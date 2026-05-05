@@ -1,0 +1,156 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/experiments/results/public_pr95_intake_20260504_codex/pr95_src/submissions/hnerv_muon/src/__pycache__/model.cpython-312.pyc",
+  "names": [
+    "__doc__",
+    "torch",
+    "torch.nn",
+    "nn",
+    "torch.nn.functional",
+    "functional",
+    "F",
+    "Module",
+    "HNeRVDecoder"
+  ],
+  "varnames": [],
+  "consts": [
+    "HNeRV-style decoder: 229K params, single-video memorization.\n\nPer-frame-pair latent (28-d) -> 6 upsample stages -> 384x512 RGB pair.\n\nEach stage: Conv(in, out*4, 3x3) + PixelShuffle(2) + bilinear-skip + sin().\nFinal: dilated-conv refine residual + sigmoid RGB heads (separate frame 0 and 1).\n",
+    0,
+    null,
+    {
+      "__code__": "HNeRVDecoder",
+      "qualname": "HNeRVDecoder",
+      "argcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "__init__",
+        "forward",
+        "__classcell__"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "__class__"
+      ]
+    },
+    "HNeRVDecoder"
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": "HNeRV-style decoder: 229K params, single-video memorization.\n\nPer-frame-pair latent (28-d) -> 6 upsample stages -> 384x512 RGB pair.\n\nEach stage: Conv(in, out*4, 3x3) + PixelShuffle(2) + bilinear-skip + sin().\nFinal: dilated-conv refine residual + sigmoid RGB heads (separate frame 0 and 1).\n",
+  "child_codes": [
+    {
+      "qualname": "HNeRVDecoder",
+      "name": "HNeRVDecoder",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "__init__",
+        "forward",
+        "__classcell__"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "__class__"
+      ],
+      "doc": "HNeRVDecoder",
+      "dis": "              0 MAKE_CELL                0 (__class__)\n\n 13           2 RESUME                   0\n              4 LOAD_NAME                0 (__name__)\n              6 STORE_NAME               1 (__module__)\n              8 LOAD_CONST               0 ('HNeRVDecoder')\n             10 STORE_NAME               2 (__qualname__)\n\n 14          12 LOAD_CONST               3 ((28, 36, (384, 512)))\n             14 LOAD_CLOSURE             0 (__class__)\n             16 BUILD_TUPLE              1\n             18 LOAD_CONST               1 (<code object __init__ at 0x804e4de00, file \"/Users/adpena/Projects/pact/experiments/results/public_pr95_intake_20260504_codex/pr95_src/submissions/hnerv_muon/src/model.py\", line 14>)\n             20 MAKE_FUNCTION            9 (defaults, closure)\n             22 STORE_NAME               3 (__init__)\n\n 42          24 LOAD_CONST               2 (<code object forward at 0x804e5e000, file \"/Users/adpena/Projects/pact/experiments/results/public_pr95_intake_20260504_codex/pr95_src/submissions/hnerv_muon/src/model.py\", line 42>)\n             26 MAKE_FUNCTION            0\n             28 STORE_NAME               4 (forward)\n             30 LOAD_CLOSURE             0 (__class__)\n             32 COPY                     1\n             34 STORE_NAME               5 (__classcell__)\n             36 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "HNeRVDecoder.__init__",
+      "name": "__init__",
+      "argcount": 4,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "self",
+        "latent_dim",
+        "base_channels",
+        "eval_size",
+        "C",
+        "i",
+        "in_ch",
+        "out_ch",
+        "final_ch"
+      ],
+      "names": [
+        "super",
+        "__init__",
+        "eval_size",
+        "base_h",
+        "base_w",
+        "int",
+        "channels",
+        "nn",
+        "Linear",
+        "stem",
+        "ModuleList",
+        "blocks",
+        "skips",
+        "range",
+        "append",
+        "Conv2d",
+        "Identity",
+        "PixelShuffle",
+        "ps",
+        "Sequential",
+        "refine",
+        "rgb_0",
+        "rgb_1"
+      ],
+      "freevars": [
+        "__class__"
+      ],
+      "cellvars": [],
+      "doc": null,
+      "dis": "              0 COPY_FREE_VARS           1\n\n 14           2 RESUME                   0\n\n 15           4 LOAD_GLOBAL              0 (super)\n             14 LOAD_DEREF               9 (__class__)\n             16 LOAD_FAST                0 (self)\n             18 LOAD_SUPER_ATTR          5 (NULL|self + __init__)\n             22 CALL                     0\n             30 POP_TOP\n\n 16          32 LOAD_FAST                3 (eval_size)\n             34 LOAD_FAST                0 (self)\n             36 STORE_ATTR               2 (eval_size)\n\n 17          46 LOAD_CONST               1 ((6, 8))\n             48 UNPACK_SEQUENCE          2\n             52 LOAD_FAST                0 (self)\n             54 STORE_ATTR               3 (base_h)\n             64 LOAD_FAST                0 (self)\n             66 STORE_ATTR               4 (base_w)\n\n 18          76 LOAD_FAST                2 (base_channels)\n             78 STORE_FAST               4 (C)\n\n 21          80 LOAD_FAST                4 (C)\n             82 LOAD_FAST                4 (C)\n             84 LOAD_FAST                4 (C)\n             86 LOAD_GLOBAL             11 (NULL + int)\n             96 LOAD_FAST                4 (C)\n             98 LOAD_CONST               2 (0.75)\n            100 BINARY_OP                5 (*)\n            104 CALL                     1\n            112 LOAD_GLOBAL             11 (NULL + int)\n            122 LOAD_FAST                4 (C)\n            124 LOAD_CONST               3 (0.58)\n            126 BINARY_OP                5 (*)\n            130 CALL                     1\n            138 LOAD_GLOBAL             11 (NULL + int)\n            148 LOAD_FAST                4 (C)\n            150 LOAD_CONST               4 (0.5)\n            152 BINARY_OP                5 (*)\n            156 CALL                     1\n            164 LOAD_GLOBAL             11 (NULL + int)\n            174 LOAD_FAST                4 (C)\n            176 LOAD_CONST               4 (0.5)\n            178 BINARY_OP                5 (*)\n            182 CALL                     1\n            190 BUILD_LIST               7\n            192 LOAD_FAST                0 (self)\n            194 STORE_ATTR               6 (channels)\n\n 23         204 LOAD_GLOBAL             15 (NULL + nn)\n            214 LOAD_ATTR               16 (Linear)\n            234 LOAD_FAST                1 (latent_dim)\n            236 LOAD_FAST                0 (self)\n            238 LOAD_ATTR               12 (channels)\n            258 LOAD_CONST               5 (0)\n            260 BINARY_SUBSCR\n            264 LOAD_FAST                0 (self)\n            266 LOAD_ATTR                6 (base_h)\n            286 BINARY_OP                5 (*)\n            290 LOAD_FAST                0 (self)\n            292 LOAD_ATTR                8 (base_w)\n            312 BINARY_OP                5 (*)\n            316 CALL                     2\n            324 LOAD_FAST                0 (self)\n            326 STORE_ATTR               9 (stem)\n\n 25         336 LOAD_GLOBAL             15 (NULL + nn)\n            346 LOAD_ATTR               20 (ModuleList)\n            366 CALL                     0\n            374 LOAD_FAST                0 (self)\n            376 STORE_ATTR              11 (blocks)\n\n 26         386 LOAD_GLOBAL             15 (NULL + nn)\n            396 LOAD_ATTR               20 (ModuleList)\n            416 CALL                     0\n            424 LOAD_FAST                0 (self)\n            426 STORE_ATTR              12 (skips)\n\n 27         436 LOAD_GLOBAL             27 (NULL + range)\n            446 LOAD_CONST               6 (6)\n            448 CALL                     1\n            456 GET_ITER\n        >>  458 FOR_ITER               161 (to 784)\n            462 STORE_FAST               5 (i)\n\n 28         464 LOAD_FAST                0 (self)\n            466 LOAD_ATTR               12 (channels)\n            486 LOAD_FAST                5 (i)\n            488 BINARY_SUBSCR\n            492 STORE_FAST               6 (in_ch)\n\n 29         494 LOAD_FAST                0 (self)\n            496 LOAD_ATTR               12 (channels)\n            516 LOAD_FAST                5 (i)\n            518 LOAD_CONST               7 (1)\n            520 BINARY_OP                0 (+)\n            524 BINARY_SUBSCR\n            528 STORE_FAST               7 (out_ch)\n\n 30         530 LOAD_FAST                0 (self)\n            532 LOAD_ATTR               22 (blocks)\n            552 LOAD_ATTR               29 (NULL|self + append)\n            572 LOAD_GLOBAL             15 (NULL + nn)\n            582 LOAD_ATTR               30 (Conv2d)\n            602 LOAD_FAST                6 (in_ch)\n            604 LOAD_FAST                7 (out_ch)\n            606 LOAD_CONST               8 (4)\n            608 BINARY_OP                5 (*)\n            612 LOAD_CONST               9 (3)\n            614 LOAD_CONST               7 (1)\n            616 KW_NAMES                10 (('padding',))\n            618 CALL                     4\n            626 CALL                     1\n            634 POP_TOP\n\n 31         636 LOAD_FAST                0 (self)\n            638 LOAD_ATTR               24 (skips)\n            658 LOAD_ATTR               29 (NULL|self + append)\n            678 LOAD_FAST                6 (in_ch)\n            680 LOAD_FAST                7 (out_ch)\n            682 COMPARE_OP              55 (!=)\n            686 POP_JUMP_IF_FALSE       23 (to 734)\n            688 LOAD_GLOBAL             15 (NULL + nn)\n            698 LOAD_ATTR               30 (Conv2d)\n            718 LOAD_FAST                6 (in_ch)\n            720 LOAD_FAST                7 (out_ch)\n            722 LOAD_CONST               7 (1)\n            724 CALL                     3\n            732 JUMP_FORWARD            19 (to 772)\n        >>  734 LOAD_GLOBAL             15 (NULL + nn)\n            744 LOAD_ATTR               32 (Identity)\n            764 CALL                     0\n        >>  772 CALL                     1\n            780 POP_TOP\n            782 JUMP_BACKWARD          163 (to 458)\n\n 27     >>  784 END_FOR\n\n 32         786 LOAD_GLOBAL             15 (NULL + nn)\n            796 LOAD_ATTR               34 (PixelShuffle)\n            816 LOAD_CONST              11 (2)\n            818 CALL                     1\n            826 LOAD_FAST                0 (self)\n            828 STORE_ATTR              18 (ps)\n\n 34         838 LOAD_FAST                0 (self)\n            840 LOAD_ATTR               12 (channels)\n            860 LOAD_CONST              12 (-1)\n            862 BINARY_SUBSCR\n            866 STORE_FAST               8 (final_ch)\n\n 35         868 LOAD_GLOBAL             15 (NULL + nn)\n            878 LOAD_ATTR               38 (Sequential)\n\n 36         898 LOAD_GLOBAL             15 (NULL + nn)\n            908 LOAD_ATTR               30 (Conv2d)\n            928 LOAD_FAST                8 (final_ch)\n            930 LOAD_FAST                8 (final_ch)\n            932 LOAD_CONST              11 (2)\n            934 BINARY_OP                2 (//)\n            938 LOAD_CONST               9 (3)\n            940 LOAD_CONST              11 (2)\n            942 LOAD_CONST              11 (2)\n            944 KW_NAMES                13 (('padding', 'dilation'))\n            946 CALL                     5\n\n 37         954 LOAD_GLOBAL             15 (NULL + nn)\n            964 LOAD_ATTR               30 (Conv2d)\n            984 LOAD_FAST                8 (final_ch)\n            986 LOAD_CONST              11 (2)\n            988 BINARY_OP                2 (//)\n            992 LOAD_FAST                8 (final_ch)\n            994 LOAD_CONST               9 (3)\n            996 LOAD_CONST               7 (1)\n            998 KW_NAMES                10 (('padding',))\n           1000 CALL                     4\n\n 35        1008 CALL                     2\n           1016 LOAD_FAST                0 (self)\n           1018 STORE_ATTR              20 (refine)\n\n 39        1028 LOAD_GLOBAL             15 (NULL + nn)\n           1038 LOAD_ATTR               30 (Conv2d)\n           1058 LOAD_FAST                8 (final_ch)\n           1060 LOAD_CONST               9 (3)\n           1062 LOAD_CONST               9 (3)\n           1064 LOAD_CONST               7 (1)\n           1066 KW_NAMES                10 (('padding',))\n           1068 CALL                     4\n           1076 LOAD_FAST                0 (self)\n           1078 STORE_ATTR              21 (rgb_0)\n\n 40        1088 LOAD_GLOBAL             15 (NULL + nn)\n           1098 LOAD_ATTR               30 (Conv2d)\n           1118 LOAD_FAST                8 (final_ch)\n           1120 LOAD_CONST               9 (3)\n           1122 LOAD_CONST               9 (3)\n           1124 LOAD_CONST               7 (1)\n           1126 KW_NAMES                10 (('padding',))\n           1128 CALL                     4\n           1136 LOAD_FAST                0 (self)\n           1138 STORE_ATTR              22 (rgb_1)\n           1148 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "HNeRVDecoder.forward",
+      "name": "forward",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "self",
+        "z",
+        "B",
+        "x",
+        "block",
+        "skip",
+        "identity",
+        "f0",
+        "f1"
+      ],
+      "names": [
+        "shape",
+        "stem",
+        "view",
+        "channels",
+        "base_h",
+        "base_w",
+        "torch",
+        "sin",
+        "zip",
+        "blocks",
+        "skips",
+        "F",
+        "interpolate",
+        "ps",
+        "refine",
+        "sigmoid",
+        "rgb_0",
+        "rgb_1",
+        "stack"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 42           0 RESUME                   0\n\n 43           2 LOAD_FAST                1 (z)\n              4 LOAD_ATTR                0 (shape)\n             24 LOAD_CONST               1 (0)\n             26 BINARY_SUBSCR\n             30 STORE_FAST               2 (B)\n\n 44          32 LOAD_FAST                0 (self)\n             34 LOAD_ATTR                3 (NULL|self + stem)\n             54 LOAD_FAST                1 (z)\n             56 CALL                     1\n             64 LOAD_ATTR                5 (NULL|self + view)\n             84 LOAD_FAST                2 (B)\n             86 LOAD_FAST                0 (self)\n             88 LOAD_ATTR                6 (channels)\n            108 LOAD_CONST               1 (0)\n            110 BINARY_SUBSCR\n            114 LOAD_FAST                0 (self)\n            116 LOAD_ATTR                8 (base_h)\n            136 LOAD_FAST                0 (self)\n            138 LOAD_ATTR               10 (base_w)\n            158 CALL                     4\n            166 STORE_FAST               3 (x)\n\n 45         168 LOAD_GLOBAL             13 (NULL + torch)\n            178 LOAD_ATTR               14 (sin)\n            198 LOAD_FAST                3 (x)\n            200 CALL                     1\n            208 STORE_FAST               3 (x)\n\n 46         210 LOAD_GLOBAL             17 (NULL + zip)\n            220 LOAD_FAST                0 (self)\n            222 LOAD_ATTR               18 (blocks)\n            242 LOAD_FAST                0 (self)\n            244 LOAD_ATTR               20 (skips)\n            264 CALL                     2\n            272 GET_ITER\n        >>  274 FOR_ITER                85 (to 448)\n            278 UNPACK_SEQUENCE          2\n            282 STORE_FAST               4 (block)\n            284 STORE_FAST               5 (skip)\n\n 47         286 LOAD_GLOBAL             23 (NULL + F)\n            296 LOAD_ATTR               24 (interpolate)\n            316 LOAD_FAST                3 (x)\n            318 LOAD_CONST               2 (2)\n            320 LOAD_CONST               3 ('bilinear')\n            322 LOAD_CONST               4 (False)\n            324 KW_NAMES                 5 (('scale_factor', 'mode', 'align_corners'))\n            326 CALL                     4\n            334 STORE_FAST               6 (identity)\n\n 48         336 PUSH_NULL\n            338 LOAD_FAST                5 (skip)\n            340 LOAD_FAST                6 (identity)\n            342 CALL                     1\n            350 STORE_FAST               6 (identity)\n\n 49         352 LOAD_FAST                0 (self)\n            354 LOAD_ATTR               27 (NULL|self + ps)\n            374 PUSH_NULL\n            376 LOAD_FAST                4 (block)\n            378 LOAD_FAST                3 (x)\n            380 CALL                     1\n            388 CALL                     1\n            396 STORE_FAST               3 (x)\n\n 50         398 LOAD_GLOBAL             13 (NULL + torch)\n            408 LOAD_ATTR               14 (sin)\n            428 LOAD_FAST                3 (x)\n            430 LOAD_FAST                6 (identity)\n            432 BINARY_OP                0 (+)\n            436 CALL                     1\n            444 STORE_FAST               3 (x)\n            446 JUMP_BACKWARD           87 (to 274)\n\n 46     >>  448 END_FOR\n\n 51         450 LOAD_FAST                3 (x)\n            452 LOAD_CONST               6 (0.1)\n            454 LOAD_GLOBAL             13 (NULL + torch)\n            464 LOAD_ATTR               14 (sin)\n            484 LOAD_FAST                0 (self)\n            486 LOAD_ATTR               29 (NULL|self + refine)\n            506 LOAD_FAST                3 (x)\n            508 CALL                     1\n            516 CALL                     1\n            524 BINARY_OP                5 (*)\n            528 BINARY_OP                0 (+)\n            532 STORE_FAST               3 (x)\n\n 52         534 LOAD_GLOBAL             13 (NULL + torch)\n            544 LOAD_ATTR               30 (sigmoid)\n            564 LOAD_FAST                0 (self)\n            566 LOAD_ATTR               33 (NULL|self + rgb_0)\n            586 LOAD_FAST                3 (x)\n            588 CALL                     1\n            596 CALL                     1\n            604 LOAD_CONST               7 (255.0)\n            606 BINARY_OP                5 (*)\n            610 STORE_FAST               7 (f0)\n\n 53         612 LOAD_GLOBAL             13 (NULL + torch)\n            622 LOAD_ATTR               30 (sigmoid)\n            642 LOAD_FAST                0 (self)\n            644 LOAD_ATTR               35 (NULL|self + rgb_1)\n            664 LOAD_FAST                3 (x)\n            666 CALL                     1\n            674 CALL                     1\n            682 LOAD_CONST               7 (255.0)\n            684 BINARY_OP                5 (*)\n            688 STORE_FAST               8 (f1)\n\n 54         690 LOAD_GLOBAL             13 (NULL + torch)\n            700 LOAD_ATTR               36 (stack)\n            720 LOAD_FAST                7 (f0)\n            722 LOAD_FAST                8 (f1)\n            724 BUILD_LIST               2\n            726 LOAD_CONST               8 (1)\n            728 KW_NAMES                 9 (('dim',))\n            730 CALL                     2\n            738 RETURN_VALUE\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  1           2 LOAD_CONST               0 ('HNeRV-style decoder: 229K params, single-video memorization.\\n\\nPer-frame-pair latent (28-d) -> 6 upsample stages -> 384x512 RGB pair.\\n\\nEach stage: Conv(in, out*4, 3x3) + PixelShuffle(2) + bilinear-skip + sin().\\nFinal: dilated-conv refine residual + sigmoid RGB heads (separate frame 0 and 1).\\n')\n              4 STORE_NAME               0 (__doc__)\n\n  8           6 LOAD_CONST               1 (0)\n              8 LOAD_CONST               2 (None)\n             10 IMPORT_NAME              1 (torch)\n             12 STORE_NAME               1 (torch)\n\n  9          14 LOAD_CONST               1 (0)\n             16 LOAD_CONST               2 (None)\n             18 IMPORT_NAME              2 (torch.nn)\n             20 IMPORT_FROM              3 (nn)\n             22 STORE_NAME               3 (nn)\n             24 POP_TOP\n\n 10          26 LOAD_CONST               1 (0)\n             28 LOAD_CONST               2 (None)\n             30 IMPORT_NAME              4 (torch.nn.functional)\n             32 IMPORT_FROM              3 (nn)\n             34 SWAP                     2\n             36 POP_TOP\n             38 IMPORT_FROM              5 (functional)\n             40 STORE_NAME               6 (F)\n             42 POP_TOP\n\n 13          44 PUSH_NULL\n             46 LOAD_BUILD_CLASS\n             48 LOAD_CONST               3 (<code object HNeRVDecoder at 0x102849c50, file \"/Users/adpena/Projects/pact/experiments/results/public_pr95_intake_20260504_codex/pr95_src/submissions/hnerv_muon/src/model.py\", line 13>)\n             50 MAKE_FUNCTION            0\n             52 LOAD_CONST               4 ('HNeRVDecoder')\n             54 LOAD_NAME                3 (nn)\n             56 LOAD_ATTR               14 (Module)\n             76 CALL                     3\n             84 STORE_NAME               8 (HNeRVDecoder)\n             86 RETURN_CONST             2 (None)\n"
+}

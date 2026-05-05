@@ -32,31 +32,36 @@ __version__ = "1.0.5"
 # ── Lazy public API ──────────────────────────────────────────────────────
 # Heavy imports (torch, pydantic) are deferred so that `import tac` stays
 # fast for CLI tooling and introspection.
+_LAZY_PUBLIC_API = {
+    # tac.training
+    "Trainer": (".training", "Trainer"),
+    "TrainConfig": (".training", "TrainConfig"),
+    # tac.architectures
+    "build_postfilter": (".architectures", "build_postfilter"),
+    # tac.renderer
+    "build_renderer": (".renderer", "build_renderer"),
+    # tac.models
+    "ScoreResult": (".models", "ScoreResult"),
+    "CheckpointMeta": (".models", "CheckpointMeta"),
+    "AveragedCheckpoint": (".models", "AveragedCheckpoint"),
+    "SensitivityResult": (".models", "SensitivityResult"),
+}
 
 
 def __getattr__(name: str):
     """Lazy-load public API symbols on first access."""
-    _API_MAP = {
-        # tac.training
-        "Trainer": (".training", "Trainer"),
-        "TrainConfig": (".training", "TrainConfig"),
-        # tac.architectures
-        "build_postfilter": (".architectures", "build_postfilter"),
-        # tac.renderer
-        "build_renderer": (".renderer", "build_renderer"),
-        # tac.models
-        "ScoreResult": (".models", "ScoreResult"),
-        "CheckpointMeta": (".models", "CheckpointMeta"),
-        "AveragedCheckpoint": (".models", "AveragedCheckpoint"),
-        "SensitivityResult": (".models", "SensitivityResult"),
-    }
-    if name in _API_MAP:
-        module_path, attr = _API_MAP[name]
+    if name in _LAZY_PUBLIC_API:
+        module_path, attr = _LAZY_PUBLIC_API[name]
         import importlib
 
         mod = importlib.import_module(module_path, __name__)
         return getattr(mod, attr)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    """Expose lazy public symbols to interactive help without importing them."""
+    return sorted(set(globals()) | set(_LAZY_PUBLIC_API))
 
 
 __all__ = [

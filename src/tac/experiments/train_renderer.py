@@ -69,6 +69,7 @@ from tac.losses import (  # noqa: E402
     scorer_loss,
     scorer_loss_cached,
     segnet_uncertainty_weighted_loss,
+    uniward_quant_noise_loss,
 )
 from tac.mask_codec import extract_masks, mask_pair_from_index  # noqa: E402
 from tac.profiles import PROFILES  # noqa: E402
@@ -3426,6 +3427,16 @@ def train(args: argparse.Namespace):
                         weight_floor=args.uncertainty_loss_floor,
                     )
                     loss = loss + args.uncertainty_loss_weight * uncert_loss
+
+                if args.use_variance_noise and args.variance_noise_weight > 0:
+                    variance_loss = uniward_quant_noise_loss(
+                        rendered_pair[:, 1],
+                        gt_pair[:, 1],
+                        base_std=args.variance_noise_base_std,
+                        kernel_size=args.variance_noise_kernel,
+                        mode=args.variance_noise_mode,
+                    )
+                    loss = loss + args.variance_noise_weight * variance_loss
 
             # Lane S: Lagrangian rate penalty on per-channel bit-depth.
             # Active only when the SC codec is on. λ ramps from start to end

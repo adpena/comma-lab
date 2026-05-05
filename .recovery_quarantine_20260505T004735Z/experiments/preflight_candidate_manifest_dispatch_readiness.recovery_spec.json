@@ -1,0 +1,1561 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/experiments/__pycache__/preflight_candidate_manifest_dispatch_readiness.cpython-312.pyc",
+  "names": [
+    "__doc__",
+    "__future__",
+    "annotations",
+    "argparse",
+    "datetime",
+    "dt",
+    "json",
+    "sys",
+    "collections.abc",
+    "Mapping",
+    "Sequence",
+    "pathlib",
+    "Path",
+    "typing",
+    "Any",
+    "SCHEMA",
+    "BLOCKING_TEXT_MARKERS",
+    "READY_TEXT_MARKERS",
+    "FALSE_READY_FIELDS",
+    "RUNTIME_CHANGING_MARKERS",
+    "FORMULA_ONLY_KEY_MARKERS",
+    "RUNTIME_SUPPORT_FALSE_KEYS",
+    "DECODE_PARITY_FALSE_KEYS",
+    "TERMINAL_CLAIM_STATUS_PREFIXES",
+    "_load_json_object",
+    "_stringify_items",
+    "_has_blocking_text",
+    "_has_ready_text",
+    "_append_blocker",
+    "_contains_runtime_changing_marker",
+    "_requires_exact_runtime_contract",
+    "_iter_leaf_values",
+    "_leaf_key",
+    "_is_nonzero_formula_value",
+    "_is_explanatory_rate_formula_path",
+    "_audit_recursive_fail_closed_fields",
+    "_audit_gate_mapping",
+    "_parse_utc",
+    "_is_terminal_claim_status",
+    "_parse_claim_rows",
+    "_manifest_lane_id",
+    "_active_lane_claims",
+    "_lane_claim_report",
+    "build_preflight",
+    "main",
+    "__name__",
+    "SystemExit"
+  ],
+  "varnames": [],
+  "consts": [
+    "Fail-closed preflight for candidate manifest dispatch readiness.\n\nThis is a cheap local guard for the gap between builder-specific readiness\nfields and the narrower Lightning submit-time ``exact_eval_dispatch_gate``.\nRun it on a candidate ``manifest.json`` before any lane claim or exact-eval\nqueue command.\n",
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "Mapping",
+      "Sequence"
+    ],
+    [
+      "Path"
+    ],
+    [
+      "Any"
+    ],
+    "candidate_manifest_dispatch_readiness_preflight_v1",
+    [
+      "blocked",
+      "fail_closed",
+      "failed",
+      "missing",
+      "non_dispatchable",
+      "not_run",
+      "planning_only",
+      "no_remote_dispatch",
+      "local_only",
+      "invalid",
+      "negative"
+    ],
+    [
+      "eligible_for_exact_eval_after_lane_claim",
+      "eligible_for_cuda_auth_eval_after_lane_claim",
+      "ready",
+      "passed"
+    ],
+    [
+      "dispatch_unlocked",
+      "ready_for_exact_eval_after_lane_claim",
+      "ready_for_exact_eval_dispatch_claim",
+      "ready_for_exact_eval_dispatch",
+      "ready_for_fixed_runtime_exact_eval",
+      "safe_for_exact_eval_dispatch",
+      "safe_for_remote_dispatch",
+      "dispatchable",
+      "dispatch_ready_now"
+    ],
+    [
+      "stbm1br",
+      "hpm1",
+      "hpac",
+      "qfq4",
+      "qma9",
+      "qh0",
+      "qps1",
+      "qzs3",
+      "qrgb"
+    ],
+    [
+      "formula_only",
+      "if_components_identical",
+      "if_archive_is_valid"
+    ],
+    [
+      "runtime_can_decode_without_edits",
+      "runtime_can_decode",
+      "public_pr85_replay_qfq4_model_loader",
+      "robust_current_qfq4_renderer_loader"
+    ],
+    [
+      "decoded_tensor_parity",
+      "local_decode_byte_parity_proven",
+      "full_decode_byte_parity_proven",
+      "byte_parity_achieved",
+      "pr91_ready_for_exact_eval"
+    ],
+    [
+      "completed_",
+      "completed_score=",
+      "completed_no_frontier",
+      "failed_",
+      "preempted",
+      "cancelled",
+      "refused_dispatch",
+      "stale_assumed_dead",
+      "stale_superseded",
+      "stopped_"
+    ],
+    {
+      "__code__": "_load_json_object",
+      "qualname": "_load_json_object",
+      "argcount": 1,
+      "varnames": [
+        "path",
+        "payload",
+        "exc"
+      ],
+      "names": [
+        "json",
+        "loads",
+        "read_text",
+        "JSONDecodeError",
+        "SystemExit",
+        "isinstance",
+        "dict"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_stringify_items",
+      "qualname": "_stringify_items",
+      "argcount": 1,
+      "varnames": [
+        "items",
+        "item"
+      ],
+      "names": [
+        "isinstance",
+        "Sequence",
+        "str",
+        "bytes",
+        "bytearray"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_has_blocking_text",
+      "qualname": "_has_blocking_text",
+      "argcount": 1,
+      "varnames": [
+        "value"
+      ],
+      "names": [
+        "lower",
+        "any",
+        "BLOCKING_TEXT_MARKERS"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "text"
+      ]
+    },
+    {
+      "__code__": "_has_ready_text",
+      "qualname": "_has_ready_text",
+      "argcount": 1,
+      "varnames": [
+        "value"
+      ],
+      "names": [
+        "lower",
+        "any",
+        "READY_TEXT_MARKERS"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "text"
+      ]
+    },
+    {
+      "__code__": "_append_blocker",
+      "qualname": "_append_blocker",
+      "argcount": 3,
+      "varnames": [
+        "blockers",
+        "code",
+        "detail"
+      ],
+      "names": [
+        "append"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_contains_runtime_changing_marker",
+      "qualname": "_contains_runtime_changing_marker",
+      "argcount": 1,
+      "varnames": [
+        "value"
+      ],
+      "names": [
+        "isinstance",
+        "Mapping",
+        "any",
+        "values",
+        "Sequence",
+        "str",
+        "bytes",
+        "bytearray",
+        "lower",
+        "RUNTIME_CHANGING_MARKERS"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "text"
+      ]
+    },
+    {
+      "__code__": "_requires_exact_runtime_contract",
+      "qualname": "_requires_exact_runtime_contract",
+      "argcount": 1,
+      "varnames": [
+        "manifest",
+        "fail_closed",
+        "key"
+      ],
+      "names": [
+        "get",
+        "isinstance",
+        "Mapping",
+        "_contains_runtime_changing_marker"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "",
+    [
+      "prefix"
+    ],
+    {
+      "__code__": "_iter_leaf_values",
+      "qualname": "_iter_leaf_values",
+      "argcount": 1,
+      "varnames": [
+        "value",
+        "prefix",
+        "rows",
+        "key",
+        "item",
+        "path",
+        "index"
+      ],
+      "names": [
+        "isinstance",
+        "Mapping",
+        "items",
+        "str",
+        "extend",
+        "_iter_leaf_values",
+        "Sequence",
+        "bytes",
+        "bytearray",
+        "enumerate",
+        "append"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_leaf_key",
+      "qualname": "_leaf_key",
+      "argcount": 1,
+      "varnames": [
+        "path"
+      ],
+      "names": [
+        "rsplit",
+        "split"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_is_nonzero_formula_value",
+      "qualname": "_is_nonzero_formula_value",
+      "argcount": 1,
+      "varnames": [
+        "value"
+      ],
+      "names": [
+        "isinstance",
+        "int",
+        "float"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_is_explanatory_rate_formula_path",
+      "qualname": "_is_explanatory_rate_formula_path",
+      "argcount": 2,
+      "varnames": [
+        "path",
+        "manifest",
+        "lower_path",
+        "readiness",
+        "exact_runtime"
+      ],
+      "names": [
+        "lower",
+        "startswith",
+        "get",
+        "isinstance",
+        "Mapping",
+        "any"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "checks"
+      ]
+    },
+    {
+      "__code__": "_audit_recursive_fail_closed_fields",
+      "qualname": "_audit_recursive_fail_closed_fields",
+      "argcount": 1,
+      "varnames": [
+        "manifest",
+        "blockers",
+        "warnings",
+        "path",
+        "value",
+        "key"
+      ],
+      "names": [
+        "_iter_leaf_values",
+        "lower",
+        "_leaf_key",
+        "any",
+        "FORMULA_ONLY_KEY_MARKERS",
+        "_is_nonzero_formula_value",
+        "_is_explanatory_rate_formula_path",
+        "append",
+        "_append_blocker",
+        "RUNTIME_SUPPORT_FALSE_KEYS",
+        "DECODE_PARITY_FALSE_KEYS",
+        "isinstance",
+        "str",
+        "_has_blocking_text"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "lower_path"
+      ]
+    },
+    {
+      "__code__": "_audit_gate_mapping",
+      "qualname": "_audit_gate_mapping",
+      "argcount": 1,
+      "varnames": [
+        "gate",
+        "path",
+        "blockers",
+        "warnings",
+        "required",
+        "key",
+        "value",
+        "nested_blockers"
+      ],
+      "names": [
+        "get",
+        "_append_blocker",
+        "FALSE_READY_FIELDS",
+        "isinstance",
+        "str",
+        "_has_blocking_text",
+        "_stringify_items",
+        "join",
+        "any",
+        "append"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "gate"
+      ]
+    },
+    {
+      "__code__": "_parse_utc",
+      "qualname": "_parse_utc",
+      "argcount": 1,
+      "varnames": [
+        "value",
+        "parsed"
+      ],
+      "names": [
+        "strip",
+        "endswith",
+        "dt",
+        "datetime",
+        "fromisoformat",
+        "ValueError",
+        "tzinfo",
+        "replace",
+        "timezone",
+        "utc",
+        "astimezone"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_is_terminal_claim_status",
+      "qualname": "_is_terminal_claim_status",
+      "argcount": 1,
+      "varnames": [
+        "status"
+      ],
+      "names": [
+        "any",
+        "TERMINAL_CLAIM_STATUS_PREFIXES"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "status"
+      ]
+    },
+    {
+      "__code__": "_parse_claim_rows",
+      "qualname": "_parse_claim_rows",
+      "argcount": 1,
+      "varnames": [
+        "path",
+        "rows",
+        "line",
+        "cell",
+        "cells"
+      ],
+      "names": [
+        "is_file",
+        "read_text",
+        "splitlines",
+        "startswith",
+        "strip",
+        "split",
+        "len",
+        "append"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_manifest_lane_id",
+      "qualname": "_manifest_lane_id",
+      "argcount": 1,
+      "varnames": [
+        "manifest",
+        "candidates",
+        "key",
+        "section",
+        "claim",
+        "candidate"
+      ],
+      "names": [
+        "get",
+        "isinstance",
+        "Mapping",
+        "append",
+        "str",
+        "strip"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_active_lane_claims",
+      "qualname": "_active_lane_claims",
+      "argcount": 1,
+      "varnames": [
+        "claims",
+        "lane_id",
+        "now",
+        "ttl_hours",
+        "cutoff",
+        "conflicts",
+        "closed_instance_job_ids",
+        "claim",
+        "status",
+        "instance_job_id",
+        "timestamp"
+      ],
+      "names": [
+        "dt",
+        "timedelta",
+        "set",
+        "get",
+        "str",
+        "_is_terminal_claim_status",
+        "add",
+        "_parse_utc",
+        "append",
+        "dict"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_lane_claim_report",
+      "qualname": "_lane_claim_report",
+      "argcount": 1,
+      "varnames": [
+        "manifest",
+        "claims_path",
+        "now_utc",
+        "ttl_hours",
+        "lane_id",
+        "now",
+        "claims",
+        "conflicts"
+      ],
+      "names": [
+        "_manifest_lane_id",
+        "_parse_utc",
+        "dt",
+        "datetime",
+        "now",
+        "timezone",
+        "utc",
+        "replace",
+        "SystemExit",
+        "_parse_claim_rows",
+        "_active_lane_claims",
+        "str",
+        "strftime",
+        "len"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    24.0,
+    [
+      "claims_path",
+      "now_utc",
+      "ttl_hours"
+    ],
+    {
+      "__code__": "build_preflight",
+      "qualname": "build_preflight",
+      "argcount": 1,
+      "varnames": [
+        "manifest_path",
+        "claims_path",
+        "now_utc",
+        "ttl_hours",
+        "manifest",
+        "blockers",
+        "warnings",
+        "gate",
+        "dispatch_gate",
+        "key",
+        "value",
+        "path",
+        "section",
+        "nested",
+        "exact_runtime",
+        "fixed_runtime",
+        "ready",
+        "lane_claim",
+        "conflict"
+      ],
+      "names": [
+        "_load_json_object",
+        "get",
+        "isinstance",
+        "Mapping",
+        "_audit_gate_mapping",
+        "str",
+        "_has_blocking_text",
+        "_append_blocker",
+        "_has_ready_text",
+        "append",
+        "FALSE_READY_FIELDS",
+        "_audit_recursive_fail_closed_fields",
+        "_stringify_items",
+        "join",
+        "_requires_exact_runtime_contract",
+        "lower",
+        "startswith",
+        "_lane_claim_report",
+        "SCHEMA",
+        "bool"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "main",
+      "qualname": "main",
+      "argcount": 1,
+      "varnames": [
+        "argv",
+        "parser",
+        "args",
+        "payload",
+        "text"
+      ],
+      "names": [
+        "argparse",
+        "ArgumentParser",
+        "__doc__",
+        "add_argument",
+        "Path",
+        "float",
+        "parse_args",
+        "build_preflight",
+        "manifest",
+        "claims_path",
+        "now_utc",
+        "ttl_hours",
+        "json",
+        "dumps",
+        "json_out",
+        "parent",
+        "mkdir",
+        "write_text",
+        "print",
+        "fail_if_not_ready"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "__main__",
+    [
+      "path",
+      "Path",
+      "return",
+      "dict[str, Any]"
+    ],
+    [
+      "items",
+      "Any",
+      "return",
+      "list[str]"
+    ],
+    [
+      "value",
+      "str",
+      "return",
+      "bool"
+    ],
+    [
+      "blockers",
+      "list[dict[str, Any]]",
+      "code",
+      "str",
+      "detail",
+      "str",
+      "return",
+      "None"
+    ],
+    [
+      "value",
+      "Any",
+      "return",
+      "bool"
+    ],
+    [
+      "manifest",
+      "Mapping[str, Any]",
+      "return",
+      "bool"
+    ],
+    [
+      "value",
+      "Any",
+      "prefix",
+      "str",
+      "return",
+      "list[tuple[str, Any]]"
+    ],
+    [
+      "path",
+      "str",
+      "return",
+      "str"
+    ],
+    [
+      "path",
+      "str",
+      "manifest",
+      "Mapping[str, Any]",
+      "return",
+      "bool"
+    ],
+    [
+      "manifest",
+      "Mapping[str, Any]",
+      "blockers",
+      "list[dict[str, Any]]",
+      "warnings",
+      "list[dict[str, Any]]",
+      "return",
+      "None"
+    ],
+    [
+      "gate",
+      "Mapping[str, Any]",
+      "path",
+      "str",
+      "blockers",
+      "list[dict[str, Any]]",
+      "warnings",
+      "list[dict[str, Any]]",
+      "return",
+      "None"
+    ],
+    [
+      "value",
+      "str",
+      "return",
+      "dt.datetime | None"
+    ],
+    [
+      "status",
+      "str",
+      "return",
+      "bool"
+    ],
+    [
+      "path",
+      "Path",
+      "return",
+      "list[dict[str, str]]"
+    ],
+    [
+      "manifest",
+      "Mapping[str, Any]",
+      "return",
+      "str | None"
+    ],
+    [
+      "claims",
+      "Sequence[Mapping[str, str]]",
+      "lane_id",
+      "str",
+      "now",
+      "dt.datetime",
+      "ttl_hours",
+      "float",
+      "return",
+      "list[dict[str, str]]"
+    ],
+    [
+      "manifest",
+      "Mapping[str, Any]",
+      "claims_path",
+      "Path | None",
+      "now_utc",
+      "str | None",
+      "ttl_hours",
+      "float",
+      "return",
+      "dict[str, Any]"
+    ],
+    [
+      "manifest_path",
+      "Path",
+      "claims_path",
+      "Path | None",
+      "now_utc",
+      "str | None",
+      "ttl_hours",
+      "float",
+      "return",
+      "dict[str, Any]"
+    ],
+    [
+      null
+    ],
+    [
+      "argv",
+      "list[str] | None",
+      "return",
+      "int"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": "Fail-closed preflight for candidate manifest dispatch readiness.\n\nThis is a cheap local guard for the gap between builder-specific readiness\nfields and the narrower Lightning submit-time ``exact_eval_dispatch_gate``.\nRun it on a candidate ``manifest.json`` before any lane claim or exact-eval\nqueue command.\n",
+  "child_codes": [
+    {
+      "qualname": "_load_json_object",
+      "name": "_load_json_object",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "payload",
+        "exc"
+      ],
+      "names": [
+        "json",
+        "loads",
+        "read_text",
+        "JSONDecodeError",
+        "SystemExit",
+        "isinstance",
+        "dict"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 95           0 RESUME                   0\n\n 96           2 NOP\n\n 97           4 LOAD_GLOBAL              1 (NULL + json)\n             14 LOAD_ATTR                2 (loads)\n             34 LOAD_FAST                0 (path)\n             36 LOAD_ATTR                5 (NULL|self + read_text)\n             56 LOAD_CONST               1 ('utf-8')\n             58 KW_NAMES                 2 (('encoding',))\n             60 CALL                     1\n             68 CALL                     1\n             76 STORE_FAST               1 (payload)\n\n100          78 LOAD_GLOBAL             11 (NULL + isinstance)\n             88 LOAD_FAST                1 (payload)\n             90 LOAD_GLOBAL             12 (dict)\n            100 CALL                     2\n            108 POP_JUMP_IF_TRUE        14 (to 138)\n\n101         110 LOAD_GLOBAL              9 (NULL + SystemExit)\n            120 LOAD_CONST               4 ('manifest must be a JSON object: ')\n            122 LOAD_FAST                0 (path)\n            124 FORMAT_VALUE             0\n            126 BUILD_STRING             2\n            128 CALL                     1\n            136 RAISE_VARARGS            1\n\n102     >>  138 LOAD_FAST                1 (payload)\n            140 RETURN_VALUE\n        >>  142 PUSH_EXC_INFO\n\n 98         144 LOAD_GLOBAL              0 (json)\n            154 LOAD_ATTR                6 (JSONDecodeError)\n            174 CHECK_EXC_MATCH\n            176 POP_JUMP_IF_FALSE       20 (to 218)\n            178 STORE_FAST               2 (exc)\n\n 99         180 LOAD_GLOBAL              9 (NULL + SystemExit)\n            190 LOAD_CONST               3 ('manifest is invalid JSON: ')\n            192 LOAD_FAST                0 (path)\n            194 FORMAT_VALUE             0\n            196 BUILD_STRING             2\n            198 CALL                     1\n            206 LOAD_FAST                2 (exc)\n            208 RAISE_VARARGS            2\n        >>  210 LOAD_CONST               0 (None)\n            212 STORE_FAST               2 (exc)\n            214 DELETE_FAST              2 (exc)\n            216 RERAISE                  1\n\n 98     >>  218 RERAISE                  0\n        >>  220 COPY                     3\n            222 POP_EXCEPT\n            224 RERAISE                  1\nExceptionTable:\n  4 to 76 -> 142 [0]\n  142 to 178 -> 220 [1] lasti\n  180 to 208 -> 210 [1] lasti\n  210 to 218 -> 220 [1] lasti\n"
+    },
+    {
+      "qualname": "_stringify_items",
+      "name": "_stringify_items",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "items",
+        "item"
+      ],
+      "names": [
+        "isinstance",
+        "Sequence",
+        "str",
+        "bytes",
+        "bytearray"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "105           0 RESUME                   0\n\n106           2 LOAD_GLOBAL              1 (NULL + isinstance)\n             12 LOAD_FAST                0 (items)\n             14 LOAD_GLOBAL              2 (Sequence)\n             24 CALL                     2\n             32 POP_JUMP_IF_FALSE       52 (to 138)\n             34 LOAD_GLOBAL              1 (NULL + isinstance)\n             44 LOAD_FAST                0 (items)\n             46 LOAD_GLOBAL              4 (str)\n             56 LOAD_GLOBAL              6 (bytes)\n             66 LOAD_GLOBAL              8 (bytearray)\n             76 BUILD_TUPLE              3\n             78 CALL                     2\n             86 POP_JUMP_IF_TRUE        25 (to 138)\n\n107          88 LOAD_FAST                0 (items)\n             90 GET_ITER\n             92 LOAD_FAST_AND_CLEAR      1 (item)\n             94 SWAP                     2\n             96 BUILD_LIST               0\n             98 SWAP                     2\n        >>  100 FOR_ITER                13 (to 130)\n            104 STORE_FAST               1 (item)\n            106 LOAD_GLOBAL              5 (NULL + str)\n            116 LOAD_FAST                1 (item)\n            118 CALL                     1\n            126 LIST_APPEND              2\n            128 JUMP_BACKWARD           15 (to 100)\n        >>  130 END_FOR\n            132 SWAP                     2\n            134 STORE_FAST               1 (item)\n            136 RETURN_VALUE\n\n108     >>  138 LOAD_FAST                0 (items)\n            140 LOAD_CONST               1 ((None, ''))\n            142 CONTAINS_OP              0\n            144 POP_JUMP_IF_FALSE        2 (to 150)\n\n109         146 BUILD_LIST               0\n            148 RETURN_VALUE\n\n110     >>  150 LOAD_GLOBAL              5 (NULL + str)\n            160 LOAD_FAST                0 (items)\n            162 CALL                     1\n            170 BUILD_LIST               1\n            172 RETURN_VALUE\n        >>  174 SWAP                     2\n            176 POP_TOP\n\n107         178 SWAP                     2\n            180 STORE_FAST               1 (item)\n            182 RERAISE                  0\nExceptionTable:\n  96 to 130 -> 174 [2]\n"
+    },
+    {
+      "qualname": "_has_blocking_text",
+      "name": "_has_blocking_text",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "value"
+      ],
+      "names": [
+        "lower",
+        "any",
+        "BLOCKING_TEXT_MARKERS"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "text"
+      ],
+      "doc": null,
+      "dis": "              0 MAKE_CELL                1 (text)\n\n113           2 RESUME                   0\n\n114           4 LOAD_FAST                0 (value)\n              6 LOAD_ATTR                1 (NULL|self + lower)\n             26 CALL                     0\n             34 STORE_DEREF              1 (text)\n\n115          36 LOAD_GLOBAL              3 (NULL + any)\n             46 LOAD_CLOSURE             1 (text)\n             48 BUILD_TUPLE              1\n             50 LOAD_CONST               1 (<code object <genexpr> at 0x100d2dc50, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 115>)\n             52 MAKE_FUNCTION            8 (closure)\n             54 LOAD_GLOBAL              4 (BLOCKING_TEXT_MARKERS)\n             64 GET_ITER\n             66 CALL                     0\n             74 CALL                     1\n             82 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_has_blocking_text.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "marker"
+      ],
+      "names": [],
+      "freevars": [
+        "text"
+      ],
+      "cellvars": [],
+      "doc": null,
+      "dis": "              0 COPY_FREE_VARS           1\n\n115           2 RETURN_GENERATOR\n              4 POP_TOP\n              6 RESUME                   0\n              8 LOAD_FAST                0 (.0)\n        >>   10 FOR_ITER                 8 (to 30)\n             14 STORE_FAST               1 (marker)\n             16 LOAD_FAST                1 (marker)\n             18 LOAD_DEREF               2 (text)\n             20 CONTAINS_OP              0\n             22 YIELD_VALUE              1\n             24 RESUME                   1\n             26 POP_TOP\n             28 JUMP_BACKWARD           10 (to 10)\n        >>   30 END_FOR\n             32 RETURN_CONST             0 (None)\n        >>   34 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             36 RERAISE                  1\nExceptionTable:\n  6 to 32 -> 34 [0] lasti\n"
+    },
+    {
+      "qualname": "_has_ready_text",
+      "name": "_has_ready_text",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "value"
+      ],
+      "names": [
+        "lower",
+        "any",
+        "READY_TEXT_MARKERS"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "text"
+      ],
+      "doc": null,
+      "dis": "              0 MAKE_CELL                1 (text)\n\n118           2 RESUME                   0\n\n119           4 LOAD_FAST                0 (value)\n              6 LOAD_ATTR                1 (NULL|self + lower)\n             26 CALL                     0\n             34 STORE_DEREF              1 (text)\n\n120          36 LOAD_GLOBAL              3 (NULL + any)\n             46 LOAD_CLOSURE             1 (text)\n             48 BUILD_TUPLE              1\n             50 LOAD_CONST               1 (<code object <genexpr> at 0x100e58c60, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 120>)\n             52 MAKE_FUNCTION            8 (closure)\n             54 LOAD_GLOBAL              4 (READY_TEXT_MARKERS)\n             64 GET_ITER\n             66 CALL                     0\n             74 CALL                     1\n             82 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_has_ready_text.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "marker"
+      ],
+      "names": [],
+      "freevars": [
+        "text"
+      ],
+      "cellvars": [],
+      "doc": null,
+      "dis": "              0 COPY_FREE_VARS           1\n\n120           2 RETURN_GENERATOR\n              4 POP_TOP\n              6 RESUME                   0\n              8 LOAD_FAST                0 (.0)\n        >>   10 FOR_ITER                 8 (to 30)\n             14 STORE_FAST               1 (marker)\n             16 LOAD_FAST                1 (marker)\n             18 LOAD_DEREF               2 (text)\n             20 CONTAINS_OP              0\n             22 YIELD_VALUE              1\n             24 RESUME                   1\n             26 POP_TOP\n             28 JUMP_BACKWARD           10 (to 10)\n        >>   30 END_FOR\n             32 RETURN_CONST             0 (None)\n        >>   34 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             36 RERAISE                  1\nExceptionTable:\n  6 to 32 -> 34 [0] lasti\n"
+    },
+    {
+      "qualname": "_append_blocker",
+      "name": "_append_blocker",
+      "argcount": 3,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "blockers",
+        "code",
+        "detail"
+      ],
+      "names": [
+        "append"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "123           0 RESUME                   0\n\n124           2 LOAD_FAST                0 (blockers)\n              4 LOAD_ATTR                1 (NULL|self + append)\n             24 LOAD_FAST                1 (code)\n             26 LOAD_CONST               1 ('blocking')\n             28 LOAD_FAST                2 (detail)\n             30 LOAD_CONST               2 (('code', 'severity', 'detail'))\n             32 BUILD_CONST_KEY_MAP      3\n             34 CALL                     1\n             42 POP_TOP\n             44 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "_contains_runtime_changing_marker",
+      "name": "_contains_runtime_changing_marker",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "value"
+      ],
+      "names": [
+        "isinstance",
+        "Mapping",
+        "any",
+        "values",
+        "Sequence",
+        "str",
+        "bytes",
+        "bytearray",
+        "lower",
+        "RUNTIME_CHANGING_MARKERS"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "text"
+      ],
+      "doc": null,
+      "dis": "              0 MAKE_CELL                1 (text)\n\n127           2 RESUME                   0\n\n128           4 LOAD_GLOBAL              1 (NULL + isinstance)\n             14 LOAD_FAST                0 (value)\n             16 LOAD_GLOBAL              2 (Mapping)\n             26 CALL                     2\n             34 POP_JUMP_IF_FALSE       32 (to 100)\n\n129          36 LOAD_GLOBAL              5 (NULL + any)\n             46 LOAD_CONST               1 (<code object <genexpr> at 0x100eb8d30, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 129>)\n             48 MAKE_FUNCTION            0\n             50 LOAD_FAST                0 (value)\n             52 LOAD_ATTR                7 (NULL|self + values)\n             72 CALL                     0\n             80 GET_ITER\n             82 CALL                     0\n             90 CALL                     1\n             98 RETURN_VALUE\n\n130     >>  100 LOAD_GLOBAL              1 (NULL + isinstance)\n            110 LOAD_FAST                0 (value)\n            112 LOAD_GLOBAL              8 (Sequence)\n            122 CALL                     2\n            130 POP_JUMP_IF_FALSE       45 (to 222)\n            132 LOAD_GLOBAL              1 (NULL + isinstance)\n            142 LOAD_FAST                0 (value)\n            144 LOAD_GLOBAL             10 (str)\n            154 LOAD_GLOBAL             12 (bytes)\n            164 LOAD_GLOBAL             14 (bytearray)\n            174 BUILD_TUPLE              3\n            176 CALL                     2\n            184 POP_JUMP_IF_TRUE        18 (to 222)\n\n131         186 LOAD_GLOBAL              5 (NULL + any)\n            196 LOAD_CONST               2 (<code object <genexpr> at 0x100eb8f30, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 131>)\n            198 MAKE_FUNCTION            0\n            200 LOAD_FAST                0 (value)\n            202 GET_ITER\n            204 CALL                     0\n            212 CALL                     1\n            220 RETURN_VALUE\n\n132     >>  222 LOAD_GLOBAL             11 (NULL + str)\n            232 LOAD_FAST                0 (value)\n            234 CALL                     1\n            242 LOAD_ATTR               17 (NULL|self + lower)\n            262 CALL                     0\n            270 STORE_DEREF              1 (text)\n\n133         272 LOAD_GLOBAL              5 (NULL + any)\n            282 LOAD_CLOSURE             1 (text)\n            284 BUILD_TUPLE              1\n            286 LOAD_CONST               3 (<code object <genexpr> at 0x100e5a880, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 133>)\n            288 MAKE_FUNCTION            8 (closure)\n            290 LOAD_GLOBAL             18 (RUNTIME_CHANGING_MARKERS)\n            300 GET_ITER\n            302 CALL                     0\n            310 CALL                     1\n            318 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_contains_runtime_changing_marker.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "item"
+      ],
+      "names": [
+        "_contains_runtime_changing_marker"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "129           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                15 (to 42)\n             12 STORE_FAST               1 (item)\n             14 LOAD_GLOBAL              1 (NULL + _contains_runtime_changing_marker)\n             24 LOAD_FAST                1 (item)\n             26 CALL                     1\n             34 YIELD_VALUE              1\n             36 RESUME                   1\n             38 POP_TOP\n             40 JUMP_BACKWARD           17 (to 8)\n        >>   42 END_FOR\n             44 RETURN_CONST             0 (None)\n        >>   46 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             48 RERAISE                  1\nExceptionTable:\n  4 to 44 -> 46 [0] lasti\n"
+    },
+    {
+      "qualname": "_contains_runtime_changing_marker.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "item"
+      ],
+      "names": [
+        "_contains_runtime_changing_marker"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "131           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                15 (to 42)\n             12 STORE_FAST               1 (item)\n             14 LOAD_GLOBAL              1 (NULL + _contains_runtime_changing_marker)\n             24 LOAD_FAST                1 (item)\n             26 CALL                     1\n             34 YIELD_VALUE              1\n             36 RESUME                   1\n             38 POP_TOP\n             40 JUMP_BACKWARD           17 (to 8)\n        >>   42 END_FOR\n             44 RETURN_CONST             0 (None)\n        >>   46 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             48 RERAISE                  1\nExceptionTable:\n  4 to 44 -> 46 [0] lasti\n"
+    },
+    {
+      "qualname": "_contains_runtime_changing_marker.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "marker"
+      ],
+      "names": [],
+      "freevars": [
+        "text"
+      ],
+      "cellvars": [],
+      "doc": null,
+      "dis": "              0 COPY_FREE_VARS           1\n\n133           2 RETURN_GENERATOR\n              4 POP_TOP\n              6 RESUME                   0\n              8 LOAD_FAST                0 (.0)\n        >>   10 FOR_ITER                 8 (to 30)\n             14 STORE_FAST               1 (marker)\n             16 LOAD_FAST                1 (marker)\n             18 LOAD_DEREF               2 (text)\n             20 CONTAINS_OP              0\n             22 YIELD_VALUE              1\n             24 RESUME                   1\n             26 POP_TOP\n             28 JUMP_BACKWARD           10 (to 10)\n        >>   30 END_FOR\n             32 RETURN_CONST             0 (None)\n        >>   34 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             36 RERAISE                  1\nExceptionTable:\n  6 to 32 -> 34 [0] lasti\n"
+    },
+    {
+      "qualname": "_requires_exact_runtime_contract",
+      "name": "_requires_exact_runtime_contract",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "manifest",
+        "fail_closed",
+        "key"
+      ],
+      "names": [
+        "get",
+        "isinstance",
+        "Mapping",
+        "_contains_runtime_changing_marker"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "136           0 RESUME                   0\n\n137           2 LOAD_FAST                0 (manifest)\n              4 LOAD_ATTR                1 (NULL|self + get)\n             24 LOAD_CONST               1 ('fail_closed_preflight')\n             26 CALL                     1\n             34 STORE_FAST               1 (fail_closed)\n\n138          36 LOAD_GLOBAL              3 (NULL + isinstance)\n             46 LOAD_FAST                1 (fail_closed)\n             48 LOAD_GLOBAL              4 (Mapping)\n             58 CALL                     2\n             66 POP_JUMP_IF_FALSE       40 (to 148)\n\n139          68 LOAD_FAST                1 (fail_closed)\n             70 LOAD_ATTR                1 (NULL|self + get)\n             90 LOAD_CONST               2 ('exact_eval_requires_explicit_pr85_replay_runtime')\n             92 CALL                     1\n            100 LOAD_CONST               3 (True)\n            102 IS_OP                    0\n            104 POP_JUMP_IF_FALSE        1 (to 108)\n\n140         106 RETURN_CONST             3 (True)\n\n141     >>  108 LOAD_FAST                1 (fail_closed)\n            110 LOAD_ATTR                1 (NULL|self + get)\n            130 LOAD_CONST               4 ('exact_eval_requires_submitted_runtime_contract')\n            132 CALL                     1\n            140 LOAD_CONST               3 (True)\n            142 IS_OP                    0\n            144 POP_JUMP_IF_FALSE        1 (to 148)\n\n142         146 RETURN_CONST             3 (True)\n\n143     >>  148 LOAD_CONST               5 (('candidate_id', 'policy_id', 'tool', 'runtime_support', 'source_policy', 'segments', 'candidate_bundle'))\n            150 GET_ITER\n        >>  152 FOR_ITER                35 (to 226)\n            156 STORE_FAST               2 (key)\n\n152         158 LOAD_FAST                2 (key)\n            160 LOAD_FAST                0 (manifest)\n            162 CONTAINS_OP              0\n            164 POP_JUMP_IF_TRUE         1 (to 168)\n            166 JUMP_BACKWARD            8 (to 152)\n        >>  168 LOAD_GLOBAL              7 (NULL + _contains_runtime_changing_marker)\n            178 LOAD_FAST                0 (manifest)\n            180 LOAD_ATTR                1 (NULL|self + get)\n            200 LOAD_FAST                2 (key)\n            202 CALL                     1\n            210 CALL                     1\n            218 POP_JUMP_IF_TRUE         1 (to 222)\n            220 JUMP_BACKWARD           35 (to 152)\n\n153     >>  222 POP_TOP\n            224 RETURN_CONST             3 (True)\n\n143     >>  226 END_FOR\n\n154         228 RETURN_CONST             6 (False)\n"
+    },
+    {
+      "qualname": "_iter_leaf_values",
+      "name": "_iter_leaf_values",
+      "argcount": 1,
+      "kwonlyargcount": 1,
+      "varnames": [
+        "value",
+        "prefix",
+        "rows",
+        "key",
+        "item",
+        "path",
+        "index"
+      ],
+      "names": [
+        "isinstance",
+        "Mapping",
+        "items",
+        "str",
+        "extend",
+        "_iter_leaf_values",
+        "Sequence",
+        "bytes",
+        "bytearray",
+        "enumerate",
+        "append"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "157           0 RESUME                   0\n\n158           2 BUILD_LIST               0\n              4 STORE_FAST               2 (rows)\n\n159           6 LOAD_GLOBAL              1 (NULL + isinstance)\n             16 LOAD_FAST                0 (value)\n             18 LOAD_GLOBAL              2 (Mapping)\n             28 CALL                     2\n             36 POP_JUMP_IF_FALSE       74 (to 186)\n\n160          38 LOAD_FAST                0 (value)\n             40 LOAD_ATTR                5 (NULL|self + items)\n             60 CALL                     0\n             68 GET_ITER\n        >>   70 FOR_ITER                53 (to 180)\n             74 UNPACK_SEQUENCE          2\n             78 STORE_FAST               3 (key)\n             80 STORE_FAST               4 (item)\n\n161          82 LOAD_FAST                1 (prefix)\n             84 POP_JUMP_IF_FALSE        7 (to 100)\n             86 LOAD_FAST                1 (prefix)\n             88 FORMAT_VALUE             0\n             90 LOAD_CONST               1 ('.')\n             92 LOAD_FAST                3 (key)\n             94 FORMAT_VALUE             0\n             96 BUILD_STRING             3\n             98 JUMP_FORWARD            10 (to 120)\n        >>  100 LOAD_GLOBAL              7 (NULL + str)\n            110 LOAD_FAST                3 (key)\n            112 CALL                     1\n        >>  120 STORE_FAST               5 (path)\n\n162         122 LOAD_FAST                2 (rows)\n            124 LOAD_ATTR                9 (NULL|self + extend)\n            144 LOAD_GLOBAL             11 (NULL + _iter_leaf_values)\n            154 LOAD_FAST                4 (item)\n            156 LOAD_FAST                5 (path)\n            158 KW_NAMES                 2 (('prefix',))\n            160 CALL                     2\n            168 CALL                     1\n            176 POP_TOP\n            178 JUMP_BACKWARD           55 (to 70)\n\n160     >>  180 END_FOR\n\n168         182 LOAD_FAST                2 (rows)\n            184 RETURN_VALUE\n\n163     >>  186 LOAD_GLOBAL              1 (NULL + isinstance)\n            196 LOAD_FAST                0 (value)\n            198 LOAD_GLOBAL             12 (Sequence)\n            208 CALL                     2\n            216 POP_JUMP_IF_FALSE       82 (to 382)\n            218 LOAD_GLOBAL              1 (NULL + isinstance)\n            228 LOAD_FAST                0 (value)\n            230 LOAD_GLOBAL              6 (str)\n            240 LOAD_GLOBAL             14 (bytes)\n            250 LOAD_GLOBAL             16 (bytearray)\n            260 BUILD_TUPLE              3\n            262 CALL                     2\n            270 POP_JUMP_IF_TRUE        55 (to 382)\n\n164         272 LOAD_GLOBAL             19 (NULL + enumerate)\n            282 LOAD_FAST                0 (value)\n            284 CALL                     1\n            292 GET_ITER\n        >>  294 FOR_ITER                39 (to 376)\n            298 UNPACK_SEQUENCE          2\n            302 STORE_FAST               6 (index)\n            304 STORE_FAST               4 (item)\n\n165         306 LOAD_FAST                2 (rows)\n            308 LOAD_ATTR                9 (NULL|self + extend)\n            328 LOAD_GLOBAL             11 (NULL + _iter_leaf_values)\n            338 LOAD_FAST                4 (item)\n            340 LOAD_FAST                1 (prefix)\n            342 FORMAT_VALUE             0\n            344 LOAD_CONST               3 ('[')\n            346 LOAD_FAST                6 (index)\n            348 FORMAT_VALUE             0\n            350 LOAD_CONST               4 (']')\n            352 BUILD_STRING             4\n            354 KW_NAMES                 2 (('prefix',))\n            356 CALL                     2\n            364 CALL                     1\n            372 POP_TOP\n            374 JUMP_BACKWARD           41 (to 294)\n\n164     >>  376 END_FOR\n\n168         378 LOAD_FAST                2 (rows)\n            380 RETURN_VALUE\n\n167     >>  382 LOAD_FAST                2 (rows)\n            384 LOAD_ATTR               21 (NULL|self + append)\n            404 LOAD_FAST                1 (prefix)\n            406 LOAD_FAST                0 (value)\n            408 BUILD_TUPLE              2\n            410 CALL                     1\n            418 POP_TOP\n\n168         420 LOAD_FAST                2 (rows)\n            422 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_leaf_key",
+      "name": "_leaf_key",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path"
+      ],
+      "names": [
+        "rsplit",
+        "split"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "171           0 RESUME                   0\n\n172           2 LOAD_FAST                0 (path)\n              4 LOAD_ATTR                1 (NULL|self + rsplit)\n             24 LOAD_CONST               1 ('.')\n             26 LOAD_CONST               2 (1)\n             28 CALL                     2\n             36 LOAD_CONST               3 (-1)\n             38 BINARY_SUBSCR\n             42 LOAD_ATTR                3 (NULL|self + split)\n             62 LOAD_CONST               4 ('[')\n             64 LOAD_CONST               2 (1)\n             66 CALL                     2\n             74 LOAD_CONST               5 (0)\n             76 BINARY_SUBSCR\n             80 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_is_nonzero_formula_value",
+      "name": "_is_nonzero_formula_value",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "value"
+      ],
+      "names": [
+        "isinstance",
+        "int",
+        "float"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "175           0 RESUME                   0\n\n176           2 LOAD_FAST                0 (value)\n              4 LOAD_CONST               0 (None)\n              6 LOAD_CONST               1 (False)\n              8 LOAD_CONST               2 ('')\n             10 BUILD_LIST               0\n             12 BUILD_MAP                0\n             14 BUILD_TUPLE              5\n             16 CONTAINS_OP              0\n             18 POP_JUMP_IF_FALSE        1 (to 22)\n\n177          20 RETURN_CONST             1 (False)\n\n178     >>   22 LOAD_GLOBAL              1 (NULL + isinstance)\n             32 LOAD_FAST                0 (value)\n             34 LOAD_GLOBAL              2 (int)\n             44 LOAD_GLOBAL              4 (float)\n             54 BUILD_TUPLE              2\n             56 CALL                     2\n             64 POP_JUMP_IF_FALSE        5 (to 76)\n\n179          66 LOAD_FAST                0 (value)\n             68 LOAD_CONST               3 (0)\n             70 COMPARE_OP              55 (!=)\n             74 RETURN_VALUE\n\n180     >>   76 RETURN_CONST             4 (True)\n"
+    },
+    {
+      "qualname": "_is_explanatory_rate_formula_path",
+      "name": "_is_explanatory_rate_formula_path",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "manifest",
+        "lower_path",
+        "readiness",
+        "exact_runtime"
+      ],
+      "names": [
+        "lower",
+        "startswith",
+        "get",
+        "isinstance",
+        "Mapping",
+        "any"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "checks"
+      ],
+      "doc": null,
+      "dis": "              0 MAKE_CELL                5 (checks)\n\n183           2 RESUME                   0\n\n184           4 LOAD_FAST                0 (path)\n              6 LOAD_ATTR                1 (NULL|self + lower)\n             26 CALL                     0\n             34 STORE_FAST               2 (lower_path)\n\n185          36 LOAD_FAST                2 (lower_path)\n             38 LOAD_ATTR                3 (NULL|self + startswith)\n             58 LOAD_CONST               1 ('formula_only_rate_delta_')\n             60 CALL                     1\n             68 POP_JUMP_IF_TRUE         1 (to 72)\n\n186          70 RETURN_CONST             2 (False)\n\n187     >>   72 LOAD_FAST                1 (manifest)\n             74 LOAD_ATTR                5 (NULL|self + get)\n             94 LOAD_CONST               3 ('score_claim')\n             96 CALL                     1\n            104 LOAD_CONST               2 (False)\n            106 IS_OP                    1\n            108 POP_JUMP_IF_FALSE        1 (to 112)\n\n188         110 RETURN_CONST             2 (False)\n\n189     >>  112 LOAD_FAST                1 (manifest)\n            114 LOAD_ATTR                5 (NULL|self + get)\n            134 LOAD_CONST               4 ('dispatch_readiness')\n            136 CALL                     1\n            144 STORE_FAST               3 (readiness)\n\n190         146 LOAD_GLOBAL              7 (NULL + isinstance)\n            156 LOAD_FAST                3 (readiness)\n            158 LOAD_GLOBAL              8 (Mapping)\n            168 CALL                     2\n            176 POP_JUMP_IF_TRUE         1 (to 180)\n\n191         178 RETURN_CONST             2 (False)\n\n192     >>  180 LOAD_FAST                3 (readiness)\n            182 LOAD_ATTR                5 (NULL|self + get)\n            202 LOAD_CONST               5 ('checks')\n            204 CALL                     1\n            212 STORE_DEREF              5 (checks)\n\n193         214 LOAD_GLOBAL              7 (NULL + isinstance)\n            224 LOAD_DEREF               5 (checks)\n            226 LOAD_GLOBAL              8 (Mapping)\n            236 CALL                     2\n            244 POP_JUMP_IF_TRUE         1 (to 248)\n\n194         246 RETURN_CONST             2 (False)\n\n195     >>  248 LOAD_FAST                1 (manifest)\n            250 LOAD_ATTR                5 (NULL|self + get)\n            270 LOAD_CONST               6 ('exact_eval_runtime_contract')\n            272 CALL                     1\n            280 STORE_FAST               4 (exact_runtime)\n\n196         282 LOAD_GLOBAL              7 (NULL + isinstance)\n            292 LOAD_FAST                4 (exact_runtime)\n            294 LOAD_GLOBAL              8 (Mapping)\n            304 CALL                     2\n            312 POP_JUMP_IF_TRUE         1 (to 316)\n\n197         314 RETURN_CONST             2 (False)\n\n198     >>  316 LOAD_FAST                4 (exact_runtime)\n            318 LOAD_ATTR                5 (NULL|self + get)\n            338 LOAD_CONST               7 ('ready_for_exact_eval_runtime')\n            340 CALL                     1\n            348 LOAD_CONST               8 (True)\n            350 IS_OP                    1\n            352 POP_JUMP_IF_FALSE        1 (to 356)\n\n199         354 RETURN_CONST             2 (False)\n\n200     >>  356 LOAD_GLOBAL             11 (NULL + any)\n            366 LOAD_CLOSURE             5 (checks)\n            368 BUILD_TUPLE              1\n            370 LOAD_CONST               9 (<code object <genexpr> at 0x100ec2de0, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 200>)\n            372 MAKE_FUNCTION            8 (closure)\n\n202         374 LOAD_CONST              10 (('strict_zip_single_member_x', 'candidate_changes_only_randmulti_vs_stbm', 'randmulti_decoded_rows_match_stbm', 'candidate_score_claim_false'))\n            376 GET_ITER\n\n200         378 CALL                     0\n            386 CALL                     1\n            394 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_is_explanatory_rate_formula_path.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "key"
+      ],
+      "names": [
+        "get"
+      ],
+      "freevars": [
+        "checks"
+      ],
+      "cellvars": [],
+      "doc": null,
+      "dis": "              0 COPY_FREE_VARS           1\n\n200           2 RETURN_GENERATOR\n              4 POP_TOP\n              6 RESUME                   0\n              8 LOAD_FAST                0 (.0)\n\n202     >>   10 FOR_ITER                23 (to 60)\n             14 STORE_FAST               1 (key)\n\n201          16 LOAD_DEREF               2 (checks)\n             18 LOAD_ATTR                1 (NULL|self + get)\n             38 LOAD_FAST                1 (key)\n             40 CALL                     1\n             48 LOAD_CONST               0 (True)\n             50 IS_OP                    0\n             52 YIELD_VALUE              1\n             54 RESUME                   1\n             56 POP_TOP\n             58 JUMP_BACKWARD           25 (to 10)\n\n202     >>   60 END_FOR\n             62 RETURN_CONST             1 (None)\n        >>   64 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             66 RERAISE                  1\nExceptionTable:\n  6 to 62 -> 64 [0] lasti\n"
+    },
+    {
+      "qualname": "_audit_recursive_fail_closed_fields",
+      "name": "_audit_recursive_fail_closed_fields",
+      "argcount": 1,
+      "kwonlyargcount": 2,
+      "varnames": [
+        "manifest",
+        "blockers",
+        "warnings",
+        "path",
+        "value",
+        "key"
+      ],
+      "names": [
+        "_iter_leaf_values",
+        "lower",
+        "_leaf_key",
+        "any",
+        "FORMULA_ONLY_KEY_MARKERS",
+        "_is_nonzero_formula_value",
+        "_is_explanatory_rate_formula_path",
+        "append",
+        "_append_blocker",
+        "RUNTIME_SUPPORT_FALSE_KEYS",
+        "DECODE_PARITY_FALSE_KEYS",
+        "isinstance",
+        "str",
+        "_has_blocking_text"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "lower_path"
+      ],
+      "doc": null,
+      "dis": "              0 MAKE_CELL                6 (lower_path)\n\n211           2 RESUME                   0\n\n217           4 LOAD_GLOBAL              1 (NULL + _iter_leaf_values)\n             14 LOAD_FAST                0 (manifest)\n             16 CALL                     1\n             24 GET_ITER\n        >>   26 FOR_ITER               230 (to 490)\n             30 UNPACK_SEQUENCE          2\n             34 STORE_FAST               3 (path)\n             36 STORE_FAST               4 (value)\n\n218          38 LOAD_FAST                3 (path)\n             40 LOAD_ATTR                3 (NULL|self + lower)\n             60 CALL                     0\n             68 STORE_DEREF              6 (lower_path)\n\n219          70 LOAD_GLOBAL              5 (NULL + _leaf_key)\n             80 LOAD_DEREF               6 (lower_path)\n             82 CALL                     1\n             90 STORE_FAST               5 (key)\n\n220          92 LOAD_GLOBAL              7 (NULL + any)\n            102 LOAD_CLOSURE             6 (lower_path)\n            104 BUILD_TUPLE              1\n            106 LOAD_CONST               1 (<code object <genexpr> at 0x100e5aa60, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 220>)\n            108 MAKE_FUNCTION            8 (closure)\n            110 LOAD_GLOBAL              8 (FORMULA_ONLY_KEY_MARKERS)\n            120 GET_ITER\n            122 CALL                     0\n            130 CALL                     1\n            138 POP_JUMP_IF_FALSE       64 (to 268)\n            140 LOAD_GLOBAL             11 (NULL + _is_nonzero_formula_value)\n            150 LOAD_FAST                4 (value)\n            152 CALL                     1\n            160 POP_JUMP_IF_FALSE       53 (to 268)\n\n221         162 LOAD_GLOBAL             13 (NULL + _is_explanatory_rate_formula_path)\n            172 LOAD_FAST                3 (path)\n            174 LOAD_FAST                0 (manifest)\n            176 CALL                     2\n            184 POP_JUMP_IF_FALSE       24 (to 234)\n\n222         186 LOAD_FAST                2 (warnings)\n            188 LOAD_ATTR               15 (NULL|self + append)\n\n224         208 LOAD_CONST               2 ('formula_only_rate_summary_non_dispatching')\n\n225         210 LOAD_FAST                3 (path)\n            212 FORMAT_VALUE             0\n            214 LOAD_CONST               3 (' is recorded as a non-score explanatory rate projection')\n            216 BUILD_STRING             2\n\n223         218 LOAD_CONST               4 (('code', 'detail'))\n            220 BUILD_CONST_KEY_MAP      2\n\n222         222 CALL                     1\n            230 POP_TOP\n\n228         232 JUMP_BACKWARD          104 (to 26)\n\n229     >>  234 LOAD_GLOBAL             17 (NULL + _append_blocker)\n\n230         244 LOAD_FAST                1 (blockers)\n\n231         246 LOAD_CONST               5 ('formula_only_dispatch_evidence')\n\n232         248 LOAD_FAST                3 (path)\n            250 FORMAT_VALUE             0\n            252 LOAD_CONST               6 (' is formula-only and cannot unlock exact-eval dispatch')\n            254 BUILD_STRING             2\n\n229         256 CALL                     3\n            264 POP_TOP\n\n234         266 JUMP_BACKWARD          121 (to 26)\n\n235     >>  268 LOAD_FAST                5 (key)\n            270 LOAD_GLOBAL             18 (RUNTIME_SUPPORT_FALSE_KEYS)\n            280 CONTAINS_OP              0\n            282 POP_JUMP_IF_FALSE       21 (to 326)\n            284 LOAD_FAST                4 (value)\n            286 LOAD_CONST               7 (False)\n            288 IS_OP                    0\n            290 POP_JUMP_IF_FALSE       17 (to 326)\n\n236         292 LOAD_GLOBAL             17 (NULL + _append_blocker)\n\n237         302 LOAD_FAST                1 (blockers)\n\n238         304 LOAD_CONST               8 ('runtime_loader_support_false')\n\n239         306 LOAD_FAST                3 (path)\n            308 FORMAT_VALUE             0\n            310 LOAD_CONST               9 (' is false')\n            312 BUILD_STRING             2\n\n236         314 CALL                     3\n            322 POP_TOP\n\n241         324 JUMP_BACKWARD          150 (to 26)\n\n242     >>  326 LOAD_FAST                5 (key)\n            328 LOAD_GLOBAL             20 (DECODE_PARITY_FALSE_KEYS)\n            338 CONTAINS_OP              0\n            340 POP_JUMP_IF_FALSE       21 (to 384)\n            342 LOAD_FAST                4 (value)\n            344 LOAD_CONST               7 (False)\n            346 IS_OP                    0\n            348 POP_JUMP_IF_FALSE       17 (to 384)\n\n243         350 LOAD_GLOBAL             17 (NULL + _append_blocker)\n\n244         360 LOAD_FAST                1 (blockers)\n\n245         362 LOAD_CONST              10 ('decode_or_exact_parity_false')\n\n246         364 LOAD_FAST                3 (path)\n            366 FORMAT_VALUE             0\n            368 LOAD_CONST               9 (' is false')\n            370 BUILD_STRING             2\n\n243         372 CALL                     3\n            380 POP_TOP\n\n248         382 JUMP_BACKWARD          179 (to 26)\n\n249     >>  384 LOAD_FAST                5 (key)\n            386 LOAD_CONST              11 (frozenset({'failure_reason', 'blocker_class', 'readiness_status', 'status'}))\n            388 CONTAINS_OP              0\n            390 POP_JUMP_IF_TRUE         1 (to 394)\n            392 JUMP_BACKWARD          184 (to 26)\n\n250     >>  394 LOAD_GLOBAL             23 (NULL + isinstance)\n            404 LOAD_FAST                4 (value)\n            406 LOAD_GLOBAL             24 (str)\n            416 CALL                     2\n            424 POP_JUMP_IF_TRUE         1 (to 428)\n            426 JUMP_BACKWARD          201 (to 26)\n        >>  428 LOAD_GLOBAL             27 (NULL + _has_blocking_text)\n            438 LOAD_FAST                4 (value)\n            440 CALL                     1\n            448 POP_JUMP_IF_TRUE         1 (to 452)\n            450 JUMP_BACKWARD          213 (to 26)\n\n251     >>  452 LOAD_GLOBAL             17 (NULL + _append_blocker)\n\n252         462 LOAD_FAST                1 (blockers)\n\n253         464 LOAD_CONST              12 ('nested_blocking_status')\n\n254         466 LOAD_FAST                3 (path)\n            468 FORMAT_VALUE             0\n            470 LOAD_CONST              13 ('=')\n            472 LOAD_FAST                4 (value)\n            474 FORMAT_VALUE             2 (repr)\n            476 BUILD_STRING             3\n\n251         478 CALL                     3\n            486 POP_TOP\n            488 JUMP_BACKWARD          232 (to 26)\n\n217     >>  490 END_FOR\n            492 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "_audit_recursive_fail_closed_fields.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "marker"
+      ],
+      "names": [],
+      "freevars": [
+        "lower_path"
+      ],
+      "cellvars": [],
+      "doc": null,
+      "dis": "              0 COPY_FREE_VARS           1\n\n220           2 RETURN_GENERATOR\n              4 POP_TOP\n              6 RESUME                   0\n              8 LOAD_FAST                0 (.0)\n        >>   10 FOR_ITER                 8 (to 30)\n             14 STORE_FAST               1 (marker)\n             16 LOAD_FAST                1 (marker)\n             18 LOAD_DEREF               2 (lower_path)\n             20 CONTAINS_OP              0\n             22 YIELD_VALUE              1\n             24 RESUME                   1\n             26 POP_TOP\n             28 JUMP_BACKWARD           10 (to 10)\n        >>   30 END_FOR\n             32 RETURN_CONST             0 (None)\n        >>   34 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             36 RERAISE                  1\nExceptionTable:\n  6 to 32 -> 34 [0] lasti\n"
+    },
+    {
+      "qualname": "_audit_gate_mapping",
+      "name": "_audit_gate_mapping",
+      "argcount": 1,
+      "kwonlyargcount": 3,
+      "varnames": [
+        "gate",
+        "path",
+        "blockers",
+        "warnings",
+        "required",
+        "key",
+        "value",
+        "nested_blockers"
+      ],
+      "names": [
+        "get",
+        "_append_blocker",
+        "FALSE_READY_FIELDS",
+        "isinstance",
+        "str",
+        "_has_blocking_text",
+        "_stringify_items",
+        "join",
+        "any",
+        "append"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "gate"
+      ],
+      "doc": null,
+      "dis": "              0 MAKE_CELL                0 (gate)\n\n258           2 RESUME                   0\n\n265           4 LOAD_DEREF               0 (gate)\n              6 LOAD_ATTR                1 (NULL|self + get)\n             26 LOAD_CONST               1 ('required')\n             28 CALL                     1\n             36 STORE_FAST               4 (required)\n\n266          38 LOAD_FAST                4 (required)\n             40 LOAD_CONST               2 (True)\n             42 IS_OP                    0\n             44 POP_JUMP_IF_FALSE       38 (to 122)\n             46 LOAD_DEREF               0 (gate)\n             48 LOAD_ATTR                1 (NULL|self + get)\n             68 LOAD_CONST               3 ('safe_for_exact_eval_dispatch')\n             70 CALL                     1\n             78 LOAD_CONST               2 (True)\n             80 IS_OP                    1\n             82 POP_JUMP_IF_FALSE       19 (to 122)\n\n267          84 LOAD_GLOBAL              3 (NULL + _append_blocker)\n\n268          94 LOAD_FAST                2 (blockers)\n\n269          96 LOAD_FAST                1 (path)\n             98 FORMAT_VALUE             0\n            100 LOAD_CONST               4 (':unsafe_required_exact_eval_gate')\n            102 BUILD_STRING             2\n\n270         104 LOAD_FAST                1 (path)\n            106 FORMAT_VALUE             0\n            108 LOAD_CONST               5 (' requires safe_for_exact_eval_dispatch=true')\n            110 BUILD_STRING             2\n\n267         112 CALL                     3\n            120 POP_TOP\n\n272     >>  122 LOAD_GLOBAL              4 (FALSE_READY_FIELDS)\n            132 GET_ITER\n        >>  134 FOR_ITER                40 (to 218)\n            138 STORE_FAST               5 (key)\n\n273         140 LOAD_FAST                5 (key)\n            142 LOAD_DEREF               0 (gate)\n            144 CONTAINS_OP              0\n            146 POP_JUMP_IF_TRUE         1 (to 150)\n            148 JUMP_BACKWARD            8 (to 134)\n        >>  150 LOAD_DEREF               0 (gate)\n            152 LOAD_FAST                5 (key)\n            154 BINARY_SUBSCR\n            158 LOAD_CONST               6 (False)\n            160 IS_OP                    0\n            162 POP_JUMP_IF_TRUE         1 (to 166)\n            164 JUMP_BACKWARD           16 (to 134)\n\n274     >>  166 LOAD_GLOBAL              3 (NULL + _append_blocker)\n\n275         176 LOAD_FAST                2 (blockers)\n\n276         178 LOAD_FAST                1 (path)\n            180 FORMAT_VALUE             0\n            182 LOAD_CONST               7 (':')\n            184 LOAD_FAST                5 (key)\n            186 FORMAT_VALUE             0\n            188 LOAD_CONST               8 ('_false')\n            190 BUILD_STRING             4\n\n277         192 LOAD_FAST                1 (path)\n            194 FORMAT_VALUE             0\n            196 LOAD_CONST               9 ('.')\n            198 LOAD_FAST                5 (key)\n            200 FORMAT_VALUE             0\n            202 LOAD_CONST              10 (' is false')\n            204 BUILD_STRING             4\n\n274         206 CALL                     3\n            214 POP_TOP\n            216 JUMP_BACKWARD           42 (to 134)\n\n272     >>  218 END_FOR\n\n279         220 LOAD_CONST              11 (('status', 'dispatch_gate', 'readiness_status', 'next_dispatch_gate'))\n            222 GET_ITER\n        >>  224 FOR_ITER                75 (to 378)\n            228 STORE_FAST               5 (key)\n\n280         230 LOAD_DEREF               0 (gate)\n            232 LOAD_ATTR                1 (NULL|self + get)\n            252 LOAD_FAST                5 (key)\n            254 CALL                     1\n            262 STORE_FAST               6 (value)\n\n281         264 LOAD_GLOBAL              7 (NULL + isinstance)\n            274 LOAD_FAST                6 (value)\n            276 LOAD_GLOBAL              8 (str)\n            286 CALL                     2\n            294 POP_JUMP_IF_TRUE         1 (to 298)\n            296 JUMP_BACKWARD           37 (to 224)\n        >>  298 LOAD_GLOBAL             11 (NULL + _has_blocking_text)\n            308 LOAD_FAST                6 (value)\n            310 CALL                     1\n            318 POP_JUMP_IF_TRUE         1 (to 322)\n            320 JUMP_BACKWARD           49 (to 224)\n\n282     >>  322 LOAD_GLOBAL              3 (NULL + _append_blocker)\n\n283         332 LOAD_FAST                2 (blockers)\n\n284         334 LOAD_FAST                1 (path)\n            336 FORMAT_VALUE             0\n            338 LOAD_CONST               7 (':')\n            340 LOAD_FAST                5 (key)\n            342 FORMAT_VALUE             0\n            344 LOAD_CONST              12 ('_blocked')\n            346 BUILD_STRING             4\n\n285         348 LOAD_FAST                1 (path)\n            350 FORMAT_VALUE             0\n            352 LOAD_CONST               9 ('.')\n            354 LOAD_FAST                5 (key)\n            356 FORMAT_VALUE             0\n            358 LOAD_CONST              13 ('=')\n            360 LOAD_FAST                6 (value)\n            362 FORMAT_VALUE             2 (repr)\n            364 BUILD_STRING             5\n\n282         366 CALL                     3\n            374 POP_TOP\n            376 JUMP_BACKWARD           77 (to 224)\n\n279     >>  378 END_FOR\n\n287         380 LOAD_GLOBAL             13 (NULL + _stringify_items)\n            390 LOAD_DEREF               0 (gate)\n            392 LOAD_ATTR                1 (NULL|self + get)\n            412 LOAD_CONST              14 ('blockers')\n            414 CALL                     1\n            422 COPY                     1\n            424 POP_JUMP_IF_TRUE        17 (to 460)\n            426 POP_TOP\n            428 LOAD_DEREF               0 (gate)\n            430 LOAD_ATTR                1 (NULL|self + get)\n            450 LOAD_CONST              15 ('remaining_blockers')\n            452 CALL                     1\n        >>  460 CALL                     1\n            468 STORE_FAST               7 (nested_blockers)\n\n288         470 LOAD_FAST                7 (nested_blockers)\n            472 POP_JUMP_IF_FALSE       39 (to 552)\n\n289         474 LOAD_GLOBAL              3 (NULL + _append_blocker)\n\n290         484 LOAD_FAST                2 (blockers)\n\n291         486 LOAD_FAST                1 (path)\n            488 FORMAT_VALUE             0\n            490 LOAD_CONST              16 (':reported_blockers')\n            492 BUILD_STRING             2\n\n292         494 LOAD_FAST                1 (path)\n            496 FORMAT_VALUE             0\n            498 LOAD_CONST              17 (' reports blockers: ')\n            500 LOAD_CONST              18 (', ')\n            502 LOAD_ATTR               15 (NULL|self + join)\n            522 LOAD_FAST                7 (nested_blockers)\n            524 LOAD_CONST               0 (None)\n            526 LOAD_CONST              19 (8)\n            528 BINARY_SLICE\n            530 CALL                     1\n            538 FORMAT_VALUE             0\n            540 BUILD_STRING             3\n\n289         542 CALL                     3\n            550 POP_TOP\n\n295     >>  552 LOAD_FAST                7 (nested_blockers)\n            554 POP_JUMP_IF_TRUE        72 (to 700)\n\n296         556 LOAD_DEREF               0 (gate)\n            558 LOAD_ATTR                1 (NULL|self + get)\n            578 LOAD_CONST               1 ('required')\n            580 CALL                     1\n            588 LOAD_CONST               2 (True)\n            590 IS_OP                    1\n            592 POP_JUMP_IF_FALSE       52 (to 698)\n\n297         594 LOAD_GLOBAL             17 (NULL + any)\n            604 LOAD_CLOSURE             0 (gate)\n            606 BUILD_TUPLE              1\n            608 LOAD_CONST              20 (<code object <genexpr> at 0x100e5ac40, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 297>)\n            610 MAKE_FUNCTION            8 (closure)\n            612 LOAD_GLOBAL              4 (FALSE_READY_FIELDS)\n            622 GET_ITER\n            624 CALL                     0\n            632 CALL                     1\n            640 POP_JUMP_IF_TRUE        27 (to 696)\n\n299         642 LOAD_FAST                3 (warnings)\n            644 LOAD_ATTR               19 (NULL|self + append)\n\n301         664 LOAD_FAST                1 (path)\n            666 FORMAT_VALUE             0\n            668 LOAD_CONST              21 (':nonstandard_gate_shape')\n            670 BUILD_STRING             2\n\n302         672 LOAD_FAST                1 (path)\n            674 FORMAT_VALUE             0\n            676 LOAD_CONST              22 (' has no recognized readiness boolean')\n            678 BUILD_STRING             2\n\n300         680 LOAD_CONST              23 (('code', 'detail'))\n            682 BUILD_CONST_KEY_MAP      2\n\n299         684 CALL                     1\n            692 POP_TOP\n            694 RETURN_CONST             0 (None)\n\n297     >>  696 RETURN_CONST             0 (None)\n\n296     >>  698 RETURN_CONST             0 (None)\n\n295     >>  700 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "_audit_gate_mapping.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "key"
+      ],
+      "names": [],
+      "freevars": [
+        "gate"
+      ],
+      "cellvars": [],
+      "doc": null,
+      "dis": "              0 COPY_FREE_VARS           1\n\n297           2 RETURN_GENERATOR\n              4 POP_TOP\n              6 RESUME                   0\n              8 LOAD_FAST                0 (.0)\n        >>   10 FOR_ITER                 8 (to 30)\n             14 STORE_FAST               1 (key)\n             16 LOAD_FAST                1 (key)\n             18 LOAD_DEREF               2 (gate)\n             20 CONTAINS_OP              0\n             22 YIELD_VALUE              1\n             24 RESUME                   1\n             26 POP_TOP\n             28 JUMP_BACKWARD           10 (to 10)\n        >>   30 END_FOR\n             32 RETURN_CONST             0 (None)\n        >>   34 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             36 RERAISE                  1\nExceptionTable:\n  6 to 32 -> 34 [0] lasti\n"
+    },
+    {
+      "qualname": "_parse_utc",
+      "name": "_parse_utc",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "value",
+        "parsed"
+      ],
+      "names": [
+        "strip",
+        "endswith",
+        "dt",
+        "datetime",
+        "fromisoformat",
+        "ValueError",
+        "tzinfo",
+        "replace",
+        "timezone",
+        "utc",
+        "astimezone"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "307           0 RESUME                   0\n\n308           2 LOAD_FAST                0 (value)\n              4 LOAD_ATTR                1 (NULL|self + strip)\n             24 CALL                     0\n             32 STORE_FAST               0 (value)\n\n309          34 LOAD_FAST                0 (value)\n             36 LOAD_ATTR                3 (NULL|self + endswith)\n             56 LOAD_CONST               1 ('Z')\n             58 CALL                     1\n             66 POP_JUMP_IF_FALSE        8 (to 84)\n\n310          68 LOAD_FAST                0 (value)\n             70 LOAD_CONST               0 (None)\n             72 LOAD_CONST               2 (-1)\n             74 BINARY_SLICE\n             76 LOAD_CONST               3 ('+00:00')\n             78 BINARY_OP                0 (+)\n             82 STORE_FAST               0 (value)\n\n311     >>   84 NOP\n\n312          86 LOAD_GLOBAL              4 (dt)\n             96 LOAD_ATTR                6 (datetime)\n            116 LOAD_ATTR                9 (NULL|self + fromisoformat)\n            136 LOAD_FAST                0 (value)\n            138 CALL                     1\n            146 STORE_FAST               1 (parsed)\n\n315         148 LOAD_FAST                1 (parsed)\n            150 LOAD_ATTR               12 (tzinfo)\n            170 POP_JUMP_IF_NOT_NONE    42 (to 256)\n\n316         172 LOAD_FAST                1 (parsed)\n            174 LOAD_ATTR               15 (NULL|self + replace)\n            194 LOAD_GLOBAL              4 (dt)\n            204 LOAD_ATTR               16 (timezone)\n            224 LOAD_ATTR               18 (utc)\n            244 KW_NAMES                 4 (('tzinfo',))\n            246 CALL                     1\n            254 STORE_FAST               1 (parsed)\n\n317     >>  256 LOAD_FAST                1 (parsed)\n            258 LOAD_ATTR               21 (NULL|self + astimezone)\n            278 LOAD_GLOBAL              4 (dt)\n            288 LOAD_ATTR               16 (timezone)\n            308 LOAD_ATTR               18 (utc)\n            328 CALL                     1\n            336 RETURN_VALUE\n        >>  338 PUSH_EXC_INFO\n\n313         340 LOAD_GLOBAL             10 (ValueError)\n            350 CHECK_EXC_MATCH\n            352 POP_JUMP_IF_FALSE        3 (to 360)\n            354 POP_TOP\n\n314         356 POP_EXCEPT\n            358 RETURN_CONST             0 (None)\n\n313     >>  360 RERAISE                  0\n        >>  362 COPY                     3\n            364 POP_EXCEPT\n            366 RERAISE                  1\nExceptionTable:\n  86 to 146 -> 338 [0]\n  338 to 354 -> 362 [1] lasti\n  360 to 360 -> 362 [1] lasti\n"
+    },
+    {
+      "qualname": "_is_terminal_claim_status",
+      "name": "_is_terminal_claim_status",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "status"
+      ],
+      "names": [
+        "any",
+        "TERMINAL_CLAIM_STATUS_PREFIXES"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "status"
+      ],
+      "doc": null,
+      "dis": "              0 MAKE_CELL                0 (status)\n\n320           2 RESUME                   0\n\n321           4 LOAD_GLOBAL              1 (NULL + any)\n             14 LOAD_CLOSURE             0 (status)\n             16 BUILD_TUPLE              1\n             18 LOAD_CONST               1 (<code object <genexpr> at 0x100eb9030, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 321>)\n             20 MAKE_FUNCTION            8 (closure)\n             22 LOAD_GLOBAL              2 (TERMINAL_CLAIM_STATUS_PREFIXES)\n             32 GET_ITER\n             34 CALL                     0\n             42 CALL                     1\n             50 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_is_terminal_claim_status.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "prefix"
+      ],
+      "names": [
+        "startswith"
+      ],
+      "freevars": [
+        "status"
+      ],
+      "cellvars": [],
+      "doc": null,
+      "dis": "              0 COPY_FREE_VARS           1\n\n321           2 RETURN_GENERATOR\n              4 POP_TOP\n              6 RESUME                   0\n              8 LOAD_FAST                0 (.0)\n        >>   10 FOR_ITER                21 (to 56)\n             14 STORE_FAST               1 (prefix)\n             16 LOAD_DEREF               2 (status)\n             18 LOAD_ATTR                1 (NULL|self + startswith)\n             38 LOAD_FAST                1 (prefix)\n             40 CALL                     1\n             48 YIELD_VALUE              1\n             50 RESUME                   1\n             52 POP_TOP\n             54 JUMP_BACKWARD           23 (to 10)\n        >>   56 END_FOR\n             58 RETURN_CONST             0 (None)\n        >>   60 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             62 RERAISE                  1\nExceptionTable:\n  6 to 58 -> 60 [0] lasti\n"
+    },
+    {
+      "qualname": "_parse_claim_rows",
+      "name": "_parse_claim_rows",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "rows",
+        "line",
+        "cell",
+        "cells"
+      ],
+      "names": [
+        "is_file",
+        "read_text",
+        "splitlines",
+        "startswith",
+        "strip",
+        "split",
+        "len",
+        "append"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "324           0 RESUME                   0\n\n325           2 LOAD_FAST                0 (path)\n              4 LOAD_ATTR                1 (NULL|self + is_file)\n             24 CALL                     0\n             32 POP_JUMP_IF_TRUE         2 (to 38)\n\n326          34 BUILD_LIST               0\n             36 RETURN_VALUE\n\n327     >>   38 BUILD_LIST               0\n             40 STORE_FAST               1 (rows)\n\n328          42 LOAD_FAST                0 (path)\n             44 LOAD_ATTR                3 (NULL|self + read_text)\n             64 LOAD_CONST               1 ('utf-8')\n             66 LOAD_CONST               2 ('replace')\n             68 KW_NAMES                 3 (('encoding', 'errors'))\n             70 CALL                     2\n             78 LOAD_ATTR                5 (NULL|self + splitlines)\n             98 CALL                     0\n            106 GET_ITER\n        >>  108 FOR_ITER               165 (to 442)\n            112 STORE_FAST               2 (line)\n\n329         114 LOAD_FAST                2 (line)\n            116 LOAD_ATTR                7 (NULL|self + startswith)\n            136 LOAD_CONST               4 ('| ')\n            138 CALL                     1\n            146 POP_JUMP_IF_TRUE         1 (to 150)\n\n330         148 JUMP_BACKWARD           21 (to 108)\n\n331     >>  150 LOAD_FAST                2 (line)\n            152 LOAD_ATTR                9 (NULL|self + strip)\n            172 CALL                     0\n            180 LOAD_ATTR                9 (NULL|self + strip)\n            200 LOAD_CONST               5 ('|')\n            202 CALL                     1\n            210 LOAD_ATTR               11 (NULL|self + split)\n            230 LOAD_CONST               5 ('|')\n            232 CALL                     1\n            240 GET_ITER\n            242 LOAD_FAST_AND_CLEAR      3 (cell)\n            244 SWAP                     2\n            246 BUILD_LIST               0\n            248 SWAP                     2\n        >>  250 FOR_ITER                18 (to 290)\n            254 STORE_FAST               3 (cell)\n            256 LOAD_FAST                3 (cell)\n            258 LOAD_ATTR                9 (NULL|self + strip)\n            278 CALL                     0\n            286 LIST_APPEND              2\n            288 JUMP_BACKWARD           20 (to 250)\n        >>  290 END_FOR\n            292 STORE_FAST               4 (cells)\n            294 STORE_FAST               3 (cell)\n\n332         296 LOAD_GLOBAL             13 (NULL + len)\n            306 LOAD_FAST                4 (cells)\n            308 CALL                     1\n            316 LOAD_CONST               6 (8)\n            318 COMPARE_OP              55 (!=)\n            322 POP_JUMP_IF_TRUE         7 (to 338)\n            324 LOAD_FAST                4 (cells)\n            326 LOAD_CONST               7 (0)\n            328 BINARY_SUBSCR\n            332 LOAD_CONST               8 (frozenset({'---', 'timestamp_utc'}))\n            334 CONTAINS_OP              0\n            336 POP_JUMP_IF_FALSE        1 (to 340)\n\n333     >>  338 JUMP_BACKWARD          116 (to 108)\n\n334     >>  340 LOAD_FAST                1 (rows)\n            342 LOAD_ATTR               15 (NULL|self + append)\n\n336         362 LOAD_FAST                4 (cells)\n            364 LOAD_CONST               7 (0)\n            366 BINARY_SUBSCR\n\n337         370 LOAD_FAST                4 (cells)\n            372 LOAD_CONST               9 (1)\n            374 BINARY_SUBSCR\n\n338         378 LOAD_FAST                4 (cells)\n            380 LOAD_CONST              10 (2)\n            382 BINARY_SUBSCR\n\n339         386 LOAD_FAST                4 (cells)\n            388 LOAD_CONST              11 (3)\n            390 BINARY_SUBSCR\n\n340         394 LOAD_FAST                4 (cells)\n            396 LOAD_CONST              12 (4)\n            398 BINARY_SUBSCR\n\n341         402 LOAD_FAST                4 (cells)\n            404 LOAD_CONST              13 (5)\n            406 BINARY_SUBSCR\n\n342         410 LOAD_FAST                4 (cells)\n            412 LOAD_CONST              14 (6)\n            414 BINARY_SUBSCR\n\n343         418 LOAD_FAST                4 (cells)\n            420 LOAD_CONST              15 (7)\n            422 BINARY_SUBSCR\n\n335         426 LOAD_CONST              16 (('timestamp_utc', 'agent', 'lane_id', 'platform', 'instance_job_id', 'predicted_eta_utc', 'status', 'notes'))\n            428 BUILD_CONST_KEY_MAP      8\n\n334         430 CALL                     1\n            438 POP_TOP\n            440 JUMP_BACKWARD          167 (to 108)\n\n328     >>  442 END_FOR\n\n346         444 LOAD_FAST                1 (rows)\n            446 RETURN_VALUE\n        >>  448 SWAP                     2\n            450 POP_TOP\n\n331         452 SWAP                     2\n            454 STORE_FAST               3 (cell)\n            456 RERAISE                  0\nExceptionTable:\n  246 to 290 -> 448 [3]\n"
+    },
+    {
+      "qualname": "_manifest_lane_id",
+      "name": "_manifest_lane_id",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "manifest",
+        "candidates",
+        "key",
+        "section",
+        "claim",
+        "candidate"
+      ],
+      "names": [
+        "get",
+        "isinstance",
+        "Mapping",
+        "append",
+        "str",
+        "strip"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "349           0 RESUME                   0\n\n350           2 LOAD_FAST                0 (manifest)\n              4 LOAD_ATTR                1 (NULL|self + get)\n             24 LOAD_CONST               1 ('lane_id')\n             26 CALL                     1\n             34 BUILD_LIST               1\n             36 STORE_FAST               1 (candidates)\n\n351          38 LOAD_CONST               2 (('dispatch_readiness', 'exact_eval_dispatch_gate', 'dispatch_gate', 'dispatch'))\n             40 GET_ITER\n        >>   42 FOR_ITER               134 (to 314)\n             46 STORE_FAST               2 (key)\n\n352          48 LOAD_FAST                0 (manifest)\n             50 LOAD_ATTR                1 (NULL|self + get)\n             70 LOAD_FAST                2 (key)\n             72 CALL                     1\n             80 STORE_FAST               3 (section)\n\n353          82 LOAD_GLOBAL              3 (NULL + isinstance)\n             92 LOAD_FAST                3 (section)\n             94 LOAD_GLOBAL              4 (Mapping)\n            104 CALL                     2\n            112 POP_JUMP_IF_TRUE         1 (to 116)\n            114 JUMP_BACKWARD           37 (to 42)\n\n354     >>  116 LOAD_FAST                1 (candidates)\n            118 LOAD_ATTR                7 (NULL|self + append)\n            138 LOAD_FAST                3 (section)\n            140 LOAD_ATTR                1 (NULL|self + get)\n            160 LOAD_CONST               1 ('lane_id')\n            162 CALL                     1\n            170 CALL                     1\n            178 POP_TOP\n\n355         180 LOAD_FAST                3 (section)\n            182 LOAD_ATTR                1 (NULL|self + get)\n            202 LOAD_CONST               3 ('claim')\n            204 CALL                     1\n            212 STORE_FAST               4 (claim)\n\n356         214 LOAD_GLOBAL              3 (NULL + isinstance)\n            224 LOAD_FAST                4 (claim)\n            226 LOAD_GLOBAL              4 (Mapping)\n            236 CALL                     2\n            244 POP_JUMP_IF_TRUE         1 (to 248)\n            246 JUMP_BACKWARD          103 (to 42)\n\n357     >>  248 LOAD_FAST                1 (candidates)\n            250 LOAD_ATTR                7 (NULL|self + append)\n            270 LOAD_FAST                4 (claim)\n            272 LOAD_ATTR                1 (NULL|self + get)\n            292 LOAD_CONST               1 ('lane_id')\n            294 CALL                     1\n            302 CALL                     1\n            310 POP_TOP\n            312 JUMP_BACKWARD          136 (to 42)\n\n351     >>  314 END_FOR\n\n358         316 LOAD_FAST                1 (candidates)\n            318 GET_ITER\n        >>  320 FOR_ITER                53 (to 430)\n            324 STORE_FAST               5 (candidate)\n\n359         326 LOAD_GLOBAL              3 (NULL + isinstance)\n            336 LOAD_FAST                5 (candidate)\n            338 LOAD_GLOBAL              8 (str)\n            348 CALL                     2\n            356 POP_JUMP_IF_TRUE         1 (to 360)\n            358 JUMP_BACKWARD           20 (to 320)\n        >>  360 LOAD_FAST                5 (candidate)\n            362 LOAD_ATTR               11 (NULL|self + strip)\n            382 CALL                     0\n            390 POP_JUMP_IF_TRUE         1 (to 394)\n            392 JUMP_BACKWARD           37 (to 320)\n\n360     >>  394 LOAD_FAST                5 (candidate)\n            396 LOAD_ATTR               11 (NULL|self + strip)\n            416 CALL                     0\n            424 SWAP                     2\n            426 POP_TOP\n            428 RETURN_VALUE\n\n358     >>  430 END_FOR\n\n361         432 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "_active_lane_claims",
+      "name": "_active_lane_claims",
+      "argcount": 1,
+      "kwonlyargcount": 3,
+      "varnames": [
+        "claims",
+        "lane_id",
+        "now",
+        "ttl_hours",
+        "cutoff",
+        "conflicts",
+        "closed_instance_job_ids",
+        "claim",
+        "status",
+        "instance_job_id",
+        "timestamp"
+      ],
+      "names": [
+        "dt",
+        "timedelta",
+        "set",
+        "get",
+        "str",
+        "_is_terminal_claim_status",
+        "add",
+        "_parse_utc",
+        "append",
+        "dict"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "364           0 RESUME                   0\n\n371           2 LOAD_FAST                2 (now)\n              4 LOAD_GLOBAL              1 (NULL + dt)\n             14 LOAD_ATTR                2 (timedelta)\n             34 LOAD_FAST                3 (ttl_hours)\n             36 KW_NAMES                 1 (('hours',))\n             38 CALL                     1\n             46 BINARY_OP               10 (-)\n             50 STORE_FAST               4 (cutoff)\n\n372          52 BUILD_LIST               0\n             54 STORE_FAST               5 (conflicts)\n\n373          56 LOAD_GLOBAL              5 (NULL + set)\n             66 CALL                     0\n             74 STORE_FAST               6 (closed_instance_job_ids)\n\n374          76 LOAD_FAST                0 (claims)\n             78 GET_ITER\n        >>   80 FOR_ITER               181 (to 446)\n             84 STORE_FAST               7 (claim)\n\n375          86 LOAD_FAST                7 (claim)\n             88 LOAD_ATTR                7 (NULL|self + get)\n            108 LOAD_CONST               2 ('lane_id')\n            110 CALL                     1\n            118 LOAD_FAST                1 (lane_id)\n            120 COMPARE_OP              55 (!=)\n            124 POP_JUMP_IF_FALSE        1 (to 128)\n\n376         126 JUMP_BACKWARD           24 (to 80)\n\n377     >>  128 LOAD_GLOBAL              9 (NULL + str)\n            138 LOAD_FAST                7 (claim)\n            140 LOAD_ATTR                7 (NULL|self + get)\n            160 LOAD_CONST               3 ('status')\n            162 LOAD_CONST               4 ('')\n            164 CALL                     2\n            172 CALL                     1\n            180 STORE_FAST               8 (status)\n\n378         182 LOAD_GLOBAL              9 (NULL + str)\n            192 LOAD_FAST                7 (claim)\n            194 LOAD_ATTR                7 (NULL|self + get)\n            214 LOAD_CONST               5 ('instance_job_id')\n            216 LOAD_CONST               4 ('')\n            218 CALL                     2\n            226 CALL                     1\n            234 STORE_FAST               9 (instance_job_id)\n\n379         236 LOAD_GLOBAL             11 (NULL + _is_terminal_claim_status)\n            246 LOAD_FAST                8 (status)\n            248 CALL                     1\n            256 POP_JUMP_IF_FALSE       18 (to 294)\n\n380         258 LOAD_FAST                6 (closed_instance_job_ids)\n            260 LOAD_ATTR               13 (NULL|self + add)\n            280 LOAD_FAST                9 (instance_job_id)\n            282 CALL                     1\n            290 POP_TOP\n\n381         292 JUMP_BACKWARD          107 (to 80)\n\n382     >>  294 LOAD_FAST                9 (instance_job_id)\n            296 LOAD_FAST                6 (closed_instance_job_ids)\n            298 CONTAINS_OP              0\n            300 POP_JUMP_IF_FALSE        1 (to 304)\n\n383         302 JUMP_BACKWARD          112 (to 80)\n\n384     >>  304 LOAD_GLOBAL             15 (NULL + _parse_utc)\n            314 LOAD_GLOBAL              9 (NULL + str)\n            324 LOAD_FAST                7 (claim)\n            326 LOAD_ATTR                7 (NULL|self + get)\n            346 LOAD_CONST               6 ('timestamp_utc')\n            348 LOAD_CONST               4 ('')\n            350 CALL                     2\n            358 CALL                     1\n            366 CALL                     1\n            374 STORE_FAST              10 (timestamp)\n\n385         376 LOAD_FAST               10 (timestamp)\n            378 POP_JUMP_IF_NONE         6 (to 392)\n            380 LOAD_FAST               10 (timestamp)\n            382 LOAD_FAST                4 (cutoff)\n            384 COMPARE_OP              92 (>=)\n            388 POP_JUMP_IF_TRUE         1 (to 392)\n            390 JUMP_BACKWARD          156 (to 80)\n\n386     >>  392 LOAD_FAST                5 (conflicts)\n            394 LOAD_ATTR               17 (NULL|self + append)\n            414 LOAD_GLOBAL             19 (NULL + dict)\n            424 LOAD_FAST                7 (claim)\n            426 CALL                     1\n            434 CALL                     1\n            442 POP_TOP\n            444 JUMP_BACKWARD          183 (to 80)\n\n374     >>  446 END_FOR\n\n387         448 LOAD_FAST                5 (conflicts)\n            450 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_lane_claim_report",
+      "name": "_lane_claim_report",
+      "argcount": 1,
+      "kwonlyargcount": 3,
+      "varnames": [
+        "manifest",
+        "claims_path",
+        "now_utc",
+        "ttl_hours",
+        "lane_id",
+        "now",
+        "claims",
+        "conflicts"
+      ],
+      "names": [
+        "_manifest_lane_id",
+        "_parse_utc",
+        "dt",
+        "datetime",
+        "now",
+        "timezone",
+        "utc",
+        "replace",
+        "SystemExit",
+        "_parse_claim_rows",
+        "_active_lane_claims",
+        "str",
+        "strftime",
+        "len"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "390           0 RESUME                   0\n\n397           2 LOAD_GLOBAL              1 (NULL + _manifest_lane_id)\n             12 LOAD_FAST                0 (manifest)\n             14 CALL                     1\n             22 STORE_FAST               4 (lane_id)\n\n398          24 LOAD_FAST                1 (claims_path)\n             26 POP_JUMP_IF_NOT_NONE     7 (to 42)\n\n400          28 LOAD_CONST               1 (False)\n\n401          30 LOAD_FAST                4 (lane_id)\n\n402          32 LOAD_CONST               0 (None)\n\n403          34 BUILD_LIST               0\n\n399          36 LOAD_CONST               2 (('checked', 'lane_id', 'claims_path', 'active_conflicts'))\n             38 BUILD_CONST_KEY_MAP      4\n             40 RETURN_VALUE\n\n405     >>   42 LOAD_FAST                2 (now_utc)\n             44 POP_JUMP_IF_FALSE       11 (to 68)\n             46 LOAD_GLOBAL              3 (NULL + _parse_utc)\n             56 LOAD_FAST                2 (now_utc)\n             58 CALL                     1\n             66 JUMP_FORWARD            70 (to 208)\n        >>   68 LOAD_GLOBAL              4 (dt)\n             78 LOAD_ATTR                6 (datetime)\n             98 LOAD_ATTR                9 (NULL|self + now)\n            118 LOAD_GLOBAL              4 (dt)\n            128 LOAD_ATTR               10 (timezone)\n            148 LOAD_ATTR               12 (utc)\n            168 CALL                     1\n            176 LOAD_ATTR               15 (NULL|self + replace)\n            196 LOAD_CONST               3 (0)\n            198 KW_NAMES                 4 (('microsecond',))\n            200 CALL                     1\n        >>  208 STORE_FAST               5 (now)\n\n406         210 LOAD_FAST                5 (now)\n            212 POP_JUMP_IF_NOT_NONE    14 (to 242)\n\n407         214 LOAD_GLOBAL             17 (NULL + SystemExit)\n            224 LOAD_CONST               5 ('invalid --now-utc: ')\n            226 LOAD_FAST                2 (now_utc)\n            228 FORMAT_VALUE             0\n            230 BUILD_STRING             2\n            232 CALL                     1\n            240 RAISE_VARARGS            1\n\n408     >>  242 LOAD_GLOBAL             19 (NULL + _parse_claim_rows)\n            252 LOAD_FAST                1 (claims_path)\n            254 CALL                     1\n            262 STORE_FAST               6 (claims)\n\n409         264 LOAD_FAST                4 (lane_id)\n            266 POP_JUMP_IF_FALSE       15 (to 298)\n            268 LOAD_GLOBAL             21 (NULL + _active_lane_claims)\n            278 LOAD_FAST                6 (claims)\n            280 LOAD_FAST                4 (lane_id)\n            282 LOAD_FAST                5 (now)\n            284 LOAD_FAST                3 (ttl_hours)\n            286 KW_NAMES                 6 (('lane_id', 'now', 'ttl_hours'))\n            288 CALL                     4\n            296 JUMP_FORWARD             1 (to 300)\n        >>  298 BUILD_LIST               0\n        >>  300 STORE_FAST               7 (conflicts)\n\n411         302 LOAD_CONST               7 (True)\n\n412         304 LOAD_FAST                4 (lane_id)\n\n413         306 LOAD_GLOBAL             23 (NULL + str)\n            316 LOAD_FAST                1 (claims_path)\n            318 CALL                     1\n\n414         326 LOAD_FAST                5 (now)\n            328 LOAD_ATTR               25 (NULL|self + strftime)\n            348 LOAD_CONST               8 ('%Y-%m-%dT%H:%M:%SZ')\n            350 CALL                     1\n\n415         358 LOAD_FAST                3 (ttl_hours)\n\n416         360 LOAD_FAST                7 (conflicts)\n\n417         362 LOAD_GLOBAL             27 (NULL + len)\n            372 LOAD_FAST                6 (claims)\n            374 CALL                     1\n\n410         382 LOAD_CONST               9 (('checked', 'lane_id', 'claims_path', 'now_utc', 'ttl_hours', 'active_conflicts', 'claim_count'))\n            384 BUILD_CONST_KEY_MAP      7\n            386 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "build_preflight",
+      "name": "build_preflight",
+      "argcount": 1,
+      "kwonlyargcount": 3,
+      "varnames": [
+        "manifest_path",
+        "claims_path",
+        "now_utc",
+        "ttl_hours",
+        "manifest",
+        "blockers",
+        "warnings",
+        "gate",
+        "dispatch_gate",
+        "key",
+        "value",
+        "path",
+        "section",
+        "nested",
+        "exact_runtime",
+        "fixed_runtime",
+        "ready",
+        "lane_claim",
+        "conflict"
+      ],
+      "names": [
+        "_load_json_object",
+        "get",
+        "isinstance",
+        "Mapping",
+        "_audit_gate_mapping",
+        "str",
+        "_has_blocking_text",
+        "_append_blocker",
+        "_has_ready_text",
+        "append",
+        "FALSE_READY_FIELDS",
+        "_audit_recursive_fail_closed_fields",
+        "_stringify_items",
+        "join",
+        "_requires_exact_runtime_contract",
+        "lower",
+        "startswith",
+        "_lane_claim_report",
+        "SCHEMA",
+        "bool"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "421           0 RESUME                   0\n\n428           2 LOAD_GLOBAL              1 (NULL + _load_json_object)\n             12 LOAD_FAST                0 (manifest_path)\n             14 CALL                     1\n             22 STORE_FAST               4 (manifest)\n\n429          24 BUILD_LIST               0\n             26 STORE_FAST               5 (blockers)\n\n430          28 BUILD_LIST               0\n             30 STORE_FAST               6 (warnings)\n\n432          32 LOAD_FAST                4 (manifest)\n             34 LOAD_ATTR                3 (NULL|self + get)\n             54 LOAD_CONST               1 ('exact_eval_dispatch_gate')\n             56 CALL                     1\n             64 STORE_FAST               7 (gate)\n\n433          66 LOAD_GLOBAL              5 (NULL + isinstance)\n             76 LOAD_FAST                7 (gate)\n             78 LOAD_GLOBAL              6 (Mapping)\n             88 CALL                     2\n             96 POP_JUMP_IF_FALSE       15 (to 128)\n\n434          98 LOAD_GLOBAL              9 (NULL + _audit_gate_mapping)\n\n435         108 LOAD_FAST                7 (gate)\n\n436         110 LOAD_CONST               1 ('exact_eval_dispatch_gate')\n\n437         112 LOAD_FAST                5 (blockers)\n\n438         114 LOAD_FAST                6 (warnings)\n\n434         116 KW_NAMES                 2 (('path', 'blockers', 'warnings'))\n            118 CALL                     4\n            126 POP_TOP\n\n441     >>  128 LOAD_FAST                4 (manifest)\n            130 LOAD_ATTR                3 (NULL|self + get)\n            150 LOAD_CONST               3 ('dispatch_gate')\n            152 CALL                     1\n            160 STORE_FAST               8 (dispatch_gate)\n\n442         162 LOAD_GLOBAL              5 (NULL + isinstance)\n            172 LOAD_FAST                8 (dispatch_gate)\n            174 LOAD_GLOBAL             10 (str)\n            184 CALL                     2\n            192 POP_JUMP_IF_FALSE       88 (to 370)\n\n443         194 LOAD_GLOBAL             13 (NULL + _has_blocking_text)\n            204 LOAD_FAST                8 (dispatch_gate)\n            206 CALL                     1\n            214 POP_JUMP_IF_FALSE       17 (to 250)\n\n444         216 LOAD_GLOBAL             15 (NULL + _append_blocker)\n\n445         226 LOAD_FAST                5 (blockers)\n\n446         228 LOAD_CONST               4 ('dispatch_gate_blocked')\n\n447         230 LOAD_CONST               5 ('dispatch_gate=')\n            232 LOAD_FAST                8 (dispatch_gate)\n            234 FORMAT_VALUE             2 (repr)\n            236 BUILD_STRING             2\n\n444         238 CALL                     3\n            246 POP_TOP\n            248 JUMP_FORWARD            91 (to 432)\n\n449     >>  250 LOAD_GLOBAL             17 (NULL + _has_ready_text)\n            260 LOAD_FAST                8 (dispatch_gate)\n            262 CALL                     1\n            270 POP_JUMP_IF_FALSE       25 (to 322)\n\n450         272 LOAD_FAST                6 (warnings)\n            274 LOAD_ATTR               19 (NULL|self + append)\n\n452         294 LOAD_CONST               6 ('lane_claim_still_required')\n\n453         296 LOAD_CONST               5 ('dispatch_gate=')\n            298 LOAD_FAST                8 (dispatch_gate)\n            300 FORMAT_VALUE             2 (repr)\n            302 LOAD_CONST               7 ('; verify active Level-2 lane claim before GPU dispatch')\n            304 BUILD_STRING             3\n\n451         306 LOAD_CONST               8 (('code', 'detail'))\n            308 BUILD_CONST_KEY_MAP      2\n\n450         310 CALL                     1\n            318 POP_TOP\n            320 JUMP_FORWARD            55 (to 432)\n\n457     >>  322 LOAD_FAST                6 (warnings)\n            324 LOAD_ATTR               19 (NULL|self + append)\n\n459         344 LOAD_CONST               9 ('unrecognized_dispatch_gate_text')\n\n460         346 LOAD_CONST               5 ('dispatch_gate=')\n            348 LOAD_FAST                8 (dispatch_gate)\n            350 FORMAT_VALUE             2 (repr)\n            352 BUILD_STRING             2\n\n458         354 LOAD_CONST               8 (('code', 'detail'))\n            356 BUILD_CONST_KEY_MAP      2\n\n457         358 CALL                     1\n            366 POP_TOP\n            368 JUMP_FORWARD            31 (to 432)\n\n463     >>  370 LOAD_GLOBAL              5 (NULL + isinstance)\n            380 LOAD_FAST                8 (dispatch_gate)\n            382 LOAD_GLOBAL              6 (Mapping)\n            392 CALL                     2\n            400 POP_JUMP_IF_FALSE       15 (to 432)\n\n464         402 LOAD_GLOBAL              9 (NULL + _audit_gate_mapping)\n\n465         412 LOAD_FAST                8 (dispatch_gate)\n\n466         414 LOAD_CONST               3 ('dispatch_gate')\n\n467         416 LOAD_FAST                5 (blockers)\n\n468         418 LOAD_FAST                6 (warnings)\n\n464         420 KW_NAMES                 2 (('path', 'blockers', 'warnings'))\n            422 CALL                     4\n            430 POP_TOP\n\n471     >>  432 LOAD_GLOBAL             20 (FALSE_READY_FIELDS)\n            442 GET_ITER\n        >>  444 FOR_ITER                34 (to 516)\n            448 STORE_FAST               9 (key)\n\n472         450 LOAD_FAST                9 (key)\n            452 LOAD_FAST                4 (manifest)\n            454 CONTAINS_OP              0\n            456 POP_JUMP_IF_TRUE         1 (to 460)\n            458 JUMP_BACKWARD            8 (to 444)\n        >>  460 LOAD_FAST                4 (manifest)\n            462 LOAD_FAST                9 (key)\n            464 BINARY_SUBSCR\n            468 LOAD_CONST              10 (False)\n            470 IS_OP                    0\n            472 POP_JUMP_IF_TRUE         1 (to 476)\n            474 JUMP_BACKWARD           16 (to 444)\n\n473     >>  476 LOAD_GLOBAL             15 (NULL + _append_blocker)\n            486 LOAD_FAST                5 (blockers)\n            488 LOAD_FAST                9 (key)\n            490 FORMAT_VALUE             0\n            492 LOAD_CONST              11 ('_false')\n            494 BUILD_STRING             2\n            496 LOAD_FAST                9 (key)\n            498 FORMAT_VALUE             0\n            500 LOAD_CONST              12 (' is false')\n            502 BUILD_STRING             2\n            504 CALL                     3\n            512 POP_TOP\n            514 JUMP_BACKWARD           36 (to 444)\n\n471     >>  516 END_FOR\n\n475         518 LOAD_CONST              13 (('exact_eval_readiness_status', 'readiness_status', 'build_status'))\n            520 GET_ITER\n        >>  522 FOR_ITER                69 (to 664)\n            526 STORE_FAST               9 (key)\n\n476         528 LOAD_FAST                4 (manifest)\n            530 LOAD_ATTR                3 (NULL|self + get)\n            550 LOAD_FAST                9 (key)\n            552 CALL                     1\n            560 STORE_FAST              10 (value)\n\n477         562 LOAD_GLOBAL              5 (NULL + isinstance)\n            572 LOAD_FAST               10 (value)\n            574 LOAD_GLOBAL             10 (str)\n            584 CALL                     2\n            592 POP_JUMP_IF_TRUE         1 (to 596)\n            594 JUMP_BACKWARD           37 (to 522)\n        >>  596 LOAD_GLOBAL             13 (NULL + _has_blocking_text)\n            606 LOAD_FAST               10 (value)\n            608 CALL                     1\n            616 POP_JUMP_IF_TRUE         1 (to 620)\n            618 JUMP_BACKWARD           49 (to 522)\n\n478     >>  620 LOAD_GLOBAL             15 (NULL + _append_blocker)\n            630 LOAD_FAST                5 (blockers)\n            632 LOAD_FAST                9 (key)\n            634 FORMAT_VALUE             0\n            636 LOAD_CONST              14 ('_blocked')\n            638 BUILD_STRING             2\n            640 LOAD_FAST                9 (key)\n            642 FORMAT_VALUE             0\n            644 LOAD_CONST              15 ('=')\n            646 LOAD_FAST               10 (value)\n            648 FORMAT_VALUE             2 (repr)\n            650 BUILD_STRING             3\n            652 CALL                     3\n            660 POP_TOP\n            662 JUMP_BACKWARD           71 (to 522)\n\n475     >>  664 END_FOR\n\n480         666 LOAD_GLOBAL             23 (NULL + _audit_recursive_fail_closed_fields)\n            676 LOAD_FAST                4 (manifest)\n            678 LOAD_FAST                5 (blockers)\n            680 LOAD_FAST                6 (warnings)\n            682 KW_NAMES                16 (('blockers', 'warnings'))\n            684 CALL                     3\n            692 POP_TOP\n\n482         694 LOAD_CONST              17 ((('fail_closed_preflight', 'remaining_exact_eval_blockers'), ('exact_eval_runtime_contract', 'remaining_blockers'), ('runtime_gate', 'remaining_blockers'), ('fixed_runtime_bridge', 'remaining_blockers')))\n            696 GET_ITER\n        >>  698 FOR_ITER               112 (to 926)\n            702 UNPACK_SEQUENCE          2\n            706 STORE_FAST              11 (path)\n            708 STORE_FAST               9 (key)\n\n488         710 LOAD_FAST                4 (manifest)\n            712 LOAD_ATTR                3 (NULL|self + get)\n            732 LOAD_FAST               11 (path)\n            734 CALL                     1\n            742 STORE_FAST              12 (section)\n\n489         744 LOAD_GLOBAL              5 (NULL + isinstance)\n            754 LOAD_FAST               12 (section)\n            756 LOAD_GLOBAL              6 (Mapping)\n            766 CALL                     2\n            774 POP_JUMP_IF_TRUE         1 (to 778)\n            776 JUMP_BACKWARD           40 (to 698)\n\n490     >>  778 LOAD_GLOBAL             25 (NULL + _stringify_items)\n            788 LOAD_FAST               12 (section)\n            790 LOAD_ATTR                3 (NULL|self + get)\n            810 LOAD_FAST                9 (key)\n            812 CALL                     1\n            820 CALL                     1\n            828 STORE_FAST              13 (nested)\n\n491         830 LOAD_FAST               13 (nested)\n            832 POP_JUMP_IF_TRUE         1 (to 836)\n            834 JUMP_BACKWARD           69 (to 698)\n\n492     >>  836 LOAD_GLOBAL             15 (NULL + _append_blocker)\n\n493         846 LOAD_FAST                5 (blockers)\n\n494         848 LOAD_FAST               11 (path)\n            850 FORMAT_VALUE             0\n            852 LOAD_CONST              18 (':')\n            854 LOAD_FAST                9 (key)\n            856 FORMAT_VALUE             0\n            858 BUILD_STRING             3\n\n495         860 LOAD_FAST               11 (path)\n            862 FORMAT_VALUE             0\n            864 LOAD_CONST              19 ('.')\n            866 LOAD_FAST                9 (key)\n            868 FORMAT_VALUE             0\n            870 LOAD_CONST              20 (': ')\n            872 LOAD_CONST              21 (', ')\n            874 LOAD_ATTR               27 (NULL|self + join)\n            894 LOAD_FAST               13 (nested)\n            896 LOAD_CONST               0 (None)\n            898 LOAD_CONST              22 (8)\n            900 BINARY_SLICE\n            902 CALL                     1\n            910 FORMAT_VALUE             0\n            912 BUILD_STRING             5\n\n492         914 CALL                     3\n            922 POP_TOP\n            924 JUMP_BACKWARD          114 (to 698)\n\n482     >>  926 END_FOR\n\n498         928 LOAD_FAST                4 (manifest)\n            930 LOAD_ATTR                3 (NULL|self + get)\n            950 LOAD_CONST              23 ('exact_eval_runtime_contract')\n            952 CALL                     1\n            960 STORE_FAST              14 (exact_runtime)\n\n499         962 LOAD_GLOBAL             29 (NULL + _requires_exact_runtime_contract)\n            972 LOAD_FAST                4 (manifest)\n            974 CALL                     1\n            982 POP_JUMP_IF_FALSE       29 (to 1042)\n            984 LOAD_GLOBAL              5 (NULL + isinstance)\n            994 LOAD_FAST               14 (exact_runtime)\n            996 LOAD_GLOBAL              6 (Mapping)\n           1006 CALL                     2\n           1014 POP_JUMP_IF_TRUE        13 (to 1042)\n\n500        1016 LOAD_GLOBAL             15 (NULL + _append_blocker)\n\n501        1026 LOAD_FAST                5 (blockers)\n\n502        1028 LOAD_CONST              24 ('exact_eval_runtime_contract:missing_for_runtime_changing_candidate')\n\n503        1030 LOAD_CONST              25 ('runtime-changing candidate must record the exact submitted inflate runtime contract')\n\n500        1032 CALL                     3\n           1040 POP_TOP\n\n505     >> 1042 LOAD_GLOBAL              5 (NULL + isinstance)\n           1052 LOAD_FAST               14 (exact_runtime)\n           1054 LOAD_GLOBAL              6 (Mapping)\n           1064 CALL                     2\n           1072 POP_JUMP_IF_FALSE       32 (to 1138)\n           1074 LOAD_FAST               14 (exact_runtime)\n           1076 LOAD_ATTR                3 (NULL|self + get)\n           1096 LOAD_CONST              26 ('ready_for_exact_eval_runtime')\n           1098 CALL                     1\n           1106 LOAD_CONST              10 (False)\n           1108 IS_OP                    0\n           1110 POP_JUMP_IF_FALSE       13 (to 1138)\n\n506        1112 LOAD_GLOBAL             15 (NULL + _append_blocker)\n\n507        1122 LOAD_FAST                5 (blockers)\n\n508        1124 LOAD_CONST              27 ('exact_eval_runtime_contract:not_ready')\n\n509        1126 LOAD_CONST              28 ('exact eval runtime contract is not ready')\n\n506        1128 CALL                     3\n           1136 POP_TOP\n\n512     >> 1138 LOAD_FAST                4 (manifest)\n           1140 LOAD_ATTR                3 (NULL|self + get)\n           1160 LOAD_CONST              29 ('fixed_runtime_preflight')\n           1162 CALL                     1\n           1170 STORE_FAST              15 (fixed_runtime)\n\n513        1172 LOAD_GLOBAL              5 (NULL + isinstance)\n           1182 LOAD_FAST               15 (fixed_runtime)\n           1184 LOAD_GLOBAL              6 (Mapping)\n           1194 CALL                     2\n           1202 POP_JUMP_IF_FALSE       52 (to 1308)\n\n514        1204 LOAD_FAST               15 (fixed_runtime)\n           1206 LOAD_ATTR                3 (NULL|self + get)\n           1226 LOAD_CONST              30 ('ready_for_fixed_runtime_exact_eval')\n           1228 CALL                     1\n           1236 STORE_FAST              16 (ready)\n\n515        1238 LOAD_FAST               15 (fixed_runtime)\n           1240 LOAD_ATTR                3 (NULL|self + get)\n           1260 LOAD_CONST              31 ('ready_for_fixed_runtime_exact_eval_readiness')\n           1262 LOAD_FAST               16 (ready)\n           1264 CALL                     2\n           1272 STORE_FAST              16 (ready)\n\n516        1274 LOAD_FAST               16 (ready)\n           1276 LOAD_CONST              10 (False)\n           1278 IS_OP                    0\n           1280 POP_JUMP_IF_FALSE       13 (to 1308)\n\n517        1282 LOAD_GLOBAL             15 (NULL + _append_blocker)\n\n518        1292 LOAD_FAST                5 (blockers)\n\n519        1294 LOAD_CONST              32 ('fixed_runtime_preflight:not_ready')\n\n520        1296 LOAD_CONST              33 ('fixed runtime preflight is not ready')\n\n517        1298 CALL                     3\n           1306 POP_TOP\n\n523     >> 1308 LOAD_GLOBAL             11 (NULL + str)\n           1318 LOAD_FAST                4 (manifest)\n           1320 LOAD_ATTR                3 (NULL|self + get)\n           1340 LOAD_CONST              34 ('evidence_grade')\n           1342 LOAD_CONST              35 ('')\n           1344 CALL                     2\n           1352 CALL                     1\n           1360 LOAD_ATTR               31 (NULL|self + lower)\n           1380 CALL                     0\n           1388 LOAD_ATTR               33 (NULL|self + startswith)\n           1408 LOAD_CONST              36 ('a-negative')\n           1410 CALL                     1\n           1418 POP_JUMP_IF_FALSE       13 (to 1446)\n\n524        1420 LOAD_GLOBAL             15 (NULL + _append_blocker)\n\n525        1430 LOAD_FAST                5 (blockers)\n\n526        1432 LOAD_CONST              37 ('evidence_grade_exact_negative')\n\n527        1434 LOAD_CONST              38 ('manifest evidence_grade is exact-negative')\n\n524        1436 CALL                     3\n           1444 POP_TOP\n\n529     >> 1446 LOAD_FAST                4 (manifest)\n           1448 LOAD_ATTR                3 (NULL|self + get)\n           1468 LOAD_CONST              39 ('exact_negative')\n           1470 CALL                     1\n           1478 LOAD_CONST              40 (True)\n           1480 IS_OP                    0\n           1482 POP_JUMP_IF_FALSE       13 (to 1510)\n\n530        1484 LOAD_GLOBAL             15 (NULL + _append_blocker)\n           1494 LOAD_FAST                5 (blockers)\n           1496 LOAD_CONST              41 ('exact_negative_true')\n           1498 LOAD_CONST              42 ('manifest is marked exact_negative=true')\n           1500 CALL                     3\n           1508 POP_TOP\n\n532     >> 1510 LOAD_GLOBAL             35 (NULL + _lane_claim_report)\n\n533        1520 LOAD_FAST                4 (manifest)\n\n534        1522 LOAD_FAST                1 (claims_path)\n\n535        1524 LOAD_FAST                2 (now_utc)\n\n536        1526 LOAD_FAST                3 (ttl_hours)\n\n532        1528 KW_NAMES                43 (('claims_path', 'now_utc', 'ttl_hours'))\n           1530 CALL                     4\n           1538 STORE_FAST              17 (lane_claim)\n\n538        1540 LOAD_FAST               17 (lane_claim)\n           1542 LOAD_CONST              44 ('checked')\n           1544 BINARY_SUBSCR\n           1548 POP_JUMP_IF_FALSE       30 (to 1610)\n           1550 LOAD_FAST               17 (lane_claim)\n           1552 LOAD_ATTR                3 (NULL|self + get)\n           1572 LOAD_CONST              45 ('lane_id')\n           1574 CALL                     1\n           1582 POP_JUMP_IF_TRUE        13 (to 1610)\n\n539        1584 LOAD_GLOBAL             15 (NULL + _append_blocker)\n\n540        1594 LOAD_FAST                5 (blockers)\n\n541        1596 LOAD_CONST              46 ('lane_claim_missing_lane_id')\n\n542        1598 LOAD_CONST              47 ('claims-path was supplied but manifest did not expose a lane_id')\n\n539        1600 CALL                     3\n           1608 POP_TOP\n\n544     >> 1610 LOAD_FAST               17 (lane_claim)\n           1612 LOAD_ATTR                3 (NULL|self + get)\n           1632 LOAD_CONST              48 ('active_conflicts')\n           1634 BUILD_LIST               0\n           1636 CALL                     2\n           1644 GET_ITER\n        >> 1646 FOR_ITER               105 (to 1860)\n           1650 STORE_FAST              18 (conflict)\n\n545        1652 LOAD_GLOBAL             15 (NULL + _append_blocker)\n\n546        1662 LOAD_FAST                5 (blockers)\n\n547        1664 LOAD_CONST              49 ('active_lane_claim_conflict')\n\n549        1666 LOAD_CONST              50 ('active same-lane claim exists: ')\n\n550        1668 LOAD_FAST               18 (conflict)\n           1670 LOAD_ATTR                3 (NULL|self + get)\n           1690 LOAD_CONST              51 ('timestamp_utc')\n           1692 CALL                     1\n           1700 FORMAT_VALUE             0\n           1702 LOAD_CONST              52 (' ')\n           1704 LOAD_FAST               18 (conflict)\n           1706 LOAD_ATTR                3 (NULL|self + get)\n           1726 LOAD_CONST              53 ('agent')\n           1728 CALL                     1\n           1736 FORMAT_VALUE             0\n           1738 LOAD_CONST              52 (' ')\n\n551        1740 LOAD_FAST               18 (conflict)\n           1742 LOAD_ATTR                3 (NULL|self + get)\n           1762 LOAD_CONST              54 ('platform')\n           1764 CALL                     1\n           1772 FORMAT_VALUE             0\n           1774 LOAD_CONST              52 (' ')\n           1776 LOAD_FAST               18 (conflict)\n           1778 LOAD_ATTR                3 (NULL|self + get)\n           1798 LOAD_CONST              55 ('instance_job_id')\n           1800 CALL                     1\n           1808 FORMAT_VALUE             0\n           1810 LOAD_CONST              56 (' status=')\n\n552        1812 LOAD_FAST               18 (conflict)\n           1814 LOAD_ATTR                3 (NULL|self + get)\n           1834 LOAD_CONST              57 ('status')\n           1836 CALL                     1\n           1844 FORMAT_VALUE             0\n\n549        1846 BUILD_STRING            10\n\n545        1848 CALL                     3\n           1856 POP_TOP\n           1858 JUMP_BACKWARD          107 (to 1646)\n\n544     >> 1860 END_FOR\n\n557        1862 LOAD_GLOBAL             36 (SCHEMA)\n\n558        1872 LOAD_GLOBAL             11 (NULL + str)\n           1882 LOAD_FAST                0 (manifest_path)\n           1884 CALL                     1\n\n559        1892 LOAD_FAST                4 (manifest)\n           1894 LOAD_ATTR                3 (NULL|self + get)\n           1914 LOAD_CONST              58 ('candidate_id')\n           1916 CALL                     1\n\n560        1924 LOAD_FAST                5 (blockers)\n           1926 UNARY_NOT\n\n561        1928 LOAD_FAST                5 (blockers)\n\n562        1930 LOAD_FAST                6 (warnings)\n\n563        1932 LOAD_FAST               17 (lane_claim)\n\n564        1934 LOAD_GLOBAL             39 (NULL + bool)\n           1944 LOAD_FAST                4 (manifest)\n           1946 LOAD_ATTR                3 (NULL|self + get)\n           1966 LOAD_CONST              59 ('score_claim')\n           1968 LOAD_CONST              10 (False)\n           1970 CALL                     2\n           1978 CALL                     1\n\n565        1986 LOAD_GLOBAL             39 (NULL + bool)\n           1996 LOAD_FAST                4 (manifest)\n           1998 LOAD_ATTR                3 (NULL|self + get)\n           2018 LOAD_CONST              60 ('dispatch_performed')\n           2020 LOAD_CONST              10 (False)\n           2022 CALL                     2\n           2030 CALL                     1\n\n566        2038 LOAD_GLOBAL             39 (NULL + bool)\n           2048 LOAD_FAST                4 (manifest)\n           2050 LOAD_ATTR                3 (NULL|self + get)\n           2070 LOAD_CONST              61 ('remote_jobs_dispatched')\n           2072 LOAD_CONST              10 (False)\n           2074 CALL                     2\n           2082 CALL                     1\n\n556        2090 LOAD_CONST              62 (('schema', 'manifest_path', 'candidate_id', 'ready_for_exact_eval_dispatch', 'blockers', 'warnings', 'lane_claim', 'score_claim', 'dispatch_performed', 'remote_jobs_dispatched'))\n           2092 BUILD_CONST_KEY_MAP     10\n           2094 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "main",
+      "name": "main",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "argv",
+        "parser",
+        "args",
+        "payload",
+        "text"
+      ],
+      "names": [
+        "argparse",
+        "ArgumentParser",
+        "__doc__",
+        "add_argument",
+        "Path",
+        "float",
+        "parse_args",
+        "build_preflight",
+        "manifest",
+        "claims_path",
+        "now_utc",
+        "ttl_hours",
+        "json",
+        "dumps",
+        "json_out",
+        "parent",
+        "mkdir",
+        "write_text",
+        "print",
+        "fail_if_not_ready"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "570           0 RESUME                   0\n\n571           2 LOAD_GLOBAL              1 (NULL + argparse)\n             12 LOAD_ATTR                2 (ArgumentParser)\n             32 LOAD_GLOBAL              4 (__doc__)\n             42 KW_NAMES                 1 (('description',))\n             44 CALL                     1\n             52 STORE_FAST               1 (parser)\n\n572          54 LOAD_FAST                1 (parser)\n             56 LOAD_ATTR                7 (NULL|self + add_argument)\n             76 LOAD_CONST               2 ('--manifest')\n             78 LOAD_GLOBAL              8 (Path)\n             88 LOAD_CONST               3 (True)\n             90 KW_NAMES                 4 (('type', 'required'))\n             92 CALL                     3\n            100 POP_TOP\n\n573         102 LOAD_FAST                1 (parser)\n            104 LOAD_ATTR                7 (NULL|self + add_argument)\n            124 LOAD_CONST               5 ('--claims-path')\n            126 LOAD_GLOBAL              8 (Path)\n            136 KW_NAMES                 6 (('type',))\n            138 CALL                     2\n            146 POP_TOP\n\n574         148 LOAD_FAST                1 (parser)\n            150 LOAD_ATTR                7 (NULL|self + add_argument)\n            170 LOAD_CONST               7 ('--now-utc')\n            172 CALL                     1\n            180 POP_TOP\n\n575         182 LOAD_FAST                1 (parser)\n            184 LOAD_ATTR                7 (NULL|self + add_argument)\n            204 LOAD_CONST               8 ('--ttl-hours')\n            206 LOAD_GLOBAL             10 (float)\n            216 LOAD_CONST               9 (24.0)\n            218 KW_NAMES                10 (('type', 'default'))\n            220 CALL                     3\n            228 POP_TOP\n\n576         230 LOAD_FAST                1 (parser)\n            232 LOAD_ATTR                7 (NULL|self + add_argument)\n            252 LOAD_CONST              11 ('--json-out')\n            254 LOAD_GLOBAL              8 (Path)\n            264 KW_NAMES                 6 (('type',))\n            266 CALL                     2\n            274 POP_TOP\n\n577         276 LOAD_FAST                1 (parser)\n            278 LOAD_ATTR                7 (NULL|self + add_argument)\n            298 LOAD_CONST              12 ('--fail-if-not-ready')\n            300 LOAD_CONST              13 ('store_true')\n            302 KW_NAMES                14 (('action',))\n            304 CALL                     2\n            312 POP_TOP\n\n578         314 LOAD_FAST                1 (parser)\n            316 LOAD_ATTR               13 (NULL|self + parse_args)\n            336 LOAD_FAST                0 (argv)\n            338 CALL                     1\n            346 STORE_FAST               2 (args)\n\n580         348 LOAD_GLOBAL             15 (NULL + build_preflight)\n\n581         358 LOAD_FAST                2 (args)\n            360 LOAD_ATTR               16 (manifest)\n\n582         380 LOAD_FAST                2 (args)\n            382 LOAD_ATTR               18 (claims_path)\n\n583         402 LOAD_FAST                2 (args)\n            404 LOAD_ATTR               20 (now_utc)\n\n584         424 LOAD_FAST                2 (args)\n            426 LOAD_ATTR               22 (ttl_hours)\n\n580         446 KW_NAMES                15 (('claims_path', 'now_utc', 'ttl_hours'))\n            448 CALL                     4\n            456 STORE_FAST               3 (payload)\n\n586         458 LOAD_GLOBAL             25 (NULL + json)\n            468 LOAD_ATTR               26 (dumps)\n            488 LOAD_FAST                3 (payload)\n            490 LOAD_CONST              16 (2)\n            492 LOAD_CONST               3 (True)\n            494 LOAD_CONST              17 (False)\n            496 KW_NAMES                18 (('indent', 'sort_keys', 'allow_nan'))\n            498 CALL                     4\n            506 LOAD_CONST              19 ('\\n')\n            508 BINARY_OP                0 (+)\n            512 STORE_FAST               4 (text)\n\n587         514 LOAD_FAST                2 (args)\n            516 LOAD_ATTR               28 (json_out)\n            536 POP_JUMP_IF_FALSE       68 (to 674)\n\n588         538 LOAD_FAST                2 (args)\n            540 LOAD_ATTR               28 (json_out)\n            560 LOAD_ATTR               30 (parent)\n            580 LOAD_ATTR               33 (NULL|self + mkdir)\n            600 LOAD_CONST               3 (True)\n            602 LOAD_CONST               3 (True)\n            604 KW_NAMES                20 (('parents', 'exist_ok'))\n            606 CALL                     2\n            614 POP_TOP\n\n589         616 LOAD_FAST                2 (args)\n            618 LOAD_ATTR               28 (json_out)\n            638 LOAD_ATTR               35 (NULL|self + write_text)\n            658 LOAD_FAST                4 (text)\n            660 LOAD_CONST              21 ('utf-8')\n            662 KW_NAMES                22 (('encoding',))\n            664 CALL                     2\n            672 POP_TOP\n\n590     >>  674 LOAD_GLOBAL             37 (NULL + print)\n            684 LOAD_FAST                4 (text)\n            686 LOAD_CONST              23 ('')\n            688 KW_NAMES                24 (('end',))\n            690 CALL                     2\n            698 POP_TOP\n\n591         700 LOAD_FAST                2 (args)\n            702 LOAD_ATTR               38 (fail_if_not_ready)\n            722 POP_JUMP_IF_FALSE        6 (to 736)\n            724 LOAD_FAST                3 (payload)\n            726 LOAD_CONST              25 ('ready_for_exact_eval_dispatch')\n            728 BINARY_SUBSCR\n            732 POP_JUMP_IF_TRUE         1 (to 736)\n\n592         734 RETURN_CONST            16 (2)\n\n593     >>  736 RETURN_CONST            26 (0)\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  2           2 LOAD_CONST               0 ('Fail-closed preflight for candidate manifest dispatch readiness.\\n\\nThis is a cheap local guard for the gap between builder-specific readiness\\nfields and the narrower Lightning submit-time ``exact_eval_dispatch_gate``.\\nRun it on a candidate ``manifest.json`` before any lane claim or exact-eval\\nqueue command.\\n')\n              4 STORE_NAME               0 (__doc__)\n\n 10           6 LOAD_CONST               1 (0)\n              8 LOAD_CONST               2 (('annotations',))\n             10 IMPORT_NAME              1 (__future__)\n             12 IMPORT_FROM              2 (annotations)\n             14 STORE_NAME               2 (annotations)\n             16 POP_TOP\n\n 12          18 LOAD_CONST               1 (0)\n             20 LOAD_CONST               3 (None)\n             22 IMPORT_NAME              3 (argparse)\n             24 STORE_NAME               3 (argparse)\n\n 13          26 LOAD_CONST               1 (0)\n             28 LOAD_CONST               3 (None)\n             30 IMPORT_NAME              4 (datetime)\n             32 STORE_NAME               5 (dt)\n\n 14          34 LOAD_CONST               1 (0)\n             36 LOAD_CONST               3 (None)\n             38 IMPORT_NAME              6 (json)\n             40 STORE_NAME               6 (json)\n\n 15          42 LOAD_CONST               1 (0)\n             44 LOAD_CONST               3 (None)\n             46 IMPORT_NAME              7 (sys)\n             48 STORE_NAME               7 (sys)\n\n 16          50 LOAD_CONST               1 (0)\n             52 LOAD_CONST               4 (('Mapping', 'Sequence'))\n             54 IMPORT_NAME              8 (collections.abc)\n             56 IMPORT_FROM              9 (Mapping)\n             58 STORE_NAME               9 (Mapping)\n             60 IMPORT_FROM             10 (Sequence)\n             62 STORE_NAME              10 (Sequence)\n             64 POP_TOP\n\n 17          66 LOAD_CONST               1 (0)\n             68 LOAD_CONST               5 (('Path',))\n             70 IMPORT_NAME             11 (pathlib)\n             72 IMPORT_FROM             12 (Path)\n             74 STORE_NAME              12 (Path)\n             76 POP_TOP\n\n 18          78 LOAD_CONST               1 (0)\n             80 LOAD_CONST               6 (('Any',))\n             82 IMPORT_NAME             13 (typing)\n             84 IMPORT_FROM             14 (Any)\n             86 STORE_NAME              14 (Any)\n             88 POP_TOP\n\n 21          90 LOAD_CONST               7 ('candidate_manifest_dispatch_readiness_preflight_v1')\n             92 STORE_NAME              15 (SCHEMA)\n\n 22          94 LOAD_CONST               8 (('blocked', 'fail_closed', 'failed', 'missing', 'non_dispatchable', 'not_run', 'planning_only', 'no_remote_dispatch', 'local_only', 'invalid', 'negative'))\n             96 STORE_NAME              16 (BLOCKING_TEXT_MARKERS)\n\n 35          98 LOAD_CONST               9 (('eligible_for_exact_eval_after_lane_claim', 'eligible_for_cuda_auth_eval_after_lane_claim', 'ready', 'passed'))\n            100 STORE_NAME              17 (READY_TEXT_MARKERS)\n\n 41         102 LOAD_CONST              10 (('dispatch_unlocked', 'ready_for_exact_eval_after_lane_claim', 'ready_for_exact_eval_dispatch_claim', 'ready_for_exact_eval_dispatch', 'ready_for_fixed_runtime_exact_eval', 'safe_for_exact_eval_dispatch', 'safe_for_remote_dispatch', 'dispatchable', 'dispatch_ready_now'))\n            104 STORE_NAME              18 (FALSE_READY_FIELDS)\n\n 52         106 LOAD_CONST              11 (('stbm1br', 'hpm1', 'hpac', 'qfq4', 'qma9', 'qh0', 'qps1', 'qzs3', 'qrgb'))\n            108 STORE_NAME              19 (RUNTIME_CHANGING_MARKERS)\n\n 63         110 LOAD_CONST              12 (('formula_only', 'if_components_identical', 'if_archive_is_valid'))\n            112 STORE_NAME              20 (FORMULA_ONLY_KEY_MARKERS)\n\n 68         114 LOAD_CONST              13 (('runtime_can_decode_without_edits', 'runtime_can_decode', 'public_pr85_replay_qfq4_model_loader', 'robust_current_qfq4_renderer_loader'))\n            116 STORE_NAME              21 (RUNTIME_SUPPORT_FALSE_KEYS)\n\n 74         118 LOAD_CONST              14 (('decoded_tensor_parity', 'local_decode_byte_parity_proven', 'full_decode_byte_parity_proven', 'byte_parity_achieved', 'pr91_ready_for_exact_eval'))\n            120 STORE_NAME              22 (DECODE_PARITY_FALSE_KEYS)\n\n 81         122 LOAD_CONST              15 (('completed_', 'completed_score=', 'completed_no_frontier', 'failed_', 'preempted', 'cancelled', 'refused_dispatch', 'stale_assumed_dead', 'stale_superseded', 'stopped_'))\n            124 STORE_NAME              23 (TERMINAL_CLAIM_STATUS_PREFIXES)\n\n 95         126 LOAD_CONST              42 (('path', 'Path', 'return', 'dict[str, Any]'))\n            128 LOAD_CONST              16 (<code object _load_json_object at 0x100dc17d0, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 95>)\n            130 MAKE_FUNCTION            4 (annotations)\n            132 STORE_NAME              24 (_load_json_object)\n\n105         134 LOAD_CONST              43 (('items', 'Any', 'return', 'list[str]'))\n            136 LOAD_CONST              17 (<code object _stringify_items at 0x100d69530, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 105>)\n            138 MAKE_FUNCTION            4 (annotations)\n            140 STORE_NAME              25 (_stringify_items)\n\n113         142 LOAD_CONST              44 (('value', 'str', 'return', 'bool'))\n            144 LOAD_CONST              18 (<code object _has_blocking_text at 0x100e95c50, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 113>)\n            146 MAKE_FUNCTION            4 (annotations)\n            148 STORE_NAME              26 (_has_blocking_text)\n\n118         150 LOAD_CONST              44 (('value', 'str', 'return', 'bool'))\n            152 LOAD_CONST              19 (<code object _has_ready_text at 0x100e95d70, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 118>)\n            154 MAKE_FUNCTION            4 (annotations)\n            156 STORE_NAME              27 (_has_ready_text)\n\n123         158 LOAD_CONST              45 (('blockers', 'list[dict[str, Any]]', 'code', 'str', 'detail', 'str', 'return', 'None'))\n            160 LOAD_CONST              20 (<code object _append_blocker at 0x100e5a790, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 123>)\n            162 MAKE_FUNCTION            4 (annotations)\n            164 STORE_NAME              28 (_append_blocker)\n\n127         166 LOAD_CONST              46 (('value', 'Any', 'return', 'bool'))\n            168 LOAD_CONST              21 (<code object _contains_runtime_changing_marker at 0x100ecc630, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 127>)\n            170 MAKE_FUNCTION            4 (annotations)\n            172 STORE_NAME              29 (_contains_runtime_changing_marker)\n\n136         174 LOAD_CONST              47 (('manifest', 'Mapping[str, Any]', 'return', 'bool'))\n            176 LOAD_CONST              22 (<code object _requires_exact_runtime_contract at 0x100dc1980, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 136>)\n            178 MAKE_FUNCTION            4 (annotations)\n            180 STORE_NAME              30 (_requires_exact_runtime_contract)\n\n157         182 LOAD_CONST              23 ('')\n            184 LOAD_CONST              24 (('prefix',))\n            186 BUILD_CONST_KEY_MAP      1\n            188 LOAD_CONST              48 (('value', 'Any', 'prefix', 'str', 'return', 'list[tuple[str, Any]]'))\n            190 LOAD_CONST              25 (<code object _iter_leaf_values at 0x94b223c00, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 157>)\n            192 MAKE_FUNCTION            6 (kwdefaults, annotations)\n            194 STORE_NAME              31 (_iter_leaf_values)\n\n171         196 LOAD_CONST              49 (('path', 'str', 'return', 'str'))\n            198 LOAD_CONST              26 (<code object _leaf_key at 0x100e95e90, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 171>)\n            200 MAKE_FUNCTION            4 (annotations)\n            202 STORE_NAME              32 (_leaf_key)\n\n175         204 LOAD_CONST              46 (('value', 'Any', 'return', 'bool'))\n            206 LOAD_CONST              27 (<code object _is_nonzero_formula_value at 0x100ec2cd0, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 175>)\n            208 MAKE_FUNCTION            4 (annotations)\n            210 STORE_NAME              33 (_is_nonzero_formula_value)\n\n183         212 LOAD_CONST              50 (('path', 'str', 'manifest', 'Mapping[str, Any]', 'return', 'bool'))\n            214 LOAD_CONST              28 (<code object _is_explanatory_rate_formula_path at 0x94b223980, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 183>)\n            216 MAKE_FUNCTION            4 (annotations)\n            218 STORE_NAME              34 (_is_explanatory_rate_formula_path)\n\n211         220 NOP\n\n212         222 NOP\n\n211         224 NOP\n\n214         226 NOP\n\n211         228 NOP\n\n215         230 NOP\n\n211         232 NOP\n\n216         234 NOP\n\n211         236 LOAD_CONST              51 (('manifest', 'Mapping[str, Any]', 'blockers', 'list[dict[str, Any]]', 'warnings', 'list[dict[str, Any]]', 'return', 'None'))\n            238 LOAD_CONST              29 (<code object _audit_recursive_fail_closed_fields at 0x94b244900, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 211>)\n            240 MAKE_FUNCTION            4 (annotations)\n            242 STORE_NAME              35 (_audit_recursive_fail_closed_fields)\n\n258         244 NOP\n\n259         246 NOP\n\n258         248 NOP\n\n261         250 NOP\n\n258         252 NOP\n\n262         254 NOP\n\n258         256 NOP\n\n263         258 NOP\n\n258         260 NOP\n\n264         262 NOP\n\n258         264 LOAD_CONST              52 (('gate', 'Mapping[str, Any]', 'path', 'str', 'blockers', 'list[dict[str, Any]]', 'warnings', 'list[dict[str, Any]]', 'return', 'None'))\n            266 LOAD_CONST              30 (<code object _audit_gate_mapping at 0x94acafb80, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 258>)\n            268 MAKE_FUNCTION            4 (annotations)\n            270 STORE_NAME              36 (_audit_gate_mapping)\n\n307         272 LOAD_CONST              53 (('value', 'str', 'return', 'dt.datetime | None'))\n            274 LOAD_CONST              31 (<code object _parse_utc at 0x94b248280, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 307>)\n            276 MAKE_FUNCTION            4 (annotations)\n            278 STORE_NAME              37 (_parse_utc)\n\n320         280 LOAD_CONST              54 (('status', 'str', 'return', 'bool'))\n            282 LOAD_CONST              32 (<code object _is_terminal_claim_status at 0x100eb9130, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 320>)\n            284 MAKE_FUNCTION            4 (annotations)\n            286 STORE_NAME              38 (_is_terminal_claim_status)\n\n324         288 LOAD_CONST              55 (('path', 'Path', 'return', 'list[dict[str, str]]'))\n            290 LOAD_CONST              33 (<code object _parse_claim_rows at 0x94b245200, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 324>)\n            292 MAKE_FUNCTION            4 (annotations)\n            294 STORE_NAME              39 (_parse_claim_rows)\n\n349         296 LOAD_CONST              56 (('manifest', 'Mapping[str, Any]', 'return', 'str | None'))\n            298 LOAD_CONST              34 (<code object _manifest_lane_id at 0x94b248500, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 349>)\n            300 MAKE_FUNCTION            4 (annotations)\n            302 STORE_NAME              40 (_manifest_lane_id)\n\n364         304 NOP\n\n365         306 NOP\n\n364         308 NOP\n\n367         310 NOP\n\n364         312 NOP\n\n368         314 NOP\n\n364         316 NOP\n\n369         318 NOP\n\n364         320 NOP\n\n370         322 NOP\n\n364         324 LOAD_CONST              57 (('claims', 'Sequence[Mapping[str, str]]', 'lane_id', 'str', 'now', 'dt.datetime', 'ttl_hours', 'float', 'return', 'list[dict[str, str]]'))\n            326 LOAD_CONST              35 (<code object _active_lane_claims at 0x94b245500, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 364>)\n            328 MAKE_FUNCTION            4 (annotations)\n            330 STORE_NAME              41 (_active_lane_claims)\n\n390         332 NOP\n\n391         334 NOP\n\n390         336 NOP\n\n393         338 NOP\n\n390         340 NOP\n\n394         342 NOP\n\n390         344 NOP\n\n395         346 NOP\n\n390         348 NOP\n\n396         350 NOP\n\n390         352 LOAD_CONST              58 (('manifest', 'Mapping[str, Any]', 'claims_path', 'Path | None', 'now_utc', 'str | None', 'ttl_hours', 'float', 'return', 'dict[str, Any]'))\n            354 LOAD_CONST              36 (<code object _lane_claim_report at 0x94b248780, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 390>)\n            356 MAKE_FUNCTION            4 (annotations)\n            358 STORE_NAME              42 (_lane_claim_report)\n\n424         360 LOAD_CONST               3 (None)\n\n425         362 LOAD_CONST               3 (None)\n\n426         364 LOAD_CONST              37 (24.0)\n\n421         366 LOAD_CONST              38 (('claims_path', 'now_utc', 'ttl_hours'))\n            368 BUILD_CONST_KEY_MAP      3\n\n422         370 NOP\n\n421         372 NOP\n\n424         374 NOP\n\n421         376 NOP\n\n425         378 NOP\n\n421         380 NOP\n\n426         382 NOP\n\n421         384 NOP\n\n427         386 NOP\n\n421         388 LOAD_CONST              59 (('manifest_path', 'Path', 'claims_path', 'Path | None', 'now_utc', 'str | None', 'ttl_hours', 'float', 'return', 'dict[str, Any]'))\n            390 LOAD_CONST              39 (<code object build_preflight at 0x94ac4f200, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 421>)\n            392 MAKE_FUNCTION            6 (kwdefaults, annotations)\n            394 STORE_NAME              43 (build_preflight)\n\n570         396 LOAD_CONST              60 ((None,))\n            398 LOAD_CONST              61 (('argv', 'list[str] | None', 'return', 'int'))\n            400 LOAD_CONST              40 (<code object main at 0x94b23e000, file \"experiments/preflight_candidate_manifest_dispatch_readiness.py\", line 570>)\n            402 MAKE_FUNCTION            5 (defaults, annotations)\n            404 STORE_NAME              44 (main)\n\n596         406 LOAD_NAME               45 (__name__)\n            408 LOAD_CONST              41 ('__main__')\n            410 COMPARE_OP              40 (==)\n            414 POP_JUMP_IF_FALSE       13 (to 442)\n\n597         416 PUSH_NULL\n            418 LOAD_NAME               46 (SystemExit)\n            420 PUSH_NULL\n            422 LOAD_NAME               44 (main)\n            424 CALL                     0\n            432 CALL                     1\n            440 RAISE_VARARGS            1\n\n596     >>  442 RETURN_CONST             3 (None)\n"
+}

@@ -1,0 +1,243 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/src/tac/tests/__pycache__/test_build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.cpython-312.pyc",
+  "names": [
+    "__future__",
+    "annotations",
+    "importlib.util",
+    "importlib",
+    "json",
+    "sys",
+    "zipfile",
+    "pathlib",
+    "Path",
+    "pytest",
+    "__file__",
+    "resolve",
+    "parents",
+    "REPO",
+    "SCRIPT",
+    "_load_script",
+    "module",
+    "_require_real_inputs",
+    "test_real_pr85_stbm1br_pr92_rmb1_candidate_builds_with_dispatch_guards"
+  ],
+  "varnames": [],
+  "consts": [
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "Path"
+    ],
+    3,
+    "experiments",
+    "build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py",
+    {
+      "__code__": "_load_script",
+      "qualname": "_load_script",
+      "argcount": 0,
+      "varnames": [
+        "spec",
+        "module"
+      ],
+      "names": [
+        "importlib",
+        "util",
+        "spec_from_file_location",
+        "SCRIPT",
+        "loader",
+        "module_from_spec",
+        "sys",
+        "modules",
+        "name",
+        "exec_module"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_require_real_inputs",
+      "qualname": "_require_real_inputs",
+      "argcount": 0,
+      "varnames": [
+        "required",
+        "path",
+        "missing"
+      ],
+      "names": [
+        "module",
+        "DEFAULT_PR85_ARCHIVE",
+        "DEFAULT_STBM_ARCHIVE",
+        "DEFAULT_STBM_MANIFEST",
+        "DEFAULT_PR92_ARCHIVE",
+        "DEFAULT_PR92_PROFILE",
+        "DEFAULT_STBM_REPLAY_RUNTIME",
+        "DEFAULT_STBM_EXACT_T4",
+        "Path",
+        "exists",
+        "str",
+        "pytest",
+        "skip",
+        "join"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_real_pr85_stbm1br_pr92_rmb1_candidate_builds_with_dispatch_guards",
+      "qualname": "test_real_pr85_stbm1br_pr92_rmb1_candidate_builds_with_dispatch_guards",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "summary",
+        "manifest_path",
+        "manifest",
+        "row",
+        "archive_path",
+        "zf",
+        "info",
+        "infos"
+      ],
+      "names": [
+        "_require_real_inputs",
+        "module",
+        "build_candidate",
+        "Path",
+        "is_absolute",
+        "REPO",
+        "is_file",
+        "CANDIDATE_ID",
+        "json",
+        "loads",
+        "read_text",
+        "EXPECTED",
+        "zipfile",
+        "ZipFile",
+        "infolist",
+        "is_dir",
+        "filename",
+        "compress_type",
+        "ZIP_STORED"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    [
+      "return",
+      "None"
+    ],
+    [
+      "tmp_path",
+      "Path",
+      "return",
+      "None"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": null,
+  "child_codes": [
+    {
+      "qualname": "_load_script",
+      "name": "_load_script",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "spec",
+        "module"
+      ],
+      "names": [
+        "importlib",
+        "util",
+        "spec_from_file_location",
+        "SCRIPT",
+        "loader",
+        "module_from_spec",
+        "sys",
+        "modules",
+        "name",
+        "exec_module"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 16           0 RESUME                   0\n\n 17           2 LOAD_GLOBAL              0 (importlib)\n             12 LOAD_ATTR                2 (util)\n             32 LOAD_ATTR                5 (NULL|self + spec_from_file_location)\n             52 LOAD_CONST               1 ('build_pr85_stbm1br_pr92_rmb1_test')\n             54 LOAD_GLOBAL              6 (SCRIPT)\n             64 CALL                     2\n             72 STORE_FAST               0 (spec)\n\n 18          74 LOAD_FAST                0 (spec)\n             76 POP_JUMP_IF_NONE        12 (to 102)\n             78 LOAD_FAST                0 (spec)\n             80 LOAD_ATTR                8 (loader)\n            100 POP_JUMP_IF_NOT_NONE     2 (to 106)\n        >>  102 LOAD_ASSERTION_ERROR\n            104 RAISE_VARARGS            1\n\n 19     >>  106 LOAD_GLOBAL              0 (importlib)\n            116 LOAD_ATTR                2 (util)\n            136 LOAD_ATTR               11 (NULL|self + module_from_spec)\n            156 LOAD_FAST                0 (spec)\n            158 CALL                     1\n            166 STORE_FAST               1 (module)\n\n 20         168 LOAD_FAST                1 (module)\n            170 LOAD_GLOBAL             12 (sys)\n            180 LOAD_ATTR               14 (modules)\n            200 LOAD_FAST                0 (spec)\n            202 LOAD_ATTR               16 (name)\n            222 STORE_SUBSCR\n\n 21         226 LOAD_FAST                0 (spec)\n            228 LOAD_ATTR                8 (loader)\n            248 LOAD_ATTR               19 (NULL|self + exec_module)\n            268 LOAD_FAST                1 (module)\n            270 CALL                     1\n            278 POP_TOP\n\n 22         280 LOAD_FAST                1 (module)\n            282 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_require_real_inputs",
+      "name": "_require_real_inputs",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "required",
+        "path",
+        "missing"
+      ],
+      "names": [
+        "module",
+        "DEFAULT_PR85_ARCHIVE",
+        "DEFAULT_STBM_ARCHIVE",
+        "DEFAULT_STBM_MANIFEST",
+        "DEFAULT_PR92_ARCHIVE",
+        "DEFAULT_PR92_PROFILE",
+        "DEFAULT_STBM_REPLAY_RUNTIME",
+        "DEFAULT_STBM_EXACT_T4",
+        "Path",
+        "exists",
+        "str",
+        "pytest",
+        "skip",
+        "join"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 28           0 RESUME                   0\n\n 30           2 LOAD_GLOBAL              0 (module)\n             12 LOAD_ATTR                2 (DEFAULT_PR85_ARCHIVE)\n\n 31          32 LOAD_GLOBAL              0 (module)\n             42 LOAD_ATTR                4 (DEFAULT_STBM_ARCHIVE)\n\n 32          62 LOAD_GLOBAL              0 (module)\n             72 LOAD_ATTR                6 (DEFAULT_STBM_MANIFEST)\n\n 33          92 LOAD_GLOBAL              0 (module)\n            102 LOAD_ATTR                8 (DEFAULT_PR92_ARCHIVE)\n\n 34         122 LOAD_GLOBAL              0 (module)\n            132 LOAD_ATTR               10 (DEFAULT_PR92_PROFILE)\n\n 35         152 LOAD_GLOBAL              0 (module)\n            162 LOAD_ATTR               12 (DEFAULT_STBM_REPLAY_RUNTIME)\n            182 LOAD_CONST               1 ('inflate.py')\n            184 BINARY_OP               11 (/)\n\n 36         188 LOAD_GLOBAL              0 (module)\n            198 LOAD_ATTR               14 (DEFAULT_STBM_EXACT_T4)\n\n 29         218 BUILD_LIST               7\n            220 STORE_FAST               0 (required)\n\n 38         222 LOAD_FAST                0 (required)\n            224 GET_ITER\n            226 LOAD_FAST_AND_CLEAR      1 (path)\n            228 SWAP                     2\n            230 BUILD_LIST               0\n            232 SWAP                     2\n        >>  234 FOR_ITER                39 (to 316)\n            238 STORE_FAST               1 (path)\n            240 LOAD_GLOBAL             17 (NULL + Path)\n            250 LOAD_FAST                1 (path)\n            252 CALL                     1\n            260 LOAD_ATTR               19 (NULL|self + exists)\n            280 CALL                     0\n            288 POP_JUMP_IF_FALSE        1 (to 292)\n            290 JUMP_BACKWARD           29 (to 234)\n        >>  292 LOAD_GLOBAL             21 (NULL + str)\n            302 LOAD_FAST                1 (path)\n            304 CALL                     1\n            312 LIST_APPEND              2\n            314 JUMP_BACKWARD           41 (to 234)\n        >>  316 END_FOR\n            318 STORE_FAST               2 (missing)\n            320 STORE_FAST               1 (path)\n\n 39         322 LOAD_FAST                2 (missing)\n            324 POP_JUMP_IF_FALSE       40 (to 406)\n\n 40         326 LOAD_GLOBAL             23 (NULL + pytest)\n            336 LOAD_ATTR               24 (skip)\n            356 LOAD_CONST               2 ('required local PR85/STBM/PR92 artifacts are missing: ')\n            358 LOAD_CONST               3 (', ')\n            360 LOAD_ATTR               27 (NULL|self + join)\n            380 LOAD_FAST                2 (missing)\n            382 CALL                     1\n            390 BINARY_OP                0 (+)\n            394 CALL                     1\n            402 POP_TOP\n            404 RETURN_CONST             0 (None)\n\n 39     >>  406 RETURN_CONST             0 (None)\n        >>  408 SWAP                     2\n            410 POP_TOP\n\n 38         412 SWAP                     2\n            414 STORE_FAST               1 (path)\n            416 RERAISE                  0\nExceptionTable:\n  230 to 288 -> 408 [2]\n  292 to 316 -> 408 [2]\n"
+    },
+    {
+      "qualname": "test_real_pr85_stbm1br_pr92_rmb1_candidate_builds_with_dispatch_guards",
+      "name": "test_real_pr85_stbm1br_pr92_rmb1_candidate_builds_with_dispatch_guards",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "summary",
+        "manifest_path",
+        "manifest",
+        "row",
+        "archive_path",
+        "zf",
+        "info",
+        "infos"
+      ],
+      "names": [
+        "_require_real_inputs",
+        "module",
+        "build_candidate",
+        "Path",
+        "is_absolute",
+        "REPO",
+        "is_file",
+        "CANDIDATE_ID",
+        "json",
+        "loads",
+        "read_text",
+        "EXPECTED",
+        "zipfile",
+        "ZipFile",
+        "infolist",
+        "is_dir",
+        "filename",
+        "compress_type",
+        "ZIP_STORED"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 43           0 RESUME                   0\n\n 44           2 LOAD_GLOBAL              1 (NULL + _require_real_inputs)\n             12 CALL                     0\n             20 POP_TOP\n\n 46          22 LOAD_GLOBAL              2 (module)\n             32 LOAD_ATTR                5 (NULL|self + build_candidate)\n             52 LOAD_FAST                0 (tmp_path)\n             54 LOAD_CONST               1 ('candidate')\n             56 BINARY_OP               11 (/)\n             60 KW_NAMES                 2 (('out_dir',))\n             62 CALL                     1\n             70 STORE_FAST               1 (summary)\n\n 47          72 LOAD_GLOBAL              7 (NULL + Path)\n             82 LOAD_FAST                1 (summary)\n             84 LOAD_CONST               3 ('candidate_manifest')\n             86 BINARY_SUBSCR\n             90 CALL                     1\n             98 LOAD_ATTR                9 (NULL|self + is_absolute)\n            118 CALL                     0\n            126 POP_JUMP_IF_TRUE        12 (to 152)\n            128 LOAD_GLOBAL             10 (REPO)\n            138 LOAD_FAST                1 (summary)\n            140 LOAD_CONST               3 ('candidate_manifest')\n            142 BINARY_SUBSCR\n            146 BINARY_OP               11 (/)\n            150 JUMP_FORWARD            13 (to 178)\n        >>  152 LOAD_GLOBAL              7 (NULL + Path)\n            162 LOAD_FAST                1 (summary)\n            164 LOAD_CONST               3 ('candidate_manifest')\n            166 BINARY_SUBSCR\n            170 CALL                     1\n        >>  178 STORE_FAST               2 (manifest_path)\n\n 48         180 LOAD_FAST                2 (manifest_path)\n            182 LOAD_ATTR               13 (NULL|self + is_file)\n            202 CALL                     0\n            210 POP_JUMP_IF_TRUE        25 (to 262)\n\n 49         212 LOAD_FAST                0 (tmp_path)\n            214 LOAD_CONST               1 ('candidate')\n            216 BINARY_OP               11 (/)\n            220 LOAD_GLOBAL              2 (module)\n            230 LOAD_ATTR               14 (CANDIDATE_ID)\n            250 BINARY_OP               11 (/)\n            254 LOAD_CONST               4 ('manifest.json')\n            256 BINARY_OP               11 (/)\n            260 STORE_FAST               2 (manifest_path)\n\n 50     >>  262 LOAD_GLOBAL             17 (NULL + json)\n            272 LOAD_ATTR               18 (loads)\n            292 LOAD_FAST                2 (manifest_path)\n            294 LOAD_ATTR               21 (NULL|self + read_text)\n            314 LOAD_CONST               5 ('utf-8')\n            316 KW_NAMES                 6 (('encoding',))\n            318 CALL                     1\n            326 CALL                     1\n            334 STORE_FAST               3 (manifest)\n\n 52         336 LOAD_FAST                1 (summary)\n            338 LOAD_CONST               7 ('score_claim')\n            340 BINARY_SUBSCR\n            344 LOAD_CONST               8 (False)\n            346 IS_OP                    0\n            348 POP_JUMP_IF_TRUE         2 (to 354)\n            350 LOAD_ASSERTION_ERROR\n            352 RAISE_VARARGS            1\n\n 53     >>  354 LOAD_FAST                1 (summary)\n            356 LOAD_CONST               9 ('dispatch_performed')\n            358 BINARY_SUBSCR\n            362 LOAD_CONST               8 (False)\n            364 IS_OP                    0\n            366 POP_JUMP_IF_TRUE         2 (to 372)\n            368 LOAD_ASSERTION_ERROR\n            370 RAISE_VARARGS            1\n\n 54     >>  372 LOAD_FAST                1 (summary)\n            374 LOAD_CONST              10 ('archive_delta_bytes_vs_stbm')\n            376 BINARY_SUBSCR\n            380 LOAD_CONST              11 (-276)\n            382 COMPARE_OP              40 (==)\n            386 POP_JUMP_IF_TRUE         2 (to 392)\n            388 LOAD_ASSERTION_ERROR\n            390 RAISE_VARARGS            1\n\n 55     >>  392 LOAD_FAST                1 (summary)\n            394 LOAD_CONST              12 ('strict_zip_valid')\n            396 BINARY_SUBSCR\n            400 LOAD_CONST              13 (True)\n            402 IS_OP                    0\n            404 POP_JUMP_IF_TRUE         2 (to 410)\n            406 LOAD_ASSERTION_ERROR\n            408 RAISE_VARARGS            1\n\n 56     >>  410 LOAD_FAST                1 (summary)\n            412 LOAD_CONST              14 ('exact_t4_dispatch_justified_after_claim')\n            414 BINARY_SUBSCR\n            418 LOAD_CONST              13 (True)\n            420 IS_OP                    0\n            422 POP_JUMP_IF_TRUE         2 (to 428)\n            424 LOAD_ASSERTION_ERROR\n            426 RAISE_VARARGS            1\n\n 57     >>  428 LOAD_FAST                3 (manifest)\n            430 LOAD_CONST              15 ('candidate_archive')\n            432 BINARY_SUBSCR\n            436 LOAD_CONST              16 ('archive_bytes')\n            438 BINARY_SUBSCR\n            442 LOAD_CONST              17 (229480)\n            444 COMPARE_OP              40 (==)\n            448 POP_JUMP_IF_TRUE         2 (to 454)\n            450 LOAD_ASSERTION_ERROR\n            452 RAISE_VARARGS            1\n\n 58     >>  454 LOAD_FAST                3 (manifest)\n            456 LOAD_CONST              15 ('candidate_archive')\n            458 BINARY_SUBSCR\n            462 LOAD_CONST              18 ('archive_sha256')\n            464 BINARY_SUBSCR\n            468 POP_JUMP_IF_TRUE         2 (to 474)\n            470 LOAD_ASSERTION_ERROR\n            472 RAISE_VARARGS            1\n\n 59     >>  474 LOAD_FAST                3 (manifest)\n            476 LOAD_CONST              19 ('non_noop_byte_change')\n            478 BINARY_SUBSCR\n            482 LOAD_CONST              20 ('randmulti_delta_bytes_vs_stbm')\n            484 BINARY_SUBSCR\n            488 LOAD_CONST              11 (-276)\n            490 COMPARE_OP              40 (==)\n            494 POP_JUMP_IF_TRUE         2 (to 500)\n            496 LOAD_ASSERTION_ERROR\n            498 RAISE_VARARGS            1\n\n 60     >>  500 LOAD_FAST                3 (manifest)\n            502 LOAD_CONST              21 ('stbm_mask_preservation')\n            504 BINARY_SUBSCR\n            508 LOAD_CONST              22 ('unchanged')\n            510 BINARY_SUBSCR\n            514 LOAD_CONST              13 (True)\n            516 IS_OP                    0\n            518 POP_JUMP_IF_TRUE         2 (to 524)\n            520 LOAD_ASSERTION_ERROR\n            522 RAISE_VARARGS            1\n\n 61     >>  524 LOAD_FAST                3 (manifest)\n            526 LOAD_CONST              23 ('randmulti_decoded_row_parity')\n            528 BINARY_SUBSCR\n            532 LOAD_CONST              24 ('decoded_rows_match')\n            534 BINARY_SUBSCR\n            538 LOAD_CONST              13 (True)\n            540 IS_OP                    0\n            542 POP_JUMP_IF_TRUE         2 (to 548)\n            544 LOAD_ASSERTION_ERROR\n            546 RAISE_VARARGS            1\n\n 62     >>  548 LOAD_FAST                3 (manifest)\n            550 LOAD_CONST              23 ('randmulti_decoded_row_parity')\n            552 BINARY_SUBSCR\n            556 LOAD_CONST              25 ('decoded_rows_sha256')\n            558 BINARY_SUBSCR\n            562 LOAD_GLOBAL              2 (module)\n            572 LOAD_ATTR               22 (EXPECTED)\n            592 LOAD_CONST              26 ('decoded_randmulti_rows_sha256')\n            594 BINARY_SUBSCR\n            598 COMPARE_OP              40 (==)\n            602 POP_JUMP_IF_TRUE         2 (to 608)\n            604 LOAD_ASSERTION_ERROR\n            606 RAISE_VARARGS            1\n\n 63     >>  608 LOAD_FAST                3 (manifest)\n            610 LOAD_CONST              27 ('segment_diffs')\n            612 BINARY_SUBSCR\n            616 LOAD_CONST              28 ('candidate_vs_stbm')\n            618 BINARY_SUBSCR\n            622 GET_ITER\n            624 LOAD_FAST_AND_CLEAR      4 (row)\n            626 SWAP                     2\n            628 BUILD_LIST               0\n            630 SWAP                     2\n        >>  632 FOR_ITER                 7 (to 650)\n            636 STORE_FAST               4 (row)\n            638 LOAD_FAST                4 (row)\n            640 LOAD_CONST              29 ('segment')\n            642 BINARY_SUBSCR\n            646 LIST_APPEND              2\n            648 JUMP_BACKWARD            9 (to 632)\n        >>  650 END_FOR\n            652 SWAP                     2\n            654 STORE_FAST               4 (row)\n            656 LOAD_CONST              30 ('randmulti')\n            658 BUILD_LIST               1\n            660 COMPARE_OP              40 (==)\n            664 POP_JUMP_IF_TRUE         2 (to 670)\n            666 LOAD_ASSERTION_ERROR\n            668 RAISE_VARARGS            1\n\n 64     >>  670 LOAD_FAST                3 (manifest)\n            672 LOAD_CONST              31 ('runtime_support')\n            674 BINARY_SUBSCR\n            678 LOAD_CONST              32 ('candidate_replay_runtime')\n            680 BINARY_SUBSCR\n            684 LOAD_CONST              33 ('status')\n            686 BINARY_SUBSCR\n            690 LOAD_CONST              34 ('passed')\n            692 COMPARE_OP              40 (==)\n            696 POP_JUMP_IF_TRUE         2 (to 702)\n            698 LOAD_ASSERTION_ERROR\n            700 RAISE_VARARGS            1\n\n 65     >>  702 LOAD_FAST                3 (manifest)\n            704 LOAD_CONST              31 ('runtime_support')\n            706 BINARY_SUBSCR\n            710 LOAD_CONST              35 ('robust_current_apply_qzs3_rmb1')\n            712 BINARY_SUBSCR\n            716 LOAD_CONST              33 ('status')\n            718 BINARY_SUBSCR\n            722 LOAD_CONST              34 ('passed')\n            724 COMPARE_OP              40 (==)\n            728 POP_JUMP_IF_TRUE         2 (to 734)\n            730 LOAD_ASSERTION_ERROR\n            732 RAISE_VARARGS            1\n\n 66     >>  734 LOAD_FAST                3 (manifest)\n            736 LOAD_CONST              36 ('exact_eval_runtime_contract')\n            738 BINARY_SUBSCR\n            742 LOAD_CONST              37 ('ready_for_exact_eval_runtime')\n            744 BINARY_SUBSCR\n            748 LOAD_CONST              13 (True)\n            750 IS_OP                    0\n            752 POP_JUMP_IF_TRUE         2 (to 758)\n            754 LOAD_ASSERTION_ERROR\n            756 RAISE_VARARGS            1\n\n 67     >>  758 LOAD_FAST                3 (manifest)\n            760 LOAD_CONST              36 ('exact_eval_runtime_contract')\n            762 BINARY_SUBSCR\n            766 LOAD_CONST              38 ('runtime_tree_sha256')\n            768 BINARY_SUBSCR\n            772 POP_JUMP_IF_TRUE         2 (to 778)\n            774 LOAD_ASSERTION_ERROR\n            776 RAISE_VARARGS            1\n\n 68     >>  778 LOAD_FAST                3 (manifest)\n            780 LOAD_CONST              36 ('exact_eval_runtime_contract')\n            782 BINARY_SUBSCR\n            786 LOAD_CONST              39 ('remaining_blockers')\n            788 BINARY_SUBSCR\n            792 BUILD_LIST               0\n            794 COMPARE_OP              40 (==)\n            798 POP_JUMP_IF_TRUE         2 (to 804)\n            800 LOAD_ASSERTION_ERROR\n            802 RAISE_VARARGS            1\n\n 69     >>  804 LOAD_FAST                3 (manifest)\n            806 LOAD_CONST              40 ('dispatch_readiness')\n            808 BINARY_SUBSCR\n            812 LOAD_CONST              41 ('checks')\n            814 BINARY_SUBSCR\n            818 LOAD_CONST              42 ('candidate_score_claim_false')\n            820 BINARY_SUBSCR\n            824 LOAD_CONST              13 (True)\n            826 IS_OP                    0\n            828 POP_JUMP_IF_TRUE         2 (to 834)\n            830 LOAD_ASSERTION_ERROR\n            832 RAISE_VARARGS            1\n\n 70     >>  834 LOAD_FAST                3 (manifest)\n            836 LOAD_CONST              40 ('dispatch_readiness')\n            838 BINARY_SUBSCR\n            842 LOAD_CONST              41 ('checks')\n            844 BINARY_SUBSCR\n            848 LOAD_CONST              43 ('remote_dispatch_not_performed')\n            850 BINARY_SUBSCR\n            854 LOAD_CONST              13 (True)\n            856 IS_OP                    0\n            858 POP_JUMP_IF_TRUE         2 (to 864)\n            860 LOAD_ASSERTION_ERROR\n            862 RAISE_VARARGS            1\n\n 71     >>  864 LOAD_CONST              44 ('tools/claim_lane_dispatch.py claim')\n            866 LOAD_FAST                3 (manifest)\n            868 LOAD_CONST              40 ('dispatch_readiness')\n            870 BINARY_SUBSCR\n            874 LOAD_CONST              45 ('next_claim_command')\n            876 BINARY_SUBSCR\n            880 CONTAINS_OP              0\n            882 POP_JUMP_IF_TRUE         2 (to 888)\n            884 LOAD_ASSERTION_ERROR\n            886 RAISE_VARARGS            1\n\n 73     >>  888 LOAD_GLOBAL             10 (REPO)\n            898 LOAD_FAST                3 (manifest)\n            900 LOAD_CONST              15 ('candidate_archive')\n            902 BINARY_SUBSCR\n            906 LOAD_CONST              46 ('path')\n            908 BINARY_SUBSCR\n            912 BINARY_OP               11 (/)\n            916 STORE_FAST               5 (archive_path)\n\n 74         918 LOAD_FAST                5 (archive_path)\n            920 LOAD_ATTR               13 (NULL|self + is_file)\n            940 CALL                     0\n            948 POP_JUMP_IF_TRUE        25 (to 1000)\n\n 75         950 LOAD_FAST                0 (tmp_path)\n            952 LOAD_CONST               1 ('candidate')\n            954 BINARY_OP               11 (/)\n            958 LOAD_GLOBAL              2 (module)\n            968 LOAD_ATTR               14 (CANDIDATE_ID)\n            988 BINARY_OP               11 (/)\n            992 LOAD_CONST              47 ('archive.zip')\n            994 BINARY_OP               11 (/)\n            998 STORE_FAST               5 (archive_path)\n\n 76     >> 1000 LOAD_GLOBAL             25 (NULL + zipfile)\n           1010 LOAD_ATTR               26 (ZipFile)\n           1030 LOAD_FAST                5 (archive_path)\n           1032 LOAD_CONST              48 ('r')\n           1034 CALL                     2\n           1042 BEFORE_WITH\n           1044 STORE_FAST               6 (zf)\n\n 77        1046 LOAD_FAST                6 (zf)\n           1048 LOAD_ATTR               29 (NULL|self + infolist)\n           1068 CALL                     0\n           1076 GET_ITER\n           1078 LOAD_FAST_AND_CLEAR      7 (info)\n           1080 SWAP                     2\n           1082 BUILD_LIST               0\n           1084 SWAP                     2\n        >> 1086 FOR_ITER                21 (to 1132)\n           1090 STORE_FAST               7 (info)\n           1092 LOAD_FAST                7 (info)\n           1094 LOAD_ATTR               31 (NULL|self + is_dir)\n           1114 CALL                     0\n           1122 POP_JUMP_IF_FALSE        1 (to 1126)\n           1124 JUMP_BACKWARD           20 (to 1086)\n        >> 1126 LOAD_FAST                7 (info)\n           1128 LIST_APPEND              2\n           1130 JUMP_BACKWARD           23 (to 1086)\n        >> 1132 END_FOR\n           1134 STORE_FAST               8 (infos)\n           1136 STORE_FAST               7 (info)\n\n 78        1138 LOAD_FAST                8 (infos)\n           1140 GET_ITER\n           1142 LOAD_FAST_AND_CLEAR      7 (info)\n           1144 SWAP                     2\n           1146 BUILD_LIST               0\n           1148 SWAP                     2\n        >> 1150 FOR_ITER                14 (to 1182)\n           1154 STORE_FAST               7 (info)\n           1156 LOAD_FAST                7 (info)\n           1158 LOAD_ATTR               32 (filename)\n           1178 LIST_APPEND              2\n           1180 JUMP_BACKWARD           16 (to 1150)\n        >> 1182 END_FOR\n           1184 SWAP                     2\n           1186 STORE_FAST               7 (info)\n           1188 LOAD_CONST              49 ('x')\n           1190 BUILD_LIST               1\n           1192 COMPARE_OP              40 (==)\n           1196 POP_JUMP_IF_TRUE         2 (to 1202)\n           1198 LOAD_ASSERTION_ERROR\n           1200 RAISE_VARARGS            1\n\n 79     >> 1202 LOAD_FAST                8 (infos)\n           1204 LOAD_CONST              50 (0)\n           1206 BINARY_SUBSCR\n           1210 LOAD_ATTR               34 (compress_type)\n           1230 LOAD_GLOBAL             24 (zipfile)\n           1240 LOAD_ATTR               36 (ZIP_STORED)\n           1260 COMPARE_OP              40 (==)\n           1264 POP_JUMP_IF_TRUE         2 (to 1270)\n           1266 LOAD_ASSERTION_ERROR\n           1268 RAISE_VARARGS            1\n        >> 1270 NOP\n\n 76        1272 LOAD_CONST               0 (None)\n           1274 LOAD_CONST               0 (None)\n           1276 LOAD_CONST               0 (None)\n           1278 CALL                     2\n           1286 POP_TOP\n           1288 RETURN_CONST             0 (None)\n        >> 1290 SWAP                     2\n           1292 POP_TOP\n\n 63        1294 SWAP                     2\n           1296 STORE_FAST               4 (row)\n           1298 RERAISE                  0\n        >> 1300 SWAP                     2\n           1302 POP_TOP\n\n 77        1304 SWAP                     2\n           1306 STORE_FAST               7 (info)\n           1308 RERAISE                  0\n        >> 1310 SWAP                     2\n           1312 POP_TOP\n\n 78        1314 SWAP                     2\n           1316 STORE_FAST               7 (info)\n           1318 RERAISE                  0\n\n 76     >> 1320 PUSH_EXC_INFO\n           1322 WITH_EXCEPT_START\n           1324 POP_JUMP_IF_TRUE         1 (to 1328)\n           1326 RERAISE                  2\n        >> 1328 POP_TOP\n           1330 POP_EXCEPT\n           1332 POP_TOP\n           1334 POP_TOP\n           1336 RETURN_CONST             0 (None)\n        >> 1338 COPY                     3\n           1340 POP_EXCEPT\n           1342 RERAISE                  1\nExceptionTable:\n  628 to 650 -> 1290 [2]\n  1044 to 1080 -> 1320 [1] lasti\n  1082 to 1122 -> 1300 [3]\n  1126 to 1132 -> 1300 [3]\n  1134 to 1144 -> 1320 [1] lasti\n  1146 to 1182 -> 1310 [3]\n  1184 to 1268 -> 1320 [1] lasti\n  1300 to 1318 -> 1320 [1] lasti\n  1320 to 1328 -> 1338 [3] lasti\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  1           2 LOAD_CONST               0 (0)\n              4 LOAD_CONST               1 (('annotations',))\n              6 IMPORT_NAME              0 (__future__)\n              8 IMPORT_FROM              1 (annotations)\n             10 STORE_NAME               1 (annotations)\n             12 POP_TOP\n\n  3          14 LOAD_CONST               0 (0)\n             16 LOAD_CONST               2 (None)\n             18 IMPORT_NAME              2 (importlib.util)\n             20 STORE_NAME               3 (importlib)\n\n  4          22 LOAD_CONST               0 (0)\n             24 LOAD_CONST               2 (None)\n             26 IMPORT_NAME              4 (json)\n             28 STORE_NAME               4 (json)\n\n  5          30 LOAD_CONST               0 (0)\n             32 LOAD_CONST               2 (None)\n             34 IMPORT_NAME              5 (sys)\n             36 STORE_NAME               5 (sys)\n\n  6          38 LOAD_CONST               0 (0)\n             40 LOAD_CONST               2 (None)\n             42 IMPORT_NAME              6 (zipfile)\n             44 STORE_NAME               6 (zipfile)\n\n  7          46 LOAD_CONST               0 (0)\n             48 LOAD_CONST               3 (('Path',))\n             50 IMPORT_NAME              7 (pathlib)\n             52 IMPORT_FROM              8 (Path)\n             54 STORE_NAME               8 (Path)\n             56 POP_TOP\n\n  9          58 LOAD_CONST               0 (0)\n             60 LOAD_CONST               2 (None)\n             62 IMPORT_NAME              9 (pytest)\n             64 STORE_NAME               9 (pytest)\n\n 12          66 PUSH_NULL\n             68 LOAD_NAME                8 (Path)\n             70 LOAD_NAME               10 (__file__)\n             72 CALL                     1\n             80 LOAD_ATTR               23 (NULL|self + resolve)\n            100 CALL                     0\n            108 LOAD_ATTR               24 (parents)\n            128 LOAD_CONST               4 (3)\n            130 BINARY_SUBSCR\n            134 STORE_NAME              13 (REPO)\n\n 13         136 LOAD_NAME               13 (REPO)\n            138 LOAD_CONST               5 ('experiments')\n            140 BINARY_OP               11 (/)\n            144 LOAD_CONST               6 ('build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py')\n            146 BINARY_OP               11 (/)\n            150 STORE_NAME              14 (SCRIPT)\n\n 16         152 LOAD_CONST               7 (<code object _load_script at 0x1007f9890, file \"src/tac/tests/test_build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py\", line 16>)\n            154 MAKE_FUNCTION            0\n            156 STORE_NAME              15 (_load_script)\n\n 25         158 PUSH_NULL\n            160 LOAD_NAME               15 (_load_script)\n            162 CALL                     0\n            170 STORE_NAME              16 (module)\n\n 28         172 LOAD_CONST              10 (('return', 'None'))\n            174 LOAD_CONST               8 (<code object _require_real_inputs at 0xc9716db80, file \"src/tac/tests/test_build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py\", line 28>)\n            176 MAKE_FUNCTION            4 (annotations)\n            178 STORE_NAME              17 (_require_real_inputs)\n\n 43         180 LOAD_CONST              11 (('tmp_path', 'Path', 'return', 'None'))\n            182 LOAD_CONST               9 (<code object test_real_pr85_stbm1br_pr92_rmb1_candidate_builds_with_dispatch_guards at 0xc96a46400, file \"src/tac/tests/test_build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py\", line 43>)\n            184 MAKE_FUNCTION            4 (annotations)\n            186 STORE_NAME              18 (test_real_pr85_stbm1br_pr92_rmb1_candidate_builds_with_dispatch_guards)\n            188 RETURN_CONST             2 (None)\n"
+}

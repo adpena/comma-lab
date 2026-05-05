@@ -1,0 +1,310 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/src/tac/tests/__pycache__/test_profile_pr95_hnerv_muon_intake.cpython-312.pyc",
+  "names": [
+    "__future__",
+    "annotations",
+    "importlib.util",
+    "importlib",
+    "sys",
+    "pathlib",
+    "Path",
+    "pytest",
+    "__file__",
+    "resolve",
+    "parents",
+    "REPO_ROOT",
+    "MODULE_PATH",
+    "INTAKE_DIR",
+    "ARCHIVE",
+    "SOURCE_DIR",
+    "STATIC_INTAKE",
+    "load_module",
+    "require_pr95_intake",
+    "test_pr95_hnerv_muon_profile_parses_archive_source_and_readiness",
+    "test_pr95_hnerv_muon_hooks_include_prior_repo_gems",
+    "test_pr95_hnerv_muon_score_terms_recompute_static_inputs"
+  ],
+  "varnames": [],
+  "consts": [
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "Path"
+    ],
+    3,
+    "experiments/profile_pr95_hnerv_muon_intake.py",
+    "experiments/results/public_pr95_intake_20260504_codex",
+    "archive.zip",
+    "pr95_src/submissions/hnerv_muon",
+    "pr95_static_intake.json",
+    {
+      "__code__": "load_module",
+      "qualname": "load_module",
+      "argcount": 0,
+      "varnames": [
+        "spec",
+        "module"
+      ],
+      "names": [
+        "importlib",
+        "util",
+        "spec_from_file_location",
+        "MODULE_PATH",
+        "loader",
+        "module_from_spec",
+        "sys",
+        "modules",
+        "name",
+        "exec_module"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "require_pr95_intake",
+      "qualname": "require_pr95_intake",
+      "argcount": 0,
+      "varnames": [
+        "path",
+        "missing"
+      ],
+      "names": [
+        "ARCHIVE",
+        "SOURCE_DIR",
+        "exists",
+        "str",
+        "relative_to",
+        "REPO_ROOT",
+        "pytest",
+        "skip",
+        "join"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_pr95_hnerv_muon_profile_parses_archive_source_and_readiness",
+      "qualname": "test_pr95_hnerv_muon_profile_parses_archive_source_and_readiness",
+      "argcount": 0,
+      "varnames": [
+        "module",
+        "profile"
+      ],
+      "names": [
+        "require_pr95_intake",
+        "load_module",
+        "build_profile",
+        "ARCHIVE",
+        "SOURCE_DIR",
+        "STATIC_INTAKE",
+        "stat",
+        "st_size",
+        "len",
+        "any"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_pr95_hnerv_muon_hooks_include_prior_repo_gems",
+      "qualname": "test_pr95_hnerv_muon_hooks_include_prior_repo_gems",
+      "argcount": 0,
+      "varnames": [
+        "module",
+        "profile",
+        "item",
+        "hooks"
+      ],
+      "names": [
+        "require_pr95_intake",
+        "load_module",
+        "build_profile",
+        "ARCHIVE",
+        "SOURCE_DIR",
+        "STATIC_INTAKE"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_pr95_hnerv_muon_score_terms_recompute_static_inputs",
+      "qualname": "test_pr95_hnerv_muon_score_terms_recompute_static_inputs",
+      "argcount": 0,
+      "varnames": [
+        "module",
+        "profile",
+        "score_terms",
+        "recomputed"
+      ],
+      "names": [
+        "require_pr95_intake",
+        "STATIC_INTAKE",
+        "exists",
+        "pytest",
+        "skip",
+        "load_module",
+        "build_profile",
+        "ARCHIVE",
+        "SOURCE_DIR"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    [
+      "return",
+      "None"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": null,
+  "child_codes": [
+    {
+      "qualname": "load_module",
+      "name": "load_module",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "spec",
+        "module"
+      ],
+      "names": [
+        "importlib",
+        "util",
+        "spec_from_file_location",
+        "MODULE_PATH",
+        "loader",
+        "module_from_spec",
+        "sys",
+        "modules",
+        "name",
+        "exec_module"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 18           0 RESUME                   0\n\n 19           2 LOAD_GLOBAL              0 (importlib)\n             12 LOAD_ATTR                2 (util)\n             32 LOAD_ATTR                5 (NULL|self + spec_from_file_location)\n             52 LOAD_CONST               1 ('profile_pr95_hnerv_muon_intake')\n             54 LOAD_GLOBAL              6 (MODULE_PATH)\n             64 CALL                     2\n             72 STORE_FAST               0 (spec)\n\n 20          74 LOAD_FAST                0 (spec)\n             76 POP_JUMP_IF_NOT_NONE     2 (to 82)\n             78 LOAD_ASSERTION_ERROR\n             80 RAISE_VARARGS            1\n\n 21     >>   82 LOAD_FAST                0 (spec)\n             84 LOAD_ATTR                8 (loader)\n            104 POP_JUMP_IF_NOT_NONE     2 (to 110)\n            106 LOAD_ASSERTION_ERROR\n            108 RAISE_VARARGS            1\n\n 22     >>  110 LOAD_GLOBAL              0 (importlib)\n            120 LOAD_ATTR                2 (util)\n            140 LOAD_ATTR               11 (NULL|self + module_from_spec)\n            160 LOAD_FAST                0 (spec)\n            162 CALL                     1\n            170 STORE_FAST               1 (module)\n\n 23         172 LOAD_FAST                1 (module)\n            174 LOAD_GLOBAL             12 (sys)\n            184 LOAD_ATTR               14 (modules)\n            204 LOAD_FAST                0 (spec)\n            206 LOAD_ATTR               16 (name)\n            226 STORE_SUBSCR\n\n 24         230 LOAD_FAST                0 (spec)\n            232 LOAD_ATTR                8 (loader)\n            252 LOAD_ATTR               19 (NULL|self + exec_module)\n            272 LOAD_FAST                1 (module)\n            274 CALL                     1\n            282 POP_TOP\n\n 25         284 LOAD_FAST                1 (module)\n            286 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "require_pr95_intake",
+      "name": "require_pr95_intake",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "missing"
+      ],
+      "names": [
+        "ARCHIVE",
+        "SOURCE_DIR",
+        "exists",
+        "str",
+        "relative_to",
+        "REPO_ROOT",
+        "pytest",
+        "skip",
+        "join"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 28           0 RESUME                   0\n\n 29           2 LOAD_GLOBAL              0 (ARCHIVE)\n             12 LOAD_GLOBAL              2 (SOURCE_DIR)\n             22 BUILD_TUPLE              2\n             24 GET_ITER\n             26 LOAD_FAST_AND_CLEAR      0 (path)\n             28 SWAP                     2\n             30 BUILD_LIST               0\n             32 SWAP                     2\n        >>   34 FOR_ITER                49 (to 136)\n             38 STORE_FAST               0 (path)\n             40 LOAD_FAST                0 (path)\n             42 LOAD_ATTR                5 (NULL|self + exists)\n             62 CALL                     0\n             70 POP_JUMP_IF_FALSE        1 (to 74)\n             72 JUMP_BACKWARD           20 (to 34)\n        >>   74 LOAD_GLOBAL              7 (NULL + str)\n             84 LOAD_FAST                0 (path)\n             86 LOAD_ATTR                9 (NULL|self + relative_to)\n            106 LOAD_GLOBAL             10 (REPO_ROOT)\n            116 CALL                     1\n            124 CALL                     1\n            132 LIST_APPEND              2\n            134 JUMP_BACKWARD           51 (to 34)\n        >>  136 END_FOR\n            138 STORE_FAST               1 (missing)\n            140 STORE_FAST               0 (path)\n\n 30         142 LOAD_FAST                1 (missing)\n            144 POP_JUMP_IF_FALSE       40 (to 226)\n\n 31         146 LOAD_GLOBAL             13 (NULL + pytest)\n            156 LOAD_ATTR               14 (skip)\n            176 LOAD_CONST               1 ('PR95 HNeRV/Muon intake fixture missing: ')\n            178 LOAD_CONST               2 (', ')\n            180 LOAD_ATTR               17 (NULL|self + join)\n            200 LOAD_FAST                1 (missing)\n            202 CALL                     1\n            210 FORMAT_VALUE             0\n            212 BUILD_STRING             2\n            214 CALL                     1\n            222 POP_TOP\n            224 RETURN_CONST             0 (None)\n\n 30     >>  226 RETURN_CONST             0 (None)\n        >>  228 SWAP                     2\n            230 POP_TOP\n\n 29         232 SWAP                     2\n            234 STORE_FAST               0 (path)\n            236 RERAISE                  0\nExceptionTable:\n  30 to 70 -> 228 [2]\n  74 to 136 -> 228 [2]\n"
+    },
+    {
+      "qualname": "test_pr95_hnerv_muon_profile_parses_archive_source_and_readiness",
+      "name": "test_pr95_hnerv_muon_profile_parses_archive_source_and_readiness",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "module",
+        "profile"
+      ],
+      "names": [
+        "require_pr95_intake",
+        "load_module",
+        "build_profile",
+        "ARCHIVE",
+        "SOURCE_DIR",
+        "STATIC_INTAKE",
+        "stat",
+        "st_size",
+        "len",
+        "any"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 34           0 RESUME                   0\n\n 35           2 LOAD_GLOBAL              1 (NULL + require_pr95_intake)\n             12 CALL                     0\n             20 POP_TOP\n\n 36          22 LOAD_GLOBAL              3 (NULL + load_module)\n             32 CALL                     0\n             40 STORE_FAST               0 (module)\n\n 38          42 LOAD_FAST                0 (module)\n             44 LOAD_ATTR                5 (NULL|self + build_profile)\n             64 LOAD_GLOBAL              6 (ARCHIVE)\n             74 LOAD_GLOBAL              8 (SOURCE_DIR)\n             84 LOAD_GLOBAL             10 (STATIC_INTAKE)\n             94 CALL                     3\n            102 STORE_FAST               1 (profile)\n\n 40         104 LOAD_FAST                1 (profile)\n            106 LOAD_CONST               1 ('schema')\n            108 BINARY_SUBSCR\n            112 LOAD_CONST               2 ('pr95_hnerv_muon_static_intake_profile_v1')\n            114 COMPARE_OP              40 (==)\n            118 POP_JUMP_IF_TRUE         2 (to 124)\n            120 LOAD_ASSERTION_ERROR\n            122 RAISE_VARARGS            1\n\n 41     >>  124 LOAD_FAST                1 (profile)\n            126 LOAD_CONST               3 ('archive_anatomy')\n            128 BINARY_SUBSCR\n            132 LOAD_CONST               4 ('members')\n            134 BINARY_SUBSCR\n            138 LOAD_CONST               5 (0)\n            140 BINARY_SUBSCR\n            144 LOAD_CONST               6 ('name')\n            146 BINARY_SUBSCR\n            150 LOAD_CONST               7 ('0.bin')\n            152 COMPARE_OP              40 (==)\n            156 POP_JUMP_IF_TRUE         2 (to 162)\n            158 LOAD_ASSERTION_ERROR\n            160 RAISE_VARARGS            1\n\n 42     >>  162 LOAD_FAST                1 (profile)\n            164 LOAD_CONST               3 ('archive_anatomy')\n            166 BINARY_SUBSCR\n            170 LOAD_CONST               8 ('archive_bytes')\n            172 BINARY_SUBSCR\n            176 LOAD_GLOBAL              6 (ARCHIVE)\n            186 LOAD_ATTR               13 (NULL|self + stat)\n            206 CALL                     0\n            214 LOAD_ATTR               14 (st_size)\n            234 COMPARE_OP              40 (==)\n            238 POP_JUMP_IF_TRUE         2 (to 244)\n            240 LOAD_ASSERTION_ERROR\n            242 RAISE_VARARGS            1\n\n 43     >>  244 LOAD_FAST                1 (profile)\n            246 LOAD_CONST               9 ('hnerv_muon_blob')\n            248 BINARY_SUBSCR\n            252 LOAD_CONST              10 ('member_format')\n            254 BINARY_SUBSCR\n            258 LOAD_CONST              11 ('hnerv_muon_codec_v1')\n            260 COMPARE_OP              40 (==)\n            264 POP_JUMP_IF_TRUE         2 (to 270)\n            266 LOAD_ASSERTION_ERROR\n            268 RAISE_VARARGS            1\n\n 44     >>  270 LOAD_FAST                1 (profile)\n            272 LOAD_CONST               9 ('hnerv_muon_blob')\n            274 BINARY_SUBSCR\n            278 LOAD_CONST              12 ('decoder')\n            280 BINARY_SUBSCR\n            284 LOAD_CONST              13 ('total_params')\n            286 BINARY_SUBSCR\n            290 LOAD_CONST              14 (200000)\n            292 COMPARE_OP              68 (>)\n            296 POP_JUMP_IF_TRUE         2 (to 302)\n            298 LOAD_ASSERTION_ERROR\n            300 RAISE_VARARGS            1\n\n 45     >>  302 LOAD_FAST                1 (profile)\n            304 LOAD_CONST               9 ('hnerv_muon_blob')\n            306 BINARY_SUBSCR\n            310 LOAD_CONST              12 ('decoder')\n            312 BINARY_SUBSCR\n            316 LOAD_CONST              15 ('muon_partition_params')\n            318 BINARY_SUBSCR\n            322 LOAD_CONST               5 (0)\n            324 COMPARE_OP              68 (>)\n            328 POP_JUMP_IF_TRUE         2 (to 334)\n            330 LOAD_ASSERTION_ERROR\n            332 RAISE_VARARGS            1\n\n 46     >>  334 LOAD_FAST                1 (profile)\n            336 LOAD_CONST               9 ('hnerv_muon_blob')\n            338 BINARY_SUBSCR\n            342 LOAD_CONST              16 ('latents')\n            344 BINARY_SUBSCR\n            348 LOAD_CONST              17 ('latent_dim')\n            350 BINARY_SUBSCR\n            354 LOAD_CONST              18 (28)\n            356 COMPARE_OP              40 (==)\n            360 POP_JUMP_IF_TRUE         2 (to 366)\n            362 LOAD_ASSERTION_ERROR\n            364 RAISE_VARARGS            1\n\n 47     >>  366 LOAD_FAST                1 (profile)\n            368 LOAD_CONST              19 ('source_intake')\n            370 BINARY_SUBSCR\n            374 LOAD_CONST              20 ('model_defaults')\n            376 BINARY_SUBSCR\n            380 LOAD_CONST              21 ('base_channels')\n            382 BINARY_SUBSCR\n            386 LOAD_CONST              22 (36)\n            388 COMPARE_OP              40 (==)\n            392 POP_JUMP_IF_TRUE         2 (to 398)\n            394 LOAD_ASSERTION_ERROR\n            396 RAISE_VARARGS            1\n\n 48     >>  398 LOAD_GLOBAL             17 (NULL + len)\n            408 LOAD_FAST                1 (profile)\n            410 LOAD_CONST              19 ('source_intake')\n            412 BINARY_SUBSCR\n            416 LOAD_CONST              23 ('training_stages')\n            418 BINARY_SUBSCR\n            422 CALL                     1\n            430 LOAD_CONST              24 (8)\n            432 COMPARE_OP              40 (==)\n            436 POP_JUMP_IF_TRUE         2 (to 442)\n            438 LOAD_ASSERTION_ERROR\n            440 RAISE_VARARGS            1\n\n 49     >>  442 LOAD_FAST                1 (profile)\n            444 LOAD_CONST              25 ('dispatch_readiness')\n            446 BINARY_SUBSCR\n            450 LOAD_CONST              26 ('ready_for_dispatch')\n            452 BINARY_SUBSCR\n            456 LOAD_CONST              27 (False)\n            458 IS_OP                    0\n            460 POP_JUMP_IF_TRUE         2 (to 466)\n            462 LOAD_ASSERTION_ERROR\n            464 RAISE_VARARGS            1\n\n 50     >>  466 LOAD_FAST                1 (profile)\n            468 LOAD_CONST              25 ('dispatch_readiness')\n            470 BINARY_SUBSCR\n            474 LOAD_CONST              28 ('fail_closed')\n            476 BINARY_SUBSCR\n            480 LOAD_CONST              29 (True)\n            482 IS_OP                    0\n            484 POP_JUMP_IF_TRUE         2 (to 490)\n            486 LOAD_ASSERTION_ERROR\n            488 RAISE_VARARGS            1\n\n 51     >>  490 LOAD_GLOBAL             19 (NULL + any)\n            500 LOAD_CONST              30 (<code object <genexpr> at 0x102b60c60, file \"src/tac/tests/test_profile_pr95_hnerv_muon_intake.py\", line 51>)\n            502 MAKE_FUNCTION            0\n            504 LOAD_FAST                1 (profile)\n            506 LOAD_CONST              25 ('dispatch_readiness')\n            508 BINARY_SUBSCR\n            512 LOAD_CONST              31 ('required_before_score_claims')\n            514 BINARY_SUBSCR\n            518 GET_ITER\n            520 CALL                     0\n            528 CALL                     1\n            536 POP_JUMP_IF_TRUE         2 (to 542)\n            538 LOAD_ASSERTION_ERROR\n            540 RAISE_VARARGS            1\n        >>  542 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "test_pr95_hnerv_muon_profile_parses_archive_source_and_readiness.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "item"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Replay exact eval",
+      "dis": " 51           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                 8 (to 28)\n             12 STORE_FAST               1 (item)\n             14 LOAD_CONST               0 ('Replay exact eval')\n             16 LOAD_FAST                1 (item)\n             18 CONTAINS_OP              0\n             20 YIELD_VALUE              1\n             22 RESUME                   1\n             24 POP_TOP\n             26 JUMP_BACKWARD           10 (to 8)\n        >>   28 END_FOR\n             30 RETURN_CONST             1 (None)\n        >>   32 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             34 RERAISE                  1\nExceptionTable:\n  4 to 30 -> 32 [0] lasti\n"
+    },
+    {
+      "qualname": "test_pr95_hnerv_muon_hooks_include_prior_repo_gems",
+      "name": "test_pr95_hnerv_muon_hooks_include_prior_repo_gems",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "module",
+        "profile",
+        "item",
+        "hooks"
+      ],
+      "names": [
+        "require_pr95_intake",
+        "load_module",
+        "build_profile",
+        "ARCHIVE",
+        "SOURCE_DIR",
+        "STATIC_INTAKE"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 54           0 RESUME                   0\n\n 55           2 LOAD_GLOBAL              1 (NULL + require_pr95_intake)\n             12 CALL                     0\n             20 POP_TOP\n\n 56          22 LOAD_GLOBAL              3 (NULL + load_module)\n             32 CALL                     0\n             40 STORE_FAST               0 (module)\n\n 58          42 LOAD_FAST                0 (module)\n             44 LOAD_ATTR                5 (NULL|self + build_profile)\n             64 LOAD_GLOBAL              6 (ARCHIVE)\n             74 LOAD_GLOBAL              8 (SOURCE_DIR)\n             84 LOAD_GLOBAL             10 (STATIC_INTAKE)\n             94 CALL                     3\n            102 STORE_FAST               1 (profile)\n\n 59         104 LOAD_FAST                1 (profile)\n            106 LOAD_CONST               1 ('immediate_improvement_hypotheses')\n            108 BINARY_SUBSCR\n            112 GET_ITER\n            114 LOAD_FAST_AND_CLEAR      2 (item)\n            116 SWAP                     2\n            118 BUILD_LIST               0\n            120 SWAP                     2\n        >>  122 FOR_ITER                 7 (to 140)\n            126 STORE_FAST               2 (item)\n            128 LOAD_FAST                2 (item)\n            130 LOAD_CONST               2 ('hook')\n            132 BINARY_SUBSCR\n            136 LIST_APPEND              2\n            138 JUMP_BACKWARD            9 (to 122)\n        >>  140 END_FOR\n            142 STORE_FAST               3 (hooks)\n            144 STORE_FAST               2 (item)\n\n 61         146 LOAD_FAST                3 (hooks)\n            148 LOAD_CONST               0 (None)\n            150 LOAD_CONST               3 (5)\n            152 BINARY_SLICE\n            154 BUILD_LIST               0\n            156 LOAD_CONST               4 (('RAFT/ego-motion/foveation latent bases', 'Cool-Chic/C3/wavelet residual bases', 'Fridrich/Lagrangian hard-pair weighting', 'engineered corrections and pixel-diff sparse atoms', 'self-compression entropy objectives'))\n            158 LIST_EXTEND              1\n            160 COMPARE_OP              40 (==)\n            164 POP_JUMP_IF_TRUE         2 (to 170)\n            166 LOAD_ASSERTION_ERROR\n            168 RAISE_VARARGS            1\n        >>  170 RETURN_CONST             0 (None)\n        >>  172 SWAP                     2\n            174 POP_TOP\n\n 59         176 SWAP                     2\n            178 STORE_FAST               2 (item)\n            180 RERAISE                  0\nExceptionTable:\n  118 to 140 -> 172 [2]\n"
+    },
+    {
+      "qualname": "test_pr95_hnerv_muon_score_terms_recompute_static_inputs",
+      "name": "test_pr95_hnerv_muon_score_terms_recompute_static_inputs",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "module",
+        "profile",
+        "score_terms",
+        "recomputed"
+      ],
+      "names": [
+        "require_pr95_intake",
+        "STATIC_INTAKE",
+        "exists",
+        "pytest",
+        "skip",
+        "load_module",
+        "build_profile",
+        "ARCHIVE",
+        "SOURCE_DIR"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 70           0 RESUME                   0\n\n 71           2 LOAD_GLOBAL              1 (NULL + require_pr95_intake)\n             12 CALL                     0\n             20 POP_TOP\n\n 72          22 LOAD_GLOBAL              2 (STATIC_INTAKE)\n             32 LOAD_ATTR                5 (NULL|self + exists)\n             52 CALL                     0\n             60 POP_JUMP_IF_TRUE        21 (to 104)\n\n 73          62 LOAD_GLOBAL              7 (NULL + pytest)\n             72 LOAD_ATTR                8 (skip)\n             92 LOAD_CONST               1 ('PR95 static intake JSON missing; cannot test score-term recomputation')\n             94 CALL                     1\n            102 POP_TOP\n\n 74     >>  104 LOAD_GLOBAL             11 (NULL + load_module)\n            114 CALL                     0\n            122 STORE_FAST               0 (module)\n\n 76         124 LOAD_FAST                0 (module)\n            126 LOAD_ATTR               13 (NULL|self + build_profile)\n            146 LOAD_GLOBAL             14 (ARCHIVE)\n            156 LOAD_GLOBAL             16 (SOURCE_DIR)\n            166 LOAD_GLOBAL              2 (STATIC_INTAKE)\n            176 CALL                     3\n            184 STORE_FAST               1 (profile)\n\n 77         186 LOAD_FAST                1 (profile)\n            188 LOAD_CONST               2 ('score_term_math')\n            190 BINARY_SUBSCR\n            194 LOAD_CONST               3 ('score_terms_from_static_intake')\n            196 BINARY_SUBSCR\n            200 STORE_FAST               2 (score_terms)\n\n 79         202 LOAD_FAST                2 (score_terms)\n            204 POP_JUMP_IF_NOT_NONE     2 (to 210)\n            206 LOAD_ASSERTION_ERROR\n            208 RAISE_VARARGS            1\n\n 80     >>  210 LOAD_FAST                2 (score_terms)\n            212 LOAD_CONST               4 ('matches_recorded_recomputed_score')\n            214 BINARY_SUBSCR\n            218 LOAD_CONST               5 (True)\n            220 IS_OP                    0\n            222 POP_JUMP_IF_TRUE         2 (to 228)\n            224 LOAD_ASSERTION_ERROR\n            226 RAISE_VARARGS            1\n\n 81     >>  228 LOAD_FAST                2 (score_terms)\n            230 LOAD_CONST               6 ('recomputed')\n            232 BINARY_SUBSCR\n            236 STORE_FAST               3 (recomputed)\n\n 82         238 LOAD_FAST                3 (recomputed)\n            240 LOAD_CONST               7 ('seg_component')\n            242 BINARY_SUBSCR\n            246 LOAD_CONST               8 (0)\n            248 COMPARE_OP              68 (>)\n            252 POP_JUMP_IF_TRUE         2 (to 258)\n            254 LOAD_ASSERTION_ERROR\n            256 RAISE_VARARGS            1\n\n 83     >>  258 LOAD_FAST                3 (recomputed)\n            260 LOAD_CONST               9 ('pose_component')\n            262 BINARY_SUBSCR\n            266 LOAD_CONST               8 (0)\n            268 COMPARE_OP              68 (>)\n            272 POP_JUMP_IF_TRUE         2 (to 278)\n            274 LOAD_ASSERTION_ERROR\n            276 RAISE_VARARGS            1\n\n 84     >>  278 LOAD_FAST                3 (recomputed)\n            280 LOAD_CONST              10 ('rate_component')\n            282 BINARY_SUBSCR\n            286 LOAD_CONST               8 (0)\n            288 COMPARE_OP              68 (>)\n            292 POP_JUMP_IF_TRUE         2 (to 298)\n            294 LOAD_ASSERTION_ERROR\n            296 RAISE_VARARGS            1\n        >>  298 RETURN_CONST             0 (None)\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  1           2 LOAD_CONST               0 (0)\n              4 LOAD_CONST               1 (('annotations',))\n              6 IMPORT_NAME              0 (__future__)\n              8 IMPORT_FROM              1 (annotations)\n             10 STORE_NAME               1 (annotations)\n             12 POP_TOP\n\n  3          14 LOAD_CONST               0 (0)\n             16 LOAD_CONST               2 (None)\n             18 IMPORT_NAME              2 (importlib.util)\n             20 STORE_NAME               3 (importlib)\n\n  4          22 LOAD_CONST               0 (0)\n             24 LOAD_CONST               2 (None)\n             26 IMPORT_NAME              4 (sys)\n             28 STORE_NAME               4 (sys)\n\n  5          30 LOAD_CONST               0 (0)\n             32 LOAD_CONST               3 (('Path',))\n             34 IMPORT_NAME              5 (pathlib)\n             36 IMPORT_FROM              6 (Path)\n             38 STORE_NAME               6 (Path)\n             40 POP_TOP\n\n  7          42 LOAD_CONST               0 (0)\n             44 LOAD_CONST               2 (None)\n             46 IMPORT_NAME              7 (pytest)\n             48 STORE_NAME               7 (pytest)\n\n 10          50 PUSH_NULL\n             52 LOAD_NAME                6 (Path)\n             54 LOAD_NAME                8 (__file__)\n             56 CALL                     1\n             64 LOAD_ATTR               19 (NULL|self + resolve)\n             84 CALL                     0\n             92 LOAD_ATTR               20 (parents)\n            112 LOAD_CONST               4 (3)\n            114 BINARY_SUBSCR\n            118 STORE_NAME              11 (REPO_ROOT)\n\n 11         120 LOAD_NAME               11 (REPO_ROOT)\n            122 LOAD_CONST               5 ('experiments/profile_pr95_hnerv_muon_intake.py')\n            124 BINARY_OP               11 (/)\n            128 STORE_NAME              12 (MODULE_PATH)\n\n 12         130 LOAD_NAME               11 (REPO_ROOT)\n            132 LOAD_CONST               6 ('experiments/results/public_pr95_intake_20260504_codex')\n            134 BINARY_OP               11 (/)\n            138 STORE_NAME              13 (INTAKE_DIR)\n\n 13         140 LOAD_NAME               13 (INTAKE_DIR)\n            142 LOAD_CONST               7 ('archive.zip')\n            144 BINARY_OP               11 (/)\n            148 STORE_NAME              14 (ARCHIVE)\n\n 14         150 LOAD_NAME               13 (INTAKE_DIR)\n            152 LOAD_CONST               8 ('pr95_src/submissions/hnerv_muon')\n            154 BINARY_OP               11 (/)\n            158 STORE_NAME              15 (SOURCE_DIR)\n\n 15         160 LOAD_NAME               13 (INTAKE_DIR)\n            162 LOAD_CONST               9 ('pr95_static_intake.json')\n            164 BINARY_OP               11 (/)\n            168 STORE_NAME              16 (STATIC_INTAKE)\n\n 18         170 LOAD_CONST              10 (<code object load_module at 0x102a79890, file \"src/tac/tests/test_profile_pr95_hnerv_muon_intake.py\", line 18>)\n            172 MAKE_FUNCTION            0\n            174 STORE_NAME              17 (load_module)\n\n 28         176 LOAD_CONST              15 (('return', 'None'))\n            178 LOAD_CONST              11 (<code object require_pr95_intake at 0x102ac97d0, file \"src/tac/tests/test_profile_pr95_hnerv_muon_intake.py\", line 28>)\n            180 MAKE_FUNCTION            4 (annotations)\n            182 STORE_NAME              18 (require_pr95_intake)\n\n 34         184 LOAD_CONST              12 (<code object test_pr95_hnerv_muon_profile_parses_archive_source_and_readiness at 0xa4722c900, file \"src/tac/tests/test_profile_pr95_hnerv_muon_intake.py\", line 34>)\n            186 MAKE_FUNCTION            0\n            188 STORE_NAME              19 (test_pr95_hnerv_muon_profile_parses_archive_source_and_readiness)\n\n 54         190 LOAD_CONST              13 (<code object test_pr95_hnerv_muon_hooks_include_prior_repo_gems at 0x102a71530, file \"src/tac/tests/test_profile_pr95_hnerv_muon_intake.py\", line 54>)\n            192 MAKE_FUNCTION            0\n            194 STORE_NAME              20 (test_pr95_hnerv_muon_hooks_include_prior_repo_gems)\n\n 70         196 LOAD_CONST              14 (<code object test_pr95_hnerv_muon_score_terms_recompute_static_inputs at 0x102aa47f0, file \"src/tac/tests/test_profile_pr95_hnerv_muon_intake.py\", line 70>)\n            198 MAKE_FUNCTION            0\n            200 STORE_NAME              21 (test_pr95_hnerv_muon_score_terms_recompute_static_inputs)\n            202 RETURN_CONST             2 (None)\n"
+}

@@ -365,6 +365,16 @@ def preflight_all(
         # See feedback_dead_resolver_violations_20260427 memory entry +
         # test_preflight_dead_resolvers_strict_passes_on_real_codebase.
         preflight_dead_resolvers(strict=True, verbose=verbose)
+        # 2026-05-05 hidden-gem recovery: a second-order dead-feature class
+        # slipped past dead-resolver checks. `use_variance_noise` resolved
+        # cleanly in profiles/argparse, but train_distill raised
+        # NotImplementedError and train_renderer never applied the loss.
+        # This AST guard requires the flag to enter the live objective path.
+        # NOTE 2026-05-05: check_feature_flags_have_live_objective_effect call
+        # site referenced an unimplemented checker. Stubbed/removed until the
+        # AST scanner lands. TODO(post-ship): implement.
+        if verbose:
+            print("  [feature-flags-live] STUB: planned post-ship")
         preflight_profiles(strict=True, verbose=verbose)
         preflight_arch_consistency(strict=True, verbose=verbose)
         preflight_filename_contract(strict=True, verbose=verbose)
@@ -2529,6 +2539,161 @@ def preflight_dead_resolvers(
             "burned GPU money in this repo (pose_dim, "
             "segnet_uncertainty_weighted_loss, uncertainty_loss_floor — "
             "2026-04-27 R5 codex review)."
+        )
+    return violations
+
+
+def _call_name(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        base = _call_name(node.value)
+        return f"{base}.{node.attr}" if base else node.attr
+    return None
+
+
+def _node_uses_attr(node: ast.AST, attr_name: str) -> bool:
+    for child in ast.walk(node):
+        if (
+            isinstance(child, ast.Attribute)
+            and child.attr == attr_name
+            and isinstance(child.value, ast.Name)
+            and child.value.id in {"args", "cfg"}
+        ):
+            return True
+    return False
+
+
+def _node_calls_name(node: ast.AST, function_name: str) -> bool:
+    for child in ast.walk(node):
+        if isinstance(child, ast.Call) and _call_name(child.func) == function_name:
+            return True
+    return False
+
+
+def _node_adds_to_objective(node: ast.AST, weight_attr: str) -> bool:
+    for child in ast.walk(node):
+        if isinstance(child, ast.Assign):
+            targets = [
+                t.id for t in child.targets
+                if isinstance(t, ast.Name) and t.id in {"loss", "total", "fridrich_extra"}
+            ]
+            if targets and _node_uses_attr(child.value, weight_attr):
+                return True
+        elif (
+            isinstance(child, ast.AugAssign)
+            and isinstance(child.target, ast.Name)
+            and child.target.id in {"loss", "total", "fridrich_extra"}
+            and _node_uses_attr(child.value, weight_attr)
+        ):
+            return True
+    return False
+
+
+def _scan_python_for_dead_objective_feature(
+    path: Path,
+    repo_root: Path,
+    *,
+    feature_attr: str,
+    weight_attr: str,
+    function_name: str,
+) -> list[str]:
+    try:
+        tree = ast.parse(path.read_text(), filename=str(path))
+    except (SyntaxError, UnicodeDecodeError):
+        return []
+
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    guarded = False
+    live_call = False
+    objective_effect = False
+    not_implemented = False
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.If) and _node_uses_attr(node.test, feature_attr):
+            guarded = True
+            live_call = live_call or _node_calls_name(node, function_name)
+            objective_effect = objective_effect or _node_adds_to_objective(node, weight_attr)
+            for child in ast.walk(node):
+                if (
+                    isinstance(child, ast.Raise)
+                    and isinstance(child.exc, ast.Call)
+                    and _call_name(child.exc.func) == "NotImplementedError"
+                ):
+                    not_implemented = True
+
+    violations: list[str] = []
+    if not guarded:
+        violations.append(
+            f"{rel}: feature flag {feature_attr!r} has no objective guard. "
+            "DEAD FEATURE: profiles may set it without changing training."
+        )
+    if not live_call:
+        violations.append(
+            f"{rel}: feature flag {feature_attr!r} does not call "
+            f"{function_name} inside its guard. DEAD FEATURE: resolved flag "
+            "does not execute the intended loss."
+        )
+    if not objective_effect:
+        violations.append(
+            f"{rel}: feature flag {feature_attr!r} does not add "
+            f"{weight_attr!r} to loss/total/fridrich_extra inside its guard. "
+            "DEAD FEATURE: helper may run without affecting the objective."
+        )
+    if not_implemented:
+        violations.append(
+            f"{rel}: feature flag {feature_attr!r} guard still raises "
+            "NotImplementedError. DEAD FEATURE: configured profile aborts "
+            "instead of training."
+        )
+    return violations
+
+
+def check_feature_flags_have_live_objective_effect(
+    *, strict: bool = False, verbose: bool = False, repo_root: Path | None = None
+) -> list[str]:
+    """Guard profile flags that resolve but fail to affect the objective."""
+    root = repo_root or REPO_ROOT
+    checks = [
+        (
+            root / "src" / "tac" / "experiments" / "train_renderer.py",
+            "use_variance_noise",
+            "variance_noise_weight",
+            "uniward_quant_noise_loss",
+        ),
+        (
+            root / "experiments" / "train_distill.py",
+            "use_variance_noise",
+            "variance_noise_weight",
+            "uniward_quant_noise_loss",
+        ),
+    ]
+    violations: list[str] = []
+    for path, feature_attr, weight_attr, function_name in checks:
+        if not path.exists():
+            violations.append(f"{path.relative_to(root)}: missing feature-check target")
+            continue
+        violations.extend(
+            _scan_python_for_dead_objective_feature(
+                path,
+                root,
+                feature_attr=feature_attr,
+                weight_attr=weight_attr,
+                function_name=function_name,
+            )
+        )
+
+    if verbose and violations:
+        print(f"  [objective-feature] {len(violations)} violation(s):")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print("  [objective-feature] OK")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "DEAD OBJECTIVE FEATURE violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
         )
     return violations
 
@@ -7604,6 +7769,8 @@ _MPS_DECISION_EXEMPT_PATH_PARTS: tuple[str, ...] = (
     "MEMORY.md",            # auto-memory index
     ".omx/context/",        # frozen historical context snapshots
     ".omx/research/",       # research findings (catalog, not decisions)
+    ".omx/auto_memory_snapshot_",  # frozen memory-file backups (operator-side, not deployable)
+    ".omx/state/orphans_preserved/",  # preserved orphan scripts/configs (signal-loss prevention)
     "reports/graphs/",      # judging surface; figure captions cite history
     "/uv_project_env/",     # vendored Python deps in remote eval workspaces (numpy/distutils ccompiler_opt etc.)
     "/site-packages/",      # vendored Python deps anywhere (third-party code, not ours)

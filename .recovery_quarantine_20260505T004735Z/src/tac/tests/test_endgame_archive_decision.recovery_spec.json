@@ -1,0 +1,660 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/src/tac/tests/__pycache__/test_endgame_archive_decision.cpython-312-pytest-9.0.3.pyc",
+  "names": [
+    "__future__",
+    "annotations",
+    "builtins",
+    "@py_builtins",
+    "_pytest.assertion.rewrite",
+    "assertion",
+    "rewrite",
+    "@pytest_ar",
+    "struct",
+    "zipfile",
+    "pathlib",
+    "Path",
+    "pytest",
+    "tac.endgame_archive_decision",
+    "build_endgame_decision_profile",
+    "render_markdown",
+    "tac.pr85_bundle",
+    "PR85_HEADERLESS_RANDMULTI_SPECS",
+    "SEGMENT_ORDER",
+    "pack_pr85_bundle",
+    "_br",
+    "_qma9",
+    "_legacy_randmulti",
+    "_rmb1_randmulti",
+    "_rsb1_actions",
+    "_segments",
+    "_write_archive",
+    "test_endgame_profile_estimates_rmb1_side_info_transplant_delta",
+    "test_endgame_profile_fails_closed_on_bad_rsb1_side_info",
+    "test_endgame_profile_rejects_central_local_name_mismatch"
+  ],
+  "varnames": [],
+  "consts": [
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "Path"
+    ],
+    [
+      "build_endgame_decision_profile",
+      "render_markdown"
+    ],
+    [
+      "PR85_HEADERLESS_RANDMULTI_SPECS",
+      "SEGMENT_ORDER",
+      "pack_pr85_bundle"
+    ],
+    {
+      "__code__": "_br",
+      "qualname": "_br",
+      "argcount": 1,
+      "varnames": [
+        "data",
+        "brotli"
+      ],
+      "names": [
+        "pytest",
+        "importorskip",
+        "compress"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_qma9",
+      "qualname": "_qma9",
+      "argcount": 1,
+      "varnames": [
+        "bitstream"
+      ],
+      "names": [
+        "struct",
+        "pack",
+        "len"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_legacy_randmulti",
+      "qualname": "_legacy_randmulti",
+      "argcount": 0,
+      "varnames": [],
+      "names": [
+        "_br"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_rmb1_randmulti",
+      "qualname": "_rmb1_randmulti",
+      "argcount": 0,
+      "varnames": [
+        "raw_mask",
+        "mask_br",
+        "vals_br"
+      ],
+      "names": [
+        "sum",
+        "PR85_HEADERLESS_RANDMULTI_SPECS",
+        "_br",
+        "len",
+        "to_bytes"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_rsb1_actions",
+      "qualname": "_rsb1_actions",
+      "argcount": 1,
+      "varnames": [
+        "count",
+        "idx",
+        "raw"
+      ],
+      "names": [
+        "bytes",
+        "range",
+        "to_bytes",
+        "_br"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    [
+      "randmulti"
+    ],
+    {
+      "__code__": "_segments",
+      "qualname": "_segments",
+      "argcount": 0,
+      "varnames": [
+        "randmulti",
+        "rows",
+        "name"
+      ],
+      "names": [
+        "_qma9",
+        "_br",
+        "_legacy_randmulti",
+        "SEGMENT_ORDER"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_write_archive",
+      "qualname": "_write_archive",
+      "argcount": 2,
+      "varnames": [
+        "path",
+        "members",
+        "zf",
+        "name",
+        "data",
+        "info"
+      ],
+      "names": [
+        "zipfile",
+        "ZipFile",
+        "ZipInfo",
+        "date_time",
+        "ZIP_STORED",
+        "compress_type",
+        "external_attr",
+        "writestr"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_endgame_profile_estimates_rmb1_side_info_transplant_delta",
+      "qualname": "test_endgame_profile_estimates_rmb1_side_info_transplant_delta",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "baseline",
+        "candidate",
+        "baseline_x",
+        "candidate_x",
+        "profile",
+        "@py_assert0",
+        "@py_assert3",
+        "@py_assert2",
+        "@py_format5",
+        "@py_format7",
+        "row",
+        "archive_rows",
+        "comparison",
+        "estimate",
+        "@py_assert5",
+        "@py_format9"
+      ],
+      "names": [
+        "pack_pr85_bundle",
+        "_segments",
+        "_rmb1_randmulti",
+        "_write_archive",
+        "_rsb1_actions",
+        "build_endgame_decision_profile",
+        "@pytest_ar",
+        "_call_reprcompare",
+        "_saferepr",
+        "AssertionError",
+        "_format_explanation",
+        "next",
+        "render_markdown",
+        "@py_builtins",
+        "locals",
+        "_should_repr_global_name"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_endgame_profile_fails_closed_on_bad_rsb1_side_info",
+      "qualname": "test_endgame_profile_fails_closed_on_bad_rsb1_side_info",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "archive",
+        "x_payload",
+        "profile",
+        "report",
+        "@py_assert0",
+        "@py_assert3",
+        "@py_assert2",
+        "@py_format5",
+        "@py_format7"
+      ],
+      "names": [
+        "pack_pr85_bundle",
+        "_segments",
+        "_write_archive",
+        "build_endgame_decision_profile",
+        "@pytest_ar",
+        "_call_reprcompare",
+        "_saferepr",
+        "AssertionError",
+        "_format_explanation"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_endgame_profile_rejects_central_local_name_mismatch",
+      "qualname": "test_endgame_profile_rejects_central_local_name_mismatch",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "archive",
+        "x_payload",
+        "raw",
+        "signature",
+        "_rest",
+        "name_len",
+        "_extra_len",
+        "@py_assert2",
+        "@py_assert1",
+        "@py_format4",
+        "@py_format6",
+        "profile",
+        "report",
+        "@py_assert0",
+        "@py_assert3",
+        "@py_format5",
+        "@py_format7"
+      ],
+      "names": [
+        "pack_pr85_bundle",
+        "_segments",
+        "_write_archive",
+        "bytearray",
+        "read_bytes",
+        "struct",
+        "unpack",
+        "@pytest_ar",
+        "_call_reprcompare",
+        "@py_builtins",
+        "locals",
+        "_should_repr_global_name",
+        "_saferepr",
+        "AssertionError",
+        "_format_explanation",
+        "write_bytes",
+        "bytes",
+        "build_endgame_decision_profile"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    [
+      "data",
+      "bytes",
+      "return",
+      "bytes"
+    ],
+    [
+      {
+        "__bytes_hex__": "00000000000000000000000000000000"
+      }
+    ],
+    [
+      "bitstream",
+      "bytes",
+      "return",
+      "bytes"
+    ],
+    [
+      "return",
+      "bytes"
+    ],
+    [
+      600
+    ],
+    [
+      "count",
+      "int",
+      "return",
+      "bytes"
+    ],
+    [
+      "randmulti",
+      "bytes | None",
+      "return",
+      "dict[str, bytes]"
+    ],
+    [
+      "path",
+      "Path",
+      "members",
+      "list[tuple[str, bytes]]",
+      "return",
+      "None"
+    ],
+    [
+      "tmp_path",
+      "Path",
+      "return",
+      "None"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": null,
+  "child_codes": [
+    {
+      "qualname": "_br",
+      "name": "_br",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "data",
+        "brotli"
+      ],
+      "names": [
+        "pytest",
+        "importorskip",
+        "compress"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 13           0 RESUME                   0\n\n 14           2 LOAD_GLOBAL              1 (NULL + pytest)\n             12 LOAD_ATTR                2 (importorskip)\n             32 LOAD_CONST               1 ('brotli')\n             34 CALL                     1\n             42 STORE_FAST               1 (brotli)\n\n 15          44 LOAD_FAST                1 (brotli)\n             46 LOAD_ATTR                5 (NULL|self + compress)\n             66 LOAD_FAST                0 (data)\n             68 LOAD_CONST               2 (5)\n             70 KW_NAMES                 3 (('quality',))\n             72 CALL                     2\n             80 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_qma9",
+      "name": "_qma9",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "bitstream"
+      ],
+      "names": [
+        "struct",
+        "pack",
+        "len"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 18           0 RESUME                   0\n\n 19           2 LOAD_CONST               1 (b'QMA9')\n              4 LOAD_GLOBAL              1 (NULL + struct)\n             14 LOAD_ATTR                2 (pack)\n             34 LOAD_CONST               2 ('<IIII')\n             36 LOAD_CONST               3 (600)\n             38 LOAD_CONST               4 (512)\n             40 LOAD_CONST               5 (384)\n             42 LOAD_GLOBAL              5 (NULL + len)\n             52 LOAD_FAST                0 (bitstream)\n             54 CALL                     1\n             62 CALL                     5\n             70 BINARY_OP                0 (+)\n             74 LOAD_FAST                0 (bitstream)\n             76 BINARY_OP                0 (+)\n             80 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_legacy_randmulti",
+      "name": "_legacy_randmulti",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [],
+      "names": [
+        "_br"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 22           0 RESUME                   0\n\n 23           2 LOAD_GLOBAL              1 (NULL + _br)\n             12 LOAD_CONST               1 (b'legacy-randmulti-payload')\n             14 CALL                     1\n             22 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_rmb1_randmulti",
+      "name": "_rmb1_randmulti",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "raw_mask",
+        "mask_br",
+        "vals_br"
+      ],
+      "names": [
+        "sum",
+        "PR85_HEADERLESS_RANDMULTI_SPECS",
+        "_br",
+        "len",
+        "to_bytes"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 26           0 RESUME                   0\n\n 27           2 LOAD_CONST               1 (b'\\x00')\n              4 LOAD_CONST               2 (75)\n              6 LOAD_GLOBAL              1 (NULL + sum)\n             16 LOAD_CONST               3 (<code object <genexpr> at 0x100efcc60, file \"/Users/adpena/Projects/pact/src/tac/tests/test_endgame_archive_decision.py\", line 27>)\n             18 MAKE_FUNCTION            0\n             20 LOAD_GLOBAL              2 (PR85_HEADERLESS_RANDMULTI_SPECS)\n             30 GET_ITER\n             32 CALL                     0\n             40 CALL                     1\n             48 BINARY_OP                5 (*)\n             52 BINARY_OP                5 (*)\n             56 STORE_FAST               0 (raw_mask)\n\n 28          58 LOAD_GLOBAL              5 (NULL + _br)\n             68 LOAD_FAST                0 (raw_mask)\n             70 CALL                     1\n             78 STORE_FAST               1 (mask_br)\n\n 29          80 LOAD_GLOBAL              5 (NULL + _br)\n             90 LOAD_CONST               4 (b'')\n             92 CALL                     1\n            100 STORE_FAST               2 (vals_br)\n\n 30         102 LOAD_CONST               5 (b'RMB1')\n            104 LOAD_GLOBAL              7 (NULL + len)\n            114 LOAD_FAST                1 (mask_br)\n            116 CALL                     1\n            124 LOAD_ATTR                9 (NULL|self + to_bytes)\n            144 LOAD_CONST               6 (2)\n            146 LOAD_CONST               7 ('little')\n            148 CALL                     2\n            156 BINARY_OP                0 (+)\n            160 LOAD_FAST                1 (mask_br)\n            162 BINARY_OP                0 (+)\n            166 LOAD_FAST                2 (vals_br)\n            168 BINARY_OP                0 (+)\n            172 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_rmb1_randmulti.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "spec"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 27           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                 9 (to 30)\n             12 STORE_FAST               1 (spec)\n             14 LOAD_FAST                1 (spec)\n             16 LOAD_CONST               0 (3)\n             18 BINARY_SUBSCR\n             22 YIELD_VALUE              1\n             24 RESUME                   1\n             26 POP_TOP\n             28 JUMP_BACKWARD           11 (to 8)\n        >>   30 END_FOR\n             32 RETURN_CONST             1 (None)\n        >>   34 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             36 RERAISE                  1\nExceptionTable:\n  4 to 32 -> 34 [0] lasti\n"
+    },
+    {
+      "qualname": "_rsb1_actions",
+      "name": "_rsb1_actions",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "count",
+        "idx",
+        "raw"
+      ],
+      "names": [
+        "bytes",
+        "range",
+        "to_bytes",
+        "_br"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 33           0 RESUME                   0\n\n 34           2 LOAD_GLOBAL              1 (NULL + bytes)\n             12 LOAD_GLOBAL              3 (NULL + range)\n             22 LOAD_FAST                0 (count)\n             24 CALL                     1\n             32 GET_ITER\n             34 LOAD_FAST_AND_CLEAR      1 (idx)\n             36 SWAP                     2\n             38 BUILD_LIST               0\n             40 SWAP                     2\n        >>   42 FOR_ITER                 7 (to 60)\n             46 STORE_FAST               1 (idx)\n             48 LOAD_FAST                1 (idx)\n             50 LOAD_CONST               1 (4)\n             52 BINARY_OP                6 (%)\n             56 LIST_APPEND              2\n             58 JUMP_BACKWARD            9 (to 42)\n        >>   60 END_FOR\n             62 SWAP                     2\n             64 STORE_FAST               1 (idx)\n             66 CALL                     1\n             74 STORE_FAST               2 (raw)\n\n 35          76 LOAD_CONST               2 (b'RSB1')\n             78 LOAD_FAST                0 (count)\n             80 LOAD_ATTR                5 (NULL|self + to_bytes)\n            100 LOAD_CONST               3 (2)\n            102 LOAD_CONST               4 ('little')\n            104 CALL                     2\n            112 BINARY_OP                0 (+)\n            116 LOAD_GLOBAL              1 (NULL + bytes)\n            126 LOAD_CONST               5 (1)\n            128 LOAD_CONST               6 (0)\n            130 BUILD_LIST               2\n            132 CALL                     1\n            140 BINARY_OP                0 (+)\n            144 LOAD_GLOBAL              7 (NULL + _br)\n            154 LOAD_FAST                2 (raw)\n            156 CALL                     1\n            164 BINARY_OP                0 (+)\n            168 RETURN_VALUE\n        >>  170 SWAP                     2\n            172 POP_TOP\n\n 34         174 SWAP                     2\n            176 STORE_FAST               1 (idx)\n            178 RERAISE                  0\nExceptionTable:\n  38 to 60 -> 170 [4]\n"
+    },
+    {
+      "qualname": "_segments",
+      "name": "_segments",
+      "argcount": 0,
+      "kwonlyargcount": 1,
+      "varnames": [
+        "randmulti",
+        "rows",
+        "name"
+      ],
+      "names": [
+        "_qma9",
+        "_br",
+        "_legacy_randmulti",
+        "SEGMENT_ORDER"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 38           0 RESUME                   0\n\n 40           2 LOAD_GLOBAL              1 (NULL + _qma9)\n             12 CALL                     0\n\n 41          20 LOAD_GLOBAL              3 (NULL + _br)\n             30 LOAD_CONST               1 (b'QH0\\x00model')\n             32 CALL                     1\n\n 42          40 LOAD_GLOBAL              3 (NULL + _br)\n             50 LOAD_CONST               2 (b'P1D1pose')\n             52 CALL                     1\n\n 43          60 LOAD_GLOBAL              3 (NULL + _br)\n             70 LOAD_CONST               3 (b'\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00')\n             72 CALL                     1\n\n 44          80 LOAD_GLOBAL              3 (NULL + _br)\n             90 LOAD_CONST               4 (b'SD4\\x00')\n             92 CALL                     1\n\n 45         100 LOAD_GLOBAL              3 (NULL + _br)\n            110 LOAD_CONST               5 (b'FV1\\x00')\n            112 CALL                     1\n\n 46         120 LOAD_GLOBAL              3 (NULL + _br)\n            130 LOAD_CONST               6 (b'FH2\\x00')\n            132 CALL                     1\n\n 47         140 LOAD_GLOBAL              3 (NULL + _br)\n            150 LOAD_CONST               7 (b'FD3\\x00')\n            152 CALL                     1\n\n 48         160 LOAD_GLOBAL              3 (NULL + _br)\n            170 LOAD_CONST               8 (b'BD1\\x00')\n            172 CALL                     1\n\n 49         180 LOAD_GLOBAL              3 (NULL + _br)\n            190 LOAD_CONST               9 (b'RH1\\x00')\n            192 CALL                     1\n\n 50         200 LOAD_FAST                0 (randmulti)\n            202 POP_JUMP_IF_NONE         2 (to 208)\n            204 LOAD_FAST                0 (randmulti)\n            206 JUMP_FORWARD             9 (to 226)\n        >>  208 LOAD_GLOBAL              5 (NULL + _legacy_randmulti)\n            218 CALL                     0\n\n 39     >>  226 LOAD_CONST              10 (('mask', 'model', 'pose', 'post', 'shift', 'frac', 'frac2', 'frac3', 'bias', 'region', 'randmulti'))\n            228 BUILD_CONST_KEY_MAP     11\n            230 STORE_FAST               1 (rows)\n\n 52         232 LOAD_GLOBAL              6 (SEGMENT_ORDER)\n            242 GET_ITER\n            244 LOAD_FAST_AND_CLEAR      2 (name)\n            246 SWAP                     2\n            248 BUILD_MAP                0\n            250 SWAP                     2\n        >>  252 FOR_ITER                 8 (to 272)\n            256 STORE_FAST               2 (name)\n            258 LOAD_FAST                2 (name)\n            260 LOAD_FAST                1 (rows)\n            262 LOAD_FAST                2 (name)\n            264 BINARY_SUBSCR\n            268 MAP_ADD                  2\n            270 JUMP_BACKWARD           10 (to 252)\n        >>  272 END_FOR\n            274 SWAP                     2\n            276 STORE_FAST               2 (name)\n            278 RETURN_VALUE\n        >>  280 SWAP                     2\n            282 POP_TOP\n            284 SWAP                     2\n            286 STORE_FAST               2 (name)\n            288 RERAISE                  0\nExceptionTable:\n  248 to 272 -> 280 [2]\n"
+    },
+    {
+      "qualname": "_write_archive",
+      "name": "_write_archive",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "members",
+        "zf",
+        "name",
+        "data",
+        "info"
+      ],
+      "names": [
+        "zipfile",
+        "ZipFile",
+        "ZipInfo",
+        "date_time",
+        "ZIP_STORED",
+        "compress_type",
+        "external_attr",
+        "writestr"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 55           0 RESUME                   0\n\n 56           2 LOAD_GLOBAL              1 (NULL + zipfile)\n             12 LOAD_ATTR                2 (ZipFile)\n             32 LOAD_FAST                0 (path)\n             34 LOAD_CONST               1 ('w')\n             36 CALL                     2\n             44 BEFORE_WITH\n             46 STORE_FAST               2 (zf)\n\n 57          48 LOAD_FAST                1 (members)\n             50 GET_ITER\n        >>   52 FOR_ITER                79 (to 214)\n             56 UNPACK_SEQUENCE          2\n             60 STORE_FAST               3 (name)\n             62 STORE_FAST               4 (data)\n\n 58          64 LOAD_GLOBAL              1 (NULL + zipfile)\n             74 LOAD_ATTR                4 (ZipInfo)\n             94 LOAD_FAST                3 (name)\n             96 CALL                     1\n            104 STORE_FAST               5 (info)\n\n 59         106 LOAD_CONST               2 ((1980, 1, 1, 0, 0, 0))\n            108 LOAD_FAST                5 (info)\n            110 STORE_ATTR               3 (date_time)\n\n 60         120 LOAD_GLOBAL              0 (zipfile)\n            130 LOAD_ATTR                8 (ZIP_STORED)\n            150 LOAD_FAST                5 (info)\n            152 STORE_ATTR               5 (compress_type)\n\n 61         162 LOAD_CONST               3 (27525120)\n            164 LOAD_FAST                5 (info)\n            166 STORE_ATTR               6 (external_attr)\n\n 62         176 LOAD_FAST                2 (zf)\n            178 LOAD_ATTR               15 (NULL|self + writestr)\n            198 LOAD_FAST                5 (info)\n            200 LOAD_FAST                4 (data)\n            202 CALL                     2\n            210 POP_TOP\n            212 JUMP_BACKWARD           81 (to 52)\n\n 57     >>  214 END_FOR\n            216 NOP\n\n 56         218 LOAD_CONST               0 (None)\n            220 LOAD_CONST               0 (None)\n            222 LOAD_CONST               0 (None)\n            224 CALL                     2\n            232 POP_TOP\n            234 RETURN_CONST             0 (None)\n        >>  236 PUSH_EXC_INFO\n            238 WITH_EXCEPT_START\n            240 POP_JUMP_IF_TRUE         1 (to 244)\n            242 RERAISE                  2\n        >>  244 POP_TOP\n            246 POP_EXCEPT\n            248 POP_TOP\n            250 POP_TOP\n            252 RETURN_CONST             0 (None)\n        >>  254 COPY                     3\n            256 POP_EXCEPT\n            258 RERAISE                  1\nExceptionTable:\n  46 to 214 -> 236 [1] lasti\n  236 to 244 -> 254 [3] lasti\n"
+    },
+    {
+      "qualname": "test_endgame_profile_estimates_rmb1_side_info_transplant_delta",
+      "name": "test_endgame_profile_estimates_rmb1_side_info_transplant_delta",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "baseline",
+        "candidate",
+        "baseline_x",
+        "candidate_x",
+        "profile",
+        "@py_assert0",
+        "@py_assert3",
+        "@py_assert2",
+        "@py_format5",
+        "@py_format7",
+        "row",
+        "archive_rows",
+        "comparison",
+        "estimate",
+        "@py_assert5",
+        "@py_format9"
+      ],
+      "names": [
+        "pack_pr85_bundle",
+        "_segments",
+        "_rmb1_randmulti",
+        "_write_archive",
+        "_rsb1_actions",
+        "build_endgame_decision_profile",
+        "@pytest_ar",
+        "_call_reprcompare",
+        "_saferepr",
+        "AssertionError",
+        "_format_explanation",
+        "next",
+        "render_markdown",
+        "@py_builtins",
+        "locals",
+        "_should_repr_global_name"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 65           0 RESUME                   0\n\n 66           2 LOAD_FAST                0 (tmp_path)\n              4 LOAD_CONST               1 ('baseline.zip')\n              6 BINARY_OP               11 (/)\n             10 STORE_FAST               1 (baseline)\n\n 67          12 LOAD_FAST                0 (tmp_path)\n             14 LOAD_CONST               2 ('candidate.zip')\n             16 BINARY_OP               11 (/)\n             20 STORE_FAST               2 (candidate)\n\n 68          22 LOAD_GLOBAL              1 (NULL + pack_pr85_bundle)\n             32 LOAD_GLOBAL              3 (NULL + _segments)\n             42 CALL                     0\n             50 LOAD_CONST               3 ('explicit_30')\n             52 KW_NAMES                 4 (('header_mode',))\n             54 CALL                     2\n             62 STORE_FAST               3 (baseline_x)\n\n 69          64 LOAD_GLOBAL              1 (NULL + pack_pr85_bundle)\n             74 LOAD_GLOBAL              3 (NULL + _segments)\n             84 LOAD_GLOBAL              5 (NULL + _rmb1_randmulti)\n             94 CALL                     0\n            102 KW_NAMES                 5 (('randmulti',))\n            104 CALL                     1\n            112 LOAD_CONST               3 ('explicit_30')\n            114 KW_NAMES                 4 (('header_mode',))\n            116 CALL                     2\n            124 STORE_FAST               4 (candidate_x)\n\n 70         126 LOAD_GLOBAL              7 (NULL + _write_archive)\n            136 LOAD_FAST                1 (baseline)\n            138 LOAD_CONST               6 ('x')\n            140 LOAD_FAST                3 (baseline_x)\n            142 BUILD_TUPLE              2\n            144 BUILD_LIST               1\n            146 CALL                     2\n            154 POP_TOP\n\n 71         156 LOAD_GLOBAL              7 (NULL + _write_archive)\n            166 LOAD_FAST                2 (candidate)\n            168 LOAD_CONST               6 ('x')\n            170 LOAD_FAST                4 (candidate_x)\n            172 BUILD_TUPLE              2\n            174 LOAD_CONST               7 ('a')\n            176 LOAD_GLOBAL              9 (NULL + _rsb1_actions)\n            186 CALL                     0\n            194 BUILD_TUPLE              2\n            196 BUILD_LIST               2\n            198 CALL                     2\n            206 POP_TOP\n\n 73         208 LOAD_GLOBAL             11 (NULL + build_endgame_decision_profile)\n\n 74         218 LOAD_FAST                1 (baseline)\n            220 LOAD_FAST                2 (candidate)\n            222 LOAD_CONST               8 (('frontier', 'candidate'))\n            224 BUILD_CONST_KEY_MAP      2\n\n 75         226 LOAD_CONST               9 ('frontier')\n\n 73         228 KW_NAMES                10 (('frontier_label',))\n            230 CALL                     2\n            238 STORE_FAST               5 (profile)\n\n 78         240 LOAD_FAST                5 (profile)\n            242 LOAD_CONST              11 ('score_claim')\n            244 BINARY_SUBSCR\n            248 STORE_FAST               6 (@py_assert0)\n            250 LOAD_CONST              12 (False)\n            252 STORE_FAST               7 (@py_assert3)\n            254 LOAD_FAST                6 (@py_assert0)\n            256 LOAD_FAST                7 (@py_assert3)\n            258 IS_OP                    0\n            260 STORE_FAST               8 (@py_assert2)\n            262 LOAD_FAST                8 (@py_assert2)\n            264 POP_JUMP_IF_TRUE       108 (to 482)\n            266 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n            276 LOAD_ATTR               14 (_call_reprcompare)\n            296 LOAD_CONST              13 (('is',))\n            298 LOAD_FAST                8 (@py_assert2)\n            300 BUILD_TUPLE              1\n            302 LOAD_CONST              14 (('%(py1)s is %(py4)s',))\n            304 LOAD_FAST                6 (@py_assert0)\n            306 LOAD_FAST                7 (@py_assert3)\n            308 BUILD_TUPLE              2\n            310 CALL                     4\n            318 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n            328 LOAD_ATTR               16 (_saferepr)\n            348 LOAD_FAST                6 (@py_assert0)\n            350 CALL                     1\n            358 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n            368 LOAD_ATTR               16 (_saferepr)\n            388 LOAD_FAST                7 (@py_assert3)\n            390 CALL                     1\n            398 LOAD_CONST              15 (('py1', 'py4'))\n            400 BUILD_CONST_KEY_MAP      2\n            402 BINARY_OP                6 (%)\n            406 STORE_FAST               9 (@py_format5)\n            408 LOAD_CONST              16 ('assert %(py6)s')\n            410 LOAD_CONST              17 ('py6')\n            412 LOAD_FAST                9 (@py_format5)\n            414 BUILD_MAP                1\n            416 BINARY_OP                6 (%)\n            420 STORE_FAST              10 (@py_format7)\n            422 LOAD_GLOBAL             19 (NULL + AssertionError)\n            432 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n            442 LOAD_ATTR               20 (_format_explanation)\n            462 LOAD_FAST               10 (@py_format7)\n            464 CALL                     1\n            472 CALL                     1\n            480 RAISE_VARARGS            1\n        >>  482 LOAD_CONST               0 (None)\n            484 COPY                     1\n            486 STORE_FAST               6 (@py_assert0)\n            488 COPY                     1\n            490 STORE_FAST               8 (@py_assert2)\n            492 STORE_FAST               7 (@py_assert3)\n\n 79         494 LOAD_FAST                5 (profile)\n            496 LOAD_CONST              18 ('archives')\n            498 BINARY_SUBSCR\n            502 GET_ITER\n            504 LOAD_FAST_AND_CLEAR     11 (row)\n            506 SWAP                     2\n            508 BUILD_MAP                0\n            510 SWAP                     2\n        >>  512 FOR_ITER                 8 (to 532)\n            516 STORE_FAST              11 (row)\n            518 LOAD_FAST               11 (row)\n            520 LOAD_CONST              19 ('label')\n            522 BINARY_SUBSCR\n            526 LOAD_FAST               11 (row)\n            528 MAP_ADD                  2\n            530 JUMP_BACKWARD           10 (to 512)\n        >>  532 END_FOR\n            534 STORE_FAST              12 (archive_rows)\n            536 STORE_FAST              11 (row)\n\n 80         538 LOAD_FAST               12 (archive_rows)\n            540 LOAD_CONST              20 ('candidate')\n            542 BINARY_SUBSCR\n            546 LOAD_CONST              21 ('side_info')\n            548 BINARY_SUBSCR\n            552 LOAD_CONST              22 ('members')\n            554 BINARY_SUBSCR\n            558 LOAD_CONST              23 (0)\n            560 BINARY_SUBSCR\n            564 LOAD_CONST              24 ('validation')\n            566 BINARY_SUBSCR\n            570 LOAD_CONST              25 ('status')\n            572 BINARY_SUBSCR\n            576 STORE_FAST               6 (@py_assert0)\n            578 LOAD_CONST              26 ('ok')\n            580 STORE_FAST               7 (@py_assert3)\n            582 LOAD_FAST                6 (@py_assert0)\n            584 LOAD_FAST                7 (@py_assert3)\n            586 COMPARE_OP              40 (==)\n            590 STORE_FAST               8 (@py_assert2)\n            592 LOAD_FAST                8 (@py_assert2)\n            594 POP_JUMP_IF_TRUE       108 (to 812)\n            596 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n            606 LOAD_ATTR               14 (_call_reprcompare)\n            626 LOAD_CONST              27 (('==',))\n            628 LOAD_FAST                8 (@py_assert2)\n            630 BUILD_TUPLE              1\n            632 LOAD_CONST              28 (('%(py1)s == %(py4)s',))\n            634 LOAD_FAST                6 (@py_assert0)\n            636 LOAD_FAST                7 (@py_assert3)\n            638 BUILD_TUPLE              2\n            640 CALL                     4\n            648 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n            658 LOAD_ATTR               16 (_saferepr)\n            678 LOAD_FAST                6 (@py_assert0)\n            680 CALL                     1\n            688 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n            698 LOAD_ATTR               16 (_saferepr)\n            718 LOAD_FAST                7 (@py_assert3)\n            720 CALL                     1\n            728 LOAD_CONST              15 (('py1', 'py4'))\n            730 BUILD_CONST_KEY_MAP      2\n            732 BINARY_OP                6 (%)\n            736 STORE_FAST               9 (@py_format5)\n            738 LOAD_CONST              16 ('assert %(py6)s')\n            740 LOAD_CONST              17 ('py6')\n            742 LOAD_FAST                9 (@py_format5)\n            744 BUILD_MAP                1\n            746 BINARY_OP                6 (%)\n            750 STORE_FAST              10 (@py_format7)\n            752 LOAD_GLOBAL             19 (NULL + AssertionError)\n            762 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n            772 LOAD_ATTR               20 (_format_explanation)\n            792 LOAD_FAST               10 (@py_format7)\n            794 CALL                     1\n            802 CALL                     1\n            810 RAISE_VARARGS            1\n        >>  812 LOAD_CONST               0 (None)\n            814 COPY                     1\n            816 STORE_FAST               6 (@py_assert0)\n            818 COPY                     1\n            820 STORE_FAST               8 (@py_assert2)\n            822 STORE_FAST               7 (@py_assert3)\n\n 81         824 LOAD_FAST                5 (profile)\n            826 LOAD_CONST              29 ('comparisons_to_frontier')\n            828 BINARY_SUBSCR\n            832 LOAD_CONST              23 (0)\n            834 BINARY_SUBSCR\n            838 STORE_FAST              13 (comparison)\n\n 82         840 LOAD_GLOBAL             23 (NULL + next)\n            850 LOAD_CONST              30 (<code object <genexpr> at 0x100f5cf30, file \"/Users/adpena/Projects/pact/src/tac/tests/test_endgame_archive_decision.py\", line 82>)\n            852 MAKE_FUNCTION            0\n            854 LOAD_FAST               13 (comparison)\n            856 LOAD_CONST              31 ('transplant_estimates')\n            858 BINARY_SUBSCR\n            862 GET_ITER\n            864 CALL                     0\n            872 CALL                     1\n            880 STORE_FAST              14 (estimate)\n\n 83         882 LOAD_FAST               14 (estimate)\n            884 LOAD_CONST              32 ('requires_candidate_side_info')\n            886 BINARY_SUBSCR\n            890 STORE_FAST               6 (@py_assert0)\n            892 LOAD_CONST              33 (True)\n            894 STORE_FAST               7 (@py_assert3)\n            896 LOAD_FAST                6 (@py_assert0)\n            898 LOAD_FAST                7 (@py_assert3)\n            900 IS_OP                    0\n            902 STORE_FAST               8 (@py_assert2)\n            904 LOAD_FAST                8 (@py_assert2)\n            906 POP_JUMP_IF_TRUE       108 (to 1124)\n            908 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n            918 LOAD_ATTR               14 (_call_reprcompare)\n            938 LOAD_CONST              13 (('is',))\n            940 LOAD_FAST                8 (@py_assert2)\n            942 BUILD_TUPLE              1\n            944 LOAD_CONST              14 (('%(py1)s is %(py4)s',))\n            946 LOAD_FAST                6 (@py_assert0)\n            948 LOAD_FAST                7 (@py_assert3)\n            950 BUILD_TUPLE              2\n            952 CALL                     4\n            960 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n            970 LOAD_ATTR               16 (_saferepr)\n            990 LOAD_FAST                6 (@py_assert0)\n            992 CALL                     1\n           1000 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n           1010 LOAD_ATTR               16 (_saferepr)\n           1030 LOAD_FAST                7 (@py_assert3)\n           1032 CALL                     1\n           1040 LOAD_CONST              15 (('py1', 'py4'))\n           1042 BUILD_CONST_KEY_MAP      2\n           1044 BINARY_OP                6 (%)\n           1048 STORE_FAST               9 (@py_format5)\n           1050 LOAD_CONST              16 ('assert %(py6)s')\n           1052 LOAD_CONST              17 ('py6')\n           1054 LOAD_FAST                9 (@py_format5)\n           1056 BUILD_MAP                1\n           1058 BINARY_OP                6 (%)\n           1062 STORE_FAST              10 (@py_format7)\n           1064 LOAD_GLOBAL             19 (NULL + AssertionError)\n           1074 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n           1084 LOAD_ATTR               20 (_format_explanation)\n           1104 LOAD_FAST               10 (@py_format7)\n           1106 CALL                     1\n           1114 CALL                     1\n           1122 RAISE_VARARGS            1\n        >> 1124 LOAD_CONST               0 (None)\n           1126 COPY                     1\n           1128 STORE_FAST               6 (@py_assert0)\n           1130 COPY                     1\n           1132 STORE_FAST               8 (@py_assert2)\n           1134 STORE_FAST               7 (@py_assert3)\n\n 84        1136 LOAD_FAST               14 (estimate)\n           1138 LOAD_CONST              34 ('estimated_archive_delta_bytes')\n           1140 BINARY_SUBSCR\n           1144 STORE_FAST               6 (@py_assert0)\n           1146 LOAD_FAST               13 (comparison)\n           1148 LOAD_CONST              35 ('archive_delta_bytes')\n           1150 BINARY_SUBSCR\n           1154 STORE_FAST               7 (@py_assert3)\n           1156 LOAD_FAST                6 (@py_assert0)\n           1158 LOAD_FAST                7 (@py_assert3)\n           1160 COMPARE_OP              40 (==)\n           1164 STORE_FAST               8 (@py_assert2)\n           1166 LOAD_FAST                8 (@py_assert2)\n           1168 POP_JUMP_IF_TRUE       108 (to 1386)\n           1170 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n           1180 LOAD_ATTR               14 (_call_reprcompare)\n           1200 LOAD_CONST              27 (('==',))\n           1202 LOAD_FAST                8 (@py_assert2)\n           1204 BUILD_TUPLE              1\n           1206 LOAD_CONST              28 (('%(py1)s == %(py4)s',))\n           1208 LOAD_FAST                6 (@py_assert0)\n           1210 LOAD_FAST                7 (@py_assert3)\n           1212 BUILD_TUPLE              2\n           1214 CALL                     4\n           1222 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n           1232 LOAD_ATTR               16 (_saferepr)\n           1252 LOAD_FAST                6 (@py_assert0)\n           1254 CALL                     1\n           1262 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n           1272 LOAD_ATTR               16 (_saferepr)\n           1292 LOAD_FAST                7 (@py_assert3)\n           1294 CALL                     1\n           1302 LOAD_CONST              15 (('py1', 'py4'))\n           1304 BUILD_CONST_KEY_MAP      2\n           1306 BINARY_OP                6 (%)\n           1310 STORE_FAST               9 (@py_format5)\n           1312 LOAD_CONST              16 ('assert %(py6)s')\n           1314 LOAD_CONST              17 ('py6')\n           1316 LOAD_FAST                9 (@py_format5)\n           1318 BUILD_MAP                1\n           1320 BINARY_OP                6 (%)\n           1324 STORE_FAST              10 (@py_format7)\n           1326 LOAD_GLOBAL             19 (NULL + AssertionError)\n           1336 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n           1346 LOAD_ATTR               20 (_format_explanation)\n           1366 LOAD_FAST               10 (@py_format7)\n           1368 CALL                     1\n           1376 CALL                     1\n           1384 RAISE_VARARGS            1\n        >> 1386 LOAD_CONST               0 (None)\n           1388 COPY                     1\n           1390 STORE_FAST               6 (@py_assert0)\n           1392 COPY                     1\n           1394 STORE_FAST               8 (@py_assert2)\n           1396 STORE_FAST               7 (@py_assert3)\n\n 85        1398 LOAD_CONST              36 ('Endgame Archive Decision Profile')\n           1400 STORE_FAST               6 (@py_assert0)\n           1402 LOAD_GLOBAL             25 (NULL + render_markdown)\n           1412 LOAD_FAST                5 (profile)\n           1414 CALL                     1\n           1422 STORE_FAST              15 (@py_assert5)\n           1424 LOAD_FAST                6 (@py_assert0)\n           1426 LOAD_FAST               15 (@py_assert5)\n           1428 CONTAINS_OP              0\n           1430 STORE_FAST               8 (@py_assert2)\n           1432 LOAD_FAST                8 (@py_assert2)\n           1434 POP_JUMP_IF_TRUE       246 (to 1928)\n           1436 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n           1446 LOAD_ATTR               14 (_call_reprcompare)\n           1466 LOAD_CONST              37 (('in',))\n           1468 LOAD_FAST                8 (@py_assert2)\n           1470 BUILD_TUPLE              1\n           1472 LOAD_CONST              38 (('%(py1)s in %(py6)s\\n{%(py6)s = %(py3)s(%(py4)s)\\n}',))\n           1474 LOAD_FAST                6 (@py_assert0)\n           1476 LOAD_FAST               15 (@py_assert5)\n           1478 BUILD_TUPLE              2\n           1480 CALL                     4\n           1488 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n           1498 LOAD_ATTR               16 (_saferepr)\n           1518 LOAD_FAST                6 (@py_assert0)\n           1520 CALL                     1\n           1528 LOAD_CONST              39 ('render_markdown')\n           1530 LOAD_GLOBAL             27 (NULL + @py_builtins)\n           1540 LOAD_ATTR               28 (locals)\n           1560 CALL                     0\n           1568 CONTAINS_OP              0\n           1570 POP_JUMP_IF_TRUE        25 (to 1622)\n           1572 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n           1582 LOAD_ATTR               30 (_should_repr_global_name)\n           1602 LOAD_GLOBAL             24 (render_markdown)\n           1612 CALL                     1\n           1620 POP_JUMP_IF_FALSE       25 (to 1672)\n        >> 1622 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n           1632 LOAD_ATTR               16 (_saferepr)\n           1652 LOAD_GLOBAL             24 (render_markdown)\n           1662 CALL                     1\n           1670 JUMP_FORWARD             1 (to 1674)\n        >> 1672 LOAD_CONST              39 ('render_markdown')\n        >> 1674 LOAD_CONST              40 ('profile')\n           1676 LOAD_GLOBAL             27 (NULL + @py_builtins)\n           1686 LOAD_ATTR               28 (locals)\n           1706 CALL                     0\n           1714 CONTAINS_OP              0\n           1716 POP_JUMP_IF_TRUE        21 (to 1760)\n           1718 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n           1728 LOAD_ATTR               30 (_should_repr_global_name)\n           1748 LOAD_FAST                5 (profile)\n           1750 CALL                     1\n           1758 POP_JUMP_IF_FALSE       21 (to 1802)\n        >> 1760 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n           1770 LOAD_ATTR               16 (_saferepr)\n           1790 LOAD_FAST                5 (profile)\n           1792 CALL                     1\n           1800 JUMP_FORWARD             1 (to 1804)\n        >> 1802 LOAD_CONST              40 ('profile')\n        >> 1804 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n           1814 LOAD_ATTR               16 (_saferepr)\n           1834 LOAD_FAST               15 (@py_assert5)\n           1836 CALL                     1\n           1844 LOAD_CONST              41 (('py1', 'py3', 'py4', 'py6'))\n           1846 BUILD_CONST_KEY_MAP      4\n           1848 BINARY_OP                6 (%)\n           1852 STORE_FAST              10 (@py_format7)\n           1854 LOAD_CONST              42 ('assert %(py8)s')\n           1856 LOAD_CONST              43 ('py8')\n           1858 LOAD_FAST               10 (@py_format7)\n           1860 BUILD_MAP                1\n           1862 BINARY_OP                6 (%)\n           1866 STORE_FAST              16 (@py_format9)\n           1868 LOAD_GLOBAL             19 (NULL + AssertionError)\n           1878 LOAD_GLOBAL             13 (NULL + @pytest_ar)\n           1888 LOAD_ATTR               20 (_format_explanation)\n           1908 LOAD_FAST               16 (@py_format9)\n           1910 CALL                     1\n           1918 CALL                     1\n           1926 RAISE_VARARGS            1\n        >> 1928 LOAD_CONST               0 (None)\n           1930 COPY                     1\n           1932 STORE_FAST               6 (@py_assert0)\n           1934 COPY                     1\n           1936 STORE_FAST               8 (@py_assert2)\n           1938 STORE_FAST              15 (@py_assert5)\n           1940 RETURN_CONST             0 (None)\n        >> 1942 SWAP                     2\n           1944 POP_TOP\n\n 79        1946 SWAP                     2\n           1948 STORE_FAST              11 (row)\n           1950 RERAISE                  0\nExceptionTable:\n  508 to 532 -> 1942 [2]\n"
+    },
+    {
+      "qualname": "test_endgame_profile_estimates_rmb1_side_info_transplant_delta.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "row"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "segment",
+      "dis": " 82           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                15 (to 42)\n             12 STORE_FAST               1 (row)\n             14 LOAD_FAST                1 (row)\n             16 LOAD_CONST               0 ('segment')\n             18 BINARY_SUBSCR\n             22 LOAD_CONST               1 ('randmulti')\n             24 COMPARE_OP              40 (==)\n             28 POP_JUMP_IF_TRUE         1 (to 32)\n             30 JUMP_BACKWARD           12 (to 8)\n        >>   32 LOAD_FAST                1 (row)\n             34 YIELD_VALUE              1\n             36 RESUME                   1\n             38 POP_TOP\n             40 JUMP_BACKWARD           17 (to 8)\n        >>   42 END_FOR\n             44 RETURN_CONST             2 (None)\n        >>   46 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             48 RERAISE                  1\nExceptionTable:\n  4 to 28 -> 46 [0] lasti\n  32 to 44 -> 46 [0] lasti\n"
+    },
+    {
+      "qualname": "test_endgame_profile_fails_closed_on_bad_rsb1_side_info",
+      "name": "test_endgame_profile_fails_closed_on_bad_rsb1_side_info",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "archive",
+        "x_payload",
+        "profile",
+        "report",
+        "@py_assert0",
+        "@py_assert3",
+        "@py_assert2",
+        "@py_format5",
+        "@py_format7"
+      ],
+      "names": [
+        "pack_pr85_bundle",
+        "_segments",
+        "_write_archive",
+        "build_endgame_decision_profile",
+        "@pytest_ar",
+        "_call_reprcompare",
+        "_saferepr",
+        "AssertionError",
+        "_format_explanation"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 88           0 RESUME                   0\n\n 89           2 LOAD_FAST                0 (tmp_path)\n              4 LOAD_CONST               1 ('bad_side.zip')\n              6 BINARY_OP               11 (/)\n             10 STORE_FAST               1 (archive)\n\n 90          12 LOAD_GLOBAL              1 (NULL + pack_pr85_bundle)\n             22 LOAD_GLOBAL              3 (NULL + _segments)\n             32 CALL                     0\n             40 LOAD_CONST               2 ('explicit_30')\n             42 KW_NAMES                 3 (('header_mode',))\n             44 CALL                     2\n             52 STORE_FAST               2 (x_payload)\n\n 91          54 LOAD_GLOBAL              5 (NULL + _write_archive)\n             64 LOAD_FAST                1 (archive)\n             66 LOAD_CONST               4 ('x')\n             68 LOAD_FAST                2 (x_payload)\n             70 BUILD_TUPLE              2\n             72 LOAD_CONST               5 (('a', b'RSB1X\\x02\\x01\\x00not-brotli'))\n             74 BUILD_LIST               2\n             76 CALL                     2\n             84 POP_TOP\n\n 93          86 LOAD_GLOBAL              7 (NULL + build_endgame_decision_profile)\n             96 LOAD_CONST               6 ('bad')\n             98 LOAD_FAST                1 (archive)\n            100 BUILD_MAP                1\n            102 LOAD_CONST               6 ('bad')\n            104 KW_NAMES                 7 (('frontier_label',))\n            106 CALL                     2\n            114 STORE_FAST               3 (profile)\n\n 94         116 LOAD_FAST                3 (profile)\n            118 LOAD_CONST               8 ('archives')\n            120 BINARY_SUBSCR\n            124 LOAD_CONST               9 (0)\n            126 BINARY_SUBSCR\n            130 STORE_FAST               4 (report)\n\n 96         132 LOAD_FAST                4 (report)\n            134 LOAD_CONST              10 ('decision_support')\n            136 BINARY_SUBSCR\n            140 LOAD_CONST              11 ('valid_for_byte_decision')\n            142 BINARY_SUBSCR\n            146 STORE_FAST               5 (@py_assert0)\n            148 LOAD_CONST              12 (False)\n            150 STORE_FAST               6 (@py_assert3)\n            152 LOAD_FAST                5 (@py_assert0)\n            154 LOAD_FAST                6 (@py_assert3)\n            156 IS_OP                    0\n            158 STORE_FAST               7 (@py_assert2)\n            160 LOAD_FAST                7 (@py_assert2)\n            162 POP_JUMP_IF_TRUE       108 (to 380)\n            164 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            174 LOAD_ATTR               10 (_call_reprcompare)\n            194 LOAD_CONST              13 (('is',))\n            196 LOAD_FAST                7 (@py_assert2)\n            198 BUILD_TUPLE              1\n            200 LOAD_CONST              14 (('%(py1)s is %(py4)s',))\n            202 LOAD_FAST                5 (@py_assert0)\n            204 LOAD_FAST                6 (@py_assert3)\n            206 BUILD_TUPLE              2\n            208 CALL                     4\n            216 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            226 LOAD_ATTR               12 (_saferepr)\n            246 LOAD_FAST                5 (@py_assert0)\n            248 CALL                     1\n            256 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            266 LOAD_ATTR               12 (_saferepr)\n            286 LOAD_FAST                6 (@py_assert3)\n            288 CALL                     1\n            296 LOAD_CONST              15 (('py1', 'py4'))\n            298 BUILD_CONST_KEY_MAP      2\n            300 BINARY_OP                6 (%)\n            304 STORE_FAST               8 (@py_format5)\n            306 LOAD_CONST              16 ('assert %(py6)s')\n            308 LOAD_CONST              17 ('py6')\n            310 LOAD_FAST                8 (@py_format5)\n            312 BUILD_MAP                1\n            314 BINARY_OP                6 (%)\n            318 STORE_FAST               9 (@py_format7)\n            320 LOAD_GLOBAL             15 (NULL + AssertionError)\n            330 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            340 LOAD_ATTR               16 (_format_explanation)\n            360 LOAD_FAST                9 (@py_format7)\n            362 CALL                     1\n            370 CALL                     1\n            378 RAISE_VARARGS            1\n        >>  380 LOAD_CONST               0 (None)\n            382 COPY                     1\n            384 STORE_FAST               5 (@py_assert0)\n            386 COPY                     1\n            388 STORE_FAST               7 (@py_assert2)\n            390 STORE_FAST               6 (@py_assert3)\n\n 97         392 LOAD_CONST              18 ('side_member_validation_failed:a#1')\n            394 STORE_FAST               5 (@py_assert0)\n            396 LOAD_FAST                4 (report)\n            398 LOAD_CONST              10 ('decision_support')\n            400 BINARY_SUBSCR\n            404 LOAD_CONST              19 ('blockers')\n            406 BINARY_SUBSCR\n            410 STORE_FAST               6 (@py_assert3)\n            412 LOAD_FAST                5 (@py_assert0)\n            414 LOAD_FAST                6 (@py_assert3)\n            416 CONTAINS_OP              0\n            418 STORE_FAST               7 (@py_assert2)\n            420 LOAD_FAST                7 (@py_assert2)\n            422 POP_JUMP_IF_TRUE       108 (to 640)\n            424 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            434 LOAD_ATTR               10 (_call_reprcompare)\n            454 LOAD_CONST              20 (('in',))\n            456 LOAD_FAST                7 (@py_assert2)\n            458 BUILD_TUPLE              1\n            460 LOAD_CONST              21 (('%(py1)s in %(py4)s',))\n            462 LOAD_FAST                5 (@py_assert0)\n            464 LOAD_FAST                6 (@py_assert3)\n            466 BUILD_TUPLE              2\n            468 CALL                     4\n            476 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            486 LOAD_ATTR               12 (_saferepr)\n            506 LOAD_FAST                5 (@py_assert0)\n            508 CALL                     1\n            516 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            526 LOAD_ATTR               12 (_saferepr)\n            546 LOAD_FAST                6 (@py_assert3)\n            548 CALL                     1\n            556 LOAD_CONST              15 (('py1', 'py4'))\n            558 BUILD_CONST_KEY_MAP      2\n            560 BINARY_OP                6 (%)\n            564 STORE_FAST               8 (@py_format5)\n            566 LOAD_CONST              16 ('assert %(py6)s')\n            568 LOAD_CONST              17 ('py6')\n            570 LOAD_FAST                8 (@py_format5)\n            572 BUILD_MAP                1\n            574 BINARY_OP                6 (%)\n            578 STORE_FAST               9 (@py_format7)\n            580 LOAD_GLOBAL             15 (NULL + AssertionError)\n            590 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            600 LOAD_ATTR               16 (_format_explanation)\n            620 LOAD_FAST                9 (@py_format7)\n            622 CALL                     1\n            630 CALL                     1\n            638 RAISE_VARARGS            1\n        >>  640 LOAD_CONST               0 (None)\n            642 COPY                     1\n            644 STORE_FAST               5 (@py_assert0)\n            646 COPY                     1\n            648 STORE_FAST               7 (@py_assert2)\n            650 STORE_FAST               6 (@py_assert3)\n\n 98         652 LOAD_FAST                4 (report)\n            654 LOAD_CONST              22 ('side_info')\n            656 BINARY_SUBSCR\n            660 LOAD_CONST              23 ('members')\n            662 BINARY_SUBSCR\n            666 LOAD_CONST               9 (0)\n            668 BINARY_SUBSCR\n            672 LOAD_CONST              24 ('validation')\n            674 BINARY_SUBSCR\n            678 LOAD_CONST              25 ('status')\n            680 BINARY_SUBSCR\n            684 STORE_FAST               5 (@py_assert0)\n            686 LOAD_CONST              26 ('failed')\n            688 STORE_FAST               6 (@py_assert3)\n            690 LOAD_FAST                5 (@py_assert0)\n            692 LOAD_FAST                6 (@py_assert3)\n            694 COMPARE_OP              40 (==)\n            698 STORE_FAST               7 (@py_assert2)\n            700 LOAD_FAST                7 (@py_assert2)\n            702 POP_JUMP_IF_TRUE       108 (to 920)\n            704 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            714 LOAD_ATTR               10 (_call_reprcompare)\n            734 LOAD_CONST              27 (('==',))\n            736 LOAD_FAST                7 (@py_assert2)\n            738 BUILD_TUPLE              1\n            740 LOAD_CONST              28 (('%(py1)s == %(py4)s',))\n            742 LOAD_FAST                5 (@py_assert0)\n            744 LOAD_FAST                6 (@py_assert3)\n            746 BUILD_TUPLE              2\n            748 CALL                     4\n            756 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            766 LOAD_ATTR               12 (_saferepr)\n            786 LOAD_FAST                5 (@py_assert0)\n            788 CALL                     1\n            796 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            806 LOAD_ATTR               12 (_saferepr)\n            826 LOAD_FAST                6 (@py_assert3)\n            828 CALL                     1\n            836 LOAD_CONST              15 (('py1', 'py4'))\n            838 BUILD_CONST_KEY_MAP      2\n            840 BINARY_OP                6 (%)\n            844 STORE_FAST               8 (@py_format5)\n            846 LOAD_CONST              16 ('assert %(py6)s')\n            848 LOAD_CONST              17 ('py6')\n            850 LOAD_FAST                8 (@py_format5)\n            852 BUILD_MAP                1\n            854 BINARY_OP                6 (%)\n            858 STORE_FAST               9 (@py_format7)\n            860 LOAD_GLOBAL             15 (NULL + AssertionError)\n            870 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            880 LOAD_ATTR               16 (_format_explanation)\n            900 LOAD_FAST                9 (@py_format7)\n            902 CALL                     1\n            910 CALL                     1\n            918 RAISE_VARARGS            1\n        >>  920 LOAD_CONST               0 (None)\n            922 COPY                     1\n            924 STORE_FAST               5 (@py_assert0)\n            926 COPY                     1\n            928 STORE_FAST               7 (@py_assert2)\n            930 STORE_FAST               6 (@py_assert3)\n            932 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "test_endgame_profile_rejects_central_local_name_mismatch",
+      "name": "test_endgame_profile_rejects_central_local_name_mismatch",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "archive",
+        "x_payload",
+        "raw",
+        "signature",
+        "_rest",
+        "name_len",
+        "_extra_len",
+        "@py_assert2",
+        "@py_assert1",
+        "@py_format4",
+        "@py_format6",
+        "profile",
+        "report",
+        "@py_assert0",
+        "@py_assert3",
+        "@py_format5",
+        "@py_format7"
+      ],
+      "names": [
+        "pack_pr85_bundle",
+        "_segments",
+        "_write_archive",
+        "bytearray",
+        "read_bytes",
+        "struct",
+        "unpack",
+        "@pytest_ar",
+        "_call_reprcompare",
+        "@py_builtins",
+        "locals",
+        "_should_repr_global_name",
+        "_saferepr",
+        "AssertionError",
+        "_format_explanation",
+        "write_bytes",
+        "bytes",
+        "build_endgame_decision_profile"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "101           0 RESUME                   0\n\n102           2 LOAD_FAST                0 (tmp_path)\n              4 LOAD_CONST               1 ('mismatch.zip')\n              6 BINARY_OP               11 (/)\n             10 STORE_FAST               1 (archive)\n\n103          12 LOAD_GLOBAL              1 (NULL + pack_pr85_bundle)\n             22 LOAD_GLOBAL              3 (NULL + _segments)\n             32 CALL                     0\n             40 LOAD_CONST               2 ('explicit_30')\n             42 KW_NAMES                 3 (('header_mode',))\n             44 CALL                     2\n             52 STORE_FAST               2 (x_payload)\n\n104          54 LOAD_GLOBAL              5 (NULL + _write_archive)\n             64 LOAD_FAST                1 (archive)\n             66 LOAD_CONST               4 ('x')\n             68 LOAD_FAST                2 (x_payload)\n             70 BUILD_TUPLE              2\n             72 BUILD_LIST               1\n             74 CALL                     2\n             82 POP_TOP\n\n106          84 LOAD_GLOBAL              7 (NULL + bytearray)\n             94 LOAD_FAST                1 (archive)\n             96 LOAD_ATTR                9 (NULL|self + read_bytes)\n            116 CALL                     0\n            124 CALL                     1\n            132 STORE_FAST               3 (raw)\n\n107         134 LOAD_GLOBAL             11 (NULL + struct)\n            144 LOAD_ATTR               12 (unpack)\n            164 LOAD_CONST               5 ('<IHHHHHIIIHH')\n            166 LOAD_FAST                3 (raw)\n            168 LOAD_CONST               0 (None)\n            170 LOAD_CONST               6 (30)\n            172 BINARY_SLICE\n            174 CALL                     2\n            182 EXTENDED_ARG             2\n            184 UNPACK_EX              513\n            186 STORE_FAST               4 (signature)\n            188 STORE_FAST               5 (_rest)\n            190 STORE_FAST               6 (name_len)\n            192 STORE_FAST               7 (_extra_len)\n\n108         194 LOAD_CONST               7 (67324752)\n            196 STORE_FAST               8 (@py_assert2)\n            198 LOAD_FAST                4 (signature)\n            200 LOAD_FAST                8 (@py_assert2)\n            202 COMPARE_OP              40 (==)\n            206 STORE_FAST               9 (@py_assert1)\n            208 LOAD_FAST                9 (@py_assert1)\n            210 POP_JUMP_IF_TRUE       153 (to 518)\n            212 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n            222 LOAD_ATTR               16 (_call_reprcompare)\n            242 LOAD_CONST               8 (('==',))\n            244 LOAD_FAST                9 (@py_assert1)\n            246 BUILD_TUPLE              1\n            248 LOAD_CONST               9 (('%(py0)s == %(py3)s',))\n            250 LOAD_FAST                4 (signature)\n            252 LOAD_FAST                8 (@py_assert2)\n            254 BUILD_TUPLE              2\n            256 CALL                     4\n            264 LOAD_CONST              10 ('signature')\n            266 LOAD_GLOBAL             19 (NULL + @py_builtins)\n            276 LOAD_ATTR               20 (locals)\n            296 CALL                     0\n            304 CONTAINS_OP              0\n            306 POP_JUMP_IF_TRUE        21 (to 350)\n            308 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n            318 LOAD_ATTR               22 (_should_repr_global_name)\n            338 LOAD_FAST                4 (signature)\n            340 CALL                     1\n            348 POP_JUMP_IF_FALSE       21 (to 392)\n        >>  350 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n            360 LOAD_ATTR               24 (_saferepr)\n            380 LOAD_FAST                4 (signature)\n            382 CALL                     1\n            390 JUMP_FORWARD             1 (to 394)\n        >>  392 LOAD_CONST              10 ('signature')\n        >>  394 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n            404 LOAD_ATTR               24 (_saferepr)\n            424 LOAD_FAST                8 (@py_assert2)\n            426 CALL                     1\n            434 LOAD_CONST              11 (('py0', 'py3'))\n            436 BUILD_CONST_KEY_MAP      2\n            438 BINARY_OP                6 (%)\n            442 STORE_FAST              10 (@py_format4)\n            444 LOAD_CONST              12 ('assert %(py5)s')\n            446 LOAD_CONST              13 ('py5')\n            448 LOAD_FAST               10 (@py_format4)\n            450 BUILD_MAP                1\n            452 BINARY_OP                6 (%)\n            456 STORE_FAST              11 (@py_format6)\n            458 LOAD_GLOBAL             27 (NULL + AssertionError)\n            468 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n            478 LOAD_ATTR               28 (_format_explanation)\n            498 LOAD_FAST               11 (@py_format6)\n            500 CALL                     1\n            508 CALL                     1\n            516 RAISE_VARARGS            1\n        >>  518 LOAD_CONST               0 (None)\n            520 COPY                     1\n            522 STORE_FAST               9 (@py_assert1)\n            524 STORE_FAST               8 (@py_assert2)\n\n109         526 LOAD_CONST              14 (1)\n            528 STORE_FAST               8 (@py_assert2)\n            530 LOAD_FAST                6 (name_len)\n            532 LOAD_FAST                8 (@py_assert2)\n            534 COMPARE_OP              40 (==)\n            538 STORE_FAST               9 (@py_assert1)\n            540 LOAD_FAST                9 (@py_assert1)\n            542 POP_JUMP_IF_TRUE       153 (to 850)\n            544 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n            554 LOAD_ATTR               16 (_call_reprcompare)\n            574 LOAD_CONST               8 (('==',))\n            576 LOAD_FAST                9 (@py_assert1)\n            578 BUILD_TUPLE              1\n            580 LOAD_CONST               9 (('%(py0)s == %(py3)s',))\n            582 LOAD_FAST                6 (name_len)\n            584 LOAD_FAST                8 (@py_assert2)\n            586 BUILD_TUPLE              2\n            588 CALL                     4\n            596 LOAD_CONST              15 ('name_len')\n            598 LOAD_GLOBAL             19 (NULL + @py_builtins)\n            608 LOAD_ATTR               20 (locals)\n            628 CALL                     0\n            636 CONTAINS_OP              0\n            638 POP_JUMP_IF_TRUE        21 (to 682)\n            640 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n            650 LOAD_ATTR               22 (_should_repr_global_name)\n            670 LOAD_FAST                6 (name_len)\n            672 CALL                     1\n            680 POP_JUMP_IF_FALSE       21 (to 724)\n        >>  682 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n            692 LOAD_ATTR               24 (_saferepr)\n            712 LOAD_FAST                6 (name_len)\n            714 CALL                     1\n            722 JUMP_FORWARD             1 (to 726)\n        >>  724 LOAD_CONST              15 ('name_len')\n        >>  726 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n            736 LOAD_ATTR               24 (_saferepr)\n            756 LOAD_FAST                8 (@py_assert2)\n            758 CALL                     1\n            766 LOAD_CONST              11 (('py0', 'py3'))\n            768 BUILD_CONST_KEY_MAP      2\n            770 BINARY_OP                6 (%)\n            774 STORE_FAST              10 (@py_format4)\n            776 LOAD_CONST              12 ('assert %(py5)s')\n            778 LOAD_CONST              13 ('py5')\n            780 LOAD_FAST               10 (@py_format4)\n            782 BUILD_MAP                1\n            784 BINARY_OP                6 (%)\n            788 STORE_FAST              11 (@py_format6)\n            790 LOAD_GLOBAL             27 (NULL + AssertionError)\n            800 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n            810 LOAD_ATTR               28 (_format_explanation)\n            830 LOAD_FAST               11 (@py_format6)\n            832 CALL                     1\n            840 CALL                     1\n            848 RAISE_VARARGS            1\n        >>  850 LOAD_CONST               0 (None)\n            852 COPY                     1\n            854 STORE_FAST               9 (@py_assert1)\n            856 STORE_FAST               8 (@py_assert2)\n\n110         858 LOAD_CONST              16 (b'y')\n            860 LOAD_FAST                3 (raw)\n            862 LOAD_CONST               6 (30)\n            864 LOAD_CONST              17 (31)\n            866 STORE_SLICE\n\n111         868 LOAD_FAST                1 (archive)\n            870 LOAD_ATTR               31 (NULL|self + write_bytes)\n            890 LOAD_GLOBAL             33 (NULL + bytes)\n            900 LOAD_FAST                3 (raw)\n            902 CALL                     1\n            910 CALL                     1\n            918 POP_TOP\n\n113         920 LOAD_GLOBAL             35 (NULL + build_endgame_decision_profile)\n            930 LOAD_CONST              18 ('bad')\n            932 LOAD_FAST                1 (archive)\n            934 BUILD_MAP                1\n            936 LOAD_CONST              18 ('bad')\n            938 KW_NAMES                19 (('frontier_label',))\n            940 CALL                     2\n            948 STORE_FAST              12 (profile)\n\n114         950 LOAD_FAST               12 (profile)\n            952 LOAD_CONST              20 ('archives')\n            954 BINARY_SUBSCR\n            958 LOAD_CONST              21 (0)\n            960 BINARY_SUBSCR\n            964 STORE_FAST              13 (report)\n\n116         966 LOAD_FAST               13 (report)\n            968 LOAD_CONST              22 ('strict_zip')\n            970 BINARY_SUBSCR\n            974 LOAD_CONST              23 ('valid')\n            976 BINARY_SUBSCR\n            980 STORE_FAST              14 (@py_assert0)\n            982 LOAD_CONST              24 (False)\n            984 STORE_FAST              15 (@py_assert3)\n            986 LOAD_FAST               14 (@py_assert0)\n            988 LOAD_FAST               15 (@py_assert3)\n            990 IS_OP                    0\n            992 STORE_FAST               8 (@py_assert2)\n            994 LOAD_FAST                8 (@py_assert2)\n            996 POP_JUMP_IF_TRUE       108 (to 1214)\n            998 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n           1008 LOAD_ATTR               16 (_call_reprcompare)\n           1028 LOAD_CONST              25 (('is',))\n           1030 LOAD_FAST                8 (@py_assert2)\n           1032 BUILD_TUPLE              1\n           1034 LOAD_CONST              26 (('%(py1)s is %(py4)s',))\n           1036 LOAD_FAST               14 (@py_assert0)\n           1038 LOAD_FAST               15 (@py_assert3)\n           1040 BUILD_TUPLE              2\n           1042 CALL                     4\n           1050 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n           1060 LOAD_ATTR               24 (_saferepr)\n           1080 LOAD_FAST               14 (@py_assert0)\n           1082 CALL                     1\n           1090 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n           1100 LOAD_ATTR               24 (_saferepr)\n           1120 LOAD_FAST               15 (@py_assert3)\n           1122 CALL                     1\n           1130 LOAD_CONST              27 (('py1', 'py4'))\n           1132 BUILD_CONST_KEY_MAP      2\n           1134 BINARY_OP                6 (%)\n           1138 STORE_FAST              16 (@py_format5)\n           1140 LOAD_CONST              28 ('assert %(py6)s')\n           1142 LOAD_CONST              29 ('py6')\n           1144 LOAD_FAST               16 (@py_format5)\n           1146 BUILD_MAP                1\n           1148 BINARY_OP                6 (%)\n           1152 STORE_FAST              17 (@py_format7)\n           1154 LOAD_GLOBAL             27 (NULL + AssertionError)\n           1164 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n           1174 LOAD_ATTR               28 (_format_explanation)\n           1194 LOAD_FAST               17 (@py_format7)\n           1196 CALL                     1\n           1204 CALL                     1\n           1212 RAISE_VARARGS            1\n        >> 1214 LOAD_CONST               0 (None)\n           1216 COPY                     1\n           1218 STORE_FAST              14 (@py_assert0)\n           1220 COPY                     1\n           1222 STORE_FAST               8 (@py_assert2)\n           1224 STORE_FAST              15 (@py_assert3)\n\n117        1226 LOAD_CONST              30 ('x:central_local_name_mismatch')\n           1228 STORE_FAST              14 (@py_assert0)\n           1230 LOAD_FAST               13 (report)\n           1232 LOAD_CONST              22 ('strict_zip')\n           1234 BINARY_SUBSCR\n           1238 LOAD_CONST              31 ('blockers')\n           1240 BINARY_SUBSCR\n           1244 STORE_FAST              15 (@py_assert3)\n           1246 LOAD_FAST               14 (@py_assert0)\n           1248 LOAD_FAST               15 (@py_assert3)\n           1250 CONTAINS_OP              0\n           1252 STORE_FAST               8 (@py_assert2)\n           1254 LOAD_FAST                8 (@py_assert2)\n           1256 POP_JUMP_IF_TRUE       108 (to 1474)\n           1258 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n           1268 LOAD_ATTR               16 (_call_reprcompare)\n           1288 LOAD_CONST              32 (('in',))\n           1290 LOAD_FAST                8 (@py_assert2)\n           1292 BUILD_TUPLE              1\n           1294 LOAD_CONST              33 (('%(py1)s in %(py4)s',))\n           1296 LOAD_FAST               14 (@py_assert0)\n           1298 LOAD_FAST               15 (@py_assert3)\n           1300 BUILD_TUPLE              2\n           1302 CALL                     4\n           1310 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n           1320 LOAD_ATTR               24 (_saferepr)\n           1340 LOAD_FAST               14 (@py_assert0)\n           1342 CALL                     1\n           1350 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n           1360 LOAD_ATTR               24 (_saferepr)\n           1380 LOAD_FAST               15 (@py_assert3)\n           1382 CALL                     1\n           1390 LOAD_CONST              27 (('py1', 'py4'))\n           1392 BUILD_CONST_KEY_MAP      2\n           1394 BINARY_OP                6 (%)\n           1398 STORE_FAST              16 (@py_format5)\n           1400 LOAD_CONST              28 ('assert %(py6)s')\n           1402 LOAD_CONST              29 ('py6')\n           1404 LOAD_FAST               16 (@py_format5)\n           1406 BUILD_MAP                1\n           1408 BINARY_OP                6 (%)\n           1412 STORE_FAST              17 (@py_format7)\n           1414 LOAD_GLOBAL             27 (NULL + AssertionError)\n           1424 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n           1434 LOAD_ATTR               28 (_format_explanation)\n           1454 LOAD_FAST               17 (@py_format7)\n           1456 CALL                     1\n           1464 CALL                     1\n           1472 RAISE_VARARGS            1\n        >> 1474 LOAD_CONST               0 (None)\n           1476 COPY                     1\n           1478 STORE_FAST              14 (@py_assert0)\n           1480 COPY                     1\n           1482 STORE_FAST               8 (@py_assert2)\n           1484 STORE_FAST              15 (@py_assert3)\n\n118        1486 LOAD_FAST               13 (report)\n           1488 LOAD_CONST              34 ('decision_support')\n           1490 BINARY_SUBSCR\n           1494 LOAD_CONST              35 ('valid_for_byte_decision')\n           1496 BINARY_SUBSCR\n           1500 STORE_FAST              14 (@py_assert0)\n           1502 LOAD_CONST              24 (False)\n           1504 STORE_FAST              15 (@py_assert3)\n           1506 LOAD_FAST               14 (@py_assert0)\n           1508 LOAD_FAST               15 (@py_assert3)\n           1510 IS_OP                    0\n           1512 STORE_FAST               8 (@py_assert2)\n           1514 LOAD_FAST                8 (@py_assert2)\n           1516 POP_JUMP_IF_TRUE       108 (to 1734)\n           1518 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n           1528 LOAD_ATTR               16 (_call_reprcompare)\n           1548 LOAD_CONST              25 (('is',))\n           1550 LOAD_FAST                8 (@py_assert2)\n           1552 BUILD_TUPLE              1\n           1554 LOAD_CONST              26 (('%(py1)s is %(py4)s',))\n           1556 LOAD_FAST               14 (@py_assert0)\n           1558 LOAD_FAST               15 (@py_assert3)\n           1560 BUILD_TUPLE              2\n           1562 CALL                     4\n           1570 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n           1580 LOAD_ATTR               24 (_saferepr)\n           1600 LOAD_FAST               14 (@py_assert0)\n           1602 CALL                     1\n           1610 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n           1620 LOAD_ATTR               24 (_saferepr)\n           1640 LOAD_FAST               15 (@py_assert3)\n           1642 CALL                     1\n           1650 LOAD_CONST              27 (('py1', 'py4'))\n           1652 BUILD_CONST_KEY_MAP      2\n           1654 BINARY_OP                6 (%)\n           1658 STORE_FAST              16 (@py_format5)\n           1660 LOAD_CONST              28 ('assert %(py6)s')\n           1662 LOAD_CONST              29 ('py6')\n           1664 LOAD_FAST               16 (@py_format5)\n           1666 BUILD_MAP                1\n           1668 BINARY_OP                6 (%)\n           1672 STORE_FAST              17 (@py_format7)\n           1674 LOAD_GLOBAL             27 (NULL + AssertionError)\n           1684 LOAD_GLOBAL             15 (NULL + @pytest_ar)\n           1694 LOAD_ATTR               28 (_format_explanation)\n           1714 LOAD_FAST               17 (@py_format7)\n           1716 CALL                     1\n           1724 CALL                     1\n           1732 RAISE_VARARGS            1\n        >> 1734 LOAD_CONST               0 (None)\n           1736 COPY                     1\n           1738 STORE_FAST              14 (@py_assert0)\n           1740 COPY                     1\n           1742 STORE_FAST               8 (@py_assert2)\n           1744 STORE_FAST              15 (@py_assert3)\n           1746 RETURN_CONST             0 (None)\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  1           2 LOAD_CONST               0 (0)\n              4 LOAD_CONST               1 (('annotations',))\n              6 IMPORT_NAME              0 (__future__)\n              8 IMPORT_FROM              1 (annotations)\n             10 STORE_NAME               1 (annotations)\n             12 POP_TOP\n\n  3          14 LOAD_CONST               0 (0)\n             16 LOAD_CONST               2 (None)\n             18 IMPORT_NAME              2 (builtins)\n             20 STORE_NAME               3 (@py_builtins)\n             22 LOAD_CONST               0 (0)\n             24 LOAD_CONST               2 (None)\n             26 IMPORT_NAME              4 (_pytest.assertion.rewrite)\n             28 IMPORT_FROM              5 (assertion)\n             30 SWAP                     2\n             32 POP_TOP\n             34 IMPORT_FROM              6 (rewrite)\n             36 STORE_NAME               7 (@pytest_ar)\n             38 POP_TOP\n             40 LOAD_CONST               0 (0)\n             42 LOAD_CONST               2 (None)\n             44 IMPORT_NAME              8 (struct)\n             46 STORE_NAME               8 (struct)\n\n  4          48 LOAD_CONST               0 (0)\n             50 LOAD_CONST               2 (None)\n             52 IMPORT_NAME              9 (zipfile)\n             54 STORE_NAME               9 (zipfile)\n\n  5          56 LOAD_CONST               0 (0)\n             58 LOAD_CONST               3 (('Path',))\n             60 IMPORT_NAME             10 (pathlib)\n             62 IMPORT_FROM             11 (Path)\n             64 STORE_NAME              11 (Path)\n             66 POP_TOP\n\n  7          68 LOAD_CONST               0 (0)\n             70 LOAD_CONST               2 (None)\n             72 IMPORT_NAME             12 (pytest)\n             74 STORE_NAME              12 (pytest)\n\n  9          76 LOAD_CONST               0 (0)\n             78 LOAD_CONST               4 (('build_endgame_decision_profile', 'render_markdown'))\n             80 IMPORT_NAME             13 (tac.endgame_archive_decision)\n             82 IMPORT_FROM             14 (build_endgame_decision_profile)\n             84 STORE_NAME              14 (build_endgame_decision_profile)\n             86 IMPORT_FROM             15 (render_markdown)\n             88 STORE_NAME              15 (render_markdown)\n             90 POP_TOP\n\n 10          92 LOAD_CONST               0 (0)\n             94 LOAD_CONST               5 (('PR85_HEADERLESS_RANDMULTI_SPECS', 'SEGMENT_ORDER', 'pack_pr85_bundle'))\n             96 IMPORT_NAME             16 (tac.pr85_bundle)\n             98 IMPORT_FROM             17 (PR85_HEADERLESS_RANDMULTI_SPECS)\n            100 STORE_NAME              17 (PR85_HEADERLESS_RANDMULTI_SPECS)\n            102 IMPORT_FROM             18 (SEGMENT_ORDER)\n            104 STORE_NAME              18 (SEGMENT_ORDER)\n            106 IMPORT_FROM             19 (pack_pr85_bundle)\n            108 STORE_NAME              19 (pack_pr85_bundle)\n            110 POP_TOP\n\n 13         112 LOAD_CONST              17 (('data', 'bytes', 'return', 'bytes'))\n            114 LOAD_CONST               6 (<code object _br at 0x100f39c50, file \"/Users/adpena/Projects/pact/src/tac/tests/test_endgame_archive_decision.py\", line 13>)\n            116 MAKE_FUNCTION            4 (annotations)\n            118 STORE_NAME              20 (_br)\n\n 18         120 LOAD_CONST              18 ((b'\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00',))\n            122 LOAD_CONST              19 (('bitstream', 'bytes', 'return', 'bytes'))\n            124 LOAD_CONST               7 (<code object _qma9 at 0x100f39d70, file \"/Users/adpena/Projects/pact/src/tac/tests/test_endgame_archive_decision.py\", line 18>)\n            126 MAKE_FUNCTION            5 (defaults, annotations)\n            128 STORE_NAME              21 (_qma9)\n\n 22         130 LOAD_CONST              20 (('return', 'bytes'))\n            132 LOAD_CONST               8 (<code object _legacy_randmulti at 0x100e96090, file \"/Users/adpena/Projects/pact/src/tac/tests/test_endgame_archive_decision.py\", line 22>)\n            134 MAKE_FUNCTION            4 (annotations)\n            136 STORE_NAME              22 (_legacy_randmulti)\n\n 26         138 LOAD_CONST              20 (('return', 'bytes'))\n            140 LOAD_CONST               9 (<code object _rmb1_randmulti at 0x100ed5a10, file \"/Users/adpena/Projects/pact/src/tac/tests/test_endgame_archive_decision.py\", line 26>)\n            142 MAKE_FUNCTION            4 (annotations)\n            144 STORE_NAME              23 (_rmb1_randmulti)\n\n 33         146 LOAD_CONST              21 ((600,))\n            148 LOAD_CONST              22 (('count', 'int', 'return', 'bytes'))\n            150 LOAD_CONST              10 (<code object _rsb1_actions at 0x100e05530, file \"/Users/adpena/Projects/pact/src/tac/tests/test_endgame_archive_decision.py\", line 33>)\n            152 MAKE_FUNCTION            5 (defaults, annotations)\n            154 STORE_NAME              24 (_rsb1_actions)\n\n 38         156 LOAD_CONST               2 (None)\n            158 LOAD_CONST              11 (('randmulti',))\n            160 BUILD_CONST_KEY_MAP      1\n            162 LOAD_CONST              23 (('randmulti', 'bytes | None', 'return', 'dict[str, bytes]'))\n            164 LOAD_CONST              12 (<code object _segments at 0x100e387f0, file \"/Users/adpena/Projects/pact/src/tac/tests/test_endgame_archive_decision.py\", line 38>)\n            166 MAKE_FUNCTION            6 (kwdefaults, annotations)\n            168 STORE_NAME              25 (_segments)\n\n 55         170 LOAD_CONST              24 (('path', 'Path', 'members', 'list[tuple[str, bytes]]', 'return', 'None'))\n            172 LOAD_CONST              13 (<code object _write_archive at 0x100da2d80, file \"/Users/adpena/Projects/pact/src/tac/tests/test_endgame_archive_decision.py\", line 55>)\n            174 MAKE_FUNCTION            4 (annotations)\n            176 STORE_NAME              26 (_write_archive)\n\n 65         178 LOAD_CONST              25 (('tmp_path', 'Path', 'return', 'None'))\n            180 LOAD_CONST              14 (<code object test_endgame_profile_estimates_rmb1_side_info_transplant_delta at 0x832c2e800, file \"/Users/adpena/Projects/pact/src/tac/tests/test_endgame_archive_decision.py\", line 65>)\n            182 MAKE_FUNCTION            4 (annotations)\n            184 STORE_NAME              27 (test_endgame_profile_estimates_rmb1_side_info_transplant_delta)\n\n 88         186 LOAD_CONST              25 (('tmp_path', 'Path', 'return', 'None'))\n            188 LOAD_CONST              15 (<code object test_endgame_profile_fails_closed_on_bad_rsb1_side_info at 0x832d42800, file \"/Users/adpena/Projects/pact/src/tac/tests/test_endgame_archive_decision.py\", line 88>)\n            190 MAKE_FUNCTION            4 (annotations)\n            192 STORE_NAME              28 (test_endgame_profile_fails_closed_on_bad_rsb1_side_info)\n\n101         194 LOAD_CONST              25 (('tmp_path', 'Path', 'return', 'None'))\n            196 LOAD_CONST              16 (<code object test_endgame_profile_rejects_central_local_name_mismatch at 0x83321d800, file \"/Users/adpena/Projects/pact/src/tac/tests/test_endgame_archive_decision.py\", line 101>)\n            198 MAKE_FUNCTION            4 (annotations)\n            200 STORE_NAME              29 (test_endgame_profile_rejects_central_local_name_mismatch)\n            202 RETURN_CONST             2 (None)\n"
+}

@@ -1,0 +1,1630 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/experiments/__pycache__/profile_pr95_hnerv_muon_intake.cpython-312.pyc",
+  "names": [
+    "__doc__",
+    "__future__",
+    "annotations",
+    "argparse",
+    "ast",
+    "hashlib",
+    "json",
+    "math",
+    "re",
+    "struct",
+    "zipfile",
+    "pathlib",
+    "Path",
+    "typing",
+    "Any",
+    "__file__",
+    "resolve",
+    "parents",
+    "REPO_ROOT",
+    "DEFAULT_INTAKE_DIR",
+    "DEFAULT_ARCHIVE",
+    "DEFAULT_SOURCE_DIR",
+    "DEFAULT_STATIC_INTAKE",
+    "DEFAULT_JSON_OUT",
+    "DEFAULT_MARKDOWN_OUT",
+    "CONTEST_ORIGINAL_BYTES",
+    "SCHEMA",
+    "TOOL",
+    "_sha256_bytes",
+    "_sha256_file",
+    "_json_text",
+    "_rel",
+    "_read_u32",
+    "_product",
+    "_require_brotli",
+    "read_pr95_archive",
+    "parse_decoder_blob",
+    "parse_latents_payload",
+    "parse_hnerv_muon_member",
+    "_docstring",
+    "_first_match",
+    "_literal_number",
+    "parse_source_summary",
+    "_source_tree_sha256",
+    "load_static_intake",
+    "compute_score_terms",
+    "build_profile",
+    "dispatch_readiness",
+    "improvement_hypotheses",
+    "render_markdown",
+    "write_outputs",
+    "parse_args",
+    "main",
+    "__name__",
+    "SystemExit"
+  ],
+  "varnames": [],
+  "consts": [
+    "Static PR95 HNeRV/Muon intake profiler.\n\nThis tool performs local byte/source accounting only. It does not run the\ncontest scorer, does not load scorer models, and does not dispatch GPU work.\n",
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "Path"
+    ],
+    [
+      "Any"
+    ],
+    1,
+    "experiments/results/public_pr95_intake_20260504_codex",
+    "archive.zip",
+    "pr95_src/submissions/hnerv_muon",
+    "pr95_static_intake.json",
+    "profile_pr95_hnerv_muon_intake.json",
+    "profile_pr95_hnerv_muon_intake.md",
+    37545489,
+    "pr95_hnerv_muon_static_intake_profile_v1",
+    "experiments/profile_pr95_hnerv_muon_intake.py",
+    {
+      "__code__": "_sha256_bytes",
+      "qualname": "_sha256_bytes",
+      "argcount": 1,
+      "varnames": [
+        "data"
+      ],
+      "names": [
+        "hashlib",
+        "sha256",
+        "hexdigest"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_sha256_file",
+      "qualname": "_sha256_file",
+      "argcount": 1,
+      "varnames": [
+        "path",
+        "digest",
+        "chunk"
+      ],
+      "names": [
+        "hashlib",
+        "sha256",
+        "open",
+        "iter",
+        "update",
+        "hexdigest"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "handle"
+      ]
+    },
+    {
+      "__code__": "_json_text",
+      "qualname": "_json_text",
+      "argcount": 1,
+      "varnames": [
+        "payload"
+      ],
+      "names": [
+        "json",
+        "dumps"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_rel",
+      "qualname": "_rel",
+      "argcount": 1,
+      "varnames": [
+        "path"
+      ],
+      "names": [
+        "str",
+        "resolve",
+        "relative_to",
+        "REPO_ROOT",
+        "ValueError"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_read_u32",
+      "qualname": "_read_u32",
+      "argcount": 3,
+      "varnames": [
+        "raw",
+        "cursor",
+        "label"
+      ],
+      "names": [
+        "len",
+        "ValueError",
+        "struct",
+        "unpack_from"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_product",
+      "qualname": "_product",
+      "argcount": 1,
+      "varnames": [
+        "values",
+        "out",
+        "value"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_require_brotli",
+      "qualname": "_require_brotli",
+      "argcount": 0,
+      "varnames": [
+        "brotli",
+        "exc"
+      ],
+      "names": [
+        "brotli",
+        "ImportError",
+        "RuntimeError"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "read_pr95_archive",
+      "qualname": "read_pr95_archive",
+      "argcount": 1,
+      "varnames": [
+        "path",
+        "zf",
+        "info",
+        "infos",
+        "names",
+        "parts",
+        "payload",
+        "archive_bytes"
+      ],
+      "names": [
+        "zipfile",
+        "ZipFile",
+        "infolist",
+        "is_dir",
+        "filename",
+        "len",
+        "set",
+        "ValueError",
+        "Path",
+        "parts",
+        "startswith",
+        "read",
+        "stat",
+        "st_size",
+        "_rel",
+        "_sha256_file",
+        "int",
+        "file_size",
+        "compress_size",
+        "compress_type",
+        "ZIP_STORED",
+        "CRC",
+        "list",
+        "date_time",
+        "_sha256_bytes",
+        "CONTEST_ORIGINAL_BYTES"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "parse_decoder_blob",
+      "qualname": "parse_decoder_blob",
+      "argcount": 1,
+      "varnames": [
+        "blob",
+        "cursor",
+        "tensor_count",
+        "tensors",
+        "total_params",
+        "muon_params",
+        "adamw_decoder_params",
+        "groups",
+        "index",
+        "name_len",
+        "name",
+        "ndim",
+        "shape_values",
+        "_",
+        "value",
+        "scale",
+        "size",
+        "qbytes",
+        "shape",
+        "params",
+        "lower",
+        "is_muon",
+        "optimizer_partition",
+        "group"
+      ],
+      "names": [
+        "_read_u32",
+        "range",
+        "len",
+        "ValueError",
+        "decode",
+        "append",
+        "struct",
+        "unpack_from",
+        "tuple",
+        "_product",
+        "lower",
+        "startswith",
+        "split",
+        "get",
+        "list",
+        "min",
+        "max",
+        "dict",
+        "sorted",
+        "items"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "parse_latents_payload",
+      "qualname": "parse_latents_payload",
+      "argcount": 1,
+      "varnames": [
+        "raw",
+        "cursor",
+        "n_pairs",
+        "latent_dim",
+        "fp16_table_bytes",
+        "mins_start",
+        "scales_start",
+        "total",
+        "lo_start",
+        "hi_start",
+        "mins",
+        "scales",
+        "hi"
+      ],
+      "names": [
+        "_read_u32",
+        "len",
+        "ValueError",
+        "struct",
+        "unpack",
+        "sum",
+        "float",
+        "min",
+        "max"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "parse_hnerv_muon_member",
+      "qualname": "parse_hnerv_muon_member",
+      "argcount": 1,
+      "varnames": [
+        "payload",
+        "brotli",
+        "cursor",
+        "sections",
+        "meta_len",
+        "meta_brotli_start",
+        "meta_brotli",
+        "meta",
+        "decoder_len_offset",
+        "decoder_len",
+        "decoder_blob",
+        "decoder_raw",
+        "decoder",
+        "latents_len_offset",
+        "latents_len",
+        "latents_blob",
+        "latents_raw",
+        "latents"
+      ],
+      "names": [
+        "_require_brotli",
+        "_read_u32",
+        "len",
+        "ValueError",
+        "json",
+        "loads",
+        "decompress",
+        "append",
+        "dumps",
+        "encode",
+        "_sha256_bytes",
+        "parse_decoder_blob",
+        "parse_latents_payload",
+        "sum"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_docstring",
+      "qualname": "_docstring",
+      "argcount": 1,
+      "varnames": [
+        "path",
+        "module"
+      ],
+      "names": [
+        "ast",
+        "parse",
+        "read_text",
+        "SyntaxError",
+        "get_docstring"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_first_match",
+      "qualname": "_first_match",
+      "argcount": 2,
+      "varnames": [
+        "pattern",
+        "text",
+        "match"
+      ],
+      "names": [
+        "re",
+        "search",
+        "group"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_literal_number",
+      "qualname": "_literal_number",
+      "argcount": 2,
+      "varnames": [
+        "pattern",
+        "text",
+        "value"
+      ],
+      "names": [
+        "_first_match",
+        "lower",
+        "float",
+        "int"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "parse_source_summary",
+      "qualname": "parse_source_summary",
+      "argcount": 1,
+      "varnames": [
+        "source_dir",
+        "readme_path",
+        "model_path",
+        "optim_path",
+        "codec_path",
+        "score_path",
+        "train_path",
+        "stage_dir",
+        "source_files",
+        "readme",
+        "model_text",
+        "optim_text",
+        "score_text",
+        "stage_records",
+        "stage_path",
+        "text",
+        "score_formula",
+        "default_latent_dim",
+        "default_base_channels",
+        "eval_size"
+      ],
+      "names": [
+        "sorted",
+        "rglob",
+        "exists",
+        "read_text",
+        "glob",
+        "append",
+        "_rel",
+        "_first_match",
+        "stem",
+        "_docstring",
+        "splitlines",
+        "_literal_number",
+        "strip",
+        "len",
+        "_source_tree_sha256"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_source_tree_sha256",
+      "qualname": "_source_tree_sha256",
+      "argcount": 1,
+      "varnames": [
+        "files",
+        "digest",
+        "path"
+      ],
+      "names": [
+        "hashlib",
+        "sha256",
+        "update",
+        "_rel",
+        "encode",
+        "_sha256_file",
+        "hexdigest"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "load_static_intake",
+      "qualname": "load_static_intake",
+      "argcount": 1,
+      "varnames": [
+        "path"
+      ],
+      "names": [
+        "exists",
+        "json",
+        "loads",
+        "read_text"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "compute_score_terms",
+      "qualname": "compute_score_terms",
+      "argcount": 4,
+      "varnames": [
+        "seg",
+        "pose",
+        "archive_bytes",
+        "denominator",
+        "seg_component",
+        "pose_component",
+        "rate_component"
+      ],
+      "names": [
+        "math",
+        "sqrt"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "build_profile",
+      "qualname": "build_profile",
+      "argcount": 3,
+      "varnames": [
+        "archive_path",
+        "source_dir",
+        "static_intake_path",
+        "archive",
+        "payload",
+        "member",
+        "source",
+        "static_intake",
+        "score_claims",
+        "inputs",
+        "recomputed"
+      ],
+      "names": [
+        "read_pr95_archive",
+        "parse_hnerv_muon_member",
+        "parse_source_summary",
+        "load_static_intake",
+        "CONTEST_ORIGINAL_BYTES",
+        "get",
+        "compute_score_terms",
+        "float",
+        "int",
+        "update",
+        "bool",
+        "abs",
+        "SCHEMA",
+        "TOOL",
+        "_rel",
+        "exists",
+        "dispatch_readiness",
+        "improvement_hypotheses"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "dispatch_readiness",
+      "qualname": "dispatch_readiness",
+      "argcount": 0,
+      "varnames": [],
+      "names": [],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "improvement_hypotheses",
+      "qualname": "improvement_hypotheses",
+      "argcount": 1,
+      "varnames": [
+        "member_profile",
+        "decoder",
+        "latents",
+        "item",
+        "sections"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "render_markdown",
+      "qualname": "render_markdown",
+      "argcount": 1,
+      "varnames": [
+        "profile",
+        "archive",
+        "member",
+        "decoder",
+        "latents",
+        "readiness",
+        "score_terms",
+        "lines",
+        "section",
+        "inputs",
+        "recomputed",
+        "stage",
+        "item",
+        "hypothesis"
+      ],
+      "names": [
+        "append",
+        "extend",
+        "join"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "write_outputs",
+      "qualname": "write_outputs",
+      "argcount": 3,
+      "varnames": [
+        "profile",
+        "json_out",
+        "markdown_out"
+      ],
+      "names": [
+        "parent",
+        "mkdir",
+        "write_text",
+        "_json_text",
+        "render_markdown"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "parse_args",
+      "qualname": "parse_args",
+      "argcount": 1,
+      "varnames": [
+        "argv",
+        "parser"
+      ],
+      "names": [
+        "argparse",
+        "ArgumentParser",
+        "__doc__",
+        "add_argument",
+        "Path",
+        "DEFAULT_ARCHIVE",
+        "DEFAULT_SOURCE_DIR",
+        "DEFAULT_STATIC_INTAKE",
+        "DEFAULT_JSON_OUT",
+        "DEFAULT_MARKDOWN_OUT",
+        "parse_args"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "main",
+      "qualname": "main",
+      "argcount": 1,
+      "varnames": [
+        "argv",
+        "args",
+        "profile"
+      ],
+      "names": [
+        "parse_args",
+        "build_profile",
+        "archive",
+        "source_dir",
+        "static_intake",
+        "no_write",
+        "print",
+        "_json_text",
+        "write_outputs",
+        "json_out",
+        "markdown_out",
+        "_rel"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "__main__",
+    [
+      "data",
+      "bytes",
+      "return",
+      "str"
+    ],
+    [
+      "path",
+      "Path",
+      "return",
+      "str"
+    ],
+    [
+      "payload",
+      "Any",
+      "return",
+      "str"
+    ],
+    [
+      "raw",
+      "bytes",
+      "cursor",
+      "int",
+      "label",
+      "str",
+      "return",
+      "tuple[int, int]"
+    ],
+    [
+      "values",
+      "tuple[int, ...]",
+      "return",
+      "int"
+    ],
+    [
+      "path",
+      "Path",
+      "return",
+      "tuple[dict[str, Any], bytes]"
+    ],
+    [
+      "blob",
+      "bytes",
+      "return",
+      "dict[str, Any]"
+    ],
+    [
+      "raw",
+      "bytes",
+      "return",
+      "dict[str, Any]"
+    ],
+    [
+      "payload",
+      "bytes",
+      "return",
+      "dict[str, Any]"
+    ],
+    [
+      "pattern",
+      "str",
+      "text",
+      "str",
+      "return",
+      "str | None"
+    ],
+    [
+      "pattern",
+      "str",
+      "text",
+      "str",
+      "return",
+      "float | int | None"
+    ],
+    [
+      "source_dir",
+      "Path",
+      "return",
+      "dict[str, Any]"
+    ],
+    [
+      "files",
+      "list[Path]",
+      "return",
+      "str"
+    ],
+    [
+      "path",
+      "Path",
+      "return",
+      "dict[str, Any] | None"
+    ],
+    [
+      "seg",
+      "float",
+      "pose",
+      "float",
+      "archive_bytes",
+      "int",
+      "denominator",
+      "int",
+      "return",
+      "dict[str, float]"
+    ],
+    [
+      null
+    ],
+    [
+      "archive_path",
+      "Path",
+      "source_dir",
+      "Path",
+      "static_intake_path",
+      "Path | None",
+      "return",
+      "dict[str, Any]"
+    ],
+    [
+      "return",
+      "dict[str, Any]"
+    ],
+    [
+      "member_profile",
+      "dict[str, Any]",
+      "return",
+      "list[dict[str, Any]]"
+    ],
+    [
+      "profile",
+      "dict[str, Any]",
+      "return",
+      "str"
+    ],
+    [
+      "profile",
+      "dict[str, Any]",
+      "json_out",
+      "Path",
+      "markdown_out",
+      "Path",
+      "return",
+      "None"
+    ],
+    [
+      "argv",
+      "list[str] | None",
+      "return",
+      "argparse.Namespace"
+    ],
+    [
+      "argv",
+      "list[str] | None",
+      "return",
+      "int"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": "Static PR95 HNeRV/Muon intake profiler.\n\nThis tool performs local byte/source accounting only. It does not run the\ncontest scorer, does not load scorer models, and does not dispatch GPU work.\n",
+  "child_codes": [
+    {
+      "qualname": "_sha256_bytes",
+      "name": "_sha256_bytes",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "data"
+      ],
+      "names": [
+        "hashlib",
+        "sha256",
+        "hexdigest"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 33           0 RESUME                   0\n\n 34           2 LOAD_GLOBAL              1 (NULL + hashlib)\n             12 LOAD_ATTR                2 (sha256)\n             32 LOAD_FAST                0 (data)\n             34 CALL                     1\n             42 LOAD_ATTR                5 (NULL|self + hexdigest)\n             62 CALL                     0\n             70 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_sha256_file",
+      "name": "_sha256_file",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "digest",
+        "chunk"
+      ],
+      "names": [
+        "hashlib",
+        "sha256",
+        "open",
+        "iter",
+        "update",
+        "hexdigest"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "handle"
+      ],
+      "doc": null,
+      "dis": "              0 MAKE_CELL                3 (handle)\n\n 37           2 RESUME                   0\n\n 38           4 LOAD_GLOBAL              1 (NULL + hashlib)\n             14 LOAD_ATTR                2 (sha256)\n             34 CALL                     0\n             42 STORE_FAST               1 (digest)\n\n 39          44 LOAD_FAST                0 (path)\n             46 LOAD_ATTR                5 (NULL|self + open)\n             66 LOAD_CONST               1 ('rb')\n             68 CALL                     1\n             76 BEFORE_WITH\n             78 STORE_DEREF              3 (handle)\n\n 40          80 LOAD_GLOBAL              7 (NULL + iter)\n             90 LOAD_CLOSURE             3 (handle)\n             92 BUILD_TUPLE              1\n             94 LOAD_CONST               2 (<code object <lambda> at 0x101090c60, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 40>)\n             96 MAKE_FUNCTION            8 (closure)\n             98 LOAD_CONST               3 (b'')\n            100 CALL                     2\n            108 GET_ITER\n        >>  110 FOR_ITER                19 (to 152)\n            114 STORE_FAST               2 (chunk)\n\n 41         116 LOAD_FAST                1 (digest)\n            118 LOAD_ATTR                9 (NULL|self + update)\n            138 LOAD_FAST                2 (chunk)\n            140 CALL                     1\n            148 POP_TOP\n            150 JUMP_BACKWARD           21 (to 110)\n\n 40     >>  152 END_FOR\n            154 NOP\n\n 39         156 LOAD_CONST               0 (None)\n            158 LOAD_CONST               0 (None)\n            160 LOAD_CONST               0 (None)\n            162 CALL                     2\n            170 POP_TOP\n\n 42         172 LOAD_FAST                1 (digest)\n            174 LOAD_ATTR               11 (NULL|self + hexdigest)\n            194 CALL                     0\n            202 RETURN_VALUE\n\n 39     >>  204 PUSH_EXC_INFO\n            206 WITH_EXCEPT_START\n            208 POP_JUMP_IF_TRUE         1 (to 212)\n            210 RERAISE                  2\n        >>  212 POP_TOP\n            214 POP_EXCEPT\n            216 POP_TOP\n            218 POP_TOP\n\n 42         220 LOAD_FAST                1 (digest)\n            222 LOAD_ATTR               11 (NULL|self + hexdigest)\n            242 CALL                     0\n            250 RETURN_VALUE\n        >>  252 COPY                     3\n            254 POP_EXCEPT\n            256 RERAISE                  1\nExceptionTable:\n  78 to 152 -> 204 [1] lasti\n  204 to 212 -> 252 [3] lasti\n"
+    },
+    {
+      "qualname": "_sha256_file.<locals>.<lambda>",
+      "name": "<lambda>",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [],
+      "names": [
+        "read"
+      ],
+      "freevars": [
+        "handle"
+      ],
+      "cellvars": [],
+      "doc": null,
+      "dis": "              0 COPY_FREE_VARS           1\n\n 40           2 RESUME                   0\n              4 LOAD_DEREF               0 (handle)\n              6 LOAD_ATTR                1 (NULL|self + read)\n             26 LOAD_CONST               1 (1048576)\n             28 CALL                     1\n             36 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_json_text",
+      "name": "_json_text",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "payload"
+      ],
+      "names": [
+        "json",
+        "dumps"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 45           0 RESUME                   0\n\n 46           2 LOAD_GLOBAL              1 (NULL + json)\n             12 LOAD_ATTR                2 (dumps)\n             32 LOAD_FAST                0 (payload)\n             34 LOAD_CONST               1 (2)\n             36 LOAD_CONST               2 (True)\n             38 LOAD_CONST               3 (False)\n             40 KW_NAMES                 4 (('indent', 'sort_keys', 'allow_nan'))\n             42 CALL                     4\n             50 LOAD_CONST               5 ('\\n')\n             52 BINARY_OP                0 (+)\n             56 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_rel",
+      "name": "_rel",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path"
+      ],
+      "names": [
+        "str",
+        "resolve",
+        "relative_to",
+        "REPO_ROOT",
+        "ValueError"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 49           0 RESUME                   0\n\n 50           2 NOP\n\n 51           4 LOAD_GLOBAL              1 (NULL + str)\n             14 LOAD_FAST                0 (path)\n             16 LOAD_ATTR                3 (NULL|self + resolve)\n             36 CALL                     0\n             44 LOAD_ATTR                5 (NULL|self + relative_to)\n             64 LOAD_GLOBAL              6 (REPO_ROOT)\n             74 CALL                     1\n             82 CALL                     1\n             90 RETURN_VALUE\n        >>   92 PUSH_EXC_INFO\n\n 52          94 LOAD_GLOBAL              8 (ValueError)\n            104 CHECK_EXC_MATCH\n            106 POP_JUMP_IF_FALSE       14 (to 136)\n            108 POP_TOP\n\n 53         110 LOAD_GLOBAL              1 (NULL + str)\n            120 LOAD_FAST                0 (path)\n            122 CALL                     1\n            130 SWAP                     2\n            132 POP_EXCEPT\n            134 RETURN_VALUE\n\n 52     >>  136 RERAISE                  0\n        >>  138 COPY                     3\n            140 POP_EXCEPT\n            142 RERAISE                  1\nExceptionTable:\n  4 to 88 -> 92 [0]\n  92 to 130 -> 138 [1] lasti\n  136 to 136 -> 138 [1] lasti\n"
+    },
+    {
+      "qualname": "_read_u32",
+      "name": "_read_u32",
+      "argcount": 3,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "raw",
+        "cursor",
+        "label"
+      ],
+      "names": [
+        "len",
+        "ValueError",
+        "struct",
+        "unpack_from"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 56           0 RESUME                   0\n\n 57           2 LOAD_FAST                1 (cursor)\n              4 LOAD_CONST               1 (4)\n              6 BINARY_OP                0 (+)\n             10 LOAD_GLOBAL              1 (NULL + len)\n             20 LOAD_FAST                0 (raw)\n             22 CALL                     1\n             30 COMPARE_OP              68 (>)\n             34 POP_JUMP_IF_FALSE       14 (to 64)\n\n 58          36 LOAD_GLOBAL              3 (NULL + ValueError)\n             46 LOAD_CONST               2 ('truncated u32 while reading ')\n             48 LOAD_FAST                2 (label)\n             50 FORMAT_VALUE             0\n             52 BUILD_STRING             2\n             54 CALL                     1\n             62 RAISE_VARARGS            1\n\n 59     >>   64 LOAD_GLOBAL              5 (NULL + struct)\n             74 LOAD_ATTR                6 (unpack_from)\n             94 LOAD_CONST               3 ('<I')\n             96 LOAD_FAST                0 (raw)\n             98 LOAD_FAST                1 (cursor)\n            100 CALL                     3\n            108 LOAD_CONST               4 (0)\n            110 BINARY_SUBSCR\n            114 LOAD_FAST                1 (cursor)\n            116 LOAD_CONST               1 (4)\n            118 BINARY_OP                0 (+)\n            122 BUILD_TUPLE              2\n            124 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_product",
+      "name": "_product",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "values",
+        "out",
+        "value"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 62           0 RESUME                   0\n\n 63           2 LOAD_CONST               1 (1)\n              4 STORE_FAST               1 (out)\n\n 64           6 LOAD_FAST                0 (values)\n              8 GET_ITER\n        >>   10 FOR_ITER                 7 (to 28)\n             14 STORE_FAST               2 (value)\n\n 65          16 LOAD_FAST                1 (out)\n             18 LOAD_FAST                2 (value)\n             20 BINARY_OP               18 (*=)\n             24 STORE_FAST               1 (out)\n             26 JUMP_BACKWARD            9 (to 10)\n\n 64     >>   28 END_FOR\n\n 66          30 LOAD_FAST                1 (out)\n             32 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_require_brotli",
+      "name": "_require_brotli",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "brotli",
+        "exc"
+      ],
+      "names": [
+        "brotli",
+        "ImportError",
+        "RuntimeError"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 69           0 RESUME                   0\n\n 70           2 NOP\n\n 71           4 LOAD_CONST               1 (0)\n              6 LOAD_CONST               0 (None)\n              8 IMPORT_NAME              0 (brotli)\n             10 STORE_FAST               0 (brotli)\n\n 74          12 LOAD_FAST                0 (brotli)\n             14 RETURN_VALUE\n        >>   16 PUSH_EXC_INFO\n\n 72          18 LOAD_GLOBAL              2 (ImportError)\n             28 CHECK_EXC_MATCH\n             30 POP_JUMP_IF_FALSE       17 (to 66)\n             32 STORE_FAST               1 (exc)\n\n 73          34 LOAD_GLOBAL              5 (NULL + RuntimeError)\n             44 LOAD_CONST               2 ('brotli is required for PR95 HNeRV/Muon blob intake')\n             46 CALL                     1\n             54 LOAD_FAST                1 (exc)\n             56 RAISE_VARARGS            2\n        >>   58 LOAD_CONST               0 (None)\n             60 STORE_FAST               1 (exc)\n             62 DELETE_FAST              1 (exc)\n             64 RERAISE                  1\n\n 72     >>   66 RERAISE                  0\n        >>   68 COPY                     3\n             70 POP_EXCEPT\n             72 RERAISE                  1\nExceptionTable:\n  4 to 10 -> 16 [0]\n  16 to 32 -> 68 [1] lasti\n  34 to 56 -> 58 [1] lasti\n  58 to 66 -> 68 [1] lasti\n"
+    },
+    {
+      "qualname": "read_pr95_archive",
+      "name": "read_pr95_archive",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "zf",
+        "info",
+        "infos",
+        "names",
+        "parts",
+        "payload",
+        "archive_bytes"
+      ],
+      "names": [
+        "zipfile",
+        "ZipFile",
+        "infolist",
+        "is_dir",
+        "filename",
+        "len",
+        "set",
+        "ValueError",
+        "Path",
+        "parts",
+        "startswith",
+        "read",
+        "stat",
+        "st_size",
+        "_rel",
+        "_sha256_file",
+        "int",
+        "file_size",
+        "compress_size",
+        "compress_type",
+        "ZIP_STORED",
+        "CRC",
+        "list",
+        "date_time",
+        "_sha256_bytes",
+        "CONTEST_ORIGINAL_BYTES"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Read and validate the public PR95 single-member archive.",
+      "dis": " 77           0 RESUME                   0\n\n 79           2 LOAD_GLOBAL              1 (NULL + zipfile)\n             12 LOAD_ATTR                2 (ZipFile)\n             32 LOAD_FAST                0 (path)\n             34 LOAD_CONST               1 ('r')\n             36 CALL                     2\n             44 BEFORE_WITH\n             46 STORE_FAST               1 (zf)\n\n 80          48 LOAD_FAST                1 (zf)\n             50 LOAD_ATTR                5 (NULL|self + infolist)\n             70 CALL                     0\n             78 GET_ITER\n             80 LOAD_FAST_AND_CLEAR      2 (info)\n             82 SWAP                     2\n             84 BUILD_LIST               0\n             86 SWAP                     2\n        >>   88 FOR_ITER                21 (to 134)\n             92 STORE_FAST               2 (info)\n             94 LOAD_FAST                2 (info)\n             96 LOAD_ATTR                7 (NULL|self + is_dir)\n            116 CALL                     0\n            124 POP_JUMP_IF_FALSE        1 (to 128)\n            126 JUMP_BACKWARD           20 (to 88)\n        >>  128 LOAD_FAST                2 (info)\n            130 LIST_APPEND              2\n            132 JUMP_BACKWARD           23 (to 88)\n        >>  134 END_FOR\n            136 STORE_FAST               3 (infos)\n            138 STORE_FAST               2 (info)\n\n 81         140 LOAD_FAST                3 (infos)\n            142 GET_ITER\n            144 LOAD_FAST_AND_CLEAR      2 (info)\n            146 SWAP                     2\n            148 BUILD_LIST               0\n            150 SWAP                     2\n        >>  152 FOR_ITER                14 (to 184)\n            156 STORE_FAST               2 (info)\n            158 LOAD_FAST                2 (info)\n            160 LOAD_ATTR                8 (filename)\n            180 LIST_APPEND              2\n            182 JUMP_BACKWARD           16 (to 152)\n        >>  184 END_FOR\n            186 STORE_FAST               4 (names)\n            188 STORE_FAST               2 (info)\n\n 82         190 LOAD_GLOBAL             11 (NULL + len)\n            200 LOAD_GLOBAL             13 (NULL + set)\n            210 LOAD_FAST                4 (names)\n            212 CALL                     1\n            220 CALL                     1\n            228 LOAD_GLOBAL             11 (NULL + len)\n            238 LOAD_FAST                4 (names)\n            240 CALL                     1\n            248 COMPARE_OP              55 (!=)\n            252 POP_JUMP_IF_FALSE       14 (to 282)\n\n 83         254 LOAD_GLOBAL             15 (NULL + ValueError)\n            264 LOAD_CONST               2 ('duplicate ZIP member names are forbidden: ')\n            266 LOAD_FAST                4 (names)\n            268 FORMAT_VALUE             2 (repr)\n            270 BUILD_STRING             2\n            272 CALL                     1\n            280 RAISE_VARARGS            1\n\n 84     >>  282 LOAD_FAST                4 (names)\n            284 LOAD_CONST               3 ('0.bin')\n            286 BUILD_LIST               1\n            288 COMPARE_OP              55 (!=)\n            292 POP_JUMP_IF_FALSE       14 (to 322)\n\n 85         294 LOAD_GLOBAL             15 (NULL + ValueError)\n            304 LOAD_CONST               4 (\"PR95 HNeRV/Muon archive must contain exactly ['0.bin']; got \")\n            306 LOAD_FAST                4 (names)\n            308 FORMAT_VALUE             2 (repr)\n            310 BUILD_STRING             2\n            312 CALL                     1\n            320 RAISE_VARARGS            1\n\n 86     >>  322 LOAD_FAST                3 (infos)\n            324 LOAD_CONST               5 (0)\n            326 BINARY_SUBSCR\n            330 STORE_FAST               2 (info)\n\n 87         332 LOAD_GLOBAL             17 (NULL + Path)\n            342 LOAD_FAST                2 (info)\n            344 LOAD_ATTR                8 (filename)\n            364 CALL                     1\n            372 LOAD_ATTR               18 (parts)\n            392 STORE_FAST               5 (parts)\n\n 88         394 LOAD_FAST                2 (info)\n            396 LOAD_ATTR                8 (filename)\n            416 LOAD_ATTR               21 (NULL|self + startswith)\n            436 LOAD_CONST               6 ('/')\n            438 CALL                     1\n            446 POP_JUMP_IF_TRUE         4 (to 456)\n            448 LOAD_CONST               7 ('..')\n            450 LOAD_FAST                5 (parts)\n            452 CONTAINS_OP              0\n            454 POP_JUMP_IF_FALSE       24 (to 504)\n\n 89     >>  456 LOAD_GLOBAL             15 (NULL + ValueError)\n            466 LOAD_CONST               8 ('unsafe ZIP member path: ')\n            468 LOAD_FAST                2 (info)\n            470 LOAD_ATTR                8 (filename)\n            490 FORMAT_VALUE             2 (repr)\n            492 BUILD_STRING             2\n            494 CALL                     1\n            502 RAISE_VARARGS            1\n\n 90     >>  504 LOAD_FAST                1 (zf)\n            506 LOAD_ATTR               23 (NULL|self + read)\n            526 LOAD_FAST                2 (info)\n            528 CALL                     1\n            536 STORE_FAST               6 (payload)\n\n 79         538 LOAD_CONST               9 (None)\n            540 LOAD_CONST               9 (None)\n            542 LOAD_CONST               9 (None)\n            544 CALL                     2\n            552 POP_TOP\n\n 91     >>  554 LOAD_FAST                0 (path)\n            556 LOAD_ATTR               25 (NULL|self + stat)\n            576 CALL                     0\n            584 LOAD_ATTR               26 (st_size)\n            604 STORE_FAST               7 (archive_bytes)\n\n 94         606 LOAD_GLOBAL             29 (NULL + _rel)\n            616 LOAD_FAST                0 (path)\n            618 CALL                     1\n\n 95         626 LOAD_FAST                7 (archive_bytes)\n\n 96         628 LOAD_GLOBAL             31 (NULL + _sha256_file)\n            638 LOAD_FAST                0 (path)\n            640 CALL                     1\n\n 97         648 LOAD_GLOBAL             11 (NULL + len)\n            658 LOAD_FAST_CHECK          3 (infos)\n            660 CALL                     1\n\n100         668 LOAD_FAST_CHECK          2 (info)\n            670 LOAD_ATTR                8 (filename)\n\n101         690 LOAD_GLOBAL             33 (NULL + int)\n            700 LOAD_FAST                2 (info)\n            702 LOAD_ATTR               34 (file_size)\n            722 CALL                     1\n\n102         730 LOAD_GLOBAL             33 (NULL + int)\n            740 LOAD_FAST                2 (info)\n            742 LOAD_ATTR               36 (compress_size)\n            762 CALL                     1\n\n103         770 LOAD_GLOBAL             33 (NULL + int)\n            780 LOAD_FAST                2 (info)\n            782 LOAD_ATTR               38 (compress_type)\n            802 CALL                     1\n\n104         810 LOAD_FAST                2 (info)\n            812 LOAD_ATTR               38 (compress_type)\n            832 LOAD_GLOBAL              0 (zipfile)\n            842 LOAD_ATTR               40 (ZIP_STORED)\n            862 COMPARE_OP              40 (==)\n\n105         866 LOAD_FAST                2 (info)\n            868 LOAD_ATTR               42 (CRC)\n            888 LOAD_CONST              10 ('08x')\n            890 FORMAT_VALUE             4 (with format)\n\n106         892 LOAD_GLOBAL             45 (NULL + list)\n            902 LOAD_FAST                2 (info)\n            904 LOAD_ATTR               46 (date_time)\n            924 CALL                     1\n\n107         932 LOAD_GLOBAL             49 (NULL + _sha256_bytes)\n            942 LOAD_FAST_CHECK          6 (payload)\n            944 CALL                     1\n\n 99         952 LOAD_CONST              11 (('name', 'file_size', 'compress_size', 'compress_type', 'zip_stored', 'crc32_hex', 'date_time', 'sha256'))\n            954 BUILD_CONST_KEY_MAP      8\n\n 98         956 BUILD_LIST               1\n\n110         958 LOAD_FAST                7 (archive_bytes)\n            960 LOAD_GLOBAL             33 (NULL + int)\n            970 LOAD_FAST                2 (info)\n            972 LOAD_ATTR               36 (compress_size)\n            992 CALL                     1\n           1000 BINARY_OP               10 (-)\n\n111        1004 LOAD_CONST              12 (25.0)\n           1006 LOAD_FAST                7 (archive_bytes)\n           1008 BINARY_OP                5 (*)\n           1012 LOAD_GLOBAL             50 (CONTEST_ORIGINAL_BYTES)\n           1022 BINARY_OP               11 (/)\n\n 93        1026 LOAD_CONST              13 (('path', 'archive_bytes', 'archive_sha256', 'member_count', 'members', 'zip_overhead_bytes', 'rate_score_component'))\n           1028 BUILD_CONST_KEY_MAP      7\n\n113        1030 LOAD_FAST                6 (payload)\n\n 92        1032 BUILD_TUPLE              2\n           1034 RETURN_VALUE\n        >> 1036 SWAP                     2\n           1038 POP_TOP\n\n 80        1040 SWAP                     2\n           1042 STORE_FAST               2 (info)\n           1044 RERAISE                  0\n        >> 1046 SWAP                     2\n           1048 POP_TOP\n\n 81        1050 SWAP                     2\n           1052 STORE_FAST               2 (info)\n           1054 RERAISE                  0\n\n 79     >> 1056 PUSH_EXC_INFO\n           1058 WITH_EXCEPT_START\n           1060 POP_JUMP_IF_TRUE         1 (to 1064)\n           1062 RERAISE                  2\n        >> 1064 POP_TOP\n           1066 POP_EXCEPT\n           1068 POP_TOP\n           1070 POP_TOP\n           1072 EXTENDED_ARG             1\n           1074 JUMP_BACKWARD          261 (to 554)\n        >> 1076 COPY                     3\n           1078 POP_EXCEPT\n           1080 RERAISE                  1\nExceptionTable:\n  46 to 82 -> 1056 [1] lasti\n  84 to 124 -> 1036 [3]\n  128 to 134 -> 1036 [3]\n  136 to 146 -> 1056 [1] lasti\n  148 to 184 -> 1046 [3]\n  186 to 536 -> 1056 [1] lasti\n  1036 to 1054 -> 1056 [1] lasti\n  1056 to 1064 -> 1076 [3] lasti\n"
+    },
+    {
+      "qualname": "parse_decoder_blob",
+      "name": "parse_decoder_blob",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "blob",
+        "cursor",
+        "tensor_count",
+        "tensors",
+        "total_params",
+        "muon_params",
+        "adamw_decoder_params",
+        "groups",
+        "index",
+        "name_len",
+        "name",
+        "ndim",
+        "shape_values",
+        "_",
+        "value",
+        "scale",
+        "size",
+        "qbytes",
+        "shape",
+        "params",
+        "lower",
+        "is_muon",
+        "optimizer_partition",
+        "group"
+      ],
+      "names": [
+        "_read_u32",
+        "range",
+        "len",
+        "ValueError",
+        "decode",
+        "append",
+        "struct",
+        "unpack_from",
+        "tuple",
+        "_product",
+        "lower",
+        "startswith",
+        "split",
+        "get",
+        "list",
+        "min",
+        "max",
+        "dict",
+        "sorted",
+        "items"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Parse ``codec.encode_decoder`` output after brotli decompression.",
+      "dis": "117           0 RESUME                   0\n\n119           2 LOAD_CONST               1 (0)\n              4 STORE_FAST               1 (cursor)\n\n120           6 LOAD_GLOBAL              1 (NULL + _read_u32)\n             16 LOAD_FAST                0 (blob)\n             18 LOAD_FAST                1 (cursor)\n             20 LOAD_CONST               2 ('decoder tensor count')\n             22 CALL                     3\n             30 UNPACK_SEQUENCE          2\n             34 STORE_FAST               2 (tensor_count)\n             36 STORE_FAST               1 (cursor)\n\n121          38 BUILD_LIST               0\n             40 STORE_FAST               3 (tensors)\n\n122          42 LOAD_CONST               1 (0)\n             44 STORE_FAST               4 (total_params)\n\n123          46 LOAD_CONST               1 (0)\n             48 STORE_FAST               5 (muon_params)\n\n124          50 LOAD_CONST               1 (0)\n             52 STORE_FAST               6 (adamw_decoder_params)\n\n125          54 BUILD_MAP                0\n             56 STORE_FAST               7 (groups)\n\n127          58 LOAD_GLOBAL              3 (NULL + range)\n             68 LOAD_FAST                2 (tensor_count)\n             70 CALL                     1\n             78 GET_ITER\n        >>   80 EXTENDED_ARG             1\n             82 FOR_ITER               508 (to 1102)\n             86 STORE_FAST               8 (index)\n\n128          88 LOAD_GLOBAL              1 (NULL + _read_u32)\n             98 LOAD_FAST                0 (blob)\n            100 LOAD_FAST                1 (cursor)\n            102 LOAD_CONST               3 ('tensor ')\n            104 LOAD_FAST                8 (index)\n            106 FORMAT_VALUE             0\n            108 LOAD_CONST               4 (' name length')\n            110 BUILD_STRING             3\n            112 CALL                     3\n            120 UNPACK_SEQUENCE          2\n            124 STORE_FAST               9 (name_len)\n            126 STORE_FAST               1 (cursor)\n\n129         128 LOAD_FAST                1 (cursor)\n            130 LOAD_FAST                9 (name_len)\n            132 BINARY_OP                0 (+)\n            136 LOAD_GLOBAL              5 (NULL + len)\n            146 LOAD_FAST                0 (blob)\n            148 CALL                     1\n            156 COMPARE_OP              68 (>)\n            160 POP_JUMP_IF_FALSE       14 (to 190)\n\n130         162 LOAD_GLOBAL              7 (NULL + ValueError)\n            172 LOAD_CONST               5 ('truncated tensor name at index ')\n            174 LOAD_FAST                8 (index)\n            176 FORMAT_VALUE             0\n            178 BUILD_STRING             2\n            180 CALL                     1\n            188 RAISE_VARARGS            1\n\n131     >>  190 LOAD_FAST                0 (blob)\n            192 LOAD_FAST                1 (cursor)\n            194 LOAD_FAST                1 (cursor)\n            196 LOAD_FAST                9 (name_len)\n            198 BINARY_OP                0 (+)\n            202 BINARY_SLICE\n            204 LOAD_ATTR                9 (NULL|self + decode)\n            224 LOAD_CONST               6 ('utf-8')\n            226 CALL                     1\n            234 STORE_FAST              10 (name)\n\n132         236 LOAD_FAST                1 (cursor)\n            238 LOAD_FAST                9 (name_len)\n            240 BINARY_OP               13 (+=)\n            244 STORE_FAST               1 (cursor)\n\n133         246 LOAD_GLOBAL              1 (NULL + _read_u32)\n            256 LOAD_FAST                0 (blob)\n            258 LOAD_FAST                1 (cursor)\n            260 LOAD_FAST               10 (name)\n            262 FORMAT_VALUE             0\n            264 LOAD_CONST               7 (' ndim')\n            266 BUILD_STRING             2\n            268 CALL                     3\n            276 UNPACK_SEQUENCE          2\n            280 STORE_FAST              11 (ndim)\n            282 STORE_FAST               1 (cursor)\n\n134         284 BUILD_LIST               0\n            286 STORE_FAST              12 (shape_values)\n\n135         288 LOAD_GLOBAL              3 (NULL + range)\n            298 LOAD_FAST               11 (ndim)\n            300 CALL                     1\n            308 GET_ITER\n        >>  310 FOR_ITER                38 (to 390)\n            314 STORE_FAST              13 (_)\n\n136         316 LOAD_GLOBAL              1 (NULL + _read_u32)\n            326 LOAD_FAST                0 (blob)\n            328 LOAD_FAST                1 (cursor)\n            330 LOAD_FAST               10 (name)\n            332 FORMAT_VALUE             0\n            334 LOAD_CONST               8 (' shape')\n            336 BUILD_STRING             2\n            338 CALL                     3\n            346 UNPACK_SEQUENCE          2\n            350 STORE_FAST              14 (value)\n            352 STORE_FAST               1 (cursor)\n\n137         354 LOAD_FAST               12 (shape_values)\n            356 LOAD_ATTR               11 (NULL|self + append)\n            376 LOAD_FAST               14 (value)\n            378 CALL                     1\n            386 POP_TOP\n            388 JUMP_BACKWARD           40 (to 310)\n\n135     >>  390 END_FOR\n\n138         392 LOAD_FAST                1 (cursor)\n            394 LOAD_CONST               9 (4)\n            396 BINARY_OP                0 (+)\n            400 LOAD_GLOBAL              5 (NULL + len)\n            410 LOAD_FAST                0 (blob)\n            412 CALL                     1\n            420 COMPARE_OP              68 (>)\n            424 POP_JUMP_IF_FALSE       14 (to 454)\n\n139         426 LOAD_GLOBAL              7 (NULL + ValueError)\n            436 LOAD_CONST              10 ('truncated scale for tensor ')\n            438 LOAD_FAST               10 (name)\n            440 FORMAT_VALUE             0\n            442 BUILD_STRING             2\n            444 CALL                     1\n            452 RAISE_VARARGS            1\n\n140     >>  454 LOAD_GLOBAL             13 (NULL + struct)\n            464 LOAD_ATTR               14 (unpack_from)\n            484 LOAD_CONST              11 ('<f')\n            486 LOAD_FAST                0 (blob)\n            488 LOAD_FAST                1 (cursor)\n            490 CALL                     3\n            498 LOAD_CONST               1 (0)\n            500 BINARY_SUBSCR\n            504 STORE_FAST              15 (scale)\n\n141         506 LOAD_FAST                1 (cursor)\n            508 LOAD_CONST               9 (4)\n            510 BINARY_OP               13 (+=)\n            514 STORE_FAST               1 (cursor)\n\n142         516 LOAD_GLOBAL              1 (NULL + _read_u32)\n            526 LOAD_FAST                0 (blob)\n            528 LOAD_FAST                1 (cursor)\n            530 LOAD_FAST               10 (name)\n            532 FORMAT_VALUE             0\n            534 LOAD_CONST              12 (' quantized size')\n            536 BUILD_STRING             2\n            538 CALL                     3\n            546 UNPACK_SEQUENCE          2\n            550 STORE_FAST              16 (size)\n            552 STORE_FAST               1 (cursor)\n\n143         554 LOAD_FAST                1 (cursor)\n            556 LOAD_FAST               16 (size)\n            558 BINARY_OP                0 (+)\n            562 LOAD_GLOBAL              5 (NULL + len)\n            572 LOAD_FAST                0 (blob)\n            574 CALL                     1\n            582 COMPARE_OP              68 (>)\n            586 POP_JUMP_IF_FALSE       14 (to 616)\n\n144         588 LOAD_GLOBAL              7 (NULL + ValueError)\n            598 LOAD_CONST              13 ('truncated quantized payload for tensor ')\n            600 LOAD_FAST               10 (name)\n            602 FORMAT_VALUE             0\n            604 BUILD_STRING             2\n            606 CALL                     1\n            614 RAISE_VARARGS            1\n\n145     >>  616 LOAD_FAST                0 (blob)\n            618 LOAD_FAST                1 (cursor)\n            620 LOAD_FAST                1 (cursor)\n            622 LOAD_FAST               16 (size)\n            624 BINARY_OP                0 (+)\n            628 BINARY_SLICE\n            630 STORE_FAST              17 (qbytes)\n\n146         632 LOAD_FAST                1 (cursor)\n            634 LOAD_FAST               16 (size)\n            636 BINARY_OP               13 (+=)\n            640 STORE_FAST               1 (cursor)\n\n148         642 LOAD_GLOBAL             17 (NULL + tuple)\n            652 LOAD_FAST               12 (shape_values)\n            654 CALL                     1\n            662 STORE_FAST              18 (shape)\n\n149         664 LOAD_GLOBAL             19 (NULL + _product)\n            674 LOAD_FAST               18 (shape)\n            676 CALL                     1\n            684 STORE_FAST              19 (params)\n\n150         686 LOAD_FAST               19 (params)\n            688 LOAD_FAST               16 (size)\n            690 COMPARE_OP              55 (!=)\n            694 POP_JUMP_IF_FALSE       20 (to 736)\n\n151         696 LOAD_GLOBAL              7 (NULL + ValueError)\n            706 LOAD_CONST               3 ('tensor ')\n            708 LOAD_FAST               10 (name)\n            710 FORMAT_VALUE             0\n            712 LOAD_CONST              14 (' shape product ')\n            714 LOAD_FAST               19 (params)\n            716 FORMAT_VALUE             0\n            718 LOAD_CONST              15 (' != stored size ')\n            720 LOAD_FAST               16 (size)\n            722 FORMAT_VALUE             0\n            724 BUILD_STRING             6\n            726 CALL                     1\n            734 RAISE_VARARGS            1\n\n152     >>  736 LOAD_FAST               10 (name)\n            738 LOAD_ATTR               21 (NULL|self + lower)\n            758 CALL                     0\n            766 STORE_FAST              20 (lower)\n\n153         768 LOAD_FAST               11 (ndim)\n            770 LOAD_CONST              16 (2)\n            772 COMPARE_OP              92 (>=)\n            776 COPY                     1\n            778 POP_JUMP_IF_FALSE       30 (to 840)\n            780 POP_TOP\n            782 LOAD_CONST              17 ('stem')\n            784 LOAD_FAST               20 (lower)\n            786 CONTAINS_OP              1\n            788 COPY                     1\n            790 POP_JUMP_IF_FALSE       24 (to 840)\n            792 POP_TOP\n            794 LOAD_FAST               20 (lower)\n            796 LOAD_ATTR               23 (NULL|self + startswith)\n            816 LOAD_CONST              18 ('rgb')\n            818 CALL                     1\n            826 UNARY_NOT\n            828 COPY                     1\n            830 POP_JUMP_IF_FALSE        4 (to 840)\n            832 POP_TOP\n            834 LOAD_CONST              19 ('.rgb_')\n            836 LOAD_FAST               20 (lower)\n            838 CONTAINS_OP              1\n        >>  840 STORE_FAST              21 (is_muon)\n\n154         842 LOAD_FAST               21 (is_muon)\n            844 POP_JUMP_IF_FALSE        8 (to 862)\n\n155         846 LOAD_FAST                5 (muon_params)\n            848 LOAD_FAST               19 (params)\n            850 BINARY_OP               13 (+=)\n            854 STORE_FAST               5 (muon_params)\n\n156         856 LOAD_CONST              20 ('muon_hidden_2d_plus_weight')\n            858 STORE_FAST              22 (optimizer_partition)\n            860 JUMP_FORWARD             7 (to 876)\n\n158     >>  862 LOAD_FAST                6 (adamw_decoder_params)\n            864 LOAD_FAST               19 (params)\n            866 BINARY_OP               13 (+=)\n            870 STORE_FAST               6 (adamw_decoder_params)\n\n159         872 LOAD_CONST              21 ('adamw_decoder_or_bias')\n            874 STORE_FAST              22 (optimizer_partition)\n\n160     >>  876 LOAD_FAST               10 (name)\n            878 LOAD_ATTR               25 (NULL|self + split)\n            898 LOAD_CONST              22 ('.')\n            900 LOAD_CONST              23 (1)\n            902 CALL                     2\n            910 LOAD_CONST               1 (0)\n            912 BINARY_SUBSCR\n            916 STORE_FAST              23 (group)\n\n161         918 LOAD_FAST                7 (groups)\n            920 LOAD_ATTR               27 (NULL|self + get)\n            940 LOAD_FAST               23 (group)\n            942 LOAD_CONST               1 (0)\n            944 CALL                     2\n            952 LOAD_FAST               19 (params)\n            954 BINARY_OP                0 (+)\n            958 LOAD_FAST                7 (groups)\n            960 LOAD_FAST               23 (group)\n            962 STORE_SUBSCR\n\n162         966 LOAD_FAST                4 (total_params)\n            968 LOAD_FAST               19 (params)\n            970 BINARY_OP               13 (+=)\n            974 STORE_FAST               4 (total_params)\n\n163         976 LOAD_FAST                3 (tensors)\n            978 LOAD_ATTR               11 (NULL|self + append)\n\n165         998 LOAD_FAST               10 (name)\n\n166        1000 LOAD_GLOBAL             29 (NULL + list)\n           1010 LOAD_FAST               18 (shape)\n           1012 CALL                     1\n\n167        1020 LOAD_FAST               19 (params)\n\n168        1022 LOAD_FAST               16 (size)\n\n169        1024 LOAD_FAST               15 (scale)\n\n170        1026 LOAD_FAST               17 (qbytes)\n           1028 POP_JUMP_IF_FALSE       11 (to 1052)\n           1030 LOAD_GLOBAL             31 (NULL + min)\n           1040 LOAD_FAST               17 (qbytes)\n           1042 CALL                     1\n           1050 JUMP_FORWARD             1 (to 1054)\n        >> 1052 LOAD_CONST              24 (None)\n\n171     >> 1054 LOAD_FAST               17 (qbytes)\n           1056 POP_JUMP_IF_FALSE       11 (to 1080)\n           1058 LOAD_GLOBAL             33 (NULL + max)\n           1068 LOAD_FAST               17 (qbytes)\n           1070 CALL                     1\n           1078 JUMP_FORWARD             1 (to 1082)\n        >> 1080 LOAD_CONST              24 (None)\n\n172     >> 1082 LOAD_FAST               22 (optimizer_partition)\n\n164        1084 LOAD_CONST              25 (('name', 'shape', 'params', 'quantized_bytes', 'scale', 'zigzag_byte_min', 'zigzag_byte_max', 'optimizer_partition'))\n           1086 BUILD_CONST_KEY_MAP      8\n\n163        1088 CALL                     1\n           1096 POP_TOP\n           1098 EXTENDED_ARG             1\n           1100 JUMP_BACKWARD          511 (to 80)\n\n127     >> 1102 END_FOR\n\n176        1104 LOAD_FAST                1 (cursor)\n           1106 LOAD_GLOBAL              5 (NULL + len)\n           1116 LOAD_FAST                0 (blob)\n           1118 CALL                     1\n           1126 COMPARE_OP              55 (!=)\n           1130 POP_JUMP_IF_FALSE       26 (to 1184)\n\n177        1132 LOAD_GLOBAL              7 (NULL + ValueError)\n           1142 LOAD_CONST              26 ('decoder blob has trailing bytes: ')\n           1144 LOAD_GLOBAL              5 (NULL + len)\n           1154 LOAD_FAST                0 (blob)\n           1156 CALL                     1\n           1164 LOAD_FAST                1 (cursor)\n           1166 BINARY_OP               10 (-)\n           1170 FORMAT_VALUE             0\n           1172 BUILD_STRING             2\n           1174 CALL                     1\n           1182 RAISE_VARARGS            1\n\n180     >> 1184 LOAD_FAST                2 (tensor_count)\n\n181        1186 LOAD_FAST                4 (total_params)\n\n182        1188 LOAD_FAST                5 (muon_params)\n\n183        1190 LOAD_FAST                6 (adamw_decoder_params)\n\n184        1192 LOAD_GLOBAL             35 (NULL + dict)\n           1202 LOAD_GLOBAL             37 (NULL + sorted)\n           1212 LOAD_FAST                7 (groups)\n           1214 LOAD_ATTR               39 (NULL|self + items)\n           1234 CALL                     0\n           1242 CALL                     1\n           1250 CALL                     1\n\n185        1258 LOAD_GLOBAL             37 (NULL + sorted)\n           1268 LOAD_FAST                3 (tensors)\n           1270 LOAD_CONST              27 (<code object <lambda> at 0x10108bab0, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 185>)\n           1272 MAKE_FUNCTION            0\n           1274 LOAD_CONST              28 (True)\n           1276 KW_NAMES                29 (('key', 'reverse'))\n           1278 CALL                     3\n           1286 LOAD_CONST              24 (None)\n           1288 LOAD_CONST              30 (12)\n           1290 BINARY_SLICE\n\n186        1292 LOAD_FAST                3 (tensors)\n\n187        1294 LOAD_GLOBAL              5 (NULL + len)\n           1304 LOAD_FAST                0 (blob)\n           1306 CALL                     1\n\n179        1314 LOAD_CONST              31 (('tensor_count', 'total_params', 'muon_partition_params', 'adamw_decoder_partition_params', 'parameter_groups', 'top_tensors_by_params', 'tensors', 'raw_decoder_table_bytes'))\n           1316 BUILD_CONST_KEY_MAP      8\n           1318 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "parse_decoder_blob.<locals>.<lambda>",
+      "name": "<lambda>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "item"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "185           0 RESUME                   0\n              2 LOAD_FAST                0 (item)\n              4 LOAD_CONST               1 ('params')\n              6 BINARY_SUBSCR\n             10 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "parse_latents_payload",
+      "name": "parse_latents_payload",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "raw",
+        "cursor",
+        "n_pairs",
+        "latent_dim",
+        "fp16_table_bytes",
+        "mins_start",
+        "scales_start",
+        "total",
+        "lo_start",
+        "hi_start",
+        "mins",
+        "scales",
+        "hi"
+      ],
+      "names": [
+        "_read_u32",
+        "len",
+        "ValueError",
+        "struct",
+        "unpack",
+        "sum",
+        "float",
+        "min",
+        "max"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Parse ``codec.encode_latents`` output after brotli decompression.",
+      "dis": "191           0 RESUME                   0\n\n193           2 LOAD_CONST               1 (0)\n              4 STORE_FAST               1 (cursor)\n\n194           6 LOAD_GLOBAL              1 (NULL + _read_u32)\n             16 LOAD_FAST                0 (raw)\n             18 LOAD_FAST                1 (cursor)\n             20 LOAD_CONST               2 ('latent pair count')\n             22 CALL                     3\n             30 UNPACK_SEQUENCE          2\n             34 STORE_FAST               2 (n_pairs)\n             36 STORE_FAST               1 (cursor)\n\n195          38 LOAD_GLOBAL              1 (NULL + _read_u32)\n             48 LOAD_FAST                0 (raw)\n             50 LOAD_FAST                1 (cursor)\n             52 LOAD_CONST               3 ('latent dim')\n             54 CALL                     3\n             62 UNPACK_SEQUENCE          2\n             66 STORE_FAST               3 (latent_dim)\n             68 STORE_FAST               1 (cursor)\n\n196          70 LOAD_FAST                3 (latent_dim)\n             72 LOAD_CONST               4 (2)\n             74 BINARY_OP                5 (*)\n             78 STORE_FAST               4 (fp16_table_bytes)\n\n197          80 LOAD_FAST                1 (cursor)\n             82 STORE_FAST               5 (mins_start)\n\n198          84 LOAD_FAST                1 (cursor)\n             86 LOAD_FAST                4 (fp16_table_bytes)\n             88 BINARY_OP               13 (+=)\n             92 STORE_FAST               1 (cursor)\n\n199          94 LOAD_FAST                1 (cursor)\n             96 STORE_FAST               6 (scales_start)\n\n200          98 LOAD_FAST                1 (cursor)\n            100 LOAD_FAST                4 (fp16_table_bytes)\n            102 BINARY_OP               13 (+=)\n            106 STORE_FAST               1 (cursor)\n\n201         108 LOAD_FAST                1 (cursor)\n            110 LOAD_GLOBAL              3 (NULL + len)\n            120 LOAD_FAST                0 (raw)\n            122 CALL                     1\n            130 COMPARE_OP              68 (>)\n            134 POP_JUMP_IF_FALSE       11 (to 158)\n\n202         136 LOAD_GLOBAL              5 (NULL + ValueError)\n            146 LOAD_CONST               5 ('truncated latent min/scale tables')\n            148 CALL                     1\n            156 RAISE_VARARGS            1\n\n203     >>  158 LOAD_FAST                2 (n_pairs)\n            160 LOAD_FAST                3 (latent_dim)\n            162 BINARY_OP                5 (*)\n            166 STORE_FAST               7 (total)\n\n204         168 LOAD_FAST                1 (cursor)\n            170 STORE_FAST               8 (lo_start)\n\n205         172 LOAD_FAST                1 (cursor)\n            174 LOAD_FAST                7 (total)\n            176 BINARY_OP               13 (+=)\n            180 STORE_FAST               1 (cursor)\n\n206         182 LOAD_FAST                1 (cursor)\n            184 STORE_FAST               9 (hi_start)\n\n207         186 LOAD_FAST                1 (cursor)\n            188 LOAD_FAST                7 (total)\n            190 BINARY_OP               13 (+=)\n            194 STORE_FAST               1 (cursor)\n\n208         196 LOAD_FAST                1 (cursor)\n            198 LOAD_GLOBAL              3 (NULL + len)\n            208 LOAD_FAST                0 (raw)\n            210 CALL                     1\n            218 COMPARE_OP              55 (!=)\n            222 POP_JUMP_IF_FALSE       26 (to 276)\n\n209         224 LOAD_GLOBAL              5 (NULL + ValueError)\n            234 LOAD_CONST               6 ('latent payload accounting mismatch: cursor=')\n            236 LOAD_FAST                1 (cursor)\n            238 FORMAT_VALUE             0\n            240 LOAD_CONST               7 (', len=')\n            242 LOAD_GLOBAL              3 (NULL + len)\n            252 LOAD_FAST                0 (raw)\n            254 CALL                     1\n            262 FORMAT_VALUE             0\n            264 BUILD_STRING             4\n            266 CALL                     1\n            274 RAISE_VARARGS            1\n\n211     >>  276 LOAD_GLOBAL              7 (NULL + struct)\n            286 LOAD_ATTR                8 (unpack)\n            306 LOAD_CONST               8 ('<')\n            308 LOAD_CONST               9 ('e')\n            310 LOAD_FAST                3 (latent_dim)\n            312 BINARY_OP                5 (*)\n            316 BINARY_OP                0 (+)\n            320 LOAD_FAST                0 (raw)\n            322 LOAD_FAST                5 (mins_start)\n            324 LOAD_FAST                5 (mins_start)\n            326 LOAD_FAST                4 (fp16_table_bytes)\n            328 BINARY_OP                0 (+)\n            332 BINARY_SLICE\n            334 CALL                     2\n            342 STORE_FAST              10 (mins)\n\n212         344 LOAD_GLOBAL              7 (NULL + struct)\n            354 LOAD_ATTR                8 (unpack)\n            374 LOAD_CONST               8 ('<')\n            376 LOAD_CONST               9 ('e')\n            378 LOAD_FAST                3 (latent_dim)\n            380 BINARY_OP                5 (*)\n            384 BINARY_OP                0 (+)\n            388 LOAD_FAST                0 (raw)\n            390 LOAD_FAST                6 (scales_start)\n            392 LOAD_FAST                6 (scales_start)\n            394 LOAD_FAST                4 (fp16_table_bytes)\n            396 BINARY_OP                0 (+)\n            400 BINARY_SLICE\n            402 CALL                     2\n            410 STORE_FAST              11 (scales)\n\n213         412 LOAD_FAST                0 (raw)\n            414 LOAD_FAST                9 (hi_start)\n            416 LOAD_FAST                9 (hi_start)\n            418 LOAD_FAST                7 (total)\n            420 BINARY_OP                0 (+)\n            424 BINARY_SLICE\n            426 STORE_FAST              12 (hi)\n\n215         428 LOAD_FAST                2 (n_pairs)\n\n216         430 LOAD_FAST                3 (latent_dim)\n\n217         432 LOAD_FAST                7 (total)\n\n218         434 LOAD_GLOBAL              3 (NULL + len)\n            444 LOAD_FAST                0 (raw)\n            446 CALL                     1\n\n219         454 LOAD_CONST              10 (8)\n\n220         456 LOAD_FAST                4 (fp16_table_bytes)\n\n221         458 LOAD_FAST                4 (fp16_table_bytes)\n\n222         460 LOAD_FAST                7 (total)\n\n223         462 LOAD_FAST                7 (total)\n\n224         464 LOAD_GLOBAL             11 (NULL + sum)\n            474 LOAD_CONST              11 (<code object <genexpr> at 0x101092970, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 224>)\n            476 MAKE_FUNCTION            0\n            478 LOAD_FAST               12 (hi)\n            480 GET_ITER\n            482 CALL                     0\n            490 CALL                     1\n\n225         498 LOAD_FAST                7 (total)\n            500 POP_JUMP_IF_FALSE       21 (to 544)\n            502 LOAD_GLOBAL             11 (NULL + sum)\n            512 LOAD_CONST              12 (<code object <genexpr> at 0x101092a60, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 225>)\n            514 MAKE_FUNCTION            0\n            516 LOAD_FAST               12 (hi)\n            518 GET_ITER\n            520 CALL                     0\n            528 CALL                     1\n            536 LOAD_FAST                7 (total)\n            538 BINARY_OP               11 (/)\n            542 JUMP_FORWARD             1 (to 546)\n        >>  544 LOAD_CONST              13 (0.0)\n\n226     >>  546 LOAD_FAST               10 (mins)\n            548 POP_JUMP_IF_FALSE       40 (to 630)\n            550 LOAD_GLOBAL             13 (NULL + float)\n            560 LOAD_GLOBAL             15 (NULL + min)\n            570 LOAD_FAST               10 (mins)\n            572 CALL                     1\n            580 CALL                     1\n            588 LOAD_GLOBAL             13 (NULL + float)\n            598 LOAD_GLOBAL             17 (NULL + max)\n            608 LOAD_FAST               10 (mins)\n            610 CALL                     1\n            618 CALL                     1\n            626 BUILD_LIST               2\n            628 JUMP_FORWARD             3 (to 636)\n        >>  630 LOAD_CONST              14 (None)\n            632 LOAD_CONST              14 (None)\n            634 BUILD_LIST               2\n\n227     >>  636 LOAD_FAST               11 (scales)\n            638 POP_JUMP_IF_FALSE       42 (to 724)\n            640 LOAD_GLOBAL             13 (NULL + float)\n            650 LOAD_GLOBAL             15 (NULL + min)\n            660 LOAD_FAST               11 (scales)\n            662 CALL                     1\n            670 CALL                     1\n            678 LOAD_GLOBAL             13 (NULL + float)\n            688 LOAD_GLOBAL             17 (NULL + max)\n            698 LOAD_FAST               11 (scales)\n            700 CALL                     1\n            708 CALL                     1\n            716 BUILD_LIST               2\n\n214         718 LOAD_CONST              15 (('n_frame_pairs', 'latent_dim', 'latent_values', 'payload_bytes', 'header_bytes', 'mins_fp16_bytes', 'scales_fp16_bytes', 'lo_delta_bytes', 'hi_delta_bytes', 'hi_nonzero_count', 'hi_nonzero_fraction', 'mins_range', 'scales_range'))\n            720 BUILD_CONST_KEY_MAP     13\n            722 RETURN_VALUE\n\n227     >>  724 LOAD_CONST              14 (None)\n            726 LOAD_CONST              14 (None)\n            728 BUILD_LIST               2\n\n214         730 LOAD_CONST              15 (('n_frame_pairs', 'latent_dim', 'latent_values', 'payload_bytes', 'header_bytes', 'mins_fp16_bytes', 'scales_fp16_bytes', 'lo_delta_bytes', 'hi_delta_bytes', 'hi_nonzero_count', 'hi_nonzero_fraction', 'mins_range', 'scales_range'))\n            732 BUILD_CONST_KEY_MAP     13\n            734 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "parse_latents_payload.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "value"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "224           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                 9 (to 30)\n             12 STORE_FAST               1 (value)\n             14 LOAD_FAST                1 (value)\n             16 POP_JUMP_IF_TRUE         1 (to 20)\n             18 JUMP_BACKWARD            6 (to 8)\n        >>   20 LOAD_CONST               0 (1)\n             22 YIELD_VALUE              1\n             24 RESUME                   1\n             26 POP_TOP\n             28 JUMP_BACKWARD           11 (to 8)\n        >>   30 END_FOR\n             32 RETURN_CONST             1 (None)\n        >>   34 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             36 RERAISE                  1\nExceptionTable:\n  4 to 16 -> 34 [0] lasti\n  20 to 32 -> 34 [0] lasti\n"
+    },
+    {
+      "qualname": "parse_latents_payload.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "value"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "225           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                 9 (to 30)\n             12 STORE_FAST               1 (value)\n             14 LOAD_FAST                1 (value)\n             16 POP_JUMP_IF_TRUE         1 (to 20)\n             18 JUMP_BACKWARD            6 (to 8)\n        >>   20 LOAD_CONST               0 (1)\n             22 YIELD_VALUE              1\n             24 RESUME                   1\n             26 POP_TOP\n             28 JUMP_BACKWARD           11 (to 8)\n        >>   30 END_FOR\n             32 RETURN_CONST             1 (None)\n        >>   34 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             36 RERAISE                  1\nExceptionTable:\n  4 to 16 -> 34 [0] lasti\n  20 to 32 -> 34 [0] lasti\n"
+    },
+    {
+      "qualname": "parse_hnerv_muon_member",
+      "name": "parse_hnerv_muon_member",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "payload",
+        "brotli",
+        "cursor",
+        "sections",
+        "meta_len",
+        "meta_brotli_start",
+        "meta_brotli",
+        "meta",
+        "decoder_len_offset",
+        "decoder_len",
+        "decoder_blob",
+        "decoder_raw",
+        "decoder",
+        "latents_len_offset",
+        "latents_len",
+        "latents_blob",
+        "latents_raw",
+        "latents"
+      ],
+      "names": [
+        "_require_brotli",
+        "_read_u32",
+        "len",
+        "ValueError",
+        "json",
+        "loads",
+        "decompress",
+        "append",
+        "dumps",
+        "encode",
+        "_sha256_bytes",
+        "parse_decoder_blob",
+        "parse_latents_payload",
+        "sum"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Parse PR95 ``0.bin`` into meta, decoder, and latent sections.",
+      "dis": "231           0 RESUME                   0\n\n233           2 LOAD_GLOBAL              1 (NULL + _require_brotli)\n             12 CALL                     0\n             20 STORE_FAST               1 (brotli)\n\n234          22 LOAD_CONST               1 (0)\n             24 STORE_FAST               2 (cursor)\n\n235          26 BUILD_LIST               0\n             28 STORE_FAST               3 (sections)\n\n237          30 LOAD_GLOBAL              3 (NULL + _read_u32)\n             40 LOAD_FAST                0 (payload)\n             42 LOAD_FAST                2 (cursor)\n             44 LOAD_CONST               2 ('meta brotli length')\n             46 CALL                     3\n             54 UNPACK_SEQUENCE          2\n             58 STORE_FAST               4 (meta_len)\n             60 STORE_FAST               2 (cursor)\n\n238          62 LOAD_FAST                2 (cursor)\n             64 STORE_FAST               5 (meta_brotli_start)\n\n239          66 LOAD_FAST                0 (payload)\n             68 LOAD_FAST                2 (cursor)\n             70 LOAD_FAST                2 (cursor)\n             72 LOAD_FAST                4 (meta_len)\n             74 BINARY_OP                0 (+)\n             78 BINARY_SLICE\n             80 STORE_FAST               6 (meta_brotli)\n\n240          82 LOAD_FAST                2 (cursor)\n             84 LOAD_FAST                4 (meta_len)\n             86 BINARY_OP               13 (+=)\n             90 STORE_FAST               2 (cursor)\n\n241          92 LOAD_FAST                2 (cursor)\n             94 LOAD_GLOBAL              5 (NULL + len)\n            104 LOAD_FAST                0 (payload)\n            106 CALL                     1\n            114 COMPARE_OP              68 (>)\n            118 POP_JUMP_IF_FALSE       11 (to 142)\n\n242         120 LOAD_GLOBAL              7 (NULL + ValueError)\n            130 LOAD_CONST               3 ('truncated meta section')\n            132 CALL                     1\n            140 RAISE_VARARGS            1\n\n243     >>  142 LOAD_GLOBAL              9 (NULL + json)\n            152 LOAD_ATTR               10 (loads)\n            172 LOAD_FAST                1 (brotli)\n            174 LOAD_ATTR               13 (NULL|self + decompress)\n            194 LOAD_FAST                6 (meta_brotli)\n            196 CALL                     1\n            204 CALL                     1\n            212 STORE_FAST               7 (meta)\n\n244         214 LOAD_FAST                3 (sections)\n            216 LOAD_ATTR               15 (NULL|self + append)\n\n246         236 LOAD_CONST               4 ('meta_json_brotli')\n\n247         238 LOAD_CONST               1 (0)\n\n248         240 LOAD_FAST                4 (meta_len)\n\n249         242 LOAD_GLOBAL              5 (NULL + len)\n            252 LOAD_GLOBAL              9 (NULL + json)\n            262 LOAD_ATTR               16 (dumps)\n            282 LOAD_FAST                7 (meta)\n            284 LOAD_CONST               5 (True)\n            286 KW_NAMES                 6 (('sort_keys',))\n            288 CALL                     2\n            296 LOAD_ATTR               19 (NULL|self + encode)\n            316 LOAD_CONST               7 ('utf-8')\n            318 CALL                     1\n            326 CALL                     1\n\n250         334 LOAD_GLOBAL             21 (NULL + _sha256_bytes)\n            344 LOAD_FAST                6 (meta_brotli)\n            346 CALL                     1\n\n245         354 LOAD_CONST               8 (('name', 'length_prefix_offset', 'compressed_bytes', 'uncompressed_bytes', 'sha256'))\n            356 BUILD_CONST_KEY_MAP      5\n\n244         358 CALL                     1\n            366 POP_TOP\n\n254         368 LOAD_FAST                2 (cursor)\n            370 STORE_FAST               8 (decoder_len_offset)\n\n255         372 LOAD_GLOBAL              3 (NULL + _read_u32)\n            382 LOAD_FAST                0 (payload)\n            384 LOAD_FAST                2 (cursor)\n            386 LOAD_CONST               9 ('decoder blob length')\n            388 CALL                     3\n            396 UNPACK_SEQUENCE          2\n            400 STORE_FAST               9 (decoder_len)\n            402 STORE_FAST               2 (cursor)\n\n256         404 LOAD_FAST                0 (payload)\n            406 LOAD_FAST                2 (cursor)\n            408 LOAD_FAST                2 (cursor)\n            410 LOAD_FAST                9 (decoder_len)\n            412 BINARY_OP                0 (+)\n            416 BINARY_SLICE\n            418 STORE_FAST              10 (decoder_blob)\n\n257         420 LOAD_FAST                2 (cursor)\n            422 LOAD_FAST                9 (decoder_len)\n            424 BINARY_OP               13 (+=)\n            428 STORE_FAST               2 (cursor)\n\n258         430 LOAD_FAST                2 (cursor)\n            432 LOAD_GLOBAL              5 (NULL + len)\n            442 LOAD_FAST                0 (payload)\n            444 CALL                     1\n            452 COMPARE_OP              68 (>)\n            456 POP_JUMP_IF_FALSE       11 (to 480)\n\n259         458 LOAD_GLOBAL              7 (NULL + ValueError)\n            468 LOAD_CONST              10 ('truncated decoder section')\n            470 CALL                     1\n            478 RAISE_VARARGS            1\n\n260     >>  480 LOAD_FAST                1 (brotli)\n            482 LOAD_ATTR               13 (NULL|self + decompress)\n            502 LOAD_FAST               10 (decoder_blob)\n            504 CALL                     1\n            512 STORE_FAST              11 (decoder_raw)\n\n261         514 LOAD_GLOBAL             23 (NULL + parse_decoder_blob)\n            524 LOAD_FAST               11 (decoder_raw)\n            526 CALL                     1\n            534 STORE_FAST              12 (decoder)\n\n262         536 LOAD_FAST                3 (sections)\n            538 LOAD_ATTR               15 (NULL|self + append)\n\n264         558 LOAD_CONST              11 ('decoder_state_int8_brotli')\n\n265         560 LOAD_FAST                8 (decoder_len_offset)\n\n266         562 LOAD_FAST                9 (decoder_len)\n\n267         564 LOAD_GLOBAL              5 (NULL + len)\n            574 LOAD_FAST               11 (decoder_raw)\n            576 CALL                     1\n\n268         584 LOAD_GLOBAL             21 (NULL + _sha256_bytes)\n            594 LOAD_FAST               10 (decoder_blob)\n            596 CALL                     1\n\n263         604 LOAD_CONST               8 (('name', 'length_prefix_offset', 'compressed_bytes', 'uncompressed_bytes', 'sha256'))\n            606 BUILD_CONST_KEY_MAP      5\n\n262         608 CALL                     1\n            616 POP_TOP\n\n272         618 LOAD_FAST                2 (cursor)\n            620 STORE_FAST              13 (latents_len_offset)\n\n273         622 LOAD_GLOBAL              3 (NULL + _read_u32)\n            632 LOAD_FAST                0 (payload)\n            634 LOAD_FAST                2 (cursor)\n            636 LOAD_CONST              12 ('latents brotli length')\n            638 CALL                     3\n            646 UNPACK_SEQUENCE          2\n            650 STORE_FAST              14 (latents_len)\n            652 STORE_FAST               2 (cursor)\n\n274         654 LOAD_FAST                0 (payload)\n            656 LOAD_FAST                2 (cursor)\n            658 LOAD_FAST                2 (cursor)\n            660 LOAD_FAST               14 (latents_len)\n            662 BINARY_OP                0 (+)\n            666 BINARY_SLICE\n            668 STORE_FAST              15 (latents_blob)\n\n275         670 LOAD_FAST                2 (cursor)\n            672 LOAD_FAST               14 (latents_len)\n            674 BINARY_OP               13 (+=)\n            678 STORE_FAST               2 (cursor)\n\n276         680 LOAD_FAST                2 (cursor)\n            682 LOAD_GLOBAL              5 (NULL + len)\n            692 LOAD_FAST                0 (payload)\n            694 CALL                     1\n            702 COMPARE_OP              55 (!=)\n            706 POP_JUMP_IF_FALSE       26 (to 760)\n\n277         708 LOAD_GLOBAL              7 (NULL + ValueError)\n            718 LOAD_CONST              13 ('0.bin has trailing bytes or truncation: cursor=')\n            720 LOAD_FAST                2 (cursor)\n            722 FORMAT_VALUE             0\n            724 LOAD_CONST              14 (', len=')\n            726 LOAD_GLOBAL              5 (NULL + len)\n            736 LOAD_FAST                0 (payload)\n            738 CALL                     1\n            746 FORMAT_VALUE             0\n            748 BUILD_STRING             4\n            750 CALL                     1\n            758 RAISE_VARARGS            1\n\n278     >>  760 LOAD_FAST                1 (brotli)\n            762 LOAD_ATTR               13 (NULL|self + decompress)\n            782 LOAD_FAST               15 (latents_blob)\n            784 CALL                     1\n            792 STORE_FAST              16 (latents_raw)\n\n279         794 LOAD_GLOBAL             25 (NULL + parse_latents_payload)\n            804 LOAD_FAST               16 (latents_raw)\n            806 CALL                     1\n            814 STORE_FAST              17 (latents)\n\n280         816 LOAD_FAST                3 (sections)\n            818 LOAD_ATTR               15 (NULL|self + append)\n\n282         838 LOAD_CONST              15 ('latents_delta_uint8_brotli')\n\n283         840 LOAD_FAST               13 (latents_len_offset)\n\n284         842 LOAD_FAST               14 (latents_len)\n\n285         844 LOAD_GLOBAL              5 (NULL + len)\n            854 LOAD_FAST               16 (latents_raw)\n            856 CALL                     1\n\n286         864 LOAD_GLOBAL             21 (NULL + _sha256_bytes)\n            874 LOAD_FAST               15 (latents_blob)\n            876 CALL                     1\n\n281         884 LOAD_CONST               8 (('name', 'length_prefix_offset', 'compressed_bytes', 'uncompressed_bytes', 'sha256'))\n            886 BUILD_CONST_KEY_MAP      5\n\n280         888 CALL                     1\n            896 POP_TOP\n\n291         898 LOAD_CONST              16 ('hnerv_muon_codec_v1')\n\n292         900 LOAD_GLOBAL              5 (NULL + len)\n            910 LOAD_FAST                0 (payload)\n            912 CALL                     1\n\n293         920 LOAD_CONST              17 (12)\n\n294         922 LOAD_FAST                5 (meta_brotli_start)\n\n295         924 LOAD_FAST                3 (sections)\n\n296         926 LOAD_FAST                7 (meta)\n\n297         928 LOAD_FAST               12 (decoder)\n\n298         930 LOAD_FAST               17 (latents)\n\n299         932 LOAD_GLOBAL             27 (NULL + sum)\n            942 LOAD_CONST              18 (<code object <genexpr> at 0x101092b50, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 299>)\n            944 MAKE_FUNCTION            0\n            946 LOAD_FAST                3 (sections)\n            948 GET_ITER\n            950 CALL                     0\n            958 CALL                     1\n\n290         966 LOAD_CONST              19 (('member_format', 'member_bytes', 'section_length_prefix_bytes', 'meta_brotli_offset', 'sections', 'meta', 'decoder', 'latents', 'compressed_payload_bytes'))\n            968 BUILD_CONST_KEY_MAP      9\n            970 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "parse_hnerv_muon_member.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "item"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "compressed_bytes",
+      "dis": "299           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                 9 (to 30)\n             12 STORE_FAST               1 (item)\n             14 LOAD_FAST                1 (item)\n             16 LOAD_CONST               0 ('compressed_bytes')\n             18 BINARY_SUBSCR\n             22 YIELD_VALUE              1\n             24 RESUME                   1\n             26 POP_TOP\n             28 JUMP_BACKWARD           11 (to 8)\n        >>   30 END_FOR\n             32 RETURN_CONST             1 (None)\n        >>   34 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             36 RERAISE                  1\nExceptionTable:\n  4 to 32 -> 34 [0] lasti\n"
+    },
+    {
+      "qualname": "_docstring",
+      "name": "_docstring",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "module"
+      ],
+      "names": [
+        "ast",
+        "parse",
+        "read_text",
+        "SyntaxError",
+        "get_docstring"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "303           0 RESUME                   0\n\n304           2 NOP\n\n305           4 LOAD_GLOBAL              1 (NULL + ast)\n             14 LOAD_ATTR                2 (parse)\n             34 LOAD_FAST                0 (path)\n             36 LOAD_ATTR                5 (NULL|self + read_text)\n             56 LOAD_CONST               1 ('utf-8')\n             58 KW_NAMES                 2 (('encoding',))\n             60 CALL                     1\n             68 CALL                     1\n             76 STORE_FAST               1 (module)\n\n308          78 LOAD_GLOBAL              1 (NULL + ast)\n             88 LOAD_ATTR                8 (get_docstring)\n            108 LOAD_FAST                1 (module)\n            110 CALL                     1\n            118 COPY                     1\n            120 POP_JUMP_IF_TRUE         2 (to 126)\n            122 POP_TOP\n            124 LOAD_CONST               3 ('')\n        >>  126 RETURN_VALUE\n        >>  128 PUSH_EXC_INFO\n\n306         130 LOAD_GLOBAL              6 (SyntaxError)\n            140 CHECK_EXC_MATCH\n            142 POP_JUMP_IF_FALSE        3 (to 150)\n            144 POP_TOP\n\n307         146 POP_EXCEPT\n            148 RETURN_CONST             3 ('')\n\n306     >>  150 RERAISE                  0\n        >>  152 COPY                     3\n            154 POP_EXCEPT\n            156 RERAISE                  1\nExceptionTable:\n  4 to 76 -> 128 [0]\n  128 to 144 -> 152 [1] lasti\n  150 to 150 -> 152 [1] lasti\n"
+    },
+    {
+      "qualname": "_first_match",
+      "name": "_first_match",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "pattern",
+        "text",
+        "match"
+      ],
+      "names": [
+        "re",
+        "search",
+        "group"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "311           0 RESUME                   0\n\n312           2 LOAD_GLOBAL              1 (NULL + re)\n             12 LOAD_ATTR                2 (search)\n             32 LOAD_FAST                0 (pattern)\n             34 LOAD_FAST                1 (text)\n             36 CALL                     2\n             44 STORE_FAST               2 (match)\n\n313          46 LOAD_FAST                2 (match)\n             48 POP_JUMP_IF_FALSE       17 (to 84)\n             50 LOAD_FAST                2 (match)\n             52 LOAD_ATTR                5 (NULL|self + group)\n             72 LOAD_CONST               1 (1)\n             74 CALL                     1\n             82 RETURN_VALUE\n        >>   84 LOAD_CONST               0 (None)\n             86 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_literal_number",
+      "name": "_literal_number",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "pattern",
+        "text",
+        "value"
+      ],
+      "names": [
+        "_first_match",
+        "lower",
+        "float",
+        "int"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "316           0 RESUME                   0\n\n317           2 LOAD_GLOBAL              1 (NULL + _first_match)\n             12 LOAD_FAST                0 (pattern)\n             14 LOAD_FAST                1 (text)\n             16 CALL                     2\n             24 STORE_FAST               2 (value)\n\n318          26 LOAD_FAST                2 (value)\n             28 POP_JUMP_IF_NOT_NONE     1 (to 32)\n\n319          30 RETURN_CONST             0 (None)\n\n320     >>   32 LOAD_CONST               1 ('.')\n             34 LOAD_FAST                2 (value)\n             36 CONTAINS_OP              0\n             38 POP_JUMP_IF_TRUE        18 (to 76)\n             40 LOAD_CONST               2 ('e')\n             42 LOAD_FAST                2 (value)\n             44 LOAD_ATTR                3 (NULL|self + lower)\n             64 CALL                     0\n             72 CONTAINS_OP              0\n             74 POP_JUMP_IF_FALSE       11 (to 98)\n\n321     >>   76 LOAD_GLOBAL              5 (NULL + float)\n             86 LOAD_FAST                2 (value)\n             88 CALL                     1\n             96 RETURN_VALUE\n\n322     >>   98 LOAD_GLOBAL              7 (NULL + int)\n            108 LOAD_FAST                2 (value)\n            110 CALL                     1\n            118 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "parse_source_summary",
+      "name": "parse_source_summary",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "source_dir",
+        "readme_path",
+        "model_path",
+        "optim_path",
+        "codec_path",
+        "score_path",
+        "train_path",
+        "stage_dir",
+        "source_files",
+        "readme",
+        "model_text",
+        "optim_text",
+        "score_text",
+        "stage_records",
+        "stage_path",
+        "text",
+        "score_formula",
+        "default_latent_dim",
+        "default_base_channels",
+        "eval_size"
+      ],
+      "names": [
+        "sorted",
+        "rglob",
+        "exists",
+        "read_text",
+        "glob",
+        "append",
+        "_rel",
+        "_first_match",
+        "stem",
+        "_docstring",
+        "splitlines",
+        "_literal_number",
+        "strip",
+        "len",
+        "_source_tree_sha256"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Extract deterministic PR95 HNeRV/Muon source and curriculum facts.",
+      "dis": "325           0 RESUME                   0\n\n327           2 LOAD_FAST                0 (source_dir)\n              4 LOAD_CONST               1 ('README.md')\n              6 BINARY_OP               11 (/)\n             10 STORE_FAST               1 (readme_path)\n\n328          12 LOAD_FAST                0 (source_dir)\n             14 LOAD_CONST               2 ('src/model.py')\n             16 BINARY_OP               11 (/)\n             20 STORE_FAST               2 (model_path)\n\n329          22 LOAD_FAST                0 (source_dir)\n             24 LOAD_CONST               3 ('src/optim.py')\n             26 BINARY_OP               11 (/)\n             30 STORE_FAST               3 (optim_path)\n\n330          32 LOAD_FAST                0 (source_dir)\n             34 LOAD_CONST               4 ('src/codec.py')\n             36 BINARY_OP               11 (/)\n             40 STORE_FAST               4 (codec_path)\n\n331          42 LOAD_FAST                0 (source_dir)\n             44 LOAD_CONST               5 ('src/score.py')\n             46 BINARY_OP               11 (/)\n             50 STORE_FAST               5 (score_path)\n\n332          52 LOAD_FAST                0 (source_dir)\n             54 LOAD_CONST               6 ('src/train.py')\n             56 BINARY_OP               11 (/)\n             60 STORE_FAST               6 (train_path)\n\n333          62 LOAD_FAST                0 (source_dir)\n             64 LOAD_CONST               7 ('src/stages')\n             66 BINARY_OP               11 (/)\n             70 STORE_FAST               7 (stage_dir)\n\n335          72 LOAD_GLOBAL              1 (NULL + sorted)\n             82 LOAD_CONST               8 (<code object <genexpr> at 0x1010facd0, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 335>)\n             84 MAKE_FUNCTION            0\n             86 LOAD_FAST                0 (source_dir)\n             88 LOAD_ATTR                3 (NULL|self + rglob)\n            108 LOAD_CONST               9 ('*')\n            110 CALL                     1\n            118 GET_ITER\n            120 CALL                     0\n            128 CALL                     1\n            136 STORE_FAST               8 (source_files)\n\n336         138 LOAD_FAST                1 (readme_path)\n            140 LOAD_ATTR                5 (NULL|self + exists)\n            160 CALL                     0\n            168 POP_JUMP_IF_FALSE       18 (to 206)\n            170 LOAD_FAST                1 (readme_path)\n            172 LOAD_ATTR                7 (NULL|self + read_text)\n            192 LOAD_CONST              10 ('utf-8')\n            194 KW_NAMES                11 (('encoding',))\n            196 CALL                     1\n            204 JUMP_FORWARD             1 (to 208)\n        >>  206 LOAD_CONST              12 ('')\n        >>  208 STORE_FAST               9 (readme)\n\n337         210 LOAD_FAST                2 (model_path)\n            212 LOAD_ATTR                5 (NULL|self + exists)\n            232 CALL                     0\n            240 POP_JUMP_IF_FALSE       18 (to 278)\n            242 LOAD_FAST                2 (model_path)\n            244 LOAD_ATTR                7 (NULL|self + read_text)\n            264 LOAD_CONST              10 ('utf-8')\n            266 KW_NAMES                11 (('encoding',))\n            268 CALL                     1\n            276 JUMP_FORWARD             1 (to 280)\n        >>  278 LOAD_CONST              12 ('')\n        >>  280 STORE_FAST              10 (model_text)\n\n338         282 LOAD_FAST                3 (optim_path)\n            284 LOAD_ATTR                5 (NULL|self + exists)\n            304 CALL                     0\n            312 POP_JUMP_IF_FALSE       18 (to 350)\n            314 LOAD_FAST                3 (optim_path)\n            316 LOAD_ATTR                7 (NULL|self + read_text)\n            336 LOAD_CONST              10 ('utf-8')\n            338 KW_NAMES                11 (('encoding',))\n            340 CALL                     1\n            348 JUMP_FORWARD             1 (to 352)\n        >>  350 LOAD_CONST              12 ('')\n        >>  352 STORE_FAST              11 (optim_text)\n\n339         354 LOAD_FAST                5 (score_path)\n            356 LOAD_ATTR                5 (NULL|self + exists)\n            376 CALL                     0\n            384 POP_JUMP_IF_FALSE       18 (to 422)\n            386 LOAD_FAST                5 (score_path)\n            388 LOAD_ATTR                7 (NULL|self + read_text)\n            408 LOAD_CONST              10 ('utf-8')\n            410 KW_NAMES                11 (('encoding',))\n            412 CALL                     1\n            420 JUMP_FORWARD             1 (to 424)\n        >>  422 LOAD_CONST              12 ('')\n        >>  424 STORE_FAST              12 (score_text)\n\n341         426 BUILD_LIST               0\n            428 STORE_FAST              13 (stage_records)\n\n342         430 LOAD_GLOBAL              1 (NULL + sorted)\n            440 LOAD_FAST                7 (stage_dir)\n            442 LOAD_ATTR                9 (NULL|self + glob)\n            462 LOAD_CONST              13 ('stage*.py')\n            464 CALL                     1\n            472 CALL                     1\n            480 GET_ITER\n        >>  482 FOR_ITER               210 (to 906)\n            486 STORE_FAST              14 (stage_path)\n\n343         488 LOAD_FAST               14 (stage_path)\n            490 LOAD_ATTR                7 (NULL|self + read_text)\n            510 LOAD_CONST              10 ('utf-8')\n            512 KW_NAMES                11 (('encoding',))\n            514 CALL                     1\n            522 STORE_FAST              15 (text)\n\n344         524 LOAD_FAST               13 (stage_records)\n            526 LOAD_ATTR               11 (NULL|self + append)\n\n346         546 LOAD_GLOBAL             13 (NULL + _rel)\n            556 LOAD_FAST               14 (stage_path)\n            558 CALL                     1\n\n347         566 LOAD_GLOBAL             15 (NULL + _first_match)\n            576 LOAD_CONST              14 ('name=\"([^\"]+)\"')\n            578 LOAD_FAST               15 (text)\n            580 CALL                     2\n            588 COPY                     1\n            590 POP_JUMP_IF_TRUE        12 (to 616)\n            592 POP_TOP\n            594 LOAD_FAST               14 (stage_path)\n            596 LOAD_ATTR               16 (stem)\n\n348     >>  616 LOAD_GLOBAL             19 (NULL + _docstring)\n            626 LOAD_FAST               14 (stage_path)\n            628 CALL                     1\n            636 POP_JUMP_IF_FALSE       28 (to 694)\n            638 LOAD_GLOBAL             19 (NULL + _docstring)\n            648 LOAD_FAST               14 (stage_path)\n            650 CALL                     1\n            658 LOAD_ATTR               21 (NULL|self + splitlines)\n            678 CALL                     0\n            686 LOAD_CONST              15 (0)\n            688 BINARY_SUBSCR\n            692 JUMP_FORWARD             1 (to 696)\n        >>  694 LOAD_CONST              12 ('')\n\n349     >>  696 LOAD_GLOBAL             23 (NULL + _literal_number)\n            706 LOAD_CONST              16 ('epochs:\\\\s*int\\\\s*=\\\\s*(\\\\d+)')\n            708 LOAD_FAST               15 (text)\n            710 CALL                     2\n\n350         718 LOAD_GLOBAL             23 (NULL + _literal_number)\n            728 LOAD_CONST              17 ('adamw_lr=([0-9.eE+-]+)')\n            730 LOAD_FAST               15 (text)\n            732 CALL                     2\n\n351         740 LOAD_GLOBAL             23 (NULL + _literal_number)\n            750 LOAD_CONST              18 ('muon_lr=([0-9.eE+-]+)')\n            752 LOAD_FAST               15 (text)\n            754 CALL                     2\n\n352         762 LOAD_GLOBAL             23 (NULL + _literal_number)\n            772 LOAD_CONST              19 ('muon_weight_decay:\\\\s*float\\\\s*=\\\\s*([0-9.eE+-]+)')\n            774 LOAD_FAST               15 (text)\n            776 CALL                     2\n\n353         784 LOAD_GLOBAL             23 (NULL + _literal_number)\n            794 LOAD_CONST              20 ('cat_lambda=([0-9.eE+-]+)')\n            796 LOAD_FAST               15 (text)\n            798 CALL                     2\n\n354         806 LOAD_GLOBAL             23 (NULL + _literal_number)\n            816 LOAD_CONST              21 ('cat_sigma=([0-9.eE+-]+)')\n            818 LOAD_FAST               15 (text)\n            820 CALL                     2\n\n355         828 LOAD_CONST              22 ('use_qat=True')\n            830 LOAD_FAST               15 (text)\n            832 CONTAINS_OP              0\n\n356         834 LOAD_CONST              23 ('use_muon=True')\n            836 LOAD_FAST               15 (text)\n            838 CONTAINS_OP              0\n\n359         840 LOAD_CONST              24 ('ce_seg_loss')\n            842 LOAD_FAST               15 (text)\n            844 CONTAINS_OP              0\n            846 POP_JUMP_IF_FALSE        2 (to 852)\n\n358         848 LOAD_CONST              25 ('ce')\n            850 JUMP_FORWARD            19 (to 890)\n\n361     >>  852 LOAD_CONST              26 ('tau_softplus_seg_loss')\n            854 LOAD_FAST               15 (text)\n            856 CONTAINS_OP              0\n            858 POP_JUMP_IF_FALSE        2 (to 864)\n\n360         860 LOAD_CONST              27 ('tau_softplus')\n            862 JUMP_FORWARD            13 (to 890)\n\n363     >>  864 LOAD_CONST              28 ('smooth_disagreement_seg_loss')\n            866 LOAD_FAST               15 (text)\n            868 CONTAINS_OP              0\n            870 POP_JUMP_IF_FALSE        2 (to 876)\n\n362         872 LOAD_CONST              29 ('smooth_disagreement')\n            874 JUMP_FORWARD             7 (to 890)\n\n365     >>  876 LOAD_CONST              30 ('l7_softplus_seg_loss')\n            878 LOAD_FAST               15 (text)\n            880 CONTAINS_OP              0\n            882 POP_JUMP_IF_FALSE        2 (to 888)\n\n364         884 LOAD_CONST              31 ('l7_softplus')\n            886 JUMP_FORWARD             1 (to 890)\n\n366     >>  888 LOAD_CONST              32 ('unknown')\n\n345     >>  890 LOAD_CONST              33 (('file', 'name', 'docstring_head', 'epochs_default', 'adamw_lr', 'muon_lr', 'muon_weight_decay_default', 'cat_lambda', 'cat_sigma', 'uses_qat', 'uses_muon', 'loss_family'))\n            892 BUILD_CONST_KEY_MAP     12\n\n344         894 CALL                     1\n            902 POP_TOP\n            904 JUMP_BACKWARD          212 (to 482)\n\n342     >>  906 END_FOR\n\n371         908 LOAD_FAST                5 (score_path)\n            910 LOAD_ATTR                5 (NULL|self + exists)\n            930 CALL                     0\n            938 POP_JUMP_IF_FALSE       42 (to 1024)\n            940 LOAD_GLOBAL             19 (NULL + _docstring)\n            950 LOAD_FAST                5 (score_path)\n            952 CALL                     1\n            960 LOAD_ATTR               21 (NULL|self + splitlines)\n            980 CALL                     0\n            988 LOAD_CONST              34 (2)\n            990 BINARY_SUBSCR\n            994 LOAD_ATTR               25 (NULL|self + strip)\n           1014 CALL                     0\n           1022 JUMP_FORWARD             1 (to 1026)\n        >> 1024 LOAD_CONST              12 ('')\n        >> 1026 STORE_FAST              16 (score_formula)\n\n372        1028 LOAD_GLOBAL             23 (NULL + _literal_number)\n           1038 LOAD_CONST              35 ('latent_dim=(\\\\d+)')\n           1040 LOAD_FAST               10 (model_text)\n           1042 CALL                     2\n           1050 STORE_FAST              17 (default_latent_dim)\n\n373        1052 LOAD_GLOBAL             23 (NULL + _literal_number)\n           1062 LOAD_CONST              36 ('base_channels=(\\\\d+)')\n           1064 LOAD_FAST               10 (model_text)\n           1066 CALL                     2\n           1074 STORE_FAST              18 (default_base_channels)\n\n374        1076 LOAD_GLOBAL             15 (NULL + _first_match)\n           1086 LOAD_CONST              37 ('eval_size=\\\\((\\\\d+,\\\\s*\\\\d+)\\\\)')\n           1088 LOAD_FAST               10 (model_text)\n           1090 CALL                     2\n           1098 STORE_FAST              19 (eval_size)\n\n377        1100 LOAD_GLOBAL             13 (NULL + _rel)\n           1110 LOAD_FAST                0 (source_dir)\n           1112 CALL                     1\n\n378        1120 LOAD_GLOBAL             27 (NULL + len)\n           1130 LOAD_FAST                8 (source_files)\n           1132 CALL                     1\n\n379        1140 LOAD_GLOBAL             29 (NULL + _source_tree_sha256)\n           1150 LOAD_FAST                8 (source_files)\n           1152 CALL                     1\n\n381        1160 LOAD_GLOBAL             13 (NULL + _rel)\n           1170 LOAD_FAST                1 (readme_path)\n           1172 CALL                     1\n\n382        1180 LOAD_GLOBAL             13 (NULL + _rel)\n           1190 LOAD_FAST                2 (model_path)\n           1192 CALL                     1\n\n383        1200 LOAD_GLOBAL             13 (NULL + _rel)\n           1210 LOAD_FAST                3 (optim_path)\n           1212 CALL                     1\n\n384        1220 LOAD_GLOBAL             13 (NULL + _rel)\n           1230 LOAD_FAST                4 (codec_path)\n           1232 CALL                     1\n\n385        1240 LOAD_GLOBAL             13 (NULL + _rel)\n           1250 LOAD_FAST                5 (score_path)\n           1252 CALL                     1\n\n386        1260 LOAD_GLOBAL             13 (NULL + _rel)\n           1270 LOAD_FAST                6 (train_path)\n           1272 CALL                     1\n\n380        1280 LOAD_CONST              38 (('README', 'model', 'optimizer', 'codec', 'score', 'train'))\n           1282 BUILD_CONST_KEY_MAP      6\n\n389        1284 LOAD_FAST                9 (readme)\n           1286 POP_JUMP_IF_FALSE       19 (to 1326)\n           1288 LOAD_FAST                9 (readme)\n           1290 LOAD_ATTR               21 (NULL|self + splitlines)\n           1310 CALL                     0\n           1318 LOAD_CONST              15 (0)\n           1320 BINARY_SUBSCR\n           1324 JUMP_FORWARD             1 (to 1328)\n        >> 1326 LOAD_CONST              12 ('')\n\n390     >> 1328 LOAD_GLOBAL             15 (NULL + _first_match)\n           1338 LOAD_CONST              39 ('A\\\\s+([^\\\\n]+archive[^\\\\n]+)')\n           1340 LOAD_FAST                9 (readme)\n           1342 CALL                     2\n\n391        1350 LOAD_GLOBAL             15 (NULL + _first_match)\n           1360 LOAD_CONST              40 ('The pipeline is an ([^\\\\n]+)')\n           1362 LOAD_FAST                9 (readme)\n           1364 CALL                     2\n\n392        1372 LOAD_GLOBAL             15 (NULL + _first_match)\n           1382 LOAD_CONST              41 ('```bash\\\\n([^`]+)\\\\n```')\n           1384 LOAD_FAST                9 (readme)\n           1386 CALL                     2\n\n393        1394 LOAD_GLOBAL             15 (NULL + _first_match)\n           1404 LOAD_CONST              42 ('(~\\\\d+ hours[^\\\\n]+)')\n           1406 LOAD_FAST                9 (readme)\n           1408 CALL                     2\n\n394        1416 LOAD_GLOBAL             15 (NULL + _first_match)\n           1426 LOAD_CONST              43 ('Full writeup:\\\\s*(\\\\S+)')\n           1428 LOAD_FAST                9 (readme)\n           1430 CALL                     2\n\n388        1438 LOAD_CONST              44 (('title', 'archive_claim', 'curriculum_claim', 'reproduce_command', 'claimed_training_wallclock', 'external_writeup'))\n           1440 BUILD_CONST_KEY_MAP      6\n\n397        1442 LOAD_FAST               17 (default_latent_dim)\n\n398        1444 LOAD_FAST               18 (default_base_channels)\n\n399        1446 LOAD_FAST               19 (eval_size)\n\n400        1448 LOAD_CONST              45 ('self.base_h, self.base_w = 6, 8')\n           1450 LOAD_FAST               10 (model_text)\n           1452 CONTAINS_OP              0\n           1454 POP_JUMP_IF_FALSE        4 (to 1464)\n           1456 LOAD_CONST              46 (6)\n           1458 LOAD_CONST              47 (8)\n           1460 BUILD_LIST               2\n           1462 JUMP_FORWARD             1 (to 1466)\n        >> 1464 LOAD_CONST              48 (None)\n\n401     >> 1466 LOAD_CONST              49 ('linear latent stem + six PixelShuffle upsample blocks + dilated refine + two RGB heads')\n\n396        1468 LOAD_CONST              50 (('latent_dim', 'base_channels', 'eval_size', 'base_grid', 'architecture'))\n           1470 BUILD_CONST_KEY_MAP      5\n\n404        1472 LOAD_GLOBAL             23 (NULL + _literal_number)\n           1482 LOAD_CONST              51 ('ns_steps=([0-9]+)')\n           1484 LOAD_FAST               11 (optim_text)\n           1486 CALL                     2\n\n405        1494 LOAD_GLOBAL             23 (NULL + _literal_number)\n           1504 LOAD_CONST              52 ('lr=([0-9.eE+-]+)')\n           1506 LOAD_FAST               11 (optim_text)\n           1508 CALL                     2\n\n406        1516 LOAD_GLOBAL             23 (NULL + _literal_number)\n           1526 LOAD_CONST              53 ('momentum=([0-9.eE+-]+)')\n           1528 LOAD_FAST               11 (optim_text)\n           1530 CALL                     2\n\n407        1538 LOAD_GLOBAL             23 (NULL + _literal_number)\n           1548 LOAD_CONST              54 ('weight_decay=([0-9.eE+-]+)')\n           1550 LOAD_FAST               11 (optim_text)\n           1552 CALL                     2\n\n408        1560 LOAD_CONST              55 ('Muon receives 2D+ weights outside stem/RGB heads; AdamW receives stem, RGB heads, biases, 1D params, and latents.')\n\n403        1562 LOAD_CONST              56 (('muon_newton_schulz_steps_default', 'muon_default_lr', 'muon_default_momentum', 'muon_default_weight_decay', 'partition_rule'))\n           1564 BUILD_CONST_KEY_MAP      5\n\n411        1566 LOAD_CONST              57 ('per-tensor symmetric INT8 -> zigzag -> state table -> brotli q11')\n\n412        1568 LOAD_CONST              58 ('per-dim uint8 min/max -> first-order temporal delta -> zigzag uint16 -> lo/hi streams -> brotli q11')\n\n413        1570 LOAD_GLOBAL             23 (NULL + _literal_number)\n           1580 LOAD_CONST              59 ('was ~(\\\\d+) bytes smaller')\n           1582 LOAD_FAST                4 (codec_path)\n           1584 LOAD_ATTR                5 (NULL|self + exists)\n           1604 CALL                     0\n           1612 POP_JUMP_IF_FALSE       18 (to 1650)\n           1614 LOAD_FAST                4 (codec_path)\n           1616 LOAD_ATTR                7 (NULL|self + read_text)\n           1636 LOAD_CONST              10 ('utf-8')\n           1638 KW_NAMES                11 (('encoding',))\n           1640 CALL                     1\n           1648 JUMP_FORWARD             1 (to 1652)\n        >> 1650 LOAD_CONST              12 ('')\n        >> 1652 CALL                     2\n\n410        1660 LOAD_CONST              60 (('decoder_path', 'latent_path', 'source_notes_hybrid_ac_delta_bytes'))\n           1662 BUILD_CONST_KEY_MAP      3\n\n415        1664 LOAD_FAST               16 (score_formula)\n           1666 COPY                     1\n           1668 POP_JUMP_IF_TRUE         2 (to 1674)\n           1670 POP_TOP\n           1672 LOAD_CONST              61 ('score = 100 * seg_distortion + sqrt(10 * pose_distortion) + 25 * archive_bytes / total_video_bytes')\n\n416     >> 1674 LOAD_FAST               13 (stage_records)\n\n376        1676 LOAD_CONST              62 (('source_dir', 'source_file_count', 'source_tree_sha256', 'key_files', 'readme_summary', 'model_defaults', 'optimizer_summary', 'codec_summary', 'score_formula', 'training_stages'))\n           1678 BUILD_CONST_KEY_MAP     10\n           1680 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "parse_source_summary.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "path"
+      ],
+      "names": [
+        "is_file"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "335           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                23 (to 58)\n             12 STORE_FAST               1 (path)\n             14 LOAD_FAST                1 (path)\n             16 LOAD_ATTR                1 (NULL|self + is_file)\n             36 CALL                     0\n             44 POP_JUMP_IF_TRUE         1 (to 48)\n             46 JUMP_BACKWARD           20 (to 8)\n        >>   48 LOAD_FAST                1 (path)\n             50 YIELD_VALUE              1\n             52 RESUME                   1\n             54 POP_TOP\n             56 JUMP_BACKWARD           25 (to 8)\n        >>   58 END_FOR\n             60 RETURN_CONST             0 (None)\n        >>   62 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             64 RERAISE                  1\nExceptionTable:\n  4 to 44 -> 62 [0] lasti\n  48 to 60 -> 62 [0] lasti\n"
+    },
+    {
+      "qualname": "_source_tree_sha256",
+      "name": "_source_tree_sha256",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "files",
+        "digest",
+        "path"
+      ],
+      "names": [
+        "hashlib",
+        "sha256",
+        "update",
+        "_rel",
+        "encode",
+        "_sha256_file",
+        "hexdigest"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "420           0 RESUME                   0\n\n421           2 LOAD_GLOBAL              1 (NULL + hashlib)\n             12 LOAD_ATTR                2 (sha256)\n             32 CALL                     0\n             40 STORE_FAST               1 (digest)\n\n422          42 LOAD_FAST                0 (files)\n             44 GET_ITER\n        >>   46 FOR_ITER               118 (to 286)\n             50 STORE_FAST               2 (path)\n\n423          52 LOAD_FAST                1 (digest)\n             54 LOAD_ATTR                5 (NULL|self + update)\n             74 LOAD_GLOBAL              7 (NULL + _rel)\n             84 LOAD_FAST                2 (path)\n             86 CALL                     1\n             94 LOAD_ATTR                9 (NULL|self + encode)\n            114 LOAD_CONST               1 ('utf-8')\n            116 CALL                     1\n            124 CALL                     1\n            132 POP_TOP\n\n424         134 LOAD_FAST                1 (digest)\n            136 LOAD_ATTR                5 (NULL|self + update)\n            156 LOAD_CONST               2 (b'\\x00')\n            158 CALL                     1\n            166 POP_TOP\n\n425         168 LOAD_FAST                1 (digest)\n            170 LOAD_ATTR                5 (NULL|self + update)\n            190 LOAD_GLOBAL             11 (NULL + _sha256_file)\n            200 LOAD_FAST                2 (path)\n            202 CALL                     1\n            210 LOAD_ATTR                9 (NULL|self + encode)\n            230 LOAD_CONST               3 ('ascii')\n            232 CALL                     1\n            240 CALL                     1\n            248 POP_TOP\n\n426         250 LOAD_FAST                1 (digest)\n            252 LOAD_ATTR                5 (NULL|self + update)\n            272 LOAD_CONST               2 (b'\\x00')\n            274 CALL                     1\n            282 POP_TOP\n            284 JUMP_BACKWARD          120 (to 46)\n\n422     >>  286 END_FOR\n\n427         288 LOAD_FAST                1 (digest)\n            290 LOAD_ATTR               13 (NULL|self + hexdigest)\n            310 CALL                     0\n            318 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "load_static_intake",
+      "name": "load_static_intake",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path"
+      ],
+      "names": [
+        "exists",
+        "json",
+        "loads",
+        "read_text"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "430           0 RESUME                   0\n\n431           2 LOAD_FAST                0 (path)\n              4 LOAD_ATTR                1 (NULL|self + exists)\n             24 CALL                     0\n             32 POP_JUMP_IF_TRUE         1 (to 36)\n\n432          34 RETURN_CONST             0 (None)\n\n433     >>   36 LOAD_GLOBAL              3 (NULL + json)\n             46 LOAD_ATTR                4 (loads)\n             66 LOAD_FAST                0 (path)\n             68 LOAD_ATTR                7 (NULL|self + read_text)\n             88 LOAD_CONST               1 ('utf-8')\n             90 KW_NAMES                 2 (('encoding',))\n             92 CALL                     1\n            100 CALL                     1\n            108 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "compute_score_terms",
+      "name": "compute_score_terms",
+      "argcount": 4,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "seg",
+        "pose",
+        "archive_bytes",
+        "denominator",
+        "seg_component",
+        "pose_component",
+        "rate_component"
+      ],
+      "names": [
+        "math",
+        "sqrt"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "436           0 RESUME                   0\n\n437           2 LOAD_CONST               1 (100.0)\n              4 LOAD_FAST                0 (seg)\n              6 BINARY_OP                5 (*)\n             10 STORE_FAST               4 (seg_component)\n\n438          12 LOAD_GLOBAL              1 (NULL + math)\n             22 LOAD_ATTR                2 (sqrt)\n             42 LOAD_CONST               2 (10.0)\n             44 LOAD_FAST                1 (pose)\n             46 BINARY_OP                5 (*)\n             50 CALL                     1\n             58 STORE_FAST               5 (pose_component)\n\n439          60 LOAD_CONST               3 (25.0)\n             62 LOAD_FAST                2 (archive_bytes)\n             64 BINARY_OP                5 (*)\n             68 LOAD_FAST                3 (denominator)\n             70 BINARY_OP               11 (/)\n             74 STORE_FAST               6 (rate_component)\n\n441          76 LOAD_FAST                4 (seg_component)\n\n442          78 LOAD_FAST                5 (pose_component)\n\n443          80 LOAD_FAST                6 (rate_component)\n\n444          82 LOAD_FAST                4 (seg_component)\n             84 LOAD_FAST                5 (pose_component)\n             86 BINARY_OP                0 (+)\n             90 LOAD_FAST                6 (rate_component)\n             92 BINARY_OP                0 (+)\n\n440          96 LOAD_CONST               4 (('seg_component', 'pose_component', 'rate_component', 'recomputed_score'))\n             98 BUILD_CONST_KEY_MAP      4\n            100 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "build_profile",
+      "name": "build_profile",
+      "argcount": 3,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "archive_path",
+        "source_dir",
+        "static_intake_path",
+        "archive",
+        "payload",
+        "member",
+        "source",
+        "static_intake",
+        "score_claims",
+        "inputs",
+        "recomputed"
+      ],
+      "names": [
+        "read_pr95_archive",
+        "parse_hnerv_muon_member",
+        "parse_source_summary",
+        "load_static_intake",
+        "CONTEST_ORIGINAL_BYTES",
+        "get",
+        "compute_score_terms",
+        "float",
+        "int",
+        "update",
+        "bool",
+        "abs",
+        "SCHEMA",
+        "TOOL",
+        "_rel",
+        "exists",
+        "dispatch_readiness",
+        "improvement_hypotheses"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "448           0 RESUME                   0\n\n449           2 LOAD_GLOBAL              1 (NULL + read_pr95_archive)\n             12 LOAD_FAST                0 (archive_path)\n             14 CALL                     1\n             22 UNPACK_SEQUENCE          2\n             26 STORE_FAST               3 (archive)\n             28 STORE_FAST               4 (payload)\n\n450          30 LOAD_GLOBAL              3 (NULL + parse_hnerv_muon_member)\n             40 LOAD_FAST                4 (payload)\n             42 CALL                     1\n             50 STORE_FAST               5 (member)\n\n451          52 LOAD_GLOBAL              5 (NULL + parse_source_summary)\n             62 LOAD_FAST                1 (source_dir)\n             64 CALL                     1\n             72 STORE_FAST               6 (source)\n\n452          74 LOAD_FAST                2 (static_intake_path)\n             76 POP_JUMP_IF_FALSE       11 (to 100)\n             78 LOAD_GLOBAL              7 (NULL + load_static_intake)\n             88 LOAD_FAST                2 (static_intake_path)\n             90 CALL                     1\n             98 JUMP_FORWARD             1 (to 102)\n        >>  100 LOAD_CONST               0 (None)\n        >>  102 STORE_FAST               7 (static_intake)\n\n455         104 LOAD_CONST               1 (False)\n\n456         106 LOAD_CONST               0 (None)\n\n457         108 LOAD_CONST               2 ('score = 100 * seg + sqrt(10 * pose) + 25 * archive_bytes / 37,545,489')\n\n458         110 LOAD_GLOBAL              8 (CONTEST_ORIGINAL_BYTES)\n\n454         120 LOAD_CONST               3 (('score_claim', 'score_terms_from_static_intake', 'formula', 'denominator_bytes'))\n            122 BUILD_CONST_KEY_MAP      4\n            124 STORE_FAST               8 (score_claims)\n\n460         126 LOAD_FAST                7 (static_intake)\n            128 POP_JUMP_IF_FALSE      166 (to 462)\n            130 LOAD_FAST                7 (static_intake)\n            132 LOAD_ATTR               11 (NULL|self + get)\n            152 LOAD_CONST               4 ('claimed_body_score_inputs')\n            154 CALL                     1\n            162 POP_JUMP_IF_FALSE      149 (to 462)\n\n461         164 LOAD_FAST                7 (static_intake)\n            166 LOAD_CONST               4 ('claimed_body_score_inputs')\n            168 BINARY_SUBSCR\n            172 STORE_FAST               9 (inputs)\n\n462         174 LOAD_GLOBAL             13 (NULL + compute_score_terms)\n\n463         184 LOAD_GLOBAL             15 (NULL + float)\n            194 LOAD_FAST                9 (inputs)\n            196 LOAD_CONST               5 ('seg')\n            198 BINARY_SUBSCR\n            202 CALL                     1\n\n464         210 LOAD_GLOBAL             15 (NULL + float)\n            220 LOAD_FAST                9 (inputs)\n            222 LOAD_CONST               6 ('pose')\n            224 BINARY_SUBSCR\n            228 CALL                     1\n\n465         236 LOAD_GLOBAL             17 (NULL + int)\n            246 LOAD_FAST                9 (inputs)\n            248 LOAD_CONST               7 ('archive_bytes')\n            250 BINARY_SUBSCR\n            254 CALL                     1\n\n462         262 CALL                     3\n            270 STORE_FAST              10 (recomputed)\n\n467         272 LOAD_FAST                8 (score_claims)\n            274 LOAD_ATTR               19 (NULL|self + update)\n\n469         294 LOAD_GLOBAL             21 (NULL + bool)\n            304 LOAD_FAST                7 (static_intake)\n            306 LOAD_ATTR               11 (NULL|self + get)\n            326 LOAD_CONST               8 ('score_claim')\n            328 LOAD_CONST               1 (False)\n            330 CALL                     2\n            338 CALL                     1\n\n471         346 LOAD_FAST                9 (inputs)\n\n472         348 LOAD_FAST               10 (recomputed)\n\n473         350 LOAD_GLOBAL             23 (NULL + abs)\n\n474         360 LOAD_FAST               10 (recomputed)\n            362 LOAD_CONST               9 ('recomputed_score')\n            364 BINARY_SUBSCR\n            368 LOAD_GLOBAL             15 (NULL + float)\n            378 LOAD_FAST                9 (inputs)\n            380 LOAD_ATTR               11 (NULL|self + get)\n            400 LOAD_CONST               9 ('recomputed_score')\n            402 LOAD_FAST               10 (recomputed)\n            404 LOAD_CONST               9 ('recomputed_score')\n            406 BINARY_SUBSCR\n            410 CALL                     2\n            418 CALL                     1\n            426 BINARY_OP               10 (-)\n\n473         430 CALL                     1\n\n476         438 LOAD_CONST              10 (1e-12)\n\n473         440 COMPARE_OP               2 (<)\n\n470         444 LOAD_CONST              11 (('inputs', 'recomputed', 'matches_recorded_recomputed_score'))\n            446 BUILD_CONST_KEY_MAP      3\n\n468         448 LOAD_CONST              12 (('score_claim', 'score_terms_from_static_intake'))\n            450 BUILD_CONST_KEY_MAP      2\n\n467         452 CALL                     1\n            460 POP_TOP\n\n482     >>  462 LOAD_GLOBAL             24 (SCHEMA)\n\n483         472 LOAD_GLOBAL             26 (TOOL)\n\n485         482 LOAD_GLOBAL             29 (NULL + _rel)\n            492 LOAD_FAST                0 (archive_path)\n            494 CALL                     1\n\n486         502 LOAD_GLOBAL             29 (NULL + _rel)\n            512 LOAD_FAST                1 (source_dir)\n            514 CALL                     1\n\n487         522 LOAD_FAST                2 (static_intake_path)\n            524 POP_JUMP_IF_FALSE       27 (to 580)\n            526 LOAD_FAST                2 (static_intake_path)\n            528 LOAD_ATTR               31 (NULL|self + exists)\n            548 CALL                     0\n            556 POP_JUMP_IF_FALSE       11 (to 580)\n            558 LOAD_GLOBAL             29 (NULL + _rel)\n            568 LOAD_FAST                2 (static_intake_path)\n            570 CALL                     1\n            578 JUMP_FORWARD             1 (to 582)\n        >>  580 LOAD_CONST               0 (None)\n\n484     >>  582 LOAD_CONST              13 (('archive', 'source_dir', 'static_intake'))\n            584 BUILD_CONST_KEY_MAP      3\n\n489         586 LOAD_CONST              14 ('external_static_intake_only')\n\n490         588 LOAD_FAST                3 (archive)\n\n491         590 LOAD_FAST                5 (member)\n\n492         592 LOAD_FAST                6 (source)\n\n493         594 LOAD_FAST                8 (score_claims)\n\n494         596 LOAD_GLOBAL             33 (NULL + dispatch_readiness)\n            606 CALL                     0\n\n495         614 LOAD_GLOBAL             35 (NULL + improvement_hypotheses)\n            624 LOAD_FAST                5 (member)\n            626 CALL                     1\n\n481         634 LOAD_CONST              15 (('schema', 'tool', 'inputs', 'evidence_grade', 'archive_anatomy', 'hnerv_muon_blob', 'source_intake', 'score_term_math', 'dispatch_readiness', 'immediate_improvement_hypotheses'))\n            636 BUILD_CONST_KEY_MAP     10\n            638 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "dispatch_readiness",
+      "name": "dispatch_readiness",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "499           0 RESUME                   0\n\n501           2 LOAD_CONST               1 (False)\n\n502           4 LOAD_CONST               2 (True)\n\n503           6 LOAD_CONST               1 (False)\n\n504           8 BUILD_LIST               0\n             10 LOAD_CONST               3 (('Replay exact eval through archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA before any PR95 score claim.', 'Record contest_auth_eval.json, archive SHA-256, archive bytes, runtime tree hash, hardware, sample count, and recomputed score.', 'Owned retraining needs explicit manifest/checkpoint custody for every stage: source SHA, seed, stage config, checkpoint path, checkpoint SHA-256, optimizer state policy, and final archive builder provenance.'))\n             12 LIST_EXTEND              1\n\n509          14 BUILD_LIST               0\n             16 LOAD_CONST               4 (('Static PR95 public intake is not promotable score evidence.', 'README/body score inputs remain external until replayed under our exact CUDA auth eval custody.', 'Any HNeRV retrain without checkpoint and manifest custody is non-promotable replay work.'))\n             18 LIST_EXTEND              1\n\n500          20 LOAD_CONST               5 (('ready_for_dispatch', 'fail_closed', 'remote_dispatch_requested', 'required_before_score_claims', 'blocked_claims'))\n             22 BUILD_CONST_KEY_MAP      5\n             24 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "improvement_hypotheses",
+      "name": "improvement_hypotheses",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "member_profile",
+        "decoder",
+        "latents",
+        "item",
+        "sections"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "517           0 RESUME                   0\n\n518           2 LOAD_FAST                0 (member_profile)\n              4 LOAD_CONST               1 ('decoder')\n              6 BINARY_SUBSCR\n             10 STORE_FAST               1 (decoder)\n\n519          12 LOAD_FAST                0 (member_profile)\n             14 LOAD_CONST               2 ('latents')\n             16 BINARY_SUBSCR\n             20 STORE_FAST               2 (latents)\n\n520          22 LOAD_FAST                0 (member_profile)\n             24 LOAD_CONST               3 ('sections')\n             26 BINARY_SUBSCR\n             30 GET_ITER\n             32 LOAD_FAST_AND_CLEAR      3 (item)\n             34 SWAP                     2\n             36 BUILD_MAP                0\n             38 SWAP                     2\n        >>   40 FOR_ITER                 8 (to 60)\n             44 STORE_FAST               3 (item)\n             46 LOAD_FAST                3 (item)\n             48 LOAD_CONST               4 ('name')\n             50 BINARY_SUBSCR\n             54 LOAD_FAST                3 (item)\n             56 MAP_ADD                  2\n             58 JUMP_BACKWARD           10 (to 40)\n        >>   60 END_FOR\n             62 STORE_FAST               4 (sections)\n             64 STORE_FAST               3 (item)\n\n523          66 LOAD_CONST               5 (1)\n\n524          68 LOAD_CONST               6 ('RAFT/ego-motion/foveation latent bases')\n\n526          70 LOAD_CONST               7 ('PR95 stores ')\n             72 LOAD_FAST                2 (latents)\n             74 LOAD_CONST               8 ('n_frame_pairs')\n             76 BINARY_SUBSCR\n             80 FORMAT_VALUE             0\n             82 LOAD_CONST               9 ('x')\n             84 LOAD_FAST                2 (latents)\n             86 LOAD_CONST              10 ('latent_dim')\n             88 BINARY_SUBSCR\n             92 FORMAT_VALUE             0\n             94 LOAD_CONST              11 (' free per-frame-pair latents. Replace part of that table with charged coefficients over existing RAFT-like flow, ego-motion, and foveation bases so retraining searches a lower-dimensional, camera-aware latent manifold instead of replaying unconstrained latent memorization.')\n             96 BUILD_STRING             5\n\n529          98 LOAD_CONST              12 ('latent-basis manifest with basis SHA, coefficient bytes, reconstruction parity checks, and exact source archive SHA')\n\n530         100 LOAD_CONST              13 ('basis-guided retrains need exact replay eval first and checkpoint custody before any score claim')\n\n522         102 LOAD_CONST              14 (('rank', 'hook', 'rationale', 'owned_next_artifact', 'dispatch_constraint'))\n            104 BUILD_CONST_KEY_MAP      5\n\n533         106 LOAD_CONST              15 (2)\n\n534         108 LOAD_CONST              16 ('Cool-Chic/C3/wavelet residual bases')\n\n536         110 LOAD_CONST              17 ('HNeRV owns the coarse neural reconstruction, but the current archive has no explicit residual basis. Attach a tiny charged residual program over Cool-Chic, C3, or wavelet atoms for systematic SegNet/PoseNet residuals that are too local for global latent movement.')\n\n539         112 LOAD_CONST              18 ('residual-basis intake probe with atom bytes, affected frames/classes, decode parity, and fail-closed archive manifest')\n\n540         114 LOAD_CONST              19 ('residual atoms must be charged in archive.zip and validated by exact CUDA auth eval')\n\n532         116 LOAD_CONST              14 (('rank', 'hook', 'rationale', 'owned_next_artifact', 'dispatch_constraint'))\n            118 BUILD_CONST_KEY_MAP      5\n\n543         120 LOAD_CONST              20 (3)\n\n544         122 LOAD_CONST              21 ('Fridrich/Lagrangian hard-pair weighting')\n\n546         124 LOAD_CONST              22 ('The eight-stage curriculum already changes seg losses, C1a strength, sigma, and Muon scheduling. Use exact component traces to drive hard-pair Lagrangian weights, selecting which frame pairs deserve latent movement, residual atoms, or entropy budget instead of uniform stage replay.')\n\n549         126 LOAD_CONST              23 ('hard-pair weighting policy JSON with source eval SHA, break-even score math, selected pairs, and planning/promotable status')\n\n550         128 LOAD_CONST              24 ('weights derived from proxy or stale traces are planning-only until refreshed under exact CUDA custody')\n\n542         130 LOAD_CONST              14 (('rank', 'hook', 'rationale', 'owned_next_artifact', 'dispatch_constraint'))\n            132 BUILD_CONST_KEY_MAP      5\n\n553         134 LOAD_CONST              25 (4)\n\n554         136 LOAD_CONST              26 ('engineered corrections and pixel-diff sparse atoms')\n\n556         138 LOAD_CONST              27 ('HNeRV frame outputs can expose sparse pixel/class disagreements after inflate. Encode deterministic sparse corrections only where pixel-diff atoms clear byte-normalized component benefit, using the HNeRV output as the base representation.')\n\n559         140 LOAD_CONST              28 ('sparse-atom planner with changed-pixel count, atom payload bytes, no-op detection, and local decode application proof')\n\n560         142 LOAD_CONST              29 ('pixel corrections are non-promotable until they are consumed by inflate and exact eval confirms component benefit')\n\n552         144 LOAD_CONST              14 (('rank', 'hook', 'rationale', 'owned_next_artifact', 'dispatch_constraint'))\n            146 BUILD_CONST_KEY_MAP      5\n\n563         148 LOAD_CONST              30 (5)\n\n564         150 LOAD_CONST              31 ('self-compression entropy objectives')\n\n566         152 LOAD_CONST              32 ('Decoder section is ')\n            154 LOAD_FAST                4 (sections)\n            156 LOAD_CONST              33 ('decoder_state_int8_brotli')\n            158 BINARY_SUBSCR\n            162 LOAD_CONST              34 ('compressed_bytes')\n            164 BINARY_SUBSCR\n            168 LOAD_CONST              35 (',')\n            170 FORMAT_VALUE             4 (with format)\n            172 LOAD_CONST              36 (' compressed bytes and the latent hi-byte nonzero fraction is ')\n\n567         174 LOAD_FAST                2 (latents)\n            176 LOAD_CONST              37 ('hi_nonzero_fraction')\n            178 BINARY_SUBSCR\n            182 LOAD_CONST              38 ('.6f')\n            184 FORMAT_VALUE             4 (with format)\n            186 LOAD_CONST              39 ('. Extend C1a from a weight-shaping regularizer into a measured coder-aware objective over decoder tensors, latent deltas, and optional residual atoms.')\n\n566         188 BUILD_STRING             5\n\n570         190 LOAD_CONST              40 ('entropy-objective report tying tensor/latent histograms to estimated charged bytes and stage checkpoint manifests')\n\n571         192 LOAD_CONST              41 ('entropy proxy wins require deterministic archive rebuild and exact replay before score claims')\n\n562         194 LOAD_CONST              14 (('rank', 'hook', 'rationale', 'owned_next_artifact', 'dispatch_constraint'))\n            196 BUILD_CONST_KEY_MAP      5\n\n574         198 LOAD_CONST              42 (6)\n\n575         200 LOAD_CONST              43 ('decoder entropy and section recode')\n\n577         202 LOAD_CONST              32 ('Decoder section is ')\n            204 LOAD_FAST                4 (sections)\n            206 LOAD_CONST              33 ('decoder_state_int8_brotli')\n            208 BINARY_SUBSCR\n            212 LOAD_CONST              34 ('compressed_bytes')\n            214 BINARY_SUBSCR\n            218 LOAD_CONST              35 (',')\n            220 FORMAT_VALUE             4 (with format)\n            222 LOAD_CONST              44 (' compressed bytes; source notes a prior hybrid categorical coder beat pure brotli by about 217 bytes. Generalize that into a deterministic per-tensor coder decision table and keep the inflate dependency surface auditable.')\n            224 BUILD_STRING             3\n\n580         226 LOAD_CONST              45 ('lossless decoder-section recode candidate with section SHA map and inflate parity test')\n\n581         228 LOAD_CONST              46 ('lossless recode still needs archive custody and exact replay before any score claim')\n\n573         230 LOAD_CONST              14 (('rank', 'hook', 'rationale', 'owned_next_artifact', 'dispatch_constraint'))\n            232 BUILD_CONST_KEY_MAP      5\n\n521         234 BUILD_LIST               6\n            236 RETURN_VALUE\n        >>  238 SWAP                     2\n            240 POP_TOP\n\n520         242 SWAP                     2\n            244 STORE_FAST               3 (item)\n            246 RERAISE                  0\nExceptionTable:\n  36 to 60 -> 238 [2]\n"
+    },
+    {
+      "qualname": "render_markdown",
+      "name": "render_markdown",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "profile",
+        "archive",
+        "member",
+        "decoder",
+        "latents",
+        "readiness",
+        "score_terms",
+        "lines",
+        "section",
+        "inputs",
+        "recomputed",
+        "stage",
+        "item",
+        "hypothesis"
+      ],
+      "names": [
+        "append",
+        "extend",
+        "join"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "586           0 RESUME                   0\n\n587           2 LOAD_FAST                0 (profile)\n              4 LOAD_CONST               1 ('archive_anatomy')\n              6 BINARY_SUBSCR\n             10 STORE_FAST               1 (archive)\n\n588          12 LOAD_FAST                0 (profile)\n             14 LOAD_CONST               2 ('hnerv_muon_blob')\n             16 BINARY_SUBSCR\n             20 STORE_FAST               2 (member)\n\n589          22 LOAD_FAST                2 (member)\n             24 LOAD_CONST               3 ('decoder')\n             26 BINARY_SUBSCR\n             30 STORE_FAST               3 (decoder)\n\n590          32 LOAD_FAST                2 (member)\n             34 LOAD_CONST               4 ('latents')\n             36 BINARY_SUBSCR\n             40 STORE_FAST               4 (latents)\n\n591          42 LOAD_FAST                0 (profile)\n             44 LOAD_CONST               5 ('dispatch_readiness')\n             46 BINARY_SUBSCR\n             50 STORE_FAST               5 (readiness)\n\n592          52 LOAD_FAST                0 (profile)\n             54 LOAD_CONST               6 ('score_term_math')\n             56 BINARY_SUBSCR\n             60 LOAD_CONST               7 ('score_terms_from_static_intake')\n             62 BINARY_SUBSCR\n             66 STORE_FAST               6 (score_terms)\n\n595          68 LOAD_CONST               8 ('# PR95 HNeRV/Muon Static Intake')\n\n596          70 LOAD_CONST               9 ('')\n\n597          72 LOAD_CONST              10 ('## Archive Anatomy')\n\n598          74 LOAD_CONST               9 ('')\n\n599          76 LOAD_CONST              11 ('- archive: `')\n             78 LOAD_FAST                1 (archive)\n             80 LOAD_CONST              12 ('path')\n             82 BINARY_SUBSCR\n             86 FORMAT_VALUE             0\n             88 LOAD_CONST              13 ('`')\n             90 BUILD_STRING             3\n\n600          92 LOAD_CONST              14 ('- bytes: `')\n             94 LOAD_FAST                1 (archive)\n             96 LOAD_CONST              15 ('archive_bytes')\n             98 BINARY_SUBSCR\n            102 FORMAT_VALUE             0\n            104 LOAD_CONST              13 ('`')\n            106 BUILD_STRING             3\n\n601         108 LOAD_CONST              16 ('- sha256: `')\n            110 LOAD_FAST                1 (archive)\n            112 LOAD_CONST              17 ('archive_sha256')\n            114 BINARY_SUBSCR\n            118 FORMAT_VALUE             0\n            120 LOAD_CONST              13 ('`')\n            122 BUILD_STRING             3\n\n602         124 LOAD_CONST              18 ('- member: `')\n            126 LOAD_FAST                1 (archive)\n            128 LOAD_CONST              19 ('members')\n            130 BINARY_SUBSCR\n            134 LOAD_CONST              20 (0)\n            136 BINARY_SUBSCR\n            140 LOAD_CONST              21 ('name')\n            142 BINARY_SUBSCR\n            146 FORMAT_VALUE             0\n            148 LOAD_CONST              22 ('` stored bytes `')\n            150 LOAD_FAST                1 (archive)\n            152 LOAD_CONST              19 ('members')\n            154 BINARY_SUBSCR\n            158 LOAD_CONST              20 (0)\n            160 BINARY_SUBSCR\n            164 LOAD_CONST              23 ('file_size')\n            166 BINARY_SUBSCR\n            170 FORMAT_VALUE             0\n            172 LOAD_CONST              13 ('`')\n            174 BUILD_STRING             5\n\n603         176 LOAD_CONST              24 ('- rate component at contest denominator: `')\n            178 LOAD_FAST                1 (archive)\n            180 LOAD_CONST              25 ('rate_score_component')\n            182 BINARY_SUBSCR\n            186 LOAD_CONST              26 ('.12f')\n            188 FORMAT_VALUE             4 (with format)\n            190 LOAD_CONST              13 ('`')\n            192 BUILD_STRING             3\n\n604         194 LOAD_CONST               9 ('')\n\n605         196 LOAD_CONST              27 ('## Blob Sections')\n\n606         198 LOAD_CONST               9 ('')\n\n594         200 BUILD_LIST              12\n            202 STORE_FAST               7 (lines)\n\n608         204 LOAD_FAST                2 (member)\n            206 LOAD_CONST              28 ('sections')\n            208 BINARY_SUBSCR\n            212 GET_ITER\n        >>  214 FOR_ITER                44 (to 306)\n            218 STORE_FAST               8 (section)\n\n609         220 LOAD_FAST                7 (lines)\n            222 LOAD_ATTR                1 (NULL|self + append)\n\n610         242 LOAD_CONST              29 ('- `')\n            244 LOAD_FAST                8 (section)\n            246 LOAD_CONST              21 ('name')\n            248 BINARY_SUBSCR\n            252 FORMAT_VALUE             0\n            254 LOAD_CONST              30 ('`: compressed `')\n            256 LOAD_FAST                8 (section)\n            258 LOAD_CONST              31 ('compressed_bytes')\n            260 BINARY_SUBSCR\n            264 FORMAT_VALUE             0\n            266 LOAD_CONST              32 ('`, uncompressed `')\n\n611         268 LOAD_FAST                8 (section)\n            270 LOAD_CONST              33 ('uncompressed_bytes')\n            272 BINARY_SUBSCR\n            276 FORMAT_VALUE             0\n            278 LOAD_CONST              34 ('`, sha256 `')\n            280 LOAD_FAST                8 (section)\n            282 LOAD_CONST              35 ('sha256')\n            284 BINARY_SUBSCR\n            288 FORMAT_VALUE             0\n            290 LOAD_CONST              13 ('`')\n\n610         292 BUILD_STRING             9\n\n609         294 CALL                     1\n            302 POP_TOP\n            304 JUMP_BACKWARD           46 (to 214)\n\n608     >>  306 END_FOR\n\n613         308 LOAD_FAST                7 (lines)\n            310 LOAD_ATTR                3 (NULL|self + extend)\n\n615         330 LOAD_CONST               9 ('')\n\n616         332 LOAD_CONST              36 ('## Parameter And Latent Counts')\n\n617         334 LOAD_CONST               9 ('')\n\n618         336 LOAD_CONST              37 ('- decoder tensors: `')\n            338 LOAD_FAST                3 (decoder)\n            340 LOAD_CONST              38 ('tensor_count')\n            342 BINARY_SUBSCR\n            346 FORMAT_VALUE             0\n            348 LOAD_CONST              13 ('`')\n            350 BUILD_STRING             3\n\n619         352 LOAD_CONST              39 ('- decoder params: `')\n            354 LOAD_FAST                3 (decoder)\n            356 LOAD_CONST              40 ('total_params')\n            358 BINARY_SUBSCR\n            362 FORMAT_VALUE             0\n            364 LOAD_CONST              13 ('`')\n            366 BUILD_STRING             3\n\n620         368 LOAD_CONST              41 ('- Muon partition params: `')\n            370 LOAD_FAST                3 (decoder)\n            372 LOAD_CONST              42 ('muon_partition_params')\n            374 BINARY_SUBSCR\n            378 FORMAT_VALUE             0\n            380 LOAD_CONST              13 ('`')\n            382 BUILD_STRING             3\n\n621         384 LOAD_CONST              43 ('- AdamW decoder partition params: `')\n            386 LOAD_FAST                3 (decoder)\n            388 LOAD_CONST              44 ('adamw_decoder_partition_params')\n            390 BINARY_SUBSCR\n            394 FORMAT_VALUE             0\n            396 LOAD_CONST              13 ('`')\n            398 BUILD_STRING             3\n\n622         400 LOAD_CONST              45 ('- latent matrix: `')\n            402 LOAD_FAST                4 (latents)\n            404 LOAD_CONST              46 ('n_frame_pairs')\n            406 BINARY_SUBSCR\n            410 FORMAT_VALUE             0\n            412 LOAD_CONST              47 (' x ')\n            414 LOAD_FAST                4 (latents)\n            416 LOAD_CONST              48 ('latent_dim')\n            418 BINARY_SUBSCR\n            422 FORMAT_VALUE             0\n            424 LOAD_CONST              13 ('`')\n            426 BUILD_STRING             5\n\n623         428 LOAD_CONST              49 ('- latent hi-byte nonzero fraction: `')\n            430 LOAD_FAST                4 (latents)\n            432 LOAD_CONST              50 ('hi_nonzero_fraction')\n            434 BINARY_SUBSCR\n            438 LOAD_CONST              26 ('.12f')\n            440 FORMAT_VALUE             4 (with format)\n            442 LOAD_CONST              13 ('`')\n            444 BUILD_STRING             3\n\n624         446 LOAD_CONST               9 ('')\n\n625         448 LOAD_CONST              51 ('## Score-Term Math')\n\n626         450 LOAD_CONST               9 ('')\n\n614         452 BUILD_LIST              12\n\n613         454 CALL                     1\n            462 POP_TOP\n\n629         464 LOAD_FAST                6 (score_terms)\n            466 POP_JUMP_IF_NOT_NONE    18 (to 504)\n\n630         468 LOAD_FAST                7 (lines)\n            470 LOAD_ATTR                1 (NULL|self + append)\n            490 LOAD_CONST              52 ('- no static score terms were provided in the intake bundle')\n            492 CALL                     1\n            500 POP_TOP\n            502 JUMP_FORWARD            80 (to 664)\n\n632     >>  504 LOAD_FAST                6 (score_terms)\n            506 LOAD_CONST              53 ('inputs')\n            508 BINARY_SUBSCR\n            512 STORE_FAST               9 (inputs)\n\n633         514 LOAD_FAST                6 (score_terms)\n            516 LOAD_CONST              54 ('recomputed')\n            518 BINARY_SUBSCR\n            522 STORE_FAST              10 (recomputed)\n\n634         524 LOAD_FAST                7 (lines)\n            526 LOAD_ATTR                3 (NULL|self + extend)\n\n636         546 LOAD_CONST              55 ('- provided seg: `')\n            548 LOAD_FAST                9 (inputs)\n            550 LOAD_CONST              56 ('seg')\n            552 BINARY_SUBSCR\n            556 FORMAT_VALUE             0\n            558 LOAD_CONST              13 ('`')\n            560 BUILD_STRING             3\n\n637         562 LOAD_CONST              57 ('- provided pose: `')\n            564 LOAD_FAST                9 (inputs)\n            566 LOAD_CONST              58 ('pose')\n            568 BINARY_SUBSCR\n            572 FORMAT_VALUE             0\n            574 LOAD_CONST              13 ('`')\n            576 BUILD_STRING             3\n\n638         578 LOAD_CONST              59 ('- recomputed seg component: `')\n            580 LOAD_FAST               10 (recomputed)\n            582 LOAD_CONST              60 ('seg_component')\n            584 BINARY_SUBSCR\n            588 LOAD_CONST              26 ('.12f')\n            590 FORMAT_VALUE             4 (with format)\n            592 LOAD_CONST              13 ('`')\n            594 BUILD_STRING             3\n\n639         596 LOAD_CONST              61 ('- recomputed pose component: `')\n            598 LOAD_FAST               10 (recomputed)\n            600 LOAD_CONST              62 ('pose_component')\n            602 BINARY_SUBSCR\n            606 LOAD_CONST              26 ('.12f')\n            608 FORMAT_VALUE             4 (with format)\n            610 LOAD_CONST              13 ('`')\n            612 BUILD_STRING             3\n\n640         614 LOAD_CONST              63 ('- recomputed rate component: `')\n            616 LOAD_FAST               10 (recomputed)\n            618 LOAD_CONST              64 ('rate_component')\n            620 BINARY_SUBSCR\n            624 LOAD_CONST              26 ('.12f')\n            626 FORMAT_VALUE             4 (with format)\n            628 LOAD_CONST              13 ('`')\n            630 BUILD_STRING             3\n\n641         632 LOAD_CONST              65 ('- recomputed total: `')\n            634 LOAD_FAST               10 (recomputed)\n            636 LOAD_CONST              66 ('recomputed_score')\n            638 BINARY_SUBSCR\n            642 LOAD_CONST              26 ('.12f')\n            644 FORMAT_VALUE             4 (with format)\n            646 LOAD_CONST              13 ('`')\n            648 BUILD_STRING             3\n\n642         650 LOAD_CONST              67 ('- evidence status: external/static only, not a score claim')\n\n635         652 BUILD_LIST               7\n\n634         654 CALL                     1\n            662 POP_TOP\n\n645     >>  664 LOAD_FAST                7 (lines)\n            666 LOAD_ATTR                3 (NULL|self + extend)\n\n646         686 BUILD_LIST               0\n            688 LOAD_CONST              68 (('', '## Training And Optimizer Stages', ''))\n            690 LIST_EXTEND              1\n\n645         692 CALL                     1\n            700 POP_TOP\n\n652         702 LOAD_FAST                0 (profile)\n            704 LOAD_CONST              69 ('source_intake')\n            706 BINARY_SUBSCR\n            710 LOAD_CONST              70 ('training_stages')\n            712 BINARY_SUBSCR\n            716 GET_ITER\n        >>  718 FOR_ITER                68 (to 858)\n            722 STORE_FAST              11 (stage)\n\n653         724 LOAD_FAST                7 (lines)\n            726 LOAD_ATTR                1 (NULL|self + append)\n\n654         746 LOAD_CONST              29 ('- `')\n            748 LOAD_FAST               11 (stage)\n            750 LOAD_CONST              21 ('name')\n            752 BINARY_SUBSCR\n            756 FORMAT_VALUE             0\n            758 LOAD_CONST              71 ('`: epochs `')\n            760 LOAD_FAST               11 (stage)\n            762 LOAD_CONST              72 ('epochs_default')\n            764 BINARY_SUBSCR\n            768 FORMAT_VALUE             0\n            770 LOAD_CONST              73 ('`, loss `')\n            772 LOAD_FAST               11 (stage)\n            774 LOAD_CONST              74 ('loss_family')\n            776 BINARY_SUBSCR\n            780 FORMAT_VALUE             0\n            782 LOAD_CONST              75 ('`, AdamW lr `')\n\n655         784 LOAD_FAST               11 (stage)\n            786 LOAD_CONST              76 ('adamw_lr')\n            788 BINARY_SUBSCR\n            792 FORMAT_VALUE             0\n            794 LOAD_CONST              77 ('`, Muon `')\n            796 LOAD_FAST               11 (stage)\n            798 LOAD_CONST              78 ('uses_muon')\n            800 BINARY_SUBSCR\n            804 FORMAT_VALUE             0\n            806 LOAD_CONST              79 ('`, QAT `')\n            808 LOAD_FAST               11 (stage)\n            810 LOAD_CONST              80 ('uses_qat')\n            812 BINARY_SUBSCR\n            816 FORMAT_VALUE             0\n            818 LOAD_CONST              81 ('`, C1a lambda `')\n\n656         820 LOAD_FAST               11 (stage)\n            822 LOAD_CONST              82 ('cat_lambda')\n            824 BINARY_SUBSCR\n            828 FORMAT_VALUE             0\n            830 LOAD_CONST              83 ('`, sigma `')\n            832 LOAD_FAST               11 (stage)\n            834 LOAD_CONST              84 ('cat_sigma')\n            836 BINARY_SUBSCR\n            840 FORMAT_VALUE             0\n            842 LOAD_CONST              13 ('`')\n\n654         844 BUILD_STRING            17\n\n653         846 CALL                     1\n            854 POP_TOP\n            856 JUMP_BACKWARD           70 (to 718)\n\n652     >>  858 END_FOR\n\n658         860 LOAD_FAST                7 (lines)\n            862 LOAD_ATTR                3 (NULL|self + extend)\n\n660         882 LOAD_CONST               9 ('')\n\n661         884 LOAD_CONST              85 ('## Dispatch Readiness')\n\n662         886 LOAD_CONST               9 ('')\n\n663         888 LOAD_CONST              86 ('- ready_for_dispatch: `')\n            890 LOAD_FAST                5 (readiness)\n            892 LOAD_CONST              87 ('ready_for_dispatch')\n            894 BINARY_SUBSCR\n            898 FORMAT_VALUE             0\n            900 LOAD_CONST              13 ('`')\n            902 BUILD_STRING             3\n\n664         904 LOAD_CONST              88 ('- fail_closed: `')\n            906 LOAD_FAST                5 (readiness)\n            908 LOAD_CONST              89 ('fail_closed')\n            910 BINARY_SUBSCR\n            914 FORMAT_VALUE             0\n            916 LOAD_CONST              13 ('`')\n            918 BUILD_STRING             3\n\n659         920 BUILD_LIST               5\n\n658         922 CALL                     1\n            930 POP_TOP\n\n667         932 LOAD_FAST                5 (readiness)\n            934 LOAD_CONST              90 ('required_before_score_claims')\n            936 BINARY_SUBSCR\n            940 GET_ITER\n        >>  942 FOR_ITER                22 (to 990)\n            946 STORE_FAST              12 (item)\n\n668         948 LOAD_FAST                7 (lines)\n            950 LOAD_ATTR                1 (NULL|self + append)\n            970 LOAD_CONST              91 ('- required: ')\n            972 LOAD_FAST               12 (item)\n            974 FORMAT_VALUE             0\n            976 BUILD_STRING             2\n            978 CALL                     1\n            986 POP_TOP\n            988 JUMP_BACKWARD           24 (to 942)\n\n667     >>  990 END_FOR\n\n669         992 LOAD_FAST                5 (readiness)\n            994 LOAD_CONST              92 ('blocked_claims')\n            996 BINARY_SUBSCR\n           1000 GET_ITER\n        >> 1002 FOR_ITER                22 (to 1050)\n           1006 STORE_FAST              12 (item)\n\n670        1008 LOAD_FAST                7 (lines)\n           1010 LOAD_ATTR                1 (NULL|self + append)\n           1030 LOAD_CONST              93 ('- blocked: ')\n           1032 LOAD_FAST               12 (item)\n           1034 FORMAT_VALUE             0\n           1036 BUILD_STRING             2\n           1038 CALL                     1\n           1046 POP_TOP\n           1048 JUMP_BACKWARD           24 (to 1002)\n\n669     >> 1050 END_FOR\n\n671        1052 LOAD_FAST                7 (lines)\n           1054 LOAD_ATTR                3 (NULL|self + extend)\n\n672        1074 BUILD_LIST               0\n           1076 LOAD_CONST              94 (('', '## Immediate Improvement Hypotheses', ''))\n           1078 LIST_EXTEND              1\n\n671        1080 CALL                     1\n           1088 POP_TOP\n\n678        1090 LOAD_FAST                0 (profile)\n           1092 LOAD_CONST              95 ('immediate_improvement_hypotheses')\n           1094 BINARY_SUBSCR\n           1098 GET_ITER\n        >> 1100 FOR_ITER                36 (to 1176)\n           1104 STORE_FAST              13 (hypothesis)\n\n679        1106 LOAD_FAST                7 (lines)\n           1108 LOAD_ATTR                1 (NULL|self + append)\n           1128 LOAD_FAST               13 (hypothesis)\n           1130 LOAD_CONST              96 ('rank')\n           1132 BINARY_SUBSCR\n           1136 FORMAT_VALUE             0\n           1138 LOAD_CONST              97 ('. **')\n           1140 LOAD_FAST               13 (hypothesis)\n           1142 LOAD_CONST              98 ('hook')\n           1144 BINARY_SUBSCR\n           1148 FORMAT_VALUE             0\n           1150 LOAD_CONST              99 ('**: ')\n           1152 LOAD_FAST               13 (hypothesis)\n           1154 LOAD_CONST             100 ('rationale')\n           1156 BINARY_SUBSCR\n           1160 FORMAT_VALUE             0\n           1162 BUILD_STRING             5\n           1164 CALL                     1\n           1172 POP_TOP\n           1174 JUMP_BACKWARD           38 (to 1100)\n\n678     >> 1176 END_FOR\n\n680        1178 LOAD_FAST                7 (lines)\n           1180 LOAD_ATTR                1 (NULL|self + append)\n           1200 LOAD_CONST               9 ('')\n           1202 CALL                     1\n           1210 POP_TOP\n\n681        1212 LOAD_CONST             101 ('\\n')\n           1214 LOAD_ATTR                5 (NULL|self + join)\n           1234 LOAD_FAST                7 (lines)\n           1236 CALL                     1\n           1244 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "write_outputs",
+      "name": "write_outputs",
+      "argcount": 3,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "profile",
+        "json_out",
+        "markdown_out"
+      ],
+      "names": [
+        "parent",
+        "mkdir",
+        "write_text",
+        "_json_text",
+        "render_markdown"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "684           0 RESUME                   0\n\n685           2 LOAD_FAST                1 (json_out)\n              4 LOAD_ATTR                0 (parent)\n             24 LOAD_ATTR                3 (NULL|self + mkdir)\n             44 LOAD_CONST               1 (True)\n             46 LOAD_CONST               1 (True)\n             48 KW_NAMES                 2 (('parents', 'exist_ok'))\n             50 CALL                     2\n             58 POP_TOP\n\n686          60 LOAD_FAST                2 (markdown_out)\n             62 LOAD_ATTR                0 (parent)\n             82 LOAD_ATTR                3 (NULL|self + mkdir)\n            102 LOAD_CONST               1 (True)\n            104 LOAD_CONST               1 (True)\n            106 KW_NAMES                 2 (('parents', 'exist_ok'))\n            108 CALL                     2\n            116 POP_TOP\n\n687         118 LOAD_FAST                1 (json_out)\n            120 LOAD_ATTR                5 (NULL|self + write_text)\n            140 LOAD_GLOBAL              7 (NULL + _json_text)\n            150 LOAD_FAST                0 (profile)\n            152 CALL                     1\n            160 LOAD_CONST               3 ('utf-8')\n            162 KW_NAMES                 4 (('encoding',))\n            164 CALL                     2\n            172 POP_TOP\n\n688         174 LOAD_FAST                2 (markdown_out)\n            176 LOAD_ATTR                5 (NULL|self + write_text)\n            196 LOAD_GLOBAL              9 (NULL + render_markdown)\n            206 LOAD_FAST                0 (profile)\n            208 CALL                     1\n            216 LOAD_CONST               3 ('utf-8')\n            218 KW_NAMES                 4 (('encoding',))\n            220 CALL                     2\n            228 POP_TOP\n            230 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "parse_args",
+      "name": "parse_args",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "argv",
+        "parser"
+      ],
+      "names": [
+        "argparse",
+        "ArgumentParser",
+        "__doc__",
+        "add_argument",
+        "Path",
+        "DEFAULT_ARCHIVE",
+        "DEFAULT_SOURCE_DIR",
+        "DEFAULT_STATIC_INTAKE",
+        "DEFAULT_JSON_OUT",
+        "DEFAULT_MARKDOWN_OUT",
+        "parse_args"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "691           0 RESUME                   0\n\n692           2 LOAD_GLOBAL              1 (NULL + argparse)\n             12 LOAD_ATTR                2 (ArgumentParser)\n             32 LOAD_GLOBAL              4 (__doc__)\n             42 KW_NAMES                 1 (('description',))\n             44 CALL                     1\n             52 STORE_FAST               1 (parser)\n\n693          54 LOAD_FAST                1 (parser)\n             56 LOAD_ATTR                7 (NULL|self + add_argument)\n             76 LOAD_CONST               2 ('--archive')\n             78 LOAD_GLOBAL              8 (Path)\n             88 LOAD_GLOBAL             10 (DEFAULT_ARCHIVE)\n             98 KW_NAMES                 3 (('type', 'default'))\n            100 CALL                     3\n            108 POP_TOP\n\n694         110 LOAD_FAST                1 (parser)\n            112 LOAD_ATTR                7 (NULL|self + add_argument)\n            132 LOAD_CONST               4 ('--source-dir')\n            134 LOAD_GLOBAL              8 (Path)\n            144 LOAD_GLOBAL             12 (DEFAULT_SOURCE_DIR)\n            154 KW_NAMES                 3 (('type', 'default'))\n            156 CALL                     3\n            164 POP_TOP\n\n695         166 LOAD_FAST                1 (parser)\n            168 LOAD_ATTR                7 (NULL|self + add_argument)\n            188 LOAD_CONST               5 ('--static-intake')\n            190 LOAD_GLOBAL              8 (Path)\n            200 LOAD_GLOBAL             14 (DEFAULT_STATIC_INTAKE)\n            210 KW_NAMES                 3 (('type', 'default'))\n            212 CALL                     3\n            220 POP_TOP\n\n696         222 LOAD_FAST                1 (parser)\n            224 LOAD_ATTR                7 (NULL|self + add_argument)\n            244 LOAD_CONST               6 ('--json-out')\n            246 LOAD_GLOBAL              8 (Path)\n            256 LOAD_GLOBAL             16 (DEFAULT_JSON_OUT)\n            266 KW_NAMES                 3 (('type', 'default'))\n            268 CALL                     3\n            276 POP_TOP\n\n697         278 LOAD_FAST                1 (parser)\n            280 LOAD_ATTR                7 (NULL|self + add_argument)\n            300 LOAD_CONST               7 ('--markdown-out')\n            302 LOAD_GLOBAL              8 (Path)\n            312 LOAD_GLOBAL             18 (DEFAULT_MARKDOWN_OUT)\n            322 KW_NAMES                 3 (('type', 'default'))\n            324 CALL                     3\n            332 POP_TOP\n\n698         334 LOAD_FAST                1 (parser)\n            336 LOAD_ATTR                7 (NULL|self + add_argument)\n            356 LOAD_CONST               8 ('--no-write')\n            358 LOAD_CONST               9 ('store_true')\n            360 LOAD_CONST              10 ('Build the profile and print JSON without writing artifacts.')\n            362 KW_NAMES                11 (('action', 'help'))\n            364 CALL                     3\n            372 POP_TOP\n\n699         374 LOAD_FAST                1 (parser)\n            376 LOAD_ATTR               21 (NULL|self + parse_args)\n            396 LOAD_FAST                0 (argv)\n            398 CALL                     1\n            406 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "main",
+      "name": "main",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "argv",
+        "args",
+        "profile"
+      ],
+      "names": [
+        "parse_args",
+        "build_profile",
+        "archive",
+        "source_dir",
+        "static_intake",
+        "no_write",
+        "print",
+        "_json_text",
+        "write_outputs",
+        "json_out",
+        "markdown_out",
+        "_rel"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "702           0 RESUME                   0\n\n703           2 LOAD_GLOBAL              1 (NULL + parse_args)\n             12 LOAD_FAST                0 (argv)\n             14 CALL                     1\n             22 STORE_FAST               1 (args)\n\n704          24 LOAD_GLOBAL              3 (NULL + build_profile)\n             34 LOAD_FAST                1 (args)\n             36 LOAD_ATTR                4 (archive)\n             56 LOAD_FAST                1 (args)\n             58 LOAD_ATTR                6 (source_dir)\n             78 LOAD_FAST                1 (args)\n             80 LOAD_ATTR                8 (static_intake)\n            100 CALL                     3\n            108 STORE_FAST               2 (profile)\n\n705         110 LOAD_FAST                1 (args)\n            112 LOAD_ATTR               10 (no_write)\n            132 POP_JUMP_IF_FALSE       23 (to 180)\n\n706         134 LOAD_GLOBAL             13 (NULL + print)\n            144 LOAD_GLOBAL             15 (NULL + _json_text)\n            154 LOAD_FAST                2 (profile)\n            156 CALL                     1\n            164 LOAD_CONST               1 ('')\n            166 KW_NAMES                 2 (('end',))\n            168 CALL                     2\n            176 POP_TOP\n\n711         178 RETURN_CONST             4 (0)\n\n708     >>  180 LOAD_GLOBAL             17 (NULL + write_outputs)\n            190 LOAD_FAST                2 (profile)\n            192 LOAD_FAST                1 (args)\n            194 LOAD_ATTR               18 (json_out)\n            214 LOAD_FAST                1 (args)\n            216 LOAD_ATTR               20 (markdown_out)\n            236 CALL                     3\n            244 POP_TOP\n\n709         246 LOAD_GLOBAL             13 (NULL + print)\n            256 LOAD_CONST               3 ('wrote ')\n            258 LOAD_GLOBAL             23 (NULL + _rel)\n            268 LOAD_FAST                1 (args)\n            270 LOAD_ATTR               18 (json_out)\n            290 CALL                     1\n            298 FORMAT_VALUE             0\n            300 BUILD_STRING             2\n            302 CALL                     1\n            310 POP_TOP\n\n710         312 LOAD_GLOBAL             13 (NULL + print)\n            322 LOAD_CONST               3 ('wrote ')\n            324 LOAD_GLOBAL             23 (NULL + _rel)\n            334 LOAD_FAST                1 (args)\n            336 LOAD_ATTR               20 (markdown_out)\n            356 CALL                     1\n            364 FORMAT_VALUE             0\n            366 BUILD_STRING             2\n            368 CALL                     1\n            376 POP_TOP\n\n711         378 RETURN_CONST             4 (0)\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  2           2 LOAD_CONST               0 ('Static PR95 HNeRV/Muon intake profiler.\\n\\nThis tool performs local byte/source accounting only. It does not run the\\ncontest scorer, does not load scorer models, and does not dispatch GPU work.\\n')\n              4 STORE_NAME               0 (__doc__)\n\n  7           6 LOAD_CONST               1 (0)\n              8 LOAD_CONST               2 (('annotations',))\n             10 IMPORT_NAME              1 (__future__)\n             12 IMPORT_FROM              2 (annotations)\n             14 STORE_NAME               2 (annotations)\n             16 POP_TOP\n\n  9          18 LOAD_CONST               1 (0)\n             20 LOAD_CONST               3 (None)\n             22 IMPORT_NAME              3 (argparse)\n             24 STORE_NAME               3 (argparse)\n\n 10          26 LOAD_CONST               1 (0)\n             28 LOAD_CONST               3 (None)\n             30 IMPORT_NAME              4 (ast)\n             32 STORE_NAME               4 (ast)\n\n 11          34 LOAD_CONST               1 (0)\n             36 LOAD_CONST               3 (None)\n             38 IMPORT_NAME              5 (hashlib)\n             40 STORE_NAME               5 (hashlib)\n\n 12          42 LOAD_CONST               1 (0)\n             44 LOAD_CONST               3 (None)\n             46 IMPORT_NAME              6 (json)\n             48 STORE_NAME               6 (json)\n\n 13          50 LOAD_CONST               1 (0)\n             52 LOAD_CONST               3 (None)\n             54 IMPORT_NAME              7 (math)\n             56 STORE_NAME               7 (math)\n\n 14          58 LOAD_CONST               1 (0)\n             60 LOAD_CONST               3 (None)\n             62 IMPORT_NAME              8 (re)\n             64 STORE_NAME               8 (re)\n\n 15          66 LOAD_CONST               1 (0)\n             68 LOAD_CONST               3 (None)\n             70 IMPORT_NAME              9 (struct)\n             72 STORE_NAME               9 (struct)\n\n 16          74 LOAD_CONST               1 (0)\n             76 LOAD_CONST               3 (None)\n             78 IMPORT_NAME             10 (zipfile)\n             80 STORE_NAME              10 (zipfile)\n\n 17          82 LOAD_CONST               1 (0)\n             84 LOAD_CONST               4 (('Path',))\n             86 IMPORT_NAME             11 (pathlib)\n             88 IMPORT_FROM             12 (Path)\n             90 STORE_NAME              12 (Path)\n             92 POP_TOP\n\n 18          94 LOAD_CONST               1 (0)\n             96 LOAD_CONST               5 (('Any',))\n             98 IMPORT_NAME             13 (typing)\n            100 IMPORT_FROM             14 (Any)\n            102 STORE_NAME              14 (Any)\n            104 POP_TOP\n\n 21         106 PUSH_NULL\n            108 LOAD_NAME               12 (Path)\n            110 LOAD_NAME               15 (__file__)\n            112 CALL                     1\n            120 LOAD_ATTR               33 (NULL|self + resolve)\n            140 CALL                     0\n            148 LOAD_ATTR               34 (parents)\n            168 LOAD_CONST               6 (1)\n            170 BINARY_SUBSCR\n            174 STORE_NAME              18 (REPO_ROOT)\n\n 22         176 LOAD_NAME               18 (REPO_ROOT)\n            178 LOAD_CONST               7 ('experiments/results/public_pr95_intake_20260504_codex')\n            180 BINARY_OP               11 (/)\n            184 STORE_NAME              19 (DEFAULT_INTAKE_DIR)\n\n 23         186 LOAD_NAME               19 (DEFAULT_INTAKE_DIR)\n            188 LOAD_CONST               8 ('archive.zip')\n            190 BINARY_OP               11 (/)\n            194 STORE_NAME              20 (DEFAULT_ARCHIVE)\n\n 24         196 LOAD_NAME               19 (DEFAULT_INTAKE_DIR)\n            198 LOAD_CONST               9 ('pr95_src/submissions/hnerv_muon')\n            200 BINARY_OP               11 (/)\n            204 STORE_NAME              21 (DEFAULT_SOURCE_DIR)\n\n 25         206 LOAD_NAME               19 (DEFAULT_INTAKE_DIR)\n            208 LOAD_CONST              10 ('pr95_static_intake.json')\n            210 BINARY_OP               11 (/)\n            214 STORE_NAME              22 (DEFAULT_STATIC_INTAKE)\n\n 26         216 LOAD_NAME               19 (DEFAULT_INTAKE_DIR)\n            218 LOAD_CONST              11 ('profile_pr95_hnerv_muon_intake.json')\n            220 BINARY_OP               11 (/)\n            224 STORE_NAME              23 (DEFAULT_JSON_OUT)\n\n 27         226 LOAD_NAME               19 (DEFAULT_INTAKE_DIR)\n            228 LOAD_CONST              12 ('profile_pr95_hnerv_muon_intake.md')\n            230 BINARY_OP               11 (/)\n            234 STORE_NAME              24 (DEFAULT_MARKDOWN_OUT)\n\n 28         236 LOAD_CONST              13 (37545489)\n            238 STORE_NAME              25 (CONTEST_ORIGINAL_BYTES)\n\n 29         240 LOAD_CONST              14 ('pr95_hnerv_muon_static_intake_profile_v1')\n            242 STORE_NAME              26 (SCHEMA)\n\n 30         244 LOAD_CONST              15 ('experiments/profile_pr95_hnerv_muon_intake.py')\n            246 STORE_NAME              27 (TOOL)\n\n 33         248 LOAD_CONST              42 (('data', 'bytes', 'return', 'str'))\n            250 LOAD_CONST              16 (<code object _sha256_bytes at 0x1010faab0, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 33>)\n            252 MAKE_FUNCTION            4 (annotations)\n            254 STORE_NAME              28 (_sha256_bytes)\n\n 37         256 LOAD_CONST              43 (('path', 'Path', 'return', 'str'))\n            258 LOAD_CONST              17 (<code object _sha256_file at 0x100f3ed80, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 37>)\n            260 MAKE_FUNCTION            4 (annotations)\n            262 STORE_NAME              29 (_sha256_file)\n\n 45         264 LOAD_CONST              44 (('payload', 'Any', 'return', 'str'))\n            266 LOAD_CONST              18 (<code object _json_text at 0x1010f0d30, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 45>)\n            268 MAKE_FUNCTION            4 (annotations)\n            270 STORE_NAME              30 (_json_text)\n\n 49         272 LOAD_CONST              43 (('path', 'Path', 'return', 'str'))\n            274 LOAD_CONST              19 (<code object _rel at 0x100f57210, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 49>)\n            276 MAKE_FUNCTION            4 (annotations)\n            278 STORE_NAME              31 (_rel)\n\n 56         280 LOAD_CONST              45 (('raw', 'bytes', 'cursor', 'int', 'label', 'str', 'return', 'tuple[int, int]'))\n            282 LOAD_CONST              20 (<code object _read_u32 at 0x10103d070, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 56>)\n            284 MAKE_FUNCTION            4 (annotations)\n            286 STORE_NAME              32 (_read_u32)\n\n 62         288 LOAD_CONST              46 (('values', 'tuple[int, ...]', 'return', 'int'))\n            290 LOAD_CONST              21 (<code object _product at 0x101092790, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 62>)\n            292 MAKE_FUNCTION            4 (annotations)\n            294 STORE_NAME              33 (_product)\n\n 69         296 LOAD_CONST              22 (<code object _require_brotli at 0x1010fabc0, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 69>)\n            298 MAKE_FUNCTION            0\n            300 STORE_NAME              34 (_require_brotli)\n\n 77         302 LOAD_CONST              47 (('path', 'Path', 'return', 'tuple[dict[str, Any], bytes]'))\n            304 LOAD_CONST              23 (<code object read_pr95_archive at 0x90514f700, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 77>)\n            306 MAKE_FUNCTION            4 (annotations)\n            308 STORE_NAME              35 (read_pr95_archive)\n\n117         310 LOAD_CONST              48 (('blob', 'bytes', 'return', 'dict[str, Any]'))\n            312 LOAD_CONST              24 (<code object parse_decoder_blob at 0x904e62a00, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 117>)\n            314 MAKE_FUNCTION            4 (annotations)\n            316 STORE_NAME              36 (parse_decoder_blob)\n\n191         318 LOAD_CONST              49 (('raw', 'bytes', 'return', 'dict[str, Any]'))\n            320 LOAD_CONST              25 (<code object parse_latents_payload at 0x904e6a000, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 191>)\n            322 MAKE_FUNCTION            4 (annotations)\n            324 STORE_NAME              37 (parse_latents_payload)\n\n231         326 LOAD_CONST              50 (('payload', 'bytes', 'return', 'dict[str, Any]'))\n            328 LOAD_CONST              26 (<code object parse_hnerv_muon_member at 0x90514f200, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 231>)\n            330 MAKE_FUNCTION            4 (annotations)\n            332 STORE_NAME              38 (parse_hnerv_muon_member)\n\n303         334 LOAD_CONST              43 (('path', 'Path', 'return', 'str'))\n            336 LOAD_CONST              27 (<code object _docstring at 0x100f61bb0, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 303>)\n            338 MAKE_FUNCTION            4 (annotations)\n            340 STORE_NAME              39 (_docstring)\n\n311         342 LOAD_CONST              51 (('pattern', 'str', 'text', 'str', 'return', 'str | None'))\n            344 LOAD_CONST              28 (<code object _first_match at 0x1010cdc50, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 311>)\n            346 MAKE_FUNCTION            4 (annotations)\n            348 STORE_NAME              40 (_first_match)\n\n316         350 LOAD_CONST              52 (('pattern', 'str', 'text', 'str', 'return', 'float | int | None'))\n            352 LOAD_CONST              29 (<code object _literal_number at 0x10103efb0, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 316>)\n            354 MAKE_FUNCTION            4 (annotations)\n            356 STORE_NAME              41 (_literal_number)\n\n325         358 LOAD_CONST              53 (('source_dir', 'Path', 'return', 'dict[str, Any]'))\n            360 LOAD_CONST              30 (<code object parse_source_summary at 0x904e65000, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 325>)\n            362 MAKE_FUNCTION            4 (annotations)\n            364 STORE_NAME              42 (parse_source_summary)\n\n420         366 LOAD_CONST              54 (('files', 'list[Path]', 'return', 'str'))\n            368 LOAD_CONST              31 (<code object _source_tree_sha256 at 0x101104430, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 420>)\n            370 MAKE_FUNCTION            4 (annotations)\n            372 STORE_NAME              43 (_source_tree_sha256)\n\n430         374 LOAD_CONST              55 (('path', 'Path', 'return', 'dict[str, Any] | None'))\n            376 LOAD_CONST              32 (<code object load_static_intake at 0x100fea9c0, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 430>)\n            378 MAKE_FUNCTION            4 (annotations)\n            380 STORE_NAME              44 (load_static_intake)\n\n436         382 LOAD_NAME               25 (CONTEST_ORIGINAL_BYTES)\n            384 BUILD_TUPLE              1\n            386 LOAD_CONST              56 (('seg', 'float', 'pose', 'float', 'archive_bytes', 'int', 'denominator', 'int', 'return', 'dict[str, float]'))\n            388 LOAD_CONST              33 (<code object compute_score_terms at 0x100feaaf0, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 436>)\n            390 MAKE_FUNCTION            5 (defaults, annotations)\n            392 STORE_NAME              45 (compute_score_terms)\n\n448         394 LOAD_CONST              57 ((None,))\n            396 LOAD_CONST              58 (('archive_path', 'Path', 'source_dir', 'Path', 'static_intake_path', 'Path | None', 'return', 'dict[str, Any]'))\n            398 LOAD_CONST              34 (<code object build_profile at 0x905150380, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 448>)\n            400 MAKE_FUNCTION            5 (defaults, annotations)\n            402 STORE_NAME              46 (build_profile)\n\n499         404 LOAD_CONST              59 (('return', 'dict[str, Any]'))\n            406 LOAD_CONST              35 (<code object dispatch_readiness at 0x10102a090, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 499>)\n            408 MAKE_FUNCTION            4 (annotations)\n            410 STORE_NAME              47 (dispatch_readiness)\n\n517         412 LOAD_CONST              60 (('member_profile', 'dict[str, Any]', 'return', 'list[dict[str, Any]]'))\n            414 LOAD_CONST              36 (<code object improvement_hypotheses at 0x100fdcab0, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 517>)\n            416 MAKE_FUNCTION            4 (annotations)\n            418 STORE_NAME              48 (improvement_hypotheses)\n\n586         420 LOAD_CONST              61 (('profile', 'dict[str, Any]', 'return', 'str'))\n            422 LOAD_CONST              37 (<code object render_markdown at 0x904e61e00, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 586>)\n            424 MAKE_FUNCTION            4 (annotations)\n            426 STORE_NAME              49 (render_markdown)\n\n684         428 LOAD_CONST              62 (('profile', 'dict[str, Any]', 'json_out', 'Path', 'markdown_out', 'Path', 'return', 'None'))\n            430 LOAD_CONST              38 (<code object write_outputs at 0x100ff97d0, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 684>)\n            432 MAKE_FUNCTION            4 (annotations)\n            434 STORE_NAME              50 (write_outputs)\n\n691         436 LOAD_CONST              57 ((None,))\n            438 LOAD_CONST              63 (('argv', 'list[str] | None', 'return', 'argparse.Namespace'))\n            440 LOAD_CONST              39 (<code object parse_args at 0x905154280, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 691>)\n            442 MAKE_FUNCTION            5 (defaults, annotations)\n            444 STORE_NAME              51 (parse_args)\n\n702         446 LOAD_CONST              57 ((None,))\n            448 LOAD_CONST              64 (('argv', 'list[str] | None', 'return', 'int'))\n            450 LOAD_CONST              40 (<code object main at 0x905154500, file \"experiments/profile_pr95_hnerv_muon_intake.py\", line 702>)\n            452 MAKE_FUNCTION            5 (defaults, annotations)\n            454 STORE_NAME              52 (main)\n\n714         456 LOAD_NAME               53 (__name__)\n            458 LOAD_CONST              41 ('__main__')\n            460 COMPARE_OP              40 (==)\n            464 POP_JUMP_IF_FALSE       13 (to 492)\n\n715         466 PUSH_NULL\n            468 LOAD_NAME               54 (SystemExit)\n            470 PUSH_NULL\n            472 LOAD_NAME               52 (main)\n            474 CALL                     0\n            482 CALL                     1\n            490 RAISE_VARARGS            1\n\n714     >>  492 RETURN_CONST             3 (None)\n"
+}

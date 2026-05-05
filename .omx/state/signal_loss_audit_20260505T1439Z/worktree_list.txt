@@ -1,0 +1,4 @@
+worktree /Users/adpena/Projects/pact
+HEAD 46157d14b2e4f76c4bbb0e52435f15bd312a1686
+branch refs/heads/main
+

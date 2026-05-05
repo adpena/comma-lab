@@ -1,0 +1,350 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/experiments/results/public_pr95_intake_20260504_codex/pr95_src/submissions/hnerv_muon/src/__pycache__/score.cpython-314.pyc",
+  "names": [
+    "__doc__",
+    "math",
+    "pathlib",
+    "Path",
+    "av",
+    "torch",
+    "torch.nn.functional",
+    "nn",
+    "functional",
+    "F",
+    "CAMERA_H",
+    "CAMERA_W",
+    "EVAL_H",
+    "EVAL_W",
+    "_decoded_to_camera",
+    "inference_mode",
+    "evaluate_decoder",
+    "compute_score",
+    "total_video_bytes"
+  ],
+  "varnames": [],
+  "consts": [
+    "Score computation matching the official challenge metric.\n\nScore = 100 \u00b7 seg_distortion + sqrt(10 \u00b7 pose_distortion) + 25 \u00b7 rate\n\n  - seg_distortion: from DistortionNet.compute_distortion (frozen SegNet)\n  - pose_distortion: from DistortionNet.compute_distortion (frozen PoseNet)\n  - rate: archive_bytes / sum(video file sizes) per challenge evaluate.py:65\n\nEval runs the decoder, bicubic-upsamples (384,512) outputs to (874,1164) camera\nsize, and calls DistortionNet.compute_distortion against the GT video.\n\nStream-decoded so we never hold all 1200 full-res frames in memory at once\n(challenge frames at 1164\u00d7874\u00d73 uint8 = ~3 MB each).\n",
+    null,
+    [
+      "Path"
+    ],
+    874,
+    1164,
+    384,
+    512,
+    {
+      "__code__": "_decoded_to_camera",
+      "qualname": "_decoded_to_camera",
+      "argcount": 3,
+      "varnames": [
+        "decoded_native",
+        "target_h",
+        "target_w"
+      ],
+      "names": [
+        "F",
+        "interpolate"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "evaluate_decoder",
+      "qualname": "evaluate_decoder",
+      "argcount": 6,
+      "varnames": [
+        "decoder",
+        "latents",
+        "distortion_net",
+        "video_path",
+        "batch_pairs",
+        "device",
+        "n_pairs",
+        "container",
+        "seg_total",
+        "pose_total",
+        "count",
+        "next_gt_pair",
+        "pair_idx",
+        "batch_gt",
+        "_",
+        "pair",
+        "B",
+        "idx",
+        "z",
+        "decoded",
+        "flat",
+        "up",
+        "decoded_bhwc",
+        "pose_d",
+        "seg_d"
+      ],
+      "names": [
+        "frame_utils",
+        "yuv420_to_rgb",
+        "eval",
+        "shape",
+        "av",
+        "open",
+        "str",
+        "decode",
+        "streams",
+        "video",
+        "range",
+        "min",
+        "append",
+        "torch",
+        "stack",
+        "to",
+        "arange",
+        "reshape",
+        "EVAL_H",
+        "EVAL_W",
+        "_decoded_to_camera",
+        "CAMERA_H",
+        "CAMERA_W",
+        "permute",
+        "clamp",
+        "round",
+        "uint8",
+        "compute_distortion",
+        "sum",
+        "item",
+        "close",
+        "max"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "gt_pairs_iter_state",
+        "yuv420_to_rgb"
+      ]
+    },
+    {
+      "__code__": "compute_score",
+      "qualname": "compute_score",
+      "argcount": 4,
+      "varnames": [
+        "seg_dist",
+        "pose_dist",
+        "archive_bytes",
+        "total_video_bytes",
+        "rate",
+        "seg_component",
+        "pose_component",
+        "rate_component"
+      ],
+      "names": [
+        "math",
+        "sqrt"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "total_video_bytes",
+      "qualname": "total_video_bytes",
+      "argcount": 1,
+      "varnames": [
+        "video_paths"
+      ],
+      "names": [
+        "isinstance",
+        "str",
+        "Path",
+        "sum"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    [
+      8,
+      "cuda"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": "Score computation matching the official challenge metric.\n\nScore = 100 \u00b7 seg_distortion + sqrt(10 \u00b7 pose_distortion) + 25 \u00b7 rate\n\n  - seg_distortion: from DistortionNet.compute_distortion (frozen SegNet)\n  - pose_distortion: from DistortionNet.compute_distortion (frozen PoseNet)\n  - rate: archive_bytes / sum(video file sizes) per challenge evaluate.py:65\n\nEval runs the decoder, bicubic-upsamples (384,512) outputs to (874,1164) camera\nsize, and calls DistortionNet.compute_distortion against the GT video.\n\nStream-decoded so we never hold all 1200 full-res frames in memory at once\n(challenge frames at 1164\u00d7874\u00d73 uint8 = ~3 MB each).\n",
+  "child_codes": [
+    {
+      "qualname": "_decoded_to_camera",
+      "name": "_decoded_to_camera",
+      "argcount": 3,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "decoded_native",
+        "target_h",
+        "target_w"
+      ],
+      "names": [
+        "F",
+        "interpolate"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Resample (B*2, 3, EVAL_H, EVAL_W) -> (B*2, 3, CAMERA_H, CAMERA_W) bicubic.\nMatches eval harness resample chain.",
+      "dis": " 27           RESUME                   0\n\n 30           LOAD_GLOBAL              0 (F)\n              LOAD_ATTR                2 (interpolate)\n              PUSH_NULL\n              LOAD_FAST_BORROW_LOAD_FAST_BORROW 1 (decoded_native, target_h)\n              LOAD_FAST_BORROW         2 (target_w)\n              BUILD_TUPLE              2\n\n 31           LOAD_CONST               1 ('bicubic')\n              LOAD_CONST               2 (False)\n\n 30           LOAD_CONST               3 (('size', 'mode', 'align_corners'))\n              CALL_KW                  4\n              RETURN_VALUE\n"
+    },
+    {
+      "qualname": "evaluate_decoder",
+      "name": "evaluate_decoder",
+      "argcount": 6,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "decoder",
+        "latents",
+        "distortion_net",
+        "video_path",
+        "batch_pairs",
+        "device",
+        "n_pairs",
+        "container",
+        "seg_total",
+        "pose_total",
+        "count",
+        "next_gt_pair",
+        "pair_idx",
+        "batch_gt",
+        "_",
+        "pair",
+        "B",
+        "idx",
+        "z",
+        "decoded",
+        "flat",
+        "up",
+        "decoded_bhwc",
+        "pose_d",
+        "seg_d"
+      ],
+      "names": [
+        "frame_utils",
+        "yuv420_to_rgb",
+        "eval",
+        "shape",
+        "av",
+        "open",
+        "str",
+        "decode",
+        "streams",
+        "video",
+        "range",
+        "min",
+        "append",
+        "torch",
+        "stack",
+        "to",
+        "arange",
+        "reshape",
+        "EVAL_H",
+        "EVAL_W",
+        "_decoded_to_camera",
+        "CAMERA_H",
+        "CAMERA_W",
+        "permute",
+        "clamp",
+        "round",
+        "uint8",
+        "compute_distortion",
+        "sum",
+        "item",
+        "close",
+        "max"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "gt_pairs_iter_state",
+        "yuv420_to_rgb"
+      ],
+      "doc": "Stream-decode the GT video and the decoder output simultaneously, accumulate\nper-pair distortions via DistortionNet.compute_distortion.\n\nReturns:\n    dict with seg_distortion (mean), pose_distortion (mean)\n",
+      "dis": "  --           MAKE_CELL               25 (gt_pairs_iter_state)\n               MAKE_CELL               26 (yuv420_to_rgb)\n\n  34           RESUME                   0\n\n  43           LOAD_SMALL_INT           0\n               LOAD_CONST               1 (('yuv420_to_rgb',))\n               IMPORT_NAME              0 (frame_utils)\n               IMPORT_FROM              1 (yuv420_to_rgb)\n               STORE_DEREF             26 (yuv420_to_rgb)\n               POP_TOP\n\n  45           LOAD_FAST_BORROW         0 (decoder)\n               LOAD_ATTR                5 (eval + NULL|self)\n               CALL                     0\n               POP_TOP\n\n  46           LOAD_FAST_BORROW         1 (latents)\n               LOAD_ATTR                6 (shape)\n               LOAD_SMALL_INT           0\n               BINARY_OP               26 ([])\n               STORE_FAST               6 (n_pairs)\n\n  49           LOAD_GLOBAL              8 (av)\n               LOAD_ATTR               10 (open)\n               PUSH_NULL\n               LOAD_GLOBAL             13 (str + NULL)\n               LOAD_FAST_BORROW         3 (video_path)\n               CALL                     1\n               CALL                     1\n               STORE_FAST               7 (container)\n\n  50           LOAD_CONST               2 ('prev')\n               LOAD_CONST               3 (None)\n               LOAD_CONST               4 ('pair_idx')\n               LOAD_SMALL_INT           0\n               BUILD_MAP                2\n               STORE_DEREF             25 (gt_pairs_iter_state)\n\n  51           LOAD_CONST               5 (0.0)\n               STORE_FAST               8 (seg_total)\n\n  52           LOAD_CONST               5 (0.0)\n               STORE_FAST               9 (pose_total)\n\n  53           LOAD_SMALL_INT           0\n               STORE_FAST              10 (count)\n\n  55           LOAD_FAST_BORROW        25 (gt_pairs_iter_state)\n               LOAD_FAST_BORROW        26 (yuv420_to_rgb)\n               BUILD_TUPLE              2\n               LOAD_CONST               6 (<code object next_gt_pair at 0x100fcf5d0, file \"experiments/results/public_pr95_intake_20260504_codex/pr95_src/submissions/hnerv_muon/src/score.py\", line 55>)\n               MAKE_FUNCTION\n               SET_FUNCTION_ATTRIBUTE   8 (closure)\n               STORE_FAST              11 (next_gt_pair)\n\n  69           LOAD_FAST_BORROW         7 (container)\n               LOAD_ATTR               15 (decode + NULL|self)\n               LOAD_FAST_BORROW         7 (container)\n               LOAD_ATTR               16 (streams)\n               LOAD_ATTR               18 (video)\n               LOAD_SMALL_INT           0\n               BINARY_OP               26 ([])\n               CALL                     1\n               LOAD_DEREF              25 (gt_pairs_iter_state)\n               LOAD_CONST               7 ('frames')\n               STORE_SUBSCR\n\n  71           LOAD_SMALL_INT           0\n               STORE_FAST              12 (pair_idx)\n\n  72   L1:     LOAD_FAST_BORROW_LOAD_FAST_BORROW 198 (pair_idx, n_pairs)\n               COMPARE_OP              18 (bool(<))\n               EXTENDED_ARG             1\n               POP_JUMP_IF_FALSE      450 (to L7)\n               NOT_TAKEN\n\n  74           BUILD_LIST               0\n               STORE_FAST              13 (batch_gt)\n\n  75           LOAD_GLOBAL             21 (range + NULL)\n               LOAD_GLOBAL             23 (min + NULL)\n               LOAD_FAST_BORROW_LOAD_FAST_BORROW 70 (batch_pairs, n_pairs)\n               LOAD_FAST_BORROW        12 (pair_idx)\n               BINARY_OP               10 (-)\n               CALL                     2\n               CALL                     1\n               GET_ITER\n       L2:     FOR_ITER                33 (to L4)\n               STORE_FAST              14 (_)\n\n  76           LOAD_FAST_BORROW        11 (next_gt_pair)\n               PUSH_NULL\n               CALL                     0\n               STORE_FAST              15 (pair)\n\n  77           LOAD_FAST_BORROW        15 (pair)\n               POP_JUMP_IF_NOT_NONE     3 (to L3)\n               NOT_TAKEN\n\n  78           POP_TOP\n               JUMP_FORWARD            21 (to L5)\n\n  79   L3:     LOAD_FAST_BORROW        13 (batch_gt)\n               LOAD_ATTR               25 (append + NULL|self)\n               LOAD_FAST_BORROW        15 (pair)\n               CALL                     1\n               POP_TOP\n               JUMP_BACKWARD           35 (to L2)\n\n  75   L4:     END_FOR\n               POP_ITER\n\n  80   L5:     LOAD_FAST_BORROW        13 (batch_gt)\n               TO_BOOL\n               POP_JUMP_IF_TRUE         3 (to L6)\n               NOT_TAKEN\n\n  81           EXTENDED_ARG             1\n               JUMP_FORWARD           373 (to L7)\n\n  82   L6:     LOAD_GLOBAL             26 (torch)\n               LOAD_ATTR               28 (stack)\n               PUSH_NULL\n               LOAD_FAST_BORROW        13 (batch_gt)\n               CALL                     1\n               LOAD_ATTR               31 (to + NULL|self)\n               LOAD_FAST_BORROW         5 (device)\n               CALL                     1\n               STORE_FAST              13 (batch_gt)\n\n  83           LOAD_FAST_BORROW        13 (batch_gt)\n               LOAD_ATTR                6 (shape)\n               LOAD_SMALL_INT           0\n               BINARY_OP               26 ([])\n               STORE_FAST              16 (B)\n\n  86           LOAD_GLOBAL             26 (torch)\n               LOAD_ATTR               32 (arange)\n               PUSH_NULL\n               LOAD_FAST_BORROW_LOAD_FAST_BORROW 204 (pair_idx, pair_idx)\n               LOAD_FAST_BORROW        16 (B)\n               BINARY_OP                0 (+)\n               LOAD_FAST_BORROW         5 (device)\n               LOAD_CONST               8 (('device',))\n               CALL_KW                  3\n               STORE_FAST              17 (idx)\n\n  87           LOAD_FAST_BORROW         1 (latents)\n               LOAD_FAST_BORROW        17 (idx)\n               BINARY_OP               26 ([])\n               STORE_FAST              18 (z)\n\n  88           LOAD_FAST_BORROW         0 (decoder)\n               PUSH_NULL\n               LOAD_FAST_BORROW        18 (z)\n               CALL                     1\n               STORE_FAST              19 (decoded)\n\n  89           LOAD_FAST_BORROW        19 (decoded)\n               LOAD_ATTR               35 (reshape + NULL|self)\n               LOAD_FAST_BORROW        16 (B)\n               LOAD_SMALL_INT           2\n               BINARY_OP                5 (*)\n               LOAD_SMALL_INT           3\n               LOAD_GLOBAL             36 (EVAL_H)\n               LOAD_GLOBAL             38 (EVAL_W)\n               CALL                     4\n               STORE_FAST              20 (flat)\n\n  90           LOAD_GLOBAL             41 (_decoded_to_camera + NULL)\n               LOAD_FAST_BORROW        20 (flat)\n               CALL                     1\n               STORE_FAST              21 (up)\n\n  91           LOAD_FAST_BORROW        21 (up)\n               LOAD_ATTR               35 (reshape + NULL|self)\n               LOAD_FAST_BORROW        16 (B)\n               LOAD_SMALL_INT           2\n               LOAD_SMALL_INT           3\n               LOAD_GLOBAL             42 (CAMERA_H)\n               LOAD_GLOBAL             44 (CAMERA_W)\n               CALL                     5\n\n  92           LOAD_ATTR               47 (permute + NULL|self)\n               LOAD_SMALL_INT           0\n               LOAD_SMALL_INT           1\n               LOAD_SMALL_INT           3\n               LOAD_SMALL_INT           4\n               LOAD_SMALL_INT           2\n               CALL                     5\n\n  93           LOAD_ATTR               49 (clamp + NULL|self)\n               LOAD_SMALL_INT           0\n               LOAD_SMALL_INT         255\n               CALL                     2\n               LOAD_ATTR               51 (round + NULL|self)\n               CALL                     0\n               LOAD_ATTR               31 (to + NULL|self)\n               LOAD_GLOBAL             26 (torch)\n               LOAD_ATTR               52 (uint8)\n               CALL                     1\n\n  91           STORE_FAST              22 (decoded_bhwc)\n\n  95           LOAD_FAST_BORROW         2 (distortion_net)\n               LOAD_ATTR               55 (compute_distortion + NULL|self)\n               LOAD_FAST_BORROW        13 (batch_gt)\n               LOAD_FAST_BORROW        22 (decoded_bhwc)\n               CALL                     2\n               UNPACK_SEQUENCE          2\n               STORE_FAST              23 (pose_d)\n               STORE_FAST              24 (seg_d)\n\n  96           LOAD_FAST_BORROW         8 (seg_total)\n               LOAD_FAST_BORROW        24 (seg_d)\n               LOAD_ATTR               57 (sum + NULL|self)\n               CALL                     0\n               LOAD_ATTR               59 (item + NULL|self)\n               CALL                     0\n               BINARY_OP               13 (+=)\n               STORE_FAST               8 (seg_total)\n\n  97           LOAD_FAST_BORROW         9 (pose_total)\n               LOAD_FAST_BORROW        23 (pose_d)\n               LOAD_ATTR               57 (sum + NULL|self)\n               CALL                     0\n               LOAD_ATTR               59 (item + NULL|self)\n               CALL                     0\n               BINARY_OP               13 (+=)\n               STORE_FAST               9 (pose_total)\n\n  98           LOAD_FAST_BORROW        10 (count)\n               LOAD_FAST_BORROW        16 (B)\n               BINARY_OP               13 (+=)\n               STORE_FAST              10 (count)\n\n  99           LOAD_FAST_BORROW        12 (pair_idx)\n               LOAD_FAST_BORROW        16 (B)\n               BINARY_OP               13 (+=)\n               STORE_FAST              12 (pair_idx)\n               EXTENDED_ARG             1\n               JUMP_BACKWARD          456 (to L1)\n\n 101   L7:     LOAD_FAST_BORROW         7 (container)\n               LOAD_ATTR               61 (close + NULL|self)\n               CALL                     0\n               POP_TOP\n\n 103           LOAD_CONST               9 ('seg_distortion')\n               LOAD_FAST_BORROW         8 (seg_total)\n               LOAD_GLOBAL             63 (max + NULL)\n               LOAD_FAST_BORROW        10 (count)\n               LOAD_SMALL_INT           1\n               CALL                     2\n               BINARY_OP               11 (/)\n\n 104           LOAD_CONST              10 ('pose_distortion')\n               LOAD_FAST_BORROW         9 (pose_total)\n               LOAD_GLOBAL             63 (max + NULL)\n               LOAD_FAST_BORROW        10 (count)\n               LOAD_SMALL_INT           1\n               CALL                     2\n               BINARY_OP               11 (/)\n\n 102           BUILD_MAP                2\n               RETURN_VALUE\n"
+    },
+    {
+      "qualname": "evaluate_decoder.<locals>.next_gt_pair",
+      "name": "next_gt_pair",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "frame",
+        "f",
+        "f0",
+        "f1"
+      ],
+      "names": [
+        "get",
+        "iter",
+        "torch",
+        "stack"
+      ],
+      "freevars": [
+        "gt_pairs_iter_state",
+        "yuv420_to_rgb"
+      ],
+      "cellvars": [],
+      "doc": "Yield one (2, H, W, 3) uint8 GT pair from the stream, or None when done.",
+      "dis": "  --           COPY_FREE_VARS           2\n\n  55           RESUME                   0\n\n  58           LOAD_DEREF               4 (gt_pairs_iter_state)\n               LOAD_ATTR                1 (get + NULL|self)\n               LOAD_CONST               1 ('frames')\n               LOAD_GLOBAL              3 (iter + NULL)\n               LOAD_CONST               4 (())\n               CALL                     1\n               CALL                     2\n               GET_ITER\n       L1:     FOR_ITER                67 (to L3)\n               STORE_FAST               0 (frame)\n\n  59           LOAD_DEREF               5 (yuv420_to_rgb)\n               PUSH_NULL\n               LOAD_FAST_BORROW         0 (frame)\n               CALL                     1\n               STORE_FAST               1 (f)\n\n  60           LOAD_DEREF               4 (gt_pairs_iter_state)\n               LOAD_CONST               2 ('prev')\n               BINARY_OP               26 ([])\n               POP_JUMP_IF_NOT_NONE     8 (to L2)\n               NOT_TAKEN\n\n  61           LOAD_FAST_BORROW         1 (f)\n               LOAD_DEREF               4 (gt_pairs_iter_state)\n               LOAD_CONST               2 ('prev')\n               STORE_SUBSCR\n\n  62           JUMP_BACKWARD           29 (to L1)\n\n  63   L2:     LOAD_DEREF               4 (gt_pairs_iter_state)\n               LOAD_CONST               2 ('prev')\n               BINARY_OP               26 ([])\n               LOAD_FAST                1 (f)\n               STORE_FAST_STORE_FAST   50 (f1, f0)\n\n  64           LOAD_CONST               3 (None)\n               LOAD_DEREF               4 (gt_pairs_iter_state)\n               LOAD_CONST               2 ('prev')\n               STORE_SUBSCR\n\n  65           LOAD_GLOBAL              4 (torch)\n               LOAD_ATTR                6 (stack)\n               PUSH_NULL\n               LOAD_FAST_BORROW_LOAD_FAST_BORROW 35 (f0, f1)\n               BUILD_LIST               2\n               CALL                     1\n               SWAP                     2\n               POP_TOP\n               RETURN_VALUE\n\n  58   L3:     END_FOR\n               POP_ITER\n\n  66           LOAD_CONST               3 (None)\n               RETURN_VALUE\n"
+    },
+    {
+      "qualname": "compute_score",
+      "name": "compute_score",
+      "argcount": 4,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "seg_dist",
+        "pose_dist",
+        "archive_bytes",
+        "total_video_bytes",
+        "rate",
+        "seg_component",
+        "pose_component",
+        "rate_component"
+      ],
+      "names": [
+        "math",
+        "sqrt"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Final challenge metric. Lower is better.",
+      "dis": "108           RESUME                   0\n\n110           LOAD_FAST_BORROW_LOAD_FAST_BORROW 35 (archive_bytes, total_video_bytes)\n              BINARY_OP               11 (/)\n              STORE_FAST               4 (rate)\n\n111           LOAD_CONST               1 (100.0)\n              LOAD_FAST_BORROW         0 (seg_dist)\n              BINARY_OP                5 (*)\n              STORE_FAST               5 (seg_component)\n\n112           LOAD_GLOBAL              0 (math)\n              LOAD_ATTR                2 (sqrt)\n              PUSH_NULL\n              LOAD_CONST               2 (10.0)\n              LOAD_FAST_BORROW         1 (pose_dist)\n              BINARY_OP                5 (*)\n              LOAD_CONST               3 (1e-12)\n              BINARY_OP                0 (+)\n              CALL                     1\n              STORE_FAST               6 (pose_component)\n\n113           LOAD_CONST               4 (25.0)\n              LOAD_FAST_BORROW         4 (rate)\n              BINARY_OP                5 (*)\n              STORE_FAST               7 (rate_component)\n\n115           LOAD_CONST               5 ('score')\n              LOAD_FAST_BORROW_LOAD_FAST_BORROW 86 (seg_component, pose_component)\n              BINARY_OP                0 (+)\n              LOAD_FAST_BORROW         7 (rate_component)\n              BINARY_OP                0 (+)\n\n116           LOAD_CONST               6 ('seg_component')\n              LOAD_FAST_BORROW         5 (seg_component)\n\n117           LOAD_CONST               7 ('pose_component')\n              LOAD_FAST_BORROW         6 (pose_component)\n\n118           LOAD_CONST               8 ('rate_component')\n              LOAD_FAST_BORROW         7 (rate_component)\n\n119           LOAD_CONST               9 ('seg_distortion')\n              LOAD_FAST_BORROW         0 (seg_dist)\n\n120           LOAD_CONST              10 ('pose_distortion')\n              LOAD_FAST_BORROW         1 (pose_dist)\n\n121           LOAD_CONST              11 ('rate')\n              LOAD_FAST_BORROW         4 (rate)\n\n122           LOAD_CONST              12 ('archive_bytes')\n              LOAD_FAST_BORROW         2 (archive_bytes)\n\n114           BUILD_MAP                8\n              RETURN_VALUE\n"
+    },
+    {
+      "qualname": "total_video_bytes",
+      "name": "total_video_bytes",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "video_paths"
+      ],
+      "names": [
+        "isinstance",
+        "str",
+        "Path",
+        "sum"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Rate denominator per challenge eval (evaluate.py:64): sum of source video\nfile sizes.",
+      "dis": "126           RESUME                   0\n\n129           LOAD_GLOBAL              1 (isinstance + NULL)\n              LOAD_FAST_BORROW         0 (video_paths)\n              LOAD_GLOBAL              2 (str)\n              LOAD_GLOBAL              4 (Path)\n              BUILD_TUPLE              2\n              CALL                     2\n              TO_BOOL\n              POP_JUMP_IF_FALSE        4 (to L1)\n              NOT_TAKEN\n\n130           LOAD_FAST_BORROW         0 (video_paths)\n              BUILD_LIST               1\n              STORE_FAST               0 (video_paths)\n\n131   L1:     LOAD_GLOBAL              7 (sum + NULL)\n              LOAD_CONST               1 (<code object <genexpr> at 0x10110dcf0, file \"experiments/results/public_pr95_intake_20260504_codex/pr95_src/submissions/hnerv_muon/src/score.py\", line 131>)\n              MAKE_FUNCTION\n              LOAD_FAST_BORROW         0 (video_paths)\n              GET_ITER\n              CALL                     0\n              CALL                     1\n              RETURN_VALUE\n"
+    },
+    {
+      "qualname": "total_video_bytes.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "p"
+      ],
+      "names": [
+        "Path",
+        "stat",
+        "st_size"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 131           RETURN_GENERATOR\n               POP_TOP\n       L1:     RESUME                   0\n               LOAD_FAST                0 (.0)\n       L2:     FOR_ITER                40 (to L3)\n               STORE_FAST               1 (p)\n               LOAD_GLOBAL              1 (Path + NULL)\n               LOAD_FAST_BORROW         1 (p)\n               CALL                     1\n               LOAD_ATTR                3 (stat + NULL|self)\n               CALL                     0\n               LOAD_ATTR                4 (st_size)\n               YIELD_VALUE              0\n               RESUME                   5\n               POP_TOP\n               JUMP_BACKWARD           42 (to L2)\n       L3:     END_FOR\n               POP_ITER\n               LOAD_CONST               0 (None)\n               RETURN_VALUE\n\n  --   L4:     CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n               RERAISE                  1\nExceptionTable:\n  L1 to L4 -> L4 [0] lasti\n"
+    }
+  ],
+  "module_dis": "  0           RESUME                   0\n\n  1           LOAD_CONST               0 ('Score computation matching the official challenge metric.\\n\\nScore = 100 \u00b7 seg_distortion + sqrt(10 \u00b7 pose_distortion) + 25 \u00b7 rate\\n\\n  - seg_distortion: from DistortionNet.compute_distortion (frozen SegNet)\\n  - pose_distortion: from DistortionNet.compute_distortion (frozen PoseNet)\\n  - rate: archive_bytes / sum(video file sizes) per challenge evaluate.py:65\\n\\nEval runs the decoder, bicubic-upsamples (384,512) outputs to (874,1164) camera\\nsize, and calls DistortionNet.compute_distortion against the GT video.\\n\\nStream-decoded so we never hold all 1200 full-res frames in memory at once\\n(challenge frames at 1164\u00d7874\u00d73 uint8 = ~3 MB each).\\n')\n              STORE_NAME               0 (__doc__)\n\n 15           LOAD_SMALL_INT           0\n              LOAD_CONST               1 (None)\n              IMPORT_NAME              1 (math)\n              STORE_NAME               1 (math)\n\n 16           LOAD_SMALL_INT           0\n              LOAD_CONST               2 (('Path',))\n              IMPORT_NAME              2 (pathlib)\n              IMPORT_FROM              3 (Path)\n              STORE_NAME               3 (Path)\n              POP_TOP\n\n 18           LOAD_SMALL_INT           0\n              LOAD_CONST               1 (None)\n              IMPORT_NAME              4 (av)\n              STORE_NAME               4 (av)\n\n 19           LOAD_SMALL_INT           0\n              LOAD_CONST               1 (None)\n              IMPORT_NAME              5 (torch)\n              STORE_NAME               5 (torch)\n\n 20           LOAD_SMALL_INT           0\n              LOAD_CONST               1 (None)\n              IMPORT_NAME              6 (torch.nn.functional)\n              IMPORT_FROM              7 (nn)\n              SWAP                     2\n              POP_TOP\n              IMPORT_FROM              8 (functional)\n              STORE_NAME               9 (F)\n              POP_TOP\n\n 23           LOAD_CONST               3 (874)\n              LOAD_CONST               4 (1164)\n              SWAP                     2\n              STORE_NAME              10 (CAMERA_H)\n              STORE_NAME              11 (CAMERA_W)\n\n 24           LOAD_CONST               5 (384)\n              LOAD_CONST               6 (512)\n              SWAP                     2\n              STORE_NAME              12 (EVAL_H)\n              STORE_NAME              13 (EVAL_W)\n\n 27           LOAD_NAME               10 (CAMERA_H)\n              LOAD_NAME               11 (CAMERA_W)\n              BUILD_TUPLE              2\n              LOAD_CONST               7 (<code object _decoded_to_camera at 0x101b9e670, file \"experiments/results/public_pr95_intake_20260504_codex/pr95_src/submissions/hnerv_muon/src/score.py\", line 27>)\n              MAKE_FUNCTION\n              SET_FUNCTION_ATTRIBUTE   1 (defaults)\n              STORE_NAME              14 (_decoded_to_camera)\n\n 34           LOAD_NAME                5 (torch)\n              LOAD_ATTR               30 (inference_mode)\n              PUSH_NULL\n              CALL                     0\n\n 35           LOAD_CONST              11 ((8, 'cuda'))\n              LOAD_CONST               8 (<code object evaluate_decoder at 0xbb520aa00, file \"experiments/results/public_pr95_intake_20260504_codex/pr95_src/submissions/hnerv_muon/src/score.py\", line 34>)\n              MAKE_FUNCTION\n              SET_FUNCTION_ATTRIBUTE   1 (defaults)\n\n 34           CALL                     0\n\n 35           STORE_NAME              16 (evaluate_decoder)\n\n108           LOAD_CONST               9 (<code object compute_score at 0x101b71930, file \"experiments/results/public_pr95_intake_20260504_codex/pr95_src/submissions/hnerv_muon/src/score.py\", line 108>)\n              MAKE_FUNCTION\n              STORE_NAME              17 (compute_score)\n\n126           LOAD_CONST              10 (<code object total_video_bytes at 0x10110de30, file \"experiments/results/public_pr95_intake_20260504_codex/pr95_src/submissions/hnerv_muon/src/score.py\", line 126>)\n              MAKE_FUNCTION\n              STORE_NAME              18 (total_video_bytes)\n              LOAD_CONST               1 (None)\n              RETURN_VALUE\n"
+}

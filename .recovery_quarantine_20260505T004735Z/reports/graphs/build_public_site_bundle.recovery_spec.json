@@ -1,0 +1,695 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/reports/graphs/__pycache__/build_public_site_bundle.cpython-312.pyc",
+  "names": [
+    "__doc__",
+    "__future__",
+    "annotations",
+    "argparse",
+    "json",
+    "re",
+    "shutil",
+    "sys",
+    "dataclasses",
+    "dataclass",
+    "pathlib",
+    "Path",
+    "__file__",
+    "resolve",
+    "parent",
+    "ROOT",
+    "parents",
+    "REPO_ROOT",
+    "str",
+    "path",
+    "insert",
+    "tac.preflight",
+    "check_public_release_hygiene",
+    "DEFAULT_SOURCE",
+    "DEFAULT_OUTPUT",
+    "DEFAULT_MAX_ASSET_BYTES",
+    "compile",
+    "REDACTIONS",
+    "__annotations__",
+    "RedactionRecord",
+    "_is_relative_to",
+    "_display_path",
+    "sanitize_text",
+    "_sanitize_file",
+    "_asset_size_violations",
+    "_remove_oversized_assets",
+    "build_public_site_bundle",
+    "main",
+    "__name__",
+    "SystemExit"
+  ],
+  "varnames": [],
+  "consts": [
+    "Build a sanitized Cloudflare Pages bundle from reports/graphs/site.\n\nThe historical site directory contains useful generated artifacts, but some of\nits JSON timelines preserve local operator paths for private custody. This\nbuilder copies the site into a separate public bundle and redacts private ops\nsurfaces before the strict publish hygiene guard runs.\n",
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "dataclass"
+    ],
+    [
+      "Path"
+    ],
+    1,
+    [
+      "check_public_release_hygiene"
+    ],
+    "site",
+    "public_site",
+    26214400,
+    "local_absolute_operator_path",
+    "(?<![A-Za-z0-9_])/(?:Users|home|private|tmp|teamspace|var/folders)(?:/[^\\s)\\\"'<>`]*)?",
+    "${LOCAL_PATH_REDACTED}",
+    "private_lightning_studio_url",
+    "https://lightning\\.ai/[^/\\s)]+/[^/\\s)]+/studios/[^\\s)\\\"'<>]*",
+    "${LIGHTNING_PRIVATE_URL_REDACTED}",
+    "vast_ssh_endpoint",
+    "\\bssh\\d+\\.vast\\.ai(?::\\d+)?\\b",
+    "${VAST_SSH_REDACTED}",
+    "api_token",
+    "\\b(?:sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9_]{20,}|hf_[A-Za-z0-9]{20,})\\b",
+    "${TOKEN_REDACTED}",
+    "secret_env_assignment",
+    "\\b(VAST_API_KEY|LIGHTNING_API_KEY|CLOUDFLARE_API_TOKEN|OPENAI_API_KEY)\\s*=\\s*[^\\s\\\"'`]+",
+    "\\1=${SECRET_REDACTED}",
+    "modal_call_id",
+    "\\bfc-[A-Z0-9]{20,}\\b",
+    "${MODAL_ID_REDACTED}",
+    "modal_app_id",
+    "\\bap-[A-Za-z0-9]{10,}\\b",
+    "tuple[tuple[str, re.Pattern[str], str], ...]",
+    "REDACTIONS",
+    true,
+    [
+      "frozen"
+    ],
+    {
+      "__code__": "RedactionRecord",
+      "qualname": "RedactionRecord",
+      "argcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "__annotations__"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "RedactionRecord",
+    {
+      "__code__": "_is_relative_to",
+      "qualname": "_is_relative_to",
+      "argcount": 2,
+      "varnames": [
+        "path",
+        "parent"
+      ],
+      "names": [
+        "resolve",
+        "relative_to",
+        "ValueError"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_display_path",
+      "qualname": "_display_path",
+      "argcount": 1,
+      "varnames": [
+        "path"
+      ],
+      "names": [
+        "resolve",
+        "relative_to",
+        "REPO_ROOT",
+        "as_posix",
+        "ValueError"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "sanitize_text",
+      "qualname": "sanitize_text",
+      "argcount": 1,
+      "varnames": [
+        "text",
+        "records",
+        "out",
+        "label",
+        "pattern",
+        "replacement",
+        "count"
+      ],
+      "names": [
+        "REDACTIONS",
+        "subn",
+        "append"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_sanitize_file",
+      "qualname": "_sanitize_file",
+      "argcount": 2,
+      "varnames": [
+        "path",
+        "root",
+        "text",
+        "sanitized",
+        "raw_records",
+        "rel",
+        "label",
+        "count"
+      ],
+      "names": [
+        "read_text",
+        "UnicodeDecodeError",
+        "sanitize_text",
+        "write_text",
+        "relative_to",
+        "as_posix",
+        "RedactionRecord"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_asset_size_violations",
+      "qualname": "_asset_size_violations",
+      "argcount": 2,
+      "varnames": [
+        "root",
+        "max_asset_bytes",
+        "violations",
+        "path"
+      ],
+      "names": [
+        "sorted",
+        "rglob",
+        "is_file",
+        "stat",
+        "st_size",
+        "append",
+        "relative_to",
+        "as_posix"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_remove_oversized_assets",
+      "qualname": "_remove_oversized_assets",
+      "argcount": 2,
+      "varnames": [
+        "root",
+        "max_asset_bytes",
+        "omitted",
+        "path",
+        "size"
+      ],
+      "names": [
+        "sorted",
+        "rglob",
+        "is_file",
+        "stat",
+        "st_size",
+        "append",
+        "relative_to",
+        "as_posix",
+        "unlink"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "omit",
+    [
+      "max_asset_bytes",
+      "oversized_policy",
+      "strict_hygiene"
+    ],
+    {
+      "__code__": "build_public_site_bundle",
+      "qualname": "build_public_site_bundle",
+      "argcount": 2,
+      "varnames": [
+        "source",
+        "output",
+        "max_asset_bytes",
+        "oversized_policy",
+        "strict_hygiene",
+        "redactions",
+        "path",
+        "omitted_oversized_assets",
+        "size_violations",
+        "hygiene_violations",
+        "record",
+        "manifest"
+      ],
+      "names": [
+        "ValueError",
+        "resolve",
+        "is_dir",
+        "FileNotFoundError",
+        "_is_relative_to",
+        "exists",
+        "shutil",
+        "rmtree",
+        "copytree",
+        "sorted",
+        "rglob",
+        "is_file",
+        "extend",
+        "_sanitize_file",
+        "_remove_oversized_assets",
+        "_asset_size_violations",
+        "RuntimeError",
+        "join",
+        "check_public_release_hygiene",
+        "REPO_ROOT",
+        "_display_path",
+        "sum",
+        "__dict__",
+        "len",
+        "write_text",
+        "json",
+        "dumps"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "main",
+      "qualname": "main",
+      "argcount": 0,
+      "varnames": [
+        "parser",
+        "args",
+        "manifest"
+      ],
+      "names": [
+        "argparse",
+        "ArgumentParser",
+        "__doc__",
+        "add_argument",
+        "Path",
+        "DEFAULT_SOURCE",
+        "DEFAULT_OUTPUT",
+        "int",
+        "DEFAULT_MAX_ASSET_BYTES",
+        "parse_args",
+        "build_public_site_bundle",
+        "source",
+        "output",
+        "max_asset_bytes",
+        "oversized_policy",
+        "no_strict_hygiene",
+        "print",
+        "json",
+        "dumps"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "__main__",
+    [
+      "path",
+      "Path",
+      "parent",
+      "Path",
+      "return",
+      "bool"
+    ],
+    [
+      "path",
+      "Path",
+      "return",
+      "str"
+    ],
+    [
+      "text",
+      "str",
+      "return",
+      "tuple[str, list[tuple[str, int]]]"
+    ],
+    [
+      "path",
+      "Path",
+      "root",
+      "Path",
+      "return",
+      "list[RedactionRecord]"
+    ],
+    [
+      "root",
+      "Path",
+      "max_asset_bytes",
+      "int",
+      "return",
+      "list[str]"
+    ],
+    [
+      "root",
+      "Path",
+      "max_asset_bytes",
+      "int",
+      "return",
+      "list[dict[str, object]]"
+    ],
+    [
+      "source",
+      "Path",
+      "output",
+      "Path",
+      "max_asset_bytes",
+      "int",
+      "oversized_policy",
+      "str",
+      "strict_hygiene",
+      "bool",
+      "return",
+      "dict[str, object]"
+    ],
+    [
+      "return",
+      "int"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": "Build a sanitized Cloudflare Pages bundle from reports/graphs/site.\n\nThe historical site directory contains useful generated artifacts, but some of\nits JSON timelines preserve local operator paths for private custody. This\nbuilder copies the site into a separate public bundle and redacts private ops\nsurfaces before the strict publish hygiene guard runs.\n",
+  "child_codes": [
+    {
+      "qualname": "RedactionRecord",
+      "name": "RedactionRecord",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "__annotations__"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "RedactionRecord",
+      "dis": " 76           0 RESUME                   0\n              2 LOAD_NAME                0 (__name__)\n              4 STORE_NAME               1 (__module__)\n              6 LOAD_CONST               0 ('RedactionRecord')\n              8 STORE_NAME               2 (__qualname__)\n             10 SETUP_ANNOTATIONS\n\n 78          12 LOAD_CONST               1 ('str')\n             14 LOAD_NAME                3 (__annotations__)\n             16 LOAD_CONST               2 ('path')\n             18 STORE_SUBSCR\n\n 79          22 LOAD_CONST               1 ('str')\n             24 LOAD_NAME                3 (__annotations__)\n             26 LOAD_CONST               3 ('label')\n             28 STORE_SUBSCR\n\n 80          32 LOAD_CONST               4 ('int')\n             34 LOAD_NAME                3 (__annotations__)\n             36 LOAD_CONST               5 ('count')\n             38 STORE_SUBSCR\n             42 RETURN_CONST             6 (None)\n"
+    },
+    {
+      "qualname": "_is_relative_to",
+      "name": "_is_relative_to",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "parent"
+      ],
+      "names": [
+        "resolve",
+        "relative_to",
+        "ValueError"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 83           0 RESUME                   0\n\n 84           2 NOP\n\n 85           4 LOAD_FAST                0 (path)\n              6 LOAD_ATTR                1 (NULL|self + resolve)\n             26 CALL                     0\n             34 LOAD_ATTR                3 (NULL|self + relative_to)\n             54 LOAD_FAST                1 (parent)\n             56 LOAD_ATTR                1 (NULL|self + resolve)\n             76 CALL                     0\n             84 CALL                     1\n             92 POP_TOP\n\n 88          94 RETURN_CONST             2 (True)\n        >>   96 PUSH_EXC_INFO\n\n 86          98 LOAD_GLOBAL              4 (ValueError)\n            108 CHECK_EXC_MATCH\n            110 POP_JUMP_IF_FALSE        3 (to 118)\n            112 POP_TOP\n\n 87         114 POP_EXCEPT\n            116 RETURN_CONST             1 (False)\n\n 86     >>  118 RERAISE                  0\n        >>  120 COPY                     3\n            122 POP_EXCEPT\n            124 RERAISE                  1\nExceptionTable:\n  4 to 92 -> 96 [0]\n  96 to 112 -> 120 [1] lasti\n  118 to 118 -> 120 [1] lasti\n"
+    },
+    {
+      "qualname": "_display_path",
+      "name": "_display_path",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path"
+      ],
+      "names": [
+        "resolve",
+        "relative_to",
+        "REPO_ROOT",
+        "as_posix",
+        "ValueError"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 91           0 RESUME                   0\n\n 92           2 NOP\n\n 93           4 LOAD_FAST                0 (path)\n              6 LOAD_ATTR                1 (NULL|self + resolve)\n             26 CALL                     0\n             34 LOAD_ATTR                3 (NULL|self + relative_to)\n             54 LOAD_GLOBAL              4 (REPO_ROOT)\n             64 CALL                     1\n             72 LOAD_ATTR                7 (NULL|self + as_posix)\n             92 CALL                     0\n            100 RETURN_VALUE\n        >>  102 PUSH_EXC_INFO\n\n 94         104 LOAD_GLOBAL              8 (ValueError)\n            114 CHECK_EXC_MATCH\n            116 POP_JUMP_IF_FALSE       19 (to 156)\n            118 POP_TOP\n\n 95         120 LOAD_FAST                0 (path)\n            122 LOAD_ATTR                7 (NULL|self + as_posix)\n            142 CALL                     0\n            150 SWAP                     2\n            152 POP_EXCEPT\n            154 RETURN_VALUE\n\n 94     >>  156 RERAISE                  0\n        >>  158 COPY                     3\n            160 POP_EXCEPT\n            162 RERAISE                  1\nExceptionTable:\n  4 to 98 -> 102 [0]\n  102 to 150 -> 158 [1] lasti\n  156 to 156 -> 158 [1] lasti\n"
+    },
+    {
+      "qualname": "sanitize_text",
+      "name": "sanitize_text",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "text",
+        "records",
+        "out",
+        "label",
+        "pattern",
+        "replacement",
+        "count"
+      ],
+      "names": [
+        "REDACTIONS",
+        "subn",
+        "append"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 98           0 RESUME                   0\n\n 99           2 BUILD_LIST               0\n              4 STORE_FAST               1 (records)\n\n100           6 LOAD_FAST                0 (text)\n              8 STORE_FAST               2 (out)\n\n101          10 LOAD_GLOBAL              0 (REDACTIONS)\n             20 GET_ITER\n        >>   22 FOR_ITER                49 (to 124)\n             26 UNPACK_SEQUENCE          3\n             30 STORE_FAST               3 (label)\n             32 STORE_FAST               4 (pattern)\n             34 STORE_FAST               5 (replacement)\n\n102          36 LOAD_FAST                4 (pattern)\n             38 LOAD_ATTR                3 (NULL|self + subn)\n             58 LOAD_FAST                5 (replacement)\n             60 LOAD_FAST                2 (out)\n             62 CALL                     2\n             70 UNPACK_SEQUENCE          2\n             74 STORE_FAST               2 (out)\n             76 STORE_FAST               6 (count)\n\n103          78 LOAD_FAST                6 (count)\n             80 POP_JUMP_IF_TRUE         1 (to 84)\n             82 JUMP_BACKWARD           31 (to 22)\n\n104     >>   84 LOAD_FAST                1 (records)\n             86 LOAD_ATTR                5 (NULL|self + append)\n            106 LOAD_FAST                3 (label)\n            108 LOAD_FAST                6 (count)\n            110 BUILD_TUPLE              2\n            112 CALL                     1\n            120 POP_TOP\n            122 JUMP_BACKWARD           51 (to 22)\n\n101     >>  124 END_FOR\n\n105         126 LOAD_FAST                2 (out)\n            128 LOAD_FAST                1 (records)\n            130 BUILD_TUPLE              2\n            132 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_sanitize_file",
+      "name": "_sanitize_file",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "root",
+        "text",
+        "sanitized",
+        "raw_records",
+        "rel",
+        "label",
+        "count"
+      ],
+      "names": [
+        "read_text",
+        "UnicodeDecodeError",
+        "sanitize_text",
+        "write_text",
+        "relative_to",
+        "as_posix",
+        "RedactionRecord"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "108           0 RESUME                   0\n\n109           2 NOP\n\n110           4 LOAD_FAST                0 (path)\n              6 LOAD_ATTR                1 (NULL|self + read_text)\n             26 LOAD_CONST               1 ('utf-8')\n             28 KW_NAMES                 2 (('encoding',))\n             30 CALL                     1\n             38 STORE_FAST               2 (text)\n\n113          40 LOAD_GLOBAL              5 (NULL + sanitize_text)\n             50 LOAD_FAST                2 (text)\n             52 CALL                     1\n             60 UNPACK_SEQUENCE          2\n             64 STORE_FAST               3 (sanitized)\n             66 STORE_FAST               4 (raw_records)\n\n114          68 LOAD_FAST                3 (sanitized)\n             70 LOAD_FAST                2 (text)\n             72 COMPARE_OP              55 (!=)\n             76 POP_JUMP_IF_FALSE       19 (to 116)\n\n115          78 LOAD_FAST                0 (path)\n             80 LOAD_ATTR                7 (NULL|self + write_text)\n            100 LOAD_FAST                3 (sanitized)\n            102 LOAD_CONST               1 ('utf-8')\n            104 KW_NAMES                 2 (('encoding',))\n            106 CALL                     2\n            114 POP_TOP\n\n116     >>  116 LOAD_FAST                0 (path)\n            118 LOAD_ATTR                9 (NULL|self + relative_to)\n            138 LOAD_FAST                1 (root)\n            140 CALL                     1\n            148 LOAD_ATTR               11 (NULL|self + as_posix)\n            168 CALL                     0\n            176 STORE_FAST               5 (rel)\n\n117         178 LOAD_FAST                4 (raw_records)\n            180 GET_ITER\n            182 LOAD_FAST_AND_CLEAR      6 (label)\n            184 LOAD_FAST_AND_CLEAR      7 (count)\n            186 SWAP                     3\n            188 BUILD_LIST               0\n            190 SWAP                     2\n        >>  192 FOR_ITER                19 (to 234)\n            196 UNPACK_SEQUENCE          2\n            200 STORE_FAST               6 (label)\n            202 STORE_FAST               7 (count)\n            204 LOAD_GLOBAL             13 (NULL + RedactionRecord)\n            214 LOAD_FAST                5 (rel)\n            216 LOAD_FAST                6 (label)\n            218 LOAD_FAST                7 (count)\n            220 KW_NAMES                 3 (('path', 'label', 'count'))\n            222 CALL                     3\n            230 LIST_APPEND              2\n            232 JUMP_BACKWARD           21 (to 192)\n        >>  234 END_FOR\n            236 SWAP                     3\n            238 STORE_FAST               7 (count)\n            240 STORE_FAST               6 (label)\n            242 RETURN_VALUE\n        >>  244 PUSH_EXC_INFO\n\n111         246 LOAD_GLOBAL              2 (UnicodeDecodeError)\n            256 CHECK_EXC_MATCH\n            258 POP_JUMP_IF_FALSE        5 (to 270)\n            260 POP_TOP\n\n112         262 BUILD_LIST               0\n            264 SWAP                     2\n            266 POP_EXCEPT\n            268 RETURN_VALUE\n\n111     >>  270 RERAISE                  0\n        >>  272 COPY                     3\n            274 POP_EXCEPT\n            276 RERAISE                  1\n        >>  278 SWAP                     2\n            280 POP_TOP\n\n117         282 SWAP                     3\n            284 STORE_FAST               7 (count)\n            286 STORE_FAST               6 (label)\n            288 RERAISE                  0\nExceptionTable:\n  4 to 38 -> 244 [0]\n  188 to 234 -> 278 [3]\n  244 to 264 -> 272 [1] lasti\n  270 to 270 -> 272 [1] lasti\n"
+    },
+    {
+      "qualname": "_asset_size_violations",
+      "name": "_asset_size_violations",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "root",
+        "max_asset_bytes",
+        "violations",
+        "path"
+      ],
+      "names": [
+        "sorted",
+        "rglob",
+        "is_file",
+        "stat",
+        "st_size",
+        "append",
+        "relative_to",
+        "as_posix"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "120           0 RESUME                   0\n\n121           2 BUILD_LIST               0\n              4 STORE_FAST               2 (violations)\n\n122           6 LOAD_GLOBAL              1 (NULL + sorted)\n             16 LOAD_FAST                0 (root)\n             18 LOAD_ATTR                3 (NULL|self + rglob)\n             38 LOAD_CONST               1 ('*')\n             40 CALL                     1\n             48 CALL                     1\n             56 GET_ITER\n        >>   58 FOR_ITER               124 (to 310)\n             62 STORE_FAST               3 (path)\n\n123          64 LOAD_FAST                3 (path)\n             66 LOAD_ATTR                5 (NULL|self + is_file)\n             86 CALL                     0\n             94 POP_JUMP_IF_TRUE         1 (to 98)\n             96 JUMP_BACKWARD           20 (to 58)\n        >>   98 LOAD_FAST                3 (path)\n            100 LOAD_ATTR                7 (NULL|self + stat)\n            120 CALL                     0\n            128 LOAD_ATTR                8 (st_size)\n            148 LOAD_FAST                1 (max_asset_bytes)\n            150 COMPARE_OP              68 (>)\n            154 POP_JUMP_IF_TRUE         1 (to 158)\n            156 JUMP_BACKWARD           50 (to 58)\n\n124     >>  158 LOAD_FAST                2 (violations)\n            160 LOAD_ATTR               11 (NULL|self + append)\n            180 LOAD_FAST                3 (path)\n            182 LOAD_ATTR               13 (NULL|self + relative_to)\n            202 LOAD_FAST                0 (root)\n            204 CALL                     1\n            212 LOAD_ATTR               15 (NULL|self + as_posix)\n            232 CALL                     0\n            240 FORMAT_VALUE             0\n            242 LOAD_CONST               2 (':')\n            244 LOAD_FAST                3 (path)\n            246 LOAD_ATTR                7 (NULL|self + stat)\n            266 CALL                     0\n            274 LOAD_ATTR                8 (st_size)\n            294 FORMAT_VALUE             0\n            296 BUILD_STRING             3\n            298 CALL                     1\n            306 POP_TOP\n            308 JUMP_BACKWARD          126 (to 58)\n\n122     >>  310 END_FOR\n\n125         312 LOAD_FAST                2 (violations)\n            314 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_remove_oversized_assets",
+      "name": "_remove_oversized_assets",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "root",
+        "max_asset_bytes",
+        "omitted",
+        "path",
+        "size"
+      ],
+      "names": [
+        "sorted",
+        "rglob",
+        "is_file",
+        "stat",
+        "st_size",
+        "append",
+        "relative_to",
+        "as_posix",
+        "unlink"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "128           0 RESUME                   0\n\n129           2 BUILD_LIST               0\n              4 STORE_FAST               2 (omitted)\n\n130           6 LOAD_GLOBAL              1 (NULL + sorted)\n             16 LOAD_FAST                0 (root)\n             18 LOAD_ATTR                3 (NULL|self + rglob)\n             38 LOAD_CONST               1 ('*')\n             40 CALL                     1\n             48 CALL                     1\n             56 GET_ITER\n        >>   58 FOR_ITER               116 (to 294)\n             62 STORE_FAST               3 (path)\n\n131          64 LOAD_FAST                3 (path)\n             66 LOAD_ATTR                5 (NULL|self + is_file)\n             86 CALL                     0\n             94 POP_JUMP_IF_TRUE         1 (to 98)\n\n132          96 JUMP_BACKWARD           20 (to 58)\n\n133     >>   98 LOAD_FAST                3 (path)\n            100 LOAD_ATTR                7 (NULL|self + stat)\n            120 CALL                     0\n            128 LOAD_ATTR                8 (st_size)\n            148 STORE_FAST               4 (size)\n\n134         150 LOAD_FAST                4 (size)\n            152 LOAD_FAST                1 (max_asset_bytes)\n            154 COMPARE_OP              26 (<=)\n            158 POP_JUMP_IF_FALSE        1 (to 162)\n\n135         160 JUMP_BACKWARD           52 (to 58)\n\n136     >>  162 LOAD_FAST                2 (omitted)\n            164 LOAD_ATTR               11 (NULL|self + append)\n            184 LOAD_FAST                3 (path)\n            186 LOAD_ATTR               13 (NULL|self + relative_to)\n            206 LOAD_FAST                0 (root)\n            208 CALL                     1\n            216 LOAD_ATTR               15 (NULL|self + as_posix)\n            236 CALL                     0\n            244 LOAD_FAST                4 (size)\n            246 LOAD_CONST               2 (('path', 'bytes'))\n            248 BUILD_CONST_KEY_MAP      2\n            250 CALL                     1\n            258 POP_TOP\n\n137         260 LOAD_FAST                3 (path)\n            262 LOAD_ATTR               17 (NULL|self + unlink)\n            282 CALL                     0\n            290 POP_TOP\n            292 JUMP_BACKWARD          118 (to 58)\n\n130     >>  294 END_FOR\n\n138         296 LOAD_FAST                2 (omitted)\n            298 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "build_public_site_bundle",
+      "name": "build_public_site_bundle",
+      "argcount": 2,
+      "kwonlyargcount": 3,
+      "varnames": [
+        "source",
+        "output",
+        "max_asset_bytes",
+        "oversized_policy",
+        "strict_hygiene",
+        "redactions",
+        "path",
+        "omitted_oversized_assets",
+        "size_violations",
+        "hygiene_violations",
+        "record",
+        "manifest"
+      ],
+      "names": [
+        "ValueError",
+        "resolve",
+        "is_dir",
+        "FileNotFoundError",
+        "_is_relative_to",
+        "exists",
+        "shutil",
+        "rmtree",
+        "copytree",
+        "sorted",
+        "rglob",
+        "is_file",
+        "extend",
+        "_sanitize_file",
+        "_remove_oversized_assets",
+        "_asset_size_violations",
+        "RuntimeError",
+        "join",
+        "check_public_release_hygiene",
+        "REPO_ROOT",
+        "_display_path",
+        "sum",
+        "__dict__",
+        "len",
+        "write_text",
+        "json",
+        "dumps"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "141           0 RESUME                   0\n\n149           2 LOAD_FAST                3 (oversized_policy)\n              4 LOAD_CONST               1 (frozenset({'fail', 'omit'}))\n              6 CONTAINS_OP              1\n              8 POP_JUMP_IF_FALSE       11 (to 32)\n\n150          10 LOAD_GLOBAL              1 (NULL + ValueError)\n             20 LOAD_CONST               2 (\"oversized_policy must be 'omit' or 'fail'\")\n             22 CALL                     1\n             30 RAISE_VARARGS            1\n\n151     >>   32 LOAD_FAST                0 (source)\n             34 LOAD_ATTR                3 (NULL|self + resolve)\n             54 CALL                     0\n             62 STORE_FAST               0 (source)\n\n152          64 LOAD_FAST                1 (output)\n             66 LOAD_ATTR                3 (NULL|self + resolve)\n             86 CALL                     0\n             94 STORE_FAST               1 (output)\n\n153          96 LOAD_FAST                0 (source)\n             98 LOAD_ATTR                5 (NULL|self + is_dir)\n            118 CALL                     0\n            126 POP_JUMP_IF_TRUE        14 (to 156)\n\n154         128 LOAD_GLOBAL              7 (NULL + FileNotFoundError)\n            138 LOAD_CONST               3 ('missing source site directory: ')\n            140 LOAD_FAST                0 (source)\n            142 FORMAT_VALUE             0\n            144 BUILD_STRING             2\n            146 CALL                     1\n            154 RAISE_VARARGS            1\n\n155     >>  156 LOAD_FAST                0 (source)\n            158 LOAD_FAST                1 (output)\n            160 COMPARE_OP              40 (==)\n            164 POP_JUMP_IF_TRUE        12 (to 190)\n            166 LOAD_GLOBAL              9 (NULL + _is_relative_to)\n            176 LOAD_FAST                1 (output)\n            178 LOAD_FAST                0 (source)\n            180 CALL                     2\n            188 POP_JUMP_IF_FALSE       11 (to 212)\n\n156     >>  190 LOAD_GLOBAL              1 (NULL + ValueError)\n            200 LOAD_CONST               4 ('output must not be inside source')\n            202 CALL                     1\n            210 RAISE_VARARGS            1\n\n157     >>  212 LOAD_FAST                1 (output)\n            214 LOAD_ATTR               11 (NULL|self + exists)\n            234 CALL                     0\n            242 POP_JUMP_IF_FALSE       21 (to 286)\n\n158         244 LOAD_GLOBAL             13 (NULL + shutil)\n            254 LOAD_ATTR               14 (rmtree)\n            274 LOAD_FAST                1 (output)\n            276 CALL                     1\n            284 POP_TOP\n\n159     >>  286 LOAD_GLOBAL             13 (NULL + shutil)\n            296 LOAD_ATTR               16 (copytree)\n            316 LOAD_FAST                0 (source)\n            318 LOAD_FAST                1 (output)\n            320 CALL                     2\n            328 POP_TOP\n\n161         330 BUILD_LIST               0\n            332 STORE_FAST               5 (redactions)\n\n162         334 LOAD_GLOBAL             19 (NULL + sorted)\n            344 LOAD_FAST                1 (output)\n            346 LOAD_ATTR               21 (NULL|self + rglob)\n            366 LOAD_CONST               5 ('*')\n            368 CALL                     1\n            376 CALL                     1\n            384 GET_ITER\n        >>  386 FOR_ITER                46 (to 482)\n            390 STORE_FAST               6 (path)\n\n163         392 LOAD_FAST                6 (path)\n            394 LOAD_ATTR               23 (NULL|self + is_file)\n            414 CALL                     0\n            422 POP_JUMP_IF_TRUE         1 (to 426)\n            424 JUMP_BACKWARD           20 (to 386)\n\n164     >>  426 LOAD_FAST                5 (redactions)\n            428 LOAD_ATTR               25 (NULL|self + extend)\n            448 LOAD_GLOBAL             27 (NULL + _sanitize_file)\n            458 LOAD_FAST                6 (path)\n            460 LOAD_FAST                1 (output)\n            462 CALL                     2\n            470 CALL                     1\n            478 POP_TOP\n            480 JUMP_BACKWARD           48 (to 386)\n\n162     >>  482 END_FOR\n\n166         484 BUILD_LIST               0\n            486 STORE_FAST               7 (omitted_oversized_assets)\n\n167         488 LOAD_FAST                3 (oversized_policy)\n            490 LOAD_CONST               6 ('omit')\n            492 COMPARE_OP              40 (==)\n            496 POP_JUMP_IF_FALSE       12 (to 522)\n\n168         498 LOAD_GLOBAL             29 (NULL + _remove_oversized_assets)\n            508 LOAD_FAST                1 (output)\n            510 LOAD_FAST                2 (max_asset_bytes)\n            512 CALL                     2\n            520 STORE_FAST               7 (omitted_oversized_assets)\n\n169     >>  522 LOAD_GLOBAL             31 (NULL + _asset_size_violations)\n            532 LOAD_FAST                1 (output)\n            534 LOAD_FAST                2 (max_asset_bytes)\n            536 CALL                     2\n            544 STORE_FAST               8 (size_violations)\n\n170         546 LOAD_FAST                8 (size_violations)\n            548 POP_JUMP_IF_FALSE       36 (to 622)\n\n171         550 LOAD_GLOBAL             33 (NULL + RuntimeError)\n\n172         560 LOAD_CONST               7 ('public site asset exceeds size limit:\\n')\n\n173         562 LOAD_CONST               8 ('\\n')\n            564 LOAD_ATTR               35 (NULL|self + join)\n            584 LOAD_CONST               9 (<code object <genexpr> at 0x104cacc60, file \"/Users/adpena/Projects/pact/reports/graphs/build_public_site_bundle.py\", line 173>)\n            586 MAKE_FUNCTION            0\n            588 LOAD_FAST                8 (size_violations)\n            590 GET_ITER\n            592 CALL                     0\n            600 CALL                     1\n\n172         608 BINARY_OP                0 (+)\n\n171         612 CALL                     1\n            620 RAISE_VARARGS            1\n\n176     >>  622 LOAD_GLOBAL             37 (NULL + check_public_release_hygiene)\n\n177         632 LOAD_GLOBAL             38 (REPO_ROOT)\n\n178         642 LOAD_FAST                4 (strict_hygiene)\n\n179         644 LOAD_CONST              10 (False)\n\n180         646 LOAD_FAST                1 (output)\n            648 BUILD_LIST               1\n\n176         650 KW_NAMES                11 (('repo_root', 'strict', 'verbose', 'scan_paths'))\n            652 CALL                     4\n            660 STORE_FAST               9 (hygiene_violations)\n\n184         662 LOAD_CONST              12 (1)\n\n185         664 LOAD_GLOBAL             41 (NULL + _display_path)\n            674 LOAD_FAST                0 (source)\n            676 CALL                     1\n\n186         684 LOAD_GLOBAL             41 (NULL + _display_path)\n            694 LOAD_FAST                1 (output)\n            696 CALL                     1\n\n187         704 LOAD_GLOBAL             43 (NULL + sum)\n            714 LOAD_CONST              13 (<code object <genexpr> at 0x104d16ab0, file \"/Users/adpena/Projects/pact/reports/graphs/build_public_site_bundle.py\", line 187>)\n            716 MAKE_FUNCTION            0\n            718 LOAD_FAST                1 (output)\n            720 LOAD_ATTR               21 (NULL|self + rglob)\n            740 LOAD_CONST               5 ('*')\n            742 CALL                     1\n            750 GET_ITER\n            752 CALL                     0\n            760 CALL                     1\n\n188         768 LOAD_GLOBAL             43 (NULL + sum)\n            778 LOAD_CONST              14 (<code object <genexpr> at 0x104d0cd30, file \"/Users/adpena/Projects/pact/reports/graphs/build_public_site_bundle.py\", line 188>)\n            780 MAKE_FUNCTION            0\n            782 LOAD_FAST                5 (redactions)\n            784 GET_ITER\n            786 CALL                     0\n            794 CALL                     1\n\n189         802 LOAD_FAST                5 (redactions)\n            804 GET_ITER\n            806 LOAD_FAST_AND_CLEAR     10 (record)\n            808 SWAP                     2\n            810 BUILD_LIST               0\n            812 SWAP                     2\n        >>  814 FOR_ITER                14 (to 846)\n            818 STORE_FAST              10 (record)\n            820 LOAD_FAST               10 (record)\n            822 LOAD_ATTR               44 (__dict__)\n            842 LIST_APPEND              2\n            844 JUMP_BACKWARD           16 (to 814)\n        >>  846 END_FOR\n            848 SWAP                     2\n            850 STORE_FAST              10 (record)\n\n190         852 LOAD_FAST                7 (omitted_oversized_assets)\n\n191         854 LOAD_GLOBAL             47 (NULL + len)\n            864 LOAD_FAST                9 (hygiene_violations)\n            866 CALL                     1\n\n192         874 LOAD_FAST                2 (max_asset_bytes)\n\n193         876 LOAD_FAST                3 (oversized_policy)\n\n194         878 LOAD_CONST              10 (False)\n\n195         880 LOAD_CONST              10 (False)\n\n196         882 LOAD_CONST              15 ('public_cloudflare_pages_supplement_bundle')\n\n183         884 LOAD_CONST              16 (('schema_version', 'source', 'output', 'file_count', 'redaction_count', 'redactions', 'omitted_oversized_assets', 'hygiene_violation_count', 'max_asset_bytes', 'oversized_policy', 'score_claim', 'promotion_claim', 'allowed_use'))\n            886 BUILD_CONST_KEY_MAP     13\n            888 STORE_FAST              11 (manifest)\n\n198         890 LOAD_FAST                1 (output)\n            892 LOAD_CONST              17 ('public_site_manifest.json')\n            894 BINARY_OP               11 (/)\n            898 LOAD_ATTR               49 (NULL|self + write_text)\n\n199         918 LOAD_GLOBAL             51 (NULL + json)\n            928 LOAD_ATTR               52 (dumps)\n            948 LOAD_FAST               11 (manifest)\n            950 LOAD_CONST              18 (2)\n            952 LOAD_CONST              19 (True)\n            954 KW_NAMES                20 (('indent', 'sort_keys'))\n            956 CALL                     3\n            964 LOAD_CONST               8 ('\\n')\n            966 BINARY_OP                0 (+)\n\n200         970 LOAD_CONST              21 ('utf-8')\n\n198         972 KW_NAMES                22 (('encoding',))\n            974 CALL                     2\n            982 POP_TOP\n\n202         984 LOAD_FAST               11 (manifest)\n            986 RETURN_VALUE\n        >>  988 SWAP                     2\n            990 POP_TOP\n\n189         992 SWAP                     2\n            994 STORE_FAST              10 (record)\n            996 RERAISE                  0\nExceptionTable:\n  810 to 846 -> 988 [7]\n"
+    },
+    {
+      "qualname": "build_public_site_bundle.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "item"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "  - ",
+      "dis": "173           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                 9 (to 30)\n             12 STORE_FAST               1 (item)\n             14 LOAD_CONST               0 ('  - ')\n             16 LOAD_FAST                1 (item)\n             18 FORMAT_VALUE             0\n             20 BUILD_STRING             2\n             22 YIELD_VALUE              1\n             24 RESUME                   1\n             26 POP_TOP\n             28 JUMP_BACKWARD           11 (to 8)\n        >>   30 END_FOR\n             32 RETURN_CONST             1 (None)\n        >>   34 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             36 RERAISE                  1\nExceptionTable:\n  4 to 32 -> 34 [0] lasti\n"
+    },
+    {
+      "qualname": "build_public_site_bundle.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "path"
+      ],
+      "names": [
+        "is_file"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "187           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                23 (to 58)\n             12 STORE_FAST               1 (path)\n             14 LOAD_FAST                1 (path)\n             16 LOAD_ATTR                1 (NULL|self + is_file)\n             36 CALL                     0\n             44 POP_JUMP_IF_TRUE         1 (to 48)\n             46 JUMP_BACKWARD           20 (to 8)\n        >>   48 LOAD_CONST               0 (1)\n             50 YIELD_VALUE              1\n             52 RESUME                   1\n             54 POP_TOP\n             56 JUMP_BACKWARD           25 (to 8)\n        >>   58 END_FOR\n             60 RETURN_CONST             1 (None)\n        >>   62 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             64 RERAISE                  1\nExceptionTable:\n  4 to 44 -> 62 [0] lasti\n  48 to 60 -> 62 [0] lasti\n"
+    },
+    {
+      "qualname": "build_public_site_bundle.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "record"
+      ],
+      "names": [
+        "count"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "188           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                16 (to 44)\n             12 STORE_FAST               1 (record)\n             14 LOAD_FAST                1 (record)\n             16 LOAD_ATTR                0 (count)\n             36 YIELD_VALUE              1\n             38 RESUME                   1\n             40 POP_TOP\n             42 JUMP_BACKWARD           18 (to 8)\n        >>   44 END_FOR\n             46 RETURN_CONST             0 (None)\n        >>   48 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             50 RERAISE                  1\nExceptionTable:\n  4 to 46 -> 48 [0] lasti\n"
+    },
+    {
+      "qualname": "main",
+      "name": "main",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "parser",
+        "args",
+        "manifest"
+      ],
+      "names": [
+        "argparse",
+        "ArgumentParser",
+        "__doc__",
+        "add_argument",
+        "Path",
+        "DEFAULT_SOURCE",
+        "DEFAULT_OUTPUT",
+        "int",
+        "DEFAULT_MAX_ASSET_BYTES",
+        "parse_args",
+        "build_public_site_bundle",
+        "source",
+        "output",
+        "max_asset_bytes",
+        "oversized_policy",
+        "no_strict_hygiene",
+        "print",
+        "json",
+        "dumps"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "205           0 RESUME                   0\n\n206           2 LOAD_GLOBAL              1 (NULL + argparse)\n             12 LOAD_ATTR                2 (ArgumentParser)\n             32 LOAD_GLOBAL              4 (__doc__)\n             42 KW_NAMES                 1 (('description',))\n             44 CALL                     1\n             52 STORE_FAST               0 (parser)\n\n207          54 LOAD_FAST                0 (parser)\n             56 LOAD_ATTR                7 (NULL|self + add_argument)\n             76 LOAD_CONST               2 ('--source')\n             78 LOAD_GLOBAL              8 (Path)\n             88 LOAD_GLOBAL             10 (DEFAULT_SOURCE)\n             98 KW_NAMES                 3 (('type', 'default'))\n            100 CALL                     3\n            108 POP_TOP\n\n208         110 LOAD_FAST                0 (parser)\n            112 LOAD_ATTR                7 (NULL|self + add_argument)\n            132 LOAD_CONST               4 ('--output')\n            134 LOAD_GLOBAL              8 (Path)\n            144 LOAD_GLOBAL             12 (DEFAULT_OUTPUT)\n            154 KW_NAMES                 3 (('type', 'default'))\n            156 CALL                     3\n            164 POP_TOP\n\n209         166 LOAD_FAST                0 (parser)\n            168 LOAD_ATTR                7 (NULL|self + add_argument)\n            188 LOAD_CONST               5 ('--max-asset-bytes')\n            190 LOAD_GLOBAL             14 (int)\n            200 LOAD_GLOBAL             16 (DEFAULT_MAX_ASSET_BYTES)\n            210 KW_NAMES                 3 (('type', 'default'))\n            212 CALL                     3\n            220 POP_TOP\n\n210         222 LOAD_FAST                0 (parser)\n            224 LOAD_ATTR                7 (NULL|self + add_argument)\n            244 LOAD_CONST               6 ('--oversized-policy')\n            246 LOAD_CONST               7 (('omit', 'fail'))\n            248 LOAD_CONST               8 ('omit')\n            250 KW_NAMES                 9 (('choices', 'default'))\n            252 CALL                     3\n            260 POP_TOP\n\n211         262 LOAD_FAST                0 (parser)\n            264 LOAD_ATTR                7 (NULL|self + add_argument)\n            284 LOAD_CONST              10 ('--no-strict-hygiene')\n            286 LOAD_CONST              11 ('store_true')\n            288 KW_NAMES                12 (('action',))\n            290 CALL                     2\n            298 POP_TOP\n\n212         300 LOAD_FAST                0 (parser)\n            302 LOAD_ATTR               19 (NULL|self + parse_args)\n            322 CALL                     0\n            330 STORE_FAST               1 (args)\n\n214         332 LOAD_GLOBAL             21 (NULL + build_public_site_bundle)\n\n215         342 LOAD_FAST                1 (args)\n            344 LOAD_ATTR               22 (source)\n\n216         364 LOAD_FAST                1 (args)\n            366 LOAD_ATTR               24 (output)\n\n217         386 LOAD_FAST                1 (args)\n            388 LOAD_ATTR               26 (max_asset_bytes)\n\n218         408 LOAD_FAST                1 (args)\n            410 LOAD_ATTR               28 (oversized_policy)\n\n219         430 LOAD_FAST                1 (args)\n            432 LOAD_ATTR               30 (no_strict_hygiene)\n            452 UNARY_NOT\n\n214         454 KW_NAMES                13 (('max_asset_bytes', 'oversized_policy', 'strict_hygiene'))\n            456 CALL                     5\n            464 STORE_FAST               2 (manifest)\n\n221         466 LOAD_GLOBAL             33 (NULL + print)\n            476 LOAD_GLOBAL             35 (NULL + json)\n            486 LOAD_ATTR               36 (dumps)\n            506 LOAD_FAST                2 (manifest)\n            508 LOAD_CONST              14 (2)\n            510 LOAD_CONST              15 (True)\n            512 KW_NAMES                16 (('indent', 'sort_keys'))\n            514 CALL                     3\n            522 CALL                     1\n            530 POP_TOP\n\n222         532 RETURN_CONST            17 (0)\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  2           2 SETUP_ANNOTATIONS\n              4 LOAD_CONST               0 ('Build a sanitized Cloudflare Pages bundle from reports/graphs/site.\\n\\nThe historical site directory contains useful generated artifacts, but some of\\nits JSON timelines preserve local operator paths for private custody. This\\nbuilder copies the site into a separate public bundle and redacts private ops\\nsurfaces before the strict publish hygiene guard runs.\\n')\n              6 STORE_NAME               0 (__doc__)\n\n  9           8 LOAD_CONST               1 (0)\n             10 LOAD_CONST               2 (('annotations',))\n             12 IMPORT_NAME              1 (__future__)\n             14 IMPORT_FROM              2 (annotations)\n             16 STORE_NAME               2 (annotations)\n             18 POP_TOP\n\n 11          20 LOAD_CONST               1 (0)\n             22 LOAD_CONST               3 (None)\n             24 IMPORT_NAME              3 (argparse)\n             26 STORE_NAME               3 (argparse)\n\n 12          28 LOAD_CONST               1 (0)\n             30 LOAD_CONST               3 (None)\n             32 IMPORT_NAME              4 (json)\n             34 STORE_NAME               4 (json)\n\n 13          36 LOAD_CONST               1 (0)\n             38 LOAD_CONST               3 (None)\n             40 IMPORT_NAME              5 (re)\n             42 STORE_NAME               5 (re)\n\n 14          44 LOAD_CONST               1 (0)\n             46 LOAD_CONST               3 (None)\n             48 IMPORT_NAME              6 (shutil)\n             50 STORE_NAME               6 (shutil)\n\n 15          52 LOAD_CONST               1 (0)\n             54 LOAD_CONST               3 (None)\n             56 IMPORT_NAME              7 (sys)\n             58 STORE_NAME               7 (sys)\n\n 16          60 LOAD_CONST               1 (0)\n             62 LOAD_CONST               4 (('dataclass',))\n             64 IMPORT_NAME              8 (dataclasses)\n             66 IMPORT_FROM              9 (dataclass)\n             68 STORE_NAME               9 (dataclass)\n             70 POP_TOP\n\n 17          72 LOAD_CONST               1 (0)\n             74 LOAD_CONST               5 (('Path',))\n             76 IMPORT_NAME             10 (pathlib)\n             78 IMPORT_FROM             11 (Path)\n             80 STORE_NAME              11 (Path)\n             82 POP_TOP\n\n 20          84 PUSH_NULL\n             86 LOAD_NAME               11 (Path)\n             88 LOAD_NAME               12 (__file__)\n             90 CALL                     1\n             98 LOAD_ATTR               27 (NULL|self + resolve)\n            118 CALL                     0\n            126 LOAD_ATTR               28 (parent)\n            146 STORE_NAME              15 (ROOT)\n\n 21         148 LOAD_NAME               15 (ROOT)\n            150 LOAD_ATTR               32 (parents)\n            170 LOAD_CONST               6 (1)\n            172 BINARY_SUBSCR\n            176 STORE_NAME              17 (REPO_ROOT)\n\n 22         178 PUSH_NULL\n            180 LOAD_NAME               18 (str)\n            182 LOAD_NAME               17 (REPO_ROOT)\n            184 CALL                     1\n            192 LOAD_NAME                7 (sys)\n            194 LOAD_ATTR               38 (path)\n            214 CONTAINS_OP              1\n            216 POP_JUMP_IF_FALSE       34 (to 286)\n\n 23         218 LOAD_NAME                7 (sys)\n            220 LOAD_ATTR               38 (path)\n            240 LOAD_ATTR               41 (NULL|self + insert)\n            260 LOAD_CONST               1 (0)\n            262 PUSH_NULL\n            264 LOAD_NAME               18 (str)\n            266 LOAD_NAME               17 (REPO_ROOT)\n            268 CALL                     1\n            276 CALL                     2\n            284 POP_TOP\n\n 25     >>  286 LOAD_CONST               1 (0)\n            288 LOAD_CONST               7 (('check_public_release_hygiene',))\n            290 IMPORT_NAME             21 (tac.preflight)\n            292 IMPORT_FROM             22 (check_public_release_hygiene)\n            294 STORE_NAME              22 (check_public_release_hygiene)\n            296 POP_TOP\n\n 28         298 LOAD_NAME               15 (ROOT)\n            300 LOAD_CONST               8 ('site')\n            302 BINARY_OP               11 (/)\n            306 STORE_NAME              23 (DEFAULT_SOURCE)\n\n 29         308 LOAD_NAME               15 (ROOT)\n            310 LOAD_CONST               9 ('public_site')\n            312 BINARY_OP               11 (/)\n            316 STORE_NAME              24 (DEFAULT_OUTPUT)\n\n 30         318 LOAD_CONST              10 (26214400)\n            320 STORE_NAME              25 (DEFAULT_MAX_ASSET_BYTES)\n\n 35         322 LOAD_CONST              11 ('local_absolute_operator_path')\n\n 36         324 PUSH_NULL\n            326 LOAD_NAME                5 (re)\n            328 LOAD_ATTR               52 (compile)\n\n 37         348 LOAD_CONST              12 ('(?<![A-Za-z0-9_])/(?:Users|home|private|tmp|teamspace|var/folders)(?:/[^\\\\s)\\\\\"\\'<>`]*)?')\n\n 36         350 CALL                     1\n\n 41         358 LOAD_CONST              13 ('${LOCAL_PATH_REDACTED}')\n\n 34         360 BUILD_TUPLE              3\n\n 44         362 LOAD_CONST              14 ('private_lightning_studio_url')\n\n 45         364 PUSH_NULL\n            366 LOAD_NAME                5 (re)\n            368 LOAD_ATTR               52 (compile)\n            388 LOAD_CONST              15 ('https://lightning\\\\.ai/[^/\\\\s)]+/[^/\\\\s)]+/studios/[^\\\\s)\\\\\"\\'<>]*')\n            390 CALL                     1\n\n 46         398 LOAD_CONST              16 ('${LIGHTNING_PRIVATE_URL_REDACTED}')\n\n 43         400 BUILD_TUPLE              3\n\n 49         402 LOAD_CONST              17 ('vast_ssh_endpoint')\n\n 50         404 PUSH_NULL\n            406 LOAD_NAME                5 (re)\n            408 LOAD_ATTR               52 (compile)\n            428 LOAD_CONST              18 ('\\\\bssh\\\\d+\\\\.vast\\\\.ai(?::\\\\d+)?\\\\b')\n            430 CALL                     1\n\n 51         438 LOAD_CONST              19 ('${VAST_SSH_REDACTED}')\n\n 48         440 BUILD_TUPLE              3\n\n 54         442 LOAD_CONST              20 ('api_token')\n\n 55         444 PUSH_NULL\n            446 LOAD_NAME                5 (re)\n            448 LOAD_ATTR               52 (compile)\n            468 LOAD_CONST              21 ('\\\\b(?:sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9_]{20,}|hf_[A-Za-z0-9]{20,})\\\\b')\n            470 CALL                     1\n\n 56         478 LOAD_CONST              22 ('${TOKEN_REDACTED}')\n\n 53         480 BUILD_TUPLE              3\n\n 59         482 LOAD_CONST              23 ('secret_env_assignment')\n\n 60         484 PUSH_NULL\n            486 LOAD_NAME                5 (re)\n            488 LOAD_ATTR               52 (compile)\n            508 LOAD_CONST              24 ('\\\\b(VAST_API_KEY|LIGHTNING_API_KEY|CLOUDFLARE_API_TOKEN|OPENAI_API_KEY)\\\\s*=\\\\s*[^\\\\s\\\\\"\\'`]+')\n            510 CALL                     1\n\n 61         518 LOAD_CONST              25 ('\\\\1=${SECRET_REDACTED}')\n\n 58         520 BUILD_TUPLE              3\n\n 64         522 LOAD_CONST              26 ('modal_call_id')\n\n 65         524 PUSH_NULL\n            526 LOAD_NAME                5 (re)\n            528 LOAD_ATTR               52 (compile)\n            548 LOAD_CONST              27 ('\\\\bfc-[A-Z0-9]{20,}\\\\b')\n            550 CALL                     1\n\n 66         558 LOAD_CONST              28 ('${MODAL_ID_REDACTED}')\n\n 63         560 BUILD_TUPLE              3\n\n 69         562 LOAD_CONST              29 ('modal_app_id')\n\n 70         564 PUSH_NULL\n            566 LOAD_NAME                5 (re)\n            568 LOAD_ATTR               52 (compile)\n            588 LOAD_CONST              30 ('\\\\bap-[A-Za-z0-9]{10,}\\\\b')\n            590 CALL                     1\n\n 71         598 LOAD_CONST              28 ('${MODAL_ID_REDACTED}')\n\n 68         600 BUILD_TUPLE              3\n\n 33         602 BUILD_TUPLE              7\n            604 STORE_NAME              27 (REDACTIONS)\n            606 LOAD_CONST              31 ('tuple[tuple[str, re.Pattern[str], str], ...]')\n            608 LOAD_NAME               28 (__annotations__)\n            610 LOAD_CONST              32 ('REDACTIONS')\n            612 STORE_SUBSCR\n\n 76         616 PUSH_NULL\n            618 LOAD_NAME                9 (dataclass)\n            620 LOAD_CONST              33 (True)\n            622 KW_NAMES                34 (('frozen',))\n            624 CALL                     1\n\n 77         632 PUSH_NULL\n            634 LOAD_BUILD_CLASS\n            636 LOAD_CONST              35 (<code object RedactionRecord at 0x104b81c50, file \"/Users/adpena/Projects/pact/reports/graphs/build_public_site_bundle.py\", line 76>)\n            638 MAKE_FUNCTION            0\n            640 LOAD_CONST              36 ('RedactionRecord')\n            642 CALL                     2\n\n 76         650 CALL                     0\n\n 77         658 STORE_NAME              29 (RedactionRecord)\n\n 83         660 LOAD_CONST              48 (('path', 'Path', 'parent', 'Path', 'return', 'bool'))\n            662 LOAD_CONST              37 (<code object _is_relative_to at 0x104c5afb0, file \"/Users/adpena/Projects/pact/reports/graphs/build_public_site_bundle.py\", line 83>)\n            664 MAKE_FUNCTION            4 (annotations)\n            666 STORE_NAME              30 (_is_relative_to)\n\n 91         668 LOAD_CONST              49 (('path', 'Path', 'return', 'str'))\n            670 LOAD_CONST              38 (<code object _display_path at 0x104c85a10, file \"/Users/adpena/Projects/pact/reports/graphs/build_public_site_bundle.py\", line 91>)\n            672 MAKE_FUNCTION            4 (annotations)\n            674 STORE_NAME              31 (_display_path)\n\n 98         676 LOAD_CONST              50 (('text', 'str', 'return', 'tuple[str, list[tuple[str, int]]]'))\n            678 LOAD_CONST              39 (<code object sanitize_text at 0x104b73210, file \"/Users/adpena/Projects/pact/reports/graphs/build_public_site_bundle.py\", line 98>)\n            680 MAKE_FUNCTION            4 (annotations)\n            682 STORE_NAME              32 (sanitize_text)\n\n108         684 LOAD_CONST              51 (('path', 'Path', 'root', 'Path', 'return', 'list[RedactionRecord]'))\n            686 LOAD_CONST              40 (<code object _sanitize_file at 0x104bf0fb0, file \"/Users/adpena/Projects/pact/reports/graphs/build_public_site_bundle.py\", line 108>)\n            688 MAKE_FUNCTION            4 (annotations)\n            690 STORE_NAME              33 (_sanitize_file)\n\n120         692 LOAD_CONST              52 (('root', 'Path', 'max_asset_bytes', 'int', 'return', 'list[str]'))\n            694 LOAD_CONST              41 (<code object _asset_size_violations at 0x104d20630, file \"/Users/adpena/Projects/pact/reports/graphs/build_public_site_bundle.py\", line 120>)\n            696 MAKE_FUNCTION            4 (annotations)\n            698 STORE_NAME              34 (_asset_size_violations)\n\n128         700 LOAD_CONST              53 (('root', 'Path', 'max_asset_bytes', 'int', 'return', 'list[dict[str, object]]'))\n            702 LOAD_CONST              42 (<code object _remove_oversized_assets at 0x104bf1770, file \"/Users/adpena/Projects/pact/reports/graphs/build_public_site_bundle.py\", line 128>)\n            704 MAKE_FUNCTION            4 (annotations)\n            706 STORE_NAME              35 (_remove_oversized_assets)\n\n142         708 LOAD_NAME               23 (DEFAULT_SOURCE)\n\n143         710 LOAD_NAME               24 (DEFAULT_OUTPUT)\n\n141         712 BUILD_TUPLE              2\n\n145         714 LOAD_NAME               25 (DEFAULT_MAX_ASSET_BYTES)\n\n146         716 LOAD_CONST              43 ('omit')\n\n147         718 LOAD_CONST              33 (True)\n\n141         720 LOAD_CONST              44 (('max_asset_bytes', 'oversized_policy', 'strict_hygiene'))\n            722 BUILD_CONST_KEY_MAP      3\n\n142         724 NOP\n\n141         726 NOP\n\n143         728 NOP\n\n141         730 NOP\n\n145         732 NOP\n\n141         734 NOP\n\n146         736 NOP\n\n141         738 NOP\n\n147         740 NOP\n\n141         742 NOP\n\n148         744 NOP\n\n141         746 LOAD_CONST              54 (('source', 'Path', 'output', 'Path', 'max_asset_bytes', 'int', 'oversized_policy', 'str', 'strict_hygiene', 'bool', 'return', 'dict[str, object]'))\n            748 LOAD_CONST              45 (<code object build_public_site_bundle at 0x8db186d00, file \"/Users/adpena/Projects/pact/reports/graphs/build_public_site_bundle.py\", line 141>)\n            750 MAKE_FUNCTION            7 (defaults, kwdefaults, annotations)\n            752 STORE_NAME              36 (build_public_site_bundle)\n\n205         754 LOAD_CONST              55 (('return', 'int'))\n            756 LOAD_CONST              46 (<code object main at 0x8dae6c900, file \"/Users/adpena/Projects/pact/reports/graphs/build_public_site_bundle.py\", line 205>)\n            758 MAKE_FUNCTION            4 (annotations)\n            760 STORE_NAME              37 (main)\n\n225         762 LOAD_NAME               38 (__name__)\n            764 LOAD_CONST              47 ('__main__')\n            766 COMPARE_OP              40 (==)\n            770 POP_JUMP_IF_FALSE       13 (to 798)\n\n226         772 PUSH_NULL\n            774 LOAD_NAME               39 (SystemExit)\n            776 PUSH_NULL\n            778 LOAD_NAME               37 (main)\n            780 CALL                     0\n            788 CALL                     1\n            796 RAISE_VARARGS            1\n\n225     >>  798 RETURN_CONST             3 (None)\n"
+}

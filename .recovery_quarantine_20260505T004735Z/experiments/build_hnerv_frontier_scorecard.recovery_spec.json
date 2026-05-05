@@ -1,0 +1,456 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/experiments/__pycache__/build_hnerv_frontier_scorecard.cpython-312.pyc",
+  "names": [
+    "__doc__",
+    "__future__",
+    "annotations",
+    "argparse",
+    "json",
+    "pathlib",
+    "Path",
+    "typing",
+    "Any",
+    "load_json",
+    "maybe_load_json",
+    "profile_by_sha",
+    "contribution",
+    "row_from_eval",
+    "render_markdown",
+    "main",
+    "__name__",
+    "SystemExit"
+  ],
+  "varnames": [],
+  "consts": [
+    "Build a compact scorecard for public HNeRV frontier intake.\n\nThe scorecard joins exact CUDA replay artifacts with forensic payload profiles.\nIt does not evaluate archives and does not promote prediction-only claims; it is\nonly a deterministic decision table for the next optimization action.\n",
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "Path"
+    ],
+    [
+      "Any"
+    ],
+    {
+      "__code__": "load_json",
+      "qualname": "load_json",
+      "argcount": 1,
+      "varnames": [
+        "path"
+      ],
+      "names": [
+        "json",
+        "loads",
+        "read_text"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "maybe_load_json",
+      "qualname": "maybe_load_json",
+      "argcount": 1,
+      "varnames": [
+        "path"
+      ],
+      "names": [
+        "is_file",
+        "load_json"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "profile_by_sha",
+      "qualname": "profile_by_sha",
+      "argcount": 1,
+      "varnames": [
+        "path",
+        "payload",
+        "item"
+      ],
+      "names": [
+        "maybe_load_json"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "contribution",
+      "qualname": "contribution",
+      "argcount": 2,
+      "varnames": [
+        "payload",
+        "key",
+        "value"
+      ],
+      "names": [
+        "get",
+        "isinstance",
+        "int",
+        "float"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "row_from_eval",
+      "qualname": "row_from_eval",
+      "argcount": 3,
+      "varnames": [
+        "label",
+        "path",
+        "profiles",
+        "payload",
+        "prov",
+        "sha",
+        "profile",
+        "sections",
+        "largest_section"
+      ],
+      "names": [
+        "load_json",
+        "get",
+        "max",
+        "contribution",
+        "str"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "render_markdown",
+      "qualname": "render_markdown",
+      "argcount": 1,
+      "varnames": [
+        "rows",
+        "lines",
+        "row",
+        "largest",
+        "largest_text"
+      ],
+      "names": [
+        "sorted",
+        "get",
+        "append",
+        "format",
+        "extend",
+        "join"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "main",
+      "qualname": "main",
+      "argcount": 0,
+      "varnames": [
+        "parser",
+        "args",
+        "profiles",
+        "rows",
+        "item",
+        "label",
+        "raw_path",
+        "payload"
+      ],
+      "names": [
+        "argparse",
+        "ArgumentParser",
+        "__doc__",
+        "add_argument",
+        "Path",
+        "parse_args",
+        "profile_by_sha",
+        "profile_json",
+        "evals",
+        "SystemExit",
+        "split",
+        "append",
+        "row_from_eval",
+        "sorted",
+        "json_out",
+        "parent",
+        "mkdir",
+        "write_text",
+        "json",
+        "dumps",
+        "md_out",
+        "render_markdown"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "__main__",
+    [
+      "path",
+      "Path",
+      "return",
+      "Any"
+    ],
+    [
+      "path",
+      "Path | None",
+      "return",
+      "Any | None"
+    ],
+    [
+      "path",
+      "Path | None",
+      "return",
+      "dict[str, dict[str, Any]]"
+    ],
+    [
+      "payload",
+      "dict[str, Any]",
+      "key",
+      "str",
+      "return",
+      "float | None"
+    ],
+    [
+      "label",
+      "str",
+      "path",
+      "Path",
+      "profiles",
+      "dict[str, dict[str, Any]]",
+      "return",
+      "dict[str, Any]"
+    ],
+    [
+      "rows",
+      "list[dict[str, Any]]",
+      "return",
+      "str"
+    ],
+    [
+      "return",
+      "int"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": "Build a compact scorecard for public HNeRV frontier intake.\n\nThe scorecard joins exact CUDA replay artifacts with forensic payload profiles.\nIt does not evaluate archives and does not promote prediction-only claims; it is\nonly a deterministic decision table for the next optimization action.\n",
+  "child_codes": [
+    {
+      "qualname": "load_json",
+      "name": "load_json",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path"
+      ],
+      "names": [
+        "json",
+        "loads",
+        "read_text"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 17           0 RESUME                   0\n\n 18           2 LOAD_GLOBAL              1 (NULL + json)\n             12 LOAD_ATTR                2 (loads)\n             32 LOAD_FAST                0 (path)\n             34 LOAD_ATTR                5 (NULL|self + read_text)\n             54 CALL                     0\n             62 CALL                     1\n             70 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "maybe_load_json",
+      "name": "maybe_load_json",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path"
+      ],
+      "names": [
+        "is_file",
+        "load_json"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 21           0 RESUME                   0\n\n 22           2 LOAD_FAST                0 (path)\n              4 POP_JUMP_IF_NONE        16 (to 38)\n              6 LOAD_FAST                0 (path)\n              8 LOAD_ATTR                1 (NULL|self + is_file)\n             28 CALL                     0\n             36 POP_JUMP_IF_TRUE         1 (to 40)\n\n 23     >>   38 RETURN_CONST             0 (None)\n\n 24     >>   40 LOAD_GLOBAL              3 (NULL + load_json)\n             50 LOAD_FAST                0 (path)\n             52 CALL                     1\n             60 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "profile_by_sha",
+      "name": "profile_by_sha",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "payload",
+        "item"
+      ],
+      "names": [
+        "maybe_load_json"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 27           0 RESUME                   0\n\n 28           2 LOAD_GLOBAL              1 (NULL + maybe_load_json)\n             12 LOAD_FAST                0 (path)\n             14 CALL                     1\n             22 STORE_FAST               1 (payload)\n\n 29          24 LOAD_FAST                1 (payload)\n             26 POP_JUMP_IF_TRUE         2 (to 32)\n\n 30          28 BUILD_MAP                0\n             30 RETURN_VALUE\n\n 31     >>   32 LOAD_FAST                1 (payload)\n             34 GET_ITER\n             36 LOAD_FAST_AND_CLEAR      2 (item)\n             38 SWAP                     2\n             40 BUILD_MAP                0\n             42 SWAP                     2\n        >>   44 FOR_ITER                 8 (to 64)\n             48 STORE_FAST               2 (item)\n             50 LOAD_FAST                2 (item)\n             52 LOAD_CONST               1 ('archive_sha256')\n             54 BINARY_SUBSCR\n             58 LOAD_FAST                2 (item)\n             60 MAP_ADD                  2\n             62 JUMP_BACKWARD           10 (to 44)\n        >>   64 END_FOR\n             66 SWAP                     2\n             68 STORE_FAST               2 (item)\n             70 RETURN_VALUE\n        >>   72 SWAP                     2\n             74 POP_TOP\n             76 SWAP                     2\n             78 STORE_FAST               2 (item)\n             80 RERAISE                  0\nExceptionTable:\n  40 to 64 -> 72 [2]\n"
+    },
+    {
+      "qualname": "contribution",
+      "name": "contribution",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "payload",
+        "key",
+        "value"
+      ],
+      "names": [
+        "get",
+        "isinstance",
+        "int",
+        "float"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 34           0 RESUME                   0\n\n 35           2 LOAD_FAST                0 (payload)\n              4 LOAD_ATTR                1 (NULL|self + get)\n             24 LOAD_FAST                1 (key)\n             26 CALL                     1\n             34 STORE_FAST               2 (value)\n\n 36          36 LOAD_GLOBAL              3 (NULL + isinstance)\n             46 LOAD_FAST                2 (value)\n             48 LOAD_GLOBAL              4 (int)\n             58 LOAD_GLOBAL              6 (float)\n             68 BINARY_OP                7 (|)\n             72 CALL                     2\n             80 POP_JUMP_IF_FALSE       11 (to 104)\n             82 LOAD_GLOBAL              7 (NULL + float)\n             92 LOAD_FAST                2 (value)\n             94 CALL                     1\n            102 RETURN_VALUE\n        >>  104 LOAD_CONST               0 (None)\n            106 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "row_from_eval",
+      "name": "row_from_eval",
+      "argcount": 3,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "label",
+        "path",
+        "profiles",
+        "payload",
+        "prov",
+        "sha",
+        "profile",
+        "sections",
+        "largest_section"
+      ],
+      "names": [
+        "load_json",
+        "get",
+        "max",
+        "contribution",
+        "str"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 39           0 RESUME                   0\n\n 40           2 LOAD_GLOBAL              1 (NULL + load_json)\n             12 LOAD_FAST                1 (path)\n             14 CALL                     1\n             22 STORE_FAST               3 (payload)\n\n 41          24 LOAD_FAST                3 (payload)\n             26 LOAD_ATTR                3 (NULL|self + get)\n             46 LOAD_CONST               1 ('provenance')\n             48 CALL                     1\n             56 COPY                     1\n             58 POP_JUMP_IF_TRUE         2 (to 64)\n             60 POP_TOP\n             62 BUILD_MAP                0\n        >>   64 STORE_FAST               4 (prov)\n\n 42          66 LOAD_FAST                4 (prov)\n             68 LOAD_ATTR                3 (NULL|self + get)\n             88 LOAD_CONST               2 ('archive_sha256')\n             90 CALL                     1\n             98 STORE_FAST               5 (sha)\n\n 43         100 LOAD_FAST                2 (profiles)\n            102 LOAD_ATTR                3 (NULL|self + get)\n            122 LOAD_FAST                5 (sha)\n            124 BUILD_MAP                0\n            126 CALL                     2\n            134 STORE_FAST               6 (profile)\n\n 44         136 LOAD_FAST                6 (profile)\n            138 LOAD_ATTR                3 (NULL|self + get)\n            158 LOAD_CONST               3 ('sections')\n            160 CALL                     1\n            168 COPY                     1\n            170 POP_JUMP_IF_TRUE         2 (to 176)\n            172 POP_TOP\n            174 BUILD_LIST               0\n        >>  176 STORE_FAST               7 (sections)\n\n 45         178 LOAD_GLOBAL              5 (NULL + max)\n            188 LOAD_FAST                7 (sections)\n            190 LOAD_CONST               4 (<code object <lambda> at 0x104481c50, file \"experiments/build_hnerv_frontier_scorecard.py\", line 45>)\n            192 MAKE_FUNCTION            0\n            194 LOAD_CONST               0 (None)\n            196 KW_NAMES                 5 (('key', 'default'))\n            198 CALL                     3\n            206 STORE_FAST               8 (largest_section)\n\n 46         208 BUILD_MAP                0\n\n 47         210 LOAD_CONST               6 ('label')\n            212 LOAD_FAST                0 (label)\n\n 46         214 MAP_ADD                  1\n\n 48         216 LOAD_CONST               7 ('evidence_grade')\n\n 49         218 LOAD_FAST                4 (prov)\n            220 LOAD_ATTR                3 (NULL|self + get)\n            240 LOAD_CONST               8 ('device')\n            242 CALL                     1\n            250 LOAD_CONST               9 ('cuda')\n            252 COMPARE_OP              40 (==)\n            256 POP_JUMP_IF_FALSE       39 (to 336)\n            258 LOAD_FAST                4 (prov)\n            260 LOAD_ATTR                3 (NULL|self + get)\n            280 LOAD_CONST              10 ('gpu_t4_match')\n            282 CALL                     1\n            290 POP_JUMP_IF_FALSE       22 (to 336)\n            292 LOAD_FAST                3 (payload)\n            294 LOAD_ATTR                3 (NULL|self + get)\n            314 LOAD_CONST              11 ('n_samples')\n            316 CALL                     1\n            324 LOAD_CONST              12 (600)\n            326 COMPARE_OP              40 (==)\n            330 POP_JUMP_IF_FALSE        2 (to 336)\n\n 48         332 LOAD_CONST              13 ('A++')\n            334 JUMP_FORWARD             1 (to 338)\n\n 50     >>  336 LOAD_CONST              14 ('A')\n\n 46     >>  338 MAP_ADD                  1\n\n 51         340 LOAD_CONST              15 ('score')\n            342 LOAD_GLOBAL              7 (NULL + contribution)\n            352 LOAD_FAST                3 (payload)\n            354 LOAD_CONST              16 ('score_recomputed_from_components')\n            356 CALL                     2\n\n 46         364 MAP_ADD                  1\n\n 52         366 LOAD_CONST              17 ('archive_bytes')\n            368 LOAD_FAST                3 (payload)\n            370 LOAD_ATTR                3 (NULL|self + get)\n            390 LOAD_CONST              18 ('archive_size_bytes')\n            392 CALL                     1\n\n 46         400 MAP_ADD                  1\n\n 53         402 LOAD_CONST               2 ('archive_sha256')\n            404 LOAD_FAST                5 (sha)\n\n 46         406 MAP_ADD                  1\n\n 54         408 LOAD_CONST              19 ('avg_segnet_dist')\n            410 LOAD_GLOBAL              7 (NULL + contribution)\n            420 LOAD_FAST                3 (payload)\n            422 LOAD_CONST              19 ('avg_segnet_dist')\n            424 CALL                     2\n\n 46         432 MAP_ADD                  1\n\n 55         434 LOAD_CONST              20 ('avg_posenet_dist')\n            436 LOAD_GLOBAL              7 (NULL + contribution)\n            446 LOAD_FAST                3 (payload)\n            448 LOAD_CONST              20 ('avg_posenet_dist')\n            450 CALL                     2\n\n 46         458 MAP_ADD                  1\n\n 56         460 LOAD_CONST              21 ('score_seg_contribution')\n            462 LOAD_GLOBAL              7 (NULL + contribution)\n            472 LOAD_FAST                3 (payload)\n            474 LOAD_CONST              21 ('score_seg_contribution')\n            476 CALL                     2\n\n 46         484 MAP_ADD                  1\n\n 57         486 LOAD_CONST              22 ('score_pose_contribution')\n            488 LOAD_GLOBAL              7 (NULL + contribution)\n            498 LOAD_FAST                3 (payload)\n            500 LOAD_CONST              22 ('score_pose_contribution')\n            502 CALL                     2\n\n 46         510 MAP_ADD                  1\n\n 58         512 LOAD_CONST              23 ('score_rate_contribution')\n            514 LOAD_GLOBAL              7 (NULL + contribution)\n            524 LOAD_FAST                3 (payload)\n            526 LOAD_CONST              23 ('score_rate_contribution')\n            528 CALL                     2\n\n 46         536 MAP_ADD                  1\n\n 59         538 LOAD_CONST              24 ('gpu_model')\n            540 LOAD_FAST                4 (prov)\n            542 LOAD_ATTR                3 (NULL|self + get)\n            562 LOAD_CONST              24 ('gpu_model')\n            564 CALL                     1\n\n 46         572 MAP_ADD                  1\n\n 60         574 LOAD_CONST              25 ('runtime_tree_sha256')\n            576 LOAD_FAST                4 (prov)\n            578 LOAD_ATTR                3 (NULL|self + get)\n            598 LOAD_CONST              26 ('inflate_runtime_manifest')\n            600 CALL                     1\n            608 COPY                     1\n            610 POP_JUMP_IF_TRUE         2 (to 616)\n            612 POP_TOP\n            614 BUILD_MAP                0\n        >>  616 LOAD_ATTR                3 (NULL|self + get)\n\n 61         636 LOAD_CONST              25 ('runtime_tree_sha256')\n\n 60         638 CALL                     1\n\n 46         646 MAP_ADD                  1\n\n 63         648 LOAD_CONST              27 ('profile_kind')\n            650 LOAD_FAST                6 (profile)\n            652 LOAD_ATTR                3 (NULL|self + get)\n            672 LOAD_CONST              28 ('kind')\n            674 CALL                     1\n\n 46         682 MAP_ADD                  1\n\n 64         684 LOAD_CONST              29 ('zip_member')\n            686 LOAD_FAST                6 (profile)\n            688 LOAD_ATTR                3 (NULL|self + get)\n            708 LOAD_CONST              30 ('member_name')\n            710 CALL                     1\n\n 46         718 MAP_ADD                  1\n\n 65         720 LOAD_CONST              31 ('zip_overhead_bytes')\n            722 LOAD_FAST                6 (profile)\n            724 LOAD_ATTR                3 (NULL|self + get)\n            744 LOAD_CONST              31 ('zip_overhead_bytes')\n            746 CALL                     1\n\n 46         754 MAP_ADD                  1\n\n 66         756 LOAD_CONST              32 ('largest_payload_section')\n            758 LOAD_FAST                8 (largest_section)\n\n 46         760 MAP_ADD                  1\n\n 67         762 LOAD_CONST              33 ('eval_artifact')\n            764 LOAD_GLOBAL              9 (NULL + str)\n            774 LOAD_FAST                1 (path)\n            776 CALL                     1\n\n 46         784 MAP_ADD                  1\n            786 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "row_from_eval.<locals>.<lambda>",
+      "name": "<lambda>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "item"
+      ],
+      "names": [
+        "get"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 45           0 RESUME                   0\n              2 LOAD_FAST                0 (item)\n              4 LOAD_ATTR                1 (NULL|self + get)\n             24 LOAD_CONST               1 ('bytes')\n             26 LOAD_CONST               2 (0)\n             28 CALL                     2\n             36 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "render_markdown",
+      "name": "render_markdown",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "rows",
+        "lines",
+        "row",
+        "largest",
+        "largest_text"
+      ],
+      "names": [
+        "sorted",
+        "get",
+        "append",
+        "format",
+        "extend",
+        "join"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 71           0 RESUME                   0\n\n 72           2 BUILD_LIST               0\n              4 LOAD_CONST               1 (('# HNeRV Frontier Scorecard', '', '| label | grade | score | bytes | seg | pose | rate | largest section | archive sha |', '|---|---:|---:|---:|---:|---:|---:|---|---|'))\n              6 LIST_EXTEND              1\n              8 STORE_FAST               1 (lines)\n\n 78          10 LOAD_GLOBAL              1 (NULL + sorted)\n             20 LOAD_FAST                0 (rows)\n             22 LOAD_CONST               2 (<code object <lambda> at 0x1045e1b50, file \"experiments/build_hnerv_frontier_scorecard.py\", line 78>)\n             24 MAKE_FUNCTION            0\n             26 KW_NAMES                 3 (('key',))\n             28 CALL                     2\n             36 GET_ITER\n        >>   38 FOR_ITER               136 (to 314)\n             42 STORE_FAST               2 (row)\n\n 79          44 LOAD_FAST                2 (row)\n             46 LOAD_ATTR                3 (NULL|self + get)\n             66 LOAD_CONST               4 ('largest_payload_section')\n             68 CALL                     1\n             76 COPY                     1\n             78 POP_JUMP_IF_TRUE         2 (to 84)\n             80 POP_TOP\n             82 BUILD_MAP                0\n        >>   84 STORE_FAST               3 (largest)\n\n 82          86 LOAD_FAST                3 (largest)\n             88 POP_JUMP_IF_FALSE       37 (to 164)\n\n 81          90 LOAD_FAST                3 (largest)\n             92 LOAD_ATTR                3 (NULL|self + get)\n            112 LOAD_CONST               5 ('name')\n            114 CALL                     1\n            122 FORMAT_VALUE             0\n            124 LOAD_CONST               6 (':')\n            126 LOAD_FAST                3 (largest)\n            128 LOAD_ATTR                3 (NULL|self + get)\n            148 LOAD_CONST               7 ('bytes')\n            150 CALL                     1\n            158 FORMAT_VALUE             0\n            160 BUILD_STRING             3\n            162 JUMP_FORWARD             1 (to 166)\n\n 83     >>  164 LOAD_CONST               8 ('n/a')\n\n 80     >>  166 STORE_FAST               4 (largest_text)\n\n 85         168 LOAD_FAST                1 (lines)\n            170 LOAD_ATTR                5 (NULL|self + append)\n\n 86         190 LOAD_CONST               9 ('| {label} | {evidence_grade} | {score:.12f} | {archive_bytes} | {seg:.9f} | {pose:.9f} | {rate:.9f} | `{largest}` | `{sha}` |')\n            192 LOAD_ATTR                7 (NULL|self + format)\n\n 87         212 LOAD_FAST                2 (row)\n            214 LOAD_CONST              10 ('label')\n            216 BINARY_SUBSCR\n\n 88         220 LOAD_FAST                2 (row)\n            222 LOAD_CONST              11 ('evidence_grade')\n            224 BINARY_SUBSCR\n\n 89         228 LOAD_FAST                2 (row)\n            230 LOAD_CONST              12 ('score')\n            232 BINARY_SUBSCR\n\n 90         236 LOAD_FAST                2 (row)\n            238 LOAD_CONST              13 ('archive_bytes')\n            240 BINARY_SUBSCR\n\n 91         244 LOAD_FAST                2 (row)\n            246 LOAD_CONST              14 ('score_seg_contribution')\n            248 BINARY_SUBSCR\n\n 92         252 LOAD_FAST                2 (row)\n            254 LOAD_CONST              15 ('score_pose_contribution')\n            256 BINARY_SUBSCR\n\n 93         260 LOAD_FAST                2 (row)\n            262 LOAD_CONST              16 ('score_rate_contribution')\n            264 BINARY_SUBSCR\n\n 94         268 LOAD_FAST                4 (largest_text)\n\n 95         270 LOAD_FAST                2 (row)\n            272 LOAD_CONST              17 ('archive_sha256')\n            274 BINARY_SUBSCR\n            278 COPY                     1\n            280 POP_JUMP_IF_TRUE         2 (to 286)\n            282 POP_TOP\n            284 LOAD_CONST              18 ('')\n        >>  286 LOAD_CONST               0 (None)\n            288 LOAD_CONST              19 (16)\n            290 BINARY_SLICE\n\n 86         292 KW_NAMES                20 (('label', 'evidence_grade', 'score', 'archive_bytes', 'seg', 'pose', 'rate', 'largest', 'sha'))\n            294 CALL                     9\n\n 85         302 CALL                     1\n            310 POP_TOP\n            312 JUMP_BACKWARD          138 (to 38)\n\n 78     >>  314 END_FOR\n\n 98         316 LOAD_FAST                1 (lines)\n            318 LOAD_ATTR                9 (NULL|self + extend)\n\n 99         338 BUILD_LIST               0\n            340 LOAD_CONST              21 (('', 'Interpretation: score truth remains the exact CUDA replay JSON. Payload', 'sections are forensic signals for the next compression action; they do', 'not imply score deltas without a new exact archive eval.', ''))\n            342 LIST_EXTEND              1\n\n 98         344 CALL                     1\n            352 POP_TOP\n\n107         354 LOAD_CONST              22 ('\\n')\n            356 LOAD_ATTR               11 (NULL|self + join)\n            376 LOAD_FAST                1 (lines)\n            378 CALL                     1\n            386 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "render_markdown.<locals>.<lambda>",
+      "name": "<lambda>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "item"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 78           0 RESUME                   0\n              2 LOAD_FAST                0 (item)\n              4 LOAD_CONST               1 ('score')\n              6 BINARY_SUBSCR\n             10 POP_JUMP_IF_NONE         5 (to 22)\n             12 LOAD_FAST                0 (item)\n             14 LOAD_CONST               1 ('score')\n             16 BINARY_SUBSCR\n             20 RETURN_VALUE\n        >>   22 LOAD_CONST               2 (999)\n             24 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "main",
+      "name": "main",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "parser",
+        "args",
+        "profiles",
+        "rows",
+        "item",
+        "label",
+        "raw_path",
+        "payload"
+      ],
+      "names": [
+        "argparse",
+        "ArgumentParser",
+        "__doc__",
+        "add_argument",
+        "Path",
+        "parse_args",
+        "profile_by_sha",
+        "profile_json",
+        "evals",
+        "SystemExit",
+        "split",
+        "append",
+        "row_from_eval",
+        "sorted",
+        "json_out",
+        "parent",
+        "mkdir",
+        "write_text",
+        "json",
+        "dumps",
+        "md_out",
+        "render_markdown"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "110           0 RESUME                   0\n\n111           2 LOAD_GLOBAL              1 (NULL + argparse)\n             12 LOAD_ATTR                2 (ArgumentParser)\n             32 LOAD_GLOBAL              4 (__doc__)\n             42 KW_NAMES                 1 (('description',))\n             44 CALL                     1\n             52 STORE_FAST               0 (parser)\n\n112          54 LOAD_FAST                0 (parser)\n             56 LOAD_ATTR                7 (NULL|self + add_argument)\n\n113          76 LOAD_CONST               2 ('--profile-json')\n\n114          78 LOAD_GLOBAL              8 (Path)\n\n115          88 LOAD_CONST               3 ('Payload profile JSON emitted by profile_hnerv_frontier_payloads.py.')\n\n112          90 KW_NAMES                 4 (('type', 'help'))\n             92 CALL                     3\n            100 POP_TOP\n\n117         102 LOAD_FAST                0 (parser)\n            104 LOAD_ATTR                7 (NULL|self + add_argument)\n            124 LOAD_CONST               5 ('--json-out')\n            126 LOAD_GLOBAL              8 (Path)\n            136 LOAD_CONST               6 (True)\n            138 KW_NAMES                 7 (('type', 'required'))\n            140 CALL                     3\n            148 POP_TOP\n\n118         150 LOAD_FAST                0 (parser)\n            152 LOAD_ATTR                7 (NULL|self + add_argument)\n            172 LOAD_CONST               8 ('--md-out')\n            174 LOAD_GLOBAL              8 (Path)\n            184 LOAD_CONST               6 (True)\n            186 KW_NAMES                 7 (('type', 'required'))\n            188 CALL                     3\n            196 POP_TOP\n\n119         198 LOAD_FAST                0 (parser)\n            200 LOAD_ATTR                7 (NULL|self + add_argument)\n\n120         220 LOAD_CONST               9 ('evals')\n\n121         222 LOAD_CONST              10 ('+')\n\n122         224 LOAD_CONST              11 ('LABEL=path/to/contest_auth_eval.adjudicated.json')\n\n119         226 KW_NAMES                12 (('nargs', 'help'))\n            228 CALL                     3\n            236 POP_TOP\n\n124         238 LOAD_FAST                0 (parser)\n            240 LOAD_ATTR               11 (NULL|self + parse_args)\n            260 CALL                     0\n            268 STORE_FAST               1 (args)\n\n126         270 LOAD_GLOBAL             13 (NULL + profile_by_sha)\n            280 LOAD_FAST                1 (args)\n            282 LOAD_ATTR               14 (profile_json)\n            302 CALL                     1\n            310 STORE_FAST               2 (profiles)\n\n127         312 BUILD_LIST               0\n            314 STORE_FAST               3 (rows)\n\n128         316 LOAD_FAST                1 (args)\n            318 LOAD_ATTR               16 (evals)\n            338 GET_ITER\n        >>  340 FOR_ITER                78 (to 500)\n            344 STORE_FAST               4 (item)\n\n129         346 LOAD_CONST              13 ('=')\n            348 LOAD_FAST                4 (item)\n            350 CONTAINS_OP              1\n            352 POP_JUMP_IF_FALSE       14 (to 382)\n\n130         354 LOAD_GLOBAL             19 (NULL + SystemExit)\n            364 LOAD_CONST              14 ('expected LABEL=PATH, got ')\n            366 LOAD_FAST                4 (item)\n            368 FORMAT_VALUE             2 (repr)\n            370 BUILD_STRING             2\n            372 CALL                     1\n            380 RAISE_VARARGS            1\n\n131     >>  382 LOAD_FAST                4 (item)\n            384 LOAD_ATTR               21 (NULL|self + split)\n            404 LOAD_CONST              13 ('=')\n            406 LOAD_CONST              15 (1)\n            408 CALL                     2\n            416 UNPACK_SEQUENCE          2\n            420 STORE_FAST               5 (label)\n            422 STORE_FAST               6 (raw_path)\n\n132         424 LOAD_FAST                3 (rows)\n            426 LOAD_ATTR               23 (NULL|self + append)\n            446 LOAD_GLOBAL             25 (NULL + row_from_eval)\n            456 LOAD_FAST                5 (label)\n            458 LOAD_GLOBAL              9 (NULL + Path)\n            468 LOAD_FAST                6 (raw_path)\n            470 CALL                     1\n            478 LOAD_FAST                2 (profiles)\n            480 CALL                     3\n            488 CALL                     1\n            496 POP_TOP\n            498 JUMP_BACKWARD           80 (to 340)\n\n128     >>  500 END_FOR\n\n135         502 LOAD_CONST              15 (1)\n\n136         504 LOAD_CONST              16 ('build_hnerv_frontier_scorecard')\n\n137         506 LOAD_CONST              17 ('exact_cuda_auth_eval_json')\n\n138         508 LOAD_GLOBAL             27 (NULL + sorted)\n            518 LOAD_FAST                3 (rows)\n            520 LOAD_CONST              18 (<code object <lambda> at 0x1045e1990, file \"experiments/build_hnerv_frontier_scorecard.py\", line 138>)\n            522 MAKE_FUNCTION            0\n            524 KW_NAMES                19 (('key',))\n            526 CALL                     2\n\n134         534 LOAD_CONST              20 (('schema_version', 'tool', 'score_truth', 'rows'))\n            536 BUILD_CONST_KEY_MAP      4\n            538 STORE_FAST               7 (payload)\n\n140         540 LOAD_FAST                1 (args)\n            542 LOAD_ATTR               28 (json_out)\n            562 LOAD_ATTR               30 (parent)\n            582 LOAD_ATTR               33 (NULL|self + mkdir)\n            602 LOAD_CONST               6 (True)\n            604 LOAD_CONST               6 (True)\n            606 KW_NAMES                21 (('parents', 'exist_ok'))\n            608 CALL                     2\n            616 POP_TOP\n\n141         618 LOAD_FAST                1 (args)\n            620 LOAD_ATTR               28 (json_out)\n            640 LOAD_ATTR               35 (NULL|self + write_text)\n            660 LOAD_GLOBAL             37 (NULL + json)\n            670 LOAD_ATTR               38 (dumps)\n            690 LOAD_FAST                7 (payload)\n            692 LOAD_CONST              22 (2)\n            694 LOAD_CONST               6 (True)\n            696 KW_NAMES                23 (('indent', 'sort_keys'))\n            698 CALL                     3\n            706 LOAD_CONST              24 ('\\n')\n            708 BINARY_OP                0 (+)\n            712 CALL                     1\n            720 POP_TOP\n\n142         722 LOAD_FAST                1 (args)\n            724 LOAD_ATTR               40 (md_out)\n            744 LOAD_ATTR               30 (parent)\n            764 LOAD_ATTR               33 (NULL|self + mkdir)\n            784 LOAD_CONST               6 (True)\n            786 LOAD_CONST               6 (True)\n            788 KW_NAMES                21 (('parents', 'exist_ok'))\n            790 CALL                     2\n            798 POP_TOP\n\n143         800 LOAD_FAST                1 (args)\n            802 LOAD_ATTR               40 (md_out)\n            822 LOAD_ATTR               35 (NULL|self + write_text)\n            842 LOAD_GLOBAL             43 (NULL + render_markdown)\n            852 LOAD_FAST                3 (rows)\n            854 CALL                     1\n            862 CALL                     1\n            870 POP_TOP\n\n144         872 RETURN_CONST            25 (0)\n"
+    },
+    {
+      "qualname": "main.<locals>.<lambda>",
+      "name": "<lambda>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "item"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "138           0 RESUME                   0\n              2 LOAD_FAST                0 (item)\n              4 LOAD_CONST               1 ('score')\n              6 BINARY_SUBSCR\n             10 POP_JUMP_IF_NONE         5 (to 22)\n             12 LOAD_FAST                0 (item)\n             14 LOAD_CONST               1 ('score')\n             16 BINARY_SUBSCR\n             20 RETURN_VALUE\n        >>   22 LOAD_CONST               2 (999)\n             24 RETURN_VALUE\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  2           2 LOAD_CONST               0 ('Build a compact scorecard for public HNeRV frontier intake.\\n\\nThe scorecard joins exact CUDA replay artifacts with forensic payload profiles.\\nIt does not evaluate archives and does not promote prediction-only claims; it is\\nonly a deterministic decision table for the next optimization action.\\n')\n              4 STORE_NAME               0 (__doc__)\n\n  9           6 LOAD_CONST               1 (0)\n              8 LOAD_CONST               2 (('annotations',))\n             10 IMPORT_NAME              1 (__future__)\n             12 IMPORT_FROM              2 (annotations)\n             14 STORE_NAME               2 (annotations)\n             16 POP_TOP\n\n 11          18 LOAD_CONST               1 (0)\n             20 LOAD_CONST               3 (None)\n             22 IMPORT_NAME              3 (argparse)\n             24 STORE_NAME               3 (argparse)\n\n 12          26 LOAD_CONST               1 (0)\n             28 LOAD_CONST               3 (None)\n             30 IMPORT_NAME              4 (json)\n             32 STORE_NAME               4 (json)\n\n 13          34 LOAD_CONST               1 (0)\n             36 LOAD_CONST               4 (('Path',))\n             38 IMPORT_NAME              5 (pathlib)\n             40 IMPORT_FROM              6 (Path)\n             42 STORE_NAME               6 (Path)\n             44 POP_TOP\n\n 14          46 LOAD_CONST               1 (0)\n             48 LOAD_CONST               5 (('Any',))\n             50 IMPORT_NAME              7 (typing)\n             52 IMPORT_FROM              8 (Any)\n             54 STORE_NAME               8 (Any)\n             56 POP_TOP\n\n 17          58 LOAD_CONST              14 (('path', 'Path', 'return', 'Any'))\n             60 LOAD_CONST               6 (<code object load_json at 0x10461eab0, file \"experiments/build_hnerv_frontier_scorecard.py\", line 17>)\n             62 MAKE_FUNCTION            4 (annotations)\n             64 STORE_NAME               9 (load_json)\n\n 21          66 LOAD_CONST              15 (('path', 'Path | None', 'return', 'Any | None'))\n             68 LOAD_CONST               7 (<code object maybe_load_json at 0x104614d30, file \"experiments/build_hnerv_frontier_scorecard.py\", line 21>)\n             70 MAKE_FUNCTION            4 (annotations)\n             72 STORE_NAME              10 (maybe_load_json)\n\n 27          74 LOAD_CONST              16 (('path', 'Path | None', 'return', 'dict[str, dict[str, Any]]'))\n             76 LOAD_CONST               8 (<code object profile_by_sha at 0x1045f1c50, file \"experiments/build_hnerv_frontier_scorecard.py\", line 27>)\n             78 MAKE_FUNCTION            4 (annotations)\n             80 STORE_NAME              11 (profile_by_sha)\n\n 34          82 LOAD_CONST              17 (('payload', 'dict[str, Any]', 'key', 'str', 'return', 'float | None'))\n             84 LOAD_CONST               9 (<code object contribution at 0x104506890, file \"experiments/build_hnerv_frontier_scorecard.py\", line 34>)\n             86 MAKE_FUNCTION            4 (annotations)\n             88 STORE_NAME              12 (contribution)\n\n 39          90 LOAD_CONST              18 (('label', 'str', 'path', 'Path', 'profiles', 'dict[str, dict[str, Any]]', 'return', 'dict[str, Any]'))\n             92 LOAD_CONST              10 (<code object row_from_eval at 0x79ae42400, file \"experiments/build_hnerv_frontier_scorecard.py\", line 39>)\n             94 MAKE_FUNCTION            4 (annotations)\n             96 STORE_NAME              13 (row_from_eval)\n\n 71          98 LOAD_CONST              19 (('rows', 'list[dict[str, Any]]', 'return', 'str'))\n            100 LOAD_CONST              11 (<code object render_markdown at 0x79ae21b80, file \"experiments/build_hnerv_frontier_scorecard.py\", line 71>)\n            102 MAKE_FUNCTION            4 (annotations)\n            104 STORE_NAME              14 (render_markdown)\n\n110         106 LOAD_CONST              20 (('return', 'int'))\n            108 LOAD_CONST              12 (<code object main at 0x79b17ad00, file \"experiments/build_hnerv_frontier_scorecard.py\", line 110>)\n            110 MAKE_FUNCTION            4 (annotations)\n            112 STORE_NAME              15 (main)\n\n147         114 LOAD_NAME               16 (__name__)\n            116 LOAD_CONST              13 ('__main__')\n            118 COMPARE_OP              40 (==)\n            122 POP_JUMP_IF_FALSE       13 (to 150)\n\n148         124 PUSH_NULL\n            126 LOAD_NAME               17 (SystemExit)\n            128 PUSH_NULL\n            130 LOAD_NAME               15 (main)\n            132 CALL                     0\n            140 CALL                     1\n            148 RAISE_VARARGS            1\n\n147     >>  150 RETURN_CONST             3 (None)\n"
+}

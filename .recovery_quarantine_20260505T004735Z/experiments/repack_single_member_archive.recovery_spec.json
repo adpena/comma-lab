@@ -1,0 +1,350 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/experiments/__pycache__/repack_single_member_archive.cpython-312.pyc",
+  "names": [
+    "__doc__",
+    "__future__",
+    "annotations",
+    "argparse",
+    "hashlib",
+    "json",
+    "zipfile",
+    "pathlib",
+    "Path",
+    "FIXED_DATE_TIME",
+    "sha256_file",
+    "read_single_member",
+    "write_single_member",
+    "main",
+    "__name__",
+    "SystemExit"
+  ],
+  "varnames": [],
+  "consts": [
+    "Deterministically repack a one-member contest archive under a new name.",
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "Path"
+    ],
+    [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    {
+      "__code__": "sha256_file",
+      "qualname": "sha256_file",
+      "argcount": 1,
+      "varnames": [
+        "path",
+        "h",
+        "chunk"
+      ],
+      "names": [
+        "hashlib",
+        "sha256",
+        "open",
+        "iter",
+        "update",
+        "hexdigest"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "f"
+      ]
+    },
+    {
+      "__code__": "read_single_member",
+      "qualname": "read_single_member",
+      "argcount": 1,
+      "varnames": [
+        "path",
+        "zf",
+        "info",
+        "infos"
+      ],
+      "names": [
+        "zipfile",
+        "ZipFile",
+        "infolist",
+        "is_dir",
+        "len",
+        "SystemExit",
+        "read",
+        "filename"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "write_single_member",
+      "qualname": "write_single_member",
+      "argcount": 3,
+      "varnames": [
+        "output",
+        "member_name",
+        "payload",
+        "compress_type",
+        "compresslevel",
+        "info",
+        "zf"
+      ],
+      "names": [
+        "parent",
+        "mkdir",
+        "zipfile",
+        "ZipInfo",
+        "FIXED_DATE_TIME",
+        "compress_type",
+        "external_attr",
+        "ZipFile",
+        "writestr"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "main",
+      "qualname": "main",
+      "argcount": 0,
+      "varnames": [
+        "parser",
+        "args",
+        "source_info",
+        "payload",
+        "compress_type",
+        "compresslevel",
+        "record"
+      ],
+      "names": [
+        "argparse",
+        "ArgumentParser",
+        "__doc__",
+        "add_argument",
+        "Path",
+        "parse_args",
+        "read_single_member",
+        "input",
+        "compression",
+        "compress_type",
+        "zipfile",
+        "ZIP_STORED",
+        "ZIP_DEFLATED",
+        "write_single_member",
+        "output",
+        "member_name",
+        "str",
+        "stat",
+        "st_size",
+        "sha256_file",
+        "filename",
+        "len",
+        "hashlib",
+        "sha256",
+        "hexdigest",
+        "json_out",
+        "parent",
+        "mkdir",
+        "write_text",
+        "json",
+        "dumps",
+        "print"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "__main__",
+    [
+      "path",
+      "Path",
+      "return",
+      "str"
+    ],
+    [
+      "path",
+      "Path",
+      "return",
+      "tuple[zipfile.ZipInfo, bytes]"
+    ],
+    [
+      "output",
+      "Path",
+      "member_name",
+      "str",
+      "payload",
+      "bytes",
+      "compress_type",
+      "int",
+      "compresslevel",
+      "int | None",
+      "return",
+      "None"
+    ],
+    [
+      "return",
+      "int"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": "Deterministically repack a one-member contest archive under a new name.",
+  "child_codes": [
+    {
+      "qualname": "sha256_file",
+      "name": "sha256_file",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "h",
+        "chunk"
+      ],
+      "names": [
+        "hashlib",
+        "sha256",
+        "open",
+        "iter",
+        "update",
+        "hexdigest"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "f"
+      ],
+      "doc": null,
+      "dis": "              0 MAKE_CELL                3 (f)\n\n 16           2 RESUME                   0\n\n 17           4 LOAD_GLOBAL              1 (NULL + hashlib)\n             14 LOAD_ATTR                2 (sha256)\n             34 CALL                     0\n             42 STORE_FAST               1 (h)\n\n 18          44 LOAD_FAST                0 (path)\n             46 LOAD_ATTR                5 (NULL|self + open)\n             66 LOAD_CONST               1 ('rb')\n             68 CALL                     1\n             76 BEFORE_WITH\n             78 STORE_DEREF              3 (f)\n\n 19          80 LOAD_GLOBAL              7 (NULL + iter)\n             90 LOAD_CLOSURE             3 (f)\n             92 BUILD_TUPLE              1\n             94 LOAD_CONST               2 (<code object <lambda> at 0x100eb5c50, file \"experiments/repack_single_member_archive.py\", line 19>)\n             96 MAKE_FUNCTION            8 (closure)\n             98 LOAD_CONST               3 (b'')\n            100 CALL                     2\n            108 GET_ITER\n        >>  110 FOR_ITER                19 (to 152)\n            114 STORE_FAST               2 (chunk)\n\n 20         116 LOAD_FAST                1 (h)\n            118 LOAD_ATTR                9 (NULL|self + update)\n            138 LOAD_FAST                2 (chunk)\n            140 CALL                     1\n            148 POP_TOP\n            150 JUMP_BACKWARD           21 (to 110)\n\n 19     >>  152 END_FOR\n            154 NOP\n\n 18         156 LOAD_CONST               0 (None)\n            158 LOAD_CONST               0 (None)\n            160 LOAD_CONST               0 (None)\n            162 CALL                     2\n            170 POP_TOP\n\n 21         172 LOAD_FAST                1 (h)\n            174 LOAD_ATTR               11 (NULL|self + hexdigest)\n            194 CALL                     0\n            202 RETURN_VALUE\n\n 18     >>  204 PUSH_EXC_INFO\n            206 WITH_EXCEPT_START\n            208 POP_JUMP_IF_TRUE         1 (to 212)\n            210 RERAISE                  2\n        >>  212 POP_TOP\n            214 POP_EXCEPT\n            216 POP_TOP\n            218 POP_TOP\n\n 21         220 LOAD_FAST                1 (h)\n            222 LOAD_ATTR               11 (NULL|self + hexdigest)\n            242 CALL                     0\n            250 RETURN_VALUE\n        >>  252 COPY                     3\n            254 POP_EXCEPT\n            256 RERAISE                  1\nExceptionTable:\n  78 to 152 -> 204 [1] lasti\n  204 to 212 -> 252 [3] lasti\n"
+    },
+    {
+      "qualname": "sha256_file.<locals>.<lambda>",
+      "name": "<lambda>",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [],
+      "names": [
+        "read"
+      ],
+      "freevars": [
+        "f"
+      ],
+      "cellvars": [],
+      "doc": null,
+      "dis": "              0 COPY_FREE_VARS           1\n\n 19           2 RESUME                   0\n              4 LOAD_DEREF               0 (f)\n              6 LOAD_ATTR                1 (NULL|self + read)\n             26 LOAD_CONST               1 (1048576)\n             28 CALL                     1\n             36 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "read_single_member",
+      "name": "read_single_member",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "zf",
+        "info",
+        "infos"
+      ],
+      "names": [
+        "zipfile",
+        "ZipFile",
+        "infolist",
+        "is_dir",
+        "len",
+        "SystemExit",
+        "read",
+        "filename"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 24           0 RESUME                   0\n\n 25           2 LOAD_GLOBAL              1 (NULL + zipfile)\n             12 LOAD_ATTR                2 (ZipFile)\n             32 LOAD_FAST                0 (path)\n             34 LOAD_CONST               1 ('r')\n             36 CALL                     2\n             44 BEFORE_WITH\n             46 STORE_FAST               1 (zf)\n\n 26          48 LOAD_FAST                1 (zf)\n             50 LOAD_ATTR                5 (NULL|self + infolist)\n             70 CALL                     0\n             78 GET_ITER\n             80 LOAD_FAST_AND_CLEAR      2 (info)\n             82 SWAP                     2\n             84 BUILD_LIST               0\n             86 SWAP                     2\n        >>   88 FOR_ITER                21 (to 134)\n             92 STORE_FAST               2 (info)\n             94 LOAD_FAST                2 (info)\n             96 LOAD_ATTR                7 (NULL|self + is_dir)\n            116 CALL                     0\n            124 POP_JUMP_IF_FALSE        1 (to 128)\n            126 JUMP_BACKWARD           20 (to 88)\n        >>  128 LOAD_FAST                2 (info)\n            130 LIST_APPEND              2\n            132 JUMP_BACKWARD           23 (to 88)\n        >>  134 END_FOR\n            136 STORE_FAST               3 (infos)\n            138 STORE_FAST               2 (info)\n\n 27         140 LOAD_GLOBAL              9 (NULL + len)\n            150 LOAD_FAST                3 (infos)\n            152 CALL                     1\n            160 LOAD_CONST               2 (1)\n            162 COMPARE_OP              55 (!=)\n            166 POP_JUMP_IF_FALSE       26 (to 220)\n\n 28         168 LOAD_GLOBAL             11 (NULL + SystemExit)\n            178 LOAD_FAST                0 (path)\n            180 FORMAT_VALUE             0\n            182 LOAD_CONST               3 (' has ')\n            184 LOAD_GLOBAL              9 (NULL + len)\n            194 LOAD_FAST                3 (infos)\n            196 CALL                     1\n            204 FORMAT_VALUE             0\n            206 LOAD_CONST               4 (' file members; expected exactly one')\n            208 BUILD_STRING             4\n            210 CALL                     1\n            218 RAISE_VARARGS            1\n\n 29     >>  220 LOAD_FAST                3 (infos)\n            222 LOAD_CONST               5 (0)\n            224 BINARY_SUBSCR\n            228 STORE_FAST               2 (info)\n\n 30         230 LOAD_FAST                2 (info)\n            232 LOAD_FAST                1 (zf)\n            234 LOAD_ATTR               13 (NULL|self + read)\n            254 LOAD_FAST                2 (info)\n            256 LOAD_ATTR               14 (filename)\n            276 CALL                     1\n            284 BUILD_TUPLE              2\n\n 25         286 SWAP                     2\n            288 LOAD_CONST               0 (None)\n            290 LOAD_CONST               0 (None)\n            292 LOAD_CONST               0 (None)\n            294 CALL                     2\n            302 POP_TOP\n            304 RETURN_VALUE\n        >>  306 SWAP                     2\n            308 POP_TOP\n\n 26         310 SWAP                     2\n            312 STORE_FAST               2 (info)\n            314 RERAISE                  0\n\n 25     >>  316 PUSH_EXC_INFO\n            318 WITH_EXCEPT_START\n            320 POP_JUMP_IF_TRUE         1 (to 324)\n            322 RERAISE                  2\n        >>  324 POP_TOP\n            326 POP_EXCEPT\n            328 POP_TOP\n            330 POP_TOP\n            332 RETURN_CONST             0 (None)\n        >>  334 COPY                     3\n            336 POP_EXCEPT\n            338 RERAISE                  1\nExceptionTable:\n  46 to 82 -> 316 [1] lasti\n  84 to 124 -> 306 [3]\n  128 to 134 -> 306 [3]\n  136 to 284 -> 316 [1] lasti\n  306 to 314 -> 316 [1] lasti\n  316 to 324 -> 334 [3] lasti\n"
+    },
+    {
+      "qualname": "write_single_member",
+      "name": "write_single_member",
+      "argcount": 3,
+      "kwonlyargcount": 2,
+      "varnames": [
+        "output",
+        "member_name",
+        "payload",
+        "compress_type",
+        "compresslevel",
+        "info",
+        "zf"
+      ],
+      "names": [
+        "parent",
+        "mkdir",
+        "zipfile",
+        "ZipInfo",
+        "FIXED_DATE_TIME",
+        "compress_type",
+        "external_attr",
+        "ZipFile",
+        "writestr"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 33           0 RESUME                   0\n\n 41           2 LOAD_FAST                0 (output)\n              4 LOAD_ATTR                0 (parent)\n             24 LOAD_ATTR                3 (NULL|self + mkdir)\n             44 LOAD_CONST               1 (True)\n             46 LOAD_CONST               1 (True)\n             48 KW_NAMES                 2 (('parents', 'exist_ok'))\n             50 CALL                     2\n             58 POP_TOP\n\n 42          60 LOAD_GLOBAL              5 (NULL + zipfile)\n             70 LOAD_ATTR                6 (ZipInfo)\n             90 LOAD_FAST                1 (member_name)\n             92 LOAD_GLOBAL              8 (FIXED_DATE_TIME)\n            102 KW_NAMES                 3 (('date_time',))\n            104 CALL                     2\n            112 STORE_FAST               5 (info)\n\n 43         114 LOAD_FAST                3 (compress_type)\n            116 LOAD_FAST                5 (info)\n            118 STORE_ATTR               5 (compress_type)\n\n 44         128 LOAD_CONST               4 (2175008768)\n            130 LOAD_FAST                5 (info)\n            132 STORE_ATTR               6 (external_attr)\n\n 45         142 LOAD_GLOBAL              5 (NULL + zipfile)\n            152 LOAD_ATTR               14 (ZipFile)\n            172 LOAD_FAST                0 (output)\n            174 LOAD_CONST               5 ('w')\n            176 LOAD_CONST               1 (True)\n            178 KW_NAMES                 6 (('strict_timestamps',))\n            180 CALL                     3\n            188 BEFORE_WITH\n            190 STORE_FAST               6 (zf)\n\n 46         192 LOAD_FAST                6 (zf)\n            194 LOAD_ATTR               17 (NULL|self + writestr)\n            214 LOAD_FAST                5 (info)\n            216 LOAD_FAST                2 (payload)\n            218 LOAD_FAST                3 (compress_type)\n            220 LOAD_FAST                4 (compresslevel)\n            222 KW_NAMES                 7 (('compress_type', 'compresslevel'))\n            224 CALL                     4\n            232 POP_TOP\n\n 45         234 LOAD_CONST               0 (None)\n            236 LOAD_CONST               0 (None)\n            238 LOAD_CONST               0 (None)\n            240 CALL                     2\n            248 POP_TOP\n            250 RETURN_CONST             0 (None)\n        >>  252 PUSH_EXC_INFO\n            254 WITH_EXCEPT_START\n            256 POP_JUMP_IF_TRUE         1 (to 260)\n            258 RERAISE                  2\n        >>  260 POP_TOP\n            262 POP_EXCEPT\n            264 POP_TOP\n            266 POP_TOP\n            268 RETURN_CONST             0 (None)\n        >>  270 COPY                     3\n            272 POP_EXCEPT\n            274 RERAISE                  1\nExceptionTable:\n  190 to 232 -> 252 [1] lasti\n  252 to 260 -> 270 [3] lasti\n"
+    },
+    {
+      "qualname": "main",
+      "name": "main",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "parser",
+        "args",
+        "source_info",
+        "payload",
+        "compress_type",
+        "compresslevel",
+        "record"
+      ],
+      "names": [
+        "argparse",
+        "ArgumentParser",
+        "__doc__",
+        "add_argument",
+        "Path",
+        "parse_args",
+        "read_single_member",
+        "input",
+        "compression",
+        "compress_type",
+        "zipfile",
+        "ZIP_STORED",
+        "ZIP_DEFLATED",
+        "write_single_member",
+        "output",
+        "member_name",
+        "str",
+        "stat",
+        "st_size",
+        "sha256_file",
+        "filename",
+        "len",
+        "hashlib",
+        "sha256",
+        "hexdigest",
+        "json_out",
+        "parent",
+        "mkdir",
+        "write_text",
+        "json",
+        "dumps",
+        "print"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 49           0 RESUME                   0\n\n 50           2 LOAD_GLOBAL              1 (NULL + argparse)\n             12 LOAD_ATTR                2 (ArgumentParser)\n             32 LOAD_GLOBAL              4 (__doc__)\n             42 KW_NAMES                 1 (('description',))\n             44 CALL                     1\n             52 STORE_FAST               0 (parser)\n\n 51          54 LOAD_FAST                0 (parser)\n             56 LOAD_ATTR                7 (NULL|self + add_argument)\n             76 LOAD_CONST               2 ('--input')\n             78 LOAD_CONST               3 (True)\n             80 LOAD_GLOBAL              8 (Path)\n             90 KW_NAMES                 4 (('required', 'type'))\n             92 CALL                     3\n            100 POP_TOP\n\n 52         102 LOAD_FAST                0 (parser)\n            104 LOAD_ATTR                7 (NULL|self + add_argument)\n            124 LOAD_CONST               5 ('--output')\n            126 LOAD_CONST               3 (True)\n            128 LOAD_GLOBAL              8 (Path)\n            138 KW_NAMES                 4 (('required', 'type'))\n            140 CALL                     3\n            148 POP_TOP\n\n 53         150 LOAD_FAST                0 (parser)\n            152 LOAD_ATTR                7 (NULL|self + add_argument)\n            172 LOAD_CONST               6 ('--member-name')\n            174 LOAD_CONST               3 (True)\n            176 KW_NAMES                 7 (('required',))\n            178 CALL                     2\n            186 POP_TOP\n\n 54         188 LOAD_FAST                0 (parser)\n            190 LOAD_ATTR                7 (NULL|self + add_argument)\n            210 LOAD_CONST               8 ('--json-out')\n            212 LOAD_GLOBAL              8 (Path)\n            222 KW_NAMES                 9 (('type',))\n            224 CALL                     2\n            232 POP_TOP\n\n 55         234 LOAD_FAST                0 (parser)\n            236 LOAD_ATTR                7 (NULL|self + add_argument)\n\n 56         256 LOAD_CONST              10 ('--compression')\n\n 57         258 LOAD_CONST              11 (('preserve', 'stored', 'deflated'))\n\n 58         260 LOAD_CONST              12 ('preserve')\n\n 55         262 KW_NAMES                13 (('choices', 'default'))\n            264 CALL                     3\n            272 POP_TOP\n\n 60         274 LOAD_FAST                0 (parser)\n            276 LOAD_ATTR               11 (NULL|self + parse_args)\n            296 CALL                     0\n            304 STORE_FAST               1 (args)\n\n 62         306 LOAD_GLOBAL             13 (NULL + read_single_member)\n            316 LOAD_FAST                1 (args)\n            318 LOAD_ATTR               14 (input)\n            338 CALL                     1\n            346 UNPACK_SEQUENCE          2\n            350 STORE_FAST               2 (source_info)\n            352 STORE_FAST               3 (payload)\n\n 63         354 LOAD_FAST                1 (args)\n            356 LOAD_ATTR               16 (compression)\n            376 LOAD_CONST              12 ('preserve')\n            378 COMPARE_OP              40 (==)\n            382 POP_JUMP_IF_FALSE       13 (to 410)\n\n 64         384 LOAD_FAST                2 (source_info)\n            386 LOAD_ATTR               18 (compress_type)\n            406 STORE_FAST               4 (compress_type)\n            408 JUMP_FORWARD            48 (to 506)\n\n 65     >>  410 LOAD_FAST                1 (args)\n            412 LOAD_ATTR               16 (compression)\n            432 LOAD_CONST              14 ('stored')\n            434 COMPARE_OP              40 (==)\n            438 POP_JUMP_IF_FALSE       17 (to 474)\n\n 66         440 LOAD_GLOBAL             20 (zipfile)\n            450 LOAD_ATTR               22 (ZIP_STORED)\n            470 STORE_FAST               4 (compress_type)\n            472 JUMP_FORWARD            16 (to 506)\n\n 68     >>  474 LOAD_GLOBAL             20 (zipfile)\n            484 LOAD_ATTR               24 (ZIP_DEFLATED)\n            504 STORE_FAST               4 (compress_type)\n\n 69     >>  506 LOAD_FAST                4 (compress_type)\n            508 LOAD_GLOBAL             20 (zipfile)\n            518 LOAD_ATTR               24 (ZIP_DEFLATED)\n            538 COMPARE_OP              40 (==)\n            542 POP_JUMP_IF_FALSE        2 (to 548)\n            544 LOAD_CONST              15 (9)\n            546 JUMP_FORWARD             1 (to 550)\n        >>  548 LOAD_CONST               0 (None)\n        >>  550 STORE_FAST               5 (compresslevel)\n\n 70         552 LOAD_GLOBAL             27 (NULL + write_single_member)\n\n 71         562 LOAD_FAST                1 (args)\n            564 LOAD_ATTR               28 (output)\n\n 72         584 LOAD_FAST                1 (args)\n            586 LOAD_ATTR               30 (member_name)\n\n 73         606 LOAD_FAST                3 (payload)\n\n 74         608 LOAD_FAST                4 (compress_type)\n\n 75         610 LOAD_FAST                5 (compresslevel)\n\n 70         612 KW_NAMES                16 (('compress_type', 'compresslevel'))\n            614 CALL                     5\n            622 POP_TOP\n\n 78         624 LOAD_GLOBAL             33 (NULL + str)\n            634 LOAD_FAST                1 (args)\n            636 LOAD_ATTR               14 (input)\n            656 CALL                     1\n\n 79         664 LOAD_FAST                1 (args)\n            666 LOAD_ATTR               14 (input)\n            686 LOAD_ATTR               35 (NULL|self + stat)\n            706 CALL                     0\n            714 LOAD_ATTR               36 (st_size)\n\n 80         734 LOAD_GLOBAL             39 (NULL + sha256_file)\n            744 LOAD_FAST                1 (args)\n            746 LOAD_ATTR               14 (input)\n            766 CALL                     1\n\n 81         774 LOAD_GLOBAL             33 (NULL + str)\n            784 LOAD_FAST                1 (args)\n            786 LOAD_ATTR               28 (output)\n            806 CALL                     1\n\n 82         814 LOAD_FAST                1 (args)\n            816 LOAD_ATTR               28 (output)\n            836 LOAD_ATTR               35 (NULL|self + stat)\n            856 CALL                     0\n            864 LOAD_ATTR               36 (st_size)\n\n 83         884 LOAD_GLOBAL             39 (NULL + sha256_file)\n            894 LOAD_FAST                1 (args)\n            896 LOAD_ATTR               28 (output)\n            916 CALL                     1\n\n 84         924 LOAD_FAST                2 (source_info)\n            926 LOAD_ATTR               40 (filename)\n\n 85         946 LOAD_GLOBAL             43 (NULL + len)\n            956 LOAD_FAST                3 (payload)\n            958 CALL                     1\n\n 86         966 LOAD_GLOBAL             45 (NULL + hashlib)\n            976 LOAD_ATTR               46 (sha256)\n            996 LOAD_FAST                3 (payload)\n            998 CALL                     1\n           1006 LOAD_ATTR               49 (NULL|self + hexdigest)\n           1026 CALL                     0\n\n 87        1034 LOAD_FAST                1 (args)\n           1036 LOAD_ATTR               30 (member_name)\n\n 88        1056 LOAD_FAST                1 (args)\n           1058 LOAD_ATTR               16 (compression)\n\n 89        1078 LOAD_FAST                4 (compress_type)\n\n 90        1080 LOAD_FAST                1 (args)\n           1082 LOAD_ATTR               28 (output)\n           1102 LOAD_ATTR               35 (NULL|self + stat)\n           1122 CALL                     0\n           1130 LOAD_ATTR               36 (st_size)\n           1150 LOAD_FAST                1 (args)\n           1152 LOAD_ATTR               14 (input)\n           1172 LOAD_ATTR               35 (NULL|self + stat)\n           1192 CALL                     0\n           1200 LOAD_ATTR               36 (st_size)\n           1220 BINARY_OP               10 (-)\n\n 91        1224 LOAD_CONST              17 (False)\n\n 92        1226 LOAD_CONST              18 ('byte_repack_only')\n\n 77        1228 LOAD_CONST              19 (('input', 'input_bytes', 'input_sha256', 'output', 'output_bytes', 'output_sha256', 'source_member_name', 'source_member_bytes', 'source_member_sha256', 'target_member_name', 'compression', 'compress_type', 'byte_delta', 'score_claim', 'evidence_grade'))\n           1230 BUILD_CONST_KEY_MAP     15\n           1232 STORE_FAST               6 (record)\n\n 94        1234 LOAD_FAST                1 (args)\n           1236 LOAD_ATTR               50 (json_out)\n           1256 POP_JUMP_IF_FALSE       92 (to 1442)\n\n 95        1258 LOAD_FAST                1 (args)\n           1260 LOAD_ATTR               50 (json_out)\n           1280 LOAD_ATTR               52 (parent)\n           1300 LOAD_ATTR               55 (NULL|self + mkdir)\n           1320 LOAD_CONST               3 (True)\n           1322 LOAD_CONST               3 (True)\n           1324 KW_NAMES                20 (('parents', 'exist_ok'))\n           1326 CALL                     2\n           1334 POP_TOP\n\n 96        1336 LOAD_FAST                1 (args)\n           1338 LOAD_ATTR               50 (json_out)\n           1358 LOAD_ATTR               57 (NULL|self + write_text)\n           1378 LOAD_GLOBAL             59 (NULL + json)\n           1388 LOAD_ATTR               60 (dumps)\n           1408 LOAD_FAST                6 (record)\n           1410 LOAD_CONST              21 (2)\n           1412 LOAD_CONST               3 (True)\n           1414 KW_NAMES                22 (('indent', 'sort_keys'))\n           1416 CALL                     3\n           1424 LOAD_CONST              23 ('\\n')\n           1426 BINARY_OP                0 (+)\n           1430 CALL                     1\n           1438 POP_TOP\n\n 99        1440 RETURN_CONST            24 (0)\n\n 98     >> 1442 LOAD_GLOBAL             63 (NULL + print)\n           1452 LOAD_GLOBAL             59 (NULL + json)\n           1462 LOAD_ATTR               60 (dumps)\n           1482 LOAD_FAST                6 (record)\n           1484 LOAD_CONST              21 (2)\n           1486 LOAD_CONST               3 (True)\n           1488 KW_NAMES                22 (('indent', 'sort_keys'))\n           1490 CALL                     3\n           1498 CALL                     1\n           1506 POP_TOP\n\n 99        1508 RETURN_CONST            24 (0)\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  2           2 LOAD_CONST               0 ('Deterministically repack a one-member contest archive under a new name.')\n              4 STORE_NAME               0 (__doc__)\n\n  4           6 LOAD_CONST               1 (0)\n              8 LOAD_CONST               2 (('annotations',))\n             10 IMPORT_NAME              1 (__future__)\n             12 IMPORT_FROM              2 (annotations)\n             14 STORE_NAME               2 (annotations)\n             16 POP_TOP\n\n  6          18 LOAD_CONST               1 (0)\n             20 LOAD_CONST               3 (None)\n             22 IMPORT_NAME              3 (argparse)\n             24 STORE_NAME               3 (argparse)\n\n  7          26 LOAD_CONST               1 (0)\n             28 LOAD_CONST               3 (None)\n             30 IMPORT_NAME              4 (hashlib)\n             32 STORE_NAME               4 (hashlib)\n\n  8          34 LOAD_CONST               1 (0)\n             36 LOAD_CONST               3 (None)\n             38 IMPORT_NAME              5 (json)\n             40 STORE_NAME               5 (json)\n\n  9          42 LOAD_CONST               1 (0)\n             44 LOAD_CONST               3 (None)\n             46 IMPORT_NAME              6 (zipfile)\n             48 STORE_NAME               6 (zipfile)\n\n 10          50 LOAD_CONST               1 (0)\n             52 LOAD_CONST               4 (('Path',))\n             54 IMPORT_NAME              7 (pathlib)\n             56 IMPORT_FROM              8 (Path)\n             58 STORE_NAME               8 (Path)\n             60 POP_TOP\n\n 13          62 LOAD_CONST               5 ((1980, 1, 1, 0, 0, 0))\n             64 STORE_NAME               9 (FIXED_DATE_TIME)\n\n 16          66 LOAD_CONST              11 (('path', 'Path', 'return', 'str'))\n             68 LOAD_CONST               6 (<code object sha256_file at 0x100e8ed80, file \"experiments/repack_single_member_archive.py\", line 16>)\n             70 MAKE_FUNCTION            4 (annotations)\n             72 STORE_NAME              10 (sha256_file)\n\n 24          74 LOAD_CONST              12 (('path', 'Path', 'return', 'tuple[zipfile.ZipInfo, bytes]'))\n             76 LOAD_CONST               7 (<code object read_single_member at 0x798e1db80, file \"experiments/repack_single_member_archive.py\", line 24>)\n             78 MAKE_FUNCTION            4 (annotations)\n             80 STORE_NAME              11 (read_single_member)\n\n 33          82 NOP\n\n 34          84 NOP\n\n 33          86 NOP\n\n 35          88 NOP\n\n 33          90 NOP\n\n 36          92 NOP\n\n 33          94 NOP\n\n 38          96 NOP\n\n 33          98 NOP\n\n 39         100 NOP\n\n 33         102 NOP\n\n 40         104 NOP\n\n 33         106 LOAD_CONST              13 (('output', 'Path', 'member_name', 'str', 'payload', 'bytes', 'compress_type', 'int', 'compresslevel', 'int | None', 'return', 'None'))\n            108 LOAD_CONST               8 (<code object write_single_member at 0x100ef9890, file \"experiments/repack_single_member_archive.py\", line 33>)\n            110 MAKE_FUNCTION            4 (annotations)\n            112 STORE_NAME              12 (write_single_member)\n\n 49         114 LOAD_CONST              14 (('return', 'int'))\n            116 LOAD_CONST               9 (<code object main at 0x799189500, file \"experiments/repack_single_member_archive.py\", line 49>)\n            118 MAKE_FUNCTION            4 (annotations)\n            120 STORE_NAME              13 (main)\n\n102         122 LOAD_NAME               14 (__name__)\n            124 LOAD_CONST              10 ('__main__')\n            126 COMPARE_OP              40 (==)\n            130 POP_JUMP_IF_FALSE       13 (to 158)\n\n103         132 PUSH_NULL\n            134 LOAD_NAME               15 (SystemExit)\n            136 PUSH_NULL\n            138 LOAD_NAME               13 (main)\n            140 CALL                     0\n            148 CALL                     1\n            156 RAISE_VARARGS            1\n\n102     >>  158 RETURN_CONST             3 (None)\n"
+}

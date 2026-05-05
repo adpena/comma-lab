@@ -385,7 +385,25 @@ def test_extract_archive_zip_slip_protection(cae, tmp_path: Path):
     bad_zip = tmp_path / "evil.zip"
     with zipfile.ZipFile(bad_zip, "w") as z:
         z.writestr("../escaped.txt", b"pwned")
-    with pytest.raises(RuntimeError, match="zip-slip"):
+    with pytest.raises(RuntimeError, match="NONCANONICAL|zip-slip"):
+        cae._extract_archive(bad_zip, tmp_path / "dest")
+
+
+def test_extract_archive_rejects_prefix_traversal_member(cae, tmp_path: Path):
+    """`../dest_evil/p` must not pass a string-prefix destination check."""
+    bad_zip = tmp_path / "evil_prefix.zip"
+    with zipfile.ZipFile(bad_zip, "w") as z:
+        z.writestr("../dest_evil/p", b"pwned")
+    with pytest.raises(RuntimeError, match="NONCANONICAL|zip-slip"):
+        cae._extract_archive(bad_zip, tmp_path / "dest")
+    assert not (tmp_path / "dest_evil" / "p").exists()
+
+
+def test_extract_archive_rejects_backslash_member(cae, tmp_path: Path):
+    bad_zip = tmp_path / "evil_backslash.zip"
+    with zipfile.ZipFile(bad_zip, "w") as z:
+        z.writestr(r"..\\p", b"pwned")
+    with pytest.raises(RuntimeError, match="BACKSLASH"):
         cae._extract_archive(bad_zip, tmp_path / "dest")
 
 

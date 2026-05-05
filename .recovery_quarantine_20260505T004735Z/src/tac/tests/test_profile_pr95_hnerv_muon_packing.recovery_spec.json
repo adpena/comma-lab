@@ -1,0 +1,566 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/src/tac/tests/__pycache__/test_profile_pr95_hnerv_muon_packing.cpython-312.pyc",
+  "names": [
+    "__future__",
+    "annotations",
+    "io",
+    "json",
+    "struct",
+    "zipfile",
+    "pathlib",
+    "Path",
+    "brotli",
+    "experiments.profile_pr95_hnerv_muon_packing",
+    "LatentPayload",
+    "decoder_raw_variants",
+    "parse_decoder_records_structured",
+    "parse_latents_raw",
+    "parse_top_blob",
+    "reorder_latents_raw",
+    "reorder_stem_weight_record",
+    "run",
+    "_decoder_record",
+    "_decoder_raw",
+    "_top_blob",
+    "test_decoder_raw_variants_preserve_record_set",
+    "test_parse_top_blob_roundtrips_raw_streams",
+    "test_latent_dimension_permutation_compensates_stem_weight",
+    "test_profiler_emits_no_score_claim_candidate"
+  ],
+  "varnames": [],
+  "consts": [
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "Path"
+    ],
+    [
+      "LatentPayload",
+      "decoder_raw_variants",
+      "parse_decoder_records_structured",
+      "parse_latents_raw",
+      "parse_top_blob",
+      "reorder_latents_raw",
+      "reorder_stem_weight_record",
+      "run"
+    ],
+    {
+      "__code__": "_decoder_record",
+      "qualname": "_decoder_record",
+      "argcount": 3,
+      "varnames": [
+        "name",
+        "q",
+        "shape",
+        "total",
+        "dim",
+        "out",
+        "name_b"
+      ],
+      "names": [
+        "len",
+        "io",
+        "BytesIO",
+        "encode",
+        "write",
+        "struct",
+        "pack",
+        "getvalue"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_decoder_raw",
+      "qualname": "_decoder_raw",
+      "argcount": 1,
+      "varnames": [
+        "records",
+        "out",
+        "record"
+      ],
+      "names": [
+        "io",
+        "BytesIO",
+        "write",
+        "struct",
+        "pack",
+        "len",
+        "getvalue"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_top_blob",
+      "qualname": "_top_blob",
+      "argcount": 3,
+      "varnames": [
+        "meta_raw",
+        "decoder_raw",
+        "latents_raw",
+        "meta",
+        "dec",
+        "lat",
+        "out",
+        "payload"
+      ],
+      "names": [
+        "brotli",
+        "compress",
+        "io",
+        "BytesIO",
+        "write",
+        "struct",
+        "pack",
+        "len",
+        "getvalue"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_decoder_raw_variants_preserve_record_set",
+      "qualname": "test_decoder_raw_variants_preserve_record_set",
+      "argcount": 0,
+      "varnames": [
+        "records",
+        "raw",
+        "variants",
+        "candidate"
+      ],
+      "names": [
+        "_decoder_record",
+        "_decoder_raw",
+        "decoder_raw_variants",
+        "set",
+        "values",
+        "sorted"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_parse_top_blob_roundtrips_raw_streams",
+      "qualname": "test_parse_top_blob_roundtrips_raw_streams",
+      "argcount": 0,
+      "varnames": [
+        "meta_raw",
+        "decoder_raw",
+        "latents_raw",
+        "blob",
+        "parsed"
+      ],
+      "names": [
+        "_decoder_raw",
+        "_decoder_record",
+        "_top_blob",
+        "parse_top_blob"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_latent_dimension_permutation_compensates_stem_weight",
+      "qualname": "test_latent_dimension_permutation_compensates_stem_weight",
+      "argcount": 0,
+      "varnames": [
+        "stem",
+        "decoder_raw",
+        "latents_raw",
+        "permutation",
+        "reordered_latents",
+        "reordered_stem",
+        "original_rows",
+        "original_w",
+        "reordered_w",
+        "row",
+        "reordered_row",
+        "weights"
+      ],
+      "names": [
+        "_decoder_record",
+        "bytes",
+        "_decoder_raw",
+        "LatentPayload",
+        "to_bytes",
+        "parse_latents_raw",
+        "reorder_latents_raw",
+        "reorder_stem_weight_record",
+        "parse_decoder_records_structured",
+        "quantized",
+        "q_zz",
+        "zip",
+        "sum"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_profiler_emits_no_score_claim_candidate",
+      "qualname": "test_profiler_emits_no_score_claim_candidate",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "blob",
+        "zf",
+        "Args",
+        "manifest"
+      ],
+      "names": [
+        "_top_blob",
+        "_decoder_raw",
+        "_decoder_record",
+        "LatentPayload",
+        "to_bytes",
+        "zipfile",
+        "ZipFile",
+        "ZIP_STORED",
+        "writestr",
+        "run",
+        "json",
+        "loads",
+        "read_text",
+        "Path",
+        "is_file"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "tmp_path",
+        "archive"
+      ]
+    },
+    [
+      null
+    ],
+    [
+      "name",
+      "str",
+      "q",
+      "bytes",
+      "shape",
+      "tuple[int, ...] | None",
+      "return",
+      "bytes"
+    ],
+    [
+      "records",
+      "list[bytes]",
+      "return",
+      "bytes"
+    ],
+    [
+      "meta_raw",
+      "bytes",
+      "decoder_raw",
+      "bytes",
+      "latents_raw",
+      "bytes",
+      "return",
+      "bytes"
+    ],
+    [
+      "return",
+      "None"
+    ],
+    [
+      "tmp_path",
+      "Path",
+      "return",
+      "None"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": null,
+  "child_codes": [
+    {
+      "qualname": "_decoder_record",
+      "name": "_decoder_record",
+      "argcount": 3,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "name",
+        "q",
+        "shape",
+        "total",
+        "dim",
+        "out",
+        "name_b"
+      ],
+      "names": [
+        "len",
+        "io",
+        "BytesIO",
+        "encode",
+        "write",
+        "struct",
+        "pack",
+        "getvalue"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 23           0 RESUME                   0\n\n 24           2 LOAD_FAST                2 (shape)\n              4 COPY                     1\n              6 POP_JUMP_IF_TRUE        12 (to 32)\n              8 POP_TOP\n             10 LOAD_GLOBAL              1 (NULL + len)\n             20 LOAD_FAST                1 (q)\n             22 CALL                     1\n             30 BUILD_TUPLE              1\n        >>   32 STORE_FAST               2 (shape)\n\n 25          34 LOAD_CONST               1 (1)\n             36 STORE_FAST               3 (total)\n\n 26          38 LOAD_FAST                2 (shape)\n             40 GET_ITER\n        >>   42 FOR_ITER                 7 (to 60)\n             46 STORE_FAST               4 (dim)\n\n 27          48 LOAD_FAST                3 (total)\n             50 LOAD_FAST                4 (dim)\n             52 BINARY_OP               18 (*=)\n             56 STORE_FAST               3 (total)\n             58 JUMP_BACKWARD            9 (to 42)\n\n 26     >>   60 END_FOR\n\n 28          62 LOAD_FAST                3 (total)\n             64 LOAD_GLOBAL              1 (NULL + len)\n             74 LOAD_FAST                1 (q)\n             76 CALL                     1\n             84 COMPARE_OP              40 (==)\n             88 POP_JUMP_IF_TRUE         2 (to 94)\n             90 LOAD_ASSERTION_ERROR\n             92 RAISE_VARARGS            1\n\n 29     >>   94 LOAD_GLOBAL              3 (NULL + io)\n            104 LOAD_ATTR                4 (BytesIO)\n            124 CALL                     0\n            132 STORE_FAST               5 (out)\n\n 30         134 LOAD_FAST                0 (name)\n            136 LOAD_ATTR                7 (NULL|self + encode)\n            156 LOAD_CONST               2 ('utf-8')\n            158 CALL                     1\n            166 STORE_FAST               6 (name_b)\n\n 31         168 LOAD_FAST                5 (out)\n            170 LOAD_ATTR                9 (NULL|self + write)\n            190 LOAD_GLOBAL             11 (NULL + struct)\n            200 LOAD_ATTR               12 (pack)\n            220 LOAD_CONST               3 ('<I')\n            222 LOAD_GLOBAL              1 (NULL + len)\n            232 LOAD_FAST                6 (name_b)\n            234 CALL                     1\n            242 CALL                     2\n            250 CALL                     1\n            258 POP_TOP\n\n 32         260 LOAD_FAST                5 (out)\n            262 LOAD_ATTR                9 (NULL|self + write)\n            282 LOAD_FAST                6 (name_b)\n            284 CALL                     1\n            292 POP_TOP\n\n 33         294 LOAD_FAST                5 (out)\n            296 LOAD_ATTR                9 (NULL|self + write)\n            316 LOAD_GLOBAL             11 (NULL + struct)\n            326 LOAD_ATTR               12 (pack)\n            346 LOAD_CONST               3 ('<I')\n            348 LOAD_GLOBAL              1 (NULL + len)\n            358 LOAD_FAST                2 (shape)\n            360 CALL                     1\n            368 CALL                     2\n            376 CALL                     1\n            384 POP_TOP\n\n 34         386 LOAD_FAST                2 (shape)\n            388 GET_ITER\n        >>  390 FOR_ITER                39 (to 472)\n            394 STORE_FAST               4 (dim)\n\n 35         396 LOAD_FAST                5 (out)\n            398 LOAD_ATTR                9 (NULL|self + write)\n            418 LOAD_GLOBAL             11 (NULL + struct)\n            428 LOAD_ATTR               12 (pack)\n            448 LOAD_CONST               3 ('<I')\n            450 LOAD_FAST                4 (dim)\n            452 CALL                     2\n            460 CALL                     1\n            468 POP_TOP\n            470 JUMP_BACKWARD           41 (to 390)\n\n 34     >>  472 END_FOR\n\n 36         474 LOAD_FAST                5 (out)\n            476 LOAD_ATTR                9 (NULL|self + write)\n            496 LOAD_GLOBAL             11 (NULL + struct)\n            506 LOAD_ATTR               12 (pack)\n            526 LOAD_CONST               4 ('<f')\n            528 LOAD_CONST               5 (0.25)\n            530 CALL                     2\n            538 CALL                     1\n            546 POP_TOP\n\n 37         548 LOAD_FAST                5 (out)\n            550 LOAD_ATTR                9 (NULL|self + write)\n            570 LOAD_GLOBAL             11 (NULL + struct)\n            580 LOAD_ATTR               12 (pack)\n            600 LOAD_CONST               3 ('<I')\n            602 LOAD_GLOBAL              1 (NULL + len)\n            612 LOAD_FAST                1 (q)\n            614 CALL                     1\n            622 CALL                     2\n            630 CALL                     1\n            638 POP_TOP\n\n 38         640 LOAD_FAST                5 (out)\n            642 LOAD_ATTR                9 (NULL|self + write)\n            662 LOAD_FAST                1 (q)\n            664 CALL                     1\n            672 POP_TOP\n\n 39         674 LOAD_FAST                5 (out)\n            676 LOAD_ATTR               15 (NULL|self + getvalue)\n            696 CALL                     0\n            704 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_decoder_raw",
+      "name": "_decoder_raw",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "records",
+        "out",
+        "record"
+      ],
+      "names": [
+        "io",
+        "BytesIO",
+        "write",
+        "struct",
+        "pack",
+        "len",
+        "getvalue"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 42           0 RESUME                   0\n\n 43           2 LOAD_GLOBAL              1 (NULL + io)\n             12 LOAD_ATTR                2 (BytesIO)\n             32 CALL                     0\n             40 STORE_FAST               1 (out)\n\n 44          42 LOAD_FAST                1 (out)\n             44 LOAD_ATTR                5 (NULL|self + write)\n             64 LOAD_GLOBAL              7 (NULL + struct)\n             74 LOAD_ATTR                8 (pack)\n             94 LOAD_CONST               1 ('<I')\n             96 LOAD_GLOBAL             11 (NULL + len)\n            106 LOAD_FAST                0 (records)\n            108 CALL                     1\n            116 CALL                     2\n            124 CALL                     1\n            132 POP_TOP\n\n 45         134 LOAD_FAST                0 (records)\n            136 GET_ITER\n        >>  138 FOR_ITER                19 (to 180)\n            142 STORE_FAST               2 (record)\n\n 46         144 LOAD_FAST                1 (out)\n            146 LOAD_ATTR                5 (NULL|self + write)\n            166 LOAD_FAST                2 (record)\n            168 CALL                     1\n            176 POP_TOP\n            178 JUMP_BACKWARD           21 (to 138)\n\n 45     >>  180 END_FOR\n\n 47         182 LOAD_FAST                1 (out)\n            184 LOAD_ATTR               13 (NULL|self + getvalue)\n            204 CALL                     0\n            212 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_top_blob",
+      "name": "_top_blob",
+      "argcount": 3,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "meta_raw",
+        "decoder_raw",
+        "latents_raw",
+        "meta",
+        "dec",
+        "lat",
+        "out",
+        "payload"
+      ],
+      "names": [
+        "brotli",
+        "compress",
+        "io",
+        "BytesIO",
+        "write",
+        "struct",
+        "pack",
+        "len",
+        "getvalue"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 50           0 RESUME                   0\n\n 51           2 LOAD_GLOBAL              1 (NULL + brotli)\n             12 LOAD_ATTR                2 (compress)\n             32 LOAD_FAST                0 (meta_raw)\n             34 LOAD_CONST               1 (5)\n             36 KW_NAMES                 2 (('quality',))\n             38 CALL                     2\n             46 STORE_FAST               3 (meta)\n\n 52          48 LOAD_GLOBAL              1 (NULL + brotli)\n             58 LOAD_ATTR                2 (compress)\n             78 LOAD_FAST                1 (decoder_raw)\n             80 LOAD_CONST               1 (5)\n             82 KW_NAMES                 2 (('quality',))\n             84 CALL                     2\n             92 STORE_FAST               4 (dec)\n\n 53          94 LOAD_GLOBAL              1 (NULL + brotli)\n            104 LOAD_ATTR                2 (compress)\n            124 LOAD_FAST                2 (latents_raw)\n            126 LOAD_CONST               1 (5)\n            128 KW_NAMES                 2 (('quality',))\n            130 CALL                     2\n            138 STORE_FAST               5 (lat)\n\n 54         140 LOAD_GLOBAL              5 (NULL + io)\n            150 LOAD_ATTR                6 (BytesIO)\n            170 CALL                     0\n            178 STORE_FAST               6 (out)\n\n 55         180 LOAD_FAST                3 (meta)\n            182 LOAD_FAST                4 (dec)\n            184 LOAD_FAST                5 (lat)\n            186 BUILD_TUPLE              3\n            188 GET_ITER\n        >>  190 FOR_ITER                65 (to 324)\n            194 STORE_FAST               7 (payload)\n\n 56         196 LOAD_FAST                6 (out)\n            198 LOAD_ATTR                9 (NULL|self + write)\n            218 LOAD_GLOBAL             11 (NULL + struct)\n            228 LOAD_ATTR               12 (pack)\n            248 LOAD_CONST               3 ('<I')\n            250 LOAD_GLOBAL             15 (NULL + len)\n            260 LOAD_FAST                7 (payload)\n            262 CALL                     1\n            270 CALL                     2\n            278 CALL                     1\n            286 POP_TOP\n\n 57         288 LOAD_FAST                6 (out)\n            290 LOAD_ATTR                9 (NULL|self + write)\n            310 LOAD_FAST                7 (payload)\n            312 CALL                     1\n            320 POP_TOP\n            322 JUMP_BACKWARD           67 (to 190)\n\n 55     >>  324 END_FOR\n\n 58         326 LOAD_FAST                6 (out)\n            328 LOAD_ATTR               17 (NULL|self + getvalue)\n            348 CALL                     0\n            356 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "test_decoder_raw_variants_preserve_record_set",
+      "name": "test_decoder_raw_variants_preserve_record_set",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "records",
+        "raw",
+        "variants",
+        "candidate"
+      ],
+      "names": [
+        "_decoder_record",
+        "_decoder_raw",
+        "decoder_raw_variants",
+        "set",
+        "values",
+        "sorted"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 61           0 RESUME                   0\n\n 62           2 LOAD_GLOBAL              1 (NULL + _decoder_record)\n             12 LOAD_CONST               1 ('b.weight')\n             14 LOAD_CONST               2 (b'\\x01\\x02')\n             16 CALL                     2\n             24 LOAD_GLOBAL              1 (NULL + _decoder_record)\n             34 LOAD_CONST               3 ('a.weight')\n             36 LOAD_CONST               4 (b'\\x03')\n             38 CALL                     2\n             46 BUILD_LIST               2\n             48 STORE_FAST               0 (records)\n\n 63          50 LOAD_GLOBAL              3 (NULL + _decoder_raw)\n             60 LOAD_FAST                0 (records)\n             62 CALL                     1\n             70 STORE_FAST               1 (raw)\n\n 65          72 LOAD_GLOBAL              5 (NULL + decoder_raw_variants)\n             82 LOAD_FAST                1 (raw)\n             84 CALL                     1\n             92 STORE_FAST               2 (variants)\n\n 67          94 LOAD_GLOBAL              7 (NULL + set)\n            104 LOAD_FAST                2 (variants)\n            106 CALL                     1\n            114 BUILD_SET                0\n            116 LOAD_CONST               5 (frozenset({'name_desc', 'size_desc', 'size_asc', 'name_asc', 'original'}))\n            118 SET_UPDATE               1\n            120 COMPARE_OP              40 (==)\n            124 POP_JUMP_IF_TRUE         2 (to 130)\n            126 LOAD_ASSERTION_ERROR\n            128 RAISE_VARARGS            1\n\n 68     >>  130 LOAD_FAST                2 (variants)\n            132 LOAD_ATTR                9 (NULL|self + values)\n            152 CALL                     0\n            160 GET_ITER\n        >>  162 FOR_ITER                36 (to 238)\n            166 STORE_FAST               3 (candidate)\n\n 69         168 LOAD_GLOBAL             11 (NULL + sorted)\n            178 LOAD_GLOBAL              5 (NULL + decoder_raw_variants)\n            188 LOAD_FAST                3 (candidate)\n            190 CALL                     1\n            198 CALL                     1\n            206 LOAD_GLOBAL             11 (NULL + sorted)\n            216 LOAD_FAST                2 (variants)\n            218 CALL                     1\n            226 COMPARE_OP              40 (==)\n            230 POP_JUMP_IF_FALSE        1 (to 234)\n            232 JUMP_BACKWARD           36 (to 162)\n        >>  234 LOAD_ASSERTION_ERROR\n            236 RAISE_VARARGS            1\n\n 68     >>  238 END_FOR\n            240 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "test_parse_top_blob_roundtrips_raw_streams",
+      "name": "test_parse_top_blob_roundtrips_raw_streams",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "meta_raw",
+        "decoder_raw",
+        "latents_raw",
+        "blob",
+        "parsed"
+      ],
+      "names": [
+        "_decoder_raw",
+        "_decoder_record",
+        "_top_blob",
+        "parse_top_blob"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 72           0 RESUME                   0\n\n 73           2 LOAD_CONST               1 (b'{\"latent_dim\": 1, \"n_pairs\": 1}')\n              4 STORE_FAST               0 (meta_raw)\n\n 74           6 LOAD_GLOBAL              1 (NULL + _decoder_raw)\n             16 LOAD_GLOBAL              3 (NULL + _decoder_record)\n             26 LOAD_CONST               2 ('x')\n             28 LOAD_CONST               3 (b'\\x01')\n             30 CALL                     2\n             38 BUILD_LIST               1\n             40 CALL                     1\n             48 STORE_FAST               1 (decoder_raw)\n\n 75          50 LOAD_CONST               4 (b'latent-bytes')\n             52 STORE_FAST               2 (latents_raw)\n\n 76          54 LOAD_GLOBAL              5 (NULL + _top_blob)\n             64 LOAD_FAST                0 (meta_raw)\n             66 LOAD_FAST                1 (decoder_raw)\n             68 LOAD_FAST                2 (latents_raw)\n             70 CALL                     3\n             78 STORE_FAST               3 (blob)\n\n 78          80 LOAD_GLOBAL              7 (NULL + parse_top_blob)\n             90 LOAD_FAST                3 (blob)\n             92 CALL                     1\n            100 STORE_FAST               4 (parsed)\n\n 80         102 LOAD_FAST                4 (parsed)\n            104 LOAD_CONST               5 ('meta_raw')\n            106 BINARY_SUBSCR\n            110 LOAD_FAST                0 (meta_raw)\n            112 COMPARE_OP              40 (==)\n            116 POP_JUMP_IF_TRUE         2 (to 122)\n            118 LOAD_ASSERTION_ERROR\n            120 RAISE_VARARGS            1\n\n 81     >>  122 LOAD_FAST                4 (parsed)\n            124 LOAD_CONST               6 ('decoder_raw')\n            126 BINARY_SUBSCR\n            130 LOAD_FAST                1 (decoder_raw)\n            132 COMPARE_OP              40 (==)\n            136 POP_JUMP_IF_TRUE         2 (to 142)\n            138 LOAD_ASSERTION_ERROR\n            140 RAISE_VARARGS            1\n\n 82     >>  142 LOAD_FAST                4 (parsed)\n            144 LOAD_CONST               7 ('latents_raw')\n            146 BINARY_SUBSCR\n            150 LOAD_FAST                2 (latents_raw)\n            152 COMPARE_OP              40 (==)\n            156 POP_JUMP_IF_TRUE         2 (to 162)\n            158 LOAD_ASSERTION_ERROR\n            160 RAISE_VARARGS            1\n        >>  162 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "test_latent_dimension_permutation_compensates_stem_weight",
+      "name": "test_latent_dimension_permutation_compensates_stem_weight",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "stem",
+        "decoder_raw",
+        "latents_raw",
+        "permutation",
+        "reordered_latents",
+        "reordered_stem",
+        "original_rows",
+        "original_w",
+        "reordered_w",
+        "row",
+        "reordered_row",
+        "weights"
+      ],
+      "names": [
+        "_decoder_record",
+        "bytes",
+        "_decoder_raw",
+        "LatentPayload",
+        "to_bytes",
+        "parse_latents_raw",
+        "reorder_latents_raw",
+        "reorder_stem_weight_record",
+        "parse_decoder_records_structured",
+        "quantized",
+        "q_zz",
+        "zip",
+        "sum"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 85           0 RESUME                   0\n\n 86           2 LOAD_GLOBAL              1 (NULL + _decoder_record)\n             12 LOAD_CONST               1 ('stem.weight')\n             14 LOAD_GLOBAL              3 (NULL + bytes)\n             24 BUILD_LIST               0\n             26 LOAD_CONST               2 ((1, 2, 3, 4, 5, 6))\n             28 LIST_EXTEND              1\n             30 CALL                     1\n             38 LOAD_CONST               3 ((2, 3))\n             40 KW_NAMES                 4 (('shape',))\n             42 CALL                     3\n             50 STORE_FAST               0 (stem)\n\n 87          52 LOAD_GLOBAL              5 (NULL + _decoder_raw)\n             62 LOAD_FAST                0 (stem)\n             64 BUILD_LIST               1\n             66 CALL                     1\n             74 STORE_FAST               1 (decoder_raw)\n\n 88          76 LOAD_GLOBAL              7 (NULL + LatentPayload)\n\n 89          86 LOAD_CONST               5 (3)\n\n 90          88 LOAD_CONST               5 (3)\n\n 91          90 LOAD_CONST               6 (b'aabbcc')\n\n 92          92 LOAD_CONST               7 (b'ddeeff')\n\n 93          94 LOAD_CONST               8 (((1, 2, 3), (2, 4, 6), (3, 6, 9)))\n\n 88          96 KW_NAMES                 9 (('n_pairs', 'latent_dim', 'mins_f16', 'scales_f16', 'quantized'))\n             98 CALL                     5\n\n 94         106 LOAD_ATTR                9 (NULL|self + to_bytes)\n            126 CALL                     0\n\n 88         134 STORE_FAST               2 (latents_raw)\n\n 95         136 BUILD_LIST               0\n            138 LOAD_CONST              10 ((2, 0, 1))\n            140 LIST_EXTEND              1\n            142 STORE_FAST               3 (permutation)\n\n 97         144 LOAD_GLOBAL             11 (NULL + parse_latents_raw)\n            154 LOAD_GLOBAL             13 (NULL + reorder_latents_raw)\n            164 LOAD_FAST                2 (latents_raw)\n            166 LOAD_FAST                3 (permutation)\n            168 CALL                     2\n            176 CALL                     1\n            184 STORE_FAST               4 (reordered_latents)\n\n 98         186 LOAD_GLOBAL             15 (NULL + reorder_stem_weight_record)\n            196 LOAD_GLOBAL             17 (NULL + parse_decoder_records_structured)\n            206 LOAD_FAST                1 (decoder_raw)\n            208 CALL                     1\n            216 LOAD_CONST              11 (0)\n            218 BINARY_SUBSCR\n            222 LOAD_FAST                3 (permutation)\n            224 CALL                     2\n            232 STORE_FAST               5 (reordered_stem)\n\n100         234 LOAD_FAST                4 (reordered_latents)\n            236 LOAD_ATTR               18 (quantized)\n            256 LOAD_CONST              12 (((3, 1, 2), (6, 2, 4), (9, 3, 6)))\n            258 COMPARE_OP              40 (==)\n            262 POP_JUMP_IF_TRUE         2 (to 268)\n            264 LOAD_ASSERTION_ERROR\n            266 RAISE_VARARGS            1\n\n101     >>  268 LOAD_FAST                5 (reordered_stem)\n            270 LOAD_ATTR               20 (q_zz)\n            290 LOAD_GLOBAL              3 (NULL + bytes)\n            300 BUILD_LIST               0\n            302 LOAD_CONST              13 ((3, 1, 2, 6, 4, 5))\n            304 LIST_EXTEND              1\n            306 CALL                     1\n            314 COMPARE_OP              40 (==)\n            318 POP_JUMP_IF_TRUE         2 (to 324)\n            320 LOAD_ASSERTION_ERROR\n            322 RAISE_VARARGS            1\n\n103     >>  324 LOAD_GLOBAL             11 (NULL + parse_latents_raw)\n            334 LOAD_FAST                2 (latents_raw)\n            336 CALL                     1\n            344 LOAD_ATTR               18 (quantized)\n            364 STORE_FAST               6 (original_rows)\n\n104         366 BUILD_LIST               0\n            368 LOAD_CONST              14 ((1, 2, 3))\n            370 LIST_EXTEND              1\n            372 BUILD_LIST               0\n            374 LOAD_CONST              15 ((4, 5, 6))\n            376 LIST_EXTEND              1\n            378 BUILD_LIST               2\n            380 STORE_FAST               7 (original_w)\n\n105         382 BUILD_LIST               0\n            384 LOAD_CONST              16 ((3, 1, 2))\n            386 LIST_EXTEND              1\n            388 BUILD_LIST               0\n            390 LOAD_CONST              17 ((6, 4, 5))\n            392 LIST_EXTEND              1\n            394 BUILD_LIST               2\n            396 STORE_FAST               8 (reordered_w)\n\n106         398 LOAD_GLOBAL             23 (NULL + zip)\n            408 LOAD_FAST                6 (original_rows)\n            410 LOAD_FAST                4 (reordered_latents)\n            412 LOAD_ATTR               18 (quantized)\n            432 CALL                     2\n            440 GET_ITER\n        >>  442 FOR_ITER                92 (to 630)\n            446 UNPACK_SEQUENCE          2\n            450 STORE_FAST               9 (row)\n            452 STORE_FAST              10 (reordered_row)\n\n109         454 LOAD_FAST                7 (original_w)\n            456 GET_ITER\n\n107         458 LOAD_FAST_AND_CLEAR     11 (weights)\n            460 SWAP                     2\n            462 BUILD_LIST               0\n            464 SWAP                     2\n\n109     >>  466 FOR_ITER                30 (to 530)\n            470 STORE_FAST              11 (weights)\n\n108         472 LOAD_GLOBAL             25 (NULL + sum)\n            482 LOAD_CONST              18 (<code object <genexpr> at 0x1009e5c50, file \"src/tac/tests/test_profile_pr95_hnerv_muon_packing.py\", line 108>)\n            484 MAKE_FUNCTION            0\n            486 LOAD_GLOBAL             23 (NULL + zip)\n            496 LOAD_FAST                9 (row)\n            498 LOAD_FAST               11 (weights)\n            500 CALL                     2\n            508 GET_ITER\n            510 CALL                     0\n            518 CALL                     1\n            526 LIST_APPEND              2\n            528 JUMP_BACKWARD           32 (to 466)\n\n109     >>  530 END_FOR\n\n107         532 SWAP                     2\n            534 STORE_FAST              11 (weights)\n\n112         536 LOAD_FAST                8 (reordered_w)\n            538 GET_ITER\n\n110         540 LOAD_FAST_AND_CLEAR     11 (weights)\n            542 SWAP                     2\n            544 BUILD_LIST               0\n            546 SWAP                     2\n\n112     >>  548 FOR_ITER                30 (to 612)\n            552 STORE_FAST              11 (weights)\n\n111         554 LOAD_GLOBAL             25 (NULL + sum)\n            564 LOAD_CONST              19 (<code object <genexpr> at 0x10151cc60, file \"src/tac/tests/test_profile_pr95_hnerv_muon_packing.py\", line 111>)\n            566 MAKE_FUNCTION            0\n            568 LOAD_GLOBAL             23 (NULL + zip)\n            578 LOAD_FAST               10 (reordered_row)\n            580 LOAD_FAST               11 (weights)\n            582 CALL                     2\n            590 GET_ITER\n            592 CALL                     0\n            600 CALL                     1\n            608 LIST_APPEND              2\n            610 JUMP_BACKWARD           32 (to 548)\n\n112     >>  612 END_FOR\n\n110         614 SWAP                     2\n            616 STORE_FAST              11 (weights)\n\n107         618 COMPARE_OP              40 (==)\n            622 POP_JUMP_IF_FALSE        1 (to 626)\n            624 JUMP_BACKWARD           92 (to 442)\n        >>  626 LOAD_ASSERTION_ERROR\n            628 RAISE_VARARGS            1\n\n106     >>  630 END_FOR\n            632 RETURN_CONST             0 (None)\n        >>  634 SWAP                     2\n            636 POP_TOP\n\n107         638 SWAP                     2\n            640 STORE_FAST              11 (weights)\n            642 RERAISE                  0\n        >>  644 SWAP                     2\n            646 POP_TOP\n\n110         648 SWAP                     2\n            650 STORE_FAST              11 (weights)\n            652 RERAISE                  0\nExceptionTable:\n  462 to 530 -> 634 [3]\n  544 to 612 -> 644 [4]\n"
+    },
+    {
+      "qualname": "test_latent_dimension_permutation_compensates_stem_weight.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "value",
+        "weight"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "108           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                12 (to 36)\n             12 UNPACK_SEQUENCE          2\n             16 STORE_FAST               1 (value)\n             18 STORE_FAST               2 (weight)\n             20 LOAD_FAST                1 (value)\n             22 LOAD_FAST                2 (weight)\n             24 BINARY_OP                5 (*)\n             28 YIELD_VALUE              1\n             30 RESUME                   1\n             32 POP_TOP\n             34 JUMP_BACKWARD           14 (to 8)\n        >>   36 END_FOR\n             38 RETURN_CONST             0 (None)\n        >>   40 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             42 RERAISE                  1\nExceptionTable:\n  4 to 38 -> 40 [0] lasti\n"
+    },
+    {
+      "qualname": "test_latent_dimension_permutation_compensates_stem_weight.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "value",
+        "weight"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "111           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                12 (to 36)\n             12 UNPACK_SEQUENCE          2\n             16 STORE_FAST               1 (value)\n             18 STORE_FAST               2 (weight)\n             20 LOAD_FAST                1 (value)\n             22 LOAD_FAST                2 (weight)\n             24 BINARY_OP                5 (*)\n             28 YIELD_VALUE              1\n             30 RESUME                   1\n             32 POP_TOP\n             34 JUMP_BACKWARD           14 (to 8)\n        >>   36 END_FOR\n             38 RETURN_CONST             0 (None)\n        >>   40 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             42 RERAISE                  1\nExceptionTable:\n  4 to 38 -> 40 [0] lasti\n"
+    },
+    {
+      "qualname": "test_profiler_emits_no_score_claim_candidate",
+      "name": "test_profiler_emits_no_score_claim_candidate",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "blob",
+        "zf",
+        "Args",
+        "manifest"
+      ],
+      "names": [
+        "_top_blob",
+        "_decoder_raw",
+        "_decoder_record",
+        "LatentPayload",
+        "to_bytes",
+        "zipfile",
+        "ZipFile",
+        "ZIP_STORED",
+        "writestr",
+        "run",
+        "json",
+        "loads",
+        "read_text",
+        "Path",
+        "is_file"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "tmp_path",
+        "archive"
+      ],
+      "doc": null,
+      "dis": "              0 MAKE_CELL                0 (tmp_path)\n              2 MAKE_CELL                5 (archive)\n\n116           4 RESUME                   0\n\n117           6 LOAD_DEREF               0 (tmp_path)\n              8 LOAD_CONST               1 ('archive.zip')\n             10 BINARY_OP               11 (/)\n             14 STORE_DEREF              5 (archive)\n\n118          16 LOAD_GLOBAL              1 (NULL + _top_blob)\n\n119          26 LOAD_CONST               2 (b'{\"latent_dim\": 1, \"n_pairs\": 1}')\n\n120          28 LOAD_GLOBAL              3 (NULL + _decoder_raw)\n\n121          38 LOAD_GLOBAL              5 (NULL + _decoder_record)\n             48 LOAD_CONST               3 ('stem.weight')\n             50 LOAD_CONST               4 (b'\\x01\\x02')\n             52 LOAD_CONST               5 ((2, 1))\n             54 KW_NAMES                 6 (('shape',))\n             56 CALL                     3\n\n122          64 LOAD_GLOBAL              5 (NULL + _decoder_record)\n             74 LOAD_CONST               7 ('b')\n             76 LOAD_CONST               4 (b'\\x01\\x02')\n             78 CALL                     2\n\n123          86 LOAD_GLOBAL              5 (NULL + _decoder_record)\n             96 LOAD_CONST               8 ('a')\n             98 LOAD_CONST               9 (b'\\x03')\n            100 CALL                     2\n\n120         108 BUILD_LIST               3\n            110 CALL                     1\n\n125         118 LOAD_GLOBAL              7 (NULL + LatentPayload)\n\n126         128 LOAD_CONST              10 (3)\n\n127         130 LOAD_CONST              11 (1)\n\n128         132 LOAD_CONST              12 (b'aa')\n\n129         134 LOAD_CONST              13 (b'bb')\n\n130         136 LOAD_CONST              14 (((1,), (2,), (3,)))\n\n125         138 KW_NAMES                15 (('n_pairs', 'latent_dim', 'mins_f16', 'scales_f16', 'quantized'))\n            140 CALL                     5\n\n131         148 LOAD_ATTR                9 (NULL|self + to_bytes)\n            168 CALL                     0\n\n118         176 CALL                     3\n            184 STORE_FAST               1 (blob)\n\n133         186 LOAD_GLOBAL             11 (NULL + zipfile)\n            196 LOAD_ATTR               12 (ZipFile)\n            216 LOAD_DEREF               5 (archive)\n            218 LOAD_CONST              16 ('w')\n            220 LOAD_GLOBAL             10 (zipfile)\n            230 LOAD_ATTR               14 (ZIP_STORED)\n            250 KW_NAMES                17 (('compression',))\n            252 CALL                     3\n            260 BEFORE_WITH\n            262 STORE_FAST               2 (zf)\n\n134         264 LOAD_FAST                2 (zf)\n            266 LOAD_ATTR               17 (NULL|self + writestr)\n            286 LOAD_CONST              18 ('0.bin')\n            288 LOAD_FAST                1 (blob)\n            290 CALL                     2\n            298 POP_TOP\n\n133         300 LOAD_CONST               0 (None)\n            302 LOAD_CONST               0 (None)\n            304 LOAD_CONST               0 (None)\n            306 CALL                     2\n            314 POP_TOP\n\n136     >>  316 PUSH_NULL\n            318 LOAD_BUILD_CLASS\n            320 LOAD_CLOSURE             5 (archive)\n            322 LOAD_CLOSURE             0 (tmp_path)\n            324 BUILD_TUPLE              2\n            326 LOAD_CONST              19 (<code object Args at 0x10151e790, file \"src/tac/tests/test_profile_pr95_hnerv_muon_packing.py\", line 136>)\n            328 MAKE_FUNCTION            8 (closure)\n            330 LOAD_CONST              20 ('Args')\n            332 CALL                     2\n            340 STORE_FAST               3 (Args)\n\n146         342 LOAD_GLOBAL             19 (NULL + run)\n            352 PUSH_NULL\n            354 LOAD_FAST                3 (Args)\n            356 CALL                     0\n            364 CALL                     1\n            372 LOAD_CONST              21 (0)\n            374 COMPARE_OP              40 (==)\n            378 POP_JUMP_IF_TRUE         2 (to 384)\n            380 LOAD_ASSERTION_ERROR\n            382 RAISE_VARARGS            1\n\n147     >>  384 LOAD_GLOBAL             21 (NULL + json)\n            394 LOAD_ATTR               22 (loads)\n            414 LOAD_DEREF               0 (tmp_path)\n            416 LOAD_CONST              22 ('out')\n            418 BINARY_OP               11 (/)\n            422 LOAD_CONST              23 ('profile_pr95_hnerv_muon_packing.json')\n            424 BINARY_OP               11 (/)\n            428 LOAD_ATTR               25 (NULL|self + read_text)\n            448 CALL                     0\n            456 CALL                     1\n            464 STORE_FAST               4 (manifest)\n\n148         466 LOAD_FAST                4 (manifest)\n            468 LOAD_CONST              24 ('score_claim')\n            470 BINARY_SUBSCR\n            474 LOAD_CONST              25 (False)\n            476 IS_OP                    0\n            478 POP_JUMP_IF_TRUE         2 (to 484)\n            480 LOAD_ASSERTION_ERROR\n            482 RAISE_VARARGS            1\n\n149     >>  484 LOAD_FAST                4 (manifest)\n            486 LOAD_CONST              26 ('safety')\n            488 BINARY_SUBSCR\n            492 LOAD_CONST              27 ('no_tensor_requantization')\n            494 BINARY_SUBSCR\n            498 LOAD_CONST              28 (True)\n            500 IS_OP                    0\n            502 POP_JUMP_IF_TRUE         2 (to 508)\n            504 LOAD_ASSERTION_ERROR\n            506 RAISE_VARARGS            1\n\n150     >>  508 LOAD_FAST                4 (manifest)\n            510 LOAD_CONST              26 ('safety')\n            512 BINARY_SUBSCR\n            516 LOAD_CONST              29 ('uses_existing_pr95_runtime_contract')\n            518 BINARY_SUBSCR\n            522 LOAD_CONST              28 (True)\n            524 IS_OP                    0\n            526 POP_JUMP_IF_TRUE         2 (to 532)\n            528 LOAD_ASSERTION_ERROR\n            530 RAISE_VARARGS            1\n\n151     >>  532 LOAD_FAST                4 (manifest)\n            534 LOAD_CONST              30 ('no_op_detection')\n            536 BINARY_SUBSCR\n            540 LOAD_CONST              31 ('source_archive_reused')\n            542 BINARY_SUBSCR\n            546 LOAD_CONST              25 (False)\n            548 IS_OP                    0\n            550 POP_JUMP_IF_TRUE         2 (to 556)\n            552 LOAD_ASSERTION_ERROR\n            554 RAISE_VARARGS            1\n\n152     >>  556 LOAD_CONST              32 ('decoder_records')\n            558 LOAD_FAST                4 (manifest)\n            560 LOAD_CONST              33 ('accounting')\n            562 BINARY_SUBSCR\n            566 CONTAINS_OP              0\n            568 POP_JUMP_IF_TRUE         2 (to 574)\n            570 LOAD_ASSERTION_ERROR\n            572 RAISE_VARARGS            1\n\n153     >>  574 LOAD_GLOBAL             27 (NULL + Path)\n            584 LOAD_FAST                4 (manifest)\n            586 LOAD_CONST              34 ('candidate_archive')\n            588 BINARY_SUBSCR\n            592 CALL                     1\n            600 LOAD_ATTR               29 (NULL|self + is_file)\n            620 CALL                     0\n            628 POP_JUMP_IF_TRUE         2 (to 634)\n            630 LOAD_ASSERTION_ERROR\n            632 RAISE_VARARGS            1\n        >>  634 RETURN_CONST             0 (None)\n\n133     >>  636 PUSH_EXC_INFO\n            638 WITH_EXCEPT_START\n            640 POP_JUMP_IF_TRUE         1 (to 644)\n            642 RERAISE                  2\n        >>  644 POP_TOP\n            646 POP_EXCEPT\n            648 POP_TOP\n            650 POP_TOP\n            652 JUMP_BACKWARD          169 (to 316)\n        >>  654 COPY                     3\n            656 POP_EXCEPT\n            658 RERAISE                  1\nExceptionTable:\n  262 to 298 -> 636 [1] lasti\n  636 to 644 -> 654 [3] lasti\n"
+    },
+    {
+      "qualname": "test_profiler_emits_no_score_claim_candidate.<locals>.Args",
+      "name": "Args",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "min_quality",
+        "max_quality",
+        "min_lgwin",
+        "max_lgwin",
+        "__init__"
+      ],
+      "freevars": [
+        "archive",
+        "tmp_path"
+      ],
+      "cellvars": [],
+      "doc": "test_profiler_emits_no_score_claim_candidate.<locals>.Args",
+      "dis": "              0 COPY_FREE_VARS           2\n\n136           2 RESUME                   0\n              4 LOAD_NAME                0 (__name__)\n              6 STORE_NAME               1 (__module__)\n              8 LOAD_CONST               0 ('test_profiler_emits_no_score_claim_candidate.<locals>.Args')\n             10 STORE_NAME               2 (__qualname__)\n\n137          12 LOAD_CONST               1 (4)\n             14 STORE_NAME               3 (min_quality)\n\n138          16 LOAD_CONST               2 (5)\n             18 STORE_NAME               4 (max_quality)\n\n139          20 LOAD_CONST               3 (10)\n             22 STORE_NAME               5 (min_lgwin)\n\n140          24 LOAD_CONST               4 (12)\n             26 STORE_NAME               6 (max_lgwin)\n\n142          28 LOAD_CONST               7 (('return', 'None'))\n             30 LOAD_CLOSURE             0 (archive)\n             32 LOAD_CLOSURE             1 (tmp_path)\n             34 BUILD_TUPLE              2\n             36 LOAD_CONST               5 (<code object __init__ at 0x101586ab0, file \"src/tac/tests/test_profile_pr95_hnerv_muon_packing.py\", line 142>)\n             38 MAKE_FUNCTION           12 (annotations, closure)\n             40 STORE_NAME               7 (__init__)\n             42 RETURN_CONST             6 (None)\n"
+    },
+    {
+      "qualname": "test_profiler_emits_no_score_claim_candidate.<locals>.Args.__init__",
+      "name": "__init__",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "self"
+      ],
+      "names": [
+        "str",
+        "archive",
+        "output_dir"
+      ],
+      "freevars": [
+        "archive",
+        "tmp_path"
+      ],
+      "cellvars": [],
+      "doc": null,
+      "dis": "              0 COPY_FREE_VARS           2\n\n142           2 RESUME                   0\n\n143           4 LOAD_GLOBAL              1 (NULL + str)\n             14 LOAD_DEREF               1 (archive)\n             16 CALL                     1\n             24 LOAD_FAST                0 (self)\n             26 STORE_ATTR               1 (archive)\n\n144          36 LOAD_GLOBAL              1 (NULL + str)\n             46 LOAD_DEREF               2 (tmp_path)\n             48 LOAD_CONST               1 ('out')\n             50 BINARY_OP               11 (/)\n             54 CALL                     1\n             62 LOAD_FAST                0 (self)\n             64 STORE_ATTR               2 (output_dir)\n             74 RETURN_CONST             0 (None)\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  1           2 LOAD_CONST               0 (0)\n              4 LOAD_CONST               1 (('annotations',))\n              6 IMPORT_NAME              0 (__future__)\n              8 IMPORT_FROM              1 (annotations)\n             10 STORE_NAME               1 (annotations)\n             12 POP_TOP\n\n  3          14 LOAD_CONST               0 (0)\n             16 LOAD_CONST               2 (None)\n             18 IMPORT_NAME              2 (io)\n             20 STORE_NAME               2 (io)\n\n  4          22 LOAD_CONST               0 (0)\n             24 LOAD_CONST               2 (None)\n             26 IMPORT_NAME              3 (json)\n             28 STORE_NAME               3 (json)\n\n  5          30 LOAD_CONST               0 (0)\n             32 LOAD_CONST               2 (None)\n             34 IMPORT_NAME              4 (struct)\n             36 STORE_NAME               4 (struct)\n\n  6          38 LOAD_CONST               0 (0)\n             40 LOAD_CONST               2 (None)\n             42 IMPORT_NAME              5 (zipfile)\n             44 STORE_NAME               5 (zipfile)\n\n  7          46 LOAD_CONST               0 (0)\n             48 LOAD_CONST               3 (('Path',))\n             50 IMPORT_NAME              6 (pathlib)\n             52 IMPORT_FROM              7 (Path)\n             54 STORE_NAME               7 (Path)\n             56 POP_TOP\n\n  9          58 LOAD_CONST               0 (0)\n             60 LOAD_CONST               2 (None)\n             62 IMPORT_NAME              8 (brotli)\n             64 STORE_NAME               8 (brotli)\n\n 11          66 LOAD_CONST               0 (0)\n             68 LOAD_CONST               4 (('LatentPayload', 'decoder_raw_variants', 'parse_decoder_records_structured', 'parse_latents_raw', 'parse_top_blob', 'reorder_latents_raw', 'reorder_stem_weight_record', 'run'))\n             70 IMPORT_NAME              9 (experiments.profile_pr95_hnerv_muon_packing)\n             72 IMPORT_FROM             10 (LatentPayload)\n             74 STORE_NAME              10 (LatentPayload)\n             76 IMPORT_FROM             11 (decoder_raw_variants)\n             78 STORE_NAME              11 (decoder_raw_variants)\n             80 IMPORT_FROM             12 (parse_decoder_records_structured)\n             82 STORE_NAME              12 (parse_decoder_records_structured)\n             84 IMPORT_FROM             13 (parse_latents_raw)\n             86 STORE_NAME              13 (parse_latents_raw)\n             88 IMPORT_FROM             14 (parse_top_blob)\n             90 STORE_NAME              14 (parse_top_blob)\n             92 IMPORT_FROM             15 (reorder_latents_raw)\n             94 STORE_NAME              15 (reorder_latents_raw)\n             96 IMPORT_FROM             16 (reorder_stem_weight_record)\n             98 STORE_NAME              16 (reorder_stem_weight_record)\n            100 IMPORT_FROM             17 (run)\n            102 STORE_NAME              17 (run)\n            104 POP_TOP\n\n 23         106 LOAD_CONST              12 ((None,))\n            108 LOAD_CONST              13 (('name', 'str', 'q', 'bytes', 'shape', 'tuple[int, ...] | None', 'return', 'bytes'))\n            110 LOAD_CONST               5 (<code object _decoder_record at 0xae121e000, file \"src/tac/tests/test_profile_pr95_hnerv_muon_packing.py\", line 23>)\n            112 MAKE_FUNCTION            5 (defaults, annotations)\n            114 STORE_NAME              18 (_decoder_record)\n\n 42         116 LOAD_CONST              14 (('records', 'list[bytes]', 'return', 'bytes'))\n            118 LOAD_CONST               6 (<code object _decoder_raw at 0x1009dd210, file \"src/tac/tests/test_profile_pr95_hnerv_muon_packing.py\", line 42>)\n            120 MAKE_FUNCTION            4 (annotations)\n            122 STORE_NAME              19 (_decoder_raw)\n\n 50         124 LOAD_CONST              15 (('meta_raw', 'bytes', 'decoder_raw', 'bytes', 'latents_raw', 'bytes', 'return', 'bytes'))\n            126 LOAD_CONST               7 (<code object _top_blob at 0xae1201680, file \"src/tac/tests/test_profile_pr95_hnerv_muon_packing.py\", line 50>)\n            128 MAKE_FUNCTION            4 (annotations)\n            130 STORE_NAME              20 (_top_blob)\n\n 61         132 LOAD_CONST              16 (('return', 'None'))\n            134 LOAD_CONST               8 (<code object test_decoder_raw_variants_preserve_record_set at 0x100a5cab0, file \"src/tac/tests/test_profile_pr95_hnerv_muon_packing.py\", line 61>)\n            136 MAKE_FUNCTION            4 (annotations)\n            138 STORE_NAME              21 (test_decoder_raw_variants_preserve_record_set)\n\n 72         140 LOAD_CONST              16 (('return', 'None'))\n            142 LOAD_CONST               9 (<code object test_parse_top_blob_roundtrips_raw_streams at 0x1014f5a10, file \"src/tac/tests/test_profile_pr95_hnerv_muon_packing.py\", line 72>)\n            144 MAKE_FUNCTION            4 (annotations)\n            146 STORE_NAME              22 (test_parse_top_blob_roundtrips_raw_streams)\n\n 85         148 LOAD_CONST              16 (('return', 'None'))\n            150 LOAD_CONST              10 (<code object test_latent_dimension_permutation_compensates_stem_weight at 0xae0c8fb80, file \"src/tac/tests/test_profile_pr95_hnerv_muon_packing.py\", line 85>)\n            152 MAKE_FUNCTION            4 (annotations)\n            154 STORE_NAME              23 (test_latent_dimension_permutation_compensates_stem_weight)\n\n116         156 LOAD_CONST              17 (('tmp_path', 'Path', 'return', 'None'))\n            158 LOAD_CONST              11 (<code object test_profiler_emits_no_score_claim_candidate at 0xae0dac000, file \"src/tac/tests/test_profile_pr95_hnerv_muon_packing.py\", line 116>)\n            160 MAKE_FUNCTION            4 (annotations)\n            162 STORE_NAME              24 (test_profiler_emits_no_score_claim_candidate)\n            164 RETURN_CONST             2 (None)\n"
+}

@@ -1,0 +1,1209 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/src/tac/__pycache__/qh0_renderer_codec.cpython-312.pyc",
+  "names": [
+    "__doc__",
+    "__future__",
+    "annotations",
+    "hashlib",
+    "json",
+    "lzma",
+    "math",
+    "struct",
+    "zlib",
+    "dataclasses",
+    "dataclass",
+    "numpy",
+    "np",
+    "torch",
+    "tac.quantizr_faithful_renderer",
+    "JointFrameGenerator",
+    "build_quantizr_faithful_renderer",
+    "QH0_MAGIC",
+    "QM0_MAGIC",
+    "QH1_MAGIC",
+    "QH0_SUPPORTED_MAGICS",
+    "Struct",
+    "QH1_HEADER_STRUCT",
+    "QH1_SCHEMA",
+    "tensor",
+    "float32",
+    "FP4_POS_LEVELS",
+    "ValueError",
+    "QH0CodecError",
+    "QH0DecodeReport",
+    "unpack_nibbles",
+    "_require_available",
+    "_read_u8",
+    "_sha256",
+    "_decode_qh1_record",
+    "reconstruct_qh1_payload",
+    "_unsplit_bytes_to_tensor",
+    "_read_tensor_bytes",
+    "_unhilo_packed",
+    "_dequantize_fp4_from_nibbles",
+    "_module_weight_order",
+    "decode_qh0_state_dict",
+    "load_qh0"
+  ],
+  "varnames": [],
+  "consts": [
+    "QH0/QM0 renderer codec for PR85-style JointFrameGenerator payloads.\n\nThe public PR85/PR89 family stores a Quantizr-faithful\n``JointFrameGenerator`` as a compact custom byte stream.  This module decodes\nthat stream without importing the public submission runtime or using pickle.\nIt is intentionally narrow: the output is the existing\n``tac.quantizr_faithful_renderer.JointFrameGenerator`` used by robust_current.\n",
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "dataclass"
+    ],
+    [
+      "JointFrameGenerator",
+      "build_quantizr_faithful_renderer"
+    ],
+    {
+      "__bytes_hex__": "514830"
+    },
+    {
+      "__bytes_hex__": "514d30"
+    },
+    {
+      "__bytes_hex__": "514831"
+    },
+    "<I",
+    "qh1_record_repack_v1",
+    [
+      0.0,
+      0.5,
+      1.0,
+      1.5,
+      2.0,
+      3.0,
+      4.0,
+      6.0
+    ],
+    [
+      "dtype"
+    ],
+    {
+      "__code__": "QH0CodecError",
+      "qualname": "QH0CodecError",
+      "argcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "__doc__"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "QH0CodecError",
+    true,
+    [
+      "frozen"
+    ],
+    {
+      "__code__": "QH0DecodeReport",
+      "qualname": "QH0DecodeReport",
+      "argcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "__doc__",
+        "__annotations__"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "QH0DecodeReport",
+    {
+      "__code__": "unpack_nibbles",
+      "qualname": "unpack_nibbles",
+      "argcount": 2,
+      "varnames": [
+        "packed",
+        "count",
+        "flat",
+        "out"
+      ],
+      "names": [
+        "QH0CodecError",
+        "reshape",
+        "to",
+        "torch",
+        "uint8",
+        "empty",
+        "numel",
+        "device"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_require_available",
+      "qualname": "_require_available",
+      "argcount": 4,
+      "varnames": [
+        "raw",
+        "pos",
+        "nbytes",
+        "label"
+      ],
+      "names": [
+        "len",
+        "QH0CodecError"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_read_u8",
+      "qualname": "_read_u8",
+      "argcount": 3,
+      "varnames": [
+        "raw",
+        "pos",
+        "label"
+      ],
+      "names": [
+        "_require_available",
+        "int"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_sha256",
+      "qualname": "_sha256",
+      "argcount": 1,
+      "varnames": [
+        "data"
+      ],
+      "names": [
+        "hashlib",
+        "sha256",
+        "hexdigest"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_decode_qh1_record",
+      "qualname": "_decode_qh1_record",
+      "argcount": 3,
+      "varnames": [
+        "data",
+        "codec",
+        "label",
+        "brotli",
+        "exc"
+      ],
+      "names": [
+        "zlib",
+        "decompress",
+        "lzma",
+        "brotli",
+        "ImportError",
+        "QH0CodecError",
+        "error"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "reconstruct_qh1_payload",
+      "qualname": "reconstruct_qh1_payload",
+      "argcount": 1,
+      "varnames": [
+        "payload",
+        "raw",
+        "min_len",
+        "header_len",
+        "header_start",
+        "header_end",
+        "header",
+        "exc",
+        "base_codec",
+        "base_encoded_bytes",
+        "base_encoded",
+        "out",
+        "expected_bytes",
+        "expected_sha",
+        "body_pos",
+        "seen",
+        "records",
+        "index",
+        "record",
+        "offset",
+        "nbytes",
+        "encoded_bytes",
+        "codec",
+        "label",
+        "encoded",
+        "decoded",
+        "rebuilt"
+      ],
+      "names": [
+        "bytes",
+        "startswith",
+        "QH1_MAGIC",
+        "len",
+        "QH1_HEADER_STRUCT",
+        "size",
+        "QH0CodecError",
+        "unpack_from",
+        "json",
+        "loads",
+        "decode",
+        "Exception",
+        "get",
+        "QH1_SCHEMA",
+        "str",
+        "int",
+        "_sha256",
+        "bytearray",
+        "_decode_qh1_record",
+        "set",
+        "isinstance",
+        "list",
+        "enumerate",
+        "dict",
+        "any",
+        "add",
+        "QH0_SUPPORTED_MAGICS"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "key"
+      ]
+    },
+    {
+      "__code__": "_unsplit_bytes_to_tensor",
+      "qualname": "_unsplit_bytes_to_tensor",
+      "argcount": 7,
+      "varnames": [
+        "raw",
+        "pos",
+        "nbytes",
+        "dtype",
+        "shape",
+        "device",
+        "label",
+        "half",
+        "source",
+        "out",
+        "tensor"
+      ],
+      "names": [
+        "_require_available",
+        "np",
+        "frombuffer",
+        "uint8",
+        "empty",
+        "torch",
+        "bytearray",
+        "tobytes",
+        "clone",
+        "reshape",
+        "to"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_read_tensor_bytes",
+      "qualname": "_read_tensor_bytes",
+      "argcount": 7,
+      "varnames": [
+        "raw",
+        "pos",
+        "nbytes",
+        "dtype",
+        "shape",
+        "device",
+        "label",
+        "tensor"
+      ],
+      "names": [
+        "_require_available",
+        "torch",
+        "frombuffer",
+        "bytearray",
+        "clone",
+        "reshape",
+        "to"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_unhilo_packed",
+      "qualname": "_unhilo_packed",
+      "argcount": 5,
+      "varnames": [
+        "raw",
+        "pos",
+        "packed_len",
+        "device",
+        "label",
+        "half",
+        "hi_packed",
+        "lo_packed",
+        "hi",
+        "lo",
+        "packed",
+        "tensor"
+      ],
+      "names": [
+        "QH0CodecError",
+        "_require_available",
+        "np",
+        "frombuffer",
+        "uint8",
+        "empty",
+        "astype",
+        "torch",
+        "bytearray",
+        "tobytes",
+        "clone",
+        "to"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_dequantize_fp4_from_nibbles",
+      "qualname": "_dequantize_fp4_from_nibbles",
+      "argcount": 3,
+      "varnames": [
+        "nibbles",
+        "scales",
+        "shape",
+        "flat_n",
+        "block_size",
+        "nib",
+        "signs",
+        "mag_idx",
+        "levels",
+        "q",
+        "dq"
+      ],
+      "names": [
+        "math",
+        "prod",
+        "numel",
+        "QH0CodecError",
+        "view",
+        "to",
+        "torch",
+        "int64",
+        "FP4_POS_LEVELS",
+        "device",
+        "float32",
+        "where",
+        "bool",
+        "reshape"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_module_weight_order",
+      "qualname": "_module_weight_order",
+      "argcount": 1,
+      "varnames": [
+        "model",
+        "ordered",
+        "name",
+        "module"
+      ],
+      "names": [
+        "named_modules",
+        "isinstance",
+        "torch",
+        "nn",
+        "Conv2d",
+        "Embedding",
+        "append"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "cpu",
+    [
+      "device"
+    ],
+    {
+      "__code__": "decode_qh0_state_dict",
+      "qualname": "decode_qh0_state_dict",
+      "argcount": 1,
+      "varnames": [
+        "payload",
+        "device",
+        "raw",
+        "magic",
+        "hilo_split",
+        "pos",
+        "model",
+        "state",
+        "covered",
+        "fp4_count",
+        "fp16_count",
+        "int8_count",
+        "name",
+        "module",
+        "kind",
+        "shape",
+        "numel",
+        "block_size",
+        "blocks",
+        "packed_len",
+        "packed",
+        "scales",
+        "nibbles",
+        "tensor",
+        "nbytes",
+        "bias",
+        "bias_shape",
+        "bias_tensor",
+        "key",
+        "q",
+        "rows",
+        "dense",
+        "report"
+      ],
+      "names": [
+        "reconstruct_qh1_payload",
+        "len",
+        "QH0CodecError",
+        "QH0_SUPPORTED_MAGICS",
+        "QH0_MAGIC",
+        "build_quantizr_faithful_renderer",
+        "set",
+        "_module_weight_order",
+        "_read_u8",
+        "tuple",
+        "weight",
+        "shape",
+        "int",
+        "numel",
+        "_unhilo_packed",
+        "_unsplit_bytes_to_tensor",
+        "torch",
+        "float16",
+        "_read_tensor_bytes",
+        "uint8",
+        "unpack_nibbles",
+        "_dequantize_fp4_from_nibbles",
+        "float",
+        "add",
+        "getattr",
+        "state_dict",
+        "items",
+        "int8",
+        "reshape",
+        "QH0DecodeReport",
+        "decode"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "load_qh0",
+      "qualname": "load_qh0",
+      "argcount": 1,
+      "varnames": [
+        "payload",
+        "device",
+        "state",
+        "_report",
+        "model"
+      ],
+      "names": [
+        "decode_qh0_state_dict",
+        "build_quantizr_faithful_renderer",
+        "load_state_dict",
+        "to",
+        "eval"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    [
+      "packed",
+      "torch.Tensor",
+      "count",
+      "int",
+      "return",
+      "torch.Tensor"
+    ],
+    [
+      "raw",
+      "bytes",
+      "pos",
+      "int",
+      "nbytes",
+      "int",
+      "label",
+      "str",
+      "return",
+      "None"
+    ],
+    [
+      "raw",
+      "bytes",
+      "pos",
+      "int",
+      "label",
+      "str",
+      "return",
+      "tuple[int, int]"
+    ],
+    [
+      "data",
+      "bytes",
+      "return",
+      "str"
+    ],
+    [
+      "data",
+      "bytes",
+      "codec",
+      "str",
+      "label",
+      "str",
+      "return",
+      "bytes"
+    ],
+    [
+      "payload",
+      "bytes | bytearray | memoryview",
+      "return",
+      "bytes"
+    ],
+    [
+      "raw",
+      "bytes",
+      "pos",
+      "int",
+      "nbytes",
+      "int",
+      "dtype",
+      "torch.dtype",
+      "shape",
+      "tuple[int, ...]",
+      "device",
+      "torch.device | str",
+      "label",
+      "str",
+      "return",
+      "tuple[torch.Tensor, int]"
+    ],
+    [
+      "raw",
+      "bytes",
+      "pos",
+      "int",
+      "packed_len",
+      "int",
+      "device",
+      "torch.device | str",
+      "label",
+      "str",
+      "return",
+      "tuple[torch.Tensor, int]"
+    ],
+    [
+      "nibbles",
+      "torch.Tensor",
+      "scales",
+      "torch.Tensor",
+      "shape",
+      "tuple[int, ...]",
+      "return",
+      "torch.Tensor"
+    ],
+    [
+      "model",
+      "JointFrameGenerator",
+      "return",
+      "list[tuple[str, torch.nn.Module]]"
+    ],
+    [
+      "payload",
+      "bytes | bytearray | memoryview",
+      "device",
+      "torch.device | str",
+      "return",
+      "tuple[dict[str, torch.Tensor], QH0DecodeReport]"
+    ],
+    [
+      "payload",
+      "bytes | bytearray | memoryview",
+      "device",
+      "torch.device | str",
+      "return",
+      "JointFrameGenerator"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": "QH0/QM0 renderer codec for PR85-style JointFrameGenerator payloads.\n\nThe public PR85/PR89 family stores a Quantizr-faithful\n``JointFrameGenerator`` as a compact custom byte stream.  This module decodes\nthat stream without importing the public submission runtime or using pickle.\nIt is intentionally narrow: the output is the existing\n``tac.quantizr_faithful_renderer.JointFrameGenerator`` used by robust_current.\n",
+  "child_codes": [
+    {
+      "qualname": "QH0CodecError",
+      "name": "QH0CodecError",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "__doc__"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "QH0CodecError",
+      "dis": " 38           0 RESUME                   0\n              2 LOAD_NAME                0 (__name__)\n              4 STORE_NAME               1 (__module__)\n              6 LOAD_CONST               0 ('QH0CodecError')\n              8 STORE_NAME               2 (__qualname__)\n\n 39          10 LOAD_CONST               1 ('Raised when a QH0/QM0 payload is malformed or unsupported.')\n             12 STORE_NAME               3 (__doc__)\n             14 RETURN_CONST             2 (None)\n"
+    },
+    {
+      "qualname": "QH0DecodeReport",
+      "name": "QH0DecodeReport",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "__doc__",
+        "__annotations__"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "QH0DecodeReport",
+      "dis": " 42           0 RESUME                   0\n              2 LOAD_NAME                0 (__name__)\n              4 STORE_NAME               1 (__module__)\n              6 LOAD_CONST               0 ('QH0DecodeReport')\n              8 STORE_NAME               2 (__qualname__)\n             10 SETUP_ANNOTATIONS\n\n 44          12 LOAD_CONST               1 ('Small decode-custody summary for logs and tests.')\n             14 STORE_NAME               3 (__doc__)\n\n 46          16 LOAD_CONST               2 ('str')\n             18 LOAD_NAME                4 (__annotations__)\n             20 LOAD_CONST               3 ('magic')\n             22 STORE_SUBSCR\n\n 47          26 LOAD_CONST               4 ('int')\n             28 LOAD_NAME                4 (__annotations__)\n             30 LOAD_CONST               5 ('payload_bytes')\n             32 STORE_SUBSCR\n\n 48          36 LOAD_CONST               4 ('int')\n             38 LOAD_NAME                4 (__annotations__)\n             40 LOAD_CONST               6 ('consumed_bytes')\n             42 STORE_SUBSCR\n\n 49          46 LOAD_CONST               4 ('int')\n             48 LOAD_NAME                4 (__annotations__)\n             50 LOAD_CONST               7 ('tensor_count')\n             52 STORE_SUBSCR\n\n 50          56 LOAD_CONST               4 ('int')\n             58 LOAD_NAME                4 (__annotations__)\n             60 LOAD_CONST               8 ('q_fp4_tensor_count')\n             62 STORE_SUBSCR\n\n 51          66 LOAD_CONST               4 ('int')\n             68 LOAD_NAME                4 (__annotations__)\n             70 LOAD_CONST               9 ('fp16_tensor_count')\n             72 STORE_SUBSCR\n\n 52          76 LOAD_CONST               4 ('int')\n             78 LOAD_NAME                4 (__annotations__)\n             80 LOAD_CONST              10 ('int8_dense_tensor_count')\n             82 STORE_SUBSCR\n             86 RETURN_CONST            11 (None)\n"
+    },
+    {
+      "qualname": "unpack_nibbles",
+      "name": "unpack_nibbles",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "packed",
+        "count",
+        "flat",
+        "out"
+      ],
+      "names": [
+        "QH0CodecError",
+        "reshape",
+        "to",
+        "torch",
+        "uint8",
+        "empty",
+        "numel",
+        "device"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Unpack high/low 4-bit nibbles in the public PR85 order.",
+      "dis": " 55           0 RESUME                   0\n\n 58           2 LOAD_FAST                1 (count)\n              4 LOAD_CONST               1 (0)\n              6 COMPARE_OP               2 (<)\n             10 POP_JUMP_IF_FALSE       14 (to 40)\n\n 59          12 LOAD_GLOBAL              1 (NULL + QH0CodecError)\n             22 LOAD_CONST               2 ('nibble count must be non-negative, got ')\n             24 LOAD_FAST                1 (count)\n             26 FORMAT_VALUE             0\n             28 BUILD_STRING             2\n             30 CALL                     1\n             38 RAISE_VARARGS            1\n\n 60     >>   40 LOAD_FAST                0 (packed)\n             42 LOAD_ATTR                3 (NULL|self + reshape)\n             62 LOAD_CONST               3 (-1)\n             64 CALL                     1\n             72 LOAD_ATTR                5 (NULL|self + to)\n             92 LOAD_GLOBAL              6 (torch)\n            102 LOAD_ATTR                8 (uint8)\n            122 CALL                     1\n            130 STORE_FAST               2 (flat)\n\n 61         132 LOAD_GLOBAL              7 (NULL + torch)\n            142 LOAD_ATTR               10 (empty)\n            162 LOAD_FAST                2 (flat)\n            164 LOAD_ATTR               13 (NULL|self + numel)\n            184 CALL                     0\n            192 LOAD_CONST               4 (2)\n            194 BINARY_OP                5 (*)\n            198 LOAD_GLOBAL              6 (torch)\n            208 LOAD_ATTR                8 (uint8)\n            228 LOAD_FAST                0 (packed)\n            230 LOAD_ATTR               14 (device)\n            250 KW_NAMES                 5 (('dtype', 'device'))\n            252 CALL                     3\n            260 STORE_FAST               3 (out)\n\n 62         262 LOAD_FAST                2 (flat)\n            264 LOAD_CONST               6 (4)\n            266 BINARY_OP                9 (>>)\n            270 LOAD_CONST               7 (15)\n            272 BINARY_OP                1 (&)\n            276 LOAD_FAST                3 (out)\n            278 LOAD_CONST               1 (0)\n            280 LOAD_CONST               8 (None)\n            282 LOAD_CONST               4 (2)\n            284 BUILD_SLICE              3\n            286 STORE_SUBSCR\n\n 63         290 LOAD_FAST                2 (flat)\n            292 LOAD_CONST               7 (15)\n            294 BINARY_OP                1 (&)\n            298 LOAD_FAST                3 (out)\n            300 LOAD_CONST               9 (1)\n            302 LOAD_CONST               8 (None)\n            304 LOAD_CONST               4 (2)\n            306 BUILD_SLICE              3\n            308 STORE_SUBSCR\n\n 64         312 LOAD_FAST                3 (out)\n            314 LOAD_CONST               8 (None)\n            316 LOAD_FAST                1 (count)\n            318 BINARY_SLICE\n            320 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_require_available",
+      "name": "_require_available",
+      "argcount": 4,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "raw",
+        "pos",
+        "nbytes",
+        "label"
+      ],
+      "names": [
+        "len",
+        "QH0CodecError"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 67           0 RESUME                   0\n\n 68           2 LOAD_FAST                2 (nbytes)\n              4 LOAD_CONST               1 (0)\n              6 COMPARE_OP               2 (<)\n             10 POP_JUMP_IF_TRUE        22 (to 56)\n             12 LOAD_FAST                1 (pos)\n             14 LOAD_CONST               1 (0)\n             16 COMPARE_OP               2 (<)\n             20 POP_JUMP_IF_TRUE        17 (to 56)\n             22 LOAD_FAST                1 (pos)\n             24 LOAD_FAST                2 (nbytes)\n             26 BINARY_OP                0 (+)\n             30 LOAD_GLOBAL              1 (NULL + len)\n             40 LOAD_FAST                0 (raw)\n             42 CALL                     1\n             50 COMPARE_OP              68 (>)\n             54 POP_JUMP_IF_FALSE       32 (to 120)\n\n 69     >>   56 LOAD_GLOBAL              3 (NULL + QH0CodecError)\n\n 70          66 LOAD_CONST               2 ('QH0 payload truncated while reading ')\n             68 LOAD_FAST                3 (label)\n             70 FORMAT_VALUE             0\n             72 LOAD_CONST               3 (': pos=')\n\n 71          74 LOAD_FAST                1 (pos)\n             76 FORMAT_VALUE             0\n             78 LOAD_CONST               4 (' nbytes=')\n             80 LOAD_FAST                2 (nbytes)\n             82 FORMAT_VALUE             0\n             84 LOAD_CONST               5 (' payload=')\n             86 LOAD_GLOBAL              1 (NULL + len)\n             96 LOAD_FAST                0 (raw)\n             98 CALL                     1\n            106 FORMAT_VALUE             0\n\n 70         108 BUILD_STRING             8\n\n 69         110 CALL                     1\n            118 RAISE_VARARGS            1\n\n 68     >>  120 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "_read_u8",
+      "name": "_read_u8",
+      "argcount": 3,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "raw",
+        "pos",
+        "label"
+      ],
+      "names": [
+        "_require_available",
+        "int"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 75           0 RESUME                   0\n\n 76           2 LOAD_GLOBAL              1 (NULL + _require_available)\n             12 LOAD_FAST                0 (raw)\n             14 LOAD_FAST                1 (pos)\n             16 LOAD_CONST               1 (1)\n             18 LOAD_FAST                2 (label)\n             20 CALL                     4\n             28 POP_TOP\n\n 77          30 LOAD_GLOBAL              3 (NULL + int)\n             40 LOAD_FAST                0 (raw)\n             42 LOAD_FAST                1 (pos)\n             44 BINARY_SUBSCR\n             48 CALL                     1\n             56 LOAD_FAST                1 (pos)\n             58 LOAD_CONST               1 (1)\n             60 BINARY_OP                0 (+)\n             64 BUILD_TUPLE              2\n             66 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_sha256",
+      "name": "_sha256",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "data"
+      ],
+      "names": [
+        "hashlib",
+        "sha256",
+        "hexdigest"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 80           0 RESUME                   0\n\n 81           2 LOAD_GLOBAL              1 (NULL + hashlib)\n             12 LOAD_ATTR                2 (sha256)\n             32 LOAD_FAST                0 (data)\n             34 CALL                     1\n             42 LOAD_ATTR                5 (NULL|self + hexdigest)\n             62 CALL                     0\n             70 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_decode_qh1_record",
+      "name": "_decode_qh1_record",
+      "argcount": 3,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "data",
+        "codec",
+        "label",
+        "brotli",
+        "exc"
+      ],
+      "names": [
+        "zlib",
+        "decompress",
+        "lzma",
+        "brotli",
+        "ImportError",
+        "QH0CodecError",
+        "error"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 84           0 RESUME                   0\n\n 85           2 LOAD_FAST                1 (codec)\n              4 LOAD_CONST               1 ('raw')\n              6 COMPARE_OP              40 (==)\n             10 POP_JUMP_IF_FALSE        2 (to 16)\n\n 86          12 LOAD_FAST                0 (data)\n             14 RETURN_VALUE\n\n 87     >>   16 LOAD_FAST                1 (codec)\n             18 LOAD_CONST               2 ('zlib')\n             20 COMPARE_OP              40 (==)\n             24 POP_JUMP_IF_FALSE       21 (to 68)\n\n 88          26 LOAD_GLOBAL              1 (NULL + zlib)\n             36 LOAD_ATTR                2 (decompress)\n             56 LOAD_FAST                0 (data)\n             58 CALL                     1\n             66 RETURN_VALUE\n\n 89     >>   68 LOAD_FAST                1 (codec)\n             70 LOAD_CONST               3 ('lzma')\n             72 COMPARE_OP              40 (==)\n             76 POP_JUMP_IF_FALSE       21 (to 120)\n\n 90          78 LOAD_GLOBAL              5 (NULL + lzma)\n             88 LOAD_ATTR                2 (decompress)\n            108 LOAD_FAST                0 (data)\n            110 CALL                     1\n            118 RETURN_VALUE\n\n 91     >>  120 LOAD_FAST                1 (codec)\n            122 LOAD_CONST               4 ('brotli')\n            124 COMPARE_OP              40 (==)\n            128 POP_JUMP_IF_FALSE       23 (to 176)\n\n 92         130 NOP\n\n 93         132 LOAD_CONST               5 (0)\n            134 LOAD_CONST               0 (None)\n            136 IMPORT_NAME              3 (brotli)\n            138 STORE_FAST               3 (brotli)\n\n 96         140 NOP\n\n 97         142 LOAD_FAST                3 (brotli)\n            144 LOAD_ATTR                3 (NULL|self + decompress)\n            164 LOAD_FAST                0 (data)\n            166 CALL                     1\n            174 RETURN_VALUE\n\n100     >>  176 LOAD_GLOBAL             11 (NULL + QH0CodecError)\n            186 LOAD_FAST                2 (label)\n            188 FORMAT_VALUE             0\n            190 LOAD_CONST               8 (': unsupported QH1 record codec ')\n            192 LOAD_FAST                1 (codec)\n            194 FORMAT_VALUE             2 (repr)\n            196 BUILD_STRING             3\n            198 CALL                     1\n            206 RAISE_VARARGS            1\n        >>  208 PUSH_EXC_INFO\n\n 94         210 LOAD_GLOBAL              8 (ImportError)\n            220 CHECK_EXC_MATCH\n            222 POP_JUMP_IF_FALSE       20 (to 264)\n            224 STORE_FAST               4 (exc)\n\n 95         226 LOAD_GLOBAL             11 (NULL + QH0CodecError)\n            236 LOAD_FAST                2 (label)\n            238 FORMAT_VALUE             0\n            240 LOAD_CONST               6 (': QH1 brotli record requires brotli')\n            242 BUILD_STRING             2\n            244 CALL                     1\n            252 LOAD_FAST                4 (exc)\n            254 RAISE_VARARGS            2\n        >>  256 LOAD_CONST               0 (None)\n            258 STORE_FAST               4 (exc)\n            260 DELETE_FAST              4 (exc)\n            262 RERAISE                  1\n\n 94     >>  264 RERAISE                  0\n        >>  266 COPY                     3\n            268 POP_EXCEPT\n            270 RERAISE                  1\n        >>  272 PUSH_EXC_INFO\n\n 98         274 LOAD_FAST                3 (brotli)\n            276 LOAD_ATTR               12 (error)\n            296 CHECK_EXC_MATCH\n            298 POP_JUMP_IF_FALSE       20 (to 340)\n            300 STORE_FAST               4 (exc)\n\n 99         302 LOAD_GLOBAL             11 (NULL + QH0CodecError)\n            312 LOAD_FAST                2 (label)\n            314 FORMAT_VALUE             0\n            316 LOAD_CONST               7 (': invalid QH1 brotli record')\n            318 BUILD_STRING             2\n            320 CALL                     1\n            328 LOAD_FAST                4 (exc)\n            330 RAISE_VARARGS            2\n        >>  332 LOAD_CONST               0 (None)\n            334 STORE_FAST               4 (exc)\n            336 DELETE_FAST              4 (exc)\n            338 RERAISE                  1\n\n 98     >>  340 RERAISE                  0\n        >>  342 COPY                     3\n            344 POP_EXCEPT\n            346 RERAISE                  1\nExceptionTable:\n  132 to 138 -> 208 [0]\n  142 to 172 -> 272 [0]\n  208 to 224 -> 266 [1] lasti\n  226 to 254 -> 256 [1] lasti\n  256 to 264 -> 266 [1] lasti\n  272 to 300 -> 342 [1] lasti\n  302 to 330 -> 332 [1] lasti\n  332 to 340 -> 342 [1] lasti\n"
+    },
+    {
+      "qualname": "reconstruct_qh1_payload",
+      "name": "reconstruct_qh1_payload",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "payload",
+        "raw",
+        "min_len",
+        "header_len",
+        "header_start",
+        "header_end",
+        "header",
+        "exc",
+        "base_codec",
+        "base_encoded_bytes",
+        "base_encoded",
+        "out",
+        "expected_bytes",
+        "expected_sha",
+        "body_pos",
+        "seen",
+        "records",
+        "index",
+        "record",
+        "offset",
+        "nbytes",
+        "encoded_bytes",
+        "codec",
+        "label",
+        "encoded",
+        "decoded",
+        "rebuilt"
+      ],
+      "names": [
+        "bytes",
+        "startswith",
+        "QH1_MAGIC",
+        "len",
+        "QH1_HEADER_STRUCT",
+        "size",
+        "QH0CodecError",
+        "unpack_from",
+        "json",
+        "loads",
+        "decode",
+        "Exception",
+        "get",
+        "QH1_SCHEMA",
+        "str",
+        "int",
+        "_sha256",
+        "bytearray",
+        "_decode_qh1_record",
+        "set",
+        "isinstance",
+        "list",
+        "enumerate",
+        "dict",
+        "any",
+        "add",
+        "QH0_SUPPORTED_MAGICS"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "key"
+      ],
+      "doc": "Reconstruct original QH0/QM0 bytes from a QH1 record-repack payload.\n\n    QH1 is intentionally lossless: it patches compressed record slices back into\n    a stored QH0/QM0 source byte stream, then the normal reviewed QH0 decoder\n    handles model tensors. It is a byte-packer only, not a renderer mutation.\n    ",
+      "dis": "              0 MAKE_CELL               27 (key)\n\n103           2 RESUME                   0\n\n111           4 LOAD_GLOBAL              1 (NULL + bytes)\n             14 LOAD_FAST                0 (payload)\n             16 CALL                     1\n             24 STORE_FAST               1 (raw)\n\n112          26 LOAD_FAST                1 (raw)\n             28 LOAD_ATTR                3 (NULL|self + startswith)\n             48 LOAD_GLOBAL              4 (QH1_MAGIC)\n             58 CALL                     1\n             66 POP_JUMP_IF_TRUE         2 (to 72)\n\n113          68 LOAD_FAST                1 (raw)\n             70 RETURN_VALUE\n\n114     >>   72 LOAD_GLOBAL              7 (NULL + len)\n             82 LOAD_GLOBAL              4 (QH1_MAGIC)\n             92 CALL                     1\n            100 LOAD_GLOBAL              8 (QH1_HEADER_STRUCT)\n            110 LOAD_ATTR               10 (size)\n            130 BINARY_OP                0 (+)\n            134 STORE_FAST               2 (min_len)\n\n115         136 LOAD_GLOBAL              7 (NULL + len)\n            146 LOAD_FAST                1 (raw)\n            148 CALL                     1\n            156 LOAD_FAST                2 (min_len)\n            158 COMPARE_OP               2 (<)\n            162 POP_JUMP_IF_FALSE       11 (to 186)\n\n116         164 LOAD_GLOBAL             13 (NULL + QH0CodecError)\n            174 LOAD_CONST               1 ('QH1 payload is shorter than magic/header')\n            176 CALL                     1\n            184 RAISE_VARARGS            1\n\n117     >>  186 LOAD_GLOBAL              8 (QH1_HEADER_STRUCT)\n            196 LOAD_ATTR               15 (NULL|self + unpack_from)\n            216 LOAD_FAST                1 (raw)\n            218 LOAD_GLOBAL              7 (NULL + len)\n            228 LOAD_GLOBAL              4 (QH1_MAGIC)\n            238 CALL                     1\n            246 CALL                     2\n            254 LOAD_CONST               2 (0)\n            256 BINARY_SUBSCR\n            260 STORE_FAST               3 (header_len)\n\n118         262 LOAD_GLOBAL              7 (NULL + len)\n            272 LOAD_GLOBAL              4 (QH1_MAGIC)\n            282 CALL                     1\n            290 LOAD_GLOBAL              8 (QH1_HEADER_STRUCT)\n            300 LOAD_ATTR               10 (size)\n            320 BINARY_OP                0 (+)\n            324 STORE_FAST               4 (header_start)\n\n119         326 LOAD_FAST                4 (header_start)\n            328 LOAD_FAST                3 (header_len)\n            330 BINARY_OP                0 (+)\n            334 STORE_FAST               5 (header_end)\n\n120         336 LOAD_FAST                3 (header_len)\n            338 LOAD_CONST               2 (0)\n            340 COMPARE_OP              26 (<=)\n            344 POP_JUMP_IF_TRUE        14 (to 374)\n            346 LOAD_FAST                5 (header_end)\n            348 LOAD_GLOBAL              7 (NULL + len)\n            358 LOAD_FAST                1 (raw)\n            360 CALL                     1\n            368 COMPARE_OP              68 (>)\n            372 POP_JUMP_IF_FALSE       14 (to 402)\n\n121     >>  374 LOAD_GLOBAL             13 (NULL + QH0CodecError)\n            384 LOAD_CONST               3 ('invalid QH1 header length: ')\n            386 LOAD_FAST                3 (header_len)\n            388 FORMAT_VALUE             0\n            390 BUILD_STRING             2\n            392 CALL                     1\n            400 RAISE_VARARGS            1\n\n122     >>  402 NOP\n\n123         404 LOAD_GLOBAL             17 (NULL + json)\n            414 LOAD_ATTR               18 (loads)\n            434 LOAD_FAST                1 (raw)\n            436 LOAD_FAST                4 (header_start)\n            438 LOAD_FAST                5 (header_end)\n            440 BINARY_SLICE\n            442 LOAD_ATTR               21 (NULL|self + decode)\n            462 LOAD_CONST               4 ('utf-8')\n            464 CALL                     1\n            472 CALL                     1\n            480 STORE_FAST               6 (header)\n\n126         482 LOAD_FAST                6 (header)\n            484 LOAD_ATTR               25 (NULL|self + get)\n            504 LOAD_CONST               7 ('schema')\n            506 CALL                     1\n            514 LOAD_GLOBAL             26 (QH1_SCHEMA)\n            524 COMPARE_OP              55 (!=)\n            528 POP_JUMP_IF_FALSE       29 (to 588)\n\n127         530 LOAD_GLOBAL             13 (NULL + QH0CodecError)\n            540 LOAD_CONST               8 ('unsupported QH1 schema: ')\n            542 LOAD_FAST                6 (header)\n            544 LOAD_ATTR               25 (NULL|self + get)\n            564 LOAD_CONST               7 ('schema')\n            566 CALL                     1\n            574 FORMAT_VALUE             2 (repr)\n            576 BUILD_STRING             2\n            578 CALL                     1\n            586 RAISE_VARARGS            1\n\n128     >>  588 LOAD_GLOBAL             29 (NULL + str)\n            598 LOAD_FAST                6 (header)\n            600 LOAD_ATTR               25 (NULL|self + get)\n            620 LOAD_CONST               9 ('base_codec')\n            622 LOAD_CONST              10 ('')\n            624 CALL                     2\n            632 CALL                     1\n            640 STORE_FAST               8 (base_codec)\n\n129         642 LOAD_GLOBAL             31 (NULL + int)\n            652 LOAD_FAST                6 (header)\n            654 LOAD_ATTR               25 (NULL|self + get)\n            674 LOAD_CONST              11 ('base_encoded_bytes')\n            676 LOAD_CONST              12 (-1)\n            678 CALL                     2\n            686 CALL                     1\n            694 STORE_FAST               9 (base_encoded_bytes)\n\n130         696 LOAD_FAST                9 (base_encoded_bytes)\n            698 LOAD_CONST               2 (0)\n            700 COMPARE_OP               2 (<)\n            704 POP_JUMP_IF_TRUE        17 (to 740)\n            706 LOAD_FAST                5 (header_end)\n            708 LOAD_FAST                9 (base_encoded_bytes)\n            710 BINARY_OP                0 (+)\n            714 LOAD_GLOBAL              7 (NULL + len)\n            724 LOAD_FAST                1 (raw)\n            726 CALL                     1\n            734 COMPARE_OP              68 (>)\n            738 POP_JUMP_IF_FALSE       11 (to 762)\n\n131     >>  740 LOAD_GLOBAL             13 (NULL + QH0CodecError)\n            750 LOAD_CONST              13 ('QH1 base template is truncated')\n            752 CALL                     1\n            760 RAISE_VARARGS            1\n\n132     >>  762 LOAD_FAST                1 (raw)\n            764 LOAD_FAST                5 (header_end)\n            766 LOAD_FAST                5 (header_end)\n            768 LOAD_FAST                9 (base_encoded_bytes)\n            770 BINARY_OP                0 (+)\n            774 BINARY_SLICE\n            776 STORE_FAST              10 (base_encoded)\n\n133         778 LOAD_GLOBAL             29 (NULL + str)\n            788 LOAD_FAST                6 (header)\n            790 LOAD_ATTR               25 (NULL|self + get)\n            810 LOAD_CONST              14 ('base_encoded_sha256')\n            812 LOAD_CONST              10 ('')\n            814 CALL                     2\n            822 CALL                     1\n            830 LOAD_GLOBAL             33 (NULL + _sha256)\n            840 LOAD_FAST               10 (base_encoded)\n            842 CALL                     1\n            850 COMPARE_OP              55 (!=)\n            854 POP_JUMP_IF_FALSE       11 (to 878)\n\n134         856 LOAD_GLOBAL             13 (NULL + QH0CodecError)\n            866 LOAD_CONST              15 ('QH1 base encoded SHA-256 mismatch')\n            868 CALL                     1\n            876 RAISE_VARARGS            1\n\n135     >>  878 LOAD_GLOBAL             35 (NULL + bytearray)\n            888 LOAD_GLOBAL             37 (NULL + _decode_qh1_record)\n            898 LOAD_FAST               10 (base_encoded)\n            900 LOAD_FAST                8 (base_codec)\n            902 LOAD_CONST              16 ('QH1 base')\n            904 CALL                     3\n            912 CALL                     1\n            920 STORE_FAST              11 (out)\n\n136         922 LOAD_GLOBAL             29 (NULL + str)\n            932 LOAD_FAST                6 (header)\n            934 LOAD_ATTR               25 (NULL|self + get)\n            954 LOAD_CONST              17 ('base_decoded_sha256')\n            956 LOAD_CONST              10 ('')\n            958 CALL                     2\n            966 CALL                     1\n            974 LOAD_GLOBAL             33 (NULL + _sha256)\n            984 LOAD_GLOBAL              1 (NULL + bytes)\n            994 LOAD_FAST               11 (out)\n            996 CALL                     1\n           1004 CALL                     1\n           1012 COMPARE_OP              55 (!=)\n           1016 POP_JUMP_IF_FALSE       11 (to 1040)\n\n137        1018 LOAD_GLOBAL             13 (NULL + QH0CodecError)\n           1028 LOAD_CONST              18 ('QH1 base decoded SHA-256 mismatch')\n           1030 CALL                     1\n           1038 RAISE_VARARGS            1\n\n138     >> 1040 LOAD_GLOBAL             31 (NULL + int)\n           1050 LOAD_FAST                6 (header)\n           1052 LOAD_ATTR               25 (NULL|self + get)\n           1072 LOAD_CONST              19 ('source_bytes')\n           1074 LOAD_CONST              12 (-1)\n           1076 CALL                     2\n           1084 CALL                     1\n           1092 STORE_FAST              12 (expected_bytes)\n\n139        1094 LOAD_FAST               12 (expected_bytes)\n           1096 LOAD_GLOBAL              7 (NULL + len)\n           1106 LOAD_FAST               11 (out)\n           1108 CALL                     1\n           1116 COMPARE_OP              55 (!=)\n           1120 POP_JUMP_IF_FALSE       26 (to 1174)\n\n140        1122 LOAD_GLOBAL             13 (NULL + QH0CodecError)\n\n141        1132 LOAD_CONST              20 ('QH1 source length mismatch: header=')\n           1134 LOAD_FAST               12 (expected_bytes)\n           1136 FORMAT_VALUE             0\n           1138 LOAD_CONST              21 (' base=')\n           1140 LOAD_GLOBAL              7 (NULL + len)\n           1150 LOAD_FAST               11 (out)\n           1152 CALL                     1\n           1160 FORMAT_VALUE             0\n           1162 BUILD_STRING             4\n\n140        1164 CALL                     1\n           1172 RAISE_VARARGS            1\n\n143     >> 1174 LOAD_GLOBAL             29 (NULL + str)\n           1184 LOAD_FAST                6 (header)\n           1186 LOAD_ATTR               25 (NULL|self + get)\n           1206 LOAD_CONST              22 ('source_sha256')\n           1208 LOAD_CONST              10 ('')\n           1210 CALL                     2\n           1218 CALL                     1\n           1226 STORE_FAST              13 (expected_sha)\n\n144        1228 LOAD_FAST                5 (header_end)\n           1230 LOAD_FAST                9 (base_encoded_bytes)\n           1232 BINARY_OP                0 (+)\n           1236 STORE_FAST              14 (body_pos)\n\n145        1238 LOAD_GLOBAL             39 (NULL + set)\n           1248 CALL                     0\n           1256 STORE_FAST              15 (seen)\n\n146        1258 LOAD_FAST                6 (header)\n           1260 LOAD_ATTR               25 (NULL|self + get)\n           1280 LOAD_CONST              23 ('records')\n           1282 CALL                     1\n           1290 STORE_FAST              16 (records)\n\n147        1292 LOAD_GLOBAL             41 (NULL + isinstance)\n           1302 LOAD_FAST               16 (records)\n           1304 LOAD_GLOBAL             42 (list)\n           1314 CALL                     2\n           1322 POP_JUMP_IF_TRUE        11 (to 1346)\n\n148        1324 LOAD_GLOBAL             13 (NULL + QH0CodecError)\n           1334 LOAD_CONST              24 ('QH1 header records must be a list')\n           1336 CALL                     1\n           1344 RAISE_VARARGS            1\n\n149     >> 1346 LOAD_GLOBAL             45 (NULL + enumerate)\n           1356 LOAD_FAST               16 (records)\n           1358 CALL                     1\n           1366 GET_ITER\n        >> 1368 EXTENDED_ARG             1\n           1370 FOR_ITER               472 (to 2318)\n           1374 UNPACK_SEQUENCE          2\n           1378 STORE_FAST              17 (index)\n           1380 STORE_FAST              18 (record)\n\n150        1382 LOAD_GLOBAL             41 (NULL + isinstance)\n           1392 LOAD_FAST               18 (record)\n           1394 LOAD_GLOBAL             46 (dict)\n           1404 CALL                     2\n           1412 POP_JUMP_IF_TRUE        15 (to 1444)\n\n151        1414 LOAD_GLOBAL             13 (NULL + QH0CodecError)\n           1424 LOAD_CONST              25 ('QH1 record ')\n           1426 LOAD_FAST               17 (index)\n           1428 FORMAT_VALUE             0\n           1430 LOAD_CONST              26 (' is not an object')\n           1432 BUILD_STRING             3\n           1434 CALL                     1\n           1442 RAISE_VARARGS            1\n\n152     >> 1444 LOAD_GLOBAL             31 (NULL + int)\n           1454 LOAD_FAST               18 (record)\n           1456 LOAD_ATTR               25 (NULL|self + get)\n           1476 LOAD_CONST              27 ('offset')\n           1478 LOAD_CONST              12 (-1)\n           1480 CALL                     2\n           1488 CALL                     1\n           1496 STORE_FAST              19 (offset)\n\n153        1498 LOAD_GLOBAL             31 (NULL + int)\n           1508 LOAD_FAST               18 (record)\n           1510 LOAD_ATTR               25 (NULL|self + get)\n           1530 LOAD_CONST              28 ('nbytes')\n           1532 LOAD_CONST              12 (-1)\n           1534 CALL                     2\n           1542 CALL                     1\n           1550 STORE_FAST              20 (nbytes)\n\n154        1552 LOAD_GLOBAL             31 (NULL + int)\n           1562 LOAD_FAST               18 (record)\n           1564 LOAD_ATTR               25 (NULL|self + get)\n           1584 LOAD_CONST              29 ('encoded_bytes')\n           1586 LOAD_CONST              12 (-1)\n           1588 CALL                     2\n           1596 CALL                     1\n           1604 STORE_FAST              21 (encoded_bytes)\n\n155        1606 LOAD_GLOBAL             29 (NULL + str)\n           1616 LOAD_FAST               18 (record)\n           1618 LOAD_ATTR               25 (NULL|self + get)\n           1638 LOAD_CONST              30 ('codec')\n           1640 LOAD_CONST              10 ('')\n           1642 CALL                     2\n           1650 CALL                     1\n           1658 STORE_FAST              22 (codec)\n\n156        1660 LOAD_CONST              25 ('QH1 record ')\n           1662 LOAD_FAST               17 (index)\n           1664 FORMAT_VALUE             0\n           1666 BUILD_STRING             2\n           1668 STORE_FAST              23 (label)\n\n157        1670 LOAD_FAST               19 (offset)\n           1672 LOAD_CONST               2 (0)\n           1674 COMPARE_OP               2 (<)\n           1678 POP_JUMP_IF_TRUE        22 (to 1724)\n           1680 LOAD_FAST               20 (nbytes)\n           1682 LOAD_CONST               2 (0)\n           1684 COMPARE_OP               2 (<)\n           1688 POP_JUMP_IF_TRUE        17 (to 1724)\n           1690 LOAD_FAST               19 (offset)\n           1692 LOAD_FAST               20 (nbytes)\n           1694 BINARY_OP                0 (+)\n           1698 LOAD_GLOBAL              7 (NULL + len)\n           1708 LOAD_FAST               11 (out)\n           1710 CALL                     1\n           1718 COMPARE_OP              68 (>)\n           1722 POP_JUMP_IF_FALSE       19 (to 1762)\n\n158     >> 1724 LOAD_GLOBAL             13 (NULL + QH0CodecError)\n\n159        1734 LOAD_FAST               23 (label)\n           1736 FORMAT_VALUE             0\n           1738 LOAD_CONST              31 (': invalid target slice offset=')\n           1740 LOAD_FAST               19 (offset)\n           1742 FORMAT_VALUE             0\n           1744 LOAD_CONST              32 (' nbytes=')\n           1746 LOAD_FAST               20 (nbytes)\n           1748 FORMAT_VALUE             0\n           1750 BUILD_STRING             5\n\n158        1752 CALL                     1\n           1760 RAISE_VARARGS            1\n\n161     >> 1762 LOAD_FAST               21 (encoded_bytes)\n           1764 LOAD_CONST               2 (0)\n           1766 COMPARE_OP               2 (<)\n           1770 POP_JUMP_IF_TRUE        17 (to 1806)\n           1772 LOAD_FAST               14 (body_pos)\n           1774 LOAD_FAST               21 (encoded_bytes)\n           1776 BINARY_OP                0 (+)\n           1780 LOAD_GLOBAL              7 (NULL + len)\n           1790 LOAD_FAST                1 (raw)\n           1792 CALL                     1\n           1800 COMPARE_OP              68 (>)\n           1804 POP_JUMP_IF_FALSE       14 (to 1834)\n\n162     >> 1806 LOAD_GLOBAL             13 (NULL + QH0CodecError)\n           1816 LOAD_FAST               23 (label)\n           1818 FORMAT_VALUE             0\n           1820 LOAD_CONST              33 (': encoded slice is truncated')\n           1822 BUILD_STRING             2\n           1824 CALL                     1\n           1832 RAISE_VARARGS            1\n\n163     >> 1834 LOAD_FAST               19 (offset)\n           1836 LOAD_FAST               19 (offset)\n           1838 LOAD_FAST               20 (nbytes)\n           1840 BINARY_OP                0 (+)\n           1844 BUILD_TUPLE              2\n           1846 STORE_DEREF             27 (key)\n\n164        1848 LOAD_GLOBAL             49 (NULL + any)\n           1858 LOAD_CLOSURE            27 (key)\n           1860 BUILD_TUPLE              1\n           1862 LOAD_CONST              34 (<code object <genexpr> at 0x1037becd0, file \"/Users/adpena/Projects/pact/src/tac/qh0_renderer_codec.py\", line 164>)\n           1864 MAKE_FUNCTION            8 (closure)\n           1866 LOAD_FAST               15 (seen)\n           1868 GET_ITER\n           1870 CALL                     0\n           1878 CALL                     1\n           1886 POP_JUMP_IF_FALSE       14 (to 1916)\n\n165        1888 LOAD_GLOBAL             13 (NULL + QH0CodecError)\n           1898 LOAD_FAST               23 (label)\n           1900 FORMAT_VALUE             0\n           1902 LOAD_CONST              35 (': overlapping target slice')\n           1904 BUILD_STRING             2\n           1906 CALL                     1\n           1914 RAISE_VARARGS            1\n\n166     >> 1916 LOAD_FAST               15 (seen)\n           1918 LOAD_ATTR               51 (NULL|self + add)\n           1938 LOAD_DEREF              27 (key)\n           1940 CALL                     1\n           1948 POP_TOP\n\n167        1950 LOAD_FAST                1 (raw)\n           1952 LOAD_FAST               14 (body_pos)\n           1954 LOAD_FAST               14 (body_pos)\n           1956 LOAD_FAST               21 (encoded_bytes)\n           1958 BINARY_OP                0 (+)\n           1962 BINARY_SLICE\n           1964 STORE_FAST              24 (encoded)\n\n168        1966 LOAD_FAST               14 (body_pos)\n           1968 LOAD_FAST               21 (encoded_bytes)\n           1970 BINARY_OP               13 (+=)\n           1974 STORE_FAST              14 (body_pos)\n\n169        1976 LOAD_GLOBAL             29 (NULL + str)\n           1986 LOAD_FAST               18 (record)\n           1988 LOAD_ATTR               25 (NULL|self + get)\n           2008 LOAD_CONST              36 ('encoded_sha256')\n           2010 LOAD_CONST              10 ('')\n           2012 CALL                     2\n           2020 CALL                     1\n           2028 LOAD_GLOBAL             33 (NULL + _sha256)\n           2038 LOAD_FAST               24 (encoded)\n           2040 CALL                     1\n           2048 COMPARE_OP              55 (!=)\n           2052 POP_JUMP_IF_FALSE       14 (to 2082)\n\n170        2054 LOAD_GLOBAL             13 (NULL + QH0CodecError)\n           2064 LOAD_FAST               23 (label)\n           2066 FORMAT_VALUE             0\n           2068 LOAD_CONST              37 (': encoded SHA-256 mismatch')\n           2070 BUILD_STRING             2\n           2072 CALL                     1\n           2080 RAISE_VARARGS            1\n\n171     >> 2082 LOAD_GLOBAL             37 (NULL + _decode_qh1_record)\n           2092 LOAD_FAST               24 (encoded)\n           2094 LOAD_FAST               22 (codec)\n           2096 LOAD_FAST               23 (label)\n           2098 CALL                     3\n           2106 STORE_FAST              25 (decoded)\n\n172        2108 LOAD_GLOBAL              7 (NULL + len)\n           2118 LOAD_FAST               25 (decoded)\n           2120 CALL                     1\n           2128 LOAD_FAST               20 (nbytes)\n           2130 COMPARE_OP              55 (!=)\n           2134 POP_JUMP_IF_FALSE       28 (to 2192)\n\n173        2136 LOAD_GLOBAL             13 (NULL + QH0CodecError)\n\n174        2146 LOAD_FAST               23 (label)\n           2148 FORMAT_VALUE             0\n           2150 LOAD_CONST              38 (': decoded length mismatch: got=')\n           2152 LOAD_GLOBAL              7 (NULL + len)\n           2162 LOAD_FAST               25 (decoded)\n           2164 CALL                     1\n           2172 FORMAT_VALUE             0\n           2174 LOAD_CONST              39 (' expected=')\n           2176 LOAD_FAST               20 (nbytes)\n           2178 FORMAT_VALUE             0\n           2180 BUILD_STRING             5\n\n173        2182 CALL                     1\n           2190 RAISE_VARARGS            1\n\n176     >> 2192 LOAD_GLOBAL             29 (NULL + str)\n           2202 LOAD_FAST               18 (record)\n           2204 LOAD_ATTR               25 (NULL|self + get)\n           2224 LOAD_CONST              40 ('decoded_sha256')\n           2226 LOAD_CONST              10 ('')\n           2228 CALL                     2\n           2236 CALL                     1\n           2244 LOAD_GLOBAL             33 (NULL + _sha256)\n           2254 LOAD_FAST               25 (decoded)\n           2256 CALL                     1\n           2264 COMPARE_OP              55 (!=)\n           2268 POP_JUMP_IF_FALSE       14 (to 2298)\n\n177        2270 LOAD_GLOBAL             13 (NULL + QH0CodecError)\n           2280 LOAD_FAST               23 (label)\n           2282 FORMAT_VALUE             0\n           2284 LOAD_CONST              41 (': decoded SHA-256 mismatch')\n           2286 BUILD_STRING             2\n           2288 CALL                     1\n           2296 RAISE_VARARGS            1\n\n178     >> 2298 LOAD_FAST               25 (decoded)\n           2300 LOAD_FAST               11 (out)\n           2302 LOAD_FAST               19 (offset)\n           2304 LOAD_FAST               19 (offset)\n           2306 LOAD_FAST               20 (nbytes)\n           2308 BINARY_OP                0 (+)\n           2312 STORE_SLICE\n           2314 EXTENDED_ARG             1\n           2316 JUMP_BACKWARD          475 (to 1368)\n\n149     >> 2318 END_FOR\n\n179        2320 LOAD_FAST               14 (body_pos)\n           2322 LOAD_GLOBAL              7 (NULL + len)\n           2332 LOAD_FAST                1 (raw)\n           2334 CALL                     1\n           2342 COMPARE_OP              55 (!=)\n           2346 POP_JUMP_IF_FALSE       26 (to 2400)\n\n180        2348 LOAD_GLOBAL             13 (NULL + QH0CodecError)\n           2358 LOAD_CONST              42 ('QH1 payload has trailing bytes: consumed=')\n           2360 LOAD_FAST               14 (body_pos)\n           2362 FORMAT_VALUE             0\n           2364 LOAD_CONST              43 (' total=')\n           2366 LOAD_GLOBAL              7 (NULL + len)\n           2376 LOAD_FAST                1 (raw)\n           2378 CALL                     1\n           2386 FORMAT_VALUE             0\n           2388 BUILD_STRING             4\n           2390 CALL                     1\n           2398 RAISE_VARARGS            1\n\n181     >> 2400 LOAD_GLOBAL              1 (NULL + bytes)\n           2410 LOAD_FAST               11 (out)\n           2412 CALL                     1\n           2420 STORE_FAST              26 (rebuilt)\n\n182        2422 LOAD_FAST               13 (expected_sha)\n           2424 LOAD_GLOBAL             33 (NULL + _sha256)\n           2434 LOAD_FAST               26 (rebuilt)\n           2436 CALL                     1\n           2444 COMPARE_OP              55 (!=)\n           2448 POP_JUMP_IF_FALSE       11 (to 2472)\n\n183        2450 LOAD_GLOBAL             13 (NULL + QH0CodecError)\n           2460 LOAD_CONST              44 ('QH1 reconstructed source SHA-256 mismatch')\n           2462 CALL                     1\n           2470 RAISE_VARARGS            1\n\n184     >> 2472 LOAD_FAST               26 (rebuilt)\n           2474 LOAD_CONST               6 (None)\n           2476 LOAD_CONST              45 (3)\n           2478 BINARY_SLICE\n           2480 LOAD_GLOBAL             52 (QH0_SUPPORTED_MAGICS)\n           2490 CONTAINS_OP              1\n           2492 POP_JUMP_IF_FALSE       17 (to 2528)\n\n185        2494 LOAD_GLOBAL             13 (NULL + QH0CodecError)\n           2504 LOAD_CONST              46 ('QH1 reconstructed unsupported magic: ')\n           2506 LOAD_FAST               26 (rebuilt)\n           2508 LOAD_CONST               6 (None)\n           2510 LOAD_CONST              45 (3)\n           2512 BINARY_SLICE\n           2514 FORMAT_VALUE             2 (repr)\n           2516 BUILD_STRING             2\n           2518 CALL                     1\n           2526 RAISE_VARARGS            1\n\n186     >> 2528 LOAD_FAST               26 (rebuilt)\n           2530 RETURN_VALUE\n        >> 2532 PUSH_EXC_INFO\n\n124        2534 LOAD_GLOBAL             22 (Exception)\n           2544 CHECK_EXC_MATCH\n           2546 POP_JUMP_IF_FALSE       17 (to 2582)\n           2548 STORE_FAST               7 (exc)\n\n125        2550 LOAD_GLOBAL             13 (NULL + QH0CodecError)\n           2560 LOAD_CONST               5 ('QH1 header is not valid UTF-8 JSON')\n           2562 CALL                     1\n           2570 LOAD_FAST                7 (exc)\n           2572 RAISE_VARARGS            2\n        >> 2574 LOAD_CONST               6 (None)\n           2576 STORE_FAST               7 (exc)\n           2578 DELETE_FAST              7 (exc)\n           2580 RERAISE                  1\n\n124     >> 2582 RERAISE                  0\n        >> 2584 COPY                     3\n           2586 POP_EXCEPT\n           2588 RERAISE                  1\nExceptionTable:\n  404 to 480 -> 2532 [0]\n  2532 to 2548 -> 2584 [1] lasti\n  2550 to 2572 -> 2574 [1] lasti\n  2574 to 2582 -> 2584 [1] lasti\n"
+    },
+    {
+      "qualname": "reconstruct_qh1_payload.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "old"
+      ],
+      "names": [],
+      "freevars": [
+        "key"
+      ],
+      "cellvars": [],
+      "doc": null,
+      "dis": "              0 COPY_FREE_VARS           1\n\n164           2 RETURN_GENERATOR\n              4 POP_TOP\n              6 RESUME                   0\n              8 LOAD_FAST                0 (.0)\n        >>   10 FOR_ITER                29 (to 72)\n             14 STORE_FAST               1 (old)\n             16 LOAD_DEREF               2 (key)\n             18 LOAD_CONST               0 (1)\n             20 BINARY_SUBSCR\n             24 LOAD_FAST                1 (old)\n             26 LOAD_CONST               1 (0)\n             28 BINARY_SUBSCR\n             32 COMPARE_OP              26 (<=)\n             36 COPY                     1\n             38 POP_JUMP_IF_TRUE        11 (to 62)\n             40 POP_TOP\n             42 LOAD_FAST                1 (old)\n             44 LOAD_CONST               0 (1)\n             46 BINARY_SUBSCR\n             50 LOAD_DEREF               2 (key)\n             52 LOAD_CONST               1 (0)\n             54 BINARY_SUBSCR\n             58 COMPARE_OP              26 (<=)\n        >>   62 UNARY_NOT\n             64 YIELD_VALUE              1\n             66 RESUME                   1\n             68 POP_TOP\n             70 JUMP_BACKWARD           31 (to 10)\n        >>   72 END_FOR\n             74 RETURN_CONST             2 (None)\n        >>   76 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             78 RERAISE                  1\nExceptionTable:\n  6 to 74 -> 76 [0] lasti\n"
+    },
+    {
+      "qualname": "_unsplit_bytes_to_tensor",
+      "name": "_unsplit_bytes_to_tensor",
+      "argcount": 7,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "raw",
+        "pos",
+        "nbytes",
+        "dtype",
+        "shape",
+        "device",
+        "label",
+        "half",
+        "source",
+        "out",
+        "tensor"
+      ],
+      "names": [
+        "_require_available",
+        "np",
+        "frombuffer",
+        "uint8",
+        "empty",
+        "torch",
+        "bytearray",
+        "tobytes",
+        "clone",
+        "reshape",
+        "to"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Undo PR85's even/odd byte split before constructing a tensor.",
+      "dis": "189           0 RESUME                   0\n\n200           2 LOAD_GLOBAL              1 (NULL + _require_available)\n             12 LOAD_FAST                0 (raw)\n             14 LOAD_FAST                1 (pos)\n             16 LOAD_FAST                2 (nbytes)\n             18 LOAD_FAST                6 (label)\n             20 CALL                     4\n             28 POP_TOP\n\n201          30 LOAD_FAST                2 (nbytes)\n             32 LOAD_CONST               1 (1)\n             34 BINARY_OP                0 (+)\n             38 LOAD_CONST               2 (2)\n             40 BINARY_OP                2 (//)\n             44 STORE_FAST               7 (half)\n\n202          46 LOAD_GLOBAL              3 (NULL + np)\n             56 LOAD_ATTR                4 (frombuffer)\n             76 LOAD_FAST                0 (raw)\n             78 LOAD_FAST                1 (pos)\n             80 LOAD_FAST                1 (pos)\n             82 LOAD_FAST                2 (nbytes)\n             84 BINARY_OP                0 (+)\n             88 BINARY_SLICE\n             90 LOAD_GLOBAL              2 (np)\n            100 LOAD_ATTR                6 (uint8)\n            120 KW_NAMES                 3 (('dtype',))\n            122 CALL                     2\n            130 STORE_FAST               8 (source)\n\n203         132 LOAD_GLOBAL              3 (NULL + np)\n            142 LOAD_ATTR                8 (empty)\n            162 LOAD_FAST                2 (nbytes)\n            164 LOAD_GLOBAL              2 (np)\n            174 LOAD_ATTR                6 (uint8)\n            194 KW_NAMES                 3 (('dtype',))\n            196 CALL                     2\n            204 STORE_FAST               9 (out)\n\n204         206 LOAD_FAST                8 (source)\n            208 LOAD_CONST               4 (None)\n            210 LOAD_FAST                7 (half)\n            212 BINARY_SLICE\n            214 LOAD_FAST                9 (out)\n            216 LOAD_CONST               5 (0)\n            218 LOAD_CONST               4 (None)\n            220 LOAD_CONST               2 (2)\n            222 BUILD_SLICE              3\n            224 STORE_SUBSCR\n\n205         228 LOAD_FAST                8 (source)\n            230 LOAD_FAST                7 (half)\n            232 LOAD_CONST               4 (None)\n            234 BINARY_SLICE\n            236 LOAD_FAST                9 (out)\n            238 LOAD_CONST               1 (1)\n            240 LOAD_CONST               4 (None)\n            242 LOAD_CONST               2 (2)\n            244 BUILD_SLICE              3\n            246 STORE_SUBSCR\n\n206         250 LOAD_GLOBAL             11 (NULL + torch)\n            260 LOAD_ATTR                4 (frombuffer)\n            280 LOAD_GLOBAL             13 (NULL + bytearray)\n            290 LOAD_FAST                9 (out)\n            292 LOAD_ATTR               15 (NULL|self + tobytes)\n            312 CALL                     0\n            320 CALL                     1\n            328 LOAD_FAST                3 (dtype)\n            330 KW_NAMES                 3 (('dtype',))\n            332 CALL                     2\n            340 LOAD_ATTR               17 (NULL|self + clone)\n            360 CALL                     0\n            368 STORE_FAST              10 (tensor)\n\n207         370 LOAD_FAST               10 (tensor)\n            372 LOAD_ATTR               19 (NULL|self + reshape)\n            392 LOAD_FAST                4 (shape)\n            394 CALL                     1\n            402 LOAD_ATTR               21 (NULL|self + to)\n            422 LOAD_FAST                5 (device)\n            424 CALL                     1\n            432 LOAD_FAST                1 (pos)\n            434 LOAD_FAST                2 (nbytes)\n            436 BINARY_OP                0 (+)\n            440 BUILD_TUPLE              2\n            442 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_read_tensor_bytes",
+      "name": "_read_tensor_bytes",
+      "argcount": 7,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "raw",
+        "pos",
+        "nbytes",
+        "dtype",
+        "shape",
+        "device",
+        "label",
+        "tensor"
+      ],
+      "names": [
+        "_require_available",
+        "torch",
+        "frombuffer",
+        "bytearray",
+        "clone",
+        "reshape",
+        "to"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "210           0 RESUME                   0\n\n219           2 LOAD_GLOBAL              1 (NULL + _require_available)\n             12 LOAD_FAST                0 (raw)\n             14 LOAD_FAST                1 (pos)\n             16 LOAD_FAST                2 (nbytes)\n             18 LOAD_FAST                6 (label)\n             20 CALL                     4\n             28 POP_TOP\n\n220          30 LOAD_GLOBAL              3 (NULL + torch)\n             40 LOAD_ATTR                4 (frombuffer)\n             60 LOAD_GLOBAL              7 (NULL + bytearray)\n             70 LOAD_FAST                0 (raw)\n             72 LOAD_FAST                1 (pos)\n             74 LOAD_FAST                1 (pos)\n             76 LOAD_FAST                2 (nbytes)\n             78 BINARY_OP                0 (+)\n             82 BINARY_SLICE\n             84 CALL                     1\n             92 LOAD_FAST                3 (dtype)\n             94 KW_NAMES                 1 (('dtype',))\n             96 CALL                     2\n            104 LOAD_ATTR                9 (NULL|self + clone)\n            124 CALL                     0\n            132 STORE_FAST               7 (tensor)\n\n221         134 LOAD_FAST                7 (tensor)\n            136 LOAD_ATTR               11 (NULL|self + reshape)\n            156 LOAD_FAST                4 (shape)\n            158 CALL                     1\n            166 LOAD_ATTR               13 (NULL|self + to)\n            186 LOAD_FAST                5 (device)\n            188 CALL                     1\n            196 LOAD_FAST                1 (pos)\n            198 LOAD_FAST                2 (nbytes)\n            200 BINARY_OP                0 (+)\n            204 BUILD_TUPLE              2\n            206 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_unhilo_packed",
+      "name": "_unhilo_packed",
+      "argcount": 5,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "raw",
+        "pos",
+        "packed_len",
+        "device",
+        "label",
+        "half",
+        "hi_packed",
+        "lo_packed",
+        "hi",
+        "lo",
+        "packed",
+        "tensor"
+      ],
+      "names": [
+        "QH0CodecError",
+        "_require_available",
+        "np",
+        "frombuffer",
+        "uint8",
+        "empty",
+        "astype",
+        "torch",
+        "bytearray",
+        "tobytes",
+        "clone",
+        "to"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Undo PR85 QH0 high/low nibble split into packed FP4 bytes.",
+      "dis": "224           0 RESUME                   0\n\n233           2 LOAD_FAST                2 (packed_len)\n              4 LOAD_CONST               1 (2)\n              6 BINARY_OP                6 (%)\n             10 POP_JUMP_IF_FALSE       16 (to 44)\n\n234          12 LOAD_GLOBAL              1 (NULL + QH0CodecError)\n             22 LOAD_FAST                4 (label)\n             24 FORMAT_VALUE             0\n             26 LOAD_CONST               2 (' packed_len must be even for QH0, got ')\n             28 LOAD_FAST                2 (packed_len)\n             30 FORMAT_VALUE             0\n             32 BUILD_STRING             3\n             34 CALL                     1\n             42 RAISE_VARARGS            1\n\n235     >>   44 LOAD_FAST                2 (packed_len)\n             46 LOAD_CONST               1 (2)\n             48 BINARY_OP                2 (//)\n             52 STORE_FAST               5 (half)\n\n236          54 LOAD_GLOBAL              3 (NULL + _require_available)\n             64 LOAD_FAST                0 (raw)\n             66 LOAD_FAST                1 (pos)\n             68 LOAD_FAST                5 (half)\n             70 LOAD_CONST               1 (2)\n             72 BINARY_OP                5 (*)\n             76 LOAD_FAST                4 (label)\n             78 CALL                     4\n             86 POP_TOP\n\n237          88 LOAD_GLOBAL              5 (NULL + np)\n             98 LOAD_ATTR                6 (frombuffer)\n            118 LOAD_FAST                0 (raw)\n            120 LOAD_FAST                1 (pos)\n            122 LOAD_FAST                1 (pos)\n            124 LOAD_FAST                5 (half)\n            126 BINARY_OP                0 (+)\n            130 BINARY_SLICE\n            132 LOAD_GLOBAL              4 (np)\n            142 LOAD_ATTR                8 (uint8)\n            162 KW_NAMES                 3 (('dtype',))\n            164 CALL                     2\n            172 STORE_FAST               6 (hi_packed)\n\n238         174 LOAD_FAST                1 (pos)\n            176 LOAD_FAST                5 (half)\n            178 BINARY_OP               13 (+=)\n            182 STORE_FAST               1 (pos)\n\n239         184 LOAD_GLOBAL              5 (NULL + np)\n            194 LOAD_ATTR                6 (frombuffer)\n            214 LOAD_FAST                0 (raw)\n            216 LOAD_FAST                1 (pos)\n            218 LOAD_FAST                1 (pos)\n            220 LOAD_FAST                5 (half)\n            222 BINARY_OP                0 (+)\n            226 BINARY_SLICE\n            228 LOAD_GLOBAL              4 (np)\n            238 LOAD_ATTR                8 (uint8)\n            258 KW_NAMES                 3 (('dtype',))\n            260 CALL                     2\n            268 STORE_FAST               7 (lo_packed)\n\n240         270 LOAD_FAST                1 (pos)\n            272 LOAD_FAST                5 (half)\n            274 BINARY_OP               13 (+=)\n            278 STORE_FAST               1 (pos)\n\n241         280 LOAD_GLOBAL              5 (NULL + np)\n            290 LOAD_ATTR               10 (empty)\n            310 LOAD_FAST                5 (half)\n            312 LOAD_CONST               1 (2)\n            314 BINARY_OP                5 (*)\n            318 LOAD_GLOBAL              4 (np)\n            328 LOAD_ATTR                8 (uint8)\n            348 KW_NAMES                 3 (('dtype',))\n            350 CALL                     2\n            358 STORE_FAST               8 (hi)\n\n242         360 LOAD_GLOBAL              5 (NULL + np)\n            370 LOAD_ATTR               10 (empty)\n            390 LOAD_FAST                5 (half)\n            392 LOAD_CONST               1 (2)\n            394 BINARY_OP                5 (*)\n            398 LOAD_GLOBAL              4 (np)\n            408 LOAD_ATTR                8 (uint8)\n            428 KW_NAMES                 3 (('dtype',))\n            430 CALL                     2\n            438 STORE_FAST               9 (lo)\n\n243         440 LOAD_FAST                6 (hi_packed)\n            442 LOAD_CONST               4 (4)\n            444 BINARY_OP                9 (>>)\n            448 LOAD_CONST               5 (15)\n            450 BINARY_OP                1 (&)\n            454 LOAD_FAST                8 (hi)\n            456 LOAD_CONST               6 (0)\n            458 LOAD_CONST               7 (None)\n            460 LOAD_CONST               1 (2)\n            462 BUILD_SLICE              3\n            464 STORE_SUBSCR\n\n244         468 LOAD_FAST                6 (hi_packed)\n            470 LOAD_CONST               5 (15)\n            472 BINARY_OP                1 (&)\n            476 LOAD_FAST                8 (hi)\n            478 LOAD_CONST               8 (1)\n            480 LOAD_CONST               7 (None)\n            482 LOAD_CONST               1 (2)\n            484 BUILD_SLICE              3\n            486 STORE_SUBSCR\n\n245         490 LOAD_FAST                7 (lo_packed)\n            492 LOAD_CONST               4 (4)\n            494 BINARY_OP                9 (>>)\n            498 LOAD_CONST               5 (15)\n            500 BINARY_OP                1 (&)\n            504 LOAD_FAST                9 (lo)\n            506 LOAD_CONST               6 (0)\n            508 LOAD_CONST               7 (None)\n            510 LOAD_CONST               1 (2)\n            512 BUILD_SLICE              3\n            514 STORE_SUBSCR\n\n246         518 LOAD_FAST                7 (lo_packed)\n            520 LOAD_CONST               5 (15)\n            522 BINARY_OP                1 (&)\n            526 LOAD_FAST                9 (lo)\n            528 LOAD_CONST               8 (1)\n            530 LOAD_CONST               7 (None)\n            532 LOAD_CONST               1 (2)\n            534 BUILD_SLICE              3\n            536 STORE_SUBSCR\n\n247         540 LOAD_FAST                8 (hi)\n            542 LOAD_CONST               7 (None)\n            544 LOAD_FAST                2 (packed_len)\n            546 BINARY_SLICE\n            548 LOAD_CONST               4 (4)\n            550 BINARY_OP                3 (<<)\n            554 LOAD_FAST                9 (lo)\n            556 LOAD_CONST               7 (None)\n            558 LOAD_FAST                2 (packed_len)\n            560 BINARY_SLICE\n            562 BINARY_OP                7 (|)\n            566 LOAD_ATTR               13 (NULL|self + astype)\n            586 LOAD_GLOBAL              4 (np)\n            596 LOAD_ATTR                8 (uint8)\n            616 CALL                     1\n            624 STORE_FAST              10 (packed)\n\n248         626 LOAD_GLOBAL             15 (NULL + torch)\n            636 LOAD_ATTR                6 (frombuffer)\n            656 LOAD_GLOBAL             17 (NULL + bytearray)\n            666 LOAD_FAST               10 (packed)\n            668 LOAD_ATTR               19 (NULL|self + tobytes)\n            688 CALL                     0\n            696 CALL                     1\n            704 LOAD_GLOBAL             14 (torch)\n            714 LOAD_ATTR                8 (uint8)\n            734 KW_NAMES                 3 (('dtype',))\n            736 CALL                     2\n            744 LOAD_ATTR               21 (NULL|self + clone)\n            764 CALL                     0\n            772 STORE_FAST              11 (tensor)\n\n249         774 LOAD_FAST               11 (tensor)\n            776 LOAD_ATTR               23 (NULL|self + to)\n            796 LOAD_FAST                3 (device)\n            798 CALL                     1\n            806 LOAD_FAST                1 (pos)\n            808 BUILD_TUPLE              2\n            810 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_dequantize_fp4_from_nibbles",
+      "name": "_dequantize_fp4_from_nibbles",
+      "argcount": 3,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "nibbles",
+        "scales",
+        "shape",
+        "flat_n",
+        "block_size",
+        "nib",
+        "signs",
+        "mag_idx",
+        "levels",
+        "q",
+        "dq"
+      ],
+      "names": [
+        "math",
+        "prod",
+        "numel",
+        "QH0CodecError",
+        "view",
+        "to",
+        "torch",
+        "int64",
+        "FP4_POS_LEVELS",
+        "device",
+        "float32",
+        "where",
+        "bool",
+        "reshape"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "252           0 RESUME                   0\n\n257           2 LOAD_GLOBAL              1 (NULL + math)\n             12 LOAD_ATTR                2 (prod)\n             32 LOAD_FAST                2 (shape)\n             34 CALL                     1\n             42 STORE_FAST               3 (flat_n)\n\n258          44 LOAD_FAST                1 (scales)\n             46 LOAD_ATTR                5 (NULL|self + numel)\n             66 CALL                     0\n             74 LOAD_CONST               1 (0)\n             76 COMPARE_OP              26 (<=)\n             80 POP_JUMP_IF_FALSE       11 (to 104)\n\n259          82 LOAD_GLOBAL              7 (NULL + QH0CodecError)\n             92 LOAD_CONST               2 ('FP4 record has no scales')\n             94 CALL                     1\n            102 RAISE_VARARGS            1\n\n260     >>  104 LOAD_FAST                0 (nibbles)\n            106 LOAD_ATTR                5 (NULL|self + numel)\n            126 CALL                     0\n            134 LOAD_FAST                1 (scales)\n            136 LOAD_ATTR                5 (NULL|self + numel)\n            156 CALL                     0\n            164 BINARY_OP                6 (%)\n            168 LOAD_CONST               1 (0)\n            170 COMPARE_OP              55 (!=)\n            174 POP_JUMP_IF_FALSE       45 (to 266)\n\n261         176 LOAD_GLOBAL              7 (NULL + QH0CodecError)\n\n262         186 LOAD_CONST               3 ('FP4 nibbles/scales mismatch: nibbles=')\n            188 LOAD_FAST                0 (nibbles)\n            190 LOAD_ATTR                5 (NULL|self + numel)\n            210 CALL                     0\n            218 FORMAT_VALUE             0\n            220 LOAD_CONST               4 (' scales=')\n            222 LOAD_FAST                1 (scales)\n            224 LOAD_ATTR                5 (NULL|self + numel)\n            244 CALL                     0\n            252 FORMAT_VALUE             0\n            254 BUILD_STRING             4\n\n261         256 CALL                     1\n            264 RAISE_VARARGS            1\n\n264     >>  266 LOAD_FAST                0 (nibbles)\n            268 LOAD_ATTR                5 (NULL|self + numel)\n            288 CALL                     0\n            296 LOAD_FAST                1 (scales)\n            298 LOAD_ATTR                5 (NULL|self + numel)\n            318 CALL                     0\n            326 BINARY_OP                2 (//)\n            330 STORE_FAST               4 (block_size)\n\n265         332 LOAD_FAST                0 (nibbles)\n            334 LOAD_ATTR                9 (NULL|self + view)\n            354 LOAD_CONST               5 (-1)\n            356 LOAD_FAST                4 (block_size)\n            358 CALL                     2\n            366 STORE_FAST               5 (nib)\n\n266         368 LOAD_FAST                5 (nib)\n            370 LOAD_CONST               6 (3)\n            372 BINARY_OP                9 (>>)\n            376 LOAD_ATTR               11 (NULL|self + to)\n            396 LOAD_GLOBAL             12 (torch)\n            406 LOAD_ATTR               14 (int64)\n            426 CALL                     1\n            434 STORE_FAST               6 (signs)\n\n267         436 LOAD_FAST                5 (nib)\n            438 LOAD_CONST               7 (7)\n            440 BINARY_OP                1 (&)\n            444 LOAD_ATTR               11 (NULL|self + to)\n            464 LOAD_GLOBAL             12 (torch)\n            474 LOAD_ATTR               14 (int64)\n            494 CALL                     1\n            502 STORE_FAST               7 (mag_idx)\n\n268         504 LOAD_GLOBAL             16 (FP4_POS_LEVELS)\n            514 LOAD_ATTR               11 (NULL|self + to)\n            534 LOAD_FAST                1 (scales)\n            536 LOAD_ATTR               18 (device)\n            556 LOAD_GLOBAL             12 (torch)\n            566 LOAD_ATTR               20 (float32)\n            586 CALL                     2\n            594 STORE_FAST               8 (levels)\n\n269         596 LOAD_FAST                8 (levels)\n            598 LOAD_FAST                7 (mag_idx)\n            600 BINARY_SUBSCR\n            604 STORE_FAST               9 (q)\n\n270         606 LOAD_GLOBAL             13 (NULL + torch)\n            616 LOAD_ATTR               22 (where)\n            636 LOAD_FAST                6 (signs)\n            638 LOAD_ATTR               25 (NULL|self + bool)\n            658 CALL                     0\n            666 LOAD_FAST                9 (q)\n            668 UNARY_NEGATIVE\n            670 LOAD_FAST                9 (q)\n            672 CALL                     3\n            680 STORE_FAST               9 (q)\n\n271         682 LOAD_FAST                9 (q)\n            684 LOAD_FAST                1 (scales)\n            686 LOAD_CONST               0 (None)\n            688 LOAD_CONST               0 (None)\n            690 BUILD_SLICE              2\n            692 LOAD_CONST               0 (None)\n            694 BUILD_TUPLE              2\n            696 BINARY_SUBSCR\n            700 LOAD_ATTR               11 (NULL|self + to)\n            720 LOAD_GLOBAL             12 (torch)\n            730 LOAD_ATTR               20 (float32)\n            750 CALL                     1\n            758 BINARY_OP                5 (*)\n            762 STORE_FAST              10 (dq)\n\n272         764 LOAD_FAST               10 (dq)\n            766 LOAD_ATTR               27 (NULL|self + reshape)\n            786 LOAD_CONST               5 (-1)\n            788 CALL                     1\n            796 LOAD_CONST               0 (None)\n            798 LOAD_FAST                3 (flat_n)\n            800 BINARY_SLICE\n            802 LOAD_ATTR               27 (NULL|self + reshape)\n            822 LOAD_FAST                2 (shape)\n            824 CALL                     1\n            832 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_module_weight_order",
+      "name": "_module_weight_order",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "model",
+        "ordered",
+        "name",
+        "module"
+      ],
+      "names": [
+        "named_modules",
+        "isinstance",
+        "torch",
+        "nn",
+        "Conv2d",
+        "Embedding",
+        "append"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "275           0 RESUME                   0\n\n276           2 BUILD_LIST               0\n              4 STORE_FAST               1 (ordered)\n\n277           6 LOAD_FAST                0 (model)\n              8 LOAD_ATTR                1 (NULL|self + named_modules)\n             28 CALL                     0\n             36 GET_ITER\n        >>   38 FOR_ITER                87 (to 216)\n             42 UNPACK_SEQUENCE          2\n             46 STORE_FAST               2 (name)\n             48 STORE_FAST               3 (module)\n\n278          50 LOAD_GLOBAL              3 (NULL + isinstance)\n             60 LOAD_FAST                3 (module)\n             62 LOAD_GLOBAL              4 (torch)\n             72 LOAD_ATTR                6 (nn)\n             92 LOAD_ATTR                8 (Conv2d)\n            112 LOAD_GLOBAL              4 (torch)\n            122 LOAD_ATTR                6 (nn)\n            142 LOAD_ATTR               10 (Embedding)\n            162 BUILD_TUPLE              2\n            164 CALL                     2\n            172 POP_JUMP_IF_TRUE         1 (to 176)\n            174 JUMP_BACKWARD           69 (to 38)\n\n279     >>  176 LOAD_FAST                1 (ordered)\n            178 LOAD_ATTR               13 (NULL|self + append)\n            198 LOAD_FAST                2 (name)\n            200 LOAD_FAST                3 (module)\n            202 BUILD_TUPLE              2\n            204 CALL                     1\n            212 POP_TOP\n            214 JUMP_BACKWARD           89 (to 38)\n\n277     >>  216 END_FOR\n\n280         218 LOAD_FAST                1 (ordered)\n            220 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "decode_qh0_state_dict",
+      "name": "decode_qh0_state_dict",
+      "argcount": 1,
+      "kwonlyargcount": 1,
+      "varnames": [
+        "payload",
+        "device",
+        "raw",
+        "magic",
+        "hilo_split",
+        "pos",
+        "model",
+        "state",
+        "covered",
+        "fp4_count",
+        "fp16_count",
+        "int8_count",
+        "name",
+        "module",
+        "kind",
+        "shape",
+        "numel",
+        "block_size",
+        "blocks",
+        "packed_len",
+        "packed",
+        "scales",
+        "nibbles",
+        "tensor",
+        "nbytes",
+        "bias",
+        "bias_shape",
+        "bias_tensor",
+        "key",
+        "q",
+        "rows",
+        "dense",
+        "report"
+      ],
+      "names": [
+        "reconstruct_qh1_payload",
+        "len",
+        "QH0CodecError",
+        "QH0_SUPPORTED_MAGICS",
+        "QH0_MAGIC",
+        "build_quantizr_faithful_renderer",
+        "set",
+        "_module_weight_order",
+        "_read_u8",
+        "tuple",
+        "weight",
+        "shape",
+        "int",
+        "numel",
+        "_unhilo_packed",
+        "_unsplit_bytes_to_tensor",
+        "torch",
+        "float16",
+        "_read_tensor_bytes",
+        "uint8",
+        "unpack_nibbles",
+        "_dequantize_fp4_from_nibbles",
+        "float",
+        "add",
+        "getattr",
+        "state_dict",
+        "items",
+        "int8",
+        "reshape",
+        "QH0DecodeReport",
+        "decode"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Decode PR85/PR89 QH0 or QM0 bytes into a JointFrameGenerator state dict.",
+      "dis": "283           0 RESUME                   0\n\n290           2 LOAD_GLOBAL              1 (NULL + reconstruct_qh1_payload)\n             12 LOAD_FAST                0 (payload)\n             14 CALL                     1\n             22 STORE_FAST               2 (raw)\n\n291          24 LOAD_GLOBAL              3 (NULL + len)\n             34 LOAD_FAST                2 (raw)\n             36 CALL                     1\n             44 LOAD_CONST               1 (3)\n             46 COMPARE_OP               2 (<)\n             50 POP_JUMP_IF_FALSE       11 (to 74)\n\n292          52 LOAD_GLOBAL              5 (NULL + QH0CodecError)\n             62 LOAD_CONST               2 ('QH0 payload is shorter than the 3-byte magic')\n             64 CALL                     1\n             72 RAISE_VARARGS            1\n\n293     >>   74 LOAD_FAST                2 (raw)\n             76 LOAD_CONST               3 (None)\n             78 LOAD_CONST               1 (3)\n             80 BINARY_SLICE\n             82 STORE_FAST               3 (magic)\n\n294          84 LOAD_FAST                3 (magic)\n             86 LOAD_GLOBAL              6 (QH0_SUPPORTED_MAGICS)\n             96 CONTAINS_OP              1\n             98 POP_JUMP_IF_FALSE       14 (to 128)\n\n295         100 LOAD_GLOBAL              5 (NULL + QH0CodecError)\n            110 LOAD_CONST               4 ('unsupported QH0 renderer magic: ')\n            112 LOAD_FAST                3 (magic)\n            114 FORMAT_VALUE             2 (repr)\n            116 BUILD_STRING             2\n            118 CALL                     1\n            126 RAISE_VARARGS            1\n\n296     >>  128 LOAD_FAST                3 (magic)\n            130 LOAD_GLOBAL              8 (QH0_MAGIC)\n            140 COMPARE_OP              40 (==)\n            144 STORE_FAST               4 (hilo_split)\n\n297         146 LOAD_CONST               1 (3)\n            148 STORE_FAST               5 (pos)\n\n298         150 LOAD_GLOBAL             11 (NULL + build_quantizr_faithful_renderer)\n            160 CALL                     0\n            168 STORE_FAST               6 (model)\n\n299         170 BUILD_MAP                0\n            172 STORE_FAST               7 (state)\n\n300         174 LOAD_GLOBAL             13 (NULL + set)\n            184 CALL                     0\n            192 STORE_FAST               8 (covered)\n\n301         194 LOAD_CONST               5 (0)\n            196 STORE_FAST               9 (fp4_count)\n\n302         198 LOAD_CONST               5 (0)\n            200 STORE_FAST              10 (fp16_count)\n\n303         202 LOAD_CONST               5 (0)\n            204 STORE_FAST              11 (int8_count)\n\n305         206 LOAD_GLOBAL             15 (NULL + _module_weight_order)\n            216 LOAD_FAST                6 (model)\n            218 CALL                     1\n            226 GET_ITER\n        >>  228 EXTENDED_ARG             2\n            230 FOR_ITER               685 (to 1604)\n            234 UNPACK_SEQUENCE          2\n            238 STORE_FAST              12 (name)\n            240 STORE_FAST              13 (module)\n\n306         242 LOAD_GLOBAL             17 (NULL + _read_u8)\n            252 LOAD_FAST                2 (raw)\n            254 LOAD_FAST                5 (pos)\n            256 LOAD_FAST               12 (name)\n            258 FORMAT_VALUE             0\n            260 LOAD_CONST               6 ('.weight kind')\n            262 BUILD_STRING             2\n            264 CALL                     3\n            272 UNPACK_SEQUENCE          2\n            276 STORE_FAST              14 (kind)\n            278 STORE_FAST               5 (pos)\n\n307         280 LOAD_GLOBAL             19 (NULL + tuple)\n            290 LOAD_CONST               7 (<code object <genexpr> at 0x1037b5330, file \"/Users/adpena/Projects/pact/src/tac/qh0_renderer_codec.py\", line 307>)\n            292 MAKE_FUNCTION            0\n            294 LOAD_FAST               13 (module)\n            296 LOAD_ATTR               20 (weight)\n            316 LOAD_ATTR               22 (shape)\n            336 GET_ITER\n            338 CALL                     0\n            346 CALL                     1\n            354 STORE_FAST              15 (shape)\n\n308         356 LOAD_GLOBAL             25 (NULL + int)\n            366 LOAD_FAST               13 (module)\n            368 LOAD_ATTR               20 (weight)\n            388 LOAD_ATTR               27 (NULL|self + numel)\n            408 CALL                     0\n            416 CALL                     1\n            424 STORE_FAST              16 (numel)\n\n309         426 LOAD_FAST               14 (kind)\n            428 LOAD_CONST               8 (1)\n            430 COMPARE_OP              40 (==)\n            434 POP_JUMP_IF_FALSE      216 (to 868)\n\n310         436 LOAD_CONST               9 (32)\n            438 STORE_FAST              17 (block_size)\n\n311         440 LOAD_FAST               16 (numel)\n            442 LOAD_FAST               17 (block_size)\n            444 BINARY_OP                0 (+)\n            448 LOAD_CONST               8 (1)\n            450 BINARY_OP               10 (-)\n            454 LOAD_FAST               17 (block_size)\n            456 BINARY_OP                2 (//)\n            460 STORE_FAST              18 (blocks)\n\n312         462 LOAD_FAST               18 (blocks)\n            464 LOAD_FAST               17 (block_size)\n            466 BINARY_OP                5 (*)\n            470 LOAD_CONST               8 (1)\n            472 BINARY_OP                0 (+)\n            476 LOAD_CONST              10 (2)\n            478 BINARY_OP                2 (//)\n            482 STORE_FAST              19 (packed_len)\n\n313         484 LOAD_FAST                4 (hilo_split)\n            486 POP_JUMP_IF_FALSE       63 (to 614)\n\n314         488 LOAD_GLOBAL             29 (NULL + _unhilo_packed)\n            498 LOAD_FAST                2 (raw)\n            500 LOAD_FAST                5 (pos)\n            502 LOAD_FAST               19 (packed_len)\n            504 LOAD_FAST                1 (device)\n            506 LOAD_FAST               12 (name)\n            508 FORMAT_VALUE             0\n            510 LOAD_CONST              11 ('.weight')\n            512 BUILD_STRING             2\n            514 CALL                     5\n            522 UNPACK_SEQUENCE          2\n            526 STORE_FAST              20 (packed)\n            528 STORE_FAST               5 (pos)\n\n315         530 LOAD_GLOBAL             31 (NULL + _unsplit_bytes_to_tensor)\n\n316         540 LOAD_FAST                2 (raw)\n            542 LOAD_FAST                5 (pos)\n            544 LOAD_FAST               18 (blocks)\n            546 LOAD_CONST              10 (2)\n            548 BINARY_OP                5 (*)\n            552 LOAD_GLOBAL             32 (torch)\n            562 LOAD_ATTR               34 (float16)\n            582 LOAD_FAST               18 (blocks)\n            584 BUILD_TUPLE              1\n            586 LOAD_FAST                1 (device)\n            588 LOAD_FAST               12 (name)\n            590 FORMAT_VALUE             0\n            592 LOAD_CONST              12 ('.scales')\n            594 BUILD_STRING             2\n\n315         596 CALL                     7\n            604 UNPACK_SEQUENCE          2\n            608 STORE_FAST              21 (scales)\n            610 STORE_FAST               5 (pos)\n            612 JUMP_FORWARD            79 (to 772)\n\n319     >>  614 LOAD_GLOBAL             37 (NULL + _read_tensor_bytes)\n\n320         624 LOAD_FAST                2 (raw)\n            626 LOAD_FAST                5 (pos)\n            628 LOAD_FAST               19 (packed_len)\n            630 LOAD_GLOBAL             32 (torch)\n            640 LOAD_ATTR               38 (uint8)\n            660 LOAD_FAST               19 (packed_len)\n            662 BUILD_TUPLE              1\n            664 LOAD_FAST                1 (device)\n            666 LOAD_FAST               12 (name)\n            668 FORMAT_VALUE             0\n            670 LOAD_CONST              13 ('.packed')\n            672 BUILD_STRING             2\n\n319         674 CALL                     7\n            682 UNPACK_SEQUENCE          2\n            686 STORE_FAST              20 (packed)\n            688 STORE_FAST               5 (pos)\n\n322         690 LOAD_GLOBAL             37 (NULL + _read_tensor_bytes)\n\n323         700 LOAD_FAST                2 (raw)\n            702 LOAD_FAST                5 (pos)\n            704 LOAD_FAST               18 (blocks)\n            706 LOAD_CONST              10 (2)\n            708 BINARY_OP                5 (*)\n            712 LOAD_GLOBAL             32 (torch)\n            722 LOAD_ATTR               34 (float16)\n            742 LOAD_FAST               18 (blocks)\n            744 BUILD_TUPLE              1\n            746 LOAD_FAST                1 (device)\n            748 LOAD_FAST               12 (name)\n            750 FORMAT_VALUE             0\n            752 LOAD_CONST              12 ('.scales')\n            754 BUILD_STRING             2\n\n322         756 CALL                     7\n            764 UNPACK_SEQUENCE          2\n            768 STORE_FAST              21 (scales)\n            770 STORE_FAST               5 (pos)\n\n325     >>  772 LOAD_GLOBAL             41 (NULL + unpack_nibbles)\n            782 LOAD_FAST               20 (packed)\n            784 LOAD_FAST               20 (packed)\n            786 LOAD_ATTR               27 (NULL|self + numel)\n            806 CALL                     0\n            814 LOAD_CONST              10 (2)\n            816 BINARY_OP                5 (*)\n            820 CALL                     2\n            828 STORE_FAST              22 (nibbles)\n\n326         830 LOAD_GLOBAL             43 (NULL + _dequantize_fp4_from_nibbles)\n            840 LOAD_FAST               22 (nibbles)\n            842 LOAD_FAST               21 (scales)\n            844 LOAD_FAST               15 (shape)\n            846 CALL                     3\n            854 STORE_FAST              23 (tensor)\n\n327         856 LOAD_FAST                9 (fp4_count)\n            858 LOAD_CONST               8 (1)\n            860 BINARY_OP               13 (+=)\n            864 STORE_FAST               9 (fp4_count)\n            866 JUMP_FORWARD           127 (to 1122)\n\n328     >>  868 LOAD_FAST               14 (kind)\n            870 LOAD_CONST               5 (0)\n            872 COMPARE_OP              40 (==)\n            876 POP_JUMP_IF_FALSE      104 (to 1086)\n\n329         878 LOAD_FAST               16 (numel)\n            880 LOAD_CONST              10 (2)\n            882 BINARY_OP                5 (*)\n            886 STORE_FAST              24 (nbytes)\n\n330         888 LOAD_FAST                4 (hilo_split)\n            890 POP_JUMP_IF_FALSE       38 (to 968)\n\n331         892 LOAD_GLOBAL             31 (NULL + _unsplit_bytes_to_tensor)\n\n332         902 LOAD_FAST                2 (raw)\n            904 LOAD_FAST                5 (pos)\n            906 LOAD_FAST               24 (nbytes)\n            908 LOAD_GLOBAL             32 (torch)\n            918 LOAD_ATTR               34 (float16)\n            938 LOAD_FAST               15 (shape)\n            940 LOAD_FAST                1 (device)\n            942 LOAD_FAST               12 (name)\n            944 FORMAT_VALUE             0\n            946 LOAD_CONST              11 ('.weight')\n            948 BUILD_STRING             2\n\n331         950 CALL                     7\n            958 UNPACK_SEQUENCE          2\n            962 STORE_FAST              23 (tensor)\n            964 STORE_FAST               5 (pos)\n            966 JUMP_FORWARD            37 (to 1042)\n\n335     >>  968 LOAD_GLOBAL             37 (NULL + _read_tensor_bytes)\n\n336         978 LOAD_FAST                2 (raw)\n            980 LOAD_FAST                5 (pos)\n            982 LOAD_FAST               24 (nbytes)\n            984 LOAD_GLOBAL             32 (torch)\n            994 LOAD_ATTR               34 (float16)\n           1014 LOAD_FAST               15 (shape)\n           1016 LOAD_FAST                1 (device)\n           1018 LOAD_FAST               12 (name)\n           1020 FORMAT_VALUE             0\n           1022 LOAD_CONST              11 ('.weight')\n           1024 BUILD_STRING             2\n\n335        1026 CALL                     7\n           1034 UNPACK_SEQUENCE          2\n           1038 STORE_FAST              23 (tensor)\n           1040 STORE_FAST               5 (pos)\n\n338     >> 1042 LOAD_FAST               23 (tensor)\n           1044 LOAD_ATTR               45 (NULL|self + float)\n           1064 CALL                     0\n           1072 STORE_FAST              23 (tensor)\n\n339        1074 LOAD_FAST               10 (fp16_count)\n           1076 LOAD_CONST               8 (1)\n           1078 BINARY_OP               13 (+=)\n           1082 STORE_FAST              10 (fp16_count)\n           1084 JUMP_FORWARD            18 (to 1122)\n\n341     >> 1086 LOAD_GLOBAL              5 (NULL + QH0CodecError)\n           1096 LOAD_CONST              14 ('bad QH0 weight kind ')\n           1098 LOAD_FAST               14 (kind)\n           1100 FORMAT_VALUE             0\n           1102 LOAD_CONST              15 (' for ')\n           1104 LOAD_FAST               12 (name)\n           1106 FORMAT_VALUE             0\n           1108 LOAD_CONST              11 ('.weight')\n           1110 BUILD_STRING             5\n           1112 CALL                     1\n           1120 RAISE_VARARGS            1\n\n342     >> 1122 LOAD_FAST               23 (tensor)\n           1124 LOAD_ATTR               45 (NULL|self + float)\n           1144 CALL                     0\n           1152 LOAD_FAST                7 (state)\n           1154 LOAD_FAST               12 (name)\n           1156 FORMAT_VALUE             0\n           1158 LOAD_CONST              11 ('.weight')\n           1160 BUILD_STRING             2\n           1162 STORE_SUBSCR\n\n343        1166 LOAD_FAST                8 (covered)\n           1168 LOAD_ATTR               47 (NULL|self + add)\n           1188 LOAD_FAST               12 (name)\n           1190 FORMAT_VALUE             0\n           1192 LOAD_CONST              11 ('.weight')\n           1194 BUILD_STRING             2\n           1196 CALL                     1\n           1204 POP_TOP\n\n345        1206 LOAD_GLOBAL             49 (NULL + getattr)\n           1216 LOAD_FAST               13 (module)\n           1218 LOAD_CONST              16 ('bias')\n           1220 LOAD_CONST               3 (None)\n           1222 CALL                     3\n           1230 STORE_FAST              25 (bias)\n\n346        1232 LOAD_FAST               25 (bias)\n           1234 POP_JUMP_IF_NOT_NONE     2 (to 1240)\n           1236 EXTENDED_ARG             1\n           1238 JUMP_BACKWARD          506 (to 228)\n\n347     >> 1240 LOAD_GLOBAL             19 (NULL + tuple)\n           1250 LOAD_CONST              17 (<code object <genexpr> at 0x1037b5430, file \"/Users/adpena/Projects/pact/src/tac/qh0_renderer_codec.py\", line 347>)\n           1252 MAKE_FUNCTION            0\n           1254 LOAD_FAST               25 (bias)\n           1256 LOAD_ATTR               22 (shape)\n           1276 GET_ITER\n           1278 CALL                     0\n           1286 CALL                     1\n           1294 STORE_FAST              26 (bias_shape)\n\n348        1296 LOAD_GLOBAL             25 (NULL + int)\n           1306 LOAD_FAST               25 (bias)\n           1308 LOAD_ATTR               27 (NULL|self + numel)\n           1328 CALL                     0\n           1336 CALL                     1\n           1344 LOAD_CONST              10 (2)\n           1346 BINARY_OP                5 (*)\n           1350 STORE_FAST              24 (nbytes)\n\n349        1352 LOAD_FAST                4 (hilo_split)\n           1354 POP_JUMP_IF_FALSE       38 (to 1432)\n\n350        1356 LOAD_GLOBAL             31 (NULL + _unsplit_bytes_to_tensor)\n\n351        1366 LOAD_FAST                2 (raw)\n           1368 LOAD_FAST                5 (pos)\n           1370 LOAD_FAST               24 (nbytes)\n           1372 LOAD_GLOBAL             32 (torch)\n           1382 LOAD_ATTR               34 (float16)\n           1402 LOAD_FAST               26 (bias_shape)\n           1404 LOAD_FAST                1 (device)\n           1406 LOAD_FAST               12 (name)\n           1408 FORMAT_VALUE             0\n           1410 LOAD_CONST              18 ('.bias')\n           1412 BUILD_STRING             2\n\n350        1414 CALL                     7\n           1422 UNPACK_SEQUENCE          2\n           1426 STORE_FAST              27 (bias_tensor)\n           1428 STORE_FAST               5 (pos)\n           1430 JUMP_FORWARD            37 (to 1506)\n\n354     >> 1432 LOAD_GLOBAL             37 (NULL + _read_tensor_bytes)\n\n355        1442 LOAD_FAST                2 (raw)\n           1444 LOAD_FAST                5 (pos)\n           1446 LOAD_FAST               24 (nbytes)\n           1448 LOAD_GLOBAL             32 (torch)\n           1458 LOAD_ATTR               34 (float16)\n           1478 LOAD_FAST               26 (bias_shape)\n           1480 LOAD_FAST                1 (device)\n           1482 LOAD_FAST               12 (name)\n           1484 FORMAT_VALUE             0\n           1486 LOAD_CONST              18 ('.bias')\n           1488 BUILD_STRING             2\n\n354        1490 CALL                     7\n           1498 UNPACK_SEQUENCE          2\n           1502 STORE_FAST              27 (bias_tensor)\n           1504 STORE_FAST               5 (pos)\n\n357     >> 1506 LOAD_FAST               27 (bias_tensor)\n           1508 LOAD_ATTR               45 (NULL|self + float)\n           1528 CALL                     0\n           1536 LOAD_FAST                7 (state)\n           1538 LOAD_FAST               12 (name)\n           1540 FORMAT_VALUE             0\n           1542 LOAD_CONST              18 ('.bias')\n           1544 BUILD_STRING             2\n           1546 STORE_SUBSCR\n\n358        1550 LOAD_FAST                8 (covered)\n           1552 LOAD_ATTR               47 (NULL|self + add)\n           1572 LOAD_FAST               12 (name)\n           1574 FORMAT_VALUE             0\n           1576 LOAD_CONST              18 ('.bias')\n           1578 BUILD_STRING             2\n           1580 CALL                     1\n           1588 POP_TOP\n\n359        1590 LOAD_FAST               10 (fp16_count)\n           1592 LOAD_CONST               8 (1)\n           1594 BINARY_OP               13 (+=)\n           1598 STORE_FAST              10 (fp16_count)\n           1600 EXTENDED_ARG             2\n           1602 JUMP_BACKWARD          688 (to 228)\n\n305     >> 1604 END_FOR\n\n361        1606 LOAD_FAST                6 (model)\n           1608 LOAD_ATTR               51 (NULL|self + state_dict)\n           1628 CALL                     0\n           1636 LOAD_ATTR               53 (NULL|self + items)\n           1656 CALL                     0\n           1664 GET_ITER\n        >> 1666 EXTENDED_ARG             1\n           1668 FOR_ITER               418 (to 2508)\n           1672 UNPACK_SEQUENCE          2\n           1676 STORE_FAST              28 (key)\n           1678 STORE_FAST              23 (tensor)\n\n362        1680 LOAD_FAST               28 (key)\n           1682 LOAD_FAST                8 (covered)\n           1684 CONTAINS_OP              0\n           1686 POP_JUMP_IF_FALSE        1 (to 1690)\n\n363        1688 JUMP_BACKWARD           12 (to 1666)\n\n364     >> 1690 LOAD_GLOBAL             17 (NULL + _read_u8)\n           1700 LOAD_FAST                2 (raw)\n           1702 LOAD_FAST                5 (pos)\n           1704 LOAD_FAST               28 (key)\n           1706 FORMAT_VALUE             0\n           1708 LOAD_CONST              19 (' dense kind')\n           1710 BUILD_STRING             2\n           1712 CALL                     3\n           1720 UNPACK_SEQUENCE          2\n           1724 STORE_FAST              14 (kind)\n           1726 STORE_FAST               5 (pos)\n\n365        1728 LOAD_GLOBAL             19 (NULL + tuple)\n           1738 LOAD_CONST              20 (<code object <genexpr> at 0x1037b5530, file \"/Users/adpena/Projects/pact/src/tac/qh0_renderer_codec.py\", line 365>)\n           1740 MAKE_FUNCTION            0\n           1742 LOAD_FAST               23 (tensor)\n           1744 LOAD_ATTR               22 (shape)\n           1764 GET_ITER\n           1766 CALL                     0\n           1774 CALL                     1\n           1782 STORE_FAST              15 (shape)\n\n366        1784 LOAD_GLOBAL             25 (NULL + int)\n           1794 LOAD_FAST               23 (tensor)\n           1796 LOAD_ATTR               27 (NULL|self + numel)\n           1816 CALL                     0\n           1824 CALL                     1\n           1832 STORE_FAST              16 (numel)\n\n367        1834 LOAD_FAST               14 (kind)\n           1836 LOAD_CONST              10 (2)\n           1838 COMPARE_OP              40 (==)\n           1842 POP_JUMP_IF_FALSE      208 (to 2260)\n\n368        1844 LOAD_GLOBAL             37 (NULL + _read_tensor_bytes)\n           1854 LOAD_FAST                2 (raw)\n           1856 LOAD_FAST                5 (pos)\n           1858 LOAD_FAST               16 (numel)\n           1860 LOAD_GLOBAL             32 (torch)\n           1870 LOAD_ATTR               54 (int8)\n           1890 LOAD_FAST               15 (shape)\n           1892 LOAD_FAST                1 (device)\n           1894 LOAD_FAST               28 (key)\n           1896 FORMAT_VALUE             0\n           1898 LOAD_CONST              21 ('.q_int8')\n           1900 BUILD_STRING             2\n           1902 CALL                     7\n           1910 UNPACK_SEQUENCE          2\n           1914 STORE_FAST              29 (q)\n           1916 STORE_FAST               5 (pos)\n\n369        1918 LOAD_GLOBAL              3 (NULL + len)\n           1928 LOAD_FAST               15 (shape)\n           1930 CALL                     1\n           1938 LOAD_CONST              10 (2)\n           1940 COMPARE_OP              92 (>=)\n           1944 POP_JUMP_IF_FALSE        5 (to 1956)\n           1946 LOAD_FAST               15 (shape)\n           1948 LOAD_CONST               5 (0)\n           1950 BINARY_SUBSCR\n           1954 JUMP_FORWARD             1 (to 1958)\n        >> 1956 LOAD_CONST               8 (1)\n        >> 1958 STORE_FAST              30 (rows)\n\n370        1960 LOAD_FAST                4 (hilo_split)\n           1962 POP_JUMP_IF_FALSE       42 (to 2048)\n\n371        1964 LOAD_GLOBAL             31 (NULL + _unsplit_bytes_to_tensor)\n\n372        1974 LOAD_FAST                2 (raw)\n           1976 LOAD_FAST                5 (pos)\n           1978 LOAD_FAST               30 (rows)\n           1980 LOAD_CONST              10 (2)\n           1982 BINARY_OP                5 (*)\n           1986 LOAD_GLOBAL             32 (torch)\n           1996 LOAD_ATTR               34 (float16)\n           2016 LOAD_FAST               30 (rows)\n           2018 BUILD_TUPLE              1\n           2020 LOAD_FAST                1 (device)\n           2022 LOAD_FAST               28 (key)\n           2024 FORMAT_VALUE             0\n           2026 LOAD_CONST              12 ('.scales')\n           2028 BUILD_STRING             2\n\n371        2030 CALL                     7\n           2038 UNPACK_SEQUENCE          2\n           2042 STORE_FAST              21 (scales)\n           2044 STORE_FAST               5 (pos)\n           2046 JUMP_FORWARD            41 (to 2130)\n\n375     >> 2048 LOAD_GLOBAL             37 (NULL + _read_tensor_bytes)\n\n376        2058 LOAD_FAST                2 (raw)\n           2060 LOAD_FAST                5 (pos)\n           2062 LOAD_FAST               30 (rows)\n           2064 LOAD_CONST              10 (2)\n           2066 BINARY_OP                5 (*)\n           2070 LOAD_GLOBAL             32 (torch)\n           2080 LOAD_ATTR               34 (float16)\n           2100 LOAD_FAST               30 (rows)\n           2102 BUILD_TUPLE              1\n           2104 LOAD_FAST                1 (device)\n           2106 LOAD_FAST               28 (key)\n           2108 FORMAT_VALUE             0\n           2110 LOAD_CONST              12 ('.scales')\n           2112 BUILD_STRING             2\n\n375        2114 CALL                     7\n           2122 UNPACK_SEQUENCE          2\n           2126 STORE_FAST              21 (scales)\n           2128 STORE_FAST               5 (pos)\n\n378     >> 2130 LOAD_FAST               29 (q)\n           2132 LOAD_ATTR               45 (NULL|self + float)\n           2152 CALL                     0\n           2160 LOAD_FAST               21 (scales)\n           2162 LOAD_ATTR               45 (NULL|self + float)\n           2182 CALL                     0\n           2190 LOAD_CONST               3 (None)\n           2192 LOAD_CONST               3 (None)\n           2194 BUILD_SLICE              2\n           2196 LOAD_CONST               3 (None)\n           2198 BUILD_TUPLE              2\n           2200 BINARY_SUBSCR\n           2204 BINARY_OP                5 (*)\n           2208 LOAD_ATTR               57 (NULL|self + reshape)\n           2228 LOAD_FAST               15 (shape)\n           2230 CALL                     1\n           2238 LOAD_FAST                7 (state)\n           2240 LOAD_FAST               28 (key)\n           2242 STORE_SUBSCR\n\n379        2246 LOAD_FAST               11 (int8_count)\n           2248 LOAD_CONST               8 (1)\n           2250 BINARY_OP               13 (+=)\n           2254 STORE_FAST              11 (int8_count)\n           2256 EXTENDED_ARG             1\n           2258 JUMP_BACKWARD          297 (to 1666)\n\n380     >> 2260 LOAD_FAST               14 (kind)\n           2262 LOAD_CONST               5 (0)\n           2264 COMPARE_OP              40 (==)\n           2268 POP_JUMP_IF_FALSE      102 (to 2474)\n\n381        2270 LOAD_FAST               16 (numel)\n           2272 LOAD_CONST              10 (2)\n           2274 BINARY_OP                5 (*)\n           2278 STORE_FAST              24 (nbytes)\n\n382        2280 LOAD_FAST                4 (hilo_split)\n           2282 POP_JUMP_IF_FALSE       35 (to 2354)\n\n383        2284 LOAD_GLOBAL             31 (NULL + _unsplit_bytes_to_tensor)\n\n384        2294 LOAD_FAST                2 (raw)\n           2296 LOAD_FAST                5 (pos)\n           2298 LOAD_FAST               24 (nbytes)\n           2300 LOAD_GLOBAL             32 (torch)\n           2310 LOAD_ATTR               34 (float16)\n           2330 LOAD_FAST               15 (shape)\n           2332 LOAD_FAST                1 (device)\n           2334 LOAD_FAST               28 (key)\n\n383        2336 CALL                     7\n           2344 UNPACK_SEQUENCE          2\n           2348 STORE_FAST              31 (dense)\n           2350 STORE_FAST               5 (pos)\n           2352 JUMP_FORWARD            34 (to 2422)\n\n387     >> 2354 LOAD_GLOBAL             37 (NULL + _read_tensor_bytes)\n           2364 LOAD_FAST                2 (raw)\n           2366 LOAD_FAST                5 (pos)\n           2368 LOAD_FAST               24 (nbytes)\n           2370 LOAD_GLOBAL             32 (torch)\n           2380 LOAD_ATTR               34 (float16)\n           2400 LOAD_FAST               15 (shape)\n           2402 LOAD_FAST                1 (device)\n           2404 LOAD_FAST               28 (key)\n           2406 CALL                     7\n           2414 UNPACK_SEQUENCE          2\n           2418 STORE_FAST              31 (dense)\n           2420 STORE_FAST               5 (pos)\n\n388     >> 2422 LOAD_FAST               31 (dense)\n           2424 LOAD_ATTR               45 (NULL|self + float)\n           2444 CALL                     0\n           2452 LOAD_FAST                7 (state)\n           2454 LOAD_FAST               28 (key)\n           2456 STORE_SUBSCR\n\n389        2460 LOAD_FAST               10 (fp16_count)\n           2462 LOAD_CONST               8 (1)\n           2464 BINARY_OP               13 (+=)\n           2468 STORE_FAST              10 (fp16_count)\n           2470 EXTENDED_ARG             1\n           2472 JUMP_BACKWARD          404 (to 1666)\n\n391     >> 2474 LOAD_GLOBAL              5 (NULL + QH0CodecError)\n           2484 LOAD_CONST              22 ('bad QH0 dense kind ')\n           2486 LOAD_FAST               14 (kind)\n           2488 FORMAT_VALUE             0\n           2490 LOAD_CONST              15 (' for ')\n           2492 LOAD_FAST               28 (key)\n           2494 FORMAT_VALUE             0\n           2496 BUILD_STRING             4\n           2498 CALL                     1\n           2506 RAISE_VARARGS            1\n\n361     >> 2508 END_FOR\n\n393        2510 LOAD_FAST                5 (pos)\n           2512 LOAD_GLOBAL              3 (NULL + len)\n           2522 LOAD_FAST                2 (raw)\n           2524 CALL                     1\n           2532 COMPARE_OP              55 (!=)\n           2536 POP_JUMP_IF_FALSE       26 (to 2590)\n\n394        2538 LOAD_GLOBAL              5 (NULL + QH0CodecError)\n           2548 LOAD_CONST              23 ('QH0 payload has trailing bytes: consumed=')\n           2550 LOAD_FAST                5 (pos)\n           2552 FORMAT_VALUE             0\n           2554 LOAD_CONST              24 (' total=')\n           2556 LOAD_GLOBAL              3 (NULL + len)\n           2566 LOAD_FAST                2 (raw)\n           2568 CALL                     1\n           2576 FORMAT_VALUE             0\n           2578 BUILD_STRING             4\n           2580 CALL                     1\n           2588 RAISE_VARARGS            1\n\n395     >> 2590 LOAD_GLOBAL             59 (NULL + QH0DecodeReport)\n\n396        2600 LOAD_FAST                3 (magic)\n           2602 LOAD_ATTR               61 (NULL|self + decode)\n           2622 LOAD_CONST              25 ('ascii')\n           2624 CALL                     1\n\n397        2632 LOAD_GLOBAL              3 (NULL + len)\n           2642 LOAD_FAST                2 (raw)\n           2644 CALL                     1\n\n398        2652 LOAD_FAST                5 (pos)\n\n399        2654 LOAD_GLOBAL              3 (NULL + len)\n           2664 LOAD_FAST                7 (state)\n           2666 CALL                     1\n\n400        2674 LOAD_FAST                9 (fp4_count)\n\n401        2676 LOAD_FAST               10 (fp16_count)\n\n402        2678 LOAD_FAST               11 (int8_count)\n\n395        2680 KW_NAMES                26 (('magic', 'payload_bytes', 'consumed_bytes', 'tensor_count', 'q_fp4_tensor_count', 'fp16_tensor_count', 'int8_dense_tensor_count'))\n           2682 CALL                     7\n           2690 STORE_FAST              32 (report)\n\n404        2692 LOAD_FAST                7 (state)\n           2694 LOAD_FAST               32 (report)\n           2696 BUILD_TUPLE              2\n           2698 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "decode_qh0_state_dict.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "x"
+      ],
+      "names": [
+        "int"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "307           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                15 (to 42)\n             12 STORE_FAST               1 (x)\n             14 LOAD_GLOBAL              1 (NULL + int)\n             24 LOAD_FAST                1 (x)\n             26 CALL                     1\n             34 YIELD_VALUE              1\n             36 RESUME                   1\n             38 POP_TOP\n             40 JUMP_BACKWARD           17 (to 8)\n        >>   42 END_FOR\n             44 RETURN_CONST             0 (None)\n        >>   46 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             48 RERAISE                  1\nExceptionTable:\n  4 to 44 -> 46 [0] lasti\n"
+    },
+    {
+      "qualname": "decode_qh0_state_dict.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "x"
+      ],
+      "names": [
+        "int"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "347           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                15 (to 42)\n             12 STORE_FAST               1 (x)\n             14 LOAD_GLOBAL              1 (NULL + int)\n             24 LOAD_FAST                1 (x)\n             26 CALL                     1\n             34 YIELD_VALUE              1\n             36 RESUME                   1\n             38 POP_TOP\n             40 JUMP_BACKWARD           17 (to 8)\n        >>   42 END_FOR\n             44 RETURN_CONST             0 (None)\n        >>   46 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             48 RERAISE                  1\nExceptionTable:\n  4 to 44 -> 46 [0] lasti\n"
+    },
+    {
+      "qualname": "decode_qh0_state_dict.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "x"
+      ],
+      "names": [
+        "int"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "365           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                15 (to 42)\n             12 STORE_FAST               1 (x)\n             14 LOAD_GLOBAL              1 (NULL + int)\n             24 LOAD_FAST                1 (x)\n             26 CALL                     1\n             34 YIELD_VALUE              1\n             36 RESUME                   1\n             38 POP_TOP\n             40 JUMP_BACKWARD           17 (to 8)\n        >>   42 END_FOR\n             44 RETURN_CONST             0 (None)\n        >>   46 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             48 RERAISE                  1\nExceptionTable:\n  4 to 44 -> 46 [0] lasti\n"
+    },
+    {
+      "qualname": "load_qh0",
+      "name": "load_qh0",
+      "argcount": 1,
+      "kwonlyargcount": 1,
+      "varnames": [
+        "payload",
+        "device",
+        "state",
+        "_report",
+        "model"
+      ],
+      "names": [
+        "decode_qh0_state_dict",
+        "build_quantizr_faithful_renderer",
+        "load_state_dict",
+        "to",
+        "eval"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Load QH0/QM0 bytes into a Quantizr-faithful JointFrameGenerator.",
+      "dis": "407           0 RESUME                   0\n\n414           2 LOAD_GLOBAL              1 (NULL + decode_qh0_state_dict)\n             12 LOAD_FAST                0 (payload)\n             14 LOAD_FAST                1 (device)\n             16 KW_NAMES                 1 (('device',))\n             18 CALL                     2\n             26 UNPACK_SEQUENCE          2\n             30 STORE_FAST               2 (state)\n             32 STORE_FAST               3 (_report)\n\n415          34 LOAD_GLOBAL              3 (NULL + build_quantizr_faithful_renderer)\n             44 CALL                     0\n             52 STORE_FAST               4 (model)\n\n416          54 LOAD_FAST                4 (model)\n             56 LOAD_ATTR                5 (NULL|self + load_state_dict)\n             76 LOAD_FAST                2 (state)\n             78 LOAD_CONST               2 (True)\n             80 KW_NAMES                 3 (('strict',))\n             82 CALL                     2\n             90 POP_TOP\n\n417          92 LOAD_FAST                4 (model)\n             94 LOAD_ATTR                7 (NULL|self + to)\n            114 LOAD_FAST                1 (device)\n            116 CALL                     1\n            124 LOAD_ATTR                9 (NULL|self + eval)\n            144 CALL                     0\n            152 RETURN_VALUE\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  1           2 LOAD_CONST               0 ('QH0/QM0 renderer codec for PR85-style JointFrameGenerator payloads.\\n\\nThe public PR85/PR89 family stores a Quantizr-faithful\\n``JointFrameGenerator`` as a compact custom byte stream.  This module decodes\\nthat stream without importing the public submission runtime or using pickle.\\nIt is intentionally narrow: the output is the existing\\n``tac.quantizr_faithful_renderer.JointFrameGenerator`` used by robust_current.\\n')\n              4 STORE_NAME               0 (__doc__)\n\n 10           6 LOAD_CONST               1 (0)\n              8 LOAD_CONST               2 (('annotations',))\n             10 IMPORT_NAME              1 (__future__)\n             12 IMPORT_FROM              2 (annotations)\n             14 STORE_NAME               2 (annotations)\n             16 POP_TOP\n\n 12          18 LOAD_CONST               1 (0)\n             20 LOAD_CONST               3 (None)\n             22 IMPORT_NAME              3 (hashlib)\n             24 STORE_NAME               3 (hashlib)\n\n 13          26 LOAD_CONST               1 (0)\n             28 LOAD_CONST               3 (None)\n             30 IMPORT_NAME              4 (json)\n             32 STORE_NAME               4 (json)\n\n 14          34 LOAD_CONST               1 (0)\n             36 LOAD_CONST               3 (None)\n             38 IMPORT_NAME              5 (lzma)\n             40 STORE_NAME               5 (lzma)\n\n 15          42 LOAD_CONST               1 (0)\n             44 LOAD_CONST               3 (None)\n             46 IMPORT_NAME              6 (math)\n             48 STORE_NAME               6 (math)\n\n 16          50 LOAD_CONST               1 (0)\n             52 LOAD_CONST               3 (None)\n             54 IMPORT_NAME              7 (struct)\n             56 STORE_NAME               7 (struct)\n\n 17          58 LOAD_CONST               1 (0)\n             60 LOAD_CONST               3 (None)\n             62 IMPORT_NAME              8 (zlib)\n             64 STORE_NAME               8 (zlib)\n\n 18          66 LOAD_CONST               1 (0)\n             68 LOAD_CONST               4 (('dataclass',))\n             70 IMPORT_NAME              9 (dataclasses)\n             72 IMPORT_FROM             10 (dataclass)\n             74 STORE_NAME              10 (dataclass)\n             76 POP_TOP\n\n 20          78 LOAD_CONST               1 (0)\n             80 LOAD_CONST               3 (None)\n             82 IMPORT_NAME             11 (numpy)\n             84 STORE_NAME              12 (np)\n\n 21          86 LOAD_CONST               1 (0)\n             88 LOAD_CONST               3 (None)\n             90 IMPORT_NAME             13 (torch)\n             92 STORE_NAME              13 (torch)\n\n 23          94 LOAD_CONST               1 (0)\n             96 LOAD_CONST               5 (('JointFrameGenerator', 'build_quantizr_faithful_renderer'))\n             98 IMPORT_NAME             14 (tac.quantizr_faithful_renderer)\n            100 IMPORT_FROM             15 (JointFrameGenerator)\n            102 STORE_NAME              15 (JointFrameGenerator)\n            104 IMPORT_FROM             16 (build_quantizr_faithful_renderer)\n            106 STORE_NAME              16 (build_quantizr_faithful_renderer)\n            108 POP_TOP\n\n 26         110 LOAD_CONST               6 (b'QH0')\n            112 STORE_NAME              17 (QH0_MAGIC)\n\n 27         114 LOAD_CONST               7 (b'QM0')\n            116 STORE_NAME              18 (QM0_MAGIC)\n\n 28         118 LOAD_CONST               8 (b'QH1')\n            120 STORE_NAME              19 (QH1_MAGIC)\n\n 29         122 LOAD_NAME               17 (QH0_MAGIC)\n            124 LOAD_NAME               18 (QM0_MAGIC)\n            126 BUILD_TUPLE              2\n            128 STORE_NAME              20 (QH0_SUPPORTED_MAGICS)\n\n 30         130 PUSH_NULL\n            132 LOAD_NAME                7 (struct)\n            134 LOAD_ATTR               42 (Struct)\n            154 LOAD_CONST               9 ('<I')\n            156 CALL                     1\n            164 STORE_NAME              22 (QH1_HEADER_STRUCT)\n\n 31         166 LOAD_CONST              10 ('qh1_record_repack_v1')\n            168 STORE_NAME              23 (QH1_SCHEMA)\n\n 32         170 PUSH_NULL\n            172 LOAD_NAME               13 (torch)\n            174 LOAD_ATTR               48 (tensor)\n\n 33         194 BUILD_LIST               0\n            196 LOAD_CONST              11 ((0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0))\n            198 LIST_EXTEND              1\n\n 34         200 LOAD_NAME               13 (torch)\n            202 LOAD_ATTR               50 (float32)\n\n 32         222 KW_NAMES                12 (('dtype',))\n            224 CALL                     2\n            232 STORE_NAME              26 (FP4_POS_LEVELS)\n\n 38         234 PUSH_NULL\n            236 LOAD_BUILD_CLASS\n            238 LOAD_CONST              13 (<code object QH0CodecError at 0x10374fab0, file \"/Users/adpena/Projects/pact/src/tac/qh0_renderer_codec.py\", line 38>)\n            240 MAKE_FUNCTION            0\n            242 LOAD_CONST              14 ('QH0CodecError')\n            244 LOAD_NAME               27 (ValueError)\n            246 CALL                     3\n            254 STORE_NAME              28 (QH0CodecError)\n\n 42         256 PUSH_NULL\n            258 LOAD_NAME               10 (dataclass)\n            260 LOAD_CONST              15 (True)\n            262 KW_NAMES                16 (('frozen',))\n            264 CALL                     1\n\n 43         272 PUSH_NULL\n            274 LOAD_BUILD_CLASS\n            276 LOAD_CONST              17 (<code object QH0DecodeReport at 0x103791c50, file \"/Users/adpena/Projects/pact/src/tac/qh0_renderer_codec.py\", line 42>)\n            278 MAKE_FUNCTION            0\n            280 LOAD_CONST              18 ('QH0DecodeReport')\n            282 CALL                     2\n\n 42         290 CALL                     0\n\n 43         298 STORE_NAME              29 (QH0DecodeReport)\n\n 55         300 LOAD_CONST              34 (('packed', 'torch.Tensor', 'count', 'int', 'return', 'torch.Tensor'))\n            302 LOAD_CONST              19 (<code object unpack_nibbles at 0x8250ff980, file \"/Users/adpena/Projects/pact/src/tac/qh0_renderer_codec.py\", line 55>)\n            304 MAKE_FUNCTION            4 (annotations)\n            306 STORE_NAME              30 (unpack_nibbles)\n\n 67         308 LOAD_CONST              35 (('raw', 'bytes', 'pos', 'int', 'nbytes', 'int', 'label', 'str', 'return', 'None'))\n            310 LOAD_CONST              20 (<code object _require_available at 0x103705070, file \"/Users/adpena/Projects/pact/src/tac/qh0_renderer_codec.py\", line 67>)\n            312 MAKE_FUNCTION            4 (annotations)\n            314 STORE_NAME              31 (_require_available)\n\n 75         316 LOAD_CONST              36 (('raw', 'bytes', 'pos', 'int', 'label', 'str', 'return', 'tuple[int, int]'))\n            318 LOAD_CONST              21 (<code object _read_u8 at 0x1037beab0, file \"/Users/adpena/Projects/pact/src/tac/qh0_renderer_codec.py\", line 75>)\n            320 MAKE_FUNCTION            4 (annotations)\n            322 STORE_NAME              32 (_read_u8)\n\n 80         324 LOAD_CONST              37 (('data', 'bytes', 'return', 'str'))\n            326 LOAD_CONST              22 (<code object _sha256 at 0x1037bebc0, file \"/Users/adpena/Projects/pact/src/tac/qh0_renderer_codec.py\", line 80>)\n            328 MAKE_FUNCTION            4 (annotations)\n            330 STORE_NAME              33 (_sha256)\n\n 84         332 LOAD_CONST              38 (('data', 'bytes', 'codec', 'str', 'label', 'str', 'return', 'bytes'))\n            334 LOAD_CONST              23 (<code object _decode_qh1_record at 0x825110000, file \"/Users/adpena/Projects/pact/src/tac/qh0_renderer_codec.py\", line 84>)\n            336 MAKE_FUNCTION            4 (annotations)\n            338 STORE_NAME              34 (_decode_qh1_record)\n\n103         340 LOAD_CONST              39 (('payload', 'bytes | bytearray | memoryview', 'return', 'bytes'))\n            342 LOAD_CONST              24 (<code object reconstruct_qh1_payload at 0x824e68000, file \"/Users/adpena/Projects/pact/src/tac/qh0_renderer_codec.py\", line 103>)\n            344 MAKE_FUNCTION            4 (annotations)\n            346 STORE_NAME              35 (reconstruct_qh1_payload)\n\n189         348 NOP\n\n190         350 NOP\n\n189         352 NOP\n\n191         354 NOP\n\n189         356 NOP\n\n192         358 NOP\n\n189         360 NOP\n\n193         362 NOP\n\n189         364 NOP\n\n194         366 NOP\n\n189         368 NOP\n\n195         370 NOP\n\n189         372 NOP\n\n196         374 NOP\n\n189         376 NOP\n\n197         378 NOP\n\n189         380 LOAD_CONST              40 (('raw', 'bytes', 'pos', 'int', 'nbytes', 'int', 'dtype', 'torch.dtype', 'shape', 'tuple[int, ...]', 'device', 'torch.device | str', 'label', 'str', 'return', 'tuple[torch.Tensor, int]'))\n            382 LOAD_CONST              25 (<code object _unsplit_bytes_to_tensor at 0x825110280, file \"/Users/adpena/Projects/pact/src/tac/qh0_renderer_codec.py\", line 189>)\n            384 MAKE_FUNCTION            4 (annotations)\n            386 STORE_NAME              36 (_unsplit_bytes_to_tensor)\n\n210         388 NOP\n\n211         390 NOP\n\n210         392 NOP\n\n212         394 NOP\n\n210         396 NOP\n\n213         398 NOP\n\n210         400 NOP\n\n214         402 NOP\n\n210         404 NOP\n\n215         406 NOP\n\n210         408 NOP\n\n216         410 NOP\n\n210         412 NOP\n\n217         414 NOP\n\n210         416 NOP\n\n218         418 NOP\n\n210         420 LOAD_CONST              40 (('raw', 'bytes', 'pos', 'int', 'nbytes', 'int', 'dtype', 'torch.dtype', 'shape', 'tuple[int, ...]', 'device', 'torch.device | str', 'label', 'str', 'return', 'tuple[torch.Tensor, int]'))\n            422 LOAD_CONST              26 (<code object _read_tensor_bytes at 0x1036fa5b0, file \"/Users/adpena/Projects/pact/src/tac/qh0_renderer_codec.py\", line 210>)\n            424 MAKE_FUNCTION            4 (annotations)\n            426 STORE_NAME              37 (_read_tensor_bytes)\n\n224         428 NOP\n\n225         430 NOP\n\n224         432 NOP\n\n226         434 NOP\n\n224         436 NOP\n\n227         438 NOP\n\n224         440 NOP\n\n228         442 NOP\n\n224         444 NOP\n\n229         446 NOP\n\n224         448 NOP\n\n230         450 NOP\n\n224         452 LOAD_CONST              41 (('raw', 'bytes', 'pos', 'int', 'packed_len', 'int', 'device', 'torch.device | str', 'label', 'str', 'return', 'tuple[torch.Tensor, int]'))\n            454 LOAD_CONST              27 (<code object _unhilo_packed at 0x824e61c00, file \"/Users/adpena/Projects/pact/src/tac/qh0_renderer_codec.py\", line 224>)\n            456 MAKE_FUNCTION            4 (annotations)\n            458 STORE_NAME              38 (_unhilo_packed)\n\n252         460 NOP\n\n253         462 NOP\n\n252         464 NOP\n\n254         466 NOP\n\n252         468 NOP\n\n255         470 NOP\n\n252         472 NOP\n\n256         474 NOP\n\n252         476 LOAD_CONST              42 (('nibbles', 'torch.Tensor', 'scales', 'torch.Tensor', 'shape', 'tuple[int, ...]', 'return', 'torch.Tensor'))\n            478 LOAD_CONST              28 (<code object _dequantize_fp4_from_nibbles at 0x82510ad00, file \"/Users/adpena/Projects/pact/src/tac/qh0_renderer_codec.py\", line 252>)\n            480 MAKE_FUNCTION            4 (annotations)\n            482 STORE_NAME              39 (_dequantize_fp4_from_nibbles)\n\n275         484 LOAD_CONST              43 (('model', 'JointFrameGenerator', 'return', 'list[tuple[str, torch.nn.Module]]'))\n            486 LOAD_CONST              29 (<code object _module_weight_order at 0x102cb2f50, file \"/Users/adpena/Projects/pact/src/tac/qh0_renderer_codec.py\", line 275>)\n            488 MAKE_FUNCTION            4 (annotations)\n            490 STORE_NAME              40 (_module_weight_order)\n\n286         492 LOAD_CONST              30 ('cpu')\n\n283         494 LOAD_CONST              31 (('device',))\n            496 BUILD_CONST_KEY_MAP      1\n\n284         498 NOP\n\n283         500 NOP\n\n286         502 NOP\n\n283         504 NOP\n\n287         506 NOP\n\n283         508 LOAD_CONST              44 (('payload', 'bytes | bytearray | memoryview', 'device', 'torch.device | str', 'return', 'tuple[dict[str, torch.Tensor], QH0DecodeReport]'))\n            510 LOAD_CONST              32 (<code object decode_qh0_state_dict at 0x824e69800, file \"/Users/adpena/Projects/pact/src/tac/qh0_renderer_codec.py\", line 283>)\n            512 MAKE_FUNCTION            6 (kwdefaults, annotations)\n            514 STORE_NAME              41 (decode_qh0_state_dict)\n\n410         516 LOAD_CONST              30 ('cpu')\n\n407         518 LOAD_CONST              31 (('device',))\n            520 BUILD_CONST_KEY_MAP      1\n\n408         522 NOP\n\n407         524 NOP\n\n410         526 NOP\n\n407         528 NOP\n\n411         530 NOP\n\n407         532 LOAD_CONST              45 (('payload', 'bytes | bytearray | memoryview', 'device', 'torch.device | str', 'return', 'JointFrameGenerator'))\n            534 LOAD_CONST              33 (<code object load_qh0 at 0x102cb58f0, file \"/Users/adpena/Projects/pact/src/tac/qh0_renderer_codec.py\", line 407>)\n            536 MAKE_FUNCTION            6 (kwdefaults, annotations)\n            538 STORE_NAME              42 (load_qh0)\n            540 RETURN_CONST             3 (None)\n"
+}

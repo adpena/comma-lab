@@ -1,0 +1,4 @@
+stash@{2026-05-04 17:33:00 -0500}: On main: pre-rigor-pass safety stash 20260504T223300Z
+stash@{2026-04-29 18:13:44 -0500}: WIP on main: 45d808ae 2 new STRICT preflight checks (82, 83) + CLAUDE.md FORBIDDEN extension — Round 3 council prescription
+stash@{2026-04-26 10:17:03 -0500}: On master: yousfi_3_5_pending_greenup
+stash@{2026-04-26 07:26:12 -0500}: WIP on main: c5214993 DEN-V2 partial: 4 layers of arch-drift fixed, pipeline downstream still AsymmetricPairGenerator-only

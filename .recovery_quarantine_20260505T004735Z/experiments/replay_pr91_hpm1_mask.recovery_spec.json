@@ -1,0 +1,596 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/experiments/__pycache__/replay_pr91_hpm1_mask.cpython-312.pyc",
+  "names": [
+    "__doc__",
+    "__future__",
+    "annotations",
+    "argparse",
+    "json",
+    "sys",
+    "pathlib",
+    "Path",
+    "__file__",
+    "resolve",
+    "parents",
+    "REPO_ROOT",
+    "SRC_ROOT",
+    "str",
+    "path",
+    "insert",
+    "tac.pr91_hpm1_codec",
+    "DEFAULT_HPAC_PROBABILITY_VARIANT",
+    "DEFAULT_PR85_QMA9_TOKEN_SOURCE",
+    "DEFAULT_PR85_STBM_ADJUDICATED_JSON",
+    "DEFAULT_PR85_STBM_ARCHIVE",
+    "DEFAULT_PR91_ARCHIVE",
+    "extract_pr91_hpm1_payload",
+    "plan_pr91_hpm1_pr85_stbm_fusion",
+    "prototype_reencode_hpm1_from_raw_tokens",
+    "prototype_reencode_hpm1_residual_from_raw_tokens",
+    "run_pr91_hpm1_first_symbol_state_probe",
+    "run_pr91_hpm1_context_window_probe",
+    "run_pr91_hpm1_probability_variant_matrix",
+    "run_pr91_hpm1_preflight",
+    "build_arg_parser",
+    "_load_raw_tokens",
+    "_parse_probability_variants",
+    "_parse_symbol_windows",
+    "_parse_csv",
+    "_parse_prob_eps_values",
+    "main",
+    "__name__",
+    "SystemExit"
+  ],
+  "varnames": [],
+  "consts": [
+    "Replay PR91 HPM1 mask tokens locally and fail closed on parity gaps.",
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "Path"
+    ],
+    1,
+    "src",
+    [
+      "DEFAULT_HPAC_PROBABILITY_VARIANT",
+      "DEFAULT_PR85_QMA9_TOKEN_SOURCE",
+      "DEFAULT_PR85_STBM_ADJUDICATED_JSON",
+      "DEFAULT_PR85_STBM_ARCHIVE",
+      "DEFAULT_PR91_ARCHIVE",
+      "extract_pr91_hpm1_payload",
+      "plan_pr91_hpm1_pr85_stbm_fusion",
+      "prototype_reencode_hpm1_from_raw_tokens",
+      "prototype_reencode_hpm1_residual_from_raw_tokens",
+      "run_pr91_hpm1_first_symbol_state_probe",
+      "run_pr91_hpm1_context_window_probe",
+      "run_pr91_hpm1_probability_variant_matrix",
+      "run_pr91_hpm1_preflight"
+    ],
+    {
+      "__code__": "build_arg_parser",
+      "qualname": "build_arg_parser",
+      "argcount": 0,
+      "varnames": [
+        "parser"
+      ],
+      "names": [
+        "argparse",
+        "ArgumentParser",
+        "__doc__",
+        "add_argument",
+        "Path",
+        "DEFAULT_PR91_ARCHIVE",
+        "int",
+        "DEFAULT_PR85_QMA9_TOKEN_SOURCE",
+        "DEFAULT_PR85_STBM_ARCHIVE",
+        "DEFAULT_PR85_STBM_ADJUDICATED_JSON"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_load_raw_tokens",
+      "qualname": "_load_raw_tokens",
+      "argcount": 3,
+      "varnames": [
+        "path",
+        "shape_text",
+        "layout",
+        "np",
+        "shape",
+        "raw",
+        "expected",
+        "arr"
+      ],
+      "names": [
+        "numpy",
+        "tuple",
+        "split",
+        "len",
+        "SystemExit",
+        "read_bytes",
+        "frombuffer",
+        "uint8",
+        "reshape",
+        "transpose",
+        "copy",
+        "ascontiguousarray",
+        "size",
+        "int",
+        "min",
+        "max"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_parse_probability_variants",
+      "qualname": "_parse_probability_variants",
+      "argcount": 1,
+      "varnames": [
+        "text",
+        "default_source"
+      ],
+      "names": [
+        "strip",
+        "DEFAULT_HPAC_PROBABILITY_VARIANT",
+        "tuple",
+        "split"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_parse_symbol_windows",
+      "qualname": "_parse_symbol_windows",
+      "argcount": 1,
+      "varnames": [
+        "text",
+        "windows",
+        "item",
+        "start_text",
+        "count_text"
+      ],
+      "names": [
+        "split",
+        "strip",
+        "SystemExit",
+        "append",
+        "int",
+        "tuple"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_parse_csv",
+      "qualname": "_parse_csv",
+      "argcount": 1,
+      "varnames": [
+        "text",
+        "values"
+      ],
+      "names": [
+        "tuple",
+        "split",
+        "SystemExit"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_parse_prob_eps_values",
+      "qualname": "_parse_prob_eps_values",
+      "argcount": 1,
+      "varnames": [
+        "text"
+      ],
+      "names": [
+        "tuple",
+        "_parse_csv"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "main",
+      "qualname": "main",
+      "argcount": 1,
+      "varnames": [
+        "argv",
+        "args",
+        "report",
+        "payload",
+        "prototype",
+        "variants",
+        "text"
+      ],
+      "names": [
+        "build_arg_parser",
+        "parse_args",
+        "fusion_plan",
+        "plan_pr91_hpm1_pr85_stbm_fusion",
+        "pr85_stbm_archive",
+        "archive",
+        "pr85_stbm_adjudicated_json",
+        "skip_fusion_prefix_probe",
+        "raw_token_bin",
+        "extract_pr91_hpm1_payload",
+        "residual_symbols",
+        "prototype_reencode_hpm1_residual_from_raw_tokens",
+        "prototype_reencode_hpm1_from_raw_tokens",
+        "_load_raw_tokens",
+        "raw_token_shape",
+        "raw_token_layout",
+        "prototype_max_frames",
+        "first_symbol_state_probe",
+        "_parse_probability_variants",
+        "probability_variants",
+        "run_pr91_hpm1_first_symbol_state_probe",
+        "reference_tokens",
+        "reference_layout",
+        "symbol_count",
+        "symbol_offset",
+        "context_window_probe",
+        "run_pr91_hpm1_context_window_probe",
+        "_parse_symbol_windows",
+        "symbol_windows",
+        "_parse_csv",
+        "context_modes",
+        "_parse_prob_eps_values",
+        "prob_eps_values",
+        "probability_variant_matrix",
+        "run_pr91_hpm1_probability_variant_matrix",
+        "full_decode",
+        "max_frames",
+        "attempt_reencode",
+        "run_pr91_hpm1_preflight",
+        "json",
+        "dumps",
+        "json_out",
+        "parent",
+        "mkdir",
+        "write_text",
+        "print"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "__main__",
+    [
+      "return",
+      "argparse.ArgumentParser"
+    ],
+    [
+      "path",
+      "Path",
+      "shape_text",
+      "str",
+      "layout",
+      "str"
+    ],
+    [
+      "text",
+      "str | None",
+      "default_source",
+      "bool",
+      "return",
+      "tuple[str, ...] | None"
+    ],
+    [
+      "text",
+      "str",
+      "return",
+      "tuple[tuple[int, int], ...]"
+    ],
+    [
+      "text",
+      "str",
+      "return",
+      "tuple[str, ...]"
+    ],
+    [
+      "text",
+      "str",
+      "return",
+      "tuple[float, ...]"
+    ],
+    [
+      null
+    ],
+    [
+      "argv",
+      "list[str] | None",
+      "return",
+      "int"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": "Replay PR91 HPM1 mask tokens locally and fail closed on parity gaps.",
+  "child_codes": [
+    {
+      "qualname": "build_arg_parser",
+      "name": "build_arg_parser",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "parser"
+      ],
+      "names": [
+        "argparse",
+        "ArgumentParser",
+        "__doc__",
+        "add_argument",
+        "Path",
+        "DEFAULT_PR91_ARCHIVE",
+        "int",
+        "DEFAULT_PR85_QMA9_TOKEN_SOURCE",
+        "DEFAULT_PR85_STBM_ARCHIVE",
+        "DEFAULT_PR85_STBM_ADJUDICATED_JSON"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 34           0 RESUME                   0\n\n 35           2 LOAD_GLOBAL              1 (NULL + argparse)\n             12 LOAD_ATTR                2 (ArgumentParser)\n             32 LOAD_GLOBAL              4 (__doc__)\n             42 KW_NAMES                 1 (('description',))\n             44 CALL                     1\n             52 STORE_FAST               0 (parser)\n\n 36          54 LOAD_FAST                0 (parser)\n             56 LOAD_ATTR                7 (NULL|self + add_argument)\n             76 LOAD_CONST               2 ('--archive')\n             78 LOAD_GLOBAL              8 (Path)\n             88 LOAD_GLOBAL             10 (DEFAULT_PR91_ARCHIVE)\n             98 KW_NAMES                 3 (('type', 'default'))\n            100 CALL                     3\n            108 POP_TOP\n\n 37         110 LOAD_FAST                0 (parser)\n            112 LOAD_ATTR                7 (NULL|self + add_argument)\n\n 38         132 LOAD_CONST               4 ('--max-frames')\n\n 39         134 LOAD_GLOBAL             12 (int)\n\n 40         144 LOAD_CONST               5 (1)\n\n 41         146 LOAD_CONST               6 ('Local decode cap. Use --full-decode to omit the cap.')\n\n 37         148 KW_NAMES                 7 (('type', 'default', 'help'))\n            150 CALL                     4\n            158 POP_TOP\n\n 43         160 LOAD_FAST                0 (parser)\n            162 LOAD_ATTR                7 (NULL|self + add_argument)\n\n 44         182 LOAD_CONST               8 ('--full-decode')\n\n 45         184 LOAD_CONST               9 ('store_true')\n\n 46         186 LOAD_CONST              10 ('Attempt full 600-frame HPM1 decode. Local only; no scorer loads.')\n\n 43         188 KW_NAMES                11 (('action', 'help'))\n            190 CALL                     3\n            198 POP_TOP\n\n 48         200 LOAD_FAST                0 (parser)\n            202 LOAD_ATTR                7 (NULL|self + add_argument)\n\n 49         222 LOAD_CONST              12 ('--attempt-reencode')\n\n 50         224 LOAD_CONST               9 ('store_true')\n\n 51         226 LOAD_CONST              13 ('If decode passes, re-encode decoded tokens. Full byte parity is meaningful only with --full-decode.')\n\n 48         228 KW_NAMES                11 (('action', 'help'))\n            230 CALL                     3\n            238 POP_TOP\n\n 53         240 LOAD_FAST                0 (parser)\n            242 LOAD_ATTR                7 (NULL|self + add_argument)\n\n 54         262 LOAD_CONST              14 ('--raw-token-bin')\n\n 55         264 LOAD_GLOBAL              8 (Path)\n\n 56         274 LOAD_CONST               0 (None)\n\n 57         276 LOAD_CONST              15 ('Optional decoded uint8 NHW token file for the local-only re-encode prototype.')\n\n 53         278 KW_NAMES                 7 (('type', 'default', 'help'))\n            280 CALL                     4\n            288 POP_TOP\n\n 59         290 LOAD_FAST                0 (parser)\n            292 LOAD_ATTR                7 (NULL|self + add_argument)\n\n 60         312 LOAD_CONST              16 ('--raw-token-shape')\n\n 61         314 LOAD_CONST              17 ('600,512,384')\n\n 63         316 LOAD_CONST              18 ('Shape for --raw-token-bin before layout normalization. The default matches the PR85 QMA9 storage-order token source.')\n\n 59         318 KW_NAMES                19 (('default', 'help'))\n            320 CALL                     3\n            328 POP_TOP\n\n 67         330 LOAD_FAST                0 (parser)\n            332 LOAD_ATTR                7 (NULL|self + add_argument)\n\n 68         352 LOAD_CONST              20 ('--raw-token-layout')\n\n 69         354 LOAD_CONST              21 ('qma9_storage_wh_to_render_hw')\n\n 70         356 LOAD_CONST              22 (('qma9_storage_wh_to_render_hw', 'nhw_render_order'))\n\n 71         358 LOAD_CONST              23 ('Normalize --raw-token-bin into render-order N,H,W before prototype encoding.')\n\n 67         360 KW_NAMES                24 (('default', 'choices', 'help'))\n            362 CALL                     4\n            370 POP_TOP\n\n 73         372 LOAD_FAST                0 (parser)\n            374 LOAD_ATTR                7 (NULL|self + add_argument)\n\n 74         394 LOAD_CONST              25 ('--prototype-max-frames')\n\n 75         396 LOAD_GLOBAL             12 (int)\n\n 76         406 LOAD_CONST               0 (None)\n\n 77         408 LOAD_CONST              26 ('Frame cap for --raw-token-bin prototype encoding.')\n\n 73         410 KW_NAMES                 7 (('type', 'default', 'help'))\n            412 CALL                     4\n            420 POP_TOP\n\n 79         422 LOAD_FAST                0 (parser)\n            424 LOAD_ATTR                7 (NULL|self + add_argument)\n\n 80         444 LOAD_CONST              27 ('--residual-symbols')\n\n 81         446 LOAD_CONST               9 ('store_true')\n\n 83         448 LOAD_CONST              28 ('With --raw-token-bin, encode mod-5 residual symbols while conditioning on raw previous-frame context. Local-only; no score claim or dispatch.')\n\n 79         450 KW_NAMES                11 (('action', 'help'))\n            452 CALL                     3\n            460 POP_TOP\n\n 87         462 LOAD_FAST                0 (parser)\n            464 LOAD_ATTR                7 (NULL|self + add_argument)\n\n 88         484 LOAD_CONST              29 ('--first-symbol-state-probe')\n\n 89         486 LOAD_CONST               9 ('store_true')\n\n 90         488 LOAD_CONST              30 ('Write a local-only trace of the first submitted HPM1 symbols and probability rows.')\n\n 87         490 KW_NAMES                11 (('action', 'help'))\n            492 CALL                     3\n            500 POP_TOP\n\n 92         502 LOAD_FAST                0 (parser)\n            504 LOAD_ATTR                7 (NULL|self + add_argument)\n\n 93         524 LOAD_CONST              31 ('--context-window-probe')\n\n 94         526 LOAD_CONST               9 ('store_true')\n\n 96         528 LOAD_CONST              32 ('Replay bounded PR91 HPM1 symbol windows under decoded and teacher-forced reference contexts.')\n\n 92         530 KW_NAMES                11 (('action', 'help'))\n            532 CALL                     3\n            540 POP_TOP\n\n100         542 LOAD_FAST                0 (parser)\n            544 LOAD_ATTR                7 (NULL|self + add_argument)\n\n101         564 LOAD_CONST              33 ('--probability-variant-matrix')\n\n102         566 LOAD_CONST               9 ('store_true')\n\n103         568 LOAD_CONST              34 ('Probe all requested HPAC probability contracts and fail closed unless full byte parity is proven.')\n\n100         570 KW_NAMES                11 (('action', 'help'))\n            572 CALL                     3\n            580 POP_TOP\n\n105         582 LOAD_FAST                0 (parser)\n            584 LOAD_ATTR                7 (NULL|self + add_argument)\n\n106         604 LOAD_CONST              35 ('--symbol-count')\n\n107         606 LOAD_GLOBAL             12 (int)\n\n108         616 LOAD_CONST              36 (16)\n\n109         618 LOAD_CONST              37 ('Number of prefix symbols to trace with --first-symbol-state-probe.')\n\n105         620 KW_NAMES                 7 (('type', 'default', 'help'))\n            622 CALL                     4\n            630 POP_TOP\n\n111         632 LOAD_FAST                0 (parser)\n            634 LOAD_ATTR                7 (NULL|self + add_argument)\n\n112         654 LOAD_CONST              38 ('--symbol-offset')\n\n113         656 LOAD_GLOBAL             12 (int)\n\n114         666 LOAD_CONST              39 (0)\n\n115         668 LOAD_CONST              40 ('Global decoded-symbol offset for --first-symbol-state-probe window tracing.')\n\n111         670 KW_NAMES                 7 (('type', 'default', 'help'))\n            672 CALL                     4\n            680 POP_TOP\n\n117         682 LOAD_FAST                0 (parser)\n            684 LOAD_ATTR                7 (NULL|self + add_argument)\n\n118         704 LOAD_CONST              41 ('--symbol-windows')\n\n119         706 LOAD_CONST              42 ('33:8,5948:8')\n\n121         708 LOAD_CONST              43 ('Comma-separated start:count windows for --context-window-probe. Defaults to the first context divergence and entropy-failure window.')\n\n117         710 KW_NAMES                19 (('default', 'help'))\n            712 CALL                     3\n            720 POP_TOP\n\n125         722 LOAD_FAST                0 (parser)\n            724 LOAD_ATTR                7 (NULL|self + add_argument)\n\n126         744 LOAD_CONST              44 ('--context-modes')\n\n127         746 LOAD_CONST              45 ('decoded_context,reference_context')\n\n128         748 LOAD_CONST              46 ('Comma-separated context modes for --context-window-probe.')\n\n125         750 KW_NAMES                19 (('default', 'help'))\n            752 CALL                     3\n            760 POP_TOP\n\n130         762 LOAD_FAST                0 (parser)\n            764 LOAD_ATTR                7 (NULL|self + add_argument)\n\n131         784 LOAD_CONST              47 ('--prob-eps-values')\n\n132         786 LOAD_CONST              48 ('1e-7')\n\n133         788 LOAD_CONST              49 ('Comma-separated probability clip eps values for --context-window-probe.')\n\n130         790 KW_NAMES                19 (('default', 'help'))\n            792 CALL                     3\n            800 POP_TOP\n\n135         802 LOAD_FAST                0 (parser)\n            804 LOAD_ATTR                7 (NULL|self + add_argument)\n\n136         824 LOAD_CONST              50 ('--reference-tokens')\n\n137         826 LOAD_GLOBAL              8 (Path)\n\n138         836 LOAD_GLOBAL             14 (DEFAULT_PR85_QMA9_TOKEN_SOURCE)\n\n139         846 LOAD_CONST              51 ('Optional PR85/QMA9 decoded uint8 NHW token source for prefix comparison.')\n\n135         848 KW_NAMES                 7 (('type', 'default', 'help'))\n            850 CALL                     4\n            858 POP_TOP\n\n141         860 LOAD_FAST                0 (parser)\n            862 LOAD_ATTR                7 (NULL|self + add_argument)\n\n142         882 LOAD_CONST              52 ('--reference-layout')\n\n143         884 LOAD_CONST              21 ('qma9_storage_wh_to_render_hw')\n\n144         886 LOAD_CONST              53 (('qma9_storage_wh_to_render_hw', 'legacy_assume_nhw'))\n\n145         888 LOAD_CONST              54 ('How to interpret --reference-tokens before comparing to PR91 render-order symbols.')\n\n141         890 KW_NAMES                24 (('default', 'choices', 'help'))\n            892 CALL                     4\n            900 POP_TOP\n\n147         902 LOAD_FAST                0 (parser)\n            904 LOAD_ATTR                7 (NULL|self + add_argument)\n\n148         924 LOAD_CONST              55 ('--probability-variants')\n\n149         926 LOAD_CONST               0 (None)\n\n151         928 LOAD_CONST              56 ('Comma-separated HPAC probability variants. Defaults to the source contract for --first-symbol-state-probe and all registered variants for --probability-variant-matrix.')\n\n147         930 KW_NAMES                19 (('default', 'help'))\n            932 CALL                     3\n            940 POP_TOP\n\n156         942 LOAD_FAST                0 (parser)\n            944 LOAD_ATTR                7 (NULL|self + add_argument)\n\n157         964 LOAD_CONST              57 ('--fusion-plan')\n\n158         966 LOAD_CONST               9 ('store_true')\n\n159         968 LOAD_CONST              58 ('Plan the PR85+STBM -> PR91/HPM1 byte-faithful fusion gate without dispatch.')\n\n156         970 KW_NAMES                11 (('action', 'help'))\n            972 CALL                     3\n            980 POP_TOP\n\n161         982 LOAD_FAST                0 (parser)\n            984 LOAD_ATTR                7 (NULL|self + add_argument)\n           1004 LOAD_CONST              59 ('--pr85-stbm-archive')\n           1006 LOAD_GLOBAL              8 (Path)\n           1016 LOAD_GLOBAL             16 (DEFAULT_PR85_STBM_ARCHIVE)\n           1026 KW_NAMES                 3 (('type', 'default'))\n           1028 CALL                     3\n           1036 POP_TOP\n\n162        1038 LOAD_FAST                0 (parser)\n           1040 LOAD_ATTR                7 (NULL|self + add_argument)\n\n163        1060 LOAD_CONST              60 ('--pr85-stbm-adjudicated-json')\n\n164        1062 LOAD_GLOBAL              8 (Path)\n\n165        1072 LOAD_GLOBAL             18 (DEFAULT_PR85_STBM_ADJUDICATED_JSON)\n\n162        1082 KW_NAMES                 3 (('type', 'default'))\n           1084 CALL                     3\n           1092 POP_TOP\n\n167        1094 LOAD_FAST                0 (parser)\n           1096 LOAD_ATTR                7 (NULL|self + add_argument)\n\n168        1116 LOAD_CONST              61 ('--skip-fusion-prefix-probe')\n\n169        1118 LOAD_CONST               9 ('store_true')\n\n170        1120 LOAD_CONST              62 ('Skip the local HPM1 prefix decode probe inside --fusion-plan.')\n\n167        1122 KW_NAMES                11 (('action', 'help'))\n           1124 CALL                     3\n           1132 POP_TOP\n\n172        1134 LOAD_FAST                0 (parser)\n           1136 LOAD_ATTR                7 (NULL|self + add_argument)\n           1156 LOAD_CONST              63 ('--json-out')\n           1158 LOAD_GLOBAL              8 (Path)\n           1168 LOAD_CONST               0 (None)\n           1170 KW_NAMES                 3 (('type', 'default'))\n           1172 CALL                     3\n           1180 POP_TOP\n\n173        1182 LOAD_FAST                0 (parser)\n           1184 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_load_raw_tokens",
+      "name": "_load_raw_tokens",
+      "argcount": 3,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "shape_text",
+        "layout",
+        "np",
+        "shape",
+        "raw",
+        "expected",
+        "arr"
+      ],
+      "names": [
+        "numpy",
+        "tuple",
+        "split",
+        "len",
+        "SystemExit",
+        "read_bytes",
+        "frombuffer",
+        "uint8",
+        "reshape",
+        "transpose",
+        "copy",
+        "ascontiguousarray",
+        "size",
+        "int",
+        "min",
+        "max"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "176           0 RESUME                   0\n\n177           2 LOAD_CONST               1 (0)\n              4 LOAD_CONST               0 (None)\n              6 IMPORT_NAME              0 (numpy)\n              8 STORE_FAST               3 (np)\n\n179          10 LOAD_GLOBAL              3 (NULL + tuple)\n             20 LOAD_CONST               2 (<code object <genexpr> at 0x1054e4d30, file \"experiments/replay_pr91_hpm1_mask.py\", line 179>)\n             22 MAKE_FUNCTION            0\n             24 LOAD_FAST                1 (shape_text)\n             26 LOAD_ATTR                5 (NULL|self + split)\n             46 LOAD_CONST               3 (',')\n             48 CALL                     1\n             56 GET_ITER\n             58 CALL                     0\n             66 CALL                     1\n             74 STORE_FAST               4 (shape)\n\n180          76 LOAD_GLOBAL              7 (NULL + len)\n             86 LOAD_FAST                4 (shape)\n             88 CALL                     1\n             96 LOAD_CONST               4 (3)\n             98 COMPARE_OP              55 (!=)\n            102 POP_JUMP_IF_FALSE       11 (to 126)\n\n181         104 LOAD_GLOBAL              9 (NULL + SystemExit)\n            114 LOAD_CONST               5 ('--raw-token-shape must have three dimensions')\n            116 CALL                     1\n            124 RAISE_VARARGS            1\n\n182     >>  126 LOAD_FAST                0 (path)\n            128 LOAD_ATTR               11 (NULL|self + read_bytes)\n            148 CALL                     0\n            156 STORE_FAST               5 (raw)\n\n183         158 LOAD_FAST                4 (shape)\n            160 LOAD_CONST               1 (0)\n            162 BINARY_SUBSCR\n            166 LOAD_FAST                4 (shape)\n            168 LOAD_CONST               6 (1)\n            170 BINARY_SUBSCR\n            174 BINARY_OP                5 (*)\n            178 LOAD_FAST                4 (shape)\n            180 LOAD_CONST               7 (2)\n            182 BINARY_SUBSCR\n            186 BINARY_OP                5 (*)\n            190 STORE_FAST               6 (expected)\n\n184         192 LOAD_GLOBAL              7 (NULL + len)\n            202 LOAD_FAST                5 (raw)\n            204 CALL                     1\n            212 LOAD_FAST                6 (expected)\n            214 COMPARE_OP              55 (!=)\n            218 POP_JUMP_IF_FALSE       26 (to 272)\n\n185         220 LOAD_GLOBAL              9 (NULL + SystemExit)\n            230 LOAD_CONST               8 ('raw token size mismatch: got ')\n            232 LOAD_GLOBAL              7 (NULL + len)\n            242 LOAD_FAST                5 (raw)\n            244 CALL                     1\n            252 FORMAT_VALUE             0\n            254 LOAD_CONST               9 (' expected ')\n            256 LOAD_FAST                6 (expected)\n            258 FORMAT_VALUE             0\n            260 BUILD_STRING             4\n            262 CALL                     1\n            270 RAISE_VARARGS            1\n\n186     >>  272 LOAD_FAST                3 (np)\n            274 LOAD_ATTR               13 (NULL|self + frombuffer)\n            294 LOAD_FAST                5 (raw)\n            296 LOAD_FAST                3 (np)\n            298 LOAD_ATTR               14 (uint8)\n            318 KW_NAMES                10 (('dtype',))\n            320 CALL                     2\n            328 LOAD_ATTR               17 (NULL|self + reshape)\n            348 LOAD_FAST                4 (shape)\n            350 CALL                     1\n            358 STORE_FAST               7 (arr)\n\n187         360 LOAD_FAST                2 (layout)\n            362 LOAD_CONST              11 ('qma9_storage_wh_to_render_hw')\n            364 COMPARE_OP              40 (==)\n            368 POP_JUMP_IF_FALSE       33 (to 436)\n\n188         370 LOAD_FAST                3 (np)\n            372 LOAD_ATTR               19 (NULL|self + transpose)\n            392 LOAD_FAST                7 (arr)\n            394 LOAD_CONST              12 ((0, 2, 1))\n            396 CALL                     2\n            404 LOAD_ATTR               21 (NULL|self + copy)\n            424 CALL                     0\n            432 STORE_FAST               7 (arr)\n            434 JUMP_FORWARD            37 (to 510)\n\n189     >>  436 LOAD_FAST                2 (layout)\n            438 LOAD_CONST              13 ('nhw_render_order')\n            440 COMPARE_OP              40 (==)\n            444 POP_JUMP_IF_FALSE       18 (to 482)\n\n190         446 LOAD_FAST                3 (np)\n            448 LOAD_ATTR               23 (NULL|self + ascontiguousarray)\n            468 LOAD_FAST                7 (arr)\n            470 CALL                     1\n            478 STORE_FAST               7 (arr)\n            480 JUMP_FORWARD            14 (to 510)\n\n192     >>  482 LOAD_GLOBAL              9 (NULL + SystemExit)\n            492 LOAD_CONST              14 ('unsupported raw token layout: ')\n            494 LOAD_FAST                2 (layout)\n            496 FORMAT_VALUE             0\n            498 BUILD_STRING             2\n            500 CALL                     1\n            508 RAISE_VARARGS            1\n\n193     >>  510 LOAD_FAST                7 (arr)\n            512 LOAD_ATTR               24 (size)\n            532 POP_JUMP_IF_FALSE       67 (to 668)\n            534 LOAD_GLOBAL             27 (NULL + int)\n            544 LOAD_FAST                7 (arr)\n            546 LOAD_ATTR               29 (NULL|self + min)\n            566 CALL                     0\n            574 CALL                     1\n            582 LOAD_CONST               1 (0)\n            584 COMPARE_OP               2 (<)\n            588 POP_JUMP_IF_TRUE        28 (to 646)\n            590 LOAD_GLOBAL             27 (NULL + int)\n            600 LOAD_FAST                7 (arr)\n            602 LOAD_ATTR               31 (NULL|self + max)\n            622 CALL                     0\n            630 CALL                     1\n            638 LOAD_CONST              15 (4)\n            640 COMPARE_OP              68 (>)\n            644 POP_JUMP_IF_FALSE       11 (to 668)\n\n194     >>  646 LOAD_GLOBAL              9 (NULL + SystemExit)\n            656 LOAD_CONST              16 ('raw token class value out of range 0..4')\n            658 CALL                     1\n            666 RAISE_VARARGS            1\n\n195     >>  668 LOAD_FAST                7 (arr)\n            670 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_load_raw_tokens.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "part"
+      ],
+      "names": [
+        "int"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "179           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                15 (to 42)\n             12 STORE_FAST               1 (part)\n             14 LOAD_GLOBAL              1 (NULL + int)\n             24 LOAD_FAST                1 (part)\n             26 CALL                     1\n             34 YIELD_VALUE              1\n             36 RESUME                   1\n             38 POP_TOP\n             40 JUMP_BACKWARD           17 (to 8)\n        >>   42 END_FOR\n             44 RETURN_CONST             0 (None)\n        >>   46 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             48 RERAISE                  1\nExceptionTable:\n  4 to 44 -> 46 [0] lasti\n"
+    },
+    {
+      "qualname": "_parse_probability_variants",
+      "name": "_parse_probability_variants",
+      "argcount": 1,
+      "kwonlyargcount": 1,
+      "varnames": [
+        "text",
+        "default_source"
+      ],
+      "names": [
+        "strip",
+        "DEFAULT_HPAC_PROBABILITY_VARIANT",
+        "tuple",
+        "split"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "198           0 RESUME                   0\n\n199           2 LOAD_FAST                0 (text)\n              4 POP_JUMP_IF_NONE        16 (to 38)\n              6 LOAD_FAST                0 (text)\n              8 LOAD_ATTR                1 (NULL|self + strip)\n             28 CALL                     0\n             36 POP_JUMP_IF_TRUE        11 (to 60)\n\n200     >>   38 LOAD_FAST                1 (default_source)\n             40 POP_JUMP_IF_FALSE        7 (to 56)\n             42 LOAD_GLOBAL              2 (DEFAULT_HPAC_PROBABILITY_VARIANT)\n             52 BUILD_TUPLE              1\n             54 RETURN_VALUE\n        >>   56 LOAD_CONST               0 (None)\n             58 RETURN_VALUE\n\n201     >>   60 LOAD_GLOBAL              5 (NULL + tuple)\n             70 LOAD_CONST               1 (<code object <genexpr> at 0x1054c1c50, file \"experiments/replay_pr91_hpm1_mask.py\", line 201>)\n             72 MAKE_FUNCTION            0\n             74 LOAD_FAST                0 (text)\n             76 LOAD_ATTR                7 (NULL|self + split)\n             96 LOAD_CONST               2 (',')\n             98 CALL                     1\n            106 GET_ITER\n            108 CALL                     0\n            116 CALL                     1\n            124 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_parse_probability_variants.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "part"
+      ],
+      "names": [
+        "strip"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "201           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                37 (to 86)\n             12 STORE_FAST               1 (part)\n             14 LOAD_FAST                1 (part)\n             16 LOAD_ATTR                1 (NULL|self + strip)\n             36 CALL                     0\n             44 POP_JUMP_IF_TRUE         1 (to 48)\n             46 JUMP_BACKWARD           20 (to 8)\n        >>   48 LOAD_FAST                1 (part)\n             50 LOAD_ATTR                1 (NULL|self + strip)\n             70 CALL                     0\n             78 YIELD_VALUE              1\n             80 RESUME                   1\n             82 POP_TOP\n             84 JUMP_BACKWARD           39 (to 8)\n        >>   86 END_FOR\n             88 RETURN_CONST             0 (None)\n        >>   90 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             92 RERAISE                  1\nExceptionTable:\n  4 to 44 -> 90 [0] lasti\n  48 to 88 -> 90 [0] lasti\n"
+    },
+    {
+      "qualname": "_parse_symbol_windows",
+      "name": "_parse_symbol_windows",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "text",
+        "windows",
+        "item",
+        "start_text",
+        "count_text"
+      ],
+      "names": [
+        "split",
+        "strip",
+        "SystemExit",
+        "append",
+        "int",
+        "tuple"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "204           0 RESUME                   0\n\n205           2 BUILD_LIST               0\n              4 STORE_FAST               1 (windows)\n\n206           6 LOAD_FAST                0 (text)\n              8 LOAD_ATTR                1 (NULL|self + split)\n             28 LOAD_CONST               1 (',')\n             30 CALL                     1\n             38 GET_ITER\n        >>   40 FOR_ITER                98 (to 240)\n             44 STORE_FAST               2 (item)\n\n207          46 LOAD_FAST                2 (item)\n             48 LOAD_ATTR                3 (NULL|self + strip)\n             68 CALL                     0\n             76 STORE_FAST               2 (item)\n\n208          78 LOAD_FAST                2 (item)\n             80 POP_JUMP_IF_TRUE         1 (to 84)\n\n209          82 JUMP_BACKWARD           22 (to 40)\n\n210     >>   84 LOAD_CONST               2 (':')\n             86 LOAD_FAST                2 (item)\n             88 CONTAINS_OP              1\n             90 POP_JUMP_IF_FALSE       15 (to 122)\n\n211          92 LOAD_GLOBAL              5 (NULL + SystemExit)\n            102 LOAD_CONST               3 ('bad --symbol-windows item ')\n            104 LOAD_FAST                2 (item)\n            106 FORMAT_VALUE             2 (repr)\n            108 LOAD_CONST               4 ('; expected start:count')\n            110 BUILD_STRING             3\n            112 CALL                     1\n            120 RAISE_VARARGS            1\n\n212     >>  122 LOAD_FAST                2 (item)\n            124 LOAD_ATTR                1 (NULL|self + split)\n            144 LOAD_CONST               2 (':')\n            146 LOAD_CONST               5 (1)\n            148 CALL                     2\n            156 UNPACK_SEQUENCE          2\n            160 STORE_FAST               3 (start_text)\n            162 STORE_FAST               4 (count_text)\n\n213         164 LOAD_FAST                1 (windows)\n            166 LOAD_ATTR                7 (NULL|self + append)\n            186 LOAD_GLOBAL              9 (NULL + int)\n            196 LOAD_FAST                3 (start_text)\n            198 CALL                     1\n            206 LOAD_GLOBAL              9 (NULL + int)\n            216 LOAD_FAST                4 (count_text)\n            218 CALL                     1\n            226 BUILD_TUPLE              2\n            228 CALL                     1\n            236 POP_TOP\n            238 JUMP_BACKWARD          100 (to 40)\n\n206     >>  240 END_FOR\n\n214         242 LOAD_FAST                1 (windows)\n            244 POP_JUMP_IF_TRUE        11 (to 268)\n\n215         246 LOAD_GLOBAL              5 (NULL + SystemExit)\n            256 LOAD_CONST               6 ('--symbol-windows must specify at least one start:count pair')\n            258 CALL                     1\n            266 RAISE_VARARGS            1\n\n216     >>  268 LOAD_GLOBAL             11 (NULL + tuple)\n            278 LOAD_FAST                1 (windows)\n            280 CALL                     1\n            288 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_parse_csv",
+      "name": "_parse_csv",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "text",
+        "values"
+      ],
+      "names": [
+        "tuple",
+        "split",
+        "SystemExit"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "219           0 RESUME                   0\n\n220           2 LOAD_GLOBAL              1 (NULL + tuple)\n             12 LOAD_CONST               1 (<code object <genexpr> at 0x1054c1d70, file \"experiments/replay_pr91_hpm1_mask.py\", line 220>)\n             14 MAKE_FUNCTION            0\n             16 LOAD_FAST                0 (text)\n             18 LOAD_ATTR                3 (NULL|self + split)\n             38 LOAD_CONST               2 (',')\n             40 CALL                     1\n             48 GET_ITER\n             50 CALL                     0\n             58 CALL                     1\n             66 STORE_FAST               1 (values)\n\n221          68 LOAD_FAST                1 (values)\n             70 POP_JUMP_IF_TRUE        11 (to 94)\n\n222          72 LOAD_GLOBAL              5 (NULL + SystemExit)\n             82 LOAD_CONST               3 ('comma-separated value must not be empty')\n             84 CALL                     1\n             92 RAISE_VARARGS            1\n\n223     >>   94 LOAD_FAST                1 (values)\n             96 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_parse_csv.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "part"
+      ],
+      "names": [
+        "strip"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "220           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                37 (to 86)\n             12 STORE_FAST               1 (part)\n             14 LOAD_FAST                1 (part)\n             16 LOAD_ATTR                1 (NULL|self + strip)\n             36 CALL                     0\n             44 POP_JUMP_IF_TRUE         1 (to 48)\n             46 JUMP_BACKWARD           20 (to 8)\n        >>   48 LOAD_FAST                1 (part)\n             50 LOAD_ATTR                1 (NULL|self + strip)\n             70 CALL                     0\n             78 YIELD_VALUE              1\n             80 RESUME                   1\n             82 POP_TOP\n             84 JUMP_BACKWARD           39 (to 8)\n        >>   86 END_FOR\n             88 RETURN_CONST             0 (None)\n        >>   90 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             92 RERAISE                  1\nExceptionTable:\n  4 to 44 -> 90 [0] lasti\n  48 to 88 -> 90 [0] lasti\n"
+    },
+    {
+      "qualname": "_parse_prob_eps_values",
+      "name": "_parse_prob_eps_values",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "text"
+      ],
+      "names": [
+        "tuple",
+        "_parse_csv"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "226           0 RESUME                   0\n\n227           2 LOAD_GLOBAL              1 (NULL + tuple)\n             12 LOAD_CONST               1 (<code object <genexpr> at 0x1054e4f30, file \"experiments/replay_pr91_hpm1_mask.py\", line 227>)\n             14 MAKE_FUNCTION            0\n             16 LOAD_GLOBAL              3 (NULL + _parse_csv)\n             26 LOAD_FAST                0 (text)\n             28 CALL                     1\n             36 GET_ITER\n             38 CALL                     0\n             46 CALL                     1\n             54 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_parse_prob_eps_values.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "part"
+      ],
+      "names": [
+        "float"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "227           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                15 (to 42)\n             12 STORE_FAST               1 (part)\n             14 LOAD_GLOBAL              1 (NULL + float)\n             24 LOAD_FAST                1 (part)\n             26 CALL                     1\n             34 YIELD_VALUE              1\n             36 RESUME                   1\n             38 POP_TOP\n             40 JUMP_BACKWARD           17 (to 8)\n        >>   42 END_FOR\n             44 RETURN_CONST             0 (None)\n        >>   46 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             48 RERAISE                  1\nExceptionTable:\n  4 to 44 -> 46 [0] lasti\n"
+    },
+    {
+      "qualname": "main",
+      "name": "main",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "argv",
+        "args",
+        "report",
+        "payload",
+        "prototype",
+        "variants",
+        "text"
+      ],
+      "names": [
+        "build_arg_parser",
+        "parse_args",
+        "fusion_plan",
+        "plan_pr91_hpm1_pr85_stbm_fusion",
+        "pr85_stbm_archive",
+        "archive",
+        "pr85_stbm_adjudicated_json",
+        "skip_fusion_prefix_probe",
+        "raw_token_bin",
+        "extract_pr91_hpm1_payload",
+        "residual_symbols",
+        "prototype_reencode_hpm1_residual_from_raw_tokens",
+        "prototype_reencode_hpm1_from_raw_tokens",
+        "_load_raw_tokens",
+        "raw_token_shape",
+        "raw_token_layout",
+        "prototype_max_frames",
+        "first_symbol_state_probe",
+        "_parse_probability_variants",
+        "probability_variants",
+        "run_pr91_hpm1_first_symbol_state_probe",
+        "reference_tokens",
+        "reference_layout",
+        "symbol_count",
+        "symbol_offset",
+        "context_window_probe",
+        "run_pr91_hpm1_context_window_probe",
+        "_parse_symbol_windows",
+        "symbol_windows",
+        "_parse_csv",
+        "context_modes",
+        "_parse_prob_eps_values",
+        "prob_eps_values",
+        "probability_variant_matrix",
+        "run_pr91_hpm1_probability_variant_matrix",
+        "full_decode",
+        "max_frames",
+        "attempt_reencode",
+        "run_pr91_hpm1_preflight",
+        "json",
+        "dumps",
+        "json_out",
+        "parent",
+        "mkdir",
+        "write_text",
+        "print"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "230           0 RESUME                   0\n\n231           2 LOAD_GLOBAL              1 (NULL + build_arg_parser)\n             12 CALL                     0\n             20 LOAD_ATTR                3 (NULL|self + parse_args)\n             40 LOAD_FAST                0 (argv)\n             42 CALL                     1\n             50 STORE_FAST               1 (args)\n\n232          52 LOAD_FAST                1 (args)\n             54 LOAD_ATTR                4 (fusion_plan)\n             74 POP_JUMP_IF_FALSE       58 (to 192)\n\n233          76 LOAD_GLOBAL              7 (NULL + plan_pr91_hpm1_pr85_stbm_fusion)\n\n234          86 LOAD_FAST                1 (args)\n             88 LOAD_ATTR                8 (pr85_stbm_archive)\n\n235         108 LOAD_FAST                1 (args)\n            110 LOAD_ATTR               10 (archive)\n\n236         130 LOAD_FAST                1 (args)\n            132 LOAD_ATTR               12 (pr85_stbm_adjudicated_json)\n\n237         152 LOAD_FAST                1 (args)\n            154 LOAD_ATTR               14 (skip_fusion_prefix_probe)\n            174 UNARY_NOT\n\n233         176 KW_NAMES                 1 (('pr85_stbm_archive', 'pr91_archive', 'pr85_stbm_adjudicated_json', 'include_hpm1_prefix_probe'))\n            178 CALL                     4\n            186 STORE_FAST               2 (report)\n            188 EXTENDED_ARG             2\n            190 JUMP_FORWARD           527 (to 1246)\n\n239     >>  192 LOAD_FAST                1 (args)\n            194 LOAD_ATTR               16 (raw_token_bin)\n            214 POP_JUMP_IF_NONE       109 (to 434)\n\n240         216 LOAD_GLOBAL             19 (NULL + extract_pr91_hpm1_payload)\n            226 LOAD_FAST                1 (args)\n            228 LOAD_ATTR               10 (archive)\n            248 CALL                     1\n            256 STORE_FAST               3 (payload)\n\n243         258 LOAD_FAST                1 (args)\n            260 LOAD_ATTR               20 (residual_symbols)\n            280 POP_JUMP_IF_FALSE        6 (to 294)\n\n242         282 LOAD_GLOBAL             22 (prototype_reencode_hpm1_residual_from_raw_tokens)\n            292 JUMP_FORWARD             5 (to 304)\n\n244     >>  294 LOAD_GLOBAL             24 (prototype_reencode_hpm1_from_raw_tokens)\n\n241     >>  304 STORE_FAST               4 (prototype)\n\n246         306 PUSH_NULL\n            308 LOAD_FAST                4 (prototype)\n\n247         310 LOAD_GLOBAL             27 (NULL + _load_raw_tokens)\n            320 LOAD_FAST                1 (args)\n            322 LOAD_ATTR               16 (raw_token_bin)\n            342 LOAD_FAST                1 (args)\n            344 LOAD_ATTR               28 (raw_token_shape)\n            364 LOAD_FAST                1 (args)\n            366 LOAD_ATTR               30 (raw_token_layout)\n            386 CALL                     3\n\n248         394 LOAD_FAST                3 (payload)\n\n249         396 LOAD_FAST                1 (args)\n            398 LOAD_ATTR               32 (prototype_max_frames)\n\n246         418 KW_NAMES                 2 (('max_frames',))\n            420 CALL                     3\n            428 STORE_FAST               2 (report)\n            430 EXTENDED_ARG             1\n            432 JUMP_FORWARD           406 (to 1246)\n\n251     >>  434 LOAD_FAST                1 (args)\n            436 LOAD_ATTR               34 (first_symbol_state_probe)\n            456 POP_JUMP_IF_FALSE       96 (to 650)\n\n252         458 LOAD_GLOBAL             37 (NULL + _parse_probability_variants)\n            468 LOAD_FAST                1 (args)\n            470 LOAD_ATTR               38 (probability_variants)\n            490 LOAD_CONST               3 (True)\n            492 KW_NAMES                 4 (('default_source',))\n            494 CALL                     2\n            502 STORE_FAST               5 (variants)\n\n253         504 LOAD_FAST                5 (variants)\n            506 POP_JUMP_IF_NOT_NONE     2 (to 512)\n            508 LOAD_ASSERTION_ERROR\n            510 RAISE_VARARGS            1\n\n254     >>  512 LOAD_GLOBAL             41 (NULL + run_pr91_hpm1_first_symbol_state_probe)\n\n255         522 LOAD_FAST                1 (args)\n            524 LOAD_ATTR               10 (archive)\n\n256         544 LOAD_FAST                1 (args)\n            546 LOAD_ATTR               42 (reference_tokens)\n\n257         566 LOAD_FAST                1 (args)\n            568 LOAD_ATTR               44 (reference_layout)\n\n258         588 LOAD_FAST                5 (variants)\n\n259         590 LOAD_FAST                1 (args)\n            592 LOAD_ATTR               46 (symbol_count)\n\n260         612 LOAD_FAST                1 (args)\n            614 LOAD_ATTR               48 (symbol_offset)\n\n254         634 KW_NAMES                 5 (('reference_tokens_path', 'reference_layout', 'variants', 'symbol_count', 'symbol_offset'))\n            636 CALL                     6\n            644 STORE_FAST               2 (report)\n            646 EXTENDED_ARG             1\n            648 JUMP_FORWARD           298 (to 1246)\n\n262     >>  650 LOAD_FAST                1 (args)\n            652 LOAD_ATTR               50 (context_window_probe)\n            672 POP_JUMP_IF_FALSE      133 (to 940)\n\n263         674 LOAD_GLOBAL             37 (NULL + _parse_probability_variants)\n            684 LOAD_FAST                1 (args)\n            686 LOAD_ATTR               38 (probability_variants)\n            706 LOAD_CONST               3 (True)\n            708 KW_NAMES                 4 (('default_source',))\n            710 CALL                     2\n            718 STORE_FAST               5 (variants)\n\n264         720 LOAD_FAST                5 (variants)\n            722 POP_JUMP_IF_NOT_NONE     2 (to 728)\n            724 LOAD_ASSERTION_ERROR\n            726 RAISE_VARARGS            1\n\n265     >>  728 LOAD_GLOBAL             53 (NULL + run_pr91_hpm1_context_window_probe)\n\n266         738 LOAD_FAST                1 (args)\n            740 LOAD_ATTR               10 (archive)\n\n267         760 LOAD_FAST                1 (args)\n            762 LOAD_ATTR               42 (reference_tokens)\n\n268         782 LOAD_FAST                1 (args)\n            784 LOAD_ATTR               44 (reference_layout)\n\n269         804 LOAD_FAST                5 (variants)\n\n270         806 LOAD_GLOBAL             55 (NULL + _parse_symbol_windows)\n            816 LOAD_FAST                1 (args)\n            818 LOAD_ATTR               56 (symbol_windows)\n            838 CALL                     1\n\n271         846 LOAD_GLOBAL             59 (NULL + _parse_csv)\n            856 LOAD_FAST                1 (args)\n            858 LOAD_ATTR               60 (context_modes)\n            878 CALL                     1\n\n272         886 LOAD_GLOBAL             63 (NULL + _parse_prob_eps_values)\n            896 LOAD_FAST                1 (args)\n            898 LOAD_ATTR               64 (prob_eps_values)\n            918 CALL                     1\n\n265         926 KW_NAMES                 6 (('reference_tokens_path', 'reference_layout', 'variants', 'windows', 'context_modes', 'prob_eps_values'))\n            928 CALL                     7\n            936 STORE_FAST               2 (report)\n            938 JUMP_FORWARD           153 (to 1246)\n\n274     >>  940 LOAD_FAST                1 (args)\n            942 LOAD_ATTR               66 (probability_variant_matrix)\n            962 POP_JUMP_IF_FALSE       83 (to 1130)\n\n275         964 LOAD_GLOBAL             37 (NULL + _parse_probability_variants)\n            974 LOAD_FAST                1 (args)\n            976 LOAD_ATTR               38 (probability_variants)\n            996 LOAD_CONST               7 (False)\n            998 KW_NAMES                 4 (('default_source',))\n           1000 CALL                     2\n           1008 STORE_FAST               5 (variants)\n\n276        1010 LOAD_GLOBAL             69 (NULL + run_pr91_hpm1_probability_variant_matrix)\n\n277        1020 LOAD_FAST                1 (args)\n           1022 LOAD_ATTR               10 (archive)\n\n278        1042 LOAD_FAST                5 (variants)\n\n279        1044 LOAD_FAST                1 (args)\n           1046 LOAD_ATTR               70 (full_decode)\n           1066 POP_JUMP_IF_FALSE        2 (to 1072)\n           1068 LOAD_CONST               0 (None)\n           1070 JUMP_FORWARD            11 (to 1094)\n        >> 1072 LOAD_FAST                1 (args)\n           1074 LOAD_ATTR               72 (max_frames)\n\n280     >> 1094 LOAD_FAST                1 (args)\n           1096 LOAD_ATTR               74 (attempt_reencode)\n\n276        1116 KW_NAMES                 8 (('variants', 'max_frames', 'attempt_reencode'))\n           1118 CALL                     4\n           1126 STORE_FAST               2 (report)\n           1128 JUMP_FORWARD            58 (to 1246)\n\n283     >> 1130 LOAD_GLOBAL             77 (NULL + run_pr91_hpm1_preflight)\n\n284        1140 LOAD_FAST                1 (args)\n           1142 LOAD_ATTR               10 (archive)\n\n285        1162 LOAD_FAST                1 (args)\n           1164 LOAD_ATTR               70 (full_decode)\n           1184 POP_JUMP_IF_FALSE        2 (to 1190)\n           1186 LOAD_CONST               0 (None)\n           1188 JUMP_FORWARD            11 (to 1212)\n        >> 1190 LOAD_FAST                1 (args)\n           1192 LOAD_ATTR               72 (max_frames)\n\n286     >> 1212 LOAD_FAST                1 (args)\n           1214 LOAD_ATTR               74 (attempt_reencode)\n\n283        1234 KW_NAMES                 9 (('max_frames', 'attempt_reencode'))\n           1236 CALL                     3\n           1244 STORE_FAST               2 (report)\n\n288     >> 1246 LOAD_GLOBAL             79 (NULL + json)\n           1256 LOAD_ATTR               80 (dumps)\n           1276 LOAD_FAST                2 (report)\n           1278 LOAD_CONST              10 (2)\n           1280 LOAD_CONST               3 (True)\n           1282 KW_NAMES                11 (('indent', 'sort_keys'))\n           1284 CALL                     3\n           1292 LOAD_CONST              12 ('\\n')\n           1294 BINARY_OP                0 (+)\n           1298 STORE_FAST               6 (text)\n\n289        1300 LOAD_FAST                1 (args)\n           1302 LOAD_ATTR               82 (json_out)\n           1322 POP_JUMP_IF_NONE        68 (to 1460)\n\n290        1324 LOAD_FAST                1 (args)\n           1326 LOAD_ATTR               82 (json_out)\n           1346 LOAD_ATTR               84 (parent)\n           1366 LOAD_ATTR               87 (NULL|self + mkdir)\n           1386 LOAD_CONST               3 (True)\n           1388 LOAD_CONST               3 (True)\n           1390 KW_NAMES                13 (('parents', 'exist_ok'))\n           1392 CALL                     2\n           1400 POP_TOP\n\n291        1402 LOAD_FAST                1 (args)\n           1404 LOAD_ATTR               82 (json_out)\n           1424 LOAD_ATTR               89 (NULL|self + write_text)\n           1444 LOAD_FAST                6 (text)\n           1446 LOAD_CONST              14 ('utf-8')\n           1448 KW_NAMES                15 (('encoding',))\n           1450 CALL                     2\n           1458 POP_TOP\n\n292     >> 1460 LOAD_GLOBAL             91 (NULL + print)\n           1470 LOAD_FAST                6 (text)\n           1472 LOAD_CONST              16 ('')\n           1474 KW_NAMES                17 (('end',))\n           1476 CALL                     2\n           1484 POP_TOP\n\n293        1486 RETURN_CONST            18 (0)\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  2           2 LOAD_CONST               0 ('Replay PR91 HPM1 mask tokens locally and fail closed on parity gaps.')\n              4 STORE_NAME               0 (__doc__)\n\n  4           6 LOAD_CONST               1 (0)\n              8 LOAD_CONST               2 (('annotations',))\n             10 IMPORT_NAME              1 (__future__)\n             12 IMPORT_FROM              2 (annotations)\n             14 STORE_NAME               2 (annotations)\n             16 POP_TOP\n\n  6          18 LOAD_CONST               1 (0)\n             20 LOAD_CONST               3 (None)\n             22 IMPORT_NAME              3 (argparse)\n             24 STORE_NAME               3 (argparse)\n\n  7          26 LOAD_CONST               1 (0)\n             28 LOAD_CONST               3 (None)\n             30 IMPORT_NAME              4 (json)\n             32 STORE_NAME               4 (json)\n\n  8          34 LOAD_CONST               1 (0)\n             36 LOAD_CONST               3 (None)\n             38 IMPORT_NAME              5 (sys)\n             40 STORE_NAME               5 (sys)\n\n  9          42 LOAD_CONST               1 (0)\n             44 LOAD_CONST               4 (('Path',))\n             46 IMPORT_NAME              6 (pathlib)\n             48 IMPORT_FROM              7 (Path)\n             50 STORE_NAME               7 (Path)\n             52 POP_TOP\n\n 12          54 PUSH_NULL\n             56 LOAD_NAME                7 (Path)\n             58 LOAD_NAME                8 (__file__)\n             60 CALL                     1\n             68 LOAD_ATTR               19 (NULL|self + resolve)\n             88 CALL                     0\n             96 LOAD_ATTR               20 (parents)\n            116 LOAD_CONST               5 (1)\n            118 BINARY_SUBSCR\n            122 STORE_NAME              11 (REPO_ROOT)\n\n 13         124 LOAD_NAME               11 (REPO_ROOT)\n            126 LOAD_CONST               6 ('src')\n            128 BINARY_OP               11 (/)\n            132 STORE_NAME              12 (SRC_ROOT)\n\n 14         134 PUSH_NULL\n            136 LOAD_NAME               13 (str)\n            138 LOAD_NAME               12 (SRC_ROOT)\n            140 CALL                     1\n            148 LOAD_NAME                5 (sys)\n            150 LOAD_ATTR               28 (path)\n            170 CONTAINS_OP              1\n            172 POP_JUMP_IF_FALSE       34 (to 242)\n\n 15         174 LOAD_NAME                5 (sys)\n            176 LOAD_ATTR               28 (path)\n            196 LOAD_ATTR               31 (NULL|self + insert)\n            216 LOAD_CONST               1 (0)\n            218 PUSH_NULL\n            220 LOAD_NAME               13 (str)\n            222 LOAD_NAME               12 (SRC_ROOT)\n            224 CALL                     1\n            232 CALL                     2\n            240 POP_TOP\n\n 17     >>  242 LOAD_CONST               1 (0)\n            244 LOAD_CONST               7 (('DEFAULT_HPAC_PROBABILITY_VARIANT', 'DEFAULT_PR85_QMA9_TOKEN_SOURCE', 'DEFAULT_PR85_STBM_ADJUDICATED_JSON', 'DEFAULT_PR85_STBM_ARCHIVE', 'DEFAULT_PR91_ARCHIVE', 'extract_pr91_hpm1_payload', 'plan_pr91_hpm1_pr85_stbm_fusion', 'prototype_reencode_hpm1_from_raw_tokens', 'prototype_reencode_hpm1_residual_from_raw_tokens', 'run_pr91_hpm1_first_symbol_state_probe', 'run_pr91_hpm1_context_window_probe', 'run_pr91_hpm1_probability_variant_matrix', 'run_pr91_hpm1_preflight'))\n            246 IMPORT_NAME             16 (tac.pr91_hpm1_codec)\n            248 IMPORT_FROM             17 (DEFAULT_HPAC_PROBABILITY_VARIANT)\n            250 STORE_NAME              17 (DEFAULT_HPAC_PROBABILITY_VARIANT)\n            252 IMPORT_FROM             18 (DEFAULT_PR85_QMA9_TOKEN_SOURCE)\n            254 STORE_NAME              18 (DEFAULT_PR85_QMA9_TOKEN_SOURCE)\n            256 IMPORT_FROM             19 (DEFAULT_PR85_STBM_ADJUDICATED_JSON)\n            258 STORE_NAME              19 (DEFAULT_PR85_STBM_ADJUDICATED_JSON)\n            260 IMPORT_FROM             20 (DEFAULT_PR85_STBM_ARCHIVE)\n            262 STORE_NAME              20 (DEFAULT_PR85_STBM_ARCHIVE)\n            264 IMPORT_FROM             21 (DEFAULT_PR91_ARCHIVE)\n            266 STORE_NAME              21 (DEFAULT_PR91_ARCHIVE)\n            268 IMPORT_FROM             22 (extract_pr91_hpm1_payload)\n            270 STORE_NAME              22 (extract_pr91_hpm1_payload)\n            272 IMPORT_FROM             23 (plan_pr91_hpm1_pr85_stbm_fusion)\n            274 STORE_NAME              23 (plan_pr91_hpm1_pr85_stbm_fusion)\n            276 IMPORT_FROM             24 (prototype_reencode_hpm1_from_raw_tokens)\n            278 STORE_NAME              24 (prototype_reencode_hpm1_from_raw_tokens)\n            280 IMPORT_FROM             25 (prototype_reencode_hpm1_residual_from_raw_tokens)\n            282 STORE_NAME              25 (prototype_reencode_hpm1_residual_from_raw_tokens)\n            284 IMPORT_FROM             26 (run_pr91_hpm1_first_symbol_state_probe)\n            286 STORE_NAME              26 (run_pr91_hpm1_first_symbol_state_probe)\n            288 IMPORT_FROM             27 (run_pr91_hpm1_context_window_probe)\n            290 STORE_NAME              27 (run_pr91_hpm1_context_window_probe)\n            292 IMPORT_FROM             28 (run_pr91_hpm1_probability_variant_matrix)\n            294 STORE_NAME              28 (run_pr91_hpm1_probability_variant_matrix)\n            296 IMPORT_FROM             29 (run_pr91_hpm1_preflight)\n            298 STORE_NAME              29 (run_pr91_hpm1_preflight)\n            300 POP_TOP\n\n 34         302 LOAD_CONST              16 (('return', 'argparse.ArgumentParser'))\n            304 LOAD_CONST               8 (<code object build_arg_parser at 0xa36e8d800, file \"experiments/replay_pr91_hpm1_mask.py\", line 34>)\n            306 MAKE_FUNCTION            4 (annotations)\n            308 STORE_NAME              30 (build_arg_parser)\n\n176         310 LOAD_CONST              17 (('path', 'Path', 'shape_text', 'str', 'layout', 'str'))\n            312 LOAD_CONST               9 (<code object _load_raw_tokens at 0xa36e98000, file \"experiments/replay_pr91_hpm1_mask.py\", line 176>)\n            314 MAKE_FUNCTION            4 (annotations)\n            316 STORE_NAME              31 (_load_raw_tokens)\n\n198         318 LOAD_CONST              18 (('text', 'str | None', 'default_source', 'bool', 'return', 'tuple[str, ...] | None'))\n            320 LOAD_CONST              10 (<code object _parse_probability_variants at 0x105431070, file \"experiments/replay_pr91_hpm1_mask.py\", line 198>)\n            322 MAKE_FUNCTION            4 (annotations)\n            324 STORE_NAME              32 (_parse_probability_variants)\n\n204         326 LOAD_CONST              19 (('text', 'str', 'return', 'tuple[tuple[int, int], ...]'))\n            328 LOAD_CONST              11 (<code object _parse_symbol_windows at 0x1049b07f0, file \"experiments/replay_pr91_hpm1_mask.py\", line 204>)\n            330 MAKE_FUNCTION            4 (annotations)\n            332 STORE_NAME              33 (_parse_symbol_windows)\n\n219         334 LOAD_CONST              20 (('text', 'str', 'return', 'tuple[str, ...]'))\n            336 LOAD_CONST              12 (<code object _parse_csv at 0x1049c6760, file \"experiments/replay_pr91_hpm1_mask.py\", line 219>)\n            338 MAKE_FUNCTION            4 (annotations)\n            340 STORE_NAME              34 (_parse_csv)\n\n226         342 LOAD_CONST              21 (('text', 'str', 'return', 'tuple[float, ...]'))\n            344 LOAD_CONST              13 (<code object _parse_prob_eps_values at 0x1054e5030, file \"experiments/replay_pr91_hpm1_mask.py\", line 226>)\n            346 MAKE_FUNCTION            4 (annotations)\n            348 STORE_NAME              35 (_parse_prob_eps_values)\n\n230         350 LOAD_CONST              22 ((None,))\n            352 LOAD_CONST              23 (('argv', 'list[str] | None', 'return', 'int'))\n            354 LOAD_CONST              14 (<code object main at 0xa37170700, file \"experiments/replay_pr91_hpm1_mask.py\", line 230>)\n            356 MAKE_FUNCTION            5 (defaults, annotations)\n            358 STORE_NAME              36 (main)\n\n296         360 LOAD_NAME               37 (__name__)\n            362 LOAD_CONST              15 ('__main__')\n            364 COMPARE_OP              40 (==)\n            368 POP_JUMP_IF_FALSE       13 (to 396)\n\n297         370 PUSH_NULL\n            372 LOAD_NAME               38 (SystemExit)\n            374 PUSH_NULL\n            376 LOAD_NAME               36 (main)\n            378 CALL                     0\n            386 CALL                     1\n            394 RAISE_VARARGS            1\n\n296     >>  396 RETURN_CONST             3 (None)\n"
+}

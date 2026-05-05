@@ -196,7 +196,7 @@ class DistillConfig:
     variance_noise_weight: float = 0.1   # multiplier for the L2-after-noise term
     variance_noise_base_std: float = 2.0  # mean noise std (pixel units, 0-255 range)
     variance_noise_kernel: int = 8       # local-variance window size
-    variance_noise_mode: str = "variance"  # 'variance' (UNIWARD) | 'inverse_variance'
+    variance_noise_mode: str = "variance"  # 'variance' | 'inverse_variance' | 'wavelet_db4'
 
     # Yousfi #5: ScanNet-style spatial uncertainty maps. Up-weights the
     # reconstruction loss in pixels SegNet is most CONFIDENT about (low
@@ -541,20 +541,13 @@ def compute_scorer_loss(
                 pred_frames_for_loss, gt_frames_for_loss,
             )
         if cfg.use_variance_noise and cfg.variance_noise_weight > 0:
-            # Codex R5-2 Finding #2 (2026-04-27): the planned
-            # `tac.losses.uniward_quant_noise_loss` helper never landed —
-            # this branch silently reached an ImportError on every run that
-            # enabled it. Profiles WILDE/SHIRAZ/GREEN/DEN/Lane D all set
-            # use_variance_noise=True. Until the helper is implemented per
-            # the wavelet_db4 design (see tac.wavelet_variance.wavelet_variance_map
-            # for the supporting math), fail loudly here so the operator
-            # knows their requested loss is not active. Do NOT silently
-            # `pass` — that would be the same dead-default class as pose_dim.
-            raise NotImplementedError(
-                "use_variance_noise=True but tac.losses.uniward_quant_noise_loss "
-                "is not implemented (codex R5-2 Finding #2). Either implement "
-                "the helper using tac.wavelet_variance.wavelet_variance_map, "
-                "or set use_variance_noise=False in the profile."
+            from tac.losses import uniward_quant_noise_loss
+            fridrich_extra = fridrich_extra + cfg.variance_noise_weight * uniward_quant_noise_loss(
+                pred_frames_for_loss,
+                gt_frames_for_loss,
+                base_std=cfg.variance_noise_base_std,
+                kernel_size=cfg.variance_noise_kernel,
+                mode=cfg.variance_noise_mode,
             )
         # Yousfi #5: ScanNet-style spatial uncertainty-weighted reconstruction.
         # Costs an extra SegNet forward pass on the (detached) GT frames.
@@ -643,15 +636,16 @@ def compute_scorer_loss(
         fridrich_metrics["markov_loss"] = mc_loss.item()
 
     if cfg.use_variance_noise and cfg.variance_noise_weight > 0:
-        # Codex R5-2 Finding #2 (2026-04-27): see the matching block above —
-        # tac.losses.uniward_quant_noise_loss never landed. Fail loud rather
-        # than silent ImportError. (Same dead-default bug class as pose_dim.)
-        raise NotImplementedError(
-            "use_variance_noise=True but tac.losses.uniward_quant_noise_loss "
-            "is not implemented (codex R5-2 Finding #2). Either implement "
-            "the helper using tac.wavelet_variance.wavelet_variance_map, "
-            "or set use_variance_noise=False in the profile."
+        from tac.losses import uniward_quant_noise_loss
+        variance_loss = uniward_quant_noise_loss(
+            pred_frames_for_loss,
+            gt_frames_for_loss,
+            base_std=cfg.variance_noise_base_std,
+            kernel_size=cfg.variance_noise_kernel,
+            mode=cfg.variance_noise_mode,
         )
+        total = total + cfg.variance_noise_weight * variance_loss
+        fridrich_metrics["variance_noise_loss"] = variance_loss.item()
 
     # Yousfi #5: ScanNet-style spatial uncertainty-weighted reconstruction.
     # Same HWC → CHW auto-detection. Costs an extra SegNet forward pass.
@@ -1509,9 +1503,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--variance-noise-kernel", type=int, default=8,
                    help="Local-variance window size (default 8 = SegNet stride-2 RF)")
     p.add_argument("--variance-noise-mode", type=str, default="variance",
-                   choices=["variance", "inverse_variance"],
-                   help="UNIWARD direction: 'variance' (default, noise in texture) or "
-                        "'inverse_variance' (ablation)")
+                   choices=["variance", "inverse_variance", "wavelet_db4"],
+                   help="UNIWARD direction: 'variance' (default, local texture), "
+                        "'inverse_variance' (ablation), or 'wavelet_db4'")
     # Yousfi #5: ScanNet-style spatial uncertainty maps
     p.add_argument("--use-uncertainty-loss", action="store_true",
                    help="Yousfi #5: weight the renderer's reconstruction loss by "

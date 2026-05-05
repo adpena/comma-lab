@@ -5,8 +5,8 @@ bug pattern — argparse defaults that silently override profile values.
 
 - **CRITICAL** (matches a key in `tac.profiles.PROFILES`): **0**
 - **SUSPICIOUS** (non-None default, no profile match): **5**
-- **SAFE** (default=None or action implies None): **5721**
-- **TOTAL ARGUMENTS SCANNED**: **5726**
+- **SAFE** (default=None or action implies None): **2998**
+- **TOTAL ARGUMENTS SCANNED**: **3003**
 
 ---
 

@@ -60,7 +60,7 @@ import sys
 import tempfile
 import time
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 # Schema version for the JSON we emit. Bump when adding fields so downstream
 # tooling (BATTLE_PLAN parsers, leaderboard, etc.) can detect compatibility.
@@ -548,15 +548,23 @@ def _extract_archive(archive: Path, dest: Path) -> list[str]:
     """Extract archive.zip into dest/. Returns list of member names.
     Refuses to write outside dest (zip-slip protection)."""
     dest.mkdir(parents=True, exist_ok=True)
+    dest_resolved = dest.resolve()
     members: list[str] = []
     with zipfile.ZipFile(archive, "r") as z:
         _validate_zip_container_integrity(archive, z.infolist())
         for info in z.infolist():
-            # zip-slip protection
+            _validate_zip_member_name(info.filename)
             target = (dest / info.filename).resolve()
-            if not str(target).startswith(str(dest.resolve())):
-                raise RuntimeError(f"Refusing zip-slip path: {info.filename}")
-            z.extract(info, dest)
+            try:
+                target.relative_to(dest_resolved)
+            except ValueError as exc:
+                raise RuntimeError(f"Refusing zip-slip path: {info.filename}") from exc
+            if info.is_dir():
+                target.mkdir(parents=True, exist_ok=True)
+            else:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with z.open(info, "r") as src, target.open("wb") as dst:
+                    shutil.copyfileobj(src, dst)
             members.append(info.filename)
     return members
 
@@ -564,6 +572,24 @@ def _extract_archive(archive: Path, dest: Path) -> list[str]:
 def _decode_zip_name(raw: bytes, *, utf8: bool) -> str:
     encoding = "utf-8" if utf8 else "cp437"
     return raw.decode(encoding)
+
+
+def _validate_zip_member_name(name: str) -> None:
+    """Reject path names that can make ZIP readers disagree about custody."""
+    if not name:
+        raise RuntimeError("[archive-validate] EMPTY zip member filename")
+    if "\\" in name:
+        raise RuntimeError(f"[archive-validate] BACKSLASH in zip member name: {name!r}")
+    if any(ord(ch) < 32 for ch in name):
+        raise RuntimeError(f"[archive-validate] CONTROL character in zip member name: {name!r}")
+    member = PurePosixPath(name)
+    if member.is_absolute():
+        raise RuntimeError(f"[archive-validate] ABSOLUTE zip member path: {name!r}")
+    parts = member.parts
+    if not parts or any(part in {"", ".", ".."} for part in parts):
+        raise RuntimeError(f"[archive-validate] NONCANONICAL zip member path: {name!r}")
+    if ":" in parts[0]:
+        raise RuntimeError(f"[archive-validate] DRIVE-like zip member path: {name!r}")
 
 
 def _validate_zip_container_integrity(
@@ -580,6 +606,7 @@ def _validate_zip_container_integrity(
     seen: set[str] = set()
     with archive.open("rb") as fh:
         for info in infos:
+            _validate_zip_member_name(info.filename)
             if info.filename in seen:
                 raise RuntimeError(
                     f"[archive-validate] DUPLICATE zip member name: {info.filename!r}"
@@ -627,6 +654,7 @@ def _validate_zip_container_integrity(
                     "[archive-validate] ZIP central/local filename mismatch: "
                     f"central={info.filename!r} local={local_name!r}"
                 )
+            _validate_zip_member_name(local_name)
 
 
 # 2026-04-28 deep hardening pass 3 dimension 3: Whitelist-based archive

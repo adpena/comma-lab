@@ -1,0 +1,722 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/tools/__pycache__/check_dispatch_cli_shell_hazards.cpython-312.pyc",
+  "names": [
+    "__doc__",
+    "__future__",
+    "annotations",
+    "argparse",
+    "json",
+    "re",
+    "sys",
+    "dataclasses",
+    "asdict",
+    "dataclass",
+    "pathlib",
+    "Path",
+    "DEFAULT_SCAN_PATHS",
+    "DEFAULT_EXCLUDES",
+    "TEXT_SUFFIXES",
+    "LAUNCHER_STALE_FLAGS",
+    "Hazard",
+    "_repo_rel",
+    "_is_excluded",
+    "iter_scan_files",
+    "compile",
+    "_HEREDOC_START_RE",
+    "strip_heredoc_bodies",
+    "_logical_commands",
+    "_find_printf_is_remote_linux_context",
+    "scan_text",
+    "scan_paths",
+    "build_parser",
+    "main",
+    "__name__",
+    "SystemExit"
+  ],
+  "varnames": [],
+  "consts": [
+    "Scan for dispatch CLI and shell portability hazards.\n\nThis is a lightweight guard for bug classes that cost wall-clock during the\nMay 2026 sprint:\n\n* passing adjudicator-only flags to ``launch_lightning_batch_job.py``;\n* using zsh's special ``path`` variable name in shell snippets;\n* using GNU ``find -printf`` in local/macOS-facing snippets.\n\nThe scanner is intentionally conservative. Historical ledgers and result\nartifacts are excluded by default, and Python heredocs inside shell scripts are\nignored so legitimate Python variables named ``path`` are not flagged.\n",
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "asdict",
+      "dataclass"
+    ],
+    [
+      "Path"
+    ],
+    [
+      "scripts",
+      "docs",
+      "reports"
+    ],
+    [
+      ".git",
+      ".omx",
+      "__pycache__",
+      "experiments/results",
+      "reports/raw",
+      "runtime-rs/target"
+    ],
+    {
+      "__frozenset__": [
+        ".rst",
+        ".sh",
+        ".py",
+        ".zsh",
+        ".bash",
+        ".md",
+        ".txt"
+      ]
+    },
+    "adjudicator-only; use launch_lightning_batch_job.py exact-eval --adjudicate instead",
+    [
+      "--required-device",
+      "--required-samples"
+    ],
+    true,
+    [
+      "frozen"
+    ],
+    {
+      "__code__": "Hazard",
+      "qualname": "Hazard",
+      "argcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "__annotations__"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "Hazard",
+    {
+      "__code__": "_repo_rel",
+      "qualname": "_repo_rel",
+      "argcount": 2,
+      "varnames": [
+        "path",
+        "root"
+      ],
+      "names": [
+        "resolve",
+        "relative_to",
+        "as_posix",
+        "ValueError"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_is_excluded",
+      "qualname": "_is_excluded",
+      "argcount": 3,
+      "varnames": [
+        "path",
+        "root",
+        "excludes",
+        "rel",
+        "parts",
+        "item"
+      ],
+      "names": [
+        "_repo_rel",
+        "set",
+        "Path",
+        "parts",
+        "startswith",
+        "rstrip"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "iter_scan_files",
+      "qualname": "iter_scan_files",
+      "argcount": 3,
+      "varnames": [
+        "root",
+        "scan_paths",
+        "excludes",
+        "files",
+        "raw",
+        "start",
+        "candidates",
+        "p",
+        "candidate"
+      ],
+      "names": [
+        "exists",
+        "is_file",
+        "rglob",
+        "_is_excluded",
+        "suffix",
+        "lower",
+        "TEXT_SUFFIXES",
+        "append",
+        "sorted"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "<<-?\\s*['\\\"]?(?P<tag>[A-Za-z_][A-Za-z0-9_]*)['\\\"]?",
+    {
+      "__code__": "strip_heredoc_bodies",
+      "qualname": "strip_heredoc_bodies",
+      "argcount": 1,
+      "varnames": [
+        "text",
+        "out",
+        "stop_tag",
+        "lineno",
+        "line",
+        "match"
+      ],
+      "names": [
+        "enumerate",
+        "splitlines",
+        "strip",
+        "append",
+        "_HEREDOC_START_RE",
+        "search",
+        "group"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_logical_commands",
+      "qualname": "_logical_commands",
+      "argcount": 1,
+      "varnames": [
+        "numbered_lines",
+        "commands",
+        "current_lineno",
+        "current",
+        "lineno",
+        "line",
+        "stripped"
+      ],
+      "names": [
+        "rstrip",
+        "endswith",
+        "append",
+        "join"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_find_printf_is_remote_linux_context",
+      "qualname": "_find_printf_is_remote_linux_context",
+      "argcount": 1,
+      "varnames": [
+        "line"
+      ],
+      "names": [
+        "lower"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "scan_text",
+      "qualname": "scan_text",
+      "argcount": 2,
+      "varnames": [
+        "path",
+        "text",
+        "root",
+        "rel",
+        "hazards",
+        "numbered",
+        "lineno",
+        "command",
+        "flag",
+        "reason",
+        "line"
+      ],
+      "names": [
+        "_repo_rel",
+        "strip_heredoc_bodies",
+        "_logical_commands",
+        "LAUNCHER_STALE_FLAGS",
+        "items",
+        "re",
+        "search",
+        "escape",
+        "append",
+        "Hazard",
+        "_find_printf_is_remote_linux_context",
+        "suffix",
+        "lower"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "scan_paths",
+      "qualname": "scan_paths",
+      "argcount": 3,
+      "varnames": [
+        "root",
+        "scan_paths",
+        "excludes",
+        "hazards",
+        "file_path",
+        "text"
+      ],
+      "names": [
+        "iter_scan_files",
+        "read_text",
+        "OSError",
+        "extend",
+        "scan_text"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "build_parser",
+      "qualname": "build_parser",
+      "argcount": 0,
+      "varnames": [
+        "parser"
+      ],
+      "names": [
+        "argparse",
+        "ArgumentParser",
+        "__doc__",
+        "add_argument",
+        "Path",
+        "cwd"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "main",
+      "qualname": "main",
+      "argcount": 1,
+      "varnames": [
+        "argv",
+        "args",
+        "root",
+        "scan_roots",
+        "hazards",
+        "item",
+        "payload",
+        "text"
+      ],
+      "names": [
+        "build_parser",
+        "parse_args",
+        "repo_root",
+        "resolve",
+        "scan_path",
+        "tuple",
+        "DEFAULT_SCAN_PATHS",
+        "scan_paths",
+        "str",
+        "list",
+        "len",
+        "asdict",
+        "json",
+        "dumps",
+        "json_out",
+        "parent",
+        "mkdir",
+        "write_text",
+        "sys",
+        "stdout",
+        "write",
+        "strict"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "__main__",
+    [
+      "path",
+      "Path",
+      "root",
+      "Path",
+      "return",
+      "str"
+    ],
+    [
+      "path",
+      "Path",
+      "root",
+      "Path",
+      "excludes",
+      "tuple[str, ...]",
+      "return",
+      "bool"
+    ],
+    [
+      "root",
+      "Path",
+      "scan_paths",
+      "tuple[str, ...]",
+      "excludes",
+      "tuple[str, ...]",
+      "return",
+      "list[Path]"
+    ],
+    [
+      "text",
+      "str",
+      "return",
+      "list[tuple[int, str]]"
+    ],
+    [
+      "numbered_lines",
+      "list[tuple[int, str]]",
+      "return",
+      "list[tuple[int, str]]"
+    ],
+    [
+      "line",
+      "str",
+      "return",
+      "bool"
+    ],
+    [
+      "path",
+      "Path",
+      "text",
+      "str",
+      "root",
+      "Path",
+      "return",
+      "list[Hazard]"
+    ],
+    [
+      "root",
+      "Path",
+      "scan_paths",
+      "tuple[str, ...]",
+      "excludes",
+      "tuple[str, ...]",
+      "return",
+      "list[Hazard]"
+    ],
+    [
+      "return",
+      "argparse.ArgumentParser"
+    ],
+    [
+      null
+    ],
+    [
+      "argv",
+      "list[str] | None",
+      "return",
+      "int"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": "Scan for dispatch CLI and shell portability hazards.\n\nThis is a lightweight guard for bug classes that cost wall-clock during the\nMay 2026 sprint:\n\n* passing adjudicator-only flags to ``launch_lightning_batch_job.py``;\n* using zsh's special ``path`` variable name in shell snippets;\n* using GNU ``find -printf`` in local/macOS-facing snippets.\n\nThe scanner is intentionally conservative. Historical ledgers and result\nartifacts are excluded by default, and Python heredocs inside shell scripts are\nignored so legitimate Python variables named ``path`` are not flagged.\n",
+  "child_codes": [
+    {
+      "qualname": "Hazard",
+      "name": "Hazard",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "__annotations__"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Hazard",
+      "dis": " 41           0 RESUME                   0\n              2 LOAD_NAME                0 (__name__)\n              4 STORE_NAME               1 (__module__)\n              6 LOAD_CONST               0 ('Hazard')\n              8 STORE_NAME               2 (__qualname__)\n             10 SETUP_ANNOTATIONS\n\n 43          12 LOAD_CONST               1 ('str')\n             14 LOAD_NAME                3 (__annotations__)\n             16 LOAD_CONST               2 ('path')\n             18 STORE_SUBSCR\n\n 44          22 LOAD_CONST               3 ('int')\n             24 LOAD_NAME                3 (__annotations__)\n             26 LOAD_CONST               4 ('line')\n             28 STORE_SUBSCR\n\n 45          32 LOAD_CONST               1 ('str')\n             34 LOAD_NAME                3 (__annotations__)\n             36 LOAD_CONST               5 ('code')\n             38 STORE_SUBSCR\n\n 46          42 LOAD_CONST               1 ('str')\n             44 LOAD_NAME                3 (__annotations__)\n             46 LOAD_CONST               6 ('message')\n             48 STORE_SUBSCR\n             52 RETURN_CONST             7 (None)\n"
+    },
+    {
+      "qualname": "_repo_rel",
+      "name": "_repo_rel",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "root"
+      ],
+      "names": [
+        "resolve",
+        "relative_to",
+        "as_posix",
+        "ValueError"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 49           0 RESUME                   0\n\n 50           2 NOP\n\n 51           4 LOAD_FAST                0 (path)\n              6 LOAD_ATTR                1 (NULL|self + resolve)\n             26 CALL                     0\n             34 LOAD_ATTR                3 (NULL|self + relative_to)\n             54 LOAD_FAST                1 (root)\n             56 LOAD_ATTR                1 (NULL|self + resolve)\n             76 CALL                     0\n             84 CALL                     1\n             92 LOAD_ATTR                5 (NULL|self + as_posix)\n            112 CALL                     0\n            120 RETURN_VALUE\n        >>  122 PUSH_EXC_INFO\n\n 52         124 LOAD_GLOBAL              6 (ValueError)\n            134 CHECK_EXC_MATCH\n            136 POP_JUMP_IF_FALSE       19 (to 176)\n            138 POP_TOP\n\n 53         140 LOAD_FAST                0 (path)\n            142 LOAD_ATTR                5 (NULL|self + as_posix)\n            162 CALL                     0\n            170 SWAP                     2\n            172 POP_EXCEPT\n            174 RETURN_VALUE\n\n 52     >>  176 RERAISE                  0\n        >>  178 COPY                     3\n            180 POP_EXCEPT\n            182 RERAISE                  1\nExceptionTable:\n  4 to 118 -> 122 [0]\n  122 to 170 -> 178 [1] lasti\n  176 to 176 -> 178 [1] lasti\n"
+    },
+    {
+      "qualname": "_is_excluded",
+      "name": "_is_excluded",
+      "argcount": 3,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "root",
+        "excludes",
+        "rel",
+        "parts",
+        "item"
+      ],
+      "names": [
+        "_repo_rel",
+        "set",
+        "Path",
+        "parts",
+        "startswith",
+        "rstrip"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 56           0 RESUME                   0\n\n 57           2 LOAD_GLOBAL              1 (NULL + _repo_rel)\n             12 LOAD_FAST                0 (path)\n             14 LOAD_FAST                1 (root)\n             16 CALL                     2\n             24 STORE_FAST               3 (rel)\n\n 58          26 LOAD_GLOBAL              3 (NULL + set)\n             36 LOAD_GLOBAL              5 (NULL + Path)\n             46 LOAD_FAST                3 (rel)\n             48 CALL                     1\n             56 LOAD_ATTR                6 (parts)\n             76 CALL                     1\n             84 STORE_FAST               4 (parts)\n\n 59          86 LOAD_FAST                2 (excludes)\n             88 GET_ITER\n        >>   90 FOR_ITER                55 (to 204)\n             94 STORE_FAST               5 (item)\n\n 60          96 LOAD_CONST               1 ('/')\n             98 LOAD_FAST                5 (item)\n            100 CONTAINS_OP              0\n            102 POP_JUMP_IF_FALSE       43 (to 190)\n\n 61         104 LOAD_FAST                3 (rel)\n            106 LOAD_FAST                5 (item)\n            108 COMPARE_OP              40 (==)\n            112 POP_JUMP_IF_TRUE        36 (to 186)\n            114 LOAD_FAST                3 (rel)\n            116 LOAD_ATTR                9 (NULL|self + startswith)\n            136 LOAD_FAST                5 (item)\n            138 LOAD_ATTR               11 (NULL|self + rstrip)\n            158 LOAD_CONST               1 ('/')\n            160 CALL                     1\n            168 LOAD_CONST               1 ('/')\n            170 BINARY_OP                0 (+)\n            174 CALL                     1\n            182 POP_JUMP_IF_TRUE         1 (to 186)\n            184 JUMP_BACKWARD           48 (to 90)\n\n 62     >>  186 POP_TOP\n            188 RETURN_CONST             2 (True)\n\n 63     >>  190 LOAD_FAST                5 (item)\n            192 LOAD_FAST                4 (parts)\n            194 CONTAINS_OP              0\n            196 POP_JUMP_IF_TRUE         1 (to 200)\n            198 JUMP_BACKWARD           55 (to 90)\n\n 64     >>  200 POP_TOP\n            202 RETURN_CONST             2 (True)\n\n 59     >>  204 END_FOR\n\n 65         206 RETURN_CONST             3 (False)\n"
+    },
+    {
+      "qualname": "iter_scan_files",
+      "name": "iter_scan_files",
+      "argcount": 3,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "root",
+        "scan_paths",
+        "excludes",
+        "files",
+        "raw",
+        "start",
+        "candidates",
+        "p",
+        "candidate"
+      ],
+      "names": [
+        "exists",
+        "is_file",
+        "rglob",
+        "_is_excluded",
+        "suffix",
+        "lower",
+        "TEXT_SUFFIXES",
+        "append",
+        "sorted"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 68           0 RESUME                   0\n\n 73           2 BUILD_LIST               0\n              4 STORE_FAST               3 (files)\n\n 74           6 LOAD_FAST                1 (scan_paths)\n              8 GET_ITER\n        >>   10 FOR_ITER               162 (to 338)\n             14 STORE_FAST               4 (raw)\n\n 75          16 LOAD_FAST                0 (root)\n             18 LOAD_FAST                4 (raw)\n             20 BINARY_OP               11 (/)\n             24 STORE_FAST               5 (start)\n\n 76          26 LOAD_FAST                5 (start)\n             28 LOAD_ATTR                1 (NULL|self + exists)\n             48 CALL                     0\n             56 POP_JUMP_IF_TRUE         1 (to 60)\n\n 77          58 JUMP_BACKWARD           25 (to 10)\n\n 78     >>   60 LOAD_FAST                5 (start)\n             62 LOAD_ATTR                3 (NULL|self + is_file)\n             82 CALL                     0\n             90 POP_JUMP_IF_FALSE        4 (to 100)\n\n 79          92 LOAD_FAST                5 (start)\n             94 BUILD_LIST               1\n             96 STORE_FAST               6 (candidates)\n             98 JUMP_FORWARD            47 (to 194)\n\n 81     >>  100 LOAD_FAST                5 (start)\n            102 LOAD_ATTR                5 (NULL|self + rglob)\n            122 LOAD_CONST               1 ('*')\n            124 CALL                     1\n            132 GET_ITER\n            134 LOAD_FAST_AND_CLEAR      7 (p)\n            136 SWAP                     2\n            138 BUILD_LIST               0\n            140 SWAP                     2\n        >>  142 FOR_ITER                21 (to 188)\n            146 STORE_FAST               7 (p)\n            148 LOAD_FAST                7 (p)\n            150 LOAD_ATTR                3 (NULL|self + is_file)\n            170 CALL                     0\n            178 POP_JUMP_IF_TRUE         1 (to 182)\n            180 JUMP_BACKWARD           20 (to 142)\n        >>  182 LOAD_FAST                7 (p)\n            184 LIST_APPEND              2\n            186 JUMP_BACKWARD           23 (to 142)\n        >>  188 END_FOR\n            190 STORE_FAST               6 (candidates)\n            192 STORE_FAST               7 (p)\n\n 82     >>  194 LOAD_FAST                6 (candidates)\n            196 GET_ITER\n        >>  198 FOR_ITER                66 (to 334)\n            202 STORE_FAST               8 (candidate)\n\n 83         204 LOAD_GLOBAL              7 (NULL + _is_excluded)\n            214 LOAD_FAST                8 (candidate)\n            216 LOAD_FAST                0 (root)\n            218 LOAD_FAST                2 (excludes)\n            220 CALL                     3\n            228 POP_JUMP_IF_FALSE        1 (to 232)\n\n 84         230 JUMP_BACKWARD           17 (to 198)\n\n 85     >>  232 LOAD_FAST                8 (candidate)\n            234 LOAD_ATTR                8 (suffix)\n            254 LOAD_ATTR               11 (NULL|self + lower)\n            274 CALL                     0\n            282 LOAD_GLOBAL             12 (TEXT_SUFFIXES)\n            292 CONTAINS_OP              0\n            294 POP_JUMP_IF_TRUE         1 (to 298)\n            296 JUMP_BACKWARD           50 (to 198)\n\n 86     >>  298 LOAD_FAST                3 (files)\n            300 LOAD_ATTR               15 (NULL|self + append)\n            320 LOAD_FAST                8 (candidate)\n            322 CALL                     1\n            330 POP_TOP\n            332 JUMP_BACKWARD           68 (to 198)\n\n 82     >>  334 END_FOR\n            336 JUMP_BACKWARD          164 (to 10)\n\n 74     >>  338 END_FOR\n\n 87         340 LOAD_GLOBAL             17 (NULL + sorted)\n            350 LOAD_FAST                3 (files)\n            352 CALL                     1\n            360 RETURN_VALUE\n        >>  362 SWAP                     2\n            364 POP_TOP\n\n 81         366 SWAP                     2\n            368 STORE_FAST               7 (p)\n            370 RERAISE                  0\nExceptionTable:\n  138 to 178 -> 362 [3]\n  182 to 188 -> 362 [3]\n"
+    },
+    {
+      "qualname": "strip_heredoc_bodies",
+      "name": "strip_heredoc_bodies",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "text",
+        "out",
+        "stop_tag",
+        "lineno",
+        "line",
+        "match"
+      ],
+      "names": [
+        "enumerate",
+        "splitlines",
+        "strip",
+        "append",
+        "_HEREDOC_START_RE",
+        "search",
+        "group"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Return ``(original_lineno, line)`` pairs excluding heredoc bodies.",
+      "dis": " 93           0 RESUME                   0\n\n 95           2 BUILD_LIST               0\n              4 STORE_FAST               1 (out)\n\n 96           6 LOAD_CONST               1 (None)\n              8 STORE_FAST               2 (stop_tag)\n\n 97          10 LOAD_GLOBAL              1 (NULL + enumerate)\n             20 LOAD_FAST                0 (text)\n             22 LOAD_ATTR                3 (NULL|self + splitlines)\n             42 CALL                     0\n             50 LOAD_CONST               2 (1)\n             52 KW_NAMES                 3 (('start',))\n             54 CALL                     2\n             62 GET_ITER\n        >>   64 FOR_ITER                89 (to 246)\n             68 UNPACK_SEQUENCE          2\n             72 STORE_FAST               3 (lineno)\n             74 STORE_FAST               4 (line)\n\n 98          76 LOAD_FAST                2 (stop_tag)\n             78 POP_JUMP_IF_NONE        22 (to 124)\n\n 99          80 LOAD_FAST                4 (line)\n             82 LOAD_ATTR                5 (NULL|self + strip)\n            102 CALL                     0\n            110 LOAD_FAST                2 (stop_tag)\n            112 COMPARE_OP              40 (==)\n            116 POP_JUMP_IF_FALSE        2 (to 122)\n\n100         118 LOAD_CONST               1 (None)\n            120 STORE_FAST               2 (stop_tag)\n\n101     >>  122 JUMP_BACKWARD           30 (to 64)\n\n102     >>  124 LOAD_FAST                1 (out)\n            126 LOAD_ATTR                7 (NULL|self + append)\n            146 LOAD_FAST                3 (lineno)\n            148 LOAD_FAST                4 (line)\n            150 BUILD_TUPLE              2\n            152 CALL                     1\n            160 POP_TOP\n\n103         162 LOAD_GLOBAL              8 (_HEREDOC_START_RE)\n            172 LOAD_ATTR               11 (NULL|self + search)\n            192 LOAD_FAST                4 (line)\n            194 CALL                     1\n            202 STORE_FAST               5 (match)\n\n104         204 LOAD_FAST                5 (match)\n            206 POP_JUMP_IF_TRUE         1 (to 210)\n            208 JUMP_BACKWARD           73 (to 64)\n\n105     >>  210 LOAD_FAST                5 (match)\n            212 LOAD_ATTR               13 (NULL|self + group)\n            232 LOAD_CONST               4 ('tag')\n            234 CALL                     1\n            242 STORE_FAST               2 (stop_tag)\n            244 JUMP_BACKWARD           91 (to 64)\n\n 97     >>  246 END_FOR\n\n106         248 LOAD_FAST                1 (out)\n            250 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_logical_commands",
+      "name": "_logical_commands",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "numbered_lines",
+        "commands",
+        "current_lineno",
+        "current",
+        "lineno",
+        "line",
+        "stripped"
+      ],
+      "names": [
+        "rstrip",
+        "endswith",
+        "append",
+        "join"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "109           0 RESUME                   0\n\n110           2 BUILD_LIST               0\n              4 STORE_FAST               1 (commands)\n\n111           6 LOAD_CONST               0 (None)\n              8 STORE_FAST               2 (current_lineno)\n\n112          10 BUILD_LIST               0\n             12 STORE_FAST               3 (current)\n\n113          14 LOAD_FAST                0 (numbered_lines)\n             16 GET_ITER\n        >>   18 FOR_ITER               118 (to 258)\n             22 UNPACK_SEQUENCE          2\n             26 STORE_FAST               4 (lineno)\n             28 STORE_FAST               5 (line)\n\n114          30 LOAD_FAST                5 (line)\n             32 LOAD_ATTR                1 (NULL|self + rstrip)\n             52 CALL                     0\n             60 STORE_FAST               6 (stripped)\n\n115          62 LOAD_FAST                2 (current_lineno)\n             64 POP_JUMP_IF_NOT_NONE     2 (to 70)\n\n116          66 LOAD_FAST                4 (lineno)\n             68 STORE_FAST               2 (current_lineno)\n\n117     >>   70 LOAD_FAST                6 (stripped)\n             72 LOAD_ATTR                3 (NULL|self + endswith)\n             92 LOAD_CONST               1 ('\\\\')\n             94 CALL                     1\n            102 POP_JUMP_IF_FALSE       21 (to 146)\n\n118         104 LOAD_FAST                3 (current)\n            106 LOAD_ATTR                5 (NULL|self + append)\n            126 LOAD_FAST                6 (stripped)\n            128 LOAD_CONST               0 (None)\n            130 LOAD_CONST               2 (-1)\n            132 BINARY_SLICE\n            134 CALL                     1\n            142 POP_TOP\n\n119         144 JUMP_BACKWARD           64 (to 18)\n\n120     >>  146 LOAD_FAST                3 (current)\n            148 LOAD_ATTR                5 (NULL|self + append)\n            168 LOAD_FAST                6 (stripped)\n            170 CALL                     1\n            178 POP_TOP\n\n121         180 LOAD_FAST                1 (commands)\n            182 LOAD_ATTR                5 (NULL|self + append)\n            202 LOAD_FAST                2 (current_lineno)\n            204 LOAD_CONST               3 (' ')\n            206 LOAD_ATTR                7 (NULL|self + join)\n            226 LOAD_FAST                3 (current)\n            228 CALL                     1\n            236 BUILD_TUPLE              2\n            238 CALL                     1\n            246 POP_TOP\n\n122         248 BUILD_LIST               0\n            250 STORE_FAST               3 (current)\n\n123         252 LOAD_CONST               0 (None)\n            254 STORE_FAST               2 (current_lineno)\n            256 JUMP_BACKWARD          120 (to 18)\n\n113     >>  258 END_FOR\n\n124         260 LOAD_FAST                3 (current)\n            262 POP_JUMP_IF_FALSE       44 (to 352)\n\n125         264 LOAD_FAST                1 (commands)\n            266 LOAD_ATTR                5 (NULL|self + append)\n            286 LOAD_FAST                2 (current_lineno)\n            288 COPY                     1\n            290 POP_JUMP_IF_TRUE         8 (to 308)\n            292 POP_TOP\n            294 LOAD_FAST                0 (numbered_lines)\n            296 LOAD_CONST               2 (-1)\n            298 BINARY_SUBSCR\n            302 LOAD_CONST               4 (0)\n            304 BINARY_SUBSCR\n        >>  308 LOAD_CONST               3 (' ')\n            310 LOAD_ATTR                7 (NULL|self + join)\n            330 LOAD_FAST                3 (current)\n            332 CALL                     1\n            340 BUILD_TUPLE              2\n            342 CALL                     1\n            350 POP_TOP\n\n126     >>  352 LOAD_FAST                1 (commands)\n            354 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_find_printf_is_remote_linux_context",
+      "name": "_find_printf_is_remote_linux_context",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "line"
+      ],
+      "names": [
+        "lower"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "129           0 RESUME                   0\n\n131           2 LOAD_CONST               1 ('/workspace/')\n              4 LOAD_FAST                0 (line)\n              6 CONTAINS_OP              0\n              8 COPY                     1\n             10 POP_JUMP_IF_TRUE        42 (to 96)\n             12 POP_TOP\n\n132          14 LOAD_CONST               2 ('root@')\n             16 LOAD_FAST                0 (line)\n             18 CONTAINS_OP              0\n\n131          20 COPY                     1\n             22 POP_JUMP_IF_TRUE        36 (to 96)\n             24 POP_TOP\n\n133          26 LOAD_CONST               3 ('ssh ')\n             28 LOAD_FAST                0 (line)\n             30 CONTAINS_OP              0\n\n131          32 COPY                     1\n             34 POP_JUMP_IF_TRUE        30 (to 96)\n             36 POP_TOP\n\n134          38 LOAD_CONST               4 ('SSH_BASE')\n             40 LOAD_FAST                0 (line)\n             42 CONTAINS_OP              0\n\n131          44 COPY                     1\n             46 POP_JUMP_IF_TRUE        24 (to 96)\n             48 POP_TOP\n\n135          50 LOAD_CONST               5 ('SSH_OPTS')\n             52 LOAD_FAST                0 (line)\n             54 CONTAINS_OP              0\n\n131          56 COPY                     1\n             58 POP_JUMP_IF_TRUE        18 (to 96)\n             60 POP_TOP\n\n136          62 LOAD_CONST               6 ('remote')\n             64 LOAD_FAST                0 (line)\n             66 LOAD_ATTR                1 (NULL|self + lower)\n             86 CALL                     0\n             94 CONTAINS_OP              0\n\n130     >>   96 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "scan_text",
+      "name": "scan_text",
+      "argcount": 2,
+      "kwonlyargcount": 1,
+      "varnames": [
+        "path",
+        "text",
+        "root",
+        "rel",
+        "hazards",
+        "numbered",
+        "lineno",
+        "command",
+        "flag",
+        "reason",
+        "line"
+      ],
+      "names": [
+        "_repo_rel",
+        "strip_heredoc_bodies",
+        "_logical_commands",
+        "LAUNCHER_STALE_FLAGS",
+        "items",
+        "re",
+        "search",
+        "escape",
+        "append",
+        "Hazard",
+        "_find_printf_is_remote_linux_context",
+        "suffix",
+        "lower"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "140           0 RESUME                   0\n\n141           2 LOAD_GLOBAL              1 (NULL + _repo_rel)\n             12 LOAD_FAST                0 (path)\n             14 LOAD_FAST                2 (root)\n             16 CALL                     2\n             24 STORE_FAST               3 (rel)\n\n142          26 BUILD_LIST               0\n             28 STORE_FAST               4 (hazards)\n\n143          30 LOAD_GLOBAL              3 (NULL + strip_heredoc_bodies)\n             40 LOAD_FAST                1 (text)\n             42 CALL                     1\n             50 STORE_FAST               5 (numbered)\n\n144          52 LOAD_GLOBAL              5 (NULL + _logical_commands)\n             62 LOAD_FAST                5 (numbered)\n             64 CALL                     1\n             72 GET_ITER\n        >>   74 FOR_ITER               168 (to 414)\n             78 UNPACK_SEQUENCE          2\n             82 STORE_FAST               6 (lineno)\n             84 STORE_FAST               7 (command)\n\n145          86 LOAD_CONST               1 ('launch_lightning_batch_job.py')\n             88 LOAD_FAST                7 (command)\n             90 CONTAINS_OP              0\n             92 POP_JUMP_IF_FALSE      108 (to 310)\n\n146          94 LOAD_GLOBAL              6 (LAUNCHER_STALE_FLAGS)\n            104 LOAD_ATTR                9 (NULL|self + items)\n            124 CALL                     0\n            132 GET_ITER\n        >>  134 FOR_ITER                85 (to 308)\n            138 UNPACK_SEQUENCE          2\n            142 STORE_FAST               8 (flag)\n            144 STORE_FAST               9 (reason)\n\n147         146 LOAD_GLOBAL             11 (NULL + re)\n            156 LOAD_ATTR               12 (search)\n            176 LOAD_CONST               2 ('(?<!\\\\S)')\n            178 LOAD_GLOBAL             11 (NULL + re)\n            188 LOAD_ATTR               14 (escape)\n            208 LOAD_FAST                8 (flag)\n            210 CALL                     1\n            218 FORMAT_VALUE             0\n            220 LOAD_CONST               3 ('(?![A-Za-z0-9_-])')\n            222 BUILD_STRING             3\n            224 LOAD_FAST                7 (command)\n            226 CALL                     2\n            234 POP_JUMP_IF_TRUE         1 (to 238)\n            236 JUMP_BACKWARD           52 (to 134)\n\n148     >>  238 LOAD_FAST                4 (hazards)\n            240 LOAD_ATTR               17 (NULL|self + append)\n\n149         260 LOAD_GLOBAL             19 (NULL + Hazard)\n\n150         270 LOAD_FAST                3 (rel)\n\n151         272 LOAD_FAST                6 (lineno)\n\n152         274 LOAD_CONST               4 ('stale_lightning_launcher_flag')\n\n153         276 LOAD_FAST                8 (flag)\n            278 FORMAT_VALUE             0\n            280 LOAD_CONST               5 (' passed to launch_lightning_batch_job.py; ')\n            282 LOAD_FAST                9 (reason)\n            284 FORMAT_VALUE             0\n            286 BUILD_STRING             3\n\n149         288 CALL                     4\n\n148         296 CALL                     1\n            304 POP_TOP\n            306 JUMP_BACKWARD           87 (to 134)\n\n146     >>  308 END_FOR\n\n156     >>  310 LOAD_CONST               6 ('find ')\n            312 LOAD_FAST                7 (command)\n            314 CONTAINS_OP              0\n            316 POP_JUMP_IF_TRUE         1 (to 320)\n            318 JUMP_BACKWARD          123 (to 74)\n        >>  320 LOAD_CONST               7 ('-printf')\n            322 LOAD_FAST                7 (command)\n            324 CONTAINS_OP              0\n            326 POP_JUMP_IF_TRUE         1 (to 330)\n            328 JUMP_BACKWARD          128 (to 74)\n        >>  330 LOAD_GLOBAL             21 (NULL + _find_printf_is_remote_linux_context)\n            340 LOAD_FAST                7 (command)\n            342 CALL                     1\n            350 POP_JUMP_IF_FALSE        1 (to 354)\n            352 JUMP_BACKWARD          140 (to 74)\n\n157     >>  354 LOAD_FAST                4 (hazards)\n            356 LOAD_ATTR               17 (NULL|self + append)\n\n158         376 LOAD_GLOBAL             19 (NULL + Hazard)\n\n159         386 LOAD_FAST                3 (rel)\n\n160         388 LOAD_FAST                6 (lineno)\n\n161         390 LOAD_CONST               8 ('macos_find_printf')\n\n162         392 LOAD_CONST               9 ('GNU find -printf is not available on macOS; use Python pathlib/stat or a POSIX/BSD-safe form for local commands')\n\n158         394 CALL                     4\n\n157         402 CALL                     1\n            410 POP_TOP\n            412 JUMP_BACKWARD          170 (to 74)\n\n144     >>  414 END_FOR\n\n165         416 LOAD_FAST                0 (path)\n            418 LOAD_ATTR               22 (suffix)\n            438 LOAD_ATTR               25 (NULL|self + lower)\n            458 CALL                     0\n            466 LOAD_CONST              10 (frozenset({'.txt', '.zsh', '.rst', '.md'}))\n            468 CONTAINS_OP              0\n            470 POP_JUMP_IF_FALSE      106 (to 684)\n\n166         472 LOAD_FAST                5 (numbered)\n            474 GET_ITER\n        >>  476 FOR_ITER               101 (to 682)\n            480 UNPACK_SEQUENCE          2\n            484 STORE_FAST               6 (lineno)\n            486 STORE_FAST              10 (line)\n\n167         488 LOAD_GLOBAL             11 (NULL + re)\n            498 LOAD_ATTR               12 (search)\n            518 LOAD_CONST              11 ('(^|[;&|]\\\\s*)(local\\\\s+)?path=')\n            520 LOAD_FAST               10 (line)\n            522 CALL                     2\n            530 POP_JUMP_IF_TRUE        45 (to 622)\n            532 LOAD_GLOBAL             11 (NULL + re)\n            542 LOAD_ATTR               12 (search)\n            562 LOAD_CONST              12 ('\\\\bfor\\\\s+path\\\\s+in\\\\b')\n            564 LOAD_FAST               10 (line)\n            566 CALL                     2\n            574 POP_JUMP_IF_TRUE        23 (to 622)\n            576 LOAD_GLOBAL             11 (NULL + re)\n            586 LOAD_ATTR               12 (search)\n            606 LOAD_CONST              13 ('\\\\bread\\\\b[^\\\\n#]*\\\\bpath\\\\b')\n            608 LOAD_FAST               10 (line)\n            610 CALL                     2\n            618 POP_JUMP_IF_TRUE         1 (to 622)\n            620 JUMP_BACKWARD           73 (to 476)\n\n168     >>  622 LOAD_FAST                4 (hazards)\n            624 LOAD_ATTR               17 (NULL|self + append)\n\n169         644 LOAD_GLOBAL             19 (NULL + Hazard)\n\n170         654 LOAD_FAST                3 (rel)\n\n171         656 LOAD_FAST                6 (lineno)\n\n172         658 LOAD_CONST              14 ('zsh_path_special_variable')\n\n173         660 LOAD_CONST              15 (\"avoid shell variable name 'path' in zsh-facing snippets; it mutates command lookup\")\n\n169         662 CALL                     4\n\n168         670 CALL                     1\n            678 POP_TOP\n            680 JUMP_BACKWARD          103 (to 476)\n\n166     >>  682 END_FOR\n\n176     >>  684 LOAD_FAST                4 (hazards)\n            686 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "scan_paths",
+      "name": "scan_paths",
+      "argcount": 3,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "root",
+        "scan_paths",
+        "excludes",
+        "hazards",
+        "file_path",
+        "text"
+      ],
+      "names": [
+        "iter_scan_files",
+        "read_text",
+        "OSError",
+        "extend",
+        "scan_text"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "179           0 RESUME                   0\n\n184           2 BUILD_LIST               0\n              4 STORE_FAST               3 (hazards)\n\n185           6 LOAD_GLOBAL              1 (NULL + iter_scan_files)\n             16 LOAD_FAST                0 (root)\n             18 LOAD_FAST                1 (scan_paths)\n             20 LOAD_FAST                2 (excludes)\n             22 KW_NAMES                 1 (('scan_paths', 'excludes'))\n             24 CALL                     3\n             32 GET_ITER\n        >>   34 FOR_ITER                51 (to 140)\n             38 STORE_FAST               4 (file_path)\n\n186          40 NOP\n\n187          42 LOAD_FAST                4 (file_path)\n             44 LOAD_ATTR                3 (NULL|self + read_text)\n             64 LOAD_CONST               2 ('utf-8')\n             66 LOAD_CONST               3 ('ignore')\n             68 KW_NAMES                 4 (('encoding', 'errors'))\n             70 CALL                     2\n             78 STORE_FAST               5 (text)\n\n190          80 LOAD_FAST                3 (hazards)\n             82 LOAD_ATTR                7 (NULL|self + extend)\n            102 LOAD_GLOBAL              9 (NULL + scan_text)\n            112 LOAD_FAST                4 (file_path)\n            114 LOAD_FAST                5 (text)\n            116 LOAD_FAST                0 (root)\n            118 KW_NAMES                 5 (('root',))\n            120 CALL                     3\n            128 CALL                     1\n            136 POP_TOP\n            138 JUMP_BACKWARD           53 (to 34)\n\n185     >>  140 END_FOR\n\n191         142 LOAD_FAST                3 (hazards)\n            144 RETURN_VALUE\n        >>  146 PUSH_EXC_INFO\n\n188         148 LOAD_GLOBAL              4 (OSError)\n            158 CHECK_EXC_MATCH\n            160 POP_JUMP_IF_FALSE        3 (to 168)\n            162 POP_TOP\n\n189         164 POP_EXCEPT\n            166 JUMP_BACKWARD           67 (to 34)\n\n188     >>  168 RERAISE                  0\n        >>  170 COPY                     3\n            172 POP_EXCEPT\n            174 RERAISE                  1\nExceptionTable:\n  42 to 78 -> 146 [1]\n  146 to 162 -> 170 [2] lasti\n  168 to 168 -> 170 [2] lasti\n"
+    },
+    {
+      "qualname": "build_parser",
+      "name": "build_parser",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "parser"
+      ],
+      "names": [
+        "argparse",
+        "ArgumentParser",
+        "__doc__",
+        "add_argument",
+        "Path",
+        "cwd"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "194           0 RESUME                   0\n\n195           2 LOAD_GLOBAL              1 (NULL + argparse)\n             12 LOAD_ATTR                2 (ArgumentParser)\n             32 LOAD_GLOBAL              4 (__doc__)\n             42 KW_NAMES                 1 (('description',))\n             44 CALL                     1\n             52 STORE_FAST               0 (parser)\n\n196          54 LOAD_FAST                0 (parser)\n             56 LOAD_ATTR                7 (NULL|self + add_argument)\n             76 LOAD_CONST               2 ('--repo-root')\n             78 LOAD_GLOBAL              8 (Path)\n             88 LOAD_GLOBAL              9 (NULL + Path)\n             98 LOAD_ATTR               10 (cwd)\n            118 CALL                     0\n            126 KW_NAMES                 3 (('type', 'default'))\n            128 CALL                     3\n            136 POP_TOP\n\n197         138 LOAD_FAST                0 (parser)\n            140 LOAD_ATTR                7 (NULL|self + add_argument)\n            160 LOAD_CONST               4 ('--scan-path')\n            162 LOAD_CONST               5 ('append')\n            164 BUILD_LIST               0\n            166 KW_NAMES                 6 (('action', 'default'))\n            168 CALL                     3\n            176 POP_TOP\n\n198         178 LOAD_FAST                0 (parser)\n            180 LOAD_ATTR                7 (NULL|self + add_argument)\n            200 LOAD_CONST               7 ('--json-out')\n            202 LOAD_GLOBAL              8 (Path)\n            212 KW_NAMES                 8 (('type',))\n            214 CALL                     2\n            222 POP_TOP\n\n199         224 LOAD_FAST                0 (parser)\n            226 LOAD_ATTR                7 (NULL|self + add_argument)\n            246 LOAD_CONST               9 ('--strict')\n            248 LOAD_CONST              10 ('store_true')\n            250 KW_NAMES                11 (('action',))\n            252 CALL                     2\n            260 POP_TOP\n\n200         262 LOAD_FAST                0 (parser)\n            264 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "main",
+      "name": "main",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "argv",
+        "args",
+        "root",
+        "scan_roots",
+        "hazards",
+        "item",
+        "payload",
+        "text"
+      ],
+      "names": [
+        "build_parser",
+        "parse_args",
+        "repo_root",
+        "resolve",
+        "scan_path",
+        "tuple",
+        "DEFAULT_SCAN_PATHS",
+        "scan_paths",
+        "str",
+        "list",
+        "len",
+        "asdict",
+        "json",
+        "dumps",
+        "json_out",
+        "parent",
+        "mkdir",
+        "write_text",
+        "sys",
+        "stdout",
+        "write",
+        "strict"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "203           0 RESUME                   0\n\n204           2 LOAD_GLOBAL              1 (NULL + build_parser)\n             12 CALL                     0\n             20 LOAD_ATTR                3 (NULL|self + parse_args)\n             40 LOAD_FAST                0 (argv)\n             42 CALL                     1\n             50 STORE_FAST               1 (args)\n\n205          52 LOAD_FAST                1 (args)\n             54 LOAD_ATTR                4 (repo_root)\n             74 LOAD_ATTR                7 (NULL|self + resolve)\n             94 CALL                     0\n            102 STORE_FAST               2 (root)\n\n206         104 LOAD_FAST                1 (args)\n            106 LOAD_ATTR                8 (scan_path)\n            126 POP_JUMP_IF_FALSE       21 (to 170)\n            128 LOAD_GLOBAL             11 (NULL + tuple)\n            138 LOAD_FAST                1 (args)\n            140 LOAD_ATTR                8 (scan_path)\n            160 CALL                     1\n            168 JUMP_FORWARD             5 (to 180)\n        >>  170 LOAD_GLOBAL             12 (DEFAULT_SCAN_PATHS)\n        >>  180 STORE_FAST               3 (scan_roots)\n\n207         182 LOAD_GLOBAL             15 (NULL + scan_paths)\n            192 LOAD_FAST                2 (root)\n            194 LOAD_FAST                3 (scan_roots)\n            196 KW_NAMES                 1 (('scan_paths',))\n            198 CALL                     2\n            206 STORE_FAST               4 (hazards)\n\n209         208 LOAD_CONST               2 (1)\n\n210         210 LOAD_CONST               3 ('tools/check_dispatch_cli_shell_hazards.py')\n\n211         212 LOAD_GLOBAL             17 (NULL + str)\n            222 LOAD_FAST                2 (root)\n            224 CALL                     1\n\n212         232 LOAD_GLOBAL             19 (NULL + list)\n            242 LOAD_FAST                3 (scan_roots)\n            244 CALL                     1\n\n213         252 LOAD_GLOBAL             21 (NULL + len)\n            262 LOAD_FAST                4 (hazards)\n            264 CALL                     1\n\n214         272 LOAD_FAST                4 (hazards)\n            274 GET_ITER\n            276 LOAD_FAST_AND_CLEAR      5 (item)\n            278 SWAP                     2\n            280 BUILD_LIST               0\n            282 SWAP                     2\n        >>  284 FOR_ITER                13 (to 314)\n            288 STORE_FAST               5 (item)\n            290 LOAD_GLOBAL             23 (NULL + asdict)\n            300 LOAD_FAST                5 (item)\n            302 CALL                     1\n            310 LIST_APPEND              2\n            312 JUMP_BACKWARD           15 (to 284)\n        >>  314 END_FOR\n            316 SWAP                     2\n            318 STORE_FAST               5 (item)\n\n208         320 LOAD_CONST               4 (('schema_version', 'tool', 'repo_root', 'scan_paths', 'hazard_count', 'hazards'))\n            322 BUILD_CONST_KEY_MAP      6\n            324 STORE_FAST               6 (payload)\n\n216         326 LOAD_GLOBAL             25 (NULL + json)\n            336 LOAD_ATTR               26 (dumps)\n            356 LOAD_FAST                6 (payload)\n            358 LOAD_CONST               5 (2)\n            360 LOAD_CONST               6 (True)\n            362 KW_NAMES                 7 (('indent', 'sort_keys'))\n            364 CALL                     3\n            372 LOAD_CONST               8 ('\\n')\n            374 BINARY_OP                0 (+)\n            378 STORE_FAST               7 (text)\n\n217         380 LOAD_FAST                1 (args)\n            382 LOAD_ATTR               28 (json_out)\n            402 POP_JUMP_IF_FALSE       69 (to 542)\n\n218         404 LOAD_FAST                1 (args)\n            406 LOAD_ATTR               28 (json_out)\n            426 LOAD_ATTR               30 (parent)\n            446 LOAD_ATTR               33 (NULL|self + mkdir)\n            466 LOAD_CONST               6 (True)\n            468 LOAD_CONST               6 (True)\n            470 KW_NAMES                 9 (('parents', 'exist_ok'))\n            472 CALL                     2\n            480 POP_TOP\n\n219         482 LOAD_FAST                1 (args)\n            484 LOAD_ATTR               28 (json_out)\n            504 LOAD_ATTR               35 (NULL|self + write_text)\n            524 LOAD_FAST                7 (text)\n            526 LOAD_CONST              10 ('utf-8')\n            528 KW_NAMES                11 (('encoding',))\n            530 CALL                     2\n            538 POP_TOP\n            540 JUMP_FORWARD            31 (to 604)\n\n221     >>  542 LOAD_GLOBAL             36 (sys)\n            552 LOAD_ATTR               38 (stdout)\n            572 LOAD_ATTR               41 (NULL|self + write)\n            592 LOAD_FAST                7 (text)\n            594 CALL                     1\n            602 POP_TOP\n\n222     >>  604 LOAD_FAST                1 (args)\n            606 LOAD_ATTR               42 (strict)\n            626 POP_JUMP_IF_FALSE        3 (to 634)\n            628 LOAD_FAST                4 (hazards)\n            630 POP_JUMP_IF_FALSE        1 (to 634)\n\n223         632 RETURN_CONST             5 (2)\n\n224     >>  634 RETURN_CONST            12 (0)\n        >>  636 SWAP                     2\n            638 POP_TOP\n\n214         640 SWAP                     2\n            642 STORE_FAST               5 (item)\n            644 RERAISE                  0\nExceptionTable:\n  280 to 314 -> 636 [7]\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  2           2 LOAD_CONST               0 (\"Scan for dispatch CLI and shell portability hazards.\\n\\nThis is a lightweight guard for bug classes that cost wall-clock during the\\nMay 2026 sprint:\\n\\n* passing adjudicator-only flags to ``launch_lightning_batch_job.py``;\\n* using zsh's special ``path`` variable name in shell snippets;\\n* using GNU ``find -printf`` in local/macOS-facing snippets.\\n\\nThe scanner is intentionally conservative. Historical ledgers and result\\nartifacts are excluded by default, and Python heredocs inside shell scripts are\\nignored so legitimate Python variables named ``path`` are not flagged.\\n\")\n              4 STORE_NAME               0 (__doc__)\n\n 15           6 LOAD_CONST               1 (0)\n              8 LOAD_CONST               2 (('annotations',))\n             10 IMPORT_NAME              1 (__future__)\n             12 IMPORT_FROM              2 (annotations)\n             14 STORE_NAME               2 (annotations)\n             16 POP_TOP\n\n 17          18 LOAD_CONST               1 (0)\n             20 LOAD_CONST               3 (None)\n             22 IMPORT_NAME              3 (argparse)\n             24 STORE_NAME               3 (argparse)\n\n 18          26 LOAD_CONST               1 (0)\n             28 LOAD_CONST               3 (None)\n             30 IMPORT_NAME              4 (json)\n             32 STORE_NAME               4 (json)\n\n 19          34 LOAD_CONST               1 (0)\n             36 LOAD_CONST               3 (None)\n             38 IMPORT_NAME              5 (re)\n             40 STORE_NAME               5 (re)\n\n 20          42 LOAD_CONST               1 (0)\n             44 LOAD_CONST               3 (None)\n             46 IMPORT_NAME              6 (sys)\n             48 STORE_NAME               6 (sys)\n\n 21          50 LOAD_CONST               1 (0)\n             52 LOAD_CONST               4 (('asdict', 'dataclass'))\n             54 IMPORT_NAME              7 (dataclasses)\n             56 IMPORT_FROM              8 (asdict)\n             58 STORE_NAME               8 (asdict)\n             60 IMPORT_FROM              9 (dataclass)\n             62 STORE_NAME               9 (dataclass)\n             64 POP_TOP\n\n 22          66 LOAD_CONST               1 (0)\n             68 LOAD_CONST               5 (('Path',))\n             70 IMPORT_NAME             10 (pathlib)\n             72 IMPORT_FROM             11 (Path)\n             74 STORE_NAME              11 (Path)\n             76 POP_TOP\n\n 25          78 LOAD_CONST               6 (('scripts', 'docs', 'reports'))\n             80 STORE_NAME              12 (DEFAULT_SCAN_PATHS)\n\n 26          82 LOAD_CONST               7 (('.git', '.omx', '__pycache__', 'experiments/results', 'reports/raw', 'runtime-rs/target'))\n             84 STORE_NAME              13 (DEFAULT_EXCLUDES)\n\n 34          86 BUILD_SET                0\n             88 LOAD_CONST               8 (frozenset({'.rst', '.sh', '.py', '.zsh', '.bash', '.md', '.txt'}))\n             90 SET_UPDATE               1\n             92 STORE_NAME              14 (TEXT_SUFFIXES)\n\n 36          94 LOAD_CONST               9 ('adjudicator-only; use launch_lightning_batch_job.py exact-eval --adjudicate instead')\n\n 37          96 LOAD_CONST               9 ('adjudicator-only; use launch_lightning_batch_job.py exact-eval --adjudicate instead')\n\n 35          98 LOAD_CONST              10 (('--required-device', '--required-samples'))\n            100 BUILD_CONST_KEY_MAP      2\n            102 STORE_NAME              15 (LAUNCHER_STALE_FLAGS)\n\n 41         104 PUSH_NULL\n            106 LOAD_NAME                9 (dataclass)\n            108 LOAD_CONST              11 (True)\n            110 KW_NAMES                12 (('frozen',))\n            112 CALL                     1\n\n 42         120 PUSH_NULL\n            122 LOAD_BUILD_CLASS\n            124 LOAD_CONST              13 (<code object Hazard at 0x1053e4d30, file \"tools/check_dispatch_cli_shell_hazards.py\", line 41>)\n            126 MAKE_FUNCTION            0\n            128 LOAD_CONST              14 ('Hazard')\n            130 CALL                     2\n\n 41         138 CALL                     0\n\n 42         146 STORE_NAME              16 (Hazard)\n\n 49         148 LOAD_CONST              27 (('path', 'Path', 'root', 'Path', 'return', 'str'))\n            150 LOAD_CONST              15 (<code object _repo_rel at 0x105294330, file \"tools/check_dispatch_cli_shell_hazards.py\", line 49>)\n            152 MAKE_FUNCTION            4 (annotations)\n            154 STORE_NAME              17 (_repo_rel)\n\n 56         156 LOAD_CONST              28 (('path', 'Path', 'root', 'Path', 'excludes', 'tuple[str, ...]', 'return', 'bool'))\n            158 LOAD_CONST              16 (<code object _is_excluded at 0x10532a5b0, file \"tools/check_dispatch_cli_shell_hazards.py\", line 56>)\n            160 MAKE_FUNCTION            4 (annotations)\n            162 STORE_NAME              18 (_is_excluded)\n\n 70         164 LOAD_NAME               12 (DEFAULT_SCAN_PATHS)\n\n 71         166 LOAD_NAME               13 (DEFAULT_EXCLUDES)\n\n 68         168 BUILD_TUPLE              2\n\n 69         170 NOP\n\n 68         172 NOP\n\n 70         174 NOP\n\n 68         176 NOP\n\n 71         178 NOP\n\n 68         180 NOP\n\n 72         182 NOP\n\n 68         184 LOAD_CONST              29 (('root', 'Path', 'scan_paths', 'tuple[str, ...]', 'excludes', 'tuple[str, ...]', 'return', 'list[Path]'))\n            186 LOAD_CONST              17 (<code object iter_scan_files at 0xbd1154000, file \"tools/check_dispatch_cli_shell_hazards.py\", line 68>)\n            188 MAKE_FUNCTION            5 (defaults, annotations)\n            190 STORE_NAME              19 (iter_scan_files)\n\n 90         192 PUSH_NULL\n            194 LOAD_NAME                5 (re)\n            196 LOAD_ATTR               40 (compile)\n            216 LOAD_CONST              18 ('<<-?\\\\s*[\\'\\\\\"]?(?P<tag>[A-Za-z_][A-Za-z0-9_]*)[\\'\\\\\"]?')\n            218 CALL                     1\n            226 STORE_NAME              21 (_HEREDOC_START_RE)\n\n 93         228 LOAD_CONST              30 (('text', 'str', 'return', 'list[tuple[int, str]]'))\n            230 LOAD_CONST              19 (<code object strip_heredoc_bodies at 0x1052d0ab0, file \"tools/check_dispatch_cli_shell_hazards.py\", line 93>)\n            232 MAKE_FUNCTION            4 (annotations)\n            234 STORE_NAME              22 (strip_heredoc_bodies)\n\n109         236 LOAD_CONST              31 (('numbered_lines', 'list[tuple[int, str]]', 'return', 'list[tuple[int, str]]'))\n            238 LOAD_CONST              20 (<code object _logical_commands at 0xbd1154280, file \"tools/check_dispatch_cli_shell_hazards.py\", line 109>)\n            240 MAKE_FUNCTION            4 (annotations)\n            242 STORE_NAME              23 (_logical_commands)\n\n129         244 LOAD_CONST              32 (('line', 'str', 'return', 'bool'))\n            246 LOAD_CONST              21 (<code object _find_printf_is_remote_linux_context at 0x1052de760, file \"tools/check_dispatch_cli_shell_hazards.py\", line 129>)\n            248 MAKE_FUNCTION            4 (annotations)\n            250 STORE_NAME              24 (_find_printf_is_remote_linux_context)\n\n140         252 LOAD_CONST              33 (('path', 'Path', 'text', 'str', 'root', 'Path', 'return', 'list[Hazard]'))\n            254 LOAD_CONST              22 (<code object scan_text at 0xbd109fb80, file \"tools/check_dispatch_cli_shell_hazards.py\", line 140>)\n            256 MAKE_FUNCTION            4 (annotations)\n            258 STORE_NAME              25 (scan_text)\n\n181         260 LOAD_NAME               12 (DEFAULT_SCAN_PATHS)\n\n182         262 LOAD_NAME               13 (DEFAULT_EXCLUDES)\n\n179         264 BUILD_TUPLE              2\n\n180         266 NOP\n\n179         268 NOP\n\n181         270 NOP\n\n179         272 NOP\n\n182         274 NOP\n\n179         276 NOP\n\n183         278 NOP\n\n179         280 LOAD_CONST              34 (('root', 'Path', 'scan_paths', 'tuple[str, ...]', 'excludes', 'tuple[str, ...]', 'return', 'list[Hazard]'))\n            282 LOAD_CONST              23 (<code object scan_paths at 0x10535da10, file \"tools/check_dispatch_cli_shell_hazards.py\", line 179>)\n            284 MAKE_FUNCTION            5 (defaults, annotations)\n            286 STORE_NAME              26 (scan_paths)\n\n194         288 LOAD_CONST              35 (('return', 'argparse.ArgumentParser'))\n            290 LOAD_CONST              24 (<code object build_parser at 0x105232d80, file \"tools/check_dispatch_cli_shell_hazards.py\", line 194>)\n            292 MAKE_FUNCTION            4 (annotations)\n            294 STORE_NAME              27 (build_parser)\n\n203         296 LOAD_CONST              36 ((None,))\n            298 LOAD_CONST              37 (('argv', 'list[str] | None', 'return', 'int'))\n            300 LOAD_CONST              25 (<code object main at 0xbd1150000, file \"tools/check_dispatch_cli_shell_hazards.py\", line 203>)\n            302 MAKE_FUNCTION            5 (defaults, annotations)\n            304 STORE_NAME              28 (main)\n\n227         306 LOAD_NAME               29 (__name__)\n            308 LOAD_CONST              26 ('__main__')\n            310 COMPARE_OP              40 (==)\n            314 POP_JUMP_IF_FALSE       13 (to 342)\n\n228         316 PUSH_NULL\n            318 LOAD_NAME               30 (SystemExit)\n            320 PUSH_NULL\n            322 LOAD_NAME               28 (main)\n            324 CALL                     0\n            332 CALL                     1\n            340 RAISE_VARARGS            1\n\n227     >>  342 RETURN_CONST             3 (None)\n"
+}

@@ -2472,7 +2472,7 @@ def main() -> int:
     comp.add_argument("--variance-noise-base-std", type=float, default=2.0)
     comp.add_argument("--variance-noise-kernel", type=int, default=8)
     comp.add_argument("--variance-noise-mode", type=str, default="variance",
-                      choices=["variance", "inverse_variance"])
+                      choices=["variance", "inverse_variance", "wavelet_db4"])
     # Yousfi #5: ScanNet-style spatial uncertainty maps
     comp.add_argument("--use-uncertainty-loss", action="store_true",
                       help="Yousfi #5: weight reconstruction loss by inverse SegNet "

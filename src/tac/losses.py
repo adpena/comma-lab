@@ -1033,8 +1033,17 @@ def segnet_uncertainty_weighted_loss(
     Returns:
         Scalar loss = inverse_entropy_weight-weighted L1 reconstruction.
     """
-    rx = _hwc_to_chw(rendered_frame_hwc.unsqueeze(1))[:, 0]  # (B, 3, H, W)
-    gx = _hwc_to_chw(gt_frame_hwc.unsqueeze(1))[:, 0]
+    def _frame_to_bchw(x: torch.Tensor, name: str) -> torch.Tensor:
+        if x.ndim != 4:
+            raise ValueError(f"{name} must be 4D BCHW or BHWC; got {tuple(x.shape)}")
+        if x.shape[1] == 3:
+            return x.contiguous()
+        if x.shape[-1] == 3:
+            return x.permute(0, 3, 1, 2).contiguous()
+        raise ValueError(f"{name} must have 3 RGB channels; got {tuple(x.shape)}")
+
+    rx = _frame_to_bchw(rendered_frame_hwc, "rendered_frame")
+    gx = _frame_to_bchw(gt_frame_hwc, "gt_frame")
     with torch.no_grad():
         gs_in = segnet.preprocess_input(gx.unsqueeze(1))
         gs_logits = segnet(gs_in)
@@ -1054,6 +1063,38 @@ def segnet_uncertainty_weighted_loss(
         weight = inv_ent.clamp_min(float(weight_floor))
     diff = (rx.float() - gx.float()).abs().mean(dim=1)  # (B, H, W) — mean over 3 RGB
     return (diff * weight).mean()
+
+
+def uniward_quant_noise_loss(
+    reconstructed: torch.Tensor,
+    target: torch.Tensor,
+    base_std: float = 2.0,
+    kernel_size: int = 8,
+    mode: str = "variance",
+) -> torch.Tensor:
+    """L2 reconstruction loss after UNIWARD-shaped quantization noise.
+
+    The noise field is generated from ``target.detach()`` so the proposal
+    field is a fixed scorer-aligned profile, while gradients still flow
+    through ``reconstructed``. Accepts either ``(B, 3, H, W)`` or
+    ``(B, H, W, 3)`` tensors.
+    """
+    from tac.fridrich import variance_weighted_noise
+
+    if reconstructed.ndim == 4 and reconstructed.shape[-1] == 3:
+        recon_chw = reconstructed.permute(0, 3, 1, 2).contiguous()
+        target_chw = target.permute(0, 3, 1, 2).contiguous()
+    else:
+        recon_chw = reconstructed
+        target_chw = target
+
+    noise = variance_weighted_noise(
+        target_chw.detach(),
+        base_std=base_std,
+        kernel_size=kernel_size,
+        mode=mode,
+    )
+    return F.mse_loss(recon_chw + noise, target_chw)
 
 
 def feature_matching_loss(

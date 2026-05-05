@@ -16,8 +16,10 @@ from tac.preflight import (
     _import_inside_try_handler,
     _is_resolvable_submodule,
     _module_top_level_names,
+    _scan_python_for_dead_objective_feature,
     _scan_python_for_dead_imports,
     _scan_python_for_dead_resolvers,
+    check_feature_flags_have_live_objective_effect,
     preflight_dead_resolvers,
 )
 
@@ -385,6 +387,81 @@ def test_segnet_uncertainty_weighted_loss_no_longer_dead_in_train_renderer() -> 
         f"segnet_uncertainty_weighted_loss should be defined in tac.losses "
         f"post-R5 but scanner flagged: {target}"
     )
+
+
+def test_variance_noise_flag_has_live_train_renderer_callsite() -> None:
+    """Guard the second-order dead-feature class: resolver exists, but the
+    feature is never applied in the training objective."""
+    repo_root = Path(__file__).resolve().parent.parent.parent.parent
+    script = repo_root / "src" / "tac" / "experiments" / "train_renderer.py"
+    src = script.read_text()
+    assert "uniward_quant_noise_loss" in src
+    assert "args.use_variance_noise and args.variance_noise_weight > 0" in src
+    assert "loss = loss + args.variance_noise_weight * variance_loss" in src
+
+
+def test_variance_noise_flag_has_live_train_distill_callsite() -> None:
+    """The distillation entrypoint had the same live flag but missing helper
+    problem. Keep both training surfaces protected."""
+    repo_root = Path(__file__).resolve().parent.parent.parent.parent
+    script = repo_root / "experiments" / "train_distill.py"
+    src = script.read_text()
+    assert "uniward_quant_noise_loss" in src
+    assert "cfg.use_variance_noise and cfg.variance_noise_weight > 0" in src
+    assert "cfg.variance_noise_weight * variance_loss" in src
+
+
+def test_dead_objective_feature_scanner_catches_guarded_notimplemented(tmp_path: Path) -> None:
+    root = _stub_repo(tmp_path)
+    script = root / "experiments" / "broken_feature.py"
+    _write(script, """
+        def train(cfg):
+            total = 0
+            if cfg.use_variance_noise and cfg.variance_noise_weight > 0:
+                raise NotImplementedError("not wired")
+            return total
+    """)
+    violations = _scan_python_for_dead_objective_feature(
+        script,
+        root,
+        feature_attr="use_variance_noise",
+        weight_attr="variance_noise_weight",
+        function_name="uniward_quant_noise_loss",
+    )
+    assert any("NotImplementedError" in v for v in violations)
+    assert any("does not call" in v for v in violations)
+    assert any("does not add" in v for v in violations)
+
+
+def test_dead_objective_feature_scanner_rejects_helper_noop(tmp_path: Path) -> None:
+    root = _stub_repo(tmp_path)
+    script = root / "experiments" / "noop_feature.py"
+    _write(script, """
+        def uniward_quant_noise_loss(a, b):
+            return 1
+        def train(args):
+            loss = 0
+            if args.use_variance_noise and args.variance_noise_weight > 0:
+                variance_loss = uniward_quant_noise_loss(1, 2)
+                print(variance_loss)
+            return loss
+    """)
+    violations = _scan_python_for_dead_objective_feature(
+        script,
+        root,
+        feature_attr="use_variance_noise",
+        weight_attr="variance_noise_weight",
+        function_name="uniward_quant_noise_loss",
+    )
+    assert any("does not add" in v for v in violations)
+
+
+def test_feature_flags_have_live_objective_effect_real_codebase() -> None:
+    violations = check_feature_flags_have_live_objective_effect(
+        strict=False,
+        verbose=False,
+    )
+    assert violations == []
 
 
 # ── Codex R5-2 Finding #2 strict-mode flip regressions ───────────────────────

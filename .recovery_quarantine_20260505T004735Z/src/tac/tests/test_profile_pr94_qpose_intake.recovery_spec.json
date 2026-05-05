@@ -1,0 +1,355 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/src/tac/tests/__pycache__/test_profile_pr94_qpose_intake.cpython-312-pytest-9.0.3.pyc",
+  "names": [
+    "__future__",
+    "annotations",
+    "builtins",
+    "@py_builtins",
+    "_pytest.assertion.rewrite",
+    "assertion",
+    "rewrite",
+    "@pytest_ar",
+    "importlib.util",
+    "importlib",
+    "sys",
+    "pathlib",
+    "Path",
+    "brotli",
+    "__file__",
+    "resolve",
+    "parents",
+    "REPO_ROOT",
+    "MODULE_PATH",
+    "load_module",
+    "uvarint",
+    "zigzag",
+    "test_infer_pr94_fixed_range_layout_for_observed_payload_size",
+    "test_profile_payload_decodes_qp1_velocity_and_sg2_actions"
+  ],
+  "varnames": [],
+  "consts": [
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "Path"
+    ],
+    3,
+    "experiments/profile_pr94_qpose_intake.py",
+    {
+      "__code__": "load_module",
+      "qualname": "load_module",
+      "argcount": 0,
+      "varnames": [
+        "spec",
+        "@py_assert2",
+        "@py_assert1",
+        "@py_format4",
+        "@py_format6",
+        "@py_assert4",
+        "@py_assert3",
+        "@py_format8",
+        "module"
+      ],
+      "names": [
+        "importlib",
+        "util",
+        "spec_from_file_location",
+        "MODULE_PATH",
+        "@pytest_ar",
+        "_call_reprcompare",
+        "@py_builtins",
+        "locals",
+        "_should_repr_global_name",
+        "_saferepr",
+        "AssertionError",
+        "_format_explanation",
+        "loader",
+        "module_from_spec",
+        "sys",
+        "modules",
+        "name",
+        "exec_module"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "uvarint",
+      "qualname": "uvarint",
+      "argcount": 1,
+      "varnames": [
+        "value",
+        "out",
+        "byte"
+      ],
+      "names": [
+        "bytearray",
+        "append",
+        "bytes"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "zigzag",
+      "qualname": "zigzag",
+      "argcount": 1,
+      "varnames": [
+        "value"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_infer_pr94_fixed_range_layout_for_observed_payload_size",
+      "qualname": "test_infer_pr94_fixed_range_layout_for_observed_payload_size",
+      "argcount": 0,
+      "varnames": [
+        "module",
+        "layout",
+        "@py_assert1",
+        "@py_assert4",
+        "@py_assert3",
+        "@py_format6",
+        "@py_format8"
+      ],
+      "names": [
+        "load_module",
+        "infer_pr94_layout",
+        "payload_format",
+        "@pytest_ar",
+        "_call_reprcompare",
+        "@py_builtins",
+        "locals",
+        "_should_repr_global_name",
+        "_saferepr",
+        "AssertionError",
+        "_format_explanation",
+        "mask_len",
+        "model_len",
+        "actions_len",
+        "pose_len"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_profile_payload_decodes_qp1_velocity_and_sg2_actions",
+      "qualname": "test_profile_payload_decodes_qp1_velocity_and_sg2_actions",
+      "argcount": 0,
+      "varnames": [
+        "module",
+        "mask",
+        "model",
+        "actions_raw",
+        "actions",
+        "pose_raw",
+        "pose",
+        "payload",
+        "layout",
+        "profile",
+        "@py_assert0",
+        "@py_assert3",
+        "@py_assert2",
+        "@py_format5",
+        "@py_format7"
+      ],
+      "names": [
+        "load_module",
+        "brotli",
+        "compress",
+        "uvarint",
+        "bytes",
+        "to_bytes",
+        "zigzag",
+        "SegmentLayout",
+        "len",
+        "profile_payload",
+        "@pytest_ar",
+        "_call_reprcompare",
+        "_saferepr",
+        "AssertionError",
+        "_format_explanation"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    [
+      "value",
+      "int",
+      "return",
+      "bytes"
+    ],
+    [
+      "value",
+      "int",
+      "return",
+      "int"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": null,
+  "child_codes": [
+    {
+      "qualname": "load_module",
+      "name": "load_module",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "spec",
+        "@py_assert2",
+        "@py_assert1",
+        "@py_format4",
+        "@py_format6",
+        "@py_assert4",
+        "@py_assert3",
+        "@py_format8",
+        "module"
+      ],
+      "names": [
+        "importlib",
+        "util",
+        "spec_from_file_location",
+        "MODULE_PATH",
+        "@pytest_ar",
+        "_call_reprcompare",
+        "@py_builtins",
+        "locals",
+        "_should_repr_global_name",
+        "_saferepr",
+        "AssertionError",
+        "_format_explanation",
+        "loader",
+        "module_from_spec",
+        "sys",
+        "modules",
+        "name",
+        "exec_module"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 14           0 RESUME                   0\n\n 15           2 LOAD_GLOBAL              0 (importlib)\n             12 LOAD_ATTR                2 (util)\n             32 LOAD_ATTR                5 (NULL|self + spec_from_file_location)\n             52 LOAD_CONST               1 ('profile_pr94_qpose_intake')\n             54 LOAD_GLOBAL              6 (MODULE_PATH)\n             64 CALL                     2\n             72 STORE_FAST               0 (spec)\n\n 16          74 LOAD_CONST               0 (None)\n             76 STORE_FAST               1 (@py_assert2)\n             78 LOAD_FAST                0 (spec)\n             80 LOAD_FAST                1 (@py_assert2)\n             82 IS_OP                    1\n             84 STORE_FAST               2 (@py_assert1)\n             86 LOAD_FAST                2 (@py_assert1)\n             88 POP_JUMP_IF_TRUE       153 (to 396)\n             90 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            100 LOAD_ATTR               10 (_call_reprcompare)\n            120 LOAD_CONST               2 (('is not',))\n            122 LOAD_FAST                2 (@py_assert1)\n            124 BUILD_TUPLE              1\n            126 LOAD_CONST               3 (('%(py0)s is not %(py3)s',))\n            128 LOAD_FAST                0 (spec)\n            130 LOAD_FAST                1 (@py_assert2)\n            132 BUILD_TUPLE              2\n            134 CALL                     4\n            142 LOAD_CONST               4 ('spec')\n            144 LOAD_GLOBAL             13 (NULL + @py_builtins)\n            154 LOAD_ATTR               14 (locals)\n            174 CALL                     0\n            182 CONTAINS_OP              0\n            184 POP_JUMP_IF_TRUE        21 (to 228)\n            186 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            196 LOAD_ATTR               16 (_should_repr_global_name)\n            216 LOAD_FAST                0 (spec)\n            218 CALL                     1\n            226 POP_JUMP_IF_FALSE       21 (to 270)\n        >>  228 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            238 LOAD_ATTR               18 (_saferepr)\n            258 LOAD_FAST                0 (spec)\n            260 CALL                     1\n            268 JUMP_FORWARD             1 (to 272)\n        >>  270 LOAD_CONST               4 ('spec')\n        >>  272 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            282 LOAD_ATTR               18 (_saferepr)\n            302 LOAD_FAST                1 (@py_assert2)\n            304 CALL                     1\n            312 LOAD_CONST               5 (('py0', 'py3'))\n            314 BUILD_CONST_KEY_MAP      2\n            316 BINARY_OP                6 (%)\n            320 STORE_FAST               3 (@py_format4)\n            322 LOAD_CONST               6 ('assert %(py5)s')\n            324 LOAD_CONST               7 ('py5')\n            326 LOAD_FAST                3 (@py_format4)\n            328 BUILD_MAP                1\n            330 BINARY_OP                6 (%)\n            334 STORE_FAST               4 (@py_format6)\n            336 LOAD_GLOBAL             21 (NULL + AssertionError)\n            346 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            356 LOAD_ATTR               22 (_format_explanation)\n            376 LOAD_FAST                4 (@py_format6)\n            378 CALL                     1\n            386 CALL                     1\n            394 RAISE_VARARGS            1\n        >>  396 LOAD_CONST               0 (None)\n            398 COPY                     1\n            400 STORE_FAST               2 (@py_assert1)\n            402 STORE_FAST               1 (@py_assert2)\n\n 17         404 LOAD_FAST                0 (spec)\n            406 LOAD_ATTR               24 (loader)\n            426 STORE_FAST               2 (@py_assert1)\n            428 LOAD_CONST               0 (None)\n            430 STORE_FAST               5 (@py_assert4)\n            432 LOAD_FAST                2 (@py_assert1)\n            434 LOAD_FAST                5 (@py_assert4)\n            436 IS_OP                    1\n            438 STORE_FAST               6 (@py_assert3)\n            440 LOAD_FAST                6 (@py_assert3)\n            442 POP_JUMP_IF_TRUE       173 (to 790)\n            444 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            454 LOAD_ATTR               10 (_call_reprcompare)\n            474 LOAD_CONST               2 (('is not',))\n            476 LOAD_FAST                6 (@py_assert3)\n            478 BUILD_TUPLE              1\n            480 LOAD_CONST               8 (('%(py2)s\\n{%(py2)s = %(py0)s.loader\\n} is not %(py5)s',))\n            482 LOAD_FAST                2 (@py_assert1)\n            484 LOAD_FAST                5 (@py_assert4)\n            486 BUILD_TUPLE              2\n            488 CALL                     4\n            496 LOAD_CONST               4 ('spec')\n            498 LOAD_GLOBAL             13 (NULL + @py_builtins)\n            508 LOAD_ATTR               14 (locals)\n            528 CALL                     0\n            536 CONTAINS_OP              0\n            538 POP_JUMP_IF_TRUE        21 (to 582)\n            540 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            550 LOAD_ATTR               16 (_should_repr_global_name)\n            570 LOAD_FAST                0 (spec)\n            572 CALL                     1\n            580 POP_JUMP_IF_FALSE       21 (to 624)\n        >>  582 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            592 LOAD_ATTR               18 (_saferepr)\n            612 LOAD_FAST                0 (spec)\n            614 CALL                     1\n            622 JUMP_FORWARD             1 (to 626)\n        >>  624 LOAD_CONST               4 ('spec')\n        >>  626 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            636 LOAD_ATTR               18 (_saferepr)\n            656 LOAD_FAST                2 (@py_assert1)\n            658 CALL                     1\n            666 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            676 LOAD_ATTR               18 (_saferepr)\n            696 LOAD_FAST                5 (@py_assert4)\n            698 CALL                     1\n            706 LOAD_CONST               9 (('py0', 'py2', 'py5'))\n            708 BUILD_CONST_KEY_MAP      3\n            710 BINARY_OP                6 (%)\n            714 STORE_FAST               4 (@py_format6)\n            716 LOAD_CONST              10 ('assert %(py7)s')\n            718 LOAD_CONST              11 ('py7')\n            720 LOAD_FAST                4 (@py_format6)\n            722 BUILD_MAP                1\n            724 BINARY_OP                6 (%)\n            728 STORE_FAST               7 (@py_format8)\n            730 LOAD_GLOBAL             21 (NULL + AssertionError)\n            740 LOAD_GLOBAL              9 (NULL + @pytest_ar)\n            750 LOAD_ATTR               22 (_format_explanation)\n            770 LOAD_FAST                7 (@py_format8)\n            772 CALL                     1\n            780 CALL                     1\n            788 RAISE_VARARGS            1\n        >>  790 LOAD_CONST               0 (None)\n            792 COPY                     1\n            794 STORE_FAST               2 (@py_assert1)\n            796 COPY                     1\n            798 STORE_FAST               6 (@py_assert3)\n            800 STORE_FAST               5 (@py_assert4)\n\n 18         802 LOAD_GLOBAL              0 (importlib)\n            812 LOAD_ATTR                2 (util)\n            832 LOAD_ATTR               27 (NULL|self + module_from_spec)\n            852 LOAD_FAST                0 (spec)\n            854 CALL                     1\n            862 STORE_FAST               8 (module)\n\n 19         864 LOAD_FAST                8 (module)\n            866 LOAD_GLOBAL             28 (sys)\n            876 LOAD_ATTR               30 (modules)\n            896 LOAD_FAST                0 (spec)\n            898 LOAD_ATTR               32 (name)\n            918 STORE_SUBSCR\n\n 20         922 LOAD_FAST                0 (spec)\n            924 LOAD_ATTR               24 (loader)\n            944 LOAD_ATTR               35 (NULL|self + exec_module)\n            964 LOAD_FAST                8 (module)\n            966 CALL                     1\n            974 POP_TOP\n\n 21         976 LOAD_FAST                8 (module)\n            978 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "uvarint",
+      "name": "uvarint",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "value",
+        "out",
+        "byte"
+      ],
+      "names": [
+        "bytearray",
+        "append",
+        "bytes"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 24           0 RESUME                   0\n\n 25           2 LOAD_GLOBAL              1 (NULL + bytearray)\n             12 CALL                     0\n             20 STORE_FAST               1 (out)\n\n 26          22 NOP\n\n 27     >>   24 LOAD_FAST                0 (value)\n             26 LOAD_CONST               1 (127)\n             28 BINARY_OP                1 (&)\n             32 STORE_FAST               2 (byte)\n\n 28          34 LOAD_FAST                0 (value)\n             36 LOAD_CONST               2 (7)\n             38 BINARY_OP               22 (>>=)\n             42 STORE_FAST               0 (value)\n\n 29          44 LOAD_FAST                0 (value)\n             46 POP_JUMP_IF_FALSE       21 (to 90)\n\n 30          48 LOAD_FAST                1 (out)\n             50 LOAD_ATTR                3 (NULL|self + append)\n             70 LOAD_FAST                2 (byte)\n             72 LOAD_CONST               3 (128)\n             74 BINARY_OP                7 (|)\n             78 CALL                     1\n             86 POP_TOP\n             88 JUMP_FORWARD            28 (to 146)\n\n 32     >>   90 LOAD_FAST                1 (out)\n             92 LOAD_ATTR                3 (NULL|self + append)\n            112 LOAD_FAST                2 (byte)\n            114 CALL                     1\n            122 POP_TOP\n\n 33         124 LOAD_GLOBAL              5 (NULL + bytes)\n            134 LOAD_FAST                1 (out)\n            136 CALL                     1\n            144 RETURN_VALUE\n\n 26     >>  146 JUMP_BACKWARD           62 (to 24)\n"
+    },
+    {
+      "qualname": "zigzag",
+      "name": "zigzag",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "value"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 36           0 RESUME                   0\n\n 37           2 LOAD_FAST                0 (value)\n              4 LOAD_CONST               1 (1)\n              6 BINARY_OP                3 (<<)\n             10 LOAD_FAST                0 (value)\n             12 LOAD_CONST               2 (31)\n             14 BINARY_OP                9 (>>)\n             18 BINARY_OP               12 (^)\n             22 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "test_infer_pr94_fixed_range_layout_for_observed_payload_size",
+      "name": "test_infer_pr94_fixed_range_layout_for_observed_payload_size",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "module",
+        "layout",
+        "@py_assert1",
+        "@py_assert4",
+        "@py_assert3",
+        "@py_format6",
+        "@py_format8"
+      ],
+      "names": [
+        "load_module",
+        "infer_pr94_layout",
+        "payload_format",
+        "@pytest_ar",
+        "_call_reprcompare",
+        "@py_builtins",
+        "locals",
+        "_should_repr_global_name",
+        "_saferepr",
+        "AssertionError",
+        "_format_explanation",
+        "mask_len",
+        "model_len",
+        "actions_len",
+        "pose_len"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 40           0 RESUME                   0\n\n 41           2 LOAD_GLOBAL              1 (NULL + load_module)\n             12 CALL                     0\n             20 STORE_FAST               0 (module)\n\n 43          22 LOAD_FAST                0 (module)\n             24 LOAD_ATTR                3 (NULL|self + infer_pr94_layout)\n             44 LOAD_CONST               1 (b'\\x00')\n             46 LOAD_CONST               2 (276987)\n             48 BINARY_OP                5 (*)\n             52 CALL                     1\n             60 STORE_FAST               1 (layout)\n\n 45          62 LOAD_FAST                1 (layout)\n             64 LOAD_ATTR                4 (payload_format)\n             84 STORE_FAST               2 (@py_assert1)\n             86 LOAD_CONST               3 ('pr94_fixed_range_qpose_tile_actions')\n             88 STORE_FAST               3 (@py_assert4)\n             90 LOAD_FAST                2 (@py_assert1)\n             92 LOAD_FAST                3 (@py_assert4)\n             94 COMPARE_OP              40 (==)\n             98 STORE_FAST               4 (@py_assert3)\n            100 LOAD_FAST                4 (@py_assert3)\n            102 POP_JUMP_IF_TRUE       173 (to 450)\n            104 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n            114 LOAD_ATTR                8 (_call_reprcompare)\n            134 LOAD_CONST               4 (('==',))\n            136 LOAD_FAST                4 (@py_assert3)\n            138 BUILD_TUPLE              1\n            140 LOAD_CONST               5 (('%(py2)s\\n{%(py2)s = %(py0)s.payload_format\\n} == %(py5)s',))\n            142 LOAD_FAST                2 (@py_assert1)\n            144 LOAD_FAST                3 (@py_assert4)\n            146 BUILD_TUPLE              2\n            148 CALL                     4\n            156 LOAD_CONST               6 ('layout')\n            158 LOAD_GLOBAL             11 (NULL + @py_builtins)\n            168 LOAD_ATTR               12 (locals)\n            188 CALL                     0\n            196 CONTAINS_OP              0\n            198 POP_JUMP_IF_TRUE        21 (to 242)\n            200 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n            210 LOAD_ATTR               14 (_should_repr_global_name)\n            230 LOAD_FAST                1 (layout)\n            232 CALL                     1\n            240 POP_JUMP_IF_FALSE       21 (to 284)\n        >>  242 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n            252 LOAD_ATTR               16 (_saferepr)\n            272 LOAD_FAST                1 (layout)\n            274 CALL                     1\n            282 JUMP_FORWARD             1 (to 286)\n        >>  284 LOAD_CONST               6 ('layout')\n        >>  286 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n            296 LOAD_ATTR               16 (_saferepr)\n            316 LOAD_FAST                2 (@py_assert1)\n            318 CALL                     1\n            326 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n            336 LOAD_ATTR               16 (_saferepr)\n            356 LOAD_FAST                3 (@py_assert4)\n            358 CALL                     1\n            366 LOAD_CONST               7 (('py0', 'py2', 'py5'))\n            368 BUILD_CONST_KEY_MAP      3\n            370 BINARY_OP                6 (%)\n            374 STORE_FAST               5 (@py_format6)\n            376 LOAD_CONST               8 ('assert %(py7)s')\n            378 LOAD_CONST               9 ('py7')\n            380 LOAD_FAST                5 (@py_format6)\n            382 BUILD_MAP                1\n            384 BINARY_OP                6 (%)\n            388 STORE_FAST               6 (@py_format8)\n            390 LOAD_GLOBAL             19 (NULL + AssertionError)\n            400 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n            410 LOAD_ATTR               20 (_format_explanation)\n            430 LOAD_FAST                6 (@py_format8)\n            432 CALL                     1\n            440 CALL                     1\n            448 RAISE_VARARGS            1\n        >>  450 LOAD_CONST               0 (None)\n            452 COPY                     1\n            454 STORE_FAST               2 (@py_assert1)\n            456 COPY                     1\n            458 STORE_FAST               4 (@py_assert3)\n            460 STORE_FAST               3 (@py_assert4)\n\n 46         462 LOAD_FAST                1 (layout)\n            464 LOAD_ATTR               22 (mask_len)\n            484 STORE_FAST               2 (@py_assert1)\n            486 LOAD_CONST              10 (219472)\n            488 STORE_FAST               3 (@py_assert4)\n            490 LOAD_FAST                2 (@py_assert1)\n            492 LOAD_FAST                3 (@py_assert4)\n            494 COMPARE_OP              40 (==)\n            498 STORE_FAST               4 (@py_assert3)\n            500 LOAD_FAST                4 (@py_assert3)\n            502 POP_JUMP_IF_TRUE       173 (to 850)\n            504 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n            514 LOAD_ATTR                8 (_call_reprcompare)\n            534 LOAD_CONST               4 (('==',))\n            536 LOAD_FAST                4 (@py_assert3)\n            538 BUILD_TUPLE              1\n            540 LOAD_CONST              11 (('%(py2)s\\n{%(py2)s = %(py0)s.mask_len\\n} == %(py5)s',))\n            542 LOAD_FAST                2 (@py_assert1)\n            544 LOAD_FAST                3 (@py_assert4)\n            546 BUILD_TUPLE              2\n            548 CALL                     4\n            556 LOAD_CONST               6 ('layout')\n            558 LOAD_GLOBAL             11 (NULL + @py_builtins)\n            568 LOAD_ATTR               12 (locals)\n            588 CALL                     0\n            596 CONTAINS_OP              0\n            598 POP_JUMP_IF_TRUE        21 (to 642)\n            600 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n            610 LOAD_ATTR               14 (_should_repr_global_name)\n            630 LOAD_FAST                1 (layout)\n            632 CALL                     1\n            640 POP_JUMP_IF_FALSE       21 (to 684)\n        >>  642 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n            652 LOAD_ATTR               16 (_saferepr)\n            672 LOAD_FAST                1 (layout)\n            674 CALL                     1\n            682 JUMP_FORWARD             1 (to 686)\n        >>  684 LOAD_CONST               6 ('layout')\n        >>  686 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n            696 LOAD_ATTR               16 (_saferepr)\n            716 LOAD_FAST                2 (@py_assert1)\n            718 CALL                     1\n            726 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n            736 LOAD_ATTR               16 (_saferepr)\n            756 LOAD_FAST                3 (@py_assert4)\n            758 CALL                     1\n            766 LOAD_CONST               7 (('py0', 'py2', 'py5'))\n            768 BUILD_CONST_KEY_MAP      3\n            770 BINARY_OP                6 (%)\n            774 STORE_FAST               5 (@py_format6)\n            776 LOAD_CONST               8 ('assert %(py7)s')\n            778 LOAD_CONST               9 ('py7')\n            780 LOAD_FAST                5 (@py_format6)\n            782 BUILD_MAP                1\n            784 BINARY_OP                6 (%)\n            788 STORE_FAST               6 (@py_format8)\n            790 LOAD_GLOBAL             19 (NULL + AssertionError)\n            800 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n            810 LOAD_ATTR               20 (_format_explanation)\n            830 LOAD_FAST                6 (@py_format8)\n            832 CALL                     1\n            840 CALL                     1\n            848 RAISE_VARARGS            1\n        >>  850 LOAD_CONST               0 (None)\n            852 COPY                     1\n            854 STORE_FAST               2 (@py_assert1)\n            856 COPY                     1\n            858 STORE_FAST               4 (@py_assert3)\n            860 STORE_FAST               3 (@py_assert4)\n\n 47         862 LOAD_FAST                1 (layout)\n            864 LOAD_ATTR               24 (model_len)\n            884 STORE_FAST               2 (@py_assert1)\n            886 LOAD_CONST              12 (55756)\n            888 STORE_FAST               3 (@py_assert4)\n            890 LOAD_FAST                2 (@py_assert1)\n            892 LOAD_FAST                3 (@py_assert4)\n            894 COMPARE_OP              40 (==)\n            898 STORE_FAST               4 (@py_assert3)\n            900 LOAD_FAST                4 (@py_assert3)\n            902 POP_JUMP_IF_TRUE       173 (to 1250)\n            904 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n            914 LOAD_ATTR                8 (_call_reprcompare)\n            934 LOAD_CONST               4 (('==',))\n            936 LOAD_FAST                4 (@py_assert3)\n            938 BUILD_TUPLE              1\n            940 LOAD_CONST              13 (('%(py2)s\\n{%(py2)s = %(py0)s.model_len\\n} == %(py5)s',))\n            942 LOAD_FAST                2 (@py_assert1)\n            944 LOAD_FAST                3 (@py_assert4)\n            946 BUILD_TUPLE              2\n            948 CALL                     4\n            956 LOAD_CONST               6 ('layout')\n            958 LOAD_GLOBAL             11 (NULL + @py_builtins)\n            968 LOAD_ATTR               12 (locals)\n            988 CALL                     0\n            996 CONTAINS_OP              0\n            998 POP_JUMP_IF_TRUE        21 (to 1042)\n           1000 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n           1010 LOAD_ATTR               14 (_should_repr_global_name)\n           1030 LOAD_FAST                1 (layout)\n           1032 CALL                     1\n           1040 POP_JUMP_IF_FALSE       21 (to 1084)\n        >> 1042 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n           1052 LOAD_ATTR               16 (_saferepr)\n           1072 LOAD_FAST                1 (layout)\n           1074 CALL                     1\n           1082 JUMP_FORWARD             1 (to 1086)\n        >> 1084 LOAD_CONST               6 ('layout')\n        >> 1086 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n           1096 LOAD_ATTR               16 (_saferepr)\n           1116 LOAD_FAST                2 (@py_assert1)\n           1118 CALL                     1\n           1126 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n           1136 LOAD_ATTR               16 (_saferepr)\n           1156 LOAD_FAST                3 (@py_assert4)\n           1158 CALL                     1\n           1166 LOAD_CONST               7 (('py0', 'py2', 'py5'))\n           1168 BUILD_CONST_KEY_MAP      3\n           1170 BINARY_OP                6 (%)\n           1174 STORE_FAST               5 (@py_format6)\n           1176 LOAD_CONST               8 ('assert %(py7)s')\n           1178 LOAD_CONST               9 ('py7')\n           1180 LOAD_FAST                5 (@py_format6)\n           1182 BUILD_MAP                1\n           1184 BINARY_OP                6 (%)\n           1188 STORE_FAST               6 (@py_format8)\n           1190 LOAD_GLOBAL             19 (NULL + AssertionError)\n           1200 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n           1210 LOAD_ATTR               20 (_format_explanation)\n           1230 LOAD_FAST                6 (@py_format8)\n           1232 CALL                     1\n           1240 CALL                     1\n           1248 RAISE_VARARGS            1\n        >> 1250 LOAD_CONST               0 (None)\n           1252 COPY                     1\n           1254 STORE_FAST               2 (@py_assert1)\n           1256 COPY                     1\n           1258 STORE_FAST               4 (@py_assert3)\n           1260 STORE_FAST               3 (@py_assert4)\n\n 48        1262 LOAD_FAST                1 (layout)\n           1264 LOAD_ATTR               26 (actions_len)\n           1284 STORE_FAST               2 (@py_assert1)\n           1286 LOAD_CONST              14 (861)\n           1288 STORE_FAST               3 (@py_assert4)\n           1290 LOAD_FAST                2 (@py_assert1)\n           1292 LOAD_FAST                3 (@py_assert4)\n           1294 COMPARE_OP              40 (==)\n           1298 STORE_FAST               4 (@py_assert3)\n           1300 LOAD_FAST                4 (@py_assert3)\n           1302 POP_JUMP_IF_TRUE       173 (to 1650)\n           1304 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n           1314 LOAD_ATTR                8 (_call_reprcompare)\n           1334 LOAD_CONST               4 (('==',))\n           1336 LOAD_FAST                4 (@py_assert3)\n           1338 BUILD_TUPLE              1\n           1340 LOAD_CONST              15 (('%(py2)s\\n{%(py2)s = %(py0)s.actions_len\\n} == %(py5)s',))\n           1342 LOAD_FAST                2 (@py_assert1)\n           1344 LOAD_FAST                3 (@py_assert4)\n           1346 BUILD_TUPLE              2\n           1348 CALL                     4\n           1356 LOAD_CONST               6 ('layout')\n           1358 LOAD_GLOBAL             11 (NULL + @py_builtins)\n           1368 LOAD_ATTR               12 (locals)\n           1388 CALL                     0\n           1396 CONTAINS_OP              0\n           1398 POP_JUMP_IF_TRUE        21 (to 1442)\n           1400 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n           1410 LOAD_ATTR               14 (_should_repr_global_name)\n           1430 LOAD_FAST                1 (layout)\n           1432 CALL                     1\n           1440 POP_JUMP_IF_FALSE       21 (to 1484)\n        >> 1442 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n           1452 LOAD_ATTR               16 (_saferepr)\n           1472 LOAD_FAST                1 (layout)\n           1474 CALL                     1\n           1482 JUMP_FORWARD             1 (to 1486)\n        >> 1484 LOAD_CONST               6 ('layout')\n        >> 1486 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n           1496 LOAD_ATTR               16 (_saferepr)\n           1516 LOAD_FAST                2 (@py_assert1)\n           1518 CALL                     1\n           1526 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n           1536 LOAD_ATTR               16 (_saferepr)\n           1556 LOAD_FAST                3 (@py_assert4)\n           1558 CALL                     1\n           1566 LOAD_CONST               7 (('py0', 'py2', 'py5'))\n           1568 BUILD_CONST_KEY_MAP      3\n           1570 BINARY_OP                6 (%)\n           1574 STORE_FAST               5 (@py_format6)\n           1576 LOAD_CONST               8 ('assert %(py7)s')\n           1578 LOAD_CONST               9 ('py7')\n           1580 LOAD_FAST                5 (@py_format6)\n           1582 BUILD_MAP                1\n           1584 BINARY_OP                6 (%)\n           1588 STORE_FAST               6 (@py_format8)\n           1590 LOAD_GLOBAL             19 (NULL + AssertionError)\n           1600 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n           1610 LOAD_ATTR               20 (_format_explanation)\n           1630 LOAD_FAST                6 (@py_format8)\n           1632 CALL                     1\n           1640 CALL                     1\n           1648 RAISE_VARARGS            1\n        >> 1650 LOAD_CONST               0 (None)\n           1652 COPY                     1\n           1654 STORE_FAST               2 (@py_assert1)\n           1656 COPY                     1\n           1658 STORE_FAST               4 (@py_assert3)\n           1660 STORE_FAST               3 (@py_assert4)\n\n 49        1662 LOAD_FAST                1 (layout)\n           1664 LOAD_ATTR               28 (pose_len)\n           1684 STORE_FAST               2 (@py_assert1)\n           1686 LOAD_CONST              16 (898)\n           1688 STORE_FAST               3 (@py_assert4)\n           1690 LOAD_FAST                2 (@py_assert1)\n           1692 LOAD_FAST                3 (@py_assert4)\n           1694 COMPARE_OP              40 (==)\n           1698 STORE_FAST               4 (@py_assert3)\n           1700 LOAD_FAST                4 (@py_assert3)\n           1702 POP_JUMP_IF_TRUE       173 (to 2050)\n           1704 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n           1714 LOAD_ATTR                8 (_call_reprcompare)\n           1734 LOAD_CONST               4 (('==',))\n           1736 LOAD_FAST                4 (@py_assert3)\n           1738 BUILD_TUPLE              1\n           1740 LOAD_CONST              17 (('%(py2)s\\n{%(py2)s = %(py0)s.pose_len\\n} == %(py5)s',))\n           1742 LOAD_FAST                2 (@py_assert1)\n           1744 LOAD_FAST                3 (@py_assert4)\n           1746 BUILD_TUPLE              2\n           1748 CALL                     4\n           1756 LOAD_CONST               6 ('layout')\n           1758 LOAD_GLOBAL             11 (NULL + @py_builtins)\n           1768 LOAD_ATTR               12 (locals)\n           1788 CALL                     0\n           1796 CONTAINS_OP              0\n           1798 POP_JUMP_IF_TRUE        21 (to 1842)\n           1800 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n           1810 LOAD_ATTR               14 (_should_repr_global_name)\n           1830 LOAD_FAST                1 (layout)\n           1832 CALL                     1\n           1840 POP_JUMP_IF_FALSE       21 (to 1884)\n        >> 1842 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n           1852 LOAD_ATTR               16 (_saferepr)\n           1872 LOAD_FAST                1 (layout)\n           1874 CALL                     1\n           1882 JUMP_FORWARD             1 (to 1886)\n        >> 1884 LOAD_CONST               6 ('layout')\n        >> 1886 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n           1896 LOAD_ATTR               16 (_saferepr)\n           1916 LOAD_FAST                2 (@py_assert1)\n           1918 CALL                     1\n           1926 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n           1936 LOAD_ATTR               16 (_saferepr)\n           1956 LOAD_FAST                3 (@py_assert4)\n           1958 CALL                     1\n           1966 LOAD_CONST               7 (('py0', 'py2', 'py5'))\n           1968 BUILD_CONST_KEY_MAP      3\n           1970 BINARY_OP                6 (%)\n           1974 STORE_FAST               5 (@py_format6)\n           1976 LOAD_CONST               8 ('assert %(py7)s')\n           1978 LOAD_CONST               9 ('py7')\n           1980 LOAD_FAST                5 (@py_format6)\n           1982 BUILD_MAP                1\n           1984 BINARY_OP                6 (%)\n           1988 STORE_FAST               6 (@py_format8)\n           1990 LOAD_GLOBAL             19 (NULL + AssertionError)\n           2000 LOAD_GLOBAL              7 (NULL + @pytest_ar)\n           2010 LOAD_ATTR               20 (_format_explanation)\n           2030 LOAD_FAST                6 (@py_format8)\n           2032 CALL                     1\n           2040 CALL                     1\n           2048 RAISE_VARARGS            1\n        >> 2050 LOAD_CONST               0 (None)\n           2052 COPY                     1\n           2054 STORE_FAST               2 (@py_assert1)\n           2056 COPY                     1\n           2058 STORE_FAST               4 (@py_assert3)\n           2060 STORE_FAST               3 (@py_assert4)\n           2062 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "test_profile_payload_decodes_qp1_velocity_and_sg2_actions",
+      "name": "test_profile_payload_decodes_qp1_velocity_and_sg2_actions",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "module",
+        "mask",
+        "model",
+        "actions_raw",
+        "actions",
+        "pose_raw",
+        "pose",
+        "payload",
+        "layout",
+        "profile",
+        "@py_assert0",
+        "@py_assert3",
+        "@py_assert2",
+        "@py_format5",
+        "@py_format7"
+      ],
+      "names": [
+        "load_module",
+        "brotli",
+        "compress",
+        "uvarint",
+        "bytes",
+        "to_bytes",
+        "zigzag",
+        "SegmentLayout",
+        "len",
+        "profile_payload",
+        "@pytest_ar",
+        "_call_reprcompare",
+        "_saferepr",
+        "AssertionError",
+        "_format_explanation"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 52           0 RESUME                   0\n\n 53           2 LOAD_GLOBAL              1 (NULL + load_module)\n             12 CALL                     0\n             20 STORE_FAST               0 (module)\n\n 54          22 LOAD_GLOBAL              3 (NULL + brotli)\n             32 LOAD_ATTR                4 (compress)\n             52 LOAD_CONST               1 (b'mask-obu')\n             54 CALL                     1\n             62 STORE_FAST               1 (mask)\n\n 55          64 LOAD_GLOBAL              3 (NULL + brotli)\n             74 LOAD_ATTR                4 (compress)\n             94 LOAD_CONST               2 (b'QZS3renderer')\n             96 CALL                     1\n            104 STORE_FAST               2 (model)\n\n 56         106 LOAD_CONST               3 (b'SG2')\n            108 LOAD_GLOBAL              7 (NULL + uvarint)\n            118 LOAD_CONST               4 (5)\n            120 CALL                     1\n            128 BINARY_OP                0 (+)\n            132 LOAD_GLOBAL              7 (NULL + uvarint)\n            142 LOAD_CONST               5 (2)\n            144 CALL                     1\n            152 BINARY_OP                0 (+)\n            156 LOAD_GLOBAL              7 (NULL + uvarint)\n            166 LOAD_CONST               6 (10)\n            168 CALL                     1\n            176 BINARY_OP                0 (+)\n            180 LOAD_GLOBAL              9 (NULL + bytes)\n            190 LOAD_CONST               7 (1)\n            192 BUILD_LIST               1\n            194 CALL                     1\n            202 BINARY_OP                0 (+)\n            206 LOAD_GLOBAL              7 (NULL + uvarint)\n            216 LOAD_CONST               5 (2)\n            218 CALL                     1\n            226 BINARY_OP                0 (+)\n            230 LOAD_GLOBAL              9 (NULL + bytes)\n            240 LOAD_CONST               8 (3)\n            242 BUILD_LIST               1\n            244 CALL                     1\n            252 BINARY_OP                0 (+)\n            256 STORE_FAST               3 (actions_raw)\n\n 57         258 LOAD_GLOBAL              3 (NULL + brotli)\n            268 LOAD_ATTR                4 (compress)\n            288 LOAD_FAST                3 (actions_raw)\n            290 CALL                     1\n            298 STORE_FAST               4 (actions)\n\n 58         300 LOAD_CONST               9 (b'QP1')\n            302 LOAD_CONST              10 (100)\n            304 LOAD_ATTR               11 (NULL|self + to_bytes)\n            324 LOAD_CONST               5 (2)\n            326 LOAD_CONST              11 ('little')\n            328 CALL                     2\n            336 BINARY_OP                0 (+)\n            340 LOAD_GLOBAL              7 (NULL + uvarint)\n            350 LOAD_GLOBAL             13 (NULL + zigzag)\n            360 LOAD_CONST               7 (1)\n            362 CALL                     1\n            370 CALL                     1\n            378 BINARY_OP                0 (+)\n            382 LOAD_GLOBAL              7 (NULL + uvarint)\n            392 LOAD_GLOBAL             13 (NULL + zigzag)\n            402 LOAD_CONST              12 (-2)\n            404 CALL                     1\n            412 CALL                     1\n            420 BINARY_OP                0 (+)\n            424 STORE_FAST               5 (pose_raw)\n\n 59         426 LOAD_GLOBAL              3 (NULL + brotli)\n            436 LOAD_ATTR                4 (compress)\n            456 LOAD_FAST                5 (pose_raw)\n            458 CALL                     1\n            466 STORE_FAST               6 (pose)\n\n 60         468 LOAD_FAST                1 (mask)\n            470 LOAD_FAST                2 (model)\n            472 BINARY_OP                0 (+)\n            476 LOAD_FAST                4 (actions)\n            478 BINARY_OP                0 (+)\n            482 LOAD_FAST                6 (pose)\n            484 BINARY_OP                0 (+)\n            488 STORE_FAST               7 (payload)\n\n 61         490 LOAD_FAST                0 (module)\n            492 LOAD_ATTR               15 (NULL|self + SegmentLayout)\n\n 62         512 LOAD_CONST              13 ('test')\n\n 63         514 LOAD_CONST              14 ('unit_test')\n\n 64         516 LOAD_CONST              15 (0)\n\n 65         518 LOAD_GLOBAL             17 (NULL + len)\n            528 LOAD_FAST                1 (mask)\n            530 CALL                     1\n\n 66         538 LOAD_GLOBAL             17 (NULL + len)\n            548 LOAD_FAST                2 (model)\n            550 CALL                     1\n\n 67         558 LOAD_GLOBAL             17 (NULL + len)\n            568 LOAD_FAST                4 (actions)\n            570 CALL                     1\n\n 68         578 LOAD_GLOBAL             17 (NULL + len)\n            588 LOAD_FAST                6 (pose)\n            590 CALL                     1\n\n 61         598 KW_NAMES                16 (('payload_format', 'boundary_authority', 'header_bytes', 'mask_len', 'model_len', 'actions_len', 'pose_len'))\n            600 CALL                     7\n            608 STORE_FAST               8 (layout)\n\n 71         610 LOAD_FAST                0 (module)\n            612 LOAD_ATTR               19 (NULL|self + profile_payload)\n            632 LOAD_FAST                7 (payload)\n            634 LOAD_FAST                8 (layout)\n            636 KW_NAMES                17 (('layout',))\n            638 CALL                     2\n            646 STORE_FAST               9 (profile)\n\n 73         648 LOAD_FAST                9 (profile)\n            650 LOAD_CONST              18 ('classification')\n            652 BINARY_SUBSCR\n            656 LOAD_CONST              19 ('renderer_magic')\n            658 BINARY_SUBSCR\n            662 STORE_FAST              10 (@py_assert0)\n            664 LOAD_CONST              20 ('QZS3')\n            666 STORE_FAST              11 (@py_assert3)\n            668 LOAD_FAST               10 (@py_assert0)\n            670 LOAD_FAST               11 (@py_assert3)\n            672 COMPARE_OP              40 (==)\n            676 STORE_FAST              12 (@py_assert2)\n            678 LOAD_FAST               12 (@py_assert2)\n            680 POP_JUMP_IF_TRUE       108 (to 898)\n            682 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n            692 LOAD_ATTR               22 (_call_reprcompare)\n            712 LOAD_CONST              21 (('==',))\n            714 LOAD_FAST               12 (@py_assert2)\n            716 BUILD_TUPLE              1\n            718 LOAD_CONST              22 (('%(py1)s == %(py4)s',))\n            720 LOAD_FAST               10 (@py_assert0)\n            722 LOAD_FAST               11 (@py_assert3)\n            724 BUILD_TUPLE              2\n            726 CALL                     4\n            734 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n            744 LOAD_ATTR               24 (_saferepr)\n            764 LOAD_FAST               10 (@py_assert0)\n            766 CALL                     1\n            774 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n            784 LOAD_ATTR               24 (_saferepr)\n            804 LOAD_FAST               11 (@py_assert3)\n            806 CALL                     1\n            814 LOAD_CONST              23 (('py1', 'py4'))\n            816 BUILD_CONST_KEY_MAP      2\n            818 BINARY_OP                6 (%)\n            822 STORE_FAST              13 (@py_format5)\n            824 LOAD_CONST              24 ('assert %(py6)s')\n            826 LOAD_CONST              25 ('py6')\n            828 LOAD_FAST               13 (@py_format5)\n            830 BUILD_MAP                1\n            832 BINARY_OP                6 (%)\n            836 STORE_FAST              14 (@py_format7)\n            838 LOAD_GLOBAL             27 (NULL + AssertionError)\n            848 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n            858 LOAD_ATTR               28 (_format_explanation)\n            878 LOAD_FAST               14 (@py_format7)\n            880 CALL                     1\n            888 CALL                     1\n            896 RAISE_VARARGS            1\n        >>  898 LOAD_CONST               0 (None)\n            900 COPY                     1\n            902 STORE_FAST              10 (@py_assert0)\n            904 COPY                     1\n            906 STORE_FAST              12 (@py_assert2)\n            908 STORE_FAST              11 (@py_assert3)\n\n 74         910 LOAD_FAST                9 (profile)\n            912 LOAD_CONST              18 ('classification')\n            914 BINARY_SUBSCR\n            918 LOAD_CONST              26 ('qpose')\n            920 BINARY_SUBSCR\n            924 LOAD_CONST              27 ('format')\n            926 BINARY_SUBSCR\n            930 STORE_FAST              10 (@py_assert0)\n            932 LOAD_CONST              28 ('QP1_velocity_delta_varint')\n            934 STORE_FAST              11 (@py_assert3)\n            936 LOAD_FAST               10 (@py_assert0)\n            938 LOAD_FAST               11 (@py_assert3)\n            940 COMPARE_OP              40 (==)\n            944 STORE_FAST              12 (@py_assert2)\n            946 LOAD_FAST               12 (@py_assert2)\n            948 POP_JUMP_IF_TRUE       108 (to 1166)\n            950 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n            960 LOAD_ATTR               22 (_call_reprcompare)\n            980 LOAD_CONST              21 (('==',))\n            982 LOAD_FAST               12 (@py_assert2)\n            984 BUILD_TUPLE              1\n            986 LOAD_CONST              22 (('%(py1)s == %(py4)s',))\n            988 LOAD_FAST               10 (@py_assert0)\n            990 LOAD_FAST               11 (@py_assert3)\n            992 BUILD_TUPLE              2\n            994 CALL                     4\n           1002 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n           1012 LOAD_ATTR               24 (_saferepr)\n           1032 LOAD_FAST               10 (@py_assert0)\n           1034 CALL                     1\n           1042 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n           1052 LOAD_ATTR               24 (_saferepr)\n           1072 LOAD_FAST               11 (@py_assert3)\n           1074 CALL                     1\n           1082 LOAD_CONST              23 (('py1', 'py4'))\n           1084 BUILD_CONST_KEY_MAP      2\n           1086 BINARY_OP                6 (%)\n           1090 STORE_FAST              13 (@py_format5)\n           1092 LOAD_CONST              24 ('assert %(py6)s')\n           1094 LOAD_CONST              25 ('py6')\n           1096 LOAD_FAST               13 (@py_format5)\n           1098 BUILD_MAP                1\n           1100 BINARY_OP                6 (%)\n           1104 STORE_FAST              14 (@py_format7)\n           1106 LOAD_GLOBAL             27 (NULL + AssertionError)\n           1116 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n           1126 LOAD_ATTR               28 (_format_explanation)\n           1146 LOAD_FAST               14 (@py_format7)\n           1148 CALL                     1\n           1156 CALL                     1\n           1164 RAISE_VARARGS            1\n        >> 1166 LOAD_CONST               0 (None)\n           1168 COPY                     1\n           1170 STORE_FAST              10 (@py_assert0)\n           1172 COPY                     1\n           1174 STORE_FAST              12 (@py_assert2)\n           1176 STORE_FAST              11 (@py_assert3)\n\n 75        1178 LOAD_FAST                9 (profile)\n           1180 LOAD_CONST              18 ('classification')\n           1182 BINARY_SUBSCR\n           1186 LOAD_CONST              26 ('qpose')\n           1188 BINARY_SUBSCR\n           1192 LOAD_CONST              29 ('pose_rows')\n           1194 BINARY_SUBSCR\n           1198 STORE_FAST              10 (@py_assert0)\n           1200 LOAD_CONST               8 (3)\n           1202 STORE_FAST              11 (@py_assert3)\n           1204 LOAD_FAST               10 (@py_assert0)\n           1206 LOAD_FAST               11 (@py_assert3)\n           1208 COMPARE_OP              40 (==)\n           1212 STORE_FAST              12 (@py_assert2)\n           1214 LOAD_FAST               12 (@py_assert2)\n           1216 POP_JUMP_IF_TRUE       108 (to 1434)\n           1218 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n           1228 LOAD_ATTR               22 (_call_reprcompare)\n           1248 LOAD_CONST              21 (('==',))\n           1250 LOAD_FAST               12 (@py_assert2)\n           1252 BUILD_TUPLE              1\n           1254 LOAD_CONST              22 (('%(py1)s == %(py4)s',))\n           1256 LOAD_FAST               10 (@py_assert0)\n           1258 LOAD_FAST               11 (@py_assert3)\n           1260 BUILD_TUPLE              2\n           1262 CALL                     4\n           1270 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n           1280 LOAD_ATTR               24 (_saferepr)\n           1300 LOAD_FAST               10 (@py_assert0)\n           1302 CALL                     1\n           1310 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n           1320 LOAD_ATTR               24 (_saferepr)\n           1340 LOAD_FAST               11 (@py_assert3)\n           1342 CALL                     1\n           1350 LOAD_CONST              23 (('py1', 'py4'))\n           1352 BUILD_CONST_KEY_MAP      2\n           1354 BINARY_OP                6 (%)\n           1358 STORE_FAST              13 (@py_format5)\n           1360 LOAD_CONST              24 ('assert %(py6)s')\n           1362 LOAD_CONST              25 ('py6')\n           1364 LOAD_FAST               13 (@py_format5)\n           1366 BUILD_MAP                1\n           1368 BINARY_OP                6 (%)\n           1372 STORE_FAST              14 (@py_format7)\n           1374 LOAD_GLOBAL             27 (NULL + AssertionError)\n           1384 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n           1394 LOAD_ATTR               28 (_format_explanation)\n           1414 LOAD_FAST               14 (@py_format7)\n           1416 CALL                     1\n           1424 CALL                     1\n           1432 RAISE_VARARGS            1\n        >> 1434 LOAD_CONST               0 (None)\n           1436 COPY                     1\n           1438 STORE_FAST              10 (@py_assert0)\n           1440 COPY                     1\n           1442 STORE_FAST              12 (@py_assert2)\n           1444 STORE_FAST              11 (@py_assert3)\n\n 76        1446 LOAD_FAST                9 (profile)\n           1448 LOAD_CONST              18 ('classification')\n           1450 BINARY_SUBSCR\n           1454 LOAD_CONST              26 ('qpose')\n           1456 BINARY_SUBSCR\n           1460 LOAD_CONST              30 ('non_velocity_columns_fixed_zero')\n           1462 BINARY_SUBSCR\n           1466 STORE_FAST              10 (@py_assert0)\n           1468 LOAD_CONST              31 (True)\n           1470 STORE_FAST              11 (@py_assert3)\n           1472 LOAD_FAST               10 (@py_assert0)\n           1474 LOAD_FAST               11 (@py_assert3)\n           1476 IS_OP                    0\n           1478 STORE_FAST              12 (@py_assert2)\n           1480 LOAD_FAST               12 (@py_assert2)\n           1482 POP_JUMP_IF_TRUE       108 (to 1700)\n           1484 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n           1494 LOAD_ATTR               22 (_call_reprcompare)\n           1514 LOAD_CONST              32 (('is',))\n           1516 LOAD_FAST               12 (@py_assert2)\n           1518 BUILD_TUPLE              1\n           1520 LOAD_CONST              33 (('%(py1)s is %(py4)s',))\n           1522 LOAD_FAST               10 (@py_assert0)\n           1524 LOAD_FAST               11 (@py_assert3)\n           1526 BUILD_TUPLE              2\n           1528 CALL                     4\n           1536 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n           1546 LOAD_ATTR               24 (_saferepr)\n           1566 LOAD_FAST               10 (@py_assert0)\n           1568 CALL                     1\n           1576 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n           1586 LOAD_ATTR               24 (_saferepr)\n           1606 LOAD_FAST               11 (@py_assert3)\n           1608 CALL                     1\n           1616 LOAD_CONST              23 (('py1', 'py4'))\n           1618 BUILD_CONST_KEY_MAP      2\n           1620 BINARY_OP                6 (%)\n           1624 STORE_FAST              13 (@py_format5)\n           1626 LOAD_CONST              24 ('assert %(py6)s')\n           1628 LOAD_CONST              25 ('py6')\n           1630 LOAD_FAST               13 (@py_format5)\n           1632 BUILD_MAP                1\n           1634 BINARY_OP                6 (%)\n           1638 STORE_FAST              14 (@py_format7)\n           1640 LOAD_GLOBAL             27 (NULL + AssertionError)\n           1650 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n           1660 LOAD_ATTR               28 (_format_explanation)\n           1680 LOAD_FAST               14 (@py_format7)\n           1682 CALL                     1\n           1690 CALL                     1\n           1698 RAISE_VARARGS            1\n        >> 1700 LOAD_CONST               0 (None)\n           1702 COPY                     1\n           1704 STORE_FAST              10 (@py_assert0)\n           1706 COPY                     1\n           1708 STORE_FAST              12 (@py_assert2)\n           1710 STORE_FAST              11 (@py_assert3)\n\n 77        1712 LOAD_FAST                9 (profile)\n           1714 LOAD_CONST              18 ('classification')\n           1716 BINARY_SUBSCR\n           1720 LOAD_CONST              34 ('tile_actions')\n           1722 BINARY_SUBSCR\n           1726 LOAD_CONST              27 ('format')\n           1728 BINARY_SUBSCR\n           1732 STORE_FAST              10 (@py_assert0)\n           1734 LOAD_CONST              35 ('sg2_tile_group_varint')\n           1736 STORE_FAST              11 (@py_assert3)\n           1738 LOAD_FAST               10 (@py_assert0)\n           1740 LOAD_FAST               11 (@py_assert3)\n           1742 COMPARE_OP              40 (==)\n           1746 STORE_FAST              12 (@py_assert2)\n           1748 LOAD_FAST               12 (@py_assert2)\n           1750 POP_JUMP_IF_TRUE       108 (to 1968)\n           1752 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n           1762 LOAD_ATTR               22 (_call_reprcompare)\n           1782 LOAD_CONST              21 (('==',))\n           1784 LOAD_FAST               12 (@py_assert2)\n           1786 BUILD_TUPLE              1\n           1788 LOAD_CONST              22 (('%(py1)s == %(py4)s',))\n           1790 LOAD_FAST               10 (@py_assert0)\n           1792 LOAD_FAST               11 (@py_assert3)\n           1794 BUILD_TUPLE              2\n           1796 CALL                     4\n           1804 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n           1814 LOAD_ATTR               24 (_saferepr)\n           1834 LOAD_FAST               10 (@py_assert0)\n           1836 CALL                     1\n           1844 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n           1854 LOAD_ATTR               24 (_saferepr)\n           1874 LOAD_FAST               11 (@py_assert3)\n           1876 CALL                     1\n           1884 LOAD_CONST              23 (('py1', 'py4'))\n           1886 BUILD_CONST_KEY_MAP      2\n           1888 BINARY_OP                6 (%)\n           1892 STORE_FAST              13 (@py_format5)\n           1894 LOAD_CONST              24 ('assert %(py6)s')\n           1896 LOAD_CONST              25 ('py6')\n           1898 LOAD_FAST               13 (@py_format5)\n           1900 BUILD_MAP                1\n           1902 BINARY_OP                6 (%)\n           1906 STORE_FAST              14 (@py_format7)\n           1908 LOAD_GLOBAL             27 (NULL + AssertionError)\n           1918 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n           1928 LOAD_ATTR               28 (_format_explanation)\n           1948 LOAD_FAST               14 (@py_format7)\n           1950 CALL                     1\n           1958 CALL                     1\n           1966 RAISE_VARARGS            1\n        >> 1968 LOAD_CONST               0 (None)\n           1970 COPY                     1\n           1972 STORE_FAST              10 (@py_assert0)\n           1974 COPY                     1\n           1976 STORE_FAST              12 (@py_assert2)\n           1978 STORE_FAST              11 (@py_assert3)\n\n 78        1980 LOAD_FAST                9 (profile)\n           1982 LOAD_CONST              18 ('classification')\n           1984 BINARY_SUBSCR\n           1988 LOAD_CONST              34 ('tile_actions')\n           1990 BINARY_SUBSCR\n           1994 LOAD_CONST              36 ('record_count')\n           1996 BINARY_SUBSCR\n           2000 STORE_FAST              10 (@py_assert0)\n           2002 LOAD_CONST               5 (2)\n           2004 STORE_FAST              11 (@py_assert3)\n           2006 LOAD_FAST               10 (@py_assert0)\n           2008 LOAD_FAST               11 (@py_assert3)\n           2010 COMPARE_OP              40 (==)\n           2014 STORE_FAST              12 (@py_assert2)\n           2016 LOAD_FAST               12 (@py_assert2)\n           2018 POP_JUMP_IF_TRUE       108 (to 2236)\n           2020 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n           2030 LOAD_ATTR               22 (_call_reprcompare)\n           2050 LOAD_CONST              21 (('==',))\n           2052 LOAD_FAST               12 (@py_assert2)\n           2054 BUILD_TUPLE              1\n           2056 LOAD_CONST              22 (('%(py1)s == %(py4)s',))\n           2058 LOAD_FAST               10 (@py_assert0)\n           2060 LOAD_FAST               11 (@py_assert3)\n           2062 BUILD_TUPLE              2\n           2064 CALL                     4\n           2072 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n           2082 LOAD_ATTR               24 (_saferepr)\n           2102 LOAD_FAST               10 (@py_assert0)\n           2104 CALL                     1\n           2112 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n           2122 LOAD_ATTR               24 (_saferepr)\n           2142 LOAD_FAST               11 (@py_assert3)\n           2144 CALL                     1\n           2152 LOAD_CONST              23 (('py1', 'py4'))\n           2154 BUILD_CONST_KEY_MAP      2\n           2156 BINARY_OP                6 (%)\n           2160 STORE_FAST              13 (@py_format5)\n           2162 LOAD_CONST              24 ('assert %(py6)s')\n           2164 LOAD_CONST              25 ('py6')\n           2166 LOAD_FAST               13 (@py_format5)\n           2168 BUILD_MAP                1\n           2170 BINARY_OP                6 (%)\n           2174 STORE_FAST              14 (@py_format7)\n           2176 LOAD_GLOBAL             27 (NULL + AssertionError)\n           2186 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n           2196 LOAD_ATTR               28 (_format_explanation)\n           2216 LOAD_FAST               14 (@py_format7)\n           2218 CALL                     1\n           2226 CALL                     1\n           2234 RAISE_VARARGS            1\n        >> 2236 LOAD_CONST               0 (None)\n           2238 COPY                     1\n           2240 STORE_FAST              10 (@py_assert0)\n           2242 COPY                     1\n           2244 STORE_FAST              12 (@py_assert2)\n           2246 STORE_FAST              11 (@py_assert3)\n\n 79        2248 LOAD_FAST                9 (profile)\n           2250 LOAD_CONST              18 ('classification')\n           2252 BINARY_SUBSCR\n           2256 LOAD_CONST              34 ('tile_actions')\n           2258 BINARY_SUBSCR\n           2262 LOAD_CONST              37 ('first_records')\n           2264 BINARY_SUBSCR\n           2268 STORE_FAST              10 (@py_assert0)\n\n 80        2270 LOAD_CONST               6 (10)\n           2272 LOAD_CONST               4 (5)\n           2274 LOAD_CONST               7 (1)\n           2276 LOAD_CONST              38 (('frame', 'tile', 'action'))\n           2278 BUILD_CONST_KEY_MAP      3\n\n 81        2280 LOAD_CONST              39 (12)\n           2282 LOAD_CONST               4 (5)\n           2284 LOAD_CONST               8 (3)\n           2286 LOAD_CONST              38 (('frame', 'tile', 'action'))\n           2288 BUILD_CONST_KEY_MAP      3\n\n 79        2290 BUILD_LIST               2\n           2292 STORE_FAST              11 (@py_assert3)\n           2294 LOAD_FAST               10 (@py_assert0)\n           2296 LOAD_FAST               11 (@py_assert3)\n           2298 COMPARE_OP              40 (==)\n           2302 STORE_FAST              12 (@py_assert2)\n           2304 LOAD_FAST               12 (@py_assert2)\n           2306 POP_JUMP_IF_TRUE       108 (to 2524)\n           2308 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n\n 82        2318 LOAD_ATTR               22 (_call_reprcompare)\n\n 79        2338 LOAD_CONST              21 (('==',))\n           2340 LOAD_FAST               12 (@py_assert2)\n           2342 BUILD_TUPLE              1\n           2344 LOAD_CONST              22 (('%(py1)s == %(py4)s',))\n           2346 LOAD_FAST               10 (@py_assert0)\n           2348 LOAD_FAST               11 (@py_assert3)\n           2350 BUILD_TUPLE              2\n           2352 CALL                     4\n           2360 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n\n 82        2370 LOAD_ATTR               24 (_saferepr)\n\n 79        2390 LOAD_FAST               10 (@py_assert0)\n           2392 CALL                     1\n           2400 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n\n 82        2410 LOAD_ATTR               24 (_saferepr)\n\n 79        2430 LOAD_FAST               11 (@py_assert3)\n           2432 CALL                     1\n           2440 LOAD_CONST              23 (('py1', 'py4'))\n           2442 BUILD_CONST_KEY_MAP      2\n           2444 BINARY_OP                6 (%)\n           2448 STORE_FAST              13 (@py_format5)\n           2450 LOAD_CONST              24 ('assert %(py6)s')\n           2452 LOAD_CONST              25 ('py6')\n           2454 LOAD_FAST               13 (@py_format5)\n           2456 BUILD_MAP                1\n           2458 BINARY_OP                6 (%)\n           2462 STORE_FAST              14 (@py_format7)\n           2464 LOAD_GLOBAL             27 (NULL + AssertionError)\n           2474 LOAD_GLOBAL             21 (NULL + @pytest_ar)\n\n 82        2484 LOAD_ATTR               28 (_format_explanation)\n\n 79        2504 LOAD_FAST               14 (@py_format7)\n           2506 CALL                     1\n           2514 CALL                     1\n           2522 RAISE_VARARGS            1\n        >> 2524 LOAD_CONST               0 (None)\n           2526 COPY                     1\n           2528 STORE_FAST              10 (@py_assert0)\n           2530 COPY                     1\n           2532 STORE_FAST              12 (@py_assert2)\n           2534 STORE_FAST              11 (@py_assert3)\n           2536 RETURN_CONST             0 (None)\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  1           2 LOAD_CONST               0 (0)\n              4 LOAD_CONST               1 (('annotations',))\n              6 IMPORT_NAME              0 (__future__)\n              8 IMPORT_FROM              1 (annotations)\n             10 STORE_NAME               1 (annotations)\n             12 POP_TOP\n\n  3          14 LOAD_CONST               0 (0)\n             16 LOAD_CONST               2 (None)\n             18 IMPORT_NAME              2 (builtins)\n             20 STORE_NAME               3 (@py_builtins)\n             22 LOAD_CONST               0 (0)\n             24 LOAD_CONST               2 (None)\n             26 IMPORT_NAME              4 (_pytest.assertion.rewrite)\n             28 IMPORT_FROM              5 (assertion)\n             30 SWAP                     2\n             32 POP_TOP\n             34 IMPORT_FROM              6 (rewrite)\n             36 STORE_NAME               7 (@pytest_ar)\n             38 POP_TOP\n             40 LOAD_CONST               0 (0)\n             42 LOAD_CONST               2 (None)\n             44 IMPORT_NAME              8 (importlib.util)\n             46 STORE_NAME               9 (importlib)\n\n  4          48 LOAD_CONST               0 (0)\n             50 LOAD_CONST               2 (None)\n             52 IMPORT_NAME             10 (sys)\n             54 STORE_NAME              10 (sys)\n\n  5          56 LOAD_CONST               0 (0)\n             58 LOAD_CONST               3 (('Path',))\n             60 IMPORT_NAME             11 (pathlib)\n             62 IMPORT_FROM             12 (Path)\n             64 STORE_NAME              12 (Path)\n             66 POP_TOP\n\n  7          68 LOAD_CONST               0 (0)\n             70 LOAD_CONST               2 (None)\n             72 IMPORT_NAME             13 (brotli)\n             74 STORE_NAME              13 (brotli)\n\n 10          76 PUSH_NULL\n             78 LOAD_NAME               12 (Path)\n             80 LOAD_NAME               14 (__file__)\n             82 CALL                     1\n             90 LOAD_ATTR               31 (NULL|self + resolve)\n            110 CALL                     0\n            118 LOAD_ATTR               32 (parents)\n            138 LOAD_CONST               4 (3)\n            140 BINARY_SUBSCR\n            144 STORE_NAME              17 (REPO_ROOT)\n\n 11         146 LOAD_NAME               17 (REPO_ROOT)\n            148 LOAD_CONST               5 ('experiments/profile_pr94_qpose_intake.py')\n            150 BINARY_OP               11 (/)\n            154 STORE_NAME              18 (MODULE_PATH)\n\n 14         156 LOAD_CONST               6 (<code object load_module at 0xaeae96800, file \"/Users/adpena/Projects/pact/src/tac/tests/test_profile_pr94_qpose_intake.py\", line 14>)\n            158 MAKE_FUNCTION            0\n            160 STORE_NAME              19 (load_module)\n\n 24         162 LOAD_CONST              11 (('value', 'int', 'return', 'bytes'))\n            164 LOAD_CONST               7 (<code object uvarint at 0x100371bb0, file \"/Users/adpena/Projects/pact/src/tac/tests/test_profile_pr94_qpose_intake.py\", line 24>)\n            166 MAKE_FUNCTION            4 (annotations)\n            168 STORE_NAME              20 (uvarint)\n\n 36         170 LOAD_CONST              12 (('value', 'int', 'return', 'int'))\n            172 LOAD_CONST               8 (<code object zigzag at 0x100442090, file \"/Users/adpena/Projects/pact/src/tac/tests/test_profile_pr94_qpose_intake.py\", line 36>)\n            174 MAKE_FUNCTION            4 (annotations)\n            176 STORE_NAME              21 (zigzag)\n\n 40         178 LOAD_CONST               9 (<code object test_infer_pr94_fixed_range_layout_for_observed_payload_size at 0xaeb02f200, file \"/Users/adpena/Projects/pact/src/tac/tests/test_profile_pr94_qpose_intake.py\", line 40>)\n            180 MAKE_FUNCTION            0\n            182 STORE_NAME              22 (test_infer_pr94_fixed_range_layout_for_observed_payload_size)\n\n 52         184 LOAD_CONST              10 (<code object test_profile_payload_decodes_qp1_velocity_and_sg2_actions at 0xaeb0b7000, file \"/Users/adpena/Projects/pact/src/tac/tests/test_profile_pr94_qpose_intake.py\", line 52>)\n            186 MAKE_FUNCTION            0\n            188 STORE_NAME              23 (test_profile_payload_decodes_qp1_velocity_and_sg2_actions)\n            190 RETURN_CONST             2 (None)\n"
+}

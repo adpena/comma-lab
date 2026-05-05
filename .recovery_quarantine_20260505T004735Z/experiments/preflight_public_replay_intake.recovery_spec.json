@@ -1,0 +1,1091 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/experiments/__pycache__/preflight_public_replay_intake.cpython-312.pyc",
+  "names": [
+    "__doc__",
+    "__future__",
+    "annotations",
+    "argparse",
+    "gzip",
+    "hashlib",
+    "json",
+    "re",
+    "sys",
+    "zipfile",
+    "pathlib",
+    "Path",
+    "typing",
+    "Any",
+    "__file__",
+    "resolve",
+    "parents",
+    "REPO_ROOT",
+    "SRC_ROOT",
+    "EXPERIMENTS_ROOT",
+    "_path",
+    "str",
+    "path",
+    "insert",
+    "contest_auth_eval",
+    "_runtime_dependency_manifest",
+    "_validate_archive_members",
+    "_validate_zip_container_integrity",
+    "tac.pr85_bundle",
+    "Pr85BundleError",
+    "parse_pr85_bundle",
+    "tac.submission_archive",
+    "validate_archive_member_name",
+    "SCHEMA",
+    "TOOL",
+    "EVIDENCE_GRADE",
+    "compile",
+    "DOTALL",
+    "SOURCE_EMBEDDED_PAYLOAD_LITERAL_RE",
+    "_sha256_bytes",
+    "_sha256_file",
+    "_repo_rel",
+    "_json_text",
+    "_magic_ascii",
+    "_try_brotli",
+    "_try_gzip",
+    "_contract_to_json",
+    "_probe_pr85_family_x",
+    "_probe_member",
+    "_runtime_source_payload_scan",
+    "_archive_report",
+    "build_preflight",
+    "build_parser",
+    "main",
+    "__name__",
+    "SystemExit"
+  ],
+  "varnames": [],
+  "consts": [
+    "Static public-PR replay intake preflight.\n\nThis tool validates a public archive/runtime pair before any exact-eval\ndispatch.  It is intentionally local and static: it never inflates videos,\nloads scorers, runs CUDA, submits remote jobs, or makes score claims.\n",
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "Path"
+    ],
+    [
+      "Any"
+    ],
+    1,
+    "src",
+    "experiments",
+    [
+      "_runtime_dependency_manifest",
+      "_validate_archive_members",
+      "_validate_zip_container_integrity"
+    ],
+    [
+      "Pr85BundleError",
+      "parse_pr85_bundle"
+    ],
+    [
+      "validate_archive_member_name"
+    ],
+    "public_replay_intake_preflight_v1",
+    "experiments/preflight_public_replay_intake.py",
+    "external/local_preflight_non_score_until_cuda",
+    "(?:b64decode|b85decode|a85decode|brotli\\.decompress|lzma\\.decompress|zlib\\.decompress)\\s*\\(\\s*([rubfRUBF]*[\\\"'])(?P<payload>.{65536,}?)(?<!\\\\)\\1",
+    {
+      "__code__": "_sha256_bytes",
+      "qualname": "_sha256_bytes",
+      "argcount": 1,
+      "varnames": [
+        "data"
+      ],
+      "names": [
+        "hashlib",
+        "sha256",
+        "hexdigest"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_sha256_file",
+      "qualname": "_sha256_file",
+      "argcount": 1,
+      "varnames": [
+        "path",
+        "digest",
+        "chunk"
+      ],
+      "names": [
+        "hashlib",
+        "sha256",
+        "open",
+        "iter",
+        "update",
+        "hexdigest"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "handle"
+      ]
+    },
+    {
+      "__code__": "_repo_rel",
+      "qualname": "_repo_rel",
+      "argcount": 1,
+      "varnames": [
+        "path"
+      ],
+      "names": [
+        "resolve",
+        "relative_to",
+        "REPO_ROOT",
+        "as_posix",
+        "ValueError",
+        "str"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_json_text",
+      "qualname": "_json_text",
+      "argcount": 1,
+      "varnames": [
+        "payload"
+      ],
+      "names": [
+        "json",
+        "dumps"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_magic_ascii",
+      "qualname": "_magic_ascii",
+      "argcount": 2,
+      "varnames": [
+        "data",
+        "n"
+      ],
+      "names": [
+        "decode"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_try_brotli",
+      "qualname": "_try_brotli",
+      "argcount": 1,
+      "varnames": [
+        "data",
+        "brotli",
+        "decoded",
+        "exc"
+      ],
+      "names": [
+        "brotli",
+        "ImportError",
+        "decompress",
+        "error",
+        "str",
+        "len",
+        "_sha256_bytes",
+        "_magic_ascii",
+        "hex"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_try_gzip",
+      "qualname": "_try_gzip",
+      "argcount": 1,
+      "varnames": [
+        "data",
+        "decoded",
+        "exc"
+      ],
+      "names": [
+        "gzip",
+        "decompress",
+        "OSError",
+        "str",
+        "len",
+        "_sha256_bytes",
+        "_magic_ascii",
+        "hex"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_contract_to_json",
+      "qualname": "_contract_to_json",
+      "argcount": 1,
+      "varnames": [
+        "contract"
+      ],
+      "names": [
+        "name",
+        "codec",
+        "int",
+        "bytes",
+        "sha256",
+        "magic",
+        "dict",
+        "metadata"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_probe_pr85_family_x",
+      "qualname": "_probe_pr85_family_x",
+      "argcount": 1,
+      "varnames": [
+        "raw",
+        "bundle",
+        "segments",
+        "name",
+        "contract",
+        "row",
+        "segment",
+        "decoded",
+        "decompression"
+      ],
+      "names": [
+        "parse_pr85_bundle",
+        "segment_contracts",
+        "items",
+        "_contract_to_json",
+        "bytes",
+        "segments",
+        "_try_brotli",
+        "_magic_ascii",
+        "hex",
+        "append",
+        "format",
+        "int",
+        "header_bytes",
+        "segment_lengths",
+        "dict",
+        "fixed_length_segments"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_probe_member",
+      "qualname": "_probe_member",
+      "argcount": 2,
+      "varnames": [
+        "name",
+        "data",
+        "row",
+        "lower",
+        "_decoded",
+        "exc"
+      ],
+      "names": [
+        "len",
+        "_sha256_bytes",
+        "_magic_ascii",
+        "hex",
+        "lower",
+        "_probe_pr85_family_x",
+        "endswith",
+        "_try_brotli",
+        "_try_gzip",
+        "startswith",
+        "json",
+        "loads",
+        "decode",
+        "Pr85BundleError",
+        "UnicodeDecodeError",
+        "JSONDecodeError",
+        "__class__",
+        "__name__"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_runtime_source_payload_scan",
+      "qualname": "_runtime_source_payload_scan",
+      "argcount": 2,
+      "varnames": [
+        "runtime_root",
+        "archive_bytes",
+        "source_bytes",
+        "violations",
+        "files",
+        "path",
+        "rel",
+        "raw",
+        "file_row",
+        "text"
+      ],
+      "names": [
+        "sorted",
+        "rglob",
+        "is_file",
+        "relative_to",
+        "as_posix",
+        "any",
+        "Path",
+        "parts",
+        "append",
+        "suffix",
+        "lower",
+        "read_bytes",
+        "len",
+        "_sha256_bytes",
+        "decode",
+        "SOURCE_EMBEDDED_PAYLOAD_LITERAL_RE",
+        "search",
+        "_repo_rel"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_archive_report",
+      "qualname": "_archive_report",
+      "argcount": 1,
+      "varnames": [
+        "archive",
+        "blockers",
+        "report",
+        "zf",
+        "info",
+        "infos",
+        "names",
+        "name",
+        "duplicate_names",
+        "exc",
+        "member_rows",
+        "row",
+        "data",
+        "probe"
+      ],
+      "names": [
+        "is_file",
+        "_repo_rel",
+        "str",
+        "stat",
+        "st_size",
+        "_sha256_file",
+        "zipfile",
+        "ZipFile",
+        "infolist",
+        "is_dir",
+        "filename",
+        "sorted",
+        "count",
+        "append",
+        "join",
+        "_validate_zip_container_integrity",
+        "RuntimeError",
+        "int",
+        "file_size",
+        "compress_size",
+        "compress_type",
+        "CRC",
+        "validate_archive_member_name",
+        "ValueError",
+        "read",
+        "_probe_member",
+        "get",
+        "Exception",
+        "_validate_archive_members",
+        "BadZipFile"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "upstream",
+    [
+      "upstream_dir",
+      "expected_archive_sha256",
+      "expected_archive_size_bytes",
+      "expected_runtime_tree_sha256"
+    ],
+    {
+      "__code__": "build_preflight",
+      "qualname": "build_preflight",
+      "argcount": 2,
+      "varnames": [
+        "archive",
+        "inflate_sh",
+        "upstream_dir",
+        "expected_archive_sha256",
+        "expected_archive_size_bytes",
+        "expected_runtime_tree_sha256",
+        "archive_report",
+        "blockers",
+        "actual",
+        "runtime_report",
+        "runtime_manifest",
+        "detail",
+        "ready"
+      ],
+      "names": [
+        "Path",
+        "_archive_report",
+        "get",
+        "append",
+        "is_file",
+        "_repo_rel",
+        "str",
+        "_runtime_dependency_manifest",
+        "_sha256_file",
+        "_runtime_source_payload_scan",
+        "parent",
+        "int",
+        "SCHEMA",
+        "TOOL",
+        "EVIDENCE_GRADE"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "build_parser",
+      "qualname": "build_parser",
+      "argcount": 0,
+      "varnames": [
+        "parser"
+      ],
+      "names": [
+        "argparse",
+        "ArgumentParser",
+        "__doc__",
+        "add_argument",
+        "Path",
+        "REPO_ROOT",
+        "int"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "main",
+      "qualname": "main",
+      "argcount": 1,
+      "varnames": [
+        "argv",
+        "args",
+        "payload",
+        "text"
+      ],
+      "names": [
+        "build_parser",
+        "parse_args",
+        "build_preflight",
+        "archive",
+        "inflate_sh",
+        "upstream_dir",
+        "expected_archive_sha256",
+        "expected_archive_size_bytes",
+        "expected_runtime_tree_sha256",
+        "_json_text",
+        "json_out",
+        "parent",
+        "mkdir",
+        "write_text",
+        "print",
+        "fail_if_not_ready"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "__main__",
+    [
+      "data",
+      "bytes",
+      "return",
+      "str"
+    ],
+    [
+      "path",
+      "Path",
+      "return",
+      "str"
+    ],
+    [
+      "payload",
+      "Any",
+      "return",
+      "str"
+    ],
+    [
+      8
+    ],
+    [
+      "data",
+      "bytes",
+      "n",
+      "int",
+      "return",
+      "str"
+    ],
+    [
+      "data",
+      "bytes",
+      "return",
+      "tuple[bytes | None, dict[str, Any]]"
+    ],
+    [
+      "contract",
+      "Any",
+      "return",
+      "dict[str, Any]"
+    ],
+    [
+      "raw",
+      "bytes",
+      "return",
+      "dict[str, Any]"
+    ],
+    [
+      "name",
+      "str",
+      "data",
+      "bytes",
+      "return",
+      "dict[str, Any]"
+    ],
+    [
+      "runtime_root",
+      "Path",
+      "archive_bytes",
+      "int",
+      "return",
+      "dict[str, Any]"
+    ],
+    [
+      "archive",
+      "Path",
+      "return",
+      "tuple[dict[str, Any], list[dict[str, str]]]"
+    ],
+    [
+      "archive",
+      "Path",
+      "inflate_sh",
+      "Path",
+      "upstream_dir",
+      "Path",
+      "expected_archive_sha256",
+      "str | None",
+      "expected_archive_size_bytes",
+      "int | None",
+      "expected_runtime_tree_sha256",
+      "str | None",
+      "return",
+      "dict[str, Any]"
+    ],
+    [
+      "return",
+      "argparse.ArgumentParser"
+    ],
+    [
+      null
+    ],
+    [
+      "argv",
+      "list[str] | None",
+      "return",
+      "int"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": "Static public-PR replay intake preflight.\n\nThis tool validates a public archive/runtime pair before any exact-eval\ndispatch.  It is intentionally local and static: it never inflates videos,\nloads scorers, runs CUDA, submits remote jobs, or makes score claims.\n",
+  "child_codes": [
+    {
+      "qualname": "_sha256_bytes",
+      "name": "_sha256_bytes",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "data"
+      ],
+      "names": [
+        "hashlib",
+        "sha256",
+        "hexdigest"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 51           0 RESUME                   0\n\n 52           2 LOAD_GLOBAL              1 (NULL + hashlib)\n             12 LOAD_ATTR                2 (sha256)\n             32 LOAD_FAST                0 (data)\n             34 CALL                     1\n             42 LOAD_ATTR                5 (NULL|self + hexdigest)\n             62 CALL                     0\n             70 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_sha256_file",
+      "name": "_sha256_file",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "digest",
+        "chunk"
+      ],
+      "names": [
+        "hashlib",
+        "sha256",
+        "open",
+        "iter",
+        "update",
+        "hexdigest"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "handle"
+      ],
+      "doc": null,
+      "dis": "              0 MAKE_CELL                3 (handle)\n\n 55           2 RESUME                   0\n\n 56           4 LOAD_GLOBAL              1 (NULL + hashlib)\n             14 LOAD_ATTR                2 (sha256)\n             34 CALL                     0\n             42 STORE_FAST               1 (digest)\n\n 57          44 LOAD_FAST                0 (path)\n             46 LOAD_ATTR                5 (NULL|self + open)\n             66 LOAD_CONST               1 ('rb')\n             68 CALL                     1\n             76 BEFORE_WITH\n             78 STORE_DEREF              3 (handle)\n\n 58          80 LOAD_GLOBAL              7 (NULL + iter)\n             90 LOAD_CLOSURE             3 (handle)\n             92 BUILD_TUPLE              1\n             94 LOAD_CONST               2 (<code object <lambda> at 0x101309c50, file \"/Users/adpena/Projects/pact/experiments/preflight_public_replay_intake.py\", line 58>)\n             96 MAKE_FUNCTION            8 (closure)\n             98 LOAD_CONST               3 (b'')\n            100 CALL                     2\n            108 GET_ITER\n        >>  110 FOR_ITER                19 (to 152)\n            114 STORE_FAST               2 (chunk)\n\n 59         116 LOAD_FAST                1 (digest)\n            118 LOAD_ATTR                9 (NULL|self + update)\n            138 LOAD_FAST                2 (chunk)\n            140 CALL                     1\n            148 POP_TOP\n            150 JUMP_BACKWARD           21 (to 110)\n\n 58     >>  152 END_FOR\n            154 NOP\n\n 57         156 LOAD_CONST               0 (None)\n            158 LOAD_CONST               0 (None)\n            160 LOAD_CONST               0 (None)\n            162 CALL                     2\n            170 POP_TOP\n\n 60         172 LOAD_FAST                1 (digest)\n            174 LOAD_ATTR               11 (NULL|self + hexdigest)\n            194 CALL                     0\n            202 RETURN_VALUE\n\n 57     >>  204 PUSH_EXC_INFO\n            206 WITH_EXCEPT_START\n            208 POP_JUMP_IF_TRUE         1 (to 212)\n            210 RERAISE                  2\n        >>  212 POP_TOP\n            214 POP_EXCEPT\n            216 POP_TOP\n            218 POP_TOP\n\n 60         220 LOAD_FAST                1 (digest)\n            222 LOAD_ATTR               11 (NULL|self + hexdigest)\n            242 CALL                     0\n            250 RETURN_VALUE\n        >>  252 COPY                     3\n            254 POP_EXCEPT\n            256 RERAISE                  1\nExceptionTable:\n  78 to 152 -> 204 [1] lasti\n  204 to 212 -> 252 [3] lasti\n"
+    },
+    {
+      "qualname": "_sha256_file.<locals>.<lambda>",
+      "name": "<lambda>",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [],
+      "names": [
+        "read"
+      ],
+      "freevars": [
+        "handle"
+      ],
+      "cellvars": [],
+      "doc": null,
+      "dis": "              0 COPY_FREE_VARS           1\n\n 58           2 RESUME                   0\n              4 LOAD_DEREF               0 (handle)\n              6 LOAD_ATTR                1 (NULL|self + read)\n             26 LOAD_CONST               1 (1048576)\n             28 CALL                     1\n             36 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_repo_rel",
+      "name": "_repo_rel",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path"
+      ],
+      "names": [
+        "resolve",
+        "relative_to",
+        "REPO_ROOT",
+        "as_posix",
+        "ValueError",
+        "str"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 63           0 RESUME                   0\n\n 64           2 NOP\n\n 65           4 LOAD_FAST                0 (path)\n              6 LOAD_ATTR                1 (NULL|self + resolve)\n             26 CALL                     0\n             34 LOAD_ATTR                3 (NULL|self + relative_to)\n             54 LOAD_GLOBAL              4 (REPO_ROOT)\n             64 CALL                     1\n             72 LOAD_ATTR                7 (NULL|self + as_posix)\n             92 CALL                     0\n            100 RETURN_VALUE\n        >>  102 PUSH_EXC_INFO\n\n 66         104 LOAD_GLOBAL              8 (ValueError)\n            114 CHECK_EXC_MATCH\n            116 POP_JUMP_IF_FALSE       28 (to 174)\n            118 POP_TOP\n\n 67         120 LOAD_GLOBAL             11 (NULL + str)\n            130 LOAD_FAST                0 (path)\n            132 LOAD_ATTR                1 (NULL|self + resolve)\n            152 CALL                     0\n            160 CALL                     1\n            168 SWAP                     2\n            170 POP_EXCEPT\n            172 RETURN_VALUE\n\n 66     >>  174 RERAISE                  0\n        >>  176 COPY                     3\n            178 POP_EXCEPT\n            180 RERAISE                  1\nExceptionTable:\n  4 to 98 -> 102 [0]\n  102 to 168 -> 176 [1] lasti\n  174 to 174 -> 176 [1] lasti\n"
+    },
+    {
+      "qualname": "_json_text",
+      "name": "_json_text",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "payload"
+      ],
+      "names": [
+        "json",
+        "dumps"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 70           0 RESUME                   0\n\n 71           2 LOAD_GLOBAL              1 (NULL + json)\n             12 LOAD_ATTR                2 (dumps)\n             32 LOAD_FAST                0 (payload)\n             34 LOAD_CONST               1 (2)\n             36 LOAD_CONST               2 (True)\n             38 LOAD_CONST               3 (False)\n             40 KW_NAMES                 4 (('indent', 'sort_keys', 'allow_nan'))\n             42 CALL                     4\n             50 LOAD_CONST               5 ('\\n')\n             52 BINARY_OP                0 (+)\n             56 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_magic_ascii",
+      "name": "_magic_ascii",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "data",
+        "n"
+      ],
+      "names": [
+        "decode"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 74           0 RESUME                   0\n\n 75           2 LOAD_FAST                0 (data)\n              4 LOAD_CONST               0 (None)\n              6 LOAD_FAST                1 (n)\n              8 BINARY_SLICE\n             10 LOAD_ATTR                1 (NULL|self + decode)\n             30 LOAD_CONST               1 ('ascii')\n             32 LOAD_CONST               2 ('replace')\n             34 KW_NAMES                 3 (('errors',))\n             36 CALL                     2\n             44 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_try_brotli",
+      "name": "_try_brotli",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "data",
+        "brotli",
+        "decoded",
+        "exc"
+      ],
+      "names": [
+        "brotli",
+        "ImportError",
+        "decompress",
+        "error",
+        "str",
+        "len",
+        "_sha256_bytes",
+        "_magic_ascii",
+        "hex"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 78           0 RESUME                   0\n\n 79           2 NOP\n\n 80           4 LOAD_CONST               1 (0)\n              6 LOAD_CONST               0 (None)\n              8 IMPORT_NAME              0 (brotli)\n             10 STORE_FAST               1 (brotli)\n\n 83          12 NOP\n\n 84          14 LOAD_FAST                1 (brotli)\n             16 LOAD_ATTR                5 (NULL|self + decompress)\n             36 LOAD_FAST                0 (data)\n             38 CALL                     1\n             46 STORE_FAST               2 (decoded)\n\n 87          48 LOAD_FAST                2 (decoded)\n\n 88          50 LOAD_CONST               2 (True)\n\n 89          52 LOAD_CONST               2 (True)\n\n 90          54 LOAD_GLOBAL             11 (NULL + len)\n             64 LOAD_FAST                2 (decoded)\n             66 CALL                     1\n\n 91          74 LOAD_GLOBAL             13 (NULL + _sha256_bytes)\n             84 LOAD_FAST                2 (decoded)\n             86 CALL                     1\n\n 92          94 LOAD_GLOBAL             15 (NULL + _magic_ascii)\n            104 LOAD_FAST                2 (decoded)\n            106 CALL                     1\n\n 93         114 LOAD_FAST                2 (decoded)\n            116 LOAD_CONST               0 (None)\n            118 LOAD_CONST               6 (8)\n            120 BINARY_SLICE\n            122 LOAD_ATTR               17 (NULL|self + hex)\n            142 CALL                     0\n\n 87         150 LOAD_CONST               7 (('attempted', 'ok', 'decoded_bytes', 'decoded_sha256', 'decoded_magic_ascii', 'decoded_magic_hex'))\n            152 BUILD_CONST_KEY_MAP      6\n            154 BUILD_TUPLE              2\n            156 RETURN_VALUE\n        >>  158 PUSH_EXC_INFO\n\n 81         160 LOAD_GLOBAL              2 (ImportError)\n            170 CHECK_EXC_MATCH\n            172 POP_JUMP_IF_FALSE       11 (to 196)\n            174 POP_TOP\n\n 82         176 LOAD_CONST               0 (None)\n            178 LOAD_CONST               2 (True)\n            180 LOAD_CONST               3 (False)\n            182 LOAD_CONST               4 ('brotli_not_available')\n            184 LOAD_CONST               5 (('attempted', 'ok', 'error'))\n            186 BUILD_CONST_KEY_MAP      3\n            188 BUILD_TUPLE              2\n            190 SWAP                     2\n            192 POP_EXCEPT\n            194 RETURN_VALUE\n\n 81     >>  196 RERAISE                  0\n        >>  198 COPY                     3\n            200 POP_EXCEPT\n            202 RERAISE                  1\n        >>  204 PUSH_EXC_INFO\n\n 85         206 LOAD_FAST                1 (brotli)\n            208 LOAD_ATTR                6 (error)\n            228 CHECK_EXC_MATCH\n            230 POP_JUMP_IF_FALSE       27 (to 286)\n            232 STORE_FAST               3 (exc)\n\n 86         234 LOAD_CONST               0 (None)\n            236 LOAD_CONST               2 (True)\n            238 LOAD_CONST               3 (False)\n            240 LOAD_GLOBAL              9 (NULL + str)\n            250 LOAD_FAST                3 (exc)\n            252 CALL                     1\n            260 LOAD_CONST               5 (('attempted', 'ok', 'error'))\n            262 BUILD_CONST_KEY_MAP      3\n            264 BUILD_TUPLE              2\n            266 SWAP                     2\n            268 POP_EXCEPT\n            270 LOAD_CONST               0 (None)\n            272 STORE_FAST               3 (exc)\n            274 DELETE_FAST              3 (exc)\n            276 RETURN_VALUE\n        >>  278 LOAD_CONST               0 (None)\n            280 STORE_FAST               3 (exc)\n            282 DELETE_FAST              3 (exc)\n            284 RERAISE                  1\n\n 85     >>  286 RERAISE                  0\n        >>  288 COPY                     3\n            290 POP_EXCEPT\n            292 RERAISE                  1\nExceptionTable:\n  4 to 10 -> 158 [0]\n  14 to 46 -> 204 [0]\n  158 to 190 -> 198 [1] lasti\n  196 to 196 -> 198 [1] lasti\n  204 to 232 -> 288 [1] lasti\n  234 to 264 -> 278 [1] lasti\n  266 to 266 -> 288 [1] lasti\n  278 to 286 -> 288 [1] lasti\n"
+    },
+    {
+      "qualname": "_try_gzip",
+      "name": "_try_gzip",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "data",
+        "decoded",
+        "exc"
+      ],
+      "names": [
+        "gzip",
+        "decompress",
+        "OSError",
+        "str",
+        "len",
+        "_sha256_bytes",
+        "_magic_ascii",
+        "hex"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 97           0 RESUME                   0\n\n 98           2 NOP\n\n 99           4 LOAD_GLOBAL              1 (NULL + gzip)\n             14 LOAD_ATTR                2 (decompress)\n             34 LOAD_FAST                0 (data)\n             36 CALL                     1\n             44 STORE_FAST               1 (decoded)\n\n102          46 LOAD_FAST                1 (decoded)\n\n103          48 LOAD_CONST               1 (True)\n\n104          50 LOAD_CONST               1 (True)\n\n105          52 LOAD_GLOBAL              9 (NULL + len)\n             62 LOAD_FAST                1 (decoded)\n             64 CALL                     1\n\n106          72 LOAD_GLOBAL             11 (NULL + _sha256_bytes)\n             82 LOAD_FAST                1 (decoded)\n             84 CALL                     1\n\n107          92 LOAD_GLOBAL             13 (NULL + _magic_ascii)\n            102 LOAD_FAST                1 (decoded)\n            104 CALL                     1\n\n108         112 LOAD_FAST                1 (decoded)\n            114 LOAD_CONST               0 (None)\n            116 LOAD_CONST               4 (8)\n            118 BINARY_SLICE\n            120 LOAD_ATTR               15 (NULL|self + hex)\n            140 CALL                     0\n\n102         148 LOAD_CONST               5 (('attempted', 'ok', 'decoded_bytes', 'decoded_sha256', 'decoded_magic_ascii', 'decoded_magic_hex'))\n            150 BUILD_CONST_KEY_MAP      6\n            152 BUILD_TUPLE              2\n            154 RETURN_VALUE\n        >>  156 PUSH_EXC_INFO\n\n100         158 LOAD_GLOBAL              4 (OSError)\n            168 CHECK_EXC_MATCH\n            170 POP_JUMP_IF_FALSE       27 (to 226)\n            172 STORE_FAST               2 (exc)\n\n101         174 LOAD_CONST               0 (None)\n            176 LOAD_CONST               1 (True)\n            178 LOAD_CONST               2 (False)\n            180 LOAD_GLOBAL              7 (NULL + str)\n            190 LOAD_FAST                2 (exc)\n            192 CALL                     1\n            200 LOAD_CONST               3 (('attempted', 'ok', 'error'))\n            202 BUILD_CONST_KEY_MAP      3\n            204 BUILD_TUPLE              2\n            206 SWAP                     2\n            208 POP_EXCEPT\n            210 LOAD_CONST               0 (None)\n            212 STORE_FAST               2 (exc)\n            214 DELETE_FAST              2 (exc)\n            216 RETURN_VALUE\n        >>  218 LOAD_CONST               0 (None)\n            220 STORE_FAST               2 (exc)\n            222 DELETE_FAST              2 (exc)\n            224 RERAISE                  1\n\n100     >>  226 RERAISE                  0\n        >>  228 COPY                     3\n            230 POP_EXCEPT\n            232 RERAISE                  1\nExceptionTable:\n  4 to 44 -> 156 [0]\n  156 to 172 -> 228 [1] lasti\n  174 to 204 -> 218 [1] lasti\n  206 to 206 -> 228 [1] lasti\n  218 to 226 -> 228 [1] lasti\n"
+    },
+    {
+      "qualname": "_contract_to_json",
+      "name": "_contract_to_json",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "contract"
+      ],
+      "names": [
+        "name",
+        "codec",
+        "int",
+        "bytes",
+        "sha256",
+        "magic",
+        "dict",
+        "metadata"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "112           0 RESUME                   0\n\n114           2 LOAD_FAST                0 (contract)\n              4 LOAD_ATTR                0 (name)\n\n115          24 LOAD_FAST                0 (contract)\n             26 LOAD_ATTR                2 (codec)\n\n116          46 LOAD_GLOBAL              5 (NULL + int)\n             56 LOAD_FAST                0 (contract)\n             58 LOAD_ATTR                6 (bytes)\n             78 CALL                     1\n\n117          86 LOAD_FAST                0 (contract)\n             88 LOAD_ATTR                8 (sha256)\n\n118         108 LOAD_FAST                0 (contract)\n            110 LOAD_ATTR               10 (magic)\n\n119         130 LOAD_GLOBAL             13 (NULL + dict)\n            140 LOAD_FAST                0 (contract)\n            142 LOAD_ATTR               14 (metadata)\n            162 CALL                     1\n\n113         170 LOAD_CONST               1 (('name', 'codec', 'bytes', 'sha256', 'magic', 'metadata'))\n            172 BUILD_CONST_KEY_MAP      6\n            174 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_probe_pr85_family_x",
+      "name": "_probe_pr85_family_x",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "raw",
+        "bundle",
+        "segments",
+        "name",
+        "contract",
+        "row",
+        "segment",
+        "decoded",
+        "decompression"
+      ],
+      "names": [
+        "parse_pr85_bundle",
+        "segment_contracts",
+        "items",
+        "_contract_to_json",
+        "bytes",
+        "segments",
+        "_try_brotli",
+        "_magic_ascii",
+        "hex",
+        "append",
+        "format",
+        "int",
+        "header_bytes",
+        "segment_lengths",
+        "dict",
+        "fixed_length_segments"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "123           0 RESUME                   0\n\n124           2 LOAD_GLOBAL              1 (NULL + parse_pr85_bundle)\n             12 LOAD_FAST                0 (raw)\n             14 CALL                     1\n             22 STORE_FAST               1 (bundle)\n\n125          24 BUILD_LIST               0\n             26 STORE_FAST               2 (segments)\n\n126          28 LOAD_FAST                1 (bundle)\n             30 LOAD_ATTR                2 (segment_contracts)\n             50 LOAD_ATTR                5 (NULL|self + items)\n             70 CALL                     0\n             78 GET_ITER\n        >>   80 FOR_ITER               119 (to 322)\n             84 UNPACK_SEQUENCE          2\n             88 STORE_FAST               3 (name)\n             90 STORE_FAST               4 (contract)\n\n127          92 LOAD_GLOBAL              7 (NULL + _contract_to_json)\n            102 LOAD_FAST                4 (contract)\n            104 CALL                     1\n            112 STORE_FAST               5 (row)\n\n128         114 LOAD_GLOBAL              9 (NULL + bytes)\n            124 LOAD_FAST                1 (bundle)\n            126 LOAD_ATTR               10 (segments)\n            146 LOAD_FAST                3 (name)\n            148 BINARY_SUBSCR\n            152 CALL                     1\n            160 STORE_FAST               6 (segment)\n\n129         162 LOAD_FAST                3 (name)\n            164 LOAD_CONST               1 ('mask')\n            166 COMPARE_OP              55 (!=)\n            170 POP_JUMP_IF_FALSE       57 (to 286)\n\n130         172 LOAD_GLOBAL             13 (NULL + _try_brotli)\n            182 LOAD_FAST                6 (segment)\n            184 CALL                     1\n            192 UNPACK_SEQUENCE          2\n            196 STORE_FAST               7 (decoded)\n            198 STORE_FAST               8 (decompression)\n\n131         200 LOAD_FAST                8 (decompression)\n            202 LOAD_FAST                5 (row)\n            204 LOAD_CONST               2 ('brotli_decode')\n            206 STORE_SUBSCR\n\n132         210 LOAD_FAST                7 (decoded)\n            212 POP_JUMP_IF_NONE        36 (to 286)\n\n133         214 LOAD_GLOBAL             15 (NULL + _magic_ascii)\n            224 LOAD_FAST                7 (decoded)\n            226 CALL                     1\n            234 LOAD_FAST                5 (row)\n            236 LOAD_CONST               3 ('decoded_magic_ascii')\n            238 STORE_SUBSCR\n\n134         242 LOAD_FAST                7 (decoded)\n            244 LOAD_CONST               0 (None)\n            246 LOAD_CONST               4 (8)\n            248 BINARY_SLICE\n            250 LOAD_ATTR               17 (NULL|self + hex)\n            270 CALL                     0\n            278 LOAD_FAST                5 (row)\n            280 LOAD_CONST               5 ('decoded_magic_hex')\n            282 STORE_SUBSCR\n\n135     >>  286 LOAD_FAST                2 (segments)\n            288 LOAD_ATTR               19 (NULL|self + append)\n            308 LOAD_FAST                5 (row)\n            310 CALL                     1\n            318 POP_TOP\n            320 JUMP_BACKWARD          121 (to 80)\n\n126     >>  322 END_FOR\n\n137         324 LOAD_CONST               6 (True)\n\n138         326 LOAD_FAST                1 (bundle)\n            328 LOAD_ATTR               20 (format)\n\n139         348 LOAD_GLOBAL             23 (NULL + int)\n            358 LOAD_FAST                1 (bundle)\n            360 LOAD_ATTR               24 (header_bytes)\n            380 CALL                     1\n\n140         388 LOAD_FAST                1 (bundle)\n            390 LOAD_ATTR               26 (segment_lengths)\n\n141         410 LOAD_GLOBAL             29 (NULL + dict)\n            420 LOAD_FAST                1 (bundle)\n            422 LOAD_ATTR               30 (fixed_length_segments)\n            442 CALL                     1\n\n142         450 LOAD_FAST                2 (segments)\n\n136         452 LOAD_CONST               7 (('recognized', 'format', 'header_bytes', 'segment_lengths', 'fixed_length_segments', 'segments'))\n            454 BUILD_CONST_KEY_MAP      6\n            456 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_probe_member",
+      "name": "_probe_member",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "name",
+        "data",
+        "row",
+        "lower",
+        "_decoded",
+        "exc"
+      ],
+      "names": [
+        "len",
+        "_sha256_bytes",
+        "_magic_ascii",
+        "hex",
+        "lower",
+        "_probe_pr85_family_x",
+        "endswith",
+        "_try_brotli",
+        "_try_gzip",
+        "startswith",
+        "json",
+        "loads",
+        "decode",
+        "Pr85BundleError",
+        "UnicodeDecodeError",
+        "JSONDecodeError",
+        "__class__",
+        "__name__"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "146           0 RESUME                   0\n\n148           2 LOAD_FAST                0 (name)\n\n149           4 LOAD_GLOBAL              1 (NULL + len)\n             14 LOAD_FAST                1 (data)\n             16 CALL                     1\n\n150          24 LOAD_GLOBAL              3 (NULL + _sha256_bytes)\n             34 LOAD_FAST                1 (data)\n             36 CALL                     1\n\n151          44 LOAD_GLOBAL              5 (NULL + _magic_ascii)\n             54 LOAD_FAST                1 (data)\n             56 CALL                     1\n\n152          64 LOAD_FAST                1 (data)\n             66 LOAD_CONST               0 (None)\n             68 LOAD_CONST               1 (8)\n             70 BINARY_SLICE\n             72 LOAD_ATTR                7 (NULL|self + hex)\n             92 CALL                     0\n\n153         100 LOAD_CONST               2 ('passed')\n\n147         102 LOAD_CONST               3 (('name', 'bytes', 'sha256', 'magic_ascii', 'magic_hex', 'status'))\n            104 BUILD_CONST_KEY_MAP      6\n            106 STORE_FAST               2 (row)\n\n155         108 LOAD_FAST                0 (name)\n            110 LOAD_ATTR                9 (NULL|self + lower)\n            130 CALL                     0\n            138 STORE_FAST               3 (lower)\n\n156         140 NOP\n\n157         142 LOAD_FAST                0 (name)\n            144 LOAD_CONST               4 ('x')\n            146 COMPARE_OP              40 (==)\n            150 POP_JUMP_IF_FALSE       16 (to 184)\n\n158         152 LOAD_GLOBAL             11 (NULL + _probe_pr85_family_x)\n            162 LOAD_FAST                1 (data)\n            164 CALL                     1\n            172 LOAD_FAST                2 (row)\n            174 LOAD_CONST               5 ('format')\n            176 STORE_SUBSCR\n\n180         180 LOAD_FAST                2 (row)\n            182 RETURN_VALUE\n\n159     >>  184 LOAD_FAST                3 (lower)\n            186 LOAD_ATTR               13 (NULL|self + endswith)\n            206 LOAD_CONST               6 ('.br')\n            208 CALL                     1\n            216 POP_JUMP_IF_FALSE       38 (to 294)\n\n160         218 LOAD_GLOBAL             15 (NULL + _try_brotli)\n            228 LOAD_FAST                1 (data)\n            230 CALL                     1\n            238 UNPACK_SEQUENCE          2\n            242 STORE_FAST               4 (_decoded)\n            244 LOAD_FAST                2 (row)\n            246 LOAD_CONST               7 ('decompression')\n            248 STORE_SUBSCR\n\n161         252 LOAD_FAST                2 (row)\n            254 LOAD_CONST               7 ('decompression')\n            256 BINARY_SUBSCR\n            260 LOAD_CONST               8 ('ok')\n            262 BINARY_SUBSCR\n            266 POP_JUMP_IF_TRUE       204 (to 676)\n\n162         268 LOAD_CONST               9 ('failed')\n            270 LOAD_FAST                2 (row)\n            272 LOAD_CONST              10 ('status')\n            274 STORE_SUBSCR\n\n163         278 LOAD_CONST              11 ('brotli_decode_failed')\n            280 LOAD_FAST                2 (row)\n            282 LOAD_CONST              12 ('blocker')\n            284 STORE_SUBSCR\n            288 NOP\n\n180         290 LOAD_FAST                2 (row)\n            292 RETURN_VALUE\n\n164     >>  294 LOAD_FAST                3 (lower)\n            296 LOAD_ATTR               13 (NULL|self + endswith)\n            316 LOAD_CONST              13 ('.gz')\n            318 CALL                     1\n            326 POP_JUMP_IF_FALSE       38 (to 404)\n\n165         328 LOAD_GLOBAL             17 (NULL + _try_gzip)\n            338 LOAD_FAST                1 (data)\n            340 CALL                     1\n            348 UNPACK_SEQUENCE          2\n            352 STORE_FAST               4 (_decoded)\n            354 LOAD_FAST                2 (row)\n            356 LOAD_CONST               7 ('decompression')\n            358 STORE_SUBSCR\n\n166         362 LOAD_FAST                2 (row)\n            364 LOAD_CONST               7 ('decompression')\n            366 BINARY_SUBSCR\n            370 LOAD_CONST               8 ('ok')\n            372 BINARY_SUBSCR\n            376 POP_JUMP_IF_TRUE       149 (to 676)\n\n167         378 LOAD_CONST               9 ('failed')\n            380 LOAD_FAST                2 (row)\n            382 LOAD_CONST              10 ('status')\n            384 STORE_SUBSCR\n\n168         388 LOAD_CONST              14 ('gzip_decode_failed')\n            390 LOAD_FAST                2 (row)\n            392 LOAD_CONST              12 ('blocker')\n            394 STORE_SUBSCR\n            398 NOP\n\n180         400 LOAD_FAST                2 (row)\n            402 RETURN_VALUE\n\n169     >>  404 LOAD_FAST                3 (lower)\n            406 LOAD_ATTR               13 (NULL|self + endswith)\n            426 LOAD_CONST              15 ('.qma9')\n            428 CALL                     1\n            436 POP_JUMP_IF_FALSE       30 (to 498)\n\n170         438 LOAD_FAST                1 (data)\n            440 LOAD_ATTR               19 (NULL|self + startswith)\n            460 LOAD_CONST              16 (b'QMA9')\n            462 CALL                     1\n            470 POP_JUMP_IF_TRUE       102 (to 676)\n\n171         472 LOAD_CONST               9 ('failed')\n            474 LOAD_FAST                2 (row)\n            476 LOAD_CONST              10 ('status')\n            478 STORE_SUBSCR\n\n172         482 LOAD_CONST              17 ('qma9_magic_mismatch')\n            484 LOAD_FAST                2 (row)\n            486 LOAD_CONST              12 ('blocker')\n            488 STORE_SUBSCR\n            492 NOP\n\n180         494 LOAD_FAST                2 (row)\n            496 RETURN_VALUE\n\n173     >>  498 LOAD_FAST                3 (lower)\n            500 LOAD_ATTR               13 (NULL|self + endswith)\n            520 LOAD_CONST              18 ('.json')\n            522 CALL                     1\n            530 POP_JUMP_IF_FALSE       38 (to 608)\n\n174         532 LOAD_GLOBAL             21 (NULL + json)\n            542 LOAD_ATTR               22 (loads)\n            562 LOAD_FAST                1 (data)\n            564 LOAD_ATTR               25 (NULL|self + decode)\n            584 LOAD_CONST              19 ('utf-8')\n            586 CALL                     1\n            594 CALL                     1\n            602 POP_TOP\n\n180         604 LOAD_FAST                2 (row)\n            606 RETURN_VALUE\n\n175     >>  608 LOAD_FAST                3 (lower)\n            610 LOAD_ATTR               13 (NULL|self + endswith)\n            630 LOAD_CONST              20 ('.txt')\n            632 CALL                     1\n            640 POP_JUMP_IF_FALSE       17 (to 676)\n\n176         642 LOAD_FAST                1 (data)\n            644 LOAD_ATTR               25 (NULL|self + decode)\n            664 LOAD_CONST              19 ('utf-8')\n            666 CALL                     1\n            674 POP_TOP\n\n180     >>  676 LOAD_FAST                2 (row)\n            678 RETURN_VALUE\n        >>  680 PUSH_EXC_INFO\n\n177         682 LOAD_GLOBAL             26 (Pr85BundleError)\n            692 LOAD_GLOBAL             28 (UnicodeDecodeError)\n            702 LOAD_GLOBAL             20 (json)\n            712 LOAD_ATTR               30 (JSONDecodeError)\n            732 BUILD_TUPLE              3\n            734 CHECK_EXC_MATCH\n            736 POP_JUMP_IF_FALSE       46 (to 830)\n            738 STORE_FAST               5 (exc)\n\n178         740 LOAD_CONST               9 ('failed')\n            742 LOAD_FAST                2 (row)\n            744 LOAD_CONST              10 ('status')\n            746 STORE_SUBSCR\n\n179         750 LOAD_FAST                5 (exc)\n            752 LOAD_ATTR               32 (__class__)\n            772 LOAD_ATTR               34 (__name__)\n            792 FORMAT_VALUE             0\n            794 LOAD_CONST              21 (': ')\n            796 LOAD_FAST                5 (exc)\n            798 FORMAT_VALUE             0\n            800 BUILD_STRING             3\n            802 LOAD_FAST                2 (row)\n            804 LOAD_CONST              12 ('blocker')\n            806 STORE_SUBSCR\n            810 POP_EXCEPT\n            812 LOAD_CONST               0 (None)\n            814 STORE_FAST               5 (exc)\n            816 DELETE_FAST              5 (exc)\n\n180         818 LOAD_FAST                2 (row)\n            820 RETURN_VALUE\n        >>  822 LOAD_CONST               0 (None)\n            824 STORE_FAST               5 (exc)\n            826 DELETE_FAST              5 (exc)\n            828 RERAISE                  1\n\n177     >>  830 RERAISE                  0\n        >>  832 COPY                     3\n            834 POP_EXCEPT\n            836 RERAISE                  1\nExceptionTable:\n  142 to 178 -> 680 [0]\n  184 to 286 -> 680 [0]\n  294 to 396 -> 680 [0]\n  404 to 490 -> 680 [0]\n  498 to 602 -> 680 [0]\n  608 to 674 -> 680 [0]\n  680 to 738 -> 832 [1] lasti\n  740 to 808 -> 822 [1] lasti\n  822 to 830 -> 832 [1] lasti\n"
+    },
+    {
+      "qualname": "_runtime_source_payload_scan",
+      "name": "_runtime_source_payload_scan",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "runtime_root",
+        "archive_bytes",
+        "source_bytes",
+        "violations",
+        "files",
+        "path",
+        "rel",
+        "raw",
+        "file_row",
+        "text"
+      ],
+      "names": [
+        "sorted",
+        "rglob",
+        "is_file",
+        "relative_to",
+        "as_posix",
+        "any",
+        "Path",
+        "parts",
+        "append",
+        "suffix",
+        "lower",
+        "read_bytes",
+        "len",
+        "_sha256_bytes",
+        "decode",
+        "SOURCE_EMBEDDED_PAYLOAD_LITERAL_RE",
+        "search",
+        "_repo_rel"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "183           0 RESUME                   0\n\n184           2 LOAD_CONST               1 (0)\n              4 STORE_FAST               2 (source_bytes)\n\n185           6 BUILD_LIST               0\n              8 STORE_FAST               3 (violations)\n\n186          10 BUILD_LIST               0\n             12 STORE_FAST               4 (files)\n\n187          14 LOAD_GLOBAL              1 (NULL + sorted)\n             24 LOAD_FAST                0 (runtime_root)\n             26 LOAD_ATTR                3 (NULL|self + rglob)\n             46 LOAD_CONST               2 ('*')\n             48 CALL                     1\n             56 CALL                     1\n             64 GET_ITER\n        >>   66 EXTENDED_ARG             1\n             68 FOR_ITER               303 (to 678)\n             72 STORE_FAST               5 (path)\n\n188          74 LOAD_FAST                5 (path)\n             76 LOAD_ATTR                5 (NULL|self + is_file)\n             96 CALL                     0\n            104 POP_JUMP_IF_TRUE         1 (to 108)\n\n189         106 JUMP_BACKWARD           21 (to 66)\n\n190     >>  108 LOAD_FAST                5 (path)\n            110 LOAD_ATTR                7 (NULL|self + relative_to)\n            130 LOAD_FAST                0 (runtime_root)\n            132 CALL                     1\n            140 LOAD_ATTR                9 (NULL|self + as_posix)\n            160 CALL                     0\n            168 STORE_FAST               6 (rel)\n\n191         170 LOAD_GLOBAL             11 (NULL + any)\n            180 LOAD_CONST               3 (<code object <genexpr> at 0x10138e9c0, file \"/Users/adpena/Projects/pact/experiments/preflight_public_replay_intake.py\", line 191>)\n            182 MAKE_FUNCTION            0\n            184 LOAD_GLOBAL             13 (NULL + Path)\n            194 LOAD_FAST                6 (rel)\n            196 CALL                     1\n            204 LOAD_ATTR               14 (parts)\n            224 GET_ITER\n            226 CALL                     0\n            234 CALL                     1\n            242 POP_JUMP_IF_FALSE       21 (to 286)\n\n192         244 LOAD_FAST                3 (violations)\n            246 LOAD_ATTR               17 (NULL|self + append)\n            266 LOAD_CONST               4 ('hidden runtime file: ')\n            268 LOAD_FAST                6 (rel)\n            270 FORMAT_VALUE             0\n            272 BUILD_STRING             2\n            274 CALL                     1\n            282 POP_TOP\n\n193         284 JUMP_BACKWARD          110 (to 66)\n\n194     >>  286 LOAD_FAST                5 (path)\n            288 LOAD_ATTR               18 (suffix)\n            308 LOAD_ATTR               21 (NULL|self + lower)\n            328 CALL                     0\n            336 LOAD_CONST               5 (frozenset({'.sh', '.py'}))\n            338 CONTAINS_OP              1\n            340 POP_JUMP_IF_FALSE        1 (to 344)\n\n195         342 JUMP_BACKWARD          139 (to 66)\n\n196     >>  344 LOAD_FAST                5 (path)\n            346 LOAD_ATTR               23 (NULL|self + read_bytes)\n            366 CALL                     0\n            374 STORE_FAST               7 (raw)\n\n197         376 LOAD_FAST                2 (source_bytes)\n            378 LOAD_GLOBAL             25 (NULL + len)\n            388 LOAD_FAST                7 (raw)\n            390 CALL                     1\n            398 BINARY_OP               13 (+=)\n            402 STORE_FAST               2 (source_bytes)\n\n198         404 LOAD_FAST                6 (rel)\n            406 LOAD_GLOBAL             25 (NULL + len)\n            416 LOAD_FAST                7 (raw)\n            418 CALL                     1\n            426 LOAD_GLOBAL             27 (NULL + _sha256_bytes)\n            436 LOAD_FAST                7 (raw)\n            438 CALL                     1\n            446 LOAD_CONST               6 (('path', 'bytes', 'sha256'))\n            448 BUILD_CONST_KEY_MAP      3\n            450 STORE_FAST               8 (file_row)\n\n199         452 LOAD_FAST                5 (path)\n            454 LOAD_ATTR               18 (suffix)\n            474 LOAD_ATTR               21 (NULL|self + lower)\n            494 CALL                     0\n            502 LOAD_CONST               7 ('.py')\n            504 COMPARE_OP              40 (==)\n            508 POP_JUMP_IF_FALSE       65 (to 640)\n\n200         510 LOAD_FAST                7 (raw)\n            512 LOAD_ATTR               29 (NULL|self + decode)\n            532 LOAD_CONST               8 ('utf-8')\n            534 LOAD_CONST               9 ('ignore')\n            536 KW_NAMES                10 (('errors',))\n            538 CALL                     2\n            546 STORE_FAST               9 (text)\n\n201         548 LOAD_GLOBAL             30 (SOURCE_EMBEDDED_PAYLOAD_LITERAL_RE)\n            558 LOAD_ATTR               33 (NULL|self + search)\n            578 LOAD_FAST                9 (text)\n            580 CALL                     1\n            588 POP_JUMP_IF_FALSE       25 (to 640)\n\n202         590 LOAD_FAST                3 (violations)\n            592 LOAD_ATTR               17 (NULL|self + append)\n            612 LOAD_FAST                6 (rel)\n            614 FORMAT_VALUE             0\n            616 LOAD_CONST              11 (' contains a >=64KiB encoded/decompressed literal')\n            618 BUILD_STRING             2\n            620 CALL                     1\n            628 POP_TOP\n\n203         630 LOAD_CONST              12 (True)\n            632 LOAD_FAST                8 (file_row)\n            634 LOAD_CONST              13 ('large_encoded_payload_literal')\n            636 STORE_SUBSCR\n\n204     >>  640 LOAD_FAST                4 (files)\n            642 LOAD_ATTR               17 (NULL|self + append)\n            662 LOAD_FAST                8 (file_row)\n            664 CALL                     1\n            672 POP_TOP\n            674 EXTENDED_ARG             1\n            676 JUMP_BACKWARD          306 (to 66)\n\n187     >>  678 END_FOR\n\n205         680 LOAD_FAST                1 (archive_bytes)\n            682 LOAD_CONST              14 (1024)\n            684 COMPARE_OP              26 (<=)\n            688 POP_JUMP_IF_FALSE       29 (to 748)\n            690 LOAD_FAST                2 (source_bytes)\n            692 LOAD_CONST              15 (65536)\n            694 COMPARE_OP              68 (>)\n            698 POP_JUMP_IF_FALSE       24 (to 748)\n\n206         700 LOAD_FAST                3 (violations)\n            702 LOAD_ATTR               17 (NULL|self + append)\n\n207         722 LOAD_CONST              16 ('archive is ')\n            724 LOAD_FAST                1 (archive_bytes)\n            726 FORMAT_VALUE             0\n            728 LOAD_CONST              17 (' bytes but runtime .py/.sh source is ')\n            730 LOAD_FAST                2 (source_bytes)\n            732 FORMAT_VALUE             0\n            734 LOAD_CONST              18 (' bytes')\n            736 BUILD_STRING             5\n\n206         738 CALL                     1\n            746 POP_TOP\n\n210     >>  748 LOAD_GLOBAL             35 (NULL + _repo_rel)\n            758 LOAD_FAST                0 (runtime_root)\n            760 CALL                     1\n\n211         768 LOAD_FAST                2 (source_bytes)\n\n212         770 LOAD_FAST                4 (files)\n\n213         772 LOAD_FAST                3 (violations)\n\n214         774 LOAD_FAST                3 (violations)\n            776 POP_JUMP_IF_TRUE         4 (to 786)\n            778 LOAD_CONST              19 ('passed')\n\n209         780 LOAD_CONST              21 (('runtime_root', 'source_bytes_py_sh', 'files', 'violations', 'status'))\n            782 BUILD_CONST_KEY_MAP      5\n            784 RETURN_VALUE\n\n214     >>  786 LOAD_CONST              20 ('failed')\n\n209         788 LOAD_CONST              21 (('runtime_root', 'source_bytes_py_sh', 'files', 'violations', 'status'))\n            790 BUILD_CONST_KEY_MAP      5\n            792 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_runtime_source_payload_scan.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "part"
+      ],
+      "names": [
+        "startswith"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": ".",
+      "dis": "191           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                40 (to 92)\n             12 STORE_FAST               1 (part)\n             14 LOAD_FAST                1 (part)\n             16 LOAD_ATTR                1 (NULL|self + startswith)\n             36 LOAD_CONST               0 ('.')\n             38 CALL                     1\n             46 COPY                     1\n             48 POP_JUMP_IF_TRUE        17 (to 84)\n             50 POP_TOP\n             52 LOAD_FAST                1 (part)\n             54 LOAD_ATTR                1 (NULL|self + startswith)\n             74 LOAD_CONST               1 ('._')\n             76 CALL                     1\n        >>   84 YIELD_VALUE              1\n             86 RESUME                   1\n             88 POP_TOP\n             90 JUMP_BACKWARD           42 (to 8)\n        >>   92 END_FOR\n             94 RETURN_CONST             2 (None)\n        >>   96 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             98 RERAISE                  1\nExceptionTable:\n  4 to 94 -> 96 [0] lasti\n"
+    },
+    {
+      "qualname": "_archive_report",
+      "name": "_archive_report",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "archive",
+        "blockers",
+        "report",
+        "zf",
+        "info",
+        "infos",
+        "names",
+        "name",
+        "duplicate_names",
+        "exc",
+        "member_rows",
+        "row",
+        "data",
+        "probe"
+      ],
+      "names": [
+        "is_file",
+        "_repo_rel",
+        "str",
+        "stat",
+        "st_size",
+        "_sha256_file",
+        "zipfile",
+        "ZipFile",
+        "infolist",
+        "is_dir",
+        "filename",
+        "sorted",
+        "count",
+        "append",
+        "join",
+        "_validate_zip_container_integrity",
+        "RuntimeError",
+        "int",
+        "file_size",
+        "compress_size",
+        "compress_type",
+        "CRC",
+        "validate_archive_member_name",
+        "ValueError",
+        "read",
+        "_probe_member",
+        "get",
+        "Exception",
+        "_validate_archive_members",
+        "BadZipFile"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "218           0 RESUME                   0\n\n219           2 BUILD_LIST               0\n              4 STORE_FAST               1 (blockers)\n\n220           6 LOAD_FAST                0 (archive)\n              8 LOAD_ATTR                1 (NULL|self + is_file)\n             28 CALL                     0\n             36 POP_JUMP_IF_TRUE        30 (to 98)\n\n222          38 LOAD_GLOBAL              3 (NULL + _repo_rel)\n             48 LOAD_FAST                0 (archive)\n             50 CALL                     1\n\n223          58 LOAD_CONST               1 ('failed')\n\n224          60 LOAD_CONST               2 ('archive_missing')\n\n221          62 LOAD_CONST               3 (('path', 'status', 'error'))\n             64 BUILD_CONST_KEY_MAP      3\n\n225          66 LOAD_CONST               2 ('archive_missing')\n             68 LOAD_GLOBAL              5 (NULL + str)\n             78 LOAD_FAST                0 (archive)\n             80 CALL                     1\n             88 LOAD_CONST               4 (('code', 'detail'))\n             90 BUILD_CONST_KEY_MAP      2\n             92 BUILD_LIST               1\n\n221          94 BUILD_TUPLE              2\n             96 RETURN_VALUE\n\n228     >>   98 LOAD_GLOBAL              3 (NULL + _repo_rel)\n            108 LOAD_FAST                0 (archive)\n            110 CALL                     1\n\n229         118 LOAD_FAST                0 (archive)\n            120 LOAD_ATTR                7 (NULL|self + stat)\n            140 CALL                     0\n            148 LOAD_ATTR                8 (st_size)\n\n230         168 LOAD_GLOBAL             11 (NULL + _sha256_file)\n            178 LOAD_FAST                0 (archive)\n            180 CALL                     1\n\n231         188 LOAD_CONST               5 ('passed')\n\n227         190 LOAD_CONST               6 (('path', 'bytes', 'sha256', 'status'))\n            192 BUILD_CONST_KEY_MAP      4\n            194 STORE_FAST               2 (report)\n\n233         196 NOP\n\n234         198 LOAD_GLOBAL             13 (NULL + zipfile)\n            208 LOAD_ATTR               14 (ZipFile)\n            228 LOAD_FAST                0 (archive)\n            230 LOAD_CONST               7 ('r')\n            232 CALL                     2\n            240 BEFORE_WITH\n            242 STORE_FAST               3 (zf)\n\n235         244 LOAD_FAST                3 (zf)\n            246 LOAD_ATTR               17 (NULL|self + infolist)\n            266 CALL                     0\n            274 GET_ITER\n            276 LOAD_FAST_AND_CLEAR      4 (info)\n            278 SWAP                     2\n            280 BUILD_LIST               0\n            282 SWAP                     2\n        >>  284 FOR_ITER                21 (to 330)\n            288 STORE_FAST               4 (info)\n            290 LOAD_FAST                4 (info)\n            292 LOAD_ATTR               19 (NULL|self + is_dir)\n            312 CALL                     0\n            320 POP_JUMP_IF_FALSE        1 (to 324)\n            322 JUMP_BACKWARD           20 (to 284)\n        >>  324 LOAD_FAST                4 (info)\n            326 LIST_APPEND              2\n            328 JUMP_BACKWARD           23 (to 284)\n        >>  330 END_FOR\n            332 STORE_FAST               5 (infos)\n            334 STORE_FAST               4 (info)\n\n236         336 LOAD_FAST                5 (infos)\n            338 GET_ITER\n            340 LOAD_FAST_AND_CLEAR      4 (info)\n            342 SWAP                     2\n            344 BUILD_LIST               0\n            346 SWAP                     2\n        >>  348 FOR_ITER                14 (to 380)\n            352 STORE_FAST               4 (info)\n            354 LOAD_FAST                4 (info)\n            356 LOAD_ATTR               20 (filename)\n            376 LIST_APPEND              2\n            378 JUMP_BACKWARD           16 (to 348)\n        >>  380 END_FOR\n            382 STORE_FAST               6 (names)\n            384 STORE_FAST               4 (info)\n\n237         386 LOAD_GLOBAL             23 (NULL + sorted)\n            396 LOAD_FAST                6 (names)\n            398 GET_ITER\n            400 LOAD_FAST_AND_CLEAR      7 (name)\n            402 SWAP                     2\n            404 BUILD_SET                0\n            406 SWAP                     2\n        >>  408 FOR_ITER                25 (to 462)\n            412 STORE_FAST               7 (name)\n            414 LOAD_FAST                6 (names)\n            416 LOAD_ATTR               25 (NULL|self + count)\n            436 LOAD_FAST                7 (name)\n            438 CALL                     1\n            446 LOAD_CONST               8 (1)\n            448 COMPARE_OP              68 (>)\n            452 POP_JUMP_IF_TRUE         1 (to 456)\n            454 JUMP_BACKWARD           24 (to 408)\n        >>  456 LOAD_FAST                7 (name)\n            458 SET_ADD                  2\n            460 JUMP_BACKWARD           27 (to 408)\n        >>  462 END_FOR\n            464 SWAP                     2\n            466 STORE_FAST               7 (name)\n            468 CALL                     1\n            476 STORE_FAST               8 (duplicate_names)\n\n238         478 LOAD_FAST                6 (names)\n            480 LOAD_FAST                2 (report)\n            482 LOAD_CONST               9 ('member_names')\n            484 STORE_SUBSCR\n\n239         488 LOAD_FAST                8 (duplicate_names)\n            490 LOAD_FAST                2 (report)\n            492 LOAD_CONST              10 ('duplicate_member_names')\n            494 STORE_SUBSCR\n\n240         498 LOAD_FAST                8 (duplicate_names)\n            500 POP_JUMP_IF_FALSE       35 (to 572)\n\n241         502 LOAD_FAST                1 (blockers)\n            504 LOAD_ATTR               27 (NULL|self + append)\n\n243         524 LOAD_CONST              10 ('duplicate_member_names')\n\n244         526 LOAD_CONST              11 (', ')\n            528 LOAD_ATTR               29 (NULL|self + join)\n            548 LOAD_FAST                8 (duplicate_names)\n            550 CALL                     1\n\n242         558 LOAD_CONST               4 (('code', 'detail'))\n            560 BUILD_CONST_KEY_MAP      2\n\n241         562 CALL                     1\n            570 POP_TOP\n\n247     >>  572 NOP\n\n248         574 LOAD_GLOBAL             31 (NULL + _validate_zip_container_integrity)\n            584 LOAD_FAST                0 (archive)\n            586 LOAD_FAST                5 (infos)\n            588 CALL                     2\n            596 POP_TOP\n\n249         598 LOAD_CONST               5 ('passed')\n            600 LOAD_FAST                2 (report)\n            602 LOAD_CONST              12 ('zip_container_integrity')\n            604 STORE_SUBSCR\n\n254     >>  608 BUILD_LIST               0\n            610 STORE_FAST              10 (member_rows)\n\n255         612 LOAD_FAST                5 (infos)\n            614 GET_ITER\n        >>  616 FOR_ITER               237 (to 1094)\n            620 STORE_FAST               4 (info)\n\n257         622 LOAD_FAST                4 (info)\n            624 LOAD_ATTR               20 (filename)\n\n258         644 LOAD_GLOBAL             35 (NULL + int)\n            654 LOAD_FAST                4 (info)\n            656 LOAD_ATTR               36 (file_size)\n            676 CALL                     1\n\n259         684 LOAD_GLOBAL             35 (NULL + int)\n            694 LOAD_FAST                4 (info)\n            696 LOAD_ATTR               38 (compress_size)\n            716 CALL                     1\n\n260         724 LOAD_GLOBAL             35 (NULL + int)\n            734 LOAD_FAST                4 (info)\n            736 LOAD_ATTR               40 (compress_type)\n            756 CALL                     1\n\n261         764 LOAD_FAST                4 (info)\n            766 LOAD_ATTR               42 (CRC)\n            786 LOAD_CONST              13 ('08x')\n            788 FORMAT_VALUE             4 (with format)\n\n256         790 LOAD_CONST              14 (('name', 'file_size', 'compress_size', 'compress_type', 'crc32_hex'))\n            792 BUILD_CONST_KEY_MAP      5\n            794 STORE_FAST              11 (row)\n\n263         796 NOP\n\n264         798 LOAD_GLOBAL             45 (NULL + validate_archive_member_name)\n            808 LOAD_FAST                4 (info)\n            810 LOAD_ATTR               20 (filename)\n            830 CALL                     1\n            838 POP_TOP\n\n265         840 LOAD_CONST               5 ('passed')\n            842 LOAD_FAST               11 (row)\n            844 LOAD_CONST              15 ('name_grammar')\n            846 STORE_SUBSCR\n\n270     >>  850 NOP\n\n271         852 LOAD_FAST                3 (zf)\n            854 LOAD_ATTR               49 (NULL|self + read)\n            874 LOAD_FAST                4 (info)\n            876 CALL                     1\n            884 STORE_FAST              12 (data)\n\n276         886 LOAD_GLOBAL             51 (NULL + _probe_member)\n            896 LOAD_FAST                4 (info)\n            898 LOAD_ATTR               20 (filename)\n            918 LOAD_FAST               12 (data)\n            920 CALL                     2\n            928 STORE_FAST              13 (probe)\n\n277         930 LOAD_FAST               13 (probe)\n            932 LOAD_FAST               11 (row)\n            934 LOAD_CONST              18 ('decode_smoke')\n            936 STORE_SUBSCR\n\n278         940 LOAD_FAST               13 (probe)\n            942 LOAD_CONST              19 ('status')\n            944 BINARY_SUBSCR\n            948 LOAD_CONST               5 ('passed')\n            950 COMPARE_OP              55 (!=)\n            954 POP_JUMP_IF_FALSE       51 (to 1058)\n\n279         956 LOAD_FAST                1 (blockers)\n            958 LOAD_ATTR               27 (NULL|self + append)\n\n281         978 LOAD_CONST              20 ('member_decode_smoke')\n\n282         980 LOAD_FAST                4 (info)\n            982 LOAD_ATTR               20 (filename)\n           1002 FORMAT_VALUE             0\n           1004 LOAD_CONST              21 (': ')\n           1006 LOAD_FAST               13 (probe)\n           1008 LOAD_ATTR               53 (NULL|self + get)\n           1028 LOAD_CONST              22 ('blocker')\n           1030 CALL                     1\n           1038 FORMAT_VALUE             0\n           1040 BUILD_STRING             3\n\n280        1042 LOAD_CONST               4 (('code', 'detail'))\n           1044 BUILD_CONST_KEY_MAP      2\n\n279        1046 CALL                     1\n           1054 POP_TOP\n           1056 NOP\n\n285     >> 1058 LOAD_FAST               10 (member_rows)\n           1060 LOAD_ATTR               27 (NULL|self + append)\n           1080 LOAD_FAST               11 (row)\n           1082 CALL                     1\n           1090 POP_TOP\n           1092 JUMP_BACKWARD          239 (to 616)\n\n255     >> 1094 END_FOR\n\n286        1096 LOAD_FAST               10 (member_rows)\n           1098 LOAD_FAST                2 (report)\n           1100 LOAD_CONST              24 ('members')\n           1102 STORE_SUBSCR\n\n288        1106 NOP\n\n289        1108 LOAD_GLOBAL             57 (NULL + _validate_archive_members)\n           1118 LOAD_FAST                6 (names)\n           1120 CALL                     1\n           1128 POP_TOP\n\n290        1130 LOAD_CONST               5 ('passed')\n           1132 LOAD_FAST                2 (report)\n           1134 LOAD_CONST              25 ('charged_member_allowlist')\n           1136 STORE_SUBSCR\n\n234     >> 1140 LOAD_CONST               0 (None)\n           1142 LOAD_CONST               0 (None)\n           1144 LOAD_CONST               0 (None)\n           1146 CALL                     2\n           1154 POP_TOP\n\n299     >> 1156 LOAD_FAST                1 (blockers)\n           1158 POP_JUMP_IF_FALSE        5 (to 1170)\n\n300        1160 LOAD_CONST               1 ('failed')\n           1162 LOAD_FAST                2 (report)\n           1164 LOAD_CONST              19 ('status')\n           1166 STORE_SUBSCR\n\n301     >> 1170 LOAD_FAST                2 (report)\n           1172 LOAD_FAST                1 (blockers)\n           1174 BUILD_TUPLE              2\n           1176 RETURN_VALUE\n        >> 1178 SWAP                     2\n           1180 POP_TOP\n\n235        1182 SWAP                     2\n           1184 STORE_FAST               4 (info)\n           1186 RERAISE                  0\n        >> 1188 SWAP                     2\n           1190 POP_TOP\n\n236        1192 SWAP                     2\n           1194 STORE_FAST               4 (info)\n           1196 RERAISE                  0\n        >> 1198 SWAP                     2\n           1200 POP_TOP\n\n237        1202 SWAP                     2\n           1204 STORE_FAST               7 (name)\n           1206 RERAISE                  0\n        >> 1208 PUSH_EXC_INFO\n\n250        1210 LOAD_GLOBAL             32 (RuntimeError)\n           1220 CHECK_EXC_MATCH\n           1222 POP_JUMP_IF_FALSE       45 (to 1314)\n           1224 STORE_FAST               9 (exc)\n\n251        1226 LOAD_CONST               1 ('failed')\n           1228 LOAD_FAST                2 (report)\n           1230 LOAD_CONST              12 ('zip_container_integrity')\n           1232 STORE_SUBSCR\n\n252        1236 LOAD_FAST                1 (blockers)\n           1238 LOAD_ATTR               27 (NULL|self + append)\n           1258 LOAD_CONST              12 ('zip_container_integrity')\n           1260 LOAD_GLOBAL              5 (NULL + str)\n           1270 LOAD_FAST                9 (exc)\n           1272 CALL                     1\n           1280 LOAD_CONST               4 (('code', 'detail'))\n           1282 BUILD_CONST_KEY_MAP      2\n           1284 CALL                     1\n           1292 POP_TOP\n           1294 POP_EXCEPT\n           1296 LOAD_CONST               0 (None)\n           1298 STORE_FAST               9 (exc)\n           1300 DELETE_FAST              9 (exc)\n           1302 EXTENDED_ARG             1\n           1304 JUMP_BACKWARD          349 (to 608)\n        >> 1306 LOAD_CONST               0 (None)\n           1308 STORE_FAST               9 (exc)\n           1310 DELETE_FAST              9 (exc)\n           1312 RERAISE                  1\n\n250     >> 1314 RERAISE                  0\n        >> 1316 COPY                     3\n           1318 POP_EXCEPT\n           1320 RERAISE                  1\n        >> 1322 PUSH_EXC_INFO\n\n266        1324 LOAD_GLOBAL             46 (ValueError)\n           1334 CHECK_EXC_MATCH\n           1336 POP_JUMP_IF_FALSE       59 (to 1456)\n           1338 STORE_FAST               9 (exc)\n\n267        1340 LOAD_CONST               1 ('failed')\n           1342 LOAD_FAST               11 (row)\n           1344 LOAD_CONST              15 ('name_grammar')\n           1346 STORE_SUBSCR\n\n268        1350 LOAD_GLOBAL              5 (NULL + str)\n           1360 LOAD_FAST                9 (exc)\n           1362 CALL                     1\n           1370 LOAD_FAST               11 (row)\n           1372 LOAD_CONST              16 ('name_grammar_error')\n           1374 STORE_SUBSCR\n\n269        1378 LOAD_FAST                1 (blockers)\n           1380 LOAD_ATTR               27 (NULL|self + append)\n           1400 LOAD_CONST              17 ('member_name_grammar')\n           1402 LOAD_GLOBAL              5 (NULL + str)\n           1412 LOAD_FAST                9 (exc)\n           1414 CALL                     1\n           1422 LOAD_CONST               4 (('code', 'detail'))\n           1424 BUILD_CONST_KEY_MAP      2\n           1426 CALL                     1\n           1434 POP_TOP\n           1436 POP_EXCEPT\n           1438 LOAD_CONST               0 (None)\n           1440 STORE_FAST               9 (exc)\n           1442 DELETE_FAST              9 (exc)\n           1444 EXTENDED_ARG             1\n           1446 JUMP_BACKWARD          299 (to 850)\n        >> 1448 LOAD_CONST               0 (None)\n           1450 STORE_FAST               9 (exc)\n           1452 DELETE_FAST              9 (exc)\n           1454 RERAISE                  1\n\n266     >> 1456 RERAISE                  0\n        >> 1458 COPY                     3\n           1460 POP_EXCEPT\n           1462 RERAISE                  1\n        >> 1464 PUSH_EXC_INFO\n\n272        1466 LOAD_GLOBAL             54 (Exception)\n           1476 CHECK_EXC_MATCH\n           1478 POP_JUMP_IF_FALSE       57 (to 1594)\n           1480 STORE_FAST               9 (exc)\n\n273        1482 LOAD_CONST               1 ('failed')\n           1484 LOAD_GLOBAL              5 (NULL + str)\n           1494 LOAD_FAST                9 (exc)\n           1496 CALL                     1\n           1504 LOAD_CONST              23 (('status', 'blocker'))\n           1506 BUILD_CONST_KEY_MAP      2\n           1508 LOAD_FAST               11 (row)\n           1510 LOAD_CONST              18 ('decode_smoke')\n           1512 STORE_SUBSCR\n\n274        1516 LOAD_FAST                1 (blockers)\n           1518 LOAD_ATTR               27 (NULL|self + append)\n           1538 LOAD_CONST              20 ('member_decode_smoke')\n           1540 LOAD_GLOBAL              5 (NULL + str)\n           1550 LOAD_FAST                9 (exc)\n           1552 CALL                     1\n           1560 LOAD_CONST               4 (('code', 'detail'))\n           1562 BUILD_CONST_KEY_MAP      2\n           1564 CALL                     1\n           1572 POP_TOP\n           1574 POP_EXCEPT\n           1576 LOAD_CONST               0 (None)\n           1578 STORE_FAST               9 (exc)\n           1580 DELETE_FAST              9 (exc)\n           1582 EXTENDED_ARG             1\n           1584 JUMP_BACKWARD          264 (to 1058)\n        >> 1586 LOAD_CONST               0 (None)\n           1588 STORE_FAST               9 (exc)\n           1590 DELETE_FAST              9 (exc)\n           1592 RERAISE                  1\n\n272     >> 1594 RERAISE                  0\n        >> 1596 COPY                     3\n           1598 POP_EXCEPT\n           1600 RERAISE                  1\n        >> 1602 PUSH_EXC_INFO\n\n291        1604 LOAD_GLOBAL             32 (RuntimeError)\n           1614 CHECK_EXC_MATCH\n           1616 POP_JUMP_IF_FALSE       45 (to 1708)\n           1618 STORE_FAST               9 (exc)\n\n292        1620 LOAD_CONST               1 ('failed')\n           1622 LOAD_FAST                2 (report)\n           1624 LOAD_CONST              25 ('charged_member_allowlist')\n           1626 STORE_SUBSCR\n\n293        1630 LOAD_FAST                1 (blockers)\n           1632 LOAD_ATTR               27 (NULL|self + append)\n           1652 LOAD_CONST              25 ('charged_member_allowlist')\n           1654 LOAD_GLOBAL              5 (NULL + str)\n           1664 LOAD_FAST                9 (exc)\n           1666 CALL                     1\n           1674 LOAD_CONST               4 (('code', 'detail'))\n           1676 BUILD_CONST_KEY_MAP      2\n           1678 CALL                     1\n           1686 POP_TOP\n           1688 POP_EXCEPT\n           1690 LOAD_CONST               0 (None)\n           1692 STORE_FAST               9 (exc)\n           1694 DELETE_FAST              9 (exc)\n           1696 EXTENDED_ARG             1\n           1698 JUMP_BACKWARD          280 (to 1140)\n        >> 1700 LOAD_CONST               0 (None)\n           1702 STORE_FAST               9 (exc)\n           1704 DELETE_FAST              9 (exc)\n           1706 RERAISE                  1\n\n291     >> 1708 RERAISE                  0\n        >> 1710 COPY                     3\n           1712 POP_EXCEPT\n           1714 RERAISE                  1\n\n234     >> 1716 PUSH_EXC_INFO\n           1718 WITH_EXCEPT_START\n           1720 POP_JUMP_IF_TRUE         1 (to 1724)\n           1722 RERAISE                  2\n        >> 1724 POP_TOP\n           1726 POP_EXCEPT\n           1728 POP_TOP\n           1730 POP_TOP\n           1732 EXTENDED_ARG             1\n           1734 JUMP_BACKWARD          290 (to 1156)\n        >> 1736 COPY                     3\n           1738 POP_EXCEPT\n           1740 RERAISE                  1\n        >> 1742 PUSH_EXC_INFO\n\n294        1744 LOAD_GLOBAL             12 (zipfile)\n           1754 LOAD_ATTR               58 (BadZipFile)\n           1774 CHECK_EXC_MATCH\n           1776 POP_JUMP_IF_FALSE       59 (to 1896)\n           1778 STORE_FAST               9 (exc)\n\n295        1780 LOAD_CONST               1 ('failed')\n           1782 LOAD_FAST                2 (report)\n           1784 LOAD_CONST              19 ('status')\n           1786 STORE_SUBSCR\n\n296        1790 LOAD_GLOBAL              5 (NULL + str)\n           1800 LOAD_FAST                9 (exc)\n           1802 CALL                     1\n           1810 LOAD_FAST                2 (report)\n           1812 LOAD_CONST              26 ('error')\n           1814 STORE_SUBSCR\n\n297        1818 LOAD_FAST                1 (blockers)\n           1820 LOAD_ATTR               27 (NULL|self + append)\n           1840 LOAD_CONST              27 ('bad_zip_file')\n           1842 LOAD_GLOBAL              5 (NULL + str)\n           1852 LOAD_FAST                9 (exc)\n           1854 CALL                     1\n           1862 LOAD_CONST               4 (('code', 'detail'))\n           1864 BUILD_CONST_KEY_MAP      2\n           1866 CALL                     1\n           1874 POP_TOP\n           1876 POP_EXCEPT\n           1878 LOAD_CONST               0 (None)\n           1880 STORE_FAST               9 (exc)\n           1882 DELETE_FAST              9 (exc)\n           1884 EXTENDED_ARG             1\n           1886 JUMP_BACKWARD          366 (to 1156)\n        >> 1888 LOAD_CONST               0 (None)\n           1890 STORE_FAST               9 (exc)\n           1892 DELETE_FAST              9 (exc)\n           1894 RERAISE                  1\n\n294     >> 1896 RERAISE                  0\n        >> 1898 COPY                     3\n           1900 POP_EXCEPT\n           1902 RERAISE                  1\nExceptionTable:\n  198 to 240 -> 1742 [0]\n  242 to 278 -> 1716 [1] lasti\n  280 to 320 -> 1178 [3]\n  324 to 330 -> 1178 [3]\n  332 to 342 -> 1716 [1] lasti\n  344 to 380 -> 1188 [3]\n  382 to 402 -> 1716 [1] lasti\n  404 to 452 -> 1198 [5]\n  456 to 462 -> 1198 [5]\n  464 to 570 -> 1716 [1] lasti\n  574 to 606 -> 1208 [1]\n  608 to 794 -> 1716 [1] lasti\n  798 to 848 -> 1322 [2]\n  852 to 884 -> 1464 [2]\n  886 to 1104 -> 1716 [1] lasti\n  1108 to 1138 -> 1602 [1]\n  1140 to 1154 -> 1742 [0]\n  1178 to 1206 -> 1716 [1] lasti\n  1208 to 1224 -> 1316 [2] lasti\n  1226 to 1292 -> 1306 [2] lasti\n  1294 to 1304 -> 1716 [1] lasti\n  1306 to 1314 -> 1316 [2] lasti\n  1316 to 1320 -> 1716 [1] lasti\n  1322 to 1338 -> 1458 [3] lasti\n  1340 to 1434 -> 1448 [3] lasti\n  1436 to 1446 -> 1716 [1] lasti\n  1448 to 1456 -> 1458 [3] lasti\n  1458 to 1462 -> 1716 [1] lasti\n  1464 to 1480 -> 1596 [3] lasti\n  1482 to 1572 -> 1586 [3] lasti\n  1574 to 1584 -> 1716 [1] lasti\n  1586 to 1594 -> 1596 [3] lasti\n  1596 to 1600 -> 1716 [1] lasti\n  1602 to 1618 -> 1710 [2] lasti\n  1620 to 1686 -> 1700 [2] lasti\n  1688 to 1698 -> 1716 [1] lasti\n  1700 to 1708 -> 1710 [2] lasti\n  1710 to 1714 -> 1716 [1] lasti\n  1716 to 1724 -> 1736 [3] lasti\n  1726 to 1740 -> 1742 [0]\n  1742 to 1778 -> 1898 [1] lasti\n  1780 to 1874 -> 1888 [1] lasti\n  1888 to 1896 -> 1898 [1] lasti\n"
+    },
+    {
+      "qualname": "build_preflight",
+      "name": "build_preflight",
+      "argcount": 2,
+      "kwonlyargcount": 4,
+      "varnames": [
+        "archive",
+        "inflate_sh",
+        "upstream_dir",
+        "expected_archive_sha256",
+        "expected_archive_size_bytes",
+        "expected_runtime_tree_sha256",
+        "archive_report",
+        "blockers",
+        "actual",
+        "runtime_report",
+        "runtime_manifest",
+        "detail",
+        "ready"
+      ],
+      "names": [
+        "Path",
+        "_archive_report",
+        "get",
+        "append",
+        "is_file",
+        "_repo_rel",
+        "str",
+        "_runtime_dependency_manifest",
+        "_sha256_file",
+        "_runtime_source_payload_scan",
+        "parent",
+        "int",
+        "SCHEMA",
+        "TOOL",
+        "EVIDENCE_GRADE"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "304           0 RESUME                   0\n\n313           2 LOAD_GLOBAL              1 (NULL + Path)\n             12 LOAD_FAST                0 (archive)\n             14 CALL                     1\n             22 STORE_FAST               0 (archive)\n\n314          24 LOAD_GLOBAL              1 (NULL + Path)\n             34 LOAD_FAST                1 (inflate_sh)\n             36 CALL                     1\n             44 STORE_FAST               1 (inflate_sh)\n\n315          46 LOAD_GLOBAL              1 (NULL + Path)\n             56 LOAD_FAST                2 (upstream_dir)\n             58 CALL                     1\n             66 STORE_FAST               2 (upstream_dir)\n\n316          68 LOAD_GLOBAL              3 (NULL + _archive_report)\n             78 LOAD_FAST                0 (archive)\n             80 CALL                     1\n             88 UNPACK_SEQUENCE          2\n             92 STORE_FAST               6 (archive_report)\n             94 STORE_FAST               7 (blockers)\n\n318          96 LOAD_FAST                3 (expected_archive_sha256)\n             98 POP_JUMP_IF_FALSE       48 (to 196)\n\n319         100 LOAD_FAST                6 (archive_report)\n            102 LOAD_ATTR                5 (NULL|self + get)\n            122 LOAD_CONST               1 ('sha256')\n            124 CALL                     1\n            132 STORE_FAST               8 (actual)\n\n320         134 LOAD_FAST                8 (actual)\n            136 LOAD_FAST                3 (expected_archive_sha256)\n            138 COMPARE_OP              55 (!=)\n            142 POP_JUMP_IF_FALSE       26 (to 196)\n\n321         144 LOAD_FAST                7 (blockers)\n            146 LOAD_ATTR                7 (NULL|self + append)\n\n323         166 LOAD_CONST               2 ('expected_archive_sha256_matches')\n\n324         168 LOAD_CONST               3 ('expected=')\n            170 LOAD_FAST                3 (expected_archive_sha256)\n            172 FORMAT_VALUE             0\n            174 LOAD_CONST               4 (' actual=')\n            176 LOAD_FAST                8 (actual)\n            178 FORMAT_VALUE             0\n            180 BUILD_STRING             4\n\n322         182 LOAD_CONST               5 (('code', 'detail'))\n            184 BUILD_CONST_KEY_MAP      2\n\n321         186 CALL                     1\n            194 POP_TOP\n\n327     >>  196 LOAD_FAST                4 (expected_archive_size_bytes)\n            198 POP_JUMP_IF_NONE        48 (to 296)\n\n328         200 LOAD_FAST                6 (archive_report)\n            202 LOAD_ATTR                5 (NULL|self + get)\n            222 LOAD_CONST               6 ('bytes')\n            224 CALL                     1\n            232 STORE_FAST               8 (actual)\n\n329         234 LOAD_FAST                8 (actual)\n            236 LOAD_FAST                4 (expected_archive_size_bytes)\n            238 COMPARE_OP              55 (!=)\n            242 POP_JUMP_IF_FALSE       26 (to 296)\n\n330         244 LOAD_FAST                7 (blockers)\n            246 LOAD_ATTR                7 (NULL|self + append)\n\n332         266 LOAD_CONST               7 ('expected_archive_size_bytes_matches')\n\n333         268 LOAD_CONST               3 ('expected=')\n            270 LOAD_FAST                4 (expected_archive_size_bytes)\n            272 FORMAT_VALUE             0\n            274 LOAD_CONST               4 (' actual=')\n            276 LOAD_FAST                8 (actual)\n            278 FORMAT_VALUE             0\n            280 BUILD_STRING             4\n\n331         282 LOAD_CONST               5 (('code', 'detail'))\n            284 BUILD_CONST_KEY_MAP      2\n\n330         286 CALL                     1\n            294 POP_TOP\n\n338     >>  296 LOAD_FAST                1 (inflate_sh)\n            298 LOAD_ATTR                9 (NULL|self + is_file)\n            318 CALL                     0\n            326 POP_JUMP_IF_TRUE        45 (to 418)\n\n340         328 LOAD_GLOBAL             11 (NULL + _repo_rel)\n            338 LOAD_FAST                1 (inflate_sh)\n            340 CALL                     1\n\n341         348 LOAD_CONST               8 ('failed')\n\n342         350 LOAD_CONST               9 ('inflate_sh_missing')\n\n339         352 LOAD_CONST              10 (('inflate_sh', 'status', 'error'))\n            354 BUILD_CONST_KEY_MAP      3\n            356 STORE_FAST               9 (runtime_report)\n\n344         358 LOAD_FAST                7 (blockers)\n            360 LOAD_ATTR                7 (NULL|self + append)\n            380 LOAD_CONST               9 ('inflate_sh_missing')\n            382 LOAD_GLOBAL             13 (NULL + str)\n            392 LOAD_FAST                1 (inflate_sh)\n            394 CALL                     1\n            402 LOAD_CONST               5 (('code', 'detail'))\n            404 BUILD_CONST_KEY_MAP      2\n            406 CALL                     1\n            414 POP_TOP\n            416 JUMP_FORWARD           230 (to 878)\n\n346     >>  418 LOAD_GLOBAL             15 (NULL + _runtime_dependency_manifest)\n            428 LOAD_FAST                1 (inflate_sh)\n            430 LOAD_FAST                2 (upstream_dir)\n            432 CALL                     2\n            440 STORE_FAST              10 (runtime_manifest)\n\n348         442 LOAD_GLOBAL             11 (NULL + _repo_rel)\n            452 LOAD_FAST                1 (inflate_sh)\n            454 CALL                     1\n\n349         462 LOAD_GLOBAL             17 (NULL + _sha256_file)\n            472 LOAD_FAST                1 (inflate_sh)\n            474 CALL                     1\n\n350         482 LOAD_FAST               10 (runtime_manifest)\n            484 LOAD_ATTR                5 (NULL|self + get)\n            504 LOAD_CONST              11 ('runtime_root')\n            506 CALL                     1\n\n351         514 LOAD_FAST               10 (runtime_manifest)\n            516 LOAD_ATTR                5 (NULL|self + get)\n            536 LOAD_CONST              12 ('runtime_tree_sha256')\n            538 CALL                     1\n\n352         546 LOAD_FAST               10 (runtime_manifest)\n\n353         548 LOAD_GLOBAL             19 (NULL + _runtime_source_payload_scan)\n\n354         558 LOAD_FAST                1 (inflate_sh)\n            560 LOAD_ATTR               20 (parent)\n\n355         580 LOAD_GLOBAL             23 (NULL + int)\n            590 LOAD_FAST                6 (archive_report)\n            592 LOAD_ATTR                5 (NULL|self + get)\n            612 LOAD_CONST               6 ('bytes')\n            614 CALL                     1\n            622 COPY                     1\n            624 POP_JUMP_IF_TRUE         2 (to 630)\n            626 POP_TOP\n            628 LOAD_CONST              13 (0)\n        >>  630 CALL                     1\n\n353         638 CALL                     2\n\n357         646 LOAD_CONST              14 ('passed')\n\n347         648 LOAD_CONST              15 (('inflate_sh', 'inflate_sh_sha256', 'runtime_root', 'runtime_tree_sha256', 'runtime_manifest', 'source_payload_scan', 'status'))\n            650 BUILD_CONST_KEY_MAP      7\n            652 STORE_FAST               9 (runtime_report)\n\n360         654 LOAD_FAST                5 (expected_runtime_tree_sha256)\n            656 POP_JUMP_IF_FALSE       61 (to 780)\n\n361         658 LOAD_FAST               10 (runtime_manifest)\n            660 LOAD_ATTR                5 (NULL|self + get)\n            680 LOAD_CONST              12 ('runtime_tree_sha256')\n            682 CALL                     1\n            690 LOAD_FAST                5 (expected_runtime_tree_sha256)\n            692 COMPARE_OP              55 (!=)\n            696 POP_JUMP_IF_FALSE       41 (to 780)\n\n363         698 LOAD_FAST                7 (blockers)\n            700 LOAD_ATTR                7 (NULL|self + append)\n\n365         720 LOAD_CONST              16 ('expected_runtime_tree_sha256_matches')\n\n367         722 LOAD_CONST               3 ('expected=')\n            724 LOAD_FAST                5 (expected_runtime_tree_sha256)\n            726 FORMAT_VALUE             0\n            728 LOAD_CONST               4 (' actual=')\n\n368         730 LOAD_FAST               10 (runtime_manifest)\n            732 LOAD_ATTR                5 (NULL|self + get)\n            752 LOAD_CONST              12 ('runtime_tree_sha256')\n            754 CALL                     1\n            762 FORMAT_VALUE             0\n\n367         764 BUILD_STRING             4\n\n364         766 LOAD_CONST               5 (('code', 'detail'))\n            768 BUILD_CONST_KEY_MAP      2\n\n363         770 CALL                     1\n            778 POP_TOP\n\n372     >>  780 LOAD_FAST                9 (runtime_report)\n            782 LOAD_CONST              17 ('source_payload_scan')\n            784 BINARY_SUBSCR\n            788 LOAD_CONST              18 ('status')\n            790 BINARY_SUBSCR\n            794 LOAD_CONST              14 ('passed')\n            796 COMPARE_OP              55 (!=)\n            800 POP_JUMP_IF_FALSE       38 (to 878)\n\n373         802 LOAD_CONST               8 ('failed')\n            804 LOAD_FAST                9 (runtime_report)\n            806 LOAD_CONST              18 ('status')\n            808 STORE_SUBSCR\n\n374         812 LOAD_FAST                9 (runtime_report)\n            814 LOAD_CONST              17 ('source_payload_scan')\n            816 BINARY_SUBSCR\n            820 LOAD_CONST              19 ('violations')\n            822 BINARY_SUBSCR\n            826 GET_ITER\n        >>  828 FOR_ITER                22 (to 876)\n            832 STORE_FAST              11 (detail)\n\n375         834 LOAD_FAST                7 (blockers)\n            836 LOAD_ATTR                7 (NULL|self + append)\n            856 LOAD_CONST              20 ('runtime_source_or_sidecar_payload')\n            858 LOAD_FAST               11 (detail)\n            860 LOAD_CONST               5 (('code', 'detail'))\n            862 BUILD_CONST_KEY_MAP      2\n            864 CALL                     1\n            872 POP_TOP\n            874 JUMP_BACKWARD           24 (to 828)\n\n374     >>  876 END_FOR\n\n377     >>  878 LOAD_FAST                7 (blockers)\n            880 UNARY_NOT\n            882 STORE_FAST              12 (ready)\n\n379         884 LOAD_GLOBAL             24 (SCHEMA)\n\n380         894 LOAD_GLOBAL             26 (TOOL)\n\n381         904 LOAD_FAST                6 (archive_report)\n\n382         906 LOAD_FAST                9 (runtime_report)\n\n383         908 LOAD_GLOBAL             28 (EVIDENCE_GRADE)\n\n384         918 LOAD_CONST              21 (False)\n\n385         920 LOAD_CONST              21 (False)\n\n386         922 LOAD_CONST              22 (True)\n\n387         924 LOAD_CONST              21 (False)\n\n388         926 LOAD_FAST               12 (ready)\n\n389         928 LOAD_FAST                7 (blockers)\n\n378         930 LOAD_CONST              23 (('schema', 'tool', 'archive', 'runtime', 'evidence_grade', 'score_claim', 'promotion_eligible', 'cuda_required_for_score', 'dispatch_performed', 'ready_for_exact_eval_dispatch', 'blockers'))\n            932 BUILD_CONST_KEY_MAP     11\n            934 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "build_parser",
+      "name": "build_parser",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "parser"
+      ],
+      "names": [
+        "argparse",
+        "ArgumentParser",
+        "__doc__",
+        "add_argument",
+        "Path",
+        "REPO_ROOT",
+        "int"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "393           0 RESUME                   0\n\n394           2 LOAD_GLOBAL              1 (NULL + argparse)\n             12 LOAD_ATTR                2 (ArgumentParser)\n             32 LOAD_GLOBAL              4 (__doc__)\n             42 KW_NAMES                 1 (('description',))\n             44 CALL                     1\n             52 STORE_FAST               0 (parser)\n\n395          54 LOAD_FAST                0 (parser)\n             56 LOAD_ATTR                7 (NULL|self + add_argument)\n             76 LOAD_CONST               2 ('--archive')\n             78 LOAD_GLOBAL              8 (Path)\n             88 LOAD_CONST               3 (True)\n             90 KW_NAMES                 4 (('type', 'required'))\n             92 CALL                     3\n            100 POP_TOP\n\n396         102 LOAD_FAST                0 (parser)\n            104 LOAD_ATTR                7 (NULL|self + add_argument)\n            124 LOAD_CONST               5 ('--inflate-sh')\n            126 LOAD_GLOBAL              8 (Path)\n            136 LOAD_CONST               3 (True)\n            138 KW_NAMES                 4 (('type', 'required'))\n            140 CALL                     3\n            148 POP_TOP\n\n397         150 LOAD_FAST                0 (parser)\n            152 LOAD_ATTR                7 (NULL|self + add_argument)\n            172 LOAD_CONST               6 ('--upstream-dir')\n            174 LOAD_GLOBAL              8 (Path)\n            184 LOAD_GLOBAL             10 (REPO_ROOT)\n            194 LOAD_CONST               7 ('upstream')\n            196 BINARY_OP               11 (/)\n            200 KW_NAMES                 8 (('type', 'default'))\n            202 CALL                     3\n            210 POP_TOP\n\n398         212 LOAD_FAST                0 (parser)\n            214 LOAD_ATTR                7 (NULL|self + add_argument)\n            234 LOAD_CONST               9 ('--expected-archive-sha256')\n            236 LOAD_CONST               0 (None)\n            238 KW_NAMES                10 (('default',))\n            240 CALL                     2\n            248 POP_TOP\n\n399         250 LOAD_FAST                0 (parser)\n            252 LOAD_ATTR                7 (NULL|self + add_argument)\n            272 LOAD_CONST              11 ('--expected-archive-size-bytes')\n            274 LOAD_GLOBAL             12 (int)\n            284 LOAD_CONST               0 (None)\n            286 KW_NAMES                 8 (('type', 'default'))\n            288 CALL                     3\n            296 POP_TOP\n\n400         298 LOAD_FAST                0 (parser)\n            300 LOAD_ATTR                7 (NULL|self + add_argument)\n            320 LOAD_CONST              12 ('--expected-runtime-tree-sha256')\n            322 LOAD_CONST               0 (None)\n            324 KW_NAMES                10 (('default',))\n            326 CALL                     2\n            334 POP_TOP\n\n401         336 LOAD_FAST                0 (parser)\n            338 LOAD_ATTR                7 (NULL|self + add_argument)\n            358 LOAD_CONST              13 ('--json-out')\n            360 LOAD_GLOBAL              8 (Path)\n            370 LOAD_CONST               0 (None)\n            372 KW_NAMES                 8 (('type', 'default'))\n            374 CALL                     3\n            382 POP_TOP\n\n402         384 LOAD_FAST                0 (parser)\n            386 LOAD_ATTR                7 (NULL|self + add_argument)\n            406 LOAD_CONST              14 ('--fail-if-not-ready')\n            408 LOAD_CONST              15 ('store_true')\n            410 KW_NAMES                16 (('action',))\n            412 CALL                     2\n            420 POP_TOP\n\n403         422 LOAD_FAST                0 (parser)\n            424 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "main",
+      "name": "main",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "argv",
+        "args",
+        "payload",
+        "text"
+      ],
+      "names": [
+        "build_parser",
+        "parse_args",
+        "build_preflight",
+        "archive",
+        "inflate_sh",
+        "upstream_dir",
+        "expected_archive_sha256",
+        "expected_archive_size_bytes",
+        "expected_runtime_tree_sha256",
+        "_json_text",
+        "json_out",
+        "parent",
+        "mkdir",
+        "write_text",
+        "print",
+        "fail_if_not_ready"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "406           0 RESUME                   0\n\n407           2 LOAD_GLOBAL              1 (NULL + build_parser)\n             12 CALL                     0\n             20 LOAD_ATTR                3 (NULL|self + parse_args)\n             40 LOAD_FAST                0 (argv)\n             42 CALL                     1\n             50 STORE_FAST               1 (args)\n\n408          52 LOAD_GLOBAL              5 (NULL + build_preflight)\n\n409          62 LOAD_FAST                1 (args)\n             64 LOAD_ATTR                6 (archive)\n\n410          84 LOAD_FAST                1 (args)\n             86 LOAD_ATTR                8 (inflate_sh)\n\n411         106 LOAD_FAST                1 (args)\n            108 LOAD_ATTR               10 (upstream_dir)\n\n412         128 LOAD_FAST                1 (args)\n            130 LOAD_ATTR               12 (expected_archive_sha256)\n\n413         150 LOAD_FAST                1 (args)\n            152 LOAD_ATTR               14 (expected_archive_size_bytes)\n\n414         172 LOAD_FAST                1 (args)\n            174 LOAD_ATTR               16 (expected_runtime_tree_sha256)\n\n408         194 KW_NAMES                 1 (('upstream_dir', 'expected_archive_sha256', 'expected_archive_size_bytes', 'expected_runtime_tree_sha256'))\n            196 CALL                     6\n            204 STORE_FAST               2 (payload)\n\n416         206 LOAD_GLOBAL             19 (NULL + _json_text)\n            216 LOAD_FAST                2 (payload)\n            218 CALL                     1\n            226 STORE_FAST               3 (text)\n\n417         228 LOAD_FAST                1 (args)\n            230 LOAD_ATTR               20 (json_out)\n            250 POP_JUMP_IF_FALSE       68 (to 388)\n\n418         252 LOAD_FAST                1 (args)\n            254 LOAD_ATTR               20 (json_out)\n            274 LOAD_ATTR               22 (parent)\n            294 LOAD_ATTR               25 (NULL|self + mkdir)\n            314 LOAD_CONST               2 (True)\n            316 LOAD_CONST               2 (True)\n            318 KW_NAMES                 3 (('parents', 'exist_ok'))\n            320 CALL                     2\n            328 POP_TOP\n\n419         330 LOAD_FAST                1 (args)\n            332 LOAD_ATTR               20 (json_out)\n            352 LOAD_ATTR               27 (NULL|self + write_text)\n            372 LOAD_FAST                3 (text)\n            374 LOAD_CONST               4 ('utf-8')\n            376 KW_NAMES                 5 (('encoding',))\n            378 CALL                     2\n            386 POP_TOP\n\n420     >>  388 LOAD_GLOBAL             29 (NULL + print)\n            398 LOAD_FAST                3 (text)\n            400 LOAD_CONST               6 ('')\n            402 KW_NAMES                 7 (('end',))\n            404 CALL                     2\n            412 POP_TOP\n\n421         414 LOAD_FAST                1 (args)\n            416 LOAD_ATTR               30 (fail_if_not_ready)\n            436 POP_JUMP_IF_FALSE        7 (to 452)\n            438 LOAD_FAST                2 (payload)\n            440 LOAD_CONST               8 ('ready_for_exact_eval_dispatch')\n            442 BINARY_SUBSCR\n            446 POP_JUMP_IF_TRUE         2 (to 452)\n            448 LOAD_CONST               9 (2)\n            450 RETURN_VALUE\n        >>  452 LOAD_CONST              10 (0)\n            454 RETURN_VALUE\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  2           2 LOAD_CONST               0 ('Static public-PR replay intake preflight.\\n\\nThis tool validates a public archive/runtime pair before any exact-eval\\ndispatch.  It is intentionally local and static: it never inflates videos,\\nloads scorers, runs CUDA, submits remote jobs, or makes score claims.\\n')\n              4 STORE_NAME               0 (__doc__)\n\n  9           6 LOAD_CONST               1 (0)\n              8 LOAD_CONST               2 (('annotations',))\n             10 IMPORT_NAME              1 (__future__)\n             12 IMPORT_FROM              2 (annotations)\n             14 STORE_NAME               2 (annotations)\n             16 POP_TOP\n\n 11          18 LOAD_CONST               1 (0)\n             20 LOAD_CONST               3 (None)\n             22 IMPORT_NAME              3 (argparse)\n             24 STORE_NAME               3 (argparse)\n\n 12          26 LOAD_CONST               1 (0)\n             28 LOAD_CONST               3 (None)\n             30 IMPORT_NAME              4 (gzip)\n             32 STORE_NAME               4 (gzip)\n\n 13          34 LOAD_CONST               1 (0)\n             36 LOAD_CONST               3 (None)\n             38 IMPORT_NAME              5 (hashlib)\n             40 STORE_NAME               5 (hashlib)\n\n 14          42 LOAD_CONST               1 (0)\n             44 LOAD_CONST               3 (None)\n             46 IMPORT_NAME              6 (json)\n             48 STORE_NAME               6 (json)\n\n 15          50 LOAD_CONST               1 (0)\n             52 LOAD_CONST               3 (None)\n             54 IMPORT_NAME              7 (re)\n             56 STORE_NAME               7 (re)\n\n 16          58 LOAD_CONST               1 (0)\n             60 LOAD_CONST               3 (None)\n             62 IMPORT_NAME              8 (sys)\n             64 STORE_NAME               8 (sys)\n\n 17          66 LOAD_CONST               1 (0)\n             68 LOAD_CONST               3 (None)\n             70 IMPORT_NAME              9 (zipfile)\n             72 STORE_NAME               9 (zipfile)\n\n 18          74 LOAD_CONST               1 (0)\n             76 LOAD_CONST               4 (('Path',))\n             78 IMPORT_NAME             10 (pathlib)\n             80 IMPORT_FROM             11 (Path)\n             82 STORE_NAME              11 (Path)\n             84 POP_TOP\n\n 19          86 LOAD_CONST               1 (0)\n             88 LOAD_CONST               5 (('Any',))\n             90 IMPORT_NAME             12 (typing)\n             92 IMPORT_FROM             13 (Any)\n             94 STORE_NAME              13 (Any)\n             96 POP_TOP\n\n 22          98 PUSH_NULL\n            100 LOAD_NAME               11 (Path)\n            102 LOAD_NAME               14 (__file__)\n            104 CALL                     1\n            112 LOAD_ATTR               31 (NULL|self + resolve)\n            132 CALL                     0\n            140 LOAD_ATTR               32 (parents)\n            160 LOAD_CONST               6 (1)\n            162 BINARY_SUBSCR\n            166 STORE_NAME              17 (REPO_ROOT)\n\n 23         168 LOAD_NAME               17 (REPO_ROOT)\n            170 LOAD_CONST               7 ('src')\n            172 BINARY_OP               11 (/)\n            176 STORE_NAME              18 (SRC_ROOT)\n\n 24         178 LOAD_NAME               17 (REPO_ROOT)\n            180 LOAD_CONST               8 ('experiments')\n            182 BINARY_OP               11 (/)\n            186 STORE_NAME              19 (EXPERIMENTS_ROOT)\n\n 25         188 LOAD_NAME               18 (SRC_ROOT)\n            190 LOAD_NAME               19 (EXPERIMENTS_ROOT)\n            192 BUILD_TUPLE              2\n            194 GET_ITER\n        >>  196 FOR_ITER                57 (to 314)\n            200 STORE_NAME              20 (_path)\n\n 26         202 PUSH_NULL\n            204 LOAD_NAME               21 (str)\n            206 LOAD_NAME               20 (_path)\n            208 CALL                     1\n            216 LOAD_NAME                8 (sys)\n            218 LOAD_ATTR               44 (path)\n            238 CONTAINS_OP              1\n            240 POP_JUMP_IF_TRUE         1 (to 244)\n            242 JUMP_BACKWARD           24 (to 196)\n\n 27     >>  244 LOAD_NAME                8 (sys)\n            246 LOAD_ATTR               44 (path)\n            266 LOAD_ATTR               47 (NULL|self + insert)\n            286 LOAD_CONST               1 (0)\n            288 PUSH_NULL\n            290 LOAD_NAME               21 (str)\n            292 LOAD_NAME               20 (_path)\n            294 CALL                     1\n            302 CALL                     2\n            310 POP_TOP\n            312 JUMP_BACKWARD           59 (to 196)\n\n 25     >>  314 END_FOR\n\n 29         316 LOAD_CONST               1 (0)\n            318 LOAD_CONST               9 (('_runtime_dependency_manifest', '_validate_archive_members', '_validate_zip_container_integrity'))\n            320 IMPORT_NAME             24 (contest_auth_eval)\n            322 IMPORT_FROM             25 (_runtime_dependency_manifest)\n            324 STORE_NAME              25 (_runtime_dependency_manifest)\n            326 IMPORT_FROM             26 (_validate_archive_members)\n            328 STORE_NAME              26 (_validate_archive_members)\n            330 IMPORT_FROM             27 (_validate_zip_container_integrity)\n            332 STORE_NAME              27 (_validate_zip_container_integrity)\n            334 POP_TOP\n\n 34         336 LOAD_CONST               1 (0)\n            338 LOAD_CONST              10 (('Pr85BundleError', 'parse_pr85_bundle'))\n            340 IMPORT_NAME             28 (tac.pr85_bundle)\n            342 IMPORT_FROM             29 (Pr85BundleError)\n            344 STORE_NAME              29 (Pr85BundleError)\n            346 IMPORT_FROM             30 (parse_pr85_bundle)\n            348 STORE_NAME              30 (parse_pr85_bundle)\n            350 POP_TOP\n\n 38         352 LOAD_CONST               1 (0)\n            354 LOAD_CONST              11 (('validate_archive_member_name',))\n            356 IMPORT_NAME             31 (tac.submission_archive)\n            358 IMPORT_FROM             32 (validate_archive_member_name)\n            360 STORE_NAME              32 (validate_archive_member_name)\n            362 POP_TOP\n\n 41         364 LOAD_CONST              12 ('public_replay_intake_preflight_v1')\n            366 STORE_NAME              33 (SCHEMA)\n\n 42         368 LOAD_CONST              13 ('experiments/preflight_public_replay_intake.py')\n            370 STORE_NAME              34 (TOOL)\n\n 43         372 LOAD_CONST              14 ('external/local_preflight_non_score_until_cuda')\n            374 STORE_NAME              35 (EVIDENCE_GRADE)\n\n 44         376 PUSH_NULL\n            378 LOAD_NAME                7 (re)\n            380 LOAD_ATTR               72 (compile)\n\n 45         400 LOAD_CONST              15 ('(?:b64decode|b85decode|a85decode|brotli\\\\.decompress|lzma\\\\.decompress|zlib\\\\.decompress)\\\\s*\\\\(\\\\s*([rubfRUBF]*[\\\\\"\\'])(?P<payload>.{65536,}?)(?<!\\\\\\\\)\\\\1')\n\n 47         402 LOAD_NAME                7 (re)\n            404 LOAD_ATTR               74 (DOTALL)\n\n 44         424 CALL                     2\n            432 STORE_NAME              38 (SOURCE_EMBEDDED_PAYLOAD_LITERAL_RE)\n\n 51         434 LOAD_CONST              34 (('data', 'bytes', 'return', 'str'))\n            436 LOAD_CONST              16 (<code object _sha256_bytes at 0x10149eab0, file \"/Users/adpena/Projects/pact/experiments/preflight_public_replay_intake.py\", line 51>)\n            438 MAKE_FUNCTION            4 (annotations)\n            440 STORE_NAME              39 (_sha256_bytes)\n\n 55         442 LOAD_CONST              35 (('path', 'Path', 'return', 'str'))\n            444 LOAD_CONST              17 (<code object _sha256_file at 0x1012e2d80, file \"/Users/adpena/Projects/pact/experiments/preflight_public_replay_intake.py\", line 55>)\n            446 MAKE_FUNCTION            4 (annotations)\n            448 STORE_NAME              40 (_sha256_file)\n\n 63         450 LOAD_CONST              35 (('path', 'Path', 'return', 'str'))\n            452 LOAD_CONST              18 (<code object _repo_rel at 0x101345530, file \"/Users/adpena/Projects/pact/experiments/preflight_public_replay_intake.py\", line 63>)\n            454 MAKE_FUNCTION            4 (annotations)\n            456 STORE_NAME              41 (_repo_rel)\n\n 70         458 LOAD_CONST              36 (('payload', 'Any', 'return', 'str'))\n            460 LOAD_CONST              19 (<code object _json_text at 0x101494d30, file \"/Users/adpena/Projects/pact/experiments/preflight_public_replay_intake.py\", line 70>)\n            462 MAKE_FUNCTION            4 (annotations)\n            464 STORE_NAME              42 (_json_text)\n\n 74         466 LOAD_CONST              37 ((8,))\n            468 LOAD_CONST              38 (('data', 'bytes', 'n', 'int', 'return', 'str'))\n            470 LOAD_CONST              20 (<code object _magic_ascii at 0x101434c60, file \"/Users/adpena/Projects/pact/experiments/preflight_public_replay_intake.py\", line 74>)\n            472 MAKE_FUNCTION            5 (defaults, annotations)\n            474 STORE_NAME              43 (_magic_ascii)\n\n 78         476 LOAD_CONST              39 (('data', 'bytes', 'return', 'tuple[bytes | None, dict[str, Any]]'))\n            478 LOAD_CONST              21 (<code object _try_brotli at 0x1013787f0, file \"/Users/adpena/Projects/pact/experiments/preflight_public_replay_intake.py\", line 78>)\n            480 MAKE_FUNCTION            4 (annotations)\n            482 STORE_NAME              44 (_try_brotli)\n\n 97         484 LOAD_CONST              39 (('data', 'bytes', 'return', 'tuple[bytes | None, dict[str, Any]]'))\n            486 LOAD_CONST              22 (<code object _try_gzip at 0x10139d980, file \"/Users/adpena/Projects/pact/experiments/preflight_public_replay_intake.py\", line 97>)\n            488 MAKE_FUNCTION            4 (annotations)\n            490 STORE_NAME              45 (_try_gzip)\n\n112         492 LOAD_CONST              40 (('contract', 'Any', 'return', 'dict[str, Any]'))\n            494 LOAD_CONST              23 (<code object _contract_to_json at 0x10140da10, file \"/Users/adpena/Projects/pact/experiments/preflight_public_replay_intake.py\", line 112>)\n            496 MAKE_FUNCTION            4 (annotations)\n            498 STORE_NAME              46 (_contract_to_json)\n\n123         500 LOAD_CONST              41 (('raw', 'bytes', 'return', 'dict[str, Any]'))\n            502 LOAD_CONST              24 (<code object _probe_pr85_family_x at 0xa2b1d4c00, file \"/Users/adpena/Projects/pact/experiments/preflight_public_replay_intake.py\", line 123>)\n            504 MAKE_FUNCTION            4 (annotations)\n            506 STORE_NAME              47 (_probe_pr85_family_x)\n\n146         508 LOAD_CONST              42 (('name', 'str', 'data', 'bytes', 'return', 'dict[str, Any]'))\n            510 LOAD_CONST              25 (<code object _probe_member at 0xa2ae16d00, file \"/Users/adpena/Projects/pact/experiments/preflight_public_replay_intake.py\", line 146>)\n            512 MAKE_FUNCTION            4 (annotations)\n            514 STORE_NAME              48 (_probe_member)\n\n183         516 LOAD_CONST              43 (('runtime_root', 'Path', 'archive_bytes', 'int', 'return', 'dict[str, Any]'))\n            518 LOAD_CONST              26 (<code object _runtime_source_payload_scan at 0xa2b1d2000, file \"/Users/adpena/Projects/pact/experiments/preflight_public_replay_intake.py\", line 183>)\n            520 MAKE_FUNCTION            4 (annotations)\n            522 STORE_NAME              49 (_runtime_source_payload_scan)\n\n218         524 LOAD_CONST              44 (('archive', 'Path', 'return', 'tuple[dict[str, Any], list[dict[str, str]]]'))\n            526 LOAD_CONST              27 (<code object _archive_report at 0xa2b196800, file \"/Users/adpena/Projects/pact/experiments/preflight_public_replay_intake.py\", line 218>)\n            528 MAKE_FUNCTION            4 (annotations)\n            530 STORE_NAME              50 (_archive_report)\n\n308         532 LOAD_NAME               17 (REPO_ROOT)\n            534 LOAD_CONST              28 ('upstream')\n            536 BINARY_OP               11 (/)\n\n309         540 LOAD_CONST               3 (None)\n\n310         542 LOAD_CONST               3 (None)\n\n311         544 LOAD_CONST               3 (None)\n\n304         546 LOAD_CONST              29 (('upstream_dir', 'expected_archive_sha256', 'expected_archive_size_bytes', 'expected_runtime_tree_sha256'))\n            548 BUILD_CONST_KEY_MAP      4\n\n305         550 NOP\n\n304         552 NOP\n\n306         554 NOP\n\n304         556 NOP\n\n308         558 NOP\n\n304         560 NOP\n\n309         562 NOP\n\n304         564 NOP\n\n310         566 NOP\n\n304         568 NOP\n\n311         570 NOP\n\n304         572 NOP\n\n312         574 NOP\n\n304         576 LOAD_CONST              45 (('archive', 'Path', 'inflate_sh', 'Path', 'upstream_dir', 'Path', 'expected_archive_sha256', 'str | None', 'expected_archive_size_bytes', 'int | None', 'expected_runtime_tree_sha256', 'str | None', 'return', 'dict[str, Any]'))\n            578 LOAD_CONST              30 (<code object build_preflight at 0xa2ae16800, file \"/Users/adpena/Projects/pact/experiments/preflight_public_replay_intake.py\", line 304>)\n            580 MAKE_FUNCTION            6 (kwdefaults, annotations)\n            582 STORE_NAME              51 (build_preflight)\n\n393         584 LOAD_CONST              46 (('return', 'argparse.ArgumentParser'))\n            586 LOAD_CONST              31 (<code object build_parser at 0xa2ae11900, file \"/Users/adpena/Projects/pact/experiments/preflight_public_replay_intake.py\", line 393>)\n            588 MAKE_FUNCTION            4 (annotations)\n            590 STORE_NAME              52 (build_parser)\n\n406         592 LOAD_CONST              47 ((None,))\n            594 LOAD_CONST              48 (('argv', 'list[str] | None', 'return', 'int'))\n            596 LOAD_CONST              32 (<code object main at 0xa2b1d4f00, file \"/Users/adpena/Projects/pact/experiments/preflight_public_replay_intake.py\", line 406>)\n            598 MAKE_FUNCTION            5 (defaults, annotations)\n            600 STORE_NAME              53 (main)\n\n424         602 LOAD_NAME               54 (__name__)\n            604 LOAD_CONST              33 ('__main__')\n            606 COMPARE_OP              40 (==)\n            610 POP_JUMP_IF_FALSE       13 (to 638)\n\n425         612 PUSH_NULL\n            614 LOAD_NAME               55 (SystemExit)\n            616 PUSH_NULL\n            618 LOAD_NAME               53 (main)\n            620 CALL                     0\n            628 CALL                     1\n            636 RAISE_VARARGS            1\n\n424     >>  638 RETURN_CONST             3 (None)\n"
+}

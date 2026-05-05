@@ -1,0 +1,289 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/src/tac/tests/__pycache__/test_dispatch_cli_shell_hazards.cpython-312.pyc",
+  "names": [
+    "__future__",
+    "annotations",
+    "importlib.util",
+    "importlib",
+    "sys",
+    "pathlib",
+    "Path",
+    "__file__",
+    "resolve",
+    "parents",
+    "REPO",
+    "HELPER",
+    "_load_helper",
+    "test_scanner_catches_adjudicator_flags_passed_to_lightning_launcher",
+    "test_scanner_does_not_flag_adjudicator_flags_on_adjudicator_cli",
+    "test_scanner_catches_zsh_path_variable_without_flagging_python_heredoc",
+    "test_scanner_catches_local_find_printf_but_allows_remote_workspace_find"
+  ],
+  "varnames": [],
+  "consts": [
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "Path"
+    ],
+    3,
+    "tools",
+    "check_dispatch_cli_shell_hazards.py",
+    {
+      "__code__": "_load_helper",
+      "qualname": "_load_helper",
+      "argcount": 0,
+      "varnames": [
+        "spec",
+        "module"
+      ],
+      "names": [
+        "importlib",
+        "util",
+        "spec_from_file_location",
+        "HELPER",
+        "loader",
+        "module_from_spec",
+        "sys",
+        "modules",
+        "name",
+        "exec_module"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_scanner_catches_adjudicator_flags_passed_to_lightning_launcher",
+      "qualname": "test_scanner_catches_adjudicator_flags_passed_to_lightning_launcher",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "helper",
+        "script",
+        "hazards",
+        "item"
+      ],
+      "names": [
+        "_load_helper",
+        "parent",
+        "mkdir",
+        "write_text",
+        "lstrip",
+        "scan_paths",
+        "code",
+        "message"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_scanner_does_not_flag_adjudicator_flags_on_adjudicator_cli",
+      "qualname": "test_scanner_does_not_flag_adjudicator_flags_on_adjudicator_cli",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "helper",
+        "script"
+      ],
+      "names": [
+        "_load_helper",
+        "parent",
+        "mkdir",
+        "write_text",
+        "lstrip",
+        "scan_paths"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_scanner_catches_zsh_path_variable_without_flagging_python_heredoc",
+      "qualname": "test_scanner_catches_zsh_path_variable_without_flagging_python_heredoc",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "helper",
+        "snippet",
+        "hazards"
+      ],
+      "names": [
+        "_load_helper",
+        "parent",
+        "mkdir",
+        "write_text",
+        "lstrip",
+        "scan_paths",
+        "len",
+        "code"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_scanner_catches_local_find_printf_but_allows_remote_workspace_find",
+      "qualname": "test_scanner_catches_local_find_printf_but_allows_remote_workspace_find",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "helper",
+        "script",
+        "hazards"
+      ],
+      "names": [
+        "_load_helper",
+        "parent",
+        "mkdir",
+        "write_text",
+        "lstrip",
+        "scan_paths",
+        "len",
+        "code"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    [
+      "tmp_path",
+      "Path",
+      "return",
+      "None"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": null,
+  "child_codes": [
+    {
+      "qualname": "_load_helper",
+      "name": "_load_helper",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "spec",
+        "module"
+      ],
+      "names": [
+        "importlib",
+        "util",
+        "spec_from_file_location",
+        "HELPER",
+        "loader",
+        "module_from_spec",
+        "sys",
+        "modules",
+        "name",
+        "exec_module"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 12           0 RESUME                   0\n\n 13           2 LOAD_GLOBAL              0 (importlib)\n             12 LOAD_ATTR                2 (util)\n             32 LOAD_ATTR                5 (NULL|self + spec_from_file_location)\n             52 LOAD_CONST               1 ('dispatch_cli_shell_hazards_test')\n             54 LOAD_GLOBAL              6 (HELPER)\n             64 CALL                     2\n             72 STORE_FAST               0 (spec)\n\n 14          74 LOAD_FAST                0 (spec)\n             76 POP_JUMP_IF_NONE        12 (to 102)\n             78 LOAD_FAST                0 (spec)\n             80 LOAD_ATTR                8 (loader)\n            100 POP_JUMP_IF_NOT_NONE     2 (to 106)\n        >>  102 LOAD_ASSERTION_ERROR\n            104 RAISE_VARARGS            1\n\n 15     >>  106 LOAD_GLOBAL              0 (importlib)\n            116 LOAD_ATTR                2 (util)\n            136 LOAD_ATTR               11 (NULL|self + module_from_spec)\n            156 LOAD_FAST                0 (spec)\n            158 CALL                     1\n            166 STORE_FAST               1 (module)\n\n 16         168 LOAD_FAST                1 (module)\n            170 LOAD_GLOBAL             12 (sys)\n            180 LOAD_ATTR               14 (modules)\n            200 LOAD_FAST                0 (spec)\n            202 LOAD_ATTR               16 (name)\n            222 STORE_SUBSCR\n\n 17         226 LOAD_FAST                0 (spec)\n            228 LOAD_ATTR                8 (loader)\n            248 LOAD_ATTR               19 (NULL|self + exec_module)\n            268 LOAD_FAST                1 (module)\n            270 CALL                     1\n            278 POP_TOP\n\n 18         280 LOAD_FAST                1 (module)\n            282 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "test_scanner_catches_adjudicator_flags_passed_to_lightning_launcher",
+      "name": "test_scanner_catches_adjudicator_flags_passed_to_lightning_launcher",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "helper",
+        "script",
+        "hazards",
+        "item"
+      ],
+      "names": [
+        "_load_helper",
+        "parent",
+        "mkdir",
+        "write_text",
+        "lstrip",
+        "scan_paths",
+        "code",
+        "message"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 21           0 RESUME                   0\n\n 24           2 LOAD_GLOBAL              1 (NULL + _load_helper)\n             12 CALL                     0\n             20 STORE_FAST               1 (helper)\n\n 25          22 LOAD_FAST                0 (tmp_path)\n             24 LOAD_CONST               1 ('scripts')\n             26 BINARY_OP               11 (/)\n             30 LOAD_CONST               2 ('bad.sh')\n             32 BINARY_OP               11 (/)\n             36 STORE_FAST               2 (script)\n\n 26          38 LOAD_FAST                2 (script)\n             40 LOAD_ATTR                2 (parent)\n             60 LOAD_ATTR                5 (NULL|self + mkdir)\n             80 CALL                     0\n             88 POP_TOP\n\n 27          90 LOAD_FAST                2 (script)\n             92 LOAD_ATTR                7 (NULL|self + write_text)\n\n 28         112 LOAD_CONST               3 ('\\n#!/usr/bin/env bash\\npython scripts/launch_lightning_batch_job.py exact-eval \\\\\\n  --job-name j \\\\\\n  --archive a.zip \\\\\\n  --required-device cuda \\\\\\n  --required-samples 600\\n')\n\n 35         114 LOAD_ATTR                9 (NULL|self + lstrip)\n            134 CALL                     0\n\n 27         142 CALL                     1\n            150 POP_TOP\n\n 38         152 LOAD_FAST                1 (helper)\n            154 LOAD_ATTR               11 (NULL|self + scan_paths)\n            174 LOAD_FAST                0 (tmp_path)\n            176 LOAD_CONST               4 (('scripts',))\n            178 KW_NAMES                 5 (('scan_paths',))\n            180 CALL                     2\n            188 STORE_FAST               3 (hazards)\n\n 40         190 LOAD_FAST                3 (hazards)\n            192 GET_ITER\n            194 LOAD_FAST_AND_CLEAR      4 (item)\n            196 SWAP                     2\n            198 BUILD_LIST               0\n            200 SWAP                     2\n        >>  202 FOR_ITER                14 (to 234)\n            206 STORE_FAST               4 (item)\n            208 LOAD_FAST                4 (item)\n            210 LOAD_ATTR               12 (code)\n            230 LIST_APPEND              2\n            232 JUMP_BACKWARD           16 (to 202)\n        >>  234 END_FOR\n            236 SWAP                     2\n            238 STORE_FAST               4 (item)\n\n 41         240 LOAD_CONST               6 ('stale_lightning_launcher_flag')\n\n 42         242 LOAD_CONST               6 ('stale_lightning_launcher_flag')\n\n 40         244 BUILD_LIST               2\n            246 COMPARE_OP              40 (==)\n            250 POP_JUMP_IF_TRUE         2 (to 256)\n            252 LOAD_ASSERTION_ERROR\n            254 RAISE_VARARGS            1\n\n 44     >>  256 LOAD_CONST               7 ('--required-device')\n            258 LOAD_FAST                3 (hazards)\n            260 LOAD_CONST               8 (0)\n            262 BINARY_SUBSCR\n            266 LOAD_ATTR               14 (message)\n            286 CONTAINS_OP              0\n            288 POP_JUMP_IF_TRUE         2 (to 294)\n            290 LOAD_ASSERTION_ERROR\n            292 RAISE_VARARGS            1\n\n 45     >>  294 LOAD_CONST               9 ('--required-samples')\n            296 LOAD_FAST                3 (hazards)\n            298 LOAD_CONST              10 (1)\n            300 BINARY_SUBSCR\n            304 LOAD_ATTR               14 (message)\n            324 CONTAINS_OP              0\n            326 POP_JUMP_IF_TRUE         2 (to 332)\n            328 LOAD_ASSERTION_ERROR\n            330 RAISE_VARARGS            1\n        >>  332 RETURN_CONST             0 (None)\n        >>  334 SWAP                     2\n            336 POP_TOP\n\n 40         338 SWAP                     2\n            340 STORE_FAST               4 (item)\n            342 RERAISE                  0\nExceptionTable:\n  198 to 234 -> 334 [2]\n"
+    },
+    {
+      "qualname": "test_scanner_does_not_flag_adjudicator_flags_on_adjudicator_cli",
+      "name": "test_scanner_does_not_flag_adjudicator_flags_on_adjudicator_cli",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "helper",
+        "script"
+      ],
+      "names": [
+        "_load_helper",
+        "parent",
+        "mkdir",
+        "write_text",
+        "lstrip",
+        "scan_paths"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 48           0 RESUME                   0\n\n 51           2 LOAD_GLOBAL              1 (NULL + _load_helper)\n             12 CALL                     0\n             20 STORE_FAST               1 (helper)\n\n 52          22 LOAD_FAST                0 (tmp_path)\n             24 LOAD_CONST               1 ('scripts')\n             26 BINARY_OP               11 (/)\n             30 LOAD_CONST               2 ('good.sh')\n             32 BINARY_OP               11 (/)\n             36 STORE_FAST               2 (script)\n\n 53          38 LOAD_FAST                2 (script)\n             40 LOAD_ATTR                2 (parent)\n             60 LOAD_ATTR                5 (NULL|self + mkdir)\n             80 CALL                     0\n             88 POP_TOP\n\n 54          90 LOAD_FAST                2 (script)\n             92 LOAD_ATTR                7 (NULL|self + write_text)\n\n 55         112 LOAD_CONST               3 ('\\n#!/usr/bin/env bash\\npython scripts/adjudicate_contest_auth_eval.py \\\\\\n  --contest-json contest_auth_eval.json \\\\\\n  --required-device cuda \\\\\\n  --required-samples 600\\n')\n\n 61         114 LOAD_ATTR                9 (NULL|self + lstrip)\n            134 CALL                     0\n\n 54         142 CALL                     1\n            150 POP_TOP\n\n 64         152 LOAD_FAST                1 (helper)\n            154 LOAD_ATTR               11 (NULL|self + scan_paths)\n            174 LOAD_FAST                0 (tmp_path)\n            176 LOAD_CONST               4 (('scripts',))\n            178 KW_NAMES                 5 (('scan_paths',))\n            180 CALL                     2\n            188 BUILD_LIST               0\n            190 COMPARE_OP              40 (==)\n            194 POP_JUMP_IF_TRUE         2 (to 200)\n            196 LOAD_ASSERTION_ERROR\n            198 RAISE_VARARGS            1\n        >>  200 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "test_scanner_catches_zsh_path_variable_without_flagging_python_heredoc",
+      "name": "test_scanner_catches_zsh_path_variable_without_flagging_python_heredoc",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "helper",
+        "snippet",
+        "hazards"
+      ],
+      "names": [
+        "_load_helper",
+        "parent",
+        "mkdir",
+        "write_text",
+        "lstrip",
+        "scan_paths",
+        "len",
+        "code"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 67           0 RESUME                   0\n\n 70           2 LOAD_GLOBAL              1 (NULL + _load_helper)\n             12 CALL                     0\n             20 STORE_FAST               1 (helper)\n\n 71          22 LOAD_FAST                0 (tmp_path)\n             24 LOAD_CONST               1 ('docs')\n             26 BINARY_OP               11 (/)\n             30 LOAD_CONST               2 ('ops.md')\n             32 BINARY_OP               11 (/)\n             36 STORE_FAST               2 (snippet)\n\n 72          38 LOAD_FAST                2 (snippet)\n             40 LOAD_ATTR                2 (parent)\n             60 LOAD_ATTR                5 (NULL|self + mkdir)\n             80 CALL                     0\n             88 POP_TOP\n\n 73          90 LOAD_FAST                2 (snippet)\n             92 LOAD_ATTR                7 (NULL|self + write_text)\n\n 74         112 LOAD_CONST               3 ('\\n```zsh\\nfor path in artifacts/*.json; do\\n  dirname \"$path\"\\ndone\\n```\\n\\n```bash\\npython - <<\\'PY\\'\\nfor path in sorted(root.rglob(\"*\")):\\n    print(path)\\nPY\\n```\\n')\n\n 87         114 LOAD_ATTR                9 (NULL|self + lstrip)\n            134 CALL                     0\n\n 73         142 CALL                     1\n            150 POP_TOP\n\n 90         152 LOAD_FAST                1 (helper)\n            154 LOAD_ATTR               11 (NULL|self + scan_paths)\n            174 LOAD_FAST                0 (tmp_path)\n            176 LOAD_CONST               4 (('docs',))\n            178 KW_NAMES                 5 (('scan_paths',))\n            180 CALL                     2\n            188 STORE_FAST               3 (hazards)\n\n 92         190 LOAD_GLOBAL             13 (NULL + len)\n            200 LOAD_FAST                3 (hazards)\n            202 CALL                     1\n            210 LOAD_CONST               6 (1)\n            212 COMPARE_OP              40 (==)\n            216 POP_JUMP_IF_TRUE         2 (to 222)\n            218 LOAD_ASSERTION_ERROR\n            220 RAISE_VARARGS            1\n\n 93     >>  222 LOAD_FAST                3 (hazards)\n            224 LOAD_CONST               7 (0)\n            226 BINARY_SUBSCR\n            230 LOAD_ATTR               14 (code)\n            250 LOAD_CONST               8 ('zsh_path_special_variable')\n            252 COMPARE_OP              40 (==)\n            256 POP_JUMP_IF_TRUE         2 (to 262)\n            258 LOAD_ASSERTION_ERROR\n            260 RAISE_VARARGS            1\n        >>  262 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "test_scanner_catches_local_find_printf_but_allows_remote_workspace_find",
+      "name": "test_scanner_catches_local_find_printf_but_allows_remote_workspace_find",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "helper",
+        "script",
+        "hazards"
+      ],
+      "names": [
+        "_load_helper",
+        "parent",
+        "mkdir",
+        "write_text",
+        "lstrip",
+        "scan_paths",
+        "len",
+        "code"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 96           0 RESUME                   0\n\n 99           2 LOAD_GLOBAL              1 (NULL + _load_helper)\n             12 CALL                     0\n             20 STORE_FAST               1 (helper)\n\n100          22 LOAD_FAST                0 (tmp_path)\n             24 LOAD_CONST               1 ('scripts')\n             26 BINARY_OP               11 (/)\n             30 LOAD_CONST               2 ('finds.sh')\n             32 BINARY_OP               11 (/)\n             36 STORE_FAST               2 (script)\n\n101          38 LOAD_FAST                2 (script)\n             40 LOAD_ATTR                2 (parent)\n             60 LOAD_ATTR                5 (NULL|self + mkdir)\n             80 CALL                     0\n             88 POP_TOP\n\n102          90 LOAD_FAST                2 (script)\n             92 LOAD_ATTR                7 (NULL|self + write_text)\n\n103         112 LOAD_CONST               3 ('\\n#!/usr/bin/env bash\\nfind . -name \\'*.json\\' -printf \\'%p\\\\n\\'\\nssh root@host \"find /workspace/pact -name heartbeat.log -printf \\'%T@\\\\n\\'\"\\n')\n\n107         114 LOAD_ATTR                9 (NULL|self + lstrip)\n            134 CALL                     0\n\n102         142 CALL                     1\n            150 POP_TOP\n\n110         152 LOAD_FAST                1 (helper)\n            154 LOAD_ATTR               11 (NULL|self + scan_paths)\n            174 LOAD_FAST                0 (tmp_path)\n            176 LOAD_CONST               4 (('scripts',))\n            178 KW_NAMES                 5 (('scan_paths',))\n            180 CALL                     2\n            188 STORE_FAST               3 (hazards)\n\n112         190 LOAD_GLOBAL             13 (NULL + len)\n            200 LOAD_FAST                3 (hazards)\n            202 CALL                     1\n            210 LOAD_CONST               6 (1)\n            212 COMPARE_OP              40 (==)\n            216 POP_JUMP_IF_TRUE         2 (to 222)\n            218 LOAD_ASSERTION_ERROR\n            220 RAISE_VARARGS            1\n\n113     >>  222 LOAD_FAST                3 (hazards)\n            224 LOAD_CONST               7 (0)\n            226 BINARY_SUBSCR\n            230 LOAD_ATTR               14 (code)\n            250 LOAD_CONST               8 ('macos_find_printf')\n            252 COMPARE_OP              40 (==)\n            256 POP_JUMP_IF_TRUE         2 (to 262)\n            258 LOAD_ASSERTION_ERROR\n            260 RAISE_VARARGS            1\n        >>  262 RETURN_CONST             0 (None)\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  1           2 LOAD_CONST               0 (0)\n              4 LOAD_CONST               1 (('annotations',))\n              6 IMPORT_NAME              0 (__future__)\n              8 IMPORT_FROM              1 (annotations)\n             10 STORE_NAME               1 (annotations)\n             12 POP_TOP\n\n  3          14 LOAD_CONST               0 (0)\n             16 LOAD_CONST               2 (None)\n             18 IMPORT_NAME              2 (importlib.util)\n             20 STORE_NAME               3 (importlib)\n\n  4          22 LOAD_CONST               0 (0)\n             24 LOAD_CONST               2 (None)\n             26 IMPORT_NAME              4 (sys)\n             28 STORE_NAME               4 (sys)\n\n  5          30 LOAD_CONST               0 (0)\n             32 LOAD_CONST               3 (('Path',))\n             34 IMPORT_NAME              5 (pathlib)\n             36 IMPORT_FROM              6 (Path)\n             38 STORE_NAME               6 (Path)\n             40 POP_TOP\n\n  8          42 PUSH_NULL\n             44 LOAD_NAME                6 (Path)\n             46 LOAD_NAME                7 (__file__)\n             48 CALL                     1\n             56 LOAD_ATTR               17 (NULL|self + resolve)\n             76 CALL                     0\n             84 LOAD_ATTR               18 (parents)\n            104 LOAD_CONST               4 (3)\n            106 BINARY_SUBSCR\n            110 STORE_NAME              10 (REPO)\n\n  9         112 LOAD_NAME               10 (REPO)\n            114 LOAD_CONST               5 ('tools')\n            116 BINARY_OP               11 (/)\n            120 LOAD_CONST               6 ('check_dispatch_cli_shell_hazards.py')\n            122 BINARY_OP               11 (/)\n            126 STORE_NAME              11 (HELPER)\n\n 12         128 LOAD_CONST               7 (<code object _load_helper at 0x1005c9890, file \"src/tac/tests/test_dispatch_cli_shell_hazards.py\", line 12>)\n            130 MAKE_FUNCTION            0\n            132 STORE_NAME              12 (_load_helper)\n\n 21         134 NOP\n\n 22         136 NOP\n\n 21         138 NOP\n\n 23         140 NOP\n\n 21         142 LOAD_CONST              12 (('tmp_path', 'Path', 'return', 'None'))\n            144 LOAD_CONST               8 (<code object test_scanner_catches_adjudicator_flags_passed_to_lightning_launcher at 0xb8ee49b80, file \"src/tac/tests/test_dispatch_cli_shell_hazards.py\", line 21>)\n            146 MAKE_FUNCTION            4 (annotations)\n            148 STORE_NAME              13 (test_scanner_catches_adjudicator_flags_passed_to_lightning_launcher)\n\n 48         150 NOP\n\n 49         152 NOP\n\n 48         154 NOP\n\n 50         156 NOP\n\n 48         158 LOAD_CONST              12 (('tmp_path', 'Path', 'return', 'None'))\n            160 LOAD_CONST               9 (<code object test_scanner_does_not_flag_adjudicator_flags_on_adjudicator_cli at 0x10065e5b0, file \"src/tac/tests/test_dispatch_cli_shell_hazards.py\", line 48>)\n            162 MAKE_FUNCTION            4 (annotations)\n            164 STORE_NAME              14 (test_scanner_does_not_flag_adjudicator_flags_on_adjudicator_cli)\n\n 67         166 NOP\n\n 68         168 NOP\n\n 67         170 NOP\n\n 69         172 NOP\n\n 67         174 LOAD_CONST              12 (('tmp_path', 'Path', 'return', 'None'))\n            176 LOAD_CONST              10 (<code object test_scanner_catches_zsh_path_variable_without_flagging_python_heredoc at 0x10055ed80, file \"src/tac/tests/test_dispatch_cli_shell_hazards.py\", line 67>)\n            178 MAKE_FUNCTION            4 (annotations)\n            180 STORE_NAME              15 (test_scanner_catches_zsh_path_variable_without_flagging_python_heredoc)\n\n 96         182 NOP\n\n 97         184 NOP\n\n 96         186 NOP\n\n 98         188 NOP\n\n 96         190 LOAD_CONST              12 (('tmp_path', 'Path', 'return', 'None'))\n            192 LOAD_CONST              11 (<code object test_scanner_catches_local_find_printf_but_allows_remote_workspace_find at 0x10055ef50, file \"src/tac/tests/test_dispatch_cli_shell_hazards.py\", line 96>)\n            194 MAKE_FUNCTION            4 (annotations)\n            196 STORE_NAME              16 (test_scanner_catches_local_find_printf_but_allows_remote_workspace_find)\n            198 RETURN_CONST             2 (None)\n"
+}

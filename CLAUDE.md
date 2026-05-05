@@ -4,6 +4,14 @@ You are operating inside a dual-track lab for the comma video compression challe
 
 Read `PROGRAM.md` before making changes.
 
+## Main branch source of truth — NON-NEGOTIABLE
+
+`main` is the sole source-of-truth branch. Do not do production work, recovery
+work, public-frontier intake, or contest-custody edits on any other branch.
+Detached public PR clones, stashes, quarantine trees, provider workspaces, and
+subagent forks are forensic inputs only; promoted code, docs, artifacts, and
+ledgers must land back on `main` after explicit review.
+
 ## Frontier target — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 The target is the best contest-faithful public frontier, not an obsolete

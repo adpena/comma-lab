@@ -52,6 +52,8 @@ __all__ = [
     "optimal_quantization_stc",
     "fridrich_pipeline",
     "linf_pose_penalty",
+    "variance_weighted_noise",
+    "segnet_uncertainty_map",
 ]
 
 
@@ -102,6 +104,100 @@ def linf_pose_penalty(
     # the standard differentiable hinge.
     violation = (pose_delta.abs() - budget).clamp(min=0.0).sum()
     return violation
+
+
+# ── Yousfi/Fridrich scorer-aligned training fields ──────────────────────
+
+
+def variance_weighted_noise(
+    image: torch.Tensor,
+    base_std: float,
+    kernel_size: int = 8,
+    mode: str = "variance",
+    eps: float = 1e-6,
+) -> torch.Tensor:
+    """Sample zero-mean noise with per-pixel std shaped by texture energy.
+
+    ``mode="variance"`` concentrates quantization noise in high-frequency,
+    UNIWARD-suitable regions; ``mode="inverse_variance"`` is an ablation that
+    does the opposite. The spatial mean of the std field is normalized to
+    ``base_std`` so this is a redistribution of a fixed noise budget.
+    """
+    if mode not in {"variance", "inverse_variance", "wavelet_db4"}:
+        raise ValueError(
+            "mode must be 'variance', 'inverse_variance', or 'wavelet_db4'; "
+            f"got {mode!r}"
+        )
+    if base_std < 0:
+        raise ValueError(f"base_std must be non-negative, got {base_std}")
+    if image.ndim != 4:
+        raise ValueError(
+            f"image must be (B, C, H, W); got shape {tuple(image.shape)}"
+        )
+    if image.shape[1] != 3:
+        raise ValueError(
+            f"image must have 3 channels (RGB); got C={image.shape[1]}"
+        )
+    if kernel_size < 1:
+        raise ValueError(f"kernel_size must be >= 1, got {kernel_size}")
+    if base_std == 0.0:
+        return torch.zeros_like(image)
+
+    img_f = image.detach().float()
+
+    if mode == "wavelet_db4":
+        from tac.wavelet_variance import wavelet_variance_map
+
+        scale = wavelet_variance_map(img_f, wavelet="db4", eps=eps)
+    else:
+        luma = (
+            0.299 * img_f[:, 0:1]
+            + 0.587 * img_f[:, 1:2]
+            + 0.114 * img_f[:, 2:3]
+        )
+        pad = kernel_size // 2
+        luma_padded = F.pad(luma, (pad, pad, pad, pad), mode="reflect")
+        sq_padded = F.pad(luma * luma, (pad, pad, pad, pad), mode="reflect")
+        local_mean = F.avg_pool2d(luma_padded, kernel_size, stride=1)
+        local_sqmean = F.avg_pool2d(sq_padded, kernel_size, stride=1)
+        local_var = (local_sqmean - local_mean * local_mean).clamp(min=0.0)
+        height, width = image.shape[2], image.shape[3]
+        local_var = local_var[:, :, :height, :width]
+        scale = local_var if mode == "variance" else 1.0 / (local_var + eps)
+
+    scale_mean = scale.mean(dim=(2, 3), keepdim=True).clamp(min=eps)
+    std_field = base_std * (scale / scale_mean)
+    std_field = std_field.expand(-1, image.shape[1], -1, -1)
+    return (torch.randn_like(img_f) * std_field).to(image.dtype)
+
+
+def segnet_uncertainty_map(
+    segnet: nn.Module,
+    image: torch.Tensor,
+    eps: float = 1e-6,
+) -> torch.Tensor:
+    """Return stop-gradient SegNet softmax entropy for ``image``.
+
+    ``image`` is a single-frame ``(B, 3, H, W)`` tensor. The scorer contract
+    expects ``(B, T, C, H, W)``, so a singleton time axis is added before
+    ``preprocess_input``. The output is ``(B, 1, H_seg, W_seg)``.
+    """
+    if image.ndim != 4:
+        raise ValueError(
+            f"image must be (B, 3, H, W); got shape {tuple(image.shape)}"
+        )
+    if image.shape[1] != 3:
+        raise ValueError(
+            f"image must have 3 channels (RGB); got C={image.shape[1]}"
+        )
+
+    with torch.no_grad():
+        seg_in = segnet.preprocess_input(image.float().unsqueeze(1))
+        logits = segnet(seg_in)
+        log_p = F.log_softmax(logits, dim=1)
+        p = log_p.exp()
+        entropy = -(p * (log_p + eps)).sum(dim=1, keepdim=True)
+    return entropy.clamp(min=0.0)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────

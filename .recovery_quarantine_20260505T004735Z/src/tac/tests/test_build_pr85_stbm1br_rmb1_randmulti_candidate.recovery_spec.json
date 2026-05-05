@@ -1,0 +1,773 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/src/tac/tests/__pycache__/test_build_pr85_stbm1br_rmb1_randmulti_candidate.cpython-312.pyc",
+  "names": [
+    "__future__",
+    "annotations",
+    "importlib.util",
+    "importlib",
+    "json",
+    "sys",
+    "zipfile",
+    "pathlib",
+    "Path",
+    "typing",
+    "Any",
+    "pytest",
+    "importorskip",
+    "brotli",
+    "tac.pr85_bundle",
+    "FIXED_V5_LENGTHS",
+    "PR85_HEADERLESS_RANDMULTI_SPECS",
+    "pack_pr85_bundle",
+    "parse_pr85_bundle",
+    "tac.stbm1br_mask_codec",
+    "STBM1BR_MAGIC",
+    "__file__",
+    "resolve",
+    "parents",
+    "REPO",
+    "SCRIPT",
+    "_load_module",
+    "_zip_info",
+    "_row",
+    "_headerless_rows",
+    "_rmb1_from_rows",
+    "_write_archive",
+    "_write_runtime_support",
+    "test_builder_replaces_only_randmulti_and_records_parity",
+    "test_builder_fails_closed_when_rmb1_rows_differ",
+    "test_builder_fails_closed_without_single_member_x_runtime_support"
+  ],
+  "varnames": [],
+  "consts": [
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "Path"
+    ],
+    [
+      "Any"
+    ],
+    "brotli",
+    [
+      "FIXED_V5_LENGTHS",
+      "PR85_HEADERLESS_RANDMULTI_SPECS",
+      "pack_pr85_bundle",
+      "parse_pr85_bundle"
+    ],
+    [
+      "STBM1BR_MAGIC"
+    ],
+    3,
+    "experiments",
+    "build_pr85_stbm1br_rmb1_randmulti_candidate.py",
+    {
+      "__code__": "_load_module",
+      "qualname": "_load_module",
+      "argcount": 0,
+      "varnames": [
+        "spec",
+        "module"
+      ],
+      "names": [
+        "importlib",
+        "util",
+        "spec_from_file_location",
+        "SCRIPT",
+        "loader",
+        "module_from_spec",
+        "sys",
+        "modules",
+        "name",
+        "exec_module"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_zip_info",
+      "qualname": "_zip_info",
+      "argcount": 0,
+      "varnames": [
+        "info"
+      ],
+      "names": [
+        "zipfile",
+        "ZipInfo",
+        "ZIP_STORED",
+        "compress_type",
+        "external_attr",
+        "create_system"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_row",
+      "qualname": "_row",
+      "argcount": 1,
+      "varnames": [
+        "counts",
+        "out",
+        "last",
+        "idx",
+        "_value",
+        "delta",
+        "byte"
+      ],
+      "names": [
+        "bytearray",
+        "append",
+        "len",
+        "extend",
+        "bytes"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_headerless_rows",
+      "qualname": "_headerless_rows",
+      "argcount": 0,
+      "varnames": [
+        "rows"
+      ],
+      "names": [
+        "_row",
+        "extend",
+        "range",
+        "sum",
+        "PR85_HEADERLESS_RANDMULTI_SPECS",
+        "join"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_rmb1_from_rows",
+      "qualname": "_rmb1_from_rows",
+      "argcount": 1,
+      "varnames": [
+        "raw",
+        "cursor",
+        "mask",
+        "values",
+        "count",
+        "row_mask",
+        "idx",
+        "_",
+        "delta",
+        "shift",
+        "byte",
+        "mask_br",
+        "vals_br"
+      ],
+      "names": [
+        "bytearray",
+        "len",
+        "int",
+        "from_bytes",
+        "range",
+        "extend",
+        "brotli",
+        "compress",
+        "bytes",
+        "to_bytes"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_write_archive",
+      "qualname": "_write_archive",
+      "argcount": 1,
+      "varnames": [
+        "path",
+        "mask",
+        "randmulti",
+        "segments",
+        "raw",
+        "zf"
+      ],
+      "names": [
+        "brotli",
+        "compress",
+        "FIXED_V5_LENGTHS",
+        "pack_pr85_bundle",
+        "parent",
+        "mkdir",
+        "zipfile",
+        "ZipFile",
+        "writestr",
+        "_zip_info"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    true,
+    [
+      "support_x"
+    ],
+    {
+      "__code__": "_write_runtime_support",
+      "qualname": "_write_runtime_support",
+      "argcount": 1,
+      "varnames": [
+        "root",
+        "support_x",
+        "x_probe"
+      ],
+      "names": [
+        "mkdir",
+        "write_text"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_builder_replaces_only_randmulti_and_records_parity",
+      "qualname": "test_builder_replaces_only_randmulti_and_records_parity",
+      "argcount": 2,
+      "varnames": [
+        "tmp_path",
+        "monkeypatch",
+        "module",
+        "rows",
+        "stbm_archive",
+        "pr92_archive",
+        "summary",
+        "manifest",
+        "gate",
+        "claim",
+        "command",
+        "duplicate",
+        "zf",
+        "parsed",
+        "custom"
+      ],
+      "names": [
+        "_load_module",
+        "_headerless_rows",
+        "_write_archive",
+        "STBM1BR_MAGIC",
+        "brotli",
+        "compress",
+        "_rmb1_from_rows",
+        "setattr",
+        "_sha256_file",
+        "stat",
+        "st_size",
+        "_write_runtime_support",
+        "build_pr85_stbm1br_rmb1_randmulti_candidate",
+        "json",
+        "loads",
+        "read_text",
+        "_sha256_bytes",
+        "index",
+        "zipfile",
+        "ZipFile",
+        "parse_pr85_bundle",
+        "read",
+        "segments",
+        "startswith"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_builder_fails_closed_when_rmb1_rows_differ",
+      "qualname": "test_builder_fails_closed_when_rmb1_rows_differ",
+      "argcount": 2,
+      "varnames": [
+        "tmp_path",
+        "monkeypatch",
+        "module",
+        "rows",
+        "stbm_archive",
+        "pr92_archive"
+      ],
+      "names": [
+        "_load_module",
+        "_headerless_rows",
+        "_write_archive",
+        "STBM1BR_MAGIC",
+        "brotli",
+        "compress",
+        "_rmb1_from_rows",
+        "sum",
+        "PR85_HEADERLESS_RANDMULTI_SPECS",
+        "setattr",
+        "_sha256_file",
+        "stat",
+        "st_size",
+        "_write_runtime_support",
+        "pytest",
+        "raises",
+        "Rmb1CandidateBuildError",
+        "build_pr85_stbm1br_rmb1_randmulti_candidate"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_builder_fails_closed_without_single_member_x_runtime_support",
+      "qualname": "test_builder_fails_closed_without_single_member_x_runtime_support",
+      "argcount": 2,
+      "varnames": [
+        "tmp_path",
+        "monkeypatch",
+        "module",
+        "rows",
+        "stbm_archive",
+        "pr92_archive"
+      ],
+      "names": [
+        "_load_module",
+        "_headerless_rows",
+        "_write_archive",
+        "STBM1BR_MAGIC",
+        "brotli",
+        "compress",
+        "_rmb1_from_rows",
+        "setattr",
+        "_sha256_file",
+        "stat",
+        "st_size",
+        "_write_runtime_support",
+        "pytest",
+        "raises",
+        "Rmb1CandidateBuildError",
+        "build_pr85_stbm1br_rmb1_randmulti_candidate"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    [
+      "return",
+      "Any"
+    ],
+    [
+      "return",
+      "zipfile.ZipInfo"
+    ],
+    [
+      "counts",
+      "list[tuple[int, int]]",
+      "return",
+      "bytes"
+    ],
+    [
+      "return",
+      "bytes"
+    ],
+    [
+      "raw",
+      "bytes",
+      "return",
+      "bytes"
+    ],
+    [
+      "path",
+      "Path",
+      "mask",
+      "bytes",
+      "randmulti",
+      "bytes",
+      "return",
+      "Path"
+    ],
+    [
+      "root",
+      "Path",
+      "support_x",
+      "bool",
+      "return",
+      "Path"
+    ],
+    [
+      "tmp_path",
+      "Path",
+      "monkeypatch",
+      "pytest.MonkeyPatch",
+      "return",
+      "None"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": null,
+  "child_codes": [
+    {
+      "qualname": "_load_module",
+      "name": "_load_module",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "spec",
+        "module"
+      ],
+      "names": [
+        "importlib",
+        "util",
+        "spec_from_file_location",
+        "SCRIPT",
+        "loader",
+        "module_from_spec",
+        "sys",
+        "modules",
+        "name",
+        "exec_module"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 23           0 RESUME                   0\n\n 24           2 LOAD_GLOBAL              0 (importlib)\n             12 LOAD_ATTR                2 (util)\n             32 LOAD_ATTR                5 (NULL|self + spec_from_file_location)\n             52 LOAD_CONST               1 ('build_pr85_stbm1br_rmb1_test')\n             54 LOAD_GLOBAL              6 (SCRIPT)\n             64 CALL                     2\n             72 STORE_FAST               0 (spec)\n\n 25          74 LOAD_FAST                0 (spec)\n             76 POP_JUMP_IF_NONE        12 (to 102)\n             78 LOAD_FAST                0 (spec)\n             80 LOAD_ATTR                8 (loader)\n            100 POP_JUMP_IF_NOT_NONE     2 (to 106)\n        >>  102 LOAD_ASSERTION_ERROR\n            104 RAISE_VARARGS            1\n\n 26     >>  106 LOAD_GLOBAL              0 (importlib)\n            116 LOAD_ATTR                2 (util)\n            136 LOAD_ATTR               11 (NULL|self + module_from_spec)\n            156 LOAD_FAST                0 (spec)\n            158 CALL                     1\n            166 STORE_FAST               1 (module)\n\n 27         168 LOAD_FAST                1 (module)\n            170 LOAD_GLOBAL             12 (sys)\n            180 LOAD_ATTR               14 (modules)\n            200 LOAD_FAST                0 (spec)\n            202 LOAD_ATTR               16 (name)\n            222 STORE_SUBSCR\n\n 28         226 LOAD_FAST                0 (spec)\n            228 LOAD_ATTR                8 (loader)\n            248 LOAD_ATTR               19 (NULL|self + exec_module)\n            268 LOAD_FAST                1 (module)\n            270 CALL                     1\n            278 POP_TOP\n\n 29         280 LOAD_FAST                1 (module)\n            282 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_zip_info",
+      "name": "_zip_info",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "info"
+      ],
+      "names": [
+        "zipfile",
+        "ZipInfo",
+        "ZIP_STORED",
+        "compress_type",
+        "external_attr",
+        "create_system"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 32           0 RESUME                   0\n\n 33           2 LOAD_GLOBAL              1 (NULL + zipfile)\n             12 LOAD_ATTR                2 (ZipInfo)\n             32 LOAD_CONST               1 ('x')\n             34 LOAD_CONST               2 ((1980, 1, 1, 0, 0, 0))\n             36 CALL                     2\n             44 STORE_FAST               0 (info)\n\n 34          46 LOAD_GLOBAL              0 (zipfile)\n             56 LOAD_ATTR                4 (ZIP_STORED)\n             76 LOAD_FAST                0 (info)\n             78 STORE_ATTR               3 (compress_type)\n\n 35          88 LOAD_CONST               3 (27525120)\n             90 LOAD_FAST                0 (info)\n             92 STORE_ATTR               4 (external_attr)\n\n 36         102 LOAD_CONST               4 (3)\n            104 LOAD_FAST                0 (info)\n            106 STORE_ATTR               5 (create_system)\n\n 37         116 LOAD_FAST                0 (info)\n            118 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_row",
+      "name": "_row",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "counts",
+        "out",
+        "last",
+        "idx",
+        "_value",
+        "delta",
+        "byte"
+      ],
+      "names": [
+        "bytearray",
+        "append",
+        "len",
+        "extend",
+        "bytes"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 40           0 RESUME                   0\n\n 41           2 LOAD_GLOBAL              1 (NULL + bytearray)\n             12 CALL                     0\n             20 STORE_FAST               1 (out)\n\n 42          22 LOAD_FAST                1 (out)\n             24 LOAD_ATTR                3 (NULL|self + append)\n             44 LOAD_GLOBAL              5 (NULL + len)\n             54 LOAD_FAST                0 (counts)\n             56 CALL                     1\n             64 CALL                     1\n             72 POP_TOP\n\n 43          74 LOAD_CONST               1 (-1)\n             76 STORE_FAST               2 (last)\n\n 44          78 LOAD_FAST                0 (counts)\n             80 GET_ITER\n        >>   82 FOR_ITER                53 (to 192)\n             86 UNPACK_SEQUENCE          2\n             90 STORE_FAST               3 (idx)\n             92 STORE_FAST               4 (_value)\n\n 45          94 LOAD_FAST                3 (idx)\n             96 LOAD_FAST                2 (last)\n             98 BINARY_OP               10 (-)\n            102 LOAD_CONST               2 (1)\n            104 BINARY_OP               10 (-)\n            108 STORE_FAST               5 (delta)\n\n 46         110 LOAD_FAST                3 (idx)\n            112 STORE_FAST               2 (last)\n\n 47         114 NOP\n\n 48     >>  116 LOAD_FAST                5 (delta)\n            118 LOAD_CONST               3 (127)\n            120 BINARY_OP                1 (&)\n            124 STORE_FAST               6 (byte)\n\n 49         126 LOAD_FAST                5 (delta)\n            128 LOAD_CONST               4 (7)\n            130 BINARY_OP               22 (>>=)\n            134 STORE_FAST               5 (delta)\n\n 50         136 LOAD_FAST                1 (out)\n            138 LOAD_ATTR                3 (NULL|self + append)\n            158 LOAD_FAST                5 (delta)\n            160 POP_JUMP_IF_FALSE        5 (to 172)\n            162 LOAD_FAST                6 (byte)\n            164 LOAD_CONST               5 (128)\n            166 BINARY_OP                7 (|)\n            170 JUMP_FORWARD             1 (to 174)\n        >>  172 LOAD_FAST                6 (byte)\n        >>  174 CALL                     1\n            182 POP_TOP\n\n 51         184 LOAD_FAST                5 (delta)\n            186 POP_JUMP_IF_TRUE         1 (to 190)\n\n 52         188 JUMP_BACKWARD           54 (to 82)\n\n 47     >>  190 JUMP_BACKWARD           38 (to 116)\n\n 44     >>  192 END_FOR\n\n 53         194 LOAD_FAST                1 (out)\n            196 LOAD_ATTR                7 (NULL|self + extend)\n            216 LOAD_CONST               6 (<code object <genexpr> at 0x102341c50, file \"src/tac/tests/test_build_pr85_stbm1br_rmb1_randmulti_candidate.py\", line 53>)\n            218 MAKE_FUNCTION            0\n            220 LOAD_FAST                0 (counts)\n            222 GET_ITER\n            224 CALL                     0\n            232 CALL                     1\n            240 POP_TOP\n\n 54         242 LOAD_GLOBAL              9 (NULL + bytes)\n            252 LOAD_FAST                1 (out)\n            254 CALL                     1\n            262 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_row.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "_idx",
+        "value"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 53           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                 9 (to 30)\n             12 UNPACK_SEQUENCE          2\n             16 STORE_FAST               1 (_idx)\n             18 STORE_FAST               2 (value)\n             20 LOAD_FAST                2 (value)\n             22 YIELD_VALUE              1\n             24 RESUME                   1\n             26 POP_TOP\n             28 JUMP_BACKWARD           11 (to 8)\n        >>   30 END_FOR\n             32 RETURN_CONST             0 (None)\n        >>   34 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             36 RERAISE                  1\nExceptionTable:\n  4 to 32 -> 34 [0] lasti\n"
+    },
+    {
+      "qualname": "_headerless_rows",
+      "name": "_headerless_rows",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "rows"
+      ],
+      "names": [
+        "_row",
+        "extend",
+        "range",
+        "sum",
+        "PR85_HEADERLESS_RANDMULTI_SPECS",
+        "join"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 57           0 RESUME                   0\n\n 58           2 LOAD_GLOBAL              1 (NULL + _row)\n             12 LOAD_CONST               1 ((0, 5))\n             14 LOAD_CONST               2 ((3, 7))\n             16 BUILD_LIST               2\n             18 CALL                     1\n             26 BUILD_LIST               1\n             28 STORE_FAST               0 (rows)\n\n 59          30 LOAD_FAST                0 (rows)\n             32 LOAD_ATTR                3 (NULL|self + extend)\n             52 LOAD_CONST               3 (<code object <genexpr> at 0x1024a1b50, file \"src/tac/tests/test_build_pr85_stbm1br_rmb1_randmulti_candidate.py\", line 59>)\n             54 MAKE_FUNCTION            0\n             56 LOAD_GLOBAL              5 (NULL + range)\n             66 LOAD_GLOBAL              7 (NULL + sum)\n             76 LOAD_CONST               4 (<code object <genexpr> at 0x102474c60, file \"src/tac/tests/test_build_pr85_stbm1br_rmb1_randmulti_candidate.py\", line 59>)\n             78 MAKE_FUNCTION            0\n             80 LOAD_GLOBAL              8 (PR85_HEADERLESS_RANDMULTI_SPECS)\n             90 GET_ITER\n             92 CALL                     0\n            100 CALL                     1\n            108 LOAD_CONST               5 (1)\n            110 BINARY_OP               10 (-)\n            114 CALL                     1\n            122 GET_ITER\n            124 CALL                     0\n            132 CALL                     1\n            140 POP_TOP\n\n 60         142 LOAD_CONST               6 (b'')\n            144 LOAD_ATTR               11 (NULL|self + join)\n            164 LOAD_FAST                0 (rows)\n            166 CALL                     1\n            174 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_headerless_rows.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "_"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 59           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                 6 (to 24)\n             12 STORE_FAST               1 (_)\n             14 LOAD_CONST               0 (b'\\x00')\n             16 YIELD_VALUE              1\n             18 RESUME                   1\n             20 POP_TOP\n             22 JUMP_BACKWARD            8 (to 8)\n        >>   24 END_FOR\n             26 RETURN_CONST             1 (None)\n        >>   28 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             30 RERAISE                  1\nExceptionTable:\n  4 to 26 -> 28 [0] lasti\n"
+    },
+    {
+      "qualname": "_headerless_rows.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "spec"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 59           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                 9 (to 30)\n             12 STORE_FAST               1 (spec)\n             14 LOAD_FAST                1 (spec)\n             16 LOAD_CONST               0 (3)\n             18 BINARY_SUBSCR\n             22 YIELD_VALUE              1\n             24 RESUME                   1\n             26 POP_TOP\n             28 JUMP_BACKWARD           11 (to 8)\n        >>   30 END_FOR\n             32 RETURN_CONST             1 (None)\n        >>   34 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             36 RERAISE                  1\nExceptionTable:\n  4 to 32 -> 34 [0] lasti\n"
+    },
+    {
+      "qualname": "_rmb1_from_rows",
+      "name": "_rmb1_from_rows",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "raw",
+        "cursor",
+        "mask",
+        "values",
+        "count",
+        "row_mask",
+        "idx",
+        "_",
+        "delta",
+        "shift",
+        "byte",
+        "mask_br",
+        "vals_br"
+      ],
+      "names": [
+        "bytearray",
+        "len",
+        "int",
+        "from_bytes",
+        "range",
+        "extend",
+        "brotli",
+        "compress",
+        "bytes",
+        "to_bytes"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 63           0 RESUME                   0\n\n 64           2 LOAD_CONST               1 (0)\n              4 STORE_FAST               1 (cursor)\n\n 65           6 LOAD_GLOBAL              1 (NULL + bytearray)\n             16 CALL                     0\n             24 STORE_FAST               2 (mask)\n\n 66          26 LOAD_GLOBAL              1 (NULL + bytearray)\n             36 CALL                     0\n             44 STORE_FAST               3 (values)\n\n 67          46 LOAD_FAST                1 (cursor)\n             48 LOAD_GLOBAL              3 (NULL + len)\n             58 LOAD_FAST                0 (raw)\n             60 CALL                     1\n             68 COMPARE_OP               2 (<)\n             72 POP_JUMP_IF_FALSE      205 (to 484)\n\n 68     >>   74 LOAD_FAST                0 (raw)\n             76 LOAD_FAST                1 (cursor)\n             78 BINARY_SUBSCR\n             82 STORE_FAST               4 (count)\n\n 69          84 LOAD_FAST                1 (cursor)\n             86 LOAD_CONST               2 (1)\n             88 BINARY_OP               13 (+=)\n             92 STORE_FAST               1 (cursor)\n\n 70          94 LOAD_FAST                4 (count)\n             96 LOAD_CONST               3 (255)\n             98 COMPARE_OP              40 (==)\n            102 POP_JUMP_IF_FALSE       33 (to 170)\n\n 71         104 LOAD_GLOBAL              4 (int)\n            114 LOAD_ATTR                7 (NULL|self + from_bytes)\n            134 LOAD_FAST                0 (raw)\n            136 LOAD_FAST                1 (cursor)\n            138 LOAD_FAST                1 (cursor)\n            140 LOAD_CONST               4 (2)\n            142 BINARY_OP                0 (+)\n            146 BINARY_SLICE\n            148 LOAD_CONST               5 ('little')\n            150 CALL                     2\n            158 STORE_FAST               4 (count)\n\n 72         160 LOAD_FAST                1 (cursor)\n            162 LOAD_CONST               4 (2)\n            164 BINARY_OP               13 (+=)\n            168 STORE_FAST               1 (cursor)\n\n 73     >>  170 LOAD_GLOBAL              1 (NULL + bytearray)\n            180 LOAD_CONST               6 (75)\n            182 CALL                     1\n            190 STORE_FAST               5 (row_mask)\n\n 74         192 LOAD_CONST               7 (-1)\n            194 STORE_FAST               6 (idx)\n\n 75         196 LOAD_GLOBAL              9 (NULL + range)\n            206 LOAD_FAST                4 (count)\n            208 CALL                     1\n            216 GET_ITER\n        >>  218 FOR_ITER                70 (to 362)\n            222 STORE_FAST               7 (_)\n\n 76         224 LOAD_CONST               1 (0)\n            226 STORE_FAST               8 (delta)\n\n 77         228 LOAD_CONST               1 (0)\n            230 STORE_FAST               9 (shift)\n\n 78         232 NOP\n\n 79     >>  234 LOAD_FAST                0 (raw)\n            236 LOAD_FAST                1 (cursor)\n            238 BINARY_SUBSCR\n            242 STORE_FAST              10 (byte)\n\n 80         244 LOAD_FAST                1 (cursor)\n            246 LOAD_CONST               2 (1)\n            248 BINARY_OP               13 (+=)\n            252 STORE_FAST               1 (cursor)\n\n 81         254 LOAD_FAST                8 (delta)\n            256 LOAD_FAST               10 (byte)\n            258 LOAD_CONST               8 (127)\n            260 BINARY_OP                1 (&)\n            264 LOAD_FAST                9 (shift)\n            266 BINARY_OP                3 (<<)\n            270 BINARY_OP               20 (|=)\n            274 STORE_FAST               8 (delta)\n\n 82         276 LOAD_FAST               10 (byte)\n            278 LOAD_CONST               9 (128)\n            280 COMPARE_OP               2 (<)\n            284 POP_JUMP_IF_FALSE        1 (to 288)\n\n 83         286 JUMP_FORWARD             6 (to 300)\n\n 84     >>  288 LOAD_FAST                9 (shift)\n            290 LOAD_CONST              10 (7)\n            292 BINARY_OP               13 (+=)\n            296 STORE_FAST               9 (shift)\n\n 78         298 JUMP_BACKWARD           33 (to 234)\n\n 85     >>  300 LOAD_FAST                6 (idx)\n            302 LOAD_FAST                8 (delta)\n            304 LOAD_CONST               2 (1)\n            306 BINARY_OP                0 (+)\n            310 BINARY_OP               13 (+=)\n            314 STORE_FAST               6 (idx)\n\n 86         316 LOAD_FAST                5 (row_mask)\n            318 LOAD_FAST                6 (idx)\n            320 LOAD_CONST              11 (8)\n            322 BINARY_OP                2 (//)\n            326 COPY                     2\n            328 COPY                     2\n            330 BINARY_SUBSCR\n            334 LOAD_CONST               2 (1)\n            336 LOAD_FAST                6 (idx)\n            338 LOAD_CONST              11 (8)\n            340 BINARY_OP                6 (%)\n            344 BINARY_OP                3 (<<)\n            348 BINARY_OP               20 (|=)\n            352 SWAP                     3\n            354 SWAP                     2\n            356 STORE_SUBSCR\n            360 JUMP_BACKWARD           72 (to 218)\n\n 75     >>  362 END_FOR\n\n 87         364 LOAD_FAST                3 (values)\n            366 LOAD_ATTR               11 (NULL|self + extend)\n            386 LOAD_FAST                0 (raw)\n            388 LOAD_FAST                1 (cursor)\n            390 LOAD_FAST                1 (cursor)\n            392 LOAD_FAST                4 (count)\n            394 BINARY_OP                0 (+)\n            398 BINARY_SLICE\n            400 CALL                     1\n            408 POP_TOP\n\n 88         410 LOAD_FAST                1 (cursor)\n            412 LOAD_FAST                4 (count)\n            414 BINARY_OP               13 (+=)\n            418 STORE_FAST               1 (cursor)\n\n 89         420 LOAD_FAST                2 (mask)\n            422 LOAD_ATTR               11 (NULL|self + extend)\n            442 LOAD_FAST                5 (row_mask)\n            444 CALL                     1\n            452 POP_TOP\n\n 67         454 LOAD_FAST                1 (cursor)\n            456 LOAD_GLOBAL              3 (NULL + len)\n            466 LOAD_FAST                0 (raw)\n            468 CALL                     1\n            476 COMPARE_OP               2 (<)\n            480 POP_JUMP_IF_FALSE        1 (to 484)\n            482 JUMP_BACKWARD          205 (to 74)\n\n 90     >>  484 LOAD_GLOBAL             12 (brotli)\n            494 LOAD_ATTR               15 (NULL|self + compress)\n            514 LOAD_GLOBAL             17 (NULL + bytes)\n            524 LOAD_FAST                2 (mask)\n            526 CALL                     1\n            534 LOAD_CONST              12 (5)\n            536 KW_NAMES                13 (('quality',))\n            538 CALL                     2\n            546 STORE_FAST              11 (mask_br)\n\n 91         548 LOAD_GLOBAL             12 (brotli)\n            558 LOAD_ATTR               15 (NULL|self + compress)\n            578 LOAD_GLOBAL             17 (NULL + bytes)\n            588 LOAD_FAST                3 (values)\n            590 CALL                     1\n            598 LOAD_CONST              12 (5)\n            600 KW_NAMES                13 (('quality',))\n            602 CALL                     2\n            610 STORE_FAST              12 (vals_br)\n\n 92         612 LOAD_CONST              14 (b'RMB1')\n            614 LOAD_GLOBAL              3 (NULL + len)\n            624 LOAD_FAST               11 (mask_br)\n            626 CALL                     1\n            634 LOAD_ATTR               19 (NULL|self + to_bytes)\n            654 LOAD_CONST               4 (2)\n            656 LOAD_CONST               5 ('little')\n            658 CALL                     2\n            666 BINARY_OP                0 (+)\n            670 LOAD_FAST               11 (mask_br)\n            672 BINARY_OP                0 (+)\n            676 LOAD_FAST               12 (vals_br)\n            678 BINARY_OP                0 (+)\n            682 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_write_archive",
+      "name": "_write_archive",
+      "argcount": 1,
+      "kwonlyargcount": 2,
+      "varnames": [
+        "path",
+        "mask",
+        "randmulti",
+        "segments",
+        "raw",
+        "zf"
+      ],
+      "names": [
+        "brotli",
+        "compress",
+        "FIXED_V5_LENGTHS",
+        "pack_pr85_bundle",
+        "parent",
+        "mkdir",
+        "zipfile",
+        "ZipFile",
+        "writestr",
+        "_zip_info"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 95           0 RESUME                   0\n\n 97           2 LOAD_FAST                1 (mask)\n\n 98           4 LOAD_GLOBAL              0 (brotli)\n             14 LOAD_ATTR                3 (NULL|self + compress)\n             34 LOAD_CONST               1 (b'QH0mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm')\n             36 LOAD_CONST               2 (5)\n             38 KW_NAMES                 3 (('quality',))\n             40 CALL                     2\n\n 99          48 LOAD_GLOBAL              0 (brotli)\n             58 LOAD_ATTR                3 (NULL|self + compress)\n             78 LOAD_CONST               4 (b'P1D1pppppppppppppppppppppppppppppppp')\n             80 LOAD_CONST               2 (5)\n             82 KW_NAMES                 3 (('quality',))\n             84 CALL                     2\n\n100          92 LOAD_GLOBAL              0 (brotli)\n            102 LOAD_ATTR                3 (NULL|self + compress)\n            122 LOAD_CONST               5 (b'\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00')\n            124 LOAD_CONST               2 (5)\n            126 KW_NAMES                 3 (('quality',))\n            128 CALL                     2\n\n101         136 LOAD_GLOBAL              0 (brotli)\n            146 LOAD_ATTR                3 (NULL|self + compress)\n            166 LOAD_CONST               6 (b'SD4\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00')\n            168 LOAD_CONST               2 (5)\n            170 KW_NAMES                 3 (('quality',))\n            172 CALL                     2\n\n102         180 LOAD_GLOBAL              0 (brotli)\n            190 LOAD_ATTR                3 (NULL|self + compress)\n            210 LOAD_CONST               7 (b'FH1\\x04\\x04\\x04\\x04\\x04\\x04\\x04\\x04\\x04\\x04\\x04\\x04')\n            212 LOAD_CONST               2 (5)\n            214 KW_NAMES                 3 (('quality',))\n            216 CALL                     2\n\n103         224 LOAD_GLOBAL              0 (brotli)\n            234 LOAD_ATTR                3 (NULL|self + compress)\n            254 LOAD_CONST               8 (b'FH2\\x04\\x04\\x04\\x04\\x04\\x04\\x04\\x04\\x04\\x04\\x04\\x04')\n            256 LOAD_CONST               2 (5)\n            258 KW_NAMES                 3 (('quality',))\n            260 CALL                     2\n\n104         268 LOAD_GLOBAL              0 (brotli)\n            278 LOAD_ATTR                3 (NULL|self + compress)\n            298 LOAD_CONST               9 (b'FD3\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00')\n            300 LOAD_CONST               2 (5)\n            302 KW_NAMES                 3 (('quality',))\n            304 CALL                     2\n\n105         312 LOAD_CONST              10 (b'B')\n            314 LOAD_GLOBAL              4 (FIXED_V5_LENGTHS)\n            324 LOAD_CONST              11 ('bias')\n            326 BINARY_SUBSCR\n            330 BINARY_OP                5 (*)\n\n106         334 LOAD_CONST              12 (b'R')\n            336 LOAD_GLOBAL              4 (FIXED_V5_LENGTHS)\n            346 LOAD_CONST              13 ('region')\n            348 BINARY_SUBSCR\n            352 BINARY_OP                5 (*)\n\n107         356 LOAD_FAST                2 (randmulti)\n\n 96         358 LOAD_CONST              14 (('mask', 'model', 'pose', 'post', 'shift', 'frac', 'frac2', 'frac3', 'bias', 'region', 'randmulti'))\n            360 BUILD_CONST_KEY_MAP     11\n            362 STORE_FAST               3 (segments)\n\n109         364 LOAD_GLOBAL              7 (NULL + pack_pr85_bundle)\n            374 LOAD_FAST                3 (segments)\n            376 LOAD_CONST              15 ('v5')\n            378 KW_NAMES                16 (('header_mode',))\n            380 CALL                     2\n            388 STORE_FAST               4 (raw)\n\n110         390 LOAD_FAST                0 (path)\n            392 LOAD_ATTR                8 (parent)\n            412 LOAD_ATTR               11 (NULL|self + mkdir)\n            432 LOAD_CONST              17 (True)\n            434 LOAD_CONST              17 (True)\n            436 KW_NAMES                18 (('parents', 'exist_ok'))\n            438 CALL                     2\n            446 POP_TOP\n\n111         448 LOAD_GLOBAL             13 (NULL + zipfile)\n            458 LOAD_ATTR               14 (ZipFile)\n            478 LOAD_FAST                0 (path)\n            480 LOAD_CONST              19 ('w')\n            482 CALL                     2\n            490 BEFORE_WITH\n            492 STORE_FAST               5 (zf)\n\n112         494 LOAD_FAST                5 (zf)\n            496 LOAD_ATTR               17 (NULL|self + writestr)\n            516 LOAD_GLOBAL             19 (NULL + _zip_info)\n            526 CALL                     0\n            534 LOAD_FAST                4 (raw)\n            536 CALL                     2\n            544 POP_TOP\n\n111         546 LOAD_CONST               0 (None)\n            548 LOAD_CONST               0 (None)\n            550 LOAD_CONST               0 (None)\n            552 CALL                     2\n            560 POP_TOP\n\n113         562 LOAD_FAST                0 (path)\n            564 RETURN_VALUE\n\n111     >>  566 PUSH_EXC_INFO\n            568 WITH_EXCEPT_START\n            570 POP_JUMP_IF_TRUE         1 (to 574)\n            572 RERAISE                  2\n        >>  574 POP_TOP\n            576 POP_EXCEPT\n            578 POP_TOP\n            580 POP_TOP\n\n113         582 LOAD_FAST                0 (path)\n            584 RETURN_VALUE\n        >>  586 COPY                     3\n            588 POP_EXCEPT\n            590 RERAISE                  1\nExceptionTable:\n  492 to 544 -> 566 [1] lasti\n  566 to 574 -> 586 [3] lasti\n"
+    },
+    {
+      "qualname": "_write_runtime_support",
+      "name": "_write_runtime_support",
+      "argcount": 1,
+      "kwonlyargcount": 1,
+      "varnames": [
+        "root",
+        "support_x",
+        "x_probe"
+      ],
+      "names": [
+        "mkdir",
+        "write_text"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "116           0 RESUME                   0\n\n117           2 LOAD_FAST                0 (root)\n              4 LOAD_ATTR                1 (NULL|self + mkdir)\n             24 LOAD_CONST               1 (True)\n             26 LOAD_CONST               1 (True)\n             28 KW_NAMES                 2 (('parents', 'exist_ok'))\n             30 CALL                     2\n             38 POP_TOP\n\n118          40 LOAD_FAST                0 (root)\n             42 LOAD_CONST               3 ('inflate_renderer.py')\n             44 BINARY_OP               11 (/)\n             48 LOAD_ATTR                3 (NULL|self + write_text)\n\n119          68 LOAD_CONST               4 (\"STBM1BR_MAGIC = b'STBM1BR\\\\0'\\ndef _load_masks_from_stbm1br():\\n    pass\\n\")\n\n122          70 LOAD_CONST               5 ('utf-8')\n\n118          72 KW_NAMES                 6 (('encoding',))\n             74 CALL                     2\n             82 POP_TOP\n\n124          84 LOAD_FAST                0 (root)\n             86 LOAD_CONST               7 ('apply_qzs3_postprocess.py')\n             88 BINARY_OP               11 (/)\n             92 LOAD_ATTR                3 (NULL|self + write_text)\n\n125         112 LOAD_CONST               8 ('def _decode_rmb1_randmulti_payload():\\n    pass\\nif blob[:4] == b\"RMB1\":\\n    pass\\n')\n\n129         114 LOAD_CONST               5 ('utf-8')\n\n124         116 KW_NAMES                 6 (('encoding',))\n            118 CALL                     2\n            126 POP_TOP\n\n131         128 LOAD_FAST                1 (support_x)\n            130 POP_JUMP_IF_FALSE        2 (to 136)\n            132 LOAD_CONST               9 ('if [ -f \"$ARCHIVE_DIR/x\" ]; then echo x; fi\\n')\n            134 JUMP_FORWARD             1 (to 138)\n        >>  136 LOAD_CONST              10 ('')\n        >>  138 STORE_FAST               2 (x_probe)\n\n132         140 LOAD_FAST                0 (root)\n            142 LOAD_CONST              11 ('inflate.sh')\n            144 BINARY_OP               11 (/)\n            148 LOAD_ATTR                3 (NULL|self + write_text)\n\n133         168 LOAD_CONST              12 ('#!/usr/bin/env bash\\nset -euo pipefail\\n')\n            170 LOAD_FAST                2 (x_probe)\n            172 BINARY_OP                0 (+)\n\n134         176 LOAD_CONST               5 ('utf-8')\n\n132         178 KW_NAMES                 6 (('encoding',))\n            180 CALL                     2\n            188 POP_TOP\n\n136         190 LOAD_FAST                0 (root)\n            192 LOAD_CONST              13 ('unpack_renderer_payload.py')\n            194 BINARY_OP               11 (/)\n            198 LOAD_ATTR                3 (NULL|self + write_text)\n\n137         218 LOAD_FAST                1 (support_x)\n            220 POP_JUMP_IF_FALSE        2 (to 226)\n            222 LOAD_CONST              14 ('PAYLOAD_SHORT_BR = \"x\"\\n')\n            224 JUMP_FORWARD             1 (to 228)\n        >>  226 LOAD_CONST              15 ('PAYLOAD_SHORT_BR = \"p\"\\n')\n\n138     >>  228 LOAD_CONST               5 ('utf-8')\n\n136         230 KW_NAMES                 6 (('encoding',))\n            232 CALL                     2\n            240 POP_TOP\n\n140         242 LOAD_FAST                0 (root)\n            244 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "test_builder_replaces_only_randmulti_and_records_parity",
+      "name": "test_builder_replaces_only_randmulti_and_records_parity",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "monkeypatch",
+        "module",
+        "rows",
+        "stbm_archive",
+        "pr92_archive",
+        "summary",
+        "manifest",
+        "gate",
+        "claim",
+        "command",
+        "duplicate",
+        "zf",
+        "parsed",
+        "custom"
+      ],
+      "names": [
+        "_load_module",
+        "_headerless_rows",
+        "_write_archive",
+        "STBM1BR_MAGIC",
+        "brotli",
+        "compress",
+        "_rmb1_from_rows",
+        "setattr",
+        "_sha256_file",
+        "stat",
+        "st_size",
+        "_write_runtime_support",
+        "build_pr85_stbm1br_rmb1_randmulti_candidate",
+        "json",
+        "loads",
+        "read_text",
+        "_sha256_bytes",
+        "index",
+        "zipfile",
+        "ZipFile",
+        "parse_pr85_bundle",
+        "read",
+        "segments",
+        "startswith"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "143           0 RESUME                   0\n\n144           2 LOAD_GLOBAL              1 (NULL + _load_module)\n             12 CALL                     0\n             20 STORE_FAST               2 (module)\n\n145          22 LOAD_GLOBAL              3 (NULL + _headerless_rows)\n             32 CALL                     0\n             40 STORE_FAST               3 (rows)\n\n146          42 LOAD_GLOBAL              5 (NULL + _write_archive)\n\n147          52 LOAD_FAST                0 (tmp_path)\n             54 LOAD_CONST               1 ('stbm.zip')\n             56 BINARY_OP               11 (/)\n\n148          60 LOAD_GLOBAL              6 (STBM1BR_MAGIC)\n             70 LOAD_CONST               2 (b'mask')\n             72 BINARY_OP                0 (+)\n\n149          76 LOAD_GLOBAL              8 (brotli)\n             86 LOAD_ATTR               11 (NULL|self + compress)\n            106 LOAD_FAST                3 (rows)\n            108 LOAD_CONST               3 (0)\n            110 KW_NAMES                 4 (('quality',))\n            112 CALL                     2\n\n146         120 KW_NAMES                 5 (('mask', 'randmulti'))\n            122 CALL                     3\n            130 STORE_FAST               4 (stbm_archive)\n\n151         132 LOAD_GLOBAL              5 (NULL + _write_archive)\n\n152         142 LOAD_FAST                0 (tmp_path)\n            144 LOAD_CONST               6 ('pr92.zip')\n            146 BINARY_OP               11 (/)\n\n153         150 LOAD_CONST               7 (b'QMA9mask')\n\n154         152 LOAD_GLOBAL             13 (NULL + _rmb1_from_rows)\n            162 LOAD_FAST                3 (rows)\n            164 CALL                     1\n\n151         172 KW_NAMES                 5 (('mask', 'randmulti'))\n            174 CALL                     3\n            182 STORE_FAST               5 (pr92_archive)\n\n156         184 LOAD_FAST                1 (monkeypatch)\n            186 LOAD_ATTR               15 (NULL|self + setattr)\n            206 LOAD_FAST                2 (module)\n            208 LOAD_CONST               8 ('EXPECTED_STBM_SHA256')\n            210 LOAD_FAST                2 (module)\n            212 LOAD_ATTR               17 (NULL|self + _sha256_file)\n            232 LOAD_FAST                4 (stbm_archive)\n            234 CALL                     1\n            242 CALL                     3\n            250 POP_TOP\n\n157         252 LOAD_FAST                1 (monkeypatch)\n            254 LOAD_ATTR               15 (NULL|self + setattr)\n            274 LOAD_FAST                2 (module)\n            276 LOAD_CONST               9 ('EXPECTED_STBM_BYTES')\n            278 LOAD_FAST                4 (stbm_archive)\n            280 LOAD_ATTR               19 (NULL|self + stat)\n            300 CALL                     0\n            308 LOAD_ATTR               20 (st_size)\n            328 CALL                     3\n            336 POP_TOP\n\n158         338 LOAD_FAST                1 (monkeypatch)\n            340 LOAD_ATTR               15 (NULL|self + setattr)\n            360 LOAD_FAST                2 (module)\n            362 LOAD_CONST              10 ('EXPECTED_PR92_SHA256')\n            364 LOAD_FAST                2 (module)\n            366 LOAD_ATTR               17 (NULL|self + _sha256_file)\n            386 LOAD_FAST                5 (pr92_archive)\n            388 CALL                     1\n            396 CALL                     3\n            404 POP_TOP\n\n159         406 LOAD_FAST                1 (monkeypatch)\n            408 LOAD_ATTR               15 (NULL|self + setattr)\n            428 LOAD_FAST                2 (module)\n            430 LOAD_CONST              11 ('ROBUST_CURRENT_DIR')\n            432 LOAD_GLOBAL             23 (NULL + _write_runtime_support)\n            442 LOAD_FAST                0 (tmp_path)\n            444 LOAD_CONST              12 ('runtime')\n            446 BINARY_OP               11 (/)\n            450 CALL                     1\n            458 CALL                     3\n            466 POP_TOP\n\n161         468 LOAD_FAST                2 (module)\n            470 LOAD_ATTR               25 (NULL|self + build_pr85_stbm1br_rmb1_randmulti_candidate)\n\n162         490 LOAD_FAST                4 (stbm_archive)\n\n163         492 LOAD_FAST                5 (pr92_archive)\n\n164         494 LOAD_FAST                0 (tmp_path)\n            496 LOAD_CONST              13 ('out')\n            498 BINARY_OP               11 (/)\n\n161         502 KW_NAMES                14 (('stbm_archive', 'pr92_archive', 'out_dir'))\n            504 CALL                     3\n            512 STORE_FAST               6 (summary)\n\n167         514 LOAD_GLOBAL             27 (NULL + json)\n            524 LOAD_ATTR               28 (loads)\n            544 LOAD_FAST                0 (tmp_path)\n            546 LOAD_CONST              13 ('out')\n            548 BINARY_OP               11 (/)\n            552 LOAD_FAST                6 (summary)\n            554 LOAD_CONST              15 ('candidate_id')\n            556 BINARY_SUBSCR\n            560 BINARY_OP               11 (/)\n            564 LOAD_CONST              16 ('manifest.json')\n            566 BINARY_OP               11 (/)\n            570 LOAD_ATTR               31 (NULL|self + read_text)\n            590 CALL                     0\n            598 CALL                     1\n            606 STORE_FAST               7 (manifest)\n\n168         608 LOAD_FAST                6 (summary)\n            610 LOAD_CONST              17 ('score_claim')\n            612 BINARY_SUBSCR\n            616 LOAD_CONST              18 (False)\n            618 IS_OP                    0\n            620 POP_JUMP_IF_TRUE         2 (to 626)\n            622 LOAD_ASSERTION_ERROR\n            624 RAISE_VARARGS            1\n\n169     >>  626 LOAD_FAST                6 (summary)\n            628 LOAD_CONST              19 ('ready_for_exact_eval_after_lane_claim')\n            630 BINARY_SUBSCR\n            634 LOAD_CONST              20 (True)\n            636 IS_OP                    0\n            638 POP_JUMP_IF_TRUE         2 (to 644)\n            640 LOAD_ASSERTION_ERROR\n            642 RAISE_VARARGS            1\n\n170     >>  644 LOAD_FAST                7 (manifest)\n            646 LOAD_CONST              21 ('fail_closed_preflight')\n            648 BINARY_SUBSCR\n            652 LOAD_CONST              22 ('status')\n            654 BINARY_SUBSCR\n            658 LOAD_CONST              23 ('passed')\n            660 COMPARE_OP              40 (==)\n            664 POP_JUMP_IF_TRUE         2 (to 670)\n            666 LOAD_ASSERTION_ERROR\n            668 RAISE_VARARGS            1\n\n171     >>  670 LOAD_FAST                7 (manifest)\n            672 LOAD_CONST              21 ('fail_closed_preflight')\n            674 BINARY_SUBSCR\n            678 LOAD_CONST              24 ('checks')\n            680 BINARY_SUBSCR\n            684 LOAD_CONST              25 ('robust_current_runtime_support')\n            686 BINARY_SUBSCR\n            690 LOAD_CONST              20 (True)\n            692 IS_OP                    0\n            694 POP_JUMP_IF_TRUE         2 (to 700)\n            696 LOAD_ASSERTION_ERROR\n            698 RAISE_VARARGS            1\n\n172     >>  700 LOAD_FAST                7 (manifest)\n            702 LOAD_CONST              21 ('fail_closed_preflight')\n            704 BINARY_SUBSCR\n            708 LOAD_CONST              24 ('checks')\n            710 BINARY_SUBSCR\n            714 LOAD_CONST              26 ('duplicate_rmb1_builder_lane_coordination')\n            716 BINARY_SUBSCR\n            720 LOAD_CONST              20 (True)\n            722 IS_OP                    0\n            724 POP_JUMP_IF_TRUE         2 (to 730)\n            726 LOAD_ASSERTION_ERROR\n            728 RAISE_VARARGS            1\n\n173     >>  730 LOAD_FAST                7 (manifest)\n            732 LOAD_CONST              27 ('runtime_support')\n            734 BINARY_SUBSCR\n            738 LOAD_CONST              22 ('status')\n            740 BINARY_SUBSCR\n            744 LOAD_CONST              23 ('passed')\n            746 COMPARE_OP              40 (==)\n            750 POP_JUMP_IF_TRUE         2 (to 756)\n            752 LOAD_ASSERTION_ERROR\n            754 RAISE_VARARGS            1\n\n174     >>  756 LOAD_FAST                7 (manifest)\n            758 LOAD_CONST              27 ('runtime_support')\n            760 BINARY_SUBSCR\n            764 LOAD_CONST              24 ('checks')\n            766 BINARY_SUBSCR\n            770 LOAD_CONST              28 ('stbm1br_magic_present')\n            772 BINARY_SUBSCR\n            776 LOAD_CONST              20 (True)\n            778 IS_OP                    0\n            780 POP_JUMP_IF_TRUE         2 (to 786)\n            782 LOAD_ASSERTION_ERROR\n            784 RAISE_VARARGS            1\n\n175     >>  786 LOAD_FAST                7 (manifest)\n            788 LOAD_CONST              27 ('runtime_support')\n            790 BINARY_SUBSCR\n            794 LOAD_CONST              24 ('checks')\n            796 BINARY_SUBSCR\n            800 LOAD_CONST              29 ('single_member_x_unpack_stage_present')\n            802 BINARY_SUBSCR\n            806 LOAD_CONST              20 (True)\n            808 IS_OP                    0\n            810 POP_JUMP_IF_TRUE         2 (to 816)\n            812 LOAD_ASSERTION_ERROR\n            814 RAISE_VARARGS            1\n\n176     >>  816 LOAD_FAST                7 (manifest)\n            818 LOAD_CONST              27 ('runtime_support')\n            820 BINARY_SUBSCR\n            824 LOAD_CONST              24 ('checks')\n            826 BINARY_SUBSCR\n            830 LOAD_CONST              30 ('rmb1_branch_present')\n            832 BINARY_SUBSCR\n            836 LOAD_CONST              20 (True)\n            838 IS_OP                    0\n            840 POP_JUMP_IF_TRUE         2 (to 846)\n            842 LOAD_ASSERTION_ERROR\n            844 RAISE_VARARGS            1\n\n177     >>  846 LOAD_FAST                7 (manifest)\n            848 LOAD_CONST              31 ('parity')\n            850 BINARY_SUBSCR\n            854 LOAD_CONST              32 ('randmulti_decoded_rows_equal')\n            856 BINARY_SUBSCR\n            860 LOAD_CONST              20 (True)\n            862 IS_OP                    0\n            864 POP_JUMP_IF_TRUE         2 (to 870)\n            866 LOAD_ASSERTION_ERROR\n            868 RAISE_VARARGS            1\n\n178     >>  870 LOAD_FAST                7 (manifest)\n            872 LOAD_CONST              33 ('segments')\n            874 BINARY_SUBSCR\n            878 LOAD_CONST              34 ('mask')\n            880 BINARY_SUBSCR\n            884 LOAD_CONST              35 ('sha256')\n            886 BINARY_SUBSCR\n            890 LOAD_FAST                2 (module)\n            892 LOAD_ATTR               33 (NULL|self + _sha256_bytes)\n            912 LOAD_GLOBAL              6 (STBM1BR_MAGIC)\n            922 LOAD_CONST               2 (b'mask')\n            924 BINARY_OP                0 (+)\n            928 CALL                     1\n            936 COMPARE_OP              40 (==)\n            940 POP_JUMP_IF_TRUE         2 (to 946)\n            942 LOAD_ASSERTION_ERROR\n            944 RAISE_VARARGS            1\n\n179     >>  946 LOAD_FAST                7 (manifest)\n            948 LOAD_CONST              33 ('segments')\n            950 BINARY_SUBSCR\n            954 LOAD_CONST              36 ('candidate_randmulti')\n            956 BINARY_SUBSCR\n            960 LOAD_CONST              37 ('codec')\n            962 BINARY_SUBSCR\n            966 LOAD_CONST              38 ('RMB1_bitmask_value_randmulti')\n            968 COMPARE_OP              40 (==)\n            972 POP_JUMP_IF_TRUE         2 (to 978)\n            974 LOAD_ASSERTION_ERROR\n            976 RAISE_VARARGS            1\n\n180     >>  978 LOAD_FAST                7 (manifest)\n            980 LOAD_CONST              39 ('dispatch_gate')\n            982 BINARY_SUBSCR\n            986 STORE_FAST               8 (gate)\n\n181         988 LOAD_FAST                8 (gate)\n            990 LOAD_CONST              40 ('claim')\n            992 BINARY_SUBSCR\n            996 STORE_FAST               9 (claim)\n\n182         998 LOAD_FAST                9 (claim)\n           1000 LOAD_CONST              41 ('command_template')\n           1002 BINARY_SUBSCR\n           1006 STORE_FAST              10 (command)\n\n183        1008 LOAD_FAST                8 (gate)\n           1010 LOAD_CONST              22 ('status')\n           1012 BINARY_SUBSCR\n           1016 LOAD_CONST              42 ('eligible_for_exact_eval_after_level2_lane_claim')\n           1018 COMPARE_OP              40 (==)\n           1022 POP_JUMP_IF_TRUE         2 (to 1028)\n           1024 LOAD_ASSERTION_ERROR\n           1026 RAISE_VARARGS            1\n\n184     >> 1028 LOAD_FAST                8 (gate)\n           1030 LOAD_CONST              43 ('dispatch_performed')\n           1032 BINARY_SUBSCR\n           1036 LOAD_CONST              18 (False)\n           1038 IS_OP                    0\n           1040 POP_JUMP_IF_TRUE         2 (to 1046)\n           1042 LOAD_ASSERTION_ERROR\n           1044 RAISE_VARARGS            1\n\n185     >> 1046 LOAD_FAST                9 (claim)\n           1048 LOAD_CONST              44 ('command_not_executed_by_builder')\n           1050 BINARY_SUBSCR\n           1054 LOAD_CONST              20 (True)\n           1056 IS_OP                    0\n           1058 POP_JUMP_IF_TRUE         2 (to 1064)\n           1060 LOAD_ASSERTION_ERROR\n           1062 RAISE_VARARGS            1\n\n186     >> 1064 LOAD_FAST               10 (command)\n           1066 LOAD_CONST               0 (None)\n           1068 LOAD_CONST              45 (3)\n           1070 BINARY_SLICE\n           1072 BUILD_LIST               0\n           1074 LOAD_CONST              46 (('.venv/bin/python', 'tools/claim_lane_dispatch.py', 'claim'))\n           1076 LIST_EXTEND              1\n           1078 COMPARE_OP              40 (==)\n           1082 POP_JUMP_IF_TRUE         2 (to 1088)\n           1084 LOAD_ASSERTION_ERROR\n           1086 RAISE_VARARGS            1\n\n187     >> 1088 LOAD_CONST              47 ('--dry-run')\n           1090 LOAD_FAST               10 (command)\n           1092 CONTAINS_OP              1\n           1094 POP_JUMP_IF_TRUE         2 (to 1100)\n           1096 LOAD_ASSERTION_ERROR\n           1098 RAISE_VARARGS            1\n\n188     >> 1100 LOAD_FAST               10 (command)\n           1102 LOAD_FAST               10 (command)\n           1104 LOAD_ATTR               35 (NULL|self + index)\n           1124 LOAD_CONST              48 ('--claims-path')\n           1126 CALL                     1\n           1134 LOAD_CONST              49 (1)\n           1136 BINARY_OP                0 (+)\n           1140 BINARY_SUBSCR\n           1144 LOAD_CONST              50 ('.omx/state/active_lane_dispatch_claims.md')\n           1146 COMPARE_OP              40 (==)\n           1150 POP_JUMP_IF_TRUE         2 (to 1156)\n           1152 LOAD_ASSERTION_ERROR\n           1154 RAISE_VARARGS            1\n\n189     >> 1156 LOAD_FAST               10 (command)\n           1158 LOAD_FAST               10 (command)\n           1160 LOAD_ATTR               35 (NULL|self + index)\n           1180 LOAD_CONST              51 ('--lane-id')\n           1182 CALL                     1\n           1190 LOAD_CONST              49 (1)\n           1192 BINARY_OP                0 (+)\n           1196 BINARY_SUBSCR\n           1200 LOAD_CONST              52 ('pr85_stbm1br_pr92_rmb1_randmulti')\n           1202 COMPARE_OP              40 (==)\n           1206 POP_JUMP_IF_TRUE         2 (to 1212)\n           1208 LOAD_ASSERTION_ERROR\n           1210 RAISE_VARARGS            1\n\n190     >> 1212 LOAD_FAST               10 (command)\n           1214 LOAD_FAST               10 (command)\n           1216 LOAD_ATTR               35 (NULL|self + index)\n           1236 LOAD_CONST              53 ('--platform')\n           1238 CALL                     1\n           1246 LOAD_CONST              49 (1)\n           1248 BINARY_OP                0 (+)\n           1252 BINARY_SUBSCR\n           1256 LOAD_CONST              54 ('lightning')\n           1258 COMPARE_OP              40 (==)\n           1262 POP_JUMP_IF_TRUE         2 (to 1268)\n           1264 LOAD_ASSERTION_ERROR\n           1266 RAISE_VARARGS            1\n\n191     >> 1268 LOAD_FAST               10 (command)\n           1270 LOAD_FAST               10 (command)\n           1272 LOAD_ATTR               35 (NULL|self + index)\n           1292 LOAD_CONST              55 ('--status')\n           1294 CALL                     1\n           1302 LOAD_CONST              49 (1)\n           1304 BINARY_OP                0 (+)\n           1308 BINARY_SUBSCR\n           1312 LOAD_CONST              56 ('exact_eval_ready')\n           1314 COMPARE_OP              40 (==)\n           1318 POP_JUMP_IF_TRUE         2 (to 1324)\n           1320 LOAD_ASSERTION_ERROR\n           1322 RAISE_VARARGS            1\n\n192     >> 1324 LOAD_CONST              57 ('archive_sha256=')\n           1326 LOAD_FAST               10 (command)\n           1328 LOAD_FAST               10 (command)\n           1330 LOAD_ATTR               35 (NULL|self + index)\n           1350 LOAD_CONST              58 ('--notes')\n           1352 CALL                     1\n           1360 LOAD_CONST              49 (1)\n           1362 BINARY_OP                0 (+)\n           1366 BINARY_SUBSCR\n           1370 CONTAINS_OP              0\n           1372 POP_JUMP_IF_TRUE         2 (to 1378)\n           1374 LOAD_ASSERTION_ERROR\n           1376 RAISE_VARARGS            1\n\n193     >> 1378 LOAD_FAST                7 (manifest)\n           1380 LOAD_CONST              59 ('duplicate_builder_coordination')\n           1382 BINARY_SUBSCR\n           1386 STORE_FAST              11 (duplicate)\n\n194        1388 LOAD_FAST                6 (summary)\n           1390 LOAD_CONST              60 ('canonical_builder')\n           1392 BINARY_SUBSCR\n           1396 LOAD_CONST              61 ('experiments/build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py')\n           1398 COMPARE_OP              40 (==)\n           1402 POP_JUMP_IF_TRUE         2 (to 1408)\n           1404 LOAD_ASSERTION_ERROR\n           1406 RAISE_VARARGS            1\n\n195     >> 1408 LOAD_FAST               11 (duplicate)\n           1410 LOAD_CONST              22 ('status')\n           1412 BINARY_SUBSCR\n           1416 LOAD_CONST              23 ('passed')\n           1418 COMPARE_OP              40 (==)\n           1422 POP_JUMP_IF_TRUE         2 (to 1428)\n           1424 LOAD_ASSERTION_ERROR\n           1426 RAISE_VARARGS            1\n\n196     >> 1428 LOAD_FAST               11 (duplicate)\n           1430 LOAD_CONST              62 ('legacy_lane_id')\n           1432 BINARY_SUBSCR\n           1436 LOAD_FAST               11 (duplicate)\n           1438 LOAD_CONST              63 ('canonical_constants')\n           1440 BINARY_SUBSCR\n           1444 LOAD_CONST              64 ('LANE_ID')\n           1446 BINARY_SUBSCR\n           1450 COMPARE_OP              40 (==)\n           1454 POP_JUMP_IF_TRUE         2 (to 1460)\n           1456 LOAD_ASSERTION_ERROR\n           1458 RAISE_VARARGS            1\n\n197     >> 1460 LOAD_FAST               11 (duplicate)\n           1462 LOAD_CONST              24 ('checks')\n           1464 BINARY_SUBSCR\n           1468 LOAD_CONST              65 ('canonical_tool_matches_path')\n           1470 BINARY_SUBSCR\n           1474 LOAD_CONST              20 (True)\n           1476 IS_OP                    0\n           1478 POP_JUMP_IF_TRUE         2 (to 1484)\n           1480 LOAD_ASSERTION_ERROR\n           1482 RAISE_VARARGS            1\n\n199     >> 1484 LOAD_GLOBAL             37 (NULL + zipfile)\n           1494 LOAD_ATTR               38 (ZipFile)\n           1514 LOAD_FAST                0 (tmp_path)\n           1516 LOAD_CONST              13 ('out')\n           1518 BINARY_OP               11 (/)\n           1522 LOAD_FAST                6 (summary)\n           1524 LOAD_CONST              15 ('candidate_id')\n           1526 BINARY_SUBSCR\n           1530 BINARY_OP               11 (/)\n           1534 LOAD_CONST              66 ('archive.zip')\n           1536 BINARY_OP               11 (/)\n           1540 CALL                     1\n           1548 BEFORE_WITH\n           1550 STORE_FAST              12 (zf)\n\n200        1552 LOAD_GLOBAL             41 (NULL + parse_pr85_bundle)\n           1562 LOAD_FAST               12 (zf)\n           1564 LOAD_ATTR               43 (NULL|self + read)\n           1584 LOAD_CONST              67 ('x')\n           1586 CALL                     1\n           1594 CALL                     1\n           1602 STORE_FAST              13 (parsed)\n\n199        1604 LOAD_CONST               0 (None)\n           1606 LOAD_CONST               0 (None)\n           1608 LOAD_CONST               0 (None)\n           1610 CALL                     2\n           1618 POP_TOP\n\n201     >> 1620 LOAD_FAST_CHECK         13 (parsed)\n           1622 LOAD_ATTR               44 (segments)\n           1642 LOAD_CONST              34 ('mask')\n           1644 BINARY_SUBSCR\n           1648 LOAD_GLOBAL              6 (STBM1BR_MAGIC)\n           1658 LOAD_CONST               2 (b'mask')\n           1660 BINARY_OP                0 (+)\n           1664 COMPARE_OP              40 (==)\n           1668 POP_JUMP_IF_TRUE         2 (to 1674)\n           1670 LOAD_ASSERTION_ERROR\n           1672 RAISE_VARARGS            1\n\n202     >> 1674 LOAD_FAST               13 (parsed)\n           1676 LOAD_ATTR               44 (segments)\n           1696 LOAD_CONST              68 ('randmulti')\n           1698 BINARY_SUBSCR\n           1702 LOAD_ATTR               47 (NULL|self + startswith)\n           1722 LOAD_CONST              69 (b'RMB1')\n           1724 CALL                     1\n           1732 POP_JUMP_IF_TRUE         2 (to 1738)\n           1734 LOAD_ASSERTION_ERROR\n           1736 RAISE_VARARGS            1\n\n204     >> 1738 LOAD_FAST                2 (module)\n           1740 LOAD_ATTR               25 (NULL|self + build_pr85_stbm1br_rmb1_randmulti_candidate)\n\n205        1760 LOAD_FAST                4 (stbm_archive)\n\n206        1762 LOAD_FAST                5 (pr92_archive)\n\n207        1764 LOAD_FAST                0 (tmp_path)\n           1766 LOAD_CONST              70 ('custom')\n           1768 BINARY_OP               11 (/)\n\n208        1772 LOAD_CONST              71 ('custom_candidate')\n\n204        1774 KW_NAMES                72 (('stbm_archive', 'pr92_archive', 'out_dir', 'candidate_id'))\n           1776 CALL                     4\n           1784 STORE_FAST              14 (custom)\n\n210        1786 LOAD_FAST               14 (custom)\n           1788 LOAD_CONST              15 ('candidate_id')\n           1790 BINARY_SUBSCR\n           1794 LOAD_CONST              71 ('custom_candidate')\n           1796 COMPARE_OP              40 (==)\n           1800 POP_JUMP_IF_TRUE         2 (to 1806)\n           1802 LOAD_ASSERTION_ERROR\n           1804 RAISE_VARARGS            1\n        >> 1806 RETURN_CONST             0 (None)\n\n199     >> 1808 PUSH_EXC_INFO\n           1810 WITH_EXCEPT_START\n           1812 POP_JUMP_IF_TRUE         1 (to 1816)\n           1814 RERAISE                  2\n        >> 1816 POP_TOP\n           1818 POP_EXCEPT\n           1820 POP_TOP\n           1822 POP_TOP\n           1824 JUMP_BACKWARD          103 (to 1620)\n        >> 1826 COPY                     3\n           1828 POP_EXCEPT\n           1830 RERAISE                  1\nExceptionTable:\n  1550 to 1602 -> 1808 [1] lasti\n  1808 to 1816 -> 1826 [3] lasti\n"
+    },
+    {
+      "qualname": "test_builder_fails_closed_when_rmb1_rows_differ",
+      "name": "test_builder_fails_closed_when_rmb1_rows_differ",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "monkeypatch",
+        "module",
+        "rows",
+        "stbm_archive",
+        "pr92_archive"
+      ],
+      "names": [
+        "_load_module",
+        "_headerless_rows",
+        "_write_archive",
+        "STBM1BR_MAGIC",
+        "brotli",
+        "compress",
+        "_rmb1_from_rows",
+        "sum",
+        "PR85_HEADERLESS_RANDMULTI_SPECS",
+        "setattr",
+        "_sha256_file",
+        "stat",
+        "st_size",
+        "_write_runtime_support",
+        "pytest",
+        "raises",
+        "Rmb1CandidateBuildError",
+        "build_pr85_stbm1br_rmb1_randmulti_candidate"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "213           0 RESUME                   0\n\n214           2 LOAD_GLOBAL              1 (NULL + _load_module)\n             12 CALL                     0\n             20 STORE_FAST               2 (module)\n\n215          22 LOAD_GLOBAL              3 (NULL + _headerless_rows)\n             32 CALL                     0\n             40 STORE_FAST               3 (rows)\n\n216          42 LOAD_GLOBAL              5 (NULL + _write_archive)\n\n217          52 LOAD_FAST                0 (tmp_path)\n             54 LOAD_CONST               1 ('stbm.zip')\n             56 BINARY_OP               11 (/)\n\n218          60 LOAD_GLOBAL              6 (STBM1BR_MAGIC)\n             70 LOAD_CONST               2 (b'mask')\n             72 BINARY_OP                0 (+)\n\n219          76 LOAD_GLOBAL              8 (brotli)\n             86 LOAD_ATTR               11 (NULL|self + compress)\n            106 LOAD_FAST                3 (rows)\n            108 LOAD_CONST               3 (5)\n            110 KW_NAMES                 4 (('quality',))\n            112 CALL                     2\n\n216         120 KW_NAMES                 5 (('mask', 'randmulti'))\n            122 CALL                     3\n            130 STORE_FAST               4 (stbm_archive)\n\n221         132 LOAD_GLOBAL              5 (NULL + _write_archive)\n\n222         142 LOAD_FAST                0 (tmp_path)\n            144 LOAD_CONST               6 ('pr92.zip')\n            146 BINARY_OP               11 (/)\n\n223         150 LOAD_CONST               7 (b'QMA9mask')\n\n224         152 LOAD_GLOBAL             13 (NULL + _rmb1_from_rows)\n            162 LOAD_CONST               8 (b'\\x00')\n            164 LOAD_GLOBAL             15 (NULL + sum)\n            174 LOAD_CONST               9 (<code object <genexpr> at 0x102476880, file \"src/tac/tests/test_build_pr85_stbm1br_rmb1_randmulti_candidate.py\", line 224>)\n            176 MAKE_FUNCTION            0\n            178 LOAD_GLOBAL             16 (PR85_HEADERLESS_RANDMULTI_SPECS)\n            188 GET_ITER\n            190 CALL                     0\n            198 CALL                     1\n            206 BINARY_OP                5 (*)\n            210 CALL                     1\n\n221         218 KW_NAMES                 5 (('mask', 'randmulti'))\n            220 CALL                     3\n            228 STORE_FAST               5 (pr92_archive)\n\n226         230 LOAD_FAST                1 (monkeypatch)\n            232 LOAD_ATTR               19 (NULL|self + setattr)\n            252 LOAD_FAST                2 (module)\n            254 LOAD_CONST              10 ('EXPECTED_STBM_SHA256')\n            256 LOAD_FAST                2 (module)\n            258 LOAD_ATTR               21 (NULL|self + _sha256_file)\n            278 LOAD_FAST                4 (stbm_archive)\n            280 CALL                     1\n            288 CALL                     3\n            296 POP_TOP\n\n227         298 LOAD_FAST                1 (monkeypatch)\n            300 LOAD_ATTR               19 (NULL|self + setattr)\n            320 LOAD_FAST                2 (module)\n            322 LOAD_CONST              11 ('EXPECTED_STBM_BYTES')\n            324 LOAD_FAST                4 (stbm_archive)\n            326 LOAD_ATTR               23 (NULL|self + stat)\n            346 CALL                     0\n            354 LOAD_ATTR               24 (st_size)\n            374 CALL                     3\n            382 POP_TOP\n\n228         384 LOAD_FAST                1 (monkeypatch)\n            386 LOAD_ATTR               19 (NULL|self + setattr)\n            406 LOAD_FAST                2 (module)\n            408 LOAD_CONST              12 ('EXPECTED_PR92_SHA256')\n            410 LOAD_FAST                2 (module)\n            412 LOAD_ATTR               21 (NULL|self + _sha256_file)\n            432 LOAD_FAST                5 (pr92_archive)\n            434 CALL                     1\n            442 CALL                     3\n            450 POP_TOP\n\n229         452 LOAD_FAST                1 (monkeypatch)\n            454 LOAD_ATTR               19 (NULL|self + setattr)\n            474 LOAD_FAST                2 (module)\n            476 LOAD_CONST              13 ('ROBUST_CURRENT_DIR')\n            478 LOAD_GLOBAL             27 (NULL + _write_runtime_support)\n            488 LOAD_FAST                0 (tmp_path)\n            490 LOAD_CONST              14 ('runtime')\n            492 BINARY_OP               11 (/)\n            496 CALL                     1\n            504 CALL                     3\n            512 POP_TOP\n\n231         514 LOAD_GLOBAL             29 (NULL + pytest)\n            524 LOAD_ATTR               30 (raises)\n            544 LOAD_FAST                2 (module)\n            546 LOAD_ATTR               32 (Rmb1CandidateBuildError)\n            566 LOAD_CONST              15 ('decoded randmulti rows differ')\n            568 KW_NAMES                16 (('match',))\n            570 CALL                     2\n            578 BEFORE_WITH\n            580 POP_TOP\n\n232         582 LOAD_FAST                2 (module)\n            584 LOAD_ATTR               35 (NULL|self + build_pr85_stbm1br_rmb1_randmulti_candidate)\n\n233         604 LOAD_FAST                4 (stbm_archive)\n\n234         606 LOAD_FAST                5 (pr92_archive)\n\n235         608 LOAD_FAST                0 (tmp_path)\n            610 LOAD_CONST              17 ('out')\n            612 BINARY_OP               11 (/)\n\n232         616 KW_NAMES                18 (('stbm_archive', 'pr92_archive', 'out_dir'))\n            618 CALL                     3\n            626 POP_TOP\n\n231         628 LOAD_CONST               0 (None)\n            630 LOAD_CONST               0 (None)\n            632 LOAD_CONST               0 (None)\n            634 CALL                     2\n            642 POP_TOP\n            644 RETURN_CONST             0 (None)\n        >>  646 PUSH_EXC_INFO\n            648 WITH_EXCEPT_START\n            650 POP_JUMP_IF_TRUE         1 (to 654)\n            652 RERAISE                  2\n        >>  654 POP_TOP\n            656 POP_EXCEPT\n            658 POP_TOP\n            660 POP_TOP\n            662 RETURN_CONST             0 (None)\n        >>  664 COPY                     3\n            666 POP_EXCEPT\n            668 RERAISE                  1\nExceptionTable:\n  580 to 626 -> 646 [1] lasti\n  646 to 654 -> 664 [3] lasti\n"
+    },
+    {
+      "qualname": "test_builder_fails_closed_when_rmb1_rows_differ.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "spec"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "224           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                 9 (to 30)\n             12 STORE_FAST               1 (spec)\n             14 LOAD_FAST                1 (spec)\n             16 LOAD_CONST               0 (3)\n             18 BINARY_SUBSCR\n             22 YIELD_VALUE              1\n             24 RESUME                   1\n             26 POP_TOP\n             28 JUMP_BACKWARD           11 (to 8)\n        >>   30 END_FOR\n             32 RETURN_CONST             1 (None)\n        >>   34 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             36 RERAISE                  1\nExceptionTable:\n  4 to 32 -> 34 [0] lasti\n"
+    },
+    {
+      "qualname": "test_builder_fails_closed_without_single_member_x_runtime_support",
+      "name": "test_builder_fails_closed_without_single_member_x_runtime_support",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "monkeypatch",
+        "module",
+        "rows",
+        "stbm_archive",
+        "pr92_archive"
+      ],
+      "names": [
+        "_load_module",
+        "_headerless_rows",
+        "_write_archive",
+        "STBM1BR_MAGIC",
+        "brotli",
+        "compress",
+        "_rmb1_from_rows",
+        "setattr",
+        "_sha256_file",
+        "stat",
+        "st_size",
+        "_write_runtime_support",
+        "pytest",
+        "raises",
+        "Rmb1CandidateBuildError",
+        "build_pr85_stbm1br_rmb1_randmulti_candidate"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "239           0 RESUME                   0\n\n242           2 LOAD_GLOBAL              1 (NULL + _load_module)\n             12 CALL                     0\n             20 STORE_FAST               2 (module)\n\n243          22 LOAD_GLOBAL              3 (NULL + _headerless_rows)\n             32 CALL                     0\n             40 STORE_FAST               3 (rows)\n\n244          42 LOAD_GLOBAL              5 (NULL + _write_archive)\n\n245          52 LOAD_FAST                0 (tmp_path)\n             54 LOAD_CONST               1 ('stbm.zip')\n             56 BINARY_OP               11 (/)\n\n246          60 LOAD_GLOBAL              6 (STBM1BR_MAGIC)\n             70 LOAD_CONST               2 (b'mask')\n             72 BINARY_OP                0 (+)\n\n247          76 LOAD_GLOBAL              8 (brotli)\n             86 LOAD_ATTR               11 (NULL|self + compress)\n            106 LOAD_FAST                3 (rows)\n            108 LOAD_CONST               3 (0)\n            110 KW_NAMES                 4 (('quality',))\n            112 CALL                     2\n\n244         120 KW_NAMES                 5 (('mask', 'randmulti'))\n            122 CALL                     3\n            130 STORE_FAST               4 (stbm_archive)\n\n249         132 LOAD_GLOBAL              5 (NULL + _write_archive)\n\n250         142 LOAD_FAST                0 (tmp_path)\n            144 LOAD_CONST               6 ('pr92.zip')\n            146 BINARY_OP               11 (/)\n\n251         150 LOAD_CONST               7 (b'QMA9mask')\n\n252         152 LOAD_GLOBAL             13 (NULL + _rmb1_from_rows)\n            162 LOAD_FAST                3 (rows)\n            164 CALL                     1\n\n249         172 KW_NAMES                 5 (('mask', 'randmulti'))\n            174 CALL                     3\n            182 STORE_FAST               5 (pr92_archive)\n\n254         184 LOAD_FAST                1 (monkeypatch)\n            186 LOAD_ATTR               15 (NULL|self + setattr)\n            206 LOAD_FAST                2 (module)\n            208 LOAD_CONST               8 ('EXPECTED_STBM_SHA256')\n            210 LOAD_FAST                2 (module)\n            212 LOAD_ATTR               17 (NULL|self + _sha256_file)\n            232 LOAD_FAST                4 (stbm_archive)\n            234 CALL                     1\n            242 CALL                     3\n            250 POP_TOP\n\n255         252 LOAD_FAST                1 (monkeypatch)\n            254 LOAD_ATTR               15 (NULL|self + setattr)\n            274 LOAD_FAST                2 (module)\n            276 LOAD_CONST               9 ('EXPECTED_STBM_BYTES')\n            278 LOAD_FAST                4 (stbm_archive)\n            280 LOAD_ATTR               19 (NULL|self + stat)\n            300 CALL                     0\n            308 LOAD_ATTR               20 (st_size)\n            328 CALL                     3\n            336 POP_TOP\n\n256         338 LOAD_FAST                1 (monkeypatch)\n            340 LOAD_ATTR               15 (NULL|self + setattr)\n            360 LOAD_FAST                2 (module)\n            362 LOAD_CONST              10 ('EXPECTED_PR92_SHA256')\n            364 LOAD_FAST                2 (module)\n            366 LOAD_ATTR               17 (NULL|self + _sha256_file)\n            386 LOAD_FAST                5 (pr92_archive)\n            388 CALL                     1\n            396 CALL                     3\n            404 POP_TOP\n\n257         406 LOAD_FAST                1 (monkeypatch)\n            408 LOAD_ATTR               15 (NULL|self + setattr)\n            428 LOAD_FAST                2 (module)\n            430 LOAD_CONST              11 ('ROBUST_CURRENT_DIR')\n            432 LOAD_GLOBAL             23 (NULL + _write_runtime_support)\n            442 LOAD_FAST                0 (tmp_path)\n            444 LOAD_CONST              12 ('runtime')\n            446 BINARY_OP               11 (/)\n            450 LOAD_CONST              13 (False)\n            452 KW_NAMES                14 (('support_x',))\n            454 CALL                     2\n            462 CALL                     3\n            470 POP_TOP\n\n259         472 LOAD_GLOBAL             25 (NULL + pytest)\n            482 LOAD_ATTR               26 (raises)\n            502 LOAD_FAST                2 (module)\n            504 LOAD_ATTR               28 (Rmb1CandidateBuildError)\n            524 LOAD_CONST              15 ('robust_current_runtime_support')\n            526 KW_NAMES                16 (('match',))\n            528 CALL                     2\n            536 BEFORE_WITH\n            538 POP_TOP\n\n260         540 LOAD_FAST                2 (module)\n            542 LOAD_ATTR               31 (NULL|self + build_pr85_stbm1br_rmb1_randmulti_candidate)\n\n261         562 LOAD_FAST                4 (stbm_archive)\n\n262         564 LOAD_FAST                5 (pr92_archive)\n\n263         566 LOAD_FAST                0 (tmp_path)\n            568 LOAD_CONST              17 ('out')\n            570 BINARY_OP               11 (/)\n\n260         574 KW_NAMES                18 (('stbm_archive', 'pr92_archive', 'out_dir'))\n            576 CALL                     3\n            584 POP_TOP\n\n259         586 LOAD_CONST               0 (None)\n            588 LOAD_CONST               0 (None)\n            590 LOAD_CONST               0 (None)\n            592 CALL                     2\n            600 POP_TOP\n            602 RETURN_CONST             0 (None)\n        >>  604 PUSH_EXC_INFO\n            606 WITH_EXCEPT_START\n            608 POP_JUMP_IF_TRUE         1 (to 612)\n            610 RERAISE                  2\n        >>  612 POP_TOP\n            614 POP_EXCEPT\n            616 POP_TOP\n            618 POP_TOP\n            620 RETURN_CONST             0 (None)\n        >>  622 COPY                     3\n            624 POP_EXCEPT\n            626 RERAISE                  1\nExceptionTable:\n  538 to 584 -> 604 [1] lasti\n  604 to 612 -> 622 [3] lasti\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  1           2 LOAD_CONST               0 (0)\n              4 LOAD_CONST               1 (('annotations',))\n              6 IMPORT_NAME              0 (__future__)\n              8 IMPORT_FROM              1 (annotations)\n             10 STORE_NAME               1 (annotations)\n             12 POP_TOP\n\n  3          14 LOAD_CONST               0 (0)\n             16 LOAD_CONST               2 (None)\n             18 IMPORT_NAME              2 (importlib.util)\n             20 STORE_NAME               3 (importlib)\n\n  4          22 LOAD_CONST               0 (0)\n             24 LOAD_CONST               2 (None)\n             26 IMPORT_NAME              4 (json)\n             28 STORE_NAME               4 (json)\n\n  5          30 LOAD_CONST               0 (0)\n             32 LOAD_CONST               2 (None)\n             34 IMPORT_NAME              5 (sys)\n             36 STORE_NAME               5 (sys)\n\n  6          38 LOAD_CONST               0 (0)\n             40 LOAD_CONST               2 (None)\n             42 IMPORT_NAME              6 (zipfile)\n             44 STORE_NAME               6 (zipfile)\n\n  7          46 LOAD_CONST               0 (0)\n             48 LOAD_CONST               3 (('Path',))\n             50 IMPORT_NAME              7 (pathlib)\n             52 IMPORT_FROM              8 (Path)\n             54 STORE_NAME               8 (Path)\n             56 POP_TOP\n\n  8          58 LOAD_CONST               0 (0)\n             60 LOAD_CONST               4 (('Any',))\n             62 IMPORT_NAME              9 (typing)\n             64 IMPORT_FROM             10 (Any)\n             66 STORE_NAME              10 (Any)\n             68 POP_TOP\n\n 10          70 LOAD_CONST               0 (0)\n             72 LOAD_CONST               2 (None)\n             74 IMPORT_NAME             11 (pytest)\n             76 STORE_NAME              11 (pytest)\n\n 13          78 PUSH_NULL\n             80 LOAD_NAME               11 (pytest)\n             82 LOAD_ATTR               24 (importorskip)\n            102 LOAD_CONST               5 ('brotli')\n            104 CALL                     1\n            112 STORE_NAME              13 (brotli)\n\n 15         114 LOAD_CONST               0 (0)\n            116 LOAD_CONST               6 (('FIXED_V5_LENGTHS', 'PR85_HEADERLESS_RANDMULTI_SPECS', 'pack_pr85_bundle', 'parse_pr85_bundle'))\n            118 IMPORT_NAME             14 (tac.pr85_bundle)\n            120 IMPORT_FROM             15 (FIXED_V5_LENGTHS)\n            122 STORE_NAME              15 (FIXED_V5_LENGTHS)\n            124 IMPORT_FROM             16 (PR85_HEADERLESS_RANDMULTI_SPECS)\n            126 STORE_NAME              16 (PR85_HEADERLESS_RANDMULTI_SPECS)\n            128 IMPORT_FROM             17 (pack_pr85_bundle)\n            130 STORE_NAME              17 (pack_pr85_bundle)\n            132 IMPORT_FROM             18 (parse_pr85_bundle)\n            134 STORE_NAME              18 (parse_pr85_bundle)\n            136 POP_TOP\n\n 16         138 LOAD_CONST               0 (0)\n            140 LOAD_CONST               7 (('STBM1BR_MAGIC',))\n            142 IMPORT_NAME             19 (tac.stbm1br_mask_codec)\n            144 IMPORT_FROM             20 (STBM1BR_MAGIC)\n            146 STORE_NAME              20 (STBM1BR_MAGIC)\n            148 POP_TOP\n\n 19         150 PUSH_NULL\n            152 LOAD_NAME                8 (Path)\n            154 LOAD_NAME               21 (__file__)\n            156 CALL                     1\n            164 LOAD_ATTR               45 (NULL|self + resolve)\n            184 CALL                     0\n            192 LOAD_ATTR               46 (parents)\n            212 LOAD_CONST               8 (3)\n            214 BINARY_SUBSCR\n            218 STORE_NAME              24 (REPO)\n\n 20         220 LOAD_NAME               24 (REPO)\n            222 LOAD_CONST               9 ('experiments')\n            224 BINARY_OP               11 (/)\n            228 LOAD_CONST              10 ('build_pr85_stbm1br_rmb1_randmulti_candidate.py')\n            230 BINARY_OP               11 (/)\n            234 STORE_NAME              25 (SCRIPT)\n\n 23         236 LOAD_CONST              23 (('return', 'Any'))\n            238 LOAD_CONST              11 (<code object _load_module at 0x102385890, file \"src/tac/tests/test_build_pr85_stbm1br_rmb1_randmulti_candidate.py\", line 23>)\n            240 MAKE_FUNCTION            4 (annotations)\n            242 STORE_NAME              26 (_load_module)\n\n 32         244 LOAD_CONST              24 (('return', 'zipfile.ZipInfo'))\n            246 LOAD_CONST              12 (<code object _zip_info at 0x102422fb0, file \"src/tac/tests/test_build_pr85_stbm1br_rmb1_randmulti_candidate.py\", line 32>)\n            248 MAKE_FUNCTION            4 (annotations)\n            250 STORE_NAME              27 (_zip_info)\n\n 40         252 LOAD_CONST              25 (('counts', 'list[tuple[int, int]]', 'return', 'bytes'))\n            254 LOAD_CONST              13 (<code object _row at 0x10231ad80, file \"src/tac/tests/test_build_pr85_stbm1br_rmb1_randmulti_candidate.py\", line 40>)\n            256 MAKE_FUNCTION            4 (annotations)\n            258 STORE_NAME              28 (_row)\n\n 57         260 LOAD_CONST              26 (('return', 'bytes'))\n            262 LOAD_CONST              14 (<code object _headerless_rows at 0x10244da10, file \"src/tac/tests/test_build_pr85_stbm1br_rmb1_randmulti_candidate.py\", line 57>)\n            264 MAKE_FUNCTION            4 (annotations)\n            266 STORE_NAME              29 (_headerless_rows)\n\n 63         268 LOAD_CONST              27 (('raw', 'bytes', 'return', 'bytes'))\n            270 LOAD_CONST              15 (<code object _rmb1_from_rows at 0xbef110000, file \"src/tac/tests/test_build_pr85_stbm1br_rmb1_randmulti_candidate.py\", line 63>)\n            272 MAKE_FUNCTION            4 (annotations)\n            274 STORE_NAME              30 (_rmb1_from_rows)\n\n 95         276 LOAD_CONST              28 (('path', 'Path', 'mask', 'bytes', 'randmulti', 'bytes', 'return', 'Path'))\n            278 LOAD_CONST              16 (<code object _write_archive at 0xbef110380, file \"src/tac/tests/test_build_pr85_stbm1br_rmb1_randmulti_candidate.py\", line 95>)\n            280 MAKE_FUNCTION            4 (annotations)\n            282 STORE_NAME              31 (_write_archive)\n\n116         284 LOAD_CONST              17 (True)\n            286 LOAD_CONST              18 (('support_x',))\n            288 BUILD_CONST_KEY_MAP      1\n            290 LOAD_CONST              29 (('root', 'Path', 'support_x', 'bool', 'return', 'Path'))\n            292 LOAD_CONST              19 (<code object _write_runtime_support at 0x1023b8ab0, file \"src/tac/tests/test_build_pr85_stbm1br_rmb1_randmulti_candidate.py\", line 116>)\n            294 MAKE_FUNCTION            6 (kwdefaults, annotations)\n            296 STORE_NAME              32 (_write_runtime_support)\n\n143         298 LOAD_CONST              30 (('tmp_path', 'Path', 'monkeypatch', 'pytest.MonkeyPatch', 'return', 'None'))\n            300 LOAD_CONST              20 (<code object test_builder_replaces_only_randmulti_and_records_parity at 0xbeee62000, file \"src/tac/tests/test_build_pr85_stbm1br_rmb1_randmulti_candidate.py\", line 143>)\n            302 MAKE_FUNCTION            4 (annotations)\n            304 STORE_NAME              33 (test_builder_replaces_only_randmulti_and_records_parity)\n\n213         306 LOAD_CONST              30 (('tmp_path', 'Path', 'monkeypatch', 'pytest.MonkeyPatch', 'return', 'None'))\n            308 LOAD_CONST              21 (<code object test_builder_fails_closed_when_rmb1_rows_differ at 0xbef110700, file \"src/tac/tests/test_build_pr85_stbm1br_rmb1_randmulti_candidate.py\", line 213>)\n            310 MAKE_FUNCTION            4 (annotations)\n            312 STORE_NAME              34 (test_builder_fails_closed_when_rmb1_rows_differ)\n\n239         314 NOP\n\n240         316 NOP\n\n239         318 NOP\n\n240         320 NOP\n\n239         322 NOP\n\n241         324 NOP\n\n239         326 LOAD_CONST              30 (('tmp_path', 'Path', 'monkeypatch', 'pytest.MonkeyPatch', 'return', 'None'))\n            328 LOAD_CONST              22 (<code object test_builder_fails_closed_without_single_member_x_runtime_support at 0xbef110a80, file \"src/tac/tests/test_build_pr85_stbm1br_rmb1_randmulti_candidate.py\", line 239>)\n            330 MAKE_FUNCTION            4 (annotations)\n            332 STORE_NAME              35 (test_builder_fails_closed_without_single_member_x_runtime_support)\n            334 RETURN_CONST             2 (None)\n"
+}

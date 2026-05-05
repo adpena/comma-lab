@@ -11,6 +11,20 @@ results in the dated `.omx/research/` ledgers and experiment artifact
 directories. This file is for durable protocols, codebase structure, and
 non-negotiable operating rules.
 
+## Main-Branch Source Of Truth — NON-NEGOTIABLE
+
+`main` is the sole source of truth for this repository. Do not do production
+work, recovery work, public-frontier intake, or contest-custody edits on any
+other branch. If another branch name points at the same commit, treat it as
+historical metadata only. Do not create, checkout, or promote side branches
+unless the operator explicitly asks for branch work in that turn.
+
+Detached public PR clones and recovered/quarantined trees may be inspected as
+forensic inputs, but any promoted code, docs, artifacts, or ledgers must land
+back on `main` through explicit review. Never let a detached clone, stash,
+quarantine directory, provider workspace, or subagent fork become an implicit
+source of truth.
+
 ## Execution Accountability — NON-NEGOTIABLE
 
 When the user asks to push score, recover state, harden a bug class, or proceed

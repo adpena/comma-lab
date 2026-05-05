@@ -1,0 +1,210 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/reports/graphs/__pycache__/test_build_public_site_bundle.cpython-312.pyc",
+  "names": [
+    "__future__",
+    "annotations",
+    "json",
+    "tempfile",
+    "unittest",
+    "pathlib",
+    "Path",
+    "reports.graphs.build_public_site_bundle",
+    "build_public_site_bundle",
+    "sanitize_text",
+    "TestCase",
+    "PublicSiteBundleTests",
+    "__name__",
+    "main"
+  ],
+  "varnames": [],
+  "consts": [
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "Path"
+    ],
+    [
+      "build_public_site_bundle",
+      "sanitize_text"
+    ],
+    {
+      "__code__": "PublicSiteBundleTests",
+      "qualname": "PublicSiteBundleTests",
+      "argcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "test_sanitize_text_redacts_private_surfaces",
+        "test_build_public_site_bundle_redacts_and_preserves_json",
+        "test_build_public_site_bundle_rejects_large_assets",
+        "test_build_public_site_bundle_omits_large_assets_by_default"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "PublicSiteBundleTests",
+    "__main__"
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": null,
+  "child_codes": [
+    {
+      "qualname": "PublicSiteBundleTests",
+      "name": "PublicSiteBundleTests",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "test_sanitize_text_redacts_private_surfaces",
+        "test_build_public_site_bundle_redacts_and_preserves_json",
+        "test_build_public_site_bundle_rejects_large_assets",
+        "test_build_public_site_bundle_omits_large_assets_by_default"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "PublicSiteBundleTests",
+      "dis": " 14           0 RESUME                   0\n              2 LOAD_NAME                0 (__name__)\n              4 STORE_NAME               1 (__module__)\n              6 LOAD_CONST               0 ('PublicSiteBundleTests')\n              8 STORE_NAME               2 (__qualname__)\n\n 15          10 LOAD_CONST               6 (('return', 'None'))\n             12 LOAD_CONST               1 (<code object test_sanitize_text_redacts_private_surfaces at 0xb68e74900, file \"/Users/adpena/Projects/pact/reports/graphs/test_build_public_site_bundle.py\", line 15>)\n             14 MAKE_FUNCTION            4 (annotations)\n             16 STORE_NAME               3 (test_sanitize_text_redacts_private_surfaces)\n\n 41          18 LOAD_CONST               6 (('return', 'None'))\n             20 LOAD_CONST               2 (<code object test_build_public_site_bundle_redacts_and_preserves_json at 0xb68e71c00, file \"/Users/adpena/Projects/pact/reports/graphs/test_build_public_site_bundle.py\", line 41>)\n             22 MAKE_FUNCTION            4 (annotations)\n             24 STORE_NAME               4 (test_build_public_site_bundle_redacts_and_preserves_json)\n\n 68          26 LOAD_CONST               6 (('return', 'None'))\n             28 LOAD_CONST               3 (<code object test_build_public_site_bundle_rejects_large_assets at 0x102ffc630, file \"/Users/adpena/Projects/pact/reports/graphs/test_build_public_site_bundle.py\", line 68>)\n             30 MAKE_FUNCTION            4 (annotations)\n             32 STORE_NAME               5 (test_build_public_site_bundle_rejects_large_assets)\n\n 85          34 LOAD_CONST               6 (('return', 'None'))\n             36 LOAD_CONST               4 (<code object test_build_public_site_bundle_omits_large_assets_by_default at 0xb6911f980, file \"/Users/adpena/Projects/pact/reports/graphs/test_build_public_site_bundle.py\", line 85>)\n             38 MAKE_FUNCTION            4 (annotations)\n             40 STORE_NAME               6 (test_build_public_site_bundle_omits_large_assets_by_default)\n             42 RETURN_CONST             5 (None)\n"
+    },
+    {
+      "qualname": "PublicSiteBundleTests.test_sanitize_text_redacts_private_surfaces",
+      "name": "test_sanitize_text_redacts_private_surfaces",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "self",
+        "text",
+        "sanitized",
+        "records"
+      ],
+      "names": [
+        "sanitize_text",
+        "assertNotIn",
+        "assertIn",
+        "assertGreaterEqual",
+        "sum"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 15           0 RESUME                   0\n\n 17           2 LOAD_CONST               1 ('path=/Users/adpena/Projects/pact/reports/raw/x tmp=/private/tmp/pact-mine/x ssh=ssh4.vast.ai:25850 url=https://lightning.ai/adpena/comma-lab/studios/foo/app?x=1 modal=ap-AbCdEf1234567890 call=fc-ABCDEF1234567890ABCDEF CLOUDFLARE_API_TOKEN=secret-token')\n\n 16           4 STORE_FAST               1 (text)\n\n 26           6 LOAD_GLOBAL              1 (NULL + sanitize_text)\n             16 LOAD_FAST                1 (text)\n             18 CALL                     1\n             26 UNPACK_SEQUENCE          2\n             30 STORE_FAST               2 (sanitized)\n             32 STORE_FAST               3 (records)\n\n 28          34 LOAD_FAST                0 (self)\n             36 LOAD_ATTR                3 (NULL|self + assertNotIn)\n             56 LOAD_CONST               2 ('/Users/adpena')\n             58 LOAD_FAST                2 (sanitized)\n             60 CALL                     2\n             68 POP_TOP\n\n 29          70 LOAD_FAST                0 (self)\n             72 LOAD_ATTR                3 (NULL|self + assertNotIn)\n             92 LOAD_CONST               3 ('/private/tmp')\n             94 LOAD_FAST                2 (sanitized)\n             96 CALL                     2\n            104 POP_TOP\n\n 30         106 LOAD_FAST                0 (self)\n            108 LOAD_ATTR                3 (NULL|self + assertNotIn)\n            128 LOAD_CONST               4 ('ssh4.vast.ai')\n            130 LOAD_FAST                2 (sanitized)\n            132 CALL                     2\n            140 POP_TOP\n\n 31         142 LOAD_FAST                0 (self)\n            144 LOAD_ATTR                3 (NULL|self + assertNotIn)\n            164 LOAD_CONST               5 ('lightning.ai/adpena/comma-lab/studios')\n            166 LOAD_FAST                2 (sanitized)\n            168 CALL                     2\n            176 POP_TOP\n\n 32         178 LOAD_FAST                0 (self)\n            180 LOAD_ATTR                3 (NULL|self + assertNotIn)\n            200 LOAD_CONST               6 ('ap-AbCdEf1234567890')\n            202 LOAD_FAST                2 (sanitized)\n            204 CALL                     2\n            212 POP_TOP\n\n 33         214 LOAD_FAST                0 (self)\n            216 LOAD_ATTR                3 (NULL|self + assertNotIn)\n            236 LOAD_CONST               7 ('fc-ABCDEF1234567890ABCDEF')\n            238 LOAD_FAST                2 (sanitized)\n            240 CALL                     2\n            248 POP_TOP\n\n 34         250 LOAD_FAST                0 (self)\n            252 LOAD_ATTR                5 (NULL|self + assertIn)\n            272 LOAD_CONST               8 ('${LOCAL_PATH_REDACTED}')\n            274 LOAD_FAST                2 (sanitized)\n            276 CALL                     2\n            284 POP_TOP\n\n 35         286 LOAD_FAST                0 (self)\n            288 LOAD_ATTR                5 (NULL|self + assertIn)\n            308 LOAD_CONST               9 ('${VAST_SSH_REDACTED}')\n            310 LOAD_FAST                2 (sanitized)\n            312 CALL                     2\n            320 POP_TOP\n\n 36         322 LOAD_FAST                0 (self)\n            324 LOAD_ATTR                5 (NULL|self + assertIn)\n            344 LOAD_CONST              10 ('${LIGHTNING_PRIVATE_URL_REDACTED}')\n            346 LOAD_FAST                2 (sanitized)\n            348 CALL                     2\n            356 POP_TOP\n\n 37         358 LOAD_FAST                0 (self)\n            360 LOAD_ATTR                5 (NULL|self + assertIn)\n            380 LOAD_CONST              11 ('${MODAL_ID_REDACTED}')\n            382 LOAD_FAST                2 (sanitized)\n            384 CALL                     2\n            392 POP_TOP\n\n 38         394 LOAD_FAST                0 (self)\n            396 LOAD_ATTR                5 (NULL|self + assertIn)\n            416 LOAD_CONST              12 ('CLOUDFLARE_API_TOKEN=${SECRET_REDACTED}')\n            418 LOAD_FAST                2 (sanitized)\n            420 CALL                     2\n            428 POP_TOP\n\n 39         430 LOAD_FAST                0 (self)\n            432 LOAD_ATTR                7 (NULL|self + assertGreaterEqual)\n            452 LOAD_GLOBAL              9 (NULL + sum)\n            462 LOAD_CONST              13 (<code object <genexpr> at 0x102e55c50, file \"/Users/adpena/Projects/pact/reports/graphs/test_build_public_site_bundle.py\", line 39>)\n            464 MAKE_FUNCTION            0\n            466 LOAD_FAST                3 (records)\n            468 GET_ITER\n            470 CALL                     0\n            478 CALL                     1\n            486 LOAD_CONST              14 (6)\n            488 CALL                     2\n            496 POP_TOP\n            498 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "PublicSiteBundleTests.test_sanitize_text_redacts_private_surfaces.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "_",
+        "count"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 39           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                 9 (to 30)\n             12 UNPACK_SEQUENCE          2\n             16 STORE_FAST               1 (_)\n             18 STORE_FAST               2 (count)\n             20 LOAD_FAST                2 (count)\n             22 YIELD_VALUE              1\n             24 RESUME                   1\n             26 POP_TOP\n             28 JUMP_BACKWARD           11 (to 8)\n        >>   30 END_FOR\n             32 RETURN_CONST             0 (None)\n        >>   34 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             36 RERAISE                  1\nExceptionTable:\n  4 to 32 -> 34 [0] lasti\n"
+    },
+    {
+      "qualname": "PublicSiteBundleTests.test_build_public_site_bundle_redacts_and_preserves_json",
+      "name": "test_build_public_site_bundle_redacts_and_preserves_json",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "self",
+        "tmp",
+        "root",
+        "source",
+        "output",
+        "manifest",
+        "data"
+      ],
+      "names": [
+        "tempfile",
+        "TemporaryDirectory",
+        "Path",
+        "mkdir",
+        "write_text",
+        "json",
+        "dumps",
+        "write_bytes",
+        "build_public_site_bundle",
+        "assertTrue",
+        "is_file",
+        "assertEqual",
+        "read_bytes",
+        "loads",
+        "read_text"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 41           0 RESUME                   0\n\n 42           2 LOAD_GLOBAL              1 (NULL + tempfile)\n             12 LOAD_ATTR                2 (TemporaryDirectory)\n             32 CALL                     0\n             40 BEFORE_WITH\n             42 STORE_FAST               1 (tmp)\n\n 43          44 LOAD_GLOBAL              5 (NULL + Path)\n             54 LOAD_FAST                1 (tmp)\n             56 CALL                     1\n             64 STORE_FAST               2 (root)\n\n 44          66 LOAD_FAST                2 (root)\n             68 LOAD_CONST               1 ('site')\n             70 BINARY_OP               11 (/)\n             74 STORE_FAST               3 (source)\n\n 45          76 LOAD_FAST                2 (root)\n             78 LOAD_CONST               2 ('public_site')\n             80 BINARY_OP               11 (/)\n             84 STORE_FAST               4 (output)\n\n 46          86 LOAD_FAST                3 (source)\n             88 LOAD_ATTR                7 (NULL|self + mkdir)\n            108 CALL                     0\n            116 POP_TOP\n\n 47         118 LOAD_FAST                3 (source)\n            120 LOAD_CONST               3 ('index.html')\n            122 BINARY_OP               11 (/)\n            126 LOAD_ATTR                9 (NULL|self + write_text)\n            146 LOAD_CONST               4 ('<h1>Apogee</h1>\\n')\n            148 LOAD_CONST               5 ('utf-8')\n            150 KW_NAMES                 6 (('encoding',))\n            152 CALL                     2\n            160 POP_TOP\n\n 48         162 LOAD_FAST                3 (source)\n            164 LOAD_CONST               7 ('data.json')\n            166 BINARY_OP               11 (/)\n            170 LOAD_ATTR                9 (NULL|self + write_text)\n\n 49         190 LOAD_GLOBAL             11 (NULL + json)\n            200 LOAD_ATTR               12 (dumps)\n            220 LOAD_CONST               8 ('path')\n            222 LOAD_CONST               9 ('/Users/adpena/Projects/pact/private')\n            224 BUILD_MAP                1\n            226 CALL                     1\n            234 LOAD_CONST              10 ('\\n')\n            236 BINARY_OP                0 (+)\n\n 50         240 LOAD_CONST               5 ('utf-8')\n\n 48         242 KW_NAMES                 6 (('encoding',))\n            244 CALL                     2\n            252 POP_TOP\n\n 52         254 LOAD_FAST                3 (source)\n            256 LOAD_CONST              11 ('clip.bin')\n            258 BINARY_OP               11 (/)\n            262 LOAD_ATTR               15 (NULL|self + write_bytes)\n            282 LOAD_CONST              12 (b'\\x00\\x01\\x02')\n            284 CALL                     1\n            292 POP_TOP\n\n 54         294 LOAD_GLOBAL             17 (NULL + build_public_site_bundle)\n\n 55         304 LOAD_FAST                3 (source)\n\n 56         306 LOAD_FAST                4 (output)\n\n 57         308 LOAD_CONST              13 (1024)\n\n 58         310 LOAD_CONST              14 (False)\n\n 54         312 KW_NAMES                15 (('max_asset_bytes', 'strict_hygiene'))\n            314 CALL                     4\n            322 STORE_FAST               5 (manifest)\n\n 61         324 LOAD_FAST                0 (self)\n            326 LOAD_ATTR               19 (NULL|self + assertTrue)\n            346 LOAD_FAST                4 (output)\n            348 LOAD_CONST               3 ('index.html')\n            350 BINARY_OP               11 (/)\n            354 LOAD_ATTR               21 (NULL|self + is_file)\n            374 CALL                     0\n            382 CALL                     1\n            390 POP_TOP\n\n 62         392 LOAD_FAST                0 (self)\n            394 LOAD_ATTR               23 (NULL|self + assertEqual)\n            414 LOAD_FAST                4 (output)\n            416 LOAD_CONST              11 ('clip.bin')\n            418 BINARY_OP               11 (/)\n            422 LOAD_ATTR               25 (NULL|self + read_bytes)\n            442 CALL                     0\n            450 LOAD_CONST              12 (b'\\x00\\x01\\x02')\n            452 CALL                     2\n            460 POP_TOP\n\n 63         462 LOAD_GLOBAL             11 (NULL + json)\n            472 LOAD_ATTR               26 (loads)\n            492 LOAD_FAST                4 (output)\n            494 LOAD_CONST               7 ('data.json')\n            496 BINARY_OP               11 (/)\n            500 LOAD_ATTR               29 (NULL|self + read_text)\n            520 LOAD_CONST               5 ('utf-8')\n            522 KW_NAMES                 6 (('encoding',))\n            524 CALL                     1\n            532 CALL                     1\n            540 STORE_FAST               6 (data)\n\n 64         542 LOAD_FAST                0 (self)\n            544 LOAD_ATTR               23 (NULL|self + assertEqual)\n            564 LOAD_FAST                6 (data)\n            566 LOAD_CONST               8 ('path')\n            568 BINARY_SUBSCR\n            572 LOAD_CONST              16 ('${LOCAL_PATH_REDACTED}')\n            574 CALL                     2\n            582 POP_TOP\n\n 65         584 LOAD_FAST                0 (self)\n            586 LOAD_ATTR               23 (NULL|self + assertEqual)\n            606 LOAD_FAST                5 (manifest)\n            608 LOAD_CONST              17 ('redaction_count')\n            610 BINARY_SUBSCR\n            614 LOAD_CONST              18 (1)\n            616 CALL                     2\n            624 POP_TOP\n\n 66         626 LOAD_FAST                0 (self)\n            628 LOAD_ATTR               19 (NULL|self + assertTrue)\n            648 LOAD_FAST                4 (output)\n            650 LOAD_CONST              19 ('public_site_manifest.json')\n            652 BINARY_OP               11 (/)\n            656 LOAD_ATTR               21 (NULL|self + is_file)\n            676 CALL                     0\n            684 CALL                     1\n            692 POP_TOP\n\n 42         694 LOAD_CONST               0 (None)\n            696 LOAD_CONST               0 (None)\n            698 LOAD_CONST               0 (None)\n            700 CALL                     2\n            708 POP_TOP\n            710 RETURN_CONST             0 (None)\n        >>  712 PUSH_EXC_INFO\n            714 WITH_EXCEPT_START\n            716 POP_JUMP_IF_TRUE         1 (to 720)\n            718 RERAISE                  2\n        >>  720 POP_TOP\n            722 POP_EXCEPT\n            724 POP_TOP\n            726 POP_TOP\n            728 RETURN_CONST             0 (None)\n        >>  730 COPY                     3\n            732 POP_EXCEPT\n            734 RERAISE                  1\nExceptionTable:\n  42 to 692 -> 712 [1] lasti\n  712 to 720 -> 730 [3] lasti\n"
+    },
+    {
+      "qualname": "PublicSiteBundleTests.test_build_public_site_bundle_rejects_large_assets",
+      "name": "test_build_public_site_bundle_rejects_large_assets",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "self",
+        "tmp",
+        "root",
+        "source",
+        "output"
+      ],
+      "names": [
+        "tempfile",
+        "TemporaryDirectory",
+        "Path",
+        "mkdir",
+        "write_bytes",
+        "assertRaises",
+        "RuntimeError",
+        "build_public_site_bundle"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 68           0 RESUME                   0\n\n 69           2 LOAD_GLOBAL              1 (NULL + tempfile)\n             12 LOAD_ATTR                2 (TemporaryDirectory)\n             32 CALL                     0\n             40 BEFORE_WITH\n             42 STORE_FAST               1 (tmp)\n\n 70          44 LOAD_GLOBAL              5 (NULL + Path)\n             54 LOAD_FAST                1 (tmp)\n             56 CALL                     1\n             64 STORE_FAST               2 (root)\n\n 71          66 LOAD_FAST                2 (root)\n             68 LOAD_CONST               1 ('site')\n             70 BINARY_OP               11 (/)\n             74 STORE_FAST               3 (source)\n\n 72          76 LOAD_FAST                2 (root)\n             78 LOAD_CONST               2 ('public_site')\n             80 BINARY_OP               11 (/)\n             84 STORE_FAST               4 (output)\n\n 73          86 LOAD_FAST                3 (source)\n             88 LOAD_ATTR                7 (NULL|self + mkdir)\n            108 CALL                     0\n            116 POP_TOP\n\n 74         118 LOAD_FAST                3 (source)\n            120 LOAD_CONST               3 ('large.mp4')\n            122 BINARY_OP               11 (/)\n            126 LOAD_ATTR                9 (NULL|self + write_bytes)\n            146 LOAD_CONST               4 (b'xxxxxxxx')\n            148 CALL                     1\n            156 POP_TOP\n\n 76         158 LOAD_FAST                0 (self)\n            160 LOAD_ATTR               11 (NULL|self + assertRaises)\n            180 LOAD_GLOBAL             12 (RuntimeError)\n            190 CALL                     1\n            198 BEFORE_WITH\n            200 POP_TOP\n\n 77         202 LOAD_GLOBAL             15 (NULL + build_public_site_bundle)\n\n 78         212 LOAD_FAST                3 (source)\n\n 79         214 LOAD_FAST                4 (output)\n\n 80         216 LOAD_CONST               5 (4)\n\n 81         218 LOAD_CONST               6 ('fail')\n\n 82         220 LOAD_CONST               7 (False)\n\n 77         222 KW_NAMES                 8 (('max_asset_bytes', 'oversized_policy', 'strict_hygiene'))\n            224 CALL                     5\n            232 POP_TOP\n\n 76         234 LOAD_CONST               0 (None)\n            236 LOAD_CONST               0 (None)\n            238 LOAD_CONST               0 (None)\n            240 CALL                     2\n            248 POP_TOP\n\n 69     >>  250 LOAD_CONST               0 (None)\n            252 LOAD_CONST               0 (None)\n            254 LOAD_CONST               0 (None)\n            256 CALL                     2\n            264 POP_TOP\n            266 RETURN_CONST             0 (None)\n\n 76     >>  268 PUSH_EXC_INFO\n            270 WITH_EXCEPT_START\n            272 POP_JUMP_IF_TRUE         1 (to 276)\n            274 RERAISE                  2\n        >>  276 POP_TOP\n            278 POP_EXCEPT\n            280 POP_TOP\n            282 POP_TOP\n            284 JUMP_BACKWARD           18 (to 250)\n        >>  286 COPY                     3\n            288 POP_EXCEPT\n            290 RERAISE                  1\n\n 69     >>  292 PUSH_EXC_INFO\n            294 WITH_EXCEPT_START\n            296 POP_JUMP_IF_TRUE         1 (to 300)\n            298 RERAISE                  2\n        >>  300 POP_TOP\n            302 POP_EXCEPT\n            304 POP_TOP\n            306 POP_TOP\n            308 RETURN_CONST             0 (None)\n        >>  310 COPY                     3\n            312 POP_EXCEPT\n            314 RERAISE                  1\nExceptionTable:\n  42 to 198 -> 292 [1] lasti\n  200 to 232 -> 268 [2] lasti\n  234 to 248 -> 292 [1] lasti\n  268 to 276 -> 286 [4] lasti\n  278 to 290 -> 292 [1] lasti\n  292 to 300 -> 310 [3] lasti\n"
+    },
+    {
+      "qualname": "PublicSiteBundleTests.test_build_public_site_bundle_omits_large_assets_by_default",
+      "name": "test_build_public_site_bundle_omits_large_assets_by_default",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "self",
+        "tmp",
+        "root",
+        "source",
+        "output",
+        "manifest"
+      ],
+      "names": [
+        "tempfile",
+        "TemporaryDirectory",
+        "Path",
+        "mkdir",
+        "write_bytes",
+        "build_public_site_bundle",
+        "assertFalse",
+        "exists",
+        "assertEqual"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 85           0 RESUME                   0\n\n 86           2 LOAD_GLOBAL              1 (NULL + tempfile)\n             12 LOAD_ATTR                2 (TemporaryDirectory)\n             32 CALL                     0\n             40 BEFORE_WITH\n             42 STORE_FAST               1 (tmp)\n\n 87          44 LOAD_GLOBAL              5 (NULL + Path)\n             54 LOAD_FAST                1 (tmp)\n             56 CALL                     1\n             64 STORE_FAST               2 (root)\n\n 88          66 LOAD_FAST                2 (root)\n             68 LOAD_CONST               1 ('site')\n             70 BINARY_OP               11 (/)\n             74 STORE_FAST               3 (source)\n\n 89          76 LOAD_FAST                2 (root)\n             78 LOAD_CONST               2 ('public_site')\n             80 BINARY_OP               11 (/)\n             84 STORE_FAST               4 (output)\n\n 90          86 LOAD_FAST                3 (source)\n             88 LOAD_ATTR                7 (NULL|self + mkdir)\n            108 CALL                     0\n            116 POP_TOP\n\n 91         118 LOAD_FAST                3 (source)\n            120 LOAD_CONST               3 ('large.gif')\n            122 BINARY_OP               11 (/)\n            126 LOAD_ATTR                9 (NULL|self + write_bytes)\n            146 LOAD_CONST               4 (b'xxxxxxxx')\n            148 CALL                     1\n            156 POP_TOP\n\n 93         158 LOAD_GLOBAL             11 (NULL + build_public_site_bundle)\n\n 94         168 LOAD_FAST                3 (source)\n\n 95         170 LOAD_FAST                4 (output)\n\n 96         172 LOAD_CONST               5 (4)\n\n 97         174 LOAD_CONST               6 (False)\n\n 93         176 KW_NAMES                 7 (('max_asset_bytes', 'strict_hygiene'))\n            178 CALL                     4\n            186 STORE_FAST               5 (manifest)\n\n100         188 LOAD_FAST                0 (self)\n            190 LOAD_ATTR               13 (NULL|self + assertFalse)\n            210 LOAD_FAST                4 (output)\n            212 LOAD_CONST               3 ('large.gif')\n            214 BINARY_OP               11 (/)\n            218 LOAD_ATTR               15 (NULL|self + exists)\n            238 CALL                     0\n            246 CALL                     1\n            254 POP_TOP\n\n101         256 LOAD_FAST                0 (self)\n            258 LOAD_ATTR               17 (NULL|self + assertEqual)\n\n102         278 LOAD_FAST                5 (manifest)\n            280 LOAD_CONST               8 ('omitted_oversized_assets')\n            282 BINARY_SUBSCR\n\n103         286 LOAD_CONST               3 ('large.gif')\n            288 LOAD_CONST               9 (8)\n            290 LOAD_CONST              10 (('path', 'bytes'))\n            292 BUILD_CONST_KEY_MAP      2\n            294 BUILD_LIST               1\n\n101         296 CALL                     2\n            304 POP_TOP\n\n 86         306 LOAD_CONST               0 (None)\n            308 LOAD_CONST               0 (None)\n            310 LOAD_CONST               0 (None)\n            312 CALL                     2\n            320 POP_TOP\n            322 RETURN_CONST             0 (None)\n        >>  324 PUSH_EXC_INFO\n            326 WITH_EXCEPT_START\n            328 POP_JUMP_IF_TRUE         1 (to 332)\n            330 RERAISE                  2\n        >>  332 POP_TOP\n            334 POP_EXCEPT\n            336 POP_TOP\n            338 POP_TOP\n            340 RETURN_CONST             0 (None)\n        >>  342 COPY                     3\n            344 POP_EXCEPT\n            346 RERAISE                  1\nExceptionTable:\n  42 to 304 -> 324 [1] lasti\n  324 to 332 -> 342 [3] lasti\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  1           2 LOAD_CONST               0 (0)\n              4 LOAD_CONST               1 (('annotations',))\n              6 IMPORT_NAME              0 (__future__)\n              8 IMPORT_FROM              1 (annotations)\n             10 STORE_NAME               1 (annotations)\n             12 POP_TOP\n\n  3          14 LOAD_CONST               0 (0)\n             16 LOAD_CONST               2 (None)\n             18 IMPORT_NAME              2 (json)\n             20 STORE_NAME               2 (json)\n\n  4          22 LOAD_CONST               0 (0)\n             24 LOAD_CONST               2 (None)\n             26 IMPORT_NAME              3 (tempfile)\n             28 STORE_NAME               3 (tempfile)\n\n  5          30 LOAD_CONST               0 (0)\n             32 LOAD_CONST               2 (None)\n             34 IMPORT_NAME              4 (unittest)\n             36 STORE_NAME               4 (unittest)\n\n  6          38 LOAD_CONST               0 (0)\n             40 LOAD_CONST               3 (('Path',))\n             42 IMPORT_NAME              5 (pathlib)\n             44 IMPORT_FROM              6 (Path)\n             46 STORE_NAME               6 (Path)\n             48 POP_TOP\n\n  8          50 LOAD_CONST               0 (0)\n             52 LOAD_CONST               4 (('build_public_site_bundle', 'sanitize_text'))\n             54 IMPORT_NAME              7 (reports.graphs.build_public_site_bundle)\n             56 IMPORT_FROM              8 (build_public_site_bundle)\n             58 STORE_NAME               8 (build_public_site_bundle)\n             60 IMPORT_FROM              9 (sanitize_text)\n             62 STORE_NAME               9 (sanitize_text)\n             64 POP_TOP\n\n 14          66 PUSH_NULL\n             68 LOAD_BUILD_CLASS\n             70 LOAD_CONST               5 (<code object PublicSiteBundleTests at 0x102f88c60, file \"/Users/adpena/Projects/pact/reports/graphs/test_build_public_site_bundle.py\", line 14>)\n             72 MAKE_FUNCTION            0\n             74 LOAD_CONST               6 ('PublicSiteBundleTests')\n             76 LOAD_NAME                4 (unittest)\n             78 LOAD_ATTR               20 (TestCase)\n             98 CALL                     3\n            106 STORE_NAME              11 (PublicSiteBundleTests)\n\n107         108 LOAD_NAME               12 (__name__)\n            110 LOAD_CONST               7 ('__main__')\n            112 COMPARE_OP              40 (==)\n            116 POP_JUMP_IF_FALSE       18 (to 154)\n\n108         118 PUSH_NULL\n            120 LOAD_NAME                4 (unittest)\n            122 LOAD_ATTR               26 (main)\n            142 CALL                     0\n            150 POP_TOP\n            152 RETURN_CONST             2 (None)\n\n107     >>  154 RETURN_CONST             2 (None)\n"
+}

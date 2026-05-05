@@ -1,0 +1,678 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/src/tac/tests/__pycache__/test_build_pr95_hnerv_residual_atom_plan.cpython-312.pyc",
+  "names": [
+    "__future__",
+    "annotations",
+    "io",
+    "json",
+    "struct",
+    "zipfile",
+    "pathlib",
+    "Path",
+    "brotli",
+    "pytest",
+    "experiments.build_pr95_hnerv_residual_atom_plan",
+    "PR95AtomPlanError",
+    "emit_plan",
+    "sha256_file",
+    "_stored_zip",
+    "_latent_raw",
+    "_top_blob",
+    "_exact_json",
+    "_component_trace_json",
+    "test_emits_proxy_ledger_without_candidate",
+    "test_component_trace_emits_deterministic_signed_policy_and_candidate",
+    "test_build_candidate_from_explicit_latent_atom_plan",
+    "test_rejects_noop_and_sidecar_atom_plans",
+    "test_rejects_component_trace_schema_mismatches"
+  ],
+  "varnames": [],
+  "consts": [
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "Path"
+    ],
+    [
+      "PR95AtomPlanError",
+      "emit_plan",
+      "sha256_file"
+    ],
+    {
+      "__code__": "_stored_zip",
+      "qualname": "_stored_zip",
+      "argcount": 2,
+      "varnames": [
+        "path",
+        "payload",
+        "info",
+        "zf"
+      ],
+      "names": [
+        "zipfile",
+        "ZipInfo",
+        "ZIP_STORED",
+        "compress_type",
+        "external_attr",
+        "ZipFile",
+        "writestr"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_latent_raw",
+      "qualname": "_latent_raw",
+      "argcount": 1,
+      "varnames": [
+        "rows",
+        "n_pairs",
+        "latent_dim",
+        "out",
+        "lo",
+        "hi",
+        "prev",
+        "offset",
+        "pair_index",
+        "row",
+        "dim_index",
+        "value",
+        "delta",
+        "zz"
+      ],
+      "names": [
+        "len",
+        "io",
+        "BytesIO",
+        "write",
+        "struct",
+        "pack",
+        "bytearray",
+        "enumerate",
+        "getvalue"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_top_blob",
+      "qualname": "_top_blob",
+      "argcount": 1,
+      "varnames": [
+        "rows",
+        "meta",
+        "decoder",
+        "latents",
+        "out",
+        "payload"
+      ],
+      "names": [
+        "brotli",
+        "compress",
+        "struct",
+        "pack",
+        "_latent_raw",
+        "io",
+        "BytesIO",
+        "write",
+        "len",
+        "getvalue"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_exact_json",
+      "qualname": "_exact_json",
+      "argcount": 2,
+      "varnames": [
+        "path",
+        "archive"
+      ],
+      "names": [
+        "write_text",
+        "json",
+        "dumps",
+        "stat",
+        "st_size",
+        "sha256_file"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    true,
+    [
+      "archive_sha256",
+      "cross_check_all_match"
+    ],
+    {
+      "__code__": "_component_trace_json",
+      "qualname": "_component_trace_json",
+      "argcount": 2,
+      "varnames": [
+        "path",
+        "archive",
+        "samples",
+        "archive_sha256",
+        "cross_check_all_match"
+      ],
+      "names": [
+        "write_text",
+        "json",
+        "dumps",
+        "len",
+        "stat",
+        "st_size",
+        "sha256_file"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_emits_proxy_ledger_without_candidate",
+      "qualname": "test_emits_proxy_ledger_without_candidate",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "archive",
+        "exact",
+        "manifest",
+        "ledger"
+      ],
+      "names": [
+        "_stored_zip",
+        "_top_blob",
+        "_exact_json",
+        "emit_plan",
+        "json",
+        "loads",
+        "read_text",
+        "len"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_component_trace_emits_deterministic_signed_policy_and_candidate",
+      "qualname": "test_component_trace_emits_deterministic_signed_policy_and_candidate",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "archive",
+        "exact",
+        "trace",
+        "manifest",
+        "signed",
+        "policy",
+        "atom",
+        "targets",
+        "build",
+        "manifest_2",
+        "policy_2"
+      ],
+      "names": [
+        "_stored_zip",
+        "_top_blob",
+        "_exact_json",
+        "_component_trace_json",
+        "emit_plan",
+        "sha256_file",
+        "json",
+        "loads",
+        "Path",
+        "read_text",
+        "len",
+        "exists"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_build_candidate_from_explicit_latent_atom_plan",
+      "qualname": "test_build_candidate_from_explicit_latent_atom_plan",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "archive",
+        "exact",
+        "member_blob",
+        "atom_plan",
+        "manifest",
+        "build",
+        "zf"
+      ],
+      "names": [
+        "_stored_zip",
+        "_top_blob",
+        "_exact_json",
+        "zipfile",
+        "ZipFile",
+        "read",
+        "write_text",
+        "json",
+        "dumps",
+        "sha256_file",
+        "__import__",
+        "sha256",
+        "hexdigest",
+        "emit_plan",
+        "namelist"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_rejects_noop_and_sidecar_atom_plans",
+      "qualname": "test_rejects_noop_and_sidecar_atom_plans",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "archive",
+        "exact",
+        "member_blob",
+        "atom_plan"
+      ],
+      "names": [
+        "_stored_zip",
+        "_top_blob",
+        "_exact_json",
+        "zipfile",
+        "ZipFile",
+        "read",
+        "write_text",
+        "json",
+        "dumps",
+        "sha256_file",
+        "__import__",
+        "sha256",
+        "hexdigest",
+        "pytest",
+        "raises",
+        "PR95AtomPlanError",
+        "emit_plan"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_rejects_component_trace_schema_mismatches",
+      "qualname": "test_rejects_component_trace_schema_mismatches",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "archive",
+        "exact",
+        "trace",
+        "samples"
+      ],
+      "names": [
+        "_stored_zip",
+        "_top_blob",
+        "_exact_json",
+        "_component_trace_json",
+        "pytest",
+        "raises",
+        "PR95AtomPlanError",
+        "emit_plan"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    [
+      "path",
+      "Path",
+      "payload",
+      "bytes",
+      "return",
+      "None"
+    ],
+    [
+      "rows",
+      "list[list[int]]",
+      "return",
+      "bytes"
+    ],
+    [
+      "path",
+      "Path",
+      "archive",
+      "Path",
+      "return",
+      "None"
+    ],
+    [
+      "path",
+      "Path",
+      "archive",
+      "Path",
+      "samples",
+      "list[dict[str, float | int]]",
+      "archive_sha256",
+      "str | None",
+      "cross_check_all_match",
+      "bool",
+      "return",
+      "None"
+    ],
+    [
+      "tmp_path",
+      "Path",
+      "return",
+      "None"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": null,
+  "child_codes": [
+    {
+      "qualname": "_stored_zip",
+      "name": "_stored_zip",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "payload",
+        "info",
+        "zf"
+      ],
+      "names": [
+        "zipfile",
+        "ZipInfo",
+        "ZIP_STORED",
+        "compress_type",
+        "external_attr",
+        "ZipFile",
+        "writestr"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 15           0 RESUME                   0\n\n 16           2 LOAD_GLOBAL              1 (NULL + zipfile)\n             12 LOAD_ATTR                2 (ZipInfo)\n             32 LOAD_CONST               1 ('0.bin')\n             34 LOAD_CONST               2 ((1980, 1, 1, 0, 0, 0))\n             36 KW_NAMES                 3 (('date_time',))\n             38 CALL                     2\n             46 STORE_FAST               2 (info)\n\n 17          48 LOAD_GLOBAL              0 (zipfile)\n             58 LOAD_ATTR                4 (ZIP_STORED)\n             78 LOAD_FAST                2 (info)\n             80 STORE_ATTR               3 (compress_type)\n\n 18          90 LOAD_CONST               4 (27525120)\n             92 LOAD_FAST                2 (info)\n             94 STORE_ATTR               4 (external_attr)\n\n 19         104 LOAD_GLOBAL              1 (NULL + zipfile)\n            114 LOAD_ATTR               10 (ZipFile)\n            134 LOAD_FAST                0 (path)\n            136 LOAD_CONST               5 ('w')\n            138 LOAD_GLOBAL              0 (zipfile)\n            148 LOAD_ATTR                4 (ZIP_STORED)\n            168 KW_NAMES                 6 (('compression',))\n            170 CALL                     3\n            178 BEFORE_WITH\n            180 STORE_FAST               3 (zf)\n\n 20         182 LOAD_FAST                3 (zf)\n            184 LOAD_ATTR               13 (NULL|self + writestr)\n            204 LOAD_FAST                2 (info)\n            206 LOAD_FAST                1 (payload)\n            208 CALL                     2\n            216 POP_TOP\n\n 19         218 LOAD_CONST               0 (None)\n            220 LOAD_CONST               0 (None)\n            222 LOAD_CONST               0 (None)\n            224 CALL                     2\n            232 POP_TOP\n            234 RETURN_CONST             0 (None)\n        >>  236 PUSH_EXC_INFO\n            238 WITH_EXCEPT_START\n            240 POP_JUMP_IF_TRUE         1 (to 244)\n            242 RERAISE                  2\n        >>  244 POP_TOP\n            246 POP_EXCEPT\n            248 POP_TOP\n            250 POP_TOP\n            252 RETURN_CONST             0 (None)\n        >>  254 COPY                     3\n            256 POP_EXCEPT\n            258 RERAISE                  1\nExceptionTable:\n  180 to 216 -> 236 [1] lasti\n  236 to 244 -> 254 [3] lasti\n"
+    },
+    {
+      "qualname": "_latent_raw",
+      "name": "_latent_raw",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "rows",
+        "n_pairs",
+        "latent_dim",
+        "out",
+        "lo",
+        "hi",
+        "prev",
+        "offset",
+        "pair_index",
+        "row",
+        "dim_index",
+        "value",
+        "delta",
+        "zz"
+      ],
+      "names": [
+        "len",
+        "io",
+        "BytesIO",
+        "write",
+        "struct",
+        "pack",
+        "bytearray",
+        "enumerate",
+        "getvalue"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 23           0 RESUME                   0\n\n 24           2 LOAD_GLOBAL              1 (NULL + len)\n             12 LOAD_FAST                0 (rows)\n             14 CALL                     1\n             22 STORE_FAST               1 (n_pairs)\n\n 25          24 LOAD_GLOBAL              1 (NULL + len)\n             34 LOAD_FAST                0 (rows)\n             36 LOAD_CONST               1 (0)\n             38 BINARY_SUBSCR\n             42 CALL                     1\n             50 STORE_FAST               2 (latent_dim)\n\n 26          52 LOAD_GLOBAL              3 (NULL + io)\n             62 LOAD_ATTR                4 (BytesIO)\n             82 CALL                     0\n             90 STORE_FAST               3 (out)\n\n 27          92 LOAD_FAST                3 (out)\n             94 LOAD_ATTR                7 (NULL|self + write)\n            114 LOAD_GLOBAL              9 (NULL + struct)\n            124 LOAD_ATTR               10 (pack)\n            144 LOAD_CONST               2 ('<II')\n            146 LOAD_FAST                1 (n_pairs)\n            148 LOAD_FAST                2 (latent_dim)\n            150 CALL                     3\n            158 CALL                     1\n            166 POP_TOP\n\n 28         168 LOAD_FAST                3 (out)\n            170 LOAD_ATTR                7 (NULL|self + write)\n            190 LOAD_CONST               3 (b'\\x00\\x00')\n            192 LOAD_FAST                2 (latent_dim)\n            194 BINARY_OP                5 (*)\n            198 CALL                     1\n            206 POP_TOP\n\n 29         208 LOAD_FAST                3 (out)\n            210 LOAD_ATTR                7 (NULL|self + write)\n            230 LOAD_CONST               4 (b'\\x00<')\n            232 LOAD_FAST                2 (latent_dim)\n            234 BINARY_OP                5 (*)\n            238 CALL                     1\n            246 POP_TOP\n\n 30         248 LOAD_GLOBAL             13 (NULL + bytearray)\n            258 LOAD_FAST                1 (n_pairs)\n            260 LOAD_FAST                2 (latent_dim)\n            262 BINARY_OP                5 (*)\n            266 CALL                     1\n            274 STORE_FAST               4 (lo)\n\n 31         276 LOAD_GLOBAL             13 (NULL + bytearray)\n            286 LOAD_FAST                1 (n_pairs)\n            288 LOAD_FAST                2 (latent_dim)\n            290 BINARY_OP                5 (*)\n            294 CALL                     1\n            302 STORE_FAST               5 (hi)\n\n 32         304 LOAD_CONST               1 (0)\n            306 BUILD_LIST               1\n            308 LOAD_FAST                2 (latent_dim)\n            310 BINARY_OP                5 (*)\n            314 STORE_FAST               6 (prev)\n\n 33         316 LOAD_CONST               1 (0)\n            318 STORE_FAST               7 (offset)\n\n 34         320 LOAD_GLOBAL             15 (NULL + enumerate)\n            330 LOAD_FAST                0 (rows)\n            332 CALL                     1\n            340 GET_ITER\n        >>  342 FOR_ITER                83 (to 512)\n            346 UNPACK_SEQUENCE          2\n            350 STORE_FAST               8 (pair_index)\n            352 STORE_FAST               9 (row)\n\n 35         354 LOAD_GLOBAL             15 (NULL + enumerate)\n            364 LOAD_FAST                9 (row)\n            366 CALL                     1\n            374 GET_ITER\n        >>  376 FOR_ITER                62 (to 504)\n            380 UNPACK_SEQUENCE          2\n            384 STORE_FAST              10 (dim_index)\n            386 STORE_FAST              11 (value)\n\n 36         388 LOAD_FAST                8 (pair_index)\n            390 LOAD_CONST               1 (0)\n            392 COMPARE_OP              40 (==)\n            396 POP_JUMP_IF_FALSE        2 (to 402)\n            398 LOAD_FAST               11 (value)\n            400 JUMP_FORWARD             7 (to 416)\n        >>  402 LOAD_FAST               11 (value)\n            404 LOAD_FAST                6 (prev)\n            406 LOAD_FAST               10 (dim_index)\n            408 BINARY_SUBSCR\n            412 BINARY_OP               10 (-)\n        >>  416 STORE_FAST              12 (delta)\n\n 37         418 LOAD_FAST               12 (delta)\n            420 LOAD_CONST               1 (0)\n            422 COMPARE_OP              92 (>=)\n            426 POP_JUMP_IF_FALSE        5 (to 438)\n            428 LOAD_CONST               5 (2)\n            430 LOAD_FAST               12 (delta)\n            432 BINARY_OP                5 (*)\n            436 JUMP_FORWARD             7 (to 452)\n        >>  438 LOAD_CONST               6 (-2)\n            440 LOAD_FAST               12 (delta)\n            442 BINARY_OP                5 (*)\n            446 LOAD_CONST               7 (1)\n            448 BINARY_OP               10 (-)\n        >>  452 STORE_FAST              13 (zz)\n\n 38         454 LOAD_FAST               13 (zz)\n            456 LOAD_CONST               8 (255)\n            458 BINARY_OP                1 (&)\n            462 LOAD_FAST                4 (lo)\n            464 LOAD_FAST                7 (offset)\n            466 STORE_SUBSCR\n\n 39         470 LOAD_FAST               13 (zz)\n            472 LOAD_CONST               9 (8)\n            474 BINARY_OP                9 (>>)\n            478 LOAD_CONST               8 (255)\n            480 BINARY_OP                1 (&)\n            484 LOAD_FAST                5 (hi)\n            486 LOAD_FAST                7 (offset)\n            488 STORE_SUBSCR\n\n 40         492 LOAD_FAST                7 (offset)\n            494 LOAD_CONST               7 (1)\n            496 BINARY_OP               13 (+=)\n            500 STORE_FAST               7 (offset)\n            502 JUMP_BACKWARD           64 (to 376)\n\n 35     >>  504 END_FOR\n\n 41         506 LOAD_FAST                9 (row)\n            508 STORE_FAST               6 (prev)\n            510 JUMP_BACKWARD           85 (to 342)\n\n 34     >>  512 END_FOR\n\n 42         514 LOAD_FAST                3 (out)\n            516 LOAD_ATTR                7 (NULL|self + write)\n            536 LOAD_FAST                4 (lo)\n            538 CALL                     1\n            546 POP_TOP\n\n 43         548 LOAD_FAST                3 (out)\n            550 LOAD_ATTR                7 (NULL|self + write)\n            570 LOAD_FAST                5 (hi)\n            572 CALL                     1\n            580 POP_TOP\n\n 44         582 LOAD_FAST                3 (out)\n            584 LOAD_ATTR               17 (NULL|self + getvalue)\n            604 CALL                     0\n            612 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_top_blob",
+      "name": "_top_blob",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "rows",
+        "meta",
+        "decoder",
+        "latents",
+        "out",
+        "payload"
+      ],
+      "names": [
+        "brotli",
+        "compress",
+        "struct",
+        "pack",
+        "_latent_raw",
+        "io",
+        "BytesIO",
+        "write",
+        "len",
+        "getvalue"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 47           0 RESUME                   0\n\n 48           2 LOAD_GLOBAL              1 (NULL + brotli)\n             12 LOAD_ATTR                2 (compress)\n             32 LOAD_CONST               1 (b'{\"latent_dim\":2,\"n_pairs\":3,\"eval_size\":[2,2],\"base_channels\":1}')\n             34 LOAD_CONST               2 (5)\n             36 KW_NAMES                 3 (('quality',))\n             38 CALL                     2\n             46 STORE_FAST               1 (meta)\n\n 49          48 LOAD_GLOBAL              1 (NULL + brotli)\n             58 LOAD_ATTR                2 (compress)\n             78 LOAD_GLOBAL              5 (NULL + struct)\n             88 LOAD_ATTR                6 (pack)\n            108 LOAD_CONST               4 ('<I')\n            110 LOAD_CONST               5 (0)\n            112 CALL                     2\n            120 LOAD_CONST               2 (5)\n            122 KW_NAMES                 3 (('quality',))\n            124 CALL                     2\n            132 STORE_FAST               2 (decoder)\n\n 50         134 LOAD_GLOBAL              1 (NULL + brotli)\n            144 LOAD_ATTR                2 (compress)\n            164 LOAD_GLOBAL              9 (NULL + _latent_raw)\n            174 LOAD_FAST                0 (rows)\n            176 CALL                     1\n            184 LOAD_CONST               2 (5)\n            186 KW_NAMES                 3 (('quality',))\n            188 CALL                     2\n            196 STORE_FAST               3 (latents)\n\n 51         198 LOAD_GLOBAL             11 (NULL + io)\n            208 LOAD_ATTR               12 (BytesIO)\n            228 CALL                     0\n            236 STORE_FAST               4 (out)\n\n 52         238 LOAD_FAST                1 (meta)\n            240 LOAD_FAST                2 (decoder)\n            242 LOAD_FAST                3 (latents)\n            244 BUILD_TUPLE              3\n            246 GET_ITER\n        >>  248 FOR_ITER                65 (to 382)\n            252 STORE_FAST               5 (payload)\n\n 53         254 LOAD_FAST                4 (out)\n            256 LOAD_ATTR               15 (NULL|self + write)\n            276 LOAD_GLOBAL              5 (NULL + struct)\n            286 LOAD_ATTR                6 (pack)\n            306 LOAD_CONST               4 ('<I')\n            308 LOAD_GLOBAL             17 (NULL + len)\n            318 LOAD_FAST                5 (payload)\n            320 CALL                     1\n            328 CALL                     2\n            336 CALL                     1\n            344 POP_TOP\n\n 54         346 LOAD_FAST                4 (out)\n            348 LOAD_ATTR               15 (NULL|self + write)\n            368 LOAD_FAST                5 (payload)\n            370 CALL                     1\n            378 POP_TOP\n            380 JUMP_BACKWARD           67 (to 248)\n\n 52     >>  382 END_FOR\n\n 55         384 LOAD_FAST                4 (out)\n            386 LOAD_ATTR               19 (NULL|self + getvalue)\n            406 CALL                     0\n            414 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_exact_json",
+      "name": "_exact_json",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "archive"
+      ],
+      "names": [
+        "write_text",
+        "json",
+        "dumps",
+        "stat",
+        "st_size",
+        "sha256_file"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 58           0 RESUME                   0\n\n 59           2 LOAD_FAST                0 (path)\n              4 LOAD_ATTR                1 (NULL|self + write_text)\n\n 60          24 LOAD_GLOBAL              3 (NULL + json)\n             34 LOAD_ATTR                4 (dumps)\n\n 62          54 LOAD_FAST                1 (archive)\n             56 LOAD_ATTR                7 (NULL|self + stat)\n             76 CALL                     0\n             84 LOAD_ATTR                8 (st_size)\n\n 63         104 LOAD_CONST               1 (0.00017185)\n\n 64         106 LOAD_CONST               2 (0.00070728)\n\n 65         108 LOAD_CONST               3 (0.04145479465634826)\n\n 66         110 LOAD_CONST               4 (0.11873675)\n\n 67         112 LOAD_CONST               5 (0.23091954465634829)\n\n 68         114 LOAD_CONST               6 (0.070728)\n\n 69         116 LOAD_CONST               7 (3)\n\n 70         118 LOAD_CONST               8 ('archive_sha256')\n            120 LOAD_GLOBAL             11 (NULL + sha256_file)\n            130 LOAD_FAST                1 (archive)\n            132 CALL                     1\n            140 BUILD_MAP                1\n\n 61         142 LOAD_CONST               9 (('archive_size_bytes', 'avg_posenet_dist', 'avg_segnet_dist', 'score_pose_contribution', 'score_rate_contribution', 'score_recomputed_from_components', 'score_seg_contribution', 'n_samples', 'provenance'))\n            144 BUILD_CONST_KEY_MAP      9\n\n 60         146 CALL                     1\n\n 73         154 LOAD_CONST              10 ('\\n')\n\n 60         156 BINARY_OP                0 (+)\n\n 74         160 LOAD_CONST              11 ('utf-8')\n\n 59         162 KW_NAMES                12 (('encoding',))\n            164 CALL                     2\n            172 POP_TOP\n            174 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "_component_trace_json",
+      "name": "_component_trace_json",
+      "argcount": 2,
+      "kwonlyargcount": 3,
+      "varnames": [
+        "path",
+        "archive",
+        "samples",
+        "archive_sha256",
+        "cross_check_all_match"
+      ],
+      "names": [
+        "write_text",
+        "json",
+        "dumps",
+        "len",
+        "stat",
+        "st_size",
+        "sha256_file"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 78           0 RESUME                   0\n\n 86           2 LOAD_FAST                0 (path)\n              4 LOAD_ATTR                1 (NULL|self + write_text)\n\n 87          24 LOAD_GLOBAL              3 (NULL + json)\n             34 LOAD_ATTR                4 (dumps)\n\n 89          54 LOAD_CONST               1 (1)\n\n 90          56 LOAD_CONST               2 (False)\n\n 91          58 LOAD_CONST               3 ('diagnostic_component_trace')\n\n 92          60 LOAD_GLOBAL              7 (NULL + len)\n             70 LOAD_FAST                2 (samples)\n             72 CALL                     1\n\n 93          80 LOAD_GLOBAL              7 (NULL + len)\n             90 LOAD_FAST                2 (samples)\n             92 CALL                     1\n\n 94         100 LOAD_CONST               4 (0.00017185)\n\n 95         102 LOAD_CONST               5 (0.00070728)\n\n 96         104 LOAD_FAST                1 (archive)\n            106 LOAD_ATTR                9 (NULL|self + stat)\n            126 CALL                     0\n            134 LOAD_ATTR               10 (st_size)\n\n 97         154 LOAD_CONST               6 (0.23091954465634829)\n\n 99         156 LOAD_FAST                3 (archive_sha256)\n            158 COPY                     1\n            160 POP_JUMP_IF_TRUE        11 (to 184)\n            162 POP_TOP\n            164 LOAD_GLOBAL             13 (NULL + sha256_file)\n            174 LOAD_FAST                1 (archive)\n            176 CALL                     1\n\n100     >>  184 LOAD_CONST               7 ('cuda:0')\n\n 98         186 LOAD_CONST               8 (('archive_sha256', 'device'))\n            188 BUILD_CONST_KEY_MAP      2\n\n103         190 LOAD_FAST                4 (cross_check_all_match)\n\n105         192 LOAD_CONST               9 ('match')\n            194 LOAD_FAST                4 (cross_check_all_match)\n            196 BUILD_MAP                1\n\n106         198 LOAD_CONST               9 ('match')\n            200 LOAD_FAST                4 (cross_check_all_match)\n            202 BUILD_MAP                1\n\n104         204 LOAD_CONST              10 (('n_samples', 'archive_size_bytes'))\n            206 BUILD_CONST_KEY_MAP      2\n\n102         208 LOAD_CONST              11 (('all_match', 'checks'))\n            210 BUILD_CONST_KEY_MAP      2\n\n109         212 LOAD_FAST                2 (samples)\n\n 88         214 LOAD_CONST              12 (('schema_version', 'score_claim', 'evidence_grade', 'n_samples', 'expected_contest_samples', 'avg_posenet_dist', 'avg_segnet_dist', 'archive_size_bytes', 'score_recomputed_from_components', 'trace_inputs', 'contest_auth_eval_cross_check', 'samples'))\n            216 BUILD_CONST_KEY_MAP     12\n\n 87         218 CALL                     1\n\n112         226 LOAD_CONST              13 ('\\n')\n\n 87         228 BINARY_OP                0 (+)\n\n113         232 LOAD_CONST              14 ('utf-8')\n\n 86         234 KW_NAMES                15 (('encoding',))\n            236 CALL                     2\n            244 POP_TOP\n            246 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "test_emits_proxy_ledger_without_candidate",
+      "name": "test_emits_proxy_ledger_without_candidate",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "archive",
+        "exact",
+        "manifest",
+        "ledger"
+      ],
+      "names": [
+        "_stored_zip",
+        "_top_blob",
+        "_exact_json",
+        "emit_plan",
+        "json",
+        "loads",
+        "read_text",
+        "len"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "117           0 RESUME                   0\n\n118           2 LOAD_FAST                0 (tmp_path)\n              4 LOAD_CONST               1 ('archive.zip')\n              6 BINARY_OP               11 (/)\n             10 STORE_FAST               1 (archive)\n\n119          12 LOAD_GLOBAL              1 (NULL + _stored_zip)\n             22 LOAD_FAST                1 (archive)\n             24 LOAD_GLOBAL              3 (NULL + _top_blob)\n             34 LOAD_CONST               2 (1)\n             36 LOAD_CONST               3 (2)\n             38 BUILD_LIST               2\n             40 LOAD_CONST               4 (5)\n             42 LOAD_CONST               3 (2)\n             44 BUILD_LIST               2\n             46 LOAD_CONST               4 (5)\n             48 LOAD_CONST               5 (9)\n             50 BUILD_LIST               2\n             52 BUILD_LIST               3\n             54 CALL                     1\n             62 CALL                     2\n             70 POP_TOP\n\n120          72 LOAD_FAST                0 (tmp_path)\n             74 LOAD_CONST               6 ('exact.json')\n             76 BINARY_OP               11 (/)\n             80 STORE_FAST               2 (exact)\n\n121          82 LOAD_GLOBAL              5 (NULL + _exact_json)\n             92 LOAD_FAST                2 (exact)\n             94 LOAD_FAST                1 (archive)\n             96 CALL                     2\n            104 POP_TOP\n\n123         106 LOAD_GLOBAL              7 (NULL + emit_plan)\n\n124         116 LOAD_FAST                1 (archive)\n\n125         118 LOAD_FAST                2 (exact)\n\n126         120 LOAD_FAST                0 (tmp_path)\n            122 LOAD_CONST               7 ('out')\n            124 BINARY_OP               11 (/)\n\n127         128 LOAD_CONST               0 (None)\n\n128         130 LOAD_CONST               3 (2)\n\n129         132 LOAD_CONST               0 (None)\n\n123         134 KW_NAMES                 8 (('source_archive', 'exact_json', 'output_dir', 'component_trace_json', 'top_k', 'build_plan_json'))\n            136 CALL                     6\n            144 STORE_FAST               3 (manifest)\n\n132         146 LOAD_FAST                3 (manifest)\n            148 LOAD_CONST               9 ('score_claim')\n            150 BINARY_SUBSCR\n            154 LOAD_CONST              10 (False)\n            156 IS_OP                    0\n            158 POP_JUMP_IF_TRUE         2 (to 164)\n            160 LOAD_ASSERTION_ERROR\n            162 RAISE_VARARGS            1\n\n133     >>  164 LOAD_FAST                3 (manifest)\n            166 LOAD_CONST              11 ('component_trace')\n            168 BINARY_SUBSCR\n            172 LOAD_CONST              12 ('available')\n            174 BINARY_SUBSCR\n            178 LOAD_CONST              10 (False)\n            180 IS_OP                    0\n            182 POP_JUMP_IF_TRUE         2 (to 188)\n            184 LOAD_ASSERTION_ERROR\n            186 RAISE_VARARGS            1\n\n134     >>  188 LOAD_FAST                3 (manifest)\n            190 LOAD_CONST              13 ('dispatch_readiness')\n            192 BINARY_SUBSCR\n            196 LOAD_CONST              14 ('ready_for_exact_eval')\n            198 BINARY_SUBSCR\n            202 LOAD_CONST              10 (False)\n            204 IS_OP                    0\n            206 POP_JUMP_IF_TRUE         2 (to 212)\n            208 LOAD_ASSERTION_ERROR\n            210 RAISE_VARARGS            1\n\n135     >>  212 LOAD_FAST                3 (manifest)\n            214 LOAD_CONST              15 ('candidate_build')\n            216 BINARY_SUBSCR\n            220 POP_JUMP_IF_NONE         2 (to 226)\n            222 LOAD_ASSERTION_ERROR\n            224 RAISE_VARARGS            1\n\n136     >>  226 LOAD_GLOBAL              9 (NULL + json)\n            236 LOAD_ATTR               10 (loads)\n            256 LOAD_FAST                0 (tmp_path)\n            258 LOAD_CONST               7 ('out')\n            260 BINARY_OP               11 (/)\n            264 LOAD_CONST              16 ('pr95_hnerv_pair_opportunity_ledger.json')\n            266 BINARY_OP               11 (/)\n            270 LOAD_ATTR               13 (NULL|self + read_text)\n            290 CALL                     0\n            298 CALL                     1\n            306 STORE_FAST               4 (ledger)\n\n137         308 LOAD_GLOBAL             15 (NULL + len)\n            318 LOAD_FAST                4 (ledger)\n            320 CALL                     1\n            328 LOAD_CONST              17 (3)\n            330 COMPARE_OP              40 (==)\n            334 POP_JUMP_IF_TRUE         2 (to 340)\n            336 LOAD_ASSERTION_ERROR\n            338 RAISE_VARARGS            1\n\n138     >>  340 LOAD_FAST                4 (ledger)\n            342 LOAD_CONST              18 (0)\n            344 BINARY_SUBSCR\n            348 LOAD_CONST              19 ('estimated_min_patch_bytes')\n            350 BINARY_SUBSCR\n            354 LOAD_CONST              18 (0)\n            356 COMPARE_OP              68 (>)\n            360 POP_JUMP_IF_TRUE         2 (to 366)\n            362 LOAD_ASSERTION_ERROR\n            364 RAISE_VARARGS            1\n\n139     >>  366 LOAD_FAST                4 (ledger)\n            368 LOAD_CONST              18 (0)\n            370 BINARY_SUBSCR\n            374 LOAD_CONST              20 ('break_even_seg_dist_reduction')\n            376 BINARY_SUBSCR\n            380 LOAD_CONST              18 (0)\n            382 COMPARE_OP              68 (>)\n            386 POP_JUMP_IF_TRUE         2 (to 392)\n            388 LOAD_ASSERTION_ERROR\n            390 RAISE_VARARGS            1\n        >>  392 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "test_component_trace_emits_deterministic_signed_policy_and_candidate",
+      "name": "test_component_trace_emits_deterministic_signed_policy_and_candidate",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "archive",
+        "exact",
+        "trace",
+        "manifest",
+        "signed",
+        "policy",
+        "atom",
+        "targets",
+        "build",
+        "manifest_2",
+        "policy_2"
+      ],
+      "names": [
+        "_stored_zip",
+        "_top_blob",
+        "_exact_json",
+        "_component_trace_json",
+        "emit_plan",
+        "sha256_file",
+        "json",
+        "loads",
+        "Path",
+        "read_text",
+        "len",
+        "exists"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "142           0 RESUME                   0\n\n143           2 LOAD_FAST                0 (tmp_path)\n              4 LOAD_CONST               1 ('archive.zip')\n              6 BINARY_OP               11 (/)\n             10 STORE_FAST               1 (archive)\n\n144          12 LOAD_GLOBAL              1 (NULL + _stored_zip)\n             22 LOAD_FAST                1 (archive)\n             24 LOAD_GLOBAL              3 (NULL + _top_blob)\n             34 LOAD_CONST               2 (1)\n             36 LOAD_CONST               3 (2)\n             38 BUILD_LIST               2\n             40 LOAD_CONST               4 (5)\n             42 LOAD_CONST               5 (4)\n             44 BUILD_LIST               2\n             46 LOAD_CONST               3 (2)\n             48 LOAD_CONST               6 (9)\n             50 BUILD_LIST               2\n             52 BUILD_LIST               3\n             54 CALL                     1\n             62 CALL                     2\n             70 POP_TOP\n\n145          72 LOAD_FAST                0 (tmp_path)\n             74 LOAD_CONST               7 ('exact.json')\n             76 BINARY_OP               11 (/)\n             80 STORE_FAST               2 (exact)\n\n146          82 LOAD_GLOBAL              5 (NULL + _exact_json)\n             92 LOAD_FAST                2 (exact)\n             94 LOAD_FAST                1 (archive)\n             96 CALL                     2\n            104 POP_TOP\n\n147         106 LOAD_FAST                0 (tmp_path)\n            108 LOAD_CONST               8 ('component_trace.json')\n            110 BINARY_OP               11 (/)\n            114 STORE_FAST               3 (trace)\n\n148         116 LOAD_GLOBAL              7 (NULL + _component_trace_json)\n\n149         126 LOAD_FAST                3 (trace)\n\n150         128 LOAD_FAST                1 (archive)\n\n153         130 LOAD_CONST               9 (0)\n\n154         132 LOAD_CONST              10 (0.00017185)\n\n155         134 LOAD_CONST              11 (0.00070728)\n\n156         136 LOAD_CONST              12 (0.9)\n\n152         138 LOAD_CONST              13 (('pair_index', 'posenet_dist', 'segnet_dist', 'score_combined_contribution_first_order'))\n            140 BUILD_CONST_KEY_MAP      4\n\n159         142 LOAD_CONST               2 (1)\n\n160         144 LOAD_CONST              14 (0.00025)\n\n161         146 LOAD_CONST              15 (0.0005)\n\n162         148 LOAD_CONST              16 (0.8)\n\n158         150 LOAD_CONST              13 (('pair_index', 'posenet_dist', 'segnet_dist', 'score_combined_contribution_first_order'))\n            152 BUILD_CONST_KEY_MAP      4\n\n165         154 LOAD_CONST               3 (2)\n\n166         156 LOAD_CONST              17 (9.37e-05)\n\n167         158 LOAD_CONST              18 (0.00091456)\n\n168         160 LOAD_CONST              19 (1.2)\n\n164         162 LOAD_CONST              13 (('pair_index', 'posenet_dist', 'segnet_dist', 'score_combined_contribution_first_order'))\n            164 BUILD_CONST_KEY_MAP      4\n\n151         166 BUILD_LIST               3\n\n148         168 KW_NAMES                20 (('samples',))\n            170 CALL                     3\n            178 POP_TOP\n\n173         180 LOAD_GLOBAL              9 (NULL + emit_plan)\n\n174         190 LOAD_FAST                1 (archive)\n\n175         192 LOAD_FAST                2 (exact)\n\n176         194 LOAD_FAST                0 (tmp_path)\n            196 LOAD_CONST              21 ('out')\n            198 BINARY_OP               11 (/)\n\n177         202 LOAD_FAST                3 (trace)\n\n178         204 LOAD_CONST              22 (3)\n\n179         206 LOAD_CONST               0 (None)\n\n180         208 LOAD_CONST               3 (2)\n\n181         210 LOAD_CONST               3 (2)\n\n182         212 LOAD_CONST              23 (True)\n\n173         214 KW_NAMES                24 (('source_archive', 'exact_json', 'output_dir', 'component_trace_json', 'top_k', 'build_plan_json', 'signed_policy_pairs', 'signed_policy_dims_per_pair', 'build_generated_signed_policy'))\n            216 CALL                     9\n            224 STORE_FAST               4 (manifest)\n\n185         226 LOAD_FAST                4 (manifest)\n            228 LOAD_CONST              25 ('component_trace')\n            230 BINARY_SUBSCR\n            234 LOAD_CONST              26 ('available')\n            236 BINARY_SUBSCR\n            240 LOAD_CONST              23 (True)\n            242 IS_OP                    0\n            244 POP_JUMP_IF_TRUE         2 (to 250)\n            246 LOAD_ASSERTION_ERROR\n            248 RAISE_VARARGS            1\n\n186     >>  250 LOAD_FAST                4 (manifest)\n            252 LOAD_CONST              25 ('component_trace')\n            254 BINARY_SUBSCR\n            258 LOAD_CONST              27 ('cross_check_all_match')\n            260 BINARY_SUBSCR\n            264 LOAD_CONST              23 (True)\n            266 IS_OP                    0\n            268 POP_JUMP_IF_TRUE         2 (to 274)\n            270 LOAD_ASSERTION_ERROR\n            272 RAISE_VARARGS            1\n\n187     >>  274 LOAD_FAST                4 (manifest)\n            276 LOAD_CONST              25 ('component_trace')\n            278 BINARY_SUBSCR\n            282 LOAD_CONST              28 ('archive_sha256')\n            284 BINARY_SUBSCR\n            288 LOAD_GLOBAL             11 (NULL + sha256_file)\n            298 LOAD_FAST                1 (archive)\n            300 CALL                     1\n            308 COMPARE_OP              40 (==)\n            312 POP_JUMP_IF_TRUE         2 (to 318)\n            314 LOAD_ASSERTION_ERROR\n            316 RAISE_VARARGS            1\n\n188     >>  318 LOAD_FAST                4 (manifest)\n            320 LOAD_CONST              29 ('signed_atom_policy')\n            322 BINARY_SUBSCR\n            326 STORE_FAST               5 (signed)\n\n189         328 LOAD_FAST                5 (signed)\n            330 LOAD_CONST              30 ('selected_pairs')\n            332 BINARY_SUBSCR\n            336 LOAD_CONST               3 (2)\n            338 LOAD_CONST               2 (1)\n            340 BUILD_LIST               2\n            342 COMPARE_OP              40 (==)\n            346 POP_JUMP_IF_TRUE         2 (to 352)\n            348 LOAD_ASSERTION_ERROR\n            350 RAISE_VARARGS            1\n\n190     >>  352 LOAD_GLOBAL             13 (NULL + json)\n            362 LOAD_ATTR               14 (loads)\n            382 LOAD_GLOBAL             17 (NULL + Path)\n            392 LOAD_FAST                5 (signed)\n            394 LOAD_CONST              31 ('path')\n            396 BINARY_SUBSCR\n            400 CALL                     1\n            408 LOAD_ATTR               19 (NULL|self + read_text)\n            428 CALL                     0\n            436 CALL                     1\n            444 STORE_FAST               6 (policy)\n\n191         446 LOAD_FAST                6 (policy)\n            448 LOAD_CONST              32 ('exact_eval_ready')\n            450 BINARY_SUBSCR\n            454 LOAD_CONST              23 (True)\n            456 IS_OP                    0\n            458 POP_JUMP_IF_TRUE         2 (to 464)\n            460 LOAD_ASSERTION_ERROR\n            462 RAISE_VARARGS            1\n\n192     >>  464 LOAD_FAST                6 (policy)\n            466 LOAD_CONST              33 ('selection')\n            468 BINARY_SUBSCR\n            472 LOAD_CONST              34 ('excluded_initial_anchor_pair')\n            474 BINARY_SUBSCR\n            478 LOAD_CONST              23 (True)\n            480 IS_OP                    0\n            482 POP_JUMP_IF_TRUE         2 (to 488)\n            484 LOAD_ASSERTION_ERROR\n            486 RAISE_VARARGS            1\n\n193     >>  488 LOAD_FAST                6 (policy)\n            490 LOAD_CONST              33 ('selection')\n            492 BINARY_SUBSCR\n            496 LOAD_CONST              30 ('selected_pairs')\n            498 BINARY_SUBSCR\n            502 LOAD_CONST               3 (2)\n            504 LOAD_CONST               2 (1)\n            506 BUILD_LIST               2\n            508 COMPARE_OP              40 (==)\n            512 POP_JUMP_IF_TRUE         2 (to 518)\n            514 LOAD_ASSERTION_ERROR\n            516 RAISE_VARARGS            1\n\n194     >>  518 LOAD_GLOBAL             21 (NULL + len)\n            528 LOAD_FAST                6 (policy)\n            530 LOAD_CONST              35 ('atoms')\n            532 BINARY_SUBSCR\n            536 CALL                     1\n            544 LOAD_CONST               5 (4)\n            546 COMPARE_OP              40 (==)\n            550 POP_JUMP_IF_TRUE         2 (to 556)\n            552 LOAD_ASSERTION_ERROR\n            554 RAISE_VARARGS            1\n\n195     >>  556 LOAD_FAST                6 (policy)\n            558 LOAD_CONST              35 ('atoms')\n            560 BINARY_SUBSCR\n            564 GET_ITER\n            566 LOAD_FAST_AND_CLEAR      7 (atom)\n            568 SWAP                     2\n            570 BUILD_SET                0\n            572 SWAP                     2\n        >>  574 FOR_ITER                12 (to 602)\n            578 STORE_FAST               7 (atom)\n            580 LOAD_FAST                7 (atom)\n            582 LOAD_CONST              36 ('pair_index')\n            584 BINARY_SUBSCR\n            588 LOAD_FAST                7 (atom)\n            590 LOAD_CONST              37 ('dim_index')\n            592 BINARY_SUBSCR\n            596 BUILD_TUPLE              2\n            598 SET_ADD                  2\n            600 JUMP_BACKWARD           14 (to 574)\n        >>  602 END_FOR\n            604 STORE_FAST               8 (targets)\n            606 STORE_FAST               7 (atom)\n\n196         608 LOAD_GLOBAL             21 (NULL + len)\n            618 LOAD_FAST                8 (targets)\n            620 CALL                     1\n            628 LOAD_GLOBAL             21 (NULL + len)\n            638 LOAD_FAST                6 (policy)\n            640 LOAD_CONST              35 ('atoms')\n            642 BINARY_SUBSCR\n            646 CALL                     1\n            654 COMPARE_OP              40 (==)\n            658 POP_JUMP_IF_TRUE         2 (to 664)\n            660 LOAD_ASSERTION_ERROR\n            662 RAISE_VARARGS            1\n\n197     >>  664 LOAD_FAST                6 (policy)\n            666 LOAD_CONST              35 ('atoms')\n            668 BINARY_SUBSCR\n            672 GET_ITER\n        >>  674 FOR_ITER                65 (to 808)\n            678 STORE_FAST               7 (atom)\n\n198         680 LOAD_FAST                7 (atom)\n            682 LOAD_CONST              36 ('pair_index')\n            684 BINARY_SUBSCR\n            688 LOAD_CONST               9 (0)\n            690 COMPARE_OP              55 (!=)\n            694 POP_JUMP_IF_TRUE         2 (to 700)\n            696 LOAD_ASSERTION_ERROR\n            698 RAISE_VARARGS            1\n\n199     >>  700 LOAD_FAST                7 (atom)\n            702 LOAD_CONST              38 ('delta')\n            704 BINARY_SUBSCR\n            708 LOAD_CONST              39 (frozenset({1, -1}))\n            710 CONTAINS_OP              0\n            712 POP_JUMP_IF_TRUE         2 (to 718)\n            714 LOAD_ASSERTION_ERROR\n            716 RAISE_VARARGS            1\n\n200     >>  718 LOAD_FAST                7 (atom)\n            720 LOAD_CONST              40 ('expected_old_value')\n            722 BINARY_SUBSCR\n            726 LOAD_FAST                7 (atom)\n            728 LOAD_CONST              38 ('delta')\n            730 BINARY_SUBSCR\n            734 BINARY_OP                0 (+)\n            738 LOAD_FAST                7 (atom)\n            740 LOAD_CONST              40 ('expected_old_value')\n            742 BINARY_SUBSCR\n            746 COMPARE_OP              55 (!=)\n            750 POP_JUMP_IF_TRUE         2 (to 756)\n            752 LOAD_ASSERTION_ERROR\n            754 RAISE_VARARGS            1\n\n201     >>  756 LOAD_FAST                7 (atom)\n            758 LOAD_CONST              41 ('source_delta_from_previous_pair')\n            760 BINARY_SUBSCR\n            764 LOAD_FAST                7 (atom)\n            766 LOAD_CONST              38 ('delta')\n            768 BINARY_SUBSCR\n            772 BINARY_OP                5 (*)\n            776 LOAD_CONST               9 (0)\n            778 COMPARE_OP               2 (<)\n            782 POP_JUMP_IF_TRUE         2 (to 788)\n            784 LOAD_ASSERTION_ERROR\n            786 RAISE_VARARGS            1\n\n202     >>  788 LOAD_FAST                7 (atom)\n            790 LOAD_CONST              42 ('dispatchable_after_lane_claim')\n            792 BINARY_SUBSCR\n            796 LOAD_CONST              23 (True)\n            798 IS_OP                    0\n            800 POP_JUMP_IF_FALSE        1 (to 804)\n            802 JUMP_BACKWARD           65 (to 674)\n        >>  804 LOAD_ASSERTION_ERROR\n            806 RAISE_VARARGS            1\n\n197     >>  808 END_FOR\n\n204         810 LOAD_FAST                4 (manifest)\n            812 LOAD_CONST              43 ('candidate_build')\n            814 BINARY_SUBSCR\n            818 STORE_FAST               9 (build)\n\n205         820 LOAD_FAST                9 (build)\n            822 LOAD_CONST              44 ('score_claim')\n            824 BINARY_SUBSCR\n            828 LOAD_CONST              45 (False)\n            830 IS_OP                    0\n            832 POP_JUMP_IF_TRUE         2 (to 838)\n            834 LOAD_ASSERTION_ERROR\n            836 RAISE_VARARGS            1\n\n206     >>  838 LOAD_GLOBAL             17 (NULL + Path)\n            848 LOAD_FAST                9 (build)\n            850 LOAD_CONST              46 ('candidate_archive')\n            852 BINARY_SUBSCR\n            856 CALL                     1\n            864 LOAD_ATTR               23 (NULL|self + exists)\n            884 CALL                     0\n            892 POP_JUMP_IF_TRUE         2 (to 898)\n            894 LOAD_ASSERTION_ERROR\n            896 RAISE_VARARGS            1\n\n207     >>  898 LOAD_GLOBAL             21 (NULL + len)\n            908 LOAD_FAST                9 (build)\n            910 LOAD_CONST              47 ('changed_atoms')\n            912 BINARY_SUBSCR\n            916 CALL                     1\n            924 LOAD_GLOBAL             21 (NULL + len)\n            934 LOAD_FAST                6 (policy)\n            936 LOAD_CONST              35 ('atoms')\n            938 BINARY_SUBSCR\n            942 CALL                     1\n            950 COMPARE_OP              40 (==)\n            954 POP_JUMP_IF_TRUE         2 (to 960)\n            956 LOAD_ASSERTION_ERROR\n            958 RAISE_VARARGS            1\n\n209     >>  960 LOAD_GLOBAL              9 (NULL + emit_plan)\n\n210         970 LOAD_FAST                1 (archive)\n\n211         972 LOAD_FAST                2 (exact)\n\n212         974 LOAD_FAST                0 (tmp_path)\n            976 LOAD_CONST              48 ('out2')\n            978 BINARY_OP               11 (/)\n\n213         982 LOAD_FAST                3 (trace)\n\n214         984 LOAD_CONST              22 (3)\n\n215         986 LOAD_CONST               0 (None)\n\n216         988 LOAD_CONST               3 (2)\n\n217         990 LOAD_CONST               3 (2)\n\n218         992 LOAD_CONST              45 (False)\n\n209         994 KW_NAMES                24 (('source_archive', 'exact_json', 'output_dir', 'component_trace_json', 'top_k', 'build_plan_json', 'signed_policy_pairs', 'signed_policy_dims_per_pair', 'build_generated_signed_policy'))\n            996 CALL                     9\n           1004 STORE_FAST              10 (manifest_2)\n\n220        1006 LOAD_GLOBAL             13 (NULL + json)\n           1016 LOAD_ATTR               14 (loads)\n           1036 LOAD_GLOBAL             17 (NULL + Path)\n           1046 LOAD_FAST               10 (manifest_2)\n           1048 LOAD_CONST              29 ('signed_atom_policy')\n           1050 BINARY_SUBSCR\n           1054 LOAD_CONST              31 ('path')\n           1056 BINARY_SUBSCR\n           1060 CALL                     1\n           1068 LOAD_ATTR               19 (NULL|self + read_text)\n           1088 CALL                     0\n           1096 CALL                     1\n           1104 STORE_FAST              11 (policy_2)\n\n221        1106 LOAD_FAST               11 (policy_2)\n           1108 LOAD_FAST                6 (policy)\n           1110 COMPARE_OP              40 (==)\n           1114 POP_JUMP_IF_TRUE         2 (to 1120)\n           1116 LOAD_ASSERTION_ERROR\n           1118 RAISE_VARARGS            1\n        >> 1120 RETURN_CONST             0 (None)\n        >> 1122 SWAP                     2\n           1124 POP_TOP\n\n195        1126 SWAP                     2\n           1128 STORE_FAST               7 (atom)\n           1130 RERAISE                  0\nExceptionTable:\n  570 to 602 -> 1122 [2]\n"
+    },
+    {
+      "qualname": "test_build_candidate_from_explicit_latent_atom_plan",
+      "name": "test_build_candidate_from_explicit_latent_atom_plan",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "archive",
+        "exact",
+        "member_blob",
+        "atom_plan",
+        "manifest",
+        "build",
+        "zf"
+      ],
+      "names": [
+        "_stored_zip",
+        "_top_blob",
+        "_exact_json",
+        "zipfile",
+        "ZipFile",
+        "read",
+        "write_text",
+        "json",
+        "dumps",
+        "sha256_file",
+        "__import__",
+        "sha256",
+        "hexdigest",
+        "emit_plan",
+        "namelist"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "224           0 RESUME                   0\n\n225           2 LOAD_FAST                0 (tmp_path)\n              4 LOAD_CONST               1 ('archive.zip')\n              6 BINARY_OP               11 (/)\n             10 STORE_FAST               1 (archive)\n\n226          12 LOAD_GLOBAL              1 (NULL + _stored_zip)\n             22 LOAD_FAST                1 (archive)\n             24 LOAD_GLOBAL              3 (NULL + _top_blob)\n             34 LOAD_CONST               2 (1)\n             36 LOAD_CONST               3 (2)\n             38 BUILD_LIST               2\n             40 LOAD_CONST               4 (5)\n             42 LOAD_CONST               3 (2)\n             44 BUILD_LIST               2\n             46 LOAD_CONST               4 (5)\n             48 LOAD_CONST               5 (9)\n             50 BUILD_LIST               2\n             52 BUILD_LIST               3\n             54 CALL                     1\n             62 CALL                     2\n             70 POP_TOP\n\n227          72 LOAD_FAST                0 (tmp_path)\n             74 LOAD_CONST               6 ('exact.json')\n             76 BINARY_OP               11 (/)\n             80 STORE_FAST               2 (exact)\n\n228          82 LOAD_GLOBAL              5 (NULL + _exact_json)\n             92 LOAD_FAST                2 (exact)\n             94 LOAD_FAST                1 (archive)\n             96 CALL                     2\n            104 POP_TOP\n\n229         106 LOAD_GLOBAL              7 (NULL + zipfile)\n            116 LOAD_ATTR                8 (ZipFile)\n            136 LOAD_FAST                1 (archive)\n            138 CALL                     1\n            146 LOAD_ATTR               11 (NULL|self + read)\n            166 LOAD_CONST               7 ('0.bin')\n            168 CALL                     1\n            176 STORE_FAST               3 (member_blob)\n\n230         178 LOAD_FAST                0 (tmp_path)\n            180 LOAD_CONST               8 ('atom_plan.json')\n            182 BINARY_OP               11 (/)\n            186 STORE_FAST               4 (atom_plan)\n\n231         188 LOAD_FAST                4 (atom_plan)\n            190 LOAD_ATTR               13 (NULL|self + write_text)\n\n232         210 LOAD_GLOBAL             15 (NULL + json)\n            220 LOAD_ATTR               16 (dumps)\n\n234         240 LOAD_GLOBAL             19 (NULL + sha256_file)\n            250 LOAD_FAST                1 (archive)\n            252 CALL                     1\n\n235         260 LOAD_GLOBAL             21 (NULL + __import__)\n            270 LOAD_CONST               9 ('hashlib')\n            272 CALL                     1\n            280 LOAD_ATTR               23 (NULL|self + sha256)\n            300 LOAD_FAST                3 (member_blob)\n            302 CALL                     1\n            310 LOAD_ATTR               25 (NULL|self + hexdigest)\n            330 CALL                     0\n\n236         338 LOAD_CONST              10 (True)\n\n239         340 LOAD_CONST              11 ('latent_uint8_delta')\n\n240         342 LOAD_CONST               2 (1)\n\n241         344 LOAD_CONST              12 (0)\n\n242         346 LOAD_CONST               4 (5)\n\n243         348 LOAD_CONST              13 (-1)\n\n238         350 LOAD_CONST              14 (('kind', 'pair_index', 'dim_index', 'expected_old_value', 'delta'))\n            352 BUILD_CONST_KEY_MAP      5\n\n237         354 BUILD_LIST               1\n\n233         356 LOAD_CONST              15 (('source_archive_sha256', 'source_member_sha256', 'forbid_sidecars', 'atoms'))\n            358 BUILD_CONST_KEY_MAP      4\n\n232         360 CALL                     1\n\n248         368 LOAD_CONST              16 ('\\n')\n\n232         370 BINARY_OP                0 (+)\n\n249         374 LOAD_CONST              17 ('utf-8')\n\n231         376 KW_NAMES                18 (('encoding',))\n            378 CALL                     2\n            386 POP_TOP\n\n252         388 LOAD_GLOBAL             27 (NULL + emit_plan)\n\n253         398 LOAD_FAST                1 (archive)\n\n254         400 LOAD_FAST                2 (exact)\n\n255         402 LOAD_FAST                0 (tmp_path)\n            404 LOAD_CONST              19 ('out')\n            406 BINARY_OP               11 (/)\n\n256         410 LOAD_CONST               0 (None)\n\n257         412 LOAD_CONST               3 (2)\n\n258         414 LOAD_FAST                4 (atom_plan)\n\n252         416 KW_NAMES                20 (('source_archive', 'exact_json', 'output_dir', 'component_trace_json', 'top_k', 'build_plan_json'))\n            418 CALL                     6\n            426 STORE_FAST               5 (manifest)\n\n261         428 LOAD_FAST                5 (manifest)\n            430 LOAD_CONST              21 ('candidate_build')\n            432 BINARY_SUBSCR\n            436 STORE_FAST               6 (build)\n\n262         438 LOAD_FAST                6 (build)\n            440 LOAD_CONST              22 ('score_claim')\n            442 BINARY_SUBSCR\n            446 LOAD_CONST              23 (False)\n            448 IS_OP                    0\n            450 POP_JUMP_IF_TRUE         2 (to 456)\n            452 LOAD_ASSERTION_ERROR\n            454 RAISE_VARARGS            1\n\n263     >>  456 LOAD_FAST                6 (build)\n            458 LOAD_CONST              24 ('archive_byte_delta')\n            460 BINARY_SUBSCR\n            464 LOAD_CONST              12 (0)\n            466 COMPARE_OP              55 (!=)\n            470 POP_JUMP_IF_TRUE        13 (to 498)\n            472 LOAD_FAST                6 (build)\n            474 LOAD_CONST              25 ('candidate_archive_sha256')\n            476 BINARY_SUBSCR\n            480 LOAD_FAST                6 (build)\n            482 LOAD_CONST              26 ('source_archive_sha256')\n            484 BINARY_SUBSCR\n            488 COMPARE_OP              55 (!=)\n            492 POP_JUMP_IF_TRUE         2 (to 498)\n            494 LOAD_ASSERTION_ERROR\n            496 RAISE_VARARGS            1\n\n264     >>  498 LOAD_GLOBAL              7 (NULL + zipfile)\n            508 LOAD_ATTR                8 (ZipFile)\n            528 LOAD_FAST                6 (build)\n            530 LOAD_CONST              27 ('candidate_archive')\n            532 BINARY_SUBSCR\n            536 CALL                     1\n            544 BEFORE_WITH\n            546 STORE_FAST               7 (zf)\n\n265         548 LOAD_FAST                7 (zf)\n            550 LOAD_ATTR               29 (NULL|self + namelist)\n            570 CALL                     0\n            578 LOAD_CONST               7 ('0.bin')\n            580 BUILD_LIST               1\n            582 COMPARE_OP              40 (==)\n            586 POP_JUMP_IF_TRUE         2 (to 592)\n            588 LOAD_ASSERTION_ERROR\n            590 RAISE_VARARGS            1\n        >>  592 NOP\n\n264         594 LOAD_CONST               0 (None)\n            596 LOAD_CONST               0 (None)\n            598 LOAD_CONST               0 (None)\n            600 CALL                     2\n            608 POP_TOP\n\n266     >>  610 LOAD_FAST                5 (manifest)\n            612 LOAD_CONST              28 ('dispatch_readiness')\n            614 BINARY_SUBSCR\n            618 LOAD_CONST              29 ('ready_for_exact_eval')\n            620 BINARY_SUBSCR\n            624 LOAD_CONST              10 (True)\n            626 IS_OP                    0\n            628 POP_JUMP_IF_TRUE         2 (to 634)\n            630 LOAD_ASSERTION_ERROR\n            632 RAISE_VARARGS            1\n\n267     >>  634 LOAD_CONST              30 ('--archive')\n            636 LOAD_FAST                5 (manifest)\n            638 LOAD_CONST              28 ('dispatch_readiness')\n            640 BINARY_SUBSCR\n            644 LOAD_CONST              31 ('example_exact_eval_command')\n            646 BINARY_SUBSCR\n            650 CONTAINS_OP              0\n            652 POP_JUMP_IF_TRUE         2 (to 658)\n            654 LOAD_ASSERTION_ERROR\n            656 RAISE_VARARGS            1\n        >>  658 RETURN_CONST             0 (None)\n\n264     >>  660 PUSH_EXC_INFO\n            662 WITH_EXCEPT_START\n            664 POP_JUMP_IF_TRUE         1 (to 668)\n            666 RERAISE                  2\n        >>  668 POP_TOP\n            670 POP_EXCEPT\n            672 POP_TOP\n            674 POP_TOP\n            676 JUMP_BACKWARD           34 (to 610)\n        >>  678 COPY                     3\n            680 POP_EXCEPT\n            682 RERAISE                  1\nExceptionTable:\n  546 to 590 -> 660 [1] lasti\n  660 to 668 -> 678 [3] lasti\n"
+    },
+    {
+      "qualname": "test_rejects_noop_and_sidecar_atom_plans",
+      "name": "test_rejects_noop_and_sidecar_atom_plans",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "archive",
+        "exact",
+        "member_blob",
+        "atom_plan"
+      ],
+      "names": [
+        "_stored_zip",
+        "_top_blob",
+        "_exact_json",
+        "zipfile",
+        "ZipFile",
+        "read",
+        "write_text",
+        "json",
+        "dumps",
+        "sha256_file",
+        "__import__",
+        "sha256",
+        "hexdigest",
+        "pytest",
+        "raises",
+        "PR95AtomPlanError",
+        "emit_plan"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "270           0 RESUME                   0\n\n271           2 LOAD_FAST                0 (tmp_path)\n              4 LOAD_CONST               1 ('archive.zip')\n              6 BINARY_OP               11 (/)\n             10 STORE_FAST               1 (archive)\n\n272          12 LOAD_GLOBAL              1 (NULL + _stored_zip)\n             22 LOAD_FAST                1 (archive)\n             24 LOAD_GLOBAL              3 (NULL + _top_blob)\n             34 LOAD_CONST               2 (1)\n             36 LOAD_CONST               3 (2)\n             38 BUILD_LIST               2\n             40 LOAD_CONST               4 (5)\n             42 LOAD_CONST               3 (2)\n             44 BUILD_LIST               2\n             46 LOAD_CONST               4 (5)\n             48 LOAD_CONST               5 (9)\n             50 BUILD_LIST               2\n             52 BUILD_LIST               3\n             54 CALL                     1\n             62 CALL                     2\n             70 POP_TOP\n\n273          72 LOAD_FAST                0 (tmp_path)\n             74 LOAD_CONST               6 ('exact.json')\n             76 BINARY_OP               11 (/)\n             80 STORE_FAST               2 (exact)\n\n274          82 LOAD_GLOBAL              5 (NULL + _exact_json)\n             92 LOAD_FAST                2 (exact)\n             94 LOAD_FAST                1 (archive)\n             96 CALL                     2\n            104 POP_TOP\n\n275         106 LOAD_GLOBAL              7 (NULL + zipfile)\n            116 LOAD_ATTR                8 (ZipFile)\n            136 LOAD_FAST                1 (archive)\n            138 CALL                     1\n            146 LOAD_ATTR               11 (NULL|self + read)\n            166 LOAD_CONST               7 ('0.bin')\n            168 CALL                     1\n            176 STORE_FAST               3 (member_blob)\n\n276         178 LOAD_FAST                0 (tmp_path)\n            180 LOAD_CONST               8 ('noop_plan.json')\n            182 BINARY_OP               11 (/)\n            186 STORE_FAST               4 (atom_plan)\n\n277         188 LOAD_FAST                4 (atom_plan)\n            190 LOAD_ATTR               13 (NULL|self + write_text)\n\n278         210 LOAD_GLOBAL             15 (NULL + json)\n            220 LOAD_ATTR               16 (dumps)\n\n280         240 LOAD_GLOBAL             19 (NULL + sha256_file)\n            250 LOAD_FAST                1 (archive)\n            252 CALL                     1\n\n281         260 LOAD_GLOBAL             21 (NULL + __import__)\n            270 LOAD_CONST               9 ('hashlib')\n            272 CALL                     1\n            280 LOAD_ATTR               23 (NULL|self + sha256)\n            300 LOAD_FAST                3 (member_blob)\n            302 CALL                     1\n            310 LOAD_ATTR               25 (NULL|self + hexdigest)\n            330 CALL                     0\n\n282         338 LOAD_CONST              10 (False)\n\n285         340 LOAD_CONST              11 ('latent_uint8_set')\n\n286         342 LOAD_CONST               2 (1)\n\n287         344 LOAD_CONST              12 (0)\n\n288         346 LOAD_CONST               4 (5)\n\n289         348 LOAD_CONST               4 (5)\n\n284         350 LOAD_CONST              13 (('kind', 'pair_index', 'dim_index', 'expected_old_value', 'value'))\n            352 BUILD_CONST_KEY_MAP      5\n\n283         354 BUILD_LIST               1\n\n279         356 LOAD_CONST              14 (('source_archive_sha256', 'source_member_sha256', 'forbid_sidecars', 'atoms'))\n            358 BUILD_CONST_KEY_MAP      4\n\n278         360 CALL                     1\n\n294         368 LOAD_CONST              15 ('\\n')\n\n278         370 BINARY_OP                0 (+)\n\n295         374 LOAD_CONST              16 ('utf-8')\n\n277         376 KW_NAMES                17 (('encoding',))\n            378 CALL                     2\n            386 POP_TOP\n\n298         388 LOAD_GLOBAL             27 (NULL + pytest)\n            398 LOAD_ATTR               28 (raises)\n            418 LOAD_GLOBAL             30 (PR95AtomPlanError)\n            428 LOAD_CONST              18 ('forbid sidecars')\n            430 KW_NAMES                19 (('match',))\n            432 CALL                     2\n            440 BEFORE_WITH\n            442 POP_TOP\n\n299         444 LOAD_GLOBAL             33 (NULL + emit_plan)\n\n300         454 LOAD_FAST                1 (archive)\n\n301         456 LOAD_FAST                2 (exact)\n\n302         458 LOAD_FAST                0 (tmp_path)\n            460 LOAD_CONST              20 ('out')\n            462 BINARY_OP               11 (/)\n\n303         466 LOAD_CONST               0 (None)\n\n304         468 LOAD_CONST               3 (2)\n\n305         470 LOAD_FAST                4 (atom_plan)\n\n299         472 KW_NAMES                21 (('source_archive', 'exact_json', 'output_dir', 'component_trace_json', 'top_k', 'build_plan_json'))\n            474 CALL                     6\n            482 POP_TOP\n\n298         484 LOAD_CONST               0 (None)\n            486 LOAD_CONST               0 (None)\n            488 LOAD_CONST               0 (None)\n            490 CALL                     2\n            498 POP_TOP\n\n308     >>  500 LOAD_FAST                4 (atom_plan)\n            502 LOAD_ATTR               13 (NULL|self + write_text)\n\n309         522 LOAD_GLOBAL             15 (NULL + json)\n            532 LOAD_ATTR               16 (dumps)\n\n311         552 LOAD_GLOBAL             19 (NULL + sha256_file)\n            562 LOAD_FAST                1 (archive)\n            564 CALL                     1\n\n312         572 LOAD_GLOBAL             21 (NULL + __import__)\n            582 LOAD_CONST               9 ('hashlib')\n            584 CALL                     1\n            592 LOAD_ATTR               23 (NULL|self + sha256)\n            612 LOAD_FAST                3 (member_blob)\n            614 CALL                     1\n            622 LOAD_ATTR               25 (NULL|self + hexdigest)\n            642 CALL                     0\n\n313         650 LOAD_CONST              22 (True)\n\n316         652 LOAD_CONST              11 ('latent_uint8_set')\n\n317         654 LOAD_CONST               2 (1)\n\n318         656 LOAD_CONST              12 (0)\n\n319         658 LOAD_CONST               4 (5)\n\n320         660 LOAD_CONST               4 (5)\n\n315         662 LOAD_CONST              13 (('kind', 'pair_index', 'dim_index', 'expected_old_value', 'value'))\n            664 BUILD_CONST_KEY_MAP      5\n\n314         666 BUILD_LIST               1\n\n310         668 LOAD_CONST              14 (('source_archive_sha256', 'source_member_sha256', 'forbid_sidecars', 'atoms'))\n            670 BUILD_CONST_KEY_MAP      4\n\n309         672 CALL                     1\n\n325         680 LOAD_CONST              15 ('\\n')\n\n309         682 BINARY_OP                0 (+)\n\n326         686 LOAD_CONST              16 ('utf-8')\n\n308         688 KW_NAMES                17 (('encoding',))\n            690 CALL                     2\n            698 POP_TOP\n\n328         700 LOAD_GLOBAL             27 (NULL + pytest)\n            710 LOAD_ATTR               28 (raises)\n            730 LOAD_GLOBAL             30 (PR95AtomPlanError)\n            740 LOAD_CONST              23 ('no-op')\n            742 KW_NAMES                19 (('match',))\n            744 CALL                     2\n            752 BEFORE_WITH\n            754 POP_TOP\n\n329         756 LOAD_GLOBAL             33 (NULL + emit_plan)\n\n330         766 LOAD_FAST                1 (archive)\n\n331         768 LOAD_FAST                2 (exact)\n\n332         770 LOAD_FAST                0 (tmp_path)\n            772 LOAD_CONST              24 ('out_noop')\n            774 BINARY_OP               11 (/)\n\n333         778 LOAD_CONST               0 (None)\n\n334         780 LOAD_CONST               3 (2)\n\n335         782 LOAD_FAST                4 (atom_plan)\n\n329         784 KW_NAMES                21 (('source_archive', 'exact_json', 'output_dir', 'component_trace_json', 'top_k', 'build_plan_json'))\n            786 CALL                     6\n            794 POP_TOP\n\n328         796 LOAD_CONST               0 (None)\n            798 LOAD_CONST               0 (None)\n            800 LOAD_CONST               0 (None)\n            802 CALL                     2\n            810 POP_TOP\n\n338     >>  812 LOAD_FAST                4 (atom_plan)\n            814 LOAD_ATTR               13 (NULL|self + write_text)\n\n339         834 LOAD_GLOBAL             15 (NULL + json)\n            844 LOAD_ATTR               16 (dumps)\n\n341         864 LOAD_GLOBAL             19 (NULL + sha256_file)\n            874 LOAD_FAST                1 (archive)\n            876 CALL                     1\n\n342         884 LOAD_GLOBAL             21 (NULL + __import__)\n            894 LOAD_CONST               9 ('hashlib')\n            896 CALL                     1\n            904 LOAD_ATTR               23 (NULL|self + sha256)\n            924 LOAD_FAST                3 (member_blob)\n            926 CALL                     1\n            934 LOAD_ATTR               25 (NULL|self + hexdigest)\n            954 CALL                     0\n\n343         962 LOAD_CONST              22 (True)\n\n346         964 LOAD_CONST              25 ('latent_uint8_delta')\n\n347         966 LOAD_CONST               2 (1)\n\n348         968 LOAD_CONST              12 (0)\n\n349         970 LOAD_CONST               4 (5)\n\n350         972 LOAD_CONST               2 (1)\n\n345         974 LOAD_CONST              26 (('kind', 'pair_index', 'dim_index', 'expected_old_value', 'delta'))\n            976 BUILD_CONST_KEY_MAP      5\n\n353         978 LOAD_CONST              25 ('latent_uint8_delta')\n\n354         980 LOAD_CONST               2 (1)\n\n355         982 LOAD_CONST              12 (0)\n\n356         984 LOAD_CONST              27 (6)\n\n357         986 LOAD_CONST              28 (-1)\n\n352         988 LOAD_CONST              26 (('kind', 'pair_index', 'dim_index', 'expected_old_value', 'delta'))\n            990 BUILD_CONST_KEY_MAP      5\n\n344         992 BUILD_LIST               2\n\n340         994 LOAD_CONST              14 (('source_archive_sha256', 'source_member_sha256', 'forbid_sidecars', 'atoms'))\n            996 BUILD_CONST_KEY_MAP      4\n\n339         998 CALL                     1\n\n362        1006 LOAD_CONST              15 ('\\n')\n\n339        1008 BINARY_OP                0 (+)\n\n363        1012 LOAD_CONST              16 ('utf-8')\n\n338        1014 KW_NAMES                17 (('encoding',))\n           1016 CALL                     2\n           1024 POP_TOP\n\n365        1026 LOAD_GLOBAL             27 (NULL + pytest)\n           1036 LOAD_ATTR               28 (raises)\n           1056 LOAD_GLOBAL             30 (PR95AtomPlanError)\n           1066 LOAD_CONST              29 ('duplicate target')\n           1068 KW_NAMES                19 (('match',))\n           1070 CALL                     2\n           1078 BEFORE_WITH\n           1080 POP_TOP\n\n366        1082 LOAD_GLOBAL             33 (NULL + emit_plan)\n\n367        1092 LOAD_FAST                1 (archive)\n\n368        1094 LOAD_FAST                2 (exact)\n\n369        1096 LOAD_FAST                0 (tmp_path)\n           1098 LOAD_CONST              30 ('out_duplicate')\n           1100 BINARY_OP               11 (/)\n\n370        1104 LOAD_CONST               0 (None)\n\n371        1106 LOAD_CONST               3 (2)\n\n372        1108 LOAD_FAST                4 (atom_plan)\n\n366        1110 KW_NAMES                21 (('source_archive', 'exact_json', 'output_dir', 'component_trace_json', 'top_k', 'build_plan_json'))\n           1112 CALL                     6\n           1120 POP_TOP\n\n365        1122 LOAD_CONST               0 (None)\n           1124 LOAD_CONST               0 (None)\n           1126 LOAD_CONST               0 (None)\n           1128 CALL                     2\n           1136 POP_TOP\n           1138 RETURN_CONST             0 (None)\n\n298     >> 1140 PUSH_EXC_INFO\n           1142 WITH_EXCEPT_START\n           1144 POP_JUMP_IF_TRUE         1 (to 1148)\n           1146 RERAISE                  2\n        >> 1148 POP_TOP\n           1150 POP_EXCEPT\n           1152 POP_TOP\n           1154 POP_TOP\n           1156 EXTENDED_ARG             1\n           1158 JUMP_BACKWARD          330 (to 500)\n        >> 1160 COPY                     3\n           1162 POP_EXCEPT\n           1164 RERAISE                  1\n\n328     >> 1166 PUSH_EXC_INFO\n           1168 WITH_EXCEPT_START\n           1170 POP_JUMP_IF_TRUE         1 (to 1174)\n           1172 RERAISE                  2\n        >> 1174 POP_TOP\n           1176 POP_EXCEPT\n           1178 POP_TOP\n           1180 POP_TOP\n           1182 JUMP_BACKWARD          186 (to 812)\n        >> 1184 COPY                     3\n           1186 POP_EXCEPT\n           1188 RERAISE                  1\n\n365     >> 1190 PUSH_EXC_INFO\n           1192 WITH_EXCEPT_START\n           1194 POP_JUMP_IF_TRUE         1 (to 1198)\n           1196 RERAISE                  2\n        >> 1198 POP_TOP\n           1200 POP_EXCEPT\n           1202 POP_TOP\n           1204 POP_TOP\n           1206 RETURN_CONST             0 (None)\n        >> 1208 COPY                     3\n           1210 POP_EXCEPT\n           1212 RERAISE                  1\nExceptionTable:\n  442 to 482 -> 1140 [1] lasti\n  754 to 794 -> 1166 [1] lasti\n  1080 to 1120 -> 1190 [1] lasti\n  1140 to 1148 -> 1160 [3] lasti\n  1166 to 1174 -> 1184 [3] lasti\n  1190 to 1198 -> 1208 [3] lasti\n"
+    },
+    {
+      "qualname": "test_rejects_component_trace_schema_mismatches",
+      "name": "test_rejects_component_trace_schema_mismatches",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "archive",
+        "exact",
+        "trace",
+        "samples"
+      ],
+      "names": [
+        "_stored_zip",
+        "_top_blob",
+        "_exact_json",
+        "_component_trace_json",
+        "pytest",
+        "raises",
+        "PR95AtomPlanError",
+        "emit_plan"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "376           0 RESUME                   0\n\n377           2 LOAD_FAST                0 (tmp_path)\n              4 LOAD_CONST               1 ('archive.zip')\n              6 BINARY_OP               11 (/)\n             10 STORE_FAST               1 (archive)\n\n378          12 LOAD_GLOBAL              1 (NULL + _stored_zip)\n             22 LOAD_FAST                1 (archive)\n             24 LOAD_GLOBAL              3 (NULL + _top_blob)\n             34 LOAD_CONST               2 (1)\n             36 LOAD_CONST               3 (2)\n             38 BUILD_LIST               2\n             40 LOAD_CONST               4 (5)\n             42 LOAD_CONST               5 (4)\n             44 BUILD_LIST               2\n             46 LOAD_CONST               3 (2)\n             48 LOAD_CONST               6 (9)\n             50 BUILD_LIST               2\n             52 BUILD_LIST               3\n             54 CALL                     1\n             62 CALL                     2\n             70 POP_TOP\n\n379          72 LOAD_FAST                0 (tmp_path)\n             74 LOAD_CONST               7 ('exact.json')\n             76 BINARY_OP               11 (/)\n             80 STORE_FAST               2 (exact)\n\n380          82 LOAD_GLOBAL              5 (NULL + _exact_json)\n             92 LOAD_FAST                2 (exact)\n             94 LOAD_FAST                1 (archive)\n             96 CALL                     2\n            104 POP_TOP\n\n381         106 LOAD_FAST                0 (tmp_path)\n            108 LOAD_CONST               8 ('component_trace.json')\n            110 BINARY_OP               11 (/)\n            114 STORE_FAST               3 (trace)\n\n384         116 LOAD_CONST               9 (0)\n\n385         118 LOAD_CONST              10 (0.00017185)\n\n386         120 LOAD_CONST              11 (0.00070728)\n\n387         122 LOAD_CONST              12 (0.9)\n\n383         124 LOAD_CONST              13 (('pair_index', 'posenet_dist', 'segnet_dist', 'score_combined_contribution_first_order'))\n            126 BUILD_CONST_KEY_MAP      4\n\n390         128 LOAD_CONST               2 (1)\n\n391         130 LOAD_CONST              14 (0.00025)\n\n392         132 LOAD_CONST              15 (0.0005)\n\n393         134 LOAD_CONST              16 (0.8)\n\n389         136 LOAD_CONST              13 (('pair_index', 'posenet_dist', 'segnet_dist', 'score_combined_contribution_first_order'))\n            138 BUILD_CONST_KEY_MAP      4\n\n396         140 LOAD_CONST               3 (2)\n\n397         142 LOAD_CONST              17 (9.37e-05)\n\n398         144 LOAD_CONST              18 (0.00091456)\n\n399         146 LOAD_CONST              19 (1.2)\n\n395         148 LOAD_CONST              13 (('pair_index', 'posenet_dist', 'segnet_dist', 'score_combined_contribution_first_order'))\n            150 BUILD_CONST_KEY_MAP      4\n\n382         152 BUILD_LIST               3\n            154 STORE_FAST               4 (samples)\n\n402         156 LOAD_GLOBAL              7 (NULL + _component_trace_json)\n            166 LOAD_FAST                3 (trace)\n            168 LOAD_FAST                1 (archive)\n            170 LOAD_FAST                4 (samples)\n            172 LOAD_CONST              20 ('bad-sha')\n            174 KW_NAMES                21 (('samples', 'archive_sha256'))\n            176 CALL                     4\n            184 POP_TOP\n\n404         186 LOAD_GLOBAL              9 (NULL + pytest)\n            196 LOAD_ATTR               10 (raises)\n            216 LOAD_GLOBAL             12 (PR95AtomPlanError)\n            226 LOAD_CONST              22 ('archive SHA mismatch')\n            228 KW_NAMES                23 (('match',))\n            230 CALL                     2\n            238 BEFORE_WITH\n            240 POP_TOP\n\n405         242 LOAD_GLOBAL             15 (NULL + emit_plan)\n\n406         252 LOAD_FAST                1 (archive)\n\n407         254 LOAD_FAST                2 (exact)\n\n408         256 LOAD_FAST                0 (tmp_path)\n            258 LOAD_CONST              24 ('out_bad_sha')\n            260 BINARY_OP               11 (/)\n\n409         264 LOAD_FAST                3 (trace)\n\n410         266 LOAD_CONST              25 (3)\n\n411         268 LOAD_CONST               0 (None)\n\n405         270 KW_NAMES                26 (('source_archive', 'exact_json', 'output_dir', 'component_trace_json', 'top_k', 'build_plan_json'))\n            272 CALL                     6\n            280 POP_TOP\n\n404         282 LOAD_CONST               0 (None)\n            284 LOAD_CONST               0 (None)\n            286 LOAD_CONST               0 (None)\n            288 CALL                     2\n            296 POP_TOP\n\n414     >>  298 LOAD_GLOBAL              7 (NULL + _component_trace_json)\n            308 LOAD_FAST                3 (trace)\n            310 LOAD_FAST                1 (archive)\n            312 LOAD_FAST                4 (samples)\n            314 LOAD_CONST              27 (False)\n            316 KW_NAMES                28 (('samples', 'cross_check_all_match'))\n            318 CALL                     4\n            326 POP_TOP\n\n415         328 LOAD_GLOBAL              9 (NULL + pytest)\n            338 LOAD_ATTR               10 (raises)\n            358 LOAD_GLOBAL             12 (PR95AtomPlanError)\n            368 LOAD_CONST              29 ('all_match must be true')\n            370 KW_NAMES                23 (('match',))\n            372 CALL                     2\n            380 BEFORE_WITH\n            382 POP_TOP\n\n416         384 LOAD_GLOBAL             15 (NULL + emit_plan)\n\n417         394 LOAD_FAST                1 (archive)\n\n418         396 LOAD_FAST                2 (exact)\n\n419         398 LOAD_FAST                0 (tmp_path)\n            400 LOAD_CONST              30 ('out_bad_crosscheck')\n            402 BINARY_OP               11 (/)\n\n420         406 LOAD_FAST                3 (trace)\n\n421         408 LOAD_CONST              25 (3)\n\n422         410 LOAD_CONST               0 (None)\n\n416         412 KW_NAMES                26 (('source_archive', 'exact_json', 'output_dir', 'component_trace_json', 'top_k', 'build_plan_json'))\n            414 CALL                     6\n            422 POP_TOP\n\n415         424 LOAD_CONST               0 (None)\n            426 LOAD_CONST               0 (None)\n            428 LOAD_CONST               0 (None)\n            430 CALL                     2\n            438 POP_TOP\n            440 RETURN_CONST             0 (None)\n\n404     >>  442 PUSH_EXC_INFO\n            444 WITH_EXCEPT_START\n            446 POP_JUMP_IF_TRUE         1 (to 450)\n            448 RERAISE                  2\n        >>  450 POP_TOP\n            452 POP_EXCEPT\n            454 POP_TOP\n            456 POP_TOP\n            458 JUMP_BACKWARD           81 (to 298)\n        >>  460 COPY                     3\n            462 POP_EXCEPT\n            464 RERAISE                  1\n\n415     >>  466 PUSH_EXC_INFO\n            468 WITH_EXCEPT_START\n            470 POP_JUMP_IF_TRUE         1 (to 474)\n            472 RERAISE                  2\n        >>  474 POP_TOP\n            476 POP_EXCEPT\n            478 POP_TOP\n            480 POP_TOP\n            482 RETURN_CONST             0 (None)\n        >>  484 COPY                     3\n            486 POP_EXCEPT\n            488 RERAISE                  1\nExceptionTable:\n  240 to 280 -> 442 [1] lasti\n  382 to 422 -> 466 [1] lasti\n  442 to 450 -> 460 [3] lasti\n  466 to 474 -> 484 [3] lasti\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  1           2 LOAD_CONST               0 (0)\n              4 LOAD_CONST               1 (('annotations',))\n              6 IMPORT_NAME              0 (__future__)\n              8 IMPORT_FROM              1 (annotations)\n             10 STORE_NAME               1 (annotations)\n             12 POP_TOP\n\n  3          14 LOAD_CONST               0 (0)\n             16 LOAD_CONST               2 (None)\n             18 IMPORT_NAME              2 (io)\n             20 STORE_NAME               2 (io)\n\n  4          22 LOAD_CONST               0 (0)\n             24 LOAD_CONST               2 (None)\n             26 IMPORT_NAME              3 (json)\n             28 STORE_NAME               3 (json)\n\n  5          30 LOAD_CONST               0 (0)\n             32 LOAD_CONST               2 (None)\n             34 IMPORT_NAME              4 (struct)\n             36 STORE_NAME               4 (struct)\n\n  6          38 LOAD_CONST               0 (0)\n             40 LOAD_CONST               2 (None)\n             42 IMPORT_NAME              5 (zipfile)\n             44 STORE_NAME               5 (zipfile)\n\n  7          46 LOAD_CONST               0 (0)\n             48 LOAD_CONST               3 (('Path',))\n             50 IMPORT_NAME              6 (pathlib)\n             52 IMPORT_FROM              7 (Path)\n             54 STORE_NAME               7 (Path)\n             56 POP_TOP\n\n  9          58 LOAD_CONST               0 (0)\n             60 LOAD_CONST               2 (None)\n             62 IMPORT_NAME              8 (brotli)\n             64 STORE_NAME               8 (brotli)\n\n 10          66 LOAD_CONST               0 (0)\n             68 LOAD_CONST               2 (None)\n             70 IMPORT_NAME              9 (pytest)\n             72 STORE_NAME               9 (pytest)\n\n 12          74 LOAD_CONST               0 (0)\n             76 LOAD_CONST               4 (('PR95AtomPlanError', 'emit_plan', 'sha256_file'))\n             78 IMPORT_NAME             10 (experiments.build_pr95_hnerv_residual_atom_plan)\n             80 IMPORT_FROM             11 (PR95AtomPlanError)\n             82 STORE_NAME              11 (PR95AtomPlanError)\n             84 IMPORT_FROM             12 (emit_plan)\n             86 STORE_NAME              12 (emit_plan)\n             88 IMPORT_FROM             13 (sha256_file)\n             90 STORE_NAME              13 (sha256_file)\n             92 POP_TOP\n\n 15          94 LOAD_CONST              17 (('path', 'Path', 'payload', 'bytes', 'return', 'None'))\n             96 LOAD_CONST               5 (<code object _stored_zip at 0x100676d80, file \"src/tac/tests/test_build_pr95_hnerv_residual_atom_plan.py\", line 15>)\n             98 MAKE_FUNCTION            4 (annotations)\n            100 STORE_NAME              14 (_stored_zip)\n\n 23         102 LOAD_CONST              18 (('rows', 'list[list[int]]', 'return', 'bytes'))\n            104 LOAD_CONST               6 (<code object _latent_raw at 0x8a5083b80, file \"src/tac/tests/test_build_pr95_hnerv_residual_atom_plan.py\", line 23>)\n            106 MAKE_FUNCTION            4 (annotations)\n            108 STORE_NAME              15 (_latent_raw)\n\n 47         110 LOAD_CONST              18 (('rows', 'list[list[int]]', 'return', 'bytes'))\n            112 LOAD_CONST               7 (<code object _top_blob at 0x8a5127980, file \"src/tac/tests/test_build_pr95_hnerv_residual_atom_plan.py\", line 47>)\n            114 MAKE_FUNCTION            4 (annotations)\n            116 STORE_NAME              16 (_top_blob)\n\n 58         118 LOAD_CONST              19 (('path', 'Path', 'archive', 'Path', 'return', 'None'))\n            120 LOAD_CONST               8 (<code object _exact_json at 0x1007a9a10, file \"src/tac/tests/test_build_pr95_hnerv_residual_atom_plan.py\", line 58>)\n            122 MAKE_FUNCTION            4 (annotations)\n            124 STORE_NAME              17 (_exact_json)\n\n 83         126 LOAD_CONST               2 (None)\n\n 84         128 LOAD_CONST               9 (True)\n\n 78         130 LOAD_CONST              10 (('archive_sha256', 'cross_check_all_match'))\n            132 BUILD_CONST_KEY_MAP      2\n\n 79         134 NOP\n\n 78         136 NOP\n\n 80         138 NOP\n\n 78         140 NOP\n\n 82         142 NOP\n\n 78         144 NOP\n\n 83         146 NOP\n\n 78         148 NOP\n\n 84         150 NOP\n\n 78         152 NOP\n\n 85         154 NOP\n\n 78         156 LOAD_CONST              20 (('path', 'Path', 'archive', 'Path', 'samples', 'list[dict[str, float | int]]', 'archive_sha256', 'str | None', 'cross_check_all_match', 'bool', 'return', 'None'))\n            158 LOAD_CONST              11 (<code object _component_trace_json at 0x100714ab0, file \"src/tac/tests/test_build_pr95_hnerv_residual_atom_plan.py\", line 78>)\n            160 MAKE_FUNCTION            6 (kwdefaults, annotations)\n            162 STORE_NAME              18 (_component_trace_json)\n\n117         164 LOAD_CONST              21 (('tmp_path', 'Path', 'return', 'None'))\n            166 LOAD_CONST              12 (<code object test_emits_proxy_ledger_without_candidate at 0x8a5127c00, file \"src/tac/tests/test_build_pr95_hnerv_residual_atom_plan.py\", line 117>)\n            168 MAKE_FUNCTION            4 (annotations)\n            170 STORE_NAME              19 (test_emits_proxy_ledger_without_candidate)\n\n142         172 LOAD_CONST              21 (('tmp_path', 'Path', 'return', 'None'))\n            174 LOAD_CONST              13 (<code object test_component_trace_emits_deterministic_signed_policy_and_candidate at 0x8a4e5de00, file \"src/tac/tests/test_build_pr95_hnerv_residual_atom_plan.py\", line 142>)\n            176 MAKE_FUNCTION            4 (annotations)\n            178 STORE_NAME              20 (test_component_trace_emits_deterministic_signed_policy_and_candidate)\n\n224         180 LOAD_CONST              21 (('tmp_path', 'Path', 'return', 'None'))\n            182 LOAD_CONST              14 (<code object test_build_candidate_from_explicit_latent_atom_plan at 0x8a5134380, file \"src/tac/tests/test_build_pr95_hnerv_residual_atom_plan.py\", line 224>)\n            184 MAKE_FUNCTION            4 (annotations)\n            186 STORE_NAME              21 (test_build_candidate_from_explicit_latent_atom_plan)\n\n270         188 LOAD_CONST              21 (('tmp_path', 'Path', 'return', 'None'))\n            190 LOAD_CONST              15 (<code object test_rejects_noop_and_sidecar_atom_plans at 0x8a4e5d800, file \"src/tac/tests/test_build_pr95_hnerv_residual_atom_plan.py\", line 270>)\n            192 MAKE_FUNCTION            4 (annotations)\n            194 STORE_NAME              22 (test_rejects_noop_and_sidecar_atom_plans)\n\n376         196 LOAD_CONST              21 (('tmp_path', 'Path', 'return', 'None'))\n            198 LOAD_CONST              16 (<code object test_rejects_component_trace_schema_mismatches at 0x8a4e6d200, file \"src/tac/tests/test_build_pr95_hnerv_residual_atom_plan.py\", line 376>)\n            200 MAKE_FUNCTION            4 (annotations)\n            202 STORE_NAME              23 (test_rejects_component_trace_schema_mismatches)\n            204 RETURN_CONST             2 (None)\n"
+}

@@ -1,0 +1,609 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/src/tac/tests/__pycache__/test_preflight_candidate_manifest_dispatch_readiness.cpython-312.pyc",
+  "names": [
+    "__future__",
+    "annotations",
+    "importlib.util",
+    "importlib",
+    "json",
+    "sys",
+    "pathlib",
+    "Path",
+    "__file__",
+    "resolve",
+    "parents",
+    "REPO",
+    "SCRIPT",
+    "_load_script",
+    "module",
+    "_write_manifest",
+    "test_blocks_builder_specific_local_only_dispatch_gate",
+    "test_blocks_unsafe_exact_eval_dispatch_gate",
+    "test_blocks_nested_exact_runtime_contract_blockers",
+    "test_blocks_runtime_changing_manifest_missing_exact_runtime_contract",
+    "test_blocks_formula_only_qfq4_model_recode_without_runtime_loader",
+    "test_blocks_hpm1_projection_when_decode_parity_failed",
+    "test_allows_eligible_manifest_but_warns_lane_claim_required",
+    "test_allows_explanatory_rate_projection_when_runtime_contract_is_ready",
+    "test_blocks_active_same_lane_claim_when_claims_path_is_supplied",
+    "test_terminal_newer_claim_closes_older_active_same_job",
+    "test_cli_fail_if_not_ready_returns_two_and_writes_report"
+  ],
+  "varnames": [],
+  "consts": [
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "Path"
+    ],
+    3,
+    "experiments",
+    "preflight_candidate_manifest_dispatch_readiness.py",
+    {
+      "__code__": "_load_script",
+      "qualname": "_load_script",
+      "argcount": 0,
+      "varnames": [
+        "spec",
+        "module"
+      ],
+      "names": [
+        "importlib",
+        "util",
+        "spec_from_file_location",
+        "SCRIPT",
+        "loader",
+        "module_from_spec",
+        "sys",
+        "modules",
+        "name",
+        "exec_module"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_write_manifest",
+      "qualname": "_write_manifest",
+      "argcount": 2,
+      "varnames": [
+        "path",
+        "payload"
+      ],
+      "names": [
+        "write_text",
+        "json",
+        "dumps"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_blocks_builder_specific_local_only_dispatch_gate",
+      "qualname": "test_blocks_builder_specific_local_only_dispatch_gate",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "payload",
+        "row",
+        "codes"
+      ],
+      "names": [
+        "_write_manifest",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_blocks_unsafe_exact_eval_dispatch_gate",
+      "qualname": "test_blocks_unsafe_exact_eval_dispatch_gate",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "payload",
+        "row"
+      ],
+      "names": [
+        "_write_manifest",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_blocks_nested_exact_runtime_contract_blockers",
+      "qualname": "test_blocks_nested_exact_runtime_contract_blockers",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "payload",
+        "row"
+      ],
+      "names": [
+        "_write_manifest",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_blocks_runtime_changing_manifest_missing_exact_runtime_contract",
+      "qualname": "test_blocks_runtime_changing_manifest_missing_exact_runtime_contract",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "payload",
+        "row"
+      ],
+      "names": [
+        "_write_manifest",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_blocks_formula_only_qfq4_model_recode_without_runtime_loader",
+      "qualname": "test_blocks_formula_only_qfq4_model_recode_without_runtime_loader",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "payload",
+        "row",
+        "codes"
+      ],
+      "names": [
+        "_write_manifest",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_blocks_hpm1_projection_when_decode_parity_failed",
+      "qualname": "test_blocks_hpm1_projection_when_decode_parity_failed",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "payload",
+        "row",
+        "codes"
+      ],
+      "names": [
+        "_write_manifest",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_allows_eligible_manifest_but_warns_lane_claim_required",
+      "qualname": "test_allows_eligible_manifest_but_warns_lane_claim_required",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "payload",
+        "row"
+      ],
+      "names": [
+        "_write_manifest",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_allows_explanatory_rate_projection_when_runtime_contract_is_ready",
+      "qualname": "test_allows_explanatory_rate_projection_when_runtime_contract_is_ready",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "payload",
+        "row"
+      ],
+      "names": [
+        "_write_manifest",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_blocks_active_same_lane_claim_when_claims_path_is_supplied",
+      "qualname": "test_blocks_active_same_lane_claim_when_claims_path_is_supplied",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "claims",
+        "payload",
+        "row"
+      ],
+      "names": [
+        "_write_manifest",
+        "write_text",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_terminal_newer_claim_closes_older_active_same_job",
+      "qualname": "test_terminal_newer_claim_closes_older_active_same_job",
+      "argcount": 1,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "claims",
+        "payload"
+      ],
+      "names": [
+        "_write_manifest",
+        "write_text",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "test_cli_fail_if_not_ready_returns_two_and_writes_report",
+      "qualname": "test_cli_fail_if_not_ready_returns_two_and_writes_report",
+      "argcount": 2,
+      "varnames": [
+        "tmp_path",
+        "capsys",
+        "manifest",
+        "out",
+        "rc",
+        "stdout_payload",
+        "file_payload"
+      ],
+      "names": [
+        "_write_manifest",
+        "module",
+        "main",
+        "str",
+        "json",
+        "loads",
+        "readouterr",
+        "out",
+        "read_text"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    [
+      "path",
+      "Path",
+      "payload",
+      "dict",
+      "return",
+      "Path"
+    ],
+    [
+      "tmp_path",
+      "Path",
+      "return",
+      "None"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": null,
+  "child_codes": [
+    {
+      "qualname": "_load_script",
+      "name": "_load_script",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "spec",
+        "module"
+      ],
+      "names": [
+        "importlib",
+        "util",
+        "spec_from_file_location",
+        "SCRIPT",
+        "loader",
+        "module_from_spec",
+        "sys",
+        "modules",
+        "name",
+        "exec_module"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 13           0 RESUME                   0\n\n 14           2 LOAD_GLOBAL              0 (importlib)\n             12 LOAD_ATTR                2 (util)\n             32 LOAD_ATTR                5 (NULL|self + spec_from_file_location)\n             52 LOAD_CONST               1 ('candidate_manifest_dispatch_readiness_test')\n             54 LOAD_GLOBAL              6 (SCRIPT)\n             64 CALL                     2\n             72 STORE_FAST               0 (spec)\n\n 15          74 LOAD_FAST                0 (spec)\n             76 POP_JUMP_IF_NONE        12 (to 102)\n             78 LOAD_FAST                0 (spec)\n             80 LOAD_ATTR                8 (loader)\n            100 POP_JUMP_IF_NOT_NONE     2 (to 106)\n        >>  102 LOAD_ASSERTION_ERROR\n            104 RAISE_VARARGS            1\n\n 16     >>  106 LOAD_GLOBAL              0 (importlib)\n            116 LOAD_ATTR                2 (util)\n            136 LOAD_ATTR               11 (NULL|self + module_from_spec)\n            156 LOAD_FAST                0 (spec)\n            158 CALL                     1\n            166 STORE_FAST               1 (module)\n\n 17         168 LOAD_FAST                1 (module)\n            170 LOAD_GLOBAL             12 (sys)\n            180 LOAD_ATTR               14 (modules)\n            200 LOAD_FAST                0 (spec)\n            202 LOAD_ATTR               16 (name)\n            222 STORE_SUBSCR\n\n 18         226 LOAD_FAST                0 (spec)\n            228 LOAD_ATTR                8 (loader)\n            248 LOAD_ATTR               19 (NULL|self + exec_module)\n            268 LOAD_FAST                1 (module)\n            270 CALL                     1\n            278 POP_TOP\n\n 19         280 LOAD_FAST                1 (module)\n            282 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_write_manifest",
+      "name": "_write_manifest",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "payload"
+      ],
+      "names": [
+        "write_text",
+        "json",
+        "dumps"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 25           0 RESUME                   0\n\n 26           2 LOAD_FAST                0 (path)\n              4 LOAD_ATTR                1 (NULL|self + write_text)\n             24 LOAD_GLOBAL              3 (NULL + json)\n             34 LOAD_ATTR                4 (dumps)\n             54 LOAD_FAST                1 (payload)\n             56 LOAD_CONST               1 (True)\n             58 KW_NAMES                 2 (('sort_keys',))\n             60 CALL                     2\n             68 LOAD_CONST               3 ('\\n')\n             70 BINARY_OP                0 (+)\n             74 LOAD_CONST               4 ('utf-8')\n             76 KW_NAMES                 5 (('encoding',))\n             78 CALL                     2\n             86 POP_TOP\n\n 27          88 LOAD_FAST                0 (path)\n             90 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "test_blocks_builder_specific_local_only_dispatch_gate",
+      "name": "test_blocks_builder_specific_local_only_dispatch_gate",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "payload",
+        "row",
+        "codes"
+      ],
+      "names": [
+        "_write_manifest",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 30           0 RESUME                   0\n\n 31           2 LOAD_GLOBAL              1 (NULL + _write_manifest)\n\n 32          12 LOAD_FAST                0 (tmp_path)\n             14 LOAD_CONST               1 ('manifest.json')\n             16 BINARY_OP               11 (/)\n\n 34          20 LOAD_CONST               2 ('stack_candidate')\n\n 35          22 LOAD_CONST               3 (False)\n\n 36          24 LOAD_CONST               4 ('blocked_local_only_until_standalone_exact_positives_and_lane_claim')\n\n 37          26 LOAD_CONST               3 (False)\n\n 33          28 LOAD_CONST               5 (('candidate_id', 'score_claim', 'dispatch_gate', 'dispatch_unlocked'))\n             30 BUILD_CONST_KEY_MAP      4\n\n 31          32 CALL                     2\n             40 STORE_FAST               1 (manifest)\n\n 41          42 LOAD_GLOBAL              2 (module)\n             52 LOAD_ATTR                5 (NULL|self + build_preflight)\n             72 LOAD_FAST                1 (manifest)\n             74 CALL                     1\n             82 STORE_FAST               2 (payload)\n\n 43          84 LOAD_FAST                2 (payload)\n             86 LOAD_CONST               6 ('ready_for_exact_eval_dispatch')\n             88 BINARY_SUBSCR\n             92 LOAD_CONST               3 (False)\n             94 IS_OP                    0\n             96 POP_JUMP_IF_TRUE         2 (to 102)\n             98 LOAD_ASSERTION_ERROR\n            100 RAISE_VARARGS            1\n\n 44     >>  102 LOAD_FAST                2 (payload)\n            104 LOAD_CONST               7 ('blockers')\n            106 BINARY_SUBSCR\n            110 GET_ITER\n            112 LOAD_FAST_AND_CLEAR      3 (row)\n            114 SWAP                     2\n            116 BUILD_SET                0\n            118 SWAP                     2\n        >>  120 FOR_ITER                 7 (to 138)\n            124 STORE_FAST               3 (row)\n            126 LOAD_FAST                3 (row)\n            128 LOAD_CONST               8 ('code')\n            130 BINARY_SUBSCR\n            134 SET_ADD                  2\n            136 JUMP_BACKWARD            9 (to 120)\n        >>  138 END_FOR\n            140 STORE_FAST               4 (codes)\n            142 STORE_FAST               3 (row)\n\n 45         144 LOAD_CONST               9 ('dispatch_gate_blocked')\n            146 LOAD_FAST                4 (codes)\n            148 CONTAINS_OP              0\n            150 POP_JUMP_IF_TRUE         2 (to 156)\n            152 LOAD_ASSERTION_ERROR\n            154 RAISE_VARARGS            1\n\n 46     >>  156 LOAD_CONST              10 ('dispatch_unlocked_false')\n            158 LOAD_FAST                4 (codes)\n            160 CONTAINS_OP              0\n            162 POP_JUMP_IF_TRUE         2 (to 168)\n            164 LOAD_ASSERTION_ERROR\n            166 RAISE_VARARGS            1\n        >>  168 RETURN_CONST             0 (None)\n        >>  170 SWAP                     2\n            172 POP_TOP\n\n 44         174 SWAP                     2\n            176 STORE_FAST               3 (row)\n            178 RERAISE                  0\nExceptionTable:\n  116 to 138 -> 170 [2]\n"
+    },
+    {
+      "qualname": "test_blocks_unsafe_exact_eval_dispatch_gate",
+      "name": "test_blocks_unsafe_exact_eval_dispatch_gate",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "payload",
+        "row"
+      ],
+      "names": [
+        "_write_manifest",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 49           0 RESUME                   0\n\n 50           2 LOAD_GLOBAL              1 (NULL + _write_manifest)\n\n 51          12 LOAD_FAST                0 (tmp_path)\n             14 LOAD_CONST               1 ('manifest.json')\n             16 BINARY_OP               11 (/)\n\n 53          20 LOAD_CONST               2 ('renderer_transplant')\n\n 54          22 LOAD_CONST               3 (False)\n\n 56          24 LOAD_CONST               4 (True)\n\n 57          26 LOAD_CONST               5 ('missing_pose_safety_report')\n\n 58          28 LOAD_CONST               3 (False)\n\n 59          30 LOAD_CONST               6 ('missing renderer transplant pose-safety preflight')\n             32 BUILD_LIST               1\n\n 55          34 LOAD_CONST               7 (('required', 'status', 'safe_for_exact_eval_dispatch', 'blockers'))\n             36 BUILD_CONST_KEY_MAP      4\n\n 52          38 LOAD_CONST               8 (('candidate_id', 'score_claim', 'exact_eval_dispatch_gate'))\n             40 BUILD_CONST_KEY_MAP      3\n\n 50          42 CALL                     2\n             50 STORE_FAST               1 (manifest)\n\n 64          52 LOAD_GLOBAL              2 (module)\n             62 LOAD_ATTR                5 (NULL|self + build_preflight)\n             82 LOAD_FAST                1 (manifest)\n             84 CALL                     1\n             92 STORE_FAST               2 (payload)\n\n 66          94 LOAD_FAST                2 (payload)\n             96 LOAD_CONST               9 ('ready_for_exact_eval_dispatch')\n             98 BINARY_SUBSCR\n            102 LOAD_CONST               3 (False)\n            104 IS_OP                    0\n            106 POP_JUMP_IF_TRUE         2 (to 112)\n            108 LOAD_ASSERTION_ERROR\n            110 RAISE_VARARGS            1\n\n 67     >>  112 BUILD_SET                0\n            114 LOAD_CONST              10 (frozenset({'exact_eval_dispatch_gate:reported_blockers', 'exact_eval_dispatch_gate:unsafe_required_exact_eval_gate', 'exact_eval_dispatch_gate:status_blocked', 'exact_eval_dispatch_gate:safe_for_exact_eval_dispatch_false'}))\n            116 SET_UPDATE               1\n\n 72         118 LOAD_FAST                2 (payload)\n            120 LOAD_CONST              11 ('blockers')\n            122 BINARY_SUBSCR\n            126 GET_ITER\n            128 LOAD_FAST_AND_CLEAR      3 (row)\n            130 SWAP                     2\n            132 BUILD_SET                0\n            134 SWAP                     2\n        >>  136 FOR_ITER                 7 (to 154)\n            140 STORE_FAST               3 (row)\n            142 LOAD_FAST                3 (row)\n            144 LOAD_CONST              12 ('code')\n            146 BINARY_SUBSCR\n            150 SET_ADD                  2\n            152 JUMP_BACKWARD            9 (to 136)\n        >>  154 END_FOR\n            156 SWAP                     2\n            158 STORE_FAST               3 (row)\n\n 67         160 COMPARE_OP              26 (<=)\n            164 POP_JUMP_IF_TRUE         2 (to 170)\n            166 LOAD_ASSERTION_ERROR\n            168 RAISE_VARARGS            1\n        >>  170 RETURN_CONST             0 (None)\n        >>  172 SWAP                     2\n            174 POP_TOP\n\n 72         176 SWAP                     2\n            178 STORE_FAST               3 (row)\n            180 RERAISE                  0\nExceptionTable:\n  132 to 154 -> 172 [3]\n"
+    },
+    {
+      "qualname": "test_blocks_nested_exact_runtime_contract_blockers",
+      "name": "test_blocks_nested_exact_runtime_contract_blockers",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "payload",
+        "row"
+      ],
+      "names": [
+        "_write_manifest",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 75           0 RESUME                   0\n\n 76           2 LOAD_GLOBAL              1 (NULL + _write_manifest)\n\n 77          12 LOAD_FAST                0 (tmp_path)\n             14 LOAD_CONST               1 ('manifest.json')\n             16 BINARY_OP               11 (/)\n\n 79          20 LOAD_CONST               2 ('stbm_candidate')\n\n 80          22 LOAD_CONST               3 (False)\n\n 81          24 LOAD_CONST               4 ('eligible_for_exact_eval_after_lane_claim')\n\n 83          26 LOAD_CONST               3 (False)\n\n 85          28 LOAD_CONST               5 ('code')\n             30 LOAD_CONST               6 ('exact_runtime:missing_explicit_pr85_replay_runtime')\n             32 BUILD_MAP                1\n\n 84          34 BUILD_LIST               1\n\n 82          36 LOAD_CONST               7 (('ready_for_exact_eval_runtime', 'remaining_blockers'))\n             38 BUILD_CONST_KEY_MAP      2\n\n 78          40 LOAD_CONST               8 (('candidate_id', 'score_claim', 'dispatch_gate', 'exact_eval_runtime_contract'))\n             42 BUILD_CONST_KEY_MAP      4\n\n 76          44 CALL                     2\n             52 STORE_FAST               1 (manifest)\n\n 91          54 LOAD_GLOBAL              2 (module)\n             64 LOAD_ATTR                5 (NULL|self + build_preflight)\n             84 LOAD_FAST                1 (manifest)\n             86 CALL                     1\n             94 STORE_FAST               2 (payload)\n\n 93          96 LOAD_FAST                2 (payload)\n             98 LOAD_CONST               9 ('ready_for_exact_eval_dispatch')\n            100 BINARY_SUBSCR\n            104 LOAD_CONST               3 (False)\n            106 IS_OP                    0\n            108 POP_JUMP_IF_TRUE         2 (to 114)\n            110 LOAD_ASSERTION_ERROR\n            112 RAISE_VARARGS            1\n\n 95     >>  114 LOAD_CONST              10 ('exact_eval_runtime_contract:remaining_blockers')\n\n 96         116 LOAD_CONST              11 ('exact_eval_runtime_contract:not_ready')\n\n 94         118 BUILD_SET                2\n\n 97         120 LOAD_FAST                2 (payload)\n            122 LOAD_CONST              12 ('blockers')\n            124 BINARY_SUBSCR\n            128 GET_ITER\n            130 LOAD_FAST_AND_CLEAR      3 (row)\n            132 SWAP                     2\n            134 BUILD_SET                0\n            136 SWAP                     2\n        >>  138 FOR_ITER                 7 (to 156)\n            142 STORE_FAST               3 (row)\n            144 LOAD_FAST                3 (row)\n            146 LOAD_CONST               5 ('code')\n            148 BINARY_SUBSCR\n            152 SET_ADD                  2\n            154 JUMP_BACKWARD            9 (to 138)\n        >>  156 END_FOR\n            158 SWAP                     2\n            160 STORE_FAST               3 (row)\n\n 94         162 COMPARE_OP              26 (<=)\n            166 POP_JUMP_IF_TRUE         2 (to 172)\n            168 LOAD_ASSERTION_ERROR\n            170 RAISE_VARARGS            1\n        >>  172 RETURN_CONST             0 (None)\n        >>  174 SWAP                     2\n            176 POP_TOP\n\n 97         178 SWAP                     2\n            180 STORE_FAST               3 (row)\n            182 RERAISE                  0\nExceptionTable:\n  134 to 156 -> 174 [3]\n"
+    },
+    {
+      "qualname": "test_blocks_runtime_changing_manifest_missing_exact_runtime_contract",
+      "name": "test_blocks_runtime_changing_manifest_missing_exact_runtime_contract",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "payload",
+        "row"
+      ],
+      "names": [
+        "_write_manifest",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "100           0 RESUME                   0\n\n101           2 LOAD_GLOBAL              1 (NULL + _write_manifest)\n\n102          12 LOAD_FAST                0 (tmp_path)\n             14 LOAD_CONST               1 ('manifest.json')\n             16 BINARY_OP               11 (/)\n\n104          20 LOAD_CONST               2 ('pr90_stbm1br_lossless_pr85_mask_recode')\n\n105          22 LOAD_CONST               3 (False)\n\n107          24 LOAD_CONST               4 ('passed')\n\n108          26 LOAD_CONST               5 (True)\n\n106          28 LOAD_CONST               6 (('status', 'exact_eval_requires_lane_claim'))\n             30 BUILD_CONST_KEY_MAP      2\n\n111          32 LOAD_CONST               7 ('local_runtime_only')\n\n112          34 LOAD_CONST               8 ('STBM1BR')\n\n110          36 LOAD_CONST               9 (('support_scope', 'format'))\n             38 BUILD_CONST_KEY_MAP      2\n\n103          40 LOAD_CONST              10 (('candidate_id', 'score_claim', 'fail_closed_preflight', 'runtime_support'))\n             42 BUILD_CONST_KEY_MAP      4\n\n101          44 CALL                     2\n             52 STORE_FAST               1 (manifest)\n\n117          54 LOAD_GLOBAL              2 (module)\n             64 LOAD_ATTR                5 (NULL|self + build_preflight)\n             84 LOAD_FAST                1 (manifest)\n             86 CALL                     1\n             94 STORE_FAST               2 (payload)\n\n119          96 LOAD_FAST                2 (payload)\n             98 LOAD_CONST              11 ('ready_for_exact_eval_dispatch')\n            100 BINARY_SUBSCR\n            104 LOAD_CONST               3 (False)\n            106 IS_OP                    0\n            108 POP_JUMP_IF_TRUE         2 (to 114)\n            110 LOAD_ASSERTION_ERROR\n            112 RAISE_VARARGS            1\n\n120     >>  114 LOAD_CONST              12 ('exact_eval_runtime_contract:missing_for_runtime_changing_candidate')\n\n121         116 LOAD_FAST                2 (payload)\n            118 LOAD_CONST              13 ('blockers')\n            120 BINARY_SUBSCR\n            124 GET_ITER\n\n120         126 LOAD_FAST_AND_CLEAR      3 (row)\n            128 SWAP                     2\n            130 BUILD_SET                0\n            132 SWAP                     2\n\n121     >>  134 FOR_ITER                 7 (to 152)\n            138 STORE_FAST               3 (row)\n            140 LOAD_FAST                3 (row)\n            142 LOAD_CONST              14 ('code')\n            144 BINARY_SUBSCR\n            148 SET_ADD                  2\n            150 JUMP_BACKWARD            9 (to 134)\n        >>  152 END_FOR\n\n120         154 SWAP                     2\n            156 STORE_FAST               3 (row)\n            158 CONTAINS_OP              0\n            160 POP_JUMP_IF_TRUE         2 (to 166)\n            162 LOAD_ASSERTION_ERROR\n            164 RAISE_VARARGS            1\n        >>  166 RETURN_CONST             0 (None)\n        >>  168 SWAP                     2\n            170 POP_TOP\n            172 SWAP                     2\n            174 STORE_FAST               3 (row)\n            176 RERAISE                  0\nExceptionTable:\n  130 to 152 -> 168 [3]\n"
+    },
+    {
+      "qualname": "test_blocks_formula_only_qfq4_model_recode_without_runtime_loader",
+      "name": "test_blocks_formula_only_qfq4_model_recode_without_runtime_loader",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "payload",
+        "row",
+        "codes"
+      ],
+      "names": [
+        "_write_manifest",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "125           0 RESUME                   0\n\n126           2 LOAD_GLOBAL              1 (NULL + _write_manifest)\n\n127          12 LOAD_FAST                0 (tmp_path)\n             14 LOAD_CONST               1 ('qfq4_readiness.json')\n             16 BINARY_OP               11 (/)\n\n129          20 LOAD_CONST               2 ('pr85_stbm1br_qfq4_model_recode')\n\n130          22 LOAD_CONST               3 (False)\n\n131          24 LOAD_CONST               4 ('eligible_for_exact_eval_after_lane_claim')\n\n133          26 LOAD_CONST               5 (True)\n\n134          28 LOAD_CONST               5 (True)\n\n132          30 LOAD_CONST               6 (('ready', 'requires_lane_claim_before_remote_eval'))\n             32 BUILD_CONST_KEY_MAP      2\n\n137          34 LOAD_CONST               7 ('best_byte_screen')\n\n138          36 LOAD_CONST               8 ('qfq4_pr85_shifted_int8_rows')\n\n139          38 LOAD_CONST               9 (-659)\n\n140          40 LOAD_CONST              10 (-0.000438801)\n\n141          42 LOAD_CONST              11 ('decoded_tensor_parity')\n             44 LOAD_CONST               3 (False)\n             46 BUILD_MAP                1\n\n143          48 LOAD_CONST               3 (False)\n\n144          50 LOAD_CONST               3 (False)\n\n142          52 LOAD_CONST              12 (('runtime_can_decode_without_edits', 'public_pr85_replay_qfq4_model_loader'))\n             54 BUILD_CONST_KEY_MAP      2\n\n137          56 LOAD_CONST              13 (('candidate_id', 'archive_delta_bytes_vs_source_formula', 'rate_score_delta_if_components_identical_formula_only', 'decoded_tensor_parity', 'runtime_compatibility'))\n             58 BUILD_CONST_KEY_MAP      5\n\n136          60 BUILD_MAP                1\n\n128          62 LOAD_CONST              14 (('candidate_id', 'score_claim', 'dispatch_gate', 'exact_eval_readiness', 'qfq4_screen'))\n             64 BUILD_CONST_KEY_MAP      5\n\n126          66 CALL                     2\n             74 STORE_FAST               1 (manifest)\n\n151          76 LOAD_GLOBAL              2 (module)\n             86 LOAD_ATTR                5 (NULL|self + build_preflight)\n            106 LOAD_FAST                1 (manifest)\n            108 CALL                     1\n            116 STORE_FAST               2 (payload)\n\n153         118 LOAD_FAST                2 (payload)\n            120 LOAD_CONST              15 ('ready_for_exact_eval_dispatch')\n            122 BINARY_SUBSCR\n            126 LOAD_CONST               3 (False)\n            128 IS_OP                    0\n            130 POP_JUMP_IF_TRUE         2 (to 136)\n            132 LOAD_ASSERTION_ERROR\n            134 RAISE_VARARGS            1\n\n154     >>  136 LOAD_FAST                2 (payload)\n            138 LOAD_CONST              16 ('blockers')\n            140 BINARY_SUBSCR\n            144 GET_ITER\n            146 LOAD_FAST_AND_CLEAR      3 (row)\n            148 SWAP                     2\n            150 BUILD_SET                0\n            152 SWAP                     2\n        >>  154 FOR_ITER                 7 (to 172)\n            158 STORE_FAST               3 (row)\n            160 LOAD_FAST                3 (row)\n            162 LOAD_CONST              17 ('code')\n            164 BINARY_SUBSCR\n            168 SET_ADD                  2\n            170 JUMP_BACKWARD            9 (to 154)\n        >>  172 END_FOR\n            174 STORE_FAST               4 (codes)\n            176 STORE_FAST               3 (row)\n\n155         178 LOAD_CONST              18 ('formula_only_dispatch_evidence')\n            180 LOAD_FAST                4 (codes)\n            182 CONTAINS_OP              0\n            184 POP_JUMP_IF_TRUE         2 (to 190)\n            186 LOAD_ASSERTION_ERROR\n            188 RAISE_VARARGS            1\n\n156     >>  190 LOAD_CONST              19 ('runtime_loader_support_false')\n            192 LOAD_FAST                4 (codes)\n            194 CONTAINS_OP              0\n            196 POP_JUMP_IF_TRUE         2 (to 202)\n            198 LOAD_ASSERTION_ERROR\n            200 RAISE_VARARGS            1\n\n157     >>  202 LOAD_CONST              20 ('decode_or_exact_parity_false')\n            204 LOAD_FAST                4 (codes)\n            206 CONTAINS_OP              0\n            208 POP_JUMP_IF_TRUE         2 (to 214)\n            210 LOAD_ASSERTION_ERROR\n            212 RAISE_VARARGS            1\n\n158     >>  214 LOAD_CONST              21 ('exact_eval_runtime_contract:missing_for_runtime_changing_candidate')\n            216 LOAD_FAST                4 (codes)\n            218 CONTAINS_OP              0\n            220 POP_JUMP_IF_TRUE         2 (to 226)\n            222 LOAD_ASSERTION_ERROR\n            224 RAISE_VARARGS            1\n        >>  226 RETURN_CONST             0 (None)\n        >>  228 SWAP                     2\n            230 POP_TOP\n\n154         232 SWAP                     2\n            234 STORE_FAST               3 (row)\n            236 RERAISE                  0\nExceptionTable:\n  150 to 172 -> 228 [2]\n"
+    },
+    {
+      "qualname": "test_blocks_hpm1_projection_when_decode_parity_failed",
+      "name": "test_blocks_hpm1_projection_when_decode_parity_failed",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "payload",
+        "row",
+        "codes"
+      ],
+      "names": [
+        "_write_manifest",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "161           0 RESUME                   0\n\n162           2 LOAD_GLOBAL              1 (NULL + _write_manifest)\n\n163          12 LOAD_FAST                0 (tmp_path)\n             14 LOAD_CONST               1 ('hpm1_readiness.json')\n             16 BINARY_OP               11 (/)\n\n165          20 LOAD_CONST               2 ('pr91_hpm1_parity_recovery')\n\n166          22 LOAD_CONST               3 (False)\n\n167          24 LOAD_CONST               4 ('eligible_for_exact_eval_after_lane_claim')\n\n169          26 LOAD_CONST               5 (-0.004895395)\n\n170          28 LOAD_CONST               6 (True)\n\n168          30 LOAD_CONST               7 (('rate_score_delta_if_archive_is_valid', 'component_identity_required'))\n             32 BUILD_CONST_KEY_MAP      2\n\n173          34 LOAD_CONST               8 ('failed_closed')\n\n174          36 LOAD_CONST               9 ('hpac_entropy_decode_contract_mismatch')\n\n175          38 LOAD_CONST               3 (False)\n\n172          40 LOAD_CONST              10 (('status', 'failure_reason', 'full_decode_byte_parity_proven'))\n             42 BUILD_CONST_KEY_MAP      3\n\n178          44 LOAD_CONST              11 ('prediction')\n\n179          46 LOAD_CONST               3 (False)\n\n177          48 LOAD_CONST              12 (('evidence_grade', 'score_claim'))\n             50 BUILD_CONST_KEY_MAP      2\n\n164          52 LOAD_CONST              13 (('candidate_id', 'score_claim', 'dispatch_gate', 'byte_faithful_fusion', 'hpm1_replay_gate', 'score_projection_if_hpm1_mask_is_semantically_identical'))\n             54 BUILD_CONST_KEY_MAP      6\n\n162          56 CALL                     2\n             64 STORE_FAST               1 (manifest)\n\n184          66 LOAD_GLOBAL              2 (module)\n             76 LOAD_ATTR                5 (NULL|self + build_preflight)\n             96 LOAD_FAST                1 (manifest)\n             98 CALL                     1\n            106 STORE_FAST               2 (payload)\n\n186         108 LOAD_FAST                2 (payload)\n            110 LOAD_CONST              14 ('ready_for_exact_eval_dispatch')\n            112 BINARY_SUBSCR\n            116 LOAD_CONST               3 (False)\n            118 IS_OP                    0\n            120 POP_JUMP_IF_TRUE         2 (to 126)\n            122 LOAD_ASSERTION_ERROR\n            124 RAISE_VARARGS            1\n\n187     >>  126 LOAD_FAST                2 (payload)\n            128 LOAD_CONST              15 ('blockers')\n            130 BINARY_SUBSCR\n            134 GET_ITER\n            136 LOAD_FAST_AND_CLEAR      3 (row)\n            138 SWAP                     2\n            140 BUILD_SET                0\n            142 SWAP                     2\n        >>  144 FOR_ITER                 7 (to 162)\n            148 STORE_FAST               3 (row)\n            150 LOAD_FAST                3 (row)\n            152 LOAD_CONST              16 ('code')\n            154 BINARY_SUBSCR\n            158 SET_ADD                  2\n            160 JUMP_BACKWARD            9 (to 144)\n        >>  162 END_FOR\n            164 STORE_FAST               4 (codes)\n            166 STORE_FAST               3 (row)\n\n188         168 LOAD_CONST              17 ('formula_only_dispatch_evidence')\n            170 LOAD_FAST                4 (codes)\n            172 CONTAINS_OP              0\n            174 POP_JUMP_IF_TRUE         2 (to 180)\n            176 LOAD_ASSERTION_ERROR\n            178 RAISE_VARARGS            1\n\n189     >>  180 LOAD_CONST              18 ('decode_or_exact_parity_false')\n            182 LOAD_FAST                4 (codes)\n            184 CONTAINS_OP              0\n            186 POP_JUMP_IF_TRUE         2 (to 192)\n            188 LOAD_ASSERTION_ERROR\n            190 RAISE_VARARGS            1\n\n190     >>  192 LOAD_CONST              19 ('nested_blocking_status')\n            194 LOAD_FAST                4 (codes)\n            196 CONTAINS_OP              0\n            198 POP_JUMP_IF_TRUE         2 (to 204)\n            200 LOAD_ASSERTION_ERROR\n            202 RAISE_VARARGS            1\n\n191     >>  204 LOAD_CONST              20 ('exact_eval_runtime_contract:missing_for_runtime_changing_candidate')\n            206 LOAD_FAST                4 (codes)\n            208 CONTAINS_OP              0\n            210 POP_JUMP_IF_TRUE         2 (to 216)\n            212 LOAD_ASSERTION_ERROR\n            214 RAISE_VARARGS            1\n        >>  216 RETURN_CONST             0 (None)\n        >>  218 SWAP                     2\n            220 POP_TOP\n\n187         222 SWAP                     2\n            224 STORE_FAST               3 (row)\n            226 RERAISE                  0\nExceptionTable:\n  140 to 162 -> 218 [2]\n"
+    },
+    {
+      "qualname": "test_allows_eligible_manifest_but_warns_lane_claim_required",
+      "name": "test_allows_eligible_manifest_but_warns_lane_claim_required",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "payload",
+        "row"
+      ],
+      "names": [
+        "_write_manifest",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "194           0 RESUME                   0\n\n195           2 LOAD_GLOBAL              1 (NULL + _write_manifest)\n\n196          12 LOAD_FAST                0 (tmp_path)\n             14 LOAD_CONST               1 ('manifest.json')\n             16 BINARY_OP               11 (/)\n\n198          20 LOAD_CONST               2 ('byte_closed_candidate')\n\n199          22 LOAD_CONST               3 (False)\n\n200          24 LOAD_CONST               4 ('eligible_for_cuda_auth_eval_after_lane_claim')\n\n201          26 LOAD_CONST               5 (True)\n\n202          28 LOAD_CONST               5 (True)\n\n204          30 LOAD_CONST               5 (True)\n\n205          32 BUILD_LIST               0\n\n203          34 LOAD_CONST               6 (('ready_for_fixed_runtime_exact_eval', 'remaining_blockers'))\n             36 BUILD_CONST_KEY_MAP      2\n\n197          38 LOAD_CONST               7 (('candidate_id', 'score_claim', 'dispatch_gate', 'dispatch_unlocked', 'ready_for_exact_eval_dispatch_claim', 'fixed_runtime_preflight'))\n             40 BUILD_CONST_KEY_MAP      6\n\n195          42 CALL                     2\n             50 STORE_FAST               1 (manifest)\n\n210          52 LOAD_GLOBAL              2 (module)\n             62 LOAD_ATTR                5 (NULL|self + build_preflight)\n             82 LOAD_FAST                1 (manifest)\n             84 CALL                     1\n             92 STORE_FAST               2 (payload)\n\n212          94 LOAD_FAST                2 (payload)\n             96 LOAD_CONST               8 ('ready_for_exact_eval_dispatch')\n             98 BINARY_SUBSCR\n            102 LOAD_CONST               5 (True)\n            104 IS_OP                    0\n            106 POP_JUMP_IF_TRUE         2 (to 112)\n            108 LOAD_ASSERTION_ERROR\n            110 RAISE_VARARGS            1\n\n213     >>  112 LOAD_FAST                2 (payload)\n            114 LOAD_CONST               9 ('blockers')\n            116 BINARY_SUBSCR\n            120 BUILD_LIST               0\n            122 COMPARE_OP              40 (==)\n            126 POP_JUMP_IF_TRUE         2 (to 132)\n            128 LOAD_ASSERTION_ERROR\n            130 RAISE_VARARGS            1\n\n214     >>  132 LOAD_FAST                2 (payload)\n            134 LOAD_CONST              10 ('warnings')\n            136 BINARY_SUBSCR\n            140 GET_ITER\n            142 LOAD_FAST_AND_CLEAR      3 (row)\n            144 SWAP                     2\n            146 BUILD_SET                0\n            148 SWAP                     2\n        >>  150 FOR_ITER                 7 (to 168)\n            154 STORE_FAST               3 (row)\n            156 LOAD_FAST                3 (row)\n            158 LOAD_CONST              11 ('code')\n            160 BINARY_SUBSCR\n            164 SET_ADD                  2\n            166 JUMP_BACKWARD            9 (to 150)\n        >>  168 END_FOR\n            170 SWAP                     2\n            172 STORE_FAST               3 (row)\n            174 LOAD_CONST              12 ('lane_claim_still_required')\n            176 BUILD_SET                1\n            178 COMPARE_OP              40 (==)\n            182 POP_JUMP_IF_TRUE         2 (to 188)\n            184 LOAD_ASSERTION_ERROR\n            186 RAISE_VARARGS            1\n        >>  188 RETURN_CONST             0 (None)\n        >>  190 SWAP                     2\n            192 POP_TOP\n            194 SWAP                     2\n            196 STORE_FAST               3 (row)\n            198 RERAISE                  0\nExceptionTable:\n  146 to 168 -> 190 [2]\n"
+    },
+    {
+      "qualname": "test_allows_explanatory_rate_projection_when_runtime_contract_is_ready",
+      "name": "test_allows_explanatory_rate_projection_when_runtime_contract_is_ready",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "payload",
+        "row"
+      ],
+      "names": [
+        "_write_manifest",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "217           0 RESUME                   0\n\n218           2 LOAD_GLOBAL              1 (NULL + _write_manifest)\n\n219          12 LOAD_FAST                0 (tmp_path)\n             14 LOAD_CONST               1 ('manifest.json')\n             16 BINARY_OP               11 (/)\n\n221          20 LOAD_CONST               2 ('pr85_stbm1br_plus_pr92_rmb1_randmulti_recode')\n\n222          22 LOAD_CONST               3 (False)\n\n224          24 LOAD_CONST               4 ('pr85_stbm1br_pr92_rmb1_randmulti')\n\n226          26 LOAD_CONST               5 (True)\n\n227          28 LOAD_CONST               5 (True)\n\n228          30 LOAD_CONST               5 (True)\n\n229          32 LOAD_CONST               5 (True)\n\n225          34 LOAD_CONST               6 (('strict_zip_single_member_x', 'candidate_changes_only_randmulti_vs_stbm', 'randmulti_decoded_rows_match_stbm', 'candidate_score_claim_false'))\n             36 BUILD_CONST_KEY_MAP      4\n\n223          38 LOAD_CONST               7 (('lane_id', 'checks'))\n             40 BUILD_CONST_KEY_MAP      2\n\n233          42 LOAD_CONST               5 (True)\n\n234          44 LOAD_CONST               8 ('abc123')\n\n235          46 BUILD_LIST               0\n\n232          48 LOAD_CONST               9 (('ready_for_exact_eval_runtime', 'runtime_tree_sha256', 'remaining_blockers'))\n             50 BUILD_CONST_KEY_MAP      3\n\n238          52 LOAD_CONST              10 (-276)\n\n239          54 LOAD_CONST              11 (-0.000183778)\n\n240          56 LOAD_CONST               3 (False)\n\n237          58 LOAD_CONST              12 (('archive_delta_bytes', 'score_delta_from_rate_only', 'score_claim'))\n             60 BUILD_CONST_KEY_MAP      3\n\n220          62 LOAD_CONST              13 (('candidate_id', 'score_claim', 'dispatch_readiness', 'exact_eval_runtime_contract', 'formula_only_rate_delta_vs_stbm'))\n             64 BUILD_CONST_KEY_MAP      5\n\n218          66 CALL                     2\n             74 STORE_FAST               1 (manifest)\n\n245          76 LOAD_GLOBAL              2 (module)\n             86 LOAD_ATTR                5 (NULL|self + build_preflight)\n            106 LOAD_FAST                1 (manifest)\n            108 CALL                     1\n            116 STORE_FAST               2 (payload)\n\n247         118 LOAD_FAST                2 (payload)\n            120 LOAD_CONST              14 ('ready_for_exact_eval_dispatch')\n            122 BINARY_SUBSCR\n            126 LOAD_CONST               5 (True)\n            128 IS_OP                    0\n            130 POP_JUMP_IF_TRUE         2 (to 136)\n            132 LOAD_ASSERTION_ERROR\n            134 RAISE_VARARGS            1\n\n248     >>  136 LOAD_FAST                2 (payload)\n            138 LOAD_CONST              15 ('blockers')\n            140 BINARY_SUBSCR\n            144 BUILD_LIST               0\n            146 COMPARE_OP              40 (==)\n            150 POP_JUMP_IF_TRUE         2 (to 156)\n            152 LOAD_ASSERTION_ERROR\n            154 RAISE_VARARGS            1\n\n249     >>  156 LOAD_FAST                2 (payload)\n            158 LOAD_CONST              16 ('warnings')\n            160 BINARY_SUBSCR\n            164 GET_ITER\n            166 LOAD_FAST_AND_CLEAR      3 (row)\n            168 SWAP                     2\n            170 BUILD_SET                0\n            172 SWAP                     2\n        >>  174 FOR_ITER                 7 (to 192)\n            178 STORE_FAST               3 (row)\n            180 LOAD_FAST                3 (row)\n            182 LOAD_CONST              17 ('code')\n            184 BINARY_SUBSCR\n            188 SET_ADD                  2\n            190 JUMP_BACKWARD            9 (to 174)\n        >>  192 END_FOR\n            194 SWAP                     2\n            196 STORE_FAST               3 (row)\n\n250         198 LOAD_CONST              18 ('formula_only_rate_summary_non_dispatching')\n\n249         200 BUILD_SET                1\n            202 COMPARE_OP              40 (==)\n            206 POP_JUMP_IF_TRUE         2 (to 212)\n            208 LOAD_ASSERTION_ERROR\n            210 RAISE_VARARGS            1\n        >>  212 RETURN_CONST             0 (None)\n        >>  214 SWAP                     2\n            216 POP_TOP\n            218 SWAP                     2\n            220 STORE_FAST               3 (row)\n            222 RERAISE                  0\nExceptionTable:\n  170 to 192 -> 214 [2]\n"
+    },
+    {
+      "qualname": "test_blocks_active_same_lane_claim_when_claims_path_is_supplied",
+      "name": "test_blocks_active_same_lane_claim_when_claims_path_is_supplied",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "claims",
+        "payload",
+        "row"
+      ],
+      "names": [
+        "_write_manifest",
+        "write_text",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "254           0 RESUME                   0\n\n255           2 LOAD_GLOBAL              1 (NULL + _write_manifest)\n\n256          12 LOAD_FAST                0 (tmp_path)\n             14 LOAD_CONST               1 ('manifest.json')\n             16 BINARY_OP               11 (/)\n\n258          20 LOAD_CONST               2 ('pr85_stbm1br_plus_pr92_rmb1_randmulti_recode')\n\n259          22 LOAD_CONST               3 (False)\n\n261          24 LOAD_CONST               4 ('pr85_stbm1br_pr92_rmb1_randmulti')\n\n262          26 LOAD_CONST               5 ('candidate_score_claim_false')\n             28 LOAD_CONST               6 (True)\n             30 BUILD_MAP                1\n\n260          32 LOAD_CONST               7 (('lane_id', 'checks'))\n             34 BUILD_CONST_KEY_MAP      2\n\n265          36 LOAD_CONST               6 (True)\n\n266          38 LOAD_CONST               8 ('abc123')\n\n267          40 BUILD_LIST               0\n\n264          42 LOAD_CONST               9 (('ready_for_exact_eval_runtime', 'runtime_tree_sha256', 'remaining_blockers'))\n             44 BUILD_CONST_KEY_MAP      3\n\n257          46 LOAD_CONST              10 (('candidate_id', 'score_claim', 'dispatch_readiness', 'exact_eval_runtime_contract'))\n             48 BUILD_CONST_KEY_MAP      4\n\n255          50 CALL                     2\n             58 STORE_FAST               1 (manifest)\n\n271          60 LOAD_FAST                0 (tmp_path)\n             62 LOAD_CONST              11 ('active_lane_dispatch_claims.md')\n             64 BINARY_OP               11 (/)\n             68 STORE_FAST               2 (claims)\n\n272          70 LOAD_FAST                2 (claims)\n             72 LOAD_ATTR                3 (NULL|self + write_text)\n\n273          92 LOAD_CONST              12 ('# claims\\n\\n| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\\n|---|---|---|---|---|---|---|---|\\n| 2026-05-04T08:22:20Z | codex:gpt-5.5 | pr85_stbm1br_pr92_rmb1_randmulti | lightning | exact_eval_active | 2026-05-04T09:37:20Z | eval | active |\\n')\n\n277          94 LOAD_CONST              13 ('utf-8')\n\n272          96 KW_NAMES                14 (('encoding',))\n             98 CALL                     2\n            106 POP_TOP\n\n280         108 LOAD_GLOBAL              4 (module)\n            118 LOAD_ATTR                7 (NULL|self + build_preflight)\n\n281         138 LOAD_FAST                1 (manifest)\n\n282         140 LOAD_FAST                2 (claims)\n\n283         142 LOAD_CONST              15 ('2026-05-04T08:26:36Z')\n\n280         144 KW_NAMES                16 (('claims_path', 'now_utc'))\n            146 CALL                     3\n            154 STORE_FAST               3 (payload)\n\n286         156 LOAD_FAST                3 (payload)\n            158 LOAD_CONST              17 ('ready_for_exact_eval_dispatch')\n            160 BINARY_SUBSCR\n            164 LOAD_CONST               3 (False)\n            166 IS_OP                    0\n            168 POP_JUMP_IF_TRUE         2 (to 174)\n            170 LOAD_ASSERTION_ERROR\n            172 RAISE_VARARGS            1\n\n287     >>  174 LOAD_FAST                3 (payload)\n            176 LOAD_CONST              18 ('lane_claim')\n            178 BINARY_SUBSCR\n            182 LOAD_CONST              19 ('checked')\n            184 BINARY_SUBSCR\n            188 LOAD_CONST               6 (True)\n            190 IS_OP                    0\n            192 POP_JUMP_IF_TRUE         2 (to 198)\n            194 LOAD_ASSERTION_ERROR\n            196 RAISE_VARARGS            1\n\n288     >>  198 LOAD_FAST                3 (payload)\n            200 LOAD_CONST              18 ('lane_claim')\n            202 BINARY_SUBSCR\n            206 LOAD_CONST              20 ('lane_id')\n            208 BINARY_SUBSCR\n            212 LOAD_CONST               4 ('pr85_stbm1br_pr92_rmb1_randmulti')\n            214 COMPARE_OP              40 (==)\n            218 POP_JUMP_IF_TRUE         2 (to 224)\n            220 LOAD_ASSERTION_ERROR\n            222 RAISE_VARARGS            1\n\n289     >>  224 LOAD_FAST                3 (payload)\n            226 LOAD_CONST              18 ('lane_claim')\n            228 BINARY_SUBSCR\n            232 LOAD_CONST              21 ('active_conflicts')\n            234 BINARY_SUBSCR\n            238 LOAD_CONST              22 (0)\n            240 BINARY_SUBSCR\n            244 LOAD_CONST              23 ('instance_job_id')\n            246 BINARY_SUBSCR\n            250 LOAD_CONST              24 ('exact_eval_active')\n            252 COMPARE_OP              40 (==)\n            256 POP_JUMP_IF_TRUE         2 (to 262)\n            258 LOAD_ASSERTION_ERROR\n            260 RAISE_VARARGS            1\n\n290     >>  262 LOAD_CONST              25 ('active_lane_claim_conflict')\n            264 LOAD_FAST                3 (payload)\n            266 LOAD_CONST              26 ('blockers')\n            268 BINARY_SUBSCR\n            272 GET_ITER\n            274 LOAD_FAST_AND_CLEAR      4 (row)\n            276 SWAP                     2\n            278 BUILD_SET                0\n            280 SWAP                     2\n        >>  282 FOR_ITER                 7 (to 300)\n            286 STORE_FAST               4 (row)\n            288 LOAD_FAST                4 (row)\n            290 LOAD_CONST              27 ('code')\n            292 BINARY_SUBSCR\n            296 SET_ADD                  2\n            298 JUMP_BACKWARD            9 (to 282)\n        >>  300 END_FOR\n            302 SWAP                     2\n            304 STORE_FAST               4 (row)\n            306 CONTAINS_OP              0\n            308 POP_JUMP_IF_TRUE         2 (to 314)\n            310 LOAD_ASSERTION_ERROR\n            312 RAISE_VARARGS            1\n        >>  314 RETURN_CONST             0 (None)\n        >>  316 SWAP                     2\n            318 POP_TOP\n            320 SWAP                     2\n            322 STORE_FAST               4 (row)\n            324 RERAISE                  0\nExceptionTable:\n  278 to 300 -> 316 [3]\n"
+    },
+    {
+      "qualname": "test_terminal_newer_claim_closes_older_active_same_job",
+      "name": "test_terminal_newer_claim_closes_older_active_same_job",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "manifest",
+        "claims",
+        "payload"
+      ],
+      "names": [
+        "_write_manifest",
+        "write_text",
+        "module",
+        "build_preflight"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "293           0 RESUME                   0\n\n294           2 LOAD_GLOBAL              1 (NULL + _write_manifest)\n\n295          12 LOAD_FAST                0 (tmp_path)\n             14 LOAD_CONST               1 ('manifest.json')\n             16 BINARY_OP               11 (/)\n\n297          20 LOAD_CONST               2 ('pr85_stbm1br_plus_pr92_rmb1_randmulti_recode')\n\n298          22 LOAD_CONST               3 (False)\n\n300          24 LOAD_CONST               4 ('pr85_stbm1br_pr92_rmb1_randmulti')\n\n301          26 LOAD_CONST               5 ('candidate_score_claim_false')\n             28 LOAD_CONST               6 (True)\n             30 BUILD_MAP                1\n\n299          32 LOAD_CONST               7 (('lane_id', 'checks'))\n             34 BUILD_CONST_KEY_MAP      2\n\n304          36 LOAD_CONST               6 (True)\n\n305          38 LOAD_CONST               8 ('abc123')\n\n306          40 BUILD_LIST               0\n\n303          42 LOAD_CONST               9 (('ready_for_exact_eval_runtime', 'runtime_tree_sha256', 'remaining_blockers'))\n             44 BUILD_CONST_KEY_MAP      3\n\n296          46 LOAD_CONST              10 (('candidate_id', 'score_claim', 'dispatch_readiness', 'exact_eval_runtime_contract'))\n             48 BUILD_CONST_KEY_MAP      4\n\n294          50 CALL                     2\n             58 STORE_FAST               1 (manifest)\n\n310          60 LOAD_FAST                0 (tmp_path)\n             62 LOAD_CONST              11 ('active_lane_dispatch_claims.md')\n             64 BINARY_OP               11 (/)\n             68 STORE_FAST               2 (claims)\n\n311          70 LOAD_FAST                2 (claims)\n             72 LOAD_ATTR                3 (NULL|self + write_text)\n\n312          92 LOAD_CONST              12 ('# claims\\n\\n| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\\n|---|---|---|---|---|---|---|---|\\n| 2026-05-04T08:30:00Z | codex:gpt-5.5 | pr85_stbm1br_pr92_rmb1_randmulti | lightning | exact_eval_closed | 2026-05-04T08:30:00Z | completed_score_0.2535 | done |\\n| 2026-05-04T08:22:20Z | codex:gpt-5.5 | pr85_stbm1br_pr92_rmb1_randmulti | lightning | exact_eval_closed | 2026-05-04T09:37:20Z | eval | old active |\\n')\n\n317          94 LOAD_CONST              13 ('utf-8')\n\n311          96 KW_NAMES                14 (('encoding',))\n             98 CALL                     2\n            106 POP_TOP\n\n320         108 LOAD_GLOBAL              4 (module)\n            118 LOAD_ATTR                7 (NULL|self + build_preflight)\n\n321         138 LOAD_FAST                1 (manifest)\n\n322         140 LOAD_FAST                2 (claims)\n\n323         142 LOAD_CONST              15 ('2026-05-04T08:31:00Z')\n\n320         144 KW_NAMES                16 (('claims_path', 'now_utc'))\n            146 CALL                     3\n            154 STORE_FAST               3 (payload)\n\n326         156 LOAD_FAST                3 (payload)\n            158 LOAD_CONST              17 ('ready_for_exact_eval_dispatch')\n            160 BINARY_SUBSCR\n            164 LOAD_CONST               6 (True)\n            166 IS_OP                    0\n            168 POP_JUMP_IF_TRUE         2 (to 174)\n            170 LOAD_ASSERTION_ERROR\n            172 RAISE_VARARGS            1\n\n327     >>  174 LOAD_FAST                3 (payload)\n            176 LOAD_CONST              18 ('lane_claim')\n            178 BINARY_SUBSCR\n            182 LOAD_CONST              19 ('active_conflicts')\n            184 BINARY_SUBSCR\n            188 BUILD_LIST               0\n            190 COMPARE_OP              40 (==)\n            194 POP_JUMP_IF_TRUE         2 (to 200)\n            196 LOAD_ASSERTION_ERROR\n            198 RAISE_VARARGS            1\n        >>  200 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "test_cli_fail_if_not_ready_returns_two_and_writes_report",
+      "name": "test_cli_fail_if_not_ready_returns_two_and_writes_report",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "tmp_path",
+        "capsys",
+        "manifest",
+        "out",
+        "rc",
+        "stdout_payload",
+        "file_payload"
+      ],
+      "names": [
+        "_write_manifest",
+        "module",
+        "main",
+        "str",
+        "json",
+        "loads",
+        "readouterr",
+        "out",
+        "read_text"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "330           0 RESUME                   0\n\n331           2 LOAD_GLOBAL              1 (NULL + _write_manifest)\n\n332          12 LOAD_FAST                0 (tmp_path)\n             14 LOAD_CONST               1 ('manifest.json')\n             16 BINARY_OP               11 (/)\n\n334          20 LOAD_CONST               2 ('planning_candidate')\n\n335          22 LOAD_CONST               3 (False)\n\n336          24 LOAD_CONST               4 ('planning_only/no_remote_dispatch')\n\n333          26 LOAD_CONST               5 (('candidate_id', 'score_claim', 'dispatch_gate'))\n             28 BUILD_CONST_KEY_MAP      3\n\n331          30 CALL                     2\n             38 STORE_FAST               2 (manifest)\n\n339          40 LOAD_FAST                0 (tmp_path)\n             42 LOAD_CONST               6 ('report.json')\n             44 BINARY_OP               11 (/)\n             48 STORE_FAST               3 (out)\n\n341          50 LOAD_GLOBAL              2 (module)\n             60 LOAD_ATTR                5 (NULL|self + main)\n\n342          80 LOAD_CONST               7 ('--manifest')\n             82 LOAD_GLOBAL              7 (NULL + str)\n             92 LOAD_FAST                2 (manifest)\n             94 CALL                     1\n            102 LOAD_CONST               8 ('--json-out')\n            104 LOAD_GLOBAL              7 (NULL + str)\n            114 LOAD_FAST                3 (out)\n            116 CALL                     1\n            124 LOAD_CONST               9 ('--fail-if-not-ready')\n            126 BUILD_LIST               5\n\n341         128 CALL                     1\n            136 STORE_FAST               4 (rc)\n\n345         138 LOAD_FAST                4 (rc)\n            140 LOAD_CONST              10 (2)\n            142 COMPARE_OP              40 (==)\n            146 POP_JUMP_IF_TRUE         2 (to 152)\n            148 LOAD_ASSERTION_ERROR\n            150 RAISE_VARARGS            1\n\n346     >>  152 LOAD_GLOBAL              9 (NULL + json)\n            162 LOAD_ATTR               10 (loads)\n            182 LOAD_FAST                1 (capsys)\n            184 LOAD_ATTR               13 (NULL|self + readouterr)\n            204 CALL                     0\n            212 LOAD_ATTR               14 (out)\n            232 CALL                     1\n            240 STORE_FAST               5 (stdout_payload)\n\n347         242 LOAD_GLOBAL              9 (NULL + json)\n            252 LOAD_ATTR               10 (loads)\n            272 LOAD_FAST                3 (out)\n            274 LOAD_ATTR               17 (NULL|self + read_text)\n            294 LOAD_CONST              11 ('utf-8')\n            296 KW_NAMES                12 (('encoding',))\n            298 CALL                     1\n            306 CALL                     1\n            314 STORE_FAST               6 (file_payload)\n\n348         316 LOAD_FAST                5 (stdout_payload)\n            318 LOAD_FAST                6 (file_payload)\n            320 COMPARE_OP              40 (==)\n            324 POP_JUMP_IF_TRUE         2 (to 330)\n            326 LOAD_ASSERTION_ERROR\n            328 RAISE_VARARGS            1\n\n349     >>  330 LOAD_FAST                6 (file_payload)\n            332 LOAD_CONST              13 ('blockers')\n            334 BINARY_SUBSCR\n            338 LOAD_CONST              14 (0)\n            340 BINARY_SUBSCR\n            344 LOAD_CONST              15 ('code')\n            346 BINARY_SUBSCR\n            350 LOAD_CONST              16 ('dispatch_gate_blocked')\n            352 COMPARE_OP              40 (==)\n            356 POP_JUMP_IF_TRUE         2 (to 362)\n            358 LOAD_ASSERTION_ERROR\n            360 RAISE_VARARGS            1\n        >>  362 RETURN_CONST             0 (None)\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  1           2 LOAD_CONST               0 (0)\n              4 LOAD_CONST               1 (('annotations',))\n              6 IMPORT_NAME              0 (__future__)\n              8 IMPORT_FROM              1 (annotations)\n             10 STORE_NAME               1 (annotations)\n             12 POP_TOP\n\n  3          14 LOAD_CONST               0 (0)\n             16 LOAD_CONST               2 (None)\n             18 IMPORT_NAME              2 (importlib.util)\n             20 STORE_NAME               3 (importlib)\n\n  4          22 LOAD_CONST               0 (0)\n             24 LOAD_CONST               2 (None)\n             26 IMPORT_NAME              4 (json)\n             28 STORE_NAME               4 (json)\n\n  5          30 LOAD_CONST               0 (0)\n             32 LOAD_CONST               2 (None)\n             34 IMPORT_NAME              5 (sys)\n             36 STORE_NAME               5 (sys)\n\n  6          38 LOAD_CONST               0 (0)\n             40 LOAD_CONST               3 (('Path',))\n             42 IMPORT_NAME              6 (pathlib)\n             44 IMPORT_FROM              7 (Path)\n             46 STORE_NAME               7 (Path)\n             48 POP_TOP\n\n  9          50 PUSH_NULL\n             52 LOAD_NAME                7 (Path)\n             54 LOAD_NAME                8 (__file__)\n             56 CALL                     1\n             64 LOAD_ATTR               19 (NULL|self + resolve)\n             84 CALL                     0\n             92 LOAD_ATTR               20 (parents)\n            112 LOAD_CONST               4 (3)\n            114 BINARY_SUBSCR\n            118 STORE_NAME              11 (REPO)\n\n 10         120 LOAD_NAME               11 (REPO)\n            122 LOAD_CONST               5 ('experiments')\n            124 BINARY_OP               11 (/)\n            128 LOAD_CONST               6 ('preflight_candidate_manifest_dispatch_readiness.py')\n            130 BINARY_OP               11 (/)\n            134 STORE_NAME              12 (SCRIPT)\n\n 13         136 LOAD_CONST               7 (<code object _load_script at 0x102cd1890, file \"src/tac/tests/test_preflight_candidate_manifest_dispatch_readiness.py\", line 13>)\n            138 MAKE_FUNCTION            0\n            140 STORE_NAME              13 (_load_script)\n\n 22         142 PUSH_NULL\n            144 LOAD_NAME               13 (_load_script)\n            146 CALL                     0\n            154 STORE_NAME              14 (module)\n\n 25         156 LOAD_CONST              20 (('path', 'Path', 'payload', 'dict', 'return', 'Path'))\n            158 LOAD_CONST               8 (<code object _write_manifest at 0x102df5e90, file \"src/tac/tests/test_preflight_candidate_manifest_dispatch_readiness.py\", line 25>)\n            160 MAKE_FUNCTION            4 (annotations)\n            162 STORE_NAME              15 (_write_manifest)\n\n 30         164 LOAD_CONST              21 (('tmp_path', 'Path', 'return', 'None'))\n            166 LOAD_CONST               9 (<code object test_blocks_builder_specific_local_only_dispatch_gate at 0x102cc9530, file \"src/tac/tests/test_preflight_candidate_manifest_dispatch_readiness.py\", line 30>)\n            168 MAKE_FUNCTION            4 (annotations)\n            170 STORE_NAME              16 (test_blocks_builder_specific_local_only_dispatch_gate)\n\n 49         172 LOAD_CONST              21 (('tmp_path', 'Path', 'return', 'None'))\n            174 LOAD_CONST              10 (<code object test_blocks_unsafe_exact_eval_dispatch_gate at 0x102cc8330, file \"src/tac/tests/test_preflight_candidate_manifest_dispatch_readiness.py\", line 49>)\n            176 MAKE_FUNCTION            4 (annotations)\n            178 STORE_NAME              17 (test_blocks_unsafe_exact_eval_dispatch_gate)\n\n 75         180 LOAD_CONST              21 (('tmp_path', 'Path', 'return', 'None'))\n            182 LOAD_CONST              11 (<code object test_blocks_nested_exact_runtime_contract_blockers at 0x102cc96b0, file \"src/tac/tests/test_preflight_candidate_manifest_dispatch_readiness.py\", line 75>)\n            184 MAKE_FUNCTION            4 (annotations)\n            186 STORE_NAME              18 (test_blocks_nested_exact_runtime_contract_blockers)\n\n100         188 LOAD_CONST              21 (('tmp_path', 'Path', 'return', 'None'))\n            190 LOAD_CONST              12 (<code object test_blocks_runtime_changing_manifest_missing_exact_runtime_contract at 0x102cc9830, file \"src/tac/tests/test_preflight_candidate_manifest_dispatch_readiness.py\", line 100>)\n            192 MAKE_FUNCTION            4 (annotations)\n            194 STORE_NAME              19 (test_blocks_runtime_changing_manifest_missing_exact_runtime_contract)\n\n125         196 LOAD_CONST              21 (('tmp_path', 'Path', 'return', 'None'))\n            198 LOAD_CONST              13 (<code object test_blocks_formula_only_qfq4_model_recode_without_runtime_loader at 0x102d217d0, file \"src/tac/tests/test_preflight_candidate_manifest_dispatch_readiness.py\", line 125>)\n            200 MAKE_FUNCTION            4 (annotations)\n            202 STORE_NAME              20 (test_blocks_formula_only_qfq4_model_recode_without_runtime_loader)\n\n161         204 LOAD_CONST              21 (('tmp_path', 'Path', 'return', 'None'))\n            206 LOAD_CONST              14 (<code object test_blocks_hpm1_projection_when_decode_parity_failed at 0x102d21980, file \"src/tac/tests/test_preflight_candidate_manifest_dispatch_readiness.py\", line 161>)\n            208 MAKE_FUNCTION            4 (annotations)\n            210 STORE_NAME              21 (test_blocks_hpm1_projection_when_decode_parity_failed)\n\n194         212 LOAD_CONST              21 (('tmp_path', 'Path', 'return', 'None'))\n            214 LOAD_CONST              15 (<code object test_allows_eligible_manifest_but_warns_lane_claim_required at 0x102d5e5b0, file \"src/tac/tests/test_preflight_candidate_manifest_dispatch_readiness.py\", line 194>)\n            216 MAKE_FUNCTION            4 (annotations)\n            218 STORE_NAME              22 (test_allows_eligible_manifest_but_warns_lane_claim_required)\n\n217         220 LOAD_CONST              21 (('tmp_path', 'Path', 'return', 'None'))\n            222 LOAD_CONST              16 (<code object test_allows_explanatory_rate_projection_when_runtime_contract_is_ready at 0x102c85210, file \"src/tac/tests/test_preflight_candidate_manifest_dispatch_readiness.py\", line 217>)\n            224 MAKE_FUNCTION            4 (annotations)\n            226 STORE_NAME              23 (test_allows_explanatory_rate_projection_when_runtime_contract_is_ready)\n\n254         228 LOAD_CONST              21 (('tmp_path', 'Path', 'return', 'None'))\n            230 LOAD_CONST              17 (<code object test_blocks_active_same_lane_claim_when_claims_path_is_supplied at 0xb35209680, file \"src/tac/tests/test_preflight_candidate_manifest_dispatch_readiness.py\", line 254>)\n            232 MAKE_FUNCTION            4 (annotations)\n            234 STORE_NAME              24 (test_blocks_active_same_lane_claim_when_claims_path_is_supplied)\n\n293         236 LOAD_CONST              21 (('tmp_path', 'Path', 'return', 'None'))\n            238 LOAD_CONST              18 (<code object test_terminal_newer_claim_closes_older_active_same_job at 0x102e15160, file \"src/tac/tests/test_preflight_candidate_manifest_dispatch_readiness.py\", line 293>)\n            240 MAKE_FUNCTION            4 (annotations)\n            242 STORE_NAME              25 (test_terminal_newer_claim_closes_older_active_same_job)\n\n330         244 LOAD_CONST              21 (('tmp_path', 'Path', 'return', 'None'))\n            246 LOAD_CONST              19 (<code object test_cli_fail_if_not_ready_returns_two_and_writes_report at 0xb3520b480, file \"src/tac/tests/test_preflight_candidate_manifest_dispatch_readiness.py\", line 330>)\n            248 MAKE_FUNCTION            4 (annotations)\n            250 STORE_NAME              26 (test_cli_fail_if_not_ready_returns_two_and_writes_report)\n            252 RETURN_CONST             2 (None)\n"
+}

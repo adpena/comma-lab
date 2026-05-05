@@ -1,0 +1,199 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/experiments/results/leaderboard_intel_20260504_codex/pr99_runtime/__pycache__/sidecar.cpython-312.pyc",
+  "names": [
+    "__doc__",
+    "struct",
+    "numpy",
+    "np",
+    "DELTA_SCALE",
+    "encode_corrections",
+    "decode_corrections",
+    "apply_corrections"
+  ],
+  "varnames": [],
+  "consts": [
+    "Latent-correction sidecar for hnerv_repack_latent.\n\nWire format (single blob, brotli'd):\n  u16 n_pairs\n  per pair: u8 dim_idx (0..27, or 255 = no correction), i8 delta_quantized (real = i8 * DELTA_SCALE)\n\nAt inflate time, for each pair p:\n  if dim_idx[p] != 255:\n      latents[p, dim_idx[p]] += delta_quantized[p] * DELTA_SCALE\n",
+    0,
+    null,
+    0.01,
+    {
+      "__code__": "encode_corrections",
+      "qualname": "encode_corrections",
+      "argcount": 2,
+      "varnames": [
+        "out_dim",
+        "out_delta_q",
+        "brotli",
+        "n",
+        "dim_packed",
+        "payload"
+      ],
+      "names": [
+        "brotli",
+        "len",
+        "np",
+        "where",
+        "astype",
+        "uint8",
+        "struct",
+        "pack",
+        "stack",
+        "int8",
+        "view",
+        "tobytes",
+        "compress"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "decode_corrections",
+      "qualname": "decode_corrections",
+      "argcount": 1,
+      "varnames": [
+        "blob",
+        "brotli",
+        "raw",
+        "n",
+        "arr",
+        "dim",
+        "delta_q"
+      ],
+      "names": [
+        "brotli",
+        "decompress",
+        "struct",
+        "unpack_from",
+        "np",
+        "frombuffer",
+        "uint8",
+        "reshape",
+        "view",
+        "int8"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "apply_corrections",
+      "qualname": "apply_corrections",
+      "argcount": 4,
+      "varnames": [
+        "latents_tensor",
+        "dim_arr",
+        "delta_q_arr",
+        "scale",
+        "torch",
+        "n",
+        "p",
+        "d"
+      ],
+      "names": [
+        "torch",
+        "shape",
+        "range",
+        "int",
+        "float"
+      ],
+      "freevars": [],
+      "cellvars": []
+    }
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": "Latent-correction sidecar for hnerv_repack_latent.\n\nWire format (single blob, brotli'd):\n  u16 n_pairs\n  per pair: u8 dim_idx (0..27, or 255 = no correction), i8 delta_quantized (real = i8 * DELTA_SCALE)\n\nAt inflate time, for each pair p:\n  if dim_idx[p] != 255:\n      latents[p, dim_idx[p]] += delta_quantized[p] * DELTA_SCALE\n",
+  "child_codes": [
+    {
+      "qualname": "encode_corrections",
+      "name": "encode_corrections",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "out_dim",
+        "out_delta_q",
+        "brotli",
+        "n",
+        "dim_packed",
+        "payload"
+      ],
+      "names": [
+        "brotli",
+        "len",
+        "np",
+        "where",
+        "astype",
+        "uint8",
+        "struct",
+        "pack",
+        "stack",
+        "int8",
+        "view",
+        "tobytes",
+        "compress"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "out_dim, out_delta_q: int8 arrays of length 600. dim=0 + delta_q=0 means 'no correction'.\n    Returns brotli-compressed blob.",
+      "dis": " 17           0 RESUME                   0\n\n 20           2 LOAD_CONST               1 (0)\n              4 LOAD_CONST               2 (None)\n              6 IMPORT_NAME              0 (brotli)\n              8 STORE_FAST               2 (brotli)\n\n 21          10 LOAD_GLOBAL              3 (NULL + len)\n             20 LOAD_FAST                0 (out_dim)\n             22 CALL                     1\n             30 STORE_FAST               3 (n)\n\n 22          32 LOAD_GLOBAL              3 (NULL + len)\n             42 LOAD_FAST                1 (out_delta_q)\n             44 CALL                     1\n             52 LOAD_FAST                3 (n)\n             54 COMPARE_OP              40 (==)\n             58 POP_JUMP_IF_TRUE         2 (to 64)\n             60 LOAD_ASSERTION_ERROR\n             62 RAISE_VARARGS            1\n\n 24     >>   64 LOAD_GLOBAL              5 (NULL + np)\n             74 LOAD_ATTR                6 (where)\n             94 LOAD_FAST                1 (out_delta_q)\n             96 LOAD_CONST               1 (0)\n             98 COMPARE_OP              40 (==)\n            102 LOAD_CONST               3 (255)\n            104 LOAD_FAST                0 (out_dim)\n            106 CALL                     3\n            114 LOAD_ATTR                9 (NULL|self + astype)\n            134 LOAD_GLOBAL              4 (np)\n            144 LOAD_ATTR               10 (uint8)\n            164 CALL                     1\n            172 STORE_FAST               4 (dim_packed)\n\n 25         174 LOAD_GLOBAL             13 (NULL + struct)\n            184 LOAD_ATTR               14 (pack)\n            204 LOAD_CONST               4 ('<H')\n            206 LOAD_FAST                3 (n)\n            208 CALL                     2\n            216 LOAD_GLOBAL              5 (NULL + np)\n            226 LOAD_ATTR               16 (stack)\n            246 LOAD_FAST                4 (dim_packed)\n            248 LOAD_FAST                1 (out_delta_q)\n            250 LOAD_ATTR                9 (NULL|self + astype)\n            270 LOAD_GLOBAL              4 (np)\n            280 LOAD_ATTR               18 (int8)\n            300 CALL                     1\n            308 LOAD_ATTR               21 (NULL|self + view)\n            328 LOAD_GLOBAL              4 (np)\n            338 LOAD_ATTR               10 (uint8)\n            358 CALL                     1\n            366 BUILD_LIST               2\n            368 LOAD_CONST               5 (1)\n            370 KW_NAMES                 6 (('axis',))\n            372 CALL                     2\n            380 LOAD_ATTR               23 (NULL|self + tobytes)\n            400 CALL                     0\n            408 BINARY_OP                0 (+)\n            412 STORE_FAST               5 (payload)\n\n 26         414 LOAD_FAST                2 (brotli)\n            416 LOAD_ATTR               25 (NULL|self + compress)\n            436 LOAD_FAST                5 (payload)\n            438 LOAD_CONST               7 (11)\n            440 KW_NAMES                 8 (('quality',))\n            442 CALL                     2\n            450 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "decode_corrections",
+      "name": "decode_corrections",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "blob",
+        "brotli",
+        "raw",
+        "n",
+        "arr",
+        "dim",
+        "delta_q"
+      ],
+      "names": [
+        "brotli",
+        "decompress",
+        "struct",
+        "unpack_from",
+        "np",
+        "frombuffer",
+        "uint8",
+        "reshape",
+        "view",
+        "int8"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Returns (dim_arr (n, int8), delta_q_arr (n, int8)). dim==255 means no correction.",
+      "dis": " 29           0 RESUME                   0\n\n 31           2 LOAD_CONST               1 (0)\n              4 LOAD_CONST               2 (None)\n              6 IMPORT_NAME              0 (brotli)\n              8 STORE_FAST               1 (brotli)\n\n 32          10 LOAD_FAST                1 (brotli)\n             12 LOAD_ATTR                3 (NULL|self + decompress)\n             32 LOAD_FAST                0 (blob)\n             34 CALL                     1\n             42 STORE_FAST               2 (raw)\n\n 33          44 LOAD_GLOBAL              5 (NULL + struct)\n             54 LOAD_ATTR                6 (unpack_from)\n             74 LOAD_CONST               3 ('<H')\n             76 LOAD_FAST                2 (raw)\n             78 LOAD_CONST               1 (0)\n             80 CALL                     3\n             88 LOAD_CONST               1 (0)\n             90 BINARY_SUBSCR\n             94 STORE_FAST               3 (n)\n\n 34          96 LOAD_GLOBAL              9 (NULL + np)\n            106 LOAD_ATTR               10 (frombuffer)\n            126 LOAD_FAST                2 (raw)\n            128 LOAD_CONST               4 (2)\n            130 LOAD_CONST               4 (2)\n            132 LOAD_CONST               4 (2)\n            134 LOAD_FAST                3 (n)\n            136 BINARY_OP                5 (*)\n            140 BINARY_OP                0 (+)\n            144 BINARY_SLICE\n            146 LOAD_GLOBAL              8 (np)\n            156 LOAD_ATTR               12 (uint8)\n            176 KW_NAMES                 5 (('dtype',))\n            178 CALL                     2\n            186 LOAD_ATTR               15 (NULL|self + reshape)\n            206 LOAD_FAST                3 (n)\n            208 LOAD_CONST               4 (2)\n            210 CALL                     2\n            218 STORE_FAST               4 (arr)\n\n 35         220 LOAD_FAST                4 (arr)\n            222 LOAD_CONST               2 (None)\n            224 LOAD_CONST               2 (None)\n            226 BUILD_SLICE              2\n            228 LOAD_CONST               1 (0)\n            230 BUILD_TUPLE              2\n            232 BINARY_SUBSCR\n            236 STORE_FAST               5 (dim)\n\n 36         238 LOAD_FAST                4 (arr)\n            240 LOAD_CONST               2 (None)\n            242 LOAD_CONST               2 (None)\n            244 BUILD_SLICE              2\n            246 LOAD_CONST               6 (1)\n            248 BUILD_TUPLE              2\n            250 BINARY_SUBSCR\n            254 LOAD_ATTR               17 (NULL|self + view)\n            274 LOAD_GLOBAL              8 (np)\n            284 LOAD_ATTR               18 (int8)\n            304 CALL                     1\n            312 STORE_FAST               6 (delta_q)\n\n 37         314 LOAD_FAST                5 (dim)\n            316 LOAD_FAST                6 (delta_q)\n            318 BUILD_TUPLE              2\n            320 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "apply_corrections",
+      "name": "apply_corrections",
+      "argcount": 4,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "latents_tensor",
+        "dim_arr",
+        "delta_q_arr",
+        "scale",
+        "torch",
+        "n",
+        "p",
+        "d"
+      ],
+      "names": [
+        "torch",
+        "shape",
+        "range",
+        "int",
+        "float"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "In-place add correction to latents_tensor (n, latent_dim). dim==255 means no-op.",
+      "dis": " 40           0 RESUME                   0\n\n 42           2 LOAD_CONST               1 (0)\n              4 LOAD_CONST               2 (None)\n              6 IMPORT_NAME              0 (torch)\n              8 STORE_FAST               4 (torch)\n\n 43          10 LOAD_FAST                0 (latents_tensor)\n             12 LOAD_ATTR                2 (shape)\n             32 LOAD_CONST               1 (0)\n             34 BINARY_SUBSCR\n             38 STORE_FAST               5 (n)\n\n 44          40 LOAD_GLOBAL              5 (NULL + range)\n             50 LOAD_FAST                5 (n)\n             52 CALL                     1\n             60 GET_ITER\n        >>   62 FOR_ITER                52 (to 170)\n             66 STORE_FAST               6 (p)\n\n 45          68 LOAD_GLOBAL              7 (NULL + int)\n             78 LOAD_FAST                1 (dim_arr)\n             80 LOAD_FAST                6 (p)\n             82 BINARY_SUBSCR\n             86 CALL                     1\n             94 STORE_FAST               7 (d)\n\n 46          96 LOAD_FAST                7 (d)\n             98 LOAD_CONST               3 (255)\n            100 COMPARE_OP              40 (==)\n            104 POP_JUMP_IF_FALSE        1 (to 108)\n\n 47         106 JUMP_BACKWARD           23 (to 62)\n\n 48     >>  108 LOAD_FAST                0 (latents_tensor)\n            110 LOAD_FAST                6 (p)\n            112 LOAD_FAST                7 (d)\n            114 BUILD_TUPLE              2\n            116 BINARY_SUBSCR\n            120 LOAD_GLOBAL              9 (NULL + float)\n            130 LOAD_FAST                2 (delta_q_arr)\n            132 LOAD_FAST                6 (p)\n            134 BINARY_SUBSCR\n            138 CALL                     1\n            146 LOAD_FAST                3 (scale)\n            148 BINARY_OP                5 (*)\n            152 BINARY_OP                0 (+)\n            156 LOAD_FAST                0 (latents_tensor)\n            158 LOAD_FAST                6 (p)\n            160 LOAD_FAST                7 (d)\n            162 BUILD_TUPLE              2\n            164 STORE_SUBSCR\n            168 JUMP_BACKWARD           54 (to 62)\n\n 44     >>  170 END_FOR\n\n 49         172 LOAD_FAST                0 (latents_tensor)\n            174 RETURN_VALUE\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  1           2 LOAD_CONST               0 (\"Latent-correction sidecar for hnerv_repack_latent.\\n\\nWire format (single blob, brotli'd):\\n  u16 n_pairs\\n  per pair: u8 dim_idx (0..27, or 255 = no correction), i8 delta_quantized (real = i8 * DELTA_SCALE)\\n\\nAt inflate time, for each pair p:\\n  if dim_idx[p] != 255:\\n      latents[p, dim_idx[p]] += delta_quantized[p] * DELTA_SCALE\\n\")\n              4 STORE_NAME               0 (__doc__)\n\n 11           6 LOAD_CONST               1 (0)\n              8 LOAD_CONST               2 (None)\n             10 IMPORT_NAME              1 (struct)\n             12 STORE_NAME               1 (struct)\n\n 12          14 LOAD_CONST               1 (0)\n             16 LOAD_CONST               2 (None)\n             18 IMPORT_NAME              2 (numpy)\n             20 STORE_NAME               3 (np)\n\n 14          22 LOAD_CONST               3 (0.01)\n             24 STORE_NAME               4 (DELTA_SCALE)\n\n 17          26 LOAD_CONST               4 (<code object encode_corrections at 0x7aae68900, file \"experiments/results/leaderboard_intel_20260504_codex/pr99_runtime/sidecar.py\", line 17>)\n             28 MAKE_FUNCTION            0\n             30 STORE_NAME               5 (encode_corrections)\n\n 29          32 LOAD_CONST               5 (<code object decode_corrections at 0x7ab105b80, file \"experiments/results/leaderboard_intel_20260504_codex/pr99_runtime/sidecar.py\", line 29>)\n             34 MAKE_FUNCTION            0\n             36 STORE_NAME               6 (decode_corrections)\n\n 40          38 LOAD_NAME                4 (DELTA_SCALE)\n             40 BUILD_TUPLE              1\n             42 LOAD_CONST               6 (<code object apply_corrections at 0x1044f1fd0, file \"experiments/results/leaderboard_intel_20260504_codex/pr99_runtime/sidecar.py\", line 40>)\n             44 MAKE_FUNCTION            1 (defaults)\n             46 STORE_NAME               7 (apply_corrections)\n             48 RETURN_CONST             2 (None)\n"
+}

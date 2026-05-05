@@ -1,0 +1,262 @@
+{
+  "archive": "experiments/results/public_pr95_intake_20260504_codex/archive.zip",
+  "archive_bytes": 178417,
+  "archive_sha256": "e976acd5fe565c94fb9a8c62e5200c949919f76150e84599f268d6a58588440a",
+  "decoder": {
+    "brotli_bytes": 162349,
+    "largest_records": [
+      {
+        "name": "stem.weight",
+        "q_bytes": 48384,
+        "scale": 0.012009871192276478,
+        "sha256": "cf4977c7138afbb35b8c50ff0bdd7a1fdcd7ac65d4dec3567476914ef66fd998",
+        "shape": [
+          1728,
+          28
+        ]
+      },
+      {
+        "name": "blocks.0.weight",
+        "q_bytes": 46656,
+        "scale": 0.0047428240068256855,
+        "sha256": "9c8b0fafa400f1be471c6883c0ba24c7c19c786dc438a4b9515e4d5d9af19770",
+        "shape": [
+          144,
+          36,
+          3,
+          3
+        ]
+      },
+      {
+        "name": "blocks.1.weight",
+        "q_bytes": 46656,
+        "scale": 0.00405484065413475,
+        "sha256": "d5122c3a0fceb59168364faf15ff5741e11acfa27b75575b85dee79985008dae",
+        "shape": [
+          144,
+          36,
+          3,
+          3
+        ]
+      },
+      {
+        "name": "blocks.2.weight",
+        "q_bytes": 34992,
+        "scale": 0.0032402160577476025,
+        "sha256": "865addb5a0a93012d5a1f461cc213f3e5c9c88c03d7638dfa7160e22b2f6883c",
+        "shape": [
+          108,
+          36,
+          3,
+          3
+        ]
+      },
+      {
+        "name": "blocks.3.weight",
+        "q_bytes": 19440,
+        "scale": 0.003186482936143875,
+        "sha256": "fa0fe70d73d77f0bdb24aa315321220d951a25239dd39900c22e0d0587a2473a",
+        "shape": [
+          80,
+          27,
+          3,
+          3
+        ]
+      },
+      {
+        "name": "blocks.4.weight",
+        "q_bytes": 12960,
+        "scale": 0.0025837854482233524,
+        "sha256": "851aa14441d02a016a09c7990a7ca166ecb26c429be6becf3ac9960575376298",
+        "shape": [
+          72,
+          20,
+          3,
+          3
+        ]
+      },
+      {
+        "name": "blocks.5.weight",
+        "q_bytes": 11664,
+        "scale": 0.00644119456410408,
+        "sha256": "110d39d21653b2c56c65804de7b3666a772be1dc15d99ca9974da0f0a946d890",
+        "shape": [
+          72,
+          18,
+          3,
+          3
+        ]
+      },
+      {
+        "name": "stem.bias",
+        "q_bytes": 1728,
+        "scale": 0.016600340604782104,
+        "sha256": "09c15c86690f462db5472f01032ae1dc1783ad2c596bfe3fe32bc12f597637aa",
+        "shape": [
+          1728
+        ]
+      },
+      {
+        "name": "refine.0.weight",
+        "q_bytes": 1458,
+        "scale": 0.007619318552315235,
+        "sha256": "80217990e80d681dc1888326657db946e32735f99b9756b99394230e455c5fb1",
+        "shape": [
+          9,
+          18,
+          3,
+          3
+        ]
+      },
+      {
+        "name": "refine.1.weight",
+        "q_bytes": 1458,
+        "scale": 0.0034957299940288067,
+        "sha256": "2dd4169e817baefbbc959bfc2cd5e573e5bb200a91ba17ab6438366487536f7c",
+        "shape": [
+          18,
+          9,
+          3,
+          3
+        ]
+      },
+      {
+        "name": "skips.2.weight",
+        "q_bytes": 972,
+        "scale": 0.003768783761188388,
+        "sha256": "11965d7666b486268cf84b33f20f620b47186fb983cb465158b7d8a8cd6809e8",
+        "shape": [
+          27,
+          36,
+          1,
+          1
+        ]
+      },
+      {
+        "name": "skips.3.weight",
+        "q_bytes": 540,
+        "scale": 0.002995765767991543,
+        "sha256": "fbdb54e423b90387b7cdd120476593deabf0585a41b40979b21945524928caec",
+        "shape": [
+          20,
+          27,
+          1,
+          1
+        ]
+      },
+      {
+        "name": "rgb_0.weight",
+        "q_bytes": 486,
+        "scale": 0.007236362434923649,
+        "sha256": "cd032eb276e2f3a102f42c4fce298274a1643fa91c00a1da64dfb58898be114f",
+        "shape": [
+          3,
+          18,
+          3,
+          3
+        ]
+      },
+      {
+        "name": "rgb_1.weight",
+        "q_bytes": 486,
+        "scale": 0.005492666270583868,
+        "sha256": "c5689a2b14ec132357e26d492f69cd74372ab529b0d9dd63a764ad556d55b0ac",
+        "shape": [
+          3,
+          18,
+          3,
+          3
+        ]
+      },
+      {
+        "name": "skips.4.weight",
+        "q_bytes": 360,
+        "scale": 0.0027972040697932243,
+        "sha256": "4813db3e2e19b1b9f33665a791658e390ba6b73695f98a0d6255390db332ffe4",
+        "shape": [
+          18,
+          20,
+          1,
+          1
+        ]
+      },
+      {
+        "name": "blocks.0.bias",
+        "q_bytes": 144,
+        "scale": 0.0068127308040857315,
+        "sha256": "1b66e30401fbfdffa41b3f1ff4738965eed8d4b65495b0fb0bd07eaf02a3e810",
+        "shape": [
+          144
+        ]
+      }
+    ],
+    "raw_bytes": 230048,
+    "record_count": 28
+  },
+  "evidence_grade": "forensic_byte_profile",
+  "latents": {
+    "brotli_bytes": 15868,
+    "latent_dim": 28,
+    "mins_f16_sha256": "50ff825dc81a7fcd4bfe80bb970194b9bfefa00ec9bdc1d214fc6a1f66ce0d34",
+    "n_pairs": 600,
+    "raw_bytes": 33720,
+    "scales_f16_sha256": "fd5863b12600d607bfdadc0529b0c91d09a3caab1361155549c16ecb61557948"
+  },
+  "member_bytes": 178309,
+  "member_name": "0.bin",
+  "member_sha256": "4b8013fb1168e21b12fc7ee6c395e032660d88daded48a0b845085e7d5eb11c4",
+  "meta": {
+    "base_channels": 36,
+    "eval_size": [
+      384,
+      512
+    ],
+    "latent_dim": 28,
+    "n_pairs": 600
+  },
+  "roundtrip_top_blob_sha256": "4b8013fb1168e21b12fc7ee6c395e032660d88daded48a0b845085e7d5eb11c4",
+  "score_claim": false,
+  "sections": [
+    {
+      "compressed_bytes": 80,
+      "entropy_bits_per_byte": 5.799748,
+      "name": "meta_brotli",
+      "raw_bytes": 80,
+      "sha256": "49385dd99c02228dd0ed7649586fe5026940573a5675911ee7cb24ab2e8bdca7"
+    },
+    {
+      "compressed_bytes": 162349,
+      "entropy_bits_per_byte": 7.998084,
+      "name": "decoder_brotli",
+      "raw_bytes": 230048,
+      "sha256": "fbeaf706e9d8c38cf39fd36b7f6c6312b66eae6c9a4f25a99708d8fbb3cdaf2e"
+    },
+    {
+      "compressed_bytes": 15868,
+      "entropy_bits_per_byte": 7.986833,
+      "name": "latents_brotli",
+      "raw_bytes": 33720,
+      "sha256": "863634aba9a956d13eab8708133239ee861bb797cbad4ff2f39a46939987c709"
+    }
+  ],
+  "top_blob_lengths": {
+    "decoder_brotli": 162349,
+    "framing_bytes": 12,
+    "latents_brotli": 15868,
+    "meta_brotli": 80
+  },
+  "zip_info": {
+    "compress_size": 178309,
+    "compress_type": 0,
+    "crc": 3949484570,
+    "date_time": [
+      2026,
+      5,
+      2,
+      17,
+      36,
+      56
+    ],
+    "file_size": 178309
+  }
+}

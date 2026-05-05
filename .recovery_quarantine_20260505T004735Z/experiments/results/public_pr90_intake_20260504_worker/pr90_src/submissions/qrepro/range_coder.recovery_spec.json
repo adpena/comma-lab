@@ -1,0 +1,373 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/experiments/results/public_pr90_intake_20260504_worker/pr90_src/submissions/qrepro/__pycache__/range_coder.cpython-312.pyc",
+  "names": [
+    "__doc__",
+    "typing",
+    "List",
+    "Sequence",
+    "TOP",
+    "HALF",
+    "QUARTER",
+    "THREE_QUARTER",
+    "RangeEncoder",
+    "RangeDecoder",
+    "int",
+    "cdfs_from_freqs"
+  ],
+  "varnames": [],
+  "consts": [
+    "Pure-Python range coder for seg_targets compression.\n\nStdlib-only (no constriction, no numpy needed for the coder core -- numpy\nused only for input-prep helpers outside the hot loop). Shipped in the\nscoring archive.\n\nBitstream format (standard carry-less 32-bit range coder):\n- 32-bit state (low, high), byte-level renormalization\n- frequency tables are fixed-point uint16 (total_freq = 2^precision, typically 1<<16)\n- symbols are uint8 in range [0, n_classes)\n\nThis is the Witten/Neal/Cleary arithmetic-coding algorithm rewritten with\nplain 32-bit ints and E1/E2/E3 renormalization. Implementation is\nbyte-identical lossless by construction (encode/decode share arithmetic).\n",
+    0,
+    [
+      "List",
+      "Sequence"
+    ],
+    4294967295,
+    2147483648,
+    1073741824,
+    3221225472,
+    {
+      "__code__": "RangeEncoder",
+      "qualname": "RangeEncoder",
+      "argcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "__doc__",
+        "__init__",
+        "int",
+        "_emit_bit",
+        "_emit_bit_and_pending",
+        "encode_symbol",
+        "bytes",
+        "finish"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "RangeEncoder",
+    {
+      "__code__": "RangeDecoder",
+      "qualname": "RangeDecoder",
+      "argcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "__doc__",
+        "bytes",
+        "__init__",
+        "int",
+        "_read_bit",
+        "decode_target",
+        "advance"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "RangeDecoder",
+    "freqs",
+    "return",
+    {
+      "__code__": "cdfs_from_freqs",
+      "qualname": "cdfs_from_freqs",
+      "argcount": 1,
+      "varnames": [
+        "freqs",
+        "cdf",
+        "acc",
+        "f"
+      ],
+      "names": [
+        "append"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    null
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": "Pure-Python range coder for seg_targets compression.\n\nStdlib-only (no constriction, no numpy needed for the coder core -- numpy\nused only for input-prep helpers outside the hot loop). Shipped in the\nscoring archive.\n\nBitstream format (standard carry-less 32-bit range coder):\n- 32-bit state (low, high), byte-level renormalization\n- frequency tables are fixed-point uint16 (total_freq = 2^precision, typically 1<<16)\n- symbols are uint8 in range [0, n_classes)\n\nThis is the Witten/Neal/Cleary arithmetic-coding algorithm rewritten with\nplain 32-bit ints and E1/E2/E3 renormalization. Implementation is\nbyte-identical lossless by construction (encode/decode share arithmetic).\n",
+  "child_codes": [
+    {
+      "qualname": "RangeEncoder",
+      "name": "RangeEncoder",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "__doc__",
+        "__init__",
+        "int",
+        "_emit_bit",
+        "_emit_bit_and_pending",
+        "encode_symbol",
+        "bytes",
+        "finish"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "RangeEncoder",
+      "dis": " 26           0 RESUME                   0\n              2 LOAD_NAME                0 (__name__)\n              4 STORE_NAME               1 (__module__)\n              6 LOAD_CONST               0 ('RangeEncoder')\n              8 STORE_NAME               2 (__qualname__)\n\n 27          10 LOAD_CONST               1 ('Encode symbols under per-symbol CDFs into a byte stream.')\n             12 STORE_NAME               3 (__doc__)\n\n 29          14 LOAD_CONST              13 (('return', None))\n             16 LOAD_CONST               4 (<code object __init__ at 0x10436e760, file \"/Users/adpena/Projects/pact/experiments/results/public_pr90_intake_20260504_worker/pr90_src/submissions/qrepro/range_coder.py\", line 29>)\n             18 MAKE_FUNCTION            4 (annotations)\n             20 STORE_NAME               4 (__init__)\n\n 37          22 LOAD_CONST               5 ('bit')\n             24 LOAD_NAME                5 (int)\n             26 LOAD_CONST               2 ('return')\n             28 LOAD_CONST               3 (None)\n             30 BUILD_TUPLE              4\n             32 LOAD_CONST               6 (<code object _emit_bit at 0x10437d7d0, file \"/Users/adpena/Projects/pact/experiments/results/public_pr90_intake_20260504_worker/pr90_src/submissions/qrepro/range_coder.py\", line 37>)\n             34 MAKE_FUNCTION            4 (annotations)\n             36 STORE_NAME               6 (_emit_bit)\n\n 45          38 LOAD_CONST               5 ('bit')\n             40 LOAD_NAME                5 (int)\n             42 LOAD_CONST               2 ('return')\n             44 LOAD_CONST               3 (None)\n             46 BUILD_TUPLE              4\n             48 LOAD_CONST               7 (<code object _emit_bit_and_pending at 0x1042e5bb0, file \"/Users/adpena/Projects/pact/experiments/results/public_pr90_intake_20260504_worker/pr90_src/submissions/qrepro/range_coder.py\", line 45>)\n             50 MAKE_FUNCTION            4 (annotations)\n             52 STORE_NAME               7 (_emit_bit_and_pending)\n\n 52          54 LOAD_CONST               8 ('cum_low')\n             56 LOAD_NAME                5 (int)\n             58 LOAD_CONST               9 ('cum_high')\n             60 LOAD_NAME                5 (int)\n             62 LOAD_CONST              10 ('total')\n             64 LOAD_NAME                5 (int)\n             66 LOAD_CONST               2 ('return')\n             68 LOAD_CONST               3 (None)\n             70 BUILD_TUPLE              8\n             72 LOAD_CONST              11 (<code object encode_symbol at 0x80ee42400, file \"/Users/adpena/Projects/pact/experiments/results/public_pr90_intake_20260504_worker/pr90_src/submissions/qrepro/range_coder.py\", line 52>)\n             74 MAKE_FUNCTION            4 (annotations)\n             76 STORE_NAME               8 (encode_symbol)\n\n 74          78 LOAD_CONST               2 ('return')\n             80 LOAD_NAME                9 (bytes)\n             82 BUILD_TUPLE              2\n             84 LOAD_CONST              12 (<code object finish at 0x80ee21b80, file \"/Users/adpena/Projects/pact/experiments/results/public_pr90_intake_20260504_worker/pr90_src/submissions/qrepro/range_coder.py\", line 74>)\n             86 MAKE_FUNCTION            4 (annotations)\n             88 STORE_NAME              10 (finish)\n             90 RETURN_CONST             3 (None)\n"
+    },
+    {
+      "qualname": "RangeEncoder.__init__",
+      "name": "__init__",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "self"
+      ],
+      "names": [
+        "low",
+        "TOP",
+        "high",
+        "pending",
+        "bytearray",
+        "out",
+        "_byte_buf",
+        "_byte_bits"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 29           0 RESUME                   0\n\n 30           2 LOAD_CONST               1 (0)\n              4 LOAD_FAST                0 (self)\n              6 STORE_ATTR               0 (low)\n\n 31          16 LOAD_GLOBAL              2 (TOP)\n             26 LOAD_FAST                0 (self)\n             28 STORE_ATTR               2 (high)\n\n 32          38 LOAD_CONST               1 (0)\n             40 LOAD_FAST                0 (self)\n             42 STORE_ATTR               3 (pending)\n\n 33          52 LOAD_GLOBAL              9 (NULL + bytearray)\n             62 CALL                     0\n             70 LOAD_FAST                0 (self)\n             72 STORE_ATTR               5 (out)\n\n 34          82 LOAD_CONST               1 (0)\n             84 LOAD_FAST                0 (self)\n             86 STORE_ATTR               6 (_byte_buf)\n\n 35          96 LOAD_CONST               1 (0)\n             98 LOAD_FAST                0 (self)\n            100 STORE_ATTR               7 (_byte_bits)\n            110 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "RangeEncoder._emit_bit",
+      "name": "_emit_bit",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "self",
+        "bit"
+      ],
+      "names": [
+        "_byte_buf",
+        "_byte_bits",
+        "out",
+        "append"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 37           0 RESUME                   0\n\n 38           2 LOAD_FAST                0 (self)\n              4 LOAD_ATTR                0 (_byte_buf)\n             24 LOAD_CONST               1 (1)\n             26 BINARY_OP                3 (<<)\n             30 LOAD_FAST                1 (bit)\n             32 BINARY_OP                7 (|)\n             36 LOAD_FAST                0 (self)\n             38 STORE_ATTR               0 (_byte_buf)\n\n 39          48 LOAD_FAST                0 (self)\n             50 COPY                     1\n             52 LOAD_ATTR                2 (_byte_bits)\n             72 LOAD_CONST               1 (1)\n             74 BINARY_OP               13 (+=)\n             78 SWAP                     2\n             80 STORE_ATTR               1 (_byte_bits)\n\n 40          90 LOAD_FAST                0 (self)\n             92 LOAD_ATTR                2 (_byte_bits)\n            112 LOAD_CONST               2 (8)\n            114 COMPARE_OP              40 (==)\n            118 POP_JUMP_IF_FALSE       55 (to 230)\n\n 41         120 LOAD_FAST                0 (self)\n            122 LOAD_ATTR                4 (out)\n            142 LOAD_ATTR                7 (NULL|self + append)\n            162 LOAD_FAST                0 (self)\n            164 LOAD_ATTR                0 (_byte_buf)\n            184 LOAD_CONST               3 (255)\n            186 BINARY_OP                1 (&)\n            190 CALL                     1\n            198 POP_TOP\n\n 42         200 LOAD_CONST               4 (0)\n            202 LOAD_FAST                0 (self)\n            204 STORE_ATTR               0 (_byte_buf)\n\n 43         214 LOAD_CONST               4 (0)\n            216 LOAD_FAST                0 (self)\n            218 STORE_ATTR               1 (_byte_bits)\n            228 RETURN_CONST             0 (None)\n\n 40     >>  230 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "RangeEncoder._emit_bit_and_pending",
+      "name": "_emit_bit_and_pending",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "self",
+        "bit",
+        "neg",
+        "_"
+      ],
+      "names": [
+        "_emit_bit",
+        "range",
+        "pending"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 45           0 RESUME                   0\n\n 46           2 LOAD_FAST                0 (self)\n              4 LOAD_ATTR                1 (NULL|self + _emit_bit)\n             24 LOAD_FAST                1 (bit)\n             26 CALL                     1\n             34 POP_TOP\n\n 47          36 LOAD_CONST               1 (1)\n             38 LOAD_FAST                1 (bit)\n             40 BINARY_OP               10 (-)\n             44 STORE_FAST               2 (neg)\n\n 48          46 LOAD_GLOBAL              3 (NULL + range)\n             56 LOAD_FAST                0 (self)\n             58 LOAD_ATTR                4 (pending)\n             78 CALL                     1\n             86 GET_ITER\n        >>   88 FOR_ITER                19 (to 130)\n             92 STORE_FAST               3 (_)\n\n 49          94 LOAD_FAST                0 (self)\n             96 LOAD_ATTR                1 (NULL|self + _emit_bit)\n            116 LOAD_FAST                2 (neg)\n            118 CALL                     1\n            126 POP_TOP\n            128 JUMP_BACKWARD           21 (to 88)\n\n 48     >>  130 END_FOR\n\n 50         132 LOAD_CONST               2 (0)\n            134 LOAD_FAST                0 (self)\n            136 STORE_ATTR               2 (pending)\n            146 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "RangeEncoder.encode_symbol",
+      "name": "encode_symbol",
+      "argcount": 4,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "self",
+        "cum_low",
+        "cum_high",
+        "total",
+        "rng"
+      ],
+      "names": [
+        "high",
+        "low",
+        "HALF",
+        "_emit_bit_and_pending",
+        "QUARTER",
+        "THREE_QUARTER",
+        "pending",
+        "TOP"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Encode one symbol defined by its cumulative range [cum_low, cum_high).",
+      "dis": " 52           0 RESUME                   0\n\n 54           2 LOAD_FAST                0 (self)\n              4 LOAD_ATTR                0 (high)\n             24 LOAD_FAST                0 (self)\n             26 LOAD_ATTR                2 (low)\n             46 BINARY_OP               10 (-)\n             50 LOAD_CONST               1 (1)\n             52 BINARY_OP                0 (+)\n             56 STORE_FAST               4 (rng)\n\n 55          58 LOAD_FAST                0 (self)\n             60 LOAD_ATTR                2 (low)\n             80 LOAD_FAST                4 (rng)\n             82 LOAD_FAST                2 (cum_high)\n             84 BINARY_OP                5 (*)\n             88 LOAD_FAST                3 (total)\n             90 BINARY_OP                2 (//)\n             94 BINARY_OP                0 (+)\n             98 LOAD_CONST               1 (1)\n            100 BINARY_OP               10 (-)\n            104 LOAD_FAST                0 (self)\n            106 STORE_ATTR               0 (high)\n\n 56         116 LOAD_FAST                0 (self)\n            118 LOAD_ATTR                2 (low)\n            138 LOAD_FAST                4 (rng)\n            140 LOAD_FAST                1 (cum_low)\n            142 BINARY_OP                5 (*)\n            146 LOAD_FAST                3 (total)\n            148 BINARY_OP                2 (//)\n            152 BINARY_OP                0 (+)\n            156 LOAD_FAST                0 (self)\n            158 STORE_ATTR               1 (low)\n\n 58         168 NOP\n\n 59     >>  170 LOAD_FAST                0 (self)\n            172 LOAD_ATTR                0 (high)\n            192 LOAD_GLOBAL              4 (HALF)\n            202 COMPARE_OP               2 (<)\n            206 POP_JUMP_IF_FALSE       18 (to 244)\n\n 60         208 LOAD_FAST                0 (self)\n            210 LOAD_ATTR                7 (NULL|self + _emit_bit_and_pending)\n            230 LOAD_CONST               2 (0)\n            232 CALL                     1\n            240 POP_TOP\n            242 JUMP_FORWARD           198 (to 640)\n\n 61     >>  244 LOAD_FAST                0 (self)\n            246 LOAD_ATTR                2 (low)\n            266 LOAD_GLOBAL              4 (HALF)\n            276 COMPARE_OP              92 (>=)\n            280 POP_JUMP_IF_FALSE       68 (to 418)\n\n 62         282 LOAD_FAST                0 (self)\n            284 LOAD_ATTR                7 (NULL|self + _emit_bit_and_pending)\n            304 LOAD_CONST               1 (1)\n            306 CALL                     1\n            314 POP_TOP\n\n 63         316 LOAD_FAST                0 (self)\n            318 COPY                     1\n            320 LOAD_ATTR                2 (low)\n            340 LOAD_GLOBAL              4 (HALF)\n            350 BINARY_OP               23 (-=)\n            354 SWAP                     2\n            356 STORE_ATTR               1 (low)\n\n 64         366 LOAD_FAST                0 (self)\n            368 COPY                     1\n            370 LOAD_ATTR                0 (high)\n            390 LOAD_GLOBAL              4 (HALF)\n            400 BINARY_OP               23 (-=)\n            404 SWAP                     2\n            406 STORE_ATTR               0 (high)\n            416 JUMP_FORWARD           111 (to 640)\n\n 65     >>  418 LOAD_FAST                0 (self)\n            420 LOAD_ATTR                2 (low)\n            440 LOAD_GLOBAL              8 (QUARTER)\n            450 COMPARE_OP              92 (>=)\n            454 POP_JUMP_IF_FALSE       91 (to 638)\n            456 LOAD_FAST                0 (self)\n            458 LOAD_ATTR                0 (high)\n            478 LOAD_GLOBAL             10 (THREE_QUARTER)\n            488 COMPARE_OP               2 (<)\n            492 POP_JUMP_IF_FALSE       72 (to 638)\n\n 66         494 LOAD_FAST                0 (self)\n            496 COPY                     1\n            498 LOAD_ATTR               12 (pending)\n            518 LOAD_CONST               1 (1)\n            520 BINARY_OP               13 (+=)\n            524 SWAP                     2\n            526 STORE_ATTR               6 (pending)\n\n 67         536 LOAD_FAST                0 (self)\n            538 COPY                     1\n            540 LOAD_ATTR                2 (low)\n            560 LOAD_GLOBAL              8 (QUARTER)\n            570 BINARY_OP               23 (-=)\n            574 SWAP                     2\n            576 STORE_ATTR               1 (low)\n\n 68         586 LOAD_FAST                0 (self)\n            588 COPY                     1\n            590 LOAD_ATTR                0 (high)\n            610 LOAD_GLOBAL              8 (QUARTER)\n            620 BINARY_OP               23 (-=)\n            624 SWAP                     2\n            626 STORE_ATTR               0 (high)\n            636 JUMP_FORWARD             1 (to 640)\n\n 70     >>  638 RETURN_CONST             3 (None)\n\n 71     >>  640 LOAD_FAST                0 (self)\n            642 LOAD_ATTR                2 (low)\n            662 LOAD_CONST               1 (1)\n            664 BINARY_OP                3 (<<)\n            668 LOAD_GLOBAL             14 (TOP)\n            678 BINARY_OP                1 (&)\n            682 LOAD_FAST                0 (self)\n            684 STORE_ATTR               1 (low)\n\n 72         694 LOAD_FAST                0 (self)\n            696 LOAD_ATTR                0 (high)\n            716 LOAD_CONST               1 (1)\n            718 BINARY_OP                3 (<<)\n            722 LOAD_CONST               1 (1)\n            724 BINARY_OP                7 (|)\n            728 LOAD_GLOBAL             14 (TOP)\n            738 BINARY_OP                1 (&)\n            742 LOAD_FAST                0 (self)\n            744 STORE_ATTR               0 (high)\n\n 58         754 EXTENDED_ARG             1\n            756 JUMP_BACKWARD          294 (to 170)\n"
+    },
+    {
+      "qualname": "RangeEncoder.finish",
+      "name": "finish",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "self"
+      ],
+      "names": [
+        "pending",
+        "low",
+        "QUARTER",
+        "_emit_bit_and_pending",
+        "_byte_bits",
+        "out",
+        "append",
+        "_byte_buf",
+        "bytes"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Flush remaining state; returns the encoded byte string.",
+      "dis": " 74           0 RESUME                   0\n\n 76           2 LOAD_FAST                0 (self)\n              4 COPY                     1\n              6 LOAD_ATTR                0 (pending)\n             26 LOAD_CONST               1 (1)\n             28 BINARY_OP               13 (+=)\n             32 SWAP                     2\n             34 STORE_ATTR               0 (pending)\n\n 77          44 LOAD_FAST                0 (self)\n             46 LOAD_ATTR                2 (low)\n             66 LOAD_GLOBAL              4 (QUARTER)\n             76 COMPARE_OP               2 (<)\n             80 POP_JUMP_IF_FALSE       18 (to 118)\n\n 78          82 LOAD_FAST                0 (self)\n             84 LOAD_ATTR                7 (NULL|self + _emit_bit_and_pending)\n            104 LOAD_CONST               2 (0)\n            106 CALL                     1\n            114 POP_TOP\n            116 JUMP_FORWARD            17 (to 152)\n\n 80     >>  118 LOAD_FAST                0 (self)\n            120 LOAD_ATTR                7 (NULL|self + _emit_bit_and_pending)\n            140 LOAD_CONST               1 (1)\n            142 CALL                     1\n            150 POP_TOP\n\n 82     >>  152 LOAD_FAST                0 (self)\n            154 LOAD_ATTR                8 (_byte_bits)\n            174 LOAD_CONST               2 (0)\n            176 COMPARE_OP              68 (>)\n            180 POP_JUMP_IF_FALSE       70 (to 322)\n\n 83         182 LOAD_FAST                0 (self)\n            184 LOAD_ATTR               10 (out)\n            204 LOAD_ATTR               13 (NULL|self + append)\n            224 LOAD_FAST                0 (self)\n            226 LOAD_ATTR               14 (_byte_buf)\n            246 LOAD_CONST               3 (8)\n            248 LOAD_FAST                0 (self)\n            250 LOAD_ATTR                8 (_byte_bits)\n            270 BINARY_OP               10 (-)\n            274 BINARY_OP                3 (<<)\n            278 LOAD_CONST               4 (255)\n            280 BINARY_OP                1 (&)\n            284 CALL                     1\n            292 POP_TOP\n\n 84         294 LOAD_CONST               2 (0)\n            296 LOAD_FAST                0 (self)\n            298 STORE_ATTR               7 (_byte_buf)\n\n 85         308 LOAD_CONST               2 (0)\n            310 LOAD_FAST                0 (self)\n            312 STORE_ATTR               4 (_byte_bits)\n\n 86     >>  322 LOAD_GLOBAL             17 (NULL + bytes)\n            332 LOAD_FAST                0 (self)\n            334 LOAD_ATTR               10 (out)\n            354 CALL                     1\n            362 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "RangeDecoder",
+      "name": "RangeDecoder",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "__doc__",
+        "bytes",
+        "__init__",
+        "int",
+        "_read_bit",
+        "decode_target",
+        "advance"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "RangeDecoder",
+      "dis": " 89           0 RESUME                   0\n              2 LOAD_NAME                0 (__name__)\n              4 STORE_NAME               1 (__module__)\n              6 LOAD_CONST               0 ('RangeDecoder')\n              8 STORE_NAME               2 (__qualname__)\n\n 90          10 LOAD_CONST               1 ('Decode symbols from a byte stream using per-symbol CDFs.\\n\\n    Matches RangeEncoder exactly; constructor consumes the first 32 bits.\\n    ')\n             12 STORE_NAME               3 (__doc__)\n\n 95          14 LOAD_CONST               2 ('data')\n             16 LOAD_NAME                4 (bytes)\n             18 LOAD_CONST               3 ('return')\n             20 LOAD_CONST               4 (None)\n             22 BUILD_TUPLE              4\n             24 LOAD_CONST               5 (<code object __init__ at 0x1042e1210, file \"/Users/adpena/Projects/pact/experiments/results/public_pr90_intake_20260504_worker/pr90_src/submissions/qrepro/range_coder.py\", line 95>)\n             26 MAKE_FUNCTION            4 (annotations)\n             28 STORE_NAME               5 (__init__)\n\n105          30 LOAD_CONST               3 ('return')\n             32 LOAD_NAME                6 (int)\n             34 BUILD_TUPLE              2\n             36 LOAD_CONST               6 (<code object _read_bit at 0x1043587f0, file \"/Users/adpena/Projects/pact/experiments/results/public_pr90_intake_20260504_worker/pr90_src/submissions/qrepro/range_coder.py\", line 105>)\n             38 MAKE_FUNCTION            4 (annotations)\n             40 STORE_NAME               7 (_read_bit)\n\n116          42 LOAD_CONST               7 ('total')\n             44 LOAD_NAME                6 (int)\n             46 LOAD_CONST               3 ('return')\n             48 LOAD_NAME                6 (int)\n             50 BUILD_TUPLE              4\n             52 LOAD_CONST               8 (<code object decode_target at 0x1042db360, file \"/Users/adpena/Projects/pact/experiments/results/public_pr90_intake_20260504_worker/pr90_src/submissions/qrepro/range_coder.py\", line 116>)\n             54 MAKE_FUNCTION            4 (annotations)\n             56 STORE_NAME               8 (decode_target)\n\n125          58 LOAD_CONST               9 ('cum_low')\n             60 LOAD_NAME                6 (int)\n             62 LOAD_CONST              10 ('cum_high')\n             64 LOAD_NAME                6 (int)\n             66 LOAD_CONST               7 ('total')\n             68 LOAD_NAME                6 (int)\n             70 LOAD_CONST               3 ('return')\n             72 LOAD_CONST               4 (None)\n             74 BUILD_TUPLE              8\n             76 LOAD_CONST              11 (<code object advance at 0x80f116800, file \"/Users/adpena/Projects/pact/experiments/results/public_pr90_intake_20260504_worker/pr90_src/submissions/qrepro/range_coder.py\", line 125>)\n             78 MAKE_FUNCTION            4 (annotations)\n             80 STORE_NAME               9 (advance)\n             82 RETURN_CONST             4 (None)\n"
+    },
+    {
+      "qualname": "RangeDecoder.__init__",
+      "name": "__init__",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "self",
+        "data",
+        "_"
+      ],
+      "names": [
+        "data",
+        "byte_pos",
+        "bit_pos",
+        "low",
+        "TOP",
+        "high",
+        "code",
+        "range",
+        "_read_bit"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 95           0 RESUME                   0\n\n 96           2 LOAD_FAST                1 (data)\n              4 LOAD_FAST                0 (self)\n              6 STORE_ATTR               0 (data)\n\n 97          16 LOAD_CONST               1 (0)\n             18 LOAD_FAST                0 (self)\n             20 STORE_ATTR               1 (byte_pos)\n\n 98          30 LOAD_CONST               1 (0)\n             32 LOAD_FAST                0 (self)\n             34 STORE_ATTR               2 (bit_pos)\n\n 99          44 LOAD_CONST               1 (0)\n             46 LOAD_FAST                0 (self)\n             48 STORE_ATTR               3 (low)\n\n100          58 LOAD_GLOBAL              8 (TOP)\n             68 LOAD_FAST                0 (self)\n             70 STORE_ATTR               5 (high)\n\n101          80 LOAD_CONST               1 (0)\n             82 LOAD_FAST                0 (self)\n             84 STORE_ATTR               6 (code)\n\n102          94 LOAD_GLOBAL             15 (NULL + range)\n            104 LOAD_CONST               2 (32)\n            106 CALL                     1\n            114 GET_ITER\n        >>  116 FOR_ITER                46 (to 212)\n            120 STORE_FAST               2 (_)\n\n103         122 LOAD_FAST                0 (self)\n            124 LOAD_ATTR               12 (code)\n            144 LOAD_CONST               3 (1)\n            146 BINARY_OP                3 (<<)\n            150 LOAD_FAST                0 (self)\n            152 LOAD_ATTR               17 (NULL|self + _read_bit)\n            172 CALL                     0\n            180 BINARY_OP                7 (|)\n            184 LOAD_GLOBAL              8 (TOP)\n            194 BINARY_OP                1 (&)\n            198 LOAD_FAST                0 (self)\n            200 STORE_ATTR               6 (code)\n            210 JUMP_BACKWARD           48 (to 116)\n\n102     >>  212 END_FOR\n            214 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "RangeDecoder._read_bit",
+      "name": "_read_bit",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "self",
+        "byte",
+        "bit"
+      ],
+      "names": [
+        "byte_pos",
+        "len",
+        "data",
+        "bit_pos"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "105           0 RESUME                   0\n\n106           2 LOAD_FAST                0 (self)\n              4 LOAD_ATTR                0 (byte_pos)\n             24 LOAD_GLOBAL              3 (NULL + len)\n             34 LOAD_FAST                0 (self)\n             36 LOAD_ATTR                4 (data)\n             56 CALL                     1\n             64 COMPARE_OP              92 (>=)\n             68 POP_JUMP_IF_FALSE        1 (to 72)\n\n107          70 RETURN_CONST             1 (0)\n\n108     >>   72 LOAD_FAST                0 (self)\n             74 LOAD_ATTR                4 (data)\n             94 LOAD_FAST                0 (self)\n             96 LOAD_ATTR                0 (byte_pos)\n            116 BINARY_SUBSCR\n            120 STORE_FAST               1 (byte)\n\n109         122 LOAD_FAST                1 (byte)\n            124 LOAD_CONST               2 (7)\n            126 LOAD_FAST                0 (self)\n            128 LOAD_ATTR                6 (bit_pos)\n            148 BINARY_OP               10 (-)\n            152 BINARY_OP                9 (>>)\n            156 LOAD_CONST               3 (1)\n            158 BINARY_OP                1 (&)\n            162 STORE_FAST               2 (bit)\n\n110         164 LOAD_FAST                0 (self)\n            166 COPY                     1\n            168 LOAD_ATTR                6 (bit_pos)\n            188 LOAD_CONST               3 (1)\n            190 BINARY_OP               13 (+=)\n            194 SWAP                     2\n            196 STORE_ATTR               3 (bit_pos)\n\n111         206 LOAD_FAST                0 (self)\n            208 LOAD_ATTR                6 (bit_pos)\n            228 LOAD_CONST               4 (8)\n            230 COMPARE_OP              40 (==)\n            234 POP_JUMP_IF_FALSE       28 (to 292)\n\n112         236 LOAD_CONST               1 (0)\n            238 LOAD_FAST                0 (self)\n            240 STORE_ATTR               3 (bit_pos)\n\n113         250 LOAD_FAST                0 (self)\n            252 COPY                     1\n            254 LOAD_ATTR                0 (byte_pos)\n            274 LOAD_CONST               3 (1)\n            276 BINARY_OP               13 (+=)\n            280 SWAP                     2\n            282 STORE_ATTR               0 (byte_pos)\n\n114     >>  292 LOAD_FAST                2 (bit)\n            294 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "RangeDecoder.decode_target",
+      "name": "decode_target",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "self",
+        "total",
+        "rng"
+      ],
+      "names": [
+        "high",
+        "low",
+        "code"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Return the 'offset' in [0, total) that the current state decodes to.\n\n        Caller must then look up which symbol owns this offset under the same\n        CDF as the encoder used, and pass cum_low/cum_high to advance().\n        ",
+      "dis": "116           0 RESUME                   0\n\n122           2 LOAD_FAST                0 (self)\n              4 LOAD_ATTR                0 (high)\n             24 LOAD_FAST                0 (self)\n             26 LOAD_ATTR                2 (low)\n             46 BINARY_OP               10 (-)\n             50 LOAD_CONST               1 (1)\n             52 BINARY_OP                0 (+)\n             56 STORE_FAST               2 (rng)\n\n123          58 LOAD_FAST                0 (self)\n             60 LOAD_ATTR                4 (code)\n             80 LOAD_FAST                0 (self)\n             82 LOAD_ATTR                2 (low)\n            102 BINARY_OP               10 (-)\n            106 LOAD_CONST               1 (1)\n            108 BINARY_OP                0 (+)\n            112 LOAD_FAST                1 (total)\n            114 BINARY_OP                5 (*)\n            118 LOAD_CONST               1 (1)\n            120 BINARY_OP               10 (-)\n            124 LOAD_FAST                2 (rng)\n            126 BINARY_OP                2 (//)\n            130 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "RangeDecoder.advance",
+      "name": "advance",
+      "argcount": 4,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "self",
+        "cum_low",
+        "cum_high",
+        "total",
+        "rng"
+      ],
+      "names": [
+        "high",
+        "low",
+        "HALF",
+        "code",
+        "QUARTER",
+        "THREE_QUARTER",
+        "TOP",
+        "_read_bit"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Narrow the decoder state to match the consumed symbol.",
+      "dis": "125           0 RESUME                   0\n\n127           2 LOAD_FAST                0 (self)\n              4 LOAD_ATTR                0 (high)\n             24 LOAD_FAST                0 (self)\n             26 LOAD_ATTR                2 (low)\n             46 BINARY_OP               10 (-)\n             50 LOAD_CONST               1 (1)\n             52 BINARY_OP                0 (+)\n             56 STORE_FAST               4 (rng)\n\n128          58 LOAD_FAST                0 (self)\n             60 LOAD_ATTR                2 (low)\n             80 LOAD_FAST                4 (rng)\n             82 LOAD_FAST                2 (cum_high)\n             84 BINARY_OP                5 (*)\n             88 LOAD_FAST                3 (total)\n             90 BINARY_OP                2 (//)\n             94 BINARY_OP                0 (+)\n             98 LOAD_CONST               1 (1)\n            100 BINARY_OP               10 (-)\n            104 LOAD_FAST                0 (self)\n            106 STORE_ATTR               0 (high)\n\n129         116 LOAD_FAST                0 (self)\n            118 LOAD_ATTR                2 (low)\n            138 LOAD_FAST                4 (rng)\n            140 LOAD_FAST                1 (cum_low)\n            142 BINARY_OP                5 (*)\n            146 LOAD_FAST                3 (total)\n            148 BINARY_OP                2 (//)\n            152 BINARY_OP                0 (+)\n            156 LOAD_FAST                0 (self)\n            158 STORE_ATTR               1 (low)\n\n131         168 NOP\n\n132     >>  170 LOAD_FAST                0 (self)\n            172 LOAD_ATTR                0 (high)\n            192 LOAD_GLOBAL              4 (HALF)\n            202 COMPARE_OP               2 (<)\n            206 POP_JUMP_IF_FALSE        1 (to 210)\n\n133         208 JUMP_FORWARD           210 (to 630)\n\n134     >>  210 LOAD_FAST                0 (self)\n            212 LOAD_ATTR                2 (low)\n            232 LOAD_GLOBAL              4 (HALF)\n            242 COMPARE_OP              92 (>=)\n            246 POP_JUMP_IF_FALSE       76 (to 400)\n\n135         248 LOAD_FAST                0 (self)\n            250 COPY                     1\n            252 LOAD_ATTR                2 (low)\n            272 LOAD_GLOBAL              4 (HALF)\n            282 BINARY_OP               23 (-=)\n            286 SWAP                     2\n            288 STORE_ATTR               1 (low)\n\n136         298 LOAD_FAST                0 (self)\n            300 COPY                     1\n            302 LOAD_ATTR                0 (high)\n            322 LOAD_GLOBAL              4 (HALF)\n            332 BINARY_OP               23 (-=)\n            336 SWAP                     2\n            338 STORE_ATTR               0 (high)\n\n137         348 LOAD_FAST                0 (self)\n            350 COPY                     1\n            352 LOAD_ATTR                6 (code)\n            372 LOAD_GLOBAL              4 (HALF)\n            382 BINARY_OP               23 (-=)\n            386 SWAP                     2\n            388 STORE_ATTR               3 (code)\n            398 JUMP_FORWARD           115 (to 630)\n\n138     >>  400 LOAD_FAST                0 (self)\n            402 LOAD_ATTR                2 (low)\n            422 LOAD_GLOBAL              8 (QUARTER)\n            432 COMPARE_OP              92 (>=)\n            436 POP_JUMP_IF_FALSE       95 (to 628)\n            438 LOAD_FAST                0 (self)\n            440 LOAD_ATTR                0 (high)\n            460 LOAD_GLOBAL             10 (THREE_QUARTER)\n            470 COMPARE_OP               2 (<)\n            474 POP_JUMP_IF_FALSE       76 (to 628)\n\n139         476 LOAD_FAST                0 (self)\n            478 COPY                     1\n            480 LOAD_ATTR                2 (low)\n            500 LOAD_GLOBAL              8 (QUARTER)\n            510 BINARY_OP               23 (-=)\n            514 SWAP                     2\n            516 STORE_ATTR               1 (low)\n\n140         526 LOAD_FAST                0 (self)\n            528 COPY                     1\n            530 LOAD_ATTR                0 (high)\n            550 LOAD_GLOBAL              8 (QUARTER)\n            560 BINARY_OP               23 (-=)\n            564 SWAP                     2\n            566 STORE_ATTR               0 (high)\n\n141         576 LOAD_FAST                0 (self)\n            578 COPY                     1\n            580 LOAD_ATTR                6 (code)\n            600 LOAD_GLOBAL              8 (QUARTER)\n            610 BINARY_OP               23 (-=)\n            614 SWAP                     2\n            616 STORE_ATTR               3 (code)\n            626 JUMP_FORWARD             1 (to 630)\n\n143     >>  628 RETURN_CONST             2 (None)\n\n144     >>  630 LOAD_FAST                0 (self)\n            632 LOAD_ATTR                2 (low)\n            652 LOAD_CONST               1 (1)\n            654 BINARY_OP                3 (<<)\n            658 LOAD_GLOBAL             12 (TOP)\n            668 BINARY_OP                1 (&)\n            672 LOAD_FAST                0 (self)\n            674 STORE_ATTR               1 (low)\n\n145         684 LOAD_FAST                0 (self)\n            686 LOAD_ATTR                0 (high)\n            706 LOAD_CONST               1 (1)\n            708 BINARY_OP                3 (<<)\n            712 LOAD_CONST               1 (1)\n            714 BINARY_OP                7 (|)\n            718 LOAD_GLOBAL             12 (TOP)\n            728 BINARY_OP                1 (&)\n            732 LOAD_FAST                0 (self)\n            734 STORE_ATTR               0 (high)\n\n146         744 LOAD_FAST                0 (self)\n            746 LOAD_ATTR                6 (code)\n            766 LOAD_CONST               1 (1)\n            768 BINARY_OP                3 (<<)\n            772 LOAD_FAST                0 (self)\n            774 LOAD_ATTR               15 (NULL|self + _read_bit)\n            794 CALL                     0\n            802 BINARY_OP                7 (|)\n            806 LOAD_GLOBAL             12 (TOP)\n            816 BINARY_OP                1 (&)\n            820 LOAD_FAST                0 (self)\n            822 STORE_ATTR               3 (code)\n\n131         832 EXTENDED_ARG             1\n            834 JUMP_BACKWARD          333 (to 170)\n"
+    },
+    {
+      "qualname": "cdfs_from_freqs",
+      "name": "cdfs_from_freqs",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "freqs",
+        "cdf",
+        "acc",
+        "f"
+      ],
+      "names": [
+        "append"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Build cumulative frequency array [0, f0, f0+f1, ..., total].",
+      "dis": "149           0 RESUME                   0\n\n151           2 LOAD_CONST               1 (0)\n              4 BUILD_LIST               1\n              6 STORE_FAST               1 (cdf)\n\n152           8 LOAD_CONST               1 (0)\n             10 STORE_FAST               2 (acc)\n\n153          12 LOAD_FAST                0 (freqs)\n             14 GET_ITER\n        >>   16 FOR_ITER                24 (to 68)\n             20 STORE_FAST               3 (f)\n\n154          22 LOAD_FAST                2 (acc)\n             24 LOAD_FAST                3 (f)\n             26 BINARY_OP               13 (+=)\n             30 STORE_FAST               2 (acc)\n\n155          32 LOAD_FAST                1 (cdf)\n             34 LOAD_ATTR                1 (NULL|self + append)\n             54 LOAD_FAST                2 (acc)\n             56 CALL                     1\n             64 POP_TOP\n             66 JUMP_BACKWARD           26 (to 16)\n\n153     >>   68 END_FOR\n\n156          70 LOAD_FAST                1 (cdf)\n             72 RETURN_VALUE\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  1           2 LOAD_CONST               0 ('Pure-Python range coder for seg_targets compression.\\n\\nStdlib-only (no constriction, no numpy needed for the coder core -- numpy\\nused only for input-prep helpers outside the hot loop). Shipped in the\\nscoring archive.\\n\\nBitstream format (standard carry-less 32-bit range coder):\\n- 32-bit state (low, high), byte-level renormalization\\n- frequency tables are fixed-point uint16 (total_freq = 2^precision, typically 1<<16)\\n- symbols are uint8 in range [0, n_classes)\\n\\nThis is the Witten/Neal/Cleary arithmetic-coding algorithm rewritten with\\nplain 32-bit ints and E1/E2/E3 renormalization. Implementation is\\nbyte-identical lossless by construction (encode/decode share arithmetic).\\n')\n              4 STORE_NAME               0 (__doc__)\n\n 17           6 LOAD_CONST               1 (0)\n              8 LOAD_CONST               2 (('List', 'Sequence'))\n             10 IMPORT_NAME              1 (typing)\n             12 IMPORT_FROM              2 (List)\n             14 STORE_NAME               2 (List)\n             16 IMPORT_FROM              3 (Sequence)\n             18 STORE_NAME               3 (Sequence)\n             20 POP_TOP\n\n 20          22 LOAD_CONST               3 (4294967295)\n             24 STORE_NAME               4 (TOP)\n\n 21          26 LOAD_CONST               4 (2147483648)\n             28 STORE_NAME               5 (HALF)\n\n 22          30 LOAD_CONST               5 (1073741824)\n             32 STORE_NAME               6 (QUARTER)\n\n 23          34 LOAD_CONST               6 (3221225472)\n             36 STORE_NAME               7 (THREE_QUARTER)\n\n 26          38 PUSH_NULL\n             40 LOAD_BUILD_CLASS\n             42 LOAD_CONST               7 (<code object RangeEncoder at 0x104459c50, file \"/Users/adpena/Projects/pact/experiments/results/public_pr90_intake_20260504_worker/pr90_src/submissions/qrepro/range_coder.py\", line 26>)\n             44 MAKE_FUNCTION            0\n             46 LOAD_CONST               8 ('RangeEncoder')\n             48 CALL                     2\n             56 STORE_NAME               8 (RangeEncoder)\n\n 89          58 PUSH_NULL\n             60 LOAD_BUILD_CLASS\n             62 LOAD_CONST               9 (<code object RangeDecoder at 0x104459d70, file \"/Users/adpena/Projects/pact/experiments/results/public_pr90_intake_20260504_worker/pr90_src/submissions/qrepro/range_coder.py\", line 89>)\n             64 MAKE_FUNCTION            0\n             66 LOAD_CONST              10 ('RangeDecoder')\n             68 CALL                     2\n             76 STORE_NAME               9 (RangeDecoder)\n\n149          78 LOAD_CONST              11 ('freqs')\n             80 LOAD_NAME                3 (Sequence)\n             82 LOAD_NAME               10 (int)\n             84 BINARY_SUBSCR\n             88 LOAD_CONST              12 ('return')\n             90 LOAD_NAME                2 (List)\n             92 LOAD_NAME               10 (int)\n             94 BINARY_SUBSCR\n             98 BUILD_TUPLE              4\n            100 LOAD_CONST              13 (<code object cdfs_from_freqs at 0x104486cd0, file \"/Users/adpena/Projects/pact/experiments/results/public_pr90_intake_20260504_worker/pr90_src/submissions/qrepro/range_coder.py\", line 149>)\n            102 MAKE_FUNCTION            4 (annotations)\n            104 STORE_NAME              11 (cdfs_from_freqs)\n            106 RETURN_CONST            14 (None)\n"
+}

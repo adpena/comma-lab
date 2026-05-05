@@ -144,3 +144,6 @@ experiments/results/public_pr*_intake_*/__pycache__/
 
 # 13MB lightning log (one-time, not durable)
 .omx/state/lightning_refresh_all_followup_*.jsonl
+
+# Auto-memory snapshot dirs (operator backups, not for git)
+.omx/auto_memory_snapshot_*/

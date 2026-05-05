@@ -1,0 +1,1611 @@
+{
+  "pyc_path": "/Users/adpena/Projects/pact/src/tac/__pycache__/public_frontier_intake.cpython-312.pyc",
+  "names": [
+    "__doc__",
+    "__future__",
+    "annotations",
+    "argparse",
+    "hashlib",
+    "json",
+    "math",
+    "struct",
+    "zipfile",
+    "collections",
+    "Counter",
+    "dataclasses",
+    "dataclass",
+    "pathlib",
+    "Path",
+    "PurePosixPath",
+    "PureWindowsPath",
+    "typing",
+    "Any",
+    "Iterable",
+    "Mapping",
+    "Sequence",
+    "tac.archive_byte_profile",
+    "CONTEST_ORIGINAL_BYTES",
+    "contest_rate_term",
+    "tac.pr85_bundle",
+    "Pr85BundleError",
+    "parse_pr85_bundle",
+    "SCHEMA",
+    "TOOL",
+    "EVIDENCE_GRADE",
+    "LOCAL_FILE_HEADER",
+    "ValueError",
+    "PublicFrontierIntakeError",
+    "_ParsedArchive",
+    "_json_text",
+    "_sha256_bytes",
+    "_sha256_file",
+    "_byte_entropy",
+    "_display_ascii",
+    "_safe_member_blockers",
+    "_decode_zip_name",
+    "_local_header_name",
+    "_codec_label",
+    "_segment_row",
+    "_inspect_member_data",
+    "_archive_members",
+    "_primary_pr85_member",
+    "_diff_against_baselines",
+    "_parse_baseline_arg",
+    "_analyze_one",
+    "profile_public_frontier_archive",
+    "render_markdown",
+    "write_outputs",
+    "build_arg_parser",
+    "main",
+    "__all__"
+  ],
+  "varnames": [],
+  "consts": [
+    "Static intake and byte diffing for public frontier archives.\n\nThis module is intentionally offline and byte-only. It validates ZIP custody,\nidentifies PR85-family bundle segments, records charged side-info members, and\ndiffs segment identities against named baselines. It never inflates contest\nvideos, loads scorers, submits jobs, or makes score claims.\n",
+    0,
+    [
+      "annotations"
+    ],
+    null,
+    [
+      "Counter"
+    ],
+    [
+      "dataclass"
+    ],
+    [
+      "Path",
+      "PurePosixPath",
+      "PureWindowsPath"
+    ],
+    [
+      "Any",
+      "Iterable",
+      "Mapping",
+      "Sequence"
+    ],
+    [
+      "CONTEST_ORIGINAL_BYTES",
+      "contest_rate_term"
+    ],
+    [
+      "Pr85BundleError",
+      "parse_pr85_bundle"
+    ],
+    "public_frontier_archive_intake_v1",
+    "experiments/profile_public_frontier_intake.py",
+    "external_archive_byte_intake_only",
+    67324752,
+    {
+      "__code__": "PublicFrontierIntakeError",
+      "qualname": "PublicFrontierIntakeError",
+      "argcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "__doc__"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "PublicFrontierIntakeError",
+    true,
+    [
+      "frozen"
+    ],
+    {
+      "__code__": "_ParsedArchive",
+      "qualname": "_ParsedArchive",
+      "argcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "__annotations__"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    "_ParsedArchive",
+    {
+      "__code__": "_json_text",
+      "qualname": "_json_text",
+      "argcount": 1,
+      "varnames": [
+        "payload"
+      ],
+      "names": [
+        "json",
+        "dumps"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_sha256_bytes",
+      "qualname": "_sha256_bytes",
+      "argcount": 1,
+      "varnames": [
+        "data"
+      ],
+      "names": [
+        "hashlib",
+        "sha256",
+        "hexdigest"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_sha256_file",
+      "qualname": "_sha256_file",
+      "argcount": 1,
+      "varnames": [
+        "path",
+        "digest",
+        "chunk"
+      ],
+      "names": [
+        "hashlib",
+        "sha256",
+        "open",
+        "iter",
+        "update",
+        "hexdigest"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "handle"
+      ]
+    },
+    {
+      "__code__": "_byte_entropy",
+      "qualname": "_byte_entropy",
+      "argcount": 1,
+      "varnames": [
+        "data",
+        "counts",
+        "entropy",
+        "total",
+        "count",
+        "p"
+      ],
+      "names": [
+        "Counter",
+        "len",
+        "values",
+        "math",
+        "log2",
+        "round"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    8,
+    [
+      "limit"
+    ],
+    {
+      "__code__": "_display_ascii",
+      "qualname": "_display_ascii",
+      "argcount": 1,
+      "varnames": [
+        "data",
+        "limit"
+      ],
+      "names": [
+        "join"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_safe_member_blockers",
+      "qualname": "_safe_member_blockers",
+      "argcount": 1,
+      "varnames": [
+        "name",
+        "blockers",
+        "posix",
+        "windows"
+      ],
+      "names": [
+        "append",
+        "PurePosixPath",
+        "PureWindowsPath",
+        "is_absolute",
+        "drive",
+        "any",
+        "parts"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_decode_zip_name",
+      "qualname": "_decode_zip_name",
+      "argcount": 2,
+      "varnames": [
+        "raw",
+        "flag_bits",
+        "encoding"
+      ],
+      "names": [
+        "decode"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_local_header_name",
+      "qualname": "_local_header_name",
+      "argcount": 2,
+      "varnames": [
+        "path",
+        "info",
+        "handle",
+        "header",
+        "signature",
+        "_version_needed",
+        "_flag_bits",
+        "_compress_type",
+        "_mod_time",
+        "_mod_date",
+        "_crc",
+        "_compress_size",
+        "_file_size",
+        "name_len",
+        "extra_len",
+        "raw_name"
+      ],
+      "names": [
+        "open",
+        "seek",
+        "header_offset",
+        "read",
+        "len",
+        "PublicFrontierIntakeError",
+        "filename",
+        "struct",
+        "unpack",
+        "LOCAL_FILE_HEADER",
+        "_decode_zip_name",
+        "flag_bits"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_codec_label",
+      "qualname": "_codec_label",
+      "argcount": 2,
+      "varnames": [
+        "segment_name",
+        "data"
+      ],
+      "names": [
+        "startswith"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_segment_row",
+      "qualname": "_segment_row",
+      "argcount": 3,
+      "varnames": [
+        "name",
+        "data",
+        "offset"
+      ],
+      "names": [
+        "len",
+        "_sha256_bytes",
+        "int",
+        "hex",
+        "_display_ascii",
+        "_codec_label",
+        "_byte_entropy"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_inspect_member_data",
+      "qualname": "_inspect_member_data",
+      "argcount": 2,
+      "varnames": [
+        "name",
+        "data",
+        "row",
+        "bundle",
+        "exc",
+        "segment_name"
+      ],
+      "names": [
+        "len",
+        "_sha256_bytes",
+        "hex",
+        "_display_ascii",
+        "_byte_entropy",
+        "parse_pr85_bundle",
+        "Pr85BundleError",
+        "str",
+        "format",
+        "int",
+        "header_bytes",
+        "segment_lengths",
+        "_segment_row",
+        "bytes",
+        "segments",
+        "segment_offsets"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_archive_members",
+      "qualname": "_archive_members",
+      "argcount": 1,
+      "varnames": [
+        "path",
+        "blockers",
+        "member_data",
+        "rows",
+        "zf",
+        "infos",
+        "name_counts",
+        "name",
+        "count",
+        "local_name",
+        "row_blockers",
+        "data"
+      ],
+      "names": [
+        "zipfile",
+        "ZipFile",
+        "infolist",
+        "append",
+        "Counter",
+        "sorted",
+        "items",
+        "_local_header_name",
+        "_safe_member_blockers",
+        "filename",
+        "is_dir",
+        "read",
+        "int",
+        "file_size",
+        "compress_size",
+        "compress_type",
+        "header_offset",
+        "CRC",
+        "_sha256_bytes",
+        "extend"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "info"
+      ]
+    },
+    {
+      "__code__": "_primary_pr85_member",
+      "qualname": "_primary_pr85_member",
+      "argcount": 1,
+      "varnames": [
+        "member_data",
+        "candidates",
+        "name",
+        "data",
+        "inspected",
+        "row",
+        "segments"
+      ],
+      "names": [
+        "items",
+        "_inspect_member_data",
+        "get",
+        "append",
+        "sort"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_diff_against_baselines",
+      "qualname": "_diff_against_baselines",
+      "argcount": 2,
+      "varnames": [
+        "primary_segments",
+        "baselines",
+        "candidate_archive_bytes",
+        "rows",
+        "label",
+        "baseline",
+        "baseline_segments",
+        "changed",
+        "name",
+        "left",
+        "right",
+        "archive_delta",
+        "row"
+      ],
+      "names": [
+        "sorted",
+        "items",
+        "primary_segments",
+        "set",
+        "get",
+        "append",
+        "bool",
+        "int",
+        "report",
+        "contest_rate_term",
+        "sum",
+        "len"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "_parse_baseline_arg",
+      "qualname": "_parse_baseline_arg",
+      "argcount": 1,
+      "varnames": [
+        "value",
+        "label",
+        "path"
+      ],
+      "names": [
+        "PublicFrontierIntakeError",
+        "split",
+        "strip",
+        "Path"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    [
+      "candidate_bytes"
+    ],
+    {
+      "__code__": "_analyze_one",
+      "qualname": "_analyze_one",
+      "argcount": 1,
+      "varnames": [
+        "path",
+        "label",
+        "candidate_bytes",
+        "archive_bytes",
+        "members",
+        "member_data",
+        "blockers",
+        "exc",
+        "primary_name",
+        "primary",
+        "primary_segments",
+        "name",
+        "side_names",
+        "side_members",
+        "total_side_bytes",
+        "report"
+      ],
+      "names": [
+        "is_file",
+        "FileNotFoundError",
+        "stat",
+        "st_size",
+        "_archive_members",
+        "zipfile",
+        "BadZipFile",
+        "PublicFrontierIntakeError",
+        "_primary_pr85_member",
+        "sorted",
+        "_inspect_member_data",
+        "sum",
+        "append",
+        "SCHEMA",
+        "TOOL",
+        "EVIDENCE_GRADE",
+        "str",
+        "_sha256_file",
+        "int",
+        "contest_rate_term",
+        "len",
+        "bool",
+        "_ParsedArchive"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    [
+      "baselines"
+    ],
+    {
+      "__code__": "profile_public_frontier_archive",
+      "qualname": "profile_public_frontier_archive",
+      "argcount": 1,
+      "varnames": [
+        "archive",
+        "label",
+        "baselines",
+        "archive_path",
+        "candidate",
+        "baseline_reports",
+        "baseline_label",
+        "baseline_path",
+        "parsed"
+      ],
+      "names": [
+        "Path",
+        "_analyze_one",
+        "items",
+        "int",
+        "report",
+        "_diff_against_baselines",
+        "primary_segments",
+        "sorted"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "render_markdown",
+      "qualname": "render_markdown",
+      "argcount": 1,
+      "varnames": [
+        "report",
+        "lines",
+        "member",
+        "blocker",
+        "primary",
+        "segment",
+        "diff"
+      ],
+      "names": [
+        "append",
+        "extend",
+        "get",
+        "join"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "write_outputs",
+      "qualname": "write_outputs",
+      "argcount": 1,
+      "varnames": [
+        "report",
+        "json_out",
+        "markdown_out"
+      ],
+      "names": [
+        "parent",
+        "mkdir",
+        "write_text",
+        "_json_text",
+        "render_markdown"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "build_arg_parser",
+      "qualname": "build_arg_parser",
+      "argcount": 0,
+      "varnames": [
+        "parser"
+      ],
+      "names": [
+        "argparse",
+        "ArgumentParser",
+        "__doc__",
+        "add_argument",
+        "Path"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    {
+      "__code__": "main",
+      "qualname": "main",
+      "argcount": 1,
+      "varnames": [
+        "argv",
+        "args",
+        "baselines",
+        "report"
+      ],
+      "names": [
+        "build_arg_parser",
+        "parse_args",
+        "dict",
+        "baseline",
+        "profile_public_frontier_archive",
+        "archive",
+        "label",
+        "write_outputs",
+        "json_out",
+        "markdown_out",
+        "print",
+        "_json_text"
+      ],
+      "freevars": [],
+      "cellvars": []
+    },
+    [
+      "PublicFrontierIntakeError",
+      "profile_public_frontier_archive",
+      "render_markdown",
+      "write_outputs",
+      "main"
+    ],
+    [
+      "payload",
+      "Mapping[str, Any]",
+      "return",
+      "str"
+    ],
+    [
+      "data",
+      "bytes",
+      "return",
+      "str"
+    ],
+    [
+      "path",
+      "Path",
+      "return",
+      "str"
+    ],
+    [
+      "data",
+      "bytes",
+      "return",
+      "float"
+    ],
+    [
+      "data",
+      "bytes",
+      "limit",
+      "int",
+      "return",
+      "str"
+    ],
+    [
+      "name",
+      "str",
+      "return",
+      "list[str]"
+    ],
+    [
+      "raw",
+      "bytes",
+      "flag_bits",
+      "int",
+      "return",
+      "str"
+    ],
+    [
+      "path",
+      "Path",
+      "info",
+      "zipfile.ZipInfo",
+      "return",
+      "str"
+    ],
+    [
+      "segment_name",
+      "str",
+      "data",
+      "bytes",
+      "return",
+      "str"
+    ],
+    [
+      "name",
+      "str",
+      "data",
+      "bytes",
+      "offset",
+      "int",
+      "return",
+      "dict[str, Any]"
+    ],
+    [
+      "name",
+      "str",
+      "data",
+      "bytes",
+      "return",
+      "dict[str, Any]"
+    ],
+    [
+      "path",
+      "Path",
+      "return",
+      "tuple[list[dict[str, Any]], dict[str, bytes], list[str]]"
+    ],
+    [
+      "member_data",
+      "Mapping[str, bytes]",
+      "return",
+      "tuple[str | None, dict[str, Any] | None, dict[str, dict[str, Any]]]"
+    ],
+    [
+      "primary_segments",
+      "Mapping[str, Mapping[str, Any]]",
+      "baselines",
+      "Mapping[str, _ParsedArchive]",
+      "candidate_archive_bytes",
+      "int",
+      "return",
+      "list[dict[str, Any]]"
+    ],
+    [
+      "value",
+      "str",
+      "return",
+      "tuple[str, Path]"
+    ],
+    [
+      "path",
+      "Path",
+      "label",
+      "str",
+      "candidate_bytes",
+      "int | None",
+      "return",
+      "_ParsedArchive"
+    ],
+    [
+      "archive",
+      "Path | str",
+      "label",
+      "str",
+      "baselines",
+      "Mapping[str, Path | str] | None",
+      "return",
+      "dict[str, Any]"
+    ],
+    [
+      "report",
+      "Mapping[str, Any]",
+      "return",
+      "str"
+    ],
+    [
+      "report",
+      "Mapping[str, Any]",
+      "json_out",
+      "Path | None",
+      "markdown_out",
+      "Path | None",
+      "return",
+      "None"
+    ],
+    [
+      "return",
+      "argparse.ArgumentParser"
+    ],
+    [
+      null
+    ],
+    [
+      "argv",
+      "Sequence[str] | None",
+      "return",
+      "int"
+    ]
+  ],
+  "freevars": [],
+  "cellvars": [],
+  "doc": "Static intake and byte diffing for public frontier archives.\n\nThis module is intentionally offline and byte-only. It validates ZIP custody,\nidentifies PR85-family bundle segments, records charged side-info members, and\ndiffs segment identities against named baselines. It never inflates contest\nvideos, loads scorers, submits jobs, or makes score claims.\n",
+  "child_codes": [
+    {
+      "qualname": "PublicFrontierIntakeError",
+      "name": "PublicFrontierIntakeError",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "__doc__"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "PublicFrontierIntakeError",
+      "dis": " 32           0 RESUME                   0\n              2 LOAD_NAME                0 (__name__)\n              4 STORE_NAME               1 (__module__)\n              6 LOAD_CONST               0 ('PublicFrontierIntakeError')\n              8 STORE_NAME               2 (__qualname__)\n\n 33          10 LOAD_CONST               1 ('Raised when a public-frontier intake input is malformed.')\n             12 STORE_NAME               3 (__doc__)\n             14 RETURN_CONST             2 (None)\n"
+    },
+    {
+      "qualname": "_ParsedArchive",
+      "name": "_ParsedArchive",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [],
+      "names": [
+        "__name__",
+        "__module__",
+        "__qualname__",
+        "__annotations__"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "_ParsedArchive",
+      "dis": " 36           0 RESUME                   0\n              2 LOAD_NAME                0 (__name__)\n              4 STORE_NAME               1 (__module__)\n              6 LOAD_CONST               0 ('_ParsedArchive')\n              8 STORE_NAME               2 (__qualname__)\n             10 SETUP_ANNOTATIONS\n\n 38          12 LOAD_CONST               1 ('dict[str, Any]')\n             14 LOAD_NAME                3 (__annotations__)\n             16 LOAD_CONST               2 ('report')\n             18 STORE_SUBSCR\n\n 39          22 LOAD_CONST               3 ('dict[str, dict[str, Any]]')\n             24 LOAD_NAME                3 (__annotations__)\n             26 LOAD_CONST               4 ('primary_segments')\n             28 STORE_SUBSCR\n             32 RETURN_CONST             5 (None)\n"
+    },
+    {
+      "qualname": "_json_text",
+      "name": "_json_text",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "payload"
+      ],
+      "names": [
+        "json",
+        "dumps"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 42           0 RESUME                   0\n\n 43           2 LOAD_GLOBAL              1 (NULL + json)\n             12 LOAD_ATTR                2 (dumps)\n             32 LOAD_FAST                0 (payload)\n             34 LOAD_CONST               1 (2)\n             36 LOAD_CONST               2 (True)\n             38 LOAD_CONST               3 (False)\n             40 KW_NAMES                 4 (('indent', 'sort_keys', 'allow_nan'))\n             42 CALL                     4\n             50 LOAD_CONST               5 ('\\n')\n             52 BINARY_OP                0 (+)\n             56 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_sha256_bytes",
+      "name": "_sha256_bytes",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "data"
+      ],
+      "names": [
+        "hashlib",
+        "sha256",
+        "hexdigest"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 46           0 RESUME                   0\n\n 47           2 LOAD_GLOBAL              1 (NULL + hashlib)\n             12 LOAD_ATTR                2 (sha256)\n             32 LOAD_FAST                0 (data)\n             34 CALL                     1\n             42 LOAD_ATTR                5 (NULL|self + hexdigest)\n             62 CALL                     0\n             70 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_sha256_file",
+      "name": "_sha256_file",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "digest",
+        "chunk"
+      ],
+      "names": [
+        "hashlib",
+        "sha256",
+        "open",
+        "iter",
+        "update",
+        "hexdigest"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "handle"
+      ],
+      "doc": null,
+      "dis": "              0 MAKE_CELL                3 (handle)\n\n 50           2 RESUME                   0\n\n 51           4 LOAD_GLOBAL              1 (NULL + hashlib)\n             14 LOAD_ATTR                2 (sha256)\n             34 CALL                     0\n             42 STORE_FAST               1 (digest)\n\n 52          44 LOAD_FAST                0 (path)\n             46 LOAD_ATTR                5 (NULL|self + open)\n             66 LOAD_CONST               1 ('rb')\n             68 CALL                     1\n             76 BEFORE_WITH\n             78 STORE_DEREF              3 (handle)\n\n 53          80 LOAD_GLOBAL              7 (NULL + iter)\n             90 LOAD_CLOSURE             3 (handle)\n             92 BUILD_TUPLE              1\n             94 LOAD_CONST               2 (<code object <lambda> at 0x105334c60, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 53>)\n             96 MAKE_FUNCTION            8 (closure)\n             98 LOAD_CONST               3 (b'')\n            100 CALL                     2\n            108 GET_ITER\n        >>  110 FOR_ITER                19 (to 152)\n            114 STORE_FAST               2 (chunk)\n\n 54         116 LOAD_FAST                1 (digest)\n            118 LOAD_ATTR                9 (NULL|self + update)\n            138 LOAD_FAST                2 (chunk)\n            140 CALL                     1\n            148 POP_TOP\n            150 JUMP_BACKWARD           21 (to 110)\n\n 53     >>  152 END_FOR\n            154 NOP\n\n 52         156 LOAD_CONST               0 (None)\n            158 LOAD_CONST               0 (None)\n            160 LOAD_CONST               0 (None)\n            162 CALL                     2\n            170 POP_TOP\n\n 55         172 LOAD_FAST                1 (digest)\n            174 LOAD_ATTR               11 (NULL|self + hexdigest)\n            194 CALL                     0\n            202 RETURN_VALUE\n\n 52     >>  204 PUSH_EXC_INFO\n            206 WITH_EXCEPT_START\n            208 POP_JUMP_IF_TRUE         1 (to 212)\n            210 RERAISE                  2\n        >>  212 POP_TOP\n            214 POP_EXCEPT\n            216 POP_TOP\n            218 POP_TOP\n\n 55         220 LOAD_FAST                1 (digest)\n            222 LOAD_ATTR               11 (NULL|self + hexdigest)\n            242 CALL                     0\n            250 RETURN_VALUE\n        >>  252 COPY                     3\n            254 POP_EXCEPT\n            256 RERAISE                  1\nExceptionTable:\n  78 to 152 -> 204 [1] lasti\n  204 to 212 -> 252 [3] lasti\n"
+    },
+    {
+      "qualname": "_sha256_file.<locals>.<lambda>",
+      "name": "<lambda>",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [],
+      "names": [
+        "read"
+      ],
+      "freevars": [
+        "handle"
+      ],
+      "cellvars": [],
+      "doc": null,
+      "dis": "              0 COPY_FREE_VARS           1\n\n 53           2 RESUME                   0\n              4 LOAD_DEREF               0 (handle)\n              6 LOAD_ATTR                1 (NULL|self + read)\n             26 LOAD_CONST               1 (1048576)\n             28 CALL                     1\n             36 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_byte_entropy",
+      "name": "_byte_entropy",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "data",
+        "counts",
+        "entropy",
+        "total",
+        "count",
+        "p"
+      ],
+      "names": [
+        "Counter",
+        "len",
+        "values",
+        "math",
+        "log2",
+        "round"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 58           0 RESUME                   0\n\n 59           2 LOAD_FAST                0 (data)\n              4 POP_JUMP_IF_TRUE         1 (to 8)\n\n 60           6 RETURN_CONST             1 (0.0)\n\n 61     >>    8 LOAD_GLOBAL              1 (NULL + Counter)\n             18 LOAD_FAST                0 (data)\n             20 CALL                     1\n             28 STORE_FAST               1 (counts)\n\n 62          30 LOAD_CONST               1 (0.0)\n             32 STORE_FAST               2 (entropy)\n\n 63          34 LOAD_GLOBAL              3 (NULL + len)\n             44 LOAD_FAST                0 (data)\n             46 CALL                     1\n             54 STORE_FAST               3 (total)\n\n 64          56 LOAD_FAST                1 (counts)\n             58 LOAD_ATTR                5 (NULL|self + values)\n             78 CALL                     0\n             86 GET_ITER\n        >>   88 FOR_ITER                34 (to 160)\n             92 STORE_FAST               4 (count)\n\n 65          94 LOAD_FAST                4 (count)\n             96 LOAD_FAST                3 (total)\n             98 BINARY_OP               11 (/)\n            102 STORE_FAST               5 (p)\n\n 66         104 LOAD_FAST                2 (entropy)\n            106 LOAD_FAST                5 (p)\n            108 LOAD_GLOBAL              7 (NULL + math)\n            118 LOAD_ATTR                8 (log2)\n            138 LOAD_FAST                5 (p)\n            140 CALL                     1\n            148 BINARY_OP                5 (*)\n            152 BINARY_OP               23 (-=)\n            156 STORE_FAST               2 (entropy)\n            158 JUMP_BACKWARD           36 (to 88)\n\n 64     >>  160 END_FOR\n\n 67         162 LOAD_GLOBAL             11 (NULL + round)\n            172 LOAD_FAST                2 (entropy)\n            174 LOAD_CONST               2 (12)\n            176 CALL                     2\n            184 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_display_ascii",
+      "name": "_display_ascii",
+      "argcount": 1,
+      "kwonlyargcount": 1,
+      "varnames": [
+        "data",
+        "limit"
+      ],
+      "names": [
+        "join"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 70           0 RESUME                   0\n\n 71           2 LOAD_CONST               1 ('')\n              4 LOAD_ATTR                1 (NULL|self + join)\n             24 LOAD_CONST               2 (<code object <genexpr> at 0x105371c50, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 71>)\n             26 MAKE_FUNCTION            0\n             28 LOAD_FAST                0 (data)\n             30 LOAD_CONST               0 (None)\n             32 LOAD_FAST                1 (limit)\n             34 BINARY_SLICE\n             36 GET_ITER\n             38 CALL                     0\n             46 CALL                     1\n             54 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_display_ascii.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "value"
+      ],
+      "names": [
+        "chr"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 71           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                31 (to 74)\n             12 STORE_FAST               1 (value)\n             14 LOAD_CONST               0 (32)\n             16 LOAD_FAST                1 (value)\n             18 SWAP                     2\n             20 COPY                     2\n             22 COMPARE_OP              26 (<=)\n             26 POP_JUMP_IF_FALSE        5 (to 38)\n             28 LOAD_CONST               1 (127)\n             30 COMPARE_OP               2 (<)\n             34 POP_JUMP_IF_FALSE       14 (to 64)\n             36 JUMP_FORWARD             2 (to 42)\n        >>   38 POP_TOP\n             40 JUMP_FORWARD            11 (to 64)\n        >>   42 LOAD_GLOBAL              1 (NULL + chr)\n             52 LOAD_FAST                1 (value)\n             54 CALL                     1\n             62 JUMP_FORWARD             1 (to 66)\n        >>   64 LOAD_CONST               2 ('.')\n        >>   66 YIELD_VALUE              1\n             68 RESUME                   1\n             70 POP_TOP\n             72 JUMP_BACKWARD           33 (to 8)\n        >>   74 END_FOR\n             76 RETURN_CONST             3 (None)\n        >>   78 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             80 RERAISE                  1\nExceptionTable:\n  4 to 76 -> 78 [0] lasti\n"
+    },
+    {
+      "qualname": "_safe_member_blockers",
+      "name": "_safe_member_blockers",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "name",
+        "blockers",
+        "posix",
+        "windows"
+      ],
+      "names": [
+        "append",
+        "PurePosixPath",
+        "PureWindowsPath",
+        "is_absolute",
+        "drive",
+        "any",
+        "parts"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 74           0 RESUME                   0\n\n 75           2 BUILD_LIST               0\n              4 STORE_FAST               1 (blockers)\n\n 76           6 LOAD_FAST                0 (name)\n              8 POP_JUMP_IF_TRUE        17 (to 44)\n\n 77          10 LOAD_FAST                1 (blockers)\n             12 LOAD_ATTR                1 (NULL|self + append)\n             32 LOAD_CONST               1 ('empty_member_name')\n             34 CALL                     1\n             42 POP_TOP\n\n 78     >>   44 LOAD_CONST               2 ('\\x00')\n             46 LOAD_FAST                0 (name)\n             48 CONTAINS_OP              0\n             50 POP_JUMP_IF_FALSE       17 (to 86)\n\n 79          52 LOAD_FAST                1 (blockers)\n             54 LOAD_ATTR                1 (NULL|self + append)\n             74 LOAD_CONST               3 ('nul_in_member_name')\n             76 CALL                     1\n             84 POP_TOP\n\n 80     >>   86 LOAD_CONST               4 ('\\\\')\n             88 LOAD_FAST                0 (name)\n             90 CONTAINS_OP              0\n             92 POP_JUMP_IF_FALSE       17 (to 128)\n\n 81          94 LOAD_FAST                1 (blockers)\n             96 LOAD_ATTR                1 (NULL|self + append)\n            116 LOAD_CONST               5 ('backslash_in_member_name')\n            118 CALL                     1\n            126 POP_TOP\n\n 82     >>  128 LOAD_GLOBAL              3 (NULL + PurePosixPath)\n            138 LOAD_FAST                0 (name)\n            140 CALL                     1\n            148 STORE_FAST               2 (posix)\n\n 83         150 LOAD_GLOBAL              5 (NULL + PureWindowsPath)\n            160 LOAD_FAST                0 (name)\n            162 CALL                     1\n            170 STORE_FAST               3 (windows)\n\n 84         172 LOAD_FAST                2 (posix)\n            174 LOAD_ATTR                7 (NULL|self + is_absolute)\n            194 CALL                     0\n            202 POP_JUMP_IF_TRUE        28 (to 260)\n            204 LOAD_FAST                3 (windows)\n            206 LOAD_ATTR                7 (NULL|self + is_absolute)\n            226 CALL                     0\n            234 POP_JUMP_IF_TRUE        12 (to 260)\n            236 LOAD_FAST                3 (windows)\n            238 LOAD_ATTR                8 (drive)\n            258 POP_JUMP_IF_FALSE       17 (to 294)\n\n 85     >>  260 LOAD_FAST                1 (blockers)\n            262 LOAD_ATTR                1 (NULL|self + append)\n            282 LOAD_CONST               6 ('absolute_or_drive_member_path')\n            284 CALL                     1\n            292 POP_TOP\n\n 86     >>  294 LOAD_GLOBAL             11 (NULL + any)\n            304 LOAD_CONST               7 (<code object <genexpr> at 0x105336790, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 86>)\n            306 MAKE_FUNCTION            0\n            308 LOAD_FAST                2 (posix)\n            310 LOAD_ATTR               12 (parts)\n            330 GET_ITER\n            332 CALL                     0\n            340 CALL                     1\n            348 POP_JUMP_IF_FALSE       17 (to 384)\n\n 87         350 LOAD_FAST                1 (blockers)\n            352 LOAD_ATTR                1 (NULL|self + append)\n            372 LOAD_CONST               8 ('zip_slip_member_path')\n            374 CALL                     1\n            382 POP_TOP\n\n 88     >>  384 LOAD_GLOBAL             11 (NULL + any)\n            394 LOAD_CONST               9 (<code object <genexpr> at 0x10539ebc0, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 88>)\n            396 MAKE_FUNCTION            0\n            398 LOAD_FAST                2 (posix)\n            400 LOAD_ATTR               12 (parts)\n            420 GET_ITER\n            422 CALL                     0\n            430 CALL                     1\n            438 POP_JUMP_IF_FALSE       17 (to 474)\n\n 89         440 LOAD_FAST                1 (blockers)\n            442 LOAD_ATTR                1 (NULL|self + append)\n            462 LOAD_CONST              10 ('hidden_or_resource_fork_member')\n            464 CALL                     1\n            472 POP_TOP\n\n 90     >>  474 LOAD_FAST                1 (blockers)\n            476 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_safe_member_blockers.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "part"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 86           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                 8 (to 28)\n             12 STORE_FAST               1 (part)\n             14 LOAD_FAST                1 (part)\n             16 LOAD_CONST               0 (('', '.', '..'))\n             18 CONTAINS_OP              0\n             20 YIELD_VALUE              1\n             22 RESUME                   1\n             24 POP_TOP\n             26 JUMP_BACKWARD           10 (to 8)\n        >>   28 END_FOR\n             30 RETURN_CONST             1 (None)\n        >>   32 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             34 RERAISE                  1\nExceptionTable:\n  4 to 30 -> 32 [0] lasti\n"
+    },
+    {
+      "qualname": "_safe_member_blockers.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "part"
+      ],
+      "names": [
+        "startswith"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 88           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                27 (to 66)\n             12 STORE_FAST               1 (part)\n             14 LOAD_FAST                1 (part)\n             16 LOAD_CONST               0 (frozenset({'.DS_Store', '__MACOSX'}))\n             18 CONTAINS_OP              0\n             20 COPY                     1\n             22 POP_JUMP_IF_TRUE        17 (to 58)\n             24 POP_TOP\n             26 LOAD_FAST                1 (part)\n             28 LOAD_ATTR                1 (NULL|self + startswith)\n             48 LOAD_CONST               1 ('._')\n             50 CALL                     1\n        >>   58 YIELD_VALUE              1\n             60 RESUME                   1\n             62 POP_TOP\n             64 JUMP_BACKWARD           29 (to 8)\n        >>   66 END_FOR\n             68 RETURN_CONST             2 (None)\n        >>   70 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             72 RERAISE                  1\nExceptionTable:\n  4 to 68 -> 70 [0] lasti\n"
+    },
+    {
+      "qualname": "_decode_zip_name",
+      "name": "_decode_zip_name",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "raw",
+        "flag_bits",
+        "encoding"
+      ],
+      "names": [
+        "decode"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 93           0 RESUME                   0\n\n 94           2 LOAD_FAST                1 (flag_bits)\n              4 LOAD_CONST               1 (2048)\n              6 BINARY_OP                1 (&)\n             10 POP_JUMP_IF_FALSE        2 (to 16)\n             12 LOAD_CONST               2 ('utf-8')\n             14 JUMP_FORWARD             1 (to 18)\n        >>   16 LOAD_CONST               3 ('cp437')\n        >>   18 STORE_FAST               2 (encoding)\n\n 95          20 LOAD_FAST                0 (raw)\n             22 LOAD_ATTR                1 (NULL|self + decode)\n             42 LOAD_FAST                2 (encoding)\n             44 CALL                     1\n             52 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_local_header_name",
+      "name": "_local_header_name",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "info",
+        "handle",
+        "header",
+        "signature",
+        "_version_needed",
+        "_flag_bits",
+        "_compress_type",
+        "_mod_time",
+        "_mod_date",
+        "_crc",
+        "_compress_size",
+        "_file_size",
+        "name_len",
+        "extra_len",
+        "raw_name"
+      ],
+      "names": [
+        "open",
+        "seek",
+        "header_offset",
+        "read",
+        "len",
+        "PublicFrontierIntakeError",
+        "filename",
+        "struct",
+        "unpack",
+        "LOCAL_FILE_HEADER",
+        "_decode_zip_name",
+        "flag_bits"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": " 98           0 RESUME                   0\n\n 99           2 LOAD_FAST                0 (path)\n              4 LOAD_ATTR                1 (NULL|self + open)\n             24 LOAD_CONST               1 ('rb')\n             26 CALL                     1\n             34 BEFORE_WITH\n             36 STORE_FAST               2 (handle)\n\n100          38 LOAD_FAST                2 (handle)\n             40 LOAD_ATTR                3 (NULL|self + seek)\n             60 LOAD_FAST                1 (info)\n             62 LOAD_ATTR                4 (header_offset)\n             82 CALL                     1\n             90 POP_TOP\n\n101          92 LOAD_FAST                2 (handle)\n             94 LOAD_ATTR                7 (NULL|self + read)\n            114 LOAD_CONST               2 (30)\n            116 CALL                     1\n            124 STORE_FAST               3 (header)\n\n102         126 LOAD_GLOBAL              9 (NULL + len)\n            136 LOAD_FAST                3 (header)\n            138 CALL                     1\n            146 LOAD_CONST               2 (30)\n            148 COMPARE_OP              55 (!=)\n            152 POP_JUMP_IF_FALSE       37 (to 228)\n\n103         154 LOAD_GLOBAL             11 (NULL + PublicFrontierIntakeError)\n\n104         164 LOAD_CONST               3 ('truncated local header for ')\n            166 LOAD_FAST                1 (info)\n            168 LOAD_ATTR               12 (filename)\n            188 FORMAT_VALUE             2 (repr)\n            190 LOAD_CONST               4 (' at ')\n            192 LOAD_FAST                1 (info)\n            194 LOAD_ATTR                4 (header_offset)\n            214 FORMAT_VALUE             0\n            216 BUILD_STRING             4\n\n103         218 CALL                     1\n            226 RAISE_VARARGS            1\n\n118     >>  228 LOAD_GLOBAL             15 (NULL + struct)\n            238 LOAD_ATTR               16 (unpack)\n            258 LOAD_CONST               5 ('<IHHHHHIIIHH')\n            260 LOAD_FAST                3 (header)\n            262 CALL                     2\n\n106         270 UNPACK_SEQUENCE         11\n\n107         274 STORE_FAST               4 (signature)\n\n108         276 STORE_FAST               5 (_version_needed)\n\n109         278 STORE_FAST               6 (_flag_bits)\n\n110         280 STORE_FAST               7 (_compress_type)\n\n111         282 STORE_FAST               8 (_mod_time)\n\n112         284 STORE_FAST               9 (_mod_date)\n\n113         286 STORE_FAST              10 (_crc)\n\n114         288 STORE_FAST              11 (_compress_size)\n\n115         290 STORE_FAST              12 (_file_size)\n\n116         292 STORE_FAST              13 (name_len)\n\n117         294 STORE_FAST              14 (extra_len)\n\n119         296 LOAD_FAST                4 (signature)\n            298 LOAD_GLOBAL             18 (LOCAL_FILE_HEADER)\n            308 COMPARE_OP              55 (!=)\n            312 POP_JUMP_IF_FALSE       37 (to 388)\n\n120         314 LOAD_GLOBAL             11 (NULL + PublicFrontierIntakeError)\n\n121         324 LOAD_CONST               6 ('bad local header signature for ')\n            326 LOAD_FAST                1 (info)\n            328 LOAD_ATTR               12 (filename)\n            348 FORMAT_VALUE             2 (repr)\n            350 LOAD_CONST               4 (' at ')\n            352 LOAD_FAST                1 (info)\n            354 LOAD_ATTR                4 (header_offset)\n            374 FORMAT_VALUE             0\n            376 BUILD_STRING             4\n\n120         378 CALL                     1\n            386 RAISE_VARARGS            1\n\n123     >>  388 LOAD_FAST                2 (handle)\n            390 LOAD_ATTR                7 (NULL|self + read)\n            410 LOAD_FAST               13 (name_len)\n            412 CALL                     1\n            420 STORE_FAST              15 (raw_name)\n\n124         422 LOAD_GLOBAL              9 (NULL + len)\n            432 LOAD_FAST               15 (raw_name)\n            434 CALL                     1\n            442 LOAD_FAST               13 (name_len)\n            444 COMPARE_OP              55 (!=)\n            448 POP_JUMP_IF_FALSE       24 (to 498)\n\n125         450 LOAD_GLOBAL             11 (NULL + PublicFrontierIntakeError)\n            460 LOAD_CONST               7 ('truncated local filename for ')\n            462 LOAD_FAST                1 (info)\n            464 LOAD_ATTR               12 (filename)\n            484 FORMAT_VALUE             2 (repr)\n            486 BUILD_STRING             2\n            488 CALL                     1\n            496 RAISE_VARARGS            1\n\n126     >>  498 LOAD_FAST                2 (handle)\n            500 LOAD_ATTR                3 (NULL|self + seek)\n            520 LOAD_FAST               14 (extra_len)\n            522 LOAD_CONST               8 (1)\n            524 CALL                     2\n            532 POP_TOP\n\n 99         534 LOAD_CONST               0 (None)\n            536 LOAD_CONST               0 (None)\n            538 LOAD_CONST               0 (None)\n            540 CALL                     2\n            548 POP_TOP\n\n127     >>  550 LOAD_GLOBAL             21 (NULL + _decode_zip_name)\n            560 LOAD_FAST_CHECK         15 (raw_name)\n            562 LOAD_FAST                1 (info)\n            564 LOAD_ATTR               22 (flag_bits)\n            584 CALL                     2\n            592 RETURN_VALUE\n\n 99     >>  594 PUSH_EXC_INFO\n            596 WITH_EXCEPT_START\n            598 POP_JUMP_IF_TRUE         1 (to 602)\n            600 RERAISE                  2\n        >>  602 POP_TOP\n            604 POP_EXCEPT\n            606 POP_TOP\n            608 POP_TOP\n            610 JUMP_BACKWARD           31 (to 550)\n        >>  612 COPY                     3\n            614 POP_EXCEPT\n            616 RERAISE                  1\nExceptionTable:\n  36 to 532 -> 594 [1] lasti\n  594 to 602 -> 612 [3] lasti\n"
+    },
+    {
+      "qualname": "_codec_label",
+      "name": "_codec_label",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "segment_name",
+        "data"
+      ],
+      "names": [
+        "startswith"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "130           0 RESUME                   0\n\n131           2 LOAD_FAST                0 (segment_name)\n              4 LOAD_CONST               1 ('mask')\n              6 COMPARE_OP              40 (==)\n             10 POP_JUMP_IF_FALSE       54 (to 120)\n\n132          12 LOAD_FAST                1 (data)\n             14 LOAD_ATTR                1 (NULL|self + startswith)\n             34 LOAD_CONST               2 (b'QMA9')\n             36 CALL                     1\n             44 POP_JUMP_IF_FALSE        1 (to 48)\n\n133          46 RETURN_CONST             3 ('QMA9_range_mask')\n\n134     >>   48 LOAD_FAST                1 (data)\n             50 LOAD_ATTR                1 (NULL|self + startswith)\n             70 LOAD_CONST               4 (b'STBM1BR\\x00')\n             72 CALL                     1\n             80 POP_JUMP_IF_FALSE        1 (to 84)\n\n135          82 RETURN_CONST             5 ('STBM1BR_lossless_mask_recode')\n\n136     >>   84 LOAD_FAST                1 (data)\n             86 LOAD_ATTR                1 (NULL|self + startswith)\n            106 LOAD_CONST               6 (b'HPM1')\n            108 CALL                     1\n            116 POP_JUMP_IF_FALSE        1 (to 120)\n\n137         118 RETURN_CONST             7 ('HPM1_hpac_mask')\n\n138     >>  120 LOAD_FAST                0 (segment_name)\n            122 LOAD_CONST               8 ('randmulti')\n            124 COMPARE_OP              40 (==)\n            128 POP_JUMP_IF_FALSE       18 (to 166)\n            130 LOAD_FAST                1 (data)\n            132 LOAD_ATTR                1 (NULL|self + startswith)\n            152 LOAD_CONST               9 (b'RMB1')\n            154 CALL                     1\n            162 POP_JUMP_IF_FALSE        1 (to 166)\n\n139         164 RETURN_CONST            10 ('RMB1_side_info_backed_randmulti')\n\n140     >>  166 LOAD_FAST                0 (segment_name)\n            168 LOAD_CONST              11 (frozenset({'randmulti', 'frac3', 'frac2', 'pose', 'model', 'region', 'bias', 'frac', 'shift', 'post'}))\n            170 CONTAINS_OP              0\n            172 POP_JUMP_IF_FALSE        1 (to 176)\n\n141         174 RETURN_CONST            12 ('opaque_pr85_segment')\n\n142     >>  176 RETURN_CONST            13 ('unknown')\n"
+    },
+    {
+      "qualname": "_segment_row",
+      "name": "_segment_row",
+      "argcount": 3,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "name",
+        "data",
+        "offset"
+      ],
+      "names": [
+        "len",
+        "_sha256_bytes",
+        "int",
+        "hex",
+        "_display_ascii",
+        "_codec_label",
+        "_byte_entropy"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "145           0 RESUME                   0\n\n147           2 LOAD_FAST                0 (name)\n\n148           4 LOAD_GLOBAL              1 (NULL + len)\n             14 LOAD_FAST                1 (data)\n             16 CALL                     1\n\n149          24 LOAD_GLOBAL              3 (NULL + _sha256_bytes)\n             34 LOAD_FAST                1 (data)\n             36 CALL                     1\n\n150          44 LOAD_GLOBAL              5 (NULL + int)\n             54 LOAD_FAST                2 (offset)\n             56 CALL                     1\n\n151          64 LOAD_FAST                1 (data)\n             66 LOAD_CONST               0 (None)\n             68 LOAD_CONST               1 (8)\n             70 BINARY_SLICE\n             72 LOAD_ATTR                7 (NULL|self + hex)\n             92 CALL                     0\n\n152         100 LOAD_GLOBAL              9 (NULL + _display_ascii)\n            110 LOAD_FAST                1 (data)\n            112 CALL                     1\n\n153         120 LOAD_GLOBAL             11 (NULL + _codec_label)\n            130 LOAD_FAST                0 (name)\n            132 LOAD_FAST                1 (data)\n            134 CALL                     2\n\n154         142 LOAD_GLOBAL             13 (NULL + _byte_entropy)\n            152 LOAD_FAST                1 (data)\n            154 CALL                     1\n\n146         162 LOAD_CONST               2 (('name', 'bytes', 'sha256', 'offset', 'magic_hex', 'magic_ascii', 'codec', 'entropy_bits_per_byte'))\n            164 BUILD_CONST_KEY_MAP      8\n            166 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_inspect_member_data",
+      "name": "_inspect_member_data",
+      "argcount": 2,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "name",
+        "data",
+        "row",
+        "bundle",
+        "exc",
+        "segment_name"
+      ],
+      "names": [
+        "len",
+        "_sha256_bytes",
+        "hex",
+        "_display_ascii",
+        "_byte_entropy",
+        "parse_pr85_bundle",
+        "Pr85BundleError",
+        "str",
+        "format",
+        "int",
+        "header_bytes",
+        "segment_lengths",
+        "_segment_row",
+        "bytes",
+        "segments",
+        "segment_offsets"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "158           0 RESUME                   0\n\n160           2 LOAD_FAST                0 (name)\n\n161           4 LOAD_GLOBAL              1 (NULL + len)\n             14 LOAD_FAST                1 (data)\n             16 CALL                     1\n\n162          24 LOAD_GLOBAL              3 (NULL + _sha256_bytes)\n             34 LOAD_FAST                1 (data)\n             36 CALL                     1\n\n163          44 LOAD_FAST                1 (data)\n             46 LOAD_CONST               0 (None)\n             48 LOAD_CONST               1 (8)\n             50 BINARY_SLICE\n             52 LOAD_ATTR                5 (NULL|self + hex)\n             72 CALL                     0\n\n164          80 LOAD_GLOBAL              7 (NULL + _display_ascii)\n             90 LOAD_FAST                1 (data)\n             92 CALL                     1\n\n165         100 LOAD_GLOBAL              9 (NULL + _byte_entropy)\n            110 LOAD_FAST                1 (data)\n            112 CALL                     1\n\n159         120 LOAD_CONST               2 (('name', 'bytes', 'sha256', 'magic_hex', 'magic_ascii', 'entropy_bits_per_byte'))\n            122 BUILD_CONST_KEY_MAP      6\n            124 STORE_FAST               2 (row)\n\n167         126 NOP\n\n168         128 LOAD_GLOBAL             11 (NULL + parse_pr85_bundle)\n            138 LOAD_FAST                1 (data)\n            140 CALL                     1\n            148 STORE_FAST               3 (bundle)\n\n174         150 LOAD_CONST               5 ('pr85_family_bundle')\n            152 LOAD_FAST                2 (row)\n            154 LOAD_CONST               3 ('recognized_container')\n            156 STORE_SUBSCR\n\n175         160 LOAD_FAST                3 (bundle)\n            162 LOAD_ATTR               16 (format)\n            182 LOAD_FAST                2 (row)\n            184 LOAD_CONST               6 ('bundle_format')\n            186 STORE_SUBSCR\n\n176         190 LOAD_GLOBAL             19 (NULL + int)\n            200 LOAD_FAST                3 (bundle)\n            202 LOAD_ATTR               20 (header_bytes)\n            222 CALL                     1\n            230 LOAD_FAST                2 (row)\n            232 LOAD_CONST               7 ('bundle_header_bytes')\n            234 STORE_SUBSCR\n\n177         238 LOAD_FAST                3 (bundle)\n            240 LOAD_ATTR               22 (segment_lengths)\n            260 LOAD_FAST                2 (row)\n            262 LOAD_CONST               8 ('segment_lengths')\n            264 STORE_SUBSCR\n\n180         268 LOAD_FAST                3 (bundle)\n            270 LOAD_ATTR               22 (segment_lengths)\n            290 GET_ITER\n\n178         292 LOAD_FAST_AND_CLEAR      5 (segment_name)\n            294 SWAP                     2\n            296 BUILD_LIST               0\n            298 SWAP                     2\n\n180     >>  300 FOR_ITER                50 (to 404)\n            304 STORE_FAST               5 (segment_name)\n\n179         306 LOAD_GLOBAL             25 (NULL + _segment_row)\n            316 LOAD_FAST                5 (segment_name)\n            318 LOAD_GLOBAL             27 (NULL + bytes)\n            328 LOAD_FAST                3 (bundle)\n            330 LOAD_ATTR               28 (segments)\n            350 LOAD_FAST                5 (segment_name)\n            352 BINARY_SUBSCR\n            356 CALL                     1\n            364 LOAD_FAST                3 (bundle)\n            366 LOAD_ATTR               30 (segment_offsets)\n            386 LOAD_FAST                5 (segment_name)\n            388 BINARY_SUBSCR\n            392 CALL                     3\n            400 LIST_APPEND              2\n            402 JUMP_BACKWARD           52 (to 300)\n\n180     >>  404 END_FOR\n\n178         406 SWAP                     2\n            408 STORE_FAST               5 (segment_name)\n            410 LOAD_FAST                2 (row)\n            412 LOAD_CONST               9 ('segments')\n            414 STORE_SUBSCR\n\n182         418 LOAD_FAST                2 (row)\n            420 RETURN_VALUE\n        >>  422 PUSH_EXC_INFO\n\n169         424 LOAD_GLOBAL             12 (Pr85BundleError)\n            434 CHECK_EXC_MATCH\n            436 POP_JUMP_IF_FALSE       31 (to 500)\n            438 STORE_FAST               4 (exc)\n\n170         440 LOAD_CONST               0 (None)\n            442 LOAD_FAST                2 (row)\n            444 LOAD_CONST               3 ('recognized_container')\n            446 STORE_SUBSCR\n\n171         450 LOAD_GLOBAL             15 (NULL + str)\n            460 LOAD_FAST                4 (exc)\n            462 CALL                     1\n            470 LOAD_FAST                2 (row)\n            472 LOAD_CONST               4 ('container_probe_error')\n            474 STORE_SUBSCR\n\n172         478 LOAD_FAST                2 (row)\n            480 SWAP                     2\n            482 POP_EXCEPT\n            484 LOAD_CONST               0 (None)\n            486 STORE_FAST               4 (exc)\n            488 DELETE_FAST              4 (exc)\n            490 RETURN_VALUE\n        >>  492 LOAD_CONST               0 (None)\n            494 STORE_FAST               4 (exc)\n            496 DELETE_FAST              4 (exc)\n            498 RERAISE                  1\n\n169     >>  500 RERAISE                  0\n        >>  502 COPY                     3\n            504 POP_EXCEPT\n            506 RERAISE                  1\n        >>  508 SWAP                     2\n            510 POP_TOP\n\n178         512 SWAP                     2\n            514 STORE_FAST               5 (segment_name)\n            516 RERAISE                  0\nExceptionTable:\n  128 to 148 -> 422 [0]\n  296 to 404 -> 508 [2]\n  422 to 438 -> 502 [1] lasti\n  440 to 478 -> 492 [1] lasti\n  480 to 480 -> 502 [1] lasti\n  492 to 500 -> 502 [1] lasti\n"
+    },
+    {
+      "qualname": "_archive_members",
+      "name": "_archive_members",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "path",
+        "blockers",
+        "member_data",
+        "rows",
+        "zf",
+        "infos",
+        "name_counts",
+        "name",
+        "count",
+        "local_name",
+        "row_blockers",
+        "data"
+      ],
+      "names": [
+        "zipfile",
+        "ZipFile",
+        "infolist",
+        "append",
+        "Counter",
+        "sorted",
+        "items",
+        "_local_header_name",
+        "_safe_member_blockers",
+        "filename",
+        "is_dir",
+        "read",
+        "int",
+        "file_size",
+        "compress_size",
+        "compress_type",
+        "header_offset",
+        "CRC",
+        "_sha256_bytes",
+        "extend"
+      ],
+      "freevars": [],
+      "cellvars": [
+        "info"
+      ],
+      "doc": null,
+      "dis": "              0 MAKE_CELL               12 (info)\n\n185           2 RESUME                   0\n\n186           4 BUILD_LIST               0\n              6 STORE_FAST               1 (blockers)\n\n187           8 BUILD_MAP                0\n             10 STORE_FAST               2 (member_data)\n\n188          12 BUILD_LIST               0\n             14 STORE_FAST               3 (rows)\n\n189          16 LOAD_GLOBAL              1 (NULL + zipfile)\n             26 LOAD_ATTR                2 (ZipFile)\n             46 LOAD_FAST                0 (path)\n             48 LOAD_CONST               1 ('r')\n             50 CALL                     2\n             58 BEFORE_WITH\n             60 STORE_FAST               4 (zf)\n\n190          62 LOAD_FAST                4 (zf)\n             64 LOAD_ATTR                5 (NULL|self + infolist)\n             84 CALL                     0\n             92 STORE_FAST               5 (infos)\n\n191          94 LOAD_FAST                5 (infos)\n             96 POP_JUMP_IF_TRUE        17 (to 132)\n\n192          98 LOAD_FAST                1 (blockers)\n            100 LOAD_ATTR                7 (NULL|self + append)\n            120 LOAD_CONST               2 ('zip_has_no_members')\n            122 CALL                     1\n            130 POP_TOP\n\n193     >>  132 LOAD_GLOBAL              9 (NULL + Counter)\n            142 LOAD_CONST               3 (<code object <genexpr> at 0x105395130, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 193>)\n            144 MAKE_FUNCTION            0\n            146 LOAD_FAST                5 (infos)\n            148 GET_ITER\n            150 CALL                     0\n            158 CALL                     1\n            166 STORE_FAST               6 (name_counts)\n\n194         168 LOAD_GLOBAL             11 (NULL + sorted)\n            178 LOAD_FAST                6 (name_counts)\n            180 LOAD_ATTR               13 (NULL|self + items)\n            200 CALL                     0\n            208 CALL                     1\n            216 GET_ITER\n        >>  218 FOR_ITER                34 (to 290)\n            222 UNPACK_SEQUENCE          2\n            226 STORE_FAST               7 (name)\n            228 STORE_FAST               8 (count)\n\n195         230 LOAD_FAST                8 (count)\n            232 LOAD_CONST               4 (1)\n            234 COMPARE_OP              68 (>)\n            238 POP_JUMP_IF_TRUE         1 (to 242)\n            240 JUMP_BACKWARD           12 (to 218)\n\n196     >>  242 LOAD_FAST                1 (blockers)\n            244 LOAD_ATTR                7 (NULL|self + append)\n            264 LOAD_CONST               5 ('duplicate_member_name:')\n            266 LOAD_FAST                7 (name)\n            268 FORMAT_VALUE             0\n            270 LOAD_CONST               6 (':')\n            272 LOAD_FAST                8 (count)\n            274 FORMAT_VALUE             0\n            276 BUILD_STRING             4\n            278 CALL                     1\n            286 POP_TOP\n            288 JUMP_BACKWARD           36 (to 218)\n\n194     >>  290 END_FOR\n\n197         292 LOAD_FAST                5 (infos)\n            294 GET_ITER\n        >>  296 EXTENDED_ARG             1\n            298 FOR_ITER               389 (to 1080)\n            302 STORE_DEREF             12 (info)\n\n198         304 LOAD_GLOBAL             15 (NULL + _local_header_name)\n            314 LOAD_FAST                0 (path)\n            316 LOAD_DEREF              12 (info)\n            318 CALL                     2\n            326 STORE_FAST               9 (local_name)\n\n199         328 LOAD_GLOBAL             17 (NULL + _safe_member_blockers)\n            338 LOAD_DEREF              12 (info)\n            340 LOAD_ATTR               18 (filename)\n            360 CALL                     1\n            368 STORE_FAST              10 (row_blockers)\n\n200         370 LOAD_FAST                9 (local_name)\n            372 LOAD_DEREF              12 (info)\n            374 LOAD_ATTR               18 (filename)\n            394 COMPARE_OP              55 (!=)\n            398 POP_JUMP_IF_FALSE       17 (to 434)\n\n201         400 LOAD_FAST               10 (row_blockers)\n            402 LOAD_ATTR                7 (NULL|self + append)\n            422 LOAD_CONST               7 ('central_local_name_mismatch')\n            424 CALL                     1\n            432 POP_TOP\n\n202     >>  434 LOAD_DEREF              12 (info)\n            436 LOAD_ATTR               21 (NULL|self + is_dir)\n            456 CALL                     0\n            464 POP_JUMP_IF_FALSE       17 (to 500)\n\n203         466 LOAD_FAST               10 (row_blockers)\n            468 LOAD_ATTR                7 (NULL|self + append)\n            488 LOAD_CONST               8 ('directory_member')\n            490 CALL                     1\n            498 POP_TOP\n\n207     >>  500 LOAD_CONST               9 (b'')\n            502 STORE_FAST              11 (data)\n\n208         504 LOAD_DEREF              12 (info)\n            506 LOAD_ATTR               21 (NULL|self + is_dir)\n            526 CALL                     0\n            534 POP_JUMP_IF_TRUE        32 (to 600)\n            536 LOAD_FAST                9 (local_name)\n            538 LOAD_DEREF              12 (info)\n            540 LOAD_ATTR               18 (filename)\n            560 COMPARE_OP              40 (==)\n            564 POP_JUMP_IF_FALSE       17 (to 600)\n\n209         566 LOAD_FAST                4 (zf)\n            568 LOAD_ATTR               23 (NULL|self + read)\n            588 LOAD_DEREF              12 (info)\n            590 CALL                     1\n            598 STORE_FAST              11 (data)\n\n210     >>  600 LOAD_DEREF              12 (info)\n            602 LOAD_ATTR               21 (NULL|self + is_dir)\n            622 CALL                     0\n            630 POP_JUMP_IF_TRUE        30 (to 692)\n            632 LOAD_FAST                9 (local_name)\n            634 LOAD_DEREF              12 (info)\n            636 LOAD_ATTR               18 (filename)\n            656 COMPARE_OP              40 (==)\n            660 POP_JUMP_IF_FALSE       15 (to 692)\n\n211         662 LOAD_FAST               11 (data)\n            664 LOAD_FAST                2 (member_data)\n            666 LOAD_DEREF              12 (info)\n            668 LOAD_ATTR               18 (filename)\n            688 STORE_SUBSCR\n\n212     >>  692 LOAD_FAST                3 (rows)\n            694 LOAD_ATTR                7 (NULL|self + append)\n\n214         714 LOAD_DEREF              12 (info)\n            716 LOAD_ATTR               18 (filename)\n\n215         736 LOAD_FAST                9 (local_name)\n\n216         738 LOAD_FAST                9 (local_name)\n            740 LOAD_DEREF              12 (info)\n            742 LOAD_ATTR               18 (filename)\n            762 COMPARE_OP              40 (==)\n\n217         766 LOAD_GLOBAL             25 (NULL + int)\n            776 LOAD_DEREF              12 (info)\n            778 LOAD_ATTR               26 (file_size)\n            798 CALL                     1\n\n218         806 LOAD_GLOBAL             25 (NULL + int)\n            816 LOAD_DEREF              12 (info)\n            818 LOAD_ATTR               28 (compress_size)\n            838 CALL                     1\n\n219         846 LOAD_GLOBAL             25 (NULL + int)\n            856 LOAD_DEREF              12 (info)\n            858 LOAD_ATTR               30 (compress_type)\n            878 CALL                     1\n\n220         886 LOAD_GLOBAL             25 (NULL + int)\n            896 LOAD_DEREF              12 (info)\n            898 LOAD_ATTR               32 (header_offset)\n            918 CALL                     1\n\n221         926 LOAD_DEREF              12 (info)\n            928 LOAD_ATTR               34 (CRC)\n            948 LOAD_CONST              10 ('08x')\n            950 FORMAT_VALUE             4 (with format)\n\n222         952 LOAD_DEREF              12 (info)\n            954 LOAD_ATTR               21 (NULL|self + is_dir)\n            974 CALL                     0\n            982 POP_JUMP_IF_FALSE        2 (to 988)\n            984 LOAD_CONST               0 (None)\n            986 JUMP_FORWARD            10 (to 1008)\n        >>  988 LOAD_GLOBAL             37 (NULL + _sha256_bytes)\n            998 LOAD_FAST               11 (data)\n           1000 CALL                     1\n\n223     >> 1008 LOAD_FAST               10 (row_blockers)\n\n213        1010 LOAD_CONST              11 (('name', 'local_header_name', 'central_local_name_match', 'bytes', 'compressed_bytes', 'method_id', 'header_offset', 'crc32', 'sha256', 'blockers'))\n           1012 BUILD_CONST_KEY_MAP     10\n\n212        1014 CALL                     1\n           1022 POP_TOP\n\n226        1024 LOAD_FAST                1 (blockers)\n           1026 LOAD_ATTR               39 (NULL|self + extend)\n           1046 LOAD_CLOSURE            12 (info)\n           1048 BUILD_TUPLE              1\n           1050 LOAD_CONST              12 (<code object <genexpr> at 0x105395230, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 226>)\n           1052 MAKE_FUNCTION            8 (closure)\n           1054 LOAD_FAST               10 (row_blockers)\n           1056 GET_ITER\n           1058 CALL                     0\n           1066 CALL                     1\n           1074 POP_TOP\n           1076 EXTENDED_ARG             1\n           1078 JUMP_BACKWARD          392 (to 296)\n\n197     >> 1080 END_FOR\n           1082 NOP\n\n189        1084 LOAD_CONST               0 (None)\n           1086 LOAD_CONST               0 (None)\n           1088 LOAD_CONST               0 (None)\n           1090 CALL                     2\n           1098 POP_TOP\n\n227     >> 1100 LOAD_FAST                3 (rows)\n           1102 LOAD_FAST                2 (member_data)\n           1104 LOAD_FAST                1 (blockers)\n           1106 BUILD_TUPLE              3\n           1108 RETURN_VALUE\n\n189     >> 1110 PUSH_EXC_INFO\n           1112 WITH_EXCEPT_START\n           1114 POP_JUMP_IF_TRUE         1 (to 1118)\n           1116 RERAISE                  2\n        >> 1118 POP_TOP\n           1120 POP_EXCEPT\n           1122 POP_TOP\n           1124 POP_TOP\n           1126 JUMP_BACKWARD           14 (to 1100)\n        >> 1128 COPY                     3\n           1130 POP_EXCEPT\n           1132 RERAISE                  1\nExceptionTable:\n  60 to 238 -> 1110 [1] lasti\n  242 to 1080 -> 1110 [1] lasti\n  1110 to 1118 -> 1128 [3] lasti\n"
+    },
+    {
+      "qualname": "_archive_members.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "info"
+      ],
+      "names": [
+        "filename"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "193           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                16 (to 44)\n             12 STORE_FAST               1 (info)\n             14 LOAD_FAST                1 (info)\n             16 LOAD_ATTR                0 (filename)\n             36 YIELD_VALUE              1\n             38 RESUME                   1\n             40 POP_TOP\n             42 JUMP_BACKWARD           18 (to 8)\n        >>   44 END_FOR\n             46 RETURN_CONST             0 (None)\n        >>   48 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             50 RERAISE                  1\nExceptionTable:\n  4 to 46 -> 48 [0] lasti\n"
+    },
+    {
+      "qualname": "_archive_members.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "blocker"
+      ],
+      "names": [
+        "filename"
+      ],
+      "freevars": [
+        "info"
+      ],
+      "cellvars": [],
+      "doc": ":",
+      "dis": "              0 COPY_FREE_VARS           1\n\n226           2 RETURN_GENERATOR\n              4 POP_TOP\n              6 RESUME                   0\n              8 LOAD_FAST                0 (.0)\n        >>   10 FOR_ITER                21 (to 56)\n             14 STORE_FAST               1 (blocker)\n             16 LOAD_DEREF               2 (info)\n             18 LOAD_ATTR                0 (filename)\n             38 FORMAT_VALUE             0\n             40 LOAD_CONST               0 (':')\n             42 LOAD_FAST                1 (blocker)\n             44 FORMAT_VALUE             0\n             46 BUILD_STRING             3\n             48 YIELD_VALUE              1\n             50 RESUME                   1\n             52 POP_TOP\n             54 JUMP_BACKWARD           23 (to 10)\n        >>   56 END_FOR\n             58 RETURN_CONST             1 (None)\n        >>   60 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             62 RERAISE                  1\nExceptionTable:\n  6 to 58 -> 60 [0] lasti\n"
+    },
+    {
+      "qualname": "_primary_pr85_member",
+      "name": "_primary_pr85_member",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "member_data",
+        "candidates",
+        "name",
+        "data",
+        "inspected",
+        "row",
+        "segments"
+      ],
+      "names": [
+        "items",
+        "_inspect_member_data",
+        "get",
+        "append",
+        "sort"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "230           0 RESUME                   0\n\n231           2 BUILD_LIST               0\n              4 STORE_FAST               1 (candidates)\n\n232           6 LOAD_FAST                0 (member_data)\n              8 LOAD_ATTR                1 (NULL|self + items)\n             28 CALL                     0\n             36 GET_ITER\n        >>   38 FOR_ITER                80 (to 202)\n             42 UNPACK_SEQUENCE          2\n             46 STORE_FAST               2 (name)\n             48 STORE_FAST               3 (data)\n\n233          50 LOAD_GLOBAL              3 (NULL + _inspect_member_data)\n             60 LOAD_FAST                2 (name)\n             62 LOAD_FAST                3 (data)\n             64 CALL                     2\n             72 STORE_FAST               4 (inspected)\n\n234          74 LOAD_FAST                4 (inspected)\n             76 LOAD_ATTR                5 (NULL|self + get)\n             96 LOAD_CONST               1 ('recognized_container')\n             98 CALL                     1\n            106 LOAD_CONST               2 ('pr85_family_bundle')\n            108 COMPARE_OP              55 (!=)\n            112 POP_JUMP_IF_FALSE        1 (to 116)\n\n235         114 JUMP_BACKWARD           39 (to 38)\n\n236     >>  116 LOAD_FAST                4 (inspected)\n            118 LOAD_CONST               3 ('segments')\n            120 BINARY_SUBSCR\n            124 GET_ITER\n            126 LOAD_FAST_AND_CLEAR      5 (row)\n            128 SWAP                     2\n            130 BUILD_MAP                0\n            132 SWAP                     2\n        >>  134 FOR_ITER                 8 (to 154)\n            138 STORE_FAST               5 (row)\n            140 LOAD_FAST                5 (row)\n            142 LOAD_CONST               4 ('name')\n            144 BINARY_SUBSCR\n            148 LOAD_FAST                5 (row)\n            150 MAP_ADD                  2\n            152 JUMP_BACKWARD           10 (to 134)\n        >>  154 END_FOR\n            156 STORE_FAST               6 (segments)\n            158 STORE_FAST               5 (row)\n\n237         160 LOAD_FAST                1 (candidates)\n            162 LOAD_ATTR                7 (NULL|self + append)\n            182 LOAD_FAST                2 (name)\n            184 LOAD_FAST                4 (inspected)\n            186 LOAD_FAST                6 (segments)\n            188 BUILD_TUPLE              3\n            190 CALL                     1\n            198 POP_TOP\n            200 JUMP_BACKWARD           82 (to 38)\n\n232     >>  202 END_FOR\n\n238         204 LOAD_FAST                1 (candidates)\n            206 POP_JUMP_IF_TRUE         5 (to 218)\n\n239         208 LOAD_CONST               0 (None)\n            210 LOAD_CONST               0 (None)\n            212 BUILD_MAP                0\n            214 BUILD_TUPLE              3\n            216 RETURN_VALUE\n\n240     >>  218 LOAD_FAST                1 (candidates)\n            220 LOAD_ATTR                9 (NULL|self + sort)\n            240 LOAD_CONST               5 (<code object <lambda> at 0x105336970, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 240>)\n            242 MAKE_FUNCTION            0\n            244 KW_NAMES                 6 (('key',))\n            246 CALL                     1\n            254 POP_TOP\n\n241         256 LOAD_FAST                1 (candidates)\n            258 LOAD_CONST               7 (0)\n            260 BINARY_SUBSCR\n            264 UNPACK_SEQUENCE          3\n            268 STORE_FAST               2 (name)\n            270 STORE_FAST               4 (inspected)\n            272 STORE_FAST               6 (segments)\n\n242         274 LOAD_FAST                2 (name)\n            276 LOAD_FAST                4 (inspected)\n            278 LOAD_FAST                6 (segments)\n            280 BUILD_TUPLE              3\n            282 RETURN_VALUE\n        >>  284 SWAP                     2\n            286 POP_TOP\n\n236         288 SWAP                     2\n            290 STORE_FAST               5 (row)\n            292 RERAISE                  0\nExceptionTable:\n  130 to 154 -> 284 [3]\n"
+    },
+    {
+      "qualname": "_primary_pr85_member.<locals>.<lambda>",
+      "name": "<lambda>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "item"
+      ],
+      "names": [
+        "int"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "240           0 RESUME                   0\n              2 LOAD_GLOBAL              1 (NULL + int)\n             12 LOAD_FAST                0 (item)\n             14 LOAD_CONST               1 (1)\n             16 BINARY_SUBSCR\n             20 LOAD_CONST               2 ('bytes')\n             22 BINARY_SUBSCR\n             26 CALL                     1\n             34 UNARY_NEGATIVE\n             36 LOAD_FAST                0 (item)\n             38 LOAD_CONST               3 (0)\n             40 BINARY_SUBSCR\n             44 BUILD_TUPLE              2\n             46 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_diff_against_baselines",
+      "name": "_diff_against_baselines",
+      "argcount": 2,
+      "kwonlyargcount": 1,
+      "varnames": [
+        "primary_segments",
+        "baselines",
+        "candidate_archive_bytes",
+        "rows",
+        "label",
+        "baseline",
+        "baseline_segments",
+        "changed",
+        "name",
+        "left",
+        "right",
+        "archive_delta",
+        "row"
+      ],
+      "names": [
+        "sorted",
+        "items",
+        "primary_segments",
+        "set",
+        "get",
+        "append",
+        "bool",
+        "int",
+        "report",
+        "contest_rate_term",
+        "sum",
+        "len"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "245           0 RESUME                   0\n\n251           2 BUILD_LIST               0\n              4 STORE_FAST               3 (rows)\n\n252           6 LOAD_GLOBAL              1 (NULL + sorted)\n             16 LOAD_FAST                1 (baselines)\n             18 LOAD_ATTR                3 (NULL|self + items)\n             38 CALL                     0\n             46 CALL                     1\n             54 GET_ITER\n        >>   56 EXTENDED_ARG             1\n             58 FOR_ITER               440 (to 942)\n             62 UNPACK_SEQUENCE          2\n             66 STORE_FAST               4 (label)\n             68 STORE_FAST               5 (baseline)\n\n253          70 LOAD_FAST                5 (baseline)\n             72 LOAD_ATTR                4 (primary_segments)\n             92 STORE_FAST               6 (baseline_segments)\n\n254          94 BUILD_LIST               0\n             96 STORE_FAST               7 (changed)\n\n255          98 LOAD_GLOBAL              1 (NULL + sorted)\n            108 LOAD_GLOBAL              7 (NULL + set)\n            118 LOAD_FAST                0 (primary_segments)\n            120 CALL                     1\n            128 LOAD_GLOBAL              7 (NULL + set)\n            138 LOAD_FAST                6 (baseline_segments)\n            140 CALL                     1\n            148 BINARY_OP                7 (|)\n            152 CALL                     1\n            160 GET_ITER\n        >>  162 FOR_ITER               234 (to 634)\n            166 STORE_FAST               8 (name)\n\n256         168 LOAD_FAST                6 (baseline_segments)\n            170 LOAD_ATTR                9 (NULL|self + get)\n            190 LOAD_FAST                8 (name)\n            192 CALL                     1\n            200 STORE_FAST               9 (left)\n\n257         202 LOAD_FAST                0 (primary_segments)\n            204 LOAD_ATTR                9 (NULL|self + get)\n            224 LOAD_FAST                8 (name)\n            226 CALL                     1\n            234 STORE_FAST              10 (right)\n\n258         236 LOAD_FAST                7 (changed)\n            238 LOAD_ATTR               11 (NULL|self + append)\n\n260         258 LOAD_FAST                8 (name)\n\n261         260 LOAD_GLOBAL             13 (NULL + bool)\n\n262         270 LOAD_FAST                9 (left)\n            272 LOAD_CONST               0 (None)\n            274 IS_OP                    1\n            276 COPY                     1\n            278 POP_JUMP_IF_FALSE       17 (to 314)\n            280 POP_TOP\n            282 LOAD_FAST               10 (right)\n            284 LOAD_CONST               0 (None)\n            286 IS_OP                    1\n            288 COPY                     1\n            290 POP_JUMP_IF_FALSE       11 (to 314)\n            292 POP_TOP\n            294 LOAD_FAST                9 (left)\n            296 LOAD_CONST               1 ('sha256')\n            298 BINARY_SUBSCR\n            302 LOAD_FAST               10 (right)\n            304 LOAD_CONST               1 ('sha256')\n            306 BINARY_SUBSCR\n            310 COMPARE_OP              40 (==)\n\n261     >>  314 CALL                     1\n\n264         322 LOAD_FAST                9 (left)\n            324 POP_JUMP_IF_NOT_NONE     2 (to 330)\n            326 LOAD_CONST               0 (None)\n            328 JUMP_FORWARD            13 (to 356)\n        >>  330 LOAD_GLOBAL             15 (NULL + int)\n            340 LOAD_FAST                9 (left)\n            342 LOAD_CONST               2 ('bytes')\n            344 BINARY_SUBSCR\n            348 CALL                     1\n\n265     >>  356 LOAD_FAST               10 (right)\n            358 POP_JUMP_IF_NOT_NONE     2 (to 364)\n            360 LOAD_CONST               0 (None)\n            362 JUMP_FORWARD            13 (to 390)\n        >>  364 LOAD_GLOBAL             15 (NULL + int)\n            374 LOAD_FAST               10 (right)\n            376 LOAD_CONST               2 ('bytes')\n            378 BINARY_SUBSCR\n            382 CALL                     1\n\n267     >>  390 LOAD_FAST                9 (left)\n            392 POP_JUMP_IF_NONE         2 (to 398)\n            394 LOAD_FAST               10 (right)\n            396 POP_JUMP_IF_NOT_NONE     2 (to 402)\n\n266     >>  398 LOAD_CONST               0 (None)\n            400 JUMP_FORWARD            28 (to 458)\n\n268     >>  402 LOAD_GLOBAL             15 (NULL + int)\n            412 LOAD_FAST               10 (right)\n            414 LOAD_CONST               2 ('bytes')\n            416 BINARY_SUBSCR\n            420 CALL                     1\n            428 LOAD_GLOBAL             15 (NULL + int)\n            438 LOAD_FAST                9 (left)\n            440 LOAD_CONST               2 ('bytes')\n            442 BINARY_SUBSCR\n            446 CALL                     1\n            454 BINARY_OP               10 (-)\n\n269     >>  458 LOAD_FAST                9 (left)\n            460 POP_JUMP_IF_NOT_NONE     2 (to 466)\n            462 LOAD_CONST               0 (None)\n            464 JUMP_FORWARD            16 (to 498)\n        >>  466 LOAD_FAST                9 (left)\n            468 LOAD_ATTR                9 (NULL|self + get)\n            488 LOAD_CONST               3 ('codec')\n            490 CALL                     1\n\n270     >>  498 LOAD_FAST               10 (right)\n            500 POP_JUMP_IF_NOT_NONE     2 (to 506)\n            502 LOAD_CONST               0 (None)\n            504 JUMP_FORWARD            16 (to 538)\n        >>  506 LOAD_FAST               10 (right)\n            508 LOAD_ATTR                9 (NULL|self + get)\n            528 LOAD_CONST               3 ('codec')\n            530 CALL                     1\n\n271     >>  538 LOAD_FAST                9 (left)\n            540 POP_JUMP_IF_NOT_NONE     2 (to 546)\n            542 LOAD_CONST               0 (None)\n            544 JUMP_FORWARD            16 (to 578)\n        >>  546 LOAD_FAST                9 (left)\n            548 LOAD_ATTR                9 (NULL|self + get)\n            568 LOAD_CONST               1 ('sha256')\n            570 CALL                     1\n\n272     >>  578 LOAD_FAST               10 (right)\n            580 POP_JUMP_IF_NOT_NONE     2 (to 586)\n            582 LOAD_CONST               0 (None)\n            584 JUMP_FORWARD            16 (to 618)\n        >>  586 LOAD_FAST               10 (right)\n            588 LOAD_ATTR                9 (NULL|self + get)\n            608 LOAD_CONST               1 ('sha256')\n            610 CALL                     1\n\n259     >>  618 LOAD_CONST               4 (('segment', 'same_sha256', 'baseline_bytes', 'candidate_bytes', 'delta_bytes', 'baseline_codec', 'candidate_codec', 'baseline_sha256', 'candidate_sha256'))\n            620 BUILD_CONST_KEY_MAP      9\n\n258         622 CALL                     1\n            630 POP_TOP\n            632 JUMP_BACKWARD          236 (to 162)\n\n255     >>  634 END_FOR\n\n275         636 LOAD_GLOBAL             15 (NULL + int)\n            646 LOAD_FAST                2 (candidate_archive_bytes)\n            648 CALL                     1\n            656 LOAD_GLOBAL             15 (NULL + int)\n            666 LOAD_FAST                5 (baseline)\n            668 LOAD_ATTR               16 (report)\n            688 LOAD_CONST               5 ('archive')\n            690 BINARY_SUBSCR\n            694 LOAD_CONST               2 ('bytes')\n            696 BINARY_SUBSCR\n            700 CALL                     1\n            708 BINARY_OP               10 (-)\n            712 STORE_FAST              11 (archive_delta)\n\n276         714 LOAD_FAST                3 (rows)\n            716 LOAD_ATTR               11 (NULL|self + append)\n\n278         736 LOAD_FAST                4 (label)\n\n279         738 LOAD_FAST                5 (baseline)\n            740 LOAD_ATTR               16 (report)\n            760 LOAD_CONST               5 ('archive')\n            762 BINARY_SUBSCR\n            766 LOAD_CONST               6 ('path')\n            768 BINARY_SUBSCR\n\n280         772 LOAD_FAST                5 (baseline)\n            774 LOAD_ATTR               16 (report)\n            794 LOAD_CONST               5 ('archive')\n            796 BINARY_SUBSCR\n            800 LOAD_CONST               2 ('bytes')\n            802 BINARY_SUBSCR\n\n281         806 LOAD_FAST               11 (archive_delta)\n\n282         808 LOAD_GLOBAL             19 (NULL + contest_rate_term)\n            818 LOAD_FAST               11 (archive_delta)\n            820 CALL                     1\n\n283         828 LOAD_FAST                7 (changed)\n            830 GET_ITER\n            832 LOAD_FAST_AND_CLEAR     12 (row)\n            834 SWAP                     2\n            836 BUILD_LIST               0\n            838 SWAP                     2\n        >>  840 FOR_ITER                10 (to 864)\n            844 STORE_FAST              12 (row)\n            846 LOAD_FAST               12 (row)\n            848 LOAD_CONST               7 ('same_sha256')\n            850 BINARY_SUBSCR\n            854 POP_JUMP_IF_FALSE        1 (to 858)\n            856 JUMP_BACKWARD            9 (to 840)\n        >>  858 LOAD_FAST               12 (row)\n            860 LIST_APPEND              2\n            862 JUMP_BACKWARD           12 (to 840)\n        >>  864 END_FOR\n            866 SWAP                     2\n            868 STORE_FAST              12 (row)\n\n284         870 LOAD_GLOBAL             21 (NULL + sum)\n            880 LOAD_CONST               8 (<code object <genexpr> at 0x105336a60, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 284>)\n            882 MAKE_FUNCTION            0\n            884 LOAD_FAST                7 (changed)\n            886 GET_ITER\n            888 CALL                     0\n            896 CALL                     1\n\n285         904 LOAD_GLOBAL             23 (NULL + len)\n            914 LOAD_FAST                7 (changed)\n            916 CALL                     1\n\n277         924 LOAD_CONST               9 (('baseline_label', 'baseline_archive_path', 'baseline_archive_bytes', 'candidate_minus_baseline_archive_bytes', 'candidate_minus_baseline_rate_score_delta', 'changed_segments', 'unchanged_segment_count', 'segment_count'))\n            926 BUILD_CONST_KEY_MAP      8\n\n276         928 CALL                     1\n            936 POP_TOP\n            938 EXTENDED_ARG             1\n            940 JUMP_BACKWARD          443 (to 56)\n\n252     >>  942 END_FOR\n\n288         944 LOAD_FAST                3 (rows)\n            946 RETURN_VALUE\n        >>  948 SWAP                     2\n            950 POP_TOP\n\n283         952 SWAP                     2\n            954 STORE_FAST              12 (row)\n            956 RERAISE                  0\nExceptionTable:\n  836 to 854 -> 948 [10]\n  858 to 864 -> 948 [10]\n"
+    },
+    {
+      "qualname": "_diff_against_baselines.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "row"
+      ],
+      "names": [],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "same_sha256",
+      "dis": "284           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                12 (to 36)\n             12 STORE_FAST               1 (row)\n             14 LOAD_FAST                1 (row)\n             16 LOAD_CONST               0 ('same_sha256')\n             18 BINARY_SUBSCR\n             22 POP_JUMP_IF_TRUE         1 (to 26)\n             24 JUMP_BACKWARD            9 (to 8)\n        >>   26 LOAD_CONST               1 (1)\n             28 YIELD_VALUE              1\n             30 RESUME                   1\n             32 POP_TOP\n             34 JUMP_BACKWARD           14 (to 8)\n        >>   36 END_FOR\n             38 RETURN_CONST             2 (None)\n        >>   40 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             42 RERAISE                  1\nExceptionTable:\n  4 to 22 -> 40 [0] lasti\n  26 to 38 -> 40 [0] lasti\n"
+    },
+    {
+      "qualname": "_parse_baseline_arg",
+      "name": "_parse_baseline_arg",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "value",
+        "label",
+        "path"
+      ],
+      "names": [
+        "PublicFrontierIntakeError",
+        "split",
+        "strip",
+        "Path"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "291           0 RESUME                   0\n\n292           2 LOAD_CONST               1 ('=')\n              4 LOAD_FAST                0 (value)\n              6 CONTAINS_OP              1\n              8 POP_JUMP_IF_FALSE       14 (to 38)\n\n293          10 LOAD_GLOBAL              1 (NULL + PublicFrontierIntakeError)\n\n294          20 LOAD_CONST               2 ('baseline must be LABEL=PATH, got ')\n             22 LOAD_FAST                0 (value)\n             24 FORMAT_VALUE             2 (repr)\n             26 BUILD_STRING             2\n\n293          28 CALL                     1\n             36 RAISE_VARARGS            1\n\n296     >>   38 LOAD_FAST                0 (value)\n             40 LOAD_ATTR                3 (NULL|self + split)\n             60 LOAD_CONST               1 ('=')\n             62 LOAD_CONST               3 (1)\n             64 CALL                     2\n             72 UNPACK_SEQUENCE          2\n             76 STORE_FAST               1 (label)\n             78 STORE_FAST               2 (path)\n\n297          80 LOAD_FAST                1 (label)\n             82 LOAD_ATTR                5 (NULL|self + strip)\n            102 CALL                     0\n            110 POP_JUMP_IF_FALSE       16 (to 144)\n            112 LOAD_FAST                2 (path)\n            114 LOAD_ATTR                5 (NULL|self + strip)\n            134 CALL                     0\n            142 POP_JUMP_IF_TRUE        14 (to 172)\n\n298     >>  144 LOAD_GLOBAL              1 (NULL + PublicFrontierIntakeError)\n            154 LOAD_CONST               2 ('baseline must be LABEL=PATH, got ')\n            156 LOAD_FAST                0 (value)\n            158 FORMAT_VALUE             2 (repr)\n            160 BUILD_STRING             2\n            162 CALL                     1\n            170 RAISE_VARARGS            1\n\n299     >>  172 LOAD_FAST                1 (label)\n            174 LOAD_ATTR                5 (NULL|self + strip)\n            194 CALL                     0\n            202 LOAD_GLOBAL              7 (NULL + Path)\n            212 LOAD_FAST                2 (path)\n            214 CALL                     1\n            222 BUILD_TUPLE              2\n            224 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "_analyze_one",
+      "name": "_analyze_one",
+      "argcount": 1,
+      "kwonlyargcount": 2,
+      "varnames": [
+        "path",
+        "label",
+        "candidate_bytes",
+        "archive_bytes",
+        "members",
+        "member_data",
+        "blockers",
+        "exc",
+        "primary_name",
+        "primary",
+        "primary_segments",
+        "name",
+        "side_names",
+        "side_members",
+        "total_side_bytes",
+        "report"
+      ],
+      "names": [
+        "is_file",
+        "FileNotFoundError",
+        "stat",
+        "st_size",
+        "_archive_members",
+        "zipfile",
+        "BadZipFile",
+        "PublicFrontierIntakeError",
+        "_primary_pr85_member",
+        "sorted",
+        "_inspect_member_data",
+        "sum",
+        "append",
+        "SCHEMA",
+        "TOOL",
+        "EVIDENCE_GRADE",
+        "str",
+        "_sha256_file",
+        "int",
+        "contest_rate_term",
+        "len",
+        "bool",
+        "_ParsedArchive"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "302           0 RESUME                   0\n\n303           2 LOAD_FAST                0 (path)\n              4 LOAD_ATTR                1 (NULL|self + is_file)\n             24 CALL                     0\n             32 POP_JUMP_IF_TRUE        14 (to 62)\n\n304          34 LOAD_GLOBAL              3 (NULL + FileNotFoundError)\n             44 LOAD_CONST               1 ('archive not found: ')\n             46 LOAD_FAST                0 (path)\n             48 FORMAT_VALUE             0\n             50 BUILD_STRING             2\n             52 CALL                     1\n             60 RAISE_VARARGS            1\n\n305     >>   62 LOAD_FAST                0 (path)\n             64 LOAD_ATTR                5 (NULL|self + stat)\n             84 CALL                     0\n             92 LOAD_ATTR                6 (st_size)\n            112 STORE_FAST               3 (archive_bytes)\n\n306         114 NOP\n\n307         116 LOAD_GLOBAL              9 (NULL + _archive_members)\n            126 LOAD_FAST                0 (path)\n            128 CALL                     1\n            136 UNPACK_SEQUENCE          3\n            140 STORE_FAST               4 (members)\n            142 STORE_FAST               5 (member_data)\n            144 STORE_FAST               6 (blockers)\n\n311         146 LOAD_GLOBAL             17 (NULL + _primary_pr85_member)\n            156 LOAD_FAST                5 (member_data)\n            158 CALL                     1\n            166 UNPACK_SEQUENCE          3\n            170 STORE_FAST               8 (primary_name)\n            172 STORE_FAST               9 (primary)\n            174 STORE_FAST              10 (primary_segments)\n\n312         176 LOAD_FAST                5 (member_data)\n            178 GET_ITER\n            180 LOAD_FAST_AND_CLEAR     11 (name)\n            182 SWAP                     2\n            184 BUILD_LIST               0\n            186 SWAP                     2\n        >>  188 FOR_ITER                10 (to 212)\n            192 STORE_FAST              11 (name)\n            194 LOAD_FAST               11 (name)\n            196 LOAD_FAST                8 (primary_name)\n            198 COMPARE_OP              55 (!=)\n            202 POP_JUMP_IF_TRUE         1 (to 206)\n            204 JUMP_BACKWARD            9 (to 188)\n        >>  206 LOAD_FAST               11 (name)\n            208 LIST_APPEND              2\n            210 JUMP_BACKWARD           12 (to 188)\n        >>  212 END_FOR\n            214 STORE_FAST              12 (side_names)\n            216 STORE_FAST              11 (name)\n\n313         218 LOAD_GLOBAL             19 (NULL + sorted)\n            228 LOAD_FAST               12 (side_names)\n            230 CALL                     1\n            238 GET_ITER\n            240 LOAD_FAST_AND_CLEAR     11 (name)\n            242 SWAP                     2\n            244 BUILD_LIST               0\n            246 SWAP                     2\n        >>  248 FOR_ITER                17 (to 286)\n            252 STORE_FAST              11 (name)\n            254 LOAD_GLOBAL             21 (NULL + _inspect_member_data)\n            264 LOAD_FAST               11 (name)\n            266 LOAD_FAST                5 (member_data)\n            268 LOAD_FAST               11 (name)\n            270 BINARY_SUBSCR\n            274 CALL                     2\n            282 LIST_APPEND              2\n            284 JUMP_BACKWARD           19 (to 248)\n        >>  286 END_FOR\n            288 STORE_FAST              13 (side_members)\n            290 STORE_FAST              11 (name)\n\n314         292 LOAD_GLOBAL             23 (NULL + sum)\n            302 LOAD_CONST               3 (<code object <genexpr> at 0x105395330, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 314>)\n            304 MAKE_FUNCTION            0\n            306 LOAD_FAST               13 (side_members)\n            308 GET_ITER\n            310 CALL                     0\n            318 CALL                     1\n            326 STORE_FAST              14 (total_side_bytes)\n\n315         328 LOAD_FAST                8 (primary_name)\n            330 POP_JUMP_IF_NOT_NONE    17 (to 366)\n\n316         332 LOAD_FAST                6 (blockers)\n            334 LOAD_ATTR               25 (NULL|self + append)\n            354 LOAD_CONST               4 ('no_pr85_family_primary_member_detected')\n            356 CALL                     1\n            364 POP_TOP\n\n318     >>  366 LOAD_GLOBAL             26 (SCHEMA)\n\n319         376 LOAD_GLOBAL             28 (TOOL)\n\n320         386 LOAD_FAST                1 (label)\n\n321         388 LOAD_CONST               5 (False)\n\n322         390 LOAD_CONST               5 (False)\n\n323         392 LOAD_GLOBAL             30 (EVIDENCE_GRADE)\n\n325         402 LOAD_GLOBAL             33 (NULL + str)\n            412 LOAD_FAST                0 (path)\n            414 CALL                     1\n\n326         422 LOAD_GLOBAL             35 (NULL + _sha256_file)\n            432 LOAD_FAST                0 (path)\n            434 CALL                     1\n\n327         442 LOAD_FAST                3 (archive_bytes)\n\n329         444 LOAD_FAST                2 (candidate_bytes)\n            446 POP_JUMP_IF_NOT_NONE     2 (to 452)\n\n328         448 LOAD_CONST               6 (0)\n            450 JUMP_FORWARD            13 (to 478)\n\n330     >>  452 LOAD_FAST                3 (archive_bytes)\n            454 LOAD_GLOBAL             37 (NULL + int)\n            464 LOAD_FAST                2 (candidate_bytes)\n            466 CALL                     1\n            474 BINARY_OP               10 (-)\n\n331     >>  478 LOAD_GLOBAL             39 (NULL + contest_rate_term)\n            488 LOAD_FAST                3 (archive_bytes)\n            490 CALL                     1\n\n324         498 LOAD_CONST               7 (('path', 'sha256', 'bytes', 'bytes_delta_candidate_minus_baseline', 'rate_term'))\n            500 BUILD_CONST_KEY_MAP      5\n\n334         502 LOAD_FAST                6 (blockers)\n            504 UNARY_NOT\n\n335         506 LOAD_GLOBAL             19 (NULL + sorted)\n            516 LOAD_FAST                6 (blockers)\n            518 CALL                     1\n\n336         526 LOAD_GLOBAL             41 (NULL + len)\n            536 LOAD_FAST                4 (members)\n            538 CALL                     1\n\n337         546 LOAD_FAST                4 (members)\n\n333         548 LOAD_CONST               8 (('valid', 'blockers', 'member_count', 'members'))\n            550 BUILD_CONST_KEY_MAP      4\n\n339         552 LOAD_FAST                9 (primary)\n\n341         554 LOAD_FAST               13 (side_members)\n\n342         556 LOAD_GLOBAL             41 (NULL + len)\n            566 LOAD_FAST               13 (side_members)\n            568 CALL                     1\n\n343         576 LOAD_FAST               14 (total_side_bytes)\n\n344         578 LOAD_GLOBAL             39 (NULL + contest_rate_term)\n            588 LOAD_FAST               14 (total_side_bytes)\n            590 CALL                     1\n\n345         598 LOAD_GLOBAL             43 (NULL + bool)\n            608 LOAD_FAST               13 (side_members)\n            610 CALL                     1\n\n340         618 LOAD_CONST               9 (('members', 'member_count', 'charged_bytes', 'rate_score_cost', 'requires_runtime_contract_review'))\n            620 BUILD_CONST_KEY_MAP      5\n\n348         622 LOAD_CONST              10 ('byte-only intake; no inflate, scorer, dispatch, promotion, or score claim')\n\n349         624 LOAD_CONST              11 ('public-reported components remain external until exact CUDA auth replay')\n\n347         626 BUILD_LIST               2\n\n317         628 LOAD_CONST              12 (('schema', 'tool', 'label', 'score_claim', 'promotion_eligible', 'evidence_grade', 'archive', 'strict_zip', 'primary_member', 'side_info', 'notes'))\n            630 BUILD_CONST_KEY_MAP     11\n            632 STORE_FAST              15 (report)\n\n352         634 LOAD_GLOBAL             45 (NULL + _ParsedArchive)\n            644 LOAD_FAST               15 (report)\n            646 LOAD_FAST               10 (primary_segments)\n            648 KW_NAMES                13 (('report', 'primary_segments'))\n            650 CALL                     2\n            658 RETURN_VALUE\n        >>  660 PUSH_EXC_INFO\n\n308         662 LOAD_GLOBAL             10 (zipfile)\n            672 LOAD_ATTR               12 (BadZipFile)\n            692 CHECK_EXC_MATCH\n            694 POP_JUMP_IF_FALSE       20 (to 736)\n            696 STORE_FAST               7 (exc)\n\n309         698 LOAD_GLOBAL             15 (NULL + PublicFrontierIntakeError)\n            708 LOAD_CONST               2 ('bad ZIP archive: ')\n            710 LOAD_FAST                0 (path)\n            712 FORMAT_VALUE             0\n            714 BUILD_STRING             2\n            716 CALL                     1\n            724 LOAD_FAST                7 (exc)\n            726 RAISE_VARARGS            2\n        >>  728 LOAD_CONST               0 (None)\n            730 STORE_FAST               7 (exc)\n            732 DELETE_FAST              7 (exc)\n            734 RERAISE                  1\n\n308     >>  736 RERAISE                  0\n        >>  738 COPY                     3\n            740 POP_EXCEPT\n            742 RERAISE                  1\n        >>  744 SWAP                     2\n            746 POP_TOP\n\n312         748 SWAP                     2\n            750 STORE_FAST              11 (name)\n            752 RERAISE                  0\n        >>  754 SWAP                     2\n            756 POP_TOP\n\n313         758 SWAP                     2\n            760 STORE_FAST              11 (name)\n            762 RERAISE                  0\nExceptionTable:\n  116 to 144 -> 660 [0]\n  184 to 202 -> 744 [2]\n  206 to 212 -> 744 [2]\n  244 to 286 -> 754 [2]\n  660 to 696 -> 738 [1] lasti\n  698 to 726 -> 728 [1] lasti\n  728 to 736 -> 738 [1] lasti\n"
+    },
+    {
+      "qualname": "_analyze_one.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "member"
+      ],
+      "names": [
+        "int"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "bytes",
+      "dis": "314           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                18 (to 48)\n             12 STORE_FAST               1 (member)\n             14 LOAD_GLOBAL              1 (NULL + int)\n             24 LOAD_FAST                1 (member)\n             26 LOAD_CONST               0 ('bytes')\n             28 BINARY_SUBSCR\n             32 CALL                     1\n             40 YIELD_VALUE              1\n             42 RESUME                   1\n             44 POP_TOP\n             46 JUMP_BACKWARD           20 (to 8)\n        >>   48 END_FOR\n             50 RETURN_CONST             1 (None)\n        >>   52 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             54 RERAISE                  1\nExceptionTable:\n  4 to 50 -> 52 [0] lasti\n"
+    },
+    {
+      "qualname": "profile_public_frontier_archive",
+      "name": "profile_public_frontier_archive",
+      "argcount": 1,
+      "kwonlyargcount": 2,
+      "varnames": [
+        "archive",
+        "label",
+        "baselines",
+        "archive_path",
+        "candidate",
+        "baseline_reports",
+        "baseline_label",
+        "baseline_path",
+        "parsed"
+      ],
+      "names": [
+        "Path",
+        "_analyze_one",
+        "items",
+        "int",
+        "report",
+        "_diff_against_baselines",
+        "primary_segments",
+        "sorted"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Build a deterministic public-frontier intake report for one archive.",
+      "dis": "355           0 RESUME                   0\n\n363           2 LOAD_GLOBAL              1 (NULL + Path)\n             12 LOAD_FAST                0 (archive)\n             14 CALL                     1\n             22 STORE_FAST               3 (archive_path)\n\n364          24 LOAD_GLOBAL              3 (NULL + _analyze_one)\n             34 LOAD_FAST                3 (archive_path)\n             36 LOAD_FAST                1 (label)\n             38 KW_NAMES                 1 (('label',))\n             40 CALL                     2\n             48 STORE_FAST               4 (candidate)\n\n365          50 BUILD_MAP                0\n             52 STORE_FAST               5 (baseline_reports)\n\n366          54 LOAD_FAST                2 (baselines)\n             56 COPY                     1\n             58 POP_JUMP_IF_TRUE         2 (to 64)\n             60 POP_TOP\n             62 BUILD_MAP                0\n        >>   64 LOAD_ATTR                5 (NULL|self + items)\n             84 CALL                     0\n             92 GET_ITER\n        >>   94 FOR_ITER                56 (to 210)\n             98 UNPACK_SEQUENCE          2\n            102 STORE_FAST               6 (baseline_label)\n            104 STORE_FAST               7 (baseline_path)\n\n367         106 LOAD_GLOBAL              3 (NULL + _analyze_one)\n\n368         116 LOAD_GLOBAL              1 (NULL + Path)\n            126 LOAD_FAST                7 (baseline_path)\n            128 CALL                     1\n\n369         136 LOAD_FAST                6 (baseline_label)\n\n370         138 LOAD_GLOBAL              7 (NULL + int)\n            148 LOAD_FAST                4 (candidate)\n            150 LOAD_ATTR                8 (report)\n            170 LOAD_CONST               2 ('archive')\n            172 BINARY_SUBSCR\n            176 LOAD_CONST               3 ('bytes')\n            178 BINARY_SUBSCR\n            182 CALL                     1\n\n367         190 KW_NAMES                 4 (('label', 'candidate_bytes'))\n            192 CALL                     3\n            200 LOAD_FAST                5 (baseline_reports)\n            202 LOAD_FAST                6 (baseline_label)\n            204 STORE_SUBSCR\n            208 JUMP_BACKWARD           58 (to 94)\n\n366     >>  210 END_FOR\n\n372         212 LOAD_GLOBAL             11 (NULL + _diff_against_baselines)\n\n373         222 LOAD_FAST                4 (candidate)\n            224 LOAD_ATTR               12 (primary_segments)\n\n374         244 LOAD_FAST                5 (baseline_reports)\n\n375         246 LOAD_GLOBAL              7 (NULL + int)\n            256 LOAD_FAST                4 (candidate)\n            258 LOAD_ATTR                8 (report)\n            278 LOAD_CONST               2 ('archive')\n            280 BINARY_SUBSCR\n            284 LOAD_CONST               3 ('bytes')\n            286 BINARY_SUBSCR\n            290 CALL                     1\n\n372         298 KW_NAMES                 5 (('candidate_archive_bytes',))\n            300 CALL                     3\n            308 LOAD_FAST                4 (candidate)\n            310 LOAD_ATTR                8 (report)\n            330 LOAD_CONST               6 ('baseline_diffs')\n            332 STORE_SUBSCR\n\n386         336 LOAD_GLOBAL             15 (NULL + sorted)\n            346 LOAD_FAST                5 (baseline_reports)\n            348 LOAD_ATTR                5 (NULL|self + items)\n            368 CALL                     0\n            376 CALL                     1\n            384 GET_ITER\n\n377         386 LOAD_FAST_AND_CLEAR      1 (label)\n            388 LOAD_FAST_AND_CLEAR      8 (parsed)\n            390 SWAP                     3\n            392 BUILD_MAP                0\n            394 SWAP                     2\n\n386     >>  396 FOR_ITER                91 (to 582)\n            400 UNPACK_SEQUENCE          2\n            404 STORE_FAST               1 (label)\n            406 STORE_FAST               8 (parsed)\n\n378         408 LOAD_FAST                1 (label)\n\n379         410 LOAD_FAST                8 (parsed)\n            412 LOAD_ATTR                8 (report)\n            432 LOAD_CONST               2 ('archive')\n            434 BINARY_SUBSCR\n\n380         438 LOAD_FAST                8 (parsed)\n            440 LOAD_ATTR                8 (report)\n            460 LOAD_CONST               7 ('strict_zip')\n            462 BINARY_SUBSCR\n            466 LOAD_CONST               8 ('valid')\n            468 BINARY_SUBSCR\n\n382         472 LOAD_FAST                8 (parsed)\n            474 LOAD_ATTR                8 (report)\n            494 LOAD_CONST               9 ('primary_member')\n            496 BINARY_SUBSCR\n            500 POP_JUMP_IF_NOT_NONE     2 (to 506)\n\n381         502 LOAD_CONST              10 (None)\n            504 JUMP_FORWARD            17 (to 540)\n\n383     >>  506 LOAD_FAST                8 (parsed)\n            508 LOAD_ATTR                8 (report)\n            528 LOAD_CONST               9 ('primary_member')\n            530 BINARY_SUBSCR\n            534 LOAD_CONST              11 ('name')\n            536 BINARY_SUBSCR\n\n384     >>  540 LOAD_FAST                8 (parsed)\n            542 LOAD_ATTR                8 (report)\n            562 LOAD_CONST              12 ('side_info')\n            564 BINARY_SUBSCR\n            568 LOAD_CONST              13 ('charged_bytes')\n            570 BINARY_SUBSCR\n\n378         574 LOAD_CONST              14 (('archive', 'strict_zip_valid', 'primary_member_name', 'side_info_charged_bytes'))\n            576 BUILD_CONST_KEY_MAP      4\n            578 MAP_ADD                  2\n            580 JUMP_BACKWARD           93 (to 396)\n\n386     >>  582 END_FOR\n\n377         584 SWAP                     3\n            586 STORE_FAST               8 (parsed)\n            588 STORE_FAST               1 (label)\n            590 LOAD_FAST                4 (candidate)\n            592 LOAD_ATTR                8 (report)\n            612 LOAD_CONST              15 ('baselines')\n            614 STORE_SUBSCR\n\n388         618 LOAD_FAST                4 (candidate)\n            620 LOAD_ATTR                8 (report)\n            640 RETURN_VALUE\n        >>  642 SWAP                     2\n            644 POP_TOP\n\n377         646 SWAP                     3\n            648 STORE_FAST               8 (parsed)\n            650 STORE_FAST               1 (label)\n            652 RERAISE                  0\nExceptionTable:\n  392 to 582 -> 642 [3]\n"
+    },
+    {
+      "qualname": "render_markdown",
+      "name": "render_markdown",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "report",
+        "lines",
+        "member",
+        "blocker",
+        "primary",
+        "segment",
+        "diff"
+      ],
+      "names": [
+        "append",
+        "extend",
+        "get",
+        "join"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": "Render a compact Markdown view of an intake report.",
+      "dis": "391           0 RESUME                   0\n\n395           2 LOAD_CONST               1 ('# Public Frontier Archive Intake')\n\n396           4 LOAD_CONST               2 ('')\n\n397           6 LOAD_CONST               3 ('- label: `')\n              8 LOAD_FAST                0 (report)\n             10 LOAD_CONST               4 ('label')\n             12 BINARY_SUBSCR\n             16 FORMAT_VALUE             0\n             18 LOAD_CONST               5 ('`')\n             20 BUILD_STRING             3\n\n398          22 LOAD_CONST               6 ('- evidence_grade: `')\n             24 LOAD_FAST                0 (report)\n             26 LOAD_CONST               7 ('evidence_grade')\n             28 BINARY_SUBSCR\n             32 FORMAT_VALUE             0\n             34 LOAD_CONST               5 ('`')\n             36 BUILD_STRING             3\n\n399          38 LOAD_CONST               8 ('- score_claim: `')\n             40 LOAD_FAST                0 (report)\n             42 LOAD_CONST               9 ('score_claim')\n             44 BINARY_SUBSCR\n             48 FORMAT_VALUE             0\n             50 LOAD_CONST               5 ('`')\n             52 BUILD_STRING             3\n\n400          54 LOAD_CONST              10 ('- archive bytes: `')\n             56 LOAD_FAST                0 (report)\n             58 LOAD_CONST              11 ('archive')\n             60 BINARY_SUBSCR\n             64 LOAD_CONST              12 ('bytes')\n             66 BINARY_SUBSCR\n             70 FORMAT_VALUE             0\n             72 LOAD_CONST               5 ('`')\n             74 BUILD_STRING             3\n\n401          76 LOAD_CONST              13 ('- archive sha256: `')\n             78 LOAD_FAST                0 (report)\n             80 LOAD_CONST              11 ('archive')\n             82 BINARY_SUBSCR\n             86 LOAD_CONST              14 ('sha256')\n             88 BINARY_SUBSCR\n             92 FORMAT_VALUE             0\n             94 LOAD_CONST               5 ('`')\n             96 BUILD_STRING             3\n\n402          98 LOAD_CONST              15 ('- strict ZIP valid: `')\n            100 LOAD_FAST                0 (report)\n            102 LOAD_CONST              16 ('strict_zip')\n            104 BINARY_SUBSCR\n            108 LOAD_CONST              17 ('valid')\n            110 BINARY_SUBSCR\n            114 FORMAT_VALUE             0\n            116 LOAD_CONST               5 ('`')\n            118 BUILD_STRING             3\n\n403         120 LOAD_CONST              18 ('- side-info bytes: `')\n            122 LOAD_FAST                0 (report)\n            124 LOAD_CONST              19 ('side_info')\n            126 BINARY_SUBSCR\n            130 LOAD_CONST              20 ('charged_bytes')\n            132 BINARY_SUBSCR\n            136 FORMAT_VALUE             0\n            138 LOAD_CONST               5 ('`')\n            140 BUILD_STRING             3\n\n404         142 LOAD_CONST               2 ('')\n\n405         144 LOAD_CONST              21 ('This report is byte-only. It does not inflate videos, load scorers, dispatch jobs, promote methods, or claim a contest score.')\n\n407         146 LOAD_CONST               2 ('')\n\n408         148 LOAD_CONST              22 ('## Members')\n\n409         150 LOAD_CONST               2 ('')\n\n410         152 LOAD_CONST              23 ('| name | bytes | compressed | local name match | sha256 |')\n\n411         154 LOAD_CONST              24 ('|---|---:|---:|---|---|')\n\n394         156 BUILD_LIST              16\n            158 STORE_FAST               1 (lines)\n\n413         160 LOAD_FAST                0 (report)\n            162 LOAD_CONST              16 ('strict_zip')\n            164 BINARY_SUBSCR\n            168 LOAD_CONST              25 ('members')\n            170 BINARY_SUBSCR\n            174 GET_ITER\n        >>  176 FOR_ITER                54 (to 288)\n            180 STORE_FAST               2 (member)\n\n414         182 LOAD_FAST                1 (lines)\n            184 LOAD_ATTR                1 (NULL|self + append)\n\n415         204 LOAD_CONST              26 ('| ')\n            206 LOAD_FAST                2 (member)\n            208 LOAD_CONST              27 ('name')\n            210 BINARY_SUBSCR\n            214 FORMAT_VALUE             0\n            216 LOAD_CONST              28 (' | ')\n            218 LOAD_FAST                2 (member)\n            220 LOAD_CONST              12 ('bytes')\n            222 BINARY_SUBSCR\n            226 FORMAT_VALUE             0\n            228 LOAD_CONST              28 (' | ')\n            230 LOAD_FAST                2 (member)\n            232 LOAD_CONST              29 ('compressed_bytes')\n            234 BINARY_SUBSCR\n            238 FORMAT_VALUE             0\n            240 LOAD_CONST              28 (' | ')\n\n416         242 LOAD_FAST                2 (member)\n            244 LOAD_CONST              30 ('central_local_name_match')\n            246 BINARY_SUBSCR\n            250 FORMAT_VALUE             0\n            252 LOAD_CONST              28 (' | ')\n            254 LOAD_FAST                2 (member)\n            256 LOAD_CONST              14 ('sha256')\n            258 BINARY_SUBSCR\n            262 COPY                     1\n            264 POP_JUMP_IF_TRUE         2 (to 270)\n            266 POP_TOP\n            268 LOAD_CONST               2 ('')\n        >>  270 FORMAT_VALUE             0\n            272 LOAD_CONST              31 (' |')\n\n415         274 BUILD_STRING            11\n\n414         276 CALL                     1\n            284 POP_TOP\n            286 JUMP_BACKWARD           56 (to 176)\n\n413     >>  288 END_FOR\n\n418         290 LOAD_FAST                0 (report)\n            292 LOAD_CONST              16 ('strict_zip')\n            294 BINARY_SUBSCR\n            298 LOAD_CONST              32 ('blockers')\n            300 BINARY_SUBSCR\n            304 POP_JUMP_IF_FALSE       53 (to 412)\n\n419         306 LOAD_FAST                1 (lines)\n            308 LOAD_ATTR                3 (NULL|self + extend)\n            328 BUILD_LIST               0\n            330 LOAD_CONST              33 (('', '## Strict ZIP Blockers', ''))\n            332 LIST_EXTEND              1\n            334 CALL                     1\n            342 POP_TOP\n\n420         344 LOAD_FAST                0 (report)\n            346 LOAD_CONST              16 ('strict_zip')\n            348 BINARY_SUBSCR\n            352 LOAD_CONST              32 ('blockers')\n            354 BINARY_SUBSCR\n            358 GET_ITER\n        >>  360 FOR_ITER                23 (to 410)\n            364 STORE_FAST               3 (blocker)\n\n421         366 LOAD_FAST                1 (lines)\n            368 LOAD_ATTR                1 (NULL|self + append)\n            388 LOAD_CONST              34 ('- `')\n            390 LOAD_FAST                3 (blocker)\n            392 FORMAT_VALUE             0\n            394 LOAD_CONST               5 ('`')\n            396 BUILD_STRING             3\n            398 CALL                     1\n            406 POP_TOP\n            408 JUMP_BACKWARD           25 (to 360)\n\n420     >>  410 END_FOR\n\n422     >>  412 LOAD_FAST                0 (report)\n            414 LOAD_ATTR                5 (NULL|self + get)\n            434 LOAD_CONST              35 ('primary_member')\n            436 CALL                     1\n            444 STORE_FAST               4 (primary)\n\n423         446 LOAD_FAST                4 (primary)\n            448 POP_JUMP_IF_FALSE       91 (to 632)\n\n424         450 LOAD_FAST                1 (lines)\n            452 LOAD_ATTR                3 (NULL|self + extend)\n\n426         472 LOAD_CONST               2 ('')\n\n427         474 LOAD_CONST              36 ('## Primary PR85-Family Bundle')\n\n428         476 LOAD_CONST               2 ('')\n\n429         478 LOAD_CONST              37 ('- member: `')\n            480 LOAD_FAST                4 (primary)\n            482 LOAD_CONST              27 ('name')\n            484 BINARY_SUBSCR\n            488 FORMAT_VALUE             0\n            490 LOAD_CONST               5 ('`')\n            492 BUILD_STRING             3\n\n430         494 LOAD_CONST              38 ('- format: `')\n            496 LOAD_FAST                4 (primary)\n            498 LOAD_CONST              39 ('bundle_format')\n            500 BINARY_SUBSCR\n            504 FORMAT_VALUE             0\n            506 LOAD_CONST               5 ('`')\n            508 BUILD_STRING             3\n\n431         510 LOAD_CONST               2 ('')\n\n432         512 LOAD_CONST              40 ('| segment | bytes | codec | sha256 |')\n\n433         514 LOAD_CONST              41 ('|---|---:|---|---|')\n\n425         516 BUILD_LIST               8\n\n424         518 CALL                     1\n            526 POP_TOP\n\n436         528 LOAD_FAST                4 (primary)\n            530 LOAD_CONST              42 ('segments')\n            532 BINARY_SUBSCR\n            536 GET_ITER\n        >>  538 FOR_ITER                44 (to 630)\n            542 STORE_FAST               5 (segment)\n\n437         544 LOAD_FAST                1 (lines)\n            546 LOAD_ATTR                1 (NULL|self + append)\n\n438         566 LOAD_CONST              26 ('| ')\n            568 LOAD_FAST                5 (segment)\n            570 LOAD_CONST              27 ('name')\n            572 BINARY_SUBSCR\n            576 FORMAT_VALUE             0\n            578 LOAD_CONST              28 (' | ')\n            580 LOAD_FAST                5 (segment)\n            582 LOAD_CONST              12 ('bytes')\n            584 BINARY_SUBSCR\n            588 FORMAT_VALUE             0\n            590 LOAD_CONST              28 (' | ')\n            592 LOAD_FAST                5 (segment)\n            594 LOAD_CONST              43 ('codec')\n            596 BINARY_SUBSCR\n            600 FORMAT_VALUE             0\n            602 LOAD_CONST              28 (' | ')\n            604 LOAD_FAST                5 (segment)\n            606 LOAD_CONST              14 ('sha256')\n            608 BINARY_SUBSCR\n            612 FORMAT_VALUE             0\n            614 LOAD_CONST              31 (' |')\n            616 BUILD_STRING             9\n\n437         618 CALL                     1\n            626 POP_TOP\n            628 JUMP_BACKWARD           46 (to 538)\n\n436     >>  630 END_FOR\n\n440     >>  632 LOAD_FAST                0 (report)\n            634 LOAD_CONST              19 ('side_info')\n            636 BINARY_SUBSCR\n            640 LOAD_CONST              25 ('members')\n            642 BINARY_SUBSCR\n            646 POP_JUMP_IF_FALSE       74 (to 796)\n\n441         648 LOAD_FAST                1 (lines)\n            650 LOAD_ATTR                3 (NULL|self + extend)\n            670 BUILD_LIST               0\n            672 LOAD_CONST              44 (('', '## Charged Side Info', '', '| member | bytes | magic | sha256 |', '|---|---:|---|---|'))\n            674 LIST_EXTEND              1\n            676 CALL                     1\n            684 POP_TOP\n\n442         686 LOAD_FAST                0 (report)\n            688 LOAD_CONST              19 ('side_info')\n            690 BINARY_SUBSCR\n            694 LOAD_CONST              25 ('members')\n            696 BINARY_SUBSCR\n            700 GET_ITER\n        >>  702 FOR_ITER                44 (to 794)\n            706 STORE_FAST               2 (member)\n\n443         708 LOAD_FAST                1 (lines)\n            710 LOAD_ATTR                1 (NULL|self + append)\n\n444         730 LOAD_CONST              26 ('| ')\n            732 LOAD_FAST                2 (member)\n            734 LOAD_CONST              27 ('name')\n            736 BINARY_SUBSCR\n            740 FORMAT_VALUE             0\n            742 LOAD_CONST              28 (' | ')\n            744 LOAD_FAST                2 (member)\n            746 LOAD_CONST              12 ('bytes')\n            748 BINARY_SUBSCR\n            752 FORMAT_VALUE             0\n            754 LOAD_CONST              28 (' | ')\n            756 LOAD_FAST                2 (member)\n            758 LOAD_CONST              45 ('magic_ascii')\n            760 BINARY_SUBSCR\n            764 FORMAT_VALUE             0\n            766 LOAD_CONST              28 (' | ')\n            768 LOAD_FAST                2 (member)\n            770 LOAD_CONST              14 ('sha256')\n            772 BINARY_SUBSCR\n            776 FORMAT_VALUE             0\n            778 LOAD_CONST              31 (' |')\n            780 BUILD_STRING             9\n\n443         782 CALL                     1\n            790 POP_TOP\n            792 JUMP_BACKWARD           46 (to 702)\n\n442     >>  794 END_FOR\n\n446     >>  796 LOAD_FAST                0 (report)\n            798 LOAD_ATTR                5 (NULL|self + get)\n            818 LOAD_CONST              46 ('baseline_diffs')\n            820 CALL                     1\n            828 POP_JUMP_IF_FALSE      131 (to 1092)\n\n447         830 LOAD_FAST                1 (lines)\n            832 LOAD_ATTR                3 (NULL|self + extend)\n            852 BUILD_LIST               0\n            854 LOAD_CONST              47 (('', '## Baseline Diffs', ''))\n            856 LIST_EXTEND              1\n            858 CALL                     1\n            866 POP_TOP\n\n448         868 LOAD_FAST                0 (report)\n            870 LOAD_CONST              46 ('baseline_diffs')\n            872 BINARY_SUBSCR\n            876 GET_ITER\n        >>  878 FOR_ITER               104 (to 1090)\n            882 STORE_FAST               6 (diff)\n\n449         884 LOAD_FAST                1 (lines)\n            886 LOAD_ATTR                3 (NULL|self + extend)\n\n451         906 LOAD_CONST              48 ('### ')\n            908 LOAD_FAST                6 (diff)\n            910 LOAD_CONST              49 ('baseline_label')\n            912 BINARY_SUBSCR\n            916 FORMAT_VALUE             0\n            918 BUILD_STRING             2\n\n452         920 LOAD_CONST               2 ('')\n\n453         922 LOAD_CONST              50 ('- archive delta bytes: `')\n            924 LOAD_FAST                6 (diff)\n            926 LOAD_CONST              51 ('candidate_minus_baseline_archive_bytes')\n            928 BINARY_SUBSCR\n            932 FORMAT_VALUE             0\n            934 LOAD_CONST               5 ('`')\n            936 BUILD_STRING             3\n\n454         938 LOAD_CONST              52 ('- rate score delta: `')\n            940 LOAD_FAST                6 (diff)\n            942 LOAD_CONST              53 ('candidate_minus_baseline_rate_score_delta')\n            944 BINARY_SUBSCR\n            948 FORMAT_VALUE             0\n            950 LOAD_CONST               5 ('`')\n            952 BUILD_STRING             3\n\n455         954 LOAD_CONST               2 ('')\n\n456         956 LOAD_CONST              54 ('| segment | delta bytes | baseline codec | candidate codec | same sha256 |')\n\n457         958 LOAD_CONST              55 ('|---|---:|---|---|---|')\n\n450         960 BUILD_LIST               7\n\n449         962 CALL                     1\n            970 POP_TOP\n\n460         972 LOAD_FAST                6 (diff)\n            974 LOAD_CONST              56 ('changed_segments')\n            976 BINARY_SUBSCR\n            980 GET_ITER\n        >>  982 FOR_ITER                50 (to 1086)\n            986 STORE_FAST               5 (segment)\n\n461         988 LOAD_FAST                1 (lines)\n            990 LOAD_ATTR                1 (NULL|self + append)\n\n462        1010 LOAD_CONST              26 ('| ')\n           1012 LOAD_FAST                5 (segment)\n           1014 LOAD_CONST              57 ('segment')\n           1016 BINARY_SUBSCR\n           1020 FORMAT_VALUE             0\n           1022 LOAD_CONST              28 (' | ')\n           1024 LOAD_FAST                5 (segment)\n           1026 LOAD_CONST              58 ('delta_bytes')\n           1028 BINARY_SUBSCR\n           1032 FORMAT_VALUE             0\n           1034 LOAD_CONST              28 (' | ')\n\n463        1036 LOAD_FAST                5 (segment)\n           1038 LOAD_CONST              59 ('baseline_codec')\n           1040 BINARY_SUBSCR\n           1044 FORMAT_VALUE             0\n           1046 LOAD_CONST              28 (' | ')\n           1048 LOAD_FAST                5 (segment)\n           1050 LOAD_CONST              60 ('candidate_codec')\n           1052 BINARY_SUBSCR\n           1056 FORMAT_VALUE             0\n           1058 LOAD_CONST              28 (' | ')\n           1060 LOAD_FAST                5 (segment)\n           1062 LOAD_CONST              61 ('same_sha256')\n           1064 BINARY_SUBSCR\n           1068 FORMAT_VALUE             0\n           1070 LOAD_CONST              31 (' |')\n\n462        1072 BUILD_STRING            11\n\n461        1074 CALL                     1\n           1082 POP_TOP\n           1084 JUMP_BACKWARD           52 (to 982)\n\n460     >> 1086 END_FOR\n           1088 JUMP_BACKWARD          106 (to 878)\n\n448     >> 1090 END_FOR\n\n465     >> 1092 LOAD_CONST              62 ('\\n')\n           1094 LOAD_ATTR                7 (NULL|self + join)\n           1114 LOAD_FAST                1 (lines)\n           1116 CALL                     1\n           1124 LOAD_CONST              62 ('\\n')\n           1126 BINARY_OP                0 (+)\n           1130 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "write_outputs",
+      "name": "write_outputs",
+      "argcount": 1,
+      "kwonlyargcount": 2,
+      "varnames": [
+        "report",
+        "json_out",
+        "markdown_out"
+      ],
+      "names": [
+        "parent",
+        "mkdir",
+        "write_text",
+        "_json_text",
+        "render_markdown"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "468           0 RESUME                   0\n\n469           2 LOAD_FAST                1 (json_out)\n              4 POP_JUMP_IF_NONE        57 (to 120)\n\n470           6 LOAD_FAST                1 (json_out)\n              8 LOAD_ATTR                0 (parent)\n             28 LOAD_ATTR                3 (NULL|self + mkdir)\n             48 LOAD_CONST               1 (True)\n             50 LOAD_CONST               1 (True)\n             52 KW_NAMES                 2 (('parents', 'exist_ok'))\n             54 CALL                     2\n             62 POP_TOP\n\n471          64 LOAD_FAST                1 (json_out)\n             66 LOAD_ATTR                5 (NULL|self + write_text)\n             86 LOAD_GLOBAL              7 (NULL + _json_text)\n             96 LOAD_FAST                0 (report)\n             98 CALL                     1\n            106 LOAD_CONST               3 ('utf-8')\n            108 KW_NAMES                 4 (('encoding',))\n            110 CALL                     2\n            118 POP_TOP\n\n472     >>  120 LOAD_FAST                2 (markdown_out)\n            122 POP_JUMP_IF_NONE        58 (to 240)\n\n473         124 LOAD_FAST                2 (markdown_out)\n            126 LOAD_ATTR                0 (parent)\n            146 LOAD_ATTR                3 (NULL|self + mkdir)\n            166 LOAD_CONST               1 (True)\n            168 LOAD_CONST               1 (True)\n            170 KW_NAMES                 2 (('parents', 'exist_ok'))\n            172 CALL                     2\n            180 POP_TOP\n\n474         182 LOAD_FAST                2 (markdown_out)\n            184 LOAD_ATTR                5 (NULL|self + write_text)\n            204 LOAD_GLOBAL              9 (NULL + render_markdown)\n            214 LOAD_FAST                0 (report)\n            216 CALL                     1\n            224 LOAD_CONST               3 ('utf-8')\n            226 KW_NAMES                 4 (('encoding',))\n            228 CALL                     2\n            236 POP_TOP\n            238 RETURN_CONST             0 (None)\n\n472     >>  240 RETURN_CONST             0 (None)\n"
+    },
+    {
+      "qualname": "build_arg_parser",
+      "name": "build_arg_parser",
+      "argcount": 0,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "parser"
+      ],
+      "names": [
+        "argparse",
+        "ArgumentParser",
+        "__doc__",
+        "add_argument",
+        "Path"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "477           0 RESUME                   0\n\n478           2 LOAD_GLOBAL              1 (NULL + argparse)\n             12 LOAD_ATTR                2 (ArgumentParser)\n             32 LOAD_GLOBAL              4 (__doc__)\n             42 KW_NAMES                 1 (('description',))\n             44 CALL                     1\n             52 STORE_FAST               0 (parser)\n\n479          54 LOAD_FAST                0 (parser)\n             56 LOAD_ATTR                7 (NULL|self + add_argument)\n             76 LOAD_CONST               2 ('--archive')\n             78 LOAD_GLOBAL              8 (Path)\n             88 LOAD_CONST               3 (True)\n             90 KW_NAMES                 4 (('type', 'required'))\n             92 CALL                     3\n            100 POP_TOP\n\n480         102 LOAD_FAST                0 (parser)\n            104 LOAD_ATTR                7 (NULL|self + add_argument)\n            124 LOAD_CONST               5 ('--label')\n            126 LOAD_CONST               6 ('candidate')\n            128 KW_NAMES                 7 (('default',))\n            130 CALL                     2\n            138 POP_TOP\n\n481         140 LOAD_FAST                0 (parser)\n            142 LOAD_ATTR                7 (NULL|self + add_argument)\n\n482         162 LOAD_CONST               8 ('--baseline')\n\n483         164 LOAD_CONST               9 ('append')\n\n484         166 BUILD_LIST               0\n\n485         168 LOAD_CONST              10 ('Named baseline as LABEL=PATH. May be repeated.')\n\n481         170 KW_NAMES                11 (('action', 'default', 'help'))\n            172 CALL                     4\n            180 POP_TOP\n\n487         182 LOAD_FAST                0 (parser)\n            184 LOAD_ATTR                7 (NULL|self + add_argument)\n            204 LOAD_CONST              12 ('--json-out')\n            206 LOAD_GLOBAL              8 (Path)\n            216 KW_NAMES                13 (('type',))\n            218 CALL                     2\n            226 POP_TOP\n\n488         228 LOAD_FAST                0 (parser)\n            230 LOAD_ATTR                7 (NULL|self + add_argument)\n            250 LOAD_CONST              14 ('--markdown-out')\n            252 LOAD_GLOBAL              8 (Path)\n            262 KW_NAMES                13 (('type',))\n            264 CALL                     2\n            272 POP_TOP\n\n489         274 LOAD_FAST                0 (parser)\n            276 RETURN_VALUE\n"
+    },
+    {
+      "qualname": "main",
+      "name": "main",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        "argv",
+        "args",
+        "baselines",
+        "report"
+      ],
+      "names": [
+        "build_arg_parser",
+        "parse_args",
+        "dict",
+        "baseline",
+        "profile_public_frontier_archive",
+        "archive",
+        "label",
+        "write_outputs",
+        "json_out",
+        "markdown_out",
+        "print",
+        "_json_text"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "492           0 RESUME                   0\n\n493           2 LOAD_GLOBAL              1 (NULL + build_arg_parser)\n             12 CALL                     0\n             20 LOAD_ATTR                3 (NULL|self + parse_args)\n             40 LOAD_FAST                0 (argv)\n             42 CALL                     1\n             50 STORE_FAST               1 (args)\n\n494          52 LOAD_GLOBAL              5 (NULL + dict)\n             62 LOAD_CONST               1 (<code object <genexpr> at 0x105395430, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 494>)\n             64 MAKE_FUNCTION            0\n             66 LOAD_FAST                1 (args)\n             68 LOAD_ATTR                6 (baseline)\n             88 GET_ITER\n             90 CALL                     0\n             98 CALL                     1\n            106 STORE_FAST               2 (baselines)\n\n495         108 LOAD_GLOBAL              9 (NULL + profile_public_frontier_archive)\n\n496         118 LOAD_FAST                1 (args)\n            120 LOAD_ATTR               10 (archive)\n\n497         140 LOAD_FAST                1 (args)\n            142 LOAD_ATTR               12 (label)\n\n498         162 LOAD_FAST                2 (baselines)\n\n495         164 KW_NAMES                 2 (('label', 'baselines'))\n            166 CALL                     3\n            174 STORE_FAST               3 (report)\n\n500         176 LOAD_GLOBAL             15 (NULL + write_outputs)\n            186 LOAD_FAST                3 (report)\n            188 LOAD_FAST                1 (args)\n            190 LOAD_ATTR               16 (json_out)\n            210 LOAD_FAST                1 (args)\n            212 LOAD_ATTR               18 (markdown_out)\n            232 KW_NAMES                 3 (('json_out', 'markdown_out'))\n            234 CALL                     3\n            242 POP_TOP\n\n501         244 LOAD_FAST                1 (args)\n            246 LOAD_ATTR               16 (json_out)\n            266 POP_JUMP_IF_NOT_NONE    34 (to 336)\n            268 LOAD_FAST                1 (args)\n            270 LOAD_ATTR               18 (markdown_out)\n            290 POP_JUMP_IF_NOT_NONE    22 (to 336)\n\n502         292 LOAD_GLOBAL             21 (NULL + print)\n            302 LOAD_GLOBAL             23 (NULL + _json_text)\n            312 LOAD_FAST                3 (report)\n            314 CALL                     1\n            322 LOAD_CONST               4 ('')\n            324 KW_NAMES                 5 (('end',))\n            326 CALL                     2\n            334 POP_TOP\n\n503     >>  336 RETURN_CONST             6 (0)\n"
+    },
+    {
+      "qualname": "main.<locals>.<genexpr>",
+      "name": "<genexpr>",
+      "argcount": 1,
+      "kwonlyargcount": 0,
+      "varnames": [
+        ".0",
+        "value"
+      ],
+      "names": [
+        "_parse_baseline_arg"
+      ],
+      "freevars": [],
+      "cellvars": [],
+      "doc": null,
+      "dis": "494           0 RETURN_GENERATOR\n              2 POP_TOP\n              4 RESUME                   0\n              6 LOAD_FAST                0 (.0)\n        >>    8 FOR_ITER                15 (to 42)\n             12 STORE_FAST               1 (value)\n             14 LOAD_GLOBAL              1 (NULL + _parse_baseline_arg)\n             24 LOAD_FAST                1 (value)\n             26 CALL                     1\n             34 YIELD_VALUE              1\n             36 RESUME                   1\n             38 POP_TOP\n             40 JUMP_BACKWARD           17 (to 8)\n        >>   42 END_FOR\n             44 RETURN_CONST             0 (None)\n        >>   46 CALL_INTRINSIC_1         3 (INTRINSIC_STOPITERATION_ERROR)\n             48 RERAISE                  1\nExceptionTable:\n  4 to 44 -> 46 [0] lasti\n"
+    }
+  ],
+  "module_dis": "  0           0 RESUME                   0\n\n  1           2 LOAD_CONST               0 ('Static intake and byte diffing for public frontier archives.\\n\\nThis module is intentionally offline and byte-only. It validates ZIP custody,\\nidentifies PR85-family bundle segments, records charged side-info members, and\\ndiffs segment identities against named baselines. It never inflates contest\\nvideos, loads scorers, submits jobs, or makes score claims.\\n')\n              4 STORE_NAME               0 (__doc__)\n\n  9           6 LOAD_CONST               1 (0)\n              8 LOAD_CONST               2 (('annotations',))\n             10 IMPORT_NAME              1 (__future__)\n             12 IMPORT_FROM              2 (annotations)\n             14 STORE_NAME               2 (annotations)\n             16 POP_TOP\n\n 11          18 LOAD_CONST               1 (0)\n             20 LOAD_CONST               3 (None)\n             22 IMPORT_NAME              3 (argparse)\n             24 STORE_NAME               3 (argparse)\n\n 12          26 LOAD_CONST               1 (0)\n             28 LOAD_CONST               3 (None)\n             30 IMPORT_NAME              4 (hashlib)\n             32 STORE_NAME               4 (hashlib)\n\n 13          34 LOAD_CONST               1 (0)\n             36 LOAD_CONST               3 (None)\n             38 IMPORT_NAME              5 (json)\n             40 STORE_NAME               5 (json)\n\n 14          42 LOAD_CONST               1 (0)\n             44 LOAD_CONST               3 (None)\n             46 IMPORT_NAME              6 (math)\n             48 STORE_NAME               6 (math)\n\n 15          50 LOAD_CONST               1 (0)\n             52 LOAD_CONST               3 (None)\n             54 IMPORT_NAME              7 (struct)\n             56 STORE_NAME               7 (struct)\n\n 16          58 LOAD_CONST               1 (0)\n             60 LOAD_CONST               3 (None)\n             62 IMPORT_NAME              8 (zipfile)\n             64 STORE_NAME               8 (zipfile)\n\n 17          66 LOAD_CONST               1 (0)\n             68 LOAD_CONST               4 (('Counter',))\n             70 IMPORT_NAME              9 (collections)\n             72 IMPORT_FROM             10 (Counter)\n             74 STORE_NAME              10 (Counter)\n             76 POP_TOP\n\n 18          78 LOAD_CONST               1 (0)\n             80 LOAD_CONST               5 (('dataclass',))\n             82 IMPORT_NAME             11 (dataclasses)\n             84 IMPORT_FROM             12 (dataclass)\n             86 STORE_NAME              12 (dataclass)\n             88 POP_TOP\n\n 19          90 LOAD_CONST               1 (0)\n             92 LOAD_CONST               6 (('Path', 'PurePosixPath', 'PureWindowsPath'))\n             94 IMPORT_NAME             13 (pathlib)\n             96 IMPORT_FROM             14 (Path)\n             98 STORE_NAME              14 (Path)\n            100 IMPORT_FROM             15 (PurePosixPath)\n            102 STORE_NAME              15 (PurePosixPath)\n            104 IMPORT_FROM             16 (PureWindowsPath)\n            106 STORE_NAME              16 (PureWindowsPath)\n            108 POP_TOP\n\n 20         110 LOAD_CONST               1 (0)\n            112 LOAD_CONST               7 (('Any', 'Iterable', 'Mapping', 'Sequence'))\n            114 IMPORT_NAME             17 (typing)\n            116 IMPORT_FROM             18 (Any)\n            118 STORE_NAME              18 (Any)\n            120 IMPORT_FROM             19 (Iterable)\n            122 STORE_NAME              19 (Iterable)\n            124 IMPORT_FROM             20 (Mapping)\n            126 STORE_NAME              20 (Mapping)\n            128 IMPORT_FROM             21 (Sequence)\n            130 STORE_NAME              21 (Sequence)\n            132 POP_TOP\n\n 22         134 LOAD_CONST               1 (0)\n            136 LOAD_CONST               8 (('CONTEST_ORIGINAL_BYTES', 'contest_rate_term'))\n            138 IMPORT_NAME             22 (tac.archive_byte_profile)\n            140 IMPORT_FROM             23 (CONTEST_ORIGINAL_BYTES)\n            142 STORE_NAME              23 (CONTEST_ORIGINAL_BYTES)\n            144 IMPORT_FROM             24 (contest_rate_term)\n            146 STORE_NAME              24 (contest_rate_term)\n            148 POP_TOP\n\n 23         150 LOAD_CONST               1 (0)\n            152 LOAD_CONST               9 (('Pr85BundleError', 'parse_pr85_bundle'))\n            154 IMPORT_NAME             25 (tac.pr85_bundle)\n            156 IMPORT_FROM             26 (Pr85BundleError)\n            158 STORE_NAME              26 (Pr85BundleError)\n            160 IMPORT_FROM             27 (parse_pr85_bundle)\n            162 STORE_NAME              27 (parse_pr85_bundle)\n            164 POP_TOP\n\n 26         166 LOAD_CONST              10 ('public_frontier_archive_intake_v1')\n            168 STORE_NAME              28 (SCHEMA)\n\n 27         170 LOAD_CONST              11 ('experiments/profile_public_frontier_intake.py')\n            172 STORE_NAME              29 (TOOL)\n\n 28         174 LOAD_CONST              12 ('external_archive_byte_intake_only')\n            176 STORE_NAME              30 (EVIDENCE_GRADE)\n\n 29         178 LOAD_CONST              13 (67324752)\n            180 STORE_NAME              31 (LOCAL_FILE_HEADER)\n\n 32         182 PUSH_NULL\n            184 LOAD_BUILD_CLASS\n            186 LOAD_CONST              14 (<code object PublicFrontierIntakeError at 0x10532fab0, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 32>)\n            188 MAKE_FUNCTION            0\n            190 LOAD_CONST              15 ('PublicFrontierIntakeError')\n            192 LOAD_NAME               32 (ValueError)\n            194 CALL                     3\n            202 STORE_NAME              33 (PublicFrontierIntakeError)\n\n 36         204 PUSH_NULL\n            206 LOAD_NAME               12 (dataclass)\n            208 LOAD_CONST              16 (True)\n            210 KW_NAMES                17 (('frozen',))\n            212 CALL                     1\n\n 37         220 PUSH_NULL\n            222 LOAD_BUILD_CLASS\n            224 LOAD_CONST              18 (<code object _ParsedArchive at 0x104899c50, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 36>)\n            226 MAKE_FUNCTION            0\n            228 LOAD_CONST              19 ('_ParsedArchive')\n            230 CALL                     2\n\n 36         238 CALL                     0\n\n 37         246 STORE_NAME              34 (_ParsedArchive)\n\n 42         248 LOAD_CONST              46 (('payload', 'Mapping[str, Any]', 'return', 'str'))\n            250 LOAD_CONST              20 (<code object _json_text at 0x105394d30, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 42>)\n            252 MAKE_FUNCTION            4 (annotations)\n            254 STORE_NAME              35 (_json_text)\n\n 46         256 LOAD_CONST              47 (('data', 'bytes', 'return', 'str'))\n            258 LOAD_CONST              21 (<code object _sha256_bytes at 0x10539eab0, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 46>)\n            260 MAKE_FUNCTION            4 (annotations)\n            262 STORE_NAME              36 (_sha256_bytes)\n\n 50         264 LOAD_CONST              48 (('path', 'Path', 'return', 'str'))\n            266 LOAD_CONST              22 (<code object _sha256_file at 0x104872d80, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 50>)\n            268 MAKE_FUNCTION            4 (annotations)\n            270 STORE_NAME              37 (_sha256_file)\n\n 58         272 LOAD_CONST              49 (('data', 'bytes', 'return', 'float'))\n            274 LOAD_CONST              23 (<code object _byte_entropy at 0x1048d5530, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 58>)\n            276 MAKE_FUNCTION            4 (annotations)\n            278 STORE_NAME              38 (_byte_entropy)\n\n 70         280 LOAD_CONST              24 (8)\n            282 LOAD_CONST              25 (('limit',))\n            284 BUILD_CONST_KEY_MAP      1\n            286 LOAD_CONST              50 (('data', 'bytes', 'limit', 'int', 'return', 'str'))\n            288 LOAD_CONST              26 (<code object _display_ascii at 0x105394f30, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 70>)\n            290 MAKE_FUNCTION            6 (kwdefaults, annotations)\n            292 STORE_NAME              39 (_display_ascii)\n\n 74         294 LOAD_CONST              51 (('name', 'str', 'return', 'list[str]'))\n            296 LOAD_CONST              27 (<code object _safe_member_blockers at 0xc0d194900, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 74>)\n            298 MAKE_FUNCTION            4 (annotations)\n            300 STORE_NAME              40 (_safe_member_blockers)\n\n 93         302 LOAD_CONST              52 (('raw', 'bytes', 'flag_bits', 'int', 'return', 'str'))\n            304 LOAD_CONST              28 (<code object _decode_zip_name at 0x105395030, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 93>)\n            306 MAKE_FUNCTION            4 (annotations)\n            308 STORE_NAME              41 (_decode_zip_name)\n\n 98         310 LOAD_CONST              53 (('path', 'Path', 'info', 'zipfile.ZipInfo', 'return', 'str'))\n            312 LOAD_CONST              29 (<code object _local_header_name at 0xc0ccdbb80, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 98>)\n            314 MAKE_FUNCTION            4 (annotations)\n            316 STORE_NAME              42 (_local_header_name)\n\n130         318 LOAD_CONST              54 (('segment_name', 'str', 'data', 'bytes', 'return', 'str'))\n            320 LOAD_CONST              30 (<code object _codec_label at 0x1048d4330, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 130>)\n            322 MAKE_FUNCTION            4 (annotations)\n            324 STORE_NAME              43 (_codec_label)\n\n145         326 LOAD_CONST              55 (('name', 'str', 'data', 'bytes', 'offset', 'int', 'return', 'dict[str, Any]'))\n            328 LOAD_CONST              31 (<code object _segment_row at 0x10530da10, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 145>)\n            330 MAKE_FUNCTION            4 (annotations)\n            332 STORE_NAME              44 (_segment_row)\n\n158         334 LOAD_CONST              56 (('name', 'str', 'data', 'bytes', 'return', 'dict[str, Any]'))\n            336 LOAD_CONST              32 (<code object _inspect_member_data at 0xc0d194f00, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 158>)\n            338 MAKE_FUNCTION            4 (annotations)\n            340 STORE_NAME              45 (_inspect_member_data)\n\n185         342 LOAD_CONST              57 (('path', 'Path', 'return', 'tuple[list[dict[str, Any]], dict[str, bytes], list[str]]'))\n            344 LOAD_CONST              33 (<code object _archive_members at 0xc0ce1d800, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 185>)\n            346 MAKE_FUNCTION            4 (annotations)\n            348 STORE_NAME              46 (_archive_members)\n\n230         350 LOAD_CONST              58 (('member_data', 'Mapping[str, bytes]', 'return', 'tuple[str | None, dict[str, Any] | None, dict[str, dict[str, Any]]]'))\n            352 LOAD_CONST              34 (<code object _primary_pr85_member at 0x1049087f0, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 230>)\n            354 MAKE_FUNCTION            4 (annotations)\n            356 STORE_NAME              47 (_primary_pr85_member)\n\n245         358 NOP\n\n246         360 NOP\n\n245         362 NOP\n\n247         364 NOP\n\n245         366 NOP\n\n249         368 NOP\n\n245         370 NOP\n\n250         372 NOP\n\n245         374 LOAD_CONST              59 (('primary_segments', 'Mapping[str, Mapping[str, Any]]', 'baselines', 'Mapping[str, _ParsedArchive]', 'candidate_archive_bytes', 'int', 'return', 'list[dict[str, Any]]'))\n            376 LOAD_CONST              35 (<code object _diff_against_baselines at 0xc0ce23200, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 245>)\n            378 MAKE_FUNCTION            4 (annotations)\n            380 STORE_NAME              48 (_diff_against_baselines)\n\n291         382 LOAD_CONST              60 (('value', 'str', 'return', 'tuple[str, Path]'))\n            384 LOAD_CONST              36 (<code object _parse_baseline_arg at 0x10492d7d0, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 291>)\n            386 MAKE_FUNCTION            4 (annotations)\n            388 STORE_NAME              49 (_parse_baseline_arg)\n\n302         390 LOAD_CONST               3 (None)\n            392 LOAD_CONST              37 (('candidate_bytes',))\n            394 BUILD_CONST_KEY_MAP      1\n            396 LOAD_CONST              61 (('path', 'Path', 'label', 'str', 'candidate_bytes', 'int | None', 'return', '_ParsedArchive'))\n            398 LOAD_CONST              38 (<code object _analyze_one at 0xc0d192000, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 302>)\n            400 MAKE_FUNCTION            6 (kwdefaults, annotations)\n            402 STORE_NAME              50 (_analyze_one)\n\n359         404 LOAD_CONST               3 (None)\n\n355         406 LOAD_CONST              39 (('baselines',))\n            408 BUILD_CONST_KEY_MAP      1\n\n356         410 NOP\n\n355         412 NOP\n\n358         414 NOP\n\n355         416 NOP\n\n359         418 NOP\n\n355         420 NOP\n\n360         422 NOP\n\n355         424 LOAD_CONST              62 (('archive', 'Path | str', 'label', 'str', 'baselines', 'Mapping[str, Path | str] | None', 'return', 'dict[str, Any]'))\n            426 LOAD_CONST              40 (<code object profile_public_frontier_archive at 0xc0ce24380, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 355>)\n            428 MAKE_FUNCTION            6 (kwdefaults, annotations)\n            430 STORE_NAME              51 (profile_public_frontier_archive)\n\n391         432 LOAD_CONST              63 (('report', 'Mapping[str, Any]', 'return', 'str'))\n            434 LOAD_CONST              41 (<code object render_markdown at 0xc0ce1de00, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 391>)\n            436 MAKE_FUNCTION            4 (annotations)\n            438 STORE_NAME              52 (render_markdown)\n\n468         440 LOAD_CONST              64 (('report', 'Mapping[str, Any]', 'json_out', 'Path | None', 'markdown_out', 'Path | None', 'return', 'None'))\n            442 LOAD_CONST              42 (<code object write_outputs at 0x104910ab0, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 468>)\n            444 MAKE_FUNCTION            4 (annotations)\n            446 STORE_NAME              53 (write_outputs)\n\n477         448 LOAD_CONST              65 (('return', 'argparse.ArgumentParser'))\n            450 LOAD_CONST              43 (<code object build_arg_parser at 0x1048dda70, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 477>)\n            452 MAKE_FUNCTION            4 (annotations)\n            454 STORE_NAME              54 (build_arg_parser)\n\n492         456 LOAD_CONST              66 ((None,))\n            458 LOAD_CONST              67 (('argv', 'Sequence[str] | None', 'return', 'int'))\n            460 LOAD_CONST              44 (<code object main at 0xc0ce2c280, file \"/Users/adpena/Projects/pact/src/tac/public_frontier_intake.py\", line 492>)\n            462 MAKE_FUNCTION            5 (defaults, annotations)\n            464 STORE_NAME              55 (main)\n\n506         466 BUILD_LIST               0\n            468 LOAD_CONST              45 (('PublicFrontierIntakeError', 'profile_public_frontier_archive', 'render_markdown', 'write_outputs', 'main'))\n            470 LIST_EXTEND              1\n            472 STORE_NAME              56 (__all__)\n            474 RETURN_CONST             3 (None)\n"
+}
