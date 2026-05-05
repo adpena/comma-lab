@@ -1,0 +1,25 @@
+{
+  "lane_id": "lane_pr106_stacked",
+  "wall_clock_seconds": 0.008899927139282227,
+  "pr106_archive": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+  "pr106_zip_bytes": 186239,
+  "pr106_bin_bytes": 186131,
+  "latent_archive": "experiments/results/lane_pr106_latent_sidecar_cpu_smoke_20260505/sidecar_archive.zip",
+  "yshift_archive": "/tmp/yshift_smoke_20260505T140305Z/pr106_yshift_sidechannel_archive.zip",
+  "lrl1_archive": "/tmp/lrl1_smoke_20260505T140305Z/pr106_lrl1_sidechannel_archive.zip",
+  "section_blob_bytes": {
+    "latent": 15,
+    "yshift": 37,
+    "lrl1": 43
+  },
+  "n_sections": 3,
+  "archive_path": "/tmp/pr106_stacked_3sister_20260505T140325Z/pr106_stacked_archive.zip",
+  "archive_zip_bytes": 186348,
+  "delta_bytes_vs_pr106_zip": 109,
+  "rate_component_score_delta_vs_pr106": 7.257862589031667e-05,
+  "outer_dispatch_magic": "0xFD",
+  "tag": "[advisory only]",
+  "council_status": "PROPOSAL \u2014 pre-registered at L1; gated on apogee_intN + 3 sidechannels all winning empirically (per docs/INDEX_score_aware_sidechannel_thread)",
+  "score_claim": false,
+  "next_step": "Compose-time scaffold only. ALL 3 sister sidechannel lanes (lane_pr106_latent_sidecar + lane_pr106_yshift_sidechannel + lane_pr106_lrl1_sidechannel) MUST land < 0.20800 [contest-CUDA] empirically before this stacked archive earns a contest dispatch. Per tools/sidechannel_stack_predictor.py --bits 5 --all, int4+full-stack predicted score = 0.163 (-0.046 vs PR106 0.20945)."
+}
