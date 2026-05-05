@@ -289,4 +289,4 @@ bash scripts/remote_lane_sjkl_c067.sh
 8. **Lane SJ-KL C067 GPU dispatch (~$0.30)** — uses C067 base archive (not PR106), so dispatchable in parallel with the PR106-stacking lanes. Predicted score band TBD pending first run.
 
 **Total dispatch matrix: 4 lanes × ~$0.30 = ~$1.20** for the highest-EV sweep that would land the first contest-CUDA score below PR106's 0.20946.
-</content>
+
