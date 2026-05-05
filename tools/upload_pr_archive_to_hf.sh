@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Upload the comma video compression challenge PR archive corpus to HuggingFace.
 #
-# Prerequisite (one-time, operator action — interactive token paste):
+# Prerequisite (one-time, operator action - interactive token paste):
 #   hf auth login
 #
 # Then this script:
@@ -32,6 +32,10 @@ DATASET_SLUG="adpena/comma_video_compression_challenge_pr_archive"
 RAW_SOURCE_DIR="experiments/results/public_pr_intake_full"
 SOURCE_DIR="experiments/results/public_pr_archive_release_view"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PYTHON_BIN="${PYTHON:-$HERE/.venv/bin/python}"
+if [ ! -x "$PYTHON_BIN" ]; then
+    PYTHON_BIN="$(command -v python3)"
+fi
 
 if ! hf auth whoami &>/dev/null; then
     echo "FATAL: hf CLI not authenticated. Run 'hf auth login' first."
@@ -39,10 +43,10 @@ if ! hf auth whoami &>/dev/null; then
 fi
 
 echo "[hf-upload] Creating dataset repo (idempotent): $DATASET_SLUG"
-hf repos create "$DATASET_SLUG" --type dataset $REPO_VISIBILITY 2>&1 | head -3 || true
+hf repos create "$DATASET_SLUG" --type dataset $REPO_VISIBILITY --exist-ok
 
 echo "[hf-upload] Materializing canonical deduplicated release view..."
-python "$HERE/tools/materialize_pr_archive_release_view.py" \
+"$PYTHON_BIN" "$HERE/tools/materialize_pr_archive_release_view.py" \
     --source-root "$HERE/$RAW_SOURCE_DIR" \
     --output-root "$HERE/$SOURCE_DIR" \
     --force
@@ -61,6 +65,11 @@ hf upload-large-folder "$DATASET_SLUG" "$HERE/$SOURCE_DIR" \
     --exclude "**/.git/**" \
     --exclude "**/__pycache__/**" \
     --exclude "**/.DS_Store"
+
+# `hf upload-large-folder` intentionally writes resumability metadata under
+# LOCAL_PATH/.cache/huggingface. Keep that state out of the canonical release
+# view after a completed upload so local audits and mirror jobs see a pure tree.
+rm -rf "$HERE/$SOURCE_DIR/.cache"
 
 echo ""
 echo "[hf-upload] DONE. Dataset live at:"
