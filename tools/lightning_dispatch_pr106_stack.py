@@ -136,14 +136,20 @@ def submit_dispatch(*, lane: str, job_name: str, archive: Path, manifest: Path,
     cmd = [
         sys.executable, str(REPO_ROOT / "scripts" / "launch_lightning_batch_job.py"), "exact-eval",
         "--job-name", job_name,
-        "--archive", str(archive),
+        # FIX 2026-05-05: --archive must be REPO-RELATIVE so the launcher's
+        # _remote_repo_rel() resolves it against --repo-dir (the REMOTE
+        # /teamspace/.../pact). If we pass the absolute mac path, the launcher
+        # rejects with "must be inside --repo-dir" because /Users/adpena/...
+        # is not a prefix of /teamspace/studios/this_studio/pact.
+        "--archive", str(archive.relative_to(REPO_ROOT)),
         "--repo-dir", remote_pact,
         "--upstream-dir", f"{remote_pact}/upstream",
         "--teamspace", LIGHTNING_TEAMSPACE,
         "--studio", LIGHTNING_STUDIO,
         "--user", LIGHTNING_USER,
         "--machine", machine,
-        "--inflate-sh", str(inflate_sh),
+        # FIX 2026-05-05: same as --archive, --inflate-sh must be REPO-RELATIVE.
+        "--inflate-sh", str(inflate_sh.relative_to(REPO_ROOT)),
         "--predicted-band", str(predicted_low), str(predicted_high),
         "--baseline-score", str(PR106_BASELINE_SCORE),
         "--baseline-archive-bytes", str(PR106_BASELINE_BYTES),

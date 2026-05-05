@@ -1,39 +1,20 @@
-# pyc-recovery pass2: STUB unreconstructible -- DERIVATIVE source never committed
-# Sherlock pass2 investigation (2026-05-05):
-#   - Searched git rev-list --all + git fsck --lost-found: only STUB blobs exist
-#   - This file was a runtime ARTIFACT produced by experiments/build_pr85_stbm1br_mask_recode_candidate.py
-#     (orig blob 8b931a313de3d3e605d4d607cc7a3b888a2a8aee, accessible via git cat-file -p)
-#   - The runtime is OUR derivative of PR85's inflate.py with a narrow STBM1BR mask branch added
-#   - Both source-of-truth pieces are intact:
-#       1. PR85 inflate.py (vendored from upstream): experiments/results/public_pr85_intake_20260503_codex/replay_submission/inflate.py
-#       2. STBM1BR codec module: src/tac/stbm1br_mask_codec.py (esp. decode_stbm1br_mask_segment)
-#   - To rebuild this runtime: take PR85 inflate.py, identify the mask-loading function,
-#     add a magic-byte sniff for STBM1BR_MAGIC = b"STBM1BR\x00", route those segments
-#     to tac.stbm1br_mask_codec.decode_stbm1br_mask_segment, all other branches unchanged
-#   - The .recovery_spec.json companion has dis() bytecode ground truth for every code object
-#     including FP4Codebook, JointFrameGenerator, load_stbm1br_mask, load_compact_archive_bundle, main
-#   - Memory ref: .omx/research/pr85_stbm1br_mask_recode_20260504_worker.md (see "Mitigation landed:" section)
-"""RECOVERY STUB - DERIVATIVE runtime, hand-reconstruct from PR85 inflate + tac.stbm1br_mask_codec.
+# pyc-recovery: STUB unreconstructible -- see .recovery_spec.json for dis() ground-truth
+# pycdc could not produce parseable output; raw decompiled text preserved in _PYCDC_PARTIAL_OUTPUT below.
+"""RECOVERY STUB - pycdc output preserved inside r-string for hand-rehydration.
 
-This file is a runtime ARTIFACT (not source-controlled) produced locally by the
-build_pr85_stbm1br_mask_recode_candidate.py builder. The .pyc was the only
-forensic trace.
+This file was decompiled from a .pyc orphan whose .py source was never
+committed. pycdc 3.12 produces substantially-complete output but trips on
+@dataclass/@property decorators, complex lambdas, and walrus operators,
+so the raw output does not parse: ``34:104: invalid syntax``.
 
-Reconstruction recipe (Sherlock pass2 verdict, NOT executed):
+The raw pycdc output is preserved verbatim in ``_PYCDC_PARTIAL_OUTPUT``
+below. The companion ``inflate.recovery_spec.json`` contains co_names, co_consts,
+co_varnames, and dis() output for every code object - the structural
+ground-truth a hand-rehydrator should consult.
 
-    pr85_inflate = Path("experiments/results/public_pr85_intake_20260503_codex/replay_submission/inflate.py").read_text()
-    # Find PR85's mask-loading function. Add a STBM1BR_MAGIC sniff branch
-    # that calls tac.stbm1br_mask_codec.decode_stbm1br_mask_segment when seen.
-    # All other PR85 inflate logic unchanged.
-
-The companion ``inflate.recovery_spec.json`` contains dis() bytecode for every
-code object including the model classes (FP4Codebook, SepResBlock,
-JointFrameGenerator) and the mask loaders (load_range_mask, load_stbm1br_mask,
-load_encoded_mask_video) and the full main() function.
-
-This stub remains a no-op import; replace once exact reconstruction is done.
-Until then, the running pyc + pyc artifact in __pycache__/ are still callable
-on the same Python 3.12 ABI.
+This stub itself is a no-op; importing it just exposes the partial
+output as a string. Replace the stub with hand-rewritten Python once
+rehydration is done.
 """
 from __future__ import annotations
 

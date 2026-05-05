@@ -1,9 +1,8 @@
+# pyc-recovery: human-reconstructed from scripts/pre_submission_compliance_check.py.pyc
+# This is the canonical main-repo content as of 2026-05-05.
+# Recovery spec preserved at: pre_submission_compliance_check.recovery_spec.json
+# Original STUB has been replaced with this canonical version.
 #!/usr/bin/env python3
-# pyc-recovery pass2: rehydrated from git blob 9d24ce3bb0a4352888ebd2ee5ad0c1cb3c25a861 via `git fsck --lost-found`
-# original path: scripts/pre_submission_compliance_check.py
-# This is OUR source, dropped during commit 66c59aae filter-repo cleanup; the .pyc was the only
-# orphan left behind. Original blob SHA verified intact.
-# Recovered: 2026-05-05 by Sherlock pass2
 """Strict pre-submission compliance gate for contest release packets.
 
 This script validates the exact upload/publish surface. It does not run the
