@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/tac/losses.py
-# hypothesis_version: 6.151.12
-
-[1e-12, 1e-10, 1e-08, 1e-06, 0.01, 0.114, 0.299, 0.5, 0.587, 0.9, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0, 200.0, 255.0, '.', 'batchmean', 'cpu', 'hh', 'hl', 'lh', 'll', 'mean', 'nearest', 'none', 'pose', 'stages.2', 'summary']

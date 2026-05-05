@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/tac/deploy/kaggle/build_kaggle_kernels.py
-# hypothesis_version: 6.151.12
-
-[1000, 2500, '*', '--only', '--output-root', '.kaggle', '__main__', 'bootstrap_codegen.py', 'bounded', 'checkpoint_priority', 'dilated_h64_long1000', 'early', 'experiments', 'kaggle.json', 'kaggle_kernels', 'max_epochs', 'pairaware_smoke', 'save_best_checkpoint', 'save_final_artifacts', 'src', 'tac', 'username']

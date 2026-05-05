@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/tac/lossless/transforms.py
-# hypothesis_version: 6.151.12
-
-[128, 256, 1024, 1025, 1026, 'bitplane_split', 'changed_values_bytes', 'compression_ratio', 'encoded_bytes', 'first_values_bytes', 'frequency_remap', 'header_bytes', 'high_bit_width', 'high_plane_bytes', 'inf', 'little', 'low_bits', 'low_plane_bytes', 'lzma', 'lzma_preset', 'mapping_bytes', 'packed_mask_bytes', 'payload_bytes', 'proxy_backend', 'roundtrip_ok', 'sample_bytes', 'sample_segments', 'sample_tokens', 'sustain_attack', 'temporal_residual', 'transform']

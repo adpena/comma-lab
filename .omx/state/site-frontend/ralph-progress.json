@@ -1,8 +1,0 @@
-{
-  "score": 95,
-  "verdict": "pass",
-  "category_match": true,
-  "differences": [],
-  "suggestions": [],
-  "reasoning": "The page now reads as a restrained technical brief end-to-end: the top context is clear, the charts are semantically legible, the lineage graph reads correctly, the video comparison behaves coherently, and desktop/mobile layouts are clean without obvious friction."
-}

@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/experiments/kaggle_output_ingest.py
-# hypothesis_version: 6.151.12
-
-['*', '--download', '--download-dir', '--manifest', '--output-root', '--with', '-p', '.log', '[', '__main__', '_best_meta.json', 'best_checkpoint', 'data', 'epoch', 'error_type', 'evidence_dir', 'failure', 'file', 'final_meta', 'fp32', 'hidden', 'ignore', 'ingest_summary.json', 'int8', 'int8_bytes', 'int8_size', 'kaggle', 'kernel_ref', 'kernels', 'latest_checkpoint', 'latest_failure', 'logs', 'message', 'meta', 'meta_path', 'output', 'path', 'pose_distortion', 'proxy_result', 'run', 'run_id', 'saved', 'score', 'scorer', 'seg_distortion', 'signals', 'slug', 'store_true', 'uv', 'variant']

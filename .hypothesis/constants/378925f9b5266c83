@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/tac/experiments/triage.py
-# hypothesis_version: 6.151.12
-
-[0.2, '--promoted-slug', '--proxy-log-dir', '?', '__main__', '_best_meta.json', 'delta_vs_reference', 'deploy_blockers', 'deploy_ready', 'directory', 'epoch', 'fp32_path', 'ignore', 'int8_path', 'int8_size', 'meta', 'meta_path', 'proxy*.log', 'proxy_already_run', 'proxy_gap_threshold', 'proxy_log', 'proxy_ready', 'rank', 'ranked', 'reference', 'saliency_weighted', 'score', 'scorer', 'slug', 'variant']

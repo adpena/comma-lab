@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/comma_lab/lossless_state_sync.py
-# hypothesis_version: 6.151.12
-
-['.omx', 'archive_bytes', 'archive_path', 'checked_items', 'compression_rate', 'contracts', 'error', 'event', 'lossless_findings.md', 'lossless_focus.md', 'lossless_focus_stale', 'lossless_latest.md', 'method', 'original_bytes', 'profile', 'promotion', 'record_count', 'reports', 'research', 'split', 'state', 'tac', 'utf-8', 'w']

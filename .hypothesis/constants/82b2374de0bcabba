@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/tac/lossless/evaluate.py
-# hypothesis_version: 6.151.12
-
-['..', '/', 'OUTPUT_DIR', '__getitem__', 'challenge', 'commaai/commavq', 'compare', 'decompress.py', 'decompressed', 'decompressed_root', 'file_name', 'json', 'map', 'mismatch_count', 'r', 'submission', 'tac-lossless-eval-', 'token.npy', 'train']

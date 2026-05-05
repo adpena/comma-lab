@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/comma_lab/scheduler/registry.py
-# hypothesis_version: 6.151.12
-
-['.yaml', '.yml', 'budget', 'budgets', 'kind', 'ledger_paths', 'manifest_globs', 'max_active_runs', 'max_archive_bytes', 'max_failed_runs', 'max_runs', 'name', 'platforms', 'result_devices', 'status_globs', 'version']

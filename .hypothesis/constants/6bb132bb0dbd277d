@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/tac/lossless/data.py
-# hypothesis_version: 6.151.12
-
-[128, 255, 1200, 'challenge', 'commaai/commavq', 'data-0000.tar.gz', 'data-0001.tar.gz', 'dtype', 'f', 'file_name', 'i', 'json', 'token.npy', 'train', 'u']

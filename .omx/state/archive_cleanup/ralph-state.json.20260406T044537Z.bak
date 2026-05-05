@@ -1,9 +1,0 @@
-{
-  "active": true,
-  "current_phase": "executing",
-  "iteration": 1,
-  "max_iterations": 10,
-  "task": "Disciplined AV1 neighborhood probe around repaired 2.20 floor, then durable-state refresh and verification",
-  "context_snapshot_path": ".omx/context/ralph-av1-neighborhood-20260406T034104Z.md",
-  "updated_at": "2026-04-06T03:41:29.450379+00:00"
-}

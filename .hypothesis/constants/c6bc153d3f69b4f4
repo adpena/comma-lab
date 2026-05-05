@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/comma_lab/task_codec/state.py
-# hypothesis_version: 6.151.12
-
-['*_best_meta.json', '*_final_meta.json', '.pt', 'FinalMetadata', 'ResumeState', '_', '_best_meta.json', '_final_meta.json', 'baseline_loss', 'best_eval', 'best_meta_path', 'final_loss', 'final_pose', 'final_seg', 'fp32_path', 'int8_path', 'int8_size', 'meta', 'tag']

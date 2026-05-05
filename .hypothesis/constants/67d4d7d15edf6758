@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/tac/data.py
-# hypothesis_version: 6.151.12
-
-[0.344136, 0.714136, 1.0, 1.402, 1.772, 16.0, 128.0, 219.0, 224.0, 255.0, 255, 874, 1164, '*.mkv', '.pt', 'bicubic', 'bilinear', 'comp_frames.pt', 'cpu', 'gt_frames.pt']

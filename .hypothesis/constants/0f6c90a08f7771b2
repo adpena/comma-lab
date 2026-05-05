@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/experiments/kaggle_kernel_builder.py
-# hypothesis_version: 6.151.12
-
-['.py', '.pyi', 'code_file', 'competition_sources', 'dataset_sources', 'enable_gpu', 'enable_internet', 'enable_tpu', 'id', 'is_private', 'kernel-metadata.json', 'kernel_sources', 'kernel_type', 'language', 'model_sources', 'python', 'run_kernel.py', 'script', 'title']

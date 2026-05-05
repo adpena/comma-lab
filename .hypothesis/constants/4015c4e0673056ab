@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/comma_lab/task_codec/records.py
-# hypothesis_version: 6.151.12
-
-['EvaluationRecord', 'archive', 'copied_report_path', 'device', 'ignore', 'pose_distortion', 'report_path', 'rule_faithful_rate', 'rule_faithful_score', 'rule_faithful_status', 'seg_distortion', 'track', 'weights', '{']

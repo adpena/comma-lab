@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/tac/lossless/global_prev_symbol.py
-# hypothesis_version: 6.151.12
-
-[-256, 128, 256, '*', '__getitem__', 'archive_bytes', 'canonical', 'chunk_count', 'chunk_index', 'clip_greedy_nn', 'clip_recursive_pca', 'command', 'compression_ratio', 'decoded', 'encoded_dir', 'exact_match', 'explicit', 'file_name', 'frame_order', 'input', 'labels_path', 'manifest.json', 'max_records', 'order_path', 'original_bytes', 'output_dir', 'output_path', 'position_major', 'preserve_input_order', 'record_count', 'record_order', 'records', 'recursive_bisect', 'strategy', 'token_count', 'train', 'unlabeled', 'wb']

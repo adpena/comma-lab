@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/comma_lab/evaluate.py
-# hypothesis_version: 6.151.12
-
-[10.0, 25.0, 100.0, ',', '--device', '--submission-dir', '.venv', 'COMMA_CHALLENGE_ROOT', 'PATH', 'VIRTUAL_ENV', 'archive.zip', 'bash', 'bin', 'bytes', 'compress.sh', 'evaluate.sh', 'exact_current', 'final_score', 'inflated', 'original_bytes', 'pose', 'python', 'rate', 'report.txt', 'robust_current', 'seg', 'submission_bytes', 'submissions']

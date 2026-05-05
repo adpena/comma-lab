@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/tac/quantization.py
-# hypothesis_version: 6.151.12
-
-[-128.0, 1e-10, 1e-08, 0.5, 1.0, 127.0, 127.5, -128, 127, '.bias', '.q', '.s', '__meta__', 'cpu']

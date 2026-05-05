@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/tac/proxy_eval.py
-# hypothesis_version: 6.151.12
-
-[874, 1164, '*.mkv', ',', '--archive-zip', '--device', '--report', '--submission-dir', '--uncompressed-dir', '--video-names-file', '0', '__main__', 'archive', 'archive.zip', 'archive_bytes', 'bytes', 'cpu', 'device', 'evaluate.py', 'inflated', 'inflated.raw', 'original_bytes', 'pose_distortion', 'rate', 'raw', 'report.txt', 'reports', 'robust_current', 'score', 'seg_distortion', 'submission', 'submissions', 'upstream', 'videos', 'weights', 'weights_path', 'workspace']

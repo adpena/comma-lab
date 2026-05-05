@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/comma_lab/task_codec/architectures.py
-# hypothesis_version: 6.151.12
-
-[20.0, 'alpha', 'block', 'canonical', 'counterpoint', 'dct_midband', 'depthwise', 'dilated', 'dropout', 'film_conditioned', 'hidden', 'kernel', 'luma', 'pairaware', 'pixelshuffle', 'qat_ema', 'residual', 'saliency_weighted', 'segaware', 'variant']

@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/tac/lossless/frequency_coder.py
-# hypothesis_version: 6.151.12
-
-[b'TFC1', b'TPC1', 0.0, 127, 128, 255, 65535, 'STREAM_MAGIC', 'command', 'compression_ratio', 'context count', 'context header', 'context_count', 'encoded_bytes', 'encoded_path', 'first symbol', 'frequency header', 'header_bytes', 'i', 'max_tokens', 'original_bytes', 'payload size', 'payload_bytes', 'restored_dtype', 'source_path', 'token count', 'token_count', 'truncated payload', 'u', 'uint16', 'unique symbol count', 'unique_symbols']

@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/tac/lossless/submission.py
-# hypothesis_version: 6.151.12
-
-[511, 2024, 32768, '*', 'decompress.py', 'w']

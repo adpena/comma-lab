@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/tac/lossless/state.py
-# hypothesis_version: 6.151.12
-
-[1e-12, '.omx', 'archive_bytes', 'archive_path', 'changed_paths', 'checked_items', 'command', 'compression_rate', 'event', 'lossless_findings.md', 'lossless_focus.md', 'lossless_latest.md', 'lossless_promote', 'method', 'original_bytes', 'profile', 'promotion', 'record_count', 'repo_root', 'reports', 'research', 'result', 'state', 'utf-8', 'w']

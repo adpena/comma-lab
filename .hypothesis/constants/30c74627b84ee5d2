@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/comma_lab/snapshot.py
-# hypothesis_version: 6.151.12
-
-[1024, 'HEAD', 'README.md', 'branch', 'commit', 'evaluate.py', 'evaluate.sh', 'files', 'frame_utils.py', 'git', 'last_verified_at', 'master', 'modules.py', 'rb', 'repo_url', 'rev-parse']

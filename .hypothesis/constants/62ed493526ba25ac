@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/comma_lab/lossless_review_tracker.py
-# hypothesis_version: 6.151.12
-
-['/', '\\', '_run_lossless', 'build_parser', 'cmd_lossless_', 'counts', 'entities', 'entity_count', 'error', 'file_path', 'last_scan', 'main', 'name', 'needs_fix', 'review_count', 'review_status', 'reviewed', 'scan', 'src/comma_lab/cli.py', 'src/tac/cli.py', 'src/tac/lossless/', 'stale', 'total', 'tracker_path', 'unreviewed', 'utf-8', 'version', 'w']

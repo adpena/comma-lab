@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/comma_lab/state_sync.py
-# hypothesis_version: 6.151.12
-
-['*.json', '-p', '.omx', '.ralph', '.ralph/run_log.md', 'current_focus.md', 'error', 'findings.md', 'latest.md', 'latest_report_stale', 'logs', 'next_experiments.md', 'notes', 'ps', 'remote_jobs', 'reports', 'reports/latest.md', 'research', 'results.jsonl', 'results_ledger_stale', 'run_id', 'run_log.md', 'score', 'session_id', 'stale', 'state', 'status', 'timeline.jsonl', 'ts', 'ts_utc', 'utf-8', 'variant', 'w', 'warning']

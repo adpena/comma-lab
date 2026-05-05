@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/comma_lab/smoke.py
-# hypothesis_version: 6.151.12
-
-[0.0, 80.0, 100.0, 120.0, '*.raw', '+', '-', '-count_frames', '-d', '-f', '-i', '-of', '-pix_fmt', '-q', '-rf', '-select_streams', '-show_entries', '-v', '-vf', '-vsync', '.', '0', '0/1', 'COMMA_CHALLENGE_ROOT', 'FFMPEG_BIN', 'FFPROBE_BIN', 'N/A', 'archive', 'archive.zip', 'avg_frame_rate', 'bash', 'bt709', 'compress.sh', 'duration', 'error', 'exact_current', 'ffmpeg', 'ffprobe', 'format', 'format=duration', 'fps', 'frames', 'height', 'inflate.sh', 'inflated', 'json', 'nb_frames', 'nb_read_frames', 'rawvideo', 'rb', 'rgb24', 'rm', 'robust_current', 'streams', 'submissions', 'tv', 'unzip', 'v:0', 'videos', 'width']

@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/tac/__init__.py
-# hypothesis_version: 6.151.12
-
-['1.0.0', 'SCHEMA_VERSION', 'resolve_cloud_asset', 'save_best_checkpoint', 'save_final_artifacts']

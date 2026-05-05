@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/comma_lab/task_codec/__init__.py
-# hypothesis_version: 6.151.12
-
-['ArchitectureConfig', 'ArchitectureRegistry', 'ArchitectureSpec', 'EvaluationRecord', 'FinalMetadata', 'QuantizationMetadata', 'RegisteredScorer', 'ResumeState', 'ScorerRegistry', 'ScorerSpec']

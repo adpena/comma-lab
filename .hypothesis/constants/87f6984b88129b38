@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/tac/tto.py
-# hypothesis_version: 6.151.12
-
-[0.0, 1e-08, 0.0001, 0.01, 0.5, 1.5, 3.0, 30.0, 120.0, 255, 'N/A', 'all', 'bn_only', 'cpu', 'edge_preservation', 'last_layer', 'pose', 'reconstruction', 'temporal_consistency']

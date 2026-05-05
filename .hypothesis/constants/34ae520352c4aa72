@@ -1,4 +1,0 @@
-# file: /Users/adpena/Projects/pact/src/comma_lab/state_models.py
-# hypothesis_version: 6.151.12
-
-[4.39, 37545489, '.omx', 'PromotedResult', 'archive_bytes', 'artifact_path', 'artifacts', 'changed_count', 'changed_paths', 'config', 'copied_report_path', 'cpu', 'current_workflow', 'device', 'epoch', 'event', 'findings', 'notes', 'packaging_view', 'platform', 'pose', 'pose_distortion', 'posenet_distortion', 'promoted_at', 'promoted_result.json', 'promotion', 'rate', 'raw_report', 'report_path', 'rule_faithful_rate', 'rule_faithful_score', 'rule_faithful_status', 'run_id', 'score', 'seg', 'seg_distortion', 'segnet_distortion', 'source', 'state', 'summary_json', 'summary_path', 'track', 'ts', 'ts_utc', 'upstream_commit', 'variant']
