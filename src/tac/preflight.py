@@ -29,6 +29,7 @@ from __future__ import annotations
 import ast
 import datetime as _dt
 import hashlib
+import importlib.util
 import os
 import re
 import shlex
@@ -357,6 +358,26 @@ def preflight_all(
         # main-loop wiring of args.batch_size). Live-codebase scan: 0
         # violations → straight to STRICT.
         preflight_t4_oom_training_guard(strict=True, verbose=verbose)
+        # 2026-05-05 recovery: shell/CLI typo and portability hazards caused
+        # repeated dead dispatches (`--rmote`, adjudicator-only flags on
+        # launchers, zsh `path`, GNU find on macOS). The scanner is strict over
+        # live dispatch/runbook surfaces and excludes historical custody logs.
+        check_dispatch_cli_shell_hazards(strict=True, verbose=verbose)
+        # 2026-05-05 council Q2 (PCC9): no L2 promotion via zero-delta smoke
+        # evidence. Live count was 4 (PR106 sister lanes); demoted L2->L1
+        # in commit 9155f0e1. Strict-flipped after cleanup.
+        check_lane_smoke_signal_nontrivial(strict=True, verbose=verbose)
+        # 2026-05-05 council Q4 (PCC10): anti-arbitrariness scanner — every
+        # prediction-logic numeric literal must carry a provenance tag
+        # ([contest-defined] / [calibration:...] / [empirical:...] /
+        # [heuristic:...] / [inherited:...]). Live count was 6; fixed in
+        # commit 9155f0e1. Strict-flipped after cleanup.
+        check_calibration_provenance(strict=True, verbose=verbose)
+        # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
+        # a curated deconstruction surface, not a raw archive/provider dump or
+        # hidden second source tree. This strict check allows explicit orphan
+        # queues while blocking raw artifacts and unclassified files.
+        check_reverse_engineering_tree_curation(strict=True, verbose=verbose)
         # 2026-04-27 codex R5-2 Finding #2: scanner flipped to strict after
         # all 19 known violations were fixed (12 dead resolvers in
         # train_renderer.py + 7 dead imports across test_fp4_quality /
@@ -370,11 +391,7 @@ def preflight_all(
         # cleanly in profiles/argparse, but train_distill raised
         # NotImplementedError and train_renderer never applied the loss.
         # This AST guard requires the flag to enter the live objective path.
-        # NOTE 2026-05-05: check_feature_flags_have_live_objective_effect call
-        # site referenced an unimplemented checker. Stubbed/removed until the
-        # AST scanner lands. TODO(post-ship): implement.
-        if verbose:
-            print("  [feature-flags-live] STUB: planned post-ship")
+        check_feature_flags_have_live_objective_effect(strict=True, verbose=verbose)
         preflight_profiles(strict=True, verbose=verbose)
         preflight_arch_consistency(strict=True, verbose=verbose)
         preflight_filename_contract(strict=True, verbose=verbose)
@@ -2721,6 +2738,183 @@ def check_feature_flags_have_live_objective_effect(
 
 class MetaBugViolation(Exception):
     """A meta-bug pattern (CLAUDE.md FORBIDDEN PATTERNS) detected."""
+
+
+def check_dispatch_cli_shell_hazards(
+    *,
+    repo_root: str | Path | None = None,
+    scan_paths: list[str] | tuple[str, ...] | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Fail closed on shell/CLI hazards that waste remote dispatch wall-clock."""
+    root = Path(repo_root or REPO_ROOT)
+    helper_path = root / "tools" / "check_dispatch_cli_shell_hazards.py"
+    if not helper_path.is_file():
+        msg = f"dispatch CLI shell hazard scanner missing: {helper_path}"
+        if strict:
+            raise MetaBugViolation(msg)
+        return [msg]
+
+    spec = importlib.util.spec_from_file_location("_pact_dispatch_cli_shell_hazards", helper_path)
+    if spec is None or spec.loader is None:
+        msg = f"cannot import dispatch CLI shell hazard scanner: {helper_path}"
+        if strict:
+            raise MetaBugViolation(msg)
+        return [msg]
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    roots = tuple(scan_paths or module.DEFAULT_SCAN_PATHS)
+    hazards = module.scan_paths(root, scan_paths=roots)
+    violations = [
+        f"{hazard.path}:{hazard.line}: {hazard.kind}: {hazard.message}"
+        for hazard in hazards
+    ]
+    if violations and strict:
+        raise MetaBugViolation("DISPATCH CLI SHELL HAZARDS:\n" + "\n".join(violations))
+    if verbose:
+        if violations:
+            print(f"  [dispatch-cli-shell-hazards] {len(violations)} violation(s)")
+        else:
+            print("  [dispatch-cli-shell-hazards] OK")
+    return violations
+
+
+def check_lane_smoke_signal_nontrivial(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """PCC9 — Catch lanes promoted to L2 with zero-delta smoke evidence.
+
+    Council Q2 prescription. Live count was 4 (4 PR106 sister lanes); fixed by
+    demoting them L2 -> L1 in commit 9155f0e1. Strict-flipped on 2026-05-05.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    helper_path = root / "tools" / "check_lane_smoke_signal_nontrivial.py"
+    if not helper_path.is_file():
+        msg = f"lane smoke-signal scanner missing: {helper_path}"
+        if strict:
+            raise MetaBugViolation(msg)
+        return [msg]
+
+    spec = importlib.util.spec_from_file_location("_pact_lane_smoke_signal", helper_path)
+    if spec is None or spec.loader is None:
+        msg = f"cannot import lane smoke-signal scanner: {helper_path}"
+        if strict:
+            raise MetaBugViolation(msg)
+        return [msg]
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    try:
+        flagged = module.scan_registry(root)
+    except FileNotFoundError as e:
+        msg = f"lane smoke-signal scan failed: {e}"
+        if strict:
+            raise MetaBugViolation(msg)
+        return [msg]
+    violations = [
+        f"{v.lane_id}: {v.evidence_path}: {v.reason[:160]}"
+        for v in flagged
+    ]
+    if violations and strict:
+        raise MetaBugViolation("LANE SMOKE-SIGNAL VIOLATIONS:\n" + "\n".join(violations))
+    if verbose:
+        if violations:
+            print(f"  [lane-smoke-signal] {len(violations)} violation(s)")
+        else:
+            print("  [lane-smoke-signal] OK")
+    return violations
+
+
+def check_calibration_provenance(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """PCC10 — Anti-arbitrariness scanner for prediction-logic magic numbers.
+
+    Council Q4 prescription. Live count was 6; fixed by tagging in commit
+    9155f0e1. Strict-flipped on 2026-05-05. Required tag forms: [contest-defined],
+    [calibration:<src>], [empirical:<artifact>], [heuristic:<reason>], [inherited:<src>].
+    """
+    root = Path(repo_root or REPO_ROOT)
+    helper_path = root / "tools" / "check_calibration_provenance.py"
+    if not helper_path.is_file():
+        msg = f"calibration provenance scanner missing: {helper_path}"
+        if strict:
+            raise MetaBugViolation(msg)
+        return [msg]
+
+    spec = importlib.util.spec_from_file_location("_pact_calibration_provenance", helper_path)
+    if spec is None or spec.loader is None:
+        msg = f"cannot import calibration provenance scanner: {helper_path}"
+        if strict:
+            raise MetaBugViolation(msg)
+        return [msg]
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    findings = module.scan(root)
+    violations = [
+        f"{f.path}:{f.lineno}: {f.target_name} = {f.literal_value}"
+        for f in findings
+    ]
+    if violations and strict:
+        raise MetaBugViolation("CALIBRATION PROVENANCE VIOLATIONS:\n" + "\n".join(violations))
+    if verbose:
+        if violations:
+            print(f"  [calibration-provenance] {len(violations)} violation(s)")
+        else:
+            print("  [calibration-provenance] OK")
+    return violations
+
+
+def check_reverse_engineering_tree_curation(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Keep reverse_engineering/ curated and force raw material into custody manifests."""
+    root = Path(repo_root or REPO_ROOT)
+    required = [
+        root / "reverse_engineering" / "README.md",
+        root / "reverse_engineering" / ".gitignore",
+    ]
+    missing = [path.relative_to(root).as_posix() for path in required if not path.is_file()]
+    violations = [f"missing required reverse-engineering surface: {rel}" for rel in missing]
+    try:
+        from comma_lab.reverse_engineering import audit_reverse_engineering_tree, blocking_records
+    except Exception as exc:  # pragma: no cover - import failure is environment-specific
+        violations.append(f"cannot import comma_lab.reverse_engineering: {exc}")
+        records = []
+        blockers = []
+    else:
+        try:
+            records = audit_reverse_engineering_tree(root)
+            blockers = blocking_records(records)
+        except Exception as exc:
+            violations.append(f"reverse-engineering audit failed: {exc}")
+            records = []
+            blockers = []
+        for record in blockers:
+            violations.append(f"{record.relpath}: {record.disposition}: {record.reason}")
+    if violations and strict:
+        raise MetaBugViolation("REVERSE ENGINEERING TREE CURATION VIOLATIONS:\n" + "\n".join(violations))
+    if verbose:
+        if violations:
+            print(f"  [reverse-engineering-curation] {len(violations)} violation(s)")
+        else:
+            print(f"  [reverse-engineering-curation] OK ({len(records)} file(s), {len(blockers)} blocker(s))")
+    return violations
 
 
 # Directories scanned for Python meta-bug patterns. Mirrors TARGET_DIRS but
