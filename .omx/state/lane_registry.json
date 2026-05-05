@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-05-05T12:45:35Z",
+  "updated_at": "2026-05-05T14:11:06Z",
   "description": "Canonical lane maturity registry. See feedback_production_hardened_standard_definition_20260430.md for the 7-gate Level 3 standard. Maintained via tools/lane_maturity.py \u2014 bare edits OK for seeding but mark/unmark/audit-log are the supported interface going forward.",
   "gate_definitions": {
     "impl_complete": "Production code lands; no NotImplementedError; all CLI flags wired; all error paths covered.",
@@ -1021,15 +1021,15 @@
       "id": "lane_omega_w_v3",
       "name": "Lane \u03a9-W V3 (PoseNet-sensitivity weighting \u2014 pending Grand Council)",
       "phase": 1.0,
-      "level": 1,
+      "level": 2,
       "gates": {
         "impl_complete": {
           "status": true,
           "evidence": "scripts/remote_lane_omega_w_v3_pr106.sh (6389b) + experiments/repack_pr106_with_water_filling.py (11953b) + submissions/apogee_v2/{inflate.py,inflate.sh,src/} all present. 4-test smoke suite (src/tac/tests/test_lane_omega_w_v3_local_smoke.py) passes; stub-mode preview verified PR106 186239B \u2192 apogee_v2 164087B (-22152 / -11.9%); parser-roundtrip 28 tensors / 228958 params byte-faithful at commit c7f237eb."
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/results/apogee_v2_repack_20260504_claude/apogee_v2_archive.zip \u2014 164,087 bytes (-22,152 vs PR106 baseline 186,239) [empirical:experiments/results/apogee_v2_repack_20260504_claude]; rate-component score \u0394 -0.01475 (stub-mode all-ones sensitivity)"
         },
         "contest_cuda": {
           "status": false,
@@ -1714,8 +1714,8 @@
           "evidence": "docs/pr106_stacking_decision_table_20260504.md"
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "scripts/remote_lane_apogee_intN.sh (shared apogee_intN dispatch script with bits selector + heartbeat + harvest path)"
         }
       },
       "notes": "FALSIFIED 2026-05-04 by tools/apogee_intN_pareto.py \u2014 int7 archive is 205,158 bytes (+18,919 vs int8 187,731 bytes) for the same VERY-LOW distortion class. The non-byte-aligned int7 packing requires shift/mask boilerplate per block whereas int8 fits cleanly. Reactivation: only if a future packer eliminates the bit-aligned overhead (e.g., 2x int7 -> 14-bit aligned; or context model on the bit-stream)."
@@ -1751,8 +1751,8 @@
           "evidence": "docs/pr100_latent_sidecar_porting_proposal_20260504.md (160-line proposal with byte-layout comparison + council gate + 3-stage implementation plan)"
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "scripts/remote_lane_pr106_latent_sidecar.sh (NVDEC probe + heartbeat + keep-work-dir + contest-CUDA tag + predicted_band)"
         }
       },
       "notes": "PROPOSAL \u2014 pre-registered at L0 per CLAUDE.md. Per-pair (dim_idx, delta_q) sidecar adds ~1.2KB to PR106 archive; predicted -0.00218 score \u0394 via PR100-vs-PR105 empirical (same arch family, +1124b/-0.00218 = net win). Stacks orthogonally with apogee_intN bit-width reduction. Cost: ~$0.60 (Vast.ai 4090 brute-force search + contest-CUDA eval). Council gate REQUIRED before implementation per design-decisions-non-negotiable. Reactivation: council 5/8 GO + operator approves dispatch. Cross-ref: docs/pr100_latent_sidecar_porting_proposal_20260504.md"
@@ -1788,8 +1788,8 @@
           "evidence": "docs/codex_metric_yshift_audit_20260504.md (93-line audit with apply-logic deconstruction + stacking analysis + cost estimate)"
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "scripts/remote_lane_pr106_yshift_sidechannel.sh (NVDEC probe + heartbeat + keep-work-dir + contest-CUDA tag + predicted_band)"
         }
       },
       "notes": "PROPOSAL \u2014 pre-registered at L0 per CLAUDE.md. Per-frame 3-byte (Y_offset, dy, dx) sidechannel; ~1-2KB brotli'd. Predicted -0.0005 to -0.0015 score \u0394 on PR106 base. STACKS orthogonally with lane_pr106_latent_sidecar (latent-space vs pixel-space corrections operate at different forward-pass stages). Stacked predicted ~-0.003 score \u0394 at ~3KB combined sidechannel cost. Cost: ~$0.60 (brute-force 49\u00d7255 dy/dx/Y candidates \u00d7 1200 frames on Vast.ai 4090). Council gate REQUIRED per design-decisions-non-negotiable. Implement only AFTER lane_pr106_latent_sidecar lands an empirical result. Cross-ref: docs/codex_metric_yshift_audit_20260504.md"
@@ -1825,8 +1825,8 @@
           "evidence": "reference_score_aware_sidechannel_paradigm_20260504.md + docs/codex_metric_lrl1_audit_20260504.md"
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "scripts/remote_lane_pr106_lrl1_sidechannel.sh (NVDEC probe + heartbeat + keep-work-dir + contest-CUDA tag + predicted_band)"
         }
       },
       "notes": ""
@@ -1862,8 +1862,8 @@
           "evidence": "tools/sidechannel_stack_predictor.py + sister-lane composition pattern"
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "scripts/remote_lane_pr106_stacked.sh (3-stage compose + parser-roundtrip + contest_auth_eval + heartbeat + harvest)"
         }
       },
       "notes": ""
