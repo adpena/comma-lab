@@ -1,0 +1,19 @@
+{
+  "archive_path": "experiments/results/lane_pr106_yshift_sidechannel_smoke_20260505T065831Z_advisory/pr106_yshift_sidechannel_archive.zip",
+  "archive_size_bytes": 186283,
+  "pr106_size_bytes": 186239,
+  "delta_bytes": 44,
+  "rate_component_score_delta_vs_pr106": 2.929779393737554e-05,
+  "search_mode": "zero",
+  "score_step": 1.0,
+  "n_pairs": 600,
+  "n_frames": 1200,
+  "sc01_payload_bytes": 3614,
+  "sc01_brotli_bytes": 37,
+  "outer_dispatch_magic": "0xFC",
+  "sc01_mode_id": 7,
+  "tag": "[advisory only]",
+  "council_status": "PROPOSAL \u2014 pre-registered at L1; gated on lane_pr106_latent_sidecar empirical",
+  "score_claim": false,
+  "next_step": "search-mode=zero is CPU smoke ONLY (all-zero corrections; pure wire-format proof). For real distortion improvement, dispatch via scripts/remote_lane_pr106_yshift_sidechannel.sh with PR106_YSHIFT_MODE=gradient (or brute_force) on Vast.ai 4090. ONLY dispatch if lane_pr106_latent_sidecar lands < 0.20800 [contest-CUDA] (per docs/INDEX_score_aware_sidechannel_thread_20260504.md decision pipeline TICK 2)."
+}
