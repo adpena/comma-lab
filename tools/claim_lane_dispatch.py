@@ -234,6 +234,17 @@ def _claim(args: argparse.Namespace) -> int:
         conflict: list[Claim] = [
             c for c in latest_status_by_job.values() if not _is_terminal(c.status)
         ]
+        closed_instance_job_ids: set[tuple[str, str]] = {
+            key for key, c in latest_status_by_job.items() if _is_terminal(c.status)
+        }
+        if args.child_of and (args.lane_id, args.child_of) in closed_instance_job_ids:
+            print(
+                f"REFUSING_DISPATCH: --child-of {args.child_of} references a "
+                f"terminal claim row for lane_id={args.lane_id}; that dispatch "
+                f"already closed (terminal status) so children cannot attach",
+                file=sys.stderr,
+            )
+            return 2
         parent_matches = bool(args.child_of) and any(
             c.instance_job_id == args.child_of for c in conflict
         )

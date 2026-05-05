@@ -112,7 +112,7 @@ mkdir -p "$EVAL_DIR"
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$APOGEE_ARCHIVE" \
     --inflate-sh "$INFLATE_SH" \
-    --out-dir "$EVAL_DIR" \
+    --work-dir "$EVAL_DIR" \
     --device cuda 2>&1 | tee -a "$LOG_DIR/run.log"
 
 # ── Final summary ─────────────────────────────────────────────────────────
