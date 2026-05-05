@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-05-05T06:58:38Z",
+  "updated_at": "2026-05-05T07:26:51Z",
   "description": "Canonical lane maturity registry. See feedback_production_hardened_standard_definition_20260430.md for the 7-gate Level 3 standard. Maintained via tools/lane_maturity.py \u2014 bare edits OK for seeding but mark/unmark/audit-log are the supported interface going forward.",
   "gate_definitions": {
     "impl_complete": "Production code lands; no NotImplementedError; all CLI flags wired; all error paths covered.",
@@ -1793,6 +1793,43 @@
         }
       },
       "notes": "PROPOSAL \u2014 pre-registered at L0 per CLAUDE.md. Per-frame 3-byte (Y_offset, dy, dx) sidechannel; ~1-2KB brotli'd. Predicted -0.0005 to -0.0015 score \u0394 on PR106 base. STACKS orthogonally with lane_pr106_latent_sidecar (latent-space vs pixel-space corrections operate at different forward-pass stages). Stacked predicted ~-0.003 score \u0394 at ~3KB combined sidechannel cost. Cost: ~$0.60 (brute-force 49\u00d7255 dy/dx/Y candidates \u00d7 1200 frames on Vast.ai 4090). Council gate REQUIRED per design-decisions-non-negotiable. Implement only AFTER lane_pr106_latent_sidecar lands an empirical result. Cross-ref: docs/codex_metric_yshift_audit_20260504.md"
+    },
+    {
+      "id": "lane_pr106_lrl1_sidechannel",
+      "name": "PR106 LRL1 Sidechannel",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/build_pr106_lrl1_sidechannel.py + submissions/pr106_lrl1_sidechannel/{inflate.py,inflate.sh,__init__.py} + scripts/remote_lane_pr106_lrl1_sidechannel.sh + src/tac/tests/test_pr106_lrl1_sidechannel.py (25/25 PASSED) [advisory only \u2014 CPU-smoke wire-format scaffolding; CUDA scorer-driven (basis, coeffs) at remote Stage 3]"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/lane_pr106_lrl1_sidechannel_smoke_20260505T072638Z_advisory/build_metadata.json \u2014 bit-exact LR01 wire-format roundtrip on real PR106 anchor (186,131 bytes); pr106_lrl1_sidechannel_archive.zip (186,289 bytes, +50 vs PR106 zip) [advisory only \u2014 CPU smoke; K=4 basis 48x64 zero-init; CUDA empirical pending Stage 3 dispatch gated on TICK 3]"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "reference_score_aware_sidechannel_paradigm_20260504.md + docs/codex_metric_lrl1_audit_20260504.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ]
 }

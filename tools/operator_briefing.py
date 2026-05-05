@@ -82,6 +82,28 @@ PHASE_4_GATED_LANES = [
             "  --env PR106_YSHIFT_MODE=brute_force"
         ),
     },
+    {
+        "lane_id": "lane_pr106_lrl1_sidechannel",
+        "name": "PR106 + per-frame LRL1 luma low-rank correction (codex_metric LRL1 mode-8 pattern, variant #6)",
+        "predicted_band": (0.2050, 0.2065),
+        "estimated_cost_usd": 0.50,
+        "council_priority": 3,
+        "max_dph": 0.30,
+        "gate_condition": (
+            "DISPATCH ONLY IF lane_pr106_yshift_sidechannel lands < 0.20650 [contest-CUDA] "
+            "(per docs/INDEX_score_aware_sidechannel_thread_20260504.md TICK 3 — 3rd "
+            "stack-on after both variants #1 latent_sidecar AND #3 yshift land empirically). "
+            "Verify via: `tools/score_dashboard.py --filter pr106_yshift_sidechannel`."
+        ),
+        "one_liner": (
+            ".venv/bin/python scripts/launch_lane_on_vastai.py full \\\n"
+            "  --lane-script scripts/remote_lane_pr106_lrl1_sidechannel.sh \\\n"
+            "  --label lane_pr106_lrl1_sidechannel \\\n"
+            "  --predicted-band 0.2050 0.2065 \\\n"
+            "  --estimated-cost 0.50 --council-priority 3 --max-dph 0.30 \\\n"
+            "  --env PR106_LRL1_MODE=brute_force --env PR106_LRL1_K=4"
+        ),
+    },
 ]
 
 
