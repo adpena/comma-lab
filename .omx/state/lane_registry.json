@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-05-05T14:11:06Z",
+  "updated_at": "2026-05-05T15:52:21Z",
   "description": "Canonical lane maturity registry. See feedback_production_hardened_standard_definition_20260430.md for the 7-gate Level 3 standard. Maintained via tools/lane_maturity.py \u2014 bare edits OK for seeding but mark/unmark/audit-log are the supported interface going forward.",
   "gate_definitions": {
     "impl_complete": "Production code lands; no NotImplementedError; all CLI flags wired; all error paths covered.",
@@ -1521,8 +1521,8 @@
           "evidence": ""
         },
         "three_clean_review": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Adversarial-bug-pass landing 2026-05-04 found 0 CRITICAL / 0 Major / 4 Minor; 3 fixed inline. CPU smoke pre-dispatch wire-format-clean. Lightning dispatch in flight 2026-05-05T15:52:04Z."
         },
         "memory_entry": {
           "status": true,
