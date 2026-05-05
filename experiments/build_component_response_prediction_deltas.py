@@ -30,7 +30,7 @@ PERTURBATION_BASIS_FORMAT = "perturbation_basis_v1"
 PRODUCER = "experiments/build_component_response_prediction_deltas.py"
 COMPONENTS = ("posenet", "segnet", "combined")
 DEFAULT_EPSILONS = (-1.0, 0.0, 1.0)
-SCORE_EPS = 1e-12
+SCORE_EPS = 1e-12  # [heuristic:numerical-floor for division-safe component-response score ratios]
 LEAKAGE_KEYS = {
     "actual_delta",
     "contest_auth_eval",

@@ -71,7 +71,7 @@ from model import HNeRVDecoder  # type: ignore[import-not-found]  # noqa: E402
 
 SIDECAR_MAGIC = 0xFE
 SIDECAR_FORMAT_ID = 0x01
-DELTA_SCALE = 0.01  # int8 quant: real_delta = i8 * 0.01 (range +- 1.27)
+DELTA_SCALE = 0.01  # [inherited:PR100/hnerv_lc_v2/sidecar.py] int8 quant: real_delta = i8 * 0.01 (range ±1.27)
 NO_OP_DIM = 255
 
 CAMERA_H, CAMERA_W = 874, 1164

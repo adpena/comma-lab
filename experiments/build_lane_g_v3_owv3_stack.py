@@ -42,7 +42,7 @@ PFP16_FRONTIER_ARCHIVE_BYTES = 686_635
 PFP16_FRONTIER_ARCHIVE_SHA256 = (
     "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
 )
-PFP16_FRONTIER_SCORE = 1.043987524793892
+PFP16_FRONTIER_SCORE = 1.043987524793892  # [empirical:reports/raw/pfp16_a_plus_plus_deploy_baseline_freeze_20260501] PFP16 A++ deploy baseline contest-CUDA T4
 
 
 def _sha256(data: bytes | Path) -> str:

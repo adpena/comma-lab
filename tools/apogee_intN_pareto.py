@@ -3,8 +3,10 @@
 
 Reads every `experiments/results/apogee_int*_repack_*/repack_metadata.json`,
 sorts by archive size, marks Pareto-dominated configs (smaller AND lower-risk
-exists), and prints a one-glance dispatch decision matrix with operator-ready
-one-liners per non-dominated config.
+exists), and prints a one-glance decision matrix. Because this lane currently
+has no contest-faithful distortion model, it does not emit dispatch one-liners
+by default; use `--emit-forensic-one-liners` only for explicitly
+non-promotable byte/parser forensics.
 
 A config is Pareto-dominated when there exists another config with BOTH:
   - smaller archive_size_bytes (better rate)
@@ -21,13 +23,17 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-PR106_BASELINE_SCORE = 0.20945673
+PR106_BASELINE_SCORE = 0.20945673  # [calibration:.omx/calibration/anchors_apogee_intN.json] PR106 lossless contest-CUDA T4 anchor
 RISK_ORDER = ["ALMOST LOSSLESS", "VERY LOW", "LOW", "MEDIUM", "HIGH"]
+DISPATCH_BLOCKERS = [
+    "missing_contest_faithful_distortion_model",
+    "missing_scorer_basin_parity_gate",
+    "byte_only_prediction_not_score_evidence",
+]
 
 
 @dataclass
@@ -43,6 +49,11 @@ class ApogeeRow:
     pareto_dominated_by: int | None
     predicted_low: float
     predicted_high: float
+    ready_for_exact_eval_dispatch: bool
+    dispatch_blockers: list[str]
+    prediction_status: str | None
+    source_archive_sha256: str | None
+    candidate_archive_sha256: str | None
 
     def risk_rank(self) -> int:
         return RISK_ORDER.index(self.distortion_risk) if self.distortion_risk in RISK_ORDER else len(RISK_ORDER)
@@ -79,6 +90,11 @@ def scan(repo_root: Path) -> list[ApogeeRow]:
             pareto_dominated_by=None,
             predicted_low=lo,
             predicted_high=hi,
+            ready_for_exact_eval_dispatch=False,
+            dispatch_blockers=list(DISPATCH_BLOCKERS),
+            prediction_status=data.get("prediction_status"),
+            source_archive_sha256=data.get("source_archive_sha256"),
+            candidate_archive_sha256=data.get("candidate_archive_sha256"),
         ))
     # Sort ascending by bits for stable display
     rows.sort(key=lambda r: r.bits)
@@ -93,34 +109,51 @@ def scan(repo_root: Path) -> list[ApogeeRow]:
     return rows
 
 
-def _format_table(rows: list[ApogeeRow]) -> str:
+def _format_table(rows: list[ApogeeRow], *, emit_forensic_one_liners: bool = False) -> str:
     if not rows:
         return "(no apogee_intN repack manifests found)"
     out_lines: list[str] = []
     out_lines.append(f"PR106 baseline: 0.{int(PR106_BASELINE_SCORE * 1e8):08d}, 186,239 bytes")
     out_lines.append("")
-    header = f"{'bits':>4}  {'bytes':>8}  {'delta':>8}  {'rate Δ':>9}  {'risk':<16}  {'predicted band':<18}  {'pareto':<10}"
+    header = (
+        f"{'bits':>4}  {'bytes':>8}  {'delta':>8}  {'rate Δ':>9}  "
+        f"{'risk':<16}  {'predicted band':<18}  {'pareto':<10}  {'dispatch':<9}"
+    )
     out_lines.append(header)
     out_lines.append("-" * len(header))
     for r in rows:
-        if r.pareto_dominated_by is not None:
-            pareto_str = f"DOM by int{r.pareto_dominated_by}"
-        else:
-            pareto_str = "FRONTIER"
+        pareto_str = (
+            f"DOM by int{r.pareto_dominated_by}" if r.pareto_dominated_by is not None else "FRONTIER"
+        )
         out_lines.append(
             f"{r.bits:>4}  {r.archive_size_bytes:>8,}  {r.delta_bytes:>+8,}  "
-            f"{r.rate_score_delta:>+9.4f}  {r.distortion_risk:<16}  {r.predicted_band:<18}  {pareto_str:<10}"
+            f"{r.rate_score_delta:>+9.4f}  {r.distortion_risk:<16}  "
+            f"{r.predicted_band:<18}  {pareto_str:<10}  {'BLOCKED':<9}"
         )
     out_lines.append("")
-    out_lines.append("=== DISPATCH ONE-LINERS (Pareto-frontier configs only) ===")
+    out_lines.append("ready_for_exact_eval_dispatch=false")
+    out_lines.append(
+        "Blocker: no contest-faithful distortion model or scorer-basin parity gate "
+        "for the changed intN representation."
+    )
+    out_lines.append("")
+    if not emit_forensic_one_liners:
+        out_lines.append(
+            "No dispatch one-liners emitted. Pass --emit-forensic-one-liners "
+            "only for non-promotable forensics."
+        )
+        return "\n".join(out_lines)
+    out_lines.append("=== FORENSIC BYTE-ONLY ONE-LINERS (not score dispatch) ===")
     out_lines.append("")
     for r in rows:
         if r.pareto_dominated_by is not None:
             continue
         beats_baseline = r.predicted_high < PR106_BASELINE_SCORE
-        marker = "🎯" if beats_baseline else "  "
-        out_lines.append(f"{marker} int{r.bits}  predicted [{r.predicted_low:.3f}, {r.predicted_high:.3f}]  "
-                        f"({'beats' if beats_baseline else 'may match/exceed'} PR106 0.20946):")
+        marker = "rate-only" if beats_baseline else "forensic"
+        out_lines.append(
+            f"# {marker} int{r.bits} predicted [{r.predicted_low:.3f}, {r.predicted_high:.3f}] "
+            "but blocked for score dispatch without distortion evidence:"
+        )
         out_lines.append(
             f"    APOGEE_INTN_BITS={r.bits} .venv/bin/python scripts/launch_lane_on_vastai.py full \\\n"
             f"      --lane-script scripts/remote_lane_apogee_intN.sh \\\n"
@@ -129,7 +162,7 @@ def _format_table(rows: list[ApogeeRow]) -> str:
             f"      --estimated-cost 0.30 --council-priority 1 --max-dph 0.30"
         )
         out_lines.append("")
-    out_lines.append("(All dispatches use the same scripts/remote_lane_apogee_intN.sh wrapper;")
+    out_lines.append("(All forensic one-liners use the same scripts/remote_lane_apogee_intN.sh wrapper;")
     out_lines.append(" APOGEE_INTN_BITS=N env var picks bit-width — magic byte = 0xA0 | bits.)")
     return "\n".join(out_lines)
 
@@ -138,6 +171,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--json", action="store_true",
                         help="Machine-readable JSON output instead of human table.")
+    parser.add_argument(
+        "--emit-forensic-one-liners",
+        action="store_true",
+        help="Emit legacy launch commands, explicitly marked forensic and non-promotable.",
+    )
     args = parser.parse_args(argv)
 
     rows = scan(REPO_ROOT)
@@ -147,11 +185,13 @@ def main(argv: list[str] | None = None) -> int:
             "pr106_baseline_bytes": 186239,
             "n_configs": len(rows),
             "n_pareto_frontier": sum(1 for r in rows if r.pareto_dominated_by is None),
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_blockers": DISPATCH_BLOCKERS,
             "rows": [asdict(r) for r in rows],
         }
         print(json.dumps(out, indent=2))
     else:
-        print(_format_table(rows))
+        print(_format_table(rows, emit_forensic_one_liners=args.emit_forensic_one_liners))
     return 0
 
 

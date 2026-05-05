@@ -44,7 +44,7 @@ DEFAULT_PAIRED_PFP16_ARCHIVE = (
     / "lane_g_v3_pfp16"
     / "archive_lane_g_v3_pfp16.zip"
 )
-PFP16_A_PLUS_PLUS_SCORE = 1.043987524793892
+PFP16_A_PLUS_PLUS_SCORE = 1.043987524793892  # [empirical:reports/raw/pfp16_a_plus_plus_deploy_baseline_freeze_20260501] PFP16 A++ deploy baseline contest-CUDA T4
 PFP16_A_PLUS_PLUS_POSENET_DIST = 0.00346442
 PFP16_A_PLUS_PLUS_SEGNET_DIST = 0.00400656
 R5_COMPONENT_RELATIVE_CAP = 1.002
