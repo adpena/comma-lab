@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-05-05T15:52:21Z",
+  "updated_at": "2026-05-05T17:42:54Z",
   "description": "Canonical lane maturity registry. See feedback_production_hardened_standard_definition_20260430.md for the 7-gate Level 3 standard. Maintained via tools/lane_maturity.py \u2014 bare edits OK for seeding but mark/unmark/audit-log are the supported interface going forward.",
   "gate_definitions": {
     "impl_complete": "Production code lands; no NotImplementedError; all CLI flags wired; all error paths covered.",
@@ -1513,8 +1513,8 @@
           "evidence": "experiments/results/apogee_int4_repack_20260504_claude/repack_metadata.json"
         },
         "contest_cuda": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "1.4287 [contest-CUDA Lightning T4] 2026-05-05T17:40Z FALSIFIED int4 Pareto-dominated by int8 \u2014 see ~/.claude/projects/-Users-adpena-Projects-pact/memory/project_apogee_int4_FALSIFIED_score_1_43_dispatcher_VALIDATED_20260505.md"
         },
         "strict_preflight": {
           "status": false,
