@@ -12,11 +12,13 @@ recipe):
 
 REFUSAL MODES (council Q1 prescription) — checked in this exact order:
   1. INSUFFICIENT_ANCHORS:  <3 calibration anchors loaded
-  2. EXTRAPOLATION:  requested rel_err outside calibration range (with 20% margin)
-  3. HIGH_REL_ERR_WITHOUT_PROXY:  rel_err > 1.0% AND no distortion_proxy provided
-  4. CURVE_FIT_DEGENERATE:  insufficient lossy anchors to fit power-law curve
-  5. CURVE_FIT_NON_MONOTONE:  fitted exponent b ≤ 0 (distortion would decrease with rel_err)
-  6. LOSSY_BETTER_THAN_LOSSLESS_INCOHERENT:  predicted_high < tightest lossless baseline AND rel_err > 0
+  2. LOSSY_ANCHOR_INVALID_NO_RATE_SAVINGS:  any lossy anchor has archive_bytes >= tightest lossless
+  3. EXTRAPOLATION:  requested rel_err outside calibration range (with 20% margin)
+  4. HIGH_REL_ERR_WITHOUT_PROXY:  rel_err > 1.0% AND no distortion_proxy provided
+  5. CURVE_FIT_DEGENERATE:  insufficient lossy anchors to fit power-law curve
+  6. CURVE_FIT_DEGENERATE_NUMERICAL_FLOOR:  proxy curve fit hit the numerical floor
+  7. CURVE_FIT_NON_MONOTONE:  fitted exponent b ≤ 0 (distortion would decrease with rel_err)
+  8. LOSSY_BETTER_THAN_LOSSLESS_INCOHERENT:  predicted_high < tightest lossless baseline AND rel_err > 0
 
 The empirical apogee_int4 fixture (rel_err=7.09%, score 1.4287) is the
 acceptance test in `src/tac/tests/test_score_band_predictor.py`.
@@ -213,9 +215,41 @@ def predict_score_band(
             derivation="Predictor requires ≥3 calibration anchors per council Q1 (Dykstra).",
         )
 
+    # ── Refusal #2 (Bug #2 root-cause fix 2026-05-05) ─────────────────────
+    # A "lossy" anchor (rel_err > 0) MUST have archive_bytes strictly less
+    # than the tightest lossless anchor — that's the entire point of being
+    # lossy. The predictor's curve-fit assumes monotone rate reduction along
+    # the lossy direction; an anchor that is BOTH lossy AND larger than
+    # lossless violates this assumption and produces a degenerate fit.
+    #
+    # Concrete failure (canonical anchor file 2026-05-05): int8 anchor at
+    # 187,731 bytes > PR106 lossless 186,239 bytes (+1,492 bytes layout
+    # overhead). The "lossy" int8 brings no rate savings; treating it as a
+    # lossy data point poisons the power-law regression.
+    lossless = [a for a in calibration_anchors if a.rel_err_pct_per_weight == 0.0]
+    if lossless:
+        tightest_lossless_bytes = min(a.archive_bytes for a in lossless)
+        offending = [
+            a for a in calibration_anchors
+            if a.rel_err_pct_per_weight > 0.0 and a.archive_bytes >= tightest_lossless_bytes
+        ]
+        if offending:
+            names = ", ".join(f"{a.lane_id}({a.archive_bytes}B)" for a in offending)
+            return ScoreBand(
+                low=0.0, high=0.0, confidence="none",
+                refused=True,
+                refusal_reason=(
+                    f"lossy_anchor_invalid_no_rate_savings: anchor(s) [{names}] are labeled "
+                    f"lossy (rel_err>0) but have archive_bytes >= tightest lossless ({tightest_lossless_bytes}B). "
+                    "A lossy anchor with no rate savings is structurally invalid; relabel it as a "
+                    "compatibility/layout anchor and exclude from lossy-curve fitting."
+                ),
+                derivation="Council Q1 (Dykstra/Shannon): lossy direction must reduce rate.",
+            )
+
     rate_unscaled = archive_bytes / PR106_TOTAL_RATE_DENOM
 
-    # ── Refusal #2: extrapolation outside anchor range ────────────────────
+    # ── Refusal #3: extrapolation outside anchor range ────────────────────
     # Order: extrapolation check before proxy gate per docstring contract (C1).
     rel_err_anchors = [a.rel_err_pct_per_weight for a in calibration_anchors]
     rel_err_min, rel_err_max = min(rel_err_anchors), max(rel_err_anchors)
@@ -249,10 +283,39 @@ def predict_score_band(
     pred_pose: float
     pred_seg: float
     method: str
+    # Bug #7 (root-cause fix 2026-05-05): track proxy fit quality so band
+    # confidence + width can be adjusted when the proxy's internal curve fit
+    # is degenerate (e.g., one anchor's per-component excess is below the
+    # numerical floor — Bug #1). The previous code unconditionally tagged
+    # `calibrated_strong` whenever a proxy was supplied, regardless of fit.
+    proxy_fit_degenerate = False
+    proxy_degenerate_reason = ""
     if distortion_proxy is not None:
         pred_pose, pred_seg = distortion_proxy(archive_bytes, rel_err_pct_per_weight, n_quantized_layers)
         method = "proxy"
         derivation_pieces = ["distortion via local proxy"]
+        # Inspect the proxy's exposed curves (if any) for NaN-as-degenerate.
+        proxy_curves = getattr(distortion_proxy, "curves", None)
+        if isinstance(proxy_curves, dict):
+            degenerate_components = []
+            for comp_name in ("pose", "seg"):
+                comp = proxy_curves.get(comp_name)
+                if isinstance(comp, dict):
+                    a = comp.get("a", float("nan"))
+                    b = comp.get("b", float("nan"))
+                    reason = comp.get("degenerate_reason", "")
+                    try:
+                        is_nan = math.isnan(a) or math.isnan(b)
+                    except TypeError:
+                        is_nan = True
+                    if is_nan or reason:
+                        degenerate_components.append(f"{comp_name}({reason or 'NaN'})")
+            if degenerate_components:
+                proxy_fit_degenerate = True
+                proxy_degenerate_reason = "; ".join(degenerate_components)
+                derivation_pieces.append(
+                    f"proxy_curve_degenerate[{proxy_degenerate_reason}] → confidence downgraded + band widened 50%"
+                )
     else:
         # Use fitted curve for low-rel-err regime (≤1%).
         curve = fit_distortion_curve(calibration_anchors)
@@ -293,9 +356,15 @@ def predict_score_band(
         derivation_pieces = [f"power-law fit a={curve['a']:.4g} b={curve['b']:.4g}"]
 
     point_score = _score_from_components(pred_pose, pred_seg, rate_unscaled)
-    band_low = point_score - band_half_width_score
-    band_high = point_score + band_half_width_score
-    derivation_pieces.append(f"point_score={point_score:.4f} ± {band_half_width_score}")
+    # Bug #7 fix: when the proxy fit is degenerate, widen the band by 50%
+    # per Boyd interval-inflation under degenerate fit. This ensures downstream
+    # consumers see a wider uncertainty range matching the actual fit quality.
+    effective_half_width = band_half_width_score
+    if proxy_fit_degenerate:
+        effective_half_width = band_half_width_score * 1.5
+    band_low = point_score - effective_half_width
+    band_high = point_score + effective_half_width
+    derivation_pieces.append(f"point_score={point_score:.4f} ± {effective_half_width}")
 
     # ── Refusal #6: lossy-better-than-lossless sanity gate ────────────────
     # Use the TIGHTEST (best) lossless score per M2 from review — multiple
@@ -316,8 +385,14 @@ def predict_score_band(
             )
 
     # ── Confidence label ──────────────────────────────────────────────────
+    # Bug #7 fix: degraded proxy fits do NOT earn `calibrated_strong` —
+    # downgrade to `calibrated_weak` so consumers know the proxy did NOT
+    # carry meaningful per-component information.
     if method == "proxy":
-        confidence = "calibrated_strong"  # local proxy + anchors
+        if proxy_fit_degenerate:
+            confidence = "calibrated_weak"  # proxy curve fit is degenerate
+        else:
+            confidence = "calibrated_strong"  # local proxy + anchors, fit is healthy
     elif rel_err_min <= rel_err_pct_per_weight <= rel_err_max:
         confidence = "calibrated_weak"  # within range, no proxy
     else:

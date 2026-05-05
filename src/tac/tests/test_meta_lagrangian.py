@@ -29,7 +29,6 @@ from tac.predictor.score_band import (  # noqa: E402
     load_calibration_anchors,
 )
 
-
 # ── Test fixtures ─────────────────────────────────────────────────────────
 
 
@@ -118,8 +117,8 @@ def test_contest_score_uses_canonical_upstream_formula_constants() -> None:
     formula cannot drift from upstream/evaluate.py without breaking this test.
     """
     from tac.predictor.score_band import (
-        PR106_TOTAL_RATE_DENOM,
         POSE_COEFFICIENT_SQRT_INNER,
+        PR106_TOTAL_RATE_DENOM,
         RATE_COEFFICIENT,
         SEG_COEFFICIENT,
     )
@@ -156,6 +155,24 @@ def test_meta_lagrangian_evaluate_is_deterministic() -> None:
         )
         runs.append((ev.lagrangian, ev.proxy_pose, ev.proxy_seg, ev.band_low, ev.band_high))
     assert len(set(runs)) == 1, f"non-deterministic evaluate: {len(set(runs))} unique tuples"
+
+
+def test_meta_lagrangian_preserves_archive_path(tmp_path: Path) -> None:
+    archive = tmp_path / "candidate.zip"
+    archive.write_bytes(b"not-a-real-archive-for-unit-test")
+    search = MetaLagrangianSearch(_make_anchors(), _honest_proxy)
+
+    ev = search.evaluate_candidate(
+        candidate_id="path_check",
+        archive_bytes=187731,
+        rel_err_pct=0.24,
+        n_layers=13,
+        lane_class="apogee_intN",
+        archive_path=archive,
+    )
+
+    assert ev.archive_path == archive
+    assert ev.sanity_failures != ["sanity_skipped: archive_path not yet produced"]
 
 
 def test_meta_lagrangian_is_arch_agnostic_on_anchor_swap() -> None:
@@ -347,7 +364,15 @@ def test_top_k_sorts_by_lagrangian() -> None:
 
 
 def test_load_anchors_from_disk_and_evaluate(tmp_path: Path) -> None:
-    """Live-integration: load .omx/calibration/anchors_apogee_intN.json + evaluate."""
+    """Live-integration: load .omx/calibration/anchors_apogee_intN.json + evaluate.
+
+    Bug #2 (root-cause fix 2026-05-05): the canonical anchors file currently
+    has int8 archive_bytes=187731 > PR106 lossless 186239 — structurally
+    invalid (lossy anchor with no rate savings). The predictor MUST refuse
+    with `lossy_anchor_invalid_no_rate_savings`. This is the desired behavior
+    until the int8 anchor is either relabeled compat or replaced with one that
+    actually achieves rate savings.
+    """
     anchors_path = REPO_ROOT / ".omx" / "calibration" / "anchors_apogee_intN.json"
     if not anchors_path.is_file():
         pytest.skip("anchors file not present at repo path")
@@ -364,12 +389,289 @@ def test_load_anchors_from_disk_and_evaluate(tmp_path: Path) -> None:
         candidate_id="apogee_int8_anchor",
         archive_bytes=187731, rel_err_pct=0.24, n_layers=13, lane_class="apogee_intN",
     )
-    # int8 falls within the calibrated rel_err range and matches an anchor —
-    # predictor must NOT refuse. Sanity gate may pass/fail depending on
-    # whether tools/predispatch_sanity is reachable; we don't assert that here.
-    assert not int8_eval.band_refused, (
-        f"int8 refused unexpectedly: {int8_eval.band_refusal_reason}"
+    # The canonical anchors file is structurally invalid (Bug #2): int8 archive
+    # is LARGER than lossless. Predictor must refuse. This is the test that
+    # will start PASSING (in the not-refused sense) once the canonical anchors
+    # file is fixed (either relabel int8 as compat or replace with a smaller
+    # int8 archive that actually achieves rate savings).
+    assert int8_eval.band_refused, (
+        f"int8 expected refusal due to invalid anchor (Bug #2 - no rate savings); "
+        f"got band={int8_eval.band_low:.4f}-{int8_eval.band_high:.4f}"
     )
-    # Proxy must produce non-zero distortion estimates.
+    assert "lossy_anchor_invalid_no_rate_savings" in int8_eval.band_refusal_reason
+    # Proxy itself still computes (non-negative) distortion estimates.
     assert int8_eval.proxy_pose >= 0
     assert int8_eval.proxy_seg >= 0
+
+
+# ── Adversarial-review root-cause-fix regression tests (Bugs #1-#7, 2026-05-05)
+#    Each test pins one of the 7 bug-class fixes from the dispatch_readiness
+#    adversarial review. If any test starts failing, that bug class has
+#    re-introduced silent-success behavior. ────────────────────────────────
+
+
+def test_bug1_distortion_proxy_detects_degenerate_seg_floor(tmp_path: Path) -> None:
+    """Bug #1: when an anchor's per-component excess is below the numerical
+    floor, the per-component fit MUST be marked degenerate (NaN curve), not
+    silently regressed to a meaningless slope."""
+    sys.path.insert(0, str(REPO_ROOT))
+    from experiments.distortion_proxy_local import (  # type: ignore
+        DEGENERATE_EXCESS_THRESHOLD,
+        _fit_separate_curves,
+    )
+    # Two lossy anchors where one has seg_dist EQUAL to baseline (floor case).
+    anchors = [
+        {"rel_err_pct_per_weight": 0.0, "avg_pose_dist": 3.4e-5, "avg_seg_dist": 6.78e-4},
+        {"rel_err_pct_per_weight": 0.24, "avg_pose_dist": 3.4e-5,  # identical pose
+                                          "avg_seg_dist": 6.78e-4},  # identical seg → floor
+        {"rel_err_pct_per_weight": 7.09, "avg_pose_dist": 0.024, "avg_seg_dist": 0.0087},
+    ]
+    curves = _fit_separate_curves(anchors)
+    # Both pose and seg should be degenerate (the int8-shaped anchor matches baseline).
+    import math
+    assert math.isnan(curves["pose"]["a"]) and math.isnan(curves["pose"]["b"]), (
+        f"pose curve should be degenerate (NaN), got {curves['pose']}"
+    )
+    assert math.isnan(curves["seg"]["a"]) and math.isnan(curves["seg"]["b"]), (
+        f"seg curve should be degenerate (NaN), got {curves['seg']}"
+    )
+    # The degenerate_reason field must explain WHY.
+    assert "numerical_floor" in curves["pose"]["degenerate_reason"]
+    assert "numerical_floor" in curves["seg"]["degenerate_reason"]
+    assert DEGENERATE_EXCESS_THRESHOLD > 0
+
+
+def test_bug2_lossy_anchor_with_no_rate_savings_REFUSES() -> None:
+    """Bug #2: a lossy anchor (rel_err > 0) with archive_bytes >= tightest
+    lossless must trigger lossy_anchor_invalid_no_rate_savings refusal."""
+    from tac.predictor.score_band import predict_score_band
+    # Three anchors: lossless at 186K, "lossy" at 188K (no savings), int4 at 110K.
+    bad_lossy = CalibrationAnchor(
+        lane_id="bad_lossy",
+        rel_err_pct_per_weight=0.5,
+        archive_bytes=188000,  # LARGER than lossless 186239 → invalid
+        contest_cuda_score=0.21,
+        avg_pose_dist=3.5e-5,
+        avg_seg_dist=6.8e-4,
+        rate_unscaled=188000 / 37545489,
+        measured_utc="t",
+        job_id="j",
+        archive_sha256="sha",
+    )
+    lossless = CalibrationAnchor(
+        lane_id="lossless",
+        rel_err_pct_per_weight=0.0,
+        archive_bytes=186239,
+        contest_cuda_score=0.20945673,
+        avg_pose_dist=3.4e-5,
+        avg_seg_dist=6.78e-4,
+        rate_unscaled=186239 / 37545489,
+        measured_utc="t",
+        job_id="j",
+        archive_sha256="sha",
+    )
+    int4 = CalibrationAnchor(
+        lane_id="int4",
+        rel_err_pct_per_weight=7.09,
+        archive_bytes=109996,
+        contest_cuda_score=1.4287,
+        avg_pose_dist=0.024,
+        avg_seg_dist=0.0087,
+        rate_unscaled=109996 / 37545489,
+        measured_utc="t",
+        job_id="j",
+        archive_sha256="sha",
+    )
+    band = predict_score_band(
+        archive_bytes=140000,
+        rel_err_pct_per_weight=2.0,
+        n_quantized_layers=13,
+        calibration_anchors=[lossless, bad_lossy, int4],
+        distortion_proxy=lambda b, r, n: (1e-4, 1e-3),
+    )
+    assert band.refused
+    assert "lossy_anchor_invalid_no_rate_savings" in band.refusal_reason
+    assert "bad_lossy" in band.refusal_reason  # name surfaced for debug
+
+
+def test_bug3_default_sanity_gate_RAISES_when_helper_missing(tmp_path: Path, monkeypatch) -> None:
+    """Bug #3: when tools/predispatch_sanity.py is absent, the default sanity
+    gate MUST raise FileNotFoundError, not silently return passed=True."""
+    from tac.optimizer import meta_lagrangian as ml
+    # Point REPO_ROOT to an empty tmp dir so the helper file does not exist.
+    monkeypatch.setattr(ml, "REPO_ROOT", tmp_path)
+    with pytest.raises(FileNotFoundError, match="predispatch_sanity helper not found"):
+        ml._default_sanity_gate(
+            archive_path=tmp_path / "x.zip",
+            predicted_low=0.5, predicted_high=0.6,
+            rel_err_pct=0.5, lane_class="apogee_intN",
+            distortion_proxy_was_run=True,
+        )
+
+
+def test_bug3_meta_lagrangian_raises_on_missing_helper_when_archive_present(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """Bug #3 integration: search.evaluate_candidate must propagate the helper-
+    missing FileNotFoundError up via sanity_failures (no silent pass)."""
+    from tac.optimizer import meta_lagrangian as ml
+    monkeypatch.setattr(ml, "REPO_ROOT", tmp_path)
+    archive = tmp_path / "candidate.zip"
+    archive.write_bytes(b"fake-archive")
+    search = MetaLagrangianSearch(_make_anchors(), _honest_proxy)
+    ev = search.evaluate_candidate(
+        candidate_id="bug3",
+        archive_bytes=187731, rel_err_pct=0.24, n_layers=13, lane_class="apogee_intN",
+        archive_path=archive,
+    )
+    # The exception is caught + recorded as a sanity failure; the candidate is
+    # NOT eligible for dispatch.
+    assert not ev.sanity_passed
+    assert any("FileNotFoundError" in f for f in ev.sanity_failures), (
+        f"expected FileNotFoundError in sanity_failures, got {ev.sanity_failures}"
+    )
+    assert not ev.eligible_for_dispatch
+
+
+def test_bug4_remote_lane_script_requires_inflate_py_at_stage0() -> None:
+    """Bug #4: the remote lane script must require submissions/apogee_intN/
+    inflate.py existence and parse_apogee_intn_archive export at Stage 0,
+    BEFORE provenance is written."""
+    script = REPO_ROOT / "scripts" / "remote_lane_apogee_intN.sh"
+    assert script.is_file()
+    body = script.read_text()
+    # Verify the early require_file checks exist and reference the parser.
+    assert "require_file" in body, "require_file helper missing"
+    assert 'require_file "$WORKSPACE/submissions/apogee_intN/inflate.py"' in body, (
+        "early existence check for inflate.py missing"
+    )
+    assert "parse_apogee_intn_archive" in body, (
+        "Stage 0 must also verify parse_apogee_intn_archive symbol exists"
+    )
+    # The require_file invocations must come BEFORE the provenance.json write.
+    require_idx = body.index('require_file "$WORKSPACE/submissions/apogee_intN/inflate.py"')
+    prov_idx = body.index("provenance.json")
+    assert require_idx < prov_idx, (
+        "require_file checks must run BEFORE provenance is written; "
+        "otherwise the lane claim is burned before the existence check fires"
+    )
+
+
+def test_bug5_remote_lane_script_drops_ensure_dali_and_corrects_header() -> None:
+    """Bug #5: the script previously ran probe_nvdec.sh --ensure-dali while
+    its header claimed NO_NVDEC_NEEDED. Both must be fixed: header truthful
+    AND probe runs without --ensure-dali."""
+    script = REPO_ROOT / "scripts" / "remote_lane_apogee_intN.sh"
+    body = script.read_text()
+    # Header must NOT claim NO_NVDEC_NEEDED.
+    assert "NO_NVDEC_NEEDED" not in body, (
+        "header NO_NVDEC_NEEDED claim is incorrect — DALI is used by upstream/evaluate.py"
+    )
+    # Probe call must NOT pass --ensure-dali (auto-install hides install errors).
+    assert "--ensure-dali" not in body, (
+        "probe_nvdec.sh must run without --ensure-dali; DALI must be pre-installed"
+    )
+    # The probe still runs (we did not delete it).
+    assert "probe_nvdec.sh" in body
+
+
+def test_bug6_score_parser_validates_numeric_and_no_silent_fallback() -> None:
+    """Bug #6: the score parser previously had `2>/dev/null || echo PARSE_FAIL`
+    which swallowed Python errors AND silently logged a string. The fix: Python
+    errors propagate via set -e, and the SCORE value is regex-validated."""
+    script = REPO_ROOT / "scripts" / "remote_lane_apogee_intN.sh"
+    body = script.read_text()
+    # The string-fallback PARSE_FAIL must be GONE.
+    assert "PARSE_FAIL" not in body, (
+        "PARSE_FAIL silent string fallback must be removed"
+    )
+    # The "2>/dev/null" suppression of stderr in the score parser must be GONE.
+    # (We allow it elsewhere in the script for genuinely optional probes, but
+    # NOT on the json.load score parse.)
+    score_lines = [
+        ln for ln in body.split("\n")
+        if "json.load" in ln and "final_score" in ln
+    ]
+    assert score_lines, "score parser line not found"
+    for ln in score_lines:
+        assert "2>/dev/null" not in ln, (
+            f"score parse line must not suppress stderr: {ln}"
+        )
+    # The numeric regex validation must be present.
+    assert "^-?[0-9]+(\\.[0-9]+)?" in body, "numeric SCORE regex check missing"
+
+
+def test_bug7_proxy_degenerate_curve_downgrades_confidence_and_widens_band() -> None:
+    """Bug #7: when distortion_proxy.curves contains NaN coefficients (degenerate
+    fit per Bug #1), the predictor must downgrade confidence to calibrated_weak
+    AND widen the band by 50% (per Boyd interval inflation under degenerate fit)."""
+    from tac.predictor.score_band import predict_score_band
+    # Use a structurally valid 3-anchor set (lossy < lossless bytes) so the new
+    # Bug #2 refusal does not fire and we can isolate Bug #7 behavior.
+    valid_int8 = CalibrationAnchor(
+        lane_id="valid_int8",
+        rel_err_pct_per_weight=0.24,
+        archive_bytes=160000,  # smaller than lossless 186239
+        contest_cuda_score=0.20,
+        avg_pose_dist=3.375e-5,
+        avg_seg_dist=0.00067819,
+        rate_unscaled=160000 / PR106_TOTAL_RATE_DENOM,
+        measured_utc="t",
+        job_id="j",
+        archive_sha256="sha",
+    )
+    canonical = _make_anchors()
+    # Replace the broken int8 anchor with our valid one.
+    anchors = [canonical[0], valid_int8, canonical[2]]
+
+    # Healthy proxy → calibrated_strong.
+    def healthy_proxy(b, r, n):
+        return (3.5e-5, 6.8e-4)
+
+    healthy_proxy.curves = {  # type: ignore
+        "pose": {"a": 1e-3, "b": 1.0, "d_baseline": 3.4e-5, "degenerate_reason": ""},
+        "seg":  {"a": 1e-3, "b": 1.0, "d_baseline": 6.78e-4, "degenerate_reason": ""},
+    }
+    band_healthy = predict_score_band(
+        archive_bytes=160000,
+        rel_err_pct_per_weight=0.24,
+        n_quantized_layers=13,
+        calibration_anchors=anchors,
+        distortion_proxy=healthy_proxy,
+        band_half_width_score=0.05,
+    )
+    assert not band_healthy.refused
+    assert band_healthy.confidence == "calibrated_strong"
+    healthy_width = band_healthy.high - band_healthy.low
+
+    # Degenerate proxy (NaN curves) → calibrated_weak + band widened 50%.
+    import math
+
+    def degen_proxy(b, r, n):
+        return (3.5e-5, 6.8e-4)
+
+    degen_proxy.curves = {  # type: ignore
+        "pose": {"a": float("nan"), "b": float("nan"), "d_baseline": 3.4e-5,
+                 "degenerate_reason": "numerical_floor: 1 of 2 ..."},
+        "seg":  {"a": float("nan"), "b": float("nan"), "d_baseline": 6.78e-4,
+                 "degenerate_reason": "numerical_floor: 1 of 2 ..."},
+    }
+    band_degen = predict_score_band(
+        archive_bytes=160000,
+        rel_err_pct_per_weight=0.24,
+        n_quantized_layers=13,
+        calibration_anchors=anchors,
+        distortion_proxy=degen_proxy,
+        band_half_width_score=0.05,
+    )
+    assert not band_degen.refused
+    assert band_degen.confidence == "calibrated_weak", (
+        f"degenerate proxy must downgrade confidence; got {band_degen.confidence}"
+    )
+    degen_width = band_degen.high - band_degen.low
+    # 50% wider (within float tolerance).
+    assert math.isclose(degen_width, 1.5 * healthy_width, rel_tol=1e-9), (
+        f"degenerate band width {degen_width:.4f} should be 1.5x healthy {healthy_width:.4f}"
+    )
+    # Derivation must mention the degeneracy + downgrade.
+    assert "proxy_curve_degenerate" in band_degen.derivation

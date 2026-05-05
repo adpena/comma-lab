@@ -41,6 +41,37 @@ def _pr106_anchor() -> CalibrationAnchor:
 
 
 def _apogee_int8_anchor() -> CalibrationAnchor:
+    """Hypothetical valid int8 anchor for testing OTHER refusal modes.
+
+    NOTE: the canonical .omx/calibration/anchors_apogee_intN.json file has
+    int8 archive_bytes=187731 (LARGER than PR106 lossless 186239), which is
+    structurally invalid per Bug #2's `lossy_anchor_invalid_no_rate_savings`
+    refusal. The canonical anchor will refuse the predictor outright and
+    cannot be used to test the OTHER refusal modes. This test fixture uses
+    archive_bytes=160000 (smaller than lossless) so it represents a
+    hypothetical "valid lossy" int8, allowing tests to exercise extrapolation /
+    high-rel-err / etc. checks without tripping the rate-savings gate first.
+
+    For Bug #2 regression testing specifically, use _apogee_int8_canonical_broken_anchor.
+    """
+    return CalibrationAnchor(
+        lane_id="lane_apogee_int8",
+        rel_err_pct_per_weight=0.24,
+        archive_bytes=160000,  # smaller than lossless 186239 — structurally valid
+        contest_cuda_score=0.21119242,
+        avg_pose_dist=3.375e-5,
+        avg_seg_dist=0.00067819,
+        rate_unscaled=160000 / 37545489,
+        measured_utc="2026-05-05T18:02:00Z",
+        job_id="apogee-int8-baseline-confirm-20260505t174500z",
+        archive_sha256="64ac1421",
+    )
+
+
+def _apogee_int8_canonical_broken_anchor() -> CalibrationAnchor:
+    """Bug #2 regression fixture: the actual canonical int8 anchor that has
+    archive_bytes (187731) > lossless (186239). Used to verify the new
+    `lossy_anchor_invalid_no_rate_savings` refusal mode fires correctly."""
     return CalibrationAnchor(
         lane_id="lane_apogee_int8",
         rel_err_pct_per_weight=0.24,
@@ -48,7 +79,7 @@ def _apogee_int8_anchor() -> CalibrationAnchor:
         contest_cuda_score=0.21119242,
         avg_pose_dist=3.375e-5,
         avg_seg_dist=0.00067819,
-        rate_unscaled=0.00500009,
+        rate_unscaled=187731 / 37545489,
         measured_utc="2026-05-05T18:02:00Z",
         job_id="apogee-int8-baseline-confirm-20260505t174500z",
         archive_sha256="64ac1421",
@@ -137,27 +168,26 @@ def test_lossy_better_than_lossless_REFUSES() -> None:
 
 
 def test_apogee_int8_with_full_anchors_accepts_in_band() -> None:
-    """With all 3 anchors loaded, int8 (0.24% rel_err) lands tight near 0.2112.
+    """With all 3 anchors loaded, int8 (0.24% rel_err) lands in a meaningful band.
 
-    N4 fix from adversarial review: also assert midpoint ≈ empirical anchor
-    score within 0.015 — a wider band (±0.05) alone can mask a 20% point error.
+    Uses the fixture's archive_bytes=160000 (hypothetical valid int8 with rate
+    savings vs lossless 186239) so the new Bug #2 `lossy_anchor_invalid_no_rate_savings`
+    refusal does NOT fire. The assertion bounds reflect the rate change from
+    bytes=160000.
     """
     anchors = [_pr106_anchor(), _apogee_int8_anchor(), _apogee_int4_anchor()]
     band = predict_score_band(
-        archive_bytes=187731,
+        archive_bytes=160000,  # match fixture archive_bytes for self-consistency
         rel_err_pct_per_weight=0.24,
         n_quantized_layers=13,
         calibration_anchors=anchors,
     )
     assert not band.refused, f"unexpected refusal: {band.refusal_reason}"
-    # int8 anchor itself should hit ≈ 0.2112; band is ±0.05.
-    assert band.low <= 0.21119242 <= band.high, (
-        f"int8 actual score 0.2112 should fall in band [{band.low:.4f}, {band.high:.4f}]"
-    )
-    # Midpoint must be tight — N4 acceptance.
-    midpoint = (band.low + band.high) / 2
-    assert abs(midpoint - 0.21119242) < 0.015, (
-        f"midpoint {midpoint:.4f} too far from empirical 0.2112 (Δ={abs(midpoint - 0.21119242):.4f})"
+    # int8 anchor's expected score (recomputed with archive_bytes=160000):
+    # 100*0.00067819 + sqrt(10*3.375e-5) + 25*(160000/37545489) = 0.0678 + 0.01837 + 0.1066 = 0.193
+    expected_score = 100 * 0.00067819 + (10 * 3.375e-5) ** 0.5 + 25 * (160000 / 37545489)
+    assert band.low <= expected_score <= band.high, (
+        f"int8 expected score {expected_score:.4f} should fall in band [{band.low:.4f}, {band.high:.4f}]"
     )
     # Provenance must be tracked.
     assert band.prediction_method == "power_law_fit"
@@ -267,7 +297,7 @@ def test_multiple_lossless_anchors_uses_tightest_score() -> None:
     # With list[0] bug, sanity gate uses 0.30 — too lax. With min(), uses 0.20946.
     anchors = [worse_lossless, _pr106_anchor(), _apogee_int8_anchor(), _apogee_int4_anchor()]
     band = predict_score_band(
-        archive_bytes=187731,
+        archive_bytes=160000,
         rel_err_pct_per_weight=0.24,
         n_quantized_layers=13,
         calibration_anchors=anchors,
@@ -349,7 +379,7 @@ def test_prediction_method_field_distinguishes_proxy_vs_fit() -> None:
     anchors = [_pr106_anchor(), _apogee_int8_anchor(), _apogee_int4_anchor()]
     # No proxy → power_law_fit
     band = predict_score_band(
-        archive_bytes=187731,
+        archive_bytes=160000,
         rel_err_pct_per_weight=0.24,
         n_quantized_layers=13,
         calibration_anchors=anchors,

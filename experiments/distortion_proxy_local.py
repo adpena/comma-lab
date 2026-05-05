@@ -22,7 +22,7 @@ PR106-mid-bit-width region (int5/int6/int7).
 
 The output is tagged `[distortion-proxy:local]` per the empirical-claim-
 without-evidence-tag CLAUDE.md FORBIDDEN PATTERN — callers must NOT promote
-proxy-derived numbers to `[contest-CUDA]` claims.
+proxy-derived numbers to `[contest-CUDA]` claims or exact-eval readiness.
 
 Usage as library:
     from experiments.distortion_proxy_local import make_distortion_proxy
@@ -49,21 +49,40 @@ DEFAULT_ANCHORS_PATH = REPO_ROOT / ".omx" / "calibration" / "anchors_apogee_intN
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 
+# Bug #1 fix — degenerate-fit detection threshold.
+# When ANY lossy anchor's per-component excess (D - D_baseline) is below this
+# threshold, the per-component log-linear fit is numerically degenerate (the
+# log(max(excess, 1e-12)) clamp dominates the regression and produces a slope
+# that is NOT a meaningful power-law exponent — it's an artifact of the floor).
+# In that case the curve must be returned as NaN so the predictor REFUSES with
+# CURVE_FIT_DEGENERATE_NUMERICAL_FLOOR rather than emitting a confident-but-wrong band.
+#
+# Threshold rationale: the canonical anchor set has int8 seg_dist EQUAL to PR106
+# seg_dist (5 sig figs). 1e-9 is well below typical scorer numerical noise
+# (~1e-6) but well above the 1e-12 log-floor — so it triggers exactly when the
+# anchor genuinely carries no rate-distortion information for the component.
+DEGENERATE_EXCESS_THRESHOLD = 1e-9
+
+
 def _fit_separate_curves(anchors: list[dict]) -> dict[str, dict[str, float]]:
     """Fit separate power-law curves for pose and seg distortion vs rel_err.
 
     For each component (pose, seg):
         log(D - d_baseline) ≈ b * log(rel_err) + log(a)
     over the LOSSY anchors (rel_err > 0). Returns dict with sub-dicts:
-        {'pose': {'a': ..., 'b': ..., 'd_baseline': ...},
-         'seg':  {'a': ..., 'b': ..., 'd_baseline': ...}}
+        {'pose': {'a': ..., 'b': ..., 'd_baseline': ..., 'degenerate_reason': ...},
+         'seg':  {'a': ..., 'b': ..., 'd_baseline': ..., 'degenerate_reason': ...}}
+
+    Bug #1 (root-cause fix 2026-05-05): if ANY lossy anchor's per-component
+    excess (D - D_baseline) is below DEGENERATE_EXCESS_THRESHOLD, the per-
+    component fit is numerically degenerate (the `max(excess, 1e-12)` floor
+    dominates the regression). Return NaN with `degenerate_reason` set so the
+    predictor refuses with `CURVE_FIT_DEGENERATE_NUMERICAL_FLOOR` rather than
+    emitting an over-confident extrapolation built on a bogus slope.
     """
     # Identify lossless reference for baseline
     lossless = [a for a in anchors if a["rel_err_pct_per_weight"] == 0.0]
-    if not lossless:
-        baseline = min(anchors, key=lambda a: a["rel_err_pct_per_weight"])
-    else:
-        baseline = lossless[0]
+    baseline = min(anchors, key=lambda a: a["rel_err_pct_per_weight"]) if not lossless else lossless[0]
     d_pose_base = baseline["avg_pose_dist"]
     d_seg_base = baseline["avg_seg_dist"]
 
@@ -71,30 +90,56 @@ def _fit_separate_curves(anchors: list[dict]) -> dict[str, dict[str, float]]:
     if len(lossy) < 2:
         # Cannot fit; return degenerate (caller should refuse via main predictor)
         return {
-            "pose": {"a": float("nan"), "b": float("nan"), "d_baseline": d_pose_base},
-            "seg":  {"a": float("nan"), "b": float("nan"), "d_baseline": d_seg_base},
+            "pose": {"a": float("nan"), "b": float("nan"), "d_baseline": d_pose_base,
+                     "degenerate_reason": "insufficient_lossy_anchors"},
+            "seg":  {"a": float("nan"), "b": float("nan"), "d_baseline": d_seg_base,
+                     "degenerate_reason": "insufficient_lossy_anchors"},
         }
 
-    def _fit_one(values: list[tuple[float, float]], baseline_d: float) -> dict[str, float]:
+    def _fit_one(values: list[tuple[float, float]], baseline_d: float, component_label: str) -> dict[str, float]:
         # values is [(rel_err, distortion), ...] over lossy anchors
+
+        # Bug #1 root-cause: detect degenerate-floor anchors BEFORE fitting.
+        # If any anchor's excess (distortion - baseline) is below threshold,
+        # the log-linear regression becomes numerically degenerate because the
+        # `max(excess, 1e-12)` clamp dominates and the fitted slope is meaningless.
+        degenerate_anchors = []
+        for rel_err, distortion in values:
+            excess = distortion - baseline_d
+            if excess < DEGENERATE_EXCESS_THRESHOLD:
+                degenerate_anchors.append((rel_err, distortion, excess))
+        if degenerate_anchors:
+            return {
+                "a": float("nan"),
+                "b": float("nan"),
+                "d_baseline": baseline_d,
+                "degenerate_reason": (
+                    f"numerical_floor: {len(degenerate_anchors)} of {len(values)} "
+                    f"lossy {component_label} anchors have excess < {DEGENERATE_EXCESS_THRESHOLD:.0e} "
+                    f"(distortions match baseline within float precision); "
+                    f"power-law fit is NOT meaningful"
+                ),
+            }
+
         log_rel = [math.log(v[0]) for v in values]
-        log_excess = [math.log(max(v[1] - baseline_d, 1e-12)) for v in values]
+        log_excess = [math.log(v[1] - baseline_d) for v in values]
         n = len(values)
         mean_x = sum(log_rel) / n
         mean_y = sum(log_excess) / n
         var_x = sum((x - mean_x) ** 2 for x in log_rel)
         if var_x == 0:
-            return {"a": float("nan"), "b": float("nan"), "d_baseline": baseline_d}
+            return {"a": float("nan"), "b": float("nan"), "d_baseline": baseline_d,
+                    "degenerate_reason": "zero_variance_in_log_rel_err"}
         cov_xy = sum((log_rel[i] - mean_x) * (log_excess[i] - mean_y) for i in range(n))
         b = cov_xy / var_x
         a = math.exp(mean_y - b * mean_x)
-        return {"a": a, "b": b, "d_baseline": baseline_d}
+        return {"a": a, "b": b, "d_baseline": baseline_d, "degenerate_reason": ""}
 
     pose_pairs = [(a["rel_err_pct_per_weight"], a["avg_pose_dist"]) for a in lossy]
     seg_pairs = [(a["rel_err_pct_per_weight"], a["avg_seg_dist"]) for a in lossy]
     return {
-        "pose": _fit_one(pose_pairs, d_pose_base),
-        "seg":  _fit_one(seg_pairs, d_seg_base),
+        "pose": _fit_one(pose_pairs, d_pose_base, "pose"),
+        "seg":  _fit_one(seg_pairs, d_seg_base, "seg"),
     }
 
 
@@ -113,7 +158,6 @@ def make_distortion_proxy(
     """
     anchors = _load_anchors(anchors_path)
     curves = _fit_separate_curves(anchors)
-    pose_anchors = [a for a in anchors if a["rel_err_pct_per_weight"] > 0.0]
 
     rel_err_min = min((a["rel_err_pct_per_weight"] for a in anchors), default=0.0)
     rel_err_max = max((a["rel_err_pct_per_weight"] for a in anchors), default=0.0)
@@ -170,6 +214,13 @@ def main(argv: list[str] | None = None) -> int:
     payload = {
         "schema": "distortion_proxy_local_v1",
         "tag": "[distortion-proxy:local]",
+        "evidence_semantics": "local_distortion_proxy",
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": [
+            "local_distortion_proxy_is_not_contest_cuda_evidence",
+            "missing_scorer_basin_parity_gate",
+            "missing_exact_cuda_candidate_evidence",
+        ],
         "archive_bytes": args.archive_bytes,
         "rel_err_pct": args.rel_err_pct,
         "n_layers": args.n_layers,
@@ -182,7 +233,8 @@ def main(argv: list[str] | None = None) -> int:
         "warning": (
             "Closed-form architecture-naive estimate calibrated from anchors. "
             "Tag results [distortion-proxy:local], NEVER [contest-CUDA]. "
-            "Final score MUST come from upstream/evaluate.py on the EXACT archive bytes."
+            "Final score MUST come from upstream/evaluate.py on the EXACT archive bytes; "
+            "this proxy is not dispatch readiness."
         ),
     }
 
@@ -196,7 +248,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  predicted_seg_dist:   {seg:.6e}")
         print(f"  fit a_pose/b_pose:    {proxy.curves['pose']['a']:.4e} / {proxy.curves['pose']['b']:.3f}")
         print(f"  fit a_seg/b_seg:      {proxy.curves['seg']['a']:.4e} / {proxy.curves['seg']['b']:.3f}")
-        print(f"  WARNING: tag results [distortion-proxy:local], NEVER [contest-CUDA].")
+        print("  ready_for_exact_eval_dispatch: false")
+        print("  WARNING: tag results [distortion-proxy:local], NEVER [contest-CUDA].")
     return 0
 
 

@@ -35,24 +35,22 @@ from __future__ import annotations
 import importlib.util
 import math
 import sys
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Iterable, Optional
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tac.predictor.score_band import (  # noqa: E402
-    PR106_TOTAL_RATE_DENOM,
     POSE_COEFFICIENT_SQRT_INNER,
+    PR106_TOTAL_RATE_DENOM,
     RATE_COEFFICIENT,
     SEG_COEFFICIENT,
     CalibrationAnchor,
     ScoreBand,
-    load_calibration_anchors,
     predict_score_band,
 )
-
 
 # ── Contest score reproduction (matches upstream/evaluate.py) ─────────────
 
@@ -98,6 +96,7 @@ class CandidateEvaluation:
     rel_err_pct: float
     n_layers: int
     lane_class: str
+    archive_path: Path | None = None
 
     # Proxy outputs (closed-form, [distortion-proxy:local])
     proxy_pose: float = 0.0
@@ -154,8 +153,8 @@ class MetaLagrangianSearch:
         self,
         calibration_anchors: list[CalibrationAnchor],
         distortion_proxy: DistortionProxy,
-        constraints: Optional[LagrangianConstraints] = None,
-        sanity_gate: Optional[Callable[..., object]] = None,
+        constraints: LagrangianConstraints | None = None,
+        sanity_gate: Callable[..., object] | None = None,
     ) -> None:
         self.anchors = calibration_anchors
         self.proxy = distortion_proxy
@@ -171,8 +170,8 @@ class MetaLagrangianSearch:
         rel_err_pct: float,
         n_layers: int,
         lane_class: str,
-        archive_path: Optional[Path] = None,
-        sanity_predicted_band: Optional[tuple[float, float]] = None,
+        archive_path: Path | None = None,
+        sanity_predicted_band: tuple[float, float] | None = None,
     ) -> CandidateEvaluation:
         ev = CandidateEvaluation(
             candidate_id=candidate_id,
@@ -180,6 +179,7 @@ class MetaLagrangianSearch:
             rel_err_pct=rel_err_pct,
             n_layers=n_layers,
             lane_class=lane_class,
+            archive_path=archive_path,
         )
 
         # 1. Distortion proxy (CPU-only closed-form; tag [distortion-proxy:local])
@@ -271,12 +271,28 @@ class MetaLagrangianSearch:
 
 
 def _default_sanity_gate(**kwargs):
-    """Lazy-load tools/predispatch_sanity.py and call its predispatch_sanity()."""
+    """Lazy-load tools/predispatch_sanity.py and call its predispatch_sanity().
+
+    Bug #3 (root-cause fix 2026-05-05): RAISES FileNotFoundError when the
+    helper script is missing. The previous behavior — silently returning
+    `passed=True` via SimpleNamespace — was the FORBIDDEN comment-only-contract
+    pattern (CLAUDE.md): a missing dependency MUST NOT silently let dispatch
+    proceed. Tests that need to bypass the helper must inject a custom
+    `sanity_gate` callable into `MetaLagrangianSearch`, not rely on graceful
+    degradation.
+    """
     helper = REPO_ROOT / "tools" / "predispatch_sanity.py"
     if not helper.is_file():
-        # Graceful degradation for tests / sandboxes without the tool.
-        from types import SimpleNamespace
-        return SimpleNamespace(passed=True, refusal_reasons=[], gates=[])
+        # Bug #3 fix: hard-fail rather than graceful pass. A silent skip here
+        # is exactly the silent-success-on-missing-dependency pattern that
+        # CLAUDE.md non-negotiable forbids. Callers needing tests/sandbox
+        # operation must inject a `sanity_gate` callable explicitly.
+        raise FileNotFoundError(
+            f"predispatch_sanity helper not found at {helper}. "
+            "MetaLagrangianSearch refuses to silently bypass the sanity gate; "
+            "either restore tools/predispatch_sanity.py or pass a custom "
+            "`sanity_gate=` callable to the search constructor."
+        )
     spec = importlib.util.spec_from_file_location("_pact_predispatch_sanity_meta", helper)
     if spec is None or spec.loader is None:
         from types import SimpleNamespace

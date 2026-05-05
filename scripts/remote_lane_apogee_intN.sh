@@ -1,6 +1,10 @@
 #!/bin/bash
-# NO_NVDEC_NEEDED — pure tensor-side codec + scorer-forward; no DALI/NVDEC video pipeline.
 # Lane #04 generic intN — PR106 HNeRV decoder repacked via signed intN block-FP
+#
+# DALI/NVDEC IS REQUIRED at Stage 3: contest_auth_eval delegates to upstream/evaluate.py
+# which uses DALI's video pipeline (frame_utils.DaliVideoDataset, --num-threads,
+# --prefetch-queue-depth) for ground-truth comma2k19 video decode. The previous
+# DALI-not-needed header on this file was incorrect — Bug #5 root-cause fix 2026-05-05.
 #
 # Operator picks bits via env var (4..8). Magic byte encoding:
 #   APOGEE_INTN_BITS=4 → magic 0xA4, HIGH risk, predicted [0.155, 0.180]
@@ -35,12 +39,47 @@ PR106_STATE_DICT="${PR106_STATE_DICT:-experiments/results/sensitivity_map_pr106_
 
 # Stage 0: NVDEC probe — required by preflight check_remote_scripts_have_nvdec_probe.
 # probe MUST come before any GPU-work marker including bare `nvidia-smi`.
+# Bug #5 fix: drop the auto-install probe flag. The header previously claimed
+# DALI-not-needed (incorrect — see top header), but the probe was forcing a
+# DALI install on every host. The contest_auth_eval pipeline DOES use DALI
+# internally (via upstream/evaluate.py for video decode), so the probe is
+# correct, but the auto-install flag would silently install DALI on bare
+# PyTorch images and hide install failures. We now run a normal probe so
+# DALI must be pre-installed by the canonical bootstrap (remote_archive_only_eval.sh).
 if [ "${SKIP_NVDEC_PROBE:-0}" != "1" ] && [ -f "$WORKSPACE/scripts/probe_nvdec.sh" ]; then
-    bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
-        log "FATAL: NVDEC/DALI probe failed; exact CUDA eval is not trustworthy on this host."
+    bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
+        echo "FATAL: NVDEC/DALI probe failed; exact CUDA eval is not trustworthy on this host." >&2
         exit 2
     }
 fi
+
+# Bug #4 (root-cause fix 2026-05-05): require submissions/apogee_intN/inflate.py
+# AFTER the cheap NVDEC probe (~10s) but BEFORE provenance is written,
+# Stage 1 builds an archive, or any paid-GPU compute kicks off. The lane claim
+# is associated with the provenance write — these checks gate against
+# burning that claim on missing dependencies. require_file is a stat() call
+# (nanoseconds, zero GPU cost).
+require_file() {
+    if [ ! -f "$1" ]; then
+        echo "FATAL: required file missing: $1" >&2
+        exit 2
+    fi
+}
+require_file "$WORKSPACE/submissions/apogee_intN/inflate.py"
+require_file "$WORKSPACE/submissions/apogee_intN/inflate.sh"
+require_file "$WORKSPACE/experiments/repack_pr106_with_intN_block_fp.py"
+# Verify the inflate module exports the parser symbol the Stage 2 step uses.
+"$PYBIN" - "$WORKSPACE/submissions/apogee_intN" <<'PYEOF' || { echo "FATAL: parse_apogee_intn_archive not exported by submissions/apogee_intN/inflate.py" >&2; exit 2; }
+import sys, importlib.util
+inflate_dir = sys.argv[1]
+sys.path.insert(0, inflate_dir)
+spec = importlib.util.spec_from_file_location("_apogee_inflate_check", inflate_dir + "/inflate.py")
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+assert hasattr(mod, "parse_apogee_intn_archive"), \
+    "inflate.py must export parse_apogee_intn_archive"
+print("[stage-0] inflate.py exports parse_apogee_intn_archive: OK")
+PYEOF
 
 cd "$WORKSPACE"
 
@@ -61,6 +100,10 @@ HB_PID=$!
 trap "kill $HB_PID 2>/dev/null || true" EXIT
 
 # ── Stage 0: Provenance + CUDA preflight ──────────────────────────────────
+# Bug #4 cross-check: the contest_auth_eval.py path used at Stage 3 is
+# verified existence here (deferred from Stage 0 require_file block to avoid
+# the preflight nvdec-probe-order scanner's GPU-cost-marker false-positive).
+require_file "$WORKSPACE/experiments/contest_auth_eval.py"
 GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
 GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1 | head -1 || echo "no-gpu")
 "$PYBIN" -c "
@@ -128,15 +171,25 @@ mkdir -p "$EVAL_DIR"
     --device cuda 2>&1 | tee -a "$LOG_DIR/run.log"
 
 # ── Final summary ─────────────────────────────────────────────────────────
+# Bug #6 (root-cause fix 2026-05-05): no `2>/dev/null`, no string fallback.
+# Previously the parser swallowed Python errors AND fell back to a sentinel
+# string, which silently propagated into log lines as if the dispatch
+# succeeded. Now Python errors propagate via set -e (the `set -euo pipefail`
+# at the top of the script), and the SCORE value is validated as a numeric
+# regex before being logged.
 SCORE_JSON="$EVAL_DIR/contest_auth_eval.json"
-if [ -f "$SCORE_JSON" ]; then
-    SCORE=$("$PYBIN" -c "import json; print(json.load(open('$SCORE_JSON'))['final_score'])" 2>/dev/null || echo "PARSE_FAIL")
-    log "DONE: lane=$LANE_ID bits=$APOGEE_INTN_BITS archive_bytes=$ARCHIVE_BYTES contest_cuda_score=$SCORE [contest-CUDA]"
-    log "  beats PR106 baseline 0.20946? $("$PYBIN" -c "
-s = $SCORE
-print('YES — new public-frontier candidate' if isinstance(s, (int, float)) and s < 0.20946 else f'no (score {s} >= 0.20946)')
-" 2>/dev/null || echo "?")"
-else
+if [ ! -f "$SCORE_JSON" ]; then
     log "FATAL: stage 3 did not produce $SCORE_JSON"
     exit 4
 fi
+SCORE=$("$PYBIN" -c "import json; print(json.load(open('$SCORE_JSON'))['final_score'])")
+# Validate SCORE is a numeric value — guards against silent key-rename in
+# contest_auth_eval.py output schema. If json.load printed a string or empty,
+# this regex catches it before the log lies about success.
+if ! [[ "$SCORE" =~ ^-?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?$ ]]; then
+    log "FATAL: stage 3 score parse returned non-numeric value: '$SCORE'"
+    exit 5
+fi
+log "DONE: lane=$LANE_ID bits=$APOGEE_INTN_BITS archive_bytes=$ARCHIVE_BYTES contest_cuda_score=$SCORE [contest-CUDA]"
+BEATS=$("$PYBIN" -c "s = float('$SCORE'); print('YES — new public-frontier candidate' if s < 0.20946 else f'no (score {s} >= 0.20946)')")
+log "  beats PR106 baseline 0.20946? $BEATS"
