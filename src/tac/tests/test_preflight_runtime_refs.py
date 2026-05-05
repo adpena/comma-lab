@@ -141,3 +141,95 @@ ${PYBIN} -u experiments/missing_x.py --x 1
 ''')
     violations = check_shell_script_runtime_refs_resolve(repo_root=tmp_path, strict=False, verbose=False)
     assert len(violations) == 1
+
+
+# ============================================================
+# check_test_imports_resolve_to_disk — sister check for test-file imports
+# ============================================================
+
+from tac.preflight_runtime_refs import check_test_imports_resolve_to_disk  # noqa: E402
+
+
+def test_test_import_resolves_existing_module(tmp_path):
+    test_dir = tmp_path / "src" / "tac" / "tests"
+    test_dir.mkdir(parents=True)
+    (tmp_path / "experiments").mkdir()
+    (tmp_path / "experiments" / "real_module.py").write_text("X = 1\n")
+    (test_dir / "test_x.py").write_text(
+        "from experiments.real_module import X\n"
+    )
+    violations = check_test_imports_resolve_to_disk(repo_root=tmp_path, strict=False, verbose=False)
+    assert violations == []
+
+
+def test_test_import_catches_missing_experiments_module(tmp_path):
+    test_dir = tmp_path / "src" / "tac" / "tests"
+    test_dir.mkdir(parents=True)
+    (tmp_path / "experiments").mkdir()
+    (test_dir / "test_x.py").write_text(
+        "from experiments.missing_module import (foo, bar)\n"
+    )
+    violations = check_test_imports_resolve_to_disk(repo_root=tmp_path, strict=False, verbose=False)
+    assert len(violations) == 1
+    assert "missing_module" in violations[0]
+    assert "experiments/missing_module.py" in violations[0]
+
+
+def test_test_import_catches_missing_tools_module(tmp_path):
+    test_dir = tmp_path / "src" / "tac" / "tests"
+    test_dir.mkdir(parents=True)
+    (test_dir / "test_y.py").write_text(
+        "from tools.missing_helper import claim\n"
+    )
+    violations = check_test_imports_resolve_to_disk(repo_root=tmp_path, strict=False, verbose=False)
+    assert len(violations) == 1
+    assert "tools/missing_helper.py" in violations[0]
+
+
+def test_test_import_resolves_package_init(tmp_path):
+    """`from experiments.foo import bar` resolves to experiments/foo/__init__.py
+    when foo is a package, not a module."""
+    test_dir = tmp_path / "src" / "tac" / "tests"
+    test_dir.mkdir(parents=True)
+    (tmp_path / "experiments" / "foo").mkdir(parents=True)
+    (tmp_path / "experiments" / "foo" / "__init__.py").write_text("bar = 42\n")
+    (test_dir / "test_z.py").write_text(
+        "from experiments.foo import bar\n"
+    )
+    violations = check_test_imports_resolve_to_disk(repo_root=tmp_path, strict=False, verbose=False)
+    assert violations == []
+
+
+def test_test_import_ignores_stdlib_and_third_party(tmp_path):
+    """stdlib + third-party imports must NOT be flagged."""
+    test_dir = tmp_path / "src" / "tac" / "tests"
+    test_dir.mkdir(parents=True)
+    (test_dir / "test_x.py").write_text(
+        "from collections import OrderedDict\n"
+        "from numpy import array\n"
+        "from torch.nn import Module\n"
+        "from tac.preflight_runtime_refs import check_test_imports_resolve_to_disk\n"
+    )
+    violations = check_test_imports_resolve_to_disk(repo_root=tmp_path, strict=False, verbose=False)
+    assert violations == []
+
+
+def test_test_import_strict_mode_raises(tmp_path):
+    test_dir = tmp_path / "src" / "tac" / "tests"
+    test_dir.mkdir(parents=True)
+    (test_dir / "test_x.py").write_text(
+        "from experiments.missing_x import foo\n"
+    )
+    with pytest.raises(RuntimeError, match="unresolved test-file imports"):
+        check_test_imports_resolve_to_disk(repo_root=tmp_path, strict=True, verbose=False)
+
+
+def test_test_import_live_codebase_under_known_threshold():
+    """Sanity: as of 2026-05-04 (after rebuilding repack_quantizr_faithful_qzs3_archive
+    + build_renderer_packed_payload_archive stubs) there are 0 known
+    violations. Threshold is loose so future small drift doesn't break."""
+    violations = check_test_imports_resolve_to_disk(strict=False, verbose=False)
+    assert len(violations) <= 3, (
+        f"test-imports check violations climbed to {len(violations)} "
+        f"(was 0 at introduction): {violations}"
+    )

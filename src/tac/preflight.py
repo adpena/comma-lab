@@ -1088,8 +1088,18 @@ def preflight_all(
         # worktrees were auto-cleaned without committing helper source).
         # Warn-only initially; one known violation as of 2026-05-04.
         try:
-            from tac.preflight_runtime_refs import check_shell_script_runtime_refs_resolve
+            from tac.preflight_runtime_refs import (
+                check_shell_script_runtime_refs_resolve,
+                check_test_imports_resolve_to_disk,
+            )
             check_shell_script_runtime_refs_resolve(strict=False, verbose=verbose)
+            # PCC9b: sister check — test-file `from <experiments|tools|submissions>.X
+            # import` references must resolve. Catches the same lost-helper bug
+            # class but at pytest-collection time (e.g. test_qzs3_packer.py
+            # depending on lost experiments/repack_quantizr_faithful_qzs3_archive.py
+            # and experiments/build_renderer_packed_payload_archive.py — both
+            # safe-stubbed 2026-05-04). Warn-only initially.
+            check_test_imports_resolve_to_disk(strict=False, verbose=verbose)
         except ImportError:
             pass  # graceful if module missing during partial install
 

@@ -175,5 +175,118 @@ def check_shell_script_runtime_refs_resolve(
 
 __all__ = [
     "check_shell_script_runtime_refs_resolve",
+    "check_test_imports_resolve_to_disk",
     "REPO_ROOT",
 ]
+
+
+# ============================================================
+# Sister check: test-file `from <module>.X import` references where the
+# corresponding source file is missing on disk. Same lost-helper bug class
+# as the shell-script runtime-refs check — caught test_qzs3_packer.py's
+# ImportError at collection because experiments/repack_quantizr_faithful_qzs3_archive.py
+# was lost in a subagent worktree.
+#
+# Scope: src/tac/tests/*.py imports targeting repo-internal namespaces
+#   - from experiments.X import ...     →  experiments/X.py must exist
+#   - from tools.X import ...           →  tools/X.py must exist
+#   - from submissions.X.Y import ...   →  submissions/X/Y.py must exist
+#
+# Out of scope:
+#   - stdlib imports (collections, json, etc.)
+#   - third-party imports (numpy, torch, brotli, etc.)
+#   - tac.* imports (covered by Python's own import system at test time)
+#   - dotted imports beyond the file boundary (we only verify the leaf .py)
+# ============================================================
+
+_TEST_SCAN_DIR = "src/tac/tests"
+
+# Match: from <ns>.X[.Y...] import
+# Captures the dotted path so we can resolve to a file on disk.
+_FROM_IMPORT_RE = re.compile(
+    r'^\s*from\s+((?:experiments|tools|submissions)(?:\.[A-Za-z_][A-Za-z_0-9]*)+)\s+import\s'
+)
+
+
+def _resolve_dotted_to_file(dotted: str, repo_root: Path) -> Path:
+    """Map `experiments.foo.bar` → `experiments/foo/bar.py`.
+
+    Note: this is a heuristic — the actual Python resolution may pick up
+    `experiments/foo/bar/__init__.py` instead. We check both.
+    """
+    parts = dotted.split(".")
+    # Try as a module file: <parts...>.py
+    as_file = repo_root.joinpath(*parts[:-1], parts[-1] + ".py")
+    if as_file.is_file():
+        return as_file
+    # Try as a package init: <parts...>/__init__.py
+    as_pkg = repo_root.joinpath(*parts, "__init__.py")
+    if as_pkg.is_file():
+        return as_pkg
+    # Return the file path that "should have existed" (caller treats as missing)
+    return as_file
+
+
+def _scan_test_file(test_path: Path, repo_root: Path) -> list[tuple[str, int, str, str]]:
+    """Return list of (test_path_rel, line_number, dotted_module, expected_file)
+    for unresolved imports."""
+    violations: list[tuple[str, int, str, str]] = []
+    try:
+        text = test_path.read_text()
+    except (UnicodeDecodeError, OSError):
+        return violations
+
+    test_rel = str(test_path.relative_to(repo_root))
+    for line_idx, line in enumerate(text.splitlines()):
+        m = _FROM_IMPORT_RE.match(line)
+        if not m:
+            continue
+        dotted = m.group(1)
+        target = _resolve_dotted_to_file(dotted, repo_root)
+        if not target.exists():
+            violations.append((test_rel, line_idx + 1, dotted, str(target.relative_to(repo_root))))
+
+    return violations
+
+
+def check_test_imports_resolve_to_disk(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Verify that every `from <experiments|tools|submissions>.X import`
+    in src/tac/tests/*.py resolves to an existing file on disk.
+
+    Catches the same lost-helper class as
+    check_shell_script_runtime_refs_resolve, but for test-file imports
+    (which fail at pytest collection time, not at runtime).
+    """
+    root = repo_root or REPO_ROOT
+    test_dir = root / _TEST_SCAN_DIR
+    violations: list[str] = []
+    n_scanned = 0
+
+    if test_dir.is_dir():
+        for test_file in sorted(test_dir.rglob("*.py")):
+            n_scanned += 1
+            for test_rel, line_no, dotted, expected_file in _scan_test_file(test_file, root):
+                violations.append(
+                    f"{test_rel}:{line_no}: "
+                    f"`from {dotted} import ...` -> missing {expected_file}"
+                )
+
+    if verbose:
+        if violations:
+            print(f"  [test-imports-resolve] {len(violations)} violation(s) across {n_scanned} files:")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(f"  [test-imports-resolve] OK: {n_scanned} files scanned")
+
+    if strict and violations:
+        raise RuntimeError(
+            f"check_test_imports_resolve_to_disk: {len(violations)} unresolved "
+            f"test-file imports — pytest will ImportError at collection. See above."
+        )
+
+    return violations
