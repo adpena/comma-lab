@@ -97,6 +97,61 @@ def _parse_one(path: Path, repo_root: Path) -> ScoreRow | None:
     )
 
 
+def _parse_log(path: Path, repo_root: Path) -> ScoreRow | None:
+    """Extract embedded RESULT_JSON from an auth_eval.log file.
+
+    The contest_auth_eval.py runner emits a single line `RESULT_JSON: {...}`
+    in its stdout log. When the canonical JSON wasn't synced back from a
+    remote (Lightning, Vast.ai), the auth_eval.log is the only on-disk source.
+    """
+    try:
+        text = path.read_text(errors="replace")
+    except OSError:
+        return None
+    marker = "RESULT_JSON: "
+    idx = text.rfind(marker)
+    if idx < 0:
+        return None
+    json_start = idx + len(marker)
+    json_end = text.find("\n", json_start)
+    if json_end < 0:
+        json_end = len(text)
+    try:
+        data = json.loads(text[json_start:json_end])
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    score = (
+        _safe_get(data, "canonical_score")
+        or _safe_get(data, "score_recomputed_from_components")
+        or _safe_get(data, "final_score")
+    )
+    if score is None:
+        return None
+    try:
+        score = float(score)
+    except (TypeError, ValueError):
+        return None
+    rel = path.relative_to(repo_root) if path.is_relative_to(repo_root) else path
+    mtime = dt.datetime.fromtimestamp(path.stat().st_mtime, tz=dt.timezone.utc)
+    prov = _safe_get(data, "provenance", default={})
+    return ScoreRow(
+        score=score,
+        archive_bytes=_safe_get(data, "archive_size_bytes"),
+        archive_sha256=_safe_get(prov, "archive_sha256") if isinstance(prov, dict) else None,
+        seg_dist_avg=_safe_get(data, "avg_segnet_dist"),
+        pose_dist_avg=_safe_get(data, "avg_posenet_dist"),
+        rate=_safe_get(data, "rate_unscaled"),
+        samples=_safe_get(data, "n_samples"),
+        device=str(_safe_get(prov, "device", default="?")) if isinstance(prov, dict) else "?",
+        gpu_match=bool(_safe_get(prov, "gpu_t4_match", default=False)) if isinstance(prov, dict) else False,
+        path=str(rel),
+        mtime_utc=mtime.strftime("%Y-%m-%dT%H:%MZ"),
+        extra=data,
+    )
+
+
 def scan(
     repo_root: Path,
     scan_root: Path | None = None,
@@ -108,6 +163,8 @@ def scan(
     if not root.is_dir():
         return []
     rows: list[ScoreRow] = []
+    seen_dirs: set[Path] = set()
+    # Pass 1: canonical contest_auth_eval*.json files (preferred when present)
     for p in root.rglob("contest_auth_eval*.json"):
         if path_filter and path_filter not in str(p):
             continue
@@ -116,6 +173,20 @@ def scan(
             if mtime < since:
                 continue
         row = _parse_one(p, repo_root)
+        if row is not None:
+            rows.append(row)
+            seen_dirs.add(p.parent)
+    # Pass 2: auth_eval.log fallback for dispatches whose JSON didn't sync back
+    for p in root.rglob("auth_eval.log"):
+        if p.parent in seen_dirs:
+            continue  # canonical JSON already covers this dispatch
+        if path_filter and path_filter not in str(p):
+            continue
+        if since:
+            mtime = dt.datetime.fromtimestamp(p.stat().st_mtime, tz=dt.timezone.utc).date()
+            if mtime < since:
+                continue
+        row = _parse_log(p, repo_root)
         if row is not None:
             rows.append(row)
     return rows
