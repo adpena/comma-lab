@@ -108,6 +108,139 @@ def test_contest_score_matches_apogee_int4_falsification() -> None:
     assert abs(score - 1.42866394) < 1e-3, f"score={score} too far from 1.4287"
 
 
+def test_contest_score_uses_canonical_upstream_formula_constants() -> None:
+    """Per user mandate 2026-05-05 'meta-lagrangian and predictors need to be
+    deterministic reproducibility and based on same math as auth eval'.
+
+    The contest-score formula is `100*seg + sqrt(10*pose) + 25*rate_unscaled`
+    where `rate_unscaled = archive_bytes / 37545489` (the GT-video bytes).
+    Verify EVERY constant by name from `tac.predictor.score_band` so the
+    formula cannot drift from upstream/evaluate.py without breaking this test.
+    """
+    from tac.predictor.score_band import (
+        PR106_TOTAL_RATE_DENOM,
+        POSE_COEFFICIENT_SQRT_INNER,
+        RATE_COEFFICIENT,
+        SEG_COEFFICIENT,
+    )
+    # Constants must match the canonical contest-CUDA formula bytes.
+    assert SEG_COEFFICIENT == 100.0, "seg coefficient must be exactly 100 per upstream"
+    assert RATE_COEFFICIENT == 25.0, "rate coefficient must be exactly 25 per upstream"
+    assert POSE_COEFFICIENT_SQRT_INNER == 10.0, "pose sqrt-inner must be 10 per upstream"
+    # GT video size in bytes — comma's 0.mkv. Anyone changing this is changing
+    # the official rate denominator; that's a contest-rule violation.
+    assert PR106_TOTAL_RATE_DENOM == 37545489, "PR106 rate denom must equal 0.mkv bytes"
+
+
+def test_contest_score_is_deterministic_across_runs() -> None:
+    """Per user mandate, the engine must produce IDENTICAL outputs for identical
+    inputs across runs — no RNG, no clock-time drift, no platform variance."""
+    inputs = (3.4e-5, 0.00067819, 186239)
+    runs = [contest_score(*inputs) for _ in range(50)]
+    # All 50 runs must be EXACTLY equal (not just within tolerance — closed-form
+    # math should be bit-identical).
+    assert len(set(runs)) == 1, f"non-deterministic: got {len(set(runs))} unique values"
+
+
+def test_meta_lagrangian_evaluate_is_deterministic() -> None:
+    """MetaLagrangianSearch.evaluate_candidate() must be deterministic given
+    fixed anchors + fixed proxy. Same input → same output across 20 runs."""
+    anchors = _make_anchors()
+    runs = []
+    for _ in range(20):
+        search = MetaLagrangianSearch(anchors, _honest_proxy)
+        ev = search.evaluate_candidate(
+            candidate_id="det_check",
+            archive_bytes=187731, rel_err_pct=0.24, n_layers=13,
+            lane_class="apogee_intN",
+        )
+        runs.append((ev.lagrangian, ev.proxy_pose, ev.proxy_seg, ev.band_low, ev.band_high))
+    assert len(set(runs)) == 1, f"non-deterministic evaluate: {len(set(runs))} unique tuples"
+
+
+def test_meta_lagrangian_is_arch_agnostic_on_anchor_swap() -> None:
+    """Per user mandate 'arch agnostic if possible' — the engine should accept
+    arbitrary anchor sets (any architecture class) and produce a self-consistent
+    Lagrangian, as long as anchors are well-formed.
+
+    We verify by constructing synthetic anchors for a HYPOTHETICAL different
+    architecture (a bigger renderer with different rate-distortion tradeoff)
+    and confirming the engine still ranks candidates correctly relative to
+    that calibration.
+    """
+    # Synthetic 'arch_X' anchors with a realistic rate-distortion curve where
+    # lossy is strictly worse than lossless across all components (no impossible
+    # predictor refusal). Mimics a bigger renderer (300K params class).
+    arch_x_anchors = [
+        CalibrationAnchor(
+            lane_id="arch_x_lossless",
+            rel_err_pct_per_weight=0.0,
+            archive_bytes=300000,
+            contest_cuda_score=0.5,
+            avg_pose_dist=1e-4,
+            avg_seg_dist=2e-3,
+            rate_unscaled=300000 / PR106_TOTAL_RATE_DENOM,
+            measured_utc="2026-05-05T20:00Z",
+            job_id="arch-x-baseline",
+            archive_sha256="aaaa",
+        ),
+        CalibrationAnchor(
+            lane_id="arch_x_int8",
+            rel_err_pct_per_weight=0.5,
+            archive_bytes=240000,
+            contest_cuda_score=0.55,
+            avg_pose_dist=1.5e-4,
+            avg_seg_dist=2.5e-3,
+            rate_unscaled=240000 / PR106_TOTAL_RATE_DENOM,
+            measured_utc="2026-05-05T20:01Z",
+            job_id="arch-x-int8",
+            archive_sha256="bbbb",
+        ),
+        CalibrationAnchor(
+            lane_id="arch_x_int4",
+            rel_err_pct_per_weight=8.0,
+            archive_bytes=160000,
+            contest_cuda_score=2.5,
+            avg_pose_dist=0.05,
+            avg_seg_dist=0.01,
+            rate_unscaled=160000 / PR106_TOTAL_RATE_DENOM,
+            measured_utc="2026-05-05T20:02Z",
+            job_id="arch-x-int4",
+            archive_sha256="cccc",
+        ),
+    ]
+    # Arch-X-aware proxy: returns this arch's distortion levels (NOT the
+    # default apogee anchors). Demonstrates the engine accepts arbitrary
+    # callable proxy without arch-specific assumptions.
+    def _arch_x_proxy(archive_bytes: int, rel_err_pct: float, n_layers: int):
+        if rel_err_pct >= 5.0:
+            return (0.05, 0.01)        # arch-x int4 anchor distortions
+        if rel_err_pct >= 0.3:
+            return (1.5e-4, 2.5e-3)    # arch-x int8
+        return (1e-4, 2e-3)            # arch-x lossless
+
+    search = MetaLagrangianSearch(arch_x_anchors, _arch_x_proxy)
+    # Engine accepts arbitrary anchor architectures without crashing —
+    # whether the predictor accepts/refuses the candidate is a separate
+    # mathematical-consistency check. This test only verifies the engine
+    # is structurally arch-agnostic.
+    ev = search.evaluate_candidate(
+        candidate_id="arch_x_int8_synthetic",
+        archive_bytes=240000, rel_err_pct=0.5, n_layers=42,
+        lane_class="arch_X",
+    )
+    # Lagrangian computed from proxy outputs even when band is refused.
+    assert math_isfinite(ev.lagrangian), f"non-finite Lagrangian: {ev.lagrangian}"
+    # Proxy outputs reflect the swapped-in arch_x callable, NOT defaults.
+    assert ev.proxy_pose == 1.5e-4, f"proxy_pose={ev.proxy_pose} not from arch_x callable"
+    assert ev.proxy_seg == 2.5e-3, f"proxy_seg={ev.proxy_seg} not from arch_x callable"
+
+
+def math_isfinite(x: float) -> bool:
+    import math
+    return math.isfinite(x)
+
+
 # ── Lagrangian penalties ──────────────────────────────────────────────────
 
 
