@@ -45,6 +45,7 @@ def _import_inflate_module():
     sys.path.insert(0, str(SUBMISSION_DIR / "src"))
     import importlib
 
+    sys.modules.pop("inflate", None)
     return importlib.import_module("inflate")
 
 
