@@ -38,6 +38,7 @@ APOGEE_SRC = REPO_ROOT / "submissions/apogee_intN/src"
 
 
 def _load_inflate():
+    sys.modules.pop("inflate", None)  # avoid sister-module collision
     sys.path.insert(0, str(INFLATE_DIR))
     sys.path.insert(0, str(APOGEE_SRC))
     import inflate  # type: ignore[import-not-found]
