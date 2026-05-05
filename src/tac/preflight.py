@@ -297,6 +297,11 @@ def preflight_all(
         # caused confusing auth failures; scripts/runbooks should use an SSH
         # config alias whose resolved policy is checked with ssh -G.
         check_lightning_ssh_static_policy(strict=True, verbose=verbose)
+        # 2026-05-05 recovery R13: public/submission helpers had a stale
+        # provider download path that disabled host-key checking and ran
+        # evaluate.py on CPU. Keep provider orchestration out of submission
+        # surfaces and require CUDA for any helper that scores.
+        check_no_submission_provider_or_cpu_score_leakage(strict=True, verbose=verbose)
         # 2026-04-30 Lightning r3 exact-eval failure: CUDA preflight and
         # archive/inflate succeeded, but upstream evaluate.py crashed on
         # missing `nvidia.dali`. Exact-eval runners must bootstrap/probe DALI
@@ -439,6 +444,7 @@ def preflight_all(
         check_eval_roundtrip_gate_called_after_output_dir_resolution(strict=True, verbose=verbose)
         check_nvdec_probe_has_error_classification(strict=True, verbose=verbose)
         check_archive_builders_use_deterministic_zip(strict=True, verbose=verbose)
+        check_no_raw_zip_extractall(strict=True, verbose=verbose)
         # 2026-05-02 public Apogee supplement/site hygiene. The repo has
         # legacy private custody/state docs, so the default full-preflight pass
         # keeps this warn-only. Release tooling should call the same checker
@@ -3090,6 +3096,31 @@ _LIGHTNING_BARE_PROVIDER_TARGET_RE = re.compile(
     (?![A-Za-z0-9_.-])
     """
 )
+_PROVIDER_HOSTNAME_RE = re.compile(
+    r"""(?ix)
+    \b
+    (?:
+        ssh\.lightning\.ai
+        |
+        ssh\d*\.vast\.ai
+    )
+    \b
+    """
+)
+_SCORE_ENTRYPOINT_RE = re.compile(
+    r"""(?ix)
+    (?:
+        contest_auth_eval\.py
+        |
+        upstream/evaluate\.py
+        |
+        (?<![A-Za-z0-9_.-])evaluate\.py
+        |
+        runner\.py["'\s]+evaluate
+    )
+    """
+)
+_CPU_MPS_DEVICE_RE = re.compile(r"""(?ix)--device(?:\s+|=)(?:cpu|mps)\b""")
 
 
 def _iter_python_files(root: Path, dirs: list[str]) -> list[Path]:
@@ -3407,6 +3438,127 @@ def check_lightning_ssh_static_policy(
             "checking and should target SSH config aliases instead of the "
             "bare provider host. This keeps staging/harvest custody auditable "
             "before any Batch Job or SSH artifact copy."
+        )
+    return violations
+
+
+def _candidate_submission_provider_score_surface_files(repo_root: Path) -> list[Path]:
+    """Return public/submission helper surfaces where provider or CPU score
+    shortcuts are especially dangerous.
+
+    This is intentionally narrower than the general remote-script corpus:
+    legacy Vast/Lightning launchers have their own custody checks, while files
+    under submissions/ can leak stale provider targets or CPU score commands
+    directly into public/operator workflows.
+    """
+    candidates: list[Path] = []
+    roots = [
+        repo_root / "submissions" / "robust_current",
+        repo_root / "submissions" / "pr106_stacked",
+    ]
+    suffixes = {".py", ".sh"}
+    for base in roots:
+        if not base.exists():
+            continue
+        for path in sorted(base.rglob("*")):
+            if not path.is_file() or path.suffix.lower() not in suffixes:
+                continue
+            rel_parts = set(path.relative_to(repo_root).parts)
+            if rel_parts.intersection({"eval_runs", "__pycache__"}):
+                continue
+            candidates.append(path)
+    return sorted({p.resolve(): p for p in candidates}.values())
+
+
+def _line_is_negative_provider_guidance(line: str) -> bool:
+    lower = line.lower()
+    return any(
+        token in lower
+        for token in (
+            "do not use",
+            "never use",
+            "forbid",
+            "reject",
+            "blocked",
+            "disallow",
+            "fatal:",
+            "must not",
+        )
+    )
+
+
+def _scan_submission_for_provider_or_cpu_score_leakage(path: Path, repo_root: Path) -> list[str]:
+    violations: list[str] = []
+    text = _read_text_if_possible(path)
+    if not text:
+        return violations
+    rel = path.relative_to(repo_root) if path.is_relative_to(repo_root) else path
+    is_shell = path.suffix.lower() == ".sh"
+    scan_text = _mask_shell_heredocs(text) if is_shell else text
+    lines = scan_text.splitlines()
+
+    for i, line in enumerate(lines, start=1):
+        if _PROVIDER_HOSTNAME_RE.search(line) and not _line_is_negative_provider_guidance(line):
+            violations.append(
+                f"{rel}:{i}: submission helper embeds provider hostname; "
+                "use an operator-supplied SSH alias/target outside public custody."
+            )
+        if _LIGHTNING_STRICT_HOSTKEY_DISABLED_RE.search(line) and not _line_is_negative_provider_guidance(line):
+            violations.append(
+                f"{rel}:{i}: submission helper disables host-key checking; "
+                "use accept-new/yes and persistent known_hosts custody."
+            )
+        if _LIGHTNING_NULL_KNOWN_HOSTS_RE.search(line) and not _line_is_negative_provider_guidance(line):
+            violations.append(
+                f"{rel}:{i}: submission helper sends host keys to /dev/null; "
+                "use persistent known_hosts custody."
+            )
+
+    for i, line in enumerate(lines, start=1):
+        if not _SCORE_ENTRYPOINT_RE.search(line):
+            continue
+        window = "\n".join(lines[i - 1 : min(len(lines), i + 14)])
+        if _CPU_MPS_DEVICE_RE.search(window):
+            violations.append(
+                f"{rel}:{i}: score-path command uses --device cpu/mps; "
+                "contest score helpers must require CUDA or skip scoring."
+            )
+    return violations
+
+
+def check_no_submission_provider_or_cpu_score_leakage(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Block stale provider-host and CPU/MPS score paths in submission helpers.
+
+    This closes the `download_and_eval.sh` class: a public/operator helper
+    silently copied from a provider host with TOFU disabled and then ran the
+    scorer on CPU. Provider-specific orchestration belongs in private custody
+    scripts; submission helpers must be CUDA-scoring or package-only.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    candidates = _candidate_submission_provider_score_surface_files(root)
+    for path in candidates:
+        violations.extend(_scan_submission_for_provider_or_cpu_score_leakage(path, root))
+    if verbose:
+        if violations:
+            print(f"  [submission-provider-score-leakage] {len(violations)} violation(s):")
+            for v in violations[:20]:
+                print(f"    • {v}")
+            if len(violations) > 20:
+                print(f"    … (+{len(violations) - 20} more)")
+        else:
+            print(f"  [submission-provider-score-leakage] OK: {len(candidates)} submission helper(s) scanned")
+    if violations and strict:
+        raise MetaBugViolation(
+            "SUBMISSION PROVIDER/CPU SCORE LEAKAGE VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n\nSubmission helpers must not embed provider hostnames, "
+            "disable SSH host-key custody, or run contest score paths on "
+            "CPU/MPS. Use CUDA for score truth or --skip-score/package-only."
         )
     return violations
 
@@ -7592,6 +7744,55 @@ def check_archive_builders_use_deterministic_zip(
     return violations
 
 
+_RAW_EXTRACTALL_ALLOWED = {
+    "src/tac/submission_archive.py",
+}
+
+
+def check_no_raw_zip_extractall(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Block raw ZipFile.extractall outside the canonical safe extractor."""
+    root = repo_root or REPO_ROOT
+    scan_roots = ("src", "tools", "scripts", "experiments", "submissions")
+    violations: list[str] = []
+    needle = "." + "extractall("
+    for rel_root in scan_roots:
+        base = root / rel_root
+        if not base.exists():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            rel = path.relative_to(root).as_posix()
+            if rel in _RAW_EXTRACTALL_ALLOWED:
+                continue
+            if any(part in path.parts for part in ("__pycache__", ".pytest_cache", "tests")):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
+            for lineno, line in enumerate(text.splitlines(), start=1):
+                if needle in line:
+                    violations.append(
+                        f"{rel}:{lineno}: raw ZipFile.extractall is forbidden; "
+                        "use tac.submission_archive.safe_extract_zip"
+                    )
+    if verbose and violations:
+        print(f"  [safe-zip-extract] {len(violations)} raw extractall violation(s):")
+        for violation in violations:
+            print(f"    • {violation}")
+    elif verbose:
+        print("  [safe-zip-extract] OK")
+    if violations and strict:
+        raise MetaBugViolation(
+            "RAW ZIP EXTRACTALL violations:\n"
+            + "\n".join(f"  • {violation}" for violation in violations)
+        )
+    return violations
+
+
 # ── Check F: public release docs must not leak private ops state ────────────
 _PUBLIC_RELEASE_SCAN_PATHS = (
     "README.md",
@@ -11411,11 +11612,20 @@ def check_remote_scripts_probe_nvdec_early(strict: bool = False, verbose: bool =
         return violations
     n_scripts = 0
     n_with_probe = 0
+    n_opted_out = 0
     for script_path in sorted(scripts_dir.glob("remote_lane_*.sh")):
         if any(script_path.name.endswith(suf) for suf in EXEMPT_SUFFIXES):
             continue
         n_scripts += 1
         text = script_path.read_text(errors="ignore")
+        # Honor NO_NVDEC_NEEDED opt-out marker in first 30 lines (parity with
+        # _load_lane_script at line ~5831). Lanes operating on already-decoded
+        # tensors / archives don't need an NVDEC probe — the marker is the
+        # operator's affirmative declaration of that.
+        header = "\n".join(text.split("\n")[:30])
+        if _NVDEC_OPT_OUT_TOKEN in header:
+            n_opted_out += 1
+            continue
         # Strip comment-only lines so header docstrings don't false-positive
         # the GPU-marker scan. Use line-based filtering: lines starting with #.
         non_comment_lines = []

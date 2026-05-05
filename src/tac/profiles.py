@@ -3368,18 +3368,29 @@ QUANTIZR_REPLICA_88K_HALFFRAME_ANNEALED = {
 # variant="quantizr_faithful" — train_renderer dispatches to the new arm
 # instead of the build_renderer() warp-based default.
 #
-# Predicted band [0.40, 0.80] [contest-CUDA]:
+# Predicted band [0.40, 0.80] [predicted-band only — NEVER-VERIFIED]:
+# CRITICAL CLARITY (per feedback_q_faithful_NEVER_reproduced_quantizr_score_20260505):
+# Q-FAITHFUL has ZERO [contest-CUDA] landings. The 0.30-0.35 reproduction of
+# Quantizr's 0.33 leader is a Grand Council PREDICTION, never empirically
+# verified. v1/v2 crashed (argparse), v3 unharvested (Modal TTL), 4090 ep
+# 810/3000 PREEMPTED. Do NOT cite this band in any commit / submission /
+# paper / writeup as if it were measured.
+#
+# Predicted-band rationale (advisory only, NOT a claim):
 #   * Floor 0.40: Quantizr ships at 0.33; we use Lane A's scorer-measured
 #     poses (load-bearing per `project_baseline_poses_load_bearing`) +
 #     DSConv (matches Quantizr) + KL distill T=2.0 (matches) + 5-stage QAT.
 #   * Anchor 0.55: matches Quantizr 0.33 ± 0.5 lane variance — first true
-#     replica should land within his neighborhood.
+#     replica should land within his neighborhood [predicted-band only].
 #   * Ceiling 0.80: Lane A 1.15 minus rate gain. The 88K renderer (~64KB
 #     FP4) saves ~225KB vs Lane A's 290KB renderer; at 25 bits/byte rate
 #     factor that's a 0.30 rate reduction. Even if PoseNet/SegNet match
 #     Lane A exactly, archive shrinks; ceiling is just rate-floored.
 #
-# Costs: ~$8 for 12h on RTX 4090. Single bet, no in-flight A/B.
+# Costs: ~$8 for 12h on RTX 4090 (also never recouped — preempted). Single
+# bet, no in-flight A/B. Future re-attempts must produce a [contest-CUDA]
+# JSON artifact and retract the NEVER-VERIFIED memory before any score
+# citation lands.
 LANE_Q_FAITHFUL_88K = {
     "experiment_type": "renderer_training",
     # Architecture dispatch flag — train_renderer must read this to pick the
@@ -3404,6 +3415,15 @@ LANE_Q_FAITHFUL_88K = {
     # eval_roundtrip is NON-NEGOTIABLE per CLAUDE.md.
     "eval_roundtrip": True,
     "posetto_noise_std": 0.5,
+    # Half-frame paradigm (matches Quantizr's PR-#55 spec — encode only 600
+    # odd-frame masks, warp the rest at inflate time). The Q-FAITHFUL dispatch
+    # script (scripts/remote_lane_q_faithful_jointgen.sh) builds the mask
+    # seed with --half-frame, so the trained renderer MUST be half-frame-
+    # aware to avoid the score-17.55 catastrophe documented in
+    # feedback_half_frame_breaks_posenet (verified 2026-04-27).
+    # Same parity rule as Lane V (sister 88K from-scratch lane).
+    "use_zoom_flow": True,           # MotionPredictor 4ch (gate+residual)
+    "mask_half_sim_prob": 1.0,       # ALWAYS-on warp-expansion at training
     # Loss configuration: Quantizr's recipe per his compress.py:
     #   * KL distill on SegNet logits at T=2.0 — `kl_distill_segnet_only`
     #   * L1 pixel loss

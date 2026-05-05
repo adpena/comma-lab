@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
-"""CLI wrapper for comma-lab research-state tracking audits."""
+"""CLI wrapper for comma-lab research-state tracking audits.
+
+# no-argparse-OK: thin re-export of comma_lab.research_state.main(), which owns
+# the argparse surface. --help still works because the delegate parses sys.argv.
+"""
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "src"))
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 
-from comma_lab.research_state import main  # noqa: E402
+from comma_lab.research_state import main  # noqa: E402, I001
 
 
 if __name__ == "__main__":
