@@ -11,8 +11,8 @@ Usage:
     # With remote machines
     python tools/md_timeline_build.py \
         --repo . \
-        --remote bat00:/home/adpena/pact \
-        --remote tertiary:/Users/adpena/Projects/pact \
+        --remote <host>:<remote-pact-dir> \
+        --remote <host2>:<remote-pact-dir> \
         --out tools/timeline_site/data.json
 
     # With log file aggregation

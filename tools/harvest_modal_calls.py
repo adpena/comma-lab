@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import modal
 
-REPO = Path("/Users/adpena/Projects/pact")
+REPO = Path(__file__).resolve().parents[1]
 result_dirs = list((REPO / "experiments" / "results").glob("lane_*_modal"))
 metadata_files = [d / "modal_metadata.json" for d in result_dirs if (d / "modal_metadata.json").exists()]
 

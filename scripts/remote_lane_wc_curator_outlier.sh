@@ -14,7 +14,7 @@ START_TS="$(date +%s)"
 
 cd "$WORKSPACE"
 export PYTHONHASHSEED=1234
-export PYTHONPATH="src:upstream:/Users/adpena/projects/pact:${PYTHONPATH:-}"
+export PYTHONPATH="src:upstream:${PYTHONPATH:-}"
 mkdir -p "$LOG_DIR"
 
 log() { echo "[lane-wc] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
