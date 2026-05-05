@@ -306,6 +306,46 @@ End-to-end pipeline verified locally: prepare → build_residual → 942-byte sj
 bash scripts/remote_lane_sjkl_c067.sh
 ```
 
+## Strategic findings — late 2026-05-04 dashboard-mining session
+
+After the dashboard log-parser fix (commit dbb0032d, +293 score visibility),
+three cross-PR analyses produced a coherent strategic picture:
+
+1. **PR106 vs PR101 (+0.017 gap) is training-recipe, NOT codec** — PR106 uses
+   an 8-stage training pipeline (`stage1_v328_ce` → `stage8_muon_finetune`)
+   that drops pose distortion 5× to 0.000034. Our codec-side work is correctly
+   anchored on the best-trained decoder. See
+   `docs/pr106_vs_pr101_training_recipe_finding_20260504.md`.
+
+2. **PR97 anti-pattern: pose marginal value > seg at PR106's operating point**
+   — PR97 traded pose for seg (-65% seg, +18× pose) and lost 0.042 net. The
+   marginal sensitivity formula `5/sqrt(10*pose_avg)` evaluates to 271 at
+   PR106's pose_avg=0.000034 vs SegNet's constant 100, so pose marginal value
+   is 2.71× seg. CLAUDE.md's "SegNet 77× more important" heuristic was at the
+   OLD 1.x operating point — at PR106's level the marginal value FLIPS. Our
+   pre-registered sidechannel lanes both target pose, validating direction.
+   See `docs/pr97_anti_pattern_pose_vs_seg_marginal_20260504.md`.
+
+3. **PR family evolution: 4 paradigm-shift eras** —
+   - Era 1 (PR63-64, qpose14): ~287KB / 0.325-0.331
+   - Era 2 (PR81-85, range_mask): ~215-240KB / 0.258-0.298 (-0.05)
+   - Era 3 (PR95-105, HNeRV): ~178KB / 0.226-0.231 (-0.05)
+   - Era 4 (PR106, HNeRV+8-stage): 186KB / 0.2095 (-0.017)
+
+   Within-era variance: ±0.005 (codec polish). Between-era jumps: -0.05 to
+   -0.10 (architecture/training paradigm shifts). Our lanes operate within
+   Era 4 — predicted total post-stacking range 0.180-0.205. Beating PR106 by
+   0.05+ requires Era 5 (multi-week research-grade work). See
+   `docs/pr_family_evolution_timeline_20260504.md`.
+
+**Master INDEX**: `docs/INDEX_score_aware_sidechannel_thread_20260504.md` ties
+together the 9-memo paradigm thread + 6 sidechannel variants + 2 pre-registered
+PR106-stacking lanes (`lane_pr106_latent_sidecar` + `lane_pr106_yshift_sidechannel`).
+
+**Operator handoff snapshot**: `docs/operator_handoff_snapshot_20260504.md`
+captures the 4 actionable choices with recommendation (Choice 1: dispatch
+apogee_int5 at $0.30 — RECOMMENDED).
+
 ## Updated Next Queue
 
 1. Use `experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter` as the release packet unless a newer exact T4 A++ packet is explicitly promoted.
