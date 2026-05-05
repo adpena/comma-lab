@@ -4,6 +4,63 @@ You are operating inside a dual-track lab for the comma video compression challe
 
 Read `PROGRAM.md` before making changes.
 
+## Race-mode rigor inversion + parallel-dispatch first — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**Postmortem source:** `~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_may_4_hnerv_race_postmortem_20260505.md`. The May 4 2026 contest was decided in a **4 hour 8 minute race window** after PR #95 (HNeRV root) was published at 07:47:15 UTC. Final top 3 (PR #101 / #103 / #102 at 0.193 / 0.195 / 0.195) all submitted between 11:50 and 11:55 UTC. Silver medal (rem2 PR #103) was **241 lines of code in 2 files**. Our PR #107 apogee landed at 0.229 (~11th) — we had every primitive needed but spent the race window building meta-Lagrangian + predictor + sanity gates (sequential validation harness) instead of fanning out parallel dispatches.
+
+The two rules below structurally extinct that failure mode.
+
+### Rule 1: parallel-dispatch is a FIRST-CLASS DELIVERABLE, not an afterthought
+
+When the user says "parallel" / "high-throughput" / "search" / "automation" / "stacking sweep" — the **first file built** must be the actuator that fans out N concurrent paid-GPU dispatches. Build the actuator BEFORE the ranker, BEFORE the predictor, BEFORE the sanity gate. A ranker without a parallel actuator is a planner that produces ranked plans no one executes. The canonical actuator + harvest loop is now checked in:
+
+- `tools/parallel_dispatch_top_k.py` — `concurrent.futures.ThreadPoolExecutor` over `tools/lightning_dispatch_pr106_stack.py` (Lightning T4) or `scripts/launch_lane_on_vastai.py` (Vast.ai 4090). Includes per-dispatch + total-cost gating, per-dispatch timeout, harvested-JSONL output.
+- `tools/harvest_and_reseed.py` — ingests the harvested JSONL, drops any row not tagged `[contest-CUDA]`, appends new empirical anchors to `.omx/calibration/anchors_*.json`. Closes the prediction → empirical → updated-prediction feedback loop.
+
+The canonical sweep loop is therefore three commands:
+```bash
+.venv/bin/python tools/meta_lagrangian_search_cli.py \
+    --lane-class apogee_intN --auto-sweep-bits 4,5,6,7,8 \
+    --top-k 16 --output reports/sweep_ranked.json
+
+.venv/bin/python tools/parallel_dispatch_top_k.py \
+    --ranked-input reports/sweep_ranked.json --max-concurrency 16 \
+    --provider lightning --estimated-cost-per-dispatch 0.11 \
+    --max-total-cost 5.00 --harvest-output reports/sweep_harvested.jsonl
+
+.venv/bin/python tools/harvest_and_reseed.py \
+    --harvested-jsonl reports/sweep_harvested.jsonl \
+    --anchors-path .omx/calibration/anchors_apogee_intN.json
+```
+
+If any future work proposes a "search engine" / "candidate generator" / "ranking primitive" / "sanity gate" without naming the parallel actuator, that work is INCOMPLETE. Closure requires naming the actuator that turns the ranking into N concurrent dispatches.
+
+### Rule 2: strategic-rigor inversion at leaderboard moves
+
+The agent's default prior is "max rigor: validate before dispatching." This prior is correct PRE-leader-shift (you're optimizing alone, every wasted dispatch is your money). It is WRONG POST-leader-shift (you're racing; every minute of gating is a competitor shipping ahead of you).
+
+**Detection:** before any new candidate is dispatched, the agent MUST check whether the public leaderboard has moved in the last 24 hours. If yes, the prior **inverts**: the next action is the smallest credible bolt-on submitted within ~60 minutes, not another sanity gate. Concretely, the May 4 race showed:
+- BradyMeighan: PR #97 (0.23) → #99 (0.197) → #100 (0.195) — **3 PRs in 2h 12min**
+- rem2 (silver): PR #96 (0.21) → #103 (0.195) — **2 PRs in 3h 24min, 241 LOC final increment**
+- EthanYangTW (bronze): PR #98 (0.196) → #102 (0.195) — **2 PRs in 2h 23min**
+- "kitchen_sink" PR #105 — 1776 LOC, 21 files — **lost** to rem2's 241 LOC
+
+The right move when N hours remain is the smallest credible bolt-on, not the most thorough system. Public PRs are checkpoints that lock in score, force honest contest-CUDA measurement, surface what's NOT working in 30 min instead of 4 hr, and establish presence. Holding for one polished shipment is the failure mode.
+
+### Rule 3: cron + same-prompt loop is a fan-out cadence
+
+A cron job firing every N minutes on the same prompt is the natural cadence for "fan-out K candidates and harvest." It is the WRONG cadence for "do another sequential validation pass." The May 4 cron was firing every 5 minutes and the agent kept choosing depth (more validation gates) over velocity (more dispatches). When loop tick X is shorter than dispatch wall-clock Y, every tick should fan out a new batch. When Y > X (12-hour training jobs), the tick should be a "harvest results + reseed" cycle.
+
+Translation table when the loop fires:
+- "push toward Shannon floor in absolute minimum wall clock" → fan out next batch of K parallel dispatches; do NOT add another gate.
+- "extreme rigor" → applies to the FIRST cycle (calibration of anchors), not every cycle. After cycle 1, rigor is in the actuator's gating thresholds, not in sequential validation.
+- "fix all bugs everywhere" → fix the bug class that prevents the actuator from firing. A bug that doesn't block dispatch can wait.
+
+### Concrete enforcement
+
+- Task #309 ("HIGH-THROUGHPUT DISPATCH agent: parallel GPU orchestration") sat **pending** the entire May 4 race window. That task class is a NON-NEGOTIABLE priority-1 — if a similar task exists in any backlog, it must be claimed before any new validation-gate work.
+- Any PR that adds a new ranking/predictor/sanity-gate primitive MUST link to the parallel-actuator file that consumes its output. If no such consumer exists, the PR description must explicitly state "actuator deferred — no race window currently active" with the operator's signoff on the deferral.
+
 ## Main branch source of truth — NON-NEGOTIABLE
 
 `main` is the sole source-of-truth branch. Do not do production work, recovery

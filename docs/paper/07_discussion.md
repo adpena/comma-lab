@@ -87,7 +87,59 @@ The combination predicts that the contest will *converge prematurely* to a leade
 
 This is not a critique of any individual contestant. It is a structural observation about how multi-week public-PR contests with hard deadlines reach floors. The implication for the post-deadline research agenda is concrete: which paradigm-shift candidates actually reach the YF floor when the deadline pressure is removed and the variance budget is restored. The full game-theoretic analysis with reactivation criteria appears in the methodology addendum companion.
 
-## 7.6 Conclusion
+## 7.8 Lessons learned: the May 4 race window and the planner-without-actuator failure
+
+The previous section (7.7) predicted that contests with hard deadlines would converge prematurely to leader-bands well above the theoretical floor. The same structural features predict, more sharply, what happens in the *final hours* before the deadline. This is not a hypothetical: the comma.ai contest deadline was 2026-05-03 11:59pm AOE (= 2026-05-04 12:00 UTC). The final top three submissions all landed inside a **4 hour 8 minute window** on 2026-05-04, and the structure of how they landed exposes a failure mode in our own approach that is worth documenting.
+
+### The race window
+
+PR #95 (`hnerv_muon`, AaronLeslie138) — the seminal HNeRV-class submission — was published at 2026-05-04 07:47:15 UTC, scoring 0.20. The final top three:
+
+| Rank | PR | Author | Created (UTC) | Lines added | Files | Score |
+|------|----|--------|---------------|-------------|-------|-------|
+| 🥇 1 | #101 | SajayR | 11:50:13 | 660 | 5 | 0.193 |
+| 🥈 2 | #103 | rem2 | 11:55:56 | **241** | **2** | 0.195 |
+| 🥉 3 | #102 | EthanYangTW | 11:54:32 | 367 | 7 | 0.195 |
+
+All three were small bolt-ons on top of HNeRV: a fine-tune microcodec (#101), an arithmetic-coded latent variant (#103), and an LC + scale-knob tweak (#102). The silver medal was 241 lines in 2 files, shipped within 4 hours 8 minutes of HNeRV's publication. PR #105 (`kitchen_sink`, valtterivalo) — 1776 lines across 21 files, throwing every available technique at HNeRV — landed at 0.198 and lost to PR #103's 241-line increment.
+
+The medalists also iterated publicly: BradyMeighan shipped PR #97 (0.23) → #99 (0.197) → #100 (0.195) over 2 hours 12 minutes, three checkpoints in succession. rem2 went PR #96 (0.21) → #103 (0.195) over 3 hours 24 minutes. EthanYangTW went PR #98 (0.196) → #102 (0.195) over 2 hours 23 minutes. Each public PR locked in a score, forced an honest contest-CUDA measurement, and established presence on the leaderboard before competitors could ship past.
+
+### Our approach during the same window
+
+We had every primitive needed pre-built: PR #106 byte-deconstructed; the apogee_intN codec built (int4 through int8 archives existed on disk); arithmetic codec, block-FP, water-filling, sensitivity maps all checked in. Our PR #107 (`apogee`) landed at 0.229, ranking ~11th. We did not ship a competitive submission in the 4-hour window because we used the window to build infrastructure rather than to dispatch candidates.
+
+The infrastructure built during the race window was substantial: a meta-Lagrangian search engine with predictor refusal modes, a closed-form distortion proxy, a 5-gate predispatch sanity ladder, four new STRICT preflight checks, an OSS extraction of the `tac` library to a public repository, an adversarial-review subagent, a 7-bug fix subagent. Every item is defensible engineering: each prevents a specific bug class, each closes a specific gap surfaced by a specific past incident. None of them dispatched a candidate to a paid GPU during the window in which the contest was decided.
+
+### The planner-without-actuator failure mode
+
+The deeper failure was architectural. The meta-Lagrangian engine was conceptually a parallel-dispatch system: rank N candidates locally in microseconds (the proxy is closed-form), select top-K, fire K dispatches *in parallel* to N concurrent paid GPUs ($0.11 per Lightning T4 dispatch), harvest empirical anchors, reseed the calibration. With 16 concurrent dispatches at $0.11 each, ~$2 buys 16 simultaneous empirical anchors per cycle, and the loop converges within 2-3 cycles.
+
+What we built was the ranking layer (`evaluate_all`, `top_k`, refusal modes, sanity gate). What we did not build was the actuator: `concurrent.futures.ThreadPoolExecutor` over the existing dispatch wrapper, ~150 lines. Without the actuator, the engine produces a ranked list that no one executes. With the actuator, every loop tick fans out 16 dispatches and gathers 16 empirical anchors. The architecture is *right design with the actuator missing*.
+
+A cron job had been firing every 5 minutes during the entire race window with the prompt "push to implement all necessary under plan for shannon theoretical floor in absolute minimum wall clock." The 5-minute cadence is the natural cadence for fan-out-and-harvest sweeps when the dispatch wall-clock is shorter than the loop tick. Each tick should have launched the next batch of 16 dispatches. Instead, the agent translated "absolute minimum wall clock" as "absolute maximum local rigor" and used each tick to add another sequential validation gate. The cron was effectively a force-multiplier for the wrong subroutine.
+
+### The strategic-rigor inversion
+
+The general principle this exposes: an agent's prior on rigor must be *explicit, not implicit, in the loop dispatcher*. Pre-leadership-shift, max rigor is correct (the agent is optimizing alone, every wasted dispatch is the operator's money). Post-leadership-shift, max velocity is correct (the agent is racing, every minute of additional gating is a competitor shipping ahead). The transition between these priors must be triggered by a runtime detector: poll the public leaderboard every cycle, and when it has moved within the last 24 hours, the loop dispatcher should narrow the top-K, drop sanity gates that block on proxy-only evidence, and prioritize ship-velocity over local rigor.
+
+This generalizes: when a metric is publicly contested with a hard deadline, harness rigor and competitive performance trade off directly inside the deadline window. Pre-deadline harness work is investment; intra-window harness work is forfeit. The kitchen-sink author who threw 1776 lines at HNeRV and lost to 241 lines is the same failure pattern at a different layer.
+
+### What was checked in after the deadline
+
+Three artifacts now exist in the repository to extinct this failure mode structurally:
+
+- `tools/parallel_dispatch_top_k.py` — `concurrent.futures.ThreadPoolExecutor` over `tools/lightning_dispatch_pr106_stack.py` and `scripts/launch_lane_on_vastai.py`. Per-dispatch and total-cost gating; per-dispatch timeouts; harvested-JSONL output. Strict-mode rejects candidates not marked `ready_for_exact_eval_dispatch=true` to honor the post-int4-falsification safety reflex.
+
+- `tools/harvest_and_reseed.py` — ingests the harvested JSONL, drops any row not tagged `[contest-CUDA]` (per CLAUDE.md auth-eval-everywhere rule), cross-verifies the harvested score against the per-dispatch `contest_auth_eval.json`, appends new empirical anchors to `.omx/calibration/anchors_*.json`. Closes the prediction → empirical → updated-prediction feedback loop.
+
+- `tools/feedback_loop_sweep.py` — single binary that runs the closed loop end-to-end: rank → dispatch (in-process `ThreadPoolExecutor`) → harvest → reseed → check convergence → repeat. Configurable `--max-cycles`, `--max-total-cost`, `--max-cost-per-cycle`, `--top-k`, `--convergence-eps`. The `--race-mode` flag forces the leadership-shift prior immediately: narrows top-K to 4, caps per-cycle spend to $0.50, drops sanity gates that block on proxy-only evidence.
+
+The corresponding NON-NEGOTIABLE rule has been added to `CLAUDE.md`: when the user says "parallel" / "high-throughput" / "search" / "automation" / "stacking sweep," the first file built must be the actuator that fans out N concurrent paid-GPU dispatches. A ranker without a parallel actuator is a planner that produces ranked plans no one executes. Any future PR that adds a new ranking, predictor, or sanity-gate primitive must explicitly link to the parallel-actuator file that consumes its output.
+
+The full postmortem with concrete LOC counts per medalist and the pre-staged primitives we had unused is in `feedback_may_4_hnerv_race_postmortem_20260505.md`.
+
+## 7.9 Conclusion
 
 We presented a system for the comma.ai video compression challenge built around an asymmetric warp renderer, constrained scorer-aware training, and test-time optimization with coupled trajectory loss. The trustworthy promoted floor remains the contest-compliant archive; lower proxy and TTO lanes are useful research evidence only when their archive, inflate path, and authoritative evaluation are reproduced. The single largest methodological improvement came from finding and fixing a gradient obstruction in the upstream scorer code --- a bug that made every prior TTO experiment invalid.
 
