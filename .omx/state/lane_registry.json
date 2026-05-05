@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-05-05T01:00:31Z",
+  "updated_at": "2026-05-05T02:10:53Z",
   "description": "Canonical lane maturity registry. See feedback_production_hardened_standard_definition_20260430.md for the 7-gate Level 3 standard. Maintained via tools/lane_maturity.py \u2014 bare edits OK for seeding but mark/unmark/audit-log are the supported interface going forward.",
   "gate_definitions": {
     "impl_complete": "Production code lands; no NotImplementedError; all CLI flags wired; all error paths covered.",
@@ -1719,6 +1719,43 @@
         }
       },
       "notes": "FALSIFIED 2026-05-04 by tools/apogee_intN_pareto.py \u2014 int7 archive is 205,158 bytes (+18,919 vs int8 187,731 bytes) for the same VERY-LOW distortion class. The non-byte-aligned int7 packing requires shift/mask boilerplate per block whereas int8 fits cleanly. Reactivation: only if a future packer eliminates the bit-aligned overhead (e.g., 2x int7 -> 14-bit aligned; or context model on the bit-stream)."
+    },
+    {
+      "id": "lane_pr106_latent_sidecar",
+      "name": "PR106 + per-pair latent-correction sidecar (PR100 hnerv_lc_v2 pattern)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "docs/pr100_latent_sidecar_porting_proposal_20260504.md (160-line proposal with byte-layout comparison + council gate + 3-stage implementation plan)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "PROPOSAL \u2014 pre-registered at L0 per CLAUDE.md. Per-pair (dim_idx, delta_q) sidecar adds ~1.2KB to PR106 archive; predicted -0.00218 score \u0394 via PR100-vs-PR105 empirical (same arch family, +1124b/-0.00218 = net win). Stacks orthogonally with apogee_intN bit-width reduction. Cost: ~$0.60 (Vast.ai 4090 brute-force search + contest-CUDA eval). Council gate REQUIRED before implementation per design-decisions-non-negotiable. Reactivation: council 5/8 GO + operator approves dispatch. Cross-ref: docs/pr100_latent_sidecar_porting_proposal_20260504.md"
     }
   ]
 }
