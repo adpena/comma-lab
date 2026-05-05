@@ -12,7 +12,9 @@ opening into deeper systems questions about what a video is when the consumer is
 a fixed neural scorer, not a human viewer.
 
 The current confirmed champion packet is the PR100 HNeRV-LC-v2 adapter replay,
-published through the Apogee supplement/report lane with the `apogee` name.
+built as an Apogee follow-up packet after Apogee PR #107. PR #107 remains the
+earlier public Apogee submission; PR100 exact replay is now the lower local
+A++ score-bearing packet.
 
 The score-bearing claim is:
 
@@ -28,8 +30,8 @@ The score-bearing claim is:
   `experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/contest_auth_eval.adjudicated.json`
 - packet:
   `experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter`
-- public PR:
-  `https://github.com/commaai/comma_video_compression_challenge/pull/107`
+- public source PR:
+  `https://github.com/commaai/comma_video_compression_challenge/pull/100`
 
 Every public-facing section should make the same distinction: exact local CUDA
 evidence can rank; public PR claims, comments, and static anatomy can motivate,
@@ -85,6 +87,40 @@ It should also be candid that the project state is distributed across git
 history, `.omx/research` ledgers, exact-eval artifact directories, generated
 site files, and public PR/release surfaces. The public release bundle should
 therefore be a curated evidence index, not a raw dump of operator state.
+
+## postmortem: what would have bridged the gap
+
+The honest diagnosis is that Apogee had many of the right ideas before they
+won publicly, but did not lower enough of them into contest-valid bytes fast
+enough. HNeRV/NeRV, arithmetic and range coding, hard-pair water-filling,
+foveation, LA-POSE-style motion priors, scorer-targeted corrections, and
+self-compression all appeared in our research stream. The missing bridge was
+not imagination; it was an always-on compiler path from idea to deterministic
+archive to exact CUDA evidence.
+
+The writeup should say this plainly because it is the most transferable
+lesson. In this challenge, a concept became real only when it survived:
+
+```text
+idea -> typed stream -> deterministic payload -> inflate runtime
+     -> no-op control -> exact CUDA eval -> evidence ledger
+```
+
+What we would change:
+
+- keep one strict promotion lane and one risky frontier lane running in
+  parallel;
+- require every research note to name its smallest charged archive experiment;
+- deconstruct public PR blobs, comments, archives, and runtimes continuously
+  during deadline windows;
+- make dead flags, wrong-runtime adapters, MPS/CPU leakage, no-op recodes, and
+  sidecar drift fail before dispatch;
+- retire only measured implementations, not whole representation families;
+- use hard-pair, foveation, openpilot, and LA-POSE-style motion priors as
+  routing fields for charged atoms.
+
+This postmortem is expanded in `docs/postmortem_bridge_gap_20260505.md` and
+should be linked from the public site as an engineering appendix.
 
 ## research process
 
@@ -219,7 +255,7 @@ The final release packet passed the strict pre-submission gate on:
   --expected-archive-size-bytes 178981 \
   --expected-runtime-tree-sha256 ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832 \
   --dispatch-claims-md .omx/state/active_lane_dispatch_claims.md \
-  --expected-lane-id public_pr98_hnerv_muon_finetuned_t4_adapter_replay \
+  --expected-lane-id public_pr100_hnerv_lc_v2_t4_adapter_replay \
   --expected-job-id exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z \
   --source-prs PR100
 ```
@@ -244,6 +280,7 @@ Allowed:
 Forbidden:
 
 - "The PR98 public body score is the local exact score."
+- "PR100 beats Apogee PR #107 because the public body score says so."
 - "PR100 beats Apogee before local exact CUDA replay."
 - "The PR91 public self-report is an exact score."
 - "HPM1 is decoded by `range_mask_codec.cpp`."

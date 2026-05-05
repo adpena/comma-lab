@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 import shlex
@@ -17,13 +18,33 @@ import subprocess
 import sys
 import tempfile
 import time
+from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any
 
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.deploy.lightning.defaults import (  # noqa: E402
+    DEFAULT_LIGHTNING_REMOTE_PACT,
+    default_ssh_target,
+)
+from tac.repo_io import json_text, sha256_file, write_json  # noqa: E402
+
 DEFAULT_STATE_DIR = REPO_ROOT / ".omx/state"
-DEFAULT_REMOTE_PACT = "/teamspace/studios/this_studio/pact"
+DEFAULT_REMOTE_PACT = DEFAULT_LIGHTNING_REMOTE_PACT
 DEFAULT_SOURCE_PATHS = (
     "AGENTS.md",
     "README.md",
@@ -59,6 +80,7 @@ EXCLUDED_DIR_NAMES = {
     "node_modules",
 }
 EXCLUDED_PREFIXES = (
+    ".recovery_quarantine_",
     ".omx/state/",
     ".omx/tmp/",
     ".omx/cache/",
@@ -132,14 +154,6 @@ class LightningLocalUvLockError(RuntimeError):
 
 def _utc_now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-
-
-def _sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
 
 
 def _run(
@@ -701,6 +715,26 @@ def _is_excluded(rel: Path) -> bool:
     return False
 
 
+def _git_status_path(status_line: str) -> Path | None:
+    body = status_line[3:] if len(status_line) > 3 else ""
+    if " -> " in body:
+        body = body.rsplit(" -> ", 1)[-1]
+    body = body.strip()
+    return Path(body) if body else None
+
+
+def _filter_git_status(status_lines: list[str]) -> tuple[list[str], list[str]]:
+    public_lines: list[str] = []
+    excluded_lines: list[str] = []
+    for line in status_lines:
+        rel = _git_status_path(line)
+        if rel is not None and _is_excluded(rel):
+            excluded_lines.append(line)
+        else:
+            public_lines.append(line)
+    return public_lines, excluded_lines
+
+
 def _iter_files(root: Path, *, repo_root: Path, include_excluded: bool) -> Iterable[Path]:
     if root.is_file():
         rel = root.relative_to(repo_root)
@@ -753,7 +787,7 @@ def collect_files(
                 "path": rel,
                 "role": role_by_rel[rel],
                 "bytes": path.stat().st_size,
-                "sha256": _sha256(path),
+                "sha256": sha256_file(path),
             }
         )
     if not files:
@@ -763,6 +797,8 @@ def collect_files(
 
 def build_manifest(args: argparse.Namespace, files: list[dict[str, object]]) -> dict[str, object]:
     git_status = _capture(["git", "status", "--short", "--untracked-files=all"])
+    git_status_lines = git_status.splitlines() if git_status else []
+    public_status, excluded_status = _filter_git_status(git_status_lines)
     payload = {
         "schema_version": 1,
         "generated_at_utc": _utc_now(),
@@ -786,7 +822,8 @@ def build_manifest(args: argparse.Namespace, files: list[dict[str, object]]) -> 
         "git": {
             "head": _capture(["git", "rev-parse", "HEAD"]),
             "branch": _capture(["git", "rev-parse", "--abbrev-ref", "HEAD"]),
-            "status_short": git_status.splitlines() if git_status else [],
+            "status_short": public_status,
+            "status_short_excluded_private": excluded_status,
         },
         "exclusions": {
             "dir_names": sorted(EXCLUDED_DIR_NAMES),
@@ -803,8 +840,7 @@ def build_manifest(args: argparse.Namespace, files: list[dict[str, object]]) -> 
 
 
 def _write_json(path: Path, payload: dict[str, object]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    write_json(path, payload)
 
 
 def _remote_python_command(
@@ -879,7 +915,7 @@ def _remote_python_command(
             "  'platform': platform.platform(),",
             f"  'requirements_mode': {json.dumps(requirements_mode)},",
             f"  'python_bin_requested': {python_bin!r},",
-            f"  'require_cuda': {repr(require_cuda)},",
+            f"  'require_cuda': {require_cuda!r},",
             "  'packages': {},",
             "}",
             "for name in ['tac', 'torch', 'torchvision', 'av', 'safetensors', 'numpy', 'segmentation-models-pytorch', 'timm', 'lightning', 'lightning-sdk']:",
@@ -933,7 +969,7 @@ def _remote_python_command(
             "print(json.dumps(payload, sort_keys=True))",
             "if security_findings:",
             "    raise SystemExit('FATAL_RUNTIME_SECURITY_JSON=' + json.dumps(payload['runtime_security'], sort_keys=True))",
-            f"if {repr(require_cuda)} and payload.get('torch_cuda_available') is not True:",
+            f"if {require_cuda!r} and payload.get('torch_cuda_available') is not True:",
             "    raise SystemExit('FATAL: --require-cuda requested but torch.cuda.is_available() is not true')",
             "PY",
             f"test -f {shlex.quote(remote_manifest)}",
@@ -1027,16 +1063,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def _default_remote() -> str:
-    return (
-        os.environ.get("LIGHTNING_SSH_TARGET")
-        or os.environ.get("LIGHTNING_REMOTE")
-        or os.environ.get("REMOTE")
-        or "lightning-pact"
-    )
+    return default_ssh_target()
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv or sys.argv[1:])
+    if not args.remote:
+        raise SystemExit("set --remote or LIGHTNING_SSH_TARGET before staging to Lightning")
     if args.remote == "ssh.lightning.ai":
         raise SystemExit("set --remote or LIGHTNING_USER to include the Studio SSH user")
     if args.requirements_mode == "uv-sync" and not args.dry_run and not args.ssh_check_only:
@@ -1073,7 +1106,7 @@ def main(argv: list[str] | None = None) -> int:
             diagnostic["runtime_probe"] = runtime_diagnostic
         if args.ssh_diagnostics_out:
             _write_json(Path(args.ssh_diagnostics_out), diagnostic)
-        print(json.dumps(diagnostic, indent=2, sort_keys=True))
+        print(json_text(diagnostic), end="")
         return 0
 
     files = collect_files(args.source, args.artifact)
@@ -1170,7 +1203,7 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     print(
-        json.dumps(
+        json_text(
             {
                 "status": "DRY_RUN" if args.dry_run else "OK",
                 "manifest": str(manifest_out),
@@ -1178,10 +1211,9 @@ def main(argv: list[str] | None = None) -> int:
                 "file_count": manifest["file_count"],
                 "total_bytes": manifest["total_bytes"],
                 "manifest_sha256": manifest["manifest_sha256"],
-            },
-            indent=2,
-            sort_keys=True,
-        )
+            }
+        ),
+        end="",
     )
     return 0
 

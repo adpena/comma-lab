@@ -1,12 +1,15 @@
 #!/bin/bash
 # Run a command on Lightning AI Studio through SSH.
 #
-# Configure ~/.ssh/config with a Host such as "lightning-pact", then export
-# LIGHTNING_SSH_TARGET to that alias.
+# Export LIGHTNING_SSH_TARGET to a user-qualified Studio SSH target or SSH alias.
 set -euo pipefail
 
 CMD="${1:?Usage: $0 \"command\"}"
-TARGET="${LIGHTNING_SSH_TARGET:-lightning-pact}"
+TARGET="${LIGHTNING_SSH_TARGET:-}"
+if [ -z "$TARGET" ]; then
+  echo "FATAL: set LIGHTNING_SSH_TARGET to a user-qualified Studio SSH target or SSH config alias" >&2
+  exit 2
+fi
 case "$TARGET" in
   ssh.lightning.ai)
     echo "FATAL: use a user-qualified target or SSH config alias, not bare ssh.lightning.ai" >&2

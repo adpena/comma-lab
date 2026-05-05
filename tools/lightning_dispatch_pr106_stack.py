@@ -15,7 +15,7 @@ Usage:
 Optional:
     --inflate-sh PATH   (default: derived from --lane name)
     --skip-stage        (skip lightning_repro_workspace.py if already staged)
-    --ssh-target        (default: s_01knw7wnzbe79wfq5mqqbx1mbz@ssh.lightning.ai)
+    --ssh-target        (or LIGHTNING_SSH_TARGET; required unless --skip-stage)
     --print-only        (print the resolved invocation without running)
 
 Workflow:
@@ -27,7 +27,6 @@ Workflow:
     5. Returns the job-name for harvest
 
 Encodes:
-    - studio=lossy-compression-challenge, teamspace=comma-lab, user=adpena
     - platform=lightning (claim must be exact lowercase)
     - INFLATE_TORCH_SPEC=torch==2.5.1+cu124 (driver<580 cu13 trap)
     - --allow-skip-remote-preflight-reason for the launcher path-lowercase bug
@@ -42,36 +41,134 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import json
-import os
 import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_SSH_TARGET = "s_01knw7wnzbe79wfq5mqqbx1mbz@ssh.lightning.ai"
-DEFAULT_REMOTE_PACT = "/teamspace/studios/this_studio/pact"
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.deploy.lightning.defaults import (  # noqa: E402
+    DEFAULT_LIGHTNING_REMOTE_PACT,
+    DEFAULT_LIGHTNING_SSH_TARGET,
+    DEFAULT_LIGHTNING_STUDIO,
+    DEFAULT_LIGHTNING_TEAMSPACE,
+    DEFAULT_LIGHTNING_USER,
+)
+from tac.repo_io import read_json, sha256_file  # noqa: E402
+
+_sha256_file = sha256_file  # Backward-compatible test/tool API alias.
+
+DEFAULT_SSH_TARGET = DEFAULT_LIGHTNING_SSH_TARGET
+DEFAULT_REMOTE_PACT = DEFAULT_LIGHTNING_REMOTE_PACT
 PR106_BASELINE_SCORE = 0.20945673
 PR106_BASELINE_BYTES = 186239
-LIGHTNING_STUDIO = "lossy-compression-challenge"
-LIGHTNING_TEAMSPACE = "comma-lab"
-LIGHTNING_USER = "adpena"
+LIGHTNING_STUDIO = DEFAULT_LIGHTNING_STUDIO
+LIGHTNING_TEAMSPACE = DEFAULT_LIGHTNING_TEAMSPACE
+LIGHTNING_USER = DEFAULT_LIGHTNING_USER
 INFLATE_TORCH_SPEC = "torch==2.5.1+cu124"
 UV_EXTRA_INDEX_URL = "https://download.pytorch.org/whl/cu124"
 UV_INDEX_STRATEGY = "unsafe-best-match"
+APOGEE_DISTORTION_GATE_PASSED = {"passed", "pass", "ready", "exact_positive_cuda"}
+APOGEE_ALLOWED_EVIDENCE_SEMANTICS = {
+    "contest_faithful_distortion_model",
+    "scorer_basin_parity_gate",
+    "contest_cuda_exact_eval_positive",
+}
+APOGEE_FORBIDDEN_EVIDENCE_MARKERS = (
+    "byte_only",
+    "byte-only",
+    "prediction_only",
+    "predicted_band",
+    "invalid_predicted_band",
+    "proxy_only",
+    "distortion_proxy_local",
+    "local_distortion_proxy",
+    "[distortion-proxy:local]",
+)
 
 
 def _utc_now_iso() -> str:
-    return dt.datetime.now(tz=dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return dt.datetime.now(tz=dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _utc_plus_1h_iso() -> str:
-    return (dt.datetime.now(tz=dt.timezone.utc) + dt.timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return (dt.datetime.now(tz=dt.UTC) + dt.timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _job_name(lane: str) -> str:
-    ts = dt.datetime.now(tz=dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    ts = dt.datetime.now(tz=dt.UTC).strftime("%Y%m%dT%H%M%SZ")
     return f"lane_{lane}_pr106_{ts}"
+
+
+def validate_apogee_dispatch_gate(
+    *,
+    lane: str,
+    archive: Path,
+    gate_json: Path | None,
+    allow_forensic_print_only: bool,
+    print_only: bool,
+) -> None:
+    """Fail closed for Apogee intN unless a real distortion gate is present."""
+    if not lane.startswith("apogee_int"):
+        return
+    if allow_forensic_print_only and print_only:
+        print("[apogee-gate] forensic print-only override; no GPU dispatch authorized")
+        return
+    if allow_forensic_print_only and not print_only:
+        sys.exit("FATAL: --allow-forensic-apogee-intN requires --print-only; GPU dispatch remains blocked")
+    if gate_json is None:
+        sys.exit(
+            "FATAL: apogee_intN dispatch requires --apogee-distortion-gate-json. "
+            "Byte-only Pareto predictions are forensic/noncanonical after the int4 exact negative."
+        )
+    try:
+        payload = read_json(gate_json)
+    except (OSError, ValueError) as exc:
+        sys.exit(f"FATAL: invalid Apogee distortion gate JSON {gate_json}: {exc}")
+    if not isinstance(payload, dict):
+        sys.exit(f"FATAL: Apogee distortion gate must be a JSON object: {gate_json}")
+
+    actual_sha = sha256_file(archive)
+    recorded_sha = (
+        payload.get("candidate_archive_sha256")
+        or payload.get("archive_sha256")
+        or payload.get("archive", {}).get("sha256")
+    )
+    blockers: list[str] = []
+    if recorded_sha != actual_sha:
+        blockers.append(f"candidate_archive_sha256 mismatch gate={recorded_sha!r} actual={actual_sha}")
+    if payload.get("ready_for_exact_eval_dispatch") is not True:
+        blockers.append("ready_for_exact_eval_dispatch is not true")
+    semantics = str(payload.get("evidence_semantics", "")).strip().lower()
+    if not semantics:
+        blockers.append("missing evidence_semantics")
+    if semantics not in APOGEE_ALLOWED_EVIDENCE_SEMANTICS:
+        blockers.append(f"unsupported evidence_semantics={semantics!r}")
+    payload_text = str(payload).lower()
+    for marker in APOGEE_FORBIDDEN_EVIDENCE_MARKERS:
+        if marker in semantics or marker in payload_text:
+            blockers.append(f"forbidden proxy/prediction evidence marker {marker!r}")
+            break
+    distortion_status = str(payload.get("distortion_model_status", "")).lower()
+    parity_status = str(payload.get("scorer_basin_parity_status", "")).lower()
+    exact_positive = payload.get("exact_positive_cuda_evidence") is True
+    evidence_grade = str(payload.get("evidence_grade", "")).lower()
+    if "negative" in evidence_grade or evidence_grade in {"invalid", "external", "prediction"}:
+        blockers.append(f"non-promotable evidence_grade={payload.get('evidence_grade')!r}")
+    if semantics == "contest_faithful_distortion_model" and distortion_status not in APOGEE_DISTORTION_GATE_PASSED:
+        blockers.append("contest_faithful_distortion_model requires passing distortion_model_status")
+    if semantics == "scorer_basin_parity_gate" and parity_status not in APOGEE_DISTORTION_GATE_PASSED:
+        blockers.append("scorer_basin_parity_gate requires passing scorer_basin_parity_status")
+    if semantics == "contest_cuda_exact_eval_positive" and not exact_positive:
+        blockers.append("contest_cuda_exact_eval_positive requires exact_positive_cuda_evidence=true")
+    if blockers:
+        sys.exit("FATAL: Apogee distortion gate blocked dispatch: " + "; ".join(blockers))
 
 
 def stage_workspace(*, lane: str, job_name: str, archive: Path,
@@ -202,6 +299,19 @@ def main(argv: list[str] | None = None) -> int:
                              "the abbreviation fails with 'accelerator T4 not found for AWS cluster').")
     parser.add_argument("--print-only", action="store_true",
                         help="print resolved invocation without running")
+    parser.add_argument(
+        "--apogee-distortion-gate-json",
+        type=Path,
+        help=(
+            "Required for apogee_int* GPU dispatch: JSON proving the changed "
+            "archive has a scorer-basin distortion gate or exact positive CUDA evidence."
+        ),
+    )
+    parser.add_argument(
+        "--allow-forensic-apogee-intN",
+        action="store_true",
+        help="Allow apogee_int* command rendering only with --print-only; never submits GPU work.",
+    )
     parser.add_argument("--job-name", default=None,
                         help="override auto-generated job name")
     args = parser.parse_args(argv)
@@ -220,19 +330,26 @@ def main(argv: list[str] | None = None) -> int:
     if args.inflate_sh is None:
         # derive: apogee_int4 → submissions/apogee_intN/inflate.sh
         # pr106_latent_sidecar → submissions/pr106_latent_sidecar/inflate.sh
-        if args.lane.startswith("apogee_int"):
-            inflate_dir = "apogee_intN"
-        else:
-            inflate_dir = args.lane
+        inflate_dir = "apogee_intN" if args.lane.startswith("apogee_int") else args.lane
         args.inflate_sh = REPO_ROOT / "submissions" / inflate_dir / "inflate.sh"
     if not args.inflate_sh.is_file():
         sys.exit(f"FATAL: inflate.sh not found: {args.inflate_sh}")
+
+    validate_apogee_dispatch_gate(
+        lane=args.lane,
+        archive=args.archive,
+        gate_json=args.apogee_distortion_gate_json,
+        allow_forensic_print_only=args.allow_forensic_apogee_intN,
+        print_only=args.print_only,
+    )
 
     if args.skip_stage:
         manifest = REPO_ROOT / "experiments" / "results" / "lightning_batch" / job_name / "source_manifest.json"
         if not manifest.is_file():
             sys.exit(f"FATAL: --skip-stage but manifest not found: {manifest}")
     else:
+        if not args.ssh_target:
+            sys.exit("FATAL: set --ssh-target or LIGHTNING_SSH_TARGET before staging to Lightning")
         manifest = stage_workspace(
             lane=args.lane,
             job_name=job_name,

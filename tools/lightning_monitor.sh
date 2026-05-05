@@ -3,9 +3,13 @@
 # Usage: bash tools/lightning_monitor.sh [check|log|download|status]
 set -euo pipefail
 
-TARGET="${LIGHTNING_SSH_TARGET:-lightning-pact}"
+TARGET="${LIGHTNING_SSH_TARGET:-}"
 REMOTE="${LIGHTNING_REMOTE_TAC:-/teamspace/studios/this_studio/tac}"
 LOCAL_DIR="lightning_results"
+if [ -z "$TARGET" ]; then
+  echo "FATAL: set LIGHTNING_SSH_TARGET to a user-qualified Studio SSH target or SSH config alias" >&2
+  exit 2
+fi
 case "$TARGET" in
   ssh.lightning.ai)
     echo "FATAL: use a user-qualified target or SSH config alias, not bare ssh.lightning.ai" >&2

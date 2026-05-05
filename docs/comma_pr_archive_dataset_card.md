@@ -52,11 +52,10 @@ scored archives - not just numeric scores. Several PRs link to release
 asset URLs that may rot or be deleted; this dataset preserves the
 contest-CUDA-evaluated bytes.
 
-The dataset is also a foundation for the **arxiv preprint** of the
-methodology + game-theoretic floor analysis in
-[adpena/comma-lab](https://github.com/adpena/comma-lab) `docs/paper/`,
-which uses this corpus as the empirical basis for §4 (results) and §7
-(discussion).
+The dataset is primarily maintained for the community, continued iteration,
+and the historical record of the challenge. It gives researchers and future
+contestants byte-exact archives, PR metadata, and provenance without requiring
+them to reconstruct a fast-moving public leaderboard after the fact.
 
 ## Final top 3 (for context)
 
@@ -71,20 +70,19 @@ AaronLeslie138, score 0.20, published 2026-05-04 07:47:15 UTC).
 
 ## Fetcher methodology
 
-The raw custody corpus was built by `tools/fetch_all_public_pr_archives.py` in
-[adpena/comma-lab](https://github.com/adpena/comma-lab), which walks the
-live leaderboard and for each scored PR attempts archive recovery via
-four passes in priority order:
+The raw custody corpus was built by `tools/fetch_all_public_pr_archives.py`,
+which walks the live leaderboard and for each scored PR attempts archive
+recovery via four passes in priority order:
 
 1. Direct `.zip` URL extracted from the PR body
 2. GitHub release assets on the contestant's `head_repo`
 3. GitHub release assets on `commaai/comma_video_compression_challenge`
 4. In-tree `archive.zip` LFS pointer at the PR's head SHA
 
-Per CLAUDE.md (in adpena/comma-lab) "Forbidden silent-skip cascades":
-every download attempt is logged with explicit reason code in
-`archive_provenance.json`. PRs with no recoverable archive are flagged
-in `FETCH_SUMMARY.json` under `needs_manual_triage` for operator review.
+The release process follows the repository policy against silent-skip
+cascades: every download attempt is logged with an explicit reason code in
+`archive_provenance.json`. PRs with no recoverable archive are flagged in
+`FETCH_SUMMARY.json` under `needs_manual_triage` for manual review.
 
 ## Canonical release view and deduplication
 
@@ -142,12 +140,9 @@ MIT - same as the upstream contest repo and the
 
 ## Citation
 
-If you use this dataset in published work, please cite both:
+If you use this dataset in published work, please cite:
 
-- This dataset (HuggingFace dataset DOI to be assigned on first release)
-- The methodology preprint in
-  [adpena/comma-lab](https://github.com/adpena/comma-lab) `docs/paper/`
-  (arxiv preprint forthcoming)
+- This dataset (Hugging Face dataset DOI to be assigned on first release)
 
 ## Acknowledgments
 

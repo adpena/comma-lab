@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO = Path(__file__).resolve().parents[3]
 SCRIPT = REPO / "scripts" / "lightning_repro_workspace.py"
 
@@ -50,6 +49,47 @@ def test_collect_files_excludes_result_trees_unless_explicit_artifact(tmp_path: 
     )
     by_path = {item["path"]: item for item in with_artifact}
     assert by_path["experiments/results/stale/contest_auth_eval.json"]["role"] == "artifact"
+
+
+def test_build_manifest_filters_excluded_dirty_status(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    mod = _load_module()
+
+    def fake_capture(cmd: list[str], *, cwd: Path = mod.REPO_ROOT) -> str | None:
+        if cmd[:3] == ["git", "status", "--short"]:
+            return "\n".join(
+                [
+                    " M src/tac/live.py",
+                    "?? .recovery_quarantine_20260505T004735Z/private.py",
+                    "?? .omx/state/provider.json",
+                    "?? experiments/results/run/archive.zip",
+                ]
+            )
+        if cmd == ["git", "rev-parse", "HEAD"]:
+            return "abc123"
+        if cmd == ["git", "rev-parse", "--abbrev-ref", "HEAD"]:
+            return "main"
+        raise AssertionError(f"unexpected capture command: {cmd}")
+
+    monkeypatch.setattr(mod, "_capture", fake_capture)
+    args = mod.parse_args(
+        [
+            "--remote",
+            "lightning-pact",
+            "--run-id",
+            "unit",
+            "--source",
+            "src",
+            "--dry-run",
+        ]
+    )
+    manifest = mod.build_manifest(args, [{"path": "src/tac/live.py", "role": "source", "bytes": 1, "sha256": "a"}])
+
+    assert manifest["git"]["status_short"] == [" M src/tac/live.py"]
+    assert manifest["git"]["status_short_excluded_private"] == [
+        "?? .recovery_quarantine_20260505T004735Z/private.py",
+        "?? .omx/state/provider.json",
+        "?? experiments/results/run/archive.zip",
+    ]
 
 
 def test_collect_files_excludes_generated_binary_source_payloads(tmp_path: Path) -> None:
@@ -123,14 +163,23 @@ def test_parse_args_defaults_to_oss_repro_source_set() -> None:
     assert args.requirements_mode == "uv-sync"
 
 
-def test_parse_args_default_remote_is_alias_not_provider_host(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_parse_args_default_remote_requires_env_or_cli(monkeypatch: pytest.MonkeyPatch) -> None:
     mod = _load_module()
     for name in ("LIGHTNING_SSH_TARGET", "LIGHTNING_REMOTE", "REMOTE", "LIGHTNING_USER"):
         monkeypatch.delenv(name, raising=False)
 
     args = mod.parse_args(["--dry-run"])
 
-    assert args.remote == "lightning-pact"
+    assert args.remote == ""
+
+
+def test_parse_args_default_remote_honors_lightning_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    mod = _load_module()
+    monkeypatch.setenv("LIGHTNING_SSH_TARGET", "s_example@ssh.lightning.ai")
+
+    args = mod.parse_args(["--dry-run"])
+
+    assert args.remote == "s_example@ssh.lightning.ai"
 
 
 def test_parse_args_supports_deterministic_runtime_verification() -> None:
@@ -333,7 +382,7 @@ def test_lightning_ssh_diagnostic_records_public_key_metadata(tmp_path: Path) ->
 def test_lightning_ssh_diagnostic_rejects_bare_provider_host() -> None:
     mod = _load_module()
 
-    with pytest.raises(ValueError, match="bare ssh.lightning.ai"):
+    with pytest.raises(ValueError, match=r"bare ssh\.lightning\.ai"):
         mod.lightning_ssh_diagnostic("ssh.lightning.ai", connect=False)
 
 

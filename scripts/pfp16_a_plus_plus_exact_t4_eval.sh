@@ -36,7 +36,7 @@ Modes:
 Options:
   --archive PATH           Local fixed archive path.
   --remote HOST            SSH host or alias. Defaults to $PFP16_A_PLUS_PLUS_REMOTE,
-                           $REMOTE, then scratch-studio-devbox. Do not rely on
+                           $REMOTE, then the canonical direct Lightning target. Do not rely on
                            bare ssh.lightning.ai for custody work.
   --remote-pact PATH       Remote pact repo. Default: /home/zeus/content/pact.
   --remote-upstream PATH   Remote upstream repo. Default: /home/zeus/content/upstream.
@@ -80,7 +80,7 @@ resolve_remote_default() {
   if [ -n "$REMOTE" ]; then
     return
   fi
-  REMOTE="scratch-studio-devbox"
+  die "set REMOTE or LIGHTNING_SSH_TARGET to a user-qualified Studio SSH target or SSH config alias"
 }
 
 verify_local_archive() {

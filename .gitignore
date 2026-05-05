@@ -132,6 +132,7 @@ src/tac.egg-info/
 .omx/state/**/*.json
 .omx/state/*.jsonl
 .omx/state/RACE_MODE_ACTIVE.flag
+.omx/status/
 .omx/research/artifacts/
 .omx/logs/
 reports/raw/
@@ -171,6 +172,7 @@ experiments/results/public_pr*_intake_*/__pycache__/
 # backups. Extract/canonicalize useful material into .omx/research/ or
 # docs/paper/ara/ before publishing.
 .omx/auto_memory_snapshot_*/
+reverse_engineering/orphan_pyc_recovery_20260505_codex/.omx/auto_memory_snapshot_*/
 
 # Per-PR fetched intake dirs: source/ subtrees are large + re-cloneable from each PR's head_repo + sha
 # We commit the archive.zip + metadata + provenance JSON, but exclude the cloned source/

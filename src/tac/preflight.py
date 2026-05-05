@@ -7857,6 +7857,20 @@ _PUBLIC_RELEASE_SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
 )
 
 
+def public_release_hygiene_violations_for_text(rel: str, text: str) -> list[str]:
+    """Return public-release hygiene violations for a single text blob."""
+    violations: list[str] = []
+    for lineno, line in enumerate(text.splitlines(), start=1):
+        for label, pattern in _PUBLIC_RELEASE_SECRET_PATTERNS:
+            if pattern.search(line):
+                violations.append(
+                    f"{rel}:{lineno}: public release hygiene violation: "
+                    f"{label}. Redact into a placeholder, local manifest, "
+                    f"or private custody artifact before GitHub/site publish."
+                )
+    return violations
+
+
 def _public_release_rel(path: Path, root: Path) -> str:
     try:
         return path.resolve().relative_to(root.resolve()).as_posix()
@@ -7919,14 +7933,9 @@ def check_public_release_hygiene(
             text = path.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
             continue
-        for lineno, line in enumerate(text.splitlines(), start=1):
-            for label, pattern in _PUBLIC_RELEASE_SECRET_PATTERNS:
-                if pattern.search(line):
-                    violations.append(
-                        f"{rel}:{lineno}: public release hygiene violation: "
-                        f"{label}. Redact into a placeholder, local manifest, "
-                        f"or private custody artifact before GitHub/site publish."
-                    )
+        violations.extend(
+            public_release_hygiene_violations_for_text(rel, text)
+        )
 
     if verbose and violations:
         print(
@@ -11004,8 +11013,28 @@ def _scan_python_for_kl_div_batchmean(path: Path, repo_root: Path) -> list[str]:
     exact `reduction="batchmean"` keyword form is flagged — positional
     `reduction` is rare in this API but still caught when the value is
     a string constant `"batchmean"`.
+
+    Vendored external code (PR-head mirrors, public-PR intake clones,
+    leaderboard intel snapshots, raw kaggle ingests) is skipped — these
+    are read-only mirrors of other competitors' submissions, not our
+    own code, and we cannot retroactively fix their KL reductions. The
+    marker list is kept in sync with the MPS-fallback scanner above
+    (see `_VENDORED_PATH_MARKERS`).
     """
     rel = path.relative_to(repo_root) if path.is_absolute() else path
+    rel_s = str(rel)
+    _VENDORED_PATH_MARKERS = (
+        "/pr_heads/",
+        "/leaderboard_intel_",
+        "/reverse_engineering_",
+        "/public_runtime_adapters_",
+        "/raw/kaggle_ingest/",
+        "/vendored/",
+        "_intake_",
+        "/av1_crf31_bicubic/",
+    )
+    if any(marker in rel_s for marker in _VENDORED_PATH_MARKERS):
+        return []
     try:
         text = path.read_text()
         tree = ast.parse(text, filename=str(path))
