@@ -148,7 +148,7 @@ class DistillConfig:
 
     # Per-class SegNet weighting (Yousfi: lane markings 1.2% but critical)
     use_per_class_weights: bool = False  # weight rare classes higher in hinge loss
-    segnet_class_weights: str = "1.0,15.0,1.5,3.0,7.0"  # road,lane,bg,vehicle,sky
+    segnet_class_weights: str = "1.0,15.0,1.5,3.0,7.0"  # road,lane_markings,undrivable,movable,my_car
 
     # SWA (Stochastic Weight Averaging, Polyak 1992)
     use_swa: bool = False  # average weights in last 20% of Phase 2 for wider minima
@@ -1440,7 +1440,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--use-per-class-weights", action="store_true",
                    help="Weight rare SegNet classes higher (lane markings 15x)")
     p.add_argument("--segnet-class-weights", type=str, default="1.0,15.0,1.5,3.0,7.0",
-                   help="Per-class weights: road,lane,bg,vehicle,sky")
+                   help="Per-class weights: road,lane_markings,undrivable,movable,my_car")
     # SWA
     p.add_argument("--use-swa", action="store_true",
                    help="Stochastic Weight Averaging in last 20%% of Phase 2")
