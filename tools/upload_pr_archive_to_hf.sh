@@ -36,6 +36,7 @@ PYTHON_BIN="${PYTHON:-$HERE/.venv/bin/python}"
 if [ ! -x "$PYTHON_BIN" ]; then
     PYTHON_BIN="$(command -v python3)"
 fi
+export PYTHONPATH="$HERE/src${PYTHONPATH:+:$PYTHONPATH}"
 
 if ! hf auth whoami &>/dev/null; then
     echo "FATAL: hf CLI not authenticated. Run 'hf auth login' first."
@@ -54,6 +55,22 @@ echo "[hf-upload] Materializing canonical deduplicated release view..."
 echo "[hf-upload] Copying dataset card + LICENSE into release view..."
 cp "$HERE/docs/comma_pr_archive_dataset_card.md" "$HERE/$SOURCE_DIR/README.md"
 cp "$HERE/LICENSE" "$HERE/$SOURCE_DIR/LICENSE" 2>/dev/null || true
+
+echo "[hf-upload] Running strict public-release hygiene scan on final release view..."
+"$PYTHON_BIN" - "$HERE/$SOURCE_DIR" <<'PY'
+import sys
+from pathlib import Path
+
+from tac.preflight import check_public_release_hygiene
+
+root = Path(sys.argv[1])
+check_public_release_hygiene(
+    repo_root=Path.cwd(),
+    strict=True,
+    verbose=True,
+    scan_paths=[root],
+)
+PY
 
 echo "[hf-upload] Uploading $SOURCE_DIR -> datasets/$DATASET_SLUG"
 echo "  (resumable large-folder upload; this corpus may be many GB)"

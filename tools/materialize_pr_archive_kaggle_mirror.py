@@ -13,10 +13,17 @@ import argparse
 import json
 import os
 import shutil
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+SRC = REPO / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from tac.preflight import check_public_release_hygiene  # noqa: E402
+
 DEFAULT_SOURCE = REPO / "experiments" / "results" / "public_pr_archive_release_view"
 DEFAULT_OUTPUT = REPO / "experiments" / "results" / "public_pr_archive_kaggle_mirror"
 DEFAULT_DATASET_ID = "adpena/comma-video-compression-pr-archive"
@@ -99,7 +106,14 @@ def build_dataset_metadata(dataset_id: str, *, description: str | None = None) -
     }
 
 
-def materialize_kaggle_mirror(source_root: Path, output_root: Path, *, dataset_id: str, force: bool) -> dict[str, object]:
+def materialize_kaggle_mirror(
+    source_root: Path,
+    output_root: Path,
+    *,
+    dataset_id: str,
+    force: bool,
+    strict_hygiene: bool = True,
+) -> dict[str, object]:
     source_root = source_root.resolve()
     output_root = output_root.resolve()
     if not source_root.is_dir():
@@ -156,6 +170,14 @@ def materialize_kaggle_mirror(source_root: Path, output_root: Path, *, dataset_i
         "canonical_hf_dataset": "adpena/comma_video_compression_challenge_pr_archive",
     }
     (output_root / "KAGGLE_MIRROR_MANIFEST.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    hygiene_violations = check_public_release_hygiene(
+        repo_root=REPO,
+        strict=strict_hygiene,
+        verbose=False,
+        scan_paths=[output_root],
+    )
+    manifest["hygiene_violation_count"] = len(hygiene_violations)
+    (output_root / "KAGGLE_MIRROR_MANIFEST.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     return manifest
 
 
@@ -165,6 +187,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--dataset-id", default=DEFAULT_DATASET_ID)
     parser.add_argument("--force", action="store_true")
+    parser.add_argument("--no-strict-hygiene", action="store_true")
     parser.add_argument("--format", choices=("text", "json"), default="text")
     args = parser.parse_args(argv)
 
@@ -173,6 +196,7 @@ def main(argv: list[str] | None = None) -> int:
         args.output_root,
         dataset_id=args.dataset_id,
         force=args.force,
+        strict_hygiene=not args.no_strict_hygiene,
     )
     if args.format == "json":
         print(json.dumps(manifest, indent=2, sort_keys=True))

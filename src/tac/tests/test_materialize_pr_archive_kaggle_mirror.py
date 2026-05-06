@@ -55,6 +55,7 @@ def test_materialize_kaggle_mirror_adds_metadata_and_preserves_release_files(tmp
     mirror_manifest = json.loads((output / "KAGGLE_MIRROR_MANIFEST.json").read_text(encoding="utf-8"))
     assert metadata["id"] == "adpena/comma-video-compression-pr-archive"
     assert mirror_manifest["schema"] == "comma_pr_archive_kaggle_mirror_v1"
+    assert mirror_manifest["hygiene_violation_count"] == 0
 
 
 def test_materialize_kaggle_mirror_requires_release_manifests(tmp_path: Path) -> None:
@@ -67,3 +68,22 @@ def test_materialize_kaggle_mirror_requires_release_manifests(tmp_path: Path) ->
         assert "FETCH_SUMMARY.json" in str(exc)
     else:
         raise AssertionError("expected missing release summary to fail closed")
+
+
+def test_materialize_kaggle_mirror_scans_final_generated_surface(tmp_path: Path) -> None:
+    source = tmp_path / "release"
+    output = tmp_path / "kaggle"
+    source.mkdir()
+    (source / "FETCH_SUMMARY.json").write_text('{"n_with_archive": 1}\n', encoding="utf-8")
+    (source / "OMITTED_SHARED_ASSETS.json").write_text('{"omitted_file_count": 0}\n', encoding="utf-8")
+    (source / "README.md").write_text(
+        "private notebook: /Users/example/private.ipynb\n",
+        encoding="utf-8",
+    )
+
+    try:
+        materialize_kaggle_mirror(source, output, dataset_id="adpena/demo", force=True)
+    except Exception as exc:
+        assert "PUBLIC RELEASE HYGIENE" in str(exc)
+    else:
+        raise AssertionError("expected final Kaggle mirror hygiene scan to fail closed")
