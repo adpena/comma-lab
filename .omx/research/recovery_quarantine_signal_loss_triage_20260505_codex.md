@@ -5055,5 +5055,60 @@ Verification:
   reported `ready_for_recovery_custody_preservation=true`,
   `unresolved_blocked_recovery_inputs=[]`, and
   `unresolved_live_diff_paths=[]`.
+
+## R75 - 2026-05-06 Incomplete-Rehydration Disposition Closure
+
+Closed the final explicit recovery-custody bucket from the signal-loss
+snapshot without promoting incomplete pyc decompilation as source.
+
+Added:
+
+- `.omx/research/recovery_custody_incomplete_rehydration_dispositions_20260506_codex.json`
+
+Updated:
+
+- `tools/audit_recovery_custody_snapshots.py`
+- `src/tac/tests/test_audit_recovery_custody_snapshots.py`
+
+The audit now rechecks the `88`
+`do_not_promote_incomplete_recovery_preserve_for_manual_rehydration` records
+against current `main` and classifies every record:
+
+- `51` are already represented by current tracked source files on `main`.
+- `32` are public/intake runtime residues and remain private forensic custody,
+  not repo source.
+- `2` are provider-state mirrors and remain private forensic custody.
+- `3` non-current first-party paths have explicit tracked replacements:
+  - `experiments/build_pr85_stbm1br_rmb1_randmulti_candidate.py` ->
+    `experiments/build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py`
+  - `src/tac/tests/test_build_pr85_stbm1br_rmb1_randmulti_candidate.py` ->
+    `src/tac/tests/test_build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py`
+  - `src/tac/tests/test_build_pr95_hnerv_residual_atom_plan.py` ->
+    `src/tac/tests/test_pr95_residual_atoms.py`
+
+Current unresolved recovery-custody buckets are empty:
+
+- `next_required_dispositions.pyc_incomplete_manual_rehydration_records=0`
+- `next_required_dispositions.blocked_recovery_inputs=[]`
+- `next_required_dispositions.live_diff_paths=[]`
+
+Scientific/engineering position:
+
+- The old pyc/decompile records stay preserved as forensic custody and
+  historical evidence.
+- Incomplete decompiler output remains non-promotable and must not be treated
+  as score, source, or implementation evidence.
+- Current `main` is the canonical source surface; private provider/public intake
+  residues are intentionally not restored into tracked OSS source.
+
+Verification:
+
+- `.venv/bin/python -m pytest
+  src/tac/tests/test_audit_recovery_custody_snapshots.py -q` -> `7 passed`.
+- `.venv/bin/python tools/audit_recovery_custody_snapshots.py --format json`
+  reported `ready_for_recovery_custody_preservation=true`,
+  `incomplete_rehydration_classification_counts={51 current tracked, 34 private
+  forensic, 3 explicit replacements}`, and
+  `unresolved_incomplete_manual_rehydration_paths=[]`.
 - `.venv/bin/python -m py_compile tools/audit_recovery_custody_snapshots.py
   src/tac/tests/test_audit_recovery_custody_snapshots.py` passed.

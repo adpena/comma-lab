@@ -18,6 +18,7 @@ explicitly visible for later hand disposition.
 from __future__ import annotations
 
 import argparse
+import subprocess
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -39,6 +40,9 @@ SIGNAL_LOSS_ROOT = ".omx/state/signal_loss_audit_20260505T1439Z"
 RESOLVED_DISPOSITIONS_MANIFEST = (
     ".omx/research/recovery_custody_resolved_dispositions_20260506_codex.json"
 )
+INCOMPLETE_REHYDRATION_MANIFEST = (
+    ".omx/research/recovery_custody_incomplete_rehydration_dispositions_20260506_codex.json"
+)
 
 EXPECTED_PYC_TOTAL = 97
 EXPECTED_PYC_STUBS = 76
@@ -59,6 +63,13 @@ EXPECTED_BLOCKED_RECOVERY_INPUTS = (
     "scripts/remote_lane_sjkl_c067.sh.QUARANTINED",
 )
 EXPECTED_LIVE_DIFF_PATHS = ("docs/paper/ara/trace/events.jsonl",)
+INCOMPLETE_REHYDRATION_DISPOSITION = (
+    "do_not_promote_incomplete_recovery_preserve_for_manual_rehydration"
+)
+PRIVATE_FORENSIC_INCOMPLETE_CATEGORIES = (
+    "provider_state",
+    "public_or_experiment_intake",
+)
 
 
 @dataclass(frozen=True)
@@ -66,6 +77,7 @@ class RecoveryCustodyConfig:
     pyc_recovery_root: str = PYC_RECOVERY_ROOT
     signal_loss_root: str = SIGNAL_LOSS_ROOT
     resolved_dispositions_manifest: str | None = RESOLVED_DISPOSITIONS_MANIFEST
+    incomplete_rehydration_manifest: str | None = INCOMPLETE_REHYDRATION_MANIFEST
 
 
 def _nonempty_lines(path: Path) -> list[str]:
@@ -128,6 +140,46 @@ def _load_resolved_dispositions(path: Path | None) -> dict[str, set[str]]:
     return resolved
 
 
+def _load_incomplete_rehydration_manifest(path: Path | None) -> dict[str, Any]:
+    if path is None or not path.exists():
+        return {}
+    payload = read_json(path)
+    if not isinstance(payload, dict):
+        raise ValueError(f"expected incomplete-rehydration object in {path}")
+    if payload.get("schema") != "recovery_custody_incomplete_rehydration_dispositions_v1":
+        raise ValueError(f"{path}: unsupported schema")
+    if payload.get("historical_disposition") != INCOMPLETE_REHYDRATION_DISPOSITION:
+        raise ValueError(f"{path}: historical_disposition mismatch")
+    if payload.get("expected_total") != EXPECTED_SIGNAL_DISPOSITIONS[INCOMPLETE_REHYDRATION_DISPOSITION]:
+        raise ValueError(f"{path}: expected_total mismatch")
+    entries = payload.get("explicit_noncurrent_first_party_resolutions")
+    if not isinstance(entries, list):
+        raise ValueError(f"{path}: explicit_noncurrent_first_party_resolutions must be a list")
+    seen: set[str] = set()
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            raise ValueError(f"{path}: explicit entries[{index}] is not an object")
+        for key in ("relpath", "resolution", "current_replacement", "evidence"):
+            if not isinstance(entry.get(key), str) or not entry[key]:
+                raise ValueError(f"{path}: explicit entries[{index}].{key} must be nonempty")
+        relpath = entry["relpath"]
+        if relpath in seen:
+            raise ValueError(f"{path}: duplicate explicit relpath {relpath}")
+        seen.add(relpath)
+    return payload
+
+
+def _tracked_paths(repo_root: Path) -> set[str]:
+    proc = subprocess.run(
+        ["git", "ls-files", "-z"],
+        cwd=repo_root,
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    return {item for item in proc.stdout.decode("utf-8").split("\0") if item}
+
+
 def audit_recovery_custody_snapshots(
     repo_root: Path,
     *,
@@ -141,11 +193,25 @@ def audit_recovery_custody_snapshots(
         if config.resolved_dispositions_manifest is not None
         else None
     )
+    incomplete_manifest = (
+        repo_root / config.incomplete_rehydration_manifest
+        if config.incomplete_rehydration_manifest is not None
+        else None
+    )
     try:
         resolved_dispositions = _load_resolved_dispositions(resolved_manifest)
     except (OSError, ValueError) as exc:
         blockers.append(f"{config.resolved_dispositions_manifest}: {exc}")
         resolved_dispositions = {}
+    try:
+        incomplete_rehydration = _load_incomplete_rehydration_manifest(incomplete_manifest)
+    except (OSError, ValueError) as exc:
+        blockers.append(f"{config.incomplete_rehydration_manifest}: {exc}")
+        incomplete_rehydration = {}
+    try:
+        tracked_paths = _tracked_paths(repo_root)
+    except (OSError, subprocess.CalledProcessError):
+        tracked_paths = set()
 
     pyc_required = (
         "RECOVERY_INDEX.md",
@@ -274,6 +340,66 @@ def audit_recovery_custody_snapshots(
             )
             unresolved_blocked = sorted(set(blocked_inputs) - set(resolved_blocked))
             unresolved_live_diff = sorted(set(live_diff_paths) - set(resolved_live_diff))
+            incomplete_rows = [
+                row for row in signal_rows if row.get("disposition") == INCOMPLETE_REHYDRATION_DISPOSITION
+            ]
+            explicit_replacements = {
+                str(entry["relpath"]): entry
+                for entry in incomplete_rehydration.get(
+                    "explicit_noncurrent_first_party_resolutions",
+                    [],
+                )
+            }
+            incomplete_classes: Counter[str] = Counter()
+            unresolved_incomplete: list[str] = []
+            current_tracked_incomplete: list[str] = []
+            private_forensic_incomplete: list[str] = []
+            explicit_noncurrent_resolved: list[str] = []
+            for row in incomplete_rows:
+                relpath = str(row.get("relpath"))
+                category = str(row.get("category"))
+                exists = (repo_root / relpath).exists()
+                tracked = relpath in tracked_paths
+                if exists and tracked:
+                    incomplete_classes["resolved_by_current_main_tracked_source"] += 1
+                    current_tracked_incomplete.append(relpath)
+                    continue
+                if category in PRIVATE_FORENSIC_INCOMPLETE_CATEGORIES:
+                    incomplete_classes[f"private_forensic_{category}"] += 1
+                    private_forensic_incomplete.append(relpath)
+                    continue
+                replacement = explicit_replacements.get(relpath)
+                if replacement is not None:
+                    replacement_path = str(replacement["current_replacement"])
+                    if replacement_path not in tracked_paths or not (repo_root / replacement_path).exists():
+                        blockers.append(
+                            "incomplete-rehydration replacement is not current tracked source: "
+                            f"{relpath} -> {replacement_path}"
+                        )
+                    incomplete_classes["resolved_by_explicit_noncurrent_first_party_replacement"] += 1
+                    explicit_noncurrent_resolved.append(relpath)
+                    continue
+                incomplete_classes["unresolved_manual_rehydration"] += 1
+                unresolved_incomplete.append(relpath)
+
+            historical_incomplete_paths = {str(row.get("relpath")) for row in incomplete_rows}
+            unexpected_explicit = sorted(set(explicit_replacements) - historical_incomplete_paths)
+            if unexpected_explicit:
+                blockers.append(
+                    "incomplete-rehydration manifest references non-historical path(s): "
+                    + ", ".join(unexpected_explicit[:10])
+                )
+            if incomplete_rehydration:
+                expected_classes = incomplete_rehydration.get("expected_classification_counts")
+                if not isinstance(expected_classes, dict):
+                    blockers.append("incomplete-rehydration manifest missing expected_classification_counts")
+                elif dict(incomplete_classes) != {
+                    str(key): int(value) for key, value in expected_classes.items()
+                }:
+                    blockers.append(
+                        "incomplete-rehydration classification drifted: "
+                        f"{dict(incomplete_classes)} != {expected_classes}"
+                    )
             signal_summary.update(
                 {
                     "quarantine_record_count": len(signal_rows),
@@ -286,6 +412,16 @@ def audit_recovery_custody_snapshots(
                     "resolved_live_diff_paths": resolved_live_diff,
                     "unresolved_blocked_recovery_inputs": unresolved_blocked,
                     "unresolved_live_diff_paths": unresolved_live_diff,
+                    "incomplete_rehydration_manifest": (
+                        str(incomplete_manifest) if incomplete_manifest is not None else None
+                    ),
+                    "incomplete_rehydration_classification_counts": dict(incomplete_classes),
+                    "incomplete_rehydration_current_tracked_count": len(current_tracked_incomplete),
+                    "incomplete_rehydration_private_forensic_count": len(private_forensic_incomplete),
+                    "incomplete_rehydration_explicit_noncurrent_resolved": sorted(
+                        explicit_noncurrent_resolved
+                    ),
+                    "unresolved_incomplete_manual_rehydration_paths": sorted(unresolved_incomplete),
                 }
             )
             for disposition, expected_count in EXPECTED_SIGNAL_DISPOSITIONS.items():
@@ -326,7 +462,9 @@ def audit_recovery_custody_snapshots(
             "next_required_dispositions": {
                 "pyc_incomplete_manual_rehydration_records": EXPECTED_SIGNAL_DISPOSITIONS[
                     "do_not_promote_incomplete_recovery_preserve_for_manual_rehydration"
-                ],
+                ]
+                if "unresolved_incomplete_manual_rehydration_paths" not in signal_summary
+                else len(signal_summary["unresolved_incomplete_manual_rehydration_paths"]),
                 "blocked_recovery_inputs": signal_summary.get(
                     "unresolved_blocked_recovery_inputs",
                     list(EXPECTED_BLOCKED_RECOVERY_INPUTS),

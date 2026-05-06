@@ -1,0 +1,42 @@
+{
+  "evidence": [
+    "Signal-loss snapshot .omx/state/signal_loss_audit_20260505T1439Z/quarantine_audit.json contains 88 historical do-not-promote incomplete rehydration records.",
+    "Current main re-check on 2026-05-06 found 51 records already represented by tracked source files, 32 public/intake artifacts preserved as forensic custody only, 2 provider-state mirrors preserved as forensic custody only, and 3 non-current first-party paths resolved by explicit tracked replacements.",
+    "All 88 records remain historical pyc/decompilation recovery residue; none may be promoted as source or score evidence."
+  ],
+  "expected_classification_counts": {
+    "private_forensic_provider_state": 2,
+    "private_forensic_public_or_experiment_intake": 32,
+    "resolved_by_current_main_tracked_source": 51,
+    "resolved_by_explicit_noncurrent_first_party_replacement": 3
+  },
+  "expected_total": 88,
+  "explicit_noncurrent_first_party_resolutions": [
+    {
+      "current_replacement": "experiments/build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py",
+      "evidence": "The historical path lacked PR92 in the name and was an incomplete pyc recovery artifact. The tracked replacement is the canonical builder with decoded-parity validation for PR85_STBM1BR plus PR92 RMB1 randmulti.",
+      "relpath": "experiments/build_pr85_stbm1br_rmb1_randmulti_candidate.py",
+      "resolution": "resolved_by_tracked_pr92_rmb1_canonical_builder"
+    },
+    {
+      "current_replacement": "src/tac/tests/test_build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py",
+      "evidence": "The historical no-PR92 test path was an incomplete pyc recovery artifact. The tracked replacement tests the canonical PR85_STBM1BR plus PR92 RMB1 candidate builder.",
+      "relpath": "src/tac/tests/test_build_pr85_stbm1br_rmb1_randmulti_candidate.py",
+      "resolution": "resolved_by_tracked_pr92_rmb1_canonical_builder_tests"
+    },
+    {
+      "current_replacement": "src/tac/tests/test_pr95_residual_atoms.py",
+      "evidence": "The missing CLI-specific test path was an incomplete pyc recovery artifact. The tracked replacement covers the underlying tac.pr95_residual_atoms implementation, including proxy ledgers, signed policies, candidate archive emission, and no-op/sidecar rejection.",
+      "relpath": "src/tac/tests/test_build_pr95_hnerv_residual_atom_plan.py",
+      "resolution": "resolved_by_tracked_pr95_residual_atoms_tests"
+    }
+  ],
+  "historical_disposition": "do_not_promote_incomplete_recovery_preserve_for_manual_rehydration",
+  "policy": {
+    "current_main_tracked_source": "Treat as canonical only when the current relpath exists and is tracked by git on main. The historical pyc recovery record remains custody evidence, not source.",
+    "explicit_noncurrent_first_party": "Require a tracked replacement path and evidence string in this manifest.",
+    "private_forensic_provider_state": "Provider-state mirrors are not public source and are retained only in local custody/state snapshots.",
+    "private_forensic_public_or_experiment_intake": "Public leaderboard/intake runtime residues are not repo source. Preserve archives and intake ledgers; do not rehydrate incomplete pyc decompilation into main."
+  },
+  "schema": "recovery_custody_incomplete_rehydration_dispositions_v1"
+}

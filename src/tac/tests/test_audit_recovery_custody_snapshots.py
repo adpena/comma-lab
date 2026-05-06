@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 from tac.repo_io import write_json
@@ -11,6 +12,7 @@ from tools.audit_recovery_custody_snapshots import (
     EXPECTED_PYC_STUBS,
     EXPECTED_PYC_TOTAL,
     EXPECTED_SIGNAL_DISPOSITIONS,
+    INCOMPLETE_REHYDRATION_DISPOSITION,
     RecoveryCustodyConfig,
     audit_recovery_custody_snapshots,
 )
@@ -167,6 +169,106 @@ def test_recovery_custody_audit_subtracts_resolved_dispositions(tmp_path: Path) 
     assert payload["summary"]["next_required_dispositions"]["blocked_recovery_inputs"] == []
     assert payload["summary"]["next_required_dispositions"]["live_diff_paths"] == []
     assert payload["summary"]["signal_loss"]["resolved_live_diff_paths"] == [EXPECTED_LIVE_DIFF_PATHS[0]]
+
+
+def test_recovery_custody_audit_resolves_incomplete_rehydration_manifest(tmp_path: Path) -> None:
+    _write_expected_snapshot(tmp_path)
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, stdout=subprocess.DEVNULL)
+
+    records = []
+    for i in range(51):
+        relpath = f"src/live_{i}.py"
+        path = tmp_path / relpath
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("VALUE = 1\n", encoding="utf-8")
+        records.append(
+            {
+                "category": "tac_module",
+                "disposition": INCOMPLETE_REHYDRATION_DISPOSITION,
+                "relpath": relpath,
+            }
+        )
+    for i in range(32):
+        records.append(
+            {
+                "category": "public_or_experiment_intake",
+                "disposition": INCOMPLETE_REHYDRATION_DISPOSITION,
+                "relpath": f"experiments/results/public_{i}/inflate.py",
+            }
+        )
+    for i in range(2):
+        records.append(
+            {
+                "category": "provider_state",
+                "disposition": INCOMPLETE_REHYDRATION_DISPOSITION,
+                "relpath": f".omx/state/provider_{i}/model.py",
+            }
+        )
+    explicit_entries = []
+    for i in range(3):
+        relpath = f"experiments/missing_{i}.py"
+        replacement = f"experiments/replacement_{i}.py"
+        replacement_path = tmp_path / replacement
+        replacement_path.parent.mkdir(parents=True, exist_ok=True)
+        replacement_path.write_text("VALUE = 1\n", encoding="utf-8")
+        records.append(
+            {
+                "category": "experiment_tool",
+                "disposition": INCOMPLETE_REHYDRATION_DISPOSITION,
+                "relpath": relpath,
+            }
+        )
+        explicit_entries.append(
+            {
+                "current_replacement": replacement,
+                "evidence": "synthetic test evidence",
+                "relpath": relpath,
+                "resolution": "resolved_by_test_replacement",
+            }
+        )
+
+    for disposition, count in EXPECTED_SIGNAL_DISPOSITIONS.items():
+        if disposition == INCOMPLETE_REHYDRATION_DISPOSITION:
+            continue
+        for i in range(count):
+            relpath = f"{disposition}/{i}"
+            if disposition == "blocked_recovery_input_needs_canonicalization_before_promotion":
+                relpath = EXPECTED_BLOCKED_RECOVERY_INPUTS[i]
+            if disposition == "compare_by_hand_live_diff_before_merge_or_delete":
+                relpath = EXPECTED_LIVE_DIFF_PATHS[i]
+            records.append({"category": "test", "disposition": disposition, "relpath": relpath})
+    write_json(tmp_path / "signal/quarantine_audit.json", {"records": records})
+    subprocess.run(["git", "add", "src", "experiments"], cwd=tmp_path, check=True)
+    write_json(
+        tmp_path / "incomplete.json",
+        {
+            "schema": "recovery_custody_incomplete_rehydration_dispositions_v1",
+            "historical_disposition": INCOMPLETE_REHYDRATION_DISPOSITION,
+            "expected_total": EXPECTED_SIGNAL_DISPOSITIONS[INCOMPLETE_REHYDRATION_DISPOSITION],
+            "expected_classification_counts": {
+                "private_forensic_provider_state": 2,
+                "private_forensic_public_or_experiment_intake": 32,
+                "resolved_by_current_main_tracked_source": 51,
+                "resolved_by_explicit_noncurrent_first_party_replacement": 3,
+            },
+            "explicit_noncurrent_first_party_resolutions": explicit_entries,
+        },
+    )
+
+    report = audit_recovery_custody_snapshots(
+        tmp_path,
+        config=RecoveryCustodyConfig(
+            pyc_recovery_root="pyc",
+            signal_loss_root="signal",
+            resolved_dispositions_manifest=None,
+            incomplete_rehydration_manifest="incomplete.json",
+        ),
+    )
+    result = report.to_dict()
+
+    assert result["ready_for_recovery_custody_preservation"] is True
+    assert result["summary"]["next_required_dispositions"]["pyc_incomplete_manual_rehydration_records"] == 0
+    assert result["summary"]["signal_loss"]["incomplete_rehydration_current_tracked_count"] == 51
 
 
 def test_recovery_custody_audit_blocks_nonhistorical_resolved_disposition(tmp_path: Path) -> None:
