@@ -4424,3 +4424,56 @@ Verification:
   src/tac/tests/test_rehydrated_modules_20260505.py` passed.
 - The real-archive CLI smoke above completed and wrote deterministic JSON/MD
   to `/tmp`.
+
+## R62 - 2026-05-06 Submission Packet Functional Test Recovery
+
+Resolved the damaged
+`src/tac/tests/test_build_contest_submission_packet.py` orphan by writing a
+fresh canonical functional test file against the live
+`scripts/build_contest_submission_packet.py` contract. The recovered pyc test
+body was decompiler-damaged, but its test names were high-signal and mapped
+cleanly to packet-builder bug classes.
+
+Added:
+
+- `src/tac/tests/test_build_contest_submission_packet.py`
+
+Covered packet-builder contracts:
+
+- deterministic manifest and checklist output;
+- metadata-only packets remain non-score/non-ranking/non-promotion claims;
+- copied submission packets copy only auth-eval-selected runtime files plus
+  `archive.zip`, `report.txt`, and `archive_manifest.json`;
+- `inflate.sh` is normalized to executable mode even if the runtime source is
+  not executable;
+- runtime-file SHA/byte mismatch fails closed against the
+  `inflate_runtime_manifest`;
+- archive SHA mismatch fails closed;
+- component-trace `contest_auth_eval_cross_check.all_match=false` fails closed;
+- planner/visualization/next-action supporting artifacts are recorded as
+  non-score evidence;
+- charged `sjkl.bin`, CDO1, and AMR1 payloads require auth-eval apply-proof
+  log lines;
+- packed RPK1 payloads are inspected for logical CDO1 members;
+- duplicate ZIP members and multiple packed-payload containers fail closed.
+
+Deleted resolved orphan custody after live replacement and tests:
+
+- `reverse_engineering/orphan_pyc_recovery_20260505_codex/src/tac/tests/test_build_contest_submission_packet.py`
+- `reverse_engineering/orphan_pyc_recovery_20260505_codex/src/tac/tests/test_build_contest_submission_packet.recovery_spec.json`
+
+Verification:
+
+- `.venv/bin/python -m pytest
+  src/tac/tests/test_build_contest_submission_packet.py
+  src/tac/tests/test_recovered_operational_scripts_20260506.py -q` ->
+  `11 passed`.
+- `.venv/bin/python -m py_compile
+  src/tac/tests/test_build_contest_submission_packet.py
+  scripts/build_contest_submission_packet.py` passed.
+- `.venv/bin/python tools/audit_reverse_engineering_tree.py --repo-root .
+  --summary` -> `files=697 blockers=0`.
+- `.venv/bin/python tools/audit_reverse_engineering_tree.py --repo-root .
+  --release-strict --release-manifest
+  .omx/research/reverse_engineering_release_manifest_20260505_codex.json
+  --summary` -> `files=697 blockers=0`.
