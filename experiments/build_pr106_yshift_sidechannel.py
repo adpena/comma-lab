@@ -402,6 +402,7 @@ def main() -> int:
     with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_STORED) as z:  # DETERMINISTIC_ZIP_OK
         zi = zipfile.ZipInfo("0.bin", date_time=(1980, 1, 1, 0, 0, 0))
         zi.compress_type = zipfile.ZIP_STORED
+        zi.external_attr = 0o644 << 16
         z.writestr(zi, new_bin)
     archive_size = archive_path.stat().st_size
     pr106_zip_size = args.pr106_archive.stat().st_size

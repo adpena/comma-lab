@@ -424,6 +424,41 @@ def test_builder_score_table_mode_writes_fail_closed_metadata(tmp_path):
     assert np.array_equal(sc["raw"][1], grid[zero_idx])
 
 
+def test_builder_writes_cross_platform_deterministic_zip_metadata(tmp_path):
+    """Yshift candidate archive metadata is independent of host filesystem defaults."""
+    if not PR106_ARCHIVE.is_file():
+        pytest.skip(f"PR106 anchor not present at {PR106_ARCHIVE}")
+    out_dir = tmp_path / "out"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "experiments/build_pr106_yshift_sidechannel.py"),
+            "--pr106-archive",
+            str(PR106_ARCHIVE),
+            "--out-dir",
+            str(out_dir),
+            "--search-mode",
+            "zero",
+            "--n-pairs",
+            "2",
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    with zipfile.ZipFile(out_dir / "pr106_yshift_sidechannel_archive.zip") as zf:
+        infos = zf.infolist()
+    assert len(infos) == 1
+    info = infos[0]
+    assert info.filename == "0.bin"
+    assert info.date_time == (1980, 1, 1, 0, 0, 0)
+    assert info.compress_type == zipfile.ZIP_STORED
+    assert (info.external_attr >> 16) == 0o644
+
+
 def test_builder_score_table_mode_validates_cuda_manifest(tmp_path):
     """A provided CUDA table manifest must match table/source/radius/shape exactly."""
     if not PR106_ARCHIVE.is_file():

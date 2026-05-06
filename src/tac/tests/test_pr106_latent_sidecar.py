@@ -286,3 +286,11 @@ def test_cpu_smoke_builder_metadata_is_dispatch_fail_closed(tmp_path: Path):
     assert metadata["wall_clock_seconds_note"] == "omitted_for_deterministic_smoke_manifest"
     assert Path(metadata["archive_path"]).resolve() == archive.resolve()
     assert metadata["archive_zip_bytes"] == archive.stat().st_size
+    with zipfile.ZipFile(archive) as zf:
+        infos = zf.infolist()
+    assert len(infos) == 1
+    info = infos[0]
+    assert info.filename == "0.bin"
+    assert info.date_time == (1980, 1, 1, 0, 0, 0)
+    assert info.compress_type == zipfile.ZIP_STORED
+    assert (info.external_attr >> 16) == 0o644

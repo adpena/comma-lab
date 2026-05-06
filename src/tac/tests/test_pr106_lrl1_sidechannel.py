@@ -415,6 +415,15 @@ def test_builder_zero_mode_metadata_is_fail_closed(tmp_path):
     assert "requires_real_cuda_lrl1_search" in metadata["dispatch_blockers"]
     assert "requires_exact_cuda_auth_eval_on_built_archive" in metadata["dispatch_blockers"]
 
+    with zipfile.ZipFile(archive_path) as zf:
+        infos = zf.infolist()
+    assert len(infos) == 1
+    info = infos[0]
+    assert info.filename == "0.bin"
+    assert info.date_time == (1980, 1, 1, 0, 0, 0)
+    assert info.compress_type == zipfile.ZIP_STORED
+    assert (info.external_attr >> 16) == 0o644
+
 
 def test_builder_artifact_mode_writes_fail_closed_metadata(tmp_path):
     """Artifact-mode LRL1 emits charged bytes from precomputed arrays without score claims."""
