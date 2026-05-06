@@ -3870,3 +3870,60 @@ Verification:
 - `git diff --cached --check` passed.
 - Full `.venv/bin/python tools/all_lanes_preflight.py` passed:
   `ALL 17 PREFLIGHT CHECKS PASSED`.
+
+## R50 - 2026-05-06 Dirty Nested-Custody Classification Refresh
+
+Focused dirty-state custody refresh on `main` after the HNeRV wavelet residual
+planning commit, without editing the active HNeRV sidechannel implementation or
+mutating raw custody snapshots.
+
+Current dirty-state classes:
+
+- Eight public-PR intake gitlinks remain dirty local forensic snapshots:
+  `experiments/results/public_pr100_intake_20260504_codex/source`,
+  `public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source`,
+  `public_pr103_intake_20260504_codex/source`,
+  `public_pr105_kitchen_sink_intake_20260504_codex/source`,
+  `public_pr106_belt_and_suspenders_intake_20260504_codex/source`,
+  `public_pr81_qzs3_range_mask_intake_20260503_codex/repo`,
+  `public_pr82_henosis_frontier_intake_20260503_codex/repo`, and
+  `public_pr91_intake_20260504_worker/pr91_src/repo`.
+- The common public-PR nested dirt is local modifications to recovered public
+  submission training/compression files under `submissions/fp4_mask_gen`,
+  `submissions/neural_inflate`, `submissions/quantizr`, and
+  `submissions/svtav1_dilated_ren`; PR100/101/103/105/106/81 also have
+  `submissions/ph4ntom_drv/compress.py` dirty.
+- One raw Kaggle ingest gitlink remains dirty local custody at
+  `reports/raw/kaggle_ingest/kaggle-dilated-h64-long1000-retry-v6-20260410T234220Z/comma_video_compression_challenge`,
+  with untracked `submissions/gt_passthrough/inflate.py`,
+  `submissions/gt_passthrough/inflate.sh`, and
+  `submissions/gt_passthrough/report_pyav.txt` inside the nested repo.
+- Thirty-four modified files remain under
+  `reverse_engineering/orphan_pyc_recovery_20260505_codex/`. These are still
+  private/local recovery snapshots and are covered by
+  `orphan_recovery_snapshots_private`; useful source should continue to promote
+  through canonical `src/tac`, `tools`, `docs`, or curated
+  `reverse_engineering` paths before any quarantine cleanup.
+
+Audit evidence:
+
+- `.venv/bin/python tools/audit_nested_gitlink_custody.py --repo-root . --strict --local-custody-manifest .omx/research/local_custody_release_manifest_20260505_codex.json --format json`
+  passed with `dirty_gitlink_count=9`, `documented_count=9`, and
+  `warning_count=0`.
+- `.venv/bin/python tools/audit_release_index_split.py --repo-root . --strict --local-custody-manifest .omx/research/local_custody_release_manifest_20260505_codex.json --format json`
+  passed with `record_count=43`, `documented_count=43`, `blocker_count=0`, and
+  `warning_count=0`.
+- `.venv/bin/python tools/audit_untracked_source_artifacts.py --repo-root . --strict --format json`
+  passed with `untracked_source_like_count=0` and `undispositioned_count=0`.
+- `.venv/bin/python tools/audit_orphan_recovery_canonicalization.py --repo-root . --strict --format json`
+  passed with `source_like_delete_count=0`, `unstaged_delete_count=0`, and
+  `missing_canonical_count=0`.
+- `.venv/bin/python tools/audit_reverse_engineering_tree.py --repo-root . --summary`
+  passed with `files=716` and `blockers=0`.
+- `.venv/bin/python tools/audit_reverse_engineering_tree.py --repo-root . --release-strict --release-manifest .omx/research/reverse_engineering_release_manifest_20260505_codex.json --summary`
+  passed with `files=716` and `blockers=0`.
+
+Conclusion: the remaining dirty state is intentionally local custody, not a
+release blocker, provided release/preflight flows keep passing the explicit
+local-custody manifest. No score, dispatch, or promotion claim is made from
+these dirty snapshots.
