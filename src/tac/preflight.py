@@ -7836,7 +7836,10 @@ _PUBLIC_RELEASE_SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ),
     (
         "explicit secret environment assignment",
-        re.compile(r"\b(?:VAST_API_KEY|LIGHTNING_API_KEY|CLOUDFLARE_API_TOKEN|OPENAI_API_KEY)\s*="),
+        re.compile(
+            r"(?:\b(?:VAST_API_KEY|LIGHTNING_API_KEY|CLOUDFLARE_API_TOKEN|OPENAI_API_KEY)\s*="
+            r"|os\.environ\[\s*['\"](?:VAST_API_KEY|LIGHTNING_API_KEY|CLOUDFLARE_API_TOKEN|OPENAI_API_KEY)['\"]\s*\]\s*=)"
+        ),
     ),
     (
         "concrete Vast SSH endpoint",

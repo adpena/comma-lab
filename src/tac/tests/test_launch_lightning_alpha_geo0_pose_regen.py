@@ -47,6 +47,25 @@ def _write_required_artifacts(repo_root: Path) -> dict[str, str]:
     return rels
 
 
+def test_alpha_geo0_lightning_identity_defaults_are_provider_agnostic(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mod = _load_module()
+    for name in (
+        "LIGHTNING_STUDIO",
+        "LIGHTNING_TEAMSPACE",
+        "LIGHTNING_SDK_USER",
+        "LIGHTNING_USER",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    args = mod.build_parser().parse_args(["--job-name", "Alpha_Geo0_Test"])
+
+    assert args.studio == ""
+    assert args.teamspace == ""
+    assert args.sdk_user == ""
+
+
 def test_non_dry_run_alpha_geo0_submit_requires_active_dispatch_claim(tmp_path: Path) -> None:
     mod = _load_module()
     claims = tmp_path / "active_lane_dispatch_claims.md"

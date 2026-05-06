@@ -84,3 +84,26 @@ def test_audit_public_staged_hygiene_reads_index_not_worktree(tmp_path: Path) ->
 
     assert payload["violation_count"] == 1
     assert "local absolute operator path" in payload["violations"][0]
+
+
+def test_audit_public_staged_hygiene_reads_staged_secret_assignment(
+    tmp_path: Path,
+) -> None:
+    import subprocess
+
+    root = tmp_path
+    subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
+    docs = root / "docs"
+    docs.mkdir()
+    release = docs / "release.md"
+    release.write_text(
+        "os.environ['LIGHTNING_API_KEY'] = 'redacted-test-token'\n",
+        encoding="utf-8",
+    )
+    subprocess.run(["git", "add", "docs/release.md"], cwd=root, check=True)
+    release.write_text("Supplement: ${LIGHTNING_SUPPLEMENT_URL}\n", encoding="utf-8")
+
+    payload = audit_public_staged_hygiene(root, ["docs/release.md"])
+
+    assert payload["violation_count"] == 1
+    assert "explicit secret environment assignment" in payload["violations"][0]

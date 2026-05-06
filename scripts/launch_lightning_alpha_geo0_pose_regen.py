@@ -29,13 +29,17 @@ ensure_repo_imports(REPO_ROOT)
 
 os.environ.setdefault("LIGHTNING_DISABLE_VERSION_CHECK", "1")
 
-from scripts.launch_lightning_batch_job import _require_dispatch_claim_for_submit  # noqa: E402
+from scripts.launch_lightning_batch_job import (  # noqa: E402
+    _require_dispatch_claim_for_submit,
+    _require_lightning_identity_for_studio_submit,
+)
 from tac.deploy.lightning.batch_jobs import (  # noqa: E402
     LightningAdjudicationSpec,
     LightningBatchJobsClient,
     LightningBatchJobSpec,
     _runner_preflight_command,
 )
+from tac.deploy.lightning.defaults import default_studio, default_teamspace, default_user  # noqa: E402
 from tac.repo_io import json_text, sha256_file  # noqa: E402
 
 DEFAULT_REMOTE_REPO = "/teamspace/studios/this_studio/pact"
@@ -252,7 +256,13 @@ def _remote_supply_chain_preflight(args: argparse.Namespace) -> None:
 
 
 def _require_alpha_geo0_dispatch_claim(args: argparse.Namespace) -> None:
-    _require_dispatch_claim_for_submit(args, role="alpha-geo0 exact-eval")
+    if getattr(args, "dry_run", False):
+        return
+    claim_args = args
+    if not getattr(args, "studio", None):
+        claim_args = argparse.Namespace(**vars(args))
+        claim_args.studio = "__claim_required_before_identity__"
+    _require_dispatch_claim_for_submit(claim_args, role="alpha-geo0 exact-eval")
 
 
 def _dispatch_claim_metadata(args: argparse.Namespace) -> dict[str, str]:
@@ -279,10 +289,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--local-artifact-dir", default=None)
     parser.add_argument("--state-path", default=DEFAULT_STATE_PATH)
     parser.add_argument("--machine", default=os.environ.get("LIGHTNING_MACHINE", "T4"))
-    parser.add_argument("--studio", default=os.environ.get("LIGHTNING_STUDIO", "lossy-compression-challenge"))
-    parser.add_argument("--teamspace", default=os.environ.get("LIGHTNING_TEAMSPACE", "comma-lab"))
+    parser.add_argument("--studio", default=default_studio())
+    parser.add_argument("--teamspace", default=default_teamspace())
     parser.add_argument("--org", default=os.environ.get("LIGHTNING_ORG"))
-    parser.add_argument("--sdk-user", dest="sdk_user", default=os.environ.get("LIGHTNING_SDK_USER", "adpena"))
+    parser.add_argument("--sdk-user", dest="sdk_user", default=os.environ.get("LIGHTNING_SDK_USER") or default_user())
     parser.add_argument("--python-bin", default=os.environ.get("LIGHTNING_BATCH_PYTHON_BIN", ".venv/bin/python"))
     parser.add_argument("--max-runtime", type=int, default=6 * 3600)
     parser.add_argument("--pose-steps", type=int, default=500)
@@ -356,6 +366,7 @@ def main(argv: list[str] | None = None) -> int:
     queue_metadata.update(_parse_metadata(args.queue_metadata))
     queue_metadata.update(_dispatch_claim_metadata(args))
     _require_alpha_geo0_dispatch_claim(args)
+    _require_lightning_identity_for_studio_submit(args, role="alpha-geo0 exact-eval")
     command = _build_command(args, queue_metadata)
     remote_output_dir = args.output_dir or f"{args.remote_repo.rstrip('/')}/{DEFAULT_LOCAL_ARTIFACT_ROOT}/{args.job_name}"
     local_artifact_dir = args.local_artifact_dir or f"{DEFAULT_LOCAL_ARTIFACT_ROOT}/{args.job_name}"
