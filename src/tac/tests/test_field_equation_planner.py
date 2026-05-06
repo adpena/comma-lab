@@ -13,6 +13,7 @@ from tac.optimization.field_equation_planner import (
     frechet_derivatives,
 )
 from tac.optimization.meta_lagrangian_allocator import build_atom_ledger
+from tac.repo_io import sha256_file
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -132,8 +133,74 @@ def test_volterra_interactions_are_second_order_planning_only() -> None:
     assert pair["interaction_id"] == "volterra:pose_atom+wr01"
     assert pair["second_order_score_delta"] == -0.002
     assert pair["combined_score_delta"] < pair["first_order_score_delta"]
+    assert pair["compatible_for_stack_planning"] is False
+    assert "missing_byte_closed_archive_manifest" in pair["compatibility_blockers"]
     assert pair["ready_for_exact_eval_dispatch"] is False
+    assert plan["compatible_volterra_interaction_count"] == 0
+    assert plan["blocked_volterra_interaction_count"] == 1
     assert "requires_exact_stacked_archive_cuda_eval" in pair["dispatch_blockers"]
+
+
+def test_volterra_pair_can_influence_floor_only_when_kkt_frontier_and_byte_closed(
+    tmp_path: Path,
+) -> None:
+    ledger = _closed_stack_ledger(tmp_path)
+    plan = build_field_equation_plan(
+        ledger,
+        source="fixture",
+        interactions=[
+            {
+                "atom_a": "mask_atom",
+                "atom_b": "pose_atom",
+                "score_delta": -0.003,
+                "seg_dist_delta": -0.00001,
+                "pose_dist_delta": -0.00001,
+                "byte_delta": 2,
+                "assumption": "fixture_byte_closed_nonconflicting_pair",
+            }
+        ],
+    )
+
+    pair = plan["volterra_interactions"][0]
+    assert pair["compatible_for_stack_planning"] is True
+    assert pair["compatibility_blockers"] == []
+    assert plan["compatible_volterra_interaction_count"] == 1
+    assert plan["blocked_volterra_interaction_count"] == 0
+    assert plan["theoretical_floor_estimate"]["best_pair_combined_score_delta"] == pytest.approx(
+        pair["combined_score_delta"]
+    )
+
+
+def test_declared_family_conflict_blocks_volterra_floor_contribution(tmp_path: Path) -> None:
+    ledger = _closed_stack_ledger(
+        tmp_path,
+        first_extra={"conflicts_with_families": ["pose"]},
+    )
+    plan = build_field_equation_plan(
+        ledger,
+        source="fixture",
+        interactions=[
+            {
+                "atom_a": "mask_atom",
+                "atom_b": "pose_atom",
+                "score_delta": -0.01,
+                "seg_dist_delta": -0.00001,
+                "pose_dist_delta": -0.00001,
+                "byte_delta": -5,
+                "assumption": "unsafe_fixture_conflict_synergy",
+            }
+        ],
+    )
+
+    pair = plan["volterra_interactions"][0]
+    assert pair["combined_score_delta"] < 0
+    assert pair["compatible_for_stack_planning"] is False
+    assert "declared_family_conflict" in pair["compatibility_blockers"]
+    assert "declared_family_conflict" in pair["dispatch_blockers"]
+    assert plan["compatible_volterra_interaction_count"] == 0
+    assert plan["blocked_volterra_interaction_count"] == 1
+    assert plan["volterra_blocker_counts"]["declared_family_conflict"] == 1
+    assert plan["theoretical_floor_estimate"]["best_pair_combined_score_delta"] == 0.0
 
 
 def test_unknown_constraint_fails_closed() -> None:
@@ -172,3 +239,67 @@ def test_build_field_equation_plan_cli(tmp_path) -> None:
         source["basis_id"] for source in payload["research_basis"]["sources"]
     }
     assert payload["theoretical_floor_estimate"]["base_score"] == pytest.approx(0.20935073680571203)
+
+
+def _closed_stack_ledger(
+    tmp_path: Path,
+    *,
+    first_extra: dict | None = None,
+    second_extra: dict | None = None,
+) -> dict:
+    manifest = _archive_manifest(tmp_path)
+    manifest_sha = sha256_file(manifest)
+    return build_atom_ledger(
+        [
+            {
+                "atom_id": "mask_atom",
+                "family": "mask_patch",
+                "family_group": "mask",
+                "pareto_scope": "cross_paradigm_stack",
+                "byte_delta": -10,
+                "expected_seg_dist_delta": -0.0001,
+                "expected_pose_dist_delta": 0.0,
+                "confidence": 1.0,
+                "evidence_grade": "empirical",
+                "raw_equal": True,
+                "interaction_assumptions": ["first_order_mask_patch"],
+                "archive_manifest_path": manifest.as_posix(),
+                "archive_manifest_sha256": manifest_sha,
+                **(first_extra or {}),
+            },
+            {
+                "atom_id": "pose_atom",
+                "family": "pose_patch",
+                "family_group": "pose",
+                "pareto_scope": "cross_paradigm_stack",
+                "byte_delta": -10,
+                "expected_seg_dist_delta": 0.0,
+                "expected_pose_dist_delta": -0.0001,
+                "confidence": 1.0,
+                "evidence_grade": "empirical",
+                "raw_equal": True,
+                "interaction_assumptions": ["first_order_pose_patch"],
+                "archive_manifest_path": manifest.as_posix(),
+                "archive_manifest_sha256": manifest_sha,
+                **(second_extra or {}),
+            },
+        ],
+        base_pose_dist=0.01,
+        source="fixture",
+    )
+
+
+def _archive_manifest(tmp_path: Path) -> Path:
+    manifest = tmp_path / "archive-manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "archive": {"bytes": 123, "sha256": "a" * 64},
+                "score_claim": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    return manifest

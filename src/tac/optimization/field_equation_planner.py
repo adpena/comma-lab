@@ -276,6 +276,84 @@ def _interaction_key(a: str, b: str) -> tuple[str, str]:
     return tuple(sorted((a, b)))
 
 
+def _row_family_tokens(row: Mapping[str, Any]) -> set[str]:
+    return {
+        text
+        for value in (
+            row.get("family"),
+            row.get("family_group"),
+            row.get("pareto_scope"),
+        )
+        if value is not None
+        for text in (str(value),)
+        if text
+    }
+
+
+def _declared_conflict_blockers(a: Mapping[str, Any], b: Mapping[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    atom_a = str(a.get("atom_id") or "")
+    atom_b = str(b.get("atom_id") or "")
+    if atom_b in {
+        text
+        for item in a.get("conflicts_with_atoms") or []
+        if item is not None
+        for text in (str(item),)
+        if text
+    }:
+        blockers.append("declared_atom_conflict")
+    if atom_a in {
+        text
+        for item in b.get("conflicts_with_atoms") or []
+        if item is not None
+        for text in (str(item),)
+        if text
+    }:
+        blockers.append("declared_atom_conflict")
+    a_family_conflicts = {
+        text
+        for item in a.get("conflicts_with_families") or []
+        if item is not None
+        for text in (str(item),)
+        if text
+    }
+    b_family_conflicts = {
+        text
+        for item in b.get("conflicts_with_families") or []
+        if item is not None
+        for text in (str(item),)
+        if text
+    }
+    if a_family_conflicts & _row_family_tokens(b):
+        blockers.append("declared_family_conflict")
+    if b_family_conflicts & _row_family_tokens(a):
+        blockers.append("declared_family_conflict")
+    return _unique_ordered_strings(blockers)
+
+
+def _stack_pair_compatibility(a: Mapping[str, Any], b: Mapping[str, Any]) -> dict[str, Any]:
+    blockers: list[str] = []
+    for row in (a, b):
+        if row.get("rankable") is not True:
+            blockers.append("atom_not_rankable")
+        if row.get("byte_closed_archive_manifest_attached") is not True:
+            blockers.append("missing_byte_closed_archive_manifest")
+        if row.get("pareto_eligible") is not True:
+            blockers.append("pareto_ineligible_atom")
+        elif row.get("pareto_frontier") is not True:
+            blockers.append("pareto_dominated_atom")
+        if row.get("kkt_ready_for_field_planning") is not True:
+            blockers.append("kkt_not_ready_for_field_planning")
+        if row.get("proxy_row") is True:
+            blockers.append("proxy_evidence_not_stack_compatible")
+    blockers.extend(_declared_conflict_blockers(a, b))
+    blockers = _unique_ordered_strings(blockers)
+    return {
+        "compatible_for_stack_planning": not blockers,
+        "compatibility_blockers": blockers,
+    }
+
+
 def volterra_interaction_rows(
     field_rows: Iterable[Mapping[str, Any]],
     interactions: Iterable[Mapping[str, Any]] | None = None,
@@ -300,6 +378,7 @@ def volterra_interaction_rows(
         second_seg = _as_float(item.get("seg_dist_delta", 0.0), key="seg_dist_delta")
         second_pose = _as_float(item.get("pose_dist_delta", 0.0), key="pose_dist_delta")
         second_bytes = _as_float(item.get("byte_delta", 0.0), key="byte_delta")
+        compatibility = _stack_pair_compatibility(by_id[atom_a], by_id[atom_b])
         total_score = (
             float(first_a["d_score_d_epsilon"])
             + float(first_b["d_score_d_epsilon"])
@@ -335,10 +414,12 @@ def volterra_interaction_rows(
                     12,
                 ),
                 "interaction_assumption": str(item.get("assumption") or "measured_or_planned_pair_delta"),
+                **compatibility,
                 "score_claim": False,
                 "ready_for_exact_eval_dispatch": False,
                 "dispatch_blockers": [
                     "volterra_interaction_planning_only",
+                    *compatibility["compatibility_blockers"],
                     "requires_exact_stacked_archive_cuda_eval",
                 ],
             }
@@ -385,17 +466,25 @@ def build_field_equation_plan(
     kkt_blocker_counts: Counter[str] = Counter()
     for row in rows:
         kkt_blocker_counts.update(row["kkt"]["kkt_blockers"])
+    volterra_blocker_counts: Counter[str] = Counter()
+    for row in interaction_rows:
+        volterra_blocker_counts.update(row["compatibility_blockers"])
     independent_score_delta = round(
         sum(float(row["frechet_derivatives"]["d_score_d_epsilon"]) for row in descending),
         12,
     )
+    compatible_interaction_rows = [
+        row for row in interaction_rows if row["compatible_for_stack_planning"]
+    ]
     best_pair_delta = (
-        float(interaction_rows[0]["combined_score_delta"]) if interaction_rows else 0.0
+        float(compatible_interaction_rows[0]["combined_score_delta"])
+        if compatible_interaction_rows
+        else 0.0
     )
     floor_estimate: dict[str, Any] = {
         "evidence_grade": "derivation",
         "score_claim": False,
-        "assumption": "independent_locally_descending_atoms_plus_best_known_pair_interaction",
+        "assumption": "independent_locally_descending_atoms_plus_best_compatible_nonconflicting_pair_interaction",
         "independent_score_delta": independent_score_delta,
         "best_pair_combined_score_delta": round(best_pair_delta, 12),
         "base_score": base_score,
@@ -433,6 +522,9 @@ def build_field_equation_plan(
         "kkt_blocker_counts": dict(sorted(kkt_blocker_counts.items())),
         "locally_descending_count": len(descending),
         "volterra_interaction_count": len(interaction_rows),
+        "compatible_volterra_interaction_count": len(compatible_interaction_rows),
+        "blocked_volterra_interaction_count": len(interaction_rows) - len(compatible_interaction_rows),
+        "volterra_blocker_counts": dict(sorted(volterra_blocker_counts.items())),
         "theoretical_floor_estimate": floor_estimate,
         "trainable_surrogate": {
             "target": "minimize_variational_action_delta",

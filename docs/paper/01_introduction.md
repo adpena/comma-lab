@@ -6,6 +6,11 @@
 > require a SHA-tied distortion gate or exact positive CUDA result before they
 > can be treated as frontier candidates.
 
+> 2026-05-06 publication-surface note: this chapter is a community and
+> historical-record draft. It is not an arXiv/preprint commitment. Use the
+> evidence-grade table in `docs/paper/04_results.md` for ranked scores; rows
+> labeled `prediction`, `empirical`, or `external` are roadmap/context only.
+
 The comma.ai video compression challenge asks participants to compress a 60-second driving video (1200 frames, 1164x874, HEVC) such that two frozen neural networks --- a semantic segmentation model (SegNet) and an ego-motion estimator (PoseNet) --- produce outputs as close as possible to those computed on the original. The scoring formula is
 
 $$S = 100 \cdot \bar{d}_{\text{seg}} + \sqrt{10 \cdot \bar{d}_{\text{pose}}} + 25 \cdot r$$
@@ -48,7 +53,11 @@ The discovery illustrates a broader point about optimization through frozen netw
 
 ## Contributions
 
-1. An asymmetric warp architecture for scorer-aware video generation that achieves state-of-the-art on the comma.ai challenge (0.43 vs. the next best compliant submission at 0.60), built on CLADE per-class normalization, dilated residual blocks, and Fridrich inverse steganalysis loss terms.
+1. A historical asymmetric warp architecture for scorer-aware video generation,
+   built on CLADE per-class normalization, dilated residual blocks, and
+   Fridrich-inspired inverse steganalysis loss terms. It is not claimed as the
+   current state of the art; ranked performance claims are restricted to the
+   exact `A++`/`A` evidence rows in §4.
 
 2. The discovery that PoseNet's output Jacobian has effective rank 1.008 --- a single degree of freedom (radial zoom from the focus of expansion) captures 99.8% of pose variance. This reduces the motion model from 50K parameters to 600 learned scalars (1.2 KB), validated at 10.6x PoseNet improvement.
 

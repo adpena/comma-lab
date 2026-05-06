@@ -27,7 +27,7 @@ strengthens the submission in three specific ways:
 3. **Future-proofing.** The lab's exploration graph (78 STRICT preflight
    checks, 30+ negative results across 3 eras) is the most valuable
    long-tail artifact. Encoding it in Ara format preserves it for the
-   followup arXiv preprint.
+   optional long-form public record if a venue is later chosen.
 
 Estimated cost: **3-5 hours** of additional work beyond what subagent E is
 doing today, distributed across two compilation passes. The skeleton is
@@ -196,12 +196,13 @@ need to be normalized into the Ara `evidence/` tree (Pass 2).
 
 ## Section 5 — Open questions for the user
 
-1. **Should the Ara artifact ship at the comma.ai PR, or only on arXiv
-   afterward?** The judges may not know what an Ara artifact is; explaining
+1. **Should the Ara artifact ship at the comma.ai PR, or only in a later
+   public note?** The judges may not know what an Ara artifact is; explaining
    it eats word budget. Recommendation: include a brief "this artifact
    follows the Ara paradigm (arXiv 2604.24658)" footer in the comma.ai PR
    description and link to `docs/paper/ara/PAPER.md` as a curiosity. Save
-   the full Ara-native pitch for the arXiv preprint.
+   the full Ara-native pitch for a later publication surface if the human
+   chooses one.
 2. **Disclosure policy on `evidence/index.md`.** Should we strip the
    `(memory: ...)` references that point to internal feedback files? They
    reveal the council-review structure. Recommendation: replace with

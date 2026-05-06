@@ -9,6 +9,7 @@ from pathlib import Path
 from tac.categorical_candidate_readiness import (
     ARCHIVE_MEMBER_MANIFEST_CONTRACT,
     CANDIDATE_MANIFEST_CONTRACT,
+    RUNTIME_LOADER_PARITY_CONTRACT,
     audit_categorical_candidate_manifest,
 )
 from tac.repo_io import read_json, sha256_file
@@ -50,6 +51,11 @@ def test_build_categorical_candidate_fixture_is_deterministic_and_blocked(
     )
     assert candidate["fixture_only"] is True
     assert candidate["candidate_manifest_contract"] == CANDIDATE_MANIFEST_CONTRACT
+    assert (
+        candidate["runtime_loader_parity"]["runtime_loader_parity_contract"]
+        == RUNTIME_LOADER_PARITY_CONTRACT
+    )
+    assert readiness["runtime_loader_parity"]["accepted"] is True
     assert candidate["score_claim"] is False
     assert readiness["fixture_only"] is True
     assert readiness["ready_for_exact_eval_dispatch"] is False

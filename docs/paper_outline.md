@@ -2,7 +2,9 @@
 
 **Working title:** Evidence-Gated Neural Archive Compression for a Two-Scorer Video Challenge
 
-**Target surfaces:** contest writeup, reproducibility report, arXiv-style systems note, submission packet.
+**Target surfaces:** contest writeup, reproducibility report, optional
+long-form systems note, submission packet. This outline is not an arXiv or
+preprint commitment.
 
 **Current strict frontier for latest packets:** PR100 HNeRV-LC-v2 Apogee
 follow-up adapter replay, exact Tesla T4 A++ score `0.22826947142244708`,

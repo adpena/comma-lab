@@ -2,6 +2,25 @@
 
 Treat the write-up prize as a first-class lane.
 
+## Public Framing
+
+- Frame public docs as a community and historical record plus a reproducible
+  engineering artifact.
+- Do not imply an arXiv/preprint submission is planned or guaranteed. Use
+  "optional long-form note" or "future publication surface" until the human
+  explicitly chooses a venue.
+- Rank only `A++`/`A` rows. Everything else belongs in roadmap, external
+  context, negative-results, or compliance sections.
+
+| Evidence grade | Writeup placement |
+|---|---|
+| `A++` / `A` | Ranked score tables |
+| `A-negative` | Scoped negative results |
+| `empirical` | Roadmap and engineering signal |
+| `derivation` / `prediction` | Hypothesis or next-wave plan |
+| `external` | Public PR/historical context |
+| `invalid` | Compliance lesson or quarantine |
+
 ## Capture from day one
 
 - score-over-time plots
@@ -39,4 +58,6 @@ The original four-act outline (codec → repair → tune → tiny CNN) is now ac
 - Do NOT publicize the Cloudflare site URL until the human explicitly says it is time.
 - Do NOT publish the specific Lane W (hard-pair self-compress), Lane Ω (Hessian-aware quantization), or Lane DARTS-S architecture-search recipes on public-facing surfaces.
 - Do publish the engineering-rigor story (preflight checks, MPS drift discovery, eval_roundtrip discipline) — that is differentiated and not competitively load-bearing.
-- For paper / arXiv: full disclosure is acceptable but coordinate with the human before the May 3 push.
+- For any external paper, preprint, or public supplement: full disclosure can
+  be acceptable, but coordinate with the human before naming a venue, URL, or
+  release date.

@@ -1,6 +1,6 @@
 # Task-Aware Compression via Differentiable Scorer Optimization
 
-<!-- arXiv structure:
+<!-- Long-form writeup structure:
   Section 1: Introduction (task-aware compression for autonomous driving)
   Section 2: Background (scoring formula, PoseNet, SegNet, openpilot context)
   Section 3: Method Phase 1 (post-filter, renderer, asymmetric warp)
@@ -13,16 +13,22 @@
   Section 10: Discussion
 -->
 
-> **2026-05-01 claim-status update.** This is a historical draft, not the current claim authority. Every "auth" score below that was measured on MPS is `[advisory only]` after the MPS-vs-CUDA drift discovery. The current exact CUDA archive anchor is PFP16 A++: score `1.043987524793892`, archive `686635` bytes, SHA-256 `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f`, `n=600`, Tesla T4 CUDA. KL/distillation-family text below is forensic-gated: primary scorer KL is promotion-ineligible, and SegNet-aux KL/JBL variants need matched exact CUDA component evidence before any mechanism, promotion, or safety claim. Do not cite the legacy `KL weight=0.002` narrative as a proven recipe without matched ablation proof.
+> **2026-05-06 public-claim hygiene update.** This is a historical draft, not
+> a submission packet, live leaderboard, or arXiv/preprint commitment. Every
+> score-like row below is quarantined unless it is promoted by an exact
+> `A++`/`A` evidence row with archive SHA-256, CUDA auth-eval JSON, component
+> recomputation, runtime custody, and full sample count. Use
+> `docs/paper/04_results.md` for ranked rows and `docs/paper_outline.md` for
+> the evidence-grade roadmap.
 
-## Abstract (current — to be revised before submission)
+## Abstract (historical draft - not publication-ready)
 
 We present a system for task-aware video compression that achieves a contest-CUDA score of `1.05` on comma.ai's video compression challenge through a paradigm shift from codec post-filtering to neural rendering. Our approach evolved through two paradigms and a third in active development: (Era 1) a CNN post-filter on codec output reaching `1.73` while bound to AV1; (Era 2) a neural renderer with dilated-h64 architecture that bypasses the codec entirely, with pose TTO at compress time and KL distillation on the SegNet logits at weight=0.002, reaching `1.05` [contest-CUDA] verified on the EXACT submission archive bytes; (Era 3, live) the Selfcomp-paradigm portfolio (grayscale-LUT mask, single-mask + 6-DOF affine duality, analytical pose, block-FP weight self-compression at 1.017 bpw, 94K-param SegMap) — eight Modal lanes in flight as of submission deadline. Key technical contributions are: discovery of a 23x MPS-vs-CUDA PoseNet drift that invalidated months of MPS-measured scores; the rank-1 PoseNet Jacobian analysis showing why pose TTO must warm-start from baseline poses; the KL distillation weight sensitivity result (≥ 0.01 collapses PoseNet, 0.002 sustains the boundary signal); and the engineering-rigor catalog of 78 strict preflight checks that made every score reproducible. We report 30+ negative results including the catastrophic 53.61 mask-resolution disaster (48x64 instead of 384x512), the Lane GP Runge phenomenon at degree-10 polynomial, and the UNIWARD encoder no-op finding.
 
-**Current best (verified): 1.05** [contest-CUDA] | seg=0.0040, pose=0.0034, rate=0.0185 (694KB archive)
-**Modal reproduction: 1.04** [Modal-T4-CUDA] | identical archive bytes, drift 0.01 within noise
-**Fallback floor: 1.15** [contest-CUDA] | Lane A (pose TTO from baseline poses)
-**Era 1 historical floor: 1.73** [Era 1 / Track B / current_workflow] | h64 long-horizon QAT+EMA learned int8 post-filter
+**Historical exact row to recheck in current tables: 1.05** [contest-CUDA] | seg=0.0040, pose=0.0034, rate=0.0185 (694KB archive)
+**Historical Modal reproduction row: 1.04** [Modal-T4-CUDA] | identical archive bytes, drift 0.01 within noise
+**Historical fallback row: 1.15** [contest-CUDA] | Lane A (pose TTO from baseline poses)
+**Era 1 historical floor row: 1.73** [Era 1 / Track B / current_workflow] | h64 long-horizon QAT+EMA learned int8 post-filter
 
 ---
 
@@ -35,13 +41,13 @@ The legacy abstract below was the working narrative through April 25 and referen
 > Note: every score in the legacy abstract above was measured on MPS prior to the 2026-04-25 CUDA-vs-MPS comparison. PoseNet drifts 23x; final scores drift ~2.5x. The "0.37" reading on MPS corresponds to roughly `0.93-1.0` on CUDA. Treat as `[advisory only]`.
 
 **Legacy-tagged readings (advisory only — do NOT cite as authoritative):**
-- Current best: 0.37 [advisory only — MPS]
+- Legacy MPS best reading: 0.37 [advisory only — MPS]
 - Contest-compliant: 0.61 [advisory only — MPS]
 - Contest-compliant baseline: 0.87 [advisory only — MPS]
 
 ---
 
-## Score Evolution (current — contest-CUDA only above the line)
+## Score Evolution (historical draft - exact rows only above the line)
 
 | Stage | Score | Lane | Tag | Key Technique | Insight |
 |-------|-------|------|-----|---------------|---------|

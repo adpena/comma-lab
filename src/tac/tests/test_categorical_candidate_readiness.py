@@ -14,12 +14,14 @@ from tac.categorical_candidate_readiness import (
     DETERMINISTIC_ZIP_FILE_MODE,
     DETERMINISTIC_ZIP_INFLATE_MODE,
     REQUIRED_CONTROL_NAMES,
+    RUNTIME_LOADER_PARITY_CONTRACT,
     audit_categorical_candidate_manifest,
 )
 from tac.repo_io import sha256_bytes, sha256_file, write_json
 from tac.semantic_label_contract import CONTEST_SEGNET_CLASS_NAME_TUPLE, SELFCOMP_CLASS_TO_GRAY
 
 REPO = Path(__file__).resolve().parents[3]
+RUNTIME_CONSUMER_REPO_PATH = "src/tac/qma9_range_mask_contract.py"
 
 
 def _zip_info(name: str) -> zipfile.ZipInfo:
@@ -33,11 +35,14 @@ def _zip_info(name: str) -> zipfile.ZipInfo:
 
 def _base_candidate(tmp_path: Path) -> dict:
     archive = tmp_path / "candidate.zip"
+    runtime_source = REPO / RUNTIME_CONSUMER_REPO_PATH
+    runtime_source_raw = runtime_source.read_bytes()
+    runtime_source_sha = sha256_bytes(runtime_source_raw)
     member_payloads = [
         ("categorical_payload.bin", b"\x00\x01\x01\x02categorical", "categorical_payload"),
         ("class_codebook.json", b"{\"class_order\":\"contest\"}\n", "decoder_table"),
-        ("inflate.sh", b"#!/usr/bin/env bash\nset -euo pipefail\n", "decoder_or_runtime_consumer"),
-        ("runtime_decoder.py", b"#!/usr/bin/env python3\n", "decoder_table"),
+        ("inflate.sh", b"#!/usr/bin/env bash\nset -euo pipefail\n", "inflate_entrypoint"),
+        ("runtime_decoder.py", runtime_source_raw, "decoder_or_runtime_consumer"),
     ]
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
         for name, raw, _role in member_payloads:
@@ -86,8 +91,26 @@ def _base_candidate(tmp_path: Path) -> dict:
             SELFCOMP_CLASS_TO_GRAY[index] for index in range(len(SELFCOMP_CLASS_TO_GRAY))
         ],
         "runtime_consumer": {
-            "path": "src/tac/qma9_range_mask_contract.py",
+            "path": RUNTIME_CONSUMER_REPO_PATH,
             "consumes_charged_members": True,
+        },
+        "runtime_loader_parity": {
+            "schema_version": 1,
+            "runtime_loader_parity_contract": RUNTIME_LOADER_PARITY_CONTRACT,
+            "passed": True,
+            "score_claim": False,
+            "dispatch_attempted": False,
+            "runtime_consumer_path": RUNTIME_CONSUMER_REPO_PATH,
+            "runtime_consumer_sha256": runtime_source_sha,
+            "loader_member": "runtime_decoder.py",
+            "loader_member_sha256": runtime_source_sha,
+            "byte_identical_to_runtime_consumer": True,
+            "sidecar_free": True,
+            "fallback_used": False,
+            "loaded_charged_members": [
+                "categorical_payload.bin",
+                "class_codebook.json",
+            ],
         },
         "conditioning_priors": [
             {
@@ -135,6 +158,12 @@ def test_audit_categorical_candidate_manifest_accepts_byte_closed_fixture(tmp_pa
     )
     assert manifest["semantic_contract"]["matches_candidate"] is True
     assert manifest["runtime_consumer"]["consumes_charged_members"] is True
+    assert manifest["runtime_loader_parity"]["accepted"] is True
+    assert manifest["runtime_loader_parity"]["loader_member"] == "runtime_decoder.py"
+    assert (
+        manifest["runtime_loader_parity"]["contract"]
+        == RUNTIME_LOADER_PARITY_CONTRACT
+    )
     assert manifest["conditioning_prior_contract"]["passed"] is True
     assert manifest["conditioning_prior_contract"]["runtime_consumed_count"] == 1
     assert manifest["conditioning_prior_contract"]["compression_time_only_count"] == 1
@@ -466,6 +495,37 @@ def test_audit_categorical_candidate_manifest_rejects_local_sidecar_runtime(tmp_
 
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert "runtime_consumer_path_outside_repo" in manifest["dispatch_blockers"]
+
+
+def test_audit_categorical_candidate_manifest_requires_runtime_loader_parity(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    candidate.pop("runtime_loader_parity")
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["runtime_loader_parity"]["declared"] is False
+    assert "runtime_loader_parity_missing" in manifest["dispatch_blockers"]
+
+
+def test_audit_categorical_candidate_manifest_rejects_loader_source_mismatch(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    candidate["runtime_loader_parity"]["loader_member_sha256"] = "e" * 64
+    candidate["runtime_loader_parity"]["byte_identical_to_runtime_consumer"] = False
+    candidate["runtime_loader_parity"]["sidecar_free"] = False
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+    blockers = set(manifest["dispatch_blockers"])
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["runtime_loader_parity"]["accepted"] is False
+    assert "runtime_loader_parity_loader_member_sha256_mismatch" in blockers
+    assert "runtime_loader_parity_not_byte_identical" in blockers
+    assert "runtime_loader_parity_sidecar_free_not_proven" in blockers
 
 
 def test_audit_categorical_candidate_manifest_requires_contest_archive_shape(

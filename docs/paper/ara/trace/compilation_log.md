@@ -32,7 +32,8 @@ section of the artifact was compiled, by what tool, from what sources.
   [contest-CUDA] tagged scores; Lane W / Lane Omega / Lane DARTS-S
   recipes are NOT mentioned in this skeleton.
 - **review status**: skeleton; not yet reviewed. Pending: review by
-  user before any of these layers is published on Cloudflare or arXiv.
+  user before any of these layers is published on Cloudflare, a public PR,
+  an optional preprint, or another public release surface.
 
 ## next compilation passes
 

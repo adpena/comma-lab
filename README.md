@@ -1,10 +1,29 @@
 # pact
 
-Task-aware video compression for the [comma.ai video compression challenge](https://github.com/commaai/comma_video_compression_challenge). A 287K-parameter conditional generative model compresses a 60-second driving video so that two frozen neural networks (SegNet, PoseNet) produce nearly identical outputs on the reconstruction.
+Task-aware video compression research and artifact tooling for the
+[comma.ai video compression challenge](https://github.com/commaai/comma_video_compression_challenge).
+This repository is maintained as a community and historical-record workspace:
+public-archive intake, exact replay custody, writeup drafts, and OSS tooling.
+It is not a live leaderboard page and it does not make an arXiv or preprint
+commitment.
+
+Score-bearing claims must be read through the repository evidence grades. The
+ranked public rows live in `docs/paper/04_results.md`; roadmap and planning
+rows are not score claims until exact CUDA auth eval lands on exact archive
+bytes.
 
 Scoring formula: `S = 100 * seg_distortion + sqrt(10 * pose_distortion) + 25 * rate`
 
-Current best: **0.407 proxy** (training complete, auth eval pending). Leaderboard leader is 0.33.
+## Evidence Grades
+
+| Grade | Public/writeup use | Minimum requirement |
+|---|---|---|
+| `A++` / `A` | Ranked score row | Exact archive bytes and SHA-256, CUDA auth-eval JSON, component recomputation, runtime custody, full sample count |
+| `A-negative` | Scoped negative result | Same custody standard as a score row, but used only for the measured implementation/config |
+| `empirical` | Roadmap or engineering signal | Byte, smoke, loss, round-trip, or component evidence without full score custody |
+| `derivation` / `prediction` | Roadmap only | Formula or model-based hypothesis awaiting archive evidence |
+| `external` | Community/historical context | Public PR text, leaderboard metadata, or outside papers before local exact replay |
+| `invalid` | Compliance lesson | Proxy, CPU/MPS, stale, sidecar, exploit, malformed, or otherwise non-ranking evidence |
 
 ## Architecture
 
@@ -73,18 +92,20 @@ submissions/                Submission packaging
 upstream/                   Pinned upstream challenge snapshot (read-only)
 ```
 
-## Results timeline
+## Historical Timeline
 
-| Stage | Score | Method |
-|-------|-------|--------|
-| H.265 re-encode | 1.97 | CRF 28, no postfilter |
-| CPU postfilter | 1.33 | Dilated h=64 CNN trained against scorers |
-| Asymmetric warp renderer | 0.87 | Lagrangian annealing, FP4 quantized |
-| + TTO (blind PoseNet) | 0.70 | 500-step test-time optimization, SegNet spillover only |
-| + TTO (gradient fix) | 0.43 | Differentiable BT.601 YUV — fixed upstream `@torch.no_grad` bug |
-| + WILDE/SHIRAZ training | 0.407 | Proxy score, auth eval pending |
+The early renderer/post-filter numbers in this repository are retained as
+historical research context. They should not be copied into a public ranked
+table unless the row has an `A++`/`A` evidence tag and a cited
+`contest_auth_eval.json`.
 
-The single largest improvement (0.70 to 0.43, 38.6% reduction) came from discovering that the upstream scorer's RGB-to-YUV conversion was decorated with `@torch.no_grad`, silently zeroing all PoseNet gradients during test-time optimization. Every prior TTO experiment was optimizing PoseNet blind. See `docs/paper/03_gradient_bug.md`.
+| Thread | Public/writeup status |
+|---|---|
+| H.265 and CNN post-filter baselines | Historical context for the scorer-aware workflow |
+| Asymmetric warp renderer and pose TTO | Methodology and negative-result context; only exact CUDA rows may rank |
+| Gradient obstruction fix | Measurement-methodology contribution; see `docs/paper/03_gradient_bug.md` |
+| Public PR replay/deconstruction | Community/historical-record corpus plus exact replay rows when CUDA custody exists |
+| Post-deadline hidden-gem lanes | Roadmap until charged archives pass exact CUDA auth eval |
 
 ## Methodology
 

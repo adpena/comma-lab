@@ -20,6 +20,7 @@ ensure_repo_imports(REPO_ROOT)
 from tac.categorical_candidate_readiness import (  # noqa: E402
     ARCHIVE_MEMBER_MANIFEST_CONTRACT,
     CANDIDATE_MANIFEST_CONTRACT,
+    RUNTIME_LOADER_PARITY_CONTRACT,
     audit_categorical_candidate_manifest,
 )
 from tac.repo_io import json_text, sha256_bytes, sha256_file, write_json  # noqa: E402
@@ -29,18 +30,25 @@ from tac.tool_manifest import attach_tool_run_manifest  # noqa: E402
 FIXED_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 FIXED_ZIP_FILE_MODE = 0o644
 FIXED_ZIP_INFLATE_MODE = 0o755
-MEMBERS = {
-    "inflate.sh": b"#!/usr/bin/env bash\nset -euo pipefail\necho 'fixture-only categorical candidate' >&2\nexit 2\n",
-    "categorical_payload.bin": b"QMA9_fixture_payload_not_a_score_candidate\n",
-    "class_codebook.json": b"{\"class_order\":\"contest_zero_based_comma10k_order\"}\n",
-    "runtime_decoder.py": b"#!/usr/bin/env python3\nraise SystemExit('fixture-only runtime')\n",
-}
+RUNTIME_CONSUMER_REPO_PATH = "src/tac/qma9_range_mask_contract.py"
 MEMBER_ROLES = {
-    "inflate.sh": "decoder_or_runtime_consumer",
+    "inflate.sh": "inflate_entrypoint",
     "categorical_payload.bin": "categorical_payload",
     "class_codebook.json": "decoder_table",
-    "runtime_decoder.py": "decoder_table",
+    "runtime_decoder.py": "decoder_or_runtime_consumer",
 }
+
+
+def _member_payloads() -> dict[str, bytes]:
+    return {
+        "inflate.sh": (
+            b"#!/usr/bin/env bash\nset -euo pipefail\n"
+            b"echo 'fixture-only categorical candidate' >&2\nexit 2\n"
+        ),
+        "categorical_payload.bin": b"QMA9_fixture_payload_not_a_score_candidate\n",
+        "class_codebook.json": b"{\"class_order\":\"contest_zero_based_comma10k_order\"}\n",
+        "runtime_decoder.py": (REPO_ROOT / RUNTIME_CONSUMER_REPO_PATH).read_bytes(),
+    }
 
 
 def _zip_info(name: str) -> zipfile.ZipInfo:
@@ -52,12 +60,12 @@ def _zip_info(name: str) -> zipfile.ZipInfo:
     return info
 
 
-def _write_archive(path: Path) -> list[dict[str, Any]]:
+def _write_archive(path: Path, member_payloads: dict[str, bytes]) -> list[dict[str, Any]]:
     path.parent.mkdir(parents=True, exist_ok=True)
     records = []
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as archive:
-        for name in sorted(MEMBERS):
-            raw = MEMBERS[name]
+        for name in sorted(member_payloads):
+            raw = member_payloads[name]
             archive.writestr(_zip_info(name), raw, compress_type=zipfile.ZIP_STORED)
             records.append(
                 {
@@ -72,7 +80,11 @@ def _write_archive(path: Path) -> list[dict[str, Any]]:
 
 def build_fixture(*, out_dir: Path, source_archive_sha256: str) -> dict[str, Any]:
     archive_path = out_dir / "archive.zip"
-    member_records = _write_archive(archive_path)
+    member_payloads = _member_payloads()
+    member_records = _write_archive(archive_path, member_payloads)
+    runtime_source_path = REPO_ROOT / RUNTIME_CONSUMER_REPO_PATH
+    runtime_source_sha = sha256_file(runtime_source_path)
+    runtime_loader_sha = sha256_bytes(member_payloads["runtime_decoder.py"])
     archive_member_manifest = {
         "schema_version": 1,
         "kind": "categorical_fixture_archive_member_manifest",
@@ -113,8 +125,26 @@ def build_fixture(*, out_dir: Path, source_archive_sha256: str) -> dict[str, Any
             SELFCOMP_CLASS_TO_GRAY[index] for index in range(len(SELFCOMP_CLASS_TO_GRAY))
         ],
         "runtime_consumer": {
-            "path": "src/tac/qma9_range_mask_contract.py",
+            "path": RUNTIME_CONSUMER_REPO_PATH,
             "consumes_charged_members": True,
+        },
+        "runtime_loader_parity": {
+            "schema_version": 1,
+            "runtime_loader_parity_contract": RUNTIME_LOADER_PARITY_CONTRACT,
+            "passed": True,
+            "score_claim": False,
+            "dispatch_attempted": False,
+            "runtime_consumer_path": RUNTIME_CONSUMER_REPO_PATH,
+            "runtime_consumer_sha256": runtime_source_sha,
+            "loader_member": "runtime_decoder.py",
+            "loader_member_sha256": runtime_loader_sha,
+            "byte_identical_to_runtime_consumer": True,
+            "sidecar_free": True,
+            "fallback_used": False,
+            "loaded_charged_members": [
+                "categorical_payload.bin",
+                "class_codebook.json",
+            ],
         },
         "conditioning_priors": [
             {

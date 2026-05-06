@@ -201,9 +201,17 @@ These questions are the natural follow-on to the contest deadline and define the
 
 ## A6. Public-release posture
 
-This addendum formalizes contributions that are appropriate for the post-deadline paper. It avoids unpublished private artifacts beyond what is necessary to make the YF floor concept reproducible from the committed repository state. The implementation paths for SJ-KL, atom-waterfill, hard-pair selection, and line-search are referenced by file path; the specific archive recipes that achieve C-067 are documented elsewhere in the writeup (with PR #67 mask attribution per `EXTERNAL_SOURCE_ATTRIBUTION_C067.md`).
+This addendum formalizes contributions that may be appropriate for a
+post-deadline public release or paper. It avoids unpublished private artifacts
+beyond what is necessary to make the YF floor concept reproducible from the
+committed repository state. The implementation paths for SJ-KL,
+atom-waterfill, hard-pair selection, and line-search are referenced by file
+path; the specific archive recipes that achieve C-067 are documented elsewhere
+in the writeup (with PR #67 mask attribution per
+`EXTERNAL_SOURCE_ATTRIBUTION_C067.md`).
 
-When the paper goes public, this addendum should be inlined into the formal sections:
+If this material is used in a public release or paper, this addendum should be
+inlined into the formal sections:
 
 - **§2 Method**: incorporate Section A3 (atomic decomposition formalism) as a subsection, with the worked example (Section A3.5) as a results vignette.
 - **§6 Related Work**: incorporate Section A2 (Yousfi-Fridrich floor) as a subsection adjacent to the existing 6.5 (steganalysis) coverage.

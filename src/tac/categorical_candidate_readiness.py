@@ -18,6 +18,7 @@ from tac.semantic_label_contract import CONTEST_SEGNET_CLASS_NAME_TUPLE, SELFCOM
 SCHEMA_VERSION = 1
 CANDIDATE_MANIFEST_CONTRACT = "categorical_byte_closed_candidate_manifest_v1"
 ARCHIVE_MEMBER_MANIFEST_CONTRACT = "categorical_archive_member_manifest_v1"
+RUNTIME_LOADER_PARITY_CONTRACT = "categorical_runtime_loader_parity_v1"
 CANDIDATE_MANIFEST_KINDS = (
     "categorical_candidate_manifest",
     "categorical_candidate_fixture_manifest",
@@ -120,6 +121,115 @@ def _control_passed(value: Any) -> bool:
     if isinstance(value, dict):
         return value.get("passed") is True
     return False
+
+
+def _runtime_loader_parity_report(
+    report: Any,
+    *,
+    runtime_path: Path | None,
+    member_records: list[dict[str, Any]],
+    archive_members: dict[str, bytes],
+    repo_root: Path,
+) -> tuple[dict[str, Any], list[str]]:
+    blockers: list[str] = []
+    expected_runtime_path = repo_relative(runtime_path, repo_root) if runtime_path else ""
+    runtime_exists = bool(runtime_path is not None and runtime_path.is_file())
+    runtime_sha = sha256_file(runtime_path) if runtime_exists else ""
+    summary: dict[str, Any] = {
+        "schema_version": SCHEMA_VERSION,
+        "contract": RUNTIME_LOADER_PARITY_CONTRACT,
+        "declared": isinstance(report, dict),
+        "accepted": False,
+        "runtime_consumer_path": expected_runtime_path,
+        "runtime_consumer_sha256": runtime_sha,
+        "loader_member": "",
+        "loader_member_sha256": "",
+        "byte_identical_to_runtime_consumer": False,
+        "sidecar_free": False,
+        "fallback_used": None,
+        "loaded_charged_members": [],
+        "blockers": [],
+    }
+    if not isinstance(report, dict):
+        blockers.append("runtime_loader_parity_missing")
+        summary["blockers"] = blockers
+        return summary, blockers
+
+    if report.get("schema_version") != SCHEMA_VERSION:
+        blockers.append("runtime_loader_parity_schema_version_missing_or_invalid")
+    if report.get("runtime_loader_parity_contract") != RUNTIME_LOADER_PARITY_CONTRACT:
+        blockers.append("runtime_loader_parity_contract_missing_or_invalid")
+    if report.get("passed") is not True:
+        blockers.append("runtime_loader_parity_not_passed")
+    if report.get("score_claim") is not False:
+        blockers.append("runtime_loader_parity_score_claim_must_be_false")
+    if report.get("dispatch_attempted") is not False:
+        blockers.append("runtime_loader_parity_dispatch_attempted_must_be_false")
+
+    loader_member = report.get("loader_member")
+    loader_member_str = loader_member if isinstance(loader_member, str) else ""
+    summary["loader_member"] = loader_member_str
+    if not _safe_member_name(loader_member_str):
+        blockers.append("runtime_loader_parity_loader_member_missing_or_unsafe")
+
+    charged_by_name = {record["name"]: record for record in member_records if record.get("name")}
+    charged_record = charged_by_name.get(loader_member_str)
+    if loader_member_str and charged_record is None:
+        blockers.append("runtime_loader_parity_loader_member_not_charged")
+    elif charged_record is not None and charged_record.get("role") != "decoder_or_runtime_consumer":
+        blockers.append("runtime_loader_parity_loader_role_not_decoder_or_runtime_consumer")
+
+    loader_raw = archive_members.get(loader_member_str)
+    loader_sha = sha256_bytes(loader_raw) if loader_raw is not None else ""
+    summary["loader_member_sha256"] = loader_sha
+    if loader_member_str and loader_raw is None:
+        blockers.append("runtime_loader_parity_loader_member_missing_from_archive")
+    if charged_record is not None and loader_raw is not None:
+        if charged_record.get("bytes") != len(loader_raw):
+            blockers.append("runtime_loader_parity_loader_member_bytes_mismatch")
+        if charged_record.get("sha256") != loader_sha:
+            blockers.append("runtime_loader_parity_loader_member_charged_sha256_mismatch")
+    if report.get("loader_member_sha256") != loader_sha:
+        blockers.append("runtime_loader_parity_loader_member_sha256_mismatch")
+
+    if report.get("runtime_consumer_path") != expected_runtime_path:
+        blockers.append("runtime_loader_parity_runtime_consumer_path_mismatch")
+    if report.get("runtime_consumer_sha256") != runtime_sha:
+        blockers.append("runtime_loader_parity_runtime_consumer_sha256_mismatch")
+    if report.get("byte_identical_to_runtime_consumer") is not True:
+        blockers.append("runtime_loader_parity_not_byte_identical")
+    if runtime_sha and loader_sha and runtime_sha != loader_sha:
+        blockers.append("runtime_loader_parity_source_loader_sha256_mismatch")
+
+    sidecar_free = report.get("sidecar_free") is True
+    fallback_used = report.get("fallback_used")
+    summary["byte_identical_to_runtime_consumer"] = report.get("byte_identical_to_runtime_consumer") is True
+    summary["sidecar_free"] = sidecar_free
+    summary["fallback_used"] = fallback_used
+    if not sidecar_free:
+        blockers.append("runtime_loader_parity_sidecar_free_not_proven")
+    if fallback_used is not False:
+        blockers.append("runtime_loader_parity_fallback_used")
+
+    loaded_members = report.get("loaded_charged_members")
+    if not isinstance(loaded_members, list) or not loaded_members:
+        blockers.append("runtime_loader_parity_loaded_charged_members_missing")
+        loaded_member_names: list[str] = []
+    else:
+        loaded_member_names = []
+        for item in loaded_members:
+            if not _safe_member_name(item):
+                blockers.append("runtime_loader_parity_loaded_charged_member_unsafe")
+                continue
+            loaded_member_names.append(item)
+            if item not in charged_by_name:
+                blockers.append(f"runtime_loader_parity_loaded_charged_member_not_declared:{item}")
+    summary["loaded_charged_members"] = loaded_member_names
+
+    accepted = not blockers
+    summary["accepted"] = accepted
+    summary["blockers"] = blockers
+    return summary, blockers
 
 
 def _contains_marker(value: Any, marker: str) -> bool:
@@ -689,6 +799,15 @@ def audit_categorical_candidate_manifest(
             blockers.append("candidate_archive_untracked_members")
             warnings.append(f"archive contains untracked members: {archive_untracked_members}")
 
+    runtime_loader_parity, runtime_loader_blockers = _runtime_loader_parity_report(
+        payload.get("runtime_loader_parity"),
+        runtime_path=runtime_path,
+        member_records=member_records,
+        archive_members=archive_members,
+        repo_root=root,
+    )
+    blockers.extend(runtime_loader_blockers)
+
     candidate_rows, candidate_row_blockers = _audit_candidate_rows(payload)
     blockers.extend(candidate_row_blockers)
 
@@ -778,11 +897,15 @@ def audit_categorical_candidate_manifest(
         "runtime_consumer": {
             "path": repo_relative(runtime_path, root) if runtime_path is not None else "",
             "exists": bool(runtime_path is not None and runtime_path.exists()),
+            "sha256": sha256_file(runtime_path)
+            if runtime_path is not None and runtime_path.is_file()
+            else "",
             "consumes_charged_members": (
                 isinstance(runtime_consumer, dict)
                 and runtime_consumer.get("consumes_charged_members") is True
             ),
         },
+        "runtime_loader_parity": runtime_loader_parity,
         "conditioning_prior_contract": conditioning_prior_contract,
         "charged_member_summary": {
             "count": len(member_records),
@@ -810,6 +933,7 @@ __all__ = [
     "DETERMINISTIC_ZIP_INFLATE_MODE",
     "REQUIRED_CONTROL_NAMES",
     "REQUIRED_MEMBER_ROLES",
+    "RUNTIME_LOADER_PARITY_CONTRACT",
     "SCHEMA_VERSION",
     "audit_categorical_candidate_manifest",
 ]

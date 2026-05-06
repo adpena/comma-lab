@@ -56,7 +56,7 @@ machine-executable knowledge package that replaces a single PDF narrative.
   reported until [contest-CUDA] verified.
 - **Why the writeup matters:** the challenge has a separate writeup prize.
   This Ara package is engineered for both human-reader skim and agent-reviewer
-  reproduction.
+  reproduction. It is not an arXiv/preprint commitment.
 
 ## How to navigate this artifact
 
@@ -75,8 +75,8 @@ reproducibility contract.
 ## Provenance and disclosure
 
 - The `disclosure_policy` field above is binding. Public surfaces (the
-  Cloudflare site, arXiv preprint, public PR) MUST NOT include items under
-  `disclosure_policy.private`.
+  Cloudflare site, optional preprint, public PR, or release notes) MUST NOT
+  include items under `disclosure_policy.private`.
 - This artifact is generated and partially maintained by `tools/ara_compile.py`
   which ingests `.ralph/run_log.md`, `experiments/results/**`, and
   topic-indexed project-memory summaries.

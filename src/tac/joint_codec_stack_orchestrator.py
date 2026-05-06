@@ -129,6 +129,9 @@ _JCSP_VERSION: int = 1
 JCSP_STREAM_METADATA_SCHEMA: str = "jcsp_tensor_stream_specs_manifest_v1"
 JCSP_ARCHIVE_MEMBER_NAME: str = "jcsp.bin"
 JCSP_ARCHIVE_MEMBER_CONTRACT_SCHEMA: str = "jcsp_archive_member_runtime_contract_v1"
+JCSP_MODEL_STREAM_ARCHIVE_READINESS_SCHEMA: str = (
+    "jcsp_model_stream_archive_readiness_v1"
+)
 
 # Codec kind flags
 KIND_ARITHMETIC_STATIC: int = 0
@@ -167,7 +170,9 @@ class JCSPTensorStreamSpec:
     num_elements: int
     raw_bytes: int
     byte_estimate: int
+    byte_estimate_source: str
     bytes_charged: int
+    bytes_charged_source: str
     score_per_byte_marginal: float
     score_marginal_source: str
     score_marginal_evidence: str
@@ -219,6 +224,22 @@ def _is_floating_dtype(dtype_name: str) -> bool:
     return "float" in dtype_name or "bfloat" in dtype_name
 
 
+def _validate_jcsp_stream_name(name: str, *, context: str) -> str:
+    encoded = name.encode("utf-8")
+    if not (1 <= len(encoded) <= 255):
+        raise ValueError(
+            f"{context} stream name must be 1..255 UTF-8 bytes, got "
+            f"{len(encoded)} for {name!r}"
+        )
+    if "\x00" in name:
+        raise ValueError(f"{context} stream name must not contain NUL bytes")
+    return name
+
+
+def _jcsp_stream_name_sort_key(name: str) -> tuple[bytes, str]:
+    return (name.encode("utf-8"), name)
+
+
 def _iter_model_tensors(model: Any, *, include_buffers: bool) -> list[tuple[str, Any]]:
     """Return deterministic ``(name, tensor)`` pairs from a module or mapping."""
     if isinstance(model, Mapping):
@@ -244,7 +265,19 @@ def _sorted_unique_model_tensors(
     *,
     include_buffers: bool,
 ) -> list[tuple[str, Any]]:
-    items = _iter_model_tensors(model, include_buffers=include_buffers)
+    items = [
+        (
+            _validate_jcsp_stream_name(
+                name,
+                context="model_to_jcsp_streams",
+            ),
+            tensor,
+        )
+        for name, tensor in _iter_model_tensors(
+            model,
+            include_buffers=include_buffers,
+        )
+    ]
     counts: dict[str, int] = {}
     for name, _tensor in items:
         counts[name] = counts.get(name, 0) + 1
@@ -254,7 +287,7 @@ def _sorted_unique_model_tensors(
             "model_to_jcsp_streams requires unique tensor stream names; "
             f"duplicates: {', '.join(duplicates)}"
         )
-    return sorted(items, key=lambda item: item[0])
+    return sorted(items, key=lambda item: _jcsp_stream_name_sort_key(item[0]))
 
 
 def _infer_model_tensor_codec_kind(
@@ -276,13 +309,17 @@ def _estimate_model_tensor_stream_bytes(
     dtype_name: str,
     num_elements: int,
     raw_bytes: int,
-) -> int:
+) -> tuple[int, str]:
     # Conservative compress-time estimate: floating tensors are assumed to be
     # at least fp16-quantizable, while integer/bool metadata stays raw unless a
     # later exact qint stream proves a smaller charged wire format.
-    if _is_floating_dtype(dtype_name) and "16" not in dtype_name and "bfloat" not in dtype_name:
-        return max(0, int(num_elements) * 2)
-    return int(raw_bytes)
+    if (
+        _is_floating_dtype(dtype_name)
+        and "16" not in dtype_name
+        and "bfloat" not in dtype_name
+    ):
+        return max(0, int(num_elements) * 2), "fp16_quantization_floor_estimate"
+    return int(raw_bytes), "raw_tensor_bytes_estimate"
 
 
 def _match_name_set(name: str, candidates: Iterable[str] | None) -> bool:
@@ -295,6 +332,32 @@ def _match_name_set(name: str, candidates: Iterable[str] | None) -> bool:
         ):
             return True
     return False
+
+
+def _matched_wet_stream_names(
+    *,
+    tensor_names: set[str],
+    wet_streams: Iterable[str] | None,
+) -> set[str]:
+    if wet_streams is None:
+        return set()
+    patterns = tuple(str(candidate) for candidate in wet_streams)
+    matched = {
+        name
+        for name in tensor_names
+        if _match_name_set(name, patterns)
+    }
+    unmatched = [
+        pattern
+        for pattern in patterns
+        if not any(_match_name_set(name, (pattern,)) for name in tensor_names)
+    ]
+    if unmatched:
+        raise ValueError(
+            "model_to_jcsp_streams got wet_streams patterns that matched no "
+            "streams: " + ", ".join(sorted(unmatched))
+        )
+    return matched
 
 
 def _require_finite(value: float, *, field: str, name: str) -> float:
@@ -408,14 +471,58 @@ def model_to_jcsp_streams(
         include_buffers=include_buffers,
     )
     tensor_names = {name for name, _tensor in tensor_items}
+    score_marginals_by_name: dict[str, Any] | None = None
+    if score_marginals is not None:
+        score_marginals_by_name = {
+            str(name): value for name, value in score_marginals.items()
+        }
+        unknown_marginals = sorted(
+            name for name in score_marginals_by_name if name not in tensor_names
+        )
+        if unknown_marginals:
+            raise ValueError(
+                "model_to_jcsp_streams got score_marginals for unknown streams: "
+                + ", ".join(unknown_marginals)
+            )
+    codec_overrides_by_name: dict[str, int] | None = None
     if codec_overrides is not None:
+        raw_codec_overrides_by_name = {
+            str(name): value for name, value in codec_overrides.items()
+        }
         unknown_overrides = sorted(
-            str(name) for name in codec_overrides if str(name) not in tensor_names
+            name for name in raw_codec_overrides_by_name if name not in tensor_names
         )
         if unknown_overrides:
             raise ValueError(
                 "model_to_jcsp_streams got codec_overrides for unknown streams: "
                 + ", ".join(unknown_overrides)
+            )
+        codec_overrides_by_name = {}
+        for name, value in raw_codec_overrides_by_name.items():
+            try:
+                codec_overrides_by_name[name] = int(value)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"invalid codec override for {name!r}: {value!r}"
+                ) from exc
+    wet_stream_names = _matched_wet_stream_names(
+        tensor_names=tensor_names,
+        wet_streams=wet_streams,
+    )
+    if wet_stream_names:
+        wet_without_raw_override = sorted(
+            name
+            for name in wet_stream_names
+            if (
+                codec_overrides_by_name is None
+                or name not in codec_overrides_by_name
+                or codec_overrides_by_name[name] != KIND_RAW_PASSTHROUGH
+            )
+        )
+        if wet_without_raw_override:
+            raise ValueError(
+                "wet streams require explicit RAW_PASSTHROUGH codec overrides: "
+                + ", ".join(wet_without_raw_override)
             )
     for stream_index, (name, tensor) in enumerate(tensor_items):
         shape = _tensor_shape_tuple(tensor)
@@ -430,8 +537,8 @@ def model_to_jcsp_streams(
             large_tensor_balle_threshold_bytes=large_tensor_balle_threshold_bytes,
         )
         codec_kind = (
-            int(codec_overrides[name])
-            if codec_overrides is not None and name in codec_overrides
+            codec_overrides_by_name[name]
+            if codec_overrides_by_name is not None and name in codec_overrides_by_name
             else inferred_kind
         )
         if codec_kind not in (
@@ -440,11 +547,14 @@ def model_to_jcsp_streams(
             KIND_RAW_PASSTHROUGH,
         ):
             raise ValueError(f"invalid codec override for {name!r}: {codec_kind}")
-        byte_estimate = _estimate_model_tensor_stream_bytes(
+        byte_estimate, byte_estimate_source = _estimate_model_tensor_stream_bytes(
             dtype_name=dtype_name,
             num_elements=num_elements,
             raw_bytes=raw_bytes,
         )
+        if codec_kind == KIND_RAW_PASSTHROUGH:
+            byte_estimate = int(raw_bytes)
+            byte_estimate_source = "raw_passthrough_tensor_bytes"
         (
             marginal,
             marginal_source,
@@ -453,23 +563,34 @@ def model_to_jcsp_streams(
             score_tags,
         ) = _score_annotation_for_stream(
             name=name,
-            score_marginals=score_marginals,
+            score_marginals=score_marginals_by_name,
             default_score_per_byte_marginal=default_score_per_byte_marginal,
         )
         constraint_tags = [
             "additive_score_marginal_required",
             "no_scorer_load_at_stream_decomposition",
+            "score_affecting_sidecars_forbidden",
+            "single_member_jcsp_archive_required",
             *score_tags,
         ]
         dispatch_blockers = [
             "qint_or_exact_wire_stream_missing",
             "decode_validation_missing",
+            "byte_closed_archive_member_missing",
         ]
         if "missing_score_marginal" in constraint_tags:
             dispatch_blockers.append("score_marginal_artifact_missing")
-        if _match_name_set(name, wet_streams):
+        if name in wet_stream_names:
+            constraint_tags = [
+                tag for tag in constraint_tags if tag != "missing_score_marginal"
+            ]
+            dispatch_blockers = [
+                blocker
+                for blocker in dispatch_blockers
+                if blocker != "score_marginal_artifact_missing"
+            ]
             constraint_tags.append("wet_stream_do_not_perturb")
-            dispatch_blockers.append("wet_stream_requires_explicit_override")
+            constraint_tags.append("wet_stream_raw_passthrough_required")
             marginal = 0.0
             marginal_source = "wet_stream"
             marginal_evidence = "derivation"
@@ -477,6 +598,8 @@ def model_to_jcsp_streams(
             "refuse_dispatch_if_score_marginal_missing",
             "refuse_dispatch_if_decode_validation_missing",
             "refuse_dispatch_if_charged_bytes_unverified",
+            "refuse_dispatch_if_archive_member_not_byte_closed",
+            "refuse_dispatch_if_sidecar_dependency_detected",
         ]
         research_basis_ids = tuple(
             dict.fromkeys(
@@ -507,7 +630,9 @@ def model_to_jcsp_streams(
                 num_elements=num_elements,
                 raw_bytes=raw_bytes,
                 byte_estimate=byte_estimate,
+                byte_estimate_source=byte_estimate_source,
                 bytes_charged=byte_estimate,
+                bytes_charged_source="planning_estimate_not_archive_closed",
                 score_per_byte_marginal=float(marginal),
                 score_marginal_source=marginal_source,
                 score_marginal_evidence=marginal_evidence,
@@ -537,7 +662,9 @@ def _stream_spec_record(stream: JCSPTensorStreamSpec) -> dict[str, Any]:
         "num_elements": int(stream.num_elements),
         "raw_bytes": int(stream.raw_bytes),
         "byte_estimate": int(stream.byte_estimate),
+        "byte_estimate_source": stream.byte_estimate_source,
         "bytes_charged": int(stream.bytes_charged),
+        "bytes_charged_source": stream.bytes_charged_source,
         "score_per_byte_marginal": float(marginal),
         "score_marginal_source": stream.score_marginal_source,
         "score_marginal_evidence": stream.score_marginal_evidence,
@@ -599,15 +726,20 @@ def jcsp_stream_specs_manifest(
         "streams": records,
         "determinism_contract": {
             "json_encoding": "sort_keys=True,separators=(',', ':'),allow_nan=False",
-            "stream_order": "decomposition_index_then_name",
+            "stream_order": "decomposition_index_assigned_after_utf8_name_byte_sort",
             "stream_id": (
                 "sha256(name,tensor_dtype,tensor_shape,num_elements,raw_bytes)"
             ),
         },
+        "sidecar_policy": {
+            "score_affecting_sidecars_allowed": False,
+            "required_archive_members": [JCSP_ARCHIVE_MEMBER_NAME],
+            "archive_member_contract_schema": JCSP_ARCHIVE_MEMBER_CONTRACT_SCHEMA,
+        },
         "promotion_blockers": [
             "qint_or_exact_wire_stream_missing",
             "decode_validation_missing",
-            "charged_archive_member_missing",
+            "byte_closed_archive_member_missing",
             "runtime_loader_parity_missing",
             "exact_cuda_auth_eval_missing",
         ],
@@ -660,11 +792,10 @@ class StreamSource:
     score_per_byte_marginal: float = 0.0
 
     def __post_init__(self) -> None:
-        if not (1 <= len(self.name.encode("utf-8")) <= 255):
-            raise ValueError(
-                f"StreamSource.name must be 1..255 UTF-8 bytes, got "
-                f"{len(self.name.encode('utf-8'))}"
-            )
+        self.name = _validate_jcsp_stream_name(
+            self.name,
+            context="StreamSource",
+        )
         if self.codec_kind not in (
             KIND_ARITHMETIC_STATIC,
             KIND_BALLE_HYPERPRIOR,
@@ -1321,6 +1452,144 @@ def load_jcsp_archive_member_for_runtime(
     }
 
 
+def _codec_kind_reconciles_model_plan(
+    *,
+    planned: int,
+    actual: int,
+) -> tuple[bool, str]:
+    if actual == planned:
+        return True, "planned_codec_kind_used"
+    if planned == KIND_BALLE_HYPERPRIOR and actual == KIND_ARITHMETIC_STATIC:
+        return True, "balle_static_wins_actual_arithmetic"
+    return False, "codec_kind_mismatch"
+
+
+def jcsp_model_stream_archive_readiness(
+    *,
+    streams: Iterable[JCSPTensorStreamSpec],
+    archive_bytes: bytes,
+    member_name: str = JCSP_ARCHIVE_MEMBER_NAME,
+) -> dict[str, Any]:
+    """Tie model stream metadata to a byte-closed JCSP archive member.
+
+    This is still a scoreless planning/readiness artifact. It requires the ZIP
+    archive to contain exactly one deterministic JCSP member, rejects sidecar
+    members through the runtime archive contract, and then verifies that the
+    container stream order/names reconcile with the deterministic
+    ``model_to_jcsp_streams`` manifest before reporting per-stream actual
+    payload bytes.
+    """
+
+    stream_manifest = jcsp_stream_specs_manifest(streams)
+    archive_contract = load_jcsp_archive_member_for_runtime(
+        archive_bytes=archive_bytes,
+        member_name=member_name,
+        require_single_member=True,
+    )
+
+    stream_records = list(stream_manifest["streams"])
+    runtime_streams = list(archive_contract["jcsp_runtime_parity"]["streams"])
+    manifest_names = [str(record["name"]) for record in stream_records]
+    runtime_names = [str(record["name"]) for record in runtime_streams]
+    if runtime_names != manifest_names:
+        raise ValueError(
+            "JCSP model stream archive readiness requires archive stream order "
+            "to match the deterministic model stream manifest; "
+            f"manifest={manifest_names!r} archive={runtime_names!r}"
+        )
+
+    closed_by_archive = {
+        "qint_or_exact_wire_stream_missing",
+        "byte_closed_archive_member_missing",
+        "charged_archive_member_missing",
+        "runtime_loader_parity_missing",
+    }
+    dispatch_blockers: list[str] = [
+        str(blocker)
+        for blocker in archive_contract.get("dispatch_blockers", ())
+    ]
+    stream_readiness: list[dict[str, Any]] = []
+    for record, runtime in zip(stream_records, runtime_streams, strict=True):
+        planned_kind = int(record["codec_kind"])
+        actual_kind = int(runtime["codec_kind"])
+        codec_reconciled, codec_note = _codec_kind_reconciles_model_plan(
+            planned=planned_kind,
+            actual=actual_kind,
+        )
+        if not codec_reconciled:
+            raise ValueError(
+                "JCSP archive stream codec kind does not match model stream "
+                f"plan for {record['name']!r}: planned={planned_kind} "
+                f"actual={actual_kind}"
+            )
+
+        actual_bytes = int(runtime["actual_bytes"])
+        planned_bytes = int(record["bytes_charged"])
+        stream_blockers = [
+            str(blocker)
+            for blocker in record["dispatch_blockers"]
+            if str(blocker) not in closed_by_archive
+        ]
+        bytes_reconciled = actual_bytes == planned_bytes
+        if not bytes_reconciled:
+            stream_blockers.append("stream_bytes_charged_reconciliation_missing")
+
+        dispatch_blockers.extend(stream_blockers)
+        stream_readiness.append(
+            {
+                "name": record["name"],
+                "stream_id": record["stream_id"],
+                "planned_codec_kind": planned_kind,
+                "archive_codec_kind": actual_kind,
+                "codec_kind_reconciliation": codec_note,
+                "raw_bytes": int(record["raw_bytes"]),
+                "byte_estimate": int(record["byte_estimate"]),
+                "byte_estimate_source": record["byte_estimate_source"],
+                "bytes_charged": planned_bytes,
+                "bytes_charged_source": record["bytes_charged_source"],
+                "archive_actual_bytes": actual_bytes,
+                "archive_actual_bytes_source": "jcsp_container_member_payload",
+                "bytes_charged_reconciled": bytes_reconciled,
+                "score_per_byte_marginal": float(
+                    record["score_per_byte_marginal"]
+                ),
+                "score_marginal_source": record["score_marginal_source"],
+                "score_marginal_evidence": record["score_marginal_evidence"],
+                "scorer_term_targeted": record["scorer_term_targeted"],
+                "dispatch_blockers": list(dict.fromkeys(stream_blockers)),
+            }
+        )
+
+    payload: dict[str, Any] = {
+        "schema": JCSP_MODEL_STREAM_ARCHIVE_READINESS_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_runtime_loader": True,
+        "ready_for_exact_eval_dispatch": False,
+        "stream_manifest_sha256": stream_manifest["manifest_sha256"],
+        "archive_contract_schema": archive_contract["schema"],
+        "archive_sha256": archive_contract["archive_sha256"],
+        "archive_bytes": int(archive_contract["archive_bytes"]),
+        "member_name": archive_contract["member_name"],
+        "member_sha256": archive_contract["member_sha256"],
+        "member_bytes": int(archive_contract["member_bytes"]),
+        "byte_closed_archive_member": True,
+        "single_member_no_sidecars": (
+            archive_contract["archive_members"] == [member_name]
+        ),
+        "runtime_stream_order_matches_manifest": True,
+        "stream_count": len(stream_readiness),
+        "streams": stream_readiness,
+        "sidecar_policy": {
+            "score_affecting_sidecars_allowed": False,
+            "validated_archive_members": archive_contract["archive_members"],
+        },
+        "dispatch_blockers": list(dict.fromkeys(dispatch_blockers)),
+    }
+    payload["readiness_sha256"] = _canonical_json_sha256(payload)
+    return payload
+
+
 # ────────────────────────────────────────────────────────────────────────────
 # Orchestrator
 # ────────────────────────────────────────────────────────────────────────────
@@ -1532,6 +1801,7 @@ def run_sequential_codec_stack(
 __all__ = [
     "JCSP_ARCHIVE_MEMBER_CONTRACT_SCHEMA",
     "JCSP_ARCHIVE_MEMBER_NAME",
+    "JCSP_MODEL_STREAM_ARCHIVE_READINESS_SCHEMA",
     "JCSP_STREAM_METADATA_SCHEMA",
     "KIND_ARITHMETIC_STATIC",
     "KIND_BALLE_HYPERPRIOR",
@@ -1542,6 +1812,7 @@ __all__ = [
     "StreamSource",
     "build_jcsp_archive_member",
     "build_jcsp_noop_archive_fixture",
+    "jcsp_model_stream_archive_readiness",
     "jcsp_stream_specs_manifest",
     "load_jcsp_archive_member_for_runtime",
     "model_to_jcsp_streams",

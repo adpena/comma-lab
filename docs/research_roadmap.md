@@ -1,5 +1,11 @@
 # Research Roadmap — Task-Aware Neural Video Compression
 
+> **2026-05-06 status.** This file is a historical roadmap and idea ledger.
+> It is kept for community context and post-contest planning, not as a live
+> priority list or score authority. Any item below is `prediction` or
+> `empirical` until a charged archive passes exact CUDA auth eval with full
+> custody. Current ranked rows belong in `docs/paper/04_results.md`.
+
 ## Council Eureka Moments (2026-04-12)
 
 1. **Scoring formula sqrt asymmetry** — PoseNet has diminishing returns below pose=0.0005. Knee of the curve. Stop PoseNet optimization there, focus on SegNet + rate.
@@ -33,17 +39,20 @@
 ### PHASE 4: Week 3 (April 21-May 3, LOCK & POLISH)
 - April 21: LOCK final approach
 - Ablation studies for paper
-- Writeup/paper finalization
+- Writeup cleanup/finalization
 - May 1-3: Final submission
 
 ### PHASE 5: Post-competition
-- possible long-form paper
+- optional long-form writeup or paper, only after evidence-grade cleanup
 - 3DGS / 4D-GS experiments
 - Open-source tac library
 
 ---
 
-## Active Priority: Beat Quantizr (deadline May 3, 2026)
+## Historical Priority: Beat Quantizr (deadline May 3, 2026)
+
+This section records the April 2026 contest plan. It is not a current claim
+that these lanes remain optimal, dispatch-ready, or score-bearing.
 
 ### NOW — Asymmetric Warp Training (deployed on Modal T4)
 - AsymmetricPairGenerator with Fridrich 3-phase curriculum

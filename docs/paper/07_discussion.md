@@ -28,7 +28,7 @@ Each member is instructed to bring their full expertise and to disagree with the
 
 This pattern is not a toy. The council caught the gradient bug that no unit test would have found. It identified the Lagrangian annealing phenomenon (temporarily reducing constraint caps to explore the Pareto frontier). It killed KL distillation after two failed authoritative evaluations rather than allowing a third attempt. And it prevented premature convergence on a single approach by mandating parallel exploration of multiple viable paths.
 
-Whether this constitutes a *methodology* or merely a useful prompting pattern is an open question. We note that the pattern is reproducible, that it caught a competition-changing bug, and that the resulting system outperforms a submission by a domain insider.
+Whether this constitutes a *methodology* or merely a useful prompting pattern is an open question. We note that the pattern is reproducible, that it caught a consequential gradient-flow bug, and that comparative performance claims should be read only from the evidence-graded result tables.
 
 ## 7.3 Limitations
 

@@ -204,7 +204,25 @@ Allowed wording:
 
 ## Public-release posture
 
-The C-067 attribution above is appropriate for the contest submission and the eventual paper. It does not expose unpublished private artifacts, internal training recipes beyond what is necessary to make the C-067 archive bytes reproducible from the committed C-059 lineage, or non-essential operational details. The PR #67 mask source-attribution is a paper-integrity requirement, not a competitive disclosure.
+The C-067 attribution above is appropriate for the contest submission and any
+future public writeup or paper that discusses this archive lineage. It does not
+expose unpublished private artifacts, internal training recipes beyond what is
+necessary to make the C-067 archive bytes reproducible from the committed
+C-059 lineage, or non-essential operational details. The PR #67 mask
+source-attribution is an integrity requirement, not a competitive disclosure.
 
-When the paper goes public, the bibliographic citations should include: PR #67 (`https://github.com/commaai/comma_video_compression_challenge/pull/67`, EthanYangTW), PR #55 (`https://github.com/commaai/comma_video_compression_challenge/pull/55`, Quantizr / Jimmy, UCLA CSE/Neuro), PR #65 (`https://github.com/commaai/comma_video_compression_challenge/pull/65`, henosis-us / Matt Abrahamson), and PR #56 (`https://github.com/commaai/comma_video_compression_challenge/pull/56`, szabolcs-cs / Selfcomp), with author display names as listed on each PR. The acknowledgements section should explicitly thank Quantizr for the published `inflate.py` that made the JointFrameGenerator paradigm legible to the field, and the contest organizers (comma.ai, Yassine Yousfi) for the open-PR contest format that enabled this kind of cross-contestant signal diffusion.
+If this material is used in a public release or paper, the bibliographic
+citations should include: PR #67
+(`https://github.com/commaai/comma_video_compression_challenge/pull/67`,
+EthanYangTW), PR #55
+(`https://github.com/commaai/comma_video_compression_challenge/pull/55`,
+Quantizr / Jimmy, UCLA CSE/Neuro), PR #65
+(`https://github.com/commaai/comma_video_compression_challenge/pull/65`,
+henosis-us / Matt Abrahamson), and PR #56
+(`https://github.com/commaai/comma_video_compression_challenge/pull/56`,
+szabolcs-cs / Selfcomp), with author display names as listed on each PR. The
+acknowledgements section should explicitly thank Quantizr for the published
+`inflate.py` that made the JointFrameGenerator paradigm legible to the field,
+and the contest organizers (comma.ai, Yassine Yousfi) for the open-PR contest
+format that enabled this kind of cross-contestant signal diffusion.
 </content>

@@ -85,6 +85,9 @@ def test_sparse_aqc1_floor_beats_dense_aqv1_for_large_sparse_alphabet() -> None:
     assert row["aqc1_sparse_model_floor_bytes"] < row["aqv1_static_model_floor_bytes"]
     assert row["gap_to_best_static_arithmetic_container_floor_bytes"] > 0
     assert manifest["opportunity_ranking"][0]["label"] == "large_sparse_qints"
+    assert manifest["entropy_overhead_target_ranking"][0]["label"] == "large_sparse_qints"
+    assert manifest["entropy_overhead_target_ranking"][0]["target_kind"] == "static_arithmetic_container_gap"
+    assert manifest["entropy_overhead_target_ranking"][0]["ready_for_exact_eval_dispatch"] is False
 
 
 def test_aq_floor_accounts_for_local_arithmetic_payload_termination_byte() -> None:
@@ -171,7 +174,20 @@ def test_known_overhead_accounting_ranks_model_gap_without_dispatch() -> None:
     assert overhead["total_known_container_overhead_bytes"] == 116
     assert overhead["largest_known_overhead_streams"][0]["label"] == "hdc2_prev_symbol_contexts"
     assert overhead["largest_known_overhead_streams"][0]["ready_for_exact_eval_dispatch"] is False
-    assert "Known Overhead Accounting" in render_markdown(manifest)
+    targets = manifest["entropy_overhead_target_ranking"]
+    assert targets[0]["label"] == "hdc2_prev_symbol_contexts"
+    assert targets[0]["target_kind"] == "known_payload_entropy_gap"
+    assert targets[0]["target_bytes_field"] == "known_payload_gap_to_entropy_floor_bytes"
+    assert targets[0]["required_next_artifact"] == "roundtrip_payload_recode_manifest"
+    assert targets[0]["score_claim"] is False
+    assert targets[0]["ready_for_archive_preflight"] is False
+    assert targets[0]["ready_for_exact_eval_dispatch"] is False
+    assert "requires_exact_cuda_auth_eval" in targets[0]["dispatch_blockers"]
+    model_target = next(row for row in targets if row["target_kind"] == "known_model_overhead")
+    assert model_target["target_bytes"] == 40_840
+    rendered = render_markdown(manifest)
+    assert "Known Overhead Accounting" in rendered
+    assert "Entropy-Overhead Target Ranking" in rendered
 
 
 def test_invalid_inputs_fail_closed() -> None:

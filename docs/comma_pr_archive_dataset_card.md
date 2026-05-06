@@ -57,6 +57,23 @@ and the historical record of the challenge. It gives researchers and future
 contestants byte-exact archives, PR metadata, and provenance without requiring
 them to reconstruct a fast-moving public leaderboard after the fact.
 
+## Evidence boundary
+
+This corpus is a public archive and provenance record, not a claim that every
+row has been independently replayed by this repository. The intended evidence
+uses are:
+
+| Item | Evidence grade | Allowed use |
+|---|---|---|
+| Public leaderboard score and PR metadata | `external` | Historical context and discovery index |
+| Recovered `archive.zip` bytes plus SHA-256 | `empirical` / custody | Byte-exact deconstruction, replay setup, reproducibility checks |
+| Local `contest_auth_eval.json` on the exact archive | `A++` / `A` when complete | Ranked score evidence after component recomputation and runtime custody |
+| Failed replay, malformed archive, or sidecar dependence | `invalid` / `external_quarantine` | Compliance and methodology lessons only |
+
+Any paper, report, or benchmark table should cite the exact replay artifact
+when ranking scores. Public PR prose or rounded leaderboard metadata should
+stay labeled as `external`.
+
 ## Final top 3 (for context)
 
 | Rank | PR | Author | Score | LOC | Files | Submitted (UTC) |
@@ -148,7 +165,9 @@ MIT - same as the upstream contest repo and the
 
 If you use this dataset in published work, please cite:
 
-- This dataset (Hugging Face dataset DOI to be assigned on first release)
+- This dataset's Hugging Face repository, commit or revision, and any exact
+  archive SHA-256 values used in your analysis. No DOI is promised until one
+  exists in the release metadata.
 
 ## Acknowledgments
 

@@ -47,6 +47,31 @@ FAIL_CLOSED_CRITERIA = [
     "refuse_if_roundtrip_decode_validation_missing",
 ]
 
+ENTROPY_OVERHEAD_TARGET_ACTIONS = {
+    "known_payload_entropy_gap": {
+        "target_action": "prototype_byte_equivalent_entropy_coder_for_encoded_payload",
+        "required_next_artifact": "roundtrip_payload_recode_manifest",
+    },
+    "known_model_overhead": {
+        "target_action": "reduce_or_share_static_model_context_metadata",
+        "required_next_artifact": "byte_accounted_model_overhead_reduction_manifest",
+    },
+    "known_container_overhead": {
+        "target_action": "collapse_container_framing_or_merge_streams",
+        "required_next_artifact": "container_overhead_diff_manifest",
+    },
+    "static_arithmetic_container_gap": {
+        "target_action": "prototype_static_arithmetic_container_and_roundtrip_decode",
+        "required_next_artifact": "byte_equivalent_static_arithmetic_archive_diff",
+    },
+}
+_TARGET_KIND_PRIORITY = {
+    "known_payload_entropy_gap": 0,
+    "known_model_overhead": 1,
+    "known_container_overhead": 2,
+    "static_arithmetic_container_gap": 3,
+}
+
 
 class EntropyCodecGapAuditError(ValueError):
     """Raised when an entropy-codec audit input is malformed."""
@@ -130,6 +155,7 @@ def build_entropy_codec_gap_audit(
         ),
         "known_overhead_accounting": _known_overhead_accounting(rows),
         "streams": rows,
+        "entropy_overhead_target_ranking": _entropy_overhead_target_ranking(rows),
         "opportunity_ranking": _opportunity_ranking(rows),
     }
 
@@ -196,6 +222,30 @@ def render_markdown(manifest: Mapping[str, Any]) -> str:
                     container=row.get("known_container_overhead_bytes"),
                     payload_gap=row.get("known_payload_gap_to_entropy_floor_bytes"),
                     unattributed=row.get("known_unattributed_bytes"),
+                )
+            )
+    targets = manifest.get("entropy_overhead_target_ranking")
+    if isinstance(targets, list) and targets:
+        lines.extend(
+            [
+                "",
+                "## Entropy-Overhead Target Ranking",
+                "",
+                "| rank | stream | target kind | target bytes | next artifact | ready for exact eval |",
+                "|---:|---|---|---:|---|---|",
+            ]
+        )
+        for row in targets:
+            if not isinstance(row, Mapping):
+                raise EntropyCodecGapAuditError("entropy-overhead target rows must be objects")
+            lines.append(
+                "| {rank} | {label} | `{kind}` | {bytes} | `{artifact}` | `{ready}` |".format(
+                    rank=row.get("rank"),
+                    label=row.get("label"),
+                    kind=row.get("target_kind"),
+                    bytes=row.get("target_bytes"),
+                    artifact=row.get("required_next_artifact"),
+                    ready=_bool_text(row.get("ready_for_exact_eval_dispatch") is True),
                 )
             )
     lines.append("")
@@ -571,6 +621,101 @@ def _known_overhead_accounting(rows: Sequence[Mapping[str, Any]]) -> dict[str, A
     }
 
 
+def _entropy_overhead_target_ranking(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    ranked: list[dict[str, Any]] = []
+    for row in rows:
+        has_known_accounting = (
+            row.get("known_encoded_payload_bytes") is not None
+            or row.get("known_model_overhead_bytes") is not None
+            or row.get("known_container_overhead_bytes") is not None
+        )
+        if has_known_accounting:
+            _append_entropy_overhead_target(
+                ranked,
+                row,
+                target_kind="known_payload_entropy_gap",
+                target_bytes=row.get("known_payload_gap_to_entropy_floor_bytes"),
+                target_bytes_field="known_payload_gap_to_entropy_floor_bytes",
+                accounting_source="known_overhead_accounting",
+            )
+            _append_entropy_overhead_target(
+                ranked,
+                row,
+                target_kind="known_model_overhead",
+                target_bytes=row.get("known_model_overhead_bytes"),
+                target_bytes_field="known_model_overhead_bytes",
+                accounting_source="known_overhead_accounting",
+            )
+            _append_entropy_overhead_target(
+                ranked,
+                row,
+                target_kind="known_container_overhead",
+                target_bytes=row.get("known_container_overhead_bytes"),
+                target_bytes_field="known_container_overhead_bytes",
+                accounting_source="known_overhead_accounting",
+            )
+            continue
+        _append_entropy_overhead_target(
+            ranked,
+            row,
+            target_kind="static_arithmetic_container_gap",
+            target_bytes=row.get("gap_to_best_static_arithmetic_container_floor_bytes"),
+            target_bytes_field="gap_to_best_static_arithmetic_container_floor_bytes",
+            accounting_source="static_arithmetic_floor",
+        )
+    ranked.sort(
+        key=lambda row: (
+            -float(row["target_bytes"]),
+            _TARGET_KIND_PRIORITY[str(row["target_kind"])],
+            str(row["label"]),
+            str(row["target_kind"]),
+        )
+    )
+    for rank, row in enumerate(ranked, start=1):
+        row["rank"] = rank
+    return ranked
+
+
+def _append_entropy_overhead_target(
+    ranked: list[dict[str, Any]],
+    row: Mapping[str, Any],
+    *,
+    target_kind: str,
+    target_bytes: Any,
+    target_bytes_field: str,
+    accounting_source: str,
+) -> None:
+    positive_bytes = _positive_target_bytes(target_bytes)
+    if positive_bytes is None:
+        return
+    action = ENTROPY_OVERHEAD_TARGET_ACTIONS[target_kind]
+    ranked.append(
+        {
+            "label": row["label"],
+            "source": row["source"],
+            "codec_surface": row["codec_surface"],
+            "target_kind": target_kind,
+            "target_bytes": positive_bytes,
+            "target_bytes_field": target_bytes_field,
+            "accounting_source": accounting_source,
+            "target_action": action["target_action"],
+            "required_next_artifact": action["required_next_artifact"],
+            "actual_bytes": row["actual_bytes"],
+            "entropy_floor_bytes": row["entropy_floor_bytes"],
+            "best_static_arithmetic_container_kind": row["best_static_arithmetic_container_kind"],
+            "best_static_arithmetic_container_floor_bytes": row["best_static_arithmetic_container_floor_bytes"],
+            "known_overhead_accounting_complete": row["known_overhead_accounting_complete"],
+            "planning_only": True,
+            "score_claim": False,
+            "dispatch_attempted": False,
+            "ready_for_archive_preflight": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_blockers": list(DISPATCH_BLOCKERS),
+            "fail_closed_criteria": list(FAIL_CLOSED_CRITERIA),
+        }
+    )
+
+
 def _opportunity_ranking(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     ranked: list[dict[str, Any]] = []
     for row in rows:
@@ -661,6 +806,15 @@ def _round_float(value: float) -> float:
     return 0.0 if abs(rounded) < 5e-13 else rounded
 
 
+def _positive_target_bytes(value: Any) -> int | float | None:
+    if value is None:
+        return None
+    amount = _round_float(float(value))
+    if amount <= 0:
+        return None
+    return int(amount) if float(amount).is_integer() else amount
+
+
 def _bool_text(value: bool) -> str:
     return "true" if value else "false"
 
@@ -672,6 +826,7 @@ __all__ = [
     "AQV1_FIXED_HEADER_BYTES",
     "DEFAULT_EVIDENCE_GRADE",
     "DISPATCH_BLOCKERS",
+    "ENTROPY_OVERHEAD_TARGET_ACTIONS",
     "FAIL_CLOSED_CRITERIA",
     "SCHEMA_VERSION",
     "SCORE_EVIDENCE_GRADE",
