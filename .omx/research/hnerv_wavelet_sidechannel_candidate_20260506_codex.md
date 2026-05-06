@@ -465,3 +465,40 @@ rate improvement (`-9` archive bytes) while staying in the middle of the raw
 perturbation ladder. The `1/4` candidate is the conservative distortion probe;
 the `1/1` candidate is the maximum perturbation probe. None of these rows is a
 score claim until CUDA auth eval measures the actual component response.
+
+## WR01 Exact-Eval Operator Packet
+
+The WR01 exact-eval handoff is now a deterministic packet rather than a chat
+command. It validates the static artifacts, records missing Lightning runtime
+identity, and emits the three operator commands: lane claim, staged submit, and
+harvest/adjudication.
+
+Command:
+
+```bash
+.venv/bin/python tools/build_wr01_exact_eval_packet.py \
+  --json-out experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json
+```
+
+Observed packet:
+
+- `ready_for_submit=false`
+- blocker: `missing_lightning_environment`
+- missing env:
+  `LIGHTNING_SSH_TARGET`, `LIGHTNING_REMOTE_PACT`, `LIGHTNING_UPSTREAM_DIR`,
+  `LIGHTNING_TEAMSPACE`, `LIGHTNING_STUDIO`, `LIGHTNING_SDK_USER`
+- `preflight_ready=true`
+- `compliance_ok=true`
+- `payload_diff_ready=true`
+- `dry_run_ready=true`
+- dispatch attempted: `false`
+
+Tracked artifact:
+
+- `experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json`
+
+Updated conclusion:
+
+Once Lightning env is loaded, the packet's `commands.claim` must run before
+`commands.submit`. Until then the candidate remains locally prepared but not
+submitted; the refusal is intentional and contest-compliance preserving.
