@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable, Mapping
+from hashlib import sha256
+from pathlib import Path
 from typing import Any
 
 CONTEST_ORIGINAL_BYTES = 37_545_489
@@ -72,6 +74,61 @@ def _string_list(value: Any) -> list[str]:
     return [str(value)]
 
 
+def _is_sha256(value: str) -> bool:
+    return len(value) == 64 and all(char in "0123456789abcdef" for char in value.lower())
+
+
+def _sha256_file(path: Path) -> str:
+    digest = sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _archive_manifest_custody(path_value: str, sha256_value: str) -> dict[str, Any]:
+    if not path_value and not sha256_value:
+        return {
+            "path": "",
+            "sha256": "",
+            "exists": False,
+            "is_file": False,
+            "sha256_valid": False,
+            "sha256_matches": False,
+            "verified": False,
+            "blockers": [],
+        }
+    blockers: list[str] = []
+    if not path_value:
+        blockers.append("archive_manifest_path_missing")
+    if not _is_sha256(sha256_value):
+        blockers.append("archive_manifest_sha256_missing_or_invalid")
+    path = Path(path_value) if path_value else Path()
+    exists = bool(path_value and path.exists())
+    is_file = bool(exists and path.is_file())
+    actual_sha = ""
+    if path_value and not exists:
+        blockers.append("archive_manifest_path_missing")
+    elif exists and not is_file:
+        blockers.append("archive_manifest_path_not_file")
+    elif is_file and _is_sha256(sha256_value):
+        actual_sha = _sha256_file(path)
+        if actual_sha != sha256_value:
+            blockers.append("archive_manifest_sha256_mismatch")
+    verified = bool(is_file and actual_sha == sha256_value)
+    return {
+        "path": path_value,
+        "sha256": sha256_value,
+        "exists": exists,
+        "is_file": is_file,
+        "sha256_valid": _is_sha256(sha256_value),
+        "sha256_actual": actual_sha,
+        "sha256_matches": verified,
+        "verified": verified,
+        "blockers": blockers,
+    }
+
+
 def expected_atom_score_delta(
     atom: Mapping[str, Any],
     *,
@@ -100,7 +157,11 @@ def expected_atom_score_delta(
     conflicts_with_atoms = _string_list(atom.get("conflicts_with_atoms"))
     archive_manifest_path = str(atom.get("archive_manifest_path") or "")
     archive_manifest_sha256 = str(atom.get("archive_manifest_sha256") or "")
-    byte_closed_archive_manifest_attached = bool(archive_manifest_path and archive_manifest_sha256)
+    archive_manifest_custody = _archive_manifest_custody(
+        archive_manifest_path,
+        archive_manifest_sha256,
+    )
+    byte_closed_archive_manifest_attached = bool(archive_manifest_custody["verified"])
     requested_dispatchable = bool(
         atom.get("dispatchable") is True or atom.get("ready_for_exact_eval_dispatch") is True
     )
@@ -109,6 +170,7 @@ def expected_atom_score_delta(
         "requires_byte_closed_archive",
         "requires_exact_cuda_auth_eval",
         *rank_blockers,
+        *archive_manifest_custody["blockers"],
     ]
     if requested_dispatchable and not byte_closed_archive_manifest_attached:
         dispatch_blockers.append("requested_dispatchable_without_byte_closed_archive_manifest")
@@ -147,6 +209,7 @@ def expected_atom_score_delta(
         "source_archive_sha256": atom.get("source_archive_sha256", ""),
         "archive_manifest_path": archive_manifest_path,
         "archive_manifest_sha256": archive_manifest_sha256,
+        "archive_manifest_custody": archive_manifest_custody,
         "byte_closed_archive_manifest_attached": byte_closed_archive_manifest_attached,
         "requested_dispatchable": requested_dispatchable,
         "archive_ready_for_stack_review": bool(rankable and byte_closed_archive_manifest_attached),

@@ -14,6 +14,7 @@ from tac.optimization.meta_lagrangian_allocator import (
     pose_score_delta,
     rate_score_delta,
 )
+from tac.repo_io import sha256_file
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -25,7 +26,8 @@ def test_rate_and_pose_score_terms_match_contest_formula() -> None:
         pose_score_delta(0.01, -0.02)
 
 
-def test_expected_atom_score_delta_combines_rate_seg_pose_and_priors() -> None:
+def test_expected_atom_score_delta_combines_rate_seg_pose_and_priors(tmp_path: Path) -> None:
+    manifest = _archive_manifest(tmp_path)
     row = expected_atom_score_delta(
         {
             "atom_id": "pair75_lane_repair",
@@ -42,8 +44,8 @@ def test_expected_atom_score_delta_combines_rate_seg_pose_and_priors() -> None:
             "family_group": "mask_repair_local",
             "conflicts_with_families": ["whole_mask_replacement"],
             "conflicts_with_atoms": ["atom:global_crf"],
-            "archive_manifest_path": "candidate/manifest.json",
-            "archive_manifest_sha256": "a" * 64,
+            "archive_manifest_path": manifest.as_posix(),
+            "archive_manifest_sha256": sha256_file(manifest),
         },
         base_pose_dist=0.01,
     )
@@ -55,6 +57,7 @@ def test_expected_atom_score_delta_combines_rate_seg_pose_and_priors() -> None:
     assert row["conflicts_with_families"] == ["whole_mask_replacement"]
     assert row["conflicts_with_atoms"] == ["atom:global_crf"]
     assert row["byte_closed_archive_manifest_attached"] is True
+    assert row["archive_manifest_custody"]["verified"] is True
     assert row["archive_ready_for_stack_review"] is True
     assert row["dispatchable"] is False
 
@@ -153,7 +156,8 @@ def test_requested_dispatchable_atom_without_archive_manifest_is_refused() -> No
     assert ledger["conflict_family_counts"] == {"whole_mask_replacement": 1}
 
 
-def test_byte_closed_manifest_allows_stack_review_but_not_dispatch() -> None:
+def test_byte_closed_manifest_allows_stack_review_but_not_dispatch(tmp_path: Path) -> None:
+    manifest = _archive_manifest(tmp_path)
     row = expected_atom_score_delta(
         {
             "atom_id": "byte_closed_local_candidate",
@@ -162,8 +166,8 @@ def test_byte_closed_manifest_allows_stack_review_but_not_dispatch() -> None:
             "confidence": 1.0,
             "evidence_grade": "empirical_byte_raw_equal",
             "raw_equal": True,
-            "archive_manifest_path": "candidate/manifest.json",
-            "archive_manifest_sha256": "b" * 64,
+            "archive_manifest_path": manifest.as_posix(),
+            "archive_manifest_sha256": sha256_file(manifest),
         },
         base_pose_dist=0.01,
     )
@@ -172,6 +176,53 @@ def test_byte_closed_manifest_allows_stack_review_but_not_dispatch() -> None:
     assert row["archive_ready_for_stack_review"] is True
     assert row["dispatchable"] is False
     assert "requires_exact_cuda_auth_eval" in row["dispatch_blockers"]
+
+
+def test_unverified_archive_manifest_does_not_allow_stack_review(tmp_path: Path) -> None:
+    manifest = _archive_manifest(tmp_path)
+    row = expected_atom_score_delta(
+        {
+            "atom_id": "stale_manifest_candidate",
+            "family": "hnerv_decoder_rate_recode",
+            "byte_delta": -151,
+            "confidence": 1.0,
+            "evidence_grade": "empirical_byte_raw_equal",
+            "raw_equal": True,
+            "archive_manifest_path": manifest.as_posix(),
+            "archive_manifest_sha256": "0" * 64,
+        },
+        base_pose_dist=0.01,
+    )
+
+    assert row["rankable"] is True
+    assert row["archive_manifest_custody"]["verified"] is False
+    assert row["archive_manifest_custody"]["sha256_matches"] is False
+    assert row["byte_closed_archive_manifest_attached"] is False
+    assert row["archive_ready_for_stack_review"] is False
+    assert "archive_manifest_sha256_mismatch" in row["dispatch_blockers"]
+
+
+def test_missing_archive_manifest_does_not_allow_stack_review(tmp_path: Path) -> None:
+    missing = tmp_path / "missing-manifest.json"
+    row = expected_atom_score_delta(
+        {
+            "atom_id": "missing_manifest_candidate",
+            "family": "hnerv_decoder_rate_recode",
+            "byte_delta": -151,
+            "confidence": 1.0,
+            "evidence_grade": "empirical_byte_raw_equal",
+            "raw_equal": True,
+            "archive_manifest_path": missing.as_posix(),
+            "archive_manifest_sha256": "1" * 64,
+        },
+        base_pose_dist=0.01,
+    )
+
+    assert row["rankable"] is True
+    assert row["archive_manifest_custody"]["exists"] is False
+    assert row["byte_closed_archive_manifest_attached"] is False
+    assert row["archive_ready_for_stack_review"] is False
+    assert "archive_manifest_path_missing" in row["dispatch_blockers"]
 
 
 def test_build_meta_lagrangian_atom_ledger_cli(tmp_path: Path) -> None:
@@ -209,3 +260,19 @@ def test_build_meta_lagrangian_atom_ledger_cli(tmp_path: Path) -> None:
     payload = json.loads(out.read_text())
     assert payload["atom_count"] == 1
     assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def _archive_manifest(tmp_path: Path) -> Path:
+    manifest = tmp_path / "archive-manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "archive": {"bytes": 123, "sha256": "a" * 64},
+                "score_claim": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    return manifest
