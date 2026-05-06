@@ -304,6 +304,14 @@ def classify_file(path: Path, repo_root: Path, reverse_root: Path) -> ReverseEng
                     "Recovered file matches live main after removing the pyc-recovery banner; "
                     "preserve the audit/spec signal, then delete this duplicate copy."
                 )
+        elif rel_to_reverse.startswith("public_frontier/recovered_runtime/"):
+            category = "public_frontier_runtime_reference"
+            disposition = "track_in_git"
+            target = rel
+            reason = (
+                "Curated source-sized public-runtime reference under public_frontier; "
+                "forensic evidence only, not score evidence or active experiment output."
+            )
         elif path.name == ".gitignore" or path.suffix.lower() in {".md", ".json"}:
             category = "curated_reverse_engineering_surface"
             disposition = "track_in_git"

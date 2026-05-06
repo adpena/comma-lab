@@ -4220,3 +4220,39 @@ Expected post-commit state: the non-strict orphan recovery audit should report
 `modified_missing_canonical_count=0`, `shadowed_modified_count=0`, and
 `missing_canonical_count=0`; any remaining dirty state should be unrelated
 nested public-PR gitlinks, Kaggle raw custody, or active Lightning artifacts.
+
+## R58 - 2026-05-06 Public Frontier Audit Classifier Hardening
+
+The public-runtime reference move in R56 intentionally created a curated
+forensic source tree under `reverse_engineering/public_frontier/`, but the
+reverse-engineering audit still treated `.py` files outside the orphan tree as
+generic `manual_review` blockers. That made the strict gate fail on the 32
+curated public-runtime Python references even though the README and ledger had
+already defined their evidence boundary.
+
+Fixed the classifier in `src/comma_lab/reverse_engineering.py` so
+`public_frontier/recovered_runtime/` files are classified as
+`public_frontier_runtime_reference` with disposition `track_in_git`. These
+files remain external forensic references only; the classifier change does not
+make them score evidence, active experiment output, or reusable implementation.
+
+Regression coverage:
+
+- Added
+  `src/tac/tests/test_reverse_engineering_public_frontier_audit.py` to assert
+  source-sized public-frontier runtime references are curated forensic sources
+  and not strict blockers.
+
+Verification:
+
+- `.venv/bin/python -m pytest
+  src/tac/tests/test_reverse_engineering_public_frontier_audit.py -q` ->
+  `1 passed`.
+- `.venv/bin/python -m py_compile src/comma_lab/reverse_engineering.py
+  src/tac/tests/test_reverse_engineering_public_frontier_audit.py` passed.
+- `.venv/bin/python tools/audit_reverse_engineering_tree.py --repo-root .
+  --summary` -> `files=705 blockers=0`.
+- `.venv/bin/python tools/audit_reverse_engineering_tree.py --repo-root .
+  --release-strict --release-manifest
+  .omx/research/reverse_engineering_release_manifest_20260505_codex.json
+  --summary` -> `files=705 blockers=0`.
