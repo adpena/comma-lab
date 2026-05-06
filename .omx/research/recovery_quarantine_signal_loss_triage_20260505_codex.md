@@ -4134,3 +4134,43 @@ Non-strict orphan audit after this promotion reports
 `modified_missing_canonical_count=26` while the two active renames are staged;
 after commit the remaining queue should be the 24 public-runtime/operational
 fragments that still require explicit public-frontier archival or promotion.
+
+## R56 - 2026-05-06 Public Frontier Runtime Reference Canonicalization
+
+Moved the recovered public-runtime `experiments/results` source/spec subtree
+out of the orphan-pyc intake and into the clean reverse-engineering surface:
+
+- `reverse_engineering/public_frontier/recovered_runtime/experiments_results_20260505_pyc_recovery/`
+
+This preserves the original public PR/runtime path context for deconstruction
+while removing the false signal that these recovered `.py` files are active
+experiment outputs or score evidence. The new `public_frontier` README marks
+the boundary explicitly: these files are external/forensic references only;
+reusable implementation must be promoted into `src/tac/`, thin operator
+wrappers into `experiments/`, and all score claims still require exact CUDA
+auth eval of our own archive bytes.
+
+The moved subtree currently contains 64 source-sized files: 32 Python sources
+and 32 `.recovery_spec.json` files. No raw archives, videos, checkpoints,
+cloned repos, provider logs, compiled caches, or score ledgers were introduced
+into the public frontier tree.
+
+Verification:
+
+- `find reverse_engineering/public_frontier/recovered_runtime/experiments_results_20260505_pyc_recovery -type f -name '*.py' -print0 | xargs -0 .venv/bin/python -m py_compile`
+  passed.
+- `reverse_engineering/public_frontier/README.md` added the public-runtime
+  evidence boundary and listed the preserved PR/runtime groups.
+- `reverse_engineering/README.md` now lists `public_frontier/` as a current
+  curated surface.
+- Non-strict orphan audit while the rename is staged reports
+  `modified_missing_canonical_count=66`: 64 entries are the intentional
+  source/spec renames into `public_frontier`, and the remaining active
+  unmoved queue is the two operational scripts
+  `reverse_engineering/orphan_pyc_recovery_20260505_codex/scripts/build_contest_submission_packet.py`
+  and
+  `reverse_engineering/orphan_pyc_recovery_20260505_codex/scripts/q_faithful_snapshot_loop.py`.
+
+Next queue: decide whether those two operational scripts should be promoted,
+archived as forensic-only, or deleted after canonical functionality is proven
+elsewhere.

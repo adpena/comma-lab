@@ -26,6 +26,9 @@ parsers, profilers, planners, or packers are invoked.
 
 - `pr95_hnerv/` documents the PR95-family HNeRV single-member archive grammar,
   exact-replay boundary, and residual-atom planning surface.
+- `public_frontier/` contains curated source-sized public runtime references
+  from public submission deconstruction and orphan-pyc recovery. It is forensic
+  reference material, not score evidence or an active experiment output tree.
 - `orphan_pyc_recovery_20260505_codex/` is a temporary recovery intake, not a
   canonical source tree. Promote useful code into `src/tac`, thin CLIs into
   `experiments/`, and findings into `.omx/research/` before deleting anything.
