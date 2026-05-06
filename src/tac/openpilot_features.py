@@ -2,7 +2,7 @@
 
 Supercombo is allowed only before archive creation.  This module extracts a
 per-pair penultimate feature vector when a session is available and falls back
-to zero embeddings with a warning when weights/runtime are absent.
+to zero embeddings only when the caller explicitly requests a smoke fallback.
 """
 from __future__ import annotations
 
@@ -17,7 +17,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-__all__ = ["extract_supercombo_features"]
+__all__ = ["SupercomboFeatureUnavailable", "extract_supercombo_features"]
+
+
+class SupercomboFeatureUnavailable(RuntimeError):
+    """Raised when openpilot features are requested but no model/session exists."""
 
 
 def _n_pairs(video: torch.Tensor) -> int:
@@ -83,6 +87,7 @@ def extract_supercombo_features(
     session: Any | None = None,
     require_cuda: bool = False,
     feature_dim: int = 512,
+    allow_zero_fallback: bool = False,
 ) -> torch.Tensor:
     """Extract one supercombo feature vector per non-overlapping frame pair.
 
@@ -95,6 +100,8 @@ def extract_supercombo_features(
         require_cuda: reject CPU tensors when CUDA-only production behavior is
             requested.
         feature_dim: fallback feature width when no session is available.
+        allow_zero_fallback: if true, return warning-tagged zero features when
+            openpilot runtime/model loading fails. Defaults to fail-closed.
     """
     if video.ndim != 4 or video.shape[-1] != 3:
         raise ValueError(f"video must have shape (N, H, W, 3); got {tuple(video.shape)}")
@@ -118,8 +125,12 @@ def extract_supercombo_features(
         except Exception as exc:
             unavailable = getattr(sys.modules.get("tac.openpilot_seeding"), "SupercomboUnavailable", None)
             if unavailable is not None and isinstance(exc, unavailable):
+                if allow_zero_fallback:
+                    return _zero_features(video, feature_dim=feature_dim, reason=str(exc))
+                raise SupercomboFeatureUnavailable(str(exc)) from exc
+            if allow_zero_fallback:
                 return _zero_features(video, feature_dim=feature_dim, reason=str(exc))
-            return _zero_features(video, feature_dim=feature_dim, reason=str(exc))
+            raise SupercomboFeatureUnavailable(str(exc)) from exc
 
     specs = _input_specs(session)
     input_name = getattr(specs[0], "name", "input_imgs") if specs else "input_imgs"

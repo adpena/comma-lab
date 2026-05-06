@@ -9,7 +9,10 @@ import torch
 # Lane DI / scene-embedding distillation is in-flight (#145 source recovery).
 # tac.scene_embedding_distiller is pending — skip until subagent lands.
 try:
-    from tac.openpilot_features import extract_supercombo_features
+    from tac.openpilot_features import (
+        SupercomboFeatureUnavailable,
+        extract_supercombo_features,
+    )
     from tac.scene_embedding_distiller import SceneEmbeddingDistiller, train_scene_embedding_distiller
 except ImportError:
     pytest.skip("Lane DI scene-embedding distiller pending", allow_module_level=True)
@@ -79,6 +82,22 @@ def test_cuda_only_enforcement_raises_on_cpu() -> None:
         extract_supercombo_features(_video(), session=_FakeSupercombo(), require_cuda=True)
 
 
+def test_missing_supercombo_fails_closed_unless_zero_fallback_explicit(tmp_path: Path) -> None:
+    missing = tmp_path / "missing_supercombo.onnx"
+    with pytest.raises(SupercomboFeatureUnavailable):
+        extract_supercombo_features(_video(), supercombo_path=missing)
+
+    with pytest.warns(RuntimeWarning, match="zero embedding"):
+        feats = extract_supercombo_features(
+            _video(n=4),
+            supercombo_path=missing,
+            feature_dim=7,
+            allow_zero_fallback=True,
+        )
+    assert feats.shape == (2, 7)
+    assert torch.count_nonzero(feats).item() == 0
+
+
 def test_distiller_save_load_roundtrip(tmp_path: Path) -> None:
     model = SceneEmbeddingDistiller(input_dim=512, output_dim=32)
     path = tmp_path / "distiller.pt"
@@ -86,4 +105,3 @@ def test_distiller_save_load_roundtrip(tmp_path: Path) -> None:
     loaded = SceneEmbeddingDistiller.load(path)
     x = torch.randn(2, 512)
     assert torch.allclose(model(x), loaded(x))
-
