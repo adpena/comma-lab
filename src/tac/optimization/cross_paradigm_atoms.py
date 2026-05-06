@@ -280,6 +280,67 @@ def atoms_from_wr01_wavelet_plan(
                 )
             )
         ]
+    # 3rd schema branch (claude:main 2026-05-06): WR01 exact-eval-packets
+    # produced by tools/build_wr01_exact_eval_packet.py document an already-
+    # built candidate archive (with archive_bytes + archive_sha256 +
+    # source_archive_sha256 + changed_section_name). They are NOT planning
+    # manifests but ARE eligible atom inputs because the candidate archive
+    # is already byte-closed. Pre-fix the cross-paradigm ledger silently
+    # produced 0 atoms when given an exact-eval packet — the adapter rejected
+    # the file but didn't surface why.
+    if (
+        "archive_bytes" in plan
+        and "archive_sha256" in plan
+        and "source_archive_sha256" in plan
+        and "changed_section_name" in plan
+    ):
+        archive_bytes = int(plan.get("archive_bytes") or 0)
+        source_bytes = int(plan.get("source_archive_bytes") or 0)
+        byte_delta = archive_bytes - source_bytes if source_bytes else 0
+        section_name = str(plan.get("changed_section_name") or "section")
+        source_label = str(plan.get("lane_id") or plan.get("job_name") or "wr01_exact_eval")
+        atom_id = f"wr01_wavelet:{_slug(source_label)}:{_slug(section_name)}:exact_eval_packet"
+        return [
+            normalize_cross_paradigm_atom(
+                {
+                    "adapter": "wr01_wavelet_plan",
+                    "paradigm": "wr01_wavelet",
+                    "atom_id": atom_id,
+                    "family": "wr01_wavelet_residual",
+                    "family_group": "wr01_wavelet",
+                    "pareto_scope": f"wr01_wavelet:{_slug(section_name)}",
+                    "byte_delta": byte_delta,
+                    # Exact-eval packets carry [predicted] deltas — the
+                    # actual contest-CUDA score is operator-gated.
+                    "expected_seg_dist_delta": 0.0,
+                    "expected_pose_dist_delta": 0.0,
+                    "confidence": 0.5 if plan.get("ready_for_submit") else 0.25,
+                    "interaction_assumptions": [
+                        "scorer_changing_wavelet_residual",
+                        "stack_after_raw_equal_rate_recodes",
+                        "exact_eval_packet_documents_byte_closed_archive",
+                    ],
+                    "archive_manifest_path": str(
+                        plan.get("artifacts", {}).get("manifest_path", "")
+                        if isinstance(plan.get("artifacts"), Mapping)
+                        else ""
+                    ) or evidence_source_path,
+                    "archive_manifest_sha256": str(plan.get("archive_sha256") or ""),
+                    "source_archive_sha256": str(plan.get("source_archive_sha256") or ""),
+                    "evidence_grade": "exact_eval_packet_byte_closed",
+                    "evidence_source_path": evidence_source_path,
+                    "evidence_source_sha256": evidence_source_sha256,
+                    "dispatch_blockers": [
+                        "requires_stack_interaction_review",
+                        "requires_exact_cuda_auth_eval",
+                        *([
+                            "exact_eval_packet_not_ready_for_submit"
+                        ] if not plan.get("ready_for_submit") else []),
+                        *(plan.get("blockers") or []),
+                    ],
+                }
+            )
+        ]
     source_label = str(plan.get("source_label") or "wr01")
     source_archive_sha256 = str(plan.get("source_archive_sha256") or "")
     atoms: list[dict[str, Any]] = []
