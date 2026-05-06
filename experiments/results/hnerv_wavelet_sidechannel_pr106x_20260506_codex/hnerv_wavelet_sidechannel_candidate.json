@@ -1,0 +1,690 @@
+{
+  "blockers": [],
+  "candidate_archive_byte_delta": 388,
+  "candidate_archive_bytes": 186619,
+  "candidate_archive_path": "experiments/results/hnerv_wavelet_sidechannel_pr106x_20260506_codex/hnerv_wavelet_sidechannel_candidate.zip",
+  "candidate_archive_sha256": "4e9846a98bf7b5d543552dabe34fd067d5b039ee1d3a75eebb83ff67bb88a993",
+  "candidate_member_name": "x",
+  "candidate_payload_byte_delta": 388,
+  "candidate_payload_bytes": 186519,
+  "candidate_payload_contains_source_payload": true,
+  "candidate_payload_sha256": "6daf7026a74ee0e77db5018dba106f272bc3625f127dfd72165b6d3ce24a4344",
+  "decoded_wavelet_sidechannel": {
+    "magic": "WR01",
+    "schema_version": 1,
+    "section_count": 1,
+    "sections": [
+      {
+        "atom_count": 32,
+        "atoms": [
+          {
+            "coefficient_index": 16,
+            "coefficient_quantized": -122,
+            "level": 0,
+            "raw_end": 14690,
+            "raw_offset": 14688
+          },
+          {
+            "coefficient_index": 25,
+            "coefficient_quantized": 120,
+            "level": 0,
+            "raw_end": 15732,
+            "raw_offset": 15730
+          },
+          {
+            "coefficient_index": 26,
+            "coefficient_quantized": 118,
+            "level": 0,
+            "raw_end": 8374,
+            "raw_offset": 8372
+          },
+          {
+            "coefficient_index": 8,
+            "coefficient_quantized": 118,
+            "level": 0,
+            "raw_end": 8402,
+            "raw_offset": 8400
+          },
+          {
+            "coefficient_index": 7,
+            "coefficient_quantized": -118,
+            "level": 0,
+            "raw_end": 11216,
+            "raw_offset": 11214
+          },
+          {
+            "coefficient_index": 29,
+            "coefficient_quantized": 115,
+            "level": 0,
+            "raw_end": 8252,
+            "raw_offset": 8250
+          },
+          {
+            "coefficient_index": 9,
+            "coefficient_quantized": 115,
+            "level": 0,
+            "raw_end": 8724,
+            "raw_offset": 8722
+          },
+          {
+            "coefficient_index": 17,
+            "coefficient_quantized": 114,
+            "level": 0,
+            "raw_end": 3748,
+            "raw_offset": 3746
+          },
+          {
+            "coefficient_index": 1,
+            "coefficient_quantized": -114,
+            "level": 0,
+            "raw_end": 6148,
+            "raw_offset": 6146
+          },
+          {
+            "coefficient_index": 4,
+            "coefficient_quantized": 114,
+            "level": 0,
+            "raw_end": 8458,
+            "raw_offset": 8456
+          },
+          {
+            "coefficient_index": 10,
+            "coefficient_quantized": 114,
+            "level": 0,
+            "raw_end": 10390,
+            "raw_offset": 10388
+          },
+          {
+            "coefficient_index": 15,
+            "coefficient_quantized": 114,
+            "level": 0,
+            "raw_end": 11744,
+            "raw_offset": 11742
+          },
+          {
+            "coefficient_index": 5,
+            "coefficient_quantized": 114,
+            "level": 0,
+            "raw_end": 12684,
+            "raw_offset": 12682
+          },
+          {
+            "coefficient_index": 4,
+            "coefficient_quantized": 114,
+            "level": 0,
+            "raw_end": 12938,
+            "raw_offset": 12936
+          },
+          {
+            "coefficient_index": 12,
+            "coefficient_quantized": 112,
+            "level": 0,
+            "raw_end": 218,
+            "raw_offset": 216
+          },
+          {
+            "coefficient_index": 15,
+            "coefficient_quantized": 112,
+            "level": 0,
+            "raw_end": 672,
+            "raw_offset": 670
+          },
+          {
+            "coefficient_index": 16,
+            "coefficient_quantized": -112,
+            "level": 0,
+            "raw_end": 7074,
+            "raw_offset": 7072
+          },
+          {
+            "coefficient_index": 27,
+            "coefficient_quantized": 112,
+            "level": 0,
+            "raw_end": 8120,
+            "raw_offset": 8118
+          },
+          {
+            "coefficient_index": 7,
+            "coefficient_quantized": 112,
+            "level": 0,
+            "raw_end": 15120,
+            "raw_offset": 15118
+          },
+          {
+            "coefficient_index": 9,
+            "coefficient_quantized": -111,
+            "level": 0,
+            "raw_end": 7380,
+            "raw_offset": 7378
+          },
+          {
+            "coefficient_index": 31,
+            "coefficient_quantized": -110,
+            "level": 0,
+            "raw_end": 4160,
+            "raw_offset": 4158
+          },
+          {
+            "coefficient_index": 14,
+            "coefficient_quantized": 110,
+            "level": 0,
+            "raw_end": 5854,
+            "raw_offset": 5852
+          },
+          {
+            "coefficient_index": 31,
+            "coefficient_quantized": 110,
+            "level": 0,
+            "raw_end": 8256,
+            "raw_offset": 8254
+          },
+          {
+            "coefficient_index": 28,
+            "coefficient_quantized": 110,
+            "level": 0,
+            "raw_end": 11002,
+            "raw_offset": 11000
+          },
+          {
+            "coefficient_index": 30,
+            "coefficient_quantized": 110,
+            "level": 0,
+            "raw_end": 11006,
+            "raw_offset": 11004
+          },
+          {
+            "coefficient_index": 3,
+            "coefficient_quantized": -110,
+            "level": 0,
+            "raw_end": 13512,
+            "raw_offset": 13510
+          },
+          {
+            "coefficient_index": 5,
+            "coefficient_quantized": 109,
+            "level": 0,
+            "raw_end": 3724,
+            "raw_offset": 3722
+          },
+          {
+            "coefficient_index": 19,
+            "coefficient_quantized": 109,
+            "level": 0,
+            "raw_end": 10024,
+            "raw_offset": 10022
+          },
+          {
+            "coefficient_index": 18,
+            "coefficient_quantized": -108,
+            "level": 0,
+            "raw_end": 5286,
+            "raw_offset": 5284
+          },
+          {
+            "coefficient_index": 21,
+            "coefficient_quantized": 108,
+            "level": 0,
+            "raw_end": 6636,
+            "raw_offset": 6634
+          },
+          {
+            "coefficient_index": 14,
+            "coefficient_quantized": 108,
+            "level": 0,
+            "raw_end": 10078,
+            "raw_offset": 10076
+          },
+          {
+            "coefficient_index": 25,
+            "coefficient_quantized": -108,
+            "level": 0,
+            "raw_end": 10292,
+            "raw_offset": 10290
+          }
+        ],
+        "raw_bytes": 33712,
+        "section_name": "latents_and_sidecar_brotli",
+        "source_section_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32"
+      }
+    ],
+    "total_atom_count": 32
+  },
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "candidate_sidechannel_not_applied_by_inflate_runtime",
+    "requires_inflate_runtime_integration",
+    "requires_archive_manifest_preflight",
+    "requires_exact_cuda_auth_eval"
+  ],
+  "plan": {
+    "blockers": [],
+    "candidate_required_proof": [
+      "source_archive_sha256",
+      "candidate_archive_sha256",
+      "source_payload_sha256",
+      "candidate_payload_sha256",
+      "source_section_sha256",
+      "candidate_section_sha256",
+      "source_bytes",
+      "candidate_bytes",
+      "runtime_consumes_wavelet_atoms"
+    ],
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "planning_only_wavelet_atoms",
+      "requires_candidate_archive_consuming_atoms",
+      "requires_old_new_section_sha256_proof",
+      "requires_archive_manifest_preflight",
+      "requires_exact_cuda_auth_eval"
+    ],
+    "plan_sha256": "df131f012367c2a9bd9976f51e8d5907969613e4556aedbdcc6ee45923a69038",
+    "ready_for_archive_preflight": false,
+    "ready_for_exact_eval_dispatch": false,
+    "ready_for_wavelet_candidate_build": true,
+    "schema_version": 1,
+    "score_claim": false,
+    "sections": [
+      {
+        "atom_count": 32,
+        "atoms": [
+          {
+            "abs_coefficient_quantized": 122,
+            "coefficient_index": 16,
+            "coefficient_quantized": -122,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 14690,
+            "raw_offset": 14688,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 120,
+            "coefficient_index": 25,
+            "coefficient_quantized": 120,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 15732,
+            "raw_offset": 15730,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 118,
+            "coefficient_index": 26,
+            "coefficient_quantized": 118,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 8374,
+            "raw_offset": 8372,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 118,
+            "coefficient_index": 8,
+            "coefficient_quantized": 118,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 8402,
+            "raw_offset": 8400,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 118,
+            "coefficient_index": 7,
+            "coefficient_quantized": -118,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 11216,
+            "raw_offset": 11214,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 115,
+            "coefficient_index": 29,
+            "coefficient_quantized": 115,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 8252,
+            "raw_offset": 8250,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 115,
+            "coefficient_index": 9,
+            "coefficient_quantized": 115,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 8724,
+            "raw_offset": 8722,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 114,
+            "coefficient_index": 17,
+            "coefficient_quantized": 114,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 3748,
+            "raw_offset": 3746,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 114,
+            "coefficient_index": 1,
+            "coefficient_quantized": -114,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 6148,
+            "raw_offset": 6146,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 114,
+            "coefficient_index": 4,
+            "coefficient_quantized": 114,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 8458,
+            "raw_offset": 8456,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 114,
+            "coefficient_index": 10,
+            "coefficient_quantized": 114,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 10390,
+            "raw_offset": 10388,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 114,
+            "coefficient_index": 15,
+            "coefficient_quantized": 114,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 11744,
+            "raw_offset": 11742,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 114,
+            "coefficient_index": 5,
+            "coefficient_quantized": 114,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 12684,
+            "raw_offset": 12682,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 114,
+            "coefficient_index": 4,
+            "coefficient_quantized": 114,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 12938,
+            "raw_offset": 12936,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 112,
+            "coefficient_index": 12,
+            "coefficient_quantized": 112,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 218,
+            "raw_offset": 216,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 112,
+            "coefficient_index": 15,
+            "coefficient_quantized": 112,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 672,
+            "raw_offset": 670,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 112,
+            "coefficient_index": 16,
+            "coefficient_quantized": -112,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 7074,
+            "raw_offset": 7072,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 112,
+            "coefficient_index": 27,
+            "coefficient_quantized": 112,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 8120,
+            "raw_offset": 8118,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 112,
+            "coefficient_index": 7,
+            "coefficient_quantized": 112,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 15120,
+            "raw_offset": 15118,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 111,
+            "coefficient_index": 9,
+            "coefficient_quantized": -111,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 7380,
+            "raw_offset": 7378,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 110,
+            "coefficient_index": 31,
+            "coefficient_quantized": -110,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 4160,
+            "raw_offset": 4158,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 110,
+            "coefficient_index": 14,
+            "coefficient_quantized": 110,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 5854,
+            "raw_offset": 5852,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 110,
+            "coefficient_index": 31,
+            "coefficient_quantized": 110,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 8256,
+            "raw_offset": 8254,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 110,
+            "coefficient_index": 28,
+            "coefficient_quantized": 110,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 11002,
+            "raw_offset": 11000,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 110,
+            "coefficient_index": 30,
+            "coefficient_quantized": 110,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 11006,
+            "raw_offset": 11004,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 110,
+            "coefficient_index": 3,
+            "coefficient_quantized": -110,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 13512,
+            "raw_offset": 13510,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 109,
+            "coefficient_index": 5,
+            "coefficient_quantized": 109,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 3724,
+            "raw_offset": 3722,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 109,
+            "coefficient_index": 19,
+            "coefficient_quantized": 109,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 10024,
+            "raw_offset": 10022,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 108,
+            "coefficient_index": 18,
+            "coefficient_quantized": -108,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 5286,
+            "raw_offset": 5284,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 108,
+            "coefficient_index": 21,
+            "coefficient_quantized": 108,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 6636,
+            "raw_offset": 6634,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 108,
+            "coefficient_index": 14,
+            "coefficient_quantized": 108,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 10078,
+            "raw_offset": 10076,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          },
+          {
+            "abs_coefficient_quantized": 108,
+            "coefficient_index": 25,
+            "coefficient_quantized": -108,
+            "estimated_wire_bytes": 6,
+            "level": 0,
+            "raw_end": 10292,
+            "raw_offset": 10290,
+            "score_claim": false,
+            "section_name": "latents_and_sidecar_brotli"
+          }
+        ],
+        "block_size": 64,
+        "estimated_atom_bytes": 192,
+        "quant_step": 1.0,
+        "raw_bytes": 33712,
+        "raw_sha256": "a38778c6304bacba39705cd9c45af337d73bc90c6b7b4ccf2563febfc312328e",
+        "score_claim": false,
+        "section_name": "latents_and_sidecar_brotli",
+        "source_section_bytes": 15849,
+        "source_section_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+        "transform_domain": "brotli_decompressed_section"
+      }
+    ],
+    "source_archive_bytes": 186231,
+    "source_archive_path": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/archive.zip",
+    "source_archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+    "source_label": "PR106x",
+    "source_member_name": "x",
+    "source_payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+    "target_sections": [
+      "latents_and_sidecar_brotli"
+    ],
+    "tool": "tac.hnerv_wavelet_residual.build_wavelet_residual_plan",
+    "total_estimated_atom_bytes": 192
+  },
+  "plan_sha256": "df131f012367c2a9bd9976f51e8d5907969613e4556aedbdcc6ee45923a69038",
+  "ready_for_archive_preflight": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_wavelet_sidechannel_candidate": true,
+  "runtime_consumption_proof": {
+    "atom_coordinate_sha256": "23f7615b6cc5b011363b5c1822cbd81ef2b9e05305d380e85a747af5ca90eff8",
+    "decoded_atom_count": 32,
+    "decoded_section_count": 1,
+    "runtime_consumed": true,
+    "score_claim": false
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive_bytes": 186231,
+  "source_archive_path": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/archive.zip",
+  "source_archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+  "source_label": "PR106x",
+  "source_member_name": "x",
+  "source_payload_bytes": 186131,
+  "source_payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+  "tool": "tac.hnerv_wavelet_sidechannel.build_wavelet_sidechannel_candidate",
+  "wavelet_sidechannel_bytes": 379,
+  "wavelet_sidechannel_sha256": "d927bea797c257a4e99e2f5c9f10c1bc5a70bd57d2f3bd4adf3cc22fb19477a5"
+}
