@@ -35,6 +35,10 @@ match the actual anchor and output archive bytes.
 runs the CLI with a synthetic yshift sister archive and asserts that provided
 sister archive byte/hash custody is recorded in `input_archives`.
 
+`src/tac/tests/test_pr106_stacked.py::test_builder_writes_cross_platform_deterministic_zip_metadata`
+asserts that the emitted archive member has fixed timestamp, stored compression,
+and mode `0644`, avoiding host-dependent ZIP permission metadata.
+
 ## Dispatch Status
 
 No exact eval or remote GPU dispatch was attempted. This is a custody and DX

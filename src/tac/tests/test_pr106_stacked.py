@@ -982,3 +982,33 @@ def test_builder_metadata_records_sister_archive_hash_custody(tmp_path):
     }
     assert metadata["input_archives"]["latent"] is None
     assert metadata["section_blob_bytes"]["yshift"] is not None
+
+
+def test_builder_writes_cross_platform_deterministic_zip_metadata(tmp_path):
+    """Output archive member metadata is independent of host filesystem defaults."""
+    if not PR106_ARCHIVE.is_file():
+        pytest.skip(f"PR106 anchor not present at {PR106_ARCHIVE}")
+    out_dir = tmp_path / "stacked"
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "experiments" / "build_pr106_stacked.py"),
+            "--pr106-archive",
+            str(PR106_ARCHIVE),
+            "--output-dir",
+            str(out_dir),
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    with zipfile.ZipFile(out_dir / "pr106_stacked_archive.zip") as zf:
+        infos = zf.infolist()
+    assert len(infos) == 1
+    info = infos[0]
+    assert info.filename == "0.bin"
+    assert info.date_time == (1980, 1, 1, 0, 0, 0)
+    assert info.compress_type == zipfile.ZIP_STORED
+    assert (info.external_attr >> 16) == 0o644
