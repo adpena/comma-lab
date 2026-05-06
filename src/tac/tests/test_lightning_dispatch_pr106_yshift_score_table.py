@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import uuid
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -81,6 +82,28 @@ def test_stage_command_stages_claim_ledger_after_local_claim(tmp_path: Path) -> 
     assert "--require-cuda" in tool.build_stage_command(args)
 
 
+def test_parser_uses_env_ssh_target_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LIGHTNING_SSH_TARGET", "env-lightning-pact")
+    tool = _load_tool()
+
+    args = tool.build_parser().parse_args([])
+
+    assert args.ssh_target == "env-lightning-pact"
+
+
+def test_stage_command_construction_is_side_effect_free(tmp_path: Path) -> None:
+    tool = _load_tool()
+    args = _args(tmp_path)
+    args.job_name = f"pure_stage_{uuid.uuid4().hex}"
+    out_dir = REPO_ROOT / "experiments/results/lightning_batch" / args.job_name
+
+    assert not out_dir.exists()
+    cmd = tool.build_stage_command(args)
+
+    assert "--manifest-out" in cmd
+    assert not out_dir.exists()
+
+
 def test_claim_command_uses_stable_score_table_lane_and_job(tmp_path: Path) -> None:
     tool = _load_tool()
     args = _args(tmp_path)
@@ -144,6 +167,16 @@ def test_dispatch_fails_before_claim_when_ssh_target_missing(tmp_path: Path) -> 
     args.ssh_target = ""
 
     with pytest.raises(SystemExit, match="--ssh-target or LIGHTNING_SSH_TARGET"):
+        tool.dispatch(args)
+
+
+def test_real_dispatch_refuses_skip_stage_without_remote_proof(tmp_path: Path) -> None:
+    tool = _load_tool()
+    args = _args(tmp_path)
+    args.skip_stage = True
+    args.print_only = False
+
+    with pytest.raises(SystemExit, match="real dispatch with --skip-stage is refused"):
         tool.dispatch(args)
 
 

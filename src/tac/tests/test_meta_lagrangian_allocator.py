@@ -178,6 +178,86 @@ def test_byte_closed_manifest_allows_stack_review_but_not_dispatch(tmp_path: Pat
     assert "requires_exact_cuda_auth_eval" in row["dispatch_blockers"]
 
 
+def test_pareto_frontier_marks_dominated_atoms_within_scope(tmp_path: Path) -> None:
+    manifest = _archive_manifest(tmp_path)
+    atoms = [
+        {
+            "atom_id": "dominator",
+            "family": "hnerv_decoder_rate_recode",
+            "family_group": "hnerv_recode",
+            "pareto_scope": "hnerv_recode",
+            "byte_delta": -200,
+            "expected_seg_dist_delta": -0.0002,
+            "expected_pose_dist_delta": -0.00002,
+            "confidence": 1.0,
+            "evidence_grade": "empirical_byte_raw_equal",
+            "raw_equal": True,
+            "archive_manifest_path": manifest.as_posix(),
+            "archive_manifest_sha256": sha256_file(manifest),
+        },
+        {
+            "atom_id": "dominated",
+            "family": "hnerv_decoder_rate_recode",
+            "family_group": "hnerv_recode",
+            "pareto_scope": "hnerv_recode",
+            "byte_delta": -100,
+            "expected_seg_dist_delta": -0.0001,
+            "expected_pose_dist_delta": -0.00001,
+            "confidence": 1.0,
+            "evidence_grade": "empirical_byte_raw_equal",
+            "raw_equal": True,
+            "archive_manifest_path": manifest.as_posix(),
+            "archive_manifest_sha256": sha256_file(manifest),
+        },
+    ]
+    ledger = build_atom_ledger(atoms, base_pose_dist=0.01, source="fixture")
+
+    assert ledger["pareto_summary"]["rankable_frontier_count"] == 1
+    assert ledger["pareto_summary"]["rankable_dominated_count"] == 1
+    assert ledger["rows"][0]["atom_id"] == "dominator"
+    dominated = next(row for row in ledger["rows"] if row["atom_id"] == "dominated")
+    assert dominated["pareto_frontier"] is False
+    assert dominated["pareto_dominated_by"] == ["dominator"]
+    assert dominated["pareto_objectives"]["byte_delta"] == -100.0
+
+
+def test_pareto_scope_preserves_orthogonal_families(tmp_path: Path) -> None:
+    manifest = _archive_manifest(tmp_path)
+    ledger = build_atom_ledger(
+        [
+            {
+                "atom_id": "mask_atom",
+                "family_group": "mask",
+                "pareto_scope": "mask",
+                "byte_delta": -20,
+                "expected_seg_dist_delta": -0.0001,
+                "confidence": 1.0,
+                "evidence_grade": "empirical",
+                "raw_equal": True,
+                "archive_manifest_path": manifest.as_posix(),
+                "archive_manifest_sha256": sha256_file(manifest),
+            },
+            {
+                "atom_id": "pose_atom",
+                "family_group": "pose",
+                "pareto_scope": "pose",
+                "byte_delta": -200,
+                "expected_seg_dist_delta": -0.0002,
+                "confidence": 1.0,
+                "evidence_grade": "empirical",
+                "raw_equal": True,
+                "archive_manifest_path": manifest.as_posix(),
+                "archive_manifest_sha256": sha256_file(manifest),
+            },
+        ],
+        base_pose_dist=0.01,
+        source="fixture",
+    )
+
+    assert ledger["pareto_summary"]["rankable_frontier_count"] == 2
+    assert all(row["pareto_frontier"] is True for row in ledger["rows"])
+
+
 def test_unverified_archive_manifest_does_not_allow_stack_review(tmp_path: Path) -> None:
     manifest = _archive_manifest(tmp_path)
     row = expected_atom_score_delta(

@@ -36,3 +36,29 @@ In print-only mode, skipped SSH/stage phases are no longer printed.
 
 No GPU dispatch, remote staging, or lane claim was attempted. This is launch-DX
 hardening only.
+
+## Addendum: env defaults and pure command construction
+
+The launcher now reads the default SSH target through
+`tac.deploy.lightning.defaults.default_ssh_target()`, so
+`LIGHTNING_SSH_TARGET` / legacy remote env overrides affect the parser default.
+
+`build_stage_command()` no longer creates
+`experiments/results/lightning_batch/<job>/source_manifest.json` directories as
+a side effect. The directory is created only on the real staging execution path.
+
+Real dispatch with `--skip-stage` now fails closed. Pre-staged Batch command
+generation remains available only in print-only mode:
+
+```text
+--backend batch --skip-ssh-check --skip-stage --print-only
+```
+
+Verification:
+
+```text
+.venv/bin/python -m pytest src/tac/tests/test_lightning_dispatch_pr106_yshift_score_table.py -q
+.venv/bin/python tools/dispatch_dryrun_pr106_sidechannels.py --json
+```
+
+No GPU dispatch, remote staging, or lane claim was attempted.

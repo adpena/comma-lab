@@ -23,6 +23,13 @@ NON_RANKABLE_EVIDENCE_GRADES = {
     "prediction",
     "external",
 }
+PARETO_EPS = 1e-12
+PARETO_MINIMIZE_OBJECTIVES = (
+    "expected_total_score_delta",
+    "byte_delta",
+    "expected_seg_dist_delta",
+    "expected_pose_dist_delta",
+)
 
 
 class MetaLagrangianError(ValueError):
@@ -122,6 +129,89 @@ def _archive_manifest_custody(path_value: str, sha256_value: str) -> dict[str, A
     }
 
 
+def _pareto_objectives(row: Mapping[str, Any]) -> dict[str, float]:
+    return {
+        "expected_total_score_delta": float(row["expected_total_score_delta"]),
+        "byte_delta": float(row["byte_delta"]),
+        "expected_seg_dist_delta": float(row["expected_seg_dist_delta"]),
+        "expected_pose_dist_delta": float(row["expected_pose_dist_delta"]),
+        "confidence": float(row["confidence"]),
+        "archive_ready_for_stack_review": float(bool(row["archive_ready_for_stack_review"])),
+    }
+
+
+def _dominates_pareto(a: Mapping[str, Any], b: Mapping[str, Any]) -> bool:
+    """Return whether ``a`` dominates ``b`` within one Pareto scope.
+
+    Lower is better for score, byte, SegNet, and PoseNet deltas. Higher is
+    better for confidence and archive-custody readiness, so an uncustodied
+    prediction cannot hide a byte-closed candidate with weaker proxy deltas.
+    """
+
+    if not bool(a["rankable"]) or not bool(b["rankable"]):
+        return False
+    if str(a["pareto_scope"]) != str(b["pareto_scope"]):
+        return False
+    strictly_better = False
+    for objective in PARETO_MINIMIZE_OBJECTIVES:
+        av = float(a[objective])
+        bv = float(b[objective])
+        if av > bv + PARETO_EPS:
+            return False
+        strictly_better = strictly_better or av < bv - PARETO_EPS
+    for objective in ("confidence", "archive_ready_for_stack_review"):
+        av = float(a[objective])
+        bv = float(b[objective])
+        if av < bv - PARETO_EPS:
+            return False
+        strictly_better = strictly_better or av > bv + PARETO_EPS
+    return strictly_better
+
+
+def _annotate_pareto_frontier(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    dominated_count = 0
+    frontier_count = 0
+    scope_counts: dict[str, dict[str, int]] = {}
+    for row in rows:
+        row["pareto_frontier"] = bool(row["rankable"])
+        row["pareto_dominated_by"] = []
+        row["pareto_objectives"] = _pareto_objectives(row)
+    for row in rows:
+        if not bool(row["rankable"]):
+            row["pareto_frontier"] = False
+            continue
+        dominators = [
+            str(other["atom_id"])
+            for other in rows
+            if other is not row and _dominates_pareto(other, row)
+        ]
+        if dominators:
+            row["pareto_frontier"] = False
+            row["pareto_dominated_by"] = sorted(dominators)
+            dominated_count += 1
+        else:
+            frontier_count += 1
+        scope = str(row["pareto_scope"])
+        stats = scope_counts.setdefault(scope, {"rankable": 0, "frontier": 0, "dominated": 0})
+        stats["rankable"] += 1
+        stats["frontier"] += int(bool(row["pareto_frontier"]))
+        stats["dominated"] += int(not bool(row["pareto_frontier"]))
+    return {
+        "objective_direction": {
+            "expected_total_score_delta": "min",
+            "byte_delta": "min",
+            "expected_seg_dist_delta": "min",
+            "expected_pose_dist_delta": "min",
+            "confidence": "max",
+            "archive_ready_for_stack_review": "max",
+        },
+        "scope_default": "family_group",
+        "rankable_frontier_count": frontier_count,
+        "rankable_dominated_count": dominated_count,
+        "scope_counts": dict(sorted(scope_counts.items())),
+    }
+
+
 def expected_atom_score_delta(
     atom: Mapping[str, Any],
     *,
@@ -146,6 +236,7 @@ def expected_atom_score_delta(
     rankable, rank_blockers = _rankable_atom(atom, evidence_grade, confidence)
     family = str(atom.get("family") or atom.get("atom_family") or "unknown")
     family_group = str(atom.get("family_group") or family)
+    pareto_scope = str(atom.get("pareto_scope") or family_group)
     conflicts_with_families = _string_list(atom.get("conflicts_with_families"))
     conflicts_with_atoms = _string_list(atom.get("conflicts_with_atoms"))
     archive_manifest_path = str(atom.get("archive_manifest_path") or "")
@@ -178,6 +269,7 @@ def expected_atom_score_delta(
         "atom_id": atom_id,
         "family": family,
         "family_group": family_group,
+        "pareto_scope": pareto_scope,
         "conflicts_with_families": conflicts_with_families,
         "conflicts_with_atoms": conflicts_with_atoms,
         "score_claim": False,
@@ -220,9 +312,11 @@ def build_atom_ledger(
     """Rank atoms by expected contest-score delta."""
 
     rows = [expected_atom_score_delta(atom, base_pose_dist=base_pose_dist) for atom in atoms]
+    pareto_summary = _annotate_pareto_frontier(rows)
     rows.sort(
         key=lambda row: (
             not bool(row["rankable"]),
+            not bool(row["pareto_frontier"]),
             float(row["expected_total_score_delta"]),
             int(row["byte_delta"]),
             str(row["atom_id"]),
@@ -252,6 +346,7 @@ def build_atom_ledger(
         "atom_count": len(rows),
         "family_group_counts": dict(sorted(family_counts.items())),
         "conflict_family_counts": dict(sorted(conflict_counts.items())),
+        "pareto_summary": pareto_summary,
         "byte_closed_archive_manifest_attached_count": archive_manifest_attached_count,
         "requested_dispatchable_refused_count": requested_dispatchable_refused_count,
         "rows": rows,

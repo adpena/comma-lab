@@ -37,14 +37,13 @@ from tac.deploy.lightning.batch_jobs import (  # noqa: E402
 )
 from tac.deploy.lightning.defaults import (  # noqa: E402
     DEFAULT_LIGHTNING_REMOTE_PACT,
-    DEFAULT_LIGHTNING_SSH_TARGET,
+    default_ssh_target,
     default_studio,
     default_teamspace,
     default_user,
 )
 
 DEFAULT_REMOTE_PACT = DEFAULT_LIGHTNING_REMOTE_PACT
-DEFAULT_SSH_TARGET = DEFAULT_LIGHTNING_SSH_TARGET
 DEFAULT_PR106_ARCHIVE = (
     REPO_ROOT
     / "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip"
@@ -126,7 +125,6 @@ def build_stage_command(args: argparse.Namespace) -> list[str]:
         / args.job_name
         / "source_manifest.json"
     )
-    manifest_out.parent.mkdir(parents=True, exist_ok=True)
     cmd = [
         sys.executable,
         str(REPO_ROOT / "scripts/lightning_repro_workspace.py"),
@@ -337,10 +335,21 @@ def _terminal_claim(args: argparse.Namespace, *, status: str, notes: str) -> Non
 
 
 def _needs_ssh_target(args: argparse.Namespace) -> bool:
-    return not (args.backend == "batch" and args.skip_ssh_check and args.skip_stage)
+    return not (
+        args.print_only
+        and args.backend == "batch"
+        and args.skip_ssh_check
+        and args.skip_stage
+    )
 
 
 def _validate_dispatch_args(args: argparse.Namespace) -> None:
+    if args.skip_stage and not args.print_only:
+        raise SystemExit(
+            "FATAL: real dispatch with --skip-stage is refused by default. "
+            "Generate a pre-staged Batch command with --print-only, or stage "
+            "the current claim ledger through this launcher."
+        )
     if _needs_ssh_target(args) and not str(args.ssh_target or "").strip():
         raise SystemExit(
             "FATAL: --ssh-target or LIGHTNING_SSH_TARGET is required before "
@@ -406,6 +415,10 @@ def dispatch(args: argparse.Namespace) -> int:
         return claim_result.returncode
 
     if not args.skip_stage:
+        (REPO_ROOT / "experiments/results/lightning_batch" / args.job_name).mkdir(
+            parents=True,
+            exist_ok=True,
+        )
         stage_result = _run(stage_cmd)
         if stage_result.returncode != 0:
             _terminal_claim(args, status="failed_stage", notes="Lightning staging failed before dispatch")
@@ -423,7 +436,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--job-name", default=default_job_name())
     parser.add_argument("--pr106-archive", type=Path, default=DEFAULT_PR106_ARCHIVE)
-    parser.add_argument("--ssh-target", default=DEFAULT_SSH_TARGET)
+    parser.add_argument("--ssh-target", default=default_ssh_target())
     parser.add_argument("--remote-pact", default=DEFAULT_REMOTE_PACT)
     parser.add_argument("--python-bin", default=".venv/bin/python")
     parser.add_argument("--ssh-connect-timeout", type=int, default=30)
