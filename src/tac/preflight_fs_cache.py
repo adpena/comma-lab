@@ -134,10 +134,22 @@ def _cached_read_text(self: Path, *args, **kwargs):  # type: ignore[override]
     Round 7 R7-1: dict get/set under `_PATCH_LOCK` so `cache_stats()` can
     iterate consistently. The actual `_ORIGINAL_READ_TEXT` call is OUTSIDE
     the lock so file I/O does not serialize.
+
+    Round 8 R8-1 fix (2026-05-06, 85%): symmetric to `_cached_rglob`'s
+    R3-D path — guard `self.resolve()` against `FileNotFoundError` /
+    `OSError` (broken symlinks, missing directory components). Without
+    the guard, a broken symlink raises from `resolve()` before
+    `_ORIGINAL_READ_TEXT` is called, producing a confusing error message
+    that points at the resolve step rather than the read attempt the
+    operator intended. Falling through to the original keeps diagnostics
+    clean and consistent with `_cached_rglob`.
     """
     if args or kwargs:
         return _ORIGINAL_READ_TEXT(self, *args, **kwargs)
-    key = str(self.resolve())
+    try:
+        key = str(self.resolve())
+    except (FileNotFoundError, OSError):
+        return _ORIGINAL_READ_TEXT(self)
     if not _is_cacheable(key):
         return _ORIGINAL_READ_TEXT(self)
     with _PATCH_LOCK:
@@ -153,8 +165,14 @@ def _cached_read_bytes(self: Path):  # type: ignore[override]
     """Cached `Path.read_bytes` for source-tree files only.
 
     Round 7 R7-1: dict get/set under `_PATCH_LOCK`; file I/O outside.
+
+    Round 8 R8-1 fix (2026-05-06, 85%): same symlink-resolve guard as
+    `_cached_read_text` and `_cached_rglob`.
     """
-    key = str(self.resolve())
+    try:
+        key = str(self.resolve())
+    except (FileNotFoundError, OSError):
+        return _ORIGINAL_READ_BYTES(self)
     if not _is_cacheable(key):
         return _ORIGINAL_READ_BYTES(self)
     with _PATCH_LOCK:
