@@ -342,6 +342,32 @@ def step_extract_masks(cfg: PipelineConfig) -> tuple[Path, Path]:
     out = Path(cfg.output_dir)
     out.mkdir(parents=True, exist_ok=True)
 
+    # ── PARADIGM-α mask_codec stub guard ───────────────────────────────
+    # Default ``av1_monochrome`` is the wired path. ``argmax_rle`` is also
+    # wired. The four research stubs (nerv / wavelet / vqvae / grayscale_lut)
+    # raise NotImplementedError below so that an operator who flips the flag
+    # without first landing the codec's compress-time training harness gets a
+    # loud failure rather than a silent fallback to AV1.
+    _wired_mask_codecs = {"av1_monochrome", "argmax_rle"}
+    _alpha_stub_codecs = {"nerv", "wavelet", "vqvae", "grayscale_lut"}
+    if cfg.mask_codec not in _wired_mask_codecs:
+        if cfg.mask_codec in _alpha_stub_codecs:
+            raise NotImplementedError(
+                f"PARADIGM-α: cfg.mask_codec={cfg.mask_codec!r} is "
+                f"REGISTERED-BUT-NOT-WIRED. The compress-time training harness "
+                f"for this codec has not yet landed; running it would either "
+                f"silently fall back to AV1 or produce a non-decodable archive. "
+                f"To enable, land the dispatch branch + an integration test "
+                f"that verifies bit-identical decode roundtrip against the "
+                f"contest scorer. See lane_alpha_{cfg.mask_codec}_mask in the "
+                f"lane registry."
+            )
+        raise ValueError(
+            f"step_extract_masks: unknown cfg.mask_codec={cfg.mask_codec!r}. "
+            f"Wired: {sorted(_wired_mask_codecs)}; "
+            f"PARADIGM-α stubs: {sorted(_alpha_stub_codecs)}."
+        )
+
     # Full masks (1200 frames) — for training and pose TTO
     if cfg.masks and Path(cfg.masks).exists():
         full_masks_path = Path(cfg.masks)
