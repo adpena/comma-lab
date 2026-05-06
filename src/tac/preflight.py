@@ -232,16 +232,18 @@ def preflight_check(
             # manifest based on which pose format the archive actually has.
             from tac.submission_archive import validate_archive, detect_pose_manifest
             manifest = detect_pose_manifest(archive_path)
-            result = validate_archive(archive_path, manifest, strict=False)
+            result = validate_archive(archive_path, manifest, strict=True)
             if result.valid:
                 _pass(f"Archive: {result.archive_bytes:,}B, rate={result.rate_term:.4f}, valid")
             else:
-                for err in result.errors:
-                    _fail(f"Archive: {err}")
+                errors = result.errors or ["archive validation returned invalid"]
+                _fail(f"Archive: {'; '.join(errors)}")
                 for w in result.warnings:
                     _warn(f"Archive: {w}")
+        except PreflightError:
+            raise
         except Exception as e:
-            _warn(f"Archive validation failed: {e}")
+            _fail(f"Archive validation failed: {e}")
 
     # ── Summary ──────────────────────────────────────────────────
     if verbose:

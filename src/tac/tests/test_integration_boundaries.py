@@ -167,6 +167,23 @@ class TestPreflightCheck(unittest.TestCase):
                 # Should fail — renderer too small
                 preflight_check(renderer_path=f.name, verbose=False)
 
+    def test_preflight_rejects_invalid_archive_path(self):
+        """Explicit archive preflight is fail-closed, not warn-open."""
+        import zipfile
+
+        from tac.preflight import PreflightError, preflight_check
+
+        with tempfile.TemporaryDirectory() as td:
+            archive = Path(td) / "archive.zip"
+            with zipfile.ZipFile(archive, "w") as zf:
+                zf.writestr("renderer.bin", b"ASYM" + b"\0" * 12000)
+                zf.writestr("renderer.bin", b"duplicate")
+                zf.writestr("masks.mkv", b"m" * 12000)
+                zf.writestr("optimized_poses.pt", b"p" * 7200)
+
+            with self.assertRaises(PreflightError):
+                preflight_check(archive_path=archive, verbose=False)
+
 
 class TestQATParametrizeNoDoubleWrap(unittest.TestCase):
     """QATRendererFP4 must not double-wrap already-parametrized layers."""

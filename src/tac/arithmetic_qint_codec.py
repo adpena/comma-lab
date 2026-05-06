@@ -58,6 +58,8 @@ import numpy as np
 
 _AQ_MAGIC: bytes = b"AQv1"
 _AQ_VERSION: int = 1
+_SH_MAGIC: bytes = b"SHv1"
+_SH_VERSION: int = 1
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -381,8 +383,8 @@ def repack_payload_tar_xz_to_arithmetic(
     meta = json.loads(members["meta.json"].decode("utf-8"))
 
     out = io.BytesIO()
-    out.write(b"SHv1")
-    out.write(struct.pack("<H", 1))
+    out.write(_SH_MAGIC)
+    out.write(struct.pack("<H", _SH_VERSION))
 
     record_buffers: list[bytes] = []
     sizes: dict[str, dict] = {}
@@ -487,37 +489,74 @@ def unpack_arithmetic_payload(payload_path: str) -> dict:
     with open(payload_path, "rb") as f:
         blob = f.read()
     buf = io.BytesIO(blob)
-    if buf.read(4) != b"SHv1":
-        raise ValueError("bad SHv1 magic")
-    (version,) = struct.unpack("<H", buf.read(2))
-    if version != 1:
+    magic = _read_exact(buf, 4, "SHv1 magic")
+    if magic != _SH_MAGIC:
+        raise ValueError(f"bad SHv1 magic: {magic!r}")
+    (version,) = struct.unpack("<H", _read_exact(buf, 2, "SHv1 version"))
+    if version != _SH_VERSION:
         raise ValueError(f"unsupported SHv1 version: {version}")
-    (n_keys,) = struct.unpack("<H", buf.read(2))
-    (meta_len,) = struct.unpack("<I", buf.read(4))
-    meta = json.loads(buf.read(meta_len).decode("utf-8"))
+    (n_keys,) = struct.unpack("<H", _read_exact(buf, 2, "SHv1 record count"))
+    (meta_len,) = struct.unpack("<I", _read_exact(buf, 4, "SHv1 meta length"))
+    meta = json.loads(_read_exact(buf, meta_len, "SHv1 meta.json").decode("utf-8"))
+    if not isinstance(meta, dict) or not isinstance(meta.get("keys"), dict):
+        raise ValueError("SHv1 meta.json must contain an object-valued 'keys' field")
 
     # First pass: read all records into a temp dict.
     records: dict[str, dict] = {}
-    for _ in range(n_keys):
-        (klen,) = struct.unpack("<H", buf.read(2))
-        key = buf.read(klen).decode("utf-8")
-        (codec,) = struct.unpack("<B", buf.read(1))
-        (dlen,) = struct.unpack("<Q", buf.read(8))
-        data = buf.read(dlen)
-        (slen,) = struct.unpack("<B", buf.read(1))
-        shape = list(struct.unpack(f"<{slen}i", buf.read(4 * slen))) if slen else []
-        (qmax,) = struct.unpack("<B", buf.read(1))
+    for record_index in range(n_keys):
+        (klen,) = struct.unpack("<H", _read_exact(buf, 2, f"SHv1 record {record_index} key length"))
+        if klen == 0:
+            raise ValueError(f"SHv1 record {record_index} has an empty key")
+        key = _read_exact(buf, klen, f"SHv1 record {record_index} key").decode("utf-8")
+        if key in records:
+            raise ValueError(f"duplicate SHv1 record key: {key!r}")
+        (codec,) = struct.unpack("<B", _read_exact(buf, 1, f"SHv1 record {record_index} codec"))
+        if codec not in (0, 1, 2):
+            raise ValueError(f"SHv1 record {key!r} has unknown codec {codec}")
+        (dlen,) = struct.unpack("<Q", _read_exact(buf, 8, f"SHv1 record {key!r} data length"))
+        data = _read_exact(buf, dlen, f"SHv1 record {key!r} data")
+        (slen,) = struct.unpack("<B", _read_exact(buf, 1, f"SHv1 record {key!r} shape length"))
+        if codec == 0 and slen != 4:
+            raise ValueError(f"SHv1 arithmetic qint record {key!r} must carry a 4D OIHW shape")
+        if codec in (1, 2) and slen != 0:
+            raise ValueError(f"SHv1 non-qint record {key!r} must not carry a shape")
+        shape = list(struct.unpack(f"<{slen}i", _read_exact(buf, 4 * slen, f"SHv1 record {key!r} shape"))) if slen else []
+        (qmax,) = struct.unpack("<B", _read_exact(buf, 1, f"SHv1 record {key!r} qint_max"))
         records[key] = {"codec": codec, "data": data, "shape": shape, "qint_max": qmax}
+    trailing = buf.read(1)
+    if trailing:
+        raise ValueError("SHv1 payload has trailing bytes after declared records")
 
     out: dict[str, torch.Tensor] = {}
     for key, info in meta["keys"].items():
         codec_str = info["codec"]
         if codec_str == "block_fp_per_channel_v1":
+            if key not in records:
+                raise ValueError(f"SHv1 missing qint record for key {key!r}")
+            if f"{key}#exp" not in records:
+                raise ValueError(f"SHv1 missing exponent record for key {key!r}")
             qint_rec = records[key]
             exp_rec = records[f"{key}#exp"]
+            if qint_rec["codec"] != 0:
+                raise ValueError(f"SHv1 qint record {key!r} has codec {qint_rec['codec']}, expected 0")
+            if exp_rec["codec"] != 2:
+                raise ValueError(f"SHv1 exponent record {key!r} has codec {exp_rec['codec']}, expected 2")
             shape_oihw = tuple(qint_rec["shape"])
+            if len(shape_oihw) != 4:
+                raise ValueError(f"SHv1 qint record {key!r} shape must be 4D, got {shape_oihw}")
             o, i, kh, kw = shape_oihw
             qint_arr = decode_qints_arithmetic(qint_rec["data"], expected_dtype=np.int8)
+            expected_qints = kh * kw * o * i
+            if qint_arr.size != expected_qints:
+                raise ValueError(
+                    f"SHv1 qint record {key!r} decodes {qint_arr.size} values, "
+                    f"expected {expected_qints} from shape {shape_oihw}"
+                )
+            if len(exp_rec["data"]) != o * 4:
+                raise ValueError(
+                    f"SHv1 exponent record {key!r} has {len(exp_rec['data'])}B, "
+                    f"expected {o * 4}B for out_channels={o}"
+                )
             qint_hwoi = torch.from_numpy(
                 qint_arr.reshape(kh, kw, o, i).copy()
             )
@@ -531,6 +570,10 @@ def unpack_arithmetic_payload(payload_path: str) -> dict:
                 "qint_max": qint_rec["qint_max"] or info.get("qint_max", 1),
             })
         elif codec_str == "linear_q_per_tensor_v1":
+            if key not in records:
+                raise ValueError(f"SHv1 missing passthrough tensor record for key {key!r}")
+            if records[key]["codec"] != 1:
+                raise ValueError(f"SHv1 passthrough record {key!r} has codec {records[key]['codec']}, expected 1")
             buf_t = io.BytesIO(records[key]["data"])
             packed = torch.load(buf_t, weights_only=False)
             out[key] = decode_tensor_linear_q_per_tensor_v1(packed)

@@ -196,9 +196,50 @@ per-tensor HNeRV entropy recode -> WR01 exact replay. Categorical/openpilot,
 LA-POSE, foveation, beta sensitivity, and joint ADMM should feed those archive
 builders until they have their own charged consumers.
 
+## Follow-Up Tranche: Fail-Closed DX Hardening
+
+This tranche closed two reproducibility blockers that would otherwise waste
+exact-eval time:
+
+1. Generic archive validation now consumes `ZipFile.infolist()` through the
+   strict member-info validator before manifest checks.
+   - Closes the duplicate-member collapse bug where `set(zf.namelist())` could
+     hide non-strict ZIP custody.
+   - Regression tests reject duplicate and hidden/system members through
+     `validate_archive()`, not only through extraction.
+
+2. Explicit `preflight_check(archive_path=...)` now runs strict archive
+   validation and fails closed on archive exceptions.
+   - This removes the warn-open path where corrupt or non-strict archives could
+     leave preflight looking operationally acceptable.
+
+3. SHv1/AQ payload parsing now exact-reads every container field before tensor
+   decode.
+   - Rejects truncated record fields, duplicate record keys, unknown codecs,
+     unexpected shape metadata, trailing bytes, missing qint/exponent records,
+     qint-count/shape mismatches, and exponent-count mismatches.
+   - `mask_entropy_coder.py` remains open because that file is partner-dirty;
+     do not trample it without integrating the current WIP.
+
+4. Non-`x` PR106 q10 low-level brotli repack is ready for exact-eval
+   consideration.
+   - Candidate:
+     `experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip`
+   - Archive bytes: `186088`
+   - Archive SHA-256:
+     `626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7`
+   - Static public replay preflight:
+     `experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/public_replay_preflight.json`
+   - Preflight result: `ready_for_exact_eval_dispatch=true`, blockers `[]`.
+   - Evidence grade remains `external/local_preflight_non_score_until_cuda`;
+     claim no score until exact CUDA.
+
 ## Verification Run
 
 - `.venv/bin/python tools/audit_semantic_label_contract.py --format json --fail-on-advisory`
 - `.venv/bin/python -m pytest -q src/tac/tests/test_arithmetic_qint_codec.py src/tac/tests/test_balle_hyperprior_codec.py src/tac/tests/test_inflate_segmap_arithmetic.py src/tac/tests/test_segmap_lct_archive_contract.py src/tac/tests/test_audit_semantic_label_contract.py src/tac/tests/test_semantic_quantization.py src/tac/tests/test_semantic_label_contract.py`
 - `.venv/bin/python -m pytest -q src/tac/tests/test_contest_auth_eval.py src/tac/tests/test_train_segmap_lct.py src/tac/tests/test_inflate_segmap_arithmetic.py`
 - `.venv/bin/python -m pytest -q src/tac/tests/test_arithmetic_qint_codec.py src/tac/tests/test_balle_hyperprior_codec.py src/tac/tests/test_inflate_segmap_arithmetic.py src/tac/tests/test_segmap_lct_archive_contract.py src/tac/tests/test_audit_semantic_label_contract.py src/tac/tests/test_semantic_quantization.py src/tac/tests/test_semantic_label_contract.py src/tac/tests/test_contest_auth_eval.py src/tac/tests/test_train_segmap_lct.py src/tac/tests/test_remote_lane_segmap_lct_scripts.py`
+- `.venv/bin/python -m pytest -q src/tac/tests/test_submission_archive_safety.py src/tac/tests/test_integration_boundaries.py::TestArchiveValidation src/tac/tests/test_integration_boundaries.py::TestPreflightCheck`
+- `.venv/bin/python -m pytest -q src/tac/tests/test_archive_diet_pack.py src/tac/tests/test_archive_diet.py src/tac/tests/test_inflate_segmap_arithmetic.py src/tac/tests/test_arithmetic_qint_codec.py src/tac/tests/test_submission_archive_safety.py src/tac/tests/test_integration_boundaries.py::TestArchiveValidation src/tac/tests/test_integration_boundaries.py::TestPreflightCheck`
+- `.venv/bin/python experiments/preflight_public_replay_intake.py --archive experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip --inflate-sh experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh --expected-archive-sha256 626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7 --expected-archive-size-bytes 186088 --json-out experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/public_replay_preflight.json --fail-if-not-ready`

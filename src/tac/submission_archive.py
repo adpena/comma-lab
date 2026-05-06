@@ -1013,9 +1013,11 @@ def validate_archive(
     required = set(manifest.required_files())
 
     with zipfile.ZipFile(archive_path, "r") as zf:
-        archive_names = set(zf.namelist())
-        for info in zf.infolist():
-            result.files_found[info.filename] = info.file_size
+        infos = zf.infolist()
+        archive_names_list = validate_zip_member_infos(infos)
+        archive_names = set(archive_names_list)
+        for info, name in zip(infos, archive_names_list, strict=True):
+            result.files_found[name] = info.file_size
 
         # Check required files present
         for req in required:

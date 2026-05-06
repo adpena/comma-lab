@@ -61,3 +61,34 @@ def test_safe_extract_zip_rejects_symlink_members(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="symlink"):
         safe_extract_zip(archive, tmp_path / "out")
+
+
+def test_validate_archive_rejects_duplicate_members(tmp_path: Path) -> None:
+    from tac.submission_archive import RENDERER_SUBMISSION_MANIFEST, validate_archive
+
+    archive = tmp_path / "dup_validate.zip"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("renderer.bin", b"ASYM" + b"\0" * 12000)
+        zf.writestr("renderer.bin", b"second")
+        zf.writestr("masks.mkv", b"m" * 12000)
+        zf.writestr("optimized_poses.pt", b"p" * 7200)
+
+    with pytest.raises(ValueError, match="duplicate archive member"):
+        validate_archive(archive, RENDERER_SUBMISSION_MANIFEST, strict=True)
+
+
+def test_validate_archive_rejects_hidden_members(tmp_path: Path) -> None:
+    from tac.submission_archive import RENDERER_SUBMISSION_MANIFEST, validate_archive
+
+    archive = _zip(
+        tmp_path / "hidden_validate.zip",
+        [
+            ("renderer.bin", b"ASYM" + b"\0" * 12000),
+            ("masks.mkv", b"m" * 12000),
+            ("optimized_poses.pt", b"p" * 7200),
+            (".DS_Store", b"junk"),
+        ],
+    )
+
+    with pytest.raises(ValueError, match="hidden/system archive member"):
+        validate_archive(archive, RENDERER_SUBMISSION_MANIFEST, strict=True)

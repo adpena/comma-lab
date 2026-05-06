@@ -1,6 +1,9 @@
 """Lane SH arithmetic codec roundtrip + entropy regression tests."""
 from __future__ import annotations
 
+import json
+import struct
+
 import numpy as np
 import pytest
 
@@ -8,7 +11,46 @@ from tac.arithmetic_qint_codec import (
     build_freq_table,
     decode_qints_arithmetic,
     encode_qints_arithmetic,
+    unpack_arithmetic_payload,
 )
+
+
+def _write_shv1(tmp_path, meta: dict, records: list[bytes], trailing: bytes = b""):
+    blob = bytearray()
+    meta_bytes = json.dumps(meta, separators=(",", ":")).encode("utf-8")
+    blob.extend(b"SHv1")
+    blob.extend(struct.pack("<H", 1))
+    blob.extend(struct.pack("<H", len(records)))
+    blob.extend(struct.pack("<I", len(meta_bytes)))
+    blob.extend(meta_bytes)
+    for record in records:
+        blob.extend(record)
+    blob.extend(trailing)
+    path = tmp_path / "payload.bin"
+    path.write_bytes(bytes(blob))
+    return path
+
+
+def _sh_record(
+    key: str,
+    *,
+    codec: int,
+    data: bytes = b"x",
+    shape: tuple[int, ...] = (),
+    qmax: int = 0,
+) -> bytes:
+    key_bytes = key.encode("utf-8")
+    out = bytearray()
+    out.extend(struct.pack("<H", len(key_bytes)))
+    out.extend(key_bytes)
+    out.extend(struct.pack("<B", codec))
+    out.extend(struct.pack("<Q", len(data)))
+    out.extend(data)
+    out.extend(struct.pack("<B", len(shape)))
+    if shape:
+        out.extend(struct.pack(f"<{len(shape)}i", *shape))
+    out.extend(struct.pack("<B", qmax))
+    return bytes(out)
 
 
 def test_ternary_roundtrip_uniform():
@@ -101,3 +143,68 @@ def test_short_stream_roundtrip():
         blob = encode_qints_arithmetic(qints, num_symbols=3, offset=1)
         recovered = decode_qints_arithmetic(blob, expected_dtype=np.int8)
         assert np.array_equal(qints, recovered), f"failed at n={n}"
+
+
+def test_unpack_shv1_rejects_trailing_bytes(tmp_path):
+    payload = _write_shv1(tmp_path, {"keys": {}}, [], trailing=b"junk")
+
+    with pytest.raises(ValueError, match="trailing bytes"):
+        unpack_arithmetic_payload(str(payload))
+
+
+def test_unpack_shv1_rejects_duplicate_record_keys(tmp_path):
+    payload = _write_shv1(
+        tmp_path,
+        {"keys": {}},
+        [
+            _sh_record("layer.weight", codec=1),
+            _sh_record("layer.weight", codec=1),
+        ],
+    )
+
+    with pytest.raises(ValueError, match="duplicate SHv1 record key"):
+        unpack_arithmetic_payload(str(payload))
+
+
+def test_unpack_shv1_rejects_truncated_record_data(tmp_path):
+    meta = {"keys": {}}
+    meta_bytes = json.dumps(meta, separators=(",", ":")).encode("utf-8")
+    key = b"layer.weight"
+    blob = bytearray()
+    blob.extend(b"SHv1")
+    blob.extend(struct.pack("<H", 1))
+    blob.extend(struct.pack("<H", 1))
+    blob.extend(struct.pack("<I", len(meta_bytes)))
+    blob.extend(meta_bytes)
+    blob.extend(struct.pack("<H", len(key)))
+    blob.extend(key)
+    blob.extend(struct.pack("<B", 1))
+    blob.extend(struct.pack("<Q", 16))
+    blob.extend(b"short")
+    payload = tmp_path / "payload.bin"
+    payload.write_bytes(bytes(blob))
+
+    with pytest.raises(ValueError, match="truncated while reading SHv1 record 'layer.weight' data"):
+        unpack_arithmetic_payload(str(payload))
+
+
+def test_unpack_shv1_rejects_unknown_record_codec(tmp_path):
+    payload = _write_shv1(
+        tmp_path,
+        {"keys": {}},
+        [_sh_record("layer.weight", codec=9)],
+    )
+
+    with pytest.raises(ValueError, match="unknown codec 9"):
+        unpack_arithmetic_payload(str(payload))
+
+
+def test_unpack_shv1_rejects_missing_meta_record(tmp_path):
+    payload = _write_shv1(
+        tmp_path,
+        {"keys": {"layer.weight": {"codec": "block_fp_per_channel_v1"}}},
+        [],
+    )
+
+    with pytest.raises(ValueError, match="missing qint record"):
+        unpack_arithmetic_payload(str(payload))
