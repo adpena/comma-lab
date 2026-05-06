@@ -18,6 +18,7 @@ which are CUDA-independent.
 """
 from __future__ import annotations
 
+import json
 import struct
 import subprocess
 import sys
@@ -27,7 +28,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from tac.repo_io import read_json
+from tac.repo_io import read_json, sha256_file
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PR106_ARCHIVE = REPO_ROOT / (
@@ -421,6 +422,114 @@ def test_builder_score_table_mode_writes_fail_closed_metadata(tmp_path):
     assert sc["raw"].shape == (n_frames, 3)
     assert np.array_equal(sc["raw"][0], grid[target_idx])
     assert np.array_equal(sc["raw"][1], grid[zero_idx])
+
+
+def test_builder_score_table_mode_validates_cuda_manifest(tmp_path):
+    """A provided CUDA table manifest must match table/source/radius/shape exactly."""
+    if not PR106_ARCHIVE.is_file():
+        pytest.skip(f"PR106 anchor not present at {PR106_ARCHIVE}")
+    builder = _load_builder()
+    grid = builder.build_yshift_candidate_grid(radius=1)
+    zero_idx = int(np.flatnonzero((grid == 0).all(axis=1))[0])
+    target_idx = int(np.flatnonzero((grid == np.array([1, 0, -1], dtype=np.int8)).all(axis=1))[0])
+    n_frames = 4
+    scores = np.full((n_frames, len(grid)), 10.0, dtype=np.float32)
+    scores[:, zero_idx] = 1.0
+    scores[0, target_idx] = 0.5
+    table_path = tmp_path / "cuda_score_table.npy"
+    np.save(table_path, scores)
+    manifest_path = tmp_path / "score_table_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "manifest_schema": "pr106_yshift_score_table_manifest_v1",
+                "score_claim": False,
+                "ready_for_builder": True,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "remote_jobs_dispatched": False,
+                "source_archive_sha256": sha256_file(PR106_ARCHIVE),
+                "score_table_npy_sha256": sha256_file(table_path),
+                "candidate_radius": 1,
+                "candidate_count": len(grid),
+                "n_frames": n_frames,
+                "score_table_shape": [n_frames, len(grid)],
+                "score_step": 1.0,
+            }
+        ),
+        encoding="utf-8",
+    )
+    out_dir = tmp_path / "out"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "experiments/build_pr106_yshift_sidechannel.py"),
+            "--pr106-archive",
+            str(PR106_ARCHIVE),
+            "--out-dir",
+            str(out_dir),
+            "--search-mode",
+            "score_table",
+            "--score-table-npy",
+            str(table_path),
+            "--score-table-manifest",
+            str(manifest_path),
+            "--candidate-radius",
+            "1",
+            "--n-pairs",
+            "2",
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    metadata = read_json(out_dir / "build_metadata.json")
+    assert "missing_cuda_score_table_manifest" not in metadata["dispatch_blockers"]
+    assert metadata["score_table"]["score_table_manifest_validated"] is True
+    assert metadata["score_table"]["score_table_manifest_schema"] == "pr106_yshift_score_table_manifest_v1"
+
+
+def test_score_table_manifest_validation_rejects_source_drift(tmp_path):
+    if not PR106_ARCHIVE.is_file():
+        pytest.skip(f"PR106 anchor not present at {PR106_ARCHIVE}")
+    builder = _load_builder()
+    grid = builder.build_yshift_candidate_grid(radius=1)
+    table_path = tmp_path / "cuda_score_table.npy"
+    np.save(table_path, np.zeros((4, len(grid)), dtype=np.float32))
+    manifest_path = tmp_path / "score_table_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "score_claim": False,
+                "ready_for_builder": True,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "remote_jobs_dispatched": False,
+                "source_archive_sha256": "0" * 64,
+                "score_table_npy_sha256": sha256_file(table_path),
+                "candidate_radius": 1,
+                "candidate_count": len(grid),
+                "n_frames": 4,
+                "score_table_shape": [4, len(grid)],
+                "score_step": 1.0,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="source_archive_sha256"):
+        builder.validate_score_table_manifest(
+            manifest_path,
+            score_table_npy=table_path,
+            pr106_archive=PR106_ARCHIVE,
+            n_frames=4,
+            candidate_radius=1,
+            candidate_count=len(grid),
+            score_step=1.0,
+        )
 
 
 def test_search_mode_gradient_raises_without_cuda():

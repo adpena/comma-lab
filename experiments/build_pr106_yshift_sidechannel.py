@@ -53,6 +53,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import io
+import json
 import struct
 import zipfile
 from pathlib import Path
@@ -260,6 +261,49 @@ def choose_yshift_candidates_from_score_table_file(
     return selected, diagnostics
 
 
+def validate_score_table_manifest(
+    manifest_path: Path,
+    *,
+    score_table_npy: Path,
+    pr106_archive: Path,
+    n_frames: int,
+    candidate_radius: int,
+    candidate_count: int,
+    score_step: float,
+) -> dict[str, object]:
+    """Validate CUDA score-table provenance before reducing it to charged bytes."""
+
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"score table manifest is not valid JSON: {exc}") from exc
+    if not isinstance(manifest, dict):
+        raise ValueError("score table manifest must be a JSON object")
+    if manifest.get("score_claim") is not False:
+        raise ValueError("score table manifest must keep score_claim=false")
+    if manifest.get("ready_for_builder") is not True:
+        raise ValueError("score table manifest must have ready_for_builder=true")
+    if manifest.get("source_archive_sha256") != sha256_file(pr106_archive):
+        raise ValueError("score table manifest source_archive_sha256 does not match --pr106-archive")
+    if manifest.get("score_table_npy_sha256") != sha256_file(score_table_npy):
+        raise ValueError("score table manifest score_table_npy_sha256 does not match --score-table-npy")
+    if manifest.get("candidate_radius") != int(candidate_radius):
+        raise ValueError("score table manifest candidate_radius mismatch")
+    if manifest.get("candidate_count") != int(candidate_count):
+        raise ValueError("score table manifest candidate_count mismatch")
+    if manifest.get("n_frames") != int(n_frames):
+        raise ValueError("score table manifest n_frames mismatch")
+    if manifest.get("score_table_shape") != [int(n_frames), int(candidate_count)]:
+        raise ValueError("score table manifest score_table_shape mismatch")
+    if float(manifest.get("score_step", float("nan"))) != float(score_step):
+        raise ValueError("score table manifest score_step mismatch")
+    if manifest.get("ready_for_exact_eval_dispatch") is True:
+        raise ValueError("score table manifest must not claim exact-eval dispatch readiness")
+    if manifest.get("dispatch_attempted") is True or manifest.get("remote_jobs_dispatched") is True:
+        raise ValueError("score table manifest must not mark dispatch attempted")
+    return manifest
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--pr106-archive", type=Path, required=True,
@@ -365,6 +409,17 @@ def main() -> int:
 
     score_table_metadata: dict[str, object] | None = None
     if args.score_table_npy is not None:
+        score_table_manifest: dict[str, object] | None = None
+        if args.score_table_manifest is not None:
+            score_table_manifest = validate_score_table_manifest(
+                args.score_table_manifest,
+                score_table_npy=args.score_table_npy,
+                pr106_archive=args.pr106_archive,
+                n_frames=n_frames,
+                candidate_radius=args.candidate_radius,
+                candidate_count=int(search_diagnostics.get("candidate_grid_count", 0)),
+                score_step=args.score_step,
+            )
         score_table_metadata = {
             "score_table_npy_path": str(args.score_table_npy),
             "score_table_npy_bytes": int(args.score_table_npy.stat().st_size),
@@ -377,6 +432,10 @@ def main() -> int:
             "score_table_required_provenance": (
                 "CUDA scorer table must be generated against the exact source archive; "
                 "this builder only reduces the table into charged bytes."
+            ),
+            "score_table_manifest_validated": score_table_manifest is not None,
+            "score_table_manifest_schema": (
+                score_table_manifest.get("manifest_schema") if score_table_manifest is not None else None
             ),
             "search_diagnostics": search_diagnostics,
         }
