@@ -3176,21 +3176,35 @@ def check_preflight_scanners_use_oss_mirror_helper(
 ) -> list[str]:
     """STATIC enforcement of cascade extinction (Round 17 R17-2 fix).
 
-    Reads preflight.py itself and verifies every `rglob("*.py")` /
-    `rglob("*.sh")` / `rglob("*")` call inside a function body either:
+    Reads preflight.py itself and verifies every literal-argument
+    `rglob("*.py")` / `rglob("*.sh")` / `rglob("*")` call inside a function
+    body either:
     - calls `_is_oss_export_mirror_path` within ±15 lines of the rglob, OR
     - is inside `_iter_python_files` / `_iter_shell_files` / the helper
       definition itself, OR
-    - explicitly walks a tree that genuinely cannot include the mirror
-      (e.g. the call site is annotated with a `# preflight-mirror-skip-ok:
-      <reason>` waiver comment within ±3 lines).
+    - is annotated with a `# preflight-mirror-skip-ok: <reason>` waiver
+      comment within ±8 lines (room for multi-line list comprehensions
+      and for-loop-over-dirs prologues).
+
+    KNOWN LIMITATIONS (Round 18 R18-2):
+    - Only matches LITERAL-ARGUMENT rglobs: `rglob("*.py")`, `rglob("*.sh")`,
+      `rglob("*")`. Variable-argument forms `rglob(suffix)`, custom-pattern
+      forms `rglob("*train*.py")`, f-strings, and `glob()` (non-recursive)
+      are invisible to this static check. Two confirmed false-negatives
+      exist today (`_candidate_supply_chain_manifest_files` line 3398 uses
+      `base.rglob(suffix)`; `_producer_is_deployed` line 12507 uses literal
+      but in a function this check exempts). Neither walks the OSS mirror
+      currently. New scanners using non-literal rglob patterns MUST route
+      through `_iter_python_files`/`_iter_shell_files` or call the helper
+      explicitly; the static gate cannot enforce them.
 
     The cascade documented in feedback_recursive_review_cascade_pattern_
     20260506.md ate 6 review rounds (R12-R17) because the helper was
     advisory only — new scanners could omit it and nothing failed. This
-    check converts the honor system into a static gate. Future scanners
-    that miss the helper FAIL preflight at commit time, not at the next
-    adversarial review round.
+    check converts the honor system into a static gate for the literal-
+    argument 99% case. Future scanners that miss the helper at a literal
+    rglob site FAIL preflight at commit time, not at the next adversarial
+    review round.
     """
     root = repo_root or REPO_ROOT
     target = root / "src/tac/preflight.py"
@@ -3263,7 +3277,7 @@ def check_preflight_scanners_use_oss_mirror_helper(
             f"_is_oss_export_mirror_path within ±15 lines. Either call "
             f"the helper, route through _iter_python_files/_iter_shell_files, "
             f"or annotate the call site with `# preflight-mirror-skip-ok: "
-            f"<reason>` (within ±3 lines)."
+            f"<reason>` (within ±8 lines)."
         )
     if verbose:
         if violations:
@@ -3284,7 +3298,7 @@ def check_preflight_scanners_use_oss_mirror_helper(
             + "\n\nFix: every rglob() walking experiments/ or src/tac/ in "
             "preflight.py MUST either call _is_oss_export_mirror_path, "
             "route through _iter_python_files/_iter_shell_files, or have "
-            "a `# preflight-mirror-skip-ok: <reason>` waiver within ±3 lines."
+            "a `# preflight-mirror-skip-ok: <reason>` waiver within ±8 lines."
         )
     return violations
 
