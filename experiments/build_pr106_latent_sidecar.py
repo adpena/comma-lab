@@ -48,12 +48,10 @@ import sys
 import time
 import zipfile
 from pathlib import Path
-from typing import Tuple
 
 import brotli  # type: ignore[import-not-found]
 import numpy as np
 import torch
-import torch.nn.functional as F
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -66,7 +64,7 @@ PR106_SRC_PATH = (
 sys.path.insert(0, str(PR106_SRC_PATH.resolve()))
 
 # Imported AFTER path insertion: PR106's reference codec + decoder model.
-from codec import parse_packed_archive, encode_latents  # type: ignore[import-not-found]  # noqa: E402
+from codec import parse_packed_archive  # type: ignore[import-not-found]  # noqa: E402
 from model import HNeRVDecoder  # type: ignore[import-not-found]  # noqa: E402
 from tac.repo_io import json_text  # noqa: E402
 
@@ -416,18 +414,25 @@ def main() -> int:
 
     # Stage J: write build metadata.
     elapsed = time.time() - started_at
+    recorded_wall_clock = 0.0 if args.smoke else elapsed
     metadata = {
         "lane_id": "lane_pr106_latent_sidecar",
-        "wall_clock_seconds": elapsed,
+        "wall_clock_seconds": recorded_wall_clock,
+        "wall_clock_seconds_note": (
+            "omitted_for_deterministic_smoke_manifest" if args.smoke else "observed"
+        ),
         "device": args.device,
         "smoke_mode": bool(args.smoke),
         "search_mode": args.search_mode,
         "top_k": int(args.top_k),
         "source_archive": str(args.source_archive),
         "source_archive_bytes": pr106_size,
+        "source_archive_sha256": hashlib.sha256(args.source_archive.read_bytes()).hexdigest(),
         "pr106_bin_bytes": len(pr106_bytes),
         "pr106_bin_sha256": pr106_sha,
+        "sidecar_path": str(sidecar_bin_path),
         "sidecar_bytes": len(sidecar_blob),
+        "archive_path": str(archive_path),
         "archive_blob_bytes": len(archive_blob),
         "archive_zip_bytes": archive_size,
         "delta_bytes_vs_pr106": delta,
@@ -436,7 +441,14 @@ def main() -> int:
         "predicted_total_score": 0.20945 + score_delta + 0.00218 - 2 * 0.00218,
         "score_claim": False,
         "dispatch_attempted": False,
+        "remote_jobs_dispatched": False,
         "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": [
+            "cpu_smoke_or_heuristic_builder_output",
+            "requires_scorer_backed_cuda_latent_search",
+            "requires_exact_cuda_auth_eval",
+        ],
         "evidence_grade": "empirical_build_only",
         "diagnostics": diagnostics,
         "tag": "[design-validation]" if args.smoke else "[empirical:pending-stage-3]",

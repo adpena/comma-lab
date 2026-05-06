@@ -16,7 +16,8 @@ provides the contest-CUDA empirical measurement.
 """
 from __future__ import annotations
 
-import struct
+import json
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -244,3 +245,44 @@ def test_real_pr106_unwrap_roundtrip():
         "base_channels": 36,
         "eval_size": [384, 512],
     }
+
+
+@pytest.mark.skipif(
+    not PR106_ARCHIVE.is_file(),
+    reason=f"PR106 archive not present at {PR106_ARCHIVE} — skipping metadata smoke test",
+)
+def test_cpu_smoke_builder_metadata_is_dispatch_fail_closed(tmp_path: Path):
+    """The local smoke artifact must satisfy custody checks without claiming score."""
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "experiments" / "build_pr106_latent_sidecar.py"),
+            "--source-archive",
+            str(PR106_ARCHIVE),
+            "--output-dir",
+            str(tmp_path),
+            "--device",
+            "cpu",
+            "--smoke",
+            "--top-k",
+            "1",
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "sidecar encode/decode round-trip OK" in proc.stdout
+
+    metadata = json.loads((tmp_path / "build_metadata.json").read_text())
+    archive = tmp_path / "sidecar_archive.zip"
+    assert metadata["score_claim"] is False
+    assert metadata["dispatch_attempted"] is False
+    assert metadata["remote_jobs_dispatched"] is False
+    assert metadata["promotion_eligible"] is False
+    assert metadata["ready_for_exact_eval_dispatch"] is False
+    assert metadata["dispatch_blockers"]
+    assert metadata["wall_clock_seconds"] == 0.0
+    assert metadata["wall_clock_seconds_note"] == "omitted_for_deterministic_smoke_manifest"
+    assert Path(metadata["archive_path"]).resolve() == archive.resolve()
+    assert metadata["archive_zip_bytes"] == archive.stat().st_size
