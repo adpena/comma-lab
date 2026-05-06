@@ -386,6 +386,11 @@ def preflight_all(
         # (SKIPPED|TODO|STUB|"ready at"|"nothing additional"|"manual")
         # brought it to 0. Strict-flipped after cleanup.
         check_dispatch_wrapper_stages_implemented(strict=True, verbose=verbose)
+        # 2026-05-06 cross-paradigm wiring contract — STRICT @ 0 because every
+        # PipelineConfig use_* flag landed alongside its WARN guard or
+        # dispatch (commits 999211e5 → cb2ea361). Future commits that add a
+        # flag without referencing it will fail this gate.
+        check_cross_paradigm_wiring_contract(strict=True, verbose=verbose)
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -2926,6 +2931,67 @@ def check_dispatch_wrapper_stages_implemented(
             print(f"  [wrapper-stages-implemented] {len(violations)} violation(s)")
         else:
             print("  [wrapper-stages-implemented] OK")
+    return violations
+
+
+def check_cross_paradigm_wiring_contract(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Cross-paradigm wiring contract — every PipelineConfig flag starting
+    with ``use_`` must be referenced via ``cfg.<flag>`` at least once in
+    experiments/pipeline.py source. Catches the silent-no-op trap where a
+    new flag is added to PipelineConfig but no guard or dispatch references
+    it (operator flips it, expects behavior change, gets nothing).
+
+    Wired 2026-05-06 alongside the cross-paradigm wiring landing
+    (commits 999211e5 → cb2ea361). The companion test
+    ``src/tac/tests/test_cross_paradigm_wiring_contract.py`` verifies
+    individual flags; this preflight check is the build-time gate.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    pipeline_path = root / "experiments" / "pipeline.py"
+    if not pipeline_path.is_file():
+        msg = f"experiments/pipeline.py missing: {pipeline_path}"
+        if strict:
+            raise MetaBugViolation(msg)
+        return [msg]
+
+    src = pipeline_path.read_text(encoding="utf-8")
+
+    # Extract use_X bool flags from the PipelineConfig dataclass body.
+    # The dataclass spans ~150 lines; we scan for ``use_<word>: bool``
+    # declarations.
+    flag_decl_re = re.compile(r"^\s+(use_[a-z_]+)\s*:\s*bool\s*=", re.MULTILINE)
+    declared_flags = set(flag_decl_re.findall(src))
+
+    violations: list[str] = []
+    for flag in sorted(declared_flags):
+        ref_re = re.compile(rf"\bcfg\.{re.escape(flag)}\b")
+        if not ref_re.search(src):
+            violations.append(
+                f"experiments/pipeline.py: PipelineConfig.{flag} is "
+                f"declared but has NO ``cfg.{flag}`` reference (silent-no-op trap). "
+                f"Add a WARN guard or dispatch branch in the corresponding step."
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "CROSS-PARADIGM WIRING CONTRACT VIOLATIONS:\n"
+            + "\n".join(violations)
+        )
+    if verbose:
+        if violations:
+            print(f"  [cross-paradigm-wiring] {len(violations)} violation(s)")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [cross-paradigm-wiring] OK: "
+                f"{len(declared_flags)} use_* flag(s) all referenced"
+            )
     return violations
 
 
