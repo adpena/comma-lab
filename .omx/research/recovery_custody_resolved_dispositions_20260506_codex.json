@@ -1,0 +1,29 @@
+{
+  "entries": [
+    {
+      "evidence": "R59/R60 in .omx/research/recovery_quarantine_signal_loss_triage_20260505_codex.md; recovered and live ARA traces both had 408 JSONL rows and differed only in private absolute source_path values, with live docs using sanitized <operator-memory> paths.",
+      "historical_disposition": "compare_by_hand_live_diff_before_merge_or_delete",
+      "relpath": "docs/paper/ara/trace/events.jsonl",
+      "resolution": "resolved_keep_live_sanitized_trace"
+    },
+    {
+      "evidence": "R59/R60 and tools/audit_preserved_orphans.py; live PR79 launcher supersedes the shadow with commit pinning, provenance, heartbeat, typed PR79 payload parsing, and no-score proxy markers.",
+      "historical_disposition": "blocked_recovery_input_needs_canonicalization_before_promotion",
+      "relpath": "scripts/remote_lane_pr79_segaction_search.sh.PREFLIGHT_DEBT",
+      "resolution": "resolved_superseded_by_canonical_live_script"
+    },
+    {
+      "evidence": "R59/R60 and tools/audit_preserved_orphans.py; Q-faithful launcher shadow was byte-identical to the tracked canonical script.",
+      "historical_disposition": "blocked_recovery_input_needs_canonicalization_before_promotion",
+      "relpath": "scripts/remote_lane_q_faithful_jointgen.sh.PREFLIGHT_DEBT",
+      "resolution": "resolved_duplicate_of_canonical_live_script"
+    },
+    {
+      "evidence": "R59/R60 and tools/audit_recovered_remote_lanes.py; live SJ-KL launcher/runbook/tests supersede the quarantined operator suffix copy.",
+      "historical_disposition": "blocked_recovery_input_needs_canonicalization_before_promotion",
+      "relpath": "scripts/remote_lane_sjkl_c067.sh.QUARANTINED",
+      "resolution": "resolved_superseded_by_canonical_live_script"
+    }
+  ],
+  "schema": "recovery_custody_resolved_dispositions_v1"
+}

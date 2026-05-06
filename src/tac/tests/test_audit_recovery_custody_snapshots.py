@@ -68,7 +68,11 @@ def _write_expected_snapshot(root: Path) -> None:
 
 
 def _config() -> RecoveryCustodyConfig:
-    return RecoveryCustodyConfig(pyc_recovery_root="pyc", signal_loss_root="signal")
+    return RecoveryCustodyConfig(
+        pyc_recovery_root="pyc",
+        signal_loss_root="signal",
+        resolved_dispositions_manifest=None,
+    )
 
 
 def test_recovery_custody_audit_passes_expected_snapshot(tmp_path: Path) -> None:
@@ -120,3 +124,76 @@ def test_recovery_custody_audit_blocks_disposition_drift(tmp_path: Path) -> None
 
     assert payload["ready_for_recovery_custody_preservation"] is False
     assert "disposition count drifted" in "\n".join(payload["blockers"])
+
+
+def test_recovery_custody_audit_subtracts_resolved_dispositions(tmp_path: Path) -> None:
+    _write_expected_snapshot(tmp_path)
+    write_json(
+        tmp_path / "resolved.json",
+        {
+            "entries": [
+                {
+                    "historical_disposition": "compare_by_hand_live_diff_before_merge_or_delete",
+                    "relpath": EXPECTED_LIVE_DIFF_PATHS[0],
+                    "resolution": "resolved_keep_live_sanitized_trace",
+                    "evidence": "synthetic test evidence",
+                },
+                *[
+                    {
+                        "historical_disposition": (
+                            "blocked_recovery_input_needs_canonicalization_before_promotion"
+                        ),
+                        "relpath": relpath,
+                        "resolution": "resolved_superseded",
+                        "evidence": "synthetic test evidence",
+                    }
+                    for relpath in EXPECTED_BLOCKED_RECOVERY_INPUTS
+                ],
+            ]
+        },
+    )
+
+    report = audit_recovery_custody_snapshots(
+        tmp_path,
+        config=RecoveryCustodyConfig(
+            pyc_recovery_root="pyc",
+            signal_loss_root="signal",
+            resolved_dispositions_manifest="resolved.json",
+        ),
+    )
+    payload = report.to_dict()
+
+    assert payload["ready_for_recovery_custody_preservation"] is True
+    assert payload["summary"]["next_required_dispositions"]["blocked_recovery_inputs"] == []
+    assert payload["summary"]["next_required_dispositions"]["live_diff_paths"] == []
+    assert payload["summary"]["signal_loss"]["resolved_live_diff_paths"] == [EXPECTED_LIVE_DIFF_PATHS[0]]
+
+
+def test_recovery_custody_audit_blocks_nonhistorical_resolved_disposition(tmp_path: Path) -> None:
+    _write_expected_snapshot(tmp_path)
+    write_json(
+        tmp_path / "resolved.json",
+        {
+            "entries": [
+                {
+                    "historical_disposition": "compare_by_hand_live_diff_before_merge_or_delete",
+                    "relpath": "not/in/snapshot",
+                    "resolution": "bad",
+                    "evidence": "synthetic test evidence",
+                }
+            ]
+        },
+    )
+
+    report = audit_recovery_custody_snapshots(
+        tmp_path,
+        config=RecoveryCustodyConfig(
+            pyc_recovery_root="pyc",
+            signal_loss_root="signal",
+            resolved_dispositions_manifest="resolved.json",
+        ),
+    )
+    payload = report.to_dict()
+
+    assert payload["ready_for_recovery_custody_preservation"] is False
+    assert "non-historical" in "\n".join(payload["blockers"])

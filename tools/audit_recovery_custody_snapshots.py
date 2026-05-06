@@ -36,6 +36,9 @@ from tac.repo_io import json_text, read_json, repo_relative  # noqa: E402
 
 PYC_RECOVERY_ROOT = ".omx/state/orphan_pyc_recovery_20260505"
 SIGNAL_LOSS_ROOT = ".omx/state/signal_loss_audit_20260505T1439Z"
+RESOLVED_DISPOSITIONS_MANIFEST = (
+    ".omx/research/recovery_custody_resolved_dispositions_20260506_codex.json"
+)
 
 EXPECTED_PYC_TOTAL = 97
 EXPECTED_PYC_STUBS = 76
@@ -62,6 +65,7 @@ EXPECTED_LIVE_DIFF_PATHS = ("docs/paper/ara/trace/events.jsonl",)
 class RecoveryCustodyConfig:
     pyc_recovery_root: str = PYC_RECOVERY_ROOT
     signal_loss_root: str = SIGNAL_LOSS_ROOT
+    resolved_dispositions_manifest: str | None = RESOLVED_DISPOSITIONS_MANIFEST
 
 
 def _nonempty_lines(path: Path) -> list[str]:
@@ -98,6 +102,32 @@ def _load_quarantine_records(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
+def _load_resolved_dispositions(path: Path | None) -> dict[str, set[str]]:
+    if path is None or not path.exists():
+        return {}
+    payload = read_json(path)
+    if not isinstance(payload, dict) or not isinstance(payload.get("entries"), list):
+        raise ValueError(f"expected resolved-disposition entries in {path}")
+    resolved: dict[str, set[str]] = {}
+    for index, entry in enumerate(payload["entries"]):
+        if not isinstance(entry, dict):
+            raise ValueError(f"{path}: entries[{index}] is not an object")
+        disposition = entry.get("historical_disposition")
+        relpath = entry.get("relpath")
+        resolution = entry.get("resolution")
+        evidence = entry.get("evidence")
+        if not isinstance(disposition, str) or not disposition:
+            raise ValueError(f"{path}: entries[{index}].historical_disposition must be nonempty")
+        if not isinstance(relpath, str) or not relpath:
+            raise ValueError(f"{path}: entries[{index}].relpath must be nonempty")
+        if not isinstance(resolution, str) or not resolution:
+            raise ValueError(f"{path}: entries[{index}].resolution must be nonempty")
+        if not isinstance(evidence, str) or not evidence:
+            raise ValueError(f"{path}: entries[{index}].evidence must be nonempty")
+        resolved.setdefault(disposition, set()).add(relpath)
+    return resolved
+
+
 def audit_recovery_custody_snapshots(
     repo_root: Path,
     *,
@@ -106,6 +136,16 @@ def audit_recovery_custody_snapshots(
     blockers: list[str] = []
     pyc_root = repo_root / config.pyc_recovery_root
     signal_root = repo_root / config.signal_loss_root
+    resolved_manifest = (
+        repo_root / config.resolved_dispositions_manifest
+        if config.resolved_dispositions_manifest is not None
+        else None
+    )
+    try:
+        resolved_dispositions = _load_resolved_dispositions(resolved_manifest)
+    except (OSError, ValueError) as exc:
+        blockers.append(f"{config.resolved_dispositions_manifest}: {exc}")
+        resolved_dispositions = {}
 
     pyc_required = (
         "RECOVERY_INDEX.md",
@@ -226,6 +266,14 @@ def audit_recovery_custody_snapshots(
                 for row in signal_rows
                 if row.get("disposition") == "compare_by_hand_live_diff_before_merge_or_delete"
             )
+            resolved_blocked = sorted(
+                resolved_dispositions.get("blocked_recovery_input_needs_canonicalization_before_promotion", set())
+            )
+            resolved_live_diff = sorted(
+                resolved_dispositions.get("compare_by_hand_live_diff_before_merge_or_delete", set())
+            )
+            unresolved_blocked = sorted(set(blocked_inputs) - set(resolved_blocked))
+            unresolved_live_diff = sorted(set(live_diff_paths) - set(resolved_live_diff))
             signal_summary.update(
                 {
                     "quarantine_record_count": len(signal_rows),
@@ -233,6 +281,11 @@ def audit_recovery_custody_snapshots(
                     "disposition_counts": dict(dispositions),
                     "blocked_recovery_inputs": blocked_inputs,
                     "live_diff_paths": live_diff_paths,
+                    "resolved_manifest": str(resolved_manifest) if resolved_manifest is not None else None,
+                    "resolved_blocked_recovery_inputs": resolved_blocked,
+                    "resolved_live_diff_paths": resolved_live_diff,
+                    "unresolved_blocked_recovery_inputs": unresolved_blocked,
+                    "unresolved_live_diff_paths": unresolved_live_diff,
                 }
             )
             for disposition, expected_count in EXPECTED_SIGNAL_DISPOSITIONS.items():
@@ -246,6 +299,21 @@ def audit_recovery_custody_snapshots(
                 blockers.append("signal-loss blocked recovery input set drifted")
             if tuple(live_diff_paths) != tuple(sorted(EXPECTED_LIVE_DIFF_PATHS)):
                 blockers.append("signal-loss live-diff path set drifted")
+            unexpected_resolved: list[str] = []
+            for disposition, relpaths in resolved_dispositions.items():
+                historical_paths = {
+                    str(row.get("relpath"))
+                    for row in signal_rows
+                    if row.get("disposition") == disposition
+                }
+                for relpath in relpaths:
+                    if relpath not in historical_paths:
+                        unexpected_resolved.append(f"{disposition}:{relpath}")
+            if unexpected_resolved:
+                blockers.append(
+                    "resolved-disposition manifest references non-historical path(s): "
+                    + ", ".join(sorted(unexpected_resolved)[:10])
+                )
 
     return AuditReport(
         audit="recovery_custody_snapshots",
@@ -259,8 +327,14 @@ def audit_recovery_custody_snapshots(
                 "pyc_incomplete_manual_rehydration_records": EXPECTED_SIGNAL_DISPOSITIONS[
                     "do_not_promote_incomplete_recovery_preserve_for_manual_rehydration"
                 ],
-                "blocked_recovery_inputs": list(EXPECTED_BLOCKED_RECOVERY_INPUTS),
-                "live_diff_paths": list(EXPECTED_LIVE_DIFF_PATHS),
+                "blocked_recovery_inputs": signal_summary.get(
+                    "unresolved_blocked_recovery_inputs",
+                    list(EXPECTED_BLOCKED_RECOVERY_INPUTS),
+                ),
+                "live_diff_paths": signal_summary.get(
+                    "unresolved_live_diff_paths",
+                    list(EXPECTED_LIVE_DIFF_PATHS),
+                ),
             },
         },
         metadata={"repo_root": repo_relative(repo_root, repo_root)},

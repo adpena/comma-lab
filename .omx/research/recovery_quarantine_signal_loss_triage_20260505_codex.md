@@ -5007,3 +5007,53 @@ Verification:
 - After staging the new audit files, `.venv/bin/python tools/all_lanes_preflight.py`
   passed: `ALL 20 PREFLIGHT CHECKS PASSED`, with Gate #12 reporting
   `recovery custody snapshots`.
+
+## R74 - 2026-05-06 Live-Diff And Blocked-Launcher Disposition Closure
+
+Resolved the non-pyc explicit custody buckets from the signal-loss snapshot
+without editing historical snapshot files.
+
+Added:
+
+- `.omx/research/recovery_custody_resolved_dispositions_20260506_codex.json`
+
+Updated:
+
+- `tools/audit_recovery_custody_snapshots.py`
+- `src/tac/tests/test_audit_recovery_custody_snapshots.py`
+
+Disposition decisions:
+
+- `docs/paper/ara/trace/events.jsonl` is resolved as
+  `resolved_keep_live_sanitized_trace`. R59/R60 already recorded the hand
+  comparison: the recovered and live traces both had `408` JSONL rows and
+  differed only in private absolute `source_path` values. The live trace uses
+  sanitized `<operator-memory>/...` paths and is canonical.
+- `scripts/remote_lane_pr79_segaction_search.sh.PREFLIGHT_DEBT` is resolved as
+  superseded by the canonical live PR79 launcher with commit pinning,
+  provenance, heartbeat, typed PR79 payload parsing, and no-score proxy
+  markers.
+- `scripts/remote_lane_q_faithful_jointgen.sh.PREFLIGHT_DEBT` is resolved as a
+  duplicate of the canonical live Q-faithful launcher.
+- `scripts/remote_lane_sjkl_c067.sh.QUARANTINED` is resolved as superseded by
+  the canonical live SJ-KL launcher/runbook/tests.
+
+The audit now preserves historical snapshot counts while separately reporting
+unresolved work. Current unresolved non-pyc buckets are empty:
+
+- `next_required_dispositions.blocked_recovery_inputs=[]`
+- `next_required_dispositions.live_diff_paths=[]`
+
+The remaining explicit unresolved recovery work is the `88`
+`do_not_promote_incomplete_recovery_preserve_for_manual_rehydration` records.
+
+Verification:
+
+- `.venv/bin/python -m pytest
+  src/tac/tests/test_audit_recovery_custody_snapshots.py -q` -> `6 passed`.
+- `.venv/bin/python tools/audit_recovery_custody_snapshots.py --format json`
+  reported `ready_for_recovery_custody_preservation=true`,
+  `unresolved_blocked_recovery_inputs=[]`, and
+  `unresolved_live_diff_paths=[]`.
+- `.venv/bin/python -m py_compile tools/audit_recovery_custody_snapshots.py
+  src/tac/tests/test_audit_recovery_custody_snapshots.py` passed.
