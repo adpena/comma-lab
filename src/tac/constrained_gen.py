@@ -746,9 +746,12 @@ def estimate_expected_pose(
             - ``ty_road_dy`` (0.3): vertical translation from road vertical shift.
             - ``tz_baseline`` (0.1): constant forward motion baseline.
             - ``tz_road_dy`` (0.2): forward motion from road vertical growth.
-            - ``rx_sky_dy`` (0.2): pitch from sky vertical shift.
-            - ``ry_sky_dx`` (0.3): yaw from sky horizontal shift.
+            - ``rx_my_car_dy`` (0.2): pitch proxy from ego-car-mask vertical shift.
+            - ``ry_my_car_dx`` (0.3): yaw proxy from ego-car-mask horizontal shift.
             - ``rz_road_cx`` (0.1): roll from road lateral asymmetry.
+
+            Legacy keys ``rx_sky_dy`` and ``ry_sky_dx`` are accepted as aliases
+            for old manifests. Class 4 is the contest ``my_car`` class, not sky.
 
     Returns:
         (P, 6) float tensor of estimated pose targets, P = N//2.
@@ -784,9 +787,9 @@ def estimate_expected_pose(
     road_dy = centroid_deltas[:, 0, 0]  # (P,) vertical shift of road
     road_dx = centroid_deltas[:, 0, 1]  # (P,) horizontal shift of road
 
-    # Sky class (4) centroid shift indicates horizon/rotation
-    sky_dy = centroid_deltas[:, 4, 0]   # (P,)
-    sky_dx = centroid_deltas[:, 4, 1]   # (P,)
+    # Class 4 is the contest my_car/ego-car mask, not a sky class.
+    my_car_dy = centroid_deltas[:, 4, 0]  # (P,)
+    my_car_dx = centroid_deltas[:, 4, 1]  # (P,)
 
     # Vanishing point proxy: road centroid x position in the first frame of each pair
     road_cx = centroids[0::2, 0, 1]  # (P,) road center-x in even-indexed (first) frames
@@ -802,18 +805,26 @@ def estimate_expected_pose(
         "ty_road_dy": 0.3,
         "tz_baseline": 0.1,
         "tz_road_dy": 0.2,
-        "rx_sky_dy": 0.2,
-        "ry_sky_dx": 0.3,
+        "rx_my_car_dy": 0.2,
+        "ry_my_car_dx": 0.3,
         "rz_road_cx": 0.1,
     }
-    w = {**_defaults, **(pose_heuristic_weights or {})}
+    overrides = dict(pose_heuristic_weights or {})
+    legacy_aliases = {
+        "rx_sky_dy": "rx_my_car_dy",
+        "ry_sky_dx": "ry_my_car_dx",
+    }
+    for old_key, new_key in legacy_aliases.items():
+        if old_key in overrides and new_key not in overrides:
+            overrides[new_key] = overrides[old_key]
+    w = {**_defaults, **overrides}
 
     poses = torch.zeros(P, 6, device=device)  # OFF_MANIFOLD_OK: heuristic constructor — ALL 6 dims populated immediately below from centroid deltas (see lines 812-817).
     poses[:, 0] = road_dx * w["tx_road_dx"]            # tx: lateral from road shift
     poses[:, 1] = road_dy * w["ty_road_dy"]             # ty: vertical from road shift
     poses[:, 2] = w["tz_baseline"] + road_dy * w["tz_road_dy"]  # tz: forward (baseline + road growth)
-    poses[:, 3] = sky_dy * w["rx_sky_dy"]               # rx: pitch from sky shift
-    poses[:, 4] = sky_dx * w["ry_sky_dx"]               # ry: yaw from sky shift
+    poses[:, 3] = my_car_dy * w["rx_my_car_dy"]         # rx: pitch proxy from ego-car-mask shift
+    poses[:, 4] = my_car_dx * w["ry_my_car_dx"]         # ry: yaw proxy from ego-car-mask shift
     poses[:, 5] = (road_cx - 0.5) * w["rz_road_cx"]    # rz: roll from road asymmetry
 
     return poses
