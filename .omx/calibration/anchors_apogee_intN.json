@@ -23,7 +23,8 @@
     "measured_utc": "2026-05-05T18:02:00Z",
     "job_id": "apogee-int8-baseline-confirm-20260505t174500z",
     "archive_sha256": "64ac1421df8adfa4364428b3397a622c5f916a6ee4f581d534ed476604f6c75b",
-    "notes": "Near-lossless ALMOST_LOSSLESS class. Validates inflate path is correct (pose 3.38e-5 ~= PR106 3.4e-5). Only +0.0017 vs PR106, which is layout overhead from int8 packing format."
+    "anchor_role": "compatibility_only",
+    "notes": "Near-lossless ALMOST_LOSSLESS class. Validates inflate path is correct (pose 3.38e-5 ~= PR106 3.4e-5). archive_bytes=187731 > PR106 lossless 186239 (+1492 bytes layout overhead from int8 packing format), so this anchor has NO rate savings vs lossless and is structurally invalid as a lossy curve-fitting datapoint. Tagged anchor_role=compatibility_only per tier-1 cleanup 2026-05-05: kept for inflate-path validation reference, EXCLUDED from lossy-curve fitting and from the lossy_anchor_invalid_no_rate_savings refusal in tac.predictor.score_band."
   },
   {
     "lane_id": "lane_apogee_int4",

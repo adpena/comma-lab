@@ -37,6 +37,7 @@ from __future__ import annotations
 # making long-running scripts appear silent for hours per the optimize_poses
 # incident on the A100 today).
 import sys as _dx_sys
+
 try:
     _dx_sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
     _dx_sys.stderr.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
@@ -49,12 +50,11 @@ import heapq
 import json
 import math
 import os
+import struct
 import sys
 import time
 import zlib
 from pathlib import Path
-
-import struct
 
 import numpy as np
 import torch
@@ -285,7 +285,7 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
         f"Unrecognized renderer checkpoint format at {ckpt_path}: "
         f"magic bytes {magic!r}. Accepted formats: "
         f"FP4A/ASYM/DPSM/I4LZ/CCh1/C3R1 binary exports, or a PyTorch pickle/zip "
-        f"(magics {[m for m in _RENDERER_PICKLE_MAGICS]}). "
+        f"(magics {list(_RENDERER_PICKLE_MAGICS)}). "
         f"This is the 2026-04-26 DEN-V2 bug class — do NOT add a fallback to "
         f"torch.load; instead fix the producer or register a new magic in "
         f"experiments/precompute_gradient_corrections.load_renderer."
@@ -605,7 +605,7 @@ def sparsify_and_quantize(
     # until ``len(pack_sparse_corrections(...)) <= rate_cap_bytes``. The
     # greedy allocator's internal accounting uses a fast 1-byte-per-pixel
     # arithmetic model; the real packed format is 4-byte uint32 indices
-    # plus C-byte int8 channels plus a JSON header — typically ~7×–13×
+    # plus C-byte int8 channels plus a JSON header - typically ~7x-13x
     # the fast model. Without this loop a 50 KB cap could materialise as
     # ~350 KB on disk, silently busting the archive size.
     out["packed_bytes"] = enforce_packed_byte_cap(out, rate_cap_bytes=rate_cap_bytes)
@@ -635,10 +635,11 @@ def enforce_packed_byte_cap(
     indices = np.asarray(sparse_data["indices"]).copy()
     values = np.asarray(sparse_data["values"]).copy()
     # Rank by gain (max abs across channels). Smallest = candidate to drop.
-    if values.ndim == 1:
-        gain = np.abs(values).astype(np.float32)
-    else:
-        gain = np.abs(values).max(axis=-1).astype(np.float32)
+    gain = (
+        np.abs(values).astype(np.float32)
+        if values.ndim == 1
+        else np.abs(values).max(axis=-1).astype(np.float32)
+    )
     order = np.argsort(-gain)  # descending: highest gain first
     indices = indices[order]
     values = values[order]
@@ -726,6 +727,7 @@ def unpack_sparse_corrections(data: bytes, compressed: bool = True) -> dict:
         "values": values,
         "scale": header["scale"],
         "shape": header["shape"],
+        "top_k_pct": header.get("top_k_pct", 0.0),
         "quantize_bits": qbits,
         "n_kept": n_kept,
         "n_total": header["n_total"],
@@ -750,7 +752,7 @@ def apply_corrections(
         (N, H, W, 3) corrected frames
     """
     N, H, W, C = frames.shape
-    assert N * H * W == corrections["n_total"], (
+    assert corrections["n_total"] == N * H * W, (
         f"Resolution mismatch: {N * H * W} vs {corrections['n_total']}"
     )
     flat_frames = frames.reshape(-1, C).copy()
@@ -889,7 +891,6 @@ def main():
         pair_end = min(pair_start + args.batch_pairs, n_pairs)
         frame_start = 2 * pair_start
         frame_end = 2 * pair_end
-        n_batch_pairs = pair_end - pair_start
 
         # Render frames (no grad through renderer, grad through pixel output)
         batch_masks_t = gt_masks[frame_start:frame_end:2].to(device)
@@ -909,7 +910,7 @@ def main():
 
         # Compute gradients (possibly multi-step averaged)
         batch_grad_accum = torch.zeros_like(rendered, device="cpu")
-        for step in range(args.n_steps):
+        for _step in range(args.n_steps):
             grad = compute_frame_gradients(
                 rendered_frames=rendered,
                 gt_masks=gt_masks[frame_start:frame_end],
@@ -1060,7 +1061,7 @@ def main():
     # Save raw gradient stats for analysis
     grad_magnitudes = np.sqrt((all_grads_np ** 2).sum(axis=-1))
     np.save(output_dir / "gradient_magnitudes.npy", grad_magnitudes)
-    print(f"\n  Gradient magnitude stats:")
+    print("\n  Gradient magnitude stats:")
     print(f"    mean={grad_magnitudes.mean():.4f}, "
           f"max={grad_magnitudes.max():.4f}, "
           f"std={grad_magnitudes.std():.4f}")

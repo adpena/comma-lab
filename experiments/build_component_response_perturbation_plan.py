@@ -19,23 +19,40 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import io
 import json
 import math
 import os
 import re
 import zipfile
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Any, Mapping
+from typing import Any
 
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parents[1] / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.repo_io import json_text, read_json, sha256_file, write_json
 
 PLAN_FORMAT = "official_component_response_plan_v1"
 PERTURBATION_BASIS_FORMAT = "perturbation_basis_v1"
 PREDICTION_DELTAS_FORMAT = "official_component_response_prediction_deltas_v1"
 VARIANT_MANIFEST_FORMAT = "official_component_response_archive_variants_v1"
 PRODUCER = "experiments/build_component_response_perturbation_plan.py"
-REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXED_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 FIXED_ZIP_PERMISSIONS = 0o644
 SCORE_EPS = 1e-12  # [heuristic:numerical-floor for division-safe component-response score ratios]
@@ -113,31 +130,16 @@ def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def _sha256_file(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 def _file_meta(path: Path, *, root: Path | None = None) -> dict[str, Any]:
     return {
         "path": _path_for_json(path, root=root),
         "bytes": int(path.stat().st_size),
-        "sha256": _sha256_file(path),
+        "sha256": sha256_file(path),
     }
 
 
-def _json_bytes(payload: Mapping[str, Any]) -> bytes:
-    return (
-        json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
-    ).encode("utf-8")
-
-
 def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(_json_bytes(payload))
+    write_json(path, payload)
 
 
 def _canonical_hash(payload: Mapping[str, Any]) -> str:
@@ -310,7 +312,7 @@ def _parse_patch_spec(spec: str) -> PatchAtom:
 
 def _load_basis_atoms(path: Path) -> list[PatchAtom]:
     try:
-        payload = json.loads(path.read_text())
+        payload = read_json(path)
     except json.JSONDecodeError as exc:
         raise ComponentResponsePerturbationError(f"{path}: invalid JSON") from exc
     if not isinstance(payload, Mapping):
@@ -370,7 +372,7 @@ def _load_prediction_map(path: Path | None) -> dict[float, dict[str, float]]:
     if path is None:
         return {}
     try:
-        payload = json.loads(path.read_text())
+        payload = read_json(path)
     except json.JSONDecodeError as exc:
         raise ComponentResponsePerturbationError(f"{path}: invalid JSON") from exc
     raw_points: list[Any]
@@ -468,7 +470,7 @@ def _load_prediction_artifact(
     epsilons: list[float],
 ) -> dict[float, dict[str, float]]:
     try:
-        payload = json.loads(path.read_text())
+        payload = read_json(path)
     except json.JSONDecodeError as exc:
         raise ComponentResponsePerturbationError(f"{path}: invalid JSON") from exc
     if not isinstance(payload, Mapping):
@@ -526,7 +528,7 @@ def _load_prediction_artifact_model(path: Path | None) -> dict[str, Any] | None:
     if path is None:
         return None
     try:
-        payload = json.loads(path.read_text())
+        payload = read_json(path)
     except json.JSONDecodeError as exc:
         raise ComponentResponsePerturbationError(f"{path}: invalid JSON") from exc
     if not isinstance(payload, Mapping):
@@ -750,7 +752,7 @@ def _prediction_for_epsilon(
 ) -> Mapping[str, float] | None:
     prediction = predictions.get(_epsilon_key(epsilon))
     if abs(epsilon) <= SCORE_EPS:
-        return {component: 0.0 for component in COMPONENTS}
+        return dict.fromkeys(COMPONENTS, 0.0)
     if prediction is None:
         if require_predicted_deltas:
             raise ComponentResponsePerturbationError(
@@ -1061,13 +1063,13 @@ def build_component_response_perturbation_plan(
         "basis_kind": "archive_byte_additive",
         "basis_id": str(basis_payload["basis_id"]),
         "basis_path": _path_for_json(basis_output, root=plan_output.parent),
-        "basis_sha256": _sha256_file(basis_output),
+        "basis_sha256": sha256_file(basis_output),
         "epsilon_units": "signed_integer_step",
         "archive_variants_manifest": _path_for_json(
             variants_manifest_output,
             root=plan_output.parent,
         ),
-        "archive_variants_manifest_sha256": _sha256_file(variants_manifest_output),
+        "archive_variants_manifest_sha256": sha256_file(variants_manifest_output),
         "canonical_response_eval_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
         "auth_eval_required": "cuda",
         "mutation_policy": basis_payload["mutation_policy"],
@@ -1230,7 +1232,7 @@ def main(argv: list[str] | None = None) -> int:
         )
     except ComponentResponsePerturbationError as exc:
         raise SystemExit(f"FATAL: {exc}") from exc
-    print(json.dumps(summary, indent=2, sort_keys=True, allow_nan=False))
+    print(json_text(summary), end="")
     return 0
 
 

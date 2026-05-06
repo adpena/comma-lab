@@ -366,18 +366,23 @@ def test_top_k_sorts_by_lagrangian() -> None:
 def test_load_anchors_from_disk_and_evaluate(tmp_path: Path) -> None:
     """Live-integration: load .omx/calibration/anchors_apogee_intN.json + evaluate.
 
-    Bug #2 (root-cause fix 2026-05-05): the canonical anchors file currently
-    has int8 archive_bytes=187731 > PR106 lossless 186239 — structurally
-    invalid (lossy anchor with no rate savings). The predictor MUST refuse
-    with `lossy_anchor_invalid_no_rate_savings`. This is the desired behavior
-    until the int8 anchor is either relabeled compat or replaced with one that
-    actually achieves rate savings.
+    Tier-1 cleanup 2026-05-05: the canonical int8 anchor (archive_bytes=187731 >
+    PR106 lossless 186239) is now tagged anchor_role=compatibility_only, so the
+    predictor no longer refuses with lossy_anchor_invalid_no_rate_savings.
+    The predictor proceeds; whatever it returns must NOT be that specific
+    refusal.
     """
     anchors_path = REPO_ROOT / ".omx" / "calibration" / "anchors_apogee_intN.json"
     if not anchors_path.is_file():
         pytest.skip("anchors file not present at repo path")
     anchors = load_calibration_anchors(anchors_path)
     assert len(anchors) >= 3
+    # int8 must be tagged compatibility_only post tier-1 cleanup.
+    int8_anchors = [a for a in anchors if a.lane_id == "lane_apogee_int8"]
+    assert int8_anchors and int8_anchors[0].anchor_role == "compatibility_only", (
+        "canonical int8 anchor must be tagged anchor_role=compatibility_only "
+        "(tier-1 cleanup 2026-05-05)"
+    )
 
     # Use distortion_proxy_local
     sys.path.insert(0, str(REPO_ROOT))
@@ -389,16 +394,12 @@ def test_load_anchors_from_disk_and_evaluate(tmp_path: Path) -> None:
         candidate_id="apogee_int8_anchor",
         archive_bytes=187731, rel_err_pct=0.24, n_layers=13, lane_class="apogee_intN",
     )
-    # The canonical anchors file is structurally invalid (Bug #2): int8 archive
-    # is LARGER than lossless. Predictor must refuse. This is the test that
-    # will start PASSING (in the not-refused sense) once the canonical anchors
-    # file is fixed (either relabel int8 as compat or replace with a smaller
-    # int8 archive that actually achieves rate savings).
-    assert int8_eval.band_refused, (
-        f"int8 expected refusal due to invalid anchor (Bug #2 - no rate savings); "
-        f"got band={int8_eval.band_low:.4f}-{int8_eval.band_high:.4f}"
+    # The lossy_anchor_invalid_no_rate_savings refusal MUST NOT fire — the
+    # int8 anchor is compatibility_only and is excluded from that gate.
+    assert "lossy_anchor_invalid_no_rate_savings" not in int8_eval.band_refusal_reason, (
+        f"lossy_anchor_invalid refusal should not fire on compatibility_only int8 anchor; "
+        f"got refusal={int8_eval.band_refusal_reason!r}"
     )
-    assert "lossy_anchor_invalid_no_rate_savings" in int8_eval.band_refusal_reason
     # Proxy itself still computes (non-negative) distortion estimates.
     assert int8_eval.proxy_pose >= 0
     assert int8_eval.proxy_seg >= 0

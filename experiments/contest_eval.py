@@ -17,7 +17,6 @@ This is the ONLY valid way to measure a contest-compliant score. All other
 eval scripts (auth_eval_renderer.py, modal_auth_eval.py) are proxies.
 """
 import argparse
-import json
 import math
 import os
 import shutil
@@ -58,10 +57,14 @@ def validate_archive(archive_path: Path) -> int:
 
 def extract_archive(archive_path: Path, extract_dir: Path) -> None:
     """Extract archive.zip to extract_dir."""
-    import zipfile
+    repo_root = find_repo_root()
+    src_path = str(repo_root / "src")
+    if src_path not in sys.path:
+        sys.path.insert(0, src_path)
+    from tac.submission_archive import safe_extract_zip
+
     extract_dir.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(archive_path, "r") as zf:
-        zf.extractall(extract_dir)
+    safe_extract_zip(archive_path, extract_dir)
 
 
 def run_inflate(
@@ -358,14 +361,16 @@ def main():
         }
 
         if args.output_json:
+            from tac.repo_io import json_text
+
             args.output_json.parent.mkdir(parents=True, exist_ok=True)
-            args.output_json.write_text(json.dumps(structured, indent=2))
+            args.output_json.write_text(json_text(structured), encoding="utf-8")
             print(f"\n  Results saved: {args.output_json}")
 
         # Also save alongside archive (include stem to avoid race with concurrent evals)
         result_name = f"contest_eval_{archive_path.stem}.json"
         default_json = archive_path.parent / result_name
-        default_json.write_text(json.dumps(structured, indent=2))
+        default_json.write_text(json_text(structured), encoding="utf-8")
 
     finally:
         if not keep:

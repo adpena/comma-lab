@@ -34,7 +34,6 @@ import subprocess
 import sys
 import tempfile
 import time
-import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -46,13 +45,13 @@ for _p in (_REPO_ROOT / "src", _REPO_ROOT / "upstream"):
     if _p.is_dir() and str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-from tac.mask_grayscale_lut import CLASS_TO_GRAY  # noqa: E402
 from tac.optimize_grayscale_canvas import (  # noqa: E402
     OptimizeConfig,
     optimize_grayscale_canvas,
 )
 from tac.preflight import PreflightError  # noqa: E402
 from tac.scorer import load_differentiable_scorers  # noqa: E402
+from tac.submission_archive import safe_extract_zip  # noqa: E402
 
 
 SCORER_INPUT_H = 384
@@ -69,8 +68,7 @@ def _decode_anchor_masks_to_classes(archive_path: Path) -> torch.Tensor:
     """
     with tempfile.TemporaryDirectory() as td:
         td_path = Path(td)
-        with zipfile.ZipFile(archive_path, "r") as zf:
-            zf.extractall(td_path)
+        safe_extract_zip(archive_path, td_path)
         masks_mkv = td_path / "masks.mkv"
         if not masks_mkv.exists():
             raise FileNotFoundError(
@@ -177,8 +175,6 @@ def _make_renderer_soft_forward(renderer):
     # conditioning takes integer masks; for the soft path we feed argmax
     # of the soft probs as the conditioning signal (CLADE only modulates
     # the activations, doesn't propagate gradient back through ids).
-    import torch.nn as _nn  # local import to avoid module pollution
-
     if not hasattr(renderer, "stem_conv") or not hasattr(renderer, "embedding"):
         raise PreflightError(
             "renderer does not expose .stem_conv + .embedding — Lane AL "
@@ -317,8 +313,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[lane-al] loading Lane A renderer ...", flush=True)
     with tempfile.TemporaryDirectory() as td:
         td_path = Path(td)
-        with zipfile.ZipFile(args.anchor_archive, "r") as zf:
-            zf.extractall(td_path)
+        safe_extract_zip(args.anchor_archive, td_path)
         renderer_bin = td_path / "renderer.bin"
         if not renderer_bin.exists():
             raise FileNotFoundError(f"missing renderer.bin in {args.anchor_archive}")

@@ -16,31 +16,44 @@ The output is still not score evidence. It prepares the next official CUDA
 from __future__ import annotations
 
 import argparse
-import hashlib
+import importlib.util
 import json
 import math
 import sys
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parents[1] / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 EXPERIMENTS_DIR = Path(__file__).resolve().parent
-for _path in (REPO_ROOT / "src", EXPERIMENTS_DIR):
-    if str(_path) not in sys.path:
-        sys.path.insert(0, str(_path))
+if str(EXPERIMENTS_DIR) not in sys.path:
+    sys.path.insert(0, str(EXPERIMENTS_DIR))
 
-from build_component_response_perturbation_plan import (  # noqa: E402
+from build_component_response_perturbation_plan import (
     _load_basis_atoms,
     build_component_response_perturbation_plan,
 )
-from build_component_response_prediction_deltas import (  # noqa: E402
+from build_component_response_prediction_deltas import (
     build_component_response_prediction_deltas,
 )
-from tac.deploy.lightning.batch_jobs import (  # noqa: E402
+
+from tac.deploy.lightning.batch_jobs import (
     validate_local_component_sensitivity_artifact_dir,
 )
-
+from tac.repo_io import json_text, read_json, sha256_file, write_json
 
 PRODUCER = "experiments/build_component_response_plan_from_sensitivity_artifacts.py"
 SUMMARY_FORMAT = "official_component_response_plan_from_sensitivity_artifacts_summary_v1"
@@ -54,14 +67,6 @@ class ComponentResponsePlanFromSensitivityError(ValueError):
     """Raised when harvested sensitivity artifacts cannot build a safe plan."""
 
 
-def _sha256_file(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 def _file_meta(path: Path) -> dict[str, Any]:
     path = path.resolve()
     if not path.is_file():
@@ -69,19 +74,12 @@ def _file_meta(path: Path) -> dict[str, Any]:
     return {
         "path": str(path),
         "bytes": int(path.stat().st_size),
-        "sha256": _sha256_file(path),
+        "sha256": sha256_file(path),
     }
 
 
-def _json_bytes(payload: Mapping[str, Any]) -> bytes:
-    return (
-        json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
-    ).encode("utf-8")
-
-
 def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(_json_bytes(payload))
+    write_json(path, payload)
 
 
 def _finite_epsilons(values: list[float]) -> list[float]:
@@ -114,7 +112,7 @@ def _required_artifact_file(artifact_dir: Path, name: str) -> Path:
 
 def _load_json_object(path: Path, *, label: str) -> dict[str, Any]:
     try:
-        payload = json.loads(path.read_text())
+        payload = read_json(path)
     except json.JSONDecodeError as exc:
         raise ComponentResponsePlanFromSensitivityError(f"{label} is not valid JSON: {path}") from exc
     if not isinstance(payload, dict):
@@ -713,7 +711,7 @@ def main(argv: list[str] | None = None) -> int:
         )
     except (ComponentResponsePlanFromSensitivityError, ValueError, FileNotFoundError) as exc:
         raise SystemExit(f"FATAL: {exc}") from exc
-    print(json.dumps(summary, indent=2, sort_keys=True, allow_nan=False))
+    print(json_text(summary), end="")
     return 0
 
 

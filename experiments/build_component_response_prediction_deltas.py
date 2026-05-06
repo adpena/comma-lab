@@ -11,19 +11,30 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import math
-import sys
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parents[1] / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT / "src") not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT / "src"))
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 
-from tac.sensitivity_map import load_sensitivity_map  # noqa: E402
-
+from tac.repo_io import json_text, read_json, sha256_file, write_json
+from tac.sensitivity_map import load_sensitivity_map
 
 PREDICTION_DELTAS_FORMAT = "official_component_response_prediction_deltas_v1"
 PERTURBATION_BASIS_FORMAT = "perturbation_basis_v1"
@@ -48,31 +59,16 @@ class ComponentResponsePredictionError(ValueError):
     """Raised when prediction inputs cannot form a rigorous artifact."""
 
 
-def _sha256_file(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 def _file_meta(path: Path) -> dict[str, Any]:
     return {
         "path": str(path),
         "bytes": int(path.stat().st_size),
-        "sha256": _sha256_file(path),
+        "sha256": sha256_file(path),
     }
 
 
-def _json_bytes(payload: Mapping[str, Any]) -> bytes:
-    return (
-        json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
-    ).encode("utf-8")
-
-
 def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(_json_bytes(payload))
+    write_json(path, payload)
 
 
 def _canonical_hash(payload: Any) -> str:
@@ -96,7 +92,7 @@ def _finite_float(value: Any, *, field: str) -> float:
 
 def _load_json_object(path: Path, *, label: str) -> dict[str, Any]:
     try:
-        payload = json.loads(path.read_text())
+        payload = read_json(path)
     except json.JSONDecodeError as exc:
         raise ComponentResponsePredictionError(f"{label} is invalid JSON: {path}") from exc
     if not isinstance(payload, dict):
@@ -318,7 +314,7 @@ def build_component_response_prediction_deltas(
 
     points: list[dict[str, Any]] = []
     for epsilon in epsilon_values:
-        raw_abs: dict[str, float] = {component: 0.0 for component in COMPONENTS}
+        raw_abs: dict[str, float] = dict.fromkeys(COMPONENTS, 0.0)
         contributions: list[dict[str, Any]] = []
         for atom in atom_component_sensitivities:
             delta = _integer_scaled_delta(
@@ -432,7 +428,7 @@ def main(argv: list[str] | None = None) -> int:
         )
     except ComponentResponsePredictionError as exc:
         raise SystemExit(f"FATAL: {exc}") from exc
-    print(json.dumps(summary, indent=2, sort_keys=True, allow_nan=False))
+    print(json_text(summary), end="")
     return 0
 
 
