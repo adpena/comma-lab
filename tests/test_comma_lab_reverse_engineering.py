@@ -54,6 +54,26 @@ def test_reverse_engineering_audit_classifies_curated_orphan_and_raw(tmp_path: P
         "    return report\n",
         encoding="utf-8",
     )
+    live_script = repo / "scripts/remote_lane_x.sh"
+    live_script.parent.mkdir(parents=True)
+    live_script.write_text("#!/usr/bin/env bash\nset -euo pipefail\n", encoding="utf-8")
+    shadow_script = orphan / "scripts/remote_lane_x.sh.PREFLIGHT_DEBT"
+    shadow_script.parent.mkdir(parents=True)
+    shadow_script.write_text("#!/usr/bin/env bash\nset -euo pipefail\n", encoding="utf-8")
+    live_trace = repo / "docs/paper/ara/trace/events.jsonl"
+    live_trace.parent.mkdir(parents=True)
+    live_trace.write_text(
+        '{"event_type":"observation","source_path":"<operator-memory>/MEMORY.md","summary":"MEMORY"}\n',
+        encoding="utf-8",
+    )
+    recovered_trace = orphan / "docs/paper/ara/trace/events.jsonl"
+    recovered_trace.parent.mkdir(parents=True)
+    recovered_trace.write_text(
+        '{"event_type":"observation","source_path":'
+        '"/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/MEMORY.md",'
+        '"summary":"MEMORY"}\n',
+        encoding="utf-8",
+    )
     memory = orphan / ".omx/auto_memory_snapshot_20260504T230223Z/feedback.md"
     memory.parent.mkdir(parents=True)
     memory.write_text("important memory\n", encoding="utf-8")
@@ -89,6 +109,21 @@ def test_reverse_engineering_audit_classifies_curated_orphan_and_raw(tmp_path: P
     assert by_rel[
         "reverse_engineering/orphan_pyc_recovery_20260505_codex/.omx/auto_memory_snapshot_20260504T230223Z/feedback.md"
     ].disposition == "summarize_to_research_ledger"
+    assert by_rel[
+        "reverse_engineering/orphan_pyc_recovery_20260505_codex/scripts/remote_lane_x.sh.PREFLIGHT_DEBT"
+    ].category == "orphan_operator_tool_shadow"
+    assert by_rel[
+        "reverse_engineering/orphan_pyc_recovery_20260505_codex/scripts/remote_lane_x.sh.PREFLIGHT_DEBT"
+    ].disposition == "delete_after_manifest"
+    assert by_rel[
+        "reverse_engineering/orphan_pyc_recovery_20260505_codex/scripts/remote_lane_x.sh.PREFLIGHT_DEBT"
+    ].target == "scripts/remote_lane_x.sh"
+    assert by_rel[
+        "reverse_engineering/orphan_pyc_recovery_20260505_codex/docs/paper/ara/trace/events.jsonl"
+    ].category == "orphan_report_private_path_shadow"
+    assert by_rel[
+        "reverse_engineering/orphan_pyc_recovery_20260505_codex/docs/paper/ara/trace/events.jsonl"
+    ].disposition == "delete_after_manifest"
 
     payload = json.loads(render_json(records))
     assert payload["total_files"] == len(records)

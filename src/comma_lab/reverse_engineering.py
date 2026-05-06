@@ -9,6 +9,7 @@ forensics, and externalize raw artifacts without losing signal.
 from __future__ import annotations
 
 import dataclasses
+import json
 from collections import Counter
 from collections.abc import Iterable, Sequence
 from pathlib import Path
@@ -57,6 +58,7 @@ DAMAGED_DECOMPILE_MARKERS = (
     "None(",
     "= [][",
 )
+RECOVERY_OPERATOR_SUFFIXES = (".PREFLIGHT_DEBT", ".QUARANTINED")
 
 
 @dataclasses.dataclass(frozen=True)
@@ -155,6 +157,43 @@ def _same_ignoring_recovery_header(a: Path, b: Path) -> bool:
         return _strip_recovery_header(a.read_bytes()) == _strip_recovery_header(b.read_bytes())
     except UnicodeDecodeError:
         return False
+
+
+def _same_trace_except_source_path(live_path: Path, recovered_path: Path) -> bool:
+    """Return true when a recovered ARA trace only leaks private source paths."""
+
+    try:
+        live_lines = live_path.read_text(encoding="utf-8").splitlines()
+        recovered_lines = recovered_path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError):
+        return False
+    if len(live_lines) != len(recovered_lines):
+        return False
+    for live_line, recovered_line in zip(live_lines, recovered_lines, strict=True):
+        try:
+            live = json.loads(live_line)
+            recovered = json.loads(recovered_line)
+        except json.JSONDecodeError:
+            return False
+        live_source = live.pop("source_path", None)
+        recovered_source = recovered.pop("source_path", None)
+        if live != recovered:
+            return False
+        if not isinstance(live_source, str) or not live_source.startswith("<operator-memory>/"):
+            return False
+        if not isinstance(recovered_source, str) or "/.claude/projects/" not in recovered_source:
+            return False
+    return True
+
+
+def _operator_shadow_live_path(rel_after_orphan: str, repo_root: Path) -> str | None:
+    for suffix in RECOVERY_OPERATOR_SUFFIXES:
+        if not rel_after_orphan.endswith(suffix):
+            continue
+        candidate = rel_after_orphan.removesuffix(suffix)
+        if (repo_root / candidate).is_file():
+            return candidate
+    return None
 
 
 def _repo_rel(path: Path, repo_root: Path) -> str:
@@ -286,7 +325,29 @@ def classify_file(path: Path, repo_root: Path, reverse_root: Path) -> ReverseEng
         rel_to_reverse = path.resolve().relative_to(reverse_root.resolve()).as_posix()
         if rel_to_reverse.startswith(f"{ORPHAN_ROOT_NAME}/"):
             rel_after_orphan = rel_to_reverse[len(f"{ORPHAN_ROOT_NAME}/") :]
-            if _is_damaged_decompile(path):
+            operator_shadow_target = _operator_shadow_live_path(rel_after_orphan, repo_root)
+            docs_trace_target = repo_root / rel_after_orphan
+            if (
+                rel_after_orphan == "docs/paper/ara/trace/events.jsonl"
+                and docs_trace_target.is_file()
+                and _same_trace_except_source_path(docs_trace_target, path)
+            ):
+                category = "orphan_report_private_path_shadow"
+                disposition = "delete_after_manifest"
+                target = rel_after_orphan
+                reason = (
+                    "Recovered ARA trace matches the live sanitized trace except for private absolute "
+                    "operator-memory source paths; keep the sanitized docs trace as canonical."
+                )
+            elif operator_shadow_target is not None:
+                category = "orphan_operator_tool_shadow"
+                disposition = "delete_after_manifest"
+                target = operator_shadow_target
+                reason = (
+                    "Recovered operator suffix copy is superseded by the canonical unsuffixed script; "
+                    "the live script/runbook/tests carry the reusable signal."
+                )
+            elif _is_damaged_decompile(path):
                 category = "orphan_damaged_decompile"
                 disposition = "preserve_until_hand_rehydration"
                 target = rel_after_orphan

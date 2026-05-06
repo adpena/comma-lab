@@ -4256,3 +4256,80 @@ Verification:
   --release-strict --release-manifest
   .omx/research/reverse_engineering_release_manifest_20260505_codex.json
   --summary` -> `files=705 blockers=0`.
+
+## R59 - 2026-05-06 Reverse-Engineering Promotion Queue Closed
+
+The remaining reverse-engineering promotion queue had four entries. Each was
+reviewed against the live canonical target before changing the audit
+classifier:
+
+- `docs/paper/ara/trace/events.jsonl`
+  - recovered SHA-256
+    `72ed77a99fed6d7e28e00ff456619b75fb068c5d21ba7cb9ca081127d295c845`
+  - live sanitized SHA-256
+    `0cef0e0c1bf75ad20154af6082b442d304140f75cfba08a088ced6b66aa97fde`
+  - both have `408` JSONL rows; every field matches except `source_path`.
+    The recovered copy contains private absolute
+    `/Users/adpena/.claude/projects/...` paths, while the live doc uses
+    sanitized `<operator-memory>/...` paths. The live trace is canonical.
+- `remote_lane_pr79_segaction_search.sh.PREFLIGHT_DEBT`
+  - recovered SHA-256
+    `efef151f731ccb193726ed7a97328f51c8635c4eca61e25ec87d8b702389ca41`
+  - live canonical SHA-256
+    `be1a13b151e6b05fa3318b7962e0436da85d550066a2c718676a74e7803f489f`
+  - the live script supersedes the recovered shadow with commit pinning,
+    pinned Brotli dependency, heartbeat/provenance, payload parser/writer
+    patches, and explicit proxy-only score custody.
+- `remote_lane_q_faithful_jointgen.sh.PREFLIGHT_DEBT`
+  - recovered/live SHA-256
+    `5ab8d5531589dd4552d47612934509115fee88ca35f413f25f9b75cdeac3c4f9`
+  - byte-identical to the canonical live script.
+- `remote_lane_sjkl_c067.sh.QUARANTINED`
+  - recovered SHA-256
+    `b655596b8ce4b54265411b60e7cee66d5d48359c556c7bcca956156ede4d26b5`
+  - live canonical SHA-256
+    `544cb7dff4e4137d2d1617c578259b0a0c8b6286d17fbcac20aa0481b22af107`
+  - the live script supersedes the recovered shadow with the corrected
+    `lane_sjkl_c067` claim id, provenance JSON, prepared-tensor fail-closed
+    contract, current SJ-KL builder flags, and auth-eval workdir custody.
+
+Classifier hardening:
+
+- `src/comma_lab/reverse_engineering.py` now classifies recovered ARA traces
+  that differ only by private `source_path` values as
+  `orphan_report_private_path_shadow` / `delete_after_manifest`.
+- It also classifies recovered `.PREFLIGHT_DEBT` and `.QUARANTINED` operator
+  script shadows as `orphan_operator_tool_shadow` / `delete_after_manifest`
+  when the canonical unsuffixed script exists on main.
+
+Regression coverage:
+
+- `tests/test_comma_lab_reverse_engineering.py` now covers both private-path
+  trace shadows and recovered remote-lane suffix shadows.
+- Existing recovered-lane tests still guard the canonical live scripts and
+  runbook-visible classifications.
+
+Verification:
+
+- `.venv/bin/python -m pytest tests/test_comma_lab_reverse_engineering.py
+  src/tac/tests/test_audit_recovered_remote_lanes.py
+  src/tac/tests/test_recovered_remote_lane_scripts.py -q` -> `8 passed`.
+- `bash -n scripts/remote_lane_pr79_segaction_search.sh
+  scripts/remote_lane_q_faithful_jointgen.sh
+  scripts/remote_lane_sjkl_c067.sh` passed.
+- `.venv/bin/python -m py_compile src/comma_lab/reverse_engineering.py
+  tools/audit_reverse_engineering_tree.py tools/audit_recovered_remote_lanes.py`
+  passed.
+- `.venv/bin/python tools/audit_reverse_engineering_tree.py --repo-root .
+  --summary` -> `files=705 blockers=0`.
+- `.venv/bin/python tools/audit_reverse_engineering_tree.py --repo-root .
+  --release-strict --release-manifest
+  .omx/research/reverse_engineering_release_manifest_20260505_codex.json
+  --summary` -> `files=705 blockers=0`.
+
+Post-R59 audit state:
+
+- Promotion queue: `0`.
+- `delete_after_manifest`: `4` resolved shadows.
+- `preserve_until_hand_rehydration`: `14` damaged decompile/provenance files
+  that still require hand rehydration before any promotion.
