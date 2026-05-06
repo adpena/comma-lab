@@ -466,6 +466,11 @@ def preflight_all(
         # Memory: feedback_three_active_bug_classes_needing_strict_checks_20260429.md.
         check_callsite_contracts_satisfied(strict=True, verbose=verbose)
         check_no_proxy_metric_drives_decision(strict=True, verbose=verbose)
+        # Round 17 R17-2 cascade-extinction gate: every rglob() walking
+        # experiments/ or src/tac/ in this very file must call
+        # _is_oss_export_mirror_path. Converts the 6-round honor system
+        # into a static gate at preflight time.
+        check_preflight_scanners_use_oss_mirror_helper(strict=True, verbose=verbose)
         # PCC2 (2026-04-30): comment-only contracts. Catches the IMP cycle
         # 0 = 1.98 metabug class — placeholder/stub with a comment promising
         # the wrapper will swap in the real impl, but no backing assertion.
@@ -3164,6 +3169,124 @@ def _is_oss_export_mirror_path(p: Path) -> bool:
     rounds of fixes.
     """
     return "comma_lab_public_export" in p.parts
+
+
+def check_preflight_scanners_use_oss_mirror_helper(
+    *, strict: bool = False, verbose: bool = False, repo_root: Path | None = None,
+) -> list[str]:
+    """STATIC enforcement of cascade extinction (Round 17 R17-2 fix).
+
+    Reads preflight.py itself and verifies every `rglob("*.py")` /
+    `rglob("*.sh")` / `rglob("*")` call inside a function body either:
+    - calls `_is_oss_export_mirror_path` within ±15 lines of the rglob, OR
+    - is inside `_iter_python_files` / `_iter_shell_files` / the helper
+      definition itself, OR
+    - explicitly walks a tree that genuinely cannot include the mirror
+      (e.g. the call site is annotated with a `# preflight-mirror-skip-ok:
+      <reason>` waiver comment within ±3 lines).
+
+    The cascade documented in feedback_recursive_review_cascade_pattern_
+    20260506.md ate 6 review rounds (R12-R17) because the helper was
+    advisory only — new scanners could omit it and nothing failed. This
+    check converts the honor system into a static gate. Future scanners
+    that miss the helper FAIL preflight at commit time, not at the next
+    adversarial review round.
+    """
+    root = repo_root or REPO_ROOT
+    target = root / "src/tac/preflight.py"
+    if not target.exists():
+        return []
+    try:
+        text = target.read_text()
+    except (UnicodeDecodeError, OSError):
+        return []
+    lines = text.splitlines()
+    rglob_pat = re.compile(r'\.rglob\("\*(?:\.py|\.sh|)"\)')
+    helper_pat = re.compile(r'_is_oss_export_mirror_path\b')
+    waiver_pat = re.compile(r'#\s*preflight-mirror-skip-ok:')
+    # Functions whose internals are exempt from the rule because they ARE
+    # the central skip implementation (or the static-enforcement check
+    # itself, which legitimately scans without skipping).
+    exempt_function_prefixes = (
+        "_iter_python_files",
+        "_iter_shell_files",
+        "_is_oss_export_mirror_path",
+        "check_preflight_scanners_use_oss_mirror_helper",
+    )
+    # Identify function-of-each-line via simple def-tracking.
+    current_func: str | None = None
+    func_starts: dict[int, str] = {}
+    for i, ln in enumerate(lines, start=1):
+        m = re.match(r"^def\s+(\w+)\s*\(", ln)
+        if m:
+            current_func = m.group(1)
+            func_starts[i] = current_func
+    # Build line→function lookup by walking forward from each def.
+    sorted_starts = sorted(func_starts.items())
+    line_to_func: dict[int, str] = {}
+    for idx, (start_lineno, fn) in enumerate(sorted_starts):
+        end_lineno = sorted_starts[idx + 1][0] - 1 if idx + 1 < len(sorted_starts) else len(lines)
+        for k in range(start_lineno, end_lineno + 1):
+            line_to_func[k] = fn
+
+    violations: list[str] = []
+    for i, ln in enumerate(lines, start=1):
+        if not rglob_pat.search(ln):
+            continue
+        fn = line_to_func.get(i, "<module>")
+        if fn.startswith(exempt_function_prefixes):
+            continue
+        # Window for helper / waiver lookup: ±15 lines around the rglob.
+        lo = max(0, i - 16)
+        hi = min(len(lines), i + 14)
+        window = "\n".join(lines[lo:hi])
+        if helper_pat.search(window):
+            continue
+        # Waiver must be within ±8 lines of the rglob (enough room for a
+        # multi-line list comprehension or for-loop-over-dirs prologue).
+        waiver_lo = max(0, i - 9)
+        waiver_hi = min(len(lines), i + 8)
+        waiver_window = "\n".join(lines[waiver_lo:waiver_hi])
+        if waiver_pat.search(waiver_window):
+            continue
+        # Determine if this rglob walks a dir that might contain the mirror.
+        # Heuristic: look back ~30 lines for a string literal "experiments"
+        # or "src/tac" in the surrounding code.
+        ctx_lo = max(0, i - 31)
+        ctx_window = "\n".join(lines[ctx_lo:i])
+        walks_experiments = '"experiments"' in ctx_window or '"src/tac"' in ctx_window
+        if not walks_experiments:
+            continue
+        violations.append(
+            f"src/tac/preflight.py:{i}: function {fn!r} has rglob() that "
+            f"walks experiments/ or src/tac/ without calling "
+            f"_is_oss_export_mirror_path within ±15 lines. Either call "
+            f"the helper, route through _iter_python_files/_iter_shell_files, "
+            f"or annotate the call site with `# preflight-mirror-skip-ok: "
+            f"<reason>` (within ±3 lines)."
+        )
+    if verbose:
+        if violations:
+            print(
+                f"  [oss-mirror-helper-enforced] {len(violations)} violation(s) "
+                f"in preflight.py — cascade-extinction gate"
+            )
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print("  [oss-mirror-helper-enforced] OK: cascade extinct")
+    if violations and strict:
+        raise MetaBugViolation(
+            "OSS-EXPORT MIRROR HELPER ENFORCEMENT FAILED:\n"
+            + "\n".join(f"  • {v}" for v in violations[:10])
+            + (f"\n  … and {len(violations) - 10} more"
+               if len(violations) > 10 else "")
+            + "\n\nFix: every rglob() walking experiments/ or src/tac/ in "
+            "preflight.py MUST either call _is_oss_export_mirror_path, "
+            "route through _iter_python_files/_iter_shell_files, or have "
+            "a `# preflight-mirror-skip-ok: <reason>` waiver within ±3 lines."
+        )
+    return violations
 
 
 def _iter_python_files(root: Path, dirs: list[str]) -> list[Path]:
@@ -8418,6 +8541,10 @@ def check_no_proxy_metric_drives_decision(
         if p.is_file():
             files = [p]
         elif p.is_dir():
+            # preflight-mirror-skip-ok: this scanner uses substring matching on
+            # rel_s against _MPS_DECISION_EXEMPT_PATH_PARTS (which includes
+            # "/comma_lab_public_export/") rather than .parts membership; the
+            # exemption is enforced in the per-file loop below at line ~8554.
             files = [
                 f for f in p.rglob("*")
                 if f.is_file() and f.suffix in target_suffixes
@@ -13023,6 +13150,8 @@ def check_python_heredocs_no_undefined_names(
         for sh in d_path.rglob("*.sh"):
             if sh.is_dir() or any(p in skip_parts for p in sh.parts):
                 continue
+            if _is_oss_export_mirror_path(sh):
+                continue
             try:
                 text = sh.read_text(errors="ignore")
             except (FileNotFoundError, PermissionError):
@@ -13361,6 +13490,8 @@ def check_python_heredocs_in_shell_compile(
             continue
         for sh in d_path.rglob("*.sh"):
             if sh.is_dir() or any(p in skip_parts for p in sh.parts):
+                continue
+            if _is_oss_export_mirror_path(sh):
                 continue
             try:
                 text = sh.read_text(errors="ignore")
