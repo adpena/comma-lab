@@ -196,6 +196,134 @@ def _dedupe_preserve(items: list[str]) -> list[str]:
     return out
 
 
+def _manifest_entries_by_path(manifest: dict[str, Any], *, manifest_path: Path) -> dict[str, dict[str, Any]]:
+    files = manifest.get("files")
+    if not isinstance(files, list):
+        raise ValueError(f"source manifest missing files list: {manifest_path}")
+    out: dict[str, dict[str, Any]] = {}
+    for index, item in enumerate(files):
+        if not isinstance(item, dict):
+            raise ValueError(f"source manifest files[{index}] must be an object: {manifest_path}")
+        rel = item.get("path")
+        if not isinstance(rel, str) or not rel:
+            raise ValueError(f"source manifest files[{index}].path must be a nonempty string: {manifest_path}")
+        if rel in out:
+            raise ValueError(f"source manifest contains duplicate path: {rel}")
+        out[rel] = item
+    return out
+
+
+def _assert_manifest_entry_matches_disk(entry: dict[str, Any], *, repo_root: Path, manifest_path: Path) -> None:
+    rel = entry["path"]
+    path = repo_root / rel
+    if not path.is_file():
+        raise ValueError(f"source manifest path is not a local file before submit: {rel}")
+    expected_bytes = entry.get("bytes")
+    expected_sha = entry.get("sha256")
+    if not isinstance(expected_bytes, int):
+        raise ValueError(f"source manifest entry missing integer bytes for {rel}: {manifest_path}")
+    if not isinstance(expected_sha, str) or not expected_sha:
+        raise ValueError(f"source manifest entry missing sha256 for {rel}: {manifest_path}")
+    actual_bytes = path.stat().st_size
+    actual_sha = sha256_file(path)
+    if actual_bytes != expected_bytes or actual_sha != expected_sha:
+        raise ValueError(
+            "exact-eval submit blocked; local file changed after staging source manifest: "
+            f"{rel} expected bytes={expected_bytes} sha256={expected_sha} "
+            f"actual bytes={actual_bytes} sha256={actual_sha}"
+        )
+
+
+def _public_preflight_path(plan: dict[str, Any]) -> str | None:
+    metadata = plan.get("queue_metadata")
+    if isinstance(metadata, dict):
+        value = metadata.get("public_preflight")
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
+def _validate_public_replay_preflight(plan: dict[str, Any], *, repo_root: Path) -> None:
+    preflight_rel = _public_preflight_path(plan)
+    if preflight_rel is None:
+        return
+    preflight_path = repo_root / _repo_rel(preflight_rel, repo_root=repo_root)
+    preflight = _load_json(preflight_path)
+    if preflight.get("ready_for_exact_eval_dispatch") is not True:
+        raise ValueError(
+            "exact-eval submit blocked; public replay preflight is not ready_for_exact_eval_dispatch=true: "
+            f"{preflight_rel}"
+        )
+    runtime = preflight.get("runtime")
+    if not isinstance(runtime, dict):
+        raise ValueError(f"public replay preflight missing runtime object: {preflight_rel}")
+    inflate_runtime = plan.get("inflate_runtime")
+    inflate_rel = None
+    if isinstance(inflate_runtime, dict):
+        value = inflate_runtime.get("inflate_sh")
+        if isinstance(value, str):
+            inflate_rel = value
+    if not inflate_rel:
+        raise ValueError("exact-eval plan missing inflate_runtime.inflate_sh")
+    preflight_inflate = runtime.get("inflate_sh")
+    if preflight_inflate != inflate_rel:
+        raise ValueError(
+            "exact-eval submit blocked; public replay preflight runtime.inflate_sh does not match plan: "
+            f"{preflight_inflate!r} != {inflate_rel!r}"
+        )
+    expected_inflate_sha = runtime.get("inflate_sh_sha256")
+    actual_inflate_sha = sha256_file(repo_root / inflate_rel)
+    if expected_inflate_sha != actual_inflate_sha:
+        raise ValueError(
+            "exact-eval submit blocked; public replay preflight inflate_sh_sha256 is stale: "
+            f"{preflight_rel} expected {expected_inflate_sha!r} actual {actual_inflate_sha!r}"
+        )
+    inflate_text = (repo_root / inflate_rel).read_text(errors="replace")
+    if "PACT_RUNTIME_DEPENDENCY_ROOT=" in inflate_text:
+        runtime_manifest = runtime.get("runtime_manifest")
+        if not isinstance(runtime_manifest, dict):
+            raise ValueError(
+                "exact-eval submit blocked; adapter declares PACT_RUNTIME_DEPENDENCY_ROOT "
+                f"but public preflight has no runtime_manifest: {preflight_rel}"
+            )
+        roots = runtime_manifest.get("external_dependency_roots")
+        if not isinstance(roots, list) or not roots:
+            raise ValueError(
+                "exact-eval submit blocked; adapter declares PACT_RUNTIME_DEPENDENCY_ROOT "
+                f"but public preflight has no external_dependency_roots: {preflight_rel}"
+            )
+
+
+def _validate_staged_manifest_consistency(plan: dict[str, Any], *, repo_root: Path) -> None:
+    manifest_rel = plan.get("paths", {}).get("manifest_out")
+    if not isinstance(manifest_rel, str) or not manifest_rel:
+        raise ValueError("exact-eval plan missing paths.manifest_out")
+    manifest_path = repo_root / _repo_rel(manifest_rel, repo_root=repo_root)
+    manifest = _load_json(manifest_path)
+    entries = _manifest_entries_by_path(manifest, manifest_path=manifest_path)
+    missing: list[str] = []
+    for rel in plan.get("artifacts", []):
+        if not isinstance(rel, str):
+            raise ValueError(f"exact-eval plan artifact path must be a string: {rel!r}")
+        root = repo_root / _repo_rel(rel, repo_root=repo_root)
+        if root.is_file() and rel not in entries:
+            missing.append(rel)
+        elif root.is_dir():
+            prefix = rel.rstrip("/") + "/"
+            if not any(path.startswith(prefix) for path in entries):
+                missing.append(rel)
+        elif not root.exists():
+            raise ValueError(f"exact-eval plan artifact disappeared before submit: {rel}")
+    if missing:
+        raise ValueError(
+            "exact-eval submit blocked; staged source manifest does not include plan artifact(s): "
+            + ", ".join(sorted(missing))
+        )
+    for entry in entries.values():
+        _assert_manifest_entry_matches_disk(entry, repo_root=repo_root, manifest_path=manifest_path)
+    _validate_public_replay_preflight(plan, repo_root=repo_root)
+
+
 def _ssh_target_shape_blocker(target: str | None, *, flag: str) -> str | None:
     value = str(target or "").strip()
     if not value:
@@ -651,6 +779,8 @@ def main(argv: list[str] | None = None) -> int:
         _run(plan["commands"]["stage_workspace"], cwd=REPO_ROOT)
     if args.stage_only:
         return 0
+    if args.submit:
+        _validate_staged_manifest_consistency(plan, repo_root=REPO_ROOT)
 
     queue_cmd = plan["commands"]["queue_exact_eval"]
     if queue_cmd is None:

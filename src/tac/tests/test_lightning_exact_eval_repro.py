@@ -320,3 +320,106 @@ def test_read_only_sdk_artifact_view_is_rejected_as_output_dir(tmp_path: Path) -
     )
     with pytest.raises(ValueError, match="read-only artifact view"):
         mod.build_plan(args, repo_root=tmp_path)
+
+
+def test_submit_consistency_guard_rejects_file_drift_after_stage_manifest(tmp_path: Path) -> None:
+    mod = _load_module()
+    archive, baseline = _fixture_repo(tmp_path)
+    inflate = tmp_path / "submissions/robust_current/inflate.sh"
+    inflate.parent.mkdir(parents=True)
+    inflate.write_text("#!/usr/bin/env bash\n")
+    args = mod.build_parser().parse_args(
+        _base_args(archive, baseline) + ["--stage-workspace", "--remote", "lightning-pact"]
+    )
+    plan = mod.build_plan(args, repo_root=tmp_path)
+    manifest_path = tmp_path / plan["paths"]["manifest_out"]
+    manifest_path.parent.mkdir(parents=True)
+    files = []
+    for rel in plan["artifacts"]:
+        path = tmp_path / rel
+        files.append(
+            {
+                "path": rel,
+                "role": "artifact",
+                "bytes": path.stat().st_size,
+                "sha256": mod.sha256_file(path),
+            }
+        )
+    manifest_path.write_text(json.dumps({"schema_version": 1, "files": files}, indent=2) + "\n")
+
+    archive.write_bytes(b"candidate archive bytes drifted")
+
+    with pytest.raises(ValueError, match="changed after staging source manifest"):
+        mod._validate_staged_manifest_consistency(plan, repo_root=tmp_path)
+
+
+def test_public_replay_preflight_must_match_current_adapter_sha(tmp_path: Path) -> None:
+    mod = _load_module()
+    archive, baseline = _fixture_repo(tmp_path)
+    inflate = tmp_path / "experiments/public_runtime_adapters/pr106/inflate.sh"
+    inflate.parent.mkdir(parents=True)
+    inflate.write_text("#!/usr/bin/env bash\n")
+    preflight = tmp_path / "experiments/results/pr106/public_replay_preflight.json"
+    preflight.parent.mkdir(parents=True)
+    preflight.write_text(
+        json.dumps(
+            {
+                "ready_for_exact_eval_dispatch": True,
+                "runtime": {
+                    "inflate_sh": "experiments/public_runtime_adapters/pr106/inflate.sh",
+                    "inflate_sh_sha256": "stale",
+                    "runtime_manifest": {},
+                },
+            }
+        )
+        + "\n"
+    )
+    args = mod.build_parser().parse_args(
+        _base_args(archive, baseline)
+        + [
+            "--inflate-sh",
+            str(inflate),
+            "--queue-metadata",
+            "public_preflight=experiments/results/pr106/public_replay_preflight.json",
+        ]
+    )
+    plan = mod.build_plan(args, repo_root=tmp_path)
+
+    with pytest.raises(ValueError, match="inflate_sh_sha256 is stale"):
+        mod._validate_public_replay_preflight(plan, repo_root=tmp_path)
+
+
+def test_public_replay_preflight_requires_external_roots_for_declared_dependency(tmp_path: Path) -> None:
+    mod = _load_module()
+    archive, baseline = _fixture_repo(tmp_path)
+    inflate = tmp_path / "experiments/public_runtime_adapters/pr106/inflate.sh"
+    inflate.parent.mkdir(parents=True)
+    inflate.write_text("#!/usr/bin/env bash\nexport PACT_RUNTIME_DEPENDENCY_ROOT=\"$PWD/source\"\n")
+    preflight = tmp_path / "experiments/results/pr106/public_replay_preflight.json"
+    preflight.parent.mkdir(parents=True)
+    preflight.write_text(
+        json.dumps(
+            {
+                "ready_for_exact_eval_dispatch": True,
+                "runtime": {
+                    "inflate_sh": "experiments/public_runtime_adapters/pr106/inflate.sh",
+                    "inflate_sh_sha256": mod.sha256_file(inflate),
+                    "runtime_manifest": {"external_dependency_roots": []},
+                },
+            }
+        )
+        + "\n"
+    )
+    args = mod.build_parser().parse_args(
+        _base_args(archive, baseline)
+        + [
+            "--inflate-sh",
+            str(inflate),
+            "--queue-metadata",
+            "public_preflight=experiments/results/pr106/public_replay_preflight.json",
+        ]
+    )
+    plan = mod.build_plan(args, repo_root=tmp_path)
+
+    with pytest.raises(ValueError, match="no external_dependency_roots"):
+        mod._validate_public_replay_preflight(plan, repo_root=tmp_path)
