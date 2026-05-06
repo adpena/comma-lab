@@ -61,20 +61,23 @@ def test_cached_filesystem_read_cache_skips_non_source_paths(tmp_path: Path) -> 
 
 
 def test_cached_read_text_passes_through_broken_symlink_to_original(tmp_path: Path) -> None:
-    """Round 8 R8-1 + Round 9 R9-1 fix (2026-05-06): a broken symlink
-    causes `Path.resolve()` to raise FileNotFoundError on most platforms
-    (and OSError on some). Pre-R8-1, _cached_read_text/_cached_read_bytes
-    would let that exception propagate from the resolve step rather
-    than from the actual read attempt. Post-R8-1, a broken symlink
-    falls through to the original method, which raises a meaningful
-    read-failure error.
+    """Round 8 R8-1 + Round 9 R9-1 + Round 10 R10-1/R10-2 fix (2026-05-06):
+    a broken symlink causes `Path.resolve()` to raise FileNotFoundError on
+    most platforms. Pre-R8-1 the exception propagated from the resolve
+    step; post-R8-1 the resolve guard falls through to the original method
+    which raises from the read step.
 
-    R9-1 hardening: the previous R8-1 test used `try/except: pass`
-    which passed unconditionally — a tautology that proved nothing.
-    R9-1 uses `pytest.raises` so the test FAILS if no exception is
-    raised, AND asserts the broken-symlink key is NOT cached (the
-    intent of R8-1's fall-through is to avoid caching a failed
-    resolution).
+    R10-1: replaced bare `return` on symlink-unavailable platforms with
+    `pytest.skip` so CI surfaces the skip instead of a vacuous PASS.
+
+    R10-2: the previous `pytest.raises` + `read_text_entries == 0`
+    assertions passed whether or not R8-1's resolve guard existed (a bare
+    resolve raise also bypasses the cache write). The new
+    `test_cached_read_text_resolve_failure_falls_through_to_original`
+    test below uses monkeypatch to differentially pin R8-1: it injects a
+    distinctive marker into Path.resolve and asserts the marker does NOT
+    appear in the user-visible exception, proving the fall-through swapped
+    the resolve-step error for a read-step error.
     """
     target = tmp_path / "missing.py"  # never created
     link = tmp_path / "src" / "broken_link.py"
@@ -82,45 +85,83 @@ def test_cached_read_text_passes_through_broken_symlink_to_original(tmp_path: Pa
     try:
         link.symlink_to(target)
     except (OSError, NotImplementedError):
-        # Symlinks not available on this platform — skip silently.
-        return
+        pytest.skip("symlinks not supported on this platform")
 
     with cached_filesystem(cache_reads=True):
-        # The read MUST raise — either the original raises FileNotFoundError
-        # from the read attempt, or the resolve guard falls through and the
-        # original raises. What's NOT acceptable is silent success or a
-        # confusing pre-resolve error from inside _cached_read_text.
         with pytest.raises((FileNotFoundError, OSError)):
             link.read_text()
-        # The broken-symlink path must NOT be cached: caching a failed
-        # resolution would mean a future call returns stale state. R8-1
-        # specifically falls through BEFORE the cache write to prevent
-        # exactly this poisoning.
+        # Cache invariant (NOT a R8-1 differential pin — see R10-2 test
+        # below): a failed read must not leave a cache entry behind.
         stats = cache_stats()
-        # No read_text entry should reference the broken-link path.
-        # We can't introspect keys directly without exposing a fixture
-        # API, but read_text_entries == 0 means nothing was cached.
         assert stats["read_text_entries"] == 0, (
-            "broken-symlink read must not poison the read_text cache; "
+            "failed read must not poison the read_text cache; "
             f"got stats={stats}"
         )
 
 
 def test_cached_read_bytes_passes_through_broken_symlink_to_original(tmp_path: Path) -> None:
-    """Round 8 R8-1 + Round 9 R9-1 sister test for read_bytes."""
+    """Round 8 R8-1 + Round 9 R9-1 + Round 10 R10-1 sister test for read_bytes."""
     target = tmp_path / "missing.bin"
     link = tmp_path / "src" / "broken_link.bin"
     link.parent.mkdir(parents=True, exist_ok=True)
     try:
         link.symlink_to(target)
     except (OSError, NotImplementedError):
-        return
+        pytest.skip("symlinks not supported on this platform")
 
     with cached_filesystem(cache_reads=True):
         with pytest.raises((FileNotFoundError, OSError)):
             link.read_bytes()
         stats = cache_stats()
         assert stats["read_bytes_entries"] == 0, (
-            "broken-symlink read must not poison the read_bytes cache; "
+            "failed read must not poison the read_bytes cache; "
             f"got stats={stats}"
         )
+
+
+def test_cached_read_text_resolve_failure_falls_through_to_original(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Round 10 R10-2 fix (2026-05-06, 88%): differentially pin R8-1.
+
+    The previous broken-symlink tests asserted that a failed read raises
+    AND doesn't cache. Both assertions pass with or without R8-1's
+    resolve guard, because a bare unguarded `self.resolve()` raise also
+    bypasses the cache write. So the prior tests did not differentially
+    catch a regression that removed R8-1.
+
+    This test injects a UNIQUE marker into Path.resolve so that if R8-1
+    is reverted, the user-visible exception will contain the marker
+    (proving the resolve-step error reached the caller). With R8-1, the
+    fall-through routes to `_ORIGINAL_READ_TEXT(self)` which raises a
+    DIFFERENT FileNotFoundError that does NOT contain the marker.
+    """
+    source_root = tmp_path / "src"
+    source_root.mkdir()
+    path = source_root / "sample.py"
+    # Don't create the file — read_text will fail. But we need resolve()
+    # to also fail with our marker so that a missing R8-1 guard would
+    # leak the marker out.
+
+    marker = "ROUND_10_R10_2_DISTINCTIVE_RESOLVE_MARKER"
+    real_resolve = Path.resolve
+
+    def _raising_resolve(self: Path, *args, **kwargs):
+        if self == path:
+            raise FileNotFoundError(marker)
+        return real_resolve(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", _raising_resolve)
+
+    with cached_filesystem(cache_reads=True):
+        with pytest.raises((FileNotFoundError, OSError)) as exc_info:
+            path.read_text()
+
+    # R8-1 differential pin: post-R8-1 the resolve raise is CAUGHT and
+    # routed to the original read, which raises a different exception.
+    # Pre-R8-1 the resolve raise leaks out and the marker appears in the
+    # exception. Assert the marker does NOT leak.
+    assert marker not in str(exc_info.value), (
+        f"R8-1 resolve guard regressed: the resolve-step marker leaked "
+        f"into the user-visible exception. Got: {exc_info.value!r}"
+    )
