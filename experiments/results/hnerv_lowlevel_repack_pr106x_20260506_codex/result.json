@@ -1,0 +1,162 @@
+{
+  "attempts": [
+    {
+      "accepted_for_candidate": true,
+      "byte_delta": -151,
+      "candidate_bytes": 170127,
+      "candidate_section_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+      "changed": true,
+      "lgwin": null,
+      "quality": 10,
+      "rate_positive": true,
+      "raw_bytes": 229070,
+      "section_name": "decoder_packed_brotli",
+      "source_bytes": 170278,
+      "source_section_sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004"
+    },
+    {
+      "accepted_for_candidate": false,
+      "byte_delta": 0,
+      "candidate_bytes": 15849,
+      "candidate_section_sha256": "1f6433927b2999bd1a22f240e0949584a518910f59a164ba6dca665ff9074587",
+      "changed": true,
+      "lgwin": 18,
+      "quality": 11,
+      "rate_positive": false,
+      "raw_bytes": 33712,
+      "section_name": "latents_and_sidecar_brotli",
+      "source_bytes": 15849,
+      "source_section_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32"
+    }
+  ],
+  "brotli_raw_equivalence": [
+    {
+      "candidate_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+      "raw_bytes": 229070,
+      "raw_equal": true,
+      "section_name": "decoder_packed_brotli",
+      "source_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703"
+    },
+    {
+      "candidate_raw_sha256": "a38778c6304bacba39705cd9c45af337d73bc90c6b7b4ccf2563febfc312328e",
+      "raw_bytes": 33712,
+      "raw_equal": true,
+      "section_name": "latents_and_sidecar_brotli",
+      "source_raw_sha256": "a38778c6304bacba39705cd9c45af337d73bc90c6b7b4ccf2563febfc312328e"
+    }
+  ],
+  "candidate_archive_bytes": 186080,
+  "candidate_archive_path": "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/pr106x_hnerv_brotli_repack_candidate.zip",
+  "candidate_archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+  "candidate_diff": {
+    "brotli_raw_equivalence": [
+      {
+        "candidate_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+        "raw_bytes": 229070,
+        "raw_equal": true,
+        "section_name": "decoder_packed_brotli",
+        "source_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703"
+      },
+      {
+        "candidate_raw_sha256": "a38778c6304bacba39705cd9c45af337d73bc90c6b7b4ccf2563febfc312328e",
+        "raw_bytes": 33712,
+        "raw_equal": true,
+        "section_name": "latents_and_sidecar_brotli",
+        "source_raw_sha256": "a38778c6304bacba39705cd9c45af337d73bc90c6b7b4ccf2563febfc312328e"
+      }
+    ],
+    "candidate_archive_bytes": 186080,
+    "candidate_archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+    "candidate_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+    "dispatch_attempted": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "sections": [
+      {
+        "candidate_bytes": 4,
+        "candidate_section_sha256": "c670d1bee2140039bc6fc23599dd4bdc2ec00a659e0815945a7d60cfe6daccc7",
+        "label": "PR106x",
+        "section_name": "packed_header_ff_len24",
+        "source_bytes": 4,
+        "source_section_sha256": "7939f08db7d18dd4176e8e11b1232a9be6b2371db7a4e63c1c0871fb520148b6"
+      },
+      {
+        "candidate_bytes": 170127,
+        "candidate_section_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+        "label": "PR106x",
+        "section_name": "decoder_packed_brotli",
+        "source_bytes": 170278,
+        "source_section_sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004"
+      }
+    ],
+    "source_archive_bytes": 186231,
+    "source_archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+    "source_label": "PR106x",
+    "source_payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+    "tool": "tac.hnerv_lowlevel_packer.candidate_diff"
+  },
+  "candidate_diff_audit": {
+    "blockers": [],
+    "candidate_archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+    "changed_section_count": 2,
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "requires_archive_manifest_preflight",
+      "requires_lane_dispatch_claim",
+      "requires_exact_cuda_auth_eval"
+    ],
+    "rate_score_delta_if_components_equal": -0.000100544702,
+    "ready_for_archive_preflight": true,
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "sections": [
+      {
+        "byte_delta": 0,
+        "candidate_bytes": 4,
+        "candidate_section_sha256": "c670d1bee2140039bc6fc23599dd4bdc2ec00a659e0815945a7d60cfe6daccc7",
+        "changed": true,
+        "label": "PR106x",
+        "optimization_role": "control_or_metadata",
+        "score_claim": false,
+        "section_name": "packed_header_ff_len24",
+        "source_bytes": 4,
+        "source_section_sha256": "7939f08db7d18dd4176e8e11b1232a9be6b2371db7a4e63c1c0871fb520148b6"
+      },
+      {
+        "byte_delta": -151,
+        "candidate_bytes": 170127,
+        "candidate_section_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+        "changed": true,
+        "label": "PR106x",
+        "optimization_role": "decoder_weight_stream",
+        "score_claim": false,
+        "section_name": "decoder_packed_brotli",
+        "source_bytes": 170278,
+        "source_section_sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004"
+      }
+    ],
+    "source_archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+    "tool": "tac.hnerv_section_repack.audit_candidate_section_diff",
+    "total_byte_delta": -151
+  },
+  "candidate_member_name": "x",
+  "candidate_payload_bytes": 185980,
+  "candidate_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "requires_archive_manifest_preflight",
+    "requires_lane_dispatch_claim",
+    "requires_exact_cuda_auth_eval"
+  ],
+  "ready_for_archive_preflight": true,
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive_bytes": 186231,
+  "source_archive_path": "experiments/results/public_pr106_belt_and_suspenders_xrepack_20260504_codex/archive.zip",
+  "source_archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+  "source_label": "PR106x",
+  "source_member_name": "x",
+  "tool": "tac.hnerv_lowlevel_packer.build_lowlevel_brotli_repack_candidate"
+}

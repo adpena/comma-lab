@@ -15,6 +15,7 @@ set -euo pipefail
 MODE="${1:-}"
 VERSION_MESSAGE="${2:-refresh public PR archive corpus mirror}"
 DATASET_ID="${KAGGLE_DATASET_ID:-adpena/comma-video-compression-pr-archive}"
+DATASET_URL="https://www.kaggle.com/datasets/$DATASET_ID"
 RAW_SOURCE_DIR="experiments/results/public_pr_intake_full"
 RELEASE_VIEW_DIR="experiments/results/public_pr_archive_release_view"
 KAGGLE_VIEW_DIR="experiments/results/public_pr_archive_kaggle_mirror"
@@ -71,4 +72,13 @@ else
     "${KAGGLE_CMD[@]}" datasets version -p "$HERE/$KAGGLE_VIEW_DIR" -m "$VERSION_MESSAGE" --dir-mode zip
 fi
 
-echo "[kaggle-upload] DONE: https://www.kaggle.com/datasets/$DATASET_ID"
+echo "[kaggle-upload] DONE: $DATASET_URL"
+if command -v curl >/dev/null 2>&1; then
+    HTTP_STATUS="$(curl -L -A "pact-public-link-audit/1" -s -o /dev/null -w "%{http_code}" --max-time 30 "$DATASET_URL" || true)"
+    if [ "$HTTP_STATUS" = "200" ]; then
+        echo "[kaggle-upload] Public web reachability verified: $DATASET_URL"
+    else
+        echo "[kaggle-upload] WARN: Kaggle API accepted the upload, but unauthenticated web GET returned HTTP $HTTP_STATUS."
+        echo "[kaggle-upload] WARN: Kaggle may still be processing/moderating the dataset; recheck with: kaggle datasets status $DATASET_ID"
+    fi
+fi

@@ -1,0 +1,89 @@
+{
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "planning_only_section_targets",
+    "requires_byte_different_archive",
+    "requires_old_new_section_sha256_proof",
+    "requires_exact_cuda_auth_eval"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "role_counts": {
+    "control_or_metadata": 1,
+    "decoder_weight_stream": 1,
+    "latent_stream": 1
+  },
+  "rows": [
+    {
+      "archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+      "candidate_required_proof": "candidate manifest must include source section sha256, candidate section sha256, source bytes, candidate bytes, and exact archive sha256",
+      "dispatchable": false,
+      "entropy_bits_per_byte": 7.998152,
+      "label": "PR106x",
+      "optimization_role": "decoder_weight_stream",
+      "payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "rate_score_gain_if_save_10pct": 0.011337580395,
+      "rate_score_gain_if_save_1pct": 0.001133291938,
+      "rate_score_gain_if_save_5pct": 0.005668457268,
+      "recommended_next_action": "build decoder self-compression or weight-stream recoding fixture",
+      "score_claim": false,
+      "section_bytes": 170278,
+      "section_end": 170282,
+      "section_index": 1,
+      "section_name": "decoder_packed_brotli",
+      "section_sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
+      "section_start": 4,
+      "zip_member": "x"
+    },
+    {
+      "archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+      "candidate_required_proof": "candidate manifest must include source section sha256, candidate section sha256, source bytes, candidate bytes, and exact archive sha256",
+      "dispatchable": false,
+      "entropy_bits_per_byte": 7.985386,
+      "label": "PR106x",
+      "optimization_role": "latent_stream",
+      "payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "rate_score_gain_if_save_10pct": 0.001054720582,
+      "rate_score_gain_if_save_1pct": 0.000105205715,
+      "rate_score_gain_if_save_5pct": 0.000527360291,
+      "recommended_next_action": "build latent arithmetic-coding parity fixture",
+      "score_claim": false,
+      "section_bytes": 15849,
+      "section_end": 186131,
+      "section_index": 2,
+      "section_name": "latents_and_sidecar_brotli",
+      "section_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+      "section_start": 170282,
+      "zip_member": "x"
+    },
+    {
+      "archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+      "candidate_required_proof": "candidate manifest must include source section sha256, candidate section sha256, source bytes, candidate bytes, and exact archive sha256",
+      "dispatchable": false,
+      "entropy_bits_per_byte": 2.0,
+      "label": "PR106x",
+      "optimization_role": "control_or_metadata",
+      "payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "rate_score_gain_if_save_10pct": 6.65859e-07,
+      "rate_score_gain_if_save_1pct": 6.65859e-07,
+      "rate_score_gain_if_save_5pct": 6.65859e-07,
+      "recommended_next_action": "audit fixed header and metadata compaction",
+      "score_claim": false,
+      "section_bytes": 4,
+      "section_end": 4,
+      "section_index": 0,
+      "section_name": "packed_header_ff_len24",
+      "section_sha256": "7939f08db7d18dd4176e8e11b1232a9be6b2371db7a4e63c1c0871fb520148b6",
+      "section_start": 0,
+      "zip_member": "x"
+    }
+  ],
+  "schema_version": 1,
+  "score_claim": false,
+  "score_truth": "exact_cuda_auth_eval_json",
+  "scorecard_tool": "build_hnerv_frontier_scorecard",
+  "selected_labels": [
+    "PR106x"
+  ],
+  "tool": "tac.hnerv_section_repack",
+  "total_section_bytes": 186131
+}

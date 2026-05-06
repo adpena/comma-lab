@@ -154,6 +154,7 @@ reports/public/.env
 experiments/results/public_pr_intake_full/
 experiments/results/public_pr_archive_release_view/
 experiments/results/public_pr_archive_kaggle_mirror/
+experiments/results/comma_lab_public_export/
 experiments/results/public_pr*_intake_*/source/videos/
 experiments/results/public_pr*_intake_*/repo/videos/
 experiments/results/public_pr*_intake_*/replay_submission/__pycache__/

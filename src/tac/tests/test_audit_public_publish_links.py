@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
+from urllib.error import HTTPError
 
+import tools.audit_public_publish_links as audit_mod
 from tools.audit_public_publish_links import (
     audit_public_publish_links,
     extract_public_links,
     live_link_violations,
+    unauthenticated_status,
 )
 
 
@@ -75,3 +78,27 @@ def test_live_link_violations_flags_network_errors(tmp_path: Path) -> None:
 
     assert len(violations) == 1
     assert violations[0].detail == "TimeoutError returned no status"
+
+
+def test_unauthenticated_status_falls_back_to_get_after_head_404(monkeypatch) -> None:
+    calls: list[str] = []
+
+    class Response:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args) -> None:
+            return None
+
+    def fake_urlopen(request, timeout: float):
+        calls.append(request.get_method())
+        if request.get_method() == "HEAD":
+            raise HTTPError(request.full_url, 404, "not found", hdrs=None, fp=None)
+        return Response()
+
+    monkeypatch.setattr(audit_mod.urllib.request, "urlopen", fake_urlopen)
+
+    assert unauthenticated_status("https://example.invalid/dataset") == (200, "GET")
+    assert calls == ["HEAD", "GET"]

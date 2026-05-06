@@ -138,7 +138,7 @@ def unauthenticated_status(url: str, *, timeout: float = 10.0) -> tuple[int | No
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return int(response.status), "HEAD"
     except urllib.error.HTTPError as exc:
-        if exc.code not in {405, 501}:
+        if exc.code not in {401, 403, 404, 405, 501}:
             return int(exc.code), "HEAD"
     except Exception as exc:  # pragma: no cover - exercised via injected checker in tests.
         return None, type(exc).__name__
