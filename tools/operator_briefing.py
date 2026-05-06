@@ -20,6 +20,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
@@ -33,6 +34,12 @@ DASHBOARD = TOOLS / "score_dashboard.py"
 RECONCILER = TOOLS / "predicted_vs_actual_reconciler.py"
 PR91_HPM1_READINESS = TOOLS / "audit_pr91_hpm1_readiness.py"
 PR91_HPM1_RUNTIME_CONTRACT = TOOLS / "audit_pr91_hpm1_runtime_contract.py"
+PR91_HPM1_READINESS_ARTIFACT = (
+    REPO_ROOT / "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json"
+)
+PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT = (
+    REPO_ROOT / "experiments/results/pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json"
+)
 
 
 # Phase-1 supplementary lanes: pre-registered dispatches that don't fit the
@@ -251,21 +258,57 @@ def _format_exact_eval_packets() -> str:
     return "\n\n".join(lines) if lines else "  (none)"
 
 
-def _load_pr91_hpm1_blocked_lane() -> dict[str, object]:
+def _load_pr91_hpm1_readiness_artifact() -> dict[str, object]:
     readiness = _run_json(PR91_HPM1_READINESS)
     runtime = _run_json(PR91_HPM1_RUNTIME_CONTRACT)
+    readiness_artifact = _load_json_file(PR91_HPM1_READINESS_ARTIFACT)
+    runtime_artifact = _load_json_file(PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT)
+    audit_errors = [
+        str(payload["_error"])
+        for payload in (readiness, runtime, readiness_artifact, runtime_artifact)
+        if isinstance(payload.get("_error"), str)
+    ]
     readiness_blockers = list(readiness.get("dispatch_blockers") or [])
     runtime_blockers = list(runtime.get("dispatch_blockers") or [])
+    artifact_readiness_blockers = list(readiness_artifact.get("dispatch_blockers") or [])
+    artifact_runtime_blockers = list(runtime_artifact.get("dispatch_blockers") or [])
+    readiness_hash = _canonical_payload_hash(readiness)
+    runtime_hash = _canonical_payload_hash(runtime)
+    readiness_artifact_hash = _canonical_payload_hash(readiness_artifact)
+    runtime_artifact_hash = _canonical_payload_hash(runtime_artifact)
+    zip_report = {}
+    if isinstance(readiness.get("member_x"), dict) and isinstance(readiness["member_x"].get("zip_report"), dict):
+        zip_report = readiness["member_x"]["zip_report"]
+    wire_contract = zip_report.get("wire_contract") if isinstance(zip_report, dict) else {}
+    summary = (
+        "PR91 static archive/member/HPM1 custody is visible, but HPM1 decode/reencode "
+        "and HPAC runtime device semantics remain blocked; this is not a score or "
+        "dispatch artifact."
+    )
     return {
-        "lane_id": "pr91_hpm1_runtime_contract",
+        "kind": "pr91_hpm1_readiness_bundle",
         "name": "PR91 HPM1 categorical mask rate signal",
-        "state": "BLOCKED_FAIL_CLOSED",
+        "state": "AUDIT_ERROR_FAIL_CLOSED" if audit_errors else "BLOCKED_FAIL_CLOSED",
+        "evidence_grade": readiness.get("evidence_grade"),
         "ready_for_exact_eval_dispatch": False,
         "score_claim": False,
-        "readiness_artifact": "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json",
-        "runtime_contract_artifact": (
-            "experiments/results/pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json"
+        "dispatch_attempted": False,
+        "promotion_eligible": False,
+        "audit_errors": audit_errors,
+        "artifact_path": _repo_rel(PR91_HPM1_READINESS_ARTIFACT),
+        "runtime_contract_artifact_path": _repo_rel(PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT),
+        "readiness_manifest_hash_self_consistent": _manifest_hash_self_consistent(readiness),
+        "runtime_manifest_hash_self_consistent": _manifest_hash_self_consistent(runtime),
+        "readiness_artifact_manifest_hash_self_consistent": _manifest_hash_self_consistent(
+            readiness_artifact
         ),
+        "runtime_artifact_manifest_hash_self_consistent": _manifest_hash_self_consistent(
+            runtime_artifact
+        ),
+        "readiness_artifact_hash_matches_live": bool(readiness_hash)
+        and readiness_hash == readiness_artifact_hash,
+        "runtime_artifact_hash_matches_live": bool(runtime_hash)
+        and runtime_hash == runtime_artifact_hash,
         "archive_custody_matches": (
             isinstance(readiness.get("source_archive"), dict)
             and readiness["source_archive"].get("matches_expected") is True
@@ -274,9 +317,13 @@ def _load_pr91_hpm1_blocked_lane() -> dict[str, object]:
             isinstance(readiness.get("hpm1_mask_segment"), dict)
             and readiness["hpm1_mask_segment"].get("matches_expected") is True
         ),
+        "zip_wire_contract_passed": isinstance(wire_contract, dict)
+        and wire_contract.get("passed") is True,
         "ambient_device_call_count": runtime.get("ambient_device_call_count"),
         "contradiction_count": runtime.get("contradiction_count"),
         "dispatch_blockers": readiness_blockers + runtime_blockers,
+        "artifact_dispatch_blockers": artifact_readiness_blockers + artifact_runtime_blockers,
+        "summary": summary,
         "next_patch": (
             "Resolve HPAC CPU/CUDA device contract, recover full HPM1 decode/reencode "
             "parity, then prove sidecar-free runtime consumption before any dispatch."
@@ -284,23 +331,30 @@ def _load_pr91_hpm1_blocked_lane() -> dict[str, object]:
     }
 
 
-def _blocked_high_ev_lane_summaries() -> list[dict[str, object]]:
-    return [_load_pr91_hpm1_blocked_lane()]
+def _non_dispatchable_readiness_artifacts() -> list[dict[str, object]]:
+    return [_load_pr91_hpm1_readiness_artifact()]
 
 
-def _format_blocked_high_ev_lanes() -> str:
+def _format_non_dispatchable_readiness_artifacts() -> str:
     lines = []
-    for lane in _blocked_high_ev_lane_summaries():
-        blockers = ", ".join(str(item) for item in lane["dispatch_blockers"])
+    for artifact in _non_dispatchable_readiness_artifacts():
+        blockers = ", ".join(str(item) for item in artifact["dispatch_blockers"])
         lines.append(
-            f"  • {lane['lane_id']} — {lane['name']}\n"
-            f"    state {lane['state']}   ready_for_exact_eval_dispatch=false\n"
-            f"    custody: archive={lane['archive_custody_matches']} "
-            f"hpm1_mask={lane['hpm1_mask_custody_matches']}\n"
-            f"    runtime: ambient_device_calls={lane['ambient_device_call_count']} "
-            f"contradictions={lane['contradiction_count']}\n"
+            f"  • {artifact['kind']} — {artifact['name']}\n"
+            f"    state {artifact['state']}   ready_for_exact_eval_dispatch=false\n"
+            f"    readiness artifact: {artifact['artifact_path']}\n"
+            f"    runtime artifact: {artifact['runtime_contract_artifact_path']}\n"
+            f"    artifact/live hashes: readiness={artifact['readiness_artifact_hash_matches_live']} "
+            f"runtime={artifact['runtime_artifact_hash_matches_live']}\n"
+            f"    custody: archive={artifact['archive_custody_matches']} "
+            f"hpm1_mask={artifact['hpm1_mask_custody_matches']} "
+            f"zip_wire={artifact['zip_wire_contract_passed']}\n"
+            f"    runtime: ambient_device_calls={artifact['ambient_device_call_count']} "
+            f"contradictions={artifact['contradiction_count']}\n"
             f"    blockers: {blockers if blockers else '(none)'}\n"
-            f"    next patch: {lane['next_patch']}"
+            f"    audit errors: {', '.join(artifact['audit_errors']) if artifact['audit_errors'] else '(none)'}\n"
+            f"    summary: {artifact['summary']}\n"
+            f"    next patch: {artifact['next_patch']}"
         )
     return "\n\n".join(lines) if lines else "  (none)"
 
@@ -356,6 +410,45 @@ def _run_json(script: Path, extra_args: list[str] | None = None) -> dict:
         return {"_error": "non-JSON output", "_stdout": text[:500]}
 
 
+def _load_json_file(path: Path) -> dict[str, object]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {"_error": f"{_repo_rel(path)} unreadable JSON: {exc}"}
+    return payload if isinstance(payload, dict) else {"_error": f"{_repo_rel(path)} is not a JSON object"}
+
+
+def _embedded_canonical_payload_hash(payload: dict[str, object]) -> str:
+    manifest = payload.get("tool_run_manifest")
+    if not isinstance(manifest, dict):
+        return ""
+    value = manifest.get("canonical_payload_without_tool_manifest_sha256")
+    return value if isinstance(value, str) else ""
+
+
+def _recomputed_canonical_payload_hash(payload: dict[str, object]) -> str:
+    without_manifest = dict(payload)
+    without_manifest.pop("tool_run_manifest", None)
+    text = json.dumps(without_manifest, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _manifest_hash_self_consistent(payload: dict[str, object]) -> bool:
+    embedded = _embedded_canonical_payload_hash(payload)
+    return bool(embedded) and embedded == _recomputed_canonical_payload_hash(payload)
+
+
+def _canonical_payload_hash(payload: dict[str, object]) -> str:
+    return _embedded_canonical_payload_hash(payload) if _manifest_hash_self_consistent(payload) else ""
+
+
+def _repo_rel(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
 def _section(title: str, body: str) -> str:
     bar = "═" * len(title)
     return f"\n{bar}\n{title}\n{bar}\n\n{body}"
@@ -392,7 +485,7 @@ def main(argv: list[str] | None = None) -> int:
             out["pareto"] = _run_json(PARETO, ["--json"])
             out["supplementary_lanes"] = PHASE_1_SUPPLEMENTARY_LANES
             out["exact_eval_packets"] = _exact_eval_packet_summaries()
-            out["blocked_high_ev_lanes"] = _blocked_high_ev_lane_summaries()
+            out["non_dispatchable_readiness_artifacts"] = _non_dispatchable_readiness_artifacts()
         if not args.skip_dashboard:
             out["dashboard"] = _run_json(DASHBOARD, ["--top", str(args.top), "--json"])
         if not args.skip_reconciler:
@@ -420,8 +513,8 @@ def main(argv: list[str] | None = None) -> int:
             _format_exact_eval_packets(),
         ))
         parts.append(_section(
-            "Phase 1 blocked high-EV lanes — visible but fail-closed",
-            _format_blocked_high_ev_lanes(),
+            "Phase 1 blocked readiness artifacts — non-dispatchable public frontier work",
+            _format_non_dispatchable_readiness_artifacts(),
         ))
     if not args.skip_dashboard:
         parts.append(_section(

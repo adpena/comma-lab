@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import struct
 import zipfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -28,6 +29,9 @@ from tac.pr91_hpm1_codec import (
 
 SCHEMA_VERSION = 1
 KIND = "pr91_hpm1_readiness"
+LOCAL_FILE_HEADER_SIGNATURE = 0x04034B50
+CENTRAL_DIRECTORY_SIGNATURE = 0x02014B50
+END_OF_CENTRAL_DIRECTORY_SIGNATURE = 0x06054B50
 
 
 @dataclass(frozen=True)
@@ -80,17 +84,153 @@ def _read_single_x_member(archive: Path) -> tuple[bytes | None, dict[str, Any]]:
         return None, {"status": "missing_archive", "members": [], "duplicates": []}
     try:
         with zipfile.ZipFile(archive) as zf:
-            names = [info.filename for info in zf.infolist()]
+            infos = zf.infolist()
+            names = [info.filename for info in infos]
             duplicates = sorted({name for name in names if names.count(name) > 1})
+            wire_contract = _zip_wire_contract(archive, infos)
             if names != ["x"]:
                 return None, {
                     "status": "not_single_x_archive",
                     "members": names,
                     "duplicates": duplicates,
+                    "wire_contract": wire_contract,
                 }
-            return zf.read("x"), {"status": "passed", "members": names, "duplicates": duplicates}
+            try:
+                member_x = zf.read("x")
+            except Exception as exc:
+                return None, {
+                    "status": "zip_member_read_failed",
+                    "members": names,
+                    "duplicates": duplicates,
+                    "wire_contract": wire_contract,
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+            return member_x, {
+                "status": "passed",
+                "members": names,
+                "duplicates": duplicates,
+                "wire_contract": wire_contract,
+            }
     except Exception as exc:
         return None, {"status": "zip_read_failed", "error": f"{type(exc).__name__}: {exc}"}
+
+
+def _zip_wire_contract(archive: Path, infos: list[zipfile.ZipInfo]) -> dict[str, Any]:
+    raw = archive.read_bytes()
+    local_headers = _scan_local_headers(raw)
+    central_records = []
+    mismatches = []
+    for info in infos:
+        local_name = ""
+        local_error = ""
+        try:
+            if info.header_offset + 30 > len(raw):
+                raise ValueError("local header extends beyond archive")
+            signature = struct.unpack_from("<I", raw, info.header_offset)[0]
+            if signature != LOCAL_FILE_HEADER_SIGNATURE:
+                raise ValueError(f"bad local header signature 0x{signature:08x}")
+            name_len = struct.unpack_from("<H", raw, info.header_offset + 26)[0]
+            extra_len = struct.unpack_from("<H", raw, info.header_offset + 28)[0]
+            name_start = info.header_offset + 30
+            name_end = name_start + name_len
+            if name_end + extra_len > len(raw):
+                raise ValueError("local header name/extra extends beyond archive")
+            local_name = raw[name_start:name_end].decode("utf-8")
+        except (UnicodeDecodeError, ValueError, struct.error) as exc:
+            local_error = f"{type(exc).__name__}: {exc}"
+        if local_error or local_name != info.filename:
+            mismatches.append(
+                {
+                    "central_name": info.filename,
+                    "local_name": local_name,
+                    "header_offset": info.header_offset,
+                    "error": local_error,
+                }
+            )
+        central_records.append(
+            {
+                "filename": info.filename,
+                "header_offset": info.header_offset,
+                "file_size": info.file_size,
+                "compress_size": info.compress_size,
+                "compress_type": info.compress_type,
+                "flag_bits": info.flag_bits,
+                "external_attr_mode": info.external_attr >> 16,
+                "date_time": list(info.date_time),
+            }
+        )
+    local_names = [row["filename"] for row in local_headers]
+    duplicate_local_names = sorted({name for name in local_names if local_names.count(name) > 1})
+    unsafe_names = sorted(
+        name
+        for name in [*local_names, *[info.filename for info in infos]]
+        if not name or name.startswith("/") or ".." in name.split("/")
+    )
+    passed = (
+        len(local_headers) == len(infos)
+        and not duplicate_local_names
+        and not unsafe_names
+        and not mismatches
+        and all(row["filename"] for row in local_headers)
+    )
+    return {
+        "schema_version": 1,
+        "passed": passed,
+        "local_header_count": len(local_headers),
+        "central_directory_count": len(infos),
+        "duplicate_local_names": duplicate_local_names,
+        "unsafe_names": unsafe_names,
+        "central_local_name_mismatches": mismatches,
+        "local_headers": local_headers,
+        "central_records": central_records,
+    }
+
+
+def _scan_local_headers(raw: bytes) -> list[dict[str, Any]]:
+    headers: list[dict[str, Any]] = []
+    offset = 0
+    while offset + 4 <= len(raw):
+        signature = struct.unpack_from("<I", raw, offset)[0]
+        if signature in {CENTRAL_DIRECTORY_SIGNATURE, END_OF_CENTRAL_DIRECTORY_SIGNATURE}:
+            break
+        if signature != LOCAL_FILE_HEADER_SIGNATURE:
+            break
+        if offset + 30 > len(raw):
+            break
+        (
+            _version,
+            flag_bits,
+            compress_type,
+            _mtime,
+            _mdate,
+            _crc32,
+            compress_size,
+            file_size,
+            name_len,
+            extra_len,
+        ) = struct.unpack_from("<HHHHHIIIHH", raw, offset + 4)
+        name_start = offset + 30
+        name_end = name_start + name_len
+        data_start = name_end + extra_len
+        data_end = data_start + compress_size
+        if data_end > len(raw):
+            break
+        try:
+            filename = raw[name_start:name_end].decode("utf-8")
+        except UnicodeDecodeError:
+            filename = ""
+        headers.append(
+            {
+                "filename": filename,
+                "header_offset": offset,
+                "file_size": file_size,
+                "compress_size": compress_size,
+                "compress_type": compress_type,
+                "flag_bits": flag_bits,
+            }
+        )
+        offset = data_end
+    return headers
 
 
 def audit_pr91_hpm1_readiness(
@@ -141,6 +281,17 @@ def audit_pr91_hpm1_readiness(
         reason="single ZIP member x matches public PR91 custody"
         if member_x_record["matches_expected"]
         else "archive must contain exactly one byte-matching member named x",
+        failed_status="missing" if member_x is None else "failed_closed",
+    )
+    wire_contract_passed = (
+        isinstance(zip_report.get("wire_contract"), dict)
+        and zip_report["wire_contract"].get("passed") is True
+    )
+    gates["zip_wire_contract"] = _gate(
+        passed=wire_contract_passed,
+        reason="ZIP central directory and local file headers agree"
+        if wire_contract_passed
+        else "ZIP central directory and local file headers must agree",
         failed_status="missing" if member_x is None else "failed_closed",
     )
 

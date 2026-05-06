@@ -22,6 +22,8 @@ The local public PR91 archive matches the expected archive custody:
 - HPM1 mask segment sha256: `a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc`
 - HPM1 tokens sha256: `541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b`
 - HPM1 HPAC sha256: `de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd`
+- ZIP wire contract: central directory and local file header agree for the
+  single `x` member; duplicate local names are blocked by the readiness audit.
 
 ## Dispatch Blockers
 

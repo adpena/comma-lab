@@ -61,6 +61,12 @@
       "reason": "archive bytes and sha256 match public PR91 custody",
       "required_for_dispatch": true,
       "status": "passed"
+    },
+    "zip_wire_contract": {
+      "passed": true,
+      "reason": "ZIP central directory and local file headers agree",
+      "required_for_dispatch": true,
+      "status": "passed"
     }
   },
   "hpm1_mask_segment": {
@@ -110,7 +116,45 @@
       "members": [
         "x"
       ],
-      "status": "passed"
+      "status": "passed",
+      "wire_contract": {
+        "central_directory_count": 1,
+        "central_local_name_mismatches": [],
+        "central_records": [
+          {
+            "compress_size": 222304,
+            "compress_type": 0,
+            "date_time": [
+              2026,
+              5,
+              3,
+              23,
+              28,
+              12
+            ],
+            "external_attr_mode": 384,
+            "file_size": 222304,
+            "filename": "x",
+            "flag_bits": 0,
+            "header_offset": 0
+          }
+        ],
+        "duplicate_local_names": [],
+        "local_header_count": 1,
+        "local_headers": [
+          {
+            "compress_size": 222304,
+            "compress_type": 0,
+            "file_size": 222304,
+            "filename": "x",
+            "flag_bits": 0,
+            "header_offset": 0
+          }
+        ],
+        "passed": true,
+        "schema_version": 1,
+        "unsafe_names": []
+      }
     }
   },
   "next_safe_actions": [
@@ -156,7 +200,7 @@
       "--json-out",
       "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "1b453d49b882b37516c0693bbb15b37abe304f7fd39a0581911254dc4387d3ab",
+    "canonical_payload_without_tool_manifest_sha256": "68bf4ba07519129ef36656e8ad05c8d0e32fc2fbdbaf1051c6094387fc7ddbbe",
     "dispatch_attempted": false,
     "input_files": [
       {

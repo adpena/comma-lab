@@ -99,7 +99,7 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO)
 
-from tac.repo_io import json_text  # noqa: E402
+from tac.repo_io import json_text, sha256_bytes  # noqa: E402
 
 TOOLS = REPO / "tools"
 SHELL_HAZARDS = TOOLS / "check_dispatch_cli_shell_hazards.py"
@@ -123,6 +123,10 @@ STAGED_PUBLIC_RELEASE_HYGIENE_AUDIT = TOOLS / "audit_staged_public_release_hygie
 CROSS_PARADIGM_FRONTIER_INVENTORY = TOOLS / "build_cross_paradigm_frontier_inventory.py"
 PR91_HPM1_READINESS_AUDIT = TOOLS / "audit_pr91_hpm1_readiness.py"
 PR91_HPM1_RUNTIME_CONTRACT_AUDIT = TOOLS / "audit_pr91_hpm1_runtime_contract.py"
+PR91_HPM1_READINESS_ARTIFACT = REPO / "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json"
+PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT = (
+    REPO / "experiments/results/pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json"
+)
 LOCAL_CUSTODY_RELEASE_MANIFEST = REPO / ".omx/research/local_custody_release_manifest_20260505_codex.json"
 REVERSE_ENGINEERING_RELEASE_MANIFEST = (
     REPO / ".omx/research/reverse_engineering_release_manifest_20260505_codex.json"
@@ -585,6 +589,62 @@ def _json_tool(tool: Path) -> tuple[bool, dict[str, object], str]:
     return True, payload, output
 
 
+def _load_json_artifact(path: Path) -> tuple[bool, dict[str, object], str]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return False, {}, f"{path.relative_to(REPO)} is not readable JSON: {exc}"
+    if not isinstance(payload, dict):
+        return False, {}, f"{path.relative_to(REPO)} must contain a JSON object"
+    return True, payload, ""
+
+
+def _embedded_canonical_payload_hash(payload: dict[str, object]) -> str:
+    manifest = payload.get("tool_run_manifest")
+    if not isinstance(manifest, dict):
+        return ""
+    value = manifest.get("canonical_payload_without_tool_manifest_sha256")
+    return str(value) if isinstance(value, str) else ""
+
+
+def _recomputed_canonical_payload_hash(payload: dict[str, object]) -> str:
+    without_manifest = dict(payload)
+    without_manifest.pop("tool_run_manifest", None)
+    return sha256_bytes(json_text(without_manifest).encode("utf-8"))
+
+
+def _canonical_payload_hash(payload: dict[str, object]) -> str:
+    embedded = _embedded_canonical_payload_hash(payload)
+    recomputed = _recomputed_canonical_payload_hash(payload)
+    return embedded if embedded and embedded == recomputed else ""
+
+
+def _manifest_hash_self_consistent(prefix: str, payload: dict[str, object]) -> dict[str, bool]:
+    return {
+        f"{prefix}_manifest_hash_self_consistent": bool(_embedded_canonical_payload_hash(payload))
+        and _embedded_canonical_payload_hash(payload) == _recomputed_canonical_payload_hash(payload)
+    }
+
+
+def _closed_payload_checks(prefix: str, payload: dict[str, object]) -> dict[str, bool]:
+    return {
+        f"{prefix}_score_claim_false": payload.get("score_claim") is False,
+        f"{prefix}_dispatch_attempted_false": payload.get("dispatch_attempted") is False,
+        f"{prefix}_ready_false": payload.get("ready_for_exact_eval_dispatch") is False,
+        f"{prefix}_promotion_false": payload.get("promotion_eligible") is False,
+        f"{prefix}_blockers_nonempty": bool(payload.get("dispatch_blockers")),
+    }
+
+
+def _required_blockers_present(
+    prefix: str,
+    payload: dict[str, object],
+    required_blockers: set[str],
+) -> dict[str, bool]:
+    blockers = set(payload.get("dispatch_blockers", []))
+    return {f"{prefix}_required_blockers_present": required_blockers <= blockers}
+
+
 def _run_pr91_hpm1_fail_closed_gate() -> tuple[bool, str]:
     ok_readiness, readiness, readiness_output = _json_tool(PR91_HPM1_READINESS_AUDIT)
     if not ok_readiness:
@@ -592,6 +652,16 @@ def _run_pr91_hpm1_fail_closed_gate() -> tuple[bool, str]:
     ok_runtime, runtime, runtime_output = _json_tool(PR91_HPM1_RUNTIME_CONTRACT_AUDIT)
     if not ok_runtime:
         return False, runtime_output
+    ok_readiness_artifact, readiness_artifact, readiness_artifact_error = _load_json_artifact(
+        PR91_HPM1_READINESS_ARTIFACT
+    )
+    if not ok_readiness_artifact:
+        return False, readiness_artifact_error
+    ok_runtime_artifact, runtime_artifact, runtime_artifact_error = _load_json_artifact(
+        PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT
+    )
+    if not ok_runtime_artifact:
+        return False, runtime_artifact_error
     readiness_blockers = set(readiness.get("dispatch_blockers", []))
     runtime_blockers = set(runtime.get("dispatch_blockers", []))
     required_readiness_blockers = {
@@ -604,13 +674,31 @@ def _run_pr91_hpm1_fail_closed_gate() -> tuple[bool, str]:
         "hpac_device_contract_resolved",
         "runtime_consumer_sidecar_free_hpm1",
     }
+    readiness_hash = _canonical_payload_hash(readiness)
+    readiness_artifact_hash = _canonical_payload_hash(readiness_artifact)
+    runtime_hash = _canonical_payload_hash(runtime)
+    runtime_artifact_hash = _canonical_payload_hash(runtime_artifact)
     checks = {
-        "readiness_score_claim_false": readiness.get("score_claim") is False,
-        "readiness_dispatch_attempted_false": readiness.get("dispatch_attempted") is False,
-        "readiness_ready_false": readiness.get("ready_for_exact_eval_dispatch") is False,
-        "runtime_score_claim_false": runtime.get("score_claim") is False,
-        "runtime_dispatch_attempted_false": runtime.get("dispatch_attempted") is False,
-        "runtime_ready_false": runtime.get("ready_for_exact_eval_dispatch") is False,
+        **_closed_payload_checks("live_readiness", readiness),
+        **_closed_payload_checks("artifact_readiness", readiness_artifact),
+        **_closed_payload_checks("live_runtime", runtime),
+        **_closed_payload_checks("artifact_runtime", runtime_artifact),
+        **_manifest_hash_self_consistent("live_readiness", readiness),
+        **_manifest_hash_self_consistent("artifact_readiness", readiness_artifact),
+        **_manifest_hash_self_consistent("live_runtime", runtime),
+        **_manifest_hash_self_consistent("artifact_runtime", runtime_artifact),
+        **_required_blockers_present("live_readiness", readiness, required_readiness_blockers),
+        **_required_blockers_present(
+            "artifact_readiness",
+            readiness_artifact,
+            required_readiness_blockers,
+        ),
+        **_required_blockers_present("live_runtime", runtime, required_runtime_blockers),
+        **_required_blockers_present("artifact_runtime", runtime_artifact, required_runtime_blockers),
+        "readiness_artifact_hash_matches_live": bool(readiness_hash)
+        and readiness_hash == readiness_artifact_hash,
+        "runtime_artifact_hash_matches_live": bool(runtime_hash)
+        and runtime_hash == runtime_artifact_hash,
         "source_archive_custody_passed": (
             isinstance(readiness.get("source_archive"), dict)
             and readiness["source_archive"].get("matches_expected") is True
@@ -623,8 +711,12 @@ def _run_pr91_hpm1_fail_closed_gate() -> tuple[bool, str]:
             isinstance(readiness.get("hpm1_mask_segment"), dict)
             and readiness["hpm1_mask_segment"].get("matches_expected") is True
         ),
-        "required_readiness_blockers_present": required_readiness_blockers <= readiness_blockers,
-        "required_runtime_blockers_present": required_runtime_blockers <= runtime_blockers,
+        "zip_wire_contract_passed": (
+            isinstance(readiness.get("member_x"), dict)
+            and isinstance(readiness["member_x"].get("zip_report"), dict)
+            and isinstance(readiness["member_x"]["zip_report"].get("wire_contract"), dict)
+            and readiness["member_x"]["zip_report"]["wire_contract"].get("passed") is True
+        ),
         "runtime_records_device_issue": int(runtime.get("ambient_device_call_count", 0)) >= 1
         and int(runtime.get("contradiction_count", 0)) >= 1,
     }
@@ -639,13 +731,12 @@ def _run_pr91_hpm1_fail_closed_gate() -> tuple[bool, str]:
             + json_text(runtime)
         )
     return True, (
-        "PR91/HPM1 fail-closed custody: PASS "
-        "(archive/member/mask custody clean; "
+        "PR91/HPM1 readiness/runtime contract: PASS "
+        "(static custody visible; runtime contract blocked; "
+        "ready_for_exact_eval_dispatch=false; "
         f"readiness_blockers={len(readiness_blockers)}; "
         f"runtime_blockers={len(runtime_blockers)}; "
-        f"ambient_device_calls={runtime.get('ambient_device_call_count')}; "
-        f"contradictions={runtime.get('contradiction_count')}; "
-        "ready_for_exact_eval_dispatch=false)"
+        "artifact_hashes_match=true)"
     )
 
 
@@ -730,6 +821,8 @@ def main(argv: list[str] | None = None) -> int:
         CROSS_PARADIGM_FRONTIER_INVENTORY,
         PR91_HPM1_READINESS_AUDIT,
         PR91_HPM1_RUNTIME_CONTRACT_AUDIT,
+        PR91_HPM1_READINESS_ARTIFACT,
+        PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT,
         LOCAL_CUSTODY_RELEASE_MANIFEST,
         *[lane["tool"] for lane in lanes],
     ]:

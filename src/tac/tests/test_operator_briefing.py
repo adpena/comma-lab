@@ -8,6 +8,7 @@ This file just guards against the orchestrator's subprocess wiring breaking
 from __future__ import annotations
 
 import json
+import importlib.util
 import subprocess
 import sys
 from pathlib import Path
@@ -23,14 +24,24 @@ def _run(*args: str) -> subprocess.CompletedProcess:
     )
 
 
+def _load_briefing_module():
+    spec = importlib.util.spec_from_file_location("operator_briefing_under_test", BRIEFING)
+    assert spec is not None
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def test_briefing_runs_all_three_phases():
     proc = _run("--top", "3")
     assert "Phase 1" in proc.stdout
     assert "Phase 2" in proc.stdout
     assert "Phase 3" in proc.stdout
     assert "Phase 1 exact-eval packets" in proc.stdout
-    assert "Phase 1 blocked high-EV lanes" in proc.stdout
-    assert "pr91_hpm1_runtime_contract" in proc.stdout
+    assert "Phase 1 blocked readiness artifacts" in proc.stdout
+    assert "pr91_hpm1_readiness_bundle" in proc.stdout
     assert "wr01_apply_pr106x_half" in proc.stdout
 
 
@@ -62,13 +73,27 @@ def test_briefing_json_composite_has_all_three_keys():
     assert "dashboard" in out
     assert "reconciler" in out
     assert "exact_eval_packets" in out
-    assert "blocked_high_ev_lanes" in out
-    assert out["blocked_high_ev_lanes"][0]["lane_id"] == "pr91_hpm1_runtime_contract"
-    assert out["blocked_high_ev_lanes"][0]["ready_for_exact_eval_dispatch"] is False
-    assert out["blocked_high_ev_lanes"][0]["archive_custody_matches"] is True
-    assert out["blocked_high_ev_lanes"][0]["hpm1_mask_custody_matches"] is True
-    assert out["blocked_high_ev_lanes"][0]["ambient_device_call_count"] >= 1
-    assert out["blocked_high_ev_lanes"][0]["contradiction_count"] >= 1
+    assert "non_dispatchable_readiness_artifacts" in out
+    row = out["non_dispatchable_readiness_artifacts"][0]
+    assert row["kind"] == "pr91_hpm1_readiness_bundle"
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["dispatch_attempted"] is False
+    assert row["promotion_eligible"] is False
+    assert row["score_claim"] is False
+    assert row["artifact_path"].endswith("pr91_hpm1_readiness_20260506_codex/readiness.json")
+    assert row["runtime_contract_artifact_path"].endswith(
+        "pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json"
+    )
+    assert row["readiness_artifact_hash_matches_live"] is True
+    assert row["runtime_artifact_hash_matches_live"] is True
+    assert row["archive_custody_matches"] is True
+    assert row["hpm1_mask_custody_matches"] is True
+    assert row["zip_wire_contract_passed"] is True
+    assert row["ambient_device_call_count"] >= 1
+    assert row["contradiction_count"] >= 1
+    assert row["dispatch_blockers"]
+    assert row["artifact_dispatch_blockers"]
+    assert "not a score or dispatch artifact" in row["summary"]
 
 
 def test_briefing_json_each_phase_has_n_total_or_n_configs():
@@ -80,4 +105,34 @@ def test_briefing_json_each_phase_has_n_total_or_n_configs():
     assert any(k in out["dashboard"] for k in ("n_total", "n_displayed"))
     assert any(k in out["reconciler"] for k in ("n_configs", "n_landed"))
     assert out["exact_eval_packets"][0]["lane_id"] == "wr01_apply_pr106x_half"
-    assert out["blocked_high_ev_lanes"][0]["score_claim"] is False
+    assert out["non_dispatchable_readiness_artifacts"][0]["score_claim"] is False
+
+
+def test_pr91_readiness_row_surfaces_audit_errors(monkeypatch):
+    mod = _load_briefing_module()
+    manifest = {"canonical_payload_without_tool_manifest_sha256": "not-recomputed-in-this-test"}
+    closed_payload = {
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "promotion_eligible": False,
+        "tool_run_manifest": manifest,
+        "dispatch_blockers": ["blocked"],
+    }
+
+    def fake_run_json(script, extra_args=None):
+        if script == mod.PR91_HPM1_READINESS:
+            return {"_error": "live readiness audit failed"}
+        return dict(closed_payload)
+
+    monkeypatch.setattr(mod, "_run_json", fake_run_json)
+    monkeypatch.setattr(mod, "_load_json_file", lambda path: dict(closed_payload))
+    monkeypatch.setattr(mod, "_canonical_payload_hash", lambda payload: "same")
+    monkeypatch.setattr(mod, "_manifest_hash_self_consistent", lambda payload: True)
+
+    row = mod._load_pr91_hpm1_readiness_artifact()
+
+    assert row["state"] == "AUDIT_ERROR_FAIL_CLOSED"
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["score_claim"] is False
+    assert row["audit_errors"] == ["live readiness audit failed"]
