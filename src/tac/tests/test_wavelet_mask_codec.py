@@ -1,6 +1,7 @@
 """Tests for tac.wavelet_mask_codec — Lane Wavelet (paradigm α2)."""
 from __future__ import annotations
 
+import numpy as np
 import pytest
 import torch
 
@@ -8,6 +9,8 @@ from tac.wavelet_mask_codec import (
     WAVELET_MAGIC,
     WAVELET_VERSION,
     WaveletConfig,
+    _decode_static_arithmetic,
+    _encode_static_arithmetic,
     decode_wavelet_codec,
     dequantize_subband,
     encode_wavelet_codec,
@@ -181,3 +184,49 @@ def test_encode_requires_keyword_config():
 def test_quantize_requires_keyword_step():
     with pytest.raises(TypeError):
         quantize_subband(torch.zeros(3), 1.0)  # type: ignore[misc]
+
+
+# ── Arithmetic coder for/else raise (PARADIGM-α CRITICAL #2) ────────────
+
+
+def test_arithmetic_coder_roundtrip_exact():
+    """Encode + decode must recover the original int16 array exactly.
+
+    Sanity baseline for the arithmetic coder before testing the for/else
+    raise on freq-table mismatch.
+    """
+    rng = np.random.default_rng(0)
+    values = rng.integers(-10, 11, size=200).astype(np.int16)
+    unique, counts = np.unique(values, return_counts=True)
+    freq = {int(v): int(c) for v, c in zip(unique, counts)}
+    encoded = _encode_static_arithmetic(values, freq)
+    decoded = _decode_static_arithmetic(encoded, freq, len(values))
+    np.testing.assert_array_equal(
+        decoded, values, err_msg="arithmetic coder round-trip failed"
+    )
+
+
+def test_arithmetic_decoder_raises_on_empty_freq_table_mismatch():
+    """PARADIGM-α CRITICAL #2: empty freq table with n_values > 0 must raise
+    ValueError, not silently return ``sorted_keys[0]`` (which would be
+    IndexError under the old default — silent in the more general case
+    where ``sorted_keys`` had at least one entry but the scaled value fell
+    outside every interval).
+
+    Construct the failure: encode something, then call decode with an
+    EMPTY freq_dec while declaring n_values=1 — the for/else raise must
+    fire because there are no intervals to fall in.
+    """
+    values = np.array([5], dtype=np.int16)
+    freq_enc = {5: 1}
+    encoded = _encode_static_arithmetic(values, freq_enc)
+    # Decode with an empty freq dict — total=0, no intervals to fall in.
+    with pytest.raises(ValueError, match="arithmetic decoder"):
+        _decode_static_arithmetic(encoded, {}, 1)
+
+
+def test_arithmetic_decoder_empty_input_returns_empty_array():
+    """Decoding an empty payload with empty freq table returns empty array."""
+    encoded = _encode_static_arithmetic(np.zeros(0, dtype=np.int16), {})
+    decoded = _decode_static_arithmetic(encoded, {}, 0)
+    assert len(decoded) == 0

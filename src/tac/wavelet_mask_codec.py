@@ -330,12 +330,26 @@ def _decode_static_arithmetic(payload: bytes, freq: dict[int, int], n_values: in
         rng = high - low + 1
         scaled = ((code - low + 1) * total - 1) // rng
 
-        # Find symbol whose cumulative interval contains scaled
-        chosen = sorted_keys[0]
+        # Find symbol whose cumulative interval contains scaled.
+        # Adversarial review 2026-05-06 (PARADIGM-α CRITICAL #2): for/else raise
+        # replaces the silent default `chosen = sorted_keys[0]`. If `scaled` falls
+        # outside every interval (truncated/corrupted payload, or freq table
+        # mismatch between encoder/decoder), the else clause fires (Python
+        # for/else — runs only when the loop never broke), raising ValueError
+        # with diagnostic context so callers detect payload corruption rather
+        # than silently returning a wrong symbol.
+        chosen: int | None = None
         for k in sorted_keys:
             if cum[k] <= scaled < cum[k] + freq[k]:
                 chosen = k
                 break
+        else:
+            raise ValueError(
+                f"arithmetic decoder: scaled={scaled} outside all symbol "
+                f"intervals (total={total}, n_symbols={len(sorted_keys)}, "
+                f"symbol_index={i}) — payload may be corrupted or truncated, "
+                f"or freq table mismatched between encoder/decoder"
+            )
 
         new_low = low + (rng * cum[chosen]) // total
         new_high = low + (rng * (cum[chosen] + freq[chosen])) // total - 1
