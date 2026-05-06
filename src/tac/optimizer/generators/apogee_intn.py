@@ -82,17 +82,23 @@ class ApogeeIntNGenerator(CandidateGenerator):
             candidate.get("band_low", 0.0),
             candidate.get("band_high", 1.0),
         ]
+        archive_path = candidate.get("archive_path")
+        if not archive_path:
+            raise ValueError("apogee_intN dispatch requires candidate['archive_path']")
         cmd = [
             sys.executable,
             str(self.repo / "tools" / "lightning_dispatch_pr106_stack.py"),
-            "--lane-script", self.DEFAULT_LANE_SCRIPT,
-            "--label", label,
-            "--predicted-band", str(band[0]), str(band[1]),
+            "--lane", str(candidate["candidate_id"]),
+            "--archive", str(archive_path),
+            "--predicted-low", str(band[0]),
+            "--predicted-high", str(band[1]),
+            "--job-name", label,
         ]
-        if candidate.get("archive_sha256"):
-            cmd += ["--expected-archive-sha256", str(candidate["archive_sha256"])]
-        if candidate.get("archive_bytes"):
-            cmd += ["--expected-archive-size-bytes", str(candidate["archive_bytes"])]
+        gate_json = candidate.get("apogee_distortion_gate_json")
+        if gate_json:
+            cmd += ["--apogee-distortion-gate-json", str(gate_json)]
+        if candidate.get("ready_for_exact_eval_dispatch") is not True:
+            cmd += ["--print-only", "--allow-forensic-apogee-intN"]
         return DispatchSpec(label=label, cmd=cmd, estimated_cost_usd=0.30,
                             timeout_seconds=1800.0, cwd=self.repo)
 

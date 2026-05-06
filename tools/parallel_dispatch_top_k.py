@@ -110,33 +110,27 @@ def _build_dispatch_cmd(
     candidate_id = candidate["candidate_id"]
     label = f"{label_prefix}_{candidate_id}"
     band = candidate.get("predicted_band", [candidate.get("band_low", 0.0), candidate.get("band_high", 1.0)])
-    archive_sha = candidate.get("archive_sha256") or candidate.get("expected_archive_sha256")
-    archive_size = candidate.get("archive_size_bytes") or candidate.get("expected_archive_size_bytes")
 
     if provider == "lightning":
         if not _LIGHTNING_DISPATCH.is_file():
             raise FileNotFoundError(f"missing lightning dispatcher: {_LIGHTNING_DISPATCH}")
-        # Round 2B B5 fix (2026-05-06, 80% confidence): the lightning dispatcher
-        # `tools/lightning_dispatch_pr106_stack.py` does NOT accept
-        # --expected-archive-sha256 or --expected-archive-size-bytes as CLI
-        # flags (verified against its argparse). Passing them caused
-        # dispatch-time argument-parse failure. Archive sha + size verification
-        # is done internally via the manifest payload (the dispatcher reads
-        # `candidate_archive_sha256` from the payload). Suppress the dead flags
-        # here — verification still happens via the manifest path. CLAUDE.md
-        # NON-NEGOTIABLE: "Before wiring any flag into subprocess.run, READ the
-        # target tool's actual parser.add_argument list."
+        archive_path = candidate.get("archive_path")
+        if not archive_path:
+            raise DispatchInputError(
+                f"candidate {candidate_id!r} missing archive_path for Lightning dispatch"
+            )
         cmd = [
             sys.executable, str(_LIGHTNING_DISPATCH),
-            "--lane-script", lane_script,
-            "--label", label,
-            "--predicted-band", str(band[0]), str(band[1]),
+            "--lane", str(candidate.get("lane_id") or candidate_id),
+            "--archive", str(archive_path),
+            "--predicted-low", str(band[0]),
+            "--predicted-high", str(band[1]),
+            "--job-name", label,
         ]
-        # Note: archive_sha and archive_size are verified by the dispatcher's
-        # internal manifest read, not via CLI flags. The values are validated
-        # in the candidate JSON pipeline before this function is called.
-        _ = archive_sha  # noqa: F841 — captured for future test/CI argparse probe
-        _ = archive_size  # noqa: F841
+        gate_json = candidate.get("apogee_distortion_gate_json")
+        if gate_json:
+            cmd += ["--apogee-distortion-gate-json", str(gate_json)]
+        _ = lane_script
         return cmd
 
     if provider == "vastai":

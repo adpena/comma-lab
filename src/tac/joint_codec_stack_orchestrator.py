@@ -230,6 +230,13 @@ class _CodecProximal:
     src: StreamSource
     _cached_bytes: int = field(init=False, default=-1)
     _cached_payload: bytes = field(init=False, default=b"")
+    # CRITICAL fix (audit finding 4 / data corruption): _cached_kind tracks the
+    # codec that was actually USED. When ``codec_kind == KIND_BALLE_HYPERPRIOR``
+    # but ``encode_qints_balle_auto`` returns ``static_wins``, the payload IS an
+    # arithmetic-static blob, not BHv1. The orchestrator must record the actual
+    # kind in the JCSP container so the inflate-side dispatcher routes the
+    # payload to ``decode_qints_arithmetic``, not ``decode_qints_balle``.
+    _cached_kind: int = field(init=False, default=-1)
 
     @property
     def name(self) -> str:
@@ -259,6 +266,7 @@ class _CodecProximal:
             blob = encode_qints_arithmetic(
                 qints=s.qints, num_symbols=s.num_symbols, offset=s.offset
             )
+            self._cached_kind = KIND_ARITHMETIC_STATIC
             return blob, len(blob)
         if s.codec_kind == KIND_BALLE_HYPERPRIOR:
             assert s.balle_codec is not None
@@ -275,13 +283,17 @@ class _CodecProximal:
                 static_baseline_bytes=len(static_baseline),
             )
             if mode_name == "static_wins":
-                # Auto says static beats BHv1 — ship the static blob (still an
-                # arithmetic-coded bytes-out; the orchestrator records this
-                # by flipping the kind in the wire format).
+                # Auto says static beats BHv1 — ship the static blob. CRITICAL:
+                # the inflate dispatcher must see KIND_ARITHMETIC_STATIC so it
+                # routes the AQv1 payload to decode_qints_arithmetic, not
+                # decode_qints_balle. (Audit finding CRITICAL 4 / data corrupt.)
+                self._cached_kind = KIND_ARITHMETIC_STATIC
                 return static_baseline, len(static_baseline)
+            self._cached_kind = KIND_BALLE_HYPERPRIOR
             return blob, len(blob)
         if s.codec_kind == KIND_RAW_PASSTHROUGH:
             assert s.raw_passthrough_bytes is not None
+            self._cached_kind = KIND_RAW_PASSTHROUGH
             return s.raw_passthrough_bytes, len(s.raw_passthrough_bytes)
         raise AssertionError(
             f"_CodecProximal: unhandled codec_kind {s.codec_kind}"
@@ -292,6 +304,17 @@ class _CodecProximal:
         if self._cached_bytes < 0:
             self.proximal_step(target_bytes=0.0, dual=0.0)
         return self._cached_payload
+
+    @property
+    def actual_codec_kind(self) -> int:
+        """The codec kind actually used (may differ from src.codec_kind when
+        encode_qints_balle_auto returns static_wins). The JCSP container must
+        record THIS value so the inflate-side dispatcher routes correctly.
+        (Audit finding CRITICAL 4: data-corruption fix.)
+        """
+        if self._cached_bytes < 0:
+            self.proximal_step(target_bytes=0.0, dual=0.0)
+        return self._cached_kind
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -352,6 +375,20 @@ def _pack_jcsp_container(
             raise ValueError(
                 f"_pack_jcsp_container: stream name {s.name!r} too long"
             )
+        if s.codec_kind not in (
+            KIND_ARITHMETIC_STATIC,
+            KIND_BALLE_HYPERPRIOR,
+            KIND_RAW_PASSTHROUGH,
+        ):
+            raise ValueError(
+                f"_pack_jcsp_container: invalid codec_kind {s.codec_kind} "
+                f"for stream {s.name!r}"
+            )
+        if int(s.actual_bytes) != len(s.payload):
+            raise ValueError(
+                f"_pack_jcsp_container: actual_bytes={s.actual_bytes} does "
+                f"not match payload_len={len(s.payload)} for stream {s.name!r}"
+            )
         out.write(struct.pack("<B", len(name_b)))
         out.write(name_b)
         out.write(struct.pack("<B", int(s.codec_kind)))
@@ -365,6 +402,14 @@ def _pack_jcsp_container(
     out.write(struct.pack("<I", int(iters)))
     out.write(struct.pack("<B", int(bool(converged))))
     return out.getvalue()
+
+
+def _require_jcsp_bytes(blob: bytes, cursor: int, n_bytes: int, context: str) -> None:
+    if n_bytes < 0 or cursor < 0 or cursor + n_bytes > len(blob):
+        raise ValueError(
+            f"unpack_jcsp_container: truncated {context} at offset {cursor}; "
+            f"need {n_bytes} bytes, blob len={len(blob)}"
+        )
 
 
 def unpack_jcsp_container(blob: bytes) -> dict:
@@ -395,22 +440,45 @@ def unpack_jcsp_container(blob: bytes) -> dict:
     cursor += 1
     streams: list[dict] = []
     for _ in range(n_streams):
+        _require_jcsp_bytes(blob, cursor, 1, "stream name length")
         (name_len,) = struct.unpack_from("<B", blob, cursor)
         cursor += 1
+        _require_jcsp_bytes(blob, cursor, name_len, "stream name")
         name = blob[cursor : cursor + name_len].decode("utf-8")
         cursor += name_len
+        _require_jcsp_bytes(blob, cursor, 1, f"stream {name!r} codec kind")
         (codec_kind,) = struct.unpack_from("<B", blob, cursor)
         cursor += 1
+        if codec_kind not in (
+            KIND_ARITHMETIC_STATIC,
+            KIND_BALLE_HYPERPRIOR,
+            KIND_RAW_PASSTHROUGH,
+        ):
+            raise ValueError(
+                f"unpack_jcsp_container: invalid codec_kind {codec_kind} "
+                f"for stream {name!r}"
+            )
+        _require_jcsp_bytes(blob, cursor, 4, f"stream {name!r} ADMM target")
         (admm_target,) = struct.unpack_from("<I", blob, cursor)
         cursor += 4
+        _require_jcsp_bytes(blob, cursor, 4, f"stream {name!r} actual bytes")
         (actual_bytes,) = struct.unpack_from("<I", blob, cursor)
         cursor += 4
+        _require_jcsp_bytes(blob, cursor, 4, f"stream {name!r} score delta")
         (score_milli,) = struct.unpack_from("<i", blob, cursor)
         cursor += 4
+        _require_jcsp_bytes(blob, cursor, 4, f"stream {name!r} marginal")
         (margin_milli,) = struct.unpack_from("<i", blob, cursor)
         cursor += 4
+        _require_jcsp_bytes(blob, cursor, 4, f"stream {name!r} payload length")
         (payload_len,) = struct.unpack_from("<I", blob, cursor)
         cursor += 4
+        if actual_bytes != payload_len:
+            raise ValueError(
+                f"unpack_jcsp_container: actual_bytes={actual_bytes} does "
+                f"not match payload_len={payload_len} for stream {name!r}"
+            )
+        _require_jcsp_bytes(blob, cursor, payload_len, f"stream {name!r} payload")
         payload = blob[cursor : cursor + payload_len]
         cursor += payload_len
         streams.append(
@@ -424,12 +492,20 @@ def unpack_jcsp_container(blob: bytes) -> dict:
                 "payload": payload,
             }
         )
+    _require_jcsp_bytes(blob, cursor, 4, "KKT residual")
     (kkt_milli,) = struct.unpack_from("<I", blob, cursor)
     cursor += 4
+    _require_jcsp_bytes(blob, cursor, 4, "ADMM iteration count")
     (iters,) = struct.unpack_from("<I", blob, cursor)
     cursor += 4
+    _require_jcsp_bytes(blob, cursor, 1, "converged flag")
     (converged,) = struct.unpack_from("<B", blob, cursor)
     cursor += 1
+    if cursor != len(blob):
+        raise ValueError(
+            f"unpack_jcsp_container: trailing bytes after JCSP payload "
+            f"(cursor={cursor}, len={len(blob)})"
+        )
     return {
         "version": version,
         "streams": streams,
@@ -457,7 +533,8 @@ def run_joint_codec_stack(
 
     Args:
         streams: list of ``StreamSource``. Required keyword.
-        byte_budget: total byte budget Σ_s b_s ≤ B. Required keyword.
+        byte_budget: total JCSP container byte budget, including stream
+            payloads and JCSP metadata. Required keyword.
         admm_max_iters: ADMM coordinator iteration cap.
         admm_rho_init: ADMM initial penalty.
         admm_kkt_tol: KKT waterline tolerance.
@@ -498,7 +575,7 @@ def run_joint_codec_stack(
         stream_results.append(
             StackStreamResult(
                 name=prox.src.name,
-                codec_kind=prox.src.codec_kind,
+                codec_kind=prox.actual_codec_kind,
                 admm_bytes_target=float(target),
                 actual_bytes=len(payload),
                 score_delta=float(
@@ -515,7 +592,12 @@ def run_joint_codec_stack(
         iters=admm_result.iters,
         converged=admm_result.converged,
     )
-    total_bytes = sum(s.actual_bytes for s in stream_results)
+    total_bytes = len(container)
+    if total_bytes > byte_budget:
+        raise ValueError(
+            f"run_joint_codec_stack: JCSP container bytes {total_bytes} exceed "
+            f"byte_budget {byte_budget} after metadata overhead"
+        )
     return JointCodecStackResult(
         converged=admm_result.converged,
         iters=admm_result.iters,
@@ -610,7 +692,7 @@ def run_sequential_codec_stack(
         stream_results.append(
             StackStreamResult(
                 name=prox.src.name,
-                codec_kind=prox.src.codec_kind,
+                codec_kind=prox.actual_codec_kind,
                 admm_bytes_target=float(len(payload)),  # no ADMM target
                 actual_bytes=len(payload),
                 score_delta=float(
@@ -626,7 +708,7 @@ def run_sequential_codec_stack(
         iters=0,
         converged=False,
     )
-    total_bytes = sum(s.actual_bytes for s in stream_results)
+    total_bytes = len(container)
     return JointCodecStackResult(
         converged=False,
         iters=0,

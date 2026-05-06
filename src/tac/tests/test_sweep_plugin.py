@@ -154,16 +154,19 @@ def test_apogee_intn_build_dispatch_includes_lightning_args():
         "candidate_id": "apogee_int7",
         "archive_bytes": 567890,
         "archive_sha256": "abc1234567890def",
+        "archive_path": str(REPO_ROOT / "experiments/results/apogee_int7_repack/archive.zip"),
         "predicted_band": [0.9, 1.1],
     }
     spec = gen.build_dispatch(fake, label="loopcycle_int7")
     assert spec.label == "loopcycle_int7"
     cmd_str = " ".join(spec.cmd)
     assert "lightning_dispatch_pr106_stack.py" in cmd_str
-    assert "--label loopcycle_int7" in cmd_str
-    assert "--predicted-band 0.9 1.1" in cmd_str
-    assert "--expected-archive-sha256 abc1234567890def" in cmd_str
-    assert "--expected-archive-size-bytes 567890" in cmd_str
+    assert "--lane apogee_int7" in cmd_str
+    assert "--job-name loopcycle_int7" in cmd_str
+    assert "--predicted-low 0.9" in cmd_str
+    assert "--predicted-high 1.1" in cmd_str
+    assert "--print-only" in cmd_str
+    assert "--allow-forensic-apogee-intN" in cmd_str
 
 
 def test_synthetic_example_loadable_and_runs():

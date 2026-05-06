@@ -63,5 +63,10 @@ def test_apogee_intn_generator_reads_repack_metadata(tmp_path: Path) -> None:
 
     dispatch = generator.build_dispatch(candidate, label="dryrun-apogee-int6")
     assert dispatch.cwd == tmp_path.resolve()
-    assert "--expected-archive-sha256" in dispatch.cmd
-    assert "--expected-archive-size-bytes" in dispatch.cmd
+    assert "--lane" in dispatch.cmd
+    assert "--archive" in dispatch.cmd
+    assert "--predicted-low" in dispatch.cmd
+    assert "--predicted-high" in dispatch.cmd
+    assert "--job-name" in dispatch.cmd
+    assert "--print-only" in dispatch.cmd
+    assert "--allow-forensic-apogee-intN" in dispatch.cmd

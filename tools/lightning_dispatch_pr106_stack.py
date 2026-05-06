@@ -16,7 +16,8 @@ Optional:
     --inflate-sh PATH   (default: derived from --lane name)
     --skip-stage        (skip lightning_repro_workspace.py if already staged)
     --ssh-target        (or LIGHTNING_SSH_TARGET; required unless --skip-stage)
-    --print-only        (print the resolved invocation without running)
+    --print-only        (print the resolved invocation without staging,
+                         claiming, or running)
 
 Workflow:
     1. Stages workspace via lightning_repro_workspace.py (sync src/, experiments/,
@@ -35,7 +36,7 @@ Encodes:
 Failure modes handled:
     - Lightning SSH unreachable → fail loud
     - Already-staged workspace → reuse manifest
-    - Existing terminal claim → re-file with --force
+    - Existing terminal claim → re-file only with --force-claim
 """
 from __future__ import annotations
 
@@ -201,7 +202,18 @@ def stage_workspace(*, lane: str, job_name: str, archive: Path,
     return manifest_out
 
 
-def claim_lane(*, lane: str, job_name: str) -> None:
+def claim_lane(
+    *,
+    lane: str,
+    job_name: str,
+    force_claim: bool,
+    force_claim_reason: str | None,
+) -> None:
+    notes = f"canonical Lightning dispatch via tools/lightning_dispatch_pr106_stack.py {_utc_now_iso()}"
+    if force_claim:
+        if not force_claim_reason:
+            sys.exit("FATAL: --force-claim requires --force-claim-reason")
+        notes = f"{notes}; force-claim: {force_claim_reason}"
     cmd = [
         sys.executable, str(REPO_ROOT / "tools" / "claim_lane_dispatch.py"), "claim",
         "--lane-id", f"lane_{lane}",
@@ -210,9 +222,10 @@ def claim_lane(*, lane: str, job_name: str) -> None:
         "--instance-job-id", job_name,
         "--predicted-eta-utc", _utc_plus_1h_iso(),
         "--status", "active_dispatching",
-        "--notes", f"canonical Lightning dispatch via tools/lightning_dispatch_pr106_stack.py {_utc_now_iso()}",
-        "--force",
+        "--notes", notes,
     ]
+    if force_claim:
+        cmd += ["--force"]
     print(f"[claim] platform=lightning lane=lane_{lane} job={job_name}")
     result = subprocess.run(cmd, cwd=REPO_ROOT, check=False)
     if result.returncode != 0:
@@ -298,7 +311,17 @@ def main(argv: list[str] | None = None) -> int:
                              "exact_eval_pr95_hnerv_muon_repacked etc. NOT 'T4' literal — "
                              "the abbreviation fails with 'accelerator T4 not found for AWS cluster').")
     parser.add_argument("--print-only", action="store_true",
-                        help="print resolved invocation without running")
+                        help="print resolved invocation without staging, claiming, or running")
+    parser.add_argument(
+        "--force-claim",
+        action="store_true",
+        help="Force the dispatch claim only when replacing a known terminal/stale claim.",
+    )
+    parser.add_argument(
+        "--force-claim-reason",
+        default=None,
+        help="Required rationale when --force-claim is set.",
+    )
     parser.add_argument(
         "--apogee-distortion-gate-json",
         type=Path,
@@ -343,7 +366,16 @@ def main(argv: list[str] | None = None) -> int:
         print_only=args.print_only,
     )
 
-    if args.skip_stage:
+    if args.print_only:
+        manifest = (
+            REPO_ROOT
+            / "experiments"
+            / "results"
+            / "lightning_batch"
+            / job_name
+            / "source_manifest.json"
+        )
+    elif args.skip_stage:
         manifest = REPO_ROOT / "experiments" / "results" / "lightning_batch" / job_name / "source_manifest.json"
         if not manifest.is_file():
             sys.exit(f"FATAL: --skip-stage but manifest not found: {manifest}")
@@ -358,7 +390,13 @@ def main(argv: list[str] | None = None) -> int:
             remote_pact=args.remote_pact,
         )
 
-    claim_lane(lane=args.lane, job_name=job_name)
+    if not args.print_only:
+        claim_lane(
+            lane=args.lane,
+            job_name=job_name,
+            force_claim=args.force_claim,
+            force_claim_reason=args.force_claim_reason,
+        )
 
     return submit_dispatch(
         lane=args.lane,

@@ -15,6 +15,7 @@ import importlib.util
 import io
 import json
 import sys
+from types import SimpleNamespace
 from contextlib import redirect_stdout
 from pathlib import Path
 
@@ -285,3 +286,72 @@ def test_apogee_distortion_gate_rejects_proxy_only_semantics(tmp_path: Path) -> 
             allow_forensic_print_only=False,
             print_only=False,
         )
+
+
+def test_main_print_only_has_no_stage_or_claim_side_effects(monkeypatch) -> None:
+    dispatcher = _load_dispatcher()
+
+    def _forbidden(*args, **kwargs):
+        raise AssertionError("print-only must not stage or claim")
+
+    submit_calls = []
+
+    def _fake_submit_dispatch(**kwargs):
+        submit_calls.append(kwargs)
+        assert kwargs["print_only"] is True
+        return 0
+
+    monkeypatch.setattr(dispatcher, "stage_workspace", _forbidden)
+    monkeypatch.setattr(dispatcher, "claim_lane", _forbidden)
+    monkeypatch.setattr(dispatcher, "submit_dispatch", _fake_submit_dispatch)
+
+    rc = dispatcher.main(
+        [
+            "--lane",
+            "apogee_int4",
+            "--archive",
+            "pyproject.toml",
+            "--inflate-sh",
+            "pyproject.toml",
+            "--predicted-low",
+            "0.1",
+            "--predicted-high",
+            "0.2",
+            "--print-only",
+            "--allow-forensic-apogee-intN",
+            "--job-name",
+            "dry_print_only",
+        ]
+    )
+
+    assert rc == 0
+    assert len(submit_calls) == 1
+
+
+def test_claim_lane_does_not_force_without_explicit_force_claim(monkeypatch) -> None:
+    dispatcher = _load_dispatcher()
+    calls = []
+
+    def _fake_run(cmd, cwd, check):
+        calls.append(cmd)
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(dispatcher.subprocess, "run", _fake_run)
+
+    dispatcher.claim_lane(
+        lane="demo",
+        job_name="job1",
+        force_claim=False,
+        force_claim_reason=None,
+    )
+    assert "--force" not in calls[-1]
+
+    dispatcher.claim_lane(
+        lane="demo",
+        job_name="job2",
+        force_claim=True,
+        force_claim_reason="terminal stale claim",
+    )
+    assert "--force" in calls[-1]
+    notes = calls[-1][calls[-1].index("--notes") + 1]
+    assert "terminal stale claim" in notes
