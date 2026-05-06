@@ -23,6 +23,55 @@ from tac.hnerv_wavelet_sidechannel import (
 REPO = Path(__file__).resolve().parents[3]
 
 
+def test_apply_wr01_atoms_to_raw_skips_malformed_mapping_atoms() -> None:
+    """Round 7 R7-2 fix (2026-05-06, 88%): a Mapping atom missing required
+    keys (raw_offset / raw_end / coefficient_quantized) used to crash the
+    whole apply pass with `TypeError: int() argument must be a string ...,
+    not 'NoneType'`. R7-2 wraps the int() coercion in try/except so the
+    malformed atom is counted as skipped and the apply continues.
+    """
+    raw = bytes([10, 20, 30, 40])
+    section = {
+        "atoms": [
+            # Valid atom — should apply.
+            {
+                "raw_offset": 0,
+                "raw_end": 2,
+                "level": 0,
+                "coefficient_index": 0,
+                "coefficient_quantized": -5,
+            },
+            # Malformed Mapping atom — missing raw_end. Pre-R7-2 this crashed.
+            {
+                "raw_offset": 2,
+                "level": 0,
+                "coefficient_index": 1,
+                "coefficient_quantized": -3,
+            },
+            # Malformed Mapping atom — non-int raw_offset. ValueError path.
+            {
+                "raw_offset": "not-an-int",
+                "raw_end": 4,
+                "level": 0,
+                "coefficient_index": 2,
+                "coefficient_quantized": -1,
+            },
+        ]
+    }
+
+    transformed, stats = apply_wr01_atoms_to_raw(
+        raw,
+        section,
+        strength_numerator=1,
+        strength_denominator=1,
+    )
+
+    # Valid atom applied; two malformed atoms skipped without crashing.
+    assert stats["applied_atom_count"] == 1
+    assert stats["skipped_atom_count"] == 2
+    assert transformed == bytes([15, 15, 30, 40])
+
+
 def test_apply_wr01_atoms_to_raw_attenuates_detail() -> None:
     raw = bytes([10, 20, 30, 40])
     section = {

@@ -55,6 +55,12 @@ def _cached_rglob(self: Path, pattern: str, *args, **kwargs):  # type: ignore[ov
     don't poison the cache and re-validate path existence before serving a
     cached entry. Stale entries from deleted directories can otherwise be
     served for the rest of the preflight run.
+
+    Round 7 R7-1 fix (2026-05-06): all `_RGLOB_CACHE` read/write operations
+    are now performed under `_PATCH_LOCK` so concurrent `cache_stats()`
+    iteration cannot collide with a writer. The actual `_ORIGINAL_RGLOB`
+    walk is performed OUTSIDE the lock to avoid serializing N parallel
+    file-system walks; only the dict get/set is locked.
     """
     # Only cache the simple .rglob("*.py")-style call; pass through anything fancier
     # to avoid changing semantics for hidden args.
@@ -67,27 +73,27 @@ def _cached_rglob(self: Path, pattern: str, *args, **kwargs):  # type: ignore[ov
         # a meaningful error rather than caching a None key.
         return _ORIGINAL_RGLOB(self, pattern)
     key = (resolved, pattern)
-    cached = _RGLOB_CACHE.get(key)
+    with _PATCH_LOCK:
+        cached = _RGLOB_CACHE.get(key)
     if cached is not None:
         # R3-D: re-validate the directory still exists. If not, drop the
         # stale entry and re-walk. Empty-result walks are still cached as [].
         try:
-            if not self.exists():
-                _RGLOB_CACHE.pop(key, None)
-                cached = None
+            still_exists = self.exists()
         except OSError:
+            still_exists = False
+        if not still_exists:
+            with _PATCH_LOCK:
+                _RGLOB_CACHE.pop(key, None)
             cached = None
     if cached is None:
-        # Round 4 R4-A fix (2026-05-06, 82% confidence): R3-D wrapped this in
-        # `try/except: raise` as scaffolding for "don't poison the cache on
-        # exception," but the cache-write is OUTSIDE the try, so a raising
-        # _ORIGINAL_RGLOB never reaches the assignment anyway. The scaffold
-        # was dead code that misleads future readers into thinking there is
-        # protection it does not provide. Removed the no-op wrapper; the
-        # natural Python control flow (raise propagates, assignment skipped)
-        # already gives us the desired behavior.
+        # Walk OUTSIDE the lock — concurrent walks are safe and we don't
+        # want one slow walk to block stat readers / other rglob callers.
+        # Round 4 R4-A: natural Python control flow (raise propagates,
+        # assignment skipped) handles "don't poison cache on exception".
         cached = list(_ORIGINAL_RGLOB(self, pattern))
-        _RGLOB_CACHE[key] = cached
+        with _PATCH_LOCK:
+            _RGLOB_CACHE[key] = cached
     # Callers iterate; returning the list is fine since rglob's contract
     # is "iterable of Path".
     return iter(cached)
@@ -123,28 +129,40 @@ def _is_cacheable(path: str) -> bool:
 
 
 def _cached_read_text(self: Path, *args, **kwargs):  # type: ignore[override]
-    """Cached `Path.read_text` for source-tree files only."""
+    """Cached `Path.read_text` for source-tree files only.
+
+    Round 7 R7-1: dict get/set under `_PATCH_LOCK` so `cache_stats()` can
+    iterate consistently. The actual `_ORIGINAL_READ_TEXT` call is OUTSIDE
+    the lock so file I/O does not serialize.
+    """
     if args or kwargs:
         return _ORIGINAL_READ_TEXT(self, *args, **kwargs)
     key = str(self.resolve())
     if not _is_cacheable(key):
         return _ORIGINAL_READ_TEXT(self)
-    cached = _READ_TEXT_CACHE.get(key)
+    with _PATCH_LOCK:
+        cached = _READ_TEXT_CACHE.get(key)
     if cached is None:
         cached = _ORIGINAL_READ_TEXT(self)
-        _READ_TEXT_CACHE[key] = cached
+        with _PATCH_LOCK:
+            _READ_TEXT_CACHE[key] = cached
     return cached
 
 
 def _cached_read_bytes(self: Path):  # type: ignore[override]
-    """Cached `Path.read_bytes` for source-tree files only."""
+    """Cached `Path.read_bytes` for source-tree files only.
+
+    Round 7 R7-1: dict get/set under `_PATCH_LOCK`; file I/O outside.
+    """
     key = str(self.resolve())
     if not _is_cacheable(key):
         return _ORIGINAL_READ_BYTES(self)
-    cached = _READ_BYTES_CACHE.get(key)
+    with _PATCH_LOCK:
+        cached = _READ_BYTES_CACHE.get(key)
     if cached is None:
         cached = _ORIGINAL_READ_BYTES(self)
-        _READ_BYTES_CACHE[key] = cached
+        with _PATCH_LOCK:
+            _READ_BYTES_CACHE[key] = cached
     return cached
 
 

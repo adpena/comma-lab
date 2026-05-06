@@ -231,13 +231,29 @@ def apply_wr01_atoms_to_raw(
     # non-linear at 0/255. Apply order changes output bytes when ranges overlap
     # AND a delta clamps. Sort by (raw_offset, level, coefficient_index) to make
     # apply deterministic regardless of caller's atom-list ordering.
-    # Round 6 R6-4 fix (2026-05-06): count non-Mapping atoms BEFORE the sort
-    # filter drops them, so `skipped_atom_count` truthfully reflects input
-    # quality. Previously the sort filtered with a generator and the inner
-    # `if not isinstance` check was unreachable, silently undercounting.
-    skipped += sum(1 for a in atoms if not isinstance(a, Mapping))
+    # Round 6 R6-4 + Round 7 R7-2 fix (2026-05-06): pre-filter BOTH non-Mapping
+    # atoms AND malformed-Mapping atoms (missing or non-int required keys) so
+    # the sort key function and the inner loop both see only valid atoms. The
+    # sort key calls int() on raw_offset/level/coefficient_index — a malformed
+    # value would crash the whole sort before the inner loop's try/except
+    # could catch it. Pre-filter solves it at the gate.
+    valid_atoms: list[Mapping[str, Any]] = []
+    for a in atoms:
+        if not isinstance(a, Mapping):
+            skipped += 1
+            continue
+        try:
+            int(a.get("raw_offset"))
+            int(a.get("raw_end"))
+            int(a.get("coefficient_quantized"))
+            int(a.get("level", 0))
+            int(a.get("coefficient_index", 0))
+        except (TypeError, ValueError):
+            skipped += 1
+            continue
+        valid_atoms.append(a)
     atoms = sorted(
-        (a for a in atoms if isinstance(a, Mapping)),
+        valid_atoms,
         key=lambda a: (
             int(a.get("raw_offset", 0)),
             int(a.get("level", 0)),
@@ -245,8 +261,10 @@ def apply_wr01_atoms_to_raw(
         ),
     )
     for atom in atoms:
-        # All atoms here are Mapping by construction (sort filtered above);
-        # the non-Mapping count was already added to `skipped`.
+        # All atoms here are well-formed Mappings by construction (the
+        # pre-filter above checked Mapping membership AND that all five
+        # required keys coerce to int); both classes were already added to
+        # `skipped`.
         start = int(atom.get("raw_offset"))
         end = int(atom.get("raw_end"))
         coefficient = int(atom.get("coefficient_quantized"))

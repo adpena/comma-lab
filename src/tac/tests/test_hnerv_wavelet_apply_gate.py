@@ -77,28 +77,37 @@ def test_audit_hnerv_wavelet_apply_gate_cli(tmp_path: Path) -> None:
 
 
 def test_apply_gate_propagates_source_archive_sha256_from_apply_transform_manifest() -> None:
-    """Round 6 R6-3 fix (2026-05-06): the gate's `source_archive_sha256`
-    output must reflect whatever value the input sidechannel_manifest
-    carries — including None when the apply_transform manifest is the
-    input and the operator did not supply a SHA. This pins R6-1's
-    contract: apply_transform no longer auto-derives a misleading
+    """Round 6 R6-3 + Round 7 R7-3 fix (2026-05-06): the gate's
+    `source_archive_sha256` output must reflect whatever value the input
+    sidechannel_manifest carries — including None when the apply_transform
+    manifest is the input and the operator did not supply a SHA. This pins
+    R6-1's contract: apply_transform no longer auto-derives a misleading
     payload-bytes hash; it propagates None or the caller-supplied SHA
     untouched.
+
+    R7-3 hardening: use `_apply_transform_manifest()` (the actual shape
+    `build_wavelet_apply_transform_candidate` emits — keyed by
+    `candidate_archive_byte_delta_vs_source_estimate`, NOT the sidechannel
+    manifest's `candidate_archive_byte_delta`). This exercises the
+    apply_transform manifest path through the gate, not the sidechannel
+    manifest path. R6-3's previous use of `_sidechannel_manifest()` was
+    a false-green: a future regression of the new-key fallback would not
+    fail this test.
     """
-    apply_transform_manifest_with_sha = dict(_sidechannel_manifest())
-    apply_transform_manifest_with_sha["source_archive_sha256"] = "c" * 64
+    apply_transform_with_sha = _apply_transform_manifest()
+    apply_transform_with_sha["source_archive_sha256"] = "c" * 64
 
     payload = build_wavelet_apply_gate(
-        sidechannel_manifest=apply_transform_manifest_with_sha,
+        sidechannel_manifest=apply_transform_with_sha,
         stacked_metadata=_stacked_metadata(),
     )
     assert payload["source_archive_sha256"] == "c" * 64
 
-    apply_transform_manifest_no_sha = dict(_sidechannel_manifest())
-    apply_transform_manifest_no_sha["source_archive_sha256"] = None
+    apply_transform_no_sha = _apply_transform_manifest()
+    apply_transform_no_sha["source_archive_sha256"] = None
 
     payload_none = build_wavelet_apply_gate(
-        sidechannel_manifest=apply_transform_manifest_no_sha,
+        sidechannel_manifest=apply_transform_no_sha,
         stacked_metadata=_stacked_metadata(),
     )
     assert payload_none["source_archive_sha256"] is None
@@ -121,12 +130,46 @@ def _sidechannel_manifest() -> dict:
 
 
 def _stacked_metadata() -> dict:
+    # Round 7 R7-4 note (2026-05-06): the 387 here is the AUTHORITATIVE
+    # delta the gate uses (stacked_delta wins over manifest-only delta in
+    # `build_wavelet_apply_gate` line 88). The manifest fixtures use 388
+    # (sidechannel) and 393 (apply_transform) intentionally — they are
+    # NOT-the-same-source-of-truth markers, demonstrating that the gate
+    # prefers the stacked metadata's delta when both are present. If you
+    # change this 387, also recompute `expected_rate` in
+    # test_wavelet_apply_gate_computes_rate_and_seg_break_even.
     return {
         "score_claim": False,
         "archive_path": "candidate.zip",
         "delta_bytes_vs_pr106_zip": 387,
         "wavelet_runtime_mode": "explicit_noop_consume_only",
         "wavelet_runtime_consumption_proof": {
+            "runtime_consumed": True,
+            "decoded_atom_count": 32,
+            "score_claim": False,
+        },
+    }
+
+
+def _apply_transform_manifest() -> dict:
+    """Round 7 R7-3 fixture: the actual manifest shape emitted by
+    `build_wavelet_apply_transform_candidate` — keyed by
+    `candidate_archive_byte_delta_vs_source_estimate`, NOT
+    `candidate_archive_byte_delta`. The gate's R2-2/R3-A fallback path
+    reads this key when the sidechannel-shape key is absent.
+
+    Use this fixture when testing apply_transform → gate flow. Use
+    `_sidechannel_manifest()` when testing sidechannel → gate flow.
+    """
+    return {
+        "score_claim": False,
+        "source_archive_sha256": "a" * 64,
+        "candidate_archive_sha256": "b" * 64,
+        "candidate_archive_byte_delta_vs_source_estimate": 393,
+        "rate_score_delta_vs_source_estimate": 25.0 * 393.0 / 37_545_489.0,
+        "wavelet_sidechannel_bytes": 379,
+        "decoded_wavelet_sidechannel": {"total_atom_count": 32},
+        "runtime_consumption_proof": {
             "runtime_consumed": True,
             "decoded_atom_count": 32,
             "score_claim": False,
