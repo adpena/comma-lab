@@ -1475,6 +1475,45 @@ def step_compress_weights(
     # — UNLIKE I4LZ which has no header. The gate that matters for NWC is
     # the codec-checkpoint requirement: without a trained codec we fall back
     # to FP4 with a warning rather than silently shipping a stub.
+    # PARADIGM-β NWCS dispatch (sensitivity-weighted neural weight codec) —
+    # mirror of the NWC branch with sensitivity-bucketed codebooks.
+    # cfg.weight_compression="nwcs_sensitivity" routes through
+    # tac.neural_weight_codec_sensitivity.SensitivityAwareWeightCodec which
+    # uses per-block sensitivity to choose codebook size (K=256 high-sens →
+    # K=4 low-sens). Requires (1) trained codec checkpoint at
+    # cfg.weight_codec_path AND (2) sensitivity_map_path. Both gates must be
+    # present or the branch raises NotImplementedError so the operator
+    # cannot accidentally ship a stub archive (silent-no-op trap class).
+    if mode == "nwcs_sensitivity":
+        codec_path = cfg.weight_codec_path or ""
+        sens_path = cfg.sensitivity_map_path or ""
+        missing = []
+        if not codec_path or not Path(codec_path).exists():
+            missing.append(f"cfg.weight_codec_path={codec_path!r}")
+        if not sens_path or not Path(sens_path).exists():
+            missing.append(f"cfg.sensitivity_map_path={sens_path!r}")
+        if missing:
+            raise NotImplementedError(
+                f"PARADIGM-β NWCS dispatch ('nwcs_sensitivity'): missing "
+                f"prerequisites — {', '.join(missing)}. The codec checkpoint "
+                f"is produced by experiments/train_neural_weight_codec_sensitivity.py "
+                f"(not yet built); the sensitivity map is produced by the GPU "
+                f"sensitivity sweep. Without both, dispatch cannot proceed. "
+                f"See lane_nwcs_sensitivity_weighted in the lane registry."
+            )
+        # Future operator landing: import and call
+        # tac.neural_weight_codec_sensitivity.export_nwcs_renderer_container
+        # with per-tensor encoded blobs from SensitivityAwareWeightCodec.
+        # For now, treat as registered-but-not-fully-implemented:
+        raise NotImplementedError(
+            "PARADIGM-β NWCS dispatch: codec checkpoint + sensitivity map "
+            "are present, but the per-tensor encoding loop "
+            "(SensitivityAwareWeightCodec.encode → "
+            "export_nwcs_renderer_container) is not yet wired. Operator "
+            "must land that integration; reference β branch (commit 107f6fea) "
+            "for the dispatch pattern."
+        )
+
     if mode == "nwc":
         codec_path = cfg.weight_codec_path or ""
         if not codec_path or not Path(codec_path).exists():
