@@ -5306,6 +5306,55 @@ Verification:
 - `.venv/bin/python tools/all_lanes_preflight.py` passed:
   `ALL 20 PREFLIGHT CHECKS PASSED`.
 
+## R81 - 2026-05-06 Component Sensitivity Shard Merge IO Lowering
+
+Continued the Gate #7 lowering tranche on the finite-difference sensitivity
+shard merger. This was a behavior-preserving cleanup only: shard validation,
+coverage checks, tensor merge semantics, certification handoff gating, and
+provenance schema were not changed.
+
+Changes:
+
+- Migrated `experiments/merge_component_sensitivity_shards.py` from hand-rolled
+  repo-root/`sys.path` setup to `tools.tool_bootstrap`.
+- Replaced local canonical JSON byte/write helpers with `tac.repo_io.json_text`
+  and `write_json`.
+- Switched CLI result output to `tac.repo_io.json_line` to preserve
+  deterministic one-line JSON stdout.
+
+Measured inventory after R81:
+
+- local SHA helpers: `54`
+- local JSON dumps: `109`
+- manual `sys.path` bootstraps: `274`
+- manual repo-root parent probes: `371`
+- manual score/dispatch metadata mentions: `601`
+
+Within-tranche committed-surface deltas:
+
+- `experiments/merge_component_sensitivity_shards.py` local JSON dump count:
+  `1 -> 0`
+- `experiments/merge_component_sensitivity_shards.py` manual `sys.path`
+  bootstrap count: `2 -> 0`
+- `experiments/merge_component_sensitivity_shards.py` manual repo-root parent
+  count: `1 -> 0`
+- `experiments/merge_component_sensitivity_shards.py` manual score/dispatch
+  metadata count: `4 -> 4`
+
+Verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_merge_component_sensitivity_shards.py
+  src/tac/tests/test_profile_component_sensitivity.py -q` passed:
+  `37 passed`.
+- `.venv/bin/python -m ruff check --select I,RUF100,F401,UP035,F821
+  experiments/merge_component_sensitivity_shards.py` passed.
+- `.venv/bin/python -m py_compile
+  experiments/merge_component_sensitivity_shards.py` passed.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --format json` reported
+  the measured inventory above.
+- `.venv/bin/python tools/all_lanes_preflight.py` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+
 ## R80 - 2026-05-06 Submission Packet Builder IO Lowering
 
 Continued the Gate #7 lowering tranche on the recovered contest submission

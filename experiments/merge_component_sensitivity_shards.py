@@ -9,23 +9,31 @@ metadata and delegates tensor merging to
 from __future__ import annotations
 
 import argparse
-import json
+import importlib.util
 import shutil
-import sys
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import torch
 
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-if str(REPO_ROOT / "src") not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT / "src"))
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 
-from experiments.profile_component_sensitivity import (  # noqa: E402
+from experiments.profile_component_sensitivity import (
     COMPONENT_OUTPUTS,
     FINITE_DIFFERENCE_MERGE_SCHEMA,
     FINITE_DIFFERENCE_SHARD_SCHEMA,
@@ -36,8 +44,8 @@ from experiments.profile_component_sensitivity import (  # noqa: E402
     _merge_finite_difference_shard_maps,
     _refs_from_payload,
 )
-from tac.sensitivity_map import load_sensitivity_map, save_sensitivity_map  # noqa: E402
-
+from tac.repo_io import json_line, json_text, write_json
+from tac.sensitivity_map import load_sensitivity_map, save_sensitivity_map
 
 PRODUCER = "experiments/merge_component_sensitivity_shards.py"
 SUMMARY_FILENAME = "component_sensitivity_profile_summary.json"
@@ -62,14 +70,10 @@ class ShardInput:
 
 
 def _json_bytes(payload: Mapping[str, Any]) -> bytes:
-    return (
-        json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
-    ).encode("utf-8")
+    return json_text(payload).encode("utf-8")
 
 
-def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(_json_bytes(payload))
+_write_json = write_json
 
 
 def _positive_int(value: Any, *, field: str) -> int:
@@ -659,16 +663,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     ) as exc:
         raise SystemExit(f"FATAL: {exc}") from exc
     print(
-        json.dumps(
+        json_line(
             {
                 "output_dir": validation["artifact_dir"],
                 "validation_json": str(Path(validation["artifact_dir"]) / VALIDATION_FILENAME),
                 "coverage": validation["coverage"],
                 "promotion_eligible": False,
                 "score_claim": False,
-            },
-            sort_keys=True,
-        )
+            }
+        ),
+        end="",
     )
     return 0
 
