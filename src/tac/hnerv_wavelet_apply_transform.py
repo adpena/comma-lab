@@ -45,7 +45,9 @@ def build_wavelet_apply_transform_candidate(
     section_name: str = DEFAULT_SECTION,
     strength_numerator: int = 1,
     strength_denominator: int = 2,
+    source_archive: str | Path | None = None,
     source_archive_sha256: str | None = None,
+    source_archive_bytes: int | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic plain-HNeRV archive after applying WR01 atoms.
 
@@ -63,17 +65,18 @@ def build_wavelet_apply_transform_candidate(
         raise HnervWaveletApplyTransformError("strength_numerator must be non-negative")
     if strength_denominator <= 0:
         raise HnervWaveletApplyTransformError("strength_denominator must be positive")
-    if source_archive_sha256 is not None and (
-        not isinstance(source_archive_sha256, str)
-        or len(source_archive_sha256) != 64
-        or not all(c in "0123456789abcdef" for c in source_archive_sha256)
-    ):
-        raise HnervWaveletApplyTransformError(
-            "source_archive_sha256 must be a 64-char lowercase hex digest or None"
-        )
+    _validate_sha256_or_none(source_archive_sha256, "source_archive_sha256")
+    if source_archive_bytes is not None and int(source_archive_bytes) <= 0:
+        raise HnervWaveletApplyTransformError("source_archive_bytes must be positive or None")
     archive = read_strict_single_member_zip(wavelet_archive)
     parsed_wrapper = parse_wavelet_sidechannel_archive_bytes(archive.payload)
     source_payload = parsed_wrapper.source_payload
+    source_custody = _source_archive_custody(
+        source_archive=source_archive,
+        source_archive_sha256=source_archive_sha256,
+        source_archive_bytes=source_archive_bytes,
+        source_payload=source_payload,
+    )
     packed = parse_ff_packed_brotli_hnerv(source_payload)
     section = _single_section(parsed_wrapper.decoded_sidechannel, section_name)
     source_section = packed.section_bytes(section_name)
@@ -124,9 +127,24 @@ def build_wavelet_apply_transform_candidate(
     candidate_archive = output_root / "hnerv_wavelet_apply_transform_candidate.zip"
     write_stored_single_member_zip(candidate_archive, member_name=archive.member_name, payload=candidate_payload)
     candidate_archive_bytes = candidate_archive.stat().st_size
-    rate_score_delta = 25.0 * (
-        candidate_archive_bytes - _source_archive_bytes_from_wrapper(archive.archive_bytes, archive.payload, source_payload)
-    ) / 37_545_489.0
+    source_archive_bytes_estimate = _source_archive_bytes_from_wrapper(
+        archive.archive_bytes,
+        archive.payload,
+        source_payload,
+    )
+    rate_score_delta = 25.0 * (candidate_archive_bytes - source_archive_bytes_estimate) / 37_545_489.0
+    source_section_sha256 = sha256_bytes(source_section)
+    candidate_section_sha256 = sha256_bytes(transformed_section)
+    dispatch_blockers = [
+        "requires_archive_manifest_preflight",
+        "requires_component_response_or_exact_cuda_eval",
+        "requires_lane_dispatch_claim",
+        "requires_exact_cuda_auth_eval",
+    ]
+    if source_custody.get("source_archive_sha256") is None:
+        dispatch_blockers.insert(0, "requires_source_archive_sha256")
+    if source_custody.get("source_archive_bytes") is None:
+        dispatch_blockers.insert(0, "requires_source_archive_bytes")
     manifest = {
         "schema_version": SCHEMA_VERSION,
         "tool": TOOL,
@@ -136,6 +154,11 @@ def build_wavelet_apply_transform_candidate(
         "wavelet_archive_path": str(wavelet_archive),
         "wavelet_archive_sha256": archive.archive_sha256,
         "wavelet_archive_bytes": archive.archive_bytes,
+        "source_archive_path": source_custody.get("source_archive_path"),
+        "source_archive_sha256": source_custody.get("source_archive_sha256"),
+        "source_archive_bytes": source_custody.get("source_archive_bytes"),
+        "source_archive_member_name": source_custody.get("source_archive_member_name"),
+        "source_archive_custody_mode": source_custody["source_archive_custody_mode"],
         "candidate_archive_path": str(candidate_archive),
         "candidate_archive_sha256": sha256_file(candidate_archive),
         "candidate_archive_bytes": candidate_archive_bytes,
@@ -144,11 +167,7 @@ def build_wavelet_apply_transform_candidate(
         "candidate_payload_bytes": len(candidate_payload),
         "source_payload_sha256": sha256_bytes(source_payload),
         "source_payload_bytes": len(source_payload),
-        "source_archive_bytes_estimated_from_wrapper": _source_archive_bytes_from_wrapper(
-            archive.archive_bytes,
-            archive.payload,
-            source_payload,
-        ),
+        "source_archive_bytes_estimated_from_wrapper": source_archive_bytes_estimate,
         # Adversarial review 2026-05-06 (BUG #2, 95% confidence): these two fields
         # are advisory-only — the byte delta is computed from a wrapper-arithmetic
         # estimate of the source archive bytes, NOT from a re-measured contest
@@ -167,11 +186,23 @@ def build_wavelet_apply_transform_candidate(
             "for break-even gating; do not promote to a score claim."
         ),
         "section_name": section_name,
-        "source_section_sha256": sha256_bytes(source_section),
-        "candidate_section_sha256": sha256_bytes(transformed_section),
+        "source_section_sha256": source_section_sha256,
+        "candidate_section_sha256": candidate_section_sha256,
         "source_section_bytes": len(source_section),
         "candidate_section_bytes": len(transformed_section),
         "section_byte_delta": len(transformed_section) - len(source_section),
+        "changed_section_name": section_name,
+        "changed_section_source_sha256": source_section_sha256,
+        "changed_section_sha256": candidate_section_sha256,
+        "changed_section_bytes": len(transformed_section),
+        "changed_section": {
+            "name": section_name,
+            "source_sha256": source_section_sha256,
+            "candidate_sha256": candidate_section_sha256,
+            "source_bytes": len(source_section),
+            "candidate_bytes": len(transformed_section),
+            "byte_delta": len(transformed_section) - len(source_section),
+        },
         "source_raw_sha256": sha256_bytes(raw),
         "candidate_raw_sha256": sha256_bytes(transformed_raw),
         "source_raw_bytes": len(raw),
@@ -188,24 +219,11 @@ def build_wavelet_apply_transform_candidate(
         # "next required evidence" record (per R4-B fail-closed-by-design).
         "ready_for_archive_preflight": False,
         "ready_for_exact_eval_dispatch": False,
-        # Round 6 R6-1 fix (2026-05-06): caller-supplied or None. The R5-5
-        # auto-derivation `sha256_bytes(source_payload)` was a payload-bytes
-        # hash, not an archive-file hash — feeding the wrong SHA into
-        # apply_gate's `source_archive_sha256` provenance chain. The wire
-        # format does not encode this value, so it must be passed in by the
-        # caller (operator who knows which source archive the wavelet
-        # sidechannel was constructed from). None is the honest default.
-        "source_archive_sha256": source_archive_sha256,
-        "dispatch_blockers": [
-            "requires_archive_manifest_preflight",
-            "requires_component_response_or_exact_cuda_eval",
-            "requires_lane_dispatch_claim",
-            "requires_exact_cuda_auth_eval",
-        ],
+        "dispatch_blockers": dispatch_blockers,
     }
     manifest_path = output_root / "hnerv_wavelet_apply_transform_candidate.json"
-    manifest_path.write_text(json_text(manifest), encoding="utf-8")
     manifest["manifest_path"] = str(manifest_path)
+    manifest_path.write_text(json_text(manifest), encoding="utf-8")
     return manifest
 
 
@@ -337,6 +355,68 @@ def _source_archive_bytes_from_wrapper(wrapper_archive_bytes: int, wrapper_paylo
     # the 0xFA wrapper bytes estimates the original archive byte count exactly
     # for the deterministic writer used by this lane.
     return int(wrapper_archive_bytes) - (len(wrapper_payload) - len(source_payload))
+
+
+def _validate_sha256_or_none(value: str | None, field_name: str) -> None:
+    if value is None:
+        return
+    if (
+        not isinstance(value, str)
+        or len(value) != 64
+        or not all(c in "0123456789abcdef" for c in value)
+    ):
+        raise HnervWaveletApplyTransformError(
+            f"{field_name} must be a 64-char lowercase hex digest or None"
+        )
+
+
+def _source_archive_custody(
+    *,
+    source_archive: str | Path | None,
+    source_archive_sha256: str | None,
+    source_archive_bytes: int | None,
+    source_payload: bytes,
+) -> dict[str, Any]:
+    if source_archive is not None:
+        archive = read_strict_single_member_zip(source_archive)
+        if archive.payload != source_payload:
+            raise HnervWaveletApplyTransformError(
+                "source_archive payload does not match WR01 wrapper source payload"
+            )
+        if source_archive_sha256 is not None and source_archive_sha256 != archive.archive_sha256:
+            raise HnervWaveletApplyTransformError(
+                "source_archive_sha256 does not match measured source archive"
+            )
+        if source_archive_bytes is not None and int(source_archive_bytes) != archive.archive_bytes:
+            raise HnervWaveletApplyTransformError(
+                "source_archive_bytes does not match measured source archive"
+            )
+        return {
+            "source_archive_path": str(source_archive),
+            "source_archive_sha256": archive.archive_sha256,
+            "source_archive_bytes": archive.archive_bytes,
+            "source_archive_member_name": archive.member_name,
+            "source_archive_custody_mode": "verified_source_archive_payload_match",
+        }
+    if (source_archive_sha256 is None) != (source_archive_bytes is None):
+        raise HnervWaveletApplyTransformError(
+            "source_archive_sha256 and source_archive_bytes must be provided together"
+        )
+    if source_archive_sha256 is None:
+        return {
+            "source_archive_path": None,
+            "source_archive_sha256": None,
+            "source_archive_bytes": None,
+            "source_archive_member_name": None,
+            "source_archive_custody_mode": "missing_source_archive_identity_fail_closed",
+        }
+    return {
+        "source_archive_path": None,
+        "source_archive_sha256": source_archive_sha256,
+        "source_archive_bytes": int(source_archive_bytes),
+        "source_archive_member_name": None,
+        "source_archive_custody_mode": "operator_supplied_source_archive_identity",
+    }
 
 
 __all__ = [

@@ -17,6 +17,7 @@ from typing import Any, cast
 from zipfile import ZipFile
 
 ProfileIndex = dict[str, dict[str, dict[str, Any]]]
+CandidateIndex = dict[str, dict[str, Any]]
 
 
 def load_json(path: Path) -> Any:
@@ -71,6 +72,21 @@ def profile_indexes(paths: list[Path] | None) -> ProfileIndex:
 
 def profile_by_sha(paths: list[Path] | None) -> dict[str, dict[str, Any]]:
     return profile_indexes(paths)["archive_sha256"]
+
+
+def candidate_indexes(paths: list[Path] | None) -> CandidateIndex:
+    by_archive_sha: dict[str, dict[str, Any]] = {}
+    for path in paths or []:
+        payload = maybe_load_json(path)
+        if not isinstance(payload, dict):
+            continue
+        candidate_sha = payload.get("candidate_archive_sha256")
+        if isinstance(candidate_sha, str):
+            by_archive_sha[candidate_sha] = {
+                **payload,
+                "candidate_manifest_path": str(path),
+            }
+    return by_archive_sha
 
 
 def numeric(payload: dict[str, Any], key: str) -> float | None:
@@ -158,6 +174,7 @@ def row_from_eval(
     label: str,
     path: Path,
     profiles: ProfileIndex | dict[str, dict[str, Any]],
+    candidates: CandidateIndex | None = None,
 ) -> dict[str, Any]:
     payload = load_json(path)
     provenance = payload.get("provenance") or {}
@@ -172,6 +189,16 @@ def row_from_eval(
         (inspected_archive or {}).get("member_sha256")
         or profile.get("member_sha256")
     )
+    candidate_manifest = {}
+    if isinstance(sha, str) and candidates:
+        candidate_manifest = candidates.get(sha) or {}
+    candidate_diff_audit = candidate_manifest.get("candidate_diff_audit")
+    brotli_raw_equivalence = candidate_manifest.get("brotli_raw_equivalence")
+    raw_equivalence_closed = (
+        isinstance(brotli_raw_equivalence, list)
+        and bool(brotli_raw_equivalence)
+        and all(isinstance(item, dict) and item.get("raw_equal") is True for item in brotli_raw_equivalence)
+    )
     evidence_grade = (
         "A++"
         if provenance.get("device") == "cuda"
@@ -180,11 +207,12 @@ def row_from_eval(
         else "A"
     )
     canonicality_blockers = _canonicality_blockers(payload, evidence_grade)
-    return {
+    row = {
         "label": label,
         "evidence_grade": evidence_grade,
         "canonical_frontier_eligible": evidence_grade == "A++" and not canonicality_blockers,
         "canonicality_blockers": canonicality_blockers,
+        "frontier_scope": "exact_local_cuda_custody",
         "score": numeric(payload, "score_recomputed_from_components"),
         "archive_bytes": payload.get("archive_size_bytes"),
         "archive_sha256": sha,
@@ -211,6 +239,26 @@ def row_from_eval(
         "payload_sections": sections,
         "eval_artifact": str(path),
     }
+    if candidate_manifest:
+        row.update(
+            {
+                "candidate_manifest": candidate_manifest.get("candidate_manifest_path"),
+                "candidate_manifest_match_key": "candidate_archive_sha256",
+                "candidate_source_label": candidate_manifest.get("source_label"),
+                "candidate_source_archive_sha256": candidate_manifest.get("source_archive_sha256"),
+                "candidate_source_archive_bytes": candidate_manifest.get("source_archive_bytes"),
+                "candidate_payload_sha256": candidate_manifest.get("candidate_payload_sha256"),
+                "candidate_diff_audit": candidate_diff_audit,
+                "brotli_raw_equivalence": brotli_raw_equivalence,
+                "raw_equivalence_closed": raw_equivalence_closed,
+                "frontier_scope": (
+                    "exact_local_cuda_custody_lossless_repack_control"
+                    if raw_equivalence_closed
+                    else "exact_local_cuda_custody_candidate_manifest"
+                ),
+            }
+        )
+    return row
 
 
 def equal_numeric(values: list[float | None]) -> bool:
@@ -367,18 +415,19 @@ def render_markdown(rows: list[dict[str, Any]]) -> str:
     lines = [
         "# HNeRV Frontier Scorecard",
         "",
-        "| label | grade | canonical | score | bytes | seg | pose | rate | largest section | archive sha |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---|---|",
+        "| label | grade | canonical | scope | score | bytes | seg | pose | rate | largest section | archive sha |",
+        "|---|---:|---:|---|---:|---:|---:|---:|---:|---|---|",
     ]
     for row in sorted(rows, key=lambda item: item["score"] if item["score"] is not None else 999):
         largest = row.get("largest_payload_section") or {}
         largest_text = f"{largest.get('name')}:{largest.get('bytes')}" if largest else "n/a"
         lines.append(
-            "| {label} | {grade} | {canonical} | {score:.12f} | {bytes_} | {seg:.9f} | "
-            "{pose:.9f} | {rate:.9f} | `{largest}` | `{sha}` |".format(
+            "| {label} | {grade} | {canonical} | `{scope}` | {score:.12f} | {bytes_} | "
+            "{seg:.9f} | {pose:.9f} | {rate:.9f} | `{largest}` | `{sha}` |".format(
                 label=row["label"],
                 grade=row["evidence_grade"],
                 canonical="yes" if row.get("canonical_frontier_eligible") else "no",
+                scope=row.get("frontier_scope") or "exact_local_cuda_custody",
                 score=row["score"],
                 bytes_=row["archive_bytes"],
                 seg=row["score_seg_contribution"],
@@ -463,6 +512,11 @@ def render_markdown(rows: list[dict[str, Any]]) -> str:
             "sections are forensic signals for the next compression action; they do",
             "not imply score deltas without a new exact archive eval.",
             "",
+            "Guardrail: a lossless Brotli repack row is a local exact-custody",
+            "byte-control. It does not supersede categorical/range-coded HNeRV",
+            "families unless that exact candidate archive has a lower CUDA score",
+            "under the same custody standard.",
+            "",
         ]
     )
     return "\n".join(lines)
@@ -476,23 +530,38 @@ def main() -> int:
         type=Path,
         help="Payload profile JSON emitted by profile_hnerv_frontier_payloads.py.",
     )
+    parser.add_argument(
+        "--candidate-manifest",
+        action="append",
+        type=Path,
+        help=(
+            "Candidate manifest emitted by a byte-transform builder. Rows match "
+            "by candidate_archive_sha256 and remain exact-eval scored by JSON."
+        ),
+    )
     parser.add_argument("--json-out", type=Path, required=True)
     parser.add_argument("--md-out", type=Path, required=True)
     parser.add_argument("evals", nargs="+", help="LABEL=path/to/contest_auth_eval.adjudicated.json")
     args = parser.parse_args()
 
     profiles = profile_indexes(args.profile_json)
+    candidates = candidate_indexes(args.candidate_manifest)
     rows: list[dict[str, Any]] = []
     for item in args.evals:
         if "=" not in item:
             raise SystemExit(f"expected LABEL=PATH, got {item!r}")
         label, raw_path = item.split("=", 1)
-        rows.append(row_from_eval(label, Path(raw_path), profiles))
+        rows.append(row_from_eval(label, Path(raw_path), profiles, candidates))
 
     payload = {
         "schema_version": 1,
         "tool": "build_hnerv_frontier_scorecard",
         "score_truth": "exact_cuda_auth_eval_json",
+        "frontier_scope": "exact_local_cuda_custody",
+        "interpretation_guardrails": [
+            "lossless_brotli_repack_rows_are_local_byte_controls_not_categorical_frontier_claims",
+            "categorical_or_range_coded_hnerv_rows_supersede_only_with_lower_exact_cuda_custody_score",
+        ],
         "payload_equivalence_groups": payload_equivalence_groups(rows),
         "payload_section_manifests": payload_section_manifests(rows),
         "followup_targets": followup_targets(rows),

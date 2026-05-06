@@ -1,0 +1,40 @@
+[
+  {
+    "archive": "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/pr106x_hnerv_brotli_repack_candidate.zip",
+    "archive_bytes": 186080,
+    "archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+    "evidence_grade": "forensic_byte_profile",
+    "kind": "ff_packed_brotli_hnerv",
+    "member_bytes": 185980,
+    "member_name": "x",
+    "member_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+    "score_claim": false,
+    "sections": [
+      {
+        "bytes": 4,
+        "end": 4,
+        "entropy_bits_per_byte": 2.0,
+        "name": "packed_header_ff_len24",
+        "sha256": "c670d1bee2140039bc6fc23599dd4bdc2ec00a659e0815945a7d60cfe6daccc7",
+        "start": 0
+      },
+      {
+        "bytes": 170127,
+        "end": 170131,
+        "entropy_bits_per_byte": 7.998224,
+        "name": "decoder_packed_brotli",
+        "sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+        "start": 4
+      },
+      {
+        "bytes": 15849,
+        "end": 185980,
+        "entropy_bits_per_byte": 7.985386,
+        "name": "latents_and_sidecar_brotli",
+        "sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+        "start": 170131
+      }
+    ],
+    "zip_overhead_bytes": 100
+  }
+]

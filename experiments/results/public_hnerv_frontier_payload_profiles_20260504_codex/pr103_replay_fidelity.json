@@ -1,0 +1,45 @@
+{
+  "audit": "public_pr_replay_fidelity",
+  "blockers": [
+    "public_leaderboard_score_mismatch"
+  ],
+  "dispatch_attempted": false,
+  "eval_dir": "experiments/results/lightning_batch/exact_eval_public_pr103_hnerv_lc_ac_t4_20260504T1245Z",
+  "intake_dir": "experiments/results/public_pr_archive_kaggle_mirror/public_pr103_intake_20260505_auto",
+  "replay_fidelity_closed": false,
+  "score_claim": false,
+  "summary": {
+    "classification": "public_runtime_or_eval_fidelity_mismatch",
+    "intake_archive": {
+      "archive": "experiments/results/public_pr_archive_kaggle_mirror/public_pr103_intake_20260505_auto/archive.zip",
+      "archive_bytes": 178223,
+      "archive_sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30",
+      "member_count": 1,
+      "members": [
+        {
+          "file_size": 178123,
+          "name": "x"
+        }
+      ]
+    },
+    "leaderboard_name": "hnerv_lc_ac",
+    "pr_number": 103,
+    "public_leaderboard_score": 0.195,
+    "replay_archive": {
+      "archive": "experiments/results/lightning_batch/exact_eval_public_pr103_hnerv_lc_ac_t4_20260504T1245Z/archive.zip",
+      "archive_bytes": 178223,
+      "archive_sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30",
+      "member_count": 1,
+      "members": [
+        {
+          "file_size": 178123,
+          "name": "x"
+        }
+      ]
+    },
+    "replay_result_source": "experiments/results/lightning_batch/exact_eval_public_pr103_hnerv_lc_ac_t4_20260504T1245Z/adjudication.log",
+    "replay_score": 0.2277649714224471,
+    "score_delta_vs_public": 0.03276497142244708,
+    "score_tolerance": 0.001
+  }
+}

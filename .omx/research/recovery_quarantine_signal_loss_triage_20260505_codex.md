@@ -1542,6 +1542,58 @@ Verification:
   tools/audit_staged_public_release_hygiene.py` passed.
 - `.venv/bin/python tools/all_lanes_preflight.py` passed:
   `ALL 20 PREFLIGHT CHECKS PASSED`.
+
+## R96 - 2026-05-06 HNeRV Replay Fidelity And WR01 Custody Hardening
+
+Fixed a public-frontier fidelity ambiguity in the HNeRV hidden-gem control
+plane. The PR106x low-level Brotli recode is now explicitly scoped as an
+`exact_local_cuda_custody_lossless_repack_control`, not as evidence that
+lossless Brotli supersedes categorical/range-coded HNeRV. The scorecard now
+accepts candidate manifests, records raw Brotli equivalence closure, and
+renders the guardrail directly in the markdown artifact.
+
+Added `tools/audit_public_pr_replay_fidelity.py` so public PR deconstruction
+fails closed when archive bytes match but local replay score diverges from the
+public leaderboard metadata. Current PR103 custody result:
+
+- Public metadata: PR103 `hnerv_lc_ac`, leaderboard score `0.195`.
+- Intake/replay archive: SHA-256
+  `31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30`,
+  `178223` bytes, one member `x`.
+- Local replay source: `adjudication.log`, score `0.2277649714224471`.
+- Classification: `public_runtime_or_eval_fidelity_mismatch`.
+- Blocker: `public_leaderboard_score_mismatch`.
+
+This means PR103 remains the categorical/range-coded frontier target, but our
+local replay is not fidelity-closed and must not promote, rank, or kill the
+family until the runtime/eval mismatch is deconstructed.
+
+WR01 wavelet apply-transform custody was also hardened:
+
+- The builder now verifies and records source archive SHA-256, bytes, member,
+  custody mode, source payload SHA-256, and changed-section SHA-256.
+- The on-disk builder manifest and CLI `--json-out` manifest are now byte-equal;
+  the previous write order could omit `manifest_path` from one copy.
+- The exact-eval packet builder now checks manifest, payload diff, public
+  replay preflight, compliance, and dry-run artifacts against the same archive,
+  source archive, source payload, changed section, lane id, job name, and queue
+  metadata.
+- Current WR01 packet remains correctly blocked by stale compliance/dry-run
+  artifacts and missing Lightning environment; it is not dispatch-ready.
+
+Verification:
+
+- `.venv/bin/python -m pytest
+  src/tac/tests/test_hnerv_wavelet_apply_transform.py
+  src/tac/tests/test_wr01_exact_eval_packet.py
+  src/tac/tests/test_hnerv_payload_diff.py
+  src/tac/tests/test_audit_public_pr_replay_fidelity.py
+  src/tac/tests/test_build_hnerv_frontier_scorecard.py -q` passed:
+  `16 passed`.
+- `.venv/bin/python -m ruff check ...` passed on all touched Python files.
+- `.venv/bin/python -m py_compile ...` passed on all touched Python files.
+- `.venv/bin/python tools/all_lanes_preflight.py --timings` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
 - Full preflight refresh passed: `ALL 10 PREFLIGHT CHECKS PASSED`.
 
 ## 2026-05-05 Codex Lightning Core Consolidation R7

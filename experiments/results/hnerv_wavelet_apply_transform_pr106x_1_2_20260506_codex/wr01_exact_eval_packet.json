@@ -1,6 +1,195 @@
 {
   "archive_bytes": 186222,
+  "archive_identity": {
+    "bytes": 186222,
+    "exists": true,
+    "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip",
+    "sha256": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628"
+  },
   "archive_sha256": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+  "artifact_consistency_checks": [
+    {
+      "actual": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "expected": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "name": "archive_sha256_arg_mismatch",
+      "ok": true
+    },
+    {
+      "actual": 186222,
+      "expected": 186222,
+      "name": "archive_bytes_arg_mismatch",
+      "ok": true
+    },
+    {
+      "actual": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+      "expected": "present",
+      "name": "manifest_source_archive_sha256_missing",
+      "ok": true
+    },
+    {
+      "actual": 186231,
+      "expected": "present",
+      "name": "manifest_source_archive_bytes_missing",
+      "ok": true
+    },
+    {
+      "actual": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "expected": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "name": "manifest_candidate_archive_sha256_mismatch",
+      "ok": true
+    },
+    {
+      "actual": 186222,
+      "expected": 186222,
+      "name": "manifest_candidate_archive_bytes_mismatch",
+      "ok": true
+    },
+    {
+      "actual": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "expected": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "name": "payload_diff_candidate_archive_sha256_mismatch",
+      "ok": true
+    },
+    {
+      "actual": 186222,
+      "expected": 186222,
+      "name": "payload_diff_candidate_archive_bytes_mismatch",
+      "ok": true
+    },
+    {
+      "actual": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+      "expected": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+      "name": "payload_diff_source_archive_sha256_mismatch",
+      "ok": true
+    },
+    {
+      "actual": 186231,
+      "expected": 186231,
+      "name": "payload_diff_source_archive_bytes_mismatch",
+      "ok": true
+    },
+    {
+      "actual": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "expected": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "name": "payload_diff_source_payload_sha256_mismatch",
+      "ok": true
+    },
+    {
+      "actual": "2d85c4891e06906833e6a106dd486184121159a2380b581dc0e0b7d56603e939",
+      "expected": "present",
+      "name": "manifest_changed_section_sha256_missing",
+      "ok": true
+    },
+    {
+      "actual": "latents_and_sidecar_brotli",
+      "expected": "latents_and_sidecar_brotli",
+      "name": "payload_diff_changed_section_name_mismatch",
+      "ok": true
+    },
+    {
+      "actual": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+      "expected": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+      "name": "payload_diff_changed_section_source_sha256_mismatch",
+      "ok": true
+    },
+    {
+      "actual": "2d85c4891e06906833e6a106dd486184121159a2380b581dc0e0b7d56603e939",
+      "expected": "2d85c4891e06906833e6a106dd486184121159a2380b581dc0e0b7d56603e939",
+      "name": "payload_diff_changed_section_sha256_mismatch",
+      "ok": true
+    },
+    {
+      "actual": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "expected": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "name": "preflight_archive_sha256_mismatch",
+      "ok": true
+    },
+    {
+      "actual": 186222,
+      "expected": 186222,
+      "name": "preflight_archive_bytes_mismatch",
+      "ok": true
+    },
+    {
+      "actual": "2d85c4891e06906833e6a106dd486184121159a2380b581dc0e0b7d56603e939",
+      "expected": "2d85c4891e06906833e6a106dd486184121159a2380b581dc0e0b7d56603e939",
+      "name": "preflight_changed_section_sha256_mismatch",
+      "ok": true
+    },
+    {
+      "actual": "803a0940f92ec1cb1b70e9815fb6c666650b5371625e17103104baa21e96b4e7",
+      "expected": "803a0940f92ec1cb1b70e9815fb6c666650b5371625e17103104baa21e96b4e7",
+      "name": "preflight_candidate_payload_sha256_mismatch",
+      "ok": true
+    },
+    {
+      "actual": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "expected": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "name": "compliance_archive_sha256_mismatch",
+      "ok": true
+    },
+    {
+      "actual": 186222,
+      "expected": 186222,
+      "name": "compliance_archive_bytes_mismatch",
+      "ok": true
+    },
+    {
+      "actual": "803a0940f92ec1cb1b70e9815fb6c666650b5371625e17103104baa21e96b4e7",
+      "expected": "803a0940f92ec1cb1b70e9815fb6c666650b5371625e17103104baa21e96b4e7",
+      "name": "compliance_candidate_payload_sha256_mismatch",
+      "ok": true
+    },
+    {
+      "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
+      "expected": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
+      "name": "compliance_manifest_path_mismatch",
+      "ok": true
+    },
+    {
+      "actual": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "expected": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "name": "dry_run_expected_archive_sha256_mismatch",
+      "ok": true
+    },
+    {
+      "actual": 186222,
+      "expected": 186222,
+      "name": "dry_run_expected_archive_bytes_mismatch",
+      "ok": true
+    },
+    {
+      "actual": null,
+      "expected": "exact_eval_wr01_apply_pr106x_half_20260506",
+      "name": "dry_run_job_name_mismatch",
+      "ok": false
+    },
+    {
+      "actual": "wr01_apply_pr106x_half",
+      "expected": "wr01_apply_pr106x_half",
+      "name": "dry_run_queue_lane_mismatch",
+      "ok": true
+    },
+    {
+      "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
+      "expected": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
+      "name": "dry_run_queue_archive_manifest_mismatch",
+      "ok": true
+    },
+    {
+      "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json",
+      "expected": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json",
+      "name": "dry_run_queue_public_preflight_mismatch",
+      "ok": true
+    },
+    {
+      "actual": null,
+      "expected": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json",
+      "name": "dry_run_queue_payload_section_diff_mismatch",
+      "ok": false
+    }
+  ],
+  "artifact_consistency_ok": false,
   "artifacts": [
     {
       "bytes": 186222,
@@ -13,7 +202,7 @@
       "path": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json"
     },
     {
-      "bytes": 2523,
+      "bytes": 3813,
       "exists": true,
       "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json"
     },
@@ -44,16 +233,53 @@
     }
   ],
   "blockers": [
+    "pre_submission_compliance_failed",
+    "dry_run_job_name_mismatch",
+    "dry_run_queue_payload_section_diff_mismatch",
     "missing_lightning_environment"
   ],
+  "changed_section_name": "latents_and_sidecar_brotli",
+  "changed_section_sha256": "2d85c4891e06906833e6a106dd486184121159a2380b581dc0e0b7d56603e939",
   "commands": {
     "claim": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id wr01_apply_pr106x_half --platform lightning --instance-job-id exact_eval_wr01_apply_pr106x_half_20260506 --agent codex:gpt-5.5 --predicted-eta-utc 2026-05-06T07:30Z --status active_exact_eval --notes 'WR01 half exact CUDA eval; archive_sha256=d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 bytes=186222; static_preflight=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json'",
     "harvest": ".venv/bin/python scripts/launch_lightning_batch_job.py harvest-ssh --state-path .omx/state/lightning_batch_jobs.json --job-name exact_eval_wr01_apply_pr106x_half_20260506 --ssh-target $LIGHTNING_SSH_TARGET --expected-archive-sha256 d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 --expected-archive-size-bytes 186222 --require-adjudication",
     "submit": ".venv/bin/python scripts/lightning_exact_eval_repro.py --job-name exact_eval_wr01_apply_pr106x_half_20260506 --stage-workspace --submit --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh --upstream-dir $LIGHTNING_UPSTREAM_DIR --remote $LIGHTNING_SSH_TARGET --remote-pact $LIGHTNING_REMOTE_PACT --studio $LIGHTNING_STUDIO --teamspace $LIGHTNING_TEAMSPACE --sdk-user $LIGHTNING_SDK_USER --machine ${LIGHTNING_MACHINE:-T4} --predicted-band 0.18 0.25 --regression-threshold 0.02 --max-posenet-relative 1.25 --max-segnet-relative 1.10 --max-sane-score 1.0 --component-trace --queue-metadata lane=wr01_apply_pr106x_half --queue-metadata archive_manifest=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --queue-metadata public_preflight=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --queue-metadata payload_section_diff=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/pre_submission_compliance.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_wr01_strength_summary_20260506_codex.json"
   },
-  "compliance_ok": true,
+  "compliance_ok": false,
   "dispatch_attempted": false,
   "dry_run_ready": true,
+  "failed_compliance_checks": [
+    {
+      "details": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=None actual=d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "name": "archive_manifest_sha_matches",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=None actual=186222",
+      "name": "archive_manifest_size_matches",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/report.txt",
+      "name": "report_exists",
+      "passed": false,
+      "severity": "error"
+    }
+  ],
   "job_name": "exact_eval_wr01_apply_pr106x_half_20260506",
   "lane_id": "wr01_apply_pr106x_half",
   "missing_artifacts": [],
@@ -68,8 +294,11 @@
   "payload_diff_ready": true,
   "preflight_ready": true,
   "ready_for_submit": false,
-  "recorded_at_utc": "2026-05-06T06:29:47Z",
+  "recorded_at_utc": "2026-05-06T13:54:55Z",
   "schema_version": 1,
   "score_claim": false,
+  "source_archive_bytes": 186231,
+  "source_archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+  "source_payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
   "tool": "tools/build_wr01_exact_eval_packet.py"
 }

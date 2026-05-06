@@ -105,6 +105,9 @@ def test_build_hnerv_wavelet_apply_transform_candidate_cli(tmp_path: Path) -> No
         decoder_packed_brotli=brotli.compress(b"decoder", quality=11),
         latents_and_sidecar_brotli=brotli.compress(raw_latents, quality=11),
     ).to_bytes()
+    source_archive = tmp_path / "source.zip"
+    write_stored_single_member_zip(source_archive, member_name="0.bin", payload=source_payload)
+    source_zip = read_strict_single_member_zip(source_archive)
     sidechannel = encode_wavelet_atom_sidechannel(
         {
             "sections": [
@@ -152,6 +155,8 @@ def test_build_hnerv_wavelet_apply_transform_candidate_cli(tmp_path: Path) -> No
             str(out_dir),
             "--source-label",
             "fixture",
+            "--source-archive",
+            str(source_archive),
             "--strength-numerator",
             "1",
             "--strength-denominator",
@@ -164,9 +169,17 @@ def test_build_hnerv_wavelet_apply_transform_candidate_cli(tmp_path: Path) -> No
     )
 
     manifest = json.loads(manifest_path.read_text())
+    builder_manifest_path = out_dir / "hnerv_wavelet_apply_transform_candidate.json"
+    assert json.loads(builder_manifest_path.read_text()) == manifest
     assert manifest["score_claim"] is False
     assert manifest["ready_for_archive_preflight"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["source_archive_sha256"] == source_zip.archive_sha256
+    assert manifest["source_archive_bytes"] == source_zip.archive_bytes
+    assert manifest["source_payload_sha256"] == sha256_bytes(source_payload)
+    assert manifest["source_archive_custody_mode"] == "verified_source_archive_payload_match"
+    assert manifest["changed_section_name"] == "latents_and_sidecar_brotli"
+    assert manifest["changed_section_sha256"] == manifest["candidate_section_sha256"]
     assert any(
         "archive_manifest_preflight" in str(blocker).lower()
         for blocker in manifest.get("dispatch_blockers", [])

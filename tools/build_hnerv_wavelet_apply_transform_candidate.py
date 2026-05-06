@@ -29,6 +29,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--fail-if-not-archive-preflight-ready", action="store_true")
     parser.add_argument(
+        "--source-archive",
+        type=Path,
+        help=(
+            "Original source archive used to build the WR01 sidechannel. When "
+            "provided, the builder verifies its payload against the wrapper "
+            "source payload and records exact archive SHA/bytes."
+        ),
+    )
+    parser.add_argument(
         "--source-archive-sha256",
         default=None,
         help=(
@@ -39,6 +48,12 @@ def main(argv: list[str] | None = None) -> int:
             "will then surface that as missing-provenance state."
         ),
     )
+    parser.add_argument(
+        "--source-archive-bytes",
+        type=int,
+        default=None,
+        help="Caller-supplied byte size of the original source archive; required with --source-archive-sha256.",
+    )
     args = parser.parse_args(argv)
 
     payload = build_wavelet_apply_transform_candidate(
@@ -48,7 +63,9 @@ def main(argv: list[str] | None = None) -> int:
         section_name=args.section_name,
         strength_numerator=args.strength_numerator,
         strength_denominator=args.strength_denominator,
+        source_archive=args.source_archive,
         source_archive_sha256=args.source_archive_sha256,
+        source_archive_bytes=args.source_archive_bytes,
     )
     text = json_text(payload)
     if args.json_out:

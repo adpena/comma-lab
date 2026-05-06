@@ -7,6 +7,7 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 import pytest
 
 from experiments.build_hnerv_frontier_scorecard import (
+    candidate_indexes,
     followup_targets,
     inspect_single_member_archive,
     payload_equivalence_groups,
@@ -101,6 +102,55 @@ def test_payload_sha_profile_fallback_tracks_byte_identical_repack(tmp_path: Pat
     assert manifests[0]["sections"][1]["optimization_role"] == "latent_stream"
     assert manifests[1]["profile_match_key"] == "member_sha256"
     assert "Payload Section Manifests" in render_markdown([original_row, repack_row])
+
+
+def test_candidate_manifest_marks_lossless_brotli_repack_as_local_control(tmp_path: Path) -> None:
+    payload = b"\xff\x08\x00\x00decoder!latent-sidecar"
+    lane_dir = tmp_path / "candidate"
+    lane_dir.mkdir()
+    archive_info = _write_archive(lane_dir / "archive.zip", "x", payload)
+    eval_path = _write_eval(lane_dir, archive_info)
+    candidate_path = tmp_path / "candidate_result.json"
+    candidate_path.write_text(
+        json.dumps(
+            {
+                "candidate_archive_bytes": archive_info["archive_bytes"],
+                "candidate_archive_sha256": archive_info["archive_sha256"],
+                "candidate_payload_sha256": archive_info["member_sha256"],
+                "source_archive_bytes": 200,
+                "source_archive_sha256": "a" * 64,
+                "source_label": "PR106x",
+                "brotli_raw_equivalence": [
+                    {
+                        "section_name": "decoder_packed_brotli",
+                        "raw_equal": True,
+                        "raw_bytes": 8,
+                        "source_raw_sha256": "b" * 64,
+                        "candidate_raw_sha256": "b" * 64,
+                    }
+                ],
+                "candidate_diff_audit": {
+                    "score_claim": False,
+                    "total_byte_delta": -151,
+                    "sections": [],
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+
+    row = row_from_eval("PR106x-lowlevel-brotli", eval_path, profile_indexes([]), candidate_indexes([candidate_path]))
+
+    assert row["candidate_manifest_match_key"] == "candidate_archive_sha256"
+    assert row["candidate_source_label"] == "PR106x"
+    assert row["candidate_source_archive_sha256"] == "a" * 64
+    assert row["raw_equivalence_closed"] is True
+    assert row["frontier_scope"] == "exact_local_cuda_custody_lossless_repack_control"
+    assert row["candidate_diff_audit"]["total_byte_delta"] == -151
+    md = render_markdown([row])
+    assert "lossless Brotli repack row is a local exact-custody" in md
+    assert "categorical/range-coded HNeRV" in md
 
 
 def test_section_optimization_role_is_stable_for_known_hnerv_sections() -> None:
