@@ -30,8 +30,15 @@ if [ "$MODE" != "--create" ] && [ "$MODE" != "--version" ]; then
     exit 2
 fi
 
-if ! command -v kaggle >/dev/null 2>&1; then
-    echo "FATAL: kaggle CLI not found. Install/auth it before uploading."
+if [ -x "$HERE/.venv/bin/kaggle" ]; then
+    KAGGLE_CMD=("$HERE/.venv/bin/kaggle")
+elif command -v kaggle >/dev/null 2>&1; then
+    KAGGLE_CMD=("$(command -v kaggle)")
+elif command -v uv >/dev/null 2>&1; then
+    export UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}"
+    KAGGLE_CMD=("uv" "run" "--with" "kaggle" "kaggle")
+else
+    echo "FATAL: kaggle CLI not found and uv fallback unavailable. Install with: uv pip install kaggle"
     exit 2
 fi
 
@@ -58,10 +65,10 @@ echo "[kaggle-upload] Running strict public-link hygiene scan on final Kaggle vi
 
 if [ "$MODE" = "--create" ]; then
     echo "[kaggle-upload] Creating Kaggle dataset: $DATASET_ID"
-    kaggle datasets create -p "$HERE/$KAGGLE_VIEW_DIR"
+    "${KAGGLE_CMD[@]}" datasets create -p "$HERE/$KAGGLE_VIEW_DIR" --public --dir-mode zip
 else
     echo "[kaggle-upload] Creating Kaggle dataset version: $DATASET_ID"
-    kaggle datasets version -p "$HERE/$KAGGLE_VIEW_DIR" -m "$VERSION_MESSAGE"
+    "${KAGGLE_CMD[@]}" datasets version -p "$HERE/$KAGGLE_VIEW_DIR" -m "$VERSION_MESSAGE" --dir-mode zip
 fi
 
 echo "[kaggle-upload] DONE: https://www.kaggle.com/datasets/$DATASET_ID"
