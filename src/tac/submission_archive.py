@@ -744,6 +744,11 @@ class ArchiveManifest:
     renderer_payload_bin: bool = False
     renderer_payload_bin_br: bool = False
     renderer_payload_p: bool = False
+    # SegMap/Selfcomp-family archive payloads. These pair with grayscale.mkv
+    # and optimized poses, but the model payload is not renderer.bin.
+    segmap_weights_tar_xz: bool = False
+    segmap_payload_bin: bool = False
+    class_targets_fp16: bool = False
     # R-radial-zoom 2026-04-25 (Hotz council #94): per-pair scalar zoom from
     # the FoE — replaces 7KB poses.bin with 2.4KB zoom_scalars.bin for renderers
     # with use_zoom_flow=True. inflate_renderer.py already loads this from
@@ -776,6 +781,9 @@ class ArchiveManifest:
             "renderer_payload_bin": "renderer_payload.bin",
             "renderer_payload_bin_br": "renderer_payload.bin.br",
             "renderer_payload_p": "p",
+            "segmap_weights_tar_xz": "segmap_weights.tar.xz",
+            "segmap_payload_bin": "payload.bin",
+            "class_targets_fp16": "class_targets.fp16",
             "zoom_scalars_bin": "zoom_scalars.bin",
             "foveation_params_bin": "foveation_params.bin",
         }
@@ -798,6 +806,26 @@ class ArchiveManifest:
                 for k, v in vars(self).items()
                 if k in mapping and v
             ]
+        n_segmap_payload_formats = sum(
+            bool(v)
+            for v in (
+                self.segmap_weights_tar_xz,
+                self.segmap_payload_bin,
+            )
+        )
+        if n_segmap_payload_formats > 1:
+            raise ValueError(
+                "ArchiveManifest: segmap_weights_tar_xz and segmap_payload_bin "
+                "are mutually exclusive."
+            )
+        if n_segmap_payload_formats and not self.grayscale_mkv:
+            raise ValueError(
+                "ArchiveManifest: SegMap payloads require grayscale_mkv=True."
+            )
+        if self.class_targets_fp16 and not n_segmap_payload_formats:
+            raise ValueError(
+                "ArchiveManifest: class_targets_fp16 requires a SegMap payload."
+            )
         n_mask_formats = sum(
             bool(v)
             for v in (
@@ -886,6 +914,32 @@ RENDERER_PACKED_PAYLOAD_SHORT_BROTLI_MANIFEST = ArchiveManifest(
     renderer_payload_p=True,
 )
 
+SEGMAP_SUBMISSION_MANIFEST = ArchiveManifest(
+    segmap_weights_tar_xz=True,
+    grayscale_mkv=True,
+    optimized_poses_pt=True,
+)
+
+SEGMAP_LCT_SUBMISSION_MANIFEST = ArchiveManifest(
+    segmap_weights_tar_xz=True,
+    grayscale_mkv=True,
+    optimized_poses_pt=True,
+    class_targets_fp16=True,
+)
+
+SEGMAP_ARITHMETIC_MANIFEST = ArchiveManifest(
+    segmap_payload_bin=True,
+    grayscale_mkv=True,
+    optimized_poses_pt=True,
+)
+
+SEGMAP_ARITHMETIC_LCT_MANIFEST = ArchiveManifest(
+    segmap_payload_bin=True,
+    grayscale_mkv=True,
+    optimized_poses_pt=True,
+    class_targets_fp16=True,
+)
+
 
 def detect_pose_manifest(archive_path) -> ArchiveManifest:
     """R38 fix: inspect the archive and return whichever manifest matches
@@ -924,7 +978,24 @@ def detect_pose_manifest(archive_path) -> ArchiveManifest:
         return RENDERER_PACKED_PAYLOAD_MANIFEST
     if "p" in names:
         return RENDERER_PACKED_PAYLOAD_SHORT_BROTLI_MANIFEST
-    if "grayscale.mkv" in logical_names:
+    has_lct = "class_targets.fp16" in logical_names
+    if "grayscale.mkv" in logical_names and "payload.bin" in logical_names:
+        manifest = ArchiveManifest(
+            segmap_payload_bin=True,
+            grayscale_mkv=True,
+            class_targets_fp16=has_lct,
+            **{pose_field: True},
+            **overlay_fields,
+        )
+    elif "grayscale.mkv" in logical_names and "segmap_weights.tar.xz" in logical_names:
+        manifest = ArchiveManifest(
+            segmap_weights_tar_xz=True,
+            grayscale_mkv=True,
+            class_targets_fp16=has_lct,
+            **{pose_field: True},
+            **overlay_fields,
+        )
+    elif "grayscale.mkv" in logical_names:
         manifest = ArchiveManifest(renderer_bin=True, grayscale_mkv=True, **{pose_field: True}, **overlay_fields)
     elif "masks.alpha4.mkv" in logical_names:
         manifest = ArchiveManifest(renderer_bin=True, masks_alpha4_mkv=True, **{pose_field: True}, **overlay_fields)
@@ -1108,6 +1179,55 @@ def validate_archive(
                     result.valid = False
             except Exception as exc:
                 result.errors.append(f"failed reading masks.nrv header: {exc!r}")
+                result.valid = False
+
+        if "segmap_weights.tar.xz" in result.files_found:
+            size = result.files_found["segmap_weights.tar.xz"]
+            if size < 6:
+                result.errors.append(
+                    f"segmap_weights.tar.xz suspiciously small: {size} bytes "
+                    "(XZ magic alone is 6 bytes)"
+                )
+                result.valid = False
+            try:
+                with zipfile.ZipFile(archive_path, "r") as zf:
+                    head = zf.read("segmap_weights.tar.xz")[:6]
+                if head != b"\xfd7zXZ\x00":
+                    result.errors.append(
+                        f"segmap_weights.tar.xz has bad magic {head!r}; expected XZ magic"
+                    )
+                    result.valid = False
+            except Exception as exc:
+                result.errors.append(f"failed reading segmap_weights.tar.xz header: {exc!r}")
+                result.valid = False
+
+        if manifest.segmap_payload_bin and "payload.bin" in result.files_found:
+            size = result.files_found["payload.bin"]
+            if size < 4:
+                result.errors.append(
+                    f"payload.bin suspiciously small: {size} bytes "
+                    "(SHv1 magic alone is 4 bytes)"
+                )
+                result.valid = False
+            try:
+                with zipfile.ZipFile(archive_path, "r") as zf:
+                    head = zf.read("payload.bin")[:4]
+                if head != b"SHv1":
+                    result.errors.append(
+                        f"payload.bin has bad magic {head!r}; expected b'SHv1'"
+                    )
+                    result.valid = False
+            except Exception as exc:
+                result.errors.append(f"failed reading payload.bin header: {exc!r}")
+                result.valid = False
+
+        if "class_targets.fp16" in result.files_found:
+            size = result.files_found["class_targets.fp16"]
+            if size != 10:
+                result.errors.append(
+                    f"class_targets.fp16 has {size} bytes; expected exactly 10 bytes "
+                    "for five fp16 class targets"
+                )
                 result.valid = False
 
         for cdo1_name in ("masks.cdo1", "masks.cdo1.xz", "masks.cdo1.zlib", "masks.cdo1.br"):
@@ -1352,6 +1472,9 @@ def build_submission_archive(
     masks_cdo1_xz: Path | str | None = None,
     masks_cdo1_zlib: Path | str | None = None,
     masks_cdo1_br: Path | str | None = None,
+    segmap_weights_tar_xz: Path | str | None = None,
+    segmap_payload_bin: Path | str | None = None,
+    class_targets_fp16: Path | str | None = None,
     optimized_poses_pt: Path | str | None = None,
     optimized_poses_bin: Path | str | None = None,
     optimized_embedding_pt: Path | str | None = None,
@@ -1378,6 +1501,9 @@ def build_submission_archive(
         masks_cdo1_xz: Optional XZ-compressed charged CDO1 overlay sidecar
         masks_cdo1_zlib: Optional zlib-compressed charged CDO1 overlay sidecar
         masks_cdo1_br: Optional Brotli-compressed charged CDO1 overlay sidecar
+        segmap_weights_tar_xz: Path to SegMap model payload
+        segmap_payload_bin: Path to SHv1 arithmetic SegMap payload
+        class_targets_fp16: Optional 5-class fp16 target payload
         optimized_poses_pt: Path to optimized_poses.pt
         optimized_poses_bin: Path to optimized_poses.bin (raw fp16, smaller)
         optimized_embedding_pt: Path to optimized_embedding.pt (optional)
@@ -1411,6 +1537,9 @@ def build_submission_archive(
         "masks.cdo1.xz": Path(masks_cdo1_xz) if masks_cdo1_xz else None,
         "masks.cdo1.zlib": Path(masks_cdo1_zlib) if masks_cdo1_zlib else None,
         "masks.cdo1.br": Path(masks_cdo1_br) if masks_cdo1_br else None,
+        "segmap_weights.tar.xz": Path(segmap_weights_tar_xz) if segmap_weights_tar_xz else None,
+        "payload.bin": Path(segmap_payload_bin) if segmap_payload_bin else None,
+        "class_targets.fp16": Path(class_targets_fp16) if class_targets_fp16 else None,
         "optimized_poses.pt": Path(optimized_poses_pt) if optimized_poses_pt else None,
         "optimized_poses.bin": Path(optimized_poses_bin) if optimized_poses_bin else None,
         "optimized_embedding.pt": Path(optimized_embedding_pt) if optimized_embedding_pt else None,
@@ -1494,6 +1623,33 @@ def build_submission_archive(
             raise ValueError(
                 f"masks.nrv has bad magic {head!r}; expected b'NRV1'. "
                 "Refusing to build an archive that would fail at inflate."
+            )
+
+    segmap_weights_src = source_map.get("segmap_weights.tar.xz")
+    if segmap_weights_src and segmap_weights_src.exists():
+        head = segmap_weights_src.read_bytes()[:6]
+        if head != b"\xfd7zXZ\x00":
+            raise ValueError(
+                f"segmap_weights.tar.xz has bad magic {head!r}; expected XZ magic. "
+                "Refusing to build an archive that would fail at inflate."
+            )
+
+    segmap_payload_src = source_map.get("payload.bin")
+    if segmap_payload_src and segmap_payload_src.exists():
+        head = segmap_payload_src.read_bytes()[:4]
+        if head != b"SHv1":
+            raise ValueError(
+                f"payload.bin has bad magic {head!r}; expected b'SHv1'. "
+                "Refusing to build an archive that would fail at inflate."
+            )
+
+    class_targets_src = source_map.get("class_targets.fp16")
+    if class_targets_src and class_targets_src.exists():
+        size = class_targets_src.stat().st_size
+        if size != 10:
+            raise ValueError(
+                f"class_targets.fp16 has {size} bytes; expected exactly 10 bytes "
+                "for five fp16 class targets."
             )
 
     # FP4 without QAT warning: check renderer.bin header
