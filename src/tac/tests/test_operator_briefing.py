@@ -28,6 +28,8 @@ def test_briefing_runs_all_three_phases():
     assert "Phase 1" in proc.stdout
     assert "Phase 2" in proc.stdout
     assert "Phase 3" in proc.stdout
+    assert "Phase 1 exact-eval packets" in proc.stdout
+    assert "wr01_apply_pr106x_half" in proc.stdout
 
 
 def test_briefing_skip_pareto_omits_phase1():
@@ -57,6 +59,7 @@ def test_briefing_json_composite_has_all_three_keys():
     assert "pareto" in out
     assert "dashboard" in out
     assert "reconciler" in out
+    assert "exact_eval_packets" in out
 
 
 def test_briefing_json_each_phase_has_n_total_or_n_configs():
@@ -67,3 +70,4 @@ def test_briefing_json_each_phase_has_n_total_or_n_configs():
     assert any(k in out["pareto"] for k in ("n_configs", "n_pareto_frontier"))
     assert any(k in out["dashboard"] for k in ("n_total", "n_displayed"))
     assert any(k in out["reconciler"] for k in ("n_configs", "n_landed"))
+    assert out["exact_eval_packets"][0]["lane_id"] == "wr01_apply_pr106x_half"
