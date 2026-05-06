@@ -22,6 +22,13 @@ def test_cross_paradigm_inventory_is_deterministic_and_non_dispatching() -> None
     assert first["score_claim"] is False
     assert first["dispatch_attempted"] is False
     assert first["ready_for_exact_eval_dispatch"] is False
+    assert first["frontier_action_queue_count"] == first["row_count"]
+    assert first["frontier_action_queue"]
+    assert all(row["score_claim"] is False for row in first["frontier_action_queue"])
+    assert all(
+        row["ready_for_exact_eval_dispatch"] is False
+        for row in first["frontier_action_queue"]
+    )
     assert "requires_exact_cuda_auth_eval" in first["dispatch_blockers"]
 
 
@@ -45,6 +52,8 @@ def test_cross_paradigm_inventory_pins_required_score_path_rows() -> None:
     categorical = rows["categorical_qma9_clade_spade_openpilot"]
     assert "categorical_masks" in categorical["paradigms"]
     assert "openpilot_priors" in categorical["paradigms"]
+    assert categorical["action_class"] == "build_byte_closed_categorical_candidate"
+    assert categorical["priority_tier"] == 30
     assert categorical["status"] == "contract_and_candidate_readiness_landed_needs_byte_closed_candidate"
     assert "src/tac/categorical_candidate_readiness.py" in categorical["code_paths"]
     assert "src/tac/pr91_hpm1_readiness.py" in categorical["code_paths"]
@@ -65,6 +74,23 @@ def test_cross_paradigm_inventory_pins_required_score_path_rows() -> None:
     lapose = rows["lapose_motion_atom_allocator"]
     assert lapose["role"] == "proposal_allocator"
     assert "meta_lagrangian" in lapose["paradigms"]
+    assert lapose["action_class"] == "calibrate_planning_signal_and_attach_archive_consumer"
+
+
+def test_cross_paradigm_inventory_action_queue_routes_next_tranche() -> None:
+    payload = build_inventory(repo_root=REPO)
+    queue = payload["frontier_action_queue"]
+
+    assert [row["key"] for row in queue[:5]] == [
+        "hnerv_wavelet_wr01_apply",
+        "hnerv_lowlevel_brotli_repack",
+        "categorical_qma9_clade_spade_openpilot",
+        "joint_admm_balle_arithmetic_stack",
+        "hnerv_per_tensor_context_entropy",
+    ]
+    assert queue[0]["action_class"] == "claim_exact_eval_packet_after_static_gate"
+    assert queue[2]["action_class"] == "build_byte_closed_categorical_candidate"
+    assert payload["action_class_counts"]["build_end_to_end_noop_stack_fixture"] == 1
 
 
 def test_cross_paradigm_inventory_paths_are_current_on_main() -> None:
@@ -86,3 +112,4 @@ def test_cross_paradigm_inventory_markdown_is_operator_briefing() -> None:
     assert "Inventory-only orchestration artifact" in markdown
     assert "`categorical_qma9_clade_spade_openpilot`" in markdown
     assert "`meta_lagrangian_cross_paradigm_allocator`" in markdown
+    assert "`build_byte_closed_categorical_candidate`" in markdown

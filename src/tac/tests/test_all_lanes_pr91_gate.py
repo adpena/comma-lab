@@ -168,3 +168,56 @@ def test_pr91_hpm1_gate_rejects_missing_required_blocker(monkeypatch) -> None:
     assert passed is False
     assert "live_readiness_required_blockers_present" in output
     assert "artifact_readiness_required_blockers_present" in output
+
+
+def test_run_lane_respects_tools_without_verbose_flag(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+    calls: list[list[str]] = []
+
+    class Result:
+        returncode = 0
+        stdout = "ok"
+        stderr = ""
+
+    def fake_run(args, *, capture_output: bool, text: bool):  # noqa: ANN001
+        calls.append(list(args))
+        return Result()
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    passed, output = module._run_lane(
+        {
+            "tool": Path("tool_without_verbose.py"),
+            "args": ["--json"],
+            "supports_verbose": False,
+        },
+        verbose=True,
+    )
+
+    assert passed is True
+    assert output == "ok"
+    assert calls
+    assert "--verbose" not in calls[0]
+
+
+def test_run_lane_passes_verbose_by_default(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+    calls: list[list[str]] = []
+
+    class Result:
+        returncode = 0
+        stdout = "ok"
+        stderr = ""
+
+    def fake_run(args, *, capture_output: bool, text: bool):  # noqa: ANN001
+        calls.append(list(args))
+        return Result()
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    passed, output = module._run_lane({"tool": Path("verbose_tool.py"), "args": []}, verbose=True)
+
+    assert passed is True
+    assert output == "ok"
+    assert calls
+    assert calls[0][-1] == "--verbose"

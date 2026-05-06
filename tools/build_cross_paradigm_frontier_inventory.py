@@ -27,6 +27,35 @@ ensure_repo_imports(REPO_ROOT)
 from tac.repo_io import json_text  # noqa: E402
 
 SCHEMA_VERSION = 1
+DEFAULT_ACTION_CLASS = "research_review_before_local_patch"
+ACTION_CLASS_BY_KEY = {
+    "hnerv_lowlevel_brotli_repack": "exact_eval_or_promote_measured_rate_candidate",
+    "hnerv_per_tensor_context_entropy": "reduce_entropy_model_overhead",
+    "hnerv_wavelet_wr01_apply": "claim_exact_eval_packet_after_static_gate",
+    "categorical_qma9_clade_spade_openpilot": "build_byte_closed_categorical_candidate",
+    "cmg3_predictive_mask_grammar": "close_runtime_decoder_fixture",
+    "lapose_motion_atom_allocator": "calibrate_planning_signal_and_attach_archive_consumer",
+    "meta_lagrangian_cross_paradigm_allocator": "attach_byte_closed_manifest_gate",
+    "sensitivity_omega_w_v3": "replace_stub_sensitivity_with_certified_cuda_artifact",
+    "joint_admm_balle_arithmetic_stack": "build_end_to_end_noop_stack_fixture",
+    "telescopic_foveation_field": "charge_runtime_geometry_consumer_contract",
+    "raft_radial_openpilot_pose": "emit_pose_disagreement_readiness_artifact",
+    "selfcompress_mdl_fp4_tto": "prove_deterministic_export_and_inflate_closure",
+}
+PRIORITY_TIER_BY_KEY = {
+    "hnerv_wavelet_wr01_apply": 10,
+    "hnerv_lowlevel_brotli_repack": 20,
+    "categorical_qma9_clade_spade_openpilot": 30,
+    "joint_admm_balle_arithmetic_stack": 40,
+    "hnerv_per_tensor_context_entropy": 50,
+    "sensitivity_omega_w_v3": 60,
+    "telescopic_foveation_field": 70,
+    "lapose_motion_atom_allocator": 80,
+    "raft_radial_openpilot_pose": 90,
+    "cmg3_predictive_mask_grammar": 100,
+    "meta_lagrangian_cross_paradigm_allocator": 110,
+    "selfcompress_mdl_fp4_tto": 120,
+}
 
 
 @dataclass(frozen=True)
@@ -391,6 +420,41 @@ def _score_snapshot(row: InventoryRow, *, repo_root: Path) -> dict[str, Any] | N
     return None
 
 
+def _action_class(row: InventoryRow) -> str:
+    return ACTION_CLASS_BY_KEY.get(row.key, DEFAULT_ACTION_CLASS)
+
+
+def _priority_tier(row: InventoryRow) -> int:
+    return PRIORITY_TIER_BY_KEY.get(row.key, 999)
+
+
+def _frontier_action_queue(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    queue = []
+    for row in rows:
+        queue.append(
+            {
+                "key": row["key"],
+                "priority_tier": row["priority_tier"],
+                "action_class": row["action_class"],
+                "role": row["role"],
+                "paradigms": row["paradigms"],
+                "status": row["status"],
+                "next_patch": row["next_patch"],
+                "blockers": row["blockers"],
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        )
+    queue.sort(
+        key=lambda item: (
+            int(item["priority_tier"]),
+            str(item["action_class"]),
+            str(item["key"]),
+        )
+    )
+    return queue
+
+
 def build_inventory(*, repo_root: Path) -> dict[str, Any]:
     rows = []
     for row in STATIC_ROWS:
@@ -415,14 +479,18 @@ def build_inventory(*, repo_root: Path) -> dict[str, Any]:
                 "score_snapshot": _score_snapshot(row, repo_root=repo_root),
                 "next_patch": row.next_patch,
                 "blockers": list(row.blockers),
+                "action_class": _action_class(row),
+                "priority_tier": _priority_tier(row),
                 "score_claim": False,
                 "ready_for_exact_eval_dispatch": False,
             }
         )
     role_counts = Counter(row["role"] for row in rows)
     paradigm_counts = Counter(paradigm for row in rows for paradigm in row["paradigms"])
+    action_class_counts = Counter(row["action_class"] for row in rows)
     missing_code = sum(row["path_audit"]["code"]["missing_count"] for row in rows)
     missing_evidence = sum(row["path_audit"]["evidence"]["missing_count"] for row in rows)
+    action_queue = _frontier_action_queue(rows)
     return {
         "schema_version": SCHEMA_VERSION,
         "tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -443,8 +511,11 @@ def build_inventory(*, repo_root: Path) -> dict[str, Any]:
         "row_count": len(rows),
         "role_counts": dict(sorted(role_counts.items())),
         "paradigm_counts": dict(sorted(paradigm_counts.items())),
+        "action_class_counts": dict(sorted(action_class_counts.items())),
         "missing_code_path_count": missing_code,
         "missing_evidence_path_count": missing_evidence,
+        "frontier_action_queue": action_queue,
+        "frontier_action_queue_count": len(action_queue),
         "rows": rows,
         "dispatch_blockers": [
             "inventory_only",
@@ -465,8 +536,8 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- missing_code_path_count: `{payload['missing_code_path_count']}`",
         f"- missing_evidence_path_count: `{payload['missing_evidence_path_count']}`",
         "",
-        "| key | role | paradigms | status | stackability | replacement | next patch | blockers |",
-        "|---|---|---|---|---|---|---|---|",
+        "| key | tier | action | role | paradigms | status | stackability | replacement | next patch | blockers |",
+        "|---|---:|---|---|---|---|---|---|---|---|",
     ]
     for row in payload["rows"]:
         lines.append(
@@ -474,6 +545,8 @@ def render_markdown(payload: dict[str, Any]) -> str:
             + " | ".join(
                 (
                     f"`{_md(row['key'])}`",
+                    str(row["priority_tier"]),
+                    f"`{_md(row['action_class'])}`",
                     f"`{_md(row['role'])}`",
                     "<br>".join(f"`{_md(item)}`" for item in row["paradigms"]),
                     _md(row["status"]),

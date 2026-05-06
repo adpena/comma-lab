@@ -158,6 +158,7 @@ LANES = [
         "name": "PR106 sidechannels (latent/yshift/LRL1/stacked)",
         "tool": TOOLS / "dispatch_dryrun_pr106_sidechannels.py",
         "args": ["--skip-help-subprocess"],
+        "supports_verbose": False,
     },
 ]
 
@@ -188,7 +189,7 @@ class PreflightResult:
 
 def _run_lane(lane: dict, verbose: bool) -> tuple[bool, str]:
     args = [sys.executable, str(lane["tool"])] + lane["args"]
-    if verbose:
+    if verbose and lane.get("supports_verbose", True):
         args.append("--verbose")
     proc = subprocess.run(args, capture_output=True, text=True)
     return proc.returncode == 0, proc.stdout + proc.stderr
@@ -571,9 +572,22 @@ def _run_cross_paradigm_frontier_inventory_gate() -> tuple[bool, str]:
             "cross-paradigm inventory has missing paths: "
             f"code={missing_code} evidence={missing_evidence}"
         )
+    action_queue = payload.get("frontier_action_queue")
+    if not isinstance(action_queue, list) or len(action_queue) != len(rows):
+        return False, "cross-paradigm inventory action queue must cover every row"
+    first = action_queue[0] if action_queue else {}
+    if not isinstance(first, dict) or first.get("key") != "hnerv_wavelet_wr01_apply":
+        return False, "cross-paradigm inventory action queue lost WR01 first-tranche routing"
+    for item in action_queue:
+        if not isinstance(item, dict):
+            return False, "cross-paradigm inventory action queue contains a non-object row"
+        if item.get("score_claim") is not False:
+            return False, "cross-paradigm inventory action queue must keep score_claim=false"
+        if item.get("ready_for_exact_eval_dispatch") is not False:
+            return False, "cross-paradigm inventory action queue must keep dispatch readiness false"
     return True, (
         "cross-paradigm inventory: PASS "
-        f"({len(rows)} rows; 0 missing code/evidence paths; inventory-only)"
+        f"({len(rows)} rows; 0 missing code/evidence paths; action queue inventory-only)"
     )
 
 
