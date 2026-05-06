@@ -10,7 +10,8 @@ The JSON state file is kept as a portable fallback and for git-friendly diffs.
 DuckDB is the primary query engine for analytics, dashboards, and reports.
 
 Usage:
-    python tools/review_tracker.py scan                          # Scan codebase
+    python tools/review_tracker.py scan                          # Incremental scan
+    python tools/review_tracker.py scan --full                   # Full codebase scan
     python tools/review_tracker.py status                        # Per-file summary
     python tools/review_tracker.py dashboard                     # Terminal dashboard
     python tools/review_tracker.py dag                           # Git DAG vs review
@@ -27,13 +28,15 @@ Usage:
 from __future__ import annotations
 
 import ast
+import fnmatch
 import json
+import os
 import re
 import subprocess
 import sys
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
 import textwrap
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -42,6 +45,14 @@ TRACKER_JSON = REPO_ROOT / ".omx" / "state" / "review_tracker.json"
 TRACKER_DB = REPO_ROOT / ".omx" / "state" / "review_tracker.duckdb"
 EXPERIMENTS_ROOT = REPO_ROOT / "experiments"
 POLICY_PATH = REPO_ROOT / ".omx" / "state" / "review_policy.json"
+
+SCAN_PREFIXES = ("src/tac/", "experiments/", "tools/", "submissions/")
+SCAN_EXCLUDE_GLOBS = (
+    "experiments/results/**",
+    "experiments/tmp/**",
+    "reports/**",
+    "upstream/**",
+)
 
 # Valid review statuses
 VALID_STATUSES = {"unreviewed", "reviewed", "stale", "needs_fix"}
@@ -82,21 +93,32 @@ class EntityRecord:
 def _estimate_complexity(node: ast.AST) -> int:
     """Rough cyclomatic complexity: branches + loops + exception handlers."""
     count = 0
-    for child in ast.walk(node):
-        if isinstance(child, (ast.If, ast.IfExp)):
-            count += 1
-        elif isinstance(child, (ast.For, ast.While, ast.AsyncFor)):
-            count += 1
-        elif isinstance(child, ast.ExceptHandler):
+    branch_types = (ast.If, ast.IfExp, ast.For, ast.While, ast.AsyncFor, ast.ExceptHandler)
+    comprehension_types = (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)
+    stack = [node]
+    while stack:
+        child = stack.pop()
+        if isinstance(child, branch_types):
             count += 1
         elif isinstance(child, ast.BoolOp):
             count += len(child.values) - 1
-        elif isinstance(child, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+        elif isinstance(child, comprehension_types):
             count += 1
+        stack.extend(ast.iter_child_nodes(child))
     return count + 1
 
 
-def _extract_from_tree(tree: ast.Module, rel_path: str, module_name: str) -> list[EntityRecord]:
+def _complexity_for(node: ast.AST, enabled: bool) -> int:
+    return _estimate_complexity(node) if enabled else 1
+
+
+def _extract_from_tree(
+    tree: ast.Module,
+    rel_path: str,
+    module_name: str,
+    *,
+    compute_complexity: bool = True,
+) -> list[EntityRecord]:
     """Extract entities from an already-parsed AST."""
     entities: list[EntityRecord] = []
 
@@ -107,7 +129,7 @@ def _extract_from_tree(tree: ast.Module, rel_path: str, module_name: str) -> lis
                 module=module_name, file_path=rel_path, entity_type="function",
                 name=node.name, start_line=node.lineno, end_line=end,
                 line_count=end - node.lineno + 1,
-                complexity=_estimate_complexity(node),
+                complexity=_complexity_for(node, compute_complexity),
             ))
         elif isinstance(node, ast.ClassDef):
             end = getattr(node, "end_lineno", node.lineno)
@@ -115,7 +137,7 @@ def _extract_from_tree(tree: ast.Module, rel_path: str, module_name: str) -> lis
                 module=module_name, file_path=rel_path, entity_type="class",
                 name=node.name, start_line=node.lineno, end_line=end,
                 line_count=end - node.lineno + 1,
-                complexity=_estimate_complexity(node),
+                complexity=_complexity_for(node, compute_complexity),
             ))
             for item in ast.iter_child_nodes(node):
                 if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -125,12 +147,12 @@ def _extract_from_tree(tree: ast.Module, rel_path: str, module_name: str) -> lis
                         name=f"{node.name}.{item.name}",
                         start_line=item.lineno, end_line=m_end,
                         line_count=m_end - item.lineno + 1,
-                        complexity=_estimate_complexity(item),
+                        complexity=_complexity_for(item, compute_complexity),
                     ))
     return entities
 
 
-def extract_entities(file_path: Path) -> list[EntityRecord]:
+def extract_entities(file_path: Path, *, compute_complexity: bool = True) -> list[EntityRecord]:
     """Parse a Python file and extract all classes/functions with metadata."""
     try:
         source = file_path.read_text(encoding="utf-8")
@@ -149,25 +171,66 @@ def extract_entities(file_path: Path) -> list[EntityRecord]:
         parts = file_path.relative_to(REPO_ROOT).with_suffix("").parts
         module_name = ".".join(parts)
 
-    return _extract_from_tree(tree, rel_path, module_name)
+    return _extract_from_tree(
+        tree,
+        rel_path,
+        module_name,
+        compute_complexity=compute_complexity,
+    )
+
+
+def _is_reviewable_python_path(rel_path: str) -> bool:
+    """Return true for canonical, tracked Python source paths."""
+    rel = rel_path.replace("\\", "/")
+    if not rel.endswith(".py"):
+        return False
+    if Path(rel).name.startswith("__"):
+        return False
+    if not rel.startswith(SCAN_PREFIXES):
+        return False
+    return not any(fnmatch.fnmatch(rel, pat) for pat in SCAN_EXCLUDE_GLOBS)
+
+
+def _reviewable_python_paths_from_git_output(output: str) -> list[Path]:
+    """Parse `git ls-files` output into deterministic repo-local paths."""
+    rel_paths = sorted({
+        line.strip()
+        for line in output.splitlines()
+        if line.strip() and _is_reviewable_python_path(line.strip())
+    })
+    return [REPO_ROOT / rel for rel in rel_paths]
+
+
+def _tracked_reviewable_python_files() -> list[Path]:
+    """List reviewable Python files from git, with a filesystem fallback.
+
+    The tracker is a code-review gate, not a custody mirror index. Walking
+    `experiments/results/**` recursively pulled in public PR source snapshots
+    and ballooned `scan` to tens of seconds. The git index gives the precise
+    source surface that can affect a commit while still including staged
+    newly-added Python files.
+    """
+    out = _run_git("ls-files", "--cached", "--others", "--exclude-standard", "*.py", timeout=10)
+    if out:
+        return _reviewable_python_paths_from_git_output(out)
+
+    candidates: list[Path] = []
+    for scan_dir in [TAC_ROOT, EXPERIMENTS_ROOT, REPO_ROOT / "tools", REPO_ROOT / "submissions"]:
+        if not scan_dir.exists():
+            continue
+        for py_file in scan_dir.rglob("*.py"):
+            rel = str(py_file.relative_to(REPO_ROOT))
+            if _is_reviewable_python_path(rel):
+                candidates.append(py_file)
+    return sorted(candidates)
 
 
 def scan_all_modules() -> list[EntityRecord]:
-    """Scan all tracked Python files in src/tac/, experiments/, tools/, submissions/."""
+    """Scan canonical tracked Python files in source/tooling directories."""
     all_entities: list[EntityRecord] = []
-
-    for py_file in sorted(TAC_ROOT.rglob("*.py")):
-        all_entities.extend(extract_entities(py_file))
-
-    # Experiment scripts, tools, submissions — top-level .py only
-    for scan_dir in [EXPERIMENTS_ROOT, REPO_ROOT / "tools", REPO_ROOT / "submissions"]:
-        if not scan_dir.exists():
-            continue
-        for py_file in sorted(scan_dir.rglob("*.py")):
-            if py_file.name.startswith("__"):
-                continue
-            all_entities.extend(extract_entities(py_file))
-
+    compute_complexity = os.environ.get("REVIEW_TRACKER_COMPLEXITY") == "1"
+    for py_file in _tracked_reviewable_python_files():
+        all_entities.extend(extract_entities(py_file, compute_complexity=compute_complexity))
     return all_entities
 
 
@@ -594,11 +657,46 @@ def _batch_file_last_commits(file_paths: list[str]) -> dict[str, tuple[str, str]
     return result
 
 
-def cmd_scan() -> None:
+def _changed_reviewable_paths_since_last_scan(
+    con,
+    current_files: set[str],
+    existing_files: set[str],
+    current_head: str,
+) -> set[str]:
+    """Return files that need AST refresh for an incremental scan."""
+    changed = set(current_files - existing_files)
+    changed.update(existing_files - current_files)
+
+    for args in [
+        ("diff", "--name-only", "HEAD"),
+        ("diff", "--name-only", "--cached"),
+    ]:
+        out = _run_git(*args, timeout=10)
+        if out:
+            changed.update(line.strip() for line in out.splitlines() if line.strip())
+
+    try:
+        row = con.execute("SELECT value FROM scan_meta WHERE key='last_scan_head'").fetchone()
+        last_head = row[0] if row else ""
+    except Exception:
+        last_head = ""
+    if last_head and current_head and last_head != current_head:
+        out = _run_git("diff", "--name-only", last_head, current_head, timeout=10)
+        if out:
+            changed.update(line.strip() for line in out.splitlines() if line.strip())
+
+    return {
+        path
+        for path in changed
+        if _is_reviewable_python_path(path) and (path in current_files or path in existing_files)
+    }
+
+
+def cmd_scan(full: bool = False) -> None:
     """Scan the codebase and update the tracker."""
     con = _init_db()
-    entities = scan_all_modules()
     now = datetime.now(timezone.utc).isoformat()
+    current_head = (_run_git("rev-parse", "HEAD", timeout=5) or "")[:12]
 
     new_count = 0
     changed_count = 0
@@ -606,15 +704,56 @@ def cmd_scan() -> None:
 
     # Build lookup of existing entities
     existing = {}
-    for row in con.execute("SELECT qualified_name, last_modified_commit, review_status FROM entities").fetchall():
-        existing[row[0]] = {"commit": row[1], "status": row[2]}
+    for row in con.execute("""
+        SELECT qualified_name, file_path, last_modified_commit, review_status,
+               reviewed_by, reviewed_at, review_pass, notes
+        FROM entities
+    """).fetchall():
+        existing[row[0]] = {
+            "file_path": row[1],
+            "commit": row[2],
+            "status": row[3],
+            "reviewed_by": row[4],
+            "reviewed_at": row[5],
+            "review_pass": row[6],
+            "notes": row[7],
+        }
 
-    # Batch-fetch last commit info for all files in one git call
+    existing_files = {
+        row[0]
+        for row in con.execute("SELECT DISTINCT file_path FROM entities").fetchall()
+    }
+    current_paths = [
+        str(path.relative_to(REPO_ROOT))
+        for path in _tracked_reviewable_python_files()
+    ]
+    current_files = set(current_paths)
+    removed_files = existing_files - current_files
+
+    scan_files = current_files if full or not existing else _changed_reviewable_paths_since_last_scan(
+        con,
+        current_files,
+        existing_files,
+        current_head,
+    )
+
+    entities: list[EntityRecord] = []
+    for rel_path in sorted(path for path in scan_files if path in current_files):
+        entities.extend(extract_entities(REPO_ROOT / rel_path, compute_complexity=False))
+
+    if not full:
+        unchanged_count = con.execute(
+            "SELECT COUNT(*) FROM entities"
+        ).fetchone()[0] - sum(
+            1
+            for record in existing.values()
+            if record.get("file_path") in scan_files or record.get("file_path") in removed_files
+        )
+
+    # Batch-fetch last commit info only for parsed files.
     _commit_cache = _batch_file_last_commits([e.file_path for e in entities])
 
-    # Wrap all DB mutations in a single transaction for speed
-    con.execute("BEGIN TRANSACTION")
-
+    rows_to_insert = []
     for ent in entities:
         key = ent.qualified_name
         commit, date = _commit_cache.get(ent.file_path, ("", ""))
@@ -623,43 +762,59 @@ def cmd_scan() -> None:
 
         prev = existing.get(key)
         if prev is None:
-            con.execute("""
-                INSERT OR REPLACE INTO entities VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, [key, ent.module, ent.file_path, ent.entity_type, ent.name,
-                  ent.start_line, ent.end_line, ent.line_count, ent.complexity,
-                  commit, date, "unreviewed", "", "", "", ""])
+            review_status = "unreviewed"
+            reviewed_by = reviewed_at = review_pass = notes = ""
             new_count += 1
         else:
             if commit and commit != prev["commit"]:
-                new_status = "stale" if prev["status"] == "reviewed" else prev["status"]
-                if new_status == "stale":
+                review_status = "stale" if prev["status"] == "reviewed" else prev["status"]
+                if review_status == "stale":
                     changed_count += 1
-                con.execute("""
-                    UPDATE entities SET start_line=?, end_line=?, line_count=?,
-                    complexity=?, last_modified_commit=?, last_modified_date=?,
-                    review_status=? WHERE qualified_name=?
-                """, [ent.start_line, ent.end_line, ent.line_count, ent.complexity,
-                      commit, date, new_status, key])
             else:
-                # Update line positions (AST may have shifted)
-                con.execute("""
-                    UPDATE entities SET start_line=?, end_line=?, line_count=?,
-                    complexity=? WHERE qualified_name=?
-                """, [ent.start_line, ent.end_line, ent.line_count, ent.complexity, key])
+                review_status = prev["status"]
                 unchanged_count += 1
+            reviewed_by = prev.get("reviewed_by", "")
+            reviewed_at = prev.get("reviewed_at", "")
+            review_pass = prev.get("review_pass", "")
+            notes = prev.get("notes", "")
 
-    # Remove entities that no longer exist
+        rows_to_insert.append([
+            key, ent.module, ent.file_path, ent.entity_type, ent.name,
+            ent.start_line, ent.end_line, ent.line_count, ent.complexity,
+            commit, date, review_status, reviewed_by, reviewed_at,
+            review_pass, notes,
+        ])
+
     current_keys = {e.qualified_name for e in entities}
-    for old_key in existing:
-        if old_key not in current_keys:
-            con.execute("DELETE FROM entities WHERE qualified_name=?", [old_key])
+    if full:
+        removed = len(set(existing) - current_keys)
+    else:
+        affected_existing = {
+            key
+            for key, record in existing.items()
+            if record.get("file_path") in scan_files or record.get("file_path") in removed_files
+        }
+        removed = len(affected_existing - current_keys)
 
+    con.execute("BEGIN TRANSACTION")
+    if full:
+        con.execute("DELETE FROM entities")
+    else:
+        for file_path in sorted(scan_files | removed_files):
+            con.execute("DELETE FROM entities WHERE file_path=?", [file_path])
+    if rows_to_insert:
+        con.executemany("""
+            INSERT INTO entities VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, rows_to_insert)
     con.execute("COMMIT")
 
-    removed = len(set(existing) - current_keys)
     con.execute("""
         INSERT OR REPLACE INTO scan_meta VALUES ('last_scan', ?)
     """, [now])
+    if current_head:
+        con.execute("""
+            INSERT OR REPLACE INTO scan_meta VALUES ('last_scan_head', ?)
+        """, [current_head])
 
     # Print summary
     stats = con.execute("""
@@ -668,10 +823,13 @@ def cmd_scan() -> None:
     stat_map = dict(stats)
     total = sum(stat_map.values())
 
-    _export_json(con)
+    if full or rows_to_insert or removed_files:
+        _export_json(con)
     con.close()
 
-    print(f"Scan complete: {total} entities across {len(set(e.file_path for e in entities))} files")
+    print(f"Scan complete: {total} entities across {len(current_files)} files")
+    if not full:
+        print(f"  Incremental files parsed: {len(scan_files)} | Removed files: {len(removed_files)}")
     print(f"  New: {new_count} | Changed (stale): {changed_count} | Unchanged: {unchanged_count} | Removed: {max(0, removed)}")
     for s in VALID_STATUSES:
         print(f"  {s}: {stat_map.get(s, 0)}", end="")
@@ -1182,7 +1340,6 @@ def cmd_report() -> None:
 def cmd_selftest() -> None:
     """Run end-to-end self-tests to verify tracker integrity."""
     import tempfile
-    import shutil
 
     print("Running self-tests...\n")
     errors = []
@@ -1689,7 +1846,7 @@ def main() -> None:
 
     # Parse keyword args from anywhere in argv
     # Supports --key value pairs and --flag (boolean flags like --dry-run)
-    BOOL_FLAGS = {"dry-run", "dry_run"}
+    BOOL_FLAGS = {"dry-run", "dry_run", "full"}
     kwargs: dict[str, str] = {}
     positional: list[str] = [sys.argv[0], cmd]
     i = 2
@@ -1712,7 +1869,7 @@ def main() -> None:
     dry_run = "dry-run" in kwargs or "dry_run" in kwargs
 
     if cmd == "scan":
-        cmd_scan()
+        cmd_scan(full="full" in kwargs)
     elif cmd == "status":
         cmd_status()
     elif cmd == "mark":
