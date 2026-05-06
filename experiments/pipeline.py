@@ -1288,6 +1288,35 @@ def step_compress_weights(
 
     mode = cfg.weight_compression
 
+    # ── Cross-paradigm flag guards (PARADIGM-β, PARADIGM-γ) ─────────────
+    # Registered fields in PipelineConfig but full dispatch wiring is staged
+    # behind operator approval per the cross-paradigm blueprint. Surfacing a
+    # WARN here prevents the silent-no-op trap if a caller sets the flag
+    # without realizing the dispatch path is not yet active. A future commit
+    # will replace each block with the actual module dispatch.
+    if cfg.use_sensitivity_weighted:
+        _log(
+            "PARADIGM-β: cfg.use_sensitivity_weighted=True but the "
+            "sensitivity-weighted dispatch path "
+            "(tac.owv3_sensitivity_weighted / "
+            "tac.neural_weight_codec_sensitivity) is REGISTERED-BUT-NOT-WIRED. "
+            "Falling through to ``cfg.weight_compression`` mode "
+            f"({mode!r}). To enable, the operator must land the dispatch "
+            "branch + an integration test. See lane_owv3_sensitivity_weighted / "
+            "lane_nwcs_sensitivity_weighted in the lane registry.",
+            "WARN",
+        )
+    if cfg.use_joint_codec_stack:
+        _log(
+            "PARADIGM-γ: cfg.use_joint_codec_stack=True but the joint codec "
+            "stack dispatch path (tac.joint_codec_stack_orchestrator) is "
+            "REGISTERED-BUT-NOT-WIRED. Falling through to "
+            f"``cfg.weight_compression`` mode ({mode!r}). To enable, the "
+            "operator must land the JCSP dispatch branch + an integration "
+            "test. See lane_joint_codec_stack in the lane registry.",
+            "WARN",
+        )
+
     # ── Lane J-NWC neural-weight-compression branch ─────────────────────
     # Gate analogous to I4LZ: NWC1 *can* faithfully roundtrip arch flags
     # because the header carries `_infer_asymmetric_config(model)` (which
