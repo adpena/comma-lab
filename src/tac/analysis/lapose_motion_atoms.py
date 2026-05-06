@@ -37,9 +37,13 @@ def build_motion_atom_manifest(
     meta-Lagrangian atom ledger. It never builds archives or claims scores.
     """
 
-    normalized = [_normalize_record(record) for record in records]
+    normalized = sorted(
+        (_normalize_record(record) for record in records),
+        key=lambda record: int(record["pair_index"]),
+    )
     if not normalized:
         raise LaposeMotionAtomError("at least one motion record is required")
+    _reject_duplicate_pair_indices(normalized)
     if target_average_degree < 0:
         raise LaposeMotionAtomError("target_average_degree must be non-negative")
     if max_atoms is not None and max_atoms <= 0:
@@ -160,6 +164,19 @@ def _record_to_atom(record: Mapping[str, Any]) -> dict[str, Any]:
         "evidence_source_sha256": record["evidence_source_sha256"],
         "source_archive_sha256": record["source_archive_sha256"],
     }
+
+
+def _reject_duplicate_pair_indices(records: Sequence[Mapping[str, Any]]) -> None:
+    seen: set[int] = set()
+    duplicates: list[int] = []
+    for record in records:
+        pair_index = int(record["pair_index"])
+        if pair_index in seen:
+            duplicates.append(pair_index)
+        seen.add(pair_index)
+    if duplicates:
+        joined = ", ".join(str(pair_index) for pair_index in duplicates)
+        raise LaposeMotionAtomError(f"duplicate pair_index values: {joined}")
 
 
 def _ranked_atoms_from_ledger(

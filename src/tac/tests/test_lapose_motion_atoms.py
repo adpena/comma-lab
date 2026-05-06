@@ -83,6 +83,38 @@ def test_motion_atom_manifest_truncates_after_ranking() -> None:
     assert manifest["atom_ledger"]["truncation"]["dropped_atom_count"] == 4
 
 
+def test_motion_atom_manifest_is_order_invariant() -> None:
+    forward = build_motion_atom_manifest(
+        _records(),
+        base_pose_dist=0.01,
+        source="fixture",
+        target_average_degree=2.0,
+    )
+    reversed_order = build_motion_atom_manifest(
+        list(reversed(_records())),
+        base_pose_dist=0.01,
+        source="fixture",
+        target_average_degree=2.0,
+    )
+
+    assert reversed_order["record_sha256"] == forward["record_sha256"]
+    assert reversed_order["graph"]["edges"] == forward["graph"]["edges"]
+    assert reversed_order["atoms"] == forward["atoms"]
+    assert reversed_order["atom_ledger"]["rows"] == forward["atom_ledger"]["rows"]
+
+
+def test_motion_atom_manifest_rejects_duplicate_pair_indices() -> None:
+    records = _records()
+    records.append({**records[0], "latent_action": [9.0, 9.0, 9.0]})
+
+    with pytest.raises(LaposeMotionAtomError, match="duplicate pair_index values: 10"):
+        build_motion_atom_manifest(
+            records,
+            base_pose_dist=0.01,
+            source="duplicate",
+        )
+
+
 def test_records_from_json_payload_accepts_list_or_records_object() -> None:
     records = _records()
     assert records_from_json_payload(records) == records
