@@ -62,6 +62,16 @@ def _rankable_atom(atom: Mapping[str, Any], evidence_grade: str, confidence: flo
     return not blockers, blockers
 
 
+def _string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value] if value else []
+    if isinstance(value, Iterable):
+        return [str(item) for item in value if str(item)]
+    return [str(value)]
+
+
 def expected_atom_score_delta(
     atom: Mapping[str, Any],
     *,
@@ -84,6 +94,26 @@ def expected_atom_score_delta(
     expected_pose_delta = float(atom.get("expected_pose_dist_delta", 0.0))
     evidence_grade = str(atom.get("evidence_grade", "prediction"))
     rankable, rank_blockers = _rankable_atom(atom, evidence_grade, confidence)
+    family = str(atom.get("family") or atom.get("atom_family") or "unknown")
+    family_group = str(atom.get("family_group") or family)
+    conflicts_with_families = _string_list(atom.get("conflicts_with_families"))
+    conflicts_with_atoms = _string_list(atom.get("conflicts_with_atoms"))
+    archive_manifest_path = str(atom.get("archive_manifest_path") or "")
+    archive_manifest_sha256 = str(atom.get("archive_manifest_sha256") or "")
+    byte_closed_archive_manifest_attached = bool(archive_manifest_path and archive_manifest_sha256)
+    requested_dispatchable = bool(
+        atom.get("dispatchable") is True or atom.get("ready_for_exact_eval_dispatch") is True
+    )
+    dispatch_blockers = [
+        "planning_only_lagrangian_atom",
+        "requires_byte_closed_archive",
+        "requires_exact_cuda_auth_eval",
+        *rank_blockers,
+    ]
+    if requested_dispatchable and not byte_closed_archive_manifest_attached:
+        dispatch_blockers.append("requested_dispatchable_without_byte_closed_archive_manifest")
+    if atom.get("score_claim") is True:
+        dispatch_blockers.append("source_atom_score_claim_true")
     seg_score = 100.0 * expected_seg_delta
     pose_score = pose_score_delta(base_pose_dist, expected_pose_delta)
     component_score = confidence * (seg_score + pose_score)
@@ -91,7 +121,10 @@ def expected_atom_score_delta(
     total = component_score + rate_score
     return {
         "atom_id": atom_id,
-        "family": atom.get("family", "unknown"),
+        "family": family,
+        "family_group": family_group,
+        "conflicts_with_families": conflicts_with_families,
+        "conflicts_with_atoms": conflicts_with_atoms,
         "score_claim": False,
         "evidence_grade": evidence_grade,
         "byte_delta": byte_delta,
@@ -112,13 +145,13 @@ def expected_atom_score_delta(
         "evidence_source_path": atom.get("evidence_source_path", ""),
         "evidence_source_sha256": atom.get("evidence_source_sha256", ""),
         "source_archive_sha256": atom.get("source_archive_sha256", ""),
+        "archive_manifest_path": archive_manifest_path,
+        "archive_manifest_sha256": archive_manifest_sha256,
+        "byte_closed_archive_manifest_attached": byte_closed_archive_manifest_attached,
+        "requested_dispatchable": requested_dispatchable,
+        "archive_ready_for_stack_review": bool(rankable and byte_closed_archive_manifest_attached),
         "dispatchable": False,
-        "dispatch_blockers": [
-            "planning_only_lagrangian_atom",
-            "requires_byte_closed_archive",
-            "requires_exact_cuda_auth_eval",
-            *rank_blockers,
-        ],
+        "dispatch_blockers": dispatch_blockers,
     }
 
 
@@ -139,6 +172,19 @@ def build_atom_ledger(
             str(row["atom_id"]),
         )
     )
+    family_counts: dict[str, int] = {}
+    conflict_counts: dict[str, int] = {}
+    archive_manifest_attached_count = 0
+    requested_dispatchable_refused_count = 0
+    for row in rows:
+        family = str(row["family_group"])
+        family_counts[family] = family_counts.get(family, 0) + 1
+        archive_manifest_attached_count += int(bool(row["byte_closed_archive_manifest_attached"]))
+        requested_dispatchable_refused_count += int(
+            bool(row["requested_dispatchable"]) and not bool(row["dispatchable"])
+        )
+        for conflict in row["conflicts_with_families"]:
+            conflict_counts[conflict] = conflict_counts.get(conflict, 0) + 1
     return {
         "schema_version": SCHEMA_VERSION,
         "tool": "tac.optimization.meta_lagrangian_allocator.build_atom_ledger",
@@ -148,6 +194,10 @@ def build_atom_ledger(
         "ready_for_exact_eval_dispatch": False,
         "base_pose_dist": float(base_pose_dist),
         "atom_count": len(rows),
+        "family_group_counts": dict(sorted(family_counts.items())),
+        "conflict_family_counts": dict(sorted(conflict_counts.items())),
+        "byte_closed_archive_manifest_attached_count": archive_manifest_attached_count,
+        "requested_dispatchable_refused_count": requested_dispatchable_refused_count,
         "rows": rows,
         "dispatch_blockers": [
             "planning_only_atom_ranking",
@@ -161,6 +211,7 @@ def atoms_from_hnerv_decoder_recode_profile(profile: Mapping[str, Any]) -> list[
     """Convert a structural-recode profile into rate-only allocation atoms."""
 
     label = str(profile.get("source_label") or "hnerv")
+    source_archive_sha256 = str(profile.get("source_archive_sha256") or "")
     atoms = []
     for row in profile.get("variants") or []:
         if not isinstance(row, Mapping):
@@ -170,6 +221,9 @@ def atoms_from_hnerv_decoder_recode_profile(profile: Mapping[str, Any]) -> list[
             {
                 "atom_id": f"{label}:decoder_recode:{variant}",
                 "family": "hnerv_decoder_rate_recode",
+                "family_group": "hnerv_rate_equivalent_recode",
+                "conflicts_with_families": [],
+                "conflicts_with_atoms": [],
                 "byte_delta": int(row.get("byte_delta_vs_source_section", 0)),
                 "expected_seg_dist_delta": 0.0,
                 "expected_pose_dist_delta": 0.0,
@@ -180,6 +234,7 @@ def atoms_from_hnerv_decoder_recode_profile(profile: Mapping[str, Any]) -> list[
                 "class_support": [],
                 "geometry_priors": [],
                 "openpilot_priors": [],
+                "source_archive_sha256": source_archive_sha256,
             }
         )
     return atoms
