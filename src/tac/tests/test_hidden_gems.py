@@ -31,6 +31,7 @@ EXPECTED_KEYS = [
     "nerv_mask_l2_readiness",
     "omega_w_v3_real_sensitivity_gate",
     "pr106_sidechannel_stack_gate",
+    "pr91_hpm1_runtime_contract",
     "pr95_residual_atom_planner",
     "raft_radial_pose_readiness",
     "wavelet_residual_basis_gate",

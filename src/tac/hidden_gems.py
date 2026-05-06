@@ -406,6 +406,39 @@ _REGISTRY: tuple[HiddenGemEntry, ...] = (
         ),
     ),
     HiddenGemEntry(
+        key="pr91_hpm1_runtime_contract",
+        title="PR91 HPM1 runtime contract",
+        category="mask_representation",
+        status="ready_for_patch",
+        summary=(
+            "Keep the public PR91 HPM1 mask stream visible as a high-EV categorical "
+            "rate signal while its HPAC device contract, full decode, and re-encode "
+            "parity remain fail-closed."
+        ),
+        evidence_paths=(
+            ".omx/research/pr91_hpm1_readiness_20260506_codex.md",
+            "src/tac/pr91_hpm1_codec.py",
+            "src/tac/pr91_hpm1_readiness.py",
+            "src/tac/pr91_hpm1_runtime_contract.py",
+            "src/tac/tests/test_pr91_hpm1_runtime_contract.py",
+        ),
+        integration_targets=(
+            "tools/audit_pr91_hpm1_readiness.py",
+            "tools/audit_pr91_hpm1_runtime_contract.py",
+            "experiments/replay_pr91_hpm1_mask.py",
+            "experiments/preflight_pr91_pr92_replay_contracts.py",
+        ),
+        next_patch=(
+            "Resolve the HPAC CPU/CUDA device contract, then recover full HPM1 "
+            "decode/reencode parity before any archive mutation or lane dispatch."
+        ),
+        contest_compliance_notes=(
+            "Static custody and runtime-contract audits are not score evidence.",
+            "No PR91/HPM1 candidate may dispatch until the HPM1 runtime consumes charged bytes "
+            "without uncharged sidecars or fallback.",
+        ),
+    ),
+    HiddenGemEntry(
         key="pr95_residual_atom_planner",
         title="PR95 residual atom planner",
         category="latent_repair",
