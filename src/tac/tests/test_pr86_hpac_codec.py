@@ -17,8 +17,13 @@ from tac.pr86_hpac_codec import (
     _categorical_from_probs,
     _group_masks,
     _normalize_probability_row,
+    collect_dependency_report,
+    decode_gzip_torch_member,
+    decode_meta_member,
     decode_tokens_hpac,
+    load_source_artifact_summaries,
     load_hpac_model_from_ppmd,
+    read_pr86_archive,
     sha256_bytes,
 )
 from tac.pr91_hpm1_codec import (
@@ -193,6 +198,39 @@ def test_load_hpac_model_from_ppmd_roundtrips_synthetic_state_dict() -> None:
     )
     assert isinstance(loaded_from_config, HPACMini)
     assert loaded_from_config.P == 2
+
+
+@pytest.mark.skipif(
+    not DEFAULT_PR91_ARCHIVE.parents[1].joinpath("public_pr86_intake_20260504_codex/archive.zip").is_file(),
+    reason="public PR86 archive not present",
+)
+def test_real_pr86_archive_contract_and_members_decode() -> None:
+    pr86_archive = DEFAULT_PR91_ARCHIVE.parents[1] / "public_pr86_intake_20260504_codex" / "archive.zip"
+    bundle = read_pr86_archive(pr86_archive)
+
+    assert bundle.extra["archive_bytes"] == 207579
+    assert set(bundle.members) == {"master.pt.gz", "slave.pt.gz", "hpac.pt.ppmd", "tokens.bin", "meta.pt"}
+    assert len(bundle.members["tokens.bin"]) == 113900
+
+    meta = decode_meta_member(bundle.members["meta.pt"])
+    master = decode_gzip_torch_member(bundle.members["master.pt.gz"])
+
+    assert meta["mode"] == "hpac"
+    assert meta["N"] == 600
+    assert meta["P"] == 32
+    assert meta["use_spm"] is True
+    assert isinstance(master, dict)
+    assert "frame_embed.weight" in master
+
+
+def test_dependency_and_source_artifact_reports_are_structured() -> None:
+    dep = collect_dependency_report(strict=False)
+    assert dep["observed"]["numpy"]
+    assert dep["strict"] is False
+
+    source_report = load_source_artifact_summaries({"missing": DEFAULT_PR91_ARCHIVE.parent / "missing.json"})
+    assert source_report["status"] == "passed_source_artifact_inventory"
+    assert source_report["artifacts"]["missing"]["exists"] is False
 
 
 def test_pr86_group_masks_match_public_pr91_failure_geometry() -> None:

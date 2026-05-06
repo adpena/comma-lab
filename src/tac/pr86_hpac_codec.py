@@ -333,26 +333,153 @@ def _validate_safe_member_name(name: str) -> str:
 def read_pr86_archive(
     archive_path: Path | str, *, contract: Pr86ArchiveContract | None = None
 ) -> Pr86ArchiveBundle:
-    """Read and validate a PR86 archive into a typed bundle (deferred)."""
-    raise _rehydration_failure("read_pr86_archive")
+    """Read and validate a PR86 archive into a typed, zip-safe bundle."""
+
+    archive = Path(archive_path)
+    resolved_contract = contract or Pr86ArchiveContract(archive)
+    if not archive.is_file():
+        raise Pr86HpacReplayError(
+            "archive_contract", "pr86_archive_missing", archive=archive
+        )
+    archive_bytes = archive.stat().st_size
+    archive_sha = sha256_path(archive)
+    if archive_bytes != int(resolved_contract.expected_bytes):
+        raise Pr86HpacReplayError(
+            "archive_contract",
+            "pr86_archive_bytes_mismatch",
+            archive=archive,
+            expected=resolved_contract.expected_bytes,
+            got=archive_bytes,
+        )
+    if archive_sha != resolved_contract.expected_sha256:
+        raise Pr86HpacReplayError(
+            "archive_contract",
+            "pr86_archive_sha256_mismatch",
+            archive=archive,
+            expected=resolved_contract.expected_sha256,
+            got=archive_sha,
+        )
+    members: dict[str, bytes] = {}
+    member_reports: dict[str, Any] = {}
+    with zipfile.ZipFile(archive, "r") as zf:
+        infos = zf.infolist()
+        names = [_validate_safe_member_name(info.filename) for info in infos]
+        duplicate_names = [name for name, count in Counter(names).items() if count > 1]
+        if duplicate_names:
+            raise Pr86HpacReplayError(
+                "archive_member_contract",
+                "duplicate_pr86_members",
+                duplicates=duplicate_names,
+            )
+        if tuple(names) != tuple(resolved_contract.expected_members):
+            raise Pr86HpacReplayError(
+                "archive_member_contract",
+                "pr86_archive_member_order_mismatch",
+                expected=list(resolved_contract.expected_members),
+                got=names,
+            )
+        for info in infos:
+            payload = zf.read(info.filename)
+            expected_size = resolved_contract.member_bytes(info.filename)
+            if len(payload) != expected_size or int(info.file_size) != expected_size:
+                raise Pr86HpacReplayError(
+                    "archive_member_contract",
+                    "pr86_member_bytes_mismatch",
+                    member=info.filename,
+                    expected=expected_size,
+                    got=len(payload),
+                    zip_file_size=int(info.file_size),
+                )
+            members[info.filename] = payload
+            member_reports[info.filename] = {
+                "bytes": len(payload),
+                "zip_file_size": int(info.file_size),
+                "zip_compress_size": int(info.compress_size),
+                "sha256": sha256_bytes(payload),
+            }
+    return Pr86ArchiveBundle(
+        contract=resolved_contract,
+        members=members,
+        sha256=archive_sha,
+        extra={
+            "archive_bytes": archive_bytes,
+            "member_reports": member_reports,
+        },
+    )
 
 
 def load_source_artifact_summaries(
     paths: Mapping[str, Path] | None = None,
 ) -> dict[str, Any]:
-    raise _rehydration_failure("load_source_artifact_summaries")
+    requested = dict(paths or {path.name: path for path in default_source_artifact_paths()})
+    rows: dict[str, Any] = {}
+    for name, path_like in requested.items():
+        path = Path(path_like)
+        row: dict[str, Any] = {"path": repo_rel(path), "exists": path.is_file()}
+        if path.is_file():
+            data = path.read_bytes()
+            row.update({"bytes": len(data), "sha256": sha256_bytes(data)})
+            if path.suffix == ".json":
+                try:
+                    row["json"] = json.loads(data.decode("utf-8"))
+                    row["json_parse_status"] = "passed"
+                except Exception as exc:
+                    row["json_parse_status"] = "failed"
+                    row["json_parse_error"] = type(exc).__name__
+        rows[str(name)] = row
+    return {"status": "passed_source_artifact_inventory", "artifacts": rows}
 
 
 def analyze_pr86_current_source_context(
     sources: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    raise _rehydration_failure("analyze_pr86_current_source_context")
+    artifact_report = dict(sources or load_source_artifact_summaries())
+    artifacts = artifact_report.get("artifacts", {})
+    present = [name for name, row in artifacts.items() if row.get("exists")]
+    missing = [name for name, row in artifacts.items() if not row.get("exists")]
+    return {
+        "status": "passed_static_pr86_source_context",
+        "score_claim": False,
+        "artifact_count": len(artifacts),
+        "present_artifacts": present,
+        "missing_artifacts": missing,
+        "artifact_report": artifact_report,
+    }
 
 
 def collect_dependency_report(
     *, expected: Mapping[str, str] | None = None, strict: bool = False
 ) -> dict[str, Any]:
-    raise _rehydration_failure("collect_dependency_report")
+    expected_versions = dict(expected or RECORDED_PR86_DEPENDENCIES)
+    observed = {
+        "python": ".".join(map(str, sys.version_info[:3])),
+        "torch": getattr(torch, "__version__", "missing") if torch is not None else "missing",
+        "numpy": np.__version__,
+        "constriction": _package_version("constriction"),
+        "pyppmd": _package_version("pyppmd"),
+    }
+    mismatches = {
+        name: {"expected": expected_version, "observed": observed.get(name, "missing")}
+        for name, expected_version in expected_versions.items()
+        if observed.get(name, "missing") != expected_version
+    }
+    missing = [name for name, value in observed.items() if value in ("missing", "unknown")]
+    report = {
+        "status": "passed" if not mismatches and not missing else "mismatch",
+        "expected": expected_versions,
+        "observed": observed,
+        "mismatches": mismatches,
+        "missing": missing,
+        "strict": bool(strict),
+    }
+    if strict and (mismatches or missing):
+        raise Pr86HpacReplayError(
+            "dependency_contract",
+            "pr86_dependency_mismatch",
+            mismatches=mismatches,
+            missing=missing,
+        )
+    return report
 
 
 def decode_gzip_torch_member(
@@ -363,12 +490,27 @@ def decode_gzip_torch_member(
     Stub: defers to ``torch.load(gzip.decompress(...))`` once the masked
     conv pair model is rehydrated.
     """
-    raise _rehydration_failure("decode_gzip_torch_member")
+    _require_torch()
+    try:
+        raw = gzip.decompress(payload)
+    except Exception as exc:
+        raise Pr86HpacReplayError(
+            "torch_member_contract", "gzip_decompress_failed"
+        ) from exc
+    return torch.load(io.BytesIO(raw), map_location="cpu", weights_only=weights_only)
 
 
 def decode_meta_member(payload: bytes) -> Any:
     """Decode the ``meta.pt`` member into a structured metadata object."""
-    raise _rehydration_failure("decode_meta_member")
+    _require_torch()
+    meta = torch.load(io.BytesIO(payload), map_location="cpu", weights_only=False)
+    if not isinstance(meta, Mapping):
+        raise Pr86HpacReplayError(
+            "meta_member_contract",
+            "expected_meta_mapping",
+            loaded_type=type(meta).__name__,
+        )
+    return dict(meta)
 
 
 # --- Symbols re-exported by pr91_hpm1_codec ---

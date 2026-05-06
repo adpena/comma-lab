@@ -4645,3 +4645,34 @@ Verification:
   hpac_entropy_decode_contract_mismatch` with
   `group_start_decoded_symbols=5760` and
   `decoded_symbol_count_before_failure=5951`.
+
+## R66 - 2026-05-06 PR86 Archive Custody Surface Recovery
+
+Recovered the PR86 archive custody and member-decoding surface around the
+minimal HPAC decode probe.
+
+Updated:
+
+- `src/tac/pr86_hpac_codec.py`
+- `src/tac/tests/test_pr86_hpac_codec.py`
+
+Recovered contracts:
+
+- strict PR86 `archive.zip` validation for archive bytes, archive SHA-256,
+  zip-safe member names, duplicate-member rejection, member ordering, member
+  byte sizes, and member SHA-256 reports;
+- `meta.pt` torch decode into a structured mapping;
+- gzip torch member decode for `master.pt.gz` / `slave.pt.gz`;
+- dependency report for recorded PR86 replay dependencies;
+- source-artifact inventory summaries for local PR86 forensic context.
+
+The full PR86 render path and HPAC re-encode path remain intentionally
+fail-loud. This tranche only turns raw custody into structured evidence and
+does not promote a score claim.
+
+Verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_pr86_hpac_codec.py
+  src/tac/tests/test_rehydrated_modules_20260505.py -q` -> `40 passed`.
+- `.venv/bin/python -m py_compile src/tac/pr86_hpac_codec.py
+  src/tac/tests/test_pr86_hpac_codec.py` passed.
