@@ -96,6 +96,43 @@ at L0 and the maturity pass walks each gate forward).
 | `lane_raft_pose_init` | WARN guard | `step_pose_tto` → fall through |
 | **`lane_riemannian_pose_tto`** | **WIRED** | `step_pose_tto` → `optimize_poses.py --optimizer=riemannian-sgd` |
 
+## Maturity-discipline backfill (claude:main, later in 2026-05-06)
+
+After the cross-paradigm wiring landed, the following gates were backfilled
+based on accumulated empirical evidence. Re-creation commands for future
+agents:
+
+```bash
+# lane_owv3_sensitivity_weighted (β dispatch LIVE + tested + adversarial-reviewed)
+.venv/bin/python tools/lane_maturity.py mark lane_owv3_sensitivity_weighted --gate three_clean_review --evidence "Adversarial review 2026-05-06 (3 fixes: torch.load weights_only=True, cache-invalidation effective_mode, model.eval()) committed in cb2ea361 + 3 integration tests in test_pipeline_beta_dispatch.py + 6 wiring contract tests + 7 cross-paradigm regression tests all green"
+.venv/bin/python tools/lane_maturity.py mark lane_owv3_sensitivity_weighted --gate memory_entry --evidence "feedback_adversarial_review_beta_riemannian_dispatch_20260506.md + project_cross_paradigm_pipeline_wiring_landed_20260506.md + feedback_goal_is_lowest_score_not_quantizr_paradigm_match_20260506.md"
+.venv/bin/python tools/lane_maturity.py mark lane_owv3_sensitivity_weighted --gate strict_preflight --evidence "STRICT preflight check_cross_paradigm_wiring_contract enforces use_sensitivity_weighted has cfg.<flag> reference (commit a0f00246, 12 flags scanned, 0 violations)"
+
+# lane_riemannian_pose_tto (la-pose Riemannian dispatch LIVE)
+.venv/bin/python tools/lane_maturity.py mark lane_riemannian_pose_tto --gate impl_complete --evidence "tac.se3 + tac.riemannian_pose_optimizer.RiemannianSGD; LIVE dispatch wired in step_pose_tto via --optimizer=riemannian-sgd subprocess flag (commit 330356f1)"
+.venv/bin/python tools/lane_maturity.py mark lane_riemannian_pose_tto --gate three_clean_review --evidence "Adversarial review 2026-05-06: clean (no findings) — preconditions all met by optimize_poses.py argparse defaults (--pose-mode=full-6dof, --lora-rank=0). 9 cross-paradigm tests green."
+.venv/bin/python tools/lane_maturity.py mark lane_riemannian_pose_tto --gate memory_entry --evidence "feedback_adversarial_review_beta_riemannian_dispatch_20260506.md + project_cross_paradigm_pipeline_wiring_landed_20260506.md"
+.venv/bin/python tools/lane_maturity.py mark lane_riemannian_pose_tto --gate strict_preflight --evidence "STRICT preflight check_cross_paradigm_wiring_contract enforces use_riemannian_tto has cfg.<flag> reference (commit a0f00246)"
+
+# lane_alpha_wavelet_mask (audit fixes + WR01 schema branch + regression test)
+.venv/bin/python tools/lane_maturity.py mark lane_alpha_wavelet_mask --gate three_clean_review --evidence "Adversarial review session 2026-05-06: 7 findings ALL FIXED (commits 5f187bb0 + fa1e8759 codex-side + WR01 schema branch 0abfd60e + regression test f8975eaa). 6 cross-paradigm tests green."
+.venv/bin/python tools/lane_maturity.py mark lane_alpha_wavelet_mask --gate memory_entry --evidence "feedback_adversarial_review_session_complete_paradigm_alpha_wavelet_20260506.md + project_paradigm_alpha_architecture_clarification_20260506.md + cross_paradigm_atom_ledger_first_dryrun_20260506.md"
+
+# lane_joint_codec_stack (γ audit fixes + design council)
+.venv/bin/python tools/lane_maturity.py mark lane_joint_codec_stack --gate memory_entry --evidence "paradigm_audit_findings_20260506.md (5 γ findings applied) + grand_council_meta_lagrangian_pareto_design_decisions_20260506.md"
+```
+
+After backfill, audit shows:
+- `lane_owv3_sensitivity_weighted`: L1 with 4/7 gates (impl+strict+3clean+memory)
+- `lane_riemannian_pose_tto`: L1 with 4/7 gates (same set)
+- `lane_alpha_wavelet_mask`: L1 with 3/7 gates (impl+3clean+memory)
+- `lane_joint_codec_stack`: L1 with 2/7 gates (impl+memory)
+
+Remaining gates per lane (operator-gated):
+- `real_archive_empirical` — needs Lane G v3 anchor or equivalent empirical measurement
+- `contest_cuda` — needs paid GPU dispatch with `[contest-CUDA]` tag
+- `deploy_runbook` — needs `scripts/remote_lane_<id>.sh` with heartbeat + watchdog + harvest
+
 ## Cross-references
 
 - `project_cross_paradigm_pipeline_wiring_landed_20260506.md` — the wiring landing memory entry
