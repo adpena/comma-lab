@@ -26,6 +26,11 @@ def _zip_with_zero_bin(path: Path) -> None:
         z.writestr("0.bin", b"\xffsynthetic")
 
 
+def _zip_with_single_member(path: Path, *, member_name: str = "x") -> None:
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as z:
+        z.writestr(member_name, b"\xfa\x01synthetic")
+
+
 def _manifest(path: Path, *, score_claim: bool = False) -> None:
     path.write_text(json.dumps({"score_claim": score_claim}, indent=2))
 
@@ -40,6 +45,8 @@ def test_default_dryrun_passes_and_reports_no_score_claim() -> None:
     assert report.provider_state_free is True
     assert any(c.name == "latent:help" and c.ok for c in report.checks)
     assert any(c.name == "stacked:score-claim-marker" and c.ok for c in report.checks)
+    stacked_flags = next(c for c in report.checks if c.name == "stacked:argparse-flags")
+    assert "--wavelet" in stacked_flags.detail
 
 
 def test_missing_builder_files_fail_closed(tmp_path: Path) -> None:
@@ -139,6 +146,54 @@ def test_production_readiness_accepts_false_score_claim_manifests(tmp_path: Path
 
     assert report.ok
     assert all(c.ok for c in report.checks if c.name.endswith(":manifest"))
+
+
+def test_production_readiness_accepts_optional_wavelet_candidate(tmp_path: Path) -> None:
+    pr106 = tmp_path / "pr106.zip"
+    latent = tmp_path / "latent.zip"
+    yshift = tmp_path / "yshift.zip"
+    lrl1 = tmp_path / "lrl1.zip"
+    wavelet = tmp_path / "wavelet.zip"
+    for archive in (pr106, latent, yshift, lrl1):
+        _zip_with_zero_bin(archive)
+    _zip_with_single_member(wavelet, member_name="x")
+
+    latent_manifest = tmp_path / "latent_manifest.json"
+    yshift_manifest = tmp_path / "yshift_manifest.json"
+    lrl1_manifest = tmp_path / "lrl1_manifest.json"
+    wavelet_manifest = tmp_path / "wavelet_manifest.json"
+    stacked_manifest = tmp_path / "stacked_manifest.json"
+    for manifest in (
+        latent_manifest,
+        yshift_manifest,
+        lrl1_manifest,
+        wavelet_manifest,
+        stacked_manifest,
+    ):
+        _manifest(manifest, score_claim=False)
+
+    report = run_dryrun(
+        repo=REPO,
+        run_help=False,
+        production_readiness=True,
+        production_inputs=ProductionInputs(
+            pr106_archive=pr106,
+            latent_sister_archive=latent,
+            yshift_sister_archive=yshift,
+            lrl1_sister_archive=lrl1,
+            wavelet_sister_archive=wavelet,
+            latent_manifest=latent_manifest,
+            yshift_manifest=yshift_manifest,
+            lrl1_manifest=lrl1_manifest,
+            wavelet_manifest=wavelet_manifest,
+            stacked_manifest=stacked_manifest,
+        ),
+    )
+
+    assert report.ok
+    checks = {c.name: c for c in report.checks}
+    assert checks["production:wavelet-sister-single-member"].ok
+    assert checks["wavelet:manifest"].ok
 
 
 def test_json_cli_is_deterministic_and_score_claim_false() -> None:

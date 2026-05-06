@@ -27,9 +27,11 @@ Usage:
       --latent-sister-archive experiments/results/lane_pr106_latent_sidecar_cpu_smoke_20260505/sidecar_archive.zip \
       --yshift-sister-archive experiments/results/lane_pr106_yshift_sidechannel_smoke_20260505T065831Z_advisory/pr106_yshift_sidechannel_archive.zip \
       --lrl1-sister-archive experiments/results/lane_pr106_lrl1_sidechannel_smoke_20260505T072638Z_advisory/pr106_lrl1_sidechannel_archive.zip \
+      --wavelet-sister-archive experiments/results/hnerv_wavelet_sidechannel_pr106x_20260506_codex/hnerv_wavelet_sidechannel_candidate.zip \
       --latent-manifest experiments/results/lane_pr106_latent_sidecar_cpu_smoke_20260505/build_metadata.json \
       --yshift-manifest experiments/results/lane_pr106_yshift_sidechannel_smoke_20260505T065831Z_advisory/build_metadata.json \
       --lrl1-manifest experiments/results/lane_pr106_lrl1_sidechannel_smoke_20260505T072638Z_advisory/build_metadata.json \
+      --wavelet-manifest experiments/results/hnerv_wavelet_sidechannel_pr106x_20260506_codex/manifest.json \
       --stacked-manifest experiments/results/lane_pr106_stacked_3sister_cpu_smoke_20260505T140325Z/build_metadata.json
 """
 from __future__ import annotations
@@ -67,9 +69,11 @@ class ProductionInputs:
     latent_sister_archive: Path | None = None
     yshift_sister_archive: Path | None = None
     lrl1_sister_archive: Path | None = None
+    wavelet_sister_archive: Path | None = None
     latent_manifest: Path | None = None
     yshift_manifest: Path | None = None
     lrl1_manifest: Path | None = None
+    wavelet_manifest: Path | None = None
     stacked_manifest: Path | None = None
 
 
@@ -196,6 +200,7 @@ BUILDER_SPECS: tuple[BuilderSpec, ...] = (
             "--latent",
             "--yshift",
             "--lrl1",
+            "--wavelet",
             "--output-dir",
         ),
         help_tokens=(
@@ -204,6 +209,7 @@ BUILDER_SPECS: tuple[BuilderSpec, ...] = (
             "--latent",
             "--yshift",
             "--lrl1",
+            "--wavelet",
         ),
     ),
 )
@@ -482,6 +488,32 @@ def _check_zip_has_zero_bin(
     )
 
 
+def _check_zip_has_single_file(
+    checks: list[CheckResult],
+    *,
+    name: str,
+    path: Path | None,
+    repo: Path,
+) -> None:
+    if path is None or not path.is_file():
+        return
+    try:
+        with zipfile.ZipFile(path) as z:
+            infos = z.infolist()
+    except zipfile.BadZipFile as exc:
+        _check(name, checks, False, f"{_rel(path, repo)} is not a valid ZIP: {exc}")
+        return
+    ok = len(infos) == 1 and not infos[0].is_dir()
+    _check(
+        name,
+        checks,
+        ok,
+        f"{_rel(path, repo)} contains one file member"
+        if ok
+        else f"{_rel(path, repo)} must contain exactly one file member",
+    )
+
+
 def _check_manifest(
     checks: list[CheckResult],
     *,
@@ -511,9 +543,11 @@ def _iter_optional_paths(inputs: ProductionInputs) -> Iterable[tuple[str, Path |
     yield "latent_sister_archive", inputs.latent_sister_archive
     yield "yshift_sister_archive", inputs.yshift_sister_archive
     yield "lrl1_sister_archive", inputs.lrl1_sister_archive
+    yield "wavelet_sister_archive", inputs.wavelet_sister_archive
     yield "latent_manifest", inputs.latent_manifest
     yield "yshift_manifest", inputs.yshift_manifest
     yield "lrl1_manifest", inputs.lrl1_manifest
+    yield "wavelet_manifest", inputs.wavelet_manifest
     yield "stacked_manifest", inputs.stacked_manifest
 
 
@@ -535,6 +569,7 @@ def _check_production_inputs(
             ("latent:manifest", inputs.latent_manifest),
             ("yshift:manifest", inputs.yshift_manifest),
             ("lrl1:manifest", inputs.lrl1_manifest),
+            ("wavelet:manifest", inputs.wavelet_manifest),
             ("stacked:manifest", inputs.stacked_manifest),
         ):
             _check_manifest(
@@ -563,6 +598,12 @@ def _check_production_inputs(
         ("production:lrl1-sister-zero-bin", inputs.lrl1_sister_archive),
     ):
         _check_zip_has_zero_bin(checks, name=name, path=path, repo=repo)
+    _check_zip_has_single_file(
+        checks,
+        name="production:wavelet-sister-single-member",
+        path=inputs.wavelet_sister_archive,
+        repo=repo,
+    )
 
     for manifest_name, path in (
         ("latent:manifest", inputs.latent_manifest),
@@ -574,6 +615,15 @@ def _check_production_inputs(
             checks,
             name=manifest_name,
             path=path,
+            repo=repo,
+            production_readiness=True,
+            warnings=warnings,
+        )
+    if inputs.wavelet_sister_archive is not None or inputs.wavelet_manifest is not None:
+        _check_manifest(
+            checks,
+            name="wavelet:manifest",
+            path=inputs.wavelet_manifest,
             repo=repo,
             production_readiness=True,
             warnings=warnings,
@@ -665,9 +715,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--latent-sister-archive", type=str, default=None)
     parser.add_argument("--yshift-sister-archive", type=str, default=None)
     parser.add_argument("--lrl1-sister-archive", type=str, default=None)
+    parser.add_argument("--wavelet-sister-archive", type=str, default=None)
     parser.add_argument("--latent-manifest", type=str, default=None)
     parser.add_argument("--yshift-manifest", type=str, default=None)
     parser.add_argument("--lrl1-manifest", type=str, default=None)
+    parser.add_argument("--wavelet-manifest", type=str, default=None)
     parser.add_argument("--stacked-manifest", type=str, default=None)
     parser.add_argument(
         "--latent-search-mode",
@@ -694,9 +746,11 @@ def main(argv: list[str] | None = None) -> int:
         latent_sister_archive=_optional_path(args.latent_sister_archive),
         yshift_sister_archive=_optional_path(args.yshift_sister_archive),
         lrl1_sister_archive=_optional_path(args.lrl1_sister_archive),
+        wavelet_sister_archive=_optional_path(args.wavelet_sister_archive),
         latent_manifest=_optional_path(args.latent_manifest),
         yshift_manifest=_optional_path(args.yshift_manifest),
         lrl1_manifest=_optional_path(args.lrl1_manifest),
+        wavelet_manifest=_optional_path(args.wavelet_manifest),
         stacked_manifest=_optional_path(args.stacked_manifest),
     )
     report = run_dryrun(
