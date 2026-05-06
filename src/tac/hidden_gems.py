@@ -31,6 +31,7 @@ STATUSES = frozenset(
         "planning",
         "prototype",
         "ready_for_patch",
+        "implemented_guarded",
     }
 )
 
@@ -348,7 +349,7 @@ _REGISTRY: tuple[HiddenGemEntry, ...] = (
         key="omega_w_v3_real_sensitivity_gate",
         title="Omega-W-V3 real sensitivity gate",
         category="stack_composition",
-        status="ready_for_patch",
+        status="implemented_guarded",
         summary=(
             "Make the PR106 water-fill repack lane refuse stub, stale, or mismatched "
             "sensitivity metadata before production dispatch."
@@ -364,12 +365,13 @@ _REGISTRY: tuple[HiddenGemEntry, ...] = (
             "tools/all_lanes_preflight.py",
         ),
         next_patch=(
-            "Add a require-real-sensitivity mode that fails dispatch when metadata is "
-            "stub, stale, or not tied to the source archive SHA."
+            "Wire certified sensitivity maps into a concrete OWV3 candidate builder "
+            "and keep exact CUDA eval as the only promotion path."
         ),
         contest_compliance_notes=(
             "Sensitivity is optimizer feedback, not score evidence.",
-            "Production dispatch needs exact source archive identity and non-stub metadata.",
+            "Production dispatch needs exact source archive identity, CUDA device "
+            "provenance, and component_sensitivity_map_certification_v1 metadata.",
         ),
     ),
     HiddenGemEntry(

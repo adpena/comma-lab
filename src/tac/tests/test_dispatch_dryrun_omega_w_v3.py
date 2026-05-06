@@ -41,12 +41,34 @@ def _write_sensitivity(path: Path, metadata: dict[str, object]) -> None:
 
 
 def _valid_metadata(source_archive: Path) -> dict[str, object]:
+    archive_sha = _sha256(source_archive)
     return {
         "device": "cuda",
-        "source_archive_sha256": _sha256(source_archive),
+        "source_archive_sha256": archive_sha,
         "source_archive_bytes": source_archive.stat().st_size,
-        "tag": "[contest-CUDA]",
+        "promotion_eligible": True,
+        "official_component_response": True,
+        "canonical_scorer_path": True,
+        "sensitivity_source": "certified_official_component_sensitivity",
+        "tag": "[certified-contest-CUDA]",
         "n_pairs": 600,
+        "certification": {
+            "format": "component_sensitivity_map_certification_v1",
+            "component": "combined",
+            "device": "cuda",
+            "official_component_response": True,
+            "canonical_scorer_path": True,
+            "promotion_eligible": True,
+            "source_map_sha256": "a" * 64,
+            "official_response_curve_sha256": "b" * 64,
+            "stability_sha256": "c" * 64,
+            "sample_plan_sha256": "d" * 64,
+            "baseline_archive_sha256": archive_sha,
+            "baseline_archive_bytes": source_archive.stat().st_size,
+            "contest_auth_eval_json_sha256": "e" * 64,
+            "review_clean_passes": 3,
+            "review_unresolved_blockers": [],
+        },
     }
 
 
@@ -59,6 +81,7 @@ def test_real_sensitivity_metadata_accepts_cuda_source_archive_sha(tmp_path: Pat
     msg = dryrun.check_real_sensitivity_metadata(sensitivity, source_archive)
 
     assert "real sensitivity metadata OK" in msg
+    assert "certified component='combined'" in msg
     assert _sha256(source_archive)[:16] in msg
 
 
@@ -105,9 +128,25 @@ def test_real_sensitivity_metadata_requires_source_archive_sha(tmp_path: Path) -
     sensitivity = tmp_path / "sensitivity_map.pt"
     metadata = _valid_metadata(source_archive)
     del metadata["source_archive_sha256"]
+    metadata["certification"] = {
+        **metadata["certification"],  # type: ignore[dict-item]
+        "baseline_archive_sha256": "f" * 64,
+    }
     _write_sensitivity(sensitivity, metadata)
 
-    with pytest.raises(dryrun.CheckFailure, match="source_archive_sha256"):
+    with pytest.raises(dryrun.CheckFailure, match="source archive SHA"):
+        dryrun.check_real_sensitivity_metadata(sensitivity, source_archive)
+
+
+def test_real_sensitivity_metadata_requires_certification(tmp_path: Path) -> None:
+    source_archive = tmp_path / "archive.zip"
+    source_archive.write_bytes(b"pr106-source")
+    sensitivity = tmp_path / "sensitivity_map.pt"
+    metadata = _valid_metadata(source_archive)
+    del metadata["certification"]
+    _write_sensitivity(sensitivity, metadata)
+
+    with pytest.raises(dryrun.CheckFailure, match="certification"):
         dryrun.check_real_sensitivity_metadata(sensitivity, source_archive)
 
 

@@ -118,6 +118,12 @@ REAL_SENSITIVITY_SOURCE_BYTES_KEYS = (
     "source_archive_bytes",
     "baseline_archive_bytes",
 )
+REAL_SENSITIVITY_CERTIFIED_SOURCE_SHA_KEYS = (
+    "baseline_archive_sha256",
+)
+REAL_SENSITIVITY_CERTIFIED_SOURCE_BYTES_KEYS = (
+    "baseline_archive_bytes",
+)
 
 
 class CheckFailure(Exception):
@@ -153,7 +159,7 @@ def _metadata_value(metadata: Mapping[str, Any], keys: tuple[str, ...]) -> Any |
     for key in keys:
         if key in metadata:
             return metadata[key]
-    for container in ("source_archive", "baseline_archive", "source"):
+    for container in ("source_archive", "baseline_archive", "source", "certification"):
         nested = metadata.get(container)
         if isinstance(nested, Mapping):
             for key in keys:
@@ -216,6 +222,7 @@ def check_real_sensitivity_metadata(
             SensitivityMapError,
             load_sensitivity_map,
             require_authoritative_device,
+            validate_certified_sensitivity_map_metadata,
         )
     except Exception as e:  # pragma: no cover - import failure is environment-specific.
         raise CheckFailure(f"cannot import tac.sensitivity_map: {e}") from e
@@ -233,20 +240,37 @@ def check_real_sensitivity_metadata(
         require_authoritative_device(metadata.get("device"))
     except SensitivityMapError as e:
         failures.append(str(e))
+    try:
+        certification = validate_certified_sensitivity_map_metadata(metadata)
+    except SensitivityMapError as e:
+        failures.append(f"certification rejected: {e}")
+        certification = {}
 
     failures.extend(_real_sensitivity_metadata_blockers(metadata))
 
     actual_sha = sha256_file(source_archive)
-    recorded_sha = _metadata_value(metadata, REAL_SENSITIVITY_SOURCE_SHA_KEYS)
+    recorded_sha = _metadata_value(
+        metadata,
+        REAL_SENSITIVITY_SOURCE_SHA_KEYS + REAL_SENSITIVITY_CERTIFIED_SOURCE_SHA_KEYS,
+    )
     if not isinstance(recorded_sha, str) or len(recorded_sha.strip()) != 64:
-        failures.append("metadata missing 64-hex source_archive_sha256")
+        failures.append("metadata missing 64-hex source archive SHA")
     elif recorded_sha.strip().lower() != actual_sha:
         failures.append(
-            "metadata source_archive_sha256 is stale or mismatched: "
+            "metadata source archive SHA is stale or mismatched: "
             f"metadata={recorded_sha.strip().lower()} actual={actual_sha}"
         )
+    certified_sha = certification.get("baseline_archive_sha256")
+    if isinstance(certified_sha, str) and certified_sha != actual_sha:
+        failures.append(
+            "certification baseline_archive_sha256 is stale or mismatched: "
+            f"metadata={certified_sha} actual={actual_sha}"
+        )
 
-    recorded_bytes = _metadata_value(metadata, REAL_SENSITIVITY_SOURCE_BYTES_KEYS)
+    recorded_bytes = _metadata_value(
+        metadata,
+        REAL_SENSITIVITY_SOURCE_BYTES_KEYS + REAL_SENSITIVITY_CERTIFIED_SOURCE_BYTES_KEYS,
+    )
     if recorded_bytes is not None:
         try:
             recorded_bytes_int = int(recorded_bytes)
@@ -259,6 +283,14 @@ def check_real_sensitivity_metadata(
                     "metadata source archive bytes is stale or mismatched: "
                     f"metadata={recorded_bytes_int} actual={actual_bytes}"
                 )
+    certified_bytes = certification.get("baseline_archive_bytes")
+    if isinstance(certified_bytes, int) and not isinstance(certified_bytes, bool):
+        actual_bytes = source_archive.stat().st_size
+        if certified_bytes != actual_bytes:
+            failures.append(
+                "certification baseline_archive_bytes is stale or mismatched: "
+                f"metadata={certified_bytes} actual={actual_bytes}"
+            )
 
     if failures:
         joined = "; ".join(failures)
@@ -266,6 +298,7 @@ def check_real_sensitivity_metadata(
 
     return (
         f"real sensitivity metadata OK ({len(sensitivities)} tensors, "
+        f"certified component={certification.get('component')!r}, "
         f"source sha {actual_sha[:16]}..., device={metadata.get('device')!r})"
     )
 
