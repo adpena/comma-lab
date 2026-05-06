@@ -713,6 +713,31 @@ def step_pose_tto(cfg: PipelineConfig, iteration: int = 0) -> Path:
     """Adaptive pose TTO with convergence detection."""
     iter_dir = Path(cfg.output_dir) / f"iter_{iteration}"
     iter_dir.mkdir(parents=True, exist_ok=True)
+
+    # ── Cross-paradigm flag guards (PARADIGM-la-pose) ──────────────────
+    # Mirror of the WARN-on-unwired pattern from step_compress_weights.
+    # ``use_raft_init`` would route warm-start through
+    # ``experiments/derive_poses_from_raft.py``;
+    # ``use_riemannian_tto`` would dispatch optimization through
+    # ``tac.se3`` exp/log maps. Both REGISTERED-BUT-NOT-WIRED until the
+    # operator lands the dispatch branch + integration test (see
+    # lane_raft_pose_init / lane_riemannian_pose_tto in the registry).
+    if cfg.use_raft_init:
+        _log(
+            "PARADIGM-la-pose: cfg.use_raft_init=True but the RAFT warm-start "
+            "dispatch path is REGISTERED-BUT-NOT-WIRED. Continuing with "
+            "default pose initialization. To enable, the operator must "
+            "land the dispatch branch in step_pose_tto.",
+            "WARN",
+        )
+    if cfg.use_riemannian_tto:
+        _log(
+            "PARADIGM-la-pose: cfg.use_riemannian_tto=True but the SE(3) "
+            "Riemannian optimizer dispatch path is REGISTERED-BUT-NOT-WIRED. "
+            "Continuing with the default Euclidean optimizer. To enable, "
+            "the operator must land the dispatch branch in optimize_poses.py.",
+            "WARN",
+        )
     # R29 fix: validate masks BEFORE constructing the subprocess cmd. Prior
     # version passed cfg.masks blindly, so an empty string flowed through
     # to optimize_poses.py and produced a cryptic decode failure deep in the
