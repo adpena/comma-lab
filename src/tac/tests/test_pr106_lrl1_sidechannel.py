@@ -21,6 +21,7 @@ which are CUDA-independent.
 from __future__ import annotations
 
 import struct
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -28,6 +29,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 import torch
+
+from tac.repo_io import read_json, sha256_file
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PR106_ARCHIVE = REPO_ROOT / (
@@ -366,6 +369,50 @@ def test_archive_size_overhead_under_10kb_for_K4():
     # Zero payload is highly compressible; expect ~30-100 bytes total
     assert overhead < 10240, f"overhead {overhead} bytes exceeds 10KB ceiling"
     assert overhead < 200, f"zero-init overhead {overhead} should be tiny (~50 bytes)"
+
+
+def test_builder_zero_mode_metadata_is_fail_closed(tmp_path):
+    """Zero-mode LRL1 build records deterministic custody but remains non-dispatchable."""
+    if not PR106_ARCHIVE.is_file():
+        pytest.skip(f"PR106 anchor not present at {PR106_ARCHIVE}")
+    out_dir = tmp_path / "out"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "experiments/build_pr106_lrl1_sidechannel.py"),
+            "--pr106-archive",
+            str(PR106_ARCHIVE),
+            "--out-dir",
+            str(out_dir),
+            "--search-mode",
+            "zero",
+            "--K",
+            "2",
+            "--low-h",
+            "8",
+            "--low-w",
+            "8",
+            "--n-pairs",
+            "2",
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    archive_path = out_dir / "pr106_lrl1_sidechannel_archive.zip"
+    metadata = read_json(out_dir / "build_metadata.json")
+    assert metadata["manifest_schema"] == "pr106_lrl1_sidechannel_build_metadata_v2"
+    assert metadata["score_claim"] is False
+    assert metadata["dispatch_attempted"] is False
+    assert metadata["remote_jobs_dispatched"] is False
+    assert metadata["ready_for_exact_eval_dispatch"] is False
+    assert metadata["archive_sha256"] == sha256_file(archive_path)
+    assert metadata["source_archive_sha256"] == sha256_file(PR106_ARCHIVE)
+    assert "requires_real_cuda_lrl1_search" in metadata["dispatch_blockers"]
+    assert "requires_exact_cuda_auth_eval_on_built_archive" in metadata["dispatch_blockers"]
 
 
 def test_zero_search_shapes():

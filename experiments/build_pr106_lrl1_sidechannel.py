@@ -95,7 +95,7 @@ prepend_paths(
     REPO_ROOT / "submissions" / "apogee_intN" / "src",
 )
 
-from tac.repo_io import json_text
+from tac.repo_io import json_text, sha256_file
 
 from inflate import (  # type: ignore[import-not-found]
     LRL1_MAGIC_BYTE,
@@ -306,8 +306,12 @@ def main() -> int:
     print(f"[build-lrl1] estimated rate-component score Δ vs PR106: {score_delta:+.6f}")
 
     metadata = {
+        "manifest_schema": "pr106_lrl1_sidechannel_build_metadata_v2",
         "archive_path": str(archive_path),
         "archive_size_bytes": archive_size,
+        "archive_sha256": sha256_file(archive_path),
+        "source_archive_path": str(args.pr106_archive),
+        "source_archive_sha256": sha256_file(args.pr106_archive),
         "pr106_size_bytes": pr106_zip_size,
         "delta_bytes": delta,
         "rate_component_score_delta_vs_pr106": score_delta,
@@ -329,6 +333,15 @@ def main() -> int:
             "lane_pr106_yshift_sidechannel BOTH winning empirically (3rd stack-on)"
         ),
         "score_claim": False,
+        "dispatch_attempted": False,
+        "remote_jobs_dispatched": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": [
+            "requires_real_cuda_lrl1_search",
+            "requires_exact_cuda_auth_eval_on_built_archive",
+            "requires_inflate_runtime_tree_hash_provenance",
+            "requires_lane_claim_before_remote_gpu_or_eval_dispatch",
+        ],
         "next_step": (
             "search-mode=zero is CPU smoke ONLY (all-zero basis+coeffs; pure wire-format proof). "
             "For real distortion improvement, dispatch via "
