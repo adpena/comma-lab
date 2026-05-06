@@ -24,7 +24,9 @@ from tac.pose_gaussian_process import fit_pose_gp, reconstruct_poses, save_pose_
 
 
 def _load_pose_tensor(path: Path) -> torch.Tensor:
-    data = torch.load(str(path), map_location="cuda", weights_only=True)
+    # Audit Finding 11 (2026-05-06): map_location="cpu" — `fit_pose_gp` does
+    # numpy fitting; CUDA load was wasteful overhead and broke CPU-only machines.
+    data = torch.load(str(path), map_location="cpu", weights_only=True)
     if isinstance(data, dict):
         for key in ("poses", "optimized_poses", "gt_poses"):
             value = data.get(key)

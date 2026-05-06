@@ -140,6 +140,16 @@ def _best_response_delta(component_response: Mapping[str, Any]) -> dict[str, Any
             best_point = point
     if best_point is None:
         raise LaposeMotionAtomError("component response has no valid points")
+    # Audit Finding 2 (2026-05-06): raise instead of silently returning
+    # baseline as "best". If best_delta >= 0, every non-baseline point is
+    # worse than or equal to baseline. Producing zero-delta atoms from this
+    # would silently pollute the planning ledger with no-op atoms.
+    if best_delta >= 0.0:
+        raise LaposeMotionAtomError(
+            f"component response has no improving point: best combined_delta="
+            f"{best_delta:.6g} >= 0 (baseline already optimal or all "
+            f"non-baseline points regress). Refusing to produce zero-delta atoms."
+        )
     best_values = _mapping(best_point.get("values"), "best values")
     best_archive = _mapping(best_point.get("archive"), "best archive")
     return {
@@ -148,6 +158,8 @@ def _best_response_delta(component_response: Mapping[str, Any]) -> dict[str, Any
         "seg_dist_delta": float(best_values.get("segnet")) - base_seg,
         "pose_dist_delta": float(best_values.get("posenet")) - base_pose,
         "byte_delta": int(best_archive.get("bytes")) - base_bytes,
+        # [prediction]: 0.5/0.8 thresholds are engineering judgments, not
+        # empirical calibrations.
         "confidence": 0.5 if component_response.get("promotion_eligible") is False else 0.8,
     }
 
