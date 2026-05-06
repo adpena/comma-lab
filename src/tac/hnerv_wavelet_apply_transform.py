@@ -37,6 +37,22 @@ class HnervWaveletApplyTransformError(ValueError):
     """Raised when a WR01 transform input is invalid."""
 
 
+def _guard_no_tmp_path(path: str | Path, label: str) -> None:
+    """Reject persisted WR01 inputs/outputs under common tmp roots."""
+
+    raw = Path(path).expanduser()
+    try:
+        resolved = raw.resolve(strict=False)
+    except OSError as exc:
+        raise HnervWaveletApplyTransformError(f"{label}: failed to resolve path {path!s}") from exc
+    text = resolved.as_posix()
+    for forbidden in ("/tmp", "/private/tmp", "/var/tmp"):
+        if text == forbidden or text.startswith(forbidden + "/"):
+            raise HnervWaveletApplyTransformError(
+                f"{label}: persisted WR01 artifact path must not be under {forbidden}: {text}"
+            )
+
+
 def build_wavelet_apply_transform_candidate(
     *,
     wavelet_archive: str | Path,
@@ -61,10 +77,25 @@ def build_wavelet_apply_transform_candidate(
     instead of trusting a bogus value.
     """
 
-    if strength_numerator < 0:
-        raise HnervWaveletApplyTransformError("strength_numerator must be non-negative")
+    # Adversarial review 2026-05-06 (PARADIGM-alpha CRITICAL #5): validate > 0.
+    # strength_numerator=0 silently produces a zero-strength transform (no byte
+    # change) and only raises AFTER wasting a full brotli roundtrip on the
+    # transformed_section comparison. Gate at the entry point so the caller
+    # gets a fast deterministic error.
+    if strength_numerator <= 0:
+        raise HnervWaveletApplyTransformError(
+            f"strength_numerator must be > 0 (got {strength_numerator}); "
+            "strength_numerator=0 produces zero-strength transform with no byte change"
+        )
     if strength_denominator <= 0:
         raise HnervWaveletApplyTransformError("strength_denominator must be positive")
+    # Adversarial review 2026-05-06 (PARADIGM-alpha IMPORTANT, /tmp path guard):
+    # /tmp paths are FORBIDDEN in persisted manifests per CLAUDE.md
+    # ("Forbidden /tmp paths in any persisted artifact"). Guard at the gate.
+    _guard_no_tmp_path(wavelet_archive, "wavelet_archive")
+    _guard_no_tmp_path(output_dir, "output_dir")
+    if source_archive is not None:
+        _guard_no_tmp_path(source_archive, "source_archive")
     _validate_sha256_or_none(source_archive_sha256, "source_archive_sha256")
     if source_archive_bytes is not None and int(source_archive_bytes) <= 0:
         raise HnervWaveletApplyTransformError("source_archive_bytes must be positive or None")
@@ -102,16 +133,32 @@ def build_wavelet_apply_transform_candidate(
     if transformed_raw == raw:
         raise HnervWaveletApplyTransformError(f"{section_name}: WR01 transform produced no byte change")
     transformed_section = brotli.compress(transformed_raw, quality=11)
-    # Round 2 R2-5 fix (2026-05-06, 83% confidence): replace hardcoded section
-    # name string literals in the comparison with the shared REPACKABLE_SECTIONS
-    # constants. The dataclass FIELD names below (latents_and_sidecar_brotli=
-    # and decoder_packed_brotli=) are tied to the dataclass definition, not
-    # drift sources — they cannot use constants because Python kwargs require
-    # literal identifiers. The comparison string literals previously WERE drift
-    # sources; now they read from REPACKABLE_SECTIONS so any rename in the
-    # packer module surfaces as a NameError, not silent drift.
-    _LATENTS_SECTION = REPACKABLE_SECTIONS[1]  # "latents_and_sidecar_brotli"
-    _DECODER_SECTION = REPACKABLE_SECTIONS[0]  # "decoder_packed_brotli"
+    # Adversarial review 2026-05-06 (PARADIGM-alpha CRITICAL #3): replace fragile
+    # `REPACKABLE_SECTIONS[1]` / `[0]` index access with explicit string
+    # constants gated by an `assert` membership check against the shared
+    # constant tuple. Any reorder of REPACKABLE_SECTIONS in
+    # `hnerv_lowlevel_packer` previously silently produced wrong-section
+    # repacks (the index access compiled fine but mapped to the wrong
+    # section). With the assert, a future rename or reorder fires loudly at
+    # function entry instead of silently shipping a corrupt archive.
+    # The dataclass FIELD names below (latents_and_sidecar_brotli= and
+    # decoder_packed_brotli=) are tied to the dataclass definition; Python
+    # kwargs require literal identifiers so they cannot themselves be
+    # constants — but the comparison strings now are.
+    _LATENTS_SECTION = "latents_and_sidecar_brotli"
+    _DECODER_SECTION = "decoder_packed_brotli"
+    if _LATENTS_SECTION not in REPACKABLE_SECTIONS:
+        raise HnervWaveletApplyTransformError(
+            f"_LATENTS_SECTION constant {_LATENTS_SECTION!r} not in REPACKABLE_SECTIONS "
+            f"({REPACKABLE_SECTIONS!r}); hnerv_lowlevel_packer may have been "
+            f"refactored; update this file."
+        )
+    if _DECODER_SECTION not in REPACKABLE_SECTIONS:
+        raise HnervWaveletApplyTransformError(
+            f"_DECODER_SECTION constant {_DECODER_SECTION!r} not in REPACKABLE_SECTIONS "
+            f"({REPACKABLE_SECTIONS!r}); hnerv_lowlevel_packer may have been "
+            f"refactored; update this file."
+        )
     candidate_packed = dataclasses.replace(
         packed,
         latents_and_sidecar_brotli=(

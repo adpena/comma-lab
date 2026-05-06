@@ -9,7 +9,6 @@ from tools.build_cross_paradigm_frontier_inventory import (
     render_markdown,
 )
 
-
 REPO = Path(__file__).resolve().parents[3]
 
 
@@ -56,6 +55,10 @@ def test_cross_paradigm_inventory_pins_required_score_path_rows() -> None:
     assert categorical["priority_tier"] == 30
     assert categorical["status"] == "contract_and_candidate_readiness_landed_needs_byte_closed_candidate"
     assert "src/tac/categorical_candidate_readiness.py" in categorical["code_paths"]
+    assert (
+        "src/tac/categorical_openpilot_mask_prior_contract.py"
+        in categorical["code_paths"]
+    )
     assert "src/tac/pr91_hpm1_readiness.py" in categorical["code_paths"]
     assert "src/tac/pr91_hpm1_runtime_contract.py" in categorical["code_paths"]
     assert "tools/audit_categorical_candidate_readiness.py" in categorical["code_paths"]
@@ -70,6 +73,10 @@ def test_cross_paradigm_inventory_pins_required_score_path_rows() -> None:
         "experiments/results/pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json"
         in categorical["evidence_paths"]
     )
+
+    entropy = rows["hnerv_per_tensor_context_entropy"]
+    assert "src/tac/optimization/entropy_codec_gap_audit.py" in entropy["code_paths"]
+    assert "tools/audit_entropy_codec_gap.py" in entropy["code_paths"]
 
     lapose = rows["lapose_motion_atom_allocator"]
     assert lapose["role"] == "proposal_allocator"

@@ -83,6 +83,21 @@ def _base_candidate(tmp_path: Path) -> dict:
             "path": "src/tac/qma9_range_mask_contract.py",
             "consumes_charged_members": True,
         },
+        "conditioning_priors": [
+            {
+                "family": "openpilot_priors",
+                "name": "ego_lane_atom_ranker",
+                "usage": "compression_time_atom_ranking_only",
+                "runtime_consumed": False,
+            },
+            {
+                "family": "clade_spade",
+                "name": "fixture_class_conditioning",
+                "usage": "inflate_runtime_conditioning",
+                "runtime_consumed": True,
+                "charged_member": "class_codebook.json",
+            },
+        ],
         "charged_members": charged_members,
         "no_op_controls": {name: {"passed": True} for name in REQUIRED_CONTROL_NAMES},
     }
@@ -103,8 +118,58 @@ def test_audit_categorical_candidate_manifest_accepts_byte_closed_fixture(tmp_pa
     assert manifest["candidate_archive"]["contains_inflate_sh"] is True
     assert manifest["semantic_contract"]["matches_candidate"] is True
     assert manifest["runtime_consumer"]["consumes_charged_members"] is True
+    assert manifest["conditioning_prior_contract"]["passed"] is True
+    assert manifest["conditioning_prior_contract"]["runtime_consumed_count"] == 1
+    assert manifest["conditioning_prior_contract"]["compression_time_only_count"] == 1
     assert manifest["charged_member_summary"]["roles"]["categorical_payload"] == 1
     assert manifest["charged_member_summary"]["roles"]["decoder_or_runtime_consumer"] == 1
+
+
+def test_audit_categorical_candidate_manifest_rejects_uncharged_runtime_openpilot_prior(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    candidate["conditioning_priors"] = [
+        {
+            "family": "openpilot_priors",
+            "name": "supercombo_lane_features",
+            "usage": "inflate_runtime_conditioning",
+            "runtime_consumed": True,
+        }
+    ]
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+    blockers = set(manifest["dispatch_blockers"])
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["conditioning_prior_contract"]["passed"] is False
+    assert (
+        "conditioning_prior_charged_member_missing_or_unsafe:"
+        "openpilot_priors:supercombo_lane_features"
+    ) in blockers
+
+
+def test_audit_categorical_candidate_manifest_rejects_undeclared_clade_spade_member(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    candidate["conditioning_priors"] = [
+        {
+            "family": "clade_spade",
+            "name": "class_affine_table",
+            "usage": "inflate_runtime_conditioning",
+            "runtime_consumed": True,
+            "charged_member": "missing_clade_table.bin",
+        }
+    ]
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert (
+        "conditioning_prior_charged_member_not_declared:"
+        "clade_spade:class_affine_table:missing_clade_table.bin"
+    ) in manifest["dispatch_blockers"]
 
 
 def test_audit_categorical_candidate_manifest_fails_closed_on_label_and_control_drift(

@@ -113,8 +113,10 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         code_paths=(
             "src/tac/hnerv_decoder_recode.py",
             "src/tac/arithmetic_qint_codec.py",
+            "src/tac/optimization/entropy_codec_gap_audit.py",
             "src/tac/lossless/range_coder.py",
             "src/tac/lossless/frequency_coder.py",
+            "tools/audit_entropy_codec_gap.py",
         ),
         evidence_paths=("experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",),
         next_patch=(
@@ -164,6 +166,7 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         code_paths=(
             "src/tac/categorical_compression_contract.py",
             "src/tac/categorical_candidate_readiness.py",
+            "src/tac/categorical_openpilot_mask_prior_contract.py",
             "src/tac/pr91_hpm1_readiness.py",
             "src/tac/pr91_hpm1_runtime_contract.py",
             "src/tac/qma9_range_mask_contract.py",

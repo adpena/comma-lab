@@ -104,6 +104,21 @@ def build_fixture(*, out_dir: Path, source_archive_sha256: str) -> dict[str, Any
             "path": "src/tac/qma9_range_mask_contract.py",
             "consumes_charged_members": True,
         },
+        "conditioning_priors": [
+            {
+                "family": "openpilot_priors",
+                "name": "ego_lane_atom_ranker",
+                "usage": "compression_time_atom_ranking_only",
+                "runtime_consumed": False,
+            },
+            {
+                "family": "clade_spade",
+                "name": "fixture_class_conditioning",
+                "usage": "inflate_runtime_conditioning",
+                "runtime_consumed": True,
+                "charged_member": "class_codebook.json",
+            },
+        ],
         "charged_members": member_records,
         "no_op_controls": {
             "decode_reencode_identity_control": {

@@ -9,6 +9,9 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from tac.categorical_compression_contract import build_categorical_compression_contract
+from tac.categorical_openpilot_mask_prior_contract import (
+    audit_categorical_openpilot_mask_priors,
+)
 from tac.repo_io import json_text, repo_relative, sha256_bytes, sha256_file
 from tac.semantic_label_contract import CONTEST_SEGNET_CLASS_NAME_TUPLE, SELFCOMP_CLASS_TO_GRAY
 
@@ -307,7 +310,7 @@ def audit_categorical_candidate_manifest(
     controls = payload.get("no_op_controls")
     if not isinstance(controls, dict):
         blockers.append("no_op_controls_missing")
-        control_summary = {name: False for name in REQUIRED_CONTROL_NAMES}
+        control_summary = dict.fromkeys(REQUIRED_CONTROL_NAMES, False)
     else:
         control_summary = {name: _control_passed(controls.get(name)) for name in REQUIRED_CONTROL_NAMES}
         for name, passed in control_summary.items():
@@ -353,6 +356,13 @@ def audit_categorical_candidate_manifest(
         if duplicates:
             blockers.append("charged_member_duplicate_names")
             warnings.append(f"duplicate charged member names: {duplicates}")
+
+    conditioning_prior_contract = audit_categorical_openpilot_mask_priors(
+        payload.get("conditioning_priors"),
+        charged_member_names=member_names,
+    )
+    blockers.extend(conditioning_prior_contract["dispatch_blockers"])
+    warnings.extend(conditioning_prior_contract["warnings"])
 
     if manifest_payload is not None:
         manifest_members = manifest_payload.get("members")
@@ -482,6 +492,7 @@ def audit_categorical_candidate_manifest(
                 and runtime_consumer.get("consumes_charged_members") is True
             ),
         },
+        "conditioning_prior_contract": conditioning_prior_contract,
         "charged_member_summary": {
             "count": len(member_records),
             "roles": dict(sorted(role_counts.items())),

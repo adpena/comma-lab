@@ -88,10 +88,14 @@ References
 """
 from __future__ import annotations
 
+import hashlib
 import io
+import json
+import math
 import struct
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Mapping, Protocol, runtime_checkable
+from typing import Any
 
 import numpy as np
 
@@ -103,18 +107,14 @@ from tac.balle_hyperprior_codec import (
     BalleHyperpriorCodec,
     decode_qints_balle,
     encode_qints_balle_auto,
-    encode_qints_full_balle,
-    encode_qints_hotz_lite,
 )
 from tac.joint_admm_coordinator import (
     AdmmResult,
     JointADMMConfig,
     ProximalStepResult,
-    StreamProximalCodec,
     run_admm,
 )
 from tac.optimization.research_basis import research_basis_ids_for_family
-
 
 _JCSP_MAGIC: bytes = b"JCSP"
 _JCSP_VERSION: int = 1
@@ -141,6 +141,8 @@ class JCSPTensorStreamSpec:
     """
 
     name: str
+    stream_id: str
+    decomposition_index: int
     codec_kind: int
     tensor_shape: tuple[int, ...]
     tensor_dtype: str
@@ -209,6 +211,24 @@ def _iter_model_tensors(model: Any, *, include_buffers: bool) -> list[tuple[str,
     )
 
 
+def _sorted_unique_model_tensors(
+    model: Any,
+    *,
+    include_buffers: bool,
+) -> list[tuple[str, Any]]:
+    items = _iter_model_tensors(model, include_buffers=include_buffers)
+    counts: dict[str, int] = {}
+    for name, _tensor in items:
+        counts[name] = counts.get(name, 0) + 1
+    duplicates = sorted(name for name, count in counts.items() if count > 1)
+    if duplicates:
+        raise ValueError(
+            "model_to_jcsp_streams requires unique tensor stream names; "
+            f"duplicates: {', '.join(duplicates)}"
+        )
+    return sorted(items, key=lambda item: item[0])
+
+
 def _infer_model_tensor_codec_kind(
     *,
     dtype_name: str,
@@ -242,9 +262,18 @@ def _match_name_set(name: str, candidates: Iterable[str] | None) -> bool:
         return False
     for candidate in candidates:
         text = str(candidate)
-        if name == text or name.startswith(text.rstrip("*")) and text.endswith("*"):
+        if name == text or (
+            name.startswith(text.rstrip("*")) and text.endswith("*")
+        ):
             return True
     return False
+
+
+def _require_finite(value: float, *, field: str, name: str) -> float:
+    out = float(value)
+    if not math.isfinite(out):
+        raise ValueError(f"{field} for stream {name!r} must be finite")
+    return out
 
 
 def _score_annotation_for_stream(
@@ -256,7 +285,11 @@ def _score_annotation_for_stream(
     raw = score_marginals.get(name) if score_marginals is not None else None
     if raw is None:
         return (
-            float(default_score_per_byte_marginal),
+            _require_finite(
+                default_score_per_byte_marginal,
+                field="default_score_per_byte_marginal",
+                name=name,
+            ),
             "missing_score_marginal",
             "prediction",
             "joint",
@@ -264,7 +297,7 @@ def _score_annotation_for_stream(
         )
     if isinstance(raw, (int, float)):
         return (
-            float(raw),
+            _require_finite(raw, field="score_per_byte_marginal", name=name),
             "caller_exact_name",
             "empirical",
             "joint",
@@ -277,9 +310,14 @@ def _score_annotation_for_stream(
                 f"score_marginals[{name!r}] must define "
                 "'score_per_byte_marginal' or 'marginal'"
             )
+        marginal = _require_finite(
+            value,
+            field="score_per_byte_marginal",
+            name=name,
+        )
         tags_raw = raw.get("constraint_tags", ())
         return (
-            float(value),
+            marginal,
             str(raw.get("source", "caller_exact_name")),
             str(raw.get("evidence_grade", "empirical")),
             str(raw.get("scorer_term_targeted", "joint")),
@@ -289,6 +327,31 @@ def _score_annotation_for_stream(
         f"score_marginals[{name!r}] must be a float or mapping, got "
         f"{type(raw).__name__}"
     )
+
+
+def _stream_identity_sha256(
+    *,
+    name: str,
+    dtype_name: str,
+    shape: tuple[int, ...],
+    num_elements: int,
+    raw_bytes: int,
+) -> str:
+    payload = {
+        "name": name,
+        "tensor_dtype": dtype_name,
+        "tensor_shape": list(shape),
+        "num_elements": int(num_elements),
+        "raw_bytes": int(raw_bytes),
+    }
+    return hashlib.sha256(
+        json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+    ).hexdigest()
 
 
 def model_to_jcsp_streams(
@@ -312,7 +375,21 @@ def model_to_jcsp_streams(
     if large_tensor_balle_threshold_bytes <= 0:
         raise ValueError("large_tensor_balle_threshold_bytes must be > 0")
     out: list[JCSPTensorStreamSpec] = []
-    for name, tensor in _iter_model_tensors(model, include_buffers=include_buffers):
+    tensor_items = _sorted_unique_model_tensors(
+        model,
+        include_buffers=include_buffers,
+    )
+    tensor_names = {name for name, _tensor in tensor_items}
+    if codec_overrides is not None:
+        unknown_overrides = sorted(
+            str(name) for name in codec_overrides if str(name) not in tensor_names
+        )
+        if unknown_overrides:
+            raise ValueError(
+                "model_to_jcsp_streams got codec_overrides for unknown streams: "
+                + ", ".join(unknown_overrides)
+            )
+    for stream_index, (name, tensor) in enumerate(tensor_items):
         shape = _tensor_shape_tuple(tensor)
         num_elements = _tensor_numel(tensor, shape)
         dtype_name = str(getattr(tensor, "dtype", type(tensor).__name__))
@@ -388,6 +465,14 @@ def model_to_jcsp_streams(
         out.append(
             JCSPTensorStreamSpec(
                 name=name,
+                stream_id=_stream_identity_sha256(
+                    name=name,
+                    dtype_name=dtype_name,
+                    shape=shape,
+                    num_elements=num_elements,
+                    raw_bytes=raw_bytes,
+                ),
+                decomposition_index=stream_index,
                 codec_kind=codec_kind,
                 tensor_shape=shape,
                 tensor_dtype=dtype_name,
@@ -676,13 +761,13 @@ def _pack_jcsp_container(
         out.write(struct.pack("<B", len(name_b)))
         out.write(name_b)
         out.write(struct.pack("<B", int(s.codec_kind)))
-        out.write(struct.pack("<I", int(round(max(0, s.admm_bytes_target)))))
+        out.write(struct.pack("<I", round(max(0, s.admm_bytes_target))))
         out.write(struct.pack("<I", int(s.actual_bytes)))
-        out.write(struct.pack("<i", int(round(s.score_delta * 1e6))))
-        out.write(struct.pack("<i", int(round(s.marginal * 1e6))))
+        out.write(struct.pack("<i", round(s.score_delta * 1e6)))
+        out.write(struct.pack("<i", round(s.marginal * 1e6)))
         out.write(struct.pack("<I", len(s.payload)))
         out.write(s.payload)
-    out.write(struct.pack("<I", max(0, int(round(waterline_kkt_residual * 1e6)))))
+    out.write(struct.pack("<I", max(0, round(waterline_kkt_residual * 1e6))))
     out.write(struct.pack("<I", int(iters)))
     out.write(struct.pack("<B", int(bool(converged))))
     return out.getvalue()
@@ -852,7 +937,11 @@ def run_joint_codec_stack(
     admm_result: AdmmResult = run_admm(streams=proximals, cfg=cfg)
 
     stream_results: list[StackStreamResult] = []
-    for prox, target in zip(proximals, admm_result.final_bytes_per_stream):
+    for prox, target in zip(
+        proximals,
+        admm_result.final_bytes_per_stream,
+        strict=True,
+    ):
         # Roundtrip-verify each stream so a malformed bytes-out cannot ship.
         payload = prox.cached_payload
         _verify_stream_roundtrip(prox.src, payload)
@@ -1004,11 +1093,11 @@ def run_sequential_codec_stack(
 
 
 __all__ = [
-    "JCSPTensorStreamSpec",
-    "JointCodecStackResult",
     "KIND_ARITHMETIC_STATIC",
     "KIND_BALLE_HYPERPRIOR",
     "KIND_RAW_PASSTHROUGH",
+    "JCSPTensorStreamSpec",
+    "JointCodecStackResult",
     "StackStreamResult",
     "StreamSource",
     "model_to_jcsp_streams",

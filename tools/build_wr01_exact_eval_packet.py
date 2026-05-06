@@ -124,6 +124,38 @@ def _failed_compliance_checks(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return failed
 
 
+def _artifact_flag_violations(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return explicit score/dispatch flags that make readiness unsafe.
+
+    Legacy readiness artifacts do not all carry the same guard fields, so
+    missing flags are tolerated. A present truthy flag is never tolerated in a
+    packet that is supposed to be custody/readiness-only.
+    """
+
+    guarded_flags = (
+        "score_claim",
+        "promotion_eligible",
+        "dispatch_attempted",
+        "dispatch_performed",
+        "gpu_launched",
+    )
+    violations: list[dict[str, Any]] = []
+    for artifact_name, payload in artifacts.items():
+        if not payload:
+            continue
+        for flag in guarded_flags:
+            if payload.get(flag) is True:
+                violations.append(
+                    {
+                        "artifact": artifact_name,
+                        "flag": flag,
+                        "actual": True,
+                        "expected": False,
+                    }
+                )
+    return violations
+
+
 def _changed_section(payload: dict[str, Any]) -> dict[str, Any] | None:
     changed = [
         section
@@ -207,6 +239,15 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
     compliance_payload = _read_json(compliance) if _repo_path(compliance).is_file() else {}
     payload_diff_payload = _read_json(payload_diff) if _repo_path(payload_diff).is_file() else {}
     dry_run_payload = _read_json(dry_run) if _repo_path(dry_run).is_file() else {}
+    artifact_flag_violations = _artifact_flag_violations(
+        {
+            "manifest": manifest_payload,
+            "public_replay_preflight": preflight_payload,
+            "pre_submission_compliance": compliance_payload,
+            "payload_section_diff": payload_diff_payload,
+            "lightning_exact_eval_dry_run": dry_run_payload,
+        }
+    )
 
     preflight_ready = (
         preflight_payload.get("ready_for_exact_eval_dispatch") is True
@@ -556,6 +597,8 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         blockers.append("payload_section_diff_not_ready")
     if not dry_run_ready:
         blockers.append("lightning_dry_run_not_ready")
+    if artifact_flag_violations:
+        blockers.append("artifact_score_or_dispatch_flag_violation")
     blockers.extend(consistency_blockers)
     if missing_env:
         blockers.append("missing_lightning_environment")
@@ -584,6 +627,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "failed_compliance_checks": failed_compliance_checks,
         "payload_diff_ready": payload_diff_ready,
         "dry_run_ready": dry_run_ready,
+        "artifact_flag_violations": artifact_flag_violations,
         "artifact_consistency_ok": not consistency_blockers,
         "artifact_consistency_checks": consistency_checks,
         "artifacts": artifact_statuses,

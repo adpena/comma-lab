@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 import brotli
+import pytest
 
 from tac.hnerv_lowlevel_packer import (
     PackedHnervPayload,
@@ -14,7 +15,11 @@ from tac.hnerv_lowlevel_packer import (
     sha256_bytes,
     write_stored_single_member_zip,
 )
-from tac.hnerv_wavelet_apply_transform import apply_wr01_atoms_to_raw
+from tac.hnerv_wavelet_apply_transform import (
+    HnervWaveletApplyTransformError,
+    apply_wr01_atoms_to_raw,
+    build_wavelet_apply_transform_candidate,
+)
 from tac.hnerv_wavelet_sidechannel import (
     build_wavelet_sidechannel_archive_bytes,
     encode_wavelet_atom_sidechannel,
@@ -96,6 +101,23 @@ def test_apply_wr01_atoms_to_raw_attenuates_detail() -> None:
     assert transformed == bytes([15, 15, 30, 40])
     assert stats["applied_atom_count"] == 1
     assert stats["changed_raw_positions"] == 2
+
+
+def test_build_wavelet_apply_transform_candidate_fails_fast_on_invalid_gate() -> None:
+    with pytest.raises(HnervWaveletApplyTransformError, match="strength_numerator"):
+        build_wavelet_apply_transform_candidate(
+            wavelet_archive="/not-read/wavelet.zip",
+            output_dir="/not-written/out",
+            source_label="fixture",
+            strength_numerator=0,
+        )
+
+    with pytest.raises(HnervWaveletApplyTransformError, match="must not be under"):
+        build_wavelet_apply_transform_candidate(
+            wavelet_archive="/tmp/wavelet.zip",
+            output_dir="/not-written/out",
+            source_label="fixture",
+        )
 
 
 def test_build_hnerv_wavelet_apply_transform_candidate_cli(tmp_path: Path) -> None:
