@@ -3994,3 +3994,49 @@ source paths are tracked, stricter, tested, and already contain the useful
 recovered behavior plus later hardening. The remaining orphan modified-copy
 queue should drop from `shadowed_modified_count=3` to zero after these staged
 deletions, leaving only missing-canonical recovery decisions.
+
+## R53 - 2026-05-06 Remaining Missing-Canonical Queue Classification
+
+After the first tracked-shadow cleanup, the recovery audit reports
+`shadowed_modified_count=0`, `source_like_modified_count=31`, and
+`modified_missing_canonical_count=31`. These are no longer duplicates of
+tracked canonical files; they require explicit promotion, archival, or
+disposition decisions.
+
+Current buckets:
+
+- 2 root reverse-engineering tools:
+  `experiments/build_pr85_qh0_serializer_candidates.py` and
+  `experiments/replay_pr91_hpm1_mask.py`.
+- 21 public-submission runtime/replay fragments:
+  PR96/PR98/PR99 HNeRV runtime files, PR85/STBM replay runtime, PR65/PR67
+  adapter inflates, PR85/PR86 inflates, PR90 qrepro codec/range/sparse
+  scripts, and PR95 HNeRV inflate/model files.
+- 1 renderer self-compression search artifact:
+  `experiments/results/renderer_selfcompression_nextwave_worker_20260503/c101_combined_zero_search.py`.
+- 2 operational scripts:
+  `scripts/build_contest_submission_packet.py` and
+  `scripts/q_faithful_snapshot_loop.py`.
+- 4 recovered tests:
+  `src/tac/tests/test_endgame_archive_decision.py`,
+  `src/tac/tests/test_pr85_bundle.py`,
+  `src/tac/tests/test_quantizr_torch_fp4_codec.py`, and
+  `src/tac/tests/test_qzs3_postprocess_qrm1_runtime.py`.
+- 1 submission runtime helper:
+  `submissions/robust_current/apply_qzs3_postprocess.py`.
+
+Recommended next promotion order:
+
+1. Promote the four recovered tests first if they still encode useful guard
+   behavior; tests are the safest signal to canonicalize and will expose any
+   stale assumptions.
+2. Promote or archive PR95/PR90 public runtime fragments under a clean
+   `reverse_engineering/public_frontier/` path, not under `experiments/results`,
+   because they are forensic reference code rather than active experiment
+   outputs.
+3. Diff the two operational scripts against current OSS/release flows before
+   promotion; if they are stale, keep only their recovery specs and ledger
+   notes.
+4. Treat `apply_qzs3_postprocess.py` as high-risk because it shadows the active
+   robust runtime conceptually even though its canonical path is not tracked.
+   Promote only after direct runtime-parity review.
