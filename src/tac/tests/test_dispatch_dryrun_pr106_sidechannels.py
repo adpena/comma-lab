@@ -96,6 +96,7 @@ def test_missing_builder_files_fail_closed(tmp_path: Path) -> None:
     assert {c.name for c in missing} == {
         "latent:file",
         "yshift:file",
+        "yshift_score_table:file",
         "lrl1:file",
         "stacked:file",
     }

@@ -10,7 +10,7 @@
 #
 # Operator picks search mode via env var:
 #   PR106_YSHIFT_MODE=zero        → CPU smoke (no real correction; wire format only)
-#   PR106_YSHIFT_MODE=score_table → consume precomputed CUDA candidate table
+#   PR106_YSHIFT_MODE=score_table → consume or build precomputed CUDA candidate table
 #   PR106_YSHIFT_MODE=gradient    → CUDA, ~$0.20, ~5min
 #                                   1 backward pass ∂score/∂{Y_off, dy, dx} per frame, quantize
 #   PR106_YSHIFT_MODE=brute_force → CUDA, ~$0.40, ~10min
@@ -41,6 +41,10 @@ PR106_YSHIFT_CANDIDATE_RADIUS="${PR106_YSHIFT_CANDIDATE_RADIUS:-3}"
 PR106_YSHIFT_N_PAIRS="${PR106_YSHIFT_N_PAIRS:-600}"
 PR106_YSHIFT_SCORE_TABLE_NPY="${PR106_YSHIFT_SCORE_TABLE_NPY:-}"
 PR106_YSHIFT_SCORE_TABLE_MANIFEST="${PR106_YSHIFT_SCORE_TABLE_MANIFEST:-}"
+PR106_YSHIFT_SCORE_TABLE_LANE_ID="${PR106_YSHIFT_SCORE_TABLE_LANE_ID:-lane_pr106_yshift_score_table}"
+PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID="${PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID:-}"
+PR106_YSHIFT_SCORE_TABLE_BATCH_PAIRS="${PR106_YSHIFT_SCORE_TABLE_BATCH_PAIRS:-8}"
+PR106_YSHIFT_SCORE_TABLE_CANDIDATE_BATCH_SIZE="${PR106_YSHIFT_SCORE_TABLE_CANDIDATE_BATCH_SIZE:-32}"
 PR106_ARCHIVE="${PR106_ARCHIVE:-experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip}"
 
 [ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
@@ -60,8 +64,8 @@ if ! [[ "$PR106_YSHIFT_MODE" =~ ^(zero|score_table|gradient|brute_force)$ ]]; th
     echo "FATAL: PR106_YSHIFT_MODE must be one of {zero, score_table, gradient, brute_force}; got: $PR106_YSHIFT_MODE" >&2
     exit 2
 fi
-if [ "$PR106_YSHIFT_MODE" = "score_table" ] && [ ! -f "$PR106_YSHIFT_SCORE_TABLE_NPY" ]; then
-    echo "FATAL: PR106_YSHIFT_MODE=score_table requires PR106_YSHIFT_SCORE_TABLE_NPY" >&2
+if [ "$PR106_YSHIFT_MODE" = "score_table" ] && [ -n "$PR106_YSHIFT_SCORE_TABLE_NPY" ] && [ ! -f "$PR106_YSHIFT_SCORE_TABLE_NPY" ]; then
+    echo "FATAL: supplied PR106_YSHIFT_SCORE_TABLE_NPY does not exist: $PR106_YSHIFT_SCORE_TABLE_NPY" >&2
     exit 2
 fi
 
@@ -69,6 +73,9 @@ LANE_ID="lane_pr106_yshift_sidechannel_${PR106_YSHIFT_MODE}"
 LOG_DIR="$WORKSPACE/experiments/results/${LANE_ID}_$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "$LOG_DIR"
 log() { echo "[lane-pr106-yshift-${PR106_YSHIFT_MODE}] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
+if [ -z "$PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID" ]; then
+    PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID="$(basename "$LOG_DIR")"
+fi
 
 # Heartbeat (per CLAUDE.md remote-code-parity rule)
 HEARTBEAT="$LOG_DIR/heartbeat.log"
@@ -106,6 +113,27 @@ print(f'[stage-0] provenance written; CUDA={torch.cuda.is_available()}; mode={mo
 log "=== Stage 1: build pr106_yshift sidechannel (mode=$PR106_YSHIFT_MODE, step=$SCORE_STEP) ==="
 BUILD_DIR="$LOG_DIR/build"
 mkdir -p "$BUILD_DIR"
+if [ "$PR106_YSHIFT_MODE" = "score_table" ] && [ -z "$PR106_YSHIFT_SCORE_TABLE_NPY" ]; then
+    log "=== Stage 1a: generate CUDA yshift score table ==="
+    SCORE_TABLE_DIR="$LOG_DIR/score_table"
+    mkdir -p "$SCORE_TABLE_DIR"
+    "$PYBIN" -u experiments/build_pr106_yshift_score_table.py \
+        --pr106-archive "$PR106_ARCHIVE" \
+        --out-dir "$SCORE_TABLE_DIR" \
+        --candidate-radius "$PR106_YSHIFT_CANDIDATE_RADIUS" \
+        --score-step "$SCORE_STEP" \
+        --n-pairs "$PR106_YSHIFT_N_PAIRS" \
+        --batch-pairs "$PR106_YSHIFT_SCORE_TABLE_BATCH_PAIRS" \
+        --candidate-batch-size "$PR106_YSHIFT_SCORE_TABLE_CANDIDATE_BATCH_SIZE" \
+        --lane-id "$PR106_YSHIFT_SCORE_TABLE_LANE_ID" \
+        --instance-job-id "$PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID" 2>&1 | tee -a "$LOG_DIR/run.log"
+    PR106_YSHIFT_SCORE_TABLE_NPY="$SCORE_TABLE_DIR/score_table.npy"
+    PR106_YSHIFT_SCORE_TABLE_MANIFEST="$SCORE_TABLE_DIR/score_table_manifest.json"
+    if [ ! -f "$PR106_YSHIFT_SCORE_TABLE_NPY" ] || [ ! -f "$PR106_YSHIFT_SCORE_TABLE_MANIFEST" ]; then
+        log "FATAL: score-table generation did not produce table+manifest"
+        exit 3
+    fi
+fi
 BUILD_ARGS=(
     experiments/build_pr106_yshift_sidechannel.py
     --pr106-archive "$PR106_ARCHIVE"

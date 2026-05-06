@@ -5,7 +5,7 @@ This is a $0 local guard. It does not dispatch, does not touch provider state,
 does not require CUDA, and does not build archives. It validates only the
 surfaces that can fail before money or GPU time is spent:
 
-  1. The four PR106 sidechannel builder scripts exist and parse as Python.
+  1. The PR106 sidechannel builder/profiler scripts exist and parse as Python.
   2. Their expected argparse flags are present.
   3. Their `--help` surfaces execute successfully.
   4. Their build metadata paths include `score_claim: false` in source.
@@ -173,6 +173,30 @@ BUILDER_SPECS: tuple[BuilderSpec, ...] = (
         real_mode_guard_functions=(
             "_gradient_search_stub",
             "_brute_force_search_stub",
+        ),
+    ),
+    BuilderSpec(
+        name="yshift_score_table",
+        relpath="experiments/build_pr106_yshift_score_table.py",
+        expected_flags=(
+            "--pr106-archive",
+            "--out-dir",
+            "--candidate-radius",
+            "--score-step",
+            "--n-pairs",
+            "--device",
+            "--batch-pairs",
+            "--candidate-batch-size",
+            "--claims-path",
+            "--lane-id",
+            "--instance-job-id",
+            "--dry-run-plan",
+        ),
+        help_tokens=(
+            "Build a scorer-backed PR106 yshift candidate table",
+            "--dry-run-plan",
+            "--instance-job-id",
+            "score_table",
         ),
     ),
     BuilderSpec(
