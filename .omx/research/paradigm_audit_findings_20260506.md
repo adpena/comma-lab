@@ -9,12 +9,16 @@ captured here so none are lost as fixes are batched.
 ### CRITICAL (4)
 
 1. **`imp_sensitivity_weighted.py:278,309`** — `std_model.get_parameter()` on a sub-module attr returns the module, not the parameter. Will `AttributeError` on every real renderer with dotted layer names. Fix: `getattr(std_model, _qname_to_subset_attr(qname)).weight`.
+   - **Disposition 2026-05-06 codex:** fixed in `src/tac/imp_sensitivity_weighted.py`; added regression `test_prune_missing_current_mask_entry_uses_subset_weight_shape`.
 
 2. **`owv3_sensitivity_weighted.py:86-95`** — Fixed `+32` byte constant in `_v1_raw_byte_estimate` inflates budget for partial-channel layers; over-allocates bits for low-sensitivity channels. Fix: gate `+32` on `len(quant_idx) == c_out` or remove.
+   - **Disposition 2026-05-06 codex:** fixed by making container overhead explicit and only including it for full-channel OWV3 budgets; added regression `test_owv3_partial_channel_budget_does_not_charge_full_container_overhead`.
 
 3. **`neural_weight_codec_sensitivity.py:1002`** — `decode_with_per_block_codebook` tightly coupled to exact codec instance; no archive-embedded bucket-size fallback. Mismatch silently corrupts reconstruction. Fix: assert bucket_sizes match codec config before decode.
+   - **Disposition 2026-05-06 codex:** current code already asserts `bucket_sizes` against `codec.sens_config.codebook_sizes`; existing tests cover mismatch rejection.
 
 4. **`neural_weight_codec_sensitivity.py:630-633`** — `compute_per_block_sensitivity` formula is `|g|³` (gmag×ghess), not `g²` (Fisher). Inconsistent with docstring + theory. Fix: use `per_elem = ghess` alone.
+   - **Disposition 2026-05-06 codex:** fixed to use the Fisher diagonal proxy `E[g^2]`; focused Hessian-correlation test remains green.
 
 ### IMPORTANT (12) + Hygiene (6) — see audit transcript
 
@@ -48,7 +52,7 @@ captured here so none are lost as fixes are batched.
 
 Top important: pipeline.py integration gap (no profile for any of 4 mask encoders) · preflight_all wiring gap · /tmp path guard missing · runtime_consumption_proof tautology · zero byte-delta wavelet not blocked · bare `except Exception` swallows KeyboardInterrupt.
 
-## PARADIGM-γ (joint score-aware codec stack) — IN FLIGHT
-## PARADIGM-γ (joint score-aware codec stack) — IN FLIGHT
+## PARADIGM-γ (joint score-aware codec stack) — see audit a85d6ec952db78191
+## PARADIGM-γ (joint score-aware codec stack) — see audit a85d6ec952db78191
 ## la-pose + raft + pose_gp — IN FLIGHT
 ## Cross-paradigm integration — IN FLIGHT

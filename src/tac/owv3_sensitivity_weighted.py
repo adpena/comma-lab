@@ -82,17 +82,34 @@ def _eligible_for_owv3(module: nn.Module) -> bool:
     )
 
 
-def _v1_raw_byte_estimate(weight: torch.Tensor) -> int:
+def _v1_raw_byte_estimate(
+    weight: torch.Tensor,
+    *,
+    include_container_overhead: bool = True,
+) -> int:
     o, i, kh, kw = weight.shape
-    return int(o * i * kh * kw) + int(o * 4) + 32
+    overhead = 32 if include_container_overhead else 0
+    return int(o * i * kh * kw) + int(o * 4) + overhead
 
 
-def _derive_total_bits(weight: torch.Tensor, ratio: float) -> int:
+def _derive_total_bits(
+    weight: torch.Tensor,
+    ratio: float,
+    *,
+    include_container_overhead: bool = True,
+) -> int:
     if ratio <= 0.0 or ratio >= 1.0:
         raise OWV3ArchiveError(
             f"bit_budget_ratio={ratio} must be in (0, 1)"
         )
-    return int(_v1_raw_byte_estimate(weight) * ratio * 8)
+    return int(
+        _v1_raw_byte_estimate(
+            weight,
+            include_container_overhead=include_container_overhead,
+        )
+        * ratio
+        * 8
+    )
 
 
 def _fp16_blob(tensor: torch.Tensor) -> bytes:
@@ -745,7 +762,11 @@ def encode_owv3_archive(
 
             w_quant = w[torch.tensor(quant_idx, dtype=torch.long)]
             hess = sens[torch.tensor(quant_idx, dtype=torch.long)].clamp_min(1e-12)
-            total_bits = _derive_total_bits(w_quant, ratio)
+            total_bits = _derive_total_bits(
+                w_quant,
+                ratio,
+                include_container_overhead=len(quant_idx) == int(w.shape[0]),
+            )
             try:
                 owv2_payload = encode_omega_w_v2(
                     weights_block_fp=w_quant,

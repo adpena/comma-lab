@@ -72,7 +72,7 @@ def test_per_block_sensitivity_correlates_with_hessian():
     loud_mean = by_row[:, 0].mean().item()
     quiet_mean = by_row[:, 1].mean().item()
     # Loud blocks should be at least 4× more sensitive than quiet
-    # (combined factor of ~10² in gradient magnitude × Hessian proxy).
+    # (squared-gradient Fisher proxy gives roughly a 10² separation).
     assert loud_mean > 4.0 * quiet_mean, (
         f"loud_mean={loud_mean:.4e}, quiet_mean={quiet_mean:.4e}"
     )

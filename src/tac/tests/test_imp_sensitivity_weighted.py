@@ -154,6 +154,29 @@ def test_prune_with_existing_mask_monotone() -> None:
         assert (mask2[key] & ~mask1[key]).sum().item() == 0
 
 
+def test_prune_missing_current_mask_entry_uses_subset_weight_shape() -> None:
+    torch.manual_seed(2026)
+    model = _three_conv_model()
+    sens = {
+        "0.weight": torch.full((8,), 5e-4),
+        "2.weight": torch.full((16,), 5e-4),
+        "4.weight": torch.full((4,), 1e-7),
+    }
+    current_mask = {
+        "0.weight": torch.ones_like(model[0].weight, dtype=torch.bool),
+    }
+
+    new_mask = prune_with_sensitivity_weighting(
+        model=model,
+        sensitivities=sens,
+        sparsity_increment=0.20,
+        current_mask=current_mask,
+    )
+
+    assert new_mask["2.weight"].shape == model[2].weight.shape
+    assert new_mask["4.weight"].shape == model[4].weight.shape
+
+
 def test_prune_aggressive_multiplier_capped() -> None:
     torch.manual_seed(2026)
     model = _three_conv_model()

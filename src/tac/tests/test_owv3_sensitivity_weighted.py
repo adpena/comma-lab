@@ -14,6 +14,8 @@ from tac.owv3_sensitivity_weighted import (
     OWV3_ARCHIVE_MAGIC,
     OWV3_ARCHIVE_VERSION,
     OWV3ArchiveError,
+    _derive_total_bits,
+    _v1_raw_byte_estimate,
     decode_owv3_archive,
     enforce_owv3_byte_budget,
     encode_owv3_archive,
@@ -94,6 +96,18 @@ def test_owv3_magic_constants_and_registry() -> None:
     assert entry.name == "Lane Ω-W-V3"
     assert "owv3_sensitivity_weighted" in entry.decode_module
     assert sniff_codec(b"OWV3payload") == entry
+
+
+def test_owv3_partial_channel_budget_does_not_charge_full_container_overhead() -> None:
+    weight = torch.zeros(2, 3, 3, 3)
+
+    assert _v1_raw_byte_estimate(weight, include_container_overhead=True) == 94
+    assert _v1_raw_byte_estimate(weight, include_container_overhead=False) == 62
+    assert _derive_total_bits(
+        weight,
+        0.5,
+        include_container_overhead=False,
+    ) == 248
 
 
 def test_owv3_mixed_channel_archive_round_trip_and_forward() -> None:

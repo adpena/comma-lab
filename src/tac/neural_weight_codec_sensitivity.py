@@ -629,8 +629,9 @@ def compute_per_block_sensitivity(
         # mean over pairs
         gmag = (grad_sums[name] / float(n_pairs)).reshape(-1)
         ghess = (grad_sq_sums[name] / float(n_pairs)).reshape(-1)
-        # combine: hard-pair magnitude × Hessian-diag proxy (per element)
-        per_elem = gmag * ghess
+        # Fisher diagonal proxy: E[g^2].  The gradient magnitude accumulator is
+        # retained for diagnostics, but multiplying by it would produce |g|^3.
+        per_elem = ghess
         # aggregate to blocks (drop tail; same as tensor_to_blocks)
         n_blocks = per_elem.numel() // block_size
         if n_blocks == 0:

@@ -275,7 +275,7 @@ def prune_with_sensitivity_weighting(
             qname: current_mask.get(qname).clone()
             if current_mask.get(qname) is not None
             else torch.ones_like(
-                std_model.get_parameter(_qname_to_subset_attr(qname)),
+                getattr(std_model, _qname_to_subset_attr(qname)).weight,
                 dtype=torch.bool,
                 device="cpu",
             )
@@ -306,7 +306,7 @@ def prune_with_sensitivity_weighting(
             qname: current_mask.get(qname).clone()
             if current_mask.get(qname) is not None
             else torch.ones_like(
-                agg_model.get_parameter(_qname_to_subset_attr(qname)),
+                getattr(agg_model, _qname_to_subset_attr(qname)).weight,
                 dtype=torch.bool,
                 device="cpu",
             )
