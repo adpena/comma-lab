@@ -144,6 +144,7 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "src/tac/openpilot_seeding.py",
             "tools/audit_categorical_compression_contract.py",
             "tools/audit_categorical_candidate_readiness.py",
+            "tools/build_categorical_candidate_fixture.py",
         ),
         evidence_paths=(
             ".omx/research/qma9_range_mask_deconstruction_20260503_codex.md",
@@ -151,8 +152,8 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/scorecard.json",
         ),
         next_patch=(
-            "Build the first real byte-closed categorical candidate and pass "
-            "tools/audit_categorical_candidate_readiness.py before any lane claim or exact eval."
+            "Replace the deterministic fixture with the first real byte-closed categorical candidate "
+            "and pass tools/audit_categorical_candidate_readiness.py before any lane claim or exact eval."
         ),
         blockers=(
             "raw lossless class wrapping was byte-regressive",

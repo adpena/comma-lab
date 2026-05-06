@@ -237,7 +237,8 @@
         "src/tac/contrib/diffusion_renderer.py",
         "src/tac/openpilot_seeding.py",
         "tools/audit_categorical_compression_contract.py",
-        "tools/audit_categorical_candidate_readiness.py"
+        "tools/audit_categorical_candidate_readiness.py",
+        "tools/build_categorical_candidate_fixture.py"
       ],
       "evidence_grade": "external/planning plus deterministic archive-readiness audit",
       "evidence_paths": [
@@ -246,7 +247,7 @@
         "experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/scorecard.json"
       ],
       "key": "categorical_qma9_clade_spade_openpilot",
-      "next_patch": "Build the first real byte-closed categorical candidate and pass tools/audit_categorical_candidate_readiness.py before any lane claim or exact eval.",
+      "next_patch": "Replace the deterministic fixture with the first real byte-closed categorical candidate and pass tools/audit_categorical_candidate_readiness.py before any lane claim or exact eval.",
       "paradigms": [
         "alpha_mask_payload",
         "categorical_masks",
@@ -265,9 +266,10 @@
             "src/tac/contrib/diffusion_renderer.py",
             "src/tac/openpilot_seeding.py",
             "tools/audit_categorical_compression_contract.py",
-            "tools/audit_categorical_candidate_readiness.py"
+            "tools/audit_categorical_candidate_readiness.py",
+            "tools/build_categorical_candidate_fixture.py"
           ],
-          "existing_count": 11,
+          "existing_count": 12,
           "missing": [],
           "missing_count": 0
         },

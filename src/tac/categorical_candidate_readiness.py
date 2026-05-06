@@ -96,6 +96,9 @@ def audit_categorical_candidate_manifest(
     if not _is_sha256(payload.get("source_archive_sha256")):
         blockers.append("source_archive_sha256_missing_or_invalid")
 
+    if payload.get("fixture_only") is True:
+        blockers.append("fixture_only_candidate_not_dispatchable")
+
     expected_names = list(CONTEST_SEGNET_CLASS_NAME_TUPLE)
     if payload.get("semantic_class_order") != expected_names:
         blockers.append("semantic_class_order_mismatch")
@@ -247,6 +250,7 @@ def audit_categorical_candidate_manifest(
         "evidence_grade": "archive_readiness_audit" if ready else "planning_manifest_audit",
         "contract_sha256": sha256_bytes(json_text(contract).encode("utf-8")),
         "source_archive_sha256": payload.get("source_archive_sha256", ""),
+        "fixture_only": payload.get("fixture_only") is True,
         "candidate_archive": {
             "contract": payload.get("candidate_archive_contract", ""),
             "path": repo_relative(archive_path, root) if archive_path is not None else "",
