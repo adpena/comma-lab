@@ -3,17 +3,19 @@
 
 The report consumes local candidate-packet manifests from any paradigm. It is a
 selection artifact only: it does not claim scores, dispatch remote work, or
-promote a candidate. A candidate can only surface
-``ready_for_exact_eval_dispatch=true`` here when the existing strict candidate
-manifest preflight also returns true for the same manifest.
+promote a candidate. Static candidate readiness is separate from
+``ready_for_exact_eval_dispatch``: exact-eval dispatch readiness additionally
+requires a matching active Level-2 lane claim for the manifest lane/job.
 """
 
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import importlib.util
+import zipfile
 from collections.abc import Iterable, Mapping, Sequence
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 try:
@@ -30,6 +32,18 @@ SCHEMA_VERSION = 1
 TOOL = "tools/build_field_meta_dispatch_selection.py"
 STRICT_PREFLIGHT = "experiments/preflight_candidate_manifest_dispatch_readiness.py"
 HEX_CHARS = set("0123456789abcdef")
+TERMINAL_CLAIM_STATUS_PREFIXES = (
+    "completed_",
+    "completed_score=",
+    "completed_no_frontier",
+    "failed_",
+    "preempted",
+    "cancelled",
+    "refused_dispatch",
+    "stale_assumed_dead",
+    "stale_superseded",
+    "stopped_",
+)
 
 
 def _strict_preflight_module(repo_root: Path) -> Any:
@@ -77,6 +91,14 @@ def _nested(mapping: Mapping[str, Any], path: Sequence[str]) -> Any:
     return value
 
 
+def _first_nonempty_string(mapping: Mapping[str, Any], paths: Sequence[Sequence[str]]) -> str:
+    for path in paths:
+        value = _nested(mapping, path)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
 def _coerce_positive_int(value: Any) -> int | None:
     if isinstance(value, bool):
         return None
@@ -101,6 +123,75 @@ def _display_path(path: Path | None, *, repo_root: Path) -> str:
     if path is None:
         return ""
     return repo_relative(path, repo_root)
+
+
+def _unsafe_zip_member_name(name: str) -> str | None:
+    if not name:
+        return "zip_empty_member_name"
+    pure = PurePosixPath(name)
+    parts = pure.parts
+    if pure.is_absolute() or name.startswith("/"):
+        return "zip_absolute_member_name"
+    if any(part in {"", ".", ".."} for part in parts):
+        return "zip_slip_member_name"
+    if any(part == "__MACOSX" or part.startswith("._") for part in parts):
+        return "zip_resource_fork_member"
+    if any(part in {".DS_Store", "Thumbs.db"} or part.startswith(".") for part in parts):
+        return "zip_hidden_member"
+    return None
+
+
+def _local_header_name(path: Path, info: zipfile.ZipInfo) -> str | None:
+    with path.open("rb") as handle:
+        handle.seek(info.header_offset)
+        header = handle.read(30)
+        if len(header) != 30 or header[:4] != b"PK\x03\x04":
+            return None
+        flag_bits = int.from_bytes(header[6:8], "little")
+        name_len = int.from_bytes(header[26:28], "little")
+        raw_name = handle.read(name_len)
+    encoding = "utf-8" if flag_bits & 0x800 else "cp437"
+    try:
+        return raw_name.decode(encoding)
+    except UnicodeDecodeError:
+        return None
+
+
+def _zip_custody_proof(path: Path | None) -> dict[str, Any]:
+    if path is None or not path.is_file():
+        return {
+            "status": "blocked",
+            "member_count": 0,
+            "member_names": [],
+            "blockers": ["archive_file_missing_for_zip_custody"],
+        }
+    blockers: list[str] = []
+    names: list[str] = []
+    try:
+        with zipfile.ZipFile(path) as zf:
+            infos = zf.infolist()
+            names = [info.filename for info in infos]
+            if not names:
+                blockers.append("zip_empty_archive")
+            if len(names) != len(set(names)):
+                blockers.append("zip_duplicate_members")
+            for info in infos:
+                central_name = info.filename
+                unsafe = _unsafe_zip_member_name(central_name)
+                if unsafe:
+                    blockers.append(unsafe)
+                local_name = _local_header_name(path, info)
+                if local_name != central_name:
+                    blockers.append("zip_local_header_name_mismatch")
+    except (OSError, zipfile.BadZipFile, RuntimeError):
+        blockers.append("archive_zip_unreadable")
+    blockers = _unique_strings(blockers)
+    return {
+        "status": "passed" if not blockers else "blocked",
+        "member_count": len(names),
+        "member_names": names,
+        "blockers": blockers,
+    }
 
 
 def _archive_identity_candidates(
@@ -180,6 +271,7 @@ def _archive_proof(
             "sha256_actual": "",
             "bytes_expected": None,
             "bytes_actual": None,
+            "zip_custody": _zip_custody_proof(None),
             "blockers": ["archive_identity_missing"],
         }
     selected = candidates[0]
@@ -193,6 +285,7 @@ def _archive_proof(
     blockers: list[str] = []
     actual_sha = ""
     actual_bytes: int | None = None
+    zip_custody = _zip_custody_proof(None)
     if path is None:
         blockers.append("archive_path_missing")
     elif not path.is_file():
@@ -204,6 +297,8 @@ def _archive_proof(
     if path is not None and path.is_file():
         actual_bytes = path.stat().st_size
         actual_sha = sha256_file(path)
+        zip_custody = _zip_custody_proof(path)
+        blockers.extend(f"zip:{blocker}" for blocker in zip_custody["blockers"])
         if _is_sha256(expected_sha) and actual_sha != expected_sha:
             blockers.append("archive_sha256_mismatch")
         if expected_bytes is not None and actual_bytes != expected_bytes:
@@ -217,6 +312,7 @@ def _archive_proof(
         "sha256_actual": actual_sha,
         "bytes_expected": expected_bytes,
         "bytes_actual": actual_bytes,
+        "zip_custody": zip_custody,
         "blockers": _unique_strings(blockers),
     }
 
@@ -393,6 +489,7 @@ def _strict_candidate_preflight(
     except SystemExit as exc:
         return {
             "schema": getattr(module, "SCHEMA", "candidate_manifest_dispatch_readiness_preflight_v1"),
+            "candidate_static_preflight_ready": False,
             "ready_for_exact_eval_dispatch": False,
             "blockers": [{"code": "strict_candidate_preflight_error", "detail": str(exc)}],
             "warnings": [],
@@ -401,10 +498,168 @@ def _strict_candidate_preflight(
     warnings = payload.get("warnings") if isinstance(payload.get("warnings"), list) else []
     return {
         "schema": payload.get("schema"),
-        "ready_for_exact_eval_dispatch": payload.get("ready_for_exact_eval_dispatch") is True,
+        "candidate_static_preflight_ready": payload.get("ready_for_exact_eval_dispatch") is True,
+        "ready_for_exact_eval_dispatch": False,
         "blockers": blockers,
         "warnings": warnings,
         "lane_claim": payload.get("lane_claim"),
+    }
+
+
+def _parse_utc(value: str) -> dt.datetime | None:
+    text = value.strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = dt.datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=dt.UTC)
+    return parsed.astimezone(dt.UTC)
+
+
+def _is_terminal_claim_status(status: str) -> bool:
+    return any(status.startswith(prefix) for prefix in TERMINAL_CLAIM_STATUS_PREFIXES)
+
+
+def _parse_claim_rows(path: Path) -> list[dict[str, str]]:
+    if not path.is_file():
+        return []
+    rows: list[dict[str, str]] = []
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if not line.startswith("| "):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) != 8 or cells[0] in {"timestamp_utc", "---"}:
+            continue
+        rows.append(
+            {
+                "timestamp_utc": cells[0],
+                "agent": cells[1],
+                "lane_id": cells[2],
+                "platform": cells[3],
+                "instance_job_id": cells[4],
+                "predicted_eta_utc": cells[5],
+                "status": cells[6],
+                "notes": cells[7],
+            }
+        )
+    return rows
+
+
+def _manifest_lane_id(payload: Mapping[str, Any]) -> str:
+    return _first_nonempty_string(
+        payload,
+        (
+            ("lane_id",),
+            ("dispatch_lane_id",),
+            ("exact_eval_dispatch_lane_id",),
+            ("exact_eval_dispatch_gate", "lane_id"),
+            ("exact_eval_dispatch_gate", "claim", "lane_id"),
+            ("dispatch_gate", "lane_id"),
+            ("dispatch_gate", "claim", "lane_id"),
+            ("dispatch", "lane_id"),
+            ("dispatch", "claim", "lane_id"),
+            ("dispatch_readiness", "lane_id"),
+            ("dispatch_readiness", "claim", "lane_id"),
+        ),
+    )
+
+
+def _manifest_instance_job_id(payload: Mapping[str, Any]) -> str:
+    return _first_nonempty_string(
+        payload,
+        (
+            ("instance_job_id",),
+            ("job_name",),
+            ("dispatch_job_name",),
+            ("exact_eval_job_name",),
+            ("exact_eval_instance_job_id",),
+            ("exact_eval_dispatch_gate", "instance_job_id"),
+            ("exact_eval_dispatch_gate", "job_name"),
+            ("exact_eval_dispatch_gate", "claim", "instance_job_id"),
+            ("exact_eval_dispatch_gate", "claim", "job_name"),
+            ("dispatch_gate", "instance_job_id"),
+            ("dispatch_gate", "job_name"),
+            ("dispatch_gate", "claim", "instance_job_id"),
+            ("dispatch_gate", "claim", "job_name"),
+            ("dispatch", "instance_job_id"),
+            ("dispatch", "job_name"),
+            ("dispatch", "claim", "instance_job_id"),
+            ("dispatch", "claim", "job_name"),
+            ("dispatch_readiness", "instance_job_id"),
+            ("dispatch_readiness", "job_name"),
+            ("dispatch_readiness", "claim", "instance_job_id"),
+            ("dispatch_readiness", "claim", "job_name"),
+        ),
+    )
+
+
+def _dispatch_claim_proof(
+    payload: Mapping[str, Any],
+    *,
+    claims_path: Path | None,
+    now_utc: str | None,
+    ttl_hours: float,
+) -> dict[str, Any]:
+    lane_id = _manifest_lane_id(payload)
+    instance_job_id = _manifest_instance_job_id(payload)
+    blockers: list[str] = []
+    checked = claims_path is not None
+    if claims_path is None:
+        blockers.append("dispatch_claim_check_missing")
+    elif not claims_path.is_file():
+        blockers.append("dispatch_claims_file_missing")
+    if not lane_id:
+        blockers.append("dispatch_lane_id_missing")
+    if not instance_job_id:
+        blockers.append("dispatch_instance_job_id_missing")
+    active_claim: dict[str, str] | None = None
+    matching_claims: list[dict[str, str]] = []
+    parsed_now = None
+    if claims_path is not None:
+        if now_utc is None:
+            raise SystemExit(
+                "--now-utc is required with --claims-path so dispatch readiness output is byte-reproducible"
+            )
+        parsed_now = _parse_utc(now_utc)
+        if parsed_now is None:
+            raise SystemExit(f"invalid --now-utc: {now_utc}")
+    if checked and claims_path is not None and claims_path.is_file() and lane_id and instance_job_id:
+        cutoff = parsed_now - dt.timedelta(hours=ttl_hours) if parsed_now is not None else None
+        for claim in _parse_claim_rows(claims_path):
+            if claim["lane_id"] != lane_id or claim["instance_job_id"] != instance_job_id:
+                continue
+            timestamp = _parse_utc(claim["timestamp_utc"])
+            if timestamp is None or (cutoff is not None and timestamp < cutoff):
+                continue
+            matching_claims.append(claim)
+        if matching_claims:
+            matching_claims.sort(
+                key=lambda claim: _parse_utc(claim["timestamp_utc"]) or dt.datetime.min.replace(tzinfo=dt.UTC),
+                reverse=True,
+            )
+            latest = matching_claims[0]
+            if _is_terminal_claim_status(latest["status"]):
+                blockers.append("dispatch_claim_latest_status_terminal")
+            else:
+                active_claim = latest
+        else:
+            blockers.append("active_dispatch_claim_missing")
+    active = active_claim is not None
+    return {
+        "status": "passed" if active else "blocked",
+        "checked": checked,
+        "claims_path": str(claims_path) if claims_path is not None else None,
+        "now_utc": parsed_now.strftime("%Y-%m-%dT%H:%M:%SZ") if parsed_now is not None else None,
+        "ttl_hours": ttl_hours,
+        "lane_id": lane_id,
+        "instance_job_id": instance_job_id,
+        "active_lane_claim": active,
+        "active_claim": active_claim,
+        "matching_claims": matching_claims,
+        "blockers": _unique_strings(blockers),
     }
 
 
@@ -450,8 +705,9 @@ def _next_required_proofs(blockers: Sequence[str]) -> list[str]:
         out.append("runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract")
     if "strict_candidate_preflight_not_ready" in blockers:
         out.append(f"passing_{STRICT_PREFLIGHT}")
+    if "missing_active_lane_dispatch_claim" in blockers:
+        out.append("matching_active_level2_lane_claim_for_manifest_lane_and_job")
     if not out:
-        out.append("active_lane_dispatch_claim_before_remote_gpu_submit")
         out.append("exact_cuda_auth_eval_on_selected_archive_bytes")
     return out
 
@@ -473,27 +729,40 @@ def _row_for_manifest(
     strict = _strict_candidate_preflight(
         manifest_path,
         repo_root=repo_root,
+        claims_path=None,
+        now_utc=None,
+        ttl_hours=ttl_hours,
+    )
+    claim = _dispatch_claim_proof(
+        payload,
         claims_path=claims_path,
         now_utc=now_utc,
         ttl_hours=ttl_hours,
     )
-    blockers: list[str] = []
+    static_blockers: list[str] = []
     if not archive["byte_closed"]:
-        blockers.append("missing_byte_closed_archive_proof")
-        blockers.extend(f"archive:{blocker}" for blocker in archive["blockers"])
+        static_blockers.append("missing_byte_closed_archive_proof")
+        static_blockers.extend(f"archive:{blocker}" for blocker in archive["blockers"])
     if not runtime["runtime_closed"]:
-        blockers.append("missing_byte_closed_runtime_proof")
-        blockers.extend(f"runtime:{blocker}" for blocker in runtime["blockers"])
-    if strict["ready_for_exact_eval_dispatch"] is not True:
-        blockers.append("strict_candidate_preflight_not_ready")
-        blockers.extend(
+        static_blockers.append("missing_byte_closed_runtime_proof")
+        static_blockers.extend(f"runtime:{blocker}" for blocker in runtime["blockers"])
+    if strict["candidate_static_preflight_ready"] is not True:
+        static_blockers.append("strict_candidate_preflight_not_ready")
+        static_blockers.extend(
             f"strict:{blocker.get('code', 'unknown')}"
             for blocker in strict["blockers"]
             if isinstance(blocker, Mapping)
         )
-    blockers = _unique_strings(blockers)
-    strict_ready = strict["ready_for_exact_eval_dispatch"] is True
-    ready = bool(strict_ready and archive["byte_closed"] and runtime["runtime_closed"] and not blockers)
+    static_blockers = _unique_strings(static_blockers)
+    strict_ready = strict["candidate_static_preflight_ready"] is True
+    static_ready = bool(strict_ready and archive["byte_closed"] and runtime["runtime_closed"] and not static_blockers)
+    dispatch_blockers: list[str] = []
+    if static_ready and not claim["active_lane_claim"]:
+        dispatch_blockers.append("missing_active_lane_dispatch_claim")
+        dispatch_blockers.extend(f"claim:{blocker}" for blocker in claim["blockers"])
+    dispatch_blockers = _unique_strings(dispatch_blockers)
+    blockers = _unique_strings([*static_blockers, *dispatch_blockers])
+    ready = bool(static_ready and claim["active_lane_claim"] and not dispatch_blockers)
     return {
         "schema_version": SCHEMA_VERSION,
         "manifest_path": repo_relative(manifest_path, repo_root),
@@ -503,7 +772,11 @@ def _row_for_manifest(
         "score_claim": False,
         "dispatch_attempted": False,
         "ready_for_exact_eval_dispatch": ready,
+        "candidate_static_preflight_ready": static_ready,
+        "static_candidate_blockers": static_blockers,
+        "dispatch_claim_proof": claim,
         "strict_candidate_preflight_ready": strict_ready,
+        "strict_candidate_static_preflight_ready": strict_ready,
         "strict_candidate_preflight": strict,
         "archive_proof": archive,
         "runtime_proof": runtime,
@@ -569,6 +842,7 @@ def build_selection_report(
     rows.sort(
         key=lambda row: (
             not bool(row["ready_for_exact_eval_dispatch"]),
+            not bool(row["candidate_static_preflight_ready"]),
             len(row["candidate_blockers"]),
             float(row["expected_total_score_delta"]),
             int(row["byte_delta"]),
@@ -578,6 +852,7 @@ def build_selection_report(
     )
     selected = rows[0] if rows else None
     ready_count = sum(int(row["ready_for_exact_eval_dispatch"]) for row in rows)
+    static_ready_count = sum(int(row["candidate_static_preflight_ready"]) for row in rows)
     return {
         "schema_version": SCHEMA_VERSION,
         "tool": TOOL,
@@ -585,7 +860,9 @@ def build_selection_report(
         "score_claim": False,
         "dispatch_attempted": False,
         "ready_for_exact_eval_dispatch": bool(selected and selected["ready_for_exact_eval_dispatch"]),
+        "candidate_static_preflight_ready": bool(selected and selected["candidate_static_preflight_ready"]),
         "candidate_count": len(rows),
+        "candidate_static_preflight_ready_count": static_ready_count,
         "ready_candidate_count": ready_count,
         "selected_candidate": selected,
         "rows": rows,

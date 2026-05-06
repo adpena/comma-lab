@@ -320,6 +320,24 @@
   },
   "dispatch_attempted": false,
   "fixture_only": false,
+  "hpm1_structural_decode_inventory": {
+    "byte_exact_semantic_reencode_proven": false,
+    "bytes": 12612,
+    "contract": "hpm1_payload_structural_decode_inventory_v1",
+    "full_decode_proven": false,
+    "path": "hpm1_structural_inventory.json",
+    "payload_member": "categorical_payload.bin",
+    "payload_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+    "sha256": "985d5b944e61208020dbadf3d5a43233a0a6d494bf156010d3f16c09b45a8bba",
+    "structural_reencode_matches_source": true,
+    "unsupported_wire_constructs": [
+      "hpac_autoregressive_probability_rows",
+      "constriction_range_decoder_uint32_queue_replay",
+      "hpac_context_update_order",
+      "range_encoder_uint32_reemit",
+      "contest_runtime_sidecar_free_hpm1_loader"
+    ]
+  },
   "kind": "categorical_qma9_clade_spade_openpilot_candidate_manifest",
   "no_op_controls": {
     "charged_member_presence_control": {

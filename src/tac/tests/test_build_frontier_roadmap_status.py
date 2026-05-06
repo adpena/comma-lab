@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import zipfile
 from pathlib import Path
 
 from tools.build_frontier_roadmap_status import (
@@ -91,6 +92,7 @@ def test_frontier_roadmap_status_markdown_is_operator_briefing() -> None:
     assert "Frontier Roadmap Status" in markdown
     assert "Live-safe operator roadmap" in markdown
     assert "Next Comprehensive Tranche" in markdown
+    assert "candidate_static_preflight_ready_count" in markdown
     assert "`rate_frontier_closure`" in markdown
     assert "`field_meta_selection`" in markdown
     assert "`hnerv_wavelet_wr01_apply`" in markdown
@@ -102,7 +104,11 @@ def test_frontier_roadmap_status_markdown_is_operator_briefing() -> None:
 
 def test_frontier_roadmap_status_consumes_field_meta_packet_manifests(tmp_path: Path) -> None:
     archive = tmp_path / "archive.zip"
-    archive.write_bytes(b"field meta packet archive")
+    info = zipfile.ZipInfo("x")
+    info.date_time = (1980, 1, 1, 0, 0, 0)
+    info.external_attr = 0o644 << 16
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr(info, b"field meta packet archive")
     manifest = tmp_path / "manifest.json"
     manifest.write_text(
         json.dumps(
@@ -141,7 +147,10 @@ def test_frontier_roadmap_status_consumes_field_meta_packet_manifests(tmp_path: 
         "field_meta_candidate_packet_selection"
     ]
     assert packet_selection["candidate_count"] == 1
-    assert packet_selection["ready_candidate_count"] == 1
+    assert packet_selection["candidate_static_preflight_ready_count"] == 1
+    assert packet_selection["ready_candidate_count"] == 0
     assert packet_selection["selected_candidate"]["candidate_id"] == "generic_packet"
     assert packet_selection["selected_candidate"]["strict_candidate_preflight_ready"] is True
+    assert packet_selection["selected_candidate"]["candidate_static_preflight_ready"] is True
+    assert packet_selection["selected_candidate"]["ready_for_exact_eval_dispatch"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False

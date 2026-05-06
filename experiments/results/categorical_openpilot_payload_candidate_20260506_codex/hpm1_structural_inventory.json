@@ -1,0 +1,344 @@
+{
+  "blocker_manifest": {
+    "blocker_manifest_contract": "hpm1_decode_reencode_blocker_manifest_v1",
+    "dispatch_attempted": false,
+    "next_required_proof_contract": "pr91_hpm1_decode_reencode_parity_v1",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "status": "blocked_structural_inventory_only",
+    "unsupported_wire_constructs": [
+      {
+        "current_evidence": "local prefix replay remains fail-closed before frame-0 decode completion; this inventory does not generate probability rows",
+        "name": "hpac_autoregressive_probability_rows",
+        "next_proof": "record first failing/passing probability row with model, context, dtype, and categorical parameters pinned",
+        "status": "unsupported_for_parity",
+        "wire_construct": "HPACMini logits -> clipped float64 softmax rows -> constriction.stream.model.Categorical(perfect=False)"
+      },
+      {
+        "current_evidence": "token bytes are inventoried as little-endian uint32 words, but entropy-model compatibility is not proven",
+        "name": "constriction_range_decoder_uint32_queue_replay",
+        "next_proof": "decode all 600 frames from the exact token bytes and record decoded token tensor SHA-256",
+        "status": "unsupported_for_parity",
+        "wire_construct": "np.frombuffer(tokens.bin, dtype=np.uint32) consumed by constriction.stream.queue.RangeDecoder"
+      },
+      {
+        "current_evidence": "header proves P/delta/use_spm/hpac_d_film values only; it does not prove source-identical context mutation",
+        "name": "hpac_context_update_order",
+        "next_proof": "trace the first two context windows against reference decoded tokens and prove no drift before byte re-encode",
+        "status": "unsupported_for_parity",
+        "wire_construct": "per-frame/per-group current-token context plus previous-frame context and optional CausalSPM"
+      },
+      {
+        "current_evidence": "structural HPM1 segment re-emits only by preserving opaque token bytes; no semantic encoder has reproduced them",
+        "name": "range_encoder_uint32_reemit",
+        "next_proof": "encode decoded tokens back to the exact token stream SHA-256 and then the exact HPM1 segment SHA-256",
+        "status": "unsupported_for_parity",
+        "wire_construct": "semantic tokens -> HPAC probability rows -> constriction range encoder -> uint32 queue bytes"
+      },
+      {
+        "current_evidence": "candidate archive carries the payload bytes, but the runtime member is still a fail-closed verifier skeleton",
+        "name": "contest_runtime_sidecar_free_hpm1_loader",
+        "next_proof": "replace the skeleton with a charged runtime loader and prove it consumes only archive members",
+        "status": "unsupported_for_parity",
+        "wire_construct": "archive member -> inflate runtime HPM1 branch without uncharged tokens/model sidecars or fallback"
+      }
+    ]
+  },
+  "byte_exact_semantic_reencode": {
+    "byte_exact": false,
+    "passed": false,
+    "reencoded_hpm1_sha256": "",
+    "refusal_reasons": [
+      "full_semantic_decode_missing",
+      "range_encoder_uint32_reemit_not_proven",
+      "opaque_token_preservation_is_not_decode_reencode_parity"
+    ]
+  },
+  "candidate_archive": {
+    "bytes": 152235,
+    "exists": true,
+    "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/archive.zip",
+    "sha256": "106af3ed6917d6115586463ef35e43119add5db002fd19f3da7cd8065a63eb8d"
+  },
+  "decoded_geometry_contract": {
+    "decoded_shape_nhw": [
+      600,
+      384,
+      512
+    ],
+    "expected_decoded_symbol_count": 117964800,
+    "groups_per_frame": 94,
+    "height_width_divisible_by_predictor_count": true,
+    "patch_grid": [
+      12,
+      16
+    ],
+    "patches_per_frame": 192,
+    "required_full_decode_frames": 600,
+    "source_runtime_num_classes": 5,
+    "symbol_domain": [
+      0,
+      4
+    ]
+  },
+  "dispatch_attempted": false,
+  "evidence_grade": "hpm1_structural_byte_inventory",
+  "full_decode": {
+    "decoded_masks_sha256": "",
+    "frame_count": 0,
+    "passed": false,
+    "refusal_reasons": [
+      "hpac_probability_rows_not_byte_closed",
+      "constriction_range_decoder_replay_not_proven",
+      "hpac_context_update_order_not_proven"
+    ]
+  },
+  "header": {
+    "config": {
+      "channels": 64,
+      "delta": 2,
+      "height": 384,
+      "hpac_d_film": 8,
+      "hpac_len": 28243,
+      "n_frames": 600,
+      "ppmd_order": 4,
+      "predictor_count": 32,
+      "tokens_len": 116796,
+      "use_spm": 1,
+      "width": 512
+    },
+    "fields": [
+      {
+        "bytes": 4,
+        "format": "bytes",
+        "name": "magic",
+        "offset": 0,
+        "value": "HPM1"
+      },
+      {
+        "bytes": 4,
+        "format": "uint32_le",
+        "name": "n_frames",
+        "offset": 4,
+        "value": 600
+      },
+      {
+        "bytes": 4,
+        "format": "uint32_le",
+        "name": "height",
+        "offset": 8,
+        "value": 384
+      },
+      {
+        "bytes": 4,
+        "format": "uint32_le",
+        "name": "width",
+        "offset": 12,
+        "value": 512
+      },
+      {
+        "bytes": 4,
+        "format": "uint32_le",
+        "name": "predictor_count",
+        "offset": 16,
+        "value": 32
+      },
+      {
+        "bytes": 4,
+        "format": "uint32_le",
+        "name": "delta",
+        "offset": 20,
+        "value": 2
+      },
+      {
+        "bytes": 4,
+        "format": "uint32_le",
+        "name": "channels",
+        "offset": 24,
+        "value": 64
+      },
+      {
+        "bytes": 4,
+        "format": "uint32_le",
+        "name": "use_spm",
+        "offset": 28,
+        "value": 1
+      },
+      {
+        "bytes": 4,
+        "format": "uint32_le",
+        "name": "hpac_d_film",
+        "offset": 32,
+        "value": 8
+      },
+      {
+        "bytes": 4,
+        "format": "uint32_le",
+        "name": "tokens_len",
+        "offset": 36,
+        "value": 116796
+      },
+      {
+        "bytes": 4,
+        "format": "uint32_le",
+        "name": "hpac_len",
+        "offset": 40,
+        "value": 28243
+      },
+      {
+        "bytes": 4,
+        "format": "uint32_le",
+        "name": "ppmd_order",
+        "offset": 44,
+        "value": 4
+      }
+    ],
+    "sha256": "e22642f557e19923041914bd2d2de62d9bd29dd667c98480cb92bf6fa53df7e4"
+  },
+  "hpac_model_inventory": {
+    "bytes": 28243,
+    "ppmd_order": 4,
+    "runtime_loader_contract": "pyppmd.decompress(..., max_order=4) then torch.load",
+    "semantic_state_dict_blocker": "not_loaded_by_structural_inventory",
+    "semantic_state_dict_loaded": false,
+    "sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd"
+  },
+  "hpm1_structural_decode_inventory_contract": "hpm1_payload_structural_decode_inventory_v1",
+  "kind": "hpm1_payload_structural_decode_inventory",
+  "next_required_proofs": [
+    "load the embedded HPAC model and pin state-dict shape/hash custody",
+    "decode all 600 HPM1 frames from the exact token stream on CPU",
+    "record decoded token tensor SHA-256 and context-window traces",
+    "range-encode decoded tokens back to the exact token stream SHA-256",
+    "rebuild the HPM1 segment to the exact source segment SHA-256 from semantic tokens",
+    "prove charged runtime loading without sidecars or fallback"
+  ],
+  "payload_member": "categorical_payload.bin",
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "sections": [
+    {
+      "bytes": 48,
+      "end_offset_exclusive": 48,
+      "entropy_bits_per_byte": 2.582552,
+      "name": "header",
+      "offset": 0,
+      "sha256": "e22642f557e19923041914bd2d2de62d9bd29dd667c98480cb92bf6fa53df7e4",
+      "wire_construct": "HPM1 fixed header"
+    },
+    {
+      "bytes": 116796,
+      "end_offset_exclusive": 116844,
+      "entropy_bits_per_byte": 7.998453,
+      "name": "tokens",
+      "offset": 48,
+      "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+      "wire_construct": "constriction uint32 range-coded token stream"
+    },
+    {
+      "bytes": 28243,
+      "end_offset_exclusive": 145087,
+      "entropy_bits_per_byte": 7.993357,
+      "name": "hpac_ppmd_model",
+      "offset": 116844,
+      "sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+      "wire_construct": "PPMd-compressed HPACMini torch state dict"
+    }
+  ],
+  "segment": {
+    "bytes": 145087,
+    "codec": "HPM1",
+    "header_bytes": 48,
+    "magic": "HPM1",
+    "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+    "tail_bytes": 0
+  },
+  "source_archive": {
+    "bytes": 222404,
+    "exists": true,
+    "path": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+    "sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f"
+  },
+  "source_member": "x:mask",
+  "structural_reencode": {
+    "common_prefix_bytes": 145087,
+    "matches_source_segment": true,
+    "not_semantic_decode_reencode_parity": true,
+    "passed": true,
+    "reencoded_segment_bytes": 145087,
+    "reencoded_segment_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+    "scope": "header_plus_opaque_token_and_hpac_section_repack_only",
+    "source_segment_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc"
+  },
+  "token_stream_inventory": {
+    "bytes": 116796,
+    "first_words_hex": [
+      "0x9b5c86f6",
+      "0xc3e3f98a",
+      "0xf6f1efc5",
+      "0x12458e3f",
+      "0x13c6f92f",
+      "0x00000000",
+      "0x00000000",
+      "0x1edbc12d"
+    ],
+    "last_words_hex": [
+      "0x21ba8197",
+      "0x9cfe9ecd",
+      "0x6cad5e80",
+      "0xc7afa705",
+      "0x98e4980f",
+      "0x76208ae1",
+      "0x69051875",
+      "0xa3cabc6d"
+    ],
+    "max_word": 4294779409,
+    "min_word": 0,
+    "range_decoder_input_dtype": "uint32_le",
+    "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+    "uint32_aligned": true,
+    "uint32_word_count": 29199,
+    "unique_word_count": 29198,
+    "zero_word_count": 2
+  },
+  "unsupported_wire_constructs": [
+    {
+      "current_evidence": "local prefix replay remains fail-closed before frame-0 decode completion; this inventory does not generate probability rows",
+      "name": "hpac_autoregressive_probability_rows",
+      "next_proof": "record first failing/passing probability row with model, context, dtype, and categorical parameters pinned",
+      "status": "unsupported_for_parity",
+      "wire_construct": "HPACMini logits -> clipped float64 softmax rows -> constriction.stream.model.Categorical(perfect=False)"
+    },
+    {
+      "current_evidence": "token bytes are inventoried as little-endian uint32 words, but entropy-model compatibility is not proven",
+      "name": "constriction_range_decoder_uint32_queue_replay",
+      "next_proof": "decode all 600 frames from the exact token bytes and record decoded token tensor SHA-256",
+      "status": "unsupported_for_parity",
+      "wire_construct": "np.frombuffer(tokens.bin, dtype=np.uint32) consumed by constriction.stream.queue.RangeDecoder"
+    },
+    {
+      "current_evidence": "header proves P/delta/use_spm/hpac_d_film values only; it does not prove source-identical context mutation",
+      "name": "hpac_context_update_order",
+      "next_proof": "trace the first two context windows against reference decoded tokens and prove no drift before byte re-encode",
+      "status": "unsupported_for_parity",
+      "wire_construct": "per-frame/per-group current-token context plus previous-frame context and optional CausalSPM"
+    },
+    {
+      "current_evidence": "structural HPM1 segment re-emits only by preserving opaque token bytes; no semantic encoder has reproduced them",
+      "name": "range_encoder_uint32_reemit",
+      "next_proof": "encode decoded tokens back to the exact token stream SHA-256 and then the exact HPM1 segment SHA-256",
+      "status": "unsupported_for_parity",
+      "wire_construct": "semantic tokens -> HPAC probability rows -> constriction range encoder -> uint32 queue bytes"
+    },
+    {
+      "current_evidence": "candidate archive carries the payload bytes, but the runtime member is still a fail-closed verifier skeleton",
+      "name": "contest_runtime_sidecar_free_hpm1_loader",
+      "next_proof": "replace the skeleton with a charged runtime loader and prove it consumes only archive members",
+      "status": "unsupported_for_parity",
+      "wire_construct": "archive member -> inflate runtime HPM1 branch without uncharged tokens/model sidecars or fallback"
+    }
+  ]
+}

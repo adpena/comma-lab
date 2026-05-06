@@ -10,6 +10,8 @@ import pytest
 from tac.hnerv_entropy_candidate_packet import (
     HnervEntropyCandidatePacketError,
     build_candidate_packet_manifest,
+    discover_candidate_audit_inputs,
+    discovery_report_input_paths,
 )
 from tac.optimization.entropy_codec_gap_audit import build_entropy_codec_gap_audit
 from tac.repo_io import json_text, sha256_file
@@ -105,6 +107,101 @@ def test_candidate_packet_can_build_audit_from_stream_profile(tmp_path: Path) ->
     assert manifest["selected_target"]["label"] == "hnerv_decoder_weights"
 
 
+def test_discovery_rejects_hnerv_profiles_without_entropy_stream_counts(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo"
+    candidate_dir = root / "experiments" / "results" / "public_pr95_hnerv"
+    candidate_dir.mkdir(parents=True)
+    self_output_dir = root / "experiments" / "results" / "hnerv_entropy_packet_discovery"
+    self_output_dir.mkdir(parents=True)
+    (self_output_dir / "discovery_report.json").write_text(
+        json_text(
+            {
+                "tool": "tac.hnerv_entropy_candidate_packet.discover_candidate_audit_inputs",
+                "candidate_inputs": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    profile_path = candidate_dir / "pr95_hnerv_muon_packing_profile.json"
+    profile_path.write_text(
+        json_text(
+            {
+                "archive_sha256": "a" * 64,
+                "archive_bytes": 178417,
+                "score_claim": False,
+                "sections": [
+                    {
+                        "name": "decoder_brotli",
+                        "raw_bytes": 230048,
+                        "compressed_bytes": 162349,
+                        "entropy_bits_per_byte": 7.998084,
+                        "sha256": "b" * 64,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = discover_candidate_audit_inputs(repo_root=root)
+
+    assert report["tool"] == "tac.hnerv_entropy_candidate_packet.discover_candidate_audit_inputs"
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["ready_for_packet_materialization"] is False
+    assert report["candidate_input_count"] == 1
+    assert report["valid_input_count"] == 0
+    assert report["selected_entropy_audit"] is None
+    assert "hnerv_entropy_codec_gap_audit_json_with_entropy_overhead_target_ranking" in report[
+        "missing_source_artifacts"
+    ]
+    candidate = report["candidate_inputs"][0]
+    assert candidate["valid"] is False
+    assert candidate["source_json"]["bytes"] == profile_path.stat().st_size
+    assert candidate["source_json"]["sha256"] == sha256_file(profile_path)
+    assert candidate["missing_required_fields"] == [
+        "entropy_overhead_target_ranking",
+        "streams",
+    ]
+    assert "entropy audit/profile JSON must contain" in candidate["rejection_reason"]
+    assert discovery_report_input_paths(report, root) == [profile_path]
+
+
+def test_discovery_selects_valid_stream_profile_by_repo_relative_path(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo"
+    invalid_dir = root / "experiments" / "results" / "a_hnerv_profile"
+    valid_dir = root / "experiments" / "results" / "b_hnerv_entropy"
+    invalid_dir.mkdir(parents=True)
+    valid_dir.mkdir(parents=True)
+    (invalid_dir / "invalid_hnerv_profile.json").write_text(
+        json_text({"sections": []}),
+        encoding="utf-8",
+    )
+    valid_path = valid_dir / "valid_hnerv_stream_profile.json"
+    valid_path.write_text(
+        json_text({"source_label": "valid_hnerv", "streams": _streams()}),
+        encoding="utf-8",
+    )
+
+    report = discover_candidate_audit_inputs(repo_root=root)
+
+    assert report["candidate_input_count"] == 2
+    assert report["valid_input_count"] == 1
+    assert report["ready_for_packet_materialization"] is True
+    assert report["missing_source_artifacts"] == []
+    assert report["selected_entropy_audit"]["path"] == (
+        "experiments/results/b_hnerv_entropy/valid_hnerv_stream_profile.json"
+    )
+    valid = next(row for row in report["candidate_inputs"] if row["valid"] is True)
+    assert valid["audit_source_kind"] == "stream_profile_built_entropy_codec_gap_audit"
+    assert valid["audit_summary"]["stream_count"] == 2
+    assert valid["selected_target"]["label"] == "hnerv_decoder_weights"
+
+
 def test_candidate_packet_rejects_unknown_artifact_for_selected_target(tmp_path: Path) -> None:
     audit_path = tmp_path / "entropy_audit.json"
     audit_path.write_text(json_text(_audit()), encoding="utf-8")
@@ -147,6 +244,39 @@ def test_build_hnerv_entropy_candidate_packet_cli_writes_manifest(tmp_path: Path
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["packet_requirements"][0]["id"] == "roundtrip_payload_recode_manifest"
     assert any(row["id"] == "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256" for row in payload["available_inputs"])
+
+
+def test_build_hnerv_entropy_candidate_packet_cli_discovers_missing_source_inputs(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "scan"
+    root.mkdir()
+    profile_path = root / "orphan_hnerv_profile.json"
+    profile_path.write_text(json_text({"sections": []}), encoding="utf-8")
+    json_out = tmp_path / "discovery.json"
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_hnerv_entropy_candidate_packet.py"),
+            "--search-root",
+            str(root),
+            "--json-out",
+            str(json_out),
+            "--fail-if-missing",
+        ],
+        cwd=REPO,
+        text=True,
+        check=False,
+    )
+
+    assert proc.returncode == 1
+    payload = json.loads(json_out.read_text(encoding="utf-8"))
+    assert payload["tool"] == "tac.hnerv_entropy_candidate_packet.discover_candidate_audit_inputs"
+    assert payload["valid_input_count"] == 0
+    assert payload["candidate_inputs"][0]["source_json"]["sha256"] == sha256_file(profile_path)
+    assert "streams" in payload["candidate_inputs"][0]["missing_required_fields"]
+    assert payload["tool_run_manifest"]["input_files"][0]["sha256"] == sha256_file(profile_path)
 
 
 def _audit() -> dict:

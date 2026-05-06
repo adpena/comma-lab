@@ -8,6 +8,7 @@ of claiming decode/re-encode or exact-eval readiness.
 
 from __future__ import annotations
 
+import struct
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,10 @@ from tac.categorical_candidate_readiness import (
     RUNTIME_LOADER_PARITY_CONTRACT,
     audit_categorical_candidate_manifest,
 )
+from tac.hpm1_payload_structure import (
+    HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT,
+    build_hpm1_structural_decode_inventory,
+)
 from tac.pr85_bundle import Pr85BundleError, parse_pr85_bundle
 from tac.pr91_hpm1_codec import (
     DEFAULT_PR91_ARCHIVE,
@@ -44,6 +49,7 @@ CANDIDATE_KIND = "categorical_qma9_clade_spade_openpilot_candidate_manifest"
 ARCHIVE_MEMBER_MANIFEST_KIND = "categorical_local_candidate_archive_member_manifest"
 RUNTIME_PROOF_SKELETON_KIND = "categorical_runtime_consumer_proof_skeleton"
 RUNTIME_PROOF_SKELETON_CONTRACT = "categorical_runtime_consumer_proof_skeleton_v1"
+HPM1_STRUCTURAL_INVENTORY_FILENAME = "hpm1_structural_inventory.json"
 RUNTIME_CONSUMER_REPO_PATH = "src/tac/categorical_candidate_runtime_skeleton.py"
 MEMBER_ROLES = {
     "categorical_payload.bin": "categorical_payload",
@@ -172,6 +178,52 @@ def _write_archive(path: Path, member_payloads: dict[str, bytes]) -> list[dict[s
     return records
 
 
+def _write_hpm1_structural_inventory(
+    *,
+    out_dir: Path,
+    categorical_payload: bytes,
+    payload_source: dict[str, Any],
+    candidate_archive_path: Path,
+) -> dict[str, Any] | None:
+    source_archive_raw = payload_source.get("source_archive_path")
+    source_archive_path: Path | None = None
+    if isinstance(source_archive_raw, str) and source_archive_raw:
+        source_archive_path = Path(source_archive_raw)
+        if not source_archive_path.is_absolute():
+            source_archive_path = REPO_ROOT / source_archive_path
+    try:
+        inventory = build_hpm1_structural_decode_inventory(
+            categorical_payload,
+            payload_member="categorical_payload.bin",
+            source_archive=source_archive_path,
+            source_member=f"{payload_source.get('source_member', 'x')}:"
+            f"{payload_source.get('segment_name', 'mask')}",
+            candidate_archive=candidate_archive_path,
+        )
+    except (Pr85BundleError, ValueError, struct.error):
+        return None
+    inventory_path = out_dir / HPM1_STRUCTURAL_INVENTORY_FILENAME
+    write_json(inventory_path, inventory)
+    return {
+        "path": HPM1_STRUCTURAL_INVENTORY_FILENAME,
+        "bytes": inventory_path.stat().st_size,
+        "sha256": sha256_file(inventory_path),
+        "contract": HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT,
+        "payload_member": "categorical_payload.bin",
+        "payload_member_sha256": sha256_bytes(categorical_payload),
+        "structural_reencode_matches_source": inventory["structural_reencode"][
+            "matches_source_segment"
+        ],
+        "full_decode_proven": inventory["full_decode"]["passed"],
+        "byte_exact_semantic_reencode_proven": inventory[
+            "byte_exact_semantic_reencode"
+        ]["passed"],
+        "unsupported_wire_constructs": [
+            row["name"] for row in inventory["unsupported_wire_constructs"]
+        ],
+    }
+
+
 def build_categorical_payload_candidate(
     *,
     out_dir: str | Path,
@@ -212,6 +264,12 @@ def build_categorical_payload_candidate(
     archive_path = out / "archive.zip"
     member_records = _write_archive(archive_path, member_payloads)
     archive_sha = sha256_file(archive_path)
+    hpm1_structural_inventory = _write_hpm1_structural_inventory(
+        out_dir=out,
+        categorical_payload=categorical_payload,
+        payload_source=payload_source,
+        candidate_archive_path=archive_path,
+    )
 
     archive_member_manifest = {
         "schema_version": SCHEMA_VERSION,
@@ -283,6 +341,11 @@ def build_categorical_payload_candidate(
             "path": RUNTIME_CONSUMER_REPO_PATH,
             "consumes_charged_members": True,
         },
+        **(
+            {"hpm1_structural_decode_inventory": hpm1_structural_inventory}
+            if hpm1_structural_inventory is not None
+            else {}
+        ),
         "runtime_loader_parity": {
             "schema_version": SCHEMA_VERSION,
             "runtime_loader_parity_contract": RUNTIME_LOADER_PARITY_CONTRACT,
@@ -391,10 +454,25 @@ def build_categorical_payload_candidate(
             "construction_plan": repo_relative(construction_plan_path, root),
             "candidate": repo_relative(candidate_path, root),
             "readiness": repo_relative(readiness_path, root),
+            **(
+                {
+                    "hpm1_structural_inventory": repo_relative(
+                        out / HPM1_STRUCTURAL_INVENTORY_FILENAME,
+                        root,
+                    )
+                }
+                if hpm1_structural_inventory is not None
+                else {}
+            ),
         },
         "archive_sha256": archive_sha,
         "archive_bytes": archive_path.stat().st_size,
         "charged_members": member_records,
+        **(
+            {"hpm1_structural_decode_inventory": hpm1_structural_inventory}
+            if hpm1_structural_inventory is not None
+            else {}
+        ),
         "readiness_blockers": readiness["dispatch_blockers"],
     }
     write_json(out / "summary.json", summary)
@@ -410,6 +488,7 @@ __all__ = [
     "ARCHIVE_MEMBER_MANIFEST_KIND",
     "BUILD_KIND",
     "CANDIDATE_KIND",
+    "HPM1_STRUCTURAL_INVENTORY_FILENAME",
     "MEMBER_ORDER",
     "RUNTIME_CONSUMER_REPO_PATH",
     "RUNTIME_PROOF_SKELETON_CONTRACT",

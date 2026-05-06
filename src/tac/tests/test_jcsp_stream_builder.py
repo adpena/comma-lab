@@ -14,6 +14,7 @@ Adversarial-coverage angles:
 
 from __future__ import annotations
 
+import hashlib
 import json
 
 import numpy as np
@@ -22,13 +23,16 @@ import torch
 
 from tac.jcsp_stream_builder import (
     JCSP_STREAM_SOURCE_DRY_RUN_SCHEMA,
+    JCSP_STREAM_SOURCE_LOCAL_ARCHIVE_MEMBER_SCHEMA,
     jcsp_stream_source_dry_run_metadata,
+    jcsp_stream_source_local_archive_member,
     load_jcsp_score_marginals,
     model_to_stream_sources,
     quantize_tensor_symmetric,
     tensor_to_stream_source,
 )
 from tac.joint_codec_stack_orchestrator import (
+    JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER,
     KIND_ARITHMETIC_STATIC,
     KIND_BALLE_HYPERPRIOR,
     KIND_RAW_PASSTHROUGH,
@@ -303,4 +307,73 @@ def test_jcsp_stream_source_dry_run_metadata_is_deterministic(tmp_path) -> None:
     assert first["streams"][0]["score_per_byte_marginal"] == pytest.approx(1e-6)
     assert "dry_run_only_no_archive_bytes_written" in (
         first["streams"][0]["dispatch_blockers"]
+    )
+
+
+def test_jcsp_stream_source_local_archive_member_is_byte_closed_and_blocked(
+    tmp_path,
+) -> None:
+    artifact = tmp_path / "marginals.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "score_marginals": {
+                    "a.weight": 1e-6,
+                    "b.weight": 2e-6,
+                }
+            },
+            sort_keys=True,
+        )
+    )
+    state_dict = {
+        "b.weight": torch.zeros(2, dtype=torch.float32),
+        "a.weight": torch.linspace(-1.0, 1.0, 6, dtype=torch.float32),
+    }
+
+    archive_a, contract_a = jcsp_stream_source_local_archive_member(
+        state_dict,
+        score_marginals_path=artifact,
+        preview_bytes_per_stream=4,
+    )
+    archive_b, contract_b = jcsp_stream_source_local_archive_member(
+        state_dict,
+        score_marginals_path=artifact,
+        preview_bytes_per_stream=4,
+    )
+
+    assert archive_a == archive_b
+    assert contract_a == contract_b
+    assert contract_a["score_claim"] is False
+    assert contract_a["ready_for_local_skeleton_loader"] is True
+    assert contract_a["ready_for_runtime_loader"] is False
+    assert contract_a["ready_for_exact_eval_dispatch"] is False
+    assert contract_a["byte_closed_archive_member"] is True
+    assert contract_a["single_member_no_sidecars"] is True
+    assert contract_a["archive_sha256"] == hashlib.sha256(archive_a).hexdigest()
+    assert contract_a["member_name"] == "jcsp.bin"
+    assert JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER in contract_a["dispatch_blockers"]
+
+    manifest = contract_a["skeleton_manifest"]
+    assert manifest["schema"] == JCSP_STREAM_SOURCE_LOCAL_ARCHIVE_MEMBER_SCHEMA
+    assert manifest["container_magic"] == "JCSK"
+    assert manifest["container_version"] == 1
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["archive_bytes_written"] is True
+    assert manifest["runtime_payloads_encoded"] is False
+    assert manifest["byte_manifest"]["source_stream_bytes"] == 8
+    assert manifest["byte_manifest"]["encoded_preview_bytes"] == 6
+    assert [row["name"] for row in manifest["streams"]] == [
+        "a.weight",
+        "b.weight",
+    ]
+    first_preview = manifest["streams"][0]["preview"]
+    assert first_preview["source_bytes_kind"] == (
+        "quantized_qint_int8_prefix_not_codec_payload"
+    )
+    assert first_preview["preview_bytes"] == 4
+    assert len(first_preview["preview_hex"]) == 8
+    assert first_preview["preview_truncated"] is True
+    assert "full_codec_payload_not_encoded" in (
+        manifest["streams"][0]["dispatch_blockers"]
     )

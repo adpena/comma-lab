@@ -1,17 +1,21 @@
 {
-  "dirty_blocked_row_count": 1,
-  "dirty_path_count": 42,
+  "dirty_blocked_row_count": 2,
+  "dirty_path_count": 48,
   "dirty_paths": [
-    ".omx/research/categorical_byte_closed_payload_candidate_20260506_codex.md",
-    ".omx/research/cross_paradigm_frontier_inventory_20260506_codex.json",
-    ".omx/research/cross_paradigm_frontier_inventory_20260506_codex.md",
+    ".omx/research/categorical_hpm1_structural_inventory_20260506_codex.md",
     ".omx/research/field_meta_dispatch_selection_20260506_codex.json",
     ".omx/research/field_meta_dispatch_selection_20260506_codex.md",
+    ".omx/research/frontier_roadmap_status_20260506_codex.json",
+    ".omx/research/frontier_roadmap_status_20260506_codex.md",
     ".omx/research/hnerv_entropy_candidate_packet_readiness_20260506_codex.md",
-    ".omx/research/jcsp_pipeline_dry_run_hardening_20260506_codex.md",
-    ".omx/research/lapose_foveation_transport_atoms_20260506_codex.md",
+    ".omx/research/jcsp_byte_closure_tranche_20260506_codex.md",
+    ".omx/research/lapose_foveation_archive_consumption_closure_20260506_codex.md",
     "experiments/pipeline.py",
-    "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/",
+    "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/candidate.json",
+    "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/hpm1_structural_inventory.json",
+    "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+    "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/summary.json",
+    "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/",
     "experiments/results/public_pr100_intake_20260504_codex/source",
     "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source",
     "experiments/results/public_pr103_intake_20260504_codex/source",
@@ -21,28 +25,30 @@
     "experiments/results/public_pr82_henosis_frontier_intake_20260503_codex/repo",
     "experiments/results/public_pr91_intake_20260504_worker/pr91_src/repo",
     "reports/raw/kaggle_ingest/kaggle-dilated-h64-long1000-retry-v6-20260410T234220Z/comma_video_compression_challenge",
-    "src/tac/analysis/lapose_foveation_payload.py",
     "src/tac/categorical_candidate_readiness.py",
-    "src/tac/categorical_candidate_runtime_skeleton.py",
     "src/tac/categorical_payload_candidate.py",
     "src/tac/hnerv_entropy_candidate_packet.py",
+    "src/tac/hpm1_payload_structure.py",
     "src/tac/jcsp_stream_builder.py",
+    "src/tac/joint_codec_stack_orchestrator.py",
+    "src/tac/lapose_foveation_payload_candidate.py",
+    "src/tac/lapose_foveation_runtime_skeleton.py",
     "src/tac/tests/test_build_categorical_candidate_payload.py",
-    "src/tac/tests/test_build_cross_paradigm_frontier_inventory.py",
     "src/tac/tests/test_build_field_meta_dispatch_selection.py",
     "src/tac/tests/test_build_frontier_roadmap_status.py",
+    "src/tac/tests/test_build_lapose_foveation_payload_archive.py",
     "src/tac/tests/test_categorical_candidate_readiness.py",
     "src/tac/tests/test_hnerv_entropy_candidate_packet.py",
+    "src/tac/tests/test_hpm1_payload_structure.py",
     "src/tac/tests/test_jcsp_stream_builder.py",
-    "src/tac/tests/test_lapose_foveation_payload.py",
     "src/tac/tests/test_materialize_comma_lab_public_export.py",
     "src/tac/tests/test_pipeline_jcsp_gate.py",
+    "tools/audit_categorical_candidate_readiness.py",
     "tools/build_categorical_candidate_payload.py",
-    "tools/build_cross_paradigm_frontier_inventory.py",
     "tools/build_field_meta_dispatch_selection.py",
     "tools/build_frontier_roadmap_status.py",
     "tools/build_hnerv_entropy_candidate_packet.py",
-    "tools/build_lapose_foveation_tuple_payload.py",
+    "tools/build_lapose_foveation_payload_archive.py",
     "tools/materialize_comma_lab_public_export.py"
   ],
   "dispatch_attempted": false,
@@ -60,7 +66,6 @@
         "hnerv_lowlevel_brotli_repack"
       ],
       "needs_byte_closed_candidate": [
-        "joint_admm_balle_arithmetic_stack",
         "sensitivity_omega_w_v3",
         "selfcompress_mdl_fp4_tto"
       ],
@@ -89,14 +94,16 @@
     ],
     "field_meta_candidate_packet_selection": {
       "candidate_count": 4,
+      "candidate_static_preflight_ready": true,
+      "candidate_static_preflight_ready_count": 1,
       "dispatch_attempted": false,
       "dispatch_blockers": [
         "selection_report_only_no_dispatch",
         "requires_lane_dispatch_claim_before_remote_gpu_submit",
         "requires_exact_cuda_auth_eval_for_score_claim"
       ],
-      "ready_candidate_count": 1,
-      "ready_for_exact_eval_dispatch": true,
+      "ready_candidate_count": 0,
+      "ready_for_exact_eval_dispatch": false,
       "report_blockers": [],
       "rows": [
         {
@@ -109,22 +116,50 @@
             "sha256_actual": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
             "sha256_expected": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
             "source": "archive_object",
-            "status": "passed"
+            "status": "passed",
+            "zip_custody": {
+              "blockers": [],
+              "member_count": 1,
+              "member_names": [
+                "0.bin"
+              ],
+              "status": "passed"
+            }
           },
           "byte_delta": 0,
-          "candidate_blockers": [],
+          "candidate_blockers": [
+            "missing_active_lane_dispatch_claim",
+            "claim:dispatch_lane_id_missing",
+            "claim:dispatch_instance_job_id_missing"
+          ],
           "candidate_id": "hnerv_lowlevel_repack_pr106_q10_20260506_codex",
+          "candidate_static_preflight_ready": true,
           "dispatch_attempted": false,
+          "dispatch_claim_proof": {
+            "active_claim": null,
+            "active_lane_claim": false,
+            "blockers": [
+              "dispatch_lane_id_missing",
+              "dispatch_instance_job_id_missing"
+            ],
+            "checked": true,
+            "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+            "instance_job_id": "",
+            "lane_id": "",
+            "matching_claims": [],
+            "now_utc": "2026-05-06T22:53:55Z",
+            "status": "blocked",
+            "ttl_hours": 24.0
+          },
           "expected_information_gain_nats": 0.0,
           "expected_total_score_delta": 0.0,
           "manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/public_replay_preflight.json",
           "manifest_sha256": "8c90a9f05924205a3f05ad3108c4475c0930ba6addbbcda9177dce04d1f609ff",
           "next_required_proof": [
-            "active_lane_dispatch_claim_before_remote_gpu_submit",
-            "exact_cuda_auth_eval_on_selected_archive_bytes"
+            "matching_active_level2_lane_claim_for_manifest_lane_and_job"
           ],
           "packet_kind": "public_replay_intake_preflight_v1",
-          "ready_for_exact_eval_dispatch": true,
+          "ready_for_exact_eval_dispatch": false,
           "runtime_proof": {
             "blockers": [],
             "candidates": [
@@ -150,19 +185,22 @@
           },
           "schema_version": 1,
           "score_claim": false,
+          "static_candidate_blockers": [],
           "strict_candidate_preflight": {
             "blockers": [],
+            "candidate_static_preflight_ready": true,
             "lane_claim": {
               "active_conflicts": [],
               "checked": false,
               "claims_path": null,
               "lane_id": null
             },
-            "ready_for_exact_eval_dispatch": true,
+            "ready_for_exact_eval_dispatch": false,
             "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
             "warnings": []
           },
-          "strict_candidate_preflight_ready": true
+          "strict_candidate_preflight_ready": true,
+          "strict_candidate_static_preflight_ready": true
         },
         {
           "archive_proof": {
@@ -174,7 +212,15 @@
             "sha256_actual": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
             "sha256_expected": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
             "source": "candidate_archive_fields",
-            "status": "passed"
+            "status": "passed",
+            "zip_custody": {
+              "blockers": [],
+              "member_count": 1,
+              "member_names": [
+                "x"
+              ],
+              "status": "passed"
+            }
           },
           "byte_delta": -9,
           "candidate_blockers": [
@@ -182,7 +228,24 @@
             "strict:ready_for_exact_eval_dispatch_false"
           ],
           "candidate_id": "hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex",
+          "candidate_static_preflight_ready": false,
           "dispatch_attempted": false,
+          "dispatch_claim_proof": {
+            "active_claim": null,
+            "active_lane_claim": false,
+            "blockers": [
+              "dispatch_lane_id_missing",
+              "dispatch_instance_job_id_missing"
+            ],
+            "checked": true,
+            "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+            "instance_job_id": "",
+            "lane_id": "",
+            "matching_claims": [],
+            "now_utc": "2026-05-06T22:53:55Z",
+            "status": "blocked",
+            "ttl_hours": 24.0
+          },
           "expected_information_gain_nats": 0.0,
           "expected_total_score_delta": -5.9927305780995425e-06,
           "manifest_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
@@ -210,6 +273,10 @@
           },
           "schema_version": 1,
           "score_claim": false,
+          "static_candidate_blockers": [
+            "strict_candidate_preflight_not_ready",
+            "strict:ready_for_exact_eval_dispatch_false"
+          ],
           "strict_candidate_preflight": {
             "blockers": [
               {
@@ -218,6 +285,7 @@
                 "severity": "blocking"
               }
             ],
+            "candidate_static_preflight_ready": false,
             "lane_claim": {
               "active_conflicts": [],
               "checked": false,
@@ -228,7 +296,8 @@
             "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
             "warnings": []
           },
-          "strict_candidate_preflight_ready": false
+          "strict_candidate_preflight_ready": false,
+          "strict_candidate_static_preflight_ready": false
         },
         {
           "archive_proof": {
@@ -242,7 +311,15 @@
             "sha256_actual": "",
             "sha256_expected": "",
             "source": "",
-            "status": "blocked"
+            "status": "blocked",
+            "zip_custody": {
+              "blockers": [
+                "archive_file_missing_for_zip_custody"
+              ],
+              "member_count": 0,
+              "member_names": [],
+              "status": "blocked"
+            }
           },
           "byte_delta": 0,
           "candidate_blockers": [
@@ -254,7 +331,24 @@
             "strict:ready_for_exact_eval_dispatch_false"
           ],
           "candidate_id": "joint_admm_balle_arithmetic_stack",
+          "candidate_static_preflight_ready": false,
           "dispatch_attempted": false,
+          "dispatch_claim_proof": {
+            "active_claim": null,
+            "active_lane_claim": false,
+            "blockers": [
+              "dispatch_lane_id_missing",
+              "dispatch_instance_job_id_missing"
+            ],
+            "checked": true,
+            "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+            "instance_job_id": "",
+            "lane_id": "",
+            "matching_claims": [],
+            "now_utc": "2026-05-06T22:53:55Z",
+            "status": "blocked",
+            "ttl_hours": 24.0
+          },
           "expected_information_gain_nats": 0.0,
           "expected_total_score_delta": 0.0,
           "manifest_path": "experiments/results/joint_stack_noop_manifest_20260506_codex/manifest.json",
@@ -278,6 +372,14 @@
           },
           "schema_version": 1,
           "score_claim": false,
+          "static_candidate_blockers": [
+            "missing_byte_closed_archive_proof",
+            "archive:archive_identity_missing",
+            "missing_byte_closed_runtime_proof",
+            "runtime:runtime_proof_missing",
+            "strict_candidate_preflight_not_ready",
+            "strict:ready_for_exact_eval_dispatch_false"
+          ],
           "strict_candidate_preflight": {
             "blockers": [
               {
@@ -286,6 +388,7 @@
                 "severity": "blocking"
               }
             ],
+            "candidate_static_preflight_ready": false,
             "lane_claim": {
               "active_conflicts": [],
               "checked": false,
@@ -296,7 +399,8 @@
             "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
             "warnings": []
           },
-          "strict_candidate_preflight_ready": false
+          "strict_candidate_preflight_ready": false,
+          "strict_candidate_static_preflight_ready": false
         },
         {
           "archive_proof": {
@@ -310,7 +414,15 @@
             "sha256_actual": "",
             "sha256_expected": "",
             "source": "",
-            "status": "blocked"
+            "status": "blocked",
+            "zip_custody": {
+              "blockers": [
+                "archive_file_missing_for_zip_custody"
+              ],
+              "member_count": 0,
+              "member_names": [],
+              "status": "blocked"
+            }
           },
           "byte_delta": 0,
           "candidate_blockers": [
@@ -323,7 +435,24 @@
             "strict:nested_blocking_status"
           ],
           "candidate_id": "pr91_hpm1_readiness_20260506_codex",
+          "candidate_static_preflight_ready": false,
           "dispatch_attempted": false,
+          "dispatch_claim_proof": {
+            "active_claim": null,
+            "active_lane_claim": false,
+            "blockers": [
+              "dispatch_lane_id_missing",
+              "dispatch_instance_job_id_missing"
+            ],
+            "checked": true,
+            "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+            "instance_job_id": "",
+            "lane_id": "",
+            "matching_claims": [],
+            "now_utc": "2026-05-06T22:53:55Z",
+            "status": "blocked",
+            "ttl_hours": 24.0
+          },
           "expected_information_gain_nats": 0.0,
           "expected_total_score_delta": 0.0,
           "manifest_path": "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json",
@@ -347,6 +476,15 @@
           },
           "schema_version": 1,
           "score_claim": false,
+          "static_candidate_blockers": [
+            "missing_byte_closed_archive_proof",
+            "archive:archive_identity_missing",
+            "missing_byte_closed_runtime_proof",
+            "runtime:runtime_proof_missing",
+            "strict_candidate_preflight_not_ready",
+            "strict:ready_for_exact_eval_dispatch_false",
+            "strict:nested_blocking_status"
+          ],
           "strict_candidate_preflight": {
             "blockers": [
               {
@@ -375,6 +513,7 @@
                 "severity": "blocking"
               }
             ],
+            "candidate_static_preflight_ready": false,
             "lane_claim": {
               "active_conflicts": [],
               "checked": false,
@@ -385,7 +524,8 @@
             "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
             "warnings": []
           },
-          "strict_candidate_preflight_ready": false
+          "strict_candidate_preflight_ready": false,
+          "strict_candidate_static_preflight_ready": false
         }
       ],
       "schema_version": 1,
@@ -400,22 +540,50 @@
           "sha256_actual": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
           "sha256_expected": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
           "source": "archive_object",
-          "status": "passed"
+          "status": "passed",
+          "zip_custody": {
+            "blockers": [],
+            "member_count": 1,
+            "member_names": [
+              "0.bin"
+            ],
+            "status": "passed"
+          }
         },
         "byte_delta": 0,
-        "candidate_blockers": [],
+        "candidate_blockers": [
+          "missing_active_lane_dispatch_claim",
+          "claim:dispatch_lane_id_missing",
+          "claim:dispatch_instance_job_id_missing"
+        ],
         "candidate_id": "hnerv_lowlevel_repack_pr106_q10_20260506_codex",
+        "candidate_static_preflight_ready": true,
         "dispatch_attempted": false,
+        "dispatch_claim_proof": {
+          "active_claim": null,
+          "active_lane_claim": false,
+          "blockers": [
+            "dispatch_lane_id_missing",
+            "dispatch_instance_job_id_missing"
+          ],
+          "checked": true,
+          "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+          "instance_job_id": "",
+          "lane_id": "",
+          "matching_claims": [],
+          "now_utc": "2026-05-06T22:53:55Z",
+          "status": "blocked",
+          "ttl_hours": 24.0
+        },
         "expected_information_gain_nats": 0.0,
         "expected_total_score_delta": 0.0,
         "manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/public_replay_preflight.json",
         "manifest_sha256": "8c90a9f05924205a3f05ad3108c4475c0930ba6addbbcda9177dce04d1f609ff",
         "next_required_proof": [
-          "active_lane_dispatch_claim_before_remote_gpu_submit",
-          "exact_cuda_auth_eval_on_selected_archive_bytes"
+          "matching_active_level2_lane_claim_for_manifest_lane_and_job"
         ],
         "packet_kind": "public_replay_intake_preflight_v1",
-        "ready_for_exact_eval_dispatch": true,
+        "ready_for_exact_eval_dispatch": false,
         "runtime_proof": {
           "blockers": [],
           "candidates": [
@@ -441,19 +609,22 @@
         },
         "schema_version": 1,
         "score_claim": false,
+        "static_candidate_blockers": [],
         "strict_candidate_preflight": {
           "blockers": [],
+          "candidate_static_preflight_ready": true,
           "lane_claim": {
             "active_conflicts": [],
             "checked": false,
             "claims_path": null,
             "lane_id": null
           },
-          "ready_for_exact_eval_dispatch": true,
+          "ready_for_exact_eval_dispatch": false,
           "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
           "warnings": []
         },
-        "strict_candidate_preflight_ready": true
+        "strict_candidate_preflight_ready": true,
+        "strict_candidate_static_preflight_ready": true
       },
       "strict_candidate_preflight": "experiments/preflight_candidate_manifest_dispatch_readiness.py",
       "tool": "tools/build_field_meta_dispatch_selection.py"
@@ -467,7 +638,7 @@
       "negative, no-op, and blocked results are preserved as artifacts"
     ],
     "name": "byte-closed frontier closure and field-selected exact-eval tranche",
-    "objective": "Lower the score by converting the strongest current planning surfaces into byte-closed, runtime-consumed candidates, then select the first exact CUDA packet through Pareto/KKT/meta-Lagrangian gates.",
+    "objective": "Prepare score-reduction attempts by converting the strongest current planning surfaces into byte-closed, runtime-consumed candidates, then select any exact CUDA packet only through Pareto/KKT/meta-Lagrangian gates.",
     "ready_for_exact_eval_dispatch": false,
     "schema": "next_comprehensive_tranche_v1",
     "score_claim": false,
@@ -477,7 +648,7 @@
           "candidate archive manifest records exact bytes and SHA-256",
           "decoder/runtime parity proves output equivalence or declares scorer-changing scope",
           "entropy-gap target ranking names concrete next artifact, not only a family",
-          "ready_for_exact_eval_dispatch remains false until candidate-specific preflight passes"
+          "ready_for_exact_eval_dispatch remains false until static preflight and matching active claim pass"
         ],
         "id": "rate_frontier_closure",
         "keys": [
@@ -535,7 +706,7 @@
           "candidate rows carry family/conflict and byte-closed manifest fields",
           "proxy, dominated, non-KKT, and non-byte-closed rows are penalized or refused",
           "expected-information-gain is recorded separately from predicted score",
-          "selected exact-eval packet has lane claim plus candidate-specific preflight"
+          "selected exact-eval packet has a matching active lane claim plus candidate-specific static preflight"
         ],
         "id": "field_meta_selection",
         "keys": [
@@ -548,9 +719,9 @@
   "next_unblocked_keys": [
     "hnerv_wavelet_wr01_apply",
     "hnerv_lowlevel_brotli_repack",
-    "joint_admm_balle_arithmetic_stack",
     "hnerv_per_tensor_context_entropy",
-    "sensitivity_omega_w_v3"
+    "sensitivity_omega_w_v3",
+    "telescopic_foveation_field"
   ],
   "ready_for_exact_eval_dispatch": false,
   "row_count": 12,
@@ -613,11 +784,11 @@
         "PR91 HPAC device contract is ambient/contradictory in public runtime sources"
       ],
       "dirty_path_blockers": [
-        ".omx/research/categorical_byte_closed_payload_candidate_20260506_codex.md",
-        "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/",
+        "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+        "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/summary.json",
         "src/tac/categorical_candidate_readiness.py",
-        "src/tac/categorical_candidate_runtime_skeleton.py",
         "src/tac/categorical_payload_candidate.py",
+        "tools/audit_categorical_candidate_readiness.py",
         "tools/build_categorical_candidate_payload.py"
       ],
       "dispatch_attempted": false,
@@ -645,7 +816,9 @@
         "side information must be charged",
         "individual components do not imply score composability"
       ],
-      "dirty_path_blockers": [],
+      "dirty_path_blockers": [
+        "src/tac/joint_codec_stack_orchestrator.py"
+      ],
       "dispatch_attempted": false,
       "evidence_grade": "planning/component empirical plus typed fixture manifest",
       "key": "joint_admm_balle_arithmetic_stack",
@@ -653,11 +826,11 @@
       "missing_evidence_path_count": 0,
       "next_patch": "Replace the fixture-only contract with a byte-closed JCSP archive member and runtime loader parity, then claim a lane before exact CUDA auth eval.",
       "priority_tier": 40,
-      "readiness_stage": "needs_byte_closed_candidate_or_fixture",
+      "readiness_stage": "blocked_by_dirty_worktree",
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "medium-high if it can replace HNeRV sections with a smaller scorer-stable stack",
       "role": "stack_or_replacement_orchestrator",
-      "safe_to_touch_now": true,
+      "safe_to_touch_now": false,
       "score_claim": false,
       "stackability": "high in architecture, unproven in exact archive",
       "status": "typed_noop_stack_manifest_landed_not_archive_dispatchable",
@@ -875,9 +1048,9 @@
   "schema_version": 2,
   "score_claim": false,
   "stage_counts": {
-    "blocked_by_dirty_worktree": 1,
+    "blocked_by_dirty_worktree": 2,
     "exact_evidence_present_review_before_promotion": 1,
-    "needs_byte_closed_candidate_or_fixture": 3,
+    "needs_byte_closed_candidate_or_fixture": 2,
     "needs_lane_claim_and_exact_cuda": 1,
     "needs_research_or_contract_hardening": 6
   },

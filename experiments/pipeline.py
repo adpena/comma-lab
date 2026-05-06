@@ -1378,7 +1378,7 @@ def step_compress_weights(
     # mode is now derived from the cross-paradigm flags BEFORE the cache
     # comparison.
     if cfg.use_joint_codec_stack:
-        effective_mode = "joint_codec_stack_dry_run"
+        effective_mode = "joint_codec_stack_local_skeleton"
     elif cfg.use_sensitivity_weighted and cfg.sensitivity_map_path and Path(cfg.sensitivity_map_path).exists():
         effective_mode = "owv3_sensitivity_weighted"
     else:
@@ -1531,27 +1531,42 @@ def step_compress_weights(
                 f"work is the per-tensor marginals harness + the "
                 f"run_admm/run_sequential_codec_stack invocation."
             )
-        from tac.jcsp_stream_builder import jcsp_stream_source_dry_run_metadata
+        from tac.jcsp_stream_builder import (
+            jcsp_stream_source_local_archive_member,
+        )
 
         model = _load_renderer_for_jcsp_dry_run(cfg, checkpoint_path)
-        dry_run = jcsp_stream_source_dry_run_metadata(
+        archive_bytes, skeleton_contract = jcsp_stream_source_local_archive_member(
             model,
             score_marginals_path=marginals_path,
         )
+        archive_path = iter_dir / "jcsp_local_skeleton_archive.zip"
+        manifest_path = iter_dir / "jcsp_local_skeleton_manifest.json"
+        archive_path.write_bytes(archive_bytes)
+        manifest_path.write_text(
+            json.dumps(
+                skeleton_contract,
+                sort_keys=True,
+                indent=2,
+                allow_nan=False,
+            )
+            + "\n"
+        )
         _log(
-            "PARADIGM-gamma JCSP dry run built "
-            f"{dry_run['stream_count']} StreamSource metadata rows "
-            f"(manifest_sha256={dry_run['manifest_sha256']}, "
-            "archive_bytes_written=False, "
+            "PARADIGM-gamma JCSP local skeleton wrote "
+            f"{skeleton_contract['skeleton_manifest']['stream_count']} "
+            f"stream preview rows to {archive_path} "
+            f"(archive_sha256={skeleton_contract['archive_sha256']}, "
+            "archive_bytes_written=True, "
             "ready_for_exact_eval_dispatch=False).",
             "WARN",
         )
         raise NotImplementedError(
-            "PARADIGM-gamma JCSP dispatch: deterministic dry-run completed "
-            "from score_marginals_path, but the dispatch loop "
-            "(model_to_stream_sources -> run_admm -> build_jcsp_archive_member) "
-            "is not wired in pipeline.py. No archive bytes were written, no "
-            "lane was claimed, and no GPU/remote/eval dispatch was attempted."
+            "PARADIGM-gamma JCSP dispatch: local byte-closed skeleton archive "
+            f"was written at {archive_path} with manifest {manifest_path}, "
+            "but it is not dispatch-ready. The submission runtime does not "
+            "consume jcsp.bin, strict preflight proof is missing, no lane was "
+            "claimed, and no GPU/remote/eval dispatch was attempted."
         )
 
     # ── Lane J-NWC neural-weight-compression branch ─────────────────────

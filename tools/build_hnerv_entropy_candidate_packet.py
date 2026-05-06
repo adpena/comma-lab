@@ -18,6 +18,8 @@ ensure_repo_imports(REPO_ROOT)
 from tac.hnerv_entropy_candidate_packet import (  # noqa: E402
     HnervEntropyCandidatePacketError,
     build_candidate_packet_manifest,
+    discover_candidate_audit_inputs,
+    discovery_report_input_paths,
     existing_artifact_input_paths,
 )
 from tac.repo_io import json_text  # noqa: E402
@@ -38,7 +40,27 @@ NAMED_ARTIFACT_FLAGS = {
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--entropy-audit", type=Path, required=True)
+    parser.add_argument(
+        "--entropy-audit",
+        type=Path,
+        help=(
+            "Entropy codec gap audit or stream profile JSON. If omitted, the "
+            "tool discovers candidate inputs and either selects the first valid "
+            "one or emits a fail-closed discovery report."
+        ),
+    )
+    parser.add_argument(
+        "--discovery-only",
+        action="store_true",
+        help="Only emit the deterministic entropy-audit discovery report.",
+    )
+    parser.add_argument(
+        "--search-root",
+        action="append",
+        default=[],
+        type=Path,
+        help="Root directory or JSON file to scan when --entropy-audit is omitted.",
+    )
     parser.add_argument("--target-rank", type=int)
     parser.add_argument("--target-label")
     parser.add_argument("--target-kind")
@@ -84,8 +106,35 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
         artifacts = artifact_paths_from_args(args)
+        entropy_audit = args.entropy_audit
+        if args.discovery_only or entropy_audit is None:
+            discovery = discover_candidate_audit_inputs(
+                search_roots=args.search_root or None,
+                repo_root=REPO_ROOT,
+            )
+            if args.discovery_only or discovery.get("selected_entropy_audit") is None:
+                discovery = attach_tool_run_manifest(
+                    discovery,
+                    tool=Path(__file__).relative_to(REPO_ROOT).as_posix(),
+                    argv=raw_argv,
+                    input_paths=discovery_report_input_paths(discovery, REPO_ROOT),
+                    repo_root=REPO_ROOT,
+                    output_path=args.json_out,
+                )
+                text = json_text(discovery)
+                if args.json_out:
+                    args.json_out.parent.mkdir(parents=True, exist_ok=True)
+                    args.json_out.write_text(text, encoding="utf-8")
+                else:
+                    print(text, end="")
+                if args.fail_if_missing and discovery.get("missing_source_artifacts"):
+                    return 1
+                return 0
+            selected = discovery["selected_entropy_audit"]
+            entropy_audit = REPO_ROOT / str(selected["path"])
+
         manifest = build_candidate_packet_manifest(
-            args.entropy_audit,
+            entropy_audit,
             target_rank=args.target_rank,
             target_label=args.target_label,
             target_kind=args.target_kind,
@@ -100,7 +149,7 @@ def main(argv: list[str] | None = None) -> int:
         manifest,
         tool=Path(__file__).relative_to(REPO_ROOT).as_posix(),
         argv=raw_argv,
-        input_paths=existing_artifact_input_paths(args.entropy_audit, artifacts),
+        input_paths=existing_artifact_input_paths(entropy_audit, artifacts),
         repo_root=REPO_ROOT,
         output_path=args.json_out,
     )

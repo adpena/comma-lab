@@ -13,7 +13,27 @@ from tac.optimization.entropy_codec_gap_audit import (
 from tac.repo_io import read_json, repo_relative, sha256_file
 
 SCHEMA_VERSION = 1
+DISCOVERY_SCHEMA_VERSION = 1
 TOOL_NAME = "tac.hnerv_entropy_candidate_packet"
+DISCOVERY_TOOL_NAME = "tac.hnerv_entropy_candidate_packet.discover_candidate_audit_inputs"
+DEFAULT_DISCOVERY_ROOTS = (
+    "experiments/results",
+    ".omx/research/artifacts",
+)
+DISCOVERY_REQUIRED_SOURCE_ARTIFACTS = [
+    "hnerv_entropy_codec_gap_audit_json_with_entropy_overhead_target_ranking",
+    "or_hnerv_stream_profile_json_with_streams_actual_bytes_and_symbol_counts",
+]
+DISCOVERY_PATH_HINTS = (
+    "audit",
+    "entropy",
+    "packing",
+    "profile",
+    "stream",
+)
+DISCOVERY_EXCLUDED_PATH_HINTS = (
+    "hnerv_entropy_packet_discovery",
+)
 
 BLOCKER_TO_REQUIREMENT = {
     "missing_source_archive_manifest": "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256",
@@ -190,6 +210,73 @@ def existing_artifact_input_paths(
     return out
 
 
+def discover_candidate_audit_inputs(
+    *,
+    search_roots: Sequence[str | Path] | None = None,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Discover valid HNeRV entropy audit/profile inputs without inventing data."""
+
+    root = Path(repo_root) if repo_root is not None else Path.cwd()
+    roots = [Path(item) for item in (search_roots or DEFAULT_DISCOVERY_ROOTS)]
+    candidate_paths = _discover_candidate_json_paths(roots, root)
+    candidates = [_candidate_discovery_record(path, root) for path in candidate_paths]
+    valid_inputs = [row for row in candidates if row["valid"] is True]
+    selected = valid_inputs[0] if valid_inputs else None
+    return {
+        "schema_version": DISCOVERY_SCHEMA_VERSION,
+        "tool": DISCOVERY_TOOL_NAME,
+        "planning_only": True,
+        "score_claim": False,
+        "score_evidence_grade": "invalid",
+        "dispatch_attempted": False,
+        "gpu_required": False,
+        "ready_for_exact_eval_dispatch": False,
+        "ready_for_packet_materialization": selected is not None,
+        "dispatch_blockers": [
+            "discovery_report_is_not_dispatch_authorization",
+            "requires_valid_entropy_audit_or_stream_profile_before_packet_materialization",
+            "requires_packet_manifest_operator_review_before_archive_work",
+            "requires_lane_dispatch_claim_before_gpu",
+            "requires_exact_cuda_auth_eval",
+        ],
+        "candidate_selection_policy": {
+            "path_filter": (
+                "repo-relative JSON path must contain hnerv plus one of "
+                + ", ".join(DISCOVERY_PATH_HINTS)
+            ),
+            "valid_input_contract": list(DISCOVERY_REQUIRED_SOURCE_ARTIFACTS),
+            "selection": "first_valid_input_by_repo_relative_path",
+        },
+        "search_roots": [repo_relative(_resolve_search_root(path, root), root) for path in roots],
+        "candidate_input_count": len(candidates),
+        "valid_input_count": len(valid_inputs),
+        "selected_entropy_audit": selected["source_json"] if selected is not None else None,
+        "missing_source_artifacts": [] if selected is not None else list(DISCOVERY_REQUIRED_SOURCE_ARTIFACTS),
+        "candidate_inputs": candidates,
+    }
+
+
+def discovery_report_input_paths(report: Mapping[str, Any], repo_root: str | Path) -> list[Path]:
+    """Return existing source JSON paths referenced by a discovery report."""
+
+    root = Path(repo_root)
+    paths: list[Path] = []
+    for row in report.get("candidate_inputs") or []:
+        if not isinstance(row, Mapping):
+            continue
+        source_json = row.get("source_json")
+        if not isinstance(source_json, Mapping):
+            continue
+        path_text = source_json.get("path")
+        if not path_text:
+            continue
+        path = root / str(path_text)
+        if path.is_file():
+            paths.append(path)
+    return paths
+
+
 def _normalize_audit(payload: Any) -> tuple[dict[str, Any], str]:
     if isinstance(payload, Mapping) and isinstance(payload.get("entropy_overhead_target_ranking"), list):
         return dict(payload), "entropy_codec_gap_audit"
@@ -214,6 +301,130 @@ def _normalize_audit(payload: Any) -> tuple[dict[str, Any], str]:
     except EntropyCodecGapAuditError as exc:
         raise HnervEntropyCandidatePacketError(f"stream profile rejected by entropy audit: {exc}") from exc
     return audit, "stream_profile_built_entropy_codec_gap_audit"
+
+
+def _discover_candidate_json_paths(paths: Sequence[Path], repo_root: Path) -> list[Path]:
+    out: list[Path] = []
+    seen: set[Path] = set()
+    for search_root in paths:
+        resolved_root = _resolve_search_root(search_root, repo_root)
+        if resolved_root.is_file():
+            candidates = [resolved_root] if resolved_root.suffix.lower() == ".json" else []
+        elif resolved_root.is_dir():
+            candidates = list(resolved_root.rglob("*.json"))
+        else:
+            candidates = []
+        for candidate in candidates:
+            if not candidate.is_file() or not _looks_like_discovery_candidate(candidate, repo_root):
+                continue
+            resolved = candidate.resolve()
+            if resolved not in seen:
+                out.append(candidate)
+                seen.add(resolved)
+    return sorted(out, key=lambda path: repo_relative(path, repo_root))
+
+
+def _resolve_search_root(path: Path, repo_root: Path) -> Path:
+    return path if path.is_absolute() else repo_root / path
+
+
+def _looks_like_discovery_candidate(path: Path, repo_root: Path) -> bool:
+    text = repo_relative(path, repo_root).lower()
+    if any(hint in text for hint in DISCOVERY_EXCLUDED_PATH_HINTS):
+        return False
+    return "hnerv" in text and any(hint in text for hint in DISCOVERY_PATH_HINTS)
+
+
+def _candidate_discovery_record(path: Path, repo_root: Path) -> dict[str, Any]:
+    source_json = _file_record("candidate_entropy_audit_or_stream_profile_json", path, repo_root)
+    row: dict[str, Any] = {
+        "path": source_json["path"],
+        "source_json": source_json,
+        "valid": False,
+        "audit_source_kind": None,
+        "audit_summary": None,
+        "selected_target": None,
+        "missing_source_artifacts": list(DISCOVERY_REQUIRED_SOURCE_ARTIFACTS),
+        "rejection_reason": "",
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+    }
+    try:
+        payload = read_json(path)
+    except Exception as exc:
+        row["rejection_reason"] = f"invalid_json:{exc}"
+        return row
+
+    row["json_shape"] = _json_shape(payload)
+    try:
+        audit, audit_source_kind = _normalize_audit(payload)
+        target = _select_target(
+            audit,
+            target_rank=None,
+            target_label=None,
+            target_kind=None,
+        )
+        _requirements_for_target(target)
+    except HnervEntropyCandidatePacketError as exc:
+        row["rejection_reason"] = str(exc)
+        row["missing_required_fields"] = _missing_discovery_source_fields(payload)
+        return row
+
+    row["valid"] = True
+    row["audit_source_kind"] = audit_source_kind
+    row["audit_summary"] = {
+        "tool": audit.get("tool"),
+        "source_label": audit.get("source_label"),
+        "stream_count": audit.get("stream_count"),
+        "total_actual_bytes": audit.get("total_actual_bytes"),
+        "target_count": len(audit.get("entropy_overhead_target_ranking") or []),
+    }
+    row["selected_target"] = {
+        "rank": target.get("rank"),
+        "label": target.get("label"),
+        "target_kind": target.get("target_kind"),
+        "target_bytes": target.get("target_bytes"),
+        "required_next_artifact": target.get("required_next_artifact"),
+    }
+    row["missing_source_artifacts"] = []
+    return row
+
+
+def _json_shape(payload: Any) -> dict[str, Any]:
+    if isinstance(payload, Mapping):
+        return {
+            "kind": "object",
+            "keys": sorted(str(key) for key in payload),
+        }
+    if isinstance(payload, Sequence) and not isinstance(payload, (str, bytes, bytearray)):
+        return {
+            "kind": "array",
+            "length": len(payload),
+        }
+    return {"kind": type(payload).__name__}
+
+
+def _missing_discovery_source_fields(payload: Any) -> list[str]:
+    if not isinstance(payload, Mapping):
+        return list(DISCOVERY_REQUIRED_SOURCE_ARTIFACTS)
+    missing: list[str] = []
+    if not isinstance(payload.get("entropy_overhead_target_ranking"), list):
+        missing.append("entropy_overhead_target_ranking")
+    streams = payload.get("streams")
+    if not isinstance(streams, list):
+        missing.append("streams")
+    elif not streams:
+        missing.append("streams_nonempty")
+    else:
+        for index, stream in enumerate(streams):
+            if not isinstance(stream, Mapping):
+                missing.append(f"streams[{index}]_object")
+                continue
+            if "actual_bytes" not in stream:
+                missing.append(f"streams[{index}].actual_bytes")
+            if "symbol_counts" not in stream:
+                missing.append(f"streams[{index}].symbol_counts")
+    return _unique_ordered(missing)
 
 
 def _select_target(
@@ -365,10 +576,13 @@ def _unique_ordered(values: Sequence[str]) -> list[str]:
 
 __all__ = [
     "BLOCKER_TO_REQUIREMENT",
+    "DISCOVERY_REQUIRED_SOURCE_ARTIFACTS",
     "PACKET_DISPATCH_BLOCKERS",
     "SCHEMA_VERSION",
     "TOOL_NAME",
     "HnervEntropyCandidatePacketError",
     "build_candidate_packet_manifest",
+    "discover_candidate_audit_inputs",
+    "discovery_report_input_paths",
     "existing_artifact_input_paths",
 ]

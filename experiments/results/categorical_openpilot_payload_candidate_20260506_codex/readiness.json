@@ -517,6 +517,28 @@
   ],
   "evidence_grade": "planning_manifest_audit",
   "fixture_only": false,
+  "hpm1_structural_decode_inventory": {
+    "accepted": true,
+    "blockers": [],
+    "byte_exact_semantic_reencode_proven": false,
+    "bytes": 12612,
+    "contract": "hpm1_payload_structural_decode_inventory_v1",
+    "declared": true,
+    "full_decode_proven": false,
+    "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/hpm1_structural_inventory.json",
+    "payload_member": "categorical_payload.bin",
+    "payload_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+    "schema_version": 1,
+    "sha256": "985d5b944e61208020dbadf3d5a43233a0a6d494bf156010d3f16c09b45a8bba",
+    "structural_reencode_matches_source": true,
+    "unsupported_wire_constructs": [
+      "hpac_autoregressive_probability_rows",
+      "constriction_range_decoder_uint32_queue_replay",
+      "hpac_context_update_order",
+      "range_encoder_uint32_reemit",
+      "contest_runtime_sidecar_free_hpm1_loader"
+    ]
+  },
   "kind": "categorical_candidate_readiness",
   "no_op_controls": {
     "charged_member_presence_control": true,
@@ -580,7 +602,7 @@
       "--payload-source",
       "pr91-hpm1-mask"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "ee0d406c8ee7b38e50911b5762acc20e46ba1fae0bb7c0d49f41ec65ac193dd9",
+    "canonical_payload_without_tool_manifest_sha256": "bbefbfb18632639e5939c81eca43183901c259a130d6a874a87c89982fd3c402",
     "dispatch_attempted": false,
     "input_files": [
       {
@@ -594,14 +616,19 @@
         "sha256": "106af3ed6917d6115586463ef35e43119add5db002fd19f3da7cd8065a63eb8d"
       },
       {
-        "bytes": 13434,
+        "bytes": 14233,
         "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/candidate.json",
-        "sha256": "7836da86c4dc11f1dda64e935bce264688316a325ff28995f21f00a9006a26ed"
+        "sha256": "d37049c482cd505db9cc365055a03611f2c111a68fd6eb862ddeabee36dcc193"
       },
       {
         "bytes": 1379,
         "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/archive_member_manifest.json",
         "sha256": "b62af504996161baaf5b2297140a296cad4ebde61334919dc8a43b69d61f47c1"
+      },
+      {
+        "bytes": 12612,
+        "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/hpm1_structural_inventory.json",
+        "sha256": "985d5b944e61208020dbadf3d5a43233a0a6d494bf156010d3f16c09b45a8bba"
       }
     ],
     "output_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",

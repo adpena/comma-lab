@@ -126,9 +126,15 @@ from tac.submission_archive import (
 
 _JCSP_MAGIC: bytes = b"JCSP"
 _JCSP_VERSION: int = 1
+_JCSP_LOCAL_SKELETON_MAGIC: bytes = b"JCSK"
+_JCSP_LOCAL_SKELETON_VERSION: int = 1
 JCSP_STREAM_METADATA_SCHEMA: str = "jcsp_tensor_stream_specs_manifest_v1"
 JCSP_ARCHIVE_MEMBER_NAME: str = "jcsp.bin"
 JCSP_ARCHIVE_MEMBER_CONTRACT_SCHEMA: str = "jcsp_archive_member_runtime_contract_v1"
+JCSP_LOCAL_SKELETON_SCHEMA: str = "jcsp_local_archive_member_skeleton_v1"
+JCSP_LOCAL_ARCHIVE_MEMBER_CONTRACT_SCHEMA: str = (
+    "jcsp_local_archive_member_skeleton_contract_v1"
+)
 JCSP_STREAM_ARCHIVE_BYTE_RECONCILIATION_SCHEMA: str = (
     "jcsp_stream_archive_byte_reconciliation_v1"
 )
@@ -141,6 +147,9 @@ JCSP_SUBMISSION_RUNTIME_CONSUMPTION_SCHEMA: str = (
 JCSP_REQUIRED_SUBMISSION_RUNTIME: str = "submissions/robust_current"
 JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER: str = (
     "submissions_robust_current_jcsp_bin_consumption_missing"
+)
+JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER: str = (
+    "jcsp_local_skeleton_not_submission_runtime_container"
 )
 
 # Codec kind flags
@@ -194,13 +203,27 @@ class JCSPTensorStreamSpec:
 
 
 def _canonical_json_sha256(payload: Mapping[str, Any]) -> str:
-    encoded = json.dumps(
+    return hashlib.sha256(_canonical_json_bytes(payload)).hexdigest()
+
+
+def _canonical_json_bytes(payload: Mapping[str, Any]) -> bytes:
+    return json.dumps(
         payload,
         sort_keys=True,
         separators=(",", ":"),
         allow_nan=False,
     ).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
+
+
+def _reject_duplicate_json_object_pairs(
+    pairs: list[tuple[str, Any]],
+) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in out:
+            raise ValueError(f"duplicate JSON key {key!r}")
+        out[key] = value
+    return out
 
 
 def _tensor_shape_tuple(tensor: Any) -> tuple[int, ...]:
@@ -1376,6 +1399,215 @@ def build_jcsp_noop_archive_fixture(
     )
 
 
+def pack_jcsp_local_skeleton_container(
+    *,
+    manifest: Mapping[str, Any],
+) -> bytes:
+    """Pack a local-only JCSP skeleton manifest into deterministic bytes.
+
+    ``JCSK`` is intentionally distinct from the runtime ``JCSP`` magic. The
+    resulting member can be byte-closed and hashed, but it must fail closed for
+    exact-eval dispatch until a submission runtime consumes the real JCSP
+    container and strict preflight proves that path.
+    """
+
+    if not isinstance(manifest, Mapping):
+        raise TypeError("manifest must be a mapping")
+    payload = dict(manifest)
+    payload.pop("manifest_sha256", None)
+    payload["schema"] = str(payload.get("schema", JCSP_LOCAL_SKELETON_SCHEMA))
+    if payload["schema"] != JCSP_LOCAL_SKELETON_SCHEMA:
+        raise ValueError(
+            "JCSP local skeleton manifest has wrong schema "
+            f"{payload['schema']!r}; expected {JCSP_LOCAL_SKELETON_SCHEMA!r}"
+        )
+    payload["container_magic"] = _JCSP_LOCAL_SKELETON_MAGIC.decode("ascii")
+    payload["container_version"] = _JCSP_LOCAL_SKELETON_VERSION
+    for required_false_field in (
+        "score_claim",
+        "dispatch_attempted",
+        "ready_for_runtime_loader",
+        "ready_for_submission_runtime_consumption",
+        "ready_for_exact_eval_dispatch",
+    ):
+        if payload.get(required_false_field, False) is not False:
+            raise ValueError(
+                "JCSP local skeleton manifest field "
+                f"{required_false_field!r} must be False"
+            )
+    streams = payload.get("streams", [])
+    if not isinstance(streams, list):
+        raise ValueError("JCSP local skeleton manifest streams must be a list")
+    if int(payload.get("stream_count", len(streams))) != len(streams):
+        raise ValueError(
+            "JCSP local skeleton manifest stream_count does not match streams"
+        )
+    payload["manifest_sha256"] = _canonical_json_sha256(payload)
+    body = _canonical_json_bytes(payload)
+
+    out = io.BytesIO()
+    out.write(_JCSP_LOCAL_SKELETON_MAGIC)
+    out.write(struct.pack("<H", _JCSP_LOCAL_SKELETON_VERSION))
+    out.write(struct.pack("<I", len(body)))
+    out.write(body)
+    return out.getvalue()
+
+
+def unpack_jcsp_local_skeleton_container(blob: bytes) -> dict[str, Any]:
+    """Unpack and verify a local-only ``JCSK`` skeleton container."""
+
+    payload = _require_bytes(blob, context="local JCSP skeleton container")
+    fixed_header_len = 4 + 2 + 4
+    if len(payload) < fixed_header_len:
+        raise ValueError(
+            "unpack_jcsp_local_skeleton_container: blob too small "
+            f"(len={len(payload)})"
+        )
+    if payload[:4] != _JCSP_LOCAL_SKELETON_MAGIC:
+        raise ValueError(
+            "unpack_jcsp_local_skeleton_container: bad magic "
+            f"{payload[:4]!r}, expected {_JCSP_LOCAL_SKELETON_MAGIC!r}"
+        )
+    (version,) = struct.unpack_from("<H", payload, 4)
+    if version != _JCSP_LOCAL_SKELETON_VERSION:
+        raise ValueError(
+            "unpack_jcsp_local_skeleton_container: unsupported version "
+            f"{version}"
+        )
+    (body_len,) = struct.unpack_from("<I", payload, 6)
+    body_start = fixed_header_len
+    body_end = body_start + int(body_len)
+    if body_end != len(payload):
+        raise ValueError(
+            "unpack_jcsp_local_skeleton_container: body length mismatch "
+            f"declared={body_len} actual={len(payload) - body_start}"
+        )
+    try:
+        manifest = json.loads(
+            payload[body_start:body_end].decode("utf-8"),
+            object_pairs_hook=_reject_duplicate_json_object_pairs,
+        )
+    except (UnicodeDecodeError, ValueError) as exc:
+        raise ValueError(
+            "unpack_jcsp_local_skeleton_container: manifest is not "
+            "deterministic UTF-8 JSON"
+        ) from exc
+    if not isinstance(manifest, Mapping):
+        raise ValueError(
+            "unpack_jcsp_local_skeleton_container: manifest must be a mapping"
+        )
+    if manifest.get("schema") != JCSP_LOCAL_SKELETON_SCHEMA:
+        raise ValueError(
+            "unpack_jcsp_local_skeleton_container: wrong schema "
+            f"{manifest.get('schema')!r}"
+        )
+    if manifest.get("container_magic") != _JCSP_LOCAL_SKELETON_MAGIC.decode("ascii"):
+        raise ValueError(
+            "unpack_jcsp_local_skeleton_container: container_magic mismatch"
+        )
+    if int(manifest.get("container_version", -1)) != _JCSP_LOCAL_SKELETON_VERSION:
+        raise ValueError(
+            "unpack_jcsp_local_skeleton_container: container_version mismatch"
+        )
+    for required_false_field in (
+        "score_claim",
+        "dispatch_attempted",
+        "ready_for_runtime_loader",
+        "ready_for_submission_runtime_consumption",
+        "ready_for_exact_eval_dispatch",
+    ):
+        if manifest.get(required_false_field) is not False:
+            raise ValueError(
+                "unpack_jcsp_local_skeleton_container: "
+                f"{required_false_field} must be False"
+            )
+    streams = manifest.get("streams")
+    if not isinstance(streams, list):
+        raise ValueError(
+            "unpack_jcsp_local_skeleton_container: streams must be a list"
+        )
+    if int(manifest.get("stream_count", -1)) != len(streams):
+        raise ValueError(
+            "unpack_jcsp_local_skeleton_container: stream_count mismatch"
+        )
+    recorded_sha = manifest.get("manifest_sha256")
+    if not isinstance(recorded_sha, str) or len(recorded_sha) != 64:
+        raise ValueError(
+            "unpack_jcsp_local_skeleton_container: missing manifest_sha256"
+        )
+    without_sha = dict(manifest)
+    without_sha.pop("manifest_sha256", None)
+    actual_sha = _canonical_json_sha256(without_sha)
+    if actual_sha != recorded_sha:
+        raise ValueError(
+            "unpack_jcsp_local_skeleton_container: manifest_sha256 mismatch"
+        )
+    return dict(manifest)
+
+
+def _collect_local_skeleton_blockers(
+    manifest: Mapping[str, Any],
+) -> list[str]:
+    blockers: list[str] = []
+    for blocker_field in ("promotion_blockers", "dispatch_blockers"):
+        raw = manifest.get(blocker_field, ())
+        if isinstance(raw, list):
+            blockers.extend(str(item) for item in raw)
+    streams = manifest.get("streams", ())
+    if isinstance(streams, list):
+        for stream in streams:
+            if not isinstance(stream, Mapping):
+                continue
+            raw = stream.get("dispatch_blockers", ())
+            if isinstance(raw, list):
+                blockers.extend(str(item) for item in raw)
+    blockers.extend(
+        [
+            JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER,
+            JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+            "strict_preflight_proof_missing",
+            "exact_cuda_auth_eval_missing",
+        ]
+    )
+    return list(dict.fromkeys(blockers))
+
+
+def build_jcsp_local_skeleton_archive_member(
+    *,
+    manifest: Mapping[str, Any],
+    member_name: str = JCSP_ARCHIVE_MEMBER_NAME,
+    compress_type: int = zipfile.ZIP_STORED,
+) -> tuple[bytes, dict[str, Any]]:
+    """Build a deterministic one-member ZIP carrying a local ``JCSK`` payload."""
+
+    member = validate_archive_member_name(member_name)
+    container_bytes = pack_jcsp_local_skeleton_container(manifest=manifest)
+    compression = _validate_jcsp_member_compression(compress_type)
+    compresslevel = None if compression == zipfile.ZIP_STORED else 9
+
+    out = io.BytesIO()
+    with zipfile.ZipFile(
+        out,
+        "w",
+        compression=compression,
+        allowZip64=False,
+    ) as zf:
+        write_deterministic_zip_member(
+            zf,
+            member,
+            container_bytes,
+            compress_type=compression,
+            compresslevel=compresslevel,
+        )
+    archive_bytes = out.getvalue()
+    contract = load_jcsp_local_skeleton_archive_member(
+        archive_bytes=archive_bytes,
+        member_name=member,
+        require_single_member=True,
+    )
+    return archive_bytes, contract
+
+
 def _jcsp_submission_runtime_consumption_contract(
     *,
     member_name: str,
@@ -1393,6 +1625,106 @@ def _jcsp_submission_runtime_consumption_contract(
             "submissions/robust_current does not yet consume jcsp.bin during "
             "inflate"
         ),
+    }
+
+
+def load_jcsp_local_skeleton_archive_member(
+    *,
+    archive_bytes: bytes,
+    member_name: str = JCSP_ARCHIVE_MEMBER_NAME,
+    require_single_member: bool = False,
+) -> dict[str, Any]:
+    """Validate a byte-closed local JCSP skeleton archive member.
+
+    This loader proves deterministic local byte closure only. It deliberately
+    returns ``ready_for_runtime_loader=False`` because ``JCSK`` is not consumed
+    by ``submissions/robust_current`` and is not a substitute for the runtime
+    ``JCSP`` container.
+    """
+
+    archive_blob = _require_bytes(archive_bytes, context="archive_bytes")
+    member = validate_archive_member_name(member_name)
+
+    try:
+        with zipfile.ZipFile(io.BytesIO(archive_blob), "r") as zf:
+            infos = zf.infolist()
+            names = validate_zip_member_infos(infos)
+            if require_single_member and names != [member]:
+                raise ValueError(
+                    "JCSP local skeleton archive must contain exactly one "
+                    f"member {member!r}; got {names!r}"
+                )
+            if member not in names:
+                raise ValueError(
+                    f"JCSP local skeleton member {member!r} not found; "
+                    f"got {names!r}"
+                )
+
+            local_header_names: list[dict[str, Any]] = []
+            for info_row in infos:
+                local_name = _local_header_name_from_archive_bytes(
+                    archive_blob,
+                    info_row,
+                )
+                if local_name != info_row.filename:
+                    raise ValueError(
+                        "ZIP central/local name mismatch: "
+                        f"central={info_row.filename!r} local={local_name!r}"
+                    )
+                local_header_names.append(
+                    {
+                        "central": info_row.filename,
+                        "local": local_name,
+                    }
+                )
+
+            bad_crc = zf.testzip()
+            if bad_crc is not None:
+                raise ValueError(
+                    f"JCSP local skeleton archive CRC check failed for {bad_crc!r}"
+                )
+
+            info = zf.getinfo(member)
+            _validate_jcsp_member_compression(info.compress_type)
+            _require_jcsp_member_metadata_deterministic(info)
+            payload = zf.read(info)
+    except zipfile.BadZipFile as exc:
+        raise ValueError(
+            "JCSP local skeleton loader got invalid ZIP bytes"
+        ) from exc
+
+    skeleton_manifest = unpack_jcsp_local_skeleton_container(payload)
+    runtime_consumption = _jcsp_submission_runtime_consumption_contract(
+        member_name=member,
+    )
+    dispatch_blockers = _collect_local_skeleton_blockers(skeleton_manifest)
+    return {
+        "schema": JCSP_LOCAL_ARCHIVE_MEMBER_CONTRACT_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_local_skeleton_loader": True,
+        "ready_for_runtime_loader": False,
+        "ready_for_submission_runtime_consumption": False,
+        "ready_for_exact_eval_dispatch": False,
+        "member_name": member,
+        "archive_bytes": len(archive_blob),
+        "archive_sha256": _sha256_bytes(archive_blob),
+        "archive_members": names,
+        "member_bytes": len(payload),
+        "member_sha256": _sha256_bytes(payload),
+        "member_compress_type": int(info.compress_type),
+        "member_compress_size": int(info.compress_size),
+        "member_crc32": f"{int(info.CRC):08x}",
+        "member_file_mode": DETERMINISTIC_ZIP_FILE_MODE,
+        "member_date_time": list(info.date_time),
+        "local_header_names": local_header_names,
+        "container_magic": _JCSP_LOCAL_SKELETON_MAGIC.decode("ascii"),
+        "container_version": _JCSP_LOCAL_SKELETON_VERSION,
+        "skeleton_manifest": skeleton_manifest,
+        "runtime_consumption_contract": runtime_consumption,
+        "byte_closed_archive_member": True,
+        "single_member_no_sidecars": names == [member],
+        "dispatch_blockers": dispatch_blockers,
     }
 
 
@@ -1933,6 +2265,9 @@ def run_sequential_codec_stack(
 __all__ = [
     "JCSP_ARCHIVE_MEMBER_CONTRACT_SCHEMA",
     "JCSP_ARCHIVE_MEMBER_NAME",
+    "JCSP_LOCAL_ARCHIVE_MEMBER_CONTRACT_SCHEMA",
+    "JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER",
+    "JCSP_LOCAL_SKELETON_SCHEMA",
     "JCSP_MODEL_STREAM_ARCHIVE_READINESS_SCHEMA",
     "JCSP_STREAM_ARCHIVE_BYTE_RECONCILIATION_SCHEMA",
     "JCSP_STREAM_METADATA_SCHEMA",
@@ -1946,13 +2281,17 @@ __all__ = [
     "StackStreamResult",
     "StreamSource",
     "build_jcsp_archive_member",
+    "build_jcsp_local_skeleton_archive_member",
     "build_jcsp_noop_archive_fixture",
     "jcsp_model_stream_archive_readiness",
     "jcsp_stream_specs_manifest",
     "load_jcsp_archive_member_for_runtime",
+    "load_jcsp_local_skeleton_archive_member",
     "model_to_jcsp_streams",
+    "pack_jcsp_local_skeleton_container",
     "run_joint_codec_stack",
     "run_sequential_codec_stack",
     "unpack_jcsp_container",
+    "unpack_jcsp_local_skeleton_container",
     "validate_jcsp_container_runtime_parity",
 ]

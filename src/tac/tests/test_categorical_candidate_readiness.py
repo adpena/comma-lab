@@ -18,6 +18,7 @@ from tac.categorical_candidate_readiness import (
     DETERMINISTIC_ZIP_DATE_TIME,
     DETERMINISTIC_ZIP_FILE_MODE,
     DETERMINISTIC_ZIP_INFLATE_MODE,
+    HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT,
     REQUIRED_CONTROL_NAMES,
     RUNTIME_LOADER_PARITY_CONTRACT,
     audit_categorical_candidate_manifest,
@@ -158,6 +159,28 @@ def _base_candidate(tmp_path: Path) -> dict:
     }
 
 
+def _structural_hpm1_inventory(payload_sha: str) -> dict:
+    return {
+        "schema_version": 1,
+        "kind": "hpm1_payload_structural_decode_inventory",
+        "hpm1_structural_decode_inventory_contract": HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "segment": {"sha256": payload_sha},
+        "structural_reencode": {
+            "matches_source_segment": True,
+            "reencoded_segment_sha256": payload_sha,
+            "not_semantic_decode_reencode_parity": True,
+        },
+        "full_decode": {"passed": False},
+        "byte_exact_semantic_reencode": {"passed": False},
+        "unsupported_wire_constructs": [
+            {"name": "hpac_autoregressive_probability_rows"}
+        ],
+    }
+
+
 def test_audit_categorical_candidate_manifest_accepts_byte_closed_fixture(tmp_path: Path) -> None:
     candidate = _base_candidate(tmp_path)
 
@@ -198,6 +221,133 @@ def test_audit_categorical_candidate_manifest_accepts_byte_closed_fixture(tmp_pa
     assert manifest["charged_member_summary"]["roles"]["categorical_payload"] == 1
     assert manifest["charged_member_summary"]["roles"]["decoder_or_runtime_consumer"] == 1
     assert manifest["candidate_construction_plan"]["declared"] is False
+    assert manifest["hpm1_structural_decode_inventory"]["declared"] is False
+
+
+def test_audit_categorical_candidate_manifest_accepts_structural_hpm1_inventory(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    payload_sha = candidate["decode_reencode_parity"]["payload_member_sha256"]
+    inventory_path = tmp_path / "hpm1_structural_inventory.json"
+    write_json(inventory_path, _structural_hpm1_inventory(payload_sha))
+    candidate["hpm1_structural_decode_inventory"] = {
+        "path": inventory_path.name,
+        "bytes": inventory_path.stat().st_size,
+        "sha256": sha256_file(inventory_path),
+        "contract": HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT,
+        "payload_member": "categorical_payload.bin",
+        "payload_member_sha256": payload_sha,
+        "full_decode_proven": False,
+        "byte_exact_semantic_reencode_proven": False,
+    }
+
+    manifest = audit_categorical_candidate_manifest(
+        candidate,
+        repo_root=REPO,
+        manifest_dir=tmp_path,
+    )
+
+    assert manifest["ready_for_exact_eval_dispatch"] is True
+    assert manifest["hpm1_structural_decode_inventory"]["accepted"] is True
+    assert manifest["hpm1_structural_decode_inventory"][
+        "structural_reencode_matches_source"
+    ] is True
+    assert manifest["hpm1_structural_decode_inventory"][
+        "unsupported_wire_constructs"
+    ] == ["hpac_autoregressive_probability_rows"]
+
+
+def test_audit_categorical_candidate_manifest_rejects_unsafe_structural_hpm1_inventory_path(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    payload_sha = candidate["decode_reencode_parity"]["payload_member_sha256"]
+    inventory_path = tmp_path / "hpm1_structural_inventory.json"
+    write_json(inventory_path, _structural_hpm1_inventory(payload_sha))
+    candidate["hpm1_structural_decode_inventory"] = {
+        "path": inventory_path.as_posix(),
+        "bytes": inventory_path.stat().st_size,
+        "sha256": sha256_file(inventory_path),
+        "contract": HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT,
+        "payload_member": "categorical_payload.bin",
+        "payload_member_sha256": payload_sha,
+        "full_decode_proven": False,
+        "byte_exact_semantic_reencode_proven": False,
+    }
+
+    manifest = audit_categorical_candidate_manifest(
+        candidate,
+        repo_root=REPO,
+        manifest_dir=tmp_path,
+    )
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert (
+        "hpm1_structural_inventory_path_unsafe"
+        in manifest["dispatch_blockers"]
+    )
+
+
+def test_audit_categorical_candidate_manifest_rejects_traversal_structural_hpm1_inventory_path(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    payload_sha = candidate["decode_reencode_parity"]["payload_member_sha256"]
+    escaped_inventory_path = tmp_path.parent / f"{tmp_path.name}_escape_hpm1.json"
+    write_json(escaped_inventory_path, _structural_hpm1_inventory(payload_sha))
+    candidate["hpm1_structural_decode_inventory"] = {
+        "path": f"../{escaped_inventory_path.name}",
+        "bytes": escaped_inventory_path.stat().st_size,
+        "sha256": sha256_file(escaped_inventory_path),
+        "contract": HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT,
+        "payload_member": "categorical_payload.bin",
+        "payload_member_sha256": payload_sha,
+        "full_decode_proven": False,
+        "byte_exact_semantic_reencode_proven": False,
+    }
+
+    manifest = audit_categorical_candidate_manifest(
+        candidate,
+        repo_root=REPO,
+        manifest_dir=tmp_path,
+    )
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert (
+        "hpm1_structural_inventory_path_unsafe"
+        in manifest["dispatch_blockers"]
+    )
+
+
+def test_audit_categorical_candidate_manifest_rejects_bad_structural_hpm1_inventory(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    candidate["hpm1_structural_decode_inventory"] = {
+        "path": "missing_hpm1_structural_inventory.json",
+        "bytes": 123,
+        "sha256": "0" * 64,
+        "contract": HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT,
+        "payload_member": "categorical_payload.bin",
+        "payload_member_sha256": candidate["decode_reencode_parity"][
+            "payload_member_sha256"
+        ],
+        "full_decode_proven": False,
+        "byte_exact_semantic_reencode_proven": False,
+    }
+
+    manifest = audit_categorical_candidate_manifest(
+        candidate,
+        repo_root=REPO,
+        manifest_dir=tmp_path,
+    )
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert (
+        "hpm1_structural_inventory_path_missing"
+        in manifest["dispatch_blockers"]
+    )
 
 
 def test_categorical_charged_label_plan_grounds_classes_and_stays_non_dispatchable(

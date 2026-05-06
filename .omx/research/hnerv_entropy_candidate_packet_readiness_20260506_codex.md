@@ -27,3 +27,19 @@ rate-candidate packet handoff layer and makes no score claim.
   pre-submission compliance JSON, and meta-lagrangian atom export.
 - After local packet review, any GPU exact-eval attempt still requires the
   dispatch-claim protocol and exact CUDA auth eval on archive bytes.
+
+## 2026-05-06 Materialization Discovery
+
+- [empirical:experiments/results/hnerv_entropy_packet_discovery_20260506_codex/discovery_report.json]
+  `tools/build_hnerv_entropy_candidate_packet.py` now discovers candidate
+  HNeRV entropy audit/profile inputs when `--entropy-audit` is omitted.
+- Discovery scanned the deterministic HNeRV/profile/audit JSON surface under
+  `experiments/results` and `.omx/research/artifacts`, found 9 plausible source
+  JSON files, and accepted 0 as valid entropy packet inputs.
+- The report records exact byte size and SHA-256 for every discovered source
+  JSON. Current blockers are explicit:
+  `hnerv_entropy_codec_gap_audit_json_with_entropy_overhead_target_ranking` or
+  `or_hnerv_stream_profile_json_with_streams_actual_bytes_and_symbol_counts`.
+- Existing HNeRV packing/section profiles remain fail-closed because they do
+  not carry the stream `symbol_counts` required to build an entropy audit. No
+  packet manifest, dispatch readiness, score claim, or lane claim was produced.

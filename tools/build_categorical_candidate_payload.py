@@ -87,16 +87,23 @@ def main(argv: list[str] | None = None) -> int:
     candidate_path = args.out_dir / "candidate.json"
     readiness_path = args.out_dir / "readiness.json"
     manifest_path = args.out_dir / "archive_member_manifest.json"
+    hpm1_structural_inventory_path = args.out_dir / "hpm1_structural_inventory.json"
+    generated_input_paths = [
+        *[path for path in input_paths if path.is_file()],
+        archive_path,
+        candidate_path,
+        manifest_path,
+        *(
+            [hpm1_structural_inventory_path]
+            if hpm1_structural_inventory_path.is_file()
+            else []
+        ),
+    ]
     readiness = attach_tool_run_manifest(
         result["readiness"],
         tool=Path(__file__).relative_to(REPO_ROOT).as_posix(),
         argv=raw_argv,
-        input_paths=[
-            *[path for path in input_paths if path.is_file()],
-            archive_path,
-            candidate_path,
-            manifest_path,
-        ],
+        input_paths=generated_input_paths,
         repo_root=REPO_ROOT,
         output_path=readiness_path,
     )
@@ -110,11 +117,8 @@ def main(argv: list[str] | None = None) -> int:
         tool=Path(__file__).relative_to(REPO_ROOT).as_posix(),
         argv=raw_argv,
         input_paths=[
-            *[path for path in input_paths if path.is_file()],
-            archive_path,
-            candidate_path,
+            *generated_input_paths,
             readiness_path,
-            manifest_path,
         ],
         repo_root=REPO_ROOT,
         output_path=summary_path,

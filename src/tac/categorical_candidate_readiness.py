@@ -21,6 +21,9 @@ CANDIDATE_MANIFEST_CONTRACT = "categorical_byte_closed_candidate_manifest_v1"
 ARCHIVE_MEMBER_MANIFEST_CONTRACT = "categorical_archive_member_manifest_v1"
 RUNTIME_LOADER_PARITY_CONTRACT = "categorical_runtime_loader_parity_v1"
 DECODE_REENCODE_PARITY_CONTRACT = "categorical_decode_reencode_parity_v1"
+HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT = (
+    "hpm1_payload_structural_decode_inventory_v1"
+)
 CANDIDATE_MANIFEST_KINDS = (
     "categorical_candidate_manifest",
     "categorical_candidate_fixture_manifest",
@@ -330,6 +333,161 @@ def _decode_reencode_parity_report(
     summary["sidecar_free"] = sidecar_free
     if not sidecar_free:
         blockers.append("decode_reencode_sidecar_free_not_proven")
+
+    summary["accepted"] = not blockers
+    summary["blockers"] = blockers
+    return summary, blockers
+
+
+def _hpm1_structural_inventory_report(
+    report: Any,
+    *,
+    payload_member: str,
+    payload_member_sha256: str,
+    repo_root: Path,
+    manifest_dir: Path | None,
+) -> tuple[dict[str, Any], list[str]]:
+    blockers: list[str] = []
+    summary: dict[str, Any] = {
+        "schema_version": SCHEMA_VERSION,
+        "contract": HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT,
+        "declared": isinstance(report, dict),
+        "accepted": False,
+        "path": "",
+        "bytes": None,
+        "sha256": "",
+        "payload_member": payload_member,
+        "payload_member_sha256": payload_member_sha256,
+        "structural_reencode_matches_source": False,
+        "full_decode_proven": False,
+        "byte_exact_semantic_reencode_proven": False,
+        "unsupported_wire_constructs": [],
+        "blockers": [],
+    }
+    if report is None:
+        return summary, blockers
+    if not isinstance(report, dict):
+        blockers.append("hpm1_structural_inventory_record_not_object")
+        summary["blockers"] = blockers
+        return summary, blockers
+
+    if report.get("contract") != HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT:
+        blockers.append("hpm1_structural_inventory_contract_mismatch")
+    if report.get("payload_member") != payload_member:
+        blockers.append("hpm1_structural_inventory_payload_member_mismatch")
+    if report.get("payload_member_sha256") != payload_member_sha256:
+        blockers.append("hpm1_structural_inventory_payload_sha256_mismatch")
+    if report.get("full_decode_proven") is not False:
+        blockers.append("hpm1_structural_inventory_must_not_claim_full_decode")
+    if report.get("byte_exact_semantic_reencode_proven") is not False:
+        blockers.append(
+            "hpm1_structural_inventory_must_not_claim_semantic_reencode"
+        )
+
+    raw_path = report.get("path")
+    path_is_safe = _safe_member_name(raw_path)
+    if not path_is_safe:
+        blockers.append("hpm1_structural_inventory_path_unsafe")
+    path = (
+        _resolve_path(
+            raw_path,
+            repo_root=repo_root,
+            manifest_dir=manifest_dir,
+        )
+        if path_is_safe
+        else None
+    )
+    if path is None:
+        blockers.append("hpm1_structural_inventory_path_missing")
+    elif not path.exists():
+        blockers.append("hpm1_structural_inventory_path_missing")
+        summary["path"] = repo_relative(path, repo_root)
+    elif not path.is_file():
+        blockers.append("hpm1_structural_inventory_path_not_file")
+        summary["path"] = repo_relative(path, repo_root)
+    else:
+        raw = path.read_bytes()
+        actual_sha = sha256_bytes(raw)
+        summary.update(
+            {
+                "path": repo_relative(path, repo_root),
+                "bytes": len(raw),
+                "sha256": actual_sha,
+            }
+        )
+        if report.get("bytes") != len(raw):
+            blockers.append("hpm1_structural_inventory_bytes_mismatch")
+        if report.get("sha256") != actual_sha:
+            blockers.append("hpm1_structural_inventory_sha256_mismatch")
+        try:
+            payload = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            payload = None
+            blockers.append("hpm1_structural_inventory_json_invalid")
+        if isinstance(payload, dict):
+            if payload.get("schema_version") != SCHEMA_VERSION:
+                blockers.append("hpm1_structural_inventory_schema_version_invalid")
+            if payload.get("kind") != "hpm1_payload_structural_decode_inventory":
+                blockers.append("hpm1_structural_inventory_kind_invalid")
+            if (
+                payload.get("hpm1_structural_decode_inventory_contract")
+                != HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT
+            ):
+                blockers.append("hpm1_structural_inventory_payload_contract_invalid")
+            if payload.get("score_claim") is not False:
+                blockers.append("hpm1_structural_inventory_score_claim_must_be_false")
+            if payload.get("dispatch_attempted") is not False:
+                blockers.append(
+                    "hpm1_structural_inventory_dispatch_attempted_must_be_false"
+                )
+            if payload.get("ready_for_exact_eval_dispatch") is not False:
+                blockers.append(
+                    "hpm1_structural_inventory_ready_for_exact_eval_must_be_false"
+                )
+            segment = payload.get("segment")
+            if not isinstance(segment, dict):
+                blockers.append("hpm1_structural_inventory_segment_missing")
+            elif segment.get("sha256") != payload_member_sha256:
+                blockers.append("hpm1_structural_inventory_segment_sha256_mismatch")
+            structural = payload.get("structural_reencode")
+            structural_matches = (
+                isinstance(structural, dict)
+                and structural.get("matches_source_segment") is True
+                and structural.get("reencoded_segment_sha256") == payload_member_sha256
+                and structural.get("not_semantic_decode_reencode_parity") is True
+            )
+            summary["structural_reencode_matches_source"] = structural_matches
+            if not structural_matches:
+                blockers.append(
+                    "hpm1_structural_inventory_structural_reencode_not_proven"
+                )
+            full_decode = payload.get("full_decode")
+            full_decode_proven = isinstance(full_decode, dict) and full_decode.get("passed") is True
+            summary["full_decode_proven"] = full_decode_proven
+            if full_decode_proven:
+                blockers.append("hpm1_structural_inventory_claims_full_decode")
+            reencode = payload.get("byte_exact_semantic_reencode")
+            semantic_reencode_proven = (
+                isinstance(reencode, dict) and reencode.get("passed") is True
+            )
+            summary["byte_exact_semantic_reencode_proven"] = semantic_reencode_proven
+            if semantic_reencode_proven:
+                blockers.append("hpm1_structural_inventory_claims_semantic_reencode")
+            unsupported = payload.get("unsupported_wire_constructs")
+            if not isinstance(unsupported, list) or not unsupported:
+                blockers.append("hpm1_structural_inventory_unsupported_constructs_missing")
+                unsupported_names: list[str] = []
+            else:
+                unsupported_names = [
+                    row.get("name", "")
+                    for row in unsupported
+                    if isinstance(row, dict) and isinstance(row.get("name"), str)
+                ]
+                if len(unsupported_names) != len(unsupported):
+                    blockers.append(
+                        "hpm1_structural_inventory_unsupported_constructs_invalid"
+                    )
+            summary["unsupported_wire_constructs"] = unsupported_names
 
     summary["accepted"] = not blockers
     summary["blockers"] = blockers
@@ -919,6 +1077,17 @@ def audit_categorical_candidate_manifest(
     )
     blockers.extend(decode_reencode_blockers)
 
+    hpm1_structural_inventory, hpm1_structural_blockers = (
+        _hpm1_structural_inventory_report(
+            payload.get("hpm1_structural_decode_inventory"),
+            payload_member=decode_reencode_parity["payload_member"],
+            payload_member_sha256=decode_reencode_parity["payload_member_sha256"],
+            repo_root=root,
+            manifest_dir=manifest_base,
+        )
+    )
+    blockers.extend(hpm1_structural_blockers)
+
     construction_plan = audit_categorical_charged_label_plan(
         payload.get("candidate_construction_plan"),
         charged_member_names=member_names,
@@ -1028,6 +1197,7 @@ def audit_categorical_candidate_manifest(
         },
         "runtime_loader_parity": runtime_loader_parity,
         "decode_reencode_parity": decode_reencode_parity,
+        "hpm1_structural_decode_inventory": hpm1_structural_inventory,
         "candidate_construction_plan": construction_plan,
         "conditioning_prior_contract": conditioning_prior_contract,
         "charged_member_summary": {
@@ -1055,6 +1225,7 @@ __all__ = [
     "DETERMINISTIC_ZIP_DATE_TIME",
     "DETERMINISTIC_ZIP_FILE_MODE",
     "DETERMINISTIC_ZIP_INFLATE_MODE",
+    "HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT",
     "REQUIRED_CONTROL_NAMES",
     "REQUIRED_MEMBER_ROLES",
     "RUNTIME_LOADER_PARITY_CONTRACT",

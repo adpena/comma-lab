@@ -151,7 +151,7 @@ def build_next_comprehensive_tranche(
                 "candidate archive manifest records exact bytes and SHA-256",
                 "decoder/runtime parity proves output equivalence or declares scorer-changing scope",
                 "entropy-gap target ranking names concrete next artifact, not only a family",
-                "ready_for_exact_eval_dispatch remains false until candidate-specific preflight passes",
+                "ready_for_exact_eval_dispatch remains false until static preflight and matching active claim pass",
             ],
         },
         {
@@ -220,7 +220,7 @@ def build_next_comprehensive_tranche(
                 "candidate rows carry family/conflict and byte-closed manifest fields",
                 "proxy, dominated, non-KKT, and non-byte-closed rows are penalized or refused",
                 "expected-information-gain is recorded separately from predicted score",
-                "selected exact-eval packet has lane claim plus candidate-specific preflight",
+                "selected exact-eval packet has a matching active lane claim plus candidate-specific static preflight",
             ],
         },
     ]
@@ -232,9 +232,9 @@ def build_next_comprehensive_tranche(
         "dispatch_attempted": False,
         "ready_for_exact_eval_dispatch": False,
         "objective": (
-            "Lower the score by converting the strongest current planning surfaces "
-            "into byte-closed, runtime-consumed candidates, then select the first "
-            "exact CUDA packet through Pareto/KKT/meta-Lagrangian gates."
+            "Prepare score-reduction attempts by converting the strongest current "
+            "planning surfaces into byte-closed, runtime-consumed candidates, then "
+            "select any exact CUDA packet only through Pareto/KKT/meta-Lagrangian gates."
         ),
         "candidate_pools": {
             "exact_eval_or_review": exact_eval_candidates,
@@ -248,7 +248,9 @@ def build_next_comprehensive_tranche(
             "score_claim": False,
             "dispatch_attempted": False,
             "ready_for_exact_eval_dispatch": False,
+            "candidate_static_preflight_ready": False,
             "candidate_count": 0,
+            "candidate_static_preflight_ready_count": 0,
             "ready_candidate_count": 0,
             "selected_candidate": None,
             "rows": [],
@@ -382,6 +384,7 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- name: `{_md(payload['next_comprehensive_tranche']['name'])}`",
         f"- objective: {_md(payload['next_comprehensive_tranche']['objective'])}",
         f"- candidate_packet_count: `{packet_selection['candidate_count']}`",
+        f"- candidate_static_preflight_ready_count: `{packet_selection['candidate_static_preflight_ready_count']}`",
         f"- ready_candidate_packet_count: `{packet_selection['ready_candidate_count']}`",
         f"- selected_candidate_packet: `{_md(selected_packet.get('candidate_id') or 'none')}`",
         "",

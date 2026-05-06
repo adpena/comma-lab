@@ -34,11 +34,16 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 from tac.joint_codec_stack_orchestrator import (
+    JCSP_ARCHIVE_MEMBER_NAME,
+    JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER,
+    JCSP_LOCAL_SKELETON_SCHEMA,
+    JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
     KIND_ARITHMETIC_STATIC,
     KIND_BALLE_HYPERPRIOR,
     KIND_RAW_PASSTHROUGH,
     JCSPTensorStreamSpec,
     StreamSource,
+    build_jcsp_local_skeleton_archive_member,
     jcsp_stream_specs_manifest,
     model_to_jcsp_streams,
 )
@@ -48,6 +53,7 @@ if TYPE_CHECKING:
 
 
 JCSP_STREAM_SOURCE_DRY_RUN_SCHEMA = "jcsp_stream_source_dry_run_v1"
+JCSP_STREAM_SOURCE_LOCAL_ARCHIVE_MEMBER_SCHEMA = JCSP_LOCAL_SKELETON_SCHEMA
 
 
 def _coerce_to_float32_numpy(tensor: Any) -> np.ndarray:
@@ -568,9 +574,198 @@ def jcsp_stream_source_dry_run_metadata(
     return payload
 
 
+def _preview_payload_record(
+    payload: bytes,
+    *,
+    preview_bytes_per_stream: int,
+    source_bytes_kind: str,
+) -> dict[str, Any]:
+    if preview_bytes_per_stream < 0:
+        raise ValueError("preview_bytes_per_stream must be >= 0")
+    preview = payload[:preview_bytes_per_stream]
+    return {
+        "source_bytes_kind": source_bytes_kind,
+        "source_bytes": len(payload),
+        "source_sha256": hashlib.sha256(payload).hexdigest(),
+        "preview_bytes": len(preview),
+        "preview_sha256": hashlib.sha256(preview).hexdigest(),
+        "preview_hex": preview.hex(),
+        "preview_truncated": len(preview) < len(payload),
+    }
+
+
+def jcsp_stream_source_local_archive_member(
+    model: Any,
+    *,
+    score_marginals_path: str | Path,
+    num_levels: int = 15,
+    preview_bytes_per_stream: int = 64,
+    codec_overrides: Mapping[str, int] | None = None,
+    raw_passthrough_bytes_by_name: Mapping[str, bytes] | None = None,
+    wet_streams: Iterable[str] | None = None,
+    include_buffers: bool = True,
+    member_name: str = JCSP_ARCHIVE_MEMBER_NAME,
+) -> tuple[bytes, dict[str, Any]]:
+    """Build a byte-closed local JCSP skeleton archive member.
+
+    The payload is a deterministic ``JCSK`` skeleton, not a runtime ``JCSP``
+    container. It records score-marginal custody, stream-source metadata, and
+    qint/raw prefix previews with byte counts and SHA-256s so pipeline runs can
+    prove local archive-member closure before the real runtime consumer exists.
+    It never claims a score and remains non-dispatchable by construction.
+    """
+
+    artifact_path = Path(score_marginals_path)
+    score_marginals = load_jcsp_score_marginals(artifact_path)
+    specs = model_to_jcsp_streams(
+        model,
+        score_marginals=score_marginals,
+        codec_overrides=codec_overrides,
+        wet_streams=wet_streams,
+        include_buffers=include_buffers,
+    )
+    spec_manifest = jcsp_stream_specs_manifest(specs)
+    name_to_tensor = _state_dict_by_name(model)
+    raw_payloads = _normalize_raw_payloads(raw_passthrough_bytes_by_name)
+
+    records: list[dict[str, Any]] = []
+    total_source_bytes = 0
+    total_preview_bytes = 0
+    for spec in specs:
+        stream_blockers = [
+            *spec.dispatch_blockers,
+            "local_skeleton_preview_only_not_runtime_payload",
+            "full_codec_payload_not_encoded",
+            JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER,
+            "strict_preflight_proof_missing",
+            "exact_cuda_auth_eval_missing",
+        ]
+        if spec.codec_kind == KIND_BALLE_HYPERPRIOR:
+            stream_blockers.append(
+                "balle_codec_not_instantiated_for_local_skeleton"
+            )
+
+        if spec.codec_kind == KIND_RAW_PASSTHROUGH:
+            raw_payload = raw_payloads.get(spec.name)
+            if raw_payload is None:
+                raise ValueError(
+                    f"JCSP local skeleton: RAW_PASSTHROUGH stream "
+                    f"{spec.name!r} requires raw_passthrough_bytes_by_name"
+                )
+            qint_count = 0
+            qint_min = None
+            qint_max = None
+            quantization_scale = None
+            preview_record = _preview_payload_record(
+                raw_payload,
+                preview_bytes_per_stream=preview_bytes_per_stream,
+                source_bytes_kind="raw_passthrough_bytes_prefix",
+            )
+        else:
+            if spec.name not in name_to_tensor:
+                raise ValueError(
+                    f"JCSP local skeleton: stream {spec.name!r} from planning "
+                    "specs is missing from model state_dict"
+                )
+            qints, _num_symbols, _offset, scale = quantize_tensor_symmetric(
+                name_to_tensor[spec.name],
+                num_levels=num_levels,
+            )
+            qint_count = int(qints.size)
+            qint_min = int(qints.min())
+            qint_max = int(qints.max())
+            quantization_scale = float(scale)
+            preview_record = _preview_payload_record(
+                qints.tobytes(),
+                preview_bytes_per_stream=preview_bytes_per_stream,
+                source_bytes_kind="quantized_qint_int8_prefix_not_codec_payload",
+            )
+
+        total_source_bytes += int(preview_record["source_bytes"])
+        total_preview_bytes += int(preview_record["preview_bytes"])
+        records.append(
+            {
+                "name": spec.name,
+                "stream_id": spec.stream_id,
+                "decomposition_index": int(spec.decomposition_index),
+                "planned_codec_kind": int(spec.codec_kind),
+                "tensor_shape": list(spec.tensor_shape),
+                "tensor_dtype": spec.tensor_dtype,
+                "num_elements": int(spec.num_elements),
+                "raw_bytes": int(spec.raw_bytes),
+                "byte_estimate": int(spec.byte_estimate),
+                "byte_estimate_source": spec.byte_estimate_source,
+                "bytes_charged": int(spec.bytes_charged),
+                "bytes_charged_source": spec.bytes_charged_source,
+                "qint_count": qint_count,
+                "qint_dtype": "int8",
+                "qint_min": qint_min,
+                "qint_max": qint_max,
+                "quantization": "symmetric_round_to_nearest",
+                "quantization_scale": quantization_scale,
+                "preview": preview_record,
+                "score_per_byte_marginal": float(spec.score_per_byte_marginal),
+                "score_marginal_source": spec.score_marginal_source,
+                "score_marginal_evidence": spec.score_marginal_evidence,
+                "scorer_term_targeted": spec.scorer_term_targeted,
+                "local_preview_only": True,
+                "runtime_payload_encoded": False,
+                "dispatch_blockers": list(dict.fromkeys(stream_blockers)),
+            }
+        )
+
+    raw_artifact = artifact_path.read_bytes()
+    skeleton_manifest: dict[str, Any] = {
+        "schema": JCSP_STREAM_SOURCE_LOCAL_ARCHIVE_MEMBER_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_runtime_loader": False,
+        "ready_for_submission_runtime_consumption": False,
+        "ready_for_exact_eval_dispatch": False,
+        "archive_member_payload_kind": "jcsp_stream_source_local_skeleton",
+        "archive_member_name": member_name,
+        "container_bytes_built": True,
+        "archive_bytes_written": True,
+        "stream_source_objects_built": False,
+        "runtime_payloads_encoded": False,
+        "quantized_stream_previews_built": True,
+        "score_marginals_artifact": {
+            "path": str(artifact_path),
+            "bytes": len(raw_artifact),
+            "sha256": hashlib.sha256(raw_artifact).hexdigest(),
+            "format": "deterministic_json",
+            "marginal_count": len(score_marginals),
+        },
+        "stream_count": len(records),
+        "streams": records,
+        "stream_spec_manifest_sha256": spec_manifest["manifest_sha256"],
+        "byte_manifest": {
+            "source_stream_bytes": total_source_bytes,
+            "encoded_preview_bytes": total_preview_bytes,
+            "preview_bytes_per_stream": int(preview_bytes_per_stream),
+            "member_bytes_known_after_zip_write": True,
+        },
+        "promotion_blockers": [
+            "local_skeleton_preview_only_not_runtime_payload",
+            "full_codec_payload_not_encoded",
+            "runtime_loader_parity_missing",
+            JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER,
+            JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+            "strict_preflight_proof_missing",
+            "exact_cuda_auth_eval_missing",
+        ],
+    }
+    return build_jcsp_local_skeleton_archive_member(
+        manifest=skeleton_manifest,
+        member_name=member_name,
+    )
+
+
 __all__ = [
     "JCSP_STREAM_SOURCE_DRY_RUN_SCHEMA",
+    "JCSP_STREAM_SOURCE_LOCAL_ARCHIVE_MEMBER_SCHEMA",
     "jcsp_stream_source_dry_run_metadata",
+    "jcsp_stream_source_local_archive_member",
     "load_jcsp_score_marginals",
     "model_to_stream_sources",
     "quantize_tensor_symmetric",

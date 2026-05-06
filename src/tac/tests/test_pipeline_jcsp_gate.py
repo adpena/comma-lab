@@ -53,7 +53,7 @@ def test_jcsp_flag_invalidates_cached_fp4_and_requires_marginals(
     assert stale_renderer.read_bytes() == b"stale-fp4"
 
 
-def test_jcsp_present_marginals_dry_runs_then_raises_before_dispatch(
+def test_jcsp_present_marginals_writes_local_skeleton_then_raises(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -88,7 +88,7 @@ def test_jcsp_present_marginals_dry_runs_then_raises_before_dispatch(
         jcsp_score_marginals_path=str(artifact),
     )
 
-    with pytest.raises(NotImplementedError, match="deterministic dry-run"):
+    with pytest.raises(NotImplementedError, match="local byte-closed skeleton"):
         pipeline.step_compress_weights(
             cfg,
             tmp_path / "checkpoint.pt",
@@ -97,9 +97,24 @@ def test_jcsp_present_marginals_dry_runs_then_raises_before_dispatch(
 
     iter_dir = output_dir / "iter_0"
     assert iter_dir.exists()
-    assert list(iter_dir.iterdir()) == []
+    archive_path = iter_dir / "jcsp_local_skeleton_archive.zip"
+    manifest_path = iter_dir / "jcsp_local_skeleton_manifest.json"
+    assert sorted(path.name for path in iter_dir.iterdir()) == [
+        "jcsp_local_skeleton_archive.zip",
+        "jcsp_local_skeleton_manifest.json",
+    ]
+    assert archive_path.exists()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["schema"] == "jcsp_local_archive_member_skeleton_contract_v1"
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_runtime_loader"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["skeleton_manifest"]["archive_bytes_written"] is True
+    assert manifest["skeleton_manifest"]["runtime_payloads_encoded"] is False
+    assert manifest["skeleton_manifest"]["stream_count"] == 1
+    assert not (iter_dir / ".done_compress_weights").exists()
     assert any(
-        "archive_bytes_written=False" in msg
+        "archive_bytes_written=True" in msg
         and "ready_for_exact_eval_dispatch=False" in msg
         for _level, msg in logs
     )
