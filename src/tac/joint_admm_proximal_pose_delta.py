@@ -98,6 +98,13 @@ class PoseDeltaProximalCodec:
         # Sort by bytes ascending so finite-difference marginals are well-defined.
         self._frontier = sorted(frontier, key=lambda s: s.bytes_used)
         self._name = name
+        # PARADIGM-γ audit fix #4 (2026-05-06): cache the 8-bit
+        # ``encode_pose_deltas`` result. The proximal_step sanity check below
+        # called encode_pose_deltas on EVERY ADMM iteration (typically
+        # 50-200 iters), each costing ~100 µs for 600 poses × 6 dims. Since
+        # ``self._poses`` is immutable for the lifetime of this codec, the
+        # encode is a pure function of constructor arguments — cache once.
+        self._cached_encode_8bit: dict | None = None
 
     @property
     def name(self) -> str:
@@ -141,7 +148,12 @@ class PoseDeltaProximalCodec:
         if selected.delta_bits == 8:
             # We only validate the canonical 8-bit point; other bits are V2.
             try:
-                encoded = encode_pose_deltas(self._poses, delta_bits=8)
+                # PARADIGM-γ audit #4: cache encode result; invariant on poses.
+                if self._cached_encode_8bit is None:
+                    self._cached_encode_8bit = encode_pose_deltas(
+                        self._poses, delta_bits=8
+                    )
+                encoded = self._cached_encode_8bit
                 # Rough byte estimate: anchor (12) + delta_scale (12) +
                 # deltas_q (numel int8) + small dict overhead (~50).
                 approx_bytes = (
