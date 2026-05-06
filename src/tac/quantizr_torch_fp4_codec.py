@@ -204,13 +204,37 @@ def decode_torch_fp4_payload(
     quantized = payload["quantized"]
     dense_fp16 = payload["dense_fp16"]
     for key, entry in quantized.items():
-        weight = _dequantize_fp4_tensor(
-            entry["packed"],
-            entry["scales"],
-            tuple(entry["shape"]),
-            device=device,
-        )
-        state[key] = weight
+        if not isinstance(entry, dict):
+            raise ValueError(f"Torch-FP4 quantized entry {key!r} is not a dict")
+        if "packed" in entry:
+            weight_key = key
+            weight = _dequantize_fp4_tensor(
+                entry["packed"],
+                entry["scales"],
+                tuple(entry["shape"]),
+                device=device,
+            )
+            state[weight_key] = weight
+            continue
+        weight_key = f"{key}.weight"
+        if "packed_weight" in entry:
+            weight = _dequantize_fp4_tensor(
+                entry["packed_weight"],
+                entry["scales_fp16"],
+                tuple(entry["weight_shape"]),
+                device=device,
+            )
+            state[weight_key] = weight
+        elif "weight_fp16" in entry:
+            value = entry["weight_fp16"]
+            if not isinstance(value, torch.Tensor):
+                raise ValueError(f"Torch-FP4 entry {key!r} has non-tensor weight_fp16")
+            state[weight_key] = value.detach().to(device).to(torch.float32)
+        else:
+            raise ValueError(f"Torch-FP4 entry {key!r} has no recognized weight payload")
+        bias = entry.get("bias_fp16")
+        if isinstance(bias, torch.Tensor):
+            state[f"{key}.bias"] = bias.detach().to(device).to(torch.float32)
     for key, value in dense_fp16.items():
         if isinstance(value, torch.Tensor):
             state[key] = value.detach().to(device).to(torch.float32)

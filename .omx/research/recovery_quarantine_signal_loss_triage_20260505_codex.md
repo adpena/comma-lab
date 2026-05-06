@@ -4040,3 +4040,58 @@ Recommended next promotion order:
 4. Treat `apply_qzs3_postprocess.py` as high-risk because it shadows the active
    robust runtime conceptually even though its canonical path is not tracked.
    Promote only after direct runtime-parity review.
+
+## R54 - 2026-05-06 Recovered Test And QRM1 Runtime Promotion
+
+Promoted the recovered test/helper bucket from R53 into canonical tracked
+locations:
+
+- `src/tac/tests/test_endgame_archive_decision.py`
+- `src/tac/tests/test_pr85_bundle.py`
+- `src/tac/tests/test_quantizr_torch_fp4_codec.py`
+- `src/tac/tests/test_qzs3_postprocess_qrm1_runtime.py`
+- `submissions/robust_current/apply_qzs3_postprocess.py`
+
+The first combined recovered-test run was red (`25 failed, 8 passed,
+1 skipped`). The red state exposed three useful bug classes:
+
+- `tac.henosis_pr82_transfer.encode_randmulti_qrm1` was still a partial
+  rehydration stub while the QRM1 runtime tests needed a deterministic sparse
+  row encoder. Implemented `_encode_randmulti_rows` and
+  `encode_randmulti_qrm1` against the current `Pr82RandmultiGroup` contract.
+- `decode_pr85_p1d1_pose_to_fp16` returned concatenated active P1D1 streams
+  instead of the full `600 x 6` raw fp16 `optimized_poses.bin` contract.
+  Reimplemented P1D1 delta/VLQ decode with the public PR91 semantics: dim 0
+  uses `q / 512 + 20`, other dims use clipped `q / 2048`, and missing dims
+  remain zero.
+- `tac.quantizr_torch_fp4_codec` only decoded the canonical in-repo
+  Torch-FP4 payload shape. It now also decodes the public PR63-style
+  `packed_weight`/`scales_fp16` and `weight_fp16` quantized-entry shape.
+
+Strict xfails preserve recovered but currently unimplemented/stale signal:
+
+- `test_endgame_archive_decision.py`: the underlying
+  `tac.endgame_archive_decision` module remains a partial pyc rehydration
+  stub.
+- `test_current_pr92_rmb1_randmulti_is_decoded_row_parity_recode`: the local
+  public PR92 fixture still uses a stale RMB1 runtime shape.
+- `test_repack_builder_emits_torch_fp4_archive_from_qfai`: the active repack
+  builder exposes QZS3/QZS4 only; Torch-FP4 builder promotion is not wired.
+
+Verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_endgame_archive_decision.py
+  src/tac/tests/test_pr85_bundle.py
+  src/tac/tests/test_quantizr_torch_fp4_codec.py
+  src/tac/tests/test_qzs3_postprocess_qrm1_runtime.py -q`
+  -> `28 passed, 1 skipped, 5 xfailed`.
+- `.venv/bin/python -m py_compile src/tac/henosis_pr82_transfer.py
+  src/tac/pr85_bundle.py src/tac/quantizr_torch_fp4_codec.py
+  submissions/robust_current/apply_qzs3_postprocess.py` passed.
+- Non-strict orphan audit reports `ready_for_orphan_recovery_cleanup=true`
+  with `shadowed_modified_count=0`; strict audit still fails, as intended,
+  because 31 missing-canonical orphan copies remain for explicit promotion or
+  archival decisions.
+
+The PR106 yshift Lightning score-table job was checked from local state during
+this tranche and remains `Running`; no harvest or claim closure was performed.

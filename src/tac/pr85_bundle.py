@@ -14,6 +14,7 @@ Spec source: bytecode disassembly of compiled .pyc; whitespace + inline comments
 from __future__ import annotations
 
 import hashlib
+import numpy as np
 import struct
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath
@@ -389,6 +390,11 @@ def parse_hpm1_mask_segment(segment: bytes) -> Pr85SegmentContract:
     hpac = segment[token_end:hpac_end]
     tokens_uint32_aligned = int(tokens_len) % 4 == 0
     metadata: dict[str, Any] = {
+        "runtime_contract": "HPM1_pr91_hpac_mask_stream",
+        "header_bytes": HPM1_HEADER_BYTES,
+        "N": int(n_frames),
+        "H": int(height),
+        "W": int(width),
         "n_frames": int(n_frames),
         "height": int(height),
         "width": int(width),
@@ -402,6 +408,7 @@ def parse_hpm1_mask_segment(segment: bytes) -> Pr85SegmentContract:
         "ppmd_order": int(ppmd_order),
         "tokens_sha256": _sha256(tokens),
         "hpac_sha256": _sha256(hpac),
+        "hpac_ppmd_sha256": _sha256(hpac),
         "tokens_uint32_aligned": tokens_uint32_aligned,
     }
     return Pr85SegmentContract(
@@ -737,21 +744,40 @@ def decode_pr85_p1d1_pose_to_fp16(
         seen_dims.add(dim)
         dims.append(dim)
         lengths.append(n_bytes)
-    # Slice per-dim streams; concatenate in dim-id order to produce the
-    # canonical raw fp16 buffer expected by ``optimized_poses.bin``.
-    streams: dict[int, bytes] = {}
+    pose = np.zeros((600, 6), dtype=np.float32)
+    stream_value_counts: dict[int, int] = {}
     for dim, n_bytes in zip(dims, lengths):
         if cursor + n_bytes > len(raw):
             raise Pr85BundleError(
                 f"P1D1 dimension {dim} stream truncated at offset {cursor}"
             )
-        streams[dim] = raw[cursor : cursor + n_bytes]
+        stream = raw[cursor : cursor + n_bytes]
         cursor += n_bytes
+        vals = np.empty(600, dtype=np.uint32)
+        vpos = 0
+        scursor = 0
+        while scursor < len(stream) and vpos < 600:
+            value, scursor = _read_vlq(stream, scursor)
+            vals[vpos] = value
+            vpos += 1
+        if vpos != 600 or scursor != len(stream):
+            raise Pr85BundleError(
+                f"P1D1 dimension {dim} decoded {vpos} values from {len(stream)} bytes"
+            )
+        delta = ((vals.astype(np.int32) >> 1) ^ -(vals.astype(np.int32) & 1)).astype(
+            np.int32
+        )
+        q = np.cumsum(delta)
+        if dim == 0:
+            pose[:, dim] = q.astype(np.float32) / 512.0 + 20.0
+        else:
+            pose[:, dim] = np.clip(q, -32768, 32767).astype(np.float32) / 2048.0
+        stream_value_counts[int(dim)] = int(vpos)
     if cursor != len(raw):
         raise Pr85BundleError(
             f"P1D1 stream has trailing bytes: cursor={cursor} len={len(raw)}"
         )
-    out = b"".join(streams[d] for d in sorted(streams))
+    out = pose.astype(np.float16).tobytes()
     profile: dict[str, Any] = {
         "encoded_bytes": len(encoded_pose),
         "encoded_sha256": _sha256(encoded_pose),
@@ -759,9 +785,12 @@ def decode_pr85_p1d1_pose_to_fp16(
         "decoded_sha256": _sha256(raw),
         "fp16_bytes": len(out),
         "fp16_sha256": _sha256(out),
+        "raw_fp16_sha256": _sha256(out),
         "dim_count": dim_count,
         "dims": list(dims),
+        "active_dimensions": list(dims),
         "stream_lengths": list(lengths),
+        "stream_value_counts": stream_value_counts,
     }
     return out, profile
 
