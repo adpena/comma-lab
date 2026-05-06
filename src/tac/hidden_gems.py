@@ -252,8 +252,8 @@ _REGISTRY: tuple[HiddenGemEntry, ...] = (
             "src/tac/public_submission_refs.py",
         ),
         next_patch=(
-            "Add a deterministic payload-section manifest for decoder weights and latent streams "
-            "so repack candidates can prove which bytes changed."
+            "Use payload-section manifests and source/candidate HNeRV section diffs as "
+            "mandatory no-op controls for every future HNeRV repack candidate."
         ),
         contest_compliance_notes=(
             "Byte forensics only; no archive is eligible for dispatch until exact replay gates pass.",

@@ -373,3 +373,51 @@ but it is still not a score claim. Local CUDA is unavailable on this machine,
 so the next promotable evidence step is a claimed non-dry-run Lightning exact
 CUDA auth eval, followed by harvest, JSON adjudication, component trace, and a
 score-delta ledger update.
+
+## WR01 Payload Section Diff
+
+The HNeRV payload comparator now provides a standalone section-diff proof for
+source/candidate archive pairs. This closes the no-op-control gap for packed
+HNeRV archives without relying on scorecard prose or candidate-specific
+manifest fields.
+
+Command:
+
+```bash
+.venv/bin/python tools/compare_hnerv_payload_sections.py \
+  --source-archive experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/archive.zip \
+  --candidate-archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip \
+  --source-label PR106x \
+  --candidate-label WR01_half \
+  --source-manifest-json experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/scorecard.json \
+  --json-out experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json \
+  --fail-if-no-section-change
+```
+
+Observed section diff:
+
+- `ready_for_archive_preflight=true`
+- blockers: `[]`
+- changed section count: `1`
+- archive byte delta vs PR106x: `-9`
+- payload byte delta vs PR106x: `-9`
+- unchanged section: `packed_header_ff_len24`
+- unchanged section: `decoder_packed_brotli`
+- changed section: `latents_and_sidecar_brotli`
+- changed section byte delta: `-9`
+- decoder brotli raw equality: `true`
+- latents/sidecar brotli raw equality: `false`
+- latents/sidecar raw changed positions: `64`
+- latents/sidecar raw absolute delta sum: `3610`
+
+Tracked artifact:
+
+- `experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json`
+
+Updated conclusion:
+
+The WR01 half-strength candidate is now byte-different and no-op-resistant at
+the HNeRV section level. The transform does not perturb decoder bytes; all
+charged changes are isolated to the latent/sidecar brotli section. This is
+still byte-forensic evidence, not score evidence, until exact CUDA auth eval
+measures SegNet/PoseNet.
