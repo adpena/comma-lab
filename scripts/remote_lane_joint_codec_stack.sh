@@ -1,5 +1,5 @@
 #!/bin/bash
-# Lane Joint-Codec-Stack (PARADIGM-γ).
+# Lane Joint-Codec-Stack (PARADIGM-gamma).
 #
 # Module: src/tac/joint_codec_stack_orchestrator.py — JCSP wire format +
 # magic byte + ADMM coordinator across {repr, predict, quant, entropy}.
@@ -15,11 +15,18 @@
 #   * Predicted band [contest-CUDA] +150-500bp on stack-eligible archives.
 #
 # REGISTERED-BUT-NOT-WIRED in step_compress_weights as of 2026-05-06; the
-# WARN guard (commit 9bdd3d56) prevents silent no-op. Operator must build a
-# `model_to_jcsp_streams(model)` decomposition helper before this runbook
-# can produce a real archive.
+# WARN guard (commit 9bdd3d56) prevents silent no-op. The decomposition path
+# is now complete:
+#   * tac.joint_codec_stack_orchestrator.model_to_jcsp_streams ->
+#     planning specs (codec_kind, shape, dtype, byte estimates)
+#   * tac.jcsp_stream_builder.model_to_stream_sources bridges those specs
+#     to runnable StreamSource objects (symmetric int8 quantization +
+#     RAW_PASSTHROUGH payload routing). 16-test suite covers edge cases.
+# Remaining blocker is the pipeline.py dispatch wiring inside
+# step_compress_weights that calls model_to_stream_sources + run_admm and
+# packages the resulting JCSP container into an archive.zip member.
 #
-# Cost: T4 @ ~$0.50/hr × ~1hr ADMM convergence + 30min auth eval = ~$0.75.
+# Cost: T4 @ ~$0.50/hr x ~1hr ADMM convergence + 30min auth eval = ~$0.75.
 set -euo pipefail
 WORKSPACE="${WORKSPACE:-/workspace/pact}"
 PYBIN="${PYBIN:-/opt/conda/bin/python}"
@@ -29,7 +36,7 @@ cd "$WORKSPACE"
 LOG_DIR="$WORKSPACE/lane_joint_codec_stack_results"
 mkdir -p "$LOG_DIR"
 TAG="lane_joint_codec_stack"
-log() { echo "[lane-γ-jcsp] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
+log() { echo "[lane-gamma-jcsp] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
 PROVENANCE="$LOG_DIR/provenance.json"
 HEARTBEAT="$LOG_DIR/heartbeat.log"
@@ -45,16 +52,16 @@ prov = {
     'paradigm': 'gamma_joint_codec_stack',
     'predicted_band_bp': [150, 500],
     'lane_registry_id': 'lane_joint_codec_stack',
-    'cross_paradigm_wiring_status': 'WARN-guard wired in step_compress_weights (commit 9bdd3d56); full dispatch DEFERRED — needs model_to_jcsp_streams(model) helper.',
-    'audit_fixes_applied': ['score_cap_inversion (commit 721770d8)', '_gauss_cdf_vectorization (commit 13e809ae)', 'balle_pad_with_mean (commit 3c87e5e2)', 'static_wins_codec_kind_override (already in code)'],
-    'pre_dispatch_blocker': 'model_to_jcsp_streams decomposition helper not yet built',
+    'cross_paradigm_wiring_status': 'WARN-guard wired in step_compress_weights (commit 9bdd3d56); decomposition path complete via model_to_jcsp_streams + jcsp_stream_builder.model_to_stream_sources; remaining blocker is pipeline.py step_compress_weights dispatch wiring.',
+    'audit_fixes_applied': ['score_cap_inversion (commit 721770d8)', '_gauss_cdf_vectorization (commit 13e809ae)', 'balle_pad_with_mean (commit 3c87e5e2)', 'static_wins_codec_kind_override (already in code)', 'jcsp_stream_builder bridge module (this commit, 16 tests)'],
+    'pre_dispatch_blocker': 'pipeline.py step_compress_weights mode=jcsp dispatch wiring not yet landed (model_to_stream_sources -> run_admm -> archive packaging)',
     'cost_estimate_usd': 0.75,
 }
 with open('$PROVENANCE', 'w') as f: json.dump(prov, f, indent=2)
 print(json.dumps(prov))
 "
 
-( while true; do sleep 60; echo "[$(date -u +%FT%TZ)] lane=γ-jcsp" >> "$HEARTBEAT"; done ) &
+( while true; do sleep 60; echo "[$(date -u +%FT%TZ)] lane=gamma-jcsp" >> "$HEARTBEAT"; done ) &
 HB_PID=$!
 trap 'kill $HB_PID 2>/dev/null || true' EXIT
 
@@ -66,12 +73,18 @@ from tac.joint_codec_stack_orchestrator import run_joint_codec_stack, StreamSour
 print('JCSP module importable')
 " 2>&1 | tee -a "$LOG_DIR/run.log"
 
-log "=== Stage 1: model→JCSP-streams decomposition (BLOCKER) ==="
-log "WARN: model_to_jcsp_streams(model) helper not yet built."
-log "WARN: Required to convert a renderer state_dict into list[StreamSource]."
-log "WARN: Reference: tac.joint_codec_stack_orchestrator.StreamSource fields"
-log "WARN:   (name, codec_kind, qints, num_symbols, offset, balle_codec?, score_per_byte_marginal)."
+log "=== Stage 1: model-to-StreamSources decomposition (UNBLOCKED) ==="
+"$PYBIN" -c "
+import sys; sys.path.insert(0, 'src')
+from tac.jcsp_stream_builder import model_to_stream_sources, quantize_tensor_symmetric
+from tac.joint_codec_stack_orchestrator import model_to_jcsp_streams
+print('jcsp_stream_builder.model_to_stream_sources importable')
+print('quantize_tensor_symmetric importable')
+" 2>&1 | tee -a "$LOG_DIR/run.log"
 
-log "=== Stage 2: ADMM coordinator (skipped pending Stage 1) ==="
+log "=== Stage 2: ADMM coordinator (BLOCKER: pipeline.py step_compress_weights dispatch wiring) ==="
+log "WARN: pipeline.py step_compress_weights does NOT yet call model_to_stream_sources."
+log "WARN: A real archive build needs: cfg.weight_compression='jcsp' branch that calls"
+log "WARN:   model_to_stream_sources(model, score_marginals=...) -> run_admm -> JCSP container -> archive.zip."
 log "=== Stage 3: contest-CUDA auth eval (skipped) ==="
-log "LANE_JOINT_CODEC_STACK_DONE score=N/A [contest-CUDA] paradigm=γ-jcsp blocked=streams_decomposition_helper_missing"
+log "LANE_JOINT_CODEC_STACK_DONE score=N/A [contest-CUDA] paradigm=gamma-jcsp blocked=pipeline_step_compress_weights_dispatch_wiring_missing"
