@@ -5306,6 +5306,59 @@ Verification:
 - `.venv/bin/python tools/all_lanes_preflight.py` passed:
   `ALL 20 PREFLIGHT CHECKS PASSED`.
 
+## R79 - 2026-05-06 Lightning Launcher JSON IO Lowering
+
+Continued the Gate #7 lowering tranche on the Lightning Batch launcher, which
+is a high-leverage remote-GPU orchestration surface. This was a
+behavior-preserving cleanup only: command contracts, strict argparse hints,
+dispatch claim enforcement, harvest behavior, and provenance schemas were not
+changed.
+
+Changes:
+
+- Migrated `scripts/launch_lightning_batch_job.py` JSON object reads to
+  `tac.repo_io.read_json`.
+- Replaced duplicated pretty-JSON stdout calls with the existing local
+  `_print_json()` wrapper.
+- Replaced the doctor JSON-out hand-written parent/write sequence with
+  `tac.repo_io.write_json`.
+- Left raw auth logs and SSH text reads untouched because those are intentionally
+  non-JSON diagnostic streams.
+
+Measured inventory after R79:
+
+- local SHA helpers: `55`
+- local JSON dumps: `111`
+- manual `sys.path` bootstraps: `276`
+- manual repo-root parent probes: `372`
+- manual score/dispatch metadata mentions: `601`
+
+Within-tranche committed-surface deltas:
+
+- `scripts/launch_lightning_batch_job.py` local JSON dump count: `7 -> 0`
+- `scripts/launch_lightning_batch_job.py` local SHA helper count: `0 -> 0`
+- `scripts/launch_lightning_batch_job.py` manual `sys.path` bootstrap count:
+  `0 -> 0`
+- `scripts/launch_lightning_batch_job.py` manual repo-root parent count:
+  `0 -> 0`
+- `scripts/launch_lightning_batch_job.py` manual score/dispatch metadata count:
+  `1 -> 1`
+
+Verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_lightning_batch_jobs.py
+  src/tac/tests/test_public_submission_refs.py
+  src/tac/tests/test_dispatch_cli_shell_hazards.py -q` passed:
+  `137 passed`.
+- `.venv/bin/python -m ruff check --select F821
+  scripts/launch_lightning_batch_job.py` passed.
+- `.venv/bin/python -m py_compile scripts/launch_lightning_batch_job.py`
+  passed.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --format json` reported
+  the measured inventory above.
+- `.venv/bin/python tools/all_lanes_preflight.py` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+
 ## R78 - 2026-05-06 Modal Auth-Eval IO Lowering
 
 Continued the Gate #7 lowering tranche on the Modal CUDA auth-eval wrapper.

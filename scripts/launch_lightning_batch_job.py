@@ -61,7 +61,7 @@ from tac.deploy.lightning.batch_jobs import (  # noqa: E402
     validate_studio_machine_class_pair,
 )
 from tac.public_submission_refs import parse_public_pr_refs_csv  # noqa: E402
-from tac.repo_io import json_text, write_json  # noqa: E402
+from tac.repo_io import json_text, read_json, write_json  # noqa: E402
 
 SSH_AUTH_OPTIONS = (
     "-o",
@@ -780,7 +780,7 @@ def _require_manual_artifact_override(args: argparse.Namespace, *, role: str) ->
 
 def _load_json_object(path: Path, *, label: str) -> dict[str, object]:
     try:
-        payload = json.loads(path.read_text())
+        payload = read_json(path)
     except json.JSONDecodeError as exc:
         raise SystemExit(f"{label} is invalid JSON: {path}") from exc
     if not isinstance(payload, dict):
@@ -1140,7 +1140,7 @@ def _component_response_plan_artifacts(
     baseline_rel: str,
     ignore_top_baseline_json: bool = False,
 ) -> set[str]:
-    payload = json.loads(plan_path.read_text())
+    payload = read_json(plan_path)
     if isinstance(payload, list):
         plan = {"points": payload}
     elif isinstance(payload, dict):
@@ -1671,7 +1671,7 @@ def cmd_harvest_component_response_ssh(args: argparse.Namespace) -> int:
             scp_bin=args.scp_bin,
             ssh_connect_timeout=args.ssh_connect_timeout,
         )
-        print(json.dumps(result, indent=2, sort_keys=True))
+        _print_json(result)
         return 0
     _ensure_ssh_auth_ready(
         args.ssh_target,
@@ -1695,7 +1695,7 @@ def cmd_harvest_component_response_ssh(args: argparse.Namespace) -> int:
         scp_bin=args.scp_bin,
         ssh_connect_timeout=args.ssh_connect_timeout,
     )
-    print(json.dumps(result, indent=2, sort_keys=True))
+    _print_json(result)
     return 0
 
 
@@ -1720,7 +1720,7 @@ def cmd_harvest_component_sensitivity_ssh(args: argparse.Namespace) -> int:
             scp_bin=args.scp_bin,
             ssh_connect_timeout=args.ssh_connect_timeout,
         )
-        print(json.dumps(result, indent=2, sort_keys=True))
+        _print_json(result)
         return 0
     _ensure_ssh_auth_ready(
         args.ssh_target,
@@ -1743,7 +1743,7 @@ def cmd_harvest_component_sensitivity_ssh(args: argparse.Namespace) -> int:
         scp_bin=args.scp_bin,
         ssh_connect_timeout=args.ssh_connect_timeout,
     )
-    print(json.dumps(result, indent=2, sort_keys=True))
+    _print_json(result)
     return 0
 
 
@@ -2163,7 +2163,7 @@ def cmd_stop_job(args: argparse.Namespace) -> int:
         "record": refresh_record,
         "refresh_error": refresh_error,
     }
-    print(json.dumps(payload, indent=2, sort_keys=True))
+    _print_json(payload)
     return 1 if not stop_request.get("stop_returned") else 0
 
 
@@ -2292,7 +2292,7 @@ def cmd_list_machines(args: argparse.Namespace) -> int:
         machine=args.machine,
         gpu_only=args.gpu_only,
     )
-    print(json.dumps(rows, indent=2, sort_keys=True))
+    _print_json(rows)
     return 0
 
 
@@ -2437,12 +2437,9 @@ def _doctor_payload(args: argparse.Namespace) -> dict[str, object]:
 
 def cmd_doctor(args: argparse.Namespace) -> int:
     payload = _doctor_payload(args)
-    text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     if args.json_out:
-        out = Path(args.json_out)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(text)
-    print(text, end="")
+        write_json(args.json_out, payload)
+    _print_json(payload)
     return 1 if args.strict and payload.get("status") != "OK" else 0
 
 
