@@ -1585,7 +1585,7 @@ def check_codebase_drift(strict: bool = True) -> list[str]:
         if not d_path.exists():
             continue
         for py_path in d_path.rglob("*.py"):
-            if "comma_lab_public_export" in py_path.parts:
+            if _is_oss_export_mirror_path(py_path):
                 continue
             all_violations.extend(_scan_python_for_forbidden(py_path))
 
@@ -3188,7 +3188,7 @@ def _iter_python_files(root: Path, dirs: list[str]) -> list[Path]:
         for p in d_path.rglob("*.py"):
             if "__pycache__" in p.parts:
                 continue
-            if "comma_lab_public_export" in p.parts:
+            if _is_oss_export_mirror_path(p):
                 continue
             out.append(p)
     return sorted(out)
@@ -3203,7 +3203,7 @@ def _iter_shell_files(root: Path, dirs: list[str]) -> list[Path]:
         if not d_path.exists():
             continue
         for p in d_path.rglob("*.sh"):
-            if "comma_lab_public_export" in p.parts:
+            if _is_oss_export_mirror_path(p):
                 continue
             out.append(p)
     return sorted(out)
@@ -6562,11 +6562,19 @@ def preflight_filename_contract(
     n_producer_files = 0
     for pd in producer_dirs:
         for py in (root / pd).rglob("*.py"):
+            # Round 15 R15-2 fix: skip OSS-export staging mirror — its
+            # verbatim source-file copies would phantom-add their artifact
+            # filename literals to producer_literals, masking real
+            # consumer-reads-but-no-producer-writes violations.
+            if _is_oss_export_mirror_path(py):
+                continue
             if py.resolve() in consumer_paths_resolved:
                 continue  # skip consumer files in producer scan
             n_producer_files += 1
             producer_literals.update(_extract_artifact_filenames(py))
         for sh in (root / pd).rglob("*.sh"):
+            if _is_oss_export_mirror_path(sh):
+                continue
             try:
                 text = sh.read_text()
                 for token in re.findall(
@@ -7605,7 +7613,7 @@ def check_eval_roundtrip_gate_called_after_output_dir_resolution(
                 continue
             # Round 2 codebase-drift fix continued (2026-05-06): skip
             # OSS-publication staging mirror — verbatim copy of source files.
-            if "comma_lab_public_export" in p.parts:
+            if _is_oss_export_mirror_path(p):
                 continue
             n_scanned += 1
             violations.extend(_scan_python_for_gate_before_output_dir(p, root))
@@ -7776,16 +7784,13 @@ def check_archive_builders_use_deterministic_zip(
     for p in candidates:
         if "__pycache__" in p.parts:
             continue
-        # Round 13 R13-2 fix (2026-05-06): skip OSS-export staging mirror.
-        # R12 missed this scanner because it doesn't go through
-        # _iter_python_files (uses direct rglob with a custom glob pattern).
-        # R14-1 (2026-05-06) corrected the previous "this is the LAST
-        # scanner" claim — it was false; R14 found 3 more sites
-        # (check_kl_distill_uses_roundtripped_frames,
-        # preflight_loader_format_safety, check_no_raw_zip_extractall) and
-        # introduced the centralized _is_oss_export_mirror_path helper to
-        # break the cascade pattern. New scanners walking experiments/ MUST
-        # call _is_oss_export_mirror_path; do not reimplement inline.
+        # OSS-export staging mirror — see _is_oss_export_mirror_path for
+        # cascade-prevention rationale.
+        # History: R12 missed this scanner (doesn't route through
+        # _iter_python_files); R13 patched it inline; R14 introduced the
+        # centralized helper; R15 standardized all 7 known callers on the
+        # helper. New scanners walking experiments/ MUST call
+        # _is_oss_export_mirror_path — DO NOT reimplement inline.
         if _is_oss_export_mirror_path(p):
             continue
         n_scanned += 1
@@ -8247,8 +8252,8 @@ def check_callsite_contracts_satisfied(
         if not sd_path.is_dir():
             continue
         for py in sd_path.rglob("*.py"):
-            # Round 12 R12-1: skip OSS-export staging mirror.
-            if "comma_lab_public_export" in py.parts:
+            # R14-1 helper: skip OSS-export staging mirror.
+            if _is_oss_export_mirror_path(py):
                 continue
             violations.extend(
                 _scan_python_for_callsite_contract_violations(py, root)
@@ -8692,8 +8697,8 @@ def check_no_comment_only_contracts(
         for f in sd_path.rglob("*"):
             if not f.is_file() or f.suffix not in target_suffixes:
                 continue
-            # Round 12 R12-1: skip OSS-export staging mirror.
-            if "comma_lab_public_export" in f.parts:
+            # R14-1 helper: skip OSS-export staging mirror.
+            if _is_oss_export_mirror_path(f):
                 continue
             all_findings.extend(
                 _scan_file_for_comment_only_contracts(f, root, patterns)
@@ -9011,8 +9016,8 @@ def check_no_bare_round_in_eval_roundtrip(
         if not sd_path.is_dir():
             continue
         for py in sd_path.rglob("*.py"):
-            # Round 12 R12-1: skip OSS-export staging mirror.
-            if "comma_lab_public_export" in py.parts:
+            # R14-1 helper: skip OSS-export staging mirror.
+            if _is_oss_export_mirror_path(py):
                 continue
             violations.extend(
                 _scan_python_for_bare_round_in_roundtrip(py, root)
