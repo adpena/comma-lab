@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -42,6 +44,12 @@ def _sha256_array(arr: np.ndarray) -> str:
     return hashlib.sha256(arr.tobytes()).hexdigest()
 
 
+def _fake_executable(path: Path) -> Path:
+    path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    path.chmod(path.stat().st_mode | 0o111)
+    return path
+
+
 def test_rust_bridge_requires_explicit_decoder(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("PACT_STBM1BR_RUST_DECODER", raising=False)
     with pytest.raises(STBM1BRRustBridgeError, match="no decoder path"):
@@ -67,13 +75,99 @@ def test_rust_cli_rejects_bad_magic(tmp_path: Path) -> None:
     assert not out.exists()
 
 
+def test_rust_bridge_can_infer_shape_from_metadata_json(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    decoder = _fake_executable(tmp_path / "stbm1br-codec")
+
+    def fake_run(cmd, **_kwargs):
+        output = Path(cmd[3])
+        metadata = Path(cmd[cmd.index("--metadata-json") + 1])
+        output.write_bytes(bytes(range(12)))
+        metadata.write_text(
+            json.dumps({"n_pairs": 2, "height": 2, "width": 3}),
+            encoding="utf-8",
+        )
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr("tac.stbm1br_rust_bridge.subprocess.run", fake_run)
+
+    decoded = decode_stbm1br_mask_segment_via_rust(
+        b"STBM1BR\0fake",
+        decoder_path=decoder,
+    )
+
+    assert decoded.dtype == np.uint8
+    assert decoded.shape == (2, 2, 3)
+    assert decoded.reshape(-1).tolist() == list(range(12))
+
+
+def test_public_stbm_decoder_delegates_to_explicit_rust_binary(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    decoder = _fake_executable(tmp_path / "stbm1br-codec")
+
+    def fake_run(cmd, **_kwargs):
+        output = Path(cmd[3])
+        metadata = Path(cmd[cmd.index("--metadata-json") + 1])
+        assert cmd[cmd.index("--expected-frames") + 1] == "1"
+        assert cmd[cmd.index("--expected-height") + 1] == "2"
+        assert cmd[cmd.index("--expected-width") + 1] == "3"
+        output.write_bytes(bytes([4, 3, 2, 1, 0, 4]))
+        metadata.write_text(
+            json.dumps({"n_pairs": 1, "height": 2, "width": 3}),
+            encoding="utf-8",
+        )
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr("tac.stbm1br_rust_bridge.subprocess.run", fake_run)
+    monkeypatch.setenv("PACT_STBM1BR_RUST_DECODER", str(decoder))
+
+    decoded = decode_stbm1br_mask_segment(
+        b"STBM1BR\0fake",
+        expected_shape=(1, 2, 3),
+    )
+
+    assert decoded.shape == (1, 2, 3)
+    assert decoded.tolist() == [[[4, 3, 2], [1, 0, 4]]]
+
+
+def test_rust_bridge_rejects_metadata_shape_mismatch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    decoder = _fake_executable(tmp_path / "stbm1br-codec")
+
+    def fake_run(cmd, **_kwargs):
+        Path(cmd[3]).write_bytes(b"\0" * 6)
+        Path(cmd[cmd.index("--metadata-json") + 1]).write_text(
+            json.dumps({"n_pairs": 1, "height": 2, "width": 3}),
+            encoding="utf-8",
+        )
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr("tac.stbm1br_rust_bridge.subprocess.run", fake_run)
+
+    with pytest.raises(STBM1BRRustBridgeError, match="metadata shape"):
+        decode_stbm1br_mask_segment_via_rust(
+            b"STBM1BR\0fake",
+            expected_shape=(1, 3, 2),
+            decoder_path=decoder,
+        )
+
+
 @pytest.mark.timeout(240)
-def test_rust_bridge_matches_python_reference_on_real_stbm_segment() -> None:
+def test_rust_bridge_matches_public_decoder_on_real_stbm_segment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     if not STBM_SEGMENT.is_file():
         pytest.skip("real PR85 STBM1BR segment fixture is not present")
     cli = _build_debug_cli()
     segment = STBM_SEGMENT.read_bytes()
 
+    monkeypatch.setenv("PACT_STBM1BR_RUST_DECODER", os.fspath(cli))
     python_decoded = decode_stbm1br_mask_segment(segment, expected_shape=EXPECTED_SHAPE)
     rust_decoded = decode_stbm1br_mask_segment_via_rust(
         segment,

@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import bz2
 import hashlib
+import os
 import struct
 import zlib
 from dataclasses import dataclass, field
@@ -265,6 +266,19 @@ def decode_stbm1br_mask_segment(
     range-decoder + QTBM context model (~1500 lines of bit-level state machine
     that pycdc cannot fully decompile). Production path uses the Rust bridge.
     """
+    if os.environ.get("PACT_STBM1BR_RUST_DECODER"):
+        from tac.stbm1br_rust_bridge import (  # noqa: PLC0415 - optional native bridge
+            STBM1BRRustBridgeError,
+            decode_stbm1br_mask_segment_via_rust,
+        )
+
+        try:
+            return decode_stbm1br_mask_segment_via_rust(
+                payload,
+                expected_shape=expected_shape,
+            )
+        except STBM1BRRustBridgeError as exc:
+            raise STBM1BRError(str(exc)) from exc
     raise _rehydration_failure("decode_stbm1br_mask_segment")
 
 
