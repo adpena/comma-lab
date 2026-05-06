@@ -23,13 +23,13 @@ masks/weights are not silently produced.
 from __future__ import annotations
 
 import hashlib
-import json
 import lzma
 import math
 import struct
 import zlib
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
 import torch
@@ -73,6 +73,11 @@ class QH0DecodeReport:
     payload_bytes: int
     payload_sha256: str
     extra: Mapping[str, Any] = field(default_factory=dict)
+
+    @property
+    def q_fp4_tensor_count(self) -> int:
+        """Compatibility name used by the contest inflate runtime."""
+        return self.fp4_count
 
 
 def unpack_nibbles(packed: torch.Tensor, count: int) -> torch.Tensor:
@@ -256,12 +261,209 @@ def decode_qh0_state_dict(
 ) -> tuple[dict[str, torch.Tensor], QH0DecodeReport]:
     """Decode PR85/PR89 QH0 or QM0 bytes into a JointFrameGenerator state dict.
 
-    DEFERRED: the per-record decode loop dispatches between FP4 (with hi/lo
-    nibble split for QH0), FP16 dense, and int8 dense records, building a
-    ``state`` dict against ``_module_weight_order(build_quantizr_faithful_renderer())``.
-    Reconstruction requires running the full disassembly (~7KB lines).
+    This is a reviewed port of the public PR85/PR89 runtime grammar. It
+    dispatches between FP4 Conv/Embedding records, FP16 dense records, and
+    row-scaled int8 dense records while preserving the QH0 hi/lo and even/odd
+    byte transforms exactly.
     """
-    raise _rehydration_failure("decode_qh0_state_dict")
+    if len(payload) < 3:
+        raise QH0CodecError("QH0 payload is shorter than the 3-byte magic")
+    payload = reconstruct_qh1_payload(payload)
+    magic = payload[:3]
+    if magic not in QH0_SUPPORTED_MAGICS:
+        raise QH0CodecError(f"unsupported QH0 renderer magic: {magic!r}")
+
+    pos = 3
+    hilo_split = magic == QH0_MAGIC
+    state: dict[str, torch.Tensor] = {}
+    covered: set[str] = set()
+    fp4_count = 0
+    fp16_count = 0
+    int8_count = 0
+    probe = build_quantizr_faithful_renderer()
+
+    for name, module in _module_weight_order(probe):
+        kind, pos = _read_u8(payload, pos, f"{name}.weight kind")
+        shape = tuple(module.weight.shape)
+        numel = int(module.weight.numel())
+        if kind == 1:
+            block_size = 32
+            blocks = (numel + block_size - 1) // block_size
+            packed_len = (blocks * block_size + 1) // 2
+            if hilo_split:
+                packed, pos = _unhilo_packed(
+                    payload,
+                    pos,
+                    packed_len,
+                    device=device,
+                    label=f"{name}.weight fp4",
+                )
+                scales, pos = _unsplit_bytes_to_tensor(
+                    payload,
+                    pos,
+                    blocks * 2,
+                    dtype=torch.float16,
+                    shape=(blocks,),
+                    device=device,
+                    label=f"{name}.weight fp4 scales",
+                )
+            else:
+                packed, pos = _read_tensor_bytes(
+                    payload,
+                    pos,
+                    packed_len,
+                    dtype=torch.uint8,
+                    shape=(packed_len,),
+                    device=device,
+                    label=f"{name}.weight fp4",
+                )
+                scales, pos = _read_tensor_bytes(
+                    payload,
+                    pos,
+                    blocks * 2,
+                    dtype=torch.float16,
+                    shape=(blocks,),
+                    device=device,
+                    label=f"{name}.weight fp4 scales",
+                )
+            nibbles = unpack_nibbles(packed, packed.numel() * 2)
+            tensor = _dequantize_fp4_from_nibbles(nibbles, scales, shape)
+            fp4_count += 1
+        elif kind == 0:
+            nbytes = numel * 2
+            if hilo_split:
+                tensor, pos = _unsplit_bytes_to_tensor(
+                    payload,
+                    pos,
+                    nbytes,
+                    dtype=torch.float16,
+                    shape=shape,
+                    device=device,
+                    label=f"{name}.weight fp16",
+                )
+            else:
+                tensor, pos = _read_tensor_bytes(
+                    payload,
+                    pos,
+                    nbytes,
+                    dtype=torch.float16,
+                    shape=shape,
+                    device=device,
+                    label=f"{name}.weight fp16",
+                )
+            tensor = tensor.float()
+            fp16_count += 1
+        else:
+            raise QH0CodecError(f"bad custom model q kind {kind} for {name}")
+
+        state[f"{name}.weight"] = tensor.float()
+        covered.add(f"{name}.weight")
+        if getattr(module, "bias", None) is not None:
+            bias_shape = tuple(module.bias.shape)
+            nbytes = int(module.bias.numel()) * 2
+            if hilo_split:
+                bias, pos = _unsplit_bytes_to_tensor(
+                    payload,
+                    pos,
+                    nbytes,
+                    dtype=torch.float16,
+                    shape=bias_shape,
+                    device=device,
+                    label=f"{name}.bias fp16",
+                )
+            else:
+                bias, pos = _read_tensor_bytes(
+                    payload,
+                    pos,
+                    nbytes,
+                    dtype=torch.float16,
+                    shape=bias_shape,
+                    device=device,
+                    label=f"{name}.bias fp16",
+                )
+            state[f"{name}.bias"] = bias.float()
+            covered.add(f"{name}.bias")
+            fp16_count += 1
+
+    for key, tensor in probe.state_dict().items():
+        if key in covered:
+            continue
+        kind, pos = _read_u8(payload, pos, f"{key} dense kind")
+        shape = tuple(tensor.shape)
+        numel = int(tensor.numel())
+        if kind == 2:
+            quantized, pos = _read_tensor_bytes(
+                payload,
+                pos,
+                numel,
+                dtype=torch.int8,
+                shape=shape,
+                device=device,
+                label=f"{key} int8 values",
+            )
+            rows = shape[0] if len(shape) >= 2 else 1
+            if hilo_split:
+                scales, pos = _unsplit_bytes_to_tensor(
+                    payload,
+                    pos,
+                    rows * 2,
+                    dtype=torch.float16,
+                    shape=(rows,),
+                    device=device,
+                    label=f"{key} int8 scales",
+                )
+            else:
+                scales, pos = _read_tensor_bytes(
+                    payload,
+                    pos,
+                    rows * 2,
+                    dtype=torch.float16,
+                    shape=(rows,),
+                    device=device,
+                    label=f"{key} int8 scales",
+                )
+            state[key] = (quantized.float() * scales.float()[:, None]).reshape(shape)
+            int8_count += 1
+        elif kind == 0:
+            nbytes = numel * 2
+            if hilo_split:
+                dense, pos = _unsplit_bytes_to_tensor(
+                    payload,
+                    pos,
+                    nbytes,
+                    dtype=torch.float16,
+                    shape=shape,
+                    device=device,
+                    label=f"{key} fp16",
+                )
+            else:
+                dense, pos = _read_tensor_bytes(
+                    payload,
+                    pos,
+                    nbytes,
+                    dtype=torch.float16,
+                    shape=shape,
+                    device=device,
+                    label=f"{key} fp16",
+                )
+            state[key] = dense.float()
+            fp16_count += 1
+        else:
+            raise QH0CodecError(f"bad custom model dense kind {kind} for {key}")
+
+    if pos != len(payload):
+        raise QH0CodecError(
+            f"QH0 payload has trailing bytes after decode: pos={pos} payload={len(payload)}"
+        )
+    return state, QH0DecodeReport(
+        magic=magic,
+        hilo_split=hilo_split,
+        fp4_count=fp4_count,
+        fp16_count=fp16_count,
+        int8_count=int8_count,
+        payload_bytes=len(payload),
+        payload_sha256=_sha256(payload),
+    )
 
 
 def load_qh0(

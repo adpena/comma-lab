@@ -12,19 +12,23 @@ from __future__ import annotations
 import argparse
 import collections
 import dataclasses
-import hashlib
 import io
 import json
 import math
 import struct
-import zipfile
 from pathlib import Path
 from typing import Iterable, Sequence
 
 import brotli
 
-
-FIXED_DATE_TIME = (1980, 1, 1, 0, 0, 0)
+from tac.pr95_hnerv import (
+    LatentPayload,
+    encode_top_blob,
+    parse_latents_raw,
+    parse_top_blob,
+    read_single_member_zip,
+    sha256_bytes,
+)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -70,57 +74,12 @@ class DecoderRecord:
 
 
 @dataclasses.dataclass(frozen=True)
-class LatentPayload:
-    n_pairs: int
-    latent_dim: int
-    mins_f16: bytes
-    scales_f16: bytes
-    quantized: tuple[tuple[int, ...], ...]
-
-    def to_bytes(self) -> bytes:
-        if len(self.quantized) != self.n_pairs:
-            raise ValueError(f"expected {self.n_pairs} latent rows, got {len(self.quantized)}")
-        if len(self.mins_f16) != self.latent_dim * 2:
-            raise ValueError("mins_f16 length does not match latent_dim")
-        if len(self.scales_f16) != self.latent_dim * 2:
-            raise ValueError("scales_f16 length does not match latent_dim")
-        previous = [0] * self.latent_dim
-        lo = bytearray()
-        hi = bytearray()
-        for pair_index, row in enumerate(self.quantized):
-            if len(row) != self.latent_dim:
-                raise ValueError(f"row {pair_index} has {len(row)} dims, expected {self.latent_dim}")
-            for dim_index, value in enumerate(row):
-                if not 0 <= int(value) <= 255:
-                    raise ValueError(
-                        f"latent quantized value out of uint8 range at pair {pair_index}, "
-                        f"dim {dim_index}: {value}"
-                    )
-                delta = int(value) if pair_index == 0 else int(value) - previous[dim_index]
-                zz = delta * 2 if delta >= 0 else -2 * delta - 1
-                lo.append(zz & 0xFF)
-                hi.append((zz >> 8) & 0xFF)
-                previous[dim_index] = int(value)
-        return (
-            struct.pack("<II", self.n_pairs, self.latent_dim)
-            + self.mins_f16
-            + self.scales_f16
-            + bytes(lo)
-            + bytes(hi)
-        )
-
-
-@dataclasses.dataclass(frozen=True)
 class SectionProfile:
     name: str
     raw_bytes: int
     compressed_bytes: int | None
     sha256: str
     entropy_bits_per_byte: float
-
-
-def sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
 
 
 def shannon_entropy_bits_per_byte(data: bytes) -> float:
@@ -136,62 +95,6 @@ def _read_exact(buf: io.BytesIO, n: int, label: str) -> bytes:
     if len(data) != n:
         raise ValueError(f"truncated {label}: wanted {n}, got {len(data)}")
     return data
-
-
-def read_single_member_zip(path: Path) -> tuple[str, bytes, dict[str, int | list[int]]]:
-    with zipfile.ZipFile(path, "r") as zf:
-        infos = [info for info in zf.infolist() if not info.is_dir()]
-        if len(infos) != 1:
-            raise ValueError(f"expected exactly one archive member, got {len(infos)}")
-        info = infos[0]
-        if not info.filename:
-            raise ValueError("single archive member has empty filename")
-        data = zf.read(info.filename)
-        return (
-            info.filename,
-            data,
-            {
-                "compress_type": int(info.compress_type),
-                "file_size": int(info.file_size),
-                "compress_size": int(info.compress_size),
-                "crc": int(info.CRC),
-                "date_time": list(info.date_time),
-            },
-        )
-
-
-def write_stored_zip(path: Path, member_name: str, payload: bytes) -> None:
-    if not member_name:
-        raise ValueError("member_name must be nonempty")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    info = zipfile.ZipInfo(member_name, date_time=FIXED_DATE_TIME)
-    info.compress_type = zipfile.ZIP_STORED
-    info.external_attr = 0o100644 << 16
-    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED, allowZip64=False) as zf:
-        zf.writestr(info, payload, compress_type=zipfile.ZIP_STORED)
-
-
-def parse_top_blob(blob: bytes) -> dict[str, bytes]:
-    buf = io.BytesIO(blob)
-    out: dict[str, bytes] = {}
-    for label in ("meta", "decoder", "latents"):
-        size_b = _read_exact(buf, 4, f"{label}_brotli_len")
-        (size,) = struct.unpack("<I", size_b)
-        compressed = _read_exact(buf, size, f"{label}_brotli")
-        out[f"{label}_brotli"] = compressed
-        out[f"{label}_raw"] = brotli.decompress(compressed)
-    rest = buf.read()
-    if rest:
-        raise ValueError(f"trailing bytes after PR95 blob: {len(rest)}")
-    return out
-
-
-def encode_top_blob(meta_brotli: bytes, decoder_brotli: bytes, latents_brotli: bytes) -> bytes:
-    out = io.BytesIO()
-    for payload in (meta_brotli, decoder_brotli, latents_brotli):
-        out.write(struct.pack("<I", len(payload)))
-        out.write(payload)
-    return out.getvalue()
 
 
 def compact_meta_raw(meta_raw: bytes) -> bytes:
@@ -283,43 +186,6 @@ def decoder_raw_variants(decoder_raw: bytes) -> dict[str, bytes]:
         "size_desc": rebuild_decoder_raw(sorted(records, key=len, reverse=True)),
         "size_asc": rebuild_decoder_raw(sorted(records, key=len)),
     }
-
-
-def parse_latents_raw(latents_raw: bytes) -> LatentPayload:
-    buf = io.BytesIO(latents_raw)
-    n_pairs, latent_dim = struct.unpack("<II", _read_exact(buf, 8, "latent header"))
-    mins_f16 = _read_exact(buf, latent_dim * 2, "latent mins_f16")
-    scales_f16 = _read_exact(buf, latent_dim * 2, "latent scales_f16")
-    total = n_pairs * latent_dim
-    lo = _read_exact(buf, total, "latent lo delta stream")
-    hi = _read_exact(buf, total, "latent hi delta stream")
-    rest = buf.read()
-    if rest:
-        raise ValueError(f"latent raw has trailing bytes: {len(rest)}")
-    previous = [0] * latent_dim
-    rows: list[tuple[int, ...]] = []
-    for pair_index in range(n_pairs):
-        row: list[int] = []
-        for dim_index in range(latent_dim):
-            offset = pair_index * latent_dim + dim_index
-            zz = lo[offset] | (hi[offset] << 8)
-            delta = zz // 2 if zz % 2 == 0 else -(zz // 2) - 1
-            value = delta if pair_index == 0 else previous[dim_index] + delta
-            if not 0 <= value <= 255:
-                raise ValueError(
-                    f"latent quantized value out of uint8 range at pair {pair_index}, "
-                    f"dim {dim_index}: {value}"
-                )
-            row.append(value)
-            previous[dim_index] = value
-        rows.append(tuple(row))
-    return LatentPayload(
-        n_pairs=n_pairs,
-        latent_dim=latent_dim,
-        mins_f16=mins_f16,
-        scales_f16=scales_f16,
-        quantized=tuple(rows),
-    )
 
 
 def validate_permutation(permutation: Sequence[int], width: int) -> None:

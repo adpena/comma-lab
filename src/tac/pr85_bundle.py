@@ -88,6 +88,26 @@ class Pr85Bundle:
     segment_offsets: Mapping[str, int]
     fixed_length_segments: Mapping[str, int]
 
+    @property
+    def segment_lengths(self) -> dict[str, int]:
+        """Return charged byte lengths for every parsed segment.
+
+        Older recovered public-replay tools consumed this as a concrete
+        mapping. Keeping it as a derived property avoids stale duplicated
+        length state while preserving the fail-closed parser contract.
+        """
+
+        return {name: len(bytes(segment)) for name, segment in self.segments.items()}
+
+    @property
+    def segment_contracts(self) -> dict[str, "Pr85SegmentContract"]:
+        """Return deterministic local byte contracts for parsed segments."""
+
+        return {
+            name: infer_pr85_segment_contract(name, bytes(segment))
+            for name, segment in self.segments.items()
+        }
+
 
 @dataclass(frozen=True)
 class Pr85RuntimeExpansion:
