@@ -10,21 +10,21 @@ deduplicated release view and adds only Kaggle's required
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import shutil
-import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
-SRC = REPO / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
-if str(REPO) not in sys.path:
-    sys.path.insert(0, str(REPO))
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO)
 
 from tac.preflight import check_public_release_hygiene  # noqa: E402
+from tac.repo_io import json_text, write_json  # noqa: E402
 from tools.audit_public_publish_links import audit_public_publish_links  # noqa: E402
 
 DEFAULT_SOURCE = REPO / "experiments" / "results" / "public_pr_archive_release_view"
@@ -156,7 +156,7 @@ def materialize_kaggle_mirror(
             "description": "Mirror-generation manifest for this Kaggle upload view.",
         }
     )
-    (output_root / "dataset-metadata.json").write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n")
+    write_json(output_root / "dataset-metadata.json", metadata)
 
     manifest = {
         "schema": "comma_pr_archive_kaggle_mirror_v1",
@@ -172,7 +172,7 @@ def materialize_kaggle_mirror(
         "skipped": skipped,
         "canonical_hf_dataset": "adpena/comma_video_compression_challenge_pr_archive",
     }
-    (output_root / "KAGGLE_MIRROR_MANIFEST.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    write_json(output_root / "KAGGLE_MIRROR_MANIFEST.json", manifest)
     hygiene_violations = check_public_release_hygiene(
         repo_root=REPO,
         strict=strict_hygiene,
@@ -192,7 +192,7 @@ def materialize_kaggle_mirror(
     manifest["hygiene_violation_count"] = len(hygiene_violations)
     manifest["public_link_count"] = int(link_payload["link_count"])
     manifest["public_link_violation_count"] = len(link_violations)
-    (output_root / "KAGGLE_MIRROR_MANIFEST.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    write_json(output_root / "KAGGLE_MIRROR_MANIFEST.json", manifest)
     return manifest
 
 
@@ -214,7 +214,7 @@ def main(argv: list[str] | None = None) -> int:
         strict_hygiene=not args.no_strict_hygiene,
     )
     if args.format == "json":
-        print(json.dumps(manifest, indent=2, sort_keys=True))
+        print(json_text(manifest), end="")
     else:
         print(
             "kaggle mirror materialized: "

@@ -5528,6 +5528,64 @@ Verification:
 - `.venv/bin/python tools/all_lanes_preflight.py` passed:
   `ALL 20 PREFLIGHT CHECKS PASSED`.
 
+## R86 - 2026-05-06 Kaggle PR Archive Mirror IO Lowering
+
+Continued the Gate #7 lowering tranche on the Kaggle mirror materializer for
+the public PR archive corpus. This is a behavior-preserving cleanup of the
+secondary discovery/notebook mirror path; Hugging Face remains the canonical
+file-heavy host.
+
+Changes:
+
+- Migrated `tools/materialize_pr_archive_kaggle_mirror.py` from manual
+  repo-root and `sys.path.insert` setup to `tools.tool_bootstrap`.
+- Migrated generated `dataset-metadata.json` and
+  `KAGGLE_MIRROR_MANIFEST.json` writes to `tac.repo_io.write_json`.
+- Migrated JSON stdout mode to `tac.repo_io.json_text`.
+- Preserved hardlink/copy behavior, skip rules, final public-release hygiene
+  scans, link hygiene scans, `dataset-metadata.json` schema, and
+  `comma_pr_archive_kaggle_mirror_v1` manifest schema.
+
+Measured inventory after R86:
+
+- local SHA helpers: `53`
+- local JSON dumps: `102`
+- manual `sys.path` bootstraps: `270`
+- manual repo-root parent probes: `367`
+- manual score/dispatch metadata mentions: `601`
+
+Within-tranche committed-surface deltas:
+
+- `tools/materialize_pr_archive_kaggle_mirror.py` local JSON dump count:
+  `1 -> 0`
+- `tools/materialize_pr_archive_kaggle_mirror.py` local SHA helper count:
+  `0 -> 0`
+- `tools/materialize_pr_archive_kaggle_mirror.py` manual `sys.path` bootstrap
+  count: `2 -> 0`
+- `tools/materialize_pr_archive_kaggle_mirror.py` manual repo-root parent
+  count: `1 -> 0`
+- `tools/materialize_pr_archive_kaggle_mirror.py` manual score/dispatch
+  metadata count: `0 -> 0`
+
+Verification:
+
+- `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest
+  src/tac/tests/test_materialize_pr_archive_kaggle_mirror.py
+  src/tac/tests/test_tool_bootstrap.py src/tac/tests/test_repo_io.py
+  src/tac/tests/test_audit_tooling_consolidation.py -q` passed:
+  `13 passed`.
+- `.venv/bin/python -m ruff check --select I,RUF100,F401,UP035,F821,E402
+  tools/materialize_pr_archive_kaggle_mirror.py` passed.
+- `.venv/bin/python -m py_compile
+  tools/materialize_pr_archive_kaggle_mirror.py` passed.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --scan-root
+  tools/materialize_pr_archive_kaggle_mirror.py --format json` reported zero
+  findings for the file.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --format json`
+  reported the measured inventory above.
+- `.venv/bin/python tools/all_lanes_preflight.py` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+
 ## R81 - 2026-05-06 Component Sensitivity Shard Merge IO Lowering
 
 Continued the Gate #7 lowering tranche on the finite-difference sensitivity
