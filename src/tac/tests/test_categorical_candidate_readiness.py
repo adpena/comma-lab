@@ -181,6 +181,23 @@ def test_audit_categorical_candidate_manifest_rejects_duplicate_archive_members(
     assert "candidate_archive_zip_wire_contract_failed" in manifest["dispatch_blockers"]
 
 
+def test_audit_categorical_candidate_manifest_rejects_untracked_archive_members(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    archive = Path(candidate["candidate_archive"]["path"])
+    with zipfile.ZipFile(archive, "a", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("debug_sidecar.json", b"{}")
+    candidate["candidate_archive"]["bytes"] = archive.stat().st_size
+    candidate["candidate_archive"]["sha256"] = sha256_file(archive)
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert "candidate_archive_untracked_members" in manifest["dispatch_blockers"]
+    assert manifest["candidate_archive"]["untracked_members"] == ["debug_sidecar.json"]
+
+
 def test_audit_categorical_candidate_manifest_checks_member_manifest_content(tmp_path: Path) -> None:
     candidate = _base_candidate(tmp_path)
     bad_manifest_path = tmp_path / "bad_archive_member_manifest.json"

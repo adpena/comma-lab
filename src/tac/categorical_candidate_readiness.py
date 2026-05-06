@@ -369,6 +369,7 @@ def audit_categorical_candidate_manifest(
     archive_path: Path | None = None
     archive_members: dict[str, bytes] = {}
     archive_error: str | None = None
+    archive_untracked_members: list[str] = []
     archive_wire_contract: dict[str, Any] = {
         "schema_version": 1,
         "passed": False,
@@ -426,9 +427,10 @@ def audit_categorical_candidate_manifest(
                 blockers.append(f"charged_member_archive_bytes_mismatch:{name}")
             if record["sha256"] != sha256_bytes(raw):
                 blockers.append(f"charged_member_archive_sha256_mismatch:{name}")
-        untracked = sorted(archive_name_set - charged_name_set)
-        if untracked:
-            warnings.append(f"archive contains untracked members: {untracked}")
+        archive_untracked_members = sorted(archive_name_set - charged_name_set)
+        if archive_untracked_members:
+            blockers.append("candidate_archive_untracked_members")
+            warnings.append(f"archive contains untracked members: {archive_untracked_members}")
 
     ready = len(blockers) == 0
     return {
@@ -450,6 +452,7 @@ def audit_categorical_candidate_manifest(
             "zip_read_error": archive_error or "",
             "zip_wire_contract": archive_wire_contract,
             "contains_inflate_sh": CONTEST_INFLATE_MEMBER in archive_members,
+            "untracked_members": archive_untracked_members,
         },
         "archive_member_manifest": {
             "path": repo_relative(manifest_path, root) if manifest_path is not None else "",
