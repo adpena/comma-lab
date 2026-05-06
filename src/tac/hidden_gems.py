@@ -475,9 +475,11 @@ _REGISTRY: tuple[HiddenGemEntry, ...] = (
             "src/tac/contrib/wavelet_renderer.py",
             "src/tac/hnerv_wavelet_residual.py",
             "src/tac/hnerv_wavelet_sidechannel.py",
+            "src/tac/hnerv_wavelet_apply_gate.py",
             "src/tac/tests/test_wavelet_mask_codec.py",
             "src/tac/tests/test_hnerv_wavelet_residual.py",
             "src/tac/tests/test_hnerv_wavelet_sidechannel.py",
+            "src/tac/tests/test_hnerv_wavelet_apply_gate.py",
             ".omx/research/hnerv_wavelet_sidechannel_candidate_20260506_codex.md",
         ),
         integration_targets=(
@@ -486,6 +488,7 @@ _REGISTRY: tuple[HiddenGemEntry, ...] = (
             "src/tac/wavelet_mask_codec.py",
             "tools/plan_hnerv_wavelet_residual.py",
             "tools/build_hnerv_wavelet_sidechannel_candidate.py",
+            "tools/audit_hnerv_wavelet_apply_gate.py",
         ),
         next_patch=(
             "Design a reviewed WR01 apply transform with a break-even component-benefit "

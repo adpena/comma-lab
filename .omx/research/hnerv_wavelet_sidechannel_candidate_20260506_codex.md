@@ -141,3 +141,49 @@ It is engineering evidence for composability and no-op resistance, not a
 candidate for exact eval. The next real score step is a reviewed wavelet apply
 transform that can plausibly buy at least `0.000258` score through SegNet or
 PoseNet improvement before exact CUDA dispatch is considered.
+
+## WR01 Apply-Gate Break-Even
+
+The no-op stack now has a nonarbitrary readiness gate for the next score-relevant
+WR01 transform. The gate computes the exact contest-rate penalty and converts it
+into the minimum component benefit that a future transform must justify before
+archive preflight or exact CUDA dispatch.
+
+Command:
+
+```bash
+.venv/bin/python tools/audit_hnerv_wavelet_apply_gate.py \
+  --sidechannel-manifest experiments/results/hnerv_wavelet_sidechannel_pr106x_20260506_codex/manifest.json \
+  --stacked-metadata experiments/results/pr106_stacked_wavelet_wr01_noop_20260506_codex/build_metadata.json \
+  --json-out experiments/results/hnerv_wavelet_apply_gate_pr106x_20260506_codex.json
+```
+
+Observed gate output:
+
+- archive byte delta: `+387`
+- rate-only score delta: `+0.0002576874148582803`
+- minimum SegNet-distance reduction to break even:
+  `0.0000025768741485828032`
+- runtime mode: `explicit_noop_consume_only`
+- decoded WR01 atoms: `32`
+- ready for archive preflight: `false`
+- ready for exact CUDA dispatch: `false`
+- gate JSON SHA-256:
+  `8cf77a6c59f1d3421701de27f2bfd688d2cca3b812e40c0f90fcc90465af6940`
+
+Dispatch blockers:
+
+- `requires_reviewed_wr01_apply_transform`
+- `requires_component_benefit_evidence_over_break_even`
+- `requires_archive_manifest_preflight`
+- `requires_exact_cuda_auth_eval`
+- `wr01_rate_penalty_must_be_recovered_by_distortion`
+- `wr01_runtime_mode_is_explicit_noop`
+
+Updated conclusion:
+
+The WR01 path is byte-closed, runtime-consumed, and now break-even-gated. It
+must not dispatch as a no-op rate regression. The next implementation has to
+replace `explicit_noop_consume_only` with a reviewed deterministic apply
+transform and show component-response evidence above the `0.000258` score bar
+before archive preflight or CUDA auth eval is eligible.

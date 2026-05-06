@@ -1,0 +1,44 @@
+{
+  "archive_byte_delta": 387,
+  "audit": "hnerv_wavelet_apply_gate",
+  "baseline_pose_dist": null,
+  "break_even_score_improvement": 0.0002576874148582803,
+  "candidate_archive_sha256": "4e9846a98bf7b5d543552dabe34fd067d5b039ee1d3a75eebb83ff67bb88a993",
+  "decoded_atom_count": 32,
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "requires_reviewed_wr01_apply_transform",
+    "requires_component_benefit_evidence_over_break_even",
+    "requires_archive_manifest_preflight",
+    "requires_exact_cuda_auth_eval",
+    "wr01_rate_penalty_must_be_recovered_by_distortion",
+    "wr01_runtime_mode_is_explicit_noop"
+  ],
+  "min_required_seg_dist_reduction": 2.5768741485828032e-06,
+  "next_required_evidence": [
+    "reviewed_wr01_apply_transform",
+    "byte_closed_candidate_with_transform_mode_not_noop",
+    "component_response_or_exact_cuda_evidence_exceeding_break_even",
+    "archive_manifest_preflight",
+    "exact_cuda_auth_eval"
+  ],
+  "pose_break_even": null,
+  "rate_score_delta": 0.0002576874148582803,
+  "ready_for_archive_preflight": false,
+  "ready_for_exact_eval_dispatch": false,
+  "required_component_margin": 0.0,
+  "runtime_consumption_proof": {
+    "atom_coordinate_sha256": "23f7615b6cc5b011363b5c1822cbd81ef2b9e05305d380e85a747af5ca90eff8",
+    "decoded_atom_count": 32,
+    "runtime_consumed": true,
+    "score_claim": false
+  },
+  "runtime_mode": "explicit_noop_consume_only",
+  "schema_version": 1,
+  "score_claim": false,
+  "sidechannel_manifest_path": "experiments/results/hnerv_wavelet_sidechannel_pr106x_20260506_codex/hnerv_wavelet_sidechannel_candidate.json",
+  "source_archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+  "stacked_archive_path": "experiments/results/pr106_stacked_wavelet_wr01_noop_20260506_codex/pr106_stacked_archive.zip",
+  "stacked_archive_sha256": null,
+  "wavelet_sidechannel_bytes": 379
+}
