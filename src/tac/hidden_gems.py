@@ -210,7 +210,7 @@ _REGISTRY: tuple[HiddenGemEntry, ...] = (
         key="fridrich_inverse_steg_allocator",
         title="Fridrich inverse-steg allocator",
         category="latent_repair",
-        status="ready_for_patch",
+        status="implemented_guarded",
         summary=(
             "Use UNIWARD/Fridrich-style detector-aware costs as allocation feedback for "
             "charged residual atoms and HNeRV section transforms."
@@ -218,10 +218,13 @@ _REGISTRY: tuple[HiddenGemEntry, ...] = (
         evidence_paths=(
             ".omx/research/council_strategic_design_decisions_20260430.md",
             ".omx/research/council_uniward_v8_fridrich_shannon_audit_20260429.md",
+            ".omx/research/fridrich_inverse_steg_allocator_20260506_codex.md",
             "src/tac/fridrich.py",
             "src/tac/fridrich_losses.py",
             "src/tac/uniward_texture.py",
             "src/tac/tests/test_uniward_texture.py",
+            "src/tac/tests/test_hnerv_section_repack.py",
+            "src/tac/tests/test_engineered_correction_readiness.py",
         ),
         integration_targets=(
             "src/tac/hnerv_section_repack.py",
@@ -229,8 +232,8 @@ _REGISTRY: tuple[HiddenGemEntry, ...] = (
             "src/tac/uniward_delta.py",
         ),
         next_patch=(
-            "Emit a detector-cost field that ranks HNeRV latent, sidecar, and correction "
-            "atoms by charged bytes and scorer-sensitivity evidence."
+            "Feed detector-cost manifests into the stack orchestrator as optimizer feedback "
+            "only; keep archive builds blocked until charged atoms alter a byte-closed candidate."
         ),
         contest_compliance_notes=(
             "Fridrich/UNIWARD maps are optimizer feedback only until consumed by charged archive bytes.",

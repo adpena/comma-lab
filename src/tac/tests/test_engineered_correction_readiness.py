@@ -8,7 +8,11 @@ from pathlib import Path
 import numpy as np
 
 from experiments.precompute_gradient_corrections import pack_sparse_corrections
-from tac.engineered_correction_readiness import audit_sparse_corrections
+from tac.engineered_correction_readiness import (
+    audit_sparse_corrections,
+    detector_cost_atom_from_correction_report,
+)
+from tac.uniward_delta import build_detector_cost_manifest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = REPO_ROOT / "tools" / "audit_engineered_corrections.py"
@@ -75,6 +79,25 @@ def test_engineered_correction_readiness_rejects_int4_out_of_range() -> None:
 
     assert report.ready_for_local_patch is False
     assert "int4_corrections_out_of_range" in report.blockers
+
+
+def test_correction_readiness_feeds_fridrich_detector_cost_manifest() -> None:
+    report = audit_sparse_corrections(_sparse(), max_packed_bytes=10_000)
+    atom = detector_cost_atom_from_correction_report(
+        report,
+        atom_id="correction:fixture",
+        detector_capacity=0.75,
+        positive_scorer_sensitivity=0.006,
+    )
+
+    manifest = build_detector_cost_manifest([atom], source_label="correction_fixture")
+
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["rows"][0]["atom_id"] == "correction:fixture"
+    assert manifest["rows"][0]["charged_bytes"] == report.packed_bytes
+    assert manifest["rows"][0]["allocation_priority"] > 0.0
+    assert manifest["rows"][0]["promotion_eligible"] is False
 
 
 def test_engineered_correction_readiness_cli_json(tmp_path: Path) -> None:

@@ -12,8 +12,10 @@ from tac.hnerv_section_repack import (
     audit_candidate_section_diff,
     build_section_repack_plan,
     candidate_diff_from_scorecard_manifests,
+    detector_cost_atoms_from_section_plan,
     render_markdown,
 )
+from tac.uniward_delta import build_detector_cost_manifest
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -177,6 +179,23 @@ def test_candidate_diff_from_scorecard_manifests_proves_repack_noop() -> None:
     assert audit["ready_for_archive_preflight"] is False
     assert audit["changed_section_count"] == 0
     assert "candidate_diff_has_no_changed_sections" in audit["blockers"]
+
+
+def test_section_plan_feeds_fridrich_detector_cost_manifest() -> None:
+    plan = build_section_repack_plan(_scorecard(), labels=["PR106x"])
+    atoms = detector_cost_atoms_from_section_plan(plan)
+    manifest = build_detector_cost_manifest(atoms, source_label="PR106x")
+
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert "requires_charged_archive_consumption" in manifest["dispatch_blockers"]
+    assert manifest["atom_count"] == 3
+    rows = manifest["rows"]
+    assert rows[0]["atom_id"] == "hnerv:PR106x:latents_and_sidecar_brotli"
+    assert all(row["detector_capacity_source"] == "entropy_bits_per_byte/8" for row in rows)
+    assert all(row["scorer_sensitivity_source"] == "rate_score_gain_if_save_1pct" for row in rows)
+    assert rows[0]["allocation_priority"] > rows[-1]["allocation_priority"]
+    assert all(row["promotion_eligible"] is False for row in rows)
 
 
 def test_audit_hnerv_section_candidate_diff_cli_blocks_noop_repack(tmp_path: Path) -> None:

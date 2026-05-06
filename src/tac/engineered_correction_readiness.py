@@ -213,6 +213,42 @@ def audit_corrections_bin(
     return report
 
 
+def detector_cost_atom_from_correction_report(
+    report: CorrectionReadinessReport,
+    *,
+    atom_id: str,
+    detector_capacity: float | None = None,
+    positive_scorer_sensitivity: float | None = None,
+    evidence_grade: str = "planning",
+) -> dict[str, Any]:
+    """Convert a correction readiness report into a detector-cost atom row.
+
+    The returned mapping is intended for
+    ``tac.uniward_delta.build_detector_cost_manifest``. It carries only charged
+    byte and optional optimizer-feedback fields; it does not make a score or
+    dispatch claim.
+    """
+    if not atom_id:
+        raise EngineeredCorrectionReadinessError("atom_id must be nonempty")
+    atom = {
+        "atom_id": str(atom_id),
+        "atom_kind": "engineered_sparse_correction",
+        "stream_role": "sidecar_or_correction_stream",
+        "charged_bytes": int(report.packed_bytes),
+        "n_kept": int(report.n_kept),
+        "quantize_bits": int(report.quantize_bits),
+        "packed_sha256": report.packed_sha256,
+        "evidence_grade": evidence_grade,
+        "score_claim": False,
+        "dispatch_attempted": False,
+    }
+    if detector_capacity is not None:
+        atom["detector_capacity"] = float(detector_capacity)
+    if positive_scorer_sensitivity is not None:
+        atom["positive_scorer_sensitivity"] = float(positive_scorer_sensitivity)
+    return atom
+
+
 def _shape_tuple(value: Any, blockers: list[str]) -> tuple[int, int, int, int] | None:
     try:
         shape = tuple(int(part) for part in value)
@@ -263,4 +299,5 @@ __all__ = [
     "EngineeredCorrectionReadinessError",
     "audit_corrections_bin",
     "audit_sparse_corrections",
+    "detector_cost_atom_from_correction_report",
 ]

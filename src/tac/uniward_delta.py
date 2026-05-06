@@ -84,8 +84,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import struct
 import zlib
+from collections import Counter
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -106,11 +109,14 @@ __all__ = [
     "unpack_sparse_delta",
     "apply_delta_to_frame",
     "DeltaSpec",
+    "DETECTOR_COST_SCHEMA_VERSION",
+    "build_detector_cost_manifest",
 ]
 
 
 MAGIC = b"UWD1"  # UniWard Delta v1
 SCHEMA_VERSION = 2  # bumped from 1 in the Codex R5 HIGH fix below.
+DETECTOR_COST_SCHEMA_VERSION = 1
 
 # ── Compliance gate (Codex R5 HIGH — silent contest-noncompliance) ──────
 #
@@ -662,7 +668,158 @@ def apply_delta_to_frame(
     return flat.reshape(spec.H, spec.W, 3).to(frame_hwc.dtype)
 
 
-# ── 4. Convenience: hash the inputs that determine δ output ─────────────
+# ── 4. Planning-only Fridrich detector-cost atom ranking ────────────────
+
+
+def build_detector_cost_manifest(
+    atoms: Iterable[Mapping[str, Any]],
+    *,
+    source_label: str = "manual",
+    max_atoms: int | None = None,
+) -> dict[str, Any]:
+    """Rank charged atom candidates by detector capacity and score evidence.
+
+    This is optimizer feedback for stack search, not a score path. The ranking
+    uses only fields present on the input atoms:
+
+    ``priority = positive_scorer_sensitivity * detector_capacity / charged_bytes``
+
+    where ``detector_capacity`` is either an explicit UNIWARD/Fridrich capacity
+    field, ``1 / (1 + detector_cost)``, or an HNeRV section entropy proxy
+    ``entropy_bits_per_byte / 8``. Missing evidence keeps the row in the
+    manifest, but assigns priority zero and adds a risk reason. The manifest is
+    always non-dispatchable until a charged archive consumes the atom bytes and
+    exact CUDA auth eval measures the resulting archive.
+    """
+    rows = [_detector_cost_row(atom) for atom in atoms]
+    rows.sort(
+        key=lambda row: (
+            -float(row["allocation_priority"]),
+            int(row["charged_bytes"]),
+            str(row["atom_id"]),
+        )
+    )
+    if max_atoms is not None:
+        if max_atoms < 0:
+            raise ValueError("max_atoms must be nonnegative")
+        rows = rows[:max_atoms]
+    role_counts = Counter(str(row["stream_role"]) for row in rows)
+    blockers = [
+        "fridrich_detector_cost_is_optimizer_feedback_only",
+        "requires_charged_archive_consumption",
+        "requires_archive_manifest_preflight",
+        "requires_exact_cuda_auth_eval_on_candidate",
+    ]
+    return {
+        "schema_version": DETECTOR_COST_SCHEMA_VERSION,
+        "tool": "tac.uniward_delta.build_detector_cost_manifest",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": blockers,
+        "source_label": str(source_label),
+        "ranking_formula": (
+            "positive_scorer_sensitivity * detector_capacity / charged_bytes"
+        ),
+        "atom_count": len(rows),
+        "role_counts": dict(sorted(role_counts.items())),
+        "rows": rows,
+    }
+
+
+def _detector_cost_row(atom: Mapping[str, Any]) -> dict[str, Any]:
+    atom_id = str(atom.get("atom_id") or atom.get("id") or "")
+    if not atom_id:
+        raise ValueError("detector-cost atom missing atom_id")
+    charged_bytes = _positive_int(atom.get("charged_bytes") or atom.get("bytes"))
+    stream_role = str(
+        atom.get("stream_role")
+        or atom.get("optimization_role")
+        or atom.get("atom_kind")
+        or "unknown"
+    )
+    detector_capacity, detector_source, detector_risks = _detector_capacity(atom)
+    sensitivity, sensitivity_source, sensitivity_risks = _scorer_sensitivity(atom)
+    risk_reasons = [*detector_risks, *sensitivity_risks]
+    if charged_bytes <= 0:
+        risk_reasons.append("charged_bytes_must_be_positive")
+    evidence_grade = str(atom.get("evidence_grade") or atom.get("evidence") or "planning")
+    if evidence_grade not in {"A++", "A", "B", "empirical", "derivation", "planning"}:
+        risk_reasons.append(f"non_promotable_evidence_grade:{evidence_grade}")
+    priority = 0.0
+    if charged_bytes > 0 and detector_capacity > 0.0 and sensitivity > 0.0:
+        priority = sensitivity * detector_capacity / charged_bytes
+    return {
+        "atom_id": atom_id,
+        "atom_kind": str(atom.get("atom_kind") or stream_role),
+        "stream_role": stream_role,
+        "member": str(atom.get("member") or ""),
+        "charged_bytes": charged_bytes,
+        "detector_capacity": round(detector_capacity, 12),
+        "detector_capacity_source": detector_source,
+        "positive_scorer_sensitivity": round(sensitivity, 12),
+        "scorer_sensitivity_source": sensitivity_source,
+        "allocation_priority": round(priority, 15),
+        "evidence_grade": evidence_grade,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "risk_reasons": sorted(set(risk_reasons)),
+    }
+
+
+def _detector_capacity(atom: Mapping[str, Any]) -> tuple[float, str, list[str]]:
+    for key in (
+        "detector_capacity",
+        "uniward_capacity",
+        "fridrich_capacity",
+        "texture_capacity",
+    ):
+        value = _finite_float(atom.get(key))
+        if value is not None:
+            return max(0.0, value), key, []
+    detector_cost = _finite_float(atom.get("detector_cost"))
+    if detector_cost is not None:
+        return 1.0 / (1.0 + max(0.0, detector_cost)), "1/(1+detector_cost)", []
+    entropy_bits_per_byte = _finite_float(atom.get("entropy_bits_per_byte"))
+    if entropy_bits_per_byte is not None:
+        return max(0.0, min(1.0, entropy_bits_per_byte / 8.0)), "entropy_bits_per_byte/8", []
+    return 0.0, "missing", ["missing_detector_capacity"]
+
+
+def _scorer_sensitivity(atom: Mapping[str, Any]) -> tuple[float, str, list[str]]:
+    for key in (
+        "positive_scorer_sensitivity",
+        "score_sensitivity",
+        "component_sensitivity",
+        "expected_score_saved",
+        "rate_score_gain_if_save_1pct",
+    ):
+        value = _finite_float(atom.get(key))
+        if value is not None:
+            if value > 0.0:
+                return value, key, []
+            return 0.0, key, ["non_positive_scorer_sensitivity"]
+    return 0.0, "missing", ["missing_positive_scorer_sensitivity"]
+
+
+def _finite_float(value: Any) -> float | None:
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(out):
+        return None
+    return out
+
+
+def _positive_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+# ── 5. Convenience: hash the inputs that determine δ output ─────────────
 
 
 def fingerprint_inputs(*paths: Path) -> str:

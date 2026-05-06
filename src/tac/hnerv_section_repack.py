@@ -253,6 +253,37 @@ def audit_candidate_section_diff(
     }
 
 
+def detector_cost_atoms_from_section_plan(
+    plan: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    """Convert section-plan rows into Fridrich detector-cost planner atoms."""
+    rows = plan.get("rows")
+    if not isinstance(rows, list) or not rows:
+        raise HnervSectionPlanError("plan rows must be a nonempty list")
+    atoms: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, Mapping):
+            raise HnervSectionPlanError("plan row entries must be objects")
+        label = str(row.get("label") or "")
+        section_name = str(row.get("section_name") or "")
+        if not label or not section_name:
+            raise HnervSectionPlanError("plan row missing label or section_name")
+        atoms.append(
+            {
+                "atom_id": f"hnerv:{label}:{section_name}",
+                "atom_kind": "hnerv_section_transform",
+                "stream_role": str(row.get("optimization_role") or "opaque_payload_stream"),
+                "member": str(row.get("member") or row.get("zip_member") or ""),
+                "charged_bytes": int(row.get("section_bytes") or 0),
+                "entropy_bits_per_byte": row.get("entropy_bits_per_byte"),
+                "rate_score_gain_if_save_1pct": row.get("rate_score_gain_if_save_1pct"),
+                "section_sha256": row.get("section_sha256"),
+                "evidence_grade": "planning",
+            }
+        )
+    return atoms
+
+
 def _rows_from_manifest(manifest: Mapping[str, Any]) -> list[dict[str, Any]]:
     if manifest.get("score_claim") is not False:
         raise HnervSectionPlanError("payload section manifest must have score_claim=false")
@@ -435,5 +466,6 @@ __all__ = [
     "audit_candidate_section_diff",
     "build_section_repack_plan",
     "candidate_diff_from_scorecard_manifests",
+    "detector_cost_atoms_from_section_plan",
     "render_markdown",
 ]
