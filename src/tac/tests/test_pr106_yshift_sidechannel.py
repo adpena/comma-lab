@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import struct
 import sys
-import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -257,6 +256,45 @@ def test_outer_archive_rejects_bad_magic():
     new_bin[0] = 0xA5  # apogee_int5's magic — should be rejected
     with pytest.raises(ValueError, match="pr106_yshift magic mismatch"):
         inflate.parse_yshift_archive(bytes(new_bin))
+
+
+def test_yshift_candidate_grid_is_deterministic_and_contains_single_noop():
+    builder = _load_builder()
+    grid = builder.build_yshift_candidate_grid(radius=1)
+
+    assert grid.dtype == np.int8
+    assert grid.shape == (27, 3)
+    assert tuple(grid[0]) == (-1, -1, -1)
+    assert tuple(grid[-1]) == (1, 1, 1)
+    assert int(((grid == 0).all(axis=1)).sum()) == 1
+
+
+def test_choose_yshift_candidates_from_scores_keeps_noop_without_improvement():
+    builder = _load_builder()
+    grid = builder.build_yshift_candidate_grid(radius=1)
+    zero_idx = int(np.flatnonzero((grid == 0).all(axis=1))[0])
+    target_idx = int(np.flatnonzero((grid == np.array([1, 0, -1], dtype=np.int8)).all(axis=1))[0])
+    scores = np.full((3, len(grid)), 10.0)
+    scores[:, zero_idx] = 1.0
+    scores[0, target_idx] = 0.5
+    scores[1, target_idx] = 1.0
+    scores[2, target_idx] = 1.5
+
+    selected = builder.choose_yshift_candidates_from_scores(scores, grid)
+
+    assert np.array_equal(selected[0], grid[target_idx])
+    assert np.array_equal(selected[1], grid[zero_idx])
+    assert np.array_equal(selected[2], grid[zero_idx])
+
+
+def test_choose_yshift_candidates_from_scores_rejects_nonfinite_scores():
+    builder = _load_builder()
+    grid = builder.build_yshift_candidate_grid(radius=1)
+    scores = np.zeros((2, len(grid)), dtype=np.float64)
+    scores[0, 0] = np.nan
+
+    with pytest.raises(ValueError, match="NaN/Inf"):
+        builder.choose_yshift_candidates_from_scores(scores, grid)
 
 
 def test_outer_archive_rejects_wrong_sidechannel_version():

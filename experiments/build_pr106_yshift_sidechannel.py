@@ -150,6 +150,58 @@ SEARCH_MODES = {
 }
 
 
+def build_yshift_candidate_grid(radius: int = 3) -> np.ndarray:
+    """Return canonical int8 [y_off, dy, dx] candidates for scorer-backed search."""
+    if radius < 0 or radius > 127:
+        raise ValueError(f"radius must be in 0..127, got {radius}")
+    vals = range(-radius, radius + 1)
+    candidates = np.array(
+        [(y_off, dy, dx) for y_off in vals for dy in vals for dx in vals],
+        dtype=np.int16,
+    )
+    if not ((candidates == 0).all(axis=1)).any():
+        raise AssertionError("candidate grid must include the all-zero no-op")
+    return candidates.astype(np.int8)
+
+
+def choose_yshift_candidates_from_scores(
+    score_table: np.ndarray,
+    candidates: np.ndarray,
+    *,
+    require_improvement: bool = True,
+) -> np.ndarray:
+    """Choose one yshift candidate per frame from a precomputed score table.
+
+    `score_table[f, c]` must be the exact scorer objective for frame `f` and
+    candidate `c`, computed outside this helper on the authorized CUDA path.
+    This reducer is deterministic and scorer-free; it only turns measured
+    candidate scores into charged sidechannel bytes.
+    """
+    scores = np.asarray(score_table, dtype=np.float64)
+    cands = np.asarray(candidates)
+    if cands.dtype != np.int8:
+        raise TypeError(f"candidates must be int8, got {cands.dtype}")
+    if cands.ndim != 2 or cands.shape[1] != 3:
+        raise ValueError(f"candidates must have shape (n_candidates, 3), got {cands.shape}")
+    if scores.ndim != 2 or scores.shape[1] != cands.shape[0]:
+        raise ValueError(
+            "score_table must have shape (n_frames, n_candidates), got "
+            f"{scores.shape} for {cands.shape[0]} candidates"
+        )
+    if not np.isfinite(scores).all():
+        raise ValueError("score_table contains NaN/Inf")
+    zero_matches = np.flatnonzero((cands == 0).all(axis=1))
+    if len(zero_matches) != 1:
+        raise ValueError("candidates must contain exactly one all-zero no-op row")
+    zero_idx = int(zero_matches[0])
+    best_idx = scores.argmin(axis=1)
+    if require_improvement:
+        best_scores = scores[np.arange(scores.shape[0]), best_idx]
+        zero_scores = scores[:, zero_idx]
+        best_idx = np.where(best_scores < zero_scores, best_idx, zero_idx)
+    return cands[best_idx].astype(np.int8, copy=True)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--pr106-archive", type=Path, required=True,
