@@ -1,0 +1,455 @@
+{
+  "audit": "paradigm_alpha_mask_overhaul_readiness",
+  "entries": [
+    {
+      "component": "nerv_mask_codec",
+      "components_on_disk": [
+        "codec_module",
+        "trainer",
+        "tests",
+        "runtime_inflate",
+        "remote_dispatch",
+        "empirical_report"
+      ],
+      "dispatch_blockers": [
+        "paradigm_alpha_readiness_not_exact_eval_dispatch_evidence",
+        "requires_exact_cuda_auth_eval_after_l2_clearance",
+        "missing_lane12_l2_clearance_packet"
+      ],
+      "eligible_for_local_patch": true,
+      "empirical_summary": {
+        "baseline_av1_bytes": 421483,
+        "best_payload_bytes": 11845,
+        "final_argmax_disagreement_vs_av1_source": 0.020032391018337675,
+        "report_path": "reports/lane_12_nerv_real_archive.json"
+      },
+      "hidden_gem_keys": [
+        "nerv_mask_l2_readiness"
+      ],
+      "hidden_gem_registry_status": [
+        "nerv_mask_l2_readiness:planning"
+      ],
+      "key": "alpha1_nerv",
+      "local_blockers": [
+        "missing_lane12_l2_clearance_packet"
+      ],
+      "missing_core_components": [],
+      "next_patch": "Produce a geometry-passing Lane 12 candidate and write a real lane12_nerv_l2_clearance packet before any retraining or exact eval.",
+      "path_groups": {
+        "codec_module": [
+          {
+            "bytes": 37682,
+            "exists": true,
+            "kind": "file",
+            "path": "src/tac/nerv_mask_codec.py",
+            "sha256": "69d710c229e5eb54dc8828d45eacf98e9ac50fe6bc1928a4e5a188be1003e2b8"
+          }
+        ],
+        "empirical_report": [
+          {
+            "bytes": 643,
+            "exists": true,
+            "kind": "file",
+            "path": "reports/lane_12_nerv_real_archive.json",
+            "sha256": "b5fcd876e83a538f5911efc8e84b0b8764f81737db141d2880c5b87439862bf9"
+          }
+        ],
+        "l2_clearance": [
+          {
+            "bytes": null,
+            "exists": false,
+            "kind": "missing",
+            "path": ".omx/state/lane12_nerv_l2_clearance.json",
+            "sha256": null
+          }
+        ],
+        "remote_dispatch": [
+          {
+            "bytes": 21368,
+            "exists": true,
+            "kind": "file",
+            "path": "scripts/remote_lane_nerv.sh",
+            "sha256": "50d7d688834b3c18a169989b945643a8eaf7694fb547b2caea6c19964060d30e"
+          }
+        ],
+        "runtime_inflate": [
+          {
+            "bytes": 319207,
+            "exists": true,
+            "kind": "file",
+            "path": "submissions/robust_current/inflate_renderer.py",
+            "sha256": "739d898a38119a2a65bf2c5d996a3a2f4c9dccde133b8c4538afedc15ab95c53"
+          }
+        ],
+        "tests": [
+          {
+            "bytes": 29247,
+            "exists": true,
+            "kind": "file",
+            "path": "src/tac/tests/test_nerv_mask_codec.py",
+            "sha256": "a06d12c485e43bc012a79f0e92b23016083d054ea77fb6a6ec51ee021d3390df"
+          },
+          {
+            "bytes": 25746,
+            "exists": true,
+            "kind": "file",
+            "path": "src/tac/tests/test_lane12_nerv_dependency_closure.py",
+            "sha256": "d2f0a0355583ce717cf54080550b76c2be067652bcf057874404ef9995c8fc0e"
+          },
+          {
+            "bytes": 9236,
+            "exists": true,
+            "kind": "file",
+            "path": "src/tac/tests/test_preflight_nerv_codec_discipline.py",
+            "sha256": "2d26ae7c0473cd01622c96f656bface40a4d03cebcf7b8bac9551cc423a7e59c"
+          }
+        ],
+        "trainer": [
+          {
+            "bytes": 50450,
+            "exists": true,
+            "kind": "file",
+            "path": "experiments/train_nerv_mask.py",
+            "sha256": "73beb4ffdd30d19f1c7946770d40d9ea195699f2a09927e0e917daf3098a34e8"
+          }
+        ]
+      },
+      "readiness_status": "blocked_scientific_gate",
+      "ready_for_exact_eval_dispatch": false,
+      "text_requirements": [
+        {
+          "blocker": "runtime_missing_nrv1_loader",
+          "found": true,
+          "label": "runtime_accepts_nrv1",
+          "needle": "NRV1",
+          "path": "submissions/robust_current/inflate_renderer.py"
+        }
+      ],
+      "title": "Lane 12 NeRV coordinate-MLP mask codec"
+    },
+    {
+      "component": "wavelet_mask_codec",
+      "components_on_disk": [
+        "codec_module",
+        "tests",
+        "real_archive_evaluator",
+        "empirical_report",
+        "runtime_inflate_target"
+      ],
+      "dispatch_blockers": [
+        "paradigm_alpha_readiness_not_exact_eval_dispatch_evidence",
+        "requires_wmc1_runtime_loader_and_archive_manifest",
+        "requires_byte_positive_real_archive_profile"
+      ],
+      "eligible_for_local_patch": true,
+      "empirical_summary": {
+        "argmax_agreement_vs_source": 1.0,
+        "argmax_disagreement_vs_source": 0.0,
+        "baseline_av1_bytes": 421483,
+        "encoded_bytes": 24084137,
+        "pct_savings_vs_av1": -5614.14,
+        "report_path": "reports/paradigm_alpha_real_archive.json"
+      },
+      "hidden_gem_keys": [
+        "wavelet_residual_basis_gate"
+      ],
+      "hidden_gem_registry_status": [
+        "wavelet_residual_basis_gate:prototype"
+      ],
+      "key": "alpha2_wavelet",
+      "local_blockers": [
+        "runtime_missing_wmc1_loader",
+        "empirical_bytes_not_better_than_baseline_alpha2_wavelet"
+      ],
+      "missing_core_components": [],
+      "next_patch": "Do not wire runtime first: replace the byte-negative real-archive profile with a byte-positive codec configuration or residual-only manifest, then add WMC1 runtime consumption.",
+      "path_groups": {
+        "codec_module": [
+          {
+            "bytes": 20719,
+            "exists": true,
+            "kind": "file",
+            "path": "src/tac/wavelet_mask_codec.py",
+            "sha256": "47ae5787c90bf763128741cdb62d803615bf33ee596487fe0971ac91e03e3553"
+          }
+        ],
+        "empirical_report": [
+          {
+            "bytes": 571,
+            "exists": true,
+            "kind": "file",
+            "path": "reports/paradigm_alpha_real_archive.json",
+            "sha256": "9baf6cc13877f74ab84a8cfa7ed73c06ce51c0c5067c8438df7395b8742f2737"
+          }
+        ],
+        "real_archive_evaluator": [
+          {
+            "bytes": 14580,
+            "exists": true,
+            "kind": "file",
+            "path": "experiments/paradigm_alpha_real_archive_eval.py",
+            "sha256": "4e1a66f965c68b33d977ab26db4e87ac15603ffed194419f62fd08888c1a5086"
+          }
+        ],
+        "runtime_inflate_target": [
+          {
+            "bytes": 319207,
+            "exists": true,
+            "kind": "file",
+            "path": "submissions/robust_current/inflate_renderer.py",
+            "sha256": "739d898a38119a2a65bf2c5d996a3a2f4c9dccde133b8c4538afedc15ab95c53"
+          }
+        ],
+        "tests": [
+          {
+            "bytes": 6909,
+            "exists": true,
+            "kind": "file",
+            "path": "src/tac/tests/test_wavelet_mask_codec.py",
+            "sha256": "7dccc8ee05bc490007fcf4eb5f9b37e008566fedc1efba9e64611f9777e9432b"
+          }
+        ]
+      },
+      "readiness_status": "blocked_missing_runtime_integration",
+      "ready_for_exact_eval_dispatch": false,
+      "text_requirements": [
+        {
+          "blocker": "runtime_missing_wmc1_loader",
+          "found": false,
+          "label": "runtime_accepts_wmc1",
+          "needle": "WMC1",
+          "path": "submissions/robust_current/inflate_renderer.py"
+        }
+      ],
+      "title": "Wavelet mask codec"
+    },
+    {
+      "component": "vqvae_mask_codec",
+      "components_on_disk": [
+        "codec_module",
+        "tests",
+        "real_archive_evaluator",
+        "empirical_report",
+        "runtime_inflate_target"
+      ],
+      "dispatch_blockers": [
+        "paradigm_alpha_readiness_not_exact_eval_dispatch_evidence",
+        "requires_vqm1_runtime_loader_and_archive_manifest",
+        "requires_real_archive_empirical_profile"
+      ],
+      "eligible_for_local_patch": true,
+      "empirical_summary": {
+        "available_candidates": [
+          "alpha2_wavelet"
+        ],
+        "report_path": "reports/paradigm_alpha_real_archive.json"
+      },
+      "hidden_gem_keys": [],
+      "hidden_gem_registry_status": [],
+      "key": "alpha3_vqvae",
+      "local_blockers": [
+        "runtime_missing_vqm1_loader",
+        "missing_real_archive_empirical_row_alpha3_vqvae"
+      ],
+      "missing_core_components": [],
+      "next_patch": "Generate a real-archive VQM1 empirical row with codebook bytes, token-stream bytes, and decoded-mask disagreement before runtime wiring.",
+      "path_groups": {
+        "codec_module": [
+          {
+            "bytes": 17333,
+            "exists": true,
+            "kind": "file",
+            "path": "src/tac/vqvae_mask_codec.py",
+            "sha256": "1eb034a33df22883ea2c112eb19fe42b7df5973d16769548f16bcb9b4954b2a5"
+          }
+        ],
+        "empirical_report": [
+          {
+            "bytes": 571,
+            "exists": true,
+            "kind": "file",
+            "path": "reports/paradigm_alpha_real_archive.json",
+            "sha256": "9baf6cc13877f74ab84a8cfa7ed73c06ce51c0c5067c8438df7395b8742f2737"
+          }
+        ],
+        "real_archive_evaluator": [
+          {
+            "bytes": 14580,
+            "exists": true,
+            "kind": "file",
+            "path": "experiments/paradigm_alpha_real_archive_eval.py",
+            "sha256": "4e1a66f965c68b33d977ab26db4e87ac15603ffed194419f62fd08888c1a5086"
+          }
+        ],
+        "runtime_inflate_target": [
+          {
+            "bytes": 319207,
+            "exists": true,
+            "kind": "file",
+            "path": "submissions/robust_current/inflate_renderer.py",
+            "sha256": "739d898a38119a2a65bf2c5d996a3a2f4c9dccde133b8c4538afedc15ab95c53"
+          }
+        ],
+        "tests": [
+          {
+            "bytes": 7417,
+            "exists": true,
+            "kind": "file",
+            "path": "src/tac/tests/test_vqvae_mask_codec.py",
+            "sha256": "53980582a9ad735af0353bba41e2ef4fd58adf471adb5d3902dd946446ebcee2"
+          }
+        ]
+      },
+      "readiness_status": "blocked_missing_runtime_integration",
+      "ready_for_exact_eval_dispatch": false,
+      "text_requirements": [
+        {
+          "blocker": "runtime_missing_vqm1_loader",
+          "found": false,
+          "label": "runtime_accepts_vqm1",
+          "needle": "VQM1",
+          "path": "submissions/robust_current/inflate_renderer.py"
+        }
+      ],
+      "title": "VQ-VAE patch-codebook mask codec"
+    },
+    {
+      "component": "mask_grayscale_lut",
+      "components_on_disk": [
+        "codec_module",
+        "tests",
+        "archive_builder",
+        "runtime_inflate",
+        "shell_dispatch",
+        "remote_dispatch",
+        "preflight_guard",
+        "empirical_report"
+      ],
+      "dispatch_blockers": [
+        "paradigm_alpha_readiness_not_exact_eval_dispatch_evidence",
+        "requires_current_exact_cuda_archive_evidence",
+        "requires_train_inflate_grayscale_lut_parity"
+      ],
+      "eligible_for_local_patch": true,
+      "empirical_summary": {
+        "available_candidates": [
+          "alpha2_wavelet"
+        ],
+        "report_path": "reports/paradigm_alpha_real_archive.json"
+      },
+      "hidden_gem_keys": [],
+      "hidden_gem_registry_status": [],
+      "key": "alpha4_grayscale_lut",
+      "local_blockers": [
+        "missing_real_archive_empirical_row_alpha4_grayscale_lut"
+      ],
+      "missing_core_components": [],
+      "next_patch": "Refresh alpha4 through a current real-archive empirical row and an exact CUDA archive candidate that proves train/inflate grayscale parity; previous encoder-only evidence is not sufficient.",
+      "path_groups": {
+        "archive_builder": [
+          {
+            "bytes": 8521,
+            "exists": true,
+            "kind": "file",
+            "path": "experiments/build_lane_mm_archive.py",
+            "sha256": "fb2772ce4d5dd60db0e453e2ba281e5c8edadeba542f313a78166a3789d2eed4"
+          }
+        ],
+        "codec_module": [
+          {
+            "bytes": 8313,
+            "exists": true,
+            "kind": "file",
+            "path": "src/tac/mask_grayscale_lut.py",
+            "sha256": "ebfb02237c9887053ee5f4c845c87dcb20bd85686ac8ad97c28c3a2f3573584a"
+          }
+        ],
+        "empirical_report": [
+          {
+            "bytes": 571,
+            "exists": true,
+            "kind": "file",
+            "path": "reports/paradigm_alpha_real_archive.json",
+            "sha256": "9baf6cc13877f74ab84a8cfa7ed73c06ce51c0c5067c8438df7395b8742f2737"
+          }
+        ],
+        "preflight_guard": [
+          {
+            "bytes": 941340,
+            "exists": true,
+            "kind": "file",
+            "path": "src/tac/preflight.py",
+            "sha256": "1bac50f3ba279366b2c9342f6249e1c631781a045a571963815183fc9db2dc7d"
+          }
+        ],
+        "remote_dispatch": [
+          {
+            "bytes": 7584,
+            "exists": true,
+            "kind": "file",
+            "path": "scripts/remote_lane_mm_grayscale_lut.sh",
+            "sha256": "304250fc40f44451ac2d08f72c7110bacb0d055c60ee99ce33d8c24f76cc3dcf"
+          }
+        ],
+        "runtime_inflate": [
+          {
+            "bytes": 16076,
+            "exists": true,
+            "kind": "file",
+            "path": "submissions/robust_current/inflate_renderer_grayscale.py",
+            "sha256": "383407e20aff8a5b7791f61d3cdfd7516ef870bab99145854ff2f399471b8f69"
+          }
+        ],
+        "shell_dispatch": [
+          {
+            "bytes": 19345,
+            "exists": true,
+            "kind": "file",
+            "path": "submissions/robust_current/inflate.sh",
+            "sha256": "e479b7fdfbb9686f9f9f4d7d9740d24f340b41b584b07c57dd3065f5f3923005"
+          }
+        ],
+        "tests": [
+          {
+            "bytes": 7158,
+            "exists": true,
+            "kind": "file",
+            "path": "src/tac/tests/test_mask_grayscale_lut.py",
+            "sha256": "f58f8978f24a511b245768e6806a2a1c27123acff29688a65ac40de4efa3a706"
+          }
+        ]
+      },
+      "readiness_status": "blocked_empirical_evidence",
+      "ready_for_exact_eval_dispatch": false,
+      "text_requirements": [
+        {
+          "blocker": "inflate_missing_renderer_grayscale_dispatch",
+          "found": true,
+          "label": "inflate_dispatches_renderer_grayscale",
+          "needle": "PYTHON_INFLATE=\"renderer_grayscale\"",
+          "path": "submissions/robust_current/inflate.sh"
+        },
+        {
+          "blocker": "preflight_missing_grayscale_lut_consistency",
+          "found": true,
+          "label": "preflight_checks_grayscale_lut_consistency",
+          "needle": "check_segmap_grayscale_lut_consistency",
+          "path": "src/tac/preflight.py"
+        }
+      ],
+      "title": "Selfcomp grayscale-LUT mask stream"
+    }
+  ],
+  "schema_version": 1,
+  "summary": {
+    "candidate_count": 4,
+    "eligible_for_local_patch_count": 4,
+    "missing_core_component_count": 0,
+    "readiness_status_counts": {
+      "blocked_empirical_evidence": 1,
+      "blocked_missing_runtime_integration": 2,
+      "blocked_scientific_gate": 1
+    },
+    "ready_for_exact_eval_dispatch_count": 0
+  }
+}
