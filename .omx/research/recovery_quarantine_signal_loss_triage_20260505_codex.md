@@ -3927,3 +3927,43 @@ Conclusion: the remaining dirty state is intentionally local custody, not a
 release blocker, provided release/preflight flows keep passing the explicit
 local-custody manifest. No score, dispatch, or promotion claim is made from
 these dirty snapshots.
+
+## R51 - 2026-05-06 Orphan Modified-Copy Inventory Guard
+
+Hardened `tools/audit_orphan_recovery_canonicalization.py` so the orphan
+recovery tree is not only guarded at deletion time. The audit now inventories
+modified source-like copies under
+`reverse_engineering/orphan_pyc_recovery_20260505_codex/`, maps each one to
+the canonical repo path that would result from stripping the recovery prefix,
+and records whether that canonical path is already tracked.
+
+Default behavior remains advisory for modified copies so normal preflight does
+not block the working tree while the recovery queue is still being triaged.
+Strict recovery mode is available with `--fail-on-shadowed-modified` and fails
+closed on both classes that can lose signal:
+
+- modified orphan copy shadows a tracked canonical file and must be diffed or
+  deleted intentionally;
+- modified orphan copy has no tracked canonical home and must be promoted,
+  archived, or explicitly dispositioned before cleanup.
+
+Current evidence:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_audit_orphan_recovery_canonicalization.py -q`
+  passed: `3 passed`.
+- `.venv/bin/python -m py_compile tools/audit_orphan_recovery_canonicalization.py`
+  passed.
+- `.venv/bin/python tools/audit_orphan_recovery_canonicalization.py --format json`
+  passed in advisory mode with `source_like_delete_count=0`,
+  `source_like_modified_count=34`, `shadowed_modified_count=3`, and
+  `modified_missing_canonical_count=31`.
+- `.venv/bin/python tools/audit_orphan_recovery_canonicalization.py --fail-on-shadowed-modified --format json`
+  failed closed as intended with 34 blockers: 3 tracked-canonical shadows and
+  31 missing-canonical modified copies.
+
+Interpretation: the repo now has an executable no-signal-loss inventory for
+the remaining orphan recovery modified copies. Next cleanup passes should use
+the strict output as the queue: canonicalize or intentionally disposition the
+three tracked shadows first, then decide which of the 31 missing-canonical
+copies belong under `reverse_engineering/`, `tools/`, `src/tac/`, or a private
+custody manifest.
