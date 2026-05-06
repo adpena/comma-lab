@@ -27,7 +27,6 @@ import importlib.util
 import json
 import math
 import os
-import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -37,7 +36,7 @@ import torch
 import torch.nn.functional as F
 
 try:
-    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+    from tools.tool_bootstrap import ensure_repo_imports, prepend_paths, repo_root_from_tool
 except ModuleNotFoundError:  # pragma: no cover - direct script execution
     _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
     _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
@@ -46,13 +45,16 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
     _tool_bootstrap = importlib.util.module_from_spec(_spec)
     _spec.loader.exec_module(_tool_bootstrap)
     ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    prepend_paths = _tool_bootstrap.prepend_paths
     repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
 
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
-sys.path.insert(0, str(REPO_ROOT / "submissions" / "apogee_intN" / "src"))
-sys.path.insert(0, str(REPO_ROOT / "submissions" / "pr106_yshift_sidechannel"))
+prepend_paths(
+    REPO_ROOT / "submissions" / "apogee_intN" / "src",
+    REPO_ROOT / "submissions" / "pr106_yshift_sidechannel",
+)
 
 from build_pr106_yshift_sidechannel import (  # type: ignore[import-not-found]
     build_yshift_candidate_grid,
@@ -60,7 +62,7 @@ from build_pr106_yshift_sidechannel import (  # type: ignore[import-not-found]
 from codec import parse_packed_archive  # type: ignore[import-not-found]
 from model import HNeRVDecoder  # type: ignore[import-not-found]
 
-from tac.repo_io import json_text
+from tac.repo_io import json_text, sha256_file
 
 CAMERA_H = 874
 CAMERA_W = 1164
@@ -79,14 +81,6 @@ SCORE_TABLE_NPY = "score_table.npy"
 SCORE_TABLE_MANIFEST = "score_table_manifest.json"
 CHECKPOINT_TABLE_NPY = "score_table.partial.npy"
 CHECKPOINT_MANIFEST = "score_table_checkpoint.json"
-
-
-def _sha256_file(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
 
 
 def _atomic_write_text(path: Path, text: str) -> None:
@@ -145,8 +139,8 @@ def _score_table_contract(
     n_frames: int,
 ) -> dict[str, Any]:
     return {
-        "source_archive_sha256": _sha256_file(args.pr106_archive),
-        "candidate_grid_sha256": _sha256_file(candidates_path),
+        "source_archive_sha256": sha256_file(args.pr106_archive),
+        "candidate_grid_sha256": sha256_file(candidates_path),
         "candidate_radius": int(args.candidate_radius),
         "candidate_count": int(candidates_np.shape[0]),
         "n_pairs": int(args.n_pairs),
@@ -230,7 +224,7 @@ def _write_score_table_checkpoint(
         **contract,
         "checkpoint_table_npy_path": str(table_path),
         "checkpoint_table_npy_bytes": int(table_path.stat().st_size),
-        "checkpoint_table_npy_sha256": _sha256_file(table_path),
+        "checkpoint_table_npy_sha256": sha256_file(table_path),
         "updated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
     _atomic_write_text(manifest_path, json_text(manifest))
@@ -349,7 +343,7 @@ def apply_yshift_candidates_torch(
 
 def _load_distortion_net(device: torch.device):
     upstream_dir = REPO_ROOT / "upstream"
-    sys.path.insert(0, str(upstream_dir))
+    prepend_paths(upstream_dir)
     from modules import DistortionNet, posenet_sd_path, segnet_sd_path  # type: ignore[import-not-found]
 
     net = DistortionNet().eval().to(device=device)
@@ -368,7 +362,7 @@ def _load_gt_dataloader(
     prefetch_queue_depth: int,
 ):
     upstream_dir = REPO_ROOT / "upstream"
-    sys.path.insert(0, str(upstream_dir))
+    prepend_paths(upstream_dir)
     from frame_utils import DaliVideoDataset  # type: ignore[import-not-found]
 
     names = [line.strip() for line in video_names_file.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -457,7 +451,7 @@ def build_dry_run_plan(args: argparse.Namespace, candidates: np.ndarray) -> dict
         "ready_for_builder": False,
         "ready_for_exact_eval_dispatch": False,
         "source_archive_path": str(args.pr106_archive),
-        "source_archive_sha256": _sha256_file(args.pr106_archive) if args.pr106_archive.is_file() else None,
+        "source_archive_sha256": sha256_file(args.pr106_archive) if args.pr106_archive.is_file() else None,
         "candidate_radius": int(args.candidate_radius),
         "candidate_count": int(candidates.shape[0]),
         "n_pairs": int(args.n_pairs),
@@ -622,13 +616,13 @@ def build_score_table(args: argparse.Namespace) -> int:
         "lane_claim": claim_row,
         "source_archive_path": str(args.pr106_archive),
         "source_archive_bytes": int(args.pr106_archive.stat().st_size),
-        "source_archive_sha256": _sha256_file(args.pr106_archive),
+        "source_archive_sha256": sha256_file(args.pr106_archive),
         "source_zero_bin_sha256": hashlib.sha256(pr106_bytes).hexdigest(),
         "candidate_grid_path": str(candidates_path),
-        "candidate_grid_sha256": _sha256_file(candidates_path),
+        "candidate_grid_sha256": sha256_file(candidates_path),
         "score_table_npy_path": str(table_path),
         "score_table_npy_bytes": int(table_path.stat().st_size),
-        "score_table_npy_sha256": _sha256_file(table_path),
+        "score_table_npy_sha256": sha256_file(table_path),
         "candidate_radius": int(args.candidate_radius),
         "candidate_count": int(candidates_np.shape[0]),
         "n_pairs": int(args.n_pairs),

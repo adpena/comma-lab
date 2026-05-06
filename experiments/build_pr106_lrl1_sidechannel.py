@@ -76,7 +76,7 @@ import numpy as np
 
 
 try:
-    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+    from tools.tool_bootstrap import ensure_repo_imports, prepend_paths, repo_root_from_tool
 except ModuleNotFoundError:  # pragma: no cover - direct script execution
     _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
     _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
@@ -85,12 +85,15 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
     _tool_bootstrap = importlib.util.module_from_spec(_spec)
     _spec.loader.exec_module(_tool_bootstrap)
     ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    prepend_paths = _tool_bootstrap.prepend_paths
     repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
 
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
-sys.path.insert(0, str(REPO_ROOT / "submissions" / "pr106_lrl1_sidechannel"))
-sys.path.insert(0, str(REPO_ROOT / "submissions" / "apogee_intN" / "src"))
+prepend_paths(
+    REPO_ROOT / "submissions" / "pr106_lrl1_sidechannel",
+    REPO_ROOT / "submissions" / "apogee_intN" / "src",
+)
 
 from tac.repo_io import json_text
 

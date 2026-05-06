@@ -51,11 +51,9 @@ the SC01 sidechannel payload.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import importlib.util
 import io
 import struct
-import sys
 import zipfile
 from pathlib import Path
 
@@ -64,7 +62,7 @@ import numpy as np
 
 
 try:
-    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+    from tools.tool_bootstrap import ensure_repo_imports, prepend_paths, repo_root_from_tool
 except ModuleNotFoundError:  # pragma: no cover - direct script execution
     _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
     _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
@@ -73,14 +71,17 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
     _tool_bootstrap = importlib.util.module_from_spec(_spec)
     _spec.loader.exec_module(_tool_bootstrap)
     ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    prepend_paths = _tool_bootstrap.prepend_paths
     repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
 
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
-sys.path.insert(0, str(REPO_ROOT / "submissions" / "pr106_yshift_sidechannel"))
-sys.path.insert(0, str(REPO_ROOT / "submissions" / "apogee_intN" / "src"))
+prepend_paths(
+    REPO_ROOT / "submissions" / "pr106_yshift_sidechannel",
+    REPO_ROOT / "submissions" / "apogee_intN" / "src",
+)
 
-from tac.repo_io import json_text
+from tac.repo_io import json_text, sha256_file
 
 from inflate import (  # type: ignore[import-not-found]
     YSHIFT_MAGIC_BYTE,
@@ -154,14 +155,6 @@ SEARCH_MODES = {
     "brute_force": _brute_force_search_stub,
 }
 SEARCH_MODE_CHOICES = ("zero", "score_table", "gradient", "brute_force")
-
-
-def _sha256_file(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
 
 
 def build_yshift_candidate_grid(radius: int = 3) -> np.ndarray:
@@ -375,10 +368,10 @@ def main() -> int:
         score_table_metadata = {
             "score_table_npy_path": str(args.score_table_npy),
             "score_table_npy_bytes": int(args.score_table_npy.stat().st_size),
-            "score_table_npy_sha256": _sha256_file(args.score_table_npy),
+            "score_table_npy_sha256": sha256_file(args.score_table_npy),
             "score_table_manifest_path": str(args.score_table_manifest) if args.score_table_manifest else None,
             "score_table_manifest_sha256": (
-                _sha256_file(args.score_table_manifest) if args.score_table_manifest else None
+                sha256_file(args.score_table_manifest) if args.score_table_manifest else None
             ),
             "score_table_is_score_claim": False,
             "score_table_required_provenance": (
@@ -392,9 +385,9 @@ def main() -> int:
         "manifest_schema": "pr106_yshift_sidechannel_build_metadata_v2",
         "archive_path": str(archive_path),
         "archive_size_bytes": archive_size,
-        "archive_sha256": _sha256_file(archive_path),
+        "archive_sha256": sha256_file(archive_path),
         "source_archive_path": str(args.pr106_archive),
-        "source_archive_sha256": _sha256_file(args.pr106_archive),
+        "source_archive_sha256": sha256_file(args.pr106_archive),
         "pr106_size_bytes": pr106_zip_size,
         "delta_bytes": delta,
         "rate_component_score_delta_vs_pr106": score_delta,

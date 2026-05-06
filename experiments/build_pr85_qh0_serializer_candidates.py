@@ -9,33 +9,40 @@ CUDA, dispatches jobs, or claims score evidence.
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
-import sys
+import importlib.util
 import zipfile
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any
 
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SRC_ROOT = REPO_ROOT / "src"
-if str(SRC_ROOT) not in sys.path:
-    sys.path.insert(0, str(SRC_ROOT))
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 
-from tac.pr85_bundle import (  # noqa: E402
-    Pr85BundleError,
+from tac.pr85_bundle import (
     pack_pr85_bundle,
     parse_pr85_bundle,
     validate_pr85_member_name,
 )
-from tac.qh0_record_serializer import (  # noqa: E402
+from tac.qh0_record_serializer import (
     build_serialized_variants,
     choose_byte_win_candidates,
     prove_decoded_tensor_parity,
     record_set_summary,
     sha256_bytes,
 )
-
+from tac.repo_io import json_text, sha256_file
 
 TOOL = "experiments/build_pr85_qh0_serializer_candidates.py"
 SCHEMA = "pr85_qh0_serializer_candidates_v1"
@@ -58,14 +65,6 @@ class QH0SerializerCandidateError(RuntimeError):
     """Raised when a PR85 serializer candidate cannot be built safely."""
 
 
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _repo_rel(path: Path) -> str:
     resolved = path.resolve()
     try:
@@ -75,9 +74,7 @@ def _repo_rel(path: Path) -> str:
 
 
 def _json_bytes(payload: Mapping[str, Any]) -> bytes:
-    return (json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n").encode(
-        "utf-8"
-    )
+    return json_text(payload).encode("utf-8")
 
 
 def _read_single_x_archive(path: Path) -> tuple[dict[str, Any], bytes]:
@@ -93,7 +90,7 @@ def _read_single_x_archive(path: Path) -> tuple[dict[str, Any], bytes]:
         info = infos[0]
         validate_pr85_member_name(info.filename)
         raw = zf.read(info)
-    archive_sha = _sha256_file(path)
+    archive_sha = sha256_file(path)
     return (
         {
             "path": _repo_rel(path),
@@ -173,7 +170,7 @@ def _write_single_x_archive(path: Path, x_payload: bytes) -> dict[str, Any]:
     return {
         "path": _repo_rel(path),
         "archive_bytes": int(path.stat().st_size),
-        "archive_sha256": _sha256_file(path),
+        "archive_sha256": sha256_file(path),
         "member_name": "x",
         "member_file_size": int(info.file_size),
         "member_compress_size": int(info.compress_size),
@@ -515,7 +512,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         robust_current_dir=args.robust_current_dir,
     )
     print(
-        json.dumps(
+        json_text(
             {
                 "summary_path": _repo_rel(args.out_dir / "candidate_summary.json"),
                 "built_candidate_count": summary["built_candidate_count"],
@@ -523,10 +520,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "blocker_class": summary["blocker_class"],
                 "best_screened_candidate": summary["best_screened_candidate"],
                 "best_built_candidate": summary["best_built_candidate"],
-            },
-            indent=2,
-            sort_keys=True,
-        )
+            }
+        ),
+        end="",
     )
     return 0
 

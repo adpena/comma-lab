@@ -16,22 +16,32 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import io
-import json
 import shutil
 import struct
 import sys
 import zipfile
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SRC_ROOT = REPO_ROOT / "src"
-if str(SRC_ROOT) not in sys.path:
-    sys.path.insert(0, str(SRC_ROOT))
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 
-from tac.pr85_bundle import (  # noqa: E402
+from tac.pr85_bundle import (
     SEGMENT_ORDER,
     compare_pr85_randmulti_decoded_rows,
     decode_pr85_randmulti_to_headerless_rows,
@@ -39,6 +49,9 @@ from tac.pr85_bundle import (  # noqa: E402
     parse_pr85_bundle,
     validate_pr85_member_name,
 )
+from tac.repo_io import json_text, read_json, sha256_file, write_json
+
+_sha256_file = sha256_file
 
 
 TOOL = "experiments/build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py"
@@ -143,19 +156,10 @@ class CandidateBuildError(ValueError):
     """Raised when the candidate must fail closed."""
 
 
-def _json_text(payload: Any) -> str:
-    return json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
-
-
-def _write_json(path: Path, payload: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(_json_text(payload), encoding="utf-8")
-
-
 def _load_json(path: Path) -> dict[str, Any]:
     if not path.is_file():
         raise CandidateBuildError(f"missing JSON file: {_rel(path)}")
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = read_json(path)
     if not isinstance(payload, dict):
         raise CandidateBuildError(f"JSON file must contain an object: {_rel(path)}")
     return payload
@@ -163,14 +167,6 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
-
-
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def _rel(path: Path | str) -> str:
@@ -197,7 +193,7 @@ def _read_archive_member(path: Path, *, member: str = "x", allow_extra_members: 
     meta = {
         "path": _rel(path),
         "archive_bytes": int(path.stat().st_size),
-        "archive_sha256": _sha256_file(path),
+        "archive_sha256": sha256_file(path),
         "member_name": member,
         "member_bytes": len(payload),
         "member_sha256": _sha256_bytes(payload),
@@ -313,7 +309,7 @@ def _stbm_manifest_report(path: Path, stbm_meta: Mapping[str, Any], pr85_meta: M
     }
     return {
         "path": _rel(path),
-        "sha256": _sha256_file(path),
+        "sha256": sha256_file(path),
         "checks": checks,
         "status": "passed" if all(checks.values()) else "failed",
         "candidate_id": payload.get("candidate_id"),
@@ -339,7 +335,7 @@ def _pr92_profile_report(path: Path) -> dict[str, Any]:
     }
     return {
         "path": _rel(path),
-        "sha256": _sha256_file(path),
+        "sha256": sha256_file(path),
         "label": payload.get("label"),
         "evidence_grade": payload.get("evidence_grade"),
         "side_info_charged_bytes": payload.get("side_info", {}).get("charged_bytes"),
@@ -354,7 +350,7 @@ def _runtime_tree_manifest(runtime_dir: Path) -> dict[str, Any]:
     tree = hashlib.sha256()
     for path in sorted(p for p in runtime_dir.rglob("*") if p.is_file() and "__pycache__" not in p.parts):
         rel = path.relative_to(runtime_dir).as_posix()
-        sha = _sha256_file(path)
+        sha = sha256_file(path)
         files.append({"path": rel, "bytes": path.stat().st_size, "sha256": sha})
         tree.update(rel.encode("utf-8") + b"\0" + sha.encode("ascii") + b"\0")
     return {
@@ -435,7 +431,7 @@ def _robust_current_rmb1_report() -> dict[str, Any]:
     }
     return {
         "path": _rel(path),
-        "sha256": _sha256_file(path) if path.is_file() else None,
+        "sha256": sha256_file(path) if path.is_file() else None,
         "checks": checks,
         "status": "passed" if all(checks.values()) else "failed",
     }
@@ -458,7 +454,7 @@ def _stbm_exact_t4_report(path: Path, stbm_meta: Mapping[str, Any]) -> dict[str,
     }
     return {
         "path": _rel(path),
-        "sha256": _sha256_file(path),
+        "sha256": sha256_file(path),
         "status": "passed" if all(checks.values()) else "failed",
         "checks": checks,
         "canonical_score": payload.get("canonical_score"),
@@ -652,7 +648,7 @@ def build_candidate(
             ],
         },
     }
-    _write_json(candidate_dir / "manifest.json", manifest)
+    write_json(candidate_dir / "manifest.json", manifest)
     summary = {
         "schema": SUMMARY_SCHEMA,
         "tool": TOOL,
@@ -668,7 +664,7 @@ def build_candidate(
         "exact_t4_dispatch_justified_after_claim": exact_t4_dispatch_justified,
         "next_claim_command": claim_command,
     }
-    _write_json(out_dir / "candidate_summary.json", summary)
+    write_json(out_dir / "candidate_summary.json", summary)
     return summary
 
 
@@ -741,10 +737,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     write_ledger(args.ledger_md, summary)
     if args.stdout:
-        sys.stdout.write(_json_text(summary))
+        sys.stdout.write(json_text(summary))
     else:
         print(
-            _json_text(
+            json_text(
                 {
                     "candidate_archive": summary["candidate_archive"],
                     "candidate_manifest": summary["candidate_manifest"],

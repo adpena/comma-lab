@@ -5053,6 +5053,68 @@ Verification:
   reported `ready_for_recovery_custody_preservation=true`.
 - `.venv/bin/python -m py_compile tools/audit_recovery_custody_snapshots.py
   src/tac/tests/test_audit_recovery_custody_snapshots.py` passed.
+
+## R76 - 2026-05-06 Active Builder Bootstrap And IO Consolidation
+
+Continued the Gate #7 consolidation tranche on active PR85/PR106 builder paths.
+This was a behavior-preserving cleanup only: no archive bytes, score claims, or
+dispatch readiness semantics were promoted by this pass.
+
+Changes:
+
+- Added `tools.tool_bootstrap.prepend_paths()` for deterministic ordered
+  import-path prepending without duplicate `sys.path` entries.
+- Migrated PR106 sidechannel builders to `prepend_paths()`:
+  - `experiments/build_pr106_yshift_score_table.py`
+  - `experiments/build_pr106_yshift_sidechannel.py`
+  - `experiments/build_pr106_lrl1_sidechannel.py`
+  - `experiments/build_pr106_stacked.py`
+- Migrated active PR85 builders to shared bootstrap and canonical IO helpers:
+  - `experiments/build_pr85_qh0_serializer_candidates.py`
+  - `experiments/build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py`
+- Preserved the `_sha256_file` alias in the PR85 STBM/RMB1 builder for
+  existing tests and callers while routing it through `tac.repo_io.sha256_file`.
+- Added `src/tac/tests/test_tool_bootstrap.py` for the new path-prepend helper.
+
+Measured inventory after R76:
+
+- local SHA helpers: `58`
+- local JSON dumps: `130`
+- manual `sys.path` bootstraps: `281`
+- manual repo-root parent probes: `374`
+- manual score/dispatch metadata mentions: `601`
+
+Within-tranche deltas from R7:
+
+- local SHA helpers: `62 -> 58`
+- local JSON dumps: `132 -> 130`
+- manual `sys.path` bootstraps: `293 -> 281`
+- manual repo-root parent probes: `376 -> 374`
+
+Verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_tool_bootstrap.py
+  src/tac/tests/test_pr106_yshift_score_table.py
+  src/tac/tests/test_dispatch_dryrun_pr106_sidechannels.py
+  src/tac/tests/test_build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py
+  src/tac/tests/test_qh0_record_serializer.py -q` passed: `24 passed`.
+- `.venv/bin/python -m ruff check tools/tool_bootstrap.py
+  experiments/build_pr106_yshift_score_table.py
+  experiments/build_pr106_yshift_sidechannel.py
+  experiments/build_pr106_lrl1_sidechannel.py
+  experiments/build_pr106_stacked.py
+  experiments/build_pr85_qh0_serializer_candidates.py
+  experiments/build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py
+  src/tac/tests/test_tool_bootstrap.py` passed.
+- `.venv/bin/python -m py_compile tools/tool_bootstrap.py
+  experiments/build_pr106_yshift_score_table.py
+  experiments/build_pr106_yshift_sidechannel.py
+  experiments/build_pr106_lrl1_sidechannel.py
+  experiments/build_pr106_stacked.py
+  experiments/build_pr85_qh0_serializer_candidates.py
+  experiments/build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py` passed.
+- `.venv/bin/python tools/all_lanes_preflight.py` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
 - After staging the new audit files, `.venv/bin/python tools/all_lanes_preflight.py`
   passed: `ALL 20 PREFLIGHT CHECKS PASSED`, with Gate #12 reporting
   `recovery custody snapshots`.

@@ -27,4 +27,14 @@ def ensure_repo_imports(repo_root: str | Path) -> None:
             sys.path.insert(0, value)
 
 
-__all__ = ["ensure_repo_imports", "repo_root_from_tool"]
+def prepend_paths(*paths: str | Path) -> None:
+    """Prepend import paths in the same order provided, without duplicates."""
+
+    for candidate in reversed(paths):
+        value = str(Path(candidate))
+        if value in sys.path:
+            sys.path.remove(value)
+        sys.path.insert(0, value)
+
+
+__all__ = ["ensure_repo_imports", "prepend_paths", "repo_root_from_tool"]
