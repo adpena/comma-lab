@@ -18,6 +18,7 @@ from tac.lossless.frequency_coder import (
     decode_uint16_frequency_stream,
     encode_uint16_frequency_stream,
 )
+from tac.lossless.range_coder import decode_static_symbols, encode_static_symbols
 
 FIXED_STATE_SCHEMA: tuple[tuple[str, tuple[int, ...]], ...] = (
     ("stem.weight", (1728, 28)),
@@ -145,6 +146,7 @@ def build_structural_recode_profile(
         _variant_aq_global(parsed),
         _variant_aq_per_tensor(parsed),
         _variant_huffman_global(parsed),
+        _variant_context_range_per_tensor(parsed),
     ]
     for row in variants:
         row["byte_delta_vs_source_section"] = int(row["bytes"]) - len(source_brotli)
@@ -155,6 +157,13 @@ def build_structural_recode_profile(
             row["byte_gap_vs_global_q_entropy_floor_plus_raw_scales"] = int(row["bytes"]) - int(
                 entropy_summary["global_q_entropy_floor_plus_raw_scales_bytes"]
             )
+        if row["variant"] == "range_prev_symbol_per_tensor_q_streams_plus_raw_scales":
+            row["byte_gap_vs_per_tensor_q_entropy_floor_plus_raw_scales"] = int(row["bytes"]) - int(
+                entropy_summary["per_tensor_q_entropy_floor_plus_raw_scales_bytes"]
+            )
+            row["byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales"] = int(
+                row["bytes"]
+            ) - int(entropy_summary["per_tensor_prev_symbol_entropy_floor_plus_raw_scales_bytes"])
     best = min(variants, key=lambda row: (int(row["bytes"]), str(row["variant"])))
     return {
         "schema_version": SCHEMA_VERSION,
@@ -190,8 +199,12 @@ def _entropy_summary(parsed: PackedDecoderRaw, *, source_section_bytes: int) -> 
         _symbol_entropy_summary(record.q_zz_u8)["entropy_floor_bytes"]
         for record in parsed.records
     )
+    per_tensor_prev_symbol = _prev_symbol_entropy_summary(parsed.records)
     global_floor_plus_scales = int(global_q["entropy_floor_bytes"]) + len(parsed.scale_stream)
     per_tensor_floor_plus_scales = per_tensor_floor + len(parsed.scale_stream)
+    per_tensor_prev_symbol_floor_plus_scales = (
+        int(per_tensor_prev_symbol["entropy_floor_bytes"]) + len(parsed.scale_stream)
+    )
     return {
         "scope": "zero_order_symbol_entropy_floor_for_current_q_streams",
         "score_claim": False,
@@ -206,6 +219,18 @@ def _entropy_summary(parsed: PackedDecoderRaw, *, source_section_bytes: int) -> 
         "per_tensor_q_entropy_floor_plus_raw_scales_bytes": per_tensor_floor_plus_scales,
         "per_tensor_q_entropy_floor_delta_vs_source_section_bytes": per_tensor_floor_plus_scales
         - source_section_bytes,
+        "per_tensor_prev_symbol_contexts": per_tensor_prev_symbol["context_count"],
+        "per_tensor_prev_symbol_tokens": per_tensor_prev_symbol["tokens"],
+        "per_tensor_prev_symbol_entropy_bits_per_token": per_tensor_prev_symbol[
+            "entropy_bits_per_token"
+        ],
+        "per_tensor_prev_symbol_entropy_floor_bytes": per_tensor_prev_symbol["entropy_floor_bytes"],
+        "per_tensor_prev_symbol_entropy_floor_plus_raw_scales_bytes": (
+            per_tensor_prev_symbol_floor_plus_scales
+        ),
+        "per_tensor_prev_symbol_entropy_floor_delta_vs_source_section_bytes": (
+            per_tensor_prev_symbol_floor_plus_scales - source_section_bytes
+        ),
         "top_global_q_symbols": global_q["top_symbols"],
         "current_static_model_interpretation": (
             "zero_order_q_symbol_floor_loses_to_current_brotli"
@@ -214,7 +239,8 @@ def _entropy_summary(parsed: PackedDecoderRaw, *, source_section_bytes: int) -> 
         ),
         "model_limitations": [
             "zero_order_symbol_floor_only",
-            "does_not_model_contexts_run_lengths_deltas_tensor_shapes_or_brotli_transforms",
+            "prev_symbol_context_floor_models_only_one_local_context_family",
+            "does_not_model_run_lengths_deltas_tensor_shapes_or_brotli_transforms",
             "does_not_include_decoder_runtime_cost",
             "does_not_rank_or_kill_aq_huffman_family_without_exact_archive_eval",
         ],
@@ -247,6 +273,35 @@ def _symbol_entropy_summary(payload: bytes) -> dict[str, Any]:
             for symbol, count in counts.most_common(16)
         ],
     }
+
+
+def _prev_symbol_entropy_summary(records: tuple[PackedDecoderRecord, ...]) -> dict[str, Any]:
+    context_count = 0
+    token_count = 0
+    entropy_bits = 0.0
+    for record in records:
+        contexts = _prev_symbol_contexts(record.q_zz_u8)
+        context_count += len(contexts)
+        for stream in contexts.values():
+            summary = _symbol_entropy_summary(bytes(stream))
+            token_count += len(stream)
+            entropy_bits += float(summary["entropy_bits_per_symbol"]) * len(stream)
+    entropy_floor = int(math.ceil(entropy_bits / 8))
+    return {
+        "context_count": context_count,
+        "tokens": token_count,
+        "entropy_bits_per_token": round(float(entropy_bits / token_count), 12)
+        if token_count
+        else 0.0,
+        "entropy_floor_bytes": entropy_floor,
+    }
+
+
+def _prev_symbol_contexts(payload: bytes) -> dict[int, list[int]]:
+    contexts: dict[int, list[int]] = {}
+    for previous, current in zip(payload[:-1], payload[1:]):
+        contexts.setdefault(int(previous), []).append(int(current))
+    return contexts
 
 
 def _variant_brotli(label: str, raw: bytes, *, quality: int) -> dict[str, Any]:
@@ -329,6 +384,280 @@ def _variant_huffman_global(parsed: PackedDecoderRaw) -> dict[str, Any]:
     }
 
 
+def _variant_context_range_per_tensor(parsed: PackedDecoderRaw) -> dict[str, Any]:
+    payload, stats = encode_prev_symbol_context_range_fixture(parsed)
+    restored = decode_prev_symbol_context_range_fixture(payload)
+    decoded_q = restored.q_stream
+    return {
+        "variant": "range_prev_symbol_per_tensor_q_streams_plus_raw_scales",
+        "codec": "HDC1_prev_symbol_per_tensor_range_uint8",
+        "bytes": len(payload),
+        "sha256": sha256_bytes(payload),
+        "q_roundtrip_equal": decoded_q == parsed.q_stream,
+        "scale_roundtrip_equal": restored.scale_stream == parsed.scale_stream,
+        "raw_equal": restored.to_raw() == parsed.to_raw(),
+        "tensor_count": len(parsed.records),
+        "context_count": stats["context_count"],
+        "context_token_count": stats["context_token_count"],
+        "header_bytes": stats["header_bytes"],
+        "range_payload_bytes": stats["range_payload_bytes"],
+        "raw_scale_bytes": len(parsed.scale_stream),
+        "parity_fixture": True,
+        "archive_ready": False,
+        "dispatch_blockers": [
+            "parity_fixture_only",
+            "requires_submission_runtime_decoder",
+            "requires_archive_builder_and_payload_diff",
+            "requires_exact_cuda_auth_eval",
+        ],
+    }
+
+
+def encode_prev_symbol_context_range_fixture(
+    parsed: PackedDecoderRaw,
+) -> tuple[bytes, dict[str, int]]:
+    """Encode q streams with a per-tensor previous-symbol range fixture.
+
+    The container is intentionally self-describing and decoder-first. It is not
+    an archive format until an inflate-runtime decoder and section builder exist.
+    """
+
+    out = io.BytesIO()
+    out.write(b"HDC1")
+    out.write(_varint_encode(1))
+    out.write(_varint_encode(len(parsed.records)))
+    header_bytes = 4 + 1 + len(_varint_encode(len(parsed.records)))
+    range_payload_bytes = 0
+    context_count = 0
+    context_token_count = 0
+
+    for record in parsed.records:
+        encoded_name = record.name.encode("utf-8")
+        out.write(_varint_encode(len(encoded_name)))
+        out.write(encoded_name)
+        out.write(_varint_encode(record.value_count))
+        if not record.q_zz_u8:
+            raise HnervDecoderRecodeError(f"empty q stream for record {record.name}")
+        out.write(bytes([record.q_zz_u8[0]]))
+        contexts = _prev_symbol_contexts(record.q_zz_u8)
+        out.write(_varint_encode(len(contexts)))
+        header_bytes += (
+            len(_varint_encode(len(encoded_name)))
+            + len(encoded_name)
+            + len(_varint_encode(record.value_count))
+            + 1
+            + len(_varint_encode(len(contexts)))
+        )
+        for previous_symbol in sorted(contexts):
+            stream = contexts[previous_symbol]
+            encoded, local_header_bytes = _encode_context_symbol_stream(stream)
+            out.write(bytes([previous_symbol]))
+            out.write(_varint_encode(len(stream)))
+            out.write(_varint_encode(len(encoded["symbols"])))
+            out.write(_varint_encode(len(encoded["payload"])))
+            previous_symbol_for_delta = 0
+            for index, symbol in enumerate(encoded["symbols"]):
+                delta = symbol if index == 0 else symbol - previous_symbol_for_delta
+                out.write(_varint_encode(delta))
+                out.write(_varint_encode(encoded["frequencies"][index]))
+                previous_symbol_for_delta = symbol
+            out.write(encoded["payload"])
+            context_count += 1
+            context_token_count += len(stream)
+            range_payload_bytes += len(encoded["payload"])
+            header_bytes += (
+                1
+                + len(_varint_encode(len(stream)))
+                + len(_varint_encode(len(encoded["symbols"])))
+                + len(_varint_encode(len(encoded["payload"])))
+                + local_header_bytes
+            )
+
+    out.write(_varint_encode(len(parsed.scale_stream)))
+    out.write(parsed.scale_stream)
+    header_bytes += len(_varint_encode(len(parsed.scale_stream)))
+    payload = out.getvalue()
+    restored = decode_prev_symbol_context_range_fixture(payload)
+    if restored.to_raw() != parsed.to_raw():
+        raise HnervDecoderRecodeError("HDC1 context range fixture failed raw roundtrip")
+    return payload, {
+        "header_bytes": header_bytes,
+        "range_payload_bytes": range_payload_bytes,
+        "context_count": context_count,
+        "context_token_count": context_token_count,
+    }
+
+
+def decode_prev_symbol_context_range_fixture(payload: bytes) -> PackedDecoderRaw:
+    """Decode an HDC1 parity fixture emitted by encode_prev_symbol_context_range_fixture."""
+
+    cursor = 0
+    if payload[:4] != b"HDC1":
+        raise HnervDecoderRecodeError("invalid HDC1 context range fixture magic")
+    cursor = 4
+    version, cursor = _varint_decode(payload, cursor, "version")
+    if version != 1:
+        raise HnervDecoderRecodeError(f"unsupported HDC1 version: {version}")
+    record_count, cursor = _varint_decode(payload, cursor, "record_count")
+    records: list[PackedDecoderRecord] = []
+    for _ in range(record_count):
+        name_len, cursor = _varint_decode(payload, cursor, "record_name_len")
+        name_bytes = _read_payload_exact(payload, cursor, name_len, "record_name")
+        cursor += name_len
+        name = name_bytes.decode("utf-8")
+        shape = _shape_for_record_name(name)
+        value_count, cursor = _varint_decode(payload, cursor, "value_count")
+        if value_count != math.prod(shape):
+            raise HnervDecoderRecodeError(f"HDC1 value_count mismatch for {name}")
+        first = _read_payload_exact(payload, cursor, 1, "first_symbol")[0]
+        cursor += 1
+        context_count, cursor = _varint_decode(payload, cursor, "context_count")
+        decoded_contexts: dict[int, list[int]] = {}
+        for _context_index in range(context_count):
+            previous_symbol = _read_payload_exact(payload, cursor, 1, "previous_symbol")[0]
+            cursor += 1
+            if previous_symbol in decoded_contexts:
+                raise HnervDecoderRecodeError("HDC1 duplicate previous-symbol context")
+            token_count, cursor = _varint_decode(payload, cursor, "context_token_count")
+            unique_count, cursor = _varint_decode(payload, cursor, "unique_count")
+            payload_len, cursor = _varint_decode(payload, cursor, "context_payload_len")
+            symbols: list[int] = []
+            frequencies: list[int] = []
+            previous_symbol_for_delta = 0
+            for index in range(unique_count):
+                delta, cursor = _varint_decode(payload, cursor, "context_symbol_delta")
+                frequency, cursor = _varint_decode(payload, cursor, "context_frequency")
+                symbol = delta if index == 0 else previous_symbol_for_delta + delta
+                if symbol > 0xFF:
+                    raise HnervDecoderRecodeError("HDC1 context symbol exceeds uint8 range")
+                symbols.append(symbol)
+                frequencies.append(frequency)
+                previous_symbol_for_delta = symbol
+            encoded = _read_payload_exact(payload, cursor, payload_len, "context_payload")
+            cursor += payload_len
+            indices = decode_static_symbols(encoded, count=token_count, frequencies=frequencies)
+            decoded_contexts[previous_symbol] = [symbols[int(index)] for index in indices]
+        q = _restore_prev_symbol_stream(first, decoded_contexts, value_count=value_count)
+        records.append(
+            PackedDecoderRecord(
+                name=name,
+                shape=shape,
+                q_zz_u8=bytes(q),
+                scale_f32=b"",
+            )
+        )
+    scale_len, cursor = _varint_decode(payload, cursor, "scale_len")
+    scale_stream = _read_payload_exact(payload, cursor, scale_len, "scale_stream")
+    cursor += scale_len
+    if cursor != len(payload):
+        raise HnervDecoderRecodeError("HDC1 fixture has trailing bytes")
+    if scale_len != 4 * record_count:
+        raise HnervDecoderRecodeError("HDC1 scale stream length does not match record count")
+    restored_records = []
+    for index, record in enumerate(records):
+        restored_records.append(
+            dataclasses.replace(record, scale_f32=scale_stream[index * 4 : index * 4 + 4])
+        )
+    return PackedDecoderRaw(records=tuple(restored_records))
+
+
+def _encode_context_symbol_stream(stream: list[int]) -> tuple[dict[str, Any], int]:
+    counts = Counter(stream)
+    symbols = sorted(counts)
+    symbol_to_index = {symbol: index for index, symbol in enumerate(symbols)}
+    indices = [symbol_to_index[symbol] for symbol in stream]
+    frequencies = [int(counts[symbol]) for symbol in symbols]
+    payload = encode_static_symbols(indices, frequencies=frequencies)
+    restored = decode_static_symbols(payload, count=len(indices), frequencies=frequencies)
+    if [symbols[int(index)] for index in restored] != stream:
+        raise HnervDecoderRecodeError("context range stream failed local roundtrip")
+    header_bytes = 0
+    previous_symbol = 0
+    for index, symbol in enumerate(symbols):
+        delta = symbol if index == 0 else symbol - previous_symbol
+        header_bytes += len(_varint_encode(delta)) + len(_varint_encode(counts[symbol]))
+        previous_symbol = symbol
+    return {
+        "symbols": symbols,
+        "frequencies": frequencies,
+        "payload": payload,
+    }, header_bytes
+
+
+def _restore_prev_symbol_stream(
+    first_symbol: int,
+    decoded_contexts: dict[int, list[int]],
+    *,
+    value_count: int,
+) -> bytes:
+    if value_count <= 0:
+        raise HnervDecoderRecodeError("HDC1 value_count must be positive")
+    out = bytearray([first_symbol])
+    offsets = dict.fromkeys(decoded_contexts, 0)
+    previous = first_symbol
+    while len(out) < value_count:
+        values = decoded_contexts.get(previous)
+        if values is None:
+            raise HnervDecoderRecodeError("HDC1 missing previous-symbol context")
+        offset = offsets[previous]
+        if offset >= len(values):
+            raise HnervDecoderRecodeError("HDC1 previous-symbol context exhausted early")
+        current = int(values[offset])
+        offsets[previous] = offset + 1
+        out.append(current)
+        previous = current
+    for symbol, values in decoded_contexts.items():
+        if offsets[symbol] != len(values):
+            raise HnervDecoderRecodeError("HDC1 previous-symbol context has trailing values")
+    return bytes(out)
+
+
+def _shape_for_record_name(name: str) -> tuple[int, ...]:
+    for schema_name, shape in PACKED_STATE_SCHEMA:
+        if schema_name == name:
+            return shape
+    raise HnervDecoderRecodeError(f"unknown HDC1 record name: {name}")
+
+
+def _varint_encode(value: int) -> bytes:
+    if value < 0:
+        raise HnervDecoderRecodeError("varint value must be non-negative")
+    out = bytearray()
+    remaining = int(value)
+    while True:
+        byte = remaining & 0x7F
+        remaining >>= 7
+        if remaining:
+            out.append(byte | 0x80)
+        else:
+            out.append(byte)
+            return bytes(out)
+
+
+def _varint_decode(payload: bytes, offset: int, label: str) -> tuple[int, int]:
+    value = 0
+    shift = 0
+    cursor = offset
+    while True:
+        if cursor >= len(payload):
+            raise HnervDecoderRecodeError(f"HDC1 truncated while reading {label}")
+        byte = payload[cursor]
+        cursor += 1
+        value |= (byte & 0x7F) << shift
+        if byte < 0x80:
+            return value, cursor
+        shift += 7
+        if shift > 63:
+            raise HnervDecoderRecodeError(f"HDC1 {label} exceeds supported bounds")
+
+
+def _read_payload_exact(payload: bytes, offset: int, length: int, label: str) -> bytes:
+    end = offset + length
+    if length < 0 or end > len(payload):
+        raise HnervDecoderRecodeError(f"HDC1 truncated while reading {label}")
+    return payload[offset:end]
+
+
 def _container(magic: bytes, records: list[tuple[bytes, bytes]]) -> bytes:
     if len(magic) != 4:
         raise HnervDecoderRecodeError("container magic must be 4 bytes")
@@ -353,5 +682,7 @@ __all__ = [
     "PackedDecoderRaw",
     "PackedDecoderRecord",
     "build_structural_recode_profile",
+    "decode_prev_symbol_context_range_fixture",
+    "encode_prev_symbol_context_range_fixture",
     "parse_packed_decoder_brotli",
 ]
