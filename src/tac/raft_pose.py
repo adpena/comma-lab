@@ -42,18 +42,22 @@ def compute_raft_flow(video_path: str, n_frames: int = 1200, device: str = "cuda
         raise ValueError(f"n_frames must be at least 2, got {n_frames}")
 
     try:
-        from torchvision.io import read_video
         from torchvision.models.optical_flow import Raft_Large_Weights, raft_large
     except ImportError as exc:
         raise ImportError(
-            "Lane FL requires torchvision with optical-flow models and video IO. "
-            "Install a torchvision build that includes raft_large and read_video."
+            "Lane FL requires torchvision with optical-flow models. "
+            "Install a torchvision build that includes raft_large."
         ) from exc
 
-    frames, _, _ = read_video(str(path), pts_unit="sec", output_format="TCHW")
-    if frames.shape[0] < 2:
-        raise ValueError(f"video must contain at least 2 frames, got {frames.shape[0]}")
-    frames = frames[:n_frames].to(device=dev, dtype=torch.float32) / 255.0
+    from tac.data import decode_video
+
+    frame_list = decode_video(path, max_frames=n_frames)
+    if len(frame_list) < 2:
+        raise ValueError(f"video must contain at least 2 frames, got {len(frame_list)}")
+    frames = torch.stack(
+        [frame.permute(2, 0, 1).contiguous() for frame in frame_list],
+        dim=0,
+    ).to(device=dev, dtype=torch.float32) / 255.0
 
     weights = Raft_Large_Weights.DEFAULT
     transforms = weights.transforms()

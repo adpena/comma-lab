@@ -58,3 +58,9 @@ def test_no_device_fallback_in_compute_raft_flow() -> None:
     source = inspect.getsource(raft_pose.compute_raft_flow)
     assert "mps" not in source.lower()
     assert "cpu" not in source.lower()
+
+
+def test_compute_raft_flow_pushes_frame_limit_into_decoder() -> None:
+    source = inspect.getsource(raft_pose.compute_raft_flow)
+    assert "read_video" not in source
+    assert "decode_video(path, max_frames=n_frames)" in source
