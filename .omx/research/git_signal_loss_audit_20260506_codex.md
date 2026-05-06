@@ -1,0 +1,638 @@
+# Git Signal-Loss Audit
+
+- comparison_mode: `worktree`
+- historical_canonical_paths: `2105`
+- current_paths: `6520`
+- missing_canonical_paths: `624`
+
+## Missing By Class
+
+- `documentation`: `9`
+- `source_or_tooling`: `615`
+
+## Missing Paths
+
+- `docs/BATTLE_PLAN_20260420.md` [documentation] 6f4ee6554ee4 2026-04-20 rename BATTLE_PLAN to undated canonical living document
+- `docs/archive_byte_profile.md` [documentation] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `docs/paper/05_related_work.md` [documentation] 003d12e5d232 2026-04-15 paper: add Section 5 (Production Deployment) and site summary
+- `docs/paper/06_discussion.md` [documentation] 003d12e5d232 2026-04-15 paper: add Section 5 (Production Deployment) and site summary
+- `docs/runbooks/alpha_lane12_large_move_next_actions.md` [documentation] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `docs/runbooks/apogee_public_supplement_20260502.md` [documentation] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `docs/runbooks/contest_faithful_submission_next_tranche_20260502.md` [documentation] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `docs/runbooks/contest_submission_pipeline_20260502.md` [documentation] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `docs/runbooks/custom_decoder_overfit_codec_plan_20260501.md` [documentation] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/alpha_frontier_candidate_screen.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/alpha_geo0_pose_regen.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/alpha_inr_readiness.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/alpha_lossy_repair_budget_planner.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/alpha_mask_candidate_builder.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/alpha_mask_codec_candidate_matrix.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/alpha_mask_residual_planner.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/alpha_primitive_mask_diagnostics.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/alpha_repair_atom_planner.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/analyze_or_build_pr85_qfq4_model_serializer_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/analyze_public_qpose_payload_family.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/archive_bit_budget_profiler.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/average_top_checkpoints.py` [source_or_tooling] 5cc07125b761 2026-04-11 Organize: move 12 one-off research scripts to experiments/research/
+- `experiments/bat00_sync.sh` [source_or_tooling] 835064a046e3 2026-04-11 Canonical structure: everything under src/tac/
+- `experiments/benchmark_int4.py` [source_or_tooling] ccbc44ecb545 2026-04-11 Move GPU training + monitoring + benchmarks to tac, deploy/ for infra
+- `experiments/benchmark_mask_codecs.py` [source_or_tooling] 6f4405e10b62 2026-04-11 NSA tac core: fix 11 issues + delete 9 wrapper scripts
+- `experiments/build_alpha_mask_primitive_response_plan.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_alpha_mask_replacement_archive.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_and_eval.sh` [source_or_tooling] a2b31e2cdd53 2026-04-25 critical: kill ad-hoc deployment forever — canonical pipeline only
+- `experiments/build_blockfp_c067_archive.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_bundle.py` [source_or_tooling] 92cdc417f118 2026-04-11 Delete experiment originals moved to deploy/ — experiments/ now clean
+- `experiments/build_c063_breakthrough_candidate_matrix.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_c067_atom_response_table.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_c067_decoded_delta_overlay_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_c067_multimask_reconciler_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_c067_multiresolution_stack_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_c067_postdecode_mask_repair_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_c067_reversed_base_cdo1_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_c091_relative_pr75_pr77_action_pose_matrix.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_c101_native_action_atom_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_c101_renderer_pose_stack_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_charged_mask_grammar_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_cmg2_downsample_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_cmg2_foveated_repair_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_cmg3_adaptive_runs_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_cmg3_nonzero_runs_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_cmg3_rowspan_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_component_manifold_probe_plan.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_fixedslice_segment_mix_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_frontier_atom_ledger.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_imp_c067_bridge_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_kaggle_assets_dataset.py` [source_or_tooling] 92cdc417f118 2026-04-11 Delete experiment originals moved to deploy/ — experiments/ now clean
+- `experiments/build_kaggle_kernels.py` [source_or_tooling] 92cdc417f118 2026-04-11 Delete experiment originals moved to deploy/ — experiments/ now clean
+- `experiments/build_lane12_geometry_gate_repair_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_lossless_byte_squeeze_worker_20260503.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_mixed_qzs_block_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_owv3_0120_admm_stack.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_owv3_0120_stack.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pmg_hotspot_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr65_qpost_atom_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr65_qpost_atom_candidates_v2.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr65_qpost_interaction_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr75_lossless_repack_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr75_minp_lossless_micro_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr75_minp_p6_stream_mix_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr75_minp_stream_ablation_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr75_qpost_microstack_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr75_tile_action_subset_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr77_action_pose_mixed_container_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr77_tile_action_transplant_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr77_tile_delta_transfer_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr79_action_dictionary_repack_candidates_v2.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr79_action_lossless_repack_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr79_action_subset_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr79_flatpack_transfer_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr79_next_byte_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr79_pr65_postprocess_atom_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr79_pr65_selective_pose_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr81_pr82_henosis_stack_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr82_henosis_atom_transfer_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr84_pr82_henosis_stack_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr85_bridge_sparse_action_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr85_correction_recode_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr85_final_bias_stack_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr85_fixed_runtime_bridge_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr85_lossless_pure_rate_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr85_pair_action_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr85_pair_atom_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr85_post_motion_group_policy_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr85_qh1_model_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr85_qrgb_pair_atom_combo_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr85_qrgb_transfer_archive_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr85_randmulti_group_policy_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr85_sidechannel_ablation_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr85_sidechannel_recode_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr85_stbm1br_mask_recode_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr85_stbm1br_qrgb_randmulti_stack_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_pr85_stbm1br_rmb1_randmulti_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_problem_space_manifest.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_protected_mask_reencode_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_qp1_pose_active_subspace_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_qzs3_postprocess_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_renderer_group_allocator_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_renderer_shrink_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_replay_observability_signal.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/build_yf_observability_report.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/cloud_deploy.py` [source_or_tooling] 92cdc417f118 2026-04-11 Delete experiment originals moved to deploy/ — experiments/ now clean
+- `experiments/cloud_h96_trainer.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/cloud_segnet_attack_h32_trainer.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/colab_psd_training.py` [source_or_tooling] 5cc07125b761 2026-04-11 Organize: move 12 one-off research scripts to experiments/research/
+- `experiments/compare_component_traces.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/compare_pr79_runtime_parity.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/compare_public_pose_manifolds.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/crf_search.py` [source_or_tooling] 6f4405e10b62 2026-04-11 NSA tac core: fix 11 issues + delete 9 wrapper scripts
+- `experiments/crf_search_results.json` [source_or_tooling] 835064a046e3 2026-04-11 Canonical structure: everything under src/tac/
+- `experiments/crf_sweep_score.sh` [source_or_tooling] a2b31e2cdd53 2026-04-25 critical: kill ad-hoc deployment forever — canonical pipeline only
+- `experiments/custom_mask_codec_probe.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/diagnose_pr86_hpac_parity.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/encoder_sweep.sh` [source_or_tooling] 835064a046e3 2026-04-11 Canonical structure: everything under src/tac/
+- `experiments/ensemble_checkpoints.py` [source_or_tooling] 6f4405e10b62 2026-04-11 NSA tac core: fix 11 issues + delete 9 wrapper scripts
+- `experiments/ensemble_weight_averaging.py` [source_or_tooling] 5cc07125b761 2026-04-11 Organize: move 12 one-off research scripts to experiments/research/
+- `experiments/eval_full_pipeline.py` [source_or_tooling] c208598728d0 2026-04-10 Portable train_tac.py + hardened Modal deploy + cleanup
+- `experiments/exp1_fridrich_proper.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `experiments/exp2_tiny_dp_sims_proper.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `experiments/exp3_lbfgs_refinement.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `experiments/exp4_cpu_trick_stack.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `experiments/exp5_auth_scorer_setup.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `experiments/export_pr85_residual_sufficient_program_curriculum.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/extract_posenet_targets.py` [source_or_tooling] 6f4405e10b62 2026-04-11 NSA tac core: fix 11 issues + delete 9 wrapper scripts
+- `experiments/frontier_smoke_tests.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `experiments/generate_visual_comparison.py` [source_or_tooling] 5cc07125b761 2026-04-11 Organize: move 12 one-off research scripts to experiments/research/
+- `experiments/geometry_safe_mask_overlay_search.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/gpu_lane_dual_smoke.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `experiments/jacobian_optimal.py` [source_or_tooling] 5cc07125b761 2026-04-11 Organize: move 12 one-off research scripts to experiments/research/
+- `experiments/jacobian_svd_analysis.py` [source_or_tooling] 5cc07125b761 2026-04-11 Organize: move 12 one-off research scripts to experiments/research/
+- `experiments/kaggle_kernel_builder.py` [source_or_tooling] 92cdc417f118 2026-04-11 Delete experiment originals moved to deploy/ — experiments/ now clean
+- `experiments/kaggle_output_ingest.py` [source_or_tooling] 92cdc417f118 2026-04-11 Delete experiment originals moved to deploy/ — experiments/ now clean
+- `experiments/kaggle_queue_tick.py` [source_or_tooling] 92cdc417f118 2026-04-11 Delete experiment originals moved to deploy/ — experiments/ now clean
+- `experiments/kaggle_status_sync.py` [source_or_tooling] 92cdc417f118 2026-04-11 Delete experiment originals moved to deploy/ — experiments/ now clean
+- `experiments/kaggle_watchdog.py` [source_or_tooling] 92cdc417f118 2026-04-11 Delete experiment originals moved to deploy/ — experiments/ now clean
+- `experiments/karpathy_cnn_residual_analysis.py` [source_or_tooling] 5cc07125b761 2026-04-11 Organize: move 12 one-off research scripts to experiments/research/
+- `experiments/launch_bat00_smokes.sh` [source_or_tooling] 835064a046e3 2026-04-11 Canonical structure: everything under src/tac/
+- `experiments/launch_overnight.sh` [source_or_tooling] a2b31e2cdd53 2026-04-25 critical: kill ad-hoc deployment forever — canonical pipeline only
+- `experiments/launch_wilde_shiraz.sh` [source_or_tooling] a2b31e2cdd53 2026-04-25 critical: kill ad-hoc deployment forever — canonical pipeline only
+- `experiments/line_search_pose_refinement.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/live_fleet_snapshot.py` [source_or_tooling] ccbc44ecb545 2026-04-11 Move GPU training + monitoring + benchmarks to tac, deploy/ for infra
+- `experiments/measure_sjkl_fisher_rank_20260501.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/mlx_optimization_benchmark.py` [source_or_tooling] ccbc44ecb545 2026-04-11 Move GPU training + monitoring + benchmarks to tac, deploy/ for infra
+- `experiments/modal_alpha_geo0_pose_regen.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/modal_dilated_h64_deploy.py` [source_or_tooling] 92cdc417f118 2026-04-11 Delete experiment originals moved to deploy/ — experiments/ now clean
+- `experiments/modal_dilated_h96_dual_sal_deploy.py` [source_or_tooling] 92cdc417f118 2026-04-11 Delete experiment originals moved to deploy/ — experiments/ now clean
+- `experiments/modal_dilated_kl_hardframe_deploy.py` [source_or_tooling] 92cdc417f118 2026-04-11 Delete experiment originals moved to deploy/ — experiments/ now clean
+- `experiments/modal_h96_deploy.py` [source_or_tooling] 92cdc417f118 2026-04-11 Delete experiment originals moved to deploy/ — experiments/ now clean
+- `experiments/modal_h96_v2_deploy.py` [source_or_tooling] 92cdc417f118 2026-04-11 Delete experiment originals moved to deploy/ — experiments/ now clean
+- `experiments/modal_nuclear_deploy.py` [source_or_tooling] 92cdc417f118 2026-04-11 Delete experiment originals moved to deploy/ — experiments/ now clean
+- `experiments/monitor.py` [source_or_tooling] ccbc44ecb545 2026-04-11 Move GPU training + monitoring + benchmarks to tac, deploy/ for infra
+- `experiments/monte_carlo_layer_scale_search.py` [source_or_tooling] 5cc07125b761 2026-04-11 Organize: move 12 one-off research scripts to experiments/research/
+- `experiments/optimize_component_response_stack.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_c067_bigmove_nontrain_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_c067_decoded_delta_overlay_mask_topology.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_c067_geometry_safe_mask_topology_v2.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_c067_hotspot_mask_geometry_compiler.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_c067_micro_mask_reencode.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_c067_multiresolution_stack_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_c067_postdecode_mask_repair_waterfill.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_c067_renderer_self_compression_v2.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_c067_reversed_base_cdo1_overlay_economics.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_c091_mask_packer_bigmove.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_c091_native_action_atoms.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_c091_pose_manifold_bigmove.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_c091_renderer_self_compression_bigmove.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_c102_native_action_atoms.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_charged_mask_grammar_atoms.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_cmg3_pixel_lagrangian_atoms.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_ego_motion_field_atoms.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_frontier_stack_reconstruction.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_full_pipeline_self_compression_nextwave.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_lane12_geometry_gate_repair_atoms.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_lane12_l2_unblock.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_multimask_reconciliation_atoms.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_nostradamus_future_frontier.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_pose_manifold_waterfill_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_pr65_henosis_stream_transfer.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_pr79_c102_pose_action_interactions.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_pr85_correction_atom_waterfill.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_pr85_full_stack_opportunity_matrix.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_pr85_qrgb_transfer_actions.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_pr85_randmulti_group_waterfill.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_pr85_scorer_gradient_atoms.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_pr86_hpac_pr85_contract_port.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_predictive_mask_grammar_runtime_readiness.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_predictive_mask_hotspot.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_predictive_mask_residual_economics.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_public_floor_next_breakthrough_worker.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_scorer_weighted_pose_atoms.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_shannon_floor_sub024_requirements.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_sjkl_trace_benefit_allocator.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_trained_renderer_export_unlock.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/plan_yousfi_fridrich_field_equations.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/poll_bat00_runs.sh` [source_or_tooling] 835064a046e3 2026-04-11 Canonical structure: everything under src/tac/
+- `experiments/pr75_raw_output_parity.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/pr86_hpac_replay_parity.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/pr_draft.md` [source_or_tooling] 835064a046e3 2026-04-11 Canonical structure: everything under src/tac/
+- `experiments/precompute_for_modal.py` [source_or_tooling] 92cdc417f118 2026-04-11 Delete experiment originals moved to deploy/ — experiments/ now clean
+- `experiments/preflight_lane12_decoded_baseline_build.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/preflight_pr85_fixed_runtime_readiness.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/preflight_qfaithful_successor_geometry_contract.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/preflight_renderer_transplant_pose_safety.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/preflight_trained_renderer_transplant.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/prepare_c067_fixed_renderer_burn.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/prepare_trained_renderer_transplant_dispatch.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/probe_cmg2_mask_codecs.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/probe_predictive_mask_grammar.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_archive_byte_accounting.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_archive_bytes.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_atom_ledger_subspaces.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_pr79_mask_body_reduction_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_pr79_pr77_lossless_s3_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_pr82_henosis_frontier_contract.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_pr85_adaptive_masking_bundle.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_pr85_adaptive_masking_sidechannel_attribution.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_pr85_archive_bit_budget.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_pr85_family_bit_lagrangian.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_pr85_hpm1_residual_prefix_trajectory.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_pr85_model_payload_self_compression.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_pr85_nonmask_self_compression.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_pr85_qh0_record_anatomy.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_pr85_residual_sufficient_program.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_pr85_stbm1br_model_recode_feasibility.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_pr86_hpac_token_anatomy.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_pr96_rem2_hnerv_packing.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_public_frontier_intake.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_python_loop_hotpaths.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_qbf1_v2_renderer_bytes.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/profile_stbm1br_rust_decode.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/proxy_gate_triage.py` [source_or_tooling] ccbc44ecb545 2026-04-11 Move GPU training + monitoring + benchmarks to tac, deploy/ for infra
+- `experiments/proxy_h64_long2500.py` [source_or_tooling] c208598728d0 2026-04-10 Portable train_tac.py + hardened Modal deploy + cleanup
+- `experiments/proxy_score_faithful.py` [source_or_tooling] 6f4405e10b62 2026-04-11 NSA tac core: fix 11 issues + delete 9 wrapper scripts
+- `experiments/qat_current_renderer.sh` [source_or_tooling] a2b31e2cdd53 2026-04-25 critical: kill ad-hoc deployment forever — canonical pipeline only
+- `experiments/quantization_drift_audit.py` [source_or_tooling] 6f4405e10b62 2026-04-11 NSA tac core: fix 11 issues + delete 9 wrapper scripts
+- `experiments/rate_distortion_floor.py` [source_or_tooling] 6f4405e10b62 2026-04-11 NSA tac core: fix 11 issues + delete 9 wrapper scripts
+- `experiments/rd_bound_mine.py` [source_or_tooling] 5cc07125b761 2026-04-11 Organize: move 12 one-off research scripts to experiments/research/
+- `experiments/remote_job.py` [source_or_tooling] 88865863f96a 2026-04-11 Fix 4 sweep issues + migrate inflate loader + delete stale code
+- `experiments/repack_fixedslice_qp1_to_outer_brotli.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/repack_single_payload_brotli.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/replay_pr86_hpac_tokens.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/reverse_engineer_contest_video.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/reverse_engineer_top_submissions.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/run_bat00_smoke_job.sh` [source_or_tooling] 835064a046e3 2026-04-11 Canonical structure: everything under src/tac/
+- `experiments/run_endgame.sh` [source_or_tooling] 835064a046e3 2026-04-11 Canonical structure: everything under src/tac/
+- `experiments/run_karpathy_sweep.sh` [source_or_tooling] 835064a046e3 2026-04-11 Canonical structure: everything under src/tac/
+- `experiments/run_saliency_sweep.py` [source_or_tooling] 5cc07125b761 2026-04-11 Organize: move 12 one-off research scripts to experiments/research/
+- `experiments/run_scorer_queue.sh` [source_or_tooling] 835064a046e3 2026-04-11 Canonical structure: everything under src/tac/
+- `experiments/saliency_roi.py` [source_or_tooling] 6f4405e10b62 2026-04-11 NSA tac core: fix 11 issues + delete 9 wrapper scripts
+- `experiments/search_pr79_renderer_parity_constrained_shrink.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/search_renderer_parity_shrink_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/segnet_boundary_floor.py` [source_or_tooling] 5cc07125b761 2026-04-11 Organize: move 12 one-off research scripts to experiments/research/
+- `experiments/siren_mask_experiment.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `experiments/test_build_kaggle_assets_dataset.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_build_kaggle_kernels.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_cloud_segnet_attack_h32_trainer.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_kaggle_bootstrap_template.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_kaggle_kernel_builder.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_kaggle_output_ingest.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_kaggle_queue_tick.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_kaggle_status_sync.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_kaggle_watchdog.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_live_fleet_snapshot.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_lossless_review_tracker.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_lossless_state_sync.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_monte_carlo_layer_scale_search.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_postfilter_loader.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_proxy_gate_triage.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_proxy_score_faithful.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_quantization_drift_audit.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_rate_distortion_floor.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_remote_job.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_report_history_build.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_scheduler_cli.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_scheduler_registry.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_state_cli.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_state_sync.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_tac_entrypoints.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_tac_lossless_arithmetic.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_tac_lossless_baseline.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_tac_lossless_codecs.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_tac_lossless_contracts.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_tac_lossless_evaluate.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_tac_lossless_frequency_coder.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_tac_lossless_gpt_arithmetic_coder.py` [source_or_tooling] a80b75c98f8e 2026-04-11 Add lossless GPT arithmetic sample path
+- `experiments/test_tac_lossless_gpt_score.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_tac_lossless_range_coder.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_tac_lossless_state.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_tac_lossless_submission.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_task_codec_core.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_train_postfilter_canonical.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_train_postfilter_dct.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_train_postfilter_dilated_h64.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_train_postfilter_film_conditioned.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_train_postfilter_pairaware.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_train_postfilter_pixelshuffle_dilated.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_train_postfilter_qat_ema.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_train_postfilter_saliency.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_train_postfilter_segnet_attack.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_train_postfilter_v2.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/test_train_tac_entrypoint.py` [source_or_tooling] 168dbe3efd0f 2026-04-11 Move 49 test files from experiments/ to tests/ (PyPI convention)
+- `experiments/train_postfilter.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_canonical.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_counterpoint.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_cvar.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_dct.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_dilated.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_dilated_h64.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_featmatch.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_film_conditioned.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_h24.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_h32.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_kalman.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_pairaware.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_pixelshuffle_dilated.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_qat_ema.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_saliency.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_segaware.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_segnet_attack.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_segnet_boundary.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_uint8ste.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_postfilter_v2.py` [source_or_tooling] ada6efa1e370 2026-04-11 Delete 23 legacy experiment scripts — all unique logic migrated to tac
+- `experiments/train_renderer.py` [source_or_tooling] ccbc44ecb545 2026-04-11 Move GPU training + monitoring + benchmarks to tac, deploy/ for infra
+- `experiments/train_renderer_mlx.py` [source_or_tooling] ccbc44ecb545 2026-04-11 Move GPU training + monitoring + benchmarks to tac, deploy/ for infra
+- `experiments/train_tac.py` [source_or_tooling] 6f4405e10b62 2026-04-11 NSA tac core: fix 11 issues + delete 9 wrapper scripts
+- `experiments/triage_pr79_action_search_results.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `experiments/trust_region_sweep.py` [source_or_tooling] 5cc07125b761 2026-04-11 Organize: move 12 one-off research scripts to experiments/research/
+- `experiments/vastai_post_training.sh` [source_or_tooling] a2b31e2cdd53 2026-04-25 critical: kill ad-hoc deployment forever — canonical pipeline only
+- `scripts/remote_lane_12_owv3_0120_nerv_stack.sh` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `scripts/remote_lane_imp_c067_bridge.sh` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `scripts/remote_lane_pmg_hotspot_c067_eval.sh` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `scripts/remote_lane_pr95_hnerv_muon_full_burn.sh` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `scripts/remote_lane_sjkl_c067_v3_cap8k.sh` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `scripts/wave1_harvest_and_eval.sh` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `scripts/wave_omega_2_nerv_full_cuda.sh` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/adaptive.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `src/tac/archive_signal.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/coord_renderer.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `src/tac/cross_disciplinary_optimizers.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `src/tac/deploy/modal/modal_dilated_h64_deploy.py` [source_or_tooling] 985615036a38 2026-04-12 canonicalize Modal deploy: archive 7 legacy scripts, keep asymmetric + precompute
+- `src/tac/deploy/modal/modal_dilated_h96_dual_sal_deploy.py` [source_or_tooling] 985615036a38 2026-04-12 canonicalize Modal deploy: archive 7 legacy scripts, keep asymmetric + precompute
+- `src/tac/deploy/modal/modal_dilated_kl_hardframe_deploy.py` [source_or_tooling] 985615036a38 2026-04-12 canonicalize Modal deploy: archive 7 legacy scripts, keep asymmetric + precompute
+- `src/tac/deploy/modal/modal_h96_deploy.py` [source_or_tooling] 985615036a38 2026-04-12 canonicalize Modal deploy: archive 7 legacy scripts, keep asymmetric + precompute
+- `src/tac/deploy/modal/modal_h96_v2_deploy.py` [source_or_tooling] 985615036a38 2026-04-12 canonicalize Modal deploy: archive 7 legacy scripts, keep asymmetric + precompute
+- `src/tac/deploy/modal/modal_nuclear_deploy.py` [source_or_tooling] 985615036a38 2026-04-12 canonicalize Modal deploy: archive 7 legacy scripts, keep asymmetric + precompute
+- `src/tac/deploy/modal/modal_renderer_smoke_deploy.py` [source_or_tooling] 985615036a38 2026-04-12 canonicalize Modal deploy: archive 7 legacy scripts, keep asymmetric + precompute
+- `src/tac/diffusion_renderer.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `src/tac/domain_solvers.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `src/tac/finance_optimizers.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `src/tac/hamiltonian_dynamics.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `src/tac/preflight_codebase.py` [source_or_tooling] 754dacbc8e8a 2026-04-25 fix: Round 22-24 — qat_finetune missing arch CLI args, pipeline arch propagation, optimize_poses .pt loader
+- `src/tac/qbf1_renderer_codec.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/scorer_distill.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `src/tac/scorer_manifold.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `src/tac/stbm1br_rust_bridge.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/test_eureka_smoke.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `src/tac/tests/test_alpha_frontier_candidate_screen.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_alpha_inr_readiness.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_alpha_lossy_repair_budget_planner.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_alpha_mask_candidate_builder.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_alpha_mask_codec_candidate_matrix.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_alpha_mask_residual_planner.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_alpha_primitive_mask_diagnostics.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_alpha_repair_atom_planner.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_analyze_public_qpose_payload_family.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_archive_bit_budget_profiler.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_archive_signal.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_alpha_mask_primitive_response_plan.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_alpha_mask_replacement_archive.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_blockfp_c067_archive.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_c063_breakthrough_candidate_matrix.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_c067_atom_response_table.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_c067_multimask_reconciler_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_c067_multiresolution_stack_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_c067_postdecode_mask_repair_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_c067_reversed_base_cdo1_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_c091_relative_pr75_pr77_action_pose_matrix.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_c101_native_action_atom_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_c101_renderer_pose_stack_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_charged_mask_grammar_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_cmg2_downsample_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_cmg2_foveated_repair_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_cmg3_adaptive_runs_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_cmg3_nonzero_runs_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_cmg3_rowspan_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_fixedslice_segment_mix_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_frontier_atom_ledger.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_imp_c067_bridge_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_lane12_geometry_gate_repair_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_mixed_qzs_block_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pmg_hotspot_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr65_qpost_atom_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr65_qpost_atom_candidates_v2.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr65_qpost_interaction_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr75_lossless_repack_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr75_minp_lossless_micro_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr75_minp_p6_stream_mix_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr75_qpost_microstack_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr75_tile_action_subset_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr77_action_pose_mixed_container_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr77_tile_action_transplant_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr77_tile_delta_transfer_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr79_action_dictionary_repack_candidates_v2.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr79_action_lossless_repack_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr79_action_subset_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr79_flatpack_transfer_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr79_next_byte_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr79_pr65_postprocess_atom_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr79_pr65_selective_pose_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr81_pr82_henosis_stack_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr82_henosis_atom_transfer_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr84_pr82_henosis_stack_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr85_bridge_sparse_action_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr85_correction_recode_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr85_final_bias_stack_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr85_fixed_runtime_bridge_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr85_lossless_pure_rate_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr85_pair_action_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr85_pair_atom_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr85_post_motion_group_policy_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr85_qh1_model_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr85_qrgb_pair_atom_combo_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr85_qrgb_transfer_archive_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr85_randmulti_group_policy_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr85_sidechannel_ablation_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr85_sidechannel_recode_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr85_stbm1br_mask_recode_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr85_stbm1br_qrgb_randmulti_stack_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr85_stbm1br_rmb1_randmulti_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr91_qrgb_pair_atom_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_pr95_hnerv_residual_atom_plan.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_problem_space_manifest.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_protected_mask_reencode_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_qp1_pose_active_subspace_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_renderer_group_allocator_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_renderer_shrink_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_build_yf_observability_report.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_cdo1_decoded_delta_overlay.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_cloud_segnet_attack_h32_trainer.py` [source_or_tooling] 2ac7f71bfbb1 2026-04-11 Session state: MLX + Modal training debugging in progress
+- `src/tac/tests/test_compare_component_traces.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_compare_pr79_runtime_parity.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_compare_public_pose_manifolds.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_component_manifold_probe_plan.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_contest_component_trace.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_custom_mask_codec_probe.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_data_decode_limits.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_diagnose_pr86_hpac_parity.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_export_pr85_residual_sufficient_program_curriculum.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_geometry_safe_mask_overlay_search.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_inflate_renderer_grayscale_repair.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_inflate_renderer_sjkl_runtime.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_inflate_renderer_zoom_geometry.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_launch_lane_on_vastai_create_instance.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_line_search_pose.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_mask_codec_ffmpeg_resolver.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_modal_alpha_geo0_pose_regen.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_optimize_component_response_stack.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_optimize_poses_renderer_loader.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_paradigm_alpha_real_archive_eval.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_c067_bigmove_nontrain_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_c067_decoded_delta_overlay_mask_topology.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_c067_geometry_safe_mask_topology_v2.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_c067_hotspot_mask_geometry_compiler.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_c067_micro_mask_reencode.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_c067_multiresolution_stack_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_c067_postdecode_mask_repair_waterfill.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_c067_renderer_self_compression_v2.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_c067_reversed_base_cdo1_overlay_economics.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_c091_mask_packer_bigmove.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_c091_native_action_atoms.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_c091_pose_manifold_bigmove.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_c091_renderer_self_compression_bigmove.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_c102_native_action_atoms.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_charged_mask_grammar_atoms.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_cmg3_pixel_lagrangian_atoms.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_ego_motion_field_atoms.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_frontier_stack_reconstruction.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_full_pipeline_self_compression_nextwave.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_lane12_geometry_gate_repair_atoms.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_lane12_l2_unblock.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_multimask_reconciliation_atoms.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_nostradamus_future_frontier.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_pose_manifold_waterfill_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_pr65_henosis_stream_transfer.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_pr79_c102_pose_action_interactions.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_pr85_correction_atom_waterfill.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_pr85_full_stack_opportunity_matrix.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_pr85_qrgb_transfer_actions.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_pr85_randmulti_group_waterfill.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_pr85_scorer_gradient_atoms.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_pr86_hpac_pr85_contract_port.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_predictive_mask_grammar_runtime_readiness.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_predictive_mask_hotspot.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_predictive_mask_residual_economics.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_public_floor_next_breakthrough_worker.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_scorer_weighted_pose_atoms.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_shannon_floor_sub024_requirements.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_sjkl_trace_benefit_allocator.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_trained_renderer_export_unlock.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_plan_yousfi_fridrich_field_equations.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_pr75_raw_output_parity.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_pr85_qfq4_model_serializer_probe.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_pr86_hpac_replay_parity.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_preflight_lane12_decoded_baseline_build.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_preflight_pr85_fixed_runtime_readiness.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_preflight_qfaithful_successor_geometry_contract.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_preflight_renderer_transplant_pose_safety.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_preflight_trained_renderer_transplant.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_prepare_c067_fixed_renderer_burn.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_prepare_trained_renderer_transplant_dispatch.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_probe_cmg2_mask_codecs.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_probe_nvdec_script.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_probe_predictive_mask_grammar.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_profile_archive_byte_accounting.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_profile_atom_ledger_subspaces.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_profile_pr79_mask_body_reduction_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_profile_pr79_pr77_lossless_s3_candidates.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_profile_pr82_henosis_frontier_contract.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_profile_pr85_adaptive_masking_bundle.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_profile_pr85_adaptive_masking_sidechannel_attribution.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_profile_pr85_archive_bit_budget.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_profile_pr85_family_bit_lagrangian.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_profile_pr85_hpm1_residual_prefix_trajectory.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_profile_pr85_model_payload_self_compression.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_profile_pr85_nonmask_self_compression.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_profile_pr85_qh0_record_anatomy.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_profile_pr85_residual_sufficient_program.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_profile_pr85_stbm1br_model_recode_feasibility.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_profile_pr86_hpac_token_anatomy.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_profile_pr96_rem2_hnerv_packing.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_profile_python_loop_hotpaths.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_proxy_score_faithful.py` [source_or_tooling] 2ac7f71bfbb1 2026-04-11 Session state: MLX + Modal training debugging in progress
+- `src/tac/tests/test_public_frontier_intake.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_public_replay_exact_eval_hardening.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_q_faithful_snapshot_loop.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_qbf1_renderer_codec.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_qh0_renderer_codec.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_quantization_drift_audit.py` [source_or_tooling] 2ac7f71bfbb1 2026-04-11 Session state: MLX + Modal training debugging in progress
+- `src/tac/tests/test_qzs3_postprocess_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_remote_archive_only_eval_script.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_remote_bootstrap_ensurepip_contract.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_remote_job.py` [source_or_tooling] 2ac7f71bfbb1 2026-04-11 Session state: MLX + Modal training debugging in progress
+- `src/tac/tests/test_remote_lane_12_alpha_geo0_pose_regen_script.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_remote_lane_imp_c067_bridge_script.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_remote_lane_line_search_c067_script.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_remote_lane_q_faithful_jointgen_script.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_remote_lane_sjkl_c067_script.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_remote_q_faithful_postprocess_fixed_script.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_renderer_packed_payload.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_repack_fixedslice_qp1_to_outer_brotli.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_repack_single_payload_brotli.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_reverse_engineer_contest_video.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_reverse_engineer_top_submissions.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_search_pr79_renderer_parity_constrained_shrink.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_search_renderer_parity_shrink_candidate.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_seg_tile_actions_preflight.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_stbm1br_mask_codec.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_stbm1br_rust_bridge.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_submission_archive_deterministic_zip.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_submission_archive_grayscale_manifest.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_train_postfilter_canonical.py` [source_or_tooling] 2ac7f71bfbb1 2026-04-11 Session state: MLX + Modal training debugging in progress
+- `src/tac/tests/test_train_postfilter_dct.py` [source_or_tooling] 2ac7f71bfbb1 2026-04-11 Session state: MLX + Modal training debugging in progress
+- `src/tac/tests/test_train_postfilter_dilated_h64.py` [source_or_tooling] 2ac7f71bfbb1 2026-04-11 Session state: MLX + Modal training debugging in progress
+- `src/tac/tests/test_train_postfilter_film_conditioned.py` [source_or_tooling] 2ac7f71bfbb1 2026-04-11 Session state: MLX + Modal training debugging in progress
+- `src/tac/tests/test_train_postfilter_pairaware.py` [source_or_tooling] 2ac7f71bfbb1 2026-04-11 Session state: MLX + Modal training debugging in progress
+- `src/tac/tests/test_train_postfilter_pixelshuffle_dilated.py` [source_or_tooling] 2ac7f71bfbb1 2026-04-11 Session state: MLX + Modal training debugging in progress
+- `src/tac/tests/test_train_postfilter_qat_ema.py` [source_or_tooling] 2ac7f71bfbb1 2026-04-11 Session state: MLX + Modal training debugging in progress
+- `src/tac/tests/test_train_postfilter_saliency.py` [source_or_tooling] 2ac7f71bfbb1 2026-04-11 Session state: MLX + Modal training debugging in progress
+- `src/tac/tests/test_train_postfilter_segnet_attack.py` [source_or_tooling] 2ac7f71bfbb1 2026-04-11 Session state: MLX + Modal training debugging in progress
+- `src/tac/tests/test_train_postfilter_v2.py` [source_or_tooling] 2ac7f71bfbb1 2026-04-11 Session state: MLX + Modal training debugging in progress
+- `src/tac/tests/test_train_renderer_half_frame_noise.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_train_tac_entrypoint.py` [source_or_tooling] 2ac7f71bfbb1 2026-04-11 Session state: MLX + Modal training debugging in progress
+- `src/tac/tests/test_triage_pr79_action_search_results.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/tests/test_unpack_renderer_payload_fixedslice.py` [source_or_tooling] 1d9e73294a72 2026-05-04 On main: pre-rigor-pass safety stash 20260504T223300Z
+- `src/tac/variational_gen.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `src/tac/vqvae_codec.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `src/tac/wavelet_renderer.py` [source_or_tooling] cfa159614526 2026-04-12 reorg: move dead code to archive/ and contrib/ directories
+- `submissions/robust_current/config.av1-2.05-postfilter.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/config.av1-2.08-postfilter.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/config.av1-2.08.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/config.av1-2.12.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/config.av1-2.18.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/config.av1-2.19.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/config.av1-2.20.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/config.av1-522x392.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/config.av1-crf35.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/config.av1-filmgrain0.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/config.av1-unsharp030.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/config.av1-upscale-lanczos.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/config.env.backup` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/config.env.bak` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/config.env.exp_s` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/config.x265-3.25.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/config_av1_roi.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/configs/cand-416x312-crf23-g48-b4-r4.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/configs/cand-422x316-crf23-g48-b4-r4.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/configs/cand-424x318-crf23-g48-b3-r4.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/configs/cand-424x318-crf23-g48-b4-r4.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/configs/cand-424x318-crf23-g64-b4-r4.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/configs/cand-426x320-crf23-g48-b4-r4.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/configs/cand-428x320-crf23-g48-b4-r4.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/configs/cand-432x324-crf23-g48-b3-r4.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/configs/cand-432x324-crf23-g64-b4-r4.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/configs/cand-av1-524x394-p0-crf33-fg22.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/configs/dynamic-main-roi-v1.env` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/generate_roi_map.py` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/inflate.py` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/inflate_grain_mask.py` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/inflate_python.py` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/ml_mask_generator.py` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/report_crf35_auth.txt` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/report_mps.txt` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/report_psd.txt` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/report_psd_auth.txt` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `submissions/robust_current/roi_preprocess.py` [source_or_tooling] b27f59656c9a 2026-04-12 robust_current: delete 41 dead files (configs, stubs, old checkpoints, reports)
+- `tools/generate_comma_format_video.py` [source_or_tooling] ac0f25c4ef15 2026-04-11 Migrate 5 viz tools to src/tac/visualization/ + CLI subcommands
+- `tools/generate_comma_gif.py` [source_or_tooling] ac0f25c4ef15 2026-04-11 Migrate 5 viz tools to src/tac/visualization/ + CLI subcommands
+- `tools/generate_comparison_video.py` [source_or_tooling] ac0f25c4ef15 2026-04-11 Migrate 5 viz tools to src/tac/visualization/ + CLI subcommands
+- `tools/generate_segnet_viz_data.py` [source_or_tooling] ac0f25c4ef15 2026-04-11 Migrate 5 viz tools to src/tac/visualization/ + CLI subcommands
+- `tools/generate_yuv_gif.py` [source_or_tooling] ac0f25c4ef15 2026-04-11 Migrate 5 viz tools to src/tac/visualization/ + CLI subcommands
