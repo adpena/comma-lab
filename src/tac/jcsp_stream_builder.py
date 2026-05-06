@@ -25,7 +25,10 @@ caller. RAW_PASSTHROUGH streams without supplied bytes raise immediately
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Iterable, Mapping
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -36,11 +39,15 @@ from tac.joint_codec_stack_orchestrator import (
     KIND_RAW_PASSTHROUGH,
     JCSPTensorStreamSpec,
     StreamSource,
+    jcsp_stream_specs_manifest,
     model_to_jcsp_streams,
 )
 
 if TYPE_CHECKING:
     from tac.balle_hyperprior_codec import BalleHyperpriorCodec
+
+
+JCSP_STREAM_SOURCE_DRY_RUN_SCHEMA = "jcsp_stream_source_dry_run_v1"
 
 
 def _coerce_to_float32_numpy(tensor: Any) -> np.ndarray:
@@ -103,6 +110,141 @@ def quantize_tensor_symmetric(
     scale = (abs_max / k) if abs_max > 0.0 else 1.0
     qints = np.clip(np.round(arr / scale), -k, k).astype(np.int8)
     return qints, int(num_levels), int(k), float(scale)
+
+
+def _canonical_json_sha256(payload: Mapping[str, Any]) -> str:
+    return hashlib.sha256(
+        json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+def _reject_duplicate_json_object_pairs(
+    pairs: list[tuple[str, Any]],
+) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in out:
+            raise ValueError(f"duplicate JSON key {key!r}")
+        out[key] = value
+    return out
+
+
+def _normalize_score_marginals_mapping(
+    raw: Any,
+    *,
+    context: str,
+) -> dict[str, Any]:
+    if not isinstance(raw, Mapping):
+        raise ValueError(f"{context} must be a mapping of stream name to marginal")
+    out: dict[str, Any] = {}
+    for name_raw, value in raw.items():
+        if not isinstance(name_raw, str) or not name_raw:
+            raise ValueError(f"{context} has a non-string or empty stream name")
+        name = str(name_raw)
+        if isinstance(value, bool):
+            raise ValueError(f"{context}[{name!r}] must not be a bool")
+        if isinstance(value, (int, float)):
+            out[name] = float(value)
+        elif isinstance(value, Mapping):
+            out[name] = dict(value)
+        else:
+            raise ValueError(
+                f"{context}[{name!r}] must be a float or mapping, got "
+                f"{type(value).__name__}"
+            )
+    return out
+
+
+def _score_marginals_from_stream_rows(raw_streams: Any) -> dict[str, Any]:
+    if not isinstance(raw_streams, list):
+        raise ValueError("score marginals streams field must be a list")
+    out: dict[str, Any] = {}
+    for index, row in enumerate(raw_streams):
+        if not isinstance(row, Mapping):
+            raise ValueError(f"score marginals streams[{index}] must be a mapping")
+        name = row.get("name")
+        if not isinstance(name, str) or not name:
+            raise ValueError(
+                f"score marginals streams[{index}] has invalid name {name!r}"
+            )
+        if name in out:
+            raise ValueError(f"duplicate stream marginal row for {name!r}")
+        if "score_per_byte_marginal" not in row:
+            raise ValueError(
+                f"score marginals streams[{index}] for {name!r} is missing "
+                "score_per_byte_marginal"
+            )
+        tags_raw = row.get("constraint_tags", ())
+        if tags_raw is None:
+            tags: list[str] = []
+        elif isinstance(tags_raw, list):
+            tags = [str(tag) for tag in tags_raw]
+        else:
+            raise ValueError(
+                f"score marginals streams[{index}] constraint_tags must be a list"
+            )
+        out[name] = {
+            "score_per_byte_marginal": row["score_per_byte_marginal"],
+            "source": row.get("score_marginal_source", "jcsp_stream_manifest"),
+            "evidence_grade": row.get("score_marginal_evidence", "empirical"),
+            "scorer_term_targeted": row.get("scorer_term_targeted", "joint"),
+            "constraint_tags": tags,
+        }
+    return _normalize_score_marginals_mapping(out, context="score marginals")
+
+
+def load_jcsp_score_marginals(path: str | Path) -> dict[str, Any]:
+    """Load a deterministic JSON JCSP score-marginals artifact.
+
+    Supported shapes:
+    * ``{"tensor.name": 1.0e-6, ...}``
+    * ``{"score_marginals": {"tensor.name": 1.0e-6, ...}}``
+    * a JCSP stream manifest with ``streams[*].score_per_byte_marginal`` rows
+
+    The loader intentionally does not use pickle / ``torch.load``. A score
+    marginal is small structured metadata, and JSON with duplicate-key
+    rejection is the safest deterministic contract for a dry run.
+    """
+    artifact_path = Path(path)
+    if not artifact_path.exists():
+        raise FileNotFoundError(
+            f"JCSP score marginals artifact does not exist: {artifact_path}"
+        )
+    raw_bytes = artifact_path.read_bytes()
+    try:
+        text = raw_bytes.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError(
+            "JCSP score marginals artifact must be UTF-8 JSON, not a binary "
+            f"payload: {artifact_path}"
+        ) from exc
+    try:
+        data = json.loads(text, object_pairs_hook=_reject_duplicate_json_object_pairs)
+    except ValueError as exc:
+        raise ValueError(
+            f"JCSP score marginals artifact is not valid deterministic JSON: "
+            f"{artifact_path}: {exc}"
+        ) from exc
+    if not isinstance(data, Mapping):
+        raise ValueError("JCSP score marginals artifact top level must be a mapping")
+    if "score_marginals" in data:
+        return _normalize_score_marginals_mapping(
+            data["score_marginals"],
+            context="score_marginals",
+        )
+    if "tensor_score_marginals" in data:
+        return _normalize_score_marginals_mapping(
+            data["tensor_score_marginals"],
+            context="tensor_score_marginals",
+        )
+    if "streams" in data:
+        return _score_marginals_from_stream_rows(data["streams"])
+    return _normalize_score_marginals_mapping(data, context="score_marginals")
 
 
 def tensor_to_stream_source(
@@ -211,7 +353,9 @@ def model_to_stream_sources(
     )
     raw_payloads = dict(raw_passthrough_bytes_by_name or {})
     balle_by_name = dict(balle_codecs or {})
-    score_by_name = {str(k): float(v) for k, v in score_marginals.items()}
+    score_by_name = {
+        spec.name: float(spec.score_per_byte_marginal) for spec in specs
+    }
 
     state_dict_iter = model.state_dict().items() if hasattr(model, "state_dict") else dict(model).items()
     name_to_tensor: dict[str, Any] = {str(k): v for k, v in state_dict_iter}
@@ -270,7 +414,164 @@ def model_to_stream_sources(
     return streams, specs
 
 
+def _normalize_raw_payloads(
+    raw_passthrough_bytes_by_name: Mapping[str, bytes] | None,
+) -> dict[str, bytes]:
+    out: dict[str, bytes] = {}
+    for name_raw, payload in (raw_passthrough_bytes_by_name or {}).items():
+        name = str(name_raw)
+        if not isinstance(payload, (bytes, bytearray, memoryview)):
+            raise ValueError(
+                f"raw passthrough payload for {name!r} must be bytes-like"
+            )
+        out[name] = bytes(payload)
+    return out
+
+
+def _state_dict_by_name(model: Any) -> dict[str, Any]:
+    state_dict_iter = (
+        model.state_dict().items()
+        if hasattr(model, "state_dict")
+        else dict(model).items()
+    )
+    return {str(k): v for k, v in state_dict_iter}
+
+
+def jcsp_stream_source_dry_run_metadata(
+    model: Any,
+    *,
+    score_marginals_path: str | Path,
+    num_levels: int = 15,
+    codec_overrides: Mapping[str, int] | None = None,
+    raw_passthrough_bytes_by_name: Mapping[str, bytes] | None = None,
+    wet_streams: Iterable[str] | None = None,
+    include_buffers: bool = True,
+) -> dict[str, Any]:
+    """Build deterministic metadata for future ``StreamSource`` objects.
+
+    This is a dry-run/runtime-integration helper only. It loads cached
+    score-marginal metadata, decomposes the model into JCSP tensor specs, and
+    records the fields needed to instantiate ``StreamSource`` objects later.
+    It does not encode streams, build a JCSP container, write archive bytes,
+    load scorers, dispatch jobs, or claim a score.
+    """
+    artifact_path = Path(score_marginals_path)
+    score_marginals = load_jcsp_score_marginals(artifact_path)
+    specs = model_to_jcsp_streams(
+        model,
+        score_marginals=score_marginals,
+        codec_overrides=codec_overrides,
+        wet_streams=wet_streams,
+        include_buffers=include_buffers,
+    )
+    spec_manifest = jcsp_stream_specs_manifest(specs)
+    name_to_tensor = _state_dict_by_name(model)
+    raw_payloads = _normalize_raw_payloads(raw_passthrough_bytes_by_name)
+
+    records: list[dict[str, Any]] = []
+    for spec in specs:
+        raw_payload = raw_payloads.get(spec.name)
+        if spec.codec_kind == KIND_RAW_PASSTHROUGH:
+            if raw_payload is None:
+                raise ValueError(
+                    f"JCSP dry run: RAW_PASSTHROUGH stream {spec.name!r} "
+                    "requires raw_passthrough_bytes_by_name"
+                )
+            qint_count = 0
+            num_symbols = 2
+            offset = 0
+            qint_min = None
+            qint_max = None
+            quantization_scale = None
+            raw_payload_bytes = len(raw_payload)
+            raw_payload_sha256 = hashlib.sha256(raw_payload).hexdigest()
+        else:
+            if spec.name not in name_to_tensor:
+                raise ValueError(
+                    f"JCSP dry run: stream {spec.name!r} from planning specs "
+                    "is missing from model state_dict"
+                )
+            qints, num_symbols, offset, scale = quantize_tensor_symmetric(
+                name_to_tensor[spec.name],
+                num_levels=num_levels,
+            )
+            qint_count = int(qints.size)
+            qint_min = int(qints.min())
+            qint_max = int(qints.max())
+            quantization_scale = float(scale)
+            raw_payload_bytes = 0
+            raw_payload_sha256 = None
+        dispatch_blockers = list(
+            dict.fromkeys(
+                [
+                    *spec.dispatch_blockers,
+                    "dry_run_only_no_archive_bytes_written",
+                    "pipeline_dispatch_loop_not_wired",
+                ]
+            )
+        )
+        if spec.codec_kind == KIND_BALLE_HYPERPRIOR:
+            dispatch_blockers.append("balle_codec_not_instantiated_in_dry_run")
+        records.append(
+            {
+                "name": spec.name,
+                "stream_id": spec.stream_id,
+                "decomposition_index": int(spec.decomposition_index),
+                "codec_kind": int(spec.codec_kind),
+                "qint_count": qint_count,
+                "qint_dtype": "int8",
+                "qint_min": qint_min,
+                "qint_max": qint_max,
+                "num_symbols": int(num_symbols),
+                "offset": int(offset),
+                "quantization": "symmetric_round_to_nearest",
+                "quantization_scale": quantization_scale,
+                "raw_passthrough_bytes": raw_payload_bytes,
+                "raw_passthrough_sha256": raw_payload_sha256,
+                "score_per_byte_marginal": float(spec.score_per_byte_marginal),
+                "score_marginal_source": spec.score_marginal_source,
+                "score_marginal_evidence": spec.score_marginal_evidence,
+                "scorer_term_targeted": spec.scorer_term_targeted,
+                "stream_source_metadata_only": True,
+                "dispatch_blockers": dispatch_blockers,
+            }
+        )
+
+    raw_artifact = artifact_path.read_bytes()
+    payload: dict[str, Any] = {
+        "schema": JCSP_STREAM_SOURCE_DRY_RUN_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "archive_bytes_written": False,
+        "container_bytes_built": False,
+        "stream_source_objects_built": False,
+        "stream_source_metadata_only": True,
+        "score_marginals_artifact": {
+            "path": str(artifact_path),
+            "bytes": len(raw_artifact),
+            "sha256": hashlib.sha256(raw_artifact).hexdigest(),
+            "format": "deterministic_json",
+            "marginal_count": len(score_marginals),
+        },
+        "stream_count": len(records),
+        "streams": records,
+        "spec_manifest_sha256": spec_manifest["manifest_sha256"],
+        "promotion_blockers": [
+            "dry_run_only_no_archive_bytes_written",
+            "pipeline_dispatch_loop_not_wired",
+            "runtime_loader_parity_missing",
+            "exact_cuda_auth_eval_missing",
+        ],
+    }
+    payload["manifest_sha256"] = _canonical_json_sha256(payload)
+    return payload
+
+
 __all__ = [
+    "JCSP_STREAM_SOURCE_DRY_RUN_SCHEMA",
+    "jcsp_stream_source_dry_run_metadata",
+    "load_jcsp_score_marginals",
     "model_to_stream_sources",
     "quantize_tensor_symmetric",
     "tensor_to_stream_source",

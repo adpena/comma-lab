@@ -13,6 +13,7 @@ from tac.categorical_candidate_plan import (
 from tac.categorical_candidate_readiness import (
     ARCHIVE_MEMBER_MANIFEST_CONTRACT,
     CANDIDATE_MANIFEST_CONTRACT,
+    DECODE_REENCODE_PARITY_CONTRACT,
     DETERMINISTIC_ZIP_CREATE_SYSTEM,
     DETERMINISTIC_ZIP_DATE_TIME,
     DETERMINISTIC_ZIP_FILE_MODE,
@@ -60,6 +61,7 @@ def _base_candidate(tmp_path: Path) -> dict:
         }
         for name, raw, role in member_payloads
     ]
+    payload_sha = charged_members[0]["sha256"]
     archive_member_manifest = {
         "schema_version": 1,
         "kind": "categorical_test_archive_member_manifest",
@@ -116,6 +118,26 @@ def _base_candidate(tmp_path: Path) -> dict:
                 "class_codebook.json",
             ],
         },
+        "decode_reencode_parity": {
+            "schema_version": 1,
+            "decode_reencode_parity_contract": DECODE_REENCODE_PARITY_CONTRACT,
+            "passed": True,
+            "score_claim": False,
+            "dispatch_attempted": False,
+            "payload_member": "categorical_payload.bin",
+            "payload_member_sha256": payload_sha,
+            "full_decode": {
+                "passed": True,
+                "frame_count": 1,
+                "decoded_masks_sha256": "b" * 64,
+            },
+            "byte_exact_reencode": {
+                "passed": True,
+                "byte_exact": True,
+                "reencoded_payload_sha256": payload_sha,
+            },
+            "sidecar_free": True,
+        },
         "conditioning_priors": [
             {
                 "family": "openpilot_priors",
@@ -169,6 +191,8 @@ def test_audit_categorical_candidate_manifest_accepts_byte_closed_fixture(tmp_pa
         == RUNTIME_LOADER_PARITY_CONTRACT
     )
     assert manifest["conditioning_prior_contract"]["passed"] is True
+    assert manifest["decode_reencode_parity"]["accepted"] is True
+    assert manifest["decode_reencode_parity"]["payload_member"] == "categorical_payload.bin"
     assert manifest["conditioning_prior_contract"]["runtime_consumed_count"] == 1
     assert manifest["conditioning_prior_contract"]["compression_time_only_count"] == 1
     assert manifest["charged_member_summary"]["roles"]["categorical_payload"] == 1
@@ -567,6 +591,19 @@ def test_audit_categorical_candidate_manifest_requires_runtime_loader_parity(
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["runtime_loader_parity"]["declared"] is False
     assert "runtime_loader_parity_missing" in manifest["dispatch_blockers"]
+
+
+def test_audit_categorical_candidate_manifest_requires_decode_reencode_parity(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    candidate.pop("decode_reencode_parity")
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["decode_reencode_parity"]["declared"] is False
+    assert "decode_reencode_parity_missing" in manifest["dispatch_blockers"]
 
 
 def test_audit_categorical_candidate_manifest_rejects_loader_source_mismatch(

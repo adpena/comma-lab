@@ -160,8 +160,11 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         title="Categorical QMA9 plus CLADE/SPADE/openpilot labels",
         paradigms=("alpha_mask_payload", "categorical_masks", "openpilot_priors"),
         role="replacement_or_mask_stacker",
-        status="contract_and_candidate_readiness_landed_needs_byte_closed_candidate",
-        evidence_grade="external/planning plus deterministic archive-readiness audit; PR91 HPM1 static custody passed but replay blocked",
+        status="byte_closed_local_candidate_artifact_landed_blocked_on_parity",
+        evidence_grade=(
+            "local byte-closed PR91 HPM1 payload candidate plus deterministic "
+            "archive-readiness audit; decode/reencode and runtime parity blocked"
+        ),
         stackability=(
             "medium: strongest as mask grammar or class-conditioned residual layer; must not duplicate "
             "HNeRV decoder bytes"
@@ -171,7 +174,9 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "src/tac/categorical_compression_contract.py",
             "src/tac/categorical_candidate_readiness.py",
             "src/tac/categorical_candidate_plan.py",
+            "src/tac/categorical_candidate_runtime_skeleton.py",
             "src/tac/categorical_openpilot_mask_prior_contract.py",
+            "src/tac/categorical_payload_candidate.py",
             "src/tac/pr91_hpm1_readiness.py",
             "src/tac/pr91_hpm1_runtime_contract.py",
             "src/tac/qma9_range_mask_contract.py",
@@ -186,24 +191,29 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "tools/audit_pr91_hpm1_readiness.py",
             "tools/audit_pr91_hpm1_runtime_contract.py",
             "tools/build_categorical_candidate_fixture.py",
+            "tools/build_categorical_candidate_payload.py",
         ),
         evidence_paths=(
             ".omx/research/qma9_range_mask_deconstruction_20260503_codex.md",
             ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md",
+            ".omx/research/categorical_byte_closed_payload_candidate_20260506_codex.md",
             "experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/scorecard.json",
             "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json",
             "experiments/results/pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json",
+            "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/summary.json",
+            "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
         ),
         next_patch=(
-            "Recover PR91/HPM1 full decode/reencode parity or replace the deterministic fixture with "
-            "the first real byte-closed categorical candidate; resolve the HPAC CPU/CUDA runtime "
-            "contract and pass the matching readiness audit before any lane claim or exact eval."
+            "Recover PR91/HPM1 full decode/reencode parity against the local payload member, replace "
+            "the runtime skeleton with a real charged consumer, and pass the matching readiness audit "
+            "before any lane claim or exact eval."
         ),
         blockers=(
             "raw lossless class wrapping was byte-regressive",
             "CMG2 exact evals showed PoseNet collapse",
             "CLADE/SPADE/openpilot priors need charged archive consumption",
-            "PR91 HPM1 still lacks full 600-frame decode/reencode and runtime loader parity",
+            "local PR91 HPM1 payload candidate lacks full 600-frame decode/reencode parity",
+            "runtime consumer is a charged fail-closed skeleton, not a decoder",
             "PR91 HPAC device contract is ambient/contradictory in public runtime sources",
         ),
     ),

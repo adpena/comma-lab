@@ -54,6 +54,7 @@ DEFAULT_INCLUDE_PATTERNS: tuple[str, ...] = (
     "tools/audit_categorical_*.py",
     "tools/audit_public_publish_links.py",
     "tools/build_categorical_candidate_fixture.py",
+    "tools/build_categorical_candidate_payload.py",
     "tools/materialize_comma_lab_public_export.py",
     "tools/tool_bootstrap.py",
     "pyproject.toml",

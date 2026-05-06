@@ -1,11 +1,17 @@
 {
-  "dirty_blocked_row_count": 4,
-  "dirty_path_count": 41,
+  "dirty_blocked_row_count": 1,
+  "dirty_path_count": 42,
   "dirty_paths": [
-    ".omx/research/categorical_charged_label_construction_plan_20260506_codex.md",
-    ".omx/research/frontier_roadmap_status_20260506_codex.json",
-    ".omx/research/frontier_roadmap_status_20260506_codex.md",
+    ".omx/research/categorical_byte_closed_payload_candidate_20260506_codex.md",
+    ".omx/research/cross_paradigm_frontier_inventory_20260506_codex.json",
+    ".omx/research/cross_paradigm_frontier_inventory_20260506_codex.md",
+    ".omx/research/field_meta_dispatch_selection_20260506_codex.json",
+    ".omx/research/field_meta_dispatch_selection_20260506_codex.md",
+    ".omx/research/hnerv_entropy_candidate_packet_readiness_20260506_codex.md",
+    ".omx/research/jcsp_pipeline_dry_run_hardening_20260506_codex.md",
     ".omx/research/lapose_foveation_transport_atoms_20260506_codex.md",
+    "experiments/pipeline.py",
+    "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/",
     "experiments/results/public_pr100_intake_20260504_codex/source",
     "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source",
     "experiments/results/public_pr103_intake_20260504_codex/source",
@@ -15,34 +21,29 @@
     "experiments/results/public_pr82_henosis_frontier_intake_20260503_codex/repo",
     "experiments/results/public_pr91_intake_20260504_worker/pr91_src/repo",
     "reports/raw/kaggle_ingest/kaggle-dilated-h64-long1000-retry-v6-20260410T234220Z/comma_video_compression_challenge",
-    "scripts/remote_lane_joint_codec_stack.sh",
-    "src/tac/analysis/lapose_foveation_atoms.py",
-    "src/tac/categorical_candidate_plan.py",
+    "src/tac/analysis/lapose_foveation_payload.py",
     "src/tac/categorical_candidate_readiness.py",
+    "src/tac/categorical_candidate_runtime_skeleton.py",
+    "src/tac/categorical_payload_candidate.py",
+    "src/tac/hnerv_entropy_candidate_packet.py",
     "src/tac/jcsp_stream_builder.py",
-    "src/tac/joint_codec_stack_orchestrator.py",
-    "src/tac/lapose_foveation_atoms.py",
-    "src/tac/optimization/entropy_codec_gap_audit.py",
-    "src/tac/optimization/field_equation_planner.py",
-    "src/tac/optimization/meta_lagrangian_allocator.py",
-    "src/tac/optimization/research_basis.py",
-    "src/tac/tests/test_build_categorical_candidate_fixture.py",
+    "src/tac/tests/test_build_categorical_candidate_payload.py",
+    "src/tac/tests/test_build_cross_paradigm_frontier_inventory.py",
+    "src/tac/tests/test_build_field_meta_dispatch_selection.py",
     "src/tac/tests/test_build_frontier_roadmap_status.py",
     "src/tac/tests/test_categorical_candidate_readiness.py",
-    "src/tac/tests/test_entropy_codec_gap_audit.py",
-    "src/tac/tests/test_field_equation_planner.py",
-    "src/tac/tests/test_jcsp_model_streams.py",
+    "src/tac/tests/test_hnerv_entropy_candidate_packet.py",
     "src/tac/tests/test_jcsp_stream_builder.py",
-    "src/tac/tests/test_joint_codec_stack_orchestrator.py",
-    "src/tac/tests/test_lapose_foveation_atoms.py",
-    "src/tac/tests/test_lapose_lite_inputs.py",
+    "src/tac/tests/test_lapose_foveation_payload.py",
     "src/tac/tests/test_materialize_comma_lab_public_export.py",
-    "src/tac/tests/test_meta_lagrangian_allocator.py",
-    "src/tac/tests/test_research_basis.py",
-    "tools/build_categorical_candidate_fixture.py",
+    "src/tac/tests/test_pipeline_jcsp_gate.py",
+    "tools/build_categorical_candidate_payload.py",
     "tools/build_cross_paradigm_frontier_inventory.py",
+    "tools/build_field_meta_dispatch_selection.py",
     "tools/build_frontier_roadmap_status.py",
-    "tools/build_lapose_foveation_atom_manifest.py"
+    "tools/build_hnerv_entropy_candidate_packet.py",
+    "tools/build_lapose_foveation_tuple_payload.py",
+    "tools/materialize_comma_lab_public_export.py"
   ],
   "dispatch_attempted": false,
   "dispatch_blockers": [
@@ -59,14 +60,17 @@
         "hnerv_lowlevel_brotli_repack"
       ],
       "needs_byte_closed_candidate": [
+        "joint_admm_balle_arithmetic_stack",
         "sensitivity_omega_w_v3",
         "selfcompress_mdl_fp4_tto"
       ],
       "needs_research_or_contract_hardening": [
+        "hnerv_per_tensor_context_entropy",
         "telescopic_foveation_field",
         "lapose_motion_atom_allocator",
         "raft_radial_openpilot_pose",
-        "cmg3_predictive_mask_grammar"
+        "cmg3_predictive_mask_grammar",
+        "meta_lagrangian_cross_paradigm_allocator"
       ]
     },
     "dispatch_attempted": false,
@@ -83,6 +87,377 @@
       "rows newly promoted, still blocked, or retired as scoped measured negatives",
       "the next comprehensive tranche generated from the updated roadmap status"
     ],
+    "field_meta_candidate_packet_selection": {
+      "candidate_count": 4,
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "selection_report_only_no_dispatch",
+        "requires_lane_dispatch_claim_before_remote_gpu_submit",
+        "requires_exact_cuda_auth_eval_for_score_claim"
+      ],
+      "ready_candidate_count": 1,
+      "ready_for_exact_eval_dispatch": true,
+      "report_blockers": [],
+      "rows": [
+        {
+          "archive_proof": {
+            "blockers": [],
+            "byte_closed": true,
+            "bytes_actual": 186088,
+            "bytes_expected": 186088,
+            "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip",
+            "sha256_actual": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+            "sha256_expected": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+            "source": "archive_object",
+            "status": "passed"
+          },
+          "byte_delta": 0,
+          "candidate_blockers": [],
+          "candidate_id": "hnerv_lowlevel_repack_pr106_q10_20260506_codex",
+          "dispatch_attempted": false,
+          "expected_information_gain_nats": 0.0,
+          "expected_total_score_delta": 0.0,
+          "manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/public_replay_preflight.json",
+          "manifest_sha256": "8c90a9f05924205a3f05ad3108c4475c0930ba6addbbcda9177dce04d1f609ff",
+          "next_required_proof": [
+            "active_lane_dispatch_claim_before_remote_gpu_submit",
+            "exact_cuda_auth_eval_on_selected_archive_bytes"
+          ],
+          "packet_kind": "public_replay_intake_preflight_v1",
+          "ready_for_exact_eval_dispatch": true,
+          "runtime_proof": {
+            "blockers": [],
+            "candidates": [
+              {
+                "blockers": [],
+                "runtime_closed": true,
+                "runtime_tree_sha256": "ab9130cac6919e986ec97c6b49294d0a137f4738e2e8265605225da9d70496cd",
+                "source": "manifest.runtime",
+                "status": "passed"
+              },
+              {
+                "blockers": [],
+                "runtime_closed": true,
+                "runtime_tree_sha256": "ab9130cac6919e986ec97c6b49294d0a137f4738e2e8265605225da9d70496cd",
+                "source": "public_replay_preflight.runtime",
+                "status": "passed"
+              }
+            ],
+            "runtime_closed": true,
+            "runtime_tree_sha256": "ab9130cac6919e986ec97c6b49294d0a137f4738e2e8265605225da9d70496cd",
+            "source": "manifest.runtime",
+            "status": "passed"
+          },
+          "schema_version": 1,
+          "score_claim": false,
+          "strict_candidate_preflight": {
+            "blockers": [],
+            "lane_claim": {
+              "active_conflicts": [],
+              "checked": false,
+              "claims_path": null,
+              "lane_id": null
+            },
+            "ready_for_exact_eval_dispatch": true,
+            "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
+            "warnings": []
+          },
+          "strict_candidate_preflight_ready": true
+        },
+        {
+          "archive_proof": {
+            "blockers": [],
+            "byte_closed": true,
+            "bytes_actual": 186222,
+            "bytes_expected": 186222,
+            "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip",
+            "sha256_actual": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+            "sha256_expected": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+            "source": "candidate_archive_fields",
+            "status": "passed"
+          },
+          "byte_delta": -9,
+          "candidate_blockers": [
+            "strict_candidate_preflight_not_ready",
+            "strict:ready_for_exact_eval_dispatch_false"
+          ],
+          "candidate_id": "hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex",
+          "dispatch_attempted": false,
+          "expected_information_gain_nats": 0.0,
+          "expected_total_score_delta": -5.9927305780995425e-06,
+          "manifest_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
+          "manifest_sha256": "6668341a3e849a37580af1d68dc33a741bc0d07f998d31b2bb58b9ee85f734a6",
+          "next_required_proof": [
+            "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py"
+          ],
+          "packet_kind": "1",
+          "ready_for_exact_eval_dispatch": false,
+          "runtime_proof": {
+            "blockers": [],
+            "candidates": [
+              {
+                "blockers": [],
+                "runtime_closed": true,
+                "runtime_tree_sha256": "4a8445803e232159be84f84f726311c4e6846a0a9e7a1825e1be38cf9e165242",
+                "source": "public_replay_preflight.runtime",
+                "status": "passed"
+              }
+            ],
+            "runtime_closed": true,
+            "runtime_tree_sha256": "4a8445803e232159be84f84f726311c4e6846a0a9e7a1825e1be38cf9e165242",
+            "source": "public_replay_preflight.runtime",
+            "status": "passed"
+          },
+          "schema_version": 1,
+          "score_claim": false,
+          "strict_candidate_preflight": {
+            "blockers": [
+              {
+                "code": "ready_for_exact_eval_dispatch_false",
+                "detail": "ready_for_exact_eval_dispatch is false",
+                "severity": "blocking"
+              }
+            ],
+            "lane_claim": {
+              "active_conflicts": [],
+              "checked": false,
+              "claims_path": null,
+              "lane_id": null
+            },
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
+            "warnings": []
+          },
+          "strict_candidate_preflight_ready": false
+        },
+        {
+          "archive_proof": {
+            "blockers": [
+              "archive_identity_missing"
+            ],
+            "byte_closed": false,
+            "bytes_actual": null,
+            "bytes_expected": null,
+            "path": "",
+            "sha256_actual": "",
+            "sha256_expected": "",
+            "source": "",
+            "status": "blocked"
+          },
+          "byte_delta": 0,
+          "candidate_blockers": [
+            "missing_byte_closed_archive_proof",
+            "archive:archive_identity_missing",
+            "missing_byte_closed_runtime_proof",
+            "runtime:runtime_proof_missing",
+            "strict_candidate_preflight_not_ready",
+            "strict:ready_for_exact_eval_dispatch_false"
+          ],
+          "candidate_id": "joint_admm_balle_arithmetic_stack",
+          "dispatch_attempted": false,
+          "expected_information_gain_nats": 0.0,
+          "expected_total_score_delta": 0.0,
+          "manifest_path": "experiments/results/joint_stack_noop_manifest_20260506_codex/manifest.json",
+          "manifest_sha256": "35a2e6a8d84625f5f0ac1e2ba1f8b9f5277ea03577f3e921cdbbd54750f25e11",
+          "next_required_proof": [
+            "local_archive_file_with_matching_sha256_and_bytes",
+            "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+            "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py"
+          ],
+          "packet_kind": "joint_admm_balle_arithmetic_noop_manifest_v1",
+          "ready_for_exact_eval_dispatch": false,
+          "runtime_proof": {
+            "blockers": [
+              "runtime_proof_missing"
+            ],
+            "candidates": [],
+            "runtime_closed": false,
+            "runtime_tree_sha256": "",
+            "source": "",
+            "status": "blocked"
+          },
+          "schema_version": 1,
+          "score_claim": false,
+          "strict_candidate_preflight": {
+            "blockers": [
+              {
+                "code": "ready_for_exact_eval_dispatch_false",
+                "detail": "ready_for_exact_eval_dispatch is false",
+                "severity": "blocking"
+              }
+            ],
+            "lane_claim": {
+              "active_conflicts": [],
+              "checked": false,
+              "claims_path": null,
+              "lane_id": null
+            },
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
+            "warnings": []
+          },
+          "strict_candidate_preflight_ready": false
+        },
+        {
+          "archive_proof": {
+            "blockers": [
+              "archive_identity_missing"
+            ],
+            "byte_closed": false,
+            "bytes_actual": null,
+            "bytes_expected": null,
+            "path": "",
+            "sha256_actual": "",
+            "sha256_expected": "",
+            "source": "",
+            "status": "blocked"
+          },
+          "byte_delta": 0,
+          "candidate_blockers": [
+            "missing_byte_closed_archive_proof",
+            "archive:archive_identity_missing",
+            "missing_byte_closed_runtime_proof",
+            "runtime:runtime_proof_missing",
+            "strict_candidate_preflight_not_ready",
+            "strict:ready_for_exact_eval_dispatch_false",
+            "strict:nested_blocking_status"
+          ],
+          "candidate_id": "pr91_hpm1_readiness_20260506_codex",
+          "dispatch_attempted": false,
+          "expected_information_gain_nats": 0.0,
+          "expected_total_score_delta": 0.0,
+          "manifest_path": "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json",
+          "manifest_sha256": "3d0e10a646fd22426685e60b52d1647d9755ba1f3c528e459e4ec33227c63b21",
+          "next_required_proof": [
+            "local_archive_file_with_matching_sha256_and_bytes",
+            "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+            "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py"
+          ],
+          "packet_kind": "1",
+          "ready_for_exact_eval_dispatch": false,
+          "runtime_proof": {
+            "blockers": [
+              "runtime_proof_missing"
+            ],
+            "candidates": [],
+            "runtime_closed": false,
+            "runtime_tree_sha256": "",
+            "source": "",
+            "status": "blocked"
+          },
+          "schema_version": 1,
+          "score_claim": false,
+          "strict_candidate_preflight": {
+            "blockers": [
+              {
+                "code": "ready_for_exact_eval_dispatch_false",
+                "detail": "ready_for_exact_eval_dispatch is false",
+                "severity": "blocking"
+              },
+              {
+                "code": "nested_blocking_status",
+                "detail": "gates.byte_exact_hpm1_reencode.status='blocked'",
+                "severity": "blocking"
+              },
+              {
+                "code": "nested_blocking_status",
+                "detail": "gates.exact_cuda_auth_eval_after_parity.status='blocked'",
+                "severity": "blocking"
+              },
+              {
+                "code": "nested_blocking_status",
+                "detail": "gates.full_hpm1_decode_600_frames.status='blocked'",
+                "severity": "blocking"
+              },
+              {
+                "code": "nested_blocking_status",
+                "detail": "gates.runtime_hpm1_loader_without_sidecars.status='blocked'",
+                "severity": "blocking"
+              }
+            ],
+            "lane_claim": {
+              "active_conflicts": [],
+              "checked": false,
+              "claims_path": null,
+              "lane_id": null
+            },
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
+            "warnings": []
+          },
+          "strict_candidate_preflight_ready": false
+        }
+      ],
+      "schema_version": 1,
+      "score_claim": false,
+      "selected_candidate": {
+        "archive_proof": {
+          "blockers": [],
+          "byte_closed": true,
+          "bytes_actual": 186088,
+          "bytes_expected": 186088,
+          "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip",
+          "sha256_actual": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+          "sha256_expected": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+          "source": "archive_object",
+          "status": "passed"
+        },
+        "byte_delta": 0,
+        "candidate_blockers": [],
+        "candidate_id": "hnerv_lowlevel_repack_pr106_q10_20260506_codex",
+        "dispatch_attempted": false,
+        "expected_information_gain_nats": 0.0,
+        "expected_total_score_delta": 0.0,
+        "manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/public_replay_preflight.json",
+        "manifest_sha256": "8c90a9f05924205a3f05ad3108c4475c0930ba6addbbcda9177dce04d1f609ff",
+        "next_required_proof": [
+          "active_lane_dispatch_claim_before_remote_gpu_submit",
+          "exact_cuda_auth_eval_on_selected_archive_bytes"
+        ],
+        "packet_kind": "public_replay_intake_preflight_v1",
+        "ready_for_exact_eval_dispatch": true,
+        "runtime_proof": {
+          "blockers": [],
+          "candidates": [
+            {
+              "blockers": [],
+              "runtime_closed": true,
+              "runtime_tree_sha256": "ab9130cac6919e986ec97c6b49294d0a137f4738e2e8265605225da9d70496cd",
+              "source": "manifest.runtime",
+              "status": "passed"
+            },
+            {
+              "blockers": [],
+              "runtime_closed": true,
+              "runtime_tree_sha256": "ab9130cac6919e986ec97c6b49294d0a137f4738e2e8265605225da9d70496cd",
+              "source": "public_replay_preflight.runtime",
+              "status": "passed"
+            }
+          ],
+          "runtime_closed": true,
+          "runtime_tree_sha256": "ab9130cac6919e986ec97c6b49294d0a137f4738e2e8265605225da9d70496cd",
+          "source": "manifest.runtime",
+          "status": "passed"
+        },
+        "schema_version": 1,
+        "score_claim": false,
+        "strict_candidate_preflight": {
+          "blockers": [],
+          "lane_claim": {
+            "active_conflicts": [],
+            "checked": false,
+            "claims_path": null,
+            "lane_id": null
+          },
+          "ready_for_exact_eval_dispatch": true,
+          "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
+          "warnings": []
+        },
+        "strict_candidate_preflight_ready": true
+      },
+      "strict_candidate_preflight": "experiments/preflight_candidate_manifest_dispatch_readiness.py",
+      "tool": "tools/build_field_meta_dispatch_selection.py"
+    },
     "global_acceptance_gates": [
       "no score claim without exact CUDA auth eval JSON",
       "no remote/GPU dispatch without an active lane claim",
@@ -173,9 +548,9 @@
   "next_unblocked_keys": [
     "hnerv_wavelet_wr01_apply",
     "hnerv_lowlevel_brotli_repack",
-    "sensitivity_omega_w_v3",
-    "telescopic_foveation_field",
-    "lapose_motion_atom_allocator"
+    "joint_admm_balle_arithmetic_stack",
+    "hnerv_per_tensor_context_entropy",
+    "sensitivity_omega_w_v3"
   ],
   "ready_for_exact_eval_dispatch": false,
   "row_count": 12,
@@ -233,20 +608,24 @@
         "raw lossless class wrapping was byte-regressive",
         "CMG2 exact evals showed PoseNet collapse",
         "CLADE/SPADE/openpilot priors need charged archive consumption",
-        "PR91 HPM1 still lacks full 600-frame decode/reencode and runtime loader parity",
+        "local PR91 HPM1 payload candidate lacks full 600-frame decode/reencode parity",
+        "runtime consumer is a charged fail-closed skeleton, not a decoder",
         "PR91 HPAC device contract is ambient/contradictory in public runtime sources"
       ],
       "dirty_path_blockers": [
-        "src/tac/categorical_candidate_plan.py",
+        ".omx/research/categorical_byte_closed_payload_candidate_20260506_codex.md",
+        "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/",
         "src/tac/categorical_candidate_readiness.py",
-        "tools/build_categorical_candidate_fixture.py"
+        "src/tac/categorical_candidate_runtime_skeleton.py",
+        "src/tac/categorical_payload_candidate.py",
+        "tools/build_categorical_candidate_payload.py"
       ],
       "dispatch_attempted": false,
-      "evidence_grade": "external/planning plus deterministic archive-readiness audit; PR91 HPM1 static custody passed but replay blocked",
+      "evidence_grade": "local byte-closed PR91 HPM1 payload candidate plus deterministic archive-readiness audit; decode/reencode and runtime parity blocked",
       "key": "categorical_qma9_clade_spade_openpilot",
       "missing_code_path_count": 0,
       "missing_evidence_path_count": 0,
-      "next_patch": "Recover PR91/HPM1 full decode/reencode parity or replace the deterministic fixture with the first real byte-closed categorical candidate; resolve the HPAC CPU/CUDA runtime contract and pass the matching readiness audit before any lane claim or exact eval.",
+      "next_patch": "Recover PR91/HPM1 full decode/reencode parity against the local payload member, replace the runtime skeleton with a real charged consumer, and pass the matching readiness audit before any lane claim or exact eval.",
       "priority_tier": 30,
       "readiness_stage": "blocked_by_dirty_worktree",
       "ready_for_exact_eval_dispatch": false,
@@ -255,7 +634,7 @@
       "safe_to_touch_now": false,
       "score_claim": false,
       "stackability": "medium: strongest as mask grammar or class-conditioned residual layer; must not duplicate HNeRV decoder bytes",
-      "status": "contract_and_candidate_readiness_landed_needs_byte_closed_candidate",
+      "status": "byte_closed_local_candidate_artifact_landed_blocked_on_parity",
       "title": "Categorical QMA9 plus CLADE/SPADE/openpilot labels"
     },
     {
@@ -266,9 +645,7 @@
         "side information must be charged",
         "individual components do not imply score composability"
       ],
-      "dirty_path_blockers": [
-        "src/tac/joint_codec_stack_orchestrator.py"
-      ],
+      "dirty_path_blockers": [],
       "dispatch_attempted": false,
       "evidence_grade": "planning/component empirical plus typed fixture manifest",
       "key": "joint_admm_balle_arithmetic_stack",
@@ -276,11 +653,11 @@
       "missing_evidence_path_count": 0,
       "next_patch": "Replace the fixture-only contract with a byte-closed JCSP archive member and runtime loader parity, then claim a lane before exact CUDA auth eval.",
       "priority_tier": 40,
-      "readiness_stage": "blocked_by_dirty_worktree",
+      "readiness_stage": "needs_byte_closed_candidate_or_fixture",
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "medium-high if it can replace HNeRV sections with a smaller scorer-stable stack",
       "role": "stack_or_replacement_orchestrator",
-      "safe_to_touch_now": false,
+      "safe_to_touch_now": true,
       "score_claim": false,
       "stackability": "high in architecture, unproven in exact archive",
       "status": "typed_noop_stack_manifest_landed_not_archive_dispatchable",
@@ -292,9 +669,7 @@
         "HDC1/HDC2 parity fixtures are raw-equal but still byte-negative versus source brotli",
         "requires deterministic decoder runtime before any exact eval"
       ],
-      "dirty_path_blockers": [
-        "src/tac/optimization/entropy_codec_gap_audit.py"
-      ],
+      "dirty_path_blockers": [],
       "dispatch_attempted": false,
       "evidence_grade": "empirical entropy-floor plus parity fixture profile",
       "key": "hnerv_per_tensor_context_entropy",
@@ -302,11 +677,11 @@
       "missing_evidence_path_count": 0,
       "next_patch": "Cluster or codebook-share HDC2 context tables; HDC2 cut PR106x penalty from +96,671B to +51,103B but remains byte-negative.",
       "priority_tier": 50,
-      "readiness_stage": "blocked_by_dirty_worktree",
+      "readiness_stage": "needs_research_or_contract_hardening",
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "low: recodes current decoder representation",
       "role": "stacker_rate_only",
-      "safe_to_touch_now": false,
+      "safe_to_touch_now": true,
       "score_claim": false,
       "stackability": "medium-high: could stack with HNeRV raw-equivalent section recodes",
       "status": "shared_context_fixture_landed_still_byte_negative",
@@ -454,9 +829,7 @@
       "blockers": [
         "planner assumes additive expected deltas until exact stacked archives land"
       ],
-      "dirty_path_blockers": [
-        "src/tac/optimization/meta_lagrangian_allocator.py"
-      ],
+      "dirty_path_blockers": [],
       "dispatch_attempted": false,
       "evidence_grade": "derivation/planning",
       "key": "meta_lagrangian_cross_paradigm_allocator",
@@ -464,11 +837,11 @@
       "missing_evidence_path_count": 0,
       "next_patch": "Add cross-paradigm family/conflict fields and refuse dispatchable rows unless a byte-closed archive manifest is attached.",
       "priority_tier": 110,
-      "readiness_stage": "blocked_by_dirty_worktree",
+      "readiness_stage": "needs_research_or_contract_hardening",
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "none directly; selects concrete stack/replacement builders",
       "role": "canonical_ranker",
-      "safe_to_touch_now": false,
+      "safe_to_touch_now": true,
       "score_claim": false,
       "stackability": "high: common row schema can compare rate, pose, seg, class, hard-pair support",
       "status": "planning_ranker_landed",
@@ -502,11 +875,11 @@
   "schema_version": 2,
   "score_claim": false,
   "stage_counts": {
-    "blocked_by_dirty_worktree": 4,
+    "blocked_by_dirty_worktree": 1,
     "exact_evidence_present_review_before_promotion": 1,
-    "needs_byte_closed_candidate_or_fixture": 2,
+    "needs_byte_closed_candidate_or_fixture": 3,
     "needs_lane_claim_and_exact_cuda": 1,
-    "needs_research_or_contract_hardening": 4
+    "needs_research_or_contract_hardening": 6
   },
   "tool": "tools/build_frontier_roadmap_status.py"
 }

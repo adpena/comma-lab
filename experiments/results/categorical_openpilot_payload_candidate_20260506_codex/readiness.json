@@ -1,0 +1,614 @@
+{
+  "archive_member_manifest": {
+    "bytes": 1379,
+    "contract": "categorical_archive_member_manifest_v1",
+    "exists": true,
+    "json_read_error": "",
+    "kind": "categorical_local_candidate_archive_member_manifest",
+    "member_count_matches_charged_members": true,
+    "member_order_matches_charged_members": true,
+    "members_match_charged_members": true,
+    "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/archive_member_manifest.json",
+    "required_contract": "categorical_archive_member_manifest_v1",
+    "schema_valid": true,
+    "schema_version": 1,
+    "sha256": "b62af504996161baaf5b2297140a296cad4ebde61334919dc8a43b69d61f47c1"
+  },
+  "candidate_archive": {
+    "bytes": 152235,
+    "contains_inflate_sh": true,
+    "contract": "contest_archive_zip",
+    "member_order_matches_manifest": true,
+    "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/archive.zip",
+    "sha256": "106af3ed6917d6115586463ef35e43119add5db002fd19f3da7cd8065a63eb8d",
+    "untracked_members": [],
+    "zip_determinism_contract": {
+      "allowed_compress_types": [
+        0,
+        8
+      ],
+      "bad_compress_types": [],
+      "bad_create_systems": [],
+      "bad_external_attr_modes": [],
+      "bad_timestamps": [],
+      "central_local_order_matches": true,
+      "data_descriptor_members": [],
+      "extra_field_members": [],
+      "passed": true,
+      "required_create_system": 3,
+      "required_date_time": [
+        1980,
+        1,
+        1,
+        0,
+        0,
+        0
+      ],
+      "required_file_mode": 420,
+      "required_inflate_mode": 493,
+      "schema_version": 1
+    },
+    "zip_read_error": "",
+    "zip_wire_contract": {
+      "central_directory_count": 5,
+      "central_directory_names": [
+        "categorical_payload.bin",
+        "class_codebook.json",
+        "inflate.sh",
+        "runtime_consumer.py",
+        "runtime_consumer_proof_skeleton.json"
+      ],
+      "central_local_name_mismatches": [],
+      "central_records": [
+        {
+          "compress_size": 145087,
+          "compress_type": 0,
+          "create_system": 3,
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "external_attr_mode": 420,
+          "extra_len": 0,
+          "file_size": 145087,
+          "filename": "categorical_payload.bin",
+          "flag_bits": 0,
+          "header_offset": 0
+        },
+        {
+          "compress_size": 1878,
+          "compress_type": 0,
+          "create_system": 3,
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "external_attr_mode": 420,
+          "extra_len": 0,
+          "file_size": 1878,
+          "filename": "class_codebook.json",
+          "flag_bits": 0,
+          "header_offset": 145140
+        },
+        {
+          "compress_size": 233,
+          "compress_type": 0,
+          "create_system": 3,
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "external_attr_mode": 493,
+          "extra_len": 0,
+          "file_size": 233,
+          "filename": "inflate.sh",
+          "flag_bits": 0,
+          "header_offset": 147067
+        },
+        {
+          "compress_size": 2690,
+          "compress_type": 0,
+          "create_system": 3,
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "external_attr_mode": 420,
+          "extra_len": 0,
+          "file_size": 2690,
+          "filename": "runtime_consumer.py",
+          "flag_bits": 0,
+          "header_offset": 147340
+        },
+        {
+          "compress_size": 1731,
+          "compress_type": 0,
+          "create_system": 3,
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "external_attr_mode": 420,
+          "extra_len": 0,
+          "file_size": 1731,
+          "filename": "runtime_consumer_proof_skeleton.json",
+          "flag_bits": 0,
+          "header_offset": 150079
+        }
+      ],
+      "determinism_contract": {
+        "allowed_compress_types": [
+          0,
+          8
+        ],
+        "bad_compress_types": [],
+        "bad_create_systems": [],
+        "bad_external_attr_modes": [],
+        "bad_timestamps": [],
+        "central_local_order_matches": true,
+        "data_descriptor_members": [],
+        "extra_field_members": [],
+        "passed": true,
+        "required_create_system": 3,
+        "required_date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "required_file_mode": 420,
+        "required_inflate_mode": 493,
+        "schema_version": 1
+      },
+      "duplicate_local_names": [],
+      "local_header_count": 5,
+      "local_header_names": [
+        "categorical_payload.bin",
+        "class_codebook.json",
+        "inflate.sh",
+        "runtime_consumer.py",
+        "runtime_consumer_proof_skeleton.json"
+      ],
+      "local_headers": [
+        {
+          "compress_size": 145087,
+          "compress_type": 0,
+          "extra_len": 0,
+          "file_size": 145087,
+          "filename": "categorical_payload.bin",
+          "flag_bits": 0,
+          "header_offset": 0
+        },
+        {
+          "compress_size": 1878,
+          "compress_type": 0,
+          "extra_len": 0,
+          "file_size": 1878,
+          "filename": "class_codebook.json",
+          "flag_bits": 0,
+          "header_offset": 145140
+        },
+        {
+          "compress_size": 233,
+          "compress_type": 0,
+          "extra_len": 0,
+          "file_size": 233,
+          "filename": "inflate.sh",
+          "flag_bits": 0,
+          "header_offset": 147067
+        },
+        {
+          "compress_size": 2690,
+          "compress_type": 0,
+          "extra_len": 0,
+          "file_size": 2690,
+          "filename": "runtime_consumer.py",
+          "flag_bits": 0,
+          "header_offset": 147340
+        },
+        {
+          "compress_size": 1731,
+          "compress_type": 0,
+          "extra_len": 0,
+          "file_size": 1731,
+          "filename": "runtime_consumer_proof_skeleton.json",
+          "flag_bits": 0,
+          "header_offset": 150079
+        }
+      ],
+      "passed": true,
+      "schema_version": 1,
+      "unsafe_names": []
+    }
+  },
+  "candidate_construction_plan": {
+    "accepted": true,
+    "byte_closed_archive_parity": {
+      "proof_path": "",
+      "proven": false,
+      "required": true
+    },
+    "candidate_construction_ready": true,
+    "class_count": 5,
+    "class_rows": [
+      {
+        "categorical_payload_member": "categorical_payload.bin",
+        "charged_label_member": "class_codebook.json",
+        "class_id": 0,
+        "comma10k_color": "#402020",
+        "comma10k_id": 1,
+        "default_quant_bits": 8,
+        "name": "road",
+        "openpilot_prior_hint": "road_geometry_track_prior",
+        "selfcomp_gray": 0,
+        "semantic_priority_weight_ppm": 266667
+      },
+      {
+        "categorical_payload_member": "categorical_payload.bin",
+        "charged_label_member": "class_codebook.json",
+        "class_id": 1,
+        "comma10k_color": "#ff0000",
+        "comma10k_id": 2,
+        "default_quant_bits": 8,
+        "name": "lane_markings",
+        "openpilot_prior_hint": "lane_marking_track_prior",
+        "selfcomp_gray": 255,
+        "semantic_priority_weight_ppm": 266667
+      },
+      {
+        "categorical_payload_member": "categorical_payload.bin",
+        "charged_label_member": "class_codebook.json",
+        "class_id": 2,
+        "comma10k_color": "#808060",
+        "comma10k_id": 3,
+        "default_quant_bits": 4,
+        "name": "undrivable",
+        "openpilot_prior_hint": "scene_layout_prior",
+        "selfcomp_gray": 64,
+        "semantic_priority_weight_ppm": 133333
+      },
+      {
+        "categorical_payload_member": "categorical_payload.bin",
+        "charged_label_member": "class_codebook.json",
+        "class_id": 3,
+        "comma10k_color": "#00ff66",
+        "comma10k_id": 4,
+        "default_quant_bits": 6,
+        "name": "movable",
+        "openpilot_prior_hint": "dynamic_object_filter_prior",
+        "selfcomp_gray": 192,
+        "semantic_priority_weight_ppm": 200000
+      },
+      {
+        "categorical_payload_member": "categorical_payload.bin",
+        "charged_label_member": "class_codebook.json",
+        "class_id": 4,
+        "comma10k_color": "#cc00ff",
+        "comma10k_id": 5,
+        "default_quant_bits": 4,
+        "name": "my_car",
+        "openpilot_prior_hint": "ego_car_filter_prior",
+        "selfcomp_gray": 128,
+        "semantic_priority_weight_ppm": 133333
+      }
+    ],
+    "conditioning_prior_contract": {
+      "compression_time_only_count": 1,
+      "declared": true,
+      "dispatch_blockers": [],
+      "kind": "categorical_openpilot_mask_prior_contract",
+      "passed": true,
+      "records": [
+        {
+          "charged_member": "categorical_payload.bin",
+          "compression_time_only": false,
+          "family": "qma9",
+          "index": 0,
+          "name": "local_categorical_payload",
+          "requires_charged_member": true,
+          "runtime_consumed": true,
+          "usage": "inflate_runtime_conditioning"
+        },
+        {
+          "charged_member": "",
+          "compression_time_only": true,
+          "family": "openpilot_priors",
+          "index": 1,
+          "name": "ego_lane_atom_ranker",
+          "requires_charged_member": false,
+          "runtime_consumed": false,
+          "usage": "compression_time_atom_ranking_only"
+        },
+        {
+          "charged_member": "class_codebook.json",
+          "compression_time_only": false,
+          "family": "clade_spade",
+          "index": 2,
+          "name": "canonical_class_codebook_conditioning",
+          "requires_charged_member": true,
+          "runtime_consumed": true,
+          "usage": "inflate_runtime_conditioning"
+        }
+      ],
+      "runtime_consumed_count": 2,
+      "schema_version": 1,
+      "warnings": []
+    },
+    "contract": "categorical_charged_label_construction_plan_v1",
+    "declared": true,
+    "kind": "categorical_charged_label_construction_plan",
+    "planning_dispatch_blockers": [
+      "categorical_construction_plan_not_dispatchable",
+      "real_byte_closed_archive_parity_missing"
+    ],
+    "ready_for_exact_eval_dispatch": false,
+    "runtime_consumer_member": "runtime_consumer.py",
+    "schema_version": 1,
+    "validation_blockers": []
+  },
+  "candidate_manifest": {
+    "allowed_kinds": [
+      "categorical_candidate_manifest",
+      "categorical_candidate_fixture_manifest",
+      "categorical_qma9_clade_spade_openpilot_candidate_manifest"
+    ],
+    "contract": "categorical_byte_closed_candidate_manifest_v1",
+    "kind": "categorical_qma9_clade_spade_openpilot_candidate_manifest",
+    "required_contract": "categorical_byte_closed_candidate_manifest_v1",
+    "schema_valid": true,
+    "schema_version": 1
+  },
+  "candidate_rows": {
+    "candidate_rows": {
+      "blocked_rows": [],
+      "count": 1,
+      "declared": true
+    },
+    "evidence_rows": {
+      "blocked_rows": [],
+      "count": 0,
+      "declared": false
+    },
+    "source_rows": {
+      "blocked_rows": [],
+      "count": 0,
+      "declared": false
+    }
+  },
+  "charged_member_summary": {
+    "count": 5,
+    "records": [
+      {
+        "bytes": 145087,
+        "name": "categorical_payload.bin",
+        "role": "categorical_payload",
+        "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc"
+      },
+      {
+        "bytes": 1878,
+        "name": "class_codebook.json",
+        "role": "decoder_table",
+        "sha256": "6db870e7e05cc310ca25897e8d3ccac4f6fff06ad22ea57c157dbf8086ba29d0"
+      },
+      {
+        "bytes": 233,
+        "name": "inflate.sh",
+        "role": "inflate_entrypoint",
+        "sha256": "96c609ffb891c2717ccc055f81a7255a7946383f8f54fca2f1b41fdb88f26062"
+      },
+      {
+        "bytes": 2690,
+        "name": "runtime_consumer.py",
+        "role": "decoder_or_runtime_consumer",
+        "sha256": "4fb6740b3e859068dbdbe159545c49b927a8b017b6046412ef5edddcb5fcba6d"
+      },
+      {
+        "bytes": 1731,
+        "name": "runtime_consumer_proof_skeleton.json",
+        "role": "runtime_consumer_proof",
+        "sha256": "72cd6236aeff5b62657c99be07ee7f8d3d8857759daff74601976e86ee3e21f0"
+      }
+    ],
+    "required_roles": [
+      "categorical_payload",
+      "decoder_or_runtime_consumer"
+    ],
+    "roles": {
+      "categorical_payload": 1,
+      "decoder_or_runtime_consumer": 1,
+      "decoder_table": 1,
+      "inflate_entrypoint": 1,
+      "runtime_consumer_proof": 1
+    }
+  },
+  "conditioning_prior_contract": {
+    "compression_time_only_count": 1,
+    "declared": true,
+    "dispatch_blockers": [],
+    "kind": "categorical_openpilot_mask_prior_contract",
+    "passed": true,
+    "records": [
+      {
+        "charged_member": "categorical_payload.bin",
+        "compression_time_only": false,
+        "family": "qma9",
+        "index": 0,
+        "name": "local_categorical_payload",
+        "requires_charged_member": true,
+        "runtime_consumed": true,
+        "usage": "inflate_runtime_conditioning"
+      },
+      {
+        "charged_member": "",
+        "compression_time_only": true,
+        "family": "openpilot_priors",
+        "index": 1,
+        "name": "ego_lane_atom_ranker",
+        "requires_charged_member": false,
+        "runtime_consumed": false,
+        "usage": "compression_time_atom_ranking_only"
+      },
+      {
+        "charged_member": "class_codebook.json",
+        "compression_time_only": false,
+        "family": "clade_spade",
+        "index": 2,
+        "name": "canonical_class_codebook_conditioning",
+        "requires_charged_member": true,
+        "runtime_consumed": true,
+        "usage": "inflate_runtime_conditioning"
+      }
+    ],
+    "runtime_consumed_count": 2,
+    "schema_version": 1,
+    "warnings": []
+  },
+  "contract_sha256": "d540f27ffa2c0f488e031745ebf8943567e4100b3ca9cf6caaaed2f8da24c3ae",
+  "decode_reencode_parity": {
+    "accepted": false,
+    "blockers": [
+      "decode_reencode_parity_not_passed",
+      "decode_reencode_full_decode_not_proven",
+      "decode_reencode_byte_exact_reencode_not_proven"
+    ],
+    "byte_exact_reencode": false,
+    "contract": "categorical_decode_reencode_parity_v1",
+    "declared": true,
+    "decoded_frame_count": null,
+    "decoded_masks_sha256": "",
+    "full_decode_proven": false,
+    "payload_member": "categorical_payload.bin",
+    "payload_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+    "reencoded_payload_sha256": "",
+    "schema_version": 1,
+    "sidecar_free": true
+  },
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "no_op_control_not_passed:decode_reencode_identity_control",
+    "no_op_control_not_passed:label_permutation_fail_closed_control",
+    "no_op_control_not_passed:runtime_consumes_conditioning_control",
+    "runtime_loader_parity_not_passed",
+    "decode_reencode_parity_not_passed",
+    "decode_reencode_full_decode_not_proven",
+    "decode_reencode_byte_exact_reencode_not_proven"
+  ],
+  "evidence_grade": "planning_manifest_audit",
+  "fixture_only": false,
+  "kind": "categorical_candidate_readiness",
+  "no_op_controls": {
+    "charged_member_presence_control": true,
+    "decode_reencode_identity_control": false,
+    "label_permutation_fail_closed_control": false,
+    "runtime_consumes_conditioning_control": false
+  },
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "runtime_consumer": {
+    "consumes_charged_members": true,
+    "exists": true,
+    "path": "src/tac/categorical_candidate_runtime_skeleton.py",
+    "sha256": "4fb6740b3e859068dbdbe159545c49b927a8b017b6046412ef5edddcb5fcba6d"
+  },
+  "runtime_loader_parity": {
+    "accepted": false,
+    "blockers": [
+      "runtime_loader_parity_not_passed"
+    ],
+    "byte_identical_to_runtime_consumer": true,
+    "contract": "categorical_runtime_loader_parity_v1",
+    "declared": true,
+    "fallback_used": false,
+    "loaded_charged_members": [
+      "categorical_payload.bin",
+      "class_codebook.json",
+      "runtime_consumer_proof_skeleton.json"
+    ],
+    "loader_member": "runtime_consumer.py",
+    "loader_member_sha256": "4fb6740b3e859068dbdbe159545c49b927a8b017b6046412ef5edddcb5fcba6d",
+    "runtime_consumer_path": "src/tac/categorical_candidate_runtime_skeleton.py",
+    "runtime_consumer_sha256": "4fb6740b3e859068dbdbe159545c49b927a8b017b6046412ef5edddcb5fcba6d",
+    "schema_version": 1,
+    "sidecar_free": true
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "semantic_contract": {
+    "class_order": [
+      "road",
+      "lane_markings",
+      "undrivable",
+      "movable",
+      "my_car"
+    ],
+    "matches_candidate": true,
+    "selfcomp_gray_codebook": [
+      0,
+      255,
+      64,
+      192,
+      128
+    ]
+  },
+  "source_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+  "tool_run_manifest": {
+    "argv": [
+      "--out-dir",
+      "experiments/results/categorical_openpilot_payload_candidate_20260506_codex",
+      "--payload-source",
+      "pr91-hpm1-mask"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "ee0d406c8ee7b38e50911b5762acc20e46ba1fae0bb7c0d49f41ec65ac193dd9",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 222404,
+        "path": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+        "sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f"
+      },
+      {
+        "bytes": 152235,
+        "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/archive.zip",
+        "sha256": "106af3ed6917d6115586463ef35e43119add5db002fd19f3da7cd8065a63eb8d"
+      },
+      {
+        "bytes": 13434,
+        "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/candidate.json",
+        "sha256": "7836da86c4dc11f1dda64e935bce264688316a325ff28995f21f00a9006a26ed"
+      },
+      {
+        "bytes": 1379,
+        "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/archive_member_manifest.json",
+        "sha256": "b62af504996161baaf5b2297140a296cad4ebde61334919dc8a43b69d61f47c1"
+      }
+    ],
+    "output_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/build_categorical_candidate_payload.py"
+  },
+  "warnings": []
+}

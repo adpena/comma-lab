@@ -1306,6 +1306,45 @@ def step_fridrich_refine(cfg: PipelineConfig, iteration: int = 0) -> Path:
     return _resolve_fridrich_output()
 
 
+def _load_renderer_for_jcsp_dry_run(
+    cfg: PipelineConfig,
+    checkpoint_path: Path,
+) -> nn.Module:
+    """Load the renderer checkpoint for a JCSP metadata-only dry run."""
+    from tac.renderer import build_renderer
+
+    try:
+        ckpt = torch.load(
+            str(checkpoint_path),
+            map_location="cpu",
+            weights_only=True,
+        )
+    except Exception:
+        if os.environ.get("PIPELINE_ALLOW_UNSAFE_CKPT", "0") != "1":
+            raise
+        ckpt = torch.load(
+            str(checkpoint_path),
+            map_location="cpu",
+            weights_only=False,
+        )
+    model = build_renderer(
+        base_ch=cfg.base_ch,
+        mid_ch=cfg.mid_ch,
+        motion_hidden=cfg.motion_hidden,
+        depth=cfg.depth,
+        pose_dim=cfg.pose_dim,
+        embed_dim=cfg.embed_dim,
+        use_dsconv=cfg.use_dsconv,
+        padding_mode=cfg.padding_mode,
+        use_dilation=cfg.use_dilation,
+        use_zoom_flow=cfg.use_zoom_flow,
+    )
+    state = ckpt.get("state_dict", ckpt) if isinstance(ckpt, dict) else ckpt
+    model.load_state_dict(state)
+    model.eval()
+    return model
+
+
 def step_compress_weights(
     cfg: PipelineConfig,
     checkpoint_path: Path,
@@ -1338,7 +1377,9 @@ def step_compress_weights(
     # cached fp4 .done marker would silent-skip the β branch. The effective
     # mode is now derived from the cross-paradigm flags BEFORE the cache
     # comparison.
-    if cfg.use_sensitivity_weighted and cfg.sensitivity_map_path and Path(cfg.sensitivity_map_path).exists():
+    if cfg.use_joint_codec_stack:
+        effective_mode = "joint_codec_stack_dry_run"
+    elif cfg.use_sensitivity_weighted and cfg.sensitivity_map_path and Path(cfg.sensitivity_map_path).exists():
         effective_mode = "owv3_sensitivity_weighted"
     else:
         effective_mode = cfg.weight_compression
@@ -1367,7 +1408,7 @@ def step_compress_weights(
 
     mode = cfg.weight_compression
 
-    # ── Cross-paradigm flag guards (PARADIGM-β, PARADIGM-γ) ─────────────
+    # ── Cross-paradigm flag guards (PARADIGM-β, PARADIGM-gamma) ─────────
     # Registered fields in PipelineConfig but full dispatch wiring is staged
     # behind operator approval per the cross-paradigm blueprint. Surfacing a
     # WARN here prevents the silent-no-op trap if a caller sets the flag
@@ -1462,7 +1503,7 @@ def step_compress_weights(
             }))
             (iter_dir / f".done_{step_name}").touch()
             return out_path
-    # PARADIGM-γ JCSP dispatch (joint score-aware codec stack) — when
+    # PARADIGM-gamma JCSP dispatch (joint score-aware codec stack) — when
     # ``cfg.use_joint_codec_stack=True``, decompose the model into JCSP
     # streams via ``tac.jcsp_stream_builder.model_to_stream_sources``,
     # run the ADMM coordinator across {repr, predict, quant, entropy}, and
@@ -1477,7 +1518,7 @@ def step_compress_weights(
             missing.append(f"cfg.jcsp_score_marginals_path={marginals_path!r}")
         if missing:
             raise NotImplementedError(
-                f"PARADIGM-γ JCSP dispatch (use_joint_codec_stack=True): "
+                f"PARADIGM-gamma JCSP dispatch (use_joint_codec_stack=True): "
                 f"missing prerequisites — {', '.join(missing)}. The score "
                 f"marginals artifact is produced by the frontier sampler "
                 f"(per-tensor cached dScore/dByte from a calibration sweep). "
@@ -1490,16 +1531,27 @@ def step_compress_weights(
                 f"work is the per-tensor marginals harness + the "
                 f"run_admm/run_sequential_codec_stack invocation."
             )
-        # Future operator landing: load score_marginals, call
-        # model_to_stream_sources(model, score_marginals=...), run
-        # run_admm or run_sequential_codec_stack, then
-        # build_jcsp_archive_member with the resulting container_bytes.
+        from tac.jcsp_stream_builder import jcsp_stream_source_dry_run_metadata
+
+        model = _load_renderer_for_jcsp_dry_run(cfg, checkpoint_path)
+        dry_run = jcsp_stream_source_dry_run_metadata(
+            model,
+            score_marginals_path=marginals_path,
+        )
+        _log(
+            "PARADIGM-gamma JCSP dry run built "
+            f"{dry_run['stream_count']} StreamSource metadata rows "
+            f"(manifest_sha256={dry_run['manifest_sha256']}, "
+            "archive_bytes_written=False, "
+            "ready_for_exact_eval_dispatch=False).",
+            "WARN",
+        )
         raise NotImplementedError(
-            "PARADIGM-γ JCSP dispatch: score_marginals_path is present, "
-            "but the dispatch loop (model_to_stream_sources → run_admm → "
-            "build_jcsp_archive_member) is not yet wired in pipeline.py. "
-            "Operator must land that integration; reference the NWC "
-            "branch below for the canonical container-build pattern."
+            "PARADIGM-gamma JCSP dispatch: deterministic dry-run completed "
+            "from score_marginals_path, but the dispatch loop "
+            "(model_to_stream_sources -> run_admm -> build_jcsp_archive_member) "
+            "is not wired in pipeline.py. No archive bytes were written, no "
+            "lane was claimed, and no GPU/remote/eval dispatch was attempted."
         )
 
     # ── Lane J-NWC neural-weight-compression branch ─────────────────────

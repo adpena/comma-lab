@@ -20,6 +20,7 @@ SCHEMA_VERSION = 1
 CANDIDATE_MANIFEST_CONTRACT = "categorical_byte_closed_candidate_manifest_v1"
 ARCHIVE_MEMBER_MANIFEST_CONTRACT = "categorical_archive_member_manifest_v1"
 RUNTIME_LOADER_PARITY_CONTRACT = "categorical_runtime_loader_parity_v1"
+DECODE_REENCODE_PARITY_CONTRACT = "categorical_decode_reencode_parity_v1"
 CANDIDATE_MANIFEST_KINDS = (
     "categorical_candidate_manifest",
     "categorical_candidate_fixture_manifest",
@@ -229,6 +230,108 @@ def _runtime_loader_parity_report(
 
     accepted = not blockers
     summary["accepted"] = accepted
+    summary["blockers"] = blockers
+    return summary, blockers
+
+
+def _decode_reencode_parity_report(
+    report: Any,
+    *,
+    member_records: list[dict[str, Any]],
+    archive_members: dict[str, bytes],
+) -> tuple[dict[str, Any], list[str]]:
+    blockers: list[str] = []
+    summary: dict[str, Any] = {
+        "schema_version": SCHEMA_VERSION,
+        "contract": DECODE_REENCODE_PARITY_CONTRACT,
+        "declared": isinstance(report, dict),
+        "accepted": False,
+        "payload_member": "",
+        "payload_member_sha256": "",
+        "full_decode_proven": False,
+        "decoded_frame_count": None,
+        "decoded_masks_sha256": "",
+        "byte_exact_reencode": False,
+        "reencoded_payload_sha256": "",
+        "sidecar_free": False,
+        "blockers": [],
+    }
+    if not isinstance(report, dict):
+        blockers.append("decode_reencode_parity_missing")
+        summary["blockers"] = blockers
+        return summary, blockers
+
+    if report.get("schema_version") != SCHEMA_VERSION:
+        blockers.append("decode_reencode_schema_version_missing_or_invalid")
+    if report.get("decode_reencode_parity_contract") != DECODE_REENCODE_PARITY_CONTRACT:
+        blockers.append("decode_reencode_contract_missing_or_invalid")
+    if report.get("passed") is not True:
+        blockers.append("decode_reencode_parity_not_passed")
+    if report.get("score_claim") is not False:
+        blockers.append("decode_reencode_score_claim_must_be_false")
+    if report.get("dispatch_attempted") is not False:
+        blockers.append("decode_reencode_dispatch_attempted_must_be_false")
+
+    payload_member = report.get("payload_member")
+    payload_member_str = payload_member if isinstance(payload_member, str) else ""
+    summary["payload_member"] = payload_member_str
+    if not _safe_member_name(payload_member_str):
+        blockers.append("decode_reencode_payload_member_missing_or_unsafe")
+
+    charged_by_name = {record["name"]: record for record in member_records if record.get("name")}
+    charged_record = charged_by_name.get(payload_member_str)
+    if payload_member_str and charged_record is None:
+        blockers.append("decode_reencode_payload_member_not_charged")
+    elif charged_record is not None and charged_record.get("role") != "categorical_payload":
+        blockers.append("decode_reencode_payload_member_role_not_categorical_payload")
+
+    payload_raw = archive_members.get(payload_member_str)
+    payload_sha = sha256_bytes(payload_raw) if payload_raw is not None else ""
+    summary["payload_member_sha256"] = payload_sha
+    if payload_member_str and payload_raw is None:
+        blockers.append("decode_reencode_payload_member_missing_from_archive")
+    if charged_record is not None and payload_raw is not None:
+        if charged_record.get("bytes") != len(payload_raw):
+            blockers.append("decode_reencode_payload_member_bytes_mismatch")
+        if charged_record.get("sha256") != payload_sha:
+            blockers.append("decode_reencode_payload_member_charged_sha256_mismatch")
+    if report.get("payload_member_sha256") != payload_sha:
+        blockers.append("decode_reencode_payload_member_sha256_mismatch")
+
+    full_decode = report.get("full_decode")
+    full_decode_proven = isinstance(full_decode, dict) and full_decode.get("passed") is True
+    summary["full_decode_proven"] = full_decode_proven
+    if not full_decode_proven:
+        blockers.append("decode_reencode_full_decode_not_proven")
+    else:
+        frame_count = full_decode.get("frame_count")
+        summary["decoded_frame_count"] = frame_count if isinstance(frame_count, int) else None
+        if not isinstance(frame_count, int) or frame_count <= 0:
+            blockers.append("decode_reencode_full_decode_frame_count_invalid")
+        decoded_sha = full_decode.get("decoded_masks_sha256", full_decode.get("decoded_payload_sha256"))
+        summary["decoded_masks_sha256"] = decoded_sha if isinstance(decoded_sha, str) else ""
+        if not _is_sha256(decoded_sha):
+            blockers.append("decode_reencode_full_decode_sha256_missing_or_invalid")
+
+    reencode = report.get("byte_exact_reencode")
+    reencode_proven = isinstance(reencode, dict) and reencode.get("passed") is True
+    summary["byte_exact_reencode"] = reencode_proven
+    if not reencode_proven:
+        blockers.append("decode_reencode_byte_exact_reencode_not_proven")
+    else:
+        reencoded_sha = reencode.get("reencoded_payload_sha256", reencode.get("reencoded_member_sha256"))
+        summary["reencoded_payload_sha256"] = reencoded_sha if isinstance(reencoded_sha, str) else ""
+        if reencode.get("byte_exact") is not True:
+            blockers.append("decode_reencode_byte_exact_flag_not_true")
+        if reencoded_sha != payload_sha:
+            blockers.append("decode_reencode_reencoded_payload_sha256_mismatch")
+
+    sidecar_free = report.get("sidecar_free") is True
+    summary["sidecar_free"] = sidecar_free
+    if not sidecar_free:
+        blockers.append("decode_reencode_sidecar_free_not_proven")
+
+    summary["accepted"] = not blockers
     summary["blockers"] = blockers
     return summary, blockers
 
@@ -809,6 +912,13 @@ def audit_categorical_candidate_manifest(
     )
     blockers.extend(runtime_loader_blockers)
 
+    decode_reencode_parity, decode_reencode_blockers = _decode_reencode_parity_report(
+        payload.get("decode_reencode_parity"),
+        member_records=member_records,
+        archive_members=archive_members,
+    )
+    blockers.extend(decode_reencode_blockers)
+
     construction_plan = audit_categorical_charged_label_plan(
         payload.get("candidate_construction_plan"),
         charged_member_names=member_names,
@@ -917,6 +1027,7 @@ def audit_categorical_candidate_manifest(
             ),
         },
         "runtime_loader_parity": runtime_loader_parity,
+        "decode_reencode_parity": decode_reencode_parity,
         "candidate_construction_plan": construction_plan,
         "conditioning_prior_contract": conditioning_prior_contract,
         "charged_member_summary": {
@@ -938,6 +1049,7 @@ __all__ = [
     "CANDIDATE_MANIFEST_KINDS",
     "CONTEST_ARCHIVE_CONTRACT",
     "CONTEST_INFLATE_MEMBER",
+    "DECODE_REENCODE_PARITY_CONTRACT",
     "DETERMINISTIC_ZIP_ALLOWED_COMPRESS_TYPES",
     "DETERMINISTIC_ZIP_CREATE_SYSTEM",
     "DETERMINISTIC_ZIP_DATE_TIME",

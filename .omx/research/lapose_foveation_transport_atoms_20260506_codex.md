@@ -65,3 +65,45 @@ claim.
   intended path.
 - Add no-op controls proving the planner did not reuse stale candidate bytes.
 - Run exact CUDA auth eval on the exact archive before any score/rank claim.
+
+## Addendum - LFV1 Local Payload Custody
+
+Added `tac.analysis.lapose_foveation_payload` plus
+`tools/build_lapose_foveation_tuple_payload.py`.
+
+The helper lowers selected `lapose_foveation_transport_atom` rows into a
+deterministic local `LFV1` binary payload:
+
+```text
+header = magic, schema_version, row_count, frame_width, frame_height
+row    = opcode, pair_index, q(alpha), q(radius), q(power), q(origin_x), q(origin_y)
+```
+
+The row body preserves the prior 13-byte tuple model:
+
+```text
+1 byte opcode + 2 byte pair index + 5 * 2 byte quantized scalars
+```
+
+The readiness JSON records exact local payload bytes and SHA-256 and sets:
+
+- `score_claim=false`
+- `dispatch_attempted=false`
+- `promotion_eligible=false`
+- `ready_for_exact_eval_dispatch=false`
+
+This is still planning/local artifact custody, not archive evidence. The
+readiness blockers explicitly include:
+
+- `not_archive_consumed_payload`
+- `no_runtime_consumer`
+- `no_noop_controls`
+- `no_exact_cuda_eval`
+- `exact_cuda_auth_eval_required_before_score_claim`
+
+Focused verification:
+
+```text
+.venv/bin/python -m pytest src/tac/tests/test_lapose_foveation_atoms.py src/tac/tests/test_lapose_foveation_payload.py src/tac/tests/test_cross_paradigm_atoms.py -q
+.venv/bin/python -m ruff check src/tac/analysis/lapose_foveation_payload.py tools/build_lapose_foveation_tuple_payload.py src/tac/tests/test_lapose_foveation_payload.py
+```

@@ -25,6 +25,7 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.repo_io import json_text  # noqa: E402
 from tools.build_cross_paradigm_frontier_inventory import build_inventory  # noqa: E402
+from tools.build_field_meta_dispatch_selection import build_selection_report  # noqa: E402
 
 SCHEMA_VERSION = 2
 
@@ -101,7 +102,11 @@ def _keys_present(rows_by_key: dict[str, dict[str, Any]], keys: tuple[str, ...])
     return [key for key in keys if key in rows_by_key]
 
 
-def build_next_comprehensive_tranche(rows: list[dict[str, Any]]) -> dict[str, Any]:
+def build_next_comprehensive_tranche(
+    rows: list[dict[str, Any]],
+    *,
+    field_meta_candidate_packet_selection: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Return the next score-lowering tranche as a deterministic work plan.
 
     This intentionally remains an orchestration artifact. It names the next
@@ -236,6 +241,19 @@ def build_next_comprehensive_tranche(rows: list[dict[str, Any]]) -> dict[str, An
             "needs_byte_closed_candidate": byte_closed_candidates,
             "needs_research_or_contract_hardening": research_hardening_candidates,
         },
+        "field_meta_candidate_packet_selection": field_meta_candidate_packet_selection
+        or {
+            "schema_version": 1,
+            "tool": "tools/build_field_meta_dispatch_selection.py",
+            "score_claim": False,
+            "dispatch_attempted": False,
+            "ready_for_exact_eval_dispatch": False,
+            "candidate_count": 0,
+            "ready_candidate_count": 0,
+            "selected_candidate": None,
+            "rows": [],
+            "report_blockers": ["no_candidate_packet_manifests_supplied"],
+        },
         "workstreams": workstreams,
         "global_acceptance_gates": [
             "no score claim without exact CUDA auth eval JSON",
@@ -265,6 +283,10 @@ def build_roadmap_status(
     *,
     repo_root: Path,
     dirty_paths: list[str] | None = None,
+    packet_manifest_paths: list[Path] | None = None,
+    packet_manifest_globs: list[str] | None = None,
+    claims_path: Path | None = None,
+    now_utc: str | None = None,
 ) -> dict[str, Any]:
     """Join static frontier inventory with live dirty-worktree blockers."""
 
@@ -307,7 +329,17 @@ def build_roadmap_status(
         for row in rows
         if row["safe_to_touch_now"]
     ][:5]
-    next_tranche = build_next_comprehensive_tranche(rows)
+    field_meta_candidate_packet_selection = build_selection_report(
+        repo_root=repo_root,
+        manifest_paths=packet_manifest_paths or [],
+        manifest_globs=packet_manifest_globs or [],
+        claims_path=claims_path,
+        now_utc=now_utc,
+    )
+    next_tranche = build_next_comprehensive_tranche(
+        rows,
+        field_meta_candidate_packet_selection=field_meta_candidate_packet_selection,
+    )
     return {
         "schema_version": SCHEMA_VERSION,
         "tool": "tools/build_frontier_roadmap_status.py",
@@ -333,6 +365,8 @@ def build_roadmap_status(
 
 
 def render_markdown(payload: dict[str, Any]) -> str:
+    packet_selection = payload["next_comprehensive_tranche"]["field_meta_candidate_packet_selection"]
+    selected_packet = packet_selection.get("selected_candidate") or {}
     lines = [
         "# Frontier Roadmap Status",
         "",
@@ -347,6 +381,9 @@ def render_markdown(payload: dict[str, Any]) -> str:
         "",
         f"- name: `{_md(payload['next_comprehensive_tranche']['name'])}`",
         f"- objective: {_md(payload['next_comprehensive_tranche']['objective'])}",
+        f"- candidate_packet_count: `{packet_selection['candidate_count']}`",
+        f"- ready_candidate_packet_count: `{packet_selection['ready_candidate_count']}`",
+        f"- selected_candidate_packet: `{_md(selected_packet.get('candidate_id') or 'none')}`",
         "",
         "| workstream | keys | acceptance gates |",
         "|---|---|---|",
@@ -407,13 +444,23 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--md-out", type=Path)
+    parser.add_argument("--packet-manifest", action="append", type=Path, default=[])
+    parser.add_argument("--packet-manifest-glob", action="append", default=[])
+    parser.add_argument("--claims-path", type=Path)
+    parser.add_argument("--now-utc")
     parser.add_argument("--format", choices=("json", "markdown"), default="markdown")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    payload = build_roadmap_status(repo_root=args.repo_root)
+    payload = build_roadmap_status(
+        repo_root=args.repo_root,
+        packet_manifest_paths=args.packet_manifest,
+        packet_manifest_globs=args.packet_manifest_glob,
+        claims_path=args.claims_path,
+        now_utc=args.now_utc,
+    )
     if args.json_out is not None:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)
         args.json_out.write_text(json_text(payload), encoding="utf-8")

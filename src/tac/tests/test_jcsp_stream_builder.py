@@ -14,11 +14,16 @@ Adversarial-coverage angles:
 
 from __future__ import annotations
 
+import json
+
 import numpy as np
 import pytest
 import torch
 
 from tac.jcsp_stream_builder import (
+    JCSP_STREAM_SOURCE_DRY_RUN_SCHEMA,
+    jcsp_stream_source_dry_run_metadata,
+    load_jcsp_score_marginals,
     model_to_stream_sources,
     quantize_tensor_symmetric,
     tensor_to_stream_source,
@@ -171,6 +176,27 @@ def test_model_to_stream_sources_simple_state_dict_aligned_lengths() -> None:
     assert all(s.codec_kind == KIND_ARITHMETIC_STATIC for s in streams)
 
 
+def test_model_to_stream_sources_accepts_structured_marginal_rows() -> None:
+    state_dict = {
+        "a.weight": torch.linspace(-1.0, 1.0, 16, dtype=torch.float32),
+    }
+    streams, specs = model_to_stream_sources(
+        state_dict,
+        score_marginals={
+            "a.weight": {
+                "score_per_byte_marginal": 1e-6,
+                "source": "reports/component_sensitivity.json",
+                "evidence_grade": "empirical",
+                "scorer_term_targeted": "seg",
+            }
+        },
+    )
+    assert len(streams) == len(specs) == 1
+    assert streams[0].score_per_byte_marginal == pytest.approx(1e-6)
+    assert specs[0].score_marginal_source == "reports/component_sensitivity.json"
+    assert specs[0].scorer_term_targeted == "seg"
+
+
 def test_model_to_stream_sources_raw_passthrough_without_payload_raises() -> None:
     state_dict = {
         "wet.mkv": torch.zeros(4, dtype=torch.float32),
@@ -219,3 +245,62 @@ def test_model_to_stream_sources_end_to_end_into_jcsp_container() -> None:
         s["codec_kind"] == KIND_ARITHMETIC_STATIC for s in parsed["streams"]
     )
     assert result.total_bytes == len(result.container_bytes)
+
+
+def test_load_jcsp_score_marginals_rejects_duplicate_json_keys(tmp_path) -> None:
+    artifact = tmp_path / "marginals.json"
+    artifact.write_text('{"score_marginals":{"a.weight":1e-6,"a.weight":2e-6}}')
+    with pytest.raises(ValueError, match="duplicate JSON key"):
+        load_jcsp_score_marginals(artifact)
+
+
+def test_jcsp_stream_source_dry_run_metadata_is_deterministic(tmp_path) -> None:
+    artifact = tmp_path / "marginals.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "score_marginals": {
+                    "a.weight": {
+                        "score_per_byte_marginal": 1e-6,
+                        "source": "reports/component_sensitivity.json",
+                        "evidence_grade": "empirical",
+                        "scorer_term_targeted": "seg",
+                    },
+                    "b.weight": 2e-6,
+                }
+            },
+            sort_keys=True,
+        )
+    )
+    state_dict = {
+        "b.weight": torch.zeros(8, dtype=torch.float32),
+        "a.weight": torch.linspace(-1.0, 1.0, 16, dtype=torch.float32),
+    }
+
+    first = jcsp_stream_source_dry_run_metadata(
+        state_dict,
+        score_marginals_path=artifact,
+    )
+    second = jcsp_stream_source_dry_run_metadata(
+        state_dict,
+        score_marginals_path=artifact,
+    )
+
+    assert first == second
+    assert first["schema"] == JCSP_STREAM_SOURCE_DRY_RUN_SCHEMA
+    assert first["score_claim"] is False
+    assert first["dispatch_attempted"] is False
+    assert first["ready_for_exact_eval_dispatch"] is False
+    assert first["archive_bytes_written"] is False
+    assert first["container_bytes_built"] is False
+    assert first["stream_source_objects_built"] is False
+    assert first["stream_count"] == 2
+    assert [row["name"] for row in first["streams"]] == [
+        "a.weight",
+        "b.weight",
+    ]
+    assert first["streams"][0]["qint_count"] == 16
+    assert first["streams"][0]["score_per_byte_marginal"] == pytest.approx(1e-6)
+    assert "dry_run_only_no_archive_bytes_written" in (
+        first["streams"][0]["dispatch_blockers"]
+    )

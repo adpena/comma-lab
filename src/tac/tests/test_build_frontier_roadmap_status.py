@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 
 from tools.build_frontier_roadmap_status import (
@@ -96,3 +98,50 @@ def test_frontier_roadmap_status_markdown_is_operator_briefing() -> None:
     assert "`stacker_scorer_changing`" in markdown
     assert "evidence" in markdown
     assert "next_unblocked_keys" in markdown
+
+
+def test_frontier_roadmap_status_consumes_field_meta_packet_manifests(tmp_path: Path) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"field meta packet archive")
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "candidate_id": "generic_packet",
+                "score_claim": False,
+                "dispatch_attempted": False,
+                "dispatch_gate": "eligible_for_cuda_auth_eval_after_lane_claim",
+                "dispatch_unlocked": True,
+                "ready_for_exact_eval_dispatch_claim": True,
+                "archive": {
+                    "path": archive.as_posix(),
+                    "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+                    "bytes": archive.stat().st_size,
+                },
+                "fixed_runtime_preflight": {
+                    "ready_for_fixed_runtime_exact_eval": True,
+                    "runtime_tree_sha256": "c" * 64,
+                    "remaining_blockers": [],
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = build_roadmap_status(
+        repo_root=REPO,
+        dirty_paths=[],
+        packet_manifest_paths=[manifest],
+    )
+
+    packet_selection = payload["next_comprehensive_tranche"][
+        "field_meta_candidate_packet_selection"
+    ]
+    assert packet_selection["candidate_count"] == 1
+    assert packet_selection["ready_candidate_count"] == 1
+    assert packet_selection["selected_candidate"]["candidate_id"] == "generic_packet"
+    assert packet_selection["selected_candidate"]["strict_candidate_preflight_ready"] is True
+    assert payload["ready_for_exact_eval_dispatch"] is False

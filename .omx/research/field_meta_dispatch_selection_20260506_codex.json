@@ -1,0 +1,371 @@
+{
+  "candidate_count": 4,
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "selection_report_only_no_dispatch",
+    "requires_lane_dispatch_claim_before_remote_gpu_submit",
+    "requires_exact_cuda_auth_eval_for_score_claim"
+  ],
+  "ready_candidate_count": 1,
+  "ready_for_exact_eval_dispatch": true,
+  "report_blockers": [],
+  "rows": [
+    {
+      "archive_proof": {
+        "blockers": [],
+        "byte_closed": true,
+        "bytes_actual": 186088,
+        "bytes_expected": 186088,
+        "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip",
+        "sha256_actual": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+        "sha256_expected": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+        "source": "archive_object",
+        "status": "passed"
+      },
+      "byte_delta": 0,
+      "candidate_blockers": [],
+      "candidate_id": "hnerv_lowlevel_repack_pr106_q10_20260506_codex",
+      "dispatch_attempted": false,
+      "expected_information_gain_nats": 0.0,
+      "expected_total_score_delta": 0.0,
+      "manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/public_replay_preflight.json",
+      "manifest_sha256": "8c90a9f05924205a3f05ad3108c4475c0930ba6addbbcda9177dce04d1f609ff",
+      "next_required_proof": [
+        "active_lane_dispatch_claim_before_remote_gpu_submit",
+        "exact_cuda_auth_eval_on_selected_archive_bytes"
+      ],
+      "packet_kind": "public_replay_intake_preflight_v1",
+      "ready_for_exact_eval_dispatch": true,
+      "runtime_proof": {
+        "blockers": [],
+        "candidates": [
+          {
+            "blockers": [],
+            "runtime_closed": true,
+            "runtime_tree_sha256": "ab9130cac6919e986ec97c6b49294d0a137f4738e2e8265605225da9d70496cd",
+            "source": "manifest.runtime",
+            "status": "passed"
+          },
+          {
+            "blockers": [],
+            "runtime_closed": true,
+            "runtime_tree_sha256": "ab9130cac6919e986ec97c6b49294d0a137f4738e2e8265605225da9d70496cd",
+            "source": "public_replay_preflight.runtime",
+            "status": "passed"
+          }
+        ],
+        "runtime_closed": true,
+        "runtime_tree_sha256": "ab9130cac6919e986ec97c6b49294d0a137f4738e2e8265605225da9d70496cd",
+        "source": "manifest.runtime",
+        "status": "passed"
+      },
+      "schema_version": 1,
+      "score_claim": false,
+      "strict_candidate_preflight": {
+        "blockers": [],
+        "lane_claim": {
+          "active_conflicts": [],
+          "checked": false,
+          "claims_path": null,
+          "lane_id": null
+        },
+        "ready_for_exact_eval_dispatch": true,
+        "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
+        "warnings": []
+      },
+      "strict_candidate_preflight_ready": true
+    },
+    {
+      "archive_proof": {
+        "blockers": [],
+        "byte_closed": true,
+        "bytes_actual": 186222,
+        "bytes_expected": 186222,
+        "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip",
+        "sha256_actual": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+        "sha256_expected": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+        "source": "candidate_archive_fields",
+        "status": "passed"
+      },
+      "byte_delta": -9,
+      "candidate_blockers": [
+        "strict_candidate_preflight_not_ready",
+        "strict:ready_for_exact_eval_dispatch_false"
+      ],
+      "candidate_id": "hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex",
+      "dispatch_attempted": false,
+      "expected_information_gain_nats": 0.0,
+      "expected_total_score_delta": -5.9927305780995425e-06,
+      "manifest_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
+      "manifest_sha256": "6668341a3e849a37580af1d68dc33a741bc0d07f998d31b2bb58b9ee85f734a6",
+      "next_required_proof": [
+        "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py"
+      ],
+      "packet_kind": "1",
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_proof": {
+        "blockers": [],
+        "candidates": [
+          {
+            "blockers": [],
+            "runtime_closed": true,
+            "runtime_tree_sha256": "4a8445803e232159be84f84f726311c4e6846a0a9e7a1825e1be38cf9e165242",
+            "source": "public_replay_preflight.runtime",
+            "status": "passed"
+          }
+        ],
+        "runtime_closed": true,
+        "runtime_tree_sha256": "4a8445803e232159be84f84f726311c4e6846a0a9e7a1825e1be38cf9e165242",
+        "source": "public_replay_preflight.runtime",
+        "status": "passed"
+      },
+      "schema_version": 1,
+      "score_claim": false,
+      "strict_candidate_preflight": {
+        "blockers": [
+          {
+            "code": "ready_for_exact_eval_dispatch_false",
+            "detail": "ready_for_exact_eval_dispatch is false",
+            "severity": "blocking"
+          }
+        ],
+        "lane_claim": {
+          "active_conflicts": [],
+          "checked": false,
+          "claims_path": null,
+          "lane_id": null
+        },
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
+        "warnings": []
+      },
+      "strict_candidate_preflight_ready": false
+    },
+    {
+      "archive_proof": {
+        "blockers": [
+          "archive_identity_missing"
+        ],
+        "byte_closed": false,
+        "bytes_actual": null,
+        "bytes_expected": null,
+        "path": "",
+        "sha256_actual": "",
+        "sha256_expected": "",
+        "source": "",
+        "status": "blocked"
+      },
+      "byte_delta": 0,
+      "candidate_blockers": [
+        "missing_byte_closed_archive_proof",
+        "archive:archive_identity_missing",
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing",
+        "strict_candidate_preflight_not_ready",
+        "strict:ready_for_exact_eval_dispatch_false"
+      ],
+      "candidate_id": "joint_admm_balle_arithmetic_stack",
+      "dispatch_attempted": false,
+      "expected_information_gain_nats": 0.0,
+      "expected_total_score_delta": 0.0,
+      "manifest_path": "experiments/results/joint_stack_noop_manifest_20260506_codex/manifest.json",
+      "manifest_sha256": "35a2e6a8d84625f5f0ac1e2ba1f8b9f5277ea03577f3e921cdbbd54750f25e11",
+      "next_required_proof": [
+        "local_archive_file_with_matching_sha256_and_bytes",
+        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+        "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py"
+      ],
+      "packet_kind": "joint_admm_balle_arithmetic_noop_manifest_v1",
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_proof": {
+        "blockers": [
+          "runtime_proof_missing"
+        ],
+        "candidates": [],
+        "runtime_closed": false,
+        "runtime_tree_sha256": "",
+        "source": "",
+        "status": "blocked"
+      },
+      "schema_version": 1,
+      "score_claim": false,
+      "strict_candidate_preflight": {
+        "blockers": [
+          {
+            "code": "ready_for_exact_eval_dispatch_false",
+            "detail": "ready_for_exact_eval_dispatch is false",
+            "severity": "blocking"
+          }
+        ],
+        "lane_claim": {
+          "active_conflicts": [],
+          "checked": false,
+          "claims_path": null,
+          "lane_id": null
+        },
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
+        "warnings": []
+      },
+      "strict_candidate_preflight_ready": false
+    },
+    {
+      "archive_proof": {
+        "blockers": [
+          "archive_identity_missing"
+        ],
+        "byte_closed": false,
+        "bytes_actual": null,
+        "bytes_expected": null,
+        "path": "",
+        "sha256_actual": "",
+        "sha256_expected": "",
+        "source": "",
+        "status": "blocked"
+      },
+      "byte_delta": 0,
+      "candidate_blockers": [
+        "missing_byte_closed_archive_proof",
+        "archive:archive_identity_missing",
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing",
+        "strict_candidate_preflight_not_ready",
+        "strict:ready_for_exact_eval_dispatch_false",
+        "strict:nested_blocking_status"
+      ],
+      "candidate_id": "pr91_hpm1_readiness_20260506_codex",
+      "dispatch_attempted": false,
+      "expected_information_gain_nats": 0.0,
+      "expected_total_score_delta": 0.0,
+      "manifest_path": "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json",
+      "manifest_sha256": "3d0e10a646fd22426685e60b52d1647d9755ba1f3c528e459e4ec33227c63b21",
+      "next_required_proof": [
+        "local_archive_file_with_matching_sha256_and_bytes",
+        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+        "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py"
+      ],
+      "packet_kind": "1",
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_proof": {
+        "blockers": [
+          "runtime_proof_missing"
+        ],
+        "candidates": [],
+        "runtime_closed": false,
+        "runtime_tree_sha256": "",
+        "source": "",
+        "status": "blocked"
+      },
+      "schema_version": 1,
+      "score_claim": false,
+      "strict_candidate_preflight": {
+        "blockers": [
+          {
+            "code": "ready_for_exact_eval_dispatch_false",
+            "detail": "ready_for_exact_eval_dispatch is false",
+            "severity": "blocking"
+          },
+          {
+            "code": "nested_blocking_status",
+            "detail": "gates.byte_exact_hpm1_reencode.status='blocked'",
+            "severity": "blocking"
+          },
+          {
+            "code": "nested_blocking_status",
+            "detail": "gates.exact_cuda_auth_eval_after_parity.status='blocked'",
+            "severity": "blocking"
+          },
+          {
+            "code": "nested_blocking_status",
+            "detail": "gates.full_hpm1_decode_600_frames.status='blocked'",
+            "severity": "blocking"
+          },
+          {
+            "code": "nested_blocking_status",
+            "detail": "gates.runtime_hpm1_loader_without_sidecars.status='blocked'",
+            "severity": "blocking"
+          }
+        ],
+        "lane_claim": {
+          "active_conflicts": [],
+          "checked": false,
+          "claims_path": null,
+          "lane_id": null
+        },
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
+        "warnings": []
+      },
+      "strict_candidate_preflight_ready": false
+    }
+  ],
+  "schema_version": 1,
+  "score_claim": false,
+  "selected_candidate": {
+    "archive_proof": {
+      "blockers": [],
+      "byte_closed": true,
+      "bytes_actual": 186088,
+      "bytes_expected": 186088,
+      "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip",
+      "sha256_actual": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+      "sha256_expected": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+      "source": "archive_object",
+      "status": "passed"
+    },
+    "byte_delta": 0,
+    "candidate_blockers": [],
+    "candidate_id": "hnerv_lowlevel_repack_pr106_q10_20260506_codex",
+    "dispatch_attempted": false,
+    "expected_information_gain_nats": 0.0,
+    "expected_total_score_delta": 0.0,
+    "manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/public_replay_preflight.json",
+    "manifest_sha256": "8c90a9f05924205a3f05ad3108c4475c0930ba6addbbcda9177dce04d1f609ff",
+    "next_required_proof": [
+      "active_lane_dispatch_claim_before_remote_gpu_submit",
+      "exact_cuda_auth_eval_on_selected_archive_bytes"
+    ],
+    "packet_kind": "public_replay_intake_preflight_v1",
+    "ready_for_exact_eval_dispatch": true,
+    "runtime_proof": {
+      "blockers": [],
+      "candidates": [
+        {
+          "blockers": [],
+          "runtime_closed": true,
+          "runtime_tree_sha256": "ab9130cac6919e986ec97c6b49294d0a137f4738e2e8265605225da9d70496cd",
+          "source": "manifest.runtime",
+          "status": "passed"
+        },
+        {
+          "blockers": [],
+          "runtime_closed": true,
+          "runtime_tree_sha256": "ab9130cac6919e986ec97c6b49294d0a137f4738e2e8265605225da9d70496cd",
+          "source": "public_replay_preflight.runtime",
+          "status": "passed"
+        }
+      ],
+      "runtime_closed": true,
+      "runtime_tree_sha256": "ab9130cac6919e986ec97c6b49294d0a137f4738e2e8265605225da9d70496cd",
+      "source": "manifest.runtime",
+      "status": "passed"
+    },
+    "schema_version": 1,
+    "score_claim": false,
+    "strict_candidate_preflight": {
+      "blockers": [],
+      "lane_claim": {
+        "active_conflicts": [],
+        "checked": false,
+        "claims_path": null,
+        "lane_id": null
+      },
+      "ready_for_exact_eval_dispatch": true,
+      "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
+      "warnings": []
+    },
+    "strict_candidate_preflight_ready": true
+  },
+  "strict_candidate_preflight": "experiments/preflight_candidate_manifest_dispatch_readiness.py",
+  "tool": "tools/build_field_meta_dispatch_selection.py"
+}

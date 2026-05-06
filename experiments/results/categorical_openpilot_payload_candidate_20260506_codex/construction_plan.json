@@ -1,0 +1,218 @@
+{
+  "archive_member_manifest_sha256": "b62af504996161baaf5b2297140a296cad4ebde61334919dc8a43b69d61f47c1",
+  "byte_closed_archive_parity": {
+    "proof_path": "",
+    "proven": false,
+    "required": true
+  },
+  "candidate_archive_sha256": "106af3ed6917d6115586463ef35e43119add5db002fd19f3da7cd8065a63eb8d",
+  "candidate_construction_ready": true,
+  "charged_member_summary": {
+    "optional_roles": {
+      "decoder_table": {
+        "members": [
+          "class_codebook.json"
+        ],
+        "present": true
+      }
+    },
+    "required_roles": {
+      "categorical_payload": {
+        "members": [
+          "categorical_payload.bin"
+        ],
+        "present": true
+      },
+      "decoder_or_runtime_consumer": {
+        "members": [
+          "runtime_consumer.py"
+        ],
+        "present": true
+      }
+    },
+    "role_to_members": {
+      "categorical_payload": [
+        "categorical_payload.bin"
+      ],
+      "decoder_or_runtime_consumer": [
+        "runtime_consumer.py"
+      ],
+      "decoder_table": [
+        "class_codebook.json"
+      ],
+      "inflate_entrypoint": [
+        "inflate.sh"
+      ],
+      "runtime_consumer_proof": [
+        "runtime_consumer_proof_skeleton.json"
+      ]
+    }
+  },
+  "class_rows": [
+    {
+      "categorical_payload_member": "categorical_payload.bin",
+      "charged_label_member": "class_codebook.json",
+      "class_id": 0,
+      "comma10k_color": "#402020",
+      "comma10k_id": 1,
+      "default_quant_bits": 8,
+      "name": "road",
+      "openpilot_prior_hint": "road_geometry_track_prior",
+      "selfcomp_gray": 0,
+      "semantic_priority_weight_ppm": 266667
+    },
+    {
+      "categorical_payload_member": "categorical_payload.bin",
+      "charged_label_member": "class_codebook.json",
+      "class_id": 1,
+      "comma10k_color": "#ff0000",
+      "comma10k_id": 2,
+      "default_quant_bits": 8,
+      "name": "lane_markings",
+      "openpilot_prior_hint": "lane_marking_track_prior",
+      "selfcomp_gray": 255,
+      "semantic_priority_weight_ppm": 266667
+    },
+    {
+      "categorical_payload_member": "categorical_payload.bin",
+      "charged_label_member": "class_codebook.json",
+      "class_id": 2,
+      "comma10k_color": "#808060",
+      "comma10k_id": 3,
+      "default_quant_bits": 4,
+      "name": "undrivable",
+      "openpilot_prior_hint": "scene_layout_prior",
+      "selfcomp_gray": 64,
+      "semantic_priority_weight_ppm": 133333
+    },
+    {
+      "categorical_payload_member": "categorical_payload.bin",
+      "charged_label_member": "class_codebook.json",
+      "class_id": 3,
+      "comma10k_color": "#00ff66",
+      "comma10k_id": 4,
+      "default_quant_bits": 6,
+      "name": "movable",
+      "openpilot_prior_hint": "dynamic_object_filter_prior",
+      "selfcomp_gray": 192,
+      "semantic_priority_weight_ppm": 200000
+    },
+    {
+      "categorical_payload_member": "categorical_payload.bin",
+      "charged_label_member": "class_codebook.json",
+      "class_id": 4,
+      "comma10k_color": "#cc00ff",
+      "comma10k_id": 5,
+      "default_quant_bits": 4,
+      "name": "my_car",
+      "openpilot_prior_hint": "ego_car_filter_prior",
+      "selfcomp_gray": 128,
+      "semantic_priority_weight_ppm": 133333
+    }
+  ],
+  "conditioning_prior_contract": {
+    "compression_time_only_count": 1,
+    "declared": true,
+    "dispatch_blockers": [],
+    "kind": "categorical_openpilot_mask_prior_contract",
+    "passed": true,
+    "records": [
+      {
+        "charged_member": "categorical_payload.bin",
+        "compression_time_only": false,
+        "family": "qma9",
+        "index": 0,
+        "name": "local_categorical_payload",
+        "requires_charged_member": true,
+        "runtime_consumed": true,
+        "usage": "inflate_runtime_conditioning"
+      },
+      {
+        "charged_member": "",
+        "compression_time_only": true,
+        "family": "openpilot_priors",
+        "index": 1,
+        "name": "ego_lane_atom_ranker",
+        "requires_charged_member": false,
+        "runtime_consumed": false,
+        "usage": "compression_time_atom_ranking_only"
+      },
+      {
+        "charged_member": "class_codebook.json",
+        "compression_time_only": false,
+        "family": "clade_spade",
+        "index": 2,
+        "name": "canonical_class_codebook_conditioning",
+        "requires_charged_member": true,
+        "runtime_consumed": true,
+        "usage": "inflate_runtime_conditioning"
+      }
+    ],
+    "runtime_consumed_count": 2,
+    "schema_version": 1,
+    "warnings": []
+  },
+  "conditioning_priors": [
+    {
+      "charged_member": "categorical_payload.bin",
+      "family": "qma9",
+      "name": "local_categorical_payload",
+      "runtime_consumed": true,
+      "usage": "inflate_runtime_conditioning"
+    },
+    {
+      "family": "openpilot_priors",
+      "name": "ego_lane_atom_ranker",
+      "runtime_consumed": false,
+      "usage": "compression_time_atom_ranking_only"
+    },
+    {
+      "charged_member": "class_codebook.json",
+      "family": "clade_spade",
+      "name": "canonical_class_codebook_conditioning",
+      "runtime_consumed": true,
+      "usage": "inflate_runtime_conditioning"
+    }
+  ],
+  "construction_plan_contract": "categorical_charged_label_construction_plan_v1",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "categorical_construction_plan_not_dispatchable",
+    "real_byte_closed_archive_parity_missing"
+  ],
+  "evidence_grade": "planning_manifest",
+  "kind": "categorical_charged_label_construction_plan",
+  "next_required_proofs": [
+    "replace_fixture_payload_with_real_charged_categorical_payload",
+    "full_decode_reencode_parity_for_charged_categorical_payload",
+    "runtime_loader_parity_against_archive_member",
+    "exact_cuda_auth_eval_only_after_lane_claim"
+  ],
+  "plan_blockers": [],
+  "primary_label_sources": [
+    {
+      "name": "comma10k README",
+      "url": "https://github.com/commaai/comma10k/blob/master/README.md",
+      "used_for": "class ids, label names, and mask colors"
+    },
+    {
+      "name": "comma.ai crowdsourced Segnet blog",
+      "url": "https://blog.comma.ai/crowdsourced-segnet-you-can-help/",
+      "used_for": "five-label openpilot semantic grouping"
+    }
+  ],
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "runtime_consumer_member": "runtime_consumer.py",
+  "schema_version": 1,
+  "score_claim": false,
+  "semantic_class_order": [
+    "road",
+    "lane_markings",
+    "undrivable",
+    "movable",
+    "my_car"
+  ],
+  "semantic_weight_source": "SEMANTIC_QUANTIZATION_DEFAULT_BITS",
+  "source_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f"
+}

@@ -1,0 +1,112 @@
+{
+  "archive_bytes": 152235,
+  "archive_sha256": "106af3ed6917d6115586463ef35e43119add5db002fd19f3da7cd8065a63eb8d",
+  "charged_members": [
+    {
+      "bytes": 145087,
+      "name": "categorical_payload.bin",
+      "role": "categorical_payload",
+      "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc"
+    },
+    {
+      "bytes": 1878,
+      "name": "class_codebook.json",
+      "role": "decoder_table",
+      "sha256": "6db870e7e05cc310ca25897e8d3ccac4f6fff06ad22ea57c157dbf8086ba29d0"
+    },
+    {
+      "bytes": 233,
+      "name": "inflate.sh",
+      "role": "inflate_entrypoint",
+      "sha256": "96c609ffb891c2717ccc055f81a7255a7946383f8f54fca2f1b41fdb88f26062"
+    },
+    {
+      "bytes": 2690,
+      "name": "runtime_consumer.py",
+      "role": "decoder_or_runtime_consumer",
+      "sha256": "4fb6740b3e859068dbdbe159545c49b927a8b017b6046412ef5edddcb5fcba6d"
+    },
+    {
+      "bytes": 1731,
+      "name": "runtime_consumer_proof_skeleton.json",
+      "role": "runtime_consumer_proof",
+      "sha256": "72cd6236aeff5b62657c99be07ee7f8d3d8857759daff74601976e86ee3e21f0"
+    }
+  ],
+  "dispatch_attempted": false,
+  "fixture_only": false,
+  "kind": "categorical_byte_closed_local_candidate_build",
+  "paths": {
+    "archive": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/archive.zip",
+    "archive_member_manifest": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/archive_member_manifest.json",
+    "candidate": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/candidate.json",
+    "construction_plan": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/construction_plan.json",
+    "readiness": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json"
+  },
+  "payload_source": {
+    "kind": "pr91_hpm1_mask_segment",
+    "payload_bytes": 145087,
+    "payload_magic": "48504d31",
+    "payload_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+    "segment_name": "mask",
+    "source_archive_bytes": 222404,
+    "source_archive_path": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+    "source_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+    "source_member": "x",
+    "source_member_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf"
+  },
+  "readiness_blockers": [
+    "no_op_control_not_passed:decode_reencode_identity_control",
+    "no_op_control_not_passed:label_permutation_fail_closed_control",
+    "no_op_control_not_passed:runtime_consumes_conditioning_control",
+    "runtime_loader_parity_not_passed",
+    "decode_reencode_parity_not_passed",
+    "decode_reencode_full_decode_not_proven",
+    "decode_reencode_byte_exact_reencode_not_proven"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "tool_run_manifest": {
+    "argv": [
+      "--out-dir",
+      "experiments/results/categorical_openpilot_payload_candidate_20260506_codex",
+      "--payload-source",
+      "pr91-hpm1-mask"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "ec53babef87b8ab91d2cea8a5dfbae2f0ef24b8176f3b7664f0d1c0f093145e5",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 222404,
+        "path": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+        "sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f"
+      },
+      {
+        "bytes": 152235,
+        "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/archive.zip",
+        "sha256": "106af3ed6917d6115586463ef35e43119add5db002fd19f3da7cd8065a63eb8d"
+      },
+      {
+        "bytes": 13434,
+        "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/candidate.json",
+        "sha256": "7836da86c4dc11f1dda64e935bce264688316a325ff28995f21f00a9006a26ed"
+      },
+      {
+        "bytes": 18827,
+        "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+        "sha256": "c62ab23479bec7c128d46b2b2a29b8626626877daeaddb1726fe6f08985b05d7"
+      },
+      {
+        "bytes": 1379,
+        "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/archive_member_manifest.json",
+        "sha256": "b62af504996161baaf5b2297140a296cad4ebde61334919dc8a43b69d61f47c1"
+      }
+    ],
+    "output_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/summary.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/build_categorical_candidate_payload.py"
+  }
+}
