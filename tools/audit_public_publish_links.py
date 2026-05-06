@@ -9,7 +9,6 @@ that look public in text but actually require an operator session.
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import urllib.error
 import urllib.request
@@ -17,6 +16,16 @@ from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from urllib.parse import urlparse
+
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.repo_io import json_text  # noqa: E402
 
 DEFAULT_PRIVATE_NETLOCS = (
     "github.com/adpena/comma-lab",
@@ -95,8 +104,6 @@ def extract_public_links(roots: Iterable[Path], *, base_root: Path | None = None
             continue
         rel = _display_path(path, root)
         for lineno, line in enumerate(text.splitlines(), start=1):
-            if "${" in line and "}" in line:
-                continue
             for match in URL_RE.finditer(line):
                 records.append(LinkRecord(path=rel, line=lineno, url=_clean_url(match.group(0))))
     return records
@@ -216,7 +223,7 @@ def main(argv: list[str] | None = None) -> int:
 
     payload = audit_public_publish_links(args.roots, base_root=args.repo_root, live=args.live)
     if args.format == "json":
-        print(json.dumps(payload, indent=2, sort_keys=True))
+        print(json_text(payload), end="")
     elif payload["violation_count"]:
         print(
             "public publish link audit: FAIL "

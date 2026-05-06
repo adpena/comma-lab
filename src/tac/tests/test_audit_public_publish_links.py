@@ -12,12 +12,26 @@ from tools.audit_public_publish_links import (
 )
 
 
-def test_extract_public_links_skips_placeholder_lines(tmp_path: Path) -> None:
+def test_main_json_output_uses_canonical_repo_io_text(tmp_path: Path, capsys) -> None:
+    (tmp_path / "README.md").write_text("repo: https://github.com/adpena/tac\n", encoding="utf-8")
+
+    assert audit_mod.main(["--format", "json", "--repo-root", str(tmp_path), str(tmp_path)]) == 0
+
+    out = capsys.readouterr().out
+    assert out.endswith("\n")
+    assert '"link_count": 1' in out
+    assert '"schema_version": 1' in out
+    assert '"violations": []' in out
+
+
+def test_extract_public_links_ignores_placeholders_without_hiding_urls(tmp_path: Path) -> None:
+    private_url = "https://github.com/adpena/" + "comma-lab/tree/main/docs"
     (tmp_path / "README.md").write_text(
         "\n".join(
             [
                 "repo: https://github.com/adpena/tac",
                 "future: ${CLOUDFLARE_PAGES_URL}",
+                f"mixed: ${{PUBLIC_NOTEBOOK_URL}} leaked {private_url}",
             ]
         )
         + "\n",
@@ -26,8 +40,13 @@ def test_extract_public_links_skips_placeholder_lines(tmp_path: Path) -> None:
 
     links = extract_public_links([tmp_path], base_root=tmp_path)
 
-    assert [link.url for link in links] == ["https://github.com/adpena/tac"]
+    assert [link.url for link in links] == ["https://github.com/adpena/tac", private_url]
     assert links[0].path == "README.md"
+
+    payload = audit_public_publish_links([tmp_path], base_root=tmp_path)
+    assert payload["link_count"] == 2
+    assert payload["violation_count"] == 1
+    assert payload["violations"][0]["url"] == private_url
 
 
 def test_static_audit_flags_private_comma_lab_links(tmp_path: Path) -> None:

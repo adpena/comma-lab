@@ -5774,6 +5774,61 @@ Verification:
 - `.venv/bin/python tools/all_lanes_preflight.py` passed:
   `ALL 20 PREFLIGHT CHECKS PASSED`.
 
+## R90 - 2026-05-06 Public Link Audit IO Lowering
+
+Continued the public-release hardening tranche on the exported link-hygiene
+auditor. This is a behavior-preserving lowering pass: static placeholder
+skips, private-link detection, live unauthenticated link checking, and strict
+exit semantics were not changed.
+
+Changes:
+
+- Migrated `tools/audit_public_publish_links.py` to `tools.tool_bootstrap` so
+  direct script execution and module imports share the same import setup.
+- Replaced CLI JSON stdout with `tac.repo_io.json_text` to preserve the
+  repository-wide canonical pretty JSON contract.
+- Removed the whole-line placeholder skip so a public placeholder and a real
+  private URL on the same line cannot hide the private-link violation.
+- Added a CLI-level JSON output regression test covering trailing newline,
+  schema key emission, and empty-violation serialization.
+- Added a mixed placeholder/private-link regression test for the review-found
+  leak masking case.
+
+Measured inventory after R90:
+
+- local SHA helpers: `51`
+- local JSON dumps: `101`
+- manual `sys.path` bootstraps: `267`
+- manual repo-root parent probes: `364`
+- manual score/dispatch metadata mentions: `601`
+
+Within-tranche committed-surface deltas:
+
+- `tools/audit_public_publish_links.py` local JSON dump count: `1 -> 0`
+- `tools/audit_public_publish_links.py` manual `sys.path` bootstrap count:
+  `0 -> 0`
+- `tools/audit_public_publish_links.py` manual repo-root parent count: `0 -> 0`
+- `tools/audit_public_publish_links.py` local SHA helper count: `0 -> 0`
+
+Verification:
+
+- `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest
+  src/tac/tests/test_audit_public_publish_links.py
+  src/tac/tests/test_tool_bootstrap.py src/tac/tests/test_repo_io.py
+  src/tac/tests/test_audit_tooling_consolidation.py -q` passed:
+  `13 passed`.
+- `.venv/bin/python -m ruff check --select I,RUF100,F401,UP035,F821,E402
+  tools/audit_public_publish_links.py
+  src/tac/tests/test_audit_public_publish_links.py` passed.
+- `.venv/bin/python -m py_compile tools/audit_public_publish_links.py` passed.
+- `.venv/bin/python tools/audit_public_publish_links.py --format json
+  --repo-root . README.md` emitted parseable canonical JSON.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --scan-root
+  tools/audit_public_publish_links.py --format json` reported zero findings for
+  the file.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --format json`
+  reported the measured inventory above.
+
 ## R81 - 2026-05-06 Component Sensitivity Shard Merge IO Lowering
 
 Continued the Gate #7 lowering tranche on the finite-difference sensitivity
