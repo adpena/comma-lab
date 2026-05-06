@@ -1,10 +1,7 @@
 {
-  "dirty_blocked_row_count": 6,
-  "dirty_path_count": 43,
+  "dirty_blocked_row_count": 0,
+  "dirty_path_count": 9,
   "dirty_paths": [
-    ".omx/research/categorical_candidate_zip_wire_custody_20260506_codex.md",
-    ".omx/research/jcsp_runtime_parity_hardening_20260506_codex.md",
-    "experiments/plan_yousfi_fridrich_field_equations.py",
     "experiments/results/public_pr100_intake_20260504_codex/source",
     "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source",
     "experiments/results/public_pr103_intake_20260504_codex/source",
@@ -13,38 +10,7 @@
     "experiments/results/public_pr81_qzs3_range_mask_intake_20260503_codex/repo",
     "experiments/results/public_pr82_henosis_frontier_intake_20260503_codex/repo",
     "experiments/results/public_pr91_intake_20260504_worker/pr91_src/repo",
-    "reports/raw/kaggle_ingest/kaggle-dilated-h64-long1000-retry-v6-20260410T234220Z/comma_video_compression_challenge",
-    "src/tac/arithmetic_qint_codec.py",
-    "src/tac/balle_sensitivity_weighted.py",
-    "src/tac/categorical_candidate_readiness.py",
-    "src/tac/component_sensitivity_artifact.py",
-    "src/tac/joint_codec_stack_orchestrator.py",
-    "src/tac/mask_entropy_coder.py",
-    "src/tac/mdl_bayesian_codec.py",
-    "src/tac/neural_weight_codec_sensitivity.py",
-    "src/tac/optimization/entropy_codec_gap_audit.py",
-    "src/tac/optimization/field_equation_planner.py",
-    "src/tac/optimization/meta_lagrangian_allocator.py",
-    "src/tac/self_compressing_nn.py",
-    "src/tac/sensitivity_map.py",
-    "src/tac/tests/test_arithmetic_qint_codec.py",
-    "src/tac/tests/test_balle_sensitivity_weighted.py",
-    "src/tac/tests/test_build_categorical_candidate_fixture.py",
-    "src/tac/tests/test_categorical_candidate_readiness.py",
-    "src/tac/tests/test_component_sensitivity_artifact.py",
-    "src/tac/tests/test_entropy_codec_gap_audit.py",
-    "src/tac/tests/test_field_equation_planner.py",
-    "src/tac/tests/test_jcsp_model_streams.py",
-    "src/tac/tests/test_joint_codec_stack_orchestrator.py",
-    "src/tac/tests/test_mask_entropy_coder.py",
-    "src/tac/tests/test_meta_lagrangian_allocator.py",
-    "src/tac/tests/test_neural_weight_codec_sensitivity.py",
-    "src/tac/tests/test_plan_yousfi_fridrich_field_equations.py",
-    "src/tac/tests/test_sensitivity_map.py",
-    "src/tac/tests/test_tto.py",
-    "src/tac/tto.py",
-    "tools/audit_entropy_codec_gap.py",
-    "tools/build_categorical_candidate_fixture.py"
+    "reports/raw/kaggle_ingest/kaggle-dilated-h64-long1000-retry-v6-20260410T234220Z/comma_video_compression_challenge"
   ],
   "dispatch_attempted": false,
   "dispatch_blockers": [
@@ -57,9 +23,9 @@
   "next_unblocked_keys": [
     "hnerv_wavelet_wr01_apply",
     "hnerv_lowlevel_brotli_repack",
-    "telescopic_foveation_field",
-    "lapose_motion_atom_allocator",
-    "raft_radial_openpilot_pose"
+    "categorical_qma9_clade_spade_openpilot",
+    "joint_admm_balle_arithmetic_stack",
+    "hnerv_per_tensor_context_entropy"
   ],
   "ready_for_exact_eval_dispatch": false,
   "row_count": 12,
@@ -104,17 +70,14 @@
         "PR91 HPM1 still lacks full 600-frame decode/reencode and runtime loader parity",
         "PR91 HPAC device contract is ambient/contradictory in public runtime sources"
       ],
-      "dirty_path_blockers": [
-        "src/tac/categorical_candidate_readiness.py",
-        "tools/build_categorical_candidate_fixture.py"
-      ],
+      "dirty_path_blockers": [],
       "dispatch_attempted": false,
       "key": "categorical_qma9_clade_spade_openpilot",
       "next_patch": "Recover PR91/HPM1 full decode/reencode parity or replace the deterministic fixture with the first real byte-closed categorical candidate; resolve the HPAC CPU/CUDA runtime contract and pass the matching readiness audit before any lane claim or exact eval.",
       "priority_tier": 30,
-      "readiness_stage": "blocked_by_dirty_worktree",
+      "readiness_stage": "needs_byte_closed_candidate_or_fixture",
       "ready_for_exact_eval_dispatch": false,
-      "safe_to_touch_now": false,
+      "safe_to_touch_now": true,
       "score_claim": false
     },
     {
@@ -125,17 +88,14 @@
         "side information must be charged",
         "individual components do not imply score composability"
       ],
-      "dirty_path_blockers": [
-        "src/tac/arithmetic_qint_codec.py",
-        "src/tac/joint_codec_stack_orchestrator.py"
-      ],
+      "dirty_path_blockers": [],
       "dispatch_attempted": false,
       "key": "joint_admm_balle_arithmetic_stack",
       "next_patch": "Replace the fixture-only contract with a byte-closed JCSP archive member and runtime loader parity, then claim a lane before exact CUDA auth eval.",
       "priority_tier": 40,
-      "readiness_stage": "blocked_by_dirty_worktree",
+      "readiness_stage": "needs_byte_closed_candidate_or_fixture",
       "ready_for_exact_eval_dispatch": false,
-      "safe_to_touch_now": false,
+      "safe_to_touch_now": true,
       "score_claim": false
     },
     {
@@ -144,18 +104,14 @@
         "HDC1/HDC2 parity fixtures are raw-equal but still byte-negative versus source brotli",
         "requires deterministic decoder runtime before any exact eval"
       ],
-      "dirty_path_blockers": [
-        "src/tac/arithmetic_qint_codec.py",
-        "src/tac/optimization/entropy_codec_gap_audit.py",
-        "tools/audit_entropy_codec_gap.py"
-      ],
+      "dirty_path_blockers": [],
       "dispatch_attempted": false,
       "key": "hnerv_per_tensor_context_entropy",
       "next_patch": "Cluster or codebook-share HDC2 context tables; HDC2 cut PR106x penalty from +96,671B to +51,103B but remains byte-negative.",
       "priority_tier": 50,
-      "readiness_stage": "blocked_by_dirty_worktree",
+      "readiness_stage": "needs_research_or_contract_hardening",
       "ready_for_exact_eval_dispatch": false,
-      "safe_to_touch_now": false,
+      "safe_to_touch_now": true,
       "score_claim": false
     },
     {
@@ -164,17 +120,14 @@
         "stub sensitivity must fail closed",
         "component collapse risk"
       ],
-      "dirty_path_blockers": [
-        "src/tac/component_sensitivity_artifact.py",
-        "src/tac/sensitivity_map.py"
-      ],
+      "dirty_path_blockers": [],
       "dispatch_attempted": false,
       "key": "sensitivity_omega_w_v3",
       "next_patch": "Replace all-ones/stub sensitivity producers with certified CUDA/component artifacts.",
       "priority_tier": 60,
-      "readiness_stage": "blocked_by_dirty_worktree",
+      "readiness_stage": "needs_byte_closed_candidate_or_fixture",
       "ready_for_exact_eval_dispatch": false,
-      "safe_to_touch_now": false,
+      "safe_to_touch_now": true,
       "score_claim": false
     },
     {
@@ -245,16 +198,14 @@
       "blockers": [
         "planner assumes additive expected deltas until exact stacked archives land"
       ],
-      "dirty_path_blockers": [
-        "src/tac/optimization/meta_lagrangian_allocator.py"
-      ],
+      "dirty_path_blockers": [],
       "dispatch_attempted": false,
       "key": "meta_lagrangian_cross_paradigm_allocator",
       "next_patch": "Add cross-paradigm family/conflict fields and refuse dispatchable rows unless a byte-closed archive manifest is attached.",
       "priority_tier": 110,
-      "readiness_stage": "blocked_by_dirty_worktree",
+      "readiness_stage": "needs_research_or_contract_hardening",
       "ready_for_exact_eval_dispatch": false,
-      "safe_to_touch_now": false,
+      "safe_to_touch_now": true,
       "score_claim": false
     },
     {
@@ -263,28 +214,24 @@
         "runtime/export closure risk",
         "TTO must not rely on sidecars outside archive"
       ],
-      "dirty_path_blockers": [
-        "src/tac/mdl_bayesian_codec.py",
-        "src/tac/self_compressing_nn.py",
-        "src/tac/tto.py"
-      ],
+      "dirty_path_blockers": [],
       "dispatch_attempted": false,
       "key": "selfcompress_mdl_fp4_tto",
       "next_patch": "Require deterministic export manifest, inflate budget proof, and no scorer load at inflate.",
       "priority_tier": 120,
-      "readiness_stage": "blocked_by_dirty_worktree",
+      "readiness_stage": "needs_byte_closed_candidate_or_fixture",
       "ready_for_exact_eval_dispatch": false,
-      "safe_to_touch_now": false,
+      "safe_to_touch_now": true,
       "score_claim": false
     }
   ],
   "schema_version": 1,
   "score_claim": false,
   "stage_counts": {
-    "blocked_by_dirty_worktree": 6,
     "exact_evidence_present_review_before_promotion": 1,
+    "needs_byte_closed_candidate_or_fixture": 4,
     "needs_lane_claim_and_exact_cuda": 1,
-    "needs_research_or_contract_hardening": 4
+    "needs_research_or_contract_hardening": 6
   },
   "tool": "tools/build_frontier_roadmap_status.py"
 }
