@@ -24,8 +24,18 @@ Use:
 from __future__ import annotations
 
 import contextlib
+import threading
 from collections.abc import Iterator
 from pathlib import Path
+
+# Round 5 R5-4 fix (2026-05-06, 82%): class-level Path method patching is
+# fundamentally process-global. Multiple concurrent threads entering
+# cached_filesystem() raced on patch/unpatch lifecycle — thread B would skip
+# the patch (already-patched check) and then thread A's exit unpatched the
+# class while thread B was still inside its with-block. Lock the lifecycle.
+_PATCH_LOCK = threading.Lock()
+_PATCH_REFCOUNT = 0
+_PATCH_READS_REFCOUNT = 0
 
 # Globals so the patched methods can find the caches without bound state
 _RGLOB_CACHE: dict[tuple[str, str], list[Path]] = {}
@@ -156,28 +166,45 @@ def cached_filesystem(
 
     Restores originals on exit. Safe to nest — inner caches are shared with
     outer; the outer-most context owns lifecycle.
+
+    Round 5 R5-4 fix (2026-05-06, 82%): thread-safe via _PATCH_LOCK +
+    refcount. Concurrent enters bump the refcount and reuse the existing
+    patch; only the LAST exiter (refcount → 0) restores the original. This
+    prevents the patch/unpatch race documented in Round 5.
     """
-    patched_rglob = Path.rglob is not _cached_rglob
-    patched_reads = cache_reads and Path.read_text is not _cached_read_text
-    if patched_rglob:
-        Path.rglob = _cached_rglob  # type: ignore[method-assign]
-    if patched_reads:
-        Path.read_text = _cached_read_text  # type: ignore[method-assign]
-        Path.read_bytes = _cached_read_bytes  # type: ignore[method-assign]
+    global _PATCH_REFCOUNT, _PATCH_READS_REFCOUNT
+    with _PATCH_LOCK:
+        first_patch = (_PATCH_REFCOUNT == 0)
+        _PATCH_REFCOUNT += 1
+        if first_patch and Path.rglob is not _cached_rglob:
+            Path.rglob = _cached_rglob  # type: ignore[method-assign]
+        first_reads_patch = False
+        if cache_reads:
+            first_reads_patch = (_PATCH_READS_REFCOUNT == 0)
+            _PATCH_READS_REFCOUNT += 1
+            if first_reads_patch and Path.read_text is not _cached_read_text:
+                Path.read_text = _cached_read_text  # type: ignore[method-assign]
+                Path.read_bytes = _cached_read_bytes  # type: ignore[method-assign]
     try:
         yield
     finally:
-        if patched_reads:
-            Path.read_text = _ORIGINAL_READ_TEXT  # type: ignore[method-assign]
-            Path.read_bytes = _ORIGINAL_READ_BYTES  # type: ignore[method-assign]
-            _READ_TEXT_CACHE.clear()
-            _READ_BYTES_CACHE.clear()
-        if patched_rglob:
-            Path.rglob = _ORIGINAL_RGLOB  # type: ignore[method-assign]
-            _RGLOB_CACHE.clear()
-        if patched_rglob and not patched_reads:
-            _READ_TEXT_CACHE.clear()
-            _READ_BYTES_CACHE.clear()
+        with _PATCH_LOCK:
+            if cache_reads:
+                _PATCH_READS_REFCOUNT -= 1
+                if _PATCH_READS_REFCOUNT == 0:
+                    Path.read_text = _ORIGINAL_READ_TEXT  # type: ignore[method-assign]
+                    Path.read_bytes = _ORIGINAL_READ_BYTES  # type: ignore[method-assign]
+                    _READ_TEXT_CACHE.clear()
+                    _READ_BYTES_CACHE.clear()
+            _PATCH_REFCOUNT -= 1
+            if _PATCH_REFCOUNT == 0:
+                Path.rglob = _ORIGINAL_RGLOB  # type: ignore[method-assign]
+                _RGLOB_CACHE.clear()
+                # Belt-and-suspenders: clear read caches too if reads weren't
+                # already cleared by the cache_reads branch above.
+                if _PATCH_READS_REFCOUNT == 0:
+                    _READ_TEXT_CACHE.clear()
+                    _READ_BYTES_CACHE.clear()
 
 
 def cache_stats() -> dict[str, int]:

@@ -77,6 +77,17 @@ class DispatchInputError(ValueError):
 
 def _candidate_blockers(candidate: dict) -> list[str]:
     blockers: list[str] = []
+    # Round 5 R5-1 fix (2026-05-06, 95% CRITICAL): the historical
+    # `if candidate.get("dispatch_blockers"): blockers.append(...)` rejected
+    # any candidate with a non-empty list. Round 4 R4-B documented that
+    # `build_wavelet_apply_gate` and `build_wavelet_apply_transform_candidate`
+    # both emit fail-closed-by-design dispatch_blockers (4+ unconditional
+    # entries) — operators must clear those entries by hand after providing
+    # the corresponding evidence. So a non-empty list is NOT itself a
+    # blocker; the canonical clearance signal is `ready_for_exact_eval_dispatch
+    # == True`. That signal is already checked above. The dispatch_blockers
+    # list is informational ("next required evidence") and must not be the
+    # gating predicate for the actuator.
     if candidate.get("ready_for_exact_eval_dispatch") is not True:
         blockers.append("candidate_not_ready_for_exact_eval_dispatch")
     semantics = str(candidate.get("evidence_semantics") or "").strip().lower()
@@ -84,8 +95,6 @@ def _candidate_blockers(candidate: dict) -> list[str]:
         blockers.append(f"blocked_evidence_semantics:{semantics or 'missing'}")
     if candidate.get("score_claim") is True and candidate.get("score_claim_verified") is not True:
         blockers.append("unverified_score_claim")
-    if candidate.get("dispatch_blockers"):
-        blockers.append("candidate_has_dispatch_blockers")
     return blockers
 
 

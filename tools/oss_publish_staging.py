@@ -73,14 +73,19 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import hashlib
-import json
 import shutil
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
 
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.repo_io import sha256_file, write_json  # noqa: E402
 
 # Files / directories to INCLUDE in the OSS staging copy. Globs are evaluated
 # against REPO_ROOT. Order matters for human readability of MANIFEST.json.
@@ -199,14 +204,6 @@ dist/
 """
 
 
-def _sha256_file(path: Path) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 16), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 def _path_excluded(rel: Path) -> bool:
     """True if any path component or the full relative path matches any exclude pattern."""
     parts = rel.parts
@@ -263,7 +260,7 @@ def stage_oss_publish(out_dir: Path, repo_root: Path, readme_path: Path | None =
         copied.append({
             "path": str(rel),
             "bytes": dst.stat().st_size,
-            "sha256": _sha256_file(dst),
+            "sha256": sha256_file(dst),
         })
 
     # README
@@ -304,7 +301,7 @@ def stage_oss_publish(out_dir: Path, repo_root: Path, readme_path: Path | None =
         ],
     }
     manifest_dst = out_dir / "MANIFEST.json"
-    manifest_dst.write_text(json.dumps(manifest, indent=2))
+    write_json(manifest_dst, manifest)
 
     print(f"[oss-stage] copied {len(copied)} files ({sum(c['bytes'] for c in copied)} bytes total) → {out_dir}", file=sys.stderr)
     print(f"[oss-stage] wrote MANIFEST.json + README.md + LICENSE + .gitignore", file=sys.stderr)

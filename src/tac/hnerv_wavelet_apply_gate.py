@@ -74,6 +74,15 @@ def build_wavelet_apply_gate(
     _byte_delta_raw = sidechannel_manifest.get("candidate_archive_byte_delta")
     if _byte_delta_raw is None:
         _byte_delta_raw = sidechannel_manifest.get("candidate_archive_byte_delta_vs_source_estimate")
+    # Round 5 R5-2 fix (2026-05-06, 82%): _safe_int returns None for
+    # non-integer floats (e.g. JSON-rounded 3.14). The downstream "missing
+    # archive byte delta" error message would then be misleading — the key
+    # IS present, just with the wrong type. Detect explicitly and raise a
+    # clear diagnostic instead of letting the generic "missing" path fire.
+    if isinstance(_byte_delta_raw, float) and not _byte_delta_raw.is_integer():
+        raise HnervWaveletApplyGateError(
+            f"candidate_archive_byte_delta is non-integer float: {_byte_delta_raw}"
+        )
     candidate_delta = _safe_int(_byte_delta_raw)
     stacked_delta = _safe_int(stacked.get("delta_bytes_vs_pr106_zip"))
     archive_byte_delta = stacked_delta if stacked_delta is not None else candidate_delta

@@ -85,6 +85,14 @@ def test_build_hnerv_wavelet_apply_transform_candidate_cli(tmp_path: Path) -> No
     out_dir = tmp_path / "out"
     manifest_path = tmp_path / "manifest.json"
 
+    # Round 5 R5-3 fix (2026-05-06): the candidate is correctly NOT ready
+    # for archive preflight because `requires_archive_manifest_preflight`
+    # remains in dispatch_blockers (no caller has wired the upstream
+    # archive-manifest preflight call yet). Pre-R5-3 the manifest reported
+    # `ready_for_archive_preflight=True` while ALSO carrying the unwired
+    # blocker — split-brain. The test now asserts the corrected, honest
+    # state and DOES NOT pass --fail-if-not-archive-preflight-ready (which
+    # would now correctly exit 2 since the manifest is unready).
     subprocess.run(
         [
             sys.executable,
@@ -101,7 +109,6 @@ def test_build_hnerv_wavelet_apply_transform_candidate_cli(tmp_path: Path) -> No
             "1",
             "--json-out",
             str(manifest_path),
-            "--fail-if-not-archive-preflight-ready",
         ],
         check=True,
         text=True,
@@ -109,8 +116,15 @@ def test_build_hnerv_wavelet_apply_transform_candidate_cli(tmp_path: Path) -> No
 
     manifest = json.loads(manifest_path.read_text())
     assert manifest["score_claim"] is False
-    assert manifest["ready_for_archive_preflight"] is True
+    assert manifest["ready_for_archive_preflight"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert any(
+        "archive_manifest_preflight" in str(blocker).lower()
+        for blocker in manifest.get("dispatch_blockers", [])
+    ), (
+        "expected dispatch_blockers to record the unwired archive-manifest "
+        f"preflight; got {manifest.get('dispatch_blockers')}"
+    )
     assert manifest["transform_stats"]["applied_atom_count"] == 1
     candidate = read_strict_single_member_zip(manifest["candidate_archive_path"])
     assert candidate.payload[0] == 0xFF

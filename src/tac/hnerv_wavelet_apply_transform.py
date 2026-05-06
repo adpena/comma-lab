@@ -160,8 +160,20 @@ def build_wavelet_apply_transform_candidate(
         "strength_numerator": int(strength_numerator),
         "strength_denominator": int(strength_denominator),
         "transform_stats": transform_stats,
-        "ready_for_archive_preflight": True,
+        # Round 5 R5-3 fix (2026-05-06, 80%): split-brain — old code set
+        # `ready_for_archive_preflight: True` while keeping
+        # `requires_archive_manifest_preflight` in dispatch_blockers. A
+        # consumer reading `ready_for_archive_preflight` saw "ready" but the
+        # blocker list said it isn't. Aligned to the apply_gate convention:
+        # both ready_for_* flags are False; the blockers list is the canonical
+        # "next required evidence" record (per R4-B fail-closed-by-design).
+        "ready_for_archive_preflight": False,
         "ready_for_exact_eval_dispatch": False,
+        # Round 5 R5-5 fix (2026-05-06, 81%): expose source_archive_sha256 at
+        # the top-level manifest key so the apply_gate's provenance chain
+        # (which reads sidechannel_manifest.get("source_archive_sha256"))
+        # works when an apply_transform manifest is the input.
+        "source_archive_sha256": sha256_bytes(source_payload),
         "dispatch_blockers": [
             "requires_archive_manifest_preflight",
             "requires_component_response_or_exact_cuda_eval",
