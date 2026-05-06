@@ -4957,3 +4957,53 @@ Verification:
 - After staging the new audit files, `.venv/bin/python tools/all_lanes_preflight.py`
   passed: `ALL 19 PREFLIGHT CHECKS PASSED`, with Gate #11 reporting
   `preserved-orphan canonicalization`.
+
+## R73 - 2026-05-06 Recovery Custody Snapshot Preservation Audit
+
+Added an executable audit for the two unique local forensic custody surfaces
+that remain after preserved-orphan cleanup:
+
+- `.omx/state/orphan_pyc_recovery_20260505/`
+- `.omx/state/signal_loss_audit_20260505T1439Z/`
+
+Added:
+
+- `tools/audit_recovery_custody_snapshots.py`
+- `src/tac/tests/test_audit_recovery_custody_snapshots.py`
+- Gate #12 in `tools/all_lanes_preflight.py`.
+
+Current custody facts:
+
+- PYC recovery remains structurally intact: `97` recovery rows, `76`
+  parse-stub rows, `21` AST-parseable rows, `2` full decompile rows, and
+  `97/97` referenced bytecode files still present.
+- Signal-loss snapshot records no current tracked-source loss:
+  `deleted_tracked_count=0`, `modified_tracked_count=0`.
+- The quarantine audit still explicitly preserves unresolved buckets:
+  `88` incomplete/manual-rehydration records, `3` blocked launcher recovery
+  inputs, and `1` live-diff path (`docs/paper/ara/trace/events.jsonl`).
+
+Scientific/engineering position:
+
+- This audit is preservation/custody only. It does not promote recovered code,
+  delete unique snapshots, make score claims, or dispatch anything.
+- The `.omx/state/orphan_pyc_recovery_20260505/` and
+  `.omx/state/signal_loss_audit_20260505T1439Z/` directories remain local
+  forensic custody until every remaining manual bucket is explicitly promoted,
+  retired, or represented in a public/private release manifest.
+- The stale wording inside `RECOVERY_INDEX.md` about preflight being blocked is
+  historical; current all-lanes preflight is green. Preserve the old index as
+  recovery evidence and use this R73 ledger plus the executable audit for
+  current status.
+
+Verification:
+
+- `.venv/bin/python -m pytest
+  src/tac/tests/test_audit_recovery_custody_snapshots.py -q` -> `4 passed`.
+- `.venv/bin/python tools/audit_recovery_custody_snapshots.py --format json`
+  reported `ready_for_recovery_custody_preservation=true`.
+- `.venv/bin/python -m py_compile tools/audit_recovery_custody_snapshots.py
+  src/tac/tests/test_audit_recovery_custody_snapshots.py` passed.
+- After staging the new audit files, `.venv/bin/python tools/all_lanes_preflight.py`
+  passed: `ALL 20 PREFLIGHT CHECKS PASSED`, with Gate #12 reporting
+  `recovery custody snapshots`.
