@@ -705,11 +705,27 @@ def _next_required_proofs(blockers: Sequence[str]) -> list[str]:
         out.append("runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract")
     if "strict_candidate_preflight_not_ready" in blockers:
         out.append(f"passing_{STRICT_PREFLIGHT}")
+    if "missing_dispatch_identity_for_lane_claim" in blockers:
+        out.append("manifest_lane_id_and_instance_job_id_for_level2_claim")
     if "missing_active_lane_dispatch_claim" in blockers:
         out.append("matching_active_level2_lane_claim_for_manifest_lane_and_job")
     if not out:
         out.append("exact_cuda_auth_eval_on_selected_archive_bytes")
     return out
+
+
+def _dispatch_identity_proof(claim: Mapping[str, Any]) -> dict[str, Any]:
+    blockers: list[str] = []
+    if not claim.get("lane_id"):
+        blockers.append("dispatch_lane_id_missing")
+    if not claim.get("instance_job_id"):
+        blockers.append("dispatch_instance_job_id_missing")
+    return {
+        "status": "passed" if not blockers else "blocked",
+        "lane_id": str(claim.get("lane_id") or ""),
+        "instance_job_id": str(claim.get("instance_job_id") or ""),
+        "blockers": blockers,
+    }
 
 
 def _row_for_manifest(
@@ -739,6 +755,7 @@ def _row_for_manifest(
         now_utc=now_utc,
         ttl_hours=ttl_hours,
     )
+    identity = _dispatch_identity_proof(claim)
     static_blockers: list[str] = []
     if not archive["byte_closed"]:
         static_blockers.append("missing_byte_closed_archive_proof")
@@ -755,7 +772,12 @@ def _row_for_manifest(
         )
     static_blockers = _unique_strings(static_blockers)
     strict_ready = strict["candidate_static_preflight_ready"] is True
-    static_ready = bool(strict_ready and archive["byte_closed"] and runtime["runtime_closed"] and not static_blockers)
+    base_static_ready = bool(strict_ready and archive["byte_closed"] and runtime["runtime_closed"] and not static_blockers)
+    if base_static_ready and identity["status"] != "passed":
+        static_blockers.append("missing_dispatch_identity_for_lane_claim")
+        static_blockers.extend(f"identity:{blocker}" for blocker in identity["blockers"])
+        static_blockers = _unique_strings(static_blockers)
+    static_ready = bool(base_static_ready and identity["status"] == "passed")
     dispatch_blockers: list[str] = []
     if static_ready and not claim["active_lane_claim"]:
         dispatch_blockers.append("missing_active_lane_dispatch_claim")
@@ -772,8 +794,10 @@ def _row_for_manifest(
         "score_claim": False,
         "dispatch_attempted": False,
         "ready_for_exact_eval_dispatch": ready,
+        "candidate_local_preflight_ready": base_static_ready,
         "candidate_static_preflight_ready": static_ready,
         "static_candidate_blockers": static_blockers,
+        "dispatch_identity_proof": identity,
         "dispatch_claim_proof": claim,
         "strict_candidate_preflight_ready": strict_ready,
         "strict_candidate_static_preflight_ready": strict_ready,
@@ -843,6 +867,7 @@ def build_selection_report(
         key=lambda row: (
             not bool(row["ready_for_exact_eval_dispatch"]),
             not bool(row["candidate_static_preflight_ready"]),
+            not bool(row["candidate_local_preflight_ready"]),
             len(row["candidate_blockers"]),
             float(row["expected_total_score_delta"]),
             int(row["byte_delta"]),
@@ -852,6 +877,7 @@ def build_selection_report(
     )
     selected = rows[0] if rows else None
     ready_count = sum(int(row["ready_for_exact_eval_dispatch"]) for row in rows)
+    local_ready_count = sum(int(row["candidate_local_preflight_ready"]) for row in rows)
     static_ready_count = sum(int(row["candidate_static_preflight_ready"]) for row in rows)
     return {
         "schema_version": SCHEMA_VERSION,
@@ -860,8 +886,10 @@ def build_selection_report(
         "score_claim": False,
         "dispatch_attempted": False,
         "ready_for_exact_eval_dispatch": bool(selected and selected["ready_for_exact_eval_dispatch"]),
+        "candidate_local_preflight_ready": bool(selected and selected["candidate_local_preflight_ready"]),
         "candidate_static_preflight_ready": bool(selected and selected["candidate_static_preflight_ready"]),
         "candidate_count": len(rows),
+        "candidate_local_preflight_ready_count": local_ready_count,
         "candidate_static_preflight_ready_count": static_ready_count,
         "ready_candidate_count": ready_count,
         "selected_candidate": selected,

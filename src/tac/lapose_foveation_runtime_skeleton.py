@@ -23,6 +23,9 @@ PAYLOAD_MAGIC = b"LFV1"
 HEADER_STRUCT = struct.Struct("<4sHHHH")
 ROW_STRUCT = struct.Struct("<BHHHHHH")
 RUNTIME_PROOF_SKELETON_CONTRACT = "lapose_foveation_runtime_consumer_proof_skeleton_v1"
+RUNTIME_EFFECT_CONTROLS_CONTRACT = "lapose_foveation_runtime_effect_controls_v1"
+RUNTIME_STRUCTURAL_OUTPUT_CONTRACT = "lapose_foveation_runtime_structural_output_v1"
+UINT16_MAX = 65_535
 
 
 class RuntimeSkeletonError(RuntimeError):
@@ -39,6 +42,21 @@ def _sha256_file(path: Path) -> str:
 
 def _sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
+
+
+def _canonical_json_sha256(payload: dict[str, Any]) -> str:
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode(
+        "utf-8"
+    )
+    return _sha256_bytes(raw)
+
+
+def _required_int(value: Any, *, label: str, low: int, high: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise RuntimeSkeletonError(f"{label} must be an integer")
+    if not low <= value <= high:
+        raise RuntimeSkeletonError(f"{label} must be in [{low}, {high}]")
+    return int(value)
 
 
 def _decode_lfv1(payload: bytes) -> dict[str, Any]:
@@ -89,6 +107,228 @@ def _decode_lfv1(payload: bytes) -> dict[str, Any]:
     }
 
 
+def _encode_lfv1(decoded: dict[str, Any]) -> bytes:
+    if not isinstance(decoded, dict):
+        raise RuntimeSkeletonError("decoded LFV1 payload must be an object")
+    if decoded.get("magic") != PAYLOAD_MAGIC.decode("ascii"):
+        raise RuntimeSkeletonError("decoded LFV1 magic mismatch")
+    version = _required_int(
+        decoded.get("schema_version"),
+        label="decoded.schema_version",
+        low=0,
+        high=UINT16_MAX,
+    )
+    frame_width = _required_int(
+        decoded.get("frame_width"),
+        label="decoded.frame_width",
+        low=0,
+        high=UINT16_MAX,
+    )
+    frame_height = _required_int(
+        decoded.get("frame_height"),
+        label="decoded.frame_height",
+        low=0,
+        high=UINT16_MAX,
+    )
+    rows = decoded.get("rows")
+    if not isinstance(rows, list):
+        raise RuntimeSkeletonError("decoded LFV1 rows must be a list")
+    declared_row_count = _required_int(
+        decoded.get("row_count"),
+        label="decoded.row_count",
+        low=0,
+        high=UINT16_MAX,
+    )
+    if declared_row_count != len(rows):
+        raise RuntimeSkeletonError("decoded LFV1 row_count does not match rows length")
+
+    body = bytearray()
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            raise RuntimeSkeletonError(f"decoded LFV1 row {index} must be an object")
+        quantized = row.get("quantized")
+        if not isinstance(quantized, dict):
+            raise RuntimeSkeletonError(f"decoded LFV1 row {index} missing quantized values")
+        body.extend(
+            ROW_STRUCT.pack(
+                _required_int(row.get("opcode"), label=f"rows[{index}].opcode", low=0, high=255),
+                _required_int(
+                    row.get("pair_index"),
+                    label=f"rows[{index}].pair_index",
+                    low=0,
+                    high=UINT16_MAX,
+                ),
+                _required_int(
+                    quantized.get("alpha"),
+                    label=f"rows[{index}].quantized.alpha",
+                    low=0,
+                    high=UINT16_MAX,
+                ),
+                _required_int(
+                    quantized.get("radius"),
+                    label=f"rows[{index}].quantized.radius",
+                    low=0,
+                    high=UINT16_MAX,
+                ),
+                _required_int(
+                    quantized.get("power"),
+                    label=f"rows[{index}].quantized.power",
+                    low=0,
+                    high=UINT16_MAX,
+                ),
+                _required_int(
+                    quantized.get("origin_x"),
+                    label=f"rows[{index}].quantized.origin_x",
+                    low=0,
+                    high=UINT16_MAX,
+                ),
+                _required_int(
+                    quantized.get("origin_y"),
+                    label=f"rows[{index}].quantized.origin_y",
+                    low=0,
+                    high=UINT16_MAX,
+                ),
+            )
+        )
+    header = HEADER_STRUCT.pack(
+        PAYLOAD_MAGIC,
+        version,
+        len(rows),
+        frame_width,
+        frame_height,
+    )
+    return header + bytes(body)
+
+
+def _structural_output(decoded: dict[str, Any]) -> dict[str, Any]:
+    routes: list[dict[str, Any]] = []
+    for row in decoded["rows"]:
+        quantized = row["quantized"]
+        routes.append(
+            {
+                "pair_index": int(row["pair_index"]),
+                "opcode": int(row["opcode"]),
+                "quantized_alpha": int(quantized["alpha"]),
+                "quantized_radius": int(quantized["radius"]),
+                "quantized_power": int(quantized["power"]),
+                "quantized_origin_x": int(quantized["origin_x"]),
+                "quantized_origin_y": int(quantized["origin_y"]),
+            }
+        )
+    payload = {
+        "contract": RUNTIME_STRUCTURAL_OUTPUT_CONTRACT,
+        "frame_width": int(decoded["frame_width"]),
+        "frame_height": int(decoded["frame_height"]),
+        "row_count": int(decoded["row_count"]),
+        "routes": routes,
+    }
+    return {
+        "contract": RUNTIME_STRUCTURAL_OUTPUT_CONTRACT,
+        "frame_width": payload["frame_width"],
+        "frame_height": payload["frame_height"],
+        "row_count": payload["row_count"],
+        "route_count": len(routes),
+        "first_route": routes[0] if routes else None,
+        "last_route": routes[-1] if routes else None,
+        "structural_output_sha256": _canonical_json_sha256(payload),
+    }
+
+
+def _mutate_first_tuple(decoded: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    if not decoded["rows"]:
+        raise RuntimeSkeletonError("LFV1 mutation control requires at least one tuple row")
+    mutated = json.loads(json.dumps(decoded, sort_keys=True))
+    quantized = mutated["rows"][0]["quantized"]
+    old_value = int(quantized["alpha"])
+    new_value = old_value + 1 if old_value < UINT16_MAX else old_value - 1
+    quantized["alpha"] = new_value
+    return mutated, {
+        "row_index": 0,
+        "field": "quantized.alpha",
+        "old_value": old_value,
+        "new_value": new_value,
+    }
+
+
+def build_runtime_effect_control_report(payload: bytes) -> dict[str, Any]:
+    """Prove LFV1 structural controls without claiming scored output parity."""
+
+    raw = bytes(payload)
+    decoded = _decode_lfv1(raw)
+    reencoded = _encode_lfv1(decoded)
+    structural_output = _structural_output(decoded)
+    mutated_decoded, mutation = _mutate_first_tuple(decoded)
+    mutated_payload = _encode_lfv1(mutated_decoded)
+    mutated_roundtrip = _encode_lfv1(_decode_lfv1(mutated_payload))
+    mutated_structural_output = _structural_output(_decode_lfv1(mutated_payload))
+    identity_passed = reencoded == raw
+    mutation_changed_output = (
+        structural_output["structural_output_sha256"]
+        != mutated_structural_output["structural_output_sha256"]
+    )
+    mutation_roundtrip_passed = mutated_roundtrip == mutated_payload
+    structural_consumption_passed = (
+        identity_passed and mutation_changed_output and mutation_roundtrip_passed
+    )
+
+    return {
+        "schema_version": 1,
+        "runtime_effect_controls_contract": RUNTIME_EFFECT_CONTROLS_CONTRACT,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "passed": structural_consumption_passed,
+        "payload_member": PAYLOAD_MEMBER,
+        "payload_sha256": _sha256_bytes(raw),
+        "payload_bytes": len(raw),
+        "lfv1_identity_decode_control": {
+            "passed": identity_passed,
+            "decoded_row_count": decoded["row_count"],
+            "source_payload_sha256": _sha256_bytes(raw),
+            "reencoded_payload_sha256": _sha256_bytes(reencoded),
+            "byte_exact": reencoded == raw,
+        },
+        "lfv1_tuple_mutation_runtime_output_control": {
+            "passed": mutation_changed_output and mutation_roundtrip_passed,
+            "mutation": mutation,
+            "mutated_payload_sha256": _sha256_bytes(mutated_payload),
+            "mutated_payload_bytes": len(mutated_payload),
+            "mutated_identity_decode_passed": mutation_roundtrip_passed,
+            "source_structural_output_sha256": structural_output[
+                "structural_output_sha256"
+            ],
+            "mutated_structural_output_sha256": mutated_structural_output[
+                "structural_output_sha256"
+            ],
+            "structural_output_changed": mutation_changed_output,
+        },
+        "runtime_consumes_foveation_tuple_control": {
+            "passed": structural_consumption_passed,
+            "structural_output_contract": RUNTIME_STRUCTURAL_OUTPUT_CONTRACT,
+            "source_structural_output": structural_output,
+            "mutated_structural_output": mutated_structural_output,
+            "tuple_fields_in_structural_output": [
+                "opcode",
+                "pair_index",
+                "quantized.alpha",
+                "quantized.radius",
+                "quantized.power",
+                "quantized.origin_x",
+                "quantized.origin_y",
+            ],
+        },
+        "structural_runtime_consumption": {
+            "passed": structural_consumption_passed,
+            "meaning": "LFV1 tuple bytes deterministically affect the runtime skeleton structural output digest",
+        },
+        "scored_runtime_output_parity": {
+            "passed": False,
+            "meaning": "No scorer-visible frames or masks are reconstructed by this skeleton",
+            "blocker": "scored_runtime_output_parity_not_proven",
+        },
+    }
+
+
 def _read_proof(path: Path) -> dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -116,6 +356,7 @@ def verify_charged_members(archive_root: str | Path) -> dict[str, Any]:
     proof_path = root / PROOF_MEMBER
     payload_raw = payload_path.read_bytes()
     decoded = _decode_lfv1(payload_raw)
+    runtime_effect_controls = build_runtime_effect_control_report(payload_raw)
     proof = _read_proof(proof_path)
 
     charged_sha = proof.get("charged_member_sha256")
@@ -162,13 +403,17 @@ def verify_charged_members(archive_root: str | Path) -> dict[str, Any]:
         "ready_for_exact_eval_dispatch": False,
         "charged_members_verified": records,
         "lfv1_payload_decode": decoded,
+        "runtime_effect_controls": runtime_effect_controls,
+        "structural_runtime_consumption_proven": runtime_effect_controls[
+            "structural_runtime_consumption"
+        ]["passed"],
         "runtime_output_parity_proven": False,
-        "noop_controls_proven": False,
+        "scored_runtime_output_parity_proven": False,
+        "noop_controls_proven": runtime_effect_controls["passed"],
         "exact_cuda_auth_eval_proven": False,
         "dispatch_blockers": [
             "lapose_foveation_runtime_skeleton_not_a_decoder",
-            "lapose_foveation_runtime_output_parity_missing",
-            "lapose_foveation_noop_controls_missing",
+            "lapose_foveation_scored_runtime_output_parity_missing",
             "exact_cuda_auth_eval_missing",
         ],
     }

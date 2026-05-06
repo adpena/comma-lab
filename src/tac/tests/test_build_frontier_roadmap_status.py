@@ -82,6 +82,14 @@ def test_frontier_roadmap_status_is_non_dispatching_and_dirty_aware() -> None:
         "categorical_qma9_clade_spade_openpilot",
         "cmg3_predictive_mask_grammar",
     ]
+    assert workstreams["scorer_changing_mask_payload"]["dirty_blocked_keys"] == [
+        "hnerv_wavelet_wr01_apply",
+    ]
+    assert workstreams["scorer_changing_mask_payload"]["unblocked_keys"] == [
+        "categorical_qma9_clade_spade_openpilot",
+        "cmg3_predictive_mask_grammar",
+    ]
+    assert workstreams["scorer_changing_mask_payload"]["all_keys_safe_to_touch_now"] is False
     assert "no remote/GPU dispatch without an active lane claim" in tranche["global_acceptance_gates"]
 
 
@@ -93,6 +101,7 @@ def test_frontier_roadmap_status_markdown_is_operator_briefing() -> None:
     assert "Live-safe operator roadmap" in markdown
     assert "Next Comprehensive Tranche" in markdown
     assert "candidate_static_preflight_ready_count" in markdown
+    assert "dirty-blocked keys" in markdown
     assert "`rate_frontier_closure`" in markdown
     assert "`field_meta_selection`" in markdown
     assert "`hnerv_wavelet_wr01_apply`" in markdown
@@ -117,6 +126,8 @@ def test_frontier_roadmap_status_consumes_field_meta_packet_manifests(tmp_path: 
                 "score_claim": False,
                 "dispatch_attempted": False,
                 "dispatch_gate": "eligible_for_cuda_auth_eval_after_lane_claim",
+                "lane_id": "lane_generic_packet",
+                "job_name": "job_generic_packet",
                 "dispatch_unlocked": True,
                 "ready_for_exact_eval_dispatch_claim": True,
                 "archive": {
@@ -147,6 +158,7 @@ def test_frontier_roadmap_status_consumes_field_meta_packet_manifests(tmp_path: 
         "field_meta_candidate_packet_selection"
     ]
     assert packet_selection["candidate_count"] == 1
+    assert packet_selection["candidate_local_preflight_ready_count"] == 1
     assert packet_selection["candidate_static_preflight_ready_count"] == 1
     assert packet_selection["ready_candidate_count"] == 0
     assert packet_selection["selected_candidate"]["candidate_id"] == "generic_packet"

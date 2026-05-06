@@ -184,6 +184,17 @@ if [ -f "$ARCHIVE_DIR/renderer_payload.bin" ] \
   fi
 fi
 
+if [ -f "$ARCHIVE_DIR/jcsp.bin" ]; then
+  JCSP_RUNTIME_PROBE_MANIFEST="$INFLATED_DIR/jcsp_runtime_probe_manifest.json"
+  echo "[inflate] jcsp.bin detected; probing JCSP runtime bridge" >&2
+  if ! "${PYTHON:-python3}" "$SELF_DIR/jcsp_runtime_bridge.py" "$ARCHIVE_DIR" \
+      --manifest-json "$JCSP_RUNTIME_PROBE_MANIFEST"; then
+    echo "FATAL: JCSP runtime bridge refused jcsp.bin; refusing to dispatch inflate." >&2
+    echo "       Probe manifest: $JCSP_RUNTIME_PROBE_MANIFEST" >&2
+    exit 44
+  fi
+fi
+
 if [ "$PYTHON_INFLATE" = "renderer" ] \
     && [ -f "$ARCHIVE_DIR/grayscale.mkv" ] \
     && [ ! -f "$ARCHIVE_DIR/masks.mkv" ]; then

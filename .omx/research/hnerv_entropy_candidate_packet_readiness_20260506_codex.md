@@ -43,3 +43,31 @@ rate-candidate packet handoff layer and makes no score claim.
 - Existing HNeRV packing/section profiles remain fail-closed because they do
   not carry the stream `symbol_counts` required to build an entropy audit. No
   packet manifest, dispatch readiness, score claim, or lane claim was produced.
+
+## 2026-05-06 Structural Profile Adapter
+
+- [empirical:experiments/results/hnerv_entropy_packet_discovery_20260506_codex/discovery_report.json]
+  Discovery still scans 9 plausible HNeRV JSONs, but now accepts 1 valid local
+  audit source: `experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json`.
+- [empirical:experiments/results/hnerv_entropy_packet_discovery_20260506_codex/entropy_overhead_audit_from_pr106_decoder_recode_profile.json]
+  The adapter materializes a planning-only `entropy_overhead_target_ranking`
+  audit from the existing PR106 decoder structural-recode profile. It uses only
+  recorded HDC2 fixture accounting where `raw_equal`, `q_roundtrip_equal`, and
+  `scale_roundtrip_equal` are true:
+  `bytes=221381`, `header_bytes=40840`, `range_payload_bytes=180429`,
+  `raw_scale_bytes=112`.
+- The selected rank-1 target is
+  `public_pr106_belt_and_suspenders:hdc2_global_prev_symbol_contexts` with
+  `target_kind=known_model_overhead` and `target_bytes=40840`. This is a
+  local accounting target, not a byte-closed candidate and not score evidence.
+- [empirical:experiments/results/hnerv_entropy_packet_discovery_20260506_codex/candidate_packet_from_pr106_entropy_audit.json]
+  Packet materialization remains fail-closed. Required next artifacts are still
+  missing: byte-accounted model-overhead reduction manifest, model-context
+  table diff, source/candidate stream manifests, decoded-output equivalence,
+  roundtrip validation, candidate archive manifest, strict compliance JSON,
+  meta-lagrangian export, and runtime-tree parity.
+- Section-only HNeRV profiles remain rejected with a precise missing-data
+  report. Their `entropy_bits_per_byte` summaries are not treated as
+  reconstructable symbol counts; valid stream-profile input still requires
+  full `streams[*].label`, `streams[*].actual_bytes_or_bytes_charged`, and
+  `streams[*].symbol_counts_full_histogram`.

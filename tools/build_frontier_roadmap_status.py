@@ -225,6 +225,20 @@ def build_next_comprehensive_tranche(
         },
     ]
     workstreams = [stream for stream in workstreams if stream["keys"]]
+    for stream in workstreams:
+        keys = [str(key) for key in stream["keys"]]
+        dirty_blocked_keys = [
+            key
+            for key in keys
+            if rows_by_key[key].get("dirty_path_blockers")
+        ]
+        stream["unblocked_keys"] = [
+            key
+            for key in keys
+            if rows_by_key[key].get("safe_to_touch_now") is True
+        ]
+        stream["dirty_blocked_keys"] = dirty_blocked_keys
+        stream["all_keys_safe_to_touch_now"] = not dirty_blocked_keys
     return {
         "schema": "next_comprehensive_tranche_v1",
         "name": "byte-closed frontier closure and field-selected exact-eval tranche",
@@ -248,8 +262,10 @@ def build_next_comprehensive_tranche(
             "score_claim": False,
             "dispatch_attempted": False,
             "ready_for_exact_eval_dispatch": False,
+            "candidate_local_preflight_ready": False,
             "candidate_static_preflight_ready": False,
             "candidate_count": 0,
+            "candidate_local_preflight_ready_count": 0,
             "candidate_static_preflight_ready_count": 0,
             "ready_candidate_count": 0,
             "selected_candidate": None,
@@ -384,12 +400,13 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- name: `{_md(payload['next_comprehensive_tranche']['name'])}`",
         f"- objective: {_md(payload['next_comprehensive_tranche']['objective'])}",
         f"- candidate_packet_count: `{packet_selection['candidate_count']}`",
+        f"- candidate_local_preflight_ready_count: `{packet_selection['candidate_local_preflight_ready_count']}`",
         f"- candidate_static_preflight_ready_count: `{packet_selection['candidate_static_preflight_ready_count']}`",
         f"- ready_candidate_packet_count: `{packet_selection['ready_candidate_count']}`",
         f"- selected_candidate_packet: `{_md(selected_packet.get('candidate_id') or 'none')}`",
         "",
-        "| workstream | keys | acceptance gates |",
-        "|---|---|---|",
+        "| workstream | keys | dirty-blocked keys | acceptance gates |",
+        "|---|---|---|---|",
     ]
     for stream in payload["next_comprehensive_tranche"]["workstreams"]:
         lines.append(
@@ -398,6 +415,11 @@ def render_markdown(payload: dict[str, Any]) -> str:
                 (
                     f"`{_md(stream['id'])}`",
                     "<br>".join(f"`{_md(key)}`" for key in stream["keys"]),
+                    (
+                        "<br>".join(f"`{_md(key)}`" for key in stream["dirty_blocked_keys"])
+                        if stream["dirty_blocked_keys"]
+                        else "`none`"
+                    ),
                     "<br>".join(_md(gate) for gate in stream["acceptance_gates"]),
                 )
             )

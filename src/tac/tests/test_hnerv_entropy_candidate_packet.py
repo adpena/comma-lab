@@ -107,6 +107,27 @@ def test_candidate_packet_can_build_audit_from_stream_profile(tmp_path: Path) ->
     assert manifest["selected_target"]["label"] == "hnerv_decoder_weights"
 
 
+def test_candidate_packet_can_adapt_hnerv_structural_recode_profile(tmp_path: Path) -> None:
+    profile_path = tmp_path / "hnerv_decoder_recode_profile.json"
+    profile_path.write_text(json_text(_structural_recode_profile()), encoding="utf-8")
+
+    manifest = build_candidate_packet_manifest(profile_path, repo_root=REPO)
+
+    assert manifest["audit_source_kind"] == "hnerv_structural_recode_profile_adapted_entropy_overhead_audit"
+    assert manifest["audit_summary"]["tool"] == (
+        "tac.hnerv_entropy_candidate_packet.hnerv_profile_entropy_overhead_adapter"
+    )
+    assert manifest["audit_summary"]["target_count"] == 2
+    assert manifest["selected_target"]["rank"] == 1
+    assert manifest["selected_target"]["target_kind"] == "known_model_overhead"
+    assert manifest["selected_target"]["target_bytes"] == 40
+    assert manifest["selected_target"]["row"]["source_variant"]["variant"] == (
+        "range_prev_symbol_global_q_streams_plus_raw_scales"
+    )
+    assert "byte_accounted_model_overhead_reduction_manifest" in manifest["missing_artifacts"]
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
 def test_discovery_rejects_hnerv_profiles_without_entropy_stream_counts(
     tmp_path: Path,
 ) -> None:
@@ -165,8 +186,37 @@ def test_discovery_rejects_hnerv_profiles_without_entropy_stream_counts(
         "entropy_overhead_target_ranking",
         "streams",
     ]
+    assert candidate["missing_data"]["classification"] == "hnerv_section_profile_summary_only"
+    assert "streams[*].symbol_counts_full_histogram" in candidate["missing_data"]["required_inputs"]
+    assert "sections[*].entropy_bits_per_byte is a lossy summary" in candidate["missing_data"]["notes"][0]
+    assert report["missing_data_report"]["valid_entropy_audit_available"] is False
+    assert profile_path.as_posix().endswith(
+        report["missing_data_report"]["candidate_source_files"][0]["path"]
+    )
     assert "entropy audit/profile JSON must contain" in candidate["rejection_reason"]
     assert discovery_report_input_paths(report, root) == [profile_path]
+
+
+def test_discovery_selects_adapted_hnerv_structural_recode_profile(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    profile_dir = root / "experiments" / "results" / "hnerv_decoder_recode"
+    profile_dir.mkdir(parents=True)
+    profile_path = profile_dir / "profile.json"
+    profile_path.write_text(json_text(_structural_recode_profile()), encoding="utf-8")
+
+    report = discover_candidate_audit_inputs(repo_root=root)
+
+    assert report["candidate_input_count"] == 1
+    assert report["valid_input_count"] == 1
+    assert report["ready_for_packet_materialization"] is True
+    assert report["missing_source_artifacts"] == []
+    assert report["missing_data_report"]["valid_entropy_audit_available"] is True
+    assert report["selected_entropy_audit"]["path"] == "experiments/results/hnerv_decoder_recode/profile.json"
+    candidate = report["candidate_inputs"][0]
+    assert candidate["audit_source_kind"] == "hnerv_structural_recode_profile_adapted_entropy_overhead_audit"
+    assert candidate["audit_summary"]["target_count"] == 2
+    assert candidate["selected_target"]["target_kind"] == "known_model_overhead"
+    assert candidate["selected_target"]["target_bytes"] == 40
 
 
 def test_discovery_selects_valid_stream_profile_by_repo_relative_path(
@@ -279,6 +329,46 @@ def test_build_hnerv_entropy_candidate_packet_cli_discovers_missing_source_input
     assert payload["tool_run_manifest"]["input_files"][0]["sha256"] == sha256_file(profile_path)
 
 
+def test_build_hnerv_entropy_candidate_packet_cli_materializes_adapted_audit(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "scan"
+    root.mkdir()
+    profile_path = root / "hnerv_decoder_recode_profile.json"
+    profile_path.write_text(json_text(_structural_recode_profile()), encoding="utf-8")
+    audit_out = tmp_path / "entropy_audit.json"
+    packet_out = tmp_path / "packet.json"
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_hnerv_entropy_candidate_packet.py"),
+            "--search-root",
+            str(root),
+            "--entropy-audit-json-out",
+            str(audit_out),
+            "--json-out",
+            str(packet_out),
+            "--fail-if-missing",
+        ],
+        cwd=REPO,
+        text=True,
+        check=False,
+    )
+
+    assert proc.returncode == 1
+    audit = json.loads(audit_out.read_text(encoding="utf-8"))
+    packet = json.loads(packet_out.read_text(encoding="utf-8"))
+    assert audit["tool"] == "tac.hnerv_entropy_candidate_packet.hnerv_profile_entropy_overhead_adapter"
+    assert audit["audit_source_kind"] == "hnerv_structural_recode_profile_adapted_entropy_overhead_audit"
+    assert audit["entropy_overhead_target_ranking"][0]["target_kind"] == "known_model_overhead"
+    assert audit["ready_for_exact_eval_dispatch"] is False
+    assert packet["audit_source_kind"] == "entropy_codec_gap_audit"
+    assert packet["audit_source"]["path"].endswith("entropy_audit.json")
+    assert packet["selected_target"]["target_kind"] == "known_model_overhead"
+    assert packet["ready_for_exact_eval_dispatch"] is False
+
+
 def _audit() -> dict:
     return build_entropy_codec_gap_audit(_streams(), source_label="hnerv_pr106x")
 
@@ -301,3 +391,41 @@ def _streams() -> list[dict]:
             "codec_surface": "src/tac/hnerv_decoder_recode.py",
         },
     ]
+
+
+def _structural_recode_profile() -> dict:
+    return {
+        "schema_version": 1,
+        "tool": "tac.hnerv_decoder_recode.build_structural_recode_profile",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_archive_preflight": False,
+        "ready_for_exact_eval_dispatch": False,
+        "source_label": "fixture_hnerv_pr106",
+        "source_archive_sha256": "a" * 64,
+        "source_decoder_section_sha256": "b" * 64,
+        "source_decoder_section_bytes": 90,
+        "source_decoder_raw_sha256": "c" * 64,
+        "source_decoder_raw_bytes": 120,
+        "record_count": 2,
+        "q_stream_bytes": 116,
+        "scale_stream_bytes": 4,
+        "entropy_summary": {
+            "score_claim": False,
+            "per_tensor_prev_symbol_entropy_floor_plus_raw_scales_bytes": 50,
+        },
+        "variants": [
+            {
+                "variant": "range_prev_symbol_global_q_streams_plus_raw_scales",
+                "codec": "HDC2_global_prev_symbol_range_uint8",
+                "bytes": 100,
+                "header_bytes": 40,
+                "range_payload_bytes": 55,
+                "raw_scale_bytes": 5,
+                "raw_equal": True,
+                "q_roundtrip_equal": True,
+                "scale_roundtrip_equal": True,
+                "sha256": "d" * 64,
+            }
+        ],
+    }

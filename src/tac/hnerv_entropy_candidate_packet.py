@@ -7,8 +7,16 @@ from pathlib import Path
 from typing import Any
 
 from tac.optimization.entropy_codec_gap_audit import (
+    BYTE_EQUIVALENCE_BLOCKERS,
+    COMMON_EXACT_NEXT_ARTIFACT_REQUIREMENTS,
+    ENTROPY_OVERHEAD_TARGET_ACTIONS,
+    FAIL_CLOSED_CRITERIA,
+    TARGET_KIND_ARTIFACT_REQUIREMENTS,
     EntropyCodecGapAuditError,
     build_entropy_codec_gap_audit,
+)
+from tac.optimization.entropy_codec_gap_audit import (
+    DISPATCH_BLOCKERS as ENTROPY_DISPATCH_BLOCKERS,
 )
 from tac.repo_io import read_json, repo_relative, sha256_file
 
@@ -16,6 +24,8 @@ SCHEMA_VERSION = 1
 DISCOVERY_SCHEMA_VERSION = 1
 TOOL_NAME = "tac.hnerv_entropy_candidate_packet"
 DISCOVERY_TOOL_NAME = "tac.hnerv_entropy_candidate_packet.discover_candidate_audit_inputs"
+ADAPTED_AUDIT_TOOL_NAME = "tac.hnerv_entropy_candidate_packet.hnerv_profile_entropy_overhead_adapter"
+STRUCTURAL_RECODE_TOOL_NAME = "tac.hnerv_decoder_recode.build_structural_recode_profile"
 DEFAULT_DISCOVERY_ROOTS = (
     "experiments/results",
     ".omx/research/artifacts",
@@ -196,6 +206,12 @@ def build_candidate_packet_manifest(
     }
 
 
+def normalize_entropy_audit_payload(payload: Any) -> tuple[dict[str, Any], str]:
+    """Normalize a supported audit/profile payload into entropy audit shape."""
+
+    return _normalize_audit(payload)
+
+
 def existing_artifact_input_paths(
     entropy_audit_path: str | Path,
     artifact_paths: Mapping[str, str | Path] | None = None,
@@ -253,6 +269,7 @@ def discover_candidate_audit_inputs(
         "valid_input_count": len(valid_inputs),
         "selected_entropy_audit": selected["source_json"] if selected is not None else None,
         "missing_source_artifacts": [] if selected is not None else list(DISCOVERY_REQUIRED_SOURCE_ARTIFACTS),
+        "missing_data_report": _discovery_missing_data_report(candidates),
         "candidate_inputs": candidates,
     }
 
@@ -280,6 +297,9 @@ def discovery_report_input_paths(report: Mapping[str, Any], repo_root: str | Pat
 def _normalize_audit(payload: Any) -> tuple[dict[str, Any], str]:
     if isinstance(payload, Mapping) and isinstance(payload.get("entropy_overhead_target_ranking"), list):
         return dict(payload), "entropy_codec_gap_audit"
+    adapted = _adapt_hnerv_structural_recode_profile(payload)
+    if adapted is not None:
+        return adapted, "hnerv_structural_recode_profile_adapted_entropy_overhead_audit"
     if isinstance(payload, Mapping):
         streams = payload.get("streams")
         source_label = str(payload.get("source_label") or "")
@@ -301,6 +321,363 @@ def _normalize_audit(payload: Any) -> tuple[dict[str, Any], str]:
     except EntropyCodecGapAuditError as exc:
         raise HnervEntropyCandidatePacketError(f"stream profile rejected by entropy audit: {exc}") from exc
     return audit, "stream_profile_built_entropy_codec_gap_audit"
+
+
+def _adapt_hnerv_structural_recode_profile(payload: Any) -> dict[str, Any] | None:
+    if not _looks_like_hnerv_structural_recode_profile(payload):
+        return None
+    assert isinstance(payload, Mapping)
+    hdc2 = _variant_by_name(payload, "range_prev_symbol_global_q_streams_plus_raw_scales")
+    if hdc2 is None:
+        raise HnervEntropyCandidatePacketError(
+            "HNeRV structural recode profile is missing "
+            "range_prev_symbol_global_q_streams_plus_raw_scales variant"
+        )
+    _require_true(hdc2.get("raw_equal"), "hdc2.raw_equal")
+    _require_true(hdc2.get("q_roundtrip_equal"), "hdc2.q_roundtrip_equal")
+    _require_true(hdc2.get("scale_roundtrip_equal"), "hdc2.scale_roundtrip_equal")
+    hdc2_bytes = _positive_int(hdc2.get("bytes"), "hdc2.bytes")
+    header_bytes = _positive_int(hdc2.get("header_bytes"), "hdc2.header_bytes")
+    range_payload_bytes = _positive_int(hdc2.get("range_payload_bytes"), "hdc2.range_payload_bytes")
+    raw_scale_bytes = _nonnegative_int(hdc2.get("raw_scale_bytes"), "hdc2.raw_scale_bytes")
+    accounted_bytes = header_bytes + range_payload_bytes + raw_scale_bytes
+    if accounted_bytes != hdc2_bytes:
+        raise HnervEntropyCandidatePacketError(
+            "HNeRV structural recode profile HDC2 accounting is inconsistent: "
+            f"header_bytes + range_payload_bytes + raw_scale_bytes = {accounted_bytes}, "
+            f"bytes = {hdc2_bytes}"
+        )
+
+    source_label = str(payload.get("source_label") or "hnerv_structural_recode_profile")
+    source_archive_sha256 = str(payload.get("source_archive_sha256") or "")
+    source_decoder_sha256 = str(payload.get("source_decoder_section_sha256") or "")
+    stream_label = _ascii_label(f"{source_label}:hdc2_global_prev_symbol_contexts")
+    entropy_summary = payload.get("entropy_summary")
+    entropy_floor_plus_scales = _optional_positive_int_from_mapping(
+        entropy_summary,
+        "per_tensor_prev_symbol_entropy_floor_plus_raw_scales_bytes",
+    )
+    encoded_payload_with_scales = range_payload_bytes + raw_scale_bytes
+    payload_gap = (
+        encoded_payload_with_scales - entropy_floor_plus_scales
+        if entropy_floor_plus_scales is not None
+        else None
+    )
+    targets = [
+        _adapted_target_row(
+            label=stream_label,
+            source_label=source_label,
+            target_kind="known_model_overhead",
+            target_bytes=header_bytes,
+            target_bytes_field="hdc2.header_bytes",
+            accounting_source="hnerv_decoder_structural_recode_profile.hdc2_variant",
+            actual_bytes=hdc2_bytes,
+            entropy_floor_bytes=entropy_floor_plus_scales,
+            hdc2=hdc2,
+            source_archive_sha256=source_archive_sha256,
+            source_decoder_sha256=source_decoder_sha256,
+        )
+    ]
+    if payload_gap is not None and payload_gap > 0:
+        targets.append(
+            _adapted_target_row(
+                label=stream_label,
+                source_label=source_label,
+                target_kind="known_payload_entropy_gap",
+                target_bytes=payload_gap,
+                target_bytes_field=(
+                    "hdc2.range_payload_bytes_plus_raw_scale_bytes_minus_"
+                    "per_tensor_prev_symbol_entropy_floor_plus_raw_scales_bytes"
+                ),
+                accounting_source="hnerv_decoder_structural_recode_profile.entropy_summary",
+                actual_bytes=hdc2_bytes,
+                entropy_floor_bytes=entropy_floor_plus_scales,
+                hdc2=hdc2,
+                source_archive_sha256=source_archive_sha256,
+                source_decoder_sha256=source_decoder_sha256,
+            )
+        )
+    targets.sort(
+        key=lambda row: (
+            -float(row["target_bytes"]),
+            str(row["label"]),
+            str(row["target_kind"]),
+        )
+    )
+    for rank, row in enumerate(targets, start=1):
+        row["rank"] = rank
+
+    stream_row = {
+        "label": stream_label,
+        "source": source_label,
+        "codec_surface": "src/tac/hnerv_decoder_recode.py",
+        "evidence_grade": str(payload.get("evidence_grade") or "empirical"),
+        "planning_only": True,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": list(ENTROPY_DISPATCH_BLOCKERS),
+        "fail_closed_criteria": list(FAIL_CLOSED_CRITERIA),
+        "actual_bytes": hdc2_bytes,
+        "known_encoded_payload_bytes": encoded_payload_with_scales,
+        "known_model_overhead_bytes": header_bytes,
+        "known_container_overhead_bytes": 0,
+        "known_overhead_bytes": header_bytes,
+        "known_unattributed_bytes": 0,
+        "known_overhead_accounting_complete": True,
+        "entropy_floor_bytes": entropy_floor_plus_scales,
+        "known_payload_gap_to_entropy_floor_bytes": payload_gap,
+        "source_archive_sha256": source_archive_sha256,
+        "source_decoder_section_sha256": source_decoder_sha256,
+        "source_decoder_section_bytes": payload.get("source_decoder_section_bytes"),
+        "source_decoder_raw_bytes": payload.get("source_decoder_raw_bytes"),
+        "q_stream_bytes": payload.get("q_stream_bytes"),
+        "scale_stream_bytes": payload.get("scale_stream_bytes"),
+        "hdc2_variant": {
+            "variant": hdc2.get("variant"),
+            "codec": hdc2.get("codec"),
+            "bytes": hdc2_bytes,
+            "header_bytes": header_bytes,
+            "range_payload_bytes": range_payload_bytes,
+            "raw_scale_bytes": raw_scale_bytes,
+            "sha256": hdc2.get("sha256"),
+            "raw_equal": hdc2.get("raw_equal"),
+            "q_roundtrip_equal": hdc2.get("q_roundtrip_equal"),
+            "scale_roundtrip_equal": hdc2.get("scale_roundtrip_equal"),
+        },
+        "missing_for_full_symbol_count_audit": [
+            "full_hdc2_range_payload_symbol_counts",
+            "full_context_conditioned_symbol_counts",
+        ],
+    }
+    overhead = {
+        "streams_with_known_accounting": 1,
+        "complete_stream_accounting_count": 1,
+        "total_known_encoded_payload_bytes": encoded_payload_with_scales,
+        "total_known_model_overhead_bytes": header_bytes,
+        "total_known_container_overhead_bytes": 0,
+        "total_known_overhead_bytes": header_bytes,
+        "total_known_unattributed_bytes": 0,
+        "total_known_payload_gap_to_entropy_floor_bytes": payload_gap,
+        "largest_known_overhead_streams": [
+            {
+                "label": stream_label,
+                "actual_bytes": hdc2_bytes,
+                "entropy_floor_bytes": entropy_floor_plus_scales,
+                "known_encoded_payload_bytes": encoded_payload_with_scales,
+                "known_model_overhead_bytes": header_bytes,
+                "known_container_overhead_bytes": 0,
+                "known_overhead_bytes": header_bytes,
+                "known_unattributed_bytes": 0,
+                "known_overhead_accounting_complete": True,
+                "known_payload_gap_to_entropy_floor_bytes": payload_gap,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_blockers": list(ENTROPY_DISPATCH_BLOCKERS),
+            }
+        ],
+    }
+    return {
+        "schema_version": 1,
+        "tool": ADAPTED_AUDIT_TOOL_NAME,
+        "source_tool": str(payload.get("tool") or STRUCTURAL_RECODE_TOOL_NAME),
+        "planning_only": True,
+        "score_claim": False,
+        "score_evidence_grade": "invalid",
+        "dispatch_attempted": False,
+        "gpu_required": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": list(ENTROPY_DISPATCH_BLOCKERS),
+        "fail_closed_criteria": [
+            *list(FAIL_CLOSED_CRITERIA),
+            "refuse_if_hdc2_raw_roundtrip_not_true",
+            "refuse_if_hdc2_accounting_does_not_sum_to_variant_bytes",
+            "refuse_if_profile_lacks_exact_hdc2_variant_bytes",
+        ],
+        "source_label": source_label,
+        "source_archive_sha256": source_archive_sha256,
+        "source_decoder_section_sha256": source_decoder_sha256,
+        "evidence_grade": str(payload.get("evidence_grade") or "empirical"),
+        "stream_count": 1,
+        "total_actual_bytes": hdc2_bytes,
+        "known_overhead_accounting": overhead,
+        "streams": [stream_row],
+        "entropy_overhead_target_ranking": targets,
+        "adapter_notes": [
+            "adapted_from_raw_equal_hdc2_structural_recode_profile",
+            "targets_use_profile_recorded_bytes_only",
+            "section_entropy_bits_per_byte_summaries_are_not_treated_as_symbol_counts",
+        ],
+    }
+
+
+def _looks_like_hnerv_structural_recode_profile(payload: Any) -> bool:
+    if not isinstance(payload, Mapping):
+        return False
+    if str(payload.get("tool") or "") == STRUCTURAL_RECODE_TOOL_NAME:
+        return True
+    required_profile_fields = {
+        "source_decoder_section_bytes",
+        "source_decoder_raw_bytes",
+        "q_stream_bytes",
+        "scale_stream_bytes",
+        "variants",
+    }
+    if not required_profile_fields.issubset({str(key) for key in payload}):
+        return False
+    haystack = " ".join(
+        str(payload.get(key) or "") for key in ("tool", "source_label", "source_archive_sha256")
+    ).lower()
+    return "hnerv" in haystack or _variant_by_name(payload, "range_prev_symbol_global_q_streams_plus_raw_scales") is not None
+
+
+def _variant_by_name(payload: Mapping[str, Any], name: str) -> Mapping[str, Any] | None:
+    variants = payload.get("variants")
+    if not isinstance(variants, Sequence) or isinstance(variants, (str, bytes, bytearray)):
+        return None
+    for variant in variants:
+        if isinstance(variant, Mapping) and str(variant.get("variant") or "") == name:
+            return variant
+    return None
+
+
+def _adapted_target_row(
+    *,
+    label: str,
+    source_label: str,
+    target_kind: str,
+    target_bytes: int,
+    target_bytes_field: str,
+    accounting_source: str,
+    actual_bytes: int,
+    entropy_floor_bytes: int | None,
+    hdc2: Mapping[str, Any],
+    source_archive_sha256: str,
+    source_decoder_sha256: str,
+) -> dict[str, Any]:
+    action = ENTROPY_OVERHEAD_TARGET_ACTIONS[target_kind]
+    return {
+        "label": label,
+        "source": source_label,
+        "codec_surface": "src/tac/hnerv_decoder_recode.py",
+        "target_kind": target_kind,
+        "target_bytes": int(target_bytes),
+        "target_bytes_field": target_bytes_field,
+        "accounting_source": accounting_source,
+        "target_action": action["target_action"],
+        "required_next_artifact": action["required_next_artifact"],
+        "exact_next_artifact_requirements": _exact_next_artifact_requirements(target_kind),
+        "byte_equivalence_blockers": list(BYTE_EQUIVALENCE_BLOCKERS),
+        "actual_bytes": actual_bytes,
+        "entropy_floor_bytes": entropy_floor_bytes,
+        "best_static_arithmetic_container_kind": "",
+        "best_static_arithmetic_container_floor_bytes": None,
+        "known_overhead_accounting_complete": True,
+        "source_archive_sha256": source_archive_sha256,
+        "source_decoder_section_sha256": source_decoder_sha256,
+        "source_variant": {
+            "variant": hdc2.get("variant"),
+            "codec": hdc2.get("codec"),
+            "sha256": hdc2.get("sha256"),
+        },
+        "readiness_stage": "planning_target_requires_byte_equivalent_artifacts",
+        "planning_only": True,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_byte_closed_candidate_build": False,
+        "ready_for_meta_lagrangian_atom_export": False,
+        "ready_for_archive_preflight": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": list(ENTROPY_DISPATCH_BLOCKERS),
+        "fail_closed_criteria": list(FAIL_CLOSED_CRITERIA),
+        "meta_lagrangian_atom_export": {
+            "schema": "meta_lagrangian_atom_export_v1",
+            "export_ready": False,
+            "ready_for_meta_lagrangian_atom_export": False,
+            "export_blockers": [
+                "planning_target_not_byte_closed_candidate",
+                *list(BYTE_EQUIVALENCE_BLOCKERS),
+                "missing_archive_manifest_path",
+                "missing_archive_manifest_sha256",
+            ],
+            "atom_template": {
+                "atom_id": f"{_atom_id_fragment(label)}:{target_kind}",
+                "family": f"hnerv_{target_kind}",
+                "family_group": "hnerv_rate_equivalent_recode",
+                "pareto_scope": f"hnerv_rate_equivalent_recode:{_atom_id_fragment(label)}",
+                "byte_delta": -int(target_bytes),
+                "estimated_byte_delta": -int(target_bytes),
+                "target_bytes": int(target_bytes),
+                "target_bytes_field": target_bytes_field,
+                "expected_seg_dist_delta": 0.0,
+                "expected_pose_dist_delta": 0.0,
+                "confidence": 0.0,
+                "evidence_grade": "invalid_planning_target_until_byte_equivalent_candidate",
+                "raw_equal": False,
+                "score_claim": False,
+                "dispatchable": False,
+                "ready_for_exact_eval_dispatch": False,
+                "interaction_assumptions": [
+                    "rate_only_decoded_output_equivalence_required",
+                ],
+                "archive_manifest_path": "",
+                "archive_manifest_sha256": "",
+            },
+        },
+    }
+
+
+def _exact_next_artifact_requirements(target_kind: str) -> list[str]:
+    action = ENTROPY_OVERHEAD_TARGET_ACTIONS[target_kind]
+    return _unique_ordered(
+        [
+            action["required_next_artifact"],
+            *TARGET_KIND_ARTIFACT_REQUIREMENTS[target_kind],
+            *COMMON_EXACT_NEXT_ARTIFACT_REQUIREMENTS,
+        ]
+    )
+
+
+def _optional_positive_int_from_mapping(payload: Any, key: str) -> int | None:
+    if not isinstance(payload, Mapping):
+        return None
+    value = payload.get(key)
+    if value is None:
+        return None
+    return _positive_int(value, key)
+
+
+def _require_true(value: Any, context: str) -> None:
+    if value is not True:
+        raise HnervEntropyCandidatePacketError(f"{context} must be true")
+
+
+def _nonnegative_int(value: Any, context: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise HnervEntropyCandidatePacketError(f"{context} must be a non-negative integer")
+    return int(value)
+
+
+def _positive_int(value: Any, context: str) -> int:
+    integer = _nonnegative_int(value, context)
+    if integer <= 0:
+        raise HnervEntropyCandidatePacketError(f"{context} must be a positive integer")
+    return integer
+
+
+def _ascii_label(value: str) -> str:
+    label = value.strip()
+    if not label:
+        raise HnervEntropyCandidatePacketError("adapted profile label must be nonempty")
+    if any(ord(char) > 127 for char in label):
+        raise HnervEntropyCandidatePacketError("adapted profile label must be ASCII")
+    return label
+
+
+def _atom_id_fragment(value: str) -> str:
+    pieces = []
+    for char in value.lower():
+        pieces.append(char if char.isalnum() else "_")
+    return "_".join(part for part in "".join(pieces).split("_") if part) or "stream"
 
 
 def _discover_candidate_json_paths(paths: Sequence[Path], repo_root: Path) -> list[Path]:
@@ -353,6 +730,11 @@ def _candidate_discovery_record(path: Path, repo_root: Path) -> dict[str, Any]:
         payload = read_json(path)
     except Exception as exc:
         row["rejection_reason"] = f"invalid_json:{exc}"
+        row["missing_data"] = {
+            "classification": "invalid_json",
+            "required_inputs": ["parseable_json"],
+            "candidate_source_files": [source_json],
+        }
         return row
 
     row["json_shape"] = _json_shape(payload)
@@ -368,6 +750,7 @@ def _candidate_discovery_record(path: Path, repo_root: Path) -> dict[str, Any]:
     except HnervEntropyCandidatePacketError as exc:
         row["rejection_reason"] = str(exc)
         row["missing_required_fields"] = _missing_discovery_source_fields(payload)
+        row["missing_data"] = _candidate_missing_data(payload, source_json)
         return row
 
     row["valid"] = True
@@ -387,6 +770,11 @@ def _candidate_discovery_record(path: Path, repo_root: Path) -> dict[str, Any]:
         "required_next_artifact": target.get("required_next_artifact"),
     }
     row["missing_source_artifacts"] = []
+    row["missing_data"] = {
+        "classification": "sufficient_for_entropy_overhead_audit",
+        "required_inputs": [],
+        "candidate_source_files": [source_json],
+    }
     return row
 
 
@@ -425,6 +813,114 @@ def _missing_discovery_source_fields(payload: Any) -> list[str]:
             if "symbol_counts" not in stream:
                 missing.append(f"streams[{index}].symbol_counts")
     return _unique_ordered(missing)
+
+
+def _candidate_missing_data(payload: Any, source_json: Mapping[str, Any]) -> dict[str, Any]:
+    required_stream_profile = [
+        "streams[*].label",
+        "streams[*].actual_bytes_or_bytes_charged",
+        "streams[*].symbol_counts_full_histogram",
+    ]
+    if _looks_like_hnerv_structural_recode_profile(payload):
+        return {
+            "classification": "hnerv_decoder_structural_recode_profile_incomplete",
+            "required_inputs": [
+                "variants[].variant=range_prev_symbol_global_q_streams_plus_raw_scales",
+                "variants[].raw_equal=true",
+                "variants[].q_roundtrip_equal=true",
+                "variants[].scale_roundtrip_equal=true",
+                "variants[].bytes",
+                "variants[].header_bytes",
+                "variants[].range_payload_bytes",
+                "variants[].raw_scale_bytes",
+            ],
+            "candidate_source_files": [dict(source_json)],
+            "notes": [
+                "HDC2 fixture accounting is sufficient for a known_model_overhead target only when all exact bytes and raw-equivalence flags are present.",
+            ],
+        }
+    if _has_hnerv_section_profile_shape(payload):
+        return {
+            "classification": "hnerv_section_profile_summary_only",
+            "required_inputs": [
+                *required_stream_profile,
+                "or_profile_with_entropy_overhead_target_ranking",
+                "or_hnerv_decoder_structural_recode_profile_with_raw_equal_hdc2_accounting",
+            ],
+            "candidate_source_files": [dict(source_json)],
+            "notes": [
+                "sections[*].entropy_bits_per_byte is a lossy summary and cannot reconstruct symbol_counts.",
+                "section byte size, SHA-256, and entropy summaries are preserved as forensics but are not enough for a stream-count entropy audit.",
+            ],
+        }
+    if isinstance(payload, Mapping) and "entropy_summary" in payload:
+        return {
+            "classification": "entropy_summary_without_full_stream_contract",
+            "required_inputs": [
+                *required_stream_profile,
+                "or_hdc2_variant_bytes_header_bytes_range_payload_bytes_raw_scale_bytes_raw_equal_flags",
+            ],
+            "candidate_source_files": [dict(source_json)],
+            "notes": [
+                "top-symbol summaries and entropy-floor byte totals are not a replacement for the full stream profile contract unless paired with exact HDC2 overhead accounting.",
+            ],
+        }
+    return {
+        "classification": "no_supported_entropy_audit_or_profile_contract",
+        "required_inputs": [
+            "entropy_overhead_target_ranking[*].exact_next_artifact_requirements",
+            *required_stream_profile,
+            "or_hnerv_decoder_structural_recode_profile_with_raw_equal_hdc2_accounting",
+        ],
+        "candidate_source_files": [dict(source_json)],
+        "notes": [
+            "No entropy data was inferred from unrelated JSON keys.",
+        ],
+    }
+
+
+def _discovery_missing_data_report(candidates: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    required_inputs: list[str] = []
+    candidate_source_files: list[dict[str, Any]] = []
+    classifications: list[str] = []
+    for row in candidates:
+        missing = row.get("missing_data")
+        if not isinstance(missing, Mapping):
+            continue
+        classification = str(missing.get("classification") or "")
+        if classification and classification != "sufficient_for_entropy_overhead_audit":
+            classifications.append(classification)
+        for requirement in missing.get("required_inputs") or []:
+            required_inputs.append(str(requirement))
+        for source_file in missing.get("candidate_source_files") or []:
+            if isinstance(source_file, Mapping):
+                candidate_source_files.append(dict(source_file))
+    return {
+        "valid_entropy_audit_available": any(row.get("valid") is True for row in candidates),
+        "required_inputs_if_no_valid_adapter": _unique_ordered(required_inputs),
+        "candidate_source_files": _unique_file_records(candidate_source_files),
+        "invalid_candidate_classifications": _unique_ordered(classifications),
+    }
+
+
+def _has_hnerv_section_profile_shape(payload: Any) -> bool:
+    if isinstance(payload, Mapping):
+        return isinstance(payload.get("sections"), list)
+    if isinstance(payload, Sequence) and not isinstance(payload, (str, bytes, bytearray)):
+        return any(isinstance(item, Mapping) and isinstance(item.get("sections"), list) for item in payload)
+    return False
+
+
+def _unique_file_records(records: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for record in records:
+        path = str(record.get("path") or "")
+        if not path or path in seen:
+            continue
+        out.append(dict(record))
+        seen.add(path)
+    return out
 
 
 def _select_target(
@@ -575,6 +1071,7 @@ def _unique_ordered(values: Sequence[str]) -> list[str]:
 
 
 __all__ = [
+    "ADAPTED_AUDIT_TOOL_NAME",
     "BLOCKER_TO_REQUIREMENT",
     "DISCOVERY_REQUIRED_SOURCE_ARTIFACTS",
     "PACKET_DISPATCH_BLOCKERS",
@@ -585,4 +1082,5 @@ __all__ = [
     "discover_candidate_audit_inputs",
     "discovery_report_input_paths",
     "existing_artifact_input_paths",
+    "normalize_entropy_audit_payload",
 ]

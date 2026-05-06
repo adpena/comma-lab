@@ -1,7 +1,9 @@
 {
-  "candidate_count": 4,
-  "candidate_static_preflight_ready": true,
-  "candidate_static_preflight_ready_count": 1,
+  "candidate_count": 6,
+  "candidate_local_preflight_ready": true,
+  "candidate_local_preflight_ready_count": 1,
+  "candidate_static_preflight_ready": false,
+  "candidate_static_preflight_ready_count": 0,
   "dispatch_attempted": false,
   "dispatch_blockers": [
     "selection_report_only_no_dispatch",
@@ -34,35 +36,46 @@
       },
       "byte_delta": 0,
       "candidate_blockers": [
-        "missing_active_lane_dispatch_claim",
-        "claim:dispatch_lane_id_missing",
-        "claim:dispatch_instance_job_id_missing"
+        "missing_dispatch_identity_for_lane_claim",
+        "identity:dispatch_lane_id_missing",
+        "identity:dispatch_instance_job_id_missing"
       ],
       "candidate_id": "hnerv_lowlevel_repack_pr106_q10_20260506_codex",
-      "candidate_static_preflight_ready": true,
+      "candidate_local_preflight_ready": true,
+      "candidate_static_preflight_ready": false,
       "dispatch_attempted": false,
       "dispatch_claim_proof": {
         "active_claim": null,
         "active_lane_claim": false,
         "blockers": [
+          "dispatch_claim_check_missing",
           "dispatch_lane_id_missing",
           "dispatch_instance_job_id_missing"
         ],
-        "checked": true,
-        "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+        "checked": false,
+        "claims_path": null,
         "instance_job_id": "",
         "lane_id": "",
         "matching_claims": [],
-        "now_utc": "2026-05-06T22:53:55Z",
+        "now_utc": null,
         "status": "blocked",
         "ttl_hours": 24.0
+      },
+      "dispatch_identity_proof": {
+        "blockers": [
+          "dispatch_lane_id_missing",
+          "dispatch_instance_job_id_missing"
+        ],
+        "instance_job_id": "",
+        "lane_id": "",
+        "status": "blocked"
       },
       "expected_information_gain_nats": 0.0,
       "expected_total_score_delta": 0.0,
       "manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/public_replay_preflight.json",
       "manifest_sha256": "8c90a9f05924205a3f05ad3108c4475c0930ba6addbbcda9177dce04d1f609ff",
       "next_required_proof": [
-        "matching_active_level2_lane_claim_for_manifest_lane_and_job"
+        "manifest_lane_id_and_instance_job_id_for_level2_claim"
       ],
       "packet_kind": "public_replay_intake_preflight_v1",
       "ready_for_exact_eval_dispatch": false,
@@ -91,7 +104,11 @@
       },
       "schema_version": 1,
       "score_claim": false,
-      "static_candidate_blockers": [],
+      "static_candidate_blockers": [
+        "missing_dispatch_identity_for_lane_claim",
+        "identity:dispatch_lane_id_missing",
+        "identity:dispatch_instance_job_id_missing"
+      ],
       "strict_candidate_preflight": {
         "blockers": [],
         "candidate_static_preflight_ready": true,
@@ -134,23 +151,34 @@
         "strict:ready_for_exact_eval_dispatch_false"
       ],
       "candidate_id": "hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex",
+      "candidate_local_preflight_ready": false,
       "candidate_static_preflight_ready": false,
       "dispatch_attempted": false,
       "dispatch_claim_proof": {
         "active_claim": null,
         "active_lane_claim": false,
         "blockers": [
+          "dispatch_claim_check_missing",
           "dispatch_lane_id_missing",
           "dispatch_instance_job_id_missing"
         ],
-        "checked": true,
-        "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+        "checked": false,
+        "claims_path": null,
         "instance_job_id": "",
         "lane_id": "",
         "matching_claims": [],
-        "now_utc": "2026-05-06T22:53:55Z",
+        "now_utc": null,
         "status": "blocked",
         "ttl_hours": 24.0
+      },
+      "dispatch_identity_proof": {
+        "blockers": [
+          "dispatch_lane_id_missing",
+          "dispatch_instance_job_id_missing"
+        ],
+        "instance_job_id": "",
+        "lane_id": "",
+        "status": "blocked"
       },
       "expected_information_gain_nats": 0.0,
       "expected_total_score_delta": -5.9927305780995425e-06,
@@ -236,35 +264,46 @@
         "strict_candidate_preflight_not_ready",
         "strict:ready_for_exact_eval_dispatch_false"
       ],
-      "candidate_id": "joint_admm_balle_arithmetic_stack",
+      "candidate_id": "hnerv_entropy_packet_discovery_20260506_codex",
+      "candidate_local_preflight_ready": false,
       "candidate_static_preflight_ready": false,
       "dispatch_attempted": false,
       "dispatch_claim_proof": {
         "active_claim": null,
         "active_lane_claim": false,
         "blockers": [
+          "dispatch_claim_check_missing",
           "dispatch_lane_id_missing",
           "dispatch_instance_job_id_missing"
         ],
-        "checked": true,
-        "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+        "checked": false,
+        "claims_path": null,
         "instance_job_id": "",
         "lane_id": "",
         "matching_claims": [],
-        "now_utc": "2026-05-06T22:53:55Z",
+        "now_utc": null,
         "status": "blocked",
         "ttl_hours": 24.0
       },
+      "dispatch_identity_proof": {
+        "blockers": [
+          "dispatch_lane_id_missing",
+          "dispatch_instance_job_id_missing"
+        ],
+        "instance_job_id": "",
+        "lane_id": "",
+        "status": "blocked"
+      },
       "expected_information_gain_nats": 0.0,
       "expected_total_score_delta": 0.0,
-      "manifest_path": "experiments/results/joint_stack_noop_manifest_20260506_codex/manifest.json",
-      "manifest_sha256": "35a2e6a8d84625f5f0ac1e2ba1f8b9f5277ea03577f3e921cdbbd54750f25e11",
+      "manifest_path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/candidate_packet_from_pr106_entropy_audit.json",
+      "manifest_sha256": "86efa087263198ef595848bd2040326d8a4e4cdeb65954751c1c36171fe85433",
       "next_required_proof": [
         "local_archive_file_with_matching_sha256_and_bytes",
         "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
         "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py"
       ],
-      "packet_kind": "joint_admm_balle_arithmetic_noop_manifest_v1",
+      "packet_kind": "1",
       "ready_for_exact_eval_dispatch": false,
       "runtime_proof": {
         "blockers": [
@@ -337,27 +376,278 @@
         "missing_byte_closed_runtime_proof",
         "runtime:runtime_proof_missing",
         "strict_candidate_preflight_not_ready",
-        "strict:ready_for_exact_eval_dispatch_false",
-        "strict:nested_blocking_status"
+        "strict:ready_for_exact_eval_dispatch_false"
       ],
-      "candidate_id": "pr91_hpm1_readiness_20260506_codex",
+      "candidate_id": "joint_admm_balle_arithmetic_stack",
+      "candidate_local_preflight_ready": false,
       "candidate_static_preflight_ready": false,
       "dispatch_attempted": false,
       "dispatch_claim_proof": {
         "active_claim": null,
         "active_lane_claim": false,
         "blockers": [
+          "dispatch_claim_check_missing",
           "dispatch_lane_id_missing",
           "dispatch_instance_job_id_missing"
         ],
-        "checked": true,
-        "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+        "checked": false,
+        "claims_path": null,
         "instance_job_id": "",
         "lane_id": "",
         "matching_claims": [],
-        "now_utc": "2026-05-06T22:53:55Z",
+        "now_utc": null,
         "status": "blocked",
         "ttl_hours": 24.0
+      },
+      "dispatch_identity_proof": {
+        "blockers": [
+          "dispatch_lane_id_missing",
+          "dispatch_instance_job_id_missing"
+        ],
+        "instance_job_id": "",
+        "lane_id": "",
+        "status": "blocked"
+      },
+      "expected_information_gain_nats": 0.0,
+      "expected_total_score_delta": 0.0,
+      "manifest_path": "experiments/results/joint_stack_noop_manifest_20260506_codex/manifest.json",
+      "manifest_sha256": "35a2e6a8d84625f5f0ac1e2ba1f8b9f5277ea03577f3e921cdbbd54750f25e11",
+      "next_required_proof": [
+        "local_archive_file_with_matching_sha256_and_bytes",
+        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+        "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py"
+      ],
+      "packet_kind": "joint_admm_balle_arithmetic_noop_manifest_v1",
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_proof": {
+        "blockers": [
+          "runtime_proof_missing"
+        ],
+        "candidates": [],
+        "runtime_closed": false,
+        "runtime_tree_sha256": "",
+        "source": "",
+        "status": "blocked"
+      },
+      "schema_version": 1,
+      "score_claim": false,
+      "static_candidate_blockers": [
+        "missing_byte_closed_archive_proof",
+        "archive:archive_identity_missing",
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing",
+        "strict_candidate_preflight_not_ready",
+        "strict:ready_for_exact_eval_dispatch_false"
+      ],
+      "strict_candidate_preflight": {
+        "blockers": [
+          {
+            "code": "ready_for_exact_eval_dispatch_false",
+            "detail": "ready_for_exact_eval_dispatch is false",
+            "severity": "blocking"
+          }
+        ],
+        "candidate_static_preflight_ready": false,
+        "lane_claim": {
+          "active_conflicts": [],
+          "checked": false,
+          "claims_path": null,
+          "lane_id": null
+        },
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
+        "warnings": []
+      },
+      "strict_candidate_preflight_ready": false,
+      "strict_candidate_static_preflight_ready": false
+    },
+    {
+      "archive_proof": {
+        "blockers": [],
+        "byte_closed": true,
+        "bytes_actual": 222404,
+        "bytes_expected": 222404,
+        "path": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+        "sha256_actual": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+        "sha256_expected": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+        "source": "archive_object",
+        "status": "passed",
+        "zip_custody": {
+          "blockers": [],
+          "member_count": 1,
+          "member_names": [
+            "x"
+          ],
+          "status": "passed"
+        }
+      },
+      "byte_delta": 0,
+      "candidate_blockers": [
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing",
+        "strict_candidate_preflight_not_ready",
+        "strict:ready_for_exact_eval_dispatch_false",
+        "strict:nested_blocking_status",
+        "strict:exact_eval_runtime_contract:missing_for_runtime_changing_candidate"
+      ],
+      "candidate_id": "pr91_hpm1_semantic_decode_trench_20260506_codex",
+      "candidate_local_preflight_ready": false,
+      "candidate_static_preflight_ready": false,
+      "dispatch_attempted": false,
+      "dispatch_claim_proof": {
+        "active_claim": null,
+        "active_lane_claim": false,
+        "blockers": [
+          "dispatch_claim_check_missing",
+          "dispatch_lane_id_missing",
+          "dispatch_instance_job_id_missing"
+        ],
+        "checked": false,
+        "claims_path": null,
+        "instance_job_id": "",
+        "lane_id": "",
+        "matching_claims": [],
+        "now_utc": null,
+        "status": "blocked",
+        "ttl_hours": 24.0
+      },
+      "dispatch_identity_proof": {
+        "blockers": [
+          "dispatch_lane_id_missing",
+          "dispatch_instance_job_id_missing"
+        ],
+        "instance_job_id": "",
+        "lane_id": "",
+        "status": "blocked"
+      },
+      "expected_information_gain_nats": 0.0,
+      "expected_total_score_delta": 0.0,
+      "manifest_path": "experiments/results/pr91_hpm1_semantic_decode_trench_20260506_codex/semantic_decode_trench.json",
+      "manifest_sha256": "1409494e25b0fef56b0e1ed0c043f295fa7fcebc4eaa5c2c71b563cdcb65f7da",
+      "next_required_proof": [
+        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+        "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py"
+      ],
+      "packet_kind": "pr91_hpm1_semantic_decode_trench_v1",
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_proof": {
+        "blockers": [
+          "runtime_proof_missing"
+        ],
+        "candidates": [],
+        "runtime_closed": false,
+        "runtime_tree_sha256": "",
+        "source": "",
+        "status": "blocked"
+      },
+      "schema_version": 1,
+      "score_claim": false,
+      "static_candidate_blockers": [
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing",
+        "strict_candidate_preflight_not_ready",
+        "strict:ready_for_exact_eval_dispatch_false",
+        "strict:nested_blocking_status",
+        "strict:exact_eval_runtime_contract:missing_for_runtime_changing_candidate"
+      ],
+      "strict_candidate_preflight": {
+        "blockers": [
+          {
+            "code": "ready_for_exact_eval_dispatch_false",
+            "detail": "ready_for_exact_eval_dispatch is false",
+            "severity": "blocking"
+          },
+          {
+            "code": "nested_blocking_status",
+            "detail": "prefix_decode.status='failed_closed'",
+            "severity": "blocking"
+          },
+          {
+            "code": "nested_blocking_status",
+            "detail": "status='blocked_prefix_decode_entropy_contract_mismatch_after_model_load'",
+            "severity": "blocking"
+          },
+          {
+            "code": "exact_eval_runtime_contract:missing_for_runtime_changing_candidate",
+            "detail": "runtime-changing candidate must record the exact submitted inflate runtime contract",
+            "severity": "blocking"
+          }
+        ],
+        "candidate_static_preflight_ready": false,
+        "lane_claim": {
+          "active_conflicts": [],
+          "checked": false,
+          "claims_path": null,
+          "lane_id": null
+        },
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
+        "warnings": []
+      },
+      "strict_candidate_preflight_ready": false,
+      "strict_candidate_static_preflight_ready": false
+    },
+    {
+      "archive_proof": {
+        "blockers": [
+          "archive_identity_missing"
+        ],
+        "byte_closed": false,
+        "bytes_actual": null,
+        "bytes_expected": null,
+        "path": "",
+        "sha256_actual": "",
+        "sha256_expected": "",
+        "source": "",
+        "status": "blocked",
+        "zip_custody": {
+          "blockers": [
+            "archive_file_missing_for_zip_custody"
+          ],
+          "member_count": 0,
+          "member_names": [],
+          "status": "blocked"
+        }
+      },
+      "byte_delta": 0,
+      "candidate_blockers": [
+        "missing_byte_closed_archive_proof",
+        "archive:archive_identity_missing",
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing",
+        "strict_candidate_preflight_not_ready",
+        "strict:ready_for_exact_eval_dispatch_false",
+        "strict:nested_blocking_status"
+      ],
+      "candidate_id": "pr91_hpm1_readiness_20260506_codex",
+      "candidate_local_preflight_ready": false,
+      "candidate_static_preflight_ready": false,
+      "dispatch_attempted": false,
+      "dispatch_claim_proof": {
+        "active_claim": null,
+        "active_lane_claim": false,
+        "blockers": [
+          "dispatch_claim_check_missing",
+          "dispatch_lane_id_missing",
+          "dispatch_instance_job_id_missing"
+        ],
+        "checked": false,
+        "claims_path": null,
+        "instance_job_id": "",
+        "lane_id": "",
+        "matching_claims": [],
+        "now_utc": null,
+        "status": "blocked",
+        "ttl_hours": 24.0
+      },
+      "dispatch_identity_proof": {
+        "blockers": [
+          "dispatch_lane_id_missing",
+          "dispatch_instance_job_id_missing"
+        ],
+        "instance_job_id": "",
+        "lane_id": "",
+        "status": "blocked"
       },
       "expected_information_gain_nats": 0.0,
       "expected_total_score_delta": 0.0,
@@ -458,35 +748,46 @@
     },
     "byte_delta": 0,
     "candidate_blockers": [
-      "missing_active_lane_dispatch_claim",
-      "claim:dispatch_lane_id_missing",
-      "claim:dispatch_instance_job_id_missing"
+      "missing_dispatch_identity_for_lane_claim",
+      "identity:dispatch_lane_id_missing",
+      "identity:dispatch_instance_job_id_missing"
     ],
     "candidate_id": "hnerv_lowlevel_repack_pr106_q10_20260506_codex",
-    "candidate_static_preflight_ready": true,
+    "candidate_local_preflight_ready": true,
+    "candidate_static_preflight_ready": false,
     "dispatch_attempted": false,
     "dispatch_claim_proof": {
       "active_claim": null,
       "active_lane_claim": false,
       "blockers": [
+        "dispatch_claim_check_missing",
         "dispatch_lane_id_missing",
         "dispatch_instance_job_id_missing"
       ],
-      "checked": true,
-      "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+      "checked": false,
+      "claims_path": null,
       "instance_job_id": "",
       "lane_id": "",
       "matching_claims": [],
-      "now_utc": "2026-05-06T22:53:55Z",
+      "now_utc": null,
       "status": "blocked",
       "ttl_hours": 24.0
+    },
+    "dispatch_identity_proof": {
+      "blockers": [
+        "dispatch_lane_id_missing",
+        "dispatch_instance_job_id_missing"
+      ],
+      "instance_job_id": "",
+      "lane_id": "",
+      "status": "blocked"
     },
     "expected_information_gain_nats": 0.0,
     "expected_total_score_delta": 0.0,
     "manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/public_replay_preflight.json",
     "manifest_sha256": "8c90a9f05924205a3f05ad3108c4475c0930ba6addbbcda9177dce04d1f609ff",
     "next_required_proof": [
-      "matching_active_level2_lane_claim_for_manifest_lane_and_job"
+      "manifest_lane_id_and_instance_job_id_for_level2_claim"
     ],
     "packet_kind": "public_replay_intake_preflight_v1",
     "ready_for_exact_eval_dispatch": false,
@@ -515,7 +816,11 @@
     },
     "schema_version": 1,
     "score_claim": false,
-    "static_candidate_blockers": [],
+    "static_candidate_blockers": [
+      "missing_dispatch_identity_for_lane_claim",
+      "identity:dispatch_lane_id_missing",
+      "identity:dispatch_instance_job_id_missing"
+    ],
     "strict_candidate_preflight": {
       "blockers": [],
       "candidate_static_preflight_ready": true,

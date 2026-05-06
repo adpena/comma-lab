@@ -20,7 +20,9 @@ from tac.analysis.lapose_foveation_payload import (
 )
 from tac.lapose_foveation_runtime_skeleton import (
     PROOF_MEMBER,
+    RUNTIME_EFFECT_CONTROLS_CONTRACT,
     RUNTIME_PROOF_SKELETON_CONTRACT,
+    build_runtime_effect_control_report,
 )
 from tac.repo_io import json_text, repo_relative, sha256_bytes, sha256_file, write_json
 
@@ -144,6 +146,7 @@ def _runtime_proof_skeleton(
     runtime_consumer_sha256: str,
     runtime_consumer_bytes: int,
     decoded_payload: dict[str, Any],
+    runtime_effect_controls: dict[str, Any],
 ) -> dict[str, Any]:
     return {
         "schema_version": SCHEMA_VERSION,
@@ -169,16 +172,20 @@ def _runtime_proof_skeleton(
             "frame_width": decoded_payload["frame_width"],
             "frame_height": decoded_payload["frame_height"],
         },
+        "runtime_effect_controls": runtime_effect_controls,
         "proof_status": {
             "archive_contains_payload_and_runtime": True,
             "lfv1_structure_decode": True,
+            "structural_runtime_consumption": runtime_effect_controls[
+                "structural_runtime_consumption"
+            ]["passed"],
+            "scored_runtime_output_parity": False,
             "runtime_output_parity": False,
-            "noop_controls": False,
+            "noop_controls": runtime_effect_controls["passed"],
             "exact_cuda_auth_eval": False,
         },
         "dispatch_blockers": [
-            "lapose_foveation_runtime_output_parity_not_proven",
-            "lapose_foveation_noop_controls_not_run",
+            "lapose_foveation_scored_runtime_output_parity_not_proven",
             "exact_cuda_auth_eval_missing",
         ],
     }
@@ -208,6 +215,7 @@ def build_lapose_foveation_payload_archive_candidate(
     """Build a deterministic fail-closed local archive around LFV1 bytes."""
 
     decoded_payload = decode_lapose_foveation_tuple_payload(lfv1_payload)
+    runtime_effect_controls = build_runtime_effect_control_report(lfv1_payload)
     root = Path(repo_root)
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -227,6 +235,7 @@ def build_lapose_foveation_payload_archive_candidate(
             runtime_consumer_sha256=runtime_consumer_sha,
             runtime_consumer_bytes=len(runtime_consumer),
             decoded_payload=decoded_payload,
+            runtime_effect_controls=runtime_effect_controls,
         )
     ).encode("utf-8")
     member_payloads = {
@@ -296,7 +305,13 @@ def build_lapose_foveation_payload_archive_candidate(
             "sidecar_free": True,
             "fallback_used": False,
             "loaded_charged_members": [PAYLOAD_MEMBER, PROOF_MEMBER],
-            "blocker": "runtime_output_parity_not_proven",
+            "structural_runtime_consumption": runtime_effect_controls[
+                "structural_runtime_consumption"
+            ],
+            "scored_runtime_output_parity": runtime_effect_controls[
+                "scored_runtime_output_parity"
+            ],
+            "blocker": "scored_runtime_output_parity_not_proven",
         },
         "payload_decode": {
             "schema_version": SCHEMA_VERSION,
@@ -309,23 +324,21 @@ def build_lapose_foveation_payload_archive_candidate(
             "decoded_row_count": decoded_payload["row_count"],
             "sidecar_free": True,
         },
+        "runtime_effect_controls": runtime_effect_controls,
         "no_op_controls": {
-            "lfv1_identity_decode_control": {
-                "passed": False,
-                "scope": "requires decode-apply-reencode identity control",
-            },
-            "lfv1_tuple_mutation_runtime_output_control": {
-                "passed": False,
-                "scope": "requires changed LFV1 tuples to change runtime output",
-            },
+            "lfv1_identity_decode_control": runtime_effect_controls[
+                "lfv1_identity_decode_control"
+            ],
+            "lfv1_tuple_mutation_runtime_output_control": runtime_effect_controls[
+                "lfv1_tuple_mutation_runtime_output_control"
+            ],
             "charged_member_presence_control": {
                 "passed": True,
                 "scope": "archive_member_manifest_and_zip_member_sha256",
             },
-            "runtime_consumes_foveation_tuple_control": {
-                "passed": False,
-                "scope": "runtime skeleton reads LFV1 but does not reconstruct scored output",
-            },
+            "runtime_consumes_foveation_tuple_control": runtime_effect_controls[
+                "runtime_consumes_foveation_tuple_control"
+            ],
         },
         "charged_members": member_records,
         "runtime_consumer_proof_skeleton_member": {
@@ -343,7 +356,7 @@ def build_lapose_foveation_payload_archive_candidate(
                 "evidence_grade": "local_payload_archive_custody",
                 "payload_member": PAYLOAD_MEMBER,
                 "payload_sha256": payload_sha,
-                "status": "byte_closed_local_candidate_blocked_on_runtime_noop_cuda",
+                "status": "byte_closed_local_candidate_blocked_on_scored_output_cuda",
             }
         ],
     }
@@ -683,6 +696,85 @@ def _control_passed(value: Any) -> bool:
     return False
 
 
+def _runtime_effect_controls_report(
+    report: Any,
+    *,
+    raw_payload: bytes | None,
+) -> tuple[dict[str, Any], list[str]]:
+    blockers: list[str] = []
+    summary: dict[str, Any] = {
+        "schema_version": SCHEMA_VERSION,
+        "contract": RUNTIME_EFFECT_CONTROLS_CONTRACT,
+        "declared": isinstance(report, dict),
+        "accepted": False,
+        "structural_runtime_consumption": {"passed": False},
+        "scored_runtime_output_parity": {"passed": False},
+        "identity_decode_control_passed": False,
+        "tuple_mutation_control_passed": False,
+        "blockers": [],
+    }
+    if not isinstance(report, dict):
+        blockers.append("runtime_effect_controls_missing")
+        summary["blockers"] = blockers
+        return summary, blockers
+
+    summary["structural_runtime_consumption"] = report.get(
+        "structural_runtime_consumption", {"passed": False}
+    )
+    summary["scored_runtime_output_parity"] = report.get(
+        "scored_runtime_output_parity", {"passed": False}
+    )
+    summary["identity_decode_control_passed"] = _control_passed(
+        report.get("lfv1_identity_decode_control")
+    )
+    summary["tuple_mutation_control_passed"] = _control_passed(
+        report.get("lfv1_tuple_mutation_runtime_output_control")
+    )
+
+    if report.get("schema_version") != SCHEMA_VERSION:
+        blockers.append("runtime_effect_controls_schema_version_missing_or_invalid")
+    if report.get("runtime_effect_controls_contract") != RUNTIME_EFFECT_CONTROLS_CONTRACT:
+        blockers.append("runtime_effect_controls_contract_missing_or_invalid")
+    if report.get("score_claim") is not False:
+        blockers.append("runtime_effect_controls_score_claim_must_be_false")
+    if report.get("dispatch_attempted") is not False:
+        blockers.append("runtime_effect_controls_dispatch_attempted_must_be_false")
+    if report.get("ready_for_exact_eval_dispatch") is not False:
+        blockers.append("runtime_effect_controls_ready_for_exact_eval_dispatch_must_be_false")
+    if report.get("passed") is not True:
+        blockers.append("runtime_effect_controls_not_passed")
+    if not _control_passed(report.get("lfv1_identity_decode_control")):
+        blockers.append("runtime_effect_controls_identity_decode_not_passed")
+    if not _control_passed(report.get("lfv1_tuple_mutation_runtime_output_control")):
+        blockers.append("runtime_effect_controls_tuple_mutation_not_passed")
+    if not _control_passed(report.get("runtime_consumes_foveation_tuple_control")):
+        blockers.append("runtime_effect_controls_runtime_consumption_not_passed")
+
+    structural = report.get("structural_runtime_consumption")
+    if not isinstance(structural, dict) or structural.get("passed") is not True:
+        blockers.append("runtime_effect_controls_structural_consumption_not_passed")
+    scored_output = report.get("scored_runtime_output_parity")
+    if not isinstance(scored_output, dict):
+        blockers.append("runtime_effect_controls_scored_output_parity_missing")
+    elif scored_output.get("passed") is not False:
+        blockers.append("runtime_effect_controls_scored_output_parity_must_be_false")
+
+    if raw_payload is None:
+        blockers.append("runtime_effect_controls_payload_member_missing")
+    else:
+        try:
+            expected = build_runtime_effect_control_report(raw_payload)
+        except Exception as exc:
+            blockers.append(f"runtime_effect_controls_recompute_failed:{type(exc).__name__}")
+        else:
+            if report != expected:
+                blockers.append("runtime_effect_controls_report_mismatch")
+
+    summary["accepted"] = not blockers
+    summary["blockers"] = blockers
+    return summary, blockers
+
+
 def audit_lapose_foveation_payload_candidate(
     payload: dict[str, Any],
     *,
@@ -928,6 +1020,13 @@ def audit_lapose_foveation_payload_candidate(
                 no_op_summary["failed_controls"].append(name)
                 blockers.append(f"no_op_control_not_passed:{name}")
 
+    raw_lfv1_payload = archive_members.get(PAYLOAD_MEMBER)
+    runtime_effect_controls, runtime_effect_blockers = _runtime_effect_controls_report(
+        payload.get("runtime_effect_controls"),
+        raw_payload=raw_lfv1_payload,
+    )
+    blockers.extend(runtime_effect_blockers)
+
     exact_cuda_auth_eval = payload.get("exact_cuda_auth_eval")
     if not isinstance(exact_cuda_auth_eval, dict) or exact_cuda_auth_eval.get("passed") is not True:
         blockers.append("exact_cuda_auth_eval_missing")
@@ -984,6 +1083,16 @@ def audit_lapose_foveation_payload_candidate(
         "lfv1_payload_decode": payload_decode_report,
         "runtime_loader_parity": runtime_loader_parity,
         "no_op_controls": no_op_summary,
+        "runtime_effect_controls": runtime_effect_controls,
+        "runtime_consumption_audit": {
+            "structural_runtime_consumption": runtime_effect_controls[
+                "structural_runtime_consumption"
+            ],
+            "scored_runtime_output_parity": runtime_effect_controls[
+                "scored_runtime_output_parity"
+            ],
+            "scored_runtime_output_parity_required": True,
+        },
         "runtime_contract": {
             "charged_member_required": PAYLOAD_MEMBER,
             "runtime_consumer_required": True,

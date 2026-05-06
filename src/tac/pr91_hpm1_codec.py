@@ -20,14 +20,16 @@ contract is recovered from source-level evidence.
 from __future__ import annotations
 
 import hashlib
+import io
 import json
-import time
 import struct
+import time
 import zipfile
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from pathlib import Path, PurePosixPath
-from typing import Any, Mapping
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -43,10 +45,7 @@ except ImportError:  # pragma: no cover
 from tac.pr85_bundle import (
     HPM1_HEADER_BYTES,
     HPM1_MAGIC,
-    Pr85BundleError,
-    Pr85SegmentContract,
     SEGMENT_ORDER,
-    pack_pr85_bundle,
     parse_hpm1_mask_segment,
     parse_pr85_bundle,
 )
@@ -54,17 +53,15 @@ from tac.pr86_hpac_codec import (
     DEFAULT_HPAC_PROBABILITY_VARIANT,
     DEFAULT_PR86_ARCHIVE,
     EXPECTED_PR86_TOKENS_SHA256,
-    HPACMini,
+    PPMD_MEM_SIZE,
+    PROB_EPS,
     Pr86HpacReplayError,
     _categorical_from_probs,
     _group_masks,
     _normalize_probability_row,
     collect_dependency_report,
     decode_tokens_hpac,
-    encode_symbols_hpac_with_prev_context,
-    encode_tokens_hpac,
     load_hpac_model_from_ppmd,
-    read_pr86_archive,
     resolve_hpac_probability_variant,
     sha256_bytes,
     supported_hpac_probability_variant_names,
@@ -311,7 +308,7 @@ def _validate_dependency_report(report: Mapping[str, Any]) -> None:
 
 def _common_prefix_bytes(a: bytes, b: bytes) -> int:
     n = 0
-    for x, y in zip(a, b):
+    for x, y in zip(a, b, strict=False):
         if x != y:
             break
         n += 1
@@ -461,6 +458,496 @@ def load_hpm1_hpac_model(payload: Hpm1MaskPayload, *, device: str = "cpu") -> An
     )
 
 
+def _dependency_observed(report: Mapping[str, Any], name: str) -> str:
+    observed = report.get("observed", {})
+    if not isinstance(observed, Mapping):
+        return "unknown"
+    value = observed.get(name, "unknown")
+    return value if isinstance(value, str) else str(value)
+
+
+def _dependency_available(report: Mapping[str, Any], name: str) -> bool:
+    return _dependency_observed(report, name) not in {"missing", "unknown"}
+
+
+def _load_hpm1_packed_state_bytes(payload: Hpm1MaskPayload) -> tuple[bytes, Mapping[str, Any]]:
+    if torch is None:  # pragma: no cover - optional dependency path
+        raise Pr91Hpm1Error("dependency_contract", "torch_missing")
+    try:
+        import pyppmd
+    except ImportError as exc:  # pragma: no cover - optional dependency path
+        raise Pr91Hpm1Error("dependency_contract", "pyppmd_missing") from exc
+    try:
+        raw = pyppmd.decompress(
+            payload.hpac,
+            max_order=int(payload.ppmd_order),
+            mem_size=PPMD_MEM_SIZE,
+        )
+    except Exception as exc:
+        raise Pr91Hpm1Error(
+            "hpac_model_contract",
+            "ppmd_decompress_failed",
+            ppmd_order=payload.ppmd_order,
+            hpac_bytes=len(payload.hpac),
+        ) from exc
+    loaded = torch.load(io.BytesIO(raw), map_location="cpu", weights_only=False)
+    if not isinstance(loaded, Mapping):
+        raise Pr91Hpm1Error(
+            "hpac_model_contract",
+            "expected_state_dict_mapping",
+            loaded_type=type(loaded).__name__,
+        )
+    return raw, loaded
+
+
+def _tensor_bytes_sha256(tensor: Any) -> str:
+    cpu_tensor = tensor.detach().cpu().contiguous()
+    return sha256_bytes(cpu_tensor.numpy().tobytes())
+
+
+def _state_dict_tensor_inventory(state: Mapping[str, Any], *, state_kind: str) -> dict[str, Any]:
+    tensor_rows: list[dict[str, Any]] = []
+    non_tensor_rows: list[dict[str, Any]] = []
+    dtype_counts: dict[str, int] = {}
+    total_numel = 0
+    sorted_keys = sorted(str(key) for key in state)
+    for key in sorted_keys:
+        value = state[key]
+        if torch is not None and torch.is_tensor(value):
+            dtype = str(value.dtype)
+            numel = int(value.numel())
+            dtype_counts[dtype] = dtype_counts.get(dtype, 0) + 1
+            total_numel += numel
+            tensor_rows.append(
+                {
+                    "key": key,
+                    "shape": list(value.shape),
+                    "dtype": dtype,
+                    "numel": numel,
+                    "sha256": _tensor_bytes_sha256(value),
+                }
+            )
+        else:
+            non_tensor_rows.append({"key": key, "type": type(value).__name__})
+    return {
+        "state_kind": state_kind,
+        "key_count": len(sorted_keys),
+        "tensor_count": len(tensor_rows),
+        "non_tensor_count": len(non_tensor_rows),
+        "total_numel": total_numel,
+        "dtype_counts": dtype_counts,
+        "keys_sha256": sha256_bytes("\n".join(sorted_keys).encode("utf-8")),
+        "tensors": tensor_rows,
+        "non_tensors": non_tensor_rows,
+    }
+
+
+def _resolve_probe_variants(variants: tuple[str, ...] | list[str] | None) -> tuple[str, ...]:
+    if variants is None:
+        return (DEFAULT_HPAC_PROBABILITY_VARIANT,)
+    return _validate_probe_variants(tuple(variants))
+
+
+def _hpm1_probability_row_probe(
+    model: Any,
+    payload: Hpm1MaskPayload,
+    *,
+    variants: tuple[str, ...],
+    row_count: int,
+    prob_eps: float,
+    device: str,
+) -> dict[str, Any]:
+    if torch is None or F is None:  # pragma: no cover - optional dependency path
+        raise Pr91Hpm1Error("dependency_contract", "torch_missing")
+    if int(row_count) <= 0:
+        raise Pr91Hpm1Error(
+            "probability_row_probe_contract",
+            "row_count_must_be_positive",
+            row_count=row_count,
+        )
+    dev = torch.device(device)
+    masks = _group_masks(
+        payload.height,
+        payload.width,
+        P=payload.predictor_count,
+        delta=payload.delta,
+        device=dev,
+    )
+    first_group = None
+    first_mask = None
+    for group_index, mask in enumerate(masks):
+        if mask is not None:
+            first_group = group_index
+            first_mask = mask
+            break
+    if first_mask is None or first_group is None:
+        raise Pr91Hpm1Error("probability_row_probe_contract", "no_nonempty_hpac_group")
+
+    model = model.to(dev).eval()
+    with torch.no_grad():
+        idx = torch.tensor([0], dtype=torch.long, device=dev)
+        cur = torch.zeros(
+            (1, payload.height, payload.width),
+            dtype=torch.long,
+            device=dev,
+        )
+        prev = torch.zeros_like(cur)
+        logits = model(cur, idx, prev)
+        probs = F.softmax(logits.float(), dim=1)
+        rows = probs[0][:, first_mask].permute(1, 0).contiguous()
+        rows = rows[: min(int(row_count), int(rows.shape[0]))].cpu().numpy()
+
+    variant_rows: list[dict[str, Any]] = []
+    for variant_name in variants:
+        resolved = resolve_hpac_probability_variant(variant_name)
+        normalized = np.stack(
+            [
+                _normalize_probability_row(row, prob_eps=prob_eps, variant=resolved)
+                for row in rows
+            ],
+            axis=0,
+        )
+        categorical_constructed = False
+        categorical_error = ""
+        try:
+            _categorical_from_probs(rows[0], prob_eps=prob_eps, variant=resolved)
+            categorical_constructed = True
+        except Exception as exc:  # pragma: no cover - dependency-specific shape
+            categorical_error = f"{type(exc).__name__}: {exc}"
+        row_sums = normalized.sum(axis=1)
+        variant_rows.append(
+            {
+                "variant": resolved.name,
+                "probability_dtype": resolved.probability_dtype,
+                "categorical_perfect": resolved.categorical_perfect,
+                "source_contract": resolved.source_contract,
+                "normalized_rows_shape": list(normalized.shape),
+                "normalized_rows_sha256": sha256_bytes(normalized.tobytes()),
+                "first_normalized_row": [
+                    round(float(value), 10) for value in normalized[0].tolist()
+                ],
+                "row_sum_min": round(float(row_sums.min()), 10),
+                "row_sum_max": round(float(row_sums.max()), 10),
+                "categorical_constructed_first_row": categorical_constructed,
+                "categorical_error": categorical_error,
+            }
+        )
+
+    return {
+        "status": "passed_probability_row_inventory",
+        "passed": True,
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "device": device,
+        "prob_eps": float(prob_eps),
+        "first_nonempty_group": first_group,
+        "symbols_in_group": int(first_mask.sum().item()),
+        "requested_rows": int(row_count),
+        "recorded_rows": int(rows.shape[0]),
+        "raw_softmax_rows": {
+            "shape": list(rows.shape),
+            "dtype": str(rows.dtype),
+            "sha256": sha256_bytes(rows.tobytes()),
+            "first_row": [round(float(value), 10) for value in rows[0].tolist()],
+        },
+        "variant_rows": variant_rows,
+        "full_decode_proven": False,
+        "byte_exact_reencode_proven": False,
+    }
+
+
+def run_pr91_hpm1_semantic_decode_trench(
+    archive: Path = DEFAULT_PR91_ARCHIVE,
+    *,
+    device: str = "cpu",
+    probability_variants: tuple[str, ...] | list[str] | None = None,
+    probability_row_count: int = 8,
+    prob_eps: float = PROB_EPS,
+    prefix_max_frames: int | None = 1,
+    attempt_prefix_decode: bool = True,
+    output_dir: Path | None = None,
+    strict: bool = False,
+    write_json: bool = True,
+) -> dict[str, Any]:
+    """Inventory the embedded PR91 HPM1 HPAC model, then fail closed.
+
+    This is the semantic decode trench: it proves the charged HPAC model bytes
+    can be decompressed, loaded, and used to emit deterministic probability
+    rows on CPU. It does not claim decoded masks or byte-exact re-encode parity.
+    """
+
+    started_at = time.time()
+    if str(device) != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "pr91_hpm1_semantic_decode_trench_is_cpu_only",
+            requested_device=device,
+        )
+    requested_variants = _resolve_probe_variants(probability_variants)
+    archive_path = Path(archive)
+    payload = extract_pr91_hpm1_payload(archive_path)
+    mask_segment_sha = sha256_bytes(
+        build_hpm1_mask_segment(
+            payload.tokens,
+            payload.hpac,
+            N=payload.n_frames,
+            H=payload.height,
+            W=payload.width,
+            P=payload.predictor_count,
+            delta=payload.delta,
+            ch=payload.channels,
+            use_spm=bool(payload.use_spm),
+            hpac_d_film=payload.hpac_d_film,
+            ppmd_order=payload.ppmd_order,
+        )
+    )
+    dependency_report = collect_dependency_report(strict=False)
+    static_report = validate_hpm1_static_contract(payload)
+    relationship = compare_hpm1_to_pr86_hpac_contract(payload)
+    blockers: list[str] = [
+        "full_hpm1_decode_600_frames_not_proven",
+        "byte_exact_hpm1_reencode_not_proven",
+        "runtime_hpm1_loader_sidecar_free_not_proven",
+        "exact_cuda_auth_eval_not_allowed_without_local_parity",
+    ]
+    warnings: list[str] = []
+    model: Any | None = None
+    raw_state_sha = ""
+    packed_state_inventory: dict[str, Any] = {
+        "state_kind": "packed_hpac_state_dict",
+        "loaded": False,
+        "blocker": "",
+    }
+    reconstructed_state_inventory: dict[str, Any] = {
+        "state_kind": "reconstructed_hpacmini_state_dict",
+        "loaded": False,
+        "blocker": "",
+    }
+    model_load: dict[str, Any] = {
+        "status": "not_attempted",
+        "loaded": False,
+        "device": device,
+        "compressed_hpac": {
+            "bytes": len(payload.hpac),
+            "sha256": sha256_bytes(payload.hpac),
+            "ppmd_order": payload.ppmd_order,
+            "ppmd_mem_size": PPMD_MEM_SIZE,
+        },
+        "decompressed_torch_state": {
+            "bytes": None,
+            "sha256": "",
+        },
+        "blockers": [],
+    }
+
+    missing_model_deps = [
+        name
+        for name in ("torch", "pyppmd")
+        if not _dependency_available(dependency_report, name)
+    ]
+    if missing_model_deps:
+        blockers.extend(f"decoder_dependency_missing:{name}" for name in missing_model_deps)
+        model_load.update(
+            {
+                "status": "failed_closed_missing_model_dependencies",
+                "blockers": [f"missing:{name}" for name in missing_model_deps],
+            }
+        )
+    else:
+        try:
+            raw_state, packed_state = _load_hpm1_packed_state_bytes(payload)
+            raw_state_sha = sha256_bytes(raw_state)
+            packed_state_inventory = _state_dict_tensor_inventory(
+                packed_state,
+                state_kind="packed_hpac_state_dict",
+            )
+            packed_state_inventory["loaded"] = True
+            model = load_hpm1_hpac_model(payload, device=device)
+            reconstructed_state_inventory = _state_dict_tensor_inventory(
+                model.state_dict(),
+                state_kind="reconstructed_hpacmini_state_dict",
+            )
+            reconstructed_state_inventory["loaded"] = True
+            model_load.update(
+                {
+                    "status": "passed_hpac_model_load",
+                    "loaded": True,
+                    "decompressed_torch_state": {
+                        "bytes": len(raw_state),
+                        "sha256": raw_state_sha,
+                    },
+                    "model": {
+                        "type": type(model).__name__,
+                        "P": int(model.P),
+                        "delta": int(model.delta),
+                        "ch": int(model.ch),
+                        "use_spm": bool(model.use_spm),
+                        "num_classes": int(model.num_classes),
+                        "frame_embed_num_embeddings": int(model.frame_embed.num_embeddings),
+                        "frame_embed_dim": int(model.frame_embed.embedding_dim),
+                    },
+                    "blockers": [],
+                }
+            )
+        except (Pr91Hpm1Error, Pr86HpacReplayError) as exc:
+            blockers.append(f"hpac_model_load_failed:{exc.code}")
+            model_load.update(
+                {
+                    "status": "failed_closed_hpac_model_load",
+                    "blockers": [exc.code],
+                    "failure_contract": exc.contract,
+                    "failure_context": dict(exc.fields),
+                }
+            )
+
+    probability_row_probe: dict[str, Any] = {
+        "status": "not_attempted_model_not_loaded",
+        "passed": False,
+        "blockers": ["hpac_model_not_loaded"],
+    }
+    if model is not None:
+        try:
+            probability_row_probe = _hpm1_probability_row_probe(
+                model,
+                payload,
+                variants=requested_variants,
+                row_count=probability_row_count,
+                prob_eps=prob_eps,
+                device=device,
+            )
+        except (Pr91Hpm1Error, Pr86HpacReplayError) as exc:
+            blockers.append(f"probability_row_probe_failed:{exc.code}")
+            probability_row_probe = {
+                "status": "failed_closed_probability_row_probe",
+                "passed": False,
+                "failure_contract": exc.contract,
+                "failure_reason": exc.code,
+                "failure_context": dict(exc.fields),
+                "blockers": [exc.code],
+            }
+
+    prefix_decode: dict[str, Any] = {
+        "attempted": bool(attempt_prefix_decode),
+        "status": "not_attempted",
+        "passed": False,
+        "max_frames": prefix_max_frames,
+    }
+    if model is None:
+        prefix_decode["status"] = "not_attempted_model_not_loaded"
+    elif not attempt_prefix_decode:
+        prefix_decode["status"] = "not_attempted_by_request"
+        blockers.append("prefix_decode_not_attempted")
+    else:
+        try:
+            decoded, decode_report = decode_tokens_hpac(
+                model,
+                payload.tokens,
+                payload.n_frames,
+                payload.height,
+                payload.width,
+                payload.predictor_count,
+                payload.delta,
+                device=device,
+                prob_eps=prob_eps,
+                probability_variant=DEFAULT_HPAC_PROBABILITY_VARIANT,
+                max_frames=prefix_max_frames,
+                return_report=True,
+            )
+            prefix_decode = {
+                "attempted": True,
+                "status": "passed_prefix_decode",
+                "passed": True,
+                "max_frames": prefix_max_frames,
+                "decoded_tokens": {
+                    "shape": list(decoded.shape),
+                    "sha256": sha256_bytes(decoded.tobytes()),
+                },
+                "decode_report": decode_report,
+            }
+            blockers.append("full_decode_not_attempted_after_prefix")
+        except Pr86HpacReplayError as exc:
+            blockers.append(f"prefix_decode_failed:{exc.code}")
+            prefix_decode = {
+                "attempted": True,
+                "status": "failed_closed",
+                "passed": False,
+                "max_frames": prefix_max_frames,
+                "failure_stage": exc.contract,
+                "failure_reason": exc.code,
+                "failure_context": dict(exc.fields),
+            }
+
+    if model_load["loaded"] and prefix_decode["status"] == "failed_closed":
+        status = "blocked_prefix_decode_entropy_contract_mismatch_after_model_load"
+    elif model_load["loaded"] and probability_row_probe.get("passed") is True:
+        status = "blocked_full_decode_reencode_not_proven_after_model_row_inventory"
+    else:
+        status = "blocked_hpac_model_load_or_probability_row_inventory"
+
+    report: dict[str, Any] = {
+        "schema": "pr91_hpm1_semantic_decode_trench_v1",
+        "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_semantic_decode_trench",
+        "recorded_at_utc": datetime.now(UTC).replace(microsecond=0).isoformat(),
+        "status": status,
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "dispatch_performed": False,
+        "gpu_or_remote_work": False,
+        "local_only": True,
+        "ready_for_exact_eval_dispatch": False,
+        "promotion_eligible": False,
+        "evidence_grade": "local_hpac_model_load_probability_row_inventory",
+        "device": device,
+        "archive": _archive_report(archive_path),
+        "hpm1_static_contract": static_report,
+        "pr86_hpac_relationship": relationship,
+        "dependency_report": dependency_report,
+        "payload": {
+            "config": payload.config(),
+            "mask_segment_sha256": mask_segment_sha,
+            "expected_pr91_mask_segment_sha256": EXPECTED_PR91_HPM1_MASK_SHA256,
+            "tokens_bytes": len(payload.tokens),
+            "tokens_sha256": sha256_bytes(payload.tokens),
+            "hpac_bytes": len(payload.hpac),
+            "hpac_sha256": sha256_bytes(payload.hpac),
+        },
+        "hpac_model_load": model_load,
+        "packed_state_inventory": packed_state_inventory,
+        "reconstructed_state_inventory": reconstructed_state_inventory,
+        "probability_row_probe": probability_row_probe,
+        "prefix_decode": prefix_decode,
+        "full_decode": {
+            "passed": False,
+            "frame_count": 0,
+            "decoded_masks_sha256": "",
+            "refusal_reason": "full_600_frame_hpm1_decode_not_proven",
+        },
+        "byte_exact_semantic_reencode": {
+            "passed": False,
+            "byte_exact": False,
+            "reencoded_hpm1_sha256": "",
+            "refusal_reason": "semantic_decode_or_range_reencode_parity_not_proven",
+        },
+        "semantic_decode_blockers": sorted(set(blockers)),
+        "warnings": warnings,
+        "next_required_proofs": [
+            "repair the HPAC probability/range contract past the local prefix failure",
+            "decode all 600 HPM1 frames from the exact PR91 token stream on CPU",
+            "record decoded mask tensor SHA-256 and context-window traces",
+            "range-encode decoded symbols back to the exact token stream SHA-256",
+            "prove charged runtime HPM1 loading without sidecars or fallback",
+        ],
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
+    if raw_state_sha:
+        report["hpac_model_load"]["decompressed_torch_state"]["sha256"] = raw_state_sha
+    if write_json and output_dir is not None:
+        write_json_report(report, Path(output_dir) / "semantic_decode_trench.json")
+    if strict and report["ready_for_exact_eval_dispatch"] is not True:
+        raise Pr91Hpm1Error("hpm1_semantic_decode_trench", str(report["status"]), report=report)
+    return _jsonable(report)
+
+
 def run_pr91_hpm1_preflight(
     archive: Path,
     *,
@@ -524,7 +1011,7 @@ def run_pr91_hpm1_preflight(
     report: dict[str, Any] = {
         "schema_version": 1,
         "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_preflight",
-        "recorded_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "recorded_at_utc": datetime.now(UTC).replace(microsecond=0).isoformat(),
         "status": "blocked_hpm1_probability_range_contract_mismatch",
         "score_claim": False,
         "dispatch_performed": False,
@@ -648,7 +1135,7 @@ def run_pr91_hpm1_probability_variant_matrix(
     report = {
         "schema": "pr91_hpm1_probability_variant_matrix_v1",
         "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_probability_variant_matrix",
-        "recorded_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "recorded_at_utc": datetime.now(UTC).replace(microsecond=0).isoformat(),
         "status": "blocked_hpm1_probability_range_contract_mismatch",
         "score_claim": False,
         "dispatch_allowed": False,
@@ -804,7 +1291,7 @@ def run_pr91_hpm1_first_symbol_state_probe(
         {
             "schema_version": 1,
             "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_first_symbol_state_probe",
-            "recorded_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+            "recorded_at_utc": datetime.now(UTC).replace(microsecond=0).isoformat(),
             "status": "blocked_hpm1_probability_range_contract_mismatch",
             "score_claim": False,
             "dispatch_performed": False,
@@ -911,7 +1398,7 @@ def run_pr91_hpm1_context_window_probe(
         {
             "schema_version": 1,
             "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_context_window_probe",
-            "recorded_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+            "recorded_at_utc": datetime.now(UTC).replace(microsecond=0).isoformat(),
             "status": "blocked_hpm1_probability_range_contract_mismatch",
             "score_claim": False,
             "dispatch_performed": False,
@@ -1014,6 +1501,7 @@ def build_hpm1_mask_segment(
     for name, value in zip(
         ("N", "H", "W", "P", "delta", "ch", "use_spm", "hpac_d_film", "tokens_len", "hpac_len", "ppmd_order"),
         fields,
+        strict=True,
     ):
         if int(value) < 0:
             raise Pr91Hpm1Error("hpm1_segment_builder", "negative_header_field", field=name, value=value)
@@ -1031,6 +1519,7 @@ def build_hpm1_mask_segment(
     for name, value in zip(
         ("N", "H", "W", "P", "delta", "ch", "use_spm", "hpac_d_film", "tokens_len", "hpac_len", "ppmd_order"),
         fields,
+        strict=True,
     ):
         if name not in required_positive:
             continue

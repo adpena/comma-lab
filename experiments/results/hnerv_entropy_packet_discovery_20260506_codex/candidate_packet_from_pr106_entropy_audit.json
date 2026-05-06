@@ -1,0 +1,404 @@
+{
+  "archive_manifest_requirements": [
+    "candidate_archive_manifest_with_member_sha256s",
+    "strict_pre_submission_compliance_json"
+  ],
+  "audit_source": {
+    "bytes": 18138,
+    "id": "entropy_audit_json",
+    "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/entropy_overhead_audit_from_pr106_decoder_recode_profile.json",
+    "sha256": "0514a47f7e786f5353d4a3329a3f7be734d03dbd0816b7376dde536c5d639d82"
+  },
+  "audit_source_kind": "entropy_codec_gap_audit",
+  "audit_summary": {
+    "source_label": "public_pr106_belt_and_suspenders",
+    "stream_count": 1,
+    "target_count": 2,
+    "tool": "tac.hnerv_entropy_candidate_packet.hnerv_profile_entropy_overhead_adapter",
+    "total_actual_bytes": 221381
+  },
+  "available_inputs": [
+    {
+      "bytes": 18138,
+      "id": "entropy_audit_json",
+      "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/entropy_overhead_audit_from_pr106_decoder_recode_profile.json",
+      "sha256": "0514a47f7e786f5353d4a3329a3f7be734d03dbd0816b7376dde536c5d639d82"
+    }
+  ],
+  "byte_equivalence_requirements": [
+    "old_new_model_context_table_diff",
+    "candidate_stream_section_sha256_byte_range_and_byte_count",
+    "old_new_decoded_output_sha256_equality_report",
+    "roundtrip_decode_validation_manifest"
+  ],
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "missing_artifact:byte_accounted_model_overhead_reduction_manifest",
+    "missing_artifact:byte_accounted_static_model_context_reduction_manifest",
+    "missing_artifact:old_new_model_context_table_diff",
+    "missing_artifact:source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256",
+    "missing_artifact:source_stream_section_sha256_byte_range_and_symbol_count",
+    "missing_artifact:candidate_stream_section_sha256_byte_range_and_byte_count",
+    "missing_artifact:old_new_decoded_output_sha256_equality_report",
+    "missing_artifact:roundtrip_decode_validation_manifest",
+    "missing_artifact:candidate_archive_manifest_with_member_sha256s",
+    "missing_artifact:strict_pre_submission_compliance_json",
+    "missing_artifact:meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions",
+    "missing_artifact:runtime_tree_parity_manifest",
+    "missing_source_archive_manifest",
+    "missing_source_stream_sha256_and_byte_range",
+    "missing_candidate_stream_sha256_and_byte_range",
+    "missing_decoded_output_byte_equivalence_report",
+    "missing_roundtrip_decode_validation_manifest",
+    "missing_candidate_archive_manifest",
+    "missing_runtime_tree_parity_manifest",
+    "packet_manifest_is_not_dispatch_authorization",
+    "requires_operator_review_of_byte_equivalence_runtime_parity_and_archive_manifest",
+    "requires_lane_dispatch_claim_before_gpu",
+    "requires_exact_cuda_auth_eval"
+  ],
+  "gpu_required": false,
+  "invalid_json_artifacts": [],
+  "missing_artifacts": [
+    "byte_accounted_model_overhead_reduction_manifest",
+    "byte_accounted_static_model_context_reduction_manifest",
+    "old_new_model_context_table_diff",
+    "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256",
+    "source_stream_section_sha256_byte_range_and_symbol_count",
+    "candidate_stream_section_sha256_byte_range_and_byte_count",
+    "old_new_decoded_output_sha256_equality_report",
+    "roundtrip_decode_validation_manifest",
+    "candidate_archive_manifest_with_member_sha256s",
+    "strict_pre_submission_compliance_json",
+    "meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions",
+    "runtime_tree_parity_manifest"
+  ],
+  "packet_requirements": [
+    {
+      "available": false,
+      "bytes": null,
+      "id": "byte_accounted_model_overhead_reduction_manifest",
+      "missing_reason": "not_provided",
+      "path": "",
+      "provided": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requirement_group": "target_specific",
+      "score_claim": false,
+      "sha256": null
+    },
+    {
+      "available": false,
+      "bytes": null,
+      "id": "byte_accounted_static_model_context_reduction_manifest",
+      "missing_reason": "not_provided",
+      "path": "",
+      "provided": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requirement_group": "target_specific",
+      "score_claim": false,
+      "sha256": null
+    },
+    {
+      "available": false,
+      "bytes": null,
+      "id": "old_new_model_context_table_diff",
+      "missing_reason": "not_provided",
+      "path": "",
+      "provided": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requirement_group": "byte_equivalence",
+      "score_claim": false,
+      "sha256": null
+    },
+    {
+      "available": false,
+      "bytes": null,
+      "id": "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256",
+      "missing_reason": "not_provided",
+      "path": "",
+      "provided": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requirement_group": "source_custody",
+      "score_claim": false,
+      "sha256": null
+    },
+    {
+      "available": false,
+      "bytes": null,
+      "id": "source_stream_section_sha256_byte_range_and_symbol_count",
+      "missing_reason": "not_provided",
+      "path": "",
+      "provided": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requirement_group": "source_custody",
+      "score_claim": false,
+      "sha256": null
+    },
+    {
+      "available": false,
+      "bytes": null,
+      "id": "candidate_stream_section_sha256_byte_range_and_byte_count",
+      "missing_reason": "not_provided",
+      "path": "",
+      "provided": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requirement_group": "byte_equivalence",
+      "score_claim": false,
+      "sha256": null
+    },
+    {
+      "available": false,
+      "bytes": null,
+      "id": "old_new_decoded_output_sha256_equality_report",
+      "missing_reason": "not_provided",
+      "path": "",
+      "provided": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requirement_group": "byte_equivalence",
+      "score_claim": false,
+      "sha256": null
+    },
+    {
+      "available": false,
+      "bytes": null,
+      "id": "roundtrip_decode_validation_manifest",
+      "missing_reason": "not_provided",
+      "path": "",
+      "provided": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requirement_group": "byte_equivalence",
+      "score_claim": false,
+      "sha256": null
+    },
+    {
+      "available": false,
+      "bytes": null,
+      "id": "candidate_archive_manifest_with_member_sha256s",
+      "missing_reason": "not_provided",
+      "path": "",
+      "provided": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requirement_group": "archive_manifest",
+      "score_claim": false,
+      "sha256": null
+    },
+    {
+      "available": false,
+      "bytes": null,
+      "id": "strict_pre_submission_compliance_json",
+      "missing_reason": "not_provided",
+      "path": "",
+      "provided": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requirement_group": "archive_manifest",
+      "score_claim": false,
+      "sha256": null
+    },
+    {
+      "available": false,
+      "bytes": null,
+      "id": "meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions",
+      "missing_reason": "not_provided",
+      "path": "",
+      "provided": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requirement_group": "target_specific",
+      "score_claim": false,
+      "sha256": null
+    },
+    {
+      "available": false,
+      "bytes": null,
+      "id": "runtime_tree_parity_manifest",
+      "missing_reason": "not_provided",
+      "path": "",
+      "provided": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requirement_group": "runtime_parity",
+      "score_claim": false,
+      "sha256": null
+    }
+  ],
+  "planning_only": true,
+  "readiness_blockers": [
+    "missing_artifact:byte_accounted_model_overhead_reduction_manifest",
+    "missing_artifact:byte_accounted_static_model_context_reduction_manifest",
+    "missing_artifact:old_new_model_context_table_diff",
+    "missing_artifact:source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256",
+    "missing_artifact:source_stream_section_sha256_byte_range_and_symbol_count",
+    "missing_artifact:candidate_stream_section_sha256_byte_range_and_byte_count",
+    "missing_artifact:old_new_decoded_output_sha256_equality_report",
+    "missing_artifact:roundtrip_decode_validation_manifest",
+    "missing_artifact:candidate_archive_manifest_with_member_sha256s",
+    "missing_artifact:strict_pre_submission_compliance_json",
+    "missing_artifact:meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions",
+    "missing_artifact:runtime_tree_parity_manifest",
+    "missing_source_archive_manifest",
+    "missing_source_stream_sha256_and_byte_range",
+    "missing_candidate_stream_sha256_and_byte_range",
+    "missing_decoded_output_byte_equivalence_report",
+    "missing_roundtrip_decode_validation_manifest",
+    "missing_candidate_archive_manifest",
+    "missing_runtime_tree_parity_manifest"
+  ],
+  "ready_for_archive_preflight": false,
+  "ready_for_byte_closed_candidate_build": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_local_packet_review": false,
+  "runtime_parity_requirements": [
+    "runtime_tree_parity_manifest"
+  ],
+  "schema_version": 1,
+  "score_claim": false,
+  "score_evidence_grade": "invalid",
+  "selected_target": {
+    "label": "public_pr106_belt_and_suspenders:hdc2_global_prev_symbol_contexts",
+    "rank": 1,
+    "required_next_artifact": "byte_accounted_model_overhead_reduction_manifest",
+    "row": {
+      "accounting_source": "hnerv_decoder_structural_recode_profile.hdc2_variant",
+      "actual_bytes": 221381,
+      "best_static_arithmetic_container_floor_bytes": null,
+      "best_static_arithmetic_container_kind": "",
+      "byte_equivalence_blockers": [
+        "missing_source_archive_manifest",
+        "missing_source_stream_sha256_and_byte_range",
+        "missing_candidate_stream_sha256_and_byte_range",
+        "missing_decoded_output_byte_equivalence_report",
+        "missing_roundtrip_decode_validation_manifest",
+        "missing_candidate_archive_manifest",
+        "missing_runtime_tree_parity_manifest"
+      ],
+      "codec_surface": "src/tac/hnerv_decoder_recode.py",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_entropy_codec_gap_audit",
+        "requires_byte_equivalent_codec_transform",
+        "requires_roundtrip_decode_validation",
+        "requires_archive_manifest_preflight",
+        "requires_runtime_parity_proof",
+        "requires_lane_dispatch_claim_before_gpu",
+        "requires_exact_cuda_auth_eval"
+      ],
+      "entropy_floor_bytes": 156562,
+      "exact_next_artifact_requirements": [
+        "byte_accounted_model_overhead_reduction_manifest",
+        "byte_accounted_static_model_context_reduction_manifest",
+        "old_new_model_context_table_diff",
+        "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256",
+        "source_stream_section_sha256_byte_range_and_symbol_count",
+        "candidate_stream_section_sha256_byte_range_and_byte_count",
+        "old_new_decoded_output_sha256_equality_report",
+        "roundtrip_decode_validation_manifest",
+        "candidate_archive_manifest_with_member_sha256s",
+        "strict_pre_submission_compliance_json",
+        "meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions"
+      ],
+      "fail_closed_criteria": [
+        "refuse_if_counts_missing_or_nonpositive",
+        "refuse_if_actual_bytes_missing_or_nonpositive",
+        "refuse_if_count_record_sequence_is_malformed",
+        "refuse_if_known_overhead_accounting_exceeds_actual_bytes",
+        "refuse_if_huffman_lengths_not_prefix_floor",
+        "refuse_if_aq_floor_used_with_alphabet_size_less_than_two",
+        "refuse_if_roundtrip_decode_validation_missing"
+      ],
+      "known_overhead_accounting_complete": true,
+      "label": "public_pr106_belt_and_suspenders:hdc2_global_prev_symbol_contexts",
+      "meta_lagrangian_atom_export": {
+        "atom_template": {
+          "archive_manifest_path": "",
+          "archive_manifest_sha256": "",
+          "atom_id": "public_pr106_belt_and_suspenders_hdc2_global_prev_symbol_contexts:known_model_overhead",
+          "byte_delta": -40840,
+          "confidence": 0.0,
+          "dispatchable": false,
+          "estimated_byte_delta": -40840,
+          "evidence_grade": "invalid_planning_target_until_byte_equivalent_candidate",
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "family": "hnerv_known_model_overhead",
+          "family_group": "hnerv_rate_equivalent_recode",
+          "interaction_assumptions": [
+            "rate_only_decoded_output_equivalence_required"
+          ],
+          "pareto_scope": "hnerv_rate_equivalent_recode:public_pr106_belt_and_suspenders_hdc2_global_prev_symbol_contexts",
+          "raw_equal": false,
+          "ready_for_exact_eval_dispatch": false,
+          "score_claim": false,
+          "target_bytes": 40840,
+          "target_bytes_field": "hdc2.header_bytes"
+        },
+        "export_blockers": [
+          "planning_target_not_byte_closed_candidate",
+          "missing_source_archive_manifest",
+          "missing_source_stream_sha256_and_byte_range",
+          "missing_candidate_stream_sha256_and_byte_range",
+          "missing_decoded_output_byte_equivalence_report",
+          "missing_roundtrip_decode_validation_manifest",
+          "missing_candidate_archive_manifest",
+          "missing_runtime_tree_parity_manifest",
+          "missing_archive_manifest_path",
+          "missing_archive_manifest_sha256"
+        ],
+        "export_ready": false,
+        "ready_for_meta_lagrangian_atom_export": false,
+        "schema": "meta_lagrangian_atom_export_v1"
+      },
+      "planning_only": true,
+      "rank": 1,
+      "readiness_stage": "planning_target_requires_byte_equivalent_artifacts",
+      "ready_for_archive_preflight": false,
+      "ready_for_byte_closed_candidate_build": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_meta_lagrangian_atom_export": false,
+      "required_next_artifact": "byte_accounted_model_overhead_reduction_manifest",
+      "score_claim": false,
+      "source": "public_pr106_belt_and_suspenders",
+      "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+      "source_decoder_section_sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
+      "source_variant": {
+        "codec": "HDC2_global_prev_symbol_range_uint8",
+        "sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f",
+        "variant": "range_prev_symbol_global_q_streams_plus_raw_scales"
+      },
+      "target_action": "reduce_or_share_static_model_context_metadata",
+      "target_bytes": 40840,
+      "target_bytes_field": "hdc2.header_bytes",
+      "target_kind": "known_model_overhead"
+    },
+    "target_action": "reduce_or_share_static_model_context_metadata",
+    "target_bytes": 40840,
+    "target_bytes_field": "hdc2.header_bytes",
+    "target_kind": "known_model_overhead"
+  },
+  "source_artifact_requirements": [
+    "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256",
+    "source_stream_section_sha256_byte_range_and_symbol_count"
+  ],
+  "tool": "tac.hnerv_entropy_candidate_packet",
+  "tool_run_manifest": {
+    "argv": [
+      "--entropy-audit",
+      "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",
+      "--entropy-audit-json-out",
+      "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/entropy_overhead_audit_from_pr106_decoder_recode_profile.json",
+      "--json-out",
+      "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/candidate_packet_from_pr106_entropy_audit.json"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "e275165865bdfa09c69b1283fe762adda81b08f80bb4fef06440c0f3556591be",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 18138,
+        "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/entropy_overhead_audit_from_pr106_decoder_recode_profile.json",
+        "sha256": "0514a47f7e786f5353d4a3329a3f7be734d03dbd0816b7376dde536c5d639d82"
+      }
+    ],
+    "output_path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/candidate_packet_from_pr106_entropy_audit.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/build_hnerv_entropy_candidate_packet.py"
+  }
+}

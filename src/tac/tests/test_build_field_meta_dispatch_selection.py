@@ -35,10 +35,43 @@ def test_field_meta_selector_reports_static_ready_but_not_dispatch_ready_without
     assert row["strict_candidate_static_preflight_ready"] is True
     assert row["archive_proof"]["byte_closed"] is True
     assert row["runtime_proof"]["runtime_closed"] is True
+    assert row["dispatch_identity_proof"]["status"] == "passed"
     assert row["dispatch_claim_proof"]["checked"] is False
     assert "missing_active_lane_dispatch_claim" in row["candidate_blockers"]
     assert row["next_required_proof"] == [
         "matching_active_level2_lane_claim_for_manifest_lane_and_job",
+    ]
+
+
+def test_field_meta_selector_requires_lane_and_job_identity_for_static_ready(
+    tmp_path: Path,
+) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="identity_missing_candidate",
+    )
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    assert report["candidate_local_preflight_ready"] is True
+    assert report["candidate_local_preflight_ready_count"] == 1
+    assert report["candidate_static_preflight_ready"] is False
+    assert report["candidate_static_preflight_ready_count"] == 0
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["ready_candidate_count"] == 0
+    assert row["strict_candidate_preflight_ready"] is True
+    assert row["candidate_local_preflight_ready"] is True
+    assert row["archive_proof"]["byte_closed"] is True
+    assert row["runtime_proof"]["runtime_closed"] is True
+    assert row["dispatch_identity_proof"]["status"] == "blocked"
+    assert row["dispatch_identity_proof"]["blockers"] == [
+        "dispatch_lane_id_missing",
+        "dispatch_instance_job_id_missing",
+    ]
+    assert "missing_dispatch_identity_for_lane_claim" in row["candidate_blockers"]
+    assert row["next_required_proof"] == [
+        "manifest_lane_id_and_instance_job_id_for_level2_claim",
     ]
 
 
@@ -154,6 +187,8 @@ def test_field_meta_selector_is_deterministic_and_orders_static_ready_packets_fi
         tmp_path / "ready",
         candidate_id="ready",
         expected_score_delta=-0.0002,
+        lane_id="lane_ready",
+        job_name="job_ready",
     )
 
     first = build_selection_report(repo_root=REPO, manifest_paths=[blocked, ready])
@@ -167,7 +202,12 @@ def test_field_meta_selector_is_deterministic_and_orders_static_ready_packets_fi
 
 
 def test_build_field_meta_dispatch_selection_cli_writes_json(tmp_path: Path) -> None:
-    manifest = _packet_manifest(tmp_path, candidate_id="cli_candidate")
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="cli_candidate",
+        lane_id="lane_cli_candidate",
+        job_name="job_cli_candidate",
+    )
     out = tmp_path / "selection.json"
 
     subprocess.run(

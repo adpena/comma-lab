@@ -144,7 +144,13 @@ JCSP_MODEL_STREAM_ARCHIVE_READINESS_SCHEMA: str = (
 JCSP_SUBMISSION_RUNTIME_CONSUMPTION_SCHEMA: str = (
     "jcsp_submission_runtime_consumption_contract_v1"
 )
+JCSP_SUBMISSION_RUNTIME_BRIDGE_PROBE_SCHEMA: str = (
+    "jcsp_submission_runtime_bridge_probe_v1"
+)
 JCSP_REQUIRED_SUBMISSION_RUNTIME: str = "submissions/robust_current"
+JCSP_SUBMISSION_RUNTIME_BRIDGE_PATH: str = (
+    "submissions/robust_current/jcsp_runtime_bridge.py"
+)
 JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER: str = (
     "submissions_robust_current_jcsp_bin_consumption_missing"
 )
@@ -1618,12 +1624,16 @@ def _jcsp_submission_runtime_consumption_contract(
         "schema": JCSP_SUBMISSION_RUNTIME_CONSUMPTION_SCHEMA,
         "score_claim": False,
         "required_submission_runtime": JCSP_REQUIRED_SUBMISSION_RUNTIME,
+        "runtime_bridge_path": JCSP_SUBMISSION_RUNTIME_BRIDGE_PATH,
+        "runtime_bridge_probe_schema": JCSP_SUBMISSION_RUNTIME_BRIDGE_PROBE_SCHEMA,
         "required_member_name": member_name,
+        "detects_required_member": True,
         "consumes_required_member": False,
         "dispatch_blocker": JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
         "evidence": (
-            "submissions/robust_current does not yet consume jcsp.bin during "
-            "inflate"
+            "submissions/robust_current probes jcsp.bin during inflate and "
+            "fails closed, but does not yet decode JCSP streams or emit frames "
+            "from them"
         ),
     }
 
@@ -2271,6 +2281,7 @@ __all__ = [
     "JCSP_MODEL_STREAM_ARCHIVE_READINESS_SCHEMA",
     "JCSP_STREAM_ARCHIVE_BYTE_RECONCILIATION_SCHEMA",
     "JCSP_STREAM_METADATA_SCHEMA",
+    "JCSP_SUBMISSION_RUNTIME_BRIDGE_PROBE_SCHEMA",
     "JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER",
     "JCSP_SUBMISSION_RUNTIME_CONSUMPTION_SCHEMA",
     "KIND_ARITHMETIC_STATIC",

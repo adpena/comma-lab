@@ -21,8 +21,9 @@ from tac.hnerv_entropy_candidate_packet import (  # noqa: E402
     discover_candidate_audit_inputs,
     discovery_report_input_paths,
     existing_artifact_input_paths,
+    normalize_entropy_audit_payload,
 )
-from tac.repo_io import json_text  # noqa: E402
+from tac.repo_io import json_text, read_json  # noqa: E402
 from tac.tool_manifest import attach_tool_run_manifest  # noqa: E402
 
 NAMED_ARTIFACT_FLAGS = {
@@ -82,6 +83,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--meta-lagrangian-atom-json", type=Path)
     parser.add_argument("--json-out", type=Path)
     parser.add_argument(
+        "--entropy-audit-json-out",
+        type=Path,
+        help=(
+            "Write the normalized/generated entropy-overhead audit used as "
+            "packet input. This is local audit materialization only."
+        ),
+    )
+    parser.add_argument(
         "--fail-if-missing",
         action="store_true",
         help="Exit 1 if any selected-target requirement artifact is missing.",
@@ -132,6 +141,21 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             selected = discovery["selected_entropy_audit"]
             entropy_audit = REPO_ROOT / str(selected["path"])
+
+        if args.entropy_audit_json_out is not None:
+            normalized_audit, audit_source_kind = normalize_entropy_audit_payload(read_json(entropy_audit))
+            normalized_audit["audit_source_kind"] = audit_source_kind
+            normalized_audit = attach_tool_run_manifest(
+                normalized_audit,
+                tool=Path(__file__).relative_to(REPO_ROOT).as_posix(),
+                argv=raw_argv,
+                input_paths=[entropy_audit],
+                repo_root=REPO_ROOT,
+                output_path=args.entropy_audit_json_out,
+            )
+            args.entropy_audit_json_out.parent.mkdir(parents=True, exist_ok=True)
+            args.entropy_audit_json_out.write_text(json_text(normalized_audit), encoding="utf-8")
+            entropy_audit = args.entropy_audit_json_out
 
         manifest = build_candidate_packet_manifest(
             entropy_audit,

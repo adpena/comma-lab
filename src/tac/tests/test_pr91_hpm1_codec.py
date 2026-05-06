@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import io
 import json
 import math
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -15,13 +17,13 @@ from tac.pr85_bundle import SEGMENT_ORDER, pack_pr85_bundle
 from tac.pr91_hpm1_codec import (
     Pr91Hpm1Error,
     build_hpm1_mask_segment,
-    extract_pr91_hpm1_payload,
     raw_tokens_to_mod5_residual_symbols,
     reconstruct_raw_tokens_from_mod5_residual_symbols,
-    run_pr91_hpm1_preflight,
     run_pr91_hpm1_context_window_probe,
     run_pr91_hpm1_first_symbol_state_probe,
+    run_pr91_hpm1_preflight,
     run_pr91_hpm1_probability_variant_matrix,
+    run_pr91_hpm1_semantic_decode_trench,
     split_hpm1_mask_segment,
     validate_hpm1_static_contract,
 )
@@ -70,6 +72,45 @@ def _synthetic_hpm1_segment() -> bytes:
 def _synthetic_hpm1_archive(path: Path) -> Path:
     segments = {name: f"{name}-payload".encode("ascii") for name in SEGMENT_ORDER}
     segments["mask"] = _synthetic_hpm1_segment()
+    segments["bias"] = b"b" * 223
+    segments["region"] = b"r" * 273
+    _stored_x_archive(path, pack_pr85_bundle(segments, header_mode="v5"))
+    return path
+
+
+def _synthetic_hpm1_archive_with_hpac_model(path: Path) -> Path:
+    torch = pytest.importorskip("torch")
+    pyppmd = pytest.importorskip("pyppmd")
+    from tac.pr86_hpac_codec import PPMD_MAX_ORDER, PPMD_MEM_SIZE, HPACMini
+
+    model = HPACMini(num_pairs=2, P=2, delta=1, ch=4, d_film=2, use_spm=False)
+    with torch.no_grad():
+        for param in model.parameters():
+            param.zero_()
+        for buffer in model.buffers():
+            if buffer.dtype.is_floating_point:
+                buffer.zero_()
+    buf = io.BytesIO()
+    torch.save(model.state_dict(), buf)
+    hpac = pyppmd.compress(
+        buf.getvalue(),
+        max_order=PPMD_MAX_ORDER,
+        mem_size=PPMD_MEM_SIZE,
+    )
+    segment = build_hpm1_mask_segment(
+        (np.arange(32, dtype=np.uint32) % 5).tobytes(),
+        hpac,
+        N=2,
+        H=4,
+        W=4,
+        P=2,
+        delta=1,
+        ch=4,
+        use_spm=False,
+        hpac_d_film=2,
+    )
+    segments = {name: f"{name}-payload".encode("ascii") for name in SEGMENT_ORDER}
+    segments["mask"] = segment
     segments["bias"] = b"b" * 223
     segments["region"] = b"r" * 273
     _stored_x_archive(path, pack_pr85_bundle(segments, header_mode="v5"))
@@ -209,6 +250,67 @@ def test_pr91_context_window_probe_is_local_fail_closed(tmp_path: Path) -> None:
         "decoded_context",
         "reference_context",
     }
+
+
+def test_pr91_semantic_decode_trench_loads_model_rows_and_refuses_parity(
+    tmp_path: Path,
+) -> None:
+    archive = _synthetic_hpm1_archive_with_hpac_model(tmp_path / "archive.zip")
+
+    report = run_pr91_hpm1_semantic_decode_trench(
+        archive,
+        probability_row_count=3,
+        attempt_prefix_decode=False,
+        write_json=False,
+    )
+
+    assert report["schema"] == "pr91_hpm1_semantic_decode_trench_v1"
+    assert report["score_claim"] is False
+    assert report["dispatch_allowed"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["hpac_model_load"]["loaded"] is True
+    assert report["hpac_model_load"]["decompressed_torch_state"]["bytes"] > 0
+    assert len(report["hpac_model_load"]["decompressed_torch_state"]["sha256"]) == 64
+    assert report["packed_state_inventory"]["loaded"] is True
+    assert report["packed_state_inventory"]["tensor_count"] > 0
+    assert report["reconstructed_state_inventory"]["loaded"] is True
+    assert report["reconstructed_state_inventory"]["tensor_count"] > 0
+    assert report["probability_row_probe"]["passed"] is True
+    assert report["probability_row_probe"]["raw_softmax_rows"]["shape"] == [3, 5]
+    assert report["full_decode"]["passed"] is False
+    assert report["byte_exact_semantic_reencode"]["passed"] is False
+    assert "prefix_decode_not_attempted" in report["semantic_decode_blockers"]
+
+
+def test_pr91_semantic_decode_trench_cli_records_tool_manifest(tmp_path: Path) -> None:
+    archive = _synthetic_hpm1_archive_with_hpac_model(tmp_path / "archive.zip")
+    out = tmp_path / "semantic_decode_trench.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "audit_pr91_hpm1_semantic_decode_trench.py"),
+            "--archive",
+            str(archive),
+            "--skip-prefix-decode",
+            "--probability-row-count",
+            "2",
+            "--json-out",
+            str(out),
+        ],
+        check=True,
+        cwd=REPO,
+        text=True,
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["schema"] == "pr91_hpm1_semantic_decode_trench_v1"
+    assert payload["score_claim"] is False
+    assert payload["dispatch_allowed"] is False
+    assert payload["hpac_model_load"]["loaded"] is True
+    assert payload["tool_run_manifest"]["tool"] == (
+        "tools/audit_pr91_hpm1_semantic_decode_trench.py"
+    )
 
 
 def test_pr91_probe_contracts_fail_closed_on_bad_inputs(tmp_path: Path) -> None:
