@@ -479,7 +479,17 @@ def run_admm(
             if cfg.score_budget_per_stream is not None:
                 cap = cfg.score_budget_per_stream.get(stream.name)
                 if cap is not None and score_arr[s_idx] > cap:
-                    tgt = max(tgt, bytes_arr[s_idx] * 1.25 + 1.0)
+                    # PARADIGM-γ audit fix #3B (2026-05-06): the previous
+                    # `tgt = max(tgt, bytes_arr * 1.25 + 1.0)` INCREASED the
+                    # byte budget when this stream's score exceeded its cap —
+                    # the opposite of the intended "shrink this stream until
+                    # its score drops" semantics. Replace with a downward cap:
+                    # restrict target_bytes to 75% of current bytes (drives
+                    # the codec toward a lower R(D) operating point and
+                    # reduces this stream's score contribution). The MIN
+                    # ensures we never RAISE bytes when the score is already
+                    # over budget.
+                    tgt = min(tgt, max(0.0, bytes_arr[s_idx] * 0.75))
             res = stream.proximal_step(target_bytes=tgt, dual=float(lam_query))
             bytes_arr[s_idx] = float(res.encoded_bytes)
             score_arr[s_idx] = float(res.score_delta)
