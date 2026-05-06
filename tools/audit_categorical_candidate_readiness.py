@@ -43,6 +43,22 @@ def _candidate_archive_path(candidate_json: Path, payload: dict) -> Path | None:
     return REPO_ROOT / path
 
 
+def _archive_member_manifest_path(candidate_json: Path, payload: dict) -> Path | None:
+    manifest = payload.get("archive_member_manifest")
+    if not isinstance(manifest, dict):
+        return None
+    raw_path = manifest.get("path")
+    if not isinstance(raw_path, str) or not raw_path:
+        return None
+    path = Path(raw_path)
+    if path.is_absolute():
+        return path
+    local = candidate_json.parent / path
+    if local.exists():
+        return local
+    return REPO_ROOT / path
+
+
 def main(argv: list[str] | None = None) -> int:
     raw_argv = list(sys.argv[1:] if argv is None else argv)
     args = parse_args(raw_argv)
@@ -58,6 +74,9 @@ def main(argv: list[str] | None = None) -> int:
     archive_path = _candidate_archive_path(args.candidate_json, source_payload)
     if archive_path is not None and archive_path.exists():
         input_paths.append(archive_path)
+    archive_member_manifest_path = _archive_member_manifest_path(args.candidate_json, source_payload)
+    if archive_member_manifest_path is not None and archive_member_manifest_path.exists():
+        input_paths.append(archive_member_manifest_path)
     payload = attach_tool_run_manifest(
         payload,
         tool=Path(__file__).relative_to(REPO_ROOT).as_posix(),

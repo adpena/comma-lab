@@ -27,10 +27,48 @@ def _base_candidate(tmp_path: Path) -> dict:
         zf.writestr("categorical_payload.bin", payload)
         zf.writestr("runtime_decoder.py", decoder)
         zf.writestr("class_codebook.json", codebook)
+    charged_members = [
+        {
+            "name": "categorical_payload.bin",
+            "role": "categorical_payload",
+            "bytes": len(payload),
+            "sha256": sha256_bytes(payload),
+        },
+        {
+            "name": "inflate.sh",
+            "role": "decoder_or_runtime_consumer",
+            "bytes": len(inflate),
+            "sha256": sha256_bytes(inflate),
+        },
+        {
+            "name": "runtime_decoder.py",
+            "role": "decoder_table",
+            "bytes": len(decoder),
+            "sha256": sha256_bytes(decoder),
+        },
+        {
+            "name": "class_codebook.json",
+            "role": "decoder_table",
+            "bytes": len(codebook),
+            "sha256": sha256_bytes(codebook),
+        },
+    ]
+    archive_member_manifest = {
+        "schema_version": 1,
+        "kind": "categorical_test_archive_member_manifest",
+        "members": charged_members,
+    }
+    archive_member_manifest_path = tmp_path / "archive_member_manifest.json"
+    write_json(archive_member_manifest_path, archive_member_manifest)
 
     return {
         "source_archive_sha256": "a" * 64,
-        "archive_member_manifest_sha256": "b" * 64,
+        "archive_member_manifest_sha256": sha256_file(archive_member_manifest_path),
+        "archive_member_manifest": {
+            "path": archive_member_manifest_path.as_posix(),
+            "bytes": archive_member_manifest_path.stat().st_size,
+            "sha256": sha256_file(archive_member_manifest_path),
+        },
         "candidate_archive_contract": "contest_archive_zip",
         "candidate_archive": {
             "path": archive.as_posix(),
@@ -45,32 +83,7 @@ def _base_candidate(tmp_path: Path) -> dict:
             "path": "src/tac/qma9_range_mask_contract.py",
             "consumes_charged_members": True,
         },
-        "charged_members": [
-            {
-                "name": "categorical_payload.bin",
-                "role": "categorical_payload",
-                "bytes": len(payload),
-                "sha256": sha256_bytes(payload),
-            },
-            {
-                "name": "inflate.sh",
-                "role": "decoder_or_runtime_consumer",
-                "bytes": len(inflate),
-                "sha256": sha256_bytes(inflate),
-            },
-            {
-                "name": "runtime_decoder.py",
-                "role": "decoder_table",
-                "bytes": len(decoder),
-                "sha256": sha256_bytes(decoder),
-            },
-            {
-                "name": "class_codebook.json",
-                "role": "decoder_table",
-                "bytes": len(codebook),
-                "sha256": sha256_bytes(codebook),
-            },
-        ],
+        "charged_members": charged_members,
         "no_op_controls": {name: {"passed": True} for name in REQUIRED_CONTROL_NAMES},
     }
 
@@ -123,6 +136,30 @@ def test_audit_categorical_candidate_manifest_checks_archive_member_fidelity(tmp
         "charged_member_archive_sha256_mismatch:categorical_payload.bin"
         in manifest["dispatch_blockers"]
     )
+
+
+def test_audit_categorical_candidate_manifest_checks_member_manifest_content(tmp_path: Path) -> None:
+    candidate = _base_candidate(tmp_path)
+    bad_manifest_path = tmp_path / "bad_archive_member_manifest.json"
+    write_json(
+        bad_manifest_path,
+        {
+            "schema_version": 1,
+            "kind": "categorical_test_archive_member_manifest",
+            "members": candidate["charged_members"][1:],
+        },
+    )
+    candidate["archive_member_manifest"] = {
+        "path": bad_manifest_path.as_posix(),
+        "bytes": bad_manifest_path.stat().st_size,
+        "sha256": sha256_file(bad_manifest_path),
+    }
+    candidate["archive_member_manifest_sha256"] = sha256_file(bad_manifest_path)
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert "archive_member_manifest_members_mismatch" in manifest["dispatch_blockers"]
 
 
 def test_audit_categorical_candidate_manifest_rejects_local_sidecar_runtime(tmp_path: Path) -> None:
@@ -190,4 +227,4 @@ def test_audit_categorical_candidate_readiness_cli_records_tool_manifest(tmp_pat
     assert manifest["ready_for_exact_eval_dispatch"] is True
     assert tool_run["tool"] == "tools/audit_categorical_candidate_readiness.py"
     assert tool_run["score_claim"] is False
-    assert len(tool_run["input_files"]) == 2
+    assert len(tool_run["input_files"]) == 3

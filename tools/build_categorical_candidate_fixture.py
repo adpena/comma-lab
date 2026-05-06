@@ -71,6 +71,8 @@ def build_fixture(*, out_dir: Path, source_archive_sha256: str) -> dict[str, Any
         "fixture_only": True,
         "members": member_records,
     }
+    archive_member_manifest_path = out_dir / "archive_member_manifest.json"
+    write_json(archive_member_manifest_path, archive_member_manifest)
     archive_member_manifest_sha = sha256_bytes(
         json_text(archive_member_manifest).encode("utf-8")
     )
@@ -83,6 +85,11 @@ def build_fixture(*, out_dir: Path, source_archive_sha256: str) -> dict[str, Any
         "ready_for_exact_eval_dispatch": False,
         "source_archive_sha256": source_archive_sha256,
         "archive_member_manifest_sha256": archive_member_manifest_sha,
+        "archive_member_manifest": {
+            "path": "archive_member_manifest.json",
+            "bytes": archive_member_manifest_path.stat().st_size,
+            "sha256": sha256_file(archive_member_manifest_path),
+        },
         "candidate_archive_contract": "contest_archive_zip",
         "candidate_archive": {
             "path": "archive.zip",

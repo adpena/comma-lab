@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -109,6 +110,40 @@ def audit_categorical_candidate_manifest(
 
     if not _is_sha256(payload.get("archive_member_manifest_sha256")):
         blockers.append("archive_member_manifest_sha256_missing_or_invalid")
+    manifest_payload: dict[str, Any] | None = None
+    manifest_record = payload.get("archive_member_manifest")
+    manifest_path: Path | None = None
+    manifest_error = ""
+    if not isinstance(manifest_record, dict):
+        blockers.append("archive_member_manifest_record_missing")
+    else:
+        manifest_path = _resolve_path(
+            manifest_record.get("path"),
+            repo_root=root,
+            manifest_dir=manifest_base,
+        )
+        if manifest_path is None or not manifest_path.exists():
+            blockers.append("archive_member_manifest_path_missing")
+        elif not manifest_path.is_file():
+            blockers.append("archive_member_manifest_path_not_file")
+        else:
+            manifest_bytes = manifest_path.read_bytes()
+            actual_sha = sha256_bytes(manifest_bytes)
+            if manifest_record.get("bytes") != len(manifest_bytes):
+                blockers.append("archive_member_manifest_bytes_mismatch")
+            if manifest_record.get("sha256") != actual_sha:
+                blockers.append("archive_member_manifest_record_sha256_mismatch")
+            if payload.get("archive_member_manifest_sha256") != actual_sha:
+                blockers.append("archive_member_manifest_sha256_mismatch")
+            try:
+                loaded = json.loads(manifest_bytes.decode("utf-8"))
+                if not isinstance(loaded, dict):
+                    blockers.append("archive_member_manifest_not_object")
+                else:
+                    manifest_payload = loaded
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                manifest_error = f"{type(exc).__name__}: {exc}"
+                blockers.append("archive_member_manifest_json_invalid")
 
     if payload.get("candidate_archive_contract") != CONTEST_ARCHIVE_CONTRACT:
         blockers.append("candidate_archive_contract_not_contest_archive_zip")
@@ -181,6 +216,13 @@ def audit_categorical_candidate_manifest(
         if duplicates:
             blockers.append("charged_member_duplicate_names")
             warnings.append(f"duplicate charged member names: {duplicates}")
+
+    if manifest_payload is not None:
+        manifest_members = manifest_payload.get("members")
+        if not isinstance(manifest_members, list):
+            blockers.append("archive_member_manifest_members_missing")
+        elif manifest_members != charged_members:
+            blockers.append("archive_member_manifest_members_mismatch")
 
     for role in REQUIRED_MEMBER_ROLES:
         if role_counts.get(role, 0) < 1:
@@ -258,6 +300,18 @@ def audit_categorical_candidate_manifest(
             "sha256": sha256_file(archive_path) if archive_path is not None and archive_path.exists() else "",
             "zip_read_error": archive_error or "",
             "contains_inflate_sh": CONTEST_INFLATE_MEMBER in archive_members,
+        },
+        "archive_member_manifest": {
+            "path": repo_relative(manifest_path, root) if manifest_path is not None else "",
+            "exists": bool(manifest_path is not None and manifest_path.exists()),
+            "bytes": manifest_path.stat().st_size if manifest_path is not None and manifest_path.exists() else None,
+            "sha256": sha256_file(manifest_path) if manifest_path is not None and manifest_path.exists() else "",
+            "json_read_error": manifest_error,
+            "members_match_charged_members": (
+                manifest_payload is not None
+                and isinstance(manifest_payload.get("members"), list)
+                and manifest_payload.get("members") == charged_members
+            ),
         },
         "semantic_contract": {
             "class_order": expected_names,
