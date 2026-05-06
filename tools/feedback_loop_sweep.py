@@ -149,15 +149,16 @@ def _build_dispatch_cmd(candidate: dict, *, provider: str, lane_script: str,
         candidate.get("band_low", 0.0), candidate.get("band_high", 1.0)
     ]
     if provider == "lightning":
+        # Round 2B B5 fix (2026-05-06, 80% confidence): `lightning_dispatch_pr106_stack.py`
+        # does NOT accept --expected-archive-sha256 or --expected-archive-size-bytes
+        # as CLI flags (verified against its argparse). Archive sha + size are
+        # already verified internally via the manifest payload. Don't pass dead
+        # flags. CLAUDE.md NON-NEGOTIABLE: read target argparse before wiring.
         cmd = [
             sys.executable, str(REPO / "tools/lightning_dispatch_pr106_stack.py"),
             "--lane-script", lane_script, "--label", label,
             "--predicted-band", str(band[0]), str(band[1]),
         ]
-        if candidate.get("archive_sha256"):
-            cmd += ["--expected-archive-sha256", str(candidate["archive_sha256"])]
-        if candidate.get("archive_bytes"):
-            cmd += ["--expected-archive-size-bytes", str(candidate["archive_bytes"])]
         return cmd
     if provider == "vastai":
         return [
@@ -249,6 +250,14 @@ def _reseed_anchors(harvested: list[dict], anchors_path: Path,
             continue
         if h["rel_err_pct"] is None or h["archive_bytes"] is None:
             continue
+        # Round 2B B4 fix (2026-05-06, 83% confidence): record the SOURCE of
+        # avg_pose_dist + avg_seg_dist so the predictor can downweight anchors
+        # whose distortions came from the lossless fallback rather than from
+        # an actual contest-CUDA measurement. Silent fill-in was the Q-FAITHFUL
+        # ghost-evidence pattern. The source field is required for any future
+        # weight or filter logic in the meta-Lagrangian engine.
+        pose_source = "contest_cuda_measured" if h["avg_pose_dist"] is not None else "fallback_lossless"
+        seg_source = "contest_cuda_measured" if h["avg_seg_dist"] is not None else "fallback_lossless"
         added.append({
             "lane_id": h["label"],
             "rel_err_pct_per_weight": h["rel_err_pct"],
@@ -256,6 +265,8 @@ def _reseed_anchors(harvested: list[dict], anchors_path: Path,
             "contest_cuda_score": h["contest_cuda_score"],
             "avg_pose_dist": h["avg_pose_dist"] if h["avg_pose_dist"] is not None else lossless_pose,
             "avg_seg_dist": h["avg_seg_dist"] if h["avg_seg_dist"] is not None else lossless_seg,
+            "avg_pose_dist_source": pose_source,
+            "avg_seg_dist_source": seg_source,
             "rate_unscaled": h["archive_bytes"] / 37545489,
             "measured_utc": h["started_utc"],
             "job_id": h["label"],

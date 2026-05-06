@@ -107,16 +107,27 @@ def _build_dispatch_cmd(
     if provider == "lightning":
         if not _LIGHTNING_DISPATCH.is_file():
             raise FileNotFoundError(f"missing lightning dispatcher: {_LIGHTNING_DISPATCH}")
+        # Round 2B B5 fix (2026-05-06, 80% confidence): the lightning dispatcher
+        # `tools/lightning_dispatch_pr106_stack.py` does NOT accept
+        # --expected-archive-sha256 or --expected-archive-size-bytes as CLI
+        # flags (verified against its argparse). Passing them caused
+        # dispatch-time argument-parse failure. Archive sha + size verification
+        # is done internally via the manifest payload (the dispatcher reads
+        # `candidate_archive_sha256` from the payload). Suppress the dead flags
+        # here — verification still happens via the manifest path. CLAUDE.md
+        # NON-NEGOTIABLE: "Before wiring any flag into subprocess.run, READ the
+        # target tool's actual parser.add_argument list."
         cmd = [
             sys.executable, str(_LIGHTNING_DISPATCH),
             "--lane-script", lane_script,
             "--label", label,
             "--predicted-band", str(band[0]), str(band[1]),
         ]
-        if archive_sha:
-            cmd += ["--expected-archive-sha256", str(archive_sha)]
-        if archive_size:
-            cmd += ["--expected-archive-size-bytes", str(archive_size)]
+        # Note: archive_sha and archive_size are verified by the dispatcher's
+        # internal manifest read, not via CLI flags. The values are validated
+        # in the candidate JSON pipeline before this function is called.
+        _ = archive_sha  # noqa: F841 — captured for future test/CI argparse probe
+        _ = archive_size  # noqa: F841
         return cmd
 
     if provider == "vastai":

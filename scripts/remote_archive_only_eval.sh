@@ -192,7 +192,11 @@ require_uv_and_ffmpeg_contract() {
 ensure_scorer_runtime_deps() {
     # contest_auth_eval.py calls upstream/evaluate.py with PYBIN, not the
     # inflate-side uv environment. Bare PyTorch images often lack scorer deps.
-    if "$PYBIN" - <<'PY' >/tmp/pact_scorer_deps_probe.log 2>&1
+    # Round 2B B2 fix (2026-05-06, 85% confidence): redirect probe + ensurepip
+    # logs to $LOG_DIR (durable artifact path) instead of /tmp (transient).
+    # CLAUDE.md FORBIDDEN PATTERN: "/tmp paths in any persisted artifact" —
+    # /tmp logs vanish on shell exit and are unrecoverable from CI/replays.
+    if "$PYBIN" - <<'PY' >"$LOG_DIR/scorer_deps_probe_raw.log" 2>&1
 import av, einops, safetensors, segmentation_models_pytorch, timm, tqdm
 PY
     then
@@ -201,7 +205,7 @@ PY
     fi
     log "BOOTSTRAP: scorer deps missing in $PYBIN; installing runtime scorer deps"
     if ! "$PYBIN" -c "import pip" 2>/dev/null; then
-        "$PYBIN" -m ensurepip --upgrade >/tmp/pact_ensurepip_scorer.log 2>&1 || true
+        "$PYBIN" -m ensurepip --upgrade >"$LOG_DIR/ensurepip_scorer.log" 2>&1 || true
     fi
     "$PYBIN" -m pip install -q --root-user-action=ignore \
         "timm>=0.9" \

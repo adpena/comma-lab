@@ -40,7 +40,18 @@ def build_wavelet_apply_gate(
     if required_component_margin < 0:
         raise HnervWaveletApplyGateError("required_component_margin must be non-negative")
     stacked = dict(stacked_metadata or {})
-    candidate_delta = _safe_int(sidechannel_manifest.get("candidate_archive_byte_delta"))
+    # Round 2 R2-2 fix (2026-05-06, 88% confidence): the
+    # `build_wavelet_apply_transform_candidate` manifest renames the byte-delta
+    # key to `candidate_archive_byte_delta_vs_source_estimate` (per Round 1
+    # BUG #2 advisory tagging). When the gate is fed an apply_transform
+    # manifest instead of a sidechannel manifest, the historical key is
+    # missing. Read both names; prefer the historical-named key for
+    # back-compat with older sidechannel manifests, fall back to the renamed
+    # key for newer apply_transform manifests.
+    candidate_delta = _safe_int(
+        sidechannel_manifest.get("candidate_archive_byte_delta")
+        or sidechannel_manifest.get("candidate_archive_byte_delta_vs_source_estimate")
+    )
     stacked_delta = _safe_int(stacked.get("delta_bytes_vs_pr106_zip"))
     archive_byte_delta = stacked_delta if stacked_delta is not None else candidate_delta
     if archive_byte_delta is None:
@@ -143,10 +154,30 @@ def _dispatch_blockers(
         blockers.append("wr01_rate_penalty_must_be_recovered_by_distortion")
     if decoded_atoms <= 0:
         blockers.append("wr01_has_no_decoded_atoms")
+    # Round 2 R2-7 fix (2026-05-06, 80% confidence): `runtime_consumed` is
+    # tautologically True for any non-empty plan because the underlying proof
+    # function only verifies decode roundtrip (Round 1 BUG #3 finding). The
+    # gate previously blocked only on `runtime_mode == "explicit_noop_consume_only"`
+    # which is NOT the default — the default `"candidate_sidechannel_only"`
+    # leaves both gates passable. Add an explicit "runtime mode must prove
+    # actual atom application" blocker that fires for the default mode too,
+    # so the gate cannot be tautologically passed by a plan that only roundtrips
+    # decode without an inflate path applying atoms.
     if not isinstance(runtime_proof, Mapping) or runtime_proof.get("runtime_consumed") is not True:
         blockers.append("wr01_runtime_consumption_not_proven")
+    # Only modes that PROVE actual atom application clear this blocker.
+    # `candidate_sidechannel_only` (default) does NOT prove application — only
+    # that the candidate archive carries the sidechannel bytes. Real
+    # application is gated on `wr01_apply_transform_complete` or
+    # `inflate_path_applies_wr01_atoms` (set by the apply_transform pipeline).
+    _RUNTIME_MODES_THAT_PROVE_APPLICATION = (
+        "wr01_apply_transform_complete",
+        "inflate_path_applies_wr01_atoms",
+    )
     if runtime_mode == "explicit_noop_consume_only":
         blockers.append("wr01_runtime_mode_is_explicit_noop")
+    elif runtime_mode not in _RUNTIME_MODES_THAT_PROVE_APPLICATION:
+        blockers.append(f"wr01_runtime_mode_does_not_prove_application:{runtime_mode}")
     if sidechannel_manifest.get("score_claim") is not False:
         blockers.append("sidechannel_manifest_score_claim_not_false")
     if stacked_metadata and stacked_metadata.get("score_claim") is not False:

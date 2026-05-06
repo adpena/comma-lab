@@ -440,6 +440,9 @@ __all__ = [
     "HnervWaveletSidechannelError",
     "build_wavelet_sidechannel_archive_bytes",
     "build_wavelet_sidechannel_candidate",
+    # Round 2 R2-3 fix (2026-05-06): semantically-correct alias for the
+    # decode-roundtrip proof. Both names refer to the same callable.
+    "decode_roundtrip_proof",
     "decode_wavelet_atom_sidechannel",
     "encode_wavelet_atom_sidechannel",
     "parse_wavelet_sidechannel_archive_bytes",

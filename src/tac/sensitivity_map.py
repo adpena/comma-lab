@@ -210,8 +210,17 @@ def save_sensitivity_map(
 
 
 def load_sensitivity_map(path: str | Path) -> tuple[dict[str, torch.Tensor], dict]:
-    """Load a saved sensitivity artifact."""
-    payload = torch.load(str(path), map_location="cpu", weights_only=False)
+    """Load a saved sensitivity artifact.
+
+    Round 2B B3 fix (2026-05-06, 82% confidence): use `weights_only=True`.
+    Sensitivity maps are produced remotely (Vast.ai / Lightning) and shipped
+    back as artifacts — they are NOT fully trusted. The payload is a plain
+    dict of tensors + a format-string field, all of which are supported under
+    `weights_only=True` in PyTorch >= 2.0. This closes an arbitrary-code-
+    execution path via pickle and aligns with the
+    `preflight_loader_format_safety` allowlist gate.
+    """
+    payload = torch.load(str(path), map_location="cpu", weights_only=True)
     if not isinstance(payload, dict) or payload.get("format") != SENSITIVITY_MAP_FORMAT:
         raise SensitivityMapError(
             f"{path}: expected format {SENSITIVITY_MAP_FORMAT!r}"

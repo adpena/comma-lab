@@ -17,6 +17,7 @@ import brotli
 
 from tac.hnerv_lowlevel_packer import (
     DEFAULT_WAVELET_SECTION,
+    REPACKABLE_SECTIONS,
     parse_ff_packed_brotli_hnerv,
     read_strict_single_member_zip,
     sha256_bytes,
@@ -79,13 +80,23 @@ def build_wavelet_apply_transform_candidate(
     if transformed_raw == raw:
         raise HnervWaveletApplyTransformError(f"{section_name}: WR01 transform produced no byte change")
     transformed_section = brotli.compress(transformed_raw, quality=11)
+    # Round 2 R2-5 fix (2026-05-06, 83% confidence): replace hardcoded section
+    # name string literals in the comparison with the shared REPACKABLE_SECTIONS
+    # constants. The dataclass FIELD names below (latents_and_sidecar_brotli=
+    # and decoder_packed_brotli=) are tied to the dataclass definition, not
+    # drift sources — they cannot use constants because Python kwargs require
+    # literal identifiers. The comparison string literals previously WERE drift
+    # sources; now they read from REPACKABLE_SECTIONS so any rename in the
+    # packer module surfaces as a NameError, not silent drift.
+    _LATENTS_SECTION = REPACKABLE_SECTIONS[1]  # "latents_and_sidecar_brotli"
+    _DECODER_SECTION = REPACKABLE_SECTIONS[0]  # "decoder_packed_brotli"
     candidate_packed = dataclasses.replace(
         packed,
         latents_and_sidecar_brotli=(
-            transformed_section if section_name == "latents_and_sidecar_brotli" else packed.latents_and_sidecar_brotli
+            transformed_section if section_name == _LATENTS_SECTION else packed.latents_and_sidecar_brotli
         ),
         decoder_packed_brotli=(
-            transformed_section if section_name == "decoder_packed_brotli" else packed.decoder_packed_brotli
+            transformed_section if section_name == _DECODER_SECTION else packed.decoder_packed_brotli
         ),
     )
     candidate_payload = candidate_packed.to_bytes()
