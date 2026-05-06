@@ -1,0 +1,16 @@
+{
+  "lane_id": "lane_pr106_yshift_sidechannel_score_table",
+  "predicted_band": [
+    0.2065,
+    0.208
+  ],
+  "mode": "score_table",
+  "score_step": 1.0,
+  "started_at_utc": "2026-05-06T07:49:00Z",
+  "git_hash": "no-git",
+  "gpu_name": "Tesla T4",
+  "torch_version": "2.11.0+cu130",
+  "cuda_version": "13.0",
+  "pr106_archive": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+  "cuda_available": true
+}
