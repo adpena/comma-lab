@@ -5306,6 +5306,52 @@ Verification:
 - `.venv/bin/python tools/all_lanes_preflight.py` passed:
   `ALL 20 PREFLIGHT CHECKS PASSED`.
 
+## R80 - 2026-05-06 Submission Packet Builder IO Lowering
+
+Continued the Gate #7 lowering tranche on the recovered contest submission
+packet builder. This was a behavior-preserving cleanup only: packet schema,
+archive integrity checks, copied submission layout, checklist rendering, and
+score authority policy were not changed.
+
+Changes:
+
+- Migrated `scripts/build_contest_submission_packet.py` file SHA helper to
+  `tac.repo_io.sha256_file`.
+- Migrated JSON object reads and pretty JSON writes/CLI stdout to
+  `tac.repo_io.read_json`, `write_json`, and `json_text`.
+- Preserved zip member SHA calculation and RPK1 embedded-header parsing as
+  local byte-format logic.
+- Left report/checklist text rendering as text, not JSON.
+
+Measured inventory after R80:
+
+- local SHA helpers: `54`
+- local JSON dumps: `110`
+- manual `sys.path` bootstraps: `276`
+- manual repo-root parent probes: `372`
+- manual score/dispatch metadata mentions: `601`
+
+Within-tranche committed-surface deltas:
+
+- `scripts/build_contest_submission_packet.py` local SHA helper count: `1 -> 0`
+- `scripts/build_contest_submission_packet.py` local JSON dump count: `1 -> 0`
+- `scripts/build_contest_submission_packet.py` manual score/dispatch metadata
+  count: `6 -> 6`
+
+Verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_build_contest_submission_packet.py
+  src/tac/tests/test_recovered_operational_scripts_20260506.py -q` passed:
+  `11 passed`.
+- `.venv/bin/python -m ruff check --select I,RUF100,F401,UP035,F821
+  scripts/build_contest_submission_packet.py` passed.
+- `.venv/bin/python -m py_compile scripts/build_contest_submission_packet.py`
+  passed.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --format json` reported
+  the measured inventory above.
+- `.venv/bin/python tools/all_lanes_preflight.py` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+
 ## R79 - 2026-05-06 Lightning Launcher JSON IO Lowering
 
 Continued the Gate #7 lowering tranche on the Lightning Batch launcher, which

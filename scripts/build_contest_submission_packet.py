@@ -22,10 +22,10 @@ import math
 import shutil
 import struct
 import zipfile
-from pathlib import Path
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import Any
 
+from tac.repo_io import json_text, read_json, sha256_file, write_json
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCORE_DENOMINATOR = 37_545_489
@@ -67,17 +67,12 @@ class PacketError(RuntimeError):
     """Raised when the source artifact directory is not packet-ready."""
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+_sha256 = sha256_file
 
 
 def _read_json(path: Path) -> dict[str, Any]:
     try:
-        payload = json.loads(path.read_text())
+        payload = read_json(path)
     except json.JSONDecodeError as exc:
         raise PacketError(f"{path.name} is not valid JSON: {exc}") from exc
     if not isinstance(payload, dict):
@@ -313,7 +308,7 @@ def _write_archive_manifest(
         "archive_size_bytes": archive["size_bytes"],
         "members": members,
     }
-    manifest_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    write_json(manifest_path, payload)
     _normalize_submission_mode(manifest_path, "archive_manifest.json")
     return _copied_file_record(manifest_path, repo_root, submission_dir)
 
@@ -1145,7 +1140,7 @@ def build_packet(
     output_dir.mkdir(parents=True, exist_ok=True)
     manifest_path = output_dir / DEFAULT_MANIFEST_NAME
     checklist_path = output_dir / DEFAULT_CHECKLIST_NAME
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    write_json(manifest_path, manifest)
     checklist_path.write_text(render_checklist(manifest))
     return manifest
 
@@ -1316,7 +1311,7 @@ def main(argv: list[str] | None = None) -> int:
         visualizations=args.visualization,
         next_action_tranches=args.next_action_tranche,
     )
-    print(json.dumps(manifest, indent=2, sort_keys=True))
+    print(json_text(manifest), end="")
     return 0
 
 
