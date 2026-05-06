@@ -125,7 +125,7 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         title="Categorical QMA9 plus CLADE/SPADE/openpilot labels",
         paradigms=("alpha_mask_payload", "categorical_masks", "openpilot_priors"),
         role="replacement_or_mask_stacker",
-        status="recovered_tooling_needs_canonical_builder",
+        status="canonical_contract_landed_needs_byte_closed_builder",
         evidence_grade="external/planning plus local byte deconstruction",
         stackability=(
             "medium: strongest as mask grammar or class-conditioned residual layer; must not duplicate "
@@ -133,6 +133,7 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         ),
         replacement_potential="high for mask stream if learned/predictive grammar avoids CMG2 collapse",
         code_paths=(
+            "src/tac/categorical_compression_contract.py",
             "src/tac/qma9_range_mask_contract.py",
             "src/tac/qma9_run_grammar.py",
             "src/tac/qma9_alt_grammar.py",
@@ -140,6 +141,7 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "src/tac/semantic_quantization.py",
             "src/tac/contrib/diffusion_renderer.py",
             "src/tac/openpilot_seeding.py",
+            "tools/audit_categorical_compression_contract.py",
         ),
         evidence_paths=(
             ".omx/research/qma9_range_mask_deconstruction_20260503_codex.md",
@@ -147,8 +149,8 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/scorecard.json",
         ),
         next_patch=(
-            "Add a canonical categorical contract: class labels, priors, charged bytes, decoder, "
-            "no-op controls, and meta-lagrangian atoms."
+            "Build the first byte-closed categorical candidate that consumes this contract, with "
+            "label-permutation and runtime-consumption no-op controls."
         ),
         blockers=(
             "raw lossless class wrapping was byte-regressive",
