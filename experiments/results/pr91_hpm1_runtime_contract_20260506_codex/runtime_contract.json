@@ -1,0 +1,147 @@
+{
+  "ambient_device_call_count": 2,
+  "call_sites": [
+    {
+      "callee": "decompress_pr86_hpac_tokens",
+      "contradiction": false,
+      "cpu_intent_comments": [],
+      "device_class": "ambient_device_stringified",
+      "device_expression": "str(device)",
+      "function": "main",
+      "line": 902,
+      "path": "experiments/results/public_pr_archive_release_view/public_pr91_intake_20260505_auto/source/submissions/hpac_coder_hybrid/inflate.py",
+      "preceding_cpu_intent_comment": false
+    },
+    {
+      "callee": "decompress_tokens_hpac",
+      "contradiction": true,
+      "cpu_intent_comments": [
+        "# Force HPAC decode onto CPU so it matches the CPU encoder bit-exactly.",
+        "# different FP32 softmax \u2192 arithmetic decoder asserts. CPU FP32 is portable."
+      ],
+      "device_class": "ambient_device",
+      "device_expression": "device",
+      "function": "main",
+      "line": 418,
+      "path": "experiments/results/public_pr_archive_release_view/public_pr91_intake_20260505_auto/source/submissions/hpac_coder_hybrid/pr86_hpac.py",
+      "preceding_cpu_intent_comment": true
+    }
+  ],
+  "contradiction_count": 1,
+  "contradictions": [
+    {
+      "callee": "decompress_tokens_hpac",
+      "contradiction": true,
+      "cpu_intent_comments": [
+        "# Force HPAC decode onto CPU so it matches the CPU encoder bit-exactly.",
+        "# different FP32 softmax \u2192 arithmetic decoder asserts. CPU FP32 is portable."
+      ],
+      "device_class": "ambient_device",
+      "device_expression": "device",
+      "function": "main",
+      "line": 418,
+      "path": "experiments/results/public_pr_archive_release_view/public_pr91_intake_20260505_auto/source/submissions/hpac_coder_hybrid/pr86_hpac.py",
+      "preceding_cpu_intent_comment": true
+    }
+  ],
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "hpac_device_contract_resolved",
+    "runtime_consumer_sidecar_free_hpm1"
+  ],
+  "evidence_grade": "static_runtime_contract_audit",
+  "files": {
+    "inflate_py": {
+      "bytes": 86673,
+      "exists": true,
+      "path": "experiments/results/public_pr_archive_release_view/public_pr91_intake_20260505_auto/source/submissions/hpac_coder_hybrid/inflate.py",
+      "sha256": "9665d3832abd8f720617cad4e976536ef9ff4ce9a117623b9a00229c518a22ba"
+    },
+    "pr86_hpac_py": {
+      "bytes": 19657,
+      "exists": true,
+      "path": "experiments/results/public_pr_archive_release_view/public_pr91_intake_20260505_auto/source/submissions/hpac_coder_hybrid/pr86_hpac.py",
+      "sha256": "f86f3067386928478d983817c9f9ee095ce6eb02aee8c0fbb7987cd0af1f9b01"
+    }
+  },
+  "gates": {
+    "hpac_decoder_signature_found": {
+      "passed": true,
+      "reason": "decompress_tokens_hpac signature is statically visible",
+      "required_for_dispatch": true,
+      "status": "passed"
+    },
+    "hpac_device_contract_resolved": {
+      "passed": false,
+      "reason": "HPAC decode device contract is ambient or contradictory; byte parity must resolve CPU vs CUDA",
+      "required_for_dispatch": true,
+      "status": "blocked"
+    },
+    "runtime_consumer_sidecar_free_hpm1": {
+      "passed": false,
+      "reason": "static source audit does not prove sidecar-free contest HPM1 loading",
+      "required_for_dispatch": true,
+      "status": "blocked"
+    },
+    "runtime_sources_present": {
+      "passed": true,
+      "reason": "public PR91 inflate.py and pr86_hpac.py are present",
+      "required_for_dispatch": true,
+      "status": "passed"
+    }
+  },
+  "hpac_decoder_signature": {
+    "args": [
+      "blob",
+      "N",
+      "H",
+      "W",
+      "hpac_pt",
+      "P",
+      "delta",
+      "ch",
+      "device",
+      "use_spm",
+      "hpac_d_film"
+    ],
+    "device_arg_index": 8,
+    "found": true,
+    "line": 297
+  },
+  "kind": "pr91_hpm1_runtime_contract",
+  "next_safe_actions": [
+    "Resolve whether public PR91 HPAC arithmetic decode must be CPU-only or CUDA-compatible.",
+    "Pin a byte-exact device contract in local replay before full 600-frame decode/reencode work.",
+    "Require runtime-consumption proof before any PR91/HPM1 exact CUDA dispatch."
+  ],
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "source_dir": "experiments/results/public_pr_archive_release_view/public_pr91_intake_20260505_auto/source/submissions/hpac_coder_hybrid",
+  "tool_run_manifest": {
+    "argv": [
+      "--json-out",
+      "experiments/results/pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "04e965d9e7245a9e5d76d283d2a3fef7af0933968cb5ac99ccf5284dc633731d",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 86673,
+        "path": "experiments/results/public_pr_archive_release_view/public_pr91_intake_20260505_auto/source/submissions/hpac_coder_hybrid/inflate.py",
+        "sha256": "9665d3832abd8f720617cad4e976536ef9ff4ce9a117623b9a00229c518a22ba"
+      },
+      {
+        "bytes": 19657,
+        "path": "experiments/results/public_pr_archive_release_view/public_pr91_intake_20260505_auto/source/submissions/hpac_coder_hybrid/pr86_hpac.py",
+        "sha256": "f86f3067386928478d983817c9f9ee095ce6eb02aee8c0fbb7987cd0af1f9b01"
+      }
+    ],
+    "output_path": "experiments/results/pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/audit_pr91_hpm1_runtime_contract.py"
+  }
+}

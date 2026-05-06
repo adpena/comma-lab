@@ -136,6 +136,7 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "src/tac/categorical_compression_contract.py",
             "src/tac/categorical_candidate_readiness.py",
             "src/tac/pr91_hpm1_readiness.py",
+            "src/tac/pr91_hpm1_runtime_contract.py",
             "src/tac/qma9_range_mask_contract.py",
             "src/tac/qma9_run_grammar.py",
             "src/tac/qma9_alt_grammar.py",
@@ -146,6 +147,7 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "tools/audit_categorical_compression_contract.py",
             "tools/audit_categorical_candidate_readiness.py",
             "tools/audit_pr91_hpm1_readiness.py",
+            "tools/audit_pr91_hpm1_runtime_contract.py",
             "tools/build_categorical_candidate_fixture.py",
         ),
         evidence_paths=(
@@ -153,17 +155,19 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md",
             "experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/scorecard.json",
             "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json",
+            "experiments/results/pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json",
         ),
         next_patch=(
             "Recover PR91/HPM1 full decode/reencode parity or replace the deterministic fixture with "
-            "the first real byte-closed categorical candidate; pass the matching readiness audit before "
-            "any lane claim or exact eval."
+            "the first real byte-closed categorical candidate; resolve the HPAC CPU/CUDA runtime "
+            "contract and pass the matching readiness audit before any lane claim or exact eval."
         ),
         blockers=(
             "raw lossless class wrapping was byte-regressive",
             "CMG2 exact evals showed PoseNet collapse",
             "CLADE/SPADE/openpilot priors need charged archive consumption",
             "PR91 HPM1 still lacks full 600-frame decode/reencode and runtime loader parity",
+            "PR91 HPAC device contract is ambient/contradictory in public runtime sources",
         ),
     ),
     InventoryRow(

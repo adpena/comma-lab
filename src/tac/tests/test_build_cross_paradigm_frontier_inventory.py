@@ -48,11 +48,17 @@ def test_cross_paradigm_inventory_pins_required_score_path_rows() -> None:
     assert categorical["status"] == "contract_and_candidate_readiness_landed_needs_byte_closed_candidate"
     assert "src/tac/categorical_candidate_readiness.py" in categorical["code_paths"]
     assert "src/tac/pr91_hpm1_readiness.py" in categorical["code_paths"]
+    assert "src/tac/pr91_hpm1_runtime_contract.py" in categorical["code_paths"]
     assert "tools/audit_categorical_candidate_readiness.py" in categorical["code_paths"]
     assert "tools/audit_pr91_hpm1_readiness.py" in categorical["code_paths"]
+    assert "tools/audit_pr91_hpm1_runtime_contract.py" in categorical["code_paths"]
     assert "tools/build_categorical_candidate_fixture.py" in categorical["code_paths"]
     assert (
         "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json"
+        in categorical["evidence_paths"]
+    )
+    assert (
+        "experiments/results/pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json"
         in categorical["evidence_paths"]
     )
 

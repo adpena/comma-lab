@@ -4,6 +4,8 @@ This is a custody/readiness ledger, not a score claim.
 
 - tool: `tools/audit_pr91_hpm1_readiness.py`
 - artifact: `experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json`
+- runtime-contract tool: `tools/audit_pr91_hpm1_runtime_contract.py`
+- runtime-contract artifact: `experiments/results/pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json`
 - score_claim: `false`
 - dispatch_attempted: `false`
 - ready_for_exact_eval_dispatch: `false`
@@ -30,6 +32,16 @@ PR91/HPM1 remains fail-closed for exact eval dispatch:
 - `runtime_hpm1_loader_without_sidecars`
 - `exact_cuda_auth_eval_after_parity`
 
+The runtime-contract audit also blocks dispatch on:
+
+- `hpac_device_contract_resolved`
+- `runtime_consumer_sidecar_free_hpm1`
+
+It records two ambient HPAC device call sites and one contradiction between a
+CPU-determinism comment and an ambient `device` argument in the public runtime
+sources. Resolve this before treating PR91/HPM1 as a byte-savings stacker.
+
 Next safe work is to recover full 600-frame HPM1 probability/range decode,
-prove byte-exact decode/reencode parity, then wire a sidecar-free contest
-inflate runtime before any lane claim or exact CUDA auth eval.
+prove byte-exact decode/reencode parity, pin the CPU/CUDA runtime contract,
+then wire a sidecar-free contest inflate runtime before any lane claim or exact
+CUDA auth eval.
