@@ -1569,7 +1569,14 @@ def check_codebase_drift(strict: bool = True) -> list[str]:
     # double-detections of patterns the canonical originals are already
     # responsible for. Mirror is regenerated, not authored.
     # Round 12 R12-2 fix (2026-05-06): standardized on `.parts` tuple
-    # membership, consistent with R12-1 across all scanners.
+    # membership in this scanner. Note: check_no_proxy_metric_drives_decision
+    # legitimately retains substring matching because its
+    # _MPS_DECISION_EXEMPT_PATH_PARTS list contains slash-bearing prefix
+    # strings (e.g. "/.claude/projects/", "/comma_lab_public_export/")
+    # that are structurally incompatible with `.parts` component
+    # membership (path components never contain `/`). Round 13 R13-1
+    # corrected the previous "across all scanners" claim which would
+    # mislead a future reviewer into flagging that scanner as a bug.
     drift_scan_dirs = ["scripts", "experiments",
                        "src/tac/contrib", "src/tac/deploy",
                        "src/tac/experiments"]
@@ -7748,6 +7755,12 @@ def check_archive_builders_use_deterministic_zip(
     candidates = sorted({p for p in candidates if p.is_file()})
     for p in candidates:
         if "__pycache__" in p.parts:
+            continue
+        # Round 13 R13-2 fix (2026-05-06): skip OSS-export staging mirror.
+        # This is the last rglob-on-experiments scanner that needed the
+        # exemption — R12 missed it because it doesn't go through
+        # _iter_python_files (uses direct rglob with a custom glob pattern).
+        if "comma_lab_public_export" in p.parts:
             continue
         n_scanned += 1
         violations.extend(_scan_python_for_nondeterministic_zip(p, root))
