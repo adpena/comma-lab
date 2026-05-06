@@ -4095,3 +4095,42 @@ Verification:
 
 The PR106 yshift Lightning score-table job was checked from local state during
 this tranche and remains `Running`; no harvest or claim closure was performed.
+
+## R55 - 2026-05-06 First-Party Experiment CLI Promotion
+
+Promoted two recovered first-party experiment wrappers out of the orphan
+intake and back into their original canonical `experiments/` locations:
+
+- `experiments/build_pr85_qh0_serializer_candidates.py`
+- `experiments/replay_pr91_hpm1_mask.py`
+
+The PR85 QH0 serializer candidate builder compiles and exposes a clean help
+surface. It remains local-only byte-decision tooling: it rewrites PR85 model
+segments, records candidate manifests, and does not run CUDA, dispatch, or
+claim score evidence.
+
+The PR91 HPM1 replay wrapper initially had hard imports for codec functions
+that are still absent from the current partial `tac.pr91_hpm1_codec`
+rehydration. That made even `--help` fail. The wrapper now imports the module
+itself, exposes constants from the implemented surface, and lazily resolves
+optional probe/fusion symbols only when the corresponding mode is requested.
+Missing modes fail closed with an explicit message naming the missing codec
+function instead of crashing at import time.
+
+Verification:
+
+- `.venv/bin/python -m py_compile
+  experiments/build_pr85_qh0_serializer_candidates.py
+  experiments/replay_pr91_hpm1_mask.py` passed.
+- `.venv/bin/python experiments/build_pr85_qh0_serializer_candidates.py --help`
+  passed.
+- `.venv/bin/python experiments/replay_pr91_hpm1_mask.py --help` passed.
+- `experiments/replay_pr91_hpm1_mask.py --fusion-plan` now reaches an
+  intentional fail-closed message because
+  `tac.pr91_hpm1_codec.plan_pr91_hpm1_pr85_stbm_fusion` is not currently
+  implemented.
+
+Non-strict orphan audit after this promotion reports
+`modified_missing_canonical_count=26` while the two active renames are staged;
+after commit the remaining queue should be the 24 public-runtime/operational
+fragments that still require explicit public-frontier archival or promotion.
