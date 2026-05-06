@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import struct
-from typing import Mapping
+from collections.abc import Mapping
 
 import numpy as np
 import torch
@@ -557,6 +557,62 @@ def _summarize_action_counts(layers_meta: list[dict]) -> dict[str, int]:
     return counts
 
 
+def _summarize_charged_bytes(layers_meta: list[dict]) -> dict[str, int]:
+    out: dict[str, int] = {}
+    for meta in layers_meta:
+        charged = meta.get("charged_bytes") or {}
+        if not isinstance(charged, Mapping):
+            continue
+        for action, value in charged.items():
+            bytes_value = int(value or 0)
+            if bytes_value == 0:
+                continue
+            out[str(action)] = out.get(str(action), 0) + bytes_value
+    return dict(sorted(out.items()))
+
+
+def _summarize_fallback_accounting(layers_meta: list[dict]) -> dict[str, dict[str, int]]:
+    reason_counts: dict[str, int] = {}
+    reason_bytes: dict[str, int] = {}
+    for meta in layers_meta:
+        reason = meta.get("fallback_reason")
+        if not reason:
+            continue
+        key = str(reason)
+        reason_counts[key] = reason_counts.get(key, 0) + 1
+        charged = meta.get("charged_bytes") or {}
+        charged_bytes = (
+            sum(int(value or 0) for value in charged.values())
+            if isinstance(charged, Mapping)
+            else 0
+        )
+        reason_bytes[key] = reason_bytes.get(key, 0) + charged_bytes
+    return {
+        "fallback_reason_counts": dict(sorted(reason_counts.items())),
+        "fallback_reason_bytes": dict(sorted(reason_bytes.items())),
+    }
+
+
+def _build_byte_plan(
+    *,
+    layers_meta: list[dict],
+    fallback_action: str,
+    body_len: int,
+) -> dict[str, object]:
+    fallback_accounting = _summarize_fallback_accounting(layers_meta)
+    return {
+        "fallback_action": fallback_action,
+        "asym_bits": OWV3_DEFAULT_ASYM_BITS,
+        "promotion_eligible": (
+            fallback_action != OWV3_FALLBACK_ACTION_DIAGNOSTIC_FP16
+        ),
+        "charged_body_bytes": int(body_len),
+        "action_counts": _summarize_action_counts(layers_meta),
+        "action_bytes": _summarize_charged_bytes(layers_meta),
+        **fallback_accounting,
+    }
+
+
 def encode_owv3_archive(
     model: nn.Module | None = None,
     *,
@@ -797,15 +853,11 @@ def encode_owv3_archive(
         "layers": layers_meta,
         "scalar_params": scalar_params,
         "body_len": len(body),
-        "byte_plan": {
-            "fallback_action": fallback_action,
-            "asym_bits": OWV3_DEFAULT_ASYM_BITS,
-            "promotion_eligible": (
-                fallback_action != OWV3_FALLBACK_ACTION_DIAGNOSTIC_FP16
-            ),
-            "charged_body_bytes": len(body),
-            "action_counts": _summarize_action_counts(layers_meta),
-        },
+        "byte_plan": _build_byte_plan(
+            layers_meta=layers_meta,
+            fallback_action=fallback_action,
+            body_len=len(body),
+        ),
         "thresholds": {
             "protect_threshold": protect_threshold,
             "aggressive_threshold": aggressive_threshold,

@@ -158,6 +158,11 @@ def test_owv3_default_protected_channels_are_asym_not_fp16() -> None:
     assert protected_layers
     assert all(l["protected_codec"] == "asym" for l in protected_layers)
     assert header["byte_plan"]["action_counts"]["fp16_protect_channels"] == 0
+    assert header["byte_plan"]["action_bytes"]["owv2_low_bit"] > 0
+    assert header["byte_plan"]["action_bytes"]["asym"] > 0
+    assert header["byte_plan"]["action_bytes"]["bias"] > 0
+    assert header["byte_plan"]["fallback_reason_counts"]["convt_keep_asym_fallback"] > 0
+    assert header["byte_plan"]["fallback_reason_bytes"]["convt_keep_asym_fallback"] > 0
     assert header["byte_plan"]["promotion_eligible"] is True
 
 
@@ -180,6 +185,9 @@ def test_owv3_all_protected_default_keeps_asym_not_fp16() -> None:
         if l["kind"] == "fp16_conv" and l.get("fallback_reason") == "all_channels_protected"
     ]
     assert header["byte_plan"]["fallback_action"] == "keep_asym"
+    assert header["byte_plan"]["fallback_reason_counts"]["all_channels_protected"] > 0
+    assert header["byte_plan"]["fallback_reason_bytes"]["all_channels_protected"] > 0
+    assert header["byte_plan"]["action_bytes"]["keep_asym"] > 0
     assert header["byte_plan"]["promotion_eligible"] is True
 
 
@@ -200,6 +208,8 @@ def test_owv3_diagnostic_fp16_fallback_is_explicit_smoke_only() -> None:
     assert header["byte_plan"]["fallback_action"] == "diagnostic_fp16"
     assert header["byte_plan"]["promotion_eligible"] is False
     assert header["byte_plan"]["action_counts"]["diagnostic_fp16_layers"] > 0
+    assert header["byte_plan"]["action_bytes"]["diagnostic_fp16"] > 0
+    assert header["byte_plan"]["fallback_reason_bytes"]["all_channels_protected"] > 0
 
 
 def test_owv3_byte_budget_rejects_unjustified_size_regression() -> None:
