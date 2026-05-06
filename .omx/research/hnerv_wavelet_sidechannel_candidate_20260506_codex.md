@@ -249,3 +249,127 @@ candidate is byte-negative and plain-HNeRV-format, so the next scientifically
 correct step is archive preflight plus component-response or exact CUDA auth
 eval. It remains `score_claim=false` until that happens; the current evidence
 is a real byte-transform/rate artifact, not score evidence.
+
+## WR01 Apply Transform Static Preflight And Dispatch Plan
+
+The first archive-preflight attempt exposed a harness bug: single-member `x`
+archives were always interpreted as the PR85 bundle family. Public HNeRV
+archives also use member `x`, but their wire format starts with `0xff` and
+contains two 24-bit-length brotli sections. The public replay preflight now
+content-detects `0xff` HNeRV payloads before the PR85 parser and fails closed
+on malformed HNeRV payloads.
+
+Regression coverage:
+
+```bash
+.venv/bin/python -m pytest src/tac/tests/test_preflight_public_replay_intake.py -q
+```
+
+Static replay preflight command:
+
+```bash
+.venv/bin/python experiments/preflight_public_replay_intake.py \
+  --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip \
+  --inflate-sh experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh \
+  --upstream-dir experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source \
+  --expected-archive-sha256 d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 \
+  --expected-archive-size-bytes 186222 \
+  --json-out experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json \
+  --fail-if-not-ready
+```
+
+Observed static replay preflight:
+
+- `ready_for_exact_eval_dispatch=true`
+- blockers: `[]`
+- archive bytes: `186222`
+- archive SHA-256:
+  `d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628`
+- member: `x`
+- member SHA-256:
+  `803a0940f92ec1cb1b70e9815fb6c666650b5371625e17103104baa21e96b4e7`
+- detected member format: `hnerv_ff_len24_brotli_sections`
+- decoder brotli bytes: `170278`
+- decoder decoded bytes: `229070`
+- latents/sidecar brotli bytes: `15840`
+- latents/sidecar decoded bytes: `33712`
+- inflate runtime tree SHA-256:
+  `4a8445803e232159be84f84f726311c4e6846a0a9e7a1825e1be38cf9e165242`
+
+Pre-submission compliance command:
+
+```bash
+.venv/bin/python scripts/pre_submission_compliance_check.py \
+  --submission-dir experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders \
+  --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip \
+  --archive-manifest-json experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json \
+  --expect-single-member x \
+  --expected-archive-sha256 d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 \
+  --expected-archive-size-bytes 186222 \
+  --json-out experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/pre_submission_compliance.json
+```
+
+Observed compliance result:
+
+- failing checks: `[]`
+- archive member: `x`
+- archive bytes: `186222`
+- archive SHA-256:
+  `d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628`
+
+Lightning exact-eval dry-run:
+
+```bash
+.venv/bin/python scripts/launch_lightning_batch_job.py exact-eval \
+  --job-name exact_eval_wr01_apply_pr106x_half_20260506 \
+  --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip \
+  --repo-dir /Users/adpena/Projects/pact \
+  --upstream-dir experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source \
+  --inflate-sh experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh \
+  --output-dir experiments/results/lightning_batch/exact_eval_wr01_apply_pr106x_half_20260506 \
+  --local-artifact-dir experiments/results/lightning_batch/exact_eval_wr01_apply_pr106x_half_20260506 \
+  --infer-expected-archive \
+  --adjudicate \
+  --baseline-score 0.20945123680571204 \
+  --baseline-archive-bytes 186231 \
+  --baseline-posenet-dist 0.00003351 \
+  --baseline-segnet-dist 0.00067142 \
+  --regression-threshold 0.02 \
+  --max-posenet-relative 1.25 \
+  --max-segnet-relative 1.10 \
+  --queue-metadata lane=wr01_apply_pr106x_half \
+  --queue-metadata archive_manifest=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json \
+  --queue-metadata public_preflight=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json \
+  --predicted-band 0.18 0.25 \
+  --max-sane-score 1.0 \
+  --component-trace \
+  --dry-run
+```
+
+Observed Lightning dry-run:
+
+- status: `DRY_RUN`
+- submit readiness: `ok=true`
+- blockers: `[]`
+- target machine: `T4`
+- expected archive bytes: `186222`
+- expected archive SHA-256:
+  `d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628`
+- command SHA-256:
+  `6da65a57962908529a6780454894d52574c57a6f2d9e1c8a06745ab6fccb49f2`
+- predicted SDK artifact path:
+  `/teamspace/jobs/exact-eval-wr01-apply-pr106x-half-20260506/artifacts`
+
+Tracked artifacts:
+
+- `experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json`
+- `experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/pre_submission_compliance.json`
+- `experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/lightning_exact_eval_dry_run.json`
+
+Current conclusion:
+
+The half-strength WR01 apply transform is now preflight-clean for exact eval,
+but it is still not a score claim. Local CUDA is unavailable on this machine,
+so the next promotable evidence step is a claimed non-dry-run Lightning exact
+CUDA auth eval, followed by harvest, JSON adjudication, component trace, and a
+score-delta ledger update.

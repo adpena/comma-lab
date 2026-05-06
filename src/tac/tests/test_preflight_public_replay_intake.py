@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
+from tac.hnerv_lowlevel_packer import PackedHnervPayload
 from tac.pr85_bundle import SEGMENT_ORDER, pack_pr85_bundle
-
 
 brotli = pytest.importorskip("brotli")
 
@@ -105,6 +105,20 @@ def _write_x_archive(path: Path) -> None:
         zf.writestr(info, raw)
 
 
+def _write_hnerv_x_archive(path: Path) -> None:
+    payload = PackedHnervPayload(
+        header=b"",
+        decoder_packed_brotli=_br(b"decoder payload"),
+        latents_and_sidecar_brotli=_br(b"latents payload"),
+    ).to_bytes()
+    info = zipfile.ZipInfo("x", (1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_STORED
+    info.external_attr = 0o644 << 16
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr(info, payload)
+
+
 def _blocker_codes(payload: dict) -> set[str]:
     return {row["code"] for row in payload["blockers"]}
 
@@ -129,6 +143,40 @@ def test_public_replay_preflight_accepts_byte_closed_x_archive_and_runtime(tmp_p
     assert smoke["segments"][0]["codec"] == "QMA9"
     assert smoke["segments"][1]["decoded_magic_ascii"].startswith("QH0")
     assert payload["runtime"]["runtime_tree_sha256"]
+
+
+def test_public_replay_preflight_accepts_hnerv_ff_x_archive(tmp_path: Path) -> None:
+    archive = tmp_path / "archive.zip"
+    inflate_sh = _write_runtime(tmp_path / "replay_submission")
+    upstream = _write_upstream(tmp_path)
+    _write_hnerv_x_archive(archive)
+
+    payload = module.build_preflight(archive, inflate_sh, upstream_dir=upstream)
+
+    assert payload["ready_for_exact_eval_dispatch"] is True
+    smoke = payload["archive"]["members"][0]["decode_smoke"]["format"]
+    assert smoke["format"] == "hnerv_ff_len24_brotli_sections"
+    assert smoke["decoder_packed_brotli"]["brotli_decode"]["ok"] is True
+    assert smoke["latents_and_sidecar_brotli"]["brotli_decode"]["ok"] is True
+
+
+def test_public_replay_preflight_blocks_malformed_hnerv_ff_x_archive(tmp_path: Path) -> None:
+    archive = tmp_path / "archive.zip"
+    inflate_sh = _write_runtime(tmp_path / "replay_submission")
+    upstream = _write_upstream(tmp_path)
+    info = zipfile.ZipInfo("x", (1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_STORED
+    info.external_attr = 0o644 << 16
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr(info, b"\xff\x00\x00")
+
+    payload = module.build_preflight(archive, inflate_sh, upstream_dir=upstream)
+
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert "member_decode_smoke" in _blocker_codes(payload)
+    smoke = payload["archive"]["members"][0]["decode_smoke"]
+    assert smoke["status"] == "failed"
+    assert smoke["blocker"].startswith("HnervLowlevelPackError:")
 
 
 def test_public_replay_preflight_blocks_duplicate_and_sidecar_members(tmp_path: Path) -> None:

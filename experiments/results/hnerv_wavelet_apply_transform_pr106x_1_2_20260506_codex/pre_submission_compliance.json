@@ -1,0 +1,174 @@
+{
+  "archive": {
+    "bytes": 186222,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 186122,
+        "file_size": 186122,
+        "local_header_name": "x",
+        "name": "x",
+        "sha256": "803a0940f92ec1cb1b70e9815fb6c666650b5371625e17103104baa21e96b4e7",
+        "unsafe_reason": null
+      }
+    ],
+    "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip",
+    "sha256": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628"
+  },
+  "archive_manifest": {
+    "exists": true,
+    "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json"
+  },
+  "auth_eval": {
+    "exists": false,
+    "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/contest_auth_eval.json"
+  },
+  "checks": [
+    {
+      "details": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "x",
+      "name": "zip_member_safe:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "central='x' local='x' local_reason=None",
+      "name": "zip_local_header_matches:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=1",
+      "name": "archive_zip_readable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['x']",
+      "name": "zip_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['x']",
+      "name": "zip_expected_single_member",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "packed_payload_count=0",
+      "name": "zip_at_most_one_packed_payload_container",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "name": "expected_archive_sha256_is_well_formed",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 actual=d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "name": "expected_archive_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=186222 actual=186222",
+      "name": "expected_archive_size_bytes_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/contest_auth_eval.json",
+      "name": "auth_eval_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
+      "name": "archive_manifest_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
+      "name": "archive_manifest_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=None actual=d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "name": "archive_manifest_sha_matches",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=None actual=186222",
+      "name": "archive_manifest_size_matches",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/report.txt",
+      "name": "report_exists",
+      "passed": false,
+      "severity": "error"
+    }
+  ],
+  "dispatch_claims": {
+    "required": false
+  },
+  "passed": false,
+  "report": {
+    "exists": false,
+    "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/report.txt"
+  },
+  "schema": "pre_submission_compliance_check_v1",
+  "submission_dir": {
+    "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders",
+    "required_files": {
+      "archive.zip": {
+        "exists": false,
+        "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/archive.zip"
+      },
+      "inflate.sh": {
+        "exists": true,
+        "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh"
+      },
+      "report.txt": {
+        "exists": false,
+        "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/report.txt"
+      }
+    }
+  }
+}

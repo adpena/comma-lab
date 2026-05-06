@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: I001
 # pyc-recovery pass2: rehydrated from git blob bca3af5700822210f92d708931694a289f7b3b33 via `git fsck --lost-found`
 # original path: experiments/preflight_public_replay_intake.py
 # This is OUR source, dropped during commit 66c59aae filter-repo cleanup; the .pyc was the only
@@ -31,16 +32,17 @@ for _path in (SRC_ROOT, EXPERIMENTS_ROOT):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from contest_auth_eval import (  # noqa: E402
+from contest_auth_eval import (
     _runtime_dependency_manifest,
     _validate_archive_members,
     _validate_zip_container_integrity,
 )
-from tac.pr85_bundle import (  # noqa: E402
+from tac.pr85_bundle import (
     Pr85BundleError,
     parse_pr85_bundle,
 )
-from tac.submission_archive import validate_archive_member_name  # noqa: E402
+from tac.hnerv_lowlevel_packer import parse_ff_packed_brotli_hnerv
+from tac.submission_archive import validate_archive_member_name
 
 
 SCHEMA = "public_replay_intake_preflight_v1"
@@ -159,7 +161,9 @@ def _probe_member(name: str, data: bytes) -> dict[str, Any]:
     }
     lower = name.lower()
     try:
-        if name == "x":
+        if data.startswith(b"\xff"):
+            row["format"] = _probe_hnerv_ff_payload(data)
+        elif name == "x":
             row["format"] = _probe_pr85_family_x(data)
         elif lower.endswith(".br"):
             _decoded, row["decompression"] = _try_brotli(data)
@@ -179,10 +183,35 @@ def _probe_member(name: str, data: bytes) -> dict[str, Any]:
             json.loads(data.decode("utf-8"))
         elif lower.endswith(".txt"):
             data.decode("utf-8")
-    except (Pr85BundleError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+    except (Pr85BundleError, UnicodeDecodeError, ValueError, json.JSONDecodeError) as exc:
         row["status"] = "failed"
         row["blocker"] = f"{exc.__class__.__name__}: {exc}"
     return row
+
+
+def _probe_hnerv_ff_payload(raw: bytes) -> dict[str, Any]:
+    packed = parse_ff_packed_brotli_hnerv(raw)
+    decoder_raw, decoder_decode = _try_brotli(packed.decoder_packed_brotli)
+    latents_raw, latents_decode = _try_brotli(packed.latents_and_sidecar_brotli)
+    if decoder_raw is None:
+        raise ValueError("hnerv decoder brotli decode failed")
+    if latents_raw is None:
+        raise ValueError("hnerv latents brotli decode failed")
+    return {
+        "recognized": True,
+        "format": "hnerv_ff_len24_brotli_sections",
+        "header_bytes": len(packed.header),
+        "decoder_packed_brotli": {
+            "bytes": len(packed.decoder_packed_brotli),
+            "sha256": _sha256_bytes(packed.decoder_packed_brotli),
+            "brotli_decode": decoder_decode,
+        },
+        "latents_and_sidecar_brotli": {
+            "bytes": len(packed.latents_and_sidecar_brotli),
+            "sha256": _sha256_bytes(packed.latents_and_sidecar_brotli),
+            "brotli_decode": latents_decode,
+        },
+    }
 
 
 def _runtime_source_payload_scan(runtime_root: Path, archive_bytes: int) -> dict[str, Any]:
