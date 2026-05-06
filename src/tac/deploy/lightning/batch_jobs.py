@@ -53,6 +53,7 @@ ARTIFACT_COMPONENT_SENSITIVITY_LOG = "diagnostic_component_sensitivity.log"
 ARTIFACT_COMPONENT_SENSITIVITY_SUMMARY = "component_sensitivity_profile_summary.json"
 ARTIFACT_COMPONENT_TRACE = "component_trace.json"
 ARTIFACT_COMPONENT_TRACE_LOG = "component_trace.log"
+ARTIFACT_COMPONENT_TRACE_STATUS = "component_trace_status.json"
 ARTIFACT_INFRA_FAILURE = "lightning_artifact_infra_failure.json"
 LIGHTNING_EMPTY_ARTIFACT_INFRA_TERMINAL_CLASS = "empty_lightning_artifact_dir_infra"
 LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS = "exact_eval_missing_score_json"
@@ -204,6 +205,7 @@ OPTIONAL_ARTIFACT_FILES = (
     ARTIFACT_INFLATE_RUNTIME_STATIC_PREFLIGHT,
     ARTIFACT_COMPONENT_TRACE,
     ARTIFACT_COMPONENT_TRACE_LOG,
+    ARTIFACT_COMPONENT_TRACE_STATUS,
 )
 SSH_AUTH_OPTIONS = (
     "-o",
@@ -1810,6 +1812,7 @@ def exact_cuda_eval_command(
                 f"{out}/auth_eval.log "
                 f"{out}/{ARTIFACT_COMPONENT_TRACE} "
                 f"{out}/{ARTIFACT_COMPONENT_TRACE_LOG} "
+                f"{out}/{ARTIFACT_COMPONENT_TRACE_STATUS} "
                 f"{out}/adjudication.log "
                 f"{out}/adjudication_provenance.json "
                 f"{out}/{ARTIFACT_METADATA} "
@@ -1899,6 +1902,7 @@ def exact_cuda_eval_command(
         command = "\n".join(
             [
                 command,
+                "set +e",
                 (
                     f"{py} -u experiments/contest_component_trace.py "
                     f"--submission-dir {out}/eval_work "
@@ -1911,23 +1915,60 @@ def exact_cuda_eval_command(
                     f"--top-k {_quote(str(component_trace_top_k))} "
                     f"2>&1 | tee {out}/{ARTIFACT_COMPONENT_TRACE_LOG}"
                 ),
-                f"test -f {out}/{ARTIFACT_COMPONENT_TRACE}",
+                "component_trace_rc=${PIPESTATUS[0]}",
+                "set -e",
                 (
-                    f"{py} - {out}/{ARTIFACT_COMPONENT_TRACE} <<'PY'\n"
-                    "import json, math, sys\n"
-                    "payload = json.load(open(sys.argv[1]))\n"
-                    "assert payload.get('score_claim') is False\n"
-                    "assert payload.get('evidence_grade') == 'diagnostic_component_trace'\n"
-                    "assert payload.get('n_samples') == 600, payload.get('n_samples')\n"
-                    "cross = payload.get('contest_auth_eval_cross_check') or {}\n"
-                    "assert cross.get('all_match') is True, cross\n"
-                    "score = payload.get('score_recomputed_from_components')\n"
-                    "assert isinstance(score, (int, float)) and math.isfinite(score), score\n"
-                    "print('LIGHTNING_COMPONENT_TRACE_JSON_OK')\n"
-                    "print(json.dumps({'n_samples': payload.get('n_samples'), "
-                    "'avg_posenet_dist': payload.get('avg_posenet_dist'), "
-                    "'avg_segnet_dist': payload.get('avg_segnet_dist'), "
-                    "'score_recomputed_from_components': score}, sort_keys=True))\n"
+                    f"{py} - {out}/{ARTIFACT_COMPONENT_TRACE_STATUS} "
+                    f"{out}/{ARTIFACT_COMPONENT_TRACE} \"$component_trace_rc\" <<'PY'\n"
+                    "import json, math, sys, time\n"
+                    "from pathlib import Path\n"
+                    "status_path = Path(sys.argv[1])\n"
+                    "trace_path = Path(sys.argv[2])\n"
+                    "exit_code = int(sys.argv[3])\n"
+                    "status = {\n"
+                    "    'schema_version': 1,\n"
+                    "    'tool': 'exact_cuda_eval_command.component_trace_status',\n"
+                    "    'recorded_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),\n"
+                    "    'score_claim': False,\n"
+                    "    'evidence_grade': 'diagnostic_component_trace_status',\n"
+                    "    'component_trace_exit_code': exit_code,\n"
+                    "    'component_trace_json': str(trace_path),\n"
+                    "}\n"
+                    "errors = []\n"
+                    "summary = {}\n"
+                    "if exit_code != 0:\n"
+                    "    errors.append(f'component trace command exited {exit_code}')\n"
+                    "elif not trace_path.is_file():\n"
+                    "    errors.append('component_trace.json was not written')\n"
+                    "else:\n"
+                    "    try:\n"
+                    "        payload = json.loads(trace_path.read_text())\n"
+                    "        if payload.get('score_claim') is not False:\n"
+                    "            errors.append('component_trace.json score_claim is not false')\n"
+                    "        if payload.get('evidence_grade') != 'diagnostic_component_trace':\n"
+                    "            errors.append('component_trace.json evidence_grade mismatch')\n"
+                    "        if payload.get('n_samples') != 600:\n"
+                    "            errors.append(f\"component_trace.json n_samples={payload.get('n_samples')!r}\")\n"
+                    "        cross = payload.get('contest_auth_eval_cross_check') or {}\n"
+                    "        if not isinstance(cross, dict) or cross.get('all_match') is not True:\n"
+                    "            errors.append('component_trace.json cross-check did not match contest_auth_eval.json')\n"
+                    "        score = payload.get('score_recomputed_from_components')\n"
+                    "        if not isinstance(score, (int, float)) or not math.isfinite(score):\n"
+                    "            errors.append(f'component_trace.json score is not finite: {score!r}')\n"
+                    "        summary = {\n"
+                    "            'n_samples': payload.get('n_samples'),\n"
+                    "            'avg_posenet_dist': payload.get('avg_posenet_dist'),\n"
+                    "            'avg_segnet_dist': payload.get('avg_segnet_dist'),\n"
+                    "            'score_recomputed_from_components': score,\n"
+                    "        }\n"
+                    "    except Exception as exc:\n"
+                    "        errors.append(f'component_trace.json validation error: {exc}')\n"
+                    "status['status'] = 'ok' if not errors else 'diagnostic_unavailable_or_invalid'\n"
+                    "status['errors'] = errors\n"
+                    "status['summary'] = summary\n"
+                    "status_path.write_text(json.dumps(status, indent=2, sort_keys=True) + '\\n')\n"
+                    "print('LIGHTNING_COMPONENT_TRACE_STATUS')\n"
+                    "print(json.dumps({'status': status['status'], 'errors': errors, **summary}, sort_keys=True))\n"
                     "PY"
                 ),
             ]
@@ -3424,6 +3465,17 @@ def validate_local_artifact_dir(
 
     component_trace_validation: dict[str, Any] | None = None
     component_trace_path = artifact_root / ARTIFACT_COMPONENT_TRACE
+    component_trace_status_path = artifact_root / ARTIFACT_COMPONENT_TRACE_STATUS
+    component_trace_status: dict[str, Any] | None = None
+    if component_trace_status_path.is_file():
+        component_trace_status = _load_json_object(
+            component_trace_status_path,
+            label="component_trace_status.json",
+        )
+        if component_trace_status.get("score_claim") is not False:
+            raise ValueError("component_trace_status.json must remain score_claim=false")
+        if component_trace_status.get("evidence_grade") != "diagnostic_component_trace_status":
+            raise ValueError("component_trace_status.json has unexpected evidence_grade")
     if component_trace_path.is_file():
         component_trace_payload = _load_json_object(
             component_trace_path,
@@ -3487,6 +3539,7 @@ def validate_local_artifact_dir(
         "adjudication_regression_triggered": adjudication_regression_triggered,
         "adjudication_sane_score_gate_triggered": adjudication_sane_score_gate_triggered,
         "component_trace": component_trace_validation,
+        "component_trace_status": component_trace_status,
         "promotion_eligible": promotion_eligible,
         "score_source": "contest_auth_eval.json:score_recomputed_from_components",
     }

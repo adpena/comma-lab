@@ -748,9 +748,15 @@ def test_exact_cuda_eval_command_can_emit_component_trace() -> None:
     assert "--contest-auth-eval-json /out/contest_auth_eval.json" in command
     assert "--output-json /out/component_trace.json" in command
     assert "--top-k 13" in command
-    assert "LIGHTNING_COMPONENT_TRACE_JSON_OK" in command
+    assert "LIGHTNING_COMPONENT_TRACE_STATUS" in command
+    assert "component_trace_status.json" in command
+    assert "diagnostic_unavailable_or_invalid" in command
+    assert "component_trace_rc=${PIPESTATUS[0]}" in command
     assert command.index("experiments/contest_auth_eval.py") < command.index(
         "experiments/contest_component_trace.py"
+    )
+    assert command.index("experiments/contest_component_trace.py") < command.index(
+        "scripts/adjudicate_contest_auth_eval.py"
     )
 
 
@@ -2749,6 +2755,35 @@ def test_validate_local_artifact_dir_reports_failed_component_gate_as_non_promot
     assert result["promotion_eligible"] is False
 
 
+def test_validate_local_artifact_dir_accepts_component_trace_status_without_trace(
+    tmp_path: Path,
+) -> None:
+    artifact_dir = tmp_path / "artifacts"
+    _write_artifact_dir(artifact_dir, adjudication=True)
+    (artifact_dir / "component_trace_status.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "tool": "exact_cuda_eval_command.component_trace_status",
+                "score_claim": False,
+                "evidence_grade": "diagnostic_component_trace_status",
+                "component_trace_exit_code": 1,
+                "status": "diagnostic_unavailable_or_invalid",
+                "errors": ["component trace command exited 1"],
+                "summary": {},
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+
+    result = validate_local_artifact_dir(artifact_dir, require_adjudication=True)
+
+    assert result["component_trace"] is None
+    assert result["component_trace_status"]["status"] == "diagnostic_unavailable_or_invalid"
+    assert result["promotion_eligible"] is True
+
+
 def test_validate_local_artifact_dir_uses_adjudicated_hardware_promotion_gate(
     tmp_path: Path,
 ) -> None:
@@ -3046,6 +3081,7 @@ def test_harvest_ssh_artifacts_mirrors_validates_and_records_state(
                 "auth_eval.log",
                 "component_trace.json",
                 "component_trace.log",
+                "component_trace_status.json",
             }
             shutil.copy2(remote_source / name, Path(args[-1]))
             return subprocess.CompletedProcess(args, 0, stdout="", stderr="")

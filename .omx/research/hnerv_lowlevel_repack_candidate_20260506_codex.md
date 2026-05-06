@@ -106,3 +106,55 @@ adapter/preflight:
 The adapter now fails closed if both possible payload member names exist and
 requires a managed executable Python (`${PYTHON}` override or repo
 `.venv/bin/python`).
+
+## 2026-05-06 Exact CUDA Result And Diagnostic Failure Class
+
+Evidence grade: `A++ contest T4`
+
+Score claim: `true`
+
+The custody-v2 Lightning exact CUDA run completed the canonical score path:
+
+- Job: `exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506`
+- Local artifact directory:
+  `experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506`
+- Candidate archive SHA-256:
+  `b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f`
+- Candidate archive bytes: `186080`
+- Canonical recomputed score: `0.20935073680571203`
+- Average PoseNet distortion: `0.00003351`
+- Average SegNet distortion: `0.00067142`
+- Samples: `600`
+- Device: `cuda`
+- GPU: `Tesla T4`
+- Runtime tree SHA-256 recorded by exact eval:
+  `bb6baee66c61781f285fee5862ab499b8eb1fec93edeea046cb3019289638fd3`
+- External runtime dependency roots recorded: `1`
+- External runtime dependency root file count: `20`
+- Baseline PR106x score:
+  `0.20945123680571204`
+- Score delta vs PR106x baseline:
+  `-0.00010050000000000336`
+- Archive byte delta vs PR106x baseline: `-151`
+
+Component gates passed against the PR106x baseline with exact measured parity:
+PoseNet relative `1.0`, SegNet relative `1.0`. This is a byte-only HNeRV
+archive improvement, not a representation or neural-output change.
+
+Lightning marked the job failed after exact scoring because the optional
+diagnostic component-trace step crashed:
+
+```text
+RuntimeError: tac.scoring.evaluate_archive_per_pair is unavailable; cannot compute diagnostic component trace
+```
+
+This diagnostic failure did not affect `archive.zip -> inflate.sh ->
+upstream/evaluate.py` scoring. The dispatch claim was closed as
+`completed_a_pp_score_harvested_component_trace_optional_failure`.
+
+Follow-up hardening landed in `src/tac/deploy/lightning/batch_jobs.py`:
+optional component trace now writes `component_trace_status.json` and cannot
+turn a valid exact CUDA score into a failed Lightning job. Diagnostic trace
+JSON remains validated if present, but missing/unavailable trace evidence is
+recorded as non-score diagnostic status rather than blocking adjudicated score
+custody.
