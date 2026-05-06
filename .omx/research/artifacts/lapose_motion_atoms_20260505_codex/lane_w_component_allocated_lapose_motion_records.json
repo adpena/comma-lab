@@ -1,0 +1,1083 @@
+{
+  "allocation": {
+    "allocation_inference": true,
+    "measurement_scope": "global_component_response_allocated_to_pairs_by_opportunity_mass",
+    "method": "opportunity_mass_weighted_global_component_response",
+    "pair_opportunity_count": 30,
+    "response_atom": {
+      "byte_delta": -3,
+      "combined_score_delta": -0.006993025778567197,
+      "confidence": 0.5,
+      "epsilon": -2.0,
+      "pose_dist_delta": -0.0003013400000000002,
+      "seg_dist_delta": 1.2859999999999955e-05
+    }
+  },
+  "device": "cuda",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "planning_only_allocated_component_response",
+    "requires_lapose_or_motion_builder_charging_bytes",
+    "requires_noop_controls",
+    "requires_exact_cuda_auth_eval"
+  ],
+  "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+  "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+  "ready_for_exact_eval_dispatch": false,
+  "records": [
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.344739952676,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.0187615097930502e-05,
+      "expected_seg_dist_delta": 4.347671406364429e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.8368585605517604,
+      "hard_pair_support": [],
+      "latent_action": [
+        -0.602671118531,
+        0.948429924381,
+        0.316986874396,
+        2.972302346507,
+        1.150780552881,
+        2.808100452644,
+        2.161021803128,
+        0.781572755608,
+        2.029433501851,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 119,
+      "pair_support": [
+        119
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.343457392455,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.0085466445796973e-05,
+      "expected_seg_dist_delta": 4.3040783995801597e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.798387345589294,
+      "hard_pair_support": [],
+      "latent_action": [
+        -0.585976627713,
+        0.963743273292,
+        0.266831226028,
+        3.747793220286,
+        -0.361872532299,
+        2.762211864821,
+        3.205359435447,
+        -0.669396771321,
+        2.295380320722,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 124,
+      "pair_support": [
+        124
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3348391397415,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.453881566285484e-06,
+      "expected_seg_dist_delta": 4.034542939617403e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.560519912595975,
+      "hard_pair_support": [],
+      "latent_action": [
+        -0.522537562604,
+        0.997494455034,
+        0.070744697155,
+        3.358097550609,
+        -0.722028128689,
+        2.478482832612,
+        2.542468308397,
+        -1.022994470616,
+        1.632962592066,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 143,
+      "pair_support": [
+        143
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": -1,
+      "class_support": [],
+      "confidence": 0.369718301798,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.2865539961386384e-05,
+      "expected_seg_dist_delta": 5.490503879452718e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 4.845418349874024,
+      "hard_pair_support": [],
+      "latent_action": [
+        -0.298831385643,
+        0.806853605014,
+        -0.590751436795,
+        5.605178693457,
+        1.32758416024,
+        4.011113783842,
+        4.842400826003,
+        1.008362844759,
+        3.62049238194,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 210,
+      "pair_support": [
+        210
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.323368062973,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -8.731963155715002e-06,
+      "expected_seg_dist_delta": 3.726456699492084e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.2886310743358855,
+      "hard_pair_support": [],
+      "latent_action": [
+        -0.258764607679,
+        0.726306348507,
+        -0.68737114292,
+        2.461764445036,
+        -0.233089724415,
+        2.154172959768,
+        2.36360031315,
+        0.125588159148,
+        2.348551010737,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 222,
+      "pair_support": [
+        222
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.321466928894,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -8.62286218098241e-06,
+      "expected_seg_dist_delta": 3.679896716248535e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.2475414763442694,
+      "hard_pair_support": [],
+      "latent_action": [
+        -0.025041736227,
+        0.078589809084,
+        -0.996907037746,
+        2.386164900627,
+        -0.259282851431,
+        2.105161156322,
+        2.350640506505,
+        0.34993979283,
+        2.524382166488,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 292,
+      "pair_support": [
+        292
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3493512747775,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.057554756681e-05,
+      "expected_seg_dist_delta": 4.5132256490733405e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.982961647469389,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.098497495826,
+        -0.304524338179,
+        -0.952504555085,
+        1.089385298991,
+        5.85462947963,
+        2.982372680381,
+        1.083773012384,
+        2.811710619987,
+        1.812326300019,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 329,
+      "pair_support": [
+        329
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.324797132805,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -8.815770654792395e-06,
+      "expected_seg_dist_delta": 3.7622224271795883e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.3201946461024363,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.165275459098,
+        -0.496210179402,
+        -0.868202429079,
+        2.566667033244,
+        -0.302937996512,
+        2.191822088771,
+        1.704264767972,
+        0.006096585194,
+        1.224130791172,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 349,
+      "pair_support": [
+        349
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.335326592407,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.487311313754864e-06,
+      "expected_seg_dist_delta": 4.048809434356111e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.573110220683,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.235392320534,
+        -0.673923605786,
+        -0.738801037874,
+        3.445015642296,
+        -0.818069627721,
+        2.493500592226,
+        3.118819897542,
+        -0.402369711064,
+        2.631466810931,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 370,
+      "pair_support": [
+        370
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3642345914165,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.2124554674840541e-05,
+      "expected_seg_dist_delta": 5.174280650376608e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 4.566348546726098,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.242070116861,
+        -0.689273417256,
+        -0.724501315571,
+        6.243076694858,
+        -0.732941964918,
+        3.678238433193,
+        5.249857123496,
+        -0.051210690499,
+        3.505651099165,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 372,
+      "pair_support": [
+        372
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3372791316715,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.623792192557275e-06,
+      "expected_seg_dist_delta": 4.1070540783263436e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.624511635356689,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.265442404007,
+        -0.740565768888,
+        -0.671983885187,
+        2.919354382849,
+        0.336610788185,
+        2.554812363476,
+        2.794623183895,
+        1.044941909401,
+        3.072422472106,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 379,
+      "pair_support": [
+        379
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.33370029528,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.37674368197902e-06,
+      "expected_seg_dist_delta": 4.001623539863599e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.531468250465136,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.295492487479,
+        -0.800612668167,
+        -0.599182239031,
+        2.953904418569,
+        -0.126134389154,
+        2.443829917429,
+        2.196684229609,
+        0.437729547972,
+        1.732566091847,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 388,
+      "pair_support": [
+        388
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3458750510885,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.028001665478464e-05,
+      "expected_seg_dist_delta": 4.387104738187095e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.871658825482866,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.338898163606,
+        -0.874633832852,
+        -0.484784135911,
+        3.65220456585,
+        0.111786381351,
+        2.84961031957,
+        3.207175897786,
+        1.257100484326,
+        2.970085373706,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 401,
+      "pair_support": [
+        401
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3554229697555,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.1144050925467147e-05,
+      "expected_seg_dist_delta": 4.7558404095542216e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 4.197071324503536,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.348914858097,
+        -0.889453662516,
+        -0.457025362794,
+        5.098537118648,
+        -0.737307419475,
+        3.23776338556,
+        3.026200169575,
+        -0.476747179713,
+        1.530665637154,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 404,
+      "pair_support": [
+        404
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3402355699095,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.838751941422507e-06,
+      "expected_seg_dist_delta": 4.1987904017618935e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.705469754080193,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.365609348915,
+        -0.912189378837,
+        -0.409768882587,
+        3.660365122548,
+        -0.615072893346,
+        2.651379465521,
+        3.276006868347,
+        0.217035764938,
+        2.77642407121,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 409,
+      "pair_support": [
+        409
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3212341087665,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -8.609683166933318e-06,
+      "expected_seg_dist_delta": 3.67427243402011e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.2425779974154105,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.392320534224,
+        -0.943325203003,
+        -0.331869795822,
+        2.328819801839,
+        -0.165424079678,
+        2.099240702836,
+        2.042482296179,
+        0.60843186824,
+        2.153171461451,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 417,
+      "pair_support": [
+        417
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.326307866575,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -8.906117015665796e-06,
+      "expected_seg_dist_delta": 3.800778682599776e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.3542208833326024,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.435726210351,
+        -0.979682912287,
+        -0.2005527147,
+        2.924794753981,
+        -0.833348918507,
+        2.232408692988,
+        1.63446475182,
+        0.425536433399,
+        1.281107438557,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 430,
+      "pair_support": [
+        430
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.327677693044,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -8.989652390518081e-06,
+      "expected_seg_dist_delta": 3.8364282784251027e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.38568196770121,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.469115191987,
+        -0.995296525228,
+        -0.096875316098,
+        2.691309017065,
+        -0.261465678629,
+        2.269935574696,
+        2.210546203324,
+        -0.058526615058,
+        1.906728727057,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 440,
+      "pair_support": [
+        440
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.325798088943,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -8.875425400183021e-06,
+      "expected_seg_dist_delta": 3.7876807143543236e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.342661810235488,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.482470784641,
+        -0.998484049766,
+        -0.055041823763,
+        2.668895423809,
+        -0.40334505002,
+        2.218620993756,
+        2.488793461678,
+        -0.72304614055,
+        2.203080763349,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 444,
+      "pair_support": [
+        444
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.333147877784,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.339802505217152e-06,
+      "expected_seg_dist_delta": 3.985858505910004e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.517555468235621,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.489148580968,
+        -0.999418967056,
+        -0.034084135441,
+        3.147881242172,
+        -0.536493512298,
+        2.427234706442,
+        2.652680322851,
+        -0.807178100857,
+        1.906564083854,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 446,
+      "pair_support": [
+        446
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.327034526662,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -8.95023525840465e-06,
+      "expected_seg_dist_delta": 3.819606604602221e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.370836691419371,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.499165275459,
+        -0.999996561604,
+        -0.00262236148,
+        2.114568973036,
+        0.825549092539,
+        2.252228081832,
+        2.132051209984,
+        0.281658686114,
+        2.400181679103,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 449,
+      "pair_support": [
+        449
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3588065312255,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.1495489567012115e-05,
+      "expected_seg_dist_delta": 4.905820529361359e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 4.32943010988741,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.515859766277,
+        -0.99875899518,
+        0.049804312527,
+        4.858586399706,
+        0.181634853285,
+        3.395641366622,
+        3.910038705768,
+        -0.564536823224,
+        2.707886990305,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 454,
+      "pair_support": [
+        454
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": -1,
+      "class_support": [],
+      "confidence": 0.376758687847,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.4043600676190382e-05,
+      "expected_seg_dist_delta": 5.993253623674505e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 5.289099456295452,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.522537562604,
+        -0.997494455034,
+        0.070744697155,
+        8.853689599116,
+        -0.800607509737,
+        4.540338021688,
+        6.946197746678,
+        -1.101029845729,
+        3.356080970207,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 456,
+      "pair_support": [
+        456
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.334542255145,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.433643392983106e-06,
+      "expected_seg_dist_delta": 4.02590608726894e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.5528978138281353,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.726210350584,
+        -0.757930994636,
+        0.652334735676,
+        0.040443344862,
+        7.456776281681,
+        2.469391168909,
+        0.417396429598,
+        5.722185384291,
+        1.918431865424,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 517,
+      "pair_support": [
+        517
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": -1,
+      "class_support": [],
+      "confidence": 0.366843141247,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.2461713876850323e-05,
+      "expected_seg_dist_delta": 5.318166869857785e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 4.693329411046622,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.742904841402,
+        -0.72269130039,
+        0.691170951604,
+        3.050235318061,
+        4.684670072694,
+        3.829701612869,
+        2.608744444297,
+        4.763813667405,
+        3.235212749778,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 522,
+      "pair_support": [
+        522
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.330423147316,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.161948920254445e-06,
+      "expected_seg_dist_delta": 3.909957626417723e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.450572269181742,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.843071786311,
+        -0.47327474958,
+        0.880914871829,
+        2.639435331257,
+        0.116152035745,
+        2.347336933121,
+        2.445732137178,
+        0.459676986757,
+        2.42833087139,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 552,
+      "pair_support": [
+        552
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3470273828595,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.0375824844433792e-05,
+      "expected_seg_dist_delta": 4.4279918862221414e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.907742096110256,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.866444073456,
+        -0.40737538335,
+        0.913260804502,
+        3.08348297584,
+        1.253370433586,
+        2.892650559779,
+        2.640766133183,
+        1.151021420124,
+        2.451593572201,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 559,
+      "pair_support": [
+        559
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.352501984445,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.0861484131209575e-05,
+      "expected_seg_dist_delta": 4.635252071658411e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 4.090651047230294,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.933222036728,
+        -0.208253686039,
+        0.978074844913,
+        3.518465711247,
+        1.277380533567,
+        3.110824939645,
+        3.029181741508,
+        1.155898331062,
+        2.666524251236,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 579,
+      "pair_support": [
+        579
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.333239351761,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.345898401902943e-06,
+      "expected_seg_dist_delta": 3.988459993644101e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.519851304224543,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.949916527546,
+        -0.156693467541,
+        0.987647283816,
+        1.953506394781,
+        1.807791355643,
+        2.429973186927,
+        1.901646670109,
+        1.285144396674,
+        2.235139969492,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 584,
+      "pair_support": [
+        584
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "allocation_inference": true,
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3321770108425,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.275612437736367e-06,
+      "expected_seg_dist_delta": 3.9584647225489207e-07,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.493380211558906,
+      "hard_pair_support": [],
+      "latent_action": [
+        0.973288814691,
+        -0.083817211446,
+        0.996481146367,
+        2.41939255366,
+        0.729507693426,
+        2.398398383227,
+        2.202654447788,
+        -2.510543062187,
+        1.622593921325,
+        1.0
+      ],
+      "openpilot_priors": [],
+      "pair_index": 591,
+      "pair_support": [
+        591
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    }
+  ],
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+  "tool": "tac.analysis.lapose_motion_evidence.records_from_component_response"
+}

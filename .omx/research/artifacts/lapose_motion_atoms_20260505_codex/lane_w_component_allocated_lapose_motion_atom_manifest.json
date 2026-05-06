@@ -1,0 +1,1936 @@
+{
+  "atom_ledger": {
+    "atom_count": 30,
+    "base_pose_dist": 0.00346442,
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "planning_only_atom_ranking",
+      "requires_stack_interaction_review",
+      "requires_exact_cuda_auth_eval"
+    ],
+    "ready_for_exact_eval_dispatch": false,
+    "rows": [
+      {
+        "atom_id": "lapose_motion_pair:456",
+        "byte_delta": -1,
+        "class_support": [],
+        "confidence": 0.376758687847,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -1.4043600676190382e-05,
+        "expected_seg_dist_delta": 5.993253623674505e-07,
+        "expected_total_score_delta": -0.000120363599,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          456
+        ],
+        "pose_score_delta_confidence_weighted": -0.000142277844,
+        "rate_score_delta": -6.65859e-07,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 2.2580104e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:210",
+        "byte_delta": -1,
+        "class_support": [],
+        "confidence": 0.369718301798,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -1.2865539961386384e-05,
+        "expected_seg_dist_delta": 5.490503879452718e-07,
+        "expected_total_score_delta": -0.00010826261,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          210
+        ],
+        "pose_score_delta_confidence_weighted": -0.000127896149,
+        "rate_score_delta": -6.65859e-07,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 2.0299398e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:522",
+        "byte_delta": -1,
+        "class_support": [],
+        "confidence": 0.366843141247,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -1.2461713876850323e-05,
+        "expected_seg_dist_delta": 5.318166869857785e-07,
+        "expected_total_score_delta": -0.000104071275,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          522
+        ],
+        "pose_score_delta_confidence_weighted": -0.000122914746,
+        "rate_score_delta": -6.65859e-07,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.950933e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:372",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.3642345914165,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -1.2124554674840541e-05,
+        "expected_seg_dist_delta": 5.174280650376608e-07,
+        "expected_total_score_delta": -9.9889421e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          372
+        ],
+        "pose_score_delta_confidence_weighted": -0.000118735941,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.884652e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:454",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.3588065312255,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -1.1495489567012115e-05,
+        "expected_seg_dist_delta": 4.905820529361359e-07,
+        "expected_total_score_delta": -9.3290373e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          454
+        ],
+        "pose_score_delta_confidence_weighted": -0.000110892777,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.7602404e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:404",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.3554229697555,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -1.1144050925467147e-05,
+        "expected_seg_dist_delta": 4.7558404095542216e-07,
+        "expected_total_score_delta": -8.9582767e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          404
+        ],
+        "pose_score_delta_confidence_weighted": -0.000106486116,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.6903349e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:579",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.352501984445,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -1.0861484131209575e-05,
+        "expected_seg_dist_delta": 4.635252071658411e-07,
+        "expected_total_score_delta": -8.6591663e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          579
+        ],
+        "pose_score_delta_confidence_weighted": -0.000102931018,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.6339356e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:329",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.3493512747775,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -1.057554756681e-05,
+        "expected_seg_dist_delta": 4.5132256490733405e-07,
+        "expected_total_score_delta": -8.3556427e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          329
+        ],
+        "pose_score_delta_confidence_weighted": -9.9323438e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.5767011e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:559",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.3470273828595,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -1.0375824844433792e-05,
+        "expected_seg_dist_delta": 4.4279918862221414e-07,
+        "expected_total_score_delta": -8.1431716e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          559
+        ],
+        "pose_score_delta_confidence_weighted": -9.679806e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.5366344e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:401",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.3458750510885,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -1.028001665478464e-05,
+        "expected_seg_dist_delta": 4.387104738187095e-07,
+        "expected_total_score_delta": -8.0411226e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          401
+        ],
+        "pose_score_delta_confidence_weighted": -9.5585127e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.5173901e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:119",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.344739952676,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -1.0187615097930502e-05,
+        "expected_seg_dist_delta": 4.347671406364429e-07,
+        "expected_total_score_delta": -7.9426299e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          119
+        ],
+        "pose_score_delta_confidence_weighted": -9.4414459e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.498816e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:124",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.343457392455,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -1.0085466445796973e-05,
+        "expected_seg_dist_delta": 4.3040783995801597e-07,
+        "expected_total_score_delta": -7.8336691e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          124
+        ],
+        "pose_score_delta_confidence_weighted": -9.3119367e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.4782675e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:409",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.3402355699095,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -9.838751941422507e-06,
+        "expected_seg_dist_delta": 4.1987904017618935e-07,
+        "expected_total_score_delta": -7.5701918e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          409
+        ],
+        "pose_score_delta_confidence_weighted": -8.9987696e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.4285778e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:379",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.3372791316715,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -9.623792192557275e-06,
+        "expected_seg_dist_delta": 4.1070540783263436e-07,
+        "expected_total_score_delta": -7.3403174e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          379
+        ],
+        "pose_score_delta_confidence_weighted": -8.725541e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.3852236e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:370",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.335326592407,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -9.487311313754864e-06,
+        "expected_seg_dist_delta": 4.048809434356111e-07,
+        "expected_total_score_delta": -7.1942443e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          370
+        ],
+        "pose_score_delta_confidence_weighted": -8.5519178e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.3576735e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:143",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.3348391397415,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -9.453881566285484e-06,
+        "expected_seg_dist_delta": 4.034542939617403e-07,
+        "expected_total_score_delta": -7.1584527e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          143
+        ],
+        "pose_score_delta_confidence_weighted": -8.5093756e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.3509229e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:517",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.334542255145,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -9.433643392983106e-06,
+        "expected_seg_dist_delta": 4.02590608726894e-07,
+        "expected_total_score_delta": -7.1367826e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          517
+        ],
+        "pose_score_delta_confidence_weighted": -8.4836183e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.3468357e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:388",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.33370029528,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -9.37674368197902e-06,
+        "expected_seg_dist_delta": 4.001623539863599e-07,
+        "expected_total_score_delta": -7.0758488e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          388
+        ],
+        "pose_score_delta_confidence_weighted": -8.4111917e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.335343e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:584",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.333239351761,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -9.345898401902943e-06,
+        "expected_seg_dist_delta": 3.988459993644101e-07,
+        "expected_total_score_delta": -7.042812e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          584
+        ],
+        "pose_score_delta_confidence_weighted": -8.3719238e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.3291118e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:446",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.333147877784,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -9.339802505217152e-06,
+        "expected_seg_dist_delta": 3.985858505910004e-07,
+        "expected_total_score_delta": -7.0362826e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          446
+        ],
+        "pose_score_delta_confidence_weighted": -8.3641629e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.3278803e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:591",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.3321770108425,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -9.275612437736367e-06,
+        "expected_seg_dist_delta": 3.9584647225489207e-07,
+        "expected_total_score_delta": -6.9675212e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          591
+        ],
+        "pose_score_delta_confidence_weighted": -8.2824322e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.314911e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:552",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.330423147316,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -9.161948920254445e-06,
+        "expected_seg_dist_delta": 3.909957626417723e-07,
+        "expected_total_score_delta": -6.8457371e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          552
+        ],
+        "pose_score_delta_confidence_weighted": -8.1376777e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.2919405e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:440",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.327677693044,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -8.989652390518081e-06,
+        "expected_seg_dist_delta": 3.8364282784251027e-07,
+        "expected_total_score_delta": -6.661089e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          440
+        ],
+        "pose_score_delta_confidence_weighted": -7.9182009e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.257112e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:449",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.327034526662,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -8.95023525840465e-06,
+        "expected_seg_dist_delta": 3.819606604602221e-07,
+        "expected_total_score_delta": -6.6188425e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          449
+        ],
+        "pose_score_delta_confidence_weighted": -7.8679857e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.2491432e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:430",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.326307866575,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -8.906117015665796e-06,
+        "expected_seg_dist_delta": 3.800778682599776e-07,
+        "expected_total_score_delta": -6.571557e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          430
+        ],
+        "pose_score_delta_confidence_weighted": -7.811781e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.240224e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:444",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.325798088943,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -8.875425400183021e-06,
+        "expected_seg_dist_delta": 3.7876807143543236e-07,
+        "expected_total_score_delta": -6.5386623e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          444
+        ],
+        "pose_score_delta_confidence_weighted": -7.7726814e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.2340191e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:349",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.324797132805,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -8.815770654792395e-06,
+        "expected_seg_dist_delta": 3.7622224271795883e-07,
+        "expected_total_score_delta": -6.4747267e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          349
+        ],
+        "pose_score_delta_confidence_weighted": -7.6966857e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.2219591e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:222",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.323368062973,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -8.731963155715002e-06,
+        "expected_seg_dist_delta": 3.726456699492084e-07,
+        "expected_total_score_delta": -6.3849112e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          222
+        ],
+        "pose_score_delta_confidence_weighted": -7.5899283e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.2050171e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:292",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.321466928894,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -8.62286218098241e-06,
+        "expected_seg_dist_delta": 3.679896716248535e-07,
+        "expected_total_score_delta": -6.2680076e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          292
+        ],
+        "pose_score_delta_confidence_weighted": -7.4509727e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.1829651e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      {
+        "atom_id": "lapose_motion_pair:417",
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.3212341087665,
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_byte_closed_archive",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "diagnostic_cuda_global_response_allocated",
+        "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+        "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+        "expected_pose_dist_delta": -8.609683166933318e-06,
+        "expected_seg_dist_delta": 3.67427243402011e-07,
+        "expected_total_score_delta": -6.253888e-05,
+        "family": "lapose_motion_atom",
+        "geometry_priors": [
+          "scorer_pair_metric",
+          "pair_metric_hardness"
+        ],
+        "hard_pair_support": [],
+        "openpilot_priors": [],
+        "pair_support": [
+          417
+        ],
+        "pose_score_delta_confidence_weighted": -7.4341896e-05,
+        "rate_score_delta": 0.0,
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 1.1803016e-05,
+        "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      }
+    ],
+    "schema_version": 1,
+    "score_claim": false,
+    "source": "lane_w_cuda_pair_metrics_plus_pfp16_component_response_20260505",
+    "tool": "tac.optimization.meta_lagrangian_allocator.build_atom_ledger"
+  },
+  "atoms": [
+    {
+      "atom_id": "lapose_motion_pair:456",
+      "byte_delta": -1,
+      "class_support": [],
+      "confidence": 0.376758687847,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.4043600676190382e-05,
+      "expected_seg_dist_delta": 5.993253623674505e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 5.289099456295452,
+      "hard_pair_support": [],
+      "latent_norm": 12.753106135110192,
+      "openpilot_priors": [],
+      "pair_support": [
+        456
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:210",
+      "byte_delta": -1,
+      "class_support": [],
+      "confidence": 0.369718301798,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.2865539961386384e-05,
+      "expected_seg_dist_delta": 5.490503879452718e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 4.845418349874024,
+      "hard_pair_support": [],
+      "latent_norm": 9.43040022194854,
+      "openpilot_priors": [],
+      "pair_support": [
+        210
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:522",
+      "byte_delta": -1,
+      "class_support": [],
+      "confidence": 0.366843141247,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.2461713876850323e-05,
+      "expected_seg_dist_delta": 5.318166869857785e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 4.693329411046622,
+      "hard_pair_support": [],
+      "latent_norm": 9.403970491354345,
+      "openpilot_priors": [],
+      "pair_support": [
+        522
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:372",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3642345914165,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.2124554674840541e-05,
+      "expected_seg_dist_delta": 5.174280650376608e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 4.566348546726098,
+      "hard_pair_support": [],
+      "latent_norm": 9.74445783180018,
+      "openpilot_priors": [],
+      "pair_support": [
+        372
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:454",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3588065312255,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.1495489567012115e-05,
+      "expected_seg_dist_delta": 4.905820529361359e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 4.32943010988741,
+      "hard_pair_support": [],
+      "latent_norm": 7.770141637715231,
+      "openpilot_priors": [],
+      "pair_support": [
+        454
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:404",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3554229697555,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.1144050925467147e-05,
+      "expected_seg_dist_delta": 4.7558404095542216e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 4.197071324503536,
+      "hard_pair_support": [],
+      "latent_norm": 7.132437797316032,
+      "openpilot_priors": [],
+      "pair_support": [
+        404
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:579",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.352501984445,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.0861484131209575e-05,
+      "expected_seg_dist_delta": 4.635252071658411e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 4.090651047230294,
+      "hard_pair_support": [],
+      "latent_norm": 6.646941531334267,
+      "openpilot_priors": [],
+      "pair_support": [
+        579
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:329",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3493512747775,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.057554756681e-05,
+      "expected_seg_dist_delta": 4.5132256490733405e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.982961647469389,
+      "hard_pair_support": [],
+      "latent_norm": 7.663713356163477,
+      "openpilot_priors": [],
+      "pair_support": [
+        329
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:559",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3470273828595,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.0375824844433792e-05,
+      "expected_seg_dist_delta": 4.4279918862221414e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.907742096110256,
+      "hard_pair_support": [],
+      "latent_norm": 6.042000034964124,
+      "openpilot_priors": [],
+      "pair_support": [
+        559
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:401",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3458750510885,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.028001665478464e-05,
+      "expected_seg_dist_delta": 4.387104738187095e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.871658825482866,
+      "hard_pair_support": [],
+      "latent_norm": 6.653864389864078,
+      "openpilot_priors": [],
+      "pair_support": [
+        401
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:119",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.344739952676,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.0187615097930502e-05,
+      "expected_seg_dist_delta": 4.347671406364429e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.8368585605517604,
+      "hard_pair_support": [],
+      "latent_norm": 5.459577757806014,
+      "openpilot_priors": [],
+      "pair_support": [
+        119
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:124",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.343457392455,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -1.0085466445796973e-05,
+      "expected_seg_dist_delta": 4.3040783995801597e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.798387345589294,
+      "hard_pair_support": [],
+      "latent_norm": 6.335714696122222,
+      "openpilot_priors": [],
+      "pair_support": [
+        124
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:409",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3402355699095,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.838751941422507e-06,
+      "expected_seg_dist_delta": 4.1987904017618935e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.705469754080193,
+      "hard_pair_support": [],
+      "latent_norm": 6.436452975716377,
+      "openpilot_priors": [],
+      "pair_support": [
+        409
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:379",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3372791316715,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.623792192557275e-06,
+      "expected_seg_dist_delta": 4.1070540783263436e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.624511635356689,
+      "hard_pair_support": [],
+      "latent_norm": 5.964483623825679,
+      "openpilot_priors": [],
+      "pair_support": [
+        379
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:370",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.335326592407,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.487311313754864e-06,
+      "expected_seg_dist_delta": 4.048809434356111e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.573110220683,
+      "hard_pair_support": [],
+      "latent_norm": 6.133830936223934,
+      "openpilot_priors": [],
+      "pair_support": [
+        370
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:143",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3348391397415,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.453881566285484e-06,
+      "expected_seg_dist_delta": 4.034542939617403e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.560519912595975,
+      "hard_pair_support": [],
+      "latent_norm": 5.512830130441976,
+      "openpilot_priors": [],
+      "pair_support": [
+        143
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:517",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.334542255145,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.433643392983106e-06,
+      "expected_seg_dist_delta": 4.02590608726894e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.5528978138281353,
+      "hard_pair_support": [],
+      "latent_norm": 10.041335995348097,
+      "openpilot_priors": [],
+      "pair_support": [
+        517
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:388",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.33370029528,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.37674368197902e-06,
+      "expected_seg_dist_delta": 4.001623539863599e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.531468250465136,
+      "hard_pair_support": [],
+      "latent_norm": 4.981957014873232,
+      "openpilot_priors": [],
+      "pair_support": [
+        388
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:584",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.333239351761,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.345898401902943e-06,
+      "expected_seg_dist_delta": 3.988459993644101e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.519851304224543,
+      "hard_pair_support": [],
+      "latent_norm": 5.114207150667257,
+      "openpilot_priors": [],
+      "pair_support": [
+        584
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:446",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.333147877784,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.339802505217152e-06,
+      "expected_seg_dist_delta": 3.985858505910004e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.517555468235621,
+      "hard_pair_support": [],
+      "latent_norm": 5.445268794610772,
+      "openpilot_priors": [],
+      "pair_support": [
+        446
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:591",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3321770108425,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.275612437736367e-06,
+      "expected_seg_dist_delta": 3.9584647225489207e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.493380211558906,
+      "hard_pair_support": [],
+      "latent_norm": 5.373320374025499,
+      "openpilot_priors": [],
+      "pair_support": [
+        591
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:552",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.330423147316,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -9.161948920254445e-06,
+      "expected_seg_dist_delta": 3.909957626417723e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.450572269181742,
+      "hard_pair_support": [],
+      "latent_norm": 5.22403774083682,
+      "openpilot_priors": [],
+      "pair_support": [
+        552
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:440",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.327677693044,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -8.989652390518081e-06,
+      "expected_seg_dist_delta": 3.8364282784251027e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.38568196770121,
+      "hard_pair_support": [],
+      "latent_norm": 4.817648744288492,
+      "openpilot_priors": [],
+      "pair_support": [
+        440
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:449",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.327034526662,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -8.95023525840465e-06,
+      "expected_seg_dist_delta": 3.819606604602221e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.370836691419371,
+      "hard_pair_support": [],
+      "latent_norm": 4.781263077984117,
+      "openpilot_priors": [],
+      "pair_support": [
+        449
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:430",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.326307866575,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -8.906117015665796e-06,
+      "expected_seg_dist_delta": 3.800778682599776e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.3542208833326024,
+      "hard_pair_support": [],
+      "latent_norm": 4.5734224849695995,
+      "openpilot_priors": [],
+      "pair_support": [
+        430
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:444",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.325798088943,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -8.875425400183021e-06,
+      "expected_seg_dist_delta": 3.7876807143543236e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.342661810235488,
+      "hard_pair_support": [],
+      "latent_norm": 5.100117709491156,
+      "openpilot_priors": [],
+      "pair_support": [
+        444
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:349",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.324797132805,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -8.815770654792395e-06,
+      "expected_seg_dist_delta": 3.7622224271795883e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.3201946461024363,
+      "hard_pair_support": [],
+      "latent_norm": 4.232493697227994,
+      "openpilot_priors": [],
+      "pair_support": [
+        349
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:222",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.323368062973,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -8.731963155715002e-06,
+      "expected_seg_dist_delta": 3.726456699492084e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.2886310743358855,
+      "hard_pair_support": [],
+      "latent_norm": 4.892862755210862,
+      "openpilot_priors": [],
+      "pair_support": [
+        222
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:292",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.321466928894,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -8.62286218098241e-06,
+      "expected_seg_dist_delta": 3.679896716248535e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.2475414763442694,
+      "hard_pair_support": [],
+      "latent_norm": 4.920753507805557,
+      "openpilot_priors": [],
+      "pair_support": [
+        292
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    {
+      "atom_id": "lapose_motion_pair:417",
+      "byte_delta": 0,
+      "class_support": [],
+      "confidence": 0.3212341087665,
+      "evidence_grade": "diagnostic_cuda_global_response_allocated",
+      "evidence_source_path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/official_component_response_summary.json",
+      "evidence_source_sha256": "04a7b9d140009e8d32d65cbd1dcb74c4bb3ba376f8cdd1124f361a9d009da7f3",
+      "expected_pose_dist_delta": -8.609683166933318e-06,
+      "expected_seg_dist_delta": 3.67427243402011e-07,
+      "family": "lapose_motion_atom",
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.2425779974154105,
+      "hard_pair_support": [],
+      "latent_norm": 4.603212393154721,
+      "openpilot_priors": [],
+      "pair_support": [
+        417
+      ],
+      "source_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    }
+  ],
+  "base_pose_dist": 0.00346442,
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "planning_only_lapose_motion_atoms",
+    "requires_charged_payload_or_builder_policy",
+    "requires_noop_controls",
+    "requires_exact_cuda_auth_eval"
+  ],
+  "graph": {
+    "average_degree": 2.0,
+    "construction": "deterministic_nearest_motion_edges",
+    "edge_count": 30,
+    "edges": [
+      {
+        "left_pair_index": 444,
+        "motion_distance": 0.642665956219,
+        "right_pair_index": 446,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 559,
+        "motion_distance": 0.694825012091,
+        "right_pair_index": 579,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 440,
+        "motion_distance": 0.795007012932,
+        "right_pair_index": 444,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 222,
+        "motion_distance": 0.812525262142,
+        "right_pair_index": 292,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 388,
+        "motion_distance": 0.845378018964,
+        "right_pair_index": 440,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 370,
+        "motion_distance": 0.85081226986,
+        "right_pair_index": 409,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 417,
+        "motion_distance": 0.876009771134,
+        "right_pair_index": 440,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 379,
+        "motion_distance": 0.97909083564,
+        "right_pair_index": 401,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 349,
+        "motion_distance": 1.055461918736,
+        "right_pair_index": 388,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 388,
+        "motion_distance": 1.129774390377,
+        "right_pair_index": 430,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 417,
+        "motion_distance": 1.16197463353,
+        "right_pair_index": 449,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 124,
+        "motion_distance": 1.186989360886,
+        "right_pair_index": 143,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 401,
+        "motion_distance": 1.303616005268,
+        "right_pair_index": 409,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 370,
+        "motion_distance": 1.321200367048,
+        "right_pair_index": 446,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 292,
+        "motion_distance": 1.404452239916,
+        "right_pair_index": 417,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 449,
+        "motion_distance": 1.447411063368,
+        "right_pair_index": 552,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 552,
+        "motion_distance": 1.519961425332,
+        "right_pair_index": 559,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 559,
+        "motion_distance": 1.57631885143,
+        "right_pair_index": 584,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 404,
+        "motion_distance": 1.843469277443,
+        "right_pair_index": 454,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 143,
+        "motion_distance": 1.931013226999,
+        "right_pair_index": 222,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 409,
+        "motion_distance": 1.970591195797,
+        "right_pair_index": 454,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 119,
+        "motion_distance": 2.086361063015,
+        "right_pair_index": 222,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 372,
+        "motion_distance": 2.509673528764,
+        "right_pair_index": 454,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 444,
+        "motion_distance": 2.678643500853,
+        "right_pair_index": 591,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 210,
+        "motion_distance": 2.935004690828,
+        "right_pair_index": 372,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 372,
+        "motion_distance": 3.517276712365,
+        "right_pair_index": 456,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 329,
+        "motion_distance": 4.003947214641,
+        "right_pair_index": 517,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 329,
+        "motion_distance": 4.169454132425,
+        "right_pair_index": 522,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 329,
+        "motion_distance": 5.011766147322,
+        "right_pair_index": 584,
+        "role": "connectivity"
+      },
+      {
+        "left_pair_index": 388,
+        "motion_distance": 0.917627953234,
+        "right_pair_index": 417,
+        "role": "nearest_extra"
+      }
+    ],
+    "node_count": 30
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "record_count": 30,
+  "record_sha256": "62327a2db6eadec97af85cd5d8637ba24b0b5a6505cd000887f73f7f57010f06",
+  "schema_version": 1,
+  "score_claim": false,
+  "source": "lane_w_cuda_pair_metrics_plus_pfp16_component_response_20260505",
+  "source_atom_count": 30,
+  "target_average_degree": 2.0,
+  "tool": "tac.analysis.lapose_motion_atoms.build_motion_atom_manifest"
+}

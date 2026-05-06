@@ -1,0 +1,1002 @@
+{
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "planning_only_lapose_lite_inputs",
+    "lane_w_pair_metrics_are_general_scorer_telemetry_not_lane_local_state",
+    "pair_metrics_are_not_score_authority",
+    "requires_component_response_allocation",
+    "requires_charged_archive_builder",
+    "requires_exact_cuda_auth_eval"
+  ],
+  "evidence_grade": "empirical_cuda_pair_metric_telemetry",
+  "feature_contract": {
+    "description": "10-D deterministic compression-time motion/action proxy from pair index, PoseNet/SegNet/contribution z-scores, local finite differences, and hard flag",
+    "fields": [
+      "time_centered",
+      "sin_time",
+      "cos_time",
+      "pose_z",
+      "seg_z",
+      "contrib_z",
+      "pose_local_delta_z",
+      "seg_local_delta_z",
+      "contrib_local_delta_z",
+      "hard_pair_indicator"
+    ],
+    "name": "lapose_lite_pair_metric_v1"
+  },
+  "latent_actions": [
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        -0.602671118531,
+        0.948429924381,
+        0.316986874396,
+        2.972302346507,
+        1.150780552881,
+        2.808100452644,
+        2.161021803128,
+        0.781572755608,
+        2.029433501851,
+        1.0
+      ],
+      "pair_index": 119,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        -0.585976627713,
+        0.963743273292,
+        0.266831226028,
+        3.747793220286,
+        -0.361872532299,
+        2.762211864821,
+        3.205359435447,
+        -0.669396771321,
+        2.295380320722,
+        1.0
+      ],
+      "pair_index": 124,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        -0.522537562604,
+        0.997494455034,
+        0.070744697155,
+        3.358097550609,
+        -0.722028128689,
+        2.478482832612,
+        2.542468308397,
+        -1.022994470616,
+        1.632962592066,
+        1.0
+      ],
+      "pair_index": 143,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        -0.298831385643,
+        0.806853605014,
+        -0.590751436795,
+        5.605178693457,
+        1.32758416024,
+        4.011113783842,
+        4.842400826003,
+        1.008362844759,
+        3.62049238194,
+        1.0
+      ],
+      "pair_index": 210,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        -0.258764607679,
+        0.726306348507,
+        -0.68737114292,
+        2.461764445036,
+        -0.233089724415,
+        2.154172959768,
+        2.36360031315,
+        0.125588159148,
+        2.348551010737,
+        1.0
+      ],
+      "pair_index": 222,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        -0.025041736227,
+        0.078589809084,
+        -0.996907037746,
+        2.386164900627,
+        -0.259282851431,
+        2.105161156322,
+        2.350640506505,
+        0.34993979283,
+        2.524382166488,
+        1.0
+      ],
+      "pair_index": 292,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.098497495826,
+        -0.304524338179,
+        -0.952504555085,
+        1.089385298991,
+        5.85462947963,
+        2.982372680381,
+        1.083773012384,
+        2.811710619987,
+        1.812326300019,
+        1.0
+      ],
+      "pair_index": 329,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.165275459098,
+        -0.496210179402,
+        -0.868202429079,
+        2.566667033244,
+        -0.302937996512,
+        2.191822088771,
+        1.704264767972,
+        0.006096585194,
+        1.224130791172,
+        1.0
+      ],
+      "pair_index": 349,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.235392320534,
+        -0.673923605786,
+        -0.738801037874,
+        3.445015642296,
+        -0.818069627721,
+        2.493500592226,
+        3.118819897542,
+        -0.402369711064,
+        2.631466810931,
+        1.0
+      ],
+      "pair_index": 370,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.242070116861,
+        -0.689273417256,
+        -0.724501315571,
+        6.243076694858,
+        -0.732941964918,
+        3.678238433193,
+        5.249857123496,
+        -0.051210690499,
+        3.505651099165,
+        1.0
+      ],
+      "pair_index": 372,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.265442404007,
+        -0.740565768888,
+        -0.671983885187,
+        2.919354382849,
+        0.336610788185,
+        2.554812363476,
+        2.794623183895,
+        1.044941909401,
+        3.072422472106,
+        1.0
+      ],
+      "pair_index": 379,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.295492487479,
+        -0.800612668167,
+        -0.599182239031,
+        2.953904418569,
+        -0.126134389154,
+        2.443829917429,
+        2.196684229609,
+        0.437729547972,
+        1.732566091847,
+        1.0
+      ],
+      "pair_index": 388,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.338898163606,
+        -0.874633832852,
+        -0.484784135911,
+        3.65220456585,
+        0.111786381351,
+        2.84961031957,
+        3.207175897786,
+        1.257100484326,
+        2.970085373706,
+        1.0
+      ],
+      "pair_index": 401,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.348914858097,
+        -0.889453662516,
+        -0.457025362794,
+        5.098537118648,
+        -0.737307419475,
+        3.23776338556,
+        3.026200169575,
+        -0.476747179713,
+        1.530665637154,
+        1.0
+      ],
+      "pair_index": 404,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.365609348915,
+        -0.912189378837,
+        -0.409768882587,
+        3.660365122548,
+        -0.615072893346,
+        2.651379465521,
+        3.276006868347,
+        0.217035764938,
+        2.77642407121,
+        1.0
+      ],
+      "pair_index": 409,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.392320534224,
+        -0.943325203003,
+        -0.331869795822,
+        2.328819801839,
+        -0.165424079678,
+        2.099240702836,
+        2.042482296179,
+        0.60843186824,
+        2.153171461451,
+        1.0
+      ],
+      "pair_index": 417,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.435726210351,
+        -0.979682912287,
+        -0.2005527147,
+        2.924794753981,
+        -0.833348918507,
+        2.232408692988,
+        1.63446475182,
+        0.425536433399,
+        1.281107438557,
+        1.0
+      ],
+      "pair_index": 430,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.469115191987,
+        -0.995296525228,
+        -0.096875316098,
+        2.691309017065,
+        -0.261465678629,
+        2.269935574696,
+        2.210546203324,
+        -0.058526615058,
+        1.906728727057,
+        1.0
+      ],
+      "pair_index": 440,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.482470784641,
+        -0.998484049766,
+        -0.055041823763,
+        2.668895423809,
+        -0.40334505002,
+        2.218620993756,
+        2.488793461678,
+        -0.72304614055,
+        2.203080763349,
+        1.0
+      ],
+      "pair_index": 444,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.489148580968,
+        -0.999418967056,
+        -0.034084135441,
+        3.147881242172,
+        -0.536493512298,
+        2.427234706442,
+        2.652680322851,
+        -0.807178100857,
+        1.906564083854,
+        1.0
+      ],
+      "pair_index": 446,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.499165275459,
+        -0.999996561604,
+        -0.00262236148,
+        2.114568973036,
+        0.825549092539,
+        2.252228081832,
+        2.132051209984,
+        0.281658686114,
+        2.400181679103,
+        1.0
+      ],
+      "pair_index": 449,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.515859766277,
+        -0.99875899518,
+        0.049804312527,
+        4.858586399706,
+        0.181634853285,
+        3.395641366622,
+        3.910038705768,
+        -0.564536823224,
+        2.707886990305,
+        1.0
+      ],
+      "pair_index": 454,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.522537562604,
+        -0.997494455034,
+        0.070744697155,
+        8.853689599116,
+        -0.800607509737,
+        4.540338021688,
+        6.946197746678,
+        -1.101029845729,
+        3.356080970207,
+        1.0
+      ],
+      "pair_index": 456,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.726210350584,
+        -0.757930994636,
+        0.652334735676,
+        0.040443344862,
+        7.456776281681,
+        2.469391168909,
+        0.417396429598,
+        5.722185384291,
+        1.918431865424,
+        1.0
+      ],
+      "pair_index": 517,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.742904841402,
+        -0.72269130039,
+        0.691170951604,
+        3.050235318061,
+        4.684670072694,
+        3.829701612869,
+        2.608744444297,
+        4.763813667405,
+        3.235212749778,
+        1.0
+      ],
+      "pair_index": 522,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.843071786311,
+        -0.47327474958,
+        0.880914871829,
+        2.639435331257,
+        0.116152035745,
+        2.347336933121,
+        2.445732137178,
+        0.459676986757,
+        2.42833087139,
+        1.0
+      ],
+      "pair_index": 552,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.866444073456,
+        -0.40737538335,
+        0.913260804502,
+        3.08348297584,
+        1.253370433586,
+        2.892650559779,
+        2.640766133183,
+        1.151021420124,
+        2.451593572201,
+        1.0
+      ],
+      "pair_index": 559,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.933222036728,
+        -0.208253686039,
+        0.978074844913,
+        3.518465711247,
+        1.277380533567,
+        3.110824939645,
+        3.029181741508,
+        1.155898331062,
+        2.666524251236,
+        1.0
+      ],
+      "pair_index": 579,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.949916527546,
+        -0.156693467541,
+        0.987647283816,
+        1.953506394781,
+        1.807791355643,
+        2.429973186927,
+        1.901646670109,
+        1.285144396674,
+        2.235139969492,
+        1.0
+      ],
+      "pair_index": 584,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "feature_contract": "lapose_lite_pair_metric_v1",
+      "latent_action": [
+        0.973288814691,
+        -0.083817211446,
+        0.996481146367,
+        2.41939255366,
+        0.729507693426,
+        2.398398383227,
+        2.202654447788,
+        -2.510543062187,
+        1.622593921325,
+        1.0
+      ],
+      "pair_index": 591,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    }
+  ],
+  "n_pairs": 600,
+  "pair_opportunities": [
+    {
+      "class_support": [],
+      "confidence": 0.689479905352,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.8368585605517604,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.8368585605517604,
+      "pair_index": 119,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.68691478491,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.798387345589294,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.798387345589294,
+      "pair_index": 124,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.669678279483,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.560519912595975,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.560519912595975,
+      "pair_index": 143,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.739436603596,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 4.845418349874024,
+      "openpilot_priors": [],
+      "opportunity_mass": 4.845418349874024,
+      "pair_index": 210,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.646736125946,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.2886310743358855,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.2886310743358855,
+      "pair_index": 222,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.642933857788,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.2475414763442694,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.2475414763442694,
+      "pair_index": 292,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.698702549555,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.982961647469389,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.982961647469389,
+      "pair_index": 329,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.64959426561,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.3201946461024363,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.3201946461024363,
+      "pair_index": 349,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.670653184814,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.573110220683,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.573110220683,
+      "pair_index": 370,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.728469182833,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 4.566348546726098,
+      "openpilot_priors": [],
+      "opportunity_mass": 4.566348546726098,
+      "pair_index": 372,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.674558263343,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.624511635356689,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.624511635356689,
+      "pair_index": 379,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.66740059056,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.531468250465136,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.531468250465136,
+      "pair_index": 388,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.691750102177,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.871658825482866,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.871658825482866,
+      "pair_index": 401,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.710845939511,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 4.197071324503536,
+      "openpilot_priors": [],
+      "opportunity_mass": 4.197071324503536,
+      "pair_index": 404,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.680471139819,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.705469754080193,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.705469754080193,
+      "pair_index": 409,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.642468217533,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.2425779974154105,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.2425779974154105,
+      "pair_index": 417,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.65261573315,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.3542208833326024,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.3542208833326024,
+      "pair_index": 430,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.655355386088,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.38568196770121,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.38568196770121,
+      "pair_index": 440,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.651596177886,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.342661810235488,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.342661810235488,
+      "pair_index": 444,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.666295755568,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.517555468235621,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.517555468235621,
+      "pair_index": 446,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.654069053324,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.370836691419371,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.370836691419371,
+      "pair_index": 449,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.717613062451,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 4.32943010988741,
+      "openpilot_priors": [],
+      "opportunity_mass": 4.32943010988741,
+      "pair_index": 454,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.753517375694,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 5.289099456295452,
+      "openpilot_priors": [],
+      "opportunity_mass": 5.289099456295452,
+      "pair_index": 456,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.66908451029,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.5528978138281353,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.5528978138281353,
+      "pair_index": 517,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.733686282494,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 4.693329411046622,
+      "openpilot_priors": [],
+      "opportunity_mass": 4.693329411046622,
+      "pair_index": 522,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.660846294632,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.450572269181742,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.450572269181742,
+      "pair_index": 552,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.694054765719,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.907742096110256,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.907742096110256,
+      "pair_index": 559,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.70500396889,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 4.090651047230294,
+      "openpilot_priors": [],
+      "opportunity_mass": 4.090651047230294,
+      "pair_index": 579,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.666478703522,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.519851304224543,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.519851304224543,
+      "pair_index": 584,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    },
+    {
+      "class_support": [],
+      "confidence": 0.664354021685,
+      "geometry_priors": [
+        "scorer_pair_metric",
+        "pair_metric_hardness"
+      ],
+      "hard_pair_score": 3.493380211558906,
+      "openpilot_priors": [],
+      "opportunity_mass": 3.493380211558906,
+      "pair_index": 591,
+      "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+      "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33"
+    }
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "selected_pair_count": 30,
+  "source_device": "cuda",
+  "source_lane": "W",
+  "source_path": "experiments/results/lane_lane_w_modal/harvested_artifacts/lane_w_results/pair_weights.pt.meta.json",
+  "source_sha256": "3225b7f74742a588abc9b8cd12ecc5b9e9c9195efed65526e00aaceca48b7f33",
+  "tool": "tac.analysis.lapose_lite_inputs.inputs_from_pair_metric_payload"
+}
