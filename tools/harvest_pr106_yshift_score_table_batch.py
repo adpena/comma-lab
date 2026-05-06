@@ -27,6 +27,11 @@ from tac.repo_io import json_text, write_json  # noqa: E402
 DEFAULT_STATE_PATH = REPO_ROOT / ".omx/state/lightning_batch_jobs.json"
 CLAIMS_PATH = REPO_ROOT / ".omx/state/active_lane_dispatch_claims.md"
 VALIDATION_NAME = "pr106_yshift_batch_harvest_validation.json"
+NONTERMINAL_JOB_STATUSES = {"pending", "queued", "running", "submitted"}
+
+
+class ArtifactNotReady(RuntimeError):
+    """Remote job is still active and its final harvest artifacts are incomplete."""
 
 
 def _load_json(path: Path) -> Any:
@@ -67,6 +72,19 @@ def _remote_and_local(args: argparse.Namespace) -> tuple[str, Path]:
     if not isinstance(local, str) or not local:
         raise ValueError("local mirror dir not recorded; pass --mirror-dir")
     return remote, REPO_ROOT / local
+
+
+def _latest_job_status(args: argparse.Namespace) -> str | None:
+    record = _latest_record(args.state_path, args.job_name)
+    job = record.get("job") if isinstance(record.get("job"), dict) else {}
+    queue = record.get("queue") if isinstance(record.get("queue"), dict) else {}
+    status = job.get("status") or record.get("status") or queue.get("status")
+    return str(status) if status is not None else None
+
+
+def _job_is_nonterminal(args: argparse.Namespace) -> bool:
+    status = _latest_job_status(args)
+    return bool(status and status.strip().lower() in NONTERMINAL_JOB_STATUSES)
 
 
 def _ssh_options(timeout: int) -> list[str]:
@@ -219,6 +237,11 @@ def main(argv: list[str] | None = None) -> int:
                 raise SystemExit("FATAL: --ssh-target required unless --no-copy")
             harvest_remote(args, remote_dir=remote_dir, mirror_dir=mirror_dir)
         validation = validate_mirror(mirror_dir)
+    except FileNotFoundError as exc:
+        if _job_is_nonterminal(args):
+            raise SystemExit(f"ARTIFACT_NOT_READY: {exc}") from exc
+        close_claim(args, validation=None, failed=True)
+        raise
     except Exception:
         close_claim(args, validation=None, failed=True)
         raise

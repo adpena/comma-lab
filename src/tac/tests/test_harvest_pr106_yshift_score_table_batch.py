@@ -51,3 +51,54 @@ def test_validate_mirror_accepts_cuda_score_table_artifacts(tmp_path: Path) -> N
     assert validation["evidence_grade"] == "A_pending_adjudication"
     assert validation["final_score"] == 0.207
     assert (mirror / "pr106_yshift_batch_harvest_validation.json").is_file()
+
+
+def test_running_job_missing_final_artifacts_is_not_terminal_claim(
+    tmp_path: Path, monkeypatch
+) -> None:
+    tool = _load_tool()
+    state = tmp_path / "lightning_batch_jobs.json"
+    state.write_text(
+        json.dumps(
+            [
+                {
+                    "status": "Running",
+                    "spec": {
+                        "name": "lane_pr106_yshift_score_table_test",
+                        "remote_output_dir": "/remote/out",
+                        "local_artifact_dir": "experiments/results/missing_yshift_test",
+                    },
+                    "job": {"status": "Running"},
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    close_calls: list[dict[str, object]] = []
+
+    def fake_validate(_mirror: Path) -> dict[str, object]:
+        raise FileNotFoundError("missing PR106 yshift batch artifacts: ['contest_auth_eval.json']")
+
+    def fake_close_claim(*_args, **kwargs) -> None:
+        close_calls.append(kwargs)
+
+    monkeypatch.setattr(tool, "validate_mirror", fake_validate)
+    monkeypatch.setattr(tool, "close_claim", fake_close_claim)
+
+    try:
+        tool.main(
+            [
+                "--job-name",
+                "lane_pr106_yshift_score_table_test",
+                "--state-path",
+                str(state),
+                "--no-copy",
+                "--close-claim",
+            ]
+        )
+    except SystemExit as exc:
+        assert str(exc).startswith("ARTIFACT_NOT_READY:")
+    else:  # pragma: no cover
+        raise AssertionError("expected ARTIFACT_NOT_READY SystemExit")
+
+    assert close_calls == []
