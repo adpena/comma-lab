@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
-"""Dispatch dry-run for apogee_intN: validate the lane WOULD succeed locally
-without burning $0.30 on Vast.ai.
+"""Local forensic dry-run for apogee_intN.
+
+This lane is byte-only unless a separate scorer-basin distortion model or exact
+CUDA candidate evidence is provided. The default command therefore fails closed
+for exact-eval dispatch. Operators can pass ``--allow-forensic-byte-only`` to
+run the archive/parser checks as a local forensic probe, but that still does
+not make the lane ready for exact-eval dispatch.
 
 Runs every check that doesn't require CUDA / network / GPU, in order:
 
@@ -17,7 +22,9 @@ Runs every check that doesn't require CUDA / network / GPU, in order:
   10. launch_lane_on_vastai.py `full` subcommand has every flag the operator
       one-liner would emit (cross-checked via the existing wiring test logic)
 
-Exit code 0 = dispatch is GO. Non-zero = list of FAIL: ... reasons.
+Exit code 0 = local forensic byte-only checks passed when explicitly allowed.
+Default non-zero = exact-eval dispatch is blocked because the lane has no
+contest-faithful distortion model.
 
 Operator usage:
   .venv/bin/python tools/dispatch_dryrun_apogee_intN.py --bits 5
@@ -28,14 +35,22 @@ from __future__ import annotations
 
 import argparse
 import ast
-import shutil
 import subprocess
 import sys
 import tempfile
 import zipfile
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO)
+
+from tac.repo_io import repo_relative  # noqa: E402
+
 WRAPPER = REPO / "scripts" / "remote_lane_apogee_intN.sh"
 PRODUCER = REPO / "experiments" / "repack_pr106_with_intN_block_fp.py"
 PR106_ARCHIVE = REPO / "experiments" / "results" / "public_pr106_belt_and_suspenders_intake_20260504_codex" / "archive.zip"
@@ -45,6 +60,11 @@ INFLATE_PY = REPO / "submissions" / "apogee_intN" / "inflate.py"
 LAUNCH_SCRIPT = REPO / "scripts" / "launch_lane_on_vastai.py"
 
 PARETO_FRONTIER_BITS = [4, 5, 6, 8]  # int7 dominated by int8
+DISTORTION_MODEL_BLOCKER = (
+    "missing contest-faithful distortion model or scorer-basin parity gate; "
+    "byte-only Apogee intN repacks are forensic-only until a distortion "
+    "model, local output-parity report, or exact CUDA replay evidence exists"
+)
 
 
 class CheckFailure(Exception):
@@ -117,11 +137,8 @@ def check_producer_e2e_for_bits(bits: int) -> str:
 
 def check_parser_roundtrip_for_bits(bits: int) -> str:
     """Re-run producer + roundtrip through the runtime inflate parser."""
-    sys.path.insert(0, str(REPO))
-    try:
-        from submissions.apogee_intN.inflate import parse_apogee_intn_archive
-    finally:
-        sys.path.pop(0)
+    from submissions.apogee_intN.inflate import parse_apogee_intn_archive
+
     with tempfile.TemporaryDirectory() as tmp:
         out_dir = Path(tmp)
         subprocess.run(
@@ -170,10 +187,17 @@ def check_launch_script_flag_wiring() -> str:
     }
     missing = required_for_pareto_one_liners - valid_flags
     _check(not missing, f"launch script missing flags from Pareto one-liners: {sorted(missing)}")
-    return f"launch script `full` subparser has all 6 required flags ({len(valid_flags)} total flags)"
+    return (
+        f"launch script `full` subparser has all 6 required flags "
+        f"({len(valid_flags)} total flags at {repo_relative(LAUNCH_SCRIPT, REPO)})"
+    )
 
 
-def run_dryrun(bits_list: list[int], verbose: bool = False) -> int:
+def run_dryrun(
+    bits_list: list[int],
+    verbose: bool = False,
+    allow_forensic_byte_only: bool = False,
+) -> int:
     """Run all checks. Returns 0 on PASS, non-zero on any FAIL."""
     failures: list[str] = []
     passes: list[str] = []
@@ -196,6 +220,14 @@ def run_dryrun(bits_list: list[int], verbose: bool = False) -> int:
         _attempt(f"bits={bits}-producer-e2e", check_producer_e2e_for_bits, bits)
         _attempt(f"bits={bits}-parser-roundtrip", check_parser_roundtrip_for_bits, bits)
 
+    if allow_forensic_byte_only:
+        passes.append(
+            "  ✓ distortion-model-gate: explicit forensic byte-only mode; "
+            "ready_for_exact_eval_dispatch=false"
+        )
+    else:
+        failures.append(f"  ✗ distortion-model-gate: {DISTORTION_MODEL_BLOCKER}")
+
     if verbose or failures:
         for line in passes:
             print(line)
@@ -206,8 +238,9 @@ def run_dryrun(bits_list: list[int], verbose: bool = False) -> int:
         print(f"\nDISPATCH DRY-RUN FAILED: {len(failures)} check(s) failed of {len(failures) + len(passes)}.")
         print("Do NOT dispatch — fix the failures above first.")
         return 1
-    print(f"\nDISPATCH DRY-RUN PASSED: all {len(passes)} checks OK across bits={bits_list}.")
-    print("Dispatch is GO. Operator one-liners from `tools/apogee_intN_pareto.py` will succeed.")
+    print(f"\nFORENSIC BYTE-ONLY DRY-RUN PASSED: all {len(passes)} checks OK across bits={bits_list}.")
+    print("ready_for_exact_eval_dispatch=false")
+    print("Do NOT dispatch Apogee intN as a score lane without a distortion model or exact CUDA evidence.")
     return 0
 
 
@@ -217,6 +250,15 @@ def main(argv: list[str] | None = None) -> int:
                         help="bits config(s) to validate (4..8). Repeat for multiple.")
     parser.add_argument("--all-pareto-frontier", action="store_true",
                         help=f"Validate all current Pareto-frontier bits ({PARETO_FRONTIER_BITS}).")
+    parser.add_argument(
+        "--allow-forensic-byte-only",
+        action="store_true",
+        help=(
+            "Run byte/parser checks as a local forensic probe. This keeps "
+            "ready_for_exact_eval_dispatch=false and must not be used as a "
+            "score-lane GO signal."
+        ),
+    )
     parser.add_argument("-v", "--verbose", action="store_true", help="Print PASS lines too.")
     args = parser.parse_args(argv)
 
@@ -227,7 +269,11 @@ def main(argv: list[str] | None = None) -> int:
     else:
         bits_list = [5]  # default: validate the sweet-spot config
 
-    return run_dryrun(bits_list, verbose=args.verbose)
+    return run_dryrun(
+        bits_list,
+        verbose=args.verbose,
+        allow_forensic_byte_only=args.allow_forensic_byte_only,
+    )
 
 
 if __name__ == "__main__":

@@ -13,9 +13,12 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import json
 import sys
 from contextlib import redirect_stdout
 from pathlib import Path
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DISPATCHER_PATH = REPO_ROOT / "tools" / "lightning_dispatch_pr106_stack.py"
@@ -167,3 +170,118 @@ def test_submit_dispatch_carries_inflate_torch_cu124_pin() -> None:
     assert any("INFLATE_TORCH_SPEC=torch==2.5.1+cu124" in v for v in env_values), (
         f"INFLATE_TORCH_SPEC pin missing or wrong; --env values: {env_values}"
     )
+
+
+def test_apogee_dispatch_requires_distortion_gate(tmp_path: Path) -> None:
+    dispatcher = _load_dispatcher()
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"apogee bytes")
+
+    with pytest.raises(SystemExit, match="apogee_intN dispatch requires"):
+        dispatcher.validate_apogee_dispatch_gate(
+            lane="apogee_int4",
+            archive=archive,
+            gate_json=None,
+            allow_forensic_print_only=False,
+            print_only=False,
+        )
+
+
+def test_apogee_forensic_override_only_allows_print_only(tmp_path: Path) -> None:
+    dispatcher = _load_dispatcher()
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"apogee bytes")
+
+    dispatcher.validate_apogee_dispatch_gate(
+        lane="apogee_int4",
+        archive=archive,
+        gate_json=None,
+        allow_forensic_print_only=True,
+        print_only=True,
+    )
+    with pytest.raises(SystemExit, match="requires --print-only"):
+        dispatcher.validate_apogee_dispatch_gate(
+            lane="apogee_int4",
+            archive=archive,
+            gate_json=None,
+            allow_forensic_print_only=True,
+            print_only=False,
+        )
+
+
+def test_apogee_distortion_gate_must_match_archive_sha(tmp_path: Path) -> None:
+    dispatcher = _load_dispatcher()
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"apogee bytes")
+    gate = tmp_path / "gate.json"
+    gate.write_text(
+        json.dumps(
+            {
+                "candidate_archive_sha256": "wrong",
+                "evidence_semantics": "scorer_basin_parity_gate",
+                "distortion_model_status": "passed",
+                "scorer_basin_parity_status": "passed",
+                "ready_for_exact_eval_dispatch": True,
+            }
+        )
+    )
+
+    with pytest.raises(SystemExit, match="candidate_archive_sha256 mismatch"):
+        dispatcher.validate_apogee_dispatch_gate(
+            lane="apogee_int4",
+            archive=archive,
+            gate_json=gate,
+            allow_forensic_print_only=False,
+            print_only=False,
+        )
+
+
+def test_apogee_distortion_gate_can_unlock_when_positive_and_sha_matched(tmp_path: Path) -> None:
+    dispatcher = _load_dispatcher()
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"apogee bytes")
+    gate = tmp_path / "gate.json"
+    gate.write_text(
+        json.dumps(
+            {
+                "candidate_archive_sha256": dispatcher._sha256_file(archive),
+                "evidence_semantics": "scorer_basin_parity_gate",
+                "scorer_basin_parity_status": "passed",
+                "ready_for_exact_eval_dispatch": True,
+            }
+        )
+    )
+
+    dispatcher.validate_apogee_dispatch_gate(
+        lane="apogee_int4",
+        archive=archive,
+        gate_json=gate,
+        allow_forensic_print_only=False,
+        print_only=False,
+    )
+
+
+def test_apogee_distortion_gate_rejects_proxy_only_semantics(tmp_path: Path) -> None:
+    dispatcher = _load_dispatcher()
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"apogee bytes")
+    gate = tmp_path / "gate.json"
+    gate.write_text(
+        json.dumps(
+            {
+                "candidate_archive_sha256": dispatcher._sha256_file(archive),
+                "evidence_semantics": "local_distortion_proxy",
+                "distortion_model_status": "passed",
+                "ready_for_exact_eval_dispatch": True,
+            }
+        )
+    )
+
+    with pytest.raises(SystemExit, match="unsupported evidence_semantics"):
+        dispatcher.validate_apogee_dispatch_gate(
+            lane="apogee_int4",
+            archive=archive,
+            gate_json=gate,
+            allow_forensic_print_only=False,
+            print_only=False,
+        )

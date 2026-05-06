@@ -25,11 +25,20 @@ from __future__ import annotations
 
 import argparse
 import ast
-import json
 import re
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
+
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.repo_io import json_text, repo_relative  # noqa: E402
 
 DEFAULT_SCAN_PATHS = ("scripts", "docs", "reports", "tools")
 DEFAULT_EXCLUDES = (
@@ -104,10 +113,7 @@ class Hazard:
 
 
 def _repo_rel(path: Path, root: Path) -> str:
-    try:
-        return path.resolve().relative_to(root.resolve()).as_posix()
-    except ValueError:
-        return path.as_posix()
+    return repo_relative(path, root)
 
 
 def _is_excluded(path: Path, root: Path, excludes: tuple[str, ...]) -> bool:
@@ -463,7 +469,7 @@ def main(argv: list[str] | None = None) -> int:
     }
     if args.json_out:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)
-        args.json_out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        args.json_out.write_text(json_text(payload), encoding="utf-8")
 
     for hazard in hazards:
         print(f"{hazard.path}:{hazard.line}: {hazard.kind}: {hazard.message}", file=sys.stderr)

@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+# ruff: noqa: I001
 """Submit or dry-run official Lightning Batch Jobs for pact lanes/evals."""
 from __future__ import annotations
 
 import argparse
 import difflib
 import importlib.metadata as importlib_metadata
+import importlib.util
 import json
 import os
 import re
@@ -15,8 +17,20 @@ import sys
 import time
 from pathlib import Path, PurePosixPath
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO_ROOT / "src"))
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 
 # `lightning_sdk.__init__` performs a PyPI version check on import unless this
 # is set. Keep exact-eval tooling deterministic and avoid package-index network
@@ -47,6 +61,7 @@ from tac.deploy.lightning.batch_jobs import (  # noqa: E402
     validate_studio_machine_class_pair,
 )
 from tac.public_submission_refs import parse_public_pr_refs_csv  # noqa: E402
+from tac.repo_io import json_text, write_json  # noqa: E402
 
 SSH_AUTH_OPTIONS = (
     "-o",
@@ -75,6 +90,14 @@ SSH_TRANSIENT_FAILURE_PATTERNS = (
 )
 SSH_TRANSIENT_RETRY_ATTEMPTS = 4
 SSH_TRANSIENT_RETRY_INITIAL_DELAY_S = 2.0
+
+
+def _print_json(payload: object) -> None:
+    print(json_text(payload), end="")
+
+
+def _write_json(path: str | Path, payload: object) -> None:
+    write_json(path, payload)
 
 _EXACT_EVAL_PRE_SCORE_FAILURES = (
     {
@@ -649,10 +672,11 @@ def _validate_archive_manifest_dispatch_gate(args: argparse.Namespace) -> None:
         return
     status = gate.get("status") or "unknown"
     blockers = gate.get("blockers") or []
-    if isinstance(blockers, list):
-        blocker_text = ", ".join(str(item) for item in blockers[:8])
-    else:
-        blocker_text = str(blockers)
+    blocker_text = (
+        ", ".join(str(item) for item in blockers[:8])
+        if isinstance(blockers, list)
+        else str(blockers)
+    )
     raise SystemExit(
         "exact-eval submit blocked; candidate archive manifest exact_eval_dispatch_gate "
         f"is not safe_for_exact_eval_dispatch=true (status={status}). {blocker_text}"
@@ -1417,7 +1441,7 @@ def cmd_exact_eval(args: argparse.Namespace) -> int:
     record = _submit_lightning_or_exit(client, spec, dry_run=args.dry_run)
     if args.dry_run:
         record["submit_readiness"] = _remote_submit_readiness(args, role="exact-eval")
-    print(json.dumps(record, indent=2, sort_keys=True))
+    _print_json(record)
     return 0
 
 
@@ -1471,7 +1495,7 @@ def cmd_component_response(args: argparse.Namespace) -> int:
     record = _submit_lightning_or_exit(client, spec, dry_run=args.dry_run)
     if args.dry_run:
         record["submit_readiness"] = _remote_submit_readiness(args, role="component-response")
-    print(json.dumps(record, indent=2, sort_keys=True))
+    _print_json(record)
     return 0
 
 
@@ -1529,13 +1553,13 @@ def cmd_component_sensitivity(args: argparse.Namespace) -> int:
     record = _submit_lightning_or_exit(client, spec, dry_run=args.dry_run)
     if args.dry_run:
         record["submit_readiness"] = _remote_submit_readiness(args, role="component-sensitivity")
-    print(json.dumps(record, indent=2, sort_keys=True))
+    _print_json(record)
     return 0
 
 
 def cmd_list(args: argparse.Namespace) -> int:
     client = _client(args)
-    print(json.dumps(client.list_records(), indent=2, sort_keys=True))
+    _print_json(client.list_records())
     return 0
 
 
@@ -1556,7 +1580,7 @@ def cmd_validate_artifacts(args: argparse.Namespace) -> int:
             expected_archive_size_bytes=args.expected_archive_size_bytes,
             require_adjudication=args.require_adjudication,
         )
-    print(json.dumps(result, indent=2, sort_keys=True))
+    _print_json(result)
     return 0
 
 
@@ -1568,8 +1592,8 @@ def cmd_validate_component_response_artifacts(args: argparse.Namespace) -> int:
         require_passed=args.require_passed,
     )
     validation_path = Path(args.artifact_dir) / "official_component_response_artifact_validation.json"
-    validation_path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
-    print(json.dumps(result, indent=2, sort_keys=True))
+    _write_json(validation_path, result)
+    _print_json(result)
     return 0
 
 
@@ -1580,8 +1604,8 @@ def cmd_validate_component_sensitivity_artifacts(args: argparse.Namespace) -> in
         expected_baseline_archive_size_bytes=args.expected_baseline_archive_size_bytes,
     )
     validation_path = Path(args.artifact_dir) / "diagnostic_component_sensitivity_artifact_validation.json"
-    validation_path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
-    print(json.dumps(result, indent=2, sort_keys=True))
+    _write_json(validation_path, result)
+    _print_json(result)
     return 0
 
 
@@ -1602,7 +1626,7 @@ def cmd_harvest_component_response_local(args: argparse.Namespace) -> int:
             expected_baseline_archive_size_bytes=args.expected_baseline_archive_size_bytes,
             require_passed=args.require_passed,
         )
-    print(json.dumps(result, indent=2, sort_keys=True))
+    _print_json(result)
     return 0
 
 
@@ -1621,7 +1645,7 @@ def cmd_harvest_component_sensitivity_local(args: argparse.Namespace) -> int:
             expected_baseline_archive_sha256=args.expected_baseline_archive_sha256,
             expected_baseline_archive_size_bytes=args.expected_baseline_archive_size_bytes,
         )
-    print(json.dumps(result, indent=2, sort_keys=True))
+    _print_json(result)
     return 0
 
 
@@ -1734,7 +1758,7 @@ def cmd_harvest_local(args: argparse.Namespace) -> int:
         require_adjudication=args.require_adjudication,
         overwrite=args.overwrite,
     )
-    print(json.dumps(result, indent=2, sort_keys=True))
+    _print_json(result)
     return 0
 
 
@@ -1870,7 +1894,7 @@ def _persist_harvest_failure_refinement(
         mirror = Path(mirror_dir)
         if mirror.exists():
             for name in (ARTIFACT_INFRA_FAILURE, ARTIFACT_VALIDATION):
-                (mirror / name).write_text(json.dumps(refined, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+                _write_json(mirror / name, refined)
     _replace_latest_harvest_failure_in_state(
         state_path=_state_path(args) or LIGHTNING_BATCH_STATE,
         job_name=args.job_name,
@@ -1905,7 +1929,7 @@ def cmd_harvest_ssh(args: argparse.Namespace) -> int:
     if refined != result:
         result = refined
         _persist_harvest_failure_refinement(args=args, refined=result)
-    print(json.dumps(result, indent=2, sort_keys=True))
+    _print_json(result)
     return 0
 
 
@@ -1995,25 +2019,21 @@ def cmd_refresh_status(args: argparse.Namespace) -> int:
                         "status_anomalies": record.get("status_anomalies") or [],
                     }
                 )
-        print(
-            json.dumps(
-                {
-                    "refreshed_count": len(results),
-                    "skipped_count": len(skipped),
-                    "failure_count": len(failures),
-                    "results": results,
-                    "skipped": skipped,
-                    "failures": failures,
-                },
-                indent=2,
-                sort_keys=True,
-            )
+        _print_json(
+            {
+                "refreshed_count": len(results),
+                "skipped_count": len(skipped),
+                "failure_count": len(failures),
+                "results": results,
+                "skipped": skipped,
+                "failures": failures,
+            }
         )
         return 1 if failures and args.fail_on_error else 0
     if not args.job_name:
         raise SystemExit("refresh-status requires --job-name or --all")
     result = _refresh_one_status(client, args)
-    print(json.dumps(result, indent=2, sort_keys=True))
+    _print_json(result)
     return 0
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Predict stacked-dispatch score for any combination of PR106-anchor lanes.
+"""Forensic stack predictor for PR106-anchor lanes.
 
 Given:
   - apogee_intN bit-width N (∈ {4, 5, 6, 7, 8}; 7 is Pareto-dominated, skip)
@@ -8,24 +8,34 @@ Given:
 Outputs:
   - expected total archive bytes
   - per-layer score contribution (rate Δ + distortion Δ)
-  - predicted final contest score
-  - operator dispatch one-liner (or noted as "compose-then-dispatch" if multi-layer)
+  - predicted score band tagged as prediction-only, noncanonical evidence
+  - explicit dispatch blockers
 
 Sources of truth:
-  - apogee_intN bands: tools/apogee_intN_pareto.py predicted bands
+  - apogee_intN bands: tools/apogee_intN_pareto.py historical forensic bands
   - sidechannel deltas: lane registry + memory paradigm thread predictions
   - PR106 baseline: 0.20945673, 186,239 bytes
+
+This tool never emits exact-eval readiness. Its outputs are prediction-only
+forensics until a scorer-basin parity gate, contest-faithful distortion model,
+or exact CUDA evidence validates the exact candidate archive bytes.
 """
 from __future__ import annotations
 
 import argparse
 import json
 from dataclasses import dataclass
-from pathlib import Path
 
 PR106_BASELINE_SCORE = 0.20945673
 PR106_BASELINE_BYTES = 186239
 RATE_DENOM = 37545489.0  # contest formula: rate = 25 * bytes / RATE_DENOM
+DISPATCH_BLOCKERS = [
+    "prediction_only_stack_estimate",
+    "missing_exact_candidate_archive",
+    "missing_contest_faithful_distortion_model",
+    "missing_scorer_basin_parity_gate",
+    "sidechannel_deltas_not_exact_cuda_stack_evidence",
+]
 
 
 @dataclass(frozen=True)
@@ -146,15 +156,20 @@ def predict(bits: int, sidechannels: list[str]) -> dict:
             "sidechannels": sidechannels,
         },
         "warning": warning,
+        "evidence_semantics": "prediction_only_forensic",
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": list(DISPATCH_BLOCKERS),
         "predicted_archive_bytes": total_bytes,
         "predicted_total_rate_delta": total_rate_delta,
         "predicted_total_distortion_delta": total_distortion_delta,
         "predicted_score_point_estimate": point_estimate,
         "predicted_score_band": [band_low, band_high],
-        "beats_pr106": point_estimate < PR106_BASELINE_SCORE,
+        "predicted_beats_pr106": point_estimate < PR106_BASELINE_SCORE,
+        "beats_pr106": False,
+        "beats_pr106_claim_valid": False,
         "improvement_over_pr106": PR106_BASELINE_SCORE - point_estimate,
         "per_layer_breakdown": {
-            "apogee_int{}".format(bits): {
+            f"apogee_int{bits}": {
                 "bytes": base.archive_bytes,
                 "rate_delta": base.rate_delta,
                 "band": [base.predicted_band_low, base.predicted_band_high],
@@ -198,26 +213,24 @@ def _format_human(result: dict) -> str:
         "",
         f"Predicted score (point):   {result['predicted_score_point_estimate']:.6f}",
         f"Predicted score (band):    [{result['predicted_score_band'][0]:.6f}, {result['predicted_score_band'][1]:.6f}]",
-        f"Beats PR106 ({PR106_BASELINE_SCORE:.6f})? {'YES' if result['beats_pr106'] else 'NO'}",
-        f"Improvement over PR106:    {result['improvement_over_pr106']:+.6f}",
+        f"Predicted below PR106 ({PR106_BASELINE_SCORE:.6f})? {'YES' if result['predicted_beats_pr106'] else 'NO'}",
+        f"Predicted delta vs PR106:  {result['improvement_over_pr106']:+.6f}",
+        "",
+        "ready_for_exact_eval_dispatch=false",
+        "Evidence semantics: prediction_only_forensic",
+        "Dispatch blockers: " + ", ".join(result["dispatch_blockers"]),
     ])
     if cfg["sidechannels"]:
         lines.extend([
             "",
-            "Operator action: each lane is dispatched INDEPENDENTLY today.",
-            "Stacked dispatch requires a future composition tool; for now,",
-            "dispatch apogee_int{} alone, then layer sidechannels sequentially".format(cfg['apogee_bits']),
-            "(latent → yshift → lrl1) per the score-aware paradigm thread.",
+            "Operator action: do not dispatch from this prediction table.",
+            "Build an exact candidate archive and pass an explicit distortion/parity gate first.",
         ])
     else:
         lines.extend([
             "",
-            f"Operator one-liner (apogee_int{cfg['apogee_bits']} alone):",
-            "  APOGEE_INTN_BITS={} .venv/bin/python scripts/launch_lane_on_vastai.py full \\".format(cfg['apogee_bits']),
-            "    --lane-script scripts/remote_lane_apogee_intN.sh \\",
-            f"    --label lane_apogee_int{cfg['apogee_bits']}_pr106 \\",
-            f"    --predicted-band {result['predicted_score_band'][0]:.3f} {result['predicted_score_band'][1]:.3f} \\",
-            "    --estimated-cost 0.30 --council-priority 1 --max-dph 0.30",
+            f"apogee_int{cfg['apogee_bits']} alone remains blocked for score dispatch.",
+            "Use tools/dispatch_dryrun_apogee_intN.py --allow-forensic-byte-only for local parser checks only.",
         ])
     lines.append("═══════════════════════════════════════════════════════════════════")
     return "\n".join(lines)
@@ -252,12 +265,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.json:
             print(json.dumps(results, indent=2))
         else:
-            print("All combinations sorted by predicted score (best first):\n")
+            print("All combinations sorted by forensic predicted score (not dispatch-ready):\n")
             for i, r in enumerate(results[:12], 1):
                 cfg = r["config"]
                 sc = "+".join(cfg["sidechannels"]) if cfg["sidechannels"] else "alone"
                 print(f"  {i:2d}. int{cfg['apogee_bits']} {sc:<28s} → {r['predicted_score_point_estimate']:.6f} "
-                      f"(Δ {r['improvement_over_pr106']:+.6f}, {r['predicted_archive_bytes']:>7,} bytes)")
+                      f"(predicted Δ {r['improvement_over_pr106']:+.6f}, {r['predicted_archive_bytes']:>7,} bytes, ready=false)")
         return 0
 
     result = predict(args.bits, args.sidechannels)

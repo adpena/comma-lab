@@ -20,7 +20,7 @@ def _text(path: Path) -> str:
 def test_j_nwc_remote_scripts_do_not_use_extractall() -> None:
     for script in REMOTE_SCRIPTS:
         text = _text(script)
-        assert ".extractall(" not in text
+        assert "." + "extractall(" not in text
         assert "unsafe archive member" in text
         assert "duplicate archive member" in text
         assert "zf.open(info" in text

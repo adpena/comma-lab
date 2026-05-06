@@ -3,29 +3,40 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
+import importlib.util
 import json
 import os
 import shlex
 import subprocess
-import sys
 import time
 from pathlib import Path
 from typing import Any
 
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO_ROOT / "src"))
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 
 os.environ.setdefault("LIGHTNING_DISABLE_VERSION_CHECK", "1")
 
+from scripts.launch_lightning_batch_job import _require_dispatch_claim_for_submit  # noqa: E402
 from tac.deploy.lightning.batch_jobs import (  # noqa: E402
     LightningAdjudicationSpec,
     LightningBatchJobsClient,
     LightningBatchJobSpec,
     _runner_preflight_command,
 )
-
+from tac.repo_io import json_text, sha256_file  # noqa: E402
 
 DEFAULT_REMOTE_REPO = "/teamspace/studios/this_studio/pact"
 DEFAULT_LOCAL_ARTIFACT_ROOT = "experiments/results/lightning_batch"
@@ -36,6 +47,7 @@ DEFAULT_CANDIDATE_ARCHIVE = (
 DEFAULT_BASELINE_ARCHIVE = "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip"
 DEFAULT_WARM_POSES = "experiments/results/lane_g_v3_landed/iter_0/optimized_poses.pt"
 DEFAULT_GT_POSE_TARGETS = "experiments/results/lane_a_landed/gt_pose_targets.pt"
+DEFAULT_DISPATCH_CLAIMS_PATH = ".omx/state/active_lane_dispatch_claims.md"
 
 
 SSH_AUTH_OPTIONS = (
@@ -62,16 +74,8 @@ def _utc_now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
-def _sha256_path(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 def _identity(path: Path) -> dict[str, Any]:
-    return {"sha256": _sha256_path(path), "bytes": path.stat().st_size}
+    return {"sha256": sha256_file(path), "bytes": path.stat().st_size}
 
 
 def _repo_rel(path: str | Path) -> str:
@@ -247,6 +251,22 @@ def _remote_supply_chain_preflight(args: argparse.Namespace) -> None:
     )
 
 
+def _require_alpha_geo0_dispatch_claim(args: argparse.Namespace) -> None:
+    _require_dispatch_claim_for_submit(args, role="alpha-geo0 exact-eval")
+
+
+def _dispatch_claim_metadata(args: argparse.Namespace) -> dict[str, str]:
+    metadata: dict[str, str] = {}
+    lane_id = str(args.dispatch_lane_id or "").strip()
+    if lane_id:
+        metadata["dispatch_lane_id"] = lane_id
+        metadata.setdefault("lane", lane_id)
+    skip_reason = str(args.allow_missing_dispatch_claim_reason or "").strip()
+    if skip_reason:
+        metadata["dispatch_claim_skip_reason"] = skip_reason
+    return metadata
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--job-name", required=True)
@@ -275,6 +295,21 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-seconds", type=int, default=6 * 3600)
     parser.add_argument("--source-manifest", default=None)
     parser.add_argument("--queue-metadata", action="append", default=[])
+    parser.add_argument(
+        "--dispatch-lane-id",
+        default=None,
+        help="Active lane id already claimed in .omx/state/active_lane_dispatch_claims.md.",
+    )
+    parser.add_argument(
+        "--dispatch-claims-path",
+        default=DEFAULT_DISPATCH_CLAIMS_PATH,
+        help="Markdown active-dispatch claim ledger to check before non-dry-run Studio submit.",
+    )
+    parser.add_argument(
+        "--allow-missing-dispatch-claim-reason",
+        default=None,
+        help="Auditable break-glass reason for a non-dry-run Studio submit without a matching claim.",
+    )
     parser.add_argument("--remote-preflight-ssh-target", default=os.environ.get("LIGHTNING_SSH_TARGET"))
     parser.add_argument("--dry-run", action="store_true")
     return parser
@@ -290,8 +325,8 @@ def _parse_metadata(items: list[str]) -> dict[str, str]:
     return out
 
 
-def main() -> int:
-    args = build_parser().parse_args()
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
     candidate_rel = _repo_rel(args.candidate_archive)
     baseline_rel = _repo_rel(args.baseline_archive)
     warm_rel = _repo_rel(args.warm_poses)
@@ -319,6 +354,8 @@ def main() -> int:
         "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
     }
     queue_metadata.update(_parse_metadata(args.queue_metadata))
+    queue_metadata.update(_dispatch_claim_metadata(args))
+    _require_alpha_geo0_dispatch_claim(args)
     command = _build_command(args, queue_metadata)
     remote_output_dir = args.output_dir or f"{args.remote_repo.rstrip('/')}/{DEFAULT_LOCAL_ARTIFACT_ROOT}/{args.job_name}"
     local_artifact_dir = args.local_artifact_dir or f"{DEFAULT_LOCAL_ARTIFACT_ROOT}/{args.job_name}"
@@ -343,7 +380,7 @@ def main() -> int:
         _remote_supply_chain_preflight(args)
     client = LightningBatchJobsClient(state_path=Path(args.state_path))
     record = client.submit(spec, dry_run=args.dry_run)
-    print(json.dumps(record, indent=2, sort_keys=True))
+    print(json_text(record), end="")
     return 0
 
 

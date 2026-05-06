@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-"""Pre-dispatch sanity gate — 5-check ladder before any paid GPU dispatch.
+"""Pre-dispatch sanity gate — fail-closed ladder before any paid GPU dispatch.
 
 Council Q3 prescription (`feedback_grand_council_predictor_calibration_no_arbitrariness_20260505.md`).
 The apogee_int4 8x miss happened because we dispatched without a sanity ladder.
-This tool runs 5 checks in <30s and returns exit 64 on refusal:
+This tool runs fail-closed checks in <30s and returns exit 64 on refusal:
 
   Gate 1 (anchors_sufficient):  predictor has ≥3 calibration anchors for this lane class
   Gate 2 (sanity_lossy_vs_lossless): predicted lossy score > lossless baseline
-  Gate 3 (distortion_proxy_local):  for high-rel_err candidates, distortion proxy was run
+  Gate 3 (distortion_model_gate):   high-rel_err candidates have proxy telemetry
+          plus explicit non-proxy distortion/parity evidence for the exact bytes
   Gate 4 (hazard_scan):  tools/check_dispatch_cli_shell_hazards.py shows 0 dispatch_local_path_leak
   Gate 5 (lane_registry_consistent):  tools/lane_maturity.py validate passes
+  Gate 6 (apogee_evidence_semantics): apogee_intN has explicit non-proxy
+          distortion/parity evidence for the exact archive bytes
 
 Operator override: `--override-reason <≥40-char-reason>` bypasses but logs to
 `.omx/state/predispatch_overrides.log` JSONL for forensic audit.
@@ -30,24 +33,45 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import json
 import os
 import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.repo_io import json_line, json_text, read_json, sha256_file  # noqa: E402
+
 DEFAULT_ANCHORS_DIR = REPO_ROOT / ".omx" / "calibration"
 OVERRIDE_LOG = REPO_ROOT / ".omx" / "state" / "predispatch_overrides.log"
-
-# Add src/ to import path so we can use tac.predictor
-sys.path.insert(0, str(REPO_ROOT / "src"))
+APOGEE_ALLOWED_EVIDENCE_SEMANTICS = {
+    "contest_faithful_distortion_model",
+    "scorer_basin_parity_gate",
+    "contest_cuda_exact_eval_positive",
+}
+APOGEE_FORBIDDEN_EVIDENCE_MARKERS = (
+    "byte_only",
+    "byte-only",
+    "prediction_only",
+    "predicted_band",
+    "invalid_predicted_band",
+    "proxy_only",
+    "distortion_proxy_local",
+    "local_distortion_proxy",
+    "[distortion-proxy:local]",
+)
+APOGEE_PASS_STATUSES = {"pass", "passed", "ready", "exact_positive_cuda"}
 
 from tac.predictor.score_band import (  # noqa: E402
     CalibrationAnchor,
     load_calibration_anchors,
-    predict_score_band,
 )
 
 
@@ -67,7 +91,7 @@ class SanityResult:
 
 
 def _utc_now() -> str:
-    return dt.datetime.now(tz=dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return dt.datetime.now(tz=dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _gate_anchors_sufficient(lane_class: str, anchors_dir: Path) -> GateResult:
@@ -129,34 +153,51 @@ def _gate_sanity_lossy_vs_lossless(
 
 
 def _gate_distortion_proxy(
+    *,
     rel_err_pct: float,
     distortion_proxy_was_run: bool,
+    archive_path: Path,
+    evidence_json_path: Path | None,
 ) -> GateResult:
-    """Gate 3: high-rel_err candidates require local distortion proxy to be run.
+    """Gate 3: high-rel_err candidates require non-proxy distortion evidence.
 
-    Per council Q1 (Hotz): >1% rel_err needs an empirical distortion estimate.
+    The local distortion proxy is useful telemetry but is not a dispatch gate.
     """
     HIGH_REL_ERR_THRESHOLD = 1.0
     if rel_err_pct <= HIGH_REL_ERR_THRESHOLD:
         return GateResult(
-            name="distortion_proxy_local",
+            name="distortion_model_gate",
             passed=True,
             detail=f"rel_err {rel_err_pct:.2f}% ≤ {HIGH_REL_ERR_THRESHOLD}% threshold; proxy not required",
         )
     if not distortion_proxy_was_run:
         return GateResult(
-            name="distortion_proxy_local",
+            name="distortion_model_gate",
             passed=False,
             detail=(
                 f"rel_err {rel_err_pct:.2f}% > {HIGH_REL_ERR_THRESHOLD}% but --distortion-proxy-ran "
                 "not set. Run experiments/distortion_proxy_local.py against the archive first; "
-                "the cost is ~30s CPU/MPS forward pass — far cheaper than $0.30 GPU mistake."
+                "then attach non-proxy distortion/parity evidence for the exact candidate bytes."
             ),
         )
+    evidence_gate = _validate_non_proxy_readiness_evidence(
+        archive_path=archive_path,
+        evidence_json_path=evidence_json_path,
+        gate_name="distortion_model_gate",
+    )
+    if not evidence_gate.passed:
+        evidence_gate.detail = (
+            "local distortion proxy was run but is non-promotable by itself; "
+            + evidence_gate.detail
+        )
+        return evidence_gate
     return GateResult(
-        name="distortion_proxy_local",
+        name="distortion_model_gate",
         passed=True,
-        detail=f"rel_err {rel_err_pct:.2f}% > threshold; distortion proxy was run (per --distortion-proxy-ran)",
+        detail=(
+            f"rel_err {rel_err_pct:.2f}% > threshold; proxy telemetry plus "
+            f"{evidence_gate.detail}"
+        ),
     )
 
 
@@ -225,6 +266,162 @@ def _gate_lane_registry() -> GateResult:
     )
 
 
+def _gate_apogee_evidence_semantics(
+    *,
+    lane_class: str,
+    archive_path: Path,
+    evidence_json_path: Path | None,
+) -> GateResult:
+    """Gate 6: Apogee intN needs explicit non-proxy readiness evidence."""
+    if lane_class != "apogee_intN":
+        return GateResult(
+            name="apogee_evidence_semantics",
+            passed=True,
+            detail=f"not an apogee_intN lane class ({lane_class}); gate not applicable",
+        )
+    if evidence_json_path is None:
+        return GateResult(
+            name="apogee_evidence_semantics",
+            passed=False,
+            detail=(
+                "apogee_intN cannot dispatch from byte-only, proxy-only, or predicted-band evidence. "
+                "Provide --readiness-evidence-json with evidence_semantics in "
+                f"{sorted(APOGEE_ALLOWED_EVIDENCE_SEMANTICS)} for the exact archive SHA."
+            ),
+        )
+    generic_gate = _validate_non_proxy_readiness_evidence(
+        archive_path=archive_path,
+        evidence_json_path=evidence_json_path,
+        gate_name="apogee_evidence_semantics",
+    )
+    if not generic_gate.passed:
+        return generic_gate
+    try:
+        payload = read_json(evidence_json_path)
+    except (OSError, ValueError) as exc:
+        return GateResult(
+            name="apogee_evidence_semantics",
+            passed=False,
+            detail=f"cannot read readiness evidence JSON {evidence_json_path}: {exc}",
+        )
+    if not isinstance(payload, dict):
+        return GateResult(
+            name="apogee_evidence_semantics",
+            passed=False,
+            detail=f"readiness evidence must be a JSON object: {evidence_json_path}",
+        )
+
+    blockers: list[str] = []
+    actual_sha = sha256_file(archive_path)
+    recorded_sha = (
+        payload.get("candidate_archive_sha256")
+        or payload.get("archive_sha256")
+        or payload.get("archive", {}).get("sha256")
+    )
+    if recorded_sha != actual_sha:
+        blockers.append(f"candidate archive SHA mismatch evidence={recorded_sha!r} actual={actual_sha}")
+
+    semantics = str(payload.get("evidence_semantics", "")).strip().lower()
+    joined_payload = json_text(payload).lower()
+    if not semantics:
+        blockers.append("missing evidence_semantics")
+    if semantics not in APOGEE_ALLOWED_EVIDENCE_SEMANTICS:
+        blockers.append(f"unsupported evidence_semantics={semantics!r}")
+    for marker in APOGEE_FORBIDDEN_EVIDENCE_MARKERS:
+        if marker in semantics or marker in joined_payload:
+            blockers.append(f"forbidden proxy/prediction evidence marker {marker!r}")
+            break
+
+    if payload.get("ready_for_exact_eval_dispatch") is not True:
+        blockers.append("ready_for_exact_eval_dispatch is not true")
+    evidence_grade = str(payload.get("evidence_grade", "")).lower()
+    if "negative" in evidence_grade or evidence_grade in {"invalid", "external", "prediction"}:
+        blockers.append(f"non-promotable evidence_grade={payload.get('evidence_grade')!r}")
+
+    distortion_status = str(payload.get("distortion_model_status", "")).lower()
+    parity_status = str(payload.get("scorer_basin_parity_status", "")).lower()
+    exact_positive = payload.get("exact_positive_cuda_evidence") is True
+    if semantics == "contest_faithful_distortion_model" and distortion_status not in APOGEE_PASS_STATUSES:
+        blockers.append("contest_faithful_distortion_model requires passing distortion_model_status")
+    if semantics == "scorer_basin_parity_gate" and parity_status not in APOGEE_PASS_STATUSES:
+        blockers.append("scorer_basin_parity_gate requires passing scorer_basin_parity_status")
+    if semantics == "contest_cuda_exact_eval_positive" and not exact_positive:
+        blockers.append("contest_cuda_exact_eval_positive requires exact_positive_cuda_evidence=true")
+
+    if blockers:
+        return GateResult(
+            name="apogee_evidence_semantics",
+            passed=False,
+            detail="; ".join(blockers),
+        )
+    return GateResult(
+        name="apogee_evidence_semantics",
+        passed=True,
+        detail=f"{semantics} evidence matches exact archive SHA",
+    )
+
+
+def _validate_non_proxy_readiness_evidence(
+    *,
+    archive_path: Path,
+    evidence_json_path: Path | None,
+    gate_name: str,
+) -> GateResult:
+    """Validate minimal exact-byte non-proxy readiness evidence."""
+
+    if evidence_json_path is None:
+        return GateResult(
+            name=gate_name,
+            passed=False,
+            detail=(
+                "missing --readiness-evidence-json with non-proxy distortion/parity "
+                "evidence for the exact archive SHA"
+            ),
+        )
+    try:
+        payload = read_json(evidence_json_path)
+    except (OSError, ValueError) as exc:
+        return GateResult(
+            name=gate_name,
+            passed=False,
+            detail=f"cannot read readiness evidence JSON {evidence_json_path}: {exc}",
+        )
+    if not isinstance(payload, dict):
+        return GateResult(
+            name=gate_name,
+            passed=False,
+            detail=f"readiness evidence must be a JSON object: {evidence_json_path}",
+        )
+
+    blockers: list[str] = []
+    actual_sha = sha256_file(archive_path)
+    recorded_sha = (
+        payload.get("candidate_archive_sha256")
+        or payload.get("archive_sha256")
+        or payload.get("archive", {}).get("sha256")
+    )
+    if recorded_sha != actual_sha:
+        blockers.append(f"candidate archive SHA mismatch evidence={recorded_sha!r} actual={actual_sha}")
+    semantics = str(payload.get("evidence_semantics", "")).strip().lower()
+    joined_payload = json_text(payload).lower()
+    if not semantics:
+        blockers.append("missing evidence_semantics")
+    if semantics not in APOGEE_ALLOWED_EVIDENCE_SEMANTICS:
+        blockers.append(f"unsupported evidence_semantics={semantics!r}")
+    for marker in APOGEE_FORBIDDEN_EVIDENCE_MARKERS:
+        if marker in semantics or marker in joined_payload:
+            blockers.append(f"forbidden proxy/prediction evidence marker {marker!r}")
+            break
+    if payload.get("ready_for_exact_eval_dispatch") is not True:
+        blockers.append("ready_for_exact_eval_dispatch is not true")
+    evidence_grade = str(payload.get("evidence_grade", "")).lower()
+    if "negative" in evidence_grade or evidence_grade in {"invalid", "external", "prediction"}:
+        blockers.append(f"non-promotable evidence_grade={payload.get('evidence_grade')!r}")
+    if blockers:
+        return GateResult(name=gate_name, passed=False, detail="; ".join(blockers))
+    return GateResult(name=gate_name, passed=True, detail=f"{semantics} evidence matches exact archive SHA")
+
+
 def predispatch_sanity(
     archive_path: Path,
     predicted_low: float,
@@ -233,8 +430,9 @@ def predispatch_sanity(
     lane_class: str,
     distortion_proxy_was_run: bool = False,
     anchors_dir: Path = DEFAULT_ANCHORS_DIR,
+    readiness_evidence_json: Path | None = None,
 ) -> SanityResult:
-    """Run all 5 gates and return aggregate result."""
+    """Run all fail-closed gates and return aggregate result."""
     if not archive_path.is_file():
         return SanityResult(
             passed=False,
@@ -247,9 +445,19 @@ def predispatch_sanity(
     gates = [
         _gate_anchors_sufficient(lane_class, anchors_dir),
         _gate_sanity_lossy_vs_lossless(predicted_low, predicted_high, rel_err_pct, anchors),
-        _gate_distortion_proxy(rel_err_pct, distortion_proxy_was_run),
+        _gate_distortion_proxy(
+            rel_err_pct=rel_err_pct,
+            distortion_proxy_was_run=distortion_proxy_was_run,
+            archive_path=archive_path,
+            evidence_json_path=readiness_evidence_json,
+        ),
         _gate_hazard_scan(),
         _gate_lane_registry(),
+        _gate_apogee_evidence_semantics(
+            lane_class=lane_class,
+            archive_path=archive_path,
+            evidence_json_path=readiness_evidence_json,
+        ),
     ]
     passed = all(g.passed for g in gates)
     refusal_reasons = [f"{g.name}: {g.detail}" for g in gates if not g.passed]
@@ -270,7 +478,7 @@ def _log_override(
         "operator": os.environ.get("USER", "unknown"),
     }
     with OVERRIDE_LOG.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(record) + "\n")
+        f.write(json_line(record))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -283,7 +491,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--lane-class", required=True,
                         help="e.g. apogee_intN, pr106_sidecar — must match anchors_<class>.json filename")
     parser.add_argument("--distortion-proxy-ran", action="store_true",
-                        help="set if you ran experiments/distortion_proxy_local.py first")
+                        help="set if you ran experiments/distortion_proxy_local.py first; proxy output is not readiness")
+    parser.add_argument("--readiness-evidence-json", type=Path, default=None,
+                        help="required for apogee_intN: explicit non-proxy distortion/parity evidence JSON")
     parser.add_argument("--override-reason", default="",
                         help="bypass gate failures; reason ≥40 chars required and logged")
     parser.add_argument("--json", action="store_true", help="emit JSON instead of human-readable output")
@@ -296,15 +506,28 @@ def main(argv: list[str] | None = None) -> int:
         rel_err_pct=args.rel_err_pct,
         lane_class=args.lane_class,
         distortion_proxy_was_run=args.distortion_proxy_ran,
+        readiness_evidence_json=args.readiness_evidence_json,
     )
 
     if args.json:
-        print(json.dumps({
-            "passed": result.passed,
-            "gates": [{"name": g.name, "passed": g.passed, "detail": g.detail, "confidence": g.confidence}
-                       for g in result.gates],
-            "refusal_reasons": result.refusal_reasons,
-        }, indent=2))
+        print(
+            json_text(
+                {
+                    "passed": result.passed,
+                    "gates": [
+                        {
+                            "name": g.name,
+                            "passed": g.passed,
+                            "detail": g.detail,
+                            "confidence": g.confidence,
+                        }
+                        for g in result.gates
+                    ],
+                    "refusal_reasons": result.refusal_reasons,
+                }
+            ),
+            end="",
+        )
     else:
         for g in result.gates:
             mark = "PASS" if g.passed else "FAIL"

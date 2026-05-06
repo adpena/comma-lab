@@ -32,7 +32,13 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO)
 SCAN_DIRS = [REPO / "experiments", REPO / "src" / "tac" / "experiments"]
 REPORT = REPO / "reports" / "silent_defaults.md"
 
@@ -45,11 +51,10 @@ def _import_profile_keys() -> set[str]:
     via profile" — even if the user's chosen profile doesn't set it,
     another profile could.
     """
-    sys.path.insert(0, str(REPO / "src"))
     try:
         from tac.profiles import PROFILES  # type: ignore
     except Exception as exc:  # pragma: no cover — surface import errors
-        raise SystemExit(f"failed to import tac.profiles.PROFILES: {exc}")
+        raise SystemExit(f"failed to import tac.profiles.PROFILES: {exc}") from exc
     keys: set[str] = set()
     for prof in PROFILES.values():
         if isinstance(prof, dict):
@@ -222,9 +227,10 @@ def _is_risky_default(rec: dict) -> bool:
         return False
     if action == "store_false" and repr_str == "True":
         return False
-    # File-level filter: scripts without --profile cannot have silent
-    # profile overrides (no profile mechanism exists at all).
-    if not rec.get("has_profile_flag", False):
+    # File-level filter: scripts without --profile cannot have silent profile
+    # overrides. Older tests and ad hoc callers pass minimal records without
+    # this key; treat missing as "unknown" rather than "safe".
+    if rec.get("has_profile_flag") is False:
         return False
     # File-level filter: scripts with an override-detection mechanism
     # (_user_provided_flags / _apply_profile / _resolve(args.X)) handle
@@ -235,9 +241,7 @@ def _is_risky_default(rec: dict) -> bool:
     # this loop in train_renderer.py (--grad-clip, --fp4-codebook,
     # --wall-clock-timeout) were all of this shape — fixed in commit
     # 256c5e42. Per-flag verification is a future enhancement.
-    if rec.get("has_override_mechanism", False):
-        return False
-    return True
+    return rec.get("has_override_mechanism") is not True
 
 
 def write_report(records: list[dict], profile_keys: set[str]) -> None:
@@ -277,6 +281,16 @@ def write_report(records: list[dict], profile_keys: set[str]) -> None:
     lines.append(f"- **SUSPICIOUS** (non-None default, no profile match): **{len(suspicious)}**")
     lines.append(f"- **SAFE** (default=None or action implies None): **{safe_count}**")
     lines.append(f"- **TOTAL ARGUMENTS SCANNED**: **{len(records)}**")
+    canonical_entrypoints = [
+        "src/tac/experiments/train_renderer.py",
+        "experiments/pipeline.py",
+    ]
+    present_entrypoints = [path for path in canonical_entrypoints if (REPO / path).is_file()]
+    if present_entrypoints:
+        lines.append(
+            "- **CANONICAL TRAINING ENTRYPOINTS SCANNED**: "
+            + ", ".join(f"`{path}`" for path in present_entrypoints)
+        )
     lines.append("")
     lines.append("---")
     lines.append("")

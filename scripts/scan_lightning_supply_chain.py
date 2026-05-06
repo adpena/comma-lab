@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: I001
 """Scan for the 2026-04-30 Lightning PyPI compromise indicators.
 
 This wrapper is intentionally narrow: it reuses the fail-closed TAC preflight
@@ -8,19 +9,31 @@ JSON record suitable for local, Lightning Studio, Modal, or Vast harvest logs.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import importlib.metadata as metadata
-import json
 import socket
 import sys
 import time
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-if str(REPO_ROOT / "src") not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT / "src"))
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 
 from tac.preflight import check_no_compromised_lightning_supply_chain  # noqa: E402
+from tac.repo_io import json_text  # noqa: E402
 
 
 PACKAGE_NAMES = ("lightning", "pytorch-lightning", "lightning-sdk", "lightning_sdk")
@@ -83,7 +96,7 @@ def main(argv: list[str] | None = None) -> int:
         "status": "FAIL" if violations else "OK",
         "strict": bool(args.strict),
     }
-    text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    text = json_text(payload)
     if args.json_out:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)
         args.json_out.write_text(text)

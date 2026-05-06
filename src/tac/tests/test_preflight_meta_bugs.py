@@ -7,47 +7,80 @@ is being modified by a parallel subagent).
 """
 from __future__ import annotations
 
+import inspect
+import json
+import os
 import textwrap
 from pathlib import Path
 
 import pytest
 
 import tac.preflight as preflight_mod
+from tac.eval_roundtrip_gate import enforce_eval_roundtrip
 from tac.preflight import (
+    REPO_ROOT,
     MetaBugViolation,
+    _scan_doc_for_untagged_scores,
+    _scan_for_cpu_fallback_in_subagent_prompts,
+    _scan_for_halfframe_without_trained_profile,
+    _scan_for_uniward_delta_without_attestation,
+    _scan_for_unspecific_waivers,
+    _scan_for_vastai_prompt_no_cost_cap,
     _scan_inflate_for_scorer_load,
     _scan_inflate_sh_for_centralized_brotli,
     _scan_lightning_ssh_static_policy,
     _scan_python_for_disable_eval_roundtrip_flag,
     _scan_python_for_eval_roundtrip_false,
+    _scan_python_for_kl_div_batchmean,
     _scan_python_for_mps_fallback,
     _scan_python_for_pack_sparse_delta_approved,
+    _scan_python_for_silent_auto_discovery,
+    _scan_python_for_vastai_create_no_label,
+    _scan_python_for_vastai_create_no_tracker,
+    _scan_remote_script_for_nvdec_probe,
     _scan_remote_script_for_plain_cmg3a_dispatch,
     _scan_remote_script_for_plain_pmg_dispatch,
-    _scan_remote_script_for_nvdec_probe,
     _scan_shell_for_missing_set_e,
     _scan_shell_for_pipefail_grep_q,
     _scan_shell_for_zip_binary,
+    _scan_submission_for_provider_or_cpu_score_leakage,
+    _scan_test_file_for_dead_imports,
     _scan_training_script_for_auth_eval,
-    check_no_active_mcp_server_config,
-    check_no_compromised_lightning_supply_chain,
-    check_no_live_mcp_processes,
+    check_cmg3a_remote_dispatch_requires_pose_safety,
+    check_halfframe_archive_uses_trained_profile,
+    check_inflate_scorer_load_has_runtime_banner,
+    check_inflate_sh_handles_br_centrally,
+    check_kl_div_reduction_correct,
     check_lightning_exact_eval_runner_bootstraps_dali,
     check_lightning_ssh_static_policy,
-    check_cmg3a_remote_dispatch_requires_pose_safety,
-    check_pmg_remote_dispatch_requires_geometry_escape,
-    check_inflate_sh_handles_br_centrally,
+    check_no_active_mcp_server_config,
+    check_no_compromised_lightning_supply_chain,
     check_no_disable_eval_roundtrip_flag,
     check_no_eval_roundtrip_false,
+    check_no_live_mcp_processes,
     check_no_mps_fallback_default,
     check_no_pack_sparse_delta_approved_outside_promotion_tool,
     check_no_pipefail_grep_q_trap,
+    check_no_raw_zip_extractall,
     check_no_scorer_load_at_inflate,
     check_no_shell_zip_binary,
+    check_no_silent_auto_discovery_with_warn,
+    check_no_submission_provider_or_cpu_score_leakage,
+    check_pmg_remote_dispatch_requires_geometry_escape,
+    check_profile_keys_have_resolvers,
     check_public_release_hygiene,
     check_remote_scripts_have_nvdec_probe,
+    check_remote_scripts_write_provenance,
+    check_scores_have_lane_tag,
     check_shell_set_e_present,
+    check_subagent_prompts_no_cpu_fallback,
+    check_test_files_imports_resolve,
     check_training_scripts_have_auth_eval,
+    check_uniward_delta_has_attestation_gate,
+    check_vastai_create_has_label,
+    check_vastai_create_writes_tracker,
+    check_vastai_prompts_have_cost_cap,
+    check_waivers_specify_env_gate,
 )
 
 
@@ -387,7 +420,7 @@ class TestNoCompromisedLightningSupplyChain:
         cache = tmp_path / "pip-cache"
         _write(cache / "wheels" / "lightning-2.6.3-py3-none-any.whl", "placeholder\n")
 
-        with pytest.raises(MetaBugViolation, match="cached Lightning 2.6.2/2.6.3"):
+        with pytest.raises(MetaBugViolation, match=r"cached Lightning 2\.6\.2/2\.6\.3"):
             check_no_compromised_lightning_supply_chain(
                 repo_root=root,
                 site_packages_roots=[],
@@ -559,6 +592,50 @@ class TestLightningSshStaticPolicy:
         """)
 
         assert check_lightning_ssh_static_policy(root, strict=True, verbose=False) == []
+
+
+# ─── Check 0d: Submission provider/CPU score leakage guard ──────────────────
+
+
+class TestSubmissionProviderCpuScoreLeakage:
+    def test_submission_helper_provider_host_and_cpu_score_are_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "submissions" / "robust_current" / "download_and_eval.sh"
+        _write(script, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            REMOTE_HOST="${REMOTE_HOST:-alice@ssh.lightning.ai}"
+            SCP_ARGS=(-o StrictHostKeyChecking=no)
+            python3 "$SELF_DIR/runner.py" evaluate \\
+              --upstream-dir upstream \\
+              --skip-compress \\
+              --device cpu
+        """)
+
+        violations = _scan_submission_for_provider_or_cpu_score_leakage(script, root)
+
+        assert any("provider hostname" in item for item in violations)
+        assert any("host-key" in item for item in violations)
+        assert any("--device cpu/mps" in item for item in violations)
+        with pytest.raises(MetaBugViolation, match="SUBMISSION PROVIDER/CPU SCORE"):
+            check_no_submission_provider_or_cpu_score_leakage(root, strict=True, verbose=False)
+
+    def test_submission_helper_cuda_alias_path_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "submissions" / "robust_current" / "download_and_eval.sh"
+        _write(script, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            REMOTE_TARGET="${REMOTE_TARGET:?set ssh alias}"
+            SCP_ARGS=(-o BatchMode=yes -o StrictHostKeyChecking=accept-new)
+            python3 "$SELF_DIR/runner.py" evaluate \\
+              --upstream-dir upstream \\
+              --skip-compress \\
+              --device cuda
+        """)
+
+        assert _scan_submission_for_provider_or_cpu_score_leakage(script, root) == []
+        assert check_no_submission_provider_or_cpu_score_leakage(root, strict=True, verbose=False) == []
 
 
 # ─── Check 0b: MCP server config remains disabled ───────────────────────────
@@ -2074,11 +2151,8 @@ class TestPreflightAllInvokesMetaBugChecks:
     """
 
     def test_preflight_all_invokes_all_meta_bug_checks(self) -> None:
-        import inspect
-        import tac.preflight as pf
-
         # Source-grep preflight_all to verify each check is referenced.
-        src = inspect.getsource(pf.preflight_all)
+        src = inspect.getsource(preflight_mod.preflight_all)
 
         required_checks = [
             "check_no_mps_fallback_default",
@@ -2101,6 +2175,9 @@ class TestPreflightAllInvokesMetaBugChecks:
             "check_archive_builders_use_deterministic_zip",
             "check_public_release_hygiene",
             "check_lightning_exact_eval_runner_bootstraps_dali",
+            "check_dispatch_cli_shell_hazards",
+            "check_reverse_engineering_tree_curation",
+            "check_feature_flags_have_live_objective_effect",
         ]
         missing = [c for c in required_checks if c not in src]
         assert missing == [], (
@@ -2123,10 +2200,7 @@ class TestPreflightAllInvokesMetaBugChecks:
         inflate, etc.) recognized by the relevant scanner — NOT flip
         the check back to warn-only.
         """
-        import inspect
-        import tac.preflight as pf
-
-        src = inspect.getsource(pf.preflight_all)
+        src = inspect.getsource(preflight_mod.preflight_all)
         meta_checks = [
             "check_no_mps_fallback_default",
             "check_shell_set_e_present",
@@ -2147,6 +2221,9 @@ class TestPreflightAllInvokesMetaBugChecks:
             "check_nvdec_probe_has_error_classification",
             "check_archive_builders_use_deterministic_zip",
             "check_lightning_exact_eval_runner_bootstraps_dali",
+            "check_dispatch_cli_shell_hazards",
+            "check_reverse_engineering_tree_curation",
+            "check_feature_flags_have_live_objective_effect",
         ]
         for chk in meta_checks:
             # Find the line invoking this check and confirm strict=True.
@@ -2615,9 +2692,6 @@ class TestEvalRoundtripGate:
         assert "WARNING" not in captured.err
 
     def test_true_with_env_present_warns(self, capsys) -> None:
-        import os
-        from tac.eval_roundtrip_gate import enforce_eval_roundtrip
-
         os.environ["TAC_ALLOW_NO_ROUNDTRIP"] = "1"
         r = enforce_eval_roundtrip(
             self._make_args(True), write_provenance=False,
@@ -2629,9 +2703,6 @@ class TestEvalRoundtripGate:
         assert "TAC_ALLOW_NO_ROUNDTRIP" in captured.err
 
     def test_false_with_env_present_warns_and_proceeds(self, capsys) -> None:
-        import os
-        from tac.eval_roundtrip_gate import enforce_eval_roundtrip
-
         os.environ["TAC_ALLOW_NO_ROUNDTRIP"] = "1"
         r = enforce_eval_roundtrip(
             self._make_args(False), write_provenance=False,
@@ -2642,17 +2713,12 @@ class TestEvalRoundtripGate:
         assert "DANGER" in captured.err
 
     def test_false_no_env_raises_systemexit(self) -> None:
-        from tac.eval_roundtrip_gate import enforce_eval_roundtrip
-
         with pytest.raises(SystemExit):
             enforce_eval_roundtrip(
                 self._make_args(False), write_provenance=False,
             )
 
     def test_provenance_written_when_output_dir_given(self, tmp_path: Path) -> None:
-        import json
-        from tac.eval_roundtrip_gate import enforce_eval_roundtrip
-
         out = tmp_path / "run_dir"
         r = enforce_eval_roundtrip(
             self._make_args(True), output_dir=out, write_provenance=True,
@@ -3133,6 +3199,28 @@ class TestArchiveBuildersUseDeterministicZip:
         )
         assert any("compress.sh" in s for s in v), v
 
+    def test_check_catches_raw_zip_extractall(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        bad_source = """
+            import zipfile
+            def main():
+                with zipfile.ZipFile("archive.zip", "r") as zf:
+                    zf.""" + """extractall("out")
+        """
+        _write(root / "submissions" / "robust_current" / "runner.py", bad_source)
+        v = check_no_raw_zip_extractall(repo_root=root, strict=False, verbose=False)
+        assert any("runner.py" in s for s in v), v
+
+    def test_check_allows_canonical_safe_zip_extractor(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        helper_source = """
+            def safe_extract_zip(zf, out):
+                zf.""" + """extractall(out)
+        """
+        _write(root / "src" / "tac" / "submission_archive.py", helper_source)
+        v = check_no_raw_zip_extractall(repo_root=root, strict=False, verbose=False)
+        assert v == [], v
+
     def test_deterministic_zip_helper_produces_byte_identical_archives(
         self, tmp_path: Path,
     ) -> None:
@@ -3235,31 +3323,6 @@ class TestArchiveBuildersUseDeterministicZip:
 # preflight.py. Each test class covers ONE check with offending +
 # clean snippets. NEW classes only — does NOT touch any existing class
 # above (those are owned by the codex-fix subagent).
-
-
-from tac.preflight import (
-    check_halfframe_archive_uses_trained_profile,
-    check_inflate_scorer_load_has_runtime_banner,
-    check_profile_keys_have_resolvers,
-    check_remote_scripts_write_provenance,
-    check_scores_have_lane_tag,
-    check_subagent_prompts_no_cpu_fallback,
-    check_test_files_imports_resolve,
-    check_uniward_delta_has_attestation_gate,
-    check_vastai_create_has_label,
-    check_vastai_create_writes_tracker,
-    check_vastai_prompts_have_cost_cap,
-    check_waivers_specify_env_gate,
-    _scan_doc_for_untagged_scores,
-    _scan_for_cpu_fallback_in_subagent_prompts,
-    _scan_for_halfframe_without_trained_profile,
-    _scan_for_uniward_delta_without_attestation,
-    _scan_for_unspecific_waivers,
-    _scan_for_vastai_prompt_no_cost_cap,
-    _scan_python_for_vastai_create_no_label,
-    _scan_python_for_vastai_create_no_tracker,
-    _scan_test_file_for_dead_imports,
-)
 
 
 # ─── Check A: Vast.ai create instance must include --label ──────────────────
@@ -3718,15 +3781,9 @@ class TestNewMetaBugChecksSmoke:
 #
 # Tests for `check_kl_div_reduction_correct` — the scanner that forbids
 # `F.kl_div(..., reduction="batchmean")` on spatial (B, C, H, W) tensors.
-# Bug class: under-divides the per-pixel mean by H × W (=196,608 for
-# 384×512 SegNet). See findings.md "## 2026-04-27 Council forensics:
+# Bug class: under-divides the per-pixel mean by H x W (=196,608 for
+# 384x512 SegNet). See findings.md "## 2026-04-27 Council forensics:
 # Lane G — really dead, or bugged?" + losses.py Check M comment.
-
-
-from tac.preflight import (
-    check_kl_div_reduction_correct,
-    _scan_python_for_kl_div_batchmean,
-)
 
 
 class TestKlDivReductionCorrect:
@@ -3856,6 +3913,18 @@ class TestKlDivReductionCorrect:
         v = _scan_python_for_kl_div_batchmean(script, root)
         assert v == [], v
 
+    def test_vendored_public_intake_tree_is_skipped(self, tmp_path: Path) -> None:
+        """Public-PR intake mirrors are forensics, not our source to mutate."""
+        root = _stub_repo(tmp_path)
+        script = root / "experiments" / "results" / "public_pr95_intake_20260504_codex" / "source" / "bad.py"
+        _write(script, """
+            import torch.nn.functional as F
+            def kl_loss(log_p, q):
+                return F.kl_div(log_p, q, reduction="batchmean")
+        """)
+        v = _scan_python_for_kl_div_batchmean(script, root)
+        assert v == [], v
+
     def test_check_returns_zero_violations_on_live_codebase(self) -> None:
         """Live count gate: post-fix, the entire scanned codebase must
         produce 0 `batchmean`-on-spatial violations. If this asserts
@@ -3918,12 +3987,6 @@ class TestKlDivReductionCorrect:
 #
 # See findings.md "Lane F regression — bugged or dead?" + memory
 # `feedback_silent_default_masquerading_as_negative_result`.
-
-
-from tac.preflight import (
-    check_no_silent_auto_discovery_with_warn,
-    _scan_python_for_silent_auto_discovery,
-)
 
 
 class TestNoSilentAutoDiscoveryWithWarn:
@@ -4115,8 +4178,6 @@ class TestNoSilentAutoDiscoveryWithWarn:
         """Specific regression test: `experiments/qat_finetune.py` must NOT
         be flagged after the Bug 1 fix (the pre-fix file WOULD have been
         flagged). This is the one offender we fixed in the same patch."""
-        from pathlib import Path as _P
-        from tac.preflight import REPO_ROOT
         target = REPO_ROOT / "experiments" / "qat_finetune.py"
         assert target.exists(), f"qat_finetune.py missing: {target}"
         v = _scan_python_for_silent_auto_discovery(target, REPO_ROOT)

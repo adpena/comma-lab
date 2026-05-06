@@ -6,14 +6,17 @@ sweep) through the full pipeline:
 
     distortion_proxy → score_band predictor → Lagrangian → predispatch_sanity
 
-Outputs a ranked queue of dispatch-eligible candidates plus the fully evaluated
-non-eligible ones for forensic inspection. Per CLAUDE.md no-arbitrariness rule,
-every numeric threshold the CLI uses carries a ``[heuristic:...]`` provenance
-tag in :mod:`tac.optimizer.meta_lagrangian`.
+Outputs a forensic ranked queue plus the fully evaluated non-eligible rows for
+inspection. Per CLAUDE.md no-arbitrariness rule, every numeric threshold the
+CLI uses carries a ``[heuristic:...]`` provenance tag in
+:mod:`tac.optimizer.meta_lagrangian`.
 
-CONTRACT: this CLI never spends GPU. It produces a ranked queue; the operator
-or a downstream automation runs paid eval on the top-k via the existing
-``tools/lightning_dispatch_pr106_stack.py`` or ``scripts/launch_lane_on_vastai.py``.
+CONTRACT: this CLI never spends GPU and never produces exact-eval readiness.
+The search engine's local ``eligible_for_dispatch`` field is treated as an
+internal ranking predicate only. CLI output remains
+``ready_for_exact_eval_dispatch=false`` until a scorer-basin parity gate,
+contest-faithful distortion model, or exact CUDA evidence validates the exact
+candidate archive bytes.
 
 Usage:
     .venv/bin/python tools/meta_lagrangian_search_cli.py \\
@@ -41,13 +44,20 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(REPO_ROOT))
 
+from experiments.distortion_proxy_local import make_distortion_proxy  # type: ignore  # noqa: E402
 from tac.optimizer.meta_lagrangian import (  # noqa: E402
     LagrangianConstraints,
     MetaLagrangianSearch,
 )
 from tac.predictor.score_band import load_calibration_anchors  # noqa: E402
 
-from experiments.distortion_proxy_local import make_distortion_proxy  # type: ignore  # noqa: E402
+DISPATCH_BLOCKERS = [
+    "meta_lagrangian_uses_distortion_proxy_local",
+    "score_band_is_prediction_only",
+    "missing_contest_faithful_distortion_model",
+    "missing_scorer_basin_parity_gate",
+    "missing_exact_cuda_candidate_evidence",
+]
 
 
 def _auto_sweep_apogee(bits: list[int]) -> list[dict]:
@@ -78,6 +88,18 @@ def _auto_sweep_apogee(bits: list[int]) -> list[dict]:
             "archive_path": archive_path if archive_path.is_file() else None,
         })
     return candidates
+
+
+def _forensic_rank(evaluations) -> list:
+    """Rank local evaluations for inspection without implying GPU readiness."""
+    return sorted(evaluations, key=lambda ev: (ev.rank_key, ev.lagrangian, ev.candidate_id))
+
+
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -142,27 +164,44 @@ def main(argv: list[str] | None = None) -> int:
             c["archive_path"] = Path(c["archive_path"])
 
     evaluations = search.evaluate_all(candidates)
-    top_k = MetaLagrangianSearch.top_k(evaluations, k=args.top_k)
+    engine_top_k = MetaLagrangianSearch.top_k(evaluations, k=args.top_k)
+    forensic_top_k = _forensic_rank(evaluations)[:args.top_k]
+    dispatch_ready: list = []
 
     print(f"[meta-lagrangian] {len(candidates)} candidates evaluated")
-    print(f"[meta-lagrangian] {len([e for e in evaluations if e.eligible_for_dispatch])} eligible for dispatch")
-    print(f"[meta-lagrangian] top-{args.top_k}:")
-    for i, ev in enumerate(top_k):
+    print(
+        "[meta-lagrangian] "
+        f"{len([e for e in evaluations if e.eligible_for_dispatch])} local search-engine eligible "
+        "(forensic ranking only)"
+    )
+    print("[meta-lagrangian] 0 exact-eval dispatch-ready; local proxy/prediction evidence is non-promotable")
+    print(f"[meta-lagrangian] forensic top-{args.top_k}:")
+    for i, ev in enumerate(forensic_top_k):
         print(f"  #{i+1}  {ev.candidate_id}  L={ev.lagrangian:.4f}  band=[{ev.band_low:.4f}, {ev.band_high:.4f}]  method={ev.band_method}")
 
     if args.output:
         report = {
             "schema": "meta_lagrangian_search_v1",
-            "tag": "[distortion-proxy:local | predictor:calibrated_weak | sanity:gated]",
-            "ts_utc": dt.datetime.now(tz=dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "tag": "[distortion-proxy:local | predictor:calibrated_weak | sanity:gated | dispatch:blocking]",
+            "evidence_semantics": "local_proxy_prediction_forensic",
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_blockers": list(DISPATCH_BLOCKERS),
+            "ts_utc": dt.datetime.now(tz=dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "lane_class": args.lane_class,
-            "anchors_path": str(anchors_path.relative_to(REPO_ROOT)),
+            "anchors_path": _display_path(anchors_path),
             "constraints": asdict(constraints),
             "candidates_evaluated": len(candidates),
-            "eligible_for_dispatch": len([e for e in evaluations if e.eligible_for_dispatch]),
-            "top_k": [
+            "local_search_engine_eligible": len([e for e in evaluations if e.eligible_for_dispatch]),
+            "ready_for_exact_eval_dispatch_count": len(dispatch_ready),
+            "eligible_for_dispatch": 0,
+            "top_k": [],
+            "top_k_forensic": [
                 {**asdict(ev), "archive_path": str(getattr(ev, "archive_path", "")) if getattr(ev, "archive_path", None) else None}
-                for ev in top_k
+                for ev in forensic_top_k
+            ],
+            "engine_top_k_local_only": [
+                {**asdict(ev), "archive_path": str(getattr(ev, "archive_path", "")) if getattr(ev, "archive_path", None) else None}
+                for ev in engine_top_k
             ],
             "all_evaluations": [
                 {**asdict(ev), "archive_path": str(getattr(ev, "archive_path", "")) if getattr(ev, "archive_path", None) else None}
@@ -170,7 +209,9 @@ def main(argv: list[str] | None = None) -> int:
             ],
             "warning": (
                 "Outputs are [distortion-proxy:local] estimates ranked by Lagrangian. "
-                "NEVER promote to [contest-CUDA] without upstream/evaluate.py on the EXACT bytes."
+                "They are not GPU-dispatch readiness. NEVER promote to [contest-CUDA] "
+                "without upstream/evaluate.py on the EXACT bytes or an explicit "
+                "contest-faithful distortion/parity gate."
             ),
         }
         args.output.parent.mkdir(parents=True, exist_ok=True)

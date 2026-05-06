@@ -53,13 +53,16 @@ def test_reconciler_row_schema_complete():
         pytest.skip("no manifests yet")
     required_keys = {
         "bits", "predicted_low", "predicted_high", "archive_size_bytes",
-        "distortion_risk", "rate_score_delta",
+        "distortion_risk", "rate_score_delta", "prediction_status",
+        "ready_for_exact_eval_dispatch", "dispatch_blockers",
         "actual_score", "actual_path", "in_band", "beats_pr106",
         "device", "samples",
     }
     for r in out["rows"]:
         missing = required_keys - set(r.keys())
         assert not missing, f"row missing keys {missing}: {r}"
+        assert r["ready_for_exact_eval_dispatch"] is False
+        assert "missing_contest_faithful_distortion_model" in r["dispatch_blockers"]
 
 
 def test_reconciler_band_parsed_correctly():

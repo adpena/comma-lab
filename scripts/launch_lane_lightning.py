@@ -33,16 +33,33 @@ Cross-references:
 from __future__ import annotations
 
 import argparse
-import json
+import importlib.util
 import os
 import sys
-import time
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO_ROOT / "src"))
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 
 from tac.deploy.lightning import LightningDispatcher  # noqa: E402
+from tac.deploy.lightning.defaults import default_ssh_target  # noqa: E402
+from tac.repo_io import json_text  # noqa: E402
+
+
+def _print_json(payload: object) -> None:
+    print(json_text(payload), end="")
 
 
 def _parse_env_kv(items: list[str]) -> dict[str, str]:
@@ -114,9 +131,9 @@ def cmd_dispatch(args) -> int:
             s["predicted_band"] = list(args.predicted_band)
             s["estimated_cost_usd"] = float(args.estimated_cost or 0.0)
             s["kill_criteria"] = args.kill_criteria
-    dispatcher._save_state(sessions)  # noqa: SLF001 (private but intentional)
+    dispatcher._save_state(sessions)
 
-    print(json.dumps(
+    _print_json(
         {
             "status": "DISPATCHED",
             "session_id": info.session_id,
@@ -129,9 +146,8 @@ def cmd_dispatch(args) -> int:
             "env_overrides": info.env_overrides,
             "predicted_band": list(args.predicted_band),
             "estimated_cost_usd": float(args.estimated_cost or 0.0),
-        },
-        indent=2,
-    ))
+        }
+    )
     return 0
 
 
@@ -141,7 +157,7 @@ def cmd_status(args) -> int:
         return 2
     dispatcher = _make_dispatcher(args)
     info = dispatcher.poll_status(args.session_id)
-    print(json.dumps(info, indent=2))
+    _print_json(info)
     return 0
 
 
@@ -158,7 +174,7 @@ def cmd_harvest(args) -> int:
         local_dir=args.local_dir,
         remote_subdir=args.remote_subdir,
     )
-    print(json.dumps(out, indent=2))
+    _print_json(out)
     return 0
 
 
@@ -168,13 +184,13 @@ def cmd_teardown(args) -> int:
         return 2
     dispatcher = _make_dispatcher(args)
     killed = dispatcher.tear_down(args.session_id)
-    print(json.dumps({"session_id": args.session_id, "killed": killed}))
+    _print_json({"session_id": args.session_id, "killed": killed})
     return 0
 
 
 def cmd_list(args) -> int:
     sessions = LightningDispatcher.list_sessions()
-    print(json.dumps(sessions, indent=2))
+    _print_json(sessions)
     return 0
 
 
@@ -182,8 +198,8 @@ def cmd_probe(args) -> int:
     """Quick GPU probe — just SSH in and read nvidia-smi."""
     dispatcher = _make_dispatcher(args)
     name = dispatcher.get_gpu_tier()
-    tier = dispatcher._gpu_tier_normalize(name)  # noqa: SLF001
-    print(json.dumps({"gpu_name_raw": name, "gpu_tier": tier}, indent=2))
+    tier = dispatcher._gpu_tier_normalize(name)
+    _print_json({"gpu_name_raw": name, "gpu_tier": tier})
     return 0
 
 
@@ -196,7 +212,7 @@ def build_parser() -> argparse.ArgumentParser:
     common_ssh = argparse.ArgumentParser(add_help=False)
     common_ssh.add_argument(
         "--ssh-target",
-        default=os.environ.get("LIGHTNING_SSH_TARGET", "lightning-pact"),
+        default=default_ssh_target(),
         help="SSH config alias for the Lightning Studio.",
     )
     common_ssh.add_argument(

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: I001
 """Strict pre-submission compliance gate for contest release packets.
 
 This script validates the exact upload/publish surface. It does not run the
@@ -9,23 +10,34 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import json
+import importlib.util
 import math
 import re
 import stat
 import struct
-import sys
 import zipfile
 from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 
 from tools.auth_eval_records import parse_auth_eval_payload  # noqa: E402
 from tac.preflight import check_public_release_hygiene  # noqa: E402
+from tac.repo_io import json_text, read_json, repo_relative, sha256_file  # noqa: E402
 
 ORIGINAL_VIDEO_BYTES = 37_545_489
 SCHEMA = "pre_submission_compliance_check_v1"
@@ -51,23 +63,12 @@ class Check:
     details: str
 
 
-def _sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 def _bytes_sha256(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
 def _rel(path: Path) -> str:
-    try:
-        return path.resolve().relative_to(REPO_ROOT).as_posix()
-    except ValueError:
-        return path.as_posix()
+    return repo_relative(path, REPO_ROOT)
 
 
 def _add(checks: list[Check], name: str, passed: bool, details: str, *, severity: str = "error") -> None:
@@ -76,8 +77,8 @@ def _add(checks: list[Check], name: str, passed: bool, details: str, *, severity
 
 def _load_json(path: Path) -> dict[str, Any] | None:
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+        payload = read_json(path)
+    except (OSError, ValueError):
         return None
     return payload if isinstance(payload, dict) else None
 
@@ -136,7 +137,7 @@ def inspect_archive(path: Path, *, expect_single_member: str | None = None) -> t
         "path": _rel(path),
         "exists": path.is_file(),
         "bytes": path.stat().st_size if path.is_file() else None,
-        "sha256": _sha256(path) if path.is_file() else None,
+        "sha256": sha256_file(path) if path.is_file() else None,
         "members": [],
     }
     _add(checks, "archive_exists", path.is_file(), _rel(path))
@@ -385,9 +386,12 @@ def inspect_dispatch_claims(path: Path, lane_id: str | None, job_id: str | None)
                 status = cells[4]
             else:
                 continue
-            if (lane_id is None or row_lane == lane_id) and (job_id is None or row_job == job_id):
-                if status.startswith(TERMINAL_DISPATCH_STATUS_PREFIXES):
-                    terminal = True
+            if (
+                (lane_id is None or row_lane == lane_id)
+                and (job_id is None or row_job == job_id)
+                and status.startswith(TERMINAL_DISPATCH_STATUS_PREFIXES)
+            ):
+                terminal = True
     _add(checks, "dispatch_claim_terminal_row", terminal, f"lane_id={lane_id} job_id={job_id}")
     return {"path": _rel(path), "exists": exists, "rows": len(rows)}, checks
 
@@ -499,9 +503,9 @@ def main(argv: list[str] | None = None) -> int:
     report = build_report(args)
     if args.json_out:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)
-        args.json_out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        args.json_out.write_text(json_text(report), encoding="utf-8")
     else:
-        print(json.dumps(report, indent=2, sort_keys=True))
+        print(json_text(report), end="")
     if args.strict and not report["passed"]:
         return 1
     return 0

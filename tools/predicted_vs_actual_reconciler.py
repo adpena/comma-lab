@@ -9,10 +9,10 @@ Joins:
              the lane via scripts/remote_lane_apogee_intN.sh)
 
 Reports per-bits:
-  - predicted band [low, high] (from manifest)
+  - historical predicted band [low, high] (forensic byte-only, noncanonical)
   - actual final_score (from contest_auth_eval.json, if present)
-  - in-band? (✓ if low ≤ actual ≤ high; ✗ otherwise)
-  - rate component beats PR106 baseline 0.20946? (from rate_score_delta)
+  - whether the historical prediction was falsified
+  - readiness blockers proving the lane is not exact-eval dispatch-ready
   - device + samples (advisory tag check)
 
 Pairs with:
@@ -26,14 +26,26 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import json
-import re
-import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.repo_io import json_text, read_json  # noqa: E402
+
 PR106_BASELINE_SCORE = 0.20945673
+APOGEE_RECONCILER_DISPATCH_BLOCKERS = [
+    "historical_prediction_is_forensic_byte_only",
+    "missing_contest_faithful_distortion_model",
+    "missing_scorer_basin_parity_gate",
+    "reconciler_table_is_not_a_dispatch_gate",
+]
 
 
 @dataclass
@@ -44,6 +56,9 @@ class ReconciledRow:
     archive_size_bytes: int
     distortion_risk: str
     rate_score_delta: float
+    prediction_status: str | None
+    ready_for_exact_eval_dispatch: bool
+    dispatch_blockers: list[str]
     actual_score: float | None
     actual_path: str | None
     in_band: bool | None
@@ -77,8 +92,8 @@ def _find_actual_for_bits(repo_root: Path, bits: int) -> tuple[float | None, str
         return None, None, None, None
     latest = max(candidates, key=lambda p: p.stat().st_mtime)
     try:
-        data = json.loads(latest.read_text())
-    except (json.JSONDecodeError, OSError):
+        data = read_json(latest)
+    except (ValueError, OSError):
         return None, str(latest.relative_to(repo_root)), None, None
     score = data.get("final_score") or data.get("score") or data.get("total_score")
     if score is not None:
@@ -98,8 +113,8 @@ def reconcile(repo_root: Path) -> list[ReconciledRow]:
         return rows
     for manifest in base.glob("apogee_int*_repack_*/repack_metadata.json"):
         try:
-            data = json.loads(manifest.read_text())
-        except (json.JSONDecodeError, OSError):
+            data = read_json(manifest)
+        except (ValueError, OSError):
             continue
         try:
             lo, hi = _parse_band(data["predicted_score_band"])
@@ -109,6 +124,10 @@ def reconcile(repo_root: Path) -> list[ReconciledRow]:
         actual, actual_path, device, samples = _find_actual_for_bits(repo_root, bits)
         in_band = (lo <= actual <= hi) if actual is not None else None
         beats_pr106 = (actual < PR106_BASELINE_SCORE) if actual is not None else None
+        source_blockers = list(data.get("dispatch_blockers") or [])
+        dispatch_blockers = list(dict.fromkeys(source_blockers + APOGEE_RECONCILER_DISPATCH_BLOCKERS))
+        if data.get("ready_for_exact_eval_dispatch") is True:
+            dispatch_blockers.append("source_manifest_ready_claim_ignored_by_reconciler")
         rows.append(ReconciledRow(
             bits=bits,
             predicted_low=lo,
@@ -116,6 +135,9 @@ def reconcile(repo_root: Path) -> list[ReconciledRow]:
             archive_size_bytes=int(data["archive_size_bytes"]),
             distortion_risk=str(data["distortion_risk"]),
             rate_score_delta=float(data["rate_component_score_delta_vs_pr106"]),
+            prediction_status=data.get("prediction_status"),
+            ready_for_exact_eval_dispatch=False,
+            dispatch_blockers=dispatch_blockers,
             actual_score=actual,
             actual_path=actual_path,
             in_band=in_band,
@@ -132,29 +154,26 @@ def _format_table(rows: list[ReconciledRow]) -> str:
         return "(no apogee_intN repack manifests found — run experiments/repack_pr106_with_intN_block_fp.py first)"
     out: list[str] = []
     out.append(f"PR106 baseline: 0.{int(PR106_BASELINE_SCORE * 1e8):08d}, 186,239 bytes")
+    out.append("Apogee intN predictions are forensic byte-only and noncanonical until a distortion gate exists.")
     out.append("")
-    header = f"{'bits':>4}  {'predicted band':<18}  {'actual':>8}  {'in band?':<8}  {'beats PR106?':<13}  {'risk':<16}  {'device':<6}  evidence"
+    header = (
+        f"{'bits':>4}  {'historical band':<18}  {'actual':>8}  {'status':<11}  "
+        f"{'dispatch':<8}  {'risk':<16}  {'device':<6}  evidence"
+    )
     out.append(header)
     out.append("-" * len(header))
     n_landed = 0
-    n_in_band = 0
-    n_beats = 0
+    n_falsified = 0
     for r in rows:
         actual_str = f"{r.actual_score:.5f}" if r.actual_score is not None else "(pending)"
         if r.in_band is True:
-            inband_str = "✓ in"
-            n_in_band += 1
+            status = "in-band"
         elif r.in_band is False:
-            inband_str = "✗ OUT"
+            status = "FALSIFIED"
+            n_falsified += 1
         else:
-            inband_str = "—"
-        if r.beats_pr106 is True:
-            beats_str = "✓ YES (frontier!)"
-            n_beats += 1
-        elif r.beats_pr106 is False:
-            beats_str = "✗ no"
-        else:
-            beats_str = "—"
+            status = "pending"
+        dispatch_status = "READY" if r.ready_for_exact_eval_dispatch else "BLOCKED"
         if r.actual_score is not None:
             n_landed += 1
         # Mark non-CUDA device with asterisk per CLAUDE.md
@@ -167,17 +186,16 @@ def _format_table(rows: list[ReconciledRow]) -> str:
             evidence = "…" + evidence[-59:]
         out.append(
             f"{r.bits:>4}  [{r.predicted_low:.3f}, {r.predicted_high:.3f}]   "
-            f"{actual_str:>8}  {inband_str:<8}  {beats_str:<13}  "
+            f"{actual_str:>8}  {status:<11}  {dispatch_status:<8}  "
             f"{r.distortion_risk:<16}  {(device_str or '—'):<6}  {evidence}"
         )
     out.append("")
     out.append(f"Summary: {n_landed}/{len(rows)} bits configs have actual scores; "
-              f"{n_in_band}/{n_landed} in predicted band; "
-              f"{n_beats}/{n_landed} beat PR106 baseline ({PR106_BASELINE_SCORE:.5f})")
+              f"{n_falsified}/{n_landed} falsified their historical byte-only band; "
+              "0 rows are dispatch-ready without a distortion gate")
     if n_landed == 0:
         out.append("")
-        out.append("No actual scores yet. Operator action: run a Pareto-frontier dispatch from")
-        out.append("`tools/apogee_intN_pareto.py` output, then re-run this reconciler.")
+        out.append("No actual scores yet. Do not dispatch from this table; build a distortion gate first.")
     out.append("(* = non-CUDA device; treat as advisory only per CLAUDE.md MPS-auth-eval-is-NOISE)")
     return "\n".join(out)
 
@@ -197,7 +215,7 @@ def main(argv: list[str] | None = None) -> int:
             "n_beats_pr106": sum(1 for r in rows if r.beats_pr106 is True),
             "rows": [asdict(r) for r in rows],
         }
-        print(json.dumps(out, indent=2))
+        print(json_text(out), end="")
     else:
         print(_format_table(rows))
     return 0

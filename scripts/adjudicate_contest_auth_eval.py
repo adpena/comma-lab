@@ -10,12 +10,30 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import math
 import shutil
 import time
 from pathlib import Path
 from typing import Any
+
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.repo_io import json_text, read_json, sha256_file  # noqa: E402
 
 _COMPONENT_JSON_KEYS = {
     "posenet": "avg_posenet_dist",
@@ -35,14 +53,6 @@ _DISTILLATION_TEXT_MARKERS = (
     "distill",
     "jbl",
 )
-
-
-def _sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
 
 
 def _require_number(payload: dict[str, Any], key: str) -> float:
@@ -377,7 +387,7 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
     if not archive.is_file():
         raise SystemExit(f"FATAL: evaluated archive not found: {archive}")
 
-    payload = json.loads(contest_json.read_text())
+    payload = read_json(contest_json)
     score_recomputed = _require_number(payload, "score_recomputed_from_components")
     final_score = _require_number(payload, "final_score")
     sane_score_gate_triggered = not (0.0 < score_recomputed < args.max_sane_score)
@@ -401,7 +411,7 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
         )
 
     actual_archive_bytes = archive.stat().st_size
-    actual_archive_sha256 = _sha256(archive)
+    actual_archive_sha256 = sha256_file(archive)
     payload_archive_bytes = payload.get("archive_size_bytes")
     if payload_archive_bytes != actual_archive_bytes:
         raise SystemExit(
@@ -425,10 +435,7 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
             f"json={payload_archive_sha256!r} actual={actual_archive_sha256}"
         )
 
-    if provenance_path.exists():
-        provenance = json.loads(provenance_path.read_text())
-    else:
-        provenance = {}
+    provenance = read_json(provenance_path) if provenance_path.exists() else {}
 
     components, component_gates, component_gate_violations = _check_component_gates(payload, args)
     distillation_gate = _check_distillation_promotion_gate(
@@ -444,7 +451,7 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
     if args.result_copy:
         result_copy = Path(args.result_copy)
         result_copy.parent.mkdir(parents=True, exist_ok=True)
-        result_copy.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        result_copy.write_text(json_text(payload))
     else:
         result_copy = contest_json
 
@@ -564,7 +571,7 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
     )
     provenance_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = provenance_path.with_suffix(provenance_path.suffix + ".tmp")
-    tmp_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n")
+    tmp_path.write_text(json_text(provenance))
     shutil.move(str(tmp_path), str(provenance_path))
 
     return {

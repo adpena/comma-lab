@@ -12,8 +12,6 @@ import json
 import sys
 from pathlib import Path
 
-import pytest
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PREDISPATCH = REPO_ROOT / "tools" / "predispatch_sanity.py"
 
@@ -69,8 +67,8 @@ def test_apogee_int4_with_only_pr106_anchor_BLOCKS(tmp_path: Path) -> None:
     # At minimum the anchors_sufficient gate must fail.
     gate_names_failed = [g.name for g in result.gates if not g.passed]
     assert "anchors_sufficient" in gate_names_failed
-    # And the distortion proxy gate too (rel_err 7.09% > 1% threshold).
-    assert "distortion_proxy_local" in gate_names_failed
+    # And the distortion model gate too (rel_err 7.09% > 1% threshold).
+    assert "distortion_model_gate" in gate_names_failed
 
 
 def test_lossy_better_than_lossless_BLOCKS(tmp_path: Path) -> None:
@@ -135,9 +133,164 @@ def test_high_rel_err_without_proxy_BLOCKS(tmp_path: Path) -> None:
         distortion_proxy_was_run=False,
         anchors_dir=anchors_dir,
     )
-    proxy_gate = next(g for g in result.gates if g.name == "distortion_proxy_local")
+    proxy_gate = next(g for g in result.gates if g.name == "distortion_model_gate")
     assert not proxy_gate.passed
     assert "proxy" in proxy_gate.detail.lower()
+
+
+def test_high_rel_err_with_proxy_without_generic_readiness_evidence_BLOCKS() -> None:
+    """A local proxy trace is telemetry, not generic dispatch authorization."""
+    mod = _load_module()
+    archive = REPO_ROOT / "pyproject.toml"
+
+    gate = mod._gate_distortion_proxy(
+        rel_err_pct=2.5,
+        distortion_proxy_was_run=True,
+        archive_path=archive,
+        evidence_json_path=None,
+    )
+
+    assert not gate.passed
+    assert gate.name == "distortion_model_gate"
+    assert "non-promotable" in gate.detail
+    assert "readiness-evidence-json" in gate.detail
+
+
+def test_high_rel_err_with_exact_byte_generic_readiness_evidence_passes(tmp_path: Path) -> None:
+    """Generic high-rel-err dispatch requires exact SHA-tied non-proxy evidence."""
+    mod = _load_module()
+    archive = REPO_ROOT / "pyproject.toml"
+    evidence = tmp_path / "parity.json"
+    evidence.write_text(
+        json.dumps(
+            {
+                "candidate_archive_sha256": mod.sha256_file(archive),
+                "evidence_semantics": "scorer_basin_parity_gate",
+                "ready_for_exact_eval_dispatch": True,
+                "evidence_grade": "A",
+                "scorer_basin_parity_status": "passed",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    gate = mod._gate_distortion_proxy(
+        rel_err_pct=2.5,
+        distortion_proxy_was_run=True,
+        archive_path=archive,
+        evidence_json_path=evidence,
+    )
+
+    assert gate.passed
+    assert gate.name == "distortion_model_gate"
+    assert "scorer_basin_parity_gate" in gate.detail
+
+
+def test_apogee_proxy_ran_still_requires_non_proxy_readiness_evidence(tmp_path: Path) -> None:
+    """Running the local proxy is not enough to authorize Apogee GPU dispatch."""
+    mod = _load_module()
+    anchors_dir = _make_anchors_file(tmp_path, [
+        {
+            "lane_id": "lane_pr106_baseline",
+            "rel_err_pct_per_weight": 0.0,
+            "archive_bytes": 186239,
+            "contest_cuda_score": 0.20945673,
+            "avg_pose_dist": 3.4e-5,
+            "avg_seg_dist": 0.00067819,
+            "rate_unscaled": 186239 / 37545489,
+            "measured_utc": "2026-05-05T17:25Z",
+            "job_id": "pr106",
+            "archive_sha256": "ab",
+        },
+        {
+            "lane_id": "lane_apogee_int8",
+            "rel_err_pct_per_weight": 0.24,
+            "archive_bytes": 187731,
+            "contest_cuda_score": 0.21119,
+            "avg_pose_dist": 3.38e-5,
+            "avg_seg_dist": 0.000678,
+            "rate_unscaled": 187731 / 37545489,
+            "measured_utc": "2026-05-05T18:02Z",
+            "job_id": "int8",
+            "archive_sha256": "cd",
+        },
+        {
+            "lane_id": "lane_apogee_int4",
+            "rel_err_pct_per_weight": 7.09,
+            "archive_bytes": 109996,
+            "contest_cuda_score": 1.4287,
+            "avg_pose_dist": 0.0237,
+            "avg_seg_dist": 0.00868,
+            "rate_unscaled": 109996 / 37545489,
+            "measured_utc": "2026-05-05T17:40Z",
+            "job_id": "int4",
+            "archive_sha256": "ef",
+        },
+    ])
+    archive = REPO_ROOT / "pyproject.toml"
+
+    result = mod.predispatch_sanity(
+        archive_path=archive,
+        predicted_low=0.211,
+        predicted_high=0.220,
+        rel_err_pct=0.24,
+        lane_class="apogee_intN",
+        distortion_proxy_was_run=True,
+        anchors_dir=anchors_dir,
+    )
+
+    evidence_gate = next(g for g in result.gates if g.name == "apogee_evidence_semantics")
+    assert not evidence_gate.passed
+    assert "cannot dispatch from byte-only" in evidence_gate.detail
+
+
+def test_apogee_readiness_evidence_rejects_local_proxy_json(tmp_path: Path) -> None:
+    mod = _load_module()
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"apogee bytes")
+    evidence = tmp_path / "proxy.json"
+    evidence.write_text(
+        json.dumps(
+            {
+                "candidate_archive_sha256": mod.sha256_file(archive),
+                "evidence_semantics": "local_distortion_proxy",
+                "ready_for_exact_eval_dispatch": True,
+                "distortion_model_status": "passed",
+            }
+        )
+    )
+
+    gate = mod._gate_apogee_evidence_semantics(
+        lane_class="apogee_intN",
+        archive_path=archive,
+        evidence_json_path=evidence,
+    )
+    assert not gate.passed
+    assert "unsupported evidence_semantics" in gate.detail
+
+
+def test_apogee_readiness_evidence_accepts_parity_gate_for_exact_sha(tmp_path: Path) -> None:
+    mod = _load_module()
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"apogee bytes")
+    evidence = tmp_path / "parity.json"
+    evidence.write_text(
+        json.dumps(
+            {
+                "candidate_archive_sha256": mod.sha256_file(archive),
+                "evidence_semantics": "scorer_basin_parity_gate",
+                "ready_for_exact_eval_dispatch": True,
+                "scorer_basin_parity_status": "passed",
+            }
+        )
+    )
+
+    gate = mod._gate_apogee_evidence_semantics(
+        lane_class="apogee_intN",
+        archive_path=archive,
+        evidence_json_path=evidence,
+    )
+    assert gate.passed
 
 
 def test_low_rel_err_without_proxy_PASSES_proxy_gate(tmp_path: Path) -> None:
@@ -159,7 +312,7 @@ def test_low_rel_err_without_proxy_PASSES_proxy_gate(tmp_path: Path) -> None:
         distortion_proxy_was_run=False,
         anchors_dir=anchors_dir,
     )
-    proxy_gate = next(g for g in result.gates if g.name == "distortion_proxy_local")
+    proxy_gate = next(g for g in result.gates if g.name == "distortion_model_gate")
     assert proxy_gate.passed, f"proxy gate should pass for low rel_err: {proxy_gate.detail}"
 
 

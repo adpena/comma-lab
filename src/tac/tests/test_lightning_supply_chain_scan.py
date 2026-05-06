@@ -1,4 +1,5 @@
 """Tests for the Lightning supply-chain scan wrapper."""
+# ruff: noqa: I001
 from __future__ import annotations
 
 import importlib.util

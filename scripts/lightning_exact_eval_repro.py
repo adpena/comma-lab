@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: I001
 """Credential-safe reproducible Lightning exact-eval orchestrator.
 
 This wrapper composes the two lower-level Lightning tools:
@@ -14,7 +15,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
-import hashlib
+import importlib.util
 import json
 import math
 import os
@@ -26,7 +27,23 @@ from pathlib import Path
 from typing import Any
 
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.repo_io import json_text, read_json, sha256_file, write_json  # noqa: E402
+
 DEFAULT_STATE_DIR = REPO_ROOT / ".omx/state"
 DEFAULT_REMOTE_PACT = "/teamspace/studios/this_studio/pact"
 DEFAULT_UPSTREAM_DIR = "/teamspace/studios/this_studio/upstream"
@@ -100,22 +117,14 @@ def _repo_rel(path: str | Path, *, repo_root: Path = REPO_ROOT) -> Path:
         raise ValueError(f"path must stay inside repo for reproducible staging: {path}") from exc
 
 
-def _sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 def _archive_identity(path: Path) -> dict[str, Any]:
     if not path.is_file():
         raise FileNotFoundError(f"archive not found: {path}")
-    return {"sha256": _sha256(path), "size_bytes": path.stat().st_size}
+    return {"sha256": sha256_file(path), "size_bytes": path.stat().st_size}
 
 
 def _load_json(path: Path) -> dict[str, Any]:
-    payload = json.loads(path.read_text())
+    payload = read_json(path)
     if not isinstance(payload, dict):
         raise ValueError(f"expected JSON object: {path}")
     return payload
@@ -600,8 +609,7 @@ def build_plan(args: argparse.Namespace, *, repo_root: Path = REPO_ROOT) -> dict
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    write_json(path, payload)
 
 
 def _run(cmd: list[str], *, cwd: Path, capture: bool = False) -> subprocess.CompletedProcess[str]:
@@ -611,8 +619,7 @@ def _run(cmd: list[str], *, cwd: Path, capture: bool = False) -> subprocess.Comp
             cmd,
             cwd=cwd,
             text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             check=False,
         )
         if proc.stdout:
@@ -630,7 +637,12 @@ def main(argv: list[str] | None = None) -> int:
     plan = build_plan(args)
     plan_out = REPO_ROOT / plan["paths"]["plan_out"]
     _write_json(plan_out, plan)
-    print(json.dumps({"status": "PLAN_READY", "plan": str(plan_out), "submit": plan["submit"]}, indent=2, sort_keys=True))
+    print(
+        json_text(
+            {"status": "PLAN_READY", "plan": str(plan_out), "submit": plan["submit"]}
+        ),
+        end="",
+    )
     if args.plan_only:
         return 0
 
@@ -650,7 +662,15 @@ def main(argv: list[str] | None = None) -> int:
         queue_record = {"raw_stdout": queue_proc.stdout}
     queue_record_out = REPO_ROOT / plan["paths"]["queue_record_out"]
     _write_json(queue_record_out, queue_record)
-    print(json.dumps({"status": "QUEUED" if args.submit else "DRY_RUN_RECORDED", "record": str(queue_record_out)}, indent=2, sort_keys=True))
+    print(
+        json_text(
+            {
+                "status": "QUEUED" if args.submit else "DRY_RUN_RECORDED",
+                "record": str(queue_record_out),
+            }
+        ),
+        end="",
+    )
     return 0
 
 
