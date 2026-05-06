@@ -23,10 +23,17 @@
     "global_q_entropy_floor_plus_raw_scales_bytes": 187917,
     "model_limitations": [
       "zero_order_symbol_floor_only",
-      "does_not_model_contexts_run_lengths_deltas_tensor_shapes_or_brotli_transforms",
+      "prev_symbol_context_floor_models_only_one_local_context_family",
+      "does_not_model_run_lengths_deltas_tensor_shapes_or_brotli_transforms",
       "does_not_include_decoder_runtime_cost",
       "does_not_rank_or_kill_aq_huffman_family_without_exact_archive_eval"
     ],
+    "per_tensor_prev_symbol_contexts": 2643,
+    "per_tensor_prev_symbol_entropy_bits_per_token": 5.467156089704,
+    "per_tensor_prev_symbol_entropy_floor_bytes": 156450,
+    "per_tensor_prev_symbol_entropy_floor_delta_vs_source_section_bytes": -13716,
+    "per_tensor_prev_symbol_entropy_floor_plus_raw_scales_bytes": 156562,
+    "per_tensor_prev_symbol_tokens": 228930,
     "per_tensor_q_entropy_floor_bytes": 167570,
     "per_tensor_q_entropy_floor_delta_vs_source_section_bytes": -2596,
     "per_tensor_q_entropy_floor_plus_raw_scales_bytes": 167682,
@@ -199,6 +206,59 @@
       "sha256": "5fb15792038316f8dee96f82bc16e5aa99edc09385286cf635b03aececdd15a1",
       "unique_symbols": 247,
       "variant": "canonical_huffman_global_q_stream_plus_raw_scales"
+    },
+    {
+      "archive_ready": false,
+      "byte_delta_vs_source_section": 96671,
+      "byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales": 110387,
+      "byte_gap_vs_per_tensor_q_entropy_floor_plus_raw_scales": 99267,
+      "bytes": 266949,
+      "codec": "HDC1_prev_symbol_per_tensor_range_uint8",
+      "context_count": 2643,
+      "context_token_count": 228930,
+      "dispatch_blockers": [
+        "parity_fixture_only",
+        "requires_submission_runtime_decoder",
+        "requires_archive_builder_and_payload_diff",
+        "requires_exact_cuda_auth_eval"
+      ],
+      "header_bytes": 108477,
+      "parity_fixture": true,
+      "q_roundtrip_equal": true,
+      "range_payload_bytes": 158360,
+      "rate_score_delta_if_runtime_supported_and_components_equal": 0.064369250857,
+      "raw_equal": true,
+      "raw_scale_bytes": 112,
+      "scale_roundtrip_equal": true,
+      "sha256": "4d3e9b451e456a404f6dbf4c6254078f8937f3e2bfa3a606a479369c43a38172",
+      "tensor_count": 28,
+      "variant": "range_prev_symbol_per_tensor_q_streams_plus_raw_scales"
+    },
+    {
+      "archive_ready": false,
+      "byte_delta_vs_source_section": 51103,
+      "byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales": 64819,
+      "bytes": 221381,
+      "codec": "HDC2_global_prev_symbol_range_uint8",
+      "context_count": 247,
+      "context_token_count": 228930,
+      "dispatch_blockers": [
+        "parity_fixture_only",
+        "requires_submission_runtime_decoder",
+        "requires_archive_builder_and_payload_diff",
+        "requires_exact_cuda_auth_eval"
+      ],
+      "header_bytes": 40840,
+      "parity_fixture": true,
+      "q_roundtrip_equal": true,
+      "range_payload_bytes": 180429,
+      "rate_score_delta_if_runtime_supported_and_components_equal": 0.034027390081,
+      "raw_equal": true,
+      "raw_scale_bytes": 112,
+      "scale_roundtrip_equal": true,
+      "sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f",
+      "tensor_count": 28,
+      "variant": "range_prev_symbol_global_q_streams_plus_raw_scales"
     }
   ]
 }
