@@ -12,38 +12,40 @@ Currently runs:
            (curated public-submission deconstruction / no raw artifact leaks)
   Gate #2: tools/list_hidden_gems.py --format json
            (hidden-gem registry imports, schema validates, and stays provider-free)
-  Gate #3: tools/audit_hidden_gem_readiness.py --status ready_for_patch
+  Gate #3: tools/audit_semantic_label_contract.py --fail-on-advisory
+           (categorical/CLADE/SPADE/openpilot label order stays canonical)
+  Gate #4: tools/audit_hidden_gem_readiness.py --status ready_for_patch
            (ready-for-patch hidden gems point at live evidence and targets)
-  Gate #4: tools/audit_engineered_corrections.py --self-test
+  Gate #5: tools/audit_engineered_corrections.py --self-test
            (engineered-correction payload guard imports and fails closed before dispatch)
-  Gate #5: tools/audit_hnerv_frontier_scorecard.py
+  Gate #6: tools/audit_hnerv_frontier_scorecard.py
            (public HNeRV scorecard is fresh enough to route hidden-gem follow-ups)
-  Gate #6: tools/build_hnerv_lowlevel_repack_candidate.py
+  Gate #7: tools/build_hnerv_lowlevel_repack_candidate.py
            (real PR106x byte-candidate proof with raw brotli equality; still
             not exact-eval dispatch-ready)
-  Gate #7: tools/audit_tooling_consolidation.py
+  Gate #8: tools/audit_tooling_consolidation.py
            (advisory inventory of duplicated audit/preflight helper patterns)
-  Gate #8: tools/audit_recovered_remote_lanes.py
+  Gate #9: tools/audit_recovered_remote_lanes.py
            (recovered lane scripts have canonical custody/proxy classification)
-  Gate #9: tools/audit_untracked_source_artifacts.py
+  Gate #10: tools/audit_untracked_source_artifacts.py
            (no-signal-loss inventory of untracked source/research; strict when
             the reviewed disposition manifest exists)
-  Gate #10: tools/audit_orphan_recovery_canonicalization.py
+  Gate #11: tools/audit_orphan_recovery_canonicalization.py
            (orphan pyc recovery deletions must have tracked canonical copies)
-  Gate #11: tools/audit_preserved_orphans.py
+  Gate #12: tools/audit_preserved_orphans.py
            (local preserved-orphan shadows must be duplicate, superseded, or absent)
-  Gate #12: tools/audit_recovery_custody_snapshots.py
+  Gate #13: tools/audit_recovery_custody_snapshots.py
            (unique pyc/signal-loss custody snapshots are intact and explicit)
-  Gate #13: tools/audit_reverse_engineering_tree.py --release-strict
+  Gate #14: tools/audit_reverse_engineering_tree.py --release-strict
            --release-manifest ...
            (public-release reverse-engineering custody is explicitly curated)
-  Gate #14: tools/audit_release_index_split.py --strict
+  Gate #15: tools/audit_release_index_split.py --strict
            (no staged rollback shadows; no staged private provider/runtime
             state in release commits)
-  Gate #15: tools/audit_nested_gitlink_custody.py --strict
+  Gate #16: tools/audit_nested_gitlink_custody.py --strict
            (dirty public-intake/raw-custody gitlinks must be documented and
             their inner dirty status must be visible)
-  Gate #16: tools/audit_staged_public_release_hygiene.py --strict
+  Gate #17: tools/audit_staged_public_release_hygiene.py --strict
            (staged docs/site/readme public surfaces contain no private paths,
             provider job links, or credential-like strings)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
@@ -97,6 +99,7 @@ SHELL_HAZARDS = TOOLS / "check_dispatch_cli_shell_hazards.py"
 REVERSE_ENGINEERING_AUDIT = TOOLS / "audit_reverse_engineering_tree.py"
 HIDDEN_GEMS_REGISTRY = TOOLS / "list_hidden_gems.py"
 HIDDEN_GEMS_READINESS = TOOLS / "audit_hidden_gem_readiness.py"
+SEMANTIC_LABEL_AUDIT = TOOLS / "audit_semantic_label_contract.py"
 ENGINEERED_CORRECTIONS_AUDIT = TOOLS / "audit_engineered_corrections.py"
 HNERV_SCORECARD_AUDIT = TOOLS / "audit_hnerv_frontier_scorecard.py"
 HNERV_LOWLEVEL_REPACK = TOOLS / "build_hnerv_lowlevel_repack_candidate.py"
@@ -241,6 +244,37 @@ def _run_hidden_gem_readiness_gate() -> tuple[bool, str]:
         f"({local_patch_count}/{entry_count} ready-for-patch rows locally actionable; "
         "0 exact-eval-dispatch-ready)"
     )
+
+
+def _run_semantic_label_contract_gate() -> tuple[bool, str]:
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SEMANTIC_LABEL_AUDIT),
+            "--format",
+            "json",
+            "--fail-on-advisory",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    output = proc.stdout + proc.stderr
+    if proc.returncode != 0:
+        return False, output
+    try:
+        payload = json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        return False, f"semantic-label audit emitted invalid JSON: {exc}\n{output}"
+    if payload.get("ok") is not True:
+        return False, output
+    blocking = len(payload.get("blocking_findings", []))
+    advisory = len(payload.get("advisory_findings", []))
+    if blocking or advisory:
+        return False, (
+            "semantic-label audit must have zero blocking/advisory findings; "
+            f"blocking={blocking} advisory={advisory}\n{output}"
+        )
+    return True, "semantic-label contract: PASS (canonical class order; 0 stale findings)"
 
 
 def _run_engineered_corrections_gate() -> tuple[bool, str]:
@@ -542,6 +576,7 @@ def main(argv: list[str] | None = None) -> int:
         REVERSE_ENGINEERING_AUDIT,
         HIDDEN_GEMS_REGISTRY,
         HIDDEN_GEMS_READINESS,
+        SEMANTIC_LABEL_AUDIT,
         ENGINEERED_CORRECTIONS_AUDIT,
         HNERV_SCORECARD_AUDIT,
         HNERV_LOWLEVEL_REPACK,
@@ -589,116 +624,124 @@ def main(argv: list[str] | None = None) -> int:
         PreflightStep(
             "GATE",
             3,
-            "hidden-gem readiness",
-            _run_hidden_gem_readiness_gate,
-            "  ✓ Gate #3: hidden-gem readiness — PASSED",
-            "  ✗ Gate #3: hidden-gem readiness — FAILED",
+            "semantic-label contract",
+            _run_semantic_label_contract_gate,
+            "  ✓ Gate #3: semantic-label contract — PASSED",
+            "  ✗ Gate #3: semantic-label contract — FAILED",
         ),
         PreflightStep(
             "GATE",
             4,
-            "engineered-correction readiness",
-            _run_engineered_corrections_gate,
-            "  ✓ Gate #4: engineered-correction readiness — PASSED",
-            "  ✗ Gate #4: engineered-correction readiness — FAILED",
+            "hidden-gem readiness",
+            _run_hidden_gem_readiness_gate,
+            "  ✓ Gate #4: hidden-gem readiness — PASSED",
+            "  ✗ Gate #4: hidden-gem readiness — FAILED",
         ),
         PreflightStep(
             "GATE",
             5,
-            "HNeRV frontier scorecard",
-            _run_hnerv_scorecard_gate,
-            "  ✓ Gate #5: HNeRV frontier scorecard — PASSED",
-            "  ✗ Gate #5: HNeRV frontier scorecard — FAILED",
+            "engineered-correction readiness",
+            _run_engineered_corrections_gate,
+            "  ✓ Gate #5: engineered-correction readiness — PASSED",
+            "  ✗ Gate #5: engineered-correction readiness — FAILED",
         ),
         PreflightStep(
             "GATE",
             6,
-            "HNeRV low-level repack proof",
-            _run_hnerv_lowlevel_repack_gate,
-            "  ✓ Gate #6: HNeRV low-level repack proof — PASSED",
-            "  ✗ Gate #6: HNeRV low-level repack proof — FAILED",
+            "HNeRV frontier scorecard",
+            _run_hnerv_scorecard_gate,
+            "  ✓ Gate #6: HNeRV frontier scorecard — PASSED",
+            "  ✗ Gate #6: HNeRV frontier scorecard — FAILED",
         ),
         PreflightStep(
             "GATE",
             7,
-            "tooling consolidation inventory",
-            _run_tooling_consolidation_gate,
-            "  ✓ Gate #7: tooling consolidation inventory — PASSED",
-            "  ✗ Gate #7: tooling consolidation inventory — FAILED",
+            "HNeRV low-level repack proof",
+            _run_hnerv_lowlevel_repack_gate,
+            "  ✓ Gate #7: HNeRV low-level repack proof — PASSED",
+            "  ✗ Gate #7: HNeRV low-level repack proof — FAILED",
         ),
         PreflightStep(
             "GATE",
             8,
-            "recovered remote lane canonicalization",
-            _run_recovered_remote_lanes_gate,
-            "  ✓ Gate #8: recovered remote lane canonicalization — PASSED",
-            "  ✗ Gate #8: recovered remote lane canonicalization — FAILED",
+            "tooling consolidation inventory",
+            _run_tooling_consolidation_gate,
+            "  ✓ Gate #8: tooling consolidation inventory — PASSED",
+            "  ✗ Gate #8: tooling consolidation inventory — FAILED",
         ),
         PreflightStep(
             "GATE",
             9,
-            "untracked source inventory",
-            _run_untracked_source_gate,
-            "  ✓ Gate #9: untracked source inventory — PASSED (STRICT DISPOSITION)"
-            if UNTRACKED_SOURCE_DISPOSITION_MANIFEST.exists()
-            else "  ✓ Gate #9: untracked source inventory — PASSED (ADVISORY)",
-            "  ✗ Gate #9: untracked source inventory — FAILED",
+            "recovered remote lane canonicalization",
+            _run_recovered_remote_lanes_gate,
+            "  ✓ Gate #9: recovered remote lane canonicalization — PASSED",
+            "  ✗ Gate #9: recovered remote lane canonicalization — FAILED",
         ),
         PreflightStep(
             "GATE",
             10,
-            "orphan recovery canonicalization",
-            lambda: _run_gate("orphan recovery canonicalization", ORPHAN_RECOVERY_AUDIT),
-            "  ✓ Gate #10: orphan recovery canonicalization — PASSED",
-            "  ✗ Gate #10: orphan recovery canonicalization — FAILED",
+            "untracked source inventory",
+            _run_untracked_source_gate,
+            "  ✓ Gate #10: untracked source inventory — PASSED (STRICT DISPOSITION)"
+            if UNTRACKED_SOURCE_DISPOSITION_MANIFEST.exists()
+            else "  ✓ Gate #10: untracked source inventory — PASSED (ADVISORY)",
+            "  ✗ Gate #10: untracked source inventory — FAILED",
         ),
         PreflightStep(
             "GATE",
             11,
-            "preserved-orphan canonicalization",
-            _run_preserved_orphans_gate,
-            "  ✓ Gate #11: preserved-orphan canonicalization — PASSED",
-            "  ✗ Gate #11: preserved-orphan canonicalization — FAILED",
+            "orphan recovery canonicalization",
+            lambda: _run_gate("orphan recovery canonicalization", ORPHAN_RECOVERY_AUDIT),
+            "  ✓ Gate #11: orphan recovery canonicalization — PASSED",
+            "  ✗ Gate #11: orphan recovery canonicalization — FAILED",
         ),
         PreflightStep(
             "GATE",
             12,
-            "recovery custody snapshots",
-            _run_recovery_custody_snapshots_gate,
-            "  ✓ Gate #12: recovery custody snapshots — PASSED",
-            "  ✗ Gate #12: recovery custody snapshots — FAILED",
+            "preserved-orphan canonicalization",
+            _run_preserved_orphans_gate,
+            "  ✓ Gate #12: preserved-orphan canonicalization — PASSED",
+            "  ✗ Gate #12: preserved-orphan canonicalization — FAILED",
         ),
         PreflightStep(
             "GATE",
             13,
-            "reverse-engineering release manifest",
-            _run_reverse_engineering_release_gate,
-            "  ✓ Gate #13: reverse-engineering release manifest — PASSED",
-            "  ✗ Gate #13: reverse-engineering release manifest — FAILED",
+            "recovery custody snapshots",
+            _run_recovery_custody_snapshots_gate,
+            "  ✓ Gate #13: recovery custody snapshots — PASSED",
+            "  ✗ Gate #13: recovery custody snapshots — FAILED",
         ),
         PreflightStep(
             "GATE",
             14,
-            "release index/worktree split",
-            _run_release_index_split_gate,
-            "  ✓ Gate #14: release index/worktree split — PASSED",
-            "  ✗ Gate #14: release index/worktree split — FAILED",
+            "reverse-engineering release manifest",
+            _run_reverse_engineering_release_gate,
+            "  ✓ Gate #14: reverse-engineering release manifest — PASSED",
+            "  ✗ Gate #14: reverse-engineering release manifest — FAILED",
         ),
         PreflightStep(
             "GATE",
             15,
-            "nested gitlink custody",
-            _run_nested_gitlink_custody_gate,
-            "  ✓ Gate #15: nested gitlink custody — PASSED",
-            "  ✗ Gate #15: nested gitlink custody — FAILED",
+            "release index/worktree split",
+            _run_release_index_split_gate,
+            "  ✓ Gate #15: release index/worktree split — PASSED",
+            "  ✗ Gate #15: release index/worktree split — FAILED",
         ),
         PreflightStep(
             "GATE",
             16,
+            "nested gitlink custody",
+            _run_nested_gitlink_custody_gate,
+            "  ✓ Gate #16: nested gitlink custody — PASSED",
+            "  ✗ Gate #16: nested gitlink custody — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            17,
             "staged public release hygiene",
             _run_staged_public_release_hygiene_gate,
-            "  ✓ Gate #16: staged public release hygiene — PASSED",
-            "  ✗ Gate #16: staged public release hygiene — FAILED",
+            "  ✓ Gate #17: staged public release hygiene — PASSED",
+            "  ✗ Gate #17: staged public release hygiene — FAILED",
         ),
     ]
     lane_steps = [
