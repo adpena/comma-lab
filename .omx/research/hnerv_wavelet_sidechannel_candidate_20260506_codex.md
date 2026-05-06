@@ -187,3 +187,65 @@ must not dispatch as a no-op rate regression. The next implementation has to
 replace `explicit_noop_consume_only` with a reviewed deterministic apply
 transform and show component-response evidence above the `0.000258` score bar
 before archive preflight or CUDA auth eval is eligible.
+
+## Offline WR01 Apply Transform
+
+The next tranche converts WR01 from a runtime no-op sidechannel into an offline
+plain-HNeRV transform candidate. The tool decodes the WR01 atom coordinates,
+verifies the referenced HNeRV section SHA-256, attenuates the selected Haar
+detail coefficients in the decompressed latent/sidecar bytes, recompresses the
+section, and emits a normal `0xff` PR106-style archive. No sidecar or runtime
+dependency is required in the candidate archive.
+
+Command family:
+
+```bash
+.venv/bin/python tools/build_hnerv_wavelet_apply_transform_candidate.py \
+  --wavelet-archive experiments/results/hnerv_wavelet_sidechannel_pr106x_20260506_codex/hnerv_wavelet_sidechannel_candidate.zip \
+  --output-dir experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex \
+  --source-label PR106x \
+  --strength-numerator 1 \
+  --strength-denominator 2 \
+  --json-out experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json \
+  --fail-if-not-archive-preflight-ready
+```
+
+Strength sweep:
+
+| strength | candidate bytes | byte delta vs source estimate | section delta | changed raw positions | total abs raw delta |
+|---:|---:|---:|---:|---:|---:|
+| `1/4` | `186230` | `-1` | `-1` | `64` | `1820` |
+| `1/2` | `186222` | `-9` | `-9` | `64` | `3610` |
+| `3/4` | `186225` | `-6` | `-6` | `64` | `5424` |
+| `1/1` | `186224` | `-7` | `-7` | `64` | `7210` |
+
+Best rate candidate in this sweep:
+
+- strength: `1/2`
+- archive bytes: `186222`
+- archive byte delta vs source estimate: `-9`
+- rate-only score delta vs source estimate: `-0.0000059927305780995425`
+- applied atoms: `32`
+- candidate archive SHA-256:
+  `d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628`
+- manifest SHA-256:
+  `de79e2a5fb3efc70cabec70e6f7404c028f3ce3a8cbf0500cafe824cb9890fff`
+
+Tracked manifests:
+
+- `experiments/results/hnerv_wavelet_apply_transform_pr106x_1_4_20260506_codex/manifest.json`
+- `experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json`
+- `experiments/results/hnerv_wavelet_apply_transform_pr106x_3_4_20260506_codex/manifest.json`
+- `experiments/results/hnerv_wavelet_apply_transform_pr106x_1_1_20260506_codex/manifest.json`
+
+Ignored local payload artifacts:
+
+- `experiments/results/hnerv_wavelet_apply_transform_pr106x_*/hnerv_wavelet_apply_transform_candidate.zip`
+
+Updated conclusion:
+
+WR01 is no longer only a no-op stackability proof. The half-strength offline
+candidate is byte-negative and plain-HNeRV-format, so the next scientifically
+correct step is archive preflight plus component-response or exact CUDA auth
+eval. It remains `score_claim=false` until that happens; the current evidence
+is a real byte-transform/rate artifact, not score evidence.
