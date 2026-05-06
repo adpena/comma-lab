@@ -179,17 +179,19 @@ _REGISTRY: tuple[HiddenGemEntry, ...] = (
         key="engineered_correction_atom_gate",
         title="Engineered correction atom gate",
         category="latent_repair",
-        status="ready_for_patch",
+        status="implemented_guarded",
         summary=(
             "Make AMR-style and pixel-diff correction atoms no-op-resistant, signed by "
             "component traces, and fail-closed before dispatch."
         ),
         evidence_paths=(
             ".omx/research/pr85_correction_atom_waterfill_worker_20260504.md",
+            ".omx/research/engineered_correction_component_trace_gate_20260506_codex.md",
             "experiments/precompute_gradient_corrections.py",
             "src/tac/engineered_correction_readiness.py",
             "src/tac/engineered_corrections.py",
             "src/tac/engineered_corrections_v2.py",
+            "src/tac/tests/test_engineered_correction_readiness.py",
         ),
         integration_targets=(
             "tools/audit_engineered_corrections.py",
@@ -198,8 +200,9 @@ _REGISTRY: tuple[HiddenGemEntry, ...] = (
             "experiments/precompute_gradient_corrections.py",
         ),
         next_patch=(
-            "Feed a real component-trace manifest into the guarded local patch path; exact "
-            "dispatch remains blocked until a byte-closed archive consumes charged atoms."
+            "Wire signed correction readiness reports into a byte-closed archive builder "
+            "candidate; exact dispatch remains blocked until candidate diff and archive "
+            "preflight prove charged atom consumption."
         ),
         contest_compliance_notes=(
             "No correction atom can promote from proxy or byte-only evidence.",

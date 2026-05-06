@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -100,6 +101,32 @@ def test_correction_readiness_feeds_fridrich_detector_cost_manifest() -> None:
     assert manifest["rows"][0]["promotion_eligible"] is False
 
 
+def test_engineered_correction_readiness_requires_component_trace_plan() -> None:
+    report = audit_sparse_corrections(
+        _sparse(),
+        max_packed_bytes=10_000,
+        require_component_trace_plan=True,
+    )
+
+    assert report.ready_for_local_patch is False
+    assert report.component_trace_signed is False
+    assert "component_trace_plan_required" in report.blockers
+
+
+def test_engineered_correction_readiness_accepts_cross_checked_trace_plan() -> None:
+    report = audit_sparse_corrections(
+        _sparse(),
+        max_packed_bytes=10_000,
+        component_trace_plan=_component_trace_plan(),
+        require_component_trace_plan=True,
+    )
+
+    assert report.ready_for_local_patch is True
+    assert report.component_trace_signed is True
+    assert report.component_trace_atom_count == 1
+    assert report.component_trace_plan_sha256 == _component_trace_plan()["stable_plan_digest_sha256"]
+
+
 def test_engineered_correction_readiness_cli_json(tmp_path: Path) -> None:
     correction_bin = tmp_path / "gradient_corrections.bin"
     correction_bin.write_bytes(pack_sparse_corrections(_sparse()))
@@ -122,6 +149,35 @@ def test_engineered_correction_readiness_cli_json(tmp_path: Path) -> None:
     assert payload["ready_for_local_patch"] is True
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["packed_bytes"] == correction_bin.stat().st_size
+
+
+def test_engineered_correction_readiness_cli_requires_trace_plan(tmp_path: Path) -> None:
+    correction_bin = tmp_path / "gradient_corrections.bin"
+    trace_plan = tmp_path / "component_trace_atom_plan.json"
+    correction_bin.write_bytes(pack_sparse_corrections(_sparse()))
+    trace_plan.write_text(json.dumps(_component_trace_plan()), encoding="utf-8")
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT),
+            str(correction_bin),
+            "--max-packed-bytes",
+            "10000",
+            "--component-trace-plan",
+            str(trace_plan),
+            "--require-component-trace-plan",
+            "--fail-if-not-ready",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(proc.stdout)
+    assert payload["ready_for_local_patch"] is True
+    assert payload["component_trace_signed"] is True
+    assert payload["component_trace_atom_count"] == 1
 
 
 def test_engineered_correction_readiness_cli_fails_closed_on_score_claim(tmp_path: Path) -> None:
@@ -167,3 +223,40 @@ def test_engineered_correction_readiness_cli_self_test() -> None:
     payload = json.loads(proc.stdout)
     assert payload["ready_for_local_patch"] is True
     assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def _component_trace_plan() -> dict:
+    payload = {
+        "schema": "pr85_scorer_gradient_atom_opportunity_v1",
+        "planning_only": True,
+        "score_claim": False,
+        "dispatch_performed": False,
+        "remote_jobs_dispatched": False,
+        "input_artifacts": {
+            "component_traces": [
+                {
+                    "score_claim": False,
+                    "evidence_grade": "diagnostic_component_trace",
+                    "trace_cross_checked_to_exact_eval": True,
+                }
+            ]
+        },
+        "atom_ranking": [
+            {
+                "atom_id": "trace:pair_0001",
+                "source_kind": "component_trace",
+                "ranking_score": 0.0125,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "dispatch_gate": {"dispatchable": False},
+            }
+        ],
+    }
+    encoded = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode()
+    payload["stable_plan_digest_sha256"] = hashlib.sha256(encoded).hexdigest()
+    return payload

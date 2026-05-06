@@ -29,6 +29,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("corrections_bin", nargs="?", type=Path)
     parser.add_argument("--max-packed-bytes", type=int, required=True)
     parser.add_argument("--manifest", type=Path)
+    parser.add_argument("--component-trace-plan", type=Path)
+    parser.add_argument(
+        "--require-component-trace-plan",
+        action="store_true",
+        help="Require a PR85 scorer-gradient atom plan signed by a cross-checked component trace.",
+    )
     parser.add_argument(
         "--self-test",
         action="store_true",
@@ -45,6 +51,7 @@ def main(argv: list[str] | None = None) -> int:
         report = audit_sparse_corrections(
             _self_test_sparse_corrections(),
             max_packed_bytes=args.max_packed_bytes,
+            require_component_trace_plan=args.require_component_trace_plan,
         )
     else:
         if args.corrections_bin is None:
@@ -54,6 +61,8 @@ def main(argv: list[str] | None = None) -> int:
             max_packed_bytes=args.max_packed_bytes,
             compressed=not args.uncompressed,
             manifest_path=args.manifest,
+            component_trace_plan_path=args.component_trace_plan,
+            require_component_trace_plan=args.require_component_trace_plan,
         )
     payload = _audit_report(report).to_dict()
     print(json_text(payload), end="")
@@ -85,6 +94,8 @@ def _audit_report(report) -> AuditReport:
             "n_total": report.n_total,
             "packed_bytes": report.packed_bytes,
             "quantize_bits": report.quantize_bits,
+            "component_trace_signed": report.component_trace_signed,
+            "component_trace_atom_count": report.component_trace_atom_count,
             "warning_count": len(report.warnings),
         },
         metadata=details,

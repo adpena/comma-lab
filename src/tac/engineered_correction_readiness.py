@@ -13,7 +13,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 import numpy as np
 
@@ -46,10 +46,16 @@ class CorrectionReadinessReport:
     shape: tuple[int, int, int, int]
     blockers: tuple[str, ...]
     warnings: tuple[str, ...]
+    component_trace_signed: bool = False
+    component_trace_plan_sha256: str | None = None
+    component_trace_atom_count: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "blockers": list(self.blockers),
+            "component_trace_atom_count": self.component_trace_atom_count,
+            "component_trace_plan_sha256": self.component_trace_plan_sha256,
+            "component_trace_signed": self.component_trace_signed,
             "dispatch_attempted": self.dispatch_attempted,
             "n_kept": self.n_kept,
             "n_total": self.n_total,
@@ -71,6 +77,8 @@ def audit_sparse_corrections(
     compression: str = "zlib",
     require_nonzero: bool = True,
     manifest: dict[str, Any] | None = None,
+    component_trace_plan: Mapping[str, Any] | None = None,
+    require_component_trace_plan: bool = False,
 ) -> CorrectionReadinessReport:
     """Validate sparse correction data and its packed byte contract."""
     blockers: list[str] = []
@@ -84,6 +92,11 @@ def audit_sparse_corrections(
         blockers.append("manifest_dispatch_attempted_true")
     if max_packed_bytes <= 0:
         blockers.append("max_packed_bytes_must_be_positive")
+    trace_ok, trace_sha, trace_atoms, trace_blockers = _audit_component_trace_plan(
+        component_trace_plan,
+        required=require_component_trace_plan,
+    )
+    blockers.extend(trace_blockers)
 
     shape = _shape_tuple(sparse_data.get("shape"), blockers)
     qbits = _int_field(sparse_data, "quantize_bits", blockers)
@@ -178,6 +191,9 @@ def audit_sparse_corrections(
         shape=shape or (0, 0, 0, 0),
         blockers=tuple(blockers),
         warnings=tuple(warnings),
+        component_trace_signed=trace_ok,
+        component_trace_plan_sha256=trace_sha,
+        component_trace_atom_count=trace_atoms,
     )
 
 
@@ -187,6 +203,8 @@ def audit_corrections_bin(
     max_packed_bytes: int,
     compressed: bool = True,
     manifest_path: str | Path | None = None,
+    component_trace_plan_path: str | Path | None = None,
+    require_component_trace_plan: bool = False,
 ) -> CorrectionReadinessReport:
     """Validate an existing packed ``gradient_corrections.bin`` artifact."""
     artifact = Path(path)
@@ -195,11 +213,18 @@ def audit_corrections_bin(
     manifest = None
     if manifest_path is not None:
         manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+    component_trace_plan = None
+    if component_trace_plan_path is not None:
+        component_trace_plan = json.loads(
+            Path(component_trace_plan_path).read_text(encoding="utf-8")
+        )
     report = audit_sparse_corrections(
         sparse,
         max_packed_bytes=max_packed_bytes,
         compression="zlib" if compressed else "none",
         manifest=manifest,
+        component_trace_plan=component_trace_plan,
+        require_component_trace_plan=require_component_trace_plan,
     )
     if report.packed_sha256 != hashlib.sha256(payload).hexdigest():
         blockers = (*report.blockers, "packed_payload_not_canonical")
@@ -211,6 +236,92 @@ def audit_corrections_bin(
             blockers=blockers,
         )
     return report
+
+
+def _audit_component_trace_plan(
+    plan: Mapping[str, Any] | None,
+    *,
+    required: bool,
+) -> tuple[bool, str | None, int, list[str]]:
+    if plan is None:
+        return False, None, 0, ["component_trace_plan_required"] if required else []
+    blockers: list[str] = []
+    if plan.get("schema") != "pr85_scorer_gradient_atom_opportunity_v1":
+        blockers.append("component_trace_plan_schema_mismatch")
+    if plan.get("planning_only") is not True:
+        blockers.append("component_trace_plan_must_be_planning_only")
+    if plan.get("score_claim") is not False:
+        blockers.append("component_trace_plan_score_claim_must_be_false")
+    if plan.get("dispatch_performed") is not False:
+        blockers.append("component_trace_plan_dispatch_performed_must_be_false")
+    if plan.get("remote_jobs_dispatched") is not False:
+        blockers.append("component_trace_plan_remote_jobs_must_be_false")
+    digest = plan.get("stable_plan_digest_sha256")
+    if not _is_sha256(digest):
+        blockers.append("component_trace_plan_missing_stable_digest")
+        digest_str = None
+    else:
+        digest_str = str(digest)
+        if digest_str != _stable_payload_digest(plan):
+            blockers.append("component_trace_plan_stable_digest_mismatch")
+    input_artifacts = plan.get("input_artifacts")
+    if not isinstance(input_artifacts, Mapping):
+        input_artifacts = {}
+    traces = input_artifacts.get("component_traces")
+    if not isinstance(traces, list) or not traces:
+        blockers.append("component_trace_plan_missing_component_traces")
+    else:
+        for index, trace in enumerate(traces):
+            if not isinstance(trace, Mapping):
+                blockers.append(f"component_trace_plan_trace_{index}_not_object")
+                continue
+            if trace.get("score_claim") is not False:
+                blockers.append(f"component_trace_plan_trace_{index}_score_claim_not_false")
+            if trace.get("evidence_grade") != "diagnostic_component_trace":
+                blockers.append(f"component_trace_plan_trace_{index}_evidence_grade_mismatch")
+            if trace.get("trace_cross_checked_to_exact_eval") is not True:
+                blockers.append(f"component_trace_plan_trace_{index}_not_cross_checked")
+    atoms = plan.get("atom_ranking")
+    if not isinstance(atoms, list) or not atoms:
+        blockers.append("component_trace_plan_missing_atom_ranking")
+        atoms = []
+    component_trace_atoms = 0
+    positive_atoms = 0
+    for index, atom in enumerate(atoms):
+        if not isinstance(atom, Mapping):
+            blockers.append(f"component_trace_plan_atom_{index}_not_object")
+            continue
+        if atom.get("score_claim") is not False:
+            blockers.append(f"component_trace_plan_atom_{index}_score_claim_not_false")
+        if atom.get("promotion_eligible") is not False:
+            blockers.append(f"component_trace_plan_atom_{index}_promotion_not_false")
+        dispatch_gate = atom.get("dispatch_gate")
+        if not isinstance(dispatch_gate, Mapping) or dispatch_gate.get("dispatchable") is not False:
+            blockers.append(f"component_trace_plan_atom_{index}_dispatch_gate_not_blocked")
+        if atom.get("source_kind") == "component_trace":
+            component_trace_atoms += 1
+            ranking = atom.get("ranking_score")
+            if isinstance(ranking, (int, float)) and math.isfinite(float(ranking)) and float(ranking) > 0.0:
+                positive_atoms += 1
+    if component_trace_atoms == 0:
+        blockers.append("component_trace_plan_has_no_component_trace_atoms")
+    if positive_atoms == 0:
+        blockers.append("component_trace_plan_has_no_positive_component_trace_atoms")
+    return not blockers, digest_str, component_trace_atoms, blockers
+
+
+def _stable_payload_digest(payload: Mapping[str, Any]) -> str:
+    stable = {
+        key: value
+        for key, value in payload.items()
+        if key != "stable_plan_digest_sha256"
+    }
+    encoded = json.dumps(stable, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _is_sha256(value: object) -> bool:
+    return isinstance(value, str) and len(value) == 64 and all(c in "0123456789abcdef" for c in value)
 
 
 def detector_cost_atom_from_correction_report(
