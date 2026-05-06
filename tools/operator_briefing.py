@@ -31,6 +31,8 @@ TOOLS = REPO_ROOT / "tools"
 PARETO = TOOLS / "apogee_intN_pareto.py"
 DASHBOARD = TOOLS / "score_dashboard.py"
 RECONCILER = TOOLS / "predicted_vs_actual_reconciler.py"
+PR91_HPM1_READINESS = TOOLS / "audit_pr91_hpm1_readiness.py"
+PR91_HPM1_RUNTIME_CONTRACT = TOOLS / "audit_pr91_hpm1_runtime_contract.py"
 
 
 # Phase-1 supplementary lanes: pre-registered dispatches that don't fit the
@@ -249,6 +251,60 @@ def _format_exact_eval_packets() -> str:
     return "\n\n".join(lines) if lines else "  (none)"
 
 
+def _load_pr91_hpm1_blocked_lane() -> dict[str, object]:
+    readiness = _run_json(PR91_HPM1_READINESS)
+    runtime = _run_json(PR91_HPM1_RUNTIME_CONTRACT)
+    readiness_blockers = list(readiness.get("dispatch_blockers") or [])
+    runtime_blockers = list(runtime.get("dispatch_blockers") or [])
+    return {
+        "lane_id": "pr91_hpm1_runtime_contract",
+        "name": "PR91 HPM1 categorical mask rate signal",
+        "state": "BLOCKED_FAIL_CLOSED",
+        "ready_for_exact_eval_dispatch": False,
+        "score_claim": False,
+        "readiness_artifact": "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json",
+        "runtime_contract_artifact": (
+            "experiments/results/pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json"
+        ),
+        "archive_custody_matches": (
+            isinstance(readiness.get("source_archive"), dict)
+            and readiness["source_archive"].get("matches_expected") is True
+        ),
+        "hpm1_mask_custody_matches": (
+            isinstance(readiness.get("hpm1_mask_segment"), dict)
+            and readiness["hpm1_mask_segment"].get("matches_expected") is True
+        ),
+        "ambient_device_call_count": runtime.get("ambient_device_call_count"),
+        "contradiction_count": runtime.get("contradiction_count"),
+        "dispatch_blockers": readiness_blockers + runtime_blockers,
+        "next_patch": (
+            "Resolve HPAC CPU/CUDA device contract, recover full HPM1 decode/reencode "
+            "parity, then prove sidecar-free runtime consumption before any dispatch."
+        ),
+    }
+
+
+def _blocked_high_ev_lane_summaries() -> list[dict[str, object]]:
+    return [_load_pr91_hpm1_blocked_lane()]
+
+
+def _format_blocked_high_ev_lanes() -> str:
+    lines = []
+    for lane in _blocked_high_ev_lane_summaries():
+        blockers = ", ".join(str(item) for item in lane["dispatch_blockers"])
+        lines.append(
+            f"  • {lane['lane_id']} — {lane['name']}\n"
+            f"    state {lane['state']}   ready_for_exact_eval_dispatch=false\n"
+            f"    custody: archive={lane['archive_custody_matches']} "
+            f"hpm1_mask={lane['hpm1_mask_custody_matches']}\n"
+            f"    runtime: ambient_device_calls={lane['ambient_device_call_count']} "
+            f"contradictions={lane['contradiction_count']}\n"
+            f"    blockers: {blockers if blockers else '(none)'}\n"
+            f"    next patch: {lane['next_patch']}"
+        )
+    return "\n\n".join(lines) if lines else "  (none)"
+
+
 def _format_gated_lanes() -> str:
     lines = []
     for lane in PHASE_4_GATED_LANES:
@@ -293,7 +349,7 @@ def _run(script: Path, extra_args: list[str] | None = None) -> str:
 
 
 def _run_json(script: Path, extra_args: list[str] | None = None) -> dict:
-    text = _run(script, (extra_args or []) + ["--json"])
+    text = _run(script, extra_args or [])
     try:
         return json.loads(text)
     except json.JSONDecodeError:
@@ -333,13 +389,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         out = {}
         if not args.skip_pareto:
-            out["pareto"] = _run_json(PARETO)
+            out["pareto"] = _run_json(PARETO, ["--json"])
             out["supplementary_lanes"] = PHASE_1_SUPPLEMENTARY_LANES
             out["exact_eval_packets"] = _exact_eval_packet_summaries()
+            out["blocked_high_ev_lanes"] = _blocked_high_ev_lane_summaries()
         if not args.skip_dashboard:
-            out["dashboard"] = _run_json(DASHBOARD, ["--top", str(args.top)])
+            out["dashboard"] = _run_json(DASHBOARD, ["--top", str(args.top), "--json"])
         if not args.skip_reconciler:
-            out["reconciler"] = _run_json(RECONCILER)
+            out["reconciler"] = _run_json(RECONCILER, ["--json"])
         if not args.skip_gated:
             out["gated_lanes"] = PHASE_4_GATED_LANES
         if not args.skip_composition:
@@ -361,6 +418,10 @@ def main(argv: list[str] | None = None) -> int:
         parts.append(_section(
             "Phase 1 exact-eval packets — static-clean CUDA candidates",
             _format_exact_eval_packets(),
+        ))
+        parts.append(_section(
+            "Phase 1 blocked high-EV lanes — visible but fail-closed",
+            _format_blocked_high_ev_lanes(),
         ))
     if not args.skip_dashboard:
         parts.append(_section(

@@ -51,6 +51,10 @@ Currently runs:
   Gate #18: tools/build_cross_paradigm_frontier_inventory.py --format json
            (stacking/replacement inventory is current, deterministic, and
             remains inventory-only)
+  Gate #19: tools/audit_pr91_hpm1_readiness.py +
+           tools/audit_pr91_hpm1_runtime_contract.py
+           (PR91/HPM1 high-EV categorical path stays byte-custody-clean,
+            operator-visible, and fail-closed until HPAC parity/runtime gates)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -117,6 +121,8 @@ RELEASE_INDEX_SPLIT_AUDIT = TOOLS / "audit_release_index_split.py"
 NESTED_GITLINK_CUSTODY_AUDIT = TOOLS / "audit_nested_gitlink_custody.py"
 STAGED_PUBLIC_RELEASE_HYGIENE_AUDIT = TOOLS / "audit_staged_public_release_hygiene.py"
 CROSS_PARADIGM_FRONTIER_INVENTORY = TOOLS / "build_cross_paradigm_frontier_inventory.py"
+PR91_HPM1_READINESS_AUDIT = TOOLS / "audit_pr91_hpm1_readiness.py"
+PR91_HPM1_RUNTIME_CONTRACT_AUDIT = TOOLS / "audit_pr91_hpm1_runtime_contract.py"
 LOCAL_CUSTODY_RELEASE_MANIFEST = REPO / ".omx/research/local_custody_release_manifest_20260505_codex.json"
 REVERSE_ENGINEERING_RELEASE_MANIFEST = (
     REPO / ".omx/research/reverse_engineering_release_manifest_20260505_codex.json"
@@ -567,6 +573,82 @@ def _run_cross_paradigm_frontier_inventory_gate() -> tuple[bool, str]:
     )
 
 
+def _json_tool(tool: Path) -> tuple[bool, dict[str, object], str]:
+    proc = subprocess.run([sys.executable, str(tool)], capture_output=True, text=True)
+    output = proc.stdout + proc.stderr
+    if proc.returncode != 0:
+        return False, {}, output
+    try:
+        payload = json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        return False, {}, f"{tool.name} emitted invalid JSON: {exc}\n{output}"
+    return True, payload, output
+
+
+def _run_pr91_hpm1_fail_closed_gate() -> tuple[bool, str]:
+    ok_readiness, readiness, readiness_output = _json_tool(PR91_HPM1_READINESS_AUDIT)
+    if not ok_readiness:
+        return False, readiness_output
+    ok_runtime, runtime, runtime_output = _json_tool(PR91_HPM1_RUNTIME_CONTRACT_AUDIT)
+    if not ok_runtime:
+        return False, runtime_output
+    readiness_blockers = set(readiness.get("dispatch_blockers", []))
+    runtime_blockers = set(runtime.get("dispatch_blockers", []))
+    required_readiness_blockers = {
+        "full_hpm1_decode_600_frames",
+        "byte_exact_hpm1_reencode",
+        "runtime_hpm1_loader_without_sidecars",
+        "exact_cuda_auth_eval_after_parity",
+    }
+    required_runtime_blockers = {
+        "hpac_device_contract_resolved",
+        "runtime_consumer_sidecar_free_hpm1",
+    }
+    checks = {
+        "readiness_score_claim_false": readiness.get("score_claim") is False,
+        "readiness_dispatch_attempted_false": readiness.get("dispatch_attempted") is False,
+        "readiness_ready_false": readiness.get("ready_for_exact_eval_dispatch") is False,
+        "runtime_score_claim_false": runtime.get("score_claim") is False,
+        "runtime_dispatch_attempted_false": runtime.get("dispatch_attempted") is False,
+        "runtime_ready_false": runtime.get("ready_for_exact_eval_dispatch") is False,
+        "source_archive_custody_passed": (
+            isinstance(readiness.get("source_archive"), dict)
+            and readiness["source_archive"].get("matches_expected") is True
+        ),
+        "member_x_custody_passed": (
+            isinstance(readiness.get("member_x"), dict)
+            and readiness["member_x"].get("matches_expected") is True
+        ),
+        "hpm1_mask_custody_passed": (
+            isinstance(readiness.get("hpm1_mask_segment"), dict)
+            and readiness["hpm1_mask_segment"].get("matches_expected") is True
+        ),
+        "required_readiness_blockers_present": required_readiness_blockers <= readiness_blockers,
+        "required_runtime_blockers_present": required_runtime_blockers <= runtime_blockers,
+        "runtime_records_device_issue": int(runtime.get("ambient_device_call_count", 0)) >= 1
+        and int(runtime.get("contradiction_count", 0)) >= 1,
+    }
+    failed = [name for name, passed in checks.items() if not passed]
+    if failed:
+        return False, (
+            "PR91/HPM1 fail-closed gate failed: "
+            + ", ".join(failed)
+            + "\nreadiness="
+            + json_text(readiness)
+            + "\nruntime="
+            + json_text(runtime)
+        )
+    return True, (
+        "PR91/HPM1 fail-closed custody: PASS "
+        "(archive/member/mask custody clean; "
+        f"readiness_blockers={len(readiness_blockers)}; "
+        f"runtime_blockers={len(runtime_blockers)}; "
+        f"ambient_device_calls={runtime.get('ambient_device_call_count')}; "
+        f"contradictions={runtime.get('contradiction_count')}; "
+        "ready_for_exact_eval_dispatch=false)"
+    )
+
+
 def _execute_step(step: PreflightStep) -> PreflightResult:
     start = time.perf_counter()
     try:
@@ -646,6 +728,8 @@ def main(argv: list[str] | None = None) -> int:
         NESTED_GITLINK_CUSTODY_AUDIT,
         STAGED_PUBLIC_RELEASE_HYGIENE_AUDIT,
         CROSS_PARADIGM_FRONTIER_INVENTORY,
+        PR91_HPM1_READINESS_AUDIT,
+        PR91_HPM1_RUNTIME_CONTRACT_AUDIT,
         LOCAL_CUSTODY_RELEASE_MANIFEST,
         *[lane["tool"] for lane in lanes],
     ]:
@@ -807,6 +891,14 @@ def main(argv: list[str] | None = None) -> int:
             _run_cross_paradigm_frontier_inventory_gate,
             "  ✓ Gate #18: cross-paradigm frontier inventory — PASSED",
             "  ✗ Gate #18: cross-paradigm frontier inventory — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            19,
+            "PR91 HPM1 fail-closed custody",
+            _run_pr91_hpm1_fail_closed_gate,
+            "  ✓ Gate #19: PR91 HPM1 fail-closed custody — PASSED",
+            "  ✗ Gate #19: PR91 HPM1 fail-closed custody — FAILED",
         ),
     ]
     lane_steps = [

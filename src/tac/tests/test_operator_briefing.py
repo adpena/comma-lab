@@ -29,6 +29,8 @@ def test_briefing_runs_all_three_phases():
     assert "Phase 2" in proc.stdout
     assert "Phase 3" in proc.stdout
     assert "Phase 1 exact-eval packets" in proc.stdout
+    assert "Phase 1 blocked high-EV lanes" in proc.stdout
+    assert "pr91_hpm1_runtime_contract" in proc.stdout
     assert "wr01_apply_pr106x_half" in proc.stdout
 
 
@@ -60,6 +62,13 @@ def test_briefing_json_composite_has_all_three_keys():
     assert "dashboard" in out
     assert "reconciler" in out
     assert "exact_eval_packets" in out
+    assert "blocked_high_ev_lanes" in out
+    assert out["blocked_high_ev_lanes"][0]["lane_id"] == "pr91_hpm1_runtime_contract"
+    assert out["blocked_high_ev_lanes"][0]["ready_for_exact_eval_dispatch"] is False
+    assert out["blocked_high_ev_lanes"][0]["archive_custody_matches"] is True
+    assert out["blocked_high_ev_lanes"][0]["hpm1_mask_custody_matches"] is True
+    assert out["blocked_high_ev_lanes"][0]["ambient_device_call_count"] >= 1
+    assert out["blocked_high_ev_lanes"][0]["contradiction_count"] >= 1
 
 
 def test_briefing_json_each_phase_has_n_total_or_n_configs():
@@ -71,3 +80,4 @@ def test_briefing_json_each_phase_has_n_total_or_n_configs():
     assert any(k in out["dashboard"] for k in ("n_total", "n_displayed"))
     assert any(k in out["reconciler"] for k in ("n_configs", "n_landed"))
     assert out["exact_eval_packets"][0]["lane_id"] == "wr01_apply_pr106x_half"
+    assert out["blocked_high_ev_lanes"][0]["score_claim"] is False
