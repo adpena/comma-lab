@@ -378,7 +378,7 @@ _REGISTRY: tuple[HiddenGemEntry, ...] = (
         key="pr106_sidechannel_stack_gate",
         title="PR106 sidechannel stack gate",
         category="stack_composition",
-        status="ready_for_patch",
+        status="implemented_guarded",
         summary=(
             "Coordinate latent, yshift, LRL1, and stacked PR106 sidechannels through one "
             "dry-run gate so sister archives cannot drift or dispatch from proxy-only modes."
@@ -395,12 +395,14 @@ _REGISTRY: tuple[HiddenGemEntry, ...] = (
             "tools/operator_briefing.py",
         ),
         next_patch=(
-            "Add a PR106 sidechannel dry-run that validates heuristic or parse-only modes, "
-            "then implement one CUDA scorer-backed yshift or latent search mode."
+            "Implement one CUDA scorer-backed yshift or latent search mode, then feed its "
+            "exact CUDA artifact back into the stack gate."
         ),
         contest_compliance_notes=(
             "Proxy self-consistency cannot unlock exact-eval dispatch by itself.",
-            "Stacked archives must prove every sidechannel is consumed by the runtime.",
+            "Production readiness proves sister archives are anchored to the same PR106 "
+            "payload, manifests match archive paths and bytes, and stacked dispatch "
+            "blockers remain explicit until exact CUDA auth eval.",
         ),
     ),
     HiddenGemEntry(

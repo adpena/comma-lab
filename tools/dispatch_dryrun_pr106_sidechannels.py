@@ -52,6 +52,11 @@ from tac.repo_io import json_text, read_json
 
 REPO = Path(__file__).resolve().parents[1]
 REAL_SIDECHANNEL_MODES = {"gradient", "brute_force"}
+LATENT_OUTER_MAGIC = 0xFE
+YSHIFT_OUTER_MAGIC = 0xFC
+LRL1_OUTER_MAGIC = 0xFB
+WAVELET_OUTER_MAGIC = 0xFA
+WAVELET_OUTER_VERSION = 1
 
 
 @dataclass(frozen=True)
@@ -432,7 +437,13 @@ def _check_selected_modes(
             )
 
 
-def _json_score_claim_false(path: Path) -> tuple[bool, str]:
+def _json_manifest_contract(
+    path: Path,
+    *,
+    archive_path: Path | None,
+    repo: Path,
+    require_dispatch_blockers: bool = False,
+) -> tuple[bool, str]:
     try:
         data = read_json(path)
     except ValueError as exc:
@@ -441,7 +452,47 @@ def _json_score_claim_false(path: Path) -> tuple[bool, str]:
         return False, "manifest is not a JSON object"
     if data.get("score_claim") is not False:
         return False, f"score_claim is {data.get('score_claim')!r}, expected false"
-    return True, "manifest reports score_claim=false"
+    if data.get("dispatch_attempted") is True:
+        return False, "dispatch_attempted=true belongs to post-dispatch evidence, not readiness"
+    if data.get("remote_jobs_dispatched") is True:
+        return False, "remote_jobs_dispatched=true belongs to post-dispatch evidence, not readiness"
+    if require_dispatch_blockers:
+        if data.get("ready_for_exact_eval_dispatch") is not False:
+            return False, "ready_for_exact_eval_dispatch must be explicitly false before exact CUDA eval"
+        blockers = data.get("dispatch_blockers")
+        if not isinstance(blockers, list) or not blockers:
+            return False, "dispatch_blockers must be a non-empty list"
+    if archive_path is not None:
+        archive_field = (
+            data.get("archive_path")
+            or data.get("candidate_archive_path")
+        )
+        if not isinstance(archive_field, str) or not archive_field:
+            return False, "manifest must record archive_path or candidate_archive_path"
+        recorded_path = Path(archive_field)
+        if not recorded_path.is_absolute():
+            recorded_path = repo / recorded_path
+        if recorded_path.resolve(strict=False) != archive_path.resolve(strict=False):
+            return (
+                False,
+                "manifest archive path does not match supplied archive: "
+                f"metadata={_rel(recorded_path, repo)} supplied={_rel(archive_path, repo)}",
+            )
+        recorded_bytes = (
+            data.get("archive_zip_bytes")
+            or data.get("archive_size_bytes")
+            or data.get("candidate_archive_bytes")
+        )
+        if not isinstance(recorded_bytes, int) or isinstance(recorded_bytes, bool):
+            return False, "manifest must record integer archive byte count"
+        actual_bytes = archive_path.stat().st_size
+        if recorded_bytes != actual_bytes:
+            return (
+                False,
+                "manifest archive byte count does not match supplied archive: "
+                f"metadata={recorded_bytes} supplied={actual_bytes}",
+            )
+    return True, "manifest matches score/dispatch/archive custody contract"
 
 
 def _check_path_required(
@@ -485,6 +536,71 @@ def _check_zip_has_zero_bin(
         f"{_rel(path, repo)} contains 0.bin"
         if "0.bin" in names
         else f"{_rel(path, repo)} missing 0.bin (members={names})",
+    )
+
+
+def _read_zero_bin(path: Path) -> bytes:
+    with zipfile.ZipFile(path) as z:
+        return z.read("0.bin")
+
+
+def _read_single_member_payload(path: Path) -> bytes:
+    with zipfile.ZipFile(path) as z:
+        infos = z.infolist()
+        if len(infos) != 1 or infos[0].is_dir():
+            raise ValueError("expected exactly one non-directory ZIP member")
+        return z.read(infos[0].filename)
+
+
+def _check_embedded_pr106_payload(
+    checks: list[CheckResult],
+    *,
+    name: str,
+    archive: Path | None,
+    pr106_payload: bytes | None,
+    repo: Path,
+    kind: str,
+) -> None:
+    if archive is None or not archive.is_file() or pr106_payload is None:
+        return
+    try:
+        payload = _read_single_member_payload(archive) if kind == "wavelet" else _read_zero_bin(archive)
+    except (OSError, zipfile.BadZipFile, KeyError, ValueError) as exc:
+        _check(name, checks, False, f"{_rel(archive, repo)} cannot be parsed: {exc}")
+        return
+    try:
+        if kind == "latent":
+            ok = len(payload) >= 6 and payload[0] == LATENT_OUTER_MAGIC
+            embedded_len = int.from_bytes(payload[2:6], "little") if ok else -1
+            embedded = payload[6:6 + embedded_len] if ok else b""
+        elif kind in {"yshift", "lrl1"}:
+            expected_magic = YSHIFT_OUTER_MAGIC if kind == "yshift" else LRL1_OUTER_MAGIC
+            ok = len(payload) >= 4 and payload[0] == expected_magic
+            embedded_len = int.from_bytes(payload[1:4], "little") if ok else -1
+            embedded = payload[4:4 + embedded_len] if ok else b""
+        elif kind == "wavelet":
+            ok = (
+                len(payload) >= 5
+                and payload[0] == WAVELET_OUTER_MAGIC
+                and payload[1] == WAVELET_OUTER_VERSION
+            )
+            embedded_len = int.from_bytes(payload[2:5], "little") if ok else -1
+            embedded = payload[5:5 + embedded_len] if ok else b""
+        else:  # pragma: no cover - internal callsite bug.
+            raise AssertionError(f"unsupported sidechannel kind: {kind}")
+    except IndexError as exc:
+        _check(name, checks, False, f"{_rel(archive, repo)} truncated: {exc}")
+        return
+    _check(
+        name,
+        checks,
+        ok and embedded == pr106_payload,
+        f"{_rel(archive, repo)} embeds the selected PR106 0.bin payload"
+        if ok and embedded == pr106_payload
+        else (
+            f"{_rel(archive, repo)} is not anchored to the selected PR106 payload "
+            f"(kind={kind}, embedded_len={embedded_len}, expected_len={len(pr106_payload)})"
+        ),
     )
 
 
@@ -534,7 +650,43 @@ def _check_manifest(
         else:
             warnings.append(f"{name}: {detail}; ignored outside --production-readiness")
         return
-    ok, detail = _json_score_claim_false(path)
+    ok, detail = _json_manifest_contract(
+        path,
+        archive_path=None,
+        repo=repo,
+        require_dispatch_blockers=False,
+    )
+    _check(name, checks, ok, f"{_rel(path, repo)}: {detail}")
+
+
+def _check_manifest_for_archive(
+    checks: list[CheckResult],
+    *,
+    name: str,
+    path: Path | None,
+    archive_path: Path | None,
+    repo: Path,
+    production_readiness: bool,
+    warnings: list[str],
+    require_dispatch_blockers: bool = False,
+) -> None:
+    if path is None:
+        if production_readiness:
+            _check(name, checks, False, f"production readiness requires --{name.replace(':', '-')}")
+        return
+    if not path.is_file():
+        detail = f"missing {_rel(path, repo)}"
+        if production_readiness:
+            _check(name, checks, False, detail)
+        else:
+            warnings.append(f"{name}: {detail}; ignored outside --production-readiness")
+        return
+    ok, detail = _json_manifest_contract(
+        path,
+        archive_path=archive_path,
+        repo=repo,
+        require_dispatch_blockers=require_dispatch_blockers,
+    )
     _check(name, checks, ok, f"{_rel(path, repo)}: {detail}")
 
 
@@ -605,28 +757,76 @@ def _check_production_inputs(
         repo=repo,
     )
 
-    for manifest_name, path in (
-        ("latent:manifest", inputs.latent_manifest),
-        ("yshift:manifest", inputs.yshift_manifest),
-        ("lrl1:manifest", inputs.lrl1_manifest),
-        ("stacked:manifest", inputs.stacked_manifest),
+    pr106_payload: bytes | None = None
+    if inputs.pr106_archive is not None and inputs.pr106_archive.is_file():
+        try:
+            pr106_payload = _read_zero_bin(inputs.pr106_archive)
+        except (OSError, zipfile.BadZipFile, KeyError) as exc:
+            _check(
+                "production:pr106-payload-read",
+                checks,
+                False,
+                f"{_rel(inputs.pr106_archive, repo)} cannot read 0.bin: {exc}",
+            )
+        else:
+            _check(
+                "production:pr106-payload-magic",
+                checks,
+                bool(pr106_payload) and pr106_payload[0] == 0xFF,
+                "PR106 0.bin has packed archive magic 0xFF"
+                if bool(pr106_payload) and pr106_payload[0] == 0xFF
+                else "PR106 0.bin must start with packed archive magic 0xFF",
+            )
+
+    for name, archive, kind in (
+        ("production:latent-embeds-pr106", inputs.latent_sister_archive, "latent"),
+        ("production:yshift-embeds-pr106", inputs.yshift_sister_archive, "yshift"),
+        ("production:lrl1-embeds-pr106", inputs.lrl1_sister_archive, "lrl1"),
+        ("production:wavelet-embeds-pr106", inputs.wavelet_sister_archive, "wavelet"),
     ):
-        _check_manifest(
+        _check_embedded_pr106_payload(
+            checks,
+            name=name,
+            archive=archive,
+            pr106_payload=pr106_payload,
+            repo=repo,
+            kind=kind,
+        )
+
+    for manifest_name, path, archive in (
+        ("latent:manifest", inputs.latent_manifest, inputs.latent_sister_archive),
+        ("yshift:manifest", inputs.yshift_manifest, inputs.yshift_sister_archive),
+        ("lrl1:manifest", inputs.lrl1_manifest, inputs.lrl1_sister_archive),
+    ):
+        _check_manifest_for_archive(
             checks,
             name=manifest_name,
             path=path,
+            archive_path=archive,
             repo=repo,
             production_readiness=True,
             warnings=warnings,
         )
+    _check_manifest_for_archive(
+        checks,
+        name="stacked:manifest",
+        path=inputs.stacked_manifest,
+        archive_path=None,
+        repo=repo,
+        production_readiness=True,
+        warnings=warnings,
+        require_dispatch_blockers=True,
+    )
     if inputs.wavelet_sister_archive is not None or inputs.wavelet_manifest is not None:
-        _check_manifest(
+        _check_manifest_for_archive(
             checks,
             name="wavelet:manifest",
             path=inputs.wavelet_manifest,
+            archive_path=inputs.wavelet_sister_archive,
             repo=repo,
             production_readiness=True,
             warnings=warnings,
+            require_dispatch_blockers=True,
         )
 
 
