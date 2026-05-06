@@ -4477,3 +4477,70 @@ Verification:
   --release-strict --release-manifest
   .omx/research/reverse_engineering_release_manifest_20260505_codex.json
   --summary` -> `files=697 blockers=0`.
+
+## R63 - 2026-05-06 PR91/HPM1 Replay Contract Spine Recovery
+
+Recovered the canonical, local-only PR91/HPM1 replay-contract spine from the
+damaged pyc orphan set without promoting any score claim. The full neural HPAC
+range replay remains intentionally fail-closed, but the byte grammar and
+preflight surfaces now execute deterministically instead of raising
+`NotImplementedError`.
+
+Added and updated:
+
+- `src/tac/pr91_hpm1_codec.py`
+- `experiments/preflight_pr91_pr92_replay_contracts.py`
+- `src/tac/tests/test_pr91_hpm1_codec.py`
+
+Recovered contracts:
+
+- deterministic HPM1 segment builder/parser validation;
+- PR91 HPM1 static custody report with archive/member/segment SHA-256s;
+- local-only PR91 probability-variant matrix that records the known
+  probability/range mismatch as fail-closed evidence;
+- local-only PR91 preflight that blocks dispatch until HPM1 byte replay is
+  recovered;
+- previous-frame mod-5 residual symbol roundtrip helpers;
+- PR91/PR92 replay-contract preflight script that accepts an internally
+  consistent PR92/RMB1 exact-eval manifest but fails closed on missing PR92
+  custody;
+- replay CLI compatibility with `--probability-variant-matrix`,
+  `--max-frames`, and `--attempt-reencode`.
+
+Deleted resolved damaged orphan custody after live replacement and tests:
+
+- `reverse_engineering/orphan_pyc_recovery_20260505_codex/experiments/preflight_pr91_pr92_replay_contracts.py`
+- `reverse_engineering/orphan_pyc_recovery_20260505_codex/experiments/preflight_pr91_pr92_replay_contracts.recovery_spec.json`
+- `reverse_engineering/orphan_pyc_recovery_20260505_codex/src/tac/tests/test_pr91_hpm1_codec.py`
+- `reverse_engineering/orphan_pyc_recovery_20260505_codex/src/tac/tests/test_pr91_hpm1_codec.recovery_spec.json`
+- `reverse_engineering/orphan_pyc_recovery_20260505_codex/src/tac/tests/test_preflight_pr91_pr92_replay_contracts.py`
+- `reverse_engineering/orphan_pyc_recovery_20260505_codex/src/tac/tests/test_preflight_pr91_pr92_replay_contracts.recovery_spec.json`
+
+Preserved:
+
+- `reverse_engineering/orphan_pyc_recovery_20260505_codex/src/tac/pr91_hpm1_codec.recovery_spec.json`
+
+The module-level recovery spec is still useful because the exact torch/HPAC
+arithmetic replay loop is not byte-recovered. Promotion remains blocked until
+that contract decodes the HPM1 token stream.
+
+Verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_pr91_hpm1_codec.py -q` ->
+  `7 passed`.
+- `.venv/bin/python -m py_compile src/tac/pr91_hpm1_codec.py
+  src/tac/tests/test_pr91_hpm1_codec.py
+  experiments/preflight_pr91_pr92_replay_contracts.py
+  experiments/replay_pr91_hpm1_mask.py` passed.
+- `.venv/bin/python experiments/preflight_pr91_pr92_replay_contracts.py
+  --rerun-pr91-prefix --output-json /tmp/pr91_pr92_preflight.json
+  --ledger-md /tmp/pr91_pr92_preflight.md --stdout` completed with
+  `status=failed_closed`, PR91
+  `blocked_hpm1_probability_range_contract_mismatch`, and PR92
+  `failed_closed_missing_pr92_artifact` in the current checkout.
+- `.venv/bin/python experiments/replay_pr91_hpm1_mask.py
+  --probability-variant-matrix --archive
+  experiments/results/public_pr91_intake_20260504_codex/archive.zip
+  --json-out /tmp/pr91_hpm1_matrix.json` completed and recorded PR91 archive
+  bytes `222404`, member `x` bytes `222304`, mask bytes `145087`, and all
+  four probability variants as fail-closed.

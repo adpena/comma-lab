@@ -11,18 +11,18 @@ REHYDRATED 2026-05-05 from .recovery_spec.json (preserved at
 Spec source: bytecode disassembly of compiled .pyc; whitespace + inline comments lost.
 
 PARTIAL REHYDRATION: All ``EXPECTED_*`` constants, default paths, error class,
-and ``Hpm1MaskPayload`` dataclass are reconstructed exactly. The probability
-variant probe matrix entry point ``run_pr91_hpm1_probability_variant_matrix``
-is exposed but defers to ``NotImplementedError`` because the bytecode
-disassembly contains intricate torch / HPAC compose chains that pycdc
-cannot fully decompile. Production replay path is the upstream PR91
-``replay_submission`` directory.
+and ``Hpm1MaskPayload`` dataclass are reconstructed exactly. The HPM1 byte
+grammar, static custody checks, local-only residual helpers, and fail-closed
+probability matrix/preflight surfaces are implemented. The byte-exact torch /
+HPAC arithmetic/range decode loop remains blocked until the PR91 probability
+contract is recovered from source-level evidence.
 """
 from __future__ import annotations
 
 import hashlib
 import json
 import time
+import struct
 import zipfile
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -285,7 +285,21 @@ def _rehydration_failure(symbol: str) -> NotImplementedError:
 
 
 def _validate_dependency_report(report: Mapping[str, Any]) -> None:
-    raise _rehydration_failure("_validate_dependency_report")
+    """Fail closed when an optional replay dependency is explicitly missing.
+
+    Dependency collection lives in the PR86 HPAC module.  That module is still
+    partially rehydrated, so this validator accepts lightweight reports while
+    preserving a concrete failure shape for callers that do have dependency
+    facts.
+    """
+
+    missing = list(report.get("missing", []) or report.get("missing_dependencies", []) or [])
+    if missing:
+        raise Pr91Hpm1Error(
+            "dependency_contract",
+            "missing_hpm1_replay_dependencies",
+            missing=missing,
+        )
 
 
 def _common_prefix_bytes(a: bytes, b: bytes) -> int:
@@ -306,17 +320,88 @@ def _extract_first_call_body(*args: Any, **kwargs: Any) -> Any:
 
 
 def analyze_pr91_hpm1_runtime_sources(*args: Any, **kwargs: Any) -> Any:
-    raise _rehydration_failure("analyze_pr91_hpm1_runtime_sources")
+    source_dir = Path(kwargs.get("source_dir") or DEFAULT_PR91_RUNTIME_SOURCE_DIR)
+    if not source_dir.is_dir():
+        return {
+            "status": "failed_closed_missing_sources",
+            "source_dir": repo_rel(source_dir),
+            "score_claim": False,
+        }
+    files = []
+    for path in sorted(source_dir.rglob("*")):
+        if path.is_file():
+            rel = path.relative_to(source_dir).as_posix()
+            data = path.read_bytes()
+            files.append({"path": rel, "bytes": len(data), "sha256": sha256_bytes(data)})
+    return {
+        "status": "passed_static_source_inventory",
+        "source_dir": repo_rel(source_dir),
+        "score_claim": False,
+        "file_count": len(files),
+        "files": files,
+        "contains_range_codec_cpp": any(row["path"].endswith("range_mask_codec.cpp") for row in files),
+    }
 
 
 def compare_hpm1_to_pr86_hpac_contract(
-    archive: Path, *, reference: Path | None = None
+    archive: Path | Hpm1MaskPayload, *, reference: Path | None = None
 ) -> dict[str, Any]:
-    raise _rehydration_failure("compare_hpm1_to_pr86_hpac_contract")
+    payload = archive if isinstance(archive, Hpm1MaskPayload) else extract_pr91_hpm1_payload(Path(archive))
+    reference_archive = Path(reference or DEFAULT_PR86_ARCHIVE)
+    pr86_available = reference_archive.is_file()
+    relationship = {
+        "status": "passed_static_hpac_relationship",
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "pr91_tokens_sha256": sha256_bytes(payload.tokens),
+        "pr91_hpac_sha256": sha256_bytes(payload.hpac),
+        "expected_pr86_tokens_sha256": EXPECTED_PR86_TOKENS_SHA256,
+        "expected_pr91_hpm1_hpac_sha256": EXPECTED_PR91_HPM1_HPAC_SHA256,
+        "hpac_model_matches_expected_pr91": sha256_bytes(payload.hpac) == EXPECTED_PR91_HPM1_HPAC_SHA256,
+        "tokens_match_pr86_expected": sha256_bytes(payload.tokens) == EXPECTED_PR86_TOKENS_SHA256,
+        "pr86_archive_available": pr86_available,
+        "pr86_archive": repo_rel(reference_archive),
+    }
+    if not pr86_available:
+        relationship["status"] = "failed_closed_pr86_archive_unavailable"
+    return relationship
 
 
-def validate_hpm1_static_contract(archive: Path) -> dict[str, Any]:
-    raise _rehydration_failure("validate_hpm1_static_contract")
+def validate_hpm1_static_contract(archive: Path | Hpm1MaskPayload) -> dict[str, Any]:
+    payload = archive if isinstance(archive, Hpm1MaskPayload) else extract_pr91_hpm1_payload(Path(archive))
+    failures: list[str] = []
+    config = payload.config()
+    if payload.tokens_len != len(payload.tokens):
+        failures.append("tokens_len_mismatch")
+    if payload.hpac_len != len(payload.hpac):
+        failures.append("hpac_len_mismatch")
+    if payload.tokens_len <= 0:
+        failures.append("tokens_len_nonpositive")
+    if payload.hpac_len <= 0:
+        failures.append("hpac_len_nonpositive")
+    if payload.tokens_len % 4:
+        failures.append("tokens_not_uint32_aligned")
+    for key in ("n_frames", "height", "width", "predictor_count", "channels", "hpac_d_film"):
+        if int(config[key]) <= 0:
+            failures.append(f"{key}_nonpositive")
+    if int(config["delta"]) < 0:
+        failures.append("delta_negative")
+    if int(config["use_spm"]) not in (0, 1):
+        failures.append("use_spm_not_boolean")
+    return {
+        "schema": "pr91_hpm1_static_contract_v1",
+        "status": "failed" if failures else "passed",
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "config": config,
+        "tokens": {
+            "bytes": len(payload.tokens),
+            "sha256": sha256_bytes(payload.tokens),
+            "uint32_aligned": payload.tokens_len % 4 == 0,
+        },
+        "hpac": {"bytes": len(payload.hpac), "sha256": sha256_bytes(payload.hpac)},
+        "failures": failures,
+    }
 
 
 def load_hpm1_hpac_model(payload: Hpm1MaskPayload, *, device: str = "cpu") -> Any:
@@ -326,12 +411,67 @@ def load_hpm1_hpac_model(payload: Hpm1MaskPayload, *, device: str = "cpu") -> An
 def run_pr91_hpm1_preflight(
     archive: Path,
     *,
+    max_frames: int | None = 1,
+    attempt_reencode: bool = False,
+    probability_variant: str = DEFAULT_HPAC_PROBABILITY_VARIANT,
+    device: str = "cpu",
     output_dir: Path | None = None,
     strict: bool = False,
     summary: bool = True,
     write_json: bool = True,
 ) -> dict[str, Any]:
-    raise _rehydration_failure("run_pr91_hpm1_preflight")
+    started_at = time.time()
+    payload = extract_pr91_hpm1_payload(Path(archive))
+    static_report = validate_hpm1_static_contract(payload)
+    relationship = compare_hpm1_to_pr86_hpac_contract(payload)
+    report: dict[str, Any] = {
+        "schema_version": 1,
+        "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_preflight",
+        "recorded_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "status": "blocked_hpm1_probability_range_contract_mismatch",
+        "score_claim": False,
+        "dispatch_performed": False,
+        "gpu_or_remote_work": False,
+        "local_only": True,
+        "device": device,
+        "max_frames": max_frames,
+        "attempt_reencode": attempt_reencode,
+        "probability_variant": probability_variant,
+        "archive": _archive_report(Path(archive)),
+        "hpm1_static_contract": static_report,
+        "pr86_hpac_relationship": relationship,
+        "prefix_or_full_decode": {
+            "status": "failed_closed",
+            "failure_stage": "hpac_probability_range_decode",
+            "failure_reason": (
+                "Full HPAC arithmetic/range replay is not rehydrated in tac; "
+                "public PR91 remains non-dispatchable until a byte-exact "
+                "probability/range contract decodes the HPM1 token stream."
+            ),
+            "max_frames": max_frames,
+        },
+        "hpac_reencode": {
+            "attempted": bool(attempt_reencode),
+            "status": "not_attempted" if not attempt_reencode else "blocked_by_decode_contract",
+        },
+        "failure_stage": "hpac_probability_range_decode",
+        "failure_reason": "hpm1_probability_range_contract_not_byte_closed",
+        "failure_context": {
+            "known_public_failure": "frame=0 group=10 symbol=191 after 5951 decoded symbols",
+            "evidence_grade": "byte_static_plus_prior_local_prefix_diagnostic",
+        },
+        "blocker_class": "hpm1_probability_range_contract_mismatch",
+        "dispatch_unlocked": False,
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
+    if static_report["status"] != "passed":
+        report["status"] = "failed_static_hpm1_contract"
+        report["blocker_class"] = "hpm1_static_contract"
+    if write_json and output_dir is not None:
+        write_json_report(report, Path(output_dir) / "pr91_hpm1_preflight.json")
+    if strict and report["status"] != "passed":
+        raise Pr91Hpm1Error("hpm1_preflight", str(report["status"]), report=report)
+    return _jsonable(report)
 
 
 def run_pr91_hpm1_probability_variant_matrix(
@@ -339,16 +479,70 @@ def run_pr91_hpm1_probability_variant_matrix(
     *,
     output_dir: Path | None = None,
     variants: tuple[str, ...] | None = None,
+    max_frames: int | None = 1,
+    attempt_reencode: bool = False,
     strict: bool = False,
     summary: bool = True,
     write_json: bool = True,
 ) -> dict[str, Any]:
-    """Run the PR91 HPM1 probability-variant probe matrix.
+    """Run a fail-closed PR91 HPM1 probability-variant probe matrix.
 
-    DEFERRED: requires the full HPAC encode/decode replay loop from
-    ``tac.pr86_hpac_codec`` which is itself rehydrated as a stub.
+    This implementation is intentionally conservative: it validates the archive
+    and enumerates the known HPAC probability contracts, but it does not claim
+    decode success without a rehydrated byte-exact range decoder.
     """
-    raise _rehydration_failure("run_pr91_hpm1_probability_variant_matrix")
+
+    started_at = time.time()
+    payload = extract_pr91_hpm1_payload(Path(archive))
+    variant_names = variants or supported_hpac_probability_variant_names()
+    rows: list[dict[str, Any]] = []
+    for name in variant_names:
+        variant = resolve_hpac_probability_variant(name)
+        rows.append(
+            {
+                "variant": variant.name,
+                "probability_dtype": variant.probability_dtype,
+                "categorical_perfect": variant.categorical_perfect,
+                "source_contract": variant.source_contract,
+                "status": "failed_closed",
+                "decoded_frame0": False,
+                "byte_exact_reencode": False,
+                "failure_stage": "hpac_probability_range_decode",
+                "failure_reason": "hpm1_probability_range_contract_not_byte_closed",
+                "known_public_failure": (
+                    "source contract fails at frame=0 group=10 symbol=191 after "
+                    "5951 decoded symbols"
+                    if variant.source_contract
+                    else None
+                ),
+            }
+        )
+    report = {
+        "schema": "pr91_hpm1_probability_variant_matrix_v1",
+        "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_probability_variant_matrix",
+        "recorded_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "status": "blocked_hpm1_probability_range_contract_mismatch",
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "dispatch_performed": False,
+        "max_frames": max_frames,
+        "attempt_reencode": attempt_reencode,
+        "archive": _archive_report(Path(archive)),
+        "hpm1_static_contract": validate_hpm1_static_contract(payload),
+        "payload": {
+            "config": payload.config(),
+            "tokens_sha256": sha256_bytes(payload.tokens),
+            "hpac_sha256": sha256_bytes(payload.hpac),
+        },
+        "variant_results": rows,
+        "failed_variants": [row["variant"] for row in rows if row["status"] != "passed"],
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
+    if write_json and output_dir is not None:
+        write_json_report(report, Path(output_dir) / "pr91_hpm1_probability_variant_matrix.json")
+    if strict:
+        raise Pr91Hpm1Error("hpm1_probability_variant_matrix", str(report["status"]), report=report)
+    return _jsonable(report)
 
 
 def _hpm1_token_stream_transform_candidates(*args: Any, **kwargs: Any) -> Any:
@@ -365,3 +559,162 @@ def _load_reference_tokens(*args: Any, **kwargs: Any) -> Any:
 
 def _symbol_position(*args: Any, **kwargs: Any) -> Any:
     raise _rehydration_failure("_symbol_position")
+
+
+def _archive_report(archive: Path) -> dict[str, Any]:
+    archive_size, archive_sha, body = _validate_safe_single_x_archive(archive)
+    bundle = parse_pr85_bundle(body)
+    return {
+        "path": repo_rel(archive),
+        "bytes": archive_size,
+        "sha256": archive_sha,
+        "member_x_bytes": len(body),
+        "member_x_sha256": sha256_bytes(body),
+        "bundle_format": bundle.format,
+        "segment_bytes": {name: len(bundle.segments[name]) for name in SEGMENT_ORDER},
+        "segment_sha256": {name: sha256_bytes(bundle.segments[name]) for name in SEGMENT_ORDER},
+    }
+
+
+def build_hpm1_mask_segment(
+    tokens_blob: bytes,
+    hpac_ppmd_blob: bytes,
+    *,
+    N: int,
+    H: int,
+    W: int,
+    P: int,
+    delta: int,
+    ch: int,
+    use_spm: bool,
+    hpac_d_film: int,
+    ppmd_order: int = 4,
+) -> bytes:
+    """Build a deterministic HPM1 mask segment from typed byte payloads."""
+
+    if len(tokens_blob) <= 0 or len(tokens_blob) % 4:
+        raise Pr91Hpm1Error(
+            "hpm1_segment_builder",
+            "tokens_blob_must_be_nonempty_uint32_aligned",
+            tokens_bytes=len(tokens_blob),
+        )
+    if len(hpac_ppmd_blob) <= 0:
+        raise Pr91Hpm1Error(
+            "hpm1_segment_builder",
+            "hpac_ppmd_blob_must_be_nonempty",
+            hpac_bytes=len(hpac_ppmd_blob),
+        )
+    fields = (N, H, W, P, delta, ch, int(bool(use_spm)), hpac_d_film, len(tokens_blob), len(hpac_ppmd_blob), ppmd_order)
+    for name, value in zip(
+        ("N", "H", "W", "P", "delta", "ch", "use_spm", "hpac_d_film", "tokens_len", "hpac_len", "ppmd_order"),
+        fields,
+    ):
+        if int(value) < 0:
+            raise Pr91Hpm1Error("hpm1_segment_builder", "negative_header_field", field=name, value=value)
+    required_positive = {
+        "N",
+        "H",
+        "W",
+        "P",
+        "ch",
+        "hpac_d_film",
+        "tokens_len",
+        "hpac_len",
+        "ppmd_order",
+    }
+    for name, value in zip(
+        ("N", "H", "W", "P", "delta", "ch", "use_spm", "hpac_d_film", "tokens_len", "hpac_len", "ppmd_order"),
+        fields,
+    ):
+        if name not in required_positive:
+            continue
+        if int(value) <= 0:
+            raise Pr91Hpm1Error("hpm1_segment_builder", "nonpositive_header_field", field=name, value=value)
+    return HPM1_MAGIC + struct.pack("<IIIIIIIIIII", *map(int, fields)) + bytes(tokens_blob) + bytes(hpac_ppmd_blob)
+
+
+def raw_tokens_to_mod5_residual_symbols(raw_tokens: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Convert raw 0..4 HPM1 tokens into previous-frame mod-5 residual symbols."""
+
+    raw = np.asarray(raw_tokens, dtype=np.uint8)
+    if raw.ndim != 3:
+        raise Pr91Hpm1Error("hpm1_residual_symbols", "raw_tokens_must_be_nhw", shape=list(raw.shape))
+    if raw.size and (int(raw.min()) < 0 or int(raw.max()) > 4):
+        raise Pr91Hpm1Error("hpm1_residual_symbols", "raw_tokens_out_of_mod5_range")
+    prev = np.zeros_like(raw, dtype=np.uint8)
+    if raw.shape[0] > 1:
+        prev[1:] = raw[:-1]
+    residual = ((raw.astype(np.int16) - prev.astype(np.int16)) % 5).astype(np.uint8)
+    return residual, prev
+
+
+def reconstruct_raw_tokens_from_mod5_residual_symbols(
+    symbols: np.ndarray, prev_context_tokens: np.ndarray
+) -> np.ndarray:
+    symbols_arr = np.asarray(symbols, dtype=np.uint8)
+    prev = np.asarray(prev_context_tokens, dtype=np.uint8)
+    if symbols_arr.shape != prev.shape:
+        raise Pr91Hpm1Error(
+            "hpm1_residual_symbols",
+            "symbol_prev_shape_mismatch",
+            symbols_shape=list(symbols_arr.shape),
+            prev_shape=list(prev.shape),
+        )
+    return ((symbols_arr.astype(np.int16) + prev.astype(np.int16)) % 5).astype(np.uint8)
+
+
+def prototype_reencode_hpm1_from_raw_tokens(
+    raw_tokens: np.ndarray,
+    source_payload: Hpm1MaskPayload,
+    *,
+    max_frames: int | None = None,
+    probability_variant: str = DEFAULT_HPAC_PROBABILITY_VARIANT,
+    device: str = "cpu",
+) -> dict[str, Any]:
+    raw = np.asarray(raw_tokens, dtype=np.uint8)
+    if max_frames is not None:
+        raw = raw[: int(max_frames)]
+    return {
+        "schema": "pr91_hpm1_raw_token_reencode_prototype_v1",
+        "status": "blocked_hpac_encoder_not_rehydrated",
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "raw_tokens": {"shape": list(raw.shape), "sha256": sha256_bytes(raw.tobytes())},
+        "source_payload": {"config": source_payload.config(), "tokens_sha256": sha256_bytes(source_payload.tokens)},
+        "probability_variant": probability_variant,
+        "device": device,
+        "failure_reason": "encode_tokens_hpac is not rehydrated; prototype remains local-only.",
+    }
+
+
+def prototype_reencode_hpm1_residual_from_raw_tokens(
+    raw_tokens: np.ndarray,
+    source_payload: Hpm1MaskPayload,
+    *,
+    max_frames: int | None = None,
+    probability_variant: str = DEFAULT_HPAC_PROBABILITY_VARIANT,
+    device: str = "cpu",
+) -> dict[str, Any]:
+    residual, prev = raw_tokens_to_mod5_residual_symbols(raw_tokens)
+    if max_frames is not None:
+        residual = residual[: int(max_frames)]
+        prev = prev[: int(max_frames)]
+    reconstructed = reconstruct_raw_tokens_from_mod5_residual_symbols(residual, prev)
+    return {
+        "schema": "pr91_hpm1_residual_reencode_prototype_v1",
+        "status": "blocked_hpac_encoder_not_rehydrated",
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "roundtrip_raw_tokens": bool(np.array_equal(reconstructed, np.asarray(raw_tokens, dtype=np.uint8)[: reconstructed.shape[0]])),
+        "residual_symbols": {"shape": list(residual.shape), "sha256": sha256_bytes(residual.tobytes())},
+        "prev_context": {"shape": list(prev.shape), "sha256": sha256_bytes(prev.tobytes())},
+        "source_payload": {"config": source_payload.config(), "tokens_sha256": sha256_bytes(source_payload.tokens)},
+        "probability_variant": probability_variant,
+        "device": device,
+        "failure_reason": "encode_symbols_hpac_with_prev_context is not rehydrated; prototype remains local-only.",
+    }
+
+
+def write_json_report(report: Mapping[str, Any], path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(_jsonable(report), indent=2, sort_keys=True) + "\n", encoding="utf-8")
