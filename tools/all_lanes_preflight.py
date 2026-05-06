@@ -48,6 +48,9 @@ Currently runs:
   Gate #17: tools/audit_staged_public_release_hygiene.py --strict
            (staged docs/site/readme public surfaces contain no private paths,
             provider job links, or credential-like strings)
+  Gate #18: tools/build_cross_paradigm_frontier_inventory.py --format json
+           (stacking/replacement inventory is current, deterministic, and
+            remains inventory-only)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -113,6 +116,7 @@ RECOVERY_CUSTODY_SNAPSHOTS_AUDIT = TOOLS / "audit_recovery_custody_snapshots.py"
 RELEASE_INDEX_SPLIT_AUDIT = TOOLS / "audit_release_index_split.py"
 NESTED_GITLINK_CUSTODY_AUDIT = TOOLS / "audit_nested_gitlink_custody.py"
 STAGED_PUBLIC_RELEASE_HYGIENE_AUDIT = TOOLS / "audit_staged_public_release_hygiene.py"
+CROSS_PARADIGM_FRONTIER_INVENTORY = TOOLS / "build_cross_paradigm_frontier_inventory.py"
 LOCAL_CUSTODY_RELEASE_MANIFEST = REPO / ".omx/research/local_custody_release_manifest_20260505_codex.json"
 REVERSE_ENGINEERING_RELEASE_MANIFEST = (
     REPO / ".omx/research/reverse_engineering_release_manifest_20260505_codex.json"
@@ -511,6 +515,58 @@ def _run_staged_public_release_hygiene_gate() -> tuple[bool, str]:
     return proc.returncode == 0, proc.stdout + proc.stderr
 
 
+def _run_cross_paradigm_frontier_inventory_gate() -> tuple[bool, str]:
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(CROSS_PARADIGM_FRONTIER_INVENTORY),
+            "--repo-root",
+            str(REPO),
+            "--format",
+            "json",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    output = proc.stdout + proc.stderr
+    if proc.returncode != 0:
+        return False, output
+    try:
+        payload = json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        return False, f"cross-paradigm inventory emitted invalid JSON: {exc}\n{output}"
+    if payload.get("score_claim") is not False:
+        return False, "cross-paradigm inventory must keep score_claim=false"
+    if payload.get("dispatch_attempted") is not False:
+        return False, "cross-paradigm inventory must keep dispatch_attempted=false"
+    if payload.get("ready_for_exact_eval_dispatch") is not False:
+        return False, "cross-paradigm inventory must not unlock exact-eval dispatch"
+    rows = payload.get("rows")
+    if not isinstance(rows, list) or not rows:
+        return False, "cross-paradigm inventory emitted no rows"
+    row_keys = {str(row.get("key")) for row in rows if isinstance(row, dict)}
+    required_keys = {
+        "categorical_qma9_clade_spade_openpilot",
+        "lapose_motion_atom_allocator",
+        "meta_lagrangian_cross_paradigm_allocator",
+        "telescopic_foveation_field",
+    }
+    missing_keys = sorted(required_keys - row_keys)
+    if missing_keys:
+        return False, "cross-paradigm inventory missing required row(s): " + ", ".join(missing_keys)
+    missing_code = int(payload.get("missing_code_path_count", -1))
+    missing_evidence = int(payload.get("missing_evidence_path_count", -1))
+    if missing_code != 0 or missing_evidence != 0:
+        return False, (
+            "cross-paradigm inventory has missing paths: "
+            f"code={missing_code} evidence={missing_evidence}"
+        )
+    return True, (
+        "cross-paradigm inventory: PASS "
+        f"({len(rows)} rows; 0 missing code/evidence paths; inventory-only)"
+    )
+
+
 def _execute_step(step: PreflightStep) -> PreflightResult:
     start = time.perf_counter()
     try:
@@ -589,6 +645,7 @@ def main(argv: list[str] | None = None) -> int:
         RELEASE_INDEX_SPLIT_AUDIT,
         NESTED_GITLINK_CUSTODY_AUDIT,
         STAGED_PUBLIC_RELEASE_HYGIENE_AUDIT,
+        CROSS_PARADIGM_FRONTIER_INVENTORY,
         LOCAL_CUSTODY_RELEASE_MANIFEST,
         *[lane["tool"] for lane in lanes],
     ]:
@@ -742,6 +799,14 @@ def main(argv: list[str] | None = None) -> int:
             _run_staged_public_release_hygiene_gate,
             "  ✓ Gate #17: staged public release hygiene — PASSED",
             "  ✗ Gate #17: staged public release hygiene — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            18,
+            "cross-paradigm frontier inventory",
+            _run_cross_paradigm_frontier_inventory_gate,
+            "  ✓ Gate #18: cross-paradigm frontier inventory — PASSED",
+            "  ✗ Gate #18: cross-paradigm frontier inventory — FAILED",
         ),
     ]
     lane_steps = [
