@@ -4544,3 +4544,52 @@ Verification:
   --json-out /tmp/pr91_hpm1_matrix.json` completed and recorded PR91 archive
   bytes `222404`, member `x` bytes `222304`, mask bytes `145087`, and all
   four probability variants as fail-closed.
+
+## R64 - 2026-05-06 PR92 Exact Evidence Log Recovery
+
+Recovered PR92/RMB1 exact-eval custody from local Lightning logs when the
+structured `contest_auth_eval.adjudicated.json` and builder manifest are absent
+from the current checkout. The preflight remains fail-closed if both JSON and
+logs are missing, and it only uses the log fallback when both `RESULT_JSON:`
+from `auth_eval.log` and `ADJUDICATION_JSON:` from `adjudication.log` parse
+cleanly.
+
+Updated:
+
+- `experiments/preflight_pr91_pr92_replay_contracts.py`
+- `src/tac/tests/test_pr91_hpm1_codec.py`
+
+Recovered exact PR92 evidence from
+`experiments/results/lightning_batch/exact_eval_pr85_stbm1br_pr92_rmb1_t4_20260504T082220Z/`:
+
+- canonical score: `0.2535063602939779`;
+- archive bytes: `229480`;
+- archive SHA-256:
+  `f8d2dff12004fe15bdedefcd3f9574fab97f22c302fa1417a265c325468ad774`;
+- avg SegNet distance: `0.00057185`;
+- avg PoseNet distance: `0.0001894`;
+- runtime tree SHA-256:
+  `9a9a71afefe7c154ecc188068bea26f01212369883c4b32c9706b32951e267ba`;
+- evidence grade: `A++ contest T4`;
+- promotion eligible: `true`;
+- component gates clear: `true`.
+
+The combined PR91/PR92 preflight now recovers the exact PR92 evidence while
+keeping PR91/HPM1 blocked:
+
+- PR91: `blocked_hpm1_probability_range_contract_mismatch`;
+- PR92: `passed_t4_exact_pr92_rmb1_stack_validated`;
+- overall: `passed_pr92_a_plus_plus_pr91_fail_closed`.
+
+Verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_pr91_hpm1_codec.py -q` ->
+  `8 passed`.
+- `.venv/bin/python -m py_compile
+  experiments/preflight_pr91_pr92_replay_contracts.py
+  src/tac/tests/test_pr91_hpm1_codec.py` passed.
+- `.venv/bin/python experiments/preflight_pr91_pr92_replay_contracts.py
+  --rerun-pr91-prefix --output-json
+  /tmp/pr91_pr92_preflight_logrecovered.json --ledger-md
+  /tmp/pr91_pr92_preflight_logrecovered.md --stdout` completed with
+  `status=passed_pr92_a_plus_plus_pr91_fail_closed`.

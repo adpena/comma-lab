@@ -230,6 +230,76 @@ def test_preflight_pr91_pr92_replay_contracts_accepts_synthetic_pr92_and_blocks_
     assert report["pr92_rmb1_stack"]["evidence_grade"] == "A++"
 
 
+def test_preflight_pr91_pr92_replay_contracts_recovers_pr92_from_logs(tmp_path: Path) -> None:
+    module = _load_preflight_script()
+    pr91_archive = _synthetic_hpm1_archive(tmp_path / "pr91.zip")
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+    exact = {
+        "schema_version": 1,
+        "final_score": 0.25,
+        "avg_posenet_dist": 0.0001894,
+        "avg_segnet_dist": 0.00057185,
+        "archive_size_bytes": 229480,
+        "score_recomputed_from_components": 0.2535063602939779,
+        "provenance": {
+            "archive_sha256": "f8d2dff12004fe15bdedefcd3f9574fab97f22c302fa1417a265c325468ad774",
+            "archive_size_bytes": 229480,
+            "inflate_script": "/teamspace/pact/replay_submission_stbm_rmb1/inflate.sh",
+            "inflate_runtime_manifest": {
+                "runtime_root": "/teamspace/pact/replay_submission_stbm_rmb1",
+                "runtime_tree_sha256": "9a9a71afefe7c154ecc188068bea26f01212369883c4b32c9706b32951e267ba",
+            },
+        },
+    }
+    adjudication = {
+        "archive_bytes": 229480,
+        "archive_sha256": "f8d2dff12004fe15bdedefcd3f9574fab97f22c302fa1417a265c325468ad774",
+        "avg_posenet_dist": 0.0001894,
+        "avg_segnet_dist": 0.00057185,
+        "component_gate_triggered": False,
+        "contest_equivalent_hardware": True,
+        "evidence_grade": "A++ contest T4",
+        "gpu_t4_match": True,
+        "promotion_eligible": True,
+        "score_recomputed": 0.2535063602939779,
+    }
+    (log_dir / "auth_eval.log").write_text(
+        "noise\nRESULT_JSON: " + json.dumps(exact, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    (log_dir / "adjudication.log").write_text(
+        "noise\nADJUDICATION_JSON: " + json.dumps(adjudication, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    args = module.parse_args(
+        [
+            "--pr91-archive",
+            str(pr91_archive),
+            "--rerun-pr91-prefix",
+            "--pr92-manifest",
+            str(tmp_path / "missing_manifest.json"),
+            "--pr92-exact-json",
+            str(tmp_path / "missing_exact.json"),
+            "--pr92-log-dir",
+            str(log_dir),
+            "--output-json",
+            str(tmp_path / "out.json"),
+            "--ledger-md",
+            str(tmp_path / "ledger.md"),
+        ]
+    )
+    report = module.build_report(args)
+
+    assert report["status"] == "passed_pr92_a_plus_plus_pr91_fail_closed"
+    pr92 = report["pr92_rmb1_stack"]
+    assert pr92["source"]["mode"] == "recovered_from_logs"
+    assert pr92["evidence_grade"] == "A++"
+    assert pr92["exact_eval"]["score"] == 0.2535063602939779
+    assert pr92["exact_eval"]["runtime_tree_sha256"].startswith("9a9a71af")
+
+
 def test_preflight_pr91_pr92_replay_contracts_fails_closed_on_missing_pr92(tmp_path: Path) -> None:
     module = _load_preflight_script()
     pr91_archive = _synthetic_hpm1_archive(tmp_path / "pr91.zip")
@@ -242,6 +312,8 @@ def test_preflight_pr91_pr92_replay_contracts_fails_closed_on_missing_pr92(tmp_p
             str(tmp_path / "missing_manifest.json"),
             "--pr92-exact-json",
             str(tmp_path / "missing_exact.json"),
+            "--pr92-log-dir",
+            str(tmp_path / "missing_logs"),
             "--output-json",
             str(tmp_path / "out.json"),
             "--ledger-md",
