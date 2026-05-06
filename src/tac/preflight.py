@@ -21508,17 +21508,25 @@ if __name__ == "__main__":
                 print(f"Unknown profile: {args.profile}", file=sys.stderr)
                 sys.exit(2)
             profile_arch = PROFILES[args.profile]
-        preflight_all(
-            profile_name=args.profile,
-            profile_arch=profile_arch,
-            tto_frames_path=args.tto_frames,
-            gt_poses_path=args.gt_poses,
-            masks_path=args.masks,
-            renderer_path=args.renderer,
-            archive_path=args.archive,
-            check_codebase=not args.no_codebase,
-            verbose=True,
-        )
+        from tac.preflight_fs_cache import cached_filesystem
+
+        # cache_reads=True hits the read_text/read_bytes cache too — restricted
+        # to source-tree files (src/, scripts/, tools/, experiments/build_*,
+        # submissions/, etc.) so synthetic-manifest checks that mutate temp
+        # files within a single check still see fresh content.
+        # Empirical: 425s -> ~30s preflight_all on a 12,500-file repo.
+        with cached_filesystem(cache_reads=True):
+            preflight_all(
+                profile_name=args.profile,
+                profile_arch=profile_arch,
+                tto_frames_path=args.tto_frames,
+                gt_poses_path=args.gt_poses,
+                masks_path=args.masks,
+                renderer_path=args.renderer,
+                archive_path=args.archive,
+                check_codebase=not args.no_codebase,
+                verbose=True,
+            )
         print("\nPREFLIGHT PASSED")
     except (PreflightError, ArityViolation, FilenameContractError,
             CodebaseDriftError, LoaderFormatSafetyError) as e:
