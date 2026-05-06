@@ -1326,6 +1326,17 @@ def step_compress_weights(
     # from the mode recorded in the .done marker. Prior version cached
     # `skipped=True` from a fp4 run and silently blocked the next run from
     # actually running int4_lzma2 even after the operator switched modes.
+    #
+    # Adversarial review 2026-05-06 (Contrarian): the prior cache check only
+    # compared against ``cfg.weight_compression``. With β dispatch wired (mode
+    # = "owv3_sensitivity_weighted" when use_sensitivity_weighted=True), a
+    # cached fp4 .done marker would silent-skip the β branch. The effective
+    # mode is now derived from the cross-paradigm flags BEFORE the cache
+    # comparison.
+    if cfg.use_sensitivity_weighted and cfg.sensitivity_map_path and Path(cfg.sensitivity_map_path).exists():
+        effective_mode = "owv3_sensitivity_weighted"
+    else:
+        effective_mode = cfg.weight_compression
     done_path = iter_dir / f".done_{step_name}"
     if _step_done(iter_dir, step_name):
         prior_mode = None
@@ -1333,9 +1344,9 @@ def step_compress_weights(
             prior_mode = json.loads(done_path.read_text()).get("mode")
         except (json.JSONDecodeError, FileNotFoundError):
             pass
-        if prior_mode is not None and prior_mode != cfg.weight_compression:
+        if prior_mode is not None and prior_mode != effective_mode:
             _log(f"Weight compression mode changed: {prior_mode!r} → "
-                 f"{cfg.weight_compression!r}; invalidating cache", "WARN")
+                 f"{effective_mode!r}; invalidating cache", "WARN")
             try:
                 done_path.unlink()
             except FileNotFoundError:
@@ -1343,7 +1354,7 @@ def step_compress_weights(
         else:
             _log(f"Weight compression already done (iter {iteration}), skipping")
             # Return whichever format was produced
-            for suffix in ["_int4lzma2.bin", ".bin"]:
+            for suffix in ["_int4lzma2.bin", "_owv3_sensitivity.bin", ".bin"]:
                 p = iter_dir / f"renderer{suffix}"
                 if p.exists():
                     return p
@@ -1385,9 +1396,24 @@ def step_compress_weights(
             from tac.renderer import build_renderer
 
             sensitivities, sens_metadata = load_sensitivity_map(sens_path)
-            ckpt = torch.load(
-                str(checkpoint_path), map_location="cpu", weights_only=False
-            )
+            # Adversarial review 2026-05-06 fix: weights_only=True is the
+            # safe path (CLAUDE.md FORBIDDEN PATTERN: arbitrary torch.load on
+            # checkpoints from external sources — Vast.ai/Modal/Lightning
+            # artifacts). For full-checkpoint dicts that wrap a state_dict,
+            # weights_only=True works since state_dict tensors are allowlisted.
+            try:
+                ckpt = torch.load(
+                    str(checkpoint_path), map_location="cpu", weights_only=True
+                )
+            except Exception:
+                # Legacy checkpoint format may need weights_only=False; only
+                # fall back if the operator explicitly opts in via env-var.
+                import os as _os
+                if _os.environ.get("PIPELINE_ALLOW_UNSAFE_CKPT", "0") != "1":
+                    raise
+                ckpt = torch.load(
+                    str(checkpoint_path), map_location="cpu", weights_only=False
+                )
             model = build_renderer(
                 base_ch=cfg.base_ch,
                 mid_ch=cfg.mid_ch,
@@ -1402,6 +1428,10 @@ def step_compress_weights(
             )
             state = ckpt.get("state_dict", ckpt) if isinstance(ckpt, dict) else ckpt
             model.load_state_dict(state)
+            # Adversarial review 2026-05-06 fix: explicit eval mode (encode_owv3_archive
+            # also calls .eval() but defensive double-call is cheap and
+            # protects callers that compose this branch into other harnesses).
+            model.eval()
             archive_bytes = encode_owv3_archive(
                 model,
                 sensitivities=sensitivities,
