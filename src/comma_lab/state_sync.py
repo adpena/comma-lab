@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
-import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -57,6 +55,41 @@ def _atomic_write_json(path: Path, payload: object) -> bool:
 
 def _read_text(path: Path) -> str:
     return path.read_text() if path.exists() else ""
+
+
+def _read_jsonl_for_doctor(root: Path, rel_path: str) -> tuple[list[dict[str, object]], list[DriftFinding]]:
+    path = root / rel_path
+    rows: list[dict[str, object]] = []
+    findings: list[DriftFinding] = []
+    if not path.exists():
+        return rows, findings
+    for lineno, line in enumerate(path.read_text().splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError as exc:
+            findings.append(
+                DriftFinding(
+                    code="malformed_jsonl",
+                    severity="error",
+                    path=f"{rel_path}:{lineno}",
+                    message=f"ledger row is not valid JSON: {exc.msg}",
+                )
+            )
+            continue
+        if not isinstance(payload, dict):
+            findings.append(
+                DriftFinding(
+                    code="malformed_jsonl",
+                    severity="error",
+                    path=f"{rel_path}:{lineno}",
+                    message="ledger row must be a JSON object",
+                )
+            )
+            continue
+        rows.append(payload)
+    return rows, findings
 
 
 def _render_latest_md(result: PromotedResult) -> str:
@@ -220,8 +253,8 @@ def doctor_repo(repo_root: str | Path) -> DoctorReport:
                 )
             )
 
-    results_path = root / "reports" / "results.jsonl"
-    results_rows = [json.loads(line) for line in results_path.read_text().splitlines() if line.strip()] if results_path.exists() else []
+    results_rows, jsonl_findings = _read_jsonl_for_doctor(root, "reports/results.jsonl")
+    findings.extend(jsonl_findings)
     if not any(row.get("run_id") == result.run_id and float(row.get("current_workflow_score")) == result.score for row in results_rows):
         findings.append(
             DriftFinding(
@@ -232,8 +265,8 @@ def doctor_repo(repo_root: str | Path) -> DoctorReport:
             )
         )
 
-    timeline_path = root / "reports" / "timeline.jsonl"
-    timeline_rows = [json.loads(line) for line in timeline_path.read_text().splitlines() if line.strip()] if timeline_path.exists() else []
+    timeline_rows, jsonl_findings = _read_jsonl_for_doctor(root, "reports/timeline.jsonl")
+    findings.extend(jsonl_findings)
     if not any(float(row.get("score", -1)) == result.score and row.get("variant") == result.variant for row in timeline_rows):
         findings.append(
             DriftFinding(

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import io
 import json
 import tempfile
 import unittest
@@ -107,6 +106,18 @@ class StateSyncTests(unittest.TestCase):
         self.assertIn("canonical_summary_mismatch", codes)
         self.assertIn("latest_report_stale", codes)
         self.assertIn("stale_managed_session", codes)
+
+    def test_doctor_reports_malformed_jsonl_without_crashing(self) -> None:
+        from src.comma_lab import state_sync
+
+        (self.repo_root / "reports" / "results.jsonl").write_text("{not json}\n")
+
+        report = state_sync.doctor_repo(self.repo_root)
+
+        malformed = [finding for finding in report.findings if finding.code == "malformed_jsonl"]
+        self.assertEqual(len(malformed), 1)
+        self.assertEqual(malformed[0].path, "reports/results.jsonl:1")
+        self.assertIn("not valid JSON", malformed[0].message)
 
     def test_sync_repo_repairs_projections_and_marks_stale_managed_session(self) -> None:
         from src.comma_lab import state_sync
