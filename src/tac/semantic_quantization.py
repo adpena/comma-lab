@@ -1,17 +1,17 @@
 """Adaptive semantic quantization — per-class bit-depth allocation (Trick 18).
 
 For SPADE/CLADE-based renderers, different semantic classes have different
-visual importance for the scorer:
-    - Road (class 0): 8-bit — highest PoseNet sensitivity (lane markings, ego motion)
-    - Vehicles (class 1): 6-bit — important for depth cues
-    - Pedestrians (class 2): 6-bit — safety-critical but rare pixels
-    - Sky (class 3): 4-bit — PoseNet-invariant, SegNet tolerant
-    - Background (class 4): 4-bit — low scorer sensitivity
+visual importance for the scorer. This module follows the contest mask
+vocabulary used by ``mask_grayscale_lut`` / Selfcomp:
+    - Background (class 0): 4-bit
+    - Road (class 1): 8-bit - highest PoseNet sensitivity
+    - Lane markings (class 2): 8-bit - thin structure, high SegNet/PoseNet risk
+    - Movable objects (class 3): 6-bit
+    - My-car / hood (class 4): 4-bit
 
 The scoring formula weights SegNet at 100x and PoseNet at sqrt(10x),
 so road pixels (which drive both PoseNet and SegNet) get maximum precision,
-while sky pixels (which SegNet classifies trivially) can tolerate more
-quantization noise.
+while background and hood pixels can tolerate more quantization noise.
 
 This saves ~20% rate compared to uniform 8-bit quantization with
 negligible distortion increase on high-sensitivity classes.
@@ -22,7 +22,7 @@ Usage::
     q_state = semantic_adaptive_quantize(
         model.state_dict(),
         class_masks,
-        class_bits={0: 8, 1: 6, 2: 6, 3: 4, 4: 4},
+        class_bits={0: 4, 1: 8, 2: 8, 3: 6, 4: 4},
     )
 """
 
@@ -36,20 +36,20 @@ import torch.nn as nn
 
 # Default bit allocation per semantic class
 DEFAULT_CLASS_BITS: dict[int, int] = {
-    0: 8,  # Road — highest scorer sensitivity
-    1: 6,  # Vehicles
-    2: 6,  # Pedestrians
-    3: 4,  # Sky — lowest scorer sensitivity
-    4: 4,  # Background
+    0: 4,  # Background
+    1: 8,  # Road
+    2: 8,  # Lane markings
+    3: 6,  # Movable objects
+    4: 4,  # My-car / hood
 }
 
 # Human-readable class names for logging
 CLASS_NAMES: dict[int, str] = {
-    0: "road",
-    1: "vehicles",
-    2: "pedestrians",
-    3: "sky",
-    4: "background",
+    0: "background",
+    1: "road",
+    2: "lane",
+    3: "movable",
+    4: "my-car",
 }
 
 
@@ -98,7 +98,7 @@ def semantic_adaptive_quantize(
         masks: optional (N, H, W) long tensor — used for statistics only,
             not required for quantization.
         class_bits: mapping from class index to bit depth.
-            Default: {0: 8, 1: 6, 2: 6, 3: 4, 4: 4}.
+            Default: {0: 4, 1: 8, 2: 8, 3: 6, 4: 4}.
 
     Returns:
         Dict with:

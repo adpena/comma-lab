@@ -16,6 +16,7 @@ from __future__ import annotations
 import torch
 
 from tac.semantic_quantization import (
+    CLASS_NAMES,
     DEFAULT_CLASS_BITS,
     quantize_tensor,
     semantic_adaptive_quantize,
@@ -82,7 +83,7 @@ def test_quantize_tensor_zero_input() -> None:
 def test_semantic_adaptive_quantize_per_tensor_roundtrip() -> None:
     """Per-tensor reconstruction error bounded by per-tensor max scale.
 
-    Class-specific tensors use per-class bits (default road=8, sky=4).
+    Class-specific tensors use per-class bits (default road/lane=8).
     Backbone tensors use uniform max bits (8). The reconstructed tensor
     is what's stored, so we compare it to the float original within the
     bound implied by the smallest bit count used on each row.
@@ -135,8 +136,18 @@ def test_semantic_adaptive_quantize_savings_positive() -> None:
 
 
 def test_default_class_bits_table_invariants() -> None:
-    """Table sanity: 5 classes, road > sky precision."""
+    """Table sanity: follows the Selfcomp/grayscale-LUT class vocabulary."""
     assert len(DEFAULT_CLASS_BITS) == 5
-    assert DEFAULT_CLASS_BITS[0] >= DEFAULT_CLASS_BITS[3], (
-        "Road should have at least as many bits as sky"
+    assert CLASS_NAMES == {
+        0: "background",
+        1: "road",
+        2: "lane",
+        3: "movable",
+        4: "my-car",
+    }
+    assert DEFAULT_CLASS_BITS[1] >= DEFAULT_CLASS_BITS[0], (
+        "Road should have at least as many bits as background"
+    )
+    assert DEFAULT_CLASS_BITS[2] >= DEFAULT_CLASS_BITS[0], (
+        "Lane markings should have at least as many bits as background"
     )
