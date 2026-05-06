@@ -21,6 +21,8 @@ Install:
 
 Environment overrides:
     PREFLIGHT_HOOK_ENABLED=0   Skip preflight (review gate still runs)
+    PREFLIGHT_FULL=1           Run full whole-repo preflight instead of fast mode
+    PREFLIGHT_TIMEOUT_SECONDS  Override preflight subprocess timeout
     REVIEW_GATE_ENABLED=0      Skip review gate
     REVIEW_GATE_OVERRIDE=1     Override review gate (still runs preflight)
     PREFLIGHT_SKIP_RUFF=1      Skip ruff F821 step (e.g., when ruff missing)
@@ -83,28 +85,53 @@ def run_ruff_undefined_name(staged: list[str]) -> int:
             print(result.stderr, file=sys.stderr)
         print(f"\n{RED}This is the bug class that hid the auth_eval `expected_raw` "
               f"NameError for weeks.{RST}", file=sys.stderr)
-        print(f"  Fix the undefined name and re-stage.", file=sys.stderr)
-        print(f"  Skip (NOT recommended): PREFLIGHT_SKIP_RUFF=1 git commit ...",
+        print("  Fix the undefined name and re-stage.", file=sys.stderr)
+        print("  Skip (NOT recommended): PREFLIGHT_SKIP_RUFF=1 git commit ...",
               file=sys.stderr)
         return 1
     return 0
 
 
 def run_preflight() -> int:
-    """Run the 5-layer preflight validator stack."""
+    """Run the bounded preflight validator stack.
+
+    Default hook mode is intentionally fast and source-index friendly:
+    `tac.preflight --no-codebase` catches artifact/profile wiring without
+    scanning every recovered public-PR source tree and reverse-engineering
+    custody mirror on each commit. Operators can still request the full
+    whole-repo scan with `PREFLIGHT_FULL=1`.
+    """
     if os.environ.get("PREFLIGHT_HOOK_ENABLED", "1") == "0":
         return 0
+    cmd = _preflight_command()
+    timeout = _preflight_timeout_seconds()
     try:
         result = subprocess.run(
-            [".venv/bin/python", "-m", "tac.preflight"],
+            cmd,
             cwd=REPO_ROOT,
             capture_output=True,
             text=True,
+            timeout=timeout,
         )
     except FileNotFoundError:
         print(f"{YELLOW}[preflight-hook] .venv missing, skipping preflight{RST}",
               file=sys.stderr)
         return 0
+    except subprocess.TimeoutExpired as exc:
+        print(f"\n{RED}{BOLD}[preflight-hook] BLOCKED: preflight timed out{RST}",
+              file=sys.stderr)
+        print(f"  command: {' '.join(cmd)}", file=sys.stderr)
+        print(f"  timeout: {timeout}s", file=sys.stderr)
+        if exc.stdout:
+            print(str(exc.stdout)[-4000:], file=sys.stderr)
+        if exc.stderr:
+            print(str(exc.stderr)[-4000:], file=sys.stderr)
+        print(
+            f"\n{RED}The hook must be bounded. Use PREFLIGHT_FULL=1 only when "
+            f"you intentionally want the slower whole-repo scan.{RST}",
+            file=sys.stderr,
+        )
+        return 1
     if result.returncode != 0:
         print(f"\n{RED}{BOLD}[preflight-hook] BLOCKED: preflight failed{RST}")
         print(result.stdout, file=sys.stderr)
@@ -112,11 +139,33 @@ def run_preflight() -> int:
             print(result.stderr, file=sys.stderr)
         print(f"\n{RED}A drift / arity / profile / arch / filename rule fired.{RST}",
               file=sys.stderr)
-        print(f"  Fix the issue, then commit.", file=sys.stderr)
-        print(f"  Skip (NOT recommended): PREFLIGHT_HOOK_ENABLED=0 git commit ...",
+        print("  Fix the issue, then commit.", file=sys.stderr)
+        print("  Skip (NOT recommended): PREFLIGHT_HOOK_ENABLED=0 git commit ...",
               file=sys.stderr)
         return 1
     return 0
+
+
+def _preflight_command() -> list[str]:
+    """Return the preflight command for the current hook mode."""
+    cmd = [".venv/bin/python", "-m", "tac.preflight"]
+    if os.environ.get("PREFLIGHT_FULL", "0") != "1":
+        cmd.append("--no-codebase")
+    return cmd
+
+
+def _preflight_timeout_seconds() -> int:
+    """Return a positive preflight timeout with conservative defaults."""
+    raw = os.environ.get("PREFLIGHT_TIMEOUT_SECONDS")
+    if raw:
+        try:
+            value = int(raw)
+        except ValueError:
+            value = 0
+        return value if value > 0 else 90
+    if os.environ.get("PREFLIGHT_FULL", "0") == "1":
+        return 600
+    return 90
 
 
 def run_review_gate() -> int:
