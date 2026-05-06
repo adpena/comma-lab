@@ -5903,6 +5903,85 @@ Verification:
 - `.venv/bin/python tools/all_lanes_preflight.py` passed:
   `ALL 20 PREFLIGHT CHECKS PASSED`.
 
+## R92 - 2026-05-06 Cross-Platform Parallel Preflight Lowering
+
+Lowered the all-lanes preflight latency without changing gate semantics. The
+implementation stays cross-platform: no shell pipelines in the runner, no
+GNU-only flags, subprocesses use `sys.executable`, and parallel execution is
+implemented with Python `concurrent.futures` while parent output remains
+deterministically ordered by gate/lane number.
+
+Changes:
+
+- Added an ordered `PreflightStep`/`PreflightResult` runner to
+  `tools/all_lanes_preflight.py`.
+- Added bounded concurrent execution for independent gates/lanes, with
+  `--jobs 1` preserving the serial path and `--jobs N` controlling the worker
+  budget.
+- Added `--timings` to print per-step wall-clock timings for future hotspot
+  lowering.
+- Converted unexpected worker exceptions into failed preflight tasks instead
+  of letting a worker crash bypass the final summary.
+- Lowered `tools/dispatch_dryrun_apogee_intN.py` so each intN bit produces one
+  temp archive and reuses it for both magic-byte and parser-roundtrip checks.
+  Previously the producer ran twice per bit.
+
+Measured performance:
+
+- Pre-change serial all-lanes preflight: `15.12s real` after the OSS staging
+  tranche.
+- Post-change default parallel all-lanes preflight: `3.81s real` with
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+- Post-change serial compatibility mode: `12.17s real` with
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+- Apogee intN dry-run: `5.92s real -> 3.59s real` by avoiding duplicate
+  producer runs.
+
+Measured inventory after R92:
+
+- local SHA helpers: `51`
+- local JSON dumps: `101`
+- manual `sys.path` bootstraps: `267`
+- manual repo-root parent probes: `364`
+- manual score/dispatch metadata mentions: `603`
+
+Within-tranche committed-surface deltas:
+
+- `tools/all_lanes_preflight.py` remains at zero findings for SHA/JSON/
+  bootstrap/root consolidation patterns while adding bounded parallelism.
+- `tools/dispatch_dryrun_apogee_intN.py` remains at zero findings for
+  SHA/JSON/bootstrap/root consolidation patterns while eliminating duplicate
+  archive production.
+
+Verification:
+
+- `.venv/bin/python -m py_compile tools/all_lanes_preflight.py
+  tools/dispatch_dryrun_apogee_intN.py` passed.
+- `.venv/bin/python -m ruff check --select I,RUF100,F401,UP035,F821,E402
+  tools/all_lanes_preflight.py tools/dispatch_dryrun_apogee_intN.py` passed.
+- `.venv/bin/python tools/dispatch_dryrun_apogee_intN.py
+  --all-pareto-frontier --allow-forensic-byte-only` passed:
+  `FORENSIC BYTE-ONLY DRY-RUN PASSED`.
+- `.venv/bin/python tools/all_lanes_preflight.py --timings` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+- `.venv/bin/python tools/all_lanes_preflight.py --jobs 1` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --scan-root
+  tools/all_lanes_preflight.py --format json` reported zero findings for the
+  file.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --scan-root
+  tools/dispatch_dryrun_apogee_intN.py --format json` reported zero findings
+  for the file.
+
+Next performance tranche:
+
+- `Lane #1` still dominates at ~`3.37s`; if needed, parallelize per-bit archive
+  production with ordered result collection.
+- `Gate #7` remains ~`2.22s`; the correct next lowering is a shared compiled
+  scanner or Rust helper for text-tree audits, not more Python process churn.
+- `Lane #2` remains ~`2.18s`; only its structural checks are independent. The
+  stage1 -> stage3 -> parser chain should stay sequential.
+
 ## R81 - 2026-05-06 Component Sensitivity Shard Merge IO Lowering
 
 Continued the Gate #7 lowering tranche on the finite-difference sensitivity

@@ -111,53 +111,48 @@ def check_inflate_adapter_modules() -> str:
     return "inflate.{py,sh} + vendored model.py + codec.py + intn_codec.py all present + parse"
 
 
-def check_producer_e2e_for_bits(bits: int) -> str:
-    """Run the producer end-to-end against the PR106 inputs; verify archive bytes + magic."""
-    with tempfile.TemporaryDirectory() as tmp:
-        out_dir = Path(tmp)
-        proc = subprocess.run(
-            [sys.executable, str(PRODUCER),
-             "--state-dict", str(PR106_STATE_DICT),
-             "--pr106-archive", str(PR106_ARCHIVE),
-             "--bits", str(bits),
-             "--out-dir", str(out_dir)],
-            capture_output=True, text=True,
-        )
-        _check(proc.returncode == 0, f"producer for bits={bits} crashed: {proc.stderr.strip()[:300]}")
-        archive = out_dir / f"apogee_int{bits}_archive.zip"
-        _check(archive.is_file(), f"producer for bits={bits} did not emit {archive.name}")
-        # Verify ZIP + magic byte
-        with zipfile.ZipFile(archive) as z:
-            bin_bytes = z.read("0.bin")
-        expected_magic = 0xA0 | bits
-        _check(bin_bytes[0] == expected_magic,
-               f"bits={bits} produced magic 0x{bin_bytes[0]:02X}, expected 0x{expected_magic:02X}")
-        return f"producer for bits={bits} OK ({archive.stat().st_size:,}b, magic 0x{bin_bytes[0]:02X})"
+def produce_archive_for_bits(bits: int, out_dir: Path) -> Path:
+    """Run the producer once for ``bits`` and return the emitted archive."""
+    proc = subprocess.run(
+        [sys.executable, str(PRODUCER),
+         "--state-dict", str(PR106_STATE_DICT),
+         "--pr106-archive", str(PR106_ARCHIVE),
+         "--bits", str(bits),
+         "--out-dir", str(out_dir)],
+        capture_output=True, text=True,
+    )
+    _check(proc.returncode == 0, f"producer for bits={bits} crashed: {proc.stderr.strip()[:300]}")
+    archive = out_dir / f"apogee_int{bits}_archive.zip"
+    _check(archive.is_file(), f"producer for bits={bits} did not emit {archive.name}")
+    return archive
 
 
-def check_parser_roundtrip_for_bits(bits: int) -> str:
-    """Re-run producer + roundtrip through the runtime inflate parser."""
+def check_produced_archive_magic(bits: int, archive: Path) -> str:
+    """Verify ZIP readability and the intN magic byte for an emitted archive."""
+    with zipfile.ZipFile(archive) as z:
+        bin_bytes = z.read("0.bin")
+    expected_magic = 0xA0 | bits
+    _check(
+        bin_bytes[0] == expected_magic,
+        f"bits={bits} produced magic 0x{bin_bytes[0]:02X}, expected 0x{expected_magic:02X}",
+    )
+    return f"producer for bits={bits} OK ({archive.stat().st_size:,}b, magic 0x{bin_bytes[0]:02X})"
+
+
+def check_parser_roundtrip_archive(bits: int, archive: Path) -> str:
+    """Roundtrip a produced archive through the runtime inflate parser."""
     from submissions.apogee_intN.inflate import parse_apogee_intn_archive
 
-    with tempfile.TemporaryDirectory() as tmp:
-        out_dir = Path(tmp)
-        subprocess.run(
-            [sys.executable, str(PRODUCER),
-             "--state-dict", str(PR106_STATE_DICT),
-             "--pr106-archive", str(PR106_ARCHIVE),
-             "--bits", str(bits),
-             "--out-dir", str(out_dir)],
-            check=True, capture_output=True,
-        )
-        archive = out_dir / f"apogee_int{bits}_archive.zip"
-        with zipfile.ZipFile(archive) as z:
-            bin_bytes = z.read("0.bin")
-        sd, lat, meta = parse_apogee_intn_archive(bin_bytes)
-        _check(meta["bits"] == bits, f"meta bits={meta['bits']} != requested {bits}")
-        _check(len(sd) > 0, f"parser returned empty state_dict for bits={bits}")
-        _check(lat.numel() > 0, f"parser returned empty latents for bits={bits}")
-        return (f"parser roundtrip for bits={bits} OK ({len(sd)} tensors, latents {tuple(lat.shape)}, "
-                f"meta bits={meta['bits']})")
+    with zipfile.ZipFile(archive) as z:
+        bin_bytes = z.read("0.bin")
+    sd, lat, meta = parse_apogee_intn_archive(bin_bytes)
+    _check(meta["bits"] == bits, f"meta bits={meta['bits']} != requested {bits}")
+    _check(len(sd) > 0, f"parser returned empty state_dict for bits={bits}")
+    _check(lat.numel() > 0, f"parser returned empty latents for bits={bits}")
+    return (
+        f"parser roundtrip for bits={bits} OK ({len(sd)} tensors, latents {tuple(lat.shape)}, "
+        f"meta bits={meta['bits']})"
+    )
 
 
 def check_launch_script_flag_wiring() -> str:
@@ -215,10 +210,18 @@ def run_dryrun(
     _attempt("inflate-adapter", check_inflate_adapter_modules)
     _attempt("launch-script-wiring", check_launch_script_flag_wiring)
 
-    for bits in bits_list:
-        _attempt(f"bits={bits}-range", check_bits_in_range, bits)
-        _attempt(f"bits={bits}-producer-e2e", check_producer_e2e_for_bits, bits)
-        _attempt(f"bits={bits}-parser-roundtrip", check_parser_roundtrip_for_bits, bits)
+    with tempfile.TemporaryDirectory() as tmp:
+        out_dir = Path(tmp)
+        for bits in bits_list:
+            _attempt(f"bits={bits}-range", check_bits_in_range, bits)
+            try:
+                archive = produce_archive_for_bits(bits, out_dir)
+            except CheckFailure as e:
+                failures.append(f"  ✗ bits={bits}-producer-e2e: {e}")
+                failures.append(f"  ✗ bits={bits}-parser-roundtrip: skipped because producer failed")
+                continue
+            _attempt(f"bits={bits}-producer-e2e", check_produced_archive_magic, bits, archive)
+            _attempt(f"bits={bits}-parser-roundtrip", check_parser_roundtrip_archive, bits, archive)
 
     if allow_forensic_byte_only:
         passes.append(

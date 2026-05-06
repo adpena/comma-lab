@@ -71,10 +71,15 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import json
+import os
 import subprocess
 import sys
 import tempfile
+import time
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 try:
@@ -138,6 +143,30 @@ LANES = [
         "args": ["--skip-help-subprocess"],
     },
 ]
+
+
+@dataclass(frozen=True)
+class PreflightStep:
+    """One ordered preflight step that can execute independently."""
+
+    section: str
+    number: int
+    name: str
+    runner: Callable[[], tuple[bool, str]]
+    pass_summary: str
+    fail_summary: str
+    forensic_only: bool = False
+    local_smoke_only: bool = False
+
+
+@dataclass(frozen=True)
+class PreflightResult:
+    """Captured step output rendered later in deterministic order."""
+
+    step: PreflightStep
+    passed: bool
+    output: str
+    elapsed_s: float
 
 
 def _run_lane(lane: dict, verbose: bool) -> tuple[bool, str]:
@@ -358,6 +387,116 @@ def _run_reverse_engineering_release_gate() -> tuple[bool, str]:
     return proc.returncode == 0, proc.stdout + proc.stderr
 
 
+def _run_hnerv_scorecard_gate() -> tuple[bool, str]:
+    proc = subprocess.run([sys.executable, str(HNERV_SCORECARD_AUDIT)], capture_output=True, text=True)
+    return proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def _run_tooling_consolidation_gate() -> tuple[bool, str]:
+    proc = subprocess.run(
+        [sys.executable, str(TOOLING_CONSOLIDATION_AUDIT)],
+        capture_output=True,
+        text=True,
+    )
+    return proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def _run_recovered_remote_lanes_gate() -> tuple[bool, str]:
+    proc = subprocess.run(
+        [sys.executable, str(RECOVERED_REMOTE_LANES_AUDIT), "--strict"],
+        capture_output=True,
+        text=True,
+    )
+    return proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def _run_preserved_orphans_gate() -> tuple[bool, str]:
+    proc = subprocess.run(
+        [sys.executable, str(PRESERVED_ORPHANS_AUDIT), "--format", "text"],
+        capture_output=True,
+        text=True,
+    )
+    return proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def _run_recovery_custody_snapshots_gate() -> tuple[bool, str]:
+    proc = subprocess.run(
+        [sys.executable, str(RECOVERY_CUSTODY_SNAPSHOTS_AUDIT), "--format", "text"],
+        capture_output=True,
+        text=True,
+    )
+    return proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def _run_release_index_split_gate() -> tuple[bool, str]:
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(RELEASE_INDEX_SPLIT_AUDIT),
+            "--repo-root",
+            str(REPO),
+            "--strict",
+            "--local-custody-manifest",
+            str(LOCAL_CUSTODY_RELEASE_MANIFEST),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    return proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def _run_nested_gitlink_custody_gate() -> tuple[bool, str]:
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(NESTED_GITLINK_CUSTODY_AUDIT),
+            "--repo-root",
+            str(REPO),
+            "--strict",
+            "--local-custody-manifest",
+            str(LOCAL_CUSTODY_RELEASE_MANIFEST),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    return proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def _run_staged_public_release_hygiene_gate() -> tuple[bool, str]:
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(STAGED_PUBLIC_RELEASE_HYGIENE_AUDIT),
+            "--repo-root",
+            str(REPO),
+            "--strict",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    return proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def _execute_step(step: PreflightStep) -> PreflightResult:
+    start = time.perf_counter()
+    try:
+        passed, output = step.runner()
+    except Exception as exc:  # pragma: no cover - defensive fail-closed wrapper.
+        passed = False
+        output = f"{step.section} #{step.number} raised {type(exc).__name__}: {exc}"
+    return PreflightResult(
+        step=step,
+        passed=passed,
+        output=output,
+        elapsed_s=time.perf_counter() - start,
+    )
+
+
+def _default_jobs(step_count: int) -> int:
+    cpu_count = os.cpu_count() or 2
+    return max(1, min(step_count, cpu_count, 8))
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("-v", "--verbose", action="store_true",
@@ -369,6 +508,20 @@ def main(argv: list[str] | None = None) -> int:
             "Promote Lane Omega-W-V3 from stub-byte smoke to strict readiness: "
             "require a CUDA sensitivity map with source archive SHA metadata."
         ),
+    )
+    parser.add_argument(
+        "--jobs",
+        type=int,
+        default=None,
+        help=(
+            "Maximum independent preflight steps to run concurrently. "
+            "Default: min(8, CPU count, step count). Use --jobs 1 for serial output."
+        ),
+    )
+    parser.add_argument(
+        "--timings",
+        action="store_true",
+        help="Append per-step wall-clock timings to the summary.",
     )
     args = parser.parse_args(argv)
 
@@ -395,6 +548,7 @@ def main(argv: list[str] | None = None) -> int:
         PRESERVED_ORPHANS_AUDIT,
         RECOVERY_CUSTODY_SNAPSHOTS_AUDIT,
         RELEASE_INDEX_SPLIT_AUDIT,
+        NESTED_GITLINK_CUSTODY_AUDIT,
         STAGED_PUBLIC_RELEASE_HYGIENE_AUDIT,
         LOCAL_CUSTODY_RELEASE_MANIFEST,
         *[lane["tool"] for lane in lanes],
@@ -403,275 +557,207 @@ def main(argv: list[str] | None = None) -> int:
             print(f"FATAL: missing sub-tool {tool.relative_to(REPO)}", file=sys.stderr)
             return 2
 
+    gate_steps = [
+        PreflightStep(
+            "GATE",
+            0,
+            "dispatch CLI/shell hazards",
+            lambda: _run_gate("dispatch CLI/shell hazards", SHELL_HAZARDS),
+            "  ✓ Gate #0: dispatch CLI/shell hazards — PASSED",
+            "  ✗ Gate #0: dispatch CLI/shell hazards — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            1,
+            "reverse-engineering tree curation",
+            lambda: _run_gate("reverse-engineering tree curation", REVERSE_ENGINEERING_AUDIT, ["--summary"]),
+            "  ✓ Gate #1: reverse-engineering tree curation — PASSED",
+            "  ✗ Gate #1: reverse-engineering tree curation — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            2,
+            "hidden-gem registry",
+            _run_hidden_gems_gate,
+            "  ✓ Gate #2: hidden-gem registry — PASSED",
+            "  ✗ Gate #2: hidden-gem registry — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            3,
+            "hidden-gem readiness",
+            _run_hidden_gem_readiness_gate,
+            "  ✓ Gate #3: hidden-gem readiness — PASSED",
+            "  ✗ Gate #3: hidden-gem readiness — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            4,
+            "engineered-correction readiness",
+            _run_engineered_corrections_gate,
+            "  ✓ Gate #4: engineered-correction readiness — PASSED",
+            "  ✗ Gate #4: engineered-correction readiness — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            5,
+            "HNeRV frontier scorecard",
+            _run_hnerv_scorecard_gate,
+            "  ✓ Gate #5: HNeRV frontier scorecard — PASSED",
+            "  ✗ Gate #5: HNeRV frontier scorecard — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            6,
+            "HNeRV low-level repack proof",
+            _run_hnerv_lowlevel_repack_gate,
+            "  ✓ Gate #6: HNeRV low-level repack proof — PASSED",
+            "  ✗ Gate #6: HNeRV low-level repack proof — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            7,
+            "tooling consolidation inventory",
+            _run_tooling_consolidation_gate,
+            "  ✓ Gate #7: tooling consolidation inventory — PASSED",
+            "  ✗ Gate #7: tooling consolidation inventory — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            8,
+            "recovered remote lane canonicalization",
+            _run_recovered_remote_lanes_gate,
+            "  ✓ Gate #8: recovered remote lane canonicalization — PASSED",
+            "  ✗ Gate #8: recovered remote lane canonicalization — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            9,
+            "untracked source inventory",
+            _run_untracked_source_gate,
+            "  ✓ Gate #9: untracked source inventory — PASSED (STRICT DISPOSITION)"
+            if UNTRACKED_SOURCE_DISPOSITION_MANIFEST.exists()
+            else "  ✓ Gate #9: untracked source inventory — PASSED (ADVISORY)",
+            "  ✗ Gate #9: untracked source inventory — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            10,
+            "orphan recovery canonicalization",
+            lambda: _run_gate("orphan recovery canonicalization", ORPHAN_RECOVERY_AUDIT),
+            "  ✓ Gate #10: orphan recovery canonicalization — PASSED",
+            "  ✗ Gate #10: orphan recovery canonicalization — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            11,
+            "preserved-orphan canonicalization",
+            _run_preserved_orphans_gate,
+            "  ✓ Gate #11: preserved-orphan canonicalization — PASSED",
+            "  ✗ Gate #11: preserved-orphan canonicalization — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            12,
+            "recovery custody snapshots",
+            _run_recovery_custody_snapshots_gate,
+            "  ✓ Gate #12: recovery custody snapshots — PASSED",
+            "  ✗ Gate #12: recovery custody snapshots — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            13,
+            "reverse-engineering release manifest",
+            _run_reverse_engineering_release_gate,
+            "  ✓ Gate #13: reverse-engineering release manifest — PASSED",
+            "  ✗ Gate #13: reverse-engineering release manifest — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            14,
+            "release index/worktree split",
+            _run_release_index_split_gate,
+            "  ✓ Gate #14: release index/worktree split — PASSED",
+            "  ✗ Gate #14: release index/worktree split — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            15,
+            "nested gitlink custody",
+            _run_nested_gitlink_custody_gate,
+            "  ✓ Gate #15: nested gitlink custody — PASSED",
+            "  ✗ Gate #15: nested gitlink custody — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            16,
+            "staged public release hygiene",
+            _run_staged_public_release_hygiene_gate,
+            "  ✓ Gate #16: staged public release hygiene — PASSED",
+            "  ✗ Gate #16: staged public release hygiene — FAILED",
+        ),
+    ]
+    lane_steps = [
+        PreflightStep(
+            "LANE",
+            i,
+            str(lane["name"]),
+            lambda lane=lane: _run_lane(lane, verbose=args.verbose),
+            (
+                f"  ✓ Lane #{i}: {lane['name']} — SELF-PROTECTED, NOT DISPATCH-READY"
+                if lane.get("forensic_only")
+                else (
+                    f"  ✓ Lane #{i}: {lane['name']} — LOCAL-SMOKE ONLY, NOT DISPATCH-READY"
+                    if lane.get("local_smoke_only")
+                    else f"  ✓ Lane #{i}: {lane['name']} — PASSED"
+                )
+            ),
+            f"  ✗ Lane #{i}: {lane['name']} — FAILED",
+            forensic_only=bool(lane.get("forensic_only")),
+            local_smoke_only=bool(lane.get("local_smoke_only")),
+        )
+        for i, lane in enumerate(lanes, start=1)
+    ]
+    steps = gate_steps + lane_steps
+    if args.jobs is not None and args.jobs < 1:
+        print("FATAL: --jobs must be >= 1", file=sys.stderr)
+        return 2
+    max_workers = args.jobs or _default_jobs(len(steps))
+    if max_workers == 1:
+        results = [_execute_step(step) for step in steps]
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(_execute_step, step) for step in steps]
+            results = [future.result() for future in futures]
+
     n_passed = 0
     n_failed = 0
-    summary_lines: list[str] = []
-
-    bar = "═" * 70
-    print(f"\n{bar}\nGATE #0: dispatch CLI/shell hazards\n{bar}")
-    passed, output = _run_gate("dispatch CLI/shell hazards", SHELL_HAZARDS)
-    print(output.rstrip())
-    if passed:
-        n_passed += 1
-        summary_lines.append("  ✓ Gate #0: dispatch CLI/shell hazards — PASSED")
-    else:
-        n_failed += 1
-        summary_lines.append("  ✗ Gate #0: dispatch CLI/shell hazards — FAILED")
-
-    print(f"\n{bar}\nGATE #1: reverse-engineering tree curation\n{bar}")
-    passed, output = _run_gate(
-        "reverse-engineering tree curation",
-        REVERSE_ENGINEERING_AUDIT,
-        ["--summary"],
-    )
-    print(output.rstrip())
-    if passed:
-        n_passed += 1
-        summary_lines.append("  ✓ Gate #1: reverse-engineering tree curation — PASSED")
-    else:
-        n_failed += 1
-        summary_lines.append("  ✗ Gate #1: reverse-engineering tree curation — FAILED")
-
-    print(f"\n{bar}\nGATE #2: hidden-gem registry\n{bar}")
-    passed, output = _run_hidden_gems_gate()
-    print(output.rstrip())
-    if passed:
-        n_passed += 1
-        summary_lines.append("  ✓ Gate #2: hidden-gem registry — PASSED")
-    else:
-        n_failed += 1
-        summary_lines.append("  ✗ Gate #2: hidden-gem registry — FAILED")
-
-    print(f"\n{bar}\nGATE #3: hidden-gem readiness\n{bar}")
-    passed, output = _run_hidden_gem_readiness_gate()
-    print(output.rstrip())
-    if passed:
-        n_passed += 1
-        summary_lines.append("  ✓ Gate #3: hidden-gem readiness — PASSED")
-    else:
-        n_failed += 1
-        summary_lines.append("  ✗ Gate #3: hidden-gem readiness — FAILED")
-
-    print(f"\n{bar}\nGATE #4: engineered-correction readiness\n{bar}")
-    passed, output = _run_engineered_corrections_gate()
-    print(output.rstrip())
-    if passed:
-        n_passed += 1
-        summary_lines.append("  ✓ Gate #4: engineered-correction readiness — PASSED")
-    else:
-        n_failed += 1
-        summary_lines.append("  ✗ Gate #4: engineered-correction readiness — FAILED")
-
-    print(f"\n{bar}\nGATE #5: HNeRV frontier scorecard\n{bar}")
-    proc = subprocess.run([sys.executable, str(HNERV_SCORECARD_AUDIT)], capture_output=True, text=True)
-    output = proc.stdout + proc.stderr
-    print(output.rstrip())
-    if proc.returncode == 0:
-        n_passed += 1
-        summary_lines.append("  ✓ Gate #5: HNeRV frontier scorecard — PASSED")
-    else:
-        n_failed += 1
-        summary_lines.append("  ✗ Gate #5: HNeRV frontier scorecard — FAILED")
-
-    print(f"\n{bar}\nGATE #6: HNeRV low-level repack proof\n{bar}")
-    passed, output = _run_hnerv_lowlevel_repack_gate()
-    print(output.rstrip())
-    if passed:
-        n_passed += 1
-        summary_lines.append("  ✓ Gate #6: HNeRV low-level repack proof — PASSED")
-    else:
-        n_failed += 1
-        summary_lines.append("  ✗ Gate #6: HNeRV low-level repack proof — FAILED")
-
-    print(f"\n{bar}\nGATE #7: tooling consolidation inventory\n{bar}")
-    proc = subprocess.run(
-        [sys.executable, str(TOOLING_CONSOLIDATION_AUDIT)],
-        capture_output=True,
-        text=True,
-    )
-    output = proc.stdout + proc.stderr
-    print(output.rstrip())
-    if proc.returncode == 0:
-        n_passed += 1
-        summary_lines.append("  ✓ Gate #7: tooling consolidation inventory — PASSED")
-    else:
-        n_failed += 1
-        summary_lines.append("  ✗ Gate #7: tooling consolidation inventory — FAILED")
-
-    print(f"\n{bar}\nGATE #8: recovered remote lane canonicalization\n{bar}")
-    proc = subprocess.run(
-        [sys.executable, str(RECOVERED_REMOTE_LANES_AUDIT), "--strict"],
-        capture_output=True,
-        text=True,
-    )
-    output = proc.stdout + proc.stderr
-    print(output.rstrip())
-    if proc.returncode == 0:
-        n_passed += 1
-        summary_lines.append("  ✓ Gate #8: recovered remote lane canonicalization — PASSED")
-    else:
-        n_failed += 1
-        summary_lines.append("  ✗ Gate #8: recovered remote lane canonicalization — FAILED")
-
-    print(f"\n{bar}\nGATE #9: untracked source inventory\n{bar}")
-    passed, output = _run_untracked_source_gate()
-    print(output.rstrip())
-    if passed:
-        n_passed += 1
-        if UNTRACKED_SOURCE_DISPOSITION_MANIFEST.exists():
-            summary_lines.append("  ✓ Gate #9: untracked source inventory — PASSED (STRICT DISPOSITION)")
-        else:
-            summary_lines.append("  ✓ Gate #9: untracked source inventory — PASSED (ADVISORY)")
-    else:
-        n_failed += 1
-        summary_lines.append("  ✗ Gate #9: untracked source inventory — FAILED")
-
-    print(f"\n{bar}\nGATE #10: orphan recovery canonicalization\n{bar}")
-    passed, output = _run_gate("orphan recovery canonicalization", ORPHAN_RECOVERY_AUDIT)
-    print(output.rstrip())
-    if passed:
-        n_passed += 1
-        summary_lines.append("  ✓ Gate #10: orphan recovery canonicalization — PASSED")
-    else:
-        n_failed += 1
-        summary_lines.append("  ✗ Gate #10: orphan recovery canonicalization — FAILED")
-
-    print(f"\n{bar}\nGATE #11: preserved-orphan canonicalization\n{bar}")
-    proc = subprocess.run(
-        [sys.executable, str(PRESERVED_ORPHANS_AUDIT), "--format", "text"],
-        capture_output=True,
-        text=True,
-    )
-    output = proc.stdout + proc.stderr
-    print(output.rstrip())
-    if proc.returncode == 0:
-        n_passed += 1
-        summary_lines.append("  ✓ Gate #11: preserved-orphan canonicalization — PASSED")
-    else:
-        n_failed += 1
-        summary_lines.append("  ✗ Gate #11: preserved-orphan canonicalization — FAILED")
-
-    print(f"\n{bar}\nGATE #12: recovery custody snapshots\n{bar}")
-    proc = subprocess.run(
-        [sys.executable, str(RECOVERY_CUSTODY_SNAPSHOTS_AUDIT), "--format", "text"],
-        capture_output=True,
-        text=True,
-    )
-    output = proc.stdout + proc.stderr
-    print(output.rstrip())
-    if proc.returncode == 0:
-        n_passed += 1
-        summary_lines.append("  ✓ Gate #12: recovery custody snapshots — PASSED")
-    else:
-        n_failed += 1
-        summary_lines.append("  ✗ Gate #12: recovery custody snapshots — FAILED")
-
-    print(f"\n{bar}\nGATE #13: reverse-engineering release manifest\n{bar}")
-    passed, output = _run_reverse_engineering_release_gate()
-    print(output.rstrip())
-    if passed:
-        n_passed += 1
-        summary_lines.append("  ✓ Gate #13: reverse-engineering release manifest — PASSED")
-    else:
-        n_failed += 1
-        summary_lines.append("  ✗ Gate #13: reverse-engineering release manifest — FAILED")
-
-    print(f"\n{bar}\nGATE #14: release index/worktree split\n{bar}")
-    proc = subprocess.run(
-        [
-            sys.executable,
-            str(RELEASE_INDEX_SPLIT_AUDIT),
-            "--repo-root",
-            str(REPO),
-            "--strict",
-            "--local-custody-manifest",
-            str(LOCAL_CUSTODY_RELEASE_MANIFEST),
-        ],
-        capture_output=True,
-        text=True,
-    )
-    output = proc.stdout + proc.stderr
-    print(output.rstrip())
-    if proc.returncode == 0:
-        n_passed += 1
-        summary_lines.append("  ✓ Gate #14: release index/worktree split — PASSED")
-    else:
-        n_failed += 1
-        summary_lines.append("  ✗ Gate #14: release index/worktree split — FAILED")
-
-    print(f"\n{bar}\nGATE #15: nested gitlink custody\n{bar}")
-    proc = subprocess.run(
-        [
-            sys.executable,
-            str(NESTED_GITLINK_CUSTODY_AUDIT),
-            "--repo-root",
-            str(REPO),
-            "--strict",
-            "--local-custody-manifest",
-            str(LOCAL_CUSTODY_RELEASE_MANIFEST),
-        ],
-        capture_output=True,
-        text=True,
-    )
-    output = proc.stdout + proc.stderr
-    print(output.rstrip())
-    if proc.returncode == 0:
-        n_passed += 1
-        summary_lines.append("  ✓ Gate #15: nested gitlink custody — PASSED")
-    else:
-        n_failed += 1
-        summary_lines.append("  ✗ Gate #15: nested gitlink custody — FAILED")
-
-    print(f"\n{bar}\nGATE #16: staged public release hygiene\n{bar}")
-    proc = subprocess.run(
-        [
-            sys.executable,
-            str(STAGED_PUBLIC_RELEASE_HYGIENE_AUDIT),
-            "--repo-root",
-            str(REPO),
-            "--strict",
-        ],
-        capture_output=True,
-        text=True,
-    )
-    output = proc.stdout + proc.stderr
-    print(output.rstrip())
-    if proc.returncode == 0:
-        n_passed += 1
-        summary_lines.append("  ✓ Gate #16: staged public release hygiene — PASSED")
-    else:
-        n_failed += 1
-        summary_lines.append("  ✗ Gate #16: staged public release hygiene — FAILED")
-
     n_forensic_only = 0
     n_local_smoke_only = 0
-    for i, lane in enumerate(lanes, start=1):
-        bar = "═" * 70
-        print(f"\n{bar}\nLANE #{i}: {lane['name']}\n{bar}")
-        passed, output = _run_lane(lane, verbose=args.verbose)
-        print(output.rstrip())
-        if passed:
+    summary_lines: list[str] = []
+    bar = "═" * 70
+    for result in results:
+        step = result.step
+        print(f"\n{bar}\n{step.section} #{step.number}: {step.name}\n{bar}")
+        print(result.output.rstrip())
+        if result.passed:
             n_passed += 1
-            if lane.get("forensic_only"):
-                n_forensic_only += 1
-                summary_lines.append(
-                    f"  ✓ Lane #{i}: {lane['name']} — SELF-PROTECTED, NOT DISPATCH-READY"
-                )
-            elif lane.get("local_smoke_only"):
-                n_local_smoke_only += 1
-                summary_lines.append(
-                    f"  ✓ Lane #{i}: {lane['name']} — LOCAL-SMOKE ONLY, NOT DISPATCH-READY"
-                )
-            else:
-                summary_lines.append(f"  ✓ Lane #{i}: {lane['name']} — PASSED")
+            n_forensic_only += int(step.forensic_only)
+            n_local_smoke_only += int(step.local_smoke_only)
+            summary_lines.append(step.pass_summary)
         else:
             n_failed += 1
-            summary_lines.append(f"  ✗ Lane #{i}: {lane['name']} — FAILED")
+            summary_lines.append(step.fail_summary)
 
     bar = "═" * 70
     print(f"\n{bar}\nALL-LANES PREFLIGHT SUMMARY\n{bar}\n")
     for line in summary_lines:
         print(line)
+    if args.timings:
+        print("\nTimings:")
+        for result in sorted(results, key=lambda item: item.elapsed_s, reverse=True):
+            step = result.step
+            print(f"  {result.elapsed_s:6.2f}s  {step.section} #{step.number}: {step.name}")
     print()
     if n_failed == 0:
         print(f"ALL {n_passed} PREFLIGHT CHECKS PASSED.")
