@@ -1562,14 +1562,24 @@ def check_codebase_drift(strict: bool = True) -> list[str]:
     # src/tac/ subtrees; R37 added existence guard so a fresh checkout
     # missing one of these dirs doesn't crash preflight (Python <3.12
     # rglob raises FileNotFoundError on missing path).
+    # Round 2 codebase-drift fix continued (2026-05-06): the
+    # comma_lab_public_export/ tree is an OSS-publication staging mirror
+    # that contains verbatim copies of source files (including this very
+    # preflight.py). Scanning the mirror produces only false-positive
+    # double-detections of patterns the canonical originals are already
+    # responsible for. Mirror is regenerated, not authored.
     drift_scan_dirs = ["scripts", "experiments",
                        "src/tac/contrib", "src/tac/deploy",
                        "src/tac/experiments"]
+    drift_scan_skip_parts = ("/comma_lab_public_export/",)
     for d in drift_scan_dirs:
         d_path = REPO_ROOT / d
         if not d_path.exists():
             continue
         for py_path in d_path.rglob("*.py"):
+            rel_str = str(py_path.relative_to(REPO_ROOT))
+            if any(skip in rel_str for skip in drift_scan_skip_parts):
+                continue
             all_violations.extend(_scan_python_for_forbidden(py_path))
 
     if all_violations and strict:
@@ -7549,6 +7559,10 @@ def check_eval_roundtrip_gate_called_after_output_dir_resolution(
         for p in d.rglob("*.py"):
             if "__pycache__" in p.parts:
                 continue
+            # Round 2 codebase-drift fix continued (2026-05-06): skip
+            # OSS-publication staging mirror — verbatim copy of source files.
+            if "comma_lab_public_export" in p.parts:
+                continue
             n_scanned += 1
             violations.extend(_scan_python_for_gate_before_output_dir(p, root))
 
@@ -8249,6 +8263,17 @@ _MPS_DECISION_EXEMPT_PATH_PARTS: tuple[str, ...] = (
     "/uv_project_env/",     # vendored Python deps in remote eval workspaces (numpy/distutils ccompiler_opt etc.)
     "/site-packages/",      # vendored Python deps anywhere (third-party code, not ours)
     "/__pycache__/",        # compiled bytecode artifacts
+    "/comma_lab_public_export/",  # OSS-publication staging mirror — copy
+                                  # of source files that themselves contain
+                                  # the canonical no-MPS-decision RULE TEXT
+                                  # (e.g. preflight.py docstring, AGENTS.md
+                                  # rule restatements). The originals carry
+                                  # the proper [contest-CUDA] tags within
+                                  # paragraph context; the staging copy is
+                                  # a verbatim mirror and rescanning it
+                                  # produces only false positives. Source
+                                  # files are scanned at their canonical
+                                  # locations.
 )
 
 # Tags that, when present in the same paragraph, mark the entry as a
