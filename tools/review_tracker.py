@@ -766,7 +766,7 @@ def cmd_scan(full: bool = False) -> None:
             reviewed_by = reviewed_at = review_pass = notes = ""
             new_count += 1
         else:
-            if commit and commit != prev["commit"]:
+            if full and commit and commit != prev["commit"]:
                 review_status = "stale" if prev["status"] == "reviewed" else prev["status"]
                 if review_status == "stale":
                     changed_count += 1
