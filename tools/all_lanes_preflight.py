@@ -30,16 +30,18 @@ Currently runs:
             the reviewed disposition manifest exists)
   Gate #10: tools/audit_orphan_recovery_canonicalization.py
            (orphan pyc recovery deletions must have tracked canonical copies)
-  Gate #11: tools/audit_reverse_engineering_tree.py --release-strict
+  Gate #11: tools/audit_preserved_orphans.py
+           (local preserved-orphan shadows must be duplicate, superseded, or absent)
+  Gate #12: tools/audit_reverse_engineering_tree.py --release-strict
            --release-manifest ...
            (public-release reverse-engineering custody is explicitly curated)
-  Gate #12: tools/audit_release_index_split.py --strict
+  Gate #13: tools/audit_release_index_split.py --strict
            (no staged rollback shadows; no staged private provider/runtime
             state in release commits)
-  Gate #13: tools/audit_nested_gitlink_custody.py --strict
+  Gate #14: tools/audit_nested_gitlink_custody.py --strict
            (dirty public-intake/raw-custody gitlinks must be documented and
             their inner dirty status must be visible)
-  Gate #14: tools/audit_staged_public_release_hygiene.py --strict
+  Gate #15: tools/audit_staged_public_release_hygiene.py --strict
            (staged docs/site/readme public surfaces contain no private paths,
             provider job links, or credential-like strings)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
@@ -87,6 +89,7 @@ RECOVERED_REMOTE_LANES_AUDIT = TOOLS / "audit_recovered_remote_lanes.py"
 UNTRACKED_SOURCE_AUDIT = TOOLS / "audit_untracked_source_artifacts.py"
 UNTRACKED_SOURCE_DISPOSITION_MANIFEST = REPO / ".omx/research/untracked_source_dispositions_20260505_codex.json"
 ORPHAN_RECOVERY_AUDIT = TOOLS / "audit_orphan_recovery_canonicalization.py"
+PRESERVED_ORPHANS_AUDIT = TOOLS / "audit_preserved_orphans.py"
 RELEASE_INDEX_SPLIT_AUDIT = TOOLS / "audit_release_index_split.py"
 NESTED_GITLINK_CUSTODY_AUDIT = TOOLS / "audit_nested_gitlink_custody.py"
 STAGED_PUBLIC_RELEASE_HYGIENE_AUDIT = TOOLS / "audit_staged_public_release_hygiene.py"
@@ -377,6 +380,7 @@ def main(argv: list[str] | None = None) -> int:
         RECOVERED_REMOTE_LANES_AUDIT,
         UNTRACKED_SOURCE_AUDIT,
         ORPHAN_RECOVERY_AUDIT,
+        PRESERVED_ORPHANS_AUDIT,
         RELEASE_INDEX_SPLIT_AUDIT,
         STAGED_PUBLIC_RELEASE_HYGIENE_AUDIT,
         LOCAL_CUSTODY_RELEASE_MANIFEST,
@@ -519,17 +523,32 @@ def main(argv: list[str] | None = None) -> int:
         n_failed += 1
         summary_lines.append("  ✗ Gate #10: orphan recovery canonicalization — FAILED")
 
-    print(f"\n{bar}\nGATE #11: reverse-engineering release manifest\n{bar}")
+    print(f"\n{bar}\nGATE #11: preserved-orphan canonicalization\n{bar}")
+    proc = subprocess.run(
+        [sys.executable, str(PRESERVED_ORPHANS_AUDIT), "--format", "text"],
+        capture_output=True,
+        text=True,
+    )
+    output = proc.stdout + proc.stderr
+    print(output.rstrip())
+    if proc.returncode == 0:
+        n_passed += 1
+        summary_lines.append("  ✓ Gate #11: preserved-orphan canonicalization — PASSED")
+    else:
+        n_failed += 1
+        summary_lines.append("  ✗ Gate #11: preserved-orphan canonicalization — FAILED")
+
+    print(f"\n{bar}\nGATE #12: reverse-engineering release manifest\n{bar}")
     passed, output = _run_reverse_engineering_release_gate()
     print(output.rstrip())
     if passed:
         n_passed += 1
-        summary_lines.append("  ✓ Gate #11: reverse-engineering release manifest — PASSED")
+        summary_lines.append("  ✓ Gate #12: reverse-engineering release manifest — PASSED")
     else:
         n_failed += 1
-        summary_lines.append("  ✗ Gate #11: reverse-engineering release manifest — FAILED")
+        summary_lines.append("  ✗ Gate #12: reverse-engineering release manifest — FAILED")
 
-    print(f"\n{bar}\nGATE #12: release index/worktree split\n{bar}")
+    print(f"\n{bar}\nGATE #13: release index/worktree split\n{bar}")
     proc = subprocess.run(
         [
             sys.executable,
@@ -547,12 +566,12 @@ def main(argv: list[str] | None = None) -> int:
     print(output.rstrip())
     if proc.returncode == 0:
         n_passed += 1
-        summary_lines.append("  ✓ Gate #12: release index/worktree split — PASSED")
+        summary_lines.append("  ✓ Gate #13: release index/worktree split — PASSED")
     else:
         n_failed += 1
-        summary_lines.append("  ✗ Gate #12: release index/worktree split — FAILED")
+        summary_lines.append("  ✗ Gate #13: release index/worktree split — FAILED")
 
-    print(f"\n{bar}\nGATE #13: nested gitlink custody\n{bar}")
+    print(f"\n{bar}\nGATE #14: nested gitlink custody\n{bar}")
     proc = subprocess.run(
         [
             sys.executable,
@@ -570,12 +589,12 @@ def main(argv: list[str] | None = None) -> int:
     print(output.rstrip())
     if proc.returncode == 0:
         n_passed += 1
-        summary_lines.append("  ✓ Gate #13: nested gitlink custody — PASSED")
+        summary_lines.append("  ✓ Gate #14: nested gitlink custody — PASSED")
     else:
         n_failed += 1
-        summary_lines.append("  ✗ Gate #13: nested gitlink custody — FAILED")
+        summary_lines.append("  ✗ Gate #14: nested gitlink custody — FAILED")
 
-    print(f"\n{bar}\nGATE #14: staged public release hygiene\n{bar}")
+    print(f"\n{bar}\nGATE #15: staged public release hygiene\n{bar}")
     proc = subprocess.run(
         [
             sys.executable,
@@ -591,10 +610,10 @@ def main(argv: list[str] | None = None) -> int:
     print(output.rstrip())
     if proc.returncode == 0:
         n_passed += 1
-        summary_lines.append("  ✓ Gate #14: staged public release hygiene — PASSED")
+        summary_lines.append("  ✓ Gate #15: staged public release hygiene — PASSED")
     else:
         n_failed += 1
-        summary_lines.append("  ✗ Gate #14: staged public release hygiene — FAILED")
+        summary_lines.append("  ✗ Gate #15: staged public release hygiene — FAILED")
 
     n_forensic_only = 0
     n_local_smoke_only = 0

@@ -4905,3 +4905,55 @@ Verification:
   decoded_context,reference_context --json-out
   /tmp/pr91_context_window_cli_check.json` produced
   `blocked_hpm1_probability_range_contract_mismatch`.
+
+## R72 - 2026-05-06 Preserved Orphan Shadow Audit
+
+Closed the remaining `.omx/state/orphans_preserved/` shadow class with an
+executable audit before deleting local duplicate/stale copies.
+
+Added:
+
+- `tools/audit_preserved_orphans.py`
+- `src/tac/tests/test_audit_preserved_orphans.py`
+- Gate #11 in `tools/all_lanes_preflight.py`.
+
+Current disposition before local cleanup:
+
+- `remote_lane_q_faithful_jointgen_drift_20260505.sh.orphan` is byte-identical
+  to `scripts/remote_lane_q_faithful_jointgen.sh`
+  (`sha256=5ab8d5531589dd4552d47612934509115fee88ca35f413f25f9b75cdeac3c4f9`).
+- `test_yousfi_3_variance_noise_unresolved_imports_20260505.py.orphan` is
+  byte-identical to `src/tac/tests/test_yousfi_3_variance_noise.py`
+  (`sha256=7a1aae49cef28047702da08f841a510b1d4b587c3d96159b413e3ad9c40f83f1`).
+- `test_yousfi_5_uncertainty_unresolved_imports_20260505.py.orphan` is
+  byte-identical to `src/tac/tests/test_yousfi_5_uncertainty.py`
+  (`sha256=e74f70c7bbee821ac7cc3229bb9e6898334e557061b5cc50cd19efe46f4f8211`).
+- `remote_lane_pr79_segaction_search_no_provenance_20260505.sh.orphan` is an
+  older local shadow superseded by `scripts/remote_lane_pr79_segaction_search.sh`.
+  The canonical script adds public commit pinning, provenance, heartbeat,
+  typed PR79 payload parsing, and explicit no-score proxy markers.
+
+The audit is intentionally local-custody only: it makes no score claim, does
+not dispatch, and blocks unknown or content-drift preserved orphans unless a
+reviewed supersession contract exists.
+
+Verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_audit_preserved_orphans.py -q`
+  -> `4 passed`.
+- `.venv/bin/python tools/audit_preserved_orphans.py --format json` reported
+  `ready_for_preserved_orphan_cleanup=true`, `duplicate_count=3`,
+  `superseded_count=1`, and no blockers.
+- After deleting the resolved local shadow files, `.venv/bin/python
+  tools/audit_preserved_orphans.py --format text` reported
+  `PASS (0 duplicate; 0 superseded; 0 unknown)`.
+- `.venv/bin/python -m pytest src/tac/tests/test_audit_preserved_orphans.py
+  src/tac/tests/test_audit_orphan_recovery_canonicalization.py
+  src/tac/tests/test_audit_recovered_remote_lanes.py
+  src/tac/tests/test_recovered_remote_lane_scripts.py -q` -> `14 passed`.
+- `.venv/bin/python -m py_compile tools/all_lanes_preflight.py
+  tools/audit_preserved_orphans.py
+  src/tac/tests/test_audit_preserved_orphans.py` passed.
+- After staging the new audit files, `.venv/bin/python tools/all_lanes_preflight.py`
+  passed: `ALL 19 PREFLIGHT CHECKS PASSED`, with Gate #11 reporting
+  `preserved-orphan canonicalization`.
