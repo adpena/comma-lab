@@ -23,6 +23,7 @@ loaded at inflate time.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import sys
 import time
@@ -72,15 +73,27 @@ def _classes_to_one_hot(classes: torch.Tensor) -> torch.Tensor:
 
 
 def _grayscale_to_mask_features(
-    gray: torch.Tensor, *, device: torch.device, mode: str
+    gray: torch.Tensor,
+    *,
+    device: torch.device,
+    mode: str,
+    class_targets: torch.Tensor | None = None,
 ) -> torch.Tensor:
     if mode == "soft_lut":
         from tac.mask_grayscale_lut import grayscale_to_probability_map
 
+        targets = None
+        if class_targets is not None:
+            targets = class_targets.to(device=device, dtype=torch.float32)
         return grayscale_to_probability_map(
-            gray.to(device), sigma=15.0, channel_first=True
+            gray.to(device), sigma=15.0, targets=targets, channel_first=True
         ).float()
     if mode == "hard_onehot":
+        if class_targets is not None:
+            raise RuntimeError(
+                "custom class targets require SEGMAP_GRAYSCALE_MODE=soft_lut; "
+                "hard_onehot uses the fixed nearest-class decoder"
+            )
         classes = _grayscale_to_classes(gray)
         return _classes_to_one_hot(classes).to(device)
     raise RuntimeError(
@@ -132,10 +145,35 @@ def _load_state(payload_path: Path) -> dict:
     return unpack_payload_tar_xz(payload_path)
 
 
+def _resolve_archive_member(archive_dir: Path, filename: str, label: str) -> Path:
+    rel = Path(filename)
+    if not filename or rel.is_absolute() or ".." in rel.parts:
+        raise RuntimeError(
+            f"{label} must be a nonempty relative archive member path without '..', "
+            f"got {filename!r}"
+        )
+    return archive_dir / rel
+
+
+def _load_class_targets_payload(path: Path) -> torch.Tensor:
+    from tac.learnable_class_targets import LearnableClassTargets
+
+    data = path.read_bytes()
+    targets = LearnableClassTargets.deserialize_from_bytes(data)()
+    sha256 = hashlib.sha256(data).hexdigest()
+    print(
+        f"[inflate-segmap] loaded class targets payload {path.name} "
+        f"bytes={len(data)} sha256={sha256} targets={targets.tolist()}",
+        file=sys.stderr,
+    )
+    return targets.detach().to(torch.float32)
+
+
 def inflate(archive_dir: Path, inflated_dir: Path, video_names_file: Path,
             payload_filename: str = "segmap_weights.tar.xz",
             mask_filename: str = "grayscale.mkv",
             poses_filename: str = "optimized_poses.pt",
+            class_targets_filename: str | None = None,
             hidden: int = 24, block_hidden: int = 24, num_blocks: int = 8,
             max_frame_index: int = NUM_FRAMES,
             target_w: int = OUT_W, target_h: int = OUT_H) -> None:
@@ -147,6 +185,11 @@ def inflate(archive_dir: Path, inflated_dir: Path, video_names_file: Path,
 
     payload_path = archive_dir / payload_filename
     mask_path = archive_dir / mask_filename
+    class_targets_path = None
+    if class_targets_filename:
+        class_targets_path = _resolve_archive_member(
+            archive_dir, class_targets_filename, "class_targets_filename"
+        )
 
     for f, label in [
         (payload_path, "segmap_weights.tar.xz"),
@@ -154,6 +197,8 @@ def inflate(archive_dir: Path, inflated_dir: Path, video_names_file: Path,
     ]:
         if not f.exists():
             raise FileNotFoundError(f"missing {label}: {f}")
+    if class_targets_path is not None and not class_targets_path.exists():
+        raise FileNotFoundError(f"missing class targets payload: {class_targets_path}")
 
     if torch.cuda.is_available():
         device = torch.device("cuda")
@@ -184,9 +229,18 @@ def inflate(archive_dir: Path, inflated_dir: Path, video_names_file: Path,
             f"unknown SEGMAP_GRAYSCALE_MODE={grayscale_mode!r}; "
             "expected soft_lut or hard_onehot"
         )
+    class_targets = (
+        _load_class_targets_payload(class_targets_path)
+        if class_targets_path is not None
+        else None
+    )
+    if class_targets is not None and grayscale_mode != "soft_lut":
+        raise RuntimeError(
+            "custom class targets are only valid with SEGMAP_GRAYSCALE_MODE=soft_lut"
+        )
     print(
         f"[inflate-segmap] decoded grayscale in {time.monotonic() - t0:.2f}s "
-        f"(mode={grayscale_mode})",
+        f"(mode={grayscale_mode}, class_targets={'custom' if class_targets is not None else 'fixed'})",
         file=sys.stderr,
     )
 
@@ -209,7 +263,10 @@ def inflate(archive_dir: Path, inflated_dir: Path, video_names_file: Path,
         for start in range(0, n_total, batch):
             end = min(start + batch, n_total)
             chunk_oh = _grayscale_to_mask_features(
-                gray[start:end], device=device, mode=grayscale_mode
+                gray[start:end],
+                device=device,
+                mode=grayscale_mode,
+                class_targets=class_targets,
             )
             frame_idx = torch.arange(start, end, device=device, dtype=torch.long)
             rgb = model(chunk_oh, frame_idx)
@@ -251,6 +308,12 @@ def _cli() -> int:
     parser.add_argument("--payload-filename", default="segmap_weights.tar.xz")
     parser.add_argument("--mask-filename", default="grayscale.mkv")
     parser.add_argument("--poses-filename", default="optimized_poses.pt")
+    parser.add_argument(
+        "--class-targets-filename",
+        default=_os.environ.get("SEGMAP_CLASS_TARGETS_FILENAME", ""),
+        help="Optional 10-byte fp16 Lane LCT payload archive member. Empty "
+             "default preserves the fixed Selfcomp class targets.",
+    )
     # CLI defaults are the canonical Lane SC++/SA arch (hidden=24, block_hidden=24,
     # num_blocks=8). Lane DARTS-S sweeps over alternative archs and overrides via
     # SEGMAP_HIDDEN / SEGMAP_BLOCK_HIDDEN / SEGMAP_NUM_BLOCKS env vars (sourced
@@ -273,6 +336,7 @@ def _cli() -> int:
         payload_filename=args.payload_filename,
         mask_filename=args.mask_filename,
         poses_filename=args.poses_filename,
+        class_targets_filename=args.class_targets_filename or None,
         hidden=args.hidden,
         block_hidden=args.block_hidden,
         num_blocks=args.num_blocks,

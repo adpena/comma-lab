@@ -20,6 +20,7 @@ CRITICAL CONSTRAINTS (CLAUDE.md):
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 import time
@@ -101,6 +102,21 @@ def _parse_args() -> argparse.Namespace:
              "per-pair training weights (Lane WC-S Curator outlier weighting). "
              "When supplied, each pair's loss is multiplied by its weight; "
              "must have length == number of training pairs.",
+    )
+    p.add_argument(
+        "--learnable-class-targets",
+        action="store_true",
+        default=False,
+        help="Opt in to Lane LCT: train on grayscale mask pairs through "
+             "LearnableClassTargets and emit the fp16 class-target payload. "
+             "Default disabled preserves fixed soft-LUT probability masks.",
+    )
+    p.add_argument(
+        "--class-targets-filename",
+        type=str,
+        default="class_targets.fp16",
+        help="Output/archive member filename for the 10-byte LCT fp16 payload "
+             "when --learnable-class-targets is enabled.",
     )
 
     p.add_argument(
@@ -231,11 +247,19 @@ def _load_pairs(args: argparse.Namespace, device: torch.device):
     return mask_classes, gt_frames
 
 
-def _build_pair_tensors(mask_classes: torch.Tensor, gt_frames):
+def _build_pair_tensors(
+    mask_classes: torch.Tensor,
+    gt_frames,
+    *,
+    learnable_class_targets: bool = False,
+):
     """Adjacent-pair construction matching upstream evaluate.py seq_len=2.
 
     Returns (mask_pairs, gt_pairs) shaped (P, 2, ...) — the SegMapTrainer
-    expects (B, T, num_classes, H, W) for masks and (B, T, 3, H, W) for GT.
+    expects (B, T, num_classes, H, W) fixed-LUT probability masks by default.
+    With ``learnable_class_targets=True`` this returns uint8 grayscale
+    (B, T, H, W) masks so SegMapTrainer can project through the differentiable
+    LCT-aware LUT. That path is opt-in only.
     """
     from tac.mask_grayscale_lut import (
         encode_masks_grayscale,
@@ -251,8 +275,11 @@ def _build_pair_tensors(mask_classes: torch.Tensor, gt_frames):
     # SegMap. Public Selfcomp #2 does not hard-argmax grayscale masks before
     # the renderer; it feeds the soft Gaussian-LUT probability map.
     gray = encode_masks_grayscale(mask_classes.long())
-    soft = grayscale_to_probability_map(gray, sigma=15.0, channel_first=True)
-    mask_pairs = soft.view(half, 2, 5, *soft.shape[-2:])
+    if learnable_class_targets:
+        mask_pairs = gray.view(half, 2, *gray.shape[-2:]).contiguous()
+    else:
+        soft = grayscale_to_probability_map(gray, sigma=15.0, channel_first=True)
+        mask_pairs = soft.view(half, 2, 5, *soft.shape[-2:])
 
     # GT frames may be a list of (3, H, W) tensors. Stack into (N, 3, H, W).
     if isinstance(gt_frames, list):
@@ -263,6 +290,44 @@ def _build_pair_tensors(mask_classes: torch.Tensor, gt_frames):
         raise RuntimeError(f"gt_tensor ndim={gt_tensor.ndim} (expected 4)")
     gt_pairs = gt_tensor.view(half, 2, *gt_tensor.shape[-3:])
     return mask_pairs, gt_pairs
+
+
+def _validate_class_targets_filename(filename: str) -> str:
+    rel = Path(filename)
+    if not filename or rel.is_absolute() or ".." in rel.parts:
+        raise ValueError(
+            "--class-targets-filename must be a nonempty relative archive member "
+            f"path without '..', got {filename!r}"
+        )
+    return rel.as_posix()
+
+
+def _write_class_targets_payload(output_dir: Path, filename: str, targets_module) -> dict:
+    filename = _validate_class_targets_filename(filename)
+    payload = targets_module.serialize_to_bytes()
+    payload_path = output_dir / filename
+    payload_path.parent.mkdir(parents=True, exist_ok=True)
+    payload_path.write_bytes(payload)
+
+    sha256 = hashlib.sha256(payload).hexdigest()
+    targets = targets_module().detach().cpu().to(torch.float32)
+    meta = {
+        "schema_version": 1,
+        "enabled": True,
+        "format": "fp16_class_targets_v1",
+        "payload_filename": filename,
+        "payload_bytes": len(payload),
+        "payload_sha256": sha256,
+        "targets_fp32": [float(v) for v in targets.tolist()],
+        "targets_fp16": [
+            float(v) for v in targets.to(torch.float16).to(torch.float32).tolist()
+        ],
+        "num_classes": int(targets.numel()),
+    }
+    meta_path = payload_path.with_suffix(payload_path.suffix + ".json")
+    meta["metadata_filename"] = str(meta_path.relative_to(output_dir))
+    meta_path.write_text(json.dumps(meta, indent=2) + "\n")
+    return meta
 
 
 def main() -> int:
@@ -278,6 +343,13 @@ def main() -> int:
     from tac.training import EMA
 
     cfg = _build_trainer_config(args, device)
+    learnable_class_targets = None
+    lct_payload_meta = {"enabled": False}
+    if args.learnable_class_targets:
+        from tac.learnable_class_targets import LearnableClassTargets
+
+        _validate_class_targets_filename(args.class_targets_filename)
+        learnable_class_targets = LearnableClassTargets(device=device)
 
     # SegMap requires max_frame_index for the per-frame affine embedding.
     # Use 1200 frames (NUM_FRAMES) as the canonical upper bound.
@@ -301,6 +373,13 @@ def main() -> int:
             "config": cfg.model_dump() if hasattr(cfg, "model_dump") else dict(vars(cfg)),
             "distillation_policy": cfg.distillation_policy_provenance(),
             "device": str(device),
+            "learnable_class_targets": (
+                _write_class_targets_payload(
+                    output_dir, args.class_targets_filename, learnable_class_targets
+                )
+                if learnable_class_targets is not None
+                else lct_payload_meta
+            ),
         }
         (output_dir / "segmap_dry_run.json").write_text(json.dumps(meta, indent=2))
         print("[train_segmap] DRY RUN OK")
@@ -319,14 +398,24 @@ def main() -> int:
         posenet=posenet,
         segnet=segnet,
         device=device,
+        learnable_class_targets=learnable_class_targets,
     )
 
     ema = EMA(model, decay=args.ema_decay)
 
     mask_classes, gt_frames = _load_pairs(args, device)
-    mask_pairs, gt_pairs = _build_pair_tensors(mask_classes, gt_frames)
+    mask_pairs, gt_pairs = _build_pair_tensors(
+        mask_classes,
+        gt_frames,
+        learnable_class_targets=learnable_class_targets is not None,
+    )
     print(f"[train_segmap] training pairs: {mask_pairs.shape[0]} (non-overlapping)",
           flush=True)
+    print(
+        "[train_segmap] mask input mode: "
+        f"{'grayscale_lct' if learnable_class_targets is not None else 'fixed_soft_lut'}",
+        flush=True,
+    )
 
     # Lane WC-S Curator outlier pair weighting (optional). When supplied, the
     # weights are checked for shape match and broadcast into the pair loss
@@ -449,10 +538,20 @@ def main() -> int:
             )
 
     train_ckpt_path = output_dir / "segmap_train.pt"
+    if learnable_class_targets is not None:
+        lct_payload_meta = _write_class_targets_payload(
+            output_dir, args.class_targets_filename, learnable_class_targets
+        )
     torch.save(
         {
             "model": model.state_dict(),
             "ema": ema.state_dict(),
+            "learnable_class_targets": (
+                learnable_class_targets.state_dict()
+                if learnable_class_targets is not None
+                else None
+            ),
+            "learnable_class_targets_payload": lct_payload_meta,
             "config": cfg.model_dump() if hasattr(cfg, "model_dump") else dict(vars(cfg)),
             "distillation_policy": cfg.distillation_policy_provenance(),
             "epoch": args.epochs,
@@ -474,6 +573,7 @@ def main() -> int:
         "device": str(device),
         "config": cfg.model_dump() if hasattr(cfg, "model_dump") else dict(vars(cfg)),
         "distillation_policy": cfg.distillation_policy_provenance(),
+        "learnable_class_targets": lct_payload_meta,
         "history": history,
     }
     (output_dir / "segmap_train.json").write_text(json.dumps(summary, indent=2))
