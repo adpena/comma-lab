@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import os
 import re
 import sys
 from dataclasses import asdict, dataclass
@@ -117,7 +118,10 @@ def _repo_rel(path: Path, root: Path) -> str:
 
 
 def _is_excluded(path: Path, root: Path, excludes: tuple[str, ...]) -> bool:
-    rel = _repo_rel(path, root)
+    return _is_excluded_rel(_repo_rel(path, root), excludes)
+
+
+def _is_excluded_rel(rel: str, excludes: tuple[str, ...]) -> bool:
     parts = set(Path(rel).parts)
     for item in excludes:
         if "/" in item:
@@ -139,15 +143,26 @@ def iter_scan_files(
         base = root / rel
         if not base.exists():
             continue
-        candidates = [base] if base.is_file() else sorted(base.rglob("*"))
-        for candidate in candidates:
-            if not candidate.is_file():
-                continue
-            if _is_excluded(candidate, root, excludes):
-                continue
-            if candidate.suffix.lower() not in TEXT_SUFFIXES:
-                continue
-            files.append(candidate)
+        if base.is_file():
+            if not _is_excluded(base, root, excludes) and base.suffix.lower() in TEXT_SUFFIXES:
+                files.append(base)
+            continue
+        for dirpath, dirnames, filenames in os.walk(base, topdown=True):
+            dirpath_path = Path(dirpath)
+            dirnames[:] = [
+                dirname
+                for dirname in sorted(dirnames)
+                if not _is_excluded_rel(_repo_rel(dirpath_path / dirname, root), excludes)
+            ]
+            for filename in sorted(filenames):
+                candidate = dirpath_path / filename
+                if candidate.suffix.lower() not in TEXT_SUFFIXES:
+                    continue
+                if _is_excluded_rel(_repo_rel(candidate, root), excludes):
+                    continue
+                if not candidate.is_file():
+                    continue
+                files.append(candidate)
     return files
 
 

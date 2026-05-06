@@ -72,6 +72,23 @@ def test_scanner_catches_known_typo_flag(tmp_path: Path) -> None:
     assert hazards[0].kind == "known_typo_flag"
 
 
+def test_scanner_prunes_excluded_result_trees(tmp_path: Path) -> None:
+    helper = _load_helper()
+    scripts = tmp_path / "scripts"
+    scripts.mkdir()
+    (scripts / "live.sh").write_text("python tools/x.py --rmote live\n", encoding="utf-8")
+    archived = tmp_path / "experiments" / "results" / "public_pr" / "archived.sh"
+    archived.parent.mkdir(parents=True)
+    archived.write_text("python tools/x.py --rmote archived\n", encoding="utf-8")
+
+    files = helper.iter_scan_files(tmp_path, scan_paths=("scripts", "experiments"))
+    hazards = helper.scan_paths(tmp_path, scan_paths=("scripts", "experiments"))
+
+    assert [path.relative_to(tmp_path).as_posix() for path in files] == ["scripts/live.sh"]
+    assert len(hazards) == 1
+    assert hazards[0].path == "scripts/live.sh"
+
+
 def test_scanner_catches_zsh_path_variable_without_flagging_python_heredoc(tmp_path: Path) -> None:
     helper = _load_helper()
     snippet = tmp_path / "docs" / "ops.md"

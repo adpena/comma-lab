@@ -6068,6 +6068,55 @@ Next performance tranche:
   pruning traversal pattern there next for another cross-platform pure-Python
   win.
 
+## R94 - 2026-05-06 Dispatch Hazard Scanner Pruning
+
+Lowered Gate #0 using the same deterministic pruning pattern from R93.
+
+Changes:
+
+- `tools/check_dispatch_cli_shell_hazards.py` now traverses scan roots with
+  `os.walk(topdown=True)` and removes excluded directories from `dirnames`
+  before descent.
+- Preserved deterministic sorted directory and filename order.
+- Added a regression test proving `experiments/results/**` is pruned before
+  hazard scanning, so archived public-intake scripts do not inflate scan time
+  or produce duplicate findings.
+
+Measured correctness and latency:
+
+- Gate #0 standalone strict scan: `0.33s real`.
+- Full default all-lanes preflight after R94: `1.85s real` with
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+- Full serial compatibility all-lanes preflight after R94: `9.86s real` with
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+- Default all-lanes top timings now: HNeRV low-level repack `1.81s`, Apogee
+  intN `1.33s`, Omega-W-V3 `1.33s`, staged public release hygiene `0.77s`,
+  release index split `0.72s`, tooling consolidation `0.47s`, and dispatch
+  shell hazards `0.41s`.
+
+Verification:
+
+- `.venv/bin/python -m py_compile tools/check_dispatch_cli_shell_hazards.py`
+  passed.
+- `.venv/bin/python -m ruff check tools/check_dispatch_cli_shell_hazards.py
+  src/tac/tests/test_dispatch_cli_shell_hazards.py` passed.
+- `.venv/bin/python -m pytest src/tac/tests/test_dispatch_cli_shell_hazards.py
+  -q` passed: `13 passed`.
+- `.venv/bin/python tools/check_dispatch_cli_shell_hazards.py --strict
+  --json-out /tmp/gate0_after.json` passed.
+- `.venv/bin/python tools/all_lanes_preflight.py --timings` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+- `.venv/bin/python tools/all_lanes_preflight.py --jobs 1` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+
+Next performance tranche:
+
+- HNeRV low-level repack is now the default wall-clock limiter. Inspect
+  `src/tac/hnerv_lowlevel_packer.py` for deterministic per-section or
+  per-parameter parallelism; do not reorder manifest emission.
+- OSS hardening blockers from public-export materialization remain separate:
+  dependency closure, `--force` output-dir safety, and schema pinning.
+
 ## R81 - 2026-05-06 Component Sensitivity Shard Merge IO Lowering
 
 Continued the Gate #7 lowering tranche on the finite-difference sensitivity
