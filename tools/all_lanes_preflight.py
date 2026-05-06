@@ -690,6 +690,41 @@ def _pr91_runtime_source_inventory_checks(
     }
 
 
+def _pr91_runtime_device_contract_checks(
+    prefix: str,
+    payload: dict[str, object],
+) -> dict[str, bool]:
+    blockers = set(payload.get("dispatch_blockers", []))
+    gates = payload.get("gates")
+    device_gate = gates.get("hpac_device_contract_resolved") if isinstance(gates, dict) else {}
+    contract = payload.get("hpac_device_contract")
+    if not isinstance(device_gate, dict):
+        device_gate = {}
+    if not isinstance(contract, dict):
+        contract = {}
+    ambient_blocked = (
+        "hpac_device_contract_resolved" in blockers
+        and device_gate.get("passed") is False
+        and contract.get("passed") is False
+        and contract.get("status") == "blocked_ambient_or_contradictory"
+        and int(payload.get("ambient_device_call_count", 0)) >= 1
+        and int(payload.get("contradiction_count", 0)) >= 1
+    )
+    resolved_cpu = (
+        "hpac_device_contract_resolved" not in blockers
+        and device_gate.get("passed") is True
+        and contract.get("passed") is True
+        and contract.get("status") == "resolved_cpu_only"
+        and contract.get("resolved_device") == "cpu"
+        and int(payload.get("ambient_device_call_count", 0)) == 0
+        and int(payload.get("contradiction_count", 0)) == 0
+    )
+    return {
+        f"{prefix}_runtime_device_contract_fail_closed_or_resolved_cpu": ambient_blocked or resolved_cpu,
+        f"{prefix}_runtime_device_contract_not_cuda": contract.get("resolved_device") != "cuda",
+    }
+
+
 def _run_pr91_hpm1_fail_closed_gate() -> tuple[bool, str]:
     ok_readiness, readiness, readiness_output = _json_tool(PR91_HPM1_READINESS_AUDIT)
     if not ok_readiness:
@@ -715,10 +750,7 @@ def _run_pr91_hpm1_fail_closed_gate() -> tuple[bool, str]:
         "runtime_hpm1_loader_without_sidecars",
         "exact_cuda_auth_eval_after_parity",
     }
-    required_runtime_blockers = {
-        "hpac_device_contract_resolved",
-        "runtime_consumer_sidecar_free_hpm1",
-    }
+    required_runtime_blockers = {"runtime_consumer_sidecar_free_hpm1"}
     readiness_hash = _canonical_payload_hash(readiness)
     readiness_artifact_hash = _canonical_payload_hash(readiness_artifact)
     runtime_hash = _canonical_payload_hash(runtime)
@@ -742,6 +774,8 @@ def _run_pr91_hpm1_fail_closed_gate() -> tuple[bool, str]:
         **_required_blockers_present("artifact_runtime", runtime_artifact, required_runtime_blockers),
         **_pr91_runtime_source_inventory_checks("live_readiness", readiness),
         **_pr91_runtime_source_inventory_checks("artifact_readiness", readiness_artifact),
+        **_pr91_runtime_device_contract_checks("live_runtime", runtime),
+        **_pr91_runtime_device_contract_checks("artifact_runtime", runtime_artifact),
         "readiness_artifact_hash_matches_live": bool(readiness_hash)
         and readiness_hash == readiness_artifact_hash,
         "runtime_artifact_hash_matches_live": bool(runtime_hash)
@@ -764,8 +798,6 @@ def _run_pr91_hpm1_fail_closed_gate() -> tuple[bool, str]:
             and isinstance(readiness["member_x"]["zip_report"].get("wire_contract"), dict)
             and readiness["member_x"]["zip_report"]["wire_contract"].get("passed") is True
         ),
-        "runtime_records_device_issue": int(runtime.get("ambient_device_call_count", 0)) >= 1
-        and int(runtime.get("contradiction_count", 0)) >= 1,
     }
     failed = [name for name, passed in checks.items() if not passed]
     if failed:

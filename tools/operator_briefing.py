@@ -280,15 +280,40 @@ def _load_pr91_hpm1_readiness_artifact() -> dict[str, object]:
     if isinstance(readiness.get("member_x"), dict) and isinstance(readiness["member_x"].get("zip_report"), dict):
         zip_report = readiness["member_x"]["zip_report"]
     wire_contract = zip_report.get("wire_contract") if isinstance(zip_report, dict) else {}
+    hpac_contract = runtime.get("hpac_device_contract")
+    if not isinstance(hpac_contract, dict):
+        hpac_contract = {}
+    hpac_cpu_resolved = (
+        hpac_contract.get("passed") is True
+        and hpac_contract.get("status") == "resolved_cpu_only"
+        and hpac_contract.get("resolved_device") == "cpu"
+    )
     summary = (
-        "PR91 static archive/member/HPM1 custody is visible, but HPM1 decode/reencode "
-        "and HPAC runtime device semantics remain blocked; this is not a score or "
-        "dispatch artifact."
+        "PR91 static archive/member/HPM1 custody is visible, and HPAC device "
+        "semantics are pinned CPU-only; HPM1 decode/reencode and sidecar-free "
+        "runtime consumption remain blocked. This is not a score or dispatch artifact."
+        if hpac_cpu_resolved
+        else (
+            "PR91 static archive/member/HPM1 custody is visible, but HPM1 decode/reencode "
+            "and HPAC runtime device semantics remain blocked; this is not a score or "
+            "dispatch artifact."
+        )
+    )
+    next_patch = (
+        "Recover full HPM1 decode/reencode parity, then prove sidecar-free runtime "
+        "consumption before any dispatch."
+        if hpac_cpu_resolved
+        else (
+            "Resolve HPAC CPU/CUDA device contract, recover full HPM1 decode/reencode "
+            "parity, then prove sidecar-free runtime consumption before any dispatch."
+        )
     )
     return {
         "kind": "pr91_hpm1_readiness_bundle",
         "name": "PR91 HPM1 categorical mask rate signal",
-        "state": "AUDIT_ERROR_FAIL_CLOSED" if audit_errors else "BLOCKED_FAIL_CLOSED",
+        "state": "AUDIT_ERROR_FAIL_CLOSED"
+        if audit_errors
+        else ("BLOCKED_CPU_CONTRACT_PINNED" if hpac_cpu_resolved else "BLOCKED_FAIL_CLOSED"),
         "evidence_grade": readiness.get("evidence_grade"),
         "ready_for_exact_eval_dispatch": False,
         "score_claim": False,
@@ -324,10 +349,7 @@ def _load_pr91_hpm1_readiness_artifact() -> dict[str, object]:
         "dispatch_blockers": readiness_blockers + runtime_blockers,
         "artifact_dispatch_blockers": artifact_readiness_blockers + artifact_runtime_blockers,
         "summary": summary,
-        "next_patch": (
-            "Resolve HPAC CPU/CUDA device contract, recover full HPM1 decode/reencode "
-            "parity, then prove sidecar-free runtime consumption before any dispatch."
-        ),
+        "next_patch": next_patch,
     }
 
 

@@ -69,11 +69,56 @@ def _runtime_payload(hash_value: str = "runtime-hash") -> dict[str, object]:
         "tool_run_manifest": _tool_manifest(hash_value),
         "ambient_device_call_count": 2,
         "contradiction_count": 1,
+        "hpac_device_contract": {
+            "status": "blocked_ambient_or_contradictory",
+            "resolved_device": None,
+            "passed": False,
+            "device_classes": ["ambient_device", "ambient_device_stringified"],
+            "contradiction_count": 1,
+        },
+        "gates": {
+            "hpac_device_contract_resolved": {
+                "passed": False,
+                "required_for_dispatch": True,
+                "status": "blocked",
+            },
+            "runtime_consumer_sidecar_free_hpm1": {
+                "passed": False,
+                "required_for_dispatch": True,
+                "status": "blocked",
+            },
+        },
         "dispatch_blockers": [
             "hpac_device_contract_resolved",
             "runtime_consumer_sidecar_free_hpm1",
         ],
     }
+
+
+def _runtime_payload_resolved_cpu(hash_value: str = "runtime-hash") -> dict[str, object]:
+    payload = _runtime_payload(hash_value)
+    payload["ambient_device_call_count"] = 0
+    payload["contradiction_count"] = 0
+    payload["hpac_device_contract"] = {
+        "status": "resolved_cpu_only",
+        "resolved_device": "cpu",
+        "passed": True,
+        "reason": "all visible HPAC decompress call sites pass literal CPU",
+    }
+    payload["gates"] = {
+        "hpac_device_contract_resolved": {
+            "passed": True,
+            "required_for_dispatch": True,
+            "status": "passed",
+        },
+        "runtime_consumer_sidecar_free_hpm1": {
+            "passed": False,
+            "required_for_dispatch": True,
+            "status": "blocked",
+        },
+    }
+    payload["dispatch_blockers"] = ["runtime_consumer_sidecar_free_hpm1"]
+    return payload
 
 
 def test_pr91_hpm1_gate_passes_current_live_artifacts() -> None:
@@ -183,6 +228,72 @@ def test_pr91_hpm1_gate_rejects_missing_required_blocker(monkeypatch) -> None:
     assert passed is False
     assert "live_readiness_required_blockers_present" in output
     assert "artifact_readiness_required_blockers_present" in output
+
+
+def test_pr91_hpm1_gate_accepts_resolved_literal_cpu_runtime_contract(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+    readiness = _readiness_payload()
+    readiness["tool_run_manifest"]["canonical_payload_without_tool_manifest_sha256"] = (
+        module._recomputed_canonical_payload_hash(readiness)
+    )
+    runtime = _runtime_payload_resolved_cpu()
+    runtime["tool_run_manifest"]["canonical_payload_without_tool_manifest_sha256"] = (
+        module._recomputed_canonical_payload_hash(runtime)
+    )
+
+    def fake_json_tool(path: Path) -> tuple[bool, dict[str, object], str]:
+        if "runtime" in path.name:
+            return True, runtime, ""
+        return True, readiness, ""
+
+    def fake_load_artifact(path: Path) -> tuple[bool, dict[str, object], str]:
+        if "runtime" in str(path):
+            return True, runtime, ""
+        return True, readiness, ""
+
+    monkeypatch.setattr(module, "_json_tool", fake_json_tool)
+    monkeypatch.setattr(module, "_load_json_artifact", fake_load_artifact)
+
+    passed, output = module._run_pr91_hpm1_fail_closed_gate()
+
+    assert passed is True
+    assert "ready_for_exact_eval_dispatch=false" in output
+
+
+def test_pr91_hpm1_gate_rejects_resolved_cuda_runtime_contract(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+    readiness = _readiness_payload()
+    readiness["tool_run_manifest"]["canonical_payload_without_tool_manifest_sha256"] = (
+        module._recomputed_canonical_payload_hash(readiness)
+    )
+    runtime = _runtime_payload_resolved_cpu()
+    runtime["hpac_device_contract"] = {
+        "status": "resolved_cuda_only",
+        "resolved_device": "cuda",
+        "passed": True,
+    }
+    runtime["tool_run_manifest"]["canonical_payload_without_tool_manifest_sha256"] = (
+        module._recomputed_canonical_payload_hash(runtime)
+    )
+
+    def fake_json_tool(path: Path) -> tuple[bool, dict[str, object], str]:
+        if "runtime" in path.name:
+            return True, runtime, ""
+        return True, readiness, ""
+
+    def fake_load_artifact(path: Path) -> tuple[bool, dict[str, object], str]:
+        if "runtime" in str(path):
+            return True, runtime, ""
+        return True, readiness, ""
+
+    monkeypatch.setattr(module, "_json_tool", fake_json_tool)
+    monkeypatch.setattr(module, "_load_json_artifact", fake_load_artifact)
+
+    passed, output = module._run_pr91_hpm1_fail_closed_gate()
+
+    assert passed is False
+    assert "runtime_device_contract_fail_closed_or_resolved_cpu" in output
+    assert "runtime_device_contract_not_cuda" in output
 
 
 def test_pr91_hpm1_gate_rejects_pycache_only_runtime_inventory(monkeypatch) -> None:
