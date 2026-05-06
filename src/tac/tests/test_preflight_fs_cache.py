@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from tac.preflight_fs_cache import cache_stats, cached_filesystem
 
 
@@ -59,14 +61,20 @@ def test_cached_filesystem_read_cache_skips_non_source_paths(tmp_path: Path) -> 
 
 
 def test_cached_read_text_passes_through_broken_symlink_to_original(tmp_path: Path) -> None:
-    """Round 8 R8-1 fix (2026-05-06, 85%): a broken symlink causes
-    `Path.resolve()` to raise FileNotFoundError on most platforms (and
-    OSError on some). Pre-R8-1, _cached_read_text/_cached_read_bytes
+    """Round 8 R8-1 + Round 9 R9-1 fix (2026-05-06): a broken symlink
+    causes `Path.resolve()` to raise FileNotFoundError on most platforms
+    (and OSError on some). Pre-R8-1, _cached_read_text/_cached_read_bytes
     would let that exception propagate from the resolve step rather
-    than from the actual read attempt — confusing the operator's
-    diagnostic. Post-R8-1, a broken symlink falls through to the
-    original method, which raises a meaningful read-failure error.
-    Pin this contract.
+    than from the actual read attempt. Post-R8-1, a broken symlink
+    falls through to the original method, which raises a meaningful
+    read-failure error.
+
+    R9-1 hardening: the previous R8-1 test used `try/except: pass`
+    which passed unconditionally — a tautology that proved nothing.
+    R9-1 uses `pytest.raises` so the test FAILS if no exception is
+    raised, AND asserts the broken-symlink key is NOT cached (the
+    intent of R8-1's fall-through is to avoid caching a failed
+    resolution).
     """
     target = tmp_path / "missing.py"  # never created
     link = tmp_path / "src" / "broken_link.py"
@@ -78,18 +86,28 @@ def test_cached_read_text_passes_through_broken_symlink_to_original(tmp_path: Pa
         return
 
     with cached_filesystem(cache_reads=True):
-        # Either the original raises FileNotFoundError from the read OR
-        # the resolve guard falls through and the original raises. Both
-        # are acceptable; what's NOT acceptable is a confusing pre-resolve
-        # error message bubbling up from inside _cached_read_text.
-        try:
+        # The read MUST raise — either the original raises FileNotFoundError
+        # from the read attempt, or the resolve guard falls through and the
+        # original raises. What's NOT acceptable is silent success or a
+        # confusing pre-resolve error from inside _cached_read_text.
+        with pytest.raises((FileNotFoundError, OSError)):
             link.read_text()
-        except (FileNotFoundError, OSError):
-            pass  # expected error class; the message points at the read
+        # The broken-symlink path must NOT be cached: caching a failed
+        # resolution would mean a future call returns stale state. R8-1
+        # specifically falls through BEFORE the cache write to prevent
+        # exactly this poisoning.
+        stats = cache_stats()
+        # No read_text entry should reference the broken-link path.
+        # We can't introspect keys directly without exposing a fixture
+        # API, but read_text_entries == 0 means nothing was cached.
+        assert stats["read_text_entries"] == 0, (
+            "broken-symlink read must not poison the read_text cache; "
+            f"got stats={stats}"
+        )
 
 
 def test_cached_read_bytes_passes_through_broken_symlink_to_original(tmp_path: Path) -> None:
-    """Round 8 R8-1 sister test for read_bytes."""
+    """Round 8 R8-1 + Round 9 R9-1 sister test for read_bytes."""
     target = tmp_path / "missing.bin"
     link = tmp_path / "src" / "broken_link.bin"
     link.parent.mkdir(parents=True, exist_ok=True)
@@ -99,7 +117,10 @@ def test_cached_read_bytes_passes_through_broken_symlink_to_original(tmp_path: P
         return
 
     with cached_filesystem(cache_reads=True):
-        try:
+        with pytest.raises((FileNotFoundError, OSError)):
             link.read_bytes()
-        except (FileNotFoundError, OSError):
-            pass
+        stats = cache_stats()
+        assert stats["read_bytes_entries"] == 0, (
+            "broken-symlink read must not poison the read_bytes cache; "
+            f"got stats={stats}"
+        )
