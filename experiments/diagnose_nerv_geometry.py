@@ -39,14 +39,9 @@ _REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(_REPO_ROOT)
 
 from tac.repo_io import read_json, sha256_file, write_json
+from tac.semantic_label_contract import CONTEST_SEGNET_CLASS_NAMES
 
-CLASS_NAMES: dict[int, str] = {
-    0: "road",
-    1: "lane_marking",
-    2: "vehicle_undrivable",
-    3: "sky_or_movable",
-    4: "background",
-}
+CLASS_NAMES: dict[int, str] = dict(CONTEST_SEGNET_CLASS_NAMES)
 DEFAULT_BOUNDARY_RADII: tuple[int, ...] = (1, 2, 3, 5)
 
 

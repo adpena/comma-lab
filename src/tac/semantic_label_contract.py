@@ -50,6 +50,10 @@ CONTEST_SEGNET_CLASS_NAMES: Final[dict[int, str]] = {
     item.class_id: item.name for item in CONTEST_SEGNET_CLASSES
 }
 
+CONTEST_SEGNET_CLASS_NAME_TUPLE: Final[tuple[str, ...]] = tuple(
+    item.name for item in CONTEST_SEGNET_CLASSES
+)
+
 CONTEST_SEGNET_COMMA10K_COLORS: Final[dict[int, str]] = {
     item.class_id: item.comma10k_color for item in CONTEST_SEGNET_CLASSES
 }
@@ -102,6 +106,7 @@ __all__ = [
     "COMMA10K_INTERIOR_ONLY_CLASSES",
     "CONTEST_SEGNET_CLASSES",
     "CONTEST_SEGNET_CLASS_NAMES",
+    "CONTEST_SEGNET_CLASS_NAME_TUPLE",
     "CONTEST_SEGNET_COMMA10K_COLORS",
     "NUM_CONTEST_SEGNET_CLASSES",
     "SELFCOMP_CLASS_TO_GRAY",

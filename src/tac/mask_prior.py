@@ -17,8 +17,8 @@ hard projection. This costs ~20 bytes for typical low-resolution priors
 rate-limit budget for a Quantizr-class archive).
 
 Per Yousfi SegNet (upstream/modules.py): ``NUM_CLASSES = 5``. The class layout
-matches ``tac.camera.CLASS_MEAN_COLORS``:
-    0 = road, 1 = lane marking, 2 = undrivable, 3 = movable, 4 = vehicle.
+matches ``tac.semantic_label_contract.CONTEST_SEGNET_CLASS_NAMES``:
+    0 = road, 1 = lane_markings, 2 = undrivable, 3 = movable, 4 = my_car.
 
 Functions
 ---------

@@ -7,7 +7,7 @@ into tiny CNNs (~25KB each) trained on THIS specific video's distribution.
 Key insight: the scorers are massive general-purpose models but their behavior
 on our renderer's output distribution is low-dimensional. A 4-layer CNN with
 16 channels can achieve >99% agreement on this single video because:
-  1. Only 5 semantic classes (road, lane, vehicle, sky, background)
+  1. Only 5 semantic classes (road, lane_markings, undrivable, movable, my_car)
   2. Only ~600 unique frame pairs with smooth ego-motion
   3. The distribution is narrow (all highway driving, same camera)
 

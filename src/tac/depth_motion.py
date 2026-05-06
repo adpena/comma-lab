@@ -67,8 +67,9 @@ class DepthAwareMotionPredictor(nn.Module):
         super().__init__()
         self.num_classes = num_classes
 
-        # Per-class depth priors in METERS (driving scene defaults from tac.camera)
-        # road=30m, lane=30m, vehicle=15m, sky=1000m, background=20m
+        # Per-class depth priors in METERS. Class IDs follow
+        # tac.semantic_label_contract; values are legacy geometry seeds and
+        # must not be interpreted as label provenance.
         priors = depth_priors or DEPTH_PRIORS_METERS
         if num_classes == 5:
             depth_init = torch.tensor([priors.get(i, 20.0) for i in range(5)])

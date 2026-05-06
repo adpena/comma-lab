@@ -120,7 +120,7 @@ CLASS_MEAN_COLORS_INLINE = torch.tensor([
     [170.0, 170.0, 170.0],  # class 1: lane markings (light gray)
     [100.0, 80.0, 60.0],    # class 2: undrivable (brown)
     [120.0, 140.0, 160.0],  # class 3: movable objects (blue-gray)
-    [180.0, 200.0, 230.0],  # class 4: sky (light blue)
+    [180.0, 200.0, 230.0],  # class 4: my_car / ego-car interior seed
 ], dtype=torch.float32)
 
 

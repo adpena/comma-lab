@@ -16,6 +16,7 @@ Usage::
     from tac.camera import (
         COMMA_INTRINSICS, COMMA_EXTRINSICS,
         DEPTH_PRIORS_METERS, CLASS_MEAN_COLORS,
+        SEGNET_CLASS_NAMES,
         FRAME_H, FRAME_W, FRAME_C, NUM_CLASSES,
         SEGNET_INPUT_H, SEGNET_INPUT_W,
         CAMERA_H, CAMERA_W,
@@ -28,6 +29,11 @@ from dataclasses import dataclass
 
 import torch
 
+from tac.semantic_label_contract import (
+    CONTEST_SEGNET_CLASS_NAME_TUPLE,
+    NUM_CONTEST_SEGNET_CLASSES,
+)
+
 __all__ = [
     "CameraIntrinsics",
     "CameraExtrinsics",
@@ -35,6 +41,7 @@ __all__ = [
     "COMMA_EXTRINSICS",
     "DEPTH_PRIORS_METERS",
     "CLASS_MEAN_COLORS",
+    "SEGNET_CLASS_NAMES",
     "FRAME_H",
     "FRAME_W",
     "FRAME_C",
@@ -98,16 +105,18 @@ COMMA_EXTRINSICS = CameraExtrinsics(height=1.2, pitch=-0.02)
 
 
 # ── Per-class depth priors in METERS ────────────────────────────────────
-# These are the canonical depth values used across all tac modules.
-# road=far ground plane, lane=same as road, vehicle=medium,
-# sky=effectively infinity (large value), background=medium-far.
+# These are heuristic depth seeds used across tac geometry modules. Class IDs
+# follow tac.semantic_label_contract:
+# 0=road, 1=lane_markings, 2=undrivable, 3=movable, 4=my_car.
+# Do not infer semantic labels from the numeric depth values; exact archive
+# evidence must decide whether these priors help a lane.
 
 DEPTH_PRIORS_METERS: dict[int, float] = {
     0: 30.0,   # road — ground plane, far
     1: 30.0,   # lane markings — same plane as road
-    2: 15.0,   # vehicle / undrivable — medium distance
-    3: 1000.0, # sky — effectively infinity
-    4: 20.0,   # background — medium-far
+    2: 15.0,   # undrivable — legacy medium-distance seed
+    3: 1000.0, # movable — legacy far-field seed; verify before promotion
+    4: 20.0,   # my_car — legacy medium-distance seed
 }
 
 
@@ -121,7 +130,7 @@ CLASS_MEAN_COLORS = torch.tensor(
         [170.0, 170.0, 170.0],  # class 1: lane markings (light gray)
         [100.0, 80.0, 60.0],    # class 2: undrivable (brown)
         [120.0, 140.0, 160.0],  # class 3: movable objects (blue-gray)
-        [180.0, 200.0, 230.0],  # class 4: sky (light blue)
+        [180.0, 200.0, 230.0],  # class 4: my_car / ego-car interior seed
     ],
     dtype=torch.float32,
 )  # (NUM_CLASSES, 3)
@@ -133,7 +142,8 @@ CLASS_MEAN_COLORS = torch.tensor(
 FRAME_H: int = 384
 FRAME_W: int = 512
 FRAME_C: int = 3
-NUM_CLASSES: int = 5
+NUM_CLASSES: int = NUM_CONTEST_SEGNET_CLASSES
+SEGNET_CLASS_NAMES: tuple[str, ...] = CONTEST_SEGNET_CLASS_NAME_TUPLE
 
 # Aliases matching constrained_gen.py naming
 SEGNET_INPUT_H: int = FRAME_H
