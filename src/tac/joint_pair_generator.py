@@ -127,7 +127,21 @@ class JointPairGenerator(nn.Module):
 
     def _decode_3(self, z: torch.Tensor, skips: list[torch.Tensor],
                   dec3, dec2, dec1, head) -> torch.Tensor:
-        """Run one decoder head with 3 levels of skip connections."""
+        """Run one decoder head with 3 levels of skip connections.
+
+        ``skips`` is ordered SHALLOWEST-to-DEEPEST (resolution-descending order):
+
+            skips[0] = full-resolution skip (s1)
+            skips[1] = half-resolution skip (s2)
+            skips[2] = quarter-resolution skip (s3, deepest)
+
+        The decoder consumes them in REVERSE order (deepest first), matching
+        the standard U-Net semantics: ``dec3`` consumes ``skips[2]`` (deepest),
+        then ``dec2`` consumes ``skips[1]``, then ``dec1`` consumes ``skips[0]``
+        as the resolution climbs back to full size before the head 1×1 conv.
+        (PARADIGM-γ audit #13 (2026-05-06): docstring clarification — earlier
+        revisions did not document the skip ordering, leaving it implicit.)
+        """
         x = dec3(z, skips[2])
         x = dec2(x, skips[1])
         x = dec1(x, skips[0])
