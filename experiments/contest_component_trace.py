@@ -18,8 +18,7 @@ This file is the canonical Stage-2 dispatch entry point for
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
+import importlib.util
 import os
 import shutil
 import subprocess
@@ -27,6 +26,24 @@ import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
+
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, prepend_paths, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    prepend_paths = _tool_bootstrap.prepend_paths
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.repo_io import read_json, sha256_file, write_json
 
 # Required color-contract scale options for ffmpeg parity with upstream/evaluate.py.
 # These mirror the inflate-time decode contract; any drift here invalidates the
@@ -51,15 +68,10 @@ N_SAMPLES_EXPECTED = 600
 
 
 def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[1]
+    return REPO_ROOT
 
 
-def _sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
+_sha256 = sha256_file
 
 
 def _ensure_parity_ffmpeg_env() -> dict[str, str]:
@@ -138,8 +150,7 @@ def _score_archive_per_pair(
     helper isn't exposed.
     """
     repo = _repo_root()
-    sys.path.insert(0, str(repo))
-    sys.path.insert(0, str(upstream_dir))
+    prepend_paths(upstream_dir, repo)
     try:
         from tac.scoring import evaluate_archive_per_pair  # type: ignore
     except Exception:
@@ -178,7 +189,7 @@ def _cross_check_against_auth_eval(
             "all_match": False,
             "reason": "contest_auth_eval.json not found",
         }
-    auth = json.loads(auth_eval_json_path.read_text())
+    auth = read_json(auth_eval_json_path)
     avg_p = sum(p.p_i for p in pairs) / max(len(pairs), 1)
     avg_s = sum(p.s_i for p in pairs) / max(len(pairs), 1)
     # is-None guard, not truthy fallback: an exact-0.0 score is valid and must
@@ -222,7 +233,7 @@ def _write_runtime_env_sidecar(
         "cwd": os.getcwd(),
         "required_ffmpeg_scale_options": list(REQUIRED_FFMPEG_SCALE_OPTIONS),
     }
-    sidecar_path.write_text(json.dumps(payload, indent=2, sort_keys=True))
+    write_json(sidecar_path, payload)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -305,7 +316,7 @@ def main(argv: list[str] | None = None) -> int:
         "contest_auth_eval_cross_check": cross_check,
     }
 
-    args.output_json.write_text(json.dumps(payload, indent=2, sort_keys=True))
+    write_json(args.output_json, payload)
 
     sidecar_path = work_dir / RUNTIME_ENV_SIDECAR
     _write_runtime_env_sidecar(sidecar_path, args, ffmpeg_env, uv_env)

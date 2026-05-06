@@ -5306,6 +5306,69 @@ Verification:
 - `.venv/bin/python tools/all_lanes_preflight.py` passed:
   `ALL 20 PREFLIGHT CHECKS PASSED`.
 
+## R82 - 2026-05-06 Contest Component Trace IO Lowering
+
+Continued the Gate #7 lowering tranche on the diagnostic component-trace
+runner. This was a behavior-preserving cleanup only: per-pair trace schema,
+auth-eval cross-check keys, score-claim policy, ffmpeg parity checks, and
+isolated uv environment setup were not changed.
+
+Changes:
+
+- Migrated `experiments/contest_component_trace.py` from local repo-root and
+  `sys.path.insert` setup to `tools.tool_bootstrap`.
+- Replaced the local file SHA helper with `tac.repo_io.sha256_file`.
+- Replaced JSON artifact reads/writes with `tac.repo_io.read_json` and
+  `write_json`.
+- Preserved the schema-sensitive `contest_auth_eval_cross_check.auth_eval_sha256`
+  field exactly; no cross-file schema rename was attempted.
+- Applied adversarial review correction to preserve the original import
+  precedence in the per-pair scoring helper: `upstream_dir` remains ahead of
+  repo-local imports.
+
+Measured inventory after R82:
+
+- local SHA helpers: `53`
+- local JSON dumps: `107`
+- manual `sys.path` bootstraps: `272`
+- manual repo-root parent probes: `370`
+- manual score/dispatch metadata mentions: `601`
+
+Within-tranche committed-surface deltas:
+
+- `experiments/contest_component_trace.py` local SHA helper count: `1 -> 0`
+- `experiments/contest_component_trace.py` local JSON dump count: `2 -> 0`
+- `experiments/contest_component_trace.py` manual `sys.path` bootstrap count:
+  `2 -> 0`
+- `experiments/contest_component_trace.py` manual repo-root parent count:
+  `1 -> 0`
+- `experiments/contest_component_trace.py` manual score/dispatch metadata count:
+  `2 -> 2`
+
+Verification:
+
+- `.venv/bin/python -m pytest
+  src/tac/tests/test_lightning_batch_jobs.py::test_exact_cuda_eval_command_can_emit_component_trace
+  src/tac/tests/test_lightning_batch_jobs.py::test_validate_local_artifact_dir_accepts_component_trace_status_without_trace
+  src/tac/tests/test_build_contest_submission_packet.py::test_build_packet_rejects_archive_sha_and_component_trace_mismatch
+  src/tac/tests/test_lightning_exact_eval_repro.py::test_queue_command_can_request_component_trace
+  -q` passed: `4 passed`.
+- `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest
+  src/tac/tests/test_tool_bootstrap.py src/tac/tests/test_repo_io.py
+  src/tac/tests/test_audit_tooling_consolidation.py
+  src/tac/tests/test_lightning_batch_jobs.py::test_exact_cuda_eval_command_can_emit_component_trace
+  src/tac/tests/test_lightning_batch_jobs.py::test_validate_local_artifact_dir_accepts_component_trace_status_without_trace
+  src/tac/tests/test_build_contest_submission_packet.py::test_build_packet_rejects_archive_sha_and_component_trace_mismatch
+  -q` passed: `10 passed`.
+- `.venv/bin/python -m ruff check --select I,RUF100,F401,UP035,F821
+  experiments/contest_component_trace.py` passed.
+- `.venv/bin/python -m py_compile experiments/contest_component_trace.py`
+  passed.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --format json` reported
+  the measured inventory above.
+- `.venv/bin/python tools/all_lanes_preflight.py` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+
 ## R81 - 2026-05-06 Component Sensitivity Shard Merge IO Lowering
 
 Continued the Gate #7 lowering tranche on the finite-difference sensitivity
