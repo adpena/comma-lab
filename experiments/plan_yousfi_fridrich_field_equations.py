@@ -20,11 +20,11 @@ import hashlib
 import json
 import math
 import os
-from collections import Counter, defaultdict
+from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Iterable
-
+from typing import Any
 
 SCHEMA = "yousfi_fridrich_atom_field_allocator_v1"
 TOOL = "experiments/plan_yousfi_fridrich_field_equations.py"
@@ -56,6 +56,10 @@ class Atom:
     density: float
     weighted_residual_pixel_proxy: float
     expected_base_runs_per_row: int | None
+    conflicts_with_families: tuple[str, ...]
+    conflicts_with_atoms: tuple[str, ...]
+    interaction_assumptions: tuple[str, ...]
+    proxy_row: bool
 
     @property
     def row_run_key(self) -> tuple[int, int, int, int, int] | None:
@@ -151,6 +155,26 @@ def _int_tuple(values: Any, *, field: str) -> tuple[int, ...]:
     return tuple(out)
 
 
+def _string_tuple(values: Any) -> tuple[str, ...]:
+    if values is None:
+        return ()
+    if isinstance(values, str):
+        return (values,) if values else ()
+    if not isinstance(values, list | tuple | set):
+        return (str(values),) if str(values) else ()
+    return tuple(sorted({str(value) for value in values if str(value)}))
+
+
+def _is_proxy_evidence(raw: dict[str, Any]) -> bool:
+    grade = str(raw.get("evidence_grade") or "planning_only").lower()
+    return bool(
+        raw.get("proxy_row") is True
+        or "planning" in grade
+        or "proxy" in grade
+        or "prediction" in grade
+    )
+
+
 def _identity_int(identity: dict[str, Any], key: str) -> tuple[int, ...]:
     if key not in identity:
         return ()
@@ -165,6 +189,10 @@ def _identity_int(identity: dict[str, Any], key: str) -> tuple[int, ...]:
 def _atom_from_json(raw: dict[str, Any], *, source_ledger: str) -> Atom:
     if raw.get("score_claim") is True:
         raise FieldPlanError(f"atom {raw.get('atom_id')} has score_claim=true")
+    if raw.get("dispatchable") is True or raw.get("ready_for_exact_eval_dispatch") is True:
+        raise FieldPlanError(
+            f"atom {raw.get('atom_id')} is a dispatchable proxy row; build a byte-closed archive first"
+        )
     identity = raw.get("identity")
     if not isinstance(identity, dict):
         raise FieldPlanError(f"atom {raw.get('atom_id')} has no identity object")
@@ -201,7 +229,7 @@ def _atom_from_json(raw: dict[str, Any], *, source_ledger: str) -> Atom:
     return Atom(
         source_ledger=source_ledger,
         atom_id=str(raw.get("atom_id")),
-        family=str(raw.get("atom_family")),
+        family=str(raw.get("atom_family") or raw.get("family") or "unknown"),
         identity=identity,
         pair_indices=tuple(sorted(set(pair_indices))),
         frame_indices=tuple(sorted(set(frame_indices))),
@@ -218,6 +246,10 @@ def _atom_from_json(raw: dict[str, Any], *, source_ledger: str) -> Atom:
             default=float(raw.get("residual_pixels", 0)),
         ),
         expected_base_runs_per_row=None,
+        conflicts_with_families=_string_tuple(raw.get("conflicts_with_families")),
+        conflicts_with_atoms=_string_tuple(raw.get("conflicts_with_atoms")),
+        interaction_assumptions=_string_tuple(raw.get("interaction_assumptions")),
+        proxy_row=_is_proxy_evidence(raw),
     )
 
 
@@ -433,18 +465,50 @@ def _policy_from_selection(
         }
     )
     expected_base = expected_bases[0] if len(expected_bases) == 1 else None
+    conflicts_with_families = sorted(
+        {conflict for atom in selected_copy for conflict in atom.conflicts_with_families}
+    )
+    conflicts_with_atoms = sorted(
+        {conflict for atom in selected_copy for conflict in atom.conflicts_with_atoms}
+    )
+    interaction_assumptions = sorted(
+        {
+            "selected_atoms_are_first_order_proxy_rows",
+            f"interaction_model={config.interaction_model}",
+            *(
+                assumption
+                for atom in selected_copy
+                for assumption in atom.interaction_assumptions
+            ),
+        }
+    )
     return {
         "policy_id": policy_id,
         "mode": "contest_practical_field_equation",
         "score_claim": False,
         "promotion_eligible": False,
         "evidence_grade": "planning_only",
+        "proxy_row": True,
+        "byte_closed_archive_manifest_attached": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatchable": False,
+        "dispatch_attempted": False,
+        "dispatch_blockers": [
+            "field_policy_is_proxy_row",
+            "requires_byte_closed_candidate_archive_manifest",
+            "requires_exact_cuda_auth_eval",
+            "requires_stack_interaction_review",
+        ],
         "builder": "experiments/build_cmg3_adaptive_runs_candidate.py --field-policy-json <this-json> --field-policy-id "
         + policy_id,
         "selected_atom_count": len(selected_copy),
         "selected_row_run_atoms": [atom.row_run_policy_atom() for atom in selected_copy],
         "selected_atom_ids": [atom.atom_id for atom in selected_copy],
         "source_ledgers": sorted({atom.source_ledger for atom in selected_copy}),
+        "families": sorted({atom.family for atom in selected_copy}),
+        "conflicts_with_families": conflicts_with_families,
+        "conflicts_with_atoms": conflicts_with_atoms,
+        "interaction_assumptions": interaction_assumptions,
         "required_base_runs_per_row": expected_base,
         "expected_base_runs_per_row": expected_base,
         "expected_base_runs_per_row_set": expected_bases,
@@ -585,7 +649,7 @@ def build_plan(
     config = FieldConfig(
         mode=mode,
         max_source_atoms=max_source_atoms,
-        candidate_sizes=tuple(sorted(set(int(v) for v in candidate_sizes))),
+        candidate_sizes=tuple(sorted({int(v) for v in candidate_sizes})),
         interaction_model=interaction_model,
         curvature_strength=curvature_strength,
         pair_antagonism=pair_antagonism,
@@ -618,6 +682,16 @@ def build_plan(
             "archive.zip -> inflate.sh -> upstream/evaluate.py via "
             "experiments/contest_auth_eval.py --device cuda"
         ),
+        "byte_closed_manifest_gate": {
+            "candidate_policies_dispatchable": False,
+            "required_before_dispatch": True,
+            "required_manifest_fields": [
+                "archive.bytes",
+                "archive.sha256",
+                "score_claim=false",
+                "deterministic_builder_command",
+            ],
+        },
         "configuration": {
             "max_source_atoms": max_source_atoms,
             "candidate_sizes": list(config.candidate_sizes),

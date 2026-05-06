@@ -60,6 +60,9 @@ def test_build_categorical_candidate_fixture_is_deterministic_and_blocked(
         for info in archive.infolist():
             assert info.date_time == (1980, 1, 1, 0, 0, 0)
             assert info.compress_type == zipfile.ZIP_STORED
+        modes = {info.filename: info.external_attr >> 16 for info in archive.infolist()}
+        assert modes["inflate.sh"] == 0o755
+        assert modes["categorical_payload.bin"] == 0o644
 
 
 def test_build_categorical_candidate_fixture_records_tool_manifest(tmp_path: Path) -> None:

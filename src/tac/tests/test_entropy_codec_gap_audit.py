@@ -87,6 +87,25 @@ def test_sparse_aqc1_floor_beats_dense_aqv1_for_large_sparse_alphabet() -> None:
     assert manifest["opportunity_ranking"][0]["label"] == "large_sparse_qints"
 
 
+def test_aq_floor_accounts_for_local_arithmetic_payload_termination_byte() -> None:
+    manifest = build_entropy_codec_gap_audit(
+        [
+            {
+                "label": "single_positive_large_alphabet",
+                "actual_bytes": 64,
+                "symbol_counts": {"0": 1200, "1": 0},
+            }
+        ]
+    )
+
+    row = manifest["streams"][0]
+    assert row["entropy_floor_bits"] == pytest.approx(0.0)
+    assert row["static_arithmetic_entropy_payload_floor_bytes"] == 0
+    assert row["static_arithmetic_payload_floor_bytes"] == 1
+    assert row["best_static_arithmetic_container_kind"] == "AQv1"
+    assert row["best_static_arithmetic_container_floor_bytes"] == 37
+
+
 def test_single_symbol_stream_has_zero_bit_huffman_but_no_aq_floor() -> None:
     manifest = build_entropy_codec_gap_audit(
         [{"label": "constant", "actual_bytes": 12, "symbol_counts": {"0": 1200}}]
@@ -100,6 +119,29 @@ def test_single_symbol_stream_has_zero_bit_huffman_but_no_aq_floor() -> None:
     assert row["best_static_arithmetic_container_floor_bytes"] is None
 
 
+def test_record_sequence_counts_and_exact_huffman_bits_are_deterministic() -> None:
+    manifest = build_entropy_codec_gap_audit(
+        [
+            {
+                "label": "records",
+                "actual_bytes": 8,
+                "symbol_counts": [
+                    {"symbol": "b", "count": 1},
+                    {"symbol": "a", "count": 3},
+                ],
+            }
+        ]
+    )
+
+    row = manifest["streams"][0]
+    assert row["symbol_counts"] == [
+        {"symbol": "a", "count": 3},
+        {"symbol": "b", "count": 1},
+    ]
+    assert row["huffman_payload_bits_exact"] == 4
+    assert manifest["total_huffman_payload_bits_exact"] == 4
+
+
 def test_invalid_inputs_fail_closed() -> None:
     with pytest.raises(EntropyCodecGapAuditError, match="nonempty"):
         build_entropy_codec_gap_audit([])
@@ -111,9 +153,17 @@ def test_invalid_inputs_fail_closed() -> None:
         build_entropy_codec_gap_audit(
             [{"label": "bad", "actual_bytes": 1, "symbol_counts": {"0": 0}}]
         )
+    with pytest.raises(EntropyCodecGapAuditError, match="positive integer"):
+        build_entropy_codec_gap_audit(
+            [{"label": "bad", "actual_bytes": 0, "symbol_counts": {"0": 1}}]
+        )
     with pytest.raises(EntropyCodecGapAuditError, match="ASCII"):
         build_entropy_codec_gap_audit(
             [{"label": "bad", "actual_bytes": 1, "symbol_counts": {"\u03bc": 1, "a": 1}}],
+        )
+    with pytest.raises(EntropyCodecGapAuditError, match="symbol and count"):
+        build_entropy_codec_gap_audit(
+            [{"label": "bad", "actual_bytes": 1, "symbol_counts": [{"symbol": "0"}]}]
         )
 
 
@@ -147,6 +197,30 @@ def test_audit_entropy_codec_gap_cli_writes_json_and_markdown(tmp_path: Path) ->
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["tool_run_manifest"]["tool"] == "tools/audit_entropy_codec_gap.py"
     assert "mask_tokens" in md_out.read_text(encoding="utf-8")
+
+
+def test_audit_entropy_codec_gap_cli_fails_closed_on_bad_input(tmp_path: Path) -> None:
+    input_path = tmp_path / "bad_streams.json"
+    input_path.write_text(
+        json.dumps({"streams": [{"label": "bad", "actual_bytes": 0, "symbol_counts": {"0": 1}}]}),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "audit_entropy_codec_gap.py"),
+            "--input",
+            str(input_path),
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 2
+    assert "FATAL: entropy codec gap audit input rejected" in result.stderr
 
 
 def _streams() -> list[dict]:

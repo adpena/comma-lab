@@ -44,6 +44,7 @@ def test_expected_atom_score_delta_combines_rate_seg_pose_and_priors(tmp_path: P
             "family_group": "mask_repair_local",
             "conflicts_with_families": ["whole_mask_replacement"],
             "conflicts_with_atoms": ["atom:global_crf"],
+            "interaction_assumptions": ["first_order_local_patch"],
             "archive_manifest_path": manifest.as_posix(),
             "archive_manifest_sha256": sha256_file(manifest),
         },
@@ -56,10 +57,14 @@ def test_expected_atom_score_delta_combines_rate_seg_pose_and_priors(tmp_path: P
     assert row["family_group"] == "mask_repair_local"
     assert row["conflicts_with_families"] == ["whole_mask_replacement"]
     assert row["conflicts_with_atoms"] == ["atom:global_crf"]
+    assert row["interaction_assumptions"] == ["first_order_local_patch"]
     assert row["byte_closed_archive_manifest_attached"] is True
     assert row["archive_manifest_custody"]["verified"] is True
+    assert row["pareto_eligible"] is True
     assert row["archive_ready_for_stack_review"] is True
+    assert row["kkt_ready_for_field_planning"] is True
     assert row["dispatchable"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
 
 
 def test_hnerv_profile_atoms_rank_rate_only_variants() -> None:
@@ -152,6 +157,7 @@ def test_requested_dispatchable_atom_without_archive_manifest_is_refused() -> No
     assert row["dispatchable"] is False
     assert row["byte_closed_archive_manifest_attached"] is False
     assert "requested_dispatchable_without_byte_closed_archive_manifest" in row["dispatch_blockers"]
+    assert row["pareto_eligible"] is False
     assert ledger["requested_dispatchable_refused_count"] == 1
     assert ledger["conflict_family_counts"] == {"whole_mask_replacement": 1}
 
@@ -173,6 +179,7 @@ def test_byte_closed_manifest_allows_stack_review_but_not_dispatch(tmp_path: Pat
     )
 
     assert row["rankable"] is True
+    assert row["pareto_eligible"] is True
     assert row["archive_ready_for_stack_review"] is True
     assert row["dispatchable"] is False
     assert "requires_exact_cuda_auth_eval" in row["dispatch_blockers"]
@@ -258,6 +265,100 @@ def test_pareto_scope_preserves_orthogonal_families(tmp_path: Path) -> None:
     assert all(row["pareto_frontier"] is True for row in ledger["rows"])
 
 
+def test_pareto_frontier_requires_verified_byte_closed_manifest(tmp_path: Path) -> None:
+    manifest = _archive_manifest(tmp_path)
+    ledger = build_atom_ledger(
+        [
+            {
+                "atom_id": "unclosed_proxy_best_delta",
+                "family": "mask_atom",
+                "family_group": "mask",
+                "pareto_scope": "mask",
+                "byte_delta": -500,
+                "expected_seg_dist_delta": -0.001,
+                "confidence": 1.0,
+                "evidence_grade": "empirical",
+                "raw_equal": True,
+            },
+            {
+                "atom_id": "closed_weaker_delta",
+                "family": "mask_atom",
+                "family_group": "mask",
+                "pareto_scope": "mask",
+                "byte_delta": -5,
+                "expected_seg_dist_delta": -0.00001,
+                "confidence": 1.0,
+                "evidence_grade": "empirical",
+                "raw_equal": True,
+                "archive_manifest_path": manifest.as_posix(),
+                "archive_manifest_sha256": sha256_file(manifest),
+            },
+        ],
+        base_pose_dist=0.01,
+        source="fixture",
+    )
+
+    assert ledger["pareto_eligible_count"] == 1
+    assert ledger["rows"][0]["atom_id"] == "closed_weaker_delta"
+    unclosed = next(row for row in ledger["rows"] if row["atom_id"] == "unclosed_proxy_best_delta")
+    assert unclosed["rankable"] is True
+    assert unclosed["pareto_eligible"] is False
+    assert unclosed["pareto_frontier"] is False
+    assert "missing_byte_closed_archive_manifest" in unclosed["kkt_blockers"]
+
+
+def test_archive_manifest_file_must_describe_closed_archive_bytes(tmp_path: Path) -> None:
+    manifest = tmp_path / "not-byte-closed.json"
+    manifest.write_text(json.dumps({"score_claim": False}, sort_keys=True), encoding="utf-8")
+    row = expected_atom_score_delta(
+        {
+            "atom_id": "manifest_without_archive_record",
+            "family": "hnerv_decoder_rate_recode",
+            "byte_delta": -151,
+            "confidence": 1.0,
+            "evidence_grade": "empirical_byte_raw_equal",
+            "raw_equal": True,
+            "archive_manifest_path": manifest.as_posix(),
+            "archive_manifest_sha256": sha256_file(manifest),
+        },
+        base_pose_dist=0.01,
+    )
+
+    assert row["archive_manifest_custody"]["sha256_matches"] is True
+    assert row["archive_manifest_custody"]["verified"] is False
+    assert row["byte_closed_archive_manifest_attached"] is False
+    assert "archive_manifest_archive_sha256_missing_or_invalid" in row["dispatch_blockers"]
+    assert "archive_manifest_archive_bytes_missing_or_invalid" in row["dispatch_blockers"]
+
+
+def test_dispatchable_proxy_row_is_refused_even_with_byte_closed_manifest(tmp_path: Path) -> None:
+    manifest = _archive_manifest(tmp_path)
+    row = expected_atom_score_delta(
+        {
+            "atom_id": "proxy_candidate",
+            "family": "field_proxy",
+            "byte_delta": -151,
+            "confidence": 1.0,
+            "evidence_grade": "planning_proxy",
+            "raw_equal": True,
+            "dispatchable": True,
+            "interaction_assumptions": ["proxy_first_order_only"],
+            "archive_manifest_path": manifest.as_posix(),
+            "archive_manifest_sha256": sha256_file(manifest),
+        },
+        base_pose_dist=0.01,
+    )
+
+    assert row["proxy_row"] is True
+    assert row["requested_dispatchable"] is True
+    assert row["byte_closed_archive_manifest_attached"] is True
+    assert row["dispatchable"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["kkt_ready_for_field_planning"] is False
+    assert "proxy_row_not_dispatchable" in row["dispatch_blockers"]
+    assert "requested_dispatchable_proxy_row_refused" in row["dispatch_blockers"]
+
+
 def test_unverified_archive_manifest_does_not_allow_stack_review(tmp_path: Path) -> None:
     manifest = _archive_manifest(tmp_path)
     row = expected_atom_score_delta(
@@ -279,6 +380,7 @@ def test_unverified_archive_manifest_does_not_allow_stack_review(tmp_path: Path)
     assert row["archive_manifest_custody"]["sha256_matches"] is False
     assert row["byte_closed_archive_manifest_attached"] is False
     assert row["archive_ready_for_stack_review"] is False
+    assert row["pareto_eligible"] is False
     assert "archive_manifest_sha256_mismatch" in row["dispatch_blockers"]
 
 
@@ -302,6 +404,7 @@ def test_missing_archive_manifest_does_not_allow_stack_review(tmp_path: Path) ->
     assert row["archive_manifest_custody"]["exists"] is False
     assert row["byte_closed_archive_manifest_attached"] is False
     assert row["archive_ready_for_stack_review"] is False
+    assert row["pareto_eligible"] is False
     assert "archive_manifest_path_missing" in row["dispatch_blockers"]
 
 

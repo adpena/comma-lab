@@ -370,7 +370,7 @@ def test_decode_codebook_size_mismatch_raises():
     )
     codec2 = SensitivityAwareWeightCodec(cfg2)
     # State_dict shapes will mismatch, so just construct fresh codec.
-    with pytest.raises(ValueError, match="codec bucket sizes mismatch"):
+    with pytest.raises(ValueError, match="codec_checkpoint_blob"):
         decode_with_per_block_codebook(codec2, blob)
 
 

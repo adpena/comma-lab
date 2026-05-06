@@ -23,6 +23,8 @@ from tac.semantic_label_contract import CONTEST_SEGNET_CLASS_NAME_TUPLE, SELFCOM
 from tac.tool_manifest import attach_tool_run_manifest  # noqa: E402
 
 FIXED_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
+FIXED_ZIP_FILE_MODE = 0o644
+FIXED_ZIP_INFLATE_MODE = 0o755
 MEMBERS = {
     "inflate.sh": b"#!/usr/bin/env bash\nset -euo pipefail\necho 'fixture-only categorical candidate' >&2\nexit 2\n",
     "categorical_payload.bin": b"QMA9_fixture_payload_not_a_score_candidate\n",
@@ -40,7 +42,9 @@ MEMBER_ROLES = {
 def _zip_info(name: str) -> zipfile.ZipInfo:
     info = zipfile.ZipInfo(name, date_time=FIXED_ZIP_TIMESTAMP)
     info.compress_type = zipfile.ZIP_STORED
-    info.external_attr = 0o100644 << 16
+    mode = FIXED_ZIP_INFLATE_MODE if name == "inflate.sh" else FIXED_ZIP_FILE_MODE
+    info.external_attr = mode << 16
+    info.create_system = 3
     return info
 
 

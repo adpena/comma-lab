@@ -8,6 +8,7 @@ can choose which archive builders deserve exact CUDA evaluation.
 
 from __future__ import annotations
 
+import json
 import math
 from collections.abc import Iterable, Mapping
 from pathlib import Path
@@ -23,6 +24,11 @@ NON_RANKABLE_EVIDENCE_GRADES = {
     "prediction",
     "external",
 }
+PROXY_EVIDENCE_GRADE_MARKERS = (
+    "planning",
+    "proxy",
+    "prediction",
+)
 PARETO_EPS = 1e-12
 PARETO_MINIMIZE_OBJECTIVES = (
     "expected_total_score_delta",
@@ -82,8 +88,85 @@ def _string_list(value: Any) -> list[str]:
     return [str(value)]
 
 
+def _sorted_unique_string_list(value: Any) -> list[str]:
+    return sorted(set(_string_list(value)))
+
+
+def _unique_ordered_strings(values: Iterable[Any]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value)
+        if text and text not in seen:
+            out.append(text)
+            seen.add(text)
+    return out
+
+
 def _is_sha256(value: str) -> bool:
     return len(value) == 64 and all(char in "0123456789abcdef" for char in value.lower())
+
+
+def _archive_manifest_payload_custody(path: Path) -> dict[str, Any]:
+    blockers: list[str] = []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {
+            "json_valid": False,
+            "archive_sha256": "",
+            "archive_sha256_valid": False,
+            "archive_bytes": None,
+            "archive_bytes_valid": False,
+            "score_claim": None,
+            "score_claim_false": False,
+            "blockers": ["archive_manifest_json_invalid"],
+        }
+    if not isinstance(payload, dict):
+        return {
+            "json_valid": True,
+            "archive_sha256": "",
+            "archive_sha256_valid": False,
+            "archive_bytes": None,
+            "archive_bytes_valid": False,
+            "score_claim": None,
+            "score_claim_false": False,
+            "blockers": ["archive_manifest_not_object"],
+        }
+
+    archive = payload.get("archive")
+    archive_obj = archive if isinstance(archive, Mapping) else {}
+    archive_sha256 = str(
+        archive_obj.get("sha256")
+        or payload.get("archive_sha256")
+        or payload.get("candidate_archive_sha256")
+        or ""
+    )
+    archive_bytes = (
+        archive_obj.get("bytes")
+        if "bytes" in archive_obj
+        else payload.get("archive_bytes", payload.get("candidate_archive_bytes"))
+    )
+    archive_sha256_valid = _is_sha256(archive_sha256)
+    archive_bytes_valid = isinstance(archive_bytes, int) and not isinstance(archive_bytes, bool) and archive_bytes > 0
+    if not archive_sha256_valid:
+        blockers.append("archive_manifest_archive_sha256_missing_or_invalid")
+    if not archive_bytes_valid:
+        blockers.append("archive_manifest_archive_bytes_missing_or_invalid")
+    score_claim = payload.get("score_claim")
+    score_claim_false = score_claim is not True
+    if not score_claim_false:
+        blockers.append("archive_manifest_score_claim_true")
+    return {
+        "json_valid": True,
+        "archive_sha256": archive_sha256,
+        "archive_sha256_valid": archive_sha256_valid,
+        "archive_bytes": archive_bytes if isinstance(archive_bytes, int) and not isinstance(archive_bytes, bool) else None,
+        "archive_bytes_valid": archive_bytes_valid,
+        "score_claim": score_claim,
+        "score_claim_false": score_claim_false,
+        "blockers": blockers,
+    }
 
 
 def _archive_manifest_custody(path_value: str, sha256_value: str) -> dict[str, Any]:
@@ -95,6 +178,12 @@ def _archive_manifest_custody(path_value: str, sha256_value: str) -> dict[str, A
             "is_file": False,
             "sha256_valid": False,
             "sha256_matches": False,
+            "manifest_json_valid": False,
+            "archive_sha256": "",
+            "archive_sha256_valid": False,
+            "archive_bytes": None,
+            "archive_bytes_valid": False,
+            "score_claim_false": False,
             "verified": False,
             "blockers": [],
         }
@@ -107,6 +196,15 @@ def _archive_manifest_custody(path_value: str, sha256_value: str) -> dict[str, A
     exists = bool(path_value and path.exists())
     is_file = bool(exists and path.is_file())
     actual_sha = ""
+    payload_custody: dict[str, Any] = {
+        "json_valid": False,
+        "archive_sha256": "",
+        "archive_sha256_valid": False,
+        "archive_bytes": None,
+        "archive_bytes_valid": False,
+        "score_claim_false": False,
+        "blockers": [],
+    }
     if path_value and not exists:
         blockers.append("archive_manifest_path_missing")
     elif exists and not is_file:
@@ -115,7 +213,19 @@ def _archive_manifest_custody(path_value: str, sha256_value: str) -> dict[str, A
         actual_sha = sha256_file(path)
         if actual_sha != sha256_value:
             blockers.append("archive_manifest_sha256_mismatch")
-    verified = bool(is_file and actual_sha == sha256_value)
+        else:
+            payload_custody = _archive_manifest_payload_custody(path)
+            blockers.extend(payload_custody["blockers"])
+    sha256_matches = bool(actual_sha and actual_sha == sha256_value)
+    verified = bool(
+        is_file
+        and sha256_matches
+        and payload_custody["json_valid"]
+        and payload_custody["archive_sha256_valid"]
+        and payload_custody["archive_bytes_valid"]
+        and payload_custody["score_claim_false"]
+        and not blockers
+    )
     return {
         "path": path_value,
         "sha256": sha256_value,
@@ -123,9 +233,15 @@ def _archive_manifest_custody(path_value: str, sha256_value: str) -> dict[str, A
         "is_file": is_file,
         "sha256_valid": _is_sha256(sha256_value),
         "sha256_actual": actual_sha,
-        "sha256_matches": verified,
+        "sha256_matches": sha256_matches,
+        "manifest_json_valid": bool(payload_custody["json_valid"]),
+        "archive_sha256": str(payload_custody["archive_sha256"]),
+        "archive_sha256_valid": bool(payload_custody["archive_sha256_valid"]),
+        "archive_bytes": payload_custody["archive_bytes"],
+        "archive_bytes_valid": bool(payload_custody["archive_bytes_valid"]),
+        "score_claim_false": bool(payload_custody["score_claim_false"]),
         "verified": verified,
-        "blockers": blockers,
+        "blockers": _unique_ordered_strings(blockers),
     }
 
 
@@ -148,7 +264,7 @@ def _dominates_pareto(a: Mapping[str, Any], b: Mapping[str, Any]) -> bool:
     prediction cannot hide a byte-closed candidate with weaker proxy deltas.
     """
 
-    if not bool(a["rankable"]) or not bool(b["rankable"]):
+    if not bool(a["pareto_eligible"]) or not bool(b["pareto_eligible"]):
         return False
     if str(a["pareto_scope"]) != str(b["pareto_scope"]):
         return False
@@ -173,11 +289,14 @@ def _annotate_pareto_frontier(rows: list[dict[str, Any]]) -> dict[str, Any]:
     frontier_count = 0
     scope_counts: dict[str, dict[str, int]] = {}
     for row in rows:
-        row["pareto_frontier"] = bool(row["rankable"])
+        row["pareto_eligible"] = bool(
+            row["rankable"] and row["byte_closed_archive_manifest_attached"]
+        )
+        row["pareto_frontier"] = bool(row["pareto_eligible"])
         row["pareto_dominated_by"] = []
         row["pareto_objectives"] = _pareto_objectives(row)
     for row in rows:
-        if not bool(row["rankable"]):
+        if not bool(row["pareto_eligible"]):
             row["pareto_frontier"] = False
             continue
         dominators = [
@@ -206,10 +325,19 @@ def _annotate_pareto_frontier(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "archive_ready_for_stack_review": "max",
         },
         "scope_default": "family_group",
+        "eligibility": "rankable_and_verified_byte_closed_archive_manifest",
         "rankable_frontier_count": frontier_count,
         "rankable_dominated_count": dominated_count,
         "scope_counts": dict(sorted(scope_counts.items())),
     }
+
+
+def _proxy_row(evidence_grade: str, atom: Mapping[str, Any]) -> bool:
+    grade = evidence_grade.strip().lower()
+    return bool(
+        atom.get("proxy_row") is True
+        or any(marker in grade for marker in PROXY_EVIDENCE_GRADE_MARKERS)
+    )
 
 
 def expected_atom_score_delta(
@@ -233,12 +361,16 @@ def expected_atom_score_delta(
     expected_seg_delta = float(atom.get("expected_seg_dist_delta", 0.0))
     expected_pose_delta = float(atom.get("expected_pose_dist_delta", 0.0))
     evidence_grade = str(atom.get("evidence_grade", "prediction"))
-    rankable, rank_blockers = _rankable_atom(atom, evidence_grade, confidence)
-    family = str(atom.get("family") or atom.get("atom_family") or "unknown")
+    family = str(atom.get("family") or atom.get("atom_family") or atom.get("family_group") or "unknown")
     family_group = str(atom.get("family_group") or family)
     pareto_scope = str(atom.get("pareto_scope") or family_group)
-    conflicts_with_families = _string_list(atom.get("conflicts_with_families"))
-    conflicts_with_atoms = _string_list(atom.get("conflicts_with_atoms"))
+    conflicts_with_families = _sorted_unique_string_list(atom.get("conflicts_with_families"))
+    conflicts_with_atoms = _sorted_unique_string_list(atom.get("conflicts_with_atoms"))
+    interaction_assumptions = _sorted_unique_string_list(atom.get("interaction_assumptions"))
+    rankable, rank_blockers = _rankable_atom(atom, evidence_grade, confidence)
+    if family == "unknown":
+        rank_blockers.append("missing_atom_family")
+        rankable = False
     archive_manifest_path = str(atom.get("archive_manifest_path") or "")
     archive_manifest_sha256 = str(atom.get("archive_manifest_sha256") or "")
     archive_manifest_custody = _archive_manifest_custody(
@@ -246,20 +378,39 @@ def expected_atom_score_delta(
         archive_manifest_sha256,
     )
     byte_closed_archive_manifest_attached = bool(archive_manifest_custody["verified"])
+    proxy_row = _proxy_row(evidence_grade, atom)
     requested_dispatchable = bool(
         atom.get("dispatchable") is True or atom.get("ready_for_exact_eval_dispatch") is True
     )
     dispatch_blockers = [
         "planning_only_lagrangian_atom",
-        "requires_byte_closed_archive",
         "requires_exact_cuda_auth_eval",
         *rank_blockers,
         *archive_manifest_custody["blockers"],
     ]
+    if not byte_closed_archive_manifest_attached:
+        dispatch_blockers.append("requires_byte_closed_archive")
+    if proxy_row:
+        dispatch_blockers.append("proxy_row_not_dispatchable")
+    if not interaction_assumptions:
+        dispatch_blockers.append("missing_interaction_assumptions")
     if requested_dispatchable and not byte_closed_archive_manifest_attached:
         dispatch_blockers.append("requested_dispatchable_without_byte_closed_archive_manifest")
+    if requested_dispatchable and proxy_row:
+        dispatch_blockers.append("requested_dispatchable_proxy_row_refused")
     if atom.get("score_claim") is True:
         dispatch_blockers.append("source_atom_score_claim_true")
+    kkt_blockers = [
+        *rank_blockers,
+        *archive_manifest_custody["blockers"],
+    ]
+    if not byte_closed_archive_manifest_attached:
+        kkt_blockers.append("missing_byte_closed_archive_manifest")
+    if proxy_row:
+        kkt_blockers.append("proxy_evidence_not_kkt_ready")
+    if not interaction_assumptions:
+        kkt_blockers.append("missing_interaction_assumptions")
+    kkt_ready_for_field_planning = bool(not kkt_blockers)
     seg_score = 100.0 * expected_seg_delta
     pose_score = pose_score_delta(base_pose_dist, expected_pose_delta)
     component_score = confidence * (seg_score + pose_score)
@@ -272,8 +423,10 @@ def expected_atom_score_delta(
         "pareto_scope": pareto_scope,
         "conflicts_with_families": conflicts_with_families,
         "conflicts_with_atoms": conflicts_with_atoms,
+        "interaction_assumptions": interaction_assumptions,
         "score_claim": False,
         "evidence_grade": evidence_grade,
+        "proxy_row": proxy_row,
         "byte_delta": byte_delta,
         "rate_score_delta": round(rate_score, 12),
         "expected_seg_dist_delta": expected_seg_delta,
@@ -299,8 +452,12 @@ def expected_atom_score_delta(
         "byte_closed_archive_manifest_attached": byte_closed_archive_manifest_attached,
         "requested_dispatchable": requested_dispatchable,
         "archive_ready_for_stack_review": bool(rankable and byte_closed_archive_manifest_attached),
+        "pareto_eligible": bool(rankable and byte_closed_archive_manifest_attached),
+        "kkt_ready_for_field_planning": kkt_ready_for_field_planning,
+        "kkt_blockers": _unique_ordered_strings(kkt_blockers),
+        "ready_for_exact_eval_dispatch": False,
         "dispatchable": False,
-        "dispatch_blockers": dispatch_blockers,
+        "dispatch_blockers": _unique_ordered_strings(dispatch_blockers),
     }
 
 
@@ -317,9 +474,12 @@ def build_atom_ledger(
     rows.sort(
         key=lambda row: (
             not bool(row["rankable"]),
+            not bool(row["pareto_eligible"]),
             not bool(row["pareto_frontier"]),
             float(row["expected_total_score_delta"]),
             int(row["byte_delta"]),
+            str(row["family_group"]),
+            str(row["pareto_scope"]),
             str(row["atom_id"]),
         )
     )
@@ -327,10 +487,16 @@ def build_atom_ledger(
     conflict_counts: dict[str, int] = {}
     archive_manifest_attached_count = 0
     requested_dispatchable_refused_count = 0
+    pareto_eligible_count = 0
+    kkt_ready_count = 0
+    proxy_row_count = 0
     for row in rows:
         family = str(row["family_group"])
         family_counts[family] = family_counts.get(family, 0) + 1
         archive_manifest_attached_count += int(bool(row["byte_closed_archive_manifest_attached"]))
+        pareto_eligible_count += int(bool(row["pareto_eligible"]))
+        kkt_ready_count += int(bool(row["kkt_ready_for_field_planning"]))
+        proxy_row_count += int(bool(row["proxy_row"]))
         requested_dispatchable_refused_count += int(
             bool(row["requested_dispatchable"]) and not bool(row["dispatchable"])
         )
@@ -349,7 +515,13 @@ def build_atom_ledger(
         "conflict_family_counts": dict(sorted(conflict_counts.items())),
         "pareto_summary": pareto_summary,
         "byte_closed_archive_manifest_attached_count": archive_manifest_attached_count,
+        "pareto_eligible_count": pareto_eligible_count,
+        "kkt_ready_for_field_planning_count": kkt_ready_count,
+        "proxy_row_count": proxy_row_count,
         "requested_dispatchable_refused_count": requested_dispatchable_refused_count,
+        "byte_closed_manifest_required_for_pareto": True,
+        "byte_closed_manifest_required_for_kkt": True,
+        "proxy_rows_dispatchable": False,
         "rows": rows,
         "dispatch_blockers": [
             "planning_only_atom_ranking",

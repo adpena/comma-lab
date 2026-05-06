@@ -16,6 +16,7 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.optimization.entropy_codec_gap_audit import (  # noqa: E402
+    EntropyCodecGapAuditError,
     build_entropy_codec_gap_audit,
     render_markdown,
 )
@@ -54,11 +55,15 @@ def main(argv: list[str] | None = None) -> int:
         source_label = args.source_label
         evidence_grade = args.evidence_grade
 
-    manifest = build_entropy_codec_gap_audit(
-        streams,
-        source_label=source_label,
-        evidence_grade=evidence_grade,
-    )
+    try:
+        manifest = build_entropy_codec_gap_audit(
+            streams,
+            source_label=source_label,
+            evidence_grade=evidence_grade,
+        )
+    except EntropyCodecGapAuditError as exc:
+        print(f"FATAL: entropy codec gap audit input rejected: {exc}", file=sys.stderr)
+        return 2
     manifest = attach_tool_run_manifest(
         manifest,
         tool=Path(__file__).relative_to(REPO_ROOT).as_posix(),

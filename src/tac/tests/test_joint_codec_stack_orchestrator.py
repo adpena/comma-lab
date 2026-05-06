@@ -16,6 +16,7 @@ from tac.joint_codec_stack_orchestrator import (
     run_joint_codec_stack,
     run_sequential_codec_stack,
     unpack_jcsp_container,
+    validate_jcsp_container_runtime_parity,
 )
 
 
@@ -94,3 +95,52 @@ def test_unpack_jcsp_container_rejects_trailing_bytes() -> None:
 
     with pytest.raises(ValueError, match="trailing bytes"):
         unpack_jcsp_container(result.container_bytes + b"x")
+
+
+def test_jcsp_runtime_parity_reports_payload_magic() -> None:
+    qints = np.array([0, 1, -1, 2], dtype=np.int8)
+    stream = StreamSource(
+        name="tiny",
+        qints=qints,
+        num_symbols=15,
+        offset=7,
+        codec_kind=KIND_ARITHMETIC_STATIC,
+        score_per_byte_marginal=1e-6,
+    )
+    result = run_sequential_codec_stack(streams=[stream])
+
+    parity = validate_jcsp_container_runtime_parity(result.container_bytes)
+
+    assert parity["schema"] == "jcsp_runtime_loader_parity_v1"
+    assert parity["score_claim"] is False
+    assert parity["ready_for_runtime_loader"] is True
+    assert parity["streams"] == [
+        {
+            "name": "tiny",
+            "codec_kind": KIND_ARITHMETIC_STATIC,
+            "payload_magic": "AQv1",
+            "actual_bytes": result.streams[0].actual_bytes,
+            "runtime_dispatch_checked": True,
+        }
+    ]
+
+
+def test_unpack_jcsp_container_rejects_codec_kind_payload_magic_mismatch() -> None:
+    qints = np.array([0, 1, -1, 2], dtype=np.int8)
+    stream = StreamSource(
+        name="tiny",
+        qints=qints,
+        num_symbols=15,
+        offset=7,
+        codec_kind=KIND_ARITHMETIC_STATIC,
+        score_per_byte_marginal=1e-6,
+    )
+    result = run_sequential_codec_stack(streams=[stream])
+    tampered = bytearray(result.container_bytes)
+    name_len_offset = 4 + 2 + 1
+    name_len = tampered[name_len_offset]
+    codec_kind_offset = name_len_offset + 1 + name_len
+    tampered[codec_kind_offset] = KIND_BALLE_HYPERPRIOR
+
+    with pytest.raises(ValueError, match="payload magic"):
+        unpack_jcsp_container(bytes(tampered))

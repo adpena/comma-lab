@@ -9,6 +9,7 @@ variational/KKT/Volterra planning surface.
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Iterable, Mapping
 from typing import Any
 
@@ -35,6 +36,17 @@ DEFAULT_CONSTRAINTS = {
 
 class FieldEquationPlannerError(ValueError):
     """Raised when field-equation planner inputs are malformed."""
+
+
+def _unique_ordered_strings(values: Iterable[Any]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value)
+        if text and text not in seen:
+            out.append(text)
+            seen.add(text)
+    return out
 
 
 def _as_float(value: Any, *, key: str) -> float:
@@ -144,16 +156,24 @@ def _kkt_report(row: Mapping[str, Any], constraints: Mapping[str, Any]) -> dict[
     residuals = _constraint_residuals(row, constraints)
     action = variational_action_delta(row, constraints)
     stationarity = action
-    blockers: list[str] = []
+    blockers: list[str] = list(row.get("kkt_blockers") or [])
     if row.get("rankable") is not True:
         blockers.append("atom_not_rankable")
-    if constraints["require_pareto_frontier"] and row.get("pareto_frontier") is False:
-        blockers.append("pareto_dominated_atom")
+    if constraints["require_pareto_frontier"]:
+        if row.get("pareto_eligible") is False:
+            blockers.append("pareto_ineligible_atom")
+        elif row.get("pareto_frontier") is False:
+            blockers.append("pareto_dominated_atom")
     for key, value in residuals.items():
         if value > 0:
             blockers.append(key)
     if row.get("byte_closed_archive_manifest_attached") is not True:
         blockers.append("missing_byte_closed_archive_manifest")
+    if row.get("proxy_row") is True:
+        blockers.append("proxy_evidence_not_kkt_ready")
+    if not list(row.get("interaction_assumptions") or []):
+        blockers.append("missing_interaction_assumptions")
+    blockers = _unique_ordered_strings(blockers)
     return {
         "stationarity_residual": round(stationarity, 12),
         "constraint_residuals": residuals,
@@ -204,6 +224,9 @@ def field_row(row: Mapping[str, Any], constraints: Mapping[str, Any]) -> dict[st
         "family": str(row.get("family") or "unknown"),
         "family_group": str(row.get("family_group") or row.get("family") or "unknown"),
         "pareto_scope": str(row.get("pareto_scope") or row.get("family_group") or "unknown"),
+        "conflicts_with_families": sorted({str(item) for item in row.get("conflicts_with_families") or [] if str(item)}),
+        "conflicts_with_atoms": sorted({str(item) for item in row.get("conflicts_with_atoms") or [] if str(item)}),
+        "pareto_eligible": bool(row.get("pareto_eligible")),
         "pareto_frontier": bool(row.get("pareto_frontier")),
         "pareto_dominated_by": list(row.get("pareto_dominated_by") or []),
         "rankable": bool(row.get("rankable")),
@@ -215,6 +238,8 @@ def field_row(row: Mapping[str, Any], constraints: Mapping[str, Any]) -> dict[st
         "archive_manifest_path": str(row.get("archive_manifest_path") or ""),
         "archive_manifest_sha256": str(row.get("archive_manifest_sha256") or ""),
         "research_basis_ids": basis_ids,
+        "proxy_row": bool(row.get("proxy_row")),
+        "kkt_ready_for_field_planning": bool(row.get("kkt_ready_for_field_planning")),
         "frechet_derivatives": frechet_derivatives(row),
         "variational_action_delta": variational_action_delta(row, constraints),
         "kkt": kkt,
@@ -338,8 +363,12 @@ def build_field_equation_plan(
     rows.sort(
         key=lambda row: (
             not bool(row["rankable"]),
+            not bool(row["pareto_eligible"]),
             not bool(row["pareto_frontier"]),
+            not bool(row["kkt_ready_for_field_planning"]),
             float(row["variational_action_delta"]),
+            str(row["family_group"]),
+            str(row["pareto_scope"]),
             str(row["atom_id"]),
         )
     )
@@ -353,6 +382,9 @@ def build_field_equation_plan(
             if basis_id not in all_basis_ids:
                 all_basis_ids.append(basis_id)
     descending = [row for row in rows if row["kkt"]["locally_descending"]]
+    kkt_blocker_counts: Counter[str] = Counter()
+    for row in rows:
+        kkt_blocker_counts.update(row["kkt"]["kkt_blockers"])
     independent_score_delta = round(
         sum(float(row["frechet_derivatives"]["d_score_d_epsilon"]) for row in descending),
         12,
@@ -393,6 +425,12 @@ def build_field_equation_plan(
         "constraints": resolved_constraints,
         "research_basis": research_basis_manifest(all_basis_ids or None),
         "atom_count": len(rows),
+        "pareto_eligible_count": sum(1 for row in rows if row["pareto_eligible"]),
+        "kkt_ready_for_field_planning_count": sum(
+            1 for row in rows if row["kkt_ready_for_field_planning"]
+        ),
+        "proxy_row_count": sum(1 for row in rows if row["proxy_row"]),
+        "kkt_blocker_counts": dict(sorted(kkt_blocker_counts.items())),
         "locally_descending_count": len(descending),
         "volterra_interaction_count": len(interaction_rows),
         "theoretical_floor_estimate": floor_estimate,

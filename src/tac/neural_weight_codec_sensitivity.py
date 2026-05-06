@@ -1000,10 +1000,19 @@ def decode_with_per_block_codebook(
     bucket_sizes = []
     for _ in range(n_buckets):
         bucket_sizes.append(_read("<H", "bucket size")[0])
+    # CRITICAL (audit 2026-05-06 disposition #3): assert blob-stored bucket
+    # sizes match the codec's configured codebook_sizes BEFORE decode. Without
+    # this gate, a codec instance reconstructed from a checkpoint with a
+    # different codebook ladder would silently corrupt the reconstruction.
+    # Container callers should round-trip the codec_checkpoint_blob (see
+    # ``NWCSRendererContainer.codec_checkpoint_blob``) so the codec rebuilt at
+    # decode-time has the matching ``codebook_sizes``.
     if list(bucket_sizes) != list(codec.sens_config.codebook_sizes):
         raise ValueError(
             f"NWCS1.decode: codec bucket sizes mismatch "
-            f"(blob {bucket_sizes} vs codec {codec.sens_config.codebook_sizes})"
+            f"(blob {bucket_sizes} vs codec {codec.sens_config.codebook_sizes}); "
+            "rebuild the codec from the archive's codec_checkpoint_blob to "
+            "guarantee matching codebook ladder before retrying decode"
         )
 
     bucket_ids_buf = _take(n_blocks, "bucket ids")

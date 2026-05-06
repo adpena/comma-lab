@@ -272,6 +272,43 @@ def test_decode_rejects_trailing_container_bytes():
         decode_qints_arithmetic(blob + b"junk", expected_dtype=np.int8)
 
 
+def test_decode_rejects_aqv1_frequency_total_smaller_than_declared_symbols():
+    qints = np.array([-1, 0, 1, 0], dtype=np.int8)
+    blob = bytearray(encode_qints_arithmetic(qints, num_symbols=3, offset=1))
+    struct.pack_into("<Q", blob, 12, len(qints) + 1)
+
+    with pytest.raises(ValueError, match="frequency total .* smaller than n_symbols"):
+        decode_qints_arithmetic(bytes(blob), expected_dtype=np.int8)
+
+
+def test_decode_rejects_aqc1_frequency_total_mismatch():
+    qints = np.array([-10, 0, 0, 10], dtype=np.int16)
+    blob = bytearray(encode_qints_arithmetic_compact(qints, num_symbols=1024, offset=512))
+    struct.pack_into("<Q", blob, 12, len(qints) + 1)
+
+    with pytest.raises(ValueError, match="frequency total .* must equal n_symbols"):
+        decode_qints_arithmetic(bytes(blob), expected_dtype=np.int16)
+
+
+def test_aqc1_readers_reject_empty_present_table():
+    qints = np.array([0, 0, 0], dtype=np.int8)
+    blob = bytearray(encode_qints_arithmetic_compact(qints, num_symbols=3, offset=1))
+    struct.pack_into("<H", blob, 20, 0)
+
+    with pytest.raises(ValueError, match="n_present must be in"):
+        decode_qints_arithmetic(bytes(blob), expected_dtype=np.int8)
+    with pytest.raises(ValueError, match="n_present must be in"):
+        profile_aqc1_container(bytes(blob))
+
+
+def test_decode_rejects_expected_dtype_overflow_instead_of_wrapping():
+    qints = np.array([300, 300, 300], dtype=np.int16)
+    blob = encode_qints_arithmetic_compact(qints, num_symbols=1024, offset=0)
+
+    with pytest.raises(ValueError, match="outside int8 range"):
+        decode_qints_arithmetic(blob, expected_dtype=np.int8)
+
+
 def test_short_stream_roundtrip():
     # Tiny streams stress the bit-flush path of the arithmetic coder.
     for n in [1, 2, 3, 7, 15, 16, 17]:

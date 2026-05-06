@@ -1,3 +1,9 @@
+# RESEARCH_SCAFFOLDING_NOT_WIRED: no pipeline.py dispatch exists. This module
+# is a codec-selection analysis tool, not a byte-producing codec. It consumes
+# pre-computed L_total accountings from sibling codecs and produces a ranking.
+# Reactivation: wire as a post-step_compress_weights advisor that reads the
+# sweep_json output and produces a codec_recommendation.json for the operator.
+# See lane_registry.json entry lane_mdl_bayesian_advisor.
 # ROUNDTRIP_NOT_REQUIRED: this is a meta codec-comparison framework (Bayesian
 # model selection over OTHER codecs), not a byte-encoding codec. There is no
 # encode(x) → bytes / decode(bytes) → x pair to roundtrip. The module consumes

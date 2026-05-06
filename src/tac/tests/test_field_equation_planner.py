@@ -87,9 +87,15 @@ def test_field_equation_plan_emits_kkt_floor_and_trainable_surrogate() -> None:
     assert plan["score_claim"] is False
     assert plan["ready_for_exact_eval_dispatch"] is False
     assert plan["rows"][0]["atom_id"] == "wr01"
+    assert plan["rows"][0]["interaction_assumptions"] == ["first_order_local"]
+    assert plan["rows"][0]["pareto_eligible"] is False
     assert plan["rows"][0]["frechet_derivatives"]["d_score_d_epsilon"] < 0
     assert plan["rows"][0]["kkt"]["locally_descending"] is False
+    assert "pareto_ineligible_atom" in plan["rows"][0]["kkt"]["kkt_blockers"]
     assert "missing_byte_closed_archive_manifest" in plan["rows"][0]["kkt"]["kkt_blockers"]
+    assert plan["pareto_eligible_count"] == 0
+    assert plan["kkt_ready_for_field_planning_count"] == 0
+    assert plan["kkt_blocker_counts"]["missing_byte_closed_archive_manifest"] == 3
     assert plan["theoretical_floor_estimate"]["evidence_grade"] == "derivation"
     assert plan["theoretical_floor_estimate"]["score_claim"] is False
     assert plan["theoretical_floor_estimate"]["base_score"] == pytest.approx(0.20935073680571203)

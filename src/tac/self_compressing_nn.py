@@ -1,3 +1,9 @@
+# RESEARCH_SCAFFOLDING_NOT_WIRED: no compress-time training harness or
+# pipeline.py dispatch exists. Reactivation criteria: (1) add a
+# --use-scnn flag to step_compress_weights that wraps the channel-gate
+# training loop around the existing weight export, (2) real-archive
+# empirical byte measurement vs FP4 baseline on Lane G v3, (3) 3-clean
+# adversarial review. See lane_registry.json entry lane_scnn.
 # ROUNDTRIP_NOT_REQUIRED: this module is a TRAINING-TIME differentiable
 # bit-budget framework that PRODUCES a compressed checkpoint. The downstream
 # byte-encoding round-trip lives in `tac.learnable_bit_quant` (per-element

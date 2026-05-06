@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
 
 REPO = Path(__file__).resolve().parents[3]
 PLANNER_PATH = REPO / "experiments" / "plan_yousfi_fridrich_field_equations.py"
@@ -44,6 +45,7 @@ def _atom(atom_id: str, *, frame: int, y: int, x0: int, x1: int, cls: int, benef
             "estimated_lagrangian_net_proxy": benefit - 0.000003995154,
             "estimated_score_saved_per_charged_byte": benefit / charged,
         },
+        "interaction_assumptions": ["fixture_first_order_row_run"],
         "score_claim": False,
         "evidence_grade": "planning_only",
     }
@@ -90,6 +92,11 @@ def test_build_plan_emits_practical_and_ideal_equations(tmp_path: Path) -> None:
     assert payload["ideal_infinite_compute_equations"]["exact_objective"].startswith("min_A")
     assert [p["selected_atom_count"] for p in payload["candidate_policies"]] == [1, 2]
     assert payload["candidate_policies"][0]["policy_id"] == "unit_sparse_pair_frame_class_top0001"
+    assert payload["candidate_policies"][0]["ready_for_exact_eval_dispatch"] is False
+    assert payload["candidate_policies"][0]["dispatchable"] is False
+    assert "field_policy_is_proxy_row" in payload["candidate_policies"][0]["dispatch_blockers"]
+    assert "fixture_first_order_row_run" in payload["candidate_policies"][0]["interaction_assumptions"]
+    assert payload["byte_closed_manifest_gate"]["candidate_policies_dispatchable"] is False
     assert payload["candidate_policies"][0]["selected_row_run_atoms"][0] == {
         "frame_index": 0,
         "y": 10,
@@ -248,3 +255,25 @@ def test_rejects_score_claim_ledgers(tmp_path: Path) -> None:
         assert "score_claim=true" in str(exc)
     else:  # pragma: no cover
         raise AssertionError("expected FieldPlanError")
+
+
+def test_rejects_dispatchable_proxy_atoms(tmp_path: Path) -> None:
+    planner = _load_planner()
+    ledger = tmp_path / "bad-dispatchable.json"
+    payload = {
+        "schema": "cmg3_pixel_lagrangian_atom_ledger_v1",
+        "score_claim": False,
+        "evidence_grade": "planning_only",
+        "atom_count": 1,
+        "top_atoms": [_atom("dispatchable_proxy", frame=0, y=1, x0=1, x1=3, cls=1, benefit=0.01)],
+    }
+    payload["top_atoms"][0]["ready_for_exact_eval_dispatch"] = True
+    ledger.write_text(json.dumps(payload, sort_keys=True) + "\n")
+
+    with pytest.raises(planner.FieldPlanError, match="dispatchable proxy row"):
+        planner.build_plan(
+            ledger_jsons=[ledger],
+            output_json=tmp_path / "plan.json",
+            mode="contest",
+            candidate_sizes=(1,),
+        )

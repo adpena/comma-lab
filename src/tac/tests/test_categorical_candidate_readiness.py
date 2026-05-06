@@ -7,6 +7,10 @@ import zipfile
 from pathlib import Path
 
 from tac.categorical_candidate_readiness import (
+    DETERMINISTIC_ZIP_CREATE_SYSTEM,
+    DETERMINISTIC_ZIP_DATE_TIME,
+    DETERMINISTIC_ZIP_FILE_MODE,
+    DETERMINISTIC_ZIP_INFLATE_MODE,
     REQUIRED_CONTROL_NAMES,
     audit_categorical_candidate_manifest,
 )
@@ -16,42 +20,34 @@ from tac.semantic_label_contract import CONTEST_SEGNET_CLASS_NAME_TUPLE, SELFCOM
 REPO = Path(__file__).resolve().parents[3]
 
 
+def _zip_info(name: str) -> zipfile.ZipInfo:
+    info = zipfile.ZipInfo(name, date_time=DETERMINISTIC_ZIP_DATE_TIME)
+    info.compress_type = zipfile.ZIP_STORED
+    mode = DETERMINISTIC_ZIP_INFLATE_MODE if name == "inflate.sh" else DETERMINISTIC_ZIP_FILE_MODE
+    info.external_attr = mode << 16
+    info.create_system = DETERMINISTIC_ZIP_CREATE_SYSTEM
+    return info
+
+
 def _base_candidate(tmp_path: Path) -> dict:
     archive = tmp_path / "candidate.zip"
-    payload = b"\x00\x01\x01\x02categorical"
-    decoder = b"#!/usr/bin/env python3\n"
-    inflate = b"#!/usr/bin/env bash\nset -euo pipefail\n"
-    codebook = b"{\"class_order\":\"contest\"}\n"
+    member_payloads = [
+        ("categorical_payload.bin", b"\x00\x01\x01\x02categorical", "categorical_payload"),
+        ("class_codebook.json", b"{\"class_order\":\"contest\"}\n", "decoder_table"),
+        ("inflate.sh", b"#!/usr/bin/env bash\nset -euo pipefail\n", "decoder_or_runtime_consumer"),
+        ("runtime_decoder.py", b"#!/usr/bin/env python3\n", "decoder_table"),
+    ]
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
-        zf.writestr("inflate.sh", inflate)
-        zf.writestr("categorical_payload.bin", payload)
-        zf.writestr("runtime_decoder.py", decoder)
-        zf.writestr("class_codebook.json", codebook)
+        for name, raw, _role in member_payloads:
+            zf.writestr(_zip_info(name), raw, compress_type=zipfile.ZIP_STORED)
     charged_members = [
         {
-            "name": "categorical_payload.bin",
-            "role": "categorical_payload",
-            "bytes": len(payload),
-            "sha256": sha256_bytes(payload),
-        },
-        {
-            "name": "inflate.sh",
-            "role": "decoder_or_runtime_consumer",
-            "bytes": len(inflate),
-            "sha256": sha256_bytes(inflate),
-        },
-        {
-            "name": "runtime_decoder.py",
-            "role": "decoder_table",
-            "bytes": len(decoder),
-            "sha256": sha256_bytes(decoder),
-        },
-        {
-            "name": "class_codebook.json",
-            "role": "decoder_table",
-            "bytes": len(codebook),
-            "sha256": sha256_bytes(codebook),
-        },
+            "name": name,
+            "role": role,
+            "bytes": len(raw),
+            "sha256": sha256_bytes(raw),
+        }
+        for name, raw, role in member_payloads
     ]
     archive_member_manifest = {
         "schema_version": 1,
@@ -62,6 +58,8 @@ def _base_candidate(tmp_path: Path) -> dict:
     write_json(archive_member_manifest_path, archive_member_manifest)
 
     return {
+        "schema_version": 1,
+        "kind": "categorical_candidate_manifest",
         "source_archive_sha256": "a" * 64,
         "archive_member_manifest_sha256": sha256_file(archive_member_manifest_path),
         "archive_member_manifest": {
@@ -114,8 +112,12 @@ def test_audit_categorical_candidate_manifest_accepts_byte_closed_fixture(tmp_pa
     assert manifest["promotion_eligible"] is False
     assert manifest["evidence_grade"] == "archive_readiness_audit"
     assert manifest["dispatch_blockers"] == []
+    assert manifest["candidate_manifest"]["schema_valid"] is True
     assert manifest["candidate_archive"]["contract"] == "contest_archive_zip"
     assert manifest["candidate_archive"]["contains_inflate_sh"] is True
+    assert manifest["candidate_archive"]["member_order_matches_manifest"] is True
+    assert manifest["candidate_archive"]["zip_determinism_contract"]["passed"] is True
+    assert manifest["archive_member_manifest"]["schema_valid"] is True
     assert manifest["semantic_contract"]["matches_candidate"] is True
     assert manifest["runtime_consumer"]["consumes_charged_members"] is True
     assert manifest["conditioning_prior_contract"]["passed"] is True
@@ -285,6 +287,71 @@ def test_audit_categorical_candidate_manifest_checks_member_manifest_content(tmp
 
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert "archive_member_manifest_members_mismatch" in manifest["dispatch_blockers"]
+
+
+def test_audit_categorical_candidate_manifest_requires_schema_and_manifest_kind(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    candidate.pop("schema_version")
+    candidate["kind"] = "categorical_but_not_a_candidate_manifest"
+    bad_manifest_path = tmp_path / "bad_archive_member_manifest.json"
+    write_json(
+        bad_manifest_path,
+        {
+            "kind": "not_categorical_archive_manifest",
+            "members": candidate["charged_members"],
+        },
+    )
+    candidate["archive_member_manifest"] = {
+        "path": bad_manifest_path.as_posix(),
+        "bytes": bad_manifest_path.stat().st_size,
+        "sha256": sha256_file(bad_manifest_path),
+    }
+    candidate["archive_member_manifest_sha256"] = sha256_file(bad_manifest_path)
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+    blockers = set(manifest["dispatch_blockers"])
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["candidate_manifest"]["schema_valid"] is False
+    assert manifest["archive_member_manifest"]["schema_valid"] is False
+    assert "candidate_manifest_schema_version_missing_or_invalid" in blockers
+    assert "candidate_manifest_kind_missing_or_invalid" in blockers
+    assert "archive_member_manifest_schema_version_missing_or_invalid" in blockers
+    assert "archive_member_manifest_kind_missing_or_invalid" in blockers
+
+
+def test_audit_categorical_candidate_manifest_rejects_nondeterministic_zip_metadata(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    archive = Path(candidate["candidate_archive"]["path"])
+    # Preserve charged-member bytes/hashes, but keep default ZIP metadata and a
+    # reversed member order from writestr(name, ...).
+    payloads = {
+        "categorical_payload.bin": b"\x00\x01\x01\x02categorical",
+        "class_codebook.json": b"{\"class_order\":\"contest\"}\n",
+        "inflate.sh": b"#!/usr/bin/env bash\nset -euo pipefail\n",
+        "runtime_decoder.py": b"#!/usr/bin/env python3\n",
+    }
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        for name in reversed([record["name"] for record in candidate["charged_members"]]):
+            zf.writestr(name, payloads[name])
+    candidate["candidate_archive"]["bytes"] = archive.stat().st_size
+    candidate["candidate_archive"]["sha256"] = sha256_file(archive)
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+    blockers = set(manifest["dispatch_blockers"])
+    deterministic = manifest["candidate_archive"]["zip_determinism_contract"]
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["candidate_archive"]["member_order_matches_manifest"] is False
+    assert deterministic["passed"] is False
+    assert deterministic["bad_timestamps"]
+    assert deterministic["bad_external_attr_modes"]
+    assert "candidate_archive_zip_determinism_contract_failed" in blockers
+    assert "candidate_archive_member_order_mismatch" in blockers
 
 
 def test_audit_categorical_candidate_manifest_rejects_local_sidecar_runtime(tmp_path: Path) -> None:

@@ -14,6 +14,7 @@ from __future__ import annotations
 import heapq
 import math
 from collections.abc import Mapping, Sequence
+from numbers import Integral
 from typing import Any
 
 SCHEMA_VERSION = 1
@@ -38,7 +39,8 @@ DISPATCH_BLOCKERS = [
 
 FAIL_CLOSED_CRITERIA = [
     "refuse_if_counts_missing_or_nonpositive",
-    "refuse_if_actual_bytes_missing",
+    "refuse_if_actual_bytes_missing_or_nonpositive",
+    "refuse_if_count_record_sequence_is_malformed",
     "refuse_if_huffman_lengths_not_prefix_floor",
     "refuse_if_aq_floor_used_with_alphabet_size_less_than_two",
     "refuse_if_roundtrip_decode_validation_missing",
@@ -79,6 +81,7 @@ def build_entropy_codec_gap_audit(
     total_symbol_count = sum(int(row["symbol_count"]) for row in rows)
     total_entropy_bits = sum(float(row["entropy_floor_bits"]) for row in rows)
     total_huffman_bits = sum(float(row["huffman_payload_bits"]) for row in rows)
+    total_huffman_bits_exact = sum(int(row["huffman_payload_bits_exact"]) for row in rows)
     total_streamwise_entropy_bytes_ceil = sum(
         int(row["entropy_floor_bytes_ceil"]) for row in rows
     )
@@ -115,6 +118,7 @@ def build_entropy_codec_gap_audit(
             total_actual_bytes - total_entropy_bits / 8.0
         ),
         "total_huffman_payload_bits": _round_float(total_huffman_bits),
+        "total_huffman_payload_bits_exact": total_huffman_bits_exact,
         "total_huffman_payload_bytes": _round_float(total_huffman_bits / 8.0),
         "total_huffman_payload_bytes_ceil": total_huffman_payload_bytes_ceil,
         "total_huffman_gap_over_entropy_bits": _round_float(
@@ -176,14 +180,14 @@ def _build_stream_row(
     if not isinstance(stream, Mapping):
         raise EntropyCodecGapAuditError(f"stream[{index}] must be an object")
     label = _required_label(stream.get("label"), f"stream[{index}].label")
-    actual_bytes = _as_nonnegative_int(
+    actual_bytes = _as_positive_int(
         stream.get("actual_bytes", stream.get("bytes_charged")),
         f"{label}.actual_bytes",
     )
     counts = _normalize_counts(stream.get("symbol_counts", stream.get("counts")), f"{label}.symbol_counts")
     entropy = _entropy_floor(counts)
     huffman = _huffman_floor(counts)
-    aq = _aq_container_floor(counts, entropy_bits=float(entropy["entropy_floor_bits"]))
+    aq = _aq_container_floor(counts, entropy_bits=float(entropy["_entropy_floor_bits_raw"]))
 
     best_aq_bytes = aq["best_static_arithmetic_container_floor_bytes"]
     gap_to_best_aq = (
@@ -216,6 +220,7 @@ def _build_stream_row(
         "huffman_code_lengths": huffman["code_lengths"],
         "huffman_bits_per_symbol": huffman["huffman_bits_per_symbol"],
         "huffman_payload_bits": huffman["huffman_payload_bits"],
+        "huffman_payload_bits_exact": huffman["huffman_payload_bits_exact"],
         "huffman_payload_bytes": huffman["huffman_payload_bytes"],
         "huffman_payload_bytes_ceil": huffman["huffman_payload_bytes_ceil"],
         "huffman_gap_over_entropy_bits": _round_float(
@@ -246,6 +251,7 @@ def _entropy_floor(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "symbol_count": total,
         "alphabet_size": len(records),
         "positive_symbol_count": positive,
+        "_entropy_floor_bits_raw": bits,
         "entropy_bits_per_symbol": _round_float(entropy_bits_per_symbol),
         "entropy_floor_bits": _round_float(bits),
         "entropy_floor_bytes": _round_float(bits / 8.0),
@@ -267,6 +273,7 @@ def _huffman_floor(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             "code_lengths": {symbol: 0},
             "huffman_bits_per_symbol": 0.0,
             "huffman_payload_bits": 0.0,
+            "huffman_payload_bits_exact": 0,
             "huffman_payload_bytes": 0.0,
             "huffman_payload_bytes_ceil": 0,
             "degenerate_zero_bit_single_symbol": True,
@@ -301,6 +308,7 @@ def _huffman_floor(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "code_lengths": dict(sorted(lengths.items())),
         "huffman_bits_per_symbol": _round_float(payload_bits / total),
         "huffman_payload_bits": _round_float(payload_bits),
+        "huffman_payload_bits_exact": int(payload_bits),
         "huffman_payload_bytes": _round_float(payload_bits / 8.0),
         "huffman_payload_bytes_ceil": _ceil_bytes(payload_bits),
         "degenerate_zero_bit_single_symbol": False,
@@ -315,9 +323,12 @@ def _aq_container_floor(
     alphabet_size = len(records)
     positive_symbol_count = sum(1 for row in records if int(row["count"]) > 0)
     entropy_payload_bytes = _ceil_bytes(entropy_bits)
+    arithmetic_payload_floor_bytes = max(1, entropy_payload_bytes)
     if alphabet_size < 2:
         return {
             "aq_floor_applicable": False,
+            "static_arithmetic_entropy_payload_floor_bytes": entropy_payload_bytes,
+            "static_arithmetic_payload_floor_bytes": None,
             "aqv1_static_model_floor_bytes": None,
             "aqc1_sparse_model_floor_bytes": None,
             "best_static_arithmetic_container_kind": "",
@@ -326,12 +337,12 @@ def _aq_container_floor(
     aqv1 = (
         AQV1_FIXED_HEADER_BYTES
         + AQV1_DENSE_FREQ_BYTES_PER_SYMBOL * alphabet_size
-        + entropy_payload_bytes
+        + arithmetic_payload_floor_bytes
     )
     aqc1 = (
         AQC1_FIXED_HEADER_BYTES
         + AQC1_SPARSE_FREQ_BYTES_PER_SYMBOL * positive_symbol_count
-        + entropy_payload_bytes
+        + arithmetic_payload_floor_bytes
     )
     if aqc1 < aqv1:
         best_kind = "AQc1"
@@ -341,6 +352,8 @@ def _aq_container_floor(
         best_bytes = aqv1
     return {
         "aq_floor_applicable": True,
+        "static_arithmetic_entropy_payload_floor_bytes": entropy_payload_bytes,
+        "static_arithmetic_payload_floor_bytes": arithmetic_payload_floor_bytes,
         "aqv1_static_model_floor_bytes": aqv1,
         "aqc1_sparse_model_floor_bytes": aqc1,
         "best_static_arithmetic_container_kind": best_kind,
@@ -360,7 +373,17 @@ def _normalize_counts(value: Any, context: str) -> list[dict[str, Any]]:
     elif isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
         if not value:
             raise EntropyCodecGapAuditError(f"{context} must be nonempty")
-        items = [(str(index), count) for index, count in enumerate(value)]
+        if all(isinstance(item, Mapping) for item in value):
+            items = []
+            for index, item in enumerate(value):
+                if "symbol" not in item or "count" not in item:
+                    raise EntropyCodecGapAuditError(
+                        f"{context}[{index}] must contain symbol and count"
+                    )
+                items.append((item["symbol"], item["count"]))
+            items.sort(key=lambda item: str(item[0]))
+        else:
+            items = [(str(index), count) for index, count in enumerate(value)]
     else:
         raise EntropyCodecGapAuditError(f"{context} must be an object or sequence")
     for symbol_raw, count_raw in items:
@@ -419,11 +442,18 @@ def _required_label(value: Any, context: str) -> str:
 
 
 def _as_nonnegative_int(value: Any, context: str) -> int:
-    if isinstance(value, bool) or not isinstance(value, int):
+    if isinstance(value, bool) or not isinstance(value, Integral):
         raise EntropyCodecGapAuditError(f"{context} must be a non-negative integer")
     if value < 0:
         raise EntropyCodecGapAuditError(f"{context} must be a non-negative integer")
     return int(value)
+
+
+def _as_positive_int(value: Any, context: str) -> int:
+    integer = _as_nonnegative_int(value, context)
+    if integer <= 0:
+        raise EntropyCodecGapAuditError(f"{context} must be a positive integer")
+    return integer
 
 
 def _ceil_bytes(bits: float) -> int:

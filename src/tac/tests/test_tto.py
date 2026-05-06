@@ -1,6 +1,7 @@
 """Tests for test-time optimization (TTO) module."""
 import time
 
+import pytest
 import torch
 import torch.nn as nn
 
@@ -9,6 +10,7 @@ from tac.tto import (
     _select_params,
     _sobel_edges,
     edge_preservation_loss,
+    is_inflate_tto_enabled,
     reconstruction_loss,
     temporal_consistency_loss,
     test_time_optimize,
@@ -124,6 +126,36 @@ class TestParamSelection:
 # ---- Integration tests ---- #
 
 class TestTestTimeOptimize:
+    def test_inflate_time_gate_fails_closed_by_default(self, monkeypatch):
+        monkeypatch.delenv("INFLATE_TTO", raising=False)
+        model = _small_model(hidden=8)
+        frames = _make_frames(n=4, h=32, w=32)
+
+        with pytest.raises(RuntimeError, match="INFLATE_TTO=1"):
+            test_time_optimize(
+                model,
+                frames,
+                n_steps=1,
+                verbose=False,
+                inflate_time=True,
+            )
+
+    def test_inflate_time_gate_allows_explicit_operator_enable(self, monkeypatch):
+        monkeypatch.setenv("INFLATE_TTO", "1")
+        assert is_inflate_tto_enabled()
+        model = _small_model(hidden=8)
+        frames = _make_frames(n=4, h=32, w=32)
+
+        result = test_time_optimize(
+            model,
+            frames,
+            n_steps=1,
+            verbose=False,
+            inflate_time=True,
+        )
+
+        assert isinstance(result, nn.Module)
+
     def test_chw_input(self):
         model = _small_model(hidden=8)
         frames = _make_frames(n=8, h=32, w=32)

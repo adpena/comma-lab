@@ -262,6 +262,23 @@ def test_component_map_rejects_insufficient_review_passes() -> None:
         validate_component_sensitivity_manifest(manifest)
 
 
+def test_component_map_requires_explicit_empty_review_blockers() -> None:
+    manifest = _valid_manifest()
+    del manifest["component_maps"]["combined"]["certification"]["review_unresolved_blockers"]  # type: ignore[index]
+
+    with pytest.raises(ComponentSensitivityArtifactError, match="review_unresolved_blockers"):
+        validate_component_sensitivity_manifest(manifest)
+
+    for bad_blockers in (None, ["needs review"], "none"):
+        manifest = _valid_manifest()
+        manifest["component_maps"]["combined"]["certification"][  # type: ignore[index]
+            "review_unresolved_blockers"
+        ] = bad_blockers
+
+        with pytest.raises(ComponentSensitivityArtifactError, match="review_unresolved_blockers"):
+            validate_component_sensitivity_manifest(manifest)
+
+
 @pytest.mark.parametrize(
     ("key", "value"),
     [
@@ -581,6 +598,19 @@ def test_materialize_manifest_fills_custody_and_writes_deterministically(tmp_pat
     write_component_sensitivity_manifest(out_b, manifest)
     assert out_a.read_text() == out_b.read_text()
     assert out_a.read_text() == dumps_component_sensitivity_manifest(manifest)
+
+
+def test_materialize_manifest_rejects_absolute_tmp_paths(tmp_path) -> None:
+    artifact = tmp_path / "checkpoint.bin"
+    artifact.write_bytes(b"checkpoint")
+    draft = {
+        "schema_version": 1,
+        "format": "component_sensitivity_v1",
+        "inputs": {"checkpoint": {"path": str(artifact)}},
+    }
+
+    with pytest.raises(ComponentSensitivityArtifactError, match="transient"):
+        materialize_component_sensitivity_manifest(draft, root=tmp_path, promotion=False)
 
 
 def test_materialize_manifest_rejects_mismatched_custody(tmp_path) -> None:

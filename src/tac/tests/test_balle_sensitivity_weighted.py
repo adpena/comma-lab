@@ -42,8 +42,18 @@ def test_aggregate_pads_when_not_divisible() -> None:
         aggregate="mean",
     )
     assert out.shape == (2,)
-    # Last block: [3, 0] → mean = 1.5
-    assert out[1].item() == pytest.approx(1.5)
+    # Last block has one real value; padding must not dilute the mean.
+    assert out[1].item() == pytest.approx(3.0)
+
+
+def test_aggregate_tail_padding_preserves_sum_identity() -> None:
+    s = torch.tensor([1.0, 2.0, 3.0])
+    out = aggregate_pixel_sensitivity_to_blocks(
+        pixel_sensitivity=s,
+        block_size=2,
+        aggregate="sum",
+    )
+    assert torch.allclose(out, torch.tensor([3.0, 3.0]))
 
 
 def test_aggregate_rejects_bad_inputs() -> None:

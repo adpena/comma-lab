@@ -299,9 +299,19 @@ def validate_certified_sensitivity_map_metadata(
             "certification.review_clean_passes must be at least "
             f"{require_review_clean_passes}"
         )
-    unresolved = out.get("review_unresolved_blockers", [])
-    if unresolved not in ([], None):
-        raise SensitivityMapError("certification.review_unresolved_blockers must be empty")
+    # IMPORTANT (audit 2026-05-06): require key present AND empty list.
+    # Previously ``unresolved not in ([], None)`` accepted ``None`` as a silent
+    # pass — a missing/null key would skip the gate. Tighten to require an
+    # explicit empty list so absent or non-list values fail loud.
+    if "review_unresolved_blockers" not in out:
+        raise SensitivityMapError(
+            "certification.review_unresolved_blockers is required (must be an empty list)"
+        )
+    unresolved = out.get("review_unresolved_blockers")
+    if not isinstance(unresolved, list) or unresolved != []:
+        raise SensitivityMapError(
+            "certification.review_unresolved_blockers must be an empty list"
+        )
     return out
 
 

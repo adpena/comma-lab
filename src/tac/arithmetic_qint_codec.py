@@ -285,6 +285,68 @@ def _read_exact(buf: io.BytesIO, nbytes: int, label: str) -> bytes:
     return data
 
 
+def _validate_declared_symbol_count(
+    *,
+    freq: np.ndarray,
+    n_symbols: int,
+    allow_zero_freq: bool,
+    label: str,
+) -> None:
+    if n_symbols <= 0:
+        raise ValueError(f"{label} n_symbols must be positive")
+    total = int(np.sum(freq.astype(np.uint64)))
+    if allow_zero_freq:
+        if total != int(n_symbols):
+            raise ValueError(
+                f"{label} frequency total {total} must equal n_symbols {n_symbols}"
+            )
+        return
+    if total < int(n_symbols):
+        raise ValueError(
+            f"{label} frequency total {total} is smaller than n_symbols {n_symbols}"
+        )
+    zero_protection_overhead = total - int(n_symbols)
+    if zero_protection_overhead > int(freq.size) - 1:
+        raise ValueError(
+            f"{label} zero-protected frequency overhead {zero_protection_overhead} "
+            f"exceeds alphabet slack {int(freq.size) - 1}"
+        )
+
+
+def _validate_decoded_symbol_counts(
+    *,
+    symbols: np.ndarray,
+    freq: np.ndarray,
+    allow_zero_freq: bool,
+    label: str,
+) -> None:
+    observed = np.bincount(symbols.astype(np.int64), minlength=int(freq.size)).astype(np.uint64)
+    expected = freq.astype(np.uint64)
+    if allow_zero_freq:
+        if not np.array_equal(observed, expected):
+            raise ValueError(f"{label} decoded symbol counts do not match sparse frequency table")
+        return
+    if np.any(observed > expected):
+        raise ValueError(f"{label} decoded symbol count exceeds zero-protected frequency table")
+    required = expected > 1
+    if np.any(observed[required] != expected[required]):
+        raise ValueError(f"{label} decoded symbol counts do not match dense frequency table")
+
+
+def _cast_decoded_qints(symbols: np.ndarray, *, offset: int, expected_dtype: np.dtype, label: str) -> np.ndarray:
+    dtype = np.dtype(expected_dtype)
+    if dtype.kind not in ("i", "u"):
+        raise ValueError(f"{label} expected dtype must be integer, got {dtype}")
+    out = symbols.astype(np.int64) - int(offset)
+    info = np.iinfo(dtype)
+    if out.size and (int(out.min()) < int(info.min) or int(out.max()) > int(info.max)):
+        raise ValueError(
+            f"{label} decoded values outside {dtype} range: "
+            f"min={int(out.min())}, max={int(out.max())}"
+        )
+    return out.astype(dtype)
+
+
 def encode_qints_arithmetic(
     qints: np.ndarray,
     num_symbols: int = 3,
@@ -426,10 +488,18 @@ def decode_qints_arithmetic(blob: bytes, expected_dtype: np.dtype = np.int8) -> 
     (n_symbols,) = struct.unpack("<Q", _read_exact(buf, 8, "n_symbols"))
     freq = np.frombuffer(_read_exact(buf, num_symbols * 4, "frequency table"), dtype="<u4").copy()
     (payload_size,) = struct.unpack("<Q", _read_exact(buf, 8, "payload_size"))
+    if payload_size <= 0:
+        raise ValueError("AQv1 payload_size must be positive")
     payload = _read_exact(buf, payload_size, "payload")
     trailing = buf.read(1)
     if trailing:
         raise ValueError("AQv1 payload has trailing bytes after declared payload")
+    _validate_declared_symbol_count(
+        freq=freq,
+        n_symbols=int(n_symbols),
+        allow_zero_freq=False,
+        label="AQv1",
+    )
 
     out = _decode_symbols_from_arithmetic_payload(
         freq=freq,
@@ -437,8 +507,13 @@ def decode_qints_arithmetic(blob: bytes, expected_dtype: np.dtype = np.int8) -> 
         n_symbols=int(n_symbols),
         allow_zero_freq=False,
     )
-    out -= offset
-    return out.astype(expected_dtype)
+    _validate_decoded_symbol_counts(
+        symbols=out,
+        freq=freq,
+        allow_zero_freq=False,
+        label="AQv1",
+    )
+    return _cast_decoded_qints(out, offset=offset, expected_dtype=expected_dtype, label="AQv1")
 
 
 def decode_qints_arithmetic_compact(
@@ -478,17 +553,30 @@ def decode_qints_arithmetic_compact(
         seen.add(symbol)
         freq[symbol] = count
     (payload_size,) = struct.unpack("<Q", _read_exact(buf, 8, "payload_size"))
+    if payload_size <= 0:
+        raise ValueError("AQc1 payload_size must be positive")
     payload = _read_exact(buf, payload_size, "payload")
     if buf.read(1):
         raise ValueError("AQc1 payload has trailing bytes after declared payload")
+    _validate_declared_symbol_count(
+        freq=freq,
+        n_symbols=int(n_symbols),
+        allow_zero_freq=True,
+        label="AQc1",
+    )
     out = _decode_symbols_from_arithmetic_payload(
         freq=freq,
         payload=payload,
         n_symbols=int(n_symbols),
         allow_zero_freq=True,
     )
-    out -= offset
-    return out.astype(expected_dtype)
+    _validate_decoded_symbol_counts(
+        symbols=out,
+        freq=freq,
+        allow_zero_freq=True,
+        label="AQc1",
+    )
+    return _cast_decoded_qints(out, offset=offset, expected_dtype=expected_dtype, label="AQc1")
 
 
 def profile_aqv1_container(blob: bytes) -> dict:
@@ -513,11 +601,17 @@ def profile_aqv1_container(blob: bytes) -> dict:
     (n_symbols,) = struct.unpack("<Q", _read_exact(buf, 8, "n_symbols"))
     freq = np.frombuffer(_read_exact(buf, num_symbols * 4, "frequency table"), dtype="<u4").copy()
     (payload_size,) = struct.unpack("<Q", _read_exact(buf, 8, "payload_size"))
+    if payload_size <= 0:
+        raise ValueError("AQv1 payload_size must be positive")
     payload = _read_exact(buf, payload_size, "payload")
     if buf.read(1):
         raise ValueError("AQv1 payload has trailing bytes after declared payload")
-    if n_symbols <= 0:
-        raise ValueError("AQv1 n_symbols must be positive")
+    _validate_declared_symbol_count(
+        freq=freq,
+        n_symbols=int(n_symbols),
+        allow_zero_freq=False,
+        label="AQv1",
+    )
 
     header_bytes = len(blob) - len(payload)
     entropy_bits_per_symbol = _entropy_bits_from_freq(freq)
@@ -571,6 +665,10 @@ def profile_aqc1_container(blob: bytes) -> dict:
     (offset,) = struct.unpack("<i", _read_exact(buf, 4, "offset"))
     (n_symbols,) = struct.unpack("<Q", _read_exact(buf, 8, "n_symbols"))
     (n_present,) = struct.unpack("<H", _read_exact(buf, 2, "n_present"))
+    if n_present == 0 or n_present > num_symbols:
+        raise ValueError(
+            f"AQc1 n_present must be in [1, num_symbols], got {n_present}"
+        )
     freq = np.zeros(num_symbols, dtype=np.uint32)
     for _ in range(n_present):
         (symbol,) = struct.unpack("<H", _read_exact(buf, 2, "symbol"))
@@ -583,11 +681,17 @@ def profile_aqc1_container(blob: bytes) -> dict:
             raise ValueError(f"AQc1 symbol {symbol} has zero count")
         freq[symbol] = count
     (payload_size,) = struct.unpack("<Q", _read_exact(buf, 8, "payload_size"))
+    if payload_size <= 0:
+        raise ValueError("AQc1 payload_size must be positive")
     payload = _read_exact(buf, payload_size, "payload")
     if buf.read(1):
         raise ValueError("AQc1 payload has trailing bytes after declared payload")
-    if n_symbols <= 0:
-        raise ValueError("AQc1 n_symbols must be positive")
+    _validate_declared_symbol_count(
+        freq=freq,
+        n_symbols=int(n_symbols),
+        allow_zero_freq=True,
+        label="AQc1",
+    )
 
     header_bytes = len(blob) - len(payload)
     entropy_bits_per_symbol = _entropy_bits_from_freq(freq)

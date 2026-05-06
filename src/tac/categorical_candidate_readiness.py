@@ -16,6 +16,11 @@ from tac.repo_io import json_text, repo_relative, sha256_bytes, sha256_file
 from tac.semantic_label_contract import CONTEST_SEGNET_CLASS_NAME_TUPLE, SELFCOMP_CLASS_TO_GRAY
 
 SCHEMA_VERSION = 1
+CANDIDATE_MANIFEST_KINDS = (
+    "categorical_candidate_manifest",
+    "categorical_candidate_fixture_manifest",
+    "categorical_qma9_clade_spade_openpilot_candidate_manifest",
+)
 REQUIRED_CONTROL_NAMES = (
     "decode_reencode_identity_control",
     "label_permutation_fail_closed_control",
@@ -28,6 +33,12 @@ CONTEST_INFLATE_MEMBER = "inflate.sh"
 LOCAL_FILE_HEADER_SIGNATURE = 0x04034B50
 CENTRAL_DIRECTORY_SIGNATURE = 0x02014B50
 END_OF_CENTRAL_DIRECTORY_SIGNATURE = 0x06054B50
+DETERMINISTIC_ZIP_DATE_TIME = (1980, 1, 1, 0, 0, 0)
+DETERMINISTIC_ZIP_FILE_MODE = 0o644
+DETERMINISTIC_ZIP_INFLATE_MODE = 0o755
+DETERMINISTIC_ZIP_CREATE_SYSTEM = 3
+DETERMINISTIC_ZIP_ALLOWED_COMPRESS_TYPES = (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED)
+ZIP_DATA_DESCRIPTOR_FLAG = 0x0008
 
 
 def _is_sha256(value: Any) -> bool:
@@ -39,6 +50,8 @@ def _is_sha256(value: Any) -> bool:
 def _safe_member_name(name: Any) -> bool:
     if not isinstance(name, str) or not name:
         return False
+    if "\x00" in name or "\\" in name:
+        return False
     path = PurePosixPath(name)
     parts = path.parts
     return (
@@ -46,6 +59,14 @@ def _safe_member_name(name: Any) -> bool:
         and ".." not in parts
         and all(part not in {"", ".", "__MACOSX"} for part in parts)
         and not any(part.startswith(".") for part in parts)
+    )
+
+
+def _archive_member_manifest_kind_valid(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and value.startswith("categorical_")
+        and value.endswith("archive_member_manifest")
     )
 
 
@@ -120,10 +141,91 @@ def _scan_local_headers(raw: bytes) -> list[dict[str, Any]]:
                 "compress_size": compress_size,
                 "compress_type": compress_type,
                 "flag_bits": flag_bits,
+                "extra_len": extra_len,
             }
         )
         offset = data_end
     return headers
+
+
+def _expected_zip_mode(name: str) -> int:
+    return DETERMINISTIC_ZIP_INFLATE_MODE if name == CONTEST_INFLATE_MEMBER else DETERMINISTIC_ZIP_FILE_MODE
+
+
+def _zip_determinism_contract(
+    infos: list[zipfile.ZipInfo],
+    local_headers: list[dict[str, Any]],
+) -> dict[str, Any]:
+    central_names = [info.filename for info in infos]
+    local_names = [row["filename"] for row in local_headers]
+    local_by_offset = {int(row["header_offset"]): row for row in local_headers}
+    bad_timestamps: list[str] = []
+    bad_external_attr_modes: list[dict[str, Any]] = []
+    bad_create_systems: list[dict[str, Any]] = []
+    bad_compress_types: list[dict[str, Any]] = []
+    data_descriptor_members: list[str] = []
+    extra_field_members: list[str] = []
+    for info in infos:
+        if tuple(info.date_time) != DETERMINISTIC_ZIP_DATE_TIME:
+            bad_timestamps.append(info.filename)
+        mode = info.external_attr >> 16
+        expected_mode = _expected_zip_mode(info.filename)
+        if mode != expected_mode:
+            bad_external_attr_modes.append(
+                {
+                    "filename": info.filename,
+                    "mode": mode,
+                    "expected_mode": expected_mode,
+                }
+            )
+        if info.create_system != DETERMINISTIC_ZIP_CREATE_SYSTEM:
+            bad_create_systems.append(
+                {
+                    "filename": info.filename,
+                    "create_system": info.create_system,
+                    "expected_create_system": DETERMINISTIC_ZIP_CREATE_SYSTEM,
+                }
+            )
+        if info.compress_type not in DETERMINISTIC_ZIP_ALLOWED_COMPRESS_TYPES:
+            bad_compress_types.append(
+                {
+                    "filename": info.filename,
+                    "compress_type": info.compress_type,
+                    "allowed": list(DETERMINISTIC_ZIP_ALLOWED_COMPRESS_TYPES),
+                }
+            )
+        if info.flag_bits & ZIP_DATA_DESCRIPTOR_FLAG:
+            data_descriptor_members.append(info.filename)
+        local = local_by_offset.get(int(info.header_offset), {})
+        if int(local.get("extra_len", 0) or 0) != 0 or bool(info.extra):
+            extra_field_members.append(info.filename)
+
+    central_local_order_matches = local_names == central_names
+    passed = (
+        central_local_order_matches
+        and not bad_timestamps
+        and not bad_external_attr_modes
+        and not bad_create_systems
+        and not bad_compress_types
+        and not data_descriptor_members
+        and not extra_field_members
+    )
+    return {
+        "schema_version": 1,
+        "passed": passed,
+        "required_date_time": list(DETERMINISTIC_ZIP_DATE_TIME),
+        "required_file_mode": DETERMINISTIC_ZIP_FILE_MODE,
+        "required_inflate_mode": DETERMINISTIC_ZIP_INFLATE_MODE,
+        "required_create_system": DETERMINISTIC_ZIP_CREATE_SYSTEM,
+        "allowed_compress_types": list(DETERMINISTIC_ZIP_ALLOWED_COMPRESS_TYPES),
+        "central_local_order_matches": central_local_order_matches,
+        "bad_timestamps": bad_timestamps,
+        "bad_external_attr_modes": bad_external_attr_modes,
+        "bad_create_systems": bad_create_systems,
+        "bad_compress_types": bad_compress_types,
+        "data_descriptor_members": data_descriptor_members,
+        "extra_field_members": extra_field_members,
+    }
 
 
 def _zip_wire_contract(archive_path: Path, infos: list[zipfile.ZipInfo]) -> dict[str, Any]:
@@ -167,6 +269,8 @@ def _zip_wire_contract(archive_path: Path, infos: list[zipfile.ZipInfo]) -> dict
                 "compress_type": info.compress_type,
                 "flag_bits": info.flag_bits,
                 "external_attr_mode": info.external_attr >> 16,
+                "create_system": info.create_system,
+                "extra_len": len(info.extra),
                 "date_time": list(info.date_time),
             }
         )
@@ -187,9 +291,12 @@ def _zip_wire_contract(archive_path: Path, infos: list[zipfile.ZipInfo]) -> dict
         and not mismatches
         and all(row["filename"] for row in local_headers)
     )
+    determinism_contract = _zip_determinism_contract(infos, local_headers)
     return {
         "schema_version": 1,
         "passed": passed,
+        "central_directory_names": central_names,
+        "local_header_names": local_names,
         "local_header_count": len(local_headers),
         "central_directory_count": len(infos),
         "duplicate_local_names": duplicate_local_names,
@@ -197,6 +304,7 @@ def _zip_wire_contract(archive_path: Path, infos: list[zipfile.ZipInfo]) -> dict
         "central_local_name_mismatches": mismatches,
         "local_headers": local_headers,
         "central_records": central_records,
+        "determinism_contract": determinism_contract,
     }
 
 
@@ -233,6 +341,14 @@ def audit_categorical_candidate_manifest(
     contract = build_categorical_compression_contract()
     blockers: list[str] = []
     warnings: list[str] = []
+
+    candidate_schema_valid = payload.get("schema_version") == SCHEMA_VERSION
+    candidate_kind = payload.get("kind")
+    candidate_kind_valid = candidate_kind in CANDIDATE_MANIFEST_KINDS
+    if not candidate_schema_valid:
+        blockers.append("candidate_manifest_schema_version_missing_or_invalid")
+    if not candidate_kind_valid:
+        blockers.append("candidate_manifest_kind_missing_or_invalid")
 
     if not _is_sha256(payload.get("source_archive_sha256")):
         blockers.append("source_archive_sha256_missing_or_invalid")
@@ -280,6 +396,12 @@ def audit_categorical_candidate_manifest(
                 if not isinstance(loaded, dict):
                     blockers.append("archive_member_manifest_not_object")
                 else:
+                    if loaded.get("schema_version") != SCHEMA_VERSION:
+                        blockers.append(
+                            "archive_member_manifest_schema_version_missing_or_invalid"
+                        )
+                    if not _archive_member_manifest_kind_valid(loaded.get("kind")):
+                        blockers.append("archive_member_manifest_kind_missing_or_invalid")
                     manifest_payload = loaded
             except (UnicodeDecodeError, json.JSONDecodeError) as exc:
                 manifest_error = f"{type(exc).__name__}: {exc}"
@@ -380,6 +502,7 @@ def audit_categorical_candidate_manifest(
     archive_members: dict[str, bytes] = {}
     archive_error: str | None = None
     archive_untracked_members: list[str] = []
+    archive_member_order_matches_manifest = False
     archive_wire_contract: dict[str, Any] = {
         "schema_version": 1,
         "passed": False,
@@ -416,6 +539,9 @@ def audit_categorical_candidate_manifest(
                 blockers.append("candidate_archive_duplicate_member_names")
             if archive_wire_contract.get("passed") is not True:
                 blockers.append("candidate_archive_zip_wire_contract_failed")
+            determinism_contract = archive_wire_contract.get("determinism_contract")
+            if not isinstance(determinism_contract, dict) or determinism_contract.get("passed") is not True:
+                blockers.append("candidate_archive_zip_determinism_contract_failed")
         unsafe_archive_names = sorted(name for name in archive_members if not _safe_member_name(name))
         if unsafe_archive_names:
             blockers.append("candidate_archive_unsafe_member_names")
@@ -425,6 +551,10 @@ def audit_categorical_candidate_manifest(
     if archive_members:
         archive_name_set = set(archive_members)
         charged_name_set = {record["name"] for record in member_records if record["name"]}
+        archive_order = archive_wire_contract.get("central_directory_names")
+        archive_member_order_matches_manifest = archive_order == member_names
+        if not archive_member_order_matches_manifest:
+            blockers.append("candidate_archive_member_order_mismatch")
         for record in member_records:
             name = record["name"]
             if not name:
@@ -446,6 +576,12 @@ def audit_categorical_candidate_manifest(
     return {
         "schema_version": SCHEMA_VERSION,
         "kind": "categorical_candidate_readiness",
+        "candidate_manifest": {
+            "schema_version": payload.get("schema_version"),
+            "kind": payload.get("kind", ""),
+            "allowed_kinds": list(CANDIDATE_MANIFEST_KINDS),
+            "schema_valid": candidate_schema_valid and candidate_kind_valid,
+        },
         "score_claim": False,
         "dispatch_attempted": False,
         "ready_for_exact_eval_dispatch": ready,
@@ -461,12 +597,23 @@ def audit_categorical_candidate_manifest(
             "sha256": sha256_file(archive_path) if archive_path is not None and archive_path.exists() else "",
             "zip_read_error": archive_error or "",
             "zip_wire_contract": archive_wire_contract,
+            "zip_determinism_contract": archive_wire_contract.get("determinism_contract", {}),
             "contains_inflate_sh": CONTEST_INFLATE_MEMBER in archive_members,
             "untracked_members": archive_untracked_members,
+            "member_order_matches_manifest": archive_member_order_matches_manifest,
         },
         "archive_member_manifest": {
             "path": repo_relative(manifest_path, root) if manifest_path is not None else "",
             "exists": bool(manifest_path is not None and manifest_path.exists()),
+            "schema_version": (
+                manifest_payload.get("schema_version") if isinstance(manifest_payload, dict) else None
+            ),
+            "kind": manifest_payload.get("kind", "") if isinstance(manifest_payload, dict) else "",
+            "schema_valid": (
+                isinstance(manifest_payload, dict)
+                and manifest_payload.get("schema_version") == SCHEMA_VERSION
+                and _archive_member_manifest_kind_valid(manifest_payload.get("kind"))
+            ),
             "bytes": manifest_path.stat().st_size if manifest_path is not None and manifest_path.exists() else None,
             "sha256": sha256_file(manifest_path) if manifest_path is not None and manifest_path.exists() else "",
             "json_read_error": manifest_error,
@@ -506,8 +653,14 @@ def audit_categorical_candidate_manifest(
 
 
 __all__ = [
+    "CANDIDATE_MANIFEST_KINDS",
     "CONTEST_ARCHIVE_CONTRACT",
     "CONTEST_INFLATE_MEMBER",
+    "DETERMINISTIC_ZIP_ALLOWED_COMPRESS_TYPES",
+    "DETERMINISTIC_ZIP_CREATE_SYSTEM",
+    "DETERMINISTIC_ZIP_DATE_TIME",
+    "DETERMINISTIC_ZIP_FILE_MODE",
+    "DETERMINISTIC_ZIP_INFLATE_MODE",
     "REQUIRED_CONTROL_NAMES",
     "REQUIRED_MEMBER_ROLES",
     "SCHEMA_VERSION",

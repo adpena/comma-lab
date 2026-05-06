@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+import json
 import math
+from dataclasses import replace
 
 import pytest
 import torch
 
 from tac.joint_codec_stack_orchestrator import (
+    JCSP_STREAM_METADATA_SCHEMA,
     KIND_ARITHMETIC_STATIC,
     KIND_BALLE_HYPERPRIOR,
     KIND_RAW_PASSTHROUGH,
+    jcsp_stream_specs_manifest,
     model_to_jcsp_streams,
 )
 
@@ -98,6 +102,57 @@ def test_model_to_jcsp_streams_is_order_invariant_for_mapping_inputs() -> None:
     assert forward_streams == reverse_streams
     assert [stream.decomposition_index for stream in forward_streams] == [0, 1]
     assert forward_streams[0].stream_id == reverse_streams[0].stream_id
+
+
+def test_jcsp_stream_specs_manifest_is_deterministic_json_ready() -> None:
+    state = {
+        "z.bias": torch.ones((2,), dtype=torch.float32),
+        "a.weight": torch.zeros((3, 2), dtype=torch.float32),
+    }
+
+    streams = model_to_jcsp_streams(state)
+    manifest_a = jcsp_stream_specs_manifest(streams)
+    manifest_b = jcsp_stream_specs_manifest(reversed(streams))
+
+    assert manifest_a == manifest_b
+    assert manifest_a["schema"] == JCSP_STREAM_METADATA_SCHEMA
+    assert manifest_a["score_claim"] is False
+    assert manifest_a["dispatch_attempted"] is False
+    assert manifest_a["stream_count"] == 2
+    assert [row["name"] for row in manifest_a["streams"]] == [
+        "a.weight",
+        "z.bias",
+    ]
+    assert len(manifest_a["manifest_sha256"]) == 64
+    encoded_a = json.dumps(
+        manifest_a,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+    encoded_b = json.dumps(
+        manifest_b,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+    assert encoded_a == encoded_b
+
+
+def test_jcsp_stream_specs_manifest_fails_closed_on_duplicate_ids() -> None:
+    streams = model_to_jcsp_streams(
+        {
+            "a.weight": torch.zeros((3, 2), dtype=torch.float32),
+            "z.bias": torch.ones((2,), dtype=torch.float32),
+        }
+    )
+
+    corrupted = [
+        streams[0],
+        replace(streams[1], stream_id=streams[0].stream_id),
+    ]
+    with pytest.raises(ValueError, match="unique stream ids"):
+        jcsp_stream_specs_manifest(corrupted)
 
 
 def test_model_to_jcsp_streams_fails_closed_on_duplicate_stream_names() -> None:

@@ -25,11 +25,27 @@ Usage::
     model = load_postfilter_int8("postfilter_int8.pt")
     model = test_time_optimize(model, frames, n_steps=10)
     # model is now adapted to this specific content
+
+Inflate-time gate:
+    This module is INFLATE_TTO=0 GATED. The ``test_time_optimize``
+    function MUST NOT be called at inflate time unless the env var
+    ``INFLATE_TTO=1`` is explicitly set by the operator.
+    Calling it unconditionally at inflate time violates the strict-scorer-
+    rule (CLAUDE.md) because any scorer-dependent loss loaded here adds
+    ~73MB to the effective rate term.
+
+    No compress-time training harness exists for this module. Status:
+    DEFERRED — pending a compress-time TTO loop and an INFLATE_TTO=1
+    integration test with a contest-CUDA archive.
+
+    See: src/tac/preflight.py check_no_scorer_load_at_inflate
+    Registry: lane_tto_inflate_gated (Level 0)
 """
 
 from __future__ import annotations
 
 import copy
+import os
 import sys
 import time
 from typing import Literal
@@ -39,6 +55,30 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 # ---- Loss functions (self-supervised, no scorer needed) ---- #
+
+
+def is_inflate_tto_enabled() -> bool:
+    """Return whether the operator explicitly enabled inflate-time TTO."""
+    return os.environ.get("INFLATE_TTO") == "1"
+
+
+def _assert_inflate_tto_allowed(*, inflate_time: bool, supervised: bool) -> None:
+    """Fail closed for any explicit inflate-time TTO call.
+
+    Compress-time callers use the default ``inflate_time=False``. Scored
+    inflate paths must pass ``inflate_time=True`` so the environment gate is
+    auditable in logs/manifests and cannot be confused with local training.
+    """
+    if not inflate_time:
+        return
+    if is_inflate_tto_enabled():
+        return
+    mode = "supervised" if supervised else "self-supervised"
+    raise RuntimeError(
+        f"{mode} TTO requested for inflate_time=True but INFLATE_TTO=1 is not set; "
+        "inflate-time optimization is non-promotable unless explicitly gated "
+        "and audited in the archive/runtime manifest"
+    )
 
 
 def _sobel_edges(x: torch.Tensor) -> torch.Tensor:
@@ -300,6 +340,7 @@ def test_time_optimize(
     batch_size: int = 16,
     quality_check: bool = True,
     verbose: bool = True,
+    inflate_time: bool = False,
 ) -> nn.Module:
     """Adapt model to specific test content at inflation time.
 
@@ -320,11 +361,14 @@ def test_time_optimize(
         batch_size: frames per optimization step
         quality_check: if True, restore original weights if loss increases
         verbose: print progress to stderr
+        inflate_time: set True only from a scored inflate path. Requires
+            ``INFLATE_TTO=1`` to fail closed by default.
 
     Returns:
         The adapted model (same object, modified in-place).
         If quality_check detects degradation, original weights are restored.
     """
+    _assert_inflate_tto_allowed(inflate_time=inflate_time, supervised=False)
     t0 = time.monotonic()
 
     # Convert HWC -> CHW if needed
@@ -438,6 +482,7 @@ def supervised_tto(
     batch_size: int = 16,
     quality_check: bool = True,
     verbose: bool = True,
+    inflate_time: bool = False,
 ) -> nn.Module:
     """Supervised test-time optimization using pre-computed PoseNet targets.
 
@@ -459,10 +504,13 @@ def supervised_tto(
         batch_size: frames per step (must be even; each 2 frames = 1 pair)
         quality_check: restore original weights if loss increases
         verbose: print progress
+        inflate_time: set True only from a scored inflate path. Requires
+            ``INFLATE_TTO=1`` to fail closed by default.
 
     Returns:
         The adapted model (modified in-place, or restored if quality check fails).
     """
+    _assert_inflate_tto_allowed(inflate_time=inflate_time, supervised=True)
     t0 = time.monotonic()
 
     # Convert HWC -> CHW if needed

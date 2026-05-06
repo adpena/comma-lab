@@ -10,12 +10,12 @@ import hashlib
 import json
 import math
 import re
-from copy import deepcopy
+import tempfile
 from collections.abc import Mapping, Sequence
+from copy import deepcopy
 from numbers import Real
 from pathlib import Path
 from typing import Any
-
 
 COMPONENT_SENSITIVITY_FORMAT = "component_sensitivity_v1"
 COMPONENT_SENSITIVITY_SCHEMA_VERSION = 1
@@ -157,9 +157,20 @@ def sha256_file(path: str | Path, *, chunk_size: int = 1 << 20) -> str:
     return h.hexdigest()
 
 
-def file_metadata(path: str | Path) -> dict[str, Any]:
-    """Return path, byte count, and sha256 metadata for manifest construction."""
+def file_metadata(
+    path: str | Path,
+    *,
+    reject_transient_path: bool = True,
+) -> dict[str, Any]:
+    """Return path, byte count, and sha256 metadata for manifest construction.
+
+    Persisted manifests must not embed absolute transient temp paths. Relative
+    paths are allowed because callers may materialize them against a temporary
+    build root while preserving deterministic, portable manifest paths.
+    """
     p = Path(path)
+    if reject_transient_path:
+        _reject_transient_tmp_path(p, label="file_metadata")
     return {
         "path": str(p),
         "bytes": int(p.stat().st_size),
@@ -167,11 +178,56 @@ def file_metadata(path: str | Path) -> dict[str, Any]:
     }
 
 
-def custody_metadata(path: str | Path) -> dict[str, Any]:
+def _reject_transient_tmp_path(path: Path, *, label: str) -> None:
+    if not path.is_absolute():
+        return
+    prefixes = [
+        Path("/tmp"),
+        Path("/private/tmp"),
+        Path("/var/tmp"),
+        Path("/private/var/tmp"),
+    ]
+    temp_root = Path(tempfile.gettempdir())
+    if temp_root.is_absolute():
+        prefixes.append(temp_root)
+    all_prefixes: list[Path] = []
+    for prefix in prefixes:
+        all_prefixes.append(prefix)
+        try:
+            resolved_prefix = prefix.resolve(strict=False)
+        except (OSError, RuntimeError):
+            continue
+        all_prefixes.append(resolved_prefix)
+
+    candidates = [path]
+    try:
+        candidates.append(path.resolve(strict=False))
+    except (OSError, RuntimeError):
+        pass
+    for candidate in candidates:
+        for prefix in all_prefixes:
+            try:
+                candidate.relative_to(prefix)
+            except ValueError:
+                continue
+            raise ComponentSensitivityArtifactError(
+                f"{label}: refusing transient /tmp-style evidence path {path!s}; "
+                "use a relative manifest path backed by an experiment artifact "
+                "directory or .omx/research/"
+            )
+
+
+def custody_metadata(
+    path: str | Path,
+    *,
+    reject_transient_path: bool = True,
+) -> dict[str, Any]:
     """Return deterministic custody metadata for a file or directory tree."""
     p = Path(path)
+    if reject_transient_path:
+        _reject_transient_tmp_path(p, label="custody_metadata")
     if p.is_file():
-        out = file_metadata(p)
+        out = file_metadata(p, reject_transient_path=False)
         out["kind"] = "file"
         return out
     if p.is_dir():
@@ -342,8 +398,11 @@ def _materialize_file_entry(
     if not isinstance(path_value, str) or not path_value:
         return out
 
+    raw_path = Path(path_value)
+    if raw_path.is_absolute():
+        _reject_transient_tmp_path(raw_path, label=context)
     resolved = _resolve_manifest_path(path_value, root=root)
-    meta = custody_metadata(resolved)
+    meta = custody_metadata(resolved, reject_transient_path=False)
     _assert_matching_metadata(out, "bytes", meta["bytes"], context)
     _assert_matching_metadata(out, "size_bytes", meta["bytes"], context)
     _assert_matching_metadata(out, "sha256", meta["sha256"], context)
@@ -657,10 +716,19 @@ def _validate_component_map_certification(
         raise ComponentSensitivityArtifactError(
             f"{context}.certification.review_clean_passes must be at least 3"
         )
-    unresolved = certification.get("review_unresolved_blockers", [])
-    if unresolved not in ([], None):
+    # IMPORTANT (audit 2026-05-06): require key present AND empty list.
+    # Previously ``unresolved not in ([], None)`` accepted ``None`` as a
+    # silent pass — a missing/null key would skip the gate. Tighten to require
+    # an explicit empty list so absent or non-list values fail loud.
+    if "review_unresolved_blockers" not in certification:
         raise ComponentSensitivityArtifactError(
-            f"{context}.certification.review_unresolved_blockers must be empty"
+            f"{context}.certification.review_unresolved_blockers is required "
+            "(must be an empty list)"
+        )
+    unresolved = certification.get("review_unresolved_blockers")
+    if not isinstance(unresolved, list) or unresolved != []:
+        raise ComponentSensitivityArtifactError(
+            f"{context}.certification.review_unresolved_blockers must be an empty list"
         )
     response_gate = _require_mapping(
         certification,

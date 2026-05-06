@@ -67,6 +67,60 @@ def _read_varint_from(data: bytes, pos: int) -> tuple[int, int]:
     return value, pos
 
 
+def _normalize_masks_array(masks: torch.Tensor | np.ndarray) -> np.ndarray:
+    """Return a contiguous uint8 mask array after validating the wire domain."""
+
+    if isinstance(masks, torch.Tensor):
+        masks_np = masks.detach().cpu().numpy()
+    else:
+        masks_np = np.asarray(masks)
+    if masks_np.ndim != 3:
+        raise ValueError(f"masks must have shape (N, H, W), got {masks_np.shape}")
+    if any(int(dim) <= 0 for dim in masks_np.shape):
+        raise ValueError(f"mask dimensions must be positive, got {masks_np.shape}")
+    if masks_np.dtype.kind not in ("i", "u"):
+        raise ValueError(f"masks must contain integer class ids, got dtype={masks_np.dtype}")
+    min_value = int(masks_np.min())
+    max_value = int(masks_np.max())
+    if min_value < 0 or max_value >= NUM_CLASSES:
+        raise ValueError(
+            f"mask class ids must be in [0, {NUM_CLASSES}); "
+            f"min={min_value}, max={max_value}"
+        )
+    return np.ascontiguousarray(masks_np.astype(np.uint8, copy=False))
+
+
+def _validate_header_dims(N: int, H: int, W: int) -> None:
+    if min(N, H, W) <= 0:
+        raise ValueError(f"decode_masks_entropy: dimensions must be positive, got {(N, H, W)}")
+
+
+def _decompress_payload(compressed: bytes, backend_id: int) -> bytes:
+    if backend_id == 1:
+        decompressor = lzma.LZMADecompressor(format=lzma.FORMAT_XZ)
+        try:
+            raw = decompressor.decompress(compressed)
+        except lzma.LZMAError as exc:
+            raise ValueError(f"decode_masks_entropy: invalid lzma stream: {exc}") from exc
+        if not decompressor.eof:
+            raise ValueError("decode_masks_entropy: truncated lzma stream")
+        if decompressor.unused_data:
+            raise ValueError("decode_masks_entropy: trailing bytes after lzma stream")
+        return raw
+    if backend_id == 0:
+        decompressor = zlib.decompressobj()
+        try:
+            raw = decompressor.decompress(compressed) + decompressor.flush()
+        except zlib.error as exc:
+            raise ValueError(f"decode_masks_entropy: invalid zlib stream: {exc}") from exc
+        if not decompressor.eof:
+            raise ValueError("decode_masks_entropy: truncated zlib stream")
+        if decompressor.unused_data or decompressor.unconsumed_tail:
+            raise ValueError("decode_masks_entropy: trailing bytes after zlib stream")
+        return raw
+    raise ValueError(f"decode_masks_entropy: unsupported backend id {backend_id}")
+
+
 # ---------- Method A: full-frame delta ----------
 
 
@@ -85,10 +139,20 @@ def _build_fulldelta_payload(masks_np: np.ndarray) -> bytes:
 def _decode_fulldelta_payload(raw: bytes, N: int, H: int, W: int) -> np.ndarray:
     """Decode full-frame delta payload."""
     frame_size = H * W
+    expected_size = N * frame_size
+    if len(raw) != expected_size:
+        raise ValueError(
+            f"full-delta payload has {len(raw)} bytes, expected {expected_size}"
+        )
     masks = np.empty((N, H, W), dtype=np.uint8)
-    masks[0] = np.frombuffer(raw, dtype=np.uint8, count=frame_size, offset=0).reshape(H, W)
+    frame0 = np.frombuffer(raw, dtype=np.uint8, count=frame_size, offset=0).reshape(H, W)
+    if np.any(frame0 >= NUM_CLASSES):
+        raise ValueError("full-delta keyframe contains class ids outside mask domain")
+    masks[0] = frame0
     for i in range(1, N):
         delta = np.frombuffer(raw, dtype=np.uint8, count=frame_size, offset=i * frame_size).reshape(H, W)
+        if np.any(delta > NUM_CLASSES):
+            raise ValueError(f"full-delta frame {i} contains invalid delta symbols")
         masks[i] = np.where(delta == 0, masks[i - 1], delta - 1)
     return masks
 
@@ -139,9 +203,19 @@ def _decode_sparse_payload(raw: bytes, N: int, H: int, W: int) -> np.ndarray:
     frame0 = np.empty(frame_size, dtype=np.uint8)
     idx = 0
     while idx < frame_size:
+        if pos >= len(raw):
+            raise ValueError("sparse payload ended during keyframe RLE")
         val = raw[pos]
         pos += 1
+        if val >= NUM_CLASSES:
+            raise ValueError(f"sparse keyframe contains invalid class id {val}")
         run, pos = _read_varint_from(raw, pos)
+        if run <= 0:
+            raise ValueError("sparse keyframe RLE run length must be positive")
+        if idx + run > frame_size:
+            raise ValueError(
+                f"sparse keyframe RLE run exceeds frame size: idx={idx}, run={run}, frame_size={frame_size}"
+            )
         frame0[idx : idx + run] = val
         idx += run
     masks[0] = frame0.reshape(H, W)
@@ -151,13 +225,30 @@ def _decode_sparse_payload(raw: bytes, N: int, H: int, W: int) -> np.ndarray:
         masks[fi] = masks[fi - 1].copy()
         flat = masks[fi].ravel()
         num_changed, pos = _read_varint_from(raw, pos)
+        if num_changed > frame_size:
+            raise ValueError(
+                f"sparse frame {fi} declares {num_changed} changes for {frame_size} pixels"
+            )
         abs_idx = 0
-        for _ in range(num_changed):
+        for change_index in range(num_changed):
             gap, pos = _read_varint_from(raw, pos)
+            if change_index > 0 and gap == 0:
+                raise ValueError(f"sparse frame {fi} contains a duplicate changed index")
             abs_idx += gap
-            flat[abs_idx] = raw[pos]
+            if abs_idx >= frame_size:
+                raise ValueError(
+                    f"sparse frame {fi} changed index {abs_idx} is outside {frame_size} pixels"
+                )
+            if pos >= len(raw):
+                raise ValueError(f"sparse frame {fi} ended before changed value")
+            value = raw[pos]
+            if value >= NUM_CLASSES:
+                raise ValueError(f"sparse frame {fi} contains invalid class id {value}")
+            flat[abs_idx] = value
             pos += 1
 
+    if pos != len(raw):
+        raise ValueError(f"sparse payload has {len(raw) - pos} trailing bytes")
     return masks
 
 
@@ -184,11 +275,10 @@ def encode_masks_entropy(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if isinstance(masks, torch.Tensor):
-        masks_np = masks.cpu().numpy().astype(np.uint8)
-    else:
-        masks_np = np.asarray(masks, dtype=np.uint8)
+    if backend not in {"lzma", "zlib"}:
+        raise ValueError(f"unsupported mask entropy backend: {backend!r}")
 
+    masks_np = _normalize_masks_array(masks)
     N, H, W = masks_np.shape
 
     # Build both payloads
@@ -251,6 +341,10 @@ def decode_masks_entropy(
 
     with open(input_path, "rb") as f:
         data = f.read()
+    if len(data) < HEADER_SIZE:
+        raise ValueError(
+            f"decode_masks_entropy: truncated MSKV header: got {len(data)} bytes, expected {HEADER_SIZE}"
+        )
 
     pos = 0
     magic = data[pos : pos + 4]
@@ -271,19 +365,25 @@ def decode_masks_entropy(
     pos += 2
     W = struct.unpack_from("<H", data, pos)[0]
     pos += 2
+    _validate_header_dims(N, H, W)
     method = data[pos]
     pos += 1
     raw_size = struct.unpack_from("<I", data, pos)[0]
     pos += 4
+    if method not in (0, 1):
+        raise ValueError(f"decode_masks_entropy: unsupported method id {method}")
+    if raw_size <= 0:
+        raise ValueError(f"decode_masks_entropy: raw_size must be positive, got {raw_size}")
 
     compressed = data[pos:]
+    raw = _decompress_payload(compressed, backend_id)
 
-    if backend_id == 1:
-        raw = lzma.decompress(compressed, format=lzma.FORMAT_XZ)
-    else:
-        raw = zlib.decompress(compressed)
-
-    assert len(raw) == raw_size, f"Size mismatch: {len(raw)} vs {raw_size}"
+    if len(raw) != raw_size:
+        raise ValueError(
+            f"decode_masks_entropy: decompressed size mismatch: "
+            f"got {len(raw)}, declared {raw_size}. "
+            f"File is corrupt or written by a different version."
+        )
 
     if method == 0:
         masks = _decode_fulldelta_payload(raw, N, H, W)

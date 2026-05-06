@@ -172,6 +172,19 @@ def test_certified_sensitivity_map_metadata_is_fail_closed(tmp_path: Path) -> No
     with pytest.raises(SensitivityMapError, match="review_clean_passes"):
         validate_certified_sensitivity_map_metadata(bad, component="combined")
 
+    for bad_blockers in (None, ["needs review"], "none"):
+        bad = dict(metadata)
+        bad["certification"] = {**cert, "review_unresolved_blockers": bad_blockers}
+        with pytest.raises(SensitivityMapError, match="review_unresolved_blockers"):
+            validate_certified_sensitivity_map_metadata(bad, component="combined")
+
+    bad = dict(metadata)
+    bad_cert = dict(cert)
+    del bad_cert["review_unresolved_blockers"]
+    bad["certification"] = bad_cert
+    with pytest.raises(SensitivityMapError, match="review_unresolved_blockers"):
+        validate_certified_sensitivity_map_metadata(bad, component="combined")
+
     path = tmp_path / "combined.pt"
     save_certified_sensitivity_map(
         path,

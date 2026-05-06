@@ -118,11 +118,19 @@ from tac.optimization.research_basis import research_basis_ids_for_family
 
 _JCSP_MAGIC: bytes = b"JCSP"
 _JCSP_VERSION: int = 1
+JCSP_STREAM_METADATA_SCHEMA: str = "jcsp_tensor_stream_specs_manifest_v1"
 
 # Codec kind flags
 KIND_ARITHMETIC_STATIC: int = 0
 KIND_BALLE_HYPERPRIOR: int = 1
 KIND_RAW_PASSTHROUGH: int = 2
+
+_ARITHMETIC_PAYLOAD_MAGICS: tuple[bytes, ...] = (b"AQv1", b"AQc1")
+_BALLE_PAYLOAD_MAGICS: tuple[bytes, ...] = (b"BHv1",)
+_PAYLOAD_MAGICS_BY_CODEC_KIND: dict[int, tuple[bytes, ...]] = {
+    KIND_ARITHMETIC_STATIC: _ARITHMETIC_PAYLOAD_MAGICS,
+    KIND_BALLE_HYPERPRIOR: _BALLE_PAYLOAD_MAGICS,
+}
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -158,6 +166,16 @@ class JCSPTensorStreamSpec:
     constraint_tags: tuple[str, ...] = ()
     dispatch_blockers: tuple[str, ...] = ()
     fail_closed_criteria: tuple[str, ...] = ()
+
+
+def _canonical_json_sha256(payload: Mapping[str, Any]) -> str:
+    encoded = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def _tensor_shape_tuple(tensor: Any) -> tuple[int, ...]:
@@ -493,6 +511,101 @@ def model_to_jcsp_streams(
     return out
 
 
+def _stream_spec_record(stream: JCSPTensorStreamSpec) -> dict[str, Any]:
+    marginal = _require_finite(
+        stream.score_per_byte_marginal,
+        field="score_per_byte_marginal",
+        name=stream.name,
+    )
+    return {
+        "name": stream.name,
+        "stream_id": stream.stream_id,
+        "decomposition_index": int(stream.decomposition_index),
+        "codec_kind": int(stream.codec_kind),
+        "tensor_shape": list(stream.tensor_shape),
+        "tensor_dtype": stream.tensor_dtype,
+        "num_elements": int(stream.num_elements),
+        "raw_bytes": int(stream.raw_bytes),
+        "byte_estimate": int(stream.byte_estimate),
+        "bytes_charged": int(stream.bytes_charged),
+        "score_per_byte_marginal": float(marginal),
+        "score_marginal_source": stream.score_marginal_source,
+        "score_marginal_evidence": stream.score_marginal_evidence,
+        "scorer_term_targeted": stream.scorer_term_targeted,
+        "research_basis_ids": list(stream.research_basis_ids),
+        "constraint_tags": list(stream.constraint_tags),
+        "dispatch_blockers": list(stream.dispatch_blockers),
+        "fail_closed_criteria": list(stream.fail_closed_criteria),
+    }
+
+
+def jcsp_stream_specs_manifest(
+    streams: Iterable[JCSPTensorStreamSpec],
+) -> dict[str, Any]:
+    """Return a deterministic JSON-ready manifest for JCSP stream metadata.
+
+    The manifest is a compress-time planning artifact only: it records the
+    byte/marginal contract that must be closed before archive construction, but
+    it does not encode payloads, load scorers, dispatch jobs, or claim scores.
+    """
+
+    records = [
+        _stream_spec_record(stream)
+        for stream in sorted(
+            streams,
+            key=lambda item: (int(item.decomposition_index), item.name),
+        )
+    ]
+    names = [record["name"] for record in records]
+    duplicate_names = sorted(
+        name for name in set(names) if names.count(name) > 1
+    )
+    if duplicate_names:
+        raise ValueError(
+            "jcsp_stream_specs_manifest requires unique stream names; "
+            f"duplicates: {', '.join(duplicate_names)}"
+        )
+    stream_ids = [record["stream_id"] for record in records]
+    duplicate_ids = sorted(
+        stream_id for stream_id in set(stream_ids) if stream_ids.count(stream_id) > 1
+    )
+    if duplicate_ids:
+        raise ValueError(
+            "jcsp_stream_specs_manifest requires unique stream ids; "
+            f"duplicates: {', '.join(duplicate_ids)}"
+        )
+    indices = [int(record["decomposition_index"]) for record in records]
+    expected_indices = list(range(len(records)))
+    if indices != expected_indices:
+        raise ValueError(
+            "jcsp_stream_specs_manifest requires contiguous decomposition_index "
+            f"values {expected_indices}, got {indices}"
+        )
+    payload: dict[str, Any] = {
+        "schema": JCSP_STREAM_METADATA_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "stream_count": len(records),
+        "streams": records,
+        "determinism_contract": {
+            "json_encoding": "sort_keys=True,separators=(',', ':'),allow_nan=False",
+            "stream_order": "decomposition_index_then_name",
+            "stream_id": (
+                "sha256(name,tensor_dtype,tensor_shape,num_elements,raw_bytes)"
+            ),
+        },
+        "promotion_blockers": [
+            "qint_or_exact_wire_stream_missing",
+            "decode_validation_missing",
+            "charged_archive_member_missing",
+            "runtime_loader_parity_missing",
+            "exact_cuda_auth_eval_missing",
+        ],
+    }
+    payload["manifest_sha256"] = _canonical_json_sha256(payload)
+    return payload
+
+
 # ────────────────────────────────────────────────────────────────────────────
 # Stream specification
 # ────────────────────────────────────────────────────────────────────────────
@@ -722,6 +835,39 @@ class JointCodecStackResult:
 # ────────────────────────────────────────────────────────────────────────────
 
 
+def _payload_magic(payload: bytes) -> bytes:
+    if len(payload) < 4:
+        raise ValueError(
+            f"JCSP stream payload is too small for codec magic: {len(payload)} bytes"
+        )
+    return payload[:4]
+
+
+def _require_payload_magic_matches_codec_kind(
+    *,
+    codec_kind: int,
+    payload: bytes,
+    context: str,
+) -> bytes:
+    """Fail closed when runtime dispatch kind and payload wire magic disagree."""
+
+    if codec_kind == KIND_RAW_PASSTHROUGH:
+        if len(payload) <= 0:
+            raise ValueError(f"{context}: raw passthrough payload is empty")
+        return payload[:4]
+    allowed_magics = _PAYLOAD_MAGICS_BY_CODEC_KIND.get(int(codec_kind))
+    if allowed_magics is None:
+        raise ValueError(f"{context}: invalid codec_kind {codec_kind}")
+    magic = _payload_magic(payload)
+    if magic not in allowed_magics:
+        allowed = ", ".join(repr(item) for item in allowed_magics)
+        raise ValueError(
+            f"{context}: payload magic {magic!r} is incompatible with "
+            f"codec_kind {codec_kind}; expected one of {allowed}"
+        )
+    return magic
+
+
 def _pack_jcsp_container(
     *,
     streams: list[StackStreamResult],
@@ -758,6 +904,11 @@ def _pack_jcsp_container(
                 f"_pack_jcsp_container: actual_bytes={s.actual_bytes} does "
                 f"not match payload_len={len(s.payload)} for stream {s.name!r}"
             )
+        _require_payload_magic_matches_codec_kind(
+            codec_kind=s.codec_kind,
+            payload=s.payload,
+            context=f"_pack_jcsp_container stream {s.name!r}",
+        )
         out.write(struct.pack("<B", len(name_b)))
         out.write(name_b)
         out.write(struct.pack("<B", int(s.codec_kind)))
@@ -849,6 +1000,11 @@ def unpack_jcsp_container(blob: bytes) -> dict:
             )
         _require_jcsp_bytes(blob, cursor, payload_len, f"stream {name!r} payload")
         payload = blob[cursor : cursor + payload_len]
+        payload_magic = _require_payload_magic_matches_codec_kind(
+            codec_kind=codec_kind,
+            payload=payload,
+            context=f"unpack_jcsp_container stream {name!r}",
+        )
         cursor += payload_len
         streams.append(
             {
@@ -859,6 +1015,7 @@ def unpack_jcsp_container(blob: bytes) -> dict:
                 "score_delta": score_milli / 1e6,
                 "marginal": margin_milli / 1e6,
                 "payload": payload,
+                "payload_magic": payload_magic,
             }
         )
     _require_jcsp_bytes(blob, cursor, 4, "KKT residual")
@@ -881,6 +1038,43 @@ def unpack_jcsp_container(blob: bytes) -> dict:
         "waterline_kkt_residual": kkt_milli / 1e6,
         "iters": iters,
         "converged": bool(converged),
+    }
+
+
+def validate_jcsp_container_runtime_parity(blob: bytes) -> dict[str, Any]:
+    """Validate JCSP metadata that an inflate-side runtime loader would trust.
+
+    This is a byte-structure/readiness check, not a score claim. It verifies
+    the container can be unpacked fail-closed and that each stream's recorded
+    ``codec_kind`` matches the payload wire magic used for runtime dispatch.
+    """
+
+    parsed = unpack_jcsp_container(blob)
+    stream_records: list[dict[str, Any]] = []
+    for stream in parsed["streams"]:
+        magic = _require_payload_magic_matches_codec_kind(
+            codec_kind=int(stream["codec_kind"]),
+            payload=stream["payload"],
+            context=f"validate_jcsp_container_runtime_parity stream {stream['name']!r}",
+        )
+        stream_records.append(
+            {
+                "name": stream["name"],
+                "codec_kind": int(stream["codec_kind"]),
+                "payload_magic": magic.decode("ascii", errors="replace"),
+                "actual_bytes": int(stream["actual_bytes"]),
+                "runtime_dispatch_checked": True,
+            }
+        )
+    return {
+        "schema": "jcsp_runtime_loader_parity_v1",
+        "score_claim": False,
+        "ready_for_runtime_loader": True,
+        "stream_count": len(stream_records),
+        "streams": stream_records,
+        "waterline_kkt_residual": parsed["waterline_kkt_residual"],
+        "iters": parsed["iters"],
+        "converged": parsed["converged"],
     }
 
 
@@ -999,11 +1193,11 @@ def _verify_stream_roundtrip(src: StreamSource, payload: bytes) -> None:
     if src.codec_kind == KIND_BALLE_HYPERPRIOR:
         # Auto-select may have produced an AQv1 payload (static-wins). Detect
         # by magic byte and dispatch.
-        if payload[:4] == b"AQv1":
+        if payload[:4] in _ARITHMETIC_PAYLOAD_MAGICS:
             decoded = decode_qints_arithmetic(
                 payload, expected_dtype=src.qints.dtype
             )
-        elif payload[:4] == b"BHv1":
+        elif payload[:4] in _BALLE_PAYLOAD_MAGICS:
             decoded = decode_qints_balle(
                 blob=payload, expected_dtype=src.qints.dtype
             )
@@ -1093,6 +1287,7 @@ def run_sequential_codec_stack(
 
 
 __all__ = [
+    "JCSP_STREAM_METADATA_SCHEMA",
     "KIND_ARITHMETIC_STATIC",
     "KIND_BALLE_HYPERPRIOR",
     "KIND_RAW_PASSTHROUGH",
@@ -1100,8 +1295,10 @@ __all__ = [
     "JointCodecStackResult",
     "StackStreamResult",
     "StreamSource",
+    "jcsp_stream_specs_manifest",
     "model_to_jcsp_streams",
     "run_joint_codec_stack",
     "run_sequential_codec_stack",
     "unpack_jcsp_container",
+    "validate_jcsp_container_runtime_parity",
 ]

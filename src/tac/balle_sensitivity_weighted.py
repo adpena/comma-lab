@@ -153,13 +153,21 @@ def aggregate_pixel_sensitivity_to_blocks(
     n_blocks = (n + block_size - 1) // block_size
     pad_len = n_blocks * block_size - n
     if pad_len:
-        s = torch.cat([s, torch.zeros(pad_len, dtype=s.dtype)], dim=0)
+        s = torch.cat([s, torch.zeros(pad_len, dtype=s.dtype, device=s.device)], dim=0)
     blocks = s.reshape(n_blocks, block_size)
-    if aggregate == "mean":
-        return blocks.mean(dim=1)
     if aggregate == "max":
         return blocks.amax(dim=1)
-    return blocks.sum(dim=1)
+    if aggregate == "sum":
+        # Zero-padding is the additive identity for sum, no correction needed.
+        return blocks.sum(dim=1)
+    # IMPORTANT (audit 2026-05-06): naive ``blocks.mean(dim=1)`` divides the
+    # last (padded) block by ``block_size`` instead of by the actual count of
+    # real elements, biasing the mean toward 0 for short tails. Compute the
+    # mean using the true per-block element count.
+    counts = torch.full((n_blocks,), float(block_size), dtype=s.dtype, device=s.device)
+    if pad_len:
+        counts[-1] = float(block_size - pad_len)
+    return blocks.sum(dim=1) / counts
 
 
 class SensitivityConditionedHyperDecoder(nn.Module):
