@@ -31,8 +31,13 @@ def test_research_basis_manifest_is_planning_only_and_hardened() -> None:
 
 def test_family_lookup_prefers_latest_family_specific_sources() -> None:
     assert "lapose_2026" in research_basis_ids_for_family("lapose")
+    assert "geometric_visual_servo_ot_2026" in research_basis_ids_for_family("lapose")
     assert "telescope_2026" in research_basis_ids_for_family("telescopic_foveation")
+    assert "foveated_diffusion_2026" in research_basis_ids_for_family("telescopic_foveation")
     assert "foveated_telepresence_2025" in research_basis_ids_for_family("foveation")
+    assert "geometric_visual_servo_ot_2026" in research_basis_ids_for_family(
+        "optimal_transport"
+    )
     assert "rdc_universal_2025" in research_basis_ids_for_family("categorical")
     assert "flavc_2025" in research_basis_ids_for_family("entropy")
     assert "dworetzky_fridrich_detector_batch_2025" in research_basis_ids_for_family(
@@ -51,6 +56,8 @@ def test_all_registered_research_sources_satisfy_required_contract() -> None:
     assert "lyra2_2026" in by_id
     assert "compression_as_adaptation_2026" in by_id
     assert "rdc_bernoulli_2026" in by_id
+    assert "foveated_diffusion_2026" in by_id
+    assert "geometric_visual_servo_ot_2026" in by_id
     for basis_id, source in by_id.items():
         for field in REQUIRED_SOURCE_FIELDS:
             assert field in source, f"{basis_id} missing {field}"

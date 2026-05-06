@@ -18,7 +18,7 @@ from tac.repo_io import sha256_file
 
 CONTEST_ORIGINAL_BYTES = 37_545_489
 RATE_SCORE_PER_BYTE = 25 / CONTEST_ORIGINAL_BYTES
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 NON_RANKABLE_EVIDENCE_GRADES = {
     "invalid",
     "prediction",
@@ -36,6 +36,15 @@ PARETO_MINIMIZE_OBJECTIVES = (
     "expected_seg_dist_delta",
     "expected_pose_dist_delta",
 )
+SELECTION_PENALTIES = {
+    "non_rankable_atom": 1_000.0,
+    "missing_byte_closed_archive_manifest": 100.0,
+    "proxy_row": 50.0,
+    "pareto_ineligible_atom": 25.0,
+    "kkt_not_ready_for_field_planning": 10.0,
+    "pareto_dominated_atom": 5.0,
+    "requested_dispatchable_refused": 1.0,
+}
 
 
 class MetaLagrangianError(ValueError):
@@ -101,6 +110,72 @@ def _unique_ordered_strings(values: Iterable[Any]) -> list[str]:
             out.append(text)
             seen.add(text)
     return out
+
+
+def _optional_non_negative_float(atom: Mapping[str, Any], keys: Iterable[str], *, label: str) -> tuple[float, list[str]]:
+    for key in keys:
+        if key not in atom or atom.get(key) is None:
+            continue
+        value = atom.get(key)
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            raise MetaLagrangianError(f"{label} must be numeric when provided")
+        out = float(value)
+        if out < 0.0:
+            raise MetaLagrangianError(f"{label} must be non-negative when provided")
+        return round(out, 12), [key]
+    return 0.0, []
+
+
+def _uncertainty_fields(atom: Mapping[str, Any]) -> dict[str, Any]:
+    """Carry nearby Bayesian-design uncertainty fields into atom rows."""
+
+    eig, eig_sources = _optional_non_negative_float(
+        atom,
+        ("expected_information_gain_nats", "information_gain_nats"),
+        label="expected_information_gain_nats",
+    )
+    variance, variance_sources = _optional_non_negative_float(
+        atom,
+        ("expected_score_variance", "predicted_score_variance", "score_variance"),
+        label="expected_score_variance",
+    )
+    noise, noise_sources = _optional_non_negative_float(
+        atom,
+        ("observation_noise_variance",),
+        label="observation_noise_variance",
+    )
+    reduction = atom.get("family_uncertainty_reduction")
+    reduction_total_variance = 0.0
+    reduction_sources: list[str] = []
+    if isinstance(reduction, Mapping):
+        nested_eig, nested_eig_sources = _optional_non_negative_float(
+            reduction,
+            ("total_information_gain_nats",),
+            label="family_uncertainty_reduction.total_information_gain_nats",
+        )
+        nested_variance, nested_variance_sources = _optional_non_negative_float(
+            reduction,
+            ("total_variance_reduction",),
+            label="family_uncertainty_reduction.total_variance_reduction",
+        )
+        if not eig_sources:
+            eig = nested_eig
+            eig_sources = [f"family_uncertainty_reduction.{source}" for source in nested_eig_sources]
+        reduction_total_variance = nested_variance
+        reduction_sources = [
+            f"family_uncertainty_reduction.{source}" for source in nested_variance_sources
+        ]
+    source_fields = [*eig_sources, *variance_sources, *noise_sources, *reduction_sources]
+    return {
+        "expected_information_gain_nats": eig,
+        "expected_score_variance": variance,
+        "observation_noise_variance": noise,
+        "expected_uncertainty_reduction": {
+            "total_variance_reduction": reduction_total_variance,
+            "source_fields": source_fields,
+            "has_uncertainty_signal": bool(eig > 0.0 or variance > 0.0 or reduction_total_variance > 0.0),
+        },
+    }
 
 
 def _is_sha256(value: str) -> bool:
@@ -290,7 +365,9 @@ def _annotate_pareto_frontier(rows: list[dict[str, Any]]) -> dict[str, Any]:
     scope_counts: dict[str, dict[str, int]] = {}
     for row in rows:
         row["pareto_eligible"] = bool(
-            row["rankable"] and row["byte_closed_archive_manifest_attached"]
+            row["rankable"]
+            and row["byte_closed_archive_manifest_attached"]
+            and not row["proxy_row"]
         )
         row["pareto_frontier"] = bool(row["pareto_eligible"])
         row["pareto_dominated_by"] = []
@@ -325,11 +402,53 @@ def _annotate_pareto_frontier(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "archive_ready_for_stack_review": "max",
         },
         "scope_default": "family_group",
-        "eligibility": "rankable_and_verified_byte_closed_archive_manifest",
+        "eligibility": "rankable_verified_byte_closed_archive_manifest_and_non_proxy",
         "rankable_frontier_count": frontier_count,
         "rankable_dominated_count": dominated_count,
         "scope_counts": dict(sorted(scope_counts.items())),
     }
+
+
+def _selection_penalty_terms(row: Mapping[str, Any]) -> dict[str, float]:
+    terms: dict[str, float] = {}
+    if row.get("rankable") is not True:
+        terms["non_rankable_atom"] = SELECTION_PENALTIES["non_rankable_atom"]
+    if row.get("byte_closed_archive_manifest_attached") is not True:
+        terms["missing_byte_closed_archive_manifest"] = SELECTION_PENALTIES[
+            "missing_byte_closed_archive_manifest"
+        ]
+    if row.get("proxy_row") is True:
+        terms["proxy_row"] = SELECTION_PENALTIES["proxy_row"]
+    if row.get("pareto_eligible") is not True:
+        terms["pareto_ineligible_atom"] = SELECTION_PENALTIES["pareto_ineligible_atom"]
+    elif row.get("pareto_frontier") is not True:
+        terms["pareto_dominated_atom"] = SELECTION_PENALTIES["pareto_dominated_atom"]
+    if row.get("kkt_ready_for_field_planning") is not True:
+        terms["kkt_not_ready_for_field_planning"] = SELECTION_PENALTIES[
+            "kkt_not_ready_for_field_planning"
+        ]
+    if row.get("requested_dispatchable") is True and row.get("dispatchable") is not True:
+        terms["requested_dispatchable_refused"] = SELECTION_PENALTIES[
+            "requested_dispatchable_refused"
+        ]
+    return terms
+
+
+def _annotate_selection_scores(rows: list[dict[str, Any]]) -> None:
+    for row in rows:
+        terms = _selection_penalty_terms(row)
+        penalty = sum(terms.values())
+        row["selection_penalty_terms"] = {key: round(value, 12) for key, value in sorted(terms.items())}
+        row["selection_penalty_score_delta"] = round(penalty, 12)
+        row["selection_score_delta"] = round(
+            float(row["expected_total_score_delta"]) + penalty,
+            12,
+        )
+        row["selection_blockers"] = list(row["selection_penalty_terms"])
+        row["selection_policy"] = (
+            "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows "
+            "sort before raw expected-score deltas; information gain is a deterministic tie-breaker"
+        )
 
 
 def _proxy_row(evidence_grade: str, atom: Mapping[str, Any]) -> bool:
@@ -361,6 +480,7 @@ def expected_atom_score_delta(
     expected_seg_delta = float(atom.get("expected_seg_dist_delta", 0.0))
     expected_pose_delta = float(atom.get("expected_pose_dist_delta", 0.0))
     evidence_grade = str(atom.get("evidence_grade", "prediction"))
+    uncertainty = _uncertainty_fields(atom)
     family = str(atom.get("family") or atom.get("atom_family") or atom.get("family_group") or "unknown")
     family_group = str(atom.get("family_group") or family)
     pareto_scope = str(atom.get("pareto_scope") or family_group)
@@ -398,6 +518,8 @@ def expected_atom_score_delta(
         dispatch_blockers.append("requested_dispatchable_without_byte_closed_archive_manifest")
     if requested_dispatchable and proxy_row:
         dispatch_blockers.append("requested_dispatchable_proxy_row_refused")
+    if requested_dispatchable:
+        dispatch_blockers.append("requested_dispatchable_requires_external_exact_readiness_artifact")
     if atom.get("score_claim") is True:
         dispatch_blockers.append("source_atom_score_claim_true")
     kkt_blockers = [
@@ -416,7 +538,7 @@ def expected_atom_score_delta(
     component_score = confidence * (seg_score + pose_score)
     rate_score = rate_score_delta(byte_delta)
     total = component_score + rate_score
-    return {
+    row = {
         "atom_id": atom_id,
         "family": family,
         "family_group": family_group,
@@ -427,6 +549,10 @@ def expected_atom_score_delta(
         "score_claim": False,
         "evidence_grade": evidence_grade,
         "proxy_row": proxy_row,
+        "expected_information_gain_nats": uncertainty["expected_information_gain_nats"],
+        "expected_score_variance": uncertainty["expected_score_variance"],
+        "observation_noise_variance": uncertainty["observation_noise_variance"],
+        "expected_uncertainty_reduction": uncertainty["expected_uncertainty_reduction"],
         "byte_delta": byte_delta,
         "rate_score_delta": round(rate_score, 12),
         "expected_seg_dist_delta": expected_seg_delta,
@@ -451,14 +577,25 @@ def expected_atom_score_delta(
         "archive_manifest_custody": archive_manifest_custody,
         "byte_closed_archive_manifest_attached": byte_closed_archive_manifest_attached,
         "requested_dispatchable": requested_dispatchable,
-        "archive_ready_for_stack_review": bool(rankable and byte_closed_archive_manifest_attached),
-        "pareto_eligible": bool(rankable and byte_closed_archive_manifest_attached),
+        "archive_ready_for_stack_review": bool(rankable and byte_closed_archive_manifest_attached and not proxy_row),
+        "pareto_eligible": bool(rankable and byte_closed_archive_manifest_attached and not proxy_row),
+        "pareto_frontier": bool(rankable and byte_closed_archive_manifest_attached and not proxy_row),
+        "pareto_dominated_by": [],
+        "pareto_objectives": {},
         "kkt_ready_for_field_planning": kkt_ready_for_field_planning,
         "kkt_blockers": _unique_ordered_strings(kkt_blockers),
+        "selection_penalty_terms": {},
+        "selection_penalty_score_delta": 0.0,
+        "selection_score_delta": round(total, 12),
+        "selection_blockers": [],
+        "selection_policy": "pending_pareto_annotation",
         "ready_for_exact_eval_dispatch": False,
         "dispatchable": False,
         "dispatch_blockers": _unique_ordered_strings(dispatch_blockers),
     }
+    row["pareto_objectives"] = _pareto_objectives(row)
+    _annotate_selection_scores([row])
+    return row
 
 
 def build_atom_ledger(
@@ -471,12 +608,17 @@ def build_atom_ledger(
 
     rows = [expected_atom_score_delta(atom, base_pose_dist=base_pose_dist) for atom in atoms]
     pareto_summary = _annotate_pareto_frontier(rows)
+    _annotate_selection_scores(rows)
     rows.sort(
         key=lambda row: (
             not bool(row["rankable"]),
+            not bool(row["byte_closed_archive_manifest_attached"]),
+            bool(row["proxy_row"]),
             not bool(row["pareto_eligible"]),
             not bool(row["pareto_frontier"]),
-            float(row["expected_total_score_delta"]),
+            not bool(row["kkt_ready_for_field_planning"]),
+            float(row["selection_score_delta"]),
+            -float(row["expected_information_gain_nats"]),
             int(row["byte_delta"]),
             str(row["family_group"]),
             str(row["pareto_scope"]),
@@ -522,6 +664,10 @@ def build_atom_ledger(
         "byte_closed_manifest_required_for_pareto": True,
         "byte_closed_manifest_required_for_kkt": True,
         "proxy_rows_dispatchable": False,
+        "selection_policy": (
+            "penalize_non_rankable_proxy_non_byte_closed_dominated_and_kkt_blocked_rows"
+        ),
+        "selection_penalties": dict(sorted(SELECTION_PENALTIES.items())),
         "rows": rows,
         "dispatch_blockers": [
             "planning_only_atom_ranking",

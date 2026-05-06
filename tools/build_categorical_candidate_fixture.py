@@ -17,6 +17,10 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.categorical_candidate_plan import (  # noqa: E402
+    build_categorical_charged_label_plan,
+    build_categorical_class_codebook,
+)
 from tac.categorical_candidate_readiness import (  # noqa: E402
     ARCHIVE_MEMBER_MANIFEST_CONTRACT,
     CANDIDATE_MANIFEST_CONTRACT,
@@ -46,7 +50,7 @@ def _member_payloads() -> dict[str, bytes]:
             b"echo 'fixture-only categorical candidate' >&2\nexit 2\n"
         ),
         "categorical_payload.bin": b"QMA9_fixture_payload_not_a_score_candidate\n",
-        "class_codebook.json": b"{\"class_order\":\"contest_zero_based_comma10k_order\"}\n",
+        "class_codebook.json": json_text(build_categorical_class_codebook()).encode("utf-8"),
         "runtime_decoder.py": (REPO_ROOT / RUNTIME_CONSUMER_REPO_PATH).read_bytes(),
     }
 
@@ -99,6 +103,28 @@ def build_fixture(*, out_dir: Path, source_archive_sha256: str) -> dict[str, Any
     archive_member_manifest_sha = sha256_bytes(
         json_text(archive_member_manifest).encode("utf-8")
     )
+    candidate_archive_sha = sha256_file(archive_path)
+    construction_plan = build_categorical_charged_label_plan(
+        source_archive_sha256=source_archive_sha256,
+        charged_members=member_records,
+        conditioning_priors=[
+            {
+                "family": "openpilot_priors",
+                "name": "ego_lane_atom_ranker",
+                "usage": "compression_time_atom_ranking_only",
+                "runtime_consumed": False,
+            },
+            {
+                "family": "clade_spade",
+                "name": "canonical_class_codebook_conditioning",
+                "usage": "inflate_runtime_conditioning",
+                "runtime_consumed": True,
+                "charged_member": "class_codebook.json",
+            },
+        ],
+        candidate_archive_sha256=candidate_archive_sha,
+        archive_member_manifest_sha256=archive_member_manifest_sha,
+    )
     candidate = {
         "schema_version": 1,
         "kind": "categorical_candidate_fixture_manifest",
@@ -118,7 +144,7 @@ def build_fixture(*, out_dir: Path, source_archive_sha256: str) -> dict[str, Any
         "candidate_archive": {
             "path": "archive.zip",
             "bytes": archive_path.stat().st_size,
-            "sha256": sha256_file(archive_path),
+            "sha256": candidate_archive_sha,
         },
         "semantic_class_order": list(CONTEST_SEGNET_CLASS_NAME_TUPLE),
         "selfcomp_gray_codebook": [
@@ -146,21 +172,8 @@ def build_fixture(*, out_dir: Path, source_archive_sha256: str) -> dict[str, Any
                 "class_codebook.json",
             ],
         },
-        "conditioning_priors": [
-            {
-                "family": "openpilot_priors",
-                "name": "ego_lane_atom_ranker",
-                "usage": "compression_time_atom_ranking_only",
-                "runtime_consumed": False,
-            },
-            {
-                "family": "clade_spade",
-                "name": "fixture_class_conditioning",
-                "usage": "inflate_runtime_conditioning",
-                "runtime_consumed": True,
-                "charged_member": "class_codebook.json",
-            },
-        ],
+        "candidate_construction_plan": construction_plan,
+        "conditioning_priors": construction_plan["conditioning_priors"],
         "charged_members": member_records,
         "no_op_controls": {
             "decode_reencode_identity_control": {
@@ -215,10 +228,12 @@ def main(argv: list[str] | None = None) -> int:
         source_archive_sha256=args.source_archive_sha256,
     )
     archive_member_manifest_path = args.out_dir / "archive_member_manifest.json"
+    construction_plan_path = args.out_dir / "construction_plan.json"
     candidate_path = args.out_dir / "candidate.json"
     readiness_path = args.out_dir / "readiness.json"
     summary_path = args.out_dir / "summary.json"
     write_json(archive_member_manifest_path, payload["archive_member_manifest"])
+    write_json(construction_plan_path, payload["candidate_manifest"]["candidate_construction_plan"])
     write_json(candidate_path, payload["candidate_manifest"])
     write_json(readiness_path, payload["readiness"])
     summary = {
@@ -229,6 +244,7 @@ def main(argv: list[str] | None = None) -> int:
     summary["paths"] = {
         "archive": str(args.out_dir / "archive.zip"),
         "archive_member_manifest": str(archive_member_manifest_path),
+        "construction_plan": str(construction_plan_path),
         "candidate": str(candidate_path),
         "readiness": str(readiness_path),
     }

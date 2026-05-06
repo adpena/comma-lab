@@ -19,7 +19,7 @@ from tac.optimization.research_basis import (
     research_basis_manifest,
 )
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 TOOL = "tac.optimization.field_equation_planner.build_field_equation_plan"
 DEFAULT_CONSTRAINTS = {
     "max_byte_delta": 0,
@@ -31,6 +31,12 @@ DEFAULT_CONSTRAINTS = {
     "lambda_seg_violation": 100.0,
     "lambda_pose_violation": 10.0,
     "lambda_confidence_violation": 1.0,
+    "lambda_rankable_violation": 1_000.0,
+    "lambda_byte_closure_violation": 100.0,
+    "lambda_proxy_violation": 50.0,
+    "lambda_pareto_violation": 25.0,
+    "lambda_pareto_dominated_violation": 5.0,
+    "lambda_kkt_readiness_violation": 10.0,
 }
 
 
@@ -76,6 +82,12 @@ def _constraints(overrides: Mapping[str, Any] | None) -> dict[str, Any]:
         "lambda_seg_violation",
         "lambda_pose_violation",
         "lambda_confidence_violation",
+        "lambda_rankable_violation",
+        "lambda_byte_closure_violation",
+        "lambda_proxy_violation",
+        "lambda_pareto_violation",
+        "lambda_pareto_dominated_violation",
+        "lambda_kkt_readiness_violation",
     ):
         out[key] = _as_float(out[key], key=key)
     out["require_pareto_frontier"] = _as_bool(
@@ -116,6 +128,12 @@ def _confidence_violation(confidence: float, minimum: float) -> float:
     return max(0.0, minimum - confidence)
 
 
+def _float_or_default(value: Any, *, default: float, key: str) -> float:
+    if value is None:
+        return default
+    return _as_float(value, key=key)
+
+
 def _constraint_residuals(row: Mapping[str, Any], constraints: Mapping[str, Any]) -> dict[str, float]:
     byte_delta = _as_float(row.get("byte_delta"), key="byte_delta")
     seg_delta = _as_float(row.get("expected_seg_dist_delta"), key="expected_seg_dist_delta")
@@ -147,13 +165,37 @@ def variational_action_delta(row: Mapping[str, Any], constraints: Mapping[str, A
     action += float(constraints["lambda_seg_violation"]) * residuals["seg_violation"]
     action += float(constraints["lambda_pose_violation"]) * residuals["pose_violation"]
     action += float(constraints["lambda_confidence_violation"]) * residuals["confidence_violation"]
-    if constraints["require_pareto_frontier"] and row.get("pareto_frontier") is False:
-        action += 1.0
+    action += sum(_selection_constraint_penalties(row, constraints).values())
     return round(action, 12)
+
+
+def _selection_constraint_penalties(row: Mapping[str, Any], constraints: Mapping[str, Any]) -> dict[str, float]:
+    terms: dict[str, float] = {}
+    if row.get("rankable") is not True:
+        terms["non_rankable_atom"] = float(constraints["lambda_rankable_violation"])
+    if row.get("byte_closed_archive_manifest_attached") is not True:
+        terms["missing_byte_closed_archive_manifest"] = float(
+            constraints["lambda_byte_closure_violation"]
+        )
+    if row.get("proxy_row") is True:
+        terms["proxy_row"] = float(constraints["lambda_proxy_violation"])
+    if constraints["require_pareto_frontier"]:
+        if row.get("pareto_eligible") is not True:
+            terms["pareto_ineligible_atom"] = float(constraints["lambda_pareto_violation"])
+        elif row.get("pareto_frontier") is not True:
+            terms["pareto_dominated_atom"] = float(
+                constraints["lambda_pareto_dominated_violation"]
+            )
+    if row.get("kkt_ready_for_field_planning") is not True:
+        terms["kkt_not_ready_for_field_planning"] = float(
+            constraints["lambda_kkt_readiness_violation"]
+        )
+    return terms
 
 
 def _kkt_report(row: Mapping[str, Any], constraints: Mapping[str, Any]) -> dict[str, Any]:
     residuals = _constraint_residuals(row, constraints)
+    selection_penalties = _selection_constraint_penalties(row, constraints)
     action = variational_action_delta(row, constraints)
     stationarity = action
     blockers: list[str] = list(row.get("kkt_blockers") or [])
@@ -177,6 +219,10 @@ def _kkt_report(row: Mapping[str, Any], constraints: Mapping[str, Any]) -> dict[
     return {
         "stationarity_residual": round(stationarity, 12),
         "constraint_residuals": residuals,
+        "selection_penalty_terms": {
+            key: round(value, 12) for key, value in sorted(selection_penalties.items())
+        },
+        "selection_penalty_score_delta": round(sum(selection_penalties.values()), 12),
         "locally_descending": bool(stationarity < 0 and not blockers),
         "kkt_blockers": blockers,
     }
@@ -239,9 +285,43 @@ def field_row(row: Mapping[str, Any], constraints: Mapping[str, Any]) -> dict[st
         "archive_manifest_sha256": str(row.get("archive_manifest_sha256") or ""),
         "research_basis_ids": basis_ids,
         "proxy_row": bool(row.get("proxy_row")),
+        "expected_information_gain_nats": round(
+            _float_or_default(
+                row.get("expected_information_gain_nats"),
+                default=0.0,
+                key="expected_information_gain_nats",
+            ),
+            12,
+        ),
+        "expected_score_variance": round(
+            _float_or_default(
+                row.get("expected_score_variance"),
+                default=0.0,
+                key="expected_score_variance",
+            ),
+            12,
+        ),
+        "observation_noise_variance": round(
+            _float_or_default(
+                row.get("observation_noise_variance"),
+                default=0.0,
+                key="observation_noise_variance",
+            ),
+            12,
+        ),
+        "expected_uncertainty_reduction": dict(row.get("expected_uncertainty_reduction") or {}),
         "kkt_ready_for_field_planning": bool(row.get("kkt_ready_for_field_planning")),
         "frechet_derivatives": frechet_derivatives(row),
         "variational_action_delta": variational_action_delta(row, constraints),
+        "meta_lagrangian_selection_score_delta": round(
+            _float_or_default(
+                row.get("selection_score_delta"),
+                default=_as_float(row.get("expected_total_score_delta"), key="expected_total_score_delta"),
+                key="selection_score_delta",
+            ),
+            12,
+        ),
+        "meta_lagrangian_selection_penalty_terms": dict(row.get("selection_penalty_terms") or {}),
         "kkt": kkt,
         "mdl": _description_length(row),
         "interaction_assumptions": list(row.get("interaction_assumptions") or []),

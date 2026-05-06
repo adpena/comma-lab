@@ -15,6 +15,8 @@ from tac.balle_hyperprior_codec import (
 from tac.joint_codec_stack_orchestrator import (
     JCSP_ARCHIVE_MEMBER_CONTRACT_SCHEMA,
     JCSP_ARCHIVE_MEMBER_NAME,
+    JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+    JCSP_SUBMISSION_RUNTIME_CONSUMPTION_SCHEMA,
     KIND_ARITHMETIC_STATIC,
     KIND_BALLE_HYPERPRIOR,
     StreamSource,
@@ -168,6 +170,7 @@ def test_jcsp_noop_archive_fixture_is_deterministic_and_loader_consumes_member()
     assert contract["schema"] == JCSP_ARCHIVE_MEMBER_CONTRACT_SCHEMA
     assert contract["score_claim"] is False
     assert contract["ready_for_runtime_loader"] is True
+    assert contract["ready_for_submission_runtime_consumption"] is False
     assert contract["ready_for_exact_eval_dispatch"] is False
     assert contract["member_name"] == JCSP_ARCHIVE_MEMBER_NAME
     assert contract["archive_bytes"] == len(archive_a)
@@ -176,6 +179,19 @@ def test_jcsp_noop_archive_fixture_is_deterministic_and_loader_consumes_member()
     assert contract["noop_fixture"] is True
     assert contract["jcsp_runtime_parity"]["stream_count"] == 0
     assert contract["jcsp_runtime_parity"]["score_claim"] is False
+    runtime_consumption = contract["runtime_consumption_contract"]
+    assert runtime_consumption["schema"] == JCSP_SUBMISSION_RUNTIME_CONSUMPTION_SCHEMA
+    assert runtime_consumption["required_submission_runtime"] == (
+        "submissions/robust_current"
+    )
+    assert runtime_consumption["required_member_name"] == JCSP_ARCHIVE_MEMBER_NAME
+    assert runtime_consumption["consumes_required_member"] is False
+    assert runtime_consumption["dispatch_blocker"] == (
+        JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER
+    )
+    assert JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER in (
+        contract["dispatch_blockers"]
+    )
     assert "exact_cuda_auth_eval_missing" in contract["dispatch_blockers"]
 
 

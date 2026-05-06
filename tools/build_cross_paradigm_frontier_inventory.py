@@ -170,6 +170,7 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         code_paths=(
             "src/tac/categorical_compression_contract.py",
             "src/tac/categorical_candidate_readiness.py",
+            "src/tac/categorical_candidate_plan.py",
             "src/tac/categorical_openpilot_mask_prior_contract.py",
             "src/tac/pr91_hpm1_readiness.py",
             "src/tac/pr91_hpm1_runtime_contract.py",

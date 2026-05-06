@@ -26,7 +26,7 @@ ensure_repo_imports(REPO_ROOT)
 from tac.repo_io import json_text  # noqa: E402
 from tools.build_cross_paradigm_frontier_inventory import build_inventory  # noqa: E402
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def git_dirty_paths(repo_root: Path) -> list[str]:
@@ -93,6 +93,174 @@ def _readiness_stage(row: dict[str, Any], dirty_matches: list[str]) -> str:
     return "needs_research_or_contract_hardening"
 
 
+def _row_by_key(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    return {str(row["key"]): row for row in rows}
+
+
+def _keys_present(rows_by_key: dict[str, dict[str, Any]], keys: tuple[str, ...]) -> list[str]:
+    return [key for key in keys if key in rows_by_key]
+
+
+def build_next_comprehensive_tranche(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Return the next score-lowering tranche as a deterministic work plan.
+
+    This intentionally remains an orchestration artifact. It names the next
+    code/research tranche and its promotion gates, but never marks any candidate
+    as dispatchable by itself.
+    """
+
+    rows_by_key = _row_by_key(rows)
+    exact_eval_candidates = [
+        row["key"]
+        for row in rows
+        if row["safe_to_touch_now"]
+        and row["readiness_stage"]
+        in {
+            "needs_lane_claim_and_exact_cuda",
+            "exact_evidence_present_review_before_promotion",
+        }
+    ]
+    byte_closed_candidates = [
+        row["key"]
+        for row in rows
+        if row["safe_to_touch_now"] and row["readiness_stage"] == "needs_byte_closed_candidate_or_fixture"
+    ]
+    research_hardening_candidates = [
+        row["key"]
+        for row in rows
+        if row["safe_to_touch_now"] and row["readiness_stage"] == "needs_research_or_contract_hardening"
+    ]
+
+    workstreams = [
+        {
+            "id": "rate_frontier_closure",
+            "objective": (
+                "Turn HNeRV rate-only opportunities into byte-equivalent archives "
+                "or retire them as measured rate-negative implementations."
+            ),
+            "keys": _keys_present(
+                rows_by_key,
+                ("hnerv_lowlevel_brotli_repack", "hnerv_per_tensor_context_entropy"),
+            ),
+            "acceptance_gates": [
+                "candidate archive manifest records exact bytes and SHA-256",
+                "decoder/runtime parity proves output equivalence or declares scorer-changing scope",
+                "entropy-gap target ranking names concrete next artifact, not only a family",
+                "ready_for_exact_eval_dispatch remains false until candidate-specific preflight passes",
+            ],
+        },
+        {
+            "id": "scorer_changing_mask_payload",
+            "objective": (
+                "Build the first real byte-closed mask/categorical payload candidate "
+                "instead of another fixture or unconsumed sidechannel."
+            ),
+            "keys": _keys_present(
+                rows_by_key,
+                (
+                    "hnerv_wavelet_wr01_apply",
+                    "categorical_qma9_clade_spade_openpilot",
+                    "cmg3_predictive_mask_grammar",
+                ),
+            ),
+            "acceptance_gates": [
+                "charged archive member is consumed by inflate runtime",
+                "full decode/re-encode or runtime-loader parity is proven",
+                "component-collapse risks are recorded before any lane claim",
+                "no uncharged openpilot/comma labels, weights, or sidecars are read at inflate",
+            ],
+        },
+        {
+            "id": "joint_stack_runtime_closure",
+            "objective": (
+                "Move JCSP and sensitivity-aware stack planning from typed manifests "
+                "toward archive members with charged bytes and runtime consumers."
+            ),
+            "keys": _keys_present(
+                rows_by_key,
+                ("joint_admm_balle_arithmetic_stack", "sensitivity_omega_w_v3"),
+            ),
+            "acceptance_gates": [
+                "per-stream bytes reconcile against charged archive members",
+                "fixture-only streams stay blocked from dispatch",
+                "stub sensitivity artifacts fail closed",
+                "individual component wins are not treated as composable without stacked eval",
+            ],
+        },
+        {
+            "id": "geometry_pose_foveation_grounding",
+            "objective": (
+                "Convert LA-pose, RAFT/radial, and telescopic foveation from proposal "
+                "signals into calibrated byte-bearing atom rows."
+            ),
+            "keys": _keys_present(
+                rows_by_key,
+                ("telescopic_foveation_field", "lapose_motion_atom_allocator", "raft_radial_openpilot_pose"),
+            ),
+            "acceptance_gates": [
+                "geometry proposal records charged-artifact and runtime-consumer status",
+                "pose/foveation confidence is calibrated against measured component evidence",
+                "foveation remains ranking feedback until an archive consumer exists",
+                "small pose-error cliffs are treated as dispatch blockers, not warnings",
+            ],
+        },
+        {
+            "id": "field_meta_selection",
+            "objective": (
+                "Let the meta-Lagrangian/field-equation planner choose the exact next "
+                "candidate only after Pareto, KKT, custody, and interaction gates pass."
+            ),
+            "keys": _keys_present(rows_by_key, ("meta_lagrangian_cross_paradigm_allocator",)),
+            "acceptance_gates": [
+                "candidate rows carry family/conflict and byte-closed manifest fields",
+                "proxy, dominated, non-KKT, and non-byte-closed rows are penalized or refused",
+                "expected-information-gain is recorded separately from predicted score",
+                "selected exact-eval packet has lane claim plus candidate-specific preflight",
+            ],
+        },
+    ]
+    workstreams = [stream for stream in workstreams if stream["keys"]]
+    return {
+        "schema": "next_comprehensive_tranche_v1",
+        "name": "byte-closed frontier closure and field-selected exact-eval tranche",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "objective": (
+            "Lower the score by converting the strongest current planning surfaces "
+            "into byte-closed, runtime-consumed candidates, then select the first "
+            "exact CUDA packet through Pareto/KKT/meta-Lagrangian gates."
+        ),
+        "candidate_pools": {
+            "exact_eval_or_review": exact_eval_candidates,
+            "needs_byte_closed_candidate": byte_closed_candidates,
+            "needs_research_or_contract_hardening": research_hardening_candidates,
+        },
+        "workstreams": workstreams,
+        "global_acceptance_gates": [
+            "no score claim without exact CUDA auth eval JSON",
+            "no remote/GPU dispatch without an active lane claim",
+            "archive.zip -> inflate.sh -> upstream/evaluate.py remains canonical",
+            "all runtime inputs are charged archive members or fixed contest code",
+            "all builders are deterministic and cross-platform by default",
+            "negative, no-op, and blocked results are preserved as artifacts",
+        ],
+        "end_of_tranche_report_required": [
+            "changed paths and owning workers",
+            "focused tests plus all-lanes preflight result",
+            "new candidate artifacts with SHA-256 and bytes when produced",
+            "rows newly promoted, still blocked, or retired as scoped measured negatives",
+            "the next comprehensive tranche generated from the updated roadmap status",
+        ],
+        "dispatch_blockers": [
+            "tranche_plan_only",
+            "requires_candidate_specific_archive_manifest",
+            "requires_lane_dispatch_claim",
+            "requires_exact_cuda_auth_eval",
+        ],
+    }
+
+
 def build_roadmap_status(
     *,
     repo_root: Path,
@@ -139,6 +307,7 @@ def build_roadmap_status(
         for row in rows
         if row["safe_to_touch_now"]
     ][:5]
+    next_tranche = build_next_comprehensive_tranche(rows)
     return {
         "schema_version": SCHEMA_VERSION,
         "tool": "tools/build_frontier_roadmap_status.py",
@@ -152,6 +321,7 @@ def build_roadmap_status(
         "dirty_blocked_row_count": dirty_blocked_count,
         "stage_counts": dict(sorted(stage_counts.items())),
         "next_unblocked_keys": next_unblocked,
+        "next_comprehensive_tranche": next_tranche,
         "rows": rows,
         "dispatch_blockers": [
             "roadmap_status_only",
@@ -172,6 +342,30 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- dirty_path_count: `{payload['dirty_path_count']}`",
         f"- dirty_blocked_row_count: `{payload['dirty_blocked_row_count']}`",
         f"- next_unblocked_keys: `{', '.join(payload['next_unblocked_keys'])}`",
+        "",
+        "## Next Comprehensive Tranche",
+        "",
+        f"- name: `{_md(payload['next_comprehensive_tranche']['name'])}`",
+        f"- objective: {_md(payload['next_comprehensive_tranche']['objective'])}",
+        "",
+        "| workstream | keys | acceptance gates |",
+        "|---|---|---|",
+    ]
+    for stream in payload["next_comprehensive_tranche"]["workstreams"]:
+        lines.append(
+            "| "
+            + " | ".join(
+                (
+                    f"`{_md(stream['id'])}`",
+                    "<br>".join(f"`{_md(key)}`" for key in stream["keys"]),
+                    "<br>".join(_md(gate) for gate in stream["acceptance_gates"]),
+                )
+            )
+            + " |"
+        )
+    lines += [
+        "",
+        "## Frontier Rows",
         "",
         "| key | tier | role | stage | safe | action | evidence | blockers | next patch |",
         "|---|---:|---|---|---|---|---|---:|---|",

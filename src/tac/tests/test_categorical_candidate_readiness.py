@@ -6,6 +6,10 @@ import sys
 import zipfile
 from pathlib import Path
 
+from tac.categorical_candidate_plan import (
+    CATEGORICAL_CONSTRUCTION_PLAN_CONTRACT,
+    build_categorical_charged_label_plan,
+)
 from tac.categorical_candidate_readiness import (
     ARCHIVE_MEMBER_MANIFEST_CONTRACT,
     CANDIDATE_MANIFEST_CONTRACT,
@@ -169,6 +173,61 @@ def test_audit_categorical_candidate_manifest_accepts_byte_closed_fixture(tmp_pa
     assert manifest["conditioning_prior_contract"]["compression_time_only_count"] == 1
     assert manifest["charged_member_summary"]["roles"]["categorical_payload"] == 1
     assert manifest["charged_member_summary"]["roles"]["decoder_or_runtime_consumer"] == 1
+    assert manifest["candidate_construction_plan"]["declared"] is False
+
+
+def test_categorical_charged_label_plan_grounds_classes_and_stays_non_dispatchable(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    plan = build_categorical_charged_label_plan(
+        source_archive_sha256=candidate["source_archive_sha256"],
+        charged_members=candidate["charged_members"],
+        conditioning_priors=candidate["conditioning_priors"],
+        candidate_archive_sha256=candidate["candidate_archive"]["sha256"],
+        archive_member_manifest_sha256=candidate["archive_member_manifest_sha256"],
+    )
+    candidate["candidate_construction_plan"] = plan
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+    construction = manifest["candidate_construction_plan"]
+
+    assert manifest["ready_for_exact_eval_dispatch"] is True
+    assert construction["accepted"] is True
+    assert construction["contract"] == CATEGORICAL_CONSTRUCTION_PLAN_CONTRACT
+    assert construction["ready_for_exact_eval_dispatch"] is False
+    assert construction["candidate_construction_ready"] is True
+    assert "real_byte_closed_archive_parity_missing" in construction["planning_dispatch_blockers"]
+    assert construction["byte_closed_archive_parity"]["proven"] is False
+    rows = construction["class_rows"]
+    assert [row["name"] for row in rows] == list(CONTEST_SEGNET_CLASS_NAME_TUPLE)
+    assert rows[0]["charged_label_member"] == "class_codebook.json"
+    assert rows[0]["categorical_payload_member"] == "categorical_payload.bin"
+    assert rows[0]["default_quant_bits"] == 8
+    assert rows[1]["openpilot_prior_hint"] == "lane_marking_track_prior"
+    assert construction["conditioning_prior_contract"]["passed"] is True
+
+
+def test_categorical_construction_plan_cannot_claim_dispatch_readiness(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    plan = build_categorical_charged_label_plan(
+        source_archive_sha256=candidate["source_archive_sha256"],
+        charged_members=candidate["charged_members"],
+        conditioning_priors=candidate["conditioning_priors"],
+    )
+    plan["ready_for_exact_eval_dispatch"] = True
+    candidate["candidate_construction_plan"] = plan
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["candidate_construction_plan"]["accepted"] is False
+    assert (
+        "candidate_construction_plan_ready_for_exact_eval_dispatch_must_be_false"
+        in manifest["dispatch_blockers"]
+    )
 
 
 def test_audit_categorical_candidate_manifest_rejects_uncharged_runtime_openpilot_prior(

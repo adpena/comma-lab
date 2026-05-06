@@ -48,6 +48,7 @@ def test_selected_export_paths_excludes_private_custody() -> None:
         "docs/community.md",
         "docs/superpowers/specs/local.md",
         "src/tac/categorical_candidate_readiness.py",
+        "src/tac/categorical_candidate_plan.py",
         "src/tac/categorical_openpilot_mask_prior_contract.py",
         "src/tac/codec.py",
         "src/tac/semantic_label_contract.py",
@@ -68,6 +69,7 @@ def test_selected_export_paths_excludes_private_custody() -> None:
     assert selected_export_paths(paths) == [
         "README.md",
         "docs/community.md",
+        "src/tac/categorical_candidate_plan.py",
         "src/tac/categorical_candidate_readiness.py",
         "src/tac/categorical_openpilot_mask_prior_contract.py",
         "src/tac/semantic_label_contract.py",

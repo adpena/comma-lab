@@ -129,8 +129,18 @@ _JCSP_VERSION: int = 1
 JCSP_STREAM_METADATA_SCHEMA: str = "jcsp_tensor_stream_specs_manifest_v1"
 JCSP_ARCHIVE_MEMBER_NAME: str = "jcsp.bin"
 JCSP_ARCHIVE_MEMBER_CONTRACT_SCHEMA: str = "jcsp_archive_member_runtime_contract_v1"
+JCSP_STREAM_ARCHIVE_BYTE_RECONCILIATION_SCHEMA: str = (
+    "jcsp_stream_archive_byte_reconciliation_v1"
+)
 JCSP_MODEL_STREAM_ARCHIVE_READINESS_SCHEMA: str = (
     "jcsp_model_stream_archive_readiness_v1"
+)
+JCSP_SUBMISSION_RUNTIME_CONSUMPTION_SCHEMA: str = (
+    "jcsp_submission_runtime_consumption_contract_v1"
+)
+JCSP_REQUIRED_SUBMISSION_RUNTIME: str = "submissions/robust_current"
+JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER: str = (
+    "submissions_robust_current_jcsp_bin_consumption_missing"
 )
 
 # Codec kind flags
@@ -740,7 +750,9 @@ def jcsp_stream_specs_manifest(
             "qint_or_exact_wire_stream_missing",
             "decode_validation_missing",
             "byte_closed_archive_member_missing",
+            "stream_bytes_charged_reconciliation_missing",
             "runtime_loader_parity_missing",
+            JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
             "exact_cuda_auth_eval_missing",
         ],
     }
@@ -1364,6 +1376,26 @@ def build_jcsp_noop_archive_fixture(
     )
 
 
+def _jcsp_submission_runtime_consumption_contract(
+    *,
+    member_name: str,
+) -> dict[str, Any]:
+    """Return the fail-closed runtime consumption gate for JCSP archives."""
+
+    return {
+        "schema": JCSP_SUBMISSION_RUNTIME_CONSUMPTION_SCHEMA,
+        "score_claim": False,
+        "required_submission_runtime": JCSP_REQUIRED_SUBMISSION_RUNTIME,
+        "required_member_name": member_name,
+        "consumes_required_member": False,
+        "dispatch_blocker": JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+        "evidence": (
+            "submissions/robust_current does not yet consume jcsp.bin during "
+            "inflate"
+        ),
+    }
+
+
 def load_jcsp_archive_member_for_runtime(
     *,
     archive_bytes: bytes,
@@ -1425,10 +1457,14 @@ def load_jcsp_archive_member_for_runtime(
         raise ValueError("JCSP archive member loader got invalid ZIP bytes") from exc
 
     parity = validate_jcsp_container_runtime_parity(payload)
+    runtime_consumption = _jcsp_submission_runtime_consumption_contract(
+        member_name=member,
+    )
     return {
         "schema": JCSP_ARCHIVE_MEMBER_CONTRACT_SCHEMA,
         "score_claim": False,
         "ready_for_runtime_loader": True,
+        "ready_for_submission_runtime_consumption": False,
         "ready_for_exact_eval_dispatch": False,
         "member_name": member,
         "archive_bytes": len(archive_blob),
@@ -1443,8 +1479,10 @@ def load_jcsp_archive_member_for_runtime(
         "member_date_time": list(info.date_time),
         "local_header_names": local_header_names,
         "jcsp_runtime_parity": parity,
+        "runtime_consumption_contract": runtime_consumption,
         "noop_fixture": parity["stream_count"] == 0,
         "dispatch_blockers": [
+            runtime_consumption["dispatch_blocker"],
             "not_integrated_into_submission_inflate_path",
             "no_lane_dispatch_claim",
             "exact_cuda_auth_eval_missing",
@@ -1462,6 +1500,88 @@ def _codec_kind_reconciles_model_plan(
     if planned == KIND_BALLE_HYPERPRIOR and actual == KIND_ARITHMETIC_STATIC:
         return True, "balle_static_wins_actual_arithmetic"
     return False, "codec_kind_mismatch"
+
+
+def _jcsp_stream_archive_byte_reconciliation(
+    *,
+    stream_records: list[dict[str, Any]],
+    runtime_streams: list[dict[str, Any]],
+    archive_contract: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Reconcile planned per-stream bytes against the charged JCSP member."""
+
+    per_stream: list[dict[str, Any]] = []
+    intended_stream_payload_bytes = 0
+    actual_stream_payload_bytes = 0
+    for record, runtime in zip(stream_records, runtime_streams, strict=True):
+        planned_bytes = int(record["bytes_charged"])
+        actual_bytes = int(runtime["actual_bytes"])
+        intended_stream_payload_bytes += planned_bytes
+        actual_stream_payload_bytes += actual_bytes
+        per_stream.append(
+            {
+                "name": record["name"],
+                "stream_id": record["stream_id"],
+                "bytes_charged": planned_bytes,
+                "bytes_charged_source": record["bytes_charged_source"],
+                "archive_actual_bytes": actual_bytes,
+                "archive_actual_bytes_source": "jcsp_container_member_payload",
+                "delta_bytes": actual_bytes - planned_bytes,
+                "bytes_charged_reconciled": actual_bytes == planned_bytes,
+            }
+        )
+
+    actual_member_payload_bytes = int(archive_contract["member_bytes"])
+    actual_charged_member_compressed_bytes = int(
+        archive_contract["member_compress_size"]
+    )
+    actual_charged_archive_bytes = int(archive_contract["archive_bytes"])
+    member_container_overhead_bytes = (
+        actual_member_payload_bytes - actual_stream_payload_bytes
+    )
+    if member_container_overhead_bytes < 0:
+        raise ValueError(
+            "JCSP archive member reports fewer bytes than its contained stream "
+            "payloads"
+        )
+    zip_wrapper_overhead_bytes = (
+        actual_charged_archive_bytes - actual_charged_member_compressed_bytes
+    )
+    if zip_wrapper_overhead_bytes < 0:
+        raise ValueError(
+            "JCSP archive reports fewer charged bytes than the compressed member"
+        )
+
+    payload: dict[str, Any] = {
+        "schema": JCSP_STREAM_ARCHIVE_BYTE_RECONCILIATION_SCHEMA,
+        "score_claim": False,
+        "stream_count": len(per_stream),
+        "stream_payload_bytes_reconciled": all(
+            row["bytes_charged_reconciled"] for row in per_stream
+        ),
+        "intended_stream_payload_bytes": intended_stream_payload_bytes,
+        "actual_stream_payload_bytes": actual_stream_payload_bytes,
+        "actual_member_payload_bytes": actual_member_payload_bytes,
+        "actual_charged_member_compressed_bytes": (
+            actual_charged_member_compressed_bytes
+        ),
+        "actual_charged_archive_bytes": actual_charged_archive_bytes,
+        "member_container_overhead_bytes": member_container_overhead_bytes,
+        "zip_wrapper_overhead_bytes": zip_wrapper_overhead_bytes,
+        "member_compress_type": int(archive_contract["member_compress_type"]),
+        "member_name": archive_contract["member_name"],
+        "validated_archive_members": list(archive_contract["archive_members"]),
+        "single_member_no_sidecars": (
+            list(archive_contract["archive_members"])
+            == [archive_contract["member_name"]]
+        ),
+        "per_stream": per_stream,
+        "dispatch_blocker_if_unreconciled": (
+            "stream_bytes_charged_reconciliation_missing"
+        ),
+    }
+    payload["reconciliation_sha256"] = _canonical_json_sha256(payload)
+    return payload
 
 
 def jcsp_model_stream_archive_readiness(
@@ -1504,10 +1624,17 @@ def jcsp_model_stream_archive_readiness(
         "charged_archive_member_missing",
         "runtime_loader_parity_missing",
     }
+    byte_reconciliation = _jcsp_stream_archive_byte_reconciliation(
+        stream_records=stream_records,
+        runtime_streams=runtime_streams,
+        archive_contract=archive_contract,
+    )
     dispatch_blockers: list[str] = [
         str(blocker)
         for blocker in archive_contract.get("dispatch_blockers", ())
     ]
+    if not byte_reconciliation["stream_payload_bytes_reconciled"]:
+        dispatch_blockers.append("stream_bytes_charged_reconciliation_missing")
     stream_readiness: list[dict[str, Any]] = []
     for record, runtime in zip(stream_records, runtime_streams, strict=True):
         planned_kind = int(record["codec_kind"])
@@ -1565,6 +1692,7 @@ def jcsp_model_stream_archive_readiness(
         "score_claim": False,
         "dispatch_attempted": False,
         "ready_for_runtime_loader": True,
+        "ready_for_submission_runtime_consumption": False,
         "ready_for_exact_eval_dispatch": False,
         "stream_manifest_sha256": stream_manifest["manifest_sha256"],
         "archive_contract_schema": archive_contract["schema"],
@@ -1578,6 +1706,10 @@ def jcsp_model_stream_archive_readiness(
             archive_contract["archive_members"] == [member_name]
         ),
         "runtime_stream_order_matches_manifest": True,
+        "stream_archive_byte_reconciliation": byte_reconciliation,
+        "runtime_consumption_contract": archive_contract[
+            "runtime_consumption_contract"
+        ],
         "stream_count": len(stream_readiness),
         "streams": stream_readiness,
         "sidecar_policy": {
@@ -1802,7 +1934,10 @@ __all__ = [
     "JCSP_ARCHIVE_MEMBER_CONTRACT_SCHEMA",
     "JCSP_ARCHIVE_MEMBER_NAME",
     "JCSP_MODEL_STREAM_ARCHIVE_READINESS_SCHEMA",
+    "JCSP_STREAM_ARCHIVE_BYTE_RECONCILIATION_SCHEMA",
     "JCSP_STREAM_METADATA_SCHEMA",
+    "JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER",
+    "JCSP_SUBMISSION_RUNTIME_CONSUMPTION_SCHEMA",
     "KIND_ARITHMETIC_STATIC",
     "KIND_BALLE_HYPERPRIOR",
     "KIND_RAW_PASSTHROUGH",

@@ -131,15 +131,17 @@ def test_inputs_from_pair_metric_payload_rejects_bad_class_support() -> None:
     payload = _payload()
     payload["per_pair_class_support"] = [[0], [1], [2], [3], [5]]
 
-    with pytest.raises(LaposeMotionAtomError, match="outside 0..4"):
+    with pytest.raises(LaposeMotionAtomError, match=r"outside 0\.\.4"):
         inputs_from_pair_metric_payload(payload, source_path="pair_metrics.json")
 
 
 def test_canonical_and_compatibility_imports_match() -> None:
+    from tac import lapose_foveation_atoms as compat_foveation_atoms
     from tac import lapose_lite_inputs as compat_lapose_lite
     from tac import lapose_motion_atoms as compat_motion_atoms
     from tac import lapose_motion_evidence as compat_motion_evidence
     from tac import meta_lagrangian_allocator as compat_allocator
+    from tac.analysis import lapose_foveation_atoms as canonical_foveation_atoms
     from tac.analysis import lapose_lite_inputs as canonical_lapose_lite
     from tac.analysis import lapose_motion_atoms as canonical_motion_atoms
     from tac.analysis import lapose_motion_evidence as canonical_motion_evidence
@@ -148,6 +150,10 @@ def test_canonical_and_compatibility_imports_match() -> None:
     assert (
         compat_lapose_lite.inputs_from_pair_metric_payload
         is canonical_lapose_lite.inputs_from_pair_metric_payload
+    )
+    assert (
+        compat_foveation_atoms.build_foveation_transport_atom_manifest
+        is canonical_foveation_atoms.build_foveation_transport_atom_manifest
     )
     assert compat_motion_atoms.build_motion_atom_manifest is canonical_motion_atoms.build_motion_atom_manifest
     assert (

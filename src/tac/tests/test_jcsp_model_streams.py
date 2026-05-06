@@ -10,7 +10,9 @@ import torch
 
 from tac.joint_codec_stack_orchestrator import (
     JCSP_MODEL_STREAM_ARCHIVE_READINESS_SCHEMA,
+    JCSP_STREAM_ARCHIVE_BYTE_RECONCILIATION_SCHEMA,
     JCSP_STREAM_METADATA_SCHEMA,
+    JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
     KIND_ARITHMETIC_STATIC,
     KIND_BALLE_HYPERPRIOR,
     KIND_RAW_PASSTHROUGH,
@@ -213,10 +215,34 @@ def test_jcsp_model_stream_archive_readiness_closes_single_member_bytes() -> Non
     assert readiness["score_claim"] is False
     assert readiness["dispatch_attempted"] is False
     assert readiness["ready_for_runtime_loader"] is True
+    assert readiness["ready_for_submission_runtime_consumption"] is False
     assert readiness["ready_for_exact_eval_dispatch"] is False
     assert readiness["byte_closed_archive_member"] is True
     assert readiness["single_member_no_sidecars"] is True
     assert readiness["runtime_stream_order_matches_manifest"] is True
+    reconciliation = readiness["stream_archive_byte_reconciliation"]
+    assert reconciliation["schema"] == JCSP_STREAM_ARCHIVE_BYTE_RECONCILIATION_SCHEMA
+    assert reconciliation["score_claim"] is False
+    assert reconciliation["stream_payload_bytes_reconciled"] is False
+    assert reconciliation["intended_stream_payload_bytes"] == (
+        specs[0].bytes_charged + specs[1].bytes_charged
+    )
+    assert reconciliation["actual_stream_payload_bytes"] == sum(
+        stream.actual_bytes for stream in result.streams
+    )
+    assert reconciliation["actual_member_payload_bytes"] == result.total_bytes
+    assert reconciliation["actual_charged_member_compressed_bytes"] == (
+        result.total_bytes
+    )
+    assert reconciliation["actual_charged_archive_bytes"] == len(archive)
+    assert reconciliation["member_container_overhead_bytes"] == (
+        result.total_bytes - sum(stream.actual_bytes for stream in result.streams)
+    )
+    assert reconciliation["single_member_no_sidecars"] is True
+    assert [row["name"] for row in reconciliation["per_stream"]] == [
+        "a.weight",
+        "z.bias",
+    ]
     assert [row["name"] for row in readiness["streams"]] == [
         "a.weight",
         "z.bias",
@@ -230,8 +256,39 @@ def test_jcsp_model_stream_archive_readiness_closes_single_member_bytes() -> Non
     assert "byte_closed_archive_member_missing" not in readiness["dispatch_blockers"]
     assert "qint_or_exact_wire_stream_missing" not in readiness["dispatch_blockers"]
     assert "exact_cuda_auth_eval_missing" in readiness["dispatch_blockers"]
+    assert JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER in (
+        readiness["dispatch_blockers"]
+    )
+    assert "stream_bytes_charged_reconciliation_missing" in (
+        readiness["dispatch_blockers"]
+    )
     assert "stream_bytes_charged_reconciliation_missing" in (
         readiness["streams"][0]["dispatch_blockers"]
+    )
+
+    archive_closed_specs = [
+        replace(
+            spec,
+            bytes_charged=actual.actual_bytes,
+            bytes_charged_source="jcsp_container_member_payload",
+        )
+        for spec, actual in zip(specs, result.streams, strict=True)
+    ]
+    archive_closed_readiness = jcsp_model_stream_archive_readiness(
+        streams=archive_closed_specs,
+        archive_bytes=archive,
+    )
+
+    assert archive_closed_readiness["stream_archive_byte_reconciliation"][
+        "stream_payload_bytes_reconciled"
+    ] is True
+    assert "stream_bytes_charged_reconciliation_missing" not in (
+        archive_closed_readiness["dispatch_blockers"]
+    )
+    assert archive_closed_readiness["ready_for_exact_eval_dispatch"] is False
+    assert archive_closed_readiness["ready_for_submission_runtime_consumption"] is False
+    assert JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER in (
+        archive_closed_readiness["dispatch_blockers"]
     )
 
 

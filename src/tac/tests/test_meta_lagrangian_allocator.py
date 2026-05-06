@@ -226,6 +226,8 @@ def test_pareto_frontier_marks_dominated_atoms_within_scope(tmp_path: Path) -> N
     assert dominated["pareto_frontier"] is False
     assert dominated["pareto_dominated_by"] == ["dominator"]
     assert dominated["pareto_objectives"]["byte_delta"] == -100.0
+    assert dominated["selection_penalty_terms"]["pareto_dominated_atom"] > 0.0
+    assert dominated["selection_score_delta"] > dominated["expected_total_score_delta"]
 
 
 def test_pareto_scope_preserves_orthogonal_families(tmp_path: Path) -> None:
@@ -305,6 +307,117 @@ def test_pareto_frontier_requires_verified_byte_closed_manifest(tmp_path: Path) 
     assert unclosed["pareto_eligible"] is False
     assert unclosed["pareto_frontier"] is False
     assert "missing_byte_closed_archive_manifest" in unclosed["kkt_blockers"]
+    assert unclosed["selection_penalty_terms"]["missing_byte_closed_archive_manifest"] > 0.0
+    assert unclosed["selection_score_delta"] > unclosed["expected_total_score_delta"]
+
+
+def test_selection_penalizes_proxy_and_unclosed_rows_before_raw_delta(tmp_path: Path) -> None:
+    manifest = _archive_manifest(tmp_path)
+    manifest_sha = sha256_file(manifest)
+    ledger = build_atom_ledger(
+        [
+            {
+                "atom_id": "byte_closed_frontier",
+                "family": "mask_atom",
+                "family_group": "mask",
+                "pareto_scope": "mask",
+                "byte_delta": -1,
+                "confidence": 1.0,
+                "evidence_grade": "empirical",
+                "raw_equal": True,
+                "interaction_assumptions": ["byte_closed_first_order"],
+                "archive_manifest_path": manifest.as_posix(),
+                "archive_manifest_sha256": manifest_sha,
+            },
+            {
+                "atom_id": "byte_closed_proxy_large_delta",
+                "family": "mask_atom",
+                "family_group": "mask",
+                "pareto_scope": "mask",
+                "byte_delta": -1_000_000,
+                "confidence": 1.0,
+                "evidence_grade": "planning_proxy",
+                "raw_equal": True,
+                "interaction_assumptions": ["proxy_only"],
+                "archive_manifest_path": manifest.as_posix(),
+                "archive_manifest_sha256": manifest_sha,
+            },
+            {
+                "atom_id": "unclosed_large_delta",
+                "family": "mask_atom",
+                "family_group": "mask",
+                "pareto_scope": "mask",
+                "byte_delta": -2_000_000,
+                "confidence": 1.0,
+                "evidence_grade": "empirical",
+                "raw_equal": True,
+                "interaction_assumptions": ["missing_archive_manifest"],
+            },
+        ],
+        base_pose_dist=0.01,
+        source="fixture",
+    )
+
+    assert ledger["rows"][0]["atom_id"] == "byte_closed_frontier"
+    assert ledger["pareto_eligible_count"] == 1
+    proxy = next(row for row in ledger["rows"] if row["atom_id"] == "byte_closed_proxy_large_delta")
+    unclosed = next(row for row in ledger["rows"] if row["atom_id"] == "unclosed_large_delta")
+    assert proxy["pareto_eligible"] is False
+    assert proxy["selection_penalty_terms"]["proxy_row"] > 0.0
+    assert proxy["selection_penalty_terms"]["pareto_ineligible_atom"] > 0.0
+    assert unclosed["byte_closed_archive_manifest_attached"] is False
+    assert unclosed["selection_penalty_terms"]["missing_byte_closed_archive_manifest"] > 0.0
+    assert ledger["selection_policy"] == (
+        "penalize_non_rankable_proxy_non_byte_closed_dominated_and_kkt_blocked_rows"
+    )
+
+
+def test_information_gain_and_uncertainty_are_preserved_and_tiebreak_ranked(
+    tmp_path: Path,
+) -> None:
+    manifest = _archive_manifest(tmp_path)
+    manifest_sha = sha256_file(manifest)
+    common = {
+        "family": "mask_atom",
+        "family_group": "mask",
+        "pareto_scope": "mask",
+        "byte_delta": -10,
+        "confidence": 1.0,
+        "evidence_grade": "empirical",
+        "raw_equal": True,
+        "interaction_assumptions": ["first_order"],
+        "archive_manifest_path": manifest.as_posix(),
+        "archive_manifest_sha256": manifest_sha,
+    }
+    ledger = build_atom_ledger(
+        [
+            {
+                **common,
+                "atom_id": "lower_information_gain",
+                "expected_information_gain_nats": 0.1,
+                "expected_score_variance": 0.04,
+                "observation_noise_variance": 0.01,
+            },
+            {
+                **common,
+                "atom_id": "higher_information_gain",
+                "expected_information_gain_nats": 0.5,
+                "expected_score_variance": 0.04,
+                "observation_noise_variance": 0.01,
+            },
+        ],
+        base_pose_dist=0.01,
+        source="fixture",
+    )
+
+    assert ledger["rows"][0]["atom_id"] == "higher_information_gain"
+    assert ledger["rows"][0]["expected_information_gain_nats"] == pytest.approx(0.5)
+    assert ledger["rows"][0]["expected_score_variance"] == pytest.approx(0.04)
+    assert ledger["rows"][0]["expected_uncertainty_reduction"]["source_fields"] == [
+        "expected_information_gain_nats",
+        "expected_score_variance",
+        "observation_noise_variance",
+    ]
 
 
 def test_archive_manifest_file_must_describe_closed_archive_bytes(tmp_path: Path) -> None:

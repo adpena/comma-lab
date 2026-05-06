@@ -46,6 +46,11 @@ def test_frontier_roadmap_status_is_non_dispatching_and_dirty_aware() -> None:
     assert payload["row_count"] == 12
     assert payload["dirty_path_count"] == 2
     assert "requires_exact_cuda_auth_eval" in payload["dispatch_blockers"]
+    assert payload["next_comprehensive_tranche"]["score_claim"] is False
+    assert payload["next_comprehensive_tranche"]["dispatch_attempted"] is False
+    assert payload["next_comprehensive_tranche"]["ready_for_exact_eval_dispatch"] is False
+    assert payload["next_comprehensive_tranche"]["schema"] == "next_comprehensive_tranche_v1"
+    assert "requires_lane_dispatch_claim" in payload["next_comprehensive_tranche"]["dispatch_blockers"]
 
     wr01 = rows["hnerv_wavelet_wr01_apply"]
     assert wr01["role"] == "stacker_scorer_changing"
@@ -64,6 +69,18 @@ def test_frontier_roadmap_status_is_non_dispatching_and_dirty_aware() -> None:
     assert categorical["safe_to_touch_now"] is True
     assert categorical["readiness_stage"] == "needs_byte_closed_candidate_or_fixture"
 
+    tranche = payload["next_comprehensive_tranche"]
+    pools = tranche["candidate_pools"]
+    assert "hnerv_wavelet_wr01_apply" not in pools["exact_eval_or_review"]
+    assert "categorical_qma9_clade_spade_openpilot" in pools["needs_byte_closed_candidate"]
+    workstreams = {stream["id"]: stream for stream in tranche["workstreams"]}
+    assert workstreams["scorer_changing_mask_payload"]["keys"] == [
+        "hnerv_wavelet_wr01_apply",
+        "categorical_qma9_clade_spade_openpilot",
+        "cmg3_predictive_mask_grammar",
+    ]
+    assert "no remote/GPU dispatch without an active lane claim" in tranche["global_acceptance_gates"]
+
 
 def test_frontier_roadmap_status_markdown_is_operator_briefing() -> None:
     payload = build_roadmap_status(repo_root=REPO, dirty_paths=[])
@@ -71,6 +88,9 @@ def test_frontier_roadmap_status_markdown_is_operator_briefing() -> None:
 
     assert "Frontier Roadmap Status" in markdown
     assert "Live-safe operator roadmap" in markdown
+    assert "Next Comprehensive Tranche" in markdown
+    assert "`rate_frontier_closure`" in markdown
+    assert "`field_meta_selection`" in markdown
     assert "`hnerv_wavelet_wr01_apply`" in markdown
     assert "`categorical_qma9_clade_spade_openpilot`" in markdown
     assert "`stacker_scorer_changing`" in markdown

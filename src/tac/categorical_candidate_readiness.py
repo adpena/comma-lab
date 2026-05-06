@@ -8,6 +8,7 @@ import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from tac.categorical_candidate_plan import audit_categorical_charged_label_plan
 from tac.categorical_compression_contract import build_categorical_compression_contract
 from tac.categorical_openpilot_mask_prior_contract import (
     audit_categorical_openpilot_mask_priors,
@@ -808,6 +809,16 @@ def audit_categorical_candidate_manifest(
     )
     blockers.extend(runtime_loader_blockers)
 
+    construction_plan = audit_categorical_charged_label_plan(
+        payload.get("candidate_construction_plan"),
+        charged_member_names=member_names,
+    )
+    if construction_plan["declared"] and construction_plan["accepted"] is not True:
+        blockers.extend(
+            f"candidate_construction_plan_{blocker}"
+            for blocker in construction_plan["validation_blockers"]
+        )
+
     candidate_rows, candidate_row_blockers = _audit_candidate_rows(payload)
     blockers.extend(candidate_row_blockers)
 
@@ -906,6 +917,7 @@ def audit_categorical_candidate_manifest(
             ),
         },
         "runtime_loader_parity": runtime_loader_parity,
+        "candidate_construction_plan": construction_plan,
         "conditioning_prior_contract": conditioning_prior_contract,
         "charged_member_summary": {
             "count": len(member_records),

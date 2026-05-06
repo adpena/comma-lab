@@ -17,7 +17,7 @@ from collections.abc import Mapping, Sequence
 from numbers import Integral
 from typing import Any
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 TOOL_NAME = "tac.optimization.entropy_codec_gap_audit"
 SCORE_EVIDENCE_GRADE = "invalid"
 DEFAULT_EVIDENCE_GRADE = "empirical"
@@ -70,6 +70,64 @@ _TARGET_KIND_PRIORITY = {
     "known_model_overhead": 1,
     "known_container_overhead": 2,
     "static_arithmetic_container_gap": 3,
+}
+BYTE_EQUIVALENCE_BLOCKERS = [
+    "missing_source_archive_manifest",
+    "missing_source_stream_sha256_and_byte_range",
+    "missing_candidate_stream_sha256_and_byte_range",
+    "missing_decoded_output_byte_equivalence_report",
+    "missing_roundtrip_decode_validation_manifest",
+    "missing_candidate_archive_manifest",
+    "missing_runtime_tree_parity_manifest",
+]
+COMMON_EXACT_NEXT_ARTIFACT_REQUIREMENTS = [
+    "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256",
+    "source_stream_section_sha256_byte_range_and_symbol_count",
+    "candidate_stream_section_sha256_byte_range_and_byte_count",
+    "old_new_decoded_output_sha256_equality_report",
+    "roundtrip_decode_validation_manifest",
+    "candidate_archive_manifest_with_member_sha256s",
+    "strict_pre_submission_compliance_json",
+    "meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions",
+]
+TARGET_KIND_ARTIFACT_REQUIREMENTS = {
+    "known_payload_entropy_gap": [
+        "byte_equivalent_payload_entropy_recode_manifest",
+        "entropy_coder_decoder_contract",
+    ],
+    "known_model_overhead": [
+        "byte_accounted_static_model_context_reduction_manifest",
+        "old_new_model_context_table_diff",
+    ],
+    "known_container_overhead": [
+        "container_header_or_stream_merge_diff_manifest",
+        "old_new_zip_member_and_payload_layout_diff",
+    ],
+    "static_arithmetic_container_gap": [
+        "static_arithmetic_container_roundtrip_manifest",
+        "old_new_arithmetic_payload_floor_accounting",
+    ],
+}
+META_LAGRANGIAN_REQUIRED_EXPORT_FIELDS = [
+    "atom_id",
+    "family",
+    "family_group",
+    "pareto_scope",
+    "byte_delta",
+    "expected_seg_dist_delta",
+    "expected_pose_dist_delta",
+    "confidence",
+    "evidence_grade",
+    "raw_equal",
+    "interaction_assumptions",
+    "archive_manifest_path",
+    "archive_manifest_sha256",
+]
+_TARGET_KIND_FAMILY_SUFFIX = {
+    "known_payload_entropy_gap": "payload_entropy_recode",
+    "known_model_overhead": "entropy_model_overhead_recode",
+    "known_container_overhead": "container_overhead_recode",
+    "static_arithmetic_container_gap": "static_arithmetic_recode",
 }
 
 
@@ -246,6 +304,31 @@ def render_markdown(manifest: Mapping[str, Any]) -> str:
                     bytes=row.get("target_bytes"),
                     artifact=row.get("required_next_artifact"),
                     ready=_bool_text(row.get("ready_for_exact_eval_dispatch") is True),
+                )
+            )
+        lines.extend(
+            [
+                "",
+                "| rank | stream | artifact requirements | byte-equivalence blockers | meta atom export |",
+                "|---:|---|---:|---:|---|",
+            ]
+        )
+        for row in targets:
+            if not isinstance(row, Mapping):
+                raise EntropyCodecGapAuditError("entropy-overhead target rows must be objects")
+            meta_export = row.get("meta_lagrangian_atom_export")
+            meta_atom = ""
+            if isinstance(meta_export, Mapping):
+                atom_template = meta_export.get("atom_template")
+                if isinstance(atom_template, Mapping):
+                    meta_atom = str(atom_template.get("atom_id") or "")
+            lines.append(
+                "| {rank} | {label} | {requirements} | {blockers} | `{meta_atom}` |".format(
+                    rank=row.get("rank"),
+                    label=row.get("label"),
+                    requirements=len(row.get("exact_next_artifact_requirements") or []),
+                    blockers=len(row.get("byte_equivalence_blockers") or []),
+                    meta_atom=meta_atom,
                 )
             )
     lines.append("")
@@ -700,20 +783,121 @@ def _append_entropy_overhead_target(
             "accounting_source": accounting_source,
             "target_action": action["target_action"],
             "required_next_artifact": action["required_next_artifact"],
+            "exact_next_artifact_requirements": _exact_next_artifact_requirements(
+                target_kind
+            ),
+            "byte_equivalence_blockers": list(BYTE_EQUIVALENCE_BLOCKERS),
             "actual_bytes": row["actual_bytes"],
             "entropy_floor_bytes": row["entropy_floor_bytes"],
             "best_static_arithmetic_container_kind": row["best_static_arithmetic_container_kind"],
             "best_static_arithmetic_container_floor_bytes": row["best_static_arithmetic_container_floor_bytes"],
             "known_overhead_accounting_complete": row["known_overhead_accounting_complete"],
+            "readiness_stage": "planning_target_requires_byte_equivalent_artifacts",
             "planning_only": True,
             "score_claim": False,
             "dispatch_attempted": False,
+            "ready_for_byte_closed_candidate_build": False,
+            "ready_for_meta_lagrangian_atom_export": False,
             "ready_for_archive_preflight": False,
             "ready_for_exact_eval_dispatch": False,
             "dispatch_blockers": list(DISPATCH_BLOCKERS),
             "fail_closed_criteria": list(FAIL_CLOSED_CRITERIA),
+            "meta_lagrangian_atom_export": _meta_lagrangian_atom_export(
+                row,
+                target_kind=target_kind,
+                target_bytes=positive_bytes,
+                target_bytes_field=target_bytes_field,
+            ),
         }
     )
+
+
+def _exact_next_artifact_requirements(target_kind: str) -> list[str]:
+    action = ENTROPY_OVERHEAD_TARGET_ACTIONS[target_kind]
+    return _unique_ordered_strings(
+        [
+            action["required_next_artifact"],
+            *TARGET_KIND_ARTIFACT_REQUIREMENTS[target_kind],
+            *COMMON_EXACT_NEXT_ARTIFACT_REQUIREMENTS,
+        ]
+    )
+
+
+def _meta_lagrangian_atom_export(
+    row: Mapping[str, Any],
+    *,
+    target_kind: str,
+    target_bytes: int | float,
+    target_bytes_field: str,
+) -> dict[str, Any]:
+    label_fragment = _atom_id_fragment(str(row["label"]))
+    family_prefix = _target_family_prefix(row)
+    family = f"{family_prefix}_{_TARGET_KIND_FAMILY_SUFFIX[target_kind]}"
+    family_group = f"{family_prefix}_rate_equivalent_recode"
+    target_amount = float(target_bytes)
+    ledger_byte_delta = -math.floor(target_amount)
+    export_blockers = [
+        "planning_target_not_byte_closed_candidate",
+        *BYTE_EQUIVALENCE_BLOCKERS,
+        "missing_archive_manifest_path",
+        "missing_archive_manifest_sha256",
+    ]
+    if ledger_byte_delta == 0:
+        export_blockers.append("target_bytes_less_than_one_meta_lagrangian_byte")
+    return {
+        "schema": "meta_lagrangian_atom_export_v1",
+        "export_ready": False,
+        "ready_for_meta_lagrangian_atom_export": False,
+        "export_blockers": _unique_ordered_strings(export_blockers),
+        "required_fields_before_export": list(META_LAGRANGIAN_REQUIRED_EXPORT_FIELDS),
+        "atom_template": {
+            "atom_id": f"{label_fragment}:{target_kind}",
+            "family": family,
+            "family_group": family_group,
+            "pareto_scope": f"{family_group}:{label_fragment}",
+            "conflicts_with_families": [],
+            "conflicts_with_atoms": [],
+            "byte_delta": ledger_byte_delta,
+            "estimated_byte_delta": _round_float(-target_amount),
+            "target_bytes": target_bytes,
+            "target_bytes_field": target_bytes_field,
+            "expected_seg_dist_delta": 0.0,
+            "expected_pose_dist_delta": 0.0,
+            "confidence": 0.0,
+            "evidence_grade": "invalid_planning_target_until_byte_equivalent_candidate",
+            "raw_equal": False,
+            "score_claim": False,
+            "dispatchable": False,
+            "ready_for_exact_eval_dispatch": False,
+            "interaction_assumptions": [
+                "rate_only_decoded_output_equivalence_required"
+            ],
+            "hard_pair_support": [],
+            "pair_support": [],
+            "class_support": [],
+            "geometry_priors": [],
+            "openpilot_priors": [],
+            "evidence_source_path": str(row.get("source") or ""),
+            "source_archive_sha256": "",
+            "archive_manifest_path": "",
+            "archive_manifest_sha256": "",
+        },
+    }
+
+
+def _target_family_prefix(row: Mapping[str, Any]) -> str:
+    haystack = " ".join(
+        str(row.get(key) or "") for key in ("label", "source", "codec_surface")
+    ).lower()
+    return "hnerv" if "hnerv" in haystack else "entropy_codec"
+
+
+def _atom_id_fragment(value: str) -> str:
+    pieces = []
+    for char in value.lower():
+        pieces.append(char if char.isalnum() else "_")
+    fragment = "_".join(part for part in "".join(pieces).split("_") if part)
+    return fragment or "stream"
 
 
 def _opportunity_ranking(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
@@ -815,6 +999,17 @@ def _positive_target_bytes(value: Any) -> int | float | None:
     return int(amount) if float(amount).is_integer() else amount
 
 
+def _unique_ordered_strings(values: Sequence[Any]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value)
+        if text and text not in seen:
+            out.append(text)
+            seen.add(text)
+    return out
+
+
 def _bool_text(value: bool) -> str:
     return "true" if value else "false"
 
@@ -824,12 +1019,16 @@ __all__ = [
     "AQC1_SPARSE_FREQ_BYTES_PER_SYMBOL",
     "AQV1_DENSE_FREQ_BYTES_PER_SYMBOL",
     "AQV1_FIXED_HEADER_BYTES",
+    "BYTE_EQUIVALENCE_BLOCKERS",
+    "COMMON_EXACT_NEXT_ARTIFACT_REQUIREMENTS",
     "DEFAULT_EVIDENCE_GRADE",
     "DISPATCH_BLOCKERS",
     "ENTROPY_OVERHEAD_TARGET_ACTIONS",
     "FAIL_CLOSED_CRITERIA",
+    "META_LAGRANGIAN_REQUIRED_EXPORT_FIELDS",
     "SCHEMA_VERSION",
     "SCORE_EVIDENCE_GRADE",
+    "TARGET_KIND_ARTIFACT_REQUIREMENTS",
     "TOOL_NAME",
     "EntropyCodecGapAuditError",
     "build_entropy_codec_gap_audit",

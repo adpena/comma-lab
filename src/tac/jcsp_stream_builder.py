@@ -26,15 +26,15 @@ caller. RAW_PASSTHROUGH streams without supplied bytes raise immediately
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from tac.joint_codec_stack_orchestrator import (
-    JCSPTensorStreamSpec,
     KIND_ARITHMETIC_STATIC,
     KIND_BALLE_HYPERPRIOR,
     KIND_RAW_PASSTHROUGH,
+    JCSPTensorStreamSpec,
     StreamSource,
     model_to_jcsp_streams,
 )

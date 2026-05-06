@@ -92,6 +92,8 @@ def test_field_equation_plan_emits_kkt_floor_and_trainable_surrogate() -> None:
     assert plan["rows"][0]["pareto_eligible"] is False
     assert plan["rows"][0]["frechet_derivatives"]["d_score_d_epsilon"] < 0
     assert plan["rows"][0]["kkt"]["locally_descending"] is False
+    assert plan["rows"][0]["kkt"]["selection_penalty_terms"]["missing_byte_closed_archive_manifest"] > 0.0
+    assert plan["rows"][0]["variational_action_delta"] > plan["rows"][0]["frechet_derivatives"]["d_score_d_epsilon"]
     assert "pareto_ineligible_atom" in plan["rows"][0]["kkt"]["kkt_blockers"]
     assert "missing_byte_closed_archive_manifest" in plan["rows"][0]["kkt"]["kkt_blockers"]
     assert plan["pareto_eligible_count"] == 0
@@ -109,6 +111,78 @@ def test_field_equation_plan_emits_kkt_floor_and_trainable_surrogate() -> None:
     assert "lapose_2026" in pose_row["research_basis_ids"]
     assert plan["trainable_surrogate"]["target"] == "minimize_variational_action_delta"
     assert "interaction_kernel" in plan["trainable_surrogate"]["trainable_parameters"]
+
+
+def test_field_rows_carry_uncertainty_and_meta_selection_penalties(tmp_path: Path) -> None:
+    manifest = _archive_manifest(tmp_path)
+    manifest_sha = sha256_file(manifest)
+    ledger = build_atom_ledger(
+        [
+            {
+                "atom_id": "uncertainty_atom",
+                "family": "mask_patch",
+                "family_group": "mask",
+                "pareto_scope": "mask",
+                "byte_delta": -10,
+                "expected_seg_dist_delta": -0.0001,
+                "confidence": 1.0,
+                "evidence_grade": "empirical",
+                "raw_equal": True,
+                "interaction_assumptions": ["first_order_mask_patch"],
+                "expected_information_gain_nats": 0.25,
+                "expected_score_variance": 0.04,
+                "archive_manifest_path": manifest.as_posix(),
+                "archive_manifest_sha256": manifest_sha,
+            }
+        ],
+        base_pose_dist=0.01,
+        source="fixture",
+    )
+    plan = build_field_equation_plan(ledger, source="fixture")
+
+    row = plan["rows"][0]
+    assert row["expected_information_gain_nats"] == pytest.approx(0.25)
+    assert row["expected_score_variance"] == pytest.approx(0.04)
+    assert row["expected_uncertainty_reduction"]["has_uncertainty_signal"] is True
+    assert row["meta_lagrangian_selection_score_delta"] == pytest.approx(
+        ledger["rows"][0]["selection_score_delta"]
+    )
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["dispatchable"] is False
+
+
+def test_field_action_penalizes_proxy_even_when_byte_closed(tmp_path: Path) -> None:
+    manifest = _archive_manifest(tmp_path)
+    manifest_sha = sha256_file(manifest)
+    ledger = build_atom_ledger(
+        [
+            {
+                "atom_id": "proxy_atom",
+                "family": "mask_patch",
+                "family_group": "mask",
+                "pareto_scope": "mask",
+                "byte_delta": -1_000,
+                "expected_seg_dist_delta": -0.0001,
+                "confidence": 1.0,
+                "evidence_grade": "planning_proxy",
+                "raw_equal": True,
+                "interaction_assumptions": ["proxy_first_order"],
+                "archive_manifest_path": manifest.as_posix(),
+                "archive_manifest_sha256": manifest_sha,
+            }
+        ],
+        base_pose_dist=0.01,
+        source="fixture",
+    )
+    plan = build_field_equation_plan(ledger, source="fixture")
+
+    row = plan["rows"][0]
+    assert row["proxy_row"] is True
+    assert row["pareto_eligible"] is False
+    assert "proxy_evidence_not_kkt_ready" in row["kkt"]["kkt_blockers"]
+    assert row["kkt"]["selection_penalty_terms"]["proxy_row"] > 0.0
+    assert row["kkt"]["selection_penalty_terms"]["pareto_ineligible_atom"] > 0.0
+    assert row["variational_action_delta"] > row["frechet_derivatives"]["d_score_d_epsilon"]
 
 
 def test_volterra_interactions_are_second_order_planning_only() -> None:

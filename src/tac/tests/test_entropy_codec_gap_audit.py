@@ -155,6 +155,7 @@ def test_known_overhead_accounting_ranks_model_gap_without_dispatch() -> None:
                 "model_overhead_bytes": 40_840,
                 "container_overhead_bytes": 112,
                 "symbol_counts": {"0": 16, "1": 8, "2": 4, "3": 4},
+                "codec_surface": "src/tac/hnerv_decoder_recode.py",
             },
             {
                 "label": "small_side_context",
@@ -179,15 +180,35 @@ def test_known_overhead_accounting_ranks_model_gap_without_dispatch() -> None:
     assert targets[0]["target_kind"] == "known_payload_entropy_gap"
     assert targets[0]["target_bytes_field"] == "known_payload_gap_to_entropy_floor_bytes"
     assert targets[0]["required_next_artifact"] == "roundtrip_payload_recode_manifest"
+    assert "byte_equivalent_payload_entropy_recode_manifest" in targets[0][
+        "exact_next_artifact_requirements"
+    ]
+    assert "missing_decoded_output_byte_equivalence_report" in targets[0][
+        "byte_equivalence_blockers"
+    ]
     assert targets[0]["score_claim"] is False
+    assert targets[0]["ready_for_byte_closed_candidate_build"] is False
+    assert targets[0]["ready_for_meta_lagrangian_atom_export"] is False
     assert targets[0]["ready_for_archive_preflight"] is False
     assert targets[0]["ready_for_exact_eval_dispatch"] is False
     assert "requires_exact_cuda_auth_eval" in targets[0]["dispatch_blockers"]
+    atom_export = targets[0]["meta_lagrangian_atom_export"]
+    assert atom_export["export_ready"] is False
+    assert "archive_manifest_sha256" in atom_export["required_fields_before_export"]
+    assert "missing_candidate_archive_manifest" in atom_export["export_blockers"]
+    atom_template = atom_export["atom_template"]
+    assert atom_template["atom_id"] == "hdc2_prev_symbol_contexts:known_payload_entropy_gap"
+    assert atom_template["family"] == "hnerv_payload_entropy_recode"
+    assert atom_template["family_group"] == "hnerv_rate_equivalent_recode"
+    assert atom_template["byte_delta"] == -int(targets[0]["target_bytes"])
+    assert atom_template["confidence"] == 0.0
+    assert atom_template["raw_equal"] is False
     model_target = next(row for row in targets if row["target_kind"] == "known_model_overhead")
     assert model_target["target_bytes"] == 40_840
     rendered = render_markdown(manifest)
     assert "Known Overhead Accounting" in rendered
     assert "Entropy-Overhead Target Ranking" in rendered
+    assert "hdc2_prev_symbol_contexts:known_payload_entropy_gap" in rendered
 
 
 def test_invalid_inputs_fail_closed() -> None:

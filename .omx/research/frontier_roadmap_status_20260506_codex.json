@@ -1,11 +1,11 @@
 {
-  "dirty_blocked_row_count": 7,
-  "dirty_path_count": 34,
+  "dirty_blocked_row_count": 4,
+  "dirty_path_count": 41,
   "dirty_paths": [
-    ".omx/research/cross_paradigm_frontier_inventory_20260506_codex.json",
-    ".omx/research/cross_paradigm_frontier_inventory_20260506_codex.md",
-    ".omx/research/cross_paradigm_lane_registry_additions_20260506.md",
-    ".omx/research/geometry_feedback_runtime_consumer_contract_20260506_codex.md",
+    ".omx/research/categorical_charged_label_construction_plan_20260506_codex.md",
+    ".omx/research/frontier_roadmap_status_20260506_codex.json",
+    ".omx/research/frontier_roadmap_status_20260506_codex.md",
+    ".omx/research/lapose_foveation_transport_atoms_20260506_codex.md",
     "experiments/results/public_pr100_intake_20260504_codex/source",
     "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source",
     "experiments/results/public_pr103_intake_20260504_codex/source",
@@ -15,27 +15,34 @@
     "experiments/results/public_pr82_henosis_frontier_intake_20260503_codex/repo",
     "experiments/results/public_pr91_intake_20260504_worker/pr91_src/repo",
     "reports/raw/kaggle_ingest/kaggle-dilated-h64-long1000-retry-v6-20260410T234220Z/comma_video_compression_challenge",
-    "scripts/remote_lane_owv3_sensitivity_weighted.sh",
+    "scripts/remote_lane_joint_codec_stack.sh",
+    "src/tac/analysis/lapose_foveation_atoms.py",
+    "src/tac/categorical_candidate_plan.py",
     "src/tac/categorical_candidate_readiness.py",
-    "src/tac/geometry_feedback_readiness.py",
-    "src/tac/hnerv_decoder_recode.py",
+    "src/tac/jcsp_stream_builder.py",
     "src/tac/joint_codec_stack_orchestrator.py",
+    "src/tac/lapose_foveation_atoms.py",
     "src/tac/optimization/entropy_codec_gap_audit.py",
-    "src/tac/tests/test_all_lanes_geometry_feedback_gate.py",
+    "src/tac/optimization/field_equation_planner.py",
+    "src/tac/optimization/meta_lagrangian_allocator.py",
+    "src/tac/optimization/research_basis.py",
     "src/tac/tests/test_build_categorical_candidate_fixture.py",
-    "src/tac/tests/test_build_cross_paradigm_frontier_inventory.py",
     "src/tac/tests/test_build_frontier_roadmap_status.py",
     "src/tac/tests/test_categorical_candidate_readiness.py",
     "src/tac/tests/test_entropy_codec_gap_audit.py",
-    "src/tac/tests/test_geometry_feedback_readiness.py",
-    "src/tac/tests/test_hnerv_decoder_recode.py",
+    "src/tac/tests/test_field_equation_planner.py",
+    "src/tac/tests/test_jcsp_model_streams.py",
+    "src/tac/tests/test_jcsp_stream_builder.py",
     "src/tac/tests/test_joint_codec_stack_orchestrator.py",
-    "src/tac/tests/test_wr01_exact_eval_packet.py",
-    "tools/all_lanes_preflight.py",
+    "src/tac/tests/test_lapose_foveation_atoms.py",
+    "src/tac/tests/test_lapose_lite_inputs.py",
+    "src/tac/tests/test_materialize_comma_lab_public_export.py",
+    "src/tac/tests/test_meta_lagrangian_allocator.py",
+    "src/tac/tests/test_research_basis.py",
     "tools/build_categorical_candidate_fixture.py",
     "tools/build_cross_paradigm_frontier_inventory.py",
     "tools/build_frontier_roadmap_status.py",
-    "tools/build_wr01_exact_eval_packet.py"
+    "tools/build_lapose_foveation_atom_manifest.py"
   ],
   "dispatch_attempted": false,
   "dispatch_blockers": [
@@ -45,12 +52,130 @@
     "requires_exact_cuda_auth_eval"
   ],
   "inventory_tool": "tools/build_cross_paradigm_frontier_inventory.py",
+  "next_comprehensive_tranche": {
+    "candidate_pools": {
+      "exact_eval_or_review": [
+        "hnerv_wavelet_wr01_apply",
+        "hnerv_lowlevel_brotli_repack"
+      ],
+      "needs_byte_closed_candidate": [
+        "sensitivity_omega_w_v3",
+        "selfcompress_mdl_fp4_tto"
+      ],
+      "needs_research_or_contract_hardening": [
+        "telescopic_foveation_field",
+        "lapose_motion_atom_allocator",
+        "raft_radial_openpilot_pose",
+        "cmg3_predictive_mask_grammar"
+      ]
+    },
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "tranche_plan_only",
+      "requires_candidate_specific_archive_manifest",
+      "requires_lane_dispatch_claim",
+      "requires_exact_cuda_auth_eval"
+    ],
+    "end_of_tranche_report_required": [
+      "changed paths and owning workers",
+      "focused tests plus all-lanes preflight result",
+      "new candidate artifacts with SHA-256 and bytes when produced",
+      "rows newly promoted, still blocked, or retired as scoped measured negatives",
+      "the next comprehensive tranche generated from the updated roadmap status"
+    ],
+    "global_acceptance_gates": [
+      "no score claim without exact CUDA auth eval JSON",
+      "no remote/GPU dispatch without an active lane claim",
+      "archive.zip -> inflate.sh -> upstream/evaluate.py remains canonical",
+      "all runtime inputs are charged archive members or fixed contest code",
+      "all builders are deterministic and cross-platform by default",
+      "negative, no-op, and blocked results are preserved as artifacts"
+    ],
+    "name": "byte-closed frontier closure and field-selected exact-eval tranche",
+    "objective": "Lower the score by converting the strongest current planning surfaces into byte-closed, runtime-consumed candidates, then select the first exact CUDA packet through Pareto/KKT/meta-Lagrangian gates.",
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "next_comprehensive_tranche_v1",
+    "score_claim": false,
+    "workstreams": [
+      {
+        "acceptance_gates": [
+          "candidate archive manifest records exact bytes and SHA-256",
+          "decoder/runtime parity proves output equivalence or declares scorer-changing scope",
+          "entropy-gap target ranking names concrete next artifact, not only a family",
+          "ready_for_exact_eval_dispatch remains false until candidate-specific preflight passes"
+        ],
+        "id": "rate_frontier_closure",
+        "keys": [
+          "hnerv_lowlevel_brotli_repack",
+          "hnerv_per_tensor_context_entropy"
+        ],
+        "objective": "Turn HNeRV rate-only opportunities into byte-equivalent archives or retire them as measured rate-negative implementations."
+      },
+      {
+        "acceptance_gates": [
+          "charged archive member is consumed by inflate runtime",
+          "full decode/re-encode or runtime-loader parity is proven",
+          "component-collapse risks are recorded before any lane claim",
+          "no uncharged openpilot/comma labels, weights, or sidecars are read at inflate"
+        ],
+        "id": "scorer_changing_mask_payload",
+        "keys": [
+          "hnerv_wavelet_wr01_apply",
+          "categorical_qma9_clade_spade_openpilot",
+          "cmg3_predictive_mask_grammar"
+        ],
+        "objective": "Build the first real byte-closed mask/categorical payload candidate instead of another fixture or unconsumed sidechannel."
+      },
+      {
+        "acceptance_gates": [
+          "per-stream bytes reconcile against charged archive members",
+          "fixture-only streams stay blocked from dispatch",
+          "stub sensitivity artifacts fail closed",
+          "individual component wins are not treated as composable without stacked eval"
+        ],
+        "id": "joint_stack_runtime_closure",
+        "keys": [
+          "joint_admm_balle_arithmetic_stack",
+          "sensitivity_omega_w_v3"
+        ],
+        "objective": "Move JCSP and sensitivity-aware stack planning from typed manifests toward archive members with charged bytes and runtime consumers."
+      },
+      {
+        "acceptance_gates": [
+          "geometry proposal records charged-artifact and runtime-consumer status",
+          "pose/foveation confidence is calibrated against measured component evidence",
+          "foveation remains ranking feedback until an archive consumer exists",
+          "small pose-error cliffs are treated as dispatch blockers, not warnings"
+        ],
+        "id": "geometry_pose_foveation_grounding",
+        "keys": [
+          "telescopic_foveation_field",
+          "lapose_motion_atom_allocator",
+          "raft_radial_openpilot_pose"
+        ],
+        "objective": "Convert LA-pose, RAFT/radial, and telescopic foveation from proposal signals into calibrated byte-bearing atom rows."
+      },
+      {
+        "acceptance_gates": [
+          "candidate rows carry family/conflict and byte-closed manifest fields",
+          "proxy, dominated, non-KKT, and non-byte-closed rows are penalized or refused",
+          "expected-information-gain is recorded separately from predicted score",
+          "selected exact-eval packet has lane claim plus candidate-specific preflight"
+        ],
+        "id": "field_meta_selection",
+        "keys": [
+          "meta_lagrangian_cross_paradigm_allocator"
+        ],
+        "objective": "Let the meta-Lagrangian/field-equation planner choose the exact next candidate only after Pareto, KKT, custody, and interaction gates pass."
+      }
+    ]
+  },
   "next_unblocked_keys": [
+    "hnerv_wavelet_wr01_apply",
     "hnerv_lowlevel_brotli_repack",
     "sensitivity_omega_w_v3",
-    "cmg3_predictive_mask_grammar",
-    "meta_lagrangian_cross_paradigm_allocator",
-    "selfcompress_mdl_fp4_tto"
+    "telescopic_foveation_field",
+    "lapose_motion_atom_allocator"
   ],
   "ready_for_exact_eval_dispatch": false,
   "row_count": 12,
@@ -61,9 +186,7 @@
         "changes decoded output",
         "tiny byte win means component drift dominates EV"
       ],
-      "dirty_path_blockers": [
-        "tools/build_wr01_exact_eval_packet.py"
-      ],
+      "dirty_path_blockers": [],
       "dispatch_attempted": false,
       "evidence_grade": "empirical archive candidate; exact CUDA pending",
       "key": "hnerv_wavelet_wr01_apply",
@@ -71,11 +194,11 @@
       "missing_evidence_path_count": 0,
       "next_patch": "Harvest/finalize incoming custody hardening, then exact CUDA only after lane claim.",
       "priority_tier": 10,
-      "readiness_stage": "blocked_by_dirty_worktree",
+      "readiness_stage": "needs_lane_claim_and_exact_cuda",
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "low-medium: local residual transform, not full representation replacement",
       "role": "stacker_scorer_changing",
-      "safe_to_touch_now": false,
+      "safe_to_touch_now": true,
       "score_claim": false,
       "stackability": "medium: stack after raw-equivalent rate recodes, before sidechannel stacks",
       "status": "archive_candidate_preflighted",
@@ -114,6 +237,7 @@
         "PR91 HPAC device contract is ambient/contradictory in public runtime sources"
       ],
       "dirty_path_blockers": [
+        "src/tac/categorical_candidate_plan.py",
         "src/tac/categorical_candidate_readiness.py",
         "tools/build_categorical_candidate_fixture.py"
       ],
@@ -169,7 +293,6 @@
         "requires deterministic decoder runtime before any exact eval"
       ],
       "dirty_path_blockers": [
-        "src/tac/hnerv_decoder_recode.py",
         "src/tac/optimization/entropy_codec_gap_audit.py"
       ],
       "dispatch_attempted": false,
@@ -224,9 +347,7 @@
         "geometry_component_gates_required",
         "exact_cuda_auth_eval_required_before_score_claim"
       ],
-      "dirty_path_blockers": [
-        ".omx/research/geometry_feedback_runtime_consumer_contract_20260506_codex.md"
-      ],
+      "dirty_path_blockers": [],
       "dispatch_attempted": false,
       "evidence_grade": "planning plus historical negatives",
       "key": "telescopic_foveation_field",
@@ -234,11 +355,11 @@
       "missing_evidence_path_count": 0,
       "next_patch": "Run charged foveation-params readiness audit, then keep foveation as ranking feedback until a runtime consumer passes geometry preflight and exact component gates.",
       "priority_tier": 70,
-      "readiness_stage": "blocked_by_dirty_worktree",
+      "readiness_stage": "needs_research_or_contract_hardening",
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "medium if runtime consumes charged geometry without PoseNet collapse",
       "role": "scorer_weighted_proposal_or_replacement",
-      "safe_to_touch_now": false,
+      "safe_to_touch_now": true,
       "score_claim": false,
       "stackability": "medium: best as atom-ranking/foveation prior before charged runtime warp",
       "status": "historical_mixed_needs_qfaithful_successor_contract",
@@ -256,9 +377,7 @@
         "geometry_component_gates_required",
         "exact_cuda_auth_eval_required_before_score_claim"
       ],
-      "dirty_path_blockers": [
-        ".omx/research/geometry_feedback_runtime_consumer_contract_20260506_codex.md"
-      ],
+      "dirty_path_blockers": [],
       "dispatch_attempted": false,
       "evidence_grade": "diagnostic CUDA response allocated to pairs; planning only",
       "key": "lapose_motion_atom_allocator",
@@ -266,11 +385,11 @@
       "missing_evidence_path_count": 0,
       "next_patch": "Keep labeled as LA-Pose-inspired until a paper-faithful inverse-dynamics encoder and pose head exist; add class/openpilot manifests, calibrate confidence, and require a charged archive consumer before dispatch.",
       "priority_tier": 80,
-      "readiness_stage": "blocked_by_dirty_worktree",
+      "readiness_stage": "needs_research_or_contract_hardening",
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "medium if it produces a charged motion decoder or pose-sidecar replacement",
       "role": "proposal_allocator",
-      "safe_to_touch_now": false,
+      "safe_to_touch_now": true,
       "score_claim": false,
       "stackability": "high as allocator feedback for pose, foveation, categorical, and sidechannel atoms",
       "status": "planning_chain_hardened_non_rankable_global_allocations",
@@ -288,9 +407,7 @@
         "geometry_component_gates_required",
         "exact_cuda_auth_eval_required_before_score_claim"
       ],
-      "dirty_path_blockers": [
-        ".omx/research/geometry_feedback_runtime_consumer_contract_20260506_codex.md"
-      ],
+      "dirty_path_blockers": [],
       "dispatch_attempted": false,
       "evidence_grade": "planning/prototype",
       "key": "raft_radial_openpilot_pose",
@@ -298,11 +415,11 @@
       "missing_evidence_path_count": 0,
       "next_patch": "Emit deterministic pose-disagreement and runtime-consumption readiness artifacts.",
       "priority_tier": 90,
-      "readiness_stage": "blocked_by_dirty_worktree",
+      "readiness_stage": "needs_research_or_contract_hardening",
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "medium if charged pose stream beats current pose bytes/components",
       "role": "proposal_or_pose_sidecar_replacement",
-      "safe_to_touch_now": false,
+      "safe_to_touch_now": true,
       "score_claim": false,
       "stackability": "medium: can seed la-pose atoms, foveation centers, or pose-sidecar search",
       "status": "prototype_readiness_needed",
@@ -337,7 +454,9 @@
       "blockers": [
         "planner assumes additive expected deltas until exact stacked archives land"
       ],
-      "dirty_path_blockers": [],
+      "dirty_path_blockers": [
+        "src/tac/optimization/meta_lagrangian_allocator.py"
+      ],
       "dispatch_attempted": false,
       "evidence_grade": "derivation/planning",
       "key": "meta_lagrangian_cross_paradigm_allocator",
@@ -345,11 +464,11 @@
       "missing_evidence_path_count": 0,
       "next_patch": "Add cross-paradigm family/conflict fields and refuse dispatchable rows unless a byte-closed archive manifest is attached.",
       "priority_tier": 110,
-      "readiness_stage": "needs_research_or_contract_hardening",
+      "readiness_stage": "blocked_by_dirty_worktree",
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "none directly; selects concrete stack/replacement builders",
       "role": "canonical_ranker",
-      "safe_to_touch_now": true,
+      "safe_to_touch_now": false,
       "score_claim": false,
       "stackability": "high: common row schema can compare rate, pose, seg, class, hard-pair support",
       "status": "planning_ranker_landed",
@@ -380,13 +499,14 @@
       "title": "Self-compress NN plus MDL/Bayesian plus FP4/TTO"
     }
   ],
-  "schema_version": 1,
+  "schema_version": 2,
   "score_claim": false,
   "stage_counts": {
-    "blocked_by_dirty_worktree": 7,
+    "blocked_by_dirty_worktree": 4,
     "exact_evidence_present_review_before_promotion": 1,
     "needs_byte_closed_candidate_or_fixture": 2,
-    "needs_research_or_contract_hardening": 2
+    "needs_lane_claim_and_exact_cuda": 1,
+    "needs_research_or_contract_hardening": 4
   },
   "tool": "tools/build_frontier_roadmap_status.py"
 }

@@ -6,6 +6,10 @@ import sys
 import zipfile
 from pathlib import Path
 
+from tac.categorical_candidate_plan import (
+    CATEGORICAL_CLASS_CODEBOOK_CONTRACT,
+    CATEGORICAL_CONSTRUCTION_PLAN_CONTRACT,
+)
 from tac.categorical_candidate_readiness import (
     ARCHIVE_MEMBER_MANIFEST_CONTRACT,
     CANDIDATE_MANIFEST_CONTRACT,
@@ -56,10 +60,27 @@ def test_build_categorical_candidate_fixture_is_deterministic_and_blocked(
         == RUNTIME_LOADER_PARITY_CONTRACT
     )
     assert readiness["runtime_loader_parity"]["accepted"] is True
+    assert readiness["candidate_construction_plan"]["accepted"] is True
+    assert readiness["candidate_construction_plan"]["ready_for_exact_eval_dispatch"] is False
     assert candidate["score_claim"] is False
     assert readiness["fixture_only"] is True
     assert readiness["ready_for_exact_eval_dispatch"] is False
     assert "fixture_only_candidate_not_dispatchable" in readiness["dispatch_blockers"]
+    construction_plan = read_json(out_a / "construction_plan.json")
+    assert construction_plan == candidate["candidate_construction_plan"]
+    assert construction_plan["construction_plan_contract"] == CATEGORICAL_CONSTRUCTION_PLAN_CONTRACT
+    assert construction_plan["candidate_construction_ready"] is True
+    assert construction_plan["ready_for_exact_eval_dispatch"] is False
+    assert "real_byte_closed_archive_parity_missing" in construction_plan["dispatch_blockers"]
+    assert [row["name"] for row in construction_plan["class_rows"]] == [
+        "road",
+        "lane_markings",
+        "undrivable",
+        "movable",
+        "my_car",
+    ]
+    assert construction_plan["class_rows"][1]["charged_label_member"] == "class_codebook.json"
+    assert construction_plan["class_rows"][1]["openpilot_prior_hint"] == "lane_marking_track_prior"
 
     with zipfile.ZipFile(archive_a) as archive:
         member_order = [
@@ -85,6 +106,11 @@ def test_build_categorical_candidate_fixture_is_deterministic_and_blocked(
     )
     assert archive_member_manifest["member_order"] == member_order
     assert archive_member_manifest["member_count"] == len(member_order)
+    with zipfile.ZipFile(archive_a) as archive:
+        class_codebook = json.loads(archive.read("class_codebook.json").decode("utf-8"))
+    assert class_codebook["class_codebook_contract"] == CATEGORICAL_CLASS_CODEBOOK_CONTRACT
+    assert class_codebook["classes"][0]["name"] == "road"
+    assert class_codebook["classes"][1]["default_quant_bits"] == 8
 
 
 def test_build_categorical_candidate_fixture_records_tool_manifest(tmp_path: Path) -> None:
@@ -109,3 +135,4 @@ def test_build_categorical_candidate_fixture_records_tool_manifest(tmp_path: Pat
     assert summary["ready_for_exact_eval_dispatch"] is False
     assert summary["tool_run_manifest"]["tool"] == "tools/build_categorical_candidate_fixture.py"
     assert "fixture_only_candidate_not_dispatchable" in summary["readiness_blockers"]
+    assert summary["paths"]["construction_plan"].endswith("construction_plan.json")
