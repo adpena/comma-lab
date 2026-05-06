@@ -101,7 +101,16 @@ def build_wavelet_sidechannel_candidate(
     if blockers:
         return _blocked_result(archive=archive, source_label=source_label, plan=plan, blockers=blockers)
 
-    candidate_archive = output_root / "hnerv_wavelet_sidechannel_candidate.zip"
+    # PARADIGM-α audit #4 (race-mode safety): include slug(source_label) in
+    # the filename so parallel dispatches under different source_labels do not
+    # silently overwrite each other in the same output_root. Per CLAUDE.md
+    # race-mode rule, parallel candidate builds must produce non-colliding
+    # paths. Slug = lowercase ASCII alnum + '_' / '-'; everything else → '_'.
+    _slug = "".join(
+        c if c.isalnum() or c in ("-", "_") else "_"
+        for c in str(source_label).lower()
+    ) or "unlabeled"
+    candidate_archive = output_root / f"hnerv_wavelet_sidechannel_candidate_{_slug}.zip"
     write_stored_single_member_zip(candidate_archive, member_name=archive.member_name, payload=candidate_payload)
     candidate = read_strict_single_member_zip(candidate_archive)
     manifest = {
@@ -142,7 +151,7 @@ def build_wavelet_sidechannel_candidate(
             "requires_exact_cuda_auth_eval",
         ],
     }
-    manifest_path = output_root / "hnerv_wavelet_sidechannel_candidate.json"
+    manifest_path = output_root / f"hnerv_wavelet_sidechannel_candidate_{_slug}.json"
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     manifest["manifest_path"] = str(manifest_path)
     return manifest
