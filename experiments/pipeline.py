@@ -291,6 +291,43 @@ class PipelineConfig:
     multipass_target_score: float = 0.0  # 0 == "use baseline - 0.005"
     multipass_eps: float = 1e-3      # below scorer noise floor
 
+    # Cross-paradigm wiring flags (PARADIGM-α/β/γ/la-pose) — registered here
+    # so callers can pass them through; dispatch to the per-paradigm modules
+    # is staged in follow-up commits (each gate has its own integration test
+    # before the dispatch path goes live). Adversarial review 2026-05-06:
+    # registering fields without dispatching is safe — every flag has
+    # default=False / "" so existing pipeline runs are untouched. The
+    # corresponding lane-registry entries are tracked separately.
+
+    # PARADIGM-β (sensitivity-weighted weight compression). Routes
+    # ``step_compress_weights`` to ``tac.owv3_sensitivity_weighted`` /
+    # ``tac.neural_weight_codec_sensitivity``. Requires
+    # ``sensitivity_map_path`` (a serialized SensitivityMap artifact).
+    use_sensitivity_weighted: bool = False
+    sensitivity_map_path: str = ""
+    owv3_bit_budget_ratio: float = 0.7   # [calibration: owv3_sensitivity_weighted]
+    owv3_protect_threshold: float = 1e-3 # [calibration: owv3_sensitivity_weighted]
+
+    # PARADIGM-γ (joint score-aware codec stack). Routes the weight-compression
+    # step through ``tac.joint_codec_stack_orchestrator`` (ADMM + Ballé +
+    # arithmetic terminal codecs jointly). The ``JCSP`` magic byte identifies
+    # the resulting container at inflate time.
+    use_joint_codec_stack: bool = False
+
+    # PARADIGM-α (mask-encoder portfolio). Default ``av1_monochrome`` preserves
+    # current behaviour; the four research alternatives are registered here as
+    # stubs and raise NotImplementedError at dispatch time until each codec's
+    # compress-time training harness lands. mask_codec must be one of:
+    #   av1_monochrome (default, wired) | argmax_rle (wired) |
+    #   nerv | wavelet | vqvae | grayscale_lut (PARADIGM-α stubs)
+    mask_codec: str = "av1_monochrome"
+
+    # PARADIGM-la-pose. ``use_raft_init`` initializes pose TTO from RAFT-derived
+    # poses (``experiments/derive_poses_from_raft.py``); ``use_riemannian_tto``
+    # routes pose optimization through the SE(3) exp/log maps in ``tac.se3``.
+    use_raft_init: bool = False
+    use_riemannian_tto: bool = False
+
 
 # ── Step implementations ─────────────────────────────────────────────────
 
