@@ -4,19 +4,13 @@ import struct
 import zipfile
 from pathlib import Path
 
-import pytest
-
 from tac.endgame_archive_decision import build_endgame_decision_profile, render_markdown
 from tac.pr85_bundle import PR85_HEADERLESS_RANDMULTI_SPECS, SEGMENT_ORDER, pack_pr85_bundle
 
 
-pytestmark = pytest.mark.xfail(
-    reason="endgame_archive_decision remains a partial pyc rehydration stub",
-    strict=True,
-)
-
-
 def _br(data: bytes) -> bytes:
+    import pytest
+
     brotli = pytest.importorskip("brotli")
     return brotli.compress(data, quality=5)
 

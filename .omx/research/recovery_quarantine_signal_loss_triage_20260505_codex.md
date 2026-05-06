@@ -4360,3 +4360,67 @@ Expected post-cleanup audit state:
 - `delete_after_manifest` drops from `4` to `0`;
 - promotion queue remains `0`;
 - strict and release-strict blockers remain `0`.
+
+## R61 - 2026-05-06 Endgame Archive Decision Rehydration
+
+Resolved the `profile_endgame_archive_decision.py` preserved hand-rehydration
+record by making its live dependency real instead of retaining a wrapper around
+`NotImplementedError` stubs.
+
+Promoted and hardened:
+
+- `src/tac/endgame_archive_decision.py`
+  - strict ZIP custody checks, including central/local name agreement, unsafe
+    member names, duplicate members, and read errors;
+  - PR85-family primary `x` bundle segment profiling through the canonical
+    `tac.pr85_bundle` parser;
+  - local QMA9, HPM1, STBM1BR, RMB1, and RSB1 byte-contract probes;
+  - deterministic archive comparison against a named frontier label;
+  - rate-only transplant estimates for segment swaps, including RMB1
+    randmulti plus candidate side-info/ZIP-overhead accounting;
+  - JSON and Markdown outputs with `score_claim=false` and
+    `byte_level_decision_support_only` evidence grade.
+- `experiments/profile_endgame_archive_decision.py`
+  - thin CLI wrapper over the canonical `tac.endgame_archive_decision` module.
+- `src/tac/tests/test_endgame_archive_decision.py`
+  - removed the strict xfail now that the profiler is live.
+- `src/tac/tests/test_rehydrated_modules_20260505.py`
+  - updated the recovery smoke contract so endgame now fails closed on bad
+    archive input instead of being expected to raise a rehydration stub.
+
+Deleted resolved orphan custody after live replacement and tests:
+
+- `reverse_engineering/orphan_pyc_recovery_20260505_codex/experiments/profile_endgame_archive_decision.py`
+- `reverse_engineering/orphan_pyc_recovery_20260505_codex/experiments/profile_endgame_archive_decision.recovery_spec.json`
+
+Sanity run against real local public-frontier archives:
+
+```text
+.venv/bin/python experiments/profile_endgame_archive_decision.py \
+  --candidate PR85=experiments/results/public_pr85_intake_20260503_codex/archive.zip \
+  --candidate PR85_STBM1BR=experiments/results/pr85_stbm1br_mask_recode_20260504_worker/pr90_stbm1br_lossless_pr85_mask_recode/archive.zip \
+  --candidate PR92_RSB1=experiments/results/public_pr92_intake_20260504_codex/archive.zip \
+  --frontier-label PR85_STBM1BR \
+  --json-out /tmp/endgame_profile_r61.json \
+  --markdown-out /tmp/endgame_profile_r61.md
+```
+
+Observed local byte-only profile:
+
+- `PR85`: `236328` bytes, strict ZIP true, decision-valid true,
+  `+6572` bytes versus `PR85_STBM1BR`.
+- `PR85_STBM1BR`: `229756` bytes, strict ZIP true, decision-valid true,
+  frontier comparator.
+- `PR92_RSB1`: `236516` bytes, strict ZIP true, decision-valid true,
+  `386` side-info bytes, `+6760` bytes versus `PR85_STBM1BR`.
+
+Verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_endgame_archive_decision.py
+  src/tac/tests/test_rehydrated_modules_20260505.py -q` -> `33 passed`.
+- `.venv/bin/python -m py_compile src/tac/endgame_archive_decision.py
+  experiments/profile_endgame_archive_decision.py
+  src/tac/tests/test_endgame_archive_decision.py
+  src/tac/tests/test_rehydrated_modules_20260505.py` passed.
+- The real-archive CLI smoke above completed and wrote deterministic JSON/MD
+  to `/tmp`.

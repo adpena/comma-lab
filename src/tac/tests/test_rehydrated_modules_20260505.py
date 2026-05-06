@@ -1,13 +1,12 @@
 """Smoke tests for the 6 modules rehydrated 2026-05-05.
 
 Each rehydrated module ships its public API surface (constants, error classes,
-dataclasses, function signatures) but defers some functions to
-``NotImplementedError`` because the bytecode disassembly contained features
-pycdc cannot fully decompile (intricate closures, generators, masked-conv
-mixins). This test file pins the expected public API and validates the
-fully-reconstructed roundtrips for ``pr85_bundle`` (the only module with a
-live consumer in ``submissions/robust_current/inflate_renderer.py`` and
-the only module fully reconstructed).
+dataclasses, function signatures). Some modules still defer bytecode-damaged
+functions to ``NotImplementedError`` because pycdc could not fully decompile
+intricate closures, generators, or masked-conv mixins. This test file pins the
+expected public API, validates the fully reconstructed ``pr85_bundle`` runtime
+roundtrips, and keeps the now-live ``endgame_archive_decision`` CLI fail-closed
+on malformed archive input.
 
 Recovery spec source:
 ``.recovery_quarantine_20260505T004735Z/src/tac/<module>.recovery_spec.json``.
@@ -354,12 +353,12 @@ def test_pr91_hpm1_probability_matrix_raises_not_implemented(tmp_path) -> None:
         run_pr91_hpm1_probability_variant_matrix(tmp_path / "fake.zip")
 
 
-def test_endgame_archive_decision_main_raises_not_implemented(tmp_path) -> None:
+def test_endgame_archive_decision_main_fails_closed_on_invalid_zip(tmp_path) -> None:
     from tac.endgame_archive_decision import main
 
     fake = tmp_path / "ref.zip"
     fake.write_bytes(b"fake")
-    with pytest.raises(NotImplementedError, match="rehydration incomplete"):
+    with pytest.raises(SystemExit):
         main(["--reference", str(fake)])
 
 
