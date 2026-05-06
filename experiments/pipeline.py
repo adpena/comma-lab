@@ -1346,17 +1346,75 @@ def step_compress_weights(
     # without realizing the dispatch path is not yet active. A future commit
     # will replace each block with the actual module dispatch.
     if cfg.use_sensitivity_weighted:
-        _log(
-            "PARADIGM-β: cfg.use_sensitivity_weighted=True but the "
-            "sensitivity-weighted dispatch path "
-            "(tac.owv3_sensitivity_weighted / "
-            "tac.neural_weight_codec_sensitivity) is REGISTERED-BUT-NOT-WIRED. "
-            "Falling through to ``cfg.weight_compression`` mode "
-            f"({mode!r}). To enable, the operator must land the dispatch "
-            "branch + an integration test. See lane_owv3_sensitivity_weighted / "
-            "lane_nwcs_sensitivity_weighted in the lane registry.",
-            "WARN",
-        )
+        # PARADIGM-β dispatch: route through tac.owv3_sensitivity_weighted.
+        # Wired 2026-05-06 (cross-paradigm wiring 6/N).
+        # Requires:
+        # - cfg.sensitivity_map_path points at a serialized SensitivityMap
+        #   artifact (.pt produced by the GPU sensitivity sweep, validated
+        #   under load_sensitivity_map's weights_only=True allowlist).
+        # - the checkpoint loadable via the standard ArchConfig hydrator.
+        # If the path is missing or empty, falls back to cfg.weight_compression
+        # with a loud WARN so an operator who forgot to provide the artifact
+        # gets a clear error, not a silent "did nothing".
+        sens_path = cfg.sensitivity_map_path
+        if not sens_path or not Path(sens_path).exists():
+            _log(
+                f"PARADIGM-β: cfg.use_sensitivity_weighted=True but "
+                f"sensitivity_map_path={sens_path!r} does not exist. "
+                f"Falling through to weight_compression={mode!r}. "
+                f"Produce the artifact via the GPU sensitivity sweep first "
+                f"(see tac.sensitivity_map / lane_sensitivity_map in the "
+                f"registry).",
+                "WARN",
+            )
+        else:
+            from tac.owv3_sensitivity_weighted import encode_owv3_archive
+            from tac.sensitivity_map import load_sensitivity_map
+            from tac.renderer import build_renderer
+
+            sensitivities, sens_metadata = load_sensitivity_map(sens_path)
+            ckpt = torch.load(
+                str(checkpoint_path), map_location="cpu", weights_only=False
+            )
+            model = build_renderer(
+                base_ch=cfg.base_ch,
+                mid_ch=cfg.mid_ch,
+                motion_hidden=cfg.motion_hidden,
+                depth=cfg.depth,
+                pose_dim=cfg.pose_dim,
+                embed_dim=cfg.embed_dim,
+                use_dsconv=cfg.use_dsconv,
+                padding_mode=cfg.padding_mode,
+                use_dilation=cfg.use_dilation,
+                use_zoom_flow=cfg.use_zoom_flow,
+            )
+            state = ckpt.get("state_dict", ckpt) if isinstance(ckpt, dict) else ckpt
+            model.load_state_dict(state)
+            archive_bytes = encode_owv3_archive(
+                model,
+                sensitivities=sensitivities,
+                bit_budget_ratio=cfg.owv3_bit_budget_ratio,
+                protect_threshold=cfg.owv3_protect_threshold,
+            )
+            out_path = iter_dir / "renderer_owv3_sensitivity.bin"
+            out_path.write_bytes(archive_bytes)
+            _log(
+                f"PARADIGM-β: wrote {len(archive_bytes):,}-byte sensitivity-"
+                f"weighted OWV3 archive at {out_path} "
+                f"(bit_budget_ratio={cfg.owv3_bit_budget_ratio}, "
+                f"protect_threshold={cfg.owv3_protect_threshold}, "
+                f"sens_metadata_keys={sorted(sens_metadata.keys()) if sens_metadata else []}).",
+                "INFO",
+            )
+            done_path.write_text(json.dumps({
+                "mode": "owv3_sensitivity_weighted",
+                "iteration": iteration,
+                "archive_bytes": len(archive_bytes),
+                "bit_budget_ratio": cfg.owv3_bit_budget_ratio,
+                "protect_threshold": cfg.owv3_protect_threshold,
+            }))
+            (iter_dir / f".done_{step_name}").touch()
+            return out_path
     if cfg.use_joint_codec_stack:
         _log(
             "PARADIGM-γ: cfg.use_joint_codec_stack=True but the joint codec "
