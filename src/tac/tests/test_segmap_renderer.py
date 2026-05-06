@@ -196,6 +196,64 @@ def test_segmap_trainer_accepts_grayscale_pairs_with_learnable_targets() -> None
     assert targets.raw_values.grad is not None
 
 
+def test_segmap_trainer_clips_learnable_class_target_gradients(monkeypatch) -> None:
+    """Gradient clipping covers the LCT optimizer params, not only SegMap."""
+    torch.manual_seed(0)
+    cfg = _make_eval_roundtrip_true_config()
+    h = SEGMAP_INPUT_SIZE[1] // 16
+    w = SEGMAP_INPUT_SIZE[0] // 16
+    model = _make_tiny_segmap()
+    targets = LearnableClassTargets()
+    trainer = SegMapTrainer(
+        model,
+        cfg,
+        _MockPoseNet(),
+        _MockSegNet(),
+        device="cpu",
+        learnable_class_targets=targets,
+    )
+    clipped_param_ids: set[int] = set()
+    real_clip = torch.nn.utils.clip_grad_norm_
+
+    def _capture_clip(params, max_norm, *args, **kwargs):  # noqa: ANN001
+        params_tuple = tuple(params)
+        clipped_param_ids.update(id(p) for p in params_tuple)
+        return real_clip(params_tuple, max_norm, *args, **kwargs)
+
+    monkeypatch.setattr(torch.nn.utils, "clip_grad_norm_", _capture_clip)
+
+    gray = torch.randint(0, 256, (1, 2, h, w), dtype=torch.uint8)
+    gt = torch.rand(1, 2, h, w, 3) * 255.0
+    trainer.train_epoch(gray, gt, ema=None, batch_size=1)
+
+    assert id(targets.raw_values) in clipped_param_ids
+
+
+def test_segmap_trainer_enforces_lct_target_separation_after_step() -> None:
+    """Post-step LCT targets remain archive-decodable under AV1 noise."""
+    torch.manual_seed(0)
+    cfg = _make_eval_roundtrip_true_config()
+    h = SEGMAP_INPUT_SIZE[1] // 16
+    w = SEGMAP_INPUT_SIZE[0] // 16
+    model = _make_tiny_segmap()
+    targets = LearnableClassTargets(torch.tensor([120.0, 121.0, 122.0, 123.0, 124.0]))
+    trainer = SegMapTrainer(
+        model,
+        cfg,
+        _MockPoseNet(),
+        _MockSegNet(),
+        device="cpu",
+        learnable_class_targets=targets,
+    )
+
+    gray = torch.randint(0, 256, (1, 2, h, w), dtype=torch.uint8)
+    gt = torch.rand(1, 2, h, w, 3) * 255.0
+    trainer.train_epoch(gray, gt, ema=None, batch_size=1)
+
+    sorted_targets = torch.sort(targets())[0]
+    assert torch.all(sorted_targets[1:] - sorted_targets[:-1] >= 32.0)
+
+
 # ─── Trainer integration test ──────────────────────────────────────────
 
 

@@ -390,8 +390,9 @@ class SegMapTrainer:
         params = [p for p in model.parameters() if p.requires_grad]
         if learnable_class_targets is not None:
             params.extend(p for p in learnable_class_targets.parameters() if p.requires_grad)
+        self._optimizer_params = tuple(params)
         self.optimizer = torch.optim.AdamW(
-            params, lr=config.lr, weight_decay=config.weight_decay
+            self._optimizer_params, lr=config.lr, weight_decay=config.weight_decay
         )
 
     # ── Council C deep fix DF3: per-pair scorer chunking ───────────────
@@ -715,8 +716,10 @@ class SegMapTrainer:
             del loss, pose_dist, seg_dist
 
         # Single optimizer.step() per epoch over accumulated gradients.
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config.grad_clip)
+        torch.nn.utils.clip_grad_norm_(self._optimizer_params, self.config.grad_clip)
         self.optimizer.step()
+        if self.learnable_class_targets is not None:
+            self.learnable_class_targets.enforce_separation()
         if ema is not None:
             ema.update(self.model)
 
