@@ -84,10 +84,44 @@ else
     log "STAGE 1 SKIPPED."
 fi
 
-log "=== Stage 2: pose TTO with --init-poses (BLOCKER) ==="
-log "WARN: optimize_poses.py needs --init-poses flag wired before this stage."
-log "WARN: Reference: optimize_poses.py:466-482 (--lora-rank pattern)."
-log "STAGE 2 SKIPPED."
+log "=== Stage 2: pose TTO with --init-poses ==="
+# Adversarial-review correction 2026-05-06: --init-poses ALREADY exists in
+# optimize_poses.py:310 (mutually exclusive with --seed-poses-path /
+# --gt-poses-path). My earlier runbook documented this as a blocker but
+# the flag was wired all along. Stage 2 IS RUNNABLE if Stage 1 produced
+# raft_derived_poses.pt with shape (N_pairs, 6).
+ANCHOR_CKPT="${ANCHOR_CKPT:-$WORKSPACE/experiments/results/lane_a_baseline/renderer.pt}"
+if [ -f "$RAFT_OUT" ] && [ -f "$ANCHOR_CKPT" ] && [ -f "${MASKS:-/dev/null}" ]; then
+    "$PYBIN" -u experiments/optimize_poses.py \
+        --checkpoint "$ANCHOR_CKPT" \
+        --masks "${MASKS:-$WORKSPACE/experiments/results/cached/masks_full.mkv}" \
+        --device cuda \
+        --steps 1000 \
+        --lr 0.01 \
+        --batch-pairs 50 \
+        --eval-roundtrip \
+        --init-poses "$RAFT_OUT" \
+        --output-dir "$LOG_DIR/pose_tto" \
+        2>&1 | tee -a "$LOG_DIR/run.log" || { log "FATAL: pose TTO with RAFT init failed"; exit 5; }
+else
+    log "STAGE 2 SKIPPED — Stage 1 must produce $RAFT_OUT and ANCHOR_CKPT/MASKS must exist."
+fi
 
-log "=== Stage 3: contest-CUDA auth eval (skipped) ==="
-log "LANE_RAFT_POSE_INIT_DONE score=N/A [contest-CUDA] paradigm=la-pose-raft-init blocked=optimize_poses_init_poses_flag"
+# Stage 3: build archive + contest-CUDA auth eval
+log "=== Stage 3: archive build + contest-CUDA auth eval ==="
+ARCHIVE="$LOG_DIR/archive.zip"
+if [ -f "$ARCHIVE" ]; then
+    bash "$WORKSPACE/scripts/remote_archive_only_eval.sh" \
+        --archive "$ARCHIVE" \
+        --output-json "$LOG_DIR/contest_auth_eval.json" \
+        2>&1 | tee -a "$LOG_DIR/run.log"
+fi
+
+SCORE=$("$PYBIN" -c "
+import json
+try:
+    with open('$LOG_DIR/contest_auth_eval.json') as f: d = json.load(f)
+    print(d.get('score', 'N/A'))
+except Exception: print('N/A')
+")
+log "LANE_RAFT_POSE_INIT_DONE score=$SCORE [contest-CUDA] paradigm=la-pose-raft-init"
