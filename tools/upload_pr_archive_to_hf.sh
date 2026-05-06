@@ -83,6 +83,12 @@ check_public_release_hygiene(
 )
 PY
 
+echo "[hf-upload] Running strict public-link hygiene scan on final release view..."
+"$PYTHON_BIN" "$HERE/tools/audit_public_publish_links.py" \
+    "$HERE/$SOURCE_DIR" \
+    --repo-root "$HERE" \
+    --strict
+
 echo "[hf-upload] Uploading $SOURCE_DIR -> datasets/$DATASET_SLUG"
 echo "  (resumable large-folder upload; this corpus may be many GB)"
 hf upload-large-folder "$DATASET_SLUG" "$HERE/$SOURCE_DIR" \
