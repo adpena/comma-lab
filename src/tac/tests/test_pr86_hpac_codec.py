@@ -24,6 +24,8 @@ from tac.pr86_hpac_codec import (
     load_source_artifact_summaries,
     load_hpac_model_from_ppmd,
     read_pr86_archive,
+    run_pr86_hpac_probability_variant_matrix,
+    run_pr86_hpac_replay,
     sha256_bytes,
 )
 from tac.pr91_hpm1_codec import (
@@ -231,6 +233,53 @@ def test_dependency_and_source_artifact_reports_are_structured() -> None:
     source_report = load_source_artifact_summaries({"missing": DEFAULT_PR91_ARCHIVE.parent / "missing.json"})
     assert source_report["status"] == "passed_source_artifact_inventory"
     assert source_report["artifacts"]["missing"]["exists"] is False
+
+
+@pytest.mark.skipif(
+    not DEFAULT_PR91_ARCHIVE.parents[1].joinpath("public_pr86_intake_20260504_codex/archive.zip").is_file(),
+    reason="public PR86 archive not present",
+)
+def test_real_pr86_replay_reports_known_entropy_mismatch() -> None:
+    pr86_archive = DEFAULT_PR91_ARCHIVE.parents[1] / "public_pr86_intake_20260504_codex" / "archive.zip"
+
+    report = run_pr86_hpac_replay(
+        pr86_archive,
+        source_dir=None,
+        max_frames=1,
+        attempt_reencode=False,
+    )
+
+    assert report["score_claim"] is False
+    assert report["dispatch_unlocked"] is False
+    assert report["tokens_bin"]["sha256_matches_expected"] is True
+    assert report["status"] == "failed_closed"
+    assert report["failure_stage"] == "submitted_tokens_decode"
+    assert report["failure_reason"] == "hpac_entropy_decode_contract_mismatch"
+    assert report["failure_context"]["frame"] == 0
+    assert report["failure_context"]["group"] == 10
+    assert report["failure_context"]["symbol_in_group"] == 191
+
+
+@pytest.mark.skipif(
+    not DEFAULT_PR91_ARCHIVE.parents[1].joinpath("public_pr86_intake_20260504_codex/archive.zip").is_file(),
+    reason="public PR86 archive not present",
+)
+def test_real_pr86_probability_matrix_is_local_only() -> None:
+    pr86_archive = DEFAULT_PR91_ARCHIVE.parents[1] / "public_pr86_intake_20260504_codex" / "archive.zip"
+
+    report = run_pr86_hpac_probability_variant_matrix(
+        pr86_archive,
+        variants=("source_float64_perfect_false",),
+        source_dir=None,
+        max_frames=1,
+        attempt_reencode=False,
+    )
+
+    assert report["status"] == "failed_closed"
+    assert report["score_claim"] is False
+    assert report["dispatch_allowed"] is False
+    assert report["passed_variants"] == []
+    assert report["variant_results"][0]["failure_reason"] == "hpac_entropy_decode_contract_mismatch"
 
 
 def test_pr86_group_masks_match_public_pr91_failure_geometry() -> None:

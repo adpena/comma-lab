@@ -4676,3 +4676,37 @@ Verification:
   src/tac/tests/test_rehydrated_modules_20260505.py -q` -> `40 passed`.
 - `.venv/bin/python -m py_compile src/tac/pr86_hpac_codec.py
   src/tac/tests/test_pr86_hpac_codec.py` passed.
+
+## R67 - 2026-05-06 PR86 Replay Orchestration Recovery
+
+Recovered the local-only PR86 HPAC replay orchestration/reporting layer on top
+of R65/R66 custody and decode helpers.
+
+Updated:
+
+- `src/tac/pr86_hpac_codec.py`
+- `src/tac/tests/test_pr86_hpac_codec.py`
+
+Recovered contracts:
+
+- `_decode_required_members` to decode `meta.pt`, `master.pt.gz`,
+  `slave.pt.gz`, and the embedded HPAC model into structured reports;
+- `run_pr86_hpac_replay` to emit a single local forensic report with archive
+  custody, dependency facts, token stream facts, and bounded decode status;
+- `run_pr86_hpac_probability_variant_matrix` to run local probability-contract
+  probes without dispatch or score claims.
+
+Important negative evidence:
+
+- The current local PR86 archive prefix decode under the recovered source
+  contract fails closed with the same entropy mismatch coordinates seen in the
+  PR91 HPM1 derivative path: `frame=0`, `group=10`,
+  `symbol_in_group=191`, `decoded_symbol_count_before_failure=5951`.
+- This means the recovered Python source contract is sufficient to reproduce
+  the mismatch boundary, but not sufficient to claim byte-closed PR86/PR91
+  token replay. Dispatch remains blocked.
+
+Verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_pr86_hpac_codec.py -q` ->
+  `12 passed`.

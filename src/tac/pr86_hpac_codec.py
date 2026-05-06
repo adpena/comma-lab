@@ -433,6 +433,27 @@ def load_source_artifact_summaries(
 def analyze_pr86_current_source_context(
     sources: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    if isinstance(sources, (str, Path)):
+        source_root = Path(sources)
+        files = []
+        if source_root.is_dir():
+            for path in sorted(source_root.rglob("*")):
+                if path.is_file():
+                    data = path.read_bytes()
+                    files.append(
+                        {
+                            "path": path.relative_to(source_root).as_posix(),
+                            "bytes": len(data),
+                            "sha256": sha256_bytes(data),
+                        }
+                    )
+        return {
+            "status": "passed_static_pr86_source_context" if files else "missing_source_context",
+            "score_claim": False,
+            "source_root": repo_rel(source_root),
+            "file_count": len(files),
+            "files": files,
+        }
     artifact_report = dict(sources or load_source_artifact_summaries())
     artifacts = artifact_report.get("artifacts", {})
     present = [name for name, row in artifacts.items() if row.get("exists")]
@@ -1073,3 +1094,236 @@ def load_hpac_model_from_ppmd(
     ).to(device).eval()
     model.load_state_dict(sd, strict=bool(strict))
     return model
+
+
+def _payload_report(payload: Any) -> dict[str, Any]:
+    if isinstance(payload, Mapping):
+        keys = list(payload.keys())
+        return {"type": "mapping", "key_count": len(keys), "keys_preview": keys[:12]}
+    if torch is not None and torch.is_tensor(payload):
+        return {
+            "type": "tensor",
+            "shape": list(payload.shape),
+            "dtype": str(payload.dtype),
+            "numel": int(payload.numel()),
+        }
+    return {"type": type(payload).__name__}
+
+
+def _decode_required_members(
+    bundle: Pr86ArchiveBundle, *, device: str = "cpu"
+) -> tuple[dict[str, Any], HPACMini, dict[str, Any]]:
+    meta = decode_meta_member(bundle.members["meta.pt"])
+    master = decode_gzip_torch_member(bundle.members["master.pt.gz"])
+    slave = decode_gzip_torch_member(bundle.members["slave.pt.gz"])
+    hpac_model = load_hpac_model_from_ppmd(
+        bundle.members["hpac.pt.ppmd"],
+        meta,
+        device=device,
+        strict=False,
+    )
+    decoded_members = {
+        "meta.pt": _payload_report(meta),
+        "master.pt.gz": _payload_report(master),
+        "slave.pt.gz": _payload_report(slave),
+        "hpac.pt.ppmd": {
+            "type": "HPACMini",
+            "P": hpac_model.P,
+            "delta": hpac_model.delta,
+            "ch": hpac_model.ch,
+            "use_spm": hpac_model.use_spm,
+        },
+    }
+    return decoded_members, hpac_model, meta
+
+
+def _archive_bundle_report(bundle: Pr86ArchiveBundle) -> dict[str, Any]:
+    return {
+        "path": repo_rel(bundle.contract.archive_path),
+        "bytes": bundle.extra.get("archive_bytes"),
+        "sha256": bundle.sha256,
+        "expected_bytes": bundle.contract.expected_bytes,
+        "expected_sha256": bundle.contract.expected_sha256,
+        "member_reports": bundle.extra.get("member_reports", {}),
+    }
+
+
+def _finalize_replay_report(report: dict[str, Any], started_at: float) -> dict[str, Any]:
+    report["elapsed_sec"] = round(time.time() - started_at, 3)
+    return _jsonable(report)
+
+
+def run_pr86_hpac_replay(
+    archive: Path = DEFAULT_PR86_ARCHIVE,
+    *,
+    contract: Pr86ArchiveContract | None = None,
+    source_dir: Path | None = DEFAULT_PR86_MERGED_SOURCE_DIR,
+    source_artifacts: tuple[Path, ...] = (),
+    device: str = "cpu",
+    max_frames: int | None = 1,
+    attempt_reencode: bool = False,
+    probability_variant: str | HpacProbabilityVariant = DEFAULT_HPAC_PROBABILITY_VARIANT,
+) -> dict[str, Any]:
+    """Run local-only PR86 HPAC archive replay/custody diagnostics.
+
+    This emits structured forensic evidence. It never runs contest eval and
+    never unlocks dispatch; HPAC re-encode remains intentionally fail-loud.
+    """
+
+    started_at = time.time()
+    variant = resolve_hpac_probability_variant(probability_variant)
+    report: dict[str, Any] = {
+        "schema_version": 1,
+        "tool": "tac.pr86_hpac_codec.run_pr86_hpac_replay",
+        "recorded_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "status": "running",
+        "score_claim": False,
+        "dispatch_performed": False,
+        "gpu_or_remote_work": False,
+        "local_only": True,
+        "device": device,
+        "max_frames": max_frames,
+        "attempt_reencode": bool(attempt_reencode),
+        "probability_variant": _jsonable(variant.__dict__),
+        "byte_parity_achieved": False,
+        "dispatch_unlocked": False,
+        "archive": None,
+        "current_source_context": {},
+        "source_artifacts": {},
+        "dependency_contract": None,
+        "decoded_members": {},
+        "tokens_bin": {},
+        "hpac_decode": {},
+        "hpac_reencode": {},
+        "failure_stage": None,
+        "failure_reason": None,
+        "failure_context": {},
+    }
+    try:
+        if source_dir is not None:
+            report["current_source_context"] = analyze_pr86_current_source_context(source_dir)
+        if source_artifacts:
+            report["source_artifacts"] = load_source_artifact_summaries(
+                {path.name: path for path in source_artifacts}
+            )
+        dependency_report = collect_dependency_report(strict=False)
+        report["dependency_contract"] = dependency_report
+
+        resolved_contract = contract or Pr86ArchiveContract(Path(archive))
+        bundle = read_pr86_archive(Path(archive), contract=resolved_contract)
+        report["archive"] = _archive_bundle_report(bundle)
+        decoded_members, hpac_model, meta = _decode_required_members(bundle, device=device)
+        report["decoded_members"] = decoded_members
+
+        token_blob = bundle.members["tokens.bin"]
+        token_sha = sha256_bytes(token_blob)
+        report["tokens_bin"] = {
+            "bytes": len(token_blob),
+            "sha256": token_sha,
+            "expected_sha256": EXPECTED_PR86_TOKENS_SHA256,
+            "sha256_matches_expected": token_sha == EXPECTED_PR86_TOKENS_SHA256,
+            "uint32_word_count": len(token_blob) // 4 if len(token_blob) % 4 == 0 else None,
+            "encoding": "little_endian_uint32_words_for_constriction_queue",
+        }
+        if token_sha != EXPECTED_PR86_TOKENS_SHA256:
+            raise Pr86HpacReplayError(
+                "tokens_bin_contract",
+                "tokens_sha256_mismatch",
+                expected_tokens_sha256=EXPECTED_PR86_TOKENS_SHA256,
+                actual_tokens_sha256=token_sha,
+                tokens_bytes=len(token_blob),
+            )
+
+        decoded_tokens, decode_report = decode_tokens_hpac(
+            hpac_model,
+            token_blob,
+            int(meta["N"]),
+            int(meta.get("H", SEGNET_IN_H)),
+            int(meta.get("W", SEGNET_IN_W)),
+            int(meta["P"]),
+            int(meta["delta"]),
+            device=device,
+            max_frames=max_frames,
+            probability_variant=variant,
+            return_report=True,
+        )
+        report["hpac_decode"] = decode_report
+        if not attempt_reencode:
+            report["status"] = "passed_prefix_decode_reencode_not_attempted"
+            report["failure_stage"] = "decode_then_reencode_byte_parity"
+            report["failure_reason"] = "reencode_disabled"
+            report["failure_context"] = {"decoded_frames": int(decoded_tokens.shape[0])}
+            return _finalize_replay_report(report, started_at)
+
+        report["hpac_reencode"] = {
+            "status": "blocked_hpac_encoder_not_rehydrated",
+            "failure_reason": "encode_tokens_hpac remains fail-loud",
+        }
+        report["status"] = "blocked_hpac_encoder_not_rehydrated"
+        report["failure_stage"] = "decode_then_reencode_byte_parity"
+        report["failure_reason"] = "encode_tokens_hpac_not_rehydrated"
+        return _finalize_replay_report(report, started_at)
+    except Pr86HpacReplayError as exc:
+        report["status"] = "failed_closed"
+        report["failure_stage"] = exc.contract
+        report["failure_reason"] = exc.code
+        report["failure_context"] = dict(exc.fields)
+        return _finalize_replay_report(report, started_at)
+
+
+def run_pr86_hpac_probability_variant_matrix(
+    archive: Path = DEFAULT_PR86_ARCHIVE,
+    *,
+    variants: tuple[str, ...] = supported_hpac_probability_variant_names(),
+    contract: Pr86ArchiveContract | None = None,
+    source_dir: Path | None = DEFAULT_PR86_MERGED_SOURCE_DIR,
+    source_artifacts: tuple[Path, ...] = (),
+    device: str = "cpu",
+    max_frames: int | None = 1,
+    attempt_reencode: bool = False,
+) -> dict[str, Any]:
+    """Run local-only PR86 HPAC probability-variant diagnostics."""
+
+    started_at = time.time()
+    rows = []
+    for name in variants:
+        result = run_pr86_hpac_replay(
+            archive,
+            contract=contract,
+            source_dir=source_dir,
+            source_artifacts=source_artifacts,
+            device=device,
+            max_frames=max_frames,
+            attempt_reencode=attempt_reencode,
+            probability_variant=name,
+        )
+        rows.append(
+            {
+                "variant": name,
+                "status": result["status"],
+                "failure_stage": result.get("failure_stage"),
+                "failure_reason": result.get("failure_reason"),
+                "decoded_frames": result.get("hpac_decode", {}).get("decoded_frames"),
+                "decoded_tokens_sha256": result.get("hpac_decode", {})
+                .get("tokens", {})
+                .get("sha256"),
+                "dispatch_unlocked": False,
+                "score_claim": False,
+            }
+        )
+    passed = [row["variant"] for row in rows if str(row["status"]).startswith("passed")]
+    return _jsonable(
+        {
+            "schema": "pr86_hpac_probability_variant_matrix_v1",
+            "tool": "tac.pr86_hpac_codec.run_pr86_hpac_probability_variant_matrix",
+            "recorded_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+            "status": "passed_local_prefix_matrix" if passed else "failed_closed",
+            "score_claim": False,
+            "dispatch_allowed": False,
+            "dispatch_performed": False,
+            "variants": list(variants),
+            "passed_variants": passed,
+            "variant_results": rows,
+            "elapsed_sec": round(time.time() - started_at, 3),
+        }
+    )
