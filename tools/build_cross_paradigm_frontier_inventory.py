@@ -77,8 +77,8 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         title="HNeRV per-tensor/context entropy recode",
         paradigms=("alpha_mask_payload", "entropy_coding"),
         role="stacker_rate_only",
-        status="diagnosed_headroom",
-        evidence_grade="empirical entropy-floor profile",
+        status="parity_fixture_landed_header_overhead_blocked",
+        evidence_grade="empirical entropy-floor plus parity fixture profile",
         stackability="medium-high: could stack with HNeRV raw-equivalent section recodes",
         replacement_potential="low: recodes current decoder representation",
         code_paths=(
@@ -89,11 +89,11 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         ),
         evidence_paths=("experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",),
         next_patch=(
-            "Build a parity-first per-tensor/context range fixture with compact headers and "
-            "report byte gap versus per-tensor entropy floor before archive rebuild."
+            "Collapse HDC1 context-table overhead with shared/codebook-clustered contexts, then "
+            "rerun byte gap versus the per-tensor prev-symbol entropy floor before archive rebuild."
         ),
         blockers=(
-            "global static q-stream AQ/Huffman model loses to brotli",
+            "current parity HDC1 fixture is raw-equal but header-overhead byte-negative",
             "requires deterministic decoder runtime before any exact eval",
         ),
     ),
@@ -253,6 +253,7 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "src/tac/joint_admm_coordinator.py",
             "src/tac/balle_hyperprior_codec.py",
             "src/tac/arithmetic_qint_codec.py",
+            "tools/audit_arithmetic_qint_optimality.py",
             "src/tac/entropy_archive.py",
         ),
         evidence_paths=("docs/score_aware_sidechannel_paradigm_20260504.md",),

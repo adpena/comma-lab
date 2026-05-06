@@ -50,6 +50,7 @@ CLAUDE.md compliance
 from __future__ import annotations
 
 import io
+import math
 import struct
 from typing import Iterable
 
@@ -60,6 +61,15 @@ _AQ_MAGIC: bytes = b"AQv1"
 _AQ_VERSION: int = 1
 _SH_MAGIC: bytes = b"SHv1"
 _SH_VERSION: int = 1
+
+
+def _entropy_bits_from_freq(freq: np.ndarray) -> float:
+    counts = freq.astype(np.float64)
+    total = float(counts.sum())
+    if total <= 0:
+        raise ValueError("frequency table total must be positive")
+    probs = counts[counts > 0] / total
+    return float(-np.sum(probs * np.log2(probs)))
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -335,6 +345,87 @@ def decode_qints_arithmetic(blob: bytes, expected_dtype: np.dtype = np.int8) -> 
     return out.astype(expected_dtype)
 
 
+def profile_aqv1_container(blob: bytes) -> dict:
+    """Return deterministic rate diagnostics for one AQv1 container.
+
+    This is a custody/profile surface, not a score claim. It measures the
+    current static arithmetic container against the empirical zero-order
+    entropy floor implied by the transmitted frequency table.
+    """
+
+    buf = io.BytesIO(blob)
+    magic = _read_exact(buf, 4, "magic")
+    if magic != _AQ_MAGIC:
+        raise ValueError(f"bad AQv1 magic: {magic!r}")
+    (version,) = struct.unpack("<H", _read_exact(buf, 2, "version"))
+    if version != _AQ_VERSION:
+        raise ValueError(f"unsupported AQv1 version: {version}")
+    (num_symbols,) = struct.unpack("<H", _read_exact(buf, 2, "num_symbols"))
+    if num_symbols <= 1:
+        raise ValueError(f"num_symbols must be >= 2, got {num_symbols}")
+    (offset,) = struct.unpack("<i", _read_exact(buf, 4, "offset"))
+    (n_symbols,) = struct.unpack("<Q", _read_exact(buf, 8, "n_symbols"))
+    freq = np.frombuffer(_read_exact(buf, num_symbols * 4, "frequency table"), dtype="<u4").copy()
+    (payload_size,) = struct.unpack("<Q", _read_exact(buf, 8, "payload_size"))
+    payload = _read_exact(buf, payload_size, "payload")
+    if buf.read(1):
+        raise ValueError("AQv1 payload has trailing bytes after declared payload")
+    if n_symbols <= 0:
+        raise ValueError("AQv1 n_symbols must be positive")
+
+    header_bytes = len(blob) - len(payload)
+    entropy_bits_per_symbol = _entropy_bits_from_freq(freq)
+    entropy_payload_bits = entropy_bits_per_symbol * float(n_symbols)
+    entropy_payload_bytes_floor = int(math.ceil(entropy_payload_bits / 8.0))
+    payload_bits_per_symbol = 8.0 * len(payload) / float(n_symbols)
+    container_bits_per_symbol = 8.0 * len(blob) / float(n_symbols)
+    return {
+        "schema_version": 1,
+        "kind": "aqv1_entropy_profile",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "num_symbols": int(num_symbols),
+        "offset": int(offset),
+        "n_symbols": int(n_symbols),
+        "container_bytes": int(len(blob)),
+        "header_bytes": int(header_bytes),
+        "payload_bytes": int(len(payload)),
+        "frequency_table": [int(x) for x in freq.tolist()],
+        "zero_order_entropy_bits_per_symbol": entropy_bits_per_symbol,
+        "zero_order_entropy_payload_bytes_floor": entropy_payload_bytes_floor,
+        "payload_bits_per_symbol": payload_bits_per_symbol,
+        "container_bits_per_symbol": container_bits_per_symbol,
+        "payload_entropy_gap_bits_per_symbol": (
+            payload_bits_per_symbol - entropy_bits_per_symbol
+        ),
+        "container_entropy_gap_bits_per_symbol": (
+            container_bits_per_symbol - entropy_bits_per_symbol
+        ),
+        "dispatch_blockers": [
+            "zero_order_entropy_profile_not_score_evidence",
+            "exact_archive_cuda_eval_required_before_promotion",
+        ],
+    }
+
+
+def profile_qints_arithmetic(
+    qints: np.ndarray,
+    num_symbols: int = 3,
+    offset: int = 1,
+) -> dict:
+    """Encode qints with AQv1 and profile container overhead."""
+
+    blob = encode_qints_arithmetic(qints, num_symbols=num_symbols, offset=offset)
+    decoded = decode_qints_arithmetic(blob, expected_dtype=qints.dtype)
+    if not np.array_equal(decoded, np.ascontiguousarray(qints).ravel()):
+        raise ValueError("AQv1 profile roundtrip mismatch")
+    profile = profile_aqv1_container(blob)
+    profile["roundtrip_equal"] = True
+    profile["encoded_sha256"] = __import__("hashlib").sha256(blob).hexdigest()
+    return profile
+
+
 def repack_payload_tar_xz_to_arithmetic(
     payload_path: str,
     output_path: str,
@@ -585,6 +676,8 @@ def unpack_arithmetic_payload(payload_path: str) -> dict:
 __all__ = [
     "encode_qints_arithmetic",
     "decode_qints_arithmetic",
+    "profile_aqv1_container",
+    "profile_qints_arithmetic",
     "repack_payload_tar_xz_to_arithmetic",
     "unpack_arithmetic_payload",
     "build_freq_table",
