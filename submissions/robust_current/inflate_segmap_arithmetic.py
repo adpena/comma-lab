@@ -19,6 +19,7 @@ STRICT-SCORER-RULE COMPLIANCE: only the SegMap renderer is loaded at inflate.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
@@ -64,6 +65,31 @@ def _grayscale_to_classes(gray: torch.Tensor) -> torch.Tensor:
 
 def _classes_to_one_hot(classes: torch.Tensor) -> torch.Tensor:
     return F.one_hot(classes.long(), num_classes=NUM_CLASSES).permute(0, 3, 1, 2).float()
+
+
+def _normalize_grayscale_mode(mode: str) -> str:
+    normalized = mode.strip().lower()
+    if normalized in {"hard", "one_hot", "onehot"}:
+        return "hard_onehot"
+    if normalized in {"soft_lut", "hard_onehot"}:
+        return normalized
+    raise RuntimeError(
+        f"unknown SEGMAP_GRAYSCALE_MODE={normalized!r}; expected soft_lut or hard_onehot"
+    )
+
+
+def _grayscale_to_mask_features(
+    gray: torch.Tensor, *, device: torch.device, mode: str
+) -> torch.Tensor:
+    normalized = _normalize_grayscale_mode(mode)
+    if normalized == "soft_lut":
+        from tac.mask_grayscale_lut import grayscale_to_probability_map
+
+        return grayscale_to_probability_map(
+            gray.to(device), sigma=15.0, channel_first=True
+        ).float()
+    classes = _grayscale_to_classes(gray)
+    return _classes_to_one_hot(classes).to(device)
 
 
 def _build_segmap(state_dict: dict, hidden: int, block_hidden: int,
@@ -143,9 +169,12 @@ def inflate(archive_dir: Path, inflated_dir: Path, video_names_file: Path,
         raise RuntimeError(
             f"grayscale.mkv resolution {gray.shape[-2:]} != ({SEG_H}, {SEG_W})."
         )
-    classes = _grayscale_to_classes(gray)
+    grayscale_mode = _normalize_grayscale_mode(
+        os.environ.get("SEGMAP_GRAYSCALE_MODE", "soft_lut")
+    )
     print(
-        f"[inflate-segmap-arith] grayscale->classes in {time.monotonic() - t0:.2f}s",
+        f"[inflate-segmap-arith] decoded grayscale in {time.monotonic() - t0:.2f}s "
+        f"(mode={grayscale_mode})",
         file=sys.stderr,
     )
 
@@ -156,7 +185,7 @@ def inflate(archive_dir: Path, inflated_dir: Path, video_names_file: Path,
         raise RuntimeError(f"video_names_file empty: {video_names_file}")
     out_name = video_names[0]
     out_path = inflated_dir / f"{out_name}.raw"
-    n_total = classes.shape[0]
+    n_total = gray.shape[0]
     if n_total != NUM_FRAMES:
         raise RuntimeError(f"expected {NUM_FRAMES} frames, got {n_total}")
 
@@ -166,12 +195,13 @@ def inflate(archive_dir: Path, inflated_dir: Path, video_names_file: Path,
     with out_path.open("wb") as f, torch.no_grad():
         for start in range(0, n_total, batch):
             end = min(start + batch, n_total)
-            chunk_cls = classes[start:end]
-            chunk_oh = _classes_to_one_hot(chunk_cls).to(device)
+            chunk_oh = _grayscale_to_mask_features(
+                gray[start:end], device=device, mode=grayscale_mode
+            )
             frame_idx = torch.arange(start, end, device=device, dtype=torch.long)
             rgb = model(chunk_oh, frame_idx)
             rgb_native = F.interpolate(
-                rgb, size=(target_h, target_w), mode="bilinear", align_corners=False
+                rgb, size=(target_h, target_w), mode="bicubic", align_corners=False
             )
             rgb_u8 = rgb_native.clamp(0.0, 255.0).round().to(torch.uint8)
             rgb_hwc = rgb_u8.permute(0, 2, 3, 1).contiguous().cpu().numpy()
