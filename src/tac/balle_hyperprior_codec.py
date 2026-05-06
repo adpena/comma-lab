@@ -514,10 +514,23 @@ def encode_qints_full_balle(
 
     block_size = codec.block_size
     n_total = symbols.size
-    # Pad the last block with zeros so we have a full BLOCK_SIZE × n_blocks 2-D tensor.
+    # Pad the last block to a full BLOCK_SIZE × n_blocks 2-D tensor.
+    # PARADIGM-γ audit fix #5 (2026-05-06): use the stream MEAN (rounded to
+    # the input dtype) rather than zero as the pad value so the last block's
+    # hyper-encoder sees a representative input. Zero-padding biases σ in the
+    # last block downward, which propagates to a wider rate distribution and
+    # spurious static_wins regressions when n_total is not a multiple of
+    # block_size.
     n_blocks = (n_total + block_size - 1) // block_size
     pad = n_blocks * block_size - n_total
-    padded = np.concatenate([flat, np.zeros(pad, dtype=flat.dtype)])
+    if pad > 0:
+        # round to integer dtype to keep the qint stream type-clean.
+        fill_val = np.array(
+            np.round(flat.astype(np.float32).mean()), dtype=flat.dtype
+        ).item()
+        padded = np.concatenate([flat, np.full(pad, fill_val, dtype=flat.dtype)])
+    else:
+        padded = flat
     blocks = padded.reshape(n_blocks, block_size).astype(np.float32)
     # PARADIGM-γ device-mismatch fix (2026-04-30, Council #271 carry-over):
     # The Lane 20 STATIC_WINS_FALLBACK regression had two contributing causes:
