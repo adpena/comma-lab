@@ -36,52 +36,61 @@ PR106_SRC_PATH = Path(__file__).parent / "results" / (
 )
 sys.path.insert(0, str(PR106_SRC_PATH.resolve()))
 
-from codec import parse_packed_archive  # type: ignore[import-not-found]  # noqa: E402
+from codec import parse_packed_archive  # type: ignore[import-not-found]
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--archive", type=Path, required=True, help="PR106 archive.zip")
-    parser.add_argument("--out-dir", type=Path, required=True, help="output directory")
-    args = parser.parse_args()
+def extract_pr106_decoder(
+    archive: Path,
+    out_dir: Path,
+    *,
+    verbose: bool = True,
+) -> dict[str, object]:
+    """Extract PR106 decoder tensors into ``out_dir`` and return metadata.
 
-    if not args.archive.is_file():
-        print(f"ERROR: archive not found: {args.archive}", file=sys.stderr)
-        return 2
-    args.out_dir.mkdir(parents=True, exist_ok=True)
+    The callable form keeps preflight and tests in-process while the CLI below
+    remains the stable operator entrypoint.
+    """
+    if not archive.is_file():
+        raise FileNotFoundError(f"archive not found: {archive}")
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    archive_bytes = args.archive.read_bytes()
+    archive_bytes = archive.read_bytes()
     sha = hashlib.sha256(archive_bytes).hexdigest()
-    print(f"[extract-pr106] archive: {args.archive} ({len(archive_bytes)} bytes, sha256={sha[:16]}...)")
+    if verbose:
+        print(f"[extract-pr106] archive: {archive} ({len(archive_bytes)} bytes, sha256={sha[:16]}...)")
 
-    with zipfile.ZipFile(args.archive) as z:
+    with zipfile.ZipFile(archive) as z:
         names = z.namelist()
         if names != ["0.bin"]:
             print(f"WARN: expected ['0.bin'] zip member, got {names}", file=sys.stderr)
         bin_bytes = z.read("0.bin")
-    print(f"[extract-pr106] 0.bin: {len(bin_bytes)} bytes")
+    if verbose:
+        print(f"[extract-pr106] 0.bin: {len(bin_bytes)} bytes")
 
     state_dict, latents, schema = parse_packed_archive(bin_bytes)
     n_tensors = len(state_dict)
     total_params = sum(t.numel() for t in state_dict.values())
-    print(f"[extract-pr106] decoded state_dict: {n_tensors} tensors, {total_params} params")
-    print(f"[extract-pr106] schema: {schema}")
-    print(f"[extract-pr106] latents shape: {tuple(latents.shape)}, dtype={latents.dtype}")
-    for name, t in list(state_dict.items())[:5]:
-        print(f"  {name}: shape={tuple(t.shape)}, dtype={t.dtype}, abs_max={t.abs().max().item():.4g}")
-    if n_tensors > 5:
-        print(f"  ... ({n_tensors - 5} more)")
+    if verbose:
+        print(f"[extract-pr106] decoded state_dict: {n_tensors} tensors, {total_params} params")
+        print(f"[extract-pr106] schema: {schema}")
+        print(f"[extract-pr106] latents shape: {tuple(latents.shape)}, dtype={latents.dtype}")
+        for name, t in list(state_dict.items())[:5]:
+            print(f"  {name}: shape={tuple(t.shape)}, dtype={t.dtype}, abs_max={t.abs().max().item():.4g}")
+        if n_tensors > 5:
+            print(f"  ... ({n_tensors - 5} more)")
 
-    state_dict_path = args.out_dir / "state_dict.pt"
+    state_dict_path = out_dir / "state_dict.pt"
     torch.save(state_dict, state_dict_path)
-    print(f"[extract-pr106] wrote {state_dict_path} ({state_dict_path.stat().st_size} bytes)")
+    if verbose:
+        print(f"[extract-pr106] wrote {state_dict_path} ({state_dict_path.stat().st_size} bytes)")
 
-    latents_path = args.out_dir / "latents.pt"
+    latents_path = out_dir / "latents.pt"
     torch.save(latents, latents_path)
-    print(f"[extract-pr106] wrote {latents_path} ({latents_path.stat().st_size} bytes)")
+    if verbose:
+        print(f"[extract-pr106] wrote {latents_path} ({latents_path.stat().st_size} bytes)")
 
     metadata = {
-        "archive_path": str(args.archive),
+        "archive_path": str(archive),
         "archive_sha256": sha,
         "archive_size_bytes": len(archive_bytes),
         "bin_size_bytes": len(bin_bytes),
@@ -96,9 +105,23 @@ def main() -> int:
             for name, t in state_dict.items()
         ],
     }
-    metadata_path = args.out_dir / "metadata.json"
+    metadata_path = out_dir / "metadata.json"
     metadata_path.write_text(json.dumps(metadata, indent=2))
-    print(f"[extract-pr106] wrote {metadata_path}")
+    if verbose:
+        print(f"[extract-pr106] wrote {metadata_path}")
+    return metadata
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--archive", type=Path, required=True, help="PR106 archive.zip")
+    parser.add_argument("--out-dir", type=Path, required=True, help="output directory")
+    args = parser.parse_args()
+    try:
+        extract_pr106_decoder(args.archive, args.out_dir)
+    except FileNotFoundError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
     return 0
 
 

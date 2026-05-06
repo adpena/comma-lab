@@ -34,7 +34,6 @@ from __future__ import annotations
 
 import argparse
 import subprocess
-import sys
 import tempfile
 import zipfile
 from collections.abc import Mapping
@@ -322,13 +321,12 @@ def check_inflate_adapter_modules() -> str:
 
 
 def check_stage1_extract_e2e(workdir: Path, source_archive: Path = PR106_ARCHIVE) -> str:
-    proc = subprocess.run(
-        [sys.executable, str(EXTRACT_SCRIPT),
-         "--archive", str(source_archive),
-         "--out-dir", str(workdir)],
-        capture_output=True, text=True,
-    )
-    _check(proc.returncode == 0, f"Stage 1 extract crashed: {proc.stderr.strip()[:300]}")
+    try:
+        from experiments.extract_pr106_decoder import extract_pr106_decoder
+
+        extract_pr106_decoder(source_archive, workdir, verbose=False)
+    except Exception as exc:
+        raise CheckFailure(f"Stage 1 extract crashed: {type(exc).__name__}: {exc}") from exc
     for f in ("state_dict.pt", "latents.pt", "metadata.json"):
         _check((workdir / f).is_file(), f"Stage 1 did not emit {f}")
     sd_size = (workdir / "state_dict.pt").stat().st_size
@@ -343,16 +341,19 @@ def check_stage3_repack(
     enforce_stub_byte_exact: bool = True,
 ) -> str:
     """Stage 3 must produce EXACTLY 164,087 bytes in default stub mode."""
-    proc = subprocess.run(
-        [sys.executable, str(REPACK_SCRIPT),
-         "--state-dict", str(workdir / "state_dict.pt"),
-         "--sensitivity", str(sensitivity_path),
-         "--pr106-archive", str(source_archive),
-         "--target-bytes", "145000",
-         "--out-dir", str(workdir)],
-        capture_output=True, text=True,
-    )
-    _check(proc.returncode == 0, f"Stage 3 repack crashed: {proc.stderr.strip()[:300]}")
+    try:
+        from experiments.repack_pr106_with_water_filling import repack_pr106_with_water_filling
+
+        repack_pr106_with_water_filling(
+            workdir / "state_dict.pt",
+            sensitivity_path,
+            source_archive,
+            workdir,
+            target_bytes=145000,
+            verbose=False,
+        )
+    except Exception as exc:
+        raise CheckFailure(f"Stage 3 repack crashed: {type(exc).__name__}: {exc}") from exc
     archive = workdir / "apogee_v2_archive.zip"
     _check(archive.is_file(), "Stage 3 did not emit apogee_v2_archive.zip")
     actual = archive.stat().st_size

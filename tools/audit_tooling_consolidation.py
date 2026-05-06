@@ -9,6 +9,7 @@ when those files are next touched.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
@@ -80,7 +81,10 @@ PATTERNS: tuple[Pattern, ...] = (
 
 
 def _is_excluded(path: Path, root: Path) -> bool:
-    rel = repo_relative(path, root)
+    return _is_excluded_rel(repo_relative(path, root))
+
+
+def _is_excluded_rel(rel: str) -> bool:
     parts = set(Path(rel).parts)
     for item in DEFAULT_EXCLUDES:
         if "/" in item:
@@ -98,15 +102,26 @@ def iter_files(repo_root: Path, scan_roots: tuple[str, ...]) -> list[Path]:
         base = repo_root / rel
         if not base.exists():
             continue
-        candidates = [base] if base.is_file() else sorted(base.rglob("*"))
-        for candidate in candidates:
-            if not candidate.is_file():
-                continue
-            if candidate.suffix not in TEXT_SUFFIXES:
-                continue
-            if _is_excluded(candidate, repo_root):
-                continue
-            files.append(candidate)
+        if base.is_file():
+            if base.suffix in TEXT_SUFFIXES and not _is_excluded(base, repo_root):
+                files.append(base)
+            continue
+        for dirpath, dirnames, filenames in os.walk(base, topdown=True):
+            dirpath_path = Path(dirpath)
+            dirnames[:] = [
+                dirname
+                for dirname in sorted(dirnames)
+                if not _is_excluded_rel(repo_relative(dirpath_path / dirname, repo_root))
+            ]
+            for filename in sorted(filenames):
+                candidate = dirpath_path / filename
+                if candidate.suffix not in TEXT_SUFFIXES:
+                    continue
+                if _is_excluded_rel(repo_relative(candidate, repo_root)):
+                    continue
+                if not candidate.is_file():
+                    continue
+                files.append(candidate)
     return files
 
 

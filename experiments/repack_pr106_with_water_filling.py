@@ -48,8 +48,6 @@ import sys
 import zipfile
 from pathlib import Path
 
-import brotli  # type: ignore[import-not-found]
-import numpy as np
 import torch
 
 PR106_SRC_PATH = Path(__file__).parent / "results" / (
@@ -58,11 +56,10 @@ PR106_SRC_PATH = Path(__file__).parent / "results" / (
 )
 sys.path.insert(0, str(PR106_SRC_PATH.resolve()))
 
-from codec import parse_packed_archive, encode_decoder, quantize_state_dict  # type: ignore[import-not-found]  # noqa: E402
+from codec import encode_decoder, quantize_state_dict  # type: ignore[import-not-found]
 
-from tac.water_filling_codec_v2 import encode_omega_w_v2  # noqa: E402
-from tac.sensitivity_map import load_sensitivity_map  # noqa: E402
-
+from tac.sensitivity_map import load_sensitivity_map
+from tac.water_filling_codec_v2 import encode_omega_w_v2
 
 CODEC_ID_BROTLI_INT8 = 0  # PR106 fallback (for Linear, biases, small layers)
 CODEC_ID_OWV2 = 1         # water-fill + arithmetic terminal (for Conv2d)
@@ -138,36 +135,41 @@ def _build_apogee_v2_blob(
     return buf.getvalue()
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--state-dict", type=Path, required=True)
-    parser.add_argument("--sensitivity", type=Path, required=True)
-    parser.add_argument("--pr106-archive", type=Path, required=True,
-                        help="PR106 archive.zip — used to harvest the latent_brotli bytes unchanged.")
-    parser.add_argument("--target-bytes", type=int, default=145000,
-                        help="Total decoder byte budget (excludes latents). PR106 uses 170278.")
-    parser.add_argument("--out-dir", type=Path, required=True)
-    args = parser.parse_args()
+def repack_pr106_with_water_filling(
+    state_dict_path: Path,
+    sensitivity_path: Path,
+    pr106_archive: Path,
+    out_dir: Path,
+    *,
+    target_bytes: int = 145000,
+    verbose: bool = True,
+) -> dict[str, object]:
+    """Build the Apogee-v2 repack archive and return its metadata.
 
-    args.out_dir.mkdir(parents=True, exist_ok=True)
+    The callable form avoids subprocess startup in preflight while preserving
+    the CLI contract for remote wrappers and operator runbooks.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    state_dict: dict[str, torch.Tensor] = torch.load(args.state_dict, map_location="cpu", weights_only=False)
-    sensitivities, sens_meta = load_sensitivity_map(args.sensitivity)
-    print(f"[repack-pr106] state_dict: {len(state_dict)} tensors, "
-          f"{sum(t.numel() for t in state_dict.values())} params")
-    print(f"[repack-pr106] sensitivity tag: {sens_meta.get('tag', 'unknown')}")
+    state_dict: dict[str, torch.Tensor] = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    sensitivities, sens_meta = load_sensitivity_map(sensitivity_path)
+    if verbose:
+        print(f"[repack-pr106] state_dict: {len(state_dict)} tensors, "
+              f"{sum(t.numel() for t in state_dict.values())} params")
+        print(f"[repack-pr106] sensitivity tag: {sens_meta.get('tag', 'unknown')}")
 
-    if sens_meta.get("is_stub"):
-        print(f"[repack-pr106] WARN: sensitivity is [stub-design-mode]. Repack output is "
-              f"DESIGN-VALIDATION ONLY — score is NOT predictive. Use real CUDA β-Fisher "
-              f"sensitivity for production repack.", file=sys.stderr)
+    if sens_meta.get("is_stub") and verbose:
+        print("[repack-pr106] WARN: sensitivity is [stub-design-mode]. Repack output is "
+              "DESIGN-VALIDATION ONLY — score is NOT predictive. Use real CUDA beta-Fisher "
+              "sensitivity for production repack.", file=sys.stderr)
 
     # 1. Allocate per-Conv2d byte budget
-    bits_alloc = _allocate_bit_budget(sensitivities, state_dict, args.target_bytes)
-    print(f"[repack-pr106] water-fill bit budget across {len(bits_alloc)} Conv2d layers "
-          f"(target_total={args.target_bytes} bytes)")
-    for n, b in sorted(bits_alloc.items(), key=lambda kv: -kv[1])[:5]:
-        print(f"  {n}: {b} bits ({b // 8} bytes)")
+    bits_alloc = _allocate_bit_budget(sensitivities, state_dict, target_bytes)
+    if verbose:
+        print(f"[repack-pr106] water-fill bit budget across {len(bits_alloc)} Conv2d layers "
+              f"(target_total={target_bytes} bytes)")
+        for n, b in sorted(bits_alloc.items(), key=lambda kv: -kv[1])[:5]:
+            print(f"  {n}: {b} bits ({b // 8} bytes)")
 
     # 2. Encode each tensor via the appropriate codec
     encoded: dict[str, tuple[int, bytes]] = {}
@@ -180,66 +182,96 @@ def main() -> int:
                     total_bits=bits_alloc[name],
                 )
                 encoded[name] = (CODEC_ID_OWV2, payload)
-                print(f"  [owv2] {name}: {len(payload)} bytes")
+                if verbose:
+                    print(f"  [owv2] {name}: {len(payload)} bytes")
             except Exception as e:
-                print(f"  [owv2-fail->fallback] {name}: {type(e).__name__}: {e}", file=sys.stderr)
+                if verbose:
+                    print(f"  [owv2-fail->fallback] {name}: {type(e).__name__}: {e}", file=sys.stderr)
                 payload = _encode_brotli_int8_single(name, t)
                 encoded[name] = (CODEC_ID_BROTLI_INT8, payload)
-                print(f"  [brotli-int8] {name}: {len(payload)} bytes (fallback)")
+                if verbose:
+                    print(f"  [brotli-int8] {name}: {len(payload)} bytes (fallback)")
         else:
             payload = _encode_brotli_int8_single(name, t)
             encoded[name] = (CODEC_ID_BROTLI_INT8, payload)
-            print(f"  [brotli-int8] {name}: {len(payload)} bytes")
+            if verbose:
+                print(f"  [brotli-int8] {name}: {len(payload)} bytes")
 
     # 3. Harvest unchanged latent_brotli from PR106 archive
-    with zipfile.ZipFile(args.pr106_archive) as z:
+    with zipfile.ZipFile(pr106_archive) as z:
         bin_bytes = z.read("0.bin")
     _, latent_brotli, header = _parse_pr106_packed_for_latents(bin_bytes)
-    print(f"[repack-pr106] harvested latent_brotli from PR106: {len(latent_brotli)} bytes")
+    if verbose:
+        print(f"[repack-pr106] harvested latent_brotli from PR106: {len(latent_brotli)} bytes")
 
     # 4. Build apogee-v2 0.bin
     new_bin = _build_apogee_v2_blob(encoded, latent_brotli)
-    print(f"[repack-pr106] apogee-v2 0.bin: {len(new_bin)} bytes "
-          f"(decoder ~{sum(len(p) for _, p in encoded.values())} + latent {len(latent_brotli)})")
+    if verbose:
+        print(f"[repack-pr106] apogee-v2 0.bin: {len(new_bin)} bytes "
+              f"(decoder ~{sum(len(p) for _, p in encoded.values())} + latent {len(latent_brotli)})")
 
     # 5. Wrap in single-member archive.zip ('0.bin') with deterministic ZipInfo
-    archive_path = args.out_dir / "apogee_v2_archive.zip"
+    archive_path = out_dir / "apogee_v2_archive.zip"
     with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_STORED) as z:  # DETERMINISTIC_ZIP_OK
         zi = zipfile.ZipInfo("0.bin", date_time=(1980, 1, 1, 0, 0, 0))
         zi.compress_type = zipfile.ZIP_STORED
         z.writestr(zi, new_bin)
     archive_size = archive_path.stat().st_size
-    print(f"[repack-pr106] wrote {archive_path} ({archive_size} bytes)")
+    if verbose:
+        print(f"[repack-pr106] wrote {archive_path} ({archive_size} bytes)")
 
-    pr106_size = args.pr106_archive.stat().st_size
+    pr106_size = pr106_archive.stat().st_size
     delta = archive_size - pr106_size
-    print(f"[repack-pr106] PR106 archive: {pr106_size} bytes; delta: {delta:+d}")
-    rate_delta = delta / 37545489.0  # contest score formula: 25 × bytes / 37545489
+    if verbose:
+        print(f"[repack-pr106] PR106 archive: {pr106_size} bytes; delta: {delta:+d}")
+    rate_delta = delta / 37545489.0  # contest score formula: 25 x bytes / 37545489
     score_delta_estimate = 25.0 * rate_delta
-    print(f"[repack-pr106] estimated rate-component score delta: {score_delta_estimate:+.6f}")
-    print(f"[repack-pr106] (distortion delta unknown until contest_auth_eval on T4; "
-          f"sub-0.20 ship-gate is empirical contest score < 0.20945)")
+    if verbose:
+        print(f"[repack-pr106] estimated rate-component score delta: {score_delta_estimate:+.6f}")
+        print("[repack-pr106] (distortion delta unknown until contest_auth_eval on T4; "
+              "sub-0.20 ship-gate is empirical contest score < 0.20945)")
 
     metadata = {
-        "pr106_archive": str(args.pr106_archive),
+        "pr106_archive": str(pr106_archive),
         "pr106_archive_size": pr106_size,
         "apogee_v2_archive": str(archive_path),
         "apogee_v2_archive_size": archive_size,
         "size_delta_bytes": delta,
         "rate_component_score_delta": score_delta_estimate,
-        "target_decoder_bytes": args.target_bytes,
+        "target_decoder_bytes": target_bytes,
         "decoder_actual_bytes": sum(len(p) for _, p in encoded.values()),
         "n_owv2_layers": sum(1 for cid, _ in encoded.values() if cid == CODEC_ID_OWV2),
         "n_brotli_int8_layers": sum(1 for cid, _ in encoded.values() if cid == CODEC_ID_BROTLI_INT8),
-        "sensitivity_source": str(args.sensitivity),
+        "sensitivity_source": str(sensitivity_path),
         "sensitivity_meta": sens_meta,
         "per_tensor_bytes": {name: {"codec_id": cid, "bytes": len(p)} for name, (cid, p) in encoded.items()},
         "tag": "[design-validation]" if sens_meta.get("is_stub") else "[ready-for-contest-CUDA-eval]",
     }
-    metadata_path = args.out_dir / "repack_metadata.json"
+    metadata_path = out_dir / "repack_metadata.json"
     metadata_path.write_text(json.dumps(metadata, indent=2))
-    print(f"[repack-pr106] wrote {metadata_path}")
-    print(f"[repack-pr106] tag: {metadata['tag']}")
+    if verbose:
+        print(f"[repack-pr106] wrote {metadata_path}")
+        print(f"[repack-pr106] tag: {metadata['tag']}")
+    return metadata
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--state-dict", type=Path, required=True)
+    parser.add_argument("--sensitivity", type=Path, required=True)
+    parser.add_argument("--pr106-archive", type=Path, required=True,
+                        help="PR106 archive.zip — used to harvest the latent_brotli bytes unchanged.")
+    parser.add_argument("--target-bytes", type=int, default=145000,
+                        help="Total decoder byte budget (excludes latents). PR106 uses 170278.")
+    parser.add_argument("--out-dir", type=Path, required=True)
+    args = parser.parse_args()
+    repack_pr106_with_water_filling(
+        args.state_dict,
+        args.sensitivity,
+        args.pr106_archive,
+        args.out_dir,
+        target_bytes=args.target_bytes,
+    )
     return 0
 
 

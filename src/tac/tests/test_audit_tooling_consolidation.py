@@ -44,6 +44,27 @@ def test_audit_tooling_detects_duplicate_helper_patterns(tmp_path: Path) -> None
     assert payload["per_file_counts"]["tools/sample.py"]["local_json_dump"] == 1
 
 
+def test_audit_tooling_prunes_excluded_result_trees(tmp_path: Path) -> None:
+    experiments = tmp_path / "experiments"
+    experiments.mkdir()
+    live = experiments / "live.py"
+    live.write_text("def _sha256_file(path):\n    return 'live'\n", encoding="utf-8")
+    excluded_dir = experiments / "results" / "public_pr"
+    excluded_dir.mkdir(parents=True)
+    (excluded_dir / "archived.py").write_text(
+        "def _sha256_file(path):\n    return 'archived'\n",
+        encoding="utf-8",
+    )
+
+    report = audit_tooling(tmp_path, ("experiments",))
+    payload = report.to_dict()
+
+    assert payload["summary"]["file_count"] == 1
+    assert payload["summary"]["pattern_counts"]["local_sha256_helper"] == 1
+    assert "experiments/live.py" in payload["per_file_counts"]
+    assert "experiments/results/public_pr/archived.py" not in payload["per_file_counts"]
+
+
 def test_audit_tooling_cli_json_contract() -> None:
     proc = subprocess.run(
         [

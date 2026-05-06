@@ -5998,6 +5998,76 @@ Next performance tranche:
 - `Lane #2` remains ~`2.18s`; only its structural checks are independent. The
   stage1 -> stage3 -> parser chain should stay sequential.
 
+## R93 - 2026-05-06 Cross-Platform Preflight Pruning And Omega In-Process Lowering
+
+Continued R92 by removing two avoidable default-preflight costs without
+changing dispatch evidence semantics.
+
+Changes:
+
+- `tools/audit_tooling_consolidation.py` now uses deterministic `os.walk`
+  traversal that prunes excluded directories before descent. The old
+  `Path.rglob("*")` path still filtered excluded files, but it first walked
+  artifact-heavy trees such as `experiments/results/`, which made Gate #7
+  latency mostly directory traversal rather than analysis.
+- Added a regression test proving `experiments/results/**` files are not
+  counted by the tooling-consolidation inventory.
+- `experiments/extract_pr106_decoder.py` now exposes
+  `extract_pr106_decoder(...)` while preserving its CLI.
+- `experiments/repack_pr106_with_water_filling.py` now exposes
+  `repack_pr106_with_water_filling(...)` while preserving its CLI.
+- `tools/dispatch_dryrun_omega_w_v3.py` calls those producer functions
+  in-process for Stage 1 and Stage 3, eliminating two Python subprocess
+  startups while preserving the stage1 -> stage3 -> parser dependency chain
+  and the byte-exact stub invariant.
+
+Measured correctness and latency:
+
+- Gate #7 standalone inventory stayed semantically identical to the prior
+  JSON summary: `1137` files, `535` affected files, and pattern counts
+  `local_sha256_helper=51`, `local_json_dump=101`,
+  `manual_sys_path_bootstrap=267`, `manual_repo_root_parents=364`,
+  `manual_audit_score_dispatch_metadata=603`.
+- Gate #7 standalone time: `2.20s real -> 0.36s real`.
+- Omega-W-V3 dry-run standalone time: `2.43s real -> 1.23s real`.
+- Full default all-lanes preflight: `3.04s real -> 1.88s real` with
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+- Full serial compatibility all-lanes preflight: `13.39s real -> 10.04s real`
+  with `ALL 20 PREFLIGHT CHECKS PASSED`.
+- Latest default per-step timings show the remaining dominant tasks are real
+  lane work: HNeRV low-level repack `1.82s`, Omega-W-V3 `1.37s`, and Apogee
+  intN `1.36s`.
+
+Verification:
+
+- `.venv/bin/python -m py_compile tools/dispatch_dryrun_omega_w_v3.py
+  experiments/extract_pr106_decoder.py
+  experiments/repack_pr106_with_water_filling.py
+  tools/audit_tooling_consolidation.py` passed.
+- `.venv/bin/python -m ruff check tools/dispatch_dryrun_omega_w_v3.py
+  experiments/extract_pr106_decoder.py
+  experiments/repack_pr106_with_water_filling.py
+  tools/audit_tooling_consolidation.py
+  src/tac/tests/test_audit_tooling_consolidation.py` passed.
+- `.venv/bin/python -m pytest src/tac/tests/test_dispatch_dryrun_omega_w_v3.py
+  src/tac/tests/test_lane_omega_w_v3_local_smoke.py
+  src/tac/tests/test_audit_tooling_consolidation.py -q` passed.
+- `.venv/bin/python tools/dispatch_dryrun_omega_w_v3.py` passed:
+  `LANE Ω-W-V3 DISPATCH DRY-RUN PASSED`.
+- `.venv/bin/python tools/all_lanes_preflight.py --timings` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+- `.venv/bin/python tools/all_lanes_preflight.py --jobs 1` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+
+Next performance tranche:
+
+- HNeRV low-level repack is now the default wall-clock limiter. Lower it by
+  inspecting deterministic brotli/search work and parallelizing independent
+  sections only if output ordering and manifest hashes remain byte-stable.
+- Gate #0 still uses a non-pruning `Path.rglob("*")` scan; port the same
+  pruning traversal pattern there next for another cross-platform pure-Python
+  win.
+
 ## R81 - 2026-05-06 Component Sensitivity Shard Merge IO Lowering
 
 Continued the Gate #7 lowering tranche on the finite-difference sensitivity
