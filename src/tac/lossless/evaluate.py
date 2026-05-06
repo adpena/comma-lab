@@ -6,7 +6,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import zipfile
 from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
 
@@ -301,13 +300,9 @@ def evaluate_local_submission_contract(
         unpacked_root = root / "submission"
         decompressed_root = root / "decompressed"
         unpacked_root.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(archive, "r") as zf:
-            # Mitigate zip-slip (path traversal) for Python < 3.12 which does
-            # not enforce this by default in extractall.
-            for member in zf.namelist():
-                if ".." in member or member.startswith("/"):
-                    raise ValueError(f"Suspicious zip member rejected (path traversal): {member}")
-            zf.extractall(unpacked_root)
+        from tac.submission_archive import safe_extract_zip
+
+        safe_extract_zip(archive, unpacked_root)
 
         decompress_script = unpacked_root / "decompress.py"
         if not decompress_script.is_file():

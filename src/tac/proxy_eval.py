@@ -24,7 +24,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import zipfile
 from pathlib import Path
 
 import argparse
@@ -205,9 +204,10 @@ def run_faithful_proxy(weights_path: str, archive_zip: Path | None = None,
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_root = Path(tmpdir)
         # Extract archive
+        from tac.submission_archive import safe_extract_zip
+
         extract_dir = tmp_root / "archive"
-        with zipfile.ZipFile(str(archive_zip)) as zf:
-            zf.extractall(extract_dir)
+        safe_extract_zip(archive_zip, extract_dir)
         mkv_candidates = sorted(extract_dir.rglob("*.mkv"))
         if not mkv_candidates:
             raise FileNotFoundError(

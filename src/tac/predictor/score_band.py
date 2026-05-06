@@ -35,9 +35,9 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Optional
 
 # ── Contest-defined constants (NEVER tune these — they are scoring-rule fixed) ──
 SEG_COEFFICIENT = 100.0  # [contest-defined] upstream/evaluate.py
@@ -59,6 +59,15 @@ class CalibrationAnchor:
     `archive_bytes / PR106_TOTAL_RATE_DENOM` within tolerance — guards against
     stale JSON state where the byte count was bumped but the cached rate
     wasn't recomputed (M3 from adversarial review 2026-05-05).
+
+    `anchor_role` (added 2026-05-05 tier-1 cleanup) distinguishes:
+      - "fit" (default): a real lossy-curve-fitting datapoint (rate-reducing)
+      - "compatibility_only": an inflate-path-validation reference whose
+        archive is structurally NOT rate-reducing vs lossless (e.g., int8
+        anchor at 187731 bytes vs PR106 lossless 186239). Excluded from
+        lossy-curve fitting AND excluded from the `lossy_anchor_invalid_no_rate_savings`
+        refusal so it can sit alongside real lossy anchors without
+        poisoning the predictor.
     """
     lane_id: str  # e.g. "lane_pr106_baseline", "lane_apogee_int8"
     rel_err_pct_per_weight: float  # 0.0 for lossless baseline
@@ -71,6 +80,7 @@ class CalibrationAnchor:
     job_id: str  # e.g. "apogee-int8-baseline-confirm-20260505t174500z"
     archive_sha256: str
     notes: str = ""
+    anchor_role: str = "fit"  # "fit" | "compatibility_only"
 
     def __post_init__(self) -> None:
         # Validate rate_unscaled is consistent with archive_bytes/denom (M3).
@@ -83,6 +93,11 @@ class CalibrationAnchor:
                 f"inconsistent with archive_bytes={self.archive_bytes} "
                 f"/ PR106_TOTAL_RATE_DENOM={PR106_TOTAL_RATE_DENOM} "
                 f"(expected {expected:.10f}; diff {abs(self.rate_unscaled - expected):.2e})"
+            )
+        if self.anchor_role not in ("fit", "compatibility_only"):
+            raise ValueError(
+                f"CalibrationAnchor({self.lane_id}): anchor_role={self.anchor_role!r} "
+                "must be 'fit' or 'compatibility_only'"
             )
 
 
@@ -138,6 +153,12 @@ def fit_distortion_curve(anchors: list[CalibrationAnchor]) -> dict[str, float]:
     The fit is intentionally simple (2-parameter) because we have very few
     anchors (3) and over-parameterization would memorize, not generalize.
     Closed-form via log-linear regression on `log(D - d_baseline) ≈ b·log(rel_err) + log(a)`.
+
+    Anchors with `anchor_role="compatibility_only"` are excluded from the fit
+    (they are inflate-path-validation references whose bytes don't represent
+    real lossy-direction rate savings). They still count toward the
+    MIN_CALIBRATION_ANCHORS gate via len(anchors) so callers see the full
+    calibration set, but they cannot poison the lossy power-law regression.
     """
     if len(anchors) < MIN_CALIBRATION_ANCHORS:
         return {"a": float("nan"), "b": float("nan"), "d_baseline": float("nan"), "n_anchors": len(anchors)}
@@ -152,8 +173,12 @@ def fit_distortion_curve(anchors: list[CalibrationAnchor]) -> dict[str, float]:
         baseline = baseline_anchors[0]
         d_baseline = baseline.avg_pose_dist + baseline.avg_seg_dist
 
-    # Lossy anchors only (rel_err > 0); fit log(D - d_baseline) ≈ b·log(rel_err) + log(a)
-    lossy = [a for a in anchors if a.rel_err_pct_per_weight > 0.0]
+    # Lossy anchors only (rel_err > 0 AND anchor_role == "fit"); fit log(D - d_baseline)
+    # ≈ b·log(rel_err) + log(a). compatibility_only anchors are excluded from the fit.
+    lossy = [
+        a for a in anchors
+        if a.rel_err_pct_per_weight > 0.0 and a.anchor_role == "fit"
+    ]
     if len(lossy) < 2:
         return {"a": float("nan"), "b": float("nan"), "d_baseline": d_baseline, "n_anchors": len(anchors)}
 
@@ -191,7 +216,7 @@ def predict_score_band(
     rel_err_pct_per_weight: float,
     n_quantized_layers: int,
     calibration_anchors: list[CalibrationAnchor],
-    distortion_proxy: Optional[DistortionProxy] = None,
+    distortion_proxy: DistortionProxy | None = None,
     band_half_width_score: float = 0.05,  # [heuristic:council-Q1 "0.05 = sane sanity-band width"]
 ) -> ScoreBand:
     """Predict a contest-CUDA score band for a candidate.
@@ -226,12 +251,20 @@ def predict_score_band(
     # 187,731 bytes > PR106 lossless 186,239 bytes (+1,492 bytes layout
     # overhead). The "lossy" int8 brings no rate savings; treating it as a
     # lossy data point poisons the power-law regression.
+    #
+    # Anchors with `anchor_role="compatibility_only"` are EXCLUDED from this
+    # gate (tier-1 cleanup 2026-05-05): they are inflate-path-validation
+    # references that intentionally have no rate savings vs lossless. They
+    # are still loaded for context but neither poison the fit nor trigger
+    # this refusal.
     lossless = [a for a in calibration_anchors if a.rel_err_pct_per_weight == 0.0]
     if lossless:
         tightest_lossless_bytes = min(a.archive_bytes for a in lossless)
         offending = [
             a for a in calibration_anchors
-            if a.rel_err_pct_per_weight > 0.0 and a.archive_bytes >= tightest_lossless_bytes
+            if a.rel_err_pct_per_weight > 0.0
+            and a.anchor_role == "fit"
+            and a.archive_bytes >= tightest_lossless_bytes
         ]
         if offending:
             names = ", ".join(f"{a.lane_id}({a.archive_bytes}B)" for a in offending)
@@ -241,8 +274,9 @@ def predict_score_band(
                 refusal_reason=(
                     f"lossy_anchor_invalid_no_rate_savings: anchor(s) [{names}] are labeled "
                     f"lossy (rel_err>0) but have archive_bytes >= tightest lossless ({tightest_lossless_bytes}B). "
-                    "A lossy anchor with no rate savings is structurally invalid; relabel it as a "
-                    "compatibility/layout anchor and exclude from lossy-curve fitting."
+                    "A lossy anchor with no rate savings is structurally invalid; relabel it as "
+                    "anchor_role=compatibility_only to exclude it from lossy-curve fitting while "
+                    "preserving the inflate-path validation reference."
                 ),
                 derivation="Council Q1 (Dykstra/Shannon): lossy direction must reduce rate.",
             )
@@ -346,10 +380,7 @@ def predict_score_band(
         # Split D = pose + seg using nearest-anchor ratio
         nearest = min(calibration_anchors, key=lambda a: abs(a.rel_err_pct_per_weight - rel_err_pct_per_weight))
         anchor_d = nearest.avg_pose_dist + nearest.avg_seg_dist
-        if anchor_d > 0:
-            pose_ratio = nearest.avg_pose_dist / anchor_d
-        else:
-            pose_ratio = 0.0
+        pose_ratio = nearest.avg_pose_dist / anchor_d if anchor_d > 0 else 0.0
         pred_pose = d_total * pose_ratio
         pred_seg = d_total * (1.0 - pose_ratio)
         method = "power_law_fit"
@@ -389,10 +420,7 @@ def predict_score_band(
     # downgrade to `calibrated_weak` so consumers know the proxy did NOT
     # carry meaningful per-component information.
     if method == "proxy":
-        if proxy_fit_degenerate:
-            confidence = "calibrated_weak"  # proxy curve fit is degenerate
-        else:
-            confidence = "calibrated_strong"  # local proxy + anchors, fit is healthy
+        confidence = "calibrated_weak" if proxy_fit_degenerate else "calibrated_strong"
     elif rel_err_min <= rel_err_pct_per_weight <= rel_err_max:
         confidence = "calibrated_weak"  # within range, no proxy
     else:

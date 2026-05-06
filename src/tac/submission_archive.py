@@ -14,8 +14,9 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
-import json
 import logging
+import shutil
+import stat
 import struct
 import zipfile
 from dataclasses import dataclass, field
@@ -45,6 +46,8 @@ def validate_archive_member_name(name: str) -> str:
     """Validate a strict submission ZIP member name and return it unchanged."""
     if not name:
         raise ValueError("archive member name is empty")
+    if "\x00" in name:
+        raise ValueError(f"archive member contains NUL byte: {name!r}")
     if "\\" in name:
         raise ValueError(f"archive member uses backslashes: {name!r}")
 
@@ -154,6 +157,64 @@ def deterministic_zip_directory(
                 compresslevel=compresslevel,
             )
     return [arcname for arcname, _ in members]
+
+
+def validate_zip_member_infos(infos: list[zipfile.ZipInfo] | tuple[zipfile.ZipInfo, ...]) -> list[str]:
+    """Validate strict submission ZIP member metadata and return member names.
+
+    This is the read-side companion to deterministic archive construction.
+    It rejects duplicate names, zip-slip paths, hidden/resource-fork members,
+    and symlink entries before any extraction or member-level audit consumes
+    archive bytes.
+    """
+    names: list[str] = []
+    seen: set[str] = set()
+    for info in infos:
+        name = validate_archive_member_name(info.filename)
+        if name in seen:
+            raise ValueError(f"duplicate archive member: {name!r}")
+        seen.add(name)
+        mode = (info.external_attr >> 16) & 0o170000
+        if mode and stat.S_ISLNK(mode):
+            raise ValueError(f"archive member is a symlink: {name!r}")
+        names.append(name)
+    return names
+
+
+def safe_extract_zip(archive_path: Path | str, destination: Path | str) -> list[str]:
+    """Safely extract a ZIP after validating every member.
+
+    Raw ``ZipFile.extractall`` is forbidden for contest archives because it can
+    hide duplicate-member, zip-slip, hidden sidecar, and symlink bugs until much
+    later in the pipeline. This helper validates the whole archive first, then
+    streams each member into ``destination`` with an explicit path containment
+    check.
+    """
+    archive = Path(archive_path)
+    dest = Path(destination)
+    dest.mkdir(parents=True, exist_ok=True)
+    dest_root = dest.resolve()
+
+    with zipfile.ZipFile(archive, "r") as zf:
+        infos = zf.infolist()
+        names = validate_zip_member_infos(infos)
+        for info, name in zip(infos, names, strict=True):
+            target = dest_root / name
+            try:
+                target.resolve().relative_to(dest_root)
+            except ValueError as exc:
+                raise ValueError(f"zip-slip extraction target: {name!r}") from exc
+            if info.is_dir():
+                if target.exists() and not target.is_dir():
+                    raise ValueError(f"archive directory conflicts with file: {name!r}")
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            if target.exists():
+                raise ValueError(f"archive extraction target already exists: {name!r}")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with zf.open(info, "r") as source, target.open("wb") as output:
+                shutil.copyfileobj(source, output)
+    return names
 
 
 # ============================================================
@@ -359,7 +420,7 @@ def validate_seg_tile_actions_payload(
     elif raw.startswith(_SEG_TILE_ACTION_SPLIT2_MAGIC):
         encoding = f"{encoding}+S2" if encoding != "raw" else "S2"
         unpacker = _load_renderer_payload_unpacker()
-        raw = unpacker._decode_split2_seg_tile_actions(raw)  # noqa: SLF001
+        raw = unpacker._decode_split2_seg_tile_actions(raw)
         record_size = 4
     elif raw.startswith(b"SG2") or (len(raw) % 4 != 0 and len(raw) % 5 != 0):
         encoding = f"{encoding}+SG2" if encoding != "raw" else "SG2"
@@ -524,7 +585,7 @@ def _validate_archive_seg_tile_actions(zf: zipfile.ZipFile) -> list[str]:
         try:
             unpacker = _load_renderer_payload_unpacker()
             payload = _decode_packed_renderer_payload_member(packed_name, zf.read(packed_name))
-            _header, members = unpacker._parse_payload(payload)  # noqa: SLF001
+            _header, members = unpacker._parse_payload(payload)
         except Exception as exc:
             errors.append(f"{packed_name}: renderer payload preflight failed: {exc}")
         else:
@@ -1108,8 +1169,6 @@ def save_poses_binary(poses: torch.Tensor, output_path: Path | str) -> int:
     Returns:
         File size in bytes
     """
-    import torch
-
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     raw = poses.half().cpu().numpy().tobytes()
@@ -1393,11 +1452,11 @@ def build_submission_archive(
                  "-of", "csv=p=0", str(masks_src)],
                 capture_output=True, text=True, timeout=60,
             )
-        except FileNotFoundError:
+        except FileNotFoundError as exc:
             raise FileNotFoundError(
                 "ffprobe is required to validate mask frame count but was not found. "
                 "Install ffmpeg (which includes ffprobe) to enable mask validation."
-            )
+            ) from exc
         except _sp.TimeoutExpired:
             logger.warning(
                 "ffprobe timed out on %s — mask frame count NOT validated. "
@@ -1457,7 +1516,7 @@ def build_submission_archive(
     zip_kwargs: dict = {} if use_brotli else {"compresslevel": 9}
 
     if use_brotli:
-        print("Brotli compression enabled (quality=%d)" % brotli_quality)
+        print(f"Brotli compression enabled (quality={brotli_quality})")
 
     with zipfile.ZipFile(output_path, "w", zip_method, **zip_kwargs) as zf:
         for name in required:

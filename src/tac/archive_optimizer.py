@@ -19,12 +19,16 @@ Usage::
 from __future__ import annotations
 
 import io
-import os
 import shutil
-import struct
 import tempfile
 import zipfile
 from pathlib import Path
+
+from tac.submission_archive import (
+    safe_extract_zip,
+    validate_zip_member_infos,
+    write_deterministic_zip_member,
+)
 
 
 def _strip_zip_metadata(archive_path: Path, output_path: Path) -> int:
@@ -36,33 +40,36 @@ def _strip_zip_metadata(archive_path: Path, output_path: Path) -> int:
 
     Returns the new archive size in bytes.
     """
-    with zipfile.ZipFile(archive_path, "r") as zin:
-        with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zout:
-            for info in zin.infolist():
-                data = zin.read(info.filename)
+    with (
+        zipfile.ZipFile(archive_path, "r") as zin,
+        zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zout,
+    ):
+        infos = zin.infolist()
+        validate_zip_member_infos(infos)
+        for info in infos:
+            data = zin.read(info.filename)
 
-                # Create a clean ZipInfo with minimal metadata
-                new_info = zipfile.ZipInfo(filename=info.filename)
-                new_info.compress_type = zipfile.ZIP_DEFLATED
+            # Try both STORED and DEFLATED, keep whichever is smaller
+            # (already-compressed data like MKV may be smaller with STORED)
+            buf_deflated = io.BytesIO()
+            with zipfile.ZipFile(buf_deflated, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as ztmp:
+                ztmp.writestr(info.filename, data)
+            deflated_size = buf_deflated.tell()
 
-                # Try both STORED and DEFLATED, keep whichever is smaller
-                # (already-compressed data like MKV may be smaller with STORED)
-                buf_deflated = io.BytesIO()
-                with zipfile.ZipFile(buf_deflated, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as ztmp:
-                    ztmp.writestr(info.filename, data)
-                deflated_size = buf_deflated.tell()
+            buf_stored = io.BytesIO()
+            with zipfile.ZipFile(buf_stored, "w", compression=zipfile.ZIP_STORED) as ztmp:
+                ztmp.writestr(info.filename, data)
+            stored_size = buf_stored.tell()
 
-                buf_stored = io.BytesIO()
-                with zipfile.ZipFile(buf_stored, "w", compression=zipfile.ZIP_STORED) as ztmp:
-                    ztmp.writestr(info.filename, data)
-                stored_size = buf_stored.tell()
+            compress_type = zipfile.ZIP_STORED if stored_size <= deflated_size else zipfile.ZIP_DEFLATED
 
-                if stored_size <= deflated_size:
-                    new_info.compress_type = zipfile.ZIP_STORED
-                else:
-                    new_info.compress_type = zipfile.ZIP_DEFLATED
-
-                zout.writestr(new_info, data)
+            write_deterministic_zip_member(
+                zout,
+                info.filename,
+                data,
+                compress_type=compress_type,
+                compresslevel=9 if compress_type != zipfile.ZIP_STORED else None,
+            )
 
     return output_path.stat().st_size
 
@@ -141,9 +148,10 @@ def optimize_archive(archive_path: str | Path) -> dict:
         extract_dir.mkdir()
         optimized_dir.mkdir()
 
-        # Extract
-        with zipfile.ZipFile(archive_path, "r") as zf:
-            zf.extractall(extract_dir)
+        # Extract through the canonical safe extractor; raw extractall is a
+        # contest-custody bug class because it can hide duplicate/zip-slip
+        # members until much later in the pipeline.
+        safe_extract_zip(archive_path, extract_dir)
 
         per_file: dict[str, dict] = {}
 
@@ -182,11 +190,14 @@ def optimize_archive(archive_path: str | Path) -> dict:
             for fpath in sorted(optimized_dir.rglob("*")):
                 if fpath.is_dir():
                     continue
-                rel = fpath.relative_to(optimized_dir)
-                # Use minimal ZipInfo
-                info = zipfile.ZipInfo(filename=str(rel))
-                info.compress_type = zipfile.ZIP_STORED
-                zout.writestr(info, fpath.read_bytes())
+                rel = fpath.relative_to(optimized_dir).as_posix()
+                write_deterministic_zip_member(
+                    zout,
+                    rel,
+                    fpath.read_bytes(),
+                    compress_type=zipfile.ZIP_STORED,
+                    compresslevel=None,
+                )
 
         optimized_bytes = optimized_archive.stat().st_size
 

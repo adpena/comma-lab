@@ -7,13 +7,14 @@ with BT.601 limited-range YUV420->RGB matching the scorer's frame_utils.py.
 from __future__ import annotations
 
 import tempfile
-import zipfile
 from pathlib import Path
 
 import av
 import numpy as np
 import torch
 import torch.nn.functional as F
+
+from tac.submission_archive import safe_extract_zip
 
 # PoseNet uses seq_len=2 frame pairs
 SEQ_LEN = 2
@@ -83,8 +84,7 @@ def decode_video(
 def decode_archive(archive_path: str | Path) -> list[torch.Tensor]:
     """Extract .mkv from archive.zip and decode to frames."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        with zipfile.ZipFile(str(archive_path)) as zf:
-            zf.extractall(tmpdir)
+        safe_extract_zip(archive_path, tmpdir)
         mkv = next(iter(Path(tmpdir).glob("*.mkv")))
         return decode_video(str(mkv))
 

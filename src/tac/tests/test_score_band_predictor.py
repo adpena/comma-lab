@@ -8,14 +8,12 @@ under those conditions is the bug this module prevents.
 """
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
 
 from tac.predictor.score_band import (
     CalibrationAnchor,
-    ScoreBand,
     fit_distortion_curve,
     load_calibration_anchors,
     predict_score_band,
@@ -243,8 +241,8 @@ def test_fit_distortion_curve_with_3_anchors_returns_finite_coefs() -> None:
     """Power-law fit works with 3-anchor calibration set."""
     anchors = [_pr106_anchor(), _apogee_int8_anchor(), _apogee_int4_anchor()]
     coefs = fit_distortion_curve(anchors)
-    assert not (coefs["a"] != coefs["a"])  # not NaN
-    assert not (coefs["b"] != coefs["b"])
+    assert coefs["a"] == coefs["a"]  # not NaN
+    assert coefs["b"] == coefs["b"]
     assert coefs["a"] > 0
     assert coefs["b"] > 0  # distortion should monotonically increase with rel_err
     assert coefs["d_baseline"] > 0
@@ -307,7 +305,7 @@ def test_multiple_lossless_anchors_uses_tightest_score() -> None:
     # Verify the predictor correctly identified PR106 (0.20946) as the tightest
     # lossless reference. Test by predicting a barely-lossy candidate and
     # checking that the band would refuse against PR106 but not against worse_lossless.
-    band_low = predict_score_band(
+    barely_lossy_band = predict_score_band(
         archive_bytes=190000,
         rel_err_pct_per_weight=0.10,
         n_quantized_layers=13,
@@ -317,6 +315,10 @@ def test_multiple_lossless_anchors_uses_tightest_score() -> None:
     # Whatever the prediction, it must be ≥ PR106's 0.20946 if not refused as
     # lossy_better_than_lossless_incoherent. List[0]=worse_lossless=0.30 would
     # fail to catch a band predicting 0.25 (above PR106 but below 0.30).
+    if barely_lossy_band.refused:
+        assert "lossy_better_than_lossless_incoherent" in barely_lossy_band.refusal_reason
+    else:
+        assert barely_lossy_band.high >= _pr106_anchor().contest_cuda_score
 
 
 def test_non_monotone_curve_REFUSES() -> None:
@@ -363,6 +365,7 @@ def test_non_monotone_curve_REFUSES() -> None:
         distortion_proxy=lambda b, r, n: (3e-5, 6e-4),  # provide proxy to skip rel_err > 1% gate
     )
     # With proxy, monotonicity guard does not fire (we don't fit a curve).
+    assert not band.refused, f"proxy path should skip power-law monotonicity guard: {band.refusal_reason}"
     # Without proxy, it would fire. Test the no-proxy case:
     band_no_proxy = predict_score_band(
         archive_bytes=140000,
@@ -431,3 +434,130 @@ def test_all_lossless_anchors_curve_fit_degenerates() -> None:
     # important property is that the lane is REFUSED.
     assert band.refused
     assert any(reason in band.refusal_reason for reason in ("curve_fit_degenerate", "extrapolation"))
+
+
+# ── Tier-1 cleanup 2026-05-05: anchor_role=compatibility_only ────────────
+
+
+def _apogee_int8_compatibility_only_anchor() -> CalibrationAnchor:
+    """The actual canonical int8 anchor (archive_bytes=187731 > lossless 186239)
+    relabeled as compatibility_only. Should NOT trigger
+    `lossy_anchor_invalid_no_rate_savings` and should be excluded from the
+    lossy-curve fit so the predictor proceeds for other lossy anchors.
+    """
+    return CalibrationAnchor(
+        lane_id="lane_apogee_int8",
+        rel_err_pct_per_weight=0.24,
+        archive_bytes=187731,
+        contest_cuda_score=0.21119242,
+        avg_pose_dist=3.375e-5,
+        avg_seg_dist=0.00067819,
+        rate_unscaled=187731 / 37545489,
+        measured_utc="2026-05-05T18:02:00Z",
+        job_id="apogee-int8-baseline-confirm-20260505t174500z",
+        archive_sha256="64ac1421",
+        anchor_role="compatibility_only",
+    )
+
+
+def test_compatibility_only_anchor_does_not_trigger_lossy_invalid_refusal() -> None:
+    """Tier-1 cleanup: anchor_role=compatibility_only is excluded from the
+    lossy_anchor_invalid_no_rate_savings refusal, so the predictor can still
+    operate when this anchor sits alongside real lossy anchors.
+    """
+    anchors = [
+        _pr106_anchor(),
+        _apogee_int8_compatibility_only_anchor(),  # 187731B > lossless, but compat-only
+        _apogee_int4_anchor(),  # real lossy 109996B
+    ]
+    # Predict for an in-range candidate WITH a proxy (rel_err > 1.0% needs proxy).
+    band = predict_score_band(
+        archive_bytes=120000,
+        rel_err_pct_per_weight=4.0,
+        n_quantized_layers=13,
+        calibration_anchors=anchors,
+        distortion_proxy=lambda b, r, n: (0.01, 0.005),
+        band_half_width_score=0.10,
+    )
+    assert not band.refused, (
+        f"compatibility_only anchor must NOT trigger lossy_anchor_invalid_no_rate_savings; "
+        f"got refusal: {band.refusal_reason}"
+    )
+    assert "lossy_anchor_invalid_no_rate_savings" not in band.refusal_reason
+
+
+def test_compatibility_only_anchor_excluded_from_curve_fit() -> None:
+    """The fit must use only anchor_role='fit' lossy anchors. With one
+    compatibility_only and one real lossy anchor, the fit should still run
+    but will degenerate (only 1 fittable lossy anchor < required 2).
+    """
+    # 1 lossless + 1 compatibility_only + 1 real-lossy
+    anchors = [
+        _pr106_anchor(),
+        _apogee_int8_compatibility_only_anchor(),
+        _apogee_int4_anchor(),
+    ]
+    coefs = fit_distortion_curve(anchors)
+    # Only 1 fittable lossy anchor (apogee_int4) — fit degenerates to NaN.
+    # Without the exclusion, it would have 2 (int8 + int4) and produce a fit.
+    assert coefs["a"] != coefs["a"], "expected NaN a (insufficient fit-eligible lossy anchors)"
+    assert coefs["b"] != coefs["b"], "expected NaN b (insufficient fit-eligible lossy anchors)"
+    # Total anchor count is still 3 (gate-passing), but only int4 was fit-eligible.
+    assert coefs["n_anchors"] == 3
+
+
+def test_compatibility_only_anchor_does_not_block_other_lossy_anchors_in_dispatch_readiness() -> None:
+    """Regression: with the canonical anchor file (PR106 lossless + int8
+    compat-only + int4 lossy), the predictor should NOT block on
+    lossy_anchor_invalid_no_rate_savings — it should refuse for the more
+    fundamental reason (e.g., insufficient fit-eligible lossy anchors,
+    high_rel_err_without_proxy, etc.) instead.
+    """
+    anchors = [
+        _pr106_anchor(),
+        _apogee_int8_compatibility_only_anchor(),
+        _apogee_int4_anchor(),
+    ]
+    # Try to predict an int6-class candidate (rel_err ~1.55%) without a proxy.
+    band = predict_score_band(
+        archive_bytes=170450,
+        rel_err_pct_per_weight=1.55,
+        n_quantized_layers=13,
+        calibration_anchors=anchors,
+    )
+    # Must refuse for a DIFFERENT reason (high_rel_err_without_proxy,
+    # curve_fit_degenerate, etc.), not for lossy_anchor_invalid.
+    if band.refused:
+        assert "lossy_anchor_invalid_no_rate_savings" not in band.refusal_reason
+
+
+def test_invalid_anchor_role_raises() -> None:
+    """anchor_role must be 'fit' or 'compatibility_only'."""
+    with pytest.raises(ValueError, match="anchor_role"):
+        CalibrationAnchor(
+            lane_id="bogus",
+            rel_err_pct_per_weight=0.0,
+            archive_bytes=186239,
+            contest_cuda_score=0.20945673,
+            avg_pose_dist=3.4e-5,
+            avg_seg_dist=0.00067819,
+            rate_unscaled=186239 / 37545489,
+            measured_utc="2026-05-05T17:25:19Z",
+            job_id="bogus",
+            archive_sha256="ab",
+            anchor_role="not_a_role",
+        )
+
+
+def test_canonical_anchors_file_loads_int8_as_compatibility_only() -> None:
+    """The repo's canonical anchor file must have the int8 anchor tagged
+    anchor_role=compatibility_only after the tier-1 cleanup relabel.
+    """
+    if not APOGEE_ANCHORS_PATH.is_file():
+        pytest.skip(f"calibration anchors file not present at {APOGEE_ANCHORS_PATH}")
+    anchors = load_calibration_anchors(APOGEE_ANCHORS_PATH)
+    int8 = [a for a in anchors if a.lane_id == "lane_apogee_int8"]
+    assert int8, "canonical anchor file must contain lane_apogee_int8"
+    assert int8[0].anchor_role == "compatibility_only", (
+        f"int8 anchor must be tagged compatibility_only (got anchor_role={int8[0].anchor_role!r})"
+    )
