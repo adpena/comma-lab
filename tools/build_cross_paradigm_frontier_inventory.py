@@ -126,7 +126,7 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         paradigms=("alpha_mask_payload", "categorical_masks", "openpilot_priors"),
         role="replacement_or_mask_stacker",
         status="contract_and_candidate_readiness_landed_needs_byte_closed_candidate",
-        evidence_grade="external/planning plus deterministic archive-readiness audit",
+        evidence_grade="external/planning plus deterministic archive-readiness audit; PR91 HPM1 static custody passed but replay blocked",
         stackability=(
             "medium: strongest as mask grammar or class-conditioned residual layer; must not duplicate "
             "HNeRV decoder bytes"
@@ -135,6 +135,7 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         code_paths=(
             "src/tac/categorical_compression_contract.py",
             "src/tac/categorical_candidate_readiness.py",
+            "src/tac/pr91_hpm1_readiness.py",
             "src/tac/qma9_range_mask_contract.py",
             "src/tac/qma9_run_grammar.py",
             "src/tac/qma9_alt_grammar.py",
@@ -144,21 +145,25 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "src/tac/openpilot_seeding.py",
             "tools/audit_categorical_compression_contract.py",
             "tools/audit_categorical_candidate_readiness.py",
+            "tools/audit_pr91_hpm1_readiness.py",
             "tools/build_categorical_candidate_fixture.py",
         ),
         evidence_paths=(
             ".omx/research/qma9_range_mask_deconstruction_20260503_codex.md",
             ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md",
             "experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/scorecard.json",
+            "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json",
         ),
         next_patch=(
-            "Replace the deterministic fixture with the first real byte-closed categorical candidate "
-            "and pass tools/audit_categorical_candidate_readiness.py before any lane claim or exact eval."
+            "Recover PR91/HPM1 full decode/reencode parity or replace the deterministic fixture with "
+            "the first real byte-closed categorical candidate; pass the matching readiness audit before "
+            "any lane claim or exact eval."
         ),
         blockers=(
             "raw lossless class wrapping was byte-regressive",
             "CMG2 exact evals showed PoseNet collapse",
             "CLADE/SPADE/openpilot priors need charged archive consumption",
+            "PR91 HPM1 still lacks full 600-frame decode/reencode and runtime loader parity",
         ),
     ),
     InventoryRow(
