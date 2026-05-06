@@ -125,8 +125,8 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         title="Categorical QMA9 plus CLADE/SPADE/openpilot labels",
         paradigms=("alpha_mask_payload", "categorical_masks", "openpilot_priors"),
         role="replacement_or_mask_stacker",
-        status="canonical_contract_landed_needs_byte_closed_builder",
-        evidence_grade="external/planning plus local byte deconstruction",
+        status="contract_and_candidate_readiness_landed_needs_byte_closed_candidate",
+        evidence_grade="external/planning plus deterministic archive-readiness audit",
         stackability=(
             "medium: strongest as mask grammar or class-conditioned residual layer; must not duplicate "
             "HNeRV decoder bytes"
@@ -134,6 +134,7 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         replacement_potential="high for mask stream if learned/predictive grammar avoids CMG2 collapse",
         code_paths=(
             "src/tac/categorical_compression_contract.py",
+            "src/tac/categorical_candidate_readiness.py",
             "src/tac/qma9_range_mask_contract.py",
             "src/tac/qma9_run_grammar.py",
             "src/tac/qma9_alt_grammar.py",
@@ -142,6 +143,7 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "src/tac/contrib/diffusion_renderer.py",
             "src/tac/openpilot_seeding.py",
             "tools/audit_categorical_compression_contract.py",
+            "tools/audit_categorical_candidate_readiness.py",
         ),
         evidence_paths=(
             ".omx/research/qma9_range_mask_deconstruction_20260503_codex.md",
@@ -149,8 +151,8 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/scorecard.json",
         ),
         next_patch=(
-            "Build the first byte-closed categorical candidate that consumes this contract, with "
-            "label-permutation and runtime-consumption no-op controls."
+            "Build the first real byte-closed categorical candidate and pass "
+            "tools/audit_categorical_candidate_readiness.py before any lane claim or exact eval."
         ),
         blockers=(
             "raw lossless class wrapping was byte-regressive",

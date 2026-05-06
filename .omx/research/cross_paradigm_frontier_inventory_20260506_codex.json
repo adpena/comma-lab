@@ -115,7 +115,7 @@
     },
     {
       "blockers": [
-        "global static q-stream AQ/Huffman model loses to brotli",
+        "HDC1/HDC2 parity fixtures are raw-equal but still byte-negative versus source brotli",
         "requires deterministic decoder runtime before any exact eval"
       ],
       "code_paths": [
@@ -124,12 +124,12 @@
         "src/tac/lossless/range_coder.py",
         "src/tac/lossless/frequency_coder.py"
       ],
-      "evidence_grade": "empirical entropy-floor profile",
+      "evidence_grade": "empirical entropy-floor plus parity fixture profile",
       "evidence_paths": [
         "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json"
       ],
       "key": "hnerv_per_tensor_context_entropy",
-      "next_patch": "Build a parity-first per-tensor/context range fixture with compact headers and report byte gap versus per-tensor entropy floor before archive rebuild.",
+      "next_patch": "Cluster or codebook-share HDC2 context tables; HDC2 cut PR106x penalty from +96,671B to +51,103B but remains byte-negative.",
       "paradigms": [
         "alpha_mask_payload",
         "entropy_coding"
@@ -161,7 +161,7 @@
       "score_claim": false,
       "score_snapshot": null,
       "stackability": "medium-high: could stack with HNeRV raw-equivalent section recodes",
-      "status": "diagnosed_headroom",
+      "status": "shared_context_fixture_landed_still_byte_negative",
       "title": "HNeRV per-tensor/context entropy recode"
     },
     {
@@ -227,22 +227,26 @@
         "CLADE/SPADE/openpilot priors need charged archive consumption"
       ],
       "code_paths": [
+        "src/tac/categorical_compression_contract.py",
+        "src/tac/categorical_candidate_readiness.py",
         "src/tac/qma9_range_mask_contract.py",
         "src/tac/qma9_run_grammar.py",
         "src/tac/qma9_alt_grammar.py",
         "src/tac/mask_grayscale_lut.py",
         "src/tac/semantic_quantization.py",
         "src/tac/contrib/diffusion_renderer.py",
-        "src/tac/openpilot_seeding.py"
+        "src/tac/openpilot_seeding.py",
+        "tools/audit_categorical_compression_contract.py",
+        "tools/audit_categorical_candidate_readiness.py"
       ],
-      "evidence_grade": "external/planning plus local byte deconstruction",
+      "evidence_grade": "external/planning plus deterministic archive-readiness audit",
       "evidence_paths": [
         ".omx/research/qma9_range_mask_deconstruction_20260503_codex.md",
         ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md",
         "experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/scorecard.json"
       ],
       "key": "categorical_qma9_clade_spade_openpilot",
-      "next_patch": "Add a canonical categorical contract: class labels, priors, charged bytes, decoder, no-op controls, and meta-lagrangian atoms.",
+      "next_patch": "Build the first real byte-closed categorical candidate and pass tools/audit_categorical_candidate_readiness.py before any lane claim or exact eval.",
       "paradigms": [
         "alpha_mask_payload",
         "categorical_masks",
@@ -251,15 +255,19 @@
       "path_audit": {
         "code": {
           "existing": [
+            "src/tac/categorical_compression_contract.py",
+            "src/tac/categorical_candidate_readiness.py",
             "src/tac/qma9_range_mask_contract.py",
             "src/tac/qma9_run_grammar.py",
             "src/tac/qma9_alt_grammar.py",
             "src/tac/mask_grayscale_lut.py",
             "src/tac/semantic_quantization.py",
             "src/tac/contrib/diffusion_renderer.py",
-            "src/tac/openpilot_seeding.py"
+            "src/tac/openpilot_seeding.py",
+            "tools/audit_categorical_compression_contract.py",
+            "tools/audit_categorical_candidate_readiness.py"
           ],
-          "existing_count": 7,
+          "existing_count": 11,
           "missing": [],
           "missing_count": 0
         },
@@ -280,7 +288,7 @@
       "score_claim": false,
       "score_snapshot": null,
       "stackability": "medium: strongest as mask grammar or class-conditioned residual layer; must not duplicate HNeRV decoder bytes",
-      "status": "recovered_tooling_needs_canonical_builder",
+      "status": "contract_and_candidate_readiness_landed_needs_byte_closed_candidate",
       "title": "Categorical QMA9 plus CLADE/SPADE/openpilot labels"
     },
     {
@@ -500,6 +508,7 @@
         "src/tac/joint_admm_coordinator.py",
         "src/tac/balle_hyperprior_codec.py",
         "src/tac/arithmetic_qint_codec.py",
+        "tools/audit_arithmetic_qint_optimality.py",
         "src/tac/entropy_archive.py"
       ],
       "evidence_grade": "planning/component empirical",
@@ -520,9 +529,10 @@
             "src/tac/joint_admm_coordinator.py",
             "src/tac/balle_hyperprior_codec.py",
             "src/tac/arithmetic_qint_codec.py",
+            "tools/audit_arithmetic_qint_optimality.py",
             "src/tac/entropy_archive.py"
           ],
-          "existing_count": 5,
+          "existing_count": 6,
           "missing": [],
           "missing_count": 0
         },
@@ -550,6 +560,8 @@
       ],
       "code_paths": [
         "src/tac/hyperbolic_foveation.py",
+        "src/tac/foveation_readiness.py",
+        "tools/audit_hyperbolic_foveation_readiness.py",
         "experiments/plan_cmg3_pixel_lagrangian_atoms.py",
         "experiments/preflight_qfaithful_successor_geometry_contract.py",
         "src/tac/raft_radial_pose.py"
@@ -560,7 +572,7 @@
         ".omx/research/all_scores_forensic_audit_20260430.md"
       ],
       "key": "telescopic_foveation_field",
-      "next_patch": "Keep foveation as ranking feedback until a charged runtime consumer passes geometry preflight and exact component gates.",
+      "next_patch": "Run charged foveation-params readiness audit, then keep foveation as ranking feedback until a runtime consumer passes geometry preflight and exact component gates.",
       "paradigms": [
         "foveation",
         "openpilot_priors",
@@ -571,11 +583,13 @@
         "code": {
           "existing": [
             "src/tac/hyperbolic_foveation.py",
+            "src/tac/foveation_readiness.py",
+            "tools/audit_hyperbolic_foveation_readiness.py",
             "experiments/plan_cmg3_pixel_lagrangian_atoms.py",
             "experiments/preflight_qfaithful_successor_geometry_contract.py",
             "src/tac/raft_radial_pose.py"
           ],
-          "existing_count": 4,
+          "existing_count": 6,
           "missing": [],
           "missing_count": 0
         },
