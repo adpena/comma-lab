@@ -138,6 +138,49 @@ def test_audit_categorical_candidate_manifest_checks_archive_member_fidelity(tmp
     )
 
 
+def test_audit_categorical_candidate_manifest_rejects_central_local_name_mismatch(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    archive = Path(candidate["candidate_archive"]["path"])
+    raw = bytearray(archive.read_bytes())
+    with zipfile.ZipFile(archive) as zf:
+        offset = zf.getinfo("categorical_payload.bin").header_offset
+    # Mutate only the local header name. The central directory still points to
+    # categorical_payload.bin, so strict archive custody must fail closed.
+    name_start = offset + 30
+    raw[name_start] = ord("x")
+    archive.write_bytes(raw)
+    candidate["candidate_archive"]["bytes"] = archive.stat().st_size
+    candidate["candidate_archive"]["sha256"] = sha256_file(archive)
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+    wire = manifest["candidate_archive"]["zip_wire_contract"]
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert wire["passed"] is False
+    assert wire["central_local_name_mismatches"]
+    assert "candidate_archive_not_readable_zip" in manifest["dispatch_blockers"]
+    assert "candidate_archive_zip_wire_contract_failed" in manifest["dispatch_blockers"]
+
+
+def test_audit_categorical_candidate_manifest_rejects_duplicate_archive_members(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    archive = Path(candidate["candidate_archive"]["path"])
+    with zipfile.ZipFile(archive, "a", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("categorical_payload.bin", b"duplicate")
+    candidate["candidate_archive"]["bytes"] = archive.stat().st_size
+    candidate["candidate_archive"]["sha256"] = sha256_file(archive)
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert "candidate_archive_duplicate_member_names" in manifest["dispatch_blockers"]
+    assert "candidate_archive_zip_wire_contract_failed" in manifest["dispatch_blockers"]
+
+
 def test_audit_categorical_candidate_manifest_checks_member_manifest_content(tmp_path: Path) -> None:
     candidate = _base_candidate(tmp_path)
     bad_manifest_path = tmp_path / "bad_archive_member_manifest.json"
