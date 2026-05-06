@@ -50,6 +50,12 @@ echo "[kaggle-upload] Materializing Kaggle mirror view..."
     --dataset-id "$DATASET_ID" \
     --force
 
+echo "[kaggle-upload] Running strict public-link hygiene scan on final Kaggle view..."
+"$PYTHON_BIN" "$HERE/tools/audit_public_publish_links.py" \
+    "$HERE/$KAGGLE_VIEW_DIR" \
+    --repo-root "$HERE" \
+    --strict
+
 if [ "$MODE" = "--create" ]; then
     echo "[kaggle-upload] Creating Kaggle dataset: $DATASET_ID"
     kaggle datasets create -p "$HERE/$KAGGLE_VIEW_DIR"
