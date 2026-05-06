@@ -16,18 +16,20 @@ source code, while omitting reconstructable shared assets into an auditable
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import re
 import shutil
-import sys
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
-if str(REPO) not in sys.path:
-    sys.path.insert(0, str(REPO))
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO)
 DEFAULT_SOURCE = REPO / "experiments" / "results" / "public_pr_intake_full"
 DEFAULT_OUTPUT = REPO / "experiments" / "results" / "public_pr_archive_release_view"
 SANITIZED_TEXT_SUFFIXES = {".json", ".log", ".md", ".txt"}
@@ -36,6 +38,7 @@ LOCAL_OPERATOR_PATH_RE = re.compile(
 )
 PRIVATE_COMMA_LAB_URL_RE = re.compile(r"https://github\.com/adpena/comma-lab(?:/[^\s)\"'<>]*)?")
 
+from tac.repo_io import json_text, write_json  # noqa: E402
 from tools.audit_public_publish_links import audit_public_publish_links  # noqa: E402
 
 
@@ -172,7 +175,7 @@ def materialize(
         "sanitized_file_count": sanitized_file_count,
         "sanitized_replacement_count": sanitized_replacement_count,
     }
-    (output_root / "OMITTED_SHARED_ASSETS.json").write_text(json.dumps(manifest, indent=2, sort_keys=True))
+    write_json(output_root / "OMITTED_SHARED_ASSETS.json", manifest)
     link_payload = audit_public_publish_links([output_root], base_root=output_root, live=False)
     link_violations = [
         "{path}:{line}: {kind}: {url} ({detail})".format(**violation)
@@ -185,7 +188,7 @@ def materialize(
         )
     manifest["public_link_count"] = int(link_payload["link_count"])
     manifest["public_link_violation_count"] = len(link_violations)
-    (output_root / "OMITTED_SHARED_ASSETS.json").write_text(json.dumps(manifest, indent=2, sort_keys=True))
+    write_json(output_root / "OMITTED_SHARED_ASSETS.json", manifest)
     return manifest
 
 
@@ -212,7 +215,7 @@ def main(argv: list[str] | None = None) -> int:
         strict_link_hygiene=not args.no_strict_link_hygiene,
     )
     if args.format == "json":
-        print(json.dumps(manifest, indent=2, sort_keys=True))
+        print(json_text(manifest), end="")
     else:
         print(
             "release view materialized: "
