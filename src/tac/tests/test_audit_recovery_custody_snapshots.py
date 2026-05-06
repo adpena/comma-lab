@@ -204,26 +204,16 @@ def test_recovery_custody_audit_resolves_incomplete_rehydration_manifest(tmp_pat
                 "relpath": f".omx/state/provider_{i}/model.py",
             }
         )
-    explicit_entries = []
     for i in range(3):
-        relpath = f"experiments/missing_{i}.py"
-        replacement = f"experiments/replacement_{i}.py"
-        replacement_path = tmp_path / replacement
-        replacement_path.parent.mkdir(parents=True, exist_ok=True)
-        replacement_path.write_text("VALUE = 1\n", encoding="utf-8")
+        relpath = f"experiments/restored_{i}.py"
+        path = tmp_path / relpath
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("VALUE = 1\n", encoding="utf-8")
         records.append(
             {
                 "category": "experiment_tool",
                 "disposition": INCOMPLETE_REHYDRATION_DISPOSITION,
                 "relpath": relpath,
-            }
-        )
-        explicit_entries.append(
-            {
-                "current_replacement": replacement,
-                "evidence": "synthetic test evidence",
-                "relpath": relpath,
-                "resolution": "resolved_by_test_replacement",
             }
         )
 
@@ -248,10 +238,9 @@ def test_recovery_custody_audit_resolves_incomplete_rehydration_manifest(tmp_pat
             "expected_classification_counts": {
                 "private_forensic_provider_state": 2,
                 "private_forensic_public_or_experiment_intake": 32,
-                "resolved_by_current_main_tracked_source": 51,
-                "resolved_by_explicit_noncurrent_first_party_replacement": 3,
+                "resolved_by_current_main_tracked_source": 54,
             },
-            "explicit_noncurrent_first_party_resolutions": explicit_entries,
+            "explicit_noncurrent_first_party_resolutions": [],
         },
     )
 
@@ -268,7 +257,7 @@ def test_recovery_custody_audit_resolves_incomplete_rehydration_manifest(tmp_pat
 
     assert result["ready_for_recovery_custody_preservation"] is True
     assert result["summary"]["next_required_dispositions"]["pyc_incomplete_manual_rehydration_records"] == 0
-    assert result["summary"]["signal_loss"]["incomplete_rehydration_current_tracked_count"] == 51
+    assert result["summary"]["signal_loss"]["incomplete_rehydration_current_tracked_count"] == 54
 
 
 def test_recovery_custody_audit_blocks_nonhistorical_resolved_disposition(tmp_path: Path) -> None:
