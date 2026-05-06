@@ -35,7 +35,7 @@ DEFAULT_OUTPUT_DIR = REPO_ROOT / (
 UNPACKER_PATH = REPO_ROOT / "submissions/robust_current/unpack_renderer_payload.py"
 TOOL = "experiments/build_lossless_byte_squeeze_worker_20260503.py"
 
-ANCHOR_SCORE = 0.31516575028285976
+ANCHOR_SCORE = 0.31516575028285976  # [external: PR-65 contest-CUDA T4 frontier anchor]
 ANCHOR_BYTES = 276_481
 ANCHOR_SHA256 = "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746"
 SUB314_TARGET = 0.314

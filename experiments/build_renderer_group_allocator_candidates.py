@@ -43,8 +43,8 @@ from tac.quantizr_qzs3_codec import (  # noqa: E402
 
 SCHEMA = "renderer_group_allocator_candidates_v1"
 ORIGINAL_VIDEO_BYTES = 37_545_489
-FRONTIER_SCORE = 0.3154707273953505
-TARGET_SCORE = 0.314
+FRONTIER_SCORE = 0.3154707273953505  # [external: PR-65 contest-CUDA T4 frontier]
+TARGET_SCORE = 0.314  # [heuristic: aspirational floor below PR-65 frontier 0.3155]
 TARGET_ARCHIVE_BYTES_UNCHANGED_COMPONENTS = 274_133
 DEFAULT_SOURCE_ARCHIVE = (
     REPO_ROOT

@@ -50,7 +50,7 @@ SCHEMA = "c101_native_action_atom_candidate_v1"
 FIXED_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 PAYLOAD_MEMBER = "p"
 RATE_DENOM = 37_545_489
-TARGET_SCORE = 0.31
+TARGET_SCORE = 0.31  # [heuristic: aspirational floor below current PR-frontier]
 TOP192_SHA256 = "79091f2c3f0c30ef3ca512808f3adc0306010e7f57fed3a09b3664c16fea4ea8"
 PR77_ACTION_TRANSPLANT_NEGATIVE_SHA256 = (
     "27866172e76d27113e86a30f722588fd668f81a949be3acbe1e92cddc9a6a1d8"

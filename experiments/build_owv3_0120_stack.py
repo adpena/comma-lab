@@ -70,7 +70,7 @@ CHAMPION_ARCHIVE = (
 LANE_G_V3_POSES = (
     REPO_ROOT / "experiments" / "results" / "lane_g_v3_landed" / "iter_0" / "optimized_poses.pt"
 )
-CHAMPION_SCORE = 1.002399  # contest-CUDA RTX 4090, 2026-05-01
+CHAMPION_SCORE = 1.002399  # [empirical: experiments/results/lane_g_v3_owv3_wave3_LANDED_20260501/ contest-CUDA RTX 4090 2026-05-01]
 CHAMPION_BYTES_EXPECTED = 617_410
 
 

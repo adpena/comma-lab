@@ -40,7 +40,7 @@ TOOL = "experiments/build_pr75_minp_p6_stream_mix_candidates.py"
 FIXED_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 MEMBER_NAME = "p"
 RATE_SCORE_PER_BYTE = 25.0 / 37_545_489
-BASELINE_SCORE = 0.3154707273953505
+BASELINE_SCORE = 0.3154707273953505  # [external: PR-75 contest-CUDA T4 anchor (== PR-65 frontier)]
 BASELINE_BYTES = 276_342
 CUDA_AUTH_EVAL_REQUIRED = (
     "archive.zip -> inflate.sh -> upstream/evaluate.py via "

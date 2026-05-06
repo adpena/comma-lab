@@ -81,11 +81,12 @@ CHAMPION_ARCHIVE = (
     / "lane_g_v3_owv3_wave3_LANDED_20260501"
     / "archive_lane_g_v3_owv3_0120_LANDED.zip"
 )
+# [empirical: experiments/results/lane_g_v3_owv3_wave3_LANDED_20260501/ contest-CUDA RTX 4090 dispatch 35958897]
 CHAMPION_SCORE = 1.0023898347421667
-CHAMPION_BYTES = 617_410
-CHAMPION_POSE = 0.0035645
-CHAMPION_SEG = 0.00402483
-CHAMPION_RATE_UNSCALED = 0.01644432
+CHAMPION_BYTES = 617_410  # [empirical: source same as CHAMPION_SCORE]
+CHAMPION_POSE = 0.0035645  # [empirical: source same as CHAMPION_SCORE]
+CHAMPION_SEG = 0.00402483  # [empirical: source same as CHAMPION_SCORE]
+CHAMPION_RATE_UNSCALED = 0.01644432  # [empirical: source same as CHAMPION_SCORE]
 
 LANE_G_V3_DIR = REPO_ROOT / "experiments" / "results" / "lane_g_v3_landed"
 LANE_G_V3_RENDERER = LANE_G_V3_DIR / "iter_0" / "renderer.bin"

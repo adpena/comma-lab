@@ -38,7 +38,7 @@ DEFAULT_OUTPUT_DIR = REPO_ROOT / "experiments/results/pr75_minp_stream_ablation_
 TOOL = "experiments/build_pr75_minp_stream_ablation_candidates.py"
 FIXED_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 RATE_SCORE_PER_BYTE = 25.0 / 37_545_489
-BASELINE_SCORE = 0.3154707273953505
+BASELINE_SCORE = 0.3154707273953505  # [external: PR-75 contest-CUDA T4 anchor (== PR-65 frontier)]
 BASELINE_BYTES = 276_342
 
 

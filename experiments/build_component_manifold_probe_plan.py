@@ -24,7 +24,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 PRODUCER = "experiments/build_component_manifold_probe_plan.py"
 INPUT_SCHEMA = "component_manifold_probe_input_v1"
 OUTPUT_SCHEMA = "component_manifold_probe_plan_v1"
-SCORE_DENOMINATOR_BYTES = 37_545_489
+SCORE_DENOMINATOR_BYTES = 37_545_489  # [contest-defined: original video bytes]
 CUDA_AUTH_EVAL_PATH = (
     "archive.zip -> inflate.sh -> upstream/evaluate.py via "
     "experiments/contest_auth_eval.py --device cuda"

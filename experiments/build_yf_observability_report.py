@@ -20,8 +20,8 @@ from typing import Any, Iterable, Mapping
 
 SCHEMA = "yousfi_fridrich_observability_report_v1"
 TOOL = "experiments/build_yf_observability_report.py"
-SCORE_DENOMINATOR = 37_545_489
-DEFAULT_TARGET_SCORE = 0.300
+SCORE_DENOMINATOR = 37_545_489  # [contest-defined: original video bytes]
+DEFAULT_TARGET_SCORE = 0.300  # [heuristic: aspirational frontier-floor target]
 
 
 class ReportError(RuntimeError):

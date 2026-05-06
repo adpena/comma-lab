@@ -59,7 +59,7 @@ DEFAULT_OUTPUT_DIR = REPO_ROOT / "experiments/results/alpha_mask_primitive_respo
 CLASS_IDS = (0, 1, 2, 3, 4)
 FIXED_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 FIXED_ZIP_PERMISSIONS = 0o644
-SCORE_EPS = 1e-12
+SCORE_EPS = 1e-12  # [heuristic: numerical guard for log/division stability]
 NEIGHBORS_4 = ((-1, 0), (1, 0), (0, -1), (0, 1))
 HIDDEN_SYSTEM_NAMES = {"__MACOSX", ".DS_Store", "Thumbs.db", "desktop.ini"}
 

@@ -38,11 +38,11 @@ MANIFEST_SCHEMA = "pr79_action_dictionary_repack_v2_manifest_v1"
 S2_MAGIC = b"S2"
 S2_MODE_ADAPTIVE_ARITH = 1
 ACTION_ALPHABET = 108
-PR79_S2_FRONTIER_SCORE = 0.31453355357318635
+PR79_S2_FRONTIER_SCORE = 0.31453355357318635  # [external: PR-79 S2 contest-CUDA T4 A++ frontier]
 PR79_S2_FRONTIER_BYTES = 277_321
 PR79_S2_FRONTIER_SHA256 = "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68"
-SCORE_DENOMINATOR_BYTES = 37_545_489
-RATE_SCORE_WEIGHT = 25.0
+SCORE_DENOMINATOR_BYTES = 37_545_489  # [contest-defined: original video bytes]
+RATE_SCORE_WEIGHT = 25.0  # [contest-defined: rate weighting from upstream/evaluate.py]
 CUDA_AUTH_EVAL_REQUIRED = (
     "No dispatch from this worker. Before any exact eval, claim a non-conflicting "
     "lane with tools/claim_lane_dispatch.py claim, then run exact T4-equivalent "
