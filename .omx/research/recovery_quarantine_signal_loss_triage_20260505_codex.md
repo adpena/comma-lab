@@ -5642,6 +5642,67 @@ Verification:
 - `.venv/bin/python tools/all_lanes_preflight.py` passed:
   `ALL 20 PREFLIGHT CHECKS PASSED`.
 
+## R88 - 2026-05-06 Public Comma-Lab Export IO Lowering
+
+Continued the Gate #7 lowering tranche on the sanitized public comma-lab export
+materializer. This is the safe out-of-tree export path for publishing community
+docs, historical records, reproducibility tooling, and public release surfaces
+without flipping the private working repository public.
+
+Changes:
+
+- Added `tac.repo_io.sha256_bytes` for deterministic in-memory blob digests.
+- Migrated `tools/materialize_comma_lab_public_export.py` from manual repo-root
+  and `sys.path.insert` setup to `tools.tool_bootstrap`.
+- Replaced the local in-memory SHA helper with `tac.repo_io.sha256_bytes`.
+- Migrated generated `PUBLIC_EXPORT_MANIFEST.json` writes to
+  `tac.repo_io.write_json`.
+- Migrated CLI JSON stdout to `tac.repo_io.json_text`.
+- Preserved selected export include/exclude patterns, tracked-git-blob source
+  custody, public release hygiene checks, public link hygiene checks,
+  `PUBLIC_EXPORT_MANIFEST.json` schema, and private working-repo warning.
+
+Measured inventory after R88:
+
+- local SHA helpers: `52`
+- local JSON dumps: `102`
+- manual `sys.path` bootstraps: `267`
+- manual repo-root parent probes: `365`
+- manual score/dispatch metadata mentions: `601`
+
+Within-tranche committed-surface deltas:
+
+- `tools/materialize_comma_lab_public_export.py` local SHA helper count:
+  `1 -> 0`
+- `tools/materialize_comma_lab_public_export.py` local JSON dump count:
+  `0 -> 0`
+- `tools/materialize_comma_lab_public_export.py` manual `sys.path` bootstrap
+  count: `2 -> 0`
+- `tools/materialize_comma_lab_public_export.py` manual repo-root parent count:
+  `1 -> 0`
+- `tools/materialize_comma_lab_public_export.py` manual score/dispatch metadata
+  count: `0 -> 0`
+
+Verification:
+
+- `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest
+  src/tac/tests/test_materialize_comma_lab_public_export.py
+  src/tac/tests/test_tool_bootstrap.py src/tac/tests/test_repo_io.py
+  src/tac/tests/test_audit_tooling_consolidation.py -q` passed:
+  `11 passed`.
+- `.venv/bin/python -m ruff check --select I,RUF100,F401,UP035,F821,E402
+  tools/materialize_comma_lab_public_export.py src/tac/repo_io.py
+  src/tac/tests/test_repo_io.py` passed.
+- `.venv/bin/python -m py_compile
+  tools/materialize_comma_lab_public_export.py src/tac/repo_io.py` passed.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --scan-root
+  tools/materialize_comma_lab_public_export.py --format json` reported zero
+  findings for the file.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --format json`
+  reported the measured inventory above.
+- `.venv/bin/python tools/all_lanes_preflight.py` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+
 ## R81 - 2026-05-06 Component Sensitivity Shard Merge IO Lowering
 
 Continued the Gate #7 lowering tranche on the finite-difference sensitivity

@@ -49,6 +49,12 @@ def sha256_file(path: str | Path, *, chunk_size: int = 1 << 20) -> str:
     return digest.hexdigest()
 
 
+def sha256_bytes(data: bytes) -> str:
+    """Return the SHA-256 hex digest of an in-memory byte payload."""
+
+    return sha256(data).hexdigest()
+
+
 def repo_relative(path: str | Path, repo_root: str | Path) -> str:
     """Return a POSIX path relative to ``repo_root`` when possible."""
 
@@ -60,4 +66,12 @@ def repo_relative(path: str | Path, repo_root: str | Path) -> str:
         return candidate.as_posix()
 
 
-__all__ = ["json_line", "json_text", "read_json", "repo_relative", "sha256_file", "write_json"]
+__all__ = [
+    "json_line",
+    "json_text",
+    "read_json",
+    "repo_relative",
+    "sha256_bytes",
+    "sha256_file",
+    "write_json",
+]

@@ -11,21 +11,20 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
-import hashlib
-import json
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SRC = REPO_ROOT / "src"
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 
 from tac.preflight import check_public_release_hygiene  # noqa: E402
+from tac.repo_io import json_text, sha256_bytes, write_json  # noqa: E402
 from tools.audit_public_publish_links import audit_public_publish_links  # noqa: E402
 
 DEFAULT_REF = "HEAD"
@@ -115,10 +114,6 @@ def selected_export_paths(
     return selected
 
 
-def _sha256(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
 def materialize_public_export(
     repo_root: Path,
     out_dir: Path,
@@ -143,7 +138,7 @@ def materialize_public_export(
         dst = out_dir / path
         dst.parent.mkdir(parents=True, exist_ok=True)
         dst.write_bytes(data)
-        copied.append({"path": path, "bytes": len(data), "sha256": _sha256(data)})
+        copied.append({"path": path, "bytes": len(data), "sha256": sha256_bytes(data)})
 
     manifest = {
         "schema_version": 1,
@@ -161,10 +156,7 @@ def materialize_public_export(
             "Do not flip the private working repo public."
         ),
     }
-    (out_dir / "PUBLIC_EXPORT_MANIFEST.json").write_text(
-        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    write_json(out_dir / "PUBLIC_EXPORT_MANIFEST.json", manifest)
 
     hygiene_violations = check_public_release_hygiene(
         repo_root=repo_root,
@@ -189,10 +181,7 @@ def materialize_public_export(
     manifest["hygiene_violation_count"] = len(hygiene_violations)
     manifest["public_link_violation_count"] = len(link_violations)
     manifest["public_link_count"] = int(link_payload.get("link_count", 0))
-    (out_dir / "PUBLIC_EXPORT_MANIFEST.json").write_text(
-        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    write_json(out_dir / "PUBLIC_EXPORT_MANIFEST.json", manifest)
     return manifest
 
 
@@ -215,7 +204,7 @@ def main(argv: list[str] | None = None) -> int:
         allow_private_repo_links=args.allow_private_repo_links,
         strict_hygiene=not args.no_strict_hygiene,
     )
-    print(json.dumps(manifest, indent=2, sort_keys=True))
+    print(json_text(manifest), end="")
     return 0
 
 
