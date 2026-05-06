@@ -10,6 +10,7 @@ experiments/contest_auth_eval.py on the exact archive bytes.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import shlex
@@ -232,6 +233,124 @@ def candidate_id(index: int, knobs: CandidateKnobs) -> str:
         f"_protect{float_token(knobs.protect_threshold)}"
         f"_aggr{float_token(knobs.aggressive_threshold)}"
     )
+
+
+def _sha256_path(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _file_custody(path: Path) -> dict[str, object]:
+    exists = path.is_file()
+    return {
+        "path": str(path),
+        "exists": exists,
+        "bytes": path.stat().st_size if exists else None,
+        "sha256": _sha256_path(path) if exists else "",
+    }
+
+
+def build_component_sensitivity_byte_plan_manifest(
+    *,
+    sensitivity_map: Path,
+    preset: str,
+    bit_budget_ratios: tuple[float, ...] | None = None,
+    protect_thresholds: tuple[float, ...] | None = None,
+    aggressive_thresholds: tuple[float, ...] | None = None,
+    fallback_action: str = "keep_asym",
+    frontier_comparator_bytes: int | None = None,
+    frontier_comparator_sha256: str | None = None,
+    frontier_comparator_label: str = "PFP16_A++",
+    allow_non_authoritative: bool = False,
+    limit: int | None = None,
+) -> dict[str, object]:
+    """Build a fast local byte-plan manifest without loading models or archives.
+
+    The manifest is a DX and planning surface for the component-sensitivity
+    allocator hidden gem. It records deterministic candidate knobs and fallback
+    accounting, but it deliberately emits no archive bytes and cannot unlock
+    exact-eval dispatch.
+    """
+
+    grid = resolve_grid(
+        preset=preset,
+        bit_budget_ratios=bit_budget_ratios,
+        protect_thresholds=protect_thresholds,
+        aggressive_thresholds=aggressive_thresholds,
+        fallback_action=fallback_action,
+    )
+    if limit is not None:
+        grid = grid[: int(limit)]
+    candidates = [
+        {
+            "candidate_id": candidate_id(index, knobs),
+            "candidate_index": index,
+            "knobs": asdict(knobs),
+            "score_status": "not_evaluated_cuda_auth_required",
+            "archive_status": "not_built_manifest_only",
+            "ready_for_exact_eval_dispatch": False,
+        }
+        for index, knobs in enumerate(grid)
+    ]
+    fallback_accounting = {
+        "fallback_action": fallback_action,
+        "keep_asym": {
+            "charged_byte_policy": "preserve source asym bytes where sensitivity contract cannot lower safely",
+            "promotion_eligible_before_eval": fallback_action == "keep_asym",
+        },
+        "diagnostic_fp16": {
+            "charged_byte_policy": "diagnostic fallback bytes must remain non-promotable",
+            "promotion_eligible_before_eval": False,
+        },
+        "error": {
+            "charged_byte_policy": "fail closed on unsupported sensitivity coverage",
+            "promotion_eligible_before_eval": False,
+        },
+    }
+    blockers = [
+        "manifest_only_no_archive_bytes",
+        "cuda_auth_eval_required_for_score",
+        "component_balanced_sensitivity_required_before_promotion",
+    ]
+    if not sensitivity_map.is_file():
+        blockers.append("missing_sensitivity_map")
+    if not allow_non_authoritative:
+        blockers.append("authoritative_cuda_sensitivity_required")
+    return {
+        "format": "component_sensitivity_byte_plan_manifest_v1",
+        "created_iso": utc_now_iso(),
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "promotion_eligible": False,
+        "evidence_grade": "planning_manifest_only",
+        "hidden_gem_key": "component_sensitivity_byte_allocator",
+        "sensitivity_map": _file_custody(sensitivity_map),
+        "frontier_comparator": {
+            "label": frontier_comparator_label,
+            "archive_bytes": frontier_comparator_bytes,
+            "archive_sha256": frontier_comparator_sha256 or "",
+        },
+        "grid": {
+            "preset": preset,
+            "candidate_count": len(grid),
+            "bit_budget_ratios": sorted({k.bit_budget_ratio for k in grid}, reverse=True),
+            "protect_thresholds": sorted({k.protect_threshold for k in grid}),
+            "aggressive_thresholds": sorted({k.aggressive_threshold for k in grid}),
+            "fallback_action": fallback_action,
+        },
+        "fallback_action_accounting": fallback_accounting,
+        "candidates": candidates,
+        "dispatch_blockers": blockers,
+        "next_safe_actions": [
+            "Run the full OWV3 sweep only after input sensitivity custody is authoritative.",
+            "Treat manifest candidates as planning-only until archive bytes are built deterministically.",
+            "Use exact CUDA auth eval and component gates before any score or promotion claim.",
+        ],
+    }
 
 
 def classify_candidate(
@@ -1502,6 +1621,20 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-manifest", action="store_true")
     parser.add_argument("--allow-non-authoritative", action="store_true")
     parser.add_argument(
+        "--manifest-only",
+        action="store_true",
+        help=(
+            "Write a fast planning manifest for the component-sensitivity byte "
+            "allocator without loading models, building archives, or claiming score."
+        ),
+    )
+    parser.add_argument(
+        "--json-out",
+        type=Path,
+        default=None,
+        help="Optional output path for --manifest-only JSON. Defaults inside --output-dir.",
+    )
+    parser.add_argument(
         "--frontier-comparator-bytes",
         type=int,
         default=None,
@@ -1597,6 +1730,32 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    if args.manifest_only:
+        output_path = args.json_out or (args.output_dir / "byte_plan_manifest.json")
+        try:
+            manifest = build_component_sensitivity_byte_plan_manifest(
+                sensitivity_map=args.sensitivity_map,
+                preset=args.preset,
+                bit_budget_ratios=parse_float_list(args.bit_budget_ratios),
+                protect_thresholds=parse_float_list(args.protect_thresholds),
+                aggressive_thresholds=parse_float_list(args.aggressive_thresholds),
+                fallback_action=args.fallback_action,
+                frontier_comparator_bytes=args.frontier_comparator_bytes,
+                frontier_comparator_sha256=args.frontier_comparator_sha256,
+                frontier_comparator_label=args.frontier_comparator_label,
+                allow_non_authoritative=args.allow_non_authoritative,
+                limit=args.limit,
+            )
+        except Exception as exc:
+            print(f"FATAL: {type(exc).__name__}: {exc}", file=sys.stderr)
+            return 2
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        print(json.dumps(manifest, indent=2, sort_keys=True))
+        return 0
     builder = _load_builder_module()
     if args.frontier_comparator_bytes is None:
         args.frontier_comparator_bytes = builder.PFP16_FRONTIER_ARCHIVE_BYTES

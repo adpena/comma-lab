@@ -88,6 +88,57 @@ def test_classify_candidate_marks_only_byte_feasibility() -> None:
     assert blocked["selection_status"] == "byte_infeasible_vs_frontier"
 
 
+def test_manifest_only_byte_plan_is_planning_only(tmp_path: Path) -> None:
+    mod = _load_module()
+    sensitivity = tmp_path / "owv3_sensitivity_map.pt"
+    sensitivity.write_bytes(b"fake sensitivity map custody")
+
+    manifest = mod.build_component_sensitivity_byte_plan_manifest(
+        sensitivity_map=sensitivity,
+        preset="baseline",
+        bit_budget_ratios=(0.7,),
+        protect_thresholds=(0.001,),
+        aggressive_thresholds=(1e-5,),
+        fallback_action="keep_asym",
+        frontier_comparator_bytes=12345,
+        frontier_comparator_sha256="a" * 64,
+        allow_non_authoritative=True,
+        limit=1,
+    )
+
+    assert manifest["format"] == "component_sensitivity_byte_plan_manifest_v1"
+    assert manifest["score_claim"] is False
+    assert manifest["dispatch_attempted"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["promotion_eligible"] is False
+    assert manifest["sensitivity_map"]["exists"] is True
+    assert manifest["sensitivity_map"]["bytes"] == len(b"fake sensitivity map custody")
+    assert manifest["frontier_comparator"]["archive_bytes"] == 12345
+    assert manifest["grid"]["candidate_count"] == 1
+    assert manifest["candidates"][0]["archive_status"] == "not_built_manifest_only"
+    assert manifest["fallback_action_accounting"]["keep_asym"]["promotion_eligible_before_eval"] is True
+    assert "manifest_only_no_archive_bytes" in manifest["dispatch_blockers"]
+
+
+def test_manifest_only_records_missing_or_non_authoritative_sensitivity(tmp_path: Path) -> None:
+    mod = _load_module()
+
+    manifest = mod.build_component_sensitivity_byte_plan_manifest(
+        sensitivity_map=tmp_path / "missing.pt",
+        preset="baseline",
+        fallback_action="diagnostic_fp16",
+        allow_non_authoritative=False,
+        limit=1,
+    )
+
+    assert manifest["sensitivity_map"]["exists"] is False
+    assert manifest["fallback_action_accounting"]["diagnostic_fp16"][
+        "promotion_eligible_before_eval"
+    ] is False
+    assert "missing_sensitivity_map" in manifest["dispatch_blockers"]
+    assert "authoritative_cuda_sensitivity_required" in manifest["dispatch_blockers"]
+
+
 def test_select_best_byte_candidate_uses_closest_under_frontier() -> None:
     mod = _load_module()
 

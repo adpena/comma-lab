@@ -119,24 +119,27 @@ _REGISTRY: tuple[HiddenGemEntry, ...] = (
         key="component_sensitivity_byte_allocator",
         title="Component sensitivity byte allocator",
         category="renderer_payload",
-        status="ready_for_patch",
+        status="implemented_guarded",
         summary=(
             "Use certified component-sensitivity artifacts to plan renderer payload byte allocation "
             "without reading provider queues or launching eval work."
         ),
         evidence_paths=(
             ".omx/research/component_sensitivity_map_certification_20260501_codex.md",
+            ".omx/research/component_sensitivity_byte_plan_manifest_20260506_codex.md",
             ".omx/research/owv3_fisher_byte_aware_redesign_spec_20260430_codex.md",
             "src/tac/component_sensitivity_artifact.py",
             "src/tac/owv3_sensitivity_weighted.py",
+            "src/tac/tests/test_sweep_owv3_byte_plan.py",
         ),
         integration_targets=(
             "experiments/sweep_owv3_byte_plan.py",
             "src/tac/owv3_sensitivity_weighted.py",
         ),
         next_patch=(
-            "Convert certified sensitivity maps into a local byte-plan manifest with explicit "
-            "fallback-action accounting."
+            "Use `experiments/sweep_owv3_byte_plan.py --manifest-only` as the fast "
+            "planning preflight, then run the full sweep only with authoritative CUDA "
+            "sensitivity custody."
         ),
         contest_compliance_notes=(
             "Local byte analysis only; exact archive eval is required before promotion.",
