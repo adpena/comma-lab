@@ -28,6 +28,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--strength-denominator", type=int, default=2)
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--fail-if-not-archive-preflight-ready", action="store_true")
+    parser.add_argument(
+        "--source-archive-sha256",
+        default=None,
+        help=(
+            "Round 6 R6-1: caller-supplied SHA-256 of the original source "
+            "archive (the .zip the wavelet sidechannel was constructed "
+            "from). Required for the apply_gate provenance chain to record "
+            "a real archive SHA. Omit to leave the field None — apply_gate "
+            "will then surface that as missing-provenance state."
+        ),
+    )
     args = parser.parse_args(argv)
 
     payload = build_wavelet_apply_transform_candidate(
@@ -37,6 +48,7 @@ def main(argv: list[str] | None = None) -> int:
         section_name=args.section_name,
         strength_numerator=args.strength_numerator,
         strength_denominator=args.strength_denominator,
+        source_archive_sha256=args.source_archive_sha256,
     )
     text = json_text(payload)
     if args.json_out:

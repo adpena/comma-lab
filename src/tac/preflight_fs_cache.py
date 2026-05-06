@@ -171,6 +171,21 @@ def cached_filesystem(
     refcount. Concurrent enters bump the refcount and reuse the existing
     patch; only the LAST exiter (refcount → 0) restores the original. This
     prevents the patch/unpatch race documented in Round 5.
+
+    Round 6 R6-5 caveat (2026-05-06): MIXED `cache_reads` nesting is NOT
+    fully safe. If an outer caller entered with `cache_reads=True` and an
+    inner caller (in the same or another thread) enters with
+    `cache_reads=True`, then the inner exit drops `_PATCH_READS_REFCOUNT`
+    to 0 only when both have exited; that part is correct. BUT: if the
+    INNERMOST `cache_reads=True` caller exits while OUTER `cache_reads=True`
+    callers are still live, the read-cache lifecycle is fine because of the
+    refcount. The actual hazard is: if an outer `cache_reads=True` caller
+    is still inside its `with` body when an unrelated thread also entered
+    `cache_reads=True` and exited (refcount drops back to 0), the read
+    cache is cleared mid-flight — subsequent reads in the outer body
+    bypass the cache. This is a perf regression, not a correctness bug.
+    For correctness, prefer single-threaded `cached_filesystem(cache_reads=
+    True)` use, or pass `cache_reads=False` (the default) when in doubt.
     """
     global _PATCH_REFCOUNT, _PATCH_READS_REFCOUNT
     with _PATCH_LOCK:
@@ -208,10 +223,20 @@ def cached_filesystem(
 
 
 def cache_stats() -> dict[str, int]:
-    """Diagnostic: how many entries are cached right now."""
-    return {
-        "rglob_entries": len(_RGLOB_CACHE),
-        "rglob_files_total": sum(len(v) for v in _RGLOB_CACHE.values()),
-        "read_text_entries": len(_READ_TEXT_CACHE),
-        "read_bytes_entries": len(_READ_BYTES_CACHE),
-    }
+    """Diagnostic: how many entries are cached right now.
+
+    Round 6 R6-2 fix (2026-05-06): hold _PATCH_LOCK while iterating
+    `_RGLOB_CACHE.values()`. Without the lock, a concurrent thread exiting
+    `cached_filesystem()` calls `.clear()` on the cache dicts inside its
+    finally block; the iteration here would then raise
+    `RuntimeError: dictionary changed size during iteration`. The lock is
+    cheap (read-only critical section ~µs) and only contended at preflight
+    teardown.
+    """
+    with _PATCH_LOCK:
+        return {
+            "rglob_entries": len(_RGLOB_CACHE),
+            "rglob_files_total": sum(len(v) for v in _RGLOB_CACHE.values()),
+            "read_text_entries": len(_READ_TEXT_CACHE),
+            "read_bytes_entries": len(_READ_BYTES_CACHE),
+        }

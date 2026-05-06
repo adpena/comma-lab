@@ -45,13 +45,32 @@ def build_wavelet_apply_transform_candidate(
     section_name: str = DEFAULT_SECTION,
     strength_numerator: int = 1,
     strength_denominator: int = 2,
+    source_archive_sha256: str | None = None,
 ) -> dict[str, Any]:
-    """Build a deterministic plain-HNeRV archive after applying WR01 atoms."""
+    """Build a deterministic plain-HNeRV archive after applying WR01 atoms.
+
+    Round 6 R6-1 fix (2026-05-06): the WR01 wire format does NOT encode the
+    source archive's SHA-256 (only per-section brotli-section SHAs). R5-5
+    populated `source_archive_sha256` with `sha256_bytes(source_payload)` —
+    the INNER payload hash, not the archive file hash, which silently
+    corrupts the provenance chain. The field is now caller-supplied: pass
+    the actual source archive SHA-256 if you have it; otherwise the manifest
+    records None so downstream gates can detect the missing-provenance state
+    instead of trusting a bogus value.
+    """
 
     if strength_numerator < 0:
         raise HnervWaveletApplyTransformError("strength_numerator must be non-negative")
     if strength_denominator <= 0:
         raise HnervWaveletApplyTransformError("strength_denominator must be positive")
+    if source_archive_sha256 is not None and (
+        not isinstance(source_archive_sha256, str)
+        or len(source_archive_sha256) != 64
+        or not all(c in "0123456789abcdef" for c in source_archive_sha256)
+    ):
+        raise HnervWaveletApplyTransformError(
+            "source_archive_sha256 must be a 64-char lowercase hex digest or None"
+        )
     archive = read_strict_single_member_zip(wavelet_archive)
     parsed_wrapper = parse_wavelet_sidechannel_archive_bytes(archive.payload)
     source_payload = parsed_wrapper.source_payload
@@ -169,11 +188,14 @@ def build_wavelet_apply_transform_candidate(
         # "next required evidence" record (per R4-B fail-closed-by-design).
         "ready_for_archive_preflight": False,
         "ready_for_exact_eval_dispatch": False,
-        # Round 5 R5-5 fix (2026-05-06, 81%): expose source_archive_sha256 at
-        # the top-level manifest key so the apply_gate's provenance chain
-        # (which reads sidechannel_manifest.get("source_archive_sha256"))
-        # works when an apply_transform manifest is the input.
-        "source_archive_sha256": sha256_bytes(source_payload),
+        # Round 6 R6-1 fix (2026-05-06): caller-supplied or None. The R5-5
+        # auto-derivation `sha256_bytes(source_payload)` was a payload-bytes
+        # hash, not an archive-file hash — feeding the wrong SHA into
+        # apply_gate's `source_archive_sha256` provenance chain. The wire
+        # format does not encode this value, so it must be passed in by the
+        # caller (operator who knows which source archive the wavelet
+        # sidechannel was constructed from). None is the honest default.
+        "source_archive_sha256": source_archive_sha256,
         "dispatch_blockers": [
             "requires_archive_manifest_preflight",
             "requires_component_response_or_exact_cuda_eval",
@@ -209,6 +231,11 @@ def apply_wr01_atoms_to_raw(
     # non-linear at 0/255. Apply order changes output bytes when ranges overlap
     # AND a delta clamps. Sort by (raw_offset, level, coefficient_index) to make
     # apply deterministic regardless of caller's atom-list ordering.
+    # Round 6 R6-4 fix (2026-05-06): count non-Mapping atoms BEFORE the sort
+    # filter drops them, so `skipped_atom_count` truthfully reflects input
+    # quality. Previously the sort filtered with a generator and the inner
+    # `if not isinstance` check was unreachable, silently undercounting.
+    skipped += sum(1 for a in atoms if not isinstance(a, Mapping))
     atoms = sorted(
         (a for a in atoms if isinstance(a, Mapping)),
         key=lambda a: (
@@ -218,9 +245,8 @@ def apply_wr01_atoms_to_raw(
         ),
     )
     for atom in atoms:
-        if not isinstance(atom, Mapping):
-            skipped += 1
-            continue
+        # All atoms here are Mapping by construction (sort filtered above);
+        # the non-Mapping count was already added to `skipped`.
         start = int(atom.get("raw_offset"))
         end = int(atom.get("raw_end"))
         coefficient = int(atom.get("coefficient_quantized"))

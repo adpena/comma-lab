@@ -76,6 +76,34 @@ def test_audit_hnerv_wavelet_apply_gate_cli(tmp_path: Path) -> None:
     assert payload["archive_byte_delta"] == 387
 
 
+def test_apply_gate_propagates_source_archive_sha256_from_apply_transform_manifest() -> None:
+    """Round 6 R6-3 fix (2026-05-06): the gate's `source_archive_sha256`
+    output must reflect whatever value the input sidechannel_manifest
+    carries — including None when the apply_transform manifest is the
+    input and the operator did not supply a SHA. This pins R6-1's
+    contract: apply_transform no longer auto-derives a misleading
+    payload-bytes hash; it propagates None or the caller-supplied SHA
+    untouched.
+    """
+    apply_transform_manifest_with_sha = dict(_sidechannel_manifest())
+    apply_transform_manifest_with_sha["source_archive_sha256"] = "c" * 64
+
+    payload = build_wavelet_apply_gate(
+        sidechannel_manifest=apply_transform_manifest_with_sha,
+        stacked_metadata=_stacked_metadata(),
+    )
+    assert payload["source_archive_sha256"] == "c" * 64
+
+    apply_transform_manifest_no_sha = dict(_sidechannel_manifest())
+    apply_transform_manifest_no_sha["source_archive_sha256"] = None
+
+    payload_none = build_wavelet_apply_gate(
+        sidechannel_manifest=apply_transform_manifest_no_sha,
+        stacked_metadata=_stacked_metadata(),
+    )
+    assert payload_none["source_archive_sha256"] is None
+
+
 def _sidechannel_manifest() -> dict:
     return {
         "score_claim": False,
