@@ -930,6 +930,9 @@ _AV1_MONOCHROME = "av1_monochrome"
 _ENTROPY_LOSSLESS = "entropy_lossless"
 _ARGMAX_RLE = "argmax_rle"
 _STC_BOUNDARY = "stc_boundary"
+_QMA9_RANGE = "qma9_range"
+_HPM1_HPAC = "hpm1_hpac"
+_STBM1BR_PUBLIC = "stbm1br_public"
 
 # Canonical mask-format identifiers used across the pipeline. Any new
 # codec MUST be added here and routed in encode_masks_auto / decode_masks_auto
@@ -942,6 +945,13 @@ SUPPORTED_MASK_FORMATS = (
     _ENTROPY_LOSSLESS,
     _ARGMAX_RLE,           # Yousfi council #8 lossless RLE+Huffman+delta codec
     _STC_BOUNDARY,         # Lane STC boundary-coded class-id codec (lossless)
+    "qma9",                # alias for PR81/PR85 QMA9 semantic range codec
+    _QMA9_RANGE,
+)
+
+DETECTABLE_MASK_FORMATS = SUPPORTED_MASK_FORMATS + (
+    _HPM1_HPAC,
+    _STBM1BR_PUBLIC,
 )
 
 
@@ -983,6 +993,24 @@ def encode_masks_auto(
         from .stc_boundary_codec import encode_mask_video_stc
 
         return encode_mask_video_stc(masks, output_path, **kwargs)
+    elif codec in ("qma9", _QMA9_RANGE):
+        from .qma9_range_mask_contract import encode_qma9_mask
+
+        if masks.ndim != 3:
+            raise ValueError(f"QMA9 masks must have shape (N,H,W), got {tuple(masks.shape)}")
+        masks_cpu = masks.detach().to(device="cpu", dtype=torch.uint8).contiguous()
+        n_frames, height, width = masks_cpu.shape
+        storage_order = masks_cpu.numpy().transpose(0, 2, 1).tobytes()
+        payload = encode_qma9_mask(
+            storage_order,
+            frame_count=int(n_frames),
+            width=int(width),
+            height=int(height),
+        )
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(payload)
+        return output_path.stat().st_size
     else:
         raise ValueError(
             f"Unknown mask codec: {codec!r}. "
@@ -1021,19 +1049,43 @@ def decode_masks_auto(
         from .stc_boundary_codec import decode_mask_video_stc
 
         return decode_mask_video_stc(mask_path)
+    elif codec in ("qma9", _QMA9_RANGE):
+        from .qma9_range_mask_contract import decode_qma9_mask
+
+        decoded = decode_qma9_mask(Path(mask_path).read_bytes())
+        header = decoded.header
+        arr = np.frombuffer(decoded.data, dtype=np.uint8).reshape(
+            header.frame_count,
+            header.width,
+            header.height,
+        )
+        masks = np.ascontiguousarray(arr.transpose(0, 2, 1))
+        return torch.from_numpy(masks).long()
+    elif codec == _HPM1_HPAC:
+        raise ValueError(
+            "HPM1 mask payloads require PR91-specific HPAC replay/parity tooling; "
+            "generic decode_masks_auto intentionally fails closed."
+        )
+    elif codec == _STBM1BR_PUBLIC:
+        raise ValueError(
+            "STBM1BR mask payloads require the reviewed Rust bridge; generic "
+            "decode_masks_auto intentionally fails closed."
+        )
     else:
         raise ValueError(
             f"Unknown mask codec: {codec!r}. "
-            f"Supported: {SUPPORTED_MASK_FORMATS}"
+            f"Supported: {SUPPORTED_MASK_FORMATS}; detectable-only: "
+            f"{tuple(fmt for fmt in DETECTABLE_MASK_FORMATS if fmt not in SUPPORTED_MASK_FORMATS)}"
         )
 
 
 def detect_mask_codec(path: str | Path) -> str:
     """Best-effort codec sniffing from the file's first bytes.
 
-    Returns one of ``av1_monochrome``, ``entropy_lossless``, ``argmax_rle``,
-    or raises ValueError for unrecognized data. Used by the inflate-side
-    loader to pick the right decoder when only the file path is known.
+    Returns one of ``DETECTABLE_MASK_FORMATS`` or raises ValueError for
+    unrecognized data. Some public-frontier formats are detectable-only here:
+    they must route through their reviewed replay bridge instead of
+    ``decode_masks_auto``.
 
     Suffix is checked LAST so a wrapper renaming (.mkv → .bin etc.) cannot
     silently route to the wrong decoder — content-based detection only.
@@ -1053,6 +1105,15 @@ def detect_mask_codec(path: str | Path) -> str:
     # Lane STC boundary codec magic.
     if head[:4] == b"STCB":
         return _STC_BOUNDARY
+    # Public PR81/PR85 QMA9 semantic range-mask payload.
+    if head[:4] in (b"QMA9", b"QMB1", b"QMF1"):
+        return _QMA9_RANGE
+    # Public PR91 HPM1 mask payload.
+    if head[:4] == b"HPM1":
+        return _HPM1_HPAC
+    # Public PR90/PR85 STBM1BR mask payload.
+    if head[:8] == b"STBM1BR\x00":
+        return _STBM1BR_PUBLIC
     # Matroska / WebM EBML header used by AV1 in our pipeline (.mkv files).
     if head[:4] == b"\x1a\x45\xdf\xa3":
         return _AV1_MONOCHROME
