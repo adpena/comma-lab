@@ -722,6 +722,8 @@ def _validate_zip_container_integrity(
 _KNOWN_ARCHIVE_SUFFIXES = (
     ".bin", ".bin.br",          # renderer (raw or brotli'd)
     ".mkv", ".mp4",             # mask video (svtav1 / h264 / etc.)
+    ".tar.xz",                  # SegMap/Selfcomp-style packed weights
+    ".fp16",                    # tiny charged fp16 payloads (e.g. LCT)
     ".nrv",                     # NeRV mask codec payload
     ".amrc",                    # lossless argmax-RLE mask codec payload
     ".cmg1",                    # charged mask grammar payload
@@ -737,6 +739,20 @@ _KNOWN_ARCHIVE_SUFFIXES = (
     ".json", ".txt",             # manifests / pose metadata
     ".bin.zst", ".bin.lzma",    # alternative compressors
     ".npy", ".npz",             # numpy state if used
+)
+_KNOWN_BROTLI_LOGICAL_SUFFIXES = (
+    ".bin",
+    ".mkv",
+    ".mp4",
+    ".pt",
+    ".nrv",
+    ".amrc",
+    ".cmg1",
+    ".cmg2",
+    ".cmg3",
+    ".qma9",
+    ".tar.xz",
+    ".fp16",
 )
 _KNOWN_ARCHIVE_BASENAMES = (
     "p",                        # top-submission-style packed payload member
@@ -776,9 +792,14 @@ def _validate_archive_members(members: list[str]) -> None:
             # without allowing arbitrary extensionless debug payloads.
             lower = member.lower()
             basename = Path(member).name.lower()
+            logical_lower = lower[:-3] if lower.endswith(".br") else lower
             if (
                 basename not in _KNOWN_ARCHIVE_BASENAMES
                 and not any(lower.endswith(s) for s in _KNOWN_ARCHIVE_SUFFIXES)
+                and not (
+                    lower.endswith(".br")
+                    and any(logical_lower.endswith(s) for s in _KNOWN_BROTLI_LOGICAL_SUFFIXES)
+                )
             ):
                 unknown_found.append(member)
     if forbidden_found:
@@ -792,7 +813,8 @@ def _validate_archive_members(members: list[str]) -> None:
         raise RuntimeError(
             f"[archive-validate] UNKNOWN file types in archive: {unknown_found}. "
             f"Allowed suffixes: {_KNOWN_ARCHIVE_SUFFIXES}; allowed basenames: "
-            f"{_KNOWN_ARCHIVE_BASENAMES}. If a new artifact type was added "
+            f"{_KNOWN_ARCHIVE_BASENAMES}; allowed .br logical suffixes: "
+            f"{_KNOWN_BROTLI_LOGICAL_SUFFIXES}. If a new artifact type was added "
             f"intentionally, append its suffix or exact basename to the "
             f"archive whitelist in experiments/contest_auth_eval.py."
         )

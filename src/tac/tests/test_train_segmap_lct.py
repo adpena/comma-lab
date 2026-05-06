@@ -203,3 +203,27 @@ def test_inflate_rejects_custom_targets_with_hard_onehot() -> None:
             mode="hard_onehot",
             class_targets=torch.tensor([0.0, 255.0, 70.0, 185.0, 130.0]),
         )
+
+
+def test_inflate_raw_output_path_matches_auth_eval_contract(tmp_path: Path) -> None:
+    module = _load_module(
+        "submissions/robust_current/inflate_segmap.py",
+        "inflate_segmap_lct_raw_path",
+    )
+
+    assert module._raw_output_path(tmp_path, "0.mkv") == tmp_path / "0.raw"
+    assert module._raw_output_path(tmp_path, "nested/0.mkv") == tmp_path / "nested" / "0.raw"
+    with pytest.raises(ValueError, match="unsafe"):
+        module._raw_output_path(tmp_path, "../0.mkv")
+
+
+def test_film_canvas_raw_output_path_matches_auth_eval_contract(tmp_path: Path) -> None:
+    module = _load_module(
+        "submissions/robust_current/inflate_segmap_film_canvas.py",
+        "inflate_segmap_film_canvas_raw_path",
+    )
+
+    assert module._raw_output_path(tmp_path, "0.mkv") == tmp_path / "0.raw"
+    assert module._raw_output_path(tmp_path, "nested/0.mkv") == tmp_path / "nested" / "0.raw"
+    with pytest.raises(ValueError, match="unsafe"):
+        module._raw_output_path(tmp_path, "../0.mkv")

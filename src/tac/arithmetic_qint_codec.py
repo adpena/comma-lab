@@ -213,6 +213,8 @@ def build_freq_table(symbols: np.ndarray, num_symbols: int) -> np.ndarray:
     """
     if symbols.dtype.kind not in ("i", "u"):
         raise ValueError(f"symbols must be integer, got dtype={symbols.dtype}")
+    if symbols.size == 0:
+        raise ValueError("symbols must be nonempty")
     if symbols.min() < 0 or symbols.max() >= num_symbols:
         raise ValueError(
             f"symbols out of range [0, {num_symbols}): min={symbols.min()}, "
@@ -224,9 +226,23 @@ def build_freq_table(symbols: np.ndarray, num_symbols: int) -> np.ndarray:
 
 
 def _cumulative_table(freq: np.ndarray) -> tuple[np.ndarray, int]:
+    if freq.ndim != 1 or freq.size == 0:
+        raise ValueError("frequency table must be a nonempty 1D array")
+    if np.any(freq <= 0):
+        raise ValueError("frequency table contains zero-probability symbols")
     cum = np.zeros(len(freq) + 1, dtype=np.int64)
     cum[1:] = np.cumsum(freq)
-    return cum, int(cum[-1])
+    total = int(cum[-1])
+    if total <= 0:
+        raise ValueError("frequency table total must be positive")
+    return cum, total
+
+
+def _read_exact(buf: io.BytesIO, nbytes: int, label: str) -> bytes:
+    data = buf.read(nbytes)
+    if len(data) != nbytes:
+        raise ValueError(f"AQv1 truncated while reading {label}: expected {nbytes}B, got {len(data)}B")
+    return data
 
 
 def encode_qints_arithmetic(
@@ -251,6 +267,8 @@ def encode_qints_arithmetic(
     if num_symbols > 65535:
         raise ValueError(f"num_symbols must fit in uint16, got {num_symbols}")
     flat = np.ascontiguousarray(qints).ravel()
+    if flat.size == 0:
+        raise ValueError("qints must be nonempty")
     symbols = (flat.astype(np.int64) + int(offset))
     if symbols.min() < 0 or symbols.max() >= num_symbols:
         raise ValueError(
@@ -279,22 +297,23 @@ def encode_qints_arithmetic(
 def decode_qints_arithmetic(blob: bytes, expected_dtype: np.dtype = np.int8) -> np.ndarray:
     """Inverse of ``encode_qints_arithmetic`` — return the int array."""
     buf = io.BytesIO(blob)
-    magic = buf.read(4)
+    magic = _read_exact(buf, 4, "magic")
     if magic != _AQ_MAGIC:
         raise ValueError(f"bad AQv1 magic: {magic!r}")
-    (version,) = struct.unpack("<H", buf.read(2))
+    (version,) = struct.unpack("<H", _read_exact(buf, 2, "version"))
     if version != _AQ_VERSION:
         raise ValueError(f"unsupported AQv1 version: {version}")
-    (num_symbols,) = struct.unpack("<H", buf.read(2))
-    (offset,) = struct.unpack("<i", buf.read(4))
-    (n_symbols,) = struct.unpack("<Q", buf.read(8))
-    freq = np.frombuffer(buf.read(num_symbols * 4), dtype="<u4").copy()
-    (payload_size,) = struct.unpack("<Q", buf.read(8))
-    payload = buf.read(payload_size)
-    if len(payload) != payload_size:
-        raise ValueError(
-            f"payload truncated: declared {payload_size}B, got {len(payload)}B"
-        )
+    (num_symbols,) = struct.unpack("<H", _read_exact(buf, 2, "num_symbols"))
+    if num_symbols <= 1:
+        raise ValueError(f"num_symbols must be >= 2, got {num_symbols}")
+    (offset,) = struct.unpack("<i", _read_exact(buf, 4, "offset"))
+    (n_symbols,) = struct.unpack("<Q", _read_exact(buf, 8, "n_symbols"))
+    freq = np.frombuffer(_read_exact(buf, num_symbols * 4, "frequency table"), dtype="<u4").copy()
+    (payload_size,) = struct.unpack("<Q", _read_exact(buf, 8, "payload_size"))
+    payload = _read_exact(buf, payload_size, "payload")
+    trailing = buf.read(1)
+    if trailing:
+        raise ValueError("AQv1 payload has trailing bytes after declared payload")
 
     cum, total = _cumulative_table(freq)
     decoder = _ArithmeticDecoder(payload)

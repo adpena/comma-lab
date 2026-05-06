@@ -47,11 +47,8 @@ def test_single_symbol_stream_handles_gracefully():
 
 
 def test_empty_stream_rejected():
-    # Empty streams are rejected because numpy.min() has no identity on a
-    # zero-size array — defensive guard, the encoder should never see one
-    # in practice (a SegMap conv weight always has > 0 elements).
     qints = np.zeros(0, dtype=np.int8)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="nonempty"):
         encode_qints_arithmetic(qints, num_symbols=3, offset=1)
 
 
@@ -70,6 +67,30 @@ def test_freq_table_floor_is_one():
     # appears 3 times. symbol 2 (originally 1) appears 2 times.
     assert int(freq[1]) == 3
     assert int(freq[2]) == 2
+
+
+def test_freq_table_rejects_empty_symbol_stream():
+    with pytest.raises(ValueError, match="nonempty"):
+        build_freq_table(np.zeros(0, dtype=np.int8), num_symbols=3)
+
+
+def test_decode_rejects_truncated_header():
+    with pytest.raises(ValueError, match="truncated while reading magic"):
+        decode_qints_arithmetic(b"AQ", expected_dtype=np.int8)
+
+
+def test_decode_rejects_truncated_payload():
+    qints = np.zeros(16, dtype=np.int8)
+    blob = encode_qints_arithmetic(qints, num_symbols=3, offset=1)
+    with pytest.raises(ValueError, match="truncated while reading payload"):
+        decode_qints_arithmetic(blob[:-1], expected_dtype=np.int8)
+
+
+def test_decode_rejects_trailing_container_bytes():
+    qints = np.array([-1, 0, 1, 0, 0], dtype=np.int8)
+    blob = encode_qints_arithmetic(qints, num_symbols=3, offset=1)
+    with pytest.raises(ValueError, match="trailing bytes"):
+        decode_qints_arithmetic(blob + b"junk", expected_dtype=np.int8)
 
 
 def test_short_stream_roundtrip():

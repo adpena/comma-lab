@@ -40,6 +40,15 @@ NUM_FRAMES = 1200
 NUM_CLASSES = 5
 
 
+def _raw_output_path(inflated_dir: Path, video_name: str) -> Path:
+    """Return the raw path expected by contest auth eval for ``video_name``."""
+
+    rel = Path(video_name).with_suffix(".raw")
+    if rel.is_absolute() or ".." in rel.parts:
+        raise ValueError(f"unsafe video name: {video_name!r}")
+    return inflated_dir / rel
+
+
 def _ensure_repo_on_path() -> None:
     here = Path(__file__).resolve()
     repo_root = here.parent.parent.parent
@@ -250,7 +259,8 @@ def inflate(archive_dir: Path, inflated_dir: Path, video_names_file: Path,
     if not video_names:
         raise RuntimeError(f"video_names_file empty: {video_names_file}")
     out_name = video_names[0]
-    out_path = inflated_dir / f"{out_name}.raw"
+    out_path = _raw_output_path(inflated_dir, out_name)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
 
     n_total = gray.shape[0]
     if n_total != NUM_FRAMES:

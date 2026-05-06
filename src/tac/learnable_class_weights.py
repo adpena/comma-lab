@@ -2,11 +2,11 @@
 per-class distortion equalisation.
 
 Lane PS-V1 hard-coded ``--segnet-class-weights "1,5,5,1,1"``: classes 1
-(lane mark) and 2 (vehicle) are 5× boosted; classes 0 (road), 3 (sky),
-and 4 (other) keep weight 1. The numbers are heuristic — the real scoring
-formula is per-pixel argmax disagreement averaged across classes, so the
-optimal weighting depends on the per-class error distribution which
-shifts during training.
+(lane markings) and 2 (undrivable, including sky) are 5x boosted; classes
+0 (road), 3 (movable), and 4 (my_car) keep weight 1. The numbers are
+heuristic; the real scoring formula is per-pixel argmax disagreement averaged
+across classes, so the optimal weighting depends on the per-class error
+distribution which shifts during training.
 
 Lane PS-V2 makes the per-class weights LEARNABLE. The parameterisation is
 softmax (so weights sum to 1 and stay positive) over a 5-vector of raw

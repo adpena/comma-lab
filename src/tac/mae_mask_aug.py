@@ -6,8 +6,9 @@ returns the input unchanged so the inference distribution is preserved.
 
 Differs from MAE in three ways:
 
-1. Our mask vocabulary is ``num_classes=5`` discrete categories (sky, road,
-   movable, my-car, undrivable) — not continuous patch features. The
+1. Our mask vocabulary is ``num_classes=5`` discrete categories in canonical
+   contest order (road, lane_markings, undrivable, movable, my_car), not
+   continuous patch features. The
    "learnable mask token" is therefore a learnable logits vector over the
    5 classes; the augmenter replaces masked patches with a Gumbel-softmax
    sample so gradients flow into the token logits.

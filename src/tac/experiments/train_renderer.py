@@ -402,9 +402,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                         "scale.")
     # Lane PS (per-class SegNet weighting). Per memory
     # `project_research_survey_20260420` — research-grade, never
-    # implemented. SegNet predicts 5-class segmentation; cheap classes
-    # (road, sky) and costly classes (lane mark, vehicle) are averaged
-    # uniformly today. When supplied, the per-pixel SegNet contribution
+    # implemented. SegNet predicts 5-class segmentation in canonical contest
+    # order (road, lane_markings, undrivable, movable, my_car); classes with
+    # different scorer sensitivity are averaged uniformly today. When supplied,
+    # the per-pixel SegNet contribution
     # of `scorer_loss` / `scorer_loss_cached` AND the auxiliary
     # `kl_distill_segnet_only` are multiplied by the weight at each
     # pixel's GT-argmax class. The CSV is parsed via

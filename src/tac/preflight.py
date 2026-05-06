@@ -915,6 +915,7 @@ def preflight_all(
         # that exports PYTHON_INFLATE=segmap or =renderer_grayscale.
         # Lands at 0 live violations -> straight to STRICT per Lane A pattern.
         check_segmap_grayscale_lut_consistency(strict=True, verbose=verbose)
+        check_segmap_lct_archive_contract(strict=True, verbose=verbose)
         check_block_fp_exponents_alongside_qint(strict=True, verbose=verbose)
         # WARN-only: flip STRICT once first SegMap-paradigm encoder lane lands.
         check_segmap_export_calls_verify_roundtrip(strict=False, verbose=verbose)
@@ -17914,6 +17915,88 @@ def check_segmap_grayscale_lut_consistency(
             "ffmpeg path tries to read masks.mkv that does not exist and "
             "silently writes blank frames -> catastrophic score. "
             "Reference: 2026-04-29 Selfcomp port."
+        )
+    return violations
+
+
+def check_segmap_lct_archive_contract(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """LCT SegMap lanes must charge and configure the learned class targets.
+
+    ``--learnable-class-targets`` changes the grayscale inverse LUT used by the
+    scored inflate path. That 5-value fp16 table is score-affecting side
+    information, so producer scripts must copy it into ``archive.zip`` and write
+    ``SEGMAP_CLASS_TARGETS_FILENAME`` to the inflate config when the LCT flag is
+    enabled. Pass-through arithmetic repacks must preserve the same member and
+    config if the upstream archive carries it.
+    """
+    root = repo_root or REPO_ROOT
+    scripts_dir = root / "scripts"
+    violations: list[str] = []
+    n_scanned = 0
+
+    producer_required = {
+        "SEGMAP_ENABLE_LCT": "declare the opt-in LCT flag",
+        "--learnable-class-targets": "train with learnable class targets when enabled",
+        "--class-targets-filename": "bind the charged payload filename at train time",
+        'cp "$LCT_PAYLOAD" "$LOG_DIR/archive_src/$SEGMAP_CLASS_TARGETS_FILENAME"':
+            "copy the learned targets into the archive source tree",
+        "members.append('$SEGMAP_CLASS_TARGETS_FILENAME')":
+            "include the learned targets in deterministic archive member order",
+        "SEGMAP_CLASS_TARGETS_FILENAME=$SEGMAP_CLASS_TARGETS_FILENAME":
+            "write the inflate config member reference",
+    }
+    passthrough_required = {
+        'UPSTREAM_CLASS_TARGETS="$EXTRACT_DIR/$SEGMAP_CLASS_TARGETS_FILENAME"':
+            "discover the upstream LCT payload",
+        'cp "$UPSTREAM_CLASS_TARGETS" "$LOG_DIR/archive_src/$SEGMAP_CLASS_TARGETS_FILENAME"':
+            "preserve the upstream LCT payload",
+        "SEGMAP_CLASS_TARGETS_FILENAME=$SEGMAP_CLASS_TARGETS_FILENAME":
+            "write the inflate config member reference",
+    }
+
+    if scripts_dir.is_dir():
+        for sh in sorted(scripts_dir.glob("remote_lane_*.sh")):
+            try:
+                text = sh.read_text()
+            except OSError:
+                continue
+            n_scanned += 1
+            rel = sh.relative_to(root)
+
+            if "SEGMAP_ENABLE_LCT" in text:
+                for needle, reason in producer_required.items():
+                    if needle not in text:
+                        violations.append(f"{rel}: LCT producer contract missing {needle!r}: {reason}.")
+
+            pass_through_hint = (
+                "UPSTREAM_CLASS_TARGETS" in text
+                or "class_targets.fp16" in text and "payload.bin" in text
+            )
+            if pass_through_hint and "SEGMAP_ENABLE_LCT" not in text:
+                for needle, reason in passthrough_required.items():
+                    if needle not in text:
+                        violations.append(f"{rel}: LCT pass-through contract missing {needle!r}: {reason}.")
+
+    if verbose:
+        if violations:
+            print(f"  [segmap-lct-archive-contract] {len(violations)} violation(s) across {n_scanned} script(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(f"  [segmap-lct-archive-contract] OK: {n_scanned} remote_lane_*.sh script(s) clean")
+    if violations and strict:
+        raise PreflightError(
+            "SEGMAP LCT ARCHIVE CONTRACT violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nLearnable class targets are score-affecting side "
+            "information. Any SegMap lane enabling LCT must charge the "
+            "fp16 class-target payload inside archive.zip and configure "
+            "inflate with SEGMAP_CLASS_TARGETS_FILENAME. Arithmetic repacks "
+            "must preserve the upstream payload/config when present."
         )
     return violations
 

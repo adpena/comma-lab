@@ -428,11 +428,11 @@ class MaskConditionedSIREN(nn.Module):
 
     Input: (frame_idx, y, x, mask_class_onehot) -> (R, G, B)
 
-    The mask class (5 classes: road, lane, vehicle, sky, background) is
-    one-hot encoded and concatenated with the spatial coordinates.
-    This gives the network class-specific generation capacity: sky can be
-    smooth blue (few bits), road can be textured gray (more bits), and
-    class boundaries stay sharp (most bits).
+    The mask class follows the canonical contest SegNet order
+    (road, lane_markings, undrivable, movable, my_car), is one-hot encoded,
+    and is concatenated with the spatial coordinates. This gives the network
+    class-specific generation capacity: undrivable regions can be smooth,
+    road can be textured gray, and class boundaries stay sharp.
 
     Architecture:
     - Positional encoding for frame_idx -> fourier features
@@ -825,10 +825,10 @@ def train_mask_conditioned_siren(
         Goal: polish scorer satisfaction.
 
     The key insight: we do NOT need pixel-perfect reconstruction. We need
-    SCORER-SATISFYING reconstruction. The SIREN learns that sky can be
-    smooth blue (few bits), road can be textured gray (more bits), and
-    class boundaries must be sharp (most bits). Mask conditioning enables
-    this resource allocation.
+    SCORER-SATISFYING reconstruction. The SIREN learns that undrivable
+    scene regions can be smooth, road can be textured gray, and class
+    boundaries must be sharp. Mask conditioning enables this resource
+    allocation.
 
     Args:
         gt_frames: (T, H, W, 3) uint8 ground truth at scorer resolution.

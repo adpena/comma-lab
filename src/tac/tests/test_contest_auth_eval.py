@@ -438,6 +438,25 @@ def test_archive_member_validator_accepts_charged_pr85_qma9_members(cae):
     )
 
 
+def test_archive_member_validator_accepts_segmap_lct_members(cae):
+    """SegMap/LCT archive members are charged payloads, not debug sidecars."""
+    cae._validate_archive_members(
+        ["segmap_weights.tar.xz", "grayscale.mkv", "optimized_poses.pt", "class_targets.fp16"]
+    )
+
+
+def test_archive_member_validator_accepts_brotli_logical_members(cae):
+    """Diet-packed logical members may carry a final .br compression suffix."""
+    cae._validate_archive_members(
+        ["masks.mkv.br", "grayscale.mkv.br", "optimized_poses.pt.br", "payload.bin.br"]
+    )
+
+
+def test_archive_member_validator_rejects_unknown_brotli_logical_member(cae):
+    with pytest.raises(RuntimeError, match="UNKNOWN file types"):
+        cae._validate_archive_members(["debug.dat.br"])
+
+
 def test_archive_member_validator_still_rejects_unknown_extensionless_debug_member(cae):
     with pytest.raises(RuntimeError, match="UNKNOWN file types"):
         cae._validate_archive_members(["x", "debug"])

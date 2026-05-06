@@ -102,6 +102,13 @@ def test_arithmetic_grayscale_mode_aliases(alias: str) -> None:
     assert arith._normalize_grayscale_mode(alias) == "hard_onehot"
 
 
+def test_arithmetic_raw_output_path_matches_auth_eval_contract(tmp_path) -> None:
+    assert arith._raw_output_path(tmp_path, "0.mkv") == tmp_path / "0.raw"
+    assert arith._raw_output_path(tmp_path, "nested/0.mkv") == tmp_path / "nested" / "0.raw"
+    with pytest.raises(ValueError, match="unsafe"):
+        arith._raw_output_path(tmp_path, "../0.mkv")
+
+
 def test_arithmetic_rejects_unknown_grayscale_mode() -> None:
     with pytest.raises(RuntimeError, match="SEGMAP_GRAYSCALE_MODE"):
         arith._normalize_grayscale_mode("nearest")

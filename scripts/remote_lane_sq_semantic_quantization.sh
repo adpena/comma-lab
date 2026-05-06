@@ -3,15 +3,16 @@
 # UNIWARD-NO-OP-WAIVED: research-only lane — encodes meta-payload + ships Lane A anchor bytes intentionally (preflight Check 89 waiver).
 #
 # WHAT: exercises the orphan src/tac/semantic_quantization.py
-# (semantic_adaptive_quantize: per-class bit allocation 8/6/6/4/4 for
-# road/vehicles/pedestrians/sky/background) on Lane A's renderer
+# (semantic_adaptive_quantize: canonical contest class order
+# road/lane_markings/undrivable/movable/my_car) on Lane A's renderer
 # state_dict. Distinct from Lane Ω (per-WEIGHT Hessian-aware quantization)
 # — Lane SQ is per-CLASS, only meaningful for SPADE/CLADE renderers
 # whose normalization layers carry per-class parameters.
 #
 # Lane SQ's claim: SegNet's 100x weight + scoring formula structure mean
-# road pixels (high PoseNet sensitivity) deserve 8-bit, sky pixels
-# tolerate 4-bit. Saves ~20% rate vs uniform 8-bit on the SPADE/CLADE
+# road and lane-marking pixels (high PoseNet/SegNet sensitivity) deserve
+# 8-bit, while undrivable and ego-car regions can tolerate lower precision.
+# Saves ~20% rate vs uniform 8-bit on the SPADE/CLADE
 # normalization params.
 #
 # OUTSTANDING TODO: this is a RESEARCH lane. The current Lane A renderer
