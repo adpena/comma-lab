@@ -209,23 +209,18 @@ def _top_haar_atoms(
     return atoms[:top_k]
 
 
+# Adversarial review 2026-05-06 (BUG #1, 100% confidence): the planner previously
+# advertised a varint+zigzag wire format here, but the actual encoder in
+# `tac.hnerv_wavelet_sidechannel.encode_wavelet_atom_sidechannel` writes each
+# atom via `struct.pack("<IIBIi", raw_offset, raw_end, level, coefficient_index,
+# coefficient_quantized)` = uint32+uint32+uint8+uint32+int32 = 17 bytes fixed.
+# The varint estimate was off by 2-6x and downstream `rate_score_delta`
+# computations consumed the wrong number. Estimate now matches the wire encoder.
+_WAVELET_ATOM_WIRE_BYTES = 17
+
+
 def _estimated_atom_wire_bytes(raw_offset: int, level: int, coefficient: int) -> int:
-    # section id + offset varint + level byte + zigzag coefficient varint
-    return 1 + _uvarint_len(raw_offset) + 1 + _uvarint_len(_zigzag(coefficient))
-
-
-def _zigzag(value: int) -> int:
-    return (value << 1) if value >= 0 else ((-value << 1) - 1)
-
-
-def _uvarint_len(value: int) -> int:
-    if value < 0:
-        raise ValueError("uvarint cannot encode negative values")
-    n = 1
-    while value >= 0x80:
-        value >>= 7
-        n += 1
-    return n
+    return _WAVELET_ATOM_WIRE_BYTES
 
 
 def _manifest_for_label(scorecard: Mapping[str, Any], label: str) -> Mapping[str, Any]:

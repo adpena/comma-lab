@@ -116,9 +116,23 @@ def build_wavelet_apply_transform_candidate(
             archive.payload,
             source_payload,
         ),
+        # Adversarial review 2026-05-06 (BUG #2, 95% confidence): these two fields
+        # are advisory-only — the byte delta is computed from a wrapper-arithmetic
+        # estimate of the source archive bytes, NOT from a re-measured contest
+        # archive. The rate-score delta is therefore a [prediction], not a
+        # [contest-CUDA] measurement. Per CLAUDE.md "Forbidden empirical-claim-
+        # without-evidence-tag" we tag both via the field-name suffix and an
+        # explicit `_advisory_note` adjacent so downstream gate code (e.g.
+        # `tac.hnerv_wavelet_apply_gate`) cannot mistake them for empirical bytes.
         "candidate_archive_byte_delta_vs_source_estimate": candidate_archive_bytes
         - _source_archive_bytes_from_wrapper(archive.archive_bytes, archive.payload, source_payload),
         "rate_score_delta_vs_source_estimate": rate_score_delta,
+        "rate_score_delta_advisory_note": (
+            "byte delta and rate-score delta are estimated from "
+            "_source_archive_bytes_from_wrapper, not from a re-measured contest "
+            "archive — [prediction], not [contest-CUDA]. Treat as advisory only "
+            "for break-even gating; do not promote to a score claim."
+        ),
         "section_name": section_name,
         "source_section_sha256": sha256_bytes(source_section),
         "candidate_section_sha256": sha256_bytes(transformed_section),
