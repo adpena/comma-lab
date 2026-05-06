@@ -5829,6 +5829,80 @@ Verification:
 - `.venv/bin/python tools/audit_tooling_consolidation.py --format json`
   reported the measured inventory above.
 
+## R91 - 2026-05-06 Public Staging Safety Closure
+
+Closed the next public-release review findings from the R90 adversarial pass.
+This tranche hardens the publish staging/export tools against local-path
+leakage, live-worktree publication, and unsafe in-repo output directories.
+
+Changes:
+
+- `tools/materialize_comma_lab_public_export.py` now rejects any `--out-dir`
+  inside the source repository, not just the repository root or parent paths.
+- `tools/oss_publish_staging.py` now materializes from tracked git blobs at a
+  selected ref instead of copying live filesystem files. Dirty/untracked local
+  edits can no longer silently enter the staged public tree.
+- `tools/oss_publish_staging.py` no longer writes local `out_dir`,
+  `repo_root`, readme source paths, or `cd /tmp/...` commands into
+  `MANIFEST.json`; public fields use placeholders such as
+  `${TAC_OSS_STAGING_ROOT}`.
+- `tools/oss_publish_staging.py` includes its own bootstrap/link-audit
+  dependencies in the staged OSS tree.
+- `tools/oss_publish_staging.py` now runs public-release hygiene and private
+  link checks on the generated staging tree before reporting success. Strict
+  mode fails closed; `--no-strict-hygiene` records violation counts for triage.
+
+Measured inventory after R91:
+
+- local SHA helpers: `51`
+- local JSON dumps: `101`
+- manual `sys.path` bootstraps: `267`
+- manual repo-root parent probes: `364`
+- manual score/dispatch metadata mentions: `603`
+
+Within-tranche committed-surface deltas:
+
+- `tools/materialize_comma_lab_public_export.py` remains at zero findings for
+  SHA/JSON/bootstrap/root consolidation patterns while adding the in-repo
+  output refusal.
+- `tools/oss_publish_staging.py` remains at zero findings for SHA/JSON/
+  bootstrap/root consolidation patterns while switching to git-blob custody and
+  strict publish-surface gates.
+
+Verification:
+
+- `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest
+  src/tac/tests/test_oss_publish_staging.py
+  src/tac/tests/test_materialize_comma_lab_public_export.py
+  src/tac/tests/test_audit_public_publish_links.py src/tac/tests/test_repo_io.py
+  src/tac/tests/test_tool_bootstrap.py -q` passed: `21 passed`.
+- `.venv/bin/python -m ruff check --select I,RUF100,F401,UP035,F821,E402
+  tools/oss_publish_staging.py tools/materialize_comma_lab_public_export.py
+  src/tac/tests/test_oss_publish_staging.py
+  src/tac/tests/test_materialize_comma_lab_public_export.py` passed.
+- `.venv/bin/python -m py_compile tools/oss_publish_staging.py
+  tools/materialize_comma_lab_public_export.py` passed.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --scan-root
+  tools/oss_publish_staging.py --format json` reported zero findings for the
+  file.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --scan-root
+  tools/materialize_comma_lab_public_export.py --format json` reported zero
+  findings for the file.
+- A temp `tools/oss_publish_staging.py --out-dir ... --no-strict-hygiene`
+  smoke copied 851 tracked files, recorded `hygiene_violation_count=45`,
+  `public_link_violation_count=0`, and had no `/Users`, `/tmp`, or
+  `/private/tmp` in manifest fields.
+- A temp strict `tools/oss_publish_staging.py --out-dir ...` smoke failed
+  closed with `PUBLIC RELEASE HYGIENE violations` instead of a traceback. The
+  remaining 45 violations are real source/test hygiene cleanup for the next
+  tranche, not manifest leakage.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --format json`
+  reported the measured inventory above.
+- `.venv/bin/python tools/audit_staged_public_release_hygiene.py --strict`
+  passed with zero staged public files scanned.
+- `.venv/bin/python tools/all_lanes_preflight.py` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+
 ## R81 - 2026-05-06 Component Sensitivity Shard Merge IO Lowering
 
 Continued the Gate #7 lowering tranche on the finite-difference sensitivity

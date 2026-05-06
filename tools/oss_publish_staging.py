@@ -25,7 +25,7 @@ INCLUDES (OSS-publish surface):
     docs/paper/                        — methodology + 4-results + related work
     pyproject.toml                     — package metadata
     LICENSE                            — proposed Apache 2.0 (operator confirms)
-    README.md                          — generated from /tmp/tac_oss_readme_draft.md
+    README.md                          — generated from ${TAC_OSS_README}
                                          OR provided via --readme
 
 EXCLUDES (per CLAUDE.md Strategic Secrecy Rule + practical bloat):
@@ -51,16 +51,16 @@ Output:
 
 Usage:
     .venv/bin/python tools/oss_publish_staging.py \\
-        --out-dir /tmp/tac_oss_staging \\
-        --readme /tmp/tac_oss_readme_draft.md
+        --out-dir ${TAC_OSS_STAGING_ROOT} \\
+        --readme ${TAC_OSS_README}
 
 Then operator reviews:
-    ls /tmp/tac_oss_staging/
-    cat /tmp/tac_oss_staging/MANIFEST.json | jq .
-    less /tmp/tac_oss_staging/README.md
+    ls ${TAC_OSS_STAGING_ROOT}/
+    cat ${TAC_OSS_STAGING_ROOT}/MANIFEST.json | jq .
+    less ${TAC_OSS_STAGING_ROOT}/README.md
 
 Then publishes:
-    cd /tmp/tac_oss_staging
+    cd ${TAC_OSS_STAGING_ROOT}
     git init -b main
     git add .
     git commit -m "Initial public release of tac"
@@ -73,7 +73,9 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import fnmatch
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -85,7 +87,9 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
-from tac.repo_io import sha256_file, write_json  # noqa: E402
+from tac.preflight import check_public_release_hygiene  # noqa: E402
+from tac.repo_io import sha256_bytes, write_json  # noqa: E402
+from tools.audit_public_publish_links import audit_public_publish_links  # noqa: E402
 
 # Files / directories to INCLUDE in the OSS staging copy. Globs are evaluated
 # against REPO_ROOT. Order matters for human readability of MANIFEST.json.
@@ -98,6 +102,8 @@ _OSS_INCLUDE_PATTERNS: tuple[str, ...] = (
     "tools/lane_maturity.py",
     "tools/oss_publish_staging.py",
     "tools/review_tracker.py",
+    "tools/tool_bootstrap.py",
+    "tools/audit_public_publish_links.py",
     # Lane Ω-W-V3 producer + adapter
     "experiments/extract_pr106_decoder.py",
     "experiments/build_sensitivity_map_pr106.py",
@@ -169,7 +175,7 @@ Research code for the comma.ai video compression challenge.
 
 (README staging placeholder — operator should provide a polished README via
 `--readme <path>` before publishing. Suggested source:
-`/tmp/tac_oss_readme_draft.md` from the prior session work.)
+`${TAC_OSS_README}` from the local release preparation work.)
 
 For methodology see `docs/paper/`. For dispatch wrappers see `scripts/`.
 For the codec library see `src/tac/`.
@@ -204,6 +210,49 @@ dist/
 """
 
 
+def _git_lines(repo_root: Path, args: list[str]) -> list[str]:
+    proc = subprocess.run(
+        ["git", *args],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(f"git {' '.join(args)} failed: {proc.stderr.strip()}")
+    return [line for line in proc.stdout.splitlines() if line]
+
+
+def _git_blob(repo_root: Path, ref: str, path: str) -> bytes:
+    proc = subprocess.run(
+        ["git", "show", f"{ref}:{path}"],
+        cwd=repo_root,
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(f"git show {ref}:{path} failed: {proc.stderr.decode(errors='replace').strip()}")
+    return proc.stdout
+
+
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+    except ValueError:
+        return False
+    return True
+
+
+def _validate_stage_output_path(repo_root: Path, out_dir: Path) -> Path:
+    repo_root = repo_root.resolve()
+    out_dir = out_dir.resolve()
+    if out_dir == repo_root or _is_relative_to(out_dir, repo_root):
+        raise SystemExit(f"FATAL: --out-dir must be outside the repository: {out_dir}")
+    if _is_relative_to(repo_root, out_dir):
+        raise SystemExit(f"FATAL: --out-dir would contain the repository: {out_dir}")
+    return out_dir
+
+
 def _path_excluded(rel: Path) -> bool:
     """True if any path component or the full relative path matches any exclude pattern."""
     parts = rel.parts
@@ -218,26 +267,38 @@ def _path_excluded(rel: Path) -> bool:
     return False
 
 
-def _expand_include_patterns(repo_root: Path) -> list[Path]:
-    """Resolve include patterns to a deduplicated, sorted list of file paths."""
-    seen: set[Path] = set()
-    out: list[Path] = []
-    for pat in _OSS_INCLUDE_PATTERNS:
-        for p in sorted(repo_root.glob(pat)):
-            if not p.is_file():
-                continue
-            rel = p.relative_to(repo_root)
-            if _path_excluded(rel):
-                continue
-            if p in seen:
-                continue
-            seen.add(p)
-            out.append(p)
-    return out
+def _matches_include_pattern(path: str, pattern: str) -> bool:
+    if fnmatch.fnmatchcase(path, pattern):
+        return True
+    if "/**/" in pattern:
+        direct_pattern = pattern.replace("/**/", "/")
+        return fnmatch.fnmatchcase(path, direct_pattern)
+    return False
 
 
-def stage_oss_publish(out_dir: Path, repo_root: Path, readme_path: Path | None = None) -> dict:
-    """Copy the OSS subset into out_dir; write MANIFEST.json + README + LICENSE + .gitignore."""
+def selected_oss_paths(tracked_paths: list[str]) -> list[str]:
+    """Select tracked git paths that belong in the tac OSS staging tree."""
+    selected: list[str] = []
+    for path in sorted(tracked_paths):
+        rel = Path(path)
+        if _path_excluded(rel):
+            continue
+        if any(_matches_include_pattern(path, pattern) for pattern in _OSS_INCLUDE_PATTERNS):
+            selected.append(path)
+    return selected
+
+
+def stage_oss_publish(
+    out_dir: Path,
+    repo_root: Path,
+    readme_path: Path | None = None,
+    *,
+    ref: str = "HEAD",
+    strict_hygiene: bool = True,
+) -> dict:
+    """Materialize the OSS subset from git blobs; write MANIFEST.json + release scaffolding."""
+    repo_root = repo_root.resolve()
+    out_dir = _validate_stage_output_path(repo_root, out_dir)
     if out_dir.exists():
         if any(out_dir.iterdir()):
             raise SystemExit(
@@ -247,27 +308,28 @@ def stage_oss_publish(out_dir: Path, repo_root: Path, readme_path: Path | None =
     else:
         out_dir.mkdir(parents=True)
 
-    files = _expand_include_patterns(repo_root)
+    files = selected_oss_paths(_git_lines(repo_root, ["ls-tree", "-r", "--name-only", ref]))
     if not files:
         raise SystemExit("FATAL: no files matched include patterns — sanity-check _OSS_INCLUDE_PATTERNS")
 
     copied: list[dict] = []
-    for src in files:
-        rel = src.relative_to(repo_root)
+    for rel_str in files:
+        data = _git_blob(repo_root, ref, rel_str)
+        rel = Path(rel_str)
         dst = out_dir / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dst)
+        dst.write_bytes(data)
         copied.append({
-            "path": str(rel),
-            "bytes": dst.stat().st_size,
-            "sha256": sha256_file(dst),
+            "path": rel_str,
+            "bytes": len(data),
+            "sha256": sha256_bytes(data),
         })
 
     # README
     readme_dst = out_dir / "README.md"
     if readme_path and readme_path.is_file():
         shutil.copy2(readme_path, readme_dst)
-        readme_source = str(readme_path)
+        readme_source = "operator_supplied_readme"
     else:
         readme_dst.write_text(_README_FALLBACK)
         readme_source = "fallback (operator should provide --readme)"
@@ -284,8 +346,9 @@ def stage_oss_publish(out_dir: Path, repo_root: Path, readme_path: Path | None =
         "schema_version": 1,
         "produced_at_utc": dt.datetime.now(tz=dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "produced_by": "tools/oss_publish_staging.py",
-        "out_dir": str(out_dir),
-        "repo_root": str(repo_root),
+        "source_ref": ref,
+        "source_head": _git_lines(repo_root, ["rev-parse", ref])[0],
+        "staging_root": "${TAC_OSS_STAGING_ROOT}",
         "n_files_copied": len(copied),
         "total_bytes_copied": sum(c["bytes"] for c in copied),
         "include_patterns": list(_OSS_INCLUDE_PATTERNS),
@@ -293,7 +356,7 @@ def stage_oss_publish(out_dir: Path, repo_root: Path, readme_path: Path | None =
         "readme_source": readme_source,
         "license": "Apache 2.0 (placeholder — operator should replace LICENSE with full text)",
         "next_steps": [
-            f"cd {out_dir}",
+            "cd ${TAC_OSS_STAGING_ROOT}",
             "git init -b main",
             "git add .",
             'git commit -m "Initial public release of tac"',
@@ -301,6 +364,32 @@ def stage_oss_publish(out_dir: Path, repo_root: Path, readme_path: Path | None =
         ],
     }
     manifest_dst = out_dir / "MANIFEST.json"
+    write_json(manifest_dst, manifest)
+
+    hygiene_violations = check_public_release_hygiene(
+        repo_root=repo_root,
+        strict=False,
+        verbose=False,
+        scan_paths=[out_dir],
+    )
+    if hygiene_violations and strict_hygiene:
+        raise SystemExit(
+            "PUBLIC RELEASE HYGIENE violations:\n"
+            + "\n".join(f"  - {violation}" for violation in hygiene_violations[:40])
+        )
+    link_payload = audit_public_publish_links([out_dir], base_root=out_dir, live=False)
+    link_violations = [
+        "{path}:{line}: {kind}: {url} ({detail})".format(**violation)
+        for violation in link_payload["violations"]
+    ]
+    if link_violations and strict_hygiene:
+        raise SystemExit(
+            "PUBLIC LINK HYGIENE violations:\n"
+            + "\n".join(f"  - {violation}" for violation in link_violations[:40])
+        )
+    manifest["hygiene_violation_count"] = len(hygiene_violations)
+    manifest["public_link_violation_count"] = len(link_violations)
+    manifest["public_link_count"] = int(link_payload.get("link_count", 0))
     write_json(manifest_dst, manifest)
 
     print(f"[oss-stage] copied {len(copied)} files ({sum(c['bytes'] for c in copied)} bytes total) → {out_dir}", file=sys.stderr)
@@ -318,8 +407,18 @@ def main(argv: list[str] | None = None) -> int:
                         help="Polished README markdown to copy as README.md. Falls back to placeholder.")
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT,
                         help="Source repo root (default: auto-detected from this script's path).")
+    parser.add_argument("--ref", default="HEAD",
+                        help="Git ref to materialize from (default: HEAD).")
+    parser.add_argument("--no-strict-hygiene", action="store_true",
+                        help="Record public hygiene violations instead of failing.")
     args = parser.parse_args(argv)
-    stage_oss_publish(args.out_dir, args.repo_root, readme_path=args.readme)
+    stage_oss_publish(
+        args.out_dir,
+        args.repo_root,
+        readme_path=args.readme,
+        ref=args.ref,
+        strict_hygiene=not args.no_strict_hygiene,
+    )
     return 0
 
 

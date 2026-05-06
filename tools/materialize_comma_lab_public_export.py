@@ -134,6 +134,8 @@ def _validate_export_output_path(repo_root: Path, out_dir: Path) -> Path:
     broad_paths = {Path("/").resolve(), home, home.parent.resolve()}
     if out_dir == repo_root:
         raise SystemExit(f"FATAL: output directory is the repository root: {out_dir}")
+    if _path_contains(repo_root, out_dir):
+        raise SystemExit(f"FATAL: output directory must be outside the repository: {out_dir}")
     if _path_contains(out_dir, repo_root):
         raise SystemExit(f"FATAL: output directory would contain the repository: {out_dir}")
     if out_dir in broad_paths or len(out_dir.parts) <= 2:

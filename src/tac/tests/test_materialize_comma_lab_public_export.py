@@ -131,6 +131,20 @@ def test_main_force_refuses_to_delete_repo_root(tmp_path: Path) -> None:
     assert (repo / "README.md").read_text(encoding="utf-8") == "public\n"
 
 
+def test_main_force_refuses_in_repo_export_dir(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init", "-b", "main")
+    (repo / "README.md").write_text("public\n", encoding="utf-8")
+    _commit_all(repo)
+
+    out = repo / "public-export"
+    with pytest.raises(SystemExit, match="outside the repository"):
+        main(["--repo-root", str(repo), "--out-dir", str(out), "--force"])
+
+    assert not out.exists()
+
+
 def test_materialize_public_export_fails_on_private_repo_link(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
