@@ -6117,6 +6117,62 @@ Next performance tranche:
 - OSS hardening blockers from public-export materialization remain separate:
   dependency closure, `--force` output-dir safety, and schema pinning.
 
+## R95 - 2026-05-06 HNeRV Low-Level Repack Parallel Brotli Search
+
+Lowered the current all-lanes wall-clock limiter without changing candidate
+bytes or manifest choice semantics.
+
+Changes:
+
+- `src/tac/hnerv_lowlevel_packer.py` now supports bounded parallel brotli
+  recode attempts inside the fixed `(quality, lgwin)` grid.
+- Candidate choice remains deterministic: every worker returns a
+  `BrotliRecodeChoice`, and final selection still uses the existing
+  `_choice_sort_key` over collected results.
+- `tools/build_hnerv_lowlevel_repack_candidate.py` now exposes `--jobs`; the
+  default is `min(CPU count, 8)`, and `--jobs 1` preserves serial compatibility.
+- Added a regression test proving parallel `brotli_recode_search(..., jobs=4)`
+  returns the same choice and payload as `jobs=1`.
+
+Measured correctness and latency:
+
+- Focused HNeRV candidate build: `1.65s real -> 0.38s real`.
+- Serial-vs-parallel candidate SHA matched exactly:
+  `b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f`.
+- Serial and parallel accepted the same section choices:
+  `decoder_packed_brotli` at `170127` bytes with quality `10` and default
+  lgwin, and `latents_and_sidecar_brotli` at `15849` bytes with quality `11`
+  and lgwin `18`.
+- Full default all-lanes preflight after R95: `1.80s real` with
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+- Full serial compatibility all-lanes preflight after R95: `8.55s real` with
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+
+Verification:
+
+- `.venv/bin/python -m py_compile src/tac/hnerv_lowlevel_packer.py
+  tools/build_hnerv_lowlevel_repack_candidate.py` passed.
+- `.venv/bin/python -m ruff check src/tac/hnerv_lowlevel_packer.py
+  tools/build_hnerv_lowlevel_repack_candidate.py
+  src/tac/tests/test_hnerv_lowlevel_packer.py` passed.
+- `.venv/bin/python -m pytest src/tac/tests/test_hnerv_lowlevel_packer.py
+  -q` passed: `7 passed`.
+- `.venv/bin/python tools/build_hnerv_lowlevel_repack_candidate.py ...
+  --jobs 1` and default parallel mode both passed with identical candidate SHA.
+- `.venv/bin/python tools/all_lanes_preflight.py --timings` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+- `.venv/bin/python tools/all_lanes_preflight.py --jobs 1` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+
+Next performance tranche:
+
+- The longest default preflight tasks are now Apogee intN and Omega-W-V3 at
+  roughly `1.3s` each. Since HNeRV is no longer the limiter, prioritize
+  hidden-gem score-lowering work unless another gate regresses.
+- For score work, keep HNeRV candidate byte-equivalence proof as a fast
+  preflight, but do not promote it without exact archive manifest preflight,
+  lane claim, and exact CUDA auth eval.
+
 ## R81 - 2026-05-06 Component Sensitivity Shard Merge IO Lowering
 
 Continued the Gate #7 lowering tranche on the finite-difference sensitivity

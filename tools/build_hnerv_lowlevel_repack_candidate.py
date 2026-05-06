@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 try:
@@ -27,6 +28,7 @@ DEFAULT_SCORECARD = (
     / "public_hnerv_frontier_payload_profiles_20260504_codex"
     / "scorecard.json"
 )
+DEFAULT_JOBS = max(1, min(os.cpu_count() or 1, 8))
 
 
 def parse_lgwins(values: list[str] | None) -> list[int | None]:
@@ -56,6 +58,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--quality", action="append", type=int, help="Brotli quality; repeatable.")
     parser.add_argument("--lgwin", action="append", help="Brotli lgwin or 'default'; repeatable.")
     parser.add_argument(
+        "--jobs",
+        type=int,
+        default=DEFAULT_JOBS,
+        help=(
+            "Maximum brotli recode attempts to run concurrently. "
+            f"Default: min(CPU count, 8) = {DEFAULT_JOBS}; use --jobs 1 for serial compatibility."
+        ),
+    )
+    parser.add_argument(
         "--allow-rate-regression",
         action="store_true",
         help="Emit changed candidates even when they are not byte-smaller.",
@@ -83,6 +94,7 @@ def main(argv: list[str] | None = None) -> int:
         qualities=args.quality or [9, 10, 11],
         lgwins=parse_lgwins(args.lgwin),
         allow_rate_regression=args.allow_rate_regression,
+        jobs=args.jobs,
     )
     text = json_text(result)
     if args.json_out:

@@ -11,6 +11,7 @@ import pytest
 
 from tac.hnerv_lowlevel_packer import (
     HnervLowlevelPackError,
+    brotli_recode_search,
     build_lowlevel_brotli_repack_candidate,
     parse_ff_packed_brotli_hnerv,
     read_strict_single_member_zip,
@@ -92,6 +93,28 @@ def test_build_lowlevel_brotli_repack_candidate_proves_changed_section(tmp_path:
     plan = build_section_repack_plan(scorecard, labels=["PR106x"])
     reaudit = audit_candidate_section_diff(plan, result["candidate_diff"])
     assert reaudit["ready_for_archive_preflight"] is True
+
+
+def test_brotli_recode_search_parallel_matches_serial() -> None:
+    source = brotli.compress((b"parallel-hnerv-search-" * 4000), quality=1)
+
+    serial_choice, serial_payload = brotli_recode_search(
+        "decoder_packed_brotli",
+        source,
+        qualities=[9, 10, 11],
+        lgwins=[None, 18, 20, 22],
+        jobs=1,
+    )
+    parallel_choice, parallel_payload = brotli_recode_search(
+        "decoder_packed_brotli",
+        source,
+        qualities=[9, 10, 11],
+        lgwins=[None, 18, 20, 22],
+        jobs=4,
+    )
+
+    assert parallel_choice == serial_choice
+    assert parallel_payload == serial_payload
 
 
 def test_build_lowlevel_brotli_repack_candidate_blocks_noop(tmp_path: Path) -> None:

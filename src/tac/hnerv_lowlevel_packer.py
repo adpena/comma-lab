@@ -9,8 +9,10 @@ and candidate emission only; it never claims score movement.
 
 from __future__ import annotations
 
+import concurrent.futures
 import dataclasses
 import hashlib
+import os
 import zipfile
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
@@ -173,6 +175,7 @@ def brotli_recode_search(
     *,
     qualities: Iterable[int] = (9, 10, 11),
     lgwins: Iterable[int | None] = (None, 18, 20, 22, 24),
+    jobs: int = 1,
 ) -> tuple[BrotliRecodeChoice, bytes]:
     """Return the smallest deterministic brotli recode for one section."""
 
@@ -183,35 +186,36 @@ def brotli_recode_search(
     except brotli.error as exc:
         raise HnervLowlevelPackError(f"{section_name} is not brotli-decompressible") from exc
 
-    best_choice: BrotliRecodeChoice | None = None
-    best_payload: bytes | None = None
+    attempts: list[tuple[int, int | None]] = []
     for quality in qualities:
         q = int(quality)
         if not 0 <= q <= 11:
             raise HnervLowlevelPackError(f"brotli quality out of range: {q}")
         for lgwin in lgwins:
-            kwargs: dict[str, int] = {"quality": q}
             normalized_lgwin = None if lgwin is None else int(lgwin)
-            if normalized_lgwin is not None:
-                if not 10 <= normalized_lgwin <= 24:
-                    raise HnervLowlevelPackError(f"brotli lgwin out of range: {normalized_lgwin}")
-                kwargs["lgwin"] = normalized_lgwin
-            candidate = brotli.compress(raw, **kwargs)
-            choice = BrotliRecodeChoice(
-                section_name=section_name,
-                raw_bytes=len(raw),
-                source_bytes=len(compressed),
-                candidate_bytes=len(candidate),
-                quality=q,
-                lgwin=normalized_lgwin,
-                candidate_sha256=sha256_bytes(candidate),
-                changed=candidate != compressed,
-            )
-            if best_choice is None or _choice_sort_key(choice) < _choice_sort_key(best_choice):
-                best_choice = choice
-                best_payload = candidate
-    if best_choice is None or best_payload is None:
+            if normalized_lgwin is not None and not 10 <= normalized_lgwin <= 24:
+                raise HnervLowlevelPackError(f"brotli lgwin out of range: {normalized_lgwin}")
+            attempts.append((q, normalized_lgwin))
+    if not attempts:
         raise HnervLowlevelPackError("brotli search did not evaluate any variants")
+
+    best_choice: BrotliRecodeChoice | None = None
+    best_payload: bytes | None = None
+    max_workers = _bounded_jobs(jobs, len(attempts))
+    if max_workers == 1:
+        results = [_brotli_recode_attempt(section_name, compressed, raw, q, lgwin) for q, lgwin in attempts]
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [
+                executor.submit(_brotli_recode_attempt, section_name, compressed, raw, q, lgwin)
+                for q, lgwin in attempts
+            ]
+            results = [future.result() for future in futures]
+    for choice, candidate in results:
+        if best_choice is None or _choice_sort_key(choice) < _choice_sort_key(best_choice):
+            best_choice = choice
+            best_payload = candidate
+    assert best_choice is not None and best_payload is not None
     return best_choice, best_payload
 
 
@@ -225,6 +229,7 @@ def build_lowlevel_brotli_repack_candidate(
     qualities: Iterable[int] = (9, 10, 11),
     lgwins: Iterable[int | None] = (None, 18, 20, 22, 24),
     allow_rate_regression: bool = False,
+    jobs: int = 1,
 ) -> dict[str, Any]:
     """Build a deterministic HNeRV brotli-repack candidate and proof manifest.
 
@@ -255,6 +260,7 @@ def build_lowlevel_brotli_repack_candidate(
                 source_bytes,
                 qualities=qualities,
                 lgwins=lgwins,
+                jobs=jobs,
             )
         except HnervLowlevelPackError as exc:
             blockers.append(f"brotli_recode_failed:{section_name}:{exc}")
@@ -367,6 +373,38 @@ def _choice_sort_key(choice: BrotliRecodeChoice) -> tuple[int, int, int, int, st
         choice.quality,
         lgwin_sort,
         choice.candidate_sha256,
+    )
+
+
+def _bounded_jobs(jobs: int, attempt_count: int) -> int:
+    if jobs < 1:
+        raise HnervLowlevelPackError(f"jobs must be >= 1, got {jobs}")
+    return max(1, min(jobs, attempt_count, os.cpu_count() or 1))
+
+
+def _brotli_recode_attempt(
+    section_name: str,
+    source: bytes,
+    raw: bytes,
+    quality: int,
+    lgwin: int | None,
+) -> tuple[BrotliRecodeChoice, bytes]:
+    kwargs: dict[str, int] = {"quality": quality}
+    if lgwin is not None:
+        kwargs["lgwin"] = lgwin
+    candidate = brotli.compress(raw, **kwargs)
+    return (
+        BrotliRecodeChoice(
+            section_name=section_name,
+            raw_bytes=len(raw),
+            source_bytes=len(source),
+            candidate_bytes=len(candidate),
+            quality=quality,
+            lgwin=lgwin,
+            candidate_sha256=sha256_bytes(candidate),
+            changed=candidate != source,
+        ),
+        candidate,
     )
 
 
