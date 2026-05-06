@@ -4174,3 +4174,49 @@ Verification:
 Next queue: decide whether those two operational scripts should be promoted,
 archived as forensic-only, or deleted after canonical functionality is proven
 elsewhere.
+
+## R57 - 2026-05-06 Operational Script Recovery Closure
+
+Promoted the final two modified first-party orphan scripts back to their
+canonical operational paths:
+
+- `scripts/build_contest_submission_packet.py`
+- `scripts/q_faithful_snapshot_loop.py`
+
+Both files were recovered from verified first-party git blobs after the
+filter-repo cleanup left only pyc recovery stubs/orphans. They are not public
+submission fragments: existing ledgers cite these exact canonical paths for
+submission-packet hardening and Q-FAITHFUL exact-screen contracts, so keeping
+them in orphan intake would preserve signal in the wrong place.
+
+Recovery scope and guardrails:
+
+- `build_contest_submission_packet.py` restores deterministic packet
+  manifests, archive-integrity checks, runtime-directory copying, and
+  non-score checklist generation.
+- `q_faithful_snapshot_loop.py` restores bounded checkpoint snapshot export,
+  runtime SHA custody, QZS3/QZS4/Torch-FP4 snapshot packing, and exact-screen
+  command scaffolding.
+- Added `src/tac/tests/test_recovered_operational_scripts_20260506.py` so
+  both scripts must remain importable real modules, expose CLI help, and not
+  regress to pyc-recovery stubs. The Q-FAITHFUL test also verifies the current
+  runtime SHA contract resolves all referenced repo files.
+
+Verification:
+
+- `.venv/bin/python -m py_compile scripts/build_contest_submission_packet.py
+  scripts/q_faithful_snapshot_loop.py
+  src/tac/tests/test_recovered_operational_scripts_20260506.py` passed.
+- `.venv/bin/python scripts/build_contest_submission_packet.py --help` passed.
+- `.venv/bin/python scripts/q_faithful_snapshot_loop.py --help` passed.
+- `.venv/bin/python -m pytest
+  src/tac/tests/test_recovered_operational_scripts_20260506.py -q` ->
+  `2 passed`.
+- Local import check confirmed
+  `q_faithful_snapshot_loop.source_runtime_shas(Path.cwd())` resolves 11
+  runtime source files.
+
+Expected post-commit state: the non-strict orphan recovery audit should report
+`modified_missing_canonical_count=0`, `shadowed_modified_count=0`, and
+`missing_canonical_count=0`; any remaining dirty state should be unrelated
+nested public-PR gitlinks, Kaggle raw custody, or active Lightning artifacts.
