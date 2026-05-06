@@ -17,6 +17,7 @@ from tac.pr86_hpac_codec import (
     _categorical_from_probs,
     _group_masks,
     _normalize_probability_row,
+    analyze_pr86_hpac_entropy_contract,
     collect_dependency_report,
     decode_gzip_torch_member,
     decode_meta_member,
@@ -280,6 +281,30 @@ def test_real_pr86_probability_matrix_is_local_only() -> None:
     assert report["dispatch_allowed"] is False
     assert report["passed_variants"] == []
     assert report["variant_results"][0]["failure_reason"] == "hpac_entropy_decode_contract_mismatch"
+    assert report["variant_results"][0]["failure_context"]["group"] == 10
+
+
+@pytest.mark.skipif(
+    not DEFAULT_PR91_ARCHIVE.parents[1].joinpath("public_pr86_intake_20260504_codex/archive.zip").is_file(),
+    reason="public PR86 archive not present",
+)
+def test_real_pr86_entropy_contract_analysis_classifies_auth_eval_failure() -> None:
+    pr86_archive = DEFAULT_PR91_ARCHIVE.parents[1] / "public_pr86_intake_20260504_codex" / "archive.zip"
+
+    report = analyze_pr86_hpac_entropy_contract(
+        pr86_archive,
+        variants=("source_float64_perfect_false",),
+    )
+
+    assert report["status"] == "not_locally_contest_validated_entropy_contract_mismatch"
+    assert report["score_claim"] is False
+    assert report["dispatch_allowed"] is False
+    assert report["classification"]["local_exact_validated"] is False
+    assert report["classification"]["entropy_failure_variants"] == ["source_float64_perfect_false"]
+    assert "hpac_entropy_decode_contract_mismatch" in report["classification"]["auth_failure_kinds"]
+    assert report["classification"]["contest_compliance_position"] == (
+        "external_leaderboard_claim_not_promotable_until_auth_eval_passes"
+    )
 
 
 def test_pr86_group_masks_match_public_pr91_failure_geometry() -> None:

@@ -80,6 +80,12 @@ DEFAULT_FULL_REENCODE = (
 DEFAULT_TOKEN_ANATOMY = DEFAULT_PR86_DIR / "pr86_hpac_token_anatomy_forensics.json"
 DEFAULT_PR85_PROBE = DEFAULT_PR86_DIR / "pr86_hpac_pr85_qma9_parity_probe.json"
 DEFAULT_PR_VIEW = DEFAULT_PR86_DIR / "pr86_view.json"
+DEFAULT_PR86_EXACT_EVAL_LOGS = (
+    REPO_ROOT
+    / "experiments/results/lightning_batch/exact_eval_public_pr86_hpac_t4_hedge_20260504T0152Z/auth_eval.log",
+    REPO_ROOT
+    / "experiments/results/lightning_batch/exact_eval_public_pr86_hpac_t4_retry1_20260504T0213Z/auth_eval.log",
+)
 
 EXPECTED_PR86_ARCHIVE_BYTES = 207579
 EXPECTED_PR86_ARCHIVE_SHA256 = (
@@ -1303,6 +1309,7 @@ def run_pr86_hpac_probability_variant_matrix(
                 "status": result["status"],
                 "failure_stage": result.get("failure_stage"),
                 "failure_reason": result.get("failure_reason"),
+                "failure_context": result.get("failure_context", {}),
                 "decoded_frames": result.get("hpac_decode", {}).get("decoded_frames"),
                 "decoded_tokens_sha256": result.get("hpac_decode", {})
                 .get("tokens", {})
@@ -1324,6 +1331,110 @@ def run_pr86_hpac_probability_variant_matrix(
             "variants": list(variants),
             "passed_variants": passed,
             "variant_results": rows,
+            "elapsed_sec": round(time.time() - started_at, 3),
+        }
+    )
+
+
+def _summarize_pr86_auth_eval_log(path: Path) -> dict[str, Any]:
+    row: dict[str, Any] = {"path": repo_rel(path), "exists": path.is_file()}
+    if not path.is_file():
+        return row
+    text = path.read_text(encoding="utf-8", errors="replace")
+    row.update(
+        {
+            "bytes": path.stat().st_size,
+            "sha256": sha256_bytes(text.encode("utf-8", errors="replace")),
+            "archive_sha256": None,
+            "inflate_returncode": None,
+            "failure_kind": None,
+            "failure_summary": None,
+            "leaderboard_score_claim": False,
+        }
+    )
+    for line in text.splitlines():
+        if "archive sha256:" in line:
+            row["archive_sha256"] = line.rsplit(":", 1)[-1].strip()
+        if "[inflate] returncode=" in line:
+            row["inflate_returncode"] = line.split("[inflate] returncode=", 1)[1].split()[0]
+        if "UNKNOWN file types in archive" in line:
+            row["failure_kind"] = "archive_member_whitelist_failure"
+            row["failure_summary"] = line.strip()
+        if "Tried to decode from compressed data that is invalid" in line:
+            row["failure_kind"] = "hpac_entropy_decode_contract_mismatch"
+            row["failure_summary"] = line.strip()
+        if "Final score:" in line:
+            row["leaderboard_score_claim"] = True
+    if row["failure_kind"] is None and "RuntimeError: [inflate] FAILED" in text:
+        row["failure_kind"] = "inflate_failed"
+        row["failure_summary"] = "RuntimeError: [inflate] FAILED"
+    row["contest_auth_eval_passed"] = row["failure_kind"] is None and "RESULT_JSON:" in text
+    return row
+
+
+def analyze_pr86_hpac_entropy_contract(
+    archive: Path = DEFAULT_PR86_ARCHIVE,
+    *,
+    variants: tuple[str, ...] = ("source_float64_perfect_false",),
+    exact_eval_logs: tuple[Path, ...] = DEFAULT_PR86_EXACT_EVAL_LOGS,
+    max_frames: int | None = 1,
+) -> dict[str, Any]:
+    """Classify the PR86 HPAC entropy-contract blocker from local evidence."""
+
+    started_at = time.time()
+    matrix = run_pr86_hpac_probability_variant_matrix(
+        archive,
+        variants=variants,
+        source_dir=None,
+        max_frames=max_frames,
+        attempt_reencode=False,
+    )
+    log_rows = [_summarize_pr86_auth_eval_log(Path(path)) for path in exact_eval_logs]
+    entropy_failures = [
+        row for row in matrix["variant_results"]
+        if row.get("failure_reason") == "hpac_entropy_decode_contract_mismatch"
+    ]
+    auth_failures = [row for row in log_rows if row.get("failure_kind")]
+    local_exact_validated = any(row.get("contest_auth_eval_passed") for row in log_rows)
+    if local_exact_validated:
+        classification = "contest_auth_eval_validated"
+    elif entropy_failures and any(
+        row.get("failure_kind") == "hpac_entropy_decode_contract_mismatch"
+        for row in auth_failures
+    ):
+        classification = "not_locally_contest_validated_entropy_contract_mismatch"
+    elif auth_failures:
+        classification = "not_locally_contest_validated_infra_or_archive_failure"
+    elif entropy_failures:
+        classification = "local_prefix_entropy_contract_mismatch"
+    else:
+        classification = "indeterminate"
+    return _jsonable(
+        {
+            "schema": "pr86_hpac_entropy_contract_analysis_v1",
+            "tool": "tac.pr86_hpac_codec.analyze_pr86_hpac_entropy_contract",
+            "recorded_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+            "status": classification,
+            "score_claim": False,
+            "dispatch_allowed": False,
+            "archive": repo_rel(Path(archive)),
+            "probability_matrix": matrix,
+            "exact_eval_logs": log_rows,
+            "classification": {
+                "local_exact_validated": local_exact_validated,
+                "entropy_failure_variants": [row["variant"] for row in entropy_failures],
+                "auth_failure_kinds": [row.get("failure_kind") for row in auth_failures],
+                "contest_compliance_position": (
+                    "external_leaderboard_claim_not_promotable_until_auth_eval_passes"
+                    if not local_exact_validated
+                    else "local_auth_eval_passed"
+                ),
+                "next_actions": [
+                    "Diff the submitted runtime/dependency path against the environment that produced the PR body score.",
+                    "Recover a token source or encoder contract that crosses frame 0 group 10 symbol 191.",
+                    "Do not port PR86/PR91 HPAC into dispatchable stacks until full decode and reencode parity pass.",
+                ],
+            },
             "elapsed_sec": round(time.time() - started_at, 3),
         }
     )

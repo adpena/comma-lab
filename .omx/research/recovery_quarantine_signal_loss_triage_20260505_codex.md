@@ -4710,3 +4710,48 @@ Verification:
 
 - `.venv/bin/python -m pytest src/tac/tests/test_pr86_hpac_codec.py -q` ->
   `12 passed`.
+
+## R68 - 2026-05-06 PR86 Entropy Contract Classification
+
+Recovered a canonical analyzer for the PR86 HPAC entropy-contract blocker.
+The analyzer combines local probability-variant prefix replay with local T4
+`contest_auth_eval.py` logs, so PR86 compliance and stackability are classified
+from structured evidence instead of PR-body claims.
+
+Updated:
+
+- `src/tac/pr86_hpac_codec.py`
+- `src/tac/tests/test_pr86_hpac_codec.py`
+
+Recovered contracts:
+
+- `analyze_pr86_hpac_entropy_contract(...)` emits a local-only report with
+  probability-matrix results, exact-eval log summaries, and a compliance
+  classification;
+- exact-eval log summaries distinguish the earlier archive-whitelist failure
+  from the later inflate-time HPAC entropy failure;
+- probability-variant rows now preserve `failure_context` including frame,
+  group, symbol-in-group, and decoded-symbol count.
+
+Current classification for the public PR86 archive:
+
+- `status = not_locally_contest_validated_entropy_contract_mismatch`;
+- entropy failure variant: `source_float64_perfect_false`;
+- local auth-eval failure kinds:
+  `archive_member_whitelist_failure`,
+  `hpac_entropy_decode_contract_mismatch`;
+- compliance position:
+  `external_leaderboard_claim_not_promotable_until_auth_eval_passes`.
+
+This does not say the public leaderboard entry is impossible or false. It says
+our local custody does not have A/A++ evidence for PR86 or PR91-derived HPAC,
+and the next scientific task is runtime/dependency-token-contract recovery,
+not dispatch.
+
+Verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_pr86_hpac_codec.py -q` ->
+  `13 passed`.
+- Direct analyzer smoke reported PR86
+  `not_locally_contest_validated_entropy_contract_mismatch` and preserved the
+  frame-0 group-10 symbol-191 failure context.
