@@ -40,18 +40,19 @@ def build_wavelet_apply_gate(
     if required_component_margin < 0:
         raise HnervWaveletApplyGateError("required_component_margin must be non-negative")
     stacked = dict(stacked_metadata or {})
-    # Round 2 R2-2 fix (2026-05-06, 88% confidence): the
-    # `build_wavelet_apply_transform_candidate` manifest renames the byte-delta
-    # key to `candidate_archive_byte_delta_vs_source_estimate` (per Round 1
-    # BUG #2 advisory tagging). When the gate is fed an apply_transform
-    # manifest instead of a sidechannel manifest, the historical key is
-    # missing. Read both names; prefer the historical-named key for
-    # back-compat with older sidechannel manifests, fall back to the renamed
-    # key for newer apply_transform manifests.
-    candidate_delta = _safe_int(
-        sidechannel_manifest.get("candidate_archive_byte_delta")
-        or sidechannel_manifest.get("candidate_archive_byte_delta_vs_source_estimate")
-    )
+    # Round 2 R2-2 fix (2026-05-06, 88% confidence): apply_transform manifest
+    # uses the renamed `candidate_archive_byte_delta_vs_source_estimate` key.
+    # Old sidechannel manifests use `candidate_archive_byte_delta`. Read both.
+    #
+    # Round 3 R3-A fix (2026-05-06, 92% regression): the `or` idiom is unsafe
+    # for integers because zero is falsy. A real `candidate_archive_byte_delta = 0`
+    # (valid: wavelet transform produces same-size archive) was silently
+    # dropped to the fallback key. Use explicit `is None` so the primary key's
+    # zero is preserved.
+    _byte_delta_raw = sidechannel_manifest.get("candidate_archive_byte_delta")
+    if _byte_delta_raw is None:
+        _byte_delta_raw = sidechannel_manifest.get("candidate_archive_byte_delta_vs_source_estimate")
+    candidate_delta = _safe_int(_byte_delta_raw)
     stacked_delta = _safe_int(stacked.get("delta_bytes_vs_pr106_zip"))
     archive_byte_delta = stacked_delta if stacked_delta is not None else candidate_delta
     if archive_byte_delta is None:
@@ -60,10 +61,18 @@ def build_wavelet_apply_gate(
     sidechannel_bytes = _safe_int(sidechannel_manifest.get("wavelet_sidechannel_bytes"))
     decoded = sidechannel_manifest.get("decoded_wavelet_sidechannel")
     decoded_atoms = _decoded_atom_count(decoded)
-    runtime_proof = stacked.get("wavelet_runtime_consumption_proof") or sidechannel_manifest.get(
-        "runtime_consumption_proof"
-    )
-    runtime_mode = stacked.get("wavelet_runtime_mode") or "candidate_sidechannel_only"
+    # Round 3 R3-B fix (2026-05-06, 85% confidence): use explicit `is None`
+    # guards instead of `or` for both runtime_proof and runtime_mode. Same
+    # antipattern class as R2-2: `or` discards falsy-but-valid values
+    # (empty mapping, empty string). For runtime_proof, an empty dict {} is
+    # falsy but is a real proof object; for runtime_mode, future valid modes
+    # could be falsy strings.
+    runtime_proof = stacked.get("wavelet_runtime_consumption_proof")
+    if runtime_proof is None:
+        runtime_proof = sidechannel_manifest.get("runtime_consumption_proof")
+    runtime_mode = stacked.get("wavelet_runtime_mode")
+    if runtime_mode is None:
+        runtime_mode = "candidate_sidechannel_only"
     rate_score_delta = 25.0 * float(archive_byte_delta) / float(CONTEST_ORIGINAL_BYTES)
     break_even_score = max(0.0, rate_score_delta) + float(required_component_margin)
     min_seg_dist_reduction = break_even_score / 100.0
@@ -182,8 +191,15 @@ def _dispatch_blockers(
         blockers.append("sidechannel_manifest_score_claim_not_false")
     if stacked_metadata and stacked_metadata.get("score_claim") is not False:
         blockers.append("stacked_metadata_score_claim_not_false")
-    if break_even_score <= 0:
-        blockers.append("missing_positive_break_even_target")
+    # Round 3 R3-C fix (2026-05-06, 82% confidence): `<= 0` was wrong. A
+    # zero break-even score is the most permissive valid case — it means
+    # zero rate penalty (wavelet transform produced same-size archive) and
+    # zero required margin, so any positive component improvement clears
+    # the gate. Block only on negative break-even, which is mathematically
+    # impossible given `max(0.0, rate_score_delta) + max(0, margin)` but
+    # documents the invariant.
+    if break_even_score < 0:
+        blockers.append("invalid_negative_break_even_target")
     return list(dict.fromkeys(blockers))
 
 

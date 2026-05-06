@@ -38,15 +38,41 @@ _ORIGINAL_READ_BYTES = Path.read_bytes
 
 
 def _cached_rglob(self: Path, pattern: str, *args, **kwargs):  # type: ignore[override]
-    """Cached `Path.rglob` — preserves return shape (a generator-like)."""
+    """Cached `Path.rglob` — preserves return shape (a generator-like).
+
+    Round 3 R3-D fix (2026-05-06, 80% confidence): if the original rglob
+    raises (PermissionError, OSError, FileNotFoundError on broken symlink),
+    don't poison the cache and re-validate path existence before serving a
+    cached entry. Stale entries from deleted directories can otherwise be
+    served for the rest of the preflight run.
+    """
     # Only cache the simple .rglob("*.py")-style call; pass through anything fancier
     # to avoid changing semantics for hidden args.
     if args or kwargs:
         return _ORIGINAL_RGLOB(self, pattern, *args, **kwargs)
-    key = (str(self.resolve()), pattern)
+    try:
+        resolved = str(self.resolve())
+    except (FileNotFoundError, OSError):
+        # Path can't be resolved — pass through to original which will raise
+        # a meaningful error rather than caching a None key.
+        return _ORIGINAL_RGLOB(self, pattern)
+    key = (resolved, pattern)
     cached = _RGLOB_CACHE.get(key)
+    if cached is not None:
+        # R3-D: re-validate the directory still exists. If not, drop the
+        # stale entry and re-walk. Empty-result walks are still cached as [].
+        try:
+            if not self.exists():
+                _RGLOB_CACHE.pop(key, None)
+                cached = None
+        except OSError:
+            cached = None
     if cached is None:
-        cached = list(_ORIGINAL_RGLOB(self, pattern))
+        # R3-D: don't cache on exception. Let it propagate; next call retries.
+        try:
+            cached = list(_ORIGINAL_RGLOB(self, pattern))
+        except Exception:
+            raise
         _RGLOB_CACHE[key] = cached
     # Callers iterate; returning the list is fine since rglob's contract
     # is "iterable of Path".
