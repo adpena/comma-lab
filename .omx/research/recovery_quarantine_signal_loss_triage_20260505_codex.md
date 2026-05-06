@@ -5423,6 +5423,54 @@ Verification:
 - `.venv/bin/python tools/all_lanes_preflight.py` passed:
   `ALL 20 PREFLIGHT CHECKS PASSED`.
 
+## R84 - 2026-05-06 Leaderboard Poll IO Lowering
+
+Continued the Gate #7 lowering tranche on the leaderboard-move detector. This
+hardens the monitoring path that should detect frontier shifts quickly while
+preserving score-column hashing semantics and race-mode behavior.
+
+Changes:
+
+- Migrated `tools/leaderboard_poll.py` from a manual repo-root parent probe to
+  `tools.tool_bootstrap.repo_root_from_tool` plus `ensure_repo_imports`.
+- Migrated leaderboard state writes to `tac.repo_io.write_json`.
+- Migrated state reads to `tac.repo_io.read_json`.
+- Migrated change-record JSONL emission to `tac.repo_io.json_line`.
+- Preserved the `gh api` README fetch path, score-column-only hash, top-3
+  snapshot schema, race flag path, and cron output contract.
+
+Measured inventory after R84:
+
+- local SHA helpers: `53`
+- local JSON dumps: `104`
+- manual `sys.path` bootstraps: `272`
+- manual repo-root parent probes: `369`
+- manual score/dispatch metadata mentions: `601`
+
+Within-tranche committed-surface deltas:
+
+- `tools/leaderboard_poll.py` local JSON dump count: `1 -> 0`
+- `tools/leaderboard_poll.py` local SHA helper count: `0 -> 0`
+- `tools/leaderboard_poll.py` manual `sys.path` bootstrap count: `0 -> 0`
+- `tools/leaderboard_poll.py` manual repo-root parent count: `1 -> 0`
+- `tools/leaderboard_poll.py` manual score/dispatch metadata count: `0 -> 0`
+
+Verification:
+
+- `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest
+  src/tac/tests/test_leaderboard_poll.py src/tac/tests/test_tool_bootstrap.py
+  src/tac/tests/test_repo_io.py src/tac/tests/test_audit_tooling_consolidation.py
+  -q` passed: `19 passed`.
+- `.venv/bin/python -m ruff check --select I,RUF100,F401,UP035,F821,E402
+  tools/leaderboard_poll.py` passed.
+- `.venv/bin/python -m py_compile tools/leaderboard_poll.py` passed.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --scan-root
+  tools/leaderboard_poll.py --format json` reported zero findings for the file.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --format json`
+  reported the measured inventory above.
+- `.venv/bin/python tools/all_lanes_preflight.py` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+
 ## R81 - 2026-05-06 Component Sensitivity Shard Merge IO Lowering
 
 Continued the Gate #7 lowering tranche on the finite-difference sensitivity

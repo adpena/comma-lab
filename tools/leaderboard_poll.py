@@ -43,7 +43,16 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO)
+
+from tac.repo_io import json_line, read_json, write_json  # noqa: E402
+
 STATE_DIR = REPO / ".omx" / "state"
 STATE_PATH = STATE_DIR / "leaderboard_state.json"
 RACE_FLAG_PATH = STATE_DIR / "RACE_MODE_ACTIVE.flag"
@@ -165,13 +174,12 @@ def hash_score_column(entries: list[LeaderboardEntry]) -> str:
 def load_state(path: Path = STATE_PATH) -> LeaderboardState | None:
     if not path.is_file():
         return None
-    raw = json.loads(path.read_text())
+    raw = read_json(path)
     return LeaderboardState(**raw)
 
 
 def save_state(state: LeaderboardState, path: Path = STATE_PATH) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(asdict(state), indent=2, sort_keys=True))
+    write_json(path, asdict(state))
 
 
 def append_change(prev: LeaderboardState | None, curr: LeaderboardState,
@@ -187,7 +195,7 @@ def append_change(prev: LeaderboardState | None, curr: LeaderboardState,
         "curr_n_entries": curr.n_entries,
     }
     with jsonl_path.open("a") as f:
-        f.write(json.dumps(record) + "\n")
+        f.write(json_line(record))
 
 
 def touch_race_flag(path: Path = RACE_FLAG_PATH) -> None:
