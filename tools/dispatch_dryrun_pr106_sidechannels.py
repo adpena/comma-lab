@@ -206,6 +206,9 @@ BUILDER_SPECS: tuple[BuilderSpec, ...] = (
             "--pr106-archive",
             "--out-dir",
             "--search-mode",
+            "--basis-npy",
+            "--coeffs-npy",
+            "--artifact-manifest",
             "--K",
             "--low-h",
             "--low-w",
@@ -218,6 +221,7 @@ BUILDER_SPECS: tuple[BuilderSpec, ...] = (
             "--pr106-archive",
             "--out-dir",
             "--search-mode",
+            "artifact",
             "gradient/brute_force",
         ),
         real_mode_guard_functions=(

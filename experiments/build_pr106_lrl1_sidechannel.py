@@ -66,6 +66,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import io
+import json
 import struct
 import sys
 import zipfile
@@ -191,6 +192,87 @@ SEARCH_MODES = {
     "gradient": _gradient_search_stub,
     "brute_force": _brute_force_search_stub,
 }
+SEARCH_MODE_CHOICES = ("zero", "artifact", "gradient", "brute_force")
+
+
+def load_lrl1_artifact_arrays(
+    basis_npy: Path,
+    coeffs_npy: Path,
+    *,
+    K: int,
+    low_h: int,
+    low_w: int,
+    n_frames: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    basis = np.load(basis_npy, allow_pickle=False)
+    coeffs = np.load(coeffs_npy, allow_pickle=False)
+    if basis.dtype != np.int8:
+        raise TypeError(f"basis artifact must be int8, got {basis.dtype}")
+    if coeffs.dtype != np.int8:
+        raise TypeError(f"coeffs artifact must be int8, got {coeffs.dtype}")
+    if basis.shape != (K, low_h, low_w):
+        raise ValueError(
+            f"basis artifact shape mismatch: expected {(K, low_h, low_w)}, got {basis.shape}"
+        )
+    if coeffs.shape != (n_frames, K):
+        raise ValueError(
+            f"coeffs artifact shape mismatch: expected {(n_frames, K)}, got {coeffs.shape}"
+        )
+    return basis.astype(np.int8, copy=False), coeffs.astype(np.int8, copy=False)
+
+
+def validate_lrl1_artifact_manifest(
+    manifest_path: Path,
+    *,
+    basis_npy: Path,
+    coeffs_npy: Path,
+    pr106_archive: Path,
+    K: int,
+    low_h: int,
+    low_w: int,
+    n_frames: int,
+    basis_step: float,
+    coeff_step: float,
+) -> dict[str, object]:
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"LRL1 artifact manifest is not valid JSON: {exc}") from exc
+    if not isinstance(manifest, dict):
+        raise ValueError("LRL1 artifact manifest must be a JSON object")
+    if manifest.get("manifest_schema") != "pr106_lrl1_artifact_manifest_v1":
+        raise ValueError("LRL1 artifact manifest_schema mismatch")
+    if manifest.get("score_claim") is not False:
+        raise ValueError("LRL1 artifact manifest must keep score_claim=false")
+    if manifest.get("ready_for_builder") is not True:
+        raise ValueError("LRL1 artifact manifest must have ready_for_builder=true")
+    if manifest.get("source_archive_sha256") != sha256_file(pr106_archive):
+        raise ValueError("LRL1 artifact manifest source_archive_sha256 mismatch")
+    if manifest.get("basis_npy_sha256") != sha256_file(basis_npy):
+        raise ValueError("LRL1 artifact manifest basis_npy_sha256 mismatch")
+    if manifest.get("coeffs_npy_sha256") != sha256_file(coeffs_npy):
+        raise ValueError("LRL1 artifact manifest coeffs_npy_sha256 mismatch")
+    if manifest.get("K") != int(K):
+        raise ValueError("LRL1 artifact manifest K mismatch")
+    if manifest.get("low_h") != int(low_h):
+        raise ValueError("LRL1 artifact manifest low_h mismatch")
+    if manifest.get("low_w") != int(low_w):
+        raise ValueError("LRL1 artifact manifest low_w mismatch")
+    if manifest.get("n_frames") != int(n_frames):
+        raise ValueError("LRL1 artifact manifest n_frames mismatch")
+    if manifest.get("basis_shape") != [int(K), int(low_h), int(low_w)]:
+        raise ValueError("LRL1 artifact manifest basis_shape mismatch")
+    if manifest.get("coeffs_shape") != [int(n_frames), int(K)]:
+        raise ValueError("LRL1 artifact manifest coeffs_shape mismatch")
+    if float(manifest.get("basis_step", float("nan"))) != float(basis_step):
+        raise ValueError("LRL1 artifact manifest basis_step mismatch")
+    if float(manifest.get("coeff_step", float("nan"))) != float(coeff_step):
+        raise ValueError("LRL1 artifact manifest coeff_step mismatch")
+    if manifest.get("ready_for_exact_eval_dispatch") is True:
+        raise ValueError("LRL1 artifact manifest must not claim exact-eval dispatch readiness")
+    if manifest.get("dispatch_attempted") is True or manifest.get("remote_jobs_dispatched") is True:
+        raise ValueError("LRL1 artifact manifest must not mark dispatch attempted")
+    return manifest
 
 
 def main() -> int:
@@ -199,9 +281,16 @@ def main() -> int:
                         help="Path to PR106 packed archive.zip (anchor).")
     parser.add_argument("--out-dir", type=Path, required=True,
                         help="Output directory for built archive + metadata.")
-    parser.add_argument("--search-mode", choices=list(SEARCH_MODES.keys()), default="zero",
+    parser.add_argument("--search-mode", choices=SEARCH_MODE_CHOICES, default="zero",
                         help="Sidechannel search strategy. zero = CPU smoke wire-format only; "
+                             "artifact = reduce precomputed int8 basis/coeff artifacts; "
                              "gradient/brute_force = CUDA scorer required (raises if invoked here).")
+    parser.add_argument("--basis-npy", type=Path, default=None,
+                        help="Required for --search-mode artifact. Int8 shape (K, low_h, low_w).")
+    parser.add_argument("--coeffs-npy", type=Path, default=None,
+                        help="Required for --search-mode artifact. Int8 shape (n_frames, K).")
+    parser.add_argument("--artifact-manifest", type=Path, default=None,
+                        help="Required for --search-mode artifact; validates source/artifact custody.")
     parser.add_argument("--K", type=int, default=4,
                         help="Basis component count per frame (1..255). Default 4 (sweet spot).")
     parser.add_argument("--low-h", type=int, default=48,
@@ -228,11 +317,56 @@ def main() -> int:
     print(f"[build-lrl1] pr106 archive: {pr106_size} bytes")
 
     n_frames = args.n_pairs * 2
-    search_fn = SEARCH_MODES[args.search_mode]
     print(f"[build-lrl1] search-mode={args.search_mode}, K={args.K}, "
           f"basis={args.low_h}x{args.low_w}, n_frames={n_frames}, "
           f"coeff_step={args.coeff_step}, basis_step={args.basis_step}")
-    basis_int8, coeffs_int8 = search_fn(args.K, args.low_h, args.low_w, n_frames)
+    artifact_metadata: dict[str, object] | None = None
+    if args.search_mode == "artifact":
+        if args.basis_npy is None:
+            raise SystemExit("--basis-npy is required when --search-mode artifact")
+        if args.coeffs_npy is None:
+            raise SystemExit("--coeffs-npy is required when --search-mode artifact")
+        if args.artifact_manifest is None:
+            raise SystemExit("--artifact-manifest is required when --search-mode artifact")
+        basis_int8, coeffs_int8 = load_lrl1_artifact_arrays(
+            args.basis_npy,
+            args.coeffs_npy,
+            K=args.K,
+            low_h=args.low_h,
+            low_w=args.low_w,
+            n_frames=n_frames,
+        )
+        artifact_manifest = validate_lrl1_artifact_manifest(
+            args.artifact_manifest,
+            basis_npy=args.basis_npy,
+            coeffs_npy=args.coeffs_npy,
+            pr106_archive=args.pr106_archive,
+            K=args.K,
+            low_h=args.low_h,
+            low_w=args.low_w,
+            n_frames=n_frames,
+            basis_step=args.basis_step,
+            coeff_step=args.coeff_step,
+        )
+        artifact_metadata = {
+            "basis_npy_path": str(args.basis_npy),
+            "basis_npy_bytes": int(args.basis_npy.stat().st_size),
+            "basis_npy_sha256": sha256_file(args.basis_npy),
+            "coeffs_npy_path": str(args.coeffs_npy),
+            "coeffs_npy_bytes": int(args.coeffs_npy.stat().st_size),
+            "coeffs_npy_sha256": sha256_file(args.coeffs_npy),
+            "artifact_manifest_path": str(args.artifact_manifest),
+            "artifact_manifest_sha256": sha256_file(args.artifact_manifest),
+            "artifact_manifest_schema": artifact_manifest.get("manifest_schema"),
+            "artifact_manifest_validated": True,
+            "artifact_required_provenance": (
+                "LRL1 artifact arrays must be generated against the exact source archive; "
+                "this builder only reduces them into charged bytes."
+            ),
+        }
+    else:
+        search_fn = SEARCH_MODES[args.search_mode]
+        basis_int8, coeffs_int8 = search_fn(args.K, args.low_h, args.low_w, n_frames)
     if basis_int8.dtype != np.int8 or basis_int8.shape != (args.K, args.low_h, args.low_w):
         raise RuntimeError(
             f"search_fn returned bad basis shape/dtype: shape={basis_int8.shape}, "
@@ -327,7 +461,14 @@ def main() -> int:
         "lr01_brotli_bytes": len(lr01_blob),
         "outer_dispatch_magic": f"0x{LRL1_MAGIC_BYTE:02X}",
         "lr01_mode_id": int(SIDECHANNEL_MODE_LRL1),
-        "tag": "[advisory only]" if args.search_mode == "zero" else "[design-validation]",
+        "artifact": artifact_metadata,
+        "tag": (
+            "[advisory only]"
+            if args.search_mode == "zero"
+            else "[artifact-reduction]"
+            if args.search_mode == "artifact"
+            else "[design-validation]"
+        ),
         "council_status": (
             "PROPOSAL — pre-registered at L1; gated on lane_pr106_latent_sidecar AND "
             "lane_pr106_yshift_sidechannel BOTH winning empirically (3rd stack-on)"

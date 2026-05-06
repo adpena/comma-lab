@@ -21,6 +21,7 @@ which are CUDA-independent.
 from __future__ import annotations
 
 import struct
+import json
 import subprocess
 import sys
 import zipfile
@@ -413,6 +414,162 @@ def test_builder_zero_mode_metadata_is_fail_closed(tmp_path):
     assert metadata["source_archive_sha256"] == sha256_file(PR106_ARCHIVE)
     assert "requires_real_cuda_lrl1_search" in metadata["dispatch_blockers"]
     assert "requires_exact_cuda_auth_eval_on_built_archive" in metadata["dispatch_blockers"]
+
+
+def test_builder_artifact_mode_writes_fail_closed_metadata(tmp_path):
+    """Artifact-mode LRL1 emits charged bytes from precomputed arrays without score claims."""
+    if not PR106_ARCHIVE.is_file():
+        pytest.skip(f"PR106 anchor not present at {PR106_ARCHIVE}")
+    K, low_h, low_w, n_pairs = 2, 8, 8, 2
+    n_frames = n_pairs * 2
+    basis = np.zeros((K, low_h, low_w), dtype=np.int8)
+    basis[0, 0, 0] = 7
+    coeffs = np.zeros((n_frames, K), dtype=np.int8)
+    coeffs[0, 0] = 3
+    basis_path = tmp_path / "basis.npy"
+    coeffs_path = tmp_path / "coeffs.npy"
+    np.save(basis_path, basis, allow_pickle=False)
+    np.save(coeffs_path, coeffs, allow_pickle=False)
+    manifest_path = tmp_path / "artifact_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "manifest_schema": "pr106_lrl1_artifact_manifest_v1",
+                "score_claim": False,
+                "ready_for_builder": True,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "remote_jobs_dispatched": False,
+                "source_archive_sha256": sha256_file(PR106_ARCHIVE),
+                "basis_npy_sha256": sha256_file(basis_path),
+                "coeffs_npy_sha256": sha256_file(coeffs_path),
+                "K": K,
+                "low_h": low_h,
+                "low_w": low_w,
+                "n_frames": n_frames,
+                "basis_shape": [K, low_h, low_w],
+                "coeffs_shape": [n_frames, K],
+                "basis_step": 1.0,
+                "coeff_step": 1.0,
+            }
+        ),
+        encoding="utf-8",
+    )
+    out_dir = tmp_path / "out"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "experiments/build_pr106_lrl1_sidechannel.py"),
+            "--pr106-archive",
+            str(PR106_ARCHIVE),
+            "--out-dir",
+            str(out_dir),
+            "--search-mode",
+            "artifact",
+            "--basis-npy",
+            str(basis_path),
+            "--coeffs-npy",
+            str(coeffs_path),
+            "--artifact-manifest",
+            str(manifest_path),
+            "--K",
+            str(K),
+            "--low-h",
+            str(low_h),
+            "--low-w",
+            str(low_w),
+            "--n-pairs",
+            str(n_pairs),
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    metadata = read_json(out_dir / "build_metadata.json")
+    assert metadata["score_claim"] is False
+    assert metadata["ready_for_exact_eval_dispatch"] is False
+    assert metadata["search_mode"] == "artifact"
+    assert metadata["tag"] == "[artifact-reduction]"
+    assert metadata["artifact"]["artifact_manifest_validated"] is True
+    assert metadata["artifact"]["basis_npy_sha256"] == sha256_file(basis_path)
+
+    with zipfile.ZipFile(out_dir / "pr106_lrl1_sidechannel_archive.zip") as z:
+        payload = z.read("0.bin")
+    _, _, _, sc = _load_inflate().parse_lrl1_archive(payload)
+    assert sc is not None
+    assert np.array_equal(sc["basis"], basis)
+    assert np.array_equal(sc["coeffs"], coeffs)
+
+
+def test_lrl1_artifact_manifest_validation_rejects_source_drift(tmp_path):
+    if not PR106_ARCHIVE.is_file():
+        pytest.skip(f"PR106 anchor not present at {PR106_ARCHIVE}")
+    builder = _load_builder()
+    K, low_h, low_w, n_frames = 2, 8, 8, 4
+    basis_path = tmp_path / "basis.npy"
+    coeffs_path = tmp_path / "coeffs.npy"
+    np.save(basis_path, np.zeros((K, low_h, low_w), dtype=np.int8), allow_pickle=False)
+    np.save(coeffs_path, np.zeros((n_frames, K), dtype=np.int8), allow_pickle=False)
+    manifest_path = tmp_path / "artifact_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "manifest_schema": "pr106_lrl1_artifact_manifest_v1",
+                "score_claim": False,
+                "ready_for_builder": True,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "remote_jobs_dispatched": False,
+                "source_archive_sha256": "0" * 64,
+                "basis_npy_sha256": sha256_file(basis_path),
+                "coeffs_npy_sha256": sha256_file(coeffs_path),
+                "K": K,
+                "low_h": low_h,
+                "low_w": low_w,
+                "n_frames": n_frames,
+                "basis_shape": [K, low_h, low_w],
+                "coeffs_shape": [n_frames, K],
+                "basis_step": 1.0,
+                "coeff_step": 1.0,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="source_archive_sha256"):
+        builder.validate_lrl1_artifact_manifest(
+            manifest_path,
+            basis_npy=basis_path,
+            coeffs_npy=coeffs_path,
+            pr106_archive=PR106_ARCHIVE,
+            K=K,
+            low_h=low_h,
+            low_w=low_w,
+            n_frames=n_frames,
+            basis_step=1.0,
+            coeff_step=1.0,
+        )
+
+
+def test_lrl1_artifact_arrays_reject_wrong_dtype(tmp_path):
+    builder = _load_builder()
+    basis_path = tmp_path / "basis.npy"
+    coeffs_path = tmp_path / "coeffs.npy"
+    np.save(basis_path, np.zeros((2, 8, 8), dtype=np.float32), allow_pickle=False)
+    np.save(coeffs_path, np.zeros((4, 2), dtype=np.int8), allow_pickle=False)
+
+    with pytest.raises(TypeError, match="basis artifact must be int8"):
+        builder.load_lrl1_artifact_arrays(
+            basis_path,
+            coeffs_path,
+            K=2,
+            low_h=8,
+            low_w=8,
+            n_frames=4,
+        )
 
 
 def test_zero_search_shapes():
