@@ -82,7 +82,7 @@ prepend_paths(
     REPO_ROOT / "submissions" / "apogee_intN" / "src",
 )
 
-from tac.repo_io import json_text, sha256_file
+from tac.repo_io import json_text, sha256_bytes, sha256_file
 
 from inflate import (  # type: ignore[import-not-found]
     YSHIFT_MAGIC_BYTE,
@@ -170,6 +170,13 @@ def build_yshift_candidate_grid(radius: int = 3) -> np.ndarray:
     if not ((candidates == 0).all(axis=1)).any():
         raise AssertionError("candidate grid must include the all-zero no-op")
     return candidates.astype(np.int8)
+
+
+def yshift_candidate_grid_npy_sha256(candidates: np.ndarray) -> str:
+    """Return the deterministic `.npy` SHA-256 used by the CUDA score-table manifest."""
+    raw = io.BytesIO()
+    np.save(raw, np.asarray(candidates, dtype=np.int8), allow_pickle=False)
+    return sha256_bytes(raw.getvalue())
 
 
 def choose_yshift_candidates_from_scores(
@@ -279,6 +286,10 @@ def validate_score_table_manifest(
         raise ValueError(f"score table manifest is not valid JSON: {exc}") from exc
     if not isinstance(manifest, dict):
         raise ValueError("score table manifest must be a JSON object")
+    if manifest.get("manifest_schema") != "pr106_yshift_score_table_manifest_v1":
+        raise ValueError("score table manifest_schema mismatch")
+    if manifest.get("producer") != "experiments/build_pr106_yshift_score_table.py":
+        raise ValueError("score table manifest producer mismatch")
     if manifest.get("score_claim") is not False:
         raise ValueError("score table manifest must keep score_claim=false")
     if manifest.get("ready_for_builder") is not True:
@@ -291,6 +302,11 @@ def validate_score_table_manifest(
         raise ValueError("score table manifest candidate_radius mismatch")
     if manifest.get("candidate_count") != int(candidate_count):
         raise ValueError("score table manifest candidate_count mismatch")
+    expected_grid_sha256 = yshift_candidate_grid_npy_sha256(
+        build_yshift_candidate_grid(radius=candidate_radius)
+    )
+    if manifest.get("candidate_grid_sha256") != expected_grid_sha256:
+        raise ValueError("score table manifest candidate_grid_sha256 mismatch")
     if manifest.get("n_frames") != int(n_frames):
         raise ValueError("score table manifest n_frames mismatch")
     if manifest.get("score_table_shape") != [int(n_frames), int(candidate_count)]:

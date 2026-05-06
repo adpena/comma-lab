@@ -443,12 +443,14 @@ def test_builder_score_table_mode_validates_cuda_manifest(tmp_path):
         json.dumps(
             {
                 "manifest_schema": "pr106_yshift_score_table_manifest_v1",
+                "producer": "experiments/build_pr106_yshift_score_table.py",
                 "score_claim": False,
                 "ready_for_builder": True,
                 "ready_for_exact_eval_dispatch": False,
                 "dispatch_attempted": False,
                 "remote_jobs_dispatched": False,
                 "source_archive_sha256": sha256_file(PR106_ARCHIVE),
+                "candidate_grid_sha256": builder.yshift_candidate_grid_npy_sha256(grid),
                 "score_table_npy_sha256": sha256_file(table_path),
                 "candidate_radius": 1,
                 "candidate_count": len(grid),
@@ -504,11 +506,14 @@ def test_score_table_manifest_validation_rejects_source_drift(tmp_path):
         json.dumps(
             {
                 "score_claim": False,
+                "manifest_schema": "pr106_yshift_score_table_manifest_v1",
+                "producer": "experiments/build_pr106_yshift_score_table.py",
                 "ready_for_builder": True,
                 "ready_for_exact_eval_dispatch": False,
                 "dispatch_attempted": False,
                 "remote_jobs_dispatched": False,
                 "source_archive_sha256": "0" * 64,
+                "candidate_grid_sha256": builder.yshift_candidate_grid_npy_sha256(grid),
                 "score_table_npy_sha256": sha256_file(table_path),
                 "candidate_radius": 1,
                 "candidate_count": len(grid),
@@ -521,6 +526,92 @@ def test_score_table_manifest_validation_rejects_source_drift(tmp_path):
     )
 
     with pytest.raises(ValueError, match="source_archive_sha256"):
+        builder.validate_score_table_manifest(
+            manifest_path,
+            score_table_npy=table_path,
+            pr106_archive=PR106_ARCHIVE,
+            n_frames=4,
+            candidate_radius=1,
+            candidate_count=len(grid),
+            score_step=1.0,
+        )
+
+
+def test_score_table_manifest_validation_rejects_manifest_schema_drift(tmp_path):
+    if not PR106_ARCHIVE.is_file():
+        pytest.skip(f"PR106 anchor not present at {PR106_ARCHIVE}")
+    builder = _load_builder()
+    grid = builder.build_yshift_candidate_grid(radius=1)
+    table_path = tmp_path / "cuda_score_table.npy"
+    np.save(table_path, np.zeros((4, len(grid)), dtype=np.float32))
+    manifest_path = tmp_path / "score_table_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "manifest_schema": "wrong_schema",
+                "producer": "experiments/build_pr106_yshift_score_table.py",
+                "score_claim": False,
+                "ready_for_builder": True,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "remote_jobs_dispatched": False,
+                "source_archive_sha256": sha256_file(PR106_ARCHIVE),
+                "candidate_grid_sha256": builder.yshift_candidate_grid_npy_sha256(grid),
+                "score_table_npy_sha256": sha256_file(table_path),
+                "candidate_radius": 1,
+                "candidate_count": len(grid),
+                "n_frames": 4,
+                "score_table_shape": [4, len(grid)],
+                "score_step": 1.0,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="manifest_schema"):
+        builder.validate_score_table_manifest(
+            manifest_path,
+            score_table_npy=table_path,
+            pr106_archive=PR106_ARCHIVE,
+            n_frames=4,
+            candidate_radius=1,
+            candidate_count=len(grid),
+            score_step=1.0,
+        )
+
+
+def test_score_table_manifest_validation_rejects_candidate_grid_drift(tmp_path):
+    if not PR106_ARCHIVE.is_file():
+        pytest.skip(f"PR106 anchor not present at {PR106_ARCHIVE}")
+    builder = _load_builder()
+    grid = builder.build_yshift_candidate_grid(radius=1)
+    table_path = tmp_path / "cuda_score_table.npy"
+    np.save(table_path, np.zeros((4, len(grid)), dtype=np.float32))
+    manifest_path = tmp_path / "score_table_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "manifest_schema": "pr106_yshift_score_table_manifest_v1",
+                "producer": "experiments/build_pr106_yshift_score_table.py",
+                "score_claim": False,
+                "ready_for_builder": True,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "remote_jobs_dispatched": False,
+                "source_archive_sha256": sha256_file(PR106_ARCHIVE),
+                "candidate_grid_sha256": "0" * 64,
+                "score_table_npy_sha256": sha256_file(table_path),
+                "candidate_radius": 1,
+                "candidate_count": len(grid),
+                "n_frames": 4,
+                "score_table_shape": [4, len(grid)],
+                "score_step": 1.0,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="candidate_grid_sha256"):
         builder.validate_score_table_manifest(
             manifest_path,
             score_table_npy=table_path,
