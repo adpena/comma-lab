@@ -10,11 +10,14 @@ where $\bar{d}_\text{seg}$ and $\bar{d}_\text{pose}$ are averages over all 600 p
 
 $$\bar{d}_\text{pose} = \frac{1}{600}\sum_{k=0}^{599} d_\text{pose}^{(k)}, \qquad \bar{d}_\text{seg} = \frac{1}{600}\sum_{k=0}^{599} d_\text{seg}^{(k)}$$
 
-**Definition 1 (Pair difficulty).** The *difficulty* of pair $k$ under a renderer $G_\theta$ is:
+**Definition 1 (Linearized pair difficulty).** The *difficulty* of pair $k$ under a renderer $G_\theta$ is a marginal score contribution around the current archive operating point, not a per-pair square-root score:
 
-$$\delta^{(k)}(\theta) = 100 \cdot d_\text{seg}^{(k)}(\theta) + \sqrt{10 \cdot d_\text{pose}^{(k)}(\theta)}$$
+$$\delta^{(k)}(\theta;\bar d_\text{pose}) =
+\frac{100}{600} \cdot d_\text{seg}^{(k)}(\theta)
++ \frac{1}{600}\cdot\frac{\sqrt{10}}{2\sqrt{\bar d_\text{pose}}}
+\cdot d_\text{pose}^{(k)}(\theta)$$
 
-This is the pair's marginal contribution to the score (excluding rate, which is global). The total distortion score is $\frac{1}{600}\sum_k \delta^{(k)}$.
+This is the first-order contribution to the score excluding rate, which is global. The exact contest score is $\sqrt{10\bar d_\text{pose}}$, not $\frac{1}{600}\sum_k\sqrt{10d_\text{pose}^{(k)}}$; any pair attribution used for allocation must therefore be marginal or linearized around the archive's current average pose distance.
 
 **Definition 2 (Pair hardness prior).** The *hardness prior* $h^{(k)}$ is a scalar predictor of pair difficulty computable from mask topology, camera geometry, and GT frame statistics --- without running the scorers at inflate time. We seek $h^{(k)}$ such that $\text{rank}(h^{(k)}) \approx \text{rank}(\delta^{(k)})$.
 
@@ -142,7 +145,7 @@ Instead of uniform averaging over pairs, weight the loss by difficulty:
 
 $$\mathcal{L} = \sum_{k=0}^{599} w^{(k)} \cdot \delta^{(k)}(\theta), \qquad w^{(k)} = \frac{h^{(k)}}{\sum_j h^{(j)}}$$
 
-This allocates more gradient signal to hard pairs, forcing the renderer to spend capacity where it matters most.
+This allocates more gradient signal to hard pairs, forcing the renderer to spend capacity where it matters most. In public writeups, treat any Lane-W-derived table as sanitized scorer telemetry unless the release manifest explicitly allows the internal hard-pair allocation recipe.
 
 ### 6.2 Hard-pair capacity allocation
 
@@ -182,8 +185,10 @@ the PoseNet contribution from sqrt(10*0.124)=1.115 to sqrt(10*0.002)=0.153 ---
 a 0.962 point improvement. At a postfilter cost of 0.030 rate (46KB), this is
 a net +0.932 points. This is the single highest-leverage optimization available.
 
-The difficulty map is saved as `difficulty.pt` (2.4KB, 600 float values) and
-can be bundled in the archive to enable per-pair adaptive processing at inflate time.
+Internal experiments saved difficulty maps as tensors for compression-time
+analysis. A public or contest archive may include only byte-charged, sanitized
+policy payloads with documented provenance; do not publish raw Lane W internals
+or bundle `difficulty.pt` by default.
 
 ## 8. Fridrich Loss Ablation (2026-04-23)
 

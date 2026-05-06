@@ -1,5 +1,11 @@
 # 1. Introduction
 
+> 2026-05-05 correction: the post-deadline Apogee intN prediction rows below
+> are historical forensic planning artifacts, not score evidence. Exact T4
+> Apogee int4 evaluation scored `1.4286639424744803`; all Apogee intN claims
+> require a SHA-tied distortion gate or exact positive CUDA result before they
+> can be treated as frontier candidates.
+
 The comma.ai video compression challenge asks participants to compress a 60-second driving video (1200 frames, 1164x874, HEVC) such that two frozen neural networks --- a semantic segmentation model (SegNet) and an ego-motion estimator (PoseNet) --- produce outputs as close as possible to those computed on the original. The scoring formula is
 
 $$S = 100 \cdot \bar{d}_{\text{seg}} + \sqrt{10 \cdot \bar{d}_{\text{pose}}} + 25 \cdot r$$
@@ -16,7 +22,7 @@ The challenge permits any approach: standard codecs, neural compression, generat
 
 We developed an asymmetric warp renderer --- a 287K-parameter conditional generative model that produces frame pairs from compact semantic masks. The renderer is trained end-to-end against the frozen scorers using Lagrangian annealing with hard constraints on both SegNet and PoseNet distortion, following a constrained optimization formulation inspired by Fridrich's steganalysis framework [Fridrich 2009]. At test time, we apply coupled trajectory optimization (TTO), a form of test-time adaptation that directly optimizes the generated frames through the scorer networks.
 
-Our submitted contest score is **0.2293** (PR #107 `apogee`, exact T4 A++). The current public exact frontier as of contest close is PR #106 `belt_and_suspenders` (valtterivalo) at **0.20945673**, which we replayed byte-faithfully through our adapter pipeline. The trajectory of our internal best:
+Our submitted contest score is **0.2293** (PR #107 `apogee`, exact T4 A++). The final official leaderboard winner was PR #101 at **0.193**. Separately, our strongest local public-archive replay/control after the deadline was PR #106 `belt_and_suspenders` (valtterivalo) at **0.20945673**, which we replayed byte-faithfully through our adapter pipeline. The trajectory of our internal best:
 
 | Stage | Score | Approach | Evidence |
 |-------|-------|----------|----------|
@@ -28,13 +34,13 @@ Our submitted contest score is **0.2293** (PR #107 `apogee`, exact T4 A++). The 
 | Lane G v3 (KL-distill weight 0.002 + pose TTO retry) | 1.05 | mid-cycle CUDA frontier | A++ contest-CUDA |
 | C-067 (PR67-mask + C-059 fixed-slice composite) | 0.31561703 | external-source mask attribution | A++ contest-CUDA |
 | **PR #107 `apogee` (deadline submission)** | **0.2293** | PR100-adapter lineage + Hessian-aware tweaks | A++ contest-CUDA |
-| **PR #106 `belt_and_suspenders` (current public frontier)** | **0.20945673** | external HNeRV — adapter-replayed for stress-test custody | A++ contest-CUDA |
+| **PR #106 `belt_and_suspenders` (local public replay/control)** | **0.20945673** | external HNeRV — adapter-replayed for stress-test custody | A++ contest-CUDA |
 | Lane Ω-W-V3 (water-fill v2 → PR106 decoder, local stub) | ~0.195 [prediction] | per-channel sensitivity-aware bit allocation; LOW distortion risk | stub-mode preview, awaiting CUDA |
 | Lane #04 int4 (uniform 4-bit signed block-FP, local stub) | ~0.159 [prediction] | aggressive uniform quantization; HIGH distortion risk | stub-mode preview, awaiting CUDA |
 
 The single largest historical improvement --- 0.70 to 0.43, a 38.6% reduction --- came from discovering and fixing a gradient obstruction bug. The upstream scorer's RGB-to-YUV conversion was decorated with `@torch.no_grad`, silently zeroing all PoseNet gradients during test-time optimization. Every TTO experiment before the fix was optimizing PoseNet blindly. The optimizer moved pixels that happened to reduce PoseNet loss through SegNet gradient spillover, but it could not see PoseNet's actual loss surface.
 
-The end-of-contest pivot to HNeRV-style implicit neural representations (PR95 → PR99 → PR100 → PR106) compressed all participants' work-cycle time. PR106 set the public exact frontier in the final hours; we landed at PR107 apogee 0.2293 and are post-deadline scaffolding two locally-verified sub-0.20 candidates (Lane Ω-W-V3 and Lane #04 int4) for continued exploration. See §4.0 for current frontier table; §7 for community wiki + post-deadline roadmap.
+The end-of-contest pivot to HNeRV-style implicit neural representations (PR95 → PR99 → PR100 → PR106) compressed all participants' work-cycle time. PR101 set the final official top score at 0.193; PR106 became our strongest local replay/control artifact for post-deadline analysis. We landed at PR107 apogee 0.2293 and are post-deadline scaffolding two forensic sub-0.20 planning candidates (Lane Ω-W-V3 and Lane #04 int4) for continued exploration. They are not score claims and are not dispatch-ready without exact readiness evidence. See §4.0 for current frontier table; §7 for community wiki + post-deadline roadmap.
 
 This bug was invisible to standard testing. PoseNet loss changed during optimization (because SegNet gradients moved pixels that incidentally affected PoseNet output), so nothing appeared wrong. It was caught only through adversarial review --- tracing the gradient computation graph by hand when the council demanded an explanation for why 50 steps of gradient descent made PoseNet worse, not better.
 

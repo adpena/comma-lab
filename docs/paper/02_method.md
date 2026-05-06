@@ -24,7 +24,7 @@ This design is motivated by PoseNet's evaluation protocol. PoseNet measures ego-
 
 **Parameters.** The full model has 287K parameters. Channel widths are (36, 60) for the U-Net encoder/decoder. The flow predictor outputs 5 channels (2 for flow, 1 for gate, 2 for residual corrections). Masks encode 5 semantic classes as grayscale values at 63-pixel intervals, stored as compressed video.
 
-**Quantization.** Weights are quantized to FP4 using a custom 8-level codebook $\{0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0\}$ with a sign bit, reducing the archive from ~1.1 MB (FP32) to ~150 KB. A separate Int4+LZMA2 scheme achieves 2.18 bits per weight (Section 4.19).
+**Quantization.** Weights are quantized to FP4 using a custom 8-level codebook $\{0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0\}$ with a sign bit, reducing the archive from ~1.1 MB (FP32) to ~150 KB. A separate Int4+LZMA2 scheme targets ~2.18 bits per weight; the post-deadline `apogee_intN` lane explores this end of the bit-width frontier (see Section 4.0 frontier table and Section 7.4 future work).
 
 ### 2.2.1 CLADE per-class normalization
 

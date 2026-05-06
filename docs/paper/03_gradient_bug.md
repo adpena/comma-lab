@@ -38,7 +38,7 @@ Five factors conspired to hide this bug:
 
 ## 3.4 Discovery
 
-The bug was found during an adversarial review session by the skunkworks council. The Contrarian demanded an explanation for a specific observation: 50 steps of gradient descent made PoseNet *worse*, not better. Not "didn't improve much" --- actively worse. If the optimizer has access to PoseNet gradients, it cannot make PoseNet worse on average across many steps (assuming a reasonable learning rate). That is not how gradient descent works.
+The bug was found during an adversarial review session. The Contrarian demanded an explanation for a specific observation: 50 steps of gradient descent made PoseNet *worse*, not better. Not "didn't improve much" --- actively worse. If the optimizer has access to PoseNet gradients, it cannot make PoseNet worse on average across many steps (assuming a reasonable learning rate). That is not how gradient descent works.
 
 George Hotz traced the call chain: TTO loss function $\rightarrow$ PoseNet forward pass $\rightarrow$ `preprocess_input` $\rightarrow$ `rgb_to_yuv6` $\rightarrow$ `@torch.no_grad`. The gradient highway had a toll booth that charged infinity.
 

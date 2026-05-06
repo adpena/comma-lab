@@ -88,6 +88,40 @@ history, `.omx/research` ledgers, exact-eval artifact directories, generated
 site files, and public PR/release surfaces. The public release bundle should
 therefore be a curated evidence index, not a raw dump of operator state.
 
+## postmortem: what would have bridged the gap
+
+The honest diagnosis is that Apogee had many of the right ideas before they
+won publicly, but did not lower enough of them into contest-valid bytes fast
+enough. HNeRV/NeRV, arithmetic and range coding, hard-pair water-filling,
+foveation, LA-POSE-style motion priors, scorer-targeted corrections, and
+self-compression all appeared in our research stream. The missing bridge was
+not imagination; it was an always-on compiler path from idea to deterministic
+archive to exact CUDA evidence.
+
+The writeup should say this plainly because it is the most transferable
+lesson. In this challenge, a concept became real only when it survived:
+
+```text
+idea -> typed stream -> deterministic payload -> inflate runtime
+     -> no-op control -> exact CUDA eval -> evidence ledger
+```
+
+What we would change:
+
+- keep one strict promotion lane and one risky frontier lane running in
+  parallel;
+- require every research note to name its smallest charged archive experiment;
+- deconstruct public PR blobs, comments, archives, and runtimes continuously
+  during deadline windows;
+- make dead flags, wrong-runtime adapters, MPS/CPU leakage, no-op recodes, and
+  sidecar drift fail before dispatch;
+- retire only measured implementations, not whole representation families;
+- use hard-pair, foveation, openpilot, and LA-POSE-style motion priors as
+  routing fields for charged atoms.
+
+This postmortem is expanded in `docs/postmortem_bridge_gap_20260505.md` and
+should be linked from the public site as an engineering appendix.
+
 ## research process
 
 Apogee was built over a month of AI-assisted research and engineering using

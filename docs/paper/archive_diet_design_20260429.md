@@ -158,7 +158,7 @@ across runs.
 Tarball parity for remote launches: not affected (the diet operates on
 already-built archives, not on the training/inflate code paths).
 
-CLAUDE.md non-negotiable compliance:
+Repository non-negotiable compliance:
 
 * **Strict-scorer rule:** `archive_diet.py` never imports a scorer
   module; it only operates on tensor / bytes payloads.

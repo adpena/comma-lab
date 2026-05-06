@@ -1,5 +1,14 @@
 # Operator handoff snapshot (2026-05-04 22:30)
 
+> Supersession note (2026-05-05): Apogee intN predicted bands below are
+> historical byte-only planning artifacts. Exact T4 eval of
+> `apogee_int4_postfix_sanity_20260505T172500Z` scored
+> `1.4286639424744803`, so Apogee intN is now forensic/noncanonical until a
+> SHA-tied distortion model, scorer-basin parity gate, or exact positive CUDA
+> result exists. Current local A++ frontier remains PR106 x-repack at
+> `0.20945123680571204`, which is a byte-identical custody/rate control rather
+> than a new representation advance.
+
 First operator briefing run with the fixed dashboard (commits dbb0032d +
 b3e07b24). This memo captures the **actual terminal state** of the audit-
 driven build phase. The next move is human-in-the-loop, not /loop-tick code.

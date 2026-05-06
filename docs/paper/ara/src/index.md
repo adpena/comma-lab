@@ -94,7 +94,7 @@ gated by the disclosure policy in `../PAPER.md`.
 
 ## Forbidden mutation frontier
 
-Per CLAUDE.md, the following paths are immutable for the agent:
+Per repository protocol, the following paths are immutable for the agent:
 
 - `../../../upstream/` (pinned scorer snapshot)
 - `../../../submissions/exact_current/inflate.py`

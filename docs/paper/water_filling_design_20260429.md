@@ -1,7 +1,7 @@
 # Lane Ω-W — Water-filling Lagrangian bit-budget allocator (design)
 
 **Date**: 2026-04-29
-**Author**: inner skunkworks council (Shannon LEAD + Dykstra CO-LEAD + Fridrich + Yousfi + Contrarian + Ballé + MacKay)
+**Author**: adversarial review council (Shannon LEAD + Dykstra CO-LEAD + Fridrich + Yousfi + Contrarian + Ballé + MacKay)
 **Status**: BINDING design for Session-2 implementation. No vagueness. The implementor follows this doc verbatim.
 **Predicted band**: **-0.02 to -0.04 score** vs Lane A 1.15 ([contest-CUDA] tag), i.e. ship 1.11-1.13.
 **Lane code**: `Ω-W` (water-filling). Distinct from Lane Ω-Hessian (per-WEIGHT, deferred) and Lane SO (broken Hessian fallback, retired).
@@ -78,7 +78,7 @@ After mapping continuous `b_c*` to discrete `Q_c`, compute realised total bits `
 3. Set `model.train()` and `requires_grad_(True)` for all parameters.
 4. Decode anchor masks via `decode_masks_auto(masks_mkv)` → `(N, H, W)` long mask classes.
 5. Build calibration batch: pick `K = min(64, N)` evenly-spaced frames; one-hot to `(K, 5, H, W)`.
-6. **eval_roundtrip path** (MANDATORY per CLAUDE.md): forward pass MUST go through the rendering path that includes `_eval_roundtrip_chain` — i.e. quantise to uint8, decode, recompute. Reuse `tac.segmap_renderer._eval_roundtrip_chain`.
+6. **eval_roundtrip path** (MANDATORY per repository protocol): forward pass MUST go through the rendering path that includes `_eval_roundtrip_chain` — i.e. quantise to uint8, decode, recompute. Reuse `tac.segmap_renderer._eval_roundtrip_chain`.
 7. Loss: `L_render = MSE(model_out, gt_target)` where `gt_target` is the GT video frames at calibration indices (decoded from `upstream/videos/0.mkv` via `tac.video.decode_frames` if available; fall back to mask-derived target — design accepts both, implementor picks).
 8. `L_render.backward()` → per-parameter `.grad`.
 9. For each conv weight `(O, I, kH, kW)`: aggregate per output channel:
@@ -97,7 +97,7 @@ Edge case: if `σ_c² == 0` → channel is dead, set `u_c = 0`, water-fill assig
 
 ### 2.3 Device policy
 
-CUDA-required by default. CPU opt-in via `--device cpu` with a `[CPU-FALLBACK] Hessian numerics will differ from production CUDA path` banner. **NO MPS** (CLAUDE.md non-negotiable).
+CUDA-required by default. CPU opt-in via `--device cpu` with a `[CPU-FALLBACK] Hessian numerics will differ from production CUDA path` banner. **NO MPS** (repository non-negotiable).
 
 ---
 
@@ -227,7 +227,8 @@ prints JSON summary.
 
 ### 3.4 `scripts/remote_lane_omega_w_water_filling.sh` (5-stage)
 
-Stage 0: NVDEC probe (`scripts/probe_nvdec.sh --ensure-dali`)
+Stage 0: NVDEC probe (`scripts/probe_nvdec.sh`; DALI must come from the
+canonical environment bootstrap, not silent wrapper auto-install)
 Stage 1: anchor file checks (`renderer.bin`, `masks.mkv`, `optimized_poses.pt`)
 Stage 2: load `segmap_inference.pt` from `experiments/results/lane_a_landed/iter_0/`
 Stage 3: water-filling export at THREE budgets `{360_000, 480_000, 600_000}` bits
@@ -248,7 +249,7 @@ Heartbeat every 300 s; provenance.json at start AND completion. Tarball-only par
 - [x] Lane script ends with `experiments/contest_auth_eval.py` (Check 7).
 - [x] Provenance.json with required fields (Check L: lane_id, started_at_utc, completed_at_utc, git_hash, gpu_name, archive_bytes, lane_status).
 - [x] Tarball-only parity (Check 66/67/68/69 — NO `git pull` / `git reset --hard` on remote).
-- [x] All `.py` files marked reviewed via `tools/review_tracker.py mark-file --reviewer council` AND `--reviewer codex` (2-distinct-approver gate per CLAUDE.md).
+- [x] All `.py` files marked reviewed via `tools/review_tracker.py mark-file --reviewer council` AND `--reviewer codex` (2-distinct-approver gate per repository protocol).
 - [x] Lane script carries `# E2E_SMOKE_OPT_OUT:` marker IFF tests land in same commit (Check e2e-smoke-proof).
 
 ---
@@ -293,7 +294,7 @@ Water-fill PROTECTS critical channels. Predicted PoseNet/SegNet distortion ≤ u
 - Memory: `project_lane_omega_bit_budget_hessian_aware_quantization` (per-WEIGHT Lane Ω, deferred)
 - Memory: `project_codex_theoretical_floor_brutal_20260429` (Shannon floor 0.28 — water-fill is the operational tool to close the gap)
 - Memory: `feedback_council_10_member_inner_grand_council_advisory_20260429` (council structure)
-- CLAUDE.md: eval_roundtrip / CUDA-only / 2-approver / no-scorer-at-inflate non-negotiables
+- Repository protocol: eval_roundtrip / CUDA-only / 2-approver / no-scorer-at-inflate non-negotiables
 - Module: `src/tac/block_fp_codec.py` — encode_conv_weight / pack_payload_tar_xz / verify_roundtrip
 - Module: `src/tac/learnable_bit_quant.py` — iter_eligible_conv_names + curvature pattern
 - Module: `src/tac/segmap_renderer.py` — SegMap (the model)

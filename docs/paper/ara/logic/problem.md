@@ -76,7 +76,7 @@ Two distinct paradigms, in chronological order:
 
 ## Forensic bindings
 
-- Methodology rules: `../../../CLAUDE.md`
+- Methodology rules: `../../../AGENTS.md`
 - Pinned upstream snapshot: `../../../upstream/`
 - Era 1 promoted-floor evidence: `../evidence/era1/long1000_h64_authoritative/`
 - Era 2 contest-CUDA A++ evidence:

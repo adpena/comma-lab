@@ -62,7 +62,7 @@ C-067's specific score is a small part of the project. The substantive original 
 
 - **Deterministic ZIP construction with hidden-file/resource-fork exclusion, zip-slip rejection, and scorer-load guards.** Submission archives carry their own decoder when needed; sidecar dependencies are forbidden per the contest's payload-closure standard.
 
-- **Cross-agent dispatch coordination ledger** at `.omx/state/active_lane_dispatch_claims.md` (Level 1, this work, 2026-05-01 ~23:50 UTC). Mandatory append-before-dispatch protocol prevents duplicate GPU spend between Claude and codex agents. Codified in CLAUDE.md and AGENTS.md as non-negotiable.
+- **Cross-agent dispatch coordination ledger** at `.omx/state/active_lane_dispatch_claims.md` (Level 1, this work, 2026-05-01 ~23:50 UTC). Mandatory append-before-dispatch protocol prevents duplicate GPU spend between concurrent agents. Codified in the repository operating rules as non-negotiable.
 
 - **Lane-maturity harness** with seven gates (impl_complete, real_archive_empirical, contest_cuda, strict_preflight, three_clean_review, memory_entry, deploy_runbook), CLI tooling, audit log, and STRICT preflight Check 90 enforcement. Documented at `feedback_production_hardened_standard_definition_20260430.md`.
 
@@ -196,15 +196,15 @@ Allowed wording:
 - Working notes: `reports/writeup_working.md` (live operating point + public-source handling)
 - Latest report: `reports/latest.md` (frontier table + submission pipeline)
 - Reverse-engineering memory: `reference_pr65_pr67_blob_byte_layouts_proper_reverse_engineering_20260501.md`, `reference_pr67_line_search_R_D_joint_coordinate_descent_20260501.md`
-- Council derivations: `project_grand_council_FIELDS_MEDAL_shannon_floor_obsession_20260501.md` (S_min=0.155 derivation + SJ-KL primitive), `project_grand_council_shannon_floor_eureka_session_20260501.md` (engineering pragmatism path)
+- Derivation notes: internal derivation ledgers summarized in this memo (S_min=0.155 derivation + SJ-KL primitive; engineering pragmatism path)
 - PR #67 inflate.py reference: `reports/raw/leaderboard_intel_20260501/pr67_inflate.py`
 - PR #67 archive bytes: `reports/raw/leaderboard_intel_20260501/pr67_archive.zip` (sha `a5ed8da0d9988943c986b231b4cd33cea0ab878a8e1628134341db5f7f41c765`, 276,564 bytes)
 - Lane registry + maturity harness: `tools/lane_maturity.py`, `.omx/state/lane_registry.json`
 - Cross-agent dispatch coordination ledger: `.omx/state/active_lane_dispatch_claims.md`
 
-## Strategic-secrecy posture
+## Public-release posture
 
-Per CLAUDE.md "Strategic Secrecy Rule", the C-067 attribution above is appropriate for the contest submission and the eventual paper. It does not expose unpublished private artifacts, internal training recipes beyond what is necessary to make the C-067 archive bytes reproducible from the committed C-059 lineage, or non-essential operational details. The PR #67 mask source-attribution is a paper-integrity requirement, not a competitive disclosure.
+The C-067 attribution above is appropriate for the contest submission and the eventual paper. It does not expose unpublished private artifacts, internal training recipes beyond what is necessary to make the C-067 archive bytes reproducible from the committed C-059 lineage, or non-essential operational details. The PR #67 mask source-attribution is a paper-integrity requirement, not a competitive disclosure.
 
 When the paper goes public, the bibliographic citations should include: PR #67 (`https://github.com/commaai/comma_video_compression_challenge/pull/67`, EthanYangTW), PR #55 (`https://github.com/commaai/comma_video_compression_challenge/pull/55`, Quantizr / Jimmy, UCLA CSE/Neuro), PR #65 (`https://github.com/commaai/comma_video_compression_challenge/pull/65`, henosis-us / Matt Abrahamson), and PR #56 (`https://github.com/commaai/comma_video_compression_challenge/pull/56`, szabolcs-cs / Selfcomp), with author display names as listed on each PR. The acknowledgements section should explicitly thank Quantizr for the published `inflate.py` that made the JointFrameGenerator paradigm legible to the field, and the contest organizers (comma.ai, Yassine Yousfi) for the open-PR contest format that enabled this kind of cross-contestant signal diffusion.
 </content>

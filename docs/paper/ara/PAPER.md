@@ -78,8 +78,8 @@ reproducibility contract.
   Cloudflare site, arXiv preprint, public PR) MUST NOT include items under
   `disclosure_policy.private`.
 - This artifact is generated and partially maintained by `tools/ara_compile.py`
-  which ingests `.ralph/run_log.md`, `experiments/results/**`, and the
-  topic-indexed memory under `.claude/projects/.../memory/`.
+  which ingests `.ralph/run_log.md`, `experiments/results/**`, and
+  topic-indexed project-memory summaries.
 
 ## Relationship to the legacy writeup files
 

@@ -56,3 +56,13 @@
 - do NOT expose Lane W / Lane Ω / Lane DARTS-S internals on public surfaces
 - do NOT publicize the Cloudflare site URL until human says it is time
 - arXiv / paper writeup CAN have full disclosure but coordinate timing with submission
+
+## 7. candid postmortem appendix
+
+- Core lesson: we had many of the winning ideas, but not enough of them were
+  lowered into byte-closed, exact-evaluable archives early enough.
+- Required public framing: the gap was research-to-archive conversion latency,
+  not lack of imagination.
+- Link: `docs/postmortem_bridge_gap_20260505.md`
+- Include the compiler chain:
+  `idea -> typed stream -> deterministic payload -> inflate runtime -> no-op control -> exact CUDA eval -> evidence ledger`.

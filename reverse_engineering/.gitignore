@@ -1,0 +1,29 @@
+# Keep this tree curated. Store only runbooks, manifests, and small notes here.
+# Raw public PR material belongs in ignored custody directories or external
+# artifact storage with ledger links.
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.zst
+*.xz
+*.7z
+*.pt
+*.pth
+*.safetensors
+*.npy
+*.npz
+*.raw
+*.mkv
+*.mp4
+*.mov
+*.avi
+*.log
+*.jsonl
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.git/
+source/.git/
+repo/.git/

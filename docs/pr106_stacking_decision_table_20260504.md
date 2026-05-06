@@ -1,16 +1,23 @@
 # PR106 Stacking — Decision Table (2026-05-04)
 
-Consolidates all 8 codec-applicability investigations against the current public exact frontier (PR106 `belt_and_suspenders` by @valtterivalo at `0.20945673680571203` [contest-CUDA T4 A++], 186,239 bytes). One row per investigation: empirical preview, status, predicted score band, and one-liner dispatch.
+> Supersession note (2026-05-05): Lane #04 Apogee intN entries below are
+> byte-only forensic planning rows, not launch-ready score lanes. Exact T4 eval
+> of the int4 postfix archive scored `1.4286639424744803`, proving the missing
+> distortion-model bug class for that implementation. Current tooling now
+> blocks Apogee intN dispatch unless a candidate archive has a SHA-tied
+> distortion gate, scorer-basin parity report, or exact positive CUDA evidence.
+
+Consolidates all 8 codec-applicability investigations against our strongest local public-archive replay/control (PR106 `belt_and_suspenders` by @valtterivalo at `0.20945673680571203` [contest-CUDA T4 A++], 186,239 bytes). One row per investigation: empirical preview, status, predicted score band, and dispatch-readiness notes. Historical launch recommendations below are superseded by the current fail-closed preflight gates.
 
 ## Summary
 
 | Lane | Status | Predicted [contest-CUDA] | Stub-mode preview | Distortion risk | Dispatch cost |
 |---|---|---|---|---|---|
-| Lane Ω-W-V3 (water-fill v2) | ✅ Launch-ready | [0.194, 0.204] | −22,152 bytes / −11.9% archive | LOW (per-channel sensitivity controls) | ~$0.30 / 30min Vast.ai 4090 |
-| Lane #04 int4 (uniform) | ✅ Launch-ready | [0.155, 0.180] | −76,258 bytes / −41.0% archive | HIGH (~7% rel err per weight) | ~$0.30 / 30min |
+| Lane Ω-W-V3 (water-fill v2) | Local-smoke only | [0.194, 0.204] forensic | −22,152 bytes / −11.9% archive | LOW (per-channel sensitivity controls) | blocked until real CUDA sensitivity + strict readiness |
+| Lane #04 int4 (uniform) | A-negative / blocked | [0.155, 0.180] invalidated | −76,258 bytes / −41.0% archive | HIGH (~7% rel err per weight) | exact T4 negative: `1.4286639424744803` |
 | Lane #04 int5 (sweet-spot) | ⏳ Sketch-only | [0.180, 0.196] | −34,720 bytes / −18.6% archive | MEDIUM (~3.3% rel err per weight) | needs adapter (1-tick build) |
 | Lane #04 int6 (safe) | ⏳ Sketch-only | [0.190, 0.204] | −19,500 bytes / −10.5% archive | LOW (~1.6% rel err per weight) | needs adapter (1-tick build) |
-| Lane SJ-KL C067 | ✅ Launch-ready (separate base) | (not yet predicted) | 942-byte sjkl.bin in CPU stub | LOW (additive residual) | ~$0.30 / 30min |
+| Lane SJ-KL C067 | needs current readiness recheck | (not yet predicted) | 942-byte sjkl.bin in CPU stub | LOW (additive residual) | no dispatch without lane-local GO |
 | Lane #02 arith_qint → PR106 latents | ❌ FALSIFIED | — | brotli already 24% below 0-th-order Shannon (3.76 vs 4.66 bits/byte) | — | — |
 | Lane #03 QZS3 → PR106 decoder | ❌ FALSIFIED | — | hardcoded JointFrameGenerator schema; refuses HNeRV state dict | — | — |
 | Lane #04 default block_fp (ternary) → PR106 | ❌ FALSIFIED | — | ternary {-1, 0, +1} only; destroys continuous distribution (max_err 0.5-1.0) | — | (revived as int4/5/6 above) |
@@ -34,9 +41,14 @@ Empirical from `experiments/block_fp_intN_codec_sketch.py` against PR106's 13 Co
 
 **Key observation**: int5 is the unexplored sweet spot — it lands between Lane Ω-W-V3 (LOW-risk) and Lane #04 int4 (HIGH-risk) on both bytes and distortion. With `experiments/block_fp_intN_codec_sketch.py:encode_intN_block_fp(t, bits=5)` already implemented and tested, the only missing piece is a parameterized variant of `experiments/repack_pr106_with_int4_block_fp.py` that takes `--bits N` instead of hard-coded `bits=4`. The corresponding `submissions/apogee_intN/` adapter has the same shape as `submissions/apogee_int4/` but with a different magic byte per bit-width.
 
-## Dispatch order recommendation
+## Historical dispatch order recommendation (superseded)
 
-For minimum wall-clock to a contest-CUDA score that beats 0.20946:
+The notes below record the race-window plan and are preserved as historical
+process evidence. They are not current launch instructions. Current tooling
+requires lane-local readiness output plus predispatch sanity before any GPU
+dispatch.
+
+Historical minimum-wall-clock plan to a contest-CUDA score that beats 0.20946:
 
 1. **Lane Ω-W-V3 first** ($0.30, ~30min) — lowest-risk, council-approved 8/10. If it lands in [0.194, 0.204], we have a real beat.
 2. **In parallel: Lane #04 int5 build + dispatch** (~$0.30 plus 1 tick adapter work) — if Ω-W-V3 doesn't land below 0.20946, int5's predicted band [0.180, 0.196] gives a deeper margin if distortion holds.

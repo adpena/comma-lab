@@ -16,10 +16,9 @@ section of the artifact was compiled, by what tool, from what sources.
   - `reports/graphs/site/judges_one_pager.md`
   - `reports/graphs/site/lab_notebook.md`
   - `reports/graphs/site/experiment_journal.md`
-  - `CLAUDE.md`
+  - `AGENTS.md`
   - `PROGRAM.md`
-  - 7 most recent `project_*_20260429*.md` files in
-    `.claude/projects/-Users-adpena-Projects-pact/memory/`
+  - 7 most recent `project_*_20260429*.md` project-memory files
 - **paradigm reference**: arXiv 2604.24658 ("The Last Human-Written Paper:
   Agent-Native Research Artifacts")
 - **scope**: layer skeleton (PAPER.md root manifest; logic/ with problem,

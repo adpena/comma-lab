@@ -63,5 +63,5 @@ their result), or a baseline (we use them as the comparison floor).
 - **training-time scorer modifications**: the strict-scorer rule prohibits
   loading PoseNet/SegNet at inflate time. All scorer access is compress-time
   only.
-- **MPS-based authoritative measurement**: forbidden by CLAUDE.md as of
+- **MPS-based authoritative measurement**: forbidden by repository protocol as of
   2026-04-25; preflight Check 1 enforces.

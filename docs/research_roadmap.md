@@ -37,7 +37,7 @@
 - May 1-3: Final submission
 
 ### PHASE 5: Post-competition
-- arXiv paper
+- possible long-form paper
 - 3DGS / 4D-GS experiments
 - Open-source tac library
 

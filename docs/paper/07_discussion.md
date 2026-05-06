@@ -2,7 +2,7 @@
 
 ## 7.1 Human-AI collaboration as research methodology
 
-The author of this work has a background in mathematics and software engineering, with no prior experience in video compression, steganalysis, neural codecs, or the specific architectures used by comma.ai's driving stack. The project was conducted as a collaboration between one human engineer and a large language model (Claude, Anthropic) over approximately one week.
+The author of this work has a background in mathematics and software engineering, with no prior experience in video compression, steganalysis, neural codecs, or the specific architectures used by comma.ai's driving stack. The project was conducted as a collaboration between one human engineer and LLM-assisted review/code generation over approximately one week.
 
 This is not a disclaimer --- it is a methodological claim. The LLM contributed in ways that go beyond code generation:
 
@@ -14,9 +14,9 @@ This is not a disclaimer --- it is a methodological claim. The LLM contributed i
 
 The honest accounting: the LLM also introduced bugs (the training pipeline had 50+ issues caught through iterative review), proposed approaches that failed (KL distillation, adaptive weights), and occasionally generated plausible-sounding explanations that turned out to be wrong (PoseNet AllNorm invariance). The net contribution was strongly positive, but the process required active human judgment about which LLM outputs to trust and which to verify.
 
-## 7.2 The skunkworks council
+## 7.2 The adversarial review council
 
-A specific pattern emerged that we call the *skunkworks council*: a panel of simulated domain experts, each with a defined perspective and adversarial mandate, who review every design decision and experimental result. The council for this project included:
+A specific pattern emerged that we call the *adversarial review council*: a panel of simulated domain experts, each with a defined perspective and adversarial mandate, who review every design decision and experimental result. The council for this project included:
 
 - **Yousfi** (contest co-organizer perspective): scoring formula analysis, trick identification
 - **Fridrich** (steganalysis): constrained formulation, detection boundary analysis
@@ -131,11 +131,11 @@ Three artifacts now exist in the repository to extinct this failure mode structu
 
 - `tools/parallel_dispatch_top_k.py` — `concurrent.futures.ThreadPoolExecutor` over `tools/lightning_dispatch_pr106_stack.py` and `scripts/launch_lane_on_vastai.py`. Per-dispatch and total-cost gating; per-dispatch timeouts; harvested-JSONL output. Strict-mode rejects candidates not marked `ready_for_exact_eval_dispatch=true` to honor the post-int4-falsification safety reflex.
 
-- `tools/harvest_and_reseed.py` — ingests the harvested JSONL, drops any row not tagged `[contest-CUDA]` (per CLAUDE.md auth-eval-everywhere rule), cross-verifies the harvested score against the per-dispatch `contest_auth_eval.json`, appends new empirical anchors to `.omx/calibration/anchors_*.json`. Closes the prediction → empirical → updated-prediction feedback loop.
+- `tools/harvest_and_reseed.py` — ingests the harvested JSONL, drops any row not tagged `[contest-CUDA]` (per the repository auth-eval-everywhere rule), cross-verifies the harvested score against the per-dispatch `contest_auth_eval.json`, appends new empirical anchors to `.omx/calibration/anchors_*.json`. Closes the prediction → empirical → updated-prediction feedback loop.
 
 - `tools/feedback_loop_sweep.py` — single binary that runs the closed loop end-to-end: rank → dispatch (in-process `ThreadPoolExecutor`) → harvest → reseed → check convergence → repeat. Configurable `--max-cycles`, `--max-total-cost`, `--max-cost-per-cycle`, `--top-k`, `--convergence-eps`. The `--race-mode` flag forces the leadership-shift prior immediately: narrows top-K to 4, caps per-cycle spend to $0.50, drops sanity gates that block on proxy-only evidence.
 
-The corresponding NON-NEGOTIABLE rule has been added to `CLAUDE.md`: when the user says "parallel" / "high-throughput" / "search" / "automation" / "stacking sweep," the first file built must be the actuator that fans out N concurrent paid-GPU dispatches. A ranker without a parallel actuator is a planner that produces ranked plans no one executes. Any future PR that adds a new ranking, predictor, or sanity-gate primitive must explicitly link to the parallel-actuator file that consumes its output.
+The corresponding repository rule is now explicit: when the work calls for parallel, high-throughput search, automation, or stacking sweeps, the first file built must be the actuator that fans out N concurrent paid-GPU dispatches. A ranker without a parallel actuator is a planner that produces ranked plans no one executes. Any future PR that adds a new ranking, predictor, or sanity-gate primitive must explicitly link to the parallel-actuator file that consumes its output.
 
 The full postmortem with concrete LOC counts per medalist and the pre-staged primitives we had unused is in `feedback_may_4_hnerv_race_postmortem_20260505.md`.
 

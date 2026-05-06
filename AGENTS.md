@@ -127,6 +127,83 @@ Manual table edits are acceptable only for emergency recovery or correcting stal
 
 Lightning Studio-backed submitters enforce this rule in `scripts/launch_lightning_batch_job.py`: non-dry-run exact-eval, component-response, and component-sensitivity submissions must have a matching active claim row for the lane/job, unless an auditable `--allow-missing-dispatch-claim-reason` is supplied.
 
+## Operator Gates And Discoverability — NON-NEGOTIABLE
+
+Recovered or newly created tools are not complete until they are discoverable
+from normal operator flows. If a guard, profiler, packer, recovery tool, or
+submission checker matters, wire it into at least one of: `preflight_all()`,
+`tools/all_lanes_preflight.py`, `tools/operator_briefing.py`, a documented
+runbook, or a dated `.omx/research/` control ledger. Hidden one-off scripts
+are treated as incomplete work.
+
+## TAC / comma-lab Boundary And Research State Tracking
+
+Keep `tac` clean, but put real reusable Python implementation in `tac`.
+`tac` is the reusable codec/runtime library, and checks that protect archive
+validity, inflate/runtime compliance, CUDA-score custody, and package safety are
+part of that public contract. Codec primitives, archive grammars, payload
+parsers, scorer/eval contracts, byte profilers, planning primitives,
+visualization primitives, and contest-relevant algorithms belong in `tac` when
+they are reusable. Thin CLIs may live in `experiments/`, `scripts/`, or
+`tools/`, but they should delegate to `tac` modules instead of burying
+implementation in ad hoc entry points.
+
+Claude/OMX/provider/recovery policy should not enter `tac` unless the logic is
+genuinely reusable codec, contest-runtime, or contest-preflight functionality.
+Research custody, public-frontier intake, provider state, hosted supplements,
+dashboards, and recovery audits belong in the comma-lab layer (`src/comma_lab/`,
+`tools/`, `docs/`, `.omx/`).
+
+Contest-specific public-submission reverse engineering belongs in
+`reverse_engineering/`. Keep that tree clean: curated runbooks, intake
+indexes, byte-anatomy notes, adapter boundaries, and small manifests are valid;
+raw public PR clones, downloaded archives, provider transcripts, and large
+rebuildable artifacts remain in ignored experiment/custody locations with
+ledger links. Reusable wire parsers, payload grammars, profilers, atom
+planners, and archive builders still belong in `tac`, with
+`reverse_engineering/` documenting how they were used. Run
+`.venv/bin/python tools/audit_reverse_engineering_tree.py --repo-root .`
+before cleanup
+or promotion sweeps so orphaned public-runtime copies, recovery specs, and
+candidate `tac` modules receive explicit dispositions.
+
+Small durable `.omx/research` ledgers and small structured summaries are
+trackable git state. Raw `.omx/state/*.json`, provider logs, raw Modal/
+Lightning/Vast transcripts, auto-memory snapshots, generated public-site
+bundles, and large rebuildable artifacts are not. Canonicalize useful signal
+into a dated `.omx/research` ledger or a `docs/paper/ara` source record; host
+large canonical artifacts externally with a committed manifest.
+
+Run `python tools/audit_research_state_tracking.py --repo-root .` when
+deciding what to track, summarize, externalize, keep private, or delete after
+manifesting. The implementation lives in `src/comma_lab/research_state.py` by
+design so `tac` does not become an operator-state junk drawer. The
+`src/comma_lab/preflight/strict_checks.py` module is an adapter/catalog surface;
+`src/tac/preflight.py` remains the canonical preflight implementation.
+
+Current durable gates:
+
+- `tac.preflight.preflight_all()` runs
+  `check_dispatch_cli_shell_hazards(strict=True)`. This blocks repeated
+  dispatch bug classes before GPU spend: stale adjudicator flags passed to
+  `scripts/launch_lightning_batch_job.py`, known typo flags such as `--rmote`,
+  zsh-facing `path` shell variables, and local/macOS `find -printf`.
+- `tools/check_dispatch_cli_shell_hazards.py --strict` is the standalone
+  scanner and is also run by `tools/all_lanes_preflight.py`.
+- `scripts/pre_submission_compliance_check.py --contest-final --strict ...`
+  is the canonical upload-surface gate before a judge-facing packet or public
+  release. It validates required files, executable `inflate.sh`, ZIP member
+  safety and local/central header parity, duplicate/hidden/resource members,
+  packed-payload multiplicity, auth-eval archive identity, component
+  recomputation, T4/A++ promotion stamps, runtime-tree custody, archive
+  manifest freshness, report custody links, terminal dispatch-claim linkage,
+  and public supplement hygiene.
+
+Use these gates before saying a lane is ready, a packet is releasable, or a
+bug class is permanently fixed. If a new repeated failure class appears, add a
+focused test and wire the guard into the same visible surfaces instead of
+leaving a private helper buried in `scripts/` or `tools/`.
+
 ## Source-Of-Truth Documents
 
 Use these documents as the research/control plane:
@@ -159,10 +236,21 @@ supersession notes instead of erasing old research context.
 ## Codebase Map
 
 - `src/tac/` - training, codecs, archive helpers, profiles, guards, and tests.
+- `src/tac/analysis/` - scorer/video/archive telemetry and feature builders:
+  hard-pair maps, component traces, foveation fields, LA-POSE-lite motion
+  features, byte anatomy, and opportunity manifests. These modules do not
+  dispatch jobs or claim scores.
+- `src/tac/optimization/` - atom allocation and policy planning:
+  meta-Lagrangian ledgers, water-fill rankings, active-subspace policies, and
+  stack interaction planning. These modules emit planning artifacts, not score
+  claims.
 - `experiments/` - canonical training/eval/build entry points and lane tools.
 - `scripts/` - remote lane launchers, adjudicators, harvesters, and runbooks.
 - `submissions/robust_current/` - contest submission runtime and inflate path.
 - `upstream/` - contest evaluator assets. Do not patch scorer files.
+- `reverse_engineering/` - clean public-submission deconstruction runbooks,
+  indexes, and small manifests. No raw clones, provider logs, or large
+  archives.
 - `reports/` - derived reports and non-authoritative summaries.
 - `.omx/state/` - dispatch state. Treat as advisory when live API or lane-local
   artifacts disagree.
@@ -540,6 +628,12 @@ openpilot/camera/ego-motion priors, and learned selectors are compiler profile
 feedback, not score truth. Before a feedback artifact changes a dispatch, it
 must record its input archive SHA/bytes, source command, hardware/runtime
 environment, evidence grade, and whether it is promotable.
+
+Lane-specific telemetry can become global scorer feedback. For example, Lane W
+hard-pair weights are CUDA per-pair scorer telemetry over the contest video;
+they must be canonicalized as `src/tac/analysis` inputs and may route any
+downstream archive atom family. Do not silo such maps inside their original
+lane once they have general scorer meaning.
 
 Optimization passes should explicitly look for positive and negative feedback:
 an upstream representation can expose cheaper downstream pose coding; a
@@ -1115,7 +1209,7 @@ prevent re-learning these lessons, the rules below are now non-negotiable.
 When a new bug class appears in this surface area, do not patch it inline in
 the failing script. Add the fix to `scripts/remote_archive_only_eval.sh` (or
 `scripts/ensure_remote_uv.sh`) and update this section so the next agent
-inherits the lesson. "Capture the meta-pattern in memory + CLAUDE.md the
+inherits the lesson. "Capture the meta-pattern in memory + AGENTS.md the
 FIRST time it bites" — the same rule that already applies to the
 dead-flag-wiring trap applies here.
 

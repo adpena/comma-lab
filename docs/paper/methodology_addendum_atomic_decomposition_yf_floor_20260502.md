@@ -183,7 +183,7 @@ This gap exists not because the field lacks technical capability (NeRV mask code
 The interesting research questions extend past 2026-05-03:
 
 - Which paradigm-shift candidates (NeRV, block-FP-at-low-bpw, SJ-KL, hyperprior) actually reach the YF floor when the deadline pressure is removed and the variance budget is restored?
-- What is the empirical YF floor for this specific contest's scorers? (The Council's bracket of "<0.155" can be tightened with proper experimentation.)
+- What is the empirical YF floor for this specific contest's scorers? (The current bracket of "<0.155" can be tightened with proper experimentation.)
 - Is there a contest design that incentivizes architectural exploration without sacrificing the comparability of the leaderboard? (E.g., portfolio scoring across architectural classes, multi-stage submission with intermediate disclosure dates, or explicit prizes for techniques that move the floor by ε rather than for absolute score.)
 
 These questions are the natural follow-on to the contest deadline and define the research agenda that justifies continued investment past the May 3 finish line.
@@ -194,14 +194,14 @@ These questions are the natural follow-on to the contest deadline and define the
 - **Codex writeup ledger**: `.omx/research/submission_writeup_integration_20260502_codex.md` (C-067 supersession + attribution requirements).
 - **Working notes**: `reports/writeup_working.md` (live operating point + public-source handling).
 - **Latest report**: `reports/latest.md` (frontier table + submission pipeline).
-- **Council derivations**: `~/.claude/projects/-Users-adpena-Projects-pact/memory/project_grand_council_FIELDS_MEDAL_shannon_floor_obsession_20260501.md` (S_min = 0.155 derivation + SJ-KL primitive identification), `project_grand_council_shannon_floor_eureka_session_20260501.md` (engineering pragmatism path).
+- **Derivation notes**: internal derivation ledgers summarized in this addendum (S_min = 0.155 derivation + SJ-KL primitive identification; engineering pragmatism path).
 - **Reverse-engineering memory**: `reference_pr65_pr67_blob_byte_layouts_proper_reverse_engineering_20260501.md`, `reference_pr67_line_search_R_D_joint_coordinate_descent_20260501.md`.
 - **Implementation references for atomic-decomposition policies**: `src/tac/joint_admm_coordinator.py` (water-fill / Boyd-style), `src/tac/sensitivity_map.py` (Fridrich-style hard-pair), `experiments/build_renderer_packed_payload_archive.py:332` (line-search / coordinate descent).
 - **Steganalysis lineage**: Holub, Fridrich, Denemark "Universal Distortion Function for Steganography in an Arbitrary Domain" (UNIWARD, 2014); Yassine Yousfi et al. (DDE Lab Binghamton, 2020+).
 
-## A6. Strategic-secrecy posture
+## A6. Public-release posture
 
-This addendum formalizes contributions that are appropriate for the post-deadline paper. Per CLAUDE.md "Strategic Secrecy Rule", it does not expose unpublished private artifacts beyond what is necessary to make the YF floor concept reproducible from the committed repository state. The implementation paths for SJ-KL, atom-waterfill, hard-pair selection, and line-search are referenced by file path; the specific archive recipes that achieve C-067 are documented elsewhere in the writeup (with PR #67 mask attribution per `EXTERNAL_SOURCE_ATTRIBUTION_C067.md`).
+This addendum formalizes contributions that are appropriate for the post-deadline paper. It avoids unpublished private artifacts beyond what is necessary to make the YF floor concept reproducible from the committed repository state. The implementation paths for SJ-KL, atom-waterfill, hard-pair selection, and line-search are referenced by file path; the specific archive recipes that achieve C-067 are documented elsewhere in the writeup (with PR #67 mask attribution per `EXTERNAL_SOURCE_ATTRIBUTION_C067.md`).
 
 When the paper goes public, this addendum should be inlined into the formal sections:
 

@@ -130,7 +130,7 @@ outcome. An Ara-native reviewer can verify any claim by walking
 - **prereq**: `src/comma_lab/preflight/strict_checks.py` HEAD
 - **command**: `python tools/preflight_catalog_dump.py`
 - **artifact**: `evidence/preflight/strict_check_catalog.json`
-- **success criterion**: every CLAUDE.md-listed bug class maps to a
+- **success criterion**: every repository-listed bug class maps to a
   `check_*` function with `strict=True`
 - **failure mode if regressed**: a documented bug class without a static
   check would invalidate the rigor narrative.

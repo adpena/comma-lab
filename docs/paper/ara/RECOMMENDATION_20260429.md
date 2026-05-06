@@ -149,7 +149,7 @@ across the next two days.
   Ara skeleton (verified by grepping the new files).
 - Cloudflare URL is NOT mentioned.
 - All Era 3 Selfcomp paradigm scores are tagged `live; no scores reported
-  here per CLAUDE.md non-negotiable`.
+  here per repository protocol`.
 
 ## Section 4 — Concrete first actions taken (this commit)
 
@@ -211,7 +211,7 @@ need to be normalized into the Ara `evidence/` tree (Pass 2).
    "see `docs/paper/ara/PAPER.md` for the agent-native version" line to
    the prose; doing it later requires a small follow-up edit.
 4. **Should `tools/ara_compile.py` be in the review-tracker gate?**
-   Per CLAUDE.md, `.py` files need the review-tracker mark before
+   Per repository protocol, `.py` files need the review-tracker mark before
    commit. The file has no test yet; we should either ship it as
    reviewed-by-author or add a basic smoke test.
 5. **Does the `EVENT_TYPE_RULES` regex classification meet your bar?**
@@ -232,7 +232,7 @@ need to be normalized into the Ara `evidence/` tree (Pass 2).
 - [ ] **Pass 4 — Ara Seal Level 2.** Score each claim along 6 dimensions
   (evidence relevance, falsifiability, methodological rigor, etc.). This
   needs a small LLM-driven evaluator; consider running the existing
-  skunkworks council recursively.
+  adversarial review council recursively.
 - [ ] **Pass 5 — Ara Seal Level 3.** Pick the lowest-cost claim (probably
   C4 width-scaling) and run the experiment at scaled-down resolution
   (h=8, 100 epochs) inside an isolated Modal job; verify the success
