@@ -653,6 +653,284 @@ def _symbol_position(*args: Any, **kwargs: Any) -> Any:
     raise _rehydration_failure("_symbol_position")
 
 
+def _normalize_symbol_windows(
+    windows: tuple[tuple[int, int], ...] | list[tuple[int, int]],
+) -> tuple[tuple[int, int], ...]:
+    normalized: list[tuple[int, int]] = []
+    for item in windows:
+        if len(item) != 2:
+            raise Pr91Hpm1Error(
+                "context_window_probe_contract",
+                "window_must_be_start_and_count",
+                window=list(item),
+            )
+        start, count = int(item[0]), int(item[1])
+        if start < 0 or count <= 0:
+            raise Pr91Hpm1Error(
+                "context_window_probe_contract",
+                "window_start_must_be_nonnegative_and_count_positive",
+                window={"start_global_symbol": start, "count": count},
+            )
+        normalized.append((start, count))
+    if not normalized:
+        raise Pr91Hpm1Error(
+            "context_window_probe_contract",
+            "at_least_one_symbol_window_required",
+        )
+    return tuple(sorted(dict.fromkeys(normalized)))
+
+
+def _context_mode_description(context_mode: str) -> str:
+    if context_mode == "decoded_context":
+        return (
+            "Submitted stream is replayed normally: decoded symbols update the "
+            "current-frame and previous-frame HPAC contexts."
+        )
+    if context_mode == "reference_context":
+        return (
+            "Submitted stream is still consumed by RangeDecoder, but after each "
+            "group the HPAC model context is teacher-forced from the reference "
+            "token tensor. This separates accumulated decoded-context drift "
+            "from range/probability numeric mismatch."
+        )
+    raise Pr91Hpm1Error(
+        "context_window_probe_contract",
+        "unsupported_context_mode",
+        context_mode=context_mode,
+        supported_context_modes=list(PR91_HPM1_CONTEXT_MODES),
+    )
+
+
+def _reference_token_record(path: Path | None, layout: str) -> dict[str, Any]:
+    if path is None:
+        return {"path": None, "exists": False, "layout": layout, "loaded": False}
+    resolved = Path(path)
+    row: dict[str, Any] = {
+        "path": repo_rel(resolved),
+        "exists": resolved.is_file(),
+        "layout": layout,
+        "loaded": False,
+    }
+    if resolved.is_file():
+        row.update({"bytes": resolved.stat().st_size, "sha256": sha256_path(resolved)})
+    return row
+
+
+def _validate_probe_variants(variants: tuple[str, ...]) -> tuple[str, ...]:
+    requested = tuple(dict.fromkeys(str(name) for name in variants if str(name)))
+    if not requested:
+        raise Pr91Hpm1Error("probability_variant_contract", "at_least_one_variant_required")
+    for name in requested:
+        resolve_hpac_probability_variant(name)
+    return requested
+
+
+def run_pr91_hpm1_first_symbol_state_probe(
+    archive: Path = DEFAULT_PR91_ARCHIVE,
+    *,
+    reference_tokens_path: Path | None = DEFAULT_PR85_QMA9_TOKEN_SOURCE,
+    reference_layout: str = "qma9_storage_wh_to_render_hw",
+    variants: tuple[str, ...] = (DEFAULT_HPAC_PROBABILITY_VARIANT,),
+    symbol_count: int = 16,
+    symbol_offset: int = 0,
+    device: str = "cpu",
+    prob_eps: float = 1e-7,
+) -> dict[str, Any]:
+    """Return a local-only PR91 first-symbol probe blocker report.
+
+    The recovered pyc described a richer probability-row trace, but the live
+    byte-exact HPAC stream is still not closed. This function keeps the CLI and
+    downstream tooling usable without pretending the trace is promotable.
+    """
+
+    started_at = time.time()
+    if device != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "pr91_hpm1_first_symbol_probe_is_cpu_only",
+            requested_device=device,
+        )
+    if int(symbol_count) <= 0:
+        raise Pr91Hpm1Error(
+            "first_symbol_probe_contract",
+            "symbol_count_must_be_positive",
+            symbol_count=symbol_count,
+        )
+    if int(symbol_offset) < 0:
+        raise Pr91Hpm1Error(
+            "first_symbol_probe_contract",
+            "symbol_offset_must_be_nonnegative",
+            symbol_offset=symbol_offset,
+        )
+    requested_variants = _validate_probe_variants(variants)
+    payload = extract_pr91_hpm1_payload(Path(archive))
+    return _jsonable(
+        {
+            "schema_version": 1,
+            "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_first_symbol_state_probe",
+            "recorded_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+            "status": "blocked_hpm1_probability_range_contract_mismatch",
+            "score_claim": False,
+            "dispatch_performed": False,
+            "dispatch_allowed": False,
+            "gpu_or_remote_work": False,
+            "local_only": True,
+            "device": device,
+            "symbol_count": int(symbol_count),
+            "symbol_offset": int(symbol_offset),
+            "symbol_window": {
+                "start_global_symbol": int(symbol_offset),
+                "requested_count": int(symbol_count),
+                "end_global_symbol_exclusive": int(symbol_offset) + int(symbol_count),
+            },
+            "prob_eps": float(prob_eps),
+            "variants": list(requested_variants),
+            "archive": _archive_report(Path(archive)),
+            "reference_tokens": _reference_token_record(reference_tokens_path, reference_layout),
+            "hpm1_static_contract": validate_hpm1_static_contract(payload),
+            "pr86_hpac_relationship": compare_hpm1_to_pr86_hpac_contract(payload),
+            "payload": {
+                "config": payload.config(),
+                "tokens_sha256": sha256_bytes(payload.tokens),
+                "hpac_sha256": sha256_bytes(payload.hpac),
+            },
+            "variant_results": [
+                {
+                    "variant": name,
+                    "status": "blocked",
+                    "failure_stage": "hpac_probability_range_decode",
+                    "failure_reason": "first_symbol_trace_requires_byte_closed_hpm1_replay",
+                    "byte_exact_replay_required": True,
+                }
+                for name in requested_variants
+            ],
+            "source_contract_summary": {
+                "known_public_failure": "frame=0 group=10 symbol=191 after 5951 decoded symbols",
+                "current_live_decode_surface": "bounded prefix replay fails closed before trace promotion",
+            },
+            "dispatch_unlocked": False,
+            "pr91_ready_for_exact_eval": False,
+            "failure_reason": "hpm1_probability_range_contract_not_byte_closed",
+            "blocker_class": "hpm1_probability_range_contract_mismatch",
+            "elapsed_sec": round(time.time() - started_at, 3),
+        }
+    )
+
+
+def run_pr91_hpm1_context_window_probe(
+    archive: Path = DEFAULT_PR91_ARCHIVE,
+    *,
+    reference_tokens_path: Path = DEFAULT_PR85_QMA9_TOKEN_SOURCE,
+    reference_layout: str = "qma9_storage_wh_to_render_hw",
+    windows: tuple[tuple[int, int], ...] = DEFAULT_PR91_HPM1_CONTEXT_WINDOWS,
+    variants: tuple[str, ...] = (DEFAULT_HPAC_PROBABILITY_VARIANT,),
+    context_modes: tuple[str, ...] = PR91_HPM1_CONTEXT_MODES,
+    prob_eps_values: tuple[float, ...] = (1e-7,),
+    device: str = "cpu",
+    require_expected_pr91_identity: bool = True,
+) -> dict[str, Any]:
+    """Return a local-only context-window probe blocker report."""
+
+    started_at = time.time()
+    if device != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "pr91_hpm1_context_window_probe_is_cpu_only",
+            requested_device=device,
+        )
+    normalized_windows = _normalize_symbol_windows(windows)
+    requested_variants = _validate_probe_variants(variants)
+    requested_modes = tuple(dict.fromkeys(str(mode) for mode in context_modes if str(mode)))
+    if not requested_modes:
+        raise Pr91Hpm1Error(
+            "context_window_probe_contract",
+            "at_least_one_context_mode_required",
+        )
+    mode_descriptions = {
+        mode: _context_mode_description(mode)
+        for mode in requested_modes
+    }
+    eps_values = tuple(float(value) for value in prob_eps_values)
+    if not eps_values or any(value <= 0.0 for value in eps_values):
+        raise Pr91Hpm1Error(
+            "context_window_probe_contract",
+            "prob_eps_values_must_be_positive",
+            prob_eps_values=list(prob_eps_values),
+        )
+    archive_report = _archive_report(Path(archive))
+    if require_expected_pr91_identity and (
+        archive_report["bytes"] != EXPECTED_PR91_ARCHIVE_BYTES
+        or archive_report["sha256"] != EXPECTED_PR91_ARCHIVE_SHA256
+    ):
+        raise Pr91Hpm1Error(
+            "archive_contract",
+            "expected_canonical_pr91_archive_for_context_window_probe",
+            expected_bytes=EXPECTED_PR91_ARCHIVE_BYTES,
+            actual_bytes=archive_report["bytes"],
+            expected_sha256=EXPECTED_PR91_ARCHIVE_SHA256,
+            actual_sha256=archive_report["sha256"],
+        )
+    payload = extract_pr91_hpm1_payload(Path(archive))
+    return _jsonable(
+        {
+            "schema_version": 1,
+            "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_context_window_probe",
+            "recorded_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+            "status": "blocked_hpm1_probability_range_contract_mismatch",
+            "score_claim": False,
+            "dispatch_performed": False,
+            "dispatch_allowed": False,
+            "gpu_or_remote_work": False,
+            "local_only": True,
+            "device": device,
+            "archive": archive_report,
+            "require_expected_pr91_identity": bool(require_expected_pr91_identity),
+            "reference_tokens": _reference_token_record(reference_tokens_path, reference_layout),
+            "hpm1_static_contract": validate_hpm1_static_contract(payload),
+            "pr86_hpac_relationship": compare_hpm1_to_pr86_hpac_contract(payload),
+            "windows": [
+                {
+                    "start_global_symbol": start,
+                    "count": count,
+                    "end_global_symbol_exclusive": start + count,
+                }
+                for start, count in normalized_windows
+            ],
+            "variants": list(requested_variants),
+            "context_modes": [
+                {"mode": mode, "description": mode_descriptions[mode]}
+                for mode in requested_modes
+            ],
+            "prob_eps_values": list(eps_values),
+            "window_results": [
+                {
+                    "start_global_symbol": start,
+                    "count": count,
+                    "context_mode": mode,
+                    "variant": variant,
+                    "prob_eps": eps,
+                    "status": "blocked",
+                    "failure_stage": "hpac_probability_range_decode",
+                    "failure_reason": "context_window_trace_requires_byte_closed_hpm1_replay",
+                }
+                for start, count in normalized_windows
+                for mode in requested_modes
+                for variant in requested_variants
+                for eps in eps_values
+            ],
+            "source_contract_summary": {
+                "known_public_failure": "frame=0 group=10 symbol=191 after 5951 decoded symbols",
+                "current_live_decode_surface": "bounded prefix replay fails closed before context-window trace promotion",
+            },
+            "dispatch_unlocked": False,
+            "pr91_ready_for_exact_eval": False,
+            "failure_reason": "hpm1_probability_range_contract_not_byte_closed",
+            "blocker_class": "hpm1_probability_range_contract_mismatch",
+            "elapsed_sec": round(time.time() - started_at, 3),
+        }
+    )
+
+
 def _archive_report(archive: Path) -> dict[str, Any]:
     archive_size, archive_sha, body = _validate_safe_single_x_archive(archive)
     bundle = parse_pr85_bundle(body)

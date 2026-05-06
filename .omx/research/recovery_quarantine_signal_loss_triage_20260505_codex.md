@@ -4848,3 +4848,60 @@ Verification:
 - `.venv/bin/python -m pytest
   src/tac/tests/test_preflight_pr91_pr92_replay_contracts.py -q` ->
   `4 passed`.
+
+## R71 - 2026-05-06 PR91 Probe CLI Surface Fail-Closed Recovery
+
+Recovered the live PR91/HPM1 probe symbols that the CLI already exposed but
+could not call:
+
+- `run_pr91_hpm1_first_symbol_state_probe(...)`
+- `run_pr91_hpm1_context_window_probe(...)`
+
+These are conservative blocker reports, not full recovered pyc behavior. They
+preserve the public CLI/API surface, validate inputs, record archive/static
+payload custody, and fail closed behind the known HPAC probability/range
+blocker instead of raising missing-symbol errors.
+
+Updated:
+
+- `src/tac/pr91_hpm1_codec.py`
+- `src/tac/tests/test_pr91_hpm1_codec.py`
+
+Covered contracts:
+
+- first-symbol probes are CPU-only, local-only, `score_claim=false`,
+  `dispatch_allowed=false`, and report
+  `blocked_hpm1_probability_range_contract_mismatch`;
+- context-window probes normalize/deduplicate `(start, count)` windows,
+  validate `decoded_context` / `reference_context`, validate positive
+  probability epsilon values, and fail closed unless the canonical PR91 archive
+  is used by default;
+- invalid probe inputs raise `Pr91Hpm1Error` before any ambiguous output;
+- `experiments/replay_pr91_hpm1_mask.py --first-symbol-state-probe` and
+  `--context-window-probe` now produce JSON reports instead of falling through
+  `_require_pr91_symbol(...)`.
+
+Scientific position:
+
+- The recovered pyc still contains richer probability-row/context tracing
+  sketches, but those traces require byte-closed HPM1 replay. Until the
+  HPAC/range contract decodes the stream, the correct production behavior is a
+  structured non-promotable blocker report.
+- This closes a CLI/API signal-loss bug class without turning planning-only
+  probes into score evidence.
+
+Verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_pr91_hpm1_codec.py -q` ->
+  `11 passed`.
+- `.venv/bin/python experiments/replay_pr91_hpm1_mask.py --archive
+  experiments/results/public_pr91_intake_20260504_codex/archive.zip
+  --first-symbol-state-probe --symbol-count 4 --symbol-offset 0 --json-out
+  /tmp/pr91_first_symbol_cli_check.json` produced
+  `blocked_hpm1_probability_range_contract_mismatch`.
+- `.venv/bin/python experiments/replay_pr91_hpm1_mask.py --archive
+  experiments/results/public_pr91_intake_20260504_codex/archive.zip
+  --context-window-probe --symbol-windows 33:2 --context-modes
+  decoded_context,reference_context --json-out
+  /tmp/pr91_context_window_cli_check.json` produced
+  `blocked_hpm1_probability_range_contract_mismatch`.

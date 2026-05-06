@@ -19,6 +19,8 @@ from tac.pr91_hpm1_codec import (
     raw_tokens_to_mod5_residual_symbols,
     reconstruct_raw_tokens_from_mod5_residual_symbols,
     run_pr91_hpm1_preflight,
+    run_pr91_hpm1_context_window_probe,
+    run_pr91_hpm1_first_symbol_state_probe,
     run_pr91_hpm1_probability_variant_matrix,
     split_hpm1_mask_segment,
     validate_hpm1_static_contract,
@@ -155,6 +157,73 @@ def test_pr91_preflight_is_local_only_and_blocks_dispatch(tmp_path: Path) -> Non
     assert report["dispatch_performed"] is False
     assert report["dispatch_unlocked"] is False
     assert report["hpm1_static_contract"]["status"] == "passed"
+
+
+def test_pr91_first_symbol_probe_is_local_fail_closed(tmp_path: Path) -> None:
+    archive = _synthetic_hpm1_archive(tmp_path / "archive.zip")
+
+    report = run_pr91_hpm1_first_symbol_state_probe(
+        archive,
+        reference_tokens_path=tmp_path / "missing_tokens.bin",
+        variants=("source_float64_perfect_false",),
+        symbol_count=8,
+        symbol_offset=2,
+    )
+
+    assert report["status"] == "blocked_hpm1_probability_range_contract_mismatch"
+    assert report["score_claim"] is False
+    assert report["dispatch_allowed"] is False
+    assert report["symbol_window"] == {
+        "start_global_symbol": 2,
+        "requested_count": 8,
+        "end_global_symbol_exclusive": 10,
+    }
+    assert report["reference_tokens"]["exists"] is False
+    assert report["variant_results"][0]["failure_reason"] == (
+        "first_symbol_trace_requires_byte_closed_hpm1_replay"
+    )
+
+
+def test_pr91_context_window_probe_is_local_fail_closed(tmp_path: Path) -> None:
+    archive = _synthetic_hpm1_archive(tmp_path / "archive.zip")
+
+    report = run_pr91_hpm1_context_window_probe(
+        archive,
+        reference_tokens_path=tmp_path / "missing_tokens.bin",
+        windows=((3, 2), (3, 2), (10, 1)),
+        variants=("source_float64_perfect_false",),
+        context_modes=("decoded_context", "reference_context"),
+        prob_eps_values=(1e-7,),
+        require_expected_pr91_identity=False,
+    )
+
+    assert report["status"] == "blocked_hpm1_probability_range_contract_mismatch"
+    assert report["score_claim"] is False
+    assert report["dispatch_allowed"] is False
+    assert report["windows"] == [
+        {"start_global_symbol": 3, "count": 2, "end_global_symbol_exclusive": 5},
+        {"start_global_symbol": 10, "count": 1, "end_global_symbol_exclusive": 11},
+    ]
+    assert len(report["window_results"]) == 4
+    assert {row["context_mode"] for row in report["window_results"]} == {
+        "decoded_context",
+        "reference_context",
+    }
+
+
+def test_pr91_probe_contracts_fail_closed_on_bad_inputs(tmp_path: Path) -> None:
+    archive = _synthetic_hpm1_archive(tmp_path / "archive.zip")
+
+    with pytest.raises(Pr91Hpm1Error, match="symbol_count_must_be_positive"):
+        run_pr91_hpm1_first_symbol_state_probe(archive, symbol_count=0)
+    with pytest.raises(Pr91Hpm1Error, match="unsupported_context_mode"):
+        run_pr91_hpm1_context_window_probe(
+            archive,
+            context_modes=("bad_context",),
+            require_expected_pr91_identity=False,
+        )
+    with pytest.raises(Pr91Hpm1Error, match="expected_canonical_pr91_archive"):
+        run_pr91_hpm1_context_window_probe(archive)
 
 
 def test_preflight_pr91_pr92_replay_contracts_accepts_synthetic_pr92_and_blocks_pr91(
