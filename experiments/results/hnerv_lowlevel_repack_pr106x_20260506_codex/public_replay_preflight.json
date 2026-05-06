@@ -66,7 +66,7 @@
   "ready_for_exact_eval_dispatch": true,
   "runtime": {
     "inflate_sh": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh",
-    "inflate_sh_sha256": "9bfa00e3790cbee7687dff8a484fe83a9ca1c82f18b157f93185fab31662c0f0",
+    "inflate_sh_sha256": "02d5e131790bf4f3f7dbb4e9ae9603ef7bfccf1ad4f4b3be7cd9e06e7be57dfa",
     "runtime_manifest": {
       "external_dependency_roots": [
         {
@@ -199,10 +199,10 @@
       ],
       "files": [
         {
-          "bytes": 1796,
+          "bytes": 2004,
           "relative_path": "inflate.sh",
           "repo_relative_path": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh",
-          "sha256": "9bfa00e3790cbee7687dff8a484fe83a9ca1c82f18b157f93185fab31662c0f0"
+          "sha256": "02d5e131790bf4f3f7dbb4e9ae9603ef7bfccf1ad4f4b3be7cd9e06e7be57dfa"
         }
       ],
       "repo_local_tac_import_manifest": {
@@ -219,7 +219,7 @@
       },
       "runtime_file_count": 1,
       "runtime_root": "/Users/adpena/Projects/pact/experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter",
-      "runtime_tree_sha256": "06080a260017887f591e304c7cdcbe42ac5215f10fe12ecc00ddb1bc72870534",
+      "runtime_tree_sha256": "f402908b2490718c4f7b76987335ec1a496cb12ab71c27e1e1aea4024d5712cb",
       "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
       "upstream_evaluate_py": {
         "bytes": 6005,
@@ -228,17 +228,17 @@
       }
     },
     "runtime_root": "/Users/adpena/Projects/pact/experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter",
-    "runtime_tree_sha256": "06080a260017887f591e304c7cdcbe42ac5215f10fe12ecc00ddb1bc72870534",
+    "runtime_tree_sha256": "f402908b2490718c4f7b76987335ec1a496cb12ab71c27e1e1aea4024d5712cb",
     "source_payload_scan": {
       "extra_roots": [
         "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders"
       ],
       "files": [
         {
-          "bytes": 1796,
+          "bytes": 2004,
           "path": "inflate.sh",
           "root": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter",
-          "sha256": "9bfa00e3790cbee7687dff8a484fe83a9ca1c82f18b157f93185fab31662c0f0"
+          "sha256": "02d5e131790bf4f3f7dbb4e9ae9603ef7bfccf1ad4f4b3be7cd9e06e7be57dfa"
         },
         {
           "bytes": 991,
@@ -362,7 +362,7 @@
         }
       ],
       "runtime_root": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter",
-      "source_bytes_py_sh": 69896,
+      "source_bytes_py_sh": 70104,
       "status": "passed",
       "violations": []
     },

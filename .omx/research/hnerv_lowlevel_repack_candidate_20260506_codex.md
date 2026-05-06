@@ -81,3 +81,28 @@ The custody-v2 exact CUDA eval was staged and queued as:
 This job is the canonical PR106x low-level brotli repack score run. Do not
 promote the candidate from the stopped pre-custody-v2 job or from byte evidence
 alone.
+
+## 2026-05-06 Adapter Fail-Closed Hardening
+
+After the custody-v2 job was queued, a read-only adversarial review found two
+adapter sharp edges: the adapter could silently prefer `${base}.bin` when both
+`${base}.bin` and `x` existed, and it could fall back to ambient `python3` when
+the managed `.venv/bin/python` was absent.
+
+These edge cases do not change the queued candidate's semantics because the
+candidate archive has exactly one charged member (`x`) and the staged Lightning
+workspace has `.venv/bin/python`. The running custody-v2 job remains valid
+pending exact CUDA output, but any follow-up or rerun should use the hardened
+adapter/preflight:
+
+- Hardened adapter SHA-256:
+  `02d5e131790bf4f3f7dbb4e9ae9603ef7bfccf1ad4f4b3be7cd9e06e7be57dfa`
+- Hardened runtime tree SHA-256:
+  `f402908b2490718c4f7b76987335ec1a496cb12ab71c27e1e1aea4024d5712cb`
+- Hardened preflight artifact:
+  `experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/public_replay_preflight.json`
+- Hardened preflight blockers: none
+
+The adapter now fails closed if both possible payload member names exist and
+requires a managed executable Python (`${PYTHON}` override or repo
+`.venv/bin/python`).

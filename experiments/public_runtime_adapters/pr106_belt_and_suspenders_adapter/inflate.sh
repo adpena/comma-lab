@@ -21,9 +21,10 @@ if [ ! -f "$INFLATE_PY" ]; then
   exit 2
 fi
 
-PYBIN="$REPO_ROOT/.venv/bin/python"
+PYBIN="${PYTHON:-$REPO_ROOT/.venv/bin/python}"
 if [ ! -x "$PYBIN" ]; then
-  PYBIN="$(command -v python3 || command -v python)"
+  echo "FATAL: managed Python is not executable: $PYBIN" >&2
+  exit 4
 fi
 
 "$PYBIN" - <<'PY'
@@ -36,12 +37,18 @@ mkdir -p "$OUTPUT_DIR"
 while IFS= read -r line; do
   [ -z "$line" ] && continue
   BASE="${line%.*}"
-  SRC="${DATA_DIR}/${BASE}.bin"
-  if [ ! -f "$SRC" ] && [ -f "${DATA_DIR}/x" ]; then
-    SRC="${DATA_DIR}/x"
+  BASE_BIN="${DATA_DIR}/${BASE}.bin"
+  X_MEMBER="${DATA_DIR}/x"
+  if [ -f "$BASE_BIN" ] && [ -f "$X_MEMBER" ]; then
+    echo "FATAL: ambiguous PR106 payload members; both ${BASE_BIN} and ${X_MEMBER} exist" >&2
+    exit 5
   fi
-  if [ ! -f "$SRC" ]; then
-    echo "FATAL: neither ${DATA_DIR}/${BASE}.bin nor ${DATA_DIR}/x exists" >&2
+  if [ -f "$BASE_BIN" ]; then
+    SRC="$BASE_BIN"
+  elif [ -f "$X_MEMBER" ]; then
+    SRC="$X_MEMBER"
+  else
+    echo "FATAL: neither ${BASE_BIN} nor ${X_MEMBER} exists" >&2
     exit 3
   fi
   DST="${OUTPUT_DIR}/${BASE}.raw"
