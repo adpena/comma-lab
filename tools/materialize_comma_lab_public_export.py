@@ -13,7 +13,6 @@ import argparse
 import fnmatch
 import hashlib
 import json
-import re
 import shutil
 import subprocess
 import sys
@@ -21,13 +20,15 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC = REPO_ROOT / "src"
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from tac.preflight import check_public_release_hygiene  # noqa: E402
+from tools.audit_public_publish_links import audit_public_publish_links  # noqa: E402
 
 DEFAULT_REF = "HEAD"
-DEFAULT_PRIVATE_REPO_LINKS = ("github.com/adpena/comma-lab",)
 
 DEFAULT_INCLUDE_PATTERNS: tuple[str, ...] = (
     "README.md",
@@ -118,30 +119,6 @@ def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def public_link_violations(
-    root: Path,
-    *,
-    private_repo_links: tuple[str, ...] = DEFAULT_PRIVATE_REPO_LINKS,
-) -> list[str]:
-    violations: list[str] = []
-    for path in sorted(root.rglob("*")):
-        if not path.is_file():
-            continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
-            continue
-        for lineno, line in enumerate(text.splitlines(), start=1):
-            for link in private_repo_links:
-                if re.search(r"https?://" + re.escape(link), line):
-                    rel = path.relative_to(root).as_posix()
-                    violations.append(
-                        f"{rel}:{lineno}: private GitHub repository link: {link}. "
-                        "Publish a sanitized repo first or replace with a release-manifest placeholder."
-                    )
-    return violations
-
-
 def materialize_public_export(
     repo_root: Path,
     out_dir: Path,
@@ -195,7 +172,15 @@ def materialize_public_export(
         verbose=False,
         scan_paths=[out_dir],
     )
-    link_violations = [] if allow_private_repo_links else public_link_violations(out_dir)
+    link_payload = (
+        {"violation_count": 0, "violations": []}
+        if allow_private_repo_links
+        else audit_public_publish_links([out_dir], base_root=out_dir, live=False)
+    )
+    link_violations = [
+        "{path}:{line}: {kind}: {url} ({detail})".format(**violation)
+        for violation in link_payload["violations"]
+    ]
     if link_violations and strict_hygiene:
         raise SystemExit(
             "PUBLIC LINK HYGIENE violations:\n"
@@ -203,6 +188,7 @@ def materialize_public_export(
         )
     manifest["hygiene_violation_count"] = len(hygiene_violations)
     manifest["public_link_violation_count"] = len(link_violations)
+    manifest["public_link_count"] = int(link_payload.get("link_count", 0))
     (out_dir / "PUBLIC_EXPORT_MANIFEST.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",

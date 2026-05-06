@@ -112,6 +112,12 @@ This keeps the dataset useful for research and reproducibility while avoiding
 N copies of the same 37.5 MB input video, PoseNet/SegNet weights, git object
 stores, and local runtime binaries.
 
+The materializers also run static public-link hygiene on the exact publish
+surface. Private repo links, local operator paths, provider job URLs, cache
+metadata, and fixed contest assets are either omitted or replaced with
+placeholders before upload; the manifests record `public_link_count` and
+`public_link_violation_count`.
+
 ## Consumer API
 
 ```python

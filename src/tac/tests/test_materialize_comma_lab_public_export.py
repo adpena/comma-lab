@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
+from tools.audit_public_publish_links import audit_public_publish_links
 from tools.materialize_comma_lab_public_export import (
     materialize_public_export,
-    public_link_violations,
     selected_export_paths,
 )
 
@@ -81,6 +81,7 @@ def test_materialize_public_export_uses_tracked_blobs_and_omits_private_state(tm
     assert not (out / ".omx").exists()
     assert manifest["copied_count"] == 2
     assert manifest["hygiene_violation_count"] == 0
+    assert manifest["public_link_count"] == 0
     assert "${PUBLIC_EXPORT_ROOT}" in (out / "PUBLIC_EXPORT_MANIFEST.json").read_text(
         encoding="utf-8"
     )
@@ -108,4 +109,7 @@ def test_public_link_violations_allows_other_public_github_links(tmp_path: Path)
         encoding="utf-8",
     )
 
-    assert public_link_violations(tmp_path) == []
+    payload = audit_public_publish_links([tmp_path], base_root=tmp_path)
+
+    assert payload["violation_count"] == 0
+    assert payload["link_count"] == 1

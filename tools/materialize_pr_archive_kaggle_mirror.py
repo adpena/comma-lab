@@ -21,8 +21,11 @@ REPO = Path(__file__).resolve().parents[1]
 SRC = REPO / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
 
 from tac.preflight import check_public_release_hygiene  # noqa: E402
+from tools.audit_public_publish_links import audit_public_publish_links  # noqa: E402
 
 DEFAULT_SOURCE = REPO / "experiments" / "results" / "public_pr_archive_release_view"
 DEFAULT_OUTPUT = REPO / "experiments" / "results" / "public_pr_archive_kaggle_mirror"
@@ -176,7 +179,19 @@ def materialize_kaggle_mirror(
         verbose=False,
         scan_paths=[output_root],
     )
+    link_payload = audit_public_publish_links([output_root], base_root=output_root, live=False)
+    link_violations = [
+        "{path}:{line}: {kind}: {url} ({detail})".format(**violation)
+        for violation in link_payload["violations"]
+    ]
+    if link_violations and strict_hygiene:
+        raise RuntimeError(
+            "KAGGLE MIRROR LINK HYGIENE violations:\n"
+            + "\n".join(f"  - {violation}" for violation in link_violations[:40])
+        )
     manifest["hygiene_violation_count"] = len(hygiene_violations)
+    manifest["public_link_count"] = int(link_payload["link_count"])
+    manifest["public_link_violation_count"] = len(link_violations)
     (output_root / "KAGGLE_MIRROR_MANIFEST.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     return manifest
 

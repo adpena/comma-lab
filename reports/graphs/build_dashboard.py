@@ -23,7 +23,11 @@ OUT_TIMELINE = ROOT / 'reports' / 'graphs' / 'score_timeline.json'
 OUT_GRAPH = ROOT / 'reports' / 'graphs' / 'experiment_graph.json'
 MEDIA_MANIFEST = ROOT / 'reports' / 'graphs' / 'media' / 'comparison_manifest.json'
 CHALLENGE_URL = 'https://github.com/commaai/comma_video_compression_challenge'
-GITHUB_URL = 'https://github.com/adpena/comma-lab'
+GITHUB_URL = 'https://github.com/adpena/tac'
+ZOOM_W = 420
+ZOOM_H = 316
+ZOOM_X = 372
+ZOOM_Y = 286
 LOCAL_TZ = ZoneInfo('America/Chicago')
 
 
@@ -318,7 +322,7 @@ def main() -> int:
         'site_meta': {
             'challenge_url': CHALLENGE_URL,
             'github_url': GITHUB_URL,
-            'repo_slug': 'adpena/comma-lab',
+            'repo_slug': 'adpena/tac',
             'maintainer': 'Alejandro Pena',
             'updated_at_utc': build_time_utc.isoformat().replace('+00:00', 'Z'),
             'updated_at_local': format_local_datetime(build_time_utc),

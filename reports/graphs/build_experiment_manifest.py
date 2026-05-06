@@ -19,7 +19,7 @@ CANONICAL = ROOT / "reports" / "raw" / "robust_current-current_workflow-cpu-summ
 OUT = ROOT / "reports" / "graphs" / "experiment_manifest.json"
 LOCAL_TZ = ZoneInfo("America/Chicago")
 CHALLENGE_URL = "https://github.com/commaai/comma_video_compression_challenge"
-GITHUB_URL = "https://github.com/adpena/comma-lab"
+GITHUB_URL = "https://github.com/adpena/tac"
 
 
 def load_jsonl(path: Path) -> list[dict]:
@@ -44,7 +44,7 @@ def main() -> int:
     manifest = {
         "site_meta": {
             "maintainer": "Alejandro Pena",
-            "repo_slug": "adpena/comma-lab",
+            "repo_slug": "adpena/tac",
             "github_url": GITHUB_URL,
             "challenge_url": CHALLENGE_URL,
             "updated_at_utc": build_time_utc.isoformat().replace("+00:00", "Z"),

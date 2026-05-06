@@ -45,6 +45,15 @@ class PublicSiteBundleTests(unittest.TestCase):
         self.assertIn("CLOUDFLARE_API_TOKEN" + "=${SECRET_REDACTED}", sanitized)
         self.assertGreaterEqual(sum(count for _, count in records), 6)
 
+    def test_sanitize_text_rewrites_private_comma_lab_repo_url(self) -> None:
+        private_url = "https://github.com/adpena/" + "comma-lab/tree/main/docs"
+
+        sanitized, records = sanitize_text(f"repo={private_url}\n")
+
+        self.assertNotIn(private_url, sanitized)
+        self.assertIn("https://github.com/adpena/tac", sanitized)
+        self.assertEqual(records[0][0], "private_comma_lab_github_url")
+
     def test_build_public_site_bundle_redacts_and_preserves_json(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -71,6 +80,7 @@ class PublicSiteBundleTests(unittest.TestCase):
             data = json.loads((output / "data.json").read_text(encoding="utf-8"))
             self.assertEqual(data["path"], "${LOCAL_PATH_REDACTED}")
             self.assertEqual(manifest["redaction_count"], 1)
+            self.assertEqual(manifest["public_link_violation_count"], 0)
             self.assertTrue((output / "public_site_manifest.json").is_file())
 
     def test_build_public_site_bundle_scans_final_manifest_without_absolute_paths(self) -> None:
@@ -92,6 +102,32 @@ class PublicSiteBundleTests(unittest.TestCase):
             self.assertNotIn(str(root), manifest_text)
             self.assertEqual(manifest["source"], "${EXTERNAL_PATH}/site")
             self.assertEqual(manifest["output"], "${EXTERNAL_PATH}/public_site")
+            self.assertEqual(manifest["public_link_count"], 0)
+
+    def test_build_public_site_bundle_rewrites_private_comma_lab_link(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "site"
+            output = root / "public_site"
+            source.mkdir()
+            private_url = "https://github.com/adpena/" + "comma-lab"
+            (source / "index.html").write_text(
+                f"<a href='{private_url}'>private</a>\n",
+                encoding="utf-8",
+            )
+
+            manifest = build_public_site_bundle(
+                source,
+                output,
+                max_asset_bytes=1024,
+                strict_hygiene=True,
+            )
+
+            self.assertEqual(manifest["public_link_violation_count"], 0)
+            self.assertIn(
+                "https://github.com/adpena/tac",
+                (output / "index.html").read_text(encoding="utf-8"),
+            )
 
     def test_build_public_site_bundle_rejects_large_assets(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

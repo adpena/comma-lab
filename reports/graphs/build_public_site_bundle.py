@@ -27,6 +27,7 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from tac.preflight import check_public_release_hygiene
+from tools.audit_public_publish_links import audit_public_publish_links
 
 
 DEFAULT_SOURCE = ROOT / "site"
@@ -35,6 +36,11 @@ DEFAULT_MAX_ASSET_BYTES = 25 * 1024 * 1024
 
 
 REDACTIONS: tuple[tuple[str, re.Pattern[str], str], ...] = (
+    (
+        "private_comma_lab_github_url",
+        re.compile(r"https://github\.com/adpena/comma-lab(?:/[^\s)\"'<>]*)?"),
+        "https://github.com/adpena/tac",
+    ),
     (
         "local_absolute_operator_path",
         re.compile(
@@ -149,6 +155,7 @@ def build_public_site_bundle(
     max_asset_bytes: int = DEFAULT_MAX_ASSET_BYTES,
     oversized_policy: str = "omit",
     strict_hygiene: bool = True,
+    live_link_audit: bool = False,
 ) -> dict[str, object]:
     if oversized_policy not in {"omit", "fail"}:
         raise ValueError("oversized_policy must be 'omit' or 'fail'")
@@ -187,6 +194,9 @@ def build_public_site_bundle(
         "redactions": [record.__dict__ for record in redactions],
         "omitted_oversized_assets": omitted_oversized_assets,
         "hygiene_violation_count": 0,
+        "public_link_count": 0,
+        "public_link_violation_count": 0,
+        "public_link_live_audit": live_link_audit,
         "max_asset_bytes": max_asset_bytes,
         "oversized_policy": oversized_policy,
         "score_claim": False,
@@ -203,7 +213,23 @@ def build_public_site_bundle(
         verbose=False,
         scan_paths=[output],
     )
+    link_payload = audit_public_publish_links(
+        [output],
+        base_root=output,
+        live=live_link_audit,
+    )
+    link_violations = [
+        "{path}:{line}: {kind}: {url} ({detail})".format(**violation)
+        for violation in link_payload["violations"]
+    ]
+    if link_violations and strict_hygiene:
+        raise RuntimeError(
+            "PUBLIC SITE LINK HYGIENE violations:\n"
+            + "\n".join(f"  - {violation}" for violation in link_violations[:40])
+        )
     manifest["hygiene_violation_count"] = len(hygiene_violations)
+    manifest["public_link_count"] = int(link_payload["link_count"])
+    manifest["public_link_violation_count"] = len(link_violations)
     (output / "public_site_manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
@@ -218,6 +244,7 @@ def main() -> int:
     parser.add_argument("--max-asset-bytes", type=int, default=DEFAULT_MAX_ASSET_BYTES)
     parser.add_argument("--oversized-policy", choices=("omit", "fail"), default="omit")
     parser.add_argument("--no-strict-hygiene", action="store_true")
+    parser.add_argument("--live-link-audit", action="store_true")
     args = parser.parse_args()
 
     manifest = build_public_site_bundle(
@@ -226,6 +253,7 @@ def main() -> int:
         max_asset_bytes=args.max_asset_bytes,
         oversized_policy=args.oversized_policy,
         strict_hygiene=not args.no_strict_hygiene,
+        live_link_audit=args.live_link_audit,
     )
     print(json.dumps(manifest, indent=2, sort_keys=True))
     return 0

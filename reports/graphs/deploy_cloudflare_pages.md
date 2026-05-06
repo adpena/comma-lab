@@ -56,6 +56,10 @@ check_public_release_hygiene(
     ],
 )
 PY
+.venv/bin/python tools/audit_public_publish_links.py \
+  reports/graphs/public_site \
+  --repo-root . \
+  --strict
 ```
 
 ## Deploy With Wrangler

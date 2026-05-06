@@ -30,17 +30,21 @@ def test_omission_reason_skips_fixed_video_and_model_assets() -> None:
 
 
 def test_sanitize_public_text_replaces_home_paths() -> None:
+    private_url = "https://github.com/adpena/" + "comma-lab"
     text = (
         "uncompressed_dir: /home/runner/work/challenge/videos\n"
         "local: /Users/example/Projects/pact/report.txt\n"
+        f"repo: {private_url}\n"
     )
 
     sanitized, count = sanitize_public_text(text)
 
-    assert count == 2
+    assert count == 3
     assert "/home/runner" not in sanitized
     assert "/Users/example" not in sanitized
+    assert private_url not in sanitized
     assert sanitized.count("${LOCAL_PATH}") == 2
+    assert sanitized.count("${PUBLIC_COMMA_LAB_REPO_URL}") == 1
 
 
 def test_materialize_sanitizes_public_text_without_touching_archives(tmp_path: Path) -> None:
@@ -69,3 +73,4 @@ def test_materialize_sanitizes_public_text_without_touching_archives(tmp_path: P
     )
     omitted = json.loads((output / "OMITTED_SHARED_ASSETS.json").read_text(encoding="utf-8"))
     assert omitted["sanitized_file_count"] == 2
+    assert omitted["public_link_violation_count"] == 0

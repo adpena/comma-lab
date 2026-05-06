@@ -20,17 +20,23 @@ import json
 import os
 import re
 import shutil
+import sys
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
 DEFAULT_SOURCE = REPO / "experiments" / "results" / "public_pr_intake_full"
 DEFAULT_OUTPUT = REPO / "experiments" / "results" / "public_pr_archive_release_view"
 SANITIZED_TEXT_SUFFIXES = {".json", ".log", ".md", ".txt"}
 LOCAL_OPERATOR_PATH_RE = re.compile(
     r"(?<![A-Za-z0-9_])/(?:Users|home)/[A-Za-z0-9._-]+(?:/[^\s)\"'<>`]*)?"
 )
+PRIVATE_COMMA_LAB_URL_RE = re.compile(r"https://github\.com/adpena/comma-lab(?:/[^\s)\"'<>]*)?")
+
+from tools.audit_public_publish_links import audit_public_publish_links  # noqa: E402
 
 
 def display_path(path: Path) -> str:
@@ -81,7 +87,11 @@ def link_or_copy(src: Path, dst: Path) -> str:
 
 def sanitize_public_text(text: str) -> tuple[str, int]:
     sanitized, count = LOCAL_OPERATOR_PATH_RE.subn("${LOCAL_PATH}", text)
-    return sanitized, count
+    sanitized, private_count = PRIVATE_COMMA_LAB_URL_RE.subn(
+        "${PUBLIC_COMMA_LAB_REPO_URL}",
+        sanitized,
+    )
+    return sanitized, count + private_count
 
 
 def include_release_file(src: Path, dst: Path, rel: Path) -> tuple[str, int]:
@@ -98,7 +108,14 @@ def include_release_file(src: Path, dst: Path, rel: Path) -> tuple[str, int]:
     return link_or_copy(src, dst), 0
 
 
-def materialize(source_root: Path, output_root: Path, *, force: bool, source_size_limit: int) -> dict[str, object]:
+def materialize(
+    source_root: Path,
+    output_root: Path,
+    *,
+    force: bool,
+    source_size_limit: int,
+    strict_link_hygiene: bool = True,
+) -> dict[str, object]:
     source_root = source_root.resolve()
     output_root = output_root.resolve()
     if not source_root.is_dir():
@@ -156,6 +173,19 @@ def materialize(source_root: Path, output_root: Path, *, force: bool, source_siz
         "sanitized_replacement_count": sanitized_replacement_count,
     }
     (output_root / "OMITTED_SHARED_ASSETS.json").write_text(json.dumps(manifest, indent=2, sort_keys=True))
+    link_payload = audit_public_publish_links([output_root], base_root=output_root, live=False)
+    link_violations = [
+        "{path}:{line}: {kind}: {url} ({detail})".format(**violation)
+        for violation in link_payload["violations"]
+    ]
+    if link_violations and strict_link_hygiene:
+        raise RuntimeError(
+            "PUBLIC PR ARCHIVE LINK HYGIENE violations:\n"
+            + "\n".join(f"  - {violation}" for violation in link_violations[:40])
+        )
+    manifest["public_link_count"] = int(link_payload["link_count"])
+    manifest["public_link_violation_count"] = len(link_violations)
+    (output_root / "OMITTED_SHARED_ASSETS.json").write_text(json.dumps(manifest, indent=2, sort_keys=True))
     return manifest
 
 
@@ -170,6 +200,7 @@ def main(argv: list[str] | None = None) -> int:
         default=25_000_000,
         help="omit non-archive files under source/ above this size unless explicitly allowed",
     )
+    parser.add_argument("--no-strict-link-hygiene", action="store_true")
     parser.add_argument("--format", choices=("text", "json"), default="text")
     args = parser.parse_args(argv)
 
@@ -178,6 +209,7 @@ def main(argv: list[str] | None = None) -> int:
         args.output_root,
         force=args.force,
         source_size_limit=args.source_size_limit,
+        strict_link_hygiene=not args.no_strict_link_hygiene,
     )
     if args.format == "json":
         print(json.dumps(manifest, indent=2, sort_keys=True))
