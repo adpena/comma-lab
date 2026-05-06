@@ -1310,9 +1310,31 @@ def _load_renderer_for_jcsp_dry_run(
     cfg: PipelineConfig,
     checkpoint_path: Path,
 ) -> nn.Module:
-    """Load the renderer checkpoint for a JCSP metadata-only dry run."""
+    """Load the renderer checkpoint for a JCSP metadata-only dry run.
+
+    This loader expects a PyTorch state_dict pickle (the training-checkpoint
+    format produced by experiments/train_*.py). It is NOT a content-detecting
+    loader for binary exports — if the operator passes an FP4A/ASYM/DPSM/I4LZ
+    archive .bin file, raise a clear error directing them to use the canonical
+    ``experiments.precompute_gradient_corrections.load_renderer`` instead. This
+    closes the DEN-V2 bug class (2026-04-26) where torch.load on a binary export
+    would crash with "could not convert string to float: 'P4AV'".
+    """
     from tac.renderer import build_renderer
 
+    # Magic-byte gate: refuse binary export formats up front so
+    # ``torch.load`` only ever sees a pickle / zip header.
+    with checkpoint_path.open("rb") as fh:
+        magic = fh.read(4)
+    _BINARY_EXPORT_MAGICS = (b"FP4A", b"ASYM", b"DPSM", b"I4LZ", b"CCh1", b"C3R1")
+    if magic in _BINARY_EXPORT_MAGICS:
+        raise RuntimeError(
+            f"_load_renderer_for_jcsp_dry_run expects a PyTorch state_dict "
+            f"pickle but {checkpoint_path} starts with magic {magic!r}, which "
+            f"identifies a binary export format ({magic.decode('ascii', errors='replace')}). "
+            f"Use experiments.precompute_gradient_corrections.load_renderer "
+            f"(the canonical content-detecting loader) instead."
+        )
     try:
         ckpt = torch.load(
             str(checkpoint_path),
