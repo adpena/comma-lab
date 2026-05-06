@@ -5305,3 +5305,56 @@ Verification:
   the measured inventory above.
 - `.venv/bin/python tools/all_lanes_preflight.py` passed:
   `ALL 20 PREFLIGHT CHECKS PASSED`.
+
+## R78 - 2026-05-06 Modal Auth-Eval IO Lowering
+
+Continued the Gate #7 lowering tranche on the Modal CUDA auth-eval wrapper.
+This was a behavior-preserving cleanup only: the canonical eval path, CUDA
+fail-closed checks, Modal GPU selection, artifact names, and promotion
+semantics were not changed.
+
+Changes:
+
+- Migrated `experiments/modal_auth_eval.py` from a local SHA-256 file helper to
+  `tac.repo_io.sha256_file`.
+- Migrated local pretty-JSON bytes/text emission and result JSON reads to
+  `tac.repo_io.json_text`, `read_json`, and `write_json`.
+- Preserved raw log writes as plain text and preserved `_sha256_bytes()` because
+  it hashes uploaded in-memory archive bytes before any remote write.
+
+Measured current-worktree inventory after R78 (the worktree also contains
+unrelated unstaged HNeRV/hidden-gem WIP that is intentionally not part of this
+commit):
+
+- local SHA helpers: `55`
+- local JSON dumps: `118`
+- manual `sys.path` bootstraps: `276`
+- manual repo-root parent probes: `372`
+- manual score/dispatch metadata mentions: `601`
+
+Within-tranche committed-surface deltas:
+
+- `experiments/modal_auth_eval.py` local SHA helper count: `1 -> 0`
+- `experiments/modal_auth_eval.py` local JSON dump count: `4 -> 0`
+- `experiments/modal_auth_eval.py` manual `sys.path` bootstrap count: `0 -> 0`
+- `experiments/modal_auth_eval.py` manual repo-root parent count: `0 -> 0`
+- `experiments/modal_auth_eval.py` manual score/dispatch metadata count:
+  `11 -> 11`
+
+Target-file state after R78:
+
+- `experiments/modal_auth_eval.py`: local JSON/SHA plumbing is gone from the
+  consolidation inventory; only score/dispatch provenance metadata remains
+  (`11` mentions).
+
+Verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_modal_auth_eval.py
+  src/tac/tests/test_repo_io.py -q` passed: `11 passed`.
+- `.venv/bin/python -m ruff check --select I,RUF100,F401,UP035
+  experiments/modal_auth_eval.py` passed.
+- `.venv/bin/python -m py_compile experiments/modal_auth_eval.py` passed.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --format json` reported
+  the measured inventory above.
+- `.venv/bin/python tools/all_lanes_preflight.py` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.

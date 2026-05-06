@@ -26,6 +26,7 @@ from typing import Any
 
 import modal
 
+from tac.repo_io import json_text, read_json, sha256_file, write_json
 
 APP_NAME = "comma-auth-eval"
 REMOTE_REPO = Path("/workspace/pact")
@@ -107,16 +108,11 @@ def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def _sha256_path(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
+_sha256_path = sha256_file
 
 
 def _json_bytes(payload: dict[str, Any]) -> bytes:
-    return (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    return json_text(payload).encode("utf-8")
 
 
 def _safe_label(value: str) -> str:
@@ -268,9 +264,7 @@ def _run_auth_eval_inner(
             "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
         }
     )
-    (out_dir / "modal_cuda_preflight.json").write_text(
-        json.dumps(preflight, indent=2, sort_keys=True) + "\n"
-    )
+    write_json(out_dir / "modal_cuda_preflight.json", preflight)
 
     if preflight.get("torch_cuda_available") is not True:
         validation = {
@@ -432,7 +426,7 @@ def _run_auth_eval_inner(
     validation_errors: list[str] = []
     if result_json.is_file():
         try:
-            payload = json.loads(result_json.read_text())
+            payload = read_json(result_json)
         except json.JSONDecodeError as exc:
             validation_errors.append(f"contest_auth_eval.json is not valid JSON: {exc}")
     else:
@@ -624,9 +618,7 @@ def main(
         "promotion_eligible": False,
         "adjudication_required": True,
     }
-    (out_dir / "modal_cuda_auth_eval_local_request.json").write_text(
-        json.dumps(local_summary, indent=2, sort_keys=True) + "\n"
-    )
+    write_json(out_dir / "modal_cuda_auth_eval_local_request.json", local_summary)
 
     print(
         f"Uploading {archive_size_bytes:,} bytes to Modal {gpu} for CUDA auth eval "
@@ -660,9 +652,7 @@ def main(
     result["archive_sha256"] = archive_sha256
     result["archive_size_bytes"] = archive_size_bytes
     result["inflate_sh"] = inflate_sh_rel
-    (out_dir / "modal_cuda_auth_eval_result.json").write_text(
-        json.dumps(result, indent=2, sort_keys=True) + "\n"
-    )
+    write_json(out_dir / "modal_cuda_auth_eval_result.json", result)
 
     print("=" * 60)
     if result.get("passed"):
