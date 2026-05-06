@@ -1,9 +1,12 @@
 #!/bin/bash
-# NO_NVDEC_NEEDED — pure tensor-side codec + scorer-forward; no DALI/NVDEC video pipeline.
+# NVDEC_REQUIRED — Stage 4 contest_auth_eval delegates to upstream/evaluate.py
+# for video decode; this wrapper is historical/local-smoke until strict
+# readiness supplies a real CUDA sensitivity map and current predispatch GO.
 # Lane Ω-W-V3 — Water-fill v2 → PR106 HNeRV decoder repack
 #
 # Anchor: revival_plan_01_water_filling_codec_v2_pr106_decoder + revival_plan_08_sensitivity_map_pr106_producer
-# Council 8/10 GO. Predicted band [0.194, 0.204] [contest-CUDA].
+# Historical council 8/10 GO. Predicted band [0.194, 0.204] is forensic until
+# exact CUDA evidence or a SHA-tied non-proxy readiness gate validates it.
 #
 # Pipeline (4 stages, all on a single Vast.ai 4090 ~$0.30/hr × 1 hour ≈ $0.30,
 # or T4 final auth eval ~$0.22/hr × 30 min ≈ $0.11):
@@ -31,8 +34,8 @@ PYBIN="${PYBIN:-/opt/conda/bin/python}"
 # Stage 0: NVDEC probe — required by preflight check_remote_scripts_have_nvdec_probe.
 # probe MUST come before any GPU-work marker including bare `nvidia-smi`.
 if [ "${SKIP_NVDEC_PROBE:-0}" != "1" ] && [ -f "$WORKSPACE/scripts/probe_nvdec.sh" ]; then
-    bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
-        log "FATAL: NVDEC/DALI probe failed; exact CUDA eval is not trustworthy on this host."
+    bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
+        echo "FATAL: NVDEC/DALI probe failed; exact CUDA eval is not trustworthy on this host." >&2
         exit 2
     }
 fi

@@ -9465,6 +9465,10 @@ def _scan_python_for_vastai_create_no_label(
         return []
     try:
         text = path.read_text()
+        if '"create"' not in text and "'create'" not in text:
+            return []
+        if '"instance"' not in text and "'instance'" not in text:
+            return []
         tree = ast.parse(text, filename=str(path))
     except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
         return []
@@ -9558,6 +9562,10 @@ def _scan_python_for_vastai_create_no_tracker(
         return []
     try:
         text = path.read_text()
+        if '"create"' not in text and "'create'" not in text:
+            return []
+        if '"instance"' not in text and "'instance'" not in text:
+            return []
         tree = ast.parse(text, filename=str(path))
     except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
         return []
@@ -10083,7 +10091,7 @@ def _extract_profile_keys() -> set[str] | None:
     return keys - _PROFILE_KEY_EXEMPTIONS
 
 
-def _scan_for_resolver_keys(text: str) -> set[str]:
+def _scan_for_resolver_keys(text: str, candidate_keys: set[str] | None = None) -> set[str]:
     """Pull every `cfg.<KEY> = ...` assignment + `args.<KEY>` read.
 
     Also catches a wide variety of profile-key access patterns so a key
@@ -10156,32 +10164,46 @@ def _scan_for_resolver_keys(text: str) -> set[str]:
     # consumption pattern where a function signature names the key
     # directly, e.g. `def train(scorer_weight: float = 20.0): …`.
     # Without AST parsing, the regex would have to be fragile.
-    try:
-        tree = ast.parse(text)
-    except (SyntaxError, ValueError):
-        return out
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            for arg in node.args.args + node.args.kwonlyargs + node.args.posonlyargs:
-                out.add(arg.arg)
-            if node.args.vararg:
-                out.add(node.args.vararg.arg)
-            if node.args.kwarg:
-                out.add(node.args.kwarg.arg)
-        elif isinstance(node, ast.ClassDef):
-            # Dataclass-style field declarations:  `X: type = default`
-            for item in node.body:
-                if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
-                    out.add(item.target.id)
-                elif isinstance(item, ast.Assign):
-                    for t in item.targets:
-                        if isinstance(t, ast.Name):
-                            out.add(t.id)
-        elif isinstance(node, ast.Call):
-            # `f(X=value)` — keyword arguments in calls.
-            for kw in node.keywords:
-                if kw.arg is not None:  # exclude **kwargs spreads
-                    out.add(kw.arg)
+    # AST parsing is useful for ordinary source files, but this preflight module
+    # itself is very large. The regex pass above catches explicit profile-key
+    # consumers in large files; skip expensive all-keyword extraction there so
+    # the smoke gate cannot exceed pytest's 60s timeout.
+    ast_worthwhile = len(text) <= 250_000
+    if ast_worthwhile and candidate_keys is not None:
+        ast_worthwhile = any(key in text for key in candidate_keys)
+    if ast_worthwhile:
+        try:
+            tree = ast.parse(text)
+        except (SyntaxError, ValueError):
+            return out
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                for arg in node.args.args + node.args.kwonlyargs + node.args.posonlyargs:
+                    if candidate_keys is None or arg.arg in candidate_keys:
+                        out.add(arg.arg)
+                if node.args.vararg:
+                    if candidate_keys is None or node.args.vararg.arg in candidate_keys:
+                        out.add(node.args.vararg.arg)
+                if node.args.kwarg:
+                    if candidate_keys is None or node.args.kwarg.arg in candidate_keys:
+                        out.add(node.args.kwarg.arg)
+            elif isinstance(node, ast.ClassDef):
+                # Dataclass-style field declarations:  `X: type = default`
+                for item in node.body:
+                    if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
+                        if candidate_keys is None or item.target.id in candidate_keys:
+                            out.add(item.target.id)
+                    elif isinstance(item, ast.Assign):
+                        for t in item.targets:
+                            if isinstance(t, ast.Name):
+                                if candidate_keys is None or t.id in candidate_keys:
+                                    out.add(t.id)
+            elif isinstance(node, ast.Call):
+                # `f(X=value)` — keyword arguments in calls.
+                for kw in node.keywords:
+                    if kw.arg is not None:  # exclude **kwargs spreads
+                        if candidate_keys is None or kw.arg in candidate_keys:
+                            out.add(kw.arg)
     return out
 
 
@@ -10232,7 +10254,7 @@ def check_profile_keys_have_resolvers(
                 text = p.read_text()
             except (UnicodeDecodeError, FileNotFoundError):
                 continue
-            resolved.update(_scan_for_resolver_keys(text))
+            resolved.update(_scan_for_resolver_keys(text, candidate_keys=keys))
     resolver_files = ["src/tac/", "experiments/"]  # for error message
     missing = sorted(keys - resolved)
     for k in missing:
@@ -10450,7 +10472,10 @@ def _has_module_level_skip(tree: ast.Module) -> bool:
 
 
 def _scan_test_file_for_dead_imports(
-    path: Path, repo_root: Path,
+    path: Path,
+    repo_root: Path,
+    *,
+    module_defs_cache: dict[Path, set[str] | None] | None = None,
 ) -> list[str]:
     """Catch broken test imports. Companion to existing dead-import scanner.
 
@@ -10506,12 +10531,21 @@ def _scan_test_file_for_dead_imports(
             )
             continue
         # For each name imported, check it's defined in target.
-        try:
-            target_text = mod_path.read_text()
-            target_tree = ast.parse(target_text)
-        except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
+        cache_key = mod_path.resolve()
+        if module_defs_cache is not None and cache_key in module_defs_cache:
+            defined = module_defs_cache[cache_key]
+        else:
+            try:
+                target_text = mod_path.read_text()
+                target_tree = ast.parse(target_text, filename=str(mod_path))
+            except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
+                defined = None
+            else:
+                defined = _collect_module_top_level_names(target_tree)
+            if module_defs_cache is not None:
+                module_defs_cache[cache_key] = defined
+        if defined is None:
             continue
-        defined = _collect_module_top_level_names(target_tree)
         for alias in node.names:
             name = alias.name
             if name == "*":
@@ -10548,11 +10582,18 @@ def check_test_files_imports_resolve(
     n_scanned = 0
     test_dir = root / "src" / "tac" / "tests"
     if test_dir.exists():
+        module_defs_cache: dict[Path, set[str] | None] = {}
         for p in test_dir.rglob("test_*.py"):
             if "__pycache__" in p.parts:
                 continue
             n_scanned += 1
-            violations.extend(_scan_test_file_for_dead_imports(p, root))
+            violations.extend(
+                _scan_test_file_for_dead_imports(
+                    p,
+                    root,
+                    module_defs_cache=module_defs_cache,
+                )
+            )
     if verbose:
         if violations:
             print(f"  [test-imports] {len(violations)} broken test import(s):")

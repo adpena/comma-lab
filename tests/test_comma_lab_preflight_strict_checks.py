@@ -12,6 +12,7 @@ def test_strict_check_wrappers_point_at_live_tac_checks() -> None:
     assert strict_checks.check_no_mps_fallback_default is tac_preflight.check_no_mps_fallback_default
     assert strict_checks.check_42_train_inference_parity is tac_preflight.check_pose_projection_train_inference_parity
     assert strict_checks.check_public_release_hygiene is tac_preflight.check_public_release_hygiene
+    assert strict_checks.check_reverse_engineering_tree_curation is tac_preflight.check_reverse_engineering_tree_curation
 
 
 def test_emit_catalog_contains_ara_anchor_checks() -> None:

@@ -9,16 +9,25 @@ table for human review before anything is promoted or removed.
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
 from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
+
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.repo_io import json_text, sha256_file  # noqa: E402
 
 
 @dataclass(frozen=True)
 class QuarantineRecord:
     relpath: str
+    live_relpath: str
     category: str
     disposition: str
     quarantine_sha256: str
@@ -29,14 +38,6 @@ class QuarantineRecord:
     is_recovery_stub: bool
     is_recovery_spec: bool
     is_incomplete_decompile: bool
-
-
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def is_text_recovery_stub(path: Path) -> bool:
@@ -101,6 +102,17 @@ def is_blocked_recovery_name(relpath: str) -> bool:
     return relpath.endswith(".PREFLIGHT_DEBT") or relpath.endswith(".QUARANTINED")
 
 
+RECOVERY_SUFFIXES = (".PREFLIGHT_DEBT", ".QUARANTINED")
+
+
+def normalize_recovery_relpath(relpath: str) -> str:
+    """Map quarantine status-suffixed names back to their live repo path."""
+    for suffix in RECOVERY_SUFFIXES:
+        if relpath.endswith(suffix):
+            return relpath[: -len(suffix)]
+    return relpath
+
+
 def disposition_for(
     *,
     relpath: str,
@@ -136,7 +148,8 @@ def iter_records(repo: Path, quarantine: Path) -> list[QuarantineRecord]:
     records: list[QuarantineRecord] = []
     for path in sorted(item for item in quarantine.rglob("*") if item.is_file()):
         relpath = path.relative_to(quarantine).as_posix()
-        live_path = repo / relpath
+        live_relpath = normalize_recovery_relpath(relpath)
+        live_path = repo / live_relpath
         q_sha = sha256_file(path)
         live_exists = live_path.is_file()
         live_sha = sha256_file(live_path) if live_exists else None
@@ -148,6 +161,7 @@ def iter_records(repo: Path, quarantine: Path) -> list[QuarantineRecord]:
         records.append(
             QuarantineRecord(
                 relpath=relpath,
+                live_relpath=live_relpath,
                 category=category,
                 disposition=disposition_for(
                     category=category,
@@ -248,9 +262,9 @@ def main() -> int:
         "records": [asdict(record) for record in records],
     }
     args.json_out.parent.mkdir(parents=True, exist_ok=True)
-    args.json_out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    args.json_out.write_text(json_text(payload), encoding="utf-8")
     args.md_out.parent.mkdir(parents=True, exist_ok=True)
-    args.md_out.write_text(render_markdown(records, quarantine))
+    args.md_out.write_text(render_markdown(records, quarantine), encoding="utf-8")
     return 0
 
 

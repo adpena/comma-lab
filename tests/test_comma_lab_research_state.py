@@ -4,7 +4,6 @@ from pathlib import Path
 
 from comma_lab.research_state import classify_relpath, render_markdown
 
-
 REPO = Path(__file__).resolve().parents[1]
 
 
@@ -57,7 +56,20 @@ def test_large_research_artifact_externalizes_with_manifest() -> None:
     assert category == "research_artifact"
     assert disposition == "externalize_with_manifest"
     assert target == "external artifact store plus committed manifest"
-    assert "git history" in reason
+    assert "rebuildable custody outputs" in reason
+
+
+def test_generated_research_artifact_externalizes_even_when_small_text() -> None:
+    category, disposition, target, reason = classify_relpath(
+        ".omx/research/artifacts/recovery/audit.json",
+        12_000,
+        "untracked",
+    )
+
+    assert category == "research_artifact"
+    assert disposition == "externalize_with_manifest"
+    assert target == "external artifact store plus committed manifest"
+    assert "rebuildable custody outputs" in reason
 
 
 def test_generated_public_site_bundle_is_not_tracked_as_source() -> None:
@@ -114,7 +126,12 @@ def test_repo_policy_keeps_research_state_boundary_in_comma_lab() -> None:
 
     assert "tools/audit_research_state_tracking.py" in gitignore
     assert ".omx/auto_memory_snapshot_*/" in gitignore
+    assert ".omx/research/artifacts/" in gitignore
+    assert "experiments/results/lightning_batch/**/source_manifest.json" in gitignore
     assert "Keep `tac` clean" in agents
+    assert "Contest-specific public-submission reverse engineering belongs in" in agents
     assert "`tac` stays clean; comma-lab owns research state" in claude
+    assert "Use `reverse_engineering/` for clean public-submission deconstruction" in claude
     assert (REPO / "src/comma_lab/research_state.py").is_file()
     assert (REPO / "docs/runbooks/research_state_tracking_policy.md").is_file()
+    assert (REPO / "reverse_engineering/README.md").is_file()

@@ -20,6 +20,7 @@ from tac import preflight as _tac_preflight
 check_no_mps_fallback_default = _tac_preflight.check_no_mps_fallback_default
 check_42_train_inference_parity = _tac_preflight.check_pose_projection_train_inference_parity
 check_dispatch_cli_shell_hazards = _tac_preflight.check_dispatch_cli_shell_hazards
+check_reverse_engineering_tree_curation = _tac_preflight.check_reverse_engineering_tree_curation
 check_feature_flags_have_live_objective_effect = _tac_preflight.check_feature_flags_have_live_objective_effect
 check_public_release_hygiene = _tac_preflight.check_public_release_hygiene
 preflight_all = _tac_preflight.preflight_all
@@ -29,6 +30,7 @@ ANCHOR_CHECKS = {
     "check_no_mps_fallback_default": "device safety: no CPU/MPS fallback for authoritative score paths",
     "check_42_train_inference_parity": "train/inference parity for pose projection and codec contracts",
     "check_dispatch_cli_shell_hazards": "dispatch shell/CLI typo and local-platform hazard guard",
+    "check_reverse_engineering_tree_curation": "reverse-engineering tree custody and raw-artifact guard",
     "check_feature_flags_have_live_objective_effect": "dead flag and no-op objective guard",
     "check_public_release_hygiene": "public docs/site/notebook private-surface guard",
 }
@@ -79,6 +81,7 @@ __all__ = [
     "check_feature_flags_have_live_objective_effect",
     "check_no_mps_fallback_default",
     "check_public_release_hygiene",
+    "check_reverse_engineering_tree_curation",
     "emit_catalog",
     "preflight_all",
 ]

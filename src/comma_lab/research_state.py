@@ -118,6 +118,14 @@ def classify_relpath(relpath: str, size: int, git_status: str) -> tuple[str, str
             "Memory snapshots are interesting, but raw snapshots are bulky operator backups.",
         )
 
+    if relpath.startswith(".omx/research/artifacts/"):
+        return (
+            "research_artifact",
+            "externalize_with_manifest",
+            "external artifact store plus committed manifest",
+            "Generated audit/profile artifacts are rebuildable custody outputs; summarize or manifest them instead of committing every run output.",
+        )
+
     if relpath.startswith(".omx/research/"):
         if is_small_text:
             return (
