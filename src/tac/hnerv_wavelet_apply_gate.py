@@ -33,6 +33,28 @@ def build_wavelet_apply_gate(
 ) -> dict[str, Any]:
     """Return a fail-closed readiness report for a WR01 apply transform.
 
+    Round 4 R4-B note (2026-05-06, 80% confidence): this gate is
+    **fail-closed by design**. Four blockers in `_dispatch_blockers`
+    (`requires_reviewed_wr01_apply_transform`,
+    `requires_component_benefit_evidence_over_break_even`,
+    `requires_archive_manifest_preflight`, `requires_exact_cuda_auth_eval`)
+    are unconditionally appended on every call. `ready_for_exact_eval_dispatch`
+    and `ready_for_archive_preflight` are therefore always `False`. This is
+    INTENTIONAL — the gate is a documented "next required evidence" report,
+    not a pass/fail oracle. Operators must REMOVE blockers from the report
+    by hand only after the corresponding evidence has been produced (a
+    council Round-N CLEAN review for the apply_transform; a contest-CUDA
+    score that exceeds break-even; a fresh archive manifest preflight; a
+    CUDA auth-eval JSON pinned to the candidate archive bytes).
+
+    Code that consumes this report should NOT use `not gate["dispatch_blockers"]`
+    as a clearance check — the list is never empty in this module's emitted
+    output. Use the `next_required_evidence` field as a checklist and
+    confirm each item via the corresponding evidence artifact before
+    dispatch. The gate's value is in the cross-cut of byte-delta gating
+    + component-margin + WR01-specific runtime mode + manifest schema
+    enforcement, not in producing a green-light boolean.
+
     ``required_component_margin`` is an additional score-space safety margin
     beyond the byte-rate break-even. A positive value makes the gate stricter.
     """

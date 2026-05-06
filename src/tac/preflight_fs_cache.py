@@ -68,11 +68,15 @@ def _cached_rglob(self: Path, pattern: str, *args, **kwargs):  # type: ignore[ov
         except OSError:
             cached = None
     if cached is None:
-        # R3-D: don't cache on exception. Let it propagate; next call retries.
-        try:
-            cached = list(_ORIGINAL_RGLOB(self, pattern))
-        except Exception:
-            raise
+        # Round 4 R4-A fix (2026-05-06, 82% confidence): R3-D wrapped this in
+        # `try/except: raise` as scaffolding for "don't poison the cache on
+        # exception," but the cache-write is OUTSIDE the try, so a raising
+        # _ORIGINAL_RGLOB never reaches the assignment anyway. The scaffold
+        # was dead code that misleads future readers into thinking there is
+        # protection it does not provide. Removed the no-op wrapper; the
+        # natural Python control flow (raise propagates, assignment skipped)
+        # already gives us the desired behavior.
+        cached = list(_ORIGINAL_RGLOB(self, pattern))
         _RGLOB_CACHE[key] = cached
     # Callers iterate; returning the list is fine since rglob's contract
     # is "iterable of Path".
