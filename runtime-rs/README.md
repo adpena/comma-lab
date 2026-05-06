@@ -5,19 +5,24 @@ Rust workspace for hot-path experiments.
 This lane is intentionally separate from the Python harness.
 
 Targets:
+- Rust-backed Python AST/source indexing for fast preflight scans
 - raw frame writer
-- QMA-family semantic mask parser/decode prototypes
-- STBM1BR top-band semantic mask decode acceleration
 - sparse residual decode
 - ROI patch application
 - future CPU inflator core
 
+Current Python AST indexer status:
+- `crates/python-ast-indexer` parses Python files with `rustpython-parser`
+  and emits stable JSON for top-level functions, classes, imports, assigned
+  names, line numbers, and function arguments.
+- This is a first-stage replacement path for slow Python-side preflight AST
+  scans. It is not score-bearing and does not mutate repository/provider state.
+- Example: `cargo run -q -p python-ast-indexer -- ../src/tac/preflight.py`.
+
 Current QMA status:
-- `crates/qma-codec` parses QMA9 headers fail-closed and decodes QMA9 storage-order masks in Rust.
-- Tests cover a Python-contract QMA9 fixture and the known PR85 QMA9 segment header (`600 x 512 x 384`, `159011` packed bytes).
-- This is not wired into `inflate.sh` or the robust submission runtime yet; public replay custody can keep the C++ decoder until the Rust path has full archive parity evidence.
+- QMA-family semantic mask parser/decode prototypes are still planned, but no
+  QMA Rust crate is currently present in this workspace.
 
 Current STBM1BR status:
-- `crates/stbm1br-codec` decodes the PR90-derived `STBM1BR\0 + brotli(QTBM5)` mask segment to render-order `uint8` bytes.
-- Unsupported QTBM/top-band/boundary subformats fail closed; the first integration gate is exact byte parity against the Python `tac.stbm1br_mask_codec` reference and the real PR85 STBM1BR mask segment.
-- It is not an ambient contest sidecar. Python inflate may only use it when an explicit decoder path is supplied by an experiment or fixed runtime.
+- STBM1BR top-band semantic mask decode acceleration is still planned, but no
+  STBM1BR Rust crate is currently present in this workspace.
