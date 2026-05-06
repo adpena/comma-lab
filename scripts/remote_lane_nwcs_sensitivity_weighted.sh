@@ -11,10 +11,26 @@
 #     compression). Predicted -50 to -150B vs J-NWC at fixed distortion.
 #   * Predicted band [contest-CUDA] [0.78, 0.92] vs J-NWC-EC stack 0.78-0.92.
 #
-# REGISTERED-BUT-NOT-WIRED in step_compress_weights as of 2026-05-06; the
-# WARN guard (commit 9bdd3d56) prevents silent no-op. To enable, an operator
-# must land the dispatch branch (mirror of β dispatch in commit 107f6fea)
-# before this runbook can produce a real archive.
+# Wiring status as of 2026-05-06:
+#   * cfg.weight_compression='nwcs_sensitivity' branch lands a two-stage gate
+#     in pipeline.step_compress_weights (commit 9922335c): stage 1 raises
+#     NotImplementedError with explicit blocker list when codec_path /
+#     sensitivity_map_path are missing or non-existent; stage 2 raises after
+#     the per-tensor encoding loop entry point as a structural gate so an
+#     operator cannot accidentally ship a stub. Silent no-op trap is closed.
+#   * tac.neural_weight_codec_sensitivity has the codec primitives
+#     (SensitivityAwareWeightCodec, export_nwcs_renderer_container,
+#     load_nwcs_renderer_container, compute_per_block_sensitivity,
+#     encode_with_variable_codebook, decode_with_per_block_codebook).
+# Remaining blockers (operator-gated):
+#   1. Per-tensor encoding loop in step_compress_weights that calls
+#      SensitivityAwareWeightCodec.encode → export_nwcs_renderer_container
+#      with the appropriate sensitivity buckets.
+#   2. Trained NWCS codec checkpoint produced by a (not yet built)
+#      experiments/train_neural_weight_codec_sensitivity.py harness.
+#   3. CUDA sensitivity-map artifact (per-channel) at
+#      cfg.sensitivity_map_path. Reference: tac.sensitivity_map (already
+#      lands the schema + validators).
 #
 # Cost: T4 @ ~$0.50/hr × ~30min sweep + 30min auth eval = ~$0.50.
 set -euo pipefail
@@ -63,11 +79,17 @@ from tac.neural_weight_codec_sensitivity import SensitivityAwareWeightCodec
 print('NWCS module importable')
 " 2>&1 | tee -a "$LOG_DIR/run.log"
 
-log "=== Stage 1: NWCS codec training (precondition: dispatch branch must land) ==="
-log "WARN: NWCS dispatch branch in step_compress_weights is REGISTERED-BUT-NOT-WIRED."
-log "WARN: Operator must land the dispatch branch before this stage runs."
-log "WARN: Reference implementation: experiments/pipeline.py:1360-1430 (β branch)."
+log "=== Stage 1: NWCS codec training (BLOCKER: harness not built) ==="
+log "WARN: experiments/train_neural_weight_codec_sensitivity.py is the proposed"
+log "WARN:   entry point but has not yet been built. Without a trained codec"
+log "WARN:   checkpoint, cfg.weight_codec_path is unsatisfiable and the gate"
+log "WARN:   raises NotImplementedError on the first invocation."
 
-log "=== Stage 2: archive build (skipped pending Stage 1 dispatch wiring) ==="
-log "=== Stage 3: contest-CUDA auth eval (skipped) ==="
-log "LANE_NWCS_SENSITIVITY_WEIGHTED_DONE score=N/A [contest-CUDA] paradigm=β-nwcs blocked=dispatch_branch_not_wired"
+log "=== Stage 2: per-tensor encoding loop wiring (BLOCKER: pipeline.step_compress_weights) ==="
+log "INFO: pipeline.step_compress_weights at mode='nwcs_sensitivity' (commit 9922335c)"
+log "INFO:   has the gate but NOT the encoding loop. Reference β branch (commit 107f6fea)"
+log "INFO:   for the production-shape pattern: load model, walk tensors, encode each via"
+log "INFO:   SensitivityAwareWeightCodec, package via export_nwcs_renderer_container."
+
+log "=== Stage 3: contest-CUDA auth eval (skipped pending Stages 1-2) ==="
+log "LANE_NWCS_SENSITIVITY_WEIGHTED_DONE score=N/A [contest-CUDA] paradigm=β-nwcs blocked=codec_training_harness_missing+per_tensor_encoding_loop_missing"
