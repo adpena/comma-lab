@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "tool": "wr01_strength_section_diff_summary",
+  "score_claim": false,
+  "rows": [
+    {
+      "candidate_label": "WR01_1_4",
+      "candidate_archive_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_4_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip",
+      "candidate_archive_bytes": 186230,
+      "candidate_archive_sha256": "95bb35ded10668e66dcca7f42d91660c504e073aac8305b8b983b0a0f722bcaf",
+      "archive_byte_delta": -1,
+      "payload_byte_delta": -1,
+      "changed_section_count": 1,
+      "blockers": [],
+      "latent_section": {
+        "byte_delta": -1,
+        "raw_equal": false,
+        "raw_changed_positions": 64,
+        "raw_abs_delta_sum": 1820,
+        "source_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+        "candidate_sha256": "1238079917b98f187e40523a4913b151b7151f7a16c13572ab2734ac2a3ff166"
+      }
+    },
+    {
+      "candidate_label": "WR01_1_2",
+      "candidate_archive_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip",
+      "candidate_archive_bytes": 186222,
+      "candidate_archive_sha256": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "archive_byte_delta": -9,
+      "payload_byte_delta": -9,
+      "changed_section_count": 1,
+      "blockers": [],
+      "latent_section": {
+        "byte_delta": -9,
+        "raw_equal": false,
+        "raw_changed_positions": 64,
+        "raw_abs_delta_sum": 3610,
+        "source_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+        "candidate_sha256": "2d85c4891e06906833e6a106dd486184121159a2380b581dc0e0b7d56603e939"
+      }
+    },
+    {
+      "candidate_label": "WR01_3_4",
+      "candidate_archive_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_3_4_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip",
+      "candidate_archive_bytes": 186225,
+      "candidate_archive_sha256": "a2622df475ef1ff978e2b5ece5094a8a717f07d23a5f4dc2c83d97edcfb1146c",
+      "archive_byte_delta": -6,
+      "payload_byte_delta": -6,
+      "changed_section_count": 1,
+      "blockers": [],
+      "latent_section": {
+        "byte_delta": -6,
+        "raw_equal": false,
+        "raw_changed_positions": 64,
+        "raw_abs_delta_sum": 5424,
+        "source_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+        "candidate_sha256": "ed6d85e08b265fa1f74de35de07bfad634153000144434f34bbb9cd29b7ee1e9"
+      }
+    },
+    {
+      "candidate_label": "WR01_1_1",
+      "candidate_archive_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_1_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip",
+      "candidate_archive_bytes": 186224,
+      "candidate_archive_sha256": "7066ae2ed456f48a32cde24af1f67f225f63ef74e79dd5172029563b9862154f",
+      "archive_byte_delta": -7,
+      "payload_byte_delta": -7,
+      "changed_section_count": 1,
+      "blockers": [],
+      "latent_section": {
+        "byte_delta": -7,
+        "raw_equal": false,
+        "raw_changed_positions": 64,
+        "raw_abs_delta_sum": 7210,
+        "source_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+        "candidate_sha256": "7a6ea45ac488a350abcbeb8c621c8065b665b776e5058414a652bfedb392c6bb"
+      }
+    }
+  ]
+}

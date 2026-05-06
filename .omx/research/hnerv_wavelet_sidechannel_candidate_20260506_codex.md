@@ -421,3 +421,47 @@ the HNeRV section level. The transform does not perturb decoder bytes; all
 charged changes are isolated to the latent/sidecar brotli section. This is
 still byte-forensic evidence, not score evidence, until exact CUDA auth eval
 measures SegNet/PoseNet.
+
+## WR01 Strength Section-Diff Sweep
+
+The section-diff guard was applied to all four offline WR01 strength candidates
+so the exact-eval target is selected from deterministic byte evidence rather
+than intuition.
+
+Command family:
+
+```bash
+.venv/bin/python tools/compare_hnerv_payload_sections.py \
+  --source-archive experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/archive.zip \
+  --candidate-archive experiments/results/hnerv_wavelet_apply_transform_pr106x_<strength>_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip \
+  --source-label PR106x \
+  --candidate-label WR01_<strength> \
+  --source-manifest-json experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/scorecard.json \
+  --json-out experiments/results/hnerv_wavelet_apply_transform_pr106x_<strength>_20260506_codex/payload_section_diff_vs_pr106x.json \
+  --fail-if-no-section-change
+```
+
+Observed sweep:
+
+| strength | archive byte delta | payload byte delta | changed raw positions | raw abs delta sum |
+|---:|---:|---:|---:|---:|
+| `1/4` | `-1` | `-1` | `64` | `1820` |
+| `1/2` | `-9` | `-9` | `64` | `3610` |
+| `3/4` | `-6` | `-6` | `64` | `5424` |
+| `1/1` | `-7` | `-7` | `64` | `7210` |
+
+Tracked artifacts:
+
+- `experiments/results/hnerv_wavelet_apply_transform_pr106x_1_4_20260506_codex/payload_section_diff_vs_pr106x.json`
+- `experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json`
+- `experiments/results/hnerv_wavelet_apply_transform_pr106x_3_4_20260506_codex/payload_section_diff_vs_pr106x.json`
+- `experiments/results/hnerv_wavelet_apply_transform_pr106x_1_1_20260506_codex/payload_section_diff_vs_pr106x.json`
+- `experiments/results/hnerv_wavelet_apply_transform_wr01_strength_summary_20260506_codex.json`
+
+Selection rationale:
+
+The `1/2` candidate remains the exact-eval target because it has the largest
+rate improvement (`-9` archive bytes) while staying in the middle of the raw
+perturbation ladder. The `1/4` candidate is the conservative distortion probe;
+the `1/1` candidate is the maximum perturbation probe. None of these rows is a
+score claim until CUDA auth eval measures the actual component response.
