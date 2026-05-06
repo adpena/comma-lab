@@ -1568,17 +1568,17 @@ def check_codebase_drift(strict: bool = True) -> list[str]:
     # preflight.py). Scanning the mirror produces only false-positive
     # double-detections of patterns the canonical originals are already
     # responsible for. Mirror is regenerated, not authored.
+    # Round 12 R12-2 fix (2026-05-06): standardized on `.parts` tuple
+    # membership, consistent with R12-1 across all scanners.
     drift_scan_dirs = ["scripts", "experiments",
                        "src/tac/contrib", "src/tac/deploy",
                        "src/tac/experiments"]
-    drift_scan_skip_parts = ("/comma_lab_public_export/",)
     for d in drift_scan_dirs:
         d_path = REPO_ROOT / d
         if not d_path.exists():
             continue
         for py_path in d_path.rglob("*.py"):
-            rel_str = str(py_path.relative_to(REPO_ROOT))
-            if any(skip in rel_str for skip in drift_scan_skip_parts):
+            if "comma_lab_public_export" in py_path.parts:
                 continue
             all_violations.extend(_scan_python_for_forbidden(py_path))
 
@@ -3146,7 +3146,19 @@ _CPU_MPS_DEVICE_RE = re.compile(r"""(?ix)--device(?:\s+|=)(?:cpu|mps)\b""")
 
 
 def _iter_python_files(root: Path, dirs: list[str]) -> list[Path]:
-    """Collect every .py file under `dirs` (recursively). Skips __pycache__."""
+    """Collect every .py file under `dirs` (recursively). Skips __pycache__
+    and the comma_lab_public_export OSS staging mirror.
+
+    Round 12 R12-1 fix (2026-05-06): the OSS-export staging dir is a
+    verbatim copy of source files (including this very preflight.py, all
+    of src/tac/, and example training scripts). Scanning the mirror via
+    every check that uses this helper produces only false-positive
+    double-detections of patterns the canonical originals are already
+    responsible for. Centralizing the skip here (rather than in each
+    scanner) covers check_no_mps_fallback_default,
+    check_no_eval_roundtrip_false, check_no_disable_eval_roundtrip_flag,
+    and any future scanner that adopts this helper.
+    """
     out: list[Path] = []
     for d in dirs:
         d_path = root / d
@@ -3155,18 +3167,23 @@ def _iter_python_files(root: Path, dirs: list[str]) -> list[Path]:
         for p in d_path.rglob("*.py"):
             if "__pycache__" in p.parts:
                 continue
+            if "comma_lab_public_export" in p.parts:
+                continue
             out.append(p)
     return sorted(out)
 
 
 def _iter_shell_files(root: Path, dirs: list[str]) -> list[Path]:
-    """Collect every .sh file under `dirs` (recursively)."""
+    """Collect every .sh file under `dirs` (recursively). Skips the
+    comma_lab_public_export OSS staging mirror (Round 12 R12-1)."""
     out: list[Path] = []
     for d in dirs:
         d_path = root / d
         if not d_path.exists():
             continue
         for p in d_path.rglob("*.sh"):
+            if "comma_lab_public_export" in p.parts:
+                continue
             out.append(p)
     return sorted(out)
 
@@ -8188,6 +8205,9 @@ def check_callsite_contracts_satisfied(
         if not sd_path.is_dir():
             continue
         for py in sd_path.rglob("*.py"):
+            # Round 12 R12-1: skip OSS-export staging mirror.
+            if "comma_lab_public_export" in py.parts:
+                continue
             violations.extend(
                 _scan_python_for_callsite_contract_violations(py, root)
             )
@@ -8630,6 +8650,9 @@ def check_no_comment_only_contracts(
         for f in sd_path.rglob("*"):
             if not f.is_file() or f.suffix not in target_suffixes:
                 continue
+            # Round 12 R12-1: skip OSS-export staging mirror.
+            if "comma_lab_public_export" in f.parts:
+                continue
             all_findings.extend(
                 _scan_file_for_comment_only_contracts(f, root, patterns)
             )
@@ -8946,6 +8969,9 @@ def check_no_bare_round_in_eval_roundtrip(
         if not sd_path.is_dir():
             continue
         for py in sd_path.rglob("*.py"):
+            # Round 12 R12-1: skip OSS-export staging mirror.
+            if "comma_lab_public_export" in py.parts:
+                continue
             violations.extend(
                 _scan_python_for_bare_round_in_roundtrip(py, root)
             )
