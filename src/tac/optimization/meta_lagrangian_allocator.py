@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable, Mapping
-from hashlib import sha256
 from pathlib import Path
 from typing import Any
+
+from tac.repo_io import sha256_file
 
 CONTEST_ORIGINAL_BYTES = 37_545_489
 RATE_SCORE_PER_BYTE = 25 / CONTEST_ORIGINAL_BYTES
@@ -78,14 +79,6 @@ def _is_sha256(value: str) -> bool:
     return len(value) == 64 and all(char in "0123456789abcdef" for char in value.lower())
 
 
-def _sha256_file(path: Path) -> str:
-    digest = sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _archive_manifest_custody(path_value: str, sha256_value: str) -> dict[str, Any]:
     if not path_value and not sha256_value:
         return {
@@ -112,7 +105,7 @@ def _archive_manifest_custody(path_value: str, sha256_value: str) -> dict[str, A
     elif exists and not is_file:
         blockers.append("archive_manifest_path_not_file")
     elif is_file and _is_sha256(sha256_value):
-        actual_sha = _sha256_file(path)
+        actual_sha = sha256_file(path)
         if actual_sha != sha256_value:
             blockers.append("archive_manifest_sha256_mismatch")
     verified = bool(is_file and actual_sha == sha256_value)
