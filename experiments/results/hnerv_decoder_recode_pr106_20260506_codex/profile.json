@@ -1,0 +1,100 @@
+{
+  "best_variant": {
+    "byte_delta_vs_source_section": -151,
+    "bytes": 170127,
+    "codec": "brotli",
+    "quality": 10,
+    "rate_score_delta_if_runtime_supported_and_components_equal": -0.000100544702,
+    "raw_equal": true,
+    "sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+    "variant": "brotli_q10_current_raw"
+  },
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "planning_only_structural_recode_profile",
+    "requires_runtime_decoder_implementation",
+    "requires_archive_manifest_preflight",
+    "requires_exact_cuda_auth_eval"
+  ],
+  "q_stream_bytes": 228958,
+  "ready_for_archive_preflight": false,
+  "ready_for_exact_eval_dispatch": false,
+  "record_count": 28,
+  "scale_stream_bytes": 112,
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+  "source_decoder_raw_bytes": 229070,
+  "source_decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+  "source_decoder_section_bytes": 170278,
+  "source_decoder_section_sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
+  "source_label": "public_pr106_belt_and_suspenders",
+  "tool": "tac.hnerv_decoder_recode.build_structural_recode_profile",
+  "variants": [
+    {
+      "byte_delta_vs_source_section": 0,
+      "bytes": 170278,
+      "codec": "brotli",
+      "quality": 11,
+      "rate_score_delta_if_runtime_supported_and_components_equal": 0.0,
+      "raw_equal": true,
+      "sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
+      "variant": "brotli_q11_current_raw"
+    },
+    {
+      "byte_delta_vs_source_section": -151,
+      "bytes": 170127,
+      "codec": "brotli",
+      "quality": 10,
+      "rate_score_delta_if_runtime_supported_and_components_equal": -0.000100544702,
+      "raw_equal": true,
+      "sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+      "variant": "brotli_q10_current_raw"
+    },
+    {
+      "byte_delta_vs_source_section": 2860,
+      "bytes": 173138,
+      "codec": "brotli",
+      "quality": 9,
+      "rate_score_delta_if_runtime_supported_and_components_equal": 0.001904356606,
+      "raw_equal": true,
+      "sha256": "b2c77906a84affedd025b7246646b0a13831b830a9e18987a8f13767008b4a58",
+      "variant": "brotli_q9_current_raw"
+    },
+    {
+      "byte_delta_vs_source_section": 18713,
+      "bytes": 188991,
+      "codec": "AQv1_static_global_uint8",
+      "q_roundtrip_equal": true,
+      "rate_score_delta_if_runtime_supported_and_components_equal": 0.01246021859,
+      "raw_equal": true,
+      "scale_roundtrip_equal": true,
+      "sha256": "f9f1c4ca5c7bff6e4ec070045aa7a2cedbc8a21f867613bdfbf299f5e6731dd8",
+      "variant": "aq_global_q_stream_plus_raw_scales"
+    },
+    {
+      "byte_delta_vs_source_section": 27863,
+      "bytes": 198141,
+      "codec": "AQv1_static_per_tensor_uint8",
+      "q_roundtrip_equal": true,
+      "rate_score_delta_if_runtime_supported_and_components_equal": 0.018552828011,
+      "raw_equal": true,
+      "scale_roundtrip_equal": true,
+      "sha256": "9537e1b05d4ab7daf67fd6b4b3fab8079a9755408e01643c5c267da562e4273f",
+      "variant": "aq_per_tensor_q_streams_plus_raw_scales"
+    },
+    {
+      "byte_delta_vs_source_section": 19175,
+      "bytes": 189453,
+      "codec": "TFC1_static_global_uint8",
+      "max_code_bits": 19,
+      "q_roundtrip_equal": true,
+      "rate_score_delta_if_runtime_supported_and_components_equal": 0.012767845426,
+      "raw_equal": true,
+      "scale_roundtrip_equal": true,
+      "sha256": "5fb15792038316f8dee96f82bc16e5aa99edc09385286cf635b03aececdd15a1",
+      "unique_symbols": 247,
+      "variant": "canonical_huffman_global_q_stream_plus_raw_scales"
+    }
+  ]
+}
