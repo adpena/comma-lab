@@ -756,14 +756,10 @@ def step_pose_tto(cfg: PipelineConfig, iteration: int = 0) -> Path:
             "land the dispatch branch in step_pose_tto.",
             "WARN",
         )
-    if cfg.use_riemannian_tto:
-        _log(
-            "PARADIGM-la-pose: cfg.use_riemannian_tto=True but the SE(3) "
-            "Riemannian optimizer dispatch path is REGISTERED-BUT-NOT-WIRED. "
-            "Continuing with the default Euclidean optimizer. To enable, "
-            "the operator must land the dispatch branch in optimize_poses.py.",
-            "WARN",
-        )
+    # PARADIGM-la-pose use_riemannian_tto: WIRED (commit pending) — passes
+    # through ``--optimizer=riemannian-sgd`` to the optimize_poses.py
+    # subprocess later in this function. WARN guard removed; INFO log moved
+    # to the subprocess-cmd construction site.
     # R29 fix: validate masks BEFORE constructing the subprocess cmd. Prior
     # version passed cfg.masks blindly, so an empty string flowed through
     # to optimize_poses.py and produced a cryptic decode failure deep in the
@@ -856,6 +852,22 @@ def step_pose_tto(cfg: PipelineConfig, iteration: int = 0) -> Path:
         "--eval-roundtrip",
         "--output-dir", str(iter_dir),
     ]
+
+    # PARADIGM-la-pose Riemannian SE(3) dispatch — wired 2026-05-06.
+    # The optimize_poses.py CLI already supports ``--optimizer=riemannian-sgd``
+    # (Lane RM); cfg.use_riemannian_tto routes to it. The mode requires
+    # ``--pose-mode=full-6dof`` and disabled LoRA paths per the CLI's own
+    # validation (optimize_poses.py:530-546). We set the optimizer flag here
+    # and trust optimize_poses.py to validate the mode-compatibility.
+    if cfg.use_riemannian_tto:
+        cmd.extend(["--optimizer", "riemannian-sgd"])
+        _log(
+            "PARADIGM-la-pose: cfg.use_riemannian_tto=True → routing pose TTO "
+            "through SE(3) Riemannian SGD (tac.riemannian_pose_optimizer). "
+            "Predicted band [1.05, 1.15] vs Lane A's 1.15 [contest-CUDA] "
+            "(per optimize_poses.py docstring).",
+            "INFO",
+        )
 
     # Reuse cached pose targets from previous runs (saves ~15 min of PoseNet inference).
     # DX #5 (2026-04-26): mtime-gate the cache. iter_dir was created (or
