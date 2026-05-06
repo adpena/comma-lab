@@ -1,4 +1,14 @@
 {
+  "decode_reencode_parity": {
+    "accepted": false,
+    "blockers": [
+      "decode_reencode_parity_report_missing"
+    ],
+    "byte_exact_reencode": false,
+    "full_decode_600_frames": false,
+    "present": false,
+    "runtime_loader_sidecar_free": false
+  },
   "dispatch_attempted": false,
   "dispatch_blockers": [
     "byte_exact_hpm1_reencode",
@@ -200,7 +210,7 @@
       "--json-out",
       "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "68bf4ba07519129ef36656e8ad05c8d0e32fc2fbdbaf1051c6094387fc7ddbbe",
+    "canonical_payload_without_tool_manifest_sha256": "56c9a8c36ca14a01881beeab8588b040890ab86fece4fce6e4de46bb7d05e63e",
     "dispatch_attempted": false,
     "input_files": [
       {

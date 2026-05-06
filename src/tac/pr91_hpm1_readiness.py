@@ -6,7 +6,7 @@ import struct
 import zipfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from tac.pr85_bundle import HPM1_MAGIC, Pr85BundleError, parse_pr85_bundle
 from tac.pr91_hpm1_codec import (
@@ -237,6 +237,7 @@ def audit_pr91_hpm1_readiness(
     *,
     archive: str | Path = DEFAULT_PR91_ARCHIVE,
     runtime_source_dir: str | Path = DEFAULT_PR91_RUNTIME_SOURCE_DIR,
+    parity_report: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return a deterministic non-dispatchable readiness report for PR91/HPM1.
 
@@ -376,20 +377,31 @@ def audit_pr91_hpm1_readiness(
         required_for_dispatch=False,
         failed_status="missing",
     )
+    parity = _audit_decode_reencode_parity_report(
+        parity_report,
+        archive_record=archive_record,
+        hpm1_record=hpm1_record,
+    )
 
     gates["full_hpm1_decode_600_frames"] = _gate(
-        passed=False,
-        reason="full 600-frame HPM1 probability/range decode is not recovered",
+        passed=parity["full_decode_600_frames"] is True,
+        reason="full 600-frame HPM1 probability/range decode parity report is valid"
+        if parity["full_decode_600_frames"] is True
+        else "full 600-frame HPM1 probability/range decode is not recovered",
         failed_status="blocked",
     )
     gates["byte_exact_hpm1_reencode"] = _gate(
-        passed=False,
-        reason="byte-exact HPM1 re-encode is not recovered",
+        passed=parity["byte_exact_reencode"] is True,
+        reason="byte-exact HPM1 re-encode parity report is valid"
+        if parity["byte_exact_reencode"] is True
+        else "byte-exact HPM1 re-encode is not recovered",
         failed_status="blocked",
     )
     gates["runtime_hpm1_loader_without_sidecars"] = _gate(
-        passed=False,
-        reason="contest inflate runtime has not proven HPM1 loading without uncharged sidecars or fallback",
+        passed=parity["runtime_loader_sidecar_free"] is True,
+        reason="runtime HPM1 loader sidecar-free proof is valid"
+        if parity["runtime_loader_sidecar_free"] is True
+        else "contest inflate runtime has not proven HPM1 loading without uncharged sidecars or fallback",
         failed_status="blocked",
     )
     gates["exact_cuda_auth_eval_after_parity"] = _gate(
@@ -420,6 +432,7 @@ def audit_pr91_hpm1_readiness(
         "hpm1_mask_segment": hpm1_record,
         "hpm1_payload": hpm1_payload_record,
         "runtime_source_inventory": runtime_inventory,
+        "decode_reencode_parity": parity,
         "gates": gates,
         "dispatch_blockers": blockers,
         "warnings": warnings,
@@ -430,6 +443,76 @@ def audit_pr91_hpm1_readiness(
             "Only then run exact CUDA auth eval through archive.zip -> inflate.sh -> upstream/evaluate.py.",
         ],
     }
+
+
+def _audit_decode_reencode_parity_report(
+    report: Mapping[str, Any] | None,
+    *,
+    archive_record: Mapping[str, Any],
+    hpm1_record: Mapping[str, Any],
+) -> dict[str, Any]:
+    if report is None:
+        return {
+            "present": False,
+            "accepted": False,
+            "full_decode_600_frames": False,
+            "byte_exact_reencode": False,
+            "runtime_loader_sidecar_free": False,
+            "blockers": ["decode_reencode_parity_report_missing"],
+        }
+    blockers: list[str] = []
+    if report.get("schema") != "pr91_hpm1_decode_reencode_parity_v1":
+        blockers.append("parity_report_schema_mismatch")
+    if report.get("score_claim") is not False:
+        blockers.append("parity_report_score_claim_must_be_false")
+    if report.get("dispatch_attempted") is not False:
+        blockers.append("parity_report_dispatch_attempted_must_be_false")
+    if report.get("archive_sha256") != archive_record.get("sha256"):
+        blockers.append("parity_report_archive_sha256_mismatch")
+    if report.get("hpm1_mask_sha256") != hpm1_record.get("sha256"):
+        blockers.append("parity_report_hpm1_mask_sha256_mismatch")
+    device_contract = report.get("device_contract")
+    if not isinstance(device_contract, Mapping) or device_contract.get("resolved_device") != "cpu":
+        blockers.append("parity_report_device_contract_not_cpu")
+    full_decode = report.get("full_decode")
+    full_ok = (
+        isinstance(full_decode, Mapping)
+        and full_decode.get("passed") is True
+        and full_decode.get("frame_count") == 600
+        and _is_sha256(full_decode.get("decoded_masks_sha256"))
+    )
+    if not full_ok:
+        blockers.append("parity_report_full_decode_not_proven")
+    reencode = report.get("byte_exact_reencode")
+    reencode_ok = (
+        isinstance(reencode, Mapping)
+        and reencode.get("passed") is True
+        and reencode.get("reencoded_hpm1_sha256") == hpm1_record.get("sha256")
+    )
+    if not reencode_ok:
+        blockers.append("parity_report_byte_exact_reencode_not_proven")
+    runtime_loader = report.get("runtime_loader")
+    runtime_ok = (
+        isinstance(runtime_loader, Mapping)
+        and runtime_loader.get("sidecar_free") is True
+        and runtime_loader.get("fallback_used") is False
+    )
+    if not runtime_ok:
+        blockers.append("parity_report_runtime_loader_not_sidecar_free")
+    accepted = not blockers
+    return {
+        "present": True,
+        "accepted": accepted,
+        "full_decode_600_frames": full_ok and accepted,
+        "byte_exact_reencode": reencode_ok and accepted,
+        "runtime_loader_sidecar_free": runtime_ok and accepted,
+        "blockers": blockers,
+        "report_sha256": report.get("report_sha256"),
+    }
+
+
+def _is_sha256(value: object) -> bool:
+    return isinstance(value, str) and len(value) == 64 and all(c in "0123456789abcdef" for c in value)
 
 
 __all__ = [

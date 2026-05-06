@@ -421,7 +421,7 @@ _REGISTRY: tuple[HiddenGemEntry, ...] = (
         key="pr91_hpm1_runtime_contract",
         title="PR91 HPM1 runtime contract",
         category="mask_representation",
-        status="ready_for_patch",
+        status="implemented_guarded",
         summary=(
             "Keep the public PR91 HPM1 mask stream visible as a high-EV categorical "
             "rate signal while its HPAC device contract, full decode, and re-encode "
@@ -429,10 +429,12 @@ _REGISTRY: tuple[HiddenGemEntry, ...] = (
         ),
         evidence_paths=(
             ".omx/research/pr91_hpm1_readiness_20260506_codex.md",
+            ".omx/research/pr91_hpm1_runtime_contract_gate_20260506_codex.md",
             "src/tac/pr91_hpm1_codec.py",
             "src/tac/pr91_hpm1_readiness.py",
             "src/tac/pr91_hpm1_runtime_contract.py",
             "src/tac/tests/test_pr91_hpm1_runtime_contract.py",
+            "src/tac/tests/test_pr91_hpm1_readiness.py",
         ),
         integration_targets=(
             "tools/audit_pr91_hpm1_readiness.py",
@@ -441,8 +443,8 @@ _REGISTRY: tuple[HiddenGemEntry, ...] = (
             "experiments/preflight_pr91_pr92_replay_contracts.py",
         ),
         next_patch=(
-            "Resolve the HPAC CPU/CUDA device contract, then recover full HPM1 "
-            "decode/reencode parity before any archive mutation or lane dispatch."
+            "Produce a real `pr91_hpm1_decode_reencode_parity_v1` report from the "
+            "HPM1 decoder; only then can the readiness audit narrow to exact CUDA eval."
         ),
         contest_compliance_notes=(
             "Static custody and runtime-contract audits are not score evidence.",

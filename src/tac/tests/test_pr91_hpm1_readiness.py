@@ -125,6 +125,37 @@ def test_pr91_hpm1_readiness_static_real_archive_passes_but_dispatch_stays_block
     ]
 
 
+@pytest.mark.skipif(not DEFAULT_PR91_ARCHIVE.is_file(), reason="PR91 public archive not present")
+def test_pr91_hpm1_readiness_accepts_decode_reencode_parity_report_but_keeps_exact_eval_blocked() -> None:
+    base = audit_pr91_hpm1_readiness()
+    parity_report = _parity_report(
+        archive_sha=base["source_archive"]["sha256"],
+        hpm1_sha=base["hpm1_mask_segment"]["sha256"],
+    )
+
+    report = audit_pr91_hpm1_readiness(parity_report=parity_report)
+
+    assert report["decode_reencode_parity"]["accepted"] is True
+    assert report["gates"]["full_hpm1_decode_600_frames"]["passed"] is True
+    assert report["gates"]["byte_exact_hpm1_reencode"]["passed"] is True
+    assert report["gates"]["runtime_hpm1_loader_without_sidecars"]["passed"] is True
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["dispatch_blockers"] == ["exact_cuda_auth_eval_after_parity"]
+
+
+def test_pr91_hpm1_readiness_rejects_bad_parity_report(tmp_path: Path) -> None:
+    report = audit_pr91_hpm1_readiness(
+        archive=tmp_path / "missing.zip",
+        parity_report={"schema": "wrong", "score_claim": True},
+    )
+
+    parity = report["decode_reencode_parity"]
+    assert parity["accepted"] is False
+    assert "parity_report_schema_mismatch" in parity["blockers"]
+    assert "parity_report_score_claim_must_be_false" in parity["blockers"]
+    assert "full_hpm1_decode_600_frames" in report["dispatch_blockers"]
+
+
 def test_audit_pr91_hpm1_readiness_cli_records_tool_manifest(tmp_path: Path) -> None:
     archive = tmp_path / "archive.zip"
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
@@ -153,3 +184,27 @@ def test_audit_pr91_hpm1_readiness_cli_records_tool_manifest(tmp_path: Path) -> 
     assert tool_run["tool"] == "tools/audit_pr91_hpm1_readiness.py"
     assert tool_run["score_claim"] is False
     assert tool_run["input_files"][0]["path"].endswith("archive.zip")
+
+
+def _parity_report(*, archive_sha: str, hpm1_sha: str) -> dict:
+    return {
+        "schema": "pr91_hpm1_decode_reencode_parity_v1",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "archive_sha256": archive_sha,
+        "hpm1_mask_sha256": hpm1_sha,
+        "device_contract": {"resolved_device": "cpu"},
+        "full_decode": {
+            "passed": True,
+            "frame_count": 600,
+            "decoded_masks_sha256": "d" * 64,
+        },
+        "byte_exact_reencode": {
+            "passed": True,
+            "reencoded_hpm1_sha256": hpm1_sha,
+        },
+        "runtime_loader": {
+            "sidecar_free": True,
+            "fallback_used": False,
+        },
+    }

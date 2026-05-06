@@ -17,7 +17,7 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.pr91_hpm1_codec import DEFAULT_PR91_ARCHIVE, DEFAULT_PR91_RUNTIME_SOURCE_DIR  # noqa: E402
 from tac.pr91_hpm1_readiness import audit_pr91_hpm1_readiness  # noqa: E402
-from tac.repo_io import json_text  # noqa: E402
+from tac.repo_io import json_text, read_json  # noqa: E402
 from tac.tool_manifest import attach_tool_run_manifest  # noqa: E402
 
 
@@ -25,6 +25,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive", type=Path, default=DEFAULT_PR91_ARCHIVE)
     parser.add_argument("--runtime-source-dir", type=Path, default=DEFAULT_PR91_RUNTIME_SOURCE_DIR)
+    parser.add_argument("--parity-report", type=Path)
     parser.add_argument("--json-out", type=Path)
     return parser.parse_args(argv)
 
@@ -35,8 +36,9 @@ def main(argv: list[str] | None = None) -> int:
     payload = audit_pr91_hpm1_readiness(
         archive=args.archive,
         runtime_source_dir=args.runtime_source_dir,
+        parity_report=read_json(args.parity_report) if args.parity_report else None,
     )
-    input_paths = [path for path in (args.archive,) if path.is_file()]
+    input_paths = [path for path in (args.archive, args.parity_report) if path and path.is_file()]
     payload = attach_tool_run_manifest(
         payload,
         tool=Path(__file__).relative_to(REPO_ROOT).as_posix(),

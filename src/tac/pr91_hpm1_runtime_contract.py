@@ -150,6 +150,40 @@ def _call_sites(path: Path, tree: ast.Module | None) -> list[dict[str, Any]]:
     return sorted(rows, key=lambda row: (row["path"], row["line"], row["callee"]))
 
 
+def _device_contract(call_sites: list[dict[str, Any]], *, missing_files: list[str]) -> dict[str, Any]:
+    if missing_files:
+        return {
+            "status": "blocked_missing_runtime_sources",
+            "resolved_device": None,
+            "passed": False,
+            "reason": "runtime sources are missing",
+        }
+    if not call_sites:
+        return {
+            "status": "blocked_no_hpac_call_sites",
+            "resolved_device": None,
+            "passed": False,
+            "reason": "no HPAC decompress call sites were statically visible",
+        }
+    classes = {str(row["device_class"]) for row in call_sites}
+    contradictions = [row for row in call_sites if row["contradiction"]]
+    if not contradictions and classes == {"literal_cpu"}:
+        return {
+            "status": "resolved_cpu_only",
+            "resolved_device": "cpu",
+            "passed": True,
+            "reason": "all visible HPAC decompress call sites pass literal CPU",
+        }
+    return {
+        "status": "blocked_ambient_or_contradictory",
+        "resolved_device": None,
+        "passed": False,
+        "reason": "HPAC decode device contract is ambient or contradictory; byte parity must resolve CPU vs CUDA",
+        "device_classes": sorted(classes),
+        "contradiction_count": len(contradictions),
+    }
+
+
 def audit_pr91_hpm1_runtime_contract(
     *,
     source_dir: str | Path = DEFAULT_PR91_RELEASE_RUNTIME_SOURCE_DIR,
@@ -173,6 +207,7 @@ def audit_pr91_hpm1_runtime_contract(
         for record in (_source_file_record(inflate_py), _source_file_record(pr86_py))
         if not record["exists"]
     ]
+    device_contract = _device_contract(call_sites, missing_files=missing_files)
     gates = {
         "runtime_sources_present": {
             "passed": not missing_files,
@@ -191,10 +226,10 @@ def audit_pr91_hpm1_runtime_contract(
             "reason": "decompress_tokens_hpac signature is statically visible",
         },
         "hpac_device_contract_resolved": {
-            "passed": False,
-            "status": "blocked",
+            "passed": bool(device_contract["passed"]),
+            "status": "passed" if device_contract["passed"] else "blocked",
             "required_for_dispatch": True,
-            "reason": "HPAC decode device contract is ambient or contradictory; byte parity must resolve CPU vs CUDA",
+            "reason": device_contract["reason"],
         },
         "runtime_consumer_sidecar_free_hpm1": {
             "passed": False,
@@ -226,6 +261,7 @@ def audit_pr91_hpm1_runtime_contract(
         "ambient_device_call_count": len(ambient_calls),
         "contradiction_count": len(contradictions),
         "contradictions": contradictions,
+        "hpac_device_contract": device_contract,
         "gates": gates,
         "dispatch_blockers": blockers,
         "next_safe_actions": [

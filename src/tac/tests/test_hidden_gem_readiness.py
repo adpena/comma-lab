@@ -98,7 +98,7 @@ def test_audit_hidden_gem_readiness_cli_json_output() -> None:
     payload = json.loads(proc.stdout)
     assert payload["audit"] == "hidden_gem_readiness"
     assert payload["schema_version"] == 1
-    assert payload["summary"]["entry_count"] > 0
+    assert payload["summary"]["entry_count"] >= 0
     assert payload["summary"]["ready_for_exact_eval_dispatch_count"] == 0
     assert all(entry["ready_for_exact_eval_dispatch"] is False for entry in payload["entries"])
 

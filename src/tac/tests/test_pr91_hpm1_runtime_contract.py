@@ -60,6 +60,8 @@ def test_pr91_runtime_contract_detects_cpu_comment_ambient_device_contradiction(
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
     assert report["ambient_device_call_count"] == 2
+    assert report["hpac_device_contract"]["passed"] is False
+    assert report["hpac_device_contract"]["resolved_device"] is None
     assert report["contradiction_count"] == 1
     assert report["contradictions"][0]["device_class"] == "ambient_device"
     assert "hpac_device_contract_resolved" in report["dispatch_blockers"]
@@ -75,7 +77,10 @@ def test_pr91_runtime_contract_accepts_literal_cpu_call_shape_but_still_blocks_d
     assert report["ambient_device_call_count"] == 0
     assert report["contradiction_count"] == 0
     assert {row["device_class"] for row in report["call_sites"]} == {"literal_cpu"}
+    assert report["hpac_device_contract"]["passed"] is True
+    assert report["hpac_device_contract"]["resolved_device"] == "cpu"
     assert report["ready_for_exact_eval_dispatch"] is False
+    assert "hpac_device_contract_resolved" not in report["dispatch_blockers"]
     assert "runtime_consumer_sidecar_free_hpm1" in report["dispatch_blockers"]
 
 

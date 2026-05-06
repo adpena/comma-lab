@@ -108,6 +108,17 @@
     "found": true,
     "line": 297
   },
+  "hpac_device_contract": {
+    "contradiction_count": 1,
+    "device_classes": [
+      "ambient_device",
+      "ambient_device_stringified"
+    ],
+    "passed": false,
+    "reason": "HPAC decode device contract is ambient or contradictory; byte parity must resolve CPU vs CUDA",
+    "resolved_device": null,
+    "status": "blocked_ambient_or_contradictory"
+  },
   "kind": "pr91_hpm1_runtime_contract",
   "next_safe_actions": [
     "Resolve whether public PR91 HPAC arithmetic decode must be CPU-only or CUDA-compatible.",
@@ -124,7 +135,7 @@
       "--json-out",
       "experiments/results/pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "04e965d9e7245a9e5d76d283d2a3fef7af0933968cb5ac99ccf5284dc633731d",
+    "canonical_payload_without_tool_manifest_sha256": "b8ea858acda10df1a7e9df1974ab7d9793a998cb66bd855336d1a2663ff2eb7c",
     "dispatch_attempted": false,
     "input_files": [
       {
