@@ -666,6 +666,10 @@ def unpack_arithmetic_payload(payload_path: str) -> dict:
             if records[key]["codec"] != 1:
                 raise ValueError(f"SHv1 passthrough record {key!r} has codec {records[key]['codec']}, expected 1")
             buf_t = io.BytesIO(records[key]["data"])
+            # SCORER-LOAD-WAIVER: weights_only=False here is decompress-time
+            # only; the SHv1 container stores a torch.save()-d dict of qint
+            # tensors (not a state_dict). No scorer or model weights are
+            # loaded — this is pure codec metadata. (PARADIGM-γ audit waiver.)
             packed = torch.load(buf_t, weights_only=False)
             out[key] = decode_tensor_linear_q_per_tensor_v1(packed)
         else:

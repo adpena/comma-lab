@@ -423,8 +423,11 @@ def train_self_compressing(
     lambda_rate_end: float = 1.0,
     ramp_start_frac: float = 0.3,
     scorer_weight: float = 20.0,
-    device: str = "cpu",
+    device: str | None = None,
     log_every: int = 50,
+    allow_cpu: bool = False,
+    ema_decay: float = 0.997,
+    eval_roundtrip: bool = True,
 ) -> SelfCompressingPostFilter:
     """Train a self-compressing postfilter.
 
@@ -447,17 +450,66 @@ def train_self_compressing(
         lambda_rate_end: final rate penalty multiplier.
         ramp_start_frac: fraction of training before rate penalty ramp starts.
         scorer_weight: weight on scorer loss.
-        device: compute device.
+        device: compute device. Required (no default). Pass "cuda" for
+            authoritative training. Use ``allow_cpu=True`` to opt into CPU
+            training (advisory only — bytes/score will diverge from CUDA).
         log_every: log interval in epochs.
+        allow_cpu: explicit opt-in to CPU/MPS training. Without this, a
+            non-CUDA device raises. Even with the flag, an [advisory only]
+            banner is printed and the returned checkpoint must NOT be promoted.
+        ema_decay: EMA decay for inference-time weights (CLAUDE.md
+            non-negotiable: 0.997). EMA is applied at eval-time with
+            snapshot+restore; the trained EMA shadow is written into the
+            returned model so ``export_compressed_checkpoint`` ships the
+            shadow, not the live last-epoch weights.
+        eval_roundtrip: when True, route filtered output through a uint8
+            STE round-trip before scorer heads. Models the contest inflate
+            uint8 quantization; without it, proxy-auth gap is 2-11x. CLAUDE.md
+            non-negotiable.
 
     Returns:
-        Trained SelfCompressingPostFilter.
+        Trained SelfCompressingPostFilter (with EMA shadow loaded as the
+        canonical inference-time weights, per CLAUDE.md EMA rule).
     """
+    # Lazy import to avoid circular dependency: tac.training depends on
+    # tac.losses + tac.data which are not heavy, but keeping the import
+    # local guarantees self_compress remains a leaf module.
+    from tac.training import EMA  # noqa: PLC0415  (intentional lazy import)
+
+    # FORBIDDEN PATTERN guard: device must be explicit. Default "cpu" silently
+    # produced [advisory only] checkpoints that were promoted as if they were
+    # CUDA-faithful (CLAUDE.md MPS-NOISE / device-fallback non-negotiable).
+    if device is None:
+        raise ValueError(
+            "train_self_compressing(...): `device` is required (no default). "
+            "Pass device='cuda' for authoritative training, or "
+            "device='cpu' with allow_cpu=True for [advisory only] runs."
+        )
+    device_str = str(device)
+    is_cuda = device_str.startswith("cuda") or device_str == "cuda"
+    if not is_cuda and not allow_cpu:
+        raise ValueError(
+            f"train_self_compressing: refusing to run on device={device_str!r} "
+            f"without `allow_cpu=True`. Bytes and score on non-CUDA hardware "
+            f"diverge from contest CUDA (FORBIDDEN PATTERN: device-fallback). "
+            f"Pass allow_cpu=True if this is an [advisory only] run."
+        )
+    if not is_cuda:
+        print(
+            f"[advisory only] train_self_compressing on device={device_str!r}; "
+            f"resulting checkpoint MUST NOT be promoted (CLAUDE.md MPS-NOISE)."
+        )
+
     model = model.to(device)
     posenet = posenet.to(device).eval()
     segnet = segnet.to(device).eval()
     comp_frames = comp_frames.to(device)
     gt_frames = gt_frames.to(device)
+
+    # CLAUDE.md NON-NEGOTIABLE: every training path MUST instantiate EMA,
+    # update it after every optimizer.step, and use the shadow as the
+    # inference checkpoint. Decay default 0.997. Snapshot+restore at eval.
+    ema = EMA(model, decay=ema_decay)
 
     # Separate parameter groups: conv weights vs bit-depth params
     weight_params = []
@@ -491,6 +543,16 @@ def train_self_compressing(
 
         # Forward through postfilter
         filtered = model(comp_pair)
+
+        # CLAUDE.md NON-NEGOTIABLE: eval_roundtrip — STE uint8 round-trip
+        # before scorer heads. The contest inflate path quantizes the
+        # rendered output to uint8; training without this round-trip leaves
+        # a 2-11x proxy-auth gap. Use straight-through estimator so the
+        # gradient flows through the rounding op unchanged.
+        if eval_roundtrip:
+            filtered = filtered + (
+                filtered.round().clamp(0.0, 255.0) - filtered
+            ).detach()
 
         # Scorer loss: PoseNet + SegNet
         # Build (B, T, C, H, W) pairs for scorer
@@ -547,6 +609,9 @@ def train_self_compressing(
             for layer in [model.conv1, model.conv2, model.conv3]:
                 layer.bit_depth.bits.clamp_(0.0, 8.0)
 
+        # CLAUDE.md NON-NEGOTIABLE: update EMA after every optimizer.step.
+        ema.update(model)
+
         if epoch % log_every == 0 or epoch == epochs - 1:
             stats = model.compression_stats()
             print(
@@ -556,6 +621,13 @@ def train_self_compressing(
                 f"active={sum(l['active'] for l in stats['layers'])}/{sum(l['channels'] for l in stats['layers'])}"
             )
 
+    # CLAUDE.md NON-NEGOTIABLE: inference / archive bytes come from the EMA
+    # shadow, not from model.state_dict() after training. We load the shadow
+    # into the returned model so downstream callers
+    # (export_compressed_checkpoint, etc.) get the EMA weights by default.
+    # This matches the train_distill / Quantizr / Lane G v3 canonical pattern.
+    ema.apply(model)
+    model.eval()
     return model
 
 
@@ -622,8 +694,12 @@ def export_compressed_checkpoint(model: SelfCompressingPostFilter) -> bytes:
             # Shift to unsigned: [0, n_levels-1]
             unsigned = (quantized + half).clamp(0, n_levels - 1).tolist()
 
-            # Store scale as float16
-            packed.extend(struct.pack("<e", abs_max))
+            # Store scale as float16. ``struct.pack("<e", x)`` silently wraps
+            # values above the fp16 max (65504.0) to ±inf in the binary stream;
+            # clamp before packing so a large weight magnitude can never produce
+            # an inf scale at decode time. (PARADIGM-δεζ audit fp16 overflow guard.)
+            abs_max_packed = min(abs_max, 65504.0)
+            packed.extend(struct.pack("<e", abs_max_packed))
 
             # Pack values at ch_bits each
             _pack_values(packed, unsigned, ch_bits)
@@ -640,7 +716,9 @@ def export_compressed_checkpoint(model: SelfCompressingPostFilter) -> bytes:
                 q = int(round(b_val / abs_max_b * (half - 1)))
                 q = max(-(half - 1), min(half - 1, q))
                 u = q + half
-                bias_packed.extend(struct.pack("<e", abs_max_b))
+                # fp16 overflow guard (mirror of weight scale at L698).
+                abs_max_b_packed = min(abs_max_b, 65504.0)
+                bias_packed.extend(struct.pack("<e", abs_max_b_packed))
                 bias_packed.extend(struct.pack("<H", u))
 
         weight_blobs.append(bytes(packed))
@@ -655,7 +733,10 @@ def export_compressed_checkpoint(model: SelfCompressingPostFilter) -> bytes:
             "has_bias": layer.has_bias,
             "active_indices": active_indices,
             "channel_bits": channel_bits,
-            "bias_blob_len": len(bias_packed),
+            # NOTE: ``bias_blob_len`` removed — the decoder reads the bias-blob
+            # length from the binary stream (struct.unpack at the read site),
+            # not from the header. Storing it as header metadata was dead.
+            # (PARADIGM-δεζ audit: dead-metadata removal.)
         })
 
         weight_blobs.append(bytes(bias_packed))
