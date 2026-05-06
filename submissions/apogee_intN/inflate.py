@@ -6,12 +6,11 @@ PR106 latent-brotli unchanged), reconstructs the HNeRV state_dict, runs the
 decoder forward at 384x512, bicubic-upsamples to camera resolution (874x1164),
 rounds to uint8, writes contiguous (N, H, W, 3) bytes to <dst>.
 
-Magic byte encoding: 0xA0 high-nibble + bits low-nibble. So:
-    0xA4 → int4 (HIGH risk, [0.155, 0.180])
-    0xA5 → int5 (MEDIUM risk, [0.180, 0.196] — sweet spot)
-    0xA6 → int6 (LOW risk, [0.190, 0.204])
-    0xA7 → int7 (VERY LOW, [0.198, 0.208])
-    0xA8 → int8 (almost lossless, [0.196, 0.207])
+Magic byte encoding: 0xA0 high-nibble + bits low-nibble. The old predicted
+score bands for these variants were byte-only planning artifacts; exact int4
+T4 eval later showed scorer-basin collapse. Treat this runtime as forensic
+unless the exact candidate archive has a SHA-tied distortion model,
+scorer-basin parity report, or exact positive CUDA evidence.
 
 Codec dispatch:
     codec_id = 0  → PR106 brotli-int8 single-tensor (Linear / bias / small Conv2d)
@@ -38,10 +37,9 @@ HERE = Path(__file__).resolve().parent
 SRC_DIR = HERE / "src"
 sys.path.insert(0, str(SRC_DIR))
 
-from model import HNeRVDecoder  # type: ignore[import-not-found]
-from codec import decode_packed_decoder, decode_fixed_latents  # type: ignore[import-not-found]  # noqa: F401
-from intn_codec import decode_intN_blockfp_from_brotli  # type: ignore[import-not-found]
-
+from codec import decode_fixed_latents, decode_packed_decoder  # type: ignore[import-not-found]  # noqa: E402,F401
+from intn_codec import decode_intN_blockfp_from_brotli  # type: ignore[import-not-found]  # noqa: E402
+from model import HNeRVDecoder  # type: ignore[import-not-found]  # noqa: E402
 
 CAMERA_H, CAMERA_W = 874, 1164
 APOGEE_INTN_MAGIC_HIGH = 0xA0
@@ -87,11 +85,14 @@ def parse_apogee_intn_archive(archive_bytes: bytes) -> tuple[dict[str, torch.Ten
     pos += 1
     state_dict: dict[str, torch.Tensor] = {}
     for _ in range(n_codecs):
-        codec_id = archive_bytes[pos]; pos += 1
-        name_len = archive_bytes[pos]; pos += 1
+        codec_id = archive_bytes[pos]
+        pos += 1
+        name_len = archive_bytes[pos]
+        pos += 1
         name = archive_bytes[pos : pos + name_len].decode("utf-8")
         pos += name_len
-        shape_ndim = archive_bytes[pos]; pos += 1
+        shape_ndim = archive_bytes[pos]
+        pos += 1
         if shape_ndim:
             pos += shape_ndim * 4  # skip shape ints if any (currently 0 placeholder)
         (payload_len,) = struct.unpack("<I", archive_bytes[pos : pos + 4])

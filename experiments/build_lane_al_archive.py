@@ -32,6 +32,8 @@ from pathlib import Path
 
 import numpy as np
 
+from tac.submission_archive import safe_extract_zip
+
 
 def _encode_grayscale_mkv(
     pixels_uint8: np.ndarray,
@@ -100,8 +102,7 @@ def build_lane_al_archive(
 
     with tempfile.TemporaryDirectory() as td:
         td_path = Path(td)
-        with zipfile.ZipFile(anchor_archive, "r") as zf:
-            zf.extractall(td_path)
+        safe_extract_zip(anchor_archive, td_path)
 
         renderer = td_path / "renderer.bin"
         if not renderer.exists():

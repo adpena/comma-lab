@@ -136,8 +136,9 @@ def compress_archive(args: argparse.Namespace) -> None:
     # Extract to temp dir
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
-        with zipfile.ZipFile(str(archive_path), "r") as zf:
-            zf.extractall(str(tmpdir))
+        from tac.submission_archive import safe_extract_zip
+
+        safe_extract_zip(archive_path, tmpdir)
 
         # Process each component
         changes = []

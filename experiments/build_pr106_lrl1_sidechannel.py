@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: I001
 """Build a pr106_lrl1_sidechannel archive on top of a PR106 packed archive.
 
 Layered on top of PR106 (see docs/pr106_byte_layout_deconstruction_20260504.md):
@@ -63,8 +64,8 @@ the LR01 sidechannel payload.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import io
-import json
 import struct
 import sys
 import zipfile
@@ -74,18 +75,32 @@ import brotli  # type: ignore[import-not-found]
 import numpy as np
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 sys.path.insert(0, str(REPO_ROOT / "submissions" / "pr106_lrl1_sidechannel"))
 sys.path.insert(0, str(REPO_ROOT / "submissions" / "apogee_intN" / "src"))
 
-from inflate import (  # type: ignore[import-not-found]  # noqa: E402
+from tac.repo_io import json_text
+
+from inflate import (  # type: ignore[import-not-found]
     LRL1_MAGIC_BYTE,
     SIDECHANNEL_VERSION,
     LR01_MAGIC,
     LR01_HEADER,
     SIDECHANNEL_MODE_LRL1,
     parse_lrl1_archive,
-    decode_sidechannel_blob,
 )
 
 
@@ -321,7 +336,7 @@ def main() -> int:
         ),
     }
     metadata_path = args.out_dir / "build_metadata.json"
-    metadata_path.write_text(json.dumps(metadata, indent=2))
+    metadata_path.write_text(json_text(metadata), encoding="utf-8")
     print(f"[build-lrl1] wrote {metadata_path}")
     return 0
 

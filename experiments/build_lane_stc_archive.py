@@ -27,7 +27,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 import tempfile
 import zipfile
@@ -41,10 +40,12 @@ for _p in (_REPO_ROOT / "src",):
         sys.path.insert(0, str(_p))
 
 from tac.mask_codec import decode_masks  # noqa: E402  (legacy AV1 -> class IDs)
+from tac.repo_io import json_text  # noqa: E402
 from tac.stc_boundary_codec import (  # noqa: E402
     decode_mask_video_stc,
     encode_mask_video_stc,
 )
+from tac.submission_archive import safe_extract_zip  # noqa: E402
 
 
 def _det_write(zout: zipfile.ZipFile, src: Path, arcname: str) -> None:
@@ -77,8 +78,7 @@ def build_lane_stc_archive(
 
     with tempfile.TemporaryDirectory() as td:
         td_path = Path(td)
-        with zipfile.ZipFile(anchor_archive, "r") as zf:
-            zf.extractall(td_path)
+        safe_extract_zip(anchor_archive, td_path)
 
         masks_mkv = td_path / "masks.mkv"
         if not masks_mkv.exists():
@@ -195,7 +195,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     if args.manifest is not None:
         args.manifest.parent.mkdir(parents=True, exist_ok=True)
-        args.manifest.write_text(json.dumps(info, indent=2))
+        args.manifest.write_text(json_text(info), encoding="utf-8")
         print(f"[lane-stc] manifest -> {args.manifest}")
     return 0
 

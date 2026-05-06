@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: I001
 """Compose a pr106_stacked archive from pre-built sister-lane archives.
 
 This is the META-COMPOSITION builder. It takes:
@@ -46,24 +47,35 @@ inflate-time pixel render IS CUDA-required.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import io
-import json
 import struct
 import sys
 import time
 import zipfile
 from pathlib import Path
 
-import brotli  # type: ignore[import-not-found]
-import numpy as np
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
 
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
 sys.path.insert(0, str(REPO_ROOT / "submissions" / "pr106_stacked"))
 sys.path.insert(0, str(REPO_ROOT / "submissions" / "pr106_latent_sidecar" / "src"))
 
+from tac.repo_io import json_text
+
 # Imported AFTER path insertion: pr106_stacked outer parser + section constants.
-from inflate import (  # type: ignore[import-not-found]  # noqa: E402
+from inflate import (  # type: ignore[import-not-found]
     STACKED_MAGIC_BYTE,
     SECTION_END,
     SECTION_LATENT,
@@ -399,7 +411,7 @@ def main() -> int:
         ),
     }
     metadata_path = args.output_dir / "build_metadata.json"
-    metadata_path.write_text(json.dumps(metadata, indent=2))
+    metadata_path.write_text(json_text(metadata), encoding="utf-8")
     print(f"[build-stacked] wrote {metadata_path}")
     print(f"[build-stacked] DONE in {elapsed:.2f}s")
     return 0

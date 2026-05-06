@@ -10,15 +10,14 @@ set -euo pipefail
 
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SELF_DIR/../.." && pwd)"
-LIGHTNING_USER="${LIGHTNING_USER:?Set LIGHTNING_USER env var}"
-LIGHTNING_HOST="${LIGHTNING_HOST:-${LIGHTNING_USER}@ssh.lightning.ai}"
+LIGHTNING_TARGET="${LIGHTNING_TARGET:?Set LIGHTNING_TARGET to an SSH config alias or user-qualified remote target}"
 LIGHTNING_SSH_KEY="${LIGHTNING_SSH_KEY:-}"
 REMOTE_RESULTS="${LIGHTNING_REMOTE_RESULTS:-\${LIGHTNING_REMOTE_RESULTS}}"
 if [ -z "$REMOTE_RESULTS" ] || [ "$REMOTE_RESULTS" = '${LIGHTNING_REMOTE_RESULTS}' ]; then
     echo "Set LIGHTNING_REMOTE_RESULTS to the remote results directory"
     exit 2
 fi
-SCP_ARGS=(-o StrictHostKeyChecking=no)
+SCP_ARGS=(-o BatchMode=yes -o StrictHostKeyChecking=accept-new)
 if [ -n "$LIGHTNING_SSH_KEY" ]; then
     SCP_ARGS=(-i "$LIGHTNING_SSH_KEY" "${SCP_ARGS[@]}")
 fi
@@ -28,7 +27,7 @@ SKIP_SCORE="${2:-}"
 
 echo "=== Download & Eval Pipeline ==="
 echo "  Run: ${RUN_NAME}"
-echo "  Lightning: ${LIGHTNING_HOST}"
+echo "  Remote: ${LIGHTNING_TARGET}"
 echo ""
 
 # 1. Create local directory for this checkpoint
@@ -38,11 +37,11 @@ mkdir -p "$CKPT_DIR"
 # 2. Download checkpoint + meta from Lightning
 echo "[1/5] Downloading checkpoint from Lightning..."
 scp "${SCP_ARGS[@]}" \
-    "${LIGHTNING_HOST}:${REMOTE_RESULTS}/postfilter_${RUN_NAME}_best_int8.pt" \
+    "${LIGHTNING_TARGET}:${REMOTE_RESULTS}/postfilter_${RUN_NAME}_best_int8.pt" \
     "$CKPT_DIR/postfilter_int8.pt" 2>/dev/null
 
 scp "${SCP_ARGS[@]}" \
-    "${LIGHTNING_HOST}:${REMOTE_RESULTS}/postfilter_${RUN_NAME}_best_meta.json" \
+    "${LIGHTNING_TARGET}:${REMOTE_RESULTS}/postfilter_${RUN_NAME}_best_meta.json" \
     "$CKPT_DIR/meta.json" 2>/dev/null
 
 echo "  Downloaded: $(ls -lh "$CKPT_DIR/postfilter_int8.pt" | awk '{print $5}')"
@@ -89,15 +88,23 @@ if [ "$SKIP_SCORE" = "--skip-score" ]; then
     echo "To score manually:"
     echo "  python submissions/robust_current/runner.py evaluate \\"
     echo "    --upstream-dir workspace/upstream/comma_video_compression_challenge \\"
-    echo "    --run-name ${RUN_NAME}_eval --skip-compress --device cpu"
+    echo "    --run-name ${RUN_NAME}_eval --skip-compress --device cuda"
 else
     echo ""
     echo "[5/5] Running eval via runner.py..."
+    EVAL_DEVICE="${AUTH_EVAL_DEVICE:-cuda}"
+    case "$EVAL_DEVICE" in
+      cuda) ;;
+      *)
+        echo "FATAL: scoring from this helper is CUDA-only; use --skip-score for local package checks" >&2
+        exit 64
+        ;;
+    esac
     python3 "$SELF_DIR/runner.py" evaluate \
         --upstream-dir "${REPO_ROOT}/workspace/upstream/comma_video_compression_challenge" \
         --run-name "${RUN_NAME}_eval" \
         --skip-compress \
-        --device cpu
+        --device "$EVAL_DEVICE"
 fi
 
 echo ""

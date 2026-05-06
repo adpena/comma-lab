@@ -43,7 +43,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import io
-import json
 import struct
 import sys
 import time
@@ -58,6 +57,7 @@ import torch.nn.functional as F
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "src"))
 PR106_SRC_PATH = (
     REPO_ROOT
     / "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex"
@@ -68,6 +68,7 @@ sys.path.insert(0, str(PR106_SRC_PATH.resolve()))
 # Imported AFTER path insertion: PR106's reference codec + decoder model.
 from codec import parse_packed_archive, encode_latents  # type: ignore[import-not-found]  # noqa: E402
 from model import HNeRVDecoder  # type: ignore[import-not-found]  # noqa: E402
+from tac.repo_io import json_text  # noqa: E402
 
 SIDECAR_MAGIC = 0xFE
 SIDECAR_FORMAT_ID = 0x01
@@ -433,6 +434,10 @@ def main() -> int:
         "rate_component_score_delta_vs_pr106": score_delta,
         "predicted_total_score_delta_vs_pr106": -0.00218,  # PR100-vs-PR105 extrapolation
         "predicted_total_score": 0.20945 + score_delta + 0.00218 - 2 * 0.00218,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "promotion_eligible": False,
+        "evidence_grade": "empirical_build_only",
         "diagnostics": diagnostics,
         "tag": "[design-validation]" if args.smoke else "[empirical:pending-stage-3]",
         "council_status": "PRE_REGISTERED",
@@ -442,7 +447,7 @@ def main() -> int:
         ),
     }
     metadata_path = args.output_dir / "build_metadata.json"
-    metadata_path.write_text(json.dumps(metadata, indent=2))
+    metadata_path.write_text(json_text(metadata), encoding="utf-8")
     print(f"[sidecar-build] wrote {metadata_path}")
     print(f"[sidecar-build] DONE in {elapsed:.1f}s")
     return 0

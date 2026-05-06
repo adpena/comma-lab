@@ -4,9 +4,9 @@
 Reads every `experiments/results/apogee_int*_repack_*/repack_metadata.json`,
 sorts by archive size, marks Pareto-dominated configs (smaller AND lower-risk
 exists), and prints a one-glance decision matrix. Because this lane currently
-has no contest-faithful distortion model, it does not emit dispatch one-liners
-by default; use `--emit-forensic-one-liners` only for explicitly
-non-promotable byte/parser forensics.
+has no contest-faithful distortion model, it never emits executable dispatch
+one-liners. The `--emit-forensic-one-liners` compatibility flag prints a
+non-executable forensic summary only.
 
 A config is Pareto-dominated when there exists another config with BOTH:
   - smaller archive_size_bytes (better rate)
@@ -151,19 +151,15 @@ def _format_table(rows: list[ApogeeRow], *, emit_forensic_one_liners: bool = Fal
         beats_baseline = r.predicted_high < PR106_BASELINE_SCORE
         marker = "rate-only" if beats_baseline else "forensic"
         out_lines.append(
-            f"# {marker} int{r.bits} predicted [{r.predicted_low:.3f}, {r.predicted_high:.3f}] "
-            "but blocked for score dispatch without distortion evidence:"
+            f"# withheld {marker} int{r.bits}: predicted [{r.predicted_low:.3f}, {r.predicted_high:.3f}] "
+            "is byte-only forensic evidence, not a launch command."
         )
         out_lines.append(
-            f"    APOGEE_INTN_BITS={r.bits} .venv/bin/python scripts/launch_lane_on_vastai.py full \\\n"
-            f"      --lane-script scripts/remote_lane_apogee_intN.sh \\\n"
-            f"      --label lane_apogee_int{r.bits}_pr106 \\\n"
-            f"      --predicted-band {r.predicted_low} {r.predicted_high} \\\n"
-            f"      --estimated-cost 0.30 --council-priority 1 --max-dph 0.30"
+            f"# archive={r.archive_path} bits={r.bits} "
+            f"candidate_sha256={r.candidate_archive_sha256 or 'unknown'}"
         )
         out_lines.append("")
-    out_lines.append("(All forensic one-liners use the same scripts/remote_lane_apogee_intN.sh wrapper;")
-    out_lines.append(" APOGEE_INTN_BITS=N env var picks bit-width — magic byte = 0xA0 | bits.)")
+    out_lines.append("No executable remote command is emitted for Apogee intN without exact-SHA non-proxy readiness evidence.")
     return "\n".join(out_lines)
 
 
@@ -174,7 +170,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--emit-forensic-one-liners",
         action="store_true",
-        help="Emit legacy launch commands, explicitly marked forensic and non-promotable.",
+        help="Compatibility flag: emit non-executable forensic summaries, never launch commands.",
     )
     args = parser.parse_args(argv)
 
@@ -189,7 +185,7 @@ def main(argv: list[str] | None = None) -> int:
             "dispatch_blockers": DISPATCH_BLOCKERS,
             "rows": [asdict(r) for r in rows],
         }
-        print(json.dumps(out, indent=2))
+        print(json.dumps(out, indent=2, sort_keys=True, allow_nan=False))
     else:
         print(_format_table(rows, emit_forensic_one_liners=args.emit_forensic_one_liners))
     return 0

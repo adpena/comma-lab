@@ -32,8 +32,15 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO_ROOT / "src"))
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.submission_archive import validate_archive_member_name  # noqa: E402
 
 # Canonical contest constants (mirror upstream/evaluate.py rate formula).
 RATE_DENOM = 37_545_489  # contest pinned constant
@@ -47,12 +54,12 @@ def _try_import_canonical() -> tuple[tuple[str, ...], tuple[bytes, ...]]:
     usable in a stripped-down environment without the tac package).
     """
     try:
-        from tac.stack_compositions import (  # type: ignore
+        from tac.stack_compositions import (  # type: ignore  # noqa: I001
             REQUIRED_ARCHIVE_MEMBERS,
             _SCORER_FREE_RENDERER_MAGICS,
         )
         return REQUIRED_ARCHIVE_MEMBERS, _SCORER_FREE_RENDERER_MAGICS
-    except Exception as exc:  # noqa: BLE001 — fall back, but loud
+    except Exception as exc:  # fall back, but loud
         print(
             f"[audit_archive] WARNING: could not import canonical registry "
             f"({exc!r}); using hardcoded defaults.",
@@ -126,7 +133,17 @@ def audit(
 
     try:
         with zipfile.ZipFile(archive_path) as zf:
+            seen_members: set[str] = set()
             for info in zf.infolist():
+                try:
+                    validate_archive_member_name(info.filename)
+                except ValueError as exc:
+                    res.failures.append(str(exc))
+                    continue
+                if info.filename in seen_members:
+                    res.failures.append(f"duplicate member name: {info.filename}")
+                    continue
+                seen_members.add(info.filename)
                 res.members[info.filename] = info.file_size
 
             # Renderer magic check.
@@ -187,7 +204,7 @@ def render(res: AuditResult) -> str:
     lines.append(f"  bytes:      {res.archive_bytes:>10,}")
     lines.append(
         f"  rate_term:  {res.rate_term:>10.4f}  "
-        f"(= {RATE_MULT} × {res.archive_bytes:,} / {RATE_DENOM:,})"
+        f"(= {RATE_MULT} x {res.archive_bytes:,} / {RATE_DENOM:,})"
     )
     if res.renderer_magic is not None:
         lines.append(

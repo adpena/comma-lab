@@ -21,7 +21,6 @@ import shutil
 import subprocess
 import sys
 import time as _time_module
-import zipfile
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -611,8 +610,9 @@ def stage_package(
 
     # Unzip into archive_unzip_dir so inflate can find the files
     mgr.archive_unzip_dir.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(mgr.archive_zip, "r") as zf:
-        zf.extractall(mgr.archive_unzip_dir)
+    from tac.submission_archive import safe_extract_zip
+
+    safe_extract_zip(mgr.archive_zip, mgr.archive_unzip_dir)
 
     # Verify postfilter is present (contest rules: neural artifacts in archive)
     pf_in_archive = mgr.archive_unzip_dir / "postfilter_int8.pt"
@@ -1302,8 +1302,9 @@ def _unzip_archive(mgr: RunManager) -> None:
     if mgr.archive_unzip_dir.exists():
         shutil.rmtree(mgr.archive_unzip_dir)
     mgr.archive_unzip_dir.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(mgr.archive_zip, "r") as zf:
-        zf.extractall(mgr.archive_unzip_dir)
+    from tac.submission_archive import safe_extract_zip
+
+    safe_extract_zip(mgr.archive_zip, mgr.archive_unzip_dir)
 
 
 @cli.command()

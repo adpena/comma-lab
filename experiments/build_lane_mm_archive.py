@@ -41,6 +41,7 @@ for _p in (_REPO_ROOT / "src",):
         sys.path.insert(0, str(_p))
 
 from tac.mask_grayscale_lut import CLASS_TO_GRAY  # noqa: E402
+from tac.submission_archive import safe_extract_zip  # noqa: E402
 
 
 def _decode_legacy_masks_mkv(mkv_path: Path) -> torch.Tensor:
@@ -143,8 +144,7 @@ def build_lane_mm_archive(
 
     with tempfile.TemporaryDirectory() as td:
         td_path = Path(td)
-        with zipfile.ZipFile(anchor_archive, "r") as zf:
-            zf.extractall(td_path)
+        safe_extract_zip(anchor_archive, td_path)
 
         masks_mkv = td_path / "masks.mkv"
         if not masks_mkv.exists():

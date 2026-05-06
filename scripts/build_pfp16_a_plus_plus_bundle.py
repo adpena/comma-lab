@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import json
+import importlib.util
 import re
 import shutil
 import subprocess
@@ -13,8 +13,23 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.repo_io import json_text, read_json, sha256_file  # noqa: E402
+
 DEFAULT_EVIDENCE_DIR = REPO_ROOT / "experiments/results/lane_g_v3_pfp16/pfp16_a_plus_plus_t4_20260430T1620Z_codex"
 DEFAULT_ARCHIVE = REPO_ROOT / "experiments/results/lane_g_v3_pfp16/archive_lane_g_v3_pfp16.zip"
 DEFAULT_BUNDLE_DIR = REPO_ROOT / "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430"
@@ -24,14 +39,6 @@ LEGACY_REMOTE_SCORE_FIELDS = (
     "hard_kill_triggered",
     "lane_status",
 )
-
-
-def _sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
 
 
 def _run_git(args: list[str]) -> str:
@@ -146,9 +153,9 @@ def build_bundle(evidence_dir: Path, archive: Path, bundle_dir: Path) -> dict[st
     if missing:
         raise FileNotFoundError(f"missing required bundle inputs: {missing}")
 
-    payload = json.loads(contest_json.read_text())
+    payload = read_json(contest_json)
     provenance = payload.get("provenance") or {}
-    archive_sha256 = _sha256(archive)
+    archive_sha256 = sha256_file(archive)
     archive_bytes = archive.stat().st_size
     if archive_sha256 != provenance.get("archive_sha256"):
         raise RuntimeError("archive SHA does not match contest_auth_eval provenance")
@@ -167,7 +174,7 @@ def build_bundle(evidence_dir: Path, archive: Path, bundle_dir: Path) -> dict[st
     _copy(archive, bundle_dir / "archive/archive.zip")
     (bundle_dir / "archive/archive_sha256.txt").parent.mkdir(parents=True, exist_ok=True)
     (bundle_dir / "archive/archive_sha256.txt").write_text(f"{archive_sha256}  archive.zip\n")
-    (bundle_dir / "archive/archive_manifest.json").write_text(json.dumps(archive_manifest, indent=2, sort_keys=True) + "\n")
+    (bundle_dir / "archive/archive_manifest.json").write_text(json_text(archive_manifest))
     (bundle_dir / "archive/archive_member_sha256.txt").write_text("\n".join(member_hash_lines) + "\n")
 
     with zipfile.ZipFile(archive) as zf:
@@ -181,7 +188,7 @@ def build_bundle(evidence_dir: Path, archive: Path, bundle_dir: Path) -> dict[st
     run_command = " ".join(str(x) for x in sys_argv)
     (bundle_dir / "eval/run_command.sh").write_text("#!/usr/bin/env bash\nset -euo pipefail\n" + run_command + "\n")
     (bundle_dir / "eval/inflate_timing.json").write_text(
-        json.dumps(_timing_from_log(auth_eval_log.read_text(errors="replace")), indent=2, sort_keys=True) + "\n"
+        json_text(_timing_from_log(auth_eval_log.read_text(errors="replace")))
     )
 
     legacy_quarantine: dict[str, Any] | None = None
@@ -191,10 +198,10 @@ def build_bundle(evidence_dir: Path, archive: Path, bundle_dir: Path) -> dict[st
         if src.exists():
             dst = bundle_dir / f"build/{name}"
             if name == "provenance.json":
-                remote_payload = json.loads(src.read_text())
+                remote_payload = read_json(src)
                 sanitized, legacy_quarantine = _quarantine_remote_parser_fields(remote_payload, payload)
                 dst.parent.mkdir(parents=True, exist_ok=True)
-                dst.write_text(json.dumps(sanitized, indent=2, sort_keys=True) + "\n")
+                dst.write_text(json_text(sanitized))
             else:
                 _copy(src, dst)
 
@@ -206,17 +213,14 @@ def build_bundle(evidence_dir: Path, archive: Path, bundle_dir: Path) -> dict[st
     (source_dir / "git_diff.patch").write_text(diff_text)
     (source_dir / "git_diff_sha256.txt").write_text(hashlib.sha256(diff_text.encode()).hexdigest() + "\n")
     (source_dir / "remote_staged_tree_manifest.json").write_text(
-        json.dumps(
+        json_text(
             {
                 "status": "missing",
                 "reason": "Lightning staged tree was non-git; contest_auth_eval provenance recorded pact_commit error.",
                 "remote_archive_path": provenance.get("archive_path"),
                 "remote_pact_path_inferred": str(provenance.get("archive_path", "")).split("/auth_eval_input/")[0],
-            },
-            indent=2,
-            sort_keys=True,
+            }
         )
-        + "\n"
     )
 
     upstream_dir = bundle_dir / "upstream"
@@ -263,7 +267,7 @@ def build_bundle(evidence_dir: Path, archive: Path, bundle_dir: Path) -> dict[st
         "legacy_remote_parser_fields_quarantined": bool(legacy_quarantine),
         "quarantined_remote_parser_fields": quarantined_field_names,
     }
-    (bundle_dir / "bundle_summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+    (bundle_dir / "bundle_summary.json").write_text(json_text(summary))
     custody_dir = bundle_dir / "custody"
     custody_dir.mkdir(parents=True, exist_ok=True)
     custody_manifest = {
@@ -304,9 +308,7 @@ def build_bundle(evidence_dir: Path, archive: Path, bundle_dir: Path) -> dict[st
             f"{archive_sha256} ({archive_bytes} bytes, n={payload['n_samples']})."
         ),
     }
-    (custody_dir / "custody_manifest.json").write_text(
-        json.dumps(custody_manifest, indent=2, sort_keys=True) + "\n"
-    )
+    (custody_dir / "custody_manifest.json").write_text(json_text(custody_manifest))
     (custody_dir / "PFP16_A_PLUS_PLUS_CUSTODY_NOTE.md").write_text(
         "# PFP16 A++ Custody Note\n\n"
         "Paper-ready claim: exact T4 CUDA auth eval recomputes score "
@@ -350,7 +352,7 @@ def main() -> int:
     parser.add_argument("--bundle-dir", type=Path, default=DEFAULT_BUNDLE_DIR)
     args = parser.parse_args()
     summary = build_bundle(args.evidence_dir, args.archive, args.bundle_dir)
-    print(json.dumps(summary, indent=2, sort_keys=True))
+    print(json_text(summary), end="")
     return 0
 
 

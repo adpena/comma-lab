@@ -5,12 +5,10 @@ Generalization of experiments/repack_pr106_with_int4_block_fp.py to take
 arbitrary bit width via --bits N. Uses the canonical int-N codec from
 experiments/block_fp_intN_codec_sketch.py.
 
-Pareto sweet spots (per the int3..int8 sweep):
-  bits=4 — 59KB Conv2d / 7.1% err — HIGH risk (predicted score [0.155, 0.180])
-  bits=5 — 103KB Conv2d / 3.3% err — MEDIUM risk (predicted [0.180, 0.196])
-  bits=6 — 119KB Conv2d / 1.6% err — LOW risk (predicted [0.190, 0.204])
-  bits=7 — 154KB Conv2d / 0.8% err — VERY LOW risk (modest savings)
-  bits=8 — 136KB Conv2d / 0.2% err — almost lossless (modest savings)
+Pareto sweet spots from the int3..int8 sweep are forensic byte previews only.
+Exact int4 T4 eval later showed catastrophic scorer-basin drift, so no intN
+candidate is dispatch-ready without a SHA-tied distortion model,
+scorer-basin parity report, or exact positive CUDA evidence.
 
 Each variant produces an apogee_intN-format archive with magic byte
 0xA0 | bits (so 0xA5 = int5, 0xA6 = int6, etc.). The runtime inflate
@@ -26,8 +24,8 @@ Usage (int5 sweet-spot):
 from __future__ import annotations
 
 import argparse
+import hashlib
 import io
-import json
 import struct
 import sys
 import zipfile
@@ -42,13 +40,27 @@ PR106_SRC_PATH = Path(__file__).parent / "results" / (
 )
 sys.path.insert(0, str(PR106_SRC_PATH.resolve()))
 sys.path.insert(0, str(Path(__file__).parent.resolve()))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from codec import encode_decoder, quantize_state_dict  # type: ignore[import-not-found]  # noqa: E402
-from block_fp_intN_codec_sketch import encode_intN_block_fp  # type: ignore[import-not-found]  # noqa: E402
-
+from block_fp_intN_codec_sketch import encode_intN_block_fp  # type: ignore[import-not-found]
+from codec import encode_decoder, quantize_state_dict  # type: ignore[import-not-found]
+from tac.repo_io import json_text
 
 CODEC_ID_BROTLI_INT8 = 0
 CODEC_ID_INTN_BLOCKFP_BROTLI = 5  # 0x05 distinct from OWV2's 0x01 + apogee_int4's 0x02
+APOGEE_INTN_DISPATCH_BLOCKERS = [
+    "missing_contest_faithful_distortion_model",
+    "missing_scorer_basin_parity_gate",
+    "byte_only_prediction_not_score_evidence",
+]
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _magic_for_bits(bits: int) -> int:
@@ -139,9 +151,9 @@ def main() -> int:
     state_dict = torch.load(args.state_dict, map_location="cpu", weights_only=False)
     profile = _BITS_PROFILE[args.bits]
     print(f"[repack-int{args.bits}] state_dict: {len(state_dict)} tensors")
-    print(f"[repack-int{args.bits}] profile: {profile['risk']} risk, "
+    print(f"[repack-int{args.bits}] forensic byte profile: {profile['risk']} risk, "
           f"~{profile['rel_err_pct']:.2f}% rel err per weight, "
-          f"predicted score band {profile['predicted_band']}")
+          f"historical predicted score band {profile['predicted_band']}")
 
     encoded: dict[str, tuple[int, bytes]] = {}
     for name, t in state_dict.items():
@@ -175,12 +187,15 @@ def main() -> int:
     print(f"[repack-int{args.bits}] wrote {archive_path}: {archive_size} bytes")
     print(f"[repack-int{args.bits}] PR106: {pr106_size} bytes; delta: {delta:+d} ({100*delta/pr106_size:+.2f}%)")
     print(f"[repack-int{args.bits}] estimated rate-component score Δ vs PR106: {score_delta:+.6f}")
-    print(f"[repack-int{args.bits}] (distortion Δ unknown without CUDA dispatch; "
-          f"~{profile['rel_err_pct']:.2f}% rel err per weight; predicted band {profile['predicted_band']})")
+    print(f"[repack-int{args.bits}] forensic only: distortion model is missing; "
+          f"~{profile['rel_err_pct']:.2f}% rel err per weight; "
+          f"historical predicted band {profile['predicted_band']} is noncanonical")
 
     metadata = {
         "archive_path": str(archive_path),
         "archive_size_bytes": archive_size,
+        "candidate_archive_sha256": _sha256_file(archive_path),
+        "source_archive_sha256": _sha256_file(args.pr106_archive),
         "pr106_size_bytes": pr106_size,
         "delta_bytes": delta,
         "rate_component_score_delta_vs_pr106": score_delta,
@@ -192,18 +207,23 @@ def main() -> int:
         "rel_err_pct_per_weight": profile["rel_err_pct"],
         "distortion_risk": profile["risk"],
         "predicted_score_band": profile["predicted_band"],
+        "prediction_status": "forensic_byte_only_invalidated_by_int4_exact_negative",
+        "distortion_model_status": "missing",
+        "scorer_basin_parity_status": "missing",
+        "score_affecting_payload_changed": True,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": APOGEE_INTN_DISPATCH_BLOCKERS,
         "tag": "[design-validation]",
         "council_status": "NOT_REVIEWED",
         "score_claim": False,
         "next_step": (
-            "Dispatch contest-CUDA on Vast.ai 4090 (~$0.30 / 30min) to confirm distortion."
-            " Inflate adapter must handle magic byte high-nibble 0xA + bits-low-nibble"
-            " (int4=0xA4, int5=0xA5, int6=0xA6). Build a generic apogee_intN/ submission"
-            " adapter that dispatches on bits = magic & 0xF."
+            "Do not dispatch as a score lane. Build a SHA-tied distortion model "
+            "or scorer-basin parity report first, or attach exact positive CUDA "
+            "evidence for the exact candidate archive."
         ),
     }
     metadata_path = args.out_dir / "repack_metadata.json"
-    metadata_path.write_text(json.dumps(metadata, indent=2))
+    metadata_path.write_text(json_text(metadata), encoding="utf-8")
     print(f"[repack-int{args.bits}] wrote {metadata_path}")
     return 0
 
