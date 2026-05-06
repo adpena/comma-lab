@@ -66,6 +66,57 @@ def test_apply_yshift_candidates_torch_matches_integer_shift_semantics():
     assert tuple(out[1, 0, 0].tolist()) == (0, 0, 0)
 
 
+def test_batched_candidate_table_matches_pairwise_reference():
+    mod = _load_module()
+
+    class FakeDistortionNet:
+        def compute_distortion(self, gt_batch: torch.Tensor, cand_batch: torch.Tensor):
+            diff = (gt_batch.float() - cand_batch.float()).abs()
+            pose = diff.mean(dim=(1, 2, 3, 4))
+            seg = diff[:, 1].mean(dim=(1, 2, 3))
+            return pose, seg
+
+    gt_pairs = torch.zeros((2, 2, 4, 5, 3), dtype=torch.uint8)
+    comp_pairs = torch.zeros_like(gt_pairs)
+    comp_pairs[0, 0, 1, 1] = torch.tensor([40, 50, 60], dtype=torch.uint8)
+    comp_pairs[0, 1, 2, 2] = torch.tensor([80, 90, 100], dtype=torch.uint8)
+    comp_pairs[1, 0, 1, 3] = torch.tensor([120, 90, 30], dtype=torch.uint8)
+    comp_pairs[1, 1, 3, 4] = torch.tensor([15, 25, 35], dtype=torch.uint8)
+    candidates = torch.tensor(
+        [
+            [0, 0, 0],
+            [5, 0, 0],
+            [0, 1, -1],
+            [-3, -1, 1],
+        ],
+        dtype=torch.int8,
+    )
+
+    batched = mod.score_pair_batch_candidate_table(
+        FakeDistortionNet(),
+        gt_pairs=gt_pairs,
+        comp_pairs=comp_pairs,
+        candidates=candidates,
+        candidate_batch_size=2,
+        score_step=1.0,
+    )
+    pairwise_rows = []
+    for pair_index in range(gt_pairs.shape[0]):
+        row0, row1 = mod.score_frame_candidate_table(
+            FakeDistortionNet(),
+            gt_pair=gt_pairs[pair_index:pair_index + 1],
+            comp_pair=comp_pairs[pair_index:pair_index + 1],
+            candidates=candidates,
+            candidate_batch_size=2,
+            score_step=1.0,
+        )
+        pairwise_rows.extend([row0, row1])
+    pairwise = np.stack(pairwise_rows, axis=0)
+
+    assert batched.shape == pairwise.shape == (4, 4)
+    assert np.allclose(batched, pairwise, rtol=0.0, atol=1e-6)
+
+
 def test_verify_active_lane_claim_accepts_newest_nonterminal(tmp_path):
     mod = _load_module()
     claims = tmp_path / "claims.md"

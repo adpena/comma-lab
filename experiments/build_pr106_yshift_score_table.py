@@ -439,6 +439,60 @@ def score_frame_candidate_table(
     return rows[0], rows[1]
 
 
+@torch.inference_mode()
+def score_pair_batch_candidate_table(
+    distortion_net,
+    *,
+    gt_pairs: torch.Tensor,
+    comp_pairs: torch.Tensor,
+    candidates: torch.Tensor,
+    candidate_batch_size: int,
+    score_step: float,
+) -> np.ndarray:
+    """Score yshift candidates for a batch of pairs.
+
+    Output rows are ordered by frame index: pair0 frame0, pair0 frame1,
+    pair1 frame0, pair1 frame1, ...
+    """
+    if gt_pairs.ndim != 5 or gt_pairs.shape[1] != 2 or gt_pairs.shape[-1] != 3:
+        raise ValueError(f"gt_pairs must be (P,2,H,W,3), got {tuple(gt_pairs.shape)}")
+    if comp_pairs.shape != gt_pairs.shape:
+        raise ValueError(
+            f"comp_pairs shape must match gt_pairs: {tuple(comp_pairs.shape)} != "
+            f"{tuple(gt_pairs.shape)}"
+        )
+    if candidates.ndim != 2 or candidates.shape[1] != 3:
+        raise ValueError(f"candidates must be (C,3), got {tuple(candidates.shape)}")
+    pair_count = int(gt_pairs.shape[0])
+    candidate_count = int(candidates.shape[0])
+    rows = np.empty((pair_count * 2, candidate_count), dtype=np.float32)
+    for frame_slot in (0, 1):
+        for start in range(0, candidate_count, candidate_batch_size):
+            cand = candidates[start:start + candidate_batch_size]
+            cand_count = int(cand.shape[0])
+            cand_pairs = (
+                comp_pairs.unsqueeze(1)
+                .repeat(1, cand_count, 1, 1, 1, 1)
+                .reshape(pair_count * cand_count, 2, *comp_pairs.shape[2:])
+            )
+            cand_rows = cand.repeat(pair_count, 1)
+            shifted = apply_yshift_candidates_torch(
+                cand_pairs[:, frame_slot],
+                cand_rows,
+                step=score_step,
+            )
+            cand_pairs[:, frame_slot] = shifted
+            gt_batch = (
+                gt_pairs.unsqueeze(1)
+                .repeat(1, cand_count, 1, 1, 1, 1)
+                .reshape(pair_count * cand_count, 2, *gt_pairs.shape[2:])
+            )
+            pose_dist, seg_dist = distortion_net.compute_distortion(gt_batch, cand_pairs)
+            scores = score_without_rate(pose_dist, seg_dist).detach().cpu().numpy().astype(np.float32)
+            rows[frame_slot::2, start:start + cand_count] = scores.reshape(pair_count, cand_count)
+    return rows
+
+
 def build_dry_run_plan(args: argparse.Namespace, candidates: np.ndarray) -> dict[str, Any]:
     n_frames = int(args.n_pairs) * 2
     if args.max_frames is not None:
@@ -562,24 +616,18 @@ def build_score_table(args: argparse.Namespace) -> int:
             start_pair=pair_cursor,
             end_pair=pair_cursor + batch_pairs,
         )
-        for local_idx in range(batch_pairs):
-            pair_index = pair_cursor + local_idx
-            gt_pair = gt_batch[local_idx:local_idx + 1]
-            comp_pair = comp_batch[local_idx:local_idx + 1]
-            row0, row1 = score_frame_candidate_table(
-                distortion_net,
-                gt_pair=gt_pair,
-                comp_pair=comp_pair,
-                candidates=candidates,
-                candidate_batch_size=args.candidate_batch_size,
-                score_step=args.score_step,
-            )
-            frame0 = pair_index * 2
-            frame1 = frame0 + 1
-            if frame0 < n_frames:
-                table[frame0] = row0
-            if frame1 < n_frames:
-                table[frame1] = row1
+        scored_rows = score_pair_batch_candidate_table(
+            distortion_net,
+            gt_pairs=gt_batch[:batch_pairs],
+            comp_pairs=comp_batch[:batch_pairs],
+            candidates=candidates,
+            candidate_batch_size=args.candidate_batch_size,
+            score_step=args.score_step,
+        )
+        for local_frame, row in enumerate(scored_rows):
+            frame_index = pair_cursor * 2 + local_frame
+            if frame_index < n_frames:
+                table[frame_index] = row
         pair_cursor += batch_pairs
         print(f"[yshift-score-table] scored {min(pair_cursor * 2, n_frames)}/{n_frames} frames", flush=True)
         if args.resume_checkpoint:
