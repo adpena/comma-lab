@@ -249,7 +249,9 @@ def build_batch_command(args: argparse.Namespace) -> str:
             *env_exports,
             (
                 f"{args.python_bin} - <<'PY' > \"$OUT_DIR/lightning_runner_preflight.json\"\n"
-                "import json, torch, subprocess\n"
+                "import subprocess\n"
+                "import torch\n"
+                "from tac.repo_io import json_text\n"
                 "gpu = subprocess.run(['nvidia-smi', '--query-gpu=name', '--format=csv,noheader'], "
                 "text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)\n"
                 "payload = {\n"
@@ -261,14 +263,15 @@ def build_batch_command(args: argparse.Namespace) -> str:
                 "  'gpu_names': gpu.stdout.strip().splitlines(),\n"
                 "}\n"
                 "if not payload['cuda_available']:\n"
-                "    raise SystemExit(json.dumps({'LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK': False, **payload}))\n"
-                "print(json.dumps({'LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK': True, **payload}, indent=2, sort_keys=True))\n"
+                "    raise SystemExit(json_text({'LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK': False, **payload}))\n"
+                "print(json_text({'LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK': True, **payload}), end='')\n"
                 "PY"
             ),
             f"bash {REMOTE_SCRIPT} 2>&1 | tee \"$OUT_DIR/batch_run.log\"",
             (
                 f"{args.python_bin} - <<'PY'\n"
-                "import json, os, pathlib, shutil\n"
+                "import os, pathlib, shutil\n"
+                "from tac.repo_io import write_json\n"
                 "out = pathlib.Path(os.environ['OUT_DIR'])\n"
                 "run = out / 'yshift_run'\n"
                 "score_json = run / 'eval' / 'contest_auth_eval.json'\n"
@@ -282,7 +285,7 @@ def build_batch_command(args: argparse.Namespace) -> str:
                 "if score_json.is_file():\n"
                 "    shutil.copy2(score_json, out / 'contest_auth_eval.json')\n"
                 "    summary['copied_contest_auth_eval_json'] = True\n"
-                "(out / 'pr106_yshift_score_table_batch_summary.json').write_text(json.dumps(summary, indent=2, sort_keys=True))\n"
+                "write_json(out / 'pr106_yshift_score_table_batch_summary.json', summary)\n"
                 "if not score_json.is_file():\n"
                 "    raise SystemExit('FATAL: yshift score-table batch did not produce contest_auth_eval.json')\n"
                 "PY"

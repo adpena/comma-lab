@@ -5369,6 +5369,60 @@ Verification:
 - `.venv/bin/python tools/all_lanes_preflight.py` passed:
   `ALL 20 PREFLIGHT CHECKS PASSED`.
 
+## R83 - 2026-05-06 PR106 Y-Shift Lightning Dispatch JSON Lowering
+
+Continued the Gate #7 lowering tranche on the PR106 y-shift score-table
+Lightning Batch launcher. This was a behavior-preserving cleanup only:
+claim-lane ordering, staging, Batch spec metadata, remote script environment,
+CUDA preflight semantics, and `score_claim=false` promotion policy were not
+changed.
+
+Changes:
+
+- Replaced the remote Batch CUDA-preflight heredoc's pretty JSON emission with
+  `tac.repo_io.json_text`.
+- Replaced the remote Batch summary JSON write with `tac.repo_io.write_json`.
+- Preserved the batch summary schema:
+  `score_claim`, `promotion_requires_adjudication`, `yshift_run_dir`,
+  `contest_auth_eval_json`, `contest_auth_eval_json_exists`, and
+  `copied_contest_auth_eval_json`.
+
+Measured inventory after R83:
+
+- local SHA helpers: `53`
+- local JSON dumps: `105`
+- manual `sys.path` bootstraps: `272`
+- manual repo-root parent probes: `370`
+- manual score/dispatch metadata mentions: `601`
+
+Within-tranche committed-surface deltas:
+
+- `tools/lightning_dispatch_pr106_yshift_score_table.py` local JSON dump
+  count: `2 -> 0`
+- `tools/lightning_dispatch_pr106_yshift_score_table.py` local SHA helper
+  count: `0 -> 0`
+- `tools/lightning_dispatch_pr106_yshift_score_table.py` manual `sys.path`
+  bootstrap count: `0 -> 0`
+- `tools/lightning_dispatch_pr106_yshift_score_table.py` manual repo-root
+  parent count: `0 -> 0`
+- `tools/lightning_dispatch_pr106_yshift_score_table.py` manual
+  score/dispatch metadata count: `2 -> 2`
+
+Verification:
+
+- `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest
+  src/tac/tests/test_lightning_dispatch_pr106_yshift_score_table.py
+  src/tac/tests/test_repo_io.py src/tac/tests/test_audit_tooling_consolidation.py
+  -q` passed: `11 passed`.
+- `.venv/bin/python -m ruff check --select I,RUF100,F401,UP035,F821,E402
+  tools/lightning_dispatch_pr106_yshift_score_table.py` passed.
+- `.venv/bin/python -m py_compile
+  tools/lightning_dispatch_pr106_yshift_score_table.py` passed.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --format json`
+  reported the measured inventory above.
+- `.venv/bin/python tools/all_lanes_preflight.py` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+
 ## R81 - 2026-05-06 Component Sensitivity Shard Merge IO Lowering
 
 Continued the Gate #7 lowering tranche on the finite-difference sensitivity
