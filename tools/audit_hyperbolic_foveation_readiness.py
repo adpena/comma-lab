@@ -26,6 +26,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--expected-frames", type=int)
     parser.add_argument("--expected-image-size", type=int, nargs=2, metavar=("H", "W"))
     parser.add_argument("--source-archive-sha256")
+    parser.add_argument("--candidate-archive", type=Path)
+    parser.add_argument("--runtime-consumer", type=Path)
     parser.add_argument("--json-out", type=Path)
     return parser.parse_args(argv)
 
@@ -39,12 +41,19 @@ def main(argv: list[str] | None = None) -> int:
         expected_frames=args.expected_frames,
         expected_image_size=tuple(args.expected_image_size) if args.expected_image_size else None,
         source_archive_sha256=args.source_archive_sha256,
+        candidate_archive=args.candidate_archive,
+        runtime_consumer=args.runtime_consumer,
     )
+    input_paths = [args.foveation_params_bin]
+    if args.candidate_archive is not None:
+        input_paths.append(args.candidate_archive)
+    if args.runtime_consumer is not None:
+        input_paths.append(args.runtime_consumer)
     payload = attach_tool_run_manifest(
         payload,
         tool=Path(__file__).relative_to(REPO_ROOT).as_posix(),
         argv=raw_argv,
-        input_paths=[args.foveation_params_bin],
+        input_paths=input_paths,
         repo_root=REPO_ROOT,
         output_path=args.json_out,
     )

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 import torch
@@ -39,8 +40,53 @@ def test_audit_foveation_params_records_charged_custody_without_dispatch(tmp_pat
     assert manifest["image_size"] == {"height": 384, "width": 512}
     assert manifest["geometry"]["identity_like"] is True
     assert manifest["runtime_contract"]["runtime_consumer_required"] is True
+    assert "foveation_charged_member_not_proven" in manifest["dispatch_blockers"]
     assert "foveation_runtime_consumer_not_proven" in manifest["dispatch_blockers"]
     assert "exact_cuda_auth_eval_required_before_score_claim" in manifest["dispatch_blockers"]
+
+
+def test_audit_foveation_params_accepts_archive_and_runtime_consumer_proofs(
+    tmp_path: Path,
+) -> None:
+    params = tmp_path / "foveation_params.bin"
+    archive = tmp_path / "archive.zip"
+    runtime = tmp_path / "inflate_renderer.py"
+    hf = HyperbolicFoveation(
+        (64, 96),
+        n_frames=2,
+        init_alpha=0.05,
+        init_R=12.0,
+        init_o=(48.0, 32.0),
+    )
+    save_foveation_params(hf, params)
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("foveation_params.bin", params.read_bytes())
+    runtime.write_text(
+        "from tac.hyperbolic_foveation import load_foveation_params\n"
+        "MEMBER = 'foveation_params.bin'\n",
+        encoding="utf-8",
+    )
+
+    manifest = audit_foveation_params(
+        params,
+        repo_root=tmp_path,
+        expected_frames=2,
+        expected_image_size=(64, 96),
+        candidate_archive=archive,
+        runtime_consumer=runtime,
+    )
+
+    assert manifest["ok"] is True
+    assert manifest["archive_member"]["present"] is True
+    assert manifest["archive_member"]["bytes_match"] is True
+    assert manifest["archive_member"]["sha256_match"] is True
+    assert manifest["runtime_consumer"]["references_charged_member"] is True
+    assert manifest["runtime_consumer"]["references_loader"] is True
+    assert "foveation_charged_member_not_proven" not in manifest["dispatch_blockers"]
+    assert "foveation_runtime_consumer_not_proven" not in manifest["dispatch_blockers"]
+    assert manifest["dispatch_blockers"] == [
+        "exact_cuda_auth_eval_required_before_score_claim"
+    ]
 
 
 def test_audit_foveation_params_blocks_bad_geometry(tmp_path: Path) -> None:
@@ -108,6 +154,70 @@ def test_audit_hyperbolic_foveation_readiness_cli_records_tool_manifest(tmp_path
         }
     ]
     assert tool_run["dispatch_attempted"] is False
+
+
+def test_audit_hyperbolic_foveation_readiness_cli_records_optional_inputs(
+    tmp_path: Path,
+) -> None:
+    params = tmp_path / "foveation_params.bin"
+    archive = tmp_path / "archive.zip"
+    runtime = tmp_path / "inflate_renderer.py"
+    out = tmp_path / "readiness.json"
+    hf = HyperbolicFoveation(
+        (32, 48),
+        n_frames=1,
+        init_alpha=0.1,
+        init_R=10.0,
+        init_o=(24.0, 16.0),
+    )
+    save_foveation_params(hf, params)
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("foveation_params.bin", params.read_bytes())
+    runtime.write_text("load_foveation_params('foveation_params.bin')\n", encoding="utf-8")
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "audit_hyperbolic_foveation_readiness.py"),
+            "--foveation-params-bin",
+            str(params),
+            "--expected-frames",
+            "1",
+            "--expected-image-size",
+            "32",
+            "48",
+            "--candidate-archive",
+            str(archive),
+            "--runtime-consumer",
+            str(runtime),
+            "--json-out",
+            str(out),
+        ],
+        check=True,
+        cwd=REPO,
+        text=True,
+    )
+
+    manifest = json.loads(out.read_text(encoding="utf-8"))
+    assert manifest["archive_member"]["sha256_match"] is True
+    assert manifest["runtime_consumer"]["references_loader"] is True
+    assert manifest["tool_run_manifest"]["input_files"] == [
+        {
+            "path": params.as_posix(),
+            "bytes": params.stat().st_size,
+            "sha256": sha256_file(params),
+        },
+        {
+            "path": archive.as_posix(),
+            "bytes": archive.stat().st_size,
+            "sha256": sha256_file(archive),
+        },
+        {
+            "path": runtime.as_posix(),
+            "bytes": runtime.stat().st_size,
+            "sha256": sha256_file(runtime),
+        },
+    ]
 
 
 def test_audit_foveation_params_reports_load_error_for_corrupt_payload(tmp_path: Path) -> None:

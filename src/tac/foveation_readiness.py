@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+import zipfile
 
 import torch
 
 from tac.hyperbolic_foveation import EPSILON, load_foveation_params
-from tac.repo_io import repo_relative, sha256_file
+from tac.repo_io import repo_relative, sha256_bytes, sha256_file
 
 SCHEMA_VERSION = 1
 FOVEATION_MEMBER = "foveation_params.bin"
@@ -30,6 +31,8 @@ def audit_foveation_params(
     expected_frames: int | None = None,
     expected_image_size: tuple[int, int] | None = None,
     source_archive_sha256: str | None = None,
+    candidate_archive: str | Path | None = None,
+    runtime_consumer: str | Path | None = None,
 ) -> dict[str, Any]:
     """Audit a charged foveation parameter payload without scoring it."""
 
@@ -37,6 +40,7 @@ def audit_foveation_params(
     root = Path(repo_root)
     raw = payload_path.read_bytes()
     blockers = [
+        "foveation_charged_member_not_proven",
         "foveation_runtime_consumer_not_proven",
         "exact_cuda_auth_eval_required_before_score_claim",
     ]
@@ -66,6 +70,17 @@ def audit_foveation_params(
             "geometry_preflight_required": True,
             "exact_cuda_auth_eval_required": True,
         },
+        "archive_member": _audit_archive_member(
+            candidate_archive,
+            expected_raw=raw,
+            repo_root=root,
+            blockers=blockers,
+        ),
+        "runtime_consumer": _audit_runtime_consumer(
+            runtime_consumer,
+            repo_root=root,
+            blockers=blockers,
+        ),
     }
 
     try:
@@ -111,7 +126,15 @@ def audit_foveation_params(
 
     manifest.update(
         {
-            "ok": len(blockers) == 2,
+            "ok": not any(
+                blocker
+                not in {
+                    "foveation_charged_member_not_proven",
+                    "foveation_runtime_consumer_not_proven",
+                    "exact_cuda_auth_eval_required_before_score_claim",
+                }
+                for blocker in blockers
+            ),
             "n_frames": int(module.n_frames),
             "image_size": {"height": int(h), "width": int(w)},
             "geometry": {
@@ -133,6 +156,104 @@ def audit_foveation_params(
         }
     )
     return manifest
+
+
+def _audit_archive_member(
+    candidate_archive: str | Path | None,
+    *,
+    expected_raw: bytes,
+    repo_root: Path,
+    blockers: list[str],
+) -> dict[str, Any]:
+    if candidate_archive is None:
+        return {
+            "candidate_archive": "",
+            "present": False,
+            "bytes_match": False,
+            "sha256_match": False,
+        }
+    archive_path = Path(candidate_archive)
+    report: dict[str, Any] = {
+        "candidate_archive": repo_relative(archive_path, repo_root),
+        "present": False,
+        "bytes_match": False,
+        "sha256_match": False,
+        "zip_read_error": "",
+    }
+    try:
+        with zipfile.ZipFile(archive_path) as archive:
+            names = archive.namelist()
+            duplicates = sorted({name for name in names if names.count(name) > 1})
+            report["duplicate_member_names"] = duplicates
+            if duplicates:
+                blockers.append("foveation_candidate_archive_duplicate_members")
+            if FOVEATION_MEMBER not in names:
+                blockers.append("foveation_member_missing_from_candidate_archive")
+                return report
+            raw = archive.read(FOVEATION_MEMBER)
+    except Exception as exc:
+        report["zip_read_error"] = f"{type(exc).__name__}: {exc}"
+        blockers.append("foveation_candidate_archive_not_readable")
+        return report
+    report.update(
+        {
+            "present": True,
+            "bytes": len(raw),
+            "sha256": sha256_bytes(raw),
+            "bytes_match": len(raw) == len(expected_raw),
+            "sha256_match": sha256_bytes(raw) == sha256_bytes(expected_raw),
+        }
+    )
+    if not report["bytes_match"]:
+        blockers.append("foveation_member_bytes_mismatch")
+    if not report["sha256_match"]:
+        blockers.append("foveation_member_sha256_mismatch")
+    if report["bytes_match"] and report["sha256_match"]:
+        while "foveation_charged_member_not_proven" in blockers:
+            blockers.remove("foveation_charged_member_not_proven")
+    return report
+
+
+def _audit_runtime_consumer(
+    runtime_consumer: str | Path | None,
+    *,
+    repo_root: Path,
+    blockers: list[str],
+) -> dict[str, Any]:
+    if runtime_consumer is None:
+        return {
+            "path": "",
+            "exists": False,
+            "references_charged_member": False,
+            "references_loader": False,
+        }
+    path = Path(runtime_consumer)
+    report: dict[str, Any] = {
+        "path": repo_relative(path, repo_root),
+        "exists": path.is_file(),
+        "references_charged_member": False,
+        "references_loader": False,
+        "read_error": "",
+    }
+    if not path.is_file():
+        blockers.append("foveation_runtime_consumer_path_missing")
+        return report
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        report["read_error"] = f"{type(exc).__name__}: {exc}"
+        blockers.append("foveation_runtime_consumer_not_text")
+        return report
+    report["references_charged_member"] = FOVEATION_MEMBER in text
+    report["references_loader"] = "load_foveation_params" in text or "HFV1" in text
+    if not report["references_charged_member"]:
+        blockers.append("foveation_runtime_consumer_missing_member_reference")
+    if not report["references_loader"]:
+        blockers.append("foveation_runtime_consumer_missing_loader_reference")
+    if report["references_charged_member"] and report["references_loader"]:
+        while "foveation_runtime_consumer_not_proven" in blockers:
+            blockers.remove("foveation_runtime_consumer_not_proven")
+    return report
 
 
 __all__ = ["FOVEATION_MEMBER", "SCHEMA_VERSION", "audit_foveation_params"]
