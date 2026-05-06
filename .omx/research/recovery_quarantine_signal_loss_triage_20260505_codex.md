@@ -4333,3 +4333,30 @@ Post-R59 audit state:
 - `delete_after_manifest`: `4` resolved shadows.
 - `preserve_until_hand_rehydration`: `14` damaged decompile/provenance files
   that still require hand rehydration before any promotion.
+
+## R60 - 2026-05-06 Resolved Shadow Cleanup
+
+Deleted the four `delete_after_manifest` reverse-engineering shadows after R59
+recorded their SHA-256s, byte/line counts, semantic comparison, and canonical
+live targets:
+
+- `reverse_engineering/orphan_pyc_recovery_20260505_codex/docs/paper/ara/trace/events.jsonl`
+- `reverse_engineering/orphan_pyc_recovery_20260505_codex/scripts/remote_lane_pr79_segaction_search.sh.PREFLIGHT_DEBT`
+- `reverse_engineering/orphan_pyc_recovery_20260505_codex/scripts/remote_lane_q_faithful_jointgen.sh.PREFLIGHT_DEBT`
+- `reverse_engineering/orphan_pyc_recovery_20260505_codex/scripts/remote_lane_sjkl_c067.sh.QUARANTINED`
+
+This is not source loss:
+
+- the ARA trace's only differing field was private absolute `source_path`; the
+  live sanitized trace is the canonical public-safe doc artifact;
+- the Q-faithful launcher was byte-identical to the live script;
+- the PR79 and SJ-KL launcher shadows were stale predecessors superseded by
+  live scripts with stronger provenance, pinning, current parser contracts,
+  runbook wiring, and tests.
+
+Expected post-cleanup audit state:
+
+- total reverse-engineering files drop from `705` to `701`;
+- `delete_after_manifest` drops from `4` to `0`;
+- promotion queue remains `0`;
+- strict and release-strict blockers remain `0`.
