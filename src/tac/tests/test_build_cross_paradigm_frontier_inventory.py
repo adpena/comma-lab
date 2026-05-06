@@ -113,3 +113,13 @@ def test_cross_paradigm_inventory_markdown_is_operator_briefing() -> None:
     assert "`categorical_qma9_clade_spade_openpilot`" in markdown
     assert "`meta_lagrangian_cross_paradigm_allocator`" in markdown
     assert "`build_byte_closed_categorical_candidate`" in markdown
+
+
+def test_checked_in_cross_paradigm_inventory_markdown_matches_generator() -> None:
+    payload = build_inventory(repo_root=REPO)
+    expected = render_markdown(payload)
+    checked_in = (
+        REPO / ".omx/research/cross_paradigm_frontier_inventory_20260506_codex.md"
+    ).read_text(encoding="utf-8")
+
+    assert checked_in == expected
