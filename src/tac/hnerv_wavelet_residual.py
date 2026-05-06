@@ -158,11 +158,35 @@ def _top_haar_atoms(
     block_size: int,
     quant_step: float,
 ) -> list[dict[str, Any]]:
+    """Compute top-K Haar wavelet atoms for the byte stream.
+
+    Round 2A R2-4 note (2026-05-06, 85% confidence): the final partial block
+    is zero-padded to `block_size` before the Haar transform runs. Atoms whose
+    coefficient was computed using padded zeros (i.e. the last partial block,
+    if any) are SEMANTICALLY UNSOUND for round-trip — they encode coefficients
+    that depend on the implicit zero neighbor, not on a real byte value. The
+    `support_end = min(len(raw), support_start + support)` guard prevents
+    out-of-bounds writes, but it does not prevent the planner from generating
+    atoms whose value is influenced by padding. We FILTER these atoms below by
+    requiring the atom's full support window fit entirely within the real
+    (un-padded) byte range. This drops the boundary atoms cleanly.
+
+    The previous behavior was best-effort: boundary atoms could pass through
+    and contribute byte-level deltas computed against an implicit zero. For a
+    score-relevant sidechannel that's a correctness gap; per CLAUDE.md byte-
+    determinism non-negotiable we filter them at plan-time.
+    """
     atoms: list[dict[str, Any]] = []
     if not raw:
         return atoms
-    for block_start in range(0, len(raw), block_size):
+    raw_len = len(raw)
+    for block_start in range(0, raw_len, block_size):
         chunk = raw[block_start : block_start + block_size]
+        chunk_len = len(chunk)
+        # Round 2A R2-4 fix: skip the final partial block entirely. Its atoms
+        # depend on zero padding which is not present in the un-padded bytes.
+        if chunk_len < block_size:
+            continue
         centered = [float(byte) - 128.0 for byte in chunk]
         centered.extend([0.0] * (block_size - len(centered)))
         width = block_size

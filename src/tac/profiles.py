@@ -118,14 +118,30 @@ PROVEN_BASELINE_FULL = {
     "vp_saliency_horizon_boost": 2.0,
 }
 
-# Feature matching variant of proven_baseline (Trick 8: PoseNet layer 3 embeddings)
+# Feature matching variant of proven_baseline (Trick 8: PoseNet layer 3 embeddings).
 # Uses PoseNet intermediate features (stages.2, 256-ch) as the training target
-# instead of the 6-value pose output. Strictly more informative because the
-# mid-layer features capture texture statistics PoseNet actually uses.
+# instead of the 6-value pose output.
+#
+# Round 2B B6 fix (2026-05-06, 80% confidence): the prior comment claimed
+# "Strictly more informative because the mid-layer features capture texture
+# statistics PoseNet actually uses." That is a [prediction], NOT a
+# [contest-CUDA] measurement. Per CLAUDE.md "Forbidden empirical-claim-without-
+# evidence-tag" the claim must be tagged. Tag added below.
+#
+# segnet_loss_weight=100.0 sits at the boundary of the CLAUDE.md rule
+# "do NOT use segnet_loss_weight > 100 with any loss mode" — formally legal
+# but inside the footgun zone. `loss_mode="feature_match"` is also called
+# out as untested alongside kl_distill in the "Critical lessons" section.
+# Treat this profile as research-only until contest-CUDA validation lands.
+#
+# [prediction only — no contest-CUDA evidence]
 PROVEN_BASELINE_FEATMATCH = {
     **PROVEN_BASELINE,
     "loss_mode": "feature_match",
     "segnet_loss_weight": 100.0,
+    # Round 2B B6: marker for council/dispatch gates that this profile is
+    # NOT contest-CUDA-validated and requires explicit research approval.
+    "_council_status": "research_only_no_contest_cuda_evidence",
 }
 
 # Width scaling (h=96 dilated with council settings)

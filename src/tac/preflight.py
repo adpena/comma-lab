@@ -1539,6 +1539,18 @@ def check_codebase_drift(strict: bool = True) -> list[str]:
         rel = str(sh_path.relative_to(REPO_ROOT))
         if rel.startswith("experiments/results/"):
             continue
+        # Round 2 codebase-drift fix (2026-05-06): public_runtime_adapters/
+        # contains canonical bash entrypoints for replaying public PR archives.
+        # These are NOT contest submission scripts; they are intake-side
+        # adapters that wrap the public decoder + adapt member-name lookup.
+        # Per-PR, frozen-at-fetch-time. Scoped exemption is safer than adding
+        # each adapter to ALLOWED_BASH_PATHS (which would grow unboundedly
+        # with each new public PR intake).
+        if rel.startswith("experiments/public_runtime_adapters/"):
+            # Still scan the contents for forbidden patterns — exemption
+            # is for the path-allowlist, not for the bash-pattern check.
+            all_violations.extend(_scan_bash_text_for_forbidden(sh_path))
+            continue
         if rel not in ALLOWED_BASH_PATHS:
             all_violations.append(
                 f"{rel}: bash script in experiments/ — only contest submission "
