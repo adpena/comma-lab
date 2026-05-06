@@ -86,6 +86,12 @@ DEFAULT_PR86_EXACT_EVAL_LOGS = (
     REPO_ROOT
     / "experiments/results/lightning_batch/exact_eval_public_pr86_hpac_t4_retry1_20260504T0213Z/auth_eval.log",
 )
+DEFAULT_PR86_RELEASE_SOURCE_ROOT = (
+    REPO_ROOT
+    / "experiments/results/public_pr_archive_release_view/public_pr86_intake_20260505_auto/source/submissions/jas0xf_adversarial_neural_representation"
+)
+DEFAULT_PR86_TRAINING_ARCHIVE_SOURCE = DEFAULT_PR86_RELEASE_SOURCE_ROOT / "training/archive.py"
+DEFAULT_PR86_INFLATE_SOURCE = DEFAULT_PR86_RELEASE_SOURCE_ROOT / "inflate.py"
 
 EXPECTED_PR86_ARCHIVE_BYTES = 207579
 EXPECTED_PR86_ARCHIVE_SHA256 = (
@@ -1049,6 +1055,179 @@ def _load_packed_hpac_state(payload: bytes | Path | str) -> Mapping[str, Any]:
     return loaded
 
 
+def summarize_hpac_packed_state_schema(payload: bytes | Path | str) -> dict[str, Any]:
+    """Summarize HPAC packed-state keys without treating it as score evidence."""
+
+    packed_sd = _load_packed_hpac_state(payload)
+    keys = list(packed_sd.keys())
+    suffix_counts = {
+        ".weight_q": sum(key.endswith(".weight_q") for key in keys),
+        ".weight_scale": sum(key.endswith(".weight_scale") for key in keys),
+        ".weight": sum(key.endswith(".weight") for key in keys),
+        ".b": sum(key.endswith(".b") for key in keys),
+        ".e": sum(key.endswith(".e") for key in keys),
+        ".bias": sum(key.endswith(".bias") for key in keys),
+    }
+    packed_bases = sorted(
+        key[: -len(".weight_q")]
+        for key in keys
+        if key.endswith(".weight_q")
+    )
+    missing_scales = [
+        base for base in packed_bases if f"{base}.weight_scale" not in packed_sd
+    ]
+    tensor_rows = []
+    for key in keys:
+        value = packed_sd[key]
+        if torch is not None and torch.is_tensor(value):
+            tensor_rows.append(
+                {
+                    "key": key,
+                    "shape": list(value.shape),
+                    "dtype": str(value.dtype),
+                    "numel": int(value.numel()),
+                }
+            )
+        else:
+            tensor_rows.append({"key": key, "type": type(value).__name__})
+    raw_weight_keys = [
+        key for key in keys
+        if key.endswith(".weight") and not key.endswith(".weight_q")
+    ]
+    return _jsonable(
+        {
+            "schema": "hpac_packed_state_schema_v1",
+            "score_claim": False,
+            "key_count": len(keys),
+            "suffix_counts": suffix_counts,
+            "packed_weight_bases": packed_bases,
+            "missing_weight_scales": missing_scales,
+            "raw_weight_keys": raw_weight_keys,
+            "has_packed_weights": bool(packed_bases),
+            "has_raw_float_weights": bool(raw_weight_keys),
+            "has_scn_runtime_parameters": bool(suffix_counts[".b"] or suffix_counts[".e"]),
+            "keys_preview": keys[:40],
+            "tensors": tensor_rows,
+        }
+    )
+
+
+def _source_pattern_report(path: Path, patterns: Mapping[str, str]) -> dict[str, Any]:
+    row: dict[str, Any] = {
+        "path": repo_rel(path),
+        "exists": path.is_file(),
+        "patterns": {},
+    }
+    if not path.is_file():
+        return row
+    text = path.read_text(encoding="utf-8", errors="replace")
+    row.update({"bytes": path.stat().st_size, "sha256": sha256_bytes(text.encode("utf-8"))})
+    for name, pattern in patterns.items():
+        row["patterns"][name] = pattern in text
+    return row
+
+
+def analyze_pr86_hpac_scn_contract(
+    archive: Path = DEFAULT_PR86_ARCHIVE,
+    *,
+    training_archive_source: Path = DEFAULT_PR86_TRAINING_ARCHIVE_SOURCE,
+    inflate_source: Path = DEFAULT_PR86_INFLATE_SOURCE,
+) -> dict[str, Any]:
+    """Check whether PR86 HPAC encode/decode SCN modes are byte-contract aligned.
+
+    This is source-static plus payload-schema evidence. It is intentionally not
+    a proof of leaderboard invalidity and does not unlock dispatch.
+    """
+
+    started_at = time.time()
+    report: dict[str, Any] = {
+        "schema": "pr86_hpac_scn_contract_analysis_v1",
+        "tool": "tac.pr86_hpac_codec.analyze_pr86_hpac_scn_contract",
+        "recorded_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "evidence_grade": "source_static_plus_payload_schema",
+        "archive": repo_rel(Path(archive)),
+        "status": "running",
+        "source_static": {},
+        "packed_state_schema": {},
+        "candidate_root_causes": [],
+        "limitations": [
+            "This does not include the original uncompressed encoder workspace checkpoint.",
+            "This does not prove the public leaderboard score is impossible.",
+            "Full promotion still requires archive.zip -> inflate.sh -> upstream/evaluate.py CUDA success.",
+        ],
+    }
+    try:
+        bundle = read_pr86_archive(Path(archive))
+        packed_schema = summarize_hpac_packed_state_schema(bundle.members["hpac.pt.ppmd"])
+        training_report = _source_pattern_report(
+            Path(training_archive_source),
+            {
+                "encoder_loads_packed_hpac": "load_hpac_from_ppmd",
+                "encoder_calls_set_scn_false": "gen.set_scn(False)",
+                "encoder_writes_tokens_with_loaded_gen": "write_tokens(gen, gt, arch_dir / \"tokens.bin\")",
+                "encoder_reconstructs_packed_state_dict": "reconstruct_hpac_state_dict(packed_sd)",
+            },
+        )
+        inflate_report = _source_pattern_report(
+            Path(inflate_source),
+            {
+                "inflate_has_hpac_plain_runtime": "Plain masked conv (no SCN - quantization pre-applied at build time)",
+                "inflate_loads_hpac_ppmd": "hpac.pt.ppmd",
+                "inflate_has_set_scn_call": ".set_scn(",
+                "inflate_reconstructs_weight_q": ".weight_q",
+            },
+        )
+        report["source_static"] = {
+            "training_archive_py": training_report,
+            "inflate_py": inflate_report,
+        }
+        report["packed_state_schema"] = packed_schema
+        encoder_patterns = training_report.get("patterns", {})
+        inflate_patterns = inflate_report.get("patterns", {})
+        encoder_scn_off = bool(encoder_patterns.get("encoder_calls_set_scn_false"))
+        inflate_no_scn_call = inflate_report.get("exists") and not bool(
+            inflate_patterns.get("inflate_has_set_scn_call")
+        )
+        packed_only = (
+            packed_schema.get("suffix_counts", {}).get(".weight_q", 0) > 0
+            and packed_schema.get("suffix_counts", {}).get(".weight", 0) == 0
+            and packed_schema.get("suffix_counts", {}).get(".b", 0) == 0
+            and packed_schema.get("suffix_counts", {}).get(".e", 0) == 0
+        )
+        if encoder_scn_off and inflate_no_scn_call and packed_only:
+            report["candidate_root_causes"].append(
+                {
+                    "id": "encoder_decoder_scn_mode_divergence",
+                    "confidence": "strong_candidate_not_proof",
+                    "summary": (
+                        "The archive builder encodes tokens after gen.set_scn(False), "
+                        "while the submitted HPAC member contains packed weight_q/"
+                        "weight_scale tensors and no raw weights or SCN b/e runtime "
+                        "parameters; inflate reconstructs a plain pre-applied model."
+                    ),
+                    "expected_symptom": (
+                        "range decoder can match early symbols but fails once the "
+                        "probability stream diverges enough to violate constriction"
+                    ),
+                    "dispatch_allowed": False,
+                }
+            )
+        report["status"] = (
+            "candidate_encoder_decoder_scn_mode_divergence"
+            if report["candidate_root_causes"]
+            else "no_scn_mode_divergence_candidate_found"
+        )
+    except Pr86HpacReplayError as exc:
+        report["status"] = "failed_closed"
+        report["failure_stage"] = exc.contract
+        report["failure_reason"] = exc.code
+        report["failure_context"] = dict(exc.fields)
+    report["elapsed_sec"] = round(time.time() - started_at, 3)
+    return _jsonable(report)
+
+
 def load_hpac_model_from_ppmd(
     payload: bytes | Path | str,
     config: Mapping[str, Any] | None = None,
@@ -1390,6 +1569,7 @@ def analyze_pr86_hpac_entropy_contract(
         attempt_reencode=False,
     )
     log_rows = [_summarize_pr86_auth_eval_log(Path(path)) for path in exact_eval_logs]
+    scn_contract = analyze_pr86_hpac_scn_contract(archive)
     entropy_failures = [
         row for row in matrix["variant_results"]
         if row.get("failure_reason") == "hpac_entropy_decode_contract_mismatch"
@@ -1420,10 +1600,14 @@ def analyze_pr86_hpac_entropy_contract(
             "archive": repo_rel(Path(archive)),
             "probability_matrix": matrix,
             "exact_eval_logs": log_rows,
+            "scn_contract": scn_contract,
             "classification": {
                 "local_exact_validated": local_exact_validated,
                 "entropy_failure_variants": [row["variant"] for row in entropy_failures],
                 "auth_failure_kinds": [row.get("failure_kind") for row in auth_failures],
+                "likely_root_cause_candidates": [
+                    row["id"] for row in scn_contract.get("candidate_root_causes", [])
+                ],
                 "contest_compliance_position": (
                     "external_leaderboard_claim_not_promotable_until_auth_eval_passes"
                     if not local_exact_validated

@@ -4755,3 +4755,54 @@ Verification:
 - Direct analyzer smoke reported PR86
   `not_locally_contest_validated_entropy_contract_mismatch` and preserved the
   frame-0 group-10 symbol-191 failure context.
+
+## R69 - 2026-05-06 PR86 HPAC SCN Contract Root-Cause Candidate
+
+Added a source-static plus payload-schema analyzer for the PR86 HPAC entropy
+blocker. This does not promote or reject the public leaderboard claim. It
+records a strong local root-cause candidate for why our recovered PR86/PR91
+HPAC replay fails at frame 0 group 10 symbol 191.
+
+Updated:
+
+- `src/tac/pr86_hpac_codec.py`
+- `src/tac/tests/test_pr86_hpac_codec.py`
+
+New contracts:
+
+- `summarize_hpac_packed_state_schema(...)` records whether an HPAC payload
+  contains packed `*.weight_q` / `*.weight_scale` tensors, raw `*.weight`
+  tensors, and SCN runtime `.b` / `.e` parameters.
+- `analyze_pr86_hpac_scn_contract(...)` joins the submitted archive payload
+  schema with public PR86 source facts from `training/archive.py` and
+  `inflate.py`.
+- `analyze_pr86_hpac_entropy_contract(...)` now includes
+  `scn_contract` and lists likely root-cause candidates in the classification.
+
+Current evidence:
+
+- The submitted PR86 `hpac.pt.ppmd` has 9 `*.weight_q` tensors, 9
+  `*.weight_scale` tensors, zero raw `*.weight` tensors, and zero SCN `.b` /
+  `.e` runtime parameters.
+- The public archive builder source loads the packed HPAC payload, reconstructs
+  weights, calls `gen.set_scn(False)`, then writes `tokens.bin`.
+- The public inflate source has a plain pre-applied HPAC runtime and no
+  `set_scn` call.
+- The analyzer classifies this as
+  `candidate_encoder_decoder_scn_mode_divergence` with candidate id
+  `encoder_decoder_scn_mode_divergence`.
+
+Scientific position:
+
+- Evidence grade is `source_static_plus_payload_schema`.
+- Dispatch remains blocked and `score_claim=false`.
+- This is a strong root-cause candidate for the observed constriction entropy
+  assertion, but not a proof that the leaderboard entry is impossible. The
+  missing proof artifact is the original uncompressed encoder workspace
+  checkpoint or a byte-closed reproduction that decodes the submitted
+  `tokens.bin` through exact auth eval.
+
+Verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_pr86_hpac_codec.py -q` ->
+  `15 passed`.

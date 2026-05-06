@@ -18,6 +18,7 @@ from tac.pr86_hpac_codec import (
     _group_masks,
     _normalize_probability_row,
     analyze_pr86_hpac_entropy_contract,
+    analyze_pr86_hpac_scn_contract,
     collect_dependency_report,
     decode_gzip_torch_member,
     decode_meta_member,
@@ -28,6 +29,7 @@ from tac.pr86_hpac_codec import (
     run_pr86_hpac_probability_variant_matrix,
     run_pr86_hpac_replay,
     sha256_bytes,
+    summarize_hpac_packed_state_schema,
 )
 from tac.pr91_hpm1_codec import (
     DEFAULT_PR91_ARCHIVE,
@@ -226,6 +228,45 @@ def test_real_pr86_archive_contract_and_members_decode() -> None:
     assert "frame_embed.weight" in master
 
 
+@pytest.mark.skipif(
+    not DEFAULT_PR91_ARCHIVE.parents[1].joinpath("public_pr86_intake_20260504_codex/archive.zip").is_file(),
+    reason="public PR86 archive not present",
+)
+def test_real_pr86_hpac_packed_state_schema_is_packed_only() -> None:
+    pr86_archive = DEFAULT_PR91_ARCHIVE.parents[1] / "public_pr86_intake_20260504_codex" / "archive.zip"
+    bundle = read_pr86_archive(pr86_archive)
+
+    report = summarize_hpac_packed_state_schema(bundle.members["hpac.pt.ppmd"])
+
+    assert report["score_claim"] is False
+    assert report["suffix_counts"][".weight_q"] == 9
+    assert report["suffix_counts"][".weight_scale"] == 9
+    assert report["suffix_counts"][".weight"] == 0
+    assert report["suffix_counts"][".b"] == 0
+    assert report["suffix_counts"][".e"] == 0
+    assert report["has_packed_weights"] is True
+    assert report["has_raw_float_weights"] is False
+    assert report["has_scn_runtime_parameters"] is False
+
+
+@pytest.mark.skipif(
+    not DEFAULT_PR91_ARCHIVE.parents[1].joinpath("public_pr86_intake_20260504_codex/archive.zip").is_file(),
+    reason="public PR86 archive not present",
+)
+def test_real_pr86_scn_contract_reports_candidate_divergence() -> None:
+    pr86_archive = DEFAULT_PR91_ARCHIVE.parents[1] / "public_pr86_intake_20260504_codex" / "archive.zip"
+
+    report = analyze_pr86_hpac_scn_contract(pr86_archive)
+
+    assert report["status"] == "candidate_encoder_decoder_scn_mode_divergence"
+    assert report["score_claim"] is False
+    assert report["dispatch_allowed"] is False
+    assert report["evidence_grade"] == "source_static_plus_payload_schema"
+    assert report["source_static"]["training_archive_py"]["patterns"]["encoder_calls_set_scn_false"] is True
+    assert report["source_static"]["inflate_py"]["patterns"]["inflate_has_set_scn_call"] is False
+    assert report["candidate_root_causes"][0]["id"] == "encoder_decoder_scn_mode_divergence"
+
+
 def test_dependency_and_source_artifact_reports_are_structured() -> None:
     dep = collect_dependency_report(strict=False)
     assert dep["observed"]["numpy"]
@@ -305,6 +346,9 @@ def test_real_pr86_entropy_contract_analysis_classifies_auth_eval_failure() -> N
     assert report["classification"]["contest_compliance_position"] == (
         "external_leaderboard_claim_not_promotable_until_auth_eval_passes"
     )
+    assert report["classification"]["likely_root_cause_candidates"] == [
+        "encoder_decoder_scn_mode_divergence"
+    ]
 
 
 def test_pr86_group_masks_match_public_pr91_failure_geometry() -> None:
