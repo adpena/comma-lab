@@ -18,30 +18,39 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import math
 import subprocess
-import sys
 import time
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import torch
 import torch.nn.functional as F
 
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, prepend_paths, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    prepend_paths = _tool_bootstrap.prepend_paths
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
 
-REPO = Path(__file__).resolve().parents[1]
-if str(REPO) not in sys.path:
-    sys.path.insert(0, str(REPO))
-if str(REPO / "src") not in sys.path:
-    sys.path.insert(0, str(REPO / "src"))
-if str(REPO / "upstream") not in sys.path:
-    sys.path.insert(0, str(REPO / "upstream"))
+REPO = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO)
+prepend_paths(REPO / "upstream")
 
-from experiments.convert_fisher_to_owv3_sensitivity_map import (  # noqa: E402
+from experiments.convert_fisher_to_owv3_sensitivity_map import (
     convert_importance_to_channel_sensitivity,
 )
-from experiments.profile_hessian_per_weight import (  # noqa: E402
+from experiments.profile_hessian_per_weight import (
     _decode_gt_video,
     _load_masks_video,
     _load_pair_weights,
@@ -49,15 +58,16 @@ from experiments.profile_hessian_per_weight import (  # noqa: E402
     _load_renderer,
     _select_eligible_params_with_exclusions,
 )
-from tac.component_sensitivity_artifact import COMPONENTS  # noqa: E402
-from tac.component_sensitivity_artifact import CONTEST_SAMPLE_COUNT  # noqa: E402
-from tac.component_sensitivity_artifact import write_component_sensitivity_manifest  # noqa: E402
-from tac.sensitivity_map import (  # noqa: E402
+from tac.component_sensitivity_artifact import (
+    CONTEST_SAMPLE_COUNT,
+    write_component_sensitivity_manifest,
+)
+from tac.repo_io import json_text, read_json, write_json
+from tac.sensitivity_map import (
     load_sensitivity_map,
     save_sensitivity_map,
     sensitivity_cv_distance,
 )
-
 
 COMPONENT_OUTPUTS = ("posenet", "segnet", "combined")
 SCORE_EPS = 1e-12
@@ -594,7 +604,7 @@ def _write_perturbation_basis_json(
         response_top_k=response_top_k,
         input_metadata=input_metadata,
     )
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    write_json(path, payload)
     return payload
 
 
@@ -1244,7 +1254,7 @@ def _write_response_curve(
         **epsilon_metadata,
         "points": enriched_points,
     }
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    write_json(path, payload)
 
 
 def _paired_flat_values(
@@ -1362,7 +1372,7 @@ def _copy_ref_value(
 
 
 def _load_profile_summary(path: Path) -> dict[str, Any]:
-    payload = json.loads(path.read_text())
+    payload = read_json(path)
     if not isinstance(payload, dict):
         raise ComponentSensitivityProfileError(f"{path}: summary must be a JSON object")
     return payload
@@ -1584,7 +1594,7 @@ def _write_stability_json(
         "component_passed": component_passed,
         "passed": all(component_passed.values()),
     }
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    write_json(path, payload)
     return payload
 
 
@@ -1907,7 +1917,7 @@ def profile_component_sensitivity(
         holdout_map_paths[component] = str(holdout_path)
 
     sample_plan_path = out_dir / "sample_plan.json"
-    sample_plan_path.write_text(json.dumps(plan, indent=2, sort_keys=True) + "\n")
+    write_json(sample_plan_path, plan)
     stability_path = out_dir / "stability.json"
     _write_stability_json(
         stability_path,
@@ -1992,9 +2002,7 @@ def profile_component_sensitivity(
         "sample_plan_json": str(sample_plan_path),
         "stability_json": str(stability_path),
     }
-    (out_dir / "component_sensitivity_profile_summary.json").write_text(
-        json.dumps(summary, indent=2, sort_keys=True) + "\n"
-    )
+    write_json(out_dir / "component_sensitivity_profile_summary.json", summary)
     return summary
 
 
@@ -2201,7 +2209,7 @@ def main(argv: list[str] | None = None) -> int:
             "component_sensitivity_manifest": args.manifest_output,
             "manifest_archive_sha256": manifest["contest_eval"]["archive"]["sha256"],
         }
-    print(json.dumps(summary, indent=2, sort_keys=True))
+    print(json_text(summary), end="")
     return 0
 
 

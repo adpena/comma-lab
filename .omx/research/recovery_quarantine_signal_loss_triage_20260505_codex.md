@@ -5223,3 +5223,85 @@ Verification:
   `unresolved_incomplete_manual_rehydration_paths=[]`.
 - `.venv/bin/python -m py_compile tools/audit_recovery_custody_snapshots.py
   src/tac/tests/test_audit_recovery_custody_snapshots.py` passed.
+
+## R77 - 2026-05-06 Active Diagnostic Tool Bootstrap And IO Consolidation
+
+Continued the Gate #7 lowering tranche on active diagnostic and preflight
+scripts. This was a behavior-preserving cleanup only: no archive bytes, score
+claims, dispatch readiness semantics, or scientific conclusions were promoted
+by this pass.
+
+Changes:
+
+- Migrated `experiments/diagnose_nerv_geometry.py` to shared
+  `tools.tool_bootstrap` repo import setup and `tac.repo_io` read/write/SHA
+  helpers while preserving the local `_mask_tensor_sha256()` tensor-custody
+  digest.
+- Migrated `experiments/profile_component_sensitivity.py` to shared bootstrap
+  plus deterministic `prepend_paths(REPO / "upstream")`, and replaced local
+  pretty-JSON writes/summary reads with `tac.repo_io`.
+- Migrated `experiments/preflight_pr91_pr92_replay_contracts.py` to shared
+  bootstrap and `tac.repo_io` helpers while preserving private helper aliases
+  (`_sha256_file`, `_json_text`, `_write_json`) for compatibility with existing
+  tooling tests and direct imports.
+- Resolved a preflight-caught release index/worktree split in
+  `src/tac/hnerv_wavelet_apply_transform.py` and
+  `src/tac/hnerv_wavelet_residual.py` by staging the preserved working-tree
+  contents so the index again matched current `main`. No wavelet source change
+  was introduced by R77.
+
+Measured inventory after R77:
+
+- local SHA helpers: `56`
+- local JSON dumps: `122`
+- manual `sys.path` bootstraps: `276`
+- manual repo-root parent probes: `371`
+- manual score/dispatch metadata mentions: `601`
+
+Within-tranche deltas from R76:
+
+- local SHA helpers: `58 -> 56`
+- local JSON dumps: `130 -> 122`
+- manual `sys.path` bootstraps: `281 -> 276`
+- manual repo-root parent probes: `374 -> 371`
+- manual score/dispatch metadata mentions: `601 -> 601`
+
+Target-file state after R77:
+
+- `experiments/diagnose_nerv_geometry.py`: only score/dispatch metadata
+  inventory remains (`25` mentions).
+- `experiments/profile_component_sensitivity.py`: only score/dispatch metadata
+  inventory remains (`3` mentions).
+- `experiments/preflight_pr91_pr92_replay_contracts.py`: only score/dispatch
+  metadata inventory remains (`8` mentions).
+
+Review note:
+
+- A read-only adversarial review agreed this is the correct boundary for the
+  tranche and warned not to consolidate the remaining score/dispatch metadata
+  into a generic report wrapper yet, because those fields are user-facing
+  diagnostic/provenance schema rather than repeated local plumbing.
+
+Verification:
+
+- `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -p no:cacheprovider
+  src/tac/tests/test_lane12_nerv_geometry_diagnostics.py
+  src/tac/tests/test_profile_component_sensitivity.py
+  src/tac/tests/test_preflight_pr91_pr92_replay_contracts.py
+  src/tac/tests/test_pr91_hpm1_codec.py
+  src/tac/tests/test_merge_component_sensitivity_shards.py
+  src/tac/tests/test_repo_io.py src/tac/tests/test_tool_bootstrap.py
+  src/tac/tests/test_audit_tooling_consolidation.py -q` passed:
+  `78 passed`.
+- `.venv/bin/python -m ruff check --select I,RUF100,F401,UP035
+  experiments/preflight_pr91_pr92_replay_contracts.py
+  experiments/profile_component_sensitivity.py
+  experiments/diagnose_nerv_geometry.py` passed.
+- `.venv/bin/python -m py_compile
+  experiments/preflight_pr91_pr92_replay_contracts.py
+  experiments/profile_component_sensitivity.py
+  experiments/diagnose_nerv_geometry.py` passed.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --format json` reported
+  the measured inventory above.
+- `.venv/bin/python tools/all_lanes_preflight.py` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.

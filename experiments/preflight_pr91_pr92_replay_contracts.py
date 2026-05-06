@@ -11,19 +11,31 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import hashlib
+import importlib.util
 import json
 import math
 import sys
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SRC_ROOT = REPO_ROOT / "src"
-if str(SRC_ROOT) not in sys.path:
-    sys.path.insert(0, str(SRC_ROOT))
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
 
-from tac.pr91_hpm1_codec import DEFAULT_PR91_ARCHIVE, run_pr91_hpm1_probability_variant_matrix  # noqa: E402
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.pr91_hpm1_codec import DEFAULT_PR91_ARCHIVE, run_pr91_hpm1_probability_variant_matrix
+from tac.repo_io import json_text, read_json, sha256_file, write_json
 
 TOOL = "experiments/preflight_pr91_pr92_replay_contracts.py"
 SCHEMA = "pr91_pr92_replay_contract_preflight_v1"
@@ -61,22 +73,14 @@ def _rel(path: Path) -> str:
         return str(path)
 
 
-def _sha256_file(path: Path) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def _json_text(payload: Mapping[str, Any]) -> str:
-    return json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
+_sha256_file = sha256_file
+_json_text = json_text
 
 
 def _load_json(path: Path) -> dict[str, Any]:
     if not path.is_file():
         raise FileNotFoundError(_rel(path))
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = read_json(path)
     if not isinstance(payload, dict):
         raise ValueError(f"expected JSON object: {_rel(path)}")
     return payload
@@ -144,9 +148,7 @@ def _load_pr92_log_recovery(log_dir: Path) -> tuple[dict[str, Any], dict[str, An
     return manifest, exact, source
 
 
-def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(_json_text(payload), encoding="utf-8")
+_write_json = write_json
 
 
 def _failed_checks(checks: Mapping[str, bool]) -> list[str]:

@@ -9,25 +9,36 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import math
 import sys
 import tempfile
 import zipfile
 from dataclasses import asdict, dataclass, field
-from pathlib import Path
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 
-_REPO_ROOT = Path(__file__).resolve().parents[1]
-_SRC = _REPO_ROOT / "src"
-if _SRC.is_dir() and str(_SRC) not in sys.path:
-    sys.path.insert(0, str(_SRC))
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    _bootstrap_path = Path(__file__).resolve().parent.parent / "tools" / "tool_bootstrap.py"
+    _spec = importlib.util.spec_from_file_location("tool_bootstrap", _bootstrap_path)
+    if _spec is None or _spec.loader is None:
+        raise
+    _tool_bootstrap = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tool_bootstrap)
+    ensure_repo_imports = _tool_bootstrap.ensure_repo_imports
+    repo_root_from_tool = _tool_bootstrap.repo_root_from_tool
 
+_REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(_REPO_ROOT)
+
+from tac.repo_io import read_json, sha256_file, write_json
 
 CLASS_NAMES: dict[int, str] = {
     0: "road",
@@ -157,15 +168,7 @@ def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def _sha256_file(path: Path, *, chunk_size: int = 1024 * 1024) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as fh:
-        while True:
-            chunk = fh.read(chunk_size)
-            if not chunk:
-                break
-            digest.update(chunk)
-    return digest.hexdigest()
+_sha256_file = sha256_file
 
 
 def _mask_tensor_sha256(masks: torch.Tensor) -> str:
@@ -2847,7 +2850,7 @@ def _load_predecoded_mask_cache(
     if not tensor_path.exists() or not metadata_path.exists():
         return None
     try:
-        cache_metadata = json.loads(metadata_path.read_text())
+        cache_metadata = read_json(metadata_path)
     except json.JSONDecodeError:
         return None
     if cache_metadata.get("fingerprint") != fingerprint:
@@ -2921,7 +2924,7 @@ def _write_predecoded_mask_cache(
             "score_claim_eligible": False,
             "score_evidence_grade": "empirical",
         }
-        tmp_metadata_path.write_text(json.dumps(cache_metadata, indent=2, sort_keys=True) + "\n")
+        write_json(tmp_metadata_path, cache_metadata)
         tmp_tensor_path.replace(tensor_path)
         tmp_metadata_path.replace(metadata_path)
     finally:
@@ -3448,13 +3451,10 @@ def main() -> int:
         "argv": list(sys.argv),
     }
     args.output_json.parent.mkdir(parents=True, exist_ok=True)
-    args.output_json.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+    write_json(args.output_json, result)
     if args.primitive_contract_json is not None:
         contract = build_alpha_geo_primitive_contract(result)
-        args.primitive_contract_json.parent.mkdir(parents=True, exist_ok=True)
-        args.primitive_contract_json.write_text(
-            json.dumps(contract, indent=2, sort_keys=True) + "\n"
-        )
+        write_json(args.primitive_contract_json, contract)
         print(
             f"[alpha-geo-primitive-contract] wrote {args.primitive_contract_json}",
             flush=True,
