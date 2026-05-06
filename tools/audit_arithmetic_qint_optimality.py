@@ -17,7 +17,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
-from tac.arithmetic_qint_codec import profile_aqv1_container, profile_qints_arithmetic  # noqa: E402
+from tac.arithmetic_qint_codec import profile_arithmetic_container, profile_qints_arithmetic  # noqa: E402
 from tac.repo_io import json_text  # noqa: E402
 from tac.tool_manifest import attach_tool_run_manifest  # noqa: E402
 
@@ -45,7 +45,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         input_paths = [args.qints_npy]
     else:
-        payload = profile_aqv1_container(args.aqv1_bin.read_bytes())
+        payload = profile_arithmetic_container(args.aqv1_bin.read_bytes())
         input_paths = [args.aqv1_bin]
     payload = attach_tool_run_manifest(
         payload,

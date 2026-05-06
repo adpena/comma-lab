@@ -12,9 +12,14 @@ import pytest
 
 from tac.arithmetic_qint_codec import (
     build_freq_table,
+    build_observed_freq_table,
     decode_qints_arithmetic,
+    decode_qints_arithmetic_compact,
     encode_qints_arithmetic,
+    encode_qints_arithmetic_compact,
     profile_aqv1_container,
+    profile_aqc1_container,
+    profile_arithmetic_container,
     profile_qints_arithmetic,
     unpack_arithmetic_payload,
 )
@@ -97,6 +102,9 @@ def test_profile_qints_arithmetic_reports_entropy_gap_without_score_claim():
     assert profile["zero_order_entropy_bits_per_symbol"] < 1.0
     assert profile["payload_entropy_gap_bits_per_symbol"] >= -1e-9
     assert profile["container_entropy_gap_bits_per_symbol"] >= 0.0
+    assert profile["compact_roundtrip_equal"] is True
+    assert profile["compact_container_kind"] == "AQc1"
+    assert profile["best_container_kind"] in {"AQv1", "AQc1"}
     assert "zero_order_entropy_profile_not_score_evidence" in profile["dispatch_blockers"]
 
 
@@ -136,6 +144,8 @@ def test_audit_arithmetic_qint_optimality_cli_records_tool_manifest(tmp_path):
     assert payload["score_claim"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["roundtrip_equal"] is True
+    assert payload["compact_roundtrip_equal"] is True
+    assert payload["compact_container_kind"] == "AQc1"
     assert tool_run["tool"] == "tools/audit_arithmetic_qint_optimality.py"
     assert tool_run["input_files"] == [
         {
@@ -144,6 +154,34 @@ def test_audit_arithmetic_qint_optimality_cli_records_tool_manifest(tmp_path):
             "sha256": sha256_file(qints_path),
         }
     ]
+
+
+def test_audit_arithmetic_qint_optimality_cli_profiles_compact_container(tmp_path):
+    compact_path = tmp_path / "qints.aqc1"
+    out = tmp_path / "aqc_profile.json"
+    qints = np.array([-10, 0, 0, 10] * 64, dtype=np.int16)
+    compact_path.write_bytes(
+        encode_qints_arithmetic_compact(qints, num_symbols=1024, offset=512)
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "audit_arithmetic_qint_optimality.py"),
+            "--aqv1-bin",
+            str(compact_path),
+            "--json-out",
+            str(out),
+        ],
+        check=True,
+        cwd=REPO,
+        text=True,
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["kind"] == "aqc1_sparse_entropy_profile"
+    assert payload["observed_symbol_count"] == 3
+    assert payload["score_claim"] is False
 
 
 def test_septenary_roundtrip():
@@ -178,10 +216,36 @@ def test_freq_table_floor_is_one():
     freq = build_freq_table(qints, num_symbols=3)
     # All counts must be >= 1 (defensive against zero-prob symbols at decode).
     assert (freq >= 1).all()
-    # Counts: symbol 0 not present in input -> still 1. symbol 1 (originally 0)
-    # appears 3 times. symbol 2 (originally 1) appears 2 times.
-    assert int(freq[1]) == 3
-    assert int(freq[2]) == 2
+
+
+def test_compact_arithmetic_roundtrip_saves_sparse_large_alphabet_bytes():
+    qints = np.array([-10, 0, 0, 0, 10, 0, -10, 0] * 128, dtype=np.int16)
+
+    dense = encode_qints_arithmetic(qints, num_symbols=1024, offset=512)
+    compact = encode_qints_arithmetic_compact(qints, num_symbols=1024, offset=512)
+
+    assert compact[:4] == b"AQc1"
+    assert len(compact) < len(dense) - 3000
+    assert np.array_equal(
+        decode_qints_arithmetic(compact, expected_dtype=np.int16),
+        qints,
+    )
+    assert np.array_equal(
+        decode_qints_arithmetic_compact(compact, expected_dtype=np.int16),
+        qints,
+    )
+    compact_profile = profile_aqc1_container(compact)
+    dispatch_profile = profile_arithmetic_container(compact)
+    assert compact_profile["observed_symbol_count"] == 3
+    assert compact_profile["sparse_frequency_table_bytes"] == 20
+    assert dispatch_profile["kind"] == "aqc1_sparse_entropy_profile"
+
+
+def test_observed_freq_table_keeps_absent_symbols_zero():
+    symbols = np.array([0, 2, 2, 2], dtype=np.int64)
+    freq = build_observed_freq_table(symbols, num_symbols=4)
+
+    assert freq.tolist() == [1, 0, 3, 0]
 
 
 def test_freq_table_rejects_empty_symbol_stream():

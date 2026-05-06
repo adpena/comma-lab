@@ -59,6 +59,8 @@ import numpy as np
 
 _AQ_MAGIC: bytes = b"AQv1"
 _AQ_VERSION: int = 1
+_AQC_MAGIC: bytes = b"AQc1"
+_AQC_VERSION: int = 1
 _SH_MAGIC: bytes = b"SHv1"
 _SH_VERSION: int = 1
 
@@ -237,10 +239,17 @@ def build_freq_table(symbols: np.ndarray, num_symbols: int) -> np.ndarray:
     return counts
 
 
-def _cumulative_table(freq: np.ndarray) -> tuple[np.ndarray, int]:
+def _cumulative_table(
+    freq: np.ndarray,
+    *,
+    allow_zero: bool = False,
+) -> tuple[np.ndarray, int]:
     if freq.ndim != 1 or freq.size == 0:
         raise ValueError("frequency table must be a nonempty 1D array")
-    if np.any(freq <= 0):
+    if allow_zero:
+        if np.any(freq < 0):
+            raise ValueError("frequency table contains negative symbol counts")
+    elif np.any(freq <= 0):
         raise ValueError("frequency table contains zero-probability symbols")
     cum = np.zeros(len(freq) + 1, dtype=np.int64)
     cum[1:] = np.cumsum(freq)
@@ -248,6 +257,25 @@ def _cumulative_table(freq: np.ndarray) -> tuple[np.ndarray, int]:
     if total <= 0:
         raise ValueError("frequency table total must be positive")
     return cum, total
+
+
+def build_observed_freq_table(symbols: np.ndarray, num_symbols: int) -> np.ndarray:
+    """Build a frequency table without zero-protection for sparse alphabets."""
+
+    if symbols.dtype.kind not in ("i", "u"):
+        raise ValueError(f"symbols must be integer, got dtype={symbols.dtype}")
+    if symbols.size == 0:
+        raise ValueError("symbols must be nonempty")
+    if symbols.min() < 0 or symbols.max() >= num_symbols:
+        raise ValueError(
+            f"symbols out of range [0, {num_symbols}): min={symbols.min()}, "
+            f"max={symbols.max()}"
+        )
+    counts = np.bincount(symbols.ravel().astype(np.int64), minlength=num_symbols)
+    counts = counts.astype(np.uint32)
+    if not np.any(counts):
+        raise ValueError("frequency table total must be positive")
+    return counts
 
 
 def _read_exact(buf: io.BytesIO, nbytes: int, label: str) -> bytes:
@@ -306,10 +334,86 @@ def encode_qints_arithmetic(
     return header.getvalue() + payload
 
 
+def encode_qints_arithmetic_compact(
+    qints: np.ndarray,
+    num_symbols: int = 3,
+    offset: int = 1,
+) -> bytes:
+    """Arithmetic-code qints with a sparse transmitted frequency table.
+
+    ``AQc1`` is byte-compatible at the symbol-coder layer with ``AQv1`` but
+    transmits only observed symbol counts. This is useful for large alphabets
+    with few occupied symbols, where AQv1's dense ``uint32[num_symbols]`` table
+    dominates the payload.
+    """
+
+    if num_symbols <= 1:
+        raise ValueError(f"num_symbols must be >= 2, got {num_symbols}")
+    if num_symbols > 65535:
+        raise ValueError(f"num_symbols must fit in uint16, got {num_symbols}")
+    flat = np.ascontiguousarray(qints).ravel()
+    if flat.size == 0:
+        raise ValueError("qints must be nonempty")
+    symbols = flat.astype(np.int64) + int(offset)
+    if symbols.min() < 0 or symbols.max() >= num_symbols:
+        raise ValueError(
+            f"qints + offset={offset} out of range [0, {num_symbols}): "
+            f"min={int(symbols.min())}, max={int(symbols.max())}"
+        )
+    freq = build_observed_freq_table(symbols, num_symbols)
+    cum, total = _cumulative_table(freq, allow_zero=True)
+
+    encoder = _ArithmeticEncoder()
+    for s in symbols.tolist():
+        encoder.encode(int(cum[s]), int(cum[s + 1]), total)
+    payload = encoder.finish()
+
+    present = np.flatnonzero(freq > 0)
+    header = io.BytesIO()
+    header.write(_AQC_MAGIC)
+    header.write(struct.pack("<H", _AQC_VERSION))
+    header.write(struct.pack("<H", num_symbols))
+    header.write(struct.pack("<i", int(offset)))
+    header.write(struct.pack("<Q", int(symbols.size)))
+    header.write(struct.pack("<H", int(present.size)))
+    for symbol in present.tolist():
+        header.write(struct.pack("<H", int(symbol)))
+        header.write(struct.pack("<I", int(freq[symbol])))
+    header.write(struct.pack("<Q", len(payload)))
+    return header.getvalue() + payload
+
+
+def _decode_symbols_from_arithmetic_payload(
+    *,
+    freq: np.ndarray,
+    payload: bytes,
+    n_symbols: int,
+    allow_zero_freq: bool,
+) -> np.ndarray:
+    cum, total = _cumulative_table(freq, allow_zero=allow_zero_freq)
+    decoder = _ArithmeticDecoder(payload)
+    out = np.empty(n_symbols, dtype=np.int64)
+    for i in range(n_symbols):
+        target = decoder.get_target(total)
+        # Find the symbol s such that cum[s] <= target < cum[s+1]. For sparse
+        # AQc1 tables, repeated cumulative values skip zero-frequency symbols.
+        s = int(np.searchsorted(cum, target, side="right") - 1)
+        if s < 0 or s >= freq.size or int(freq[s]) <= 0:
+            raise ValueError(
+                f"decode_qints_arithmetic: target={target} fell outside a "
+                f"positive-frequency symbol at {i}/{n_symbols}"
+            )
+        decoder.remove(int(cum[s]), int(cum[s + 1]), total)
+        out[i] = s
+    return out
+
+
 def decode_qints_arithmetic(blob: bytes, expected_dtype: np.dtype = np.int8) -> np.ndarray:
-    """Inverse of ``encode_qints_arithmetic`` — return the int array."""
+    """Inverse of AQv1/AQc1 qint arithmetic containers."""
     buf = io.BytesIO(blob)
     magic = _read_exact(buf, 4, "magic")
+    if magic == _AQC_MAGIC:
+        return decode_qints_arithmetic_compact(blob, expected_dtype=expected_dtype)
     if magic != _AQ_MAGIC:
         raise ValueError(f"bad AQv1 magic: {magic!r}")
     (version,) = struct.unpack("<H", _read_exact(buf, 2, "version"))
@@ -327,20 +431,62 @@ def decode_qints_arithmetic(blob: bytes, expected_dtype: np.dtype = np.int8) -> 
     if trailing:
         raise ValueError("AQv1 payload has trailing bytes after declared payload")
 
-    cum, total = _cumulative_table(freq)
-    decoder = _ArithmeticDecoder(payload)
-    out = np.empty(n_symbols, dtype=np.int64)
-    for i in range(n_symbols):
-        target = decoder.get_target(total)
-        # Find the symbol s such that cum[s] <= target < cum[s+1].
-        s = int(np.searchsorted(cum, target, side="right") - 1)
-        if s < 0 or s >= num_symbols:
-            raise ValueError(
-                f"decode_qints_arithmetic: target={target} fell outside cum table "
-                f"[{cum[0]}, {cum[-1]}) at symbol {i}/{n_symbols}"
-            )
-        decoder.remove(int(cum[s]), int(cum[s + 1]), total)
-        out[i] = s
+    out = _decode_symbols_from_arithmetic_payload(
+        freq=freq,
+        payload=payload,
+        n_symbols=int(n_symbols),
+        allow_zero_freq=False,
+    )
+    out -= offset
+    return out.astype(expected_dtype)
+
+
+def decode_qints_arithmetic_compact(
+    blob: bytes,
+    expected_dtype: np.dtype = np.int8,
+) -> np.ndarray:
+    """Decode an ``AQc1`` sparse-frequency arithmetic qint container."""
+
+    buf = io.BytesIO(blob)
+    magic = _read_exact(buf, 4, "magic")
+    if magic != _AQC_MAGIC:
+        raise ValueError(f"bad AQc1 magic: {magic!r}")
+    (version,) = struct.unpack("<H", _read_exact(buf, 2, "version"))
+    if version != _AQC_VERSION:
+        raise ValueError(f"unsupported AQc1 version: {version}")
+    (num_symbols,) = struct.unpack("<H", _read_exact(buf, 2, "num_symbols"))
+    if num_symbols <= 1:
+        raise ValueError(f"num_symbols must be >= 2, got {num_symbols}")
+    (offset,) = struct.unpack("<i", _read_exact(buf, 4, "offset"))
+    (n_symbols,) = struct.unpack("<Q", _read_exact(buf, 8, "n_symbols"))
+    (n_present,) = struct.unpack("<H", _read_exact(buf, 2, "n_present"))
+    if n_present == 0 or n_present > num_symbols:
+        raise ValueError(
+            f"AQc1 n_present must be in [1, num_symbols], got {n_present}"
+        )
+    freq = np.zeros(num_symbols, dtype=np.uint32)
+    seen: set[int] = set()
+    for _ in range(n_present):
+        (symbol,) = struct.unpack("<H", _read_exact(buf, 2, "symbol"))
+        (count,) = struct.unpack("<I", _read_exact(buf, 4, "count"))
+        if symbol >= num_symbols:
+            raise ValueError(f"AQc1 symbol index out of range: {symbol}")
+        if symbol in seen:
+            raise ValueError(f"AQc1 duplicate symbol index: {symbol}")
+        if count == 0:
+            raise ValueError(f"AQc1 symbol {symbol} has zero count")
+        seen.add(symbol)
+        freq[symbol] = count
+    (payload_size,) = struct.unpack("<Q", _read_exact(buf, 8, "payload_size"))
+    payload = _read_exact(buf, payload_size, "payload")
+    if buf.read(1):
+        raise ValueError("AQc1 payload has trailing bytes after declared payload")
+    out = _decode_symbols_from_arithmetic_payload(
+        freq=freq,
+        payload=payload,
+        n_symbols=int(n_symbols),
+        allow_zero_freq=True,
+    )
     out -= offset
     return out.astype(expected_dtype)
 
@@ -409,6 +555,91 @@ def profile_aqv1_container(blob: bytes) -> dict:
     }
 
 
+def profile_aqc1_container(blob: bytes) -> dict:
+    """Return deterministic rate diagnostics for one AQc1 container."""
+
+    buf = io.BytesIO(blob)
+    magic = _read_exact(buf, 4, "magic")
+    if magic != _AQC_MAGIC:
+        raise ValueError(f"bad AQc1 magic: {magic!r}")
+    (version,) = struct.unpack("<H", _read_exact(buf, 2, "version"))
+    if version != _AQC_VERSION:
+        raise ValueError(f"unsupported AQc1 version: {version}")
+    (num_symbols,) = struct.unpack("<H", _read_exact(buf, 2, "num_symbols"))
+    if num_symbols <= 1:
+        raise ValueError(f"num_symbols must be >= 2, got {num_symbols}")
+    (offset,) = struct.unpack("<i", _read_exact(buf, 4, "offset"))
+    (n_symbols,) = struct.unpack("<Q", _read_exact(buf, 8, "n_symbols"))
+    (n_present,) = struct.unpack("<H", _read_exact(buf, 2, "n_present"))
+    freq = np.zeros(num_symbols, dtype=np.uint32)
+    for _ in range(n_present):
+        (symbol,) = struct.unpack("<H", _read_exact(buf, 2, "symbol"))
+        (count,) = struct.unpack("<I", _read_exact(buf, 4, "count"))
+        if symbol >= num_symbols:
+            raise ValueError(f"AQc1 symbol index out of range: {symbol}")
+        if freq[symbol] != 0:
+            raise ValueError(f"AQc1 duplicate symbol index: {symbol}")
+        if count == 0:
+            raise ValueError(f"AQc1 symbol {symbol} has zero count")
+        freq[symbol] = count
+    (payload_size,) = struct.unpack("<Q", _read_exact(buf, 8, "payload_size"))
+    payload = _read_exact(buf, payload_size, "payload")
+    if buf.read(1):
+        raise ValueError("AQc1 payload has trailing bytes after declared payload")
+    if n_symbols <= 0:
+        raise ValueError("AQc1 n_symbols must be positive")
+
+    header_bytes = len(blob) - len(payload)
+    entropy_bits_per_symbol = _entropy_bits_from_freq(freq)
+    entropy_payload_bits = entropy_bits_per_symbol * float(n_symbols)
+    entropy_payload_bytes_floor = int(math.ceil(entropy_payload_bits / 8.0))
+    payload_bits_per_symbol = 8.0 * len(payload) / float(n_symbols)
+    container_bits_per_symbol = 8.0 * len(blob) / float(n_symbols)
+    return {
+        "schema_version": 1,
+        "kind": "aqc1_sparse_entropy_profile",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "num_symbols": int(num_symbols),
+        "offset": int(offset),
+        "n_symbols": int(n_symbols),
+        "observed_symbol_count": int(n_present),
+        "container_bytes": int(len(blob)),
+        "header_bytes": int(header_bytes),
+        "payload_bytes": int(len(payload)),
+        "sparse_frequency_table_bytes": int(2 + 6 * int(n_present)),
+        "frequency_table": [int(x) for x in freq.tolist()],
+        "zero_order_entropy_bits_per_symbol": entropy_bits_per_symbol,
+        "zero_order_entropy_payload_bytes_floor": entropy_payload_bytes_floor,
+        "payload_bits_per_symbol": payload_bits_per_symbol,
+        "container_bits_per_symbol": container_bits_per_symbol,
+        "payload_entropy_gap_bits_per_symbol": (
+            payload_bits_per_symbol - entropy_bits_per_symbol
+        ),
+        "container_entropy_gap_bits_per_symbol": (
+            container_bits_per_symbol - entropy_bits_per_symbol
+        ),
+        "dispatch_blockers": [
+            "zero_order_entropy_profile_not_score_evidence",
+            "exact_archive_cuda_eval_required_before_promotion",
+        ],
+    }
+
+
+def profile_arithmetic_container(blob: bytes) -> dict:
+    """Profile any supported static arithmetic qint container."""
+
+    if len(blob) < 4:
+        raise ValueError("arithmetic container is too small for magic")
+    magic = blob[:4]
+    if magic == _AQ_MAGIC:
+        return profile_aqv1_container(blob)
+    if magic == _AQC_MAGIC:
+        return profile_aqc1_container(blob)
+    raise ValueError(f"bad arithmetic container magic: {magic!r}")
+
+
 def profile_qints_arithmetic(
     qints: np.ndarray,
     num_symbols: int = 3,
@@ -421,8 +652,41 @@ def profile_qints_arithmetic(
     if not np.array_equal(decoded, np.ascontiguousarray(qints).ravel()):
         raise ValueError("AQv1 profile roundtrip mismatch")
     profile = profile_aqv1_container(blob)
+    compact_blob = encode_qints_arithmetic_compact(
+        qints,
+        num_symbols=num_symbols,
+        offset=offset,
+    )
+    compact_decoded = decode_qints_arithmetic(
+        compact_blob,
+        expected_dtype=qints.dtype,
+    )
+    if not np.array_equal(compact_decoded, np.ascontiguousarray(qints).ravel()):
+        raise ValueError("AQc1 profile roundtrip mismatch")
+    compact_profile = profile_aqc1_container(compact_blob)
     profile["roundtrip_equal"] = True
+    profile["compact_roundtrip_equal"] = bool(
+        np.array_equal(compact_decoded, np.ascontiguousarray(qints).ravel())
+    )
+    profile["compact_container_kind"] = "AQc1"
+    profile["compact_container_bytes"] = compact_profile["container_bytes"]
+    profile["compact_header_bytes"] = compact_profile["header_bytes"]
+    profile["compact_payload_bytes"] = compact_profile["payload_bytes"]
+    profile["compact_observed_symbol_count"] = compact_profile[
+        "observed_symbol_count"
+    ]
+    profile["compact_byte_delta_vs_aqv1"] = (
+        int(compact_profile["container_bytes"]) - int(profile["container_bytes"])
+    )
+    profile["best_container_kind"] = (
+        "AQc1"
+        if int(compact_profile["container_bytes"]) < int(profile["container_bytes"])
+        else "AQv1"
+    )
     profile["encoded_sha256"] = __import__("hashlib").sha256(blob).hexdigest()
+    profile["compact_encoded_sha256"] = __import__("hashlib").sha256(
+        compact_blob
+    ).hexdigest()
     return profile
 
 
@@ -679,10 +943,15 @@ def unpack_arithmetic_payload(payload_path: str) -> dict:
 
 __all__ = [
     "encode_qints_arithmetic",
+    "encode_qints_arithmetic_compact",
     "decode_qints_arithmetic",
+    "decode_qints_arithmetic_compact",
     "profile_aqv1_container",
+    "profile_aqc1_container",
+    "profile_arithmetic_container",
     "profile_qints_arithmetic",
     "repack_payload_tar_xz_to_arithmetic",
     "unpack_arithmetic_payload",
     "build_freq_table",
+    "build_observed_freq_table",
 ]
