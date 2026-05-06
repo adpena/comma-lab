@@ -84,6 +84,39 @@ def test_each_cross_paradigm_flag_has_a_guard_site() -> None:
         )
 
 
+# Flags with full dispatch wiring (not just WARN guards). New flags graduate
+# into this set when their actual dispatch branch lands. Pinning the set here
+# prevents accidental regression where a future commit downgrades a wired
+# flag back to a WARN-only guard.
+WIRED_CROSS_PARADIGM_FLAGS: tuple[str, ...] = (
+    # β: encode_owv3_archive() called in step_compress_weights when
+    # sensitivity_map_path provided (commit 107f6fea).
+    "use_sensitivity_weighted",
+    # la-pose Riemannian: --optimizer=riemannian-sgd appended to
+    # optimize_poses.py subprocess in step_pose_tto (commit 330356f1).
+    "use_riemannian_tto",
+)
+
+
+def test_wired_flags_have_actual_dispatch() -> None:
+    """Flags that are documented as WIRED must have evidence of real
+    dispatch beyond the WARN guard. We check for a module-import or
+    subprocess-flag-extension that fires conditional on the flag."""
+    src = _PIPELINE_PATH.read_text(encoding="utf-8")
+    # β: encode_owv3_archive must be imported in the dispatch branch
+    if "use_sensitivity_weighted" in WIRED_CROSS_PARADIGM_FLAGS:
+        assert "encode_owv3_archive" in src, (
+            "β is documented WIRED but encode_owv3_archive is not imported "
+            "in pipeline.py — dispatch regressed to WARN-only?"
+        )
+    # Riemannian: --optimizer must appear (passed as subprocess flag)
+    if "use_riemannian_tto" in WIRED_CROSS_PARADIGM_FLAGS:
+        assert "riemannian-sgd" in src, (
+            "Riemannian is documented WIRED but '--optimizer=riemannian-sgd' "
+            "is not in pipeline.py — dispatch regressed to WARN-only?"
+        )
+
+
 def test_mask_codec_stub_gate_raises_not_implemented() -> None:
     """PARADIGM-α stub codecs must raise NotImplementedError, not silently
     fall back to AV1 or proceed with a non-decodable archive."""
