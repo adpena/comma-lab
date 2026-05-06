@@ -43,8 +43,13 @@ DEFAULT_INCLUDE_PATTERNS: tuple[str, ...] = (
     "src/tac/preflight.py",
     "src/tac/repo_io.py",
     "src/tac/submission_archive.py",
+    "src/tac/tests/test_audit_public_publish_links.py",
     "src/tac/tests/test_materialize_comma_lab_public_export.py",
+    "src/tac/tests/test_repo_io.py",
+    "src/tac/tests/test_tool_bootstrap.py",
+    "tools/audit_public_publish_links.py",
     "tools/materialize_comma_lab_public_export.py",
+    "tools/tool_bootstrap.py",
     "pyproject.toml",
     "uv.lock",
 )
@@ -114,6 +119,28 @@ def selected_export_paths(
     return selected
 
 
+def _path_contains(parent: Path, child: Path) -> bool:
+    try:
+        child.relative_to(parent)
+    except ValueError:
+        return False
+    return True
+
+
+def _validate_export_output_path(repo_root: Path, out_dir: Path) -> Path:
+    repo_root = repo_root.resolve()
+    out_dir = out_dir.resolve()
+    home = Path.home().resolve()
+    broad_paths = {Path("/").resolve(), home, home.parent.resolve()}
+    if out_dir == repo_root:
+        raise SystemExit(f"FATAL: output directory is the repository root: {out_dir}")
+    if _path_contains(out_dir, repo_root):
+        raise SystemExit(f"FATAL: output directory would contain the repository: {out_dir}")
+    if out_dir in broad_paths or len(out_dir.parts) <= 2:
+        raise SystemExit(f"FATAL: output directory is too broad for export staging: {out_dir}")
+    return out_dir
+
+
 def materialize_public_export(
     repo_root: Path,
     out_dir: Path,
@@ -123,7 +150,7 @@ def materialize_public_export(
     strict_hygiene: bool = True,
 ) -> dict[str, object]:
     repo_root = repo_root.resolve()
-    out_dir = out_dir.resolve()
+    out_dir = _validate_export_output_path(repo_root, out_dir)
     if out_dir.exists():
         if any(out_dir.iterdir()):
             raise SystemExit(f"FATAL: output directory is not empty: {out_dir}")
@@ -195,11 +222,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args(argv)
 
-    if args.force and args.out_dir.exists():
-        shutil.rmtree(args.out_dir)
+    repo_root = args.repo_root.resolve()
+    out_dir = _validate_export_output_path(repo_root, args.out_dir)
+    if args.force and out_dir.exists():
+        shutil.rmtree(out_dir)
     manifest = materialize_public_export(
-        args.repo_root,
-        args.out_dir,
+        repo_root,
+        out_dir,
         ref=args.ref,
         allow_private_repo_links=args.allow_private_repo_links,
         strict_hygiene=not args.no_strict_hygiene,

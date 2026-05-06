@@ -5703,6 +5703,77 @@ Verification:
 - `.venv/bin/python tools/all_lanes_preflight.py` passed:
   `ALL 20 PREFLIGHT CHECKS PASSED`.
 
+## R89 - 2026-05-06 Public Export Closure Hardening
+
+Followed up the public-export lowering review with concrete safety fixes. This
+tranche keeps the public release path runnable from exported sources and safer
+under operator `--force` usage. The current HEAD also has the OSS staging IO
+lowering from the concurrent Round 5 review commit, so this tranche verifies
+that surface but does not claim it as an R89 file delta.
+
+Changes:
+
+- Added `tools/tool_bootstrap.py`, `tools/audit_public_publish_links.py`, and
+  their focused tests to the public comma-lab export include list.
+- Added public-export output path validation before any `--force` deletion:
+  fail closed when the output path is the repo root, contains the repo, or is
+  root/home-like and too broad for staging.
+- Added manifest schema tests for `PUBLIC_EXPORT_MANIFEST.json`: exact top-level
+  key set, exact copied-item fields, on-disk JSON equality, placeholder output
+  field preservation, and copied README SHA-256.
+- Verified the current `tools/oss_publish_staging.py` surface remains clean
+  under the consolidation audit after the concurrent Round 5 lowering.
+
+Measured inventory after R89:
+
+- local SHA helpers: `51`
+- local JSON dumps: `102`
+- manual `sys.path` bootstraps: `267`
+- manual repo-root parent probes: `364`
+- manual score/dispatch metadata mentions: `601`
+
+Within-tranche committed-surface deltas:
+
+- `tools/materialize_comma_lab_public_export.py` stayed at zero findings for
+  SHA/JSON/bootstrap/root patterns while adding closure and path-safety guards.
+- `tools/oss_publish_staging.py` is already at zero findings for SHA/JSON/
+  bootstrap/root patterns in current HEAD.
+
+Verification:
+
+- `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest
+  src/tac/tests/test_materialize_comma_lab_public_export.py
+  src/tac/tests/test_audit_public_publish_links.py
+  src/tac/tests/test_tool_bootstrap.py src/tac/tests/test_repo_io.py
+  src/tac/tests/test_audit_tooling_consolidation.py -q` passed:
+  `17 passed`.
+- `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest
+  src/tac/tests/test_repo_io.py src/tac/tests/test_tool_bootstrap.py
+  src/tac/tests/test_audit_tooling_consolidation.py -q` passed:
+  `7 passed`.
+- `.venv/bin/python -m ruff check --select I,RUF100,F401,UP035,F821,E402
+  tools/materialize_comma_lab_public_export.py
+  src/tac/tests/test_materialize_comma_lab_public_export.py
+  tools/oss_publish_staging.py src/tac/repo_io.py src/tac/tests/test_repo_io.py`
+  passed.
+- `.venv/bin/python -m py_compile
+  tools/materialize_comma_lab_public_export.py tools/oss_publish_staging.py`
+  passed.
+- A temp `tools/oss_publish_staging.py --out-dir ...` smoke produced
+  `MANIFEST.json`.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --scan-root
+  tools/materialize_comma_lab_public_export.py --format json` reported zero
+  findings for the file.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --scan-root
+  tools/oss_publish_staging.py --format json` reported zero findings for the
+  file.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --format json`
+  reported the measured inventory above.
+- `.venv/bin/python tools/audit_staged_public_release_hygiene.py --strict`
+  passed with zero staged public files scanned.
+- `.venv/bin/python tools/all_lanes_preflight.py` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+
 ## R81 - 2026-05-06 Component Sensitivity Shard Merge IO Lowering
 
 Continued the Gate #7 lowering tranche on the finite-difference sensitivity
