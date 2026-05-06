@@ -19,6 +19,7 @@ STRICT-SCORER-RULE COMPLIANCE: only the SegMap renderer is loaded at inflate.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import sys
 import time
@@ -79,15 +80,27 @@ def _normalize_grayscale_mode(mode: str) -> str:
 
 
 def _grayscale_to_mask_features(
-    gray: torch.Tensor, *, device: torch.device, mode: str
+    gray: torch.Tensor,
+    *,
+    device: torch.device,
+    mode: str,
+    class_targets: torch.Tensor | None = None,
 ) -> torch.Tensor:
     normalized = _normalize_grayscale_mode(mode)
     if normalized == "soft_lut":
         from tac.mask_grayscale_lut import grayscale_to_probability_map
 
+        targets = None
+        if class_targets is not None:
+            targets = class_targets.to(device=device, dtype=torch.float32)
         return grayscale_to_probability_map(
-            gray.to(device), sigma=15.0, channel_first=True
+            gray.to(device), sigma=15.0, targets=targets, channel_first=True
         ).float()
+    if class_targets is not None:
+        raise RuntimeError(
+            "custom class targets require SEGMAP_GRAYSCALE_MODE=soft_lut; "
+            "hard_onehot uses the fixed nearest-class decoder"
+        )
     classes = _grayscale_to_classes(gray)
     return _classes_to_one_hot(classes).to(device)
 
@@ -114,9 +127,20 @@ def _build_segmap(state_dict: dict, hidden: int, block_hidden: int,
         model.eval()
         return model
 
-    from tac.segmap_renderer import SegMap
+    from tac.segmap_renderer import SegMap, SegMapHomography
 
-    model = SegMap(
+    arch = os.environ.get("SEGMAP_ARCH", "segmap").strip().lower() or "segmap"
+    if arch == "segmap_homography":
+        cls = SegMapHomography
+    elif arch == "segmap":
+        cls = SegMap
+    else:
+        raise RuntimeError(
+            f"unknown SEGMAP_ARCH={arch!r}; expected 'segmap' or 'segmap_homography'"
+        )
+    print(f"[inflate-segmap-arith] arch={arch} ({cls.__name__})", file=sys.stderr)
+
+    model = cls(
         hidden=hidden,
         block_hidden=block_hidden,
         num_blocks=num_blocks,
@@ -127,9 +151,34 @@ def _build_segmap(state_dict: dict, hidden: int, block_hidden: int,
     return model
 
 
+def _resolve_archive_member(archive_dir: Path, filename: str, label: str) -> Path:
+    rel = Path(filename)
+    if not filename or rel.is_absolute() or ".." in rel.parts:
+        raise RuntimeError(
+            f"{label} must be a nonempty relative archive member path without '..', "
+            f"got {filename!r}"
+        )
+    return archive_dir / rel
+
+
+def _load_class_targets_payload(path: Path) -> torch.Tensor:
+    from tac.learnable_class_targets import LearnableClassTargets
+
+    data = path.read_bytes()
+    targets = LearnableClassTargets.deserialize_from_bytes(data)()
+    sha256 = hashlib.sha256(data).hexdigest()
+    print(
+        f"[inflate-segmap-arith] loaded class targets payload {path.name} "
+        f"bytes={len(data)} sha256={sha256} targets={targets.tolist()}",
+        file=sys.stderr,
+    )
+    return targets.detach().to(torch.float32)
+
+
 def inflate(archive_dir: Path, inflated_dir: Path, video_names_file: Path,
             payload_filename: str = "payload.bin",
             mask_filename: str = "grayscale.mkv",
+            class_targets_filename: str | None = None,
             hidden: int = 24, block_hidden: int = 24, num_blocks: int = 8,
             max_frame_index: int = NUM_FRAMES,
             target_w: int = OUT_W, target_h: int = OUT_H) -> None:
@@ -140,9 +189,16 @@ def inflate(archive_dir: Path, inflated_dir: Path, video_names_file: Path,
 
     payload_path = archive_dir / payload_filename
     mask_path = archive_dir / mask_filename
+    class_targets_path = None
+    if class_targets_filename:
+        class_targets_path = _resolve_archive_member(
+            archive_dir, class_targets_filename, "class_targets_filename"
+        )
     for f, label in [(payload_path, payload_filename), (mask_path, mask_filename)]:
         if not f.exists():
             raise FileNotFoundError(f"missing {label}: {f}")
+    if class_targets_path is not None and not class_targets_path.exists():
+        raise FileNotFoundError(f"missing class targets payload: {class_targets_path}")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[inflate-segmap-arith] device={device}", file=sys.stderr)
@@ -172,9 +228,18 @@ def inflate(archive_dir: Path, inflated_dir: Path, video_names_file: Path,
     grayscale_mode = _normalize_grayscale_mode(
         os.environ.get("SEGMAP_GRAYSCALE_MODE", "soft_lut")
     )
+    class_targets = (
+        _load_class_targets_payload(class_targets_path)
+        if class_targets_path is not None
+        else None
+    )
+    if class_targets is not None and grayscale_mode != "soft_lut":
+        raise RuntimeError(
+            "custom class targets are only valid with SEGMAP_GRAYSCALE_MODE=soft_lut"
+        )
     print(
         f"[inflate-segmap-arith] decoded grayscale in {time.monotonic() - t0:.2f}s "
-        f"(mode={grayscale_mode})",
+        f"(mode={grayscale_mode}, class_targets={'custom' if class_targets is not None else 'fixed'})",
         file=sys.stderr,
     )
 
@@ -196,7 +261,10 @@ def inflate(archive_dir: Path, inflated_dir: Path, video_names_file: Path,
         for start in range(0, n_total, batch):
             end = min(start + batch, n_total)
             chunk_oh = _grayscale_to_mask_features(
-                gray[start:end], device=device, mode=grayscale_mode
+                gray[start:end],
+                device=device,
+                mode=grayscale_mode,
+                class_targets=class_targets,
             )
             frame_idx = torch.arange(start, end, device=device, dtype=torch.long)
             rgb = model(chunk_oh, frame_idx)
@@ -230,6 +298,12 @@ def _cli() -> int:
     parser.add_argument("video_names_file")
     parser.add_argument("--payload-filename", default="payload.bin")
     parser.add_argument("--mask-filename", default="grayscale.mkv")
+    parser.add_argument(
+        "--class-targets-filename",
+        default=os.environ.get("SEGMAP_CLASS_TARGETS_FILENAME", ""),
+        help="Optional 10-byte fp16 Lane LCT payload archive member. Empty "
+             "default preserves the fixed Selfcomp class targets.",
+    )
     parser.add_argument("--hidden", type=int, default=24)
     parser.add_argument("--block-hidden", type=int, default=24)
     parser.add_argument("--num-blocks", type=int, default=8)
@@ -243,6 +317,7 @@ def _cli() -> int:
         video_names_file=Path(args.video_names_file),
         payload_filename=args.payload_filename,
         mask_filename=args.mask_filename,
+        class_targets_filename=args.class_targets_filename or None,
         hidden=args.hidden,
         block_hidden=args.block_hidden,
         num_blocks=args.num_blocks,

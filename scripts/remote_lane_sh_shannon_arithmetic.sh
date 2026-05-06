@@ -18,6 +18,8 @@
 set -euo pipefail
 WORKSPACE="${WORKSPACE:-/workspace/pact}"
 PYBIN="${PYBIN:-/opt/conda/bin/python}"
+SEGMAP_ARCH="${SEGMAP_ARCH:-segmap}"
+SEGMAP_CLASS_TARGETS_FILENAME="${SEGMAP_CLASS_TARGETS_FILENAME:-class_targets.fp16}"
 [ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 
@@ -54,6 +56,8 @@ prov = {
     'predicted_band_delta': [-0.05, -0.02],
     'paradigm': 'segmap_arithmetic',
     'upstream_archive': '$UPSTREAM_ARCHIVE',
+    'segmap_arch': '$SEGMAP_ARCH',
+    'class_targets_filename': '$SEGMAP_CLASS_TARGETS_FILENAME',
     'controlled_baseline': 'UPSTREAM_ARCHIVE (encoder-only repack; only delta is xz -> arithmetic coder for qint streams)',
     'cost_estimate_usd': 1.00,
     'wall_clock_estimate_hours': 3.0,
@@ -95,6 +99,7 @@ print('extracted contents:', sorted(os.listdir('$EXTRACT_DIR')))
 UPSTREAM_PAYLOAD="$EXTRACT_DIR/segmap_weights.tar.xz"
 UPSTREAM_GRAYSCALE="$EXTRACT_DIR/grayscale.mkv"
 UPSTREAM_POSES="$EXTRACT_DIR/optimized_poses.pt"
+UPSTREAM_CLASS_TARGETS="$EXTRACT_DIR/$SEGMAP_CLASS_TARGETS_FILENAME"
 [ -f "$UPSTREAM_PAYLOAD" ] || { echo "FATAL: missing $UPSTREAM_PAYLOAD" >&2; exit 1; }
 [ -f "$UPSTREAM_GRAYSCALE" ] || { echo "FATAL: missing $UPSTREAM_GRAYSCALE" >&2; exit 1; }
 
@@ -134,6 +139,9 @@ cp "$UPSTREAM_GRAYSCALE" "$LOG_DIR/archive_src/grayscale.mkv"
 if [ -f "$UPSTREAM_POSES" ]; then
     cp "$UPSTREAM_POSES" "$LOG_DIR/archive_src/optimized_poses.pt"
 fi
+if [ -f "$UPSTREAM_CLASS_TARGETS" ]; then
+    cp "$UPSTREAM_CLASS_TARGETS" "$LOG_DIR/archive_src/$SEGMAP_CLASS_TARGETS_FILENAME"
+fi
 
 ARCHIVE="$LOG_DIR/archive_${LANE_ID}.zip"
 "$PYBIN" -c "
@@ -143,7 +151,11 @@ items = sorted(os.listdir(src))
 with zipfile.ZipFile('$ARCHIVE', 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
     for n in items:
         p = os.path.join(src, n)
-        z.write(p, arcname=n)
+        info = zipfile.ZipInfo(filename=n, date_time=(1980, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_DEFLATED
+        info.external_attr = (0o644 & 0xFFFF) << 16
+        with open(p, 'rb') as fh:
+            z.writestr(info, fh.read(), compresslevel=9)
 print('archive bytes:', os.path.getsize('$ARCHIVE'))
 "
 
@@ -156,7 +168,12 @@ log "archive_bytes=$ARCHIVE_BYTES (upstream was $UPSTREAM_BYTES)"
 INFLATE_CONFIG="$LOG_DIR/lane_sh_config.env"
 cat > "$INFLATE_CONFIG" <<'EOF'
 PYTHON_INFLATE=segmap_arithmetic
+SEGMAP_GRAYSCALE_MODE=soft_lut
 EOF
+echo "SEGMAP_ARCH=$SEGMAP_ARCH" >> "$INFLATE_CONFIG"
+if [ -f "$LOG_DIR/archive_src/$SEGMAP_CLASS_TARGETS_FILENAME" ]; then
+    echo "SEGMAP_CLASS_TARGETS_FILENAME=$SEGMAP_CLASS_TARGETS_FILENAME" >> "$INFLATE_CONFIG"
+fi
 
 log "=== Stage 4: contest_auth_eval [contest-CUDA] ==="
 rm -rf "$LOG_DIR/eval_work"

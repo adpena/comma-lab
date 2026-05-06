@@ -14,6 +14,8 @@
 set -euo pipefail
 WORKSPACE="${WORKSPACE:-/workspace/pact}"
 PYBIN="${PYBIN:-/opt/conda/bin/python}"
+SEGMAP_ENABLE_LCT="${SEGMAP_ENABLE_LCT:-0}"
+SEGMAP_CLASS_TARGETS_FILENAME="${SEGMAP_CLASS_TARGETS_FILENAME:-class_targets.fp16}"
 [ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 
@@ -44,6 +46,8 @@ prov = {
     'arch': {'hidden': 24, 'block_hidden': 24, 'num_blocks': 8},
     'kl_distill_weight': 0.002,
     'kl_distill_temperature': 2.0,
+    'learnable_class_targets_enabled': '$SEGMAP_ENABLE_LCT' == '1',
+    'class_targets_filename': '$SEGMAP_CLASS_TARGETS_FILENAME',
     'predicted_band': [0.30, 0.40],
     'anchor_dir': 'experiments/results/lane_a_landed/iter_0',
     'paradigm': 'segmap_clone_with_kl_distill',
@@ -78,6 +82,11 @@ for f in "$ANCHOR_RENDERER" "$ANCHOR_MASKS" "$ANCHOR_POSES" \
     [ -f "$f" ] || { echo "FATAL: missing anchor $f" >&2; exit 1; }
 done
 
+TRAIN_LCT_ARGS=()
+if [ "$SEGMAP_ENABLE_LCT" = "1" ]; then
+    TRAIN_LCT_ARGS=(--learnable-class-targets --class-targets-filename "$SEGMAP_CLASS_TARGETS_FILENAME")
+fi
+
 log "=== Stage 2: train SegMap (variant=kl_distill, T=2.0, w=0.002) ==="
 export PYTHONHASHSEED=1234
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
@@ -101,6 +110,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
     --gt-video upstream/videos/0.mkv \
     --upstream upstream \
     --device cuda \
+    "${TRAIN_LCT_ARGS[@]}" \
     --tag "$LANE_ID" \
     --output-dir "$LOG_DIR/train" 2>&1 | tee "$LOG_DIR/train.log" | tail -30
 PIPE_RC=("${PIPESTATUS[@]}")
@@ -161,16 +171,28 @@ print('grayscale.mkv bytes:', os.path.getsize(out_path))
 "
 cp "$ANCHOR_POSES" "$LOG_DIR/archive_src/optimized_poses.pt"
 cp "$PAYLOAD" "$LOG_DIR/archive_src/segmap_weights.tar.xz"
+if [ "$SEGMAP_ENABLE_LCT" = "1" ]; then
+    LCT_PAYLOAD="$LOG_DIR/train/$SEGMAP_CLASS_TARGETS_FILENAME"
+    [ -f "$LCT_PAYLOAD" ] || { echo "FATAL: missing LCT payload: $LCT_PAYLOAD" >&2; exit 2; }
+    cp "$LCT_PAYLOAD" "$LOG_DIR/archive_src/$SEGMAP_CLASS_TARGETS_FILENAME"
+fi
 
 ARCHIVE="$LOG_DIR/archive_${LANE_ID}.zip"
 "$PYBIN" -c "
 import os, zipfile
 src = '$LOG_DIR/archive_src'
+members = ['segmap_weights.tar.xz', 'grayscale.mkv', 'optimized_poses.pt']
+if '$SEGMAP_ENABLE_LCT' == '1':
+    members.append('$SEGMAP_CLASS_TARGETS_FILENAME')
 with zipfile.ZipFile('$ARCHIVE', 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
-    for n in ('segmap_weights.tar.xz', 'grayscale.mkv', 'optimized_poses.pt'):
+    for n in members:
         p = os.path.join(src, n)
         assert os.path.isfile(p), f'missing archive component {p}'
-        z.write(p, arcname=n)
+        info = zipfile.ZipInfo(filename=n, date_time=(1980, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_DEFLATED
+        info.external_attr = (0o644 & 0xFFFF) << 16
+        with open(p, 'rb') as fh:
+            z.writestr(info, fh.read(), compresslevel=9)
 print('archive bytes:', os.path.getsize('$ARCHIVE'))
 "
 
@@ -182,7 +204,11 @@ log "archive_bytes=$ARCHIVE_BYTES"
 INFLATE_CONFIG="$LOG_DIR/lane_sc_plus_plus_config.env"
 cat > "$INFLATE_CONFIG" <<'EOF'
 PYTHON_INFLATE=segmap
+SEGMAP_GRAYSCALE_MODE=soft_lut
 EOF
+if [ "$SEGMAP_ENABLE_LCT" = "1" ]; then
+    echo "SEGMAP_CLASS_TARGETS_FILENAME=$SEGMAP_CLASS_TARGETS_FILENAME" >> "$INFLATE_CONFIG"
+fi
 
 log "=== Stage 5: contest_auth_eval [contest-CUDA] ==="
 rm -rf "$LOG_DIR/eval_work"

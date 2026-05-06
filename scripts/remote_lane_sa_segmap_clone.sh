@@ -16,6 +16,8 @@
 set -euo pipefail
 WORKSPACE="${WORKSPACE:-/workspace/pact}"
 PYBIN="${PYBIN:-/opt/conda/bin/python}"
+SEGMAP_ENABLE_LCT="${SEGMAP_ENABLE_LCT:-0}"
+SEGMAP_CLASS_TARGETS_FILENAME="${SEGMAP_CLASS_TARGETS_FILENAME:-class_targets.fp16}"
 [ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 
@@ -45,6 +47,8 @@ prov = {
     'variant': 'plain',
     'arch': {'hidden': 24, 'block_hidden': 24, 'num_blocks': 8},
     'grayscale_mode': 'soft_lut',
+    'learnable_class_targets_enabled': '$SEGMAP_ENABLE_LCT' == '1',
+    'class_targets_filename': '$SEGMAP_CLASS_TARGETS_FILENAME',
     'predicted_band': [0.40, 0.55],
     'anchor_dir': 'experiments/results/lane_a_landed/iter_0',
     'paradigm': 'segmap_clone',
@@ -84,6 +88,10 @@ done
 log "=== Stage 2: train SegMap (variant=plain) ==="
 export PYTHONHASHSEED=1234
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+TRAIN_LCT_ARGS=()
+if [ "$SEGMAP_ENABLE_LCT" = "1" ]; then
+    TRAIN_LCT_ARGS=(--learnable-class-targets --class-targets-filename "$SEGMAP_CLASS_TARGETS_FILENAME")
+fi
 # Council C OOM-class deep fixes (DF2 + DF3) — see Check 87 STRICT.
 # .omx/research/council_oom_class_deep_fix_20260429.md.
 # --bf16 cuts FastViT attention-map allocation ~50% (DF2).
@@ -102,6 +110,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
     --gt-video upstream/videos/0.mkv \
     --upstream upstream \
     --device cuda \
+    "${TRAIN_LCT_ARGS[@]}" \
     --tag "$LANE_ID" \
     --output-dir "$LOG_DIR/train" 2>&1 | tee "$LOG_DIR/train.log" | tail -30
 PIPE_RC=("${PIPESTATUS[@]}")
@@ -194,13 +203,21 @@ print('grayscale.mkv bytes:', os.path.getsize(out_path))
 "
 cp "$ANCHOR_POSES" "$LOG_DIR/archive_src/optimized_poses.pt"
 cp "$PAYLOAD" "$LOG_DIR/archive_src/segmap_weights.tar.xz"
+if [ "$SEGMAP_ENABLE_LCT" = "1" ]; then
+    LCT_PAYLOAD="$LOG_DIR/train/$SEGMAP_CLASS_TARGETS_FILENAME"
+    [ -f "$LCT_PAYLOAD" ] || { echo "FATAL: missing LCT payload: $LCT_PAYLOAD" >&2; exit 2; }
+    cp "$LCT_PAYLOAD" "$LOG_DIR/archive_src/$SEGMAP_CLASS_TARGETS_FILENAME"
+fi
 
 ARCHIVE="$LOG_DIR/archive_${LANE_ID}.zip"
 "$PYBIN" -c "
 import os, zipfile
 src = '$LOG_DIR/archive_src'
+members = ['segmap_weights.tar.xz', 'grayscale.mkv', 'optimized_poses.pt']
+if '$SEGMAP_ENABLE_LCT' == '1':
+    members.append('$SEGMAP_CLASS_TARGETS_FILENAME')
 with zipfile.ZipFile('$ARCHIVE', 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
-    for n in ('segmap_weights.tar.xz', 'grayscale.mkv', 'optimized_poses.pt'):
+    for n in members:
         p = os.path.join(src, n)
         assert os.path.isfile(p), f'missing archive component {p}'
         info = zipfile.ZipInfo(filename=n, date_time=(1980, 1, 1, 0, 0, 0))
@@ -223,6 +240,9 @@ cat > "$INFLATE_CONFIG" <<'EOF'
 PYTHON_INFLATE=segmap
 SEGMAP_GRAYSCALE_MODE=soft_lut
 EOF
+if [ "$SEGMAP_ENABLE_LCT" = "1" ]; then
+    echo "SEGMAP_CLASS_TARGETS_FILENAME=$SEGMAP_CLASS_TARGETS_FILENAME" >> "$INFLATE_CONFIG"
+fi
 
 log "=== Stage 5: contest_auth_eval [contest-CUDA] ==="
 rm -rf "$LOG_DIR/eval_work"
