@@ -270,6 +270,8 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         replacement_potential="medium if runtime consumes charged geometry without PoseNet collapse",
         code_paths=(
             "src/tac/hyperbolic_foveation.py",
+            "src/tac/foveation_readiness.py",
+            "tools/audit_hyperbolic_foveation_readiness.py",
             "experiments/plan_cmg3_pixel_lagrangian_atoms.py",
             "experiments/preflight_qfaithful_successor_geometry_contract.py",
             "src/tac/raft_radial_pose.py",
@@ -279,8 +281,8 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             ".omx/research/all_scores_forensic_audit_20260430.md",
         ),
         next_patch=(
-            "Keep foveation as ranking feedback until a charged runtime consumer passes geometry "
-            "preflight and exact component gates."
+            "Run charged foveation-params readiness audit, then keep foveation as ranking feedback "
+            "until a runtime consumer passes geometry preflight and exact component gates."
         ),
         blockers=("configured-but-unconsumed foveation is a known fail-closed preflight class",),
     ),
