@@ -36,6 +36,21 @@ def _readiness_payload(hash_value: str = "readiness-hash") -> dict[str, object]:
             "zip_report": {"wire_contract": {"passed": True}},
         },
         "hpm1_mask_segment": {"matches_expected": True},
+        "runtime_source_inventory": {
+            "status": "passed_static_source_inventory",
+            "required_source_files_present": True,
+            "required_source_files": ["inflate.py", "pr86_hpac.py"],
+            "missing_required_source_files": [],
+            "pycache_only": False,
+            "files": [
+                {"path": "inflate.py", "bytes": 10, "sha256": "a" * 64},
+                {"path": "pr86_hpac.py", "bytes": 10, "sha256": "b" * 64},
+            ],
+            "source_files": [
+                {"path": "inflate.py", "bytes": 10, "sha256": "a" * 64},
+                {"path": "pr86_hpac.py", "bytes": 10, "sha256": "b" * 64},
+            ],
+        },
         "dispatch_blockers": [
             "byte_exact_hpm1_reencode",
             "exact_cuda_auth_eval_after_parity",
@@ -168,6 +183,45 @@ def test_pr91_hpm1_gate_rejects_missing_required_blocker(monkeypatch) -> None:
     assert passed is False
     assert "live_readiness_required_blockers_present" in output
     assert "artifact_readiness_required_blockers_present" in output
+
+
+def test_pr91_hpm1_gate_rejects_pycache_only_runtime_inventory(monkeypatch) -> None:
+    module = _load_all_lanes_module()
+    readiness = _readiness_payload()
+    readiness["runtime_source_inventory"] = {
+        "status": "failed_closed_missing_required_runtime_sources",
+        "required_source_files_present": False,
+        "required_source_files": ["inflate.py", "pr86_hpac.py"],
+        "missing_required_source_files": ["inflate.py", "pr86_hpac.py"],
+        "pycache_only": True,
+        "files": [
+            {
+                "path": "__pycache__/inflate.cpython-312.pyc",
+                "bytes": 10,
+                "sha256": "c" * 64,
+            }
+        ],
+        "source_files": [],
+    }
+
+    def fake_json_tool(path: Path) -> tuple[bool, dict[str, object], str]:
+        if "runtime" in path.name:
+            return True, _runtime_payload(), ""
+        return True, readiness, ""
+
+    def fake_load_artifact(path: Path) -> tuple[bool, dict[str, object], str]:
+        if "runtime" in str(path):
+            return True, _runtime_payload(), ""
+        return True, readiness, ""
+
+    monkeypatch.setattr(module, "_json_tool", fake_json_tool)
+    monkeypatch.setattr(module, "_load_json_artifact", fake_load_artifact)
+
+    passed, output = module._run_pr91_hpm1_fail_closed_gate()
+
+    assert passed is False
+    assert "live_readiness_runtime_source_inventory_passed" in output
+    assert "live_readiness_runtime_source_not_pycache_only" in output
 
 
 def test_run_lane_respects_tools_without_verbose_flag(monkeypatch) -> None:

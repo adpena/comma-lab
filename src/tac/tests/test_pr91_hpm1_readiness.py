@@ -15,6 +15,7 @@ from tac.pr91_hpm1_codec import (
     EXPECTED_PR91_HPM1_MASK_SHA256,
     EXPECTED_PR91_HPM1_TOKENS_SHA256,
     EXPECTED_PR91_MEMBER_X_SHA256,
+    analyze_pr91_hpm1_runtime_sources,
 )
 from tac.pr91_hpm1_readiness import audit_pr91_hpm1_readiness
 
@@ -110,6 +111,12 @@ def test_pr91_hpm1_readiness_static_real_archive_passes_but_dispatch_stays_block
     assert report["member_x"]["sha256"] == EXPECTED_PR91_MEMBER_X_SHA256
     assert report["member_x"]["zip_report"]["wire_contract"]["passed"] is True
     assert report["gates"]["zip_wire_contract"]["passed"] is True
+    assert report["runtime_source_inventory"]["required_source_files_present"] is True
+    assert report["runtime_source_inventory"]["pycache_only"] is False
+    runtime_paths = {row["path"] for row in report["runtime_source_inventory"]["files"]}
+    assert {"inflate.py", "pr86_hpac.py"} <= runtime_paths
+    assert report["gates"]["runtime_source_inventory"]["required_for_dispatch"] is True
+    assert report["gates"]["runtime_source_inventory"]["passed"] is True
     assert report["hpm1_mask_segment"]["matches_expected"] is True
     assert report["hpm1_mask_segment"]["sha256"] == EXPECTED_PR91_HPM1_MASK_SHA256
     assert report["hpm1_payload"]["tokens_sha256"] == EXPECTED_PR91_HPM1_TOKENS_SHA256
@@ -123,6 +130,21 @@ def test_pr91_hpm1_readiness_static_real_archive_passes_but_dispatch_stays_block
         "full_hpm1_decode_600_frames",
         "runtime_hpm1_loader_without_sidecars",
     ]
+
+
+def test_pr91_hpm1_runtime_inventory_rejects_pycache_only_sources(tmp_path: Path) -> None:
+    runtime_dir = tmp_path / "runtime"
+    pycache = runtime_dir / "__pycache__"
+    pycache.mkdir(parents=True)
+    (pycache / "inflate.cpython-312.pyc").write_bytes(b"pyc")
+    (pycache / "pr86_hpac.cpython-312.pyc").write_bytes(b"pyc")
+
+    report = analyze_pr91_hpm1_runtime_sources(source_dir=runtime_dir)
+
+    assert report["status"] == "failed_closed_missing_required_runtime_sources"
+    assert report["required_source_files_present"] is False
+    assert report["pycache_only"] is True
+    assert report["missing_required_source_files"] == ["inflate.py", "pr86_hpac.py"]
 
 
 @pytest.mark.skipif(not DEFAULT_PR91_ARCHIVE.is_file(), reason="PR91 public archive not present")

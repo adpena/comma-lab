@@ -659,6 +659,37 @@ def _required_blockers_present(
     return {f"{prefix}_required_blockers_present": required_blockers <= blockers}
 
 
+def _pr91_runtime_source_inventory_checks(
+    prefix: str,
+    payload: dict[str, object],
+) -> dict[str, bool]:
+    inventory = payload.get("runtime_source_inventory")
+    if not isinstance(inventory, dict):
+        return {f"{prefix}_runtime_source_inventory_present": False}
+    files = inventory.get("files")
+    source_files = inventory.get("source_files")
+    paths = {
+        row.get("path")
+        for row in (files if isinstance(files, list) else [])
+        if isinstance(row, dict)
+    }
+    return {
+        f"{prefix}_runtime_source_inventory_present": True,
+        f"{prefix}_runtime_source_inventory_passed": (
+            inventory.get("status") == "passed_static_source_inventory"
+        ),
+        f"{prefix}_runtime_source_required_files_present": (
+            inventory.get("required_source_files_present") is True
+            and {"inflate.py", "pr86_hpac.py"} <= paths
+        ),
+        f"{prefix}_runtime_source_not_pycache_only": (
+            inventory.get("pycache_only") is False
+            and isinstance(source_files, list)
+            and len(source_files) >= 2
+        ),
+    }
+
+
 def _run_pr91_hpm1_fail_closed_gate() -> tuple[bool, str]:
     ok_readiness, readiness, readiness_output = _json_tool(PR91_HPM1_READINESS_AUDIT)
     if not ok_readiness:
@@ -709,6 +740,8 @@ def _run_pr91_hpm1_fail_closed_gate() -> tuple[bool, str]:
         ),
         **_required_blockers_present("live_runtime", runtime, required_runtime_blockers),
         **_required_blockers_present("artifact_runtime", runtime_artifact, required_runtime_blockers),
+        **_pr91_runtime_source_inventory_checks("live_readiness", readiness),
+        **_pr91_runtime_source_inventory_checks("artifact_readiness", readiness_artifact),
         "readiness_artifact_hash_matches_live": bool(readiness_hash)
         and readiness_hash == readiness_artifact_hash,
         "runtime_artifact_hash_matches_live": bool(runtime_hash)

@@ -75,8 +75,15 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PR91_INTAKE_DIR = (
     REPO_ROOT / "experiments/results/public_pr91_intake_20260504_codex"
 )
-DEFAULT_PR91_RUNTIME_SOURCE_DIR = (
-    DEFAULT_PR91_INTAKE_DIR / "replay_submission/hpac_coder_hybrid"
+DEFAULT_PR91_RELEASE_RUNTIME_SOURCE_DIR = (
+    REPO_ROOT
+    / "experiments/results/public_pr_archive_release_view/"
+    "public_pr91_intake_20260505_auto/source/submissions/hpac_coder_hybrid"
+)
+DEFAULT_PR91_RUNTIME_SOURCE_DIR = DEFAULT_PR91_RELEASE_RUNTIME_SOURCE_DIR
+PR91_REQUIRED_RUNTIME_SOURCE_FILES = (
+    "inflate.py",
+    "pr86_hpac.py",
 )
 DEFAULT_PR91_ARCHIVE = (
     REPO_ROOT
@@ -326,19 +333,48 @@ def analyze_pr91_hpm1_runtime_sources(*args: Any, **kwargs: Any) -> Any:
             "status": "failed_closed_missing_sources",
             "source_dir": repo_rel(source_dir),
             "score_claim": False,
+            "required_source_files_present": False,
+            "required_source_files": list(PR91_REQUIRED_RUNTIME_SOURCE_FILES),
+            "missing_required_source_files": list(PR91_REQUIRED_RUNTIME_SOURCE_FILES),
         }
     files = []
+    source_files = []
+    pycache_files = []
     for path in sorted(source_dir.rglob("*")):
         if path.is_file():
             rel = path.relative_to(source_dir).as_posix()
             data = path.read_bytes()
-            files.append({"path": rel, "bytes": len(data), "sha256": sha256_bytes(data)})
+            record = {"path": rel, "bytes": len(data), "sha256": sha256_bytes(data)}
+            files.append(record)
+            if rel.startswith("__pycache__/") or rel.endswith(".pyc"):
+                pycache_files.append(record)
+            else:
+                source_files.append(record)
+    present_paths = {row["path"] for row in files}
+    missing_required = [
+        name for name in PR91_REQUIRED_RUNTIME_SOURCE_FILES if name not in present_paths
+    ]
+    required_present = not missing_required
+    pycache_only = bool(files) and not source_files
+    status = (
+        "passed_static_source_inventory"
+        if required_present and not pycache_only
+        else "failed_closed_missing_required_runtime_sources"
+    )
     return {
-        "status": "passed_static_source_inventory",
+        "status": status,
         "source_dir": repo_rel(source_dir),
         "score_claim": False,
         "file_count": len(files),
+        "source_file_count": len(source_files),
+        "pycache_file_count": len(pycache_files),
         "files": files,
+        "source_files": source_files,
+        "pycache_files": pycache_files,
+        "required_source_files": list(PR91_REQUIRED_RUNTIME_SOURCE_FILES),
+        "missing_required_source_files": missing_required,
+        "required_source_files_present": required_present,
+        "pycache_only": pycache_only,
         "contains_range_codec_cpp": any(row["path"].endswith("range_mask_codec.cpp") for row in files),
     }
 

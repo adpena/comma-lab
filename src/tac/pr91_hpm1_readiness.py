@@ -371,10 +371,10 @@ def audit_pr91_hpm1_readiness(
     runtime_inventory = analyze_pr91_hpm1_runtime_sources(source_dir=runtime_dir)
     gates["runtime_source_inventory"] = _gate(
         passed=runtime_inventory.get("status") == "passed_static_source_inventory",
-        reason="public PR91 runtime source inventory is present"
+        reason="public PR91 runtime source inventory includes required release sources"
         if runtime_inventory.get("status") == "passed_static_source_inventory"
-        else "public PR91 runtime source inventory missing",
-        required_for_dispatch=False,
+        else "public PR91 runtime source inventory missing required release sources",
+        required_for_dispatch=True,
         failed_status="missing",
     )
     parity = _audit_decode_reencode_parity_report(

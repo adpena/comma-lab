@@ -6,17 +6,12 @@ import ast
 from pathlib import Path
 from typing import Any
 
-from tac.pr91_hpm1_codec import REPO_ROOT
+from tac.pr91_hpm1_codec import REPO_ROOT, DEFAULT_PR91_RELEASE_RUNTIME_SOURCE_DIR
 from tac.repo_io import repo_relative, sha256_file
 
 SCHEMA_VERSION = 1
 KIND = "pr91_hpm1_runtime_contract"
 
-DEFAULT_PR91_RELEASE_RUNTIME_SOURCE_DIR = (
-    REPO_ROOT
-    / "experiments/results/public_pr_archive_release_view/"
-    "public_pr91_intake_20260505_auto/source/submissions/hpac_coder_hybrid"
-)
 DECOMPRESS_FUNCTION = "decompress_tokens_hpac"
 DEVICE_ARG_INDEX = 8
 
