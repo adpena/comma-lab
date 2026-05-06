@@ -45,9 +45,17 @@ source and claim-ledger staging.
   - Claim was closed as `completed_dry_run`.
 - `[external:lightning-submit]` job `lane_pr106_yshift_score_table_20260506T0732Z`
   - Submitted via Lightning Batch Jobs on T4.
-  - Initial SDK status: `Pending`.
+  - Initial SDK status: `Pending`, then `Running`.
   - Active claim: `lane_pr106_yshift_score_table` /
     `lane_pr106_yshift_score_table_20260506T0732Z`.
+- `[empirical:dispatch-path-negative]` first live job was stopped as
+  `stopped_runtime_path_mismatch`.
+  - Cause: the custom generic Batch command targeted the mutable Studio path,
+    while the submitted job snapshot exposed the repo under `snapshot/pact`.
+  - Fix: launcher now resolves `pact/pyproject.toml` inside the Batch snapshot
+    first, then falls back to the Studio path only for tmux/emergency mode.
+  - Harvest tool now maps recorded Studio output paths to the SDK artifact
+    mirror path when harvesting Batch outputs.
 
 ## Promotion Status
 

@@ -174,12 +174,17 @@ def build_stage_command(args: argparse.Namespace) -> list[str]:
     return cmd
 
 
-def score_table_env(args: argparse.Namespace) -> dict[str, str]:
-    output_dir = f"{args.remote_pact}/experiments/results/lightning_batch/{args.job_name}"
-    return {
+def score_table_env(
+    args: argparse.Namespace,
+    *,
+    output_dir: str | None = None,
+    include_log_dir: bool = True,
+) -> dict[str, str]:
+    if output_dir is None:
+        output_dir = f"{args.remote_pact}/experiments/results/lightning_batch/{args.job_name}"
+    env = {
         "PR106_YSHIFT_MODE": "score_table",
         "PR106_ARCHIVE": _repo_rel(args.pr106_archive),
-        "PR106_YSHIFT_LOG_DIR": f"{output_dir}/yshift_run",
         "PR106_YSHIFT_SCORE_TABLE_LANE_ID": SCORE_TABLE_LANE_ID,
         "PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID": args.job_name,
         "PR106_YSHIFT_CANDIDATE_RADIUS": str(args.candidate_radius),
@@ -188,6 +193,9 @@ def score_table_env(args: argparse.Namespace) -> dict[str, str]:
         "PR106_YSHIFT_SCORE_TABLE_BATCH_PAIRS": str(args.batch_pairs),
         "PR106_YSHIFT_SCORE_TABLE_CANDIDATE_BATCH_SIZE": str(args.candidate_batch_size),
     }
+    if include_log_dir:
+        env["PR106_YSHIFT_LOG_DIR"] = f"{output_dir}/yshift_run"
+    return env
 
 
 def build_dispatch_command(args: argparse.Namespace) -> list[str]:
@@ -223,24 +231,24 @@ def build_dispatch_command(args: argparse.Namespace) -> list[str]:
 
 def build_batch_command(args: argparse.Namespace) -> str:
     env_exports = [
-        f"export WORKSPACE={args.remote_pact}",
-        f"export TAC_UPSTREAM_DIR={args.remote_pact}/upstream",
-        f"export PYTHONPATH={args.remote_pact}/src:{args.remote_pact}/upstream:{args.remote_pact}",
         f"export PYBIN={args.python_bin}",
         "export PYTHONUNBUFFERED=1",
     ]
-    for key, value in sorted(score_table_env(args).items()):
+    for key, value in sorted(score_table_env(args, include_log_dir=False).items()):
         env_exports.append(f"export {key}={value}")
-    out = f"{args.remote_pact}/experiments/results/lightning_batch/{args.job_name}"
     return "\n".join(
         [
             "set -euo pipefail",
-            f"cd {args.remote_pact}",
-            f"mkdir -p {out}",
+            f"if [ -d pact ] && [ -f pact/pyproject.toml ]; then cd pact; elif [ -d {args.remote_pact} ]; then cd {args.remote_pact}; else echo FATAL: pact repo not found >&2; exit 2; fi",
+            'export OUT_DIR="$PWD/experiments/results/lightning_batch/' + args.job_name + '"',
+            'mkdir -p "$OUT_DIR"',
+            'export WORKSPACE="$PWD"',
+            'export TAC_UPSTREAM_DIR="$PWD/upstream"',
+            'export PYTHONPATH="$PWD/src:$PWD/upstream:$PWD"',
+            'export PR106_YSHIFT_LOG_DIR="$OUT_DIR/yshift_run"',
             *env_exports,
             (
-                f"{args.python_bin} - <<'PY' > "
-                f"{out}/lightning_runner_preflight.json\n"
+                f"{args.python_bin} - <<'PY' > \"$OUT_DIR/lightning_runner_preflight.json\"\n"
                 "import json, torch, subprocess\n"
                 "gpu = subprocess.run(['nvidia-smi', '--query-gpu=name', '--format=csv,noheader'], "
                 "text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)\n"
@@ -257,11 +265,11 @@ def build_batch_command(args: argparse.Namespace) -> str:
                 "print(json.dumps({'LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK': True, **payload}, indent=2, sort_keys=True))\n"
                 "PY"
             ),
-            f"bash {REMOTE_SCRIPT} 2>&1 | tee {out}/batch_run.log",
+            f"bash {REMOTE_SCRIPT} 2>&1 | tee \"$OUT_DIR/batch_run.log\"",
             (
                 f"{args.python_bin} - <<'PY'\n"
-                "import json, pathlib, shutil\n"
-                f"out = pathlib.Path({out!r})\n"
+                "import json, os, pathlib, shutil\n"
+                "out = pathlib.Path(os.environ['OUT_DIR'])\n"
                 "run = out / 'yshift_run'\n"
                 "score_json = run / 'eval' / 'contest_auth_eval.json'\n"
                 "summary = {\n"

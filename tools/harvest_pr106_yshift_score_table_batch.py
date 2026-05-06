@@ -19,6 +19,9 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.deploy.lightning.batch_jobs import (  # noqa: E402
+    lightning_sdk_persisted_studio_output_dir,
+)
 from tac.repo_io import json_text, write_json  # noqa: E402
 
 DEFAULT_STATE_PATH = REPO_ROOT / ".omx/state/lightning_batch_jobs.json"
@@ -47,7 +50,17 @@ def _remote_and_local(args: argparse.Namespace) -> tuple[str, Path]:
     record = _latest_record(args.state_path, args.job_name)
     spec = record.get("spec") if isinstance(record.get("spec"), dict) else {}
     queue = record.get("queue") if isinstance(record.get("queue"), dict) else {}
+    job = record.get("job") if isinstance(record.get("job"), dict) else {}
     remote = args.remote_artifact_dir or spec.get("remote_output_dir") or queue.get("remote_output_dir")
+    if args.remote_artifact_dir is None and isinstance(remote, str):
+        sdk_artifact_path = job.get("artifact_path") or queue.get("sdk_artifact_path")
+        if isinstance(sdk_artifact_path, str):
+            persisted = lightning_sdk_persisted_studio_output_dir(
+                sdk_artifact_path=sdk_artifact_path,
+                remote_output_dir=remote,
+            )
+            if persisted:
+                remote = persisted
     local = args.mirror_dir or spec.get("local_artifact_dir") or queue.get("local_artifact_dir")
     if not isinstance(remote, str) or not remote:
         raise ValueError("remote artifact dir not recorded; pass --remote-artifact-dir")
