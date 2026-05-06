@@ -57,6 +57,7 @@ from __future__ import annotations
 import json
 import zipfile
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -64,7 +65,10 @@ __all__ = [
     "compose_jnwcs_with_ec",
     "validate_jnwcs_ec_composition",
     "bit_budget_split_search",
+    "build_joint_admm_balle_arithmetic_noop_manifest",
     "BitBudgetSplit",
+    "JOINT_STACK_CANONICAL_ORDER",
+    "JOINT_STACK_NOOP_MANIFEST_SCHEMA",
     "REQUIRED_ARCHIVE_MEMBERS",
 ]
 
@@ -89,6 +93,21 @@ REQUIRED_ARCHIVE_MEMBERS: tuple[str, ...] = (
 )
 
 
+JOINT_STACK_CANONICAL_ORDER: tuple[str, ...] = (
+    "representation",
+    "prediction",
+    "quantization",
+    "hyperprior",
+    "arithmetic",
+    "pack",
+)
+
+
+JOINT_STACK_NOOP_MANIFEST_SCHEMA = (
+    "joint_admm_balle_arithmetic_noop_manifest_v1"
+)
+
+
 # Renderer-bin magics that DO NOT load scorer state at inflate time.
 # Lane J-NWCS exports preserve the upstream renderer's magic when the
 # encoded bytes are spliced back into renderer.bin — typically ``ASYM``
@@ -107,6 +126,191 @@ _SCORER_FREE_RENDERER_MAGICS: tuple[bytes, ...] = (
     b"NWC1",  # Lane J-NWC base codec wire format
     b"NWCS",  # Lane J-NWCS sensitivity-aware codec wire format prefix
 )
+
+
+# ── PARADIGM-gamma typed no-op stack fixture manifest ─────────────────────
+
+
+def _canonical_manifest_sha(payload: dict[str, Any]) -> str:
+    """Digest the deterministic JSON payload before the digest field exists."""
+
+    encoded = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    return sha256(encoded).hexdigest()
+
+
+def build_joint_admm_balle_arithmetic_noop_manifest(
+    *,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Return the deterministic PARADIGM-gamma typed stack fixture manifest.
+
+    This is intentionally a **non-dispatching integration contract**, not a
+    score artifact. It closes the "ADMM + Ballé + AQ landed individually"
+    gap by pinning the canonical typed order, charged-byte obligations, no-op
+    fixture semantics, and exact-eval blockers before optimization starts.
+    """
+
+    root = Path.cwd() if repo_root is None else Path(repo_root)
+    code_paths = (
+        "src/tac/joint_codec_stack_orchestrator.py",
+        "src/tac/joint_admm_coordinator.py",
+        "src/tac/balle_hyperprior_codec.py",
+        "src/tac/arithmetic_qint_codec.py",
+        "src/tac/entropy_archive.py",
+        "src/tac/stack_compositions.py",
+    )
+    present_paths = [p for p in code_paths if (root / p).exists()]
+    missing_paths = [p for p in code_paths if not (root / p).exists()]
+
+    components: list[dict[str, Any]] = [
+        {
+            "layer": "representation",
+            "component": "typed_qint_stream_sources",
+            "module": "src/tac/joint_codec_stack_orchestrator.py",
+            "typed_input_contract": (
+                "named 1-D integer qint streams with alphabet size, offset, "
+                "codec kind, and cached score-per-byte marginal"
+            ),
+            "typed_output_contract": (
+                "StreamSource records consumed without scorer state at "
+                "compress time"
+            ),
+            "charged_bytes_obligation": (
+                "all emitted stream payloads and JCSP metadata must be "
+                "inside archive.zip"
+            ),
+        },
+        {
+            "layer": "prediction",
+            "component": "joint_admm_byte_allocator",
+            "module": "src/tac/joint_admm_coordinator.py",
+            "typed_input_contract": (
+                "StreamProximalCodec objects plus byte budget and cached "
+                "marginal surfaces"
+            ),
+            "typed_output_contract": (
+                "per-stream target bytes, convergence flag, KKT residual, "
+                "and allocation history"
+            ),
+            "charged_bytes_obligation": (
+                "allocator metadata is planning-only unless packed in JCSP"
+            ),
+        },
+        {
+            "layer": "quantization",
+            "component": "qint_stream_contract",
+            "module": "src/tac/joint_codec_stack_orchestrator.py",
+            "typed_input_contract": "already-quantized signed integer arrays",
+            "typed_output_contract": (
+                "codec-specific lossless payloads after roundtrip verification"
+            ),
+            "charged_bytes_obligation": (
+                "quantizer choices must be recorded in archive manifest before "
+                "exact eval"
+            ),
+        },
+        {
+            "layer": "hyperprior",
+            "component": "balle_hyperprior_bhv1",
+            "module": "src/tac/balle_hyperprior_codec.py",
+            "typed_input_contract": "qint stream plus deterministic hyperprior config",
+            "typed_output_contract": "BHv1 payload or AQv1 static fallback",
+            "charged_bytes_obligation": (
+                "hyperprior parameters and fallback decision must be charged "
+                "or fixed in committed runtime"
+            ),
+        },
+        {
+            "layer": "arithmetic",
+            "component": "aqv1_static_arithmetic_terminal",
+            "module": "src/tac/arithmetic_qint_codec.py",
+            "typed_input_contract": "symbol stream derived from qints and offset",
+            "typed_output_contract": "AQv1 payload with deterministic roundtrip",
+            "charged_bytes_obligation": (
+                "frequency tables, model ids, and all side information must "
+                "be included in payload bytes"
+            ),
+        },
+        {
+            "layer": "pack",
+            "component": "jcsp_container_and_archive_boundary",
+            "module": "src/tac/joint_codec_stack_orchestrator.py",
+            "typed_input_contract": "StackStreamResult payloads with actual byte counts",
+            "typed_output_contract": "JCSP container bytes, then archive.zip member",
+            "charged_bytes_obligation": (
+                "JCSP must be a real archive member with runtime loader parity "
+                "before dispatch"
+            ),
+        },
+    ]
+
+    manifest: dict[str, Any] = {
+        "schema": JOINT_STACK_NOOP_MANIFEST_SCHEMA,
+        "key": "joint_admm_balle_arithmetic_stack",
+        "title": "Joint ADMM plus Ballé hyperprior plus AQ arithmetic stack fixture",
+        "score_claim": False,
+        "evidence_grade": "planning/component empirical",
+        "dispatch_attempted": False,
+        "remote_jobs_dispatched": False,
+        "ready_for_exact_eval_dispatch": False,
+        "fixture_only": True,
+        "candidate_non_noop": False,
+        "promotion_allowed": False,
+        "canonical_order": list(JOINT_STACK_CANONICAL_ORDER),
+        "components": components,
+        "no_op_fixture_semantics": {
+            "purpose": (
+                "exercise the typed end-to-end stack contract without claiming "
+                "a changed contest archive"
+            ),
+            "archive_bytes": None,
+            "archive_sha256": None,
+            "runtime_tree_sha256": None,
+            "score_components": None,
+            "must_not_dispatch": True,
+        },
+        "determinism_contract": {
+            "json_encoding": "sort_keys=True, allow_nan=False",
+            "wire_endianness": "JCSP uses explicit little-endian struct fields",
+            "cross_platform": (
+                "manifest is pure JSON; future native/Rust/SIMD consumers must "
+                "prove byte-identical output on macOS/Linux before promotion"
+            ),
+        },
+        "composition_invariants": [
+            "representation_to_prediction_to_quantization_to_hyperprior_to_arithmetic_to_pack",
+            "no scorer loads at inflate time",
+            "all side information is charged inside archive.zip",
+            "per-stream roundtrip is verified before pack",
+            "JCSP container byte budget includes metadata overhead",
+            "exact CUDA auth eval is required before score or rank claims",
+        ],
+        "dispatch_blockers": [
+            "fixture_only_candidate_not_dispatchable",
+            "no_byte_closed_archive_member_for_jcsp_container",
+            "no_runtime_loader_parity_for_jcsp_archive_member",
+            "no_exact_cuda_auth_eval_for_stacked_archive",
+            "no_lane_dispatch_claim",
+            "component_empirical_results_do_not_prove_stack_composability",
+        ],
+        "next_patch": (
+            "Build a byte-closed archive member that consumes JCSP at inflate, "
+            "then claim lane and run exact CUDA auth eval on the exact archive."
+        ),
+        "path_audit": {
+            "code": {
+                "present": present_paths,
+                "missing": missing_paths,
+            }
+        },
+    }
+    manifest["manifest_sha256"] = _canonical_manifest_sha(manifest)
+    return manifest
 
 
 # ── Composition function ──────────────────────────────────────────────────

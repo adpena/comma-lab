@@ -19,15 +19,21 @@ Round-28 review-rotation coverage:
 from __future__ import annotations
 
 import hashlib
+import json
+import subprocess
+import sys
 import zipfile
 from pathlib import Path
 
 import pytest
 
 from tac.stack_compositions import (
+    JOINT_STACK_CANONICAL_ORDER,
+    JOINT_STACK_NOOP_MANIFEST_SCHEMA,
     REQUIRED_ARCHIVE_MEMBERS,
     BitBudgetSplit,
     bit_budget_split_search,
+    build_joint_admm_balle_arithmetic_noop_manifest,
     compose_jnwcs_with_ec,
     validate_jnwcs_ec_composition,
 )
@@ -400,3 +406,67 @@ def test_compose_does_not_mutate_inputs(
         f"compose_jnwcs_with_ec mutated inputs: "
         f"pre={pre_sha} post={post_sha}"
     )
+
+
+def test_joint_stack_noop_manifest_is_deterministic_and_blocked() -> None:
+    """PARADIGM-gamma stack fixture must not masquerade as score evidence."""
+    repo = Path(__file__).resolve().parents[3]
+    first = build_joint_admm_balle_arithmetic_noop_manifest(repo_root=repo)
+    second = build_joint_admm_balle_arithmetic_noop_manifest(repo_root=repo)
+
+    assert first == second
+    assert first["schema"] == JOINT_STACK_NOOP_MANIFEST_SCHEMA
+    assert first["score_claim"] is False
+    assert first["dispatch_attempted"] is False
+    assert first["remote_jobs_dispatched"] is False
+    assert first["ready_for_exact_eval_dispatch"] is False
+    assert first["fixture_only"] is True
+    assert first["candidate_non_noop"] is False
+    assert first["promotion_allowed"] is False
+    assert "fixture_only_candidate_not_dispatchable" in first["dispatch_blockers"]
+    assert "no_exact_cuda_auth_eval_for_stacked_archive" in first["dispatch_blockers"]
+    assert isinstance(first["manifest_sha256"], str)
+    assert len(first["manifest_sha256"]) == 64
+
+
+def test_joint_stack_noop_manifest_pins_typed_canonical_order() -> None:
+    repo = Path(__file__).resolve().parents[3]
+    manifest = build_joint_admm_balle_arithmetic_noop_manifest(repo_root=repo)
+
+    assert manifest["canonical_order"] == list(JOINT_STACK_CANONICAL_ORDER)
+    assert [row["layer"] for row in manifest["components"]] == list(
+        JOINT_STACK_CANONICAL_ORDER
+    )
+    for row in manifest["components"]:
+        assert row["typed_input_contract"]
+        assert row["typed_output_contract"]
+        assert row["charged_bytes_obligation"]
+
+    invariants = manifest["composition_invariants"]
+    assert "all side information is charged inside archive.zip" in invariants
+    assert "exact CUDA auth eval is required before score or rank claims" in invariants
+    assert manifest["path_audit"]["code"]["missing"] == []
+
+
+def test_build_joint_stack_noop_manifest_tool_writes_canonical_json(
+    tmp_path: Path,
+) -> None:
+    repo = Path(__file__).resolve().parents[3]
+    out = tmp_path / "manifest.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(repo / "tools" / "build_joint_stack_noop_manifest.py"),
+            "--output",
+            str(out),
+        ],
+        cwd=repo,
+        check=True,
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload == build_joint_admm_balle_arithmetic_noop_manifest(
+        repo_root=repo
+    )
+    assert out.read_text(encoding="utf-8").endswith("\n")

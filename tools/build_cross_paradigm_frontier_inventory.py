@@ -287,8 +287,8 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         title="Joint ADMM plus Balle hyperprior plus arithmetic stack",
         paradigms=("gamma_joint_codec", "entropy_coding", "hyperprior"),
         role="stack_or_replacement_orchestrator",
-        status="components_landed_not_end_to_end_stacked",
-        evidence_grade="planning/component empirical",
+        status="typed_noop_stack_manifest_landed_not_archive_dispatchable",
+        evidence_grade="planning/component empirical plus typed fixture manifest",
         stackability="high in architecture, unproven in exact archive",
         replacement_potential="medium-high if it can replace HNeRV sections with a smaller scorer-stable stack",
         code_paths=(
@@ -296,12 +296,26 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "src/tac/joint_admm_coordinator.py",
             "src/tac/balle_hyperprior_codec.py",
             "src/tac/arithmetic_qint_codec.py",
+            "src/tac/stack_compositions.py",
             "tools/audit_arithmetic_qint_optimality.py",
+            "tools/build_joint_stack_noop_manifest.py",
             "src/tac/entropy_archive.py",
         ),
-        evidence_paths=("docs/score_aware_sidechannel_paradigm_20260504.md",),
-        next_patch="Build one end-to-end typed stack manifest and a no-op fixture before optimization.",
-        blockers=("individual components do not imply composability", "side information must be charged"),
+        evidence_paths=(
+            "docs/score_aware_sidechannel_paradigm_20260504.md",
+            "experiments/results/joint_stack_noop_manifest_20260506_codex/manifest.json",
+            ".omx/research/joint_stack_noop_manifest_20260506_codex.md",
+        ),
+        next_patch=(
+            "Replace the fixture-only contract with a byte-closed JCSP archive member and "
+            "runtime loader parity, then claim a lane before exact CUDA auth eval."
+        ),
+        blockers=(
+            "fixture-only manifest is intentionally not dispatchable",
+            "no byte-closed JCSP archive member",
+            "side information must be charged",
+            "individual components do not imply score composability",
+        ),
     ),
     InventoryRow(
         key="telescopic_foveation_field",
