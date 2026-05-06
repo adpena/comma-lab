@@ -531,6 +531,10 @@ def main(argv: list[str] | None = None) -> int:
             if Path(lane["tool"]).name == "dispatch_dryrun_omega_w_v3.py":
                 lane["args"] = [*lane["args"], "--require-real-sensitivity"]
                 lane["local_smoke_only"] = False
+    if args.jobs == 1:
+        for lane in lanes:
+            if Path(lane["tool"]).name == "dispatch_dryrun_apogee_intN.py":
+                lane["args"] = [*lane["args"], "--jobs", "1"]
 
     # Verify all sub-tools exist before running any
     for tool in [

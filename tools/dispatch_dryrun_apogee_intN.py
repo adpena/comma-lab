@@ -35,6 +35,8 @@ from __future__ import annotations
 
 import argparse
 import ast
+import concurrent.futures
+import os
 import subprocess
 import sys
 import tempfile
@@ -76,6 +78,11 @@ def _check(condition: bool, message: str) -> None:
         raise CheckFailure(message)
 
 
+def _default_jobs(item_count: int) -> int:
+    cpu_count = os.cpu_count() or 2
+    return max(1, min(item_count, cpu_count, 4))
+
+
 def check_wrapper_exists_and_parses() -> str:
     _check(WRAPPER.is_file(), f"wrapper {WRAPPER.relative_to(REPO)} missing")
     proc = subprocess.run(["bash", "-n", str(WRAPPER)], capture_output=True, text=True)
@@ -113,6 +120,7 @@ def check_inflate_adapter_modules() -> str:
 
 def produce_archive_for_bits(bits: int, out_dir: Path) -> Path:
     """Run the producer once for ``bits`` and return the emitted archive."""
+    out_dir.mkdir(parents=True, exist_ok=True)
     proc = subprocess.run(
         [sys.executable, str(PRODUCER),
          "--state-dict", str(PR106_STATE_DICT),
@@ -188,10 +196,41 @@ def check_launch_script_flag_wiring() -> str:
     )
 
 
+def _run_bit_checks(bits: int, out_dir: Path) -> tuple[list[str], list[str]]:
+    passes: list[str] = []
+    failures: list[str] = []
+
+    def _attempt(name: str, fn, *args):
+        try:
+            msg = fn(*args)
+            passes.append(f"  ✓ {name}: {msg}")
+            return True
+        except CheckFailure as e:
+            failures.append(f"  ✗ {name}: {e}")
+            return False
+
+    if not _attempt(f"bits={bits}-range", check_bits_in_range, bits):
+        failures.append(f"  ✗ bits={bits}-producer-e2e: skipped because range check failed")
+        failures.append(f"  ✗ bits={bits}-parser-roundtrip: skipped because range check failed")
+        return passes, failures
+
+    try:
+        archive = produce_archive_for_bits(bits, out_dir / f"bits_{bits}")
+    except CheckFailure as e:
+        failures.append(f"  ✗ bits={bits}-producer-e2e: {e}")
+        failures.append(f"  ✗ bits={bits}-parser-roundtrip: skipped because producer failed")
+        return passes, failures
+
+    _attempt(f"bits={bits}-producer-e2e", check_produced_archive_magic, bits, archive)
+    _attempt(f"bits={bits}-parser-roundtrip", check_parser_roundtrip_archive, bits, archive)
+    return passes, failures
+
+
 def run_dryrun(
     bits_list: list[int],
     verbose: bool = False,
     allow_forensic_byte_only: bool = False,
+    jobs: int | None = None,
 ) -> int:
     """Run all checks. Returns 0 on PASS, non-zero on any FAIL."""
     failures: list[str] = []
@@ -210,18 +249,21 @@ def run_dryrun(
     _attempt("inflate-adapter", check_inflate_adapter_modules)
     _attempt("launch-script-wiring", check_launch_script_flag_wiring)
 
+    if jobs is not None and jobs < 1:
+        failures.append("  ✗ jobs: --jobs must be >= 1")
+
     with tempfile.TemporaryDirectory() as tmp:
         out_dir = Path(tmp)
-        for bits in bits_list:
-            _attempt(f"bits={bits}-range", check_bits_in_range, bits)
-            try:
-                archive = produce_archive_for_bits(bits, out_dir)
-            except CheckFailure as e:
-                failures.append(f"  ✗ bits={bits}-producer-e2e: {e}")
-                failures.append(f"  ✗ bits={bits}-parser-roundtrip: skipped because producer failed")
-                continue
-            _attempt(f"bits={bits}-producer-e2e", check_produced_archive_magic, bits, archive)
-            _attempt(f"bits={bits}-parser-roundtrip", check_parser_roundtrip_archive, bits, archive)
+        bit_jobs = jobs or _default_jobs(len(bits_list))
+        if bit_jobs == 1 or len(bits_list) <= 1:
+            bit_results = [_run_bit_checks(bits, out_dir) for bits in bits_list]
+        else:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=bit_jobs) as executor:
+                futures = [executor.submit(_run_bit_checks, bits, out_dir) for bits in bits_list]
+                bit_results = [future.result() for future in futures]
+        for bit_passes, bit_failures in bit_results:
+            passes.extend(bit_passes)
+            failures.extend(bit_failures)
 
     if allow_forensic_byte_only:
         passes.append(
@@ -254,6 +296,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--all-pareto-frontier", action="store_true",
                         help=f"Validate all current Pareto-frontier bits ({PARETO_FRONTIER_BITS}).")
     parser.add_argument(
+        "--jobs",
+        type=int,
+        default=None,
+        help="Maximum bit-width checks to run concurrently. Default: min(4, CPU count, bit count).",
+    )
+    parser.add_argument(
         "--allow-forensic-byte-only",
         action="store_true",
         help=(
@@ -276,6 +324,7 @@ def main(argv: list[str] | None = None) -> int:
         bits_list,
         verbose=args.verbose,
         allow_forensic_byte_only=args.allow_forensic_byte_only,
+        jobs=args.jobs,
     )
 
 

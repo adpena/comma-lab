@@ -5925,17 +5925,30 @@ Changes:
 - Lowered `tools/dispatch_dryrun_apogee_intN.py` so each intN bit produces one
   temp archive and reuses it for both magic-byte and parser-roundtrip checks.
   Previously the producer ran twice per bit.
+- Added bounded per-bit concurrency inside `tools/dispatch_dryrun_apogee_intN.py`
+  with `--jobs 1` preserving serial bit validation.
+- When `tools/all_lanes_preflight.py --jobs 1` is requested, the runner also
+  forwards `--jobs 1` into Apogee intN so serial debug mode remains genuinely
+  serial.
 
 Measured performance:
 
 - Pre-change serial all-lanes preflight: `15.12s real` after the OSS staging
   tranche.
-- Post-change default parallel all-lanes preflight: `3.81s real` with
+- Post-change default parallel all-lanes preflight after top-level parallelism:
+  `3.81s real` with `ALL 20 PREFLIGHT CHECKS PASSED`.
+- Post-change default parallel all-lanes preflight after Apogee per-bit
+  parallelism: `3.04s real` with
   `ALL 20 PREFLIGHT CHECKS PASSED`.
-- Post-change serial compatibility mode: `12.17s real` with
+- Post-change serial compatibility mode after top-level parallelism:
+  `12.17s real` with `ALL 20 PREFLIGHT CHECKS PASSED`.
+- Post-change strict serial compatibility mode after forwarding Apogee
+  `--jobs 1`: `13.39s real` with
   `ALL 20 PREFLIGHT CHECKS PASSED`.
 - Apogee intN dry-run: `5.92s real -> 3.59s real` by avoiding duplicate
   producer runs.
+- Apogee intN dry-run with per-bit concurrency: `1.40s real`; Apogee
+  `--jobs 1` serial bit mode remains `3.72s real`.
 
 Measured inventory after R92:
 
@@ -5961,6 +5974,9 @@ Verification:
   tools/all_lanes_preflight.py tools/dispatch_dryrun_apogee_intN.py` passed.
 - `.venv/bin/python tools/dispatch_dryrun_apogee_intN.py
   --all-pareto-frontier --allow-forensic-byte-only` passed:
+  `FORENSIC BYTE-ONLY DRY-RUN PASSED`.
+- `.venv/bin/python tools/dispatch_dryrun_apogee_intN.py
+  --all-pareto-frontier --allow-forensic-byte-only --jobs 1` passed:
   `FORENSIC BYTE-ONLY DRY-RUN PASSED`.
 - `.venv/bin/python tools/all_lanes_preflight.py --timings` passed:
   `ALL 20 PREFLIGHT CHECKS PASSED`.
