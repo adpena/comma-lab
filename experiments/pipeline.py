@@ -313,6 +313,11 @@ class PipelineConfig:
     # arithmetic terminal codecs jointly). The ``JCSP`` magic byte identifies
     # the resulting container at inflate time.
     use_joint_codec_stack: bool = False
+    # Path to a serialized per-tensor score-marginals artifact (mapping
+    # tensor name → cached dScore/dByte). Required for JCSP dispatch — the
+    # ADMM coordinator uses these marginals to project byte allocations.
+    # Without it, all marginals are 0 and the coordinator has no signal.
+    jcsp_score_marginals_path: str = ""
 
     # PARADIGM-α (mask-encoder portfolio). Default ``av1_monochrome`` preserves
     # current behaviour; the four research alternatives are registered here as
@@ -1457,15 +1462,44 @@ def step_compress_weights(
             }))
             (iter_dir / f".done_{step_name}").touch()
             return out_path
+    # PARADIGM-γ JCSP dispatch (joint score-aware codec stack) — when
+    # ``cfg.use_joint_codec_stack=True``, decompose the model into JCSP
+    # streams via ``tac.jcsp_stream_builder.model_to_stream_sources``,
+    # run the ADMM coordinator across {repr, predict, quant, entropy}, and
+    # pack the resulting JCSP container as the renderer payload. Both gates
+    # must be present (use_joint_codec_stack flag + score_marginals path) or
+    # the branch raises NotImplementedError so the operator cannot
+    # accidentally ship a stub archive (silent-no-op trap class).
     if cfg.use_joint_codec_stack:
-        _log(
-            "PARADIGM-γ: cfg.use_joint_codec_stack=True but the joint codec "
-            "stack dispatch path (tac.joint_codec_stack_orchestrator) is "
-            "REGISTERED-BUT-NOT-WIRED. Falling through to "
-            f"``cfg.weight_compression`` mode ({mode!r}). To enable, the "
-            "operator must land the JCSP dispatch branch + an integration "
-            "test. See lane_joint_codec_stack in the lane registry.",
-            "WARN",
+        marginals_path = cfg.jcsp_score_marginals_path or ""
+        missing = []
+        if not marginals_path or not Path(marginals_path).exists():
+            missing.append(f"cfg.jcsp_score_marginals_path={marginals_path!r}")
+        if missing:
+            raise NotImplementedError(
+                f"PARADIGM-γ JCSP dispatch (use_joint_codec_stack=True): "
+                f"missing prerequisites — {', '.join(missing)}. The score "
+                f"marginals artifact is produced by the frontier sampler "
+                f"(per-tensor cached dScore/dByte from a calibration sweep). "
+                f"Without it, the ADMM coordinator has no gradient signal "
+                f"and JCSP cannot allocate bytes intelligently. See "
+                f"lane_joint_codec_stack in the lane registry. The "
+                f"decomposition primitives "
+                f"(tac.jcsp_stream_builder.model_to_stream_sources) are "
+                f"now landed (commit b2d7928a, 16 tests); the remaining "
+                f"work is the per-tensor marginals harness + the "
+                f"run_admm/run_sequential_codec_stack invocation."
+            )
+        # Future operator landing: load score_marginals, call
+        # model_to_stream_sources(model, score_marginals=...), run
+        # run_admm or run_sequential_codec_stack, then
+        # build_jcsp_archive_member with the resulting container_bytes.
+        raise NotImplementedError(
+            "PARADIGM-γ JCSP dispatch: score_marginals_path is present, "
+            "but the dispatch loop (model_to_stream_sources → run_admm → "
+            "build_jcsp_archive_member) is not yet wired in pipeline.py. "
+            "Operator must land that integration; reference the NWC "
+            "branch below for the canonical container-build pattern."
         )
 
     # ── Lane J-NWC neural-weight-compression branch ─────────────────────
