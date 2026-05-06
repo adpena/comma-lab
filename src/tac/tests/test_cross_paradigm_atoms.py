@@ -286,3 +286,113 @@ def _archive_manifest(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return manifest
+
+
+def test_atoms_from_wr01_wavelet_plan_three_schema_branches() -> None:
+    """Pin the 3 WR01 input schemas the adapter recognizes:
+    1) planning manifest with ``sections`` (original)
+    2) apply-transform manifest with ``section_byte_delta`` (original)
+    3) exact-eval-packet with ``archive_bytes`` + ``archive_sha256``
+       + ``source_archive_sha256`` + ``changed_section_name``
+       (added 2026-05-06 in commit 0abfd60e — extincts silent-no-op bug class
+       where exact-eval-packet input produced 0 atoms)
+
+    Regression: prior to the 3rd branch the adapter would silently return
+    [] for exact-eval-packet input. The cross-paradigm ledger then dropped
+    the input but reported the file as ingested (--wr01-wavelet-plan path
+    accepted at CLI), creating a planning-vs-empirical mismatch.
+    """
+    # Branch 1: planning manifest with sections
+    branch1 = atoms_from_wr01_wavelet_plan(
+        {
+            "source_label": "regression_test",
+            "source_archive_sha256": "a" * 64,
+            "sections": [
+                {
+                    "section_name": "test_section",
+                    "atoms": [
+                        {
+                            "raw_offset": 0,
+                            "level": 0,
+                            "coefficient_index": 0,
+                            "estimated_wire_bytes": 7,
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    assert len(branch1) == 1, f"branch1 sections schema dropped: {branch1}"
+    assert branch1[0]["adapter"] == "wr01_wavelet_plan"
+
+    # Branch 2: apply-transform manifest
+    branch2 = atoms_from_wr01_wavelet_plan(
+        {
+            "source_label": "regression_test_apply",
+            "section_byte_delta": -50,
+            "candidate_archive_byte_delta_vs_source_estimate": -50,
+            "changed_section_name": "test_section",
+            "candidate_archive_path": "/dev/null",
+            "candidate_archive_sha256": "b" * 64,
+        }
+    )
+    assert len(branch2) == 1, f"branch2 apply-manifest schema dropped: {branch2}"
+    # apply-manifest branch uses a distinct adapter name to surface that
+    # the input was a CHANGED-archive manifest (not a planning manifest)
+    assert branch2[0]["adapter"] == "wr01_wavelet_apply_manifest"
+
+    # Branch 3 (regression): exact-eval-packet schema
+    branch3 = atoms_from_wr01_wavelet_plan(
+        {
+            "archive_bytes": 186222,
+            "archive_sha256": "d" * 64,
+            "source_archive_bytes": 186231,
+            "source_archive_sha256": "e" * 64,
+            "source_payload_sha256": "f" * 64,
+            "changed_section_name": "latents_and_sidecar_brotli",
+            "changed_section_sha256": "0" * 64,
+            "ready_for_submit": False,
+            "lane_id": "wr01_apply_pr106x_half",
+            "job_name": "wr01_apply_pr106x_half_20260506",
+        }
+    )
+    assert len(branch3) == 1, (
+        f"branch3 exact-eval-packet REGRESSION: schema branch returned "
+        f"{branch3} — silent-no-op trap reintroduced. Re-check the "
+        f"if-elif chain in atoms_from_wr01_wavelet_plan."
+    )
+    atom = branch3[0]
+    assert atom["adapter"] == "wr01_wavelet_plan"
+    assert atom["paradigm"] == "wr01_wavelet"
+    assert atom["family_group"] == "wr01_wavelet"
+    # byte_delta = archive_bytes - source_archive_bytes = 186222 - 186231 = -9
+    assert atom["byte_delta"] == -9, (
+        f"branch3 byte_delta computed wrong: expected -9, got {atom['byte_delta']}"
+    )
+    # source_archive_sha256 must propagate through to the atom
+    assert atom["source_archive_sha256"] == "e" * 64
+    # ready_for_submit=False → confidence 0.25 (planning-grade)
+    assert atom["confidence"] == 0.25
+    # blocker reflects the not-ready state
+    assert any(
+        "exact_eval_packet_not_ready_for_submit" in b
+        for b in atom["dispatch_blockers"]
+    )
+
+    # Verify ready_for_submit=True flips confidence to 0.5
+    branch3_ready = atoms_from_wr01_wavelet_plan(
+        {
+            "archive_bytes": 186222,
+            "archive_sha256": "d" * 64,
+            "source_archive_bytes": 186231,
+            "source_archive_sha256": "e" * 64,
+            "source_payload_sha256": "f" * 64,
+            "changed_section_name": "section",
+            "ready_for_submit": True,
+            "lane_id": "wr01_test_ready",
+        }
+    )
+    assert branch3_ready[0]["confidence"] == 0.5, (
+        f"ready_for_submit=True should boost confidence to 0.5, "
+        f"got {branch3_ready[0]['confidence']}"
+    )
