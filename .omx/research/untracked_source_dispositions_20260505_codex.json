@@ -3,6 +3,12 @@
     {
       "classification": "research_untracked",
       "disposition": "track",
+      "note": "track: durable 2026-05-06 dirty-state custody ledger; no raw provider state or score claim.",
+      "path": ".omx/research/dirty_state_custody_cleanup_20260506_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
       "note": "track: durable research/control-plane ledger or disposition manifest; small, non-provider source of truth.",
       "path": ".omx/research/hnerv_payload_scorecard_followup_20260505_codex.md"
     },
@@ -339,6 +345,24 @@
     {
       "classification": "source_untracked",
       "disposition": "track",
+      "note": "track: operator-active HNeRV wavelet sidechannel WIP; excluded from dirty-custody cleanup and expected to be owned by the score lane.",
+      "path": "src/tac/hnerv_wavelet_sidechannel.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-active HNeRV wavelet sidechannel regression WIP; excluded from dirty-custody cleanup and expected to be owned by the score lane.",
+      "path": "src/tac/tests/test_hnerv_wavelet_sidechannel.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator-active HNeRV wavelet sidechannel candidate-builder WIP; excluded from dirty-custody cleanup and expected to be owned by the score lane.",
+      "path": "tools/build_hnerv_wavelet_sidechannel_candidate.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
       "note": "track: canonical audit/dispatch/tooling CLI used by all-lanes preflight or recovery workflows.",
       "path": "tools/audit_engineered_corrections.py"
     },
@@ -392,6 +416,6 @@
     }
   ],
   "policy": "Every source-like untracked path must be track, recovery_queue, ignore_private, or ignore_rebuildable with rationale.",
-  "reviewed_at_utc": "2026-05-05T00:00:00Z",
+  "reviewed_at_utc": "2026-05-06T00:00:00Z",
   "schema": "pact_untracked_source_dispositions_v1"
 }
