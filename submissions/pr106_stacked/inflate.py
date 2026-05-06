@@ -1,7 +1,8 @@
 #!/usr/bin/env python
+# ruff: noqa: E402,I001
 """Inflate pr106_stacked: PR106 HNeRV decoder + composable subset of all
-3 score-aware sidechannels (latent + yshift + lrl1) layered into a single
-archive.
+4 score-aware sidechannels (latent + yshift + lrl1 + wavelet-WR01) layered
+into a single archive.
 
 This is the meta-composition lane. Sidechannels can appear in any subset
 (e.g., latent only, latent+yshift, all 3). Inflate applies them in
@@ -10,6 +11,7 @@ canonical order:
     1. latent  (section 0x01, applies to latents[p, d] BEFORE decoder)
     2. yshift  (section 0x02, applies to frames[k]    AFTER decoder)
     3. lrl1    (section 0x03, applies to frames[k]    AFTER yshift)
+    4. wavelet (section 0x04, explicit no-op runtime-consumption proof)
 
 End-of-sections sentinel = 0x00.
 
@@ -20,7 +22,7 @@ Wire format (single 0.bin in archive.zip):
     0       1      magic 0xFD                               stacked dispatch byte
     1       3      pr106_len (uint24 LE)                    bytes of inner PR106 archive
     4       N      pr106 packed archive (raw bytes)         starts with 0xFF magic
-    4+N     1      section_id_byte (0x01..0x03 OR 0x00)     0x00 = end-of-sections
+    4+N     1      section_id_byte (0x01..0x04 OR 0x00)     0x00 = end-of-sections
     5+N     2      section_len (uint16 LE)                  brotli'd section payload size
     7+N     M      brotli(section payload)                  decompresses to header + raw
     ...                                                     (more sections OR 0x00)
@@ -34,6 +36,8 @@ Section IDs:
     0x03 = lrl1 payload     (LR01 mode-8: "LR01" + u8 mode_id=8 + u8 K +
                              u16 low_h + u16 low_w + u32 n_frames + f32 coeff_step +
                              f32 basis_step + i8[K*low_h*low_w] + i8[n_frames*K])
+    0x04 = wavelet payload  (WR01 v1: charged atom coordinates; explicit no-op
+                             until a transform/apply mode is reviewed)
 
 Each section appears at most ONCE; sections may appear in any order on the
 wire but inflate APPLIES them in canonical order regardless of wire order.
@@ -49,7 +53,7 @@ docs/INDEX_score_aware_sidechannel_thread_20260504.md.
 """
 from __future__ import annotations
 
-import io
+import hashlib
 import struct
 import sys
 from pathlib import Path
@@ -77,6 +81,7 @@ SECTION_END = 0x00
 SECTION_LATENT = 0x01
 SECTION_YSHIFT = 0x02
 SECTION_LRL1 = 0x03
+SECTION_WAVELET = 0x04
 
 # ── Latent sidecar constants (mirror submissions/pr106_latent_sidecar) ─────
 LATENT_DELTA_SCALE = 0.01
@@ -92,6 +97,10 @@ LR01_MAGIC = b"LR01"
 LR01_HEADER = struct.Struct("<4sBBHHIff")  # magic + mode_id + K + low_h + low_w +
 #                                            n_frames + coeff_step + basis_step
 SIDECHANNEL_MODE_LRL1 = 8
+
+# ── Wavelet residual sidechannel (WR01) constants ─────────────────────────
+WR01_MAGIC = b"WR01"
+WR01_SCHEMA_VERSION = 1
 
 
 # ===================================================================
@@ -164,10 +173,12 @@ def parse_stacked_archive(
             sections[section_id] = decode_yshift_blob(blob)
         elif section_id == SECTION_LRL1:
             sections[section_id] = decode_lrl1_blob(blob)
+        elif section_id == SECTION_WAVELET:
+            sections[section_id] = decode_wavelet_blob(blob)
         else:
             raise ValueError(
                 f"unknown section id 0x{section_id:02X} (expected one of "
-                f"{{0x01, 0x02, 0x03}} or 0x00 sentinel)"
+                f"{{0x01, 0x02, 0x03, 0x04}} or 0x00 sentinel)"
             )
     if not sentinel_seen:
         # Loop exited via pos >= len(archive_bytes) WITHOUT hitting SECTION_END.
@@ -280,6 +291,104 @@ def decode_lrl1_blob(blob: bytes) -> dict:
         "basis_step": float(basis_step),
         "basis": basis_int,    # (K, low_h, low_w) int8
         "coeffs": coeff_int,   # (n_frames, K) int8
+    }
+
+
+def decode_wavelet_blob(blob: bytes) -> dict:
+    """Brotli-decompress + parse WR01 wavelet atom sidechannel.
+
+    This parser intentionally consumes atom coordinates without applying them
+    to pixels. That explicit no-op mode keeps the archive byte-closed and
+    stack-testable while preventing a false score claim before a reviewed
+    transform exists.
+    """
+    raw = brotli.decompress(blob)
+    reader = _Reader(raw)
+    magic = reader.read_exact(4)
+    if magic != WR01_MAGIC:
+        raise ValueError(f"bad WR01 magic: {magic!r}")
+    version = reader.read_u16()
+    if version != WR01_SCHEMA_VERSION:
+        raise ValueError(f"unsupported WR01 schema version: {version}")
+    section_count = reader.read_u16()
+    sections: list[dict] = []
+    total_atoms = 0
+    for _section_idx in range(section_count):
+        name_len = reader.read_u8()
+        section_name = reader.read_exact(name_len).decode("ascii")
+        source_section_sha256 = reader.read_exact(32).hex()
+        raw_bytes = reader.read_u32()
+        atom_count = reader.read_u16()
+        atoms: list[dict] = []
+        seen: set[tuple[int, int, int, int]] = set()
+        for _atom_idx in range(atom_count):
+            raw_offset = reader.read_u32()
+            raw_end = reader.read_u32()
+            level = reader.read_u8()
+            coefficient_index = reader.read_u32()
+            coefficient_quantized = reader.read_i32()
+            key = (raw_offset, raw_end, level, coefficient_index)
+            if key in seen:
+                raise ValueError(f"duplicate WR01 atom in {section_name}: {key}")
+            seen.add(key)
+            if raw_end < raw_offset or raw_end > raw_bytes:
+                raise ValueError(
+                    f"bad WR01 atom support for {section_name}: "
+                    f"{raw_offset}:{raw_end}/{raw_bytes}"
+                )
+            atoms.append(
+                {
+                    "raw_offset": int(raw_offset),
+                    "raw_end": int(raw_end),
+                    "level": int(level),
+                    "coefficient_index": int(coefficient_index),
+                    "coefficient_quantized": int(coefficient_quantized),
+                }
+            )
+        total_atoms += atom_count
+        sections.append(
+            {
+                "section_name": section_name,
+                "source_section_sha256": source_section_sha256,
+                "raw_bytes": int(raw_bytes),
+                "atom_count": int(atom_count),
+                "atoms": atoms,
+            }
+        )
+    reader.assert_eof()
+    return {
+        "magic": WR01_MAGIC.decode("ascii"),
+        "schema_version": int(version),
+        "section_count": int(section_count),
+        "total_atom_count": int(total_atoms),
+        "sections": sections,
+        "runtime_mode": "explicit_noop_consume_only",
+        "runtime_consumption_proof": wavelet_runtime_consumption_proof(sections),
+    }
+
+
+def wavelet_runtime_consumption_proof(sections: list[dict]) -> dict:
+    """Return a deterministic digest proving WR01 atom coordinates were read."""
+    h = hashlib.sha256()
+    total_atoms = 0
+    for section in sections:
+        h.update(str(section["section_name"]).encode())
+        h.update(str(section["source_section_sha256"]).encode())
+        h.update(str(section["raw_bytes"]).encode())
+        for atom in section["atoms"]:
+            total_atoms += 1
+            h.update(
+                (
+                    f"{atom['raw_offset']}:{atom['raw_end']}:"
+                    f"{atom['level']}:{atom['coefficient_index']}:"
+                    f"{atom['coefficient_quantized']};"
+                ).encode()
+            )
+    return {
+        "runtime_consumed": total_atoms > 0,
+        "decoded_atom_count": int(total_atoms),
+        "atom_coordinate_sha256": h.hexdigest(),
+        "score_claim": False,
     }
 
 
@@ -440,6 +549,15 @@ def inflate(src_bin: str, dst_raw: str) -> int:
             f"lrl1 section n_frames={lrl1_section['n_frames']} mismatches "
             f"decoder expected_frames={expected_frames}"
         )
+    wavelet_section = sections.get(SECTION_WAVELET)
+    if wavelet_section is not None:
+        proof = wavelet_section["runtime_consumption_proof"]
+        print(
+            f"[inflate] wavelet WR01 consumed in explicit no-op mode: "
+            f"atoms={proof['decoded_atom_count']}, "
+            f"digest={proof['atom_coordinate_sha256']}",
+            file=sys.stderr,
+        )
 
     # ── One-time LRL1 basis upsample (cached across all frames) ───────────
     upsampled_basis: torch.Tensor | None = None
@@ -455,6 +573,7 @@ def inflate(src_bin: str, dst_raw: str) -> int:
             ("latent", latent_section),
             ("yshift", yshift_section),
             ("lrl1", lrl1_section),
+            ("wavelet_wr01_noop", wavelet_section),
         ) if sec is not None
     ) or "NONE"
     print(
@@ -501,6 +620,38 @@ def inflate(src_bin: str, dst_raw: str) -> int:
 
     print(f"saved {n} frames")
     return n
+
+
+class _Reader:
+    def __init__(self, data: bytes) -> None:
+        self._data = data
+        self._pos = 0
+
+    def read_exact(self, n: int) -> bytes:
+        end = self._pos + n
+        if end > len(self._data):
+            raise ValueError("WR01 sidechannel truncated")
+        out = self._data[self._pos:end]
+        self._pos = end
+        return out
+
+    def read_u8(self) -> int:
+        return self.read_exact(1)[0]
+
+    def read_u16(self) -> int:
+        return struct.unpack("<H", self.read_exact(2))[0]
+
+    def read_u32(self) -> int:
+        return struct.unpack("<I", self.read_exact(4))[0]
+
+    def read_i32(self) -> int:
+        return struct.unpack("<i", self.read_exact(4))[0]
+
+    def assert_eof(self) -> None:
+        if self._pos != len(self._data):
+            raise ValueError(
+                f"WR01 sidechannel trailing bytes: pos={self._pos}, total={len(self._data)}"
+            )
 
 
 if __name__ == "__main__":

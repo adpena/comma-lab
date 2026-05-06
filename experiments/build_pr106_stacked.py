@@ -4,7 +4,7 @@
 
 This is the META-COMPOSITION builder. It takes:
   - 1 PR106 packed archive (anchor; contains 0.bin with 0xFF magic)
-  - 0..3 sister-lane archives (each a single-sidechannel wrapped PR106 archive)
+  - 0..4 sister-lane archives (each a single-sidechannel wrapped PR106 archive)
 
 and produces a single pr106_stacked archive with all the sidechannel sections
 composed into a single 0.bin under the wire format documented in
@@ -18,14 +18,16 @@ Wire format extracted from each sister archive:
                         Section payload = the appended SC01 brotli'd blob.
   - --lrl1 ARCHIVE    : pr106_lrl1_sidechannel archive (magic 0xFB).
                         Section payload = the appended LR01 brotli'd blob.
+  - --wavelet ARCHIVE : hnerv_wavelet_sidechannel archive (magic 0xFA).
+                        Section payload = the appended WR01 brotli'd blob.
 
 Each sidechannel input is OPTIONAL. With ZERO sister archives, the output is
 a "pure passthrough" pr106_stacked (PR106 + only end-sentinel) which inflates
 to byte-identical pixels as plain PR106 inflate — that's the closing-the-loop
 test in src/tac/tests/test_pr106_stacked.py.
 
-Sidechannel application order is canonical (latent → yshift → lrl1) regardless
-of CLI arg order or wire-section order.
+Sidechannel application order is canonical (latent → yshift → lrl1 → wavelet
+consume-only proof) regardless of CLI arg order or wire-section order.
 
 Usage (build the full 3-stack from sister archives, plus pure-passthrough):
     .venv/bin/python experiments/build_pr106_stacked.py \\
@@ -33,6 +35,7 @@ Usage (build the full 3-stack from sister archives, plus pure-passthrough):
         --latent <pr106_latent_sidecar/sidecar_archive.zip> \\
         --yshift <pr106_yshift_sidechannel_archive.zip> \\
         --lrl1   <pr106_lrl1_sidechannel_archive.zip> \\
+        --wavelet <hnerv_wavelet_sidechannel_candidate.zip> \\
         --output-dir experiments/results/lane_pr106_stacked_$(date -u +%Y%m%dT%H%M%SZ)
 
 CPU smoke (zero corrections, byte-identical pixel guarantee):
@@ -81,10 +84,12 @@ from inflate import (  # type: ignore[import-not-found]
     SECTION_LATENT,
     SECTION_YSHIFT,
     SECTION_LRL1,
+    SECTION_WAVELET,
     parse_stacked_archive,
     decode_latent_blob,
     decode_yshift_blob,
     decode_lrl1_blob,
+    decode_wavelet_blob,
 )
 
 
@@ -93,6 +98,20 @@ LATENT_OUTER_MAGIC = 0xFE
 LATENT_FORMAT_ID = 0x01
 YSHIFT_OUTER_MAGIC = 0xFC
 LRL1_OUTER_MAGIC = 0xFB
+WAVELET_OUTER_MAGIC = 0xFA
+WAVELET_OUTER_VERSION = 1
+
+
+def _read_single_zip_payload(archive_path: Path) -> tuple[str, bytes]:
+    """Read the only member from a single-member ZIP archive."""
+    with zipfile.ZipFile(archive_path) as z:
+        infos = z.infolist()
+        if len(infos) != 1:
+            raise ValueError(f"{archive_path}: expected one ZIP member, got {len(infos)}")
+        info = infos[0]
+        if info.is_dir():
+            raise ValueError(f"{archive_path}: single ZIP member is a directory")
+        return info.filename, z.read(info.filename)
 
 
 def _read_zip_bin(archive_path: Path) -> bytes:
@@ -232,16 +251,63 @@ def extract_lrl1_section_blob(lrl1_archive: Path) -> bytes:
     return bin_bytes[pos:end]  # already brotli'd LR01 blob
 
 
+def extract_wavelet_section_blob(
+    wavelet_archive: Path,
+    *,
+    expected_pr106_bytes: bytes | None = None,
+) -> bytes:
+    """Extract the WR01 brotli'd blob from an hnerv_wavelet_sidechannel archive.
+
+    Sister archive layout:
+        magic(0xFA) + version(1) + uint24 pr106_len + pr106_bytes +
+        uint32 wr01_len + brotli(WR01 atom payload)
+    """
+    member_name, bin_bytes = _read_single_zip_payload(wavelet_archive)
+    if not bin_bytes:
+        raise ValueError(f"{wavelet_archive}: empty {member_name}")
+    if len(bin_bytes) < 9:
+        raise ValueError(f"{wavelet_archive}: truncated wavelet wrapper")
+    if bin_bytes[0] != WAVELET_OUTER_MAGIC:
+        raise ValueError(
+            f"{wavelet_archive}: outer magic 0x{bin_bytes[0]:02X} != "
+            f"0x{WAVELET_OUTER_MAGIC:02X} (expected hnerv_wavelet_sidechannel)"
+        )
+    if bin_bytes[1] != WAVELET_OUTER_VERSION:
+        raise ValueError(
+            f"{wavelet_archive}: version {bin_bytes[1]} != {WAVELET_OUTER_VERSION}"
+        )
+    pr106_len = int.from_bytes(bin_bytes[2:5], "little")
+    pos = 5
+    pr106_end = pos + pr106_len
+    if pr106_end + 4 > len(bin_bytes):
+        raise ValueError(f"{wavelet_archive}: truncated before WR01 length")
+    pr106_bytes = bin_bytes[pos:pr106_end]
+    if expected_pr106_bytes is not None and pr106_bytes != expected_pr106_bytes:
+        raise ValueError(
+            f"{wavelet_archive}: embedded PR106 payload does not match stack anchor"
+        )
+    wr01_len = struct.unpack_from("<I", bin_bytes, pr106_end)[0]
+    wr01_start = pr106_end + 4
+    wr01_end = wr01_start + wr01_len
+    if wr01_end != len(bin_bytes):
+        raise ValueError(
+            f"{wavelet_archive}: WR01 trailing bytes (pos={wr01_end}, "
+            f"total={len(bin_bytes)})"
+        )
+    return bin_bytes[wr01_start:wr01_end]  # already brotli'd WR01 blob
+
+
 def build_stacked_archive_bytes(
     pr106_bytes: bytes,
     *,
     latent_blob: bytes | None = None,
     yshift_blob: bytes | None = None,
     lrl1_blob: bytes | None = None,
+    wavelet_blob: bytes | None = None,
 ) -> bytes:
     """Compose the pr106_stacked 0.bin layout.
 
-    Sections are written in canonical order (latent → yshift → lrl1) and
+    Sections are written in canonical order (latent → yshift → lrl1 → wavelet) and
     terminated with the 0x00 end-of-sections sentinel. Inflate-time
     application order is also canonical regardless of wire order, so this
     write order is just convention.
@@ -258,6 +324,7 @@ def build_stacked_archive_bytes(
         (SECTION_LATENT, latent_blob),
         (SECTION_YSHIFT, yshift_blob),
         (SECTION_LRL1, lrl1_blob),
+        (SECTION_WAVELET, wavelet_blob),
     ):
         if blob is None:
             continue
@@ -286,6 +353,8 @@ def main() -> int:
                         help="pr106_yshift_sidechannel archive.zip (optional).")
     parser.add_argument("--lrl1", type=Path, default=None,
                         help="pr106_lrl1_sidechannel archive.zip (optional).")
+    parser.add_argument("--wavelet", type=Path, default=None,
+                        help="hnerv_wavelet_sidechannel archive.zip (optional).")
     parser.add_argument("--output-dir", type=Path, required=True,
                         help="Output directory for composed archive + metadata.")
     args = parser.parse_args()
@@ -322,6 +391,15 @@ def main() -> int:
         sections[SECTION_LRL1] = extract_lrl1_section_blob(args.lrl1)
         print(f"[build-stacked] lrl1 section: {len(sections[SECTION_LRL1])} bytes "
               f"(from {args.lrl1})")
+    if args.wavelet is not None:
+        if not args.wavelet.is_file():
+            sys.exit(f"FATAL: --wavelet archive not found at {args.wavelet}")
+        sections[SECTION_WAVELET] = extract_wavelet_section_blob(
+            args.wavelet,
+            expected_pr106_bytes=pr106_bytes,
+        )
+        print(f"[build-stacked] wavelet WR01 section: {len(sections[SECTION_WAVELET])} bytes "
+              f"(from {args.wavelet})")
 
     # Stage C: validate each section by parsing back through the inflate-side
     # decoder. This is a roundtrip safety net that catches drift between
@@ -340,6 +418,17 @@ def main() -> int:
         print(f"[build-stacked] lrl1 verified: K={decoded_lrl1['K']}, "
               f"basis={decoded_lrl1['low_h']}x{decoded_lrl1['low_w']}, "
               f"n_frames={decoded_lrl1['n_frames']}")
+    if SECTION_WAVELET in sections:
+        decoded_wavelet = decode_wavelet_blob(sections[SECTION_WAVELET])
+        proof = decoded_wavelet["runtime_consumption_proof"]
+        print(
+            f"[build-stacked] wavelet WR01 verified: "
+            f"sections={decoded_wavelet['section_count']}, "
+            f"atoms={proof['decoded_atom_count']}, "
+            f"mode={decoded_wavelet['runtime_mode']}"
+        )
+    else:
+        decoded_wavelet = None
 
     # Stage D: compose the outer archive bytes.
     new_bin = build_stacked_archive_bytes(
@@ -347,6 +436,7 @@ def main() -> int:
         latent_blob=sections.get(SECTION_LATENT),
         yshift_blob=sections.get(SECTION_YSHIFT),
         lrl1_blob=sections.get(SECTION_LRL1),
+        wavelet_blob=sections.get(SECTION_WAVELET),
     )
 
     # Stage E: roundtrip parse-back (catches builder-vs-inflate drift).
@@ -384,10 +474,12 @@ def main() -> int:
         "latent_archive": str(args.latent) if args.latent else None,
         "yshift_archive": str(args.yshift) if args.yshift else None,
         "lrl1_archive": str(args.lrl1) if args.lrl1 else None,
+        "wavelet_archive": str(args.wavelet) if args.wavelet else None,
         "section_blob_bytes": {
             "latent": len(sections.get(SECTION_LATENT, b"")) if SECTION_LATENT in sections else None,
             "yshift": len(sections.get(SECTION_YSHIFT, b"")) if SECTION_YSHIFT in sections else None,
             "lrl1": len(sections.get(SECTION_LRL1, b"")) if SECTION_LRL1 in sections else None,
+            "wavelet": len(sections.get(SECTION_WAVELET, b"")) if SECTION_WAVELET in sections else None,
         },
         "n_sections": len(sections),
         "archive_path": str(archive_path),
@@ -395,6 +487,32 @@ def main() -> int:
         "delta_bytes_vs_pr106_zip": delta,
         "rate_component_score_delta_vs_pr106": score_delta_rate_only,
         "outer_dispatch_magic": f"0x{STACKED_MAGIC_BYTE:02X}",
+        "wavelet_runtime_consumption_proof": (
+            decoded_wavelet["runtime_consumption_proof"]
+            if decoded_wavelet is not None
+            else None
+        ),
+        "wavelet_runtime_mode": (
+            decoded_wavelet["runtime_mode"]
+            if decoded_wavelet is not None
+            else None
+        ),
+        "ready_for_archive_preflight": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": [
+            "compose_time_scaffold_only",
+            "requires_sister_sidechannels_to_win_exact_cuda_before_stack_dispatch",
+            "requires_archive_manifest_preflight",
+            "requires_exact_cuda_auth_eval",
+        ] + (
+            [
+                "wavelet_wr01_runtime_mode_is_explicit_noop",
+                "wavelet_wr01_rate_regression_without_distortion_benefit",
+                "requires_reviewed_wavelet_apply_transform",
+            ]
+            if decoded_wavelet is not None
+            else []
+        ),
         "tag": "[advisory only]",  # composition is byte-side; pixel score still needs CUDA
         "council_status": (
             "PROPOSAL — pre-registered at L1; gated on apogee_intN + 3 sidechannels "
@@ -404,7 +522,8 @@ def main() -> int:
         "next_step": (
             "Compose-time scaffold only. ALL 3 sister sidechannel lanes "
             "(lane_pr106_latent_sidecar + lane_pr106_yshift_sidechannel + "
-            "lane_pr106_lrl1_sidechannel) MUST land < 0.20800 [contest-CUDA] "
+            "lane_pr106_lrl1_sidechannel + optional WR01 wavelet proof section) "
+            "MUST land < 0.20800 [contest-CUDA] "
             "empirically before this stacked archive earns a contest dispatch. "
             "Per tools/sidechannel_stack_predictor.py --bits 5 --all, "
             "int4+full-stack predicted score = 0.163 (-0.046 vs PR106 0.20945)."

@@ -1,0 +1,45 @@
+{
+  "archive_path": "experiments/results/pr106_stacked_wavelet_wr01_noop_20260506_codex/pr106_stacked_archive.zip",
+  "archive_zip_bytes": 186626,
+  "council_status": "PROPOSAL \u2014 pre-registered at L1; gated on apogee_intN + 3 sidechannels all winning empirically (per docs/INDEX_score_aware_sidechannel_thread)",
+  "delta_bytes_vs_pr106_zip": 387,
+  "dispatch_blockers": [
+    "compose_time_scaffold_only",
+    "requires_sister_sidechannels_to_win_exact_cuda_before_stack_dispatch",
+    "requires_archive_manifest_preflight",
+    "requires_exact_cuda_auth_eval",
+    "wavelet_wr01_runtime_mode_is_explicit_noop",
+    "wavelet_wr01_rate_regression_without_distortion_benefit",
+    "requires_reviewed_wavelet_apply_transform"
+  ],
+  "lane_id": "lane_pr106_stacked",
+  "latent_archive": null,
+  "lrl1_archive": null,
+  "n_sections": 1,
+  "next_step": "Compose-time scaffold only. ALL 3 sister sidechannel lanes (lane_pr106_latent_sidecar + lane_pr106_yshift_sidechannel + lane_pr106_lrl1_sidechannel + optional WR01 wavelet proof section) MUST land < 0.20800 [contest-CUDA] empirically before this stacked archive earns a contest dispatch. Per tools/sidechannel_stack_predictor.py --bits 5 --all, int4+full-stack predicted score = 0.163 (-0.046 vs PR106 0.20945).",
+  "outer_dispatch_magic": "0xFD",
+  "pr106_archive": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+  "pr106_bin_bytes": 186131,
+  "pr106_zip_bytes": 186239,
+  "rate_component_score_delta_vs_pr106": 0.0002576874148582803,
+  "ready_for_archive_preflight": false,
+  "ready_for_exact_eval_dispatch": false,
+  "score_claim": false,
+  "section_blob_bytes": {
+    "latent": null,
+    "lrl1": null,
+    "wavelet": 379,
+    "yshift": null
+  },
+  "tag": "[advisory only]",
+  "wall_clock_seconds": 0.003412008285522461,
+  "wavelet_archive": "experiments/results/hnerv_wavelet_sidechannel_pr106x_20260506_codex/hnerv_wavelet_sidechannel_candidate.zip",
+  "wavelet_runtime_consumption_proof": {
+    "atom_coordinate_sha256": "23f7615b6cc5b011363b5c1822cbd81ef2b9e05305d380e85a747af5ca90eff8",
+    "decoded_atom_count": 32,
+    "runtime_consumed": true,
+    "score_claim": false
+  },
+  "wavelet_runtime_mode": "explicit_noop_consume_only",
+  "yshift_archive": null
+}

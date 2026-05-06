@@ -82,3 +82,62 @@ Add an inflate-runtime integration mode that consumes WR01 atoms in a
 deterministic transform, or explicitly proves a byte-closed no-op mode for
 stack-composition testing. Only after that should archive preflight decide
 whether exact CUDA auth eval is eligible.
+
+## Stack-Composition Runtime Follow-Up
+
+The WR01 payload is now accepted by the canonical PR106 stack-composition
+runtime as section `0x04`.
+
+Command:
+
+```bash
+.venv/bin/python experiments/build_pr106_stacked.py \
+  --pr106-archive experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip \
+  --wavelet experiments/results/hnerv_wavelet_sidechannel_pr106x_20260506_codex/hnerv_wavelet_sidechannel_candidate.zip \
+  --output-dir experiments/results/pr106_stacked_wavelet_wr01_noop_20260506_codex
+```
+
+Observed stacked output:
+
+- stack archive bytes: `186626`
+- PR106 anchor archive bytes: `186239`
+- byte delta vs PR106 anchor archive: `+387`
+- rate-only score delta vs PR106 anchor: `+0.0002576874148582803`
+- parsed section ids: `[4]`
+- WR01 section bytes: `379`
+- WR01 decoded atoms: `32`
+- WR01 runtime mode: `explicit_noop_consume_only`
+- WR01 runtime consumed: `true`
+- WR01 atom-coordinate SHA-256:
+  `23f7615b6cc5b011363b5c1822cbd81ef2b9e05305d380e85a747af5ca90eff8`
+- stacked archive SHA-256:
+  `e1d22ae5e712944d5c5dd55a4a048eca17f98461ab643c74b6d7ec56b8bd64f1`
+- build metadata SHA-256:
+  `475e73a0fbd083cdbe28625c9e8617685694cb19c701bd0fd9012461c06a5051`
+
+Tracked metadata:
+
+- `experiments/results/pr106_stacked_wavelet_wr01_noop_20260506_codex/build_metadata.json`
+
+Ignored local payload artifact:
+
+- `experiments/results/pr106_stacked_wavelet_wr01_noop_20260506_codex/pr106_stacked_archive.zip`
+
+Machine-readable blockers:
+
+- `compose_time_scaffold_only`
+- `requires_sister_sidechannels_to_win_exact_cuda_before_stack_dispatch`
+- `requires_archive_manifest_preflight`
+- `requires_exact_cuda_auth_eval`
+- `wavelet_wr01_runtime_mode_is_explicit_noop`
+- `wavelet_wr01_rate_regression_without_distortion_benefit`
+- `requires_reviewed_wavelet_apply_transform`
+
+Updated conclusion:
+
+The stack parser and builder now close the WR01 runtime-consumption loop, but
+the stacked artifact is intentionally worse on rate and has no distortion path.
+It is engineering evidence for composability and no-op resistance, not a
+candidate for exact eval. The next real score step is a reviewed wavelet apply
+transform that can plausibly buy at least `0.000258` score through SegNet or
+PoseNet improvement before exact CUDA dispatch is considered.

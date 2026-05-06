@@ -1,12 +1,12 @@
-"""Tests for pr106_stacked — composable subset of all 3 score-aware sidechannels.
+"""Tests for pr106_stacked — composable subset of all 4 score-aware sidechannels.
 
 Covers:
   - Outer wire format (0xFD magic + uint24 pr106_len + section list + 0x00 sentinel)
   - Empty (passthrough) composition: PR106 + only sentinel parses to 0 sections
-  - Single-section compositions: latent only, yshift only, lrl1 only
+  - Single-section compositions: latent only, yshift only, lrl1 only, wavelet only
   - Two-section compositions: latent+yshift, latent+lrl1, yshift+lrl1
-  - Three-section composition: all 3 (full stack)
-  - Canonical-order application invariant (latent → yshift → lrl1)
+  - Three-section composition: all 3 original sections (full stack)
+  - Canonical-order application invariant (latent → yshift → lrl1 → wavelet consume-only)
   - End-of-sections sentinel discipline (missing/trailing-bytes guards)
   - Magic-byte anti-corruption guards
   - Duplicate-section rejection
@@ -129,6 +129,38 @@ def _build_zero_lrl1_blob(K: int = 4, low_h: int = 48, low_w: int = 64) -> bytes
     return brotli.compress(raw, quality=11)
 
 
+def _build_wavelet_blob() -> bytes:
+    """Build a synthetic WR01 payload matching tac.hnerv_wavelet_sidechannel."""
+    from tac.hnerv_wavelet_sidechannel import encode_wavelet_atom_sidechannel
+
+    plan = {
+        "sections": [
+            {
+                "section_name": "latents_and_sidecar_brotli",
+                "source_section_sha256": "1" * 64,
+                "raw_bytes": 64,
+                "atoms": [
+                    {
+                        "raw_offset": 2,
+                        "raw_end": 4,
+                        "level": 0,
+                        "coefficient_index": 1,
+                        "coefficient_quantized": -7,
+                    },
+                    {
+                        "raw_offset": 16,
+                        "raw_end": 20,
+                        "level": 1,
+                        "coefficient_index": 8,
+                        "coefficient_quantized": 5,
+                    },
+                ],
+            }
+        ]
+    }
+    return encode_wavelet_atom_sidechannel(plan)
+
+
 # ===================================================================
 # Constants + outer wire format
 # ===================================================================
@@ -142,6 +174,7 @@ def test_stacked_constants():
     assert inflate.SECTION_LATENT == 0x01
     assert inflate.SECTION_YSHIFT == 0x02
     assert inflate.SECTION_LRL1 == 0x03
+    assert inflate.SECTION_WAVELET == 0x04
     # Sister-mirror constants
     assert inflate.SC01_MAGIC == b"SC01"
     assert inflate.SIDECHANNEL_MODE_Y_SHIFT == 7
@@ -149,6 +182,8 @@ def test_stacked_constants():
     assert inflate.LR01_MAGIC == b"LR01"
     assert inflate.SIDECHANNEL_MODE_LRL1 == 8
     assert inflate.LR01_HEADER.size == 22
+    assert inflate.WR01_MAGIC == b"WR01"
+    assert inflate.WR01_SCHEMA_VERSION == 1
     assert inflate.LATENT_NO_OP_DIM == 255
     assert abs(inflate.LATENT_DELTA_SCALE - 0.01) < 1e-12
 
@@ -254,6 +289,59 @@ def test_lrl1_only_composition():
     assert sections[inflate.SECTION_LRL1]["n_frames"] == 1200
     assert sections[inflate.SECTION_LRL1]["basis"].shape == (4, 48, 64)
     assert sections[inflate.SECTION_LRL1]["coeffs"].shape == (1200, 4)
+
+
+def test_wavelet_only_composition_consumes_wr01_noop_runtime():
+    """Wavelet section only is parsed and consumed as explicit no-op proof."""
+    if not PR106_ARCHIVE.is_file():
+        pytest.skip(f"PR106 anchor not present at {PR106_ARCHIVE}")
+    builder = _load_builder()
+    inflate = _load_inflate()
+
+    pr106_bytes = builder.extract_pr106_bytes(PR106_ARCHIVE)
+    wavelet_blob = _build_wavelet_blob()
+    new_bin = builder.build_stacked_archive_bytes(pr106_bytes, wavelet_blob=wavelet_blob)
+
+    sd, lat, meta, sections = inflate.parse_stacked_archive(new_bin)
+    assert set(sections.keys()) == {inflate.SECTION_WAVELET}
+    wavelet = sections[inflate.SECTION_WAVELET]
+    assert wavelet["magic"] == "WR01"
+    assert wavelet["runtime_mode"] == "explicit_noop_consume_only"
+    assert wavelet["total_atom_count"] == 2
+    assert wavelet["runtime_consumption_proof"]["runtime_consumed"] is True
+    assert wavelet["runtime_consumption_proof"]["decoded_atom_count"] == 2
+    assert len(sd) == 28
+    assert tuple(lat.shape) == (600, 28)
+    assert meta["n_pairs"] == 600
+
+
+def test_builder_extracts_wavelet_sidechannel_blob_from_candidate_archive(tmp_path: Path):
+    """Builder extracts WR01 blobs from 0xFA candidates and checks anchor bytes."""
+    if not PR106_ARCHIVE.is_file():
+        pytest.skip(f"PR106 anchor not present at {PR106_ARCHIVE}")
+    from tac.hnerv_lowlevel_packer import write_stored_single_member_zip
+    from tac.hnerv_wavelet_sidechannel import build_wavelet_sidechannel_archive_bytes
+
+    builder = _load_builder()
+    inflate = _load_inflate()
+
+    pr106_bytes = builder.extract_pr106_bytes(PR106_ARCHIVE)
+    wavelet_blob = _build_wavelet_blob()
+    candidate_payload = build_wavelet_sidechannel_archive_bytes(
+        source_payload=pr106_bytes,
+        sidechannel_blob=wavelet_blob,
+    )
+    archive = tmp_path / "wavelet_candidate.zip"
+    write_stored_single_member_zip(archive, member_name="x", payload=candidate_payload)
+
+    extracted = builder.extract_wavelet_section_blob(
+        archive,
+        expected_pr106_bytes=pr106_bytes,
+    )
+    assert extracted == wavelet_blob
+    decoded = inflate.decode_wavelet_blob(extracted)
+    assert decoded["runtime_mode"] == "explicit_noop_consume_only"
+    assert decoded["runtime_consumption_proof"]["decoded_atom_count"] == 2
 
 
 # ===================================================================
@@ -397,22 +485,22 @@ def test_outer_archive_rejects_trailing_bytes_after_sentinel():
 
 
 def test_outer_archive_rejects_unknown_section_id():
-    """Unknown section_id (0x04+) raises."""
+    """Unknown section_id (0x05+) raises."""
     if not PR106_ARCHIVE.is_file():
         pytest.skip(f"PR106 anchor not present at {PR106_ARCHIVE}")
     builder = _load_builder()
     inflate = _load_inflate()
     pr106_bytes = builder.extract_pr106_bytes(PR106_ARCHIVE)
-    # Hand-craft archive: PR106 + section_id=0x04 + 0-len section + sentinel
+    # Hand-craft archive: PR106 + section_id=0x05 + 0-len section + sentinel
     bad = (
         bytes([0xFD])
         + len(pr106_bytes).to_bytes(3, "little")
         + pr106_bytes
-        + bytes([0x04])
+        + bytes([0x05])
         + struct.pack("<H", 0)
         + bytes([0x00])
     )
-    with pytest.raises(ValueError, match="unknown section id 0x04"):
+    with pytest.raises(ValueError, match="unknown section id 0x05"):
         inflate.parse_stacked_archive(bad)
 
 
@@ -586,7 +674,6 @@ def test_apply_yshift_no_op_with_zero_row():
 def test_apply_lrl1_no_op_with_zero_coeffs():
     """All-zero coeffs yield identity correction (no pixel change)."""
     inflate = _load_inflate()
-    import torch
     K, low_h, low_w = 4, 48, 64
     H, W = 32, 32  # smaller test frame for speed
     rng = np.random.default_rng(seed=33)
@@ -685,7 +772,6 @@ def test_zero_correction_full_stack_yields_pure_pr106_pipeline():
     assert (lrl1_section["coeffs"] == 0).all(), "lrl1 coeffs are non-zero"
 
     # Apply each no-op transform manually and confirm identity preserved
-    n = pr106_lat.shape[0]
     snapshot = pr106_lat.clone()
     inflate.apply_latent_corrections(pr106_lat, latent_section["dim"], latent_section["delta_q"])
     assert torch.equal(pr106_lat, snapshot), "latent no-op mutated PR106 latents"
@@ -701,7 +787,6 @@ def test_builder_extracts_blob_from_yshift_sister_archive(tmp_path):
     if not PR106_ARCHIVE.is_file():
         pytest.skip(f"PR106 anchor not present at {PR106_ARCHIVE}")
     builder = _load_builder()
-    inflate = _load_inflate()
 
     # Build a sister yshift archive
     sister_dir = tmp_path / "yshift"
