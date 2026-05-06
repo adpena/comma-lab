@@ -3152,6 +3152,20 @@ _SCORE_ENTRYPOINT_RE = re.compile(
 _CPU_MPS_DEVICE_RE = re.compile(r"""(?ix)--device(?:\s+|=)(?:cpu|mps)\b""")
 
 
+def _is_oss_export_mirror_path(p: Path) -> bool:
+    """True if `p` is inside the comma_lab_public_export OSS staging mirror.
+
+    Round 14 R14-1 fix (2026-05-06): centralized helper. Every scanner that
+    walks `experiments/` (or any other tree the mirror lives under) MUST
+    consult this helper rather than reimplementing the check inline. This
+    breaks the cascade-bug class documented in feedback_recursive_review_
+    cascade_pattern_20260506.md — the previous narrow-scope per-scanner
+    fixes (R12-R13) repeatedly missed siblings, requiring R12 / R13 / R14
+    rounds of fixes.
+    """
+    return "comma_lab_public_export" in p.parts
+
+
 def _iter_python_files(root: Path, dirs: list[str]) -> list[Path]:
     """Collect every .py file under `dirs` (recursively). Skips __pycache__
     and the comma_lab_public_export OSS staging mirror.
@@ -6984,6 +6998,9 @@ def preflight_loader_format_safety(
         if not d_path.exists():
             continue
         for py_path in d_path.rglob("*.py"):
+            # R14-1: skip OSS-export staging mirror via centralized helper.
+            if _is_oss_export_mirror_path(py_path):
+                continue
             n_scanned += 1
             all_violations.extend(_scan_python_for_unsafe_renderer_loader(py_path))
 
@@ -7486,6 +7503,9 @@ def check_kl_distill_uses_roundtripped_frames(
             # Skip __pycache__, tests live in src/tac/tests not here.
             if "__pycache__" in p.parts:
                 continue
+            # R14-1: skip OSS-export staging mirror via centralized helper.
+            if _is_oss_export_mirror_path(p):
+                continue
             n_scanned += 1
             violations.extend(_scan_python_for_kl_distill_raw_pairs(p, root))
     # SegMapTrainer is a library-side KL caller, not an experiment script.
@@ -7757,10 +7777,16 @@ def check_archive_builders_use_deterministic_zip(
         if "__pycache__" in p.parts:
             continue
         # Round 13 R13-2 fix (2026-05-06): skip OSS-export staging mirror.
-        # This is the last rglob-on-experiments scanner that needed the
-        # exemption — R12 missed it because it doesn't go through
+        # R12 missed this scanner because it doesn't go through
         # _iter_python_files (uses direct rglob with a custom glob pattern).
-        if "comma_lab_public_export" in p.parts:
+        # R14-1 (2026-05-06) corrected the previous "this is the LAST
+        # scanner" claim — it was false; R14 found 3 more sites
+        # (check_kl_distill_uses_roundtripped_frames,
+        # preflight_loader_format_safety, check_no_raw_zip_extractall) and
+        # introduced the centralized _is_oss_export_mirror_path helper to
+        # break the cascade pattern. New scanners walking experiments/ MUST
+        # call _is_oss_export_mirror_path; do not reimplement inline.
+        if _is_oss_export_mirror_path(p):
             continue
         n_scanned += 1
         violations.extend(_scan_python_for_nondeterministic_zip(p, root))
@@ -7820,6 +7846,9 @@ def check_no_raw_zip_extractall(
         if not base.exists():
             continue
         for path in sorted(base.rglob("*.py")):
+            # R14-1: skip OSS-export staging mirror via centralized helper.
+            if _is_oss_export_mirror_path(path):
+                continue
             rel = path.relative_to(root).as_posix()
             if rel in _RAW_EXTRACTALL_ALLOWED:
                 continue
