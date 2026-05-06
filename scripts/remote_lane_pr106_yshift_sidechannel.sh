@@ -46,6 +46,7 @@ PR106_YSHIFT_SCORE_TABLE_LANE_ID="${PR106_YSHIFT_SCORE_TABLE_LANE_ID:-lane_pr106
 PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID="${PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID:-}"
 PR106_YSHIFT_SCORE_TABLE_BATCH_PAIRS="${PR106_YSHIFT_SCORE_TABLE_BATCH_PAIRS:-8}"
 PR106_YSHIFT_SCORE_TABLE_CANDIDATE_BATCH_SIZE="${PR106_YSHIFT_SCORE_TABLE_CANDIDATE_BATCH_SIZE:-32}"
+PR106_YSHIFT_SCORE_TABLE_RESUME="${PR106_YSHIFT_SCORE_TABLE_RESUME:-1}"
 PR106_ARCHIVE="${PR106_ARCHIVE:-experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip}"
 
 if ! [[ "$PR106_YSHIFT_MODE" =~ ^(zero|score_table|gradient|brute_force)$ ]]; then
@@ -122,18 +123,27 @@ if [ "$PR106_YSHIFT_MODE" = "score_table" ] && [ -z "$PR106_YSHIFT_SCORE_TABLE_N
     log "=== Stage 1a: generate CUDA yshift score table ==="
     SCORE_TABLE_DIR="$LOG_DIR/score_table"
     mkdir -p "$SCORE_TABLE_DIR"
-    "$PYBIN" -u experiments/build_pr106_yshift_score_table.py \
-        --pr106-archive "$PR106_ARCHIVE" \
-        --out-dir "$SCORE_TABLE_DIR" \
-        --candidate-radius "$PR106_YSHIFT_CANDIDATE_RADIUS" \
-        --score-step "$SCORE_STEP" \
-        --n-pairs "$PR106_YSHIFT_N_PAIRS" \
-        --batch-pairs "$PR106_YSHIFT_SCORE_TABLE_BATCH_PAIRS" \
-        --candidate-batch-size "$PR106_YSHIFT_SCORE_TABLE_CANDIDATE_BATCH_SIZE" \
-        --lane-id "$PR106_YSHIFT_SCORE_TABLE_LANE_ID" \
-        --instance-job-id "$PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID" 2>&1 | tee -a "$LOG_DIR/run.log"
     PR106_YSHIFT_SCORE_TABLE_NPY="$SCORE_TABLE_DIR/score_table.npy"
     PR106_YSHIFT_SCORE_TABLE_MANIFEST="$SCORE_TABLE_DIR/score_table_manifest.json"
+    if [ "$PR106_YSHIFT_SCORE_TABLE_RESUME" = "1" ] && [ -f "$PR106_YSHIFT_SCORE_TABLE_NPY" ] && [ -f "$PR106_YSHIFT_SCORE_TABLE_MANIFEST" ]; then
+        log "Stage 1a RESUME: validating completed score table at $PR106_YSHIFT_SCORE_TABLE_NPY"
+    fi
+    SCORE_TABLE_ARGS=(
+        experiments/build_pr106_yshift_score_table.py
+        --pr106-archive "$PR106_ARCHIVE"
+        --out-dir "$SCORE_TABLE_DIR"
+        --candidate-radius "$PR106_YSHIFT_CANDIDATE_RADIUS"
+        --score-step "$SCORE_STEP"
+        --n-pairs "$PR106_YSHIFT_N_PAIRS"
+        --batch-pairs "$PR106_YSHIFT_SCORE_TABLE_BATCH_PAIRS"
+        --candidate-batch-size "$PR106_YSHIFT_SCORE_TABLE_CANDIDATE_BATCH_SIZE"
+        --lane-id "$PR106_YSHIFT_SCORE_TABLE_LANE_ID"
+        --instance-job-id "$PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID"
+    )
+    if [ "$PR106_YSHIFT_SCORE_TABLE_RESUME" = "1" ]; then
+        SCORE_TABLE_ARGS+=(--resume-checkpoint)
+    fi
+    "$PYBIN" -u "${SCORE_TABLE_ARGS[@]}" 2>&1 | tee -a "$LOG_DIR/run.log"
     if [ ! -f "$PR106_YSHIFT_SCORE_TABLE_NPY" ] || [ ! -f "$PR106_YSHIFT_SCORE_TABLE_MANIFEST" ]; then
         log "FATAL: score-table generation did not produce table+manifest"
         exit 3

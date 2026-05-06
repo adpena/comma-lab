@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import importlib.util
+import json
 import math
 import os
 import sys
@@ -74,6 +75,10 @@ TERMINAL_PREFIXES = (
     "stale_superseded",
     "stopped_",
 )
+SCORE_TABLE_NPY = "score_table.npy"
+SCORE_TABLE_MANIFEST = "score_table_manifest.json"
+CHECKPOINT_TABLE_NPY = "score_table.partial.npy"
+CHECKPOINT_MANIFEST = "score_table_checkpoint.json"
 
 
 def _sha256_file(path: Path) -> str:
@@ -82,6 +87,21 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _atomic_write_text(path: Path, text: str) -> None:
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    tmp.replace(path)
+
+
+def _atomic_save_npy(path: Path, array: np.ndarray) -> None:
+    tmp = path.with_name(path.name + ".tmp")
+    with tmp.open("wb") as f:
+        np.save(f, array)
+        f.flush()
+        os.fsync(f.fileno())
+    tmp.replace(path)
 
 
 def _read_pr106_bytes(pr106_archive: Path) -> bytes:
@@ -93,6 +113,155 @@ def _read_pr106_bytes(pr106_archive: Path) -> bytes:
 
 def _is_terminal_status(status: str) -> bool:
     return any(status.startswith(prefix) for prefix in TERMINAL_PREFIXES)
+
+
+def completed_prefix_frames(table: np.ndarray) -> int:
+    """Return the finite scored-row prefix, rejecting non-prefix checkpoints."""
+    if table.ndim != 2:
+        raise ValueError(f"score table checkpoint must be 2-D, got shape {table.shape}")
+    finite_rows = np.isfinite(table).all(axis=1)
+    incomplete = np.flatnonzero(~finite_rows)
+    if incomplete.size == 0:
+        return int(table.shape[0])
+    first_incomplete = int(incomplete[0])
+    if finite_rows[first_incomplete:].any():
+        raise ValueError("score table checkpoint has non-prefix finite rows")
+    return first_incomplete
+
+
+def resume_safe_prefix_frames(table: np.ndarray) -> int:
+    """Return a pair-aligned prefix so resume never trusts a half-scored pair."""
+    complete = completed_prefix_frames(table)
+    if complete < int(table.shape[0]) and complete % 2:
+        return complete - 1
+    return complete
+
+
+def _score_table_contract(
+    args: argparse.Namespace,
+    *,
+    candidates_np: np.ndarray,
+    candidates_path: Path,
+    n_frames: int,
+) -> dict[str, Any]:
+    return {
+        "source_archive_sha256": _sha256_file(args.pr106_archive),
+        "candidate_grid_sha256": _sha256_file(candidates_path),
+        "candidate_radius": int(args.candidate_radius),
+        "candidate_count": int(candidates_np.shape[0]),
+        "n_pairs": int(args.n_pairs),
+        "n_frames": int(n_frames),
+        "score_table_shape": [int(n_frames), int(candidates_np.shape[0])],
+        "score_step": float(args.score_step),
+        "max_frames": None if args.max_frames is None else int(args.max_frames),
+    }
+
+
+def _validate_checkpoint_contract(manifest: dict[str, Any], contract: dict[str, Any]) -> None:
+    for key, expected in contract.items():
+        if manifest.get(key) != expected:
+            raise ValueError(
+                f"score-table checkpoint contract mismatch for {key}: "
+                f"expected {expected!r}, got {manifest.get(key)!r}"
+            )
+
+
+def _checkpoint_paths(out_dir: Path) -> tuple[Path, Path]:
+    return out_dir / CHECKPOINT_TABLE_NPY, out_dir / CHECKPOINT_MANIFEST
+
+
+def _load_score_table_checkpoint(
+    args: argparse.Namespace,
+    *,
+    contract: dict[str, Any],
+) -> tuple[np.ndarray, int] | None:
+    table_path, manifest_path = _checkpoint_paths(args.out_dir)
+    if not table_path.is_file() and not manifest_path.is_file():
+        return None
+    if not table_path.is_file() or not manifest_path.is_file():
+        raise ValueError(
+            "incomplete score-table checkpoint; expected both "
+            f"{table_path.name} and {manifest_path.name}"
+        )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("manifest_schema") != "pr106_yshift_score_table_checkpoint_v1":
+        raise ValueError(f"unsupported score-table checkpoint schema: {manifest.get('manifest_schema')!r}")
+    _validate_checkpoint_contract(manifest, contract)
+    table = np.load(table_path)
+    expected_shape = tuple(contract["score_table_shape"])
+    if tuple(table.shape) != expected_shape:
+        raise ValueError(f"score-table checkpoint shape mismatch: expected {expected_shape}, got {table.shape}")
+    complete_frames = resume_safe_prefix_frames(table)
+    if complete_frames < completed_prefix_frames(table):
+        table[complete_frames:] = np.nan
+    print(
+        "[yshift-score-table] resumed checkpoint "
+        f"{table_path} with {complete_frames}/{table.shape[0]} complete frames",
+        flush=True,
+    )
+    return table.astype(np.float32, copy=False), complete_frames
+
+
+def _write_score_table_checkpoint(
+    args: argparse.Namespace,
+    *,
+    table: np.ndarray,
+    contract: dict[str, Any],
+    claim_row: dict[str, str],
+    started_at: float,
+    terminal: bool,
+) -> None:
+    table_path, manifest_path = _checkpoint_paths(args.out_dir)
+    complete_frames = resume_safe_prefix_frames(table)
+    table_to_write = table
+    if complete_frames < completed_prefix_frames(table):
+        table_to_write = table.copy()
+        table_to_write[complete_frames:] = np.nan
+    _atomic_save_npy(table_path, table_to_write)
+    manifest = {
+        "manifest_schema": "pr106_yshift_score_table_checkpoint_v1",
+        "producer": "experiments/build_pr106_yshift_score_table.py",
+        "score_claim": False,
+        "terminal": bool(terminal),
+        "completed_frames": int(complete_frames),
+        "completed_pairs_floor": int(complete_frames // 2),
+        "elapsed_seconds_this_invocation": float(time.time() - started_at),
+        "lane_claim": claim_row,
+        **contract,
+        "checkpoint_table_npy_path": str(table_path),
+        "checkpoint_table_npy_bytes": int(table_path.stat().st_size),
+        "checkpoint_table_npy_sha256": _sha256_file(table_path),
+        "updated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    _atomic_write_text(manifest_path, json_text(manifest))
+
+
+def _reuse_completed_score_table_if_valid(
+    args: argparse.Namespace,
+    *,
+    contract: dict[str, Any],
+) -> bool:
+    table_path = args.out_dir / SCORE_TABLE_NPY
+    manifest_path = args.out_dir / SCORE_TABLE_MANIFEST
+    if not table_path.is_file() and not manifest_path.is_file():
+        return False
+    if not table_path.is_file() or not manifest_path.is_file():
+        raise ValueError(
+            "incomplete completed score table; expected both "
+            f"{table_path.name} and {manifest_path.name}"
+        )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    _validate_checkpoint_contract(manifest, contract)
+    if manifest.get("ready_for_builder") is not True or manifest.get("score_claim") is not False:
+        raise ValueError("existing score-table manifest is not a reusable non-claim builder artifact")
+    table = np.load(table_path, mmap_mode="r")
+    expected_shape = tuple(contract["score_table_shape"])
+    if tuple(table.shape) != expected_shape:
+        raise ValueError(f"completed score-table shape mismatch: expected {expected_shape}, got {table.shape}")
+    if completed_prefix_frames(np.asarray(table)) != int(table.shape[0]):
+        raise ValueError("completed score table contains non-finite rows")
+    print(f"[yshift-score-table] reusing completed table {table_path}", flush=True)
+    return True
 
 
 def verify_active_lane_claim(
@@ -278,6 +447,8 @@ def score_frame_candidate_table(
 
 def build_dry_run_plan(args: argparse.Namespace, candidates: np.ndarray) -> dict[str, Any]:
     n_frames = int(args.n_pairs) * 2
+    if args.max_frames is not None:
+        n_frames = min(n_frames, int(args.max_frames))
     return {
         "manifest_schema": "pr106_yshift_score_table_plan_v1",
         "producer": "experiments/build_pr106_yshift_score_table.py",
@@ -293,6 +464,7 @@ def build_dry_run_plan(args: argparse.Namespace, candidates: np.ndarray) -> dict
         "n_frames": n_frames,
         "expected_score_table_shape": [n_frames, int(candidates.shape[0])],
         "score_step": float(args.score_step),
+        "max_frames": None if args.max_frames is None else int(args.max_frames),
         "objective": "100*seg_dist + sqrt(10*pose_dist), without rate constant",
         "pair_marginal_semantics": "one frame perturbed at a time inside the official two-frame scorer pair",
         "dispatch_blockers": [
@@ -310,6 +482,9 @@ def build_score_table(args: argparse.Namespace) -> int:
     candidates_np = build_yshift_candidate_grid(radius=args.candidate_radius)
     candidates_path = args.out_dir / "candidate_grid.npy"
     np.save(candidates_path, candidates_np)
+    n_frames = int(args.n_pairs) * 2
+    if args.max_frames is not None:
+        n_frames = min(n_frames, int(args.max_frames))
 
     if args.dry_run_plan:
         plan = build_dry_run_plan(args, candidates_np)
@@ -330,6 +505,14 @@ def build_score_table(args: argparse.Namespace) -> int:
         lane_id=args.lane_id,
         instance_job_id=args.instance_job_id,
     )
+    contract = _score_table_contract(
+        args,
+        candidates_np=candidates_np,
+        candidates_path=candidates_path,
+        n_frames=n_frames,
+    )
+    if args.resume_checkpoint and _reuse_completed_score_table_if_valid(args, contract=contract):
+        return 0
 
     device = torch.device("cuda", int(os.getenv("LOCAL_RANK", "0")))
     torch.cuda.set_device(device)
@@ -350,19 +533,35 @@ def build_score_table(args: argparse.Namespace) -> int:
         prefetch_queue_depth=args.prefetch_queue_depth,
     )
 
-    n_frames = int(args.n_pairs) * 2
-    if args.max_frames is not None:
-        n_frames = min(n_frames, int(args.max_frames))
     n_pairs_to_score = math.ceil(n_frames / 2)
-    table = np.full((n_frames, candidates_np.shape[0]), np.nan, dtype=np.float32)
+    checkpoint = _load_score_table_checkpoint(args, contract=contract) if args.resume_checkpoint else None
+    if checkpoint is None:
+        table = np.full((n_frames, candidates_np.shape[0]), np.nan, dtype=np.float32)
+        resume_pair_cursor = 0
+    else:
+        table, complete_frames = checkpoint
+        resume_pair_cursor = min(math.ceil(complete_frames / 2), n_pairs_to_score)
     candidates = torch.from_numpy(candidates_np.astype(np.int8)).to(device)
 
     pair_cursor = 0
     for _, _, gt_batch in gt_loader:
         if pair_cursor >= n_pairs_to_score:
             break
+        gt_rows = int(gt_batch.shape[0])
+        batch_pairs = min(gt_rows, n_pairs_to_score - pair_cursor)
+        if pair_cursor + batch_pairs <= resume_pair_cursor:
+            pair_cursor += batch_pairs
+            print(
+                f"[yshift-score-table] skipped checkpointed {min(pair_cursor * 2, n_frames)}/{n_frames} frames",
+                flush=True,
+            )
+            continue
+        local_start = max(0, resume_pair_cursor - pair_cursor)
+        if local_start:
+            gt_batch = gt_batch[local_start:]
+            pair_cursor += local_start
+            batch_pairs -= local_start
         gt_batch = gt_batch.to(device)
-        batch_pairs = min(int(gt_batch.shape[0]), n_pairs_to_score - pair_cursor)
         comp_batch = _decode_pr106_pairs(
             decoder,
             latents,
@@ -389,12 +588,21 @@ def build_score_table(args: argparse.Namespace) -> int:
                 table[frame1] = row1
         pair_cursor += batch_pairs
         print(f"[yshift-score-table] scored {min(pair_cursor * 2, n_frames)}/{n_frames} frames", flush=True)
+        if args.resume_checkpoint:
+            _write_score_table_checkpoint(
+                args,
+                table=table,
+                contract=contract,
+                claim_row=claim_row,
+                started_at=started,
+                terminal=False,
+            )
 
     if not np.isfinite(table).all():
         raise SystemExit("score table contains unfilled or non-finite entries")
 
-    table_path = args.out_dir / "score_table.npy"
-    np.save(table_path, table)
+    table_path = args.out_dir / SCORE_TABLE_NPY
+    _atomic_save_npy(table_path, table)
     elapsed = time.time() - started
     zero_idx = int(np.flatnonzero((candidates_np == 0).all(axis=1))[0])
     best_idx = table.argmin(axis=1)
@@ -427,6 +635,7 @@ def build_score_table(args: argparse.Namespace) -> int:
         "n_frames": int(n_frames),
         "score_table_shape": [int(table.shape[0]), int(table.shape[1])],
         "score_step": float(args.score_step),
+        "max_frames": None if args.max_frames is None else int(args.max_frames),
         "objective": "100*seg_dist + sqrt(10*pose_dist), without rate constant",
         "pair_marginal_semantics": "one frame perturbed at a time inside the official two-frame scorer pair",
         "zero_candidate_index": int(zero_idx),
@@ -438,13 +647,26 @@ def build_score_table(args: argparse.Namespace) -> int:
         "torch_version": torch.__version__,
         "cuda_version": getattr(torch.version, "cuda", None),
         "elapsed_seconds": float(elapsed),
+        "resume_checkpoint_enabled": bool(args.resume_checkpoint),
+        "resume_pair_cursor_at_start": int(resume_pair_cursor),
+        "checkpoint_table_npy_path": str(args.out_dir / CHECKPOINT_TABLE_NPY) if args.resume_checkpoint else None,
+        "checkpoint_manifest_path": str(args.out_dir / CHECKPOINT_MANIFEST) if args.resume_checkpoint else None,
         "dispatch_blockers": [
             "requires_archive_build_from_table",
             "requires_exact_cuda_auth_eval_on_built_archive",
         ],
     }
-    manifest_path = args.out_dir / "score_table_manifest.json"
-    manifest_path.write_text(json_text(manifest), encoding="utf-8")
+    manifest_path = args.out_dir / SCORE_TABLE_MANIFEST
+    _atomic_write_text(manifest_path, json_text(manifest))
+    if args.resume_checkpoint:
+        _write_score_table_checkpoint(
+            args,
+            table=table,
+            contract=contract,
+            claim_row=claim_row,
+            started_at=started,
+            terminal=True,
+        )
     print(f"[yshift-score-table] wrote table {table_path}")
     print(f"[yshift-score-table] wrote manifest {manifest_path}")
     return 0
@@ -476,6 +698,8 @@ def main() -> int:
                         help="Required for real CUDA scoring; must match an active lane claim row.")
     parser.add_argument("--dry-run-plan", action="store_true",
                         help="Write candidate-grid and plan metadata only; no CUDA/scorer/claim required.")
+    parser.add_argument("--resume-checkpoint", action="store_true",
+                        help="Resume and update score_table.partial.npy in --out-dir after each DALI batch.")
     args = parser.parse_args()
     return build_score_table(args)
 
