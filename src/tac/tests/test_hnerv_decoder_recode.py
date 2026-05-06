@@ -10,7 +10,9 @@ import brotli
 from tac.hnerv_decoder_recode import (
     PACKED_STATE_SCHEMA,
     build_structural_recode_profile,
+    decode_global_prev_symbol_context_range_fixture,
     decode_prev_symbol_context_range_fixture,
+    encode_global_prev_symbol_context_range_fixture,
     encode_prev_symbol_context_range_fixture,
     parse_packed_decoder_brotli,
 )
@@ -75,6 +77,19 @@ def test_structural_recode_profile_is_planning_only_and_raw_equal() -> None:
     assert entropy["per_tensor_prev_symbol_entropy_floor_plus_raw_scales_bytes"] >= entropy[
         "per_tensor_prev_symbol_entropy_floor_bytes"
     ]
+    global_context = next(
+        row
+        for row in profile["variants"]
+        if row["variant"] == "range_prev_symbol_global_q_streams_plus_raw_scales"
+    )
+    assert global_context["codec"] == "HDC2_global_prev_symbol_range_uint8"
+    assert global_context["parity_fixture"] is True
+    assert global_context["archive_ready"] is False
+    assert global_context["raw_equal"] is True
+    assert global_context["q_roundtrip_equal"] is True
+    assert global_context["context_count"] <= context_range["context_count"]
+    assert global_context["context_token_count"] == context_range["context_token_count"]
+    assert "byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales" in global_context
 
 
 def test_context_range_fixture_roundtrips_and_is_deterministic() -> None:
@@ -93,6 +108,23 @@ def test_context_range_fixture_roundtrips_and_is_deterministic() -> None:
     assert first_stats["context_count"] > 0
     assert first_stats["context_token_count"] == len(parsed.q_stream) - len(parsed.records)
     assert first_stats["header_bytes"] + first_stats["range_payload_bytes"] + len(parsed.scale_stream) <= len(first)
+
+
+def test_global_context_range_fixture_roundtrips_and_amortizes_context_table() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+
+    per_tensor, per_tensor_stats = encode_prev_symbol_context_range_fixture(parsed)
+    global_payload, global_stats = encode_global_prev_symbol_context_range_fixture(parsed)
+    restored = decode_global_prev_symbol_context_range_fixture(global_payload)
+
+    assert global_payload.startswith(b"HDC2")
+    assert restored.to_raw() == parsed.to_raw()
+    assert restored.q_stream == parsed.q_stream
+    assert restored.scale_stream == parsed.scale_stream
+    assert global_stats["context_token_count"] == per_tensor_stats["context_token_count"]
+    assert global_stats["context_count"] <= per_tensor_stats["context_count"]
+    assert global_stats["header_bytes"] < per_tensor_stats["header_bytes"]
+    assert len(global_payload) < len(per_tensor)
 
 
 def test_context_range_fixture_rejects_duplicate_previous_symbol_context() -> None:

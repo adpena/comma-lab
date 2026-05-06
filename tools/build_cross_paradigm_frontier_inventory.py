@@ -77,7 +77,7 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         title="HNeRV per-tensor/context entropy recode",
         paradigms=("alpha_mask_payload", "entropy_coding"),
         role="stacker_rate_only",
-        status="parity_fixture_landed_header_overhead_blocked",
+        status="shared_context_fixture_landed_still_byte_negative",
         evidence_grade="empirical entropy-floor plus parity fixture profile",
         stackability="medium-high: could stack with HNeRV raw-equivalent section recodes",
         replacement_potential="low: recodes current decoder representation",
@@ -89,11 +89,11 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         ),
         evidence_paths=("experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",),
         next_patch=(
-            "Collapse HDC1 context-table overhead with shared/codebook-clustered contexts, then "
-            "rerun byte gap versus the per-tensor prev-symbol entropy floor before archive rebuild."
+            "Cluster or codebook-share HDC2 context tables; HDC2 cut PR106x penalty from "
+            "+96,671B to +51,103B but remains byte-negative."
         ),
         blockers=(
-            "current parity HDC1 fixture is raw-equal but header-overhead byte-negative",
+            "HDC1/HDC2 parity fixtures are raw-equal but still byte-negative versus source brotli",
             "requires deterministic decoder runtime before any exact eval",
         ),
     ),
