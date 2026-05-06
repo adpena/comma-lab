@@ -10364,6 +10364,8 @@ def check_profile_keys_have_resolvers(
         for p in d_path.rglob("*.py"):
             if "__pycache__" in p.parts:
                 continue
+            if _is_oss_export_mirror_path(p):
+                continue
             try:
                 text = p.read_text()
             except (UnicodeDecodeError, FileNotFoundError):
@@ -11271,6 +11273,8 @@ def check_kl_div_reduction_correct(
             continue
         for p in d_path.rglob("*.py"):
             if "__pycache__" in p.parts:
+                continue
+            if _is_oss_export_mirror_path(p):
                 continue
             n_scanned += 1
             violations.extend(_scan_python_for_kl_div_batchmean(p, root))
@@ -12920,6 +12924,8 @@ def check_no_off_manifold_pose_zeros(
                 continue
             if f.name in skip_files:
                 continue
+            if _is_oss_export_mirror_path(f):
+                continue
             try:
                 text = f.read_text(errors="ignore")
             except (FileNotFoundError, PermissionError):
@@ -13457,6 +13463,8 @@ def check_no_shadowed_module_import_used_before_local_import(
         for py in d_path.rglob("*.py"):
             if any(p in skip_parts for p in py.parts):
                 continue
+            if _is_oss_export_mirror_path(py):
+                continue
             try:
                 tree = ast.parse(py.read_text())
             except SyntaxError:
@@ -13678,6 +13686,8 @@ def check_python_files_compile(
         for py in d_path.rglob("*.py"):
             if any(p in skip_parts for p in py.parts):
                 continue
+            if _is_oss_export_mirror_path(py):
+                continue
             try:
                 py_compile.compile(str(py), doraise=True)
                 n_compiled += 1
@@ -13753,6 +13763,8 @@ def check_shell_scripts_syntax_clean(
             if sh.is_dir() or not sh.is_file():
                 continue
             if any(p in skip_parts for p in sh.parts):
+                continue
+            if _is_oss_export_mirror_path(sh):
                 continue
             try:
                 proc = subprocess.run(
