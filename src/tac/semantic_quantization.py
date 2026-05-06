@@ -1,17 +1,17 @@
 """Adaptive semantic quantization — per-class bit-depth allocation (Trick 18).
 
 For SPADE/CLADE-based renderers, different semantic classes have different
-visual importance for the scorer. This module follows the contest mask
-vocabulary used by ``mask_grayscale_lut`` / Selfcomp:
-    - Background (class 0): 4-bit
-    - Road (class 1): 8-bit - highest PoseNet sensitivity
-    - Lane markings (class 2): 8-bit - thin structure, high SegNet/PoseNet risk
+visual importance for the scorer. This module follows the contest SegNet class
+order in ``tac.semantic_label_contract``:
+    - Road (class 0): 8-bit - highest PoseNet sensitivity
+    - Lane markings (class 1): 8-bit - thin structure, high SegNet/PoseNet risk
+    - Undrivable (class 2): 4-bit
     - Movable objects (class 3): 6-bit
-    - My-car / hood (class 4): 4-bit
+    - My-car / ego car (class 4): 4-bit
 
 The scoring formula weights SegNet at 100x and PoseNet at sqrt(10x),
 so road pixels (which drive both PoseNet and SegNet) get maximum precision,
-while background and hood pixels can tolerate more quantization noise.
+while undrivable and ego-car pixels can tolerate more quantization noise.
 
 This saves ~20% rate compared to uniform 8-bit quantization with
 negligible distortion increase on high-sensitivity classes.
@@ -22,7 +22,7 @@ Usage::
     q_state = semantic_adaptive_quantize(
         model.state_dict(),
         class_masks,
-        class_bits={0: 4, 1: 8, 2: 8, 3: 6, 4: 4},
+        class_bits={0: 8, 1: 8, 2: 4, 3: 6, 4: 4},
     )
 """
 
@@ -33,24 +33,17 @@ from typing import Any
 import torch
 import torch.nn as nn
 
+from tac.semantic_label_contract import (
+    CONTEST_SEGNET_CLASS_NAMES,
+    SEMANTIC_QUANTIZATION_DEFAULT_BITS,
+)
+
 
 # Default bit allocation per semantic class
-DEFAULT_CLASS_BITS: dict[int, int] = {
-    0: 4,  # Background
-    1: 8,  # Road
-    2: 8,  # Lane markings
-    3: 6,  # Movable objects
-    4: 4,  # My-car / hood
-}
+DEFAULT_CLASS_BITS: dict[int, int] = dict(SEMANTIC_QUANTIZATION_DEFAULT_BITS)
 
 # Human-readable class names for logging
-CLASS_NAMES: dict[int, str] = {
-    0: "background",
-    1: "road",
-    2: "lane",
-    3: "movable",
-    4: "my-car",
-}
+CLASS_NAMES: dict[int, str] = dict(CONTEST_SEGNET_CLASS_NAMES)
 
 
 def quantize_tensor(
@@ -98,7 +91,7 @@ def semantic_adaptive_quantize(
         masks: optional (N, H, W) long tensor — used for statistics only,
             not required for quantization.
         class_bits: mapping from class index to bit depth.
-            Default: {0: 4, 1: 8, 2: 8, 3: 6, 4: 4}.
+            Default: {0: 8, 1: 8, 2: 4, 3: 6, 4: 4}.
 
     Returns:
         Dict with:
@@ -214,7 +207,7 @@ def _smoke_test() -> None:
     gamma_bits = result["bits_used"]["clade.class_gamma.weight"]
     assert isinstance(gamma_bits, list) and len(gamma_bits) == 5
     assert gamma_bits[0] == 8, "Road should be 8-bit"
-    assert gamma_bits[3] == 4, "Sky should be 4-bit"
+    assert gamma_bits[2] == 4, "Undrivable should be 4-bit by default"
 
     # Backbone should be uniform max bits
     assert result["bits_used"]["conv1.weight"] == 8

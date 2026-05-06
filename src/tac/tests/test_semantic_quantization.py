@@ -21,6 +21,12 @@ from tac.semantic_quantization import (
     quantize_tensor,
     semantic_adaptive_quantize,
 )
+from tac.semantic_label_contract import (
+    CONTEST_SEGNET_CLASSES,
+    CONTEST_SEGNET_CLASS_NAMES,
+    SELFCOMP_CLASS_TO_GRAY,
+    validate_contest_class_table,
+)
 
 
 # ── quantize_tensor (uniform symmetric) ───────────────────────────────────
@@ -136,18 +142,35 @@ def test_semantic_adaptive_quantize_savings_positive() -> None:
 
 
 def test_default_class_bits_table_invariants() -> None:
-    """Table sanity: follows the Selfcomp/grayscale-LUT class vocabulary."""
+    """Table sanity: follows canonical contest SegNet class IDs."""
     assert len(DEFAULT_CLASS_BITS) == 5
     assert CLASS_NAMES == {
-        0: "background",
-        1: "road",
-        2: "lane",
+        0: "road",
+        1: "lane_markings",
+        2: "undrivable",
         3: "movable",
-        4: "my-car",
+        4: "my_car",
     }
-    assert DEFAULT_CLASS_BITS[1] >= DEFAULT_CLASS_BITS[0], (
-        "Road should have at least as many bits as background"
-    )
-    assert DEFAULT_CLASS_BITS[2] >= DEFAULT_CLASS_BITS[0], (
-        "Lane markings should have at least as many bits as background"
-    )
+    assert DEFAULT_CLASS_BITS[0] == 8
+    assert DEFAULT_CLASS_BITS[1] == 8
+    assert DEFAULT_CLASS_BITS[2] <= DEFAULT_CLASS_BITS[0]
+
+
+def test_semantic_label_contract_pins_comma10k_zero_index_order() -> None:
+    """comma10k is one-based; contest tensors are the same order zero-based."""
+    validate_contest_class_table()
+    assert [item.comma10k_id for item in CONTEST_SEGNET_CLASSES] == [1, 2, 3, 4, 5]
+    assert CONTEST_SEGNET_CLASS_NAMES == {
+        0: "road",
+        1: "lane_markings",
+        2: "undrivable",
+        3: "movable",
+        4: "my_car",
+    }
+    assert SELFCOMP_CLASS_TO_GRAY == {
+        0: 0,
+        1: 255,
+        2: 64,
+        3: 192,
+        4: 128,
+    }

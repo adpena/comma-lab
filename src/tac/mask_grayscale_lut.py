@@ -31,12 +31,13 @@ CLAUDE.md compliance
 - Outputs are bit-deterministic (CPU-only int math + nearest neighbours).
 - The LUT is constructable without GPU; safe for inflate path.
 
-Class -> gray mapping (matches Selfcomp inflate.py CLASS_TARGETS[5]):
-    0 (background) -> 0
-    1 (road)       -> 255
-    2 (lane)       -> 64
-    3 (movable)    -> 192
-    4 (my-car)     -> 128
+Class -> gray mapping (matches Selfcomp inflate.py CLASS_TARGETS[5]).
+These are contest SegNet class IDs, not a new label taxonomy:
+    0 (road)          -> 0
+    1 (lane_markings) -> 255
+    2 (undrivable)    -> 64
+    3 (movable)       -> 192
+    4 (my_car)        -> 128
 """
 from __future__ import annotations
 
@@ -45,16 +46,15 @@ from typing import Final
 import torch
 import torch.nn.functional as F
 
+from tac.semantic_label_contract import (
+    NUM_CONTEST_SEGNET_CLASSES,
+    SELFCOMP_CLASS_TO_GRAY,
+)
+
 
 # CLASS_TO_GRAY mirror of Selfcomp/inflate.py CLASS_TARGETS = [0, 255, 64, 192, 128].
 # The list-index is the class id; we publish a dict for explicit lookup.
-CLASS_TO_GRAY: Final[dict[int, int]] = {
-    0: 0,
-    1: 255,
-    2: 64,
-    3: 192,
-    4: 128,
-}
+CLASS_TO_GRAY: Final[dict[int, int]] = dict(SELFCOMP_CLASS_TO_GRAY)
 
 # Grayscale targets in class-id order — used by the LUT builder + decoder.
 _CLASS_TARGETS_TENSOR: Final[torch.Tensor] = torch.tensor(
@@ -62,7 +62,7 @@ _CLASS_TARGETS_TENSOR: Final[torch.Tensor] = torch.tensor(
     dtype=torch.float32,
 )
 
-NUM_CLASSES: Final[int] = len(CLASS_TO_GRAY)
+NUM_CLASSES: Final[int] = NUM_CONTEST_SEGNET_CLASSES
 LUT_DEFAULT_SIGMA: Final[float] = 15.0
 
 
