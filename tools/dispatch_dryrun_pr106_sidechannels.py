@@ -156,6 +156,9 @@ BUILDER_SPECS: tuple[BuilderSpec, ...] = (
             "--pr106-archive",
             "--out-dir",
             "--search-mode",
+            "--score-table-npy",
+            "--score-table-manifest",
+            "--candidate-radius",
             "--score-step",
             "--n-pairs",
         ),
@@ -164,6 +167,7 @@ BUILDER_SPECS: tuple[BuilderSpec, ...] = (
             "--pr106-archive",
             "--out-dir",
             "--search-mode",
+            "score_table",
             "gradient/brute_force",
         ),
         real_mode_guard_functions=(

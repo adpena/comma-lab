@@ -10,6 +10,7 @@
 #
 # Operator picks search mode via env var:
 #   PR106_YSHIFT_MODE=zero        → CPU smoke (no real correction; wire format only)
+#   PR106_YSHIFT_MODE=score_table → consume precomputed CUDA candidate table
 #   PR106_YSHIFT_MODE=gradient    → CUDA, ~$0.20, ~5min
 #                                   1 backward pass ∂score/∂{Y_off, dy, dx} per frame, quantize
 #   PR106_YSHIFT_MODE=brute_force → CUDA, ~$0.40, ~10min
@@ -36,6 +37,10 @@ WORKSPACE="${WORKSPACE:-/workspace/pact}"
 PYBIN="${PYBIN:-/opt/conda/bin/python}"
 PR106_YSHIFT_MODE="${PR106_YSHIFT_MODE:-zero}"
 SCORE_STEP="${PR106_YSHIFT_SCORE_STEP:-1.0}"
+PR106_YSHIFT_CANDIDATE_RADIUS="${PR106_YSHIFT_CANDIDATE_RADIUS:-3}"
+PR106_YSHIFT_N_PAIRS="${PR106_YSHIFT_N_PAIRS:-600}"
+PR106_YSHIFT_SCORE_TABLE_NPY="${PR106_YSHIFT_SCORE_TABLE_NPY:-}"
+PR106_YSHIFT_SCORE_TABLE_MANIFEST="${PR106_YSHIFT_SCORE_TABLE_MANIFEST:-}"
 PR106_ARCHIVE="${PR106_ARCHIVE:-experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip}"
 
 [ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
@@ -51,8 +56,12 @@ fi
 
 cd "$WORKSPACE"
 
-if ! [[ "$PR106_YSHIFT_MODE" =~ ^(zero|gradient|brute_force)$ ]]; then
-    echo "FATAL: PR106_YSHIFT_MODE must be one of {zero, gradient, brute_force}; got: $PR106_YSHIFT_MODE" >&2
+if ! [[ "$PR106_YSHIFT_MODE" =~ ^(zero|score_table|gradient|brute_force)$ ]]; then
+    echo "FATAL: PR106_YSHIFT_MODE must be one of {zero, score_table, gradient, brute_force}; got: $PR106_YSHIFT_MODE" >&2
+    exit 2
+fi
+if [ "$PR106_YSHIFT_MODE" = "score_table" ] && [ ! -f "$PR106_YSHIFT_SCORE_TABLE_NPY" ]; then
+    echo "FATAL: PR106_YSHIFT_MODE=score_table requires PR106_YSHIFT_SCORE_TABLE_NPY" >&2
     exit 2
 fi
 
@@ -97,11 +106,22 @@ print(f'[stage-0] provenance written; CUDA={torch.cuda.is_available()}; mode={mo
 log "=== Stage 1: build pr106_yshift sidechannel (mode=$PR106_YSHIFT_MODE, step=$SCORE_STEP) ==="
 BUILD_DIR="$LOG_DIR/build"
 mkdir -p "$BUILD_DIR"
-"$PYBIN" -u experiments/build_pr106_yshift_sidechannel.py \
-    --pr106-archive "$PR106_ARCHIVE" \
-    --search-mode "$PR106_YSHIFT_MODE" \
-    --score-step "$SCORE_STEP" \
-    --out-dir "$BUILD_DIR" 2>&1 | tee -a "$LOG_DIR/run.log"
+BUILD_ARGS=(
+    experiments/build_pr106_yshift_sidechannel.py
+    --pr106-archive "$PR106_ARCHIVE"
+    --search-mode "$PR106_YSHIFT_MODE"
+    --score-step "$SCORE_STEP"
+    --candidate-radius "$PR106_YSHIFT_CANDIDATE_RADIUS"
+    --n-pairs "$PR106_YSHIFT_N_PAIRS"
+    --out-dir "$BUILD_DIR"
+)
+if [ "$PR106_YSHIFT_MODE" = "score_table" ]; then
+    BUILD_ARGS+=(--score-table-npy "$PR106_YSHIFT_SCORE_TABLE_NPY")
+    if [ -n "$PR106_YSHIFT_SCORE_TABLE_MANIFEST" ]; then
+        BUILD_ARGS+=(--score-table-manifest "$PR106_YSHIFT_SCORE_TABLE_MANIFEST")
+    fi
+fi
+"$PYBIN" -u "${BUILD_ARGS[@]}" 2>&1 | tee -a "$LOG_DIR/run.log"
 YSHIFT_ARCHIVE="$BUILD_DIR/pr106_yshift_sidechannel_archive.zip"
 if [ ! -f "$YSHIFT_ARCHIVE" ]; then
     log "FATAL: stage 1 did not produce $YSHIFT_ARCHIVE"

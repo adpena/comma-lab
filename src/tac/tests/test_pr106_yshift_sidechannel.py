@@ -19,11 +19,15 @@ which are CUDA-independent.
 from __future__ import annotations
 
 import struct
+import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 import numpy as np
 import pytest
+
+from tac.repo_io import read_json
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PR106_ARCHIVE = REPO_ROOT / (
@@ -297,6 +301,48 @@ def test_choose_yshift_candidates_from_scores_rejects_nonfinite_scores():
         builder.choose_yshift_candidates_from_scores(scores, grid)
 
 
+def test_choose_yshift_candidates_from_score_table_file(tmp_path):
+    builder = _load_builder()
+    grid = builder.build_yshift_candidate_grid(radius=1)
+    zero_idx = int(np.flatnonzero((grid == 0).all(axis=1))[0])
+    target_idx = int(np.flatnonzero((grid == np.array([1, 0, -1], dtype=np.int8)).all(axis=1))[0])
+    scores = np.full((4, len(grid)), 10.0, dtype=np.float32)
+    scores[:, zero_idx] = 1.0
+    scores[0, target_idx] = 0.25
+    scores[3, target_idx] = 0.75
+    table_path = tmp_path / "score_table.npy"
+    np.save(table_path, scores)
+
+    selected, diagnostics = builder.choose_yshift_candidates_from_score_table_file(
+        table_path,
+        n_frames=4,
+        candidate_radius=1,
+    )
+
+    assert selected.dtype == np.int8
+    assert selected.shape == (4, 3)
+    assert np.array_equal(selected[0], grid[target_idx])
+    assert np.array_equal(selected[1], grid[zero_idx])
+    assert np.array_equal(selected[2], grid[zero_idx])
+    assert np.array_equal(selected[3], grid[target_idx])
+    assert diagnostics["candidate_grid_count"] == 27
+    assert diagnostics["selected_nonzero_frame_count"] == 2
+    assert diagnostics["selected_zero_frame_count"] == 2
+
+
+def test_score_table_file_shape_must_match_candidate_grid(tmp_path):
+    builder = _load_builder()
+    table_path = tmp_path / "bad_table.npy"
+    np.save(table_path, np.zeros((4, 26), dtype=np.float32))
+
+    with pytest.raises(ValueError, match="score table shape mismatch"):
+        builder.choose_yshift_candidates_from_score_table_file(
+            table_path,
+            n_frames=4,
+            candidate_radius=1,
+        )
+
+
 def test_outer_archive_rejects_wrong_sidechannel_version():
     """Outer parser raises on unknown sidechannel version byte."""
     if not PR106_ARCHIVE.is_file():
@@ -314,6 +360,67 @@ def test_outer_archive_rejects_wrong_sidechannel_version():
     new_bin[4 + pr106_len] = 99  # bogus version
     with pytest.raises(ValueError, match="sidechannel version mismatch"):
         inflate.parse_yshift_archive(bytes(new_bin))
+
+
+def test_builder_score_table_mode_writes_fail_closed_metadata(tmp_path):
+    """score_table mode emits bytes but remains non-promotable without CUDA auth eval."""
+    if not PR106_ARCHIVE.is_file():
+        pytest.skip(f"PR106 anchor not present at {PR106_ARCHIVE}")
+    builder = _load_builder()
+    grid = builder.build_yshift_candidate_grid(radius=1)
+    zero_idx = int(np.flatnonzero((grid == 0).all(axis=1))[0])
+    target_idx = int(np.flatnonzero((grid == np.array([1, 0, -1], dtype=np.int8)).all(axis=1))[0])
+    n_frames = 4
+    scores = np.full((n_frames, len(grid)), 10.0, dtype=np.float32)
+    scores[:, zero_idx] = 1.0
+    scores[0, target_idx] = 0.5
+    table_path = tmp_path / "cuda_score_table.npy"
+    np.save(table_path, scores)
+    out_dir = tmp_path / "out"
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "experiments/build_pr106_yshift_sidechannel.py"),
+            "--pr106-archive",
+            str(PR106_ARCHIVE),
+            "--out-dir",
+            str(out_dir),
+            "--search-mode",
+            "score_table",
+            "--score-table-npy",
+            str(table_path),
+            "--candidate-radius",
+            "1",
+            "--n-pairs",
+            "2",
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "score_table selected 1 nonzero frame corrections" in proc.stdout
+
+    metadata = read_json(out_dir / "build_metadata.json")
+    assert metadata["manifest_schema"] == "pr106_yshift_sidechannel_build_metadata_v2"
+    assert metadata["score_claim"] is False
+    assert metadata["ready_for_exact_eval_dispatch"] is False
+    assert metadata["dispatch_attempted"] is False
+    assert metadata["remote_jobs_dispatched"] is False
+    assert "requires_exact_cuda_auth_eval_on_built_archive" in metadata["dispatch_blockers"]
+    assert "missing_cuda_score_table_manifest" in metadata["dispatch_blockers"]
+    assert "nonstandard_n_pairs_not_contest_promotable" in metadata["dispatch_blockers"]
+    assert metadata["score_table"]["search_diagnostics"]["candidate_grid_radius"] == 1
+    assert metadata["score_table"]["search_diagnostics"]["selected_nonzero_frame_count"] == 1
+
+    with zipfile.ZipFile(out_dir / "pr106_yshift_sidechannel_archive.zip") as z:
+        payload = z.read("0.bin")
+    _, _, _, sc = _load_inflate().parse_yshift_archive(payload)
+    assert sc is not None
+    assert sc["raw"].shape == (n_frames, 3)
+    assert np.array_equal(sc["raw"][0], grid[target_idx])
+    assert np.array_equal(sc["raw"][1], grid[zero_idx])
 
 
 def test_search_mode_gradient_raises_without_cuda():

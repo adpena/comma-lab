@@ -12,10 +12,14 @@ SC01 mode-7 wire format. Inflate path is `submissions/pr106_yshift_sidechannel/i
 
 Two operating modes:
 
-  --search-mode {zero, gradient, brute_force}
+  --search-mode {zero, score_table, gradient, brute_force}
     zero        : write a no-op SC01 (all zeros). Brotli compresses to ~few bytes.
                   Used for CPU-only smoke + wire-format roundtrip verification.
                   CPU-tagged [advisory only] per CLAUDE.md MPS-noise rule.
+    score_table : scorer-free reducer over a precomputed CUDA scorer table
+                  (`--score-table-npy`). This turns measured candidate scores
+                  into deterministic charged sidechannel bytes without loading
+                  scorers at inflate time or claiming a score.
     gradient    : single backward pass per frame ∂score/∂(Y_offset, dy, dx).
                   Quantize the optimal direction to int8. Requires CUDA + scorers.
                   ~$0.20 on Vast.ai 4090.
@@ -47,6 +51,7 @@ the SC01 sidechannel payload.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import io
 import struct
@@ -148,6 +153,15 @@ SEARCH_MODES = {
     "gradient": _gradient_search_stub,
     "brute_force": _brute_force_search_stub,
 }
+SEARCH_MODE_CHOICES = ("zero", "score_table", "gradient", "brute_force")
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def build_yshift_candidate_grid(radius: int = 3) -> np.ndarray:
@@ -202,15 +216,75 @@ def choose_yshift_candidates_from_scores(
     return cands[best_idx].astype(np.int8, copy=True)
 
 
+def choose_yshift_candidates_from_score_table_file(
+    score_table_npy: Path,
+    *,
+    n_frames: int,
+    candidate_radius: int,
+) -> tuple[np.ndarray, dict[str, object]]:
+    """Load a precomputed candidate score table and emit deterministic yshift rows.
+
+    This helper is intentionally scorer-free. The input table must already have
+    been produced by a CUDA scorer job against the exact source archive. The
+    builder records file custody and keeps the archive non-promotable until a
+    separate exact CUDA auth eval scores the emitted bytes.
+    """
+    candidates = build_yshift_candidate_grid(radius=candidate_radius)
+    loaded = np.load(score_table_npy, allow_pickle=False)
+    if not isinstance(loaded, np.ndarray):
+        raise TypeError(f"score table must be a .npy ndarray, got {type(loaded).__name__}")
+    if loaded.shape != (n_frames, len(candidates)):
+        raise ValueError(
+            "score table shape mismatch: expected "
+            f"({n_frames}, {len(candidates)}), got {loaded.shape}"
+        )
+    scores = np.asarray(loaded, dtype=np.float64)
+    selected = choose_yshift_candidates_from_scores(scores, candidates)
+    zero_idx = int(np.flatnonzero((candidates == 0).all(axis=1))[0])
+    selected_indices = np.array(
+        [
+            int(np.flatnonzero((candidates == row).all(axis=1))[0])
+            for row in selected
+        ],
+        dtype=np.int32,
+    )
+    selected_scores = scores[np.arange(n_frames), selected_indices]
+    zero_scores = scores[:, zero_idx]
+    improvements = zero_scores - selected_scores
+    nonzero_rows = ~(selected == 0).all(axis=1)
+    diagnostics: dict[str, object] = {
+        "candidate_grid_radius": int(candidate_radius),
+        "candidate_grid_count": len(candidates),
+        "score_table_shape": [int(scores.shape[0]), int(scores.shape[1])],
+        "zero_candidate_index": int(zero_idx),
+        "selected_nonzero_frame_count": int(nonzero_rows.sum()),
+        "selected_zero_frame_count": int((~nonzero_rows).sum()),
+        "best_improvement_min": float(improvements.min()) if len(improvements) else 0.0,
+        "best_improvement_mean": float(improvements.mean()) if len(improvements) else 0.0,
+        "best_improvement_max": float(improvements.max()) if len(improvements) else 0.0,
+        "require_strict_improvement_over_noop": True,
+    }
+    return selected, diagnostics
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--pr106-archive", type=Path, required=True,
                         help="Path to PR106 packed archive.zip (anchor).")
     parser.add_argument("--out-dir", type=Path, required=True,
                         help="Output directory for built archive + metadata.")
-    parser.add_argument("--search-mode", choices=list(SEARCH_MODES.keys()), default="zero",
+    parser.add_argument("--search-mode", choices=SEARCH_MODE_CHOICES, default="zero",
                         help="Sidechannel search strategy. zero = CPU smoke wire-format only; "
+                             "score_table = reduce precomputed CUDA scorer table; "
                              "gradient/brute_force = CUDA scorer required (raises if invoked here).")
+    parser.add_argument("--score-table-npy", type=Path, default=None,
+                        help="Required for --search-mode score_table. Shape must be "
+                             "(n_frames, candidate_count) for the selected --candidate-radius.")
+    parser.add_argument("--score-table-manifest", type=Path, default=None,
+                        help="Optional JSON provenance for the CUDA scorer table. Its SHA/path are "
+                             "recorded, but exact CUDA auth eval remains required before promotion.")
+    parser.add_argument("--candidate-radius", type=int, default=3,
+                        help="Canonical score_table candidate grid radius for [y_off, dy, dx].")
     parser.add_argument("--score-step", type=float, default=1.0,
                         help="Y_offset scale factor (default 1.0). Smaller = finer DC adjustment.")
     parser.add_argument("--n-pairs", type=int, default=600,
@@ -224,9 +298,24 @@ def main() -> int:
     print(f"[build-yshift] pr106 archive: {pr106_size} bytes")
 
     n_frames = args.n_pairs * 2
-    search_fn = SEARCH_MODES[args.search_mode]
     print(f"[build-yshift] search-mode={args.search_mode}, n_frames={n_frames}, step={args.score_step}")
-    values_int8 = search_fn(n_frames)
+    search_diagnostics: dict[str, object] = {}
+    if args.search_mode == "score_table":
+        if args.score_table_npy is None:
+            raise SystemExit("--score-table-npy is required when --search-mode score_table")
+        values_int8, search_diagnostics = choose_yshift_candidates_from_score_table_file(
+            args.score_table_npy,
+            n_frames=n_frames,
+            candidate_radius=args.candidate_radius,
+        )
+        print(
+            "[build-yshift] score_table selected "
+            f"{search_diagnostics['selected_nonzero_frame_count']} nonzero frame corrections "
+            f"from {search_diagnostics['candidate_grid_count']} candidates"
+        )
+    else:
+        search_fn = SEARCH_MODES[args.search_mode]
+        values_int8 = search_fn(n_frames)
     if values_int8.dtype != np.int8 or values_int8.shape != (n_frames, 3):
         raise RuntimeError(
             f"search_fn returned bad shape/dtype: shape={values_int8.shape}, dtype={values_int8.dtype}"
@@ -269,9 +358,43 @@ def main() -> int:
     print(f"[build-yshift] PR106 zip: {pr106_zip_size} bytes; delta: {delta:+d} ({100*delta/pr106_zip_size:+.3f}%)")
     print(f"[build-yshift] estimated rate-component score Δ vs PR106: {score_delta:+.6f}")
 
+    dispatch_blockers = [
+        "requires_exact_cuda_auth_eval_on_built_archive",
+        "requires_inflate_runtime_tree_hash_provenance",
+        "requires_lane_claim_before_remote_gpu_or_eval_dispatch",
+    ]
+    if args.n_pairs != 600:
+        dispatch_blockers.append("nonstandard_n_pairs_not_contest_promotable")
+    if args.search_mode == "zero":
+        dispatch_blockers.append("zero_search_is_wire_format_smoke_only")
+    if args.search_mode == "score_table" and args.score_table_manifest is None:
+        dispatch_blockers.append("missing_cuda_score_table_manifest")
+
+    score_table_metadata: dict[str, object] | None = None
+    if args.score_table_npy is not None:
+        score_table_metadata = {
+            "score_table_npy_path": str(args.score_table_npy),
+            "score_table_npy_bytes": int(args.score_table_npy.stat().st_size),
+            "score_table_npy_sha256": _sha256_file(args.score_table_npy),
+            "score_table_manifest_path": str(args.score_table_manifest) if args.score_table_manifest else None,
+            "score_table_manifest_sha256": (
+                _sha256_file(args.score_table_manifest) if args.score_table_manifest else None
+            ),
+            "score_table_is_score_claim": False,
+            "score_table_required_provenance": (
+                "CUDA scorer table must be generated against the exact source archive; "
+                "this builder only reduces the table into charged bytes."
+            ),
+            "search_diagnostics": search_diagnostics,
+        }
+
     metadata = {
+        "manifest_schema": "pr106_yshift_sidechannel_build_metadata_v2",
         "archive_path": str(archive_path),
         "archive_size_bytes": archive_size,
+        "archive_sha256": _sha256_file(archive_path),
+        "source_archive_path": str(args.pr106_archive),
+        "source_archive_sha256": _sha256_file(args.pr106_archive),
         "pr106_size_bytes": pr106_zip_size,
         "delta_bytes": delta,
         "rate_component_score_delta_vs_pr106": score_delta,
@@ -283,16 +406,20 @@ def main() -> int:
         "sc01_brotli_bytes": len(sc01_blob),
         "outer_dispatch_magic": f"0x{YSHIFT_MAGIC_BYTE:02X}",
         "sc01_mode_id": int(SIDECHANNEL_MODE_Y_SHIFT),
-        "tag": "[advisory only]" if args.search_mode == "zero" else "[design-validation]",
+        "score_table": score_table_metadata,
+        "tag": "[advisory only]" if args.search_mode == "zero" else "[score-table-reduction]" if args.search_mode == "score_table" else "[design-validation]",
         "council_status": "PROPOSAL — pre-registered at L1; gated on lane_pr106_latent_sidecar empirical",
         "score_claim": False,
+        "dispatch_attempted": False,
+        "remote_jobs_dispatched": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": dispatch_blockers,
         "next_step": (
             "search-mode=zero is CPU smoke ONLY (all-zero corrections; pure wire-format proof). "
-            "For real distortion improvement, dispatch via "
-            "scripts/remote_lane_pr106_yshift_sidechannel.sh with PR106_YSHIFT_MODE=gradient "
-            "(or brute_force) on Vast.ai 4090. ONLY dispatch if lane_pr106_latent_sidecar "
-            "lands < 0.20800 [contest-CUDA] (per docs/INDEX_score_aware_sidechannel_thread_20260504.md "
-            "decision pipeline TICK 2)."
+            "search-mode=score_table consumes a precomputed CUDA scorer table and emits "
+            "charged sidechannel bytes, but it is not score evidence until exact CUDA "
+            "auth eval is run on the built archive. Direct gradient/brute_force modes "
+            "must run through a claimed remote lane and remain fail-closed in this local builder."
         ),
     }
     metadata_path = args.out_dir / "build_metadata.json"
