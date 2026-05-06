@@ -123,7 +123,7 @@ def test_score_table_checkpoint_rounds_back_half_scored_pair(tmp_path):
     args = _checkpoint_args(tmp_path)
     candidates = np.array([[0, 0, 0], [0, 1, 0]], dtype=np.int8)
     candidates_path = tmp_path / "candidate_grid.npy"
-    np.save(candidates_path, candidates)
+    np.save(candidates_path, candidates, allow_pickle=False)
     contract = mod._score_table_contract(
         args,
         candidates_np=candidates,
@@ -155,7 +155,7 @@ def test_score_table_checkpoint_rejects_contract_drift(tmp_path):
     args = _checkpoint_args(tmp_path)
     candidates = np.array([[0, 0, 0], [0, 1, 0]], dtype=np.int8)
     candidates_path = tmp_path / "candidate_grid.npy"
-    np.save(candidates_path, candidates)
+    np.save(candidates_path, candidates, allow_pickle=False)
     contract = mod._score_table_contract(
         args,
         candidates_np=candidates,
@@ -182,14 +182,14 @@ def test_completed_score_table_reuse_validates_contract(tmp_path):
     args = _checkpoint_args(tmp_path)
     candidates = np.array([[0, 0, 0], [0, 1, 0]], dtype=np.int8)
     candidates_path = tmp_path / "candidate_grid.npy"
-    np.save(candidates_path, candidates)
+    np.save(candidates_path, candidates, allow_pickle=False)
     contract = mod._score_table_contract(
         args,
         candidates_np=candidates,
         candidates_path=candidates_path,
         n_frames=6,
     )
-    np.save(tmp_path / "score_table.npy", np.zeros((6, 2), dtype=np.float32))
+    np.save(tmp_path / "score_table.npy", np.zeros((6, 2), dtype=np.float32), allow_pickle=False)
     (tmp_path / "score_table_manifest.json").write_text(
         json.dumps({"ready_for_builder": True, "score_claim": False, **contract}),
         encoding="utf-8",
@@ -237,7 +237,7 @@ def test_dry_run_plan_writes_candidate_grid_and_manifest(tmp_path):
         text=True,
     )
 
-    grid = np.load(out_dir / "candidate_grid.npy")
+    grid = np.load(out_dir / "candidate_grid.npy", allow_pickle=False)
     manifest = read_json(out_dir / "score_table_manifest.json")
     assert grid.shape == (27, 3)
     assert manifest["score_claim"] is False

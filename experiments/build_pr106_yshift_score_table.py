@@ -92,7 +92,7 @@ def _atomic_write_text(path: Path, text: str) -> None:
 def _atomic_save_npy(path: Path, array: np.ndarray) -> None:
     tmp = path.with_name(path.name + ".tmp")
     with tmp.open("wb") as f:
-        np.save(f, array)
+        np.save(f, array, allow_pickle=False)
         f.flush()
         os.fsync(f.fileno())
     tmp.replace(path)
@@ -181,7 +181,7 @@ def _load_score_table_checkpoint(
     if manifest.get("manifest_schema") != "pr106_yshift_score_table_checkpoint_v1":
         raise ValueError(f"unsupported score-table checkpoint schema: {manifest.get('manifest_schema')!r}")
     _validate_checkpoint_contract(manifest, contract)
-    table = np.load(table_path)
+    table = np.load(table_path, allow_pickle=False)
     expected_shape = tuple(contract["score_table_shape"])
     if tuple(table.shape) != expected_shape:
         raise ValueError(f"score-table checkpoint shape mismatch: expected {expected_shape}, got {table.shape}")
@@ -248,7 +248,7 @@ def _reuse_completed_score_table_if_valid(
     _validate_checkpoint_contract(manifest, contract)
     if manifest.get("ready_for_builder") is not True or manifest.get("score_claim") is not False:
         raise ValueError("existing score-table manifest is not a reusable non-claim builder artifact")
-    table = np.load(table_path, mmap_mode="r")
+    table = np.load(table_path, mmap_mode="r", allow_pickle=False)
     expected_shape = tuple(contract["score_table_shape"])
     if tuple(table.shape) != expected_shape:
         raise ValueError(f"completed score-table shape mismatch: expected {expected_shape}, got {table.shape}")
@@ -475,7 +475,7 @@ def build_score_table(args: argparse.Namespace) -> int:
     args.out_dir.mkdir(parents=True, exist_ok=True)
     candidates_np = build_yshift_candidate_grid(radius=args.candidate_radius)
     candidates_path = args.out_dir / "candidate_grid.npy"
-    np.save(candidates_path, candidates_np)
+    np.save(candidates_path, candidates_np, allow_pickle=False)
     n_frames = int(args.n_pairs) * 2
     if args.max_frames is not None:
         n_frames = min(n_frames, int(args.max_frames))
