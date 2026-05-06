@@ -307,6 +307,14 @@ def parse_args() -> argparse.Namespace:
                         "compress time is contest-compliant — only the "
                         "(600, 6) seed tensor is consumed by this loop, "
                         "supercombo itself is never bundled in the archive.")
+    p.add_argument("--init-poses", type=str, default=None,
+                   help="Explicit warm-start pose tensor (.pt, shape [N_pairs, 6]). "
+                        "Intended for RAFT/LA-Pose-style compress-time pose "
+                        "initializers after their own custody manifest exists. "
+                        "Mutually exclusive with --seed-poses-path and "
+                        "--gt-poses-path so the init source is not ambiguous. "
+                        "This is a training/planning input only; exact CUDA "
+                        "auth eval is still required after archive rebuild.")
     p.add_argument("--optimize-embedding", action="store_true",
                    help="Also optimize the renderer's shared class embedding (30 values, 120 bytes). "
                         "Embedding is GLOBAL (shared across all pairs), optimized once before "
@@ -1276,8 +1284,58 @@ def apply_renderer_cuda_batch_safety(args: argparse.Namespace, renderer: torch.n
     return int(getattr(args, "batch_pairs", requested))
 
 
+def _load_init_pose_tensor(
+    path: Path,
+    *,
+    expected_n_pairs: int,
+    source_label: str,
+) -> torch.Tensor:
+    """Load and validate an explicit pose warm-start tensor.
+
+    The caller may provide extra rows, but not fewer than the contest window.
+    This keeps RAFT/LA-Pose-style initializers as compress-time side
+    information only: the optimizer receives a finite ``(N, 6)`` tensor and no
+    external model or sidecar is needed at inflate time.
+    """
+    if expected_n_pairs <= 0:
+        raise ValueError(f"expected_n_pairs must be positive, got {expected_n_pairs}")
+    if not path.exists():
+        raise FileNotFoundError(f"{source_label} path does not exist: {path}")
+    data = torch.load(str(path), map_location="cpu", weights_only=True)
+    if isinstance(data, dict):
+        for key in ("poses", "optimized_poses", "gt_poses", "init_poses"):
+            if key in data and data[key] is not None:
+                data = data[key]
+                break
+        else:
+            raise ValueError(
+                f"{source_label} dict must contain one of "
+                "poses, optimized_poses, gt_poses, init_poses"
+            )
+    poses = torch.as_tensor(data, dtype=torch.float32)
+    if poses.ndim != 2 or poses.shape[1] != 6:
+        raise ValueError(
+            f"{source_label} must have shape (N_pairs, 6), got {tuple(poses.shape)}"
+        )
+    if poses.shape[0] < expected_n_pairs:
+        raise ValueError(
+            f"{source_label} has {poses.shape[0]} pairs but "
+            f"{expected_n_pairs} are required"
+        )
+    if not torch.isfinite(poses[:expected_n_pairs]).all():
+        raise ValueError(f"{source_label} contains NaN or Inf values")
+    return poses[:expected_n_pairs].contiguous()
+
+
 def main():
     args = parse_args()
+
+    if args.init_poses and (args.seed_poses_path or args.gt_poses_path):
+        raise SystemExit(
+            "FATAL: --init-poses is mutually exclusive with --seed-poses-path "
+            "and --gt-poses-path. Pass exactly one warm-start source so RAFT/"
+            "LA-Pose-style initialization is auditable."
+        )
 
     # Lane RM (Riemannian SE(3)) preconditions — fail loud BEFORE any GPU
     # spend. The SE(3) optimiser requires a 6-DOF pose tensor (each row =
@@ -1608,7 +1666,22 @@ def main():
     # PoseNet-distribution-calibrated warm start, expected to converge faster
     # than GT/baseline pose warm-start. Memory: project_openpilot_seeding_demo.
     print("\n[5/6] Loading initial pose vectors...", flush=True)
-    if args.seed_poses_path and Path(args.seed_poses_path).exists():
+    if args.init_poses:
+        try:
+            init_poses = _load_init_pose_tensor(
+                Path(args.init_poses),
+                expected_n_pairs=n_pairs,
+                source_label="--init-poses",
+            )
+        except (OSError, RuntimeError, ValueError) as exc:
+            raise SystemExit(f"FATAL: invalid --init-poses: {exc}") from exc
+        print(
+            f"  Loaded explicit init poses from {args.init_poses}: "
+            f"{init_poses.shape} (training/planning warm-start only; "
+            f"no score claim)",
+            flush=True,
+        )
+    elif args.seed_poses_path and Path(args.seed_poses_path).exists():
         init_poses = torch.load(args.seed_poses_path, map_location="cpu", weights_only=True).float()
         print(f"  [Lane OS-A] Loaded SEED poses from {args.seed_poses_path}: {init_poses.shape}", flush=True)
     elif args.gt_poses_path and Path(args.gt_poses_path).exists():

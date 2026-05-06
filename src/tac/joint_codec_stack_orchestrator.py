@@ -91,7 +91,7 @@ from __future__ import annotations
 import io
 import struct
 from dataclasses import dataclass, field
-from typing import Iterable, Protocol, runtime_checkable
+from typing import Any, Iterable, Mapping, Protocol, runtime_checkable
 
 import numpy as np
 
@@ -113,6 +113,7 @@ from tac.joint_admm_coordinator import (
     StreamProximalCodec,
     run_admm,
 )
+from tac.optimization.research_basis import research_basis_ids_for_family
 
 
 _JCSP_MAGIC: bytes = b"JCSP"
@@ -122,6 +123,289 @@ _JCSP_VERSION: int = 1
 KIND_ARITHMETIC_STATIC: int = 0
 KIND_BALLE_HYPERPRIOR: int = 1
 KIND_RAW_PASSTHROUGH: int = 2
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Compress-time model stream decomposition
+# ────────────────────────────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class JCSPTensorStreamSpec:
+    """Compress-time annotation for one model tensor before JCSP encoding.
+
+    This is a dispatch prerequisite, not a score claim and not an encoder. It
+    makes the per-tensor stream contract explicit so later γ-JCSP work can turn
+    selected tensors into ``StreamSource`` objects only after quantization,
+    cached sensitivity/score-marginal evidence, and decode validation exist.
+    """
+
+    name: str
+    codec_kind: int
+    tensor_shape: tuple[int, ...]
+    tensor_dtype: str
+    num_elements: int
+    raw_bytes: int
+    byte_estimate: int
+    bytes_charged: int
+    score_per_byte_marginal: float
+    score_marginal_source: str
+    score_marginal_evidence: str
+    scorer_term_targeted: str
+    research_basis_ids: tuple[str, ...] = ()
+    constraint_tags: tuple[str, ...] = ()
+    dispatch_blockers: tuple[str, ...] = ()
+    fail_closed_criteria: tuple[str, ...] = ()
+
+
+def _tensor_shape_tuple(tensor: Any) -> tuple[int, ...]:
+    return tuple(int(v) for v in getattr(tensor, "shape", ()))
+
+
+def _tensor_numel(tensor: Any, shape: tuple[int, ...]) -> int:
+    if hasattr(tensor, "numel"):
+        return int(tensor.numel())
+    n = 1
+    for dim in shape:
+        n *= int(dim)
+    return int(n)
+
+
+def _tensor_element_size(tensor: Any, dtype_name: str) -> int:
+    if hasattr(tensor, "element_size"):
+        return int(tensor.element_size())
+    if "64" in dtype_name:
+        return 8
+    if "32" in dtype_name:
+        return 4
+    if "16" in dtype_name or "bfloat" in dtype_name:
+        return 2
+    if "bool" in dtype_name or "uint8" in dtype_name or "int8" in dtype_name:
+        return 1
+    return 4
+
+
+def _is_floating_dtype(dtype_name: str) -> bool:
+    return "float" in dtype_name or "bfloat" in dtype_name
+
+
+def _iter_model_tensors(model: Any, *, include_buffers: bool) -> list[tuple[str, Any]]:
+    """Return deterministic ``(name, tensor)`` pairs from a module or mapping."""
+    if isinstance(model, Mapping):
+        return [(str(name), tensor) for name, tensor in model.items()]
+    if hasattr(model, "state_dict"):
+        state = model.state_dict()
+        return [(str(name), tensor) for name, tensor in state.items()]
+    if hasattr(model, "named_parameters"):
+        items: list[tuple[str, Any]] = [
+            (str(name), tensor) for name, tensor in model.named_parameters()
+        ]
+        if include_buffers and hasattr(model, "named_buffers"):
+            items.extend((str(name), tensor) for name, tensor in model.named_buffers())
+        return items
+    raise TypeError(
+        "model_to_jcsp_streams expects a torch-like module, a state_dict-like "
+        "mapping, or an object exposing named_parameters()."
+    )
+
+
+def _infer_model_tensor_codec_kind(
+    *,
+    dtype_name: str,
+    raw_bytes: int,
+    ndim: int,
+    large_tensor_balle_threshold_bytes: int,
+) -> int:
+    if not _is_floating_dtype(dtype_name):
+        return KIND_ARITHMETIC_STATIC
+    if raw_bytes >= large_tensor_balle_threshold_bytes and ndim >= 2:
+        return KIND_BALLE_HYPERPRIOR
+    return KIND_ARITHMETIC_STATIC
+
+
+def _estimate_model_tensor_stream_bytes(
+    *,
+    dtype_name: str,
+    num_elements: int,
+    raw_bytes: int,
+) -> int:
+    # Conservative compress-time estimate: floating tensors are assumed to be
+    # at least fp16-quantizable, while integer/bool metadata stays raw unless a
+    # later exact qint stream proves a smaller charged wire format.
+    if _is_floating_dtype(dtype_name) and "16" not in dtype_name and "bfloat" not in dtype_name:
+        return max(0, int(num_elements) * 2)
+    return int(raw_bytes)
+
+
+def _match_name_set(name: str, candidates: Iterable[str] | None) -> bool:
+    if candidates is None:
+        return False
+    for candidate in candidates:
+        text = str(candidate)
+        if name == text or name.startswith(text.rstrip("*")) and text.endswith("*"):
+            return True
+    return False
+
+
+def _score_annotation_for_stream(
+    *,
+    name: str,
+    score_marginals: Mapping[str, Any] | None,
+    default_score_per_byte_marginal: float,
+) -> tuple[float, str, str, str, tuple[str, ...]]:
+    raw = score_marginals.get(name) if score_marginals is not None else None
+    if raw is None:
+        return (
+            float(default_score_per_byte_marginal),
+            "missing_score_marginal",
+            "prediction",
+            "joint",
+            ("missing_score_marginal",),
+        )
+    if isinstance(raw, (int, float)):
+        return (
+            float(raw),
+            "caller_exact_name",
+            "empirical",
+            "joint",
+            (),
+        )
+    if isinstance(raw, Mapping):
+        value = raw.get("score_per_byte_marginal", raw.get("marginal", None))
+        if value is None:
+            raise ValueError(
+                f"score_marginals[{name!r}] must define "
+                "'score_per_byte_marginal' or 'marginal'"
+            )
+        tags_raw = raw.get("constraint_tags", ())
+        return (
+            float(value),
+            str(raw.get("source", "caller_exact_name")),
+            str(raw.get("evidence_grade", "empirical")),
+            str(raw.get("scorer_term_targeted", "joint")),
+            tuple(str(tag) for tag in tags_raw),
+        )
+    raise TypeError(
+        f"score_marginals[{name!r}] must be a float or mapping, got "
+        f"{type(raw).__name__}"
+    )
+
+
+def model_to_jcsp_streams(
+    model: Any,
+    *,
+    score_marginals: Mapping[str, Any] | None = None,
+    codec_overrides: Mapping[str, int] | None = None,
+    wet_streams: Iterable[str] | None = None,
+    include_buffers: bool = True,
+    default_score_per_byte_marginal: float = 0.0,
+    large_tensor_balle_threshold_bytes: int = 30 * 1024,
+) -> list[JCSPTensorStreamSpec]:
+    """Decompose a model/state_dict into deterministic JCSP tensor streams.
+
+    The helper intentionally does not quantize, encode, load scorers, or infer
+    score evidence. Missing score marginals stay explicit blockers. This mirrors
+    the additive-distortion discipline used by γ-JCSP: per-stream costs may be
+    summed only after each stream has a local cached marginal and a validated
+    charged-byte contract.
+    """
+    if large_tensor_balle_threshold_bytes <= 0:
+        raise ValueError("large_tensor_balle_threshold_bytes must be > 0")
+    out: list[JCSPTensorStreamSpec] = []
+    for name, tensor in _iter_model_tensors(model, include_buffers=include_buffers):
+        shape = _tensor_shape_tuple(tensor)
+        num_elements = _tensor_numel(tensor, shape)
+        dtype_name = str(getattr(tensor, "dtype", type(tensor).__name__))
+        elem_size = _tensor_element_size(tensor, dtype_name)
+        raw_bytes = int(num_elements) * int(elem_size)
+        inferred_kind = _infer_model_tensor_codec_kind(
+            dtype_name=dtype_name,
+            raw_bytes=raw_bytes,
+            ndim=len(shape),
+            large_tensor_balle_threshold_bytes=large_tensor_balle_threshold_bytes,
+        )
+        codec_kind = (
+            int(codec_overrides[name])
+            if codec_overrides is not None and name in codec_overrides
+            else inferred_kind
+        )
+        if codec_kind not in (
+            KIND_ARITHMETIC_STATIC,
+            KIND_BALLE_HYPERPRIOR,
+            KIND_RAW_PASSTHROUGH,
+        ):
+            raise ValueError(f"invalid codec override for {name!r}: {codec_kind}")
+        byte_estimate = _estimate_model_tensor_stream_bytes(
+            dtype_name=dtype_name,
+            num_elements=num_elements,
+            raw_bytes=raw_bytes,
+        )
+        (
+            marginal,
+            marginal_source,
+            marginal_evidence,
+            scorer_term,
+            score_tags,
+        ) = _score_annotation_for_stream(
+            name=name,
+            score_marginals=score_marginals,
+            default_score_per_byte_marginal=default_score_per_byte_marginal,
+        )
+        constraint_tags = [
+            "additive_score_marginal_required",
+            "no_scorer_load_at_stream_decomposition",
+            *score_tags,
+        ]
+        dispatch_blockers = [
+            "qint_or_exact_wire_stream_missing",
+            "decode_validation_missing",
+        ]
+        if "missing_score_marginal" in constraint_tags:
+            dispatch_blockers.append("score_marginal_artifact_missing")
+        if _match_name_set(name, wet_streams):
+            constraint_tags.append("wet_stream_do_not_perturb")
+            dispatch_blockers.append("wet_stream_requires_explicit_override")
+            marginal = 0.0
+            marginal_source = "wet_stream"
+            marginal_evidence = "derivation"
+        fail_closed = [
+            "refuse_dispatch_if_score_marginal_missing",
+            "refuse_dispatch_if_decode_validation_missing",
+            "refuse_dispatch_if_charged_bytes_unverified",
+        ]
+        research_basis_ids = tuple(
+            dict.fromkeys(
+                [
+                    *research_basis_ids_for_family("gamma"),
+                    *(
+                        research_basis_ids_for_family("foveation")
+                        if scorer_term in {"seg", "pose", "joint"}
+                        else []
+                    ),
+                ]
+            )
+        )
+        out.append(
+            JCSPTensorStreamSpec(
+                name=name,
+                codec_kind=codec_kind,
+                tensor_shape=shape,
+                tensor_dtype=dtype_name,
+                num_elements=num_elements,
+                raw_bytes=raw_bytes,
+                byte_estimate=byte_estimate,
+                bytes_charged=byte_estimate,
+                score_per_byte_marginal=float(marginal),
+                score_marginal_source=marginal_source,
+                score_marginal_evidence=marginal_evidence,
+                scorer_term_targeted=scorer_term,
+                research_basis_ids=research_basis_ids,
+                constraint_tags=tuple(dict.fromkeys(constraint_tags)),
+                dispatch_blockers=tuple(dict.fromkeys(dispatch_blockers)),
+                fail_closed_criteria=tuple(fail_closed),
+            )
+        )
+    return out
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -720,12 +1004,14 @@ def run_sequential_codec_stack(
 
 
 __all__ = [
+    "JCSPTensorStreamSpec",
     "JointCodecStackResult",
     "KIND_ARITHMETIC_STATIC",
     "KIND_BALLE_HYPERPRIOR",
     "KIND_RAW_PASSTHROUGH",
     "StackStreamResult",
     "StreamSource",
+    "model_to_jcsp_streams",
     "run_joint_codec_stack",
     "run_sequential_codec_stack",
     "unpack_jcsp_container",

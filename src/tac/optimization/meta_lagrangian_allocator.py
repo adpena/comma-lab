@@ -288,6 +288,7 @@ def expected_atom_score_delta(
         "class_support": list(atom.get("class_support") or []),
         "geometry_priors": list(atom.get("geometry_priors") or []),
         "openpilot_priors": list(atom.get("openpilot_priors") or []),
+        "research_basis_ids": list(atom.get("research_basis_ids") or []),
         "allocation_inference": bool(atom.get("allocation_inference", False)),
         "evidence_source_path": atom.get("evidence_source_path", ""),
         "evidence_source_sha256": atom.get("evidence_source_sha256", ""),
