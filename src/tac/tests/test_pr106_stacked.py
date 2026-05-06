@@ -24,6 +24,7 @@ Per CLAUDE.md MPS-noise rule: any score-producing assertion would need
 """
 from __future__ import annotations
 
+import subprocess
 import struct
 import sys
 import zipfile
@@ -31,6 +32,8 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
+from tac.repo_io import read_json, sha256_file
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PR106_ARCHIVE = REPO_ROOT / (
@@ -901,3 +904,45 @@ def test_builder_rejects_wrong_outer_magic_sister(tmp_path):
 
     with pytest.raises(ValueError, match="expected pr106_yshift_sidechannel"):
         builder.extract_yshift_section_blob(bogus_zip)
+
+
+def test_builder_metadata_records_archive_hash_custody(tmp_path):
+    """CLI metadata records byte/hash custody for anchor and output archives."""
+    if not PR106_ARCHIVE.is_file():
+        pytest.skip(f"PR106 anchor not present at {PR106_ARCHIVE}")
+    out_dir = tmp_path / "stacked"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "experiments" / "build_pr106_stacked.py"),
+            "--pr106-archive",
+            str(PR106_ARCHIVE),
+            "--output-dir",
+            str(out_dir),
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "[build-stacked] wrote" in proc.stdout
+
+    archive_path = out_dir / "pr106_stacked_archive.zip"
+    metadata = read_json(out_dir / "build_metadata.json")
+    assert metadata["manifest_schema"] == "pr106_stacked_build_metadata_v2"
+    assert metadata["pr106_archive_sha256"] == sha256_file(PR106_ARCHIVE)
+    assert metadata["archive_sha256"] == sha256_file(archive_path)
+    assert metadata["input_archives"]["pr106"] == {
+        "path": str(PR106_ARCHIVE),
+        "bytes": PR106_ARCHIVE.stat().st_size,
+        "sha256": sha256_file(PR106_ARCHIVE),
+    }
+    assert metadata["input_archives"]["latent"] is None
+    assert metadata["input_archives"]["yshift"] is None
+    assert metadata["input_archives"]["lrl1"] is None
+    assert metadata["input_archives"]["wavelet"] is None
+    assert metadata["output_archive"] == {
+        "path": str(archive_path),
+        "bytes": archive_path.stat().st_size,
+        "sha256": sha256_file(archive_path),
+    }

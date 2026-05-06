@@ -78,7 +78,7 @@ prepend_paths(
     REPO_ROOT / "submissions" / "pr106_latent_sidecar" / "src",
 )
 
-from tac.repo_io import json_text
+from tac.repo_io import json_text, sha256_file
 
 # Imported AFTER path insertion: pr106_stacked outer parser + section constants.
 from inflate import (  # type: ignore[import-not-found]
@@ -126,6 +126,17 @@ def _read_zip_bin(archive_path: Path) -> bytes:
                 f"{archive_path}: 0.bin missing (members={names})"
             )
         return z.read("0.bin")
+
+
+def _archive_custody(path: Path | None) -> dict[str, object] | None:
+    """Return byte/hash custody for an optional archive path."""
+    if path is None:
+        return None
+    return {
+        "path": str(path),
+        "bytes": path.stat().st_size,
+        "sha256": sha256_file(path),
+    }
 
 
 def extract_pr106_bytes(pr106_archive: Path) -> bytes:
@@ -514,15 +525,24 @@ def main() -> int:
     # Stage G: write build metadata.
     elapsed = time.time() - started
     metadata = {
+        "manifest_schema": "pr106_stacked_build_metadata_v2",
         "lane_id": "lane_pr106_stacked",
         "wall_clock_seconds": elapsed,
         "pr106_archive": str(args.pr106_archive),
+        "pr106_archive_sha256": sha256_file(args.pr106_archive),
         "pr106_zip_bytes": pr106_zip_size,
         "pr106_bin_bytes": pr106_size_bytes,
         "latent_archive": str(args.latent) if args.latent else None,
         "yshift_archive": str(args.yshift) if args.yshift else None,
         "lrl1_archive": str(args.lrl1) if args.lrl1 else None,
         "wavelet_archive": str(args.wavelet) if args.wavelet else None,
+        "input_archives": {
+            "pr106": _archive_custody(args.pr106_archive),
+            "latent": _archive_custody(args.latent),
+            "yshift": _archive_custody(args.yshift),
+            "lrl1": _archive_custody(args.lrl1),
+            "wavelet": _archive_custody(args.wavelet),
+        },
         "section_blob_bytes": {
             "latent": len(sections.get(SECTION_LATENT, b"")) if SECTION_LATENT in sections else None,
             "yshift": len(sections.get(SECTION_YSHIFT, b"")) if SECTION_YSHIFT in sections else None,
@@ -531,7 +551,9 @@ def main() -> int:
         },
         "n_sections": len(sections),
         "archive_path": str(archive_path),
+        "archive_sha256": sha256_file(archive_path),
         "archive_zip_bytes": archive_size,
+        "output_archive": _archive_custody(archive_path),
         "delta_bytes_vs_pr106_zip": delta,
         "rate_component_score_delta_vs_pr106": score_delta_rate_only,
         "outer_dispatch_magic": f"0x{STACKED_MAGIC_BYTE:02X}",
