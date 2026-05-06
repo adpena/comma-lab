@@ -4806,3 +4806,45 @@ Verification:
 
 - `.venv/bin/python -m pytest src/tac/tests/test_pr86_hpac_codec.py -q` ->
   `15 passed`.
+
+## R70 - 2026-05-06 PR91/PR92 Replay Preflight Test Canonicalization
+
+Canonicalized the PR91/HPM1 plus PR92/RMB1 replay-contract preflight with
+focused tests. The script already existed, but it lacked durable functional
+coverage tying the two important conclusions together:
+
+- PR91/HPM1 remains fail-closed until the HPAC probability/range contract is
+  byte-closed.
+- PR92/RMB1 has recoverable exact T4 evidence from local
+  `auth_eval.log` / `adjudication.log` custody when the structured
+  manifest/JSON copy is missing locally.
+
+Updated:
+
+- `src/tac/tests/test_preflight_pr91_pr92_replay_contracts.py`
+
+Covered contracts:
+
+- `validate_pr92_rmb1_contract(...)` recovers
+  `passed_t4_exact_pr92_rmb1_stack_validated` from exact-eval/adjudication
+  logs, with A++ evidence grade, archive bytes `229480`, and recomputed score
+  `0.2535063602939779`.
+- `validate_pr91_hpm1_contract(...)` returns
+  `blocked_hpm1_probability_range_contract_mismatch` when no probability
+  variant passes, with `score_claim=false` and `dispatch_allowed=false`.
+- The combined report returns
+  `passed_pr92_a_plus_plus_pr91_fail_closed` without dispatching remote work.
+- The CLI writes both JSON and markdown ledger outputs.
+
+Scientific position:
+
+- PR92 log recovery is exact-evidence custody repair, not permission to infer
+  new scores from logs generally.
+- PR91 remains non-dispatchable despite public leaderboard context until full
+  HPAC decode/reencode parity or exact auth eval succeeds.
+
+Verification:
+
+- `.venv/bin/python -m pytest
+  src/tac/tests/test_preflight_pr91_pr92_replay_contracts.py -q` ->
+  `4 passed`.
