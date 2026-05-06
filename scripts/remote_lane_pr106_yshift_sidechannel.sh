@@ -1,5 +1,6 @@
 #!/bin/bash
-# NO_NVDEC_NEEDED — pure tensor-side codec + scorer-forward; no DALI/NVDEC video pipeline.
+# CUDA scorer/eval lane. Non-zero modes require CUDA and DALI/NVDEC because the
+# score-table producer and contest auth eval both use the official video path.
 # Lane #pr106_yshift_sidechannel — PR106 + per-frame Y-shift sidechannel
 # (codex_metric_yshift SC01 mode-7 pattern, score_aware_sidechannel paradigm variant #3)
 #
@@ -47,19 +48,6 @@ PR106_YSHIFT_SCORE_TABLE_BATCH_PAIRS="${PR106_YSHIFT_SCORE_TABLE_BATCH_PAIRS:-8}
 PR106_YSHIFT_SCORE_TABLE_CANDIDATE_BATCH_SIZE="${PR106_YSHIFT_SCORE_TABLE_CANDIDATE_BATCH_SIZE:-32}"
 PR106_ARCHIVE="${PR106_ARCHIVE:-experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip}"
 
-[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
-
-# Stage 0: NVDEC probe — required by preflight check_remote_scripts_have_nvdec_probe.
-# probe MUST come before any GPU-work marker including bare `nvidia-smi`.
-if [ "${SKIP_NVDEC_PROBE:-0}" != "1" ] && [ -f "$WORKSPACE/scripts/probe_nvdec.sh" ]; then
-    bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
-        log "FATAL: NVDEC/DALI probe failed; exact CUDA eval is not trustworthy on this host."
-        exit 2
-    }
-fi
-
-cd "$WORKSPACE"
-
 if ! [[ "$PR106_YSHIFT_MODE" =~ ^(zero|score_table|gradient|brute_force)$ ]]; then
     echo "FATAL: PR106_YSHIFT_MODE must be one of {zero, score_table, gradient, brute_force}; got: $PR106_YSHIFT_MODE" >&2
     exit 2
@@ -70,12 +58,29 @@ if [ "$PR106_YSHIFT_MODE" = "score_table" ] && [ -n "$PR106_YSHIFT_SCORE_TABLE_N
 fi
 
 LANE_ID="lane_pr106_yshift_sidechannel_${PR106_YSHIFT_MODE}"
-LOG_DIR="$WORKSPACE/experiments/results/${LANE_ID}_$(date -u +%Y%m%dT%H%M%SZ)"
+LOG_DIR="${PR106_YSHIFT_LOG_DIR:-$WORKSPACE/experiments/results/${LANE_ID}_$(date -u +%Y%m%dT%H%M%SZ)}"
 mkdir -p "$LOG_DIR"
 log() { echo "[lane-pr106-yshift-${PR106_YSHIFT_MODE}] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
+if [ "$PR106_YSHIFT_MODE" = "score_table" ] && [ -z "$PR106_YSHIFT_SCORE_TABLE_NPY" ] && [ -z "$PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID" ]; then
+    log "FATAL: score_table generation requires PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID matching an active lane claim"
+    exit 2
+fi
 if [ -z "$PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID" ]; then
     PR106_YSHIFT_SCORE_TABLE_INSTANCE_JOB_ID="$(basename "$LOG_DIR")"
 fi
+
+[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
+
+# Stage 0: NVDEC probe — required for non-zero modes before any GPU-work
+# marker, including bare `nvidia-smi`.
+if [ "$PR106_YSHIFT_MODE" != "zero" ] && [ "${SKIP_NVDEC_PROBE:-0}" != "1" ] && [ -f "$WORKSPACE/scripts/probe_nvdec.sh" ]; then
+    bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
+        log "FATAL: NVDEC/DALI probe failed; exact CUDA eval is not trustworthy on this host."
+        exit 2
+    }
+fi
+
+cd "$WORKSPACE"
 
 # Heartbeat (per CLAUDE.md remote-code-parity rule)
 HEARTBEAT="$LOG_DIR/heartbeat.log"
@@ -180,7 +185,7 @@ assert sc['raw'].shape == (1200, 3), f'expected (1200, 3) sidechannel, got {sc[\
 # ── Stage 3: Contest auth eval (CUDA T4 or 4090) ──────────────────────────
 if [ "$PR106_YSHIFT_MODE" = "zero" ]; then
     log "=== Stage 3 SKIPPED: mode=zero produces no real distortion change. CPU smoke complete. ==="
-    log "DONE: lane=$LANE_ID mode=$PR106_YSHIFT_MODE archive_bytes=$ARCHIVE_BYTES (no contest score; CPU wire-format proof) [contest-CUDA]"
+    log "DONE: lane=$LANE_ID mode=$PR106_YSHIFT_MODE archive_bytes=$ARCHIVE_BYTES (no contest score; CPU wire-format proof; not contest-CUDA evidence)"
     exit 0
 fi
 
