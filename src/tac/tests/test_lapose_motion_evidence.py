@@ -25,12 +25,17 @@ def test_records_from_component_response_allocates_best_cuda_delta() -> None:
     assert payload["score_claim"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["source_archive_sha256"] == "b" * 64
+    assert (
+        payload["paper_reference"]["implementation_alignment"]
+        == "inspired_planning_only_not_paper_faithful_model"
+    )
+    assert "lapose_lite_is_not_paper_faithful_lapose_model" in payload["dispatch_blockers"]
     assert payload["allocation"]["response_atom"]["epsilon"] == -1.0
     assert payload["allocation"]["allocation_inference"] is True
     assert payload["records"][0]["evidence_grade"] == "diagnostic_cuda_global_response_allocated"
     assert payload["records"][0]["allocation_inference"] is True
     assert payload["records"][0]["pair_support"] == [10]
-    assert payload["records"][0]["hard_pair_support"] == []
+    assert payload["records"][0]["hard_pair_support"] == [10]
     assert payload["records"][0]["source_archive_sha256"] == "b" * 64
     assert payload["records"][0]["byte_delta"] == -1
 
@@ -40,6 +45,10 @@ def test_records_from_component_response_allocates_best_cuda_delta() -> None:
         source="fixture",
     )
     assert manifest["atom_ledger"]["rows"][0]["evidence_source_sha256"] == "a" * 64
+    assert manifest["atom_ledger"]["rows"][0]["rankable"] is False
+    assert "allocated_global_response_not_rankable" in manifest["atom_ledger"]["rows"][0][
+        "dispatch_blockers"
+    ]
 
 
 def test_records_from_component_response_fails_closed_on_non_cuda_or_missing_latents() -> None:
@@ -57,6 +66,19 @@ def test_records_from_component_response_fails_closed_on_non_cuda_or_missing_lat
         records_from_component_response(
             _component_response(),
             latent_actions=[],
+            pair_opportunities=_pair_opportunities(),
+            evidence_source_path="component_response.json",
+        )
+
+
+def test_records_from_component_response_rejects_no_improving_point() -> None:
+    component = _component_response()
+    component["points"][1]["values"]["combined"] = 1.1
+
+    with pytest.raises(LaposeMotionAtomError, match="no improving point"):
+        records_from_component_response(
+            component,
+            latent_actions=_latent_actions(),
             pair_opportunities=_pair_opportunities(),
             evidence_source_path="component_response.json",
         )

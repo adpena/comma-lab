@@ -16,6 +16,108 @@
     "requires_archive_manifest_preflight",
     "requires_exact_cuda_auth_eval"
   ],
+  "entropy_summary": {
+    "current_static_model_interpretation": "zero_order_q_symbol_floor_loses_to_current_brotli",
+    "global_q_entropy_floor_bytes": 187805,
+    "global_q_entropy_floor_delta_vs_source_section_bytes": 17639,
+    "global_q_entropy_floor_plus_raw_scales_bytes": 187917,
+    "model_limitations": [
+      "zero_order_symbol_floor_only",
+      "does_not_model_contexts_run_lengths_deltas_tensor_shapes_or_brotli_transforms",
+      "does_not_include_decoder_runtime_cost",
+      "does_not_rank_or_kill_aq_huffman_family_without_exact_archive_eval"
+    ],
+    "per_tensor_q_entropy_floor_bytes": 167570,
+    "per_tensor_q_entropy_floor_delta_vs_source_section_bytes": -2596,
+    "per_tensor_q_entropy_floor_plus_raw_scales_bytes": 167682,
+    "q_stream_entropy_bits_per_symbol": 6.562070351182,
+    "q_stream_symbols": 228958,
+    "q_stream_unique_symbols": 247,
+    "scope": "zero_order_symbol_entropy_floor_for_current_q_streams",
+    "score_claim": false,
+    "top_global_q_symbols": [
+      {
+        "count": 6223,
+        "frequency": 0.027179657404,
+        "symbol": 9
+      },
+      {
+        "count": 6115,
+        "frequency": 0.026707955171,
+        "symbol": 3
+      },
+      {
+        "count": 5794,
+        "frequency": 0.02530595131,
+        "symbol": 4
+      },
+      {
+        "count": 5642,
+        "frequency": 0.024642074092,
+        "symbol": 13
+      },
+      {
+        "count": 5350,
+        "frequency": 0.023366731016,
+        "symbol": 0
+      },
+      {
+        "count": 4898,
+        "frequency": 0.021392569816,
+        "symbol": 30
+      },
+      {
+        "count": 4897,
+        "frequency": 0.021388202203,
+        "symbol": 10
+      },
+      {
+        "count": 4851,
+        "frequency": 0.021187291992,
+        "symbol": 25
+      },
+      {
+        "count": 4515,
+        "frequency": 0.019719773932,
+        "symbol": 14
+      },
+      {
+        "count": 4451,
+        "frequency": 0.019440246683,
+        "symbol": 8
+      },
+      {
+        "count": 4411,
+        "frequency": 0.019265542152,
+        "symbol": 26
+      },
+      {
+        "count": 4313,
+        "frequency": 0.018837516051,
+        "symbol": 22
+      },
+      {
+        "count": 4307,
+        "frequency": 0.018811310371,
+        "symbol": 34
+      },
+      {
+        "count": 4281,
+        "frequency": 0.018697752426,
+        "symbol": 18
+      },
+      {
+        "count": 4206,
+        "frequency": 0.018370181431,
+        "symbol": 5
+      },
+      {
+        "count": 4024,
+        "frequency": 0.017575275815,
+        "symbol": 21
+      }
+    ]
+  },
   "q_stream_bytes": 228958,
   "ready_for_archive_preflight": false,
   "ready_for_exact_eval_dispatch": false,
@@ -63,6 +165,7 @@
     },
     {
       "byte_delta_vs_source_section": 18713,
+      "byte_gap_vs_global_q_entropy_floor_plus_raw_scales": 1074,
       "bytes": 188991,
       "codec": "AQv1_static_global_uint8",
       "q_roundtrip_equal": true,
@@ -85,6 +188,7 @@
     },
     {
       "byte_delta_vs_source_section": 19175,
+      "byte_gap_vs_global_q_entropy_floor_plus_raw_scales": 1536,
       "bytes": 189453,
       "codec": "TFC1_static_global_uint8",
       "max_code_bits": 19,

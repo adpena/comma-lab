@@ -17,6 +17,7 @@ from typing import Any
 import numpy as np
 
 from tac.analysis.lapose_motion_atoms import LaposeMotionAtomError
+from tac.analysis.lapose_paper_contract import LAPOSE_PAPER_REFERENCE
 
 SCHEMA_VERSION = 1
 
@@ -61,11 +62,12 @@ def inputs_from_pair_metric_payload(
     payload_openpilot_priors = _str_list(payload.get("openpilot_priors") or [], "openpilot_priors")
     latent_actions = []
     pair_opportunities = []
-    for pair_index in hardest:
+    for hard_pair_rank, pair_index in enumerate(hardest):
         _check_pair_index(pair_index, n_pairs)
         latent_actions.append(
             {
                 "pair_index": pair_index,
+                "hard_pair_rank": hard_pair_rank,
                 "latent_action": _latent_action(
                     pair_index,
                     n_pairs=n_pairs,
@@ -90,8 +92,10 @@ def inputs_from_pair_metric_payload(
         pair_opportunities.append(
             {
                 "pair_index": pair_index,
+                "hard_pair_rank": hard_pair_rank,
                 "opportunity_mass": max(float(contrib[pair_index]), 0.0),
                 "hard_pair_score": float(contrib[pair_index]),
+                "hard_pair_support": [pair_index],
                 "confidence": _confidence(float(contrib[pair_index]), contrib_stats),
                 "class_support": [],
                 "geometry_priors": ["scorer_pair_metric", "pair_metric_hardness"],
@@ -112,6 +116,7 @@ def inputs_from_pair_metric_payload(
         "source_device": payload.get("device"),
         "source_lane": payload.get("lane", ""),
         "evidence_grade": "empirical_cuda_pair_metric_telemetry",
+        "paper_reference": LAPOSE_PAPER_REFERENCE,
         "n_pairs": n_pairs,
         "selected_pair_count": len(hardest),
         "feature_contract": {
@@ -139,6 +144,7 @@ def inputs_from_pair_metric_payload(
             "planning_only_lapose_lite_inputs",
             "lane_w_pair_metrics_are_general_scorer_telemetry_not_lane_local_state",
             "pair_metrics_are_not_score_authority",
+            "lapose_lite_is_not_paper_faithful_lapose_model",
             "requires_component_response_allocation",
             "requires_charged_archive_builder",
             "requires_exact_cuda_auth_eval",

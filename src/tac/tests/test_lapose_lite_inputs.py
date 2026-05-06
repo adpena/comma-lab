@@ -24,10 +24,18 @@ def test_inputs_from_pair_metric_payload_builds_deterministic_records() -> None:
     assert manifest["score_claim"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["evidence_grade"] == "empirical_cuda_pair_metric_telemetry"
+    assert (
+        manifest["paper_reference"]["implementation_alignment"]
+        == "inspired_planning_only_not_paper_faithful_model"
+    )
     assert "pair_metrics_are_not_score_authority" in manifest["dispatch_blockers"]
+    assert "lapose_lite_is_not_paper_faithful_lapose_model" in manifest["dispatch_blockers"]
     assert manifest["selected_pair_count"] == 2
     assert manifest["latent_actions"][0]["pair_index"] == 3
+    assert manifest["latent_actions"][0]["hard_pair_rank"] == 0
     assert len(manifest["latent_actions"][0]["latent_action"]) == 10
+    assert manifest["pair_opportunities"][0]["hard_pair_rank"] == 0
+    assert manifest["pair_opportunities"][0]["hard_pair_support"] == [3]
     assert manifest["pair_opportunities"][0]["geometry_priors"] == [
         "scorer_pair_metric",
         "pair_metric_hardness",

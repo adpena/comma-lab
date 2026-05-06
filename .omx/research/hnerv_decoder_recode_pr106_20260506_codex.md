@@ -47,6 +47,30 @@ HNeRV decoder-section path: PR106's packed decoder is already better served by
 deterministic brotli q10 recode than by the current AQ/Huffman structural
 containers.
 
+## Entropy-Floor Audit
+
+The updated profile records a zero-order symbol entropy floor for the current
+decoder q stream:
+
+- q_stream_symbols: `228958`
+- q_stream_unique_symbols: `247`
+- q_stream_entropy_bits_per_symbol: `6.562070351182`
+- global_q_entropy_floor_bytes: `187805`
+- global_q_entropy_floor_plus_raw_scales_bytes: `187917`
+- global_q_entropy_floor_delta_vs_source_section_bytes: `+17639`
+- per_tensor_q_entropy_floor_plus_raw_scales_bytes: `167682`
+- per_tensor_q_entropy_floor_delta_vs_source_section_bytes: `-2596`
+
+Interpretation: current global AQ/Huffman is not merely losing because of
+massive implementation overhead. The global static symbol model's own
+zero-order floor is already worse than brotli by `17639` bytes, while the
+current global AQ container is only `1074` bytes above that floor and the
+canonical Huffman container is `1536` bytes above it. However, the per-tensor
+zero-order floor has theoretical byte headroom versus brotli. The next valid
+AQ/range direction is therefore a context/per-tensor/shape-aware model with a
+small deterministic decoder, not further polishing of the current global
+q-stream container.
+
 ## Commands
 
 ```bash

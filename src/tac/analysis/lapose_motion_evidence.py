@@ -16,6 +16,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from tac.analysis.lapose_motion_atoms import LaposeMotionAtomError
+from tac.analysis.lapose_paper_contract import LAPOSE_PAPER_REFERENCE
 
 SCHEMA_VERSION = 1
 
@@ -64,6 +65,7 @@ def records_from_component_response(
         latent = latent_by_pair[pair_index]
         record = {
             "pair_index": pair_index,
+            "hard_pair_rank": item.get("hard_pair_rank"),
             "latent_action": _float_sequence(latent.get("latent_action"), "latent_action"),
             "byte_delta": byte_delta,
             "expected_seg_dist_delta": float(response_delta["seg_dist_delta"]) * share,
@@ -93,6 +95,7 @@ def records_from_component_response(
         "evidence_source_sha256": source_sha,
         "source_archive_sha256": baseline_sha,
         "device": device,
+        "paper_reference": LAPOSE_PAPER_REFERENCE,
         "allocation": {
             "method": "opportunity_mass_weighted_global_component_response",
             "allocation_inference": True,
@@ -103,6 +106,7 @@ def records_from_component_response(
         "records": records,
         "dispatch_blockers": [
             "planning_only_allocated_component_response",
+            "lapose_lite_is_not_paper_faithful_lapose_model",
             "requires_lapose_or_motion_builder_charging_bytes",
             "requires_noop_controls",
             "requires_exact_cuda_auth_eval",
@@ -174,9 +178,10 @@ def _normalize_opportunity(item: Mapping[str, Any]) -> dict[str, Any]:
         raise LaposeMotionAtomError(f"pair {pair_index}: opportunity_mass must be finite")
     return {
         "pair_index": pair_index,
+        "hard_pair_rank": item.get("hard_pair_rank"),
         "opportunity_mass": mass,
         "hard_pair_score": float(item.get("hard_pair_score", mass)),
-        "hard_pair_support": _int_list(item.get("hard_pair_support") or []),
+        "hard_pair_support": _int_list(item.get("hard_pair_support") or [pair_index]),
         "confidence": confidence,
         "class_support": _int_list(item.get("class_support") or []),
         "geometry_priors": _str_list(item.get("geometry_priors") or []),

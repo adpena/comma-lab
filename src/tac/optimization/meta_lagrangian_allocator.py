@@ -55,6 +55,8 @@ def _rankable_atom(atom: Mapping[str, Any], evidence_grade: str, confidence: flo
         blockers.append("raw_output_not_byte_equivalent")
     if atom.get("rankable") is False:
         blockers.append("source_marked_non_rankable")
+    if atom.get("allocation_inference") is True:
+        blockers.append("allocated_global_response_not_rankable")
     if confidence <= 0.0 and int(atom.get("byte_delta", 0)) < 0:
         blockers.append("byte_savings_without_trusted_equivalence")
     return not blockers, blockers
@@ -106,6 +108,7 @@ def expected_atom_score_delta(
         "class_support": list(atom.get("class_support") or []),
         "geometry_priors": list(atom.get("geometry_priors") or []),
         "openpilot_priors": list(atom.get("openpilot_priors") or []),
+        "allocation_inference": bool(atom.get("allocation_inference", False)),
         "evidence_source_path": atom.get("evidence_source_path", ""),
         "evidence_source_sha256": atom.get("evidence_source_sha256", ""),
         "source_archive_sha256": atom.get("source_archive_sha256", ""),

@@ -6,6 +6,7 @@ import dataclasses
 import io
 import math
 import struct
+from collections import Counter
 from typing import Any
 
 import brotli
@@ -136,6 +137,7 @@ def build_structural_recode_profile(
     parsed = parse_packed_decoder_brotli(packed.decoder_packed_brotli)
     source_raw = parsed.to_raw()
     source_brotli = packed.decoder_packed_brotli
+    entropy_summary = _entropy_summary(parsed, source_section_bytes=len(source_brotli))
     variants = [
         _variant_brotli("brotli_q11_current_raw", source_raw, quality=11),
         _variant_brotli("brotli_q10_current_raw", source_raw, quality=10),
@@ -149,6 +151,10 @@ def build_structural_recode_profile(
         row["rate_score_delta_if_runtime_supported_and_components_equal"] = round(
             row["byte_delta_vs_source_section"] * (25 / 37_545_489), 12
         )
+        if str(row["variant"]).endswith("_q_stream_plus_raw_scales"):
+            row["byte_gap_vs_global_q_entropy_floor_plus_raw_scales"] = int(row["bytes"]) - int(
+                entropy_summary["global_q_entropy_floor_plus_raw_scales_bytes"]
+            )
     best = min(variants, key=lambda row: (int(row["bytes"]), str(row["variant"])))
     return {
         "schema_version": SCHEMA_VERSION,
@@ -166,6 +172,7 @@ def build_structural_recode_profile(
         "record_count": len(parsed.records),
         "q_stream_bytes": len(parsed.q_stream),
         "scale_stream_bytes": len(parsed.scale_stream),
+        "entropy_summary": entropy_summary,
         "variants": variants,
         "best_variant": best,
         "dispatch_blockers": [
@@ -173,6 +180,71 @@ def build_structural_recode_profile(
             "requires_runtime_decoder_implementation",
             "requires_archive_manifest_preflight",
             "requires_exact_cuda_auth_eval",
+        ],
+    }
+
+
+def _entropy_summary(parsed: PackedDecoderRaw, *, source_section_bytes: int) -> dict[str, Any]:
+    global_q = _symbol_entropy_summary(parsed.q_stream)
+    per_tensor_floor = sum(
+        _symbol_entropy_summary(record.q_zz_u8)["entropy_floor_bytes"]
+        for record in parsed.records
+    )
+    global_floor_plus_scales = int(global_q["entropy_floor_bytes"]) + len(parsed.scale_stream)
+    per_tensor_floor_plus_scales = per_tensor_floor + len(parsed.scale_stream)
+    return {
+        "scope": "zero_order_symbol_entropy_floor_for_current_q_streams",
+        "score_claim": False,
+        "q_stream_symbols": len(parsed.q_stream),
+        "q_stream_unique_symbols": global_q["unique_symbols"],
+        "q_stream_entropy_bits_per_symbol": global_q["entropy_bits_per_symbol"],
+        "global_q_entropy_floor_bytes": global_q["entropy_floor_bytes"],
+        "global_q_entropy_floor_plus_raw_scales_bytes": global_floor_plus_scales,
+        "global_q_entropy_floor_delta_vs_source_section_bytes": global_floor_plus_scales
+        - source_section_bytes,
+        "per_tensor_q_entropy_floor_bytes": per_tensor_floor,
+        "per_tensor_q_entropy_floor_plus_raw_scales_bytes": per_tensor_floor_plus_scales,
+        "per_tensor_q_entropy_floor_delta_vs_source_section_bytes": per_tensor_floor_plus_scales
+        - source_section_bytes,
+        "top_global_q_symbols": global_q["top_symbols"],
+        "current_static_model_interpretation": (
+            "zero_order_q_symbol_floor_loses_to_current_brotli"
+            if global_floor_plus_scales >= source_section_bytes
+            else "zero_order_q_symbol_floor_has_byte_headroom"
+        ),
+        "model_limitations": [
+            "zero_order_symbol_floor_only",
+            "does_not_model_contexts_run_lengths_deltas_tensor_shapes_or_brotli_transforms",
+            "does_not_include_decoder_runtime_cost",
+            "does_not_rank_or_kill_aq_huffman_family_without_exact_archive_eval",
+        ],
+    }
+
+
+def _symbol_entropy_summary(payload: bytes) -> dict[str, Any]:
+    if not payload:
+        return {
+            "symbols": 0,
+            "unique_symbols": 0,
+            "entropy_bits_per_symbol": 0.0,
+            "entropy_floor_bytes": 0,
+            "top_symbols": [],
+        }
+    counts = Counter(payload)
+    total = len(payload)
+    entropy = -sum((count / total) * math.log2(count / total) for count in counts.values())
+    return {
+        "symbols": total,
+        "unique_symbols": len(counts),
+        "entropy_bits_per_symbol": round(float(entropy), 12),
+        "entropy_floor_bytes": int(math.ceil(entropy * total / 8)),
+        "top_symbols": [
+            {
+                "symbol": int(symbol),
+                "count": int(count),
+                "frequency": round(float(count / total), 12),
+            }
+            for symbol, count in counts.most_common(16)
         ],
     }
 

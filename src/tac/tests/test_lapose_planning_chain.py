@@ -56,10 +56,14 @@ def test_pair_metrics_to_motion_atoms_to_lagrangian_chain_is_planning_only() -> 
 
     assert lapose_inputs["score_claim"] is False
     assert records["allocation"]["allocation_inference"] is True
+    assert manifest["paper_reference"]["arxiv"] == "2604.27448"
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["atom_ledger"]["ready_for_exact_eval_dispatch"] is False
     first_row = manifest["atom_ledger"]["rows"][0]
     assert first_row["pair_support"]
-    assert first_row["hard_pair_support"] == []
+    assert first_row["hard_pair_support"]
+    assert first_row["allocation_inference"] is True
+    assert first_row["rankable"] is False
+    assert "allocated_global_response_not_rankable" in first_row["dispatch_blockers"]
     assert first_row["evidence_source_sha256"] == "3" * 64
     assert first_row["source_archive_sha256"] == "2" * 64

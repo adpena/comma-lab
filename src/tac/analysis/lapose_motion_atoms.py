@@ -10,6 +10,7 @@ from typing import Any
 
 import numpy as np
 
+from tac.analysis.lapose_paper_contract import LAPOSE_PAPER_REFERENCE
 from tac.optimization.meta_lagrangian_allocator import build_atom_ledger
 
 SCHEMA_VERSION = 1
@@ -61,6 +62,7 @@ def build_motion_atom_manifest(
         "dispatch_attempted": False,
         "ready_for_exact_eval_dispatch": False,
         "source": source,
+        "paper_reference": LAPOSE_PAPER_REFERENCE,
         "base_pose_dist": float(base_pose_dist),
         "record_count": len(normalized),
         "record_sha256": _sha256_json(normalized),
@@ -77,6 +79,7 @@ def build_motion_atom_manifest(
         "atom_ledger": ledger,
         "dispatch_blockers": [
             "planning_only_lapose_motion_atoms",
+            "lapose_lite_is_not_paper_faithful_lapose_model",
             "requires_charged_payload_or_builder_policy",
             "requires_noop_controls",
             "requires_exact_cuda_auth_eval",
@@ -113,6 +116,7 @@ def _normalize_record(record: Mapping[str, Any]) -> dict[str, Any]:
     expected_pose = float(record.get("expected_pose_dist_delta", 0.0))
     return {
         "pair_index": pair_index,
+        "hard_pair_rank": _optional_int_field(record, "hard_pair_rank"),
         "latent_action": list(latent),
         "latent_norm": math.sqrt(sum(value * value for value in latent)),
         "hard_pair_score": float(record.get("hard_pair_score", 0.0)),
@@ -126,6 +130,7 @@ def _normalize_record(record: Mapping[str, Any]) -> dict[str, Any]:
         "geometry_priors": _str_list(record.get("geometry_priors") or []),
         "openpilot_priors": _str_list(record.get("openpilot_priors") or []),
         "evidence_grade": str(record.get("evidence_grade") or "prediction"),
+        "allocation_inference": bool(record.get("allocation_inference", False)),
         "evidence_source_path": str(record.get("evidence_source_path") or ""),
         "evidence_source_sha256": str(record.get("evidence_source_sha256") or ""),
         "source_archive_sha256": str(record.get("source_archive_sha256") or ""),
@@ -137,6 +142,7 @@ def _record_to_atom(record: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "atom_id": f"lapose_motion_pair:{pair_index}",
         "family": "lapose_motion_atom",
+        "hard_pair_rank": record["hard_pair_rank"],
         "byte_delta": int(record["byte_delta"]),
         "expected_seg_dist_delta": float(record["expected_seg_dist_delta"]),
         "expected_pose_dist_delta": float(record["expected_pose_dist_delta"]),
@@ -149,6 +155,7 @@ def _record_to_atom(record: Mapping[str, Any]) -> dict[str, Any]:
         "openpilot_priors": list(record["openpilot_priors"]),
         "hard_pair_score": float(record["hard_pair_score"]),
         "latent_norm": float(record["latent_norm"]),
+        "allocation_inference": bool(record["allocation_inference"]),
         "evidence_source_path": record["evidence_source_path"],
         "evidence_source_sha256": record["evidence_source_sha256"],
         "source_archive_sha256": record["source_archive_sha256"],
@@ -273,6 +280,16 @@ def _int_field(record: Mapping[str, Any], key: str) -> int:
     value = record.get(key)
     if not isinstance(value, int):
         raise LaposeMotionAtomError(f"{key} must be an integer")
+    return value
+
+
+def _optional_int_field(record: Mapping[str, Any], key: str) -> int | None:
+    value = record.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, int):
+        pair_index = record.get("pair_index", "<unknown>")
+        raise LaposeMotionAtomError(f"pair {pair_index}: {key} must be an integer when provided")
     return value
 
 

@@ -92,6 +92,26 @@ def test_invalid_byte_only_atom_cannot_rank_ahead_of_valid_equivalent_atom() -> 
     assert "raw_output_not_byte_equivalent" in invalid["dispatch_blockers"]
 
 
+def test_allocated_global_response_atom_is_not_rankable() -> None:
+    row = expected_atom_score_delta(
+        {
+            "atom_id": "lapose_allocated_global_response",
+            "family": "lapose_motion_atom",
+            "byte_delta": -10,
+            "expected_seg_dist_delta": -0.001,
+            "expected_pose_dist_delta": -0.0001,
+            "confidence": 0.75,
+            "evidence_grade": "diagnostic_cuda_global_response_allocated",
+            "allocation_inference": True,
+        },
+        base_pose_dist=0.01,
+    )
+
+    assert row["allocation_inference"] is True
+    assert row["rankable"] is False
+    assert "allocated_global_response_not_rankable" in row["dispatch_blockers"]
+
+
 def test_build_meta_lagrangian_atom_ledger_cli(tmp_path: Path) -> None:
     profile = tmp_path / "profile.json"
     out = tmp_path / "ledger.json"

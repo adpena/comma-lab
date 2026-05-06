@@ -1,0 +1,712 @@
+{
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "inventory_only",
+    "requires_candidate_specific_archive_manifest",
+    "requires_lane_dispatch_claim",
+    "requires_exact_cuda_auth_eval"
+  ],
+  "missing_code_path_count": 0,
+  "missing_evidence_path_count": 0,
+  "paradigm_counts": {
+    "all_paradigms": 1,
+    "alpha_mask_payload": 5,
+    "archive_packing": 1,
+    "beta_sensitivity": 1,
+    "categorical_masks": 3,
+    "delta_epsilon_zeta": 1,
+    "entropy_coding": 3,
+    "foveation": 2,
+    "gamma_joint_codec": 1,
+    "hyperprior": 1,
+    "la_pose": 2,
+    "latent_repair": 1,
+    "mdl": 1,
+    "meta_lagrangian": 2,
+    "openpilot_priors": 4,
+    "pose": 3,
+    "quantization": 1,
+    "self_compress": 1,
+    "tto": 1,
+    "waterfill": 1,
+    "wavelet": 1
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "research_grade_standard": {
+    "contest_native_rule": "Contest-native methods must carry typed contracts, deterministic manifests, no-op controls, byte-closed archive consumption, and exact CUDA custody before promotion.",
+    "external_method_rule": "Do not claim 1:1 paper implementation unless the repo has the paper's core model, training objective, inputs, outputs, and evaluation contract."
+  },
+  "role_counts": {
+    "canonical_ranker": 1,
+    "proposal_allocator": 1,
+    "proposal_or_pose_sidecar_replacement": 1,
+    "replacement_mask_stream": 1,
+    "replacement_or_mask_stacker": 1,
+    "replacement_renderer_or_decoder": 1,
+    "scorer_weighted_proposal_or_replacement": 1,
+    "stack_or_replacement_orchestrator": 1,
+    "stacker_quantization": 1,
+    "stacker_rate_only": 2,
+    "stacker_scorer_changing": 1
+  },
+  "row_count": 12,
+  "rows": [
+    {
+      "blockers": [
+        "requires exact eval for each rebuilt archive SHA"
+      ],
+      "code_paths": [
+        "src/tac/hnerv_lowlevel_packer.py",
+        "src/tac/hnerv_section_repack.py",
+        "tools/build_hnerv_lowlevel_repack_candidate.py",
+        "tools/audit_hnerv_section_candidate_diff.py"
+      ],
+      "evidence_grade": "A++ exact CUDA for PR106x; empirical for PR106 q10 rebuild until exact eval",
+      "evidence_paths": [
+        "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/contest_auth_eval.adjudicated.json",
+        "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/manifest.json",
+        ".omx/research/hnerv_decoder_recode_pr106_20260506_codex.md"
+      ],
+      "key": "hnerv_lowlevel_brotli_repack",
+      "next_patch": "Promote only exact-evaluated archive SHAs; keep PR106 q10 as archive-preflight-ready until lane claim and exact CUDA auth eval.",
+      "paradigms": [
+        "alpha_mask_payload",
+        "entropy_coding",
+        "archive_packing"
+      ],
+      "path_audit": {
+        "code": {
+          "existing": [
+            "src/tac/hnerv_lowlevel_packer.py",
+            "src/tac/hnerv_section_repack.py",
+            "tools/build_hnerv_lowlevel_repack_candidate.py",
+            "tools/audit_hnerv_section_candidate_diff.py"
+          ],
+          "existing_count": 4,
+          "missing": [],
+          "missing_count": 0
+        },
+        "evidence": {
+          "existing": [
+            "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/contest_auth_eval.adjudicated.json",
+            "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/manifest.json",
+            ".omx/research/hnerv_decoder_recode_pr106_20260506_codex.md"
+          ],
+          "existing_count": 3,
+          "missing": [],
+          "missing_count": 0
+        }
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "replacement_potential": "low: rate-only improvement, not a representation replacement",
+      "role": "stacker_rate_only",
+      "score_claim": false,
+      "score_snapshot": {
+        "archive_bytes": 186080,
+        "archive_sha256": null,
+        "path": "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/contest_auth_eval.adjudicated.json",
+        "pose_dist": 3.351e-05,
+        "score": 0.20935073680571203,
+        "seg_dist": 0.00067142
+      },
+      "stackability": "high: raw-equivalent section recode should stack before scorer-changing atoms",
+      "status": "exact_evaluated_pr106x_rate_frontier",
+      "title": "HNeRV low-level brotli repack"
+    },
+    {
+      "blockers": [
+        "global static q-stream AQ/Huffman model loses to brotli",
+        "requires deterministic decoder runtime before any exact eval"
+      ],
+      "code_paths": [
+        "src/tac/hnerv_decoder_recode.py",
+        "src/tac/arithmetic_qint_codec.py",
+        "src/tac/lossless/range_coder.py",
+        "src/tac/lossless/frequency_coder.py"
+      ],
+      "evidence_grade": "empirical entropy-floor profile",
+      "evidence_paths": [
+        "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json"
+      ],
+      "key": "hnerv_per_tensor_context_entropy",
+      "next_patch": "Build a parity-first per-tensor/context range fixture with compact headers and report byte gap versus per-tensor entropy floor before archive rebuild.",
+      "paradigms": [
+        "alpha_mask_payload",
+        "entropy_coding"
+      ],
+      "path_audit": {
+        "code": {
+          "existing": [
+            "src/tac/hnerv_decoder_recode.py",
+            "src/tac/arithmetic_qint_codec.py",
+            "src/tac/lossless/range_coder.py",
+            "src/tac/lossless/frequency_coder.py"
+          ],
+          "existing_count": 4,
+          "missing": [],
+          "missing_count": 0
+        },
+        "evidence": {
+          "existing": [
+            "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json"
+          ],
+          "existing_count": 1,
+          "missing": [],
+          "missing_count": 0
+        }
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "replacement_potential": "low: recodes current decoder representation",
+      "role": "stacker_rate_only",
+      "score_claim": false,
+      "score_snapshot": null,
+      "stackability": "medium-high: could stack with HNeRV raw-equivalent section recodes",
+      "status": "diagnosed_headroom",
+      "title": "HNeRV per-tensor/context entropy recode"
+    },
+    {
+      "blockers": [
+        "changes decoded output",
+        "tiny byte win means component drift dominates EV"
+      ],
+      "code_paths": [
+        "src/tac/hnerv_wavelet_residual.py",
+        "src/tac/hnerv_wavelet_apply_transform.py",
+        "src/tac/hnerv_wavelet_apply_gate.py",
+        "tools/build_hnerv_wavelet_apply_transform_candidate.py",
+        "tools/build_wr01_exact_eval_packet.py"
+      ],
+      "evidence_grade": "empirical archive candidate; exact CUDA pending",
+      "evidence_paths": [
+        "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
+        "experiments/results/hnerv_wavelet_sidechannel_pr106x_20260506_codex/manifest.json"
+      ],
+      "key": "hnerv_wavelet_wr01_apply",
+      "next_patch": "Harvest/finalize incoming custody hardening, then exact CUDA only after lane claim.",
+      "paradigms": [
+        "alpha_mask_payload",
+        "wavelet",
+        "latent_repair"
+      ],
+      "path_audit": {
+        "code": {
+          "existing": [
+            "src/tac/hnerv_wavelet_residual.py",
+            "src/tac/hnerv_wavelet_apply_transform.py",
+            "src/tac/hnerv_wavelet_apply_gate.py",
+            "tools/build_hnerv_wavelet_apply_transform_candidate.py",
+            "tools/build_wr01_exact_eval_packet.py"
+          ],
+          "existing_count": 5,
+          "missing": [],
+          "missing_count": 0
+        },
+        "evidence": {
+          "existing": [
+            "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
+            "experiments/results/hnerv_wavelet_sidechannel_pr106x_20260506_codex/manifest.json"
+          ],
+          "existing_count": 2,
+          "missing": [],
+          "missing_count": 0
+        }
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "replacement_potential": "low-medium: local residual transform, not full representation replacement",
+      "role": "stacker_scorer_changing",
+      "score_claim": false,
+      "score_snapshot": null,
+      "stackability": "medium: stack after raw-equivalent rate recodes, before sidechannel stacks",
+      "status": "archive_candidate_preflighted",
+      "title": "HNeRV WR01 wavelet apply transform"
+    },
+    {
+      "blockers": [
+        "raw lossless class wrapping was byte-regressive",
+        "CMG2 exact evals showed PoseNet collapse",
+        "CLADE/SPADE/openpilot priors need charged archive consumption"
+      ],
+      "code_paths": [
+        "src/tac/qma9_range_mask_contract.py",
+        "src/tac/qma9_run_grammar.py",
+        "src/tac/qma9_alt_grammar.py",
+        "src/tac/mask_grayscale_lut.py",
+        "src/tac/semantic_quantization.py",
+        "src/tac/contrib/diffusion_renderer.py",
+        "src/tac/openpilot_seeding.py"
+      ],
+      "evidence_grade": "external/planning plus local byte deconstruction",
+      "evidence_paths": [
+        ".omx/research/qma9_range_mask_deconstruction_20260503_codex.md",
+        ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md",
+        "experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/scorecard.json"
+      ],
+      "key": "categorical_qma9_clade_spade_openpilot",
+      "next_patch": "Add a canonical categorical contract: class labels, priors, charged bytes, decoder, no-op controls, and meta-lagrangian atoms.",
+      "paradigms": [
+        "alpha_mask_payload",
+        "categorical_masks",
+        "openpilot_priors"
+      ],
+      "path_audit": {
+        "code": {
+          "existing": [
+            "src/tac/qma9_range_mask_contract.py",
+            "src/tac/qma9_run_grammar.py",
+            "src/tac/qma9_alt_grammar.py",
+            "src/tac/mask_grayscale_lut.py",
+            "src/tac/semantic_quantization.py",
+            "src/tac/contrib/diffusion_renderer.py",
+            "src/tac/openpilot_seeding.py"
+          ],
+          "existing_count": 7,
+          "missing": [],
+          "missing_count": 0
+        },
+        "evidence": {
+          "existing": [
+            ".omx/research/qma9_range_mask_deconstruction_20260503_codex.md",
+            ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md",
+            "experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/scorecard.json"
+          ],
+          "existing_count": 3,
+          "missing": [],
+          "missing_count": 0
+        }
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "replacement_potential": "high for mask stream if learned/predictive grammar avoids CMG2 collapse",
+      "role": "replacement_or_mask_stacker",
+      "score_claim": false,
+      "score_snapshot": null,
+      "stackability": "medium: strongest as mask grammar or class-conditioned residual layer; must not duplicate HNeRV decoder bytes",
+      "status": "recovered_tooling_needs_canonical_builder",
+      "title": "Categorical QMA9 plus CLADE/SPADE/openpilot labels"
+    },
+    {
+      "blockers": [
+        "existing CMG2 repairs are A-negative",
+        "probe excludes decoder/archive overhead"
+      ],
+      "code_paths": [
+        "experiments/probe_predictive_mask_grammar.py",
+        "experiments/build_cmg3_rowspan_candidate.py",
+        "experiments/plan_cmg3_pixel_lagrangian_atoms.py",
+        "experiments/build_cmg3_adaptive_runs_candidate.py"
+      ],
+      "evidence_grade": "empirical byte probe only",
+      "evidence_paths": [
+        ".omx/research/shannon_floor_claim_matrix_20260430_codex.md",
+        ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md"
+      ],
+      "key": "cmg3_predictive_mask_grammar",
+      "next_patch": "Close a deterministic runtime decoder and exact archive fixture before ranking.",
+      "paradigms": [
+        "alpha_mask_payload",
+        "categorical_masks",
+        "foveation"
+      ],
+      "path_audit": {
+        "code": {
+          "existing": [
+            "experiments/probe_predictive_mask_grammar.py",
+            "experiments/build_cmg3_rowspan_candidate.py",
+            "experiments/plan_cmg3_pixel_lagrangian_atoms.py",
+            "experiments/build_cmg3_adaptive_runs_candidate.py"
+          ],
+          "existing_count": 4,
+          "missing": [],
+          "missing_count": 0
+        },
+        "evidence": {
+          "existing": [
+            ".omx/research/shannon_floor_claim_matrix_20260430_codex.md",
+            ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md"
+          ],
+          "existing_count": 2,
+          "missing": [],
+          "missing_count": 0
+        }
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "replacement_potential": "high for C067-style mask stream; unknown for HNeRV frontier",
+      "role": "replacement_mask_stream",
+      "score_claim": false,
+      "score_snapshot": null,
+      "stackability": "medium: can feed residual/categorical/foveated atoms if decoder is closed",
+      "status": "empirical_byte_probe_needs_runtime_decoder",
+      "title": "CMG3 predictive row-span mask grammar"
+    },
+    {
+      "blockers": [
+        "current outputs are planning only",
+        "confidence thresholds need calibration evidence"
+      ],
+      "code_paths": [
+        "src/tac/analysis/lapose_lite_inputs.py",
+        "src/tac/analysis/lapose_motion_atoms.py",
+        "src/tac/analysis/lapose_motion_evidence.py",
+        "tools/build_lapose_lite_inputs_from_pair_metrics.py",
+        "tools/build_lapose_motion_atom_manifest.py"
+      ],
+      "evidence_grade": "diagnostic CUDA response allocated to pairs; planning only",
+      "evidence_paths": [
+        "docs/runbooks/analysis_optimization_package_map.md"
+      ],
+      "key": "lapose_motion_atom_allocator",
+      "next_patch": "Keep labeled as LA-Pose-inspired until a paper-faithful inverse-dynamics encoder and pose head exist; add class/openpilot manifests, calibrate confidence, and require a charged archive consumer before dispatch.",
+      "paradigms": [
+        "la_pose",
+        "openpilot_priors",
+        "meta_lagrangian",
+        "pose"
+      ],
+      "path_audit": {
+        "code": {
+          "existing": [
+            "src/tac/analysis/lapose_lite_inputs.py",
+            "src/tac/analysis/lapose_motion_atoms.py",
+            "src/tac/analysis/lapose_motion_evidence.py",
+            "tools/build_lapose_lite_inputs_from_pair_metrics.py",
+            "tools/build_lapose_motion_atom_manifest.py"
+          ],
+          "existing_count": 5,
+          "missing": [],
+          "missing_count": 0
+        },
+        "evidence": {
+          "existing": [
+            "docs/runbooks/analysis_optimization_package_map.md"
+          ],
+          "existing_count": 1,
+          "missing": [],
+          "missing_count": 0
+        }
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "replacement_potential": "medium if it produces a charged motion decoder or pose-sidecar replacement",
+      "role": "proposal_allocator",
+      "score_claim": false,
+      "score_snapshot": null,
+      "stackability": "high as allocator feedback for pose, foveation, categorical, and sidechannel atoms",
+      "status": "planning_chain_hardened_non_rankable_global_allocations",
+      "title": "LA-POSE motion atom allocator"
+    },
+    {
+      "blockers": [
+        "planner assumes additive expected deltas until exact stacked archives land"
+      ],
+      "code_paths": [
+        "src/tac/optimization/meta_lagrangian_allocator.py"
+      ],
+      "evidence_grade": "derivation/planning",
+      "evidence_paths": [
+        ".omx/research/atom_lagrangian_waterfill_sub03_system_20260501_codex.md"
+      ],
+      "key": "meta_lagrangian_cross_paradigm_allocator",
+      "next_patch": "Add cross-paradigm family/conflict fields and refuse dispatchable rows unless a byte-closed archive manifest is attached.",
+      "paradigms": [
+        "meta_lagrangian",
+        "all_paradigms"
+      ],
+      "path_audit": {
+        "code": {
+          "existing": [
+            "src/tac/optimization/meta_lagrangian_allocator.py"
+          ],
+          "existing_count": 1,
+          "missing": [],
+          "missing_count": 0
+        },
+        "evidence": {
+          "existing": [
+            ".omx/research/atom_lagrangian_waterfill_sub03_system_20260501_codex.md"
+          ],
+          "existing_count": 1,
+          "missing": [],
+          "missing_count": 0
+        }
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "replacement_potential": "none directly; selects concrete stack/replacement builders",
+      "role": "canonical_ranker",
+      "score_claim": false,
+      "score_snapshot": null,
+      "stackability": "high: common row schema can compare rate, pose, seg, class, hard-pair support",
+      "status": "planning_ranker_landed",
+      "title": "Meta-lagrangian cross-paradigm allocator"
+    },
+    {
+      "blockers": [
+        "stub sensitivity must fail closed",
+        "component collapse risk"
+      ],
+      "code_paths": [
+        "src/tac/sensitivity_map.py",
+        "src/tac/component_sensitivity_artifact.py",
+        "src/tac/owv3_sensitivity_weighted.py",
+        "tools/dispatch_dryrun_omega_w_v3.py",
+        "experiments/repack_pr106_with_water_filling.py"
+      ],
+      "evidence_grade": "planning/diagnostic until certified sensitivity artifact",
+      "evidence_paths": [
+        ".omx/research/component_sensitivity_map_certification_20260501_codex.md"
+      ],
+      "key": "sensitivity_omega_w_v3",
+      "next_patch": "Replace all-ones/stub sensitivity producers with certified CUDA/component artifacts.",
+      "paradigms": [
+        "beta_sensitivity",
+        "quantization",
+        "waterfill"
+      ],
+      "path_audit": {
+        "code": {
+          "existing": [
+            "src/tac/sensitivity_map.py",
+            "src/tac/component_sensitivity_artifact.py",
+            "src/tac/owv3_sensitivity_weighted.py",
+            "tools/dispatch_dryrun_omega_w_v3.py",
+            "experiments/repack_pr106_with_water_filling.py"
+          ],
+          "existing_count": 5,
+          "missing": [],
+          "missing_count": 0
+        },
+        "evidence": {
+          "existing": [
+            ".omx/research/component_sensitivity_map_certification_20260501_codex.md"
+          ],
+          "existing_count": 1,
+          "missing": [],
+          "missing_count": 0
+        }
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "replacement_potential": "low-medium: quantization policy, not representation replacement",
+      "role": "stacker_quantization",
+      "score_claim": false,
+      "score_snapshot": null,
+      "stackability": "medium-high after HNeRV source archive identity is locked",
+      "status": "guarded_needs_real_sensitivity",
+      "title": "Sensitivity-aware Omega-W-V3"
+    },
+    {
+      "blockers": [
+        "individual components do not imply composability",
+        "side information must be charged"
+      ],
+      "code_paths": [
+        "src/tac/joint_codec_stack_orchestrator.py",
+        "src/tac/joint_admm_coordinator.py",
+        "src/tac/balle_hyperprior_codec.py",
+        "src/tac/arithmetic_qint_codec.py",
+        "src/tac/entropy_archive.py"
+      ],
+      "evidence_grade": "planning/component empirical",
+      "evidence_paths": [
+        "docs/score_aware_sidechannel_paradigm_20260504.md"
+      ],
+      "key": "joint_admm_balle_arithmetic_stack",
+      "next_patch": "Build one end-to-end typed stack manifest and a no-op fixture before optimization.",
+      "paradigms": [
+        "gamma_joint_codec",
+        "entropy_coding",
+        "hyperprior"
+      ],
+      "path_audit": {
+        "code": {
+          "existing": [
+            "src/tac/joint_codec_stack_orchestrator.py",
+            "src/tac/joint_admm_coordinator.py",
+            "src/tac/balle_hyperprior_codec.py",
+            "src/tac/arithmetic_qint_codec.py",
+            "src/tac/entropy_archive.py"
+          ],
+          "existing_count": 5,
+          "missing": [],
+          "missing_count": 0
+        },
+        "evidence": {
+          "existing": [
+            "docs/score_aware_sidechannel_paradigm_20260504.md"
+          ],
+          "existing_count": 1,
+          "missing": [],
+          "missing_count": 0
+        }
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "replacement_potential": "medium-high if it can replace HNeRV sections with a smaller scorer-stable stack",
+      "role": "stack_or_replacement_orchestrator",
+      "score_claim": false,
+      "score_snapshot": null,
+      "stackability": "high in architecture, unproven in exact archive",
+      "status": "components_landed_not_end_to_end_stacked",
+      "title": "Joint ADMM plus Balle hyperprior plus arithmetic stack"
+    },
+    {
+      "blockers": [
+        "configured-but-unconsumed foveation is a known fail-closed preflight class"
+      ],
+      "code_paths": [
+        "src/tac/hyperbolic_foveation.py",
+        "experiments/plan_cmg3_pixel_lagrangian_atoms.py",
+        "experiments/preflight_qfaithful_successor_geometry_contract.py",
+        "src/tac/raft_radial_pose.py"
+      ],
+      "evidence_grade": "planning plus historical negatives",
+      "evidence_paths": [
+        ".omx/research/lane_g_v3_stacking_skunkworks_20260428.md",
+        ".omx/research/all_scores_forensic_audit_20260430.md"
+      ],
+      "key": "telescopic_foveation_field",
+      "next_patch": "Keep foveation as ranking feedback until a charged runtime consumer passes geometry preflight and exact component gates.",
+      "paradigms": [
+        "foveation",
+        "openpilot_priors",
+        "categorical_masks",
+        "pose"
+      ],
+      "path_audit": {
+        "code": {
+          "existing": [
+            "src/tac/hyperbolic_foveation.py",
+            "experiments/plan_cmg3_pixel_lagrangian_atoms.py",
+            "experiments/preflight_qfaithful_successor_geometry_contract.py",
+            "src/tac/raft_radial_pose.py"
+          ],
+          "existing_count": 4,
+          "missing": [],
+          "missing_count": 0
+        },
+        "evidence": {
+          "existing": [
+            ".omx/research/lane_g_v3_stacking_skunkworks_20260428.md",
+            ".omx/research/all_scores_forensic_audit_20260430.md"
+          ],
+          "existing_count": 2,
+          "missing": [],
+          "missing_count": 0
+        }
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "replacement_potential": "medium if runtime consumes charged geometry without PoseNet collapse",
+      "role": "scorer_weighted_proposal_or_replacement",
+      "score_claim": false,
+      "score_snapshot": null,
+      "stackability": "medium: best as atom-ranking/foveation prior before charged runtime warp",
+      "status": "historical_mixed_needs_qfaithful_successor_contract",
+      "title": "Telescopic foveation field"
+    },
+    {
+      "blockers": [
+        "RAFT full-frame jobs historically OOM at naive settings",
+        "small pose errors can dominate score"
+      ],
+      "code_paths": [
+        "src/tac/raft_pose.py",
+        "src/tac/raft_radial_pose.py",
+        "src/tac/openpilot_seeding.py",
+        "src/tac/openpilot_features.py"
+      ],
+      "evidence_grade": "planning/prototype",
+      "evidence_paths": [
+        ".omx/research/council_lane_raft_radial_pose_design_20260430.md"
+      ],
+      "key": "raft_radial_openpilot_pose",
+      "next_patch": "Emit deterministic pose-disagreement and runtime-consumption readiness artifacts.",
+      "paradigms": [
+        "pose",
+        "openpilot_priors",
+        "la_pose"
+      ],
+      "path_audit": {
+        "code": {
+          "existing": [
+            "src/tac/raft_pose.py",
+            "src/tac/raft_radial_pose.py",
+            "src/tac/openpilot_seeding.py",
+            "src/tac/openpilot_features.py"
+          ],
+          "existing_count": 4,
+          "missing": [],
+          "missing_count": 0
+        },
+        "evidence": {
+          "existing": [
+            ".omx/research/council_lane_raft_radial_pose_design_20260430.md"
+          ],
+          "existing_count": 1,
+          "missing": [],
+          "missing_count": 0
+        }
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "replacement_potential": "medium if charged pose stream beats current pose bytes/components",
+      "role": "proposal_or_pose_sidecar_replacement",
+      "score_claim": false,
+      "score_snapshot": null,
+      "stackability": "medium: can seed la-pose atoms, foveation centers, or pose-sidecar search",
+      "status": "prototype_readiness_needed",
+      "title": "RAFT/radial/openpilot pose basis"
+    },
+    {
+      "blockers": [
+        "runtime/export closure risk",
+        "TTO must not rely on sidecars outside archive"
+      ],
+      "code_paths": [
+        "src/tac/self_compressing_nn.py",
+        "src/tac/mdl_bayesian_codec.py",
+        "src/tac/joint_renderer_scorer_finetune.py",
+        "src/tac/tto.py",
+        "src/tac/fp4_quantize.py"
+      ],
+      "evidence_grade": "planning/prototype",
+      "evidence_paths": [
+        ".omx/research/council_lane_mdl_bayesian_design_20260430.md"
+      ],
+      "key": "selfcompress_mdl_fp4_tto",
+      "next_patch": "Require deterministic export manifest, inflate budget proof, and no scorer load at inflate.",
+      "paradigms": [
+        "delta_epsilon_zeta",
+        "self_compress",
+        "mdl",
+        "tto"
+      ],
+      "path_audit": {
+        "code": {
+          "existing": [
+            "src/tac/self_compressing_nn.py",
+            "src/tac/mdl_bayesian_codec.py",
+            "src/tac/joint_renderer_scorer_finetune.py",
+            "src/tac/tto.py",
+            "src/tac/fp4_quantize.py"
+          ],
+          "existing_count": 5,
+          "missing": [],
+          "missing_count": 0
+        },
+        "evidence": {
+          "existing": [
+            ".omx/research/council_lane_mdl_bayesian_design_20260430.md"
+          ],
+          "existing_count": 1,
+          "missing": [],
+          "missing_count": 0
+        }
+      },
+      "ready_for_exact_eval_dispatch": false,
+      "replacement_potential": "high if it can replace HNeRV renderer with smaller scorer-stable decoder",
+      "role": "replacement_renderer_or_decoder",
+      "score_claim": false,
+      "score_snapshot": null,
+      "stackability": "medium-low until deterministic export/inflate closure exists",
+      "status": "pending_integration",
+      "title": "Self-compress NN plus MDL/Bayesian plus FP4/TTO"
+    }
+  ],
+  "schema_version": 1,
+  "score_claim": false,
+  "tool": "tools/build_cross_paradigm_frontier_inventory.py"
+}

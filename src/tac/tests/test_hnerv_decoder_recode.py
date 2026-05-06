@@ -39,6 +39,19 @@ def test_structural_recode_profile_is_planning_only_and_raw_equal() -> None:
     assert profile["ready_for_archive_preflight"] is False
     assert profile["record_count"] == len(PACKED_STATE_SCHEMA)
     assert all(row["raw_equal"] is True for row in profile["variants"])
+    entropy = profile["entropy_summary"]
+    assert entropy["score_claim"] is False
+    assert entropy["q_stream_symbols"] == profile["q_stream_bytes"]
+    assert entropy["global_q_entropy_floor_bytes"] <= profile["q_stream_bytes"]
+    assert entropy["global_q_entropy_floor_plus_raw_scales_bytes"] >= entropy["global_q_entropy_floor_bytes"]
+    assert entropy["current_static_model_interpretation"] in {
+        "zero_order_q_symbol_floor_loses_to_current_brotli",
+        "zero_order_q_symbol_floor_has_byte_headroom",
+    }
+    aq_global = next(
+        row for row in profile["variants"] if row["variant"] == "aq_global_q_stream_plus_raw_scales"
+    )
+    assert "byte_gap_vs_global_q_entropy_floor_plus_raw_scales" in aq_global
 
 
 def test_profile_hnerv_decoder_structural_recode_cli(tmp_path: Path) -> None:
