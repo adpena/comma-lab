@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 try:
@@ -16,6 +17,7 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.analysis.lapose_motion_evidence import records_from_component_response  # noqa: E402
 from tac.repo_io import json_text, read_json, sha256_file  # noqa: E402
+from tac.tool_manifest import attach_tool_run_manifest  # noqa: E402
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -36,7 +38,8 @@ def _records(payload: object, key: str) -> list[dict]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = parse_args(argv)
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+    args = parse_args(raw_argv)
     component_response = read_json(args.component_response_json)
     manifest = records_from_component_response(
         component_response,
@@ -44,6 +47,18 @@ def main(argv: list[str] | None = None) -> int:
         pair_opportunities=_records(read_json(args.pair_opportunities_json), "pair_opportunities"),
         evidence_source_path=args.component_response_json.as_posix(),
         evidence_source_sha256=sha256_file(args.component_response_json),
+    )
+    manifest = attach_tool_run_manifest(
+        manifest,
+        tool=Path(__file__).relative_to(REPO_ROOT).as_posix(),
+        argv=raw_argv,
+        input_paths=[
+            args.component_response_json,
+            args.latent_actions_json,
+            args.pair_opportunities_json,
+        ],
+        repo_root=REPO_ROOT,
+        output_path=args.json_out,
     )
     text = json_text(manifest)
     if args.json_out:

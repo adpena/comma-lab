@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 try:
@@ -16,6 +17,7 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.analysis.lapose_lite_inputs import inputs_from_pair_metric_payload  # noqa: E402
 from tac.repo_io import json_text, read_json, sha256_file  # noqa: E402
+from tac.tool_manifest import attach_tool_run_manifest  # noqa: E402
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -27,12 +29,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = parse_args(argv)
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+    args = parse_args(raw_argv)
     manifest = inputs_from_pair_metric_payload(
         read_json(args.pair_metrics_json),
         source_path=args.pair_metrics_json.as_posix(),
         source_sha256=sha256_file(args.pair_metrics_json),
         max_pairs=args.max_pairs,
+    )
+    manifest = attach_tool_run_manifest(
+        manifest,
+        tool=Path(__file__).relative_to(REPO_ROOT).as_posix(),
+        argv=raw_argv,
+        input_paths=[args.pair_metrics_json],
+        repo_root=REPO_ROOT,
+        output_path=args.json_out,
     )
     text = json_text(manifest)
     if args.json_out:
