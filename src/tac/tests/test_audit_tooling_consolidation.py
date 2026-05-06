@@ -40,6 +40,8 @@ def test_audit_tooling_detects_duplicate_helper_patterns(tmp_path: Path) -> None
     assert counts["local_json_dump"] == 1
     assert counts["manual_repo_root_parents"] == 1
     assert counts["manual_audit_score_dispatch_metadata"] == 1
+    assert payload["summary"]["affected_file_count"] == 1
+    assert payload["per_file_counts"]["tools/sample.py"]["local_json_dump"] == 1
 
 
 def test_audit_tooling_cli_json_contract() -> None:

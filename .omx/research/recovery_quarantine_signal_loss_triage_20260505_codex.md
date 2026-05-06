@@ -1493,6 +1493,55 @@ Verification:
   scripts/pre_submission_compliance_check.py
   src/tac/tests/test_lightning_supply_chain_scan.py
   src/tac/tests/test_pre_submission_compliance_check.py` passed.
+
+## 2026-05-06 Codex Tooling Consolidation R7
+
+Continued the Gate #7 consolidation tranche on active preflight/release guards
+without touching raw public-intake worktrees.
+
+Changes:
+
+- Migrated `tools/all_lanes_preflight.py` to `tools/tool_bootstrap.py` and
+  `tac.repo_io.json_text` for canonical JSON error payloads.
+- Migrated `tools/audit_release_index_split.py` to `tools/tool_bootstrap.py`
+  and canonical JSON output.
+- Migrated `tools/audit_staged_public_release_hygiene.py` to
+  `tools/tool_bootstrap.py` and canonical JSON output.
+- Migrated `tools/audit_nested_gitlink_custody.py` to canonical JSON output.
+- Extended `tools/audit_tooling_consolidation.py` with per-file pattern counts
+  and `affected_file_count`, so future consolidation passes can target exact
+  source files instead of only aggregate pattern totals.
+
+Measured inventory after R7:
+
+- local SHA helpers: `62`
+- local JSON dumps: `132`
+- manual `sys.path` bootstraps: `293`
+- manual repo-root parent probes: `376`
+- manual score/dispatch metadata mentions: `601`
+
+Interpretation:
+
+- The current inventory scans a broader surface than the older R6 snapshots
+  (`1135` files, including newer recovered/canonicalized tooling), so absolute
+  totals are not directly comparable with older `ALL 10` preflight snapshots.
+- The within-tranche measured deltas were behavior-preserving reductions:
+  local JSON dumps `137 -> 132`, manual `sys.path` bootstraps `294 -> 293`,
+  and manual repo-root parent probes `380 -> 376`.
+
+Verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_audit_tooling_consolidation.py
+  src/tac/tests/test_audit_release_index_split.py
+  src/tac/tests/test_audit_nested_gitlink_custody.py
+  src/tac/tests/test_audit_staged_public_release_hygiene.py -q` passed:
+  `16 passed`.
+- `.venv/bin/python -m py_compile tools/all_lanes_preflight.py
+  tools/audit_tooling_consolidation.py tools/audit_release_index_split.py
+  tools/audit_nested_gitlink_custody.py
+  tools/audit_staged_public_release_hygiene.py` passed.
+- `.venv/bin/python tools/all_lanes_preflight.py` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
 - Full preflight refresh passed: `ALL 10 PREFLIGHT CHECKS PASSED`.
 
 ## 2026-05-05 Codex Lightning Core Consolidation R7

@@ -10,17 +10,19 @@ OSS publication.
 from __future__ import annotations
 
 import argparse
-import json
 import subprocess
-import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
-SRC = REPO / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
+try:
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO)
 
 from tac.preflight import public_release_hygiene_violations_for_text  # noqa: E402
+from tac.repo_io import json_text  # noqa: E402
 
 PUBLIC_EXACT_PATHS = {
     "AGENTS.md",
@@ -115,7 +117,7 @@ def main(argv: list[str] | None = None) -> int:
     root = args.repo_root.resolve()
     payload = audit_public_staged_hygiene(root, staged_paths(root))
     if args.format == "json":
-        print(json.dumps(payload, indent=2, sort_keys=True))
+        print(json_text(payload), end="")
     elif payload["violation_count"]:
         print(
             "staged public release hygiene: FAIL "

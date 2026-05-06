@@ -10,14 +10,21 @@ from __future__ import annotations
 
 import argparse
 import re
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
-from tac.audit_contract import AuditReport, audit_exit_code
-from tac.repo_io import json_text, repo_relative
+try:
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.audit_contract import AuditReport, audit_exit_code  # noqa: E402
+from tac.repo_io import json_text, repo_relative  # noqa: E402
+
 DEFAULT_SCAN_ROOTS = ("tools", "scripts", "experiments", "src/tac", "src/comma_lab")
 DEFAULT_EXCLUDES = (
     ".git",
@@ -105,6 +112,7 @@ def iter_files(repo_root: Path, scan_roots: tuple[str, ...]) -> list[Path]:
 
 def audit_tooling(repo_root: Path, scan_roots: tuple[str, ...]) -> AuditReport:
     occurrences: dict[str, list[dict[str, object]]] = defaultdict(list)
+    per_file_counts: dict[str, Counter[str]] = defaultdict(Counter)
     files = iter_files(repo_root, scan_roots)
     for path in files:
         rel = repo_relative(path, repo_root)
@@ -115,6 +123,7 @@ def audit_tooling(repo_root: Path, scan_roots: tuple[str, ...]) -> AuditReport:
         for lineno, line in enumerate(text.splitlines(), start=1):
             for pattern in PATTERNS:
                 if pattern.regex.search(line):
+                    per_file_counts[rel][pattern.key] += 1
                     occurrences[pattern.key].append(
                         {
                             "canonical_target": pattern.canonical_target,
@@ -129,6 +138,7 @@ def audit_tooling(repo_root: Path, scan_roots: tuple[str, ...]) -> AuditReport:
             pattern.key: len(occurrences.get(pattern.key, ()))
             for pattern in PATTERNS
         },
+        "affected_file_count": len(per_file_counts),
         "patterns": {
             pattern.key: {
                 "canonical_target": pattern.canonical_target,
@@ -143,10 +153,15 @@ def audit_tooling(repo_root: Path, scan_roots: tuple[str, ...]) -> AuditReport:
         ready=True,
         summary=summary,
         metadata={
+            "occurrence_limit_per_pattern": 50,
             "occurrences": {
                 key: values[:50]
                 for key, values in sorted(occurrences.items())
-            }
+            },
+            "per_file_counts": {
+                path: dict(counts)
+                for path, counts in sorted(per_file_counts.items())
+            },
         },
     )
 

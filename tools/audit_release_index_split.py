@@ -22,6 +22,16 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+try:
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO_ROOT = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO_ROOT)
+
+from tac.repo_io import json_text  # noqa: E402
+
 ALLOWED_STAGED_OMX_STATE = {
     ".omx/state/active_lane_dispatch_claims.md",
     ".omx/state/current_focus.md",
@@ -216,7 +226,7 @@ def audit_release_index_split(root: Path, *, local_custody_rules: list[dict[str,
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
     parser.add_argument("--format", choices=("text", "json"), default="text")
     parser.add_argument("--strict", action="store_true")
     parser.add_argument(
@@ -244,7 +254,7 @@ def main(argv: list[str] | None = None) -> int:
     }
 
     if args.format == "json":
-        print(json.dumps(payload, indent=2, sort_keys=True))
+        print(json_text(payload), end="")
     else:
         visible_records = [record for record in records if record.severity != "info"]
         if visible_records:

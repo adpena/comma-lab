@@ -77,7 +77,16 @@ import sys
 import tempfile
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
+try:
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO)
+
+from tac.repo_io import json_text  # noqa: E402
+
 TOOLS = REPO / "tools"
 SHELL_HAZARDS = TOOLS / "check_dispatch_cli_shell_hazards.py"
 REVERSE_ENGINEERING_AUDIT = TOOLS / "audit_reverse_engineering_tree.py"
@@ -271,9 +280,9 @@ def _run_hnerv_lowlevel_repack_gate() -> tuple[bool, str]:
     if payload.get("ready_for_exact_eval_dispatch") is not False:
         return False, "HNeRV low-level repack must not unlock exact-eval dispatch"
     if payload.get("ready_for_archive_preflight") is not True:
-        return False, json.dumps(payload, indent=2, sort_keys=True)
+        return False, json_text(payload)
     if audit.get("ready_for_archive_preflight") is not True:
-        return False, json.dumps(payload, indent=2, sort_keys=True)
+        return False, json_text(payload)
     if not raw or any(row.get("raw_equal") is not True for row in raw if isinstance(row, dict)):
         return False, "HNeRV low-level repack missing brotli raw equality proof"
     delta = int(audit.get("total_byte_delta", 0))

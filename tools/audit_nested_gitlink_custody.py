@@ -11,7 +11,6 @@ the same local-custody manifest used by the release index split guard.
 from __future__ import annotations
 
 import argparse
-import json
 import subprocess
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -25,6 +24,7 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.repo_io import json_text  # noqa: E402
 from tools.audit_release_index_split import (  # noqa: E402
     IndexRecord,
     document_local_custody,
@@ -166,7 +166,7 @@ def main(argv: list[str] | None = None) -> int:
     payload = render_payload(records)
 
     if args.format == "json":
-        print(json.dumps(payload, indent=2, sort_keys=True))
+        print(json_text(payload), end="")
     elif not records:
         print("nested gitlink custody: PASS (no dirty gitlinks)")
     elif payload["summary"]["warning_count"] == 0:

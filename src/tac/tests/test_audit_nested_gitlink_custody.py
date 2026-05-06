@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from tools.audit_nested_gitlink_custody import (
+    NestedGitlinkRecord,
     dirty_gitlink_statuses,
     parse_gitlink_paths,
     render_payload,
 )
-from tools.audit_nested_gitlink_custody import NestedGitlinkRecord
 
 
 def test_parse_gitlink_paths_keeps_only_mode_160000() -> None:
