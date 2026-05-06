@@ -18,6 +18,7 @@ import numpy as np
 
 from tac.analysis.lapose_motion_atoms import LaposeMotionAtomError
 from tac.analysis.lapose_paper_contract import LAPOSE_PAPER_REFERENCE
+from tac.semantic_label_contract import NUM_CONTEST_SEGNET_CLASSES
 
 SCHEMA_VERSION = 1
 
@@ -60,6 +61,10 @@ def inputs_from_pair_metric_payload(
     contrib_delta_stats = _stats(contrib_deltas)
     source_sha = source_sha256 or _sha256_json(payload)
     payload_openpilot_priors = _str_list(payload.get("openpilot_priors") or [], "openpilot_priors")
+    class_support_by_pair = _per_pair_class_support(
+        payload.get("per_pair_class_support"),
+        n_pairs=n_pairs,
+    )
     latent_actions = []
     pair_opportunities = []
     for hard_pair_rank, pair_index in enumerate(hardest):
@@ -97,7 +102,7 @@ def inputs_from_pair_metric_payload(
                 "hard_pair_score": float(contrib[pair_index]),
                 "hard_pair_support": [pair_index],
                 "confidence": _confidence(float(contrib[pair_index]), contrib_stats),
-                "class_support": [],
+                "class_support": class_support_by_pair[pair_index],
                 "geometry_priors": ["scorer_pair_metric", "pair_metric_hardness"],
                 "openpilot_priors": list(payload_openpilot_priors),
                 "source_path": source_path,
@@ -117,6 +122,15 @@ def inputs_from_pair_metric_payload(
         "source_lane": payload.get("lane", ""),
         "evidence_grade": "empirical_cuda_pair_metric_telemetry",
         "paper_reference": LAPOSE_PAPER_REFERENCE,
+        "class_support_contract": {
+            "field": "per_pair_class_support",
+            "num_classes": NUM_CONTEST_SEGNET_CLASSES,
+            "source": (
+                "payload.per_pair_class_support"
+                if payload.get("per_pair_class_support") is not None
+                else "absent"
+            ),
+        },
         "n_pairs": n_pairs,
         "selected_pair_count": len(hardest),
         "feature_contract": {
@@ -234,6 +248,36 @@ def _str_list(value: Any, name: str) -> list[str]:
     if not isinstance(value, list | tuple):
         raise LaposeMotionAtomError(f"{name} must be a list")
     return [str(item) for item in value]
+
+
+def _per_pair_class_support(value: Any, *, n_pairs: int) -> list[list[int]]:
+    if value is None:
+        return [[] for _ in range(n_pairs)]
+    if not isinstance(value, list) or len(value) != n_pairs:
+        raise LaposeMotionAtomError("per_pair_class_support must be a list matching n_pairs")
+    out: list[list[int]] = []
+    for pair_index, classes in enumerate(value):
+        if not isinstance(classes, list | tuple):
+            raise LaposeMotionAtomError(
+                f"per_pair_class_support[{pair_index}] must be a list"
+            )
+        normalized: list[int] = []
+        seen: set[int] = set()
+        for class_id in classes:
+            if not isinstance(class_id, int):
+                raise LaposeMotionAtomError(
+                    f"per_pair_class_support[{pair_index}] must contain integers"
+                )
+            if class_id < 0 or class_id >= NUM_CONTEST_SEGNET_CLASSES:
+                raise LaposeMotionAtomError(
+                    f"per_pair_class_support[{pair_index}] class_id {class_id} "
+                    f"outside 0..{NUM_CONTEST_SEGNET_CLASSES - 1}"
+                )
+            if class_id not in seen:
+                seen.add(class_id)
+                normalized.append(class_id)
+        out.append(normalized)
+    return out
 
 
 def _check_pair_index(pair_index: int, n_pairs: int) -> None:

@@ -99,6 +99,42 @@ def test_inputs_from_pair_metric_payload_only_emits_sourced_openpilot_priors() -
     ]
 
 
+def test_inputs_from_pair_metric_payload_preserves_class_support() -> None:
+    payload = _payload()
+    payload["per_pair_class_support"] = [
+        [0],
+        [1, 3],
+        [],
+        [2, 3, 3],
+        [4],
+    ]
+
+    manifest = inputs_from_pair_metric_payload(
+        payload,
+        source_path="pair_metrics_with_classes.json",
+        source_sha256="f" * 64,
+        max_pairs=2,
+    )
+
+    assert manifest["class_support_contract"] == {
+        "field": "per_pair_class_support",
+        "num_classes": 5,
+        "source": "payload.per_pair_class_support",
+    }
+    assert manifest["pair_opportunities"][0]["pair_index"] == 3
+    assert manifest["pair_opportunities"][0]["class_support"] == [2, 3]
+    assert manifest["pair_opportunities"][1]["pair_index"] == 1
+    assert manifest["pair_opportunities"][1]["class_support"] == [1, 3]
+
+
+def test_inputs_from_pair_metric_payload_rejects_bad_class_support() -> None:
+    payload = _payload()
+    payload["per_pair_class_support"] = [[0], [1], [2], [3], [5]]
+
+    with pytest.raises(LaposeMotionAtomError, match="outside 0..4"):
+        inputs_from_pair_metric_payload(payload, source_path="pair_metrics.json")
+
+
 def test_canonical_and_compatibility_imports_match() -> None:
     from tac import lapose_lite_inputs as compat_lapose_lite
     from tac import lapose_motion_atoms as compat_motion_atoms
