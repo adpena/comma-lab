@@ -2275,6 +2275,25 @@ class TestPublicReleaseHygiene:
         )
         assert violations == []
 
+    def test_public_release_hygiene_explicit_scan_paths_override_default_exemptions(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        root = _stub_repo(tmp_path)
+        publish = root / "experiments" / "results" / "public_release_view"
+        _write(
+            publish / "README.md",
+            "private notebook: /Users/example/private.ipynb\n",
+        )
+
+        with pytest.raises(MetaBugViolation, match="PUBLIC RELEASE HYGIENE"):
+            check_public_release_hygiene(
+                repo_root=root,
+                strict=True,
+                verbose=False,
+                scan_paths=[publish],
+            )
+
 
 # ─── codex R5-4 #1: NVDEC probe must not fail on missing PyAV ────────────────
 

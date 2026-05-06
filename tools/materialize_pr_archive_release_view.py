@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 from collections import Counter
 from datetime import UTC, datetime
@@ -26,6 +27,10 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = REPO / "experiments" / "results" / "public_pr_intake_full"
 DEFAULT_OUTPUT = REPO / "experiments" / "results" / "public_pr_archive_release_view"
+SANITIZED_TEXT_SUFFIXES = {".json", ".log", ".md", ".txt"}
+LOCAL_OPERATOR_PATH_RE = re.compile(
+    r"(?<![A-Za-z0-9_])/(?:Users|home)/[A-Za-z0-9._-]+(?:/[^\s)\"'<>`]*)?"
+)
 
 
 def display_path(path: Path) -> str:
@@ -74,6 +79,25 @@ def link_or_copy(src: Path, dst: Path) -> str:
         return "copy"
 
 
+def sanitize_public_text(text: str) -> tuple[str, int]:
+    sanitized, count = LOCAL_OPERATOR_PATH_RE.subn("${LOCAL_PATH}", text)
+    return sanitized, count
+
+
+def include_release_file(src: Path, dst: Path, rel: Path) -> tuple[str, int]:
+    if rel.suffix.lower() in SANITIZED_TEXT_SUFFIXES:
+        try:
+            text = src.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            return link_or_copy(src, dst), 0
+        sanitized, count = sanitize_public_text(text)
+        if count:
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_text(sanitized, encoding="utf-8")
+            return "sanitized_copy", count
+    return link_or_copy(src, dst), 0
+
+
 def materialize(source_root: Path, output_root: Path, *, force: bool, source_size_limit: int) -> dict[str, object]:
     source_root = source_root.resolve()
     output_root = output_root.resolve()
@@ -89,6 +113,8 @@ def materialize(source_root: Path, output_root: Path, *, force: bool, source_siz
     hardlinked = 0
     omitted: list[dict[str, object]] = []
     omitted_by_reason: Counter[str] = Counter()
+    sanitized_file_count = 0
+    sanitized_replacement_count = 0
     included_bytes = 0
     omitted_bytes = 0
 
@@ -102,7 +128,10 @@ def materialize(source_root: Path, output_root: Path, *, force: bool, source_siz
             omitted_bytes += size
             continue
 
-        mode = link_or_copy(src, output_root / rel)
+        mode, replacements = include_release_file(src, output_root / rel, rel)
+        if replacements:
+            sanitized_file_count += 1
+            sanitized_replacement_count += replacements
         if mode == "hardlink":
             hardlinked += 1
         else:
@@ -123,6 +152,8 @@ def materialize(source_root: Path, output_root: Path, *, force: bool, source_siz
         "omitted_bytes": omitted_bytes,
         "omitted_by_reason": dict(sorted(omitted_by_reason.items())),
         "omitted": omitted,
+        "sanitized_file_count": sanitized_file_count,
+        "sanitized_replacement_count": sanitized_replacement_count,
     }
     (output_root / "OMITTED_SHARED_ASSETS.json").write_text(json.dumps(manifest, indent=2, sort_keys=True))
     return manifest

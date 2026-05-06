@@ -7888,6 +7888,7 @@ def _public_release_path_exempt(rel: str) -> bool:
 
 def _iter_public_release_scan_files(root: Path, scan_paths: list[str | Path] | None) -> list[Path]:
     selected = scan_paths if scan_paths is not None else list(_PUBLIC_RELEASE_SCAN_PATHS)
+    apply_exemptions = scan_paths is None
     files: list[Path] = []
     for raw in selected:
         path = Path(raw)
@@ -7897,14 +7898,14 @@ def _iter_public_release_scan_files(root: Path, scan_paths: list[str | Path] | N
             continue
         if path.is_file():
             rel = _public_release_rel(path, root)
-            if not _public_release_path_exempt(rel):
+            if not apply_exemptions or not _public_release_path_exempt(rel):
                 files.append(path)
             continue
         for candidate in sorted(path.rglob("*")):
             if not candidate.is_file():
                 continue
             rel = _public_release_rel(candidate, root)
-            if _public_release_path_exempt(rel):
+            if apply_exemptions and _public_release_path_exempt(rel):
                 continue
             if any(part in {"__pycache__", ".git", ".venv"} for part in candidate.parts):
                 continue
