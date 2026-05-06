@@ -141,7 +141,11 @@ def extract_pr106_bytes(pr106_archive: Path) -> bytes:
     return pr106_bytes
 
 
-def extract_latent_section_blob(latent_archive: Path) -> bytes:
+def extract_latent_section_blob(
+    latent_archive: Path,
+    *,
+    expected_pr106_bytes: bytes | None = None,
+) -> bytes:
     """Extract the latent sidecar payload (already-brotli-compressed) from a
     pr106_latent_sidecar archive.
 
@@ -164,7 +168,15 @@ def extract_latent_section_blob(latent_archive: Path) -> bytes:
         )
     pos = 2
     (pr106_len,) = struct.unpack_from("<I", bin_bytes, pos)
-    pos += 4 + pr106_len
+    pos += 4
+    pr106_end = pos + pr106_len
+    if pr106_end > len(bin_bytes):
+        raise ValueError(f"{latent_archive}: embedded PR106 payload overruns archive")
+    if expected_pr106_bytes is not None and bin_bytes[pos:pr106_end] != expected_pr106_bytes:
+        raise ValueError(
+            f"{latent_archive}: embedded PR106 payload does not match stack anchor"
+        )
+    pos = pr106_end
     if pos + 2 > len(bin_bytes):
         raise ValueError(f"{latent_archive}: truncated before sidecar_len")
     (sc_len,) = struct.unpack_from("<H", bin_bytes, pos)
@@ -178,7 +190,11 @@ def extract_latent_section_blob(latent_archive: Path) -> bytes:
     return bin_bytes[pos:end]  # already brotli-compressed PR100-style blob
 
 
-def extract_yshift_section_blob(yshift_archive: Path) -> bytes:
+def extract_yshift_section_blob(
+    yshift_archive: Path,
+    *,
+    expected_pr106_bytes: bytes | None = None,
+) -> bytes:
     """Extract the SC01 brotli'd blob from a pr106_yshift_sidechannel archive.
 
     Sister archive layout:
@@ -194,7 +210,15 @@ def extract_yshift_section_blob(yshift_archive: Path) -> bytes:
             f"0x{YSHIFT_OUTER_MAGIC:02X} (expected pr106_yshift_sidechannel)"
         )
     pr106_len = int.from_bytes(bin_bytes[1:4], "little")
-    pos = 4 + pr106_len
+    pos = 4
+    pr106_end = pos + pr106_len
+    if pr106_end > len(bin_bytes):
+        raise ValueError(f"{yshift_archive}: embedded PR106 payload overruns archive")
+    if expected_pr106_bytes is not None and bin_bytes[pos:pr106_end] != expected_pr106_bytes:
+        raise ValueError(
+            f"{yshift_archive}: embedded PR106 payload does not match stack anchor"
+        )
+    pos = pr106_end
     if pos >= len(bin_bytes):
         raise ValueError(f"{yshift_archive}: no sidechannel section present")
     sc_version = bin_bytes[pos]
@@ -216,7 +240,11 @@ def extract_yshift_section_blob(yshift_archive: Path) -> bytes:
     return bin_bytes[pos:end]  # already brotli'd SC01 blob
 
 
-def extract_lrl1_section_blob(lrl1_archive: Path) -> bytes:
+def extract_lrl1_section_blob(
+    lrl1_archive: Path,
+    *,
+    expected_pr106_bytes: bytes | None = None,
+) -> bytes:
     """Extract the LR01 brotli'd blob from a pr106_lrl1_sidechannel archive.
 
     Sister archive layout (mirrors yshift sister; only outer magic differs):
@@ -232,7 +260,15 @@ def extract_lrl1_section_blob(lrl1_archive: Path) -> bytes:
             f"0x{LRL1_OUTER_MAGIC:02X} (expected pr106_lrl1_sidechannel)"
         )
     pr106_len = int.from_bytes(bin_bytes[1:4], "little")
-    pos = 4 + pr106_len
+    pos = 4
+    pr106_end = pos + pr106_len
+    if pr106_end > len(bin_bytes):
+        raise ValueError(f"{lrl1_archive}: embedded PR106 payload overruns archive")
+    if expected_pr106_bytes is not None and bin_bytes[pos:pr106_end] != expected_pr106_bytes:
+        raise ValueError(
+            f"{lrl1_archive}: embedded PR106 payload does not match stack anchor"
+        )
+    pos = pr106_end
     if pos >= len(bin_bytes):
         raise ValueError(f"{lrl1_archive}: no sidechannel section present")
     sc_version = bin_bytes[pos]
@@ -379,19 +415,28 @@ def main() -> int:
     if args.latent is not None:
         if not args.latent.is_file():
             sys.exit(f"FATAL: --latent archive not found at {args.latent}")
-        sections[SECTION_LATENT] = extract_latent_section_blob(args.latent)
+        sections[SECTION_LATENT] = extract_latent_section_blob(
+            args.latent,
+            expected_pr106_bytes=pr106_bytes,
+        )
         print(f"[build-stacked] latent section: {len(sections[SECTION_LATENT])} bytes "
               f"(from {args.latent})")
     if args.yshift is not None:
         if not args.yshift.is_file():
             sys.exit(f"FATAL: --yshift archive not found at {args.yshift}")
-        sections[SECTION_YSHIFT] = extract_yshift_section_blob(args.yshift)
+        sections[SECTION_YSHIFT] = extract_yshift_section_blob(
+            args.yshift,
+            expected_pr106_bytes=pr106_bytes,
+        )
         print(f"[build-stacked] yshift section: {len(sections[SECTION_YSHIFT])} bytes "
               f"(from {args.yshift})")
     if args.lrl1 is not None:
         if not args.lrl1.is_file():
             sys.exit(f"FATAL: --lrl1 archive not found at {args.lrl1}")
-        sections[SECTION_LRL1] = extract_lrl1_section_blob(args.lrl1)
+        sections[SECTION_LRL1] = extract_lrl1_section_blob(
+            args.lrl1,
+            expected_pr106_bytes=pr106_bytes,
+        )
         print(f"[build-stacked] lrl1 section: {len(sections[SECTION_LRL1])} bytes "
               f"(from {args.lrl1})")
     if args.wavelet is not None:

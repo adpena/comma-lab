@@ -161,6 +161,13 @@ def _build_wavelet_blob() -> bytes:
     return encode_wavelet_atom_sidechannel(plan)
 
 
+def _write_single_member_zip(path: Path, payload: bytes, *, member: str = "0.bin") -> None:
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
+        info = zipfile.ZipInfo(member, date_time=(1980, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_STORED
+        zf.writestr(info, payload)
+
+
 # ===================================================================
 # Constants + outer wire format
 # ===================================================================
@@ -342,6 +349,65 @@ def test_builder_extracts_wavelet_sidechannel_blob_from_candidate_archive(tmp_pa
     decoded = inflate.decode_wavelet_blob(extracted)
     assert decoded["runtime_mode"] == "explicit_noop_consume_only"
     assert decoded["runtime_consumption_proof"]["decoded_atom_count"] == 2
+
+
+def test_builder_rejects_latent_sister_anchor_mismatch(tmp_path: Path):
+    builder = _load_builder()
+    archive = tmp_path / "latent.zip"
+    expected = b"\xffanchor"
+    wrong = b"\xffwrong!"
+    sidecar = _build_zero_latent_blob()
+    payload = (
+        bytes([builder.LATENT_OUTER_MAGIC, builder.LATENT_FORMAT_ID])
+        + len(wrong).to_bytes(4, "little")
+        + wrong
+        + struct.pack("<H", len(sidecar))
+        + sidecar
+    )
+    _write_single_member_zip(archive, payload)
+
+    with pytest.raises(ValueError, match="embedded PR106 payload does not match"):
+        builder.extract_latent_section_blob(archive, expected_pr106_bytes=expected)
+
+
+def test_builder_rejects_yshift_sister_anchor_mismatch(tmp_path: Path):
+    builder = _load_builder()
+    archive = tmp_path / "yshift.zip"
+    expected = b"\xffanchor"
+    wrong = b"\xffwrong!"
+    blob = _build_zero_yshift_blob()
+    payload = (
+        bytes([builder.YSHIFT_OUTER_MAGIC])
+        + len(wrong).to_bytes(3, "little")
+        + wrong
+        + bytes([1])
+        + struct.pack("<H", len(blob))
+        + blob
+    )
+    _write_single_member_zip(archive, payload)
+
+    with pytest.raises(ValueError, match="embedded PR106 payload does not match"):
+        builder.extract_yshift_section_blob(archive, expected_pr106_bytes=expected)
+
+
+def test_builder_rejects_lrl1_sister_anchor_mismatch(tmp_path: Path):
+    builder = _load_builder()
+    archive = tmp_path / "lrl1.zip"
+    expected = b"\xffanchor"
+    wrong = b"\xffwrong!"
+    blob = _build_zero_lrl1_blob()
+    payload = (
+        bytes([builder.LRL1_OUTER_MAGIC])
+        + len(wrong).to_bytes(3, "little")
+        + wrong
+        + bytes([1])
+        + struct.pack("<H", len(blob))
+        + blob
+    )
+    _write_single_member_zip(archive, payload)
+
+    with pytest.raises(ValueError, match="embedded PR106 payload does not match"):
+        builder.extract_lrl1_section_blob(archive, expected_pr106_bytes=expected)
 
 
 # ===================================================================
