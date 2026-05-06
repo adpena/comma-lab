@@ -605,8 +605,24 @@ def compute_joint_loss(
         l_auth = torch.zeros((), device=proxy_outputs_on_rendered["pose"].device)
 
     # 5) Anchor: proxy_outputs_on_original ↔ contest scorer outputs at sync.
-    # In current formulation this is captured by `proxy_distill`; weight here is
-    # an additional multiplier on top.
+    # PARADIGM-γ audit #1 (2026-05-06) — INTENTIONAL ADDITIVE DESIGN, not
+    # a double-count bug:
+    #
+    #   On anchor steps, the effective coefficient on l_proxy_distill becomes
+    #   ``proxy_distill_weight + contest_anchor_weight`` (proxy_distill_weight
+    #   contributes via the ``total`` accumulator below; contest_anchor_weight
+    #   adds a separate weighted term tied to the SAME measurement). This is
+    #   intentional: anchor steps should pull the proxy harder toward the
+    #   contest scorer than non-anchor steps, and the simplest way to express
+    #   "stronger pull at anchor checkpoints" is to scale the existing
+    #   distill term up by an additional weight rather than introduce a new
+    #   measurement that is functionally redundant with proxy_distill.
+    #
+    #   If/when an INDEPENDENT anchor measurement is introduced (e.g. a CE
+    #   loss between proxy_outputs_on_original and a fresh contest-scorer
+    #   forward), this term should be retargeted to that new measurement and
+    #   the additive scaling collapsed back. For now, the additive form is
+    #   the design.
     l_anchor = (
         config.contest_anchor_weight * l_proxy_distill
         if is_anchor_step
