@@ -16,10 +16,35 @@ from tac.repo_io import json_text, repo_relative, sha256_bytes, sha256_file
 from tac.semantic_label_contract import CONTEST_SEGNET_CLASS_NAME_TUPLE, SELFCOMP_CLASS_TO_GRAY
 
 SCHEMA_VERSION = 1
+CANDIDATE_MANIFEST_CONTRACT = "categorical_byte_closed_candidate_manifest_v1"
+ARCHIVE_MEMBER_MANIFEST_CONTRACT = "categorical_archive_member_manifest_v1"
 CANDIDATE_MANIFEST_KINDS = (
     "categorical_candidate_manifest",
     "categorical_candidate_fixture_manifest",
     "categorical_qma9_clade_spade_openpilot_candidate_manifest",
+)
+ROW_COLLECTION_FIELDS = ("candidate_rows", "evidence_rows", "source_rows")
+PROXY_ROW_KEYS = (
+    "proxy",
+    "proxy_score",
+    "proxy_pose",
+    "proxy_seg",
+    "distortion_proxy",
+)
+PROXY_ROW_STRING_FIELDS = (
+    "evidence_grade",
+    "evidence_semantics",
+    "ranking_basis",
+    "selection_basis",
+    "source",
+    "status",
+    "tag",
+)
+SIDECAR_ROW_KEYS = (
+    "sidecar",
+    "sidecars_allowed",
+    "external_sidecar",
+    "sidecar_path",
 )
 REQUIRED_CONTROL_NAMES = (
     "decode_reencode_identity_control",
@@ -95,6 +120,68 @@ def _control_passed(value: Any) -> bool:
     if isinstance(value, dict):
         return value.get("passed") is True
     return False
+
+
+def _contains_marker(value: Any, marker: str) -> bool:
+    if not isinstance(value, str):
+        return False
+    normalized = value.lower().replace("-", "_")
+    if marker == "proxy" and (
+        "non_proxy" in normalized or "no_proxy" in normalized or "proxy_free" in normalized
+    ):
+        return False
+    return marker in normalized
+
+
+def _declared_marker_value(value: Any) -> bool:
+    return value not in (False, None, "")
+
+
+def _audit_candidate_rows(payload: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    row_summaries: dict[str, Any] = {}
+    blockers: list[str] = []
+    for field in ROW_COLLECTION_FIELDS:
+        rows = payload.get(field)
+        if rows is None:
+            row_summaries[field] = {"declared": False, "count": 0, "blocked_rows": []}
+            continue
+        if not isinstance(rows, list):
+            blockers.append(f"{field}_not_list")
+            row_summaries[field] = {"declared": True, "count": 0, "blocked_rows": []}
+            continue
+        blocked_rows: list[dict[str, Any]] = []
+        for index, row in enumerate(rows):
+            if not isinstance(row, dict):
+                blockers.append(f"{field}_{index}_not_object")
+                blocked_rows.append({"index": index, "reasons": ["not_object"]})
+                continue
+            reasons: list[str] = []
+            if row.get("score_claim") is True:
+                reasons.append("score_claim_true")
+            if row.get("dispatch_attempted") is True or row.get("dispatch_performed") is True:
+                reasons.append("dispatch_attempted_true")
+            if any(key in row and _declared_marker_value(row.get(key)) for key in PROXY_ROW_KEYS):
+                reasons.append("proxy_marker")
+            if any(_contains_marker(row.get(key), "proxy") for key in PROXY_ROW_STRING_FIELDS):
+                reasons.append("proxy_marker")
+            if any(key in row and _declared_marker_value(row.get(key)) for key in SIDECAR_ROW_KEYS):
+                reasons.append("sidecar_marker")
+            if any(
+                _contains_marker(row.get(key), "sidecar")
+                for key in ("role", "source", "tag", "name")
+            ):
+                reasons.append("sidecar_marker")
+            if reasons:
+                reason_set = sorted(set(reasons))
+                blocked_rows.append({"index": index, "reasons": reason_set})
+                for reason in reason_set:
+                    blockers.append(f"{field}_{reason}:{index}")
+        row_summaries[field] = {
+            "declared": True,
+            "count": len(rows),
+            "blocked_rows": blocked_rows,
+        }
+    return row_summaries, blockers
 
 
 def _scan_local_headers(raw: bytes) -> list[dict[str, Any]]:
@@ -350,6 +437,13 @@ def audit_categorical_candidate_manifest(
     if not candidate_kind_valid:
         blockers.append("candidate_manifest_kind_missing_or_invalid")
 
+    if payload.get("candidate_manifest_contract") != CANDIDATE_MANIFEST_CONTRACT:
+        blockers.append("candidate_manifest_contract_missing_or_invalid")
+    if payload.get("score_claim") is not False:
+        blockers.append("candidate_manifest_score_claim_must_be_false")
+    if payload.get("dispatch_attempted") is not False:
+        blockers.append("candidate_manifest_dispatch_attempted_must_be_false")
+
     if not _is_sha256(payload.get("source_archive_sha256")):
         blockers.append("source_archive_sha256_missing_or_invalid")
 
@@ -399,6 +493,13 @@ def audit_categorical_candidate_manifest(
                     if loaded.get("schema_version") != SCHEMA_VERSION:
                         blockers.append(
                             "archive_member_manifest_schema_version_missing_or_invalid"
+                        )
+                    if (
+                        loaded.get("archive_member_manifest_contract")
+                        != ARCHIVE_MEMBER_MANIFEST_CONTRACT
+                    ):
+                        blockers.append(
+                            "archive_member_manifest_contract_missing_or_invalid"
                         )
                     if not _archive_member_manifest_kind_valid(loaded.get("kind")):
                         blockers.append("archive_member_manifest_kind_missing_or_invalid")
@@ -460,8 +561,14 @@ def audit_categorical_candidate_manifest(
                 member_names.append(name)
             if not isinstance(role, str) or not role:
                 blockers.append(f"charged_member_{index}_role_missing")
+            elif "sidecar" in role.lower():
+                blockers.append(f"charged_member_{index}_sidecar_role_forbidden")
             else:
                 role_counts[role] = role_counts.get(role, 0) + 1
+            if isinstance(name, str) and "sidecar" in name.lower():
+                blockers.append(f"charged_member_{index}_sidecar_name_forbidden")
+            if record.get("sidecar") is True or record.get("external_sidecar") is True:
+                blockers.append(f"charged_member_{index}_sidecar_flag_forbidden")
             if not isinstance(byte_count, int) or byte_count <= 0:
                 blockers.append(f"charged_member_{index}_bytes_invalid")
             if not _is_sha256(digest):
@@ -488,10 +595,20 @@ def audit_categorical_candidate_manifest(
 
     if manifest_payload is not None:
         manifest_members = manifest_payload.get("members")
+        manifest_member_order = manifest_payload.get("member_order")
+        manifest_member_count = manifest_payload.get("member_count")
         if not isinstance(manifest_members, list):
             blockers.append("archive_member_manifest_members_missing")
         elif manifest_members != charged_members:
             blockers.append("archive_member_manifest_members_mismatch")
+        else:
+            expected_member_order = [
+                record.get("name", "") for record in manifest_members if isinstance(record, dict)
+            ]
+            if manifest_member_order != expected_member_order:
+                blockers.append("archive_member_manifest_member_order_mismatch")
+            if manifest_member_count != len(manifest_members):
+                blockers.append("archive_member_manifest_member_count_mismatch")
 
     for role in REQUIRED_MEMBER_ROLES:
         if role_counts.get(role, 0) < 1:
@@ -572,6 +689,9 @@ def audit_categorical_candidate_manifest(
             blockers.append("candidate_archive_untracked_members")
             warnings.append(f"archive contains untracked members: {archive_untracked_members}")
 
+    candidate_rows, candidate_row_blockers = _audit_candidate_rows(payload)
+    blockers.extend(candidate_row_blockers)
+
     ready = len(blockers) == 0
     return {
         "schema_version": SCHEMA_VERSION,
@@ -579,8 +699,16 @@ def audit_categorical_candidate_manifest(
         "candidate_manifest": {
             "schema_version": payload.get("schema_version"),
             "kind": payload.get("kind", ""),
+            "contract": payload.get("candidate_manifest_contract", ""),
+            "required_contract": CANDIDATE_MANIFEST_CONTRACT,
             "allowed_kinds": list(CANDIDATE_MANIFEST_KINDS),
-            "schema_valid": candidate_schema_valid and candidate_kind_valid,
+            "schema_valid": (
+                candidate_schema_valid
+                and candidate_kind_valid
+                and payload.get("candidate_manifest_contract") == CANDIDATE_MANIFEST_CONTRACT
+                and payload.get("score_claim") is False
+                and payload.get("dispatch_attempted") is False
+            ),
         },
         "score_claim": False,
         "dispatch_attempted": False,
@@ -609,9 +737,17 @@ def audit_categorical_candidate_manifest(
                 manifest_payload.get("schema_version") if isinstance(manifest_payload, dict) else None
             ),
             "kind": manifest_payload.get("kind", "") if isinstance(manifest_payload, dict) else "",
+            "contract": (
+                manifest_payload.get("archive_member_manifest_contract", "")
+                if isinstance(manifest_payload, dict)
+                else ""
+            ),
+            "required_contract": ARCHIVE_MEMBER_MANIFEST_CONTRACT,
             "schema_valid": (
                 isinstance(manifest_payload, dict)
                 and manifest_payload.get("schema_version") == SCHEMA_VERSION
+                and manifest_payload.get("archive_member_manifest_contract")
+                == ARCHIVE_MEMBER_MANIFEST_CONTRACT
                 and _archive_member_manifest_kind_valid(manifest_payload.get("kind"))
             ),
             "bytes": manifest_path.stat().st_size if manifest_path is not None and manifest_path.exists() else None,
@@ -621,6 +757,14 @@ def audit_categorical_candidate_manifest(
                 manifest_payload is not None
                 and isinstance(manifest_payload.get("members"), list)
                 and manifest_payload.get("members") == charged_members
+            ),
+            "member_order_matches_charged_members": (
+                manifest_payload is not None
+                and manifest_payload.get("member_order") == member_names
+            ),
+            "member_count_matches_charged_members": (
+                manifest_payload is not None
+                and manifest_payload.get("member_count") == len(member_names)
             ),
         },
         "semantic_contract": {
@@ -647,12 +791,15 @@ def audit_categorical_candidate_manifest(
             "records": sorted(member_records, key=lambda item: item["name"]),
         },
         "no_op_controls": control_summary,
+        "candidate_rows": candidate_rows,
         "dispatch_blockers": blockers,
         "warnings": warnings,
     }
 
 
 __all__ = [
+    "ARCHIVE_MEMBER_MANIFEST_CONTRACT",
+    "CANDIDATE_MANIFEST_CONTRACT",
     "CANDIDATE_MANIFEST_KINDS",
     "CONTEST_ARCHIVE_CONTRACT",
     "CONTEST_INFLATE_MEMBER",

@@ -114,8 +114,14 @@ def build_roadmap_status(
         rows.append(
             {
                 "key": row["key"],
+                "title": source_row["title"],
                 "priority_tier": row["priority_tier"],
                 "action_class": row["action_class"],
+                "role": row["role"],
+                "status": row["status"],
+                "evidence_grade": source_row["evidence_grade"],
+                "stackability": source_row["stackability"],
+                "replacement_potential": source_row["replacement_potential"],
                 "readiness_stage": stage,
                 "dirty_path_blockers": dirty_matches,
                 "safe_to_touch_now": not dirty_matches,
@@ -124,6 +130,8 @@ def build_roadmap_status(
                 "ready_for_exact_eval_dispatch": False,
                 "next_patch": row["next_patch"],
                 "blockers": row["blockers"],
+                "missing_code_path_count": source_row["path_audit"]["code"]["missing_count"],
+                "missing_evidence_path_count": source_row["path_audit"]["evidence"]["missing_count"],
             }
         )
     next_unblocked = [
@@ -165,20 +173,28 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- dirty_blocked_row_count: `{payload['dirty_blocked_row_count']}`",
         f"- next_unblocked_keys: `{', '.join(payload['next_unblocked_keys'])}`",
         "",
-        "| key | tier | stage | safe | action | dirty blockers | next patch |",
-        "|---|---:|---|---|---|---|---|",
+        "| key | tier | role | stage | safe | action | evidence | blockers | next patch |",
+        "|---|---:|---|---|---|---|---|---:|---|",
     ]
     for row in payload["rows"]:
+        blocker_count = (
+            len(row["dirty_path_blockers"])
+            + int(row["missing_code_path_count"])
+            + int(row["missing_evidence_path_count"])
+            + len(row["blockers"])
+        )
         lines.append(
             "| "
             + " | ".join(
                 (
                     f"`{_md(row['key'])}`",
                     str(row["priority_tier"]),
+                    f"`{_md(row['role'])}`",
                     f"`{_md(row['readiness_stage'])}`",
                     "`yes`" if row["safe_to_touch_now"] else "`no`",
                     f"`{_md(row['action_class'])}`",
-                    "<br>".join(f"`{_md(path)}`" for path in row["dirty_path_blockers"]) or "",
+                    _md(row["evidence_grade"]),
+                    str(blocker_count),
                     _md(row["next_patch"]),
                 )
             )

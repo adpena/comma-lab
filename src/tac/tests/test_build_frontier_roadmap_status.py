@@ -48,6 +48,9 @@ def test_frontier_roadmap_status_is_non_dispatching_and_dirty_aware() -> None:
     assert "requires_exact_cuda_auth_eval" in payload["dispatch_blockers"]
 
     wr01 = rows["hnerv_wavelet_wr01_apply"]
+    assert wr01["role"] == "stacker_scorer_changing"
+    assert wr01["missing_code_path_count"] == 0
+    assert wr01["missing_evidence_path_count"] == 0
     assert wr01["readiness_stage"] == "blocked_by_dirty_worktree"
     assert wr01["safe_to_touch_now"] is False
     assert wr01["dirty_path_blockers"] == ["src/tac/hnerv_wavelet_apply_transform.py"]
@@ -70,4 +73,6 @@ def test_frontier_roadmap_status_markdown_is_operator_briefing() -> None:
     assert "Live-safe operator roadmap" in markdown
     assert "`hnerv_wavelet_wr01_apply`" in markdown
     assert "`categorical_qma9_clade_spade_openpilot`" in markdown
+    assert "`stacker_scorer_changing`" in markdown
+    assert "evidence" in markdown
     assert "next_unblocked_keys" in markdown

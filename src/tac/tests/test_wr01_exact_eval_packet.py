@@ -27,6 +27,10 @@ def test_wr01_exact_eval_packet_reports_missing_env_without_dispatch(tmp_path: P
         [
             sys.executable,
             str(REPO / "tools" / "build_wr01_exact_eval_packet.py"),
+            "--claims-path",
+            str(tmp_path / "claims.md"),
+            "--now-utc",
+            "2026-05-06T10:00:00Z",
             "--json-out",
             str(out),
         ],
@@ -44,9 +48,12 @@ def test_wr01_exact_eval_packet_reports_missing_env_without_dispatch(tmp_path: P
     assert payload["source_archive_bytes"] == 186231
     assert "pre_submission_compliance_failed" in payload["blockers"]
     assert "dry_run_queue_payload_section_diff_mismatch" in payload["blockers"]
+    assert "missing_active_lane_dispatch_claim" in payload["blockers"]
+    assert "missing_operator_exact_cuda_approval" in payload["blockers"]
     assert payload["preflight_ready"] is True
     assert payload["compliance_ok"] is False
     assert payload["payload_diff_ready"] is True
+    assert payload["operator_approved_exact_cuda"] is False
     assert payload["artifact_flag_violations"] == []
     assert "--stage-workspace" in payload["commands"]["submit"]
     assert "'$LIGHTNING_SSH_TARGET'" not in payload["commands"]["submit"]
@@ -79,6 +86,7 @@ def test_wr01_exact_eval_packet_accepts_matching_custody_artifacts(tmp_path: Pat
         {
             "score_claim": False,
             "dispatch_attempted": False,
+            "source_archive_custody_mode": "operator_supplied_source_archive_identity",
             "candidate_archive_sha256": archive_sha256,
             "candidate_archive_bytes": archive_bytes,
             "source_archive_sha256": source_archive_sha256,
@@ -168,6 +176,8 @@ def test_wr01_exact_eval_packet_accepts_matching_custody_artifacts(tmp_path: Pat
         },
     )
     out = tmp_path / "packet.json"
+    claims_path = tmp_path / "claims.md"
+    _write_claims(claims_path, lane_id="lane", job_name="job")
     env = os.environ.copy()
     for key in (
         "LIGHTNING_SSH_TARGET",
@@ -197,6 +207,11 @@ def test_wr01_exact_eval_packet_accepts_matching_custody_artifacts(tmp_path: Pat
             archive_sha256,
             "--archive-bytes",
             str(archive_bytes),
+            "--claims-path",
+            str(claims_path),
+            "--now-utc",
+            "2026-05-06T10:00:00Z",
+            "--operator-approved-exact-cuda",
             "--json-out",
             str(out),
         ],
@@ -209,7 +224,11 @@ def test_wr01_exact_eval_packet_accepts_matching_custody_artifacts(tmp_path: Pat
     assert payload["ready_for_submit"] is True
     assert payload["blockers"] == []
     assert payload["artifact_consistency_ok"] is True
+    assert payload["static_packet_ready"] is True
+    assert payload["operator_approved_exact_cuda"] is True
+    assert payload["lane_claim_preflight"]["active_claim_present"] is True
     assert payload["source_archive_sha256"] == source_archive_sha256
+    assert payload["source_archive_custody_mode"] == "operator_supplied_source_archive_identity"
     assert payload["source_payload_sha256"] == source_payload_sha256
     assert payload["changed_section_sha256"] == changed_section_sha256
     assert payload["artifact_flag_violations"] == []
@@ -240,6 +259,7 @@ def test_wr01_exact_eval_packet_refuses_truthy_score_or_dispatch_flags(tmp_path:
         {
             "score_claim": True,
             "dispatch_attempted": False,
+            "source_archive_custody_mode": "operator_supplied_source_archive_identity",
             "candidate_archive_sha256": archive_sha256,
             "candidate_archive_bytes": archive_bytes,
             "source_archive_sha256": source_archive_sha256,
@@ -331,6 +351,8 @@ def test_wr01_exact_eval_packet_refuses_truthy_score_or_dispatch_flags(tmp_path:
         },
     )
     out = tmp_path / "packet.json"
+    claims_path = tmp_path / "claims.md"
+    _write_claims(claims_path, lane_id="lane", job_name="job")
     env = os.environ.copy()
     for key in (
         "LIGHTNING_SSH_TARGET",
@@ -360,6 +382,11 @@ def test_wr01_exact_eval_packet_refuses_truthy_score_or_dispatch_flags(tmp_path:
             archive_sha256,
             "--archive-bytes",
             str(archive_bytes),
+            "--claims-path",
+            str(claims_path),
+            "--now-utc",
+            "2026-05-06T10:00:00Z",
+            "--operator-approved-exact-cuda",
             "--json-out",
             str(out),
         ],
@@ -387,9 +414,220 @@ def test_wr01_exact_eval_packet_refuses_truthy_score_or_dispatch_flags(tmp_path:
     ]
 
 
+def test_wr01_exact_eval_packet_blocks_noop_hashes_and_missing_source_custody(tmp_path: Path) -> None:
+    fixture = _write_matching_packet_artifacts(
+        tmp_path,
+        source_archive_custody_mode="missing_source_archive_identity_fail_closed",
+        source_payload_sha256="b" * 64,
+        candidate_payload_sha256="b" * 64,
+        changed_source_sha256="d" * 64,
+        changed_section_sha256="d" * 64,
+    )
+    claims_path = tmp_path / "claims.md"
+    _write_claims(claims_path, lane_id="lane", job_name="job")
+    out = tmp_path / "packet.json"
+    env = os.environ.copy()
+    for key in (
+        "LIGHTNING_SSH_TARGET",
+        "LIGHTNING_REMOTE_PACT",
+        "LIGHTNING_UPSTREAM_DIR",
+        "LIGHTNING_TEAMSPACE",
+        "LIGHTNING_STUDIO",
+        "LIGHTNING_SDK_USER",
+    ):
+        env[key] = "fixture"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_wr01_exact_eval_packet.py"),
+            "--job-name",
+            "job",
+            "--lane-id",
+            "lane",
+            "--archive",
+            str(fixture["archive"]),
+            "--baseline-json",
+            str(fixture["baseline"]),
+            "--result-dir",
+            str(fixture["result_dir"]),
+            "--archive-sha256",
+            fixture["archive_sha256"],
+            "--archive-bytes",
+            str(fixture["archive_bytes"]),
+            "--claims-path",
+            str(claims_path),
+            "--now-utc",
+            "2026-05-06T10:00:00Z",
+            "--operator-approved-exact-cuda",
+            "--json-out",
+            str(out),
+        ],
+        check=True,
+        text=True,
+        env=env,
+    )
+
+    payload = json.loads(out.read_text())
+    assert payload["ready_for_submit"] is False
+    assert payload["static_packet_ready"] is False
+    assert "manifest_source_archive_custody_mode_invalid" in payload["blockers"]
+    assert "manifest_candidate_payload_sha256_equals_source_payload_sha256_noop" in payload["blockers"]
+    assert "manifest_changed_section_candidate_sha256_equals_source_sha256_noop" in payload["blockers"]
+    assert "dry_run_job_name_mismatch" not in payload["blockers"]
+
+
 def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
 def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _write_claims(path: Path, *, lane_id: str, job_name: str) -> None:
+    path.write_text(
+        "\n".join(
+            [
+                "# Active lane dispatch claims - test fixture",
+                "",
+                "## Claims (newest first)",
+                "",
+                "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |",
+                "|---|---|---|---|---|---|---|---|",
+                (
+                    f"| 2026-05-06T09:30:00Z | codex:test | {lane_id} | lightning | "
+                    f"{job_name} | 2026-05-06T11:00:00Z | active_exact_eval | fixture |"
+                ),
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_matching_packet_artifacts(
+    root: Path,
+    *,
+    source_archive_custody_mode: str = "operator_supplied_source_archive_identity",
+    source_archive_sha256: str = "a" * 64,
+    source_payload_sha256: str = "b" * 64,
+    candidate_payload_sha256: str = "c" * 64,
+    changed_source_sha256: str = "d" * 64,
+    changed_section_sha256: str = "e" * 64,
+) -> dict[str, object]:
+    result_dir = root / "wr01_fixture"
+    result_dir.mkdir()
+    archive = result_dir / "candidate.zip"
+    archive.write_bytes(b"candidate archive bytes")
+    archive_sha256 = _sha256(archive.read_bytes())
+    archive_bytes = archive.stat().st_size
+    baseline = root / "baseline.json"
+    baseline.write_text("{}\n", encoding="utf-8")
+    source_archive_bytes = 123
+    manifest = result_dir / "manifest.json"
+    preflight = result_dir / "public_replay_preflight.json"
+    compliance = result_dir / "pre_submission_compliance.json"
+    payload_diff = result_dir / "payload_section_diff_vs_pr106x.json"
+    dry_run = result_dir / "lightning_exact_eval_dry_run.json"
+    _write_json(
+        manifest,
+        {
+            "score_claim": False,
+            "dispatch_attempted": False,
+            "source_archive_custody_mode": source_archive_custody_mode,
+            "candidate_archive_sha256": archive_sha256,
+            "candidate_archive_bytes": archive_bytes,
+            "source_archive_sha256": source_archive_sha256,
+            "source_archive_bytes": source_archive_bytes,
+            "source_payload_sha256": source_payload_sha256,
+            "candidate_payload_sha256": candidate_payload_sha256,
+            "changed_section": {
+                "name": "latents_and_sidecar_brotli",
+                "source_sha256": changed_source_sha256,
+                "candidate_sha256": changed_section_sha256,
+            },
+        },
+    )
+    _write_json(
+        payload_diff,
+        {
+            "ready_for_archive_preflight": True,
+            "changed_section_count": 1,
+            "blockers": [],
+            "candidate_archive_sha256": archive_sha256,
+            "candidate_archive_bytes": archive_bytes,
+            "source_archive_sha256": source_archive_sha256,
+            "source_archive_bytes": source_archive_bytes,
+            "source_payload_sha256": source_payload_sha256,
+            "sections": [
+                {
+                    "name": "latents_and_sidecar_brotli",
+                    "changed": True,
+                    "source_sha256": changed_source_sha256,
+                    "candidate_sha256": changed_section_sha256,
+                }
+            ],
+        },
+    )
+    _write_json(
+        preflight,
+        {
+            "ready_for_exact_eval_dispatch": True,
+            "blockers": [],
+            "archive": {
+                "sha256": archive_sha256,
+                "bytes": archive_bytes,
+                "members": [
+                    {
+                        "decode_smoke": {
+                            "sha256": candidate_payload_sha256,
+                            "format": {
+                                "latents_and_sidecar_brotli": {
+                                    "sha256": changed_section_sha256,
+                                }
+                            },
+                        }
+                    }
+                ],
+            },
+        },
+    )
+    _write_json(
+        compliance,
+        {
+            "passed": True,
+            "checks": [],
+            "archive": {
+                "sha256": archive_sha256,
+                "bytes": archive_bytes,
+                "members": [{"sha256": candidate_payload_sha256}],
+            },
+            "archive_manifest": {"path": manifest.as_posix()},
+        },
+    )
+    _write_json(
+        dry_run,
+        {
+            "status": "DRY_RUN",
+            "submit_readiness": {"ok": True, "blockers": []},
+            "spec": {
+                "expected_archive_sha256": archive_sha256,
+                "expected_archive_size_bytes": archive_bytes,
+                "name": "job",
+                "queue_metadata": {
+                    "lane": "lane",
+                    "archive_manifest": manifest.as_posix(),
+                    "public_preflight": preflight.as_posix(),
+                    "payload_section_diff": payload_diff.as_posix(),
+                },
+            },
+        },
+    )
+    return {
+        "archive": archive,
+        "archive_sha256": archive_sha256,
+        "archive_bytes": archive_bytes,
+        "baseline": baseline,
+        "result_dir": result_dir,
+    }

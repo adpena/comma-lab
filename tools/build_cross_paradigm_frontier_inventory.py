@@ -24,6 +24,10 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.geometry_feedback_readiness import (  # noqa: E402
+    GEOMETRY_FEEDBACK_ROADMAP_KEYS,
+    build_geometry_feedback_runtime_contract,
+)
 from tac.repo_io import json_text  # noqa: E402
 
 SCHEMA_VERSION = 1
@@ -240,7 +244,10 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "tools/build_lapose_lite_inputs_from_pair_metrics.py",
             "tools/build_lapose_motion_atom_manifest.py",
         ),
-        evidence_paths=("docs/runbooks/analysis_optimization_package_map.md",),
+        evidence_paths=(
+            "docs/runbooks/analysis_optimization_package_map.md",
+            ".omx/research/geometry_feedback_runtime_consumer_contract_20260506_codex.md",
+        ),
         next_patch=(
             "Keep labeled as LA-Pose-inspired until a paper-faithful inverse-dynamics encoder and "
             "pose head exist; add class/openpilot manifests, calibrate confidence, and require a "
@@ -340,6 +347,7 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         evidence_paths=(
             ".omx/research/lane_g_v3_stacking_skunkworks_20260428.md",
             ".omx/research/all_scores_forensic_audit_20260430.md",
+            ".omx/research/geometry_feedback_runtime_consumer_contract_20260506_codex.md",
         ),
         next_patch=(
             "Run charged foveation-params readiness audit, then keep foveation as ranking feedback "
@@ -362,7 +370,10 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "src/tac/openpilot_seeding.py",
             "src/tac/openpilot_features.py",
         ),
-        evidence_paths=(".omx/research/council_lane_raft_radial_pose_design_20260430.md",),
+        evidence_paths=(
+            ".omx/research/council_lane_raft_radial_pose_design_20260430.md",
+            ".omx/research/geometry_feedback_runtime_consumer_contract_20260506_codex.md",
+        ),
         next_patch="Emit deterministic pose-disagreement and runtime-consumption readiness artifacts.",
         blockers=("RAFT full-frame jobs historically OOM at naive settings", "small pose errors can dominate score"),
     ),
@@ -448,20 +459,21 @@ def _priority_tier(row: InventoryRow) -> int:
 def _frontier_action_queue(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     queue = []
     for row in rows:
-        queue.append(
-            {
-                "key": row["key"],
-                "priority_tier": row["priority_tier"],
-                "action_class": row["action_class"],
-                "role": row["role"],
-                "paradigms": row["paradigms"],
-                "status": row["status"],
-                "next_patch": row["next_patch"],
-                "blockers": row["blockers"],
-                "score_claim": False,
-                "ready_for_exact_eval_dispatch": False,
-            }
-        )
+        queue_row = {
+            "key": row["key"],
+            "priority_tier": row["priority_tier"],
+            "action_class": row["action_class"],
+            "role": row["role"],
+            "paradigms": row["paradigms"],
+            "status": row["status"],
+            "next_patch": row["next_patch"],
+            "blockers": row["blockers"],
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        if row.get("geometry_feedback_contract") is not None:
+            queue_row["geometry_feedback_contract"] = row["geometry_feedback_contract"]
+        queue.append(queue_row)
     queue.sort(
         key=lambda item: (
             int(item["priority_tier"]),
@@ -477,31 +489,34 @@ def build_inventory(*, repo_root: Path) -> dict[str, Any]:
     for row in STATIC_ROWS:
         code_status = _path_status(row.code_paths, repo_root=repo_root)
         evidence_status = _path_status(row.evidence_paths, repo_root=repo_root)
-        rows.append(
-            {
-                "key": row.key,
-                "title": row.title,
-                "paradigms": list(row.paradigms),
-                "role": row.role,
-                "status": row.status,
-                "evidence_grade": row.evidence_grade,
-                "stackability": row.stackability,
-                "replacement_potential": row.replacement_potential,
-                "code_paths": list(row.code_paths),
-                "evidence_paths": list(row.evidence_paths),
-                "path_audit": {
-                    "code": code_status,
-                    "evidence": evidence_status,
-                },
-                "score_snapshot": _score_snapshot(row, repo_root=repo_root),
-                "next_patch": row.next_patch,
-                "blockers": list(row.blockers),
-                "action_class": _action_class(row),
-                "priority_tier": _priority_tier(row),
-                "score_claim": False,
-                "ready_for_exact_eval_dispatch": False,
-            }
-        )
+        geometry_contract = _geometry_feedback_contract(row)
+        blockers = _row_blockers(row, geometry_contract)
+        row_payload = {
+            "key": row.key,
+            "title": row.title,
+            "paradigms": list(row.paradigms),
+            "role": row.role,
+            "status": row.status,
+            "evidence_grade": row.evidence_grade,
+            "stackability": row.stackability,
+            "replacement_potential": row.replacement_potential,
+            "code_paths": list(row.code_paths),
+            "evidence_paths": list(row.evidence_paths),
+            "path_audit": {
+                "code": code_status,
+                "evidence": evidence_status,
+            },
+            "score_snapshot": _score_snapshot(row, repo_root=repo_root),
+            "next_patch": row.next_patch,
+            "blockers": blockers,
+            "action_class": _action_class(row),
+            "priority_tier": _priority_tier(row),
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        if geometry_contract is not None:
+            row_payload["geometry_feedback_contract"] = geometry_contract
+        rows.append(row_payload)
     role_counts = Counter(row["role"] for row in rows)
     paradigm_counts = Counter(paradigm for row in rows for paradigm in row["paradigms"])
     action_class_counts = Counter(row["action_class"] for row in rows)
@@ -536,11 +551,35 @@ def build_inventory(*, repo_root: Path) -> dict[str, Any]:
         "rows": rows,
         "dispatch_blockers": [
             "inventory_only",
+            "geometry_feedback_requires_charged_runtime_consumer",
             "requires_candidate_specific_archive_manifest",
             "requires_lane_dispatch_claim",
             "requires_exact_cuda_auth_eval",
         ],
     }
+
+
+def _geometry_feedback_contract(row: InventoryRow) -> dict[str, Any] | None:
+    if row.key not in GEOMETRY_FEEDBACK_ROADMAP_KEYS:
+        return None
+    return build_geometry_feedback_runtime_contract(
+        lane_key=row.key,
+        paradigms=row.paradigms,
+        role=row.role,
+        evidence_grade=row.evidence_grade,
+    )
+
+
+def _row_blockers(
+    row: InventoryRow,
+    geometry_contract: dict[str, Any] | None,
+) -> list[str]:
+    blockers = list(row.blockers)
+    if geometry_contract is not None:
+        for blocker in geometry_contract["dispatch_blockers"]:
+            if blocker not in blockers:
+                blockers.append(blocker)
+    return blockers
 
 
 def render_markdown(payload: dict[str, Any]) -> str:

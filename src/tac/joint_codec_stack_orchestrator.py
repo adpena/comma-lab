@@ -93,6 +93,7 @@ import io
 import json
 import math
 import struct
+import zipfile
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
@@ -115,10 +116,19 @@ from tac.joint_admm_coordinator import (
     run_admm,
 )
 from tac.optimization.research_basis import research_basis_ids_for_family
+from tac.submission_archive import (
+    DETERMINISTIC_ZIP_DATE_TIME,
+    DETERMINISTIC_ZIP_FILE_MODE,
+    validate_archive_member_name,
+    validate_zip_member_infos,
+    write_deterministic_zip_member,
+)
 
 _JCSP_MAGIC: bytes = b"JCSP"
 _JCSP_VERSION: int = 1
 JCSP_STREAM_METADATA_SCHEMA: str = "jcsp_tensor_stream_specs_manifest_v1"
+JCSP_ARCHIVE_MEMBER_NAME: str = "jcsp.bin"
+JCSP_ARCHIVE_MEMBER_CONTRACT_SCHEMA: str = "jcsp_archive_member_runtime_contract_v1"
 
 # Codec kind flags
 KIND_ARITHMETIC_STATIC: int = 0
@@ -1079,6 +1089,239 @@ def validate_jcsp_container_runtime_parity(blob: bytes) -> dict[str, Any]:
 
 
 # ────────────────────────────────────────────────────────────────────────────
+# JCSP archive-member runtime contract
+# ────────────────────────────────────────────────────────────────────────────
+
+
+def _sha256_bytes(blob: bytes) -> str:
+    return hashlib.sha256(blob).hexdigest()
+
+
+def _require_bytes(blob: bytes | bytearray | memoryview, *, context: str) -> bytes:
+    if not isinstance(blob, (bytes, bytearray, memoryview)):
+        raise TypeError(f"{context} must be bytes-like, got {type(blob).__name__}")
+    out = bytes(blob)
+    if not out:
+        raise ValueError(f"{context} must be non-empty")
+    return out
+
+
+def _validate_jcsp_member_compression(compress_type: int) -> int:
+    out = int(compress_type)
+    if out not in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED):
+        raise ValueError(
+            "JCSP archive members must use ZIP_STORED or ZIP_DEFLATED; "
+            f"got compress_type={compress_type}"
+        )
+    return out
+
+
+def _decode_zip_member_name(raw: bytes, flag_bits: int) -> str:
+    encoding = "utf-8" if flag_bits & 0x800 else "cp437"
+    return raw.decode(encoding, errors="strict")
+
+
+def _local_header_name_from_archive_bytes(
+    archive_bytes: bytes,
+    info: zipfile.ZipInfo,
+) -> str:
+    offset = int(info.header_offset)
+    if offset < 0 or offset + 30 > len(archive_bytes):
+        raise ValueError(f"invalid ZIP local header offset for {info.filename!r}")
+    fixed = archive_bytes[offset : offset + 30]
+    if fixed[:4] != b"PK\x03\x04":
+        raise ValueError(f"invalid ZIP local header for {info.filename!r}")
+    flag_bits = struct.unpack_from("<H", fixed, 6)[0]
+    name_len, extra_len = struct.unpack_from("<HH", fixed, 26)
+    name_start = offset + 30
+    extra_start = name_start + int(name_len)
+    extra_end = extra_start + int(extra_len)
+    if extra_end > len(archive_bytes):
+        raise ValueError(f"truncated ZIP local header for {info.filename!r}")
+    local_raw = archive_bytes[name_start:extra_start]
+    return _decode_zip_member_name(local_raw, flag_bits)
+
+
+def _require_jcsp_member_metadata_deterministic(info: zipfile.ZipInfo) -> None:
+    if tuple(info.date_time) != DETERMINISTIC_ZIP_DATE_TIME:
+        raise ValueError(
+            f"JCSP member {info.filename!r} has non-deterministic timestamp "
+            f"{info.date_time!r}; expected {DETERMINISTIC_ZIP_DATE_TIME!r}"
+        )
+    if info.extra:
+        raise ValueError(f"JCSP member {info.filename!r} has ZIP extra fields")
+    if info.comment:
+        raise ValueError(f"JCSP member {info.filename!r} has ZIP comment")
+    mode = (int(info.external_attr) >> 16) & 0o777
+    if mode != DETERMINISTIC_ZIP_FILE_MODE:
+        raise ValueError(
+            f"JCSP member {info.filename!r} has file mode {mode:o}; "
+            f"expected {DETERMINISTIC_ZIP_FILE_MODE:o}"
+        )
+    if int(info.create_system) != 3:
+        raise ValueError(
+            f"JCSP member {info.filename!r} has create_system={info.create_system}; "
+            "expected 3 for deterministic Unix-style metadata"
+        )
+
+
+def build_jcsp_archive_member(
+    *,
+    container_bytes: bytes,
+    member_name: str = JCSP_ARCHIVE_MEMBER_NAME,
+    compress_type: int = zipfile.ZIP_STORED,
+) -> bytes:
+    """Return deterministic ``archive.zip`` bytes with one JCSP member.
+
+    The returned archive is a byte-closed fixture/candidate surface: the JCSP
+    payload is inside the ZIP member, member metadata is deterministic, and the
+    member is immediately passed through the runtime-loader contract below.
+    This is still not score evidence and does not imply dispatch readiness.
+    """
+
+    member = validate_archive_member_name(member_name)
+    payload = _require_bytes(container_bytes, context="container_bytes")
+    validate_jcsp_container_runtime_parity(payload)
+    compression = _validate_jcsp_member_compression(compress_type)
+    compresslevel = None if compression == zipfile.ZIP_STORED else 9
+
+    out = io.BytesIO()
+    with zipfile.ZipFile(
+        out,
+        "w",
+        compression=compression,
+        allowZip64=False,
+    ) as zf:
+        write_deterministic_zip_member(
+            zf,
+            member,
+            payload,
+            compress_type=compression,
+            compresslevel=compresslevel,
+        )
+    archive_bytes = out.getvalue()
+    load_jcsp_archive_member_for_runtime(
+        archive_bytes=archive_bytes,
+        member_name=member,
+        require_single_member=True,
+    )
+    return archive_bytes
+
+
+def build_jcsp_noop_archive_fixture(
+    *,
+    member_name: str = JCSP_ARCHIVE_MEMBER_NAME,
+    compress_type: int = zipfile.ZIP_STORED,
+) -> bytes:
+    """Build a deterministic scoreless archive fixture with a zero-stream JCSP.
+
+    This gives the runtime contract a byte-closed archive member to consume
+    before any real joint-stack payload is dispatchable. The fixture carries no
+    qint streams, performs no scorer work, and cannot support a score claim.
+    """
+
+    container = _pack_jcsp_container(
+        streams=[],
+        waterline_kkt_residual=0.0,
+        iters=0,
+        converged=True,
+    )
+    return build_jcsp_archive_member(
+        container_bytes=container,
+        member_name=member_name,
+        compress_type=compress_type,
+    )
+
+
+def load_jcsp_archive_member_for_runtime(
+    *,
+    archive_bytes: bytes,
+    member_name: str = JCSP_ARCHIVE_MEMBER_NAME,
+    require_single_member: bool = False,
+) -> dict[str, Any]:
+    """Validate and load a JCSP archive member as inflate-side code would.
+
+    The contract is deliberately stricter than a bare ``ZipFile.read``: it
+    rejects duplicate/unsafe names, central/local header name divergence,
+    missing members, non-deterministic JCSP member metadata, CRC failures, and
+    JCSP payload/kind mismatches before returning loader-ready metadata.
+    """
+
+    archive_blob = _require_bytes(archive_bytes, context="archive_bytes")
+    member = validate_archive_member_name(member_name)
+
+    try:
+        with zipfile.ZipFile(io.BytesIO(archive_blob), "r") as zf:
+            infos = zf.infolist()
+            names = validate_zip_member_infos(infos)
+            if require_single_member and names != [member]:
+                raise ValueError(
+                    "JCSP archive fixture must contain exactly one member "
+                    f"{member!r}; got {names!r}"
+                )
+            if member not in names:
+                raise ValueError(
+                    f"JCSP archive member {member!r} not found; got {names!r}"
+                )
+
+            local_header_names: list[dict[str, Any]] = []
+            for info in infos:
+                local_name = _local_header_name_from_archive_bytes(
+                    archive_blob,
+                    info,
+                )
+                if local_name != info.filename:
+                    raise ValueError(
+                        "ZIP central/local name mismatch: "
+                        f"central={info.filename!r} local={local_name!r}"
+                    )
+                local_header_names.append(
+                    {
+                        "central": info.filename,
+                        "local": local_name,
+                    }
+                )
+
+            bad_crc = zf.testzip()
+            if bad_crc is not None:
+                raise ValueError(f"JCSP archive CRC check failed for {bad_crc!r}")
+
+            info = zf.getinfo(member)
+            _validate_jcsp_member_compression(info.compress_type)
+            _require_jcsp_member_metadata_deterministic(info)
+            payload = zf.read(info)
+    except zipfile.BadZipFile as exc:
+        raise ValueError("JCSP archive member loader got invalid ZIP bytes") from exc
+
+    parity = validate_jcsp_container_runtime_parity(payload)
+    return {
+        "schema": JCSP_ARCHIVE_MEMBER_CONTRACT_SCHEMA,
+        "score_claim": False,
+        "ready_for_runtime_loader": True,
+        "ready_for_exact_eval_dispatch": False,
+        "member_name": member,
+        "archive_bytes": len(archive_blob),
+        "archive_sha256": _sha256_bytes(archive_blob),
+        "archive_members": names,
+        "member_bytes": len(payload),
+        "member_sha256": _sha256_bytes(payload),
+        "member_compress_type": int(info.compress_type),
+        "member_compress_size": int(info.compress_size),
+        "member_crc32": f"{int(info.CRC):08x}",
+        "member_file_mode": DETERMINISTIC_ZIP_FILE_MODE,
+        "member_date_time": list(info.date_time),
+        "local_header_names": local_header_names,
+        "jcsp_runtime_parity": parity,
+        "noop_fixture": parity["stream_count"] == 0,
+        "dispatch_blockers": [
+            "not_integrated_into_submission_inflate_path",
+            "no_lane_dispatch_claim",
+            "exact_cuda_auth_eval_missing",
+        ],
+    }
+
+
+# ────────────────────────────────────────────────────────────────────────────
 # Orchestrator
 # ────────────────────────────────────────────────────────────────────────────
 
@@ -1287,6 +1530,8 @@ def run_sequential_codec_stack(
 
 
 __all__ = [
+    "JCSP_ARCHIVE_MEMBER_CONTRACT_SCHEMA",
+    "JCSP_ARCHIVE_MEMBER_NAME",
     "JCSP_STREAM_METADATA_SCHEMA",
     "KIND_ARITHMETIC_STATIC",
     "KIND_BALLE_HYPERPRIOR",
@@ -1295,7 +1540,10 @@ __all__ = [
     "JointCodecStackResult",
     "StackStreamResult",
     "StreamSource",
+    "build_jcsp_archive_member",
+    "build_jcsp_noop_archive_fixture",
     "jcsp_stream_specs_manifest",
+    "load_jcsp_archive_member_for_runtime",
     "model_to_jcsp_streams",
     "run_joint_codec_stack",
     "run_sequential_codec_stack",

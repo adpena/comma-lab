@@ -142,6 +142,38 @@ def test_record_sequence_counts_and_exact_huffman_bits_are_deterministic() -> No
     assert manifest["total_huffman_payload_bits_exact"] == 4
 
 
+def test_known_overhead_accounting_ranks_model_gap_without_dispatch() -> None:
+    manifest = build_entropy_codec_gap_audit(
+        [
+            {
+                "label": "hdc2_prev_symbol_contexts",
+                "actual_bytes": 221_381,
+                "encoded_payload_bytes": 180_429,
+                "model_overhead_bytes": 40_840,
+                "container_overhead_bytes": 112,
+                "symbol_counts": {"0": 16, "1": 8, "2": 4, "3": 4},
+            },
+            {
+                "label": "small_side_context",
+                "actual_bytes": 64,
+                "encoded_payload_bytes": 48,
+                "model_overhead_bytes": 12,
+                "container_overhead_bytes": 4,
+                "symbol_counts": {"0": 15, "1": 1},
+            },
+        ]
+    )
+
+    overhead = manifest["known_overhead_accounting"]
+    assert overhead["streams_with_known_accounting"] == 2
+    assert overhead["complete_stream_accounting_count"] == 2
+    assert overhead["total_known_model_overhead_bytes"] == 40_852
+    assert overhead["total_known_container_overhead_bytes"] == 116
+    assert overhead["largest_known_overhead_streams"][0]["label"] == "hdc2_prev_symbol_contexts"
+    assert overhead["largest_known_overhead_streams"][0]["ready_for_exact_eval_dispatch"] is False
+    assert "Known Overhead Accounting" in render_markdown(manifest)
+
+
 def test_invalid_inputs_fail_closed() -> None:
     with pytest.raises(EntropyCodecGapAuditError, match="nonempty"):
         build_entropy_codec_gap_audit([])
@@ -164,6 +196,18 @@ def test_invalid_inputs_fail_closed() -> None:
     with pytest.raises(EntropyCodecGapAuditError, match="symbol and count"):
         build_entropy_codec_gap_audit(
             [{"label": "bad", "actual_bytes": 1, "symbol_counts": [{"symbol": "0"}]}]
+        )
+    with pytest.raises(EntropyCodecGapAuditError, match="exceeds actual_bytes"):
+        build_entropy_codec_gap_audit(
+            [
+                {
+                    "label": "bad",
+                    "actual_bytes": 4,
+                    "encoded_payload_bytes": 4,
+                    "model_overhead_bytes": 1,
+                    "symbol_counts": {"0": 1},
+                }
+            ]
         )
 
 

@@ -3,6 +3,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from tac.geometry_feedback_readiness import (
+    GEOMETRY_FEEDBACK_ROADMAP_KEYS,
+    UNCHARGED_GEOMETRY_FEEDBACK_BLOCKER,
+)
 from tools.build_cross_paradigm_frontier_inventory import (
     STATIC_ROWS,
     build_inventory,
@@ -82,6 +86,21 @@ def test_cross_paradigm_inventory_pins_required_score_path_rows() -> None:
     assert lapose["role"] == "proposal_allocator"
     assert "meta_lagrangian" in lapose["paradigms"]
     assert lapose["action_class"] == "calibrate_planning_signal_and_attach_archive_consumer"
+
+
+def test_cross_paradigm_inventory_geometry_feedback_contracts_fail_closed() -> None:
+    payload = build_inventory(repo_root=REPO)
+    rows = {row["key"]: row for row in payload["rows"]}
+
+    assert "geometry_feedback_requires_charged_runtime_consumer" in payload["dispatch_blockers"]
+    for key in GEOMETRY_FEEDBACK_ROADMAP_KEYS:
+        contract = rows[key]["geometry_feedback_contract"]
+        assert contract["score_claim"] is False
+        assert contract["dispatch_attempted"] is False
+        assert contract["ready_for_exact_eval_dispatch"] is False
+        assert contract["charged_runtime_consumed"] is False
+        assert UNCHARGED_GEOMETRY_FEEDBACK_BLOCKER in contract["dispatch_blockers"]
+        assert UNCHARGED_GEOMETRY_FEEDBACK_BLOCKER in rows[key]["blockers"]
 
 
 def test_cross_paradigm_inventory_action_queue_routes_next_tranche() -> None:

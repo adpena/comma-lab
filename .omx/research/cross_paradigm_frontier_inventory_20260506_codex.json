@@ -16,6 +16,7 @@
   "dispatch_attempted": false,
   "dispatch_blockers": [
     "inventory_only",
+    "geometry_feedback_requires_charged_runtime_consumer",
     "requires_candidate_specific_archive_manifest",
     "requires_lane_dispatch_claim",
     "requires_exact_cuda_auth_eval"
@@ -141,8 +142,51 @@
     {
       "action_class": "charge_runtime_geometry_consumer_contract",
       "blockers": [
-        "configured-but-unconsumed foveation is a known fail-closed preflight class"
+        "configured-but-unconsumed foveation is a known fail-closed preflight class",
+        "geometry_feedback_no_charged_artifact_proof",
+        "geometry_feedback_no_runtime_consumer_proof",
+        "geometry_feedback_not_charged_runtime_consumed",
+        "candidate_specific_archive_manifest_required",
+        "geometry_component_gates_required",
+        "exact_cuda_auth_eval_required_before_score_claim"
       ],
+      "geometry_feedback_contract": {
+        "charged_artifact_count": 0,
+        "charged_artifacts": [],
+        "charged_runtime_consumed": false,
+        "contract_name": "charged_geometry_feedback_runtime_consumer_v1",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "geometry_feedback_no_charged_artifact_proof",
+          "geometry_feedback_no_runtime_consumer_proof",
+          "geometry_feedback_not_charged_runtime_consumed",
+          "candidate_specific_archive_manifest_required",
+          "geometry_component_gates_required",
+          "exact_cuda_auth_eval_required_before_score_claim"
+        ],
+        "evidence_grade": "planning plus historical negatives",
+        "lane_key": "telescopic_foveation_field",
+        "paradigms": [
+          "categorical_masks",
+          "foveation",
+          "openpilot_priors",
+          "pose"
+        ],
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "requirements": {
+          "candidate_specific_archive_manifest_required": true,
+          "charged_archive_artifact_required": true,
+          "exact_cuda_auth_eval_required": true,
+          "geometry_component_gates_required": true,
+          "runtime_consumer_required": true
+        },
+        "role": "scorer_weighted_proposal_or_replacement",
+        "runtime_consumer_count": 0,
+        "runtime_consumers": [],
+        "schema_version": 1,
+        "score_claim": false
+      },
       "key": "telescopic_foveation_field",
       "next_patch": "Run charged foveation-params readiness audit, then keep foveation as ranking feedback until a runtime consumer passes geometry preflight and exact component gates.",
       "paradigms": [
@@ -161,8 +205,51 @@
       "action_class": "calibrate_planning_signal_and_attach_archive_consumer",
       "blockers": [
         "current outputs are planning only",
-        "confidence thresholds need calibration evidence"
+        "confidence thresholds need calibration evidence",
+        "geometry_feedback_no_charged_artifact_proof",
+        "geometry_feedback_no_runtime_consumer_proof",
+        "geometry_feedback_not_charged_runtime_consumed",
+        "candidate_specific_archive_manifest_required",
+        "geometry_component_gates_required",
+        "exact_cuda_auth_eval_required_before_score_claim"
       ],
+      "geometry_feedback_contract": {
+        "charged_artifact_count": 0,
+        "charged_artifacts": [],
+        "charged_runtime_consumed": false,
+        "contract_name": "charged_geometry_feedback_runtime_consumer_v1",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "geometry_feedback_no_charged_artifact_proof",
+          "geometry_feedback_no_runtime_consumer_proof",
+          "geometry_feedback_not_charged_runtime_consumed",
+          "candidate_specific_archive_manifest_required",
+          "geometry_component_gates_required",
+          "exact_cuda_auth_eval_required_before_score_claim"
+        ],
+        "evidence_grade": "diagnostic CUDA response allocated to pairs; planning only",
+        "lane_key": "lapose_motion_atom_allocator",
+        "paradigms": [
+          "la_pose",
+          "meta_lagrangian",
+          "openpilot_priors",
+          "pose"
+        ],
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "requirements": {
+          "candidate_specific_archive_manifest_required": true,
+          "charged_archive_artifact_required": true,
+          "exact_cuda_auth_eval_required": true,
+          "geometry_component_gates_required": true,
+          "runtime_consumer_required": true
+        },
+        "role": "proposal_allocator",
+        "runtime_consumer_count": 0,
+        "runtime_consumers": [],
+        "schema_version": 1,
+        "score_claim": false
+      },
       "key": "lapose_motion_atom_allocator",
       "next_patch": "Keep labeled as LA-Pose-inspired until a paper-faithful inverse-dynamics encoder and pose head exist; add class/openpilot manifests, calibrate confidence, and require a charged archive consumer before dispatch.",
       "paradigms": [
@@ -181,8 +268,50 @@
       "action_class": "emit_pose_disagreement_readiness_artifact",
       "blockers": [
         "RAFT full-frame jobs historically OOM at naive settings",
-        "small pose errors can dominate score"
+        "small pose errors can dominate score",
+        "geometry_feedback_no_charged_artifact_proof",
+        "geometry_feedback_no_runtime_consumer_proof",
+        "geometry_feedback_not_charged_runtime_consumed",
+        "candidate_specific_archive_manifest_required",
+        "geometry_component_gates_required",
+        "exact_cuda_auth_eval_required_before_score_claim"
       ],
+      "geometry_feedback_contract": {
+        "charged_artifact_count": 0,
+        "charged_artifacts": [],
+        "charged_runtime_consumed": false,
+        "contract_name": "charged_geometry_feedback_runtime_consumer_v1",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "geometry_feedback_no_charged_artifact_proof",
+          "geometry_feedback_no_runtime_consumer_proof",
+          "geometry_feedback_not_charged_runtime_consumed",
+          "candidate_specific_archive_manifest_required",
+          "geometry_component_gates_required",
+          "exact_cuda_auth_eval_required_before_score_claim"
+        ],
+        "evidence_grade": "planning/prototype",
+        "lane_key": "raft_radial_openpilot_pose",
+        "paradigms": [
+          "la_pose",
+          "openpilot_priors",
+          "pose"
+        ],
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "requirements": {
+          "candidate_specific_archive_manifest_required": true,
+          "charged_archive_artifact_required": true,
+          "exact_cuda_auth_eval_required": true,
+          "geometry_component_gates_required": true,
+          "runtime_consumer_required": true
+        },
+        "role": "proposal_or_pose_sidecar_replacement",
+        "runtime_consumer_count": 0,
+        "runtime_consumers": [],
+        "schema_version": 1,
+        "score_claim": false
+      },
       "key": "raft_radial_openpilot_pose",
       "next_patch": "Emit deterministic pose-disagreement and runtime-consumption readiness artifacts.",
       "paradigms": [
@@ -629,7 +758,13 @@
       "action_class": "calibrate_planning_signal_and_attach_archive_consumer",
       "blockers": [
         "current outputs are planning only",
-        "confidence thresholds need calibration evidence"
+        "confidence thresholds need calibration evidence",
+        "geometry_feedback_no_charged_artifact_proof",
+        "geometry_feedback_no_runtime_consumer_proof",
+        "geometry_feedback_not_charged_runtime_consumed",
+        "candidate_specific_archive_manifest_required",
+        "geometry_component_gates_required",
+        "exact_cuda_auth_eval_required_before_score_claim"
       ],
       "code_paths": [
         "src/tac/analysis/lapose_lite_inputs.py",
@@ -640,8 +775,46 @@
       ],
       "evidence_grade": "diagnostic CUDA response allocated to pairs; planning only",
       "evidence_paths": [
-        "docs/runbooks/analysis_optimization_package_map.md"
+        "docs/runbooks/analysis_optimization_package_map.md",
+        ".omx/research/geometry_feedback_runtime_consumer_contract_20260506_codex.md"
       ],
+      "geometry_feedback_contract": {
+        "charged_artifact_count": 0,
+        "charged_artifacts": [],
+        "charged_runtime_consumed": false,
+        "contract_name": "charged_geometry_feedback_runtime_consumer_v1",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "geometry_feedback_no_charged_artifact_proof",
+          "geometry_feedback_no_runtime_consumer_proof",
+          "geometry_feedback_not_charged_runtime_consumed",
+          "candidate_specific_archive_manifest_required",
+          "geometry_component_gates_required",
+          "exact_cuda_auth_eval_required_before_score_claim"
+        ],
+        "evidence_grade": "diagnostic CUDA response allocated to pairs; planning only",
+        "lane_key": "lapose_motion_atom_allocator",
+        "paradigms": [
+          "la_pose",
+          "meta_lagrangian",
+          "openpilot_priors",
+          "pose"
+        ],
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "requirements": {
+          "candidate_specific_archive_manifest_required": true,
+          "charged_archive_artifact_required": true,
+          "exact_cuda_auth_eval_required": true,
+          "geometry_component_gates_required": true,
+          "runtime_consumer_required": true
+        },
+        "role": "proposal_allocator",
+        "runtime_consumer_count": 0,
+        "runtime_consumers": [],
+        "schema_version": 1,
+        "score_claim": false
+      },
       "key": "lapose_motion_atom_allocator",
       "next_patch": "Keep labeled as LA-Pose-inspired until a paper-faithful inverse-dynamics encoder and pose head exist; add class/openpilot manifests, calibrate confidence, and require a charged archive consumer before dispatch.",
       "paradigms": [
@@ -665,9 +838,10 @@
         },
         "evidence": {
           "existing": [
-            "docs/runbooks/analysis_optimization_package_map.md"
+            "docs/runbooks/analysis_optimization_package_map.md",
+            ".omx/research/geometry_feedback_runtime_consumer_contract_20260506_codex.md"
           ],
-          "existing_count": 1,
+          "existing_count": 2,
           "missing": [],
           "missing_count": 0
         }
@@ -855,7 +1029,13 @@
     {
       "action_class": "charge_runtime_geometry_consumer_contract",
       "blockers": [
-        "configured-but-unconsumed foveation is a known fail-closed preflight class"
+        "configured-but-unconsumed foveation is a known fail-closed preflight class",
+        "geometry_feedback_no_charged_artifact_proof",
+        "geometry_feedback_no_runtime_consumer_proof",
+        "geometry_feedback_not_charged_runtime_consumed",
+        "candidate_specific_archive_manifest_required",
+        "geometry_component_gates_required",
+        "exact_cuda_auth_eval_required_before_score_claim"
       ],
       "code_paths": [
         "src/tac/hyperbolic_foveation.py",
@@ -868,8 +1048,46 @@
       "evidence_grade": "planning plus historical negatives",
       "evidence_paths": [
         ".omx/research/lane_g_v3_stacking_skunkworks_20260428.md",
-        ".omx/research/all_scores_forensic_audit_20260430.md"
+        ".omx/research/all_scores_forensic_audit_20260430.md",
+        ".omx/research/geometry_feedback_runtime_consumer_contract_20260506_codex.md"
       ],
+      "geometry_feedback_contract": {
+        "charged_artifact_count": 0,
+        "charged_artifacts": [],
+        "charged_runtime_consumed": false,
+        "contract_name": "charged_geometry_feedback_runtime_consumer_v1",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "geometry_feedback_no_charged_artifact_proof",
+          "geometry_feedback_no_runtime_consumer_proof",
+          "geometry_feedback_not_charged_runtime_consumed",
+          "candidate_specific_archive_manifest_required",
+          "geometry_component_gates_required",
+          "exact_cuda_auth_eval_required_before_score_claim"
+        ],
+        "evidence_grade": "planning plus historical negatives",
+        "lane_key": "telescopic_foveation_field",
+        "paradigms": [
+          "categorical_masks",
+          "foveation",
+          "openpilot_priors",
+          "pose"
+        ],
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "requirements": {
+          "candidate_specific_archive_manifest_required": true,
+          "charged_archive_artifact_required": true,
+          "exact_cuda_auth_eval_required": true,
+          "geometry_component_gates_required": true,
+          "runtime_consumer_required": true
+        },
+        "role": "scorer_weighted_proposal_or_replacement",
+        "runtime_consumer_count": 0,
+        "runtime_consumers": [],
+        "schema_version": 1,
+        "score_claim": false
+      },
       "key": "telescopic_foveation_field",
       "next_patch": "Run charged foveation-params readiness audit, then keep foveation as ranking feedback until a runtime consumer passes geometry preflight and exact component gates.",
       "paradigms": [
@@ -895,9 +1113,10 @@
         "evidence": {
           "existing": [
             ".omx/research/lane_g_v3_stacking_skunkworks_20260428.md",
-            ".omx/research/all_scores_forensic_audit_20260430.md"
+            ".omx/research/all_scores_forensic_audit_20260430.md",
+            ".omx/research/geometry_feedback_runtime_consumer_contract_20260506_codex.md"
           ],
-          "existing_count": 2,
+          "existing_count": 3,
           "missing": [],
           "missing_count": 0
         }
@@ -916,7 +1135,13 @@
       "action_class": "emit_pose_disagreement_readiness_artifact",
       "blockers": [
         "RAFT full-frame jobs historically OOM at naive settings",
-        "small pose errors can dominate score"
+        "small pose errors can dominate score",
+        "geometry_feedback_no_charged_artifact_proof",
+        "geometry_feedback_no_runtime_consumer_proof",
+        "geometry_feedback_not_charged_runtime_consumed",
+        "candidate_specific_archive_manifest_required",
+        "geometry_component_gates_required",
+        "exact_cuda_auth_eval_required_before_score_claim"
       ],
       "code_paths": [
         "src/tac/raft_pose.py",
@@ -926,8 +1151,45 @@
       ],
       "evidence_grade": "planning/prototype",
       "evidence_paths": [
-        ".omx/research/council_lane_raft_radial_pose_design_20260430.md"
+        ".omx/research/council_lane_raft_radial_pose_design_20260430.md",
+        ".omx/research/geometry_feedback_runtime_consumer_contract_20260506_codex.md"
       ],
+      "geometry_feedback_contract": {
+        "charged_artifact_count": 0,
+        "charged_artifacts": [],
+        "charged_runtime_consumed": false,
+        "contract_name": "charged_geometry_feedback_runtime_consumer_v1",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "geometry_feedback_no_charged_artifact_proof",
+          "geometry_feedback_no_runtime_consumer_proof",
+          "geometry_feedback_not_charged_runtime_consumed",
+          "candidate_specific_archive_manifest_required",
+          "geometry_component_gates_required",
+          "exact_cuda_auth_eval_required_before_score_claim"
+        ],
+        "evidence_grade": "planning/prototype",
+        "lane_key": "raft_radial_openpilot_pose",
+        "paradigms": [
+          "la_pose",
+          "openpilot_priors",
+          "pose"
+        ],
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "requirements": {
+          "candidate_specific_archive_manifest_required": true,
+          "charged_archive_artifact_required": true,
+          "exact_cuda_auth_eval_required": true,
+          "geometry_component_gates_required": true,
+          "runtime_consumer_required": true
+        },
+        "role": "proposal_or_pose_sidecar_replacement",
+        "runtime_consumer_count": 0,
+        "runtime_consumers": [],
+        "schema_version": 1,
+        "score_claim": false
+      },
       "key": "raft_radial_openpilot_pose",
       "next_patch": "Emit deterministic pose-disagreement and runtime-consumption readiness artifacts.",
       "paradigms": [
@@ -949,9 +1211,10 @@
         },
         "evidence": {
           "existing": [
-            ".omx/research/council_lane_raft_radial_pose_design_20260430.md"
+            ".omx/research/council_lane_raft_radial_pose_design_20260430.md",
+            ".omx/research/geometry_feedback_runtime_consumer_contract_20260506_codex.md"
           ],
-          "existing_count": 1,
+          "existing_count": 2,
           "missing": [],
           "missing_count": 0
         }

@@ -41,6 +41,7 @@ FAIL_CLOSED_CRITERIA = [
     "refuse_if_counts_missing_or_nonpositive",
     "refuse_if_actual_bytes_missing_or_nonpositive",
     "refuse_if_count_record_sequence_is_malformed",
+    "refuse_if_known_overhead_accounting_exceeds_actual_bytes",
     "refuse_if_huffman_lengths_not_prefix_floor",
     "refuse_if_aq_floor_used_with_alphabet_size_less_than_two",
     "refuse_if_roundtrip_decode_validation_missing",
@@ -127,6 +128,7 @@ def build_entropy_codec_gap_audit(
         "total_best_static_arithmetic_container_floor_bytes": (
             sum(aq_floor_rows) if len(aq_floor_rows) == len(rows) else None
         ),
+        "known_overhead_accounting": _known_overhead_accounting(rows),
         "streams": rows,
         "opportunity_ranking": _opportunity_ranking(rows),
     }
@@ -167,6 +169,35 @@ def render_markdown(manifest: Mapping[str, Any]) -> str:
                 gap=row.get("gap_to_best_static_arithmetic_container_floor_bytes"),
             )
         )
+    overhead = manifest.get("known_overhead_accounting")
+    if isinstance(overhead, Mapping) and int(overhead.get("streams_with_known_accounting") or 0):
+        lines.extend(
+            [
+                "",
+                "## Known Overhead Accounting",
+                "",
+                f"- streams_with_known_accounting: `{overhead.get('streams_with_known_accounting')}`",
+                f"- total_known_model_overhead_bytes: `{overhead.get('total_known_model_overhead_bytes')}`",
+                f"- total_known_container_overhead_bytes: `{overhead.get('total_known_container_overhead_bytes')}`",
+                f"- total_known_payload_gap_to_entropy_floor_bytes: `{overhead.get('total_known_payload_gap_to_entropy_floor_bytes')}`",
+                "",
+                "| stream | known overhead bytes | model bytes | container bytes | payload gap to H floor | unattributed bytes |",
+                "|---|---:|---:|---:|---:|---:|",
+            ]
+        )
+        for row in overhead.get("largest_known_overhead_streams") or []:
+            if not isinstance(row, Mapping):
+                raise EntropyCodecGapAuditError("known overhead ranking rows must be objects")
+            lines.append(
+                "| {label} | {known} | {model} | {container} | {payload_gap} | {unattributed} |".format(
+                    label=row.get("label"),
+                    known=row.get("known_overhead_bytes"),
+                    model=row.get("known_model_overhead_bytes"),
+                    container=row.get("known_container_overhead_bytes"),
+                    payload_gap=row.get("known_payload_gap_to_entropy_floor_bytes"),
+                    unattributed=row.get("known_unattributed_bytes"),
+                )
+            )
     lines.append("")
     return "\n".join(lines)
 
@@ -183,6 +214,25 @@ def _build_stream_row(
     actual_bytes = _as_positive_int(
         stream.get("actual_bytes", stream.get("bytes_charged")),
         f"{label}.actual_bytes",
+    )
+    known_encoded_payload_bytes = _optional_nonnegative_int(
+        stream.get("encoded_payload_bytes", stream.get("payload_bytes")),
+        f"{label}.encoded_payload_bytes",
+    )
+    known_model_overhead_bytes = _optional_nonnegative_int(
+        stream.get("model_overhead_bytes"),
+        f"{label}.model_overhead_bytes",
+    )
+    known_container_overhead_bytes = _optional_nonnegative_int(
+        stream.get("container_overhead_bytes"),
+        f"{label}.container_overhead_bytes",
+    )
+    _validate_known_accounting(
+        actual_bytes=actual_bytes,
+        label=label,
+        encoded_payload_bytes=known_encoded_payload_bytes,
+        model_overhead_bytes=known_model_overhead_bytes,
+        container_overhead_bytes=known_container_overhead_bytes,
     )
     counts = _normalize_counts(stream.get("symbol_counts", stream.get("counts")), f"{label}.symbol_counts")
     entropy = _entropy_floor(counts)
@@ -217,6 +267,13 @@ def _build_stream_row(
         "entropy_floor_bytes": entropy["entropy_floor_bytes"],
         "entropy_floor_bytes_ceil": entropy["entropy_floor_bytes_ceil"],
         "gap_to_entropy_floor_bytes": _round_float(actual_bytes - entropy_bytes),
+        **_known_accounting_row(
+            actual_bytes=actual_bytes,
+            entropy_floor_bytes=float(entropy["entropy_floor_bytes"]),
+            encoded_payload_bytes=known_encoded_payload_bytes,
+            model_overhead_bytes=known_model_overhead_bytes,
+            container_overhead_bytes=known_container_overhead_bytes,
+        ),
         "huffman_code_lengths": huffman["code_lengths"],
         "huffman_bits_per_symbol": huffman["huffman_bits_per_symbol"],
         "huffman_payload_bits": huffman["huffman_payload_bits"],
@@ -404,6 +461,116 @@ def _normalize_counts(value: Any, context: str) -> list[dict[str, Any]]:
     return rows
 
 
+def _known_accounting_row(
+    *,
+    actual_bytes: int,
+    entropy_floor_bytes: float,
+    encoded_payload_bytes: int | None,
+    model_overhead_bytes: int | None,
+    container_overhead_bytes: int | None,
+) -> dict[str, Any]:
+    known_parts = [
+        value
+        for value in (
+            encoded_payload_bytes,
+            model_overhead_bytes,
+            container_overhead_bytes,
+        )
+        if value is not None
+    ]
+    known_accounting_complete = bool(known_parts)
+    known_payload = encoded_payload_bytes if encoded_payload_bytes is not None else None
+    known_model = model_overhead_bytes if model_overhead_bytes is not None else None
+    known_container = (
+        container_overhead_bytes if container_overhead_bytes is not None else None
+    )
+    known_overhead = int(known_model or 0) + int(known_container or 0)
+    known_total = int(sum(known_parts)) if known_parts else None
+    known_unattributed = actual_bytes - int(known_total) if known_total is not None else None
+    payload_gap = (
+        _round_float(float(known_payload) - entropy_floor_bytes)
+        if known_payload is not None
+        else None
+    )
+    return {
+        "known_encoded_payload_bytes": known_payload,
+        "known_model_overhead_bytes": known_model,
+        "known_container_overhead_bytes": known_container,
+        "known_overhead_bytes": known_overhead if known_accounting_complete else None,
+        "known_unattributed_bytes": known_unattributed,
+        "known_overhead_accounting_complete": known_accounting_complete
+        and known_unattributed == 0,
+        "known_payload_gap_to_entropy_floor_bytes": payload_gap,
+    }
+
+
+def _known_overhead_accounting(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    known_rows = [
+        row
+        for row in rows
+        if row.get("known_encoded_payload_bytes") is not None
+        or row.get("known_model_overhead_bytes") is not None
+        or row.get("known_container_overhead_bytes") is not None
+    ]
+    ranked = []
+    for row in known_rows:
+        ranked.append(
+            {
+                "label": row["label"],
+                "actual_bytes": row["actual_bytes"],
+                "entropy_floor_bytes": row["entropy_floor_bytes"],
+                "known_encoded_payload_bytes": row["known_encoded_payload_bytes"],
+                "known_model_overhead_bytes": row["known_model_overhead_bytes"],
+                "known_container_overhead_bytes": row["known_container_overhead_bytes"],
+                "known_overhead_bytes": row["known_overhead_bytes"],
+                "known_unattributed_bytes": row["known_unattributed_bytes"],
+                "known_overhead_accounting_complete": row[
+                    "known_overhead_accounting_complete"
+                ],
+                "known_payload_gap_to_entropy_floor_bytes": row[
+                    "known_payload_gap_to_entropy_floor_bytes"
+                ],
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_blockers": list(DISPATCH_BLOCKERS),
+            }
+        )
+    ranked.sort(
+        key=lambda row: (
+            -int(row["known_overhead_bytes"] or 0),
+            -float(row["known_payload_gap_to_entropy_floor_bytes"] or -1e18),
+            str(row["label"]),
+        )
+    )
+    return {
+        "streams_with_known_accounting": len(known_rows),
+        "complete_stream_accounting_count": sum(
+            1 for row in known_rows if row.get("known_overhead_accounting_complete") is True
+        ),
+        "total_known_encoded_payload_bytes": sum(
+            int(row.get("known_encoded_payload_bytes") or 0) for row in known_rows
+        ),
+        "total_known_model_overhead_bytes": sum(
+            int(row.get("known_model_overhead_bytes") or 0) for row in known_rows
+        ),
+        "total_known_container_overhead_bytes": sum(
+            int(row.get("known_container_overhead_bytes") or 0) for row in known_rows
+        ),
+        "total_known_overhead_bytes": sum(
+            int(row.get("known_overhead_bytes") or 0) for row in known_rows
+        ),
+        "total_known_unattributed_bytes": sum(
+            int(row.get("known_unattributed_bytes") or 0) for row in known_rows
+        ),
+        "total_known_payload_gap_to_entropy_floor_bytes": _round_float(
+            sum(
+                float(row.get("known_payload_gap_to_entropy_floor_bytes") or 0.0)
+                for row in known_rows
+            )
+        ),
+        "largest_known_overhead_streams": ranked,
+    }
+
+
 def _opportunity_ranking(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     ranked: list[dict[str, Any]] = []
     for row in rows:
@@ -449,11 +616,40 @@ def _as_nonnegative_int(value: Any, context: str) -> int:
     return int(value)
 
 
+def _optional_nonnegative_int(value: Any, context: str) -> int | None:
+    if value is None:
+        return None
+    return _as_nonnegative_int(value, context)
+
+
 def _as_positive_int(value: Any, context: str) -> int:
     integer = _as_nonnegative_int(value, context)
     if integer <= 0:
         raise EntropyCodecGapAuditError(f"{context} must be a positive integer")
     return integer
+
+
+def _validate_known_accounting(
+    *,
+    actual_bytes: int,
+    label: str,
+    encoded_payload_bytes: int | None,
+    model_overhead_bytes: int | None,
+    container_overhead_bytes: int | None,
+) -> None:
+    known_total = sum(
+        int(value)
+        for value in (
+            encoded_payload_bytes,
+            model_overhead_bytes,
+            container_overhead_bytes,
+        )
+        if value is not None
+    )
+    if known_total > actual_bytes:
+        raise EntropyCodecGapAuditError(
+            f"{label}.known_overhead_accounting exceeds actual_bytes"
+        )
 
 
 def _ceil_bytes(bits: float) -> int:

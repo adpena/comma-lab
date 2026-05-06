@@ -90,6 +90,23 @@ def test_structural_recode_profile_is_planning_only_and_raw_equal() -> None:
     assert global_context["context_count"] <= context_range["context_count"]
     assert global_context["context_token_count"] == context_range["context_token_count"]
     assert "byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales" in global_context
+    plan = profile["context_overhead_plan"]
+    assert plan["score_claim"] is False
+    assert plan["planning_only"] is True
+    assert plan["ready_for_exact_eval_dispatch"] is False
+    assert plan["hdc1_to_hdc2_header_savings_bytes"] == (
+        context_range["header_bytes"] - global_context["header_bytes"]
+    )
+    assert plan["hdc2_gap_to_prev_symbol_entropy_floor_plus_raw_scales_bytes"] == (
+        global_context["bytes"]
+        - entropy["per_tensor_prev_symbol_entropy_floor_plus_raw_scales_bytes"]
+    )
+    assert plan["break_even_reduction_vs_source_from_hdc2_bytes"] == max(
+        0,
+        global_context["byte_delta_vs_source_section"] + 1,
+    )
+    assert plan["largest_accounted_gap"]["status"] == "already_realized_by_hdc2_fixture"
+    assert plan["largest_remaining_safe_target"] == plan["remaining_target_ranking"][0]
 
 
 def test_context_range_fixture_roundtrips_and_is_deterministic() -> None:

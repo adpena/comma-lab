@@ -413,6 +413,30 @@
       "disposition": "track",
       "note": "track: canonical audit/dispatch/tooling CLI used by all-lanes preflight or recovery workflows.",
       "path": "tools/tool_bootstrap.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "recovery_queue",
+      "note": "recovery_queue: recovered remote lane runbook signal; not promoted as reviewed dispatch surface until claim-gate and runtime contract are hardened.",
+      "path": "scripts/remote_lane_nwcs_sensitivity_weighted.sh"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "recovery_queue",
+      "note": "recovery_queue: recovered remote lane runbook signal; not promoted as reviewed dispatch surface until stream-decomposition, claim-gate, and runtime contract are hardened.",
+      "path": "scripts/remote_lane_joint_codec_stack.sh"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "recovery_queue",
+      "note": "recovery_queue: recovered remote lane runbook signal; not promoted as reviewed dispatch surface until init-pose CLI, claim-gate, and runtime contract are hardened.",
+      "path": "scripts/remote_lane_raft_pose_init.sh"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "recovery_queue",
+      "note": "recovery_queue: recovered remote lane runbook signal; not promoted as reviewed dispatch surface until claim-gate and runtime contract are hardened.",
+      "path": "scripts/remote_lane_riemannian_pose_tto.sh"
     }
   ],
   "policy": "Every source-like untracked path must be track, recovery_queue, ignore_private, or ignore_rebuildable with rationale.",

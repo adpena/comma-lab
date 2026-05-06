@@ -4,11 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import hashlib
 import json
 import os
+import re
 import shlex
-import time
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +39,19 @@ DEFAULT_OUTPUT_DIR = Path(
 DEFAULT_RESULT_DIR = Path(
     "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex"
 )
+DEFAULT_CLAIMS_PATH = Path(".omx/state/active_lane_dispatch_claims.md")
+DEFAULT_CLAIM_TTL_HOURS = 24
+TERMINAL_CLAIM_PREFIXES = (
+    "completed_",
+    "failed_",
+    "preempted",
+    "cancelled",
+    "refused_dispatch",
+    "stale_assumed_dead",
+    "stale_superseded",
+    "stopped_",
+)
+_CLAIM_SEPARATOR_RE = re.compile(r"^\|\s*-+\s*(\|\s*-+\s*)+\|\s*$")
 REQUIRED_ENV = (
     "LIGHTNING_SSH_TARGET",
     "LIGHTNING_REMOTE_PACT",
@@ -48,8 +62,34 @@ REQUIRED_ENV = (
 )
 
 
-def _utc_now() -> str:
-    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+def _format_utc(value: dt.datetime) -> str:
+    return value.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _parse_utc(value: str | None) -> dt.datetime | None:
+    if value is None:
+        return None
+    text = value.strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = dt.datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=dt.timezone.utc)
+    return parsed.astimezone(dt.timezone.utc)
+
+
+def _now_utc(args: argparse.Namespace) -> dt.datetime:
+    parsed = _parse_utc(args.now_utc)
+    if parsed is not None:
+        return parsed
+    if args.now_utc:
+        raise ValueError(f"--now-utc is not ISO-8601 UTC-compatible: {args.now_utc}")
+    return dt.datetime.now(tz=dt.timezone.utc).replace(microsecond=0)
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -111,6 +151,111 @@ def _get_path(payload: dict[str, Any], *keys: str) -> Any:
             return None
         current = current.get(key)
     return current
+
+
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
+def _is_sha256(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(char in "0123456789abcdef" for char in value)
+    )
+
+
+def _is_positive_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
+
+
+def _is_terminal_claim_status(status: str) -> bool:
+    return any(status.startswith(prefix) for prefix in TERMINAL_CLAIM_PREFIXES)
+
+
+def _parse_claim_rows(text: str) -> list[dict[str, str]]:
+    claims: list[dict[str, str]] = []
+    keys = (
+        "timestamp_utc",
+        "agent",
+        "lane_id",
+        "platform",
+        "instance_job_id",
+        "predicted_eta_utc",
+        "status",
+        "notes",
+    )
+    for line in text.splitlines():
+        if not line.startswith("|"):
+            continue
+        if "timestamp_utc" in line and "lane_id" in line and "instance/job_id" in line:
+            continue
+        if _CLAIM_SEPARATOR_RE.match(line):
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) < len(keys):
+            continue
+        claims.append(dict(zip(keys, cells[: len(keys)])))
+    return claims
+
+
+def _lane_claim_preflight(
+    *,
+    claims_path: Path,
+    lane_id: str,
+    job_name: str,
+    now_utc: dt.datetime,
+    ttl_hours: int,
+) -> dict[str, Any]:
+    full = _repo_path(claims_path)
+    status: dict[str, Any] = {
+        "claims_path": claims_path.as_posix(),
+        "claims_path_exists": full.is_file(),
+        "ttl_hours": ttl_hours,
+        "matching_active_claims": [],
+        "conflicting_active_claims": [],
+        "matching_terminal_claims": [],
+        "active_claim_present": False,
+        "conflict_present": False,
+    }
+    if not full.is_file():
+        return status
+    ttl = dt.timedelta(hours=ttl_hours)
+    latest_by_job: dict[str, dict[str, str]] = {}
+    for claim in _parse_claim_rows(full.read_text(encoding="utf-8")):
+        if claim.get("lane_id") != lane_id:
+            continue
+        timestamp = _parse_utc(claim.get("timestamp_utc"))
+        if timestamp is None or now_utc - timestamp > ttl:
+            continue
+        job = claim.get("instance_job_id", "")
+        previous = latest_by_job.get(job)
+        previous_timestamp = _parse_utc(previous.get("timestamp_utc")) if previous else None
+        if previous is None or previous_timestamp is None or timestamp > previous_timestamp:
+            latest_by_job[job] = claim
+
+    active: list[dict[str, str]] = []
+    terminal: list[dict[str, str]] = []
+    for claim in latest_by_job.values():
+        if _is_terminal_claim_status(claim.get("status", "")):
+            terminal.append(claim)
+        else:
+            active.append(claim)
+    status["matching_active_claims"] = [
+        claim for claim in active if claim.get("instance_job_id") == job_name
+    ]
+    status["conflicting_active_claims"] = [
+        claim for claim in active if claim.get("instance_job_id") != job_name
+    ]
+    status["matching_terminal_claims"] = [
+        claim for claim in terminal if claim.get("instance_job_id") == job_name
+    ]
+    status["active_claim_present"] = bool(status["matching_active_claims"])
+    status["conflict_present"] = bool(status["conflicting_active_claims"])
+    return status
 
 
 def _failed_compliance_checks(payload: dict[str, Any]) -> list[dict[str, Any]]:
@@ -211,7 +356,22 @@ def _check_present(
         blockers.append(name)
 
 
+def _check_condition(
+    checks: list[dict[str, Any]],
+    blockers: list[str],
+    name: str,
+    ok: bool,
+    *,
+    actual: Any,
+    expected: Any,
+) -> None:
+    checks.append({"name": name, "ok": bool(ok), "actual": actual, "expected": expected})
+    if not ok:
+        blockers.append(name)
+
+
 def build_packet(args: argparse.Namespace) -> dict[str, Any]:
+    now_utc = _now_utc(args)
     result_dir = args.result_dir
     archive = args.archive
     preflight = result_dir / "public_replay_preflight.json"
@@ -248,6 +408,13 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
             "lightning_exact_eval_dry_run": dry_run_payload,
         }
     )
+    lane_claim_preflight = _lane_claim_preflight(
+        claims_path=args.claims_path,
+        lane_id=args.lane_id,
+        job_name=args.job_name,
+        now_utc=now_utc,
+        ttl_hours=args.claim_ttl_hours,
+    )
 
     preflight_ready = (
         preflight_payload.get("ready_for_exact_eval_dispatch") is True
@@ -280,6 +447,22 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         or manifest_payload.get("changed_section_sha256")
         or manifest_payload.get("candidate_section_sha256")
     )
+    source_archive_path = manifest_payload.get("source_archive_path")
+    source_archive_custody_mode = manifest_payload.get("source_archive_custody_mode")
+    allowed_source_custody_modes = (
+        "verified_source_archive_payload_match",
+        "operator_supplied_source_archive_identity",
+    )
+    source_archive_identity = (
+        _archive_identity(Path(source_archive_path))
+        if isinstance(source_archive_path, str) and source_archive_path
+        else {
+            "path": source_archive_path,
+            "exists": False,
+            "sha256": None,
+            "bytes": None,
+        }
+    )
 
     _check_equal(
         consistency_checks,
@@ -301,12 +484,65 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "manifest_source_archive_sha256_missing",
         manifest_payload.get("source_archive_sha256"),
     )
+    _check_condition(
+        consistency_checks,
+        consistency_blockers,
+        "manifest_source_archive_sha256_malformed",
+        _is_sha256(manifest_payload.get("source_archive_sha256")),
+        actual=manifest_payload.get("source_archive_sha256"),
+        expected="64-char lowercase hex sha256",
+    )
     _check_present(
         consistency_checks,
         consistency_blockers,
         "manifest_source_archive_bytes_missing",
         manifest_payload.get("source_archive_bytes"),
     )
+    _check_condition(
+        consistency_checks,
+        consistency_blockers,
+        "manifest_source_archive_bytes_not_positive_int",
+        _is_positive_int(manifest_payload.get("source_archive_bytes")),
+        actual=manifest_payload.get("source_archive_bytes"),
+        expected="positive integer bytes",
+    )
+    _check_condition(
+        consistency_checks,
+        consistency_blockers,
+        "manifest_source_archive_custody_mode_invalid",
+        source_archive_custody_mode in allowed_source_custody_modes,
+        actual=source_archive_custody_mode,
+        expected=list(allowed_source_custody_modes),
+    )
+    if source_archive_custody_mode == "verified_source_archive_payload_match":
+        _check_present(
+            consistency_checks,
+            consistency_blockers,
+            "manifest_source_archive_path_missing",
+            source_archive_path,
+        )
+        _check_condition(
+            consistency_checks,
+            consistency_blockers,
+            "manifest_source_archive_path_missing_on_disk",
+            bool(source_archive_identity["exists"]),
+            actual=source_archive_identity,
+            expected="existing source archive path",
+        )
+        _check_equal(
+            consistency_checks,
+            consistency_blockers,
+            "manifest_source_archive_path_sha256_mismatch",
+            source_archive_identity["sha256"],
+            manifest_payload.get("source_archive_sha256"),
+        )
+        _check_equal(
+            consistency_checks,
+            consistency_blockers,
+            "manifest_source_archive_path_bytes_mismatch",
+            source_archive_identity["bytes"],
+            manifest_payload.get("source_archive_bytes"),
+        )
     _check_equal(
         consistency_checks,
         consistency_blockers,
@@ -314,12 +550,76 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         manifest_payload.get("candidate_archive_sha256"),
         archive_identity["sha256"],
     )
+    _check_condition(
+        consistency_checks,
+        consistency_blockers,
+        "manifest_candidate_archive_sha256_malformed",
+        _is_sha256(manifest_payload.get("candidate_archive_sha256")),
+        actual=manifest_payload.get("candidate_archive_sha256"),
+        expected="64-char lowercase hex sha256",
+    )
     _check_equal(
         consistency_checks,
         consistency_blockers,
         "manifest_candidate_archive_bytes_mismatch",
         manifest_payload.get("candidate_archive_bytes"),
         archive_identity["bytes"],
+    )
+    _check_condition(
+        consistency_checks,
+        consistency_blockers,
+        "manifest_candidate_archive_bytes_not_positive_int",
+        _is_positive_int(manifest_payload.get("candidate_archive_bytes")),
+        actual=manifest_payload.get("candidate_archive_bytes"),
+        expected="positive integer bytes",
+    )
+    _check_condition(
+        consistency_checks,
+        consistency_blockers,
+        "manifest_candidate_archive_sha256_equals_source_archive_sha256_noop",
+        not (
+            _is_sha256(manifest_payload.get("candidate_archive_sha256"))
+            and _is_sha256(manifest_payload.get("source_archive_sha256"))
+            and manifest_payload.get("candidate_archive_sha256")
+            == manifest_payload.get("source_archive_sha256")
+        ),
+        actual={
+            "source_archive_sha256": manifest_payload.get("source_archive_sha256"),
+            "candidate_archive_sha256": manifest_payload.get("candidate_archive_sha256"),
+        },
+        expected="different source/candidate archive sha256",
+    )
+    _check_condition(
+        consistency_checks,
+        consistency_blockers,
+        "manifest_candidate_payload_sha256_malformed",
+        _is_sha256(manifest_payload.get("candidate_payload_sha256")),
+        actual=manifest_payload.get("candidate_payload_sha256"),
+        expected="64-char lowercase hex sha256",
+    )
+    _check_condition(
+        consistency_checks,
+        consistency_blockers,
+        "manifest_source_payload_sha256_malformed",
+        _is_sha256(manifest_payload.get("source_payload_sha256")),
+        actual=manifest_payload.get("source_payload_sha256"),
+        expected="64-char lowercase hex sha256",
+    )
+    _check_condition(
+        consistency_checks,
+        consistency_blockers,
+        "manifest_candidate_payload_sha256_equals_source_payload_sha256_noop",
+        not (
+            _is_sha256(manifest_payload.get("candidate_payload_sha256"))
+            and _is_sha256(manifest_payload.get("source_payload_sha256"))
+            and manifest_payload.get("candidate_payload_sha256")
+            == manifest_payload.get("source_payload_sha256")
+        ),
+        actual={
+            "source_payload_sha256": manifest_payload.get("source_payload_sha256"),
+            "candidate_payload_sha256": manifest_payload.get("candidate_payload_sha256"),
+        },
+        expected="different source/candidate payload sha256",
     )
     _check_equal(
         consistency_checks,
@@ -361,6 +661,37 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         consistency_blockers,
         "manifest_changed_section_sha256_missing",
         changed_section_sha256,
+    )
+    _check_condition(
+        consistency_checks,
+        consistency_blockers,
+        "manifest_changed_section_source_sha256_malformed",
+        _is_sha256(changed_section_source_sha256),
+        actual=changed_section_source_sha256,
+        expected="64-char lowercase hex sha256",
+    )
+    _check_condition(
+        consistency_checks,
+        consistency_blockers,
+        "manifest_changed_section_sha256_malformed",
+        _is_sha256(changed_section_sha256),
+        actual=changed_section_sha256,
+        expected="64-char lowercase hex sha256",
+    )
+    _check_condition(
+        consistency_checks,
+        consistency_blockers,
+        "manifest_changed_section_candidate_sha256_equals_source_sha256_noop",
+        not (
+            _is_sha256(changed_section_sha256)
+            and _is_sha256(changed_section_source_sha256)
+            and changed_section_sha256 == changed_section_source_sha256
+        ),
+        actual={
+            "source_section_sha256": changed_section_source_sha256,
+            "candidate_section_sha256": changed_section_sha256,
+        },
+        expected="different source/candidate changed-section sha256",
     )
     _check_equal(
         consistency_checks,
@@ -457,7 +788,10 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         consistency_checks,
         consistency_blockers,
         "dry_run_job_name_mismatch",
-        _get_path(dry_run_payload, "spec", "job_name"),
+        _first_present(
+            _get_path(dry_run_payload, "spec", "job_name"),
+            _get_path(dry_run_payload, "spec", "name"),
+        ),
         args.job_name,
     )
     _check_equal(
@@ -600,18 +934,29 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
     if artifact_flag_violations:
         blockers.append("artifact_score_or_dispatch_flag_violation")
     blockers.extend(consistency_blockers)
+    static_blockers = list(blockers)
     if missing_env:
         blockers.append("missing_lightning_environment")
+    if lane_claim_preflight["conflict_present"]:
+        blockers.append("active_lane_dispatch_claim_conflict")
+    if not lane_claim_preflight["active_claim_present"]:
+        blockers.append("missing_active_lane_dispatch_claim")
+    if not args.operator_approved_exact_cuda:
+        blockers.append("missing_operator_exact_cuda_approval")
     return {
         "schema_version": 1,
         "tool": "tools/build_wr01_exact_eval_packet.py",
-        "recorded_at_utc": _utc_now(),
+        "recorded_at_utc": _format_utc(now_utc),
         "score_claim": False,
         "dispatch_attempted": False,
         "ready_for_submit": not blockers,
+        "static_packet_ready": not static_blockers,
         "blockers": blockers,
+        "static_blockers": static_blockers,
         "missing_env": missing_env,
         "missing_artifacts": missing_artifacts,
+        "operator_approved_exact_cuda": bool(args.operator_approved_exact_cuda),
+        "lane_claim_preflight": lane_claim_preflight,
         "lane_id": args.lane_id,
         "job_name": args.job_name,
         "archive_sha256": args.archive_sha256,
@@ -619,6 +964,8 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "archive_identity": archive_identity,
         "source_archive_sha256": manifest_payload.get("source_archive_sha256"),
         "source_archive_bytes": manifest_payload.get("source_archive_bytes"),
+        "source_archive_custody_mode": source_archive_custody_mode,
+        "source_archive_identity": source_archive_identity,
         "source_payload_sha256": manifest_payload.get("source_payload_sha256"),
         "changed_section_name": changed_section_name,
         "changed_section_sha256": changed_section_sha256,
@@ -651,10 +998,29 @@ def main() -> int:
     parser.add_argument("--result-dir", type=Path, default=DEFAULT_RESULT_DIR)
     parser.add_argument("--archive-sha256", default="d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628")
     parser.add_argument("--archive-bytes", type=int, default=186222)
+    parser.add_argument("--claims-path", type=Path, default=DEFAULT_CLAIMS_PATH)
+    parser.add_argument("--claim-ttl-hours", type=int, default=DEFAULT_CLAIM_TTL_HOURS)
+    parser.add_argument(
+        "--operator-approved-exact-cuda",
+        action="store_true",
+        help=(
+            "Explicit operator approval for a non-dry-run exact CUDA submission. "
+            "Without this flag the packet stays blocked even when static custody "
+            "and lane-claim checks pass."
+        ),
+    )
+    parser.add_argument(
+        "--now-utc",
+        help="UTC timestamp for deterministic claim-TTL checks, e.g. 2026-05-06T10:00:00Z.",
+    )
     parser.add_argument("--agent", default="codex:gpt-5.5")
     parser.add_argument("--predicted-eta-utc", default="2026-05-06T07:30Z")
     parser.add_argument("--json-out", type=Path)
     args = parser.parse_args()
+    if args.claim_ttl_hours <= 0:
+        parser.error("--claim-ttl-hours must be positive")
+    if args.now_utc and _parse_utc(args.now_utc) is None:
+        parser.error("--now-utc must be ISO-8601 UTC-compatible, e.g. 2026-05-06T10:00:00Z")
     payload = build_packet(args)
     text = json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
     if args.json_out:

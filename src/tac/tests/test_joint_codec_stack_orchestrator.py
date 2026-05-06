@@ -1,6 +1,9 @@
 """Research-grade custody checks for the PARADIGM-gamma JCSP orchestrator."""
 from __future__ import annotations
 
+import io
+import zipfile
+
 import numpy as np
 import pytest
 
@@ -10,9 +13,14 @@ from tac.balle_hyperprior_codec import (
     HyperEncoder,
 )
 from tac.joint_codec_stack_orchestrator import (
+    JCSP_ARCHIVE_MEMBER_CONTRACT_SCHEMA,
+    JCSP_ARCHIVE_MEMBER_NAME,
     KIND_ARITHMETIC_STATIC,
     KIND_BALLE_HYPERPRIOR,
     StreamSource,
+    build_jcsp_archive_member,
+    build_jcsp_noop_archive_fixture,
+    load_jcsp_archive_member_for_runtime,
     run_joint_codec_stack,
     run_sequential_codec_stack,
     unpack_jcsp_container,
@@ -144,3 +152,80 @@ def test_unpack_jcsp_container_rejects_codec_kind_payload_magic_mismatch() -> No
 
     with pytest.raises(ValueError, match="payload magic"):
         unpack_jcsp_container(bytes(tampered))
+
+
+def test_jcsp_noop_archive_fixture_is_deterministic_and_loader_consumes_member() -> None:
+    archive_a = build_jcsp_noop_archive_fixture()
+    archive_b = build_jcsp_noop_archive_fixture()
+
+    assert archive_a == archive_b
+
+    contract = load_jcsp_archive_member_for_runtime(
+        archive_bytes=archive_a,
+        require_single_member=True,
+    )
+
+    assert contract["schema"] == JCSP_ARCHIVE_MEMBER_CONTRACT_SCHEMA
+    assert contract["score_claim"] is False
+    assert contract["ready_for_runtime_loader"] is True
+    assert contract["ready_for_exact_eval_dispatch"] is False
+    assert contract["member_name"] == JCSP_ARCHIVE_MEMBER_NAME
+    assert contract["archive_bytes"] == len(archive_a)
+    assert contract["archive_members"] == [JCSP_ARCHIVE_MEMBER_NAME]
+    assert contract["member_compress_type"] == zipfile.ZIP_STORED
+    assert contract["noop_fixture"] is True
+    assert contract["jcsp_runtime_parity"]["stream_count"] == 0
+    assert contract["jcsp_runtime_parity"]["score_claim"] is False
+    assert "exact_cuda_auth_eval_missing" in contract["dispatch_blockers"]
+
+
+def test_jcsp_archive_member_contract_consumes_real_container_member() -> None:
+    qints = np.array([0, 1, -1, 2], dtype=np.int8)
+    stream = StreamSource(
+        name="tiny",
+        qints=qints,
+        num_symbols=15,
+        offset=7,
+        codec_kind=KIND_ARITHMETIC_STATIC,
+        score_per_byte_marginal=1e-6,
+    )
+    result = run_sequential_codec_stack(streams=[stream])
+
+    archive = build_jcsp_archive_member(container_bytes=result.container_bytes)
+    contract = load_jcsp_archive_member_for_runtime(
+        archive_bytes=archive,
+        require_single_member=True,
+    )
+
+    assert contract["noop_fixture"] is False
+    assert contract["member_bytes"] == result.total_bytes
+    assert contract["member_sha256"]
+    assert contract["jcsp_runtime_parity"]["stream_count"] == 1
+    assert contract["jcsp_runtime_parity"]["streams"] == [
+        {
+            "name": "tiny",
+            "codec_kind": KIND_ARITHMETIC_STATIC,
+            "payload_magic": "AQv1",
+            "actual_bytes": result.streams[0].actual_bytes,
+            "runtime_dispatch_checked": True,
+        }
+    ]
+
+
+def test_jcsp_archive_member_loader_rejects_local_central_name_mismatch() -> None:
+    archive = bytearray(build_jcsp_noop_archive_fixture())
+    with zipfile.ZipFile(io.BytesIO(archive), "r") as zf:
+        info = zf.getinfo(JCSP_ARCHIVE_MEMBER_NAME)
+        name_start = int(info.header_offset) + 30
+    archive[name_start] = ord("x")
+
+    with pytest.raises(ValueError, match="central/local name mismatch"):
+        load_jcsp_archive_member_for_runtime(
+            archive_bytes=bytes(archive),
+            require_single_member=True,
+        )
+
+
+def test_jcsp_archive_member_builder_rejects_non_jcsp_payload() -> None:
+    with pytest.raises(ValueError, match="bad magic"):
+        build_jcsp_archive_member(container_bytes=b"not-jcsp")

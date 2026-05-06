@@ -7,6 +7,7 @@ import io
 import math
 import struct
 from collections import Counter
+from itertools import pairwise
 from typing import Any
 
 import brotli
@@ -170,6 +171,11 @@ def build_structural_recode_profile(
                 row["bytes"]
             ) - int(entropy_summary["per_tensor_prev_symbol_entropy_floor_plus_raw_scales_bytes"])
     best = min(variants, key=lambda row: (int(row["bytes"]), str(row["variant"])))
+    context_overhead_plan = _context_overhead_plan(
+        entropy_summary,
+        variants,
+        source_section_bytes=len(source_brotli),
+    )
     return {
         "schema_version": SCHEMA_VERSION,
         "tool": "tac.hnerv_decoder_recode.build_structural_recode_profile",
@@ -187,6 +193,7 @@ def build_structural_recode_profile(
         "q_stream_bytes": len(parsed.q_stream),
         "scale_stream_bytes": len(parsed.scale_stream),
         "entropy_summary": entropy_summary,
+        "context_overhead_plan": context_overhead_plan,
         "variants": variants,
         "best_variant": best,
         "dispatch_blockers": [
@@ -196,6 +203,116 @@ def build_structural_recode_profile(
             "requires_exact_cuda_auth_eval",
         ],
     }
+
+
+def _context_overhead_plan(
+    entropy_summary: dict[str, Any],
+    variants: list[dict[str, Any]],
+    *,
+    source_section_bytes: int,
+) -> dict[str, Any]:
+    hdc1 = _variant_by_name(variants, "range_prev_symbol_per_tensor_q_streams_plus_raw_scales")
+    hdc2 = _variant_by_name(variants, "range_prev_symbol_global_q_streams_plus_raw_scales")
+    floor_bytes = int(entropy_summary["per_tensor_prev_symbol_entropy_floor_bytes"])
+    floor_plus_scales = int(
+        entropy_summary["per_tensor_prev_symbol_entropy_floor_plus_raw_scales_bytes"]
+    )
+    source_floor_headroom = source_section_bytes - floor_plus_scales
+    if hdc1 is None or hdc2 is None:
+        return {
+            "score_claim": False,
+            "planning_only": True,
+            "ready_for_exact_eval_dispatch": False,
+            "largest_accounted_gap": None,
+            "largest_remaining_safe_target": None,
+            "dispatch_blockers": [
+                "missing_hdc1_or_hdc2_context_fixture",
+                "requires_runtime_decoder_implementation",
+                "requires_exact_cuda_auth_eval",
+            ],
+        }
+
+    hdc1_header = int(hdc1["header_bytes"])
+    hdc2_header = int(hdc2["header_bytes"])
+    hdc1_payload = int(hdc1["range_payload_bytes"])
+    hdc2_payload = int(hdc2["range_payload_bytes"])
+    hdc2_delta_vs_source = int(hdc2["byte_delta_vs_source_section"])
+    break_even_reduction = max(0, hdc2_delta_vs_source + 1)
+    realized_header_savings = hdc1_header - hdc2_header
+    hdc2_payload_gap = hdc2_payload - floor_bytes
+    hdc2_gap_to_floor = int(hdc2["bytes"]) - floor_plus_scales
+    minimum_payload_reduction_after_zero_header = max(
+        0,
+        break_even_reduction - hdc2_header,
+    )
+    remaining_targets = [
+        {
+            "gap_id": "hdc2_self_describing_context_header",
+            "bytes": hdc2_header,
+            "status": "remaining_safe_accounting_target",
+            "target_action": "replace_or_codebook_share_context_table_metadata",
+        },
+        {
+            "gap_id": "hdc2_range_payload_above_prev_symbol_entropy_floor",
+            "bytes": hdc2_payload_gap,
+            "status": "remaining_entropy_gap_target",
+            "target_action": "improve_context_partition_or_range_payload_coding",
+        },
+    ]
+    remaining_targets.sort(key=lambda row: (-int(row["bytes"]), str(row["gap_id"])))
+    return {
+        "score_claim": False,
+        "planning_only": True,
+        "ready_for_exact_eval_dispatch": False,
+        "source_section_bytes": source_section_bytes,
+        "prev_symbol_entropy_floor_plus_raw_scales_bytes": floor_plus_scales,
+        "perfect_prev_symbol_floor_delta_vs_source_bytes": floor_plus_scales
+        - source_section_bytes,
+        "floor_headroom_before_runtime_overhead_bytes": source_floor_headroom,
+        "hdc1_per_tensor_context_count": int(hdc1["context_count"]),
+        "hdc2_global_context_count": int(hdc2["context_count"]),
+        "hdc1_header_bytes": hdc1_header,
+        "hdc2_header_bytes": hdc2_header,
+        "hdc1_range_payload_bytes": hdc1_payload,
+        "hdc2_range_payload_bytes": hdc2_payload,
+        "hdc1_to_hdc2_header_savings_bytes": realized_header_savings,
+        "hdc2_range_payload_penalty_vs_hdc1_bytes": hdc2_payload - hdc1_payload,
+        "hdc2_net_savings_vs_hdc1_bytes": int(hdc1["bytes"]) - int(hdc2["bytes"]),
+        "hdc2_gap_to_prev_symbol_entropy_floor_plus_raw_scales_bytes": hdc2_gap_to_floor,
+        "hdc2_payload_gap_to_prev_symbol_entropy_floor_bytes": hdc2_payload_gap,
+        "break_even_reduction_vs_source_from_hdc2_bytes": break_even_reduction,
+        "minimum_payload_gap_reduction_after_zero_header_bytes": (
+            minimum_payload_reduction_after_zero_header
+        ),
+        "largest_accounted_gap": {
+            "gap_id": "hdc1_to_hdc2_context_header_amortization",
+            "bytes": realized_header_savings,
+            "status": "already_realized_by_hdc2_fixture",
+        },
+        "largest_remaining_safe_target": remaining_targets[0],
+        "remaining_target_ranking": remaining_targets,
+        "planner_verdict": (
+            "target_hdc2_context_header_first_but_payload_gap_must_also_shrink"
+            if minimum_payload_reduction_after_zero_header
+            else "target_hdc2_context_header_first"
+        ),
+        "dispatch_blockers": [
+            "planning_only_context_overhead_accounting",
+            "requires_submission_runtime_decoder",
+            "requires_archive_builder_and_payload_diff",
+            "requires_exact_cuda_auth_eval",
+        ],
+    }
+
+
+def _variant_by_name(
+    variants: list[dict[str, Any]],
+    name: str,
+) -> dict[str, Any] | None:
+    for row in variants:
+        if row.get("variant") == name:
+            return row
+    return None
 
 
 def _entropy_summary(parsed: PackedDecoderRaw, *, source_section_bytes: int) -> dict[str, Any]:
@@ -268,7 +385,7 @@ def _symbol_entropy_summary(payload: bytes) -> dict[str, Any]:
         "symbols": total,
         "unique_symbols": len(counts),
         "entropy_bits_per_symbol": round(float(entropy), 12),
-        "entropy_floor_bytes": int(math.ceil(entropy * total / 8)),
+        "entropy_floor_bytes": math.ceil(entropy * total / 8),
         "top_symbols": [
             {
                 "symbol": int(symbol),
@@ -291,7 +408,7 @@ def _prev_symbol_entropy_summary(records: tuple[PackedDecoderRecord, ...]) -> di
             summary = _symbol_entropy_summary(bytes(stream))
             token_count += len(stream)
             entropy_bits += float(summary["entropy_bits_per_symbol"]) * len(stream)
-    entropy_floor = int(math.ceil(entropy_bits / 8))
+    entropy_floor = math.ceil(entropy_bits / 8)
     return {
         "context_count": context_count,
         "tokens": token_count,
@@ -304,7 +421,7 @@ def _prev_symbol_entropy_summary(records: tuple[PackedDecoderRecord, ...]) -> di
 
 def _prev_symbol_contexts(payload: bytes) -> dict[int, list[int]]:
     contexts: dict[int, list[int]] = {}
-    for previous, current in zip(payload[:-1], payload[1:]):
+    for previous, current in pairwise(payload):
         contexts.setdefault(int(previous), []).append(int(current))
     return contexts
 
@@ -605,7 +722,7 @@ def encode_global_prev_symbol_context_range_fixture(
     for record in parsed.records:
         if not record.q_zz_u8:
             raise HnervDecoderRecodeError(f"empty q stream for record {record.name}")
-        for previous, current in zip(record.q_zz_u8[:-1], record.q_zz_u8[1:]):
+        for previous, current in pairwise(record.q_zz_u8):
             global_contexts.setdefault(int(previous), []).append(int(current))
 
     out = io.BytesIO()
@@ -725,7 +842,7 @@ def decode_global_prev_symbol_context_range_fixture(payload: bytes) -> PackedDec
 
     restored_records = []
     context_offsets = dict.fromkeys(decoded_contexts, 0)
-    for record, first in zip(records, first_symbols):
+    for record, first in zip(records, first_symbols, strict=True):
         q, context_offsets = _restore_prev_symbol_stream_with_offsets(
             first,
             decoded_contexts,

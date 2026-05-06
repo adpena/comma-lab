@@ -50,7 +50,8 @@ Currently runs:
             provider job links, or credential-like strings)
   Gate #18: tools/build_cross_paradigm_frontier_inventory.py --format json
            (stacking/replacement inventory is current, deterministic, and
-            remains inventory-only)
+            remains inventory-only; geometry feedback stays blocked without
+            charged runtime consumers)
   Gate #19: tools/audit_pr91_hpm1_readiness.py +
            tools/audit_pr91_hpm1_runtime_contract.py
            (PR91/HPM1 high-EV categorical path stays byte-custody-clean,
@@ -99,6 +100,10 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO)
 
+from tac.geometry_feedback_readiness import (  # noqa: E402
+    GEOMETRY_FEEDBACK_ROADMAP_KEYS,
+    geometry_feedback_contract_failures,
+)
 from tac.repo_io import json_text, sha256_bytes  # noqa: E402
 
 TOOLS = REPO / "tools"
@@ -565,6 +570,11 @@ def _run_cross_paradigm_frontier_inventory_gate() -> tuple[bool, str]:
     missing_keys = sorted(required_keys - row_keys)
     if missing_keys:
         return False, "cross-paradigm inventory missing required row(s): " + ", ".join(missing_keys)
+    geometry_failures = _geometry_feedback_inventory_failures(payload)
+    if geometry_failures:
+        return False, "cross-paradigm inventory geometry feedback contract failed:\n" + "\n".join(
+            geometry_failures
+        )
     missing_code = int(payload.get("missing_code_path_count", -1))
     missing_evidence = int(payload.get("missing_evidence_path_count", -1))
     if missing_code != 0 or missing_evidence != 0:
@@ -587,8 +597,34 @@ def _run_cross_paradigm_frontier_inventory_gate() -> tuple[bool, str]:
             return False, "cross-paradigm inventory action queue must keep dispatch readiness false"
     return True, (
         "cross-paradigm inventory: PASS "
-        f"({len(rows)} rows; 0 missing code/evidence paths; action queue inventory-only)"
+        f"({len(rows)} rows; 0 missing code/evidence paths; "
+        "geometry feedback fail-closed; action queue inventory-only)"
     )
+
+
+def _geometry_feedback_inventory_failures(payload: dict[str, object]) -> list[str]:
+    rows = payload.get("rows")
+    if not isinstance(rows, list):
+        return ["rows: missing or non-list"]
+    by_key = {
+        str(row.get("key")): row
+        for row in rows
+        if isinstance(row, dict) and row.get("key") is not None
+    }
+    failures: list[str] = []
+    for key in GEOMETRY_FEEDBACK_ROADMAP_KEYS:
+        row = by_key.get(key)
+        if row is None:
+            failures.append(f"{key}: missing geometry feedback row")
+            continue
+        if row.get("ready_for_exact_eval_dispatch") is not False:
+            failures.append(f"{key}: row ready_for_exact_eval_dispatch must be false")
+        contract_failures = geometry_feedback_contract_failures(
+            row.get("geometry_feedback_contract")
+        )
+        for failure in contract_failures:
+            failures.append(f"{key}: {failure}")
+    return failures
 
 
 def _json_tool(tool: Path) -> tuple[bool, dict[str, object], str]:

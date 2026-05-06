@@ -17,7 +17,11 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
-from tac.categorical_candidate_readiness import audit_categorical_candidate_manifest  # noqa: E402
+from tac.categorical_candidate_readiness import (  # noqa: E402
+    ARCHIVE_MEMBER_MANIFEST_CONTRACT,
+    CANDIDATE_MANIFEST_CONTRACT,
+    audit_categorical_candidate_manifest,
+)
 from tac.repo_io import json_text, sha256_bytes, sha256_file, write_json  # noqa: E402
 from tac.semantic_label_contract import CONTEST_SEGNET_CLASS_NAME_TUPLE, SELFCOMP_CLASS_TO_GRAY  # noqa: E402
 from tac.tool_manifest import attach_tool_run_manifest  # noqa: E402
@@ -72,7 +76,10 @@ def build_fixture(*, out_dir: Path, source_archive_sha256: str) -> dict[str, Any
     archive_member_manifest = {
         "schema_version": 1,
         "kind": "categorical_fixture_archive_member_manifest",
+        "archive_member_manifest_contract": ARCHIVE_MEMBER_MANIFEST_CONTRACT,
         "fixture_only": True,
+        "member_count": len(member_records),
+        "member_order": [record["name"] for record in member_records],
         "members": member_records,
     }
     archive_member_manifest_path = out_dir / "archive_member_manifest.json"
@@ -83,6 +90,7 @@ def build_fixture(*, out_dir: Path, source_archive_sha256: str) -> dict[str, Any
     candidate = {
         "schema_version": 1,
         "kind": "categorical_candidate_fixture_manifest",
+        "candidate_manifest_contract": CANDIDATE_MANIFEST_CONTRACT,
         "fixture_only": True,
         "score_claim": False,
         "dispatch_attempted": False,

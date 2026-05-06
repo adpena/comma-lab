@@ -7,6 +7,8 @@ import zipfile
 from pathlib import Path
 
 from tac.categorical_candidate_readiness import (
+    ARCHIVE_MEMBER_MANIFEST_CONTRACT,
+    CANDIDATE_MANIFEST_CONTRACT,
     DETERMINISTIC_ZIP_CREATE_SYSTEM,
     DETERMINISTIC_ZIP_DATE_TIME,
     DETERMINISTIC_ZIP_FILE_MODE,
@@ -52,6 +54,9 @@ def _base_candidate(tmp_path: Path) -> dict:
     archive_member_manifest = {
         "schema_version": 1,
         "kind": "categorical_test_archive_member_manifest",
+        "archive_member_manifest_contract": ARCHIVE_MEMBER_MANIFEST_CONTRACT,
+        "member_count": len(charged_members),
+        "member_order": [record["name"] for record in charged_members],
         "members": charged_members,
     }
     archive_member_manifest_path = tmp_path / "archive_member_manifest.json"
@@ -60,6 +65,9 @@ def _base_candidate(tmp_path: Path) -> dict:
     return {
         "schema_version": 1,
         "kind": "categorical_candidate_manifest",
+        "candidate_manifest_contract": CANDIDATE_MANIFEST_CONTRACT,
+        "score_claim": False,
+        "dispatch_attempted": False,
         "source_archive_sha256": "a" * 64,
         "archive_member_manifest_sha256": sha256_file(archive_member_manifest_path),
         "archive_member_manifest": {
@@ -113,11 +121,18 @@ def test_audit_categorical_candidate_manifest_accepts_byte_closed_fixture(tmp_pa
     assert manifest["evidence_grade"] == "archive_readiness_audit"
     assert manifest["dispatch_blockers"] == []
     assert manifest["candidate_manifest"]["schema_valid"] is True
+    assert manifest["candidate_manifest"]["contract"] == CANDIDATE_MANIFEST_CONTRACT
     assert manifest["candidate_archive"]["contract"] == "contest_archive_zip"
     assert manifest["candidate_archive"]["contains_inflate_sh"] is True
     assert manifest["candidate_archive"]["member_order_matches_manifest"] is True
     assert manifest["candidate_archive"]["zip_determinism_contract"]["passed"] is True
     assert manifest["archive_member_manifest"]["schema_valid"] is True
+    assert (
+        manifest["archive_member_manifest"]["member_order_matches_charged_members"] is True
+    )
+    assert (
+        manifest["archive_member_manifest"]["member_count_matches_charged_members"] is True
+    )
     assert manifest["semantic_contract"]["matches_candidate"] is True
     assert manifest["runtime_consumer"]["consumes_charged_members"] is True
     assert manifest["conditioning_prior_contract"]["passed"] is True
@@ -273,6 +288,9 @@ def test_audit_categorical_candidate_manifest_checks_member_manifest_content(tmp
         {
             "schema_version": 1,
             "kind": "categorical_test_archive_member_manifest",
+            "archive_member_manifest_contract": ARCHIVE_MEMBER_MANIFEST_CONTRACT,
+            "member_count": len(candidate["charged_members"]) - 1,
+            "member_order": [record["name"] for record in candidate["charged_members"][1:]],
             "members": candidate["charged_members"][1:],
         },
     )
@@ -289,11 +307,43 @@ def test_audit_categorical_candidate_manifest_checks_member_manifest_content(tmp
     assert "archive_member_manifest_members_mismatch" in manifest["dispatch_blockers"]
 
 
+def test_audit_categorical_candidate_manifest_requires_member_order_and_count(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    bad_manifest_path = tmp_path / "bad_archive_member_manifest.json"
+    write_json(
+        bad_manifest_path,
+        {
+            "schema_version": 1,
+            "kind": "categorical_test_archive_member_manifest",
+            "archive_member_manifest_contract": ARCHIVE_MEMBER_MANIFEST_CONTRACT,
+            "member_count": len(candidate["charged_members"]) + 1,
+            "member_order": list(reversed([record["name"] for record in candidate["charged_members"]])),
+            "members": candidate["charged_members"],
+        },
+    )
+    candidate["archive_member_manifest"] = {
+        "path": bad_manifest_path.as_posix(),
+        "bytes": bad_manifest_path.stat().st_size,
+        "sha256": sha256_file(bad_manifest_path),
+    }
+    candidate["archive_member_manifest_sha256"] = sha256_file(bad_manifest_path)
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+    blockers = set(manifest["dispatch_blockers"])
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert "archive_member_manifest_member_order_mismatch" in blockers
+    assert "archive_member_manifest_member_count_mismatch" in blockers
+
+
 def test_audit_categorical_candidate_manifest_requires_schema_and_manifest_kind(
     tmp_path: Path,
 ) -> None:
     candidate = _base_candidate(tmp_path)
     candidate.pop("schema_version")
+    candidate.pop("candidate_manifest_contract")
     candidate["kind"] = "categorical_but_not_a_candidate_manifest"
     bad_manifest_path = tmp_path / "bad_archive_member_manifest.json"
     write_json(
@@ -318,8 +368,60 @@ def test_audit_categorical_candidate_manifest_requires_schema_and_manifest_kind(
     assert manifest["archive_member_manifest"]["schema_valid"] is False
     assert "candidate_manifest_schema_version_missing_or_invalid" in blockers
     assert "candidate_manifest_kind_missing_or_invalid" in blockers
+    assert "candidate_manifest_contract_missing_or_invalid" in blockers
     assert "archive_member_manifest_schema_version_missing_or_invalid" in blockers
     assert "archive_member_manifest_kind_missing_or_invalid" in blockers
+    assert "archive_member_manifest_contract_missing_or_invalid" in blockers
+
+
+def test_audit_categorical_candidate_manifest_rejects_score_claim_proxy_and_sidecar_rows(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    candidate["score_claim"] = True
+    candidate["dispatch_attempted"] = True
+    candidate["candidate_rows"] = [
+        {
+            "row_id": "proxy_probe",
+            "score_claim": False,
+            "dispatch_attempted": False,
+            "evidence_grade": "proxy",
+            "sidecar": True,
+        }
+    ]
+    candidate["evidence_rows"] = [
+        {
+            "row_id": "charged_sidecar_debug",
+            "role": "debug_sidecar",
+            "score_claim": False,
+        }
+    ]
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+    blockers = set(manifest["dispatch_blockers"])
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["candidate_manifest"]["schema_valid"] is False
+    assert "candidate_manifest_score_claim_must_be_false" in blockers
+    assert "candidate_manifest_dispatch_attempted_must_be_false" in blockers
+    assert "candidate_rows_proxy_marker:0" in blockers
+    assert "candidate_rows_sidecar_marker:0" in blockers
+    assert "evidence_rows_sidecar_marker:0" in blockers
+
+
+def test_audit_categorical_candidate_manifest_rejects_sidecar_archive_member_record(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    candidate["charged_members"][1]["role"] = "debug_sidecar"
+    candidate["charged_members"][1]["sidecar"] = True
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+    blockers = set(manifest["dispatch_blockers"])
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert "charged_member_1_sidecar_role_forbidden" in blockers
+    assert "charged_member_1_sidecar_flag_forbidden" in blockers
 
 
 def test_audit_categorical_candidate_manifest_rejects_nondeterministic_zip_metadata(
