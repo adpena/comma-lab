@@ -30,6 +30,19 @@ SCHEMA_VERSION = 1
 
 REPACKABLE_SECTIONS = ("decoder_packed_brotli", "latents_and_sidecar_brotli")
 
+# Adversarial review 2026-05-06 (BUG #5): single source of truth for section
+# names previously hardcoded across hnerv_wavelet_residual / sidechannel /
+# apply_transform / apply_gate. Drift between these files would silently produce
+# plans with no matching sections (a blocker, not a crash) and is hard to
+# diagnose. Importers should reference these constants rather than the literal
+# string.
+DEFAULT_WAVELET_SECTION = "latents_and_sidecar_brotli"
+WAVELET_AUDIT_SECTIONS = (
+    "packed_header_ff_len24",
+    "decoder_packed_brotli",
+    "latents_and_sidecar_brotli",
+)
+
 
 class HnervLowlevelPackError(ValueError):
     """Raised when an HNeRV low-level pack/repack input is invalid."""

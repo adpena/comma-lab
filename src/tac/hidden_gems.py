@@ -684,12 +684,79 @@ def _entry_text_values(entry: HiddenGemEntry) -> tuple[str, ...]:
 
 _validate_registry(_REGISTRY)
 
+
+def audit_evidence_paths(
+    *,
+    repo_root: object | None = None,
+) -> dict[str, object]:
+    """Verify every evidence_paths entry resolves to an existing file.
+
+    Adversarial review 2026-05-06 (BUG #7, 80% confidence): the registry's
+    `_validate_registry_path` checks for absolute paths, parent traversal, and
+    sensitive prefixes, but does NOT verify that referenced files actually
+    exist on disk. A research file rename or delete leaves the registry with a
+    silent dead pointer, and there is no preflight gate equivalent to lane
+    registry's Check 90 to catch this.
+
+    This function returns a structured audit (not a strict failure): it walks
+    every entry's `evidence_paths` and reports `(gem_key, path, exists)` plus a
+    `missing` summary list. Designed to be called warn-only initially; can be
+    promoted to STRICT in a future preflight check once the existing registry
+    is clean.
+
+    Args:
+        repo_root: optional Path-like root to resolve relative paths against.
+            Defaults to the repo root inferred from this file's location.
+
+    Returns:
+        {
+          "total_paths": int,
+          "missing_paths": int,
+          "missing": [{"gem_key": str, "path": str}, ...],
+          "checked_paths": int,
+          "schema_version": SCHEMA_VERSION,
+        }
+    """
+    from pathlib import Path
+
+    root = (
+        Path(repo_root)
+        if repo_root is not None
+        else Path(__file__).resolve().parents[2]
+    )
+    missing: list[dict[str, str]] = []
+    total = 0
+    checked = 0
+    for entry in _REGISTRY:
+        for raw_path in entry.evidence_paths:
+            total += 1
+            # Skip URL-like or non-path tokens; we only audit paths that look
+            # like local files. The registry intentionally allows non-path
+            # evidence strings (e.g. lane id references); those are not failures.
+            if "://" in raw_path or not raw_path or raw_path.startswith("@"):
+                continue
+            checked += 1
+            candidate = (root / raw_path).resolve()
+            if not candidate.exists():
+                missing.append(
+                    {"gem_key": entry.key, "path": raw_path}
+                )
+    return {
+        "total_paths": total,
+        "missing_paths": len(missing),
+        "checked_paths": checked,
+        "missing": missing,
+        "schema_version": SCHEMA_VERSION,
+    }
+
+
 __all__ = [
     "CATEGORIES",
     "SCHEMA_VERSION",
     "STATUSES",
     "HiddenGemEntry",
     "all_hidden_gems",
+    "audit_evidence_paths",
     "hidden_gem_to_dict",
     "registry_payload",
     "render_markdown",

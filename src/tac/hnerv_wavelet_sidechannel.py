@@ -21,6 +21,7 @@ from typing import Any
 import brotli
 
 from tac.hnerv_lowlevel_packer import (
+    DEFAULT_WAVELET_SECTION,
     read_strict_single_member_zip,
     sha256_bytes,
     write_stored_single_member_zip,
@@ -55,7 +56,7 @@ def build_wavelet_sidechannel_candidate(
     scorecard: Mapping[str, Any],
     source_label: str,
     output_dir: str | Path,
-    target_sections: Sequence[str] = ("latents_and_sidecar_brotli",),
+    target_sections: Sequence[str] = (DEFAULT_WAVELET_SECTION,),
     top_k: int = 32,
     block_size: int = 64,
     quant_step: float = 1.0,
@@ -263,8 +264,30 @@ def decode_wavelet_atom_sidechannel(blob: bytes) -> dict[str, Any]:
 
 
 def runtime_consumption_proof(decoded_sidechannel: Mapping[str, Any]) -> dict[str, Any]:
-    """Return a deterministic proof that runtime code consumed decoded atoms."""
+    """Decode-roundtrip proof, NOT runtime-consumption proof.
 
+    Adversarial review 2026-05-06 (BUG #3, 90% confidence): the historical name
+    `runtime_consumption_proof` is misleading. This function does NOT prove that
+    any runtime / inflate code path consumed the decoded atoms — it only proves
+    the decoded sidechannel structure is non-empty and that its atom coordinates
+    hash deterministically. The proof is tautologically true whenever the decode
+    roundtrip succeeds.
+
+    Real runtime consumption is checked elsewhere by:
+    - `tac.hnerv_wavelet_apply_gate.evaluate_wr01_apply_gate` — the gate that
+      blocks dispatch when no inflate path applies the atoms ("inflate_path_for
+      _wavelet_atoms_pending" / "wr01_runtime_consumption_not_proven")
+    - The end-to-end `wavelet_apply_transform` → `apply_wr01_atoms_to_raw`
+      bytes-modify chain, gated on contest-CUDA auth eval
+
+    The function name is preserved for wire-format compatibility with persisted
+    manifest JSONs and existing test fixtures (15+ call sites). Treat the
+    output dict's `runtime_consumed` field as `decode_roundtrip_succeeded` —
+    it is necessary but not sufficient for true runtime consumption.
+
+    Future refactor: see `decode_roundtrip_proof` (alias below) for the
+    semantically correct naming. Callers are encouraged to migrate.
+    """
     h = hashlib.sha256()
     total_atoms = 0
     for section in decoded_sidechannel.get("sections") or []:
@@ -286,11 +309,24 @@ def runtime_consumption_proof(decoded_sidechannel: Mapping[str, Any]) -> dict[st
             )
     return {
         "runtime_consumed": total_atoms > 0,
+        # Adversarial review 2026-05-06 (BUG #3): same value as
+        # `runtime_consumed`, exposed under semantically-correct alias.
+        # New code should read this; the old key is kept for back-compat.
+        "decode_roundtrip_succeeded": total_atoms > 0,
         "decoded_section_count": int(decoded_sidechannel.get("section_count") or 0),
         "decoded_atom_count": total_atoms,
         "atom_coordinate_sha256": h.hexdigest(),
         "score_claim": False,
+        "proof_semantics": (
+            "decode_roundtrip_only — does NOT prove runtime atom application; "
+            "see hnerv_wavelet_apply_gate for true runtime gate"
+        ),
     }
+
+
+# Adversarial review 2026-05-06 (BUG #3): semantically-correct alias.
+# Future code should call this; existing callers can migrate gradually.
+decode_roundtrip_proof = runtime_consumption_proof
 
 
 def build_wavelet_sidechannel_archive_bytes(*, source_payload: bytes, sidechannel_blob: bytes) -> bytes:

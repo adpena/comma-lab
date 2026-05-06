@@ -17,7 +17,9 @@ from typing import Any
 import brotli
 
 from tac.hnerv_lowlevel_packer import (
+    DEFAULT_WAVELET_SECTION,
     REPACKABLE_SECTIONS,
+    WAVELET_AUDIT_SECTIONS,
     parse_ff_packed_brotli_hnerv,
     read_strict_single_member_zip,
     sha256_bytes,
@@ -27,7 +29,9 @@ from tac.hnerv_section_repack import HnervSectionPlanError
 SCHEMA_VERSION = 1
 TOOL = "tac.hnerv_wavelet_residual.build_wavelet_residual_plan"
 
-DEFAULT_TARGET_SECTIONS = ("latents_and_sidecar_brotli",)
+# Adversarial review 2026-05-06 (BUG #5): import shared constant instead of
+# hardcoding the literal — single source of truth lives in hnerv_lowlevel_packer.
+DEFAULT_TARGET_SECTIONS = (DEFAULT_WAVELET_SECTION,)
 
 
 class HnervWaveletResidualError(ValueError):
@@ -257,12 +261,19 @@ def _audit_source_manifest(archive: Any, packed: Any, manifest: Mapping[str, Any
         for section in sections
         if isinstance(section, Mapping)
     }
-    for section_name in ("packed_header_ff_len24", "decoder_packed_brotli", "latents_and_sidecar_brotli"):
+    for section_name in WAVELET_AUDIT_SECTIONS:
         expected = by_name.get(section_name)
         if expected is None:
             blockers.append(f"manifest_section_missing:{section_name}")
             continue
-        section_bytes = packed.section_bytes(section_name)
+        # Adversarial review 2026-05-06 (BUG #6): guard packed.section_bytes —
+        # a malformed archive can raise here and abort the whole plan build with
+        # an unhandled exception instead of returning a structured blocker.
+        try:
+            section_bytes = packed.section_bytes(section_name)
+        except Exception as exc:  # noqa: BLE001 — propagate as blocker
+            blockers.append(f"manifest_section_bytes_unreadable:{section_name}:{exc}")
+            continue
         if expected.get("bytes") != len(section_bytes):
             blockers.append(f"manifest_section_bytes_mismatch:{section_name}")
         if expected.get("sha256") != sha256_bytes(section_bytes):

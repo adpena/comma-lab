@@ -16,6 +16,7 @@ from typing import Any
 import brotli
 
 from tac.hnerv_lowlevel_packer import (
+    DEFAULT_WAVELET_SECTION,
     parse_ff_packed_brotli_hnerv,
     read_strict_single_member_zip,
     sha256_bytes,
@@ -26,7 +27,9 @@ from tac.repo_io import json_text, sha256_file
 
 SCHEMA_VERSION = 1
 TOOL = "tac.hnerv_wavelet_apply_transform.build_wavelet_apply_transform_candidate"
-DEFAULT_SECTION = "latents_and_sidecar_brotli"
+# Adversarial review 2026-05-06 (BUG #5): re-export shared constant — this name
+# stays stable for callers but its value comes from hnerv_lowlevel_packer.
+DEFAULT_SECTION = DEFAULT_WAVELET_SECTION
 
 
 class HnervWaveletApplyTransformError(ValueError):
@@ -178,6 +181,19 @@ def apply_wr01_atoms_to_raw(
     atoms = section.get("atoms")
     if not isinstance(atoms, list):
         raise HnervWaveletApplyTransformError("WR01 section atoms must be a list")
+    # Adversarial review 2026-05-06 (BUG #4): atoms can have overlapping
+    # [raw_offset, raw_end) ranges (Haar levels nest), and `_clamp_u8` is
+    # non-linear at 0/255. Apply order changes output bytes when ranges overlap
+    # AND a delta clamps. Sort by (raw_offset, level, coefficient_index) to make
+    # apply deterministic regardless of caller's atom-list ordering.
+    atoms = sorted(
+        (a for a in atoms if isinstance(a, Mapping)),
+        key=lambda a: (
+            int(a.get("raw_offset", 0)),
+            int(a.get("level", 0)),
+            int(a.get("coefficient_index", 0)),
+        ),
+    )
     for atom in atoms:
         if not isinstance(atom, Mapping):
             skipped += 1
