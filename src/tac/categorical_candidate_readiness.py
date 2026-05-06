@@ -18,6 +18,8 @@ REQUIRED_CONTROL_NAMES = (
     "runtime_consumes_conditioning_control",
 )
 REQUIRED_MEMBER_ROLES = ("categorical_payload", "decoder_or_runtime_consumer")
+CONTEST_ARCHIVE_CONTRACT = "contest_archive_zip"
+CONTEST_INFLATE_MEMBER = "inflate.sh"
 
 
 def _is_sha256(value: Any) -> bool:
@@ -104,6 +106,9 @@ def audit_categorical_candidate_manifest(
 
     if not _is_sha256(payload.get("archive_member_manifest_sha256")):
         blockers.append("archive_member_manifest_sha256_missing_or_invalid")
+
+    if payload.get("candidate_archive_contract") != CONTEST_ARCHIVE_CONTRACT:
+        blockers.append("candidate_archive_contract_not_contest_archive_zip")
 
     runtime_consumer = payload.get("runtime_consumer")
     runtime_path: Path | None = None
@@ -206,9 +211,11 @@ def audit_categorical_candidate_manifest(
                 blockers.append("candidate_archive_not_readable_zip")
             if archive_duplicates:
                 blockers.append("candidate_archive_duplicate_member_names")
-            unsafe_archive_names = sorted(name for name in archive_members if not _safe_member_name(name))
-            if unsafe_archive_names:
-                blockers.append("candidate_archive_unsafe_member_names")
+        unsafe_archive_names = sorted(name for name in archive_members if not _safe_member_name(name))
+        if unsafe_archive_names:
+            blockers.append("candidate_archive_unsafe_member_names")
+        if CONTEST_INFLATE_MEMBER not in archive_members:
+            blockers.append("candidate_archive_missing_inflate_sh")
 
     if archive_members:
         archive_name_set = set(archive_members)
@@ -241,10 +248,12 @@ def audit_categorical_candidate_manifest(
         "contract_sha256": sha256_bytes(json_text(contract).encode("utf-8")),
         "source_archive_sha256": payload.get("source_archive_sha256", ""),
         "candidate_archive": {
+            "contract": payload.get("candidate_archive_contract", ""),
             "path": repo_relative(archive_path, root) if archive_path is not None else "",
             "bytes": archive_path.stat().st_size if archive_path is not None and archive_path.exists() else None,
             "sha256": sha256_file(archive_path) if archive_path is not None and archive_path.exists() else "",
             "zip_read_error": archive_error or "",
+            "contains_inflate_sh": CONTEST_INFLATE_MEMBER in archive_members,
         },
         "semantic_contract": {
             "class_order": expected_names,
@@ -275,6 +284,8 @@ def audit_categorical_candidate_manifest(
 
 
 __all__ = [
+    "CONTEST_ARCHIVE_CONTRACT",
+    "CONTEST_INFLATE_MEMBER",
     "REQUIRED_CONTROL_NAMES",
     "REQUIRED_MEMBER_ROLES",
     "SCHEMA_VERSION",

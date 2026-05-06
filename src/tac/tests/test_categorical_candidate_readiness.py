@@ -20,8 +20,10 @@ def _base_candidate(tmp_path: Path) -> dict:
     archive = tmp_path / "candidate.zip"
     payload = b"\x00\x01\x01\x02categorical"
     decoder = b"#!/usr/bin/env python3\n"
+    inflate = b"#!/usr/bin/env bash\nset -euo pipefail\n"
     codebook = b"{\"class_order\":\"contest\"}\n"
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("inflate.sh", inflate)
         zf.writestr("categorical_payload.bin", payload)
         zf.writestr("runtime_decoder.py", decoder)
         zf.writestr("class_codebook.json", codebook)
@@ -29,6 +31,7 @@ def _base_candidate(tmp_path: Path) -> dict:
     return {
         "source_archive_sha256": "a" * 64,
         "archive_member_manifest_sha256": "b" * 64,
+        "candidate_archive_contract": "contest_archive_zip",
         "candidate_archive": {
             "path": archive.as_posix(),
             "bytes": archive.stat().st_size,
@@ -50,8 +53,14 @@ def _base_candidate(tmp_path: Path) -> dict:
                 "sha256": sha256_bytes(payload),
             },
             {
-                "name": "runtime_decoder.py",
+                "name": "inflate.sh",
                 "role": "decoder_or_runtime_consumer",
+                "bytes": len(inflate),
+                "sha256": sha256_bytes(inflate),
+            },
+            {
+                "name": "runtime_decoder.py",
+                "role": "decoder_table",
                 "bytes": len(decoder),
                 "sha256": sha256_bytes(decoder),
             },
@@ -77,6 +86,8 @@ def test_audit_categorical_candidate_manifest_accepts_byte_closed_fixture(tmp_pa
     assert manifest["promotion_eligible"] is False
     assert manifest["evidence_grade"] == "archive_readiness_audit"
     assert manifest["dispatch_blockers"] == []
+    assert manifest["candidate_archive"]["contract"] == "contest_archive_zip"
+    assert manifest["candidate_archive"]["contains_inflate_sh"] is True
     assert manifest["semantic_contract"]["matches_candidate"] is True
     assert manifest["runtime_consumer"]["consumes_charged_members"] is True
     assert manifest["charged_member_summary"]["roles"]["categorical_payload"] == 1
@@ -124,6 +135,33 @@ def test_audit_categorical_candidate_manifest_rejects_local_sidecar_runtime(tmp_
 
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert "runtime_consumer_path_outside_repo" in manifest["dispatch_blockers"]
+
+
+def test_audit_categorical_candidate_manifest_requires_contest_archive_shape(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    candidate.pop("candidate_archive_contract")
+    with zipfile.ZipFile(candidate["candidate_archive"]["path"], "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("categorical_payload.bin", b"\x00\x01")
+    archive = Path(candidate["candidate_archive"]["path"])
+    candidate["candidate_archive"]["bytes"] = archive.stat().st_size
+    candidate["candidate_archive"]["sha256"] = sha256_file(archive)
+    candidate["charged_members"] = [
+        {
+            "name": "categorical_payload.bin",
+            "role": "categorical_payload",
+            "bytes": 2,
+            "sha256": sha256_bytes(b"\x00\x01"),
+        }
+    ]
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+    blockers = set(manifest["dispatch_blockers"])
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert "candidate_archive_contract_not_contest_archive_zip" in blockers
+    assert "candidate_archive_missing_inflate_sh" in blockers
 
 
 def test_audit_categorical_candidate_readiness_cli_records_tool_manifest(tmp_path: Path) -> None:
