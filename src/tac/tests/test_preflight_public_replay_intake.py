@@ -69,6 +69,23 @@ def _write_runtime(root: Path, *, embedded_payload: bool = False) -> Path:
     return inflate_sh
 
 
+def _write_runtime_with_external_dependency(root: Path, dependency_root: Path) -> Path:
+    root.mkdir(parents=True, exist_ok=True)
+    dependency_root.mkdir(parents=True, exist_ok=True)
+    (dependency_root / "decoder.py").write_text("def decode():\n    return b''\n", encoding="utf-8")
+    dependency_rel = dependency_root.relative_to(REPO).as_posix()
+    inflate_sh = root / "inflate.sh"
+    inflate_sh.write_text(
+        "#!/usr/bin/env bash\n"
+        f"# PACT_RUNTIME_DEPENDENCY_ROOT={dependency_rel}\n"
+        "set -euo pipefail\n"
+        'python "$(dirname "$0")/inflate.py" "$@"\n',
+        encoding="utf-8",
+    )
+    (root / "inflate.py").write_text("print('adapter')\n", encoding="utf-8")
+    return inflate_sh
+
+
 def _write_upstream(root: Path) -> Path:
     upstream = root / "upstream"
     upstream.mkdir(parents=True)
@@ -158,6 +175,39 @@ def test_public_replay_preflight_accepts_hnerv_ff_x_archive(tmp_path: Path) -> N
     assert smoke["format"] == "hnerv_ff_len24_brotli_sections"
     assert smoke["decoder_packed_brotli"]["brotli_decode"]["ok"] is True
     assert smoke["latents_and_sidecar_brotli"]["brotli_decode"]["ok"] is True
+
+
+def test_public_replay_preflight_hashes_declared_external_runtime_root(tmp_path: Path) -> None:
+    archive = tmp_path / "archive.zip"
+    dependency_root = REPO / "experiments" / "results" / "preflight_fixture_external_runtime"
+    inflate_sh = _write_runtime_with_external_dependency(
+        tmp_path / "replay_submission",
+        dependency_root,
+    )
+    upstream = _write_upstream(tmp_path)
+    _write_hnerv_x_archive(archive)
+
+    try:
+        payload = module.build_preflight(archive, inflate_sh, upstream_dir=upstream)
+    finally:
+        for path in sorted(dependency_root.rglob("*"), reverse=True):
+            if path.is_file():
+                path.unlink()
+            elif path.is_dir():
+                path.rmdir()
+        if dependency_root.exists():
+            dependency_root.rmdir()
+
+    assert payload["ready_for_exact_eval_dispatch"] is True
+    external_roots = payload["runtime"]["runtime_manifest"]["external_dependency_roots"]
+    assert len(external_roots) == 1
+    assert external_roots[0]["repo_relative_root"].endswith(
+        "experiments/results/preflight_fixture_external_runtime"
+    )
+    assert [row["relative_path"] for row in external_roots[0]["files"]] == ["decoder.py"]
+    source_scan = payload["runtime"]["source_payload_scan"]
+    assert source_scan["extra_roots"] == [external_roots[0]["repo_relative_root"]]
+    assert any(row["path"] == "decoder.py" for row in source_scan["files"])
 
 
 def test_public_replay_preflight_blocks_malformed_hnerv_ff_x_archive(tmp_path: Path) -> None:

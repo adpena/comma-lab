@@ -85,6 +85,10 @@ _RUNTIME_DEPENDENCY_SKIP_DIRS = {
     ".ruff_cache",
     "__pycache__",
 }
+_RUNTIME_DEPENDENCY_ROOT_DIRECTIVE_RE = re.compile(
+    r"^\s*#\s*PACT_RUNTIME_DEPENDENCY_ROOT\s*=\s*(?P<path>.+?)\s*$",
+    re.MULTILINE,
+)
 
 
 def _repo_root() -> Path:
@@ -117,6 +121,66 @@ def _runtime_python_files(runtime_root: Path) -> list[Path]:
             continue
         paths.append(path)
     return sorted(paths, key=lambda p: p.relative_to(runtime_root).as_posix())
+
+
+def _repo_rel(path: Path, repo_root: Path) -> str:
+    try:
+        return path.resolve().relative_to(repo_root).as_posix()
+    except ValueError:
+        return str(path.resolve())
+
+
+def _runtime_dependency_extra_roots(inflate_sh: Path, repo_root: Path) -> list[Path]:
+    """Return explicit external runtime roots declared by ``inflate.sh``.
+
+    Public replay adapters sometimes live as a tiny shell shim while importing
+    a checked-out public PR runtime from another repo-local directory. The
+    directive makes that dependency part of the exact-eval custody hash instead
+    of letting the adapter appear to be a one-file runtime.
+    """
+
+    try:
+        text = inflate_sh.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+
+    roots: list[Path] = []
+    for match in _RUNTIME_DEPENDENCY_ROOT_DIRECTIVE_RE.finditer(text):
+        raw = match.group("path").strip().strip("\"'")
+        if not raw:
+            continue
+        path = Path(raw)
+        if not path.is_absolute():
+            path = repo_root / path
+        resolved = path.resolve()
+        if resolved != inflate_sh.parent.resolve() and resolved not in roots:
+            roots.append(resolved)
+    return roots
+
+
+def _runtime_root_file_manifest(root: Path, repo_root: Path) -> list[dict]:
+    files: list[dict] = []
+    if not root.exists():
+        return files
+    for path in sorted(root.rglob("*"), key=lambda p: p.relative_to(root).as_posix()):
+        if not path.is_file():
+            continue
+        rel_parts = path.relative_to(root).parts
+        if any(part in _RUNTIME_DEPENDENCY_SKIP_DIRS for part in rel_parts):
+            continue
+        if path.name.startswith("._") or path.name in {".DS_Store", "Thumbs.db"}:
+            continue
+        if path.suffix.lower() not in _RUNTIME_DEPENDENCY_SUFFIXES:
+            continue
+        files.append(
+            {
+                "relative_path": path.relative_to(root).as_posix(),
+                "repo_relative_path": _repo_rel(path, repo_root),
+                "bytes": path.stat().st_size,
+                "sha256": _sha256(path, prefix=0),
+            }
+        )
+    return files
 
 
 def _module_exists(module_name: str, repo_root: Path) -> bool:
@@ -317,28 +381,18 @@ def _runtime_dependency_manifest(
 
     root = inflate_sh.parent.resolve()
     repo_root = (repo_root or _repo_root()).resolve()
-    files: list[dict] = []
-    if root.exists():
-        for path in sorted(root.rglob("*"), key=lambda p: p.relative_to(root).as_posix()):
-            if not path.is_file():
-                continue
-            rel_parts = path.relative_to(root).parts
-            if any(part in _RUNTIME_DEPENDENCY_SKIP_DIRS for part in rel_parts):
-                continue
-            if path.name.startswith("._") or path.name in {".DS_Store", "Thumbs.db"}:
-                continue
-            if (
-                path.resolve() != inflate_sh.resolve()
-                and path.suffix.lower() not in _RUNTIME_DEPENDENCY_SUFFIXES
-            ):
-                continue
-            files.append(
-                {
-                    "relative_path": path.relative_to(root).as_posix(),
-                    "bytes": path.stat().st_size,
-                    "sha256": _sha256(path, prefix=0),
-                }
-            )
+    files = _runtime_root_file_manifest(root, repo_root)
+    extra_roots = _runtime_dependency_extra_roots(inflate_sh, repo_root)
+    external_dependency_roots = []
+    for extra_root in extra_roots:
+        external_dependency_roots.append(
+            {
+                "root": str(extra_root),
+                "repo_relative_root": _repo_rel(extra_root, repo_root),
+                "exists": extra_root.exists(),
+                "files": _runtime_root_file_manifest(extra_root, repo_root),
+            }
+        )
 
     repo_local_tac = _repo_local_tac_import_manifest(root, repo_root)
     evaluate_py = (upstream_dir / "evaluate.py").resolve()
@@ -353,6 +407,7 @@ def _runtime_dependency_manifest(
     tree_payload = {
         "runtime_root_name": root.name,
         "files": files,
+        "external_dependency_roots": external_dependency_roots,
         "repo_local_tac_import_manifest": repo_local_tac,
         "upstream_evaluate_py": upstream_eval,
     }
@@ -365,6 +420,7 @@ def _runtime_dependency_manifest(
         "runtime_file_count": len(files),
         "runtime_tree_sha256": tree_sha,
         "files": files,
+        "external_dependency_roots": external_dependency_roots,
         "repo_local_tac_import_manifest": repo_local_tac,
         "upstream_evaluate_py": upstream_eval,
     }

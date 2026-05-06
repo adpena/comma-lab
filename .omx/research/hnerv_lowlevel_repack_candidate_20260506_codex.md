@@ -37,3 +37,47 @@ the candidate archive passes exact CUDA auth eval through the canonical path.
    improvement; if components drift, preserve as a negative payload-custody
    result and investigate runtime/member-name effects.
 
+## 2026-05-06 Custody-V2 Dispatch Update
+
+Evidence grade remains `external/local_preflight_non_score_until_cuda`.
+
+The strict public replay preflight now passes and records the public PR106
+runtime source tree as an explicit runtime dependency, not just the one-file
+adapter:
+
+- Preflight artifact:
+  `experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/public_replay_preflight.json`
+- Candidate archive SHA-256:
+  `b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f`
+- Candidate archive bytes: `186080`
+- Adapter SHA-256:
+  `9bfa00e3790cbee7687dff8a484fe83a9ca1c82f18b157f93185fab31662c0f0`
+- Runtime tree SHA-256 with declared external PR106 source root:
+  `06080a260017887f591e304c7cdcbe42ac5215f10fe12ecc00ddb1bc72870534`
+- External runtime root:
+  `experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders`
+- External runtime source scan bytes (`.py`/`.sh`): `69896`
+- Blockers: none
+- Ready for exact eval dispatch: `true`
+
+The first exact-eval submit for
+`exact_eval_pr106x_lowlevel_brotli_repack_t4_20260506` was stopped before
+running because it was submitted before external runtime dependency roots were
+included in the runtime custody hash. The lane claim was closed as
+`stopped_superseded_by_runtime_dependency_custody_v2`.
+
+The custody-v2 exact CUDA eval was staged and queued as:
+
+- Job: `exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506`
+- Lane: `pr106x_lowlevel_brotli_repack`
+- Queue status at `2026-05-06T08:55:51Z`: `Pending`
+- Source manifest:
+  `.omx/state/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506_manifest.json`
+- Manifest SHA-256:
+  `4e241cd66d85bad4bc52046ccc3ec2088b7d501c88282ad73d47557a81dda4e8`
+- Staged file count: `1411`
+- Staged total bytes: `22029886`
+
+This job is the canonical PR106x low-level brotli repack score run. Do not
+promote the candidate from the stopped pre-custody-v2 job or from byte evidence
+alone.

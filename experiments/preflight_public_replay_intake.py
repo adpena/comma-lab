@@ -214,34 +214,56 @@ def _probe_hnerv_ff_payload(raw: bytes) -> dict[str, Any]:
     }
 
 
-def _runtime_source_payload_scan(runtime_root: Path, archive_bytes: int) -> dict[str, Any]:
+def _runtime_source_payload_scan(
+    runtime_root: Path,
+    archive_bytes: int,
+    *,
+    extra_roots: list[Path] | None = None,
+) -> dict[str, Any]:
     source_bytes = 0
     violations: list[str] = []
     files: list[dict[str, Any]] = []
-    for path in sorted(runtime_root.rglob("*")):
-        if not path.is_file():
+    roots = [runtime_root, *(extra_roots or [])]
+    for root in roots:
+        root = root.resolve()
+        root_label = _repo_rel(root)
+        if not root.exists():
+            violations.append(f"declared runtime dependency root missing: {root_label}")
             continue
-        rel = path.relative_to(runtime_root).as_posix()
-        if any(part.startswith(".") or part.startswith("._") for part in Path(rel).parts):
-            violations.append(f"hidden runtime file: {rel}")
-            continue
-        if path.suffix.lower() not in {".py", ".sh"}:
-            continue
-        raw = path.read_bytes()
-        source_bytes += len(raw)
-        file_row = {"path": rel, "bytes": len(raw), "sha256": _sha256_bytes(raw)}
-        if path.suffix.lower() == ".py":
-            text = raw.decode("utf-8", errors="ignore")
-            if SOURCE_EMBEDDED_PAYLOAD_LITERAL_RE.search(text):
-                violations.append(f"{rel} contains a >=64KiB encoded/decompressed literal")
-                file_row["large_encoded_payload_literal"] = True
-        files.append(file_row)
+        for path in sorted(root.rglob("*")):
+            if not path.is_file():
+                continue
+            rel = path.relative_to(root).as_posix()
+            if any(part.startswith(".") or part.startswith("._") for part in Path(rel).parts):
+                violations.append(f"hidden runtime file: {root_label}/{rel}")
+                continue
+            if "__pycache__" in Path(rel).parts:
+                continue
+            if path.suffix.lower() not in {".py", ".sh"}:
+                continue
+            raw = path.read_bytes()
+            source_bytes += len(raw)
+            file_row = {
+                "root": root_label,
+                "path": rel,
+                "bytes": len(raw),
+                "sha256": _sha256_bytes(raw),
+            }
+            if path.suffix.lower() == ".py":
+                text = raw.decode("utf-8", errors="ignore")
+                if SOURCE_EMBEDDED_PAYLOAD_LITERAL_RE.search(text):
+                    violations.append(
+                        f"{root_label}/{rel} contains a >=64KiB encoded/decompressed literal"
+                    )
+                    file_row["large_encoded_payload_literal"] = True
+            files.append(file_row)
     if archive_bytes <= 1024 and source_bytes > 64 * 1024:
         violations.append(
             f"archive is {archive_bytes} bytes but runtime .py/.sh source is {source_bytes} bytes"
         )
     return {
         "runtime_root": _repo_rel(runtime_root),
+        "extra_roots": [_repo_rel(path) for path in (extra_roots or [])],
         "source_bytes_py_sh": source_bytes,
         "files": files,
         "violations": violations,
@@ -378,6 +400,11 @@ def build_preflight(
         blockers.append({"code": "inflate_sh_missing", "detail": str(inflate_sh)})
     else:
         runtime_manifest = _runtime_dependency_manifest(inflate_sh, upstream_dir)
+        extra_runtime_roots = [
+            Path(row["root"])
+            for row in runtime_manifest.get("external_dependency_roots", [])
+            if isinstance(row, dict) and row.get("root")
+        ]
         runtime_report = {
             "inflate_sh": _repo_rel(inflate_sh),
             "inflate_sh_sha256": _sha256_file(inflate_sh),
@@ -387,6 +414,7 @@ def build_preflight(
             "source_payload_scan": _runtime_source_payload_scan(
                 inflate_sh.parent,
                 int(archive_report.get("bytes") or 0),
+                extra_roots=extra_runtime_roots,
             ),
             "status": "passed",
         }
