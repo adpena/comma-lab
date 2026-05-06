@@ -241,23 +241,26 @@ _REGISTRY: tuple[HiddenGemEntry, ...] = (
         key="hnerv_payload_scorecard_followups",
         title="HNeRV payload scorecard follow-ups",
         category="archive_packing",
-        status="ready_for_patch",
+        status="implemented_guarded",
         summary=(
             "Make public HNeRV payload anatomy drive deterministic repack follow-ups from "
             "section bytes and provenance instead of prose."
         ),
         evidence_paths=(
             ".omx/research/public_hnerv_frontier_deconstruction_20260504_codex.md",
+            ".omx/research/hnerv_candidate_diff_guard_20260506_codex.md",
             "experiments/build_hnerv_frontier_scorecard.py",
             "experiments/profile_hnerv_frontier_payloads.py",
+            "src/tac/tests/test_archive_byte_profile.py",
         ),
         integration_targets=(
             "src/tac/archive_byte_profile.py",
             "src/tac/public_submission_refs.py",
         ),
         next_patch=(
-            "Use payload-section manifests and source/candidate HNeRV section diffs as "
-            "mandatory no-op controls for every future HNeRV repack candidate."
+            "Use `tac.archive_byte_profile.build_candidate_diff_manifest` as the "
+            "mandatory no-op control for future HNeRV repack candidates before "
+            "archive preflight or exact CUDA eval."
         ),
         contest_compliance_notes=(
             "Byte forensics only; no archive is eligible for dispatch until exact replay gates pass.",

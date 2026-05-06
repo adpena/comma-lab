@@ -9,6 +9,7 @@ import pytest
 from tac.archive_byte_profile import (
     ArchiveByteProfileError,
     build_profile_collection,
+    build_candidate_diff_manifest,
     profile_archive,
     render_markdown,
     write_outputs,
@@ -44,7 +45,8 @@ def test_profile_archive_rejects_zip_slip_and_duplicate_members(tmp_path: Path) 
 
     duplicate = tmp_path / "duplicate.zip"
     _write_member(duplicate, "x", b"1", ZIP_STORED)
-    _write_member(duplicate, "x", b"2", ZIP_STORED, append=True)
+    with pytest.warns(UserWarning, match="Duplicate name"):
+        _write_member(duplicate, "x", b"2", ZIP_STORED, append=True)
     with pytest.raises(ArchiveByteProfileError, match="duplicate archive member"):
         profile_archive(duplicate)
 
@@ -67,6 +69,62 @@ def test_profile_collection_continue_on_error_and_write_outputs(tmp_path: Path) 
     assert payload["archives"][1]["valid"] is False
     assert payload["archives"][1]["score_claim"] is False
     assert "Archive Byte Profile Collection" in md_out.read_text()
+
+
+def test_candidate_diff_manifest_classifies_archive_noop(tmp_path: Path) -> None:
+    source = tmp_path / "source.zip"
+    candidate = tmp_path / "candidate.zip"
+    _write_member(source, "x", b"payload", ZIP_STORED)
+    candidate.write_bytes(source.read_bytes())
+
+    manifest = build_candidate_diff_manifest(
+        source_archive=source,
+        candidate_archive=candidate,
+        source_label="PR106x",
+        candidate_label="noop-copy",
+    )
+
+    assert manifest["schema"] == "archive_candidate_diff_manifest_v1"
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["archive_sha256_equal"] is True
+    assert manifest["payload_sha256_multiset_equal"] is True
+    assert manifest["candidate_non_noop"] is False
+    assert manifest["no_op_status"] == "byte_identical_archive_noop"
+    assert "candidate_is_noop" in manifest["dispatch_blockers"]
+    assert "Archive Candidate Diff Manifest" in render_markdown(manifest)
+
+
+def test_candidate_diff_manifest_classifies_container_reemit_noop(tmp_path: Path) -> None:
+    source = tmp_path / "source.zip"
+    candidate = tmp_path / "candidate.zip"
+    _write_member(source, "0.bin", b"same payload", ZIP_STORED)
+    _write_member(candidate, "x", b"same payload", ZIP_DEFLATED)
+
+    manifest = build_candidate_diff_manifest(source_archive=source, candidate_archive=candidate)
+
+    assert manifest["archive_sha256_equal"] is False
+    assert manifest["member_name_sets_identical"] is False
+    assert manifest["payload_sha256_multiset_equal"] is True
+    assert manifest["candidate_non_noop"] is False
+    assert manifest["no_op_status"] == "payload_identical_container_reemit_noop"
+    assert "candidate_is_noop" in manifest["dispatch_blockers"]
+
+
+def test_candidate_diff_manifest_classifies_payload_change(tmp_path: Path) -> None:
+    source = tmp_path / "source.zip"
+    candidate = tmp_path / "candidate.zip"
+    _write_member(source, "x", b"source payload", ZIP_STORED)
+    _write_member(candidate, "x", b"candidate payload", ZIP_STORED)
+
+    manifest = build_candidate_diff_manifest(source_archive=source, candidate_archive=candidate)
+
+    assert manifest["archive_sha256_equal"] is False
+    assert manifest["payload_sha256_multiset_equal"] is False
+    assert manifest["candidate_non_noop"] is True
+    assert manifest["no_op_status"] == "non_noop_payload_changed"
+    assert "candidate_is_noop" not in manifest["dispatch_blockers"]
+    assert manifest["changed_members"][0]["status"] == "payload_changed"
 
 
 def _write_member(

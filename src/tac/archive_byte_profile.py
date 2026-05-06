@@ -21,6 +21,7 @@ from typing import Any
 
 SCHEMA = "archive_byte_profile_collection_v1"
 ARCHIVE_SCHEMA = "archive_byte_profile_v1"
+ARCHIVE_DIFF_SCHEMA = "archive_candidate_diff_manifest_v1"
 TOOL = "experiments/profile_archive_bytes.py"
 EVIDENCE_GRADE = "byte_profile_only"
 CONTEST_ORIGINAL_BYTES = 37545489
@@ -227,7 +228,142 @@ def build_profile_collection(
     }
 
 
+def build_candidate_diff_manifest(
+    *,
+    source_archive: Path | str,
+    candidate_archive: Path | str,
+    source_label: str = "source",
+    candidate_label: str = "candidate",
+) -> dict[str, Any]:
+    """Return a byte-only source/candidate archive diff manifest."""
+
+    source = profile_archive(source_archive)
+    candidate = profile_archive(candidate_archive)
+    source_members = _member_index(source)
+    candidate_members = _member_index(candidate)
+    archive_identical = source["archive_sha256"] == candidate["archive_sha256"]
+    payload_multiset_identical = _payload_sha_multiset(source) == _payload_sha_multiset(candidate)
+    member_name_sets_identical = set(source_members) == set(candidate_members)
+    changed_members = _changed_member_records(source_members, candidate_members)
+
+    if archive_identical:
+        no_op_status = "byte_identical_archive_noop"
+        candidate_non_noop = False
+    elif payload_multiset_identical:
+        no_op_status = "payload_identical_container_reemit_noop"
+        candidate_non_noop = False
+    else:
+        no_op_status = "non_noop_payload_changed"
+        candidate_non_noop = True
+
+    dispatch_blockers = [
+        "candidate_diff_manifest_is_byte_forensics_only",
+        "requires_exact_cuda_auth_eval_on_candidate",
+    ]
+    if not candidate_non_noop:
+        dispatch_blockers.append("candidate_is_noop")
+
+    return {
+        "schema": ARCHIVE_DIFF_SCHEMA,
+        "evidence_grade": EVIDENCE_GRADE,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "promotion_eligible": False,
+        "source_label": str(source_label),
+        "candidate_label": str(candidate_label),
+        "source_archive": _archive_summary(source),
+        "candidate_archive": _archive_summary(candidate),
+        "archive_byte_delta": int(candidate["archive_bytes"]) - int(source["archive_bytes"]),
+        "archive_sha256_equal": archive_identical,
+        "member_name_sets_identical": member_name_sets_identical,
+        "payload_sha256_multiset_equal": payload_multiset_identical,
+        "candidate_non_noop": candidate_non_noop,
+        "no_op_status": no_op_status,
+        "changed_members": changed_members,
+        "dispatch_blockers": dispatch_blockers,
+        "next_safe_actions": [
+            "Reject byte-identical and payload-identical container rewrites as no-op controls.",
+            "For non-noop candidates, validate archive compliance and run exact CUDA auth eval before any score claim.",
+            "Preserve source/candidate archive bytes and SHA-256s in downstream manifests.",
+        ],
+    }
+
+
+def _archive_summary(profile: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "archive_bytes": profile.get("archive_bytes"),
+        "archive_path": profile.get("archive_path"),
+        "archive_sha256": profile.get("archive_sha256"),
+        "member_count": profile.get("member_count"),
+        "rate_term": profile.get("rate_term"),
+        "zip_overhead_bytes": profile.get("zip_overhead_bytes"),
+    }
+
+
+def _member_index(profile: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    return {
+        str(member["filename"]): dict(member)
+        for member in profile.get("members", [])
+        if isinstance(member, Mapping) and "filename" in member
+    }
+
+
+def _payload_sha_multiset(profile: Mapping[str, Any]) -> dict[str, int]:
+    counts: Counter[str] = Counter()
+    for member in profile.get("members", []):
+        if isinstance(member, Mapping) and member.get("sha256"):
+            counts[str(member["sha256"])] += 1
+    return dict(sorted(counts.items()))
+
+
+def _changed_member_records(
+    source_members: Mapping[str, Mapping[str, Any]],
+    candidate_members: Mapping[str, Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for name in sorted(set(source_members) | set(candidate_members)):
+        source = source_members.get(name)
+        candidate = candidate_members.get(name)
+        if source is None:
+            rows.append(
+                {
+                    "filename": name,
+                    "status": "added",
+                    "source_sha256": "",
+                    "candidate_sha256": candidate.get("sha256") if candidate else "",
+                }
+            )
+            continue
+        if candidate is None:
+            rows.append(
+                {
+                    "filename": name,
+                    "status": "removed",
+                    "source_sha256": source.get("sha256"),
+                    "candidate_sha256": "",
+                }
+            )
+            continue
+        if source.get("sha256") != candidate.get("sha256"):
+            rows.append(
+                {
+                    "filename": name,
+                    "status": "payload_changed",
+                    "source_sha256": source.get("sha256"),
+                    "candidate_sha256": candidate.get("sha256"),
+                    "source_compressed_bytes": source.get("compressed_bytes"),
+                    "candidate_compressed_bytes": candidate.get("compressed_bytes"),
+                    "source_uncompressed_bytes": source.get("uncompressed_bytes"),
+                    "candidate_uncompressed_bytes": candidate.get("uncompressed_bytes"),
+                }
+            )
+    return rows
+
+
 def render_markdown(profile: dict[str, Any]) -> str:
+    if profile.get("schema") == ARCHIVE_DIFF_SCHEMA:
+        return _render_candidate_diff_markdown(profile)
     if profile.get("schema") == SCHEMA:
         records = profile.get("archives") or []
         lines = [
@@ -268,6 +404,38 @@ def render_markdown(profile: dict[str, Any]) -> str:
                 uncompressed=member.get("uncompressed_bytes"),
                 method=_md_escape(member.get("compression_method", "")),
                 sha=str(member.get("sha256") or "")[:16],
+            )
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _render_candidate_diff_markdown(profile: dict[str, Any]) -> str:
+    source = profile.get("source_archive") or {}
+    candidate = profile.get("candidate_archive") or {}
+    lines = [
+        "# Archive Candidate Diff Manifest",
+        "",
+        f"- source: `{profile.get('source_label')}` `{source.get('archive_sha256')}`",
+        f"- candidate: `{profile.get('candidate_label')}` `{candidate.get('archive_sha256')}`",
+        f"- archive_byte_delta: `{profile.get('archive_byte_delta')}`",
+        f"- no_op_status: `{profile.get('no_op_status')}`",
+        f"- candidate_non_noop: `{str(profile.get('candidate_non_noop') is True).lower()}`",
+        f"- score_claim: `{str(profile.get('score_claim') is True).lower()}`",
+        "",
+        "| member | status | source sha | candidate sha |",
+        "|---|---|---|---|",
+    ]
+    changed = profile.get("changed_members") or []
+    if not changed:
+        lines.append("| _none_ | _none_ | _none_ | _none_ |")
+    for row in changed:
+        lines.append(
+            "| {name} | `{status}` | `{source_sha}` | `{candidate_sha}` |".format(
+                name=_md_escape(row.get("filename", "")),
+                status=_md_escape(row.get("status", "")),
+                source_sha=str(row.get("source_sha256") or "")[:16],
+                candidate_sha=str(row.get("candidate_sha256") or "")[:16],
             )
         )
     lines.append("")
