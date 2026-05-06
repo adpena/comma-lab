@@ -37,6 +37,16 @@ from typing import Any, Mapping
 import numpy as np
 
 try:  # pragma: no cover - optional in lite environments
+    import constriction
+except ImportError:  # pragma: no cover
+    constriction = None  # type: ignore[assignment]
+
+try:  # pragma: no cover - optional in lite environments
+    import pyppmd
+except ImportError:  # pragma: no cover
+    pyppmd = None  # type: ignore[assignment]
+
+try:  # pragma: no cover - optional in lite environments
     import torch
     from torch import nn
     from torch.nn import functional as F
@@ -361,30 +371,482 @@ def decode_meta_member(payload: bytes) -> Any:
     raise _rehydration_failure("decode_meta_member")
 
 
-# --- Symbols re-exported by pr91_hpm1_codec (deferred) ---
+# --- Symbols re-exported by pr91_hpm1_codec ---
 
 
-class HPACMini:  # REHYDRATED stub
-    """Minimal HPAC encoder/decoder wrapper used by PR86 replay (deferred)."""
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        raise _rehydration_failure("HPACMini")
+def _require_torch() -> None:
+    if torch is None or nn is None or F is None:  # pragma: no cover
+        raise Pr86HpacReplayError("dependency_contract", "torch_missing")
 
 
-def _categorical_from_probs(*args: Any, **kwargs: Any) -> Any:
-    raise _rehydration_failure("_categorical_from_probs")
+def _require_constriction() -> None:
+    if constriction is None:  # pragma: no cover
+        raise Pr86HpacReplayError("dependency_contract", "constriction_missing")
 
 
-def _group_masks(*args: Any, **kwargs: Any) -> Any:
-    raise _rehydration_failure("_group_masks")
+def _require_pyppmd() -> None:
+    if pyppmd is None:  # pragma: no cover
+        raise Pr86HpacReplayError("dependency_contract", "pyppmd_missing")
 
 
-def _normalize_probability_row(*args: Any, **kwargs: Any) -> Any:
-    raise _rehydration_failure("_normalize_probability_row")
+def _patch_group_mask(k: int, delta: int, type_: str) -> Any:
+    _require_torch()
+    mask = torch.zeros(k, k, dtype=torch.float32)
+    center = (k - 1) // 2
+    for dr_idx in range(k):
+        for dc_idx in range(k):
+            dr = dr_idx - center
+            dc = dc_idx - center
+            val = dc + int(delta) * dr
+            if type_ == "A":
+                if val < 0:
+                    mask[dr_idx, dc_idx] = 1.0
+            elif type_ == "B":
+                if val <= 0:
+                    mask[dr_idx, dc_idx] = 1.0
+            else:
+                raise Pr86HpacReplayError(
+                    "masked_conv_contract", "unknown_patch_mask_type", type=type_
+                )
+    return mask
 
 
-def decode_tokens_hpac(*args: Any, **kwargs: Any) -> Any:
-    raise _rehydration_failure("decode_tokens_hpac")
+class _MaskedConv2dPG(nn.Module if nn is not None else object):  # type: ignore[misc]
+    """Plain masked conv from the PR86/PR91 public inflate source."""
+
+    def __init__(
+        self,
+        c_in: int,
+        c_out: int,
+        k: int,
+        *,
+        padding: int = 0,
+        dilation: int = 1,
+        groups: int = 1,
+        type_: str = "B",
+        delta: int = 2,
+        bias: bool = True,
+    ) -> None:
+        _require_torch()
+        super().__init__()
+        self.weight = nn.Parameter(torch.zeros(c_out, c_in // groups, k, k))
+        self.bias = nn.Parameter(torch.zeros(c_out)) if bias else None
+        self.padding = padding
+        self.dilation = dilation
+        self.groups = groups
+        mask = _patch_group_mask(k, delta, type_)
+        self.register_buffer("mask", mask.view(1, 1, k, k), persistent=False)
+
+    def forward(self, x: Any) -> Any:
+        return F.conv2d(
+            x,
+            self.weight * self.mask,
+            self.bias,
+            padding=self.padding,
+            dilation=self.dilation,
+            groups=self.groups,
+        )
+
+
+class _ChannelNorm2d(nn.Module if nn is not None else object):  # type: ignore[misc]
+    def __init__(self, num_channels: int, eps: float = 1e-5) -> None:
+        _require_torch()
+        super().__init__()
+        self.scale = nn.Parameter(torch.ones(num_channels))
+        self.shift = nn.Parameter(torch.zeros(num_channels))
+        self.eps = eps
+
+    def forward(self, x: Any) -> Any:
+        mu = x.mean(dim=1, keepdim=True)
+        var = x.var(dim=1, keepdim=True, unbiased=False)
+        x = (x - mu) / torch.sqrt(var + self.eps)
+        return x * self.scale.view(1, -1, 1, 1) + self.shift.view(1, -1, 1, 1)
+
+
+class _CausalSPM(nn.Module if nn is not None else object):  # type: ignore[misc]
+    """Decode-time causal spatial prior module from the public HPAC source."""
+
+    def __init__(self, ch: int, P: int = 32) -> None:
+        _require_torch()
+        super().__init__()
+        self.P = P
+        self.norm = _ChannelNorm2d(ch)
+        self.dw = nn.Conv2d(ch, ch, kernel_size=3, padding=1, groups=ch)
+        self.pw = nn.Conv2d(ch, ch, kernel_size=1)
+
+    def forward(self, h_past: Any) -> Any:
+        B, C, H, W = h_past.shape
+        P = self.P
+        NRp, NCp = H // P, W // P
+        x_p = h_past.view(B, C, NRp, P, NCp, P).mean(dim=(3, 5))
+        x_p = self.norm(x_p)
+        x_p = self.dw(x_p)
+        x_p = F.gelu(x_p)
+        x_p = self.pw(x_p)
+        x_full = (
+            x_p.unsqueeze(3)
+            .unsqueeze(5)
+            .expand(B, C, NRp, P, NCp, P)
+            .contiguous()
+        )
+        return x_full.view(B, C, NRp * P, NCp * P)
+
+
+class HPACMini(nn.Module if nn is not None else object):  # type: ignore[misc]
+    """Minimal HPAC token probability model used by PR86/PR91 replay."""
+
+    def __init__(
+        self,
+        num_pairs: int = 600,
+        num_classes: int = NUM_CLASSES,
+        P: int = 32,
+        delta: int = 2,
+        d_film: int = 32,
+        ch: int = 64,
+        use_spm: bool = False,
+    ) -> None:
+        _require_torch()
+        super().__init__()
+        self.num_classes = num_classes
+        self.P = int(P)
+        self.delta = int(delta)
+        self.ch = int(ch)
+        self.use_spm = bool(use_spm)
+        self.frame_embed = nn.Embedding(int(num_pairs), int(d_film))
+        self.film_gen = nn.Linear(int(d_film), int(ch) * 2)
+        self.conv_a = _MaskedConv2dPG(
+            int(num_classes) + 2,
+            int(ch),
+            7,
+            padding=3,
+            type_="A",
+            delta=int(delta),
+        )
+        self.gn_a = _ChannelNorm2d(int(ch))
+        self.conv_b1 = _MaskedConv2dPG(
+            int(ch),
+            int(ch),
+            5,
+            padding=4,
+            dilation=2,
+            groups=int(ch),
+            type_="B",
+            delta=int(delta),
+        )
+        self.gn_b1 = _ChannelNorm2d(int(ch))
+        self.conv_b2 = _MaskedConv2dPG(
+            int(ch),
+            int(ch),
+            3,
+            padding=4,
+            dilation=4,
+            groups=int(ch),
+            type_="B",
+            delta=int(delta),
+        )
+        self.gn_b2 = _ChannelNorm2d(int(ch))
+        self.conv_past = nn.Conv2d(int(num_classes), int(ch), kernel_size=3, padding=1)
+        self.spm = _CausalSPM(int(ch), P=int(P)) if use_spm else None
+        self.head = nn.Conv2d(int(ch), int(num_classes), kernel_size=1, padding=0)
+        self.register_buffer("_coord_cache", torch.zeros(0), persistent=False)
+        self._cached_P = -1
+
+    def _patch_coord_grid(self, B: int, device: Any) -> Any:
+        if self._cached_P != self.P or self._coord_cache.numel() == 0:
+            P = self.P
+            ys = (
+                torch.linspace(-1.0, 1.0, P, device=device)
+                .view(1, 1, P, 1)
+                .expand(1, 1, P, P)
+            )
+            xs = (
+                torch.linspace(-1.0, 1.0, P, device=device)
+                .view(1, 1, 1, P)
+                .expand(1, 1, P, P)
+            )
+            self._coord_cache = torch.cat([ys, xs], dim=1)
+            self._cached_P = self.P
+        return self._coord_cache.expand(B, -1, -1, -1)
+
+    def _to_patches(self, x: Any) -> Any:
+        B, C, H, W = x.shape
+        P = self.P
+        NRp, NCp = H // P, W // P
+        x = x.view(B, C, NRp, P, NCp, P).permute(0, 2, 4, 1, 3, 5).contiguous()
+        return x.view(B * NRp * NCp, C, P, P)
+
+    def _from_patches(self, x_p: Any, B: int, NRp: int, NCp: int) -> Any:
+        P = self.P
+        C = x_p.shape[1]
+        x_p = (
+            x_p.view(B, NRp, NCp, C, P, P)
+            .permute(0, 3, 1, 4, 2, 5)
+            .contiguous()
+        )
+        return x_p.view(B, C, NRp * P, NCp * P)
+
+    def forward(self, tokens: Any, idx: Any, prev_tokens: Any) -> Any:
+        B, H, W = tokens.shape
+        P = self.P
+        NRp, NCp = H // P, W // P
+        Np = NRp * NCp
+        x = F.one_hot(tokens, num_classes=self.num_classes).permute(0, 3, 1, 2).float()
+        x_p = self._to_patches(x)
+        coord_p = self._patch_coord_grid(B * Np, x.device)
+        x_in_p = torch.cat([x_p, coord_p], dim=1)
+        h_p = self.gn_a(self.conv_a(x_in_p))
+        emb = self.frame_embed(idx)
+        film = self.film_gen(emb)
+        scale, shift = film.chunk(2, dim=1)
+        scale_p = (
+            scale.view(B, 1, self.ch, 1, 1)
+            .expand(B, Np, self.ch, 1, 1)
+            .reshape(B * Np, self.ch, 1, 1)
+        )
+        shift_p = (
+            shift.view(B, 1, self.ch, 1, 1)
+            .expand(B, Np, self.ch, 1, 1)
+            .reshape(B * Np, self.ch, 1, 1)
+        )
+        h_p = h_p * (1.0 + scale_p) + shift_p
+        h_p = F.gelu(h_p)
+        x_prev = (
+            F.one_hot(prev_tokens, num_classes=self.num_classes)
+            .permute(0, 3, 1, 2)
+            .float()
+        )
+        h_past_full = self.conv_past(x_prev)
+        h_p = h_p + self._to_patches(h_past_full)
+        if self.spm is not None:
+            h_p = h_p + self._to_patches(self.spm(h_past_full))
+        h_p = F.gelu(self.gn_b1(self.conv_b1(h_p)))
+        h_p = F.gelu(self.gn_b2(self.conv_b2(h_p)))
+        logits_p = self.head(h_p)
+        return self._from_patches(logits_p, B, NRp, NCp)
+
+
+def _reconstruct_hpac_state_dict(packed_sd: Mapping[str, Any], device: str) -> dict[str, Any]:
+    _require_torch()
+    out: dict[str, Any] = {}
+    bases = sorted({k[: -len(".weight_q")] for k in packed_sd if k.endswith(".weight_q")})
+    for base in bases:
+        q = packed_sd[base + ".weight_q"].to(device).float()
+        scale = packed_sd[base + ".weight_scale"].to(device).float()
+        shape = [1] * q.ndim
+        shape[0] = -1
+        out[base + ".weight"] = (q * scale.view(*shape)).to(torch.float32)
+    skip = {f"{base}.weight_q" for base in bases} | {
+        f"{base}.weight_scale" for base in bases
+    }
+    for key, value in packed_sd.items():
+        if key in skip:
+            continue
+        if torch.is_tensor(value):
+            out[key] = value.to(device).float() if torch.is_floating_point(value) else value.to(device)
+        else:
+            out[key] = value
+    return out
+
+
+def _normalize_probability_row(
+    probs: Any,
+    *,
+    prob_eps: float = PROB_EPS,
+    variant: str | HpacProbabilityVariant = DEFAULT_HPAC_PROBABILITY_VARIANT,
+) -> np.ndarray:
+    resolved = resolve_hpac_probability_variant(variant)
+    dtype = np.float32 if resolved.probability_dtype == "float32" else np.float64
+    arr = np.asarray(probs).astype(dtype, copy=False)
+    if arr.ndim != 1 or arr.size != NUM_CLASSES:
+        raise Pr86HpacReplayError(
+            "probability_row_contract",
+            "expected_single_num_classes_row",
+            shape=list(arr.shape),
+            expected_classes=NUM_CLASSES,
+        )
+    if not np.all(np.isfinite(arr)):
+        raise Pr86HpacReplayError("probability_row_contract", "nonfinite_probability")
+    arr = np.clip(arr, dtype(prob_eps), dtype(1.0))
+    denom = float(arr.sum())
+    if denom <= 0.0:
+        raise Pr86HpacReplayError("probability_row_contract", "zero_probability_mass")
+    arr = arr / denom
+    return arr.astype(dtype, copy=False)
+
+
+def _categorical_from_probs(
+    probs: Any,
+    *,
+    prob_eps: float = PROB_EPS,
+    variant: str | HpacProbabilityVariant = DEFAULT_HPAC_PROBABILITY_VARIANT,
+) -> Any:
+    _require_constriction()
+    resolved = resolve_hpac_probability_variant(variant)
+    row = _normalize_probability_row(probs, prob_eps=prob_eps, variant=resolved)
+    return constriction.stream.model.Categorical(
+        probabilities=row,
+        perfect=bool(resolved.categorical_perfect),
+    )
+
+
+def _group_masks(H: int, W: int, *, P: int, delta: int, device: str | Any = "cpu") -> list[Any | None]:
+    _require_torch()
+    if H <= 0 or W <= 0 or P <= 0:
+        raise Pr86HpacReplayError(
+            "group_mask_contract", "nonpositive_geometry", H=H, W=W, P=P
+        )
+    if H % P or W % P:
+        raise Pr86HpacReplayError(
+            "group_mask_contract", "geometry_not_divisible_by_patch", H=H, W=W, P=P
+        )
+    if delta < 0:
+        raise Pr86HpacReplayError("group_mask_contract", "negative_delta", delta=delta)
+    NRp, NCp = H // P, W // P
+    rs = torch.arange(P, device=device).view(P, 1).expand(P, P)
+    cs = torch.arange(P, device=device).view(1, P).expand(P, P)
+    s_grid = cs + int(delta) * rs
+    n_groups = int((1 + int(delta)) * P - int(delta))
+    masks: list[Any | None] = []
+    for s in range(n_groups):
+        mp = s_grid == s
+        if not bool(mp.any()):
+            masks.append(None)
+            continue
+        full = (
+            mp.unsqueeze(0)
+            .unsqueeze(0)
+            .expand(NRp, NCp, P, P)
+            .permute(0, 2, 1, 3)
+            .reshape(NRp * P, NCp * P)
+        )
+        masks.append(full)
+    return masks
+
+
+def decode_tokens_hpac(
+    gen: HPACMini,
+    token_blob: bytes,
+    N: int,
+    H: int,
+    W: int,
+    P: int,
+    delta: int,
+    *,
+    device: str = "cpu",
+    prob_eps: float = PROB_EPS,
+    probability_variant: str | HpacProbabilityVariant = DEFAULT_HPAC_PROBABILITY_VARIANT,
+    max_frames: int | None = None,
+    return_report: bool = False,
+) -> np.ndarray | tuple[np.ndarray, dict[str, Any]]:
+    """Decode HPAC arithmetic-coded token frames with the public PR86 loop.
+
+    PR86/PR91 source-level evidence points at CPU replay as the deterministic
+    entropy contract.  GPU devices fail closed here instead of generating
+    misleading prefix evidence.
+    """
+
+    _require_torch()
+    _require_constriction()
+    if str(device) != "cpu":
+        raise Pr86HpacReplayError(
+            "device_contract",
+            "pr86_hpac_replay_is_cpu_only",
+            requested_device=device,
+        )
+    if len(token_blob) % 4:
+        raise Pr86HpacReplayError(
+            "tokens_bin_contract",
+            "tokens_bin_not_uint32_aligned",
+            tokens_bytes=len(token_blob),
+        )
+    resolved = resolve_hpac_probability_variant(probability_variant)
+    frame_count = int(N if max_frames is None else min(int(max_frames), int(N)))
+    if frame_count < 0:
+        raise Pr86HpacReplayError("decode_contract", "negative_max_frames", max_frames=max_frames)
+    dev = torch.device(device)
+    gen = gen.to(dev).eval()
+    masks = _group_masks(int(H), int(W), P=int(P), delta=int(delta), device=dev)
+    words = np.frombuffer(token_blob, dtype="<u4").astype(np.uint32, copy=False)
+    decoder = constriction.stream.queue.RangeDecoder(words)
+    tokens = np.empty((frame_count, int(H), int(W)), dtype=np.uint8)
+    decoded_prev = torch.zeros((1, int(H), int(W)), dtype=torch.long, device=dev)
+    decoded_symbols = 0
+    started_at = time.time()
+    with torch.no_grad():
+        for frame in range(frame_count):
+            idx = torch.tensor([frame], dtype=torch.long, device=dev)
+            cur = torch.zeros((1, int(H), int(W)), dtype=torch.long, device=dev)
+            frame_start_symbols = decoded_symbols
+            for group, mask in enumerate(masks):
+                if mask is None:
+                    continue
+                group_start_symbols = decoded_symbols
+                logits = gen(cur, idx, decoded_prev)
+                probs = F.softmax(logits.float(), dim=1)
+                probs_at_group = probs[0][:, mask].permute(1, 0).contiguous()
+                decoded = np.empty(int(probs_at_group.shape[0]), dtype=np.int64)
+                probs_np = probs_at_group.cpu().numpy()
+                for symbol_in_group, row in enumerate(probs_np):
+                    cat = _categorical_from_probs(row, prob_eps=prob_eps, variant=resolved)
+                    try:
+                        decoded[symbol_in_group] = decoder.decode(cat)
+                    except Exception as exc:
+                        raise Pr86HpacReplayError(
+                            "submitted_tokens_decode",
+                            "hpac_entropy_decode_contract_mismatch",
+                            frame=frame,
+                            group=group,
+                            symbol_in_group=symbol_in_group,
+                            decoded_symbol_count_before_failure=decoded_symbols,
+                            group_start_decoded_symbols=group_start_symbols,
+                            frame_start_decoded_symbols=frame_start_symbols,
+                            probability_variant=resolved.name,
+                        ) from exc
+                    decoded_symbols += 1
+                cur[0, mask] = torch.from_numpy(decoded).to(dev)
+            tokens[frame] = cur[0].cpu().numpy().astype(np.uint8)
+            decoded_prev = cur.clone()
+    report = {
+        "status": "passed_prefix_decode" if max_frames is not None else "passed_decode",
+        "score_claim": False,
+        "device": str(device),
+        "probability_variant": resolved.name,
+        "prob_eps": prob_eps,
+        "decoded_frames": int(tokens.shape[0]),
+        "decoded_symbols": decoded_symbols,
+        "elapsed_sec": round(time.time() - started_at, 3),
+        "tokens": {"shape": list(tokens.shape), "sha256": sha256_bytes(tokens.tobytes())},
+    }
+    return (tokens, report) if return_report else tokens
+
+
+def _decode_tokens_hpac_legacy(
+    blob: bytes,
+    *,
+    model: HPACMini,
+    N: int,
+    H: int,
+    W: int,
+    P: int,
+    delta: int,
+    device: str = "cpu",
+    probability_variant: str = DEFAULT_HPAC_PROBABILITY_VARIANT,
+    max_frames: int | None = None,
+) -> np.ndarray:
+    """Compatibility wrapper for early recovery tests; new code uses source signature."""
+
+    return decode_tokens_hpac(
+        model,
+        blob,
+        N,
+        H,
+        W,
+        P,
+        delta,
+        device=device,
+        probability_variant=probability_variant,
+        max_frames=max_frames,
+    )
 
 
 def encode_tokens_hpac(*args: Any, **kwargs: Any) -> Any:
@@ -395,5 +857,77 @@ def encode_symbols_hpac_with_prev_context(*args: Any, **kwargs: Any) -> Any:
     raise _rehydration_failure("encode_symbols_hpac_with_prev_context")
 
 
-def load_hpac_model_from_ppmd(*args: Any, **kwargs: Any) -> Any:
-    raise _rehydration_failure("load_hpac_model_from_ppmd")
+def _load_packed_hpac_state(payload: bytes | Path | str) -> Mapping[str, Any]:
+    _require_torch()
+    if isinstance(payload, (str, Path)):
+        path = Path(payload)
+        raw = path.read_bytes()
+        if path.suffix == ".ppmd":
+            _require_pyppmd()
+            raw = pyppmd.decompress(raw, max_order=PPMD_MAX_ORDER, mem_size=PPMD_MEM_SIZE)
+        elif path.suffix == ".gz":
+            raw = gzip.decompress(raw)
+    else:
+        _require_pyppmd()
+        raw = pyppmd.decompress(bytes(payload), max_order=PPMD_MAX_ORDER, mem_size=PPMD_MEM_SIZE)
+    loaded = torch.load(io.BytesIO(raw), map_location="cpu", weights_only=False)
+    if not isinstance(loaded, Mapping):
+        raise Pr86HpacReplayError(
+            "hpac_state_contract",
+            "expected_state_dict_mapping",
+            loaded_type=type(loaded).__name__,
+        )
+    return loaded
+
+
+def load_hpac_model_from_ppmd(
+    payload: bytes | Path | str,
+    config: Mapping[str, Any] | None = None,
+    *,
+    num_pairs: int | None = None,
+    P: int | None = None,
+    delta: int | None = None,
+    ch: int | None = None,
+    d_film: int | None = None,
+    use_spm: bool | None = None,
+    device: str = "cpu",
+    strict: bool = False,
+) -> HPACMini:
+    """Load a PR86 HPACMini from a PPMd/gzip/raw torch state payload."""
+
+    cfg = dict(config or {})
+    resolved_num_pairs = num_pairs if num_pairs is not None else cfg.get("N", cfg.get("num_pairs"))
+    resolved_P = P if P is not None else cfg.get("P")
+    resolved_delta = delta if delta is not None else cfg.get("delta")
+    resolved_ch = ch if ch is not None else cfg.get("ch", cfg.get("channels"))
+    resolved_d_film = d_film if d_film is not None else cfg.get("hpac_d_film", cfg.get("d_film", 32))
+    resolved_use_spm = use_spm if use_spm is not None else cfg.get("use_spm", False)
+    missing = [
+        name
+        for name, value in (
+            ("num_pairs", resolved_num_pairs),
+            ("P", resolved_P),
+            ("delta", resolved_delta),
+            ("ch", resolved_ch),
+        )
+        if value is None
+    ]
+    if missing:
+        raise Pr86HpacReplayError(
+            "hpac_model_config_contract",
+            "missing_hpac_model_config",
+            missing=missing,
+        )
+    packed_sd = _load_packed_hpac_state(payload)
+    sd = _reconstruct_hpac_state_dict(packed_sd, device)
+    model = HPACMini(
+        num_pairs=int(resolved_num_pairs),
+        num_classes=NUM_CLASSES,
+        P=int(resolved_P),
+        delta=int(resolved_delta),
+        ch=int(resolved_ch),
+        d_film=int(resolved_d_film),
+        use_spm=bool(resolved_use_spm),
+    ).to(device).eval()
+    model.load_state_dict(sd, strict=bool(strict))
+    return model

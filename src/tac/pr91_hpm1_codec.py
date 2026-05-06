@@ -405,7 +405,24 @@ def validate_hpm1_static_contract(archive: Path | Hpm1MaskPayload) -> dict[str, 
 
 
 def load_hpm1_hpac_model(payload: Hpm1MaskPayload, *, device: str = "cpu") -> Any:
-    raise _rehydration_failure("load_hpm1_hpac_model")
+    """Load the HPACMini model embedded in an HPM1 mask payload.
+
+    This is a local forensic helper only.  It reconstructs the model object
+    needed for bounded token-prefix probes, but it does not dispatch eval or
+    imply byte-closed PR91 replay.
+    """
+
+    return load_hpac_model_from_ppmd(
+        payload.hpac,
+        num_pairs=payload.n_frames,
+        P=payload.predictor_count,
+        delta=payload.delta,
+        ch=payload.channels,
+        d_film=payload.hpac_d_film,
+        use_spm=bool(payload.use_spm),
+        device=device,
+        strict=False,
+    )
 
 
 def run_pr91_hpm1_preflight(
@@ -424,6 +441,50 @@ def run_pr91_hpm1_preflight(
     payload = extract_pr91_hpm1_payload(Path(archive))
     static_report = validate_hpm1_static_contract(payload)
     relationship = compare_hpm1_to_pr86_hpac_contract(payload)
+    canonical_payload = (
+        sha256_bytes(payload.tokens) == EXPECTED_PR91_HPM1_TOKENS_SHA256
+        and sha256_bytes(payload.hpac) == EXPECTED_PR91_HPM1_HPAC_SHA256
+    )
+    prefix_decode: dict[str, Any] = {
+        "status": "not_attempted_noncanonical_payload",
+        "max_frames": max_frames,
+        "canonical_pr91_payload": canonical_payload,
+    }
+    if canonical_payload and max_frames is not None and int(max_frames) > 0:
+        try:
+            model = load_hpm1_hpac_model(payload, device=device)
+            decoded, decode_report = decode_tokens_hpac(
+                model,
+                payload.tokens,
+                payload.n_frames,
+                payload.height,
+                payload.width,
+                payload.predictor_count,
+                payload.delta,
+                device=device,
+                probability_variant=probability_variant,
+                max_frames=max_frames,
+                return_report=True,
+            )
+            prefix_decode = {
+                "status": "passed_prefix_decode",
+                "max_frames": max_frames,
+                "canonical_pr91_payload": True,
+                "decoded_tokens": {
+                    "shape": list(decoded.shape),
+                    "sha256": sha256_bytes(decoded.tobytes()),
+                },
+                "decode_report": decode_report,
+            }
+        except Pr86HpacReplayError as exc:
+            prefix_decode = {
+                "status": "failed_closed",
+                "failure_stage": "hpac_probability_range_decode",
+                "failure_reason": exc.code,
+                "failure_context": dict(exc.fields),
+                "max_frames": max_frames,
+                "canonical_pr91_payload": True,
+            }
     report: dict[str, Any] = {
         "schema_version": 1,
         "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_preflight",
@@ -440,16 +501,7 @@ def run_pr91_hpm1_preflight(
         "archive": _archive_report(Path(archive)),
         "hpm1_static_contract": static_report,
         "pr86_hpac_relationship": relationship,
-        "prefix_or_full_decode": {
-            "status": "failed_closed",
-            "failure_stage": "hpac_probability_range_decode",
-            "failure_reason": (
-                "Full HPAC arithmetic/range replay is not rehydrated in tac; "
-                "public PR91 remains non-dispatchable until a byte-exact "
-                "probability/range contract decodes the HPM1 token stream."
-            ),
-            "max_frames": max_frames,
-        },
+        "prefix_or_full_decode": prefix_decode,
         "hpac_reencode": {
             "attempted": bool(attempt_reencode),
             "status": "not_attempted" if not attempt_reencode else "blocked_by_decode_contract",
@@ -494,29 +546,69 @@ def run_pr91_hpm1_probability_variant_matrix(
 
     started_at = time.time()
     payload = extract_pr91_hpm1_payload(Path(archive))
+    canonical_payload = (
+        sha256_bytes(payload.tokens) == EXPECTED_PR91_HPM1_TOKENS_SHA256
+        and sha256_bytes(payload.hpac) == EXPECTED_PR91_HPM1_HPAC_SHA256
+    )
     variant_names = variants or supported_hpac_probability_variant_names()
+    model: Any | None = None
+    if canonical_payload and max_frames is not None and int(max_frames) > 0:
+        model = load_hpm1_hpac_model(payload, device="cpu")
     rows: list[dict[str, Any]] = []
     for name in variant_names:
         variant = resolve_hpac_probability_variant(name)
-        rows.append(
-            {
-                "variant": variant.name,
-                "probability_dtype": variant.probability_dtype,
-                "categorical_perfect": variant.categorical_perfect,
-                "source_contract": variant.source_contract,
-                "status": "failed_closed",
-                "decoded_frame0": False,
-                "byte_exact_reencode": False,
-                "failure_stage": "hpac_probability_range_decode",
-                "failure_reason": "hpm1_probability_range_contract_not_byte_closed",
-                "known_public_failure": (
-                    "source contract fails at frame=0 group=10 symbol=191 after "
-                    "5951 decoded symbols"
-                    if variant.source_contract
-                    else None
-                ),
-            }
-        )
+        row = {
+            "variant": variant.name,
+            "probability_dtype": variant.probability_dtype,
+            "categorical_perfect": variant.categorical_perfect,
+            "source_contract": variant.source_contract,
+            "status": "failed_closed",
+            "decoded_frame0": False,
+            "byte_exact_reencode": False,
+            "failure_stage": "hpac_probability_range_decode",
+            "failure_reason": "hpm1_probability_range_contract_not_byte_closed",
+            "known_public_failure": (
+                "source contract fails at frame=0 group=10 symbol=191 after "
+                "5951 decoded symbols"
+                if variant.source_contract
+                else None
+            ),
+            "prefix_attempted": bool(model is not None),
+            "canonical_pr91_payload": canonical_payload,
+        }
+        if model is not None:
+            try:
+                decoded, decode_report = decode_tokens_hpac(
+                    model,
+                    payload.tokens,
+                    payload.n_frames,
+                    payload.height,
+                    payload.width,
+                    payload.predictor_count,
+                    payload.delta,
+                    device="cpu",
+                    probability_variant=variant.name,
+                    max_frames=max_frames,
+                    return_report=True,
+                )
+                row.update(
+                    {
+                        "status": "passed_prefix_decode",
+                        "decoded_frame0": bool(decoded.shape[0] >= 1),
+                        "decoded_tokens_sha256": sha256_bytes(decoded.tobytes()),
+                        "decode_report": decode_report,
+                        "failure_stage": None,
+                        "failure_reason": None,
+                    }
+                )
+            except Pr86HpacReplayError as exc:
+                row.update(
+                    {
+                        "failure_reason": exc.code,
+                        "failure_context": dict(exc.fields),
+                    }
+                )
+        rows.append(row)
     report = {
         "schema": "pr91_hpm1_probability_variant_matrix_v1",
         "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_probability_variant_matrix",

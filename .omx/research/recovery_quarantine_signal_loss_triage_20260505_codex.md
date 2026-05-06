@@ -4593,3 +4593,55 @@ Verification:
   /tmp/pr91_pr92_preflight_logrecovered.json --ledger-md
   /tmp/pr91_pr92_preflight_logrecovered.md --stdout` completed with
   `status=passed_pr92_a_plus_plus_pr91_fail_closed`.
+
+## R65 - 2026-05-06 PR86 HPAC Minimal Decode Recovery
+
+Recovered the minimal PR86/HPAC entropy decode surface needed for local PR91
+HPM1 forensic replay without pulling in full PR86 render/inflate or promoting
+any score claim.
+
+Updated:
+
+- `src/tac/pr86_hpac_codec.py`
+- `src/tac/pr91_hpm1_codec.py`
+- `src/tac/tests/test_pr86_hpac_codec.py`
+- `src/tac/tests/test_rehydrated_modules_20260505.py`
+
+Recovered contracts:
+
+- `HPACMini`, `_MaskedConv2dPG`, `_ChannelNorm2d`, `_CausalSPM`, and group-mask
+  geometry from public PR86/PR91 source;
+- PPMd/gzip/raw torch HPAC state loading with PR86 INT8 packed-weight
+  reconstruction;
+- explicit HPAC probability variants, including source `float64` +
+  `Categorical(..., perfect=False)`;
+- CPU-only bounded HPAC token-prefix decode using explicit little-endian
+  `uint32` range words;
+- fail-closed PR91 failure context for the known HPM1 mismatch:
+  `frame=0`, `group=10`, `symbol_in_group=191`,
+  `decoded_symbol_count_before_failure=5951`;
+- PR91 preflight/probability-matrix JSON now attempts the canonical local
+  prefix decode for canonical payloads and records the exact mismatch context.
+
+Preserved as intentionally fail-loud:
+
+- `encode_tokens_hpac`;
+- `encode_symbols_hpac_with_prev_context`;
+- full PR86 replay/render and recode helpers.
+
+Verification:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_pr86_hpac_codec.py
+  src/tac/tests/test_pr91_hpm1_codec.py
+  src/tac/tests/test_rehydrated_modules_20260505.py -q` -> `46 passed`.
+- `.venv/bin/python -m py_compile src/tac/pr86_hpac_codec.py
+  src/tac/pr91_hpm1_codec.py src/tac/tests/test_pr86_hpac_codec.py` passed.
+- `.venv/bin/python experiments/preflight_pr91_pr92_replay_contracts.py
+  --rerun-pr91-prefix --output-json
+  /tmp/pr91_pr92_preflight_hpac_recovered.json --ledger-md
+  /tmp/pr91_pr92_preflight_hpac_recovered.md --stdout` completed with
+  `status=passed_pr92_a_plus_plus_pr91_fail_closed`.
+- Direct PR91 prefix probe records `failure_reason =
+  hpac_entropy_decode_contract_mismatch` with
+  `group_start_decoded_symbols=5760` and
+  `decoded_symbol_count_before_failure=5951`.

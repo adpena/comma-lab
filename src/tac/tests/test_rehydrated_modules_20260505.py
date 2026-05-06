@@ -339,17 +339,17 @@ def test_stbm1br_decode_raises_not_implemented() -> None:
         decode_stbm1br_mask_segment(payload)
 
 
-def test_pr86_hpac_decode_raises_not_implemented() -> None:
-    from tac.pr86_hpac_codec import decode_tokens_hpac
+def test_pr86_hpac_encode_raises_not_implemented() -> None:
+    from tac.pr86_hpac_codec import encode_tokens_hpac
 
     with pytest.raises(NotImplementedError, match="rehydration incomplete"):
-        decode_tokens_hpac()
+        encode_tokens_hpac()
 
 
-def test_pr91_hpm1_probability_matrix_raises_not_implemented(tmp_path) -> None:
-    from tac.pr91_hpm1_codec import run_pr91_hpm1_probability_variant_matrix
+def test_pr91_hpm1_probability_matrix_fails_closed_on_missing_archive(tmp_path) -> None:
+    from tac.pr91_hpm1_codec import Pr91Hpm1Error, run_pr91_hpm1_probability_variant_matrix
 
-    with pytest.raises(NotImplementedError, match="rehydration incomplete"):
+    with pytest.raises(Pr91Hpm1Error, match="archive_missing"):
         run_pr91_hpm1_probability_variant_matrix(tmp_path / "fake.zip")
 
 
