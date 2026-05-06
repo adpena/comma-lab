@@ -1,0 +1,73 @@
+#!/bin/bash
+# Lane NWCS-sensitivity-weighted (PARADIGM-β β-variant of Lane J-NWC).
+#
+# Module: src/tac/neural_weight_codec_sensitivity.py — per-block sensitivity
+# bucketing + variable-K VQ codebook (codebook_sizes per bucket).
+#
+# DELTA from Lane J-NWC:
+#   * Standard NWC uses uniform codebook size K across all weights.
+#   * NWCS uses sensitivity-bucketed codebooks: high-sensitivity buckets
+#     get K=256 (more precision), low-sensitivity get K=4 (more aggressive
+#     compression). Predicted -50 to -150B vs J-NWC at fixed distortion.
+#   * Predicted band [contest-CUDA] [0.78, 0.92] vs J-NWC-EC stack 0.78-0.92.
+#
+# REGISTERED-BUT-NOT-WIRED in step_compress_weights as of 2026-05-06; the
+# WARN guard (commit 9bdd3d56) prevents silent no-op. To enable, an operator
+# must land the dispatch branch (mirror of β dispatch in commit 107f6fea)
+# before this runbook can produce a real archive.
+#
+# Cost: T4 @ ~$0.50/hr × ~30min sweep + 30min auth eval = ~$0.50.
+set -euo pipefail
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+PYBIN="${PYBIN:-/opt/conda/bin/python}"
+[ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
+cd "$WORKSPACE"
+
+LOG_DIR="$WORKSPACE/lane_nwcs_sensitivity_weighted_results"
+mkdir -p "$LOG_DIR"
+TAG="lane_nwcs_sensitivity_weighted"
+
+log() { echo "[lane-nwcs-β] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
+
+PROVENANCE="$LOG_DIR/provenance.json"
+HEARTBEAT="$LOG_DIR/heartbeat.log"
+GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
+"$PYBIN" -c "
+import json, time, torch
+prov = {
+    'started_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+    'git_hash': '$GIT_HASH',
+    'cuda_available': torch.cuda.is_available(),
+    'lane_script': 'scripts/remote_lane_nwcs_sensitivity_weighted.sh',
+    'tag': '$TAG',
+    'paradigm': 'beta_nwcs_sensitivity_weighted',
+    'predicted_band': [0.78, 0.92],
+    'lane_registry_id': 'lane_nwcs_sensitivity_weighted',
+    'cross_paradigm_wiring_status': 'WARN-guard wired in step_compress_weights (commit 9bdd3d56); dispatch branch DEFERRED — needs operator landing.',
+    'pre_dispatch_blocker': 'NWCS dispatch branch not yet wired in step_compress_weights (mirror of β commit 107f6fea required).',
+    'cost_estimate_usd': 0.50,
+}
+with open('$PROVENANCE', 'w') as f: json.dump(prov, f, indent=2)
+print(json.dumps(prov))
+"
+
+( while true; do sleep 60; echo "[$(date -u +%FT%TZ)] lane=nwcs-β" >> "$HEARTBEAT"; done ) &
+HB_PID=$!
+trap 'kill $HB_PID 2>/dev/null || true' EXIT
+
+log "=== Stage 0: NVDEC + wiring check ==="
+bash "$WORKSPACE/scripts/probe_nvdec.sh" || { log "FATAL: NVDEC failed"; exit 2; }
+"$PYBIN" -c "
+import sys; sys.path.insert(0, 'src')
+from tac.neural_weight_codec_sensitivity import SensitivityAwareWeightCodec
+print('NWCS module importable')
+" 2>&1 | tee -a "$LOG_DIR/run.log"
+
+log "=== Stage 1: NWCS codec training (precondition: dispatch branch must land) ==="
+log "WARN: NWCS dispatch branch in step_compress_weights is REGISTERED-BUT-NOT-WIRED."
+log "WARN: Operator must land the dispatch branch before this stage runs."
+log "WARN: Reference implementation: experiments/pipeline.py:1360-1430 (β branch)."
+
+log "=== Stage 2: archive build (skipped pending Stage 1 dispatch wiring) ==="
+log "=== Stage 3: contest-CUDA auth eval (skipped) ==="
+log "LANE_NWCS_SENSITIVITY_WEIGHTED_DONE score=N/A [contest-CUDA] paradigm=β-nwcs blocked=dispatch_branch_not_wired"
