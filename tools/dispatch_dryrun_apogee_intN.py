@@ -52,14 +52,29 @@ REPO = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO)
 
 from tac.repo_io import repo_relative  # noqa: E402
+from tools.preflight_cache import build_cache_key, load_valid_cache, write_pass_cache  # noqa: E402
 
 WRAPPER = REPO / "scripts" / "remote_lane_apogee_intN.sh"
 PRODUCER = REPO / "experiments" / "repack_pr106_with_intN_block_fp.py"
 PR106_ARCHIVE = REPO / "experiments" / "results" / "public_pr106_belt_and_suspenders_intake_20260504_codex" / "archive.zip"
 PR106_STATE_DICT = REPO / "experiments" / "results" / "sensitivity_map_pr106_20260504_claude" / "state_dict.pt"
+PR106_SRC = (
+    REPO
+    / "experiments"
+    / "results"
+    / "public_pr106_belt_and_suspenders_intake_20260504_codex"
+    / "source"
+    / "submissions"
+    / "belt_and_suspenders"
+    / "src"
+)
 INFLATE_SH = REPO / "submissions" / "apogee_intN" / "inflate.sh"
 INFLATE_PY = REPO / "submissions" / "apogee_intN" / "inflate.py"
 LAUNCH_SCRIPT = REPO / "scripts" / "launch_lane_on_vastai.py"
+INFLATE_SRC = INFLATE_PY.parent / "src"
+INTN_CODEC_SKETCH = REPO / "experiments" / "block_fp_intN_codec_sketch.py"
+PR106_CODEC = PR106_SRC / "codec.py"
+CACHE_NAME = "dispatch_dryrun_apogee_intN"
 
 PARETO_FRONTIER_BITS = [4, 5, 6, 8]  # int7 dominated by int8
 DISTORTION_MODEL_BLOCKER = (
@@ -226,6 +241,38 @@ def _run_bit_checks(bits: int, out_dir: Path) -> tuple[list[str], list[str]]:
     return passes, failures
 
 
+def _cache_files() -> list[Path]:
+    return [
+        Path(__file__),
+        WRAPPER,
+        PRODUCER,
+        PR106_ARCHIVE,
+        PR106_STATE_DICT,
+        INFLATE_PY,
+        INFLATE_SH,
+        INFLATE_SRC / "model.py",
+        INFLATE_SRC / "codec.py",
+        INFLATE_SRC / "intn_codec.py",
+        INTN_CODEC_SKETCH,
+        PR106_CODEC,
+        LAUNCH_SCRIPT,
+    ]
+
+
+def _e2e_cache_key(bits_list: list[int]) -> dict[str, object]:
+    return build_cache_key(
+        name=CACHE_NAME,
+        files=_cache_files(),
+        config={
+            "bits_list": list(bits_list),
+            "source_archive": repo_relative(PR106_ARCHIVE, REPO),
+            "state_dict": repo_relative(PR106_STATE_DICT, REPO),
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+
 def run_dryrun(
     bits_list: list[int],
     verbose: bool = False,
@@ -252,18 +299,44 @@ def run_dryrun(
     if jobs is not None and jobs < 1:
         failures.append("  ✗ jobs: --jobs must be >= 1")
 
-    with tempfile.TemporaryDirectory() as tmp:
-        out_dir = Path(tmp)
-        bit_jobs = jobs or _default_jobs(len(bits_list))
-        if bit_jobs == 1 or len(bits_list) <= 1:
-            bit_results = [_run_bit_checks(bits, out_dir) for bits in bits_list]
+    if not failures:
+        cache_key = _e2e_cache_key(bits_list)
+        cache_payload = load_valid_cache(CACHE_NAME, cache_key)
+        if cache_payload is not None:
+            result = cache_payload.get("result", {})
+            passes.append(
+                "  ✓ e2e-cache: SHA-tied producer/parser cache valid "
+                f"(bits={result.get('bits_list', bits_list)})"
+            )
         else:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=bit_jobs) as executor:
-                futures = [executor.submit(_run_bit_checks, bits, out_dir) for bits in bits_list]
-                bit_results = [future.result() for future in futures]
-        for bit_passes, bit_failures in bit_results:
-            passes.extend(bit_passes)
-            failures.extend(bit_failures)
+            with tempfile.TemporaryDirectory() as tmp:
+                out_dir = Path(tmp)
+                bit_jobs = jobs or _default_jobs(len(bits_list))
+                if bit_jobs == 1 or len(bits_list) <= 1:
+                    bit_results = [_run_bit_checks(bits, out_dir) for bits in bits_list]
+                else:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=bit_jobs) as executor:
+                        futures = [executor.submit(_run_bit_checks, bits, out_dir) for bits in bits_list]
+                        bit_results = [future.result() for future in futures]
+                archive_sizes: dict[str, int] = {}
+                for bits in bits_list:
+                    archive = out_dir / f"bits_{bits}" / f"apogee_int{bits}_archive.zip"
+                    if archive.is_file():
+                        archive_sizes[str(bits)] = archive.stat().st_size
+                for bit_passes, bit_failures in bit_results:
+                    passes.extend(bit_passes)
+                    failures.extend(bit_failures)
+                if not failures:
+                    write_pass_cache(
+                        CACHE_NAME,
+                        cache_key,
+                        {
+                            "bits_list": list(bits_list),
+                            "archive_sizes": archive_sizes,
+                            "score_claim": False,
+                            "ready_for_exact_eval_dispatch": False,
+                        },
+                    )
 
     if allow_forensic_byte_only:
         passes.append(

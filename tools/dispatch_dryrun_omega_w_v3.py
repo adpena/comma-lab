@@ -49,6 +49,7 @@ REPO = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO)
 
 from tac.repo_io import repo_relative, sha256_file  # noqa: E402
+from tools.preflight_cache import build_cache_key, load_valid_cache, write_pass_cache  # noqa: E402
 
 WRAPPER = REPO / "scripts" / "remote_lane_omega_w_v3_pr106.sh"
 EXTRACT_SCRIPT = REPO / "experiments" / "extract_pr106_decoder.py"
@@ -57,6 +58,10 @@ PR106_ARCHIVE = REPO / "experiments" / "results" / "public_pr106_belt_and_suspen
 SENSITIVITY_STUB = REPO / "experiments" / "results" / "sensitivity_map_pr106_20260504_claude" / "sensitivity_map_stub.pt"
 INFLATE_PY = REPO / "submissions" / "apogee_v2" / "inflate.py"
 INFLATE_SH = REPO / "submissions" / "apogee_v2" / "inflate.sh"
+INFLATE_SRC = INFLATE_PY.parent / "src"
+WATER_FILLING_CODEC = REPO / "src" / "tac" / "water_filling_codec_v2.py"
+SENSITIVITY_MAP = REPO / "src" / "tac" / "sensitivity_map.py"
+CACHE_NAME = "dispatch_dryrun_omega_w_v3"
 
 EXPECTED_APOGEE_V2_BYTES = 164087
 EXPECTED_TOTAL_PARAMS = 228958
@@ -384,6 +389,44 @@ def check_parser_roundtrip(workdir: Path) -> str:
             f"{total_params:,} params)")
 
 
+def _cache_files(sensitivity_path: Path, source_archive: Path) -> list[Path]:
+    return [
+        Path(__file__),
+        WRAPPER,
+        EXTRACT_SCRIPT,
+        REPACK_SCRIPT,
+        source_archive,
+        sensitivity_path,
+        INFLATE_PY,
+        INFLATE_SH,
+        INFLATE_SRC / "model.py",
+        INFLATE_SRC / "codec.py",
+        WATER_FILLING_CODEC,
+        SENSITIVITY_MAP,
+    ]
+
+
+def _e2e_cache_key(
+    sensitivity_path: Path,
+    source_archive: Path,
+    *,
+    require_real_sensitivity: bool,
+) -> dict[str, object]:
+    return build_cache_key(
+        name=CACHE_NAME,
+        files=_cache_files(sensitivity_path, source_archive),
+        config={
+            "source_archive": _display_path(source_archive),
+            "sensitivity": _display_path(sensitivity_path),
+            "require_real_sensitivity": bool(require_real_sensitivity),
+            "expected_bytes": EXPECTED_APOGEE_V2_BYTES,
+            "expected_n_tensors": EXPECTED_N_TENSORS,
+            "expected_latent_shape": list(EXPECTED_LATENT_SHAPE),
+            "expected_total_params": EXPECTED_TOTAL_PARAMS,
+        },
+    )
+
+
 def run_dryrun(
     verbose: bool = False,
     *,
@@ -411,22 +454,50 @@ def run_dryrun(
 
     # Stage 1+3 + parser-roundtrip share the same workdir (chained)
     if not failures:  # only run e2e if structural checks all pass
-        with tempfile.TemporaryDirectory() as tmp:
-            workdir = Path(tmp)
-            _attempt("stage1-extract-e2e", check_stage1_extract_e2e, workdir, source_archive)
-            if any(p for p in passes if "stage1-extract-e2e" in p):
-                enforce_stub_byte_exact = _same_path(sensitivity_path, SENSITIVITY_STUB)
-                stage3_name = "stage3-repack-byte-exact" if enforce_stub_byte_exact else "stage3-repack-e2e"
-                _attempt(
-                    stage3_name,
-                    check_stage3_repack,
-                    workdir,
-                    sensitivity_path,
-                    source_archive,
-                    enforce_stub_byte_exact=enforce_stub_byte_exact,
-                )
-                if any(p for p in passes if stage3_name in p):
-                    _attempt("parser-roundtrip", check_parser_roundtrip, workdir)
+        cache_key = _e2e_cache_key(
+            sensitivity_path,
+            source_archive,
+            require_real_sensitivity=require_real_sensitivity,
+        )
+        cache_payload = load_valid_cache(CACHE_NAME, cache_key)
+        if cache_payload is not None:
+            result = cache_payload.get("result", {})
+            passes.append(
+                "  ✓ e2e-cache: SHA-tied Stage 1+3/parser cache valid "
+                f"(archive {result.get('archive_size_bytes', '?')}b, "
+                f"{result.get('n_tensors', '?')} tensors)"
+            )
+        else:
+            with tempfile.TemporaryDirectory() as tmp:
+                workdir = Path(tmp)
+                _attempt("stage1-extract-e2e", check_stage1_extract_e2e, workdir, source_archive)
+                if any(p for p in passes if "stage1-extract-e2e" in p):
+                    enforce_stub_byte_exact = _same_path(sensitivity_path, SENSITIVITY_STUB)
+                    stage3_name = "stage3-repack-byte-exact" if enforce_stub_byte_exact else "stage3-repack-e2e"
+                    _attempt(
+                        stage3_name,
+                        check_stage3_repack,
+                        workdir,
+                        sensitivity_path,
+                        source_archive,
+                        enforce_stub_byte_exact=enforce_stub_byte_exact,
+                    )
+                    if any(p for p in passes if stage3_name in p):
+                        _attempt("parser-roundtrip", check_parser_roundtrip, workdir)
+                        if not failures:
+                            archive = workdir / "apogee_v2_archive.zip"
+                            write_pass_cache(
+                                CACHE_NAME,
+                                cache_key,
+                                {
+                                    "archive_size_bytes": archive.stat().st_size,
+                                    "n_tensors": EXPECTED_N_TENSORS,
+                                    "latent_shape": list(EXPECTED_LATENT_SHAPE),
+                                    "total_params": EXPECTED_TOTAL_PARAMS,
+                                    "score_claim": False,
+                                    "ready_for_remote_cuda_dispatch": bool(require_real_sensitivity),
+                                },
+                            )
 
     if verbose or failures:
         for line in passes:
