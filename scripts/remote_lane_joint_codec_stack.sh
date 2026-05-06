@@ -14,17 +14,25 @@
 #     when the stream is configured as KIND_BALLE_HYPERPRIOR.
 #   * Predicted band [contest-CUDA] +150-500bp on stack-eligible archives.
 #
-# REGISTERED-BUT-NOT-WIRED in step_compress_weights as of 2026-05-06; the
-# WARN guard (commit 9bdd3d56) prevents silent no-op. The decomposition path
-# is now complete:
-#   * tac.joint_codec_stack_orchestrator.model_to_jcsp_streams ->
-#     planning specs (codec_kind, shape, dtype, byte estimates)
-#   * tac.jcsp_stream_builder.model_to_stream_sources bridges those specs
-#     to runnable StreamSource objects (symmetric int8 quantization +
-#     RAW_PASSTHROUGH payload routing). 16-test suite covers edge cases.
-# Remaining blocker is the pipeline.py dispatch wiring inside
-# step_compress_weights that calls model_to_stream_sources + run_admm and
-# packages the resulting JCSP container into an archive.zip member.
+# Wiring status as of commit f6c0035a (2026-05-06):
+#   * tac.joint_codec_stack_orchestrator.model_to_jcsp_streams -> planning
+#     specs (codec_kind, shape, dtype, byte estimates)
+#   * tac.jcsp_stream_builder.model_to_stream_sources -> bridges specs to
+#     runnable StreamSource objects (symmetric int8 quantization +
+#     RAW_PASSTHROUGH payload routing); 16-test suite.
+#   * tac.jcsp_score_marginals.{derive,save,load}_marginals -> per-tensor
+#     dScore/dByte custody artifact with strict envelope schema; 18-test
+#     suite. CLI: experiments/build_jcsp_score_marginals.py.
+#   * tac.jcsp_stream_builder.jcsp_stream_source_local_archive_member ->
+#     deterministic byte-closed JCSK skeleton archive (verified 4373 B
+#     archive, byte-identical across builds, PK\x03\x04 magic).
+#   * pipeline.step_compress_weights with cfg.use_joint_codec_stack=True
+#     writes <iter_dir>/jcsp_local_skeleton_archive.zip and raises
+#     NotImplementedError to prevent silent dispatch.
+# Remaining blockers (operator-gated, not code-side):
+#   1. Submission runtime does not consume the JCSK magic byte.
+#   2. Strict preflight proof of submission-runtime closure not yet landed.
+#   3. No contest-CUDA replay attempted.
 #
 # Cost: T4 @ ~$0.50/hr x ~1hr ADMM convergence + 30min auth eval = ~$0.75.
 set -euo pipefail
@@ -82,9 +90,22 @@ print('jcsp_stream_builder.model_to_stream_sources importable')
 print('quantize_tensor_symmetric importable')
 " 2>&1 | tee -a "$LOG_DIR/run.log"
 
-log "=== Stage 2: ADMM coordinator (BLOCKER: pipeline.py step_compress_weights dispatch wiring) ==="
-log "WARN: pipeline.py step_compress_weights does NOT yet call model_to_stream_sources."
-log "WARN: A real archive build needs: cfg.weight_compression='jcsp' branch that calls"
-log "WARN:   model_to_stream_sources(model, score_marginals=...) -> run_admm -> JCSP container -> archive.zip."
-log "=== Stage 3: contest-CUDA auth eval (skipped) ==="
-log "LANE_JOINT_CODEC_STACK_DONE score=N/A [contest-CUDA] paradigm=gamma-jcsp blocked=pipeline_step_compress_weights_dispatch_wiring_missing"
+log "=== Stage 2: local-skeleton archive build (UNBLOCKED at commit f6c0035a) ==="
+log "INFO: pipeline.step_compress_weights with cfg.use_joint_codec_stack=True"
+log "INFO:   now calls jcsp_stream_source_local_archive_member which produces"
+log "INFO:   a deterministic byte-closed JCSK skeleton archive at"
+log "INFO:   <iter_dir>/jcsp_local_skeleton_archive.zip plus a manifest JSON."
+log "INFO: Operator drives via:"
+log "INFO:   1. python experiments/build_jcsp_score_marginals.py --model X.pt"
+log "INFO:        --out marginals.json --mode uniform --evidence '...'"
+log "INFO:   2. python experiments/pipeline.py with use_joint_codec_stack=True"
+log "INFO:        + jcsp_score_marginals_path=marginals.json"
+log "INFO:   The pipeline raises NotImplementedError after the archive write,"
+log "INFO:   so the bytes exist but no contest-CUDA submission is attempted."
+
+log "=== Stage 3: contest-CUDA auth eval (BLOCKER: submission runtime does not consume jcsp.bin/JCSK) ==="
+log "WARN: The submission runtime in submissions/exact_current/inflate.{sh,py}"
+log "WARN:   does not parse the JCSK skeleton magic byte. Until a runtime"
+log "WARN:   consumer ships, the local-skeleton archive cannot be evaluated"
+log "WARN:   on the contest scorer. STRICT preflight proof is also pending."
+log "LANE_JOINT_CODEC_STACK_DONE score=N/A [contest-CUDA] paradigm=gamma-jcsp blocked=submission_runtime_jcsp_consumer_missing+strict_preflight_proof_missing"
