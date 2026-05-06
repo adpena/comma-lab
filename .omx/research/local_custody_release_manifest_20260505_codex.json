@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "tool": "tools/audit_release_index_split.py",
+  "scope": "public_release_local_custody",
+  "source_audit": ".venv/bin/python tools/audit_release_index_split.py --strict --format json",
+  "ledger_path": ".omx/research/recovery_quarantine_signal_loss_triage_20260505_codex.md",
+  "rules": [
+    {
+      "id": "provider_runtime_state_private_summarized",
+      "match": {
+        "kind": "unstaged_private_runtime_state",
+        "path_prefix": ".omx/state/"
+      },
+      "action": "keep_private_local",
+      "public_release": "exclude_raw",
+      "ledger_path": ".omx/research/recovery_quarantine_signal_loss_triage_20260505_codex.md",
+      "note": "Live provider/runtime ledgers are local custody. Public release cites sanitized job ids, evidence summaries, and exact artifacts rather than raw queue/database state."
+    },
+    {
+      "id": "apogee_repack_metadata_rebuildable",
+      "match": {
+        "kind": "unstaged_local_custody_snapshot",
+        "path_prefix": "experiments/results/apogee_int"
+      },
+      "action": "preserve_local_rebuildable",
+      "public_release": "exclude_raw",
+      "ledger_path": ".omx/research/recovery_quarantine_signal_loss_triage_20260505_codex.md",
+      "note": "Apogee intN repack metadata is generated experiment output. Canonical source, scorecard summaries, and release ledgers carry the reusable evidence."
+    },
+    {
+      "id": "public_pr_intake_gitlinks_forensic",
+      "match": {
+        "kind": "unstaged_local_custody_snapshot",
+        "path_prefix": "experiments/results/public_pr"
+      },
+      "action": "preserve_local_forensics",
+      "public_release": "exclude_raw",
+      "ledger_path": ".omx/research/reverse_engineering_release_manifest_20260505_codex.json",
+      "note": "Public PR intake trees are forensic snapshots. Release surfaces cite upstream PRs, archive SHA fields, and curated reverse-engineering notes instead of committing nested git state."
+    },
+    {
+      "id": "kaggle_raw_ingest_externalized",
+      "match": {
+        "kind": "unstaged_local_custody_snapshot",
+        "path_prefix": "reports/raw/kaggle_ingest/"
+      },
+      "action": "externalize_or_rebuild",
+      "public_release": "exclude_raw",
+      "ledger_path": ".omx/research/recovery_quarantine_signal_loss_triage_20260505_codex.md",
+      "note": "Raw Kaggle ingest state is rebuildable/raw custody. Public release should link a sanitized manifest or regenerate from source instructions."
+    },
+    {
+      "id": "orphan_recovery_snapshots_private",
+      "match": {
+        "kind": "unstaged_local_custody_snapshot",
+        "path_prefix": "reverse_engineering/orphan_pyc_recovery_20260505_codex/"
+      },
+      "action": "preserve_private_after_canonicalization",
+      "public_release": "exclude_raw",
+      "ledger_path": ".omx/research/reverse_engineering_release_manifest_20260505_codex.json",
+      "note": "Recovered orphan snapshots remain private/local once canonical source copies, tests, or release notes are promoted into main-tree paths."
+    }
+  ]
+}

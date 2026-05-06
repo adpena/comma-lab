@@ -1,0 +1,397 @@
+{
+  "entries": [
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable research/control-plane ledger or disposition manifest; small, non-provider source of truth.",
+      "path": ".omx/research/hnerv_payload_scorecard_followup_20260505_codex.md"
+    },
+    {
+      "classification": "research_untracked",
+      "disposition": "track",
+      "note": "track: durable research/control-plane ledger or disposition manifest; small, non-provider source of truth.",
+      "path": ".omx/research/untracked_source_dispositions_20260505_codex.json"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator runbook for recovered/canonical harness behavior.",
+      "path": "docs/runbooks/hidden_gem_readiness_audit.md"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator runbook for recovered/canonical harness behavior.",
+      "path": "docs/runbooks/hidden_gems_registry.md"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator runbook for recovered/canonical harness behavior.",
+      "path": "docs/runbooks/pr106_sidechannel_dryrun.md"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator runbook for recovered/canonical harness behavior.",
+      "path": "docs/runbooks/recovered_remote_lanes.md"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: operator runbook for recovered/canonical harness behavior.",
+      "path": "docs/runbooks/research_state_tracking_policy.md"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical experiment, replay, profile, or preflight source; artifacts remain ignored elsewhere.",
+      "path": "experiments/build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical experiment, replay, profile, or preflight source; artifacts remain ignored elsewhere.",
+      "path": "experiments/build_pr95_hnerv_residual_atom_plan.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical experiment, replay, profile, or preflight source; artifacts remain ignored elsewhere.",
+      "path": "experiments/preflight_candidate_manifest_dispatch_readiness.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical experiment, replay, profile, or preflight source; artifacts remain ignored elsewhere.",
+      "path": "experiments/preflight_public_replay_intake.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical experiment, replay, profile, or preflight source; artifacts remain ignored elsewhere.",
+      "path": "experiments/profile_pr75_minp_archive.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical experiment, replay, profile, or preflight source; artifacts remain ignored elsewhere.",
+      "path": "experiments/profile_pr94_qpose_intake.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical experiment, replay, profile, or preflight source; artifacts remain ignored elsewhere.",
+      "path": "experiments/profile_pr95_hnerv_muon_intake.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical experiment, replay, profile, or preflight source; artifacts remain ignored elsewhere.",
+      "path": "experiments/profile_pr97_h3_intake.py"
+    },
+    {
+      "classification": "reverse_engineering_untracked",
+      "disposition": "track",
+      "note": "track: curated public-submission deconstruction notes/source, not raw provider dump.",
+      "path": "reverse_engineering/README.md"
+    },
+    {
+      "classification": "reverse_engineering_untracked",
+      "disposition": "track",
+      "note": "track: curated public-submission deconstruction notes/source, not raw provider dump.",
+      "path": "reverse_engineering/pr95_hnerv/README.md"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: recovered remote lane script with custody/proxy classification and preflight coverage.",
+      "path": "scripts/remote_lane_q_faithful_jointgen.sh"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical library source recovered into main implementation surface.",
+      "path": "src/comma_lab/reverse_engineering.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical library source recovered into main implementation surface.",
+      "path": "src/tac/audit_contract.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical library source recovered into main implementation surface.",
+      "path": "src/tac/deploy/lightning/defaults.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical library source recovered into main implementation surface.",
+      "path": "src/tac/engineered_correction_readiness.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical library source recovered into main implementation surface.",
+      "path": "src/tac/hidden_gem_readiness.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical library source recovered into main implementation surface.",
+      "path": "src/tac/hidden_gems.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical library source recovered into main implementation surface.",
+      "path": "src/tac/pr79_segaction_payload.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical library source recovered into main implementation surface.",
+      "path": "src/tac/pr95_hnerv.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical library source recovered into main implementation surface.",
+      "path": "src/tac/pr95_residual_atoms.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical library source recovered into main implementation surface.",
+      "path": "src/tac/repo_io.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_audit_contract.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_audit_hnerv_frontier_scorecard.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_audit_recovered_remote_lanes.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_audit_tooling_consolidation.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_audit_untracked_source_artifacts.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_build_hnerv_frontier_scorecard.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_dispatch_dryrun_omega_w_v3.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_dispatch_dryrun_pr106_sidechannels.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_engineered_correction_readiness.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_hidden_gem_readiness.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_hidden_gems.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_launch_lightning_alpha_geo0_pose_regen.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_pr79_segaction_payload.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_pr95_residual_atoms.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_preflight_candidate_manifest_dispatch_readiness.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_preflight_public_replay_intake.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_profile_pr75_minp_archive.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_profile_pr94_qpose_intake.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_profile_pr95_hnerv_muon_intake.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_profile_pr97_h3_intake.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_qh0_record_serializer.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_recovered_remote_lane_scripts.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_repo_io.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_submission_archive_safety.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_yousfi_3_variance_noise.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "src/tac/tests/test_yousfi_5_uncertainty.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: regression coverage for recovered tac/comma-lab functionality.",
+      "path": "tests/test_comma_lab_reverse_engineering.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical audit/dispatch/tooling CLI used by all-lanes preflight or recovery workflows.",
+      "path": "tools/audit_engineered_corrections.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical audit/dispatch/tooling CLI used by all-lanes preflight or recovery workflows.",
+      "path": "tools/audit_hidden_gem_readiness.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical audit/dispatch/tooling CLI used by all-lanes preflight or recovery workflows.",
+      "path": "tools/audit_hnerv_frontier_scorecard.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical audit/dispatch/tooling CLI used by all-lanes preflight or recovery workflows.",
+      "path": "tools/audit_recovered_remote_lanes.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical audit/dispatch/tooling CLI used by all-lanes preflight or recovery workflows.",
+      "path": "tools/audit_reverse_engineering_tree.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical audit/dispatch/tooling CLI used by all-lanes preflight or recovery workflows.",
+      "path": "tools/audit_tooling_consolidation.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical audit/dispatch/tooling CLI used by all-lanes preflight or recovery workflows.",
+      "path": "tools/audit_untracked_source_artifacts.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical audit/dispatch/tooling CLI used by all-lanes preflight or recovery workflows.",
+      "path": "tools/list_hidden_gems.py"
+    },
+    {
+      "classification": "source_untracked",
+      "disposition": "track",
+      "note": "track: canonical audit/dispatch/tooling CLI used by all-lanes preflight or recovery workflows.",
+      "path": "tools/tool_bootstrap.py"
+    }
+  ],
+  "policy": "Every source-like untracked path must be track, recovery_queue, ignore_private, or ignore_rebuildable with rationale.",
+  "reviewed_at_utc": "2026-05-05T00:00:00Z",
+  "schema": "pact_untracked_source_dispositions_v1"
+}

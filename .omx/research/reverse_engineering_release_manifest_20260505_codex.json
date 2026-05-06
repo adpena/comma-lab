@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "tool": "comma_lab.reverse_engineering_release_manifest",
+  "scope": "public_release",
+  "source_audit": ".venv/bin/python tools/audit_reverse_engineering_tree.py --release-strict --summary",
+  "ledger_path": ".omx/research/recovery_quarantine_signal_loss_triage_20260505_codex.md",
+  "rules": [
+    {
+      "id": "auto_memory_snapshots_summarized",
+      "match": {
+        "category": "orphan_auto_memory_snapshot"
+      },
+      "action": "summarized_to_research_ledger",
+      "public_release": "publish_sanitized_summary",
+      "ledger_path": ".omx/research/recovery_quarantine_signal_loss_triage_20260505_codex.md",
+      "note": "Raw auto-memory snapshots are private recovery custody. Durable lessons are summarized in the dated recovery ledger and public writeup sections."
+    },
+    {
+      "id": "provider_state_summarized",
+      "match": {
+        "category": "orphan_provider_or_dispatch_state"
+      },
+      "action": "summarized_to_research_ledger",
+      "public_release": "publish_sanitized_summary",
+      "ledger_path": ".omx/research/recovery_quarantine_signal_loss_triage_20260505_codex.md",
+      "note": "Provider and dispatch state is not published raw. Release surfaces cite sanitized commands, evidence SHA fields, and custody summaries."
+    },
+    {
+      "id": "recovery_specs_preserved_private",
+      "match": {
+        "category": "orphan_recovery_spec"
+      },
+      "action": "preserved_private_with_digest",
+      "public_release": "exclude_raw",
+      "ledger_path": ".omx/research/recovery_quarantine_signal_loss_triage_20260505_codex.md",
+      "note": "Recovery specs preserve pyc/decompiler provenance but are not public source. Promoted code or ledger summaries carry the reusable signal."
+    },
+    {
+      "id": "public_runtime_copies_forensic_only",
+      "match": {
+        "category": "orphan_public_runtime_or_result_copy"
+      },
+      "action": "external_forensics_manifest_only",
+      "public_release": "exclude_raw",
+      "ledger_path": ".omx/research/recovery_quarantine_signal_loss_triage_20260505_codex.md",
+      "note": "Public runtime/result copies remain local forensic custody. Public release links PRs, archive SHA fields, and curated reverse-engineering notes."
+    },
+    {
+      "id": "damaged_decompiles_preserved_private",
+      "match": {
+        "category": "orphan_damaged_decompile"
+      },
+      "action": "preserved_private_with_digest",
+      "public_release": "exclude_raw",
+      "ledger_path": ".omx/research/recovery_quarantine_signal_loss_triage_20260505_codex.md",
+      "note": "Damaged decompile outputs are provenance, not source. Reusable behavior must be hand-rehydrated into tested main-tree code before publication."
+    },
+    {
+      "id": "operator_tools_promoted_or_ledgered",
+      "match": {
+        "category": "orphan_operator_tool_candidate"
+      },
+      "action": "promoted_or_ledgered",
+      "public_release": "publish_curated_source",
+      "ledger_path": ".omx/research/recovery_quarantine_signal_loss_triage_20260505_codex.md",
+      "note": "Operator tools that remain useful are promoted into tools/ with tests and gates; stale variants are documented as recovery evidence only."
+    },
+    {
+      "id": "tac_tests_promoted_or_ledgered",
+      "match": {
+        "category": "orphan_tac_test_candidate"
+      },
+      "action": "promoted_or_ledgered",
+      "public_release": "publish_curated_source",
+      "ledger_path": ".omx/research/recovery_quarantine_signal_loss_triage_20260505_codex.md",
+      "note": "Reusable tests are promoted into src/tac/tests. Unpromoted variants are recovery evidence and remain excluded from public source."
+    },
+    {
+      "id": "reports_docs_canonicalized",
+      "match": {
+        "category": "orphan_report_or_site_candidate"
+      },
+      "action": "canonicalized_to_docs_or_ledger",
+      "public_release": "publish_sanitized_summary",
+      "ledger_path": ".omx/research/recovery_quarantine_signal_loss_triage_20260505_codex.md",
+      "note": "Report/site candidates are folded into docs, the public writeup, or the dated recovery ledger. Raw recovered copies are not release assets."
+    },
+    {
+      "id": "experiment_entrypoints_promoted_or_ledgered",
+      "match": {
+        "category": "orphan_experiment_entrypoint_candidate"
+      },
+      "action": "promoted_or_ledgered",
+      "public_release": "publish_curated_source",
+      "ledger_path": ".omx/research/recovery_quarantine_signal_loss_triage_20260505_codex.md",
+      "note": "Reusable experiment entrypoints are promoted as thin CLIs over tac/comma_lab modules; stale recovered copies are excluded."
+    },
+    {
+      "id": "submission_runtime_candidates_private_until_compliant",
+      "match": {
+        "category": "orphan_submission_runtime_candidate"
+      },
+      "action": "preserved_private_until_compliance_review",
+      "public_release": "exclude_raw",
+      "ledger_path": ".omx/research/recovery_quarantine_signal_loss_triage_20260505_codex.md",
+      "note": "Recovered submission runtimes are not public release assets until contest-compliance and exact-runtime custody review promote them."
+    }
+  ]
+}
