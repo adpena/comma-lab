@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TOOL_PATH = REPO_ROOT / "tools" / "lightning_dispatch_pr106_yshift_score_table.py"
 
@@ -134,3 +136,33 @@ def test_batch_spec_records_generic_cuda_profile_role(tmp_path: Path) -> None:
     assert spec.teamspace == "comma-lab"
     assert spec.local_artifact_dir == "experiments/results/lightning_batch/lane_pr106_yshift_score_table_test"
     assert spec.queue_metadata["lane"] == "lane_pr106_yshift_score_table"
+
+
+def test_dispatch_fails_before_claim_when_ssh_target_missing(tmp_path: Path) -> None:
+    tool = _load_tool()
+    args = _args(tmp_path)
+    args.ssh_target = ""
+
+    with pytest.raises(SystemExit, match="--ssh-target or LIGHTNING_SSH_TARGET"):
+        tool.dispatch(args)
+
+
+def test_batch_print_only_can_skip_ssh_and_stage_when_prestaged(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    tool = _load_tool()
+    args = _args(tmp_path)
+    args.ssh_target = ""
+    args.skip_ssh_check = True
+    args.skip_stage = True
+    args.backend = "batch"
+    args.print_only = True
+
+    assert tool.dispatch(args) == 0
+    output = capsys.readouterr().out
+
+    assert "=== ssh preflight ===" not in output
+    assert "=== stage ===" not in output
+    assert "=== claim ===" in output
+    assert "=== batch command ===" in output

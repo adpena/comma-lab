@@ -336,6 +336,19 @@ def _terminal_claim(args: argparse.Namespace, *, status: str, notes: str) -> Non
     subprocess.run(cmd, cwd=REPO_ROOT, check=False)
 
 
+def _needs_ssh_target(args: argparse.Namespace) -> bool:
+    return not (args.backend == "batch" and args.skip_ssh_check and args.skip_stage)
+
+
+def _validate_dispatch_args(args: argparse.Namespace) -> None:
+    if _needs_ssh_target(args) and not str(args.ssh_target or "").strip():
+        raise SystemExit(
+            "FATAL: --ssh-target or LIGHTNING_SSH_TARGET is required before "
+            "claim/stage dispatch. For pre-staged Lightning Batch-only command "
+            "generation, pass --backend batch --skip-ssh-check --skip-stage."
+        )
+
+
 def _submit_batch(args: argparse.Namespace) -> int:
     spec = build_batch_spec(args)
     if args.print_only:
@@ -359,6 +372,7 @@ def dispatch(args: argparse.Namespace) -> int:
         raise SystemExit(f"FATAL: PR106 archive not found: {args.pr106_archive}")
     if not CLAIMS_PATH.is_file():
         raise SystemExit(f"FATAL: dispatch claim ledger not found: {CLAIMS_PATH}")
+    _validate_dispatch_args(args)
 
     ssh_cmd = build_ssh_check_command(args)
     claim_cmd = build_claim_command(
@@ -370,9 +384,11 @@ def dispatch(args: argparse.Namespace) -> int:
     dispatch_cmd = build_dispatch_command(args)
 
     if args.print_only:
-        _print_command("ssh preflight", ssh_cmd)
+        if not args.skip_ssh_check:
+            _print_command("ssh preflight", ssh_cmd)
         _print_command("claim", claim_cmd)
-        _print_command("stage", stage_cmd)
+        if not args.skip_stage:
+            _print_command("stage", stage_cmd)
         if args.backend == "batch":
             print("=== batch command ===")
             print(build_batch_command(args))
