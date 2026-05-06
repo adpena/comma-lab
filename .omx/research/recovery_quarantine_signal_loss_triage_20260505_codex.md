@@ -3967,3 +3967,30 @@ the strict output as the queue: canonicalize or intentionally disposition the
 three tracked shadows first, then decide which of the 31 missing-canonical
 copies belong under `reverse_engineering/`, `tools/`, `src/tac/`, or a private
 custody manifest.
+
+## R52 - 2026-05-06 First Tracked-Shadow Canonicalization
+
+Resolved the first strict orphan-recovery shadow class by hand-reviewing the
+three modified orphan copies that mapped onto tracked canonical files:
+
+- `reverse_engineering/orphan_pyc_recovery_20260505_codex/reports/graphs/build_public_site_bundle.py`
+  mapped to `reports/graphs/build_public_site_bundle.py`.
+- `reverse_engineering/orphan_pyc_recovery_20260505_codex/reports/graphs/test_build_public_site_bundle.py`
+  mapped to `reports/graphs/test_build_public_site_bundle.py`.
+- `reverse_engineering/orphan_pyc_recovery_20260505_codex/scripts/pre_submission_compliance_check.py`
+  mapped to `scripts/pre_submission_compliance_check.py`.
+
+Decision: keep the canonical tracked files and delete the orphan duplicates.
+The orphan copies were older recovered source snapshots with pass2 comments and
+without newer production/release hardening already present in canonical code.
+The canonical public-site bundle keeps the private `comma-lab` URL rewrite,
+public-link audit, external-path manifest redaction, `src` import bootstrap,
+and tests for final manifest/link hygiene. The canonical pre-submission gate
+keeps `tools.tool_bootstrap`, `tac.repo_io` JSON/SHA/path helpers, and the
+current terminal-dispatch row parser.
+
+No source signal is lost by deleting these three duplicates: their canonical
+source paths are tracked, stricter, tested, and already contain the useful
+recovered behavior plus later hardening. The remaining orphan modified-copy
+queue should drop from `shadowed_modified_count=3` to zero after these staged
+deletions, leaving only missing-canonical recovery decisions.
