@@ -1,29 +1,473 @@
 {
+  "followup_targets": [
+    {
+      "entropy_bits_per_byte": 7.998152,
+      "label": "PR106",
+      "payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "required_next_gate": "build byte-different archive, then exact CUDA replay",
+      "section": "decoder_packed_brotli",
+      "section_bytes": 170278,
+      "suggested_action": "decoder self-compression or weight-stream recoding fixture"
+    },
+    {
+      "entropy_bits_per_byte": 7.998152,
+      "label": "PR106x",
+      "payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "required_next_gate": "build byte-different archive, then exact CUDA replay",
+      "section": "decoder_packed_brotli",
+      "section_bytes": 170278,
+      "suggested_action": "decoder self-compression or weight-stream recoding fixture"
+    },
+    {
+      "entropy_bits_per_byte": 7.998095,
+      "label": "PR105",
+      "payload_sha256": "5f88fa8ed26816cf6e86a00cf3c88915963c2a84f899173fd6820359df29aad0",
+      "required_next_gate": "build byte-different archive, then exact CUDA replay",
+      "section": "decoder_packed_brotli",
+      "section_bytes": 161891,
+      "suggested_action": "decoder self-compression or weight-stream recoding fixture"
+    },
+    {
+      "entropy_bits_per_byte": 7.998095,
+      "label": "PR105x",
+      "payload_sha256": "5f88fa8ed26816cf6e86a00cf3c88915963c2a84f899173fd6820359df29aad0",
+      "required_next_gate": "build byte-different archive, then exact CUDA replay",
+      "section": "decoder_packed_brotli",
+      "section_bytes": 161891,
+      "suggested_action": "decoder self-compression or weight-stream recoding fixture"
+    },
+    {
+      "entropy_bits_per_byte": 7.985312,
+      "label": "PR105",
+      "payload_sha256": "5f88fa8ed26816cf6e86a00cf3c88915963c2a84f899173fd6820359df29aad0",
+      "required_next_gate": "build byte-different archive, then exact CUDA replay",
+      "section": "latents_and_sidecar_brotli",
+      "section_bytes": 15854,
+      "suggested_action": "latent/sidecar arithmetic-coding parity fixture"
+    },
+    {
+      "entropy_bits_per_byte": 7.985312,
+      "label": "PR105x",
+      "payload_sha256": "5f88fa8ed26816cf6e86a00cf3c88915963c2a84f899173fd6820359df29aad0",
+      "required_next_gate": "build byte-different archive, then exact CUDA replay",
+      "section": "latents_and_sidecar_brotli",
+      "section_bytes": 15854,
+      "suggested_action": "latent/sidecar arithmetic-coding parity fixture"
+    },
+    {
+      "entropy_bits_per_byte": 7.985386,
+      "label": "PR106",
+      "payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "required_next_gate": "build byte-different archive, then exact CUDA replay",
+      "section": "latents_and_sidecar_brotli",
+      "section_bytes": 15849,
+      "suggested_action": "latent/sidecar arithmetic-coding parity fixture"
+    },
+    {
+      "entropy_bits_per_byte": 7.985386,
+      "label": "PR106x",
+      "payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "required_next_gate": "build byte-different archive, then exact CUDA replay",
+      "section": "latents_and_sidecar_brotli",
+      "section_bytes": 15849,
+      "suggested_action": "latent/sidecar arithmetic-coding parity fixture"
+    },
+    {
+      "entropy_bits_per_byte": 2.0,
+      "label": "PR105",
+      "payload_sha256": "5f88fa8ed26816cf6e86a00cf3c88915963c2a84f899173fd6820359df29aad0",
+      "required_next_gate": "build byte-different archive, then exact CUDA replay",
+      "section": "packed_header_ff_len24",
+      "section_bytes": 4,
+      "suggested_action": "payload grammar audit"
+    },
+    {
+      "entropy_bits_per_byte": 2.0,
+      "label": "PR105x",
+      "payload_sha256": "5f88fa8ed26816cf6e86a00cf3c88915963c2a84f899173fd6820359df29aad0",
+      "required_next_gate": "build byte-different archive, then exact CUDA replay",
+      "section": "packed_header_ff_len24",
+      "section_bytes": 4,
+      "suggested_action": "payload grammar audit"
+    },
+    {
+      "entropy_bits_per_byte": 2.0,
+      "label": "PR106",
+      "payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "required_next_gate": "build byte-different archive, then exact CUDA replay",
+      "section": "packed_header_ff_len24",
+      "section_bytes": 4,
+      "suggested_action": "payload grammar audit"
+    },
+    {
+      "entropy_bits_per_byte": 2.0,
+      "label": "PR106x",
+      "payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "required_next_gate": "build byte-different archive, then exact CUDA replay",
+      "section": "packed_header_ff_len24",
+      "section_bytes": 4,
+      "suggested_action": "payload grammar audit"
+    }
+  ],
+  "payload_equivalence_groups": [
+    {
+      "archive_byte_span": 8,
+      "archives": [
+        {
+          "archive_bytes": 177857,
+          "archive_sha256": "597ba0732810eba08cdae619b679d211d398bc0249b8831898f7096d5beece1d",
+          "label": "PR105",
+          "profile_match_key": "archive_sha256",
+          "zip_member": "0.bin",
+          "zip_overhead_bytes": 108
+        },
+        {
+          "archive_bytes": 177849,
+          "archive_sha256": "692a46931f66416ab71270661f580a4b5bb2e5a887b19c51aabbb8851493feab",
+          "label": "PR105x",
+          "profile_match_key": "archive_sha256",
+          "zip_member": "x",
+          "zip_overhead_bytes": 100
+        }
+      ],
+      "labels": [
+        "PR105",
+        "PR105x"
+      ],
+      "payload_sha256": "5f88fa8ed26816cf6e86a00cf3c88915963c2a84f899173fd6820359df29aad0",
+      "readiness": "byte-identical payload pair; use as repack custody/control only",
+      "same_pose_contribution": true,
+      "same_seg_contribution": true
+    },
+    {
+      "archive_byte_span": 8,
+      "archives": [
+        {
+          "archive_bytes": 186239,
+          "archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+          "label": "PR106",
+          "profile_match_key": "archive_sha256",
+          "zip_member": "0.bin",
+          "zip_overhead_bytes": 108
+        },
+        {
+          "archive_bytes": 186231,
+          "archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+          "label": "PR106x",
+          "profile_match_key": "archive_sha256",
+          "zip_member": "x",
+          "zip_overhead_bytes": 100
+        }
+      ],
+      "labels": [
+        "PR106",
+        "PR106x"
+      ],
+      "payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "readiness": "byte-identical payload pair; use as repack custody/control only",
+      "same_pose_contribution": true,
+      "same_seg_contribution": true
+    }
+  ],
+  "payload_section_manifests": [
+    {
+      "archive_bytes": 177857,
+      "archive_sha256": "597ba0732810eba08cdae619b679d211d398bc0249b8831898f7096d5beece1d",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "payload_section_manifest_is_byte_forensics_only",
+        "requires_byte_different_candidate_archive",
+        "requires_exact_cuda_auth_eval_on_candidate"
+      ],
+      "label": "PR105",
+      "member_bytes": 177749,
+      "payload_sha256": "5f88fa8ed26816cf6e86a00cf3c88915963c2a84f899173fd6820359df29aad0",
+      "profile_match_key": "archive_sha256",
+      "score_claim": false,
+      "sections": [
+        {
+          "bytes": 4,
+          "end": 4,
+          "entropy_bits_per_byte": 2.0,
+          "index": 0,
+          "name": "packed_header_ff_len24",
+          "optimization_role": "control_or_metadata",
+          "required_byte_change_proof": "future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch",
+          "sha256": "837b877d82478a79a5d8cb14387c8f994c1b4e76d606b38c282175e3ad103478",
+          "start": 0
+        },
+        {
+          "bytes": 161891,
+          "end": 161895,
+          "entropy_bits_per_byte": 7.998095,
+          "index": 1,
+          "name": "decoder_packed_brotli",
+          "optimization_role": "decoder_weight_stream",
+          "required_byte_change_proof": "future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch",
+          "sha256": "e241db1c2cbfb53aa4dd32a0dc41ccc511259b44223a25666e026ec78aeb0934",
+          "start": 4
+        },
+        {
+          "bytes": 15854,
+          "end": 177749,
+          "entropy_bits_per_byte": 7.985312,
+          "index": 2,
+          "name": "latents_and_sidecar_brotli",
+          "optimization_role": "latent_stream",
+          "required_byte_change_proof": "future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch",
+          "sha256": "aeea25a3116b44570dcb74927ba250b68b7ddea524207f8968688ac885f3b286",
+          "start": 161895
+        }
+      ],
+      "zip_member": "0.bin"
+    },
+    {
+      "archive_bytes": 177849,
+      "archive_sha256": "692a46931f66416ab71270661f580a4b5bb2e5a887b19c51aabbb8851493feab",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "payload_section_manifest_is_byte_forensics_only",
+        "requires_byte_different_candidate_archive",
+        "requires_exact_cuda_auth_eval_on_candidate"
+      ],
+      "label": "PR105x",
+      "member_bytes": 177749,
+      "payload_sha256": "5f88fa8ed26816cf6e86a00cf3c88915963c2a84f899173fd6820359df29aad0",
+      "profile_match_key": "archive_sha256",
+      "score_claim": false,
+      "sections": [
+        {
+          "bytes": 4,
+          "end": 4,
+          "entropy_bits_per_byte": 2.0,
+          "index": 0,
+          "name": "packed_header_ff_len24",
+          "optimization_role": "control_or_metadata",
+          "required_byte_change_proof": "future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch",
+          "sha256": "837b877d82478a79a5d8cb14387c8f994c1b4e76d606b38c282175e3ad103478",
+          "start": 0
+        },
+        {
+          "bytes": 161891,
+          "end": 161895,
+          "entropy_bits_per_byte": 7.998095,
+          "index": 1,
+          "name": "decoder_packed_brotli",
+          "optimization_role": "decoder_weight_stream",
+          "required_byte_change_proof": "future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch",
+          "sha256": "e241db1c2cbfb53aa4dd32a0dc41ccc511259b44223a25666e026ec78aeb0934",
+          "start": 4
+        },
+        {
+          "bytes": 15854,
+          "end": 177749,
+          "entropy_bits_per_byte": 7.985312,
+          "index": 2,
+          "name": "latents_and_sidecar_brotli",
+          "optimization_role": "latent_stream",
+          "required_byte_change_proof": "future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch",
+          "sha256": "aeea25a3116b44570dcb74927ba250b68b7ddea524207f8968688ac885f3b286",
+          "start": 161895
+        }
+      ],
+      "zip_member": "x"
+    },
+    {
+      "archive_bytes": 186239,
+      "archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "payload_section_manifest_is_byte_forensics_only",
+        "requires_byte_different_candidate_archive",
+        "requires_exact_cuda_auth_eval_on_candidate"
+      ],
+      "label": "PR106",
+      "member_bytes": 186131,
+      "payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "profile_match_key": "archive_sha256",
+      "score_claim": false,
+      "sections": [
+        {
+          "bytes": 4,
+          "end": 4,
+          "entropy_bits_per_byte": 2.0,
+          "index": 0,
+          "name": "packed_header_ff_len24",
+          "optimization_role": "control_or_metadata",
+          "required_byte_change_proof": "future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch",
+          "sha256": "7939f08db7d18dd4176e8e11b1232a9be6b2371db7a4e63c1c0871fb520148b6",
+          "start": 0
+        },
+        {
+          "bytes": 170278,
+          "end": 170282,
+          "entropy_bits_per_byte": 7.998152,
+          "index": 1,
+          "name": "decoder_packed_brotli",
+          "optimization_role": "decoder_weight_stream",
+          "required_byte_change_proof": "future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch",
+          "sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
+          "start": 4
+        },
+        {
+          "bytes": 15849,
+          "end": 186131,
+          "entropy_bits_per_byte": 7.985386,
+          "index": 2,
+          "name": "latents_and_sidecar_brotli",
+          "optimization_role": "latent_stream",
+          "required_byte_change_proof": "future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch",
+          "sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+          "start": 170282
+        }
+      ],
+      "zip_member": "0.bin"
+    },
+    {
+      "archive_bytes": 186231,
+      "archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "payload_section_manifest_is_byte_forensics_only",
+        "requires_byte_different_candidate_archive",
+        "requires_exact_cuda_auth_eval_on_candidate"
+      ],
+      "label": "PR106x",
+      "member_bytes": 186131,
+      "payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "profile_match_key": "archive_sha256",
+      "score_claim": false,
+      "sections": [
+        {
+          "bytes": 4,
+          "end": 4,
+          "entropy_bits_per_byte": 2.0,
+          "index": 0,
+          "name": "packed_header_ff_len24",
+          "optimization_role": "control_or_metadata",
+          "required_byte_change_proof": "future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch",
+          "sha256": "7939f08db7d18dd4176e8e11b1232a9be6b2371db7a4e63c1c0871fb520148b6",
+          "start": 0
+        },
+        {
+          "bytes": 170278,
+          "end": 170282,
+          "entropy_bits_per_byte": 7.998152,
+          "index": 1,
+          "name": "decoder_packed_brotli",
+          "optimization_role": "decoder_weight_stream",
+          "required_byte_change_proof": "future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch",
+          "sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
+          "start": 4
+        },
+        {
+          "bytes": 15849,
+          "end": 186131,
+          "entropy_bits_per_byte": 7.985386,
+          "index": 2,
+          "name": "latents_and_sidecar_brotli",
+          "optimization_role": "latent_stream",
+          "required_byte_change_proof": "future candidate must record old/new section SHA-256 and old/new charged bytes before exact-eval dispatch",
+          "sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+          "start": 170282
+        }
+      ],
+      "zip_member": "x"
+    }
+  ],
   "rows": [
     {
       "archive_bytes": 186231,
       "archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
       "avg_posenet_dist": 3.351e-05,
       "avg_segnet_dist": 0.00067142,
+      "canonical_frontier_eligible": true,
+      "canonicality_blockers": [],
       "eval_artifact": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json",
       "evidence_grade": "A++",
       "gpu_model": "Tesla T4",
       "label": "PR106x",
-      "largest_payload_section": null,
-      "profile_kind": null,
+      "largest_payload_section": {
+        "bytes": 170278,
+        "end": 170282,
+        "entropy_bits_per_byte": 7.998152,
+        "name": "decoder_packed_brotli",
+        "sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
+        "start": 4
+      },
+      "member_bytes": 186131,
+      "payload_sections": [
+        {
+          "bytes": 4,
+          "end": 4,
+          "entropy_bits_per_byte": 2.0,
+          "name": "packed_header_ff_len24",
+          "sha256": "7939f08db7d18dd4176e8e11b1232a9be6b2371db7a4e63c1c0871fb520148b6",
+          "start": 0
+        },
+        {
+          "bytes": 170278,
+          "end": 170282,
+          "entropy_bits_per_byte": 7.998152,
+          "name": "decoder_packed_brotli",
+          "sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
+          "start": 4
+        },
+        {
+          "bytes": 15849,
+          "end": 186131,
+          "entropy_bits_per_byte": 7.985386,
+          "name": "latents_and_sidecar_brotli",
+          "sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+          "start": 170282
+        }
+      ],
+      "payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "profile_archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+      "profile_kind": "ff_packed_brotli_hnerv",
+      "profile_match_key": "archive_sha256",
+      "profile_member_name": "x",
       "runtime_tree_sha256": "02bbb2052ea0f5d123a6143077ce5dcda78363ffca2424214040473ac0bcb2fa",
       "score": 0.20945123680571204,
       "score_pose_contribution": 0.018305736805712028,
       "score_rate_contribution": 0.1240035,
       "score_seg_contribution": 0.06714200000000001,
-      "zip_member": null,
-      "zip_overhead_bytes": null
+      "top_payload_sections": [
+        {
+          "bytes": 170278,
+          "end": 170282,
+          "entropy_bits_per_byte": 7.998152,
+          "name": "decoder_packed_brotli",
+          "sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
+          "start": 4
+        },
+        {
+          "bytes": 15849,
+          "end": 186131,
+          "entropy_bits_per_byte": 7.985386,
+          "name": "latents_and_sidecar_brotli",
+          "sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+          "start": 170282
+        },
+        {
+          "bytes": 4,
+          "end": 4,
+          "entropy_bits_per_byte": 2.0,
+          "name": "packed_header_ff_len24",
+          "sha256": "7939f08db7d18dd4176e8e11b1232a9be6b2371db7a4e63c1c0871fb520148b6",
+          "start": 0
+        }
+      ],
+      "zip_member": "x",
+      "zip_overhead_bytes": 100
     },
     {
       "archive_bytes": 186239,
       "archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
       "avg_posenet_dist": 3.351e-05,
       "avg_segnet_dist": 0.00067142,
+      "canonical_frontier_eligible": true,
+      "canonicality_blockers": [],
       "eval_artifact": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json",
       "evidence_grade": "A++",
       "gpu_model": "Tesla T4",
@@ -36,91 +480,164 @@
         "sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
         "start": 4
       },
+      "member_bytes": 186131,
+      "payload_sections": [
+        {
+          "bytes": 4,
+          "end": 4,
+          "entropy_bits_per_byte": 2.0,
+          "name": "packed_header_ff_len24",
+          "sha256": "7939f08db7d18dd4176e8e11b1232a9be6b2371db7a4e63c1c0871fb520148b6",
+          "start": 0
+        },
+        {
+          "bytes": 170278,
+          "end": 170282,
+          "entropy_bits_per_byte": 7.998152,
+          "name": "decoder_packed_brotli",
+          "sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
+          "start": 4
+        },
+        {
+          "bytes": 15849,
+          "end": 186131,
+          "entropy_bits_per_byte": 7.985386,
+          "name": "latents_and_sidecar_brotli",
+          "sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+          "start": 170282
+        }
+      ],
+      "payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "profile_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
       "profile_kind": "ff_packed_brotli_hnerv",
+      "profile_match_key": "archive_sha256",
+      "profile_member_name": "0.bin",
       "runtime_tree_sha256": "7f4f458f23f5c92d1e94891c27fd429266081ac66b359f40b7ce68ef4acd17dd",
       "score": 0.20945673680571203,
       "score_pose_contribution": 0.018305736805712028,
       "score_rate_contribution": 0.124009,
       "score_seg_contribution": 0.06714200000000001,
+      "top_payload_sections": [
+        {
+          "bytes": 170278,
+          "end": 170282,
+          "entropy_bits_per_byte": 7.998152,
+          "name": "decoder_packed_brotli",
+          "sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
+          "start": 4
+        },
+        {
+          "bytes": 15849,
+          "end": 186131,
+          "entropy_bits_per_byte": 7.985386,
+          "name": "latents_and_sidecar_brotli",
+          "sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+          "start": 170282
+        },
+        {
+          "bytes": 4,
+          "end": 4,
+          "entropy_bits_per_byte": 2.0,
+          "name": "packed_header_ff_len24",
+          "sha256": "7939f08db7d18dd4176e8e11b1232a9be6b2371db7a4e63c1c0871fb520148b6",
+          "start": 0
+        }
+      ],
       "zip_member": "0.bin",
       "zip_overhead_bytes": 108
-    },
-    {
-      "archive_bytes": 178258,
-      "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
-      "avg_posenet_dist": 0.00017102,
-      "avg_segnet_dist": 0.00066304,
-      "eval_artifact": "experiments/results/lightning_batch/exact_eval_public_pr101_hnerv_ft_microcodec_t4_20260504T1302Z/contest_auth_eval.adjudicated.json",
-      "evidence_grade": "A++",
-      "gpu_model": "Tesla T4",
-      "label": "PR101",
-      "largest_payload_section": {
-        "bytes": 162164,
-        "end": 162164,
-        "entropy_bits_per_byte": 7.998425,
-        "name": "decoder_compact_brotli_streams",
-        "sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6",
-        "start": 0
-      },
-      "profile_kind": "pr101_microcodec",
-      "runtime_tree_sha256": "e42d650f119cc4a51732f3fd084baeb19f094de97d3fc4367401ca2e8abf2b57",
-      "score": 0.22635331443973267,
-      "score_pose_contribution": 0.04135456443973265,
-      "score_rate_contribution": 0.11869475,
-      "score_seg_contribution": 0.066304,
-      "zip_member": "x",
-      "zip_overhead_bytes": 100
-    },
-    {
-      "archive_bytes": 178223,
-      "archive_sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30",
-      "avg_posenet_dist": 0.00017198,
-      "avg_segnet_dist": 0.00067623,
-      "eval_artifact": "experiments/results/lightning_batch/exact_eval_public_pr103_hnerv_lc_ac_t4_20260504T1245Z/contest_auth_eval.adjudicated.json",
-      "evidence_grade": "A++",
-      "gpu_model": "Tesla T4",
-      "label": "PR103",
-      "largest_payload_section": {
-        "bytes": 153856,
-        "end": 161904,
-        "entropy_bits_per_byte": 7.998795,
-        "name": "merged_range_coded_weights_and_hi_latents",
-        "sha256": "08f0a219b395e6783c522bacc8239f01dcb3d27d9f7f8d2291a7478d04859de7",
-        "start": 8048
-      },
-      "profile_kind": "pr103_lc_ac",
-      "runtime_tree_sha256": "2fb80e7c6ed2f6a4a7df3d6830f4a21bd259d5eb9ca0a93298e9d5a246b5defc",
-      "score": 0.2277649714224471,
-      "score_pose_contribution": 0.04147047142244708,
-      "score_rate_contribution": 0.11867150000000001,
-      "score_seg_contribution": 0.067623,
-      "zip_member": "x",
-      "zip_overhead_bytes": 100
     },
     {
       "archive_bytes": 177849,
       "archive_sha256": "692a46931f66416ab71270661f580a4b5bb2e5a887b19c51aabbb8851493feab",
       "avg_posenet_dist": 0.00017267,
       "avg_segnet_dist": 0.00070456,
+      "canonical_frontier_eligible": true,
+      "canonicality_blockers": [],
       "eval_artifact": "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json",
       "evidence_grade": "A++",
       "gpu_model": "Tesla T4",
       "label": "PR105x",
-      "largest_payload_section": null,
-      "profile_kind": null,
+      "largest_payload_section": {
+        "bytes": 161891,
+        "end": 161895,
+        "entropy_bits_per_byte": 7.998095,
+        "name": "decoder_packed_brotli",
+        "sha256": "e241db1c2cbfb53aa4dd32a0dc41ccc511259b44223a25666e026ec78aeb0934",
+        "start": 4
+      },
+      "member_bytes": 177749,
+      "payload_sections": [
+        {
+          "bytes": 4,
+          "end": 4,
+          "entropy_bits_per_byte": 2.0,
+          "name": "packed_header_ff_len24",
+          "sha256": "837b877d82478a79a5d8cb14387c8f994c1b4e76d606b38c282175e3ad103478",
+          "start": 0
+        },
+        {
+          "bytes": 161891,
+          "end": 161895,
+          "entropy_bits_per_byte": 7.998095,
+          "name": "decoder_packed_brotli",
+          "sha256": "e241db1c2cbfb53aa4dd32a0dc41ccc511259b44223a25666e026ec78aeb0934",
+          "start": 4
+        },
+        {
+          "bytes": 15854,
+          "end": 177749,
+          "entropy_bits_per_byte": 7.985312,
+          "name": "latents_and_sidecar_brotli",
+          "sha256": "aeea25a3116b44570dcb74927ba250b68b7ddea524207f8968688ac885f3b286",
+          "start": 161895
+        }
+      ],
+      "payload_sha256": "5f88fa8ed26816cf6e86a00cf3c88915963c2a84f899173fd6820359df29aad0",
+      "profile_archive_sha256": "692a46931f66416ab71270661f580a4b5bb2e5a887b19c51aabbb8851493feab",
+      "profile_kind": "ff_packed_brotli_hnerv",
+      "profile_match_key": "archive_sha256",
+      "profile_member_name": "x",
       "runtime_tree_sha256": "c97211b6deaf0796869e2201a50c3008d26cb5561a77312d539c097bee4aa7e1",
       "score": 0.23043182986984995,
       "score_pose_contribution": 0.04155357986984996,
       "score_rate_contribution": 0.11842224999999999,
       "score_seg_contribution": 0.070456,
-      "zip_member": null,
-      "zip_overhead_bytes": null
+      "top_payload_sections": [
+        {
+          "bytes": 161891,
+          "end": 161895,
+          "entropy_bits_per_byte": 7.998095,
+          "name": "decoder_packed_brotli",
+          "sha256": "e241db1c2cbfb53aa4dd32a0dc41ccc511259b44223a25666e026ec78aeb0934",
+          "start": 4
+        },
+        {
+          "bytes": 15854,
+          "end": 177749,
+          "entropy_bits_per_byte": 7.985312,
+          "name": "latents_and_sidecar_brotli",
+          "sha256": "aeea25a3116b44570dcb74927ba250b68b7ddea524207f8968688ac885f3b286",
+          "start": 161895
+        },
+        {
+          "bytes": 4,
+          "end": 4,
+          "entropy_bits_per_byte": 2.0,
+          "name": "packed_header_ff_len24",
+          "sha256": "837b877d82478a79a5d8cb14387c8f994c1b4e76d606b38c282175e3ad103478",
+          "start": 0
+        }
+      ],
+      "zip_member": "x",
+      "zip_overhead_bytes": 100
     },
     {
       "archive_bytes": 177857,
       "archive_sha256": "597ba0732810eba08cdae619b679d211d398bc0249b8831898f7096d5beece1d",
       "avg_posenet_dist": 0.00017267,
       "avg_segnet_dist": 0.00070456,
+      "canonical_frontier_eligible": true,
+      "canonicality_blockers": [],
       "eval_artifact": "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json",
       "evidence_grade": "A++",
       "gpu_model": "Tesla T4",
@@ -133,12 +650,69 @@
         "sha256": "e241db1c2cbfb53aa4dd32a0dc41ccc511259b44223a25666e026ec78aeb0934",
         "start": 4
       },
+      "member_bytes": 177749,
+      "payload_sections": [
+        {
+          "bytes": 4,
+          "end": 4,
+          "entropy_bits_per_byte": 2.0,
+          "name": "packed_header_ff_len24",
+          "sha256": "837b877d82478a79a5d8cb14387c8f994c1b4e76d606b38c282175e3ad103478",
+          "start": 0
+        },
+        {
+          "bytes": 161891,
+          "end": 161895,
+          "entropy_bits_per_byte": 7.998095,
+          "name": "decoder_packed_brotli",
+          "sha256": "e241db1c2cbfb53aa4dd32a0dc41ccc511259b44223a25666e026ec78aeb0934",
+          "start": 4
+        },
+        {
+          "bytes": 15854,
+          "end": 177749,
+          "entropy_bits_per_byte": 7.985312,
+          "name": "latents_and_sidecar_brotli",
+          "sha256": "aeea25a3116b44570dcb74927ba250b68b7ddea524207f8968688ac885f3b286",
+          "start": 161895
+        }
+      ],
+      "payload_sha256": "5f88fa8ed26816cf6e86a00cf3c88915963c2a84f899173fd6820359df29aad0",
+      "profile_archive_sha256": "597ba0732810eba08cdae619b679d211d398bc0249b8831898f7096d5beece1d",
       "profile_kind": "ff_packed_brotli_hnerv",
+      "profile_match_key": "archive_sha256",
+      "profile_member_name": "0.bin",
       "runtime_tree_sha256": "2ebae7632b279a736f359690eb359a8f030e7f57630ea26152591cbe05021ab6",
       "score": 0.23043732986984997,
       "score_pose_contribution": 0.04155357986984996,
       "score_rate_contribution": 0.11842775,
       "score_seg_contribution": 0.070456,
+      "top_payload_sections": [
+        {
+          "bytes": 161891,
+          "end": 161895,
+          "entropy_bits_per_byte": 7.998095,
+          "name": "decoder_packed_brotli",
+          "sha256": "e241db1c2cbfb53aa4dd32a0dc41ccc511259b44223a25666e026ec78aeb0934",
+          "start": 4
+        },
+        {
+          "bytes": 15854,
+          "end": 177749,
+          "entropy_bits_per_byte": 7.985312,
+          "name": "latents_and_sidecar_brotli",
+          "sha256": "aeea25a3116b44570dcb74927ba250b68b7ddea524207f8968688ac885f3b286",
+          "start": 161895
+        },
+        {
+          "bytes": 4,
+          "end": 4,
+          "entropy_bits_per_byte": 2.0,
+          "name": "packed_header_ff_len24",
+          "sha256": "837b877d82478a79a5d8cb14387c8f994c1b4e76d606b38c282175e3ad103478",
+          "start": 0
+        }
+      ],
       "zip_member": "0.bin",
       "zip_overhead_bytes": 108
     }
