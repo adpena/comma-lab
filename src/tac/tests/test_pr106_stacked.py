@@ -171,6 +171,18 @@ def _write_single_member_zip(path: Path, payload: bytes, *, member: str = "0.bin
         zf.writestr(info, payload)
 
 
+def _write_yshift_sister_archive(path: Path, pr106_bytes: bytes, yshift_blob: bytes) -> None:
+    sister_bin = (
+        bytes([0xFC])
+        + len(pr106_bytes).to_bytes(3, "little")
+        + pr106_bytes
+        + bytes([1])
+        + struct.pack("<H", len(yshift_blob))
+        + yshift_blob
+    )
+    _write_single_member_zip(path, sister_bin)
+
+
 # ===================================================================
 # Constants + outer wire format
 # ===================================================================
@@ -862,21 +874,8 @@ def test_builder_extracts_blob_from_yshift_sister_archive(tmp_path):
     sister_dir.mkdir()
     yshift_blob = _build_zero_yshift_blob()
     pr106_bytes = builder.extract_pr106_bytes(PR106_ARCHIVE)
-    # Hand-build the sister-archive layout (magic 0xFC + uint24 len +
-    # pr106 + version 1 + uint16 sc_len + sc_blob)
-    sister_bin = (
-        bytes([0xFC])
-        + len(pr106_bytes).to_bytes(3, "little")
-        + pr106_bytes
-        + bytes([1])
-        + struct.pack("<H", len(yshift_blob))
-        + yshift_blob
-    )
     sister_zip = sister_dir / "pr106_yshift_sidechannel_archive.zip"
-    with zipfile.ZipFile(sister_zip, "w", compression=zipfile.ZIP_STORED) as z:
-        zi = zipfile.ZipInfo("0.bin", date_time=(1980, 1, 1, 0, 0, 0))
-        zi.compress_type = zipfile.ZIP_STORED
-        z.writestr(zi, sister_bin)
+    _write_yshift_sister_archive(sister_zip, pr106_bytes, yshift_blob)
 
     extracted = builder.extract_yshift_section_blob(sister_zip)
     assert extracted == yshift_blob
@@ -946,3 +945,40 @@ def test_builder_metadata_records_archive_hash_custody(tmp_path):
         "bytes": archive_path.stat().st_size,
         "sha256": sha256_file(archive_path),
     }
+
+
+def test_builder_metadata_records_sister_archive_hash_custody(tmp_path):
+    """CLI metadata records byte/hash custody for provided sister archives."""
+    if not PR106_ARCHIVE.is_file():
+        pytest.skip(f"PR106 anchor not present at {PR106_ARCHIVE}")
+    builder = _load_builder()
+    pr106_bytes = builder.extract_pr106_bytes(PR106_ARCHIVE)
+    sister_zip = tmp_path / "pr106_yshift_sidechannel_archive.zip"
+    _write_yshift_sister_archive(sister_zip, pr106_bytes, _build_zero_yshift_blob())
+
+    out_dir = tmp_path / "stacked"
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "experiments" / "build_pr106_stacked.py"),
+            "--pr106-archive",
+            str(PR106_ARCHIVE),
+            "--yshift",
+            str(sister_zip),
+            "--output-dir",
+            str(out_dir),
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    metadata = read_json(out_dir / "build_metadata.json")
+    assert metadata["input_archives"]["yshift"] == {
+        "path": str(sister_zip),
+        "bytes": sister_zip.stat().st_size,
+        "sha256": sha256_file(sister_zip),
+    }
+    assert metadata["input_archives"]["latent"] is None
+    assert metadata["section_blob_bytes"]["yshift"] is not None

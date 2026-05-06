@@ -31,6 +31,10 @@ The older flat path/byte fields remain in place for compatibility.
 runs the CLI in passthrough mode and asserts that the output metadata hashes
 match the actual anchor and output archive bytes.
 
+`src/tac/tests/test_pr106_stacked.py::test_builder_metadata_records_sister_archive_hash_custody`
+runs the CLI with a synthetic yshift sister archive and asserts that provided
+sister archive byte/hash custody is recorded in `input_archives`.
+
 ## Dispatch Status
 
 No exact eval or remote GPU dispatch was attempted. This is a custody and DX
