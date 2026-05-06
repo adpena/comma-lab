@@ -5471,6 +5471,63 @@ Verification:
 - `.venv/bin/python tools/all_lanes_preflight.py` passed:
   `ALL 20 PREFLIGHT CHECKS PASSED`.
 
+## R85 - 2026-05-06 Public PR Archive Fetcher IO Lowering
+
+Continued the Gate #7 lowering tranche on the public PR archive/source intake
+tool. This is part of the reverse-engineering custody path for preserving
+leaderboard archives, PR bodies, contestant source trees, and byte provenance.
+
+Changes:
+
+- Migrated `tools/fetch_all_public_pr_archives.py` from a manual repo-root
+  parent probe to `tools.tool_bootstrap.repo_root_from_tool` plus
+  `ensure_repo_imports`.
+- Migrated metadata, archive provenance, and fetch-summary JSON writes to
+  `tac.repo_io.write_json`.
+- Migrated refetch-mode metadata reads to `tac.repo_io.read_json`.
+- Replaced existing-archive SHA recomputation with `tac.repo_io.sha256_file`.
+- Preserved the `gh api` JSON parse path, raw README fetch path, direct
+  streaming archive download SHA accumulator, URL discovery order, source clone
+  behavior, and `FETCH_SUMMARY.json` schema.
+
+Measured inventory after R85:
+
+- local SHA helpers: `53`
+- local JSON dumps: `103`
+- manual `sys.path` bootstraps: `272`
+- manual repo-root parent probes: `368`
+- manual score/dispatch metadata mentions: `601`
+
+Within-tranche committed-surface deltas:
+
+- `tools/fetch_all_public_pr_archives.py` local JSON dump count: `1 -> 0`
+- `tools/fetch_all_public_pr_archives.py` local SHA helper count: `0 -> 0`
+- `tools/fetch_all_public_pr_archives.py` manual `sys.path` bootstrap count:
+  `0 -> 0`
+- `tools/fetch_all_public_pr_archives.py` manual repo-root parent count:
+  `1 -> 0`
+- `tools/fetch_all_public_pr_archives.py` manual score/dispatch metadata count:
+  `0 -> 0`
+
+Verification:
+
+- `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest
+  src/tac/tests/test_repo_io.py src/tac/tests/test_audit_tooling_consolidation.py
+  -q` passed: `6 passed`.
+- `.venv/bin/python -m ruff check --select I,RUF100,F401,UP035,F821,E402
+  tools/fetch_all_public_pr_archives.py` passed.
+- `.venv/bin/python -m py_compile tools/fetch_all_public_pr_archives.py`
+  passed.
+- `.venv/bin/python tools/fetch_all_public_pr_archives.py --only-prs 101
+  --dry-run` passed.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --scan-root
+  tools/fetch_all_public_pr_archives.py --format json` reported zero findings
+  for the file.
+- `.venv/bin/python tools/audit_tooling_consolidation.py --format json`
+  reported the measured inventory above.
+- `.venv/bin/python tools/all_lanes_preflight.py` passed:
+  `ALL 20 PREFLIGHT CHECKS PASSED`.
+
 ## R81 - 2026-05-06 Component Sensitivity Shard Merge IO Lowering
 
 Continued the Gate #7 lowering tranche on the finite-difference sensitivity

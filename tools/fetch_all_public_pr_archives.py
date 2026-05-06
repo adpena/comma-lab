@@ -56,7 +56,16 @@ import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
+try:
+    from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
+
+REPO = repo_root_from_tool(__file__)
+ensure_repo_imports(REPO)
+
+from tac.repo_io import read_json, sha256_file, write_json  # noqa: E402
+
 COMMA_REPO = "commaai/comma_video_compression_challenge"
 
 
@@ -216,7 +225,7 @@ def _fetch_one_pr(pr_num: int, score: float, name: str, output_root: Path,
     # 1. PR metadata (skip if refetch-archives-only and metadata already exists)
     meta_path = pr_dir / "pr_metadata.json"
     if refetch_archives_only and meta_path.is_file():
-        meta = json.loads(meta_path.read_text())
+        meta = read_json(meta_path)
         log_lines.append("  re-using existing pr_metadata.json")
         # We need raw API meta for head_repo / head_sha — load from what's stored
         head_repo = meta.get("head_repo")
@@ -245,7 +254,7 @@ def _fetch_one_pr(pr_num: int, score: float, name: str, output_root: Path,
             "deletions": api_meta.get("deletions"),
             "changed_files": api_meta.get("changed_files"),
         }
-        meta_path.write_text(json.dumps(meta, indent=2, sort_keys=True))
+        write_json(meta_path, meta)
         log_lines.append(f"✓ pr_metadata.json (head_sha={meta['head_sha']}, author={meta['author']})")
         body = api_meta.get("body") or ""
         (pr_dir / "pr_body.md").write_text(body)
@@ -256,7 +265,7 @@ def _fetch_one_pr(pr_num: int, score: float, name: str, output_root: Path,
     # 2. Archive — multi-pass URL discovery
     archive_dest = pr_dir / "archive.zip"
     if skip_existing_archives and archive_dest.is_file() and archive_dest.stat().st_size > 100:
-        sha = hashlib.sha256(archive_dest.read_bytes()).hexdigest()
+        sha = sha256_file(archive_dest)
         log_lines.append(f"✓ archive.zip exists ({archive_dest.stat().st_size} bytes, sha256 {sha[:16]}...) — skipping")
         archive_status = "exists_skipped"
         archive_sha = sha
@@ -312,14 +321,17 @@ def _fetch_one_pr(pr_num: int, score: float, name: str, output_root: Path,
                 archive_sha = None
                 archive_size = None
 
-    (pr_dir / "archive_provenance.json").write_text(json.dumps({
-        "candidates_tried": [a["url"] for a in attempts] if attempts else [],
-        "attempts": attempts,
-        "archive_sha256": archive_sha,
-        "archive_size_bytes": archive_size,
-        "status": archive_status,
-        "fetched_at_utc": datetime.now(UTC).isoformat(),
-    }, indent=2))
+    write_json(
+        pr_dir / "archive_provenance.json",
+        {
+            "candidates_tried": [a["url"] for a in attempts] if attempts else [],
+            "attempts": attempts,
+            "archive_sha256": archive_sha,
+            "archive_size_bytes": archive_size,
+            "status": archive_status,
+            "fetched_at_utc": datetime.now(UTC).isoformat(),
+        },
+    )
 
     # 3. Source clone (shallow at head SHA) — skip if already cloned
     src_dir = pr_dir / "source"
@@ -429,7 +441,7 @@ def main(argv: list[str] | None = None) -> int:
         "results": results,
     }
     summary_path = args.output_dir / "FETCH_SUMMARY.json"
-    summary_path.write_text(json.dumps(summary, indent=2))
+    write_json(summary_path, summary)
     print(f"\n[fetch] SUMMARY → {summary_path.relative_to(REPO)}")
     print(f"  attempted: {summary['total_attempted']}")
     print(f"  complete:  {summary['n_complete']}")
