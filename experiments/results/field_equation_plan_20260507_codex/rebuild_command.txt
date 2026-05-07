@@ -1,0 +1,10 @@
+.venv/bin/python tools/build_field_equation_plan.py \
+  --atom-ledger experiments/results/cross_paradigm_atom_ledger_20260507_codex/ledger.json \
+  --source frontier_tranche_20260507 \
+  --base-score 0.229 \
+  --research-basis-id dworetzky_fridrich_detector_batch_2025 \
+  --research-basis-id geometric_visual_servo_ot_2026 \
+  --research-basis-id msnerv_2025 \
+  --research-basis-id rdc_universal_2025 \
+  --research-basis-id constriction_ans \
+  --json-out experiments/results/field_equation_plan_20260507_codex/plan.json

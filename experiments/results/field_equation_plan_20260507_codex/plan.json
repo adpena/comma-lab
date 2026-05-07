@@ -1,0 +1,2322 @@
+{
+  "atom_count": 15,
+  "blocked_volterra_interaction_count": 0,
+  "compatible_volterra_interaction_count": 0,
+  "constraints": {
+    "lambda_byte_closure_violation": 100.0,
+    "lambda_byte_violation": 1.0,
+    "lambda_confidence_violation": 1.0,
+    "lambda_kkt_readiness_violation": 10.0,
+    "lambda_pareto_dominated_violation": 5.0,
+    "lambda_pareto_violation": 25.0,
+    "lambda_pose_violation": 10.0,
+    "lambda_proxy_violation": 50.0,
+    "lambda_rankable_violation": 1000.0,
+    "lambda_seg_violation": 100.0,
+    "max_byte_delta": 0.0,
+    "max_expected_pose_dist_delta": 0.0,
+    "max_expected_seg_dist_delta": 0.0,
+    "min_confidence": 0.0,
+    "require_pareto_frontier": true
+  },
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "field_equation_planning_only",
+    "requires_byte_closed_candidate_archive",
+    "requires_exact_cuda_auth_eval",
+    "requires_empirical_interaction_calibration"
+  ],
+  "field_acquisition_ranking": {
+    "base_score": 0.229,
+    "blocker_counts": {
+      "kkt_blockers_present": 15,
+      "kkt_not_ready_for_field_planning": 15,
+      "missing_byte_closed_archive_manifest": 9,
+      "pareto_ineligible_atom": 14,
+      "proxy_evidence_not_dispatch_design_ready": 5
+    },
+    "design_ready_count": 0,
+    "dispatch_attempted": false,
+    "objective": "Choose the next exact CUDA observation by expected improvement, expected information gain, and variational descent after KKT/Pareto/byte-closure blockers are explicit.",
+    "ready_for_exact_eval_dispatch": false,
+    "row_count": 15,
+    "rows": [
+      {
+        "acquisition_formula": "EI_minimize(base_score + d_score) + EIG_nats + max(0, -variational_action_delta)",
+        "acquisition_value": 0.000100544702,
+        "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:brotli_q10_current_raw",
+        "descending_action_bonus": 0.0,
+        "design_ready": false,
+        "dispatch_attempted": false,
+        "dispatch_design_blockers": [
+          "pareto_ineligible_atom",
+          "kkt_not_ready_for_field_planning",
+          "missing_byte_closed_archive_manifest",
+          "kkt_blockers_present"
+        ],
+        "expected_improvement": 0.000100544702,
+        "expected_information_gain_nats": 0.0,
+        "family": "hnerv_rate_recode",
+        "pareto_scope": "hnerv_rate_equivalent_recode",
+        "predicted_score_mean": 0.228899455298,
+        "rank": 1,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      {
+        "acquisition_formula": "EI_minimize(base_score + d_score) + EIG_nats + max(0, -variational_action_delta)",
+        "acquisition_value": 5.992731e-06,
+        "atom_id": "wr01_wavelet:wr01_apply_pr106x_half:latents_and_sidecar_brotli:exact_eval_packet",
+        "descending_action_bonus": 0.0,
+        "design_ready": false,
+        "dispatch_attempted": false,
+        "dispatch_design_blockers": [
+          "kkt_not_ready_for_field_planning",
+          "kkt_blockers_present"
+        ],
+        "expected_improvement": 5.992731e-06,
+        "expected_information_gain_nats": 0.0,
+        "family": "wr01_wavelet_residual",
+        "pareto_scope": "wr01_wavelet:latents_and_sidecar_brotli",
+        "predicted_score_mean": 0.228994007269,
+        "rank": 2,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      {
+        "acquisition_formula": "EI_minimize(base_score + d_score) + EIG_nats + max(0, -variational_action_delta)",
+        "acquisition_value": 0.0,
+        "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_0_road",
+        "descending_action_bonus": 0.0,
+        "design_ready": false,
+        "dispatch_attempted": false,
+        "dispatch_design_blockers": [
+          "pareto_ineligible_atom",
+          "kkt_not_ready_for_field_planning",
+          "proxy_evidence_not_dispatch_design_ready",
+          "kkt_blockers_present"
+        ],
+        "expected_improvement": 0.0,
+        "expected_information_gain_nats": 0.0,
+        "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
+        "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+        "predicted_score_mean": 0.229,
+        "rank": 3,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      {
+        "acquisition_formula": "EI_minimize(base_score + d_score) + EIG_nats + max(0, -variational_action_delta)",
+        "acquisition_value": 0.0,
+        "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_1_lane_markings",
+        "descending_action_bonus": 0.0,
+        "design_ready": false,
+        "dispatch_attempted": false,
+        "dispatch_design_blockers": [
+          "pareto_ineligible_atom",
+          "kkt_not_ready_for_field_planning",
+          "proxy_evidence_not_dispatch_design_ready",
+          "kkt_blockers_present"
+        ],
+        "expected_improvement": 0.0,
+        "expected_information_gain_nats": 0.0,
+        "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
+        "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+        "predicted_score_mean": 0.229,
+        "rank": 4,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      {
+        "acquisition_formula": "EI_minimize(base_score + d_score) + EIG_nats + max(0, -variational_action_delta)",
+        "acquisition_value": 0.0,
+        "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_2_undrivable",
+        "descending_action_bonus": 0.0,
+        "design_ready": false,
+        "dispatch_attempted": false,
+        "dispatch_design_blockers": [
+          "pareto_ineligible_atom",
+          "kkt_not_ready_for_field_planning",
+          "proxy_evidence_not_dispatch_design_ready",
+          "kkt_blockers_present"
+        ],
+        "expected_improvement": 0.0,
+        "expected_information_gain_nats": 0.0,
+        "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
+        "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+        "predicted_score_mean": 0.229,
+        "rank": 5,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      {
+        "acquisition_formula": "EI_minimize(base_score + d_score) + EIG_nats + max(0, -variational_action_delta)",
+        "acquisition_value": 0.0,
+        "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_3_movable",
+        "descending_action_bonus": 0.0,
+        "design_ready": false,
+        "dispatch_attempted": false,
+        "dispatch_design_blockers": [
+          "pareto_ineligible_atom",
+          "kkt_not_ready_for_field_planning",
+          "proxy_evidence_not_dispatch_design_ready",
+          "kkt_blockers_present"
+        ],
+        "expected_improvement": 0.0,
+        "expected_information_gain_nats": 0.0,
+        "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
+        "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+        "predicted_score_mean": 0.229,
+        "rank": 6,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      {
+        "acquisition_formula": "EI_minimize(base_score + d_score) + EIG_nats + max(0, -variational_action_delta)",
+        "acquisition_value": 0.0,
+        "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_4_my_car",
+        "descending_action_bonus": 0.0,
+        "design_ready": false,
+        "dispatch_attempted": false,
+        "dispatch_design_blockers": [
+          "pareto_ineligible_atom",
+          "kkt_not_ready_for_field_planning",
+          "proxy_evidence_not_dispatch_design_ready",
+          "kkt_blockers_present"
+        ],
+        "expected_improvement": 0.0,
+        "expected_information_gain_nats": 0.0,
+        "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
+        "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+        "predicted_score_mean": 0.229,
+        "rank": 7,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      {
+        "acquisition_formula": "EI_minimize(base_score + d_score) + EIG_nats + max(0, -variational_action_delta)",
+        "acquisition_value": 0.0,
+        "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:aq_global_q_stream_plus_raw_scales",
+        "descending_action_bonus": 0.0,
+        "design_ready": false,
+        "dispatch_attempted": false,
+        "dispatch_design_blockers": [
+          "pareto_ineligible_atom",
+          "kkt_not_ready_for_field_planning",
+          "missing_byte_closed_archive_manifest",
+          "kkt_blockers_present"
+        ],
+        "expected_improvement": 0.0,
+        "expected_information_gain_nats": 0.0,
+        "family": "hnerv_rate_recode",
+        "pareto_scope": "hnerv_rate_equivalent_recode",
+        "predicted_score_mean": 0.24146021859,
+        "rank": 8,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      {
+        "acquisition_formula": "EI_minimize(base_score + d_score) + EIG_nats + max(0, -variational_action_delta)",
+        "acquisition_value": 0.0,
+        "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:aq_per_tensor_q_streams_plus_raw_scales",
+        "descending_action_bonus": 0.0,
+        "design_ready": false,
+        "dispatch_attempted": false,
+        "dispatch_design_blockers": [
+          "pareto_ineligible_atom",
+          "kkt_not_ready_for_field_planning",
+          "missing_byte_closed_archive_manifest",
+          "kkt_blockers_present"
+        ],
+        "expected_improvement": 0.0,
+        "expected_information_gain_nats": 0.0,
+        "family": "hnerv_rate_recode",
+        "pareto_scope": "hnerv_rate_equivalent_recode",
+        "predicted_score_mean": 0.247552828011,
+        "rank": 9,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      {
+        "acquisition_formula": "EI_minimize(base_score + d_score) + EIG_nats + max(0, -variational_action_delta)",
+        "acquisition_value": 0.0,
+        "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:brotli_q11_current_raw",
+        "descending_action_bonus": 0.0,
+        "design_ready": false,
+        "dispatch_attempted": false,
+        "dispatch_design_blockers": [
+          "pareto_ineligible_atom",
+          "kkt_not_ready_for_field_planning",
+          "missing_byte_closed_archive_manifest",
+          "kkt_blockers_present"
+        ],
+        "expected_improvement": 0.0,
+        "expected_information_gain_nats": 0.0,
+        "family": "hnerv_rate_recode",
+        "pareto_scope": "hnerv_rate_equivalent_recode",
+        "predicted_score_mean": 0.229,
+        "rank": 10,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      {
+        "acquisition_formula": "EI_minimize(base_score + d_score) + EIG_nats + max(0, -variational_action_delta)",
+        "acquisition_value": 0.0,
+        "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:brotli_q9_current_raw",
+        "descending_action_bonus": 0.0,
+        "design_ready": false,
+        "dispatch_attempted": false,
+        "dispatch_design_blockers": [
+          "pareto_ineligible_atom",
+          "kkt_not_ready_for_field_planning",
+          "missing_byte_closed_archive_manifest",
+          "kkt_blockers_present"
+        ],
+        "expected_improvement": 0.0,
+        "expected_information_gain_nats": 0.0,
+        "family": "hnerv_rate_recode",
+        "pareto_scope": "hnerv_rate_equivalent_recode",
+        "predicted_score_mean": 0.230904356606,
+        "rank": 11,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      {
+        "acquisition_formula": "EI_minimize(base_score + d_score) + EIG_nats + max(0, -variational_action_delta)",
+        "acquisition_value": 0.0,
+        "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:canonical_huffman_global_q_stream_plus_raw_scales",
+        "descending_action_bonus": 0.0,
+        "design_ready": false,
+        "dispatch_attempted": false,
+        "dispatch_design_blockers": [
+          "pareto_ineligible_atom",
+          "kkt_not_ready_for_field_planning",
+          "missing_byte_closed_archive_manifest",
+          "kkt_blockers_present"
+        ],
+        "expected_improvement": 0.0,
+        "expected_information_gain_nats": 0.0,
+        "family": "hnerv_rate_recode",
+        "pareto_scope": "hnerv_rate_equivalent_recode",
+        "predicted_score_mean": 0.241767845426,
+        "rank": 12,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      {
+        "acquisition_formula": "EI_minimize(base_score + d_score) + EIG_nats + max(0, -variational_action_delta)",
+        "acquisition_value": 0.0,
+        "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales",
+        "descending_action_bonus": 0.0,
+        "design_ready": false,
+        "dispatch_attempted": false,
+        "dispatch_design_blockers": [
+          "pareto_ineligible_atom",
+          "kkt_not_ready_for_field_planning",
+          "missing_byte_closed_archive_manifest",
+          "kkt_blockers_present"
+        ],
+        "expected_improvement": 0.0,
+        "expected_information_gain_nats": 0.0,
+        "family": "hnerv_rate_recode",
+        "pareto_scope": "hnerv_rate_equivalent_recode",
+        "predicted_score_mean": 0.25466420163,
+        "rank": 13,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      {
+        "acquisition_formula": "EI_minimize(base_score + d_score) + EIG_nats + max(0, -variational_action_delta)",
+        "acquisition_value": 0.0,
+        "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:range_prev_symbol_global_q_streams_plus_raw_scales",
+        "descending_action_bonus": 0.0,
+        "design_ready": false,
+        "dispatch_attempted": false,
+        "dispatch_design_blockers": [
+          "pareto_ineligible_atom",
+          "kkt_not_ready_for_field_planning",
+          "missing_byte_closed_archive_manifest",
+          "kkt_blockers_present"
+        ],
+        "expected_improvement": 0.0,
+        "expected_information_gain_nats": 0.0,
+        "family": "hnerv_rate_recode",
+        "pareto_scope": "hnerv_rate_equivalent_recode",
+        "predicted_score_mean": 0.263027390081,
+        "rank": 14,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      },
+      {
+        "acquisition_formula": "EI_minimize(base_score + d_score) + EIG_nats + max(0, -variational_action_delta)",
+        "acquisition_value": 0.0,
+        "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:range_prev_symbol_per_tensor_q_streams_plus_raw_scales",
+        "descending_action_bonus": 0.0,
+        "design_ready": false,
+        "dispatch_attempted": false,
+        "dispatch_design_blockers": [
+          "pareto_ineligible_atom",
+          "kkt_not_ready_for_field_planning",
+          "missing_byte_closed_archive_manifest",
+          "kkt_blockers_present"
+        ],
+        "expected_improvement": 0.0,
+        "expected_information_gain_nats": 0.0,
+        "family": "hnerv_rate_recode",
+        "pareto_scope": "hnerv_rate_equivalent_recode",
+        "predicted_score_mean": 0.293369250857,
+        "rank": 15,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false
+      }
+    ],
+    "schema": "field_acquisition_ranking_v1",
+    "score_claim": false
+  },
+  "kkt_blocker_counts": {
+    "byte_violation": 7,
+    "kkt:kkt_proof_or_admm_result_missing": 15,
+    "missing_byte_closed_archive_manifest": 9,
+    "pareto_ineligible_atom": 14,
+    "proxy_evidence_not_kkt_ready": 5
+  },
+  "kkt_ready_for_field_planning_count": 0,
+  "locally_descending_count": 0,
+  "objective": "J = expected_total_score_delta + lambda_byte*g_byte + lambda_seg*g_seg + lambda_pose*g_pose + lambda_confidence*g_confidence",
+  "pareto_eligible_count": 1,
+  "proxy_row_count": 5,
+  "ready_for_exact_eval_dispatch": false,
+  "research_basis": {
+    "contract": "Research priors may shape planning, features, and atom ranking, but they cannot promote, rank, or claim contest score without byte-closed exact CUDA archive evidence.",
+    "global_hardening_blockers": [
+      "paper_claim_not_score_evidence",
+      "charged_byte_contract_required",
+      "deterministic_reproducibility_required",
+      "exact_cuda_auth_eval_required"
+    ],
+    "planning_only": true,
+    "promotion_eligible": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "source_count": 9,
+    "sources": [
+      {
+        "authors": [
+          "Jessica Fridrich",
+          "Miroslav Goljan",
+          "David Soukal"
+        ],
+        "basis_id": "fridrich_pq_wetpaper_2004",
+        "charged_byte_contract": "Selection channels and side information must be reproducible from charged archive payload or fixed contest code.",
+        "contest_terms": [
+          "archive_bytes",
+          "seg_dist"
+        ],
+        "hardening_blockers": [
+          "selection_channel_custody",
+          "decoder_roundtrip_parity",
+          "exact_stacked_archive_cuda_eval"
+        ],
+        "lineage": [
+          "fridrich_lab",
+          "wet_paper_codes",
+          "sender_side_information"
+        ],
+        "local_paradigms": [
+          "categorical_masks",
+          "field_equations",
+          "entropy_rate"
+        ],
+        "local_variables": [
+          "atom_amplitude_epsilon",
+          "selector_logits",
+          "interaction_kernel",
+          "conditional_groups"
+        ],
+        "title": "Perturbed Quantization Steganography with Wet Paper Codes",
+        "url": "https://doi.org/10.1145/1022431.1022435",
+        "venue_or_status": "ACM Multimedia and Security Workshop 2004",
+        "year": 2004
+      },
+      {
+        "authors": [
+          "Tomas Filler",
+          "Jan Judas",
+          "Jessica Fridrich"
+        ],
+        "basis_id": "fridrich_stc_2011",
+        "charged_byte_contract": "Per-atom distortion costs are planning weights until encoded in a byte-closed archive and scored exactly.",
+        "contest_terms": [
+          "archive_bytes",
+          "seg_dist",
+          "pose_dist"
+        ],
+        "hardening_blockers": [
+          "measured_atom_response",
+          "nonadditive_interaction_review",
+          "exact_cuda_auth_eval"
+        ],
+        "lineage": [
+          "fridrich_lab",
+          "additive_distortion",
+          "syndrome_trellis_codes"
+        ],
+        "local_paradigms": [
+          "field_equations",
+          "meta_lagrangian",
+          "pareto_kkt"
+        ],
+        "local_variables": [
+          "expected_total_score_delta",
+          "expected_seg_dist_delta",
+          "expected_pose_dist_delta",
+          "byte_delta"
+        ],
+        "title": "Minimizing Additive Distortion in Steganography Using Syndrome-Trellis Codes",
+        "url": "https://doi.org/10.1109/TIFS.2011.2134094",
+        "venue_or_status": "IEEE TIFS 2011",
+        "year": 2011
+      },
+      {
+        "authors": [
+          "Johannes Balle",
+          "Valero Laparra",
+          "Eero P. Simoncelli"
+        ],
+        "basis_id": "balle_e2e_2017",
+        "charged_byte_contract": "Any learned decoder, latent, hyperparameter, or selector that affects inflate output must be inside archive.zip or fixed contest code.",
+        "contest_terms": [
+          "archive_bytes",
+          "seg_dist",
+          "pose_dist"
+        ],
+        "hardening_blockers": [
+          "deterministic_quantization_contract",
+          "byte_closed_archive_manifest",
+          "exact_cuda_auth_eval"
+        ],
+        "lineage": [
+          "learned_compression",
+          "variational_rate_distortion"
+        ],
+        "local_paradigms": [
+          "field_equations",
+          "mdl",
+          "joint_codec_stack"
+        ],
+        "local_variables": [
+          "variational_action_delta",
+          "description_length_delta_bytes",
+          "d_score_d_epsilon"
+        ],
+        "title": "End-to-end Optimized Image Compression",
+        "url": "https://arxiv.org/abs/1611.01704",
+        "venue_or_status": "ICLR 2017 / arXiv:1611.01704",
+        "year": 2017
+      },
+      {
+        "authors": [
+          "Johannes Balle",
+          "David Minnen",
+          "Saurabh Singh",
+          "Sung Jin Hwang",
+          "Nick Johnston"
+        ],
+        "basis_id": "balle_hyperprior_2018",
+        "charged_byte_contract": "Hyperprior side information is charged unless it is fixed contest runtime code.",
+        "contest_terms": [
+          "archive_bytes"
+        ],
+        "hardening_blockers": [
+          "cross_platform_entropy_parameter_determinism",
+          "runtime_parity_proof",
+          "exact_cuda_auth_eval"
+        ],
+        "lineage": [
+          "learned_compression",
+          "hyperprior_entropy_model"
+        ],
+        "local_paradigms": [
+          "entropy_rate",
+          "joint_codec_stack",
+          "mdl"
+        ],
+        "local_variables": [
+          "conditional_entropy_floor_bits",
+          "best_conditional_model_label",
+          "model_byte_delta"
+        ],
+        "title": "Variational image compression with a scale hyperprior",
+        "url": "https://arxiv.org/abs/1802.01436",
+        "venue_or_status": "ICLR 2018 / arXiv:1802.01436",
+        "year": 2018
+      },
+      {
+        "authors": [
+          "Bamler Lab contributors"
+        ],
+        "basis_id": "constriction_ans",
+        "charged_byte_contract": "Coder tables and compressed streams are charged; external libraries cannot be sidecar dependencies.",
+        "contest_terms": [
+          "archive_bytes"
+        ],
+        "hardening_blockers": [
+          "rust_or_python_runtime_policy",
+          "bit_exact_cross_platform_roundtrip",
+          "exact_cuda_auth_eval"
+        ],
+        "lineage": [
+          "ans_range_coding",
+          "entropy_coder_implementation"
+        ],
+        "local_paradigms": [
+          "entropy_rate",
+          "aq_huffman",
+          "joint_codec_stack"
+        ],
+        "local_variables": [
+          "entropy_floor_bits",
+          "gap_to_best_conditional_floor_bytes",
+          "bytes_charged"
+        ],
+        "title": "constriction entropy coders",
+        "url": "https://github.com/bamler-lab/constriction",
+        "venue_or_status": "OSS entropy-coding library",
+        "year": 2022
+      },
+      {
+        "authors": [
+          "Eli Dworetzky",
+          "Jessica Fridrich"
+        ],
+        "basis_id": "dworetzky_fridrich_detector_batch_2025",
+        "charged_byte_contract": "Detector-informed allocation can rank atoms, but the selected archive payload and any detector-derived tables must be charged or fixed.",
+        "contest_terms": [
+          "seg_dist",
+          "pose_dist",
+          "archive_bytes"
+        ],
+        "hardening_blockers": [
+          "scorer_detector_mismatch_measurement",
+          "candidate_archive_custody",
+          "exact_cuda_auth_eval"
+        ],
+        "lineage": [
+          "fridrich_lab",
+          "detector_informed_batch_steganography",
+          "mismatched_detectors"
+        ],
+        "local_paradigms": [
+          "meta_lagrangian",
+          "bayesian_experimental_design",
+          "field_equations"
+        ],
+        "local_variables": [
+          "expected_information_gain_nats",
+          "confidence",
+          "interaction_assumptions"
+        ],
+        "title": "Secure Payload Scaling in Detector-Informed Batch Steganography: The Mismatched Detectors Case",
+        "url": "https://doi.org/10.1145/3733102.3733134",
+        "venue_or_status": "IH&MMSec 2025",
+        "year": 2025
+      },
+      {
+        "authors": [
+          "MSNeRV authors"
+        ],
+        "basis_id": "msnerv_2025",
+        "charged_byte_contract": "Multi-scale feature tensors and fusion weights are charged archive payload unless fixed in contest runtime.",
+        "contest_terms": [
+          "seg_dist",
+          "archive_bytes"
+        ],
+        "hardening_blockers": [
+          "multi_scale_decode_parity",
+          "inflate_budget_required",
+          "exact_cuda_auth_eval"
+        ],
+        "lineage": [
+          "neural_video_representation",
+          "multi_scale_feature_fusion"
+        ],
+        "local_paradigms": [
+          "hnerv",
+          "alpha",
+          "joint_codec_stack"
+        ],
+        "local_variables": [
+          "family_group",
+          "codec_kind",
+          "expected_seg_dist_delta"
+        ],
+        "title": "MSNeRV: Neural Video Representation with Multi-Scale Feature Fusion",
+        "url": "https://arxiv.org/abs/2506.15276",
+        "venue_or_status": "arXiv:2506.15276",
+        "year": 2025
+      },
+      {
+        "authors": [
+          "RDC authors"
+        ],
+        "basis_id": "rdc_universal_2025",
+        "charged_byte_contract": "Class representations, label maps, and codebooks must be charged or derived from fixed contest code.",
+        "contest_terms": [
+          "seg_dist",
+          "archive_bytes"
+        ],
+        "hardening_blockers": [
+          "five_class_contract_instantiation",
+          "label_codebook_custody",
+          "exact_cuda_auth_eval"
+        ],
+        "lineage": [
+          "rate_distortion_classification",
+          "task_oriented_compression"
+        ],
+        "local_paradigms": [
+          "categorical_masks",
+          "semantic_labels",
+          "meta_lagrangian"
+        ],
+        "local_variables": [
+          "class_support",
+          "expected_seg_dist_delta",
+          "byte_delta"
+        ],
+        "title": "Universal Rate-Distortion-Classification Representations",
+        "url": "https://arxiv.org/abs/2504.09025",
+        "venue_or_status": "arXiv:2504.09025",
+        "year": 2025
+      },
+      {
+        "authors": [
+          "Ethan Canzini",
+          "Simon Pope",
+          "Ashutosh Tiwari"
+        ],
+        "basis_id": "geometric_visual_servo_ot_2026",
+        "charged_byte_contract": "Geometric transport costs can rank pose/foveation atoms, but any pose stream, flow field, or selector consumed by inflate must be deterministic and charged.",
+        "contest_terms": [
+          "pose_dist",
+          "archive_bytes"
+        ],
+        "hardening_blockers": [
+          "se3_transport_units_required",
+          "runtime_pose_consumption_proof",
+          "exact_cuda_auth_eval"
+        ],
+        "lineage": [
+          "optimal_transport",
+          "se3_geodesic_flow",
+          "visual_servoing"
+        ],
+        "local_paradigms": [
+          "pose",
+          "optimal_transport",
+          "field_equations",
+          "meta_lagrangian"
+        ],
+        "local_variables": [
+          "geodesic_transport_cost",
+          "expected_pose_dist_delta",
+          "interaction_assumptions",
+          "pareto_scope"
+        ],
+        "title": "Geometric Visual Servo Via Optimal Transport",
+        "url": "https://arxiv.org/abs/2506.02768",
+        "venue_or_status": "Control Engineering Practice 2026 / arXiv:2506.02768v2",
+        "year": 2026
+      }
+    ],
+    "tool": "tac.optimization.research_basis"
+  },
+  "rows": [
+    {
+      "archive_manifest_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
+      "archive_manifest_sha256": "f106d31d1ffc5f5e991e3e96faef6f849b4020521538c4d819610ab548e48f91",
+      "atom_id": "wr01_wavelet:wr01_apply_pr106x_half:latents_and_sidecar_brotli:exact_eval_packet",
+      "byte_closed_archive_manifest_attached": true,
+      "confidence": 0.25,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "exact_eval_packet_not_ready_for_submit",
+        "missing_lightning_environment",
+        "missing_active_lane_dispatch_claim",
+        "missing_operator_exact_cuda_approval",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "field_equation_planning_only",
+        "research_basis_is_not_score_evidence"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "exact_eval_packet_byte_closed",
+      "expected_information_gain_nats": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "wr01_wavelet_residual",
+      "family_group": "wr01_wavelet",
+      "frechet_derivatives": {
+        "d_bytes_d_epsilon": -9.0,
+        "d_pose_dist_d_epsilon": 0.0,
+        "d_rate_score_d_epsilon": -5.992731e-06,
+        "d_score_d_epsilon": -5.992731e-06,
+        "d_seg_dist_d_epsilon": 0.0
+      },
+      "interaction_assumptions": [
+        "scorer_changing_wavelet_residual",
+        "stack_after_raw_equal_rate_recodes",
+        "exact_eval_packet_documents_byte_closed_archive"
+      ],
+      "kkt": {
+        "constraint_residuals": {
+          "byte_violation": 0.0,
+          "confidence_violation": 0.0,
+          "pose_violation": 0.0,
+          "seg_violation": 0.0
+        },
+        "kkt_blockers": [
+          "kkt:kkt_proof_or_admm_result_missing"
+        ],
+        "locally_descending": false,
+        "selection_penalty_score_delta": 10.0,
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0
+        },
+        "stationarity_residual": 9.999994007269
+      },
+      "kkt_ready_for_field_planning": false,
+      "mdl": {
+        "data_byte_delta": -9.0,
+        "description_length_delta_bytes": -9.0,
+        "description_length_rate_score_delta": -5.992731e-06,
+        "model_byte_delta": 0.0
+      },
+      "meta_lagrangian_selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0
+      },
+      "meta_lagrangian_selection_score_delta": -5.992731e-06,
+      "observation_noise_variance": 0.0,
+      "pareto_dominated_by": [],
+      "pareto_eligible": true,
+      "pareto_frontier": true,
+      "pareto_scope": "wr01_wavelet:latents_and_sidecar_brotli",
+      "proxy_row": false,
+      "rankable": true,
+      "ready_for_exact_eval_dispatch": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "variational_action_delta": 9.999994007269
+    },
+    {
+      "archive_manifest_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+      "archive_manifest_sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+      "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_0_road",
+      "byte_closed_archive_manifest_attached": true,
+      "confidence": 0.4,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [
+        "whole_mask_replacement"
+      ],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "proxy_row_not_dispatchable",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing",
+        "proxy_evidence_not_kkt_ready",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "pareto_ineligible_atom",
+        "field_equation_planning_only",
+        "research_basis_is_not_score_evidence"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "planning_manifest_audit",
+      "expected_information_gain_nats": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
+      "family_group": "categorical_openpilot_mask_plan",
+      "frechet_derivatives": {
+        "d_bytes_d_epsilon": 0.0,
+        "d_pose_dist_d_epsilon": 0.0,
+        "d_rate_score_d_epsilon": 0.0,
+        "d_score_d_epsilon": 0.0,
+        "d_seg_dist_d_epsilon": 0.0
+      },
+      "interaction_assumptions": [
+        "mask_stream_replacement_or_residual",
+        "openpilot_priors_must_be_charged_if_score_affecting",
+        "requires_class_geometry_noop_controls",
+        "categorical_byte_closed_archive_parity_proven"
+      ],
+      "kkt": {
+        "constraint_residuals": {
+          "byte_violation": 0.0,
+          "confidence_violation": 0.0,
+          "pose_violation": 0.0,
+          "seg_violation": 0.0
+        },
+        "kkt_blockers": [
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "pareto_ineligible_atom"
+        ],
+        "locally_descending": false,
+        "selection_penalty_score_delta": 85.0,
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "pareto_ineligible_atom": 25.0,
+          "proxy_row": 50.0
+        },
+        "stationarity_residual": 85.0
+      },
+      "kkt_ready_for_field_planning": false,
+      "mdl": {
+        "data_byte_delta": 0.0,
+        "description_length_delta_bytes": 0.0,
+        "description_length_rate_score_delta": 0.0,
+        "model_byte_delta": 0.0
+      },
+      "meta_lagrangian_selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "pareto_ineligible_atom": 25.0,
+        "proxy_row": 50.0
+      },
+      "meta_lagrangian_selection_score_delta": 0.0,
+      "observation_noise_variance": 0.0,
+      "pareto_dominated_by": [],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+      "proxy_row": true,
+      "rankable": true,
+      "ready_for_exact_eval_dispatch": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "variational_action_delta": 85.0
+    },
+    {
+      "archive_manifest_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+      "archive_manifest_sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+      "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_1_lane_markings",
+      "byte_closed_archive_manifest_attached": true,
+      "confidence": 0.4,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [
+        "whole_mask_replacement"
+      ],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "proxy_row_not_dispatchable",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing",
+        "proxy_evidence_not_kkt_ready",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "pareto_ineligible_atom",
+        "field_equation_planning_only",
+        "research_basis_is_not_score_evidence"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "planning_manifest_audit",
+      "expected_information_gain_nats": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
+      "family_group": "categorical_openpilot_mask_plan",
+      "frechet_derivatives": {
+        "d_bytes_d_epsilon": 0.0,
+        "d_pose_dist_d_epsilon": 0.0,
+        "d_rate_score_d_epsilon": 0.0,
+        "d_score_d_epsilon": 0.0,
+        "d_seg_dist_d_epsilon": 0.0
+      },
+      "interaction_assumptions": [
+        "mask_stream_replacement_or_residual",
+        "openpilot_priors_must_be_charged_if_score_affecting",
+        "requires_class_geometry_noop_controls",
+        "categorical_byte_closed_archive_parity_proven"
+      ],
+      "kkt": {
+        "constraint_residuals": {
+          "byte_violation": 0.0,
+          "confidence_violation": 0.0,
+          "pose_violation": 0.0,
+          "seg_violation": 0.0
+        },
+        "kkt_blockers": [
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "pareto_ineligible_atom"
+        ],
+        "locally_descending": false,
+        "selection_penalty_score_delta": 85.0,
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "pareto_ineligible_atom": 25.0,
+          "proxy_row": 50.0
+        },
+        "stationarity_residual": 85.0
+      },
+      "kkt_ready_for_field_planning": false,
+      "mdl": {
+        "data_byte_delta": 0.0,
+        "description_length_delta_bytes": 0.0,
+        "description_length_rate_score_delta": 0.0,
+        "model_byte_delta": 0.0
+      },
+      "meta_lagrangian_selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "pareto_ineligible_atom": 25.0,
+        "proxy_row": 50.0
+      },
+      "meta_lagrangian_selection_score_delta": 0.0,
+      "observation_noise_variance": 0.0,
+      "pareto_dominated_by": [],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+      "proxy_row": true,
+      "rankable": true,
+      "ready_for_exact_eval_dispatch": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "variational_action_delta": 85.0
+    },
+    {
+      "archive_manifest_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+      "archive_manifest_sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+      "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_2_undrivable",
+      "byte_closed_archive_manifest_attached": true,
+      "confidence": 0.4,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [
+        "whole_mask_replacement"
+      ],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "proxy_row_not_dispatchable",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing",
+        "proxy_evidence_not_kkt_ready",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "pareto_ineligible_atom",
+        "field_equation_planning_only",
+        "research_basis_is_not_score_evidence"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "planning_manifest_audit",
+      "expected_information_gain_nats": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
+      "family_group": "categorical_openpilot_mask_plan",
+      "frechet_derivatives": {
+        "d_bytes_d_epsilon": 0.0,
+        "d_pose_dist_d_epsilon": 0.0,
+        "d_rate_score_d_epsilon": 0.0,
+        "d_score_d_epsilon": 0.0,
+        "d_seg_dist_d_epsilon": 0.0
+      },
+      "interaction_assumptions": [
+        "mask_stream_replacement_or_residual",
+        "openpilot_priors_must_be_charged_if_score_affecting",
+        "requires_class_geometry_noop_controls",
+        "categorical_byte_closed_archive_parity_proven"
+      ],
+      "kkt": {
+        "constraint_residuals": {
+          "byte_violation": 0.0,
+          "confidence_violation": 0.0,
+          "pose_violation": 0.0,
+          "seg_violation": 0.0
+        },
+        "kkt_blockers": [
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "pareto_ineligible_atom"
+        ],
+        "locally_descending": false,
+        "selection_penalty_score_delta": 85.0,
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "pareto_ineligible_atom": 25.0,
+          "proxy_row": 50.0
+        },
+        "stationarity_residual": 85.0
+      },
+      "kkt_ready_for_field_planning": false,
+      "mdl": {
+        "data_byte_delta": 0.0,
+        "description_length_delta_bytes": 0.0,
+        "description_length_rate_score_delta": 0.0,
+        "model_byte_delta": 0.0
+      },
+      "meta_lagrangian_selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "pareto_ineligible_atom": 25.0,
+        "proxy_row": 50.0
+      },
+      "meta_lagrangian_selection_score_delta": 0.0,
+      "observation_noise_variance": 0.0,
+      "pareto_dominated_by": [],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+      "proxy_row": true,
+      "rankable": true,
+      "ready_for_exact_eval_dispatch": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "variational_action_delta": 85.0
+    },
+    {
+      "archive_manifest_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+      "archive_manifest_sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+      "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_3_movable",
+      "byte_closed_archive_manifest_attached": true,
+      "confidence": 0.4,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [
+        "whole_mask_replacement"
+      ],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "proxy_row_not_dispatchable",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing",
+        "proxy_evidence_not_kkt_ready",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "pareto_ineligible_atom",
+        "field_equation_planning_only",
+        "research_basis_is_not_score_evidence"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "planning_manifest_audit",
+      "expected_information_gain_nats": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
+      "family_group": "categorical_openpilot_mask_plan",
+      "frechet_derivatives": {
+        "d_bytes_d_epsilon": 0.0,
+        "d_pose_dist_d_epsilon": 0.0,
+        "d_rate_score_d_epsilon": 0.0,
+        "d_score_d_epsilon": 0.0,
+        "d_seg_dist_d_epsilon": 0.0
+      },
+      "interaction_assumptions": [
+        "mask_stream_replacement_or_residual",
+        "openpilot_priors_must_be_charged_if_score_affecting",
+        "requires_class_geometry_noop_controls",
+        "categorical_byte_closed_archive_parity_proven"
+      ],
+      "kkt": {
+        "constraint_residuals": {
+          "byte_violation": 0.0,
+          "confidence_violation": 0.0,
+          "pose_violation": 0.0,
+          "seg_violation": 0.0
+        },
+        "kkt_blockers": [
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "pareto_ineligible_atom"
+        ],
+        "locally_descending": false,
+        "selection_penalty_score_delta": 85.0,
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "pareto_ineligible_atom": 25.0,
+          "proxy_row": 50.0
+        },
+        "stationarity_residual": 85.0
+      },
+      "kkt_ready_for_field_planning": false,
+      "mdl": {
+        "data_byte_delta": 0.0,
+        "description_length_delta_bytes": 0.0,
+        "description_length_rate_score_delta": 0.0,
+        "model_byte_delta": 0.0
+      },
+      "meta_lagrangian_selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "pareto_ineligible_atom": 25.0,
+        "proxy_row": 50.0
+      },
+      "meta_lagrangian_selection_score_delta": 0.0,
+      "observation_noise_variance": 0.0,
+      "pareto_dominated_by": [],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+      "proxy_row": true,
+      "rankable": true,
+      "ready_for_exact_eval_dispatch": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "variational_action_delta": 85.0
+    },
+    {
+      "archive_manifest_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+      "archive_manifest_sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+      "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_4_my_car",
+      "byte_closed_archive_manifest_attached": true,
+      "confidence": 0.4,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [
+        "whole_mask_replacement"
+      ],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "proxy_row_not_dispatchable",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing",
+        "proxy_evidence_not_kkt_ready",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "pareto_ineligible_atom",
+        "field_equation_planning_only",
+        "research_basis_is_not_score_evidence"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "planning_manifest_audit",
+      "expected_information_gain_nats": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
+      "family_group": "categorical_openpilot_mask_plan",
+      "frechet_derivatives": {
+        "d_bytes_d_epsilon": 0.0,
+        "d_pose_dist_d_epsilon": 0.0,
+        "d_rate_score_d_epsilon": 0.0,
+        "d_score_d_epsilon": 0.0,
+        "d_seg_dist_d_epsilon": 0.0
+      },
+      "interaction_assumptions": [
+        "mask_stream_replacement_or_residual",
+        "openpilot_priors_must_be_charged_if_score_affecting",
+        "requires_class_geometry_noop_controls",
+        "categorical_byte_closed_archive_parity_proven"
+      ],
+      "kkt": {
+        "constraint_residuals": {
+          "byte_violation": 0.0,
+          "confidence_violation": 0.0,
+          "pose_violation": 0.0,
+          "seg_violation": 0.0
+        },
+        "kkt_blockers": [
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "pareto_ineligible_atom"
+        ],
+        "locally_descending": false,
+        "selection_penalty_score_delta": 85.0,
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "pareto_ineligible_atom": 25.0,
+          "proxy_row": 50.0
+        },
+        "stationarity_residual": 85.0
+      },
+      "kkt_ready_for_field_planning": false,
+      "mdl": {
+        "data_byte_delta": 0.0,
+        "description_length_delta_bytes": 0.0,
+        "description_length_rate_score_delta": 0.0,
+        "model_byte_delta": 0.0
+      },
+      "meta_lagrangian_selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "pareto_ineligible_atom": 25.0,
+        "proxy_row": 50.0
+      },
+      "meta_lagrangian_selection_score_delta": 0.0,
+      "observation_noise_variance": 0.0,
+      "pareto_dominated_by": [],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+      "proxy_row": true,
+      "rankable": true,
+      "ready_for_exact_eval_dispatch": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "variational_action_delta": 85.0
+    },
+    {
+      "archive_manifest_path": "",
+      "archive_manifest_sha256": "",
+      "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:brotli_q10_current_raw",
+      "byte_closed_archive_manifest_attached": false,
+      "confidence": 1.0,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "requires_byte_closed_archive",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_byte_closed_archive_manifest_before_dispatch",
+        "hnerv_rate_recode_requires_raw_equal_proof",
+        "planning_only_structural_recode_profile",
+        "requires_runtime_decoder_implementation",
+        "requires_archive_manifest_preflight",
+        "missing_byte_closed_archive_manifest",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "pareto_ineligible_atom",
+        "field_equation_planning_only",
+        "research_basis_is_not_score_evidence"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "empirical_byte_raw_equal",
+      "expected_information_gain_nats": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "hnerv_rate_recode",
+      "family_group": "hnerv_rate_equivalent_recode",
+      "frechet_derivatives": {
+        "d_bytes_d_epsilon": -151.0,
+        "d_pose_dist_d_epsilon": 0.0,
+        "d_rate_score_d_epsilon": -0.000100544702,
+        "d_score_d_epsilon": -0.000100544702,
+        "d_seg_dist_d_epsilon": 0.0
+      },
+      "interaction_assumptions": [
+        "rate_only_raw_equal_required",
+        "stack_before_scorer_changing_atoms",
+        "conflicts_with_decoder_replacement_for_same_section"
+      ],
+      "kkt": {
+        "constraint_residuals": {
+          "byte_violation": 0.0,
+          "confidence_violation": 0.0,
+          "pose_violation": 0.0,
+          "seg_violation": 0.0
+        },
+        "kkt_blockers": [
+          "missing_byte_closed_archive_manifest",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "pareto_ineligible_atom"
+        ],
+        "locally_descending": false,
+        "selection_penalty_score_delta": 135.0,
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "missing_byte_closed_archive_manifest": 100.0,
+          "pareto_ineligible_atom": 25.0
+        },
+        "stationarity_residual": 134.999899455298
+      },
+      "kkt_ready_for_field_planning": false,
+      "mdl": {
+        "data_byte_delta": -151.0,
+        "description_length_delta_bytes": -151.0,
+        "description_length_rate_score_delta": -0.000100544702,
+        "model_byte_delta": 0.0
+      },
+      "meta_lagrangian_selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "missing_byte_closed_archive_manifest": 100.0,
+        "pareto_ineligible_atom": 25.0
+      },
+      "meta_lagrangian_selection_score_delta": -0.000100544702,
+      "observation_noise_variance": 0.0,
+      "pareto_dominated_by": [],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_scope": "hnerv_rate_equivalent_recode",
+      "proxy_row": false,
+      "rankable": true,
+      "ready_for_exact_eval_dispatch": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "variational_action_delta": 134.999899455298
+    },
+    {
+      "archive_manifest_path": "",
+      "archive_manifest_sha256": "",
+      "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:brotli_q11_current_raw",
+      "byte_closed_archive_manifest_attached": false,
+      "confidence": 1.0,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "requires_byte_closed_archive",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_byte_closed_archive_manifest_before_dispatch",
+        "hnerv_rate_recode_requires_raw_equal_proof",
+        "planning_only_structural_recode_profile",
+        "requires_runtime_decoder_implementation",
+        "requires_archive_manifest_preflight",
+        "missing_byte_closed_archive_manifest",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "pareto_ineligible_atom",
+        "field_equation_planning_only",
+        "research_basis_is_not_score_evidence"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "empirical_byte_raw_equal",
+      "expected_information_gain_nats": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "hnerv_rate_recode",
+      "family_group": "hnerv_rate_equivalent_recode",
+      "frechet_derivatives": {
+        "d_bytes_d_epsilon": 0.0,
+        "d_pose_dist_d_epsilon": 0.0,
+        "d_rate_score_d_epsilon": 0.0,
+        "d_score_d_epsilon": 0.0,
+        "d_seg_dist_d_epsilon": 0.0
+      },
+      "interaction_assumptions": [
+        "rate_only_raw_equal_required",
+        "stack_before_scorer_changing_atoms",
+        "conflicts_with_decoder_replacement_for_same_section"
+      ],
+      "kkt": {
+        "constraint_residuals": {
+          "byte_violation": 0.0,
+          "confidence_violation": 0.0,
+          "pose_violation": 0.0,
+          "seg_violation": 0.0
+        },
+        "kkt_blockers": [
+          "missing_byte_closed_archive_manifest",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "pareto_ineligible_atom"
+        ],
+        "locally_descending": false,
+        "selection_penalty_score_delta": 135.0,
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "missing_byte_closed_archive_manifest": 100.0,
+          "pareto_ineligible_atom": 25.0
+        },
+        "stationarity_residual": 135.0
+      },
+      "kkt_ready_for_field_planning": false,
+      "mdl": {
+        "data_byte_delta": 0.0,
+        "description_length_delta_bytes": 0.0,
+        "description_length_rate_score_delta": 0.0,
+        "model_byte_delta": 0.0
+      },
+      "meta_lagrangian_selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "missing_byte_closed_archive_manifest": 100.0,
+        "pareto_ineligible_atom": 25.0
+      },
+      "meta_lagrangian_selection_score_delta": 0.0,
+      "observation_noise_variance": 0.0,
+      "pareto_dominated_by": [],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_scope": "hnerv_rate_equivalent_recode",
+      "proxy_row": false,
+      "rankable": true,
+      "ready_for_exact_eval_dispatch": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "variational_action_delta": 135.0
+    },
+    {
+      "archive_manifest_path": "",
+      "archive_manifest_sha256": "",
+      "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:brotli_q9_current_raw",
+      "byte_closed_archive_manifest_attached": false,
+      "confidence": 1.0,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "requires_byte_closed_archive",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_byte_closed_archive_manifest_before_dispatch",
+        "hnerv_rate_recode_requires_raw_equal_proof",
+        "planning_only_structural_recode_profile",
+        "requires_runtime_decoder_implementation",
+        "requires_archive_manifest_preflight",
+        "missing_byte_closed_archive_manifest",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "pareto_ineligible_atom",
+        "byte_violation",
+        "field_equation_planning_only",
+        "research_basis_is_not_score_evidence"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "empirical_byte_raw_equal",
+      "expected_information_gain_nats": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "hnerv_rate_recode",
+      "family_group": "hnerv_rate_equivalent_recode",
+      "frechet_derivatives": {
+        "d_bytes_d_epsilon": 2860.0,
+        "d_pose_dist_d_epsilon": 0.0,
+        "d_rate_score_d_epsilon": 0.001904356606,
+        "d_score_d_epsilon": 0.001904356606,
+        "d_seg_dist_d_epsilon": 0.0
+      },
+      "interaction_assumptions": [
+        "rate_only_raw_equal_required",
+        "stack_before_scorer_changing_atoms",
+        "conflicts_with_decoder_replacement_for_same_section"
+      ],
+      "kkt": {
+        "constraint_residuals": {
+          "byte_violation": 2860.0,
+          "confidence_violation": 0.0,
+          "pose_violation": 0.0,
+          "seg_violation": 0.0
+        },
+        "kkt_blockers": [
+          "missing_byte_closed_archive_manifest",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "pareto_ineligible_atom",
+          "byte_violation"
+        ],
+        "locally_descending": false,
+        "selection_penalty_score_delta": 135.0,
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "missing_byte_closed_archive_manifest": 100.0,
+          "pareto_ineligible_atom": 25.0
+        },
+        "stationarity_residual": 2995.001904356606
+      },
+      "kkt_ready_for_field_planning": false,
+      "mdl": {
+        "data_byte_delta": 2860.0,
+        "description_length_delta_bytes": 2860.0,
+        "description_length_rate_score_delta": 0.001904356606,
+        "model_byte_delta": 0.0
+      },
+      "meta_lagrangian_selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "missing_byte_closed_archive_manifest": 100.0,
+        "pareto_ineligible_atom": 25.0
+      },
+      "meta_lagrangian_selection_score_delta": 0.001904356606,
+      "observation_noise_variance": 0.0,
+      "pareto_dominated_by": [],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_scope": "hnerv_rate_equivalent_recode",
+      "proxy_row": false,
+      "rankable": true,
+      "ready_for_exact_eval_dispatch": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "variational_action_delta": 2995.001904356606
+    },
+    {
+      "archive_manifest_path": "",
+      "archive_manifest_sha256": "",
+      "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:aq_global_q_stream_plus_raw_scales",
+      "byte_closed_archive_manifest_attached": false,
+      "confidence": 1.0,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "requires_byte_closed_archive",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_byte_closed_archive_manifest_before_dispatch",
+        "hnerv_rate_recode_requires_raw_equal_proof",
+        "planning_only_structural_recode_profile",
+        "requires_runtime_decoder_implementation",
+        "requires_archive_manifest_preflight",
+        "missing_byte_closed_archive_manifest",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "pareto_ineligible_atom",
+        "byte_violation",
+        "field_equation_planning_only",
+        "research_basis_is_not_score_evidence"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "empirical_byte_raw_equal",
+      "expected_information_gain_nats": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "hnerv_rate_recode",
+      "family_group": "hnerv_rate_equivalent_recode",
+      "frechet_derivatives": {
+        "d_bytes_d_epsilon": 18713.0,
+        "d_pose_dist_d_epsilon": 0.0,
+        "d_rate_score_d_epsilon": 0.01246021859,
+        "d_score_d_epsilon": 0.01246021859,
+        "d_seg_dist_d_epsilon": 0.0
+      },
+      "interaction_assumptions": [
+        "rate_only_raw_equal_required",
+        "stack_before_scorer_changing_atoms",
+        "conflicts_with_decoder_replacement_for_same_section"
+      ],
+      "kkt": {
+        "constraint_residuals": {
+          "byte_violation": 18713.0,
+          "confidence_violation": 0.0,
+          "pose_violation": 0.0,
+          "seg_violation": 0.0
+        },
+        "kkt_blockers": [
+          "missing_byte_closed_archive_manifest",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "pareto_ineligible_atom",
+          "byte_violation"
+        ],
+        "locally_descending": false,
+        "selection_penalty_score_delta": 135.0,
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "missing_byte_closed_archive_manifest": 100.0,
+          "pareto_ineligible_atom": 25.0
+        },
+        "stationarity_residual": 18848.01246021859
+      },
+      "kkt_ready_for_field_planning": false,
+      "mdl": {
+        "data_byte_delta": 18713.0,
+        "description_length_delta_bytes": 18713.0,
+        "description_length_rate_score_delta": 0.01246021859,
+        "model_byte_delta": 0.0
+      },
+      "meta_lagrangian_selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "missing_byte_closed_archive_manifest": 100.0,
+        "pareto_ineligible_atom": 25.0
+      },
+      "meta_lagrangian_selection_score_delta": 0.01246021859,
+      "observation_noise_variance": 0.0,
+      "pareto_dominated_by": [],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_scope": "hnerv_rate_equivalent_recode",
+      "proxy_row": false,
+      "rankable": true,
+      "ready_for_exact_eval_dispatch": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "variational_action_delta": 18848.01246021859
+    },
+    {
+      "archive_manifest_path": "",
+      "archive_manifest_sha256": "",
+      "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:canonical_huffman_global_q_stream_plus_raw_scales",
+      "byte_closed_archive_manifest_attached": false,
+      "confidence": 1.0,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "requires_byte_closed_archive",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_byte_closed_archive_manifest_before_dispatch",
+        "hnerv_rate_recode_requires_raw_equal_proof",
+        "planning_only_structural_recode_profile",
+        "requires_runtime_decoder_implementation",
+        "requires_archive_manifest_preflight",
+        "missing_byte_closed_archive_manifest",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "pareto_ineligible_atom",
+        "byte_violation",
+        "field_equation_planning_only",
+        "research_basis_is_not_score_evidence"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "empirical_byte_raw_equal",
+      "expected_information_gain_nats": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "hnerv_rate_recode",
+      "family_group": "hnerv_rate_equivalent_recode",
+      "frechet_derivatives": {
+        "d_bytes_d_epsilon": 19175.0,
+        "d_pose_dist_d_epsilon": 0.0,
+        "d_rate_score_d_epsilon": 0.012767845426,
+        "d_score_d_epsilon": 0.012767845426,
+        "d_seg_dist_d_epsilon": 0.0
+      },
+      "interaction_assumptions": [
+        "rate_only_raw_equal_required",
+        "stack_before_scorer_changing_atoms",
+        "conflicts_with_decoder_replacement_for_same_section"
+      ],
+      "kkt": {
+        "constraint_residuals": {
+          "byte_violation": 19175.0,
+          "confidence_violation": 0.0,
+          "pose_violation": 0.0,
+          "seg_violation": 0.0
+        },
+        "kkt_blockers": [
+          "missing_byte_closed_archive_manifest",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "pareto_ineligible_atom",
+          "byte_violation"
+        ],
+        "locally_descending": false,
+        "selection_penalty_score_delta": 135.0,
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "missing_byte_closed_archive_manifest": 100.0,
+          "pareto_ineligible_atom": 25.0
+        },
+        "stationarity_residual": 19310.012767845426
+      },
+      "kkt_ready_for_field_planning": false,
+      "mdl": {
+        "data_byte_delta": 19175.0,
+        "description_length_delta_bytes": 19175.0,
+        "description_length_rate_score_delta": 0.012767845426,
+        "model_byte_delta": 0.0
+      },
+      "meta_lagrangian_selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "missing_byte_closed_archive_manifest": 100.0,
+        "pareto_ineligible_atom": 25.0
+      },
+      "meta_lagrangian_selection_score_delta": 0.012767845426,
+      "observation_noise_variance": 0.0,
+      "pareto_dominated_by": [],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_scope": "hnerv_rate_equivalent_recode",
+      "proxy_row": false,
+      "rankable": true,
+      "ready_for_exact_eval_dispatch": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "variational_action_delta": 19310.012767845426
+    },
+    {
+      "archive_manifest_path": "",
+      "archive_manifest_sha256": "",
+      "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:aq_per_tensor_q_streams_plus_raw_scales",
+      "byte_closed_archive_manifest_attached": false,
+      "confidence": 1.0,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "requires_byte_closed_archive",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_byte_closed_archive_manifest_before_dispatch",
+        "hnerv_rate_recode_requires_raw_equal_proof",
+        "planning_only_structural_recode_profile",
+        "requires_runtime_decoder_implementation",
+        "requires_archive_manifest_preflight",
+        "missing_byte_closed_archive_manifest",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "pareto_ineligible_atom",
+        "byte_violation",
+        "field_equation_planning_only",
+        "research_basis_is_not_score_evidence"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "empirical_byte_raw_equal",
+      "expected_information_gain_nats": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "hnerv_rate_recode",
+      "family_group": "hnerv_rate_equivalent_recode",
+      "frechet_derivatives": {
+        "d_bytes_d_epsilon": 27863.0,
+        "d_pose_dist_d_epsilon": 0.0,
+        "d_rate_score_d_epsilon": 0.018552828011,
+        "d_score_d_epsilon": 0.018552828011,
+        "d_seg_dist_d_epsilon": 0.0
+      },
+      "interaction_assumptions": [
+        "rate_only_raw_equal_required",
+        "stack_before_scorer_changing_atoms",
+        "conflicts_with_decoder_replacement_for_same_section"
+      ],
+      "kkt": {
+        "constraint_residuals": {
+          "byte_violation": 27863.0,
+          "confidence_violation": 0.0,
+          "pose_violation": 0.0,
+          "seg_violation": 0.0
+        },
+        "kkt_blockers": [
+          "missing_byte_closed_archive_manifest",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "pareto_ineligible_atom",
+          "byte_violation"
+        ],
+        "locally_descending": false,
+        "selection_penalty_score_delta": 135.0,
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "missing_byte_closed_archive_manifest": 100.0,
+          "pareto_ineligible_atom": 25.0
+        },
+        "stationarity_residual": 27998.018552828013
+      },
+      "kkt_ready_for_field_planning": false,
+      "mdl": {
+        "data_byte_delta": 27863.0,
+        "description_length_delta_bytes": 27863.0,
+        "description_length_rate_score_delta": 0.018552828011,
+        "model_byte_delta": 0.0
+      },
+      "meta_lagrangian_selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "missing_byte_closed_archive_manifest": 100.0,
+        "pareto_ineligible_atom": 25.0
+      },
+      "meta_lagrangian_selection_score_delta": 0.018552828011,
+      "observation_noise_variance": 0.0,
+      "pareto_dominated_by": [],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_scope": "hnerv_rate_equivalent_recode",
+      "proxy_row": false,
+      "rankable": true,
+      "ready_for_exact_eval_dispatch": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "variational_action_delta": 27998.018552828013
+    },
+    {
+      "archive_manifest_path": "",
+      "archive_manifest_sha256": "",
+      "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales",
+      "byte_closed_archive_manifest_attached": false,
+      "confidence": 1.0,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "requires_byte_closed_archive",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_byte_closed_archive_manifest_before_dispatch",
+        "hnerv_rate_recode_requires_raw_equal_proof",
+        "planning_only_structural_recode_profile",
+        "requires_runtime_decoder_implementation",
+        "requires_archive_manifest_preflight",
+        "parity_fixture_only",
+        "requires_submission_runtime_decoder",
+        "requires_archive_builder_and_payload_diff",
+        "missing_byte_closed_archive_manifest",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "pareto_ineligible_atom",
+        "byte_violation",
+        "field_equation_planning_only",
+        "research_basis_is_not_score_evidence"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "empirical_byte_raw_equal",
+      "expected_information_gain_nats": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "hnerv_rate_recode",
+      "family_group": "hnerv_rate_equivalent_recode",
+      "frechet_derivatives": {
+        "d_bytes_d_epsilon": 38543.0,
+        "d_pose_dist_d_epsilon": 0.0,
+        "d_rate_score_d_epsilon": 0.02566420163,
+        "d_score_d_epsilon": 0.02566420163,
+        "d_seg_dist_d_epsilon": 0.0
+      },
+      "interaction_assumptions": [
+        "rate_only_raw_equal_required",
+        "stack_before_scorer_changing_atoms",
+        "conflicts_with_decoder_replacement_for_same_section"
+      ],
+      "kkt": {
+        "constraint_residuals": {
+          "byte_violation": 38543.0,
+          "confidence_violation": 0.0,
+          "pose_violation": 0.0,
+          "seg_violation": 0.0
+        },
+        "kkt_blockers": [
+          "missing_byte_closed_archive_manifest",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "pareto_ineligible_atom",
+          "byte_violation"
+        ],
+        "locally_descending": false,
+        "selection_penalty_score_delta": 135.0,
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "missing_byte_closed_archive_manifest": 100.0,
+          "pareto_ineligible_atom": 25.0
+        },
+        "stationarity_residual": 38678.02566420163
+      },
+      "kkt_ready_for_field_planning": false,
+      "mdl": {
+        "data_byte_delta": 38543.0,
+        "description_length_delta_bytes": 38543.0,
+        "description_length_rate_score_delta": 0.02566420163,
+        "model_byte_delta": 0.0
+      },
+      "meta_lagrangian_selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "missing_byte_closed_archive_manifest": 100.0,
+        "pareto_ineligible_atom": 25.0
+      },
+      "meta_lagrangian_selection_score_delta": 0.02566420163,
+      "observation_noise_variance": 0.0,
+      "pareto_dominated_by": [],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_scope": "hnerv_rate_equivalent_recode",
+      "proxy_row": false,
+      "rankable": true,
+      "ready_for_exact_eval_dispatch": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "variational_action_delta": 38678.02566420163
+    },
+    {
+      "archive_manifest_path": "",
+      "archive_manifest_sha256": "",
+      "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:range_prev_symbol_global_q_streams_plus_raw_scales",
+      "byte_closed_archive_manifest_attached": false,
+      "confidence": 1.0,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "requires_byte_closed_archive",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_byte_closed_archive_manifest_before_dispatch",
+        "hnerv_rate_recode_requires_raw_equal_proof",
+        "planning_only_structural_recode_profile",
+        "requires_runtime_decoder_implementation",
+        "requires_archive_manifest_preflight",
+        "parity_fixture_only",
+        "requires_submission_runtime_decoder",
+        "requires_archive_builder_and_payload_diff",
+        "missing_byte_closed_archive_manifest",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "pareto_ineligible_atom",
+        "byte_violation",
+        "field_equation_planning_only",
+        "research_basis_is_not_score_evidence"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "empirical_byte_raw_equal",
+      "expected_information_gain_nats": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "hnerv_rate_recode",
+      "family_group": "hnerv_rate_equivalent_recode",
+      "frechet_derivatives": {
+        "d_bytes_d_epsilon": 51103.0,
+        "d_pose_dist_d_epsilon": 0.0,
+        "d_rate_score_d_epsilon": 0.034027390081,
+        "d_score_d_epsilon": 0.034027390081,
+        "d_seg_dist_d_epsilon": 0.0
+      },
+      "interaction_assumptions": [
+        "rate_only_raw_equal_required",
+        "stack_before_scorer_changing_atoms",
+        "conflicts_with_decoder_replacement_for_same_section"
+      ],
+      "kkt": {
+        "constraint_residuals": {
+          "byte_violation": 51103.0,
+          "confidence_violation": 0.0,
+          "pose_violation": 0.0,
+          "seg_violation": 0.0
+        },
+        "kkt_blockers": [
+          "missing_byte_closed_archive_manifest",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "pareto_ineligible_atom",
+          "byte_violation"
+        ],
+        "locally_descending": false,
+        "selection_penalty_score_delta": 135.0,
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "missing_byte_closed_archive_manifest": 100.0,
+          "pareto_ineligible_atom": 25.0
+        },
+        "stationarity_residual": 51238.03402739008
+      },
+      "kkt_ready_for_field_planning": false,
+      "mdl": {
+        "data_byte_delta": 51103.0,
+        "description_length_delta_bytes": 51103.0,
+        "description_length_rate_score_delta": 0.034027390081,
+        "model_byte_delta": 0.0
+      },
+      "meta_lagrangian_selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "missing_byte_closed_archive_manifest": 100.0,
+        "pareto_ineligible_atom": 25.0
+      },
+      "meta_lagrangian_selection_score_delta": 0.034027390081,
+      "observation_noise_variance": 0.0,
+      "pareto_dominated_by": [],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_scope": "hnerv_rate_equivalent_recode",
+      "proxy_row": false,
+      "rankable": true,
+      "ready_for_exact_eval_dispatch": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "variational_action_delta": 51238.03402739008
+    },
+    {
+      "archive_manifest_path": "",
+      "archive_manifest_sha256": "",
+      "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:range_prev_symbol_per_tensor_q_streams_plus_raw_scales",
+      "byte_closed_archive_manifest_attached": false,
+      "confidence": 1.0,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "requires_byte_closed_archive",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_byte_closed_archive_manifest_before_dispatch",
+        "hnerv_rate_recode_requires_raw_equal_proof",
+        "planning_only_structural_recode_profile",
+        "requires_runtime_decoder_implementation",
+        "requires_archive_manifest_preflight",
+        "parity_fixture_only",
+        "requires_submission_runtime_decoder",
+        "requires_archive_builder_and_payload_diff",
+        "missing_byte_closed_archive_manifest",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "pareto_ineligible_atom",
+        "byte_violation",
+        "field_equation_planning_only",
+        "research_basis_is_not_score_evidence"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "empirical_byte_raw_equal",
+      "expected_information_gain_nats": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "hnerv_rate_recode",
+      "family_group": "hnerv_rate_equivalent_recode",
+      "frechet_derivatives": {
+        "d_bytes_d_epsilon": 96671.0,
+        "d_pose_dist_d_epsilon": 0.0,
+        "d_rate_score_d_epsilon": 0.064369250857,
+        "d_score_d_epsilon": 0.064369250857,
+        "d_seg_dist_d_epsilon": 0.0
+      },
+      "interaction_assumptions": [
+        "rate_only_raw_equal_required",
+        "stack_before_scorer_changing_atoms",
+        "conflicts_with_decoder_replacement_for_same_section"
+      ],
+      "kkt": {
+        "constraint_residuals": {
+          "byte_violation": 96671.0,
+          "confidence_violation": 0.0,
+          "pose_violation": 0.0,
+          "seg_violation": 0.0
+        },
+        "kkt_blockers": [
+          "missing_byte_closed_archive_manifest",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "pareto_ineligible_atom",
+          "byte_violation"
+        ],
+        "locally_descending": false,
+        "selection_penalty_score_delta": 135.0,
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "missing_byte_closed_archive_manifest": 100.0,
+          "pareto_ineligible_atom": 25.0
+        },
+        "stationarity_residual": 96806.06436925086
+      },
+      "kkt_ready_for_field_planning": false,
+      "mdl": {
+        "data_byte_delta": 96671.0,
+        "description_length_delta_bytes": 96671.0,
+        "description_length_rate_score_delta": 0.064369250857,
+        "model_byte_delta": 0.0
+      },
+      "meta_lagrangian_selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "missing_byte_closed_archive_manifest": 100.0,
+        "pareto_ineligible_atom": 25.0
+      },
+      "meta_lagrangian_selection_score_delta": 0.064369250857,
+      "observation_noise_variance": 0.0,
+      "pareto_dominated_by": [],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_scope": "hnerv_rate_equivalent_recode",
+      "proxy_row": false,
+      "rankable": true,
+      "ready_for_exact_eval_dispatch": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "variational_action_delta": 96806.06436925086
+    }
+  ],
+  "schema_version": 2,
+  "score_claim": false,
+  "source": "frontier_tranche_20260507",
+  "theoretical_floor_estimate": {
+    "assumption": "independent_locally_descending_atoms_plus_best_compatible_nonconflicting_pair_interaction",
+    "base_score": 0.229,
+    "best_pair_combined_score_delta": 0.0,
+    "blockers": [
+      "nonconvex_proxy_bound",
+      "missing_exact_stacked_archive_eval",
+      "missing_higher_order_interaction_terms"
+    ],
+    "evidence_grade": "derivation",
+    "independent_score_delta": 0,
+    "optimistic_floor_score": 0.229,
+    "score_claim": false
+  },
+  "tool": "tac.optimization.field_equation_planner.build_field_equation_plan",
+  "trainable_surrogate": {
+    "determinism_contract": "training may choose archive atoms, but emitted archive bytes and inflate behavior must be deterministic and byte-closed",
+    "equation": "J_theta = score_delta_theta + lambda_rate*byte_violation_theta + lambda_seg*seg_violation_theta + lambda_pose*pose_violation_theta + lambda_conf*confidence_violation_theta",
+    "gradient_fields": [
+      "d_score_d_epsilon",
+      "d_seg_dist_d_epsilon",
+      "d_pose_dist_d_epsilon",
+      "d_bytes_d_epsilon"
+    ],
+    "target": "minimize_variational_action_delta",
+    "trainable_parameters": [
+      "atom_amplitude_epsilon",
+      "selector_logits",
+      "byte_allocator_lambdas",
+      "interaction_kernel"
+    ]
+  },
+  "volterra_blocker_counts": {},
+  "volterra_interaction_count": 0,
+  "volterra_interactions": []
+}
