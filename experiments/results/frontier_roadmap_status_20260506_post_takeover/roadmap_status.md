@@ -22,7 +22,7 @@ Live-safe operator roadmap. It does not claim scores or dispatch work.
 - selected_candidate_packet: `wr01_apply_pr106x_half`
 - selected_candidate_decision: `strict_candidate_preflight_refused`
 - selected_candidate_frontier_reason: `not_on_frontier_until_pareto_eligibility_blockers_clear`
-- selected_candidate_exact_blocker_count: `15`
+- selected_candidate_exact_blocker_count: `14`
 
 | workstream | keys | dirty-blocked keys | acceptance gates |
 |---|---|---|---|

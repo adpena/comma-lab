@@ -196,6 +196,7 @@ payload = {
     "run_id": os.environ["IMP_C067_RUN_ID"],
     "score_claim": False,
     "promotion_eligible": False,
+    "predicted_band": "empirical_byte_screen_only_no_score_predicted",
     "evidence_grade": "empirical_byte_screen_non_score",
     "classification": "empirical byte-screen only; non-score unless exact CUDA auth eval is later run",
     "required_score_truth": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",

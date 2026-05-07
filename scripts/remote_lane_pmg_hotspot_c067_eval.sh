@@ -30,6 +30,7 @@ prov = {
     "guard": "ALLOW_REPLAY_EXACT_NEGATIVE_PMG=1 (forensic replay only)",
     "score_claim": False,
     "promotion_eligible": False,
+    "predicted_band": [0.18, 2.50],
 }
 with open("$PROVENANCE", "w") as f:
     json.dump(prov, f, indent=2, sort_keys=True)

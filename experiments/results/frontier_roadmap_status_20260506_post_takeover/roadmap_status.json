@@ -2,8 +2,7 @@
   "dirty_blocked_row_count": 0,
   "dirty_path_count": 11,
   "dirty_paths": [
-    "experiments/results/frontier_roadmap_status_20260506_post_takeover/roadmap_status.json",
-    "experiments/results/frontier_roadmap_status_20260506_post_takeover/roadmap_status.md",
+    "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/lightning_exact_eval_plan.json",
     "experiments/results/public_pr100_intake_20260504_codex/source",
     "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source",
     "experiments/results/public_pr103_intake_20260504_codex/source",
@@ -12,7 +11,8 @@
     "experiments/results/public_pr81_qzs3_range_mask_intake_20260503_codex/repo",
     "experiments/results/public_pr82_henosis_frontier_intake_20260503_codex/repo",
     "experiments/results/public_pr91_intake_20260504_worker/pr91_src/repo",
-    "reports/raw/kaggle_ingest/kaggle-dilated-h64-long1000-retry-v6-20260410T234220Z/comma_video_compression_challenge"
+    "reports/raw/kaggle_ingest/kaggle-dilated-h64-long1000-retry-v6-20260410T234220Z/comma_video_compression_challenge",
+    "scripts/remote_lane_imp_c067_bridge.sh"
   ],
   "dispatch_attempted": false,
   "dispatch_blockers": [
@@ -141,8 +141,7 @@
             "strict:candidate_static_preflight_ready_false",
             "strict:static_blockers_reported",
             "packet_static_preflight_not_ready",
-            "packet_static:pre_submission_compliance_failed",
-            "packet_static:dry_run_queue_payload_section_diff_mismatch"
+            "packet_static:pre_submission_compliance_failed"
           ],
           "candidate_id": "wr01_apply_pr106x_half",
           "candidate_local_preflight_ready": false,
@@ -194,8 +193,7 @@
                 "kkt_not_ready_for_field_planning"
               ],
               "other": [
-                "packet_static:pre_submission_compliance_failed",
-                "packet_static:dry_run_queue_payload_section_diff_mismatch"
+                "packet_static:pre_submission_compliance_failed"
               ],
               "pareto_frontier": [
                 "pareto_ineligible_packet",
@@ -215,7 +213,7 @@
                 "strict_candidate_preflight_blocked"
               ]
             },
-            "blocker_count": 15,
+            "blocker_count": 14,
             "blockers": [
               "strict_candidate_preflight_not_ready",
               "strict:dispatch_gate_blocked",
@@ -226,7 +224,6 @@
               "strict:static_blockers_reported",
               "packet_static_preflight_not_ready",
               "packet_static:pre_submission_compliance_failed",
-              "packet_static:dry_run_queue_payload_section_diff_mismatch",
               "kkt:kkt_proof_or_admm_result_missing",
               "kkt_not_ready_for_field_planning",
               "pareto_ineligible_packet",
@@ -288,7 +285,6 @@
             "strict:static_blockers_reported",
             "packet_static_preflight_not_ready",
             "packet_static:pre_submission_compliance_failed",
-            "packet_static:dry_run_queue_payload_section_diff_mismatch",
             "kkt:kkt_proof_or_admm_result_missing"
           ],
           "kkt_proof": {
@@ -315,7 +311,7 @@
             0.0
           ],
           "manifest_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
-          "manifest_sha256": "5af812f68c52393027439f988e347bb1da8a29337ec0bda479e0a89629625413",
+          "manifest_sha256": "bb19c67575f9c8009bade63920ece6fcc4c535e3779dc1ee925212a0fc23b9ee",
           "next_required_proof": [
             "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py"
           ],
@@ -404,8 +400,7 @@
             "strict:candidate_static_preflight_ready_false",
             "strict:static_blockers_reported",
             "packet_static_preflight_not_ready",
-            "packet_static:pre_submission_compliance_failed",
-            "packet_static:dry_run_queue_payload_section_diff_mismatch"
+            "packet_static:pre_submission_compliance_failed"
           ],
           "strict_candidate_preflight": {
             "blockers": [
@@ -436,7 +431,7 @@
               },
               {
                 "code": "static_blockers_reported",
-                "detail": "static_blockers: pre_submission_compliance_failed, dry_run_queue_payload_section_diff_mismatch",
+                "detail": "static_blockers: pre_submission_compliance_failed",
                 "severity": "blocking"
               }
             ],
@@ -487,8 +482,7 @@
           "strict:candidate_static_preflight_ready_false",
           "strict:static_blockers_reported",
           "packet_static_preflight_not_ready",
-          "packet_static:pre_submission_compliance_failed",
-          "packet_static:dry_run_queue_payload_section_diff_mismatch"
+          "packet_static:pre_submission_compliance_failed"
         ],
         "candidate_id": "wr01_apply_pr106x_half",
         "candidate_local_preflight_ready": false,
@@ -540,8 +534,7 @@
               "kkt_not_ready_for_field_planning"
             ],
             "other": [
-              "packet_static:pre_submission_compliance_failed",
-              "packet_static:dry_run_queue_payload_section_diff_mismatch"
+              "packet_static:pre_submission_compliance_failed"
             ],
             "pareto_frontier": [
               "pareto_ineligible_packet",
@@ -561,7 +554,7 @@
               "strict_candidate_preflight_blocked"
             ]
           },
-          "blocker_count": 15,
+          "blocker_count": 14,
           "blockers": [
             "strict_candidate_preflight_not_ready",
             "strict:dispatch_gate_blocked",
@@ -572,7 +565,6 @@
             "strict:static_blockers_reported",
             "packet_static_preflight_not_ready",
             "packet_static:pre_submission_compliance_failed",
-            "packet_static:dry_run_queue_payload_section_diff_mismatch",
             "kkt:kkt_proof_or_admm_result_missing",
             "kkt_not_ready_for_field_planning",
             "pareto_ineligible_packet",
@@ -634,7 +626,6 @@
           "strict:static_blockers_reported",
           "packet_static_preflight_not_ready",
           "packet_static:pre_submission_compliance_failed",
-          "packet_static:dry_run_queue_payload_section_diff_mismatch",
           "kkt:kkt_proof_or_admm_result_missing"
         ],
         "kkt_proof": {
@@ -661,7 +652,7 @@
           0.0
         ],
         "manifest_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
-        "manifest_sha256": "5af812f68c52393027439f988e347bb1da8a29337ec0bda479e0a89629625413",
+        "manifest_sha256": "bb19c67575f9c8009bade63920ece6fcc4c535e3779dc1ee925212a0fc23b9ee",
         "next_required_proof": [
           "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py"
         ],
@@ -750,8 +741,7 @@
           "strict:candidate_static_preflight_ready_false",
           "strict:static_blockers_reported",
           "packet_static_preflight_not_ready",
-          "packet_static:pre_submission_compliance_failed",
-          "packet_static:dry_run_queue_payload_section_diff_mismatch"
+          "packet_static:pre_submission_compliance_failed"
         ],
         "strict_candidate_preflight": {
           "blockers": [
@@ -782,7 +772,7 @@
             },
             {
               "code": "static_blockers_reported",
-              "detail": "static_blockers: pre_submission_compliance_failed, dry_run_queue_payload_section_diff_mismatch",
+              "detail": "static_blockers: pre_submission_compliance_failed",
               "severity": "blocking"
             }
           ],
