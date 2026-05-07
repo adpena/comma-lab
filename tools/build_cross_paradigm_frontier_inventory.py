@@ -209,17 +209,20 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "experiments/results/pr91_hpm1_runtime_contract_20260506_codex/runtime_contract.json",
             "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/summary.json",
             "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+            ".omx/research/pr91_hpm1_phase_major_failure_classification_20260507_codex.json",
         ),
         next_patch=(
-            "Recover PR91/HPM1 full decode/reencode parity against the local payload member, replace "
-            "the runtime skeleton with a real charged consumer, and pass the matching readiness audit "
-            "before any lane claim or exact eval."
+            "Use the phase-major failure classification to recover PR91/HPM1 prior context, "
+            "range-state, or true encoder semantic-token grammar; then prove full decode/"
+            "reencode parity before replacing the runtime skeleton with a charged consumer."
         ),
         blockers=(
             "raw lossless class wrapping was byte-regressive",
             "CMG2 exact evals showed PoseNet collapse",
             "CLADE/SPADE/openpilot priors need charged archive consumption",
             "local PR91 HPM1 payload candidate lacks full 600-frame decode/reencode parity",
+            "phase-major reference row is argmax but stream still fails after 15989 symbols",
+            "prior probability/context or range-state grammar remains unrecovered",
             "runtime consumer is a charged fail-closed skeleton, not a decoder",
             "PR91 HPAC device contract is ambient/contradictory in public runtime sources",
         ),

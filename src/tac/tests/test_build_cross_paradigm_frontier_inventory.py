@@ -84,6 +84,13 @@ def test_cross_paradigm_inventory_pins_required_score_path_rows() -> None:
         "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json"
         in categorical["evidence_paths"]
     )
+    assert (
+        ".omx/research/pr91_hpm1_phase_major_failure_classification_20260507_codex.json"
+        in categorical["evidence_paths"]
+    )
+    assert "phase-major failure classification" in categorical["next_patch"]
+    assert any("15989 symbols" in blocker for blocker in categorical["blockers"])
+    assert any("range-state grammar" in blocker for blocker in categorical["blockers"])
 
     entropy = rows["hnerv_per_tensor_context_entropy"]
     assert "src/tac/optimization/entropy_codec_gap_audit.py" in entropy["code_paths"]
