@@ -356,7 +356,31 @@ class CodecPipeline:
         out += struct.pack("<I", len(results))
         for res in results:
             name_b = res.op_name.encode("utf-8")
-            state_b = json.dumps(res.op_state, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            # Bug-hunter v3 fix 2026-05-07 (MEDIUM, integration seam):
+            # the previous version called ``json.dumps(res.op_state, ...)``
+            # bare. When an op accidentally placed a non-JSON-serializable
+            # value (torch.Tensor, numpy array/scalar, set, frozenset, dataclass,
+            # ...) into ``op_state``, the resulting ``TypeError`` was opaque
+            # ("Object of type Tensor is not JSON serializable") with no
+            # indication of which op or which key was responsible. CodecPipeline
+            # composes 2-3 ops per stack and 8 stacks per matrix; without the
+            # op_name and key in the error message, operators have to bisect
+            # by hand. Catch the TypeError, identify the offending key via a
+            # walk over op_state, and re-raise with the op_name + key path.
+            try:
+                state_b = json.dumps(
+                    res.op_state, sort_keys=True, separators=(",", ":")
+                ).encode("utf-8")
+            except TypeError as exc:
+                offender = _find_non_json_serializable_key(res.op_state)
+                raise TypeError(
+                    f"CodecPipeline.encode: op {res.op_name!r} produced an "
+                    f"op_state value that is not JSON-serializable at key path "
+                    f"{offender!r}. CPL1 wire format requires op_state to be "
+                    f"JSON-encodable (str/int/float/bool/None/list/dict). "
+                    f"Convert tensors with ``.tolist()`` and numpy types with "
+                    f"``int(...)`` / ``float(...)``. Underlying error: {exc}"
+                ) from exc
             out += struct.pack("<H", len(name_b))
             out += name_b
             out += struct.pack("<I", len(state_b))
@@ -626,6 +650,47 @@ class Op2_PR103ArithmeticCodec:
             op_name=self.name,
             findings=findings,
         )
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+def _find_non_json_serializable_key(
+    obj: Any, path: str = ""
+) -> str:
+    """Walk a (possibly nested) op_state and return the dotted-key path to the
+    first value that is not JSON-serializable.
+
+    Used by :meth:`CodecPipeline.encode` to enrich the opaque ``TypeError``
+    raised by ``json.dumps`` when an op accidentally embeds a tensor, numpy
+    array, set, etc. in ``op_state``. The walk is recursive over dicts and
+    lists/tuples; for any leaf we attempt ``json.dumps(value)`` and on failure
+    return the current path. If everything is serialisable we return
+    ``"<unknown>"`` (which means the caller's TypeError must have come from
+    something other than a leaf — e.g. a custom ``__dict__``-only object).
+    """
+    import json
+
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            sub = _find_non_json_serializable_key(
+                v, f"{path}.{k}" if path else str(k)
+            )
+            if sub != "<json-ok>":
+                return sub
+        return "<json-ok>"
+    if isinstance(obj, (list, tuple)):
+        for i, v in enumerate(obj):
+            sub = _find_non_json_serializable_key(v, f"{path}[{i}]")
+            if sub != "<json-ok>":
+                return sub
+        return "<json-ok>"
+    try:
+        json.dumps(obj)
+    except TypeError:
+        return path or "<root>"
+    return "<json-ok>"
 
 
 __all__ = [

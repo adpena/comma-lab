@@ -342,3 +342,125 @@ def test_op2_docstring_lists_all_five_section_keys() -> None:
         )
     # Also pin the ac_fallback_set op_state mention.
     assert "ac_fallback_set" in docstring
+
+
+# ---------------------------------------------------------------------------
+# Bug-hunter v3: integration-seam regressions
+# ---------------------------------------------------------------------------
+
+def test_pipeline_encode_raises_actionable_error_on_non_json_op_state() -> None:
+    """Bug-hunter v3 (MEDIUM, integration seam): a CodecOp that accidentally
+    embeds a torch.Tensor / numpy array / set in ``op_state`` must produce a
+    TypeError that names the offending op AND the offending key path. The
+    previous bare ``json.dumps(op_state)`` produced an opaque
+    ``"Object of type Tensor is not JSON serializable"`` with no op or key
+    context, forcing operators to bisect across the 8 canonical stacks.
+    """
+    from tac.codec_pipeline import EncodeResult, ValidationReport
+
+    class _BadOp:
+        name = "bad_tensor_op"
+
+        def encode(self, state_dict, *, context):  # type: ignore[no-untyped-def]
+            return EncodeResult(
+                blob=b"x",
+                bytes_in=0,
+                bytes_out=1,
+                op_name=self.name,
+                op_state={
+                    "ok": [1, 2, 3],
+                    "nested": {"inner": torch.tensor([1.0])},
+                },
+            )
+
+        def decode(self, blob, *, op_state, context):  # type: ignore[no-untyped-def]
+            return {}
+
+        def validate(self, state_dict, *, context):  # type: ignore[no-untyped-def]
+            return ValidationReport(passed=True, op_name=self.name)
+
+    pipeline = CodecPipeline([_BadOp()])
+    with pytest.raises(TypeError) as excinfo:
+        pipeline.encode({})
+    msg = str(excinfo.value)
+    # Op name must appear so operators can locate the offending op without bisecting.
+    assert "bad_tensor_op" in msg, f"op name missing from error: {msg!r}"
+    # Key path must appear so operators don't have to introspect op_state.
+    assert "nested.inner" in msg, f"key path missing from error: {msg!r}"
+    # Hint about how to fix must be present (per integration-seam guidance).
+    assert "JSON" in msg
+
+
+def test_pipeline_encode_with_numpy_in_op_state_names_offender() -> None:
+    """Bug-hunter v3 (MEDIUM): numpy.ndarray / numpy scalars are a common
+    accidental op_state value (encoders that pass intermediate arrays through).
+    The error must surface the offending key path the same way as torch."""
+    import numpy as np
+
+    from tac.codec_pipeline import EncodeResult, ValidationReport
+
+    class _NumpyOp:
+        name = "np_op"
+
+        def encode(self, state_dict, *, context):  # type: ignore[no-untyped-def]
+            return EncodeResult(
+                blob=b"y",
+                bytes_in=0,
+                bytes_out=1,
+                op_name=self.name,
+                op_state={"arr": np.array([1, 2, 3])},
+            )
+
+        def decode(self, blob, *, op_state, context):  # type: ignore[no-untyped-def]
+            return {}
+
+        def validate(self, state_dict, *, context):  # type: ignore[no-untyped-def]
+            return ValidationReport(passed=True, op_name=self.name)
+
+    pipeline = CodecPipeline([_NumpyOp()])
+    with pytest.raises(TypeError) as excinfo:
+        pipeline.encode({})
+    msg = str(excinfo.value)
+    assert "np_op" in msg
+    assert "arr" in msg
+
+
+def test_pipeline_stress_30_op_chain_roundtrips() -> None:
+    """Bug-hunter v3 (LOW, integration seam): exercising a large op chain
+    catches off-by-one errors in the wire-format n_ops loop. 30 ops keeps
+    the stress test fast (<1 s) while well exceeding any realistic stack
+    depth (canonical full-stack max chain is 3 ops)."""
+    from tac.codec_pipeline import EncodeResult, ValidationReport
+
+    class _NoOp:
+        """Trivial substitutional op that emits a fixed blob; sees the same
+        state_dict each time (no transforms_state_dict). Decoder must replay
+        in-order regardless of how many copies are in the chain."""
+
+        name = "noop"
+
+        def encode(self, state_dict, *, context):  # type: ignore[no-untyped-def]
+            return EncodeResult(
+                blob=b"noop-blob",
+                bytes_in=0,
+                bytes_out=9,
+                op_name=self.name,
+                op_state={"copy_idx": 0},
+            )
+
+        def decode(self, blob, *, op_state, context):  # type: ignore[no-untyped-def]
+            return {"sentinel": torch.tensor(float(op_state.get("copy_idx", 0)))}
+
+        def validate(self, state_dict, *, context):  # type: ignore[no-untyped-def]
+            return ValidationReport(passed=True, op_name=self.name)
+
+    pipeline = CodecPipeline([_NoOp() for _ in range(30)])
+    blob, manifest = pipeline.encode({})
+    assert len(manifest.op_results) == 30
+    assert blob[:4] == b"CPL1"
+    decoded, replayed = pipeline.decode(blob)
+    assert len(replayed) == 30
+    assert all(r == "noop" for r in replayed)
+    # Final decoded state is from the LAST op (substitutional ops overwrite
+    # decoded_state; the pipeline returns the last one).
+    assert "sentinel" in decoded
