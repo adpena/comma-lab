@@ -68,14 +68,22 @@ def test_runtime_bridge_detects_real_jcsp_but_refuses_consumption(
     archive_dir = tmp_path / "archive"
     archive_dir.mkdir()
     (archive_dir / "jcsp.bin").write_bytes(_real_jcsp_bytes())
+    inflated_dir = tmp_path / "inflated"
+    inflated_dir.mkdir()
+    names_file = tmp_path / "names.txt"
+    names_file.write_text("2018-07-27--06-03-57/10/video.hevc\n", encoding="utf-8")
     manifest_path = tmp_path / "manifest.json"
 
     first = bridge.probe_jcsp_runtime_bridge(
         archive_dir,
+        inflated_dir=inflated_dir,
+        video_names_file=names_file,
         manifest_json=manifest_path,
     )
     second = bridge.probe_jcsp_runtime_bridge(
         archive_dir,
+        inflated_dir=inflated_dir,
+        video_names_file=names_file,
         manifest_json=manifest_path,
     )
 
@@ -93,7 +101,21 @@ def test_runtime_bridge_detects_real_jcsp_but_refuses_consumption(
     assert first["stream_count"] == 1
     assert first["streams"][0]["payload_magic"] == "AQv1"
     assert first["runtime_action"] == "refuse_until_jcsp_stream_consumer_implemented"
+    output_contract = first["contest_output_contract"]
+    assert output_contract["schema"] == bridge.JCSP_RUNTIME_OUTPUT_CONTRACT_SCHEMA
+    assert output_contract["expected_raw_outputs"] == [
+        "2018-07-27--06-03-57/10/video.raw"
+    ]
+    assert output_contract["bridge_emits_contest_raw_outputs"] is False
+    assert output_contract["raw_output_emission_attempted"] is False
+    assert output_contract["output_parity_checked"] is False
+    assert output_contract["ready_for_submission_runtime_consumption"] is False
+    assert output_contract["existing_raw_output_count"] == 0
+    assert bridge.JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER in (
+        output_contract["dispatch_blockers"]
+    )
     assert JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER in first["dispatch_blockers"]
+    assert bridge.JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER in first["dispatch_blockers"]
     assert "jcsp_stream_decode_emit_frames_missing" in first["dispatch_blockers"]
     assert len(first["manifest_sha256"]) == 64
 
@@ -123,6 +145,10 @@ def test_runtime_bridge_cli_fails_closed_when_jcsp_member_present(
     archive_dir = tmp_path / "archive"
     archive_dir.mkdir()
     (archive_dir / "jcsp.bin").write_bytes(_real_jcsp_bytes())
+    inflated_dir = tmp_path / "inflated"
+    inflated_dir.mkdir()
+    names_file = tmp_path / "names.txt"
+    names_file.write_text("route/video.hevc\n", encoding="utf-8")
     manifest_path = tmp_path / "probe.json"
 
     result = subprocess.run(
@@ -130,6 +156,10 @@ def test_runtime_bridge_cli_fails_closed_when_jcsp_member_present(
             sys.executable,
             str(BRIDGE_PATH),
             str(archive_dir),
+            "--inflated-dir",
+            str(inflated_dir),
+            "--video-names-file",
+            str(names_file),
             "--manifest-json",
             str(manifest_path),
         ],
@@ -144,6 +174,11 @@ def test_runtime_bridge_cli_fails_closed_when_jcsp_member_present(
     assert manifest["detected_real_jcsp_member"] is True
     assert manifest["consumes_required_member"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["contest_output_contract"]["expected_raw_outputs"] == [
+        "route/video.raw"
+    ]
+    assert manifest["contest_output_contract"]["bridge_emits_contest_raw_outputs"] is False
+    assert not (inflated_dir / "route" / "video.raw").exists()
 
 
 def test_inflate_sh_probes_jcsp_before_branch_dispatch() -> None:
@@ -152,4 +187,6 @@ def test_inflate_sh_probes_jcsp_before_branch_dispatch() -> None:
     branch_dispatch = text.index("while IFS= read -r rel")
 
     assert hook < branch_dispatch
+    assert "--inflated-dir \"$INFLATED_DIR\"" in text
+    assert "--video-names-file \"$VIDEO_NAMES_FILE\"" in text
     assert "--manifest-json \"$JCSP_RUNTIME_PROBE_MANIFEST\"" in text

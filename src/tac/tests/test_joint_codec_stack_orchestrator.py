@@ -17,6 +17,8 @@ from tac.joint_codec_stack_orchestrator import (
     JCSP_ARCHIVE_MEMBER_NAME,
     JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
     JCSP_SUBMISSION_RUNTIME_CONSUMPTION_SCHEMA,
+    JCSP_SUBMISSION_RUNTIME_OUTPUT_CONTRACT_SCHEMA,
+    JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER,
     KIND_ARITHMETIC_STATIC,
     KIND_BALLE_HYPERPRIOR,
     StreamSource,
@@ -189,7 +191,18 @@ def test_jcsp_noop_archive_fixture_is_deterministic_and_loader_consumes_member()
     assert runtime_consumption["dispatch_blocker"] == (
         JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER
     )
+    assert JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER in (
+        runtime_consumption["dispatch_blockers"]
+    )
+    output_contract = runtime_consumption["contest_output_contract"]
+    assert output_contract["schema"] == JCSP_SUBMISSION_RUNTIME_OUTPUT_CONTRACT_SCHEMA
+    assert output_contract["bridge_emits_contest_raw_outputs"] is False
+    assert output_contract["output_parity_checked"] is False
+    assert output_contract["ready_for_submission_runtime_consumption"] is False
     assert JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER in (
+        contract["dispatch_blockers"]
+    )
+    assert JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER in (
         contract["dispatch_blockers"]
     )
     assert "exact_cuda_auth_eval_missing" in contract["dispatch_blockers"]

@@ -296,13 +296,13 @@
       "ok": true
     },
     {
-      "actual": null,
+      "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json",
       "expected": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json",
       "name": "dry_run_queue_payload_section_diff_mismatch",
-      "ok": false
+      "ok": true
     }
   ],
-  "artifact_consistency_ok": false,
+  "artifact_consistency_ok": true,
   "artifact_flag_violations": [],
   "artifacts": [
     {
@@ -326,7 +326,7 @@
       "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json"
     },
     {
-      "bytes": 5915,
+      "bytes": 5975,
       "exists": true,
       "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/pre_submission_compliance.json"
     },
@@ -336,7 +336,7 @@
       "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json"
     },
     {
-      "bytes": 40241,
+      "bytes": 46635,
       "exists": true,
       "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/lightning_exact_eval_dry_run.json"
     },
@@ -348,7 +348,6 @@
   ],
   "blockers": [
     "pre_submission_compliance_failed",
-    "dry_run_queue_payload_section_diff_mismatch",
     "missing_lightning_environment",
     "missing_active_lane_dispatch_claim",
     "missing_operator_exact_cuda_approval"
@@ -363,6 +362,28 @@
     "harvest": ".venv/bin/python scripts/launch_lightning_batch_job.py harvest-ssh --state-path .omx/state/lightning_batch_jobs.json --job-name exact_eval_wr01_apply_pr106x_half_20260506 --ssh-target $LIGHTNING_SSH_TARGET --expected-archive-sha256 d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 --expected-archive-size-bytes 186222 --require-adjudication",
     "submit": ".venv/bin/python scripts/lightning_exact_eval_repro.py --job-name exact_eval_wr01_apply_pr106x_half_20260506 --stage-workspace --submit --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh --upstream-dir $LIGHTNING_UPSTREAM_DIR --remote $LIGHTNING_SSH_TARGET --remote-pact $LIGHTNING_REMOTE_PACT --studio $LIGHTNING_STUDIO --teamspace $LIGHTNING_TEAMSPACE --sdk-user $LIGHTNING_SDK_USER --machine ${LIGHTNING_MACHINE:-T4} --predicted-band 0.18 0.25 --regression-threshold 0.02 --max-posenet-relative 1.25 --max-segnet-relative 1.10 --max-sane-score 1.0 --component-trace --queue-metadata lane=wr01_apply_pr106x_half --queue-metadata archive_manifest=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --queue-metadata public_preflight=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --queue-metadata payload_section_diff=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/pre_submission_compliance.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_wr01_strength_summary_20260506_codex.json"
   },
+  "compliance_failure_summary": {
+    "categories": {
+      "archive_integrity": [],
+      "archive_manifest_mismatch": [],
+      "auth_eval_or_report_missing": [
+        "report_exists"
+      ],
+      "other": [],
+      "release_surface_missing": [
+        "required_file_present:archive.zip",
+        "required_file_present:report.txt"
+      ]
+    },
+    "failed_check_names": [
+      "required_file_present:archive.zip",
+      "required_file_present:report.txt",
+      "report_exists"
+    ],
+    "failed_count": 3,
+    "release_surface_only": true,
+    "schema": "wr01_compliance_failure_summary_v1"
+  },
   "compliance_ok": false,
   "confidence": 1.0,
   "conflicts_with_atoms": [],
@@ -370,7 +391,35 @@
   "dispatch_attempted": false,
   "dispatch_gate": "blocked_static_packet_ready_until_static_blockers_clear",
   "dispatch_unlocked": false,
+  "dry_run_queue_metadata": {
+    "actual": {
+      "archive_manifest": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
+      "lane": "wr01_apply_pr106x_half",
+      "payload_section_diff": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json",
+      "public_preflight": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json"
+    },
+    "expected": {
+      "archive_manifest": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
+      "lane": "wr01_apply_pr106x_half",
+      "payload_section_diff": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json",
+      "public_preflight": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json"
+    },
+    "mismatches": [],
+    "schema": "wr01_dry_run_queue_metadata_diagnostics_v1",
+    "source": "spec.queue_metadata",
+    "stale_missing_payload_section_diff_only": false
+  },
   "dry_run_ready": true,
+  "dry_run_submit_readiness": {
+    "blockers": [
+      "missing --remote-preflight-ssh-target; non-dry-run Studio submit needs an SSH alias for remote preflight"
+    ],
+    "note": "remote preflight alias is a submit-time environment blocker, not a candidate artifact blocker",
+    "ok": false,
+    "remote_preflight_only": true,
+    "schema": "wr01_dry_run_submit_readiness_v1",
+    "static_ok": true
+  },
   "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
   "expected_information_gain_nats": 0.0,
   "expected_pose_dist_delta": 0.0,
@@ -387,18 +436,6 @@
     {
       "details": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/report.txt",
       "name": "required_file_present:report.txt",
-      "passed": false,
-      "severity": "error"
-    },
-    {
-      "details": "claimed=None actual=d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
-      "name": "archive_manifest_sha_matches",
-      "passed": false,
-      "severity": "error"
-    },
-    {
-      "details": "claimed=None actual=186222",
-      "name": "archive_manifest_size_matches",
       "passed": false,
       "severity": "error"
     },
@@ -445,7 +482,7 @@
   "proxy_row": false,
   "ready_for_exact_eval_dispatch_claim": false,
   "ready_for_submit": false,
-  "recorded_at_utc": "2026-05-06T20:00:00Z",
+  "recorded_at_utc": "2026-05-07T00:00:00Z",
   "schema": "wr01_exact_eval_operator_packet_v1",
   "schema_version": 1,
   "score_claim": false,
@@ -460,8 +497,7 @@
   "source_archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
   "source_payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
   "static_blockers": [
-    "pre_submission_compliance_failed",
-    "dry_run_queue_payload_section_diff_mismatch"
+    "pre_submission_compliance_failed"
   ],
   "static_packet_ready": false,
   "tool": "tools/build_wr01_exact_eval_packet.py"

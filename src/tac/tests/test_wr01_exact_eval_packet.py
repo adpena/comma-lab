@@ -62,12 +62,20 @@ def test_wr01_exact_eval_packet_reports_missing_env_without_dispatch(tmp_path: P
     assert payload["source_archive_sha256"] == "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e"
     assert payload["source_archive_bytes"] == 186231
     assert "pre_submission_compliance_failed" in payload["blockers"]
-    assert "dry_run_queue_payload_section_diff_mismatch" in payload["blockers"]
+    assert "dry_run_queue_payload_section_diff_mismatch" not in payload["blockers"]
+    assert "lightning_dry_run_not_ready" not in payload["blockers"]
     assert "missing_active_lane_dispatch_claim" in payload["blockers"]
     assert "missing_operator_exact_cuda_approval" in payload["blockers"]
     assert payload["preflight_ready"] is True
     assert payload["compliance_ok"] is False
+    assert payload["compliance_failure_summary"]["release_surface_only"] is True
+    assert "required_file_present:archive.zip" in payload["compliance_failure_summary"]["categories"][
+        "release_surface_missing"
+    ]
     assert payload["payload_diff_ready"] is True
+    assert payload["dry_run_ready"] is True
+    assert payload["dry_run_submit_readiness"]["remote_preflight_only"] is True
+    assert payload["dry_run_queue_metadata"]["mismatches"] == []
     assert payload["operator_approved_exact_cuda"] is False
     assert payload["artifact_flag_violations"] == []
     assert "--stage-workspace" in payload["commands"]["submit"]
@@ -251,6 +259,8 @@ def test_wr01_exact_eval_packet_accepts_matching_custody_artifacts(tmp_path: Pat
     assert payload["conflicts_with_atoms"] == []
     assert payload["blockers"] == []
     assert payload["artifact_consistency_ok"] is True
+    assert payload["compliance_failure_summary"]["failed_count"] == 0
+    assert payload["dry_run_queue_metadata"]["mismatches"] == []
     assert payload["static_packet_ready"] is True
     assert payload["candidate_static_preflight_ready"] is True
     assert payload["dispatch_gate"] == "eligible_for_cuda_auth_eval_after_lane_claim"

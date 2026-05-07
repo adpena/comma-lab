@@ -157,6 +157,12 @@ JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER: str = (
 JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER: str = (
     "jcsp_local_skeleton_not_submission_runtime_container"
 )
+JCSP_SUBMISSION_RUNTIME_OUTPUT_CONTRACT_SCHEMA: str = (
+    "jcsp_submission_runtime_output_contract_v1"
+)
+JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER: str = (
+    "jcsp_runtime_raw_output_parity_missing"
+)
 
 # Codec kind flags
 KIND_ARITHMETIC_STATIC: int = 0
@@ -1620,6 +1626,25 @@ def _jcsp_submission_runtime_consumption_contract(
 ) -> dict[str, Any]:
     """Return the fail-closed runtime consumption gate for JCSP archives."""
 
+    output_contract = {
+        "schema": JCSP_SUBMISSION_RUNTIME_OUTPUT_CONTRACT_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "required_when_jcsp_member_present": True,
+        "contest_output_format": "one uint8 RGB rawvideo .raw per names_file entry",
+        "bridge_emits_contest_raw_outputs": False,
+        "raw_output_emission_attempted": False,
+        "output_parity_checked": False,
+        "output_parity_artifact": None,
+        "ready_for_output_parity": False,
+        "ready_for_submission_runtime_consumption": False,
+        "dispatch_blocker": JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER,
+        "dispatch_blockers": [
+            JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER,
+            "jcsp_stream_decode_emit_frames_missing",
+            "jcsp_raw_output_emission_missing",
+        ],
+    }
     return {
         "schema": JCSP_SUBMISSION_RUNTIME_CONSUMPTION_SCHEMA,
         "score_claim": False,
@@ -1630,10 +1655,15 @@ def _jcsp_submission_runtime_consumption_contract(
         "detects_required_member": True,
         "consumes_required_member": False,
         "dispatch_blocker": JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+        "dispatch_blockers": [
+            JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+            *output_contract["dispatch_blockers"],
+        ],
+        "contest_output_contract": output_contract,
         "evidence": (
             "submissions/robust_current probes jcsp.bin during inflate and "
-            "fails closed, but does not yet decode JCSP streams or emit frames "
-            "from them"
+            "fails closed, but does not yet decode JCSP streams, emit raw "
+            "contest outputs, or prove output parity"
         ),
     }
 
@@ -1824,7 +1854,7 @@ def load_jcsp_archive_member_for_runtime(
         "runtime_consumption_contract": runtime_consumption,
         "noop_fixture": parity["stream_count"] == 0,
         "dispatch_blockers": [
-            runtime_consumption["dispatch_blocker"],
+            *runtime_consumption["dispatch_blockers"],
             "not_integrated_into_submission_inflate_path",
             "no_lane_dispatch_claim",
             "exact_cuda_auth_eval_missing",
@@ -2284,6 +2314,8 @@ __all__ = [
     "JCSP_SUBMISSION_RUNTIME_BRIDGE_PROBE_SCHEMA",
     "JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER",
     "JCSP_SUBMISSION_RUNTIME_CONSUMPTION_SCHEMA",
+    "JCSP_SUBMISSION_RUNTIME_OUTPUT_CONTRACT_SCHEMA",
+    "JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER",
     "KIND_ARITHMETIC_STATIC",
     "KIND_BALLE_HYPERPRIOR",
     "KIND_RAW_PASSTHROUGH",

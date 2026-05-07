@@ -1598,8 +1598,9 @@ def step_compress_weights(
             "PARADIGM-gamma JCSP dispatch: byte-closed JCSP archive member "
             f"was written at {archive_path} with manifest {manifest_path}, "
             "but it is not dispatch-ready. The submission runtime detects but "
-            "does not consume jcsp.bin, strict preflight proof is missing, no "
-            "lane was claimed, and no GPU/remote/eval dispatch was attempted."
+            "does not emit contest raw outputs from jcsp.bin or prove output "
+            "parity, strict preflight proof is missing, no lane was claimed, "
+            "and no GPU/remote/eval dispatch was attempted."
         )
 
     # ── Lane J-NWC neural-weight-compression branch ─────────────────────

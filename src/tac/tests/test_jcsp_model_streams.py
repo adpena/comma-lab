@@ -13,6 +13,7 @@ from tac.joint_codec_stack_orchestrator import (
     JCSP_STREAM_ARCHIVE_BYTE_RECONCILIATION_SCHEMA,
     JCSP_STREAM_METADATA_SCHEMA,
     JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+    JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER,
     KIND_ARITHMETIC_STATIC,
     KIND_BALLE_HYPERPRIOR,
     KIND_RAW_PASSTHROUGH,
@@ -259,6 +260,9 @@ def test_jcsp_model_stream_archive_readiness_closes_single_member_bytes() -> Non
     assert JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER in (
         readiness["dispatch_blockers"]
     )
+    assert JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER in (
+        readiness["dispatch_blockers"]
+    )
     assert "stream_bytes_charged_reconciliation_missing" in (
         readiness["dispatch_blockers"]
     )
@@ -288,6 +292,9 @@ def test_jcsp_model_stream_archive_readiness_closes_single_member_bytes() -> Non
     assert archive_closed_readiness["ready_for_exact_eval_dispatch"] is False
     assert archive_closed_readiness["ready_for_submission_runtime_consumption"] is False
     assert JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER in (
+        archive_closed_readiness["dispatch_blockers"]
+    )
+    assert JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER in (
         archive_closed_readiness["dispatch_blockers"]
     )
 

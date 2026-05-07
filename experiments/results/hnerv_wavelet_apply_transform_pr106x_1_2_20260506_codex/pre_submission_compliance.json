@@ -127,15 +127,15 @@
       "severity": "error"
     },
     {
-      "details": "claimed=None actual=d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "details": "claimed=d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 actual=d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
       "name": "archive_manifest_sha_matches",
-      "passed": false,
+      "passed": true,
       "severity": "error"
     },
     {
-      "details": "claimed=None actual=186222",
+      "details": "claimed=186222 actual=186222",
       "name": "archive_manifest_size_matches",
-      "passed": false,
+      "passed": true,
       "severity": "error"
     },
     {

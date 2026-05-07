@@ -1,0 +1,45 @@
+{
+  "candidate_archive_sha256": "6a5bf1f3c4d6d2b6cb752979caa72a31b994825d24ee42ae90eeaa58f44abd7d",
+  "class_codebook_sha256": "6db870e7e05cc310ca25897e8d3ccac4f6fff06ad22ea57c157dbf8086ba29d0",
+  "control_name": "label_permutation_fail_closed_control",
+  "dispatch_attempted": false,
+  "failure_contract": {
+    "expected_runtime_error": "class codebook class order mismatch",
+    "fail_closed": true,
+    "fallback_used": false,
+    "sidecar_free": true
+  },
+  "independent_proof": true,
+  "kind": "categorical_label_permutation_fail_closed_control",
+  "mutation": {
+    "member": "class_codebook.json",
+    "operation": "reverse_classes_order",
+    "original_class_order": [
+      "road",
+      "lane_markings",
+      "undrivable",
+      "movable",
+      "my_car"
+    ],
+    "permuted_class_order": [
+      "my_car",
+      "movable",
+      "undrivable",
+      "lane_markings",
+      "road"
+    ]
+  },
+  "passed": true,
+  "producer_tool": "tac.categorical_payload_candidate.build_categorical_payload_candidate",
+  "proof_scope": "label_permutation_fail_closed_control",
+  "runtime_consumer_sha256": "7054d44e7eec663e0d60095acbf39f2daaa3096c4625819490efd77c17b62096",
+  "runtime_invocation": {
+    "expected_failure_observed": true,
+    "expected_returncode": 2,
+    "returncode": 2,
+    "stderr_sha256": "323b50e19f0b725c3355c3f7e064ae1a968a9152cf74462b29d842d876702940",
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "schema_version": 1,
+  "score_claim": false
+}

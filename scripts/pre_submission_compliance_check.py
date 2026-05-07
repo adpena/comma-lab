@@ -201,8 +201,10 @@ def _candidate_sha(payload: dict[str, Any]) -> str | None:
     archive = payload.get("archive") if isinstance(payload.get("archive"), dict) else {}
     for value in (
         provenance.get("archive_sha256"),
+        payload.get("candidate_archive_sha256"),
         payload.get("archive_sha256"),
         payload.get("sha256"),
+        archive.get("candidate_archive_sha256"),
         archive.get("sha256"),
         archive.get("archive_sha256"),
     ):
@@ -216,9 +218,13 @@ def _candidate_size(payload: dict[str, Any]) -> int | None:
     archive = payload.get("archive") if isinstance(payload.get("archive"), dict) else {}
     for value in (
         provenance.get("archive_size_bytes"),
+        payload.get("candidate_archive_bytes"),
+        payload.get("candidate_archive_size_bytes"),
         payload.get("archive_size_bytes"),
         payload.get("archive_bytes"),
         payload.get("bytes"),
+        archive.get("candidate_archive_bytes"),
+        archive.get("candidate_archive_size_bytes"),
         archive.get("size_bytes"),
         archive.get("archive_size_bytes"),
     ):

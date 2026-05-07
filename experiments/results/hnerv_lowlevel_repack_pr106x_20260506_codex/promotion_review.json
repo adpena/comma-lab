@@ -1,0 +1,384 @@
+{
+  "adjudication": {
+    "allowed_use": [
+      "promotion_review",
+      "rank_frontier_candidate"
+    ],
+    "component_gate_triggered": false,
+    "contest_equivalent_hardware": true,
+    "promotion_eligible": true,
+    "scientific_score_eligible": true,
+    "score_delta_vs_baseline": -0.00010050000000000336
+  },
+  "archive": {
+    "byte_delta": -151,
+    "candidate_archive_bytes": 186080,
+    "candidate_archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+    "payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+    "source_archive_bytes": 186231,
+    "source_archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e"
+  },
+  "blockers": [],
+  "checks": [
+    {
+      "blocking": true,
+      "evidence": {
+        "action_id": "review_current_exact_lossless_brotli_control_before_promotion",
+        "target_label": "PR106x-lowlevel-brotli"
+      },
+      "failure_class": "ok",
+      "id": "entropy_ranker_selected_existing_exact_control_review",
+      "passed": true,
+      "requirement": "ranker must route to review, not dispatch or score claim"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "blockers": [],
+        "raw_equivalence_closed": true,
+        "review_status": "ready_for_promotion_review_existing_exact_custody"
+      },
+      "failure_class": "ok",
+      "id": "ranker_exact_control_ready_for_review",
+      "passed": true,
+      "requirement": "ranker exact-control row must be ready for promotion review"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "canonicality_blockers": [],
+        "evidence_grade": "A++",
+        "frontier_scope": "exact_local_cuda_custody_lossless_repack_control",
+        "label": "PR106x-lowlevel-brotli"
+      },
+      "failure_class": "ok",
+      "id": "scorecard_target_row_exact_cuda_frontier_eligible",
+      "passed": true,
+      "requirement": "scorecard row must be A++ exact CUDA lossless-control custody"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "candidate_archive_bytes": 186080,
+        "candidate_archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+        "exact_eval_archive_bytes": 186080,
+        "exact_eval_archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+        "scorecard_archive_bytes": 186080,
+        "scorecard_archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f"
+      },
+      "failure_class": "ok",
+      "id": "candidate_and_exact_eval_archive_identity_match",
+      "passed": true,
+      "requirement": "candidate, scorecard, and exact eval must identify the same archive bytes"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "audit_blockers": [],
+        "candidate_archive_bytes": 186080,
+        "source_archive_bytes": 186231,
+        "total_byte_delta": -151
+      },
+      "failure_class": "ok",
+      "id": "candidate_is_rate_positive_lossless_repack",
+      "passed": true,
+      "requirement": "candidate diff audit must be blocker-free and byte-positive"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "section_count": 2,
+        "sections": [
+          {
+            "raw_bytes": 229070,
+            "raw_equal": true,
+            "section_name": "decoder_packed_brotli"
+          },
+          {
+            "raw_bytes": 33712,
+            "raw_equal": true,
+            "section_name": "latents_and_sidecar_brotli"
+          }
+        ]
+      },
+      "failure_class": "ok",
+      "id": "brotli_raw_equivalence_closed",
+      "passed": true,
+      "requirement": "all Brotli section recodes must decompress to the same raw bytes"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "archive_status": "passed",
+        "blockers": [],
+        "promotion_eligible_before_cuda": false
+      },
+      "failure_class": "ok",
+      "id": "public_replay_preflight_passed",
+      "passed": true,
+      "requirement": "public replay preflight must pass on the candidate archive"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "cuda_available": true,
+        "device": "cuda",
+        "gpu_model": "Tesla T4",
+        "gpu_t4_match": true,
+        "n_samples": 600
+      },
+      "failure_class": "ok",
+      "id": "exact_eval_is_cuda_t4_full_sample",
+      "passed": true,
+      "requirement": "exact eval must be CUDA on contest-equivalent T4 with 600 samples"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "canonical_score": 0.20935073680571203,
+        "score_recomputed_from_components": 0.20935073680571203,
+        "structured_component_score": 0.20935073680571203
+      },
+      "failure_class": "ok",
+      "id": "exact_eval_score_recomputed_from_components",
+      "passed": true,
+      "requirement": "review must use structured component recomputation, not rounded logs"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "exact_eval_runtime_tree_sha256": "bb6baee66c61781f285fee5862ab499b8eb1fec93edeea046cb3019289638fd3",
+        "scorecard_runtime_tree_sha256": "bb6baee66c61781f285fee5862ab499b8eb1fec93edeea046cb3019289638fd3"
+      },
+      "failure_class": "ok",
+      "id": "exact_eval_runtime_tree_recorded",
+      "passed": true,
+      "requirement": "exact eval runtime tree hash must be recorded and match the scorecard"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "allowed_use": [
+          "promotion_review",
+          "rank_frontier_candidate"
+        ],
+        "component_gate_violations": [],
+        "contest_equivalent_hardware": true,
+        "promotion_eligible": true,
+        "scientific_score_eligible": true
+      },
+      "failure_class": "ok",
+      "id": "adjudication_marks_existing_exact_control_promotable",
+      "passed": true,
+      "requirement": "adjudication must explicitly permit promotion review use"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "component_gates": [
+          {
+            "component": "posenet",
+            "observed": 3.351e-05,
+            "passed": true,
+            "reference": 3.351e-05,
+            "relative_to_reference": 1.0
+          },
+          {
+            "component": "segnet",
+            "observed": 0.00067142,
+            "passed": true,
+            "reference": 0.00067142,
+            "relative_to_reference": 1.0
+          }
+        ]
+      },
+      "failure_class": "ok",
+      "id": "adjudication_component_gates_passed",
+      "passed": true,
+      "requirement": "PoseNet and SegNet gates must pass against the source control"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "archive_delta_bytes": -151,
+        "regression_triggered": false,
+        "score_delta_vs_baseline": -0.00010050000000000336
+      },
+      "failure_class": "ok",
+      "id": "adjudication_score_delta_is_rate_only_improvement",
+      "passed": true,
+      "requirement": "adjudication must show non-regressing score delta versus source control"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "candidate_posenet": 3.351e-05,
+        "candidate_segnet": 0.00067142,
+        "source_label": "PR106x",
+        "source_posenet": 3.351e-05,
+        "source_segnet": 0.00067142
+      },
+      "failure_class": "ok",
+      "id": "scorecard_source_and_candidate_components_match",
+      "passed": true,
+      "requirement": "lossless control should preserve PoseNet and SegNet components in scorecard rows"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "archive_bytes": 186080,
+        "archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+        "blockers": [],
+        "expected_archive_bytes": 186080,
+        "expected_archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+        "expected_member_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+        "member_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+        "path": "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/pr106x_hnerv_brotli_repack_candidate.zip"
+      },
+      "failure_class": "ok",
+      "id": "candidate_archive_file_matches_manifest",
+      "passed": true,
+      "requirement": "local archive copy must match reviewed SHA, bytes, and payload"
+    },
+    {
+      "blocking": true,
+      "evidence": {
+        "archive_bytes": 186080,
+        "archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+        "blockers": [],
+        "expected_archive_bytes": 186080,
+        "expected_archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+        "expected_member_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+        "member_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+        "path": "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/archive.zip"
+      },
+      "failure_class": "ok",
+      "id": "exact_eval_archive_file_matches_eval_json",
+      "passed": true,
+      "requirement": "local archive copy must match reviewed SHA, bytes, and payload"
+    }
+  ],
+  "dispatch_attempted": false,
+  "exact_eval": {
+    "archive_bytes": 186080,
+    "archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+    "artifact": "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/contest_auth_eval.adjudicated.json",
+    "avg_posenet_dist": 3.351e-05,
+    "avg_segnet_dist": 0.00067142,
+    "device": "cuda",
+    "gpu_model": "Tesla T4",
+    "n_samples": 600,
+    "runtime_tree_sha256": "bb6baee66c61781f285fee5862ab499b8eb1fec93edeea046cb3019289638fd3",
+    "score_recomputed_from_components": 0.20935073680571203
+  },
+  "existing_exact_control_promotable": true,
+  "gpu_dispatch_performed": false,
+  "input_paths": {
+    "adjudication": "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/adjudication_provenance.json",
+    "candidate_archive": "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/pr106x_hnerv_brotli_repack_candidate.zip",
+    "candidate_manifest": "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/result.json",
+    "entropy_ranking": "experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/frontier_entropy_gap_ranking.json",
+    "exact_archive": "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/archive.zip",
+    "exact_eval": "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/contest_auth_eval.adjudicated.json",
+    "public_preflight": "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/public_replay_preflight.json",
+    "scorecard": "experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/scorecard.json"
+  },
+  "interpretation": "This is a promotion review for an already exact-evaluated lossless Brotli control. It does not authorize new GPU dispatch and does not create a new score claim.",
+  "lane_claim_required_for_this_review": false,
+  "missing_evidence": [],
+  "new_score_claim": false,
+  "promotion_review": true,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_new_exact_eval_dispatch": false,
+  "review_basis": "existing exact CUDA artifact only",
+  "review_verdict": "promotable_existing_exact_control",
+  "schema_version": 1,
+  "score_claim": false,
+  "target_label": "PR106x-lowlevel-brotli",
+  "tool": "tac.hnerv_lossless_control_promotion_review",
+  "tool_run_manifest": {
+    "argv": [
+      "--json-out",
+      "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/promotion_review.json",
+      "--md-out",
+      "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/promotion_review.md"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "2654593949c94610213395dc0922a377bab482931dbe5335493cd0639eb9c6e4",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 38566,
+        "path": "experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/scorecard.json",
+        "sha256": "2452d5b445b0e8be720e6475eb13dadaeea61edb85eb6f8a115e01b996321559"
+      },
+      {
+        "bytes": 13951,
+        "path": "experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/frontier_entropy_gap_ranking.json",
+        "sha256": "edaf3517e5787a895817b1deb5d9da1e7027c6993fb1e74c5cbbd69194434662"
+      },
+      {
+        "bytes": 6669,
+        "path": "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/result.json",
+        "sha256": "85e600fea05bc00765e0bdc6dfce5704c1b1601bbc5efeeff99a0d3783259d71"
+      },
+      {
+        "bytes": 14706,
+        "path": "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/contest_auth_eval.adjudicated.json",
+        "sha256": "b3f512ee001ed62e05c1bf37fbe43fb6d89c86a5537dee915c882b0d5c057bcf"
+      },
+      {
+        "bytes": 2967,
+        "path": "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/adjudication_provenance.json",
+        "sha256": "49ea6c32a2f119b3943743b1b630b37489561002e98545ba9825cb1cde5b6470"
+      },
+      {
+        "bytes": 19255,
+        "path": "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/public_replay_preflight.json",
+        "sha256": "5f6d5155be11bc60c57894e56fe8511aa83fd21938dfd736313df1178dc75f25"
+      },
+      {
+        "bytes": 186080,
+        "path": "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/pr106x_hnerv_brotli_repack_candidate.zip",
+        "sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f"
+      },
+      {
+        "bytes": 186080,
+        "path": "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/archive.zip",
+        "sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f"
+      }
+    ],
+    "output_path": "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/promotion_review.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/review_hnerv_lossless_brotli_control.py"
+  },
+  "warnings": [
+    {
+      "evidence": {
+        "current_frontier": null,
+        "target_label": "PR106x-lowlevel-brotli"
+      },
+      "id": "scorecard_current_frontier_field_missing_or_stale",
+      "message": "scorecard rows and entropy ranker select target, but current_frontier is absent or not target",
+      "severity": "warning"
+    },
+    {
+      "evidence": {
+        "pact_commit": "<error:CalledProcessError(128, ['git', 'rev-parse', 'HEAD'])>"
+      },
+      "id": "exact_eval_pact_commit_unavailable",
+      "message": "exact eval provenance could not record pact_commit; runtime tree and file hashes remain recorded",
+      "severity": "warning"
+    },
+    {
+      "evidence": {
+        "exact_eval_runtime_tree_sha256": "bb6baee66c61781f285fee5862ab499b8eb1fec93edeea046cb3019289638fd3",
+        "public_preflight_runtime_tree_sha256": "f402908b2490718c4f7b76987335ec1a496cb12ab71c27e1e1aea4024d5712cb"
+      },
+      "id": "public_preflight_runtime_tree_differs_from_exact_eval",
+      "message": "local public preflight runtime hash differs from exact eval runtime hash; compare future runs by runtime tree",
+      "severity": "warning"
+    }
+  ]
+}

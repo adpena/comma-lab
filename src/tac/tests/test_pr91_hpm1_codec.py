@@ -15,11 +15,13 @@ import pytest
 
 from tac.pr85_bundle import SEGMENT_ORDER, pack_pr85_bundle
 from tac.pr91_hpm1_codec import (
+    DEFAULT_PR91_ARCHIVE,
     Pr91Hpm1Error,
     build_hpm1_mask_segment,
     raw_tokens_to_mod5_residual_symbols,
     reconstruct_raw_tokens_from_mod5_residual_symbols,
     run_pr91_hpm1_context_window_probe,
+    run_pr91_hpm1_entropy_failure_grammar_probe,
     run_pr91_hpm1_first_symbol_state_probe,
     run_pr91_hpm1_preflight,
     run_pr91_hpm1_probability_variant_matrix,
@@ -78,7 +80,7 @@ def _synthetic_hpm1_archive(path: Path) -> Path:
     return path
 
 
-def _synthetic_hpm1_archive_with_hpac_model(path: Path) -> Path:
+def _synthetic_hpm1_archive_with_hpac_model(path: Path, *, tokens_blob: bytes | None = None) -> Path:
     torch = pytest.importorskip("torch")
     pyppmd = pytest.importorskip("pyppmd")
     from tac.pr86_hpac_codec import PPMD_MAX_ORDER, PPMD_MEM_SIZE, HPACMini
@@ -98,7 +100,7 @@ def _synthetic_hpm1_archive_with_hpac_model(path: Path) -> Path:
         mem_size=PPMD_MEM_SIZE,
     )
     segment = build_hpm1_mask_segment(
-        (np.arange(32, dtype=np.uint32) % 5).tobytes(),
+        tokens_blob if tokens_blob is not None else (np.arange(32, dtype=np.uint32) % 5).tobytes(),
         hpac,
         N=2,
         H=4,
@@ -282,6 +284,34 @@ def test_pr91_semantic_decode_trench_loads_model_rows_and_refuses_parity(
     assert "prefix_decode_not_attempted" in report["semantic_decode_blockers"]
 
 
+def test_pr91_entropy_failure_grammar_probe_records_exact_failure_row() -> None:
+    if not DEFAULT_PR91_ARCHIVE.is_file():
+        pytest.skip("canonical PR91 archive not available")
+
+    report = run_pr91_hpm1_entropy_failure_grammar_probe(
+        DEFAULT_PR91_ARCHIVE,
+        write_json=False,
+    )
+
+    assert report["schema"] == "pr91_hpm1_entropy_failure_grammar_probe_v1"
+    assert report["score_claim"] is False
+    assert report["dispatch_allowed"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["exact_missing_grammar"]["missing_wire_contract"].startswith(
+        "semantic HPAC probability/range grammar"
+    )
+    trace = report["entropy_failure_trace"]
+    assert trace["passed"] is False
+    assert trace["failure"]["stage"] == "submitted_tokens_decode"
+    assert trace["failure"]["reason"] == "hpac_entropy_decode_contract_mismatch"
+    assert trace["failing_probability_row"]["normalized_for_categorical"]["sha256"]
+    assert trace["context_before_failing_group"]["current_frame"]["shape"] == [384, 512]
+    assert trace["failure"]["frame"] == 0
+    assert trace["failure"]["group"] == 10
+    assert trace["failure"]["symbol_in_group"] == 191
+    assert trace["token_stream"]["uint32_word_count"] == 29199
+
+
 def test_pr91_semantic_decode_trench_cli_records_tool_manifest(tmp_path: Path) -> None:
     archive = _synthetic_hpm1_archive_with_hpac_model(tmp_path / "archive.zip")
     out = tmp_path / "semantic_decode_trench.json"
@@ -311,6 +341,35 @@ def test_pr91_semantic_decode_trench_cli_records_tool_manifest(tmp_path: Path) -
     assert payload["tool_run_manifest"]["tool"] == (
         "tools/audit_pr91_hpm1_semantic_decode_trench.py"
     )
+
+
+def test_pr91_entropy_failure_grammar_probe_cli_records_tool_manifest(tmp_path: Path) -> None:
+    if not DEFAULT_PR91_ARCHIVE.is_file():
+        pytest.skip("canonical PR91 archive not available")
+    out = tmp_path / "entropy_failure_grammar_probe.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "audit_pr91_hpm1_entropy_failure_grammar_probe.py"),
+            "--archive",
+            str(DEFAULT_PR91_ARCHIVE),
+            "--json-out",
+            str(out),
+        ],
+        check=True,
+        cwd=REPO,
+        text=True,
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["schema"] == "pr91_hpm1_entropy_failure_grammar_probe_v1"
+    assert payload["score_claim"] is False
+    assert payload["dispatch_allowed"] is False
+    assert payload["tool_run_manifest"]["tool"] == (
+        "tools/audit_pr91_hpm1_entropy_failure_grammar_probe.py"
+    )
+
 
 
 def test_pr91_probe_contracts_fail_closed_on_bad_inputs(tmp_path: Path) -> None:

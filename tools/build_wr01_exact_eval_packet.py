@@ -271,6 +271,39 @@ def _failed_compliance_checks(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return failed
 
 
+def _compliance_failure_summary(failed_checks: list[dict[str, Any]]) -> dict[str, Any]:
+    categories: dict[str, list[str]] = {
+        "release_surface_missing": [],
+        "archive_manifest_mismatch": [],
+        "auth_eval_or_report_missing": [],
+        "archive_integrity": [],
+        "other": [],
+    }
+    for check in failed_checks:
+        name = str(check.get("name") or "")
+        if name.startswith("required_file_present:"):
+            categories["release_surface_missing"].append(name)
+        elif name in {"archive_manifest_sha_matches", "archive_manifest_size_matches"}:
+            categories["archive_manifest_mismatch"].append(name)
+        elif name in {"auth_eval_exists", "report_exists"}:
+            categories["auth_eval_or_report_missing"].append(name)
+        elif name.startswith("zip_") or name.startswith("archive_") or name.startswith("expected_archive_"):
+            categories["archive_integrity"].append(name)
+        else:
+            categories["other"].append(name)
+    return {
+        "schema": "wr01_compliance_failure_summary_v1",
+        "failed_count": len(failed_checks),
+        "failed_check_names": [str(check.get("name") or "") for check in failed_checks],
+        "categories": {key: sorted(values) for key, values in categories.items()},
+        "release_surface_only": bool(
+            failed_checks
+            and not categories["archive_integrity"]
+            and not categories["other"]
+        ),
+    }
+
+
 def _artifact_flag_violations(artifacts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     """Return explicit score/dispatch flags that make readiness unsafe.
 
@@ -344,6 +377,75 @@ def _check_equal(
     checks.append({"name": name, "ok": ok, "actual": actual, "expected": expected})
     if not ok:
         blockers.append(name)
+
+
+def _queue_metadata_diagnostics(
+    dry_run_payload: dict[str, Any],
+    *,
+    lane_id: str,
+    manifest: Path,
+    preflight: Path,
+    payload_diff: Path,
+) -> dict[str, Any]:
+    queue = _get_path(dry_run_payload, "spec", "queue_metadata")
+    source = "spec.queue_metadata"
+    if not isinstance(queue, dict):
+        queue = _get_path(dry_run_payload, "queue", "queue_metadata")
+        source = "queue.queue_metadata"
+    queue = queue if isinstance(queue, dict) else {}
+    expected = {
+        "lane": lane_id,
+        "archive_manifest": manifest.as_posix(),
+        "public_preflight": preflight.as_posix(),
+        "payload_section_diff": payload_diff.as_posix(),
+    }
+    actual = {key: queue.get(key) for key in expected}
+    mismatches = [
+        {
+            "key": key,
+            "actual": actual[key],
+            "expected": expected[key],
+            "missing": key not in queue,
+        }
+        for key in expected
+        if actual[key] != expected[key]
+    ]
+    return {
+        "schema": "wr01_dry_run_queue_metadata_diagnostics_v1",
+        "source": source,
+        "actual": actual,
+        "expected": expected,
+        "mismatches": mismatches,
+        "stale_missing_payload_section_diff_only": (
+            len(mismatches) == 1
+            and mismatches[0]["key"] == "payload_section_diff"
+            and mismatches[0]["missing"] is True
+        ),
+    }
+
+
+def _dry_run_submit_readiness(payload: dict[str, Any]) -> dict[str, Any]:
+    readiness = payload.get("submit_readiness")
+    readiness = readiness if isinstance(readiness, dict) else {}
+    raw_blockers = readiness.get("blockers")
+    blockers = [str(item) for item in raw_blockers] if isinstance(raw_blockers, list) else []
+    remote_preflight_only = bool(blockers) and all(
+        item.startswith("missing --remote-preflight-ssh-target") for item in blockers
+    )
+    ok = readiness.get("ok") is True
+    return {
+        "schema": "wr01_dry_run_submit_readiness_v1",
+        "ok": ok,
+        "blockers": blockers,
+        "remote_preflight_only": remote_preflight_only,
+        "static_ok": ok or remote_preflight_only,
+        "note": (
+            "remote preflight alias is a submit-time environment blocker, not "
+            "a candidate artifact blocker"
+            if remote_preflight_only
+            else None
+        ),
+    }
 
 
 def _check_present(
@@ -423,13 +525,15 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         and not preflight_payload.get("blockers")
     )
     failed_compliance_checks = _failed_compliance_checks(compliance_payload)
+    compliance_failure_summary = _compliance_failure_summary(failed_compliance_checks)
     compliance_ok = compliance_payload.get("passed") is True and not failed_compliance_checks
     payload_diff_ready = (
         payload_diff_payload.get("ready_for_archive_preflight") is True
         and payload_diff_payload.get("changed_section_count") == 1
         and not payload_diff_payload.get("blockers")
     )
-    dry_run_ready = (dry_run_payload.get("submit_readiness") or {}).get("ok") is True
+    dry_run_submit_readiness = _dry_run_submit_readiness(dry_run_payload)
+    dry_run_ready = dry_run_submit_readiness["static_ok"]
     archive_identity = _archive_identity(archive)
     consistency_blockers: list[str] = []
     consistency_checks: list[dict[str, Any]] = []
@@ -464,6 +568,13 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
             "sha256": None,
             "bytes": None,
         }
+    )
+    dry_run_queue_metadata = _queue_metadata_diagnostics(
+        dry_run_payload,
+        lane_id=args.lane_id,
+        manifest=manifest,
+        preflight=preflight,
+        payload_diff=payload_diff,
     )
 
     _check_equal(
@@ -1017,8 +1128,11 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "preflight_ready": preflight_ready,
         "compliance_ok": compliance_ok,
         "failed_compliance_checks": failed_compliance_checks,
+        "compliance_failure_summary": compliance_failure_summary,
         "payload_diff_ready": payload_diff_ready,
         "dry_run_ready": dry_run_ready,
+        "dry_run_submit_readiness": dry_run_submit_readiness,
+        "dry_run_queue_metadata": dry_run_queue_metadata,
         "artifact_flag_violations": artifact_flag_violations,
         "artifact_consistency_ok": not consistency_blockers,
         "artifact_consistency_checks": consistency_checks,

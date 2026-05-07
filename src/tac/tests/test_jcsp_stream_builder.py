@@ -36,6 +36,7 @@ from tac.jcsp_stream_builder import (
 from tac.joint_codec_stack_orchestrator import (
     JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER,
     JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+    JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER,
     KIND_ARITHMETIC_STATIC,
     KIND_BALLE_HYPERPRIOR,
     KIND_RAW_PASSTHROUGH,
@@ -324,6 +325,17 @@ def test_jcsp_stream_source_archive_member_closes_real_jcsp_member(
     assert JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER in (
         manifest_a["dispatch_blockers"]
     )
+    assert JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER in (
+        manifest_a["dispatch_blockers"]
+    )
+    assert JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER in (
+        manifest_a["runtime"]["blockers"]
+    )
+    output_contract = manifest_a["runtime_consumption_contract"][
+        "contest_output_contract"
+    ]
+    assert output_contract["bridge_emits_contest_raw_outputs"] is False
+    assert output_contract["output_parity_checked"] is False
 
 
 def test_load_jcsp_score_marginals_rejects_duplicate_json_keys(tmp_path) -> None:

@@ -579,7 +579,6 @@
   "dispatch_attempted": false,
   "dispatch_blockers": [
     "no_op_control_not_passed:decode_reencode_identity_control",
-    "no_op_control_not_passed:label_permutation_fail_closed_control",
     "decode_reencode_parity_not_passed",
     "decode_reencode_full_decode_not_proven",
     "decode_reencode_byte_exact_reencode_not_proven",
@@ -704,7 +703,7 @@
   "no_op_controls": {
     "charged_member_presence_control": true,
     "decode_reencode_identity_control": false,
-    "label_permutation_fail_closed_control": false,
+    "label_permutation_fail_closed_control": true,
     "runtime_consumes_conditioning_control": true
   },
   "promotion_eligible": false,
@@ -780,7 +779,7 @@
       "--out-dir",
       "experiments/results/categorical_openpilot_payload_candidate_20260506_codex"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "cc4e1af873489d9cbb8da379330081ad1722d9b2d8c6b38623a927af81d9aef1",
+    "canonical_payload_without_tool_manifest_sha256": "59960ee10980c6318811d49de2f10abfb8035a93e18cd09c0167335cc7ca8ab6",
     "dispatch_attempted": false,
     "input_files": [
       {
@@ -794,9 +793,9 @@
         "sha256": "6a5bf1f3c4d6d2b6cb752979caa72a31b994825d24ee42ae90eeaa58f44abd7d"
       },
       {
-        "bytes": 18203,
+        "bytes": 19677,
         "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/candidate.json",
-        "sha256": "0a6d7f02c5ef51be6ab02be659c197b44a0f371e19dcb8613656eeff873bab18"
+        "sha256": "93e5a20bed0f2b8f09f31590a1f0c4ac0ef3d1ae9c2fa76ebeb4f01ef33e20be"
       },
       {
         "bytes": 1635,
@@ -812,6 +811,11 @@
         "bytes": 1534,
         "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/runtime_execution_proof.json",
         "sha256": "87f8ab14e044c8948abc153bd8ed4c092de98e981651888d8b478d4ae122cca5"
+      },
+      {
+        "bytes": 1515,
+        "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/label_permutation_control.json",
+        "sha256": "c32e7fb5defa68c84a11470d7724e8a3e4049e108524c9a74e095df30f1ddb68"
       }
     ],
     "output_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",

@@ -33,6 +33,8 @@ from typing import Any
 
 import numpy as np
 
+from tac import pr86_hpac_codec as _pr86_hpac_codec
+
 try:  # pragma: no cover - optional in lite environments
     import torch
     import torch.nn.functional as F
@@ -654,6 +656,326 @@ def _hpm1_probability_row_probe(
         "full_decode_proven": False,
         "byte_exact_reencode_proven": False,
     }
+
+
+def _small_int_preview(values: np.ndarray, *, count: int = 16) -> dict[str, Any]:
+    arr = np.asarray(values).reshape(-1)
+    return {
+        "count": int(arr.size),
+        "first": [int(value) for value in arr[:count].tolist()],
+        "last": [int(value) for value in arr[-count:].tolist()],
+    }
+
+
+def _context_tensor_summary(tensor: Any, *, label: str) -> dict[str, Any]:
+    arr = tensor.detach().cpu().numpy().astype(np.uint8, copy=False)
+    return {
+        "label": label,
+        "shape": list(arr.shape),
+        "sha256": sha256_bytes(arr.tobytes()),
+        "nonzero_count": int(np.count_nonzero(arr)),
+        "min": int(arr.min()) if arr.size else None,
+        "max": int(arr.max()) if arr.size else None,
+    }
+
+
+def _trace_hpm1_entropy_decode_failure(
+    model: Any,
+    payload: Hpm1MaskPayload,
+    *,
+    probability_variant: str | Any,
+    prob_eps: float,
+    max_frames: int | None,
+    device: str,
+) -> dict[str, Any]:
+    """Replay HPM1 entropy decode until the first exact grammar failure."""
+
+    if torch is None or F is None:  # pragma: no cover - optional dependency path
+        raise Pr91Hpm1Error("dependency_contract", "torch_missing")
+    if _pr86_hpac_codec.constriction is None:  # pragma: no cover
+        raise Pr91Hpm1Error("dependency_contract", "constriction_missing")
+    if str(device) != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "hpm1_entropy_failure_probe_is_cpu_only",
+            requested_device=device,
+        )
+
+    resolved = resolve_hpac_probability_variant(probability_variant)
+    frame_count = int(payload.n_frames if max_frames is None else min(int(max_frames), payload.n_frames))
+    if frame_count <= 0:
+        raise Pr91Hpm1Error(
+            "hpm1_entropy_failure_probe",
+            "frame_count_must_be_positive",
+            max_frames=max_frames,
+        )
+    dev = torch.device(device)
+    model = model.to(dev).eval()
+    masks = _group_masks(
+        payload.height,
+        payload.width,
+        P=payload.predictor_count,
+        delta=payload.delta,
+        device=dev,
+    )
+    words = np.frombuffer(payload.tokens, dtype="<u4").astype(np.uint32, copy=False)
+    decoder = _pr86_hpac_codec.constriction.stream.queue.RangeDecoder(words)
+    decoded_prev = torch.zeros((1, payload.height, payload.width), dtype=torch.long, device=dev)
+    decoded_symbols = 0
+    decoded_frames = np.empty((frame_count, payload.height, payload.width), dtype=np.uint8)
+    started_at = time.time()
+
+    with torch.no_grad():
+        for frame in range(frame_count):
+            idx = torch.tensor([frame], dtype=torch.long, device=dev)
+            cur = torch.zeros((1, payload.height, payload.width), dtype=torch.long, device=dev)
+            frame_start_symbols = decoded_symbols
+            for group, mask in enumerate(masks):
+                if mask is None:
+                    continue
+                group_start_symbols = decoded_symbols
+                logits = model(cur, idx, decoded_prev)
+                probs = F.softmax(logits.float(), dim=1)
+                probs_at_group = probs[0][:, mask].permute(1, 0).contiguous()
+                probs_np = probs_at_group.cpu().numpy()
+                decoded = np.empty(int(probs_at_group.shape[0]), dtype=np.int64)
+                for symbol_in_group, row in enumerate(probs_np):
+                    normalized = _normalize_probability_row(
+                        row,
+                        prob_eps=prob_eps,
+                        variant=resolved,
+                    )
+                    cat = _categorical_from_probs(row, prob_eps=prob_eps, variant=resolved)
+                    try:
+                        decoded[symbol_in_group] = decoder.decode(cat)
+                    except Exception as exc:
+                        prefix = decoded[:symbol_in_group].astype(np.uint8, copy=False)
+                        raw_row = np.ascontiguousarray(row)
+                        norm_row = np.ascontiguousarray(normalized)
+                        return {
+                            "status": "failed_at_first_entropy_mismatch",
+                            "passed": False,
+                            "score_claim": False,
+                            "dispatch_allowed": False,
+                            "device": device,
+                            "probability_variant": resolved.name,
+                            "prob_eps": float(prob_eps),
+                            "failure": {
+                                "stage": "submitted_tokens_decode",
+                                "reason": "hpac_entropy_decode_contract_mismatch",
+                                "exception_type": type(exc).__name__,
+                                "frame": int(frame),
+                                "group": int(group),
+                                "symbol_in_group": int(symbol_in_group),
+                                "decoded_symbol_count_before_failure": int(decoded_symbols),
+                                "group_start_decoded_symbols": int(group_start_symbols),
+                                "frame_start_decoded_symbols": int(frame_start_symbols),
+                            },
+                            "token_stream": {
+                                "bytes": len(payload.tokens),
+                                "sha256": sha256_bytes(payload.tokens),
+                                "uint32_word_count": int(words.size),
+                                "first_words_hex": [f"0x{int(word):08x}" for word in words[:8]],
+                                "last_words_hex": [f"0x{int(word):08x}" for word in words[-8:]],
+                            },
+                            "group_geometry": {
+                                "symbols_in_group": int(probs_at_group.shape[0]),
+                                "mask_true_count": int(mask.sum().item()),
+                                "mask_sha256": sha256_bytes(mask.cpu().numpy().astype(np.uint8).tobytes()),
+                            },
+                            "failing_probability_row": {
+                                "raw_softmax": {
+                                    "dtype": str(raw_row.dtype),
+                                    "sha256": sha256_bytes(raw_row.tobytes()),
+                                    "values": [
+                                        round(float(value), 10) for value in raw_row.tolist()
+                                    ],
+                                    "sum": round(float(raw_row.sum()), 10),
+                                },
+                                "normalized_for_categorical": {
+                                    "dtype": str(norm_row.dtype),
+                                    "sha256": sha256_bytes(norm_row.tobytes()),
+                                    "values": [
+                                        round(float(value), 10) for value in norm_row.tolist()
+                                    ],
+                                    "sum": round(float(norm_row.sum()), 10),
+                                    "argmax_symbol": int(norm_row.argmax()),
+                                    "min": round(float(norm_row.min()), 10),
+                                    "max": round(float(norm_row.max()), 10),
+                                },
+                                "categorical_perfect": bool(resolved.categorical_perfect),
+                                "source_contract": bool(resolved.source_contract),
+                            },
+                            "decoded_prefix_in_failing_group": {
+                                "symbol_count": int(prefix.size),
+                                "sha256": sha256_bytes(prefix.tobytes()),
+                                **_small_int_preview(prefix),
+                            },
+                            "context_before_failing_group": {
+                                "current_frame": _context_tensor_summary(
+                                    cur[0],
+                                    label="current_frame_tokens_before_group_assignment",
+                                ),
+                                "previous_frame": _context_tensor_summary(
+                                    decoded_prev[0],
+                                    label="previous_frame_tokens",
+                                ),
+                            },
+                            "source_equivalent_decoder_contract": {
+                                "range_decoder": "constriction.stream.queue.RangeDecoder(uint32_words)",
+                                "probability_rows": (
+                                    "F.softmax(logits.float(), dim=1) -> numpy float64 "
+                                    "clip/renormalize -> Categorical(perfect=False)"
+                                ),
+                                "group_assignment": (
+                                    "decode complete patch group, then assign cur[mask]; "
+                                    "no in-group context mutation"
+                                ),
+                            },
+                            "elapsed_sec": round(time.time() - started_at, 3),
+                        }
+                    decoded_symbols += 1
+                cur[0, mask] = torch.from_numpy(decoded).to(dev)
+            decoded_frames[frame] = cur[0].cpu().numpy().astype(np.uint8)
+            decoded_prev = cur.clone()
+
+    return {
+        "status": "passed_requested_prefix_decode",
+        "passed": True,
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "device": device,
+        "probability_variant": resolved.name,
+        "prob_eps": float(prob_eps),
+        "decoded_frames": int(decoded_frames.shape[0]),
+        "decoded_symbols": int(decoded_symbols),
+        "decoded_tokens": {
+            "shape": list(decoded_frames.shape),
+            "sha256": sha256_bytes(decoded_frames.tobytes()),
+        },
+        "full_decode_proven": max_frames is None and int(decoded_frames.shape[0]) == payload.n_frames,
+        "byte_exact_reencode_proven": False,
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
+
+
+def run_pr91_hpm1_entropy_failure_grammar_probe(
+    archive: Path = DEFAULT_PR91_ARCHIVE,
+    *,
+    device: str = "cpu",
+    probability_variant: str = DEFAULT_HPAC_PROBABILITY_VARIANT,
+    prob_eps: float = PROB_EPS,
+    max_frames: int | None = 1,
+    output_dir: Path | None = None,
+    strict: bool = False,
+    write_json: bool = True,
+) -> dict[str, Any]:
+    """Pin the exact PR91/HPM1 range-decoder grammar blocker.
+
+    The probe is local-only. It reproduces the submitted runtime entropy loop
+    until the first constriction mismatch and records enough context to keep
+    future fixes from guessing at the missing grammar.
+    """
+
+    started_at = time.time()
+    if str(device) != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "pr91_hpm1_entropy_failure_grammar_probe_is_cpu_only",
+            requested_device=device,
+        )
+    archive_path = Path(archive)
+    payload = extract_pr91_hpm1_payload(archive_path)
+    dependency_report = collect_dependency_report(strict=False)
+    static_report = validate_hpm1_static_contract(payload)
+    relationship = compare_hpm1_to_pr86_hpac_contract(payload)
+    runtime_sources = analyze_pr91_hpm1_runtime_sources()
+    model = load_hpm1_hpac_model(payload, device=device)
+    trace = _trace_hpm1_entropy_decode_failure(
+        model,
+        payload,
+        probability_variant=probability_variant,
+        prob_eps=prob_eps,
+        max_frames=max_frames,
+        device=device,
+    )
+    blocked = trace.get("passed") is not True
+    report: dict[str, Any] = {
+        "schema": "pr91_hpm1_entropy_failure_grammar_probe_v1",
+        "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_entropy_failure_grammar_probe",
+        "recorded_at_utc": datetime.now(UTC).replace(microsecond=0).isoformat(),
+        "status": (
+            "blocked_hpm1_entropy_decoder_grammar_mismatch"
+            if blocked
+            else "passed_requested_prefix_decode_reencode_still_missing"
+        ),
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "dispatch_performed": False,
+        "gpu_or_remote_work": False,
+        "local_only": True,
+        "ready_for_exact_eval_dispatch": False,
+        "promotion_eligible": False,
+        "evidence_grade": "local_entropy_failure_grammar_probe",
+        "device": device,
+        "archive": _archive_report(archive_path),
+        "hpm1_static_contract": static_report,
+        "pr86_hpac_relationship": relationship,
+        "dependency_report": dependency_report,
+        "runtime_source_contract": runtime_sources,
+        "payload": {
+            "config": payload.config(),
+            "tokens_bytes": len(payload.tokens),
+            "tokens_sha256": sha256_bytes(payload.tokens),
+            "hpac_bytes": len(payload.hpac),
+            "hpac_sha256": sha256_bytes(payload.hpac),
+        },
+        "entropy_failure_trace": trace,
+        "exact_missing_grammar": {
+            "status": "identified_as_entropy_decode_contract_gap" if blocked else "not_triggered_in_requested_prefix",
+            "missing_wire_contract": (
+                "semantic HPAC probability/range grammar that maps the exact "
+                "HPM1 uint32 token queue to 600x384x512 class tokens and back "
+                "to the same token bytes"
+            ),
+            "not_missing": [
+                "archive/member byte custody",
+                "HPM1 header/token/model section split",
+                "PPMd HPAC torch state load",
+                "submitted runtime source dependency versions",
+                "first probability-row construction",
+            ],
+            "first_blocked_operation": (
+                trace.get("failure", {}).get("stage", "")
+                if isinstance(trace.get("failure"), dict)
+                else ""
+            ),
+        },
+        "full_decode": {
+            "passed": False,
+            "frame_count": 0,
+            "decoded_masks_sha256": "",
+            "refusal_reason": "full_600_frame_hpm1_decode_not_proven",
+        },
+        "byte_exact_semantic_reencode": {
+            "passed": False,
+            "byte_exact": False,
+            "reencoded_hpm1_sha256": "",
+            "refusal_reason": "range_encoder_uint32_reemit_not_proven",
+        },
+        "next_required_proofs": [
+            "repair or recover the encoder-side HPAC probability/range grammar at the traced failure row",
+            "decode all 600 HPM1 frames from the exact PR91 token stream on CPU",
+            "range-encode decoded symbols back to the exact token stream SHA-256",
+            "prove byte-exact HPM1 segment reencode from semantic tokens",
+        ],
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
+    if write_json and output_dir is not None:
+        write_json_report(report, Path(output_dir) / "hpm1_entropy_failure_grammar_probe.json")
+    if strict and report["ready_for_exact_eval_dispatch"] is not True:
+        raise Pr91Hpm1Error("hpm1_entropy_failure_grammar_probe", str(report["status"]), report=report)
+    return _jsonable(report)
 
 
 def run_pr91_hpm1_semantic_decode_trench(

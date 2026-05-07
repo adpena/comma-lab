@@ -21,8 +21,9 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.categorical_payload_candidate import (  # noqa: E402
-    CategoricalPayloadCandidateError,
+    LABEL_PERMUTATION_CONTROL_FILENAME,
     RUNTIME_EXECUTION_PROOF_FILENAME,
+    CategoricalPayloadCandidateError,
     build_categorical_payload_candidate,
     extract_pr91_hpm1_categorical_payload,
 )
@@ -90,6 +91,7 @@ def main(argv: list[str] | None = None) -> int:
     manifest_path = args.out_dir / "archive_member_manifest.json"
     hpm1_structural_inventory_path = args.out_dir / "hpm1_structural_inventory.json"
     runtime_execution_proof_path = args.out_dir / RUNTIME_EXECUTION_PROOF_FILENAME
+    label_permutation_control_path = args.out_dir / LABEL_PERMUTATION_CONTROL_FILENAME
     generated_input_paths = [
         *[path for path in input_paths if path.is_file()],
         archive_path,
@@ -103,6 +105,11 @@ def main(argv: list[str] | None = None) -> int:
         *(
             [runtime_execution_proof_path]
             if runtime_execution_proof_path.is_file()
+            else []
+        ),
+        *(
+            [label_permutation_control_path]
+            if label_permutation_control_path.is_file()
             else []
         ),
     ]

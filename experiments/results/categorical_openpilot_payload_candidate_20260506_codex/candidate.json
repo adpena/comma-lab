@@ -401,6 +401,32 @@
     ]
   },
   "kind": "categorical_qma9_clade_spade_openpilot_candidate_manifest",
+  "label_permutation_control": {
+    "bytes": 1515,
+    "control_name": "label_permutation_fail_closed_control",
+    "expected_failure_observed": true,
+    "mutation": {
+      "member": "class_codebook.json",
+      "operation": "reverse_classes_order",
+      "original_class_order": [
+        "road",
+        "lane_markings",
+        "undrivable",
+        "movable",
+        "my_car"
+      ],
+      "permuted_class_order": [
+        "my_car",
+        "movable",
+        "undrivable",
+        "lane_markings",
+        "road"
+      ]
+    },
+    "passed": true,
+    "path": "label_permutation_control.json",
+    "sha256": "c32e7fb5defa68c84a11470d7724e8a3e4049e108524c9a74e095df30f1ddb68"
+  },
   "label_prior_payload_manifest": {
     "bytes": 5403,
     "contract": "categorical_label_prior_payload_manifest_v1",
@@ -423,8 +449,34 @@
       "scope": "real_payload_requires_decode_reencode_parity"
     },
     "label_permutation_fail_closed_control": {
-      "passed": false,
-      "scope": "real_payload_requires_label_permutation_control"
+      "passed": true,
+      "proof_artifact": {
+        "bytes": 1515,
+        "control_name": "label_permutation_fail_closed_control",
+        "expected_failure_observed": true,
+        "mutation": {
+          "member": "class_codebook.json",
+          "operation": "reverse_classes_order",
+          "original_class_order": [
+            "road",
+            "lane_markings",
+            "undrivable",
+            "movable",
+            "my_car"
+          ],
+          "permuted_class_order": [
+            "my_car",
+            "movable",
+            "undrivable",
+            "lane_markings",
+            "road"
+          ]
+        },
+        "passed": true,
+        "path": "label_permutation_control.json",
+        "sha256": "c32e7fb5defa68c84a11470d7724e8a3e4049e108524c9a74e095df30f1ddb68"
+      },
+      "scope": "runtime_rejects_permuted_charged_class_codebook"
     },
     "runtime_consumes_conditioning_control": {
       "passed": true,

@@ -117,6 +117,12 @@ def test_jcsp_present_marginals_writes_archive_member_then_raises(
     assert manifest["stream_archive_byte_reconciliation"][
         "stream_payload_bytes_reconciled"
     ] is True
+    output_contract = manifest["runtime_consumption_contract"][
+        "contest_output_contract"
+    ]
+    assert output_contract["bridge_emits_contest_raw_outputs"] is False
+    assert output_contract["output_parity_checked"] is False
+    assert output_contract["ready_for_submission_runtime_consumption"] is False
     assert not (iter_dir / ".done_compress_weights").exists()
     assert any(
         "archive_bytes_written=True" in msg

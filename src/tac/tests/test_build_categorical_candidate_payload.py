@@ -25,6 +25,7 @@ from tac.categorical_label_prior_payload_manifest import (
     LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
 )
 from tac.categorical_payload_candidate import (
+    LABEL_PERMUTATION_CONTROL_FILENAME,
     MEMBER_ORDER,
     RUNTIME_EXECUTION_PROOF_FILENAME,
     RUNTIME_PROOF_SKELETON_CONTRACT,
@@ -38,7 +39,7 @@ REPO = Path(__file__).resolve().parents[3]
 def _valid_hpm1_hpac_payload() -> bytes:
     torch = pytest.importorskip("torch")
     pyppmd = pytest.importorskip("pyppmd")
-    from tac.pr86_hpac_codec import HPACMini, PPMD_MAX_ORDER, PPMD_MEM_SIZE
+    from tac.pr86_hpac_codec import PPMD_MAX_ORDER, PPMD_MEM_SIZE, HPACMini
 
     model = HPACMini(num_pairs=2, P=2, delta=1, ch=4, d_film=2, use_spm=True)
     with torch.no_grad():
@@ -124,7 +125,9 @@ def test_build_categorical_candidate_payload_is_byte_closed_and_fail_closed(
     assert "decode_reencode_full_decode_not_proven" in blockers
     assert "decode_reencode_byte_exact_reencode_not_proven" in blockers
     assert "no_op_control_not_passed:decode_reencode_identity_control" in blockers
+    assert "no_op_control_not_passed:label_permutation_fail_closed_control" not in blockers
     assert "no_op_control_not_passed:runtime_consumes_conditioning_control" not in blockers
+    assert candidate["no_op_controls"]["label_permutation_fail_closed_control"]["passed"] is True
 
     archive_member_manifest = read_json(out_a / "archive_member_manifest.json")
     assert archive_member_manifest["archive_member_manifest_contract"] == ARCHIVE_MEMBER_MANIFEST_CONTRACT
@@ -186,6 +189,12 @@ def test_build_categorical_candidate_payload_is_byte_closed_and_fail_closed(
     assert runtime_proof["sidecar_free"] is True
     assert runtime_proof["fallback_used"] is False
     assert runtime_proof["runtime_report_summary"]["payload_codec"] == "opaque_categorical_payload"
+    label_control = read_json(out_a / LABEL_PERMUTATION_CONTROL_FILENAME)
+    assert label_control["kind"] == "categorical_label_permutation_fail_closed_control"
+    assert label_control["passed"] is True
+    assert label_control["mutation"]["operation"] == "reverse_classes_order"
+    assert label_control["failure_contract"]["fail_closed"] is True
+    assert summary["label_permutation_control"]["passed"] is True
 
 
 def test_build_categorical_candidate_payload_emits_hpm1_structural_inventory(
@@ -245,6 +254,9 @@ def test_build_categorical_candidate_payload_emits_hpm1_structural_inventory(
     assert readiness["hpm1_structural_decode_inventory"]["structural_reencode_matches_source"] is True
     assert readiness["runtime_loader_parity"]["accepted"] is True
     assert readiness["runtime_loader_parity"]["runtime_execution_proof"]["accepted"] is True
+    assert readiness["dispatch_blockers"].count(
+        "no_op_control_not_passed:label_permutation_fail_closed_control"
+    ) == 0
     assert runtime_proof["runtime_report_summary"]["payload_codec"] == "HPM1"
     assert runtime_proof["runtime_report_summary"]["hpm1_structural_reencode_passed"] is True
     assert "hpm1_structural_inventory" in summary["paths"]

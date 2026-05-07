@@ -11,9 +11,9 @@ from __future__ import annotations
 
 import json
 import os
+import struct
 import subprocess
 import sys
-import struct
 import tempfile
 import zipfile
 from pathlib import Path
@@ -64,6 +64,7 @@ ARCHIVE_MEMBER_MANIFEST_KIND = "categorical_local_candidate_archive_member_manif
 RUNTIME_PROOF_SKELETON_KIND = "categorical_runtime_consumer_proof_skeleton"
 RUNTIME_PROOF_SKELETON_CONTRACT = "categorical_runtime_consumer_proof_skeleton_v1"
 RUNTIME_EXECUTION_PROOF_FILENAME = "runtime_execution_proof.json"
+LABEL_PERMUTATION_CONTROL_FILENAME = "label_permutation_control.json"
 HPM1_STRUCTURAL_INVENTORY_FILENAME = "hpm1_structural_inventory.json"
 RUNTIME_CONSUMER_REPO_PATH = "src/tac/categorical_candidate_runtime_skeleton.py"
 MEMBER_ROLES = {
@@ -316,6 +317,95 @@ def _write_runtime_execution_proof(
     }
 
 
+def _write_label_permutation_control(
+    *,
+    out_dir: Path,
+    archive_path: Path,
+    candidate_archive_sha256: str,
+    runtime_consumer_sha256: str,
+    class_codebook_sha256: str,
+) -> dict[str, Any]:
+    with tempfile.TemporaryDirectory(prefix="categorical-label-permutation-") as temp_name:
+        temp_dir = Path(temp_name)
+        _extract_candidate_archive_for_runtime(archive_path, temp_dir)
+        codebook_path = temp_dir / "class_codebook.json"
+        codebook = json.loads(codebook_path.read_text(encoding="utf-8"))
+        classes = codebook.get("classes")
+        if not isinstance(classes, list) or len(classes) < 2:
+            raise CategoricalPayloadCandidateError("class codebook has no permutable classes")
+        original_order = [row.get("name", "") for row in classes if isinstance(row, dict)]
+        permuted_classes = list(reversed(classes))
+        codebook["classes"] = permuted_classes
+        codebook_path.write_text(json_text(codebook), encoding="utf-8")
+        env = dict(os.environ)
+        env["PYTHONPATH"] = ""
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "runtime_consumer.py",
+                "--archive-root",
+                ".",
+                "--json-out",
+                "label_permutation_runtime_report.json",
+            ],
+            cwd=temp_dir,
+            env=env,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+
+    stderr = completed.stderr or ""
+    stdout = completed.stdout or ""
+    expected_failure = "class codebook class order mismatch" in stderr
+    passed = completed.returncode == 2 and expected_failure
+    proof = {
+        "schema_version": SCHEMA_VERSION,
+        "kind": "categorical_label_permutation_fail_closed_control",
+        "independent_proof": True,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "producer_tool": "tac.categorical_payload_candidate.build_categorical_payload_candidate",
+        "proof_scope": "label_permutation_fail_closed_control",
+        "candidate_archive_sha256": candidate_archive_sha256,
+        "runtime_consumer_sha256": runtime_consumer_sha256,
+        "class_codebook_sha256": class_codebook_sha256,
+        "control_name": "label_permutation_fail_closed_control",
+        "passed": passed,
+        "mutation": {
+            "member": "class_codebook.json",
+            "operation": "reverse_classes_order",
+            "original_class_order": original_order,
+            "permuted_class_order": list(reversed(original_order)),
+        },
+        "runtime_invocation": {
+            "returncode": completed.returncode,
+            "expected_returncode": 2,
+            "expected_failure_observed": expected_failure,
+            "stderr_sha256": sha256_bytes(stderr.encode("utf-8")),
+            "stdout_sha256": sha256_bytes(stdout.encode("utf-8")),
+        },
+        "failure_contract": {
+            "expected_runtime_error": "class codebook class order mismatch",
+            "fail_closed": passed,
+            "sidecar_free": True,
+            "fallback_used": False,
+        },
+    }
+    proof_path = out_dir / LABEL_PERMUTATION_CONTROL_FILENAME
+    write_json(proof_path, proof)
+    return {
+        "path": LABEL_PERMUTATION_CONTROL_FILENAME,
+        "bytes": proof_path.stat().st_size,
+        "sha256": sha256_file(proof_path),
+        "passed": passed,
+        "control_name": "label_permutation_fail_closed_control",
+        "mutation": proof["mutation"],
+        "expected_failure_observed": expected_failure,
+    }
+
+
 def _write_hpm1_structural_inventory(
     *,
     out_dir: Path,
@@ -472,6 +562,13 @@ def build_categorical_payload_candidate(
         runtime_consumer_sha256=runtime_consumer_sha,
         loaded_charged_members=loaded_charged_members,
     )
+    label_permutation_control = _write_label_permutation_control(
+        out_dir=out,
+        archive_path=archive_path,
+        candidate_archive_sha256=archive_sha,
+        runtime_consumer_sha256=runtime_consumer_sha,
+        class_codebook_sha256=class_codebook_sha,
+    )
     hpm1_structural_inventory = _write_hpm1_structural_inventory(
         out_dir=out,
         categorical_payload=categorical_payload,
@@ -587,8 +684,9 @@ def build_categorical_payload_candidate(
                 "scope": "real_payload_requires_decode_reencode_parity",
             },
             "label_permutation_fail_closed_control": {
-                "passed": False,
-                "scope": "real_payload_requires_label_permutation_control",
+                "passed": label_permutation_control["passed"],
+                "scope": "runtime_rejects_permuted_charged_class_codebook",
+                "proof_artifact": label_permutation_control,
             },
             "charged_member_presence_control": {
                 "passed": True,
@@ -612,6 +710,7 @@ def build_categorical_payload_candidate(
             "sha256": label_prior_payload_manifest_sha,
             "contract": LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT,
         },
+        "label_permutation_control": label_permutation_control,
         "candidate_rows": [
             {
                 "row_id": "local_categorical_payload_custody",
@@ -664,6 +763,10 @@ def build_categorical_payload_candidate(
                 out / RUNTIME_EXECUTION_PROOF_FILENAME,
                 root,
             ),
+            "label_permutation_control": repo_relative(
+                out / LABEL_PERMUTATION_CONTROL_FILENAME,
+                root,
+            ),
         },
         "archive_sha256": archive_sha,
         "archive_bytes": archive_path.stat().st_size,
@@ -675,6 +778,7 @@ def build_categorical_payload_candidate(
         ),
         "readiness_blockers": readiness["dispatch_blockers"],
         "runtime_execution_proof": runtime_execution_proof,
+        "label_permutation_control": label_permutation_control,
     }
     write_json(out / "summary.json", summary)
     return {
@@ -690,6 +794,7 @@ __all__ = [
     "BUILD_KIND",
     "CANDIDATE_KIND",
     "HPM1_STRUCTURAL_INVENTORY_FILENAME",
+    "LABEL_PERMUTATION_CONTROL_FILENAME",
     "LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT",
     "LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER",
     "MEMBER_ORDER",

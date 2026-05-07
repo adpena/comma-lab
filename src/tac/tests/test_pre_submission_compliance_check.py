@@ -159,6 +159,42 @@ def test_pre_submission_check_contest_final_rejects_stale_archive_manifest(tmp_p
     assert "archive_manifest_sha_matches" in _failed_check_names(report)
 
 
+def test_pre_submission_check_accepts_candidate_archive_manifest_identity(tmp_path: Path) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    manifest = tmp_path / "wr01_candidate_manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "candidate_archive_sha256": expected["archive_sha256"],
+                "candidate_archive_bytes": expected["archive_size_bytes"],
+                "score_claim": False,
+                "dispatch_attempted": False,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--archive-manifest-json",
+                str(manifest),
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+            ]
+        )
+    )
+
+    assert report["passed"], [c for c in report["checks"] if not c["passed"]]
+
+
 def test_pre_submission_check_dispatch_claim_linkage_requires_terminal_row(tmp_path: Path) -> None:
     mod = _load_module()
     expected = _write_submission(tmp_path / "submission")

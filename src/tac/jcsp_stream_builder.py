@@ -39,6 +39,7 @@ from tac.joint_codec_stack_orchestrator import (
     JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER,
     JCSP_LOCAL_SKELETON_SCHEMA,
     JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+    JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER,
     KIND_ARITHMETIC_STATIC,
     KIND_BALLE_HYPERPRIOR,
     KIND_RAW_PASSTHROUGH,
@@ -898,7 +899,9 @@ def jcsp_stream_source_archive_member(
             "runtime_tree_sha256": None,
             "blockers": [
                 JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+                JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER,
                 "submission_runtime_stream_consumer_missing",
+                "submission_runtime_raw_output_emission_missing",
                 "runtime_tree_sha256_missing_until_submission_consumer_lands",
             ],
         },

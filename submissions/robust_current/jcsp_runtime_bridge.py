@@ -27,6 +27,8 @@ JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER = (
 JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER = (
     "jcsp_local_skeleton_not_submission_runtime_container"
 )
+JCSP_RUNTIME_OUTPUT_CONTRACT_SCHEMA = "jcsp_submission_runtime_output_contract_v1"
+JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER = "jcsp_runtime_raw_output_parity_missing"
 JCSP_MAGIC = b"JCSP"
 JCSK_MAGIC = b"JCSK"
 JCSP_VERSION = 1
@@ -80,6 +82,110 @@ def _write_manifest(path: Path, manifest: Mapping[str, Any]) -> None:
 
 def _dedupe(items: list[str]) -> list[str]:
     return list(dict.fromkeys(str(item) for item in items))
+
+
+def _raw_output_for_video_name(video_name: str) -> str:
+    text = str(video_name).strip()
+    if not text:
+        raise ValueError("empty video name")
+    if "\x00" in text or text.startswith("/"):
+        raise ValueError(f"unsafe video name {text!r}")
+    parts = Path(text).parts
+    if any(part == ".." for part in parts):
+        raise ValueError(f"unsafe video name {text!r}")
+    stem = text.rsplit(".", 1)[0] if "." in text else text
+    return f"{stem}.raw"
+
+
+def _expected_raw_outputs_from_names_file(
+    video_names_file: str | Path | None,
+) -> tuple[list[str], str | None]:
+    if video_names_file is None:
+        return [], None
+    try:
+        text = Path(video_names_file).read_text(encoding="utf-8")
+        outputs = [
+            _raw_output_for_video_name(line)
+            for line in text.splitlines()
+            if line.strip()
+        ]
+    except (OSError, UnicodeDecodeError, ValueError) as exc:
+        return [], str(exc)
+    return _dedupe(outputs), None
+
+
+def _observe_existing_raw_outputs(
+    inflated_dir: str | Path | None,
+    expected_raw_outputs: list[str],
+) -> list[dict[str, Any]]:
+    if inflated_dir is None:
+        return []
+    root = Path(inflated_dir)
+    rows: list[dict[str, Any]] = []
+    for rel in expected_raw_outputs:
+        path = root / rel
+        exists = path.exists()
+        row: dict[str, Any] = {
+            "path": rel,
+            "exists": exists,
+            "is_file": path.is_file(),
+            "bytes": None,
+        }
+        if path.is_file():
+            try:
+                row["bytes"] = int(path.stat().st_size)
+            except OSError:
+                row["bytes"] = None
+        rows.append(row)
+    return rows
+
+
+def _contest_output_contract(
+    *,
+    member_present: bool,
+    inflated_dir: str | Path | None,
+    video_names_file: str | Path | None,
+) -> dict[str, Any]:
+    expected_raw_outputs, names_error = _expected_raw_outputs_from_names_file(
+        video_names_file,
+    )
+    observed = _observe_existing_raw_outputs(inflated_dir, expected_raw_outputs)
+    existing_count = sum(1 for row in observed if row["exists"])
+    blockers: list[str] = []
+    if member_present:
+        blockers.extend(
+            [
+                JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER,
+                "jcsp_stream_decode_emit_frames_missing",
+                "jcsp_raw_output_emission_missing",
+            ]
+        )
+        if names_error is not None:
+            blockers.append("jcsp_video_names_file_parse_failed")
+        if existing_count:
+            blockers.append("jcsp_existing_raw_outputs_unproven")
+    return {
+        "schema": JCSP_RUNTIME_OUTPUT_CONTRACT_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "required_when_jcsp_member_present": member_present,
+        "contest_output_format": "one uint8 RGB rawvideo .raw per names_file entry",
+        "video_names_file_observed": video_names_file is not None,
+        "video_names_file_parse_error": names_error,
+        "inflated_dir_observed": inflated_dir is not None,
+        "expected_raw_outputs": expected_raw_outputs,
+        "expected_raw_output_count": len(expected_raw_outputs),
+        "existing_raw_outputs_at_probe": observed,
+        "existing_raw_output_count": existing_count,
+        "bridge_emits_contest_raw_outputs": False,
+        "raw_output_emission_attempted": False,
+        "output_parity_checked": False,
+        "output_parity_artifact": None,
+        "ready_for_output_parity": False,
+        "ready_for_submission_runtime_consumption": False,
+        "dispatch_blocker": JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER,
+        "dispatch_blockers": _dedupe(blockers),
+    }
 
 
 def _require_available(blob: bytes, cursor: int, n_bytes: int, context: str) -> None:
@@ -272,6 +378,8 @@ def probe_jcsp_runtime_bridge(
     archive_dir: str | Path,
     *,
     member_name: str = JCSP_ARCHIVE_MEMBER_NAME,
+    inflated_dir: str | Path | None = None,
+    video_names_file: str | Path | None = None,
     manifest_json: str | Path | None = None,
 ) -> dict[str, Any]:
     """Probe ``archive_dir/member_name`` and return a deterministic contract.
@@ -285,6 +393,11 @@ def probe_jcsp_runtime_bridge(
     archive_root = Path(archive_dir)
     member_path = archive_root / member_name
     member_exists = member_path.exists()
+    output_contract = _contest_output_contract(
+        member_present=member_exists,
+        inflated_dir=inflated_dir,
+        video_names_file=video_names_file,
+    )
     base: dict[str, Any] = {
         "schema": JCSP_RUNTIME_BRIDGE_PROBE_SCHEMA,
         "score_claim": False,
@@ -302,6 +415,7 @@ def probe_jcsp_runtime_bridge(
         "ready_for_submission_runtime_consumption": False,
         "ready_for_exact_eval_dispatch": False,
         "runtime_action": "no_jcsp_member_present",
+        "contest_output_contract": output_contract,
         "dispatch_blockers": [],
     }
     if not member_path.exists():
@@ -317,6 +431,7 @@ def probe_jcsp_runtime_bridge(
                 "dispatch_blockers": [
                     "jcsp_member_path_not_regular_file",
                     JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+                    *output_contract["dispatch_blockers"],
                     "exact_cuda_auth_eval_missing",
                 ],
             }
@@ -342,6 +457,7 @@ def probe_jcsp_runtime_bridge(
                 "dispatch_blockers": [
                     "jcsp_member_too_small_for_magic",
                     JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+                    *output_contract["dispatch_blockers"],
                     "exact_cuda_auth_eval_missing",
                 ],
             }
@@ -359,6 +475,7 @@ def probe_jcsp_runtime_bridge(
                 "dispatch_blockers": [
                     JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER,
                     JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+                    *output_contract["dispatch_blockers"],
                     "strict_preflight_proof_missing",
                     "exact_cuda_auth_eval_missing",
                 ],
@@ -376,6 +493,7 @@ def probe_jcsp_runtime_bridge(
                     "dispatch_blockers": [
                         "jcsp_runtime_probe_parse_failed",
                         JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+                        *output_contract["dispatch_blockers"],
                         "exact_cuda_auth_eval_missing",
                     ],
                 }
@@ -394,6 +512,7 @@ def probe_jcsp_runtime_bridge(
                     "dispatch_blockers": [
                         JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
                         "not_integrated_into_submission_inflate_path",
+                        *output_contract["dispatch_blockers"],
                         "jcsp_stream_decode_emit_frames_missing",
                         "exact_cuda_auth_eval_missing",
                     ],
@@ -411,6 +530,7 @@ def probe_jcsp_runtime_bridge(
                 "dispatch_blockers": [
                     "jcsp_unknown_member_magic",
                     JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+                    *output_contract["dispatch_blockers"],
                     "exact_cuda_auth_eval_missing",
                 ],
             }
@@ -438,6 +558,16 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         required=True,
         help="path to write deterministic probe manifest JSON",
     )
+    parser.add_argument(
+        "--inflated-dir",
+        default=None,
+        help="inflated output directory used to inspect pre-existing raw outputs",
+    )
+    parser.add_argument(
+        "--video-names-file",
+        default=None,
+        help="contest video names file used to derive required .raw outputs",
+    )
     return parser.parse_args(argv)
 
 
@@ -446,6 +576,8 @@ def main(argv: list[str] | None = None) -> int:
     manifest = probe_jcsp_runtime_bridge(
         args.archive_dir,
         member_name=args.member_name,
+        inflated_dir=args.inflated_dir,
+        video_names_file=args.video_names_file,
         manifest_json=args.manifest_json,
     )
     if not manifest["member_present"]:
