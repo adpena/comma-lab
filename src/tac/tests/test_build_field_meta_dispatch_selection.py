@@ -367,6 +367,43 @@ def test_field_meta_selector_ingests_apogee_parity_evidence_as_calibration(tmp_p
     assert "readiness_component_penalty_overwhelms_rate_gain" in row["candidate_blockers"]
 
 
+def test_field_meta_selector_accepts_expected_archive_size_schema_for_custody(
+    tmp_path: Path,
+) -> None:
+    archive = _zip_fixture(tmp_path / "codecop_pr101.zip", "x", b"codecop")
+    manifest = tmp_path / "codecop_manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "candidate_id": "codecop_expected_only",
+                "family_group": "codec_op_pr101",
+                "pareto_scope": "codec_op_pr101",
+                "archive_path": archive.as_posix(),
+                "expected_archive_size_bytes": archive.stat().st_size,
+                "expected_archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+                "source_archive_bytes": archive.stat().st_size + 7,
+                "ready_for_exact_eval_dispatch": False,
+                "score_claim": False,
+                "dispatch_attempted": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    assert row["archive_proof"]["source"] == "root_archive_fields"
+    assert row["archive_proof"]["byte_closed"] is True
+    assert row["candidate_archive_path"] == archive.as_posix()
+    assert row["candidate_archive_sha256"] == hashlib.sha256(archive.read_bytes()).hexdigest()
+    assert row["candidate_archive_bytes"] == archive.stat().st_size
+    assert row["byte_delta"] == -7
+
+
 def test_field_meta_selector_summarizes_nested_static_compliance_refresh() -> None:
     manifest = (
         REPO

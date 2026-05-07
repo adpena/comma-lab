@@ -424,8 +424,14 @@ def _archive_identity_candidates(
         {
             "source": "root_archive_fields",
             "path_value": payload.get("archive_path"),
-            "sha256": payload.get("archive_sha256", payload.get("candidate_archive_sha256")),
-            "bytes": payload.get("archive_bytes", payload.get("archive_size_bytes")),
+            "sha256": payload.get(
+                "archive_sha256",
+                payload.get("expected_archive_sha256", payload.get("candidate_archive_sha256")),
+            ),
+            "bytes": payload.get(
+                "archive_bytes",
+                payload.get("archive_size_bytes", payload.get("expected_archive_size_bytes")),
+            ),
         },
     ]
     scored = []
@@ -1479,7 +1485,15 @@ def _byte_delta(payload: Mapping[str, Any]) -> int:
         value = _nested(payload, path)
         if isinstance(value, int) and not isinstance(value, bool):
             return value
-    archive_bytes = _coerce_positive_int(payload.get("archive_bytes", payload.get("candidate_archive_bytes")))
+    archive_bytes = _coerce_positive_int(
+        payload.get(
+            "archive_bytes",
+            payload.get(
+                "candidate_archive_bytes",
+                payload.get("archive_size_bytes", payload.get("expected_archive_size_bytes")),
+            ),
+        )
+    )
     source_bytes = _coerce_positive_int(payload.get("source_archive_bytes"))
     if archive_bytes is not None and source_bytes is not None:
         return archive_bytes - source_bytes
@@ -1748,7 +1762,15 @@ def _apogee_readiness_component_score_penalty(evidence_payload: Mapping[str, Any
 
 
 def _candidate_source_byte_delta(payload: Mapping[str, Any]) -> int | None:
-    candidate_bytes = _optional_numeric(payload.get("candidate_archive_bytes"))
+    candidate_bytes = _optional_numeric(
+        payload.get(
+            "candidate_archive_bytes",
+            payload.get(
+                "archive_bytes",
+                payload.get("archive_size_bytes", payload.get("expected_archive_size_bytes")),
+            ),
+        )
+    )
     source_bytes = _optional_numeric(payload.get("source_archive_bytes"))
     if candidate_bytes is None or source_bytes is None:
         return None

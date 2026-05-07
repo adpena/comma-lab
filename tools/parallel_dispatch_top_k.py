@@ -36,10 +36,12 @@ Usage (typical apogee_intN sweep):
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
 import time
+import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
@@ -70,28 +72,414 @@ BLOCKED_EVIDENCE_SEMANTICS = {
     "prediction_only_forensic",
     "local_proxy_prediction_forensic",
     "byte_only_forensic",
+    "cpu_substrate_predicted_band",
 }
+BLOCKED_EVIDENCE_MARKERS = ("predict", "proxy", "forensic")
+PREDICTED_SCORE_FIELDS = (
+    "predicted_score",
+    "predicted_score_point_estimate",
+    "predicted_score_band",
+)
+CONTEST_TARGET_MARKERS = {
+    "contest",
+    "contest_cuda",
+    "contest_exact_eval",
+    "leaderboard",
+    "score_lowering",
+    "comma_video_compression_challenge",
+}
+PRODUCTION_TARGET_MARKERS = {
+    "production",
+    "production_only",
+    "comma_ai",
+    "comma_ai_production",
+    "openpilot",
+    "openpilot_edge",
+    "edge",
+    "edge_device",
+    "outside_contest",
+    "outside_contest_mode",
+}
+SELF_NEURAL_EDGE_MARKERS = (
+    "self_compress",
+    "self-compress",
+    "self_compression",
+    "self-compression",
+    "neural_compress",
+    "neural-compress",
+    "neural_compression",
+    "neural weight compression",
+    "on_device_learning",
+    "on-device-learning",
+    "edge_learning",
+    "edge-learning",
+    "online_learning",
+)
+TRUE_BIT_CHANGE_FIELDS = (
+    "score_affecting_payload_changed",
+    "charged_bits_changed",
+    "bits_changed",
+    "payload_changed",
+    "byte_different",
+    "archive_changed",
+    "archive_bytes_changed",
+)
+NO_OP_FIELDS = (
+    "no_op",
+    "is_noop",
+    "no_op_payload",
+    "noop",
+)
+SHA_DIFF_FIELD_PAIRS = (
+    ("source_archive_sha256", "candidate_archive_sha256"),
+    ("source_archive_sha256", "archive_sha256"),
+    ("input_archive_sha256", "output_archive_sha256"),
+    ("old_archive_sha256", "new_archive_sha256"),
+    ("source_payload_sha256", "candidate_payload_sha256"),
+    ("input_payload_sha256", "output_payload_sha256"),
+    ("old_payload_sha256", "new_payload_sha256"),
+)
+BYTE_DIFF_FIELD_PAIRS = (
+    ("source_archive_bytes", "candidate_archive_bytes"),
+    ("source_archive_bytes", "archive_size_bytes"),
+    ("source_archive_bytes", "expected_archive_size_bytes"),
+    ("source_charged_bytes", "candidate_charged_bytes"),
+    ("old_archive_bytes", "new_archive_bytes"),
+    ("input_archive_bytes", "output_archive_bytes"),
+)
 
 
 class DispatchInputError(ValueError):
     """Raised when ranked input is not exact-eval dispatch-ready."""
 
 
-def _candidate_archive_bytes(candidate: dict) -> int | None:
-    for key in ("archive_size_bytes", "expected_archive_size_bytes", "archive_bytes"):
-        value = candidate.get(key)
-        if value is None:
-            continue
+def _is_sha256(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    text = value.strip().lower()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _coerce_positive_int(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int) and value > 0:
+        return value
+    if isinstance(value, str) and value.strip().isdigit():
+        parsed = int(value.strip())
+        return parsed if parsed > 0 else None
+    return None
+
+
+def _coerce_float(value: object) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int | float):
+        return float(value)
+    if isinstance(value, str):
         try:
-            return int(value)
-        except (TypeError, ValueError):
+            return float(value.strip())
+        except ValueError:
             return None
     return None
+
+
+def _candidate_archive_path_value(candidate: dict) -> object:
+    for key in ("archive_path", "candidate_archive_path"):
+        value = candidate.get(key)
+        if value:
+            return value
+    return None
+
+
+def _resolve_archive_path(path_value: object, *, ranked_input_dir: Path | None) -> Path | None:
+    if isinstance(path_value, Path):
+        path = path_value
+    elif isinstance(path_value, str) and path_value.strip():
+        path = Path(path_value)
+    else:
+        return None
+    if path.is_absolute():
+        return path
+    candidates = [REPO / path]
+    if ranked_input_dir is not None:
+        candidates.append(ranked_input_dir / path)
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return candidates[0]
+
+
+def _candidate_archive_byte_values(candidate: dict) -> dict[str, int]:
+    values: dict[str, int] = {}
+    for key in (
+        "candidate_archive_bytes",
+        "archive_size_bytes",
+        "expected_archive_size_bytes",
+        "archive_bytes",
+    ):
+        parsed = _coerce_positive_int(candidate.get(key))
+        if parsed is not None:
+            values[key] = parsed
+    return values
+
+
+def _candidate_archive_bytes(candidate: dict) -> int | None:
+    values = _candidate_archive_byte_values(candidate)
+    return next(iter(values.values()), None)
+
+
+def _candidate_archive_sha256(candidate: dict) -> str:
+    for key in ("candidate_archive_sha256", "archive_sha256", "expected_archive_sha256"):
+        value = candidate.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip().lower()
+    return ""
+
+
+def _candidate_exact_score(candidate: dict) -> float | None:
+    for key in ("contest_cuda_score", "final_score", "contest_score", "score"):
+        parsed = _coerce_float(candidate.get(key))
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _flatten_text(value: object) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, bool | int | float):
+        return [str(value)]
+    if isinstance(value, dict):
+        out: list[str] = []
+        for key, inner in value.items():
+            out.extend(_flatten_text(key))
+            out.extend(_flatten_text(inner))
+        return out
+    if isinstance(value, list | tuple | set):
+        out: list[str] = []
+        for inner in value:
+            out.extend(_flatten_text(inner))
+        return out
+    return [str(value)]
+
+
+def _candidate_text(candidate: dict) -> str:
+    keys = (
+        "candidate_id",
+        "lane_id",
+        "lane_class",
+        "family",
+        "family_group",
+        "pareto_scope",
+        "op_class",
+        "op_module",
+        "cathedral_op",
+        "optimization_target",
+        "target_mode",
+        "target_modes",
+        "deployment_target",
+        "deployment_targets",
+        "paradigm",
+        "paradigms",
+        "tags",
+        "notes",
+    )
+    parts: list[str] = []
+    for key in keys:
+        parts.extend(_flatten_text(candidate.get(key)))
+    return " ".join(parts).strip().lower()
+
+
+def _normalize_target_token(value: str) -> str:
+    return (
+        value.strip()
+        .lower()
+        .replace("-", "_")
+        .replace(" ", "_")
+        .replace("/", "_")
+    )
+
+
+def _candidate_target_modes(candidate: dict) -> set[str]:
+    modes: set[str] = set()
+    for key in (
+        "optimization_target",
+        "target_mode",
+        "target_modes",
+        "dispatch_target",
+        "deployment_target",
+        "deployment_targets",
+    ):
+        for part in _flatten_text(candidate.get(key)):
+            token = _normalize_target_token(part)
+            if token:
+                modes.add(token)
+    if candidate.get("contest_mode") is True:
+        modes.add("contest")
+    if candidate.get("contest_mode") is False:
+        modes.add("outside_contest_mode")
+    if candidate.get("production_target") is True:
+        modes.add("production")
+    if candidate.get("openpilot_target") is True:
+        modes.add("openpilot")
+    if candidate.get("comma_ai_target") is True:
+        modes.add("comma_ai_production")
+    if candidate.get("outside_contest_mode") is True:
+        modes.add("outside_contest_mode")
+    return modes
+
+
+def _candidate_targets_contest_dispatch(candidate: dict) -> bool:
+    modes = _candidate_target_modes(candidate)
+    if not modes:
+        return True
+    return bool(modes & CONTEST_TARGET_MARKERS)
+
+
+def _target_mode_blockers(candidate: dict) -> list[str]:
+    modes = _candidate_target_modes(candidate)
+    if not modes:
+        return []
+    blockers: list[str] = []
+    if modes & PRODUCTION_TARGET_MARKERS and not _candidate_targets_contest_dispatch(candidate):
+        mode_text = ",".join(sorted(modes))
+        blockers.append(
+            f"non_contest_target_mode:{mode_text}; "
+            "parallel_dispatch_top_k only dispatches contest exact-eval archives"
+        )
+    return blockers
+
+
+def _candidate_is_self_neural_or_edge_learning(candidate: dict) -> bool:
+    text = _candidate_text(candidate)
+    return any(marker in text for marker in SELF_NEURAL_EDGE_MARKERS)
+
+
+def _field_true(mapping: dict, key: str) -> bool | None:
+    value = mapping.get(key)
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        token = value.strip().lower()
+        if token in {"true", "yes", "1", "passed"}:
+            return True
+        if token in {"false", "no", "0", "failed"}:
+            return False
+    return None
+
+
+def _explicit_no_op(mapping: dict) -> bool:
+    for key in NO_OP_FIELDS:
+        value = _field_true(mapping, key)
+        if value is True:
+            return True
+    status = str(mapping.get("no_op_status") or "").strip().lower()
+    return "no_op" in status or "noop" in status
+
+
+def _recursive_dicts(value: object) -> list[dict]:
+    out: list[dict] = []
+    if isinstance(value, dict):
+        out.append(value)
+        for inner in value.values():
+            out.extend(_recursive_dicts(inner))
+    elif isinstance(value, list | tuple):
+        for inner in value:
+            out.extend(_recursive_dicts(inner))
+    return out
+
+
+def _candidate_bits_changed(candidate: dict) -> bool:
+    for mapping in _recursive_dicts(candidate):
+        if _explicit_no_op(mapping):
+            return False
+    for mapping in _recursive_dicts(candidate):
+        for key in TRUE_BIT_CHANGE_FIELDS:
+            value = _field_true(mapping, key)
+            if value is True:
+                return True
+            if value is False and key in {"score_affecting_payload_changed", "charged_bits_changed"}:
+                return False
+        for old_key, new_key in SHA_DIFF_FIELD_PAIRS:
+            old = mapping.get(old_key)
+            new = mapping.get(new_key)
+            if _is_sha256(old) and _is_sha256(new):
+                return str(old).lower() != str(new).lower()
+        for old_key, new_key in BYTE_DIFF_FIELD_PAIRS:
+            old = _coerce_positive_int(mapping.get(old_key))
+            new = _coerce_positive_int(mapping.get(new_key))
+            if old is not None and new is not None:
+                return old != new
+    return False
+
+
+def _self_neural_edge_blockers(candidate: dict) -> list[str]:
+    if not _candidate_is_self_neural_or_edge_learning(candidate):
+        return []
+    if _candidate_bits_changed(candidate):
+        return []
+    return [
+        "self_neural_edge_candidate_missing_charged_bits_changed_proof:"
+        " provide score_affecting_payload_changed/charged_bits_changed=true "
+        "or old/new SHA-256 or charged-byte delta proof"
+    ]
+
+
+def _archive_custody_blockers(
+    candidate: dict,
+    *,
+    ranked_input_dir: Path | None,
+) -> list[str]:
+    blockers: list[str] = []
+    path = _resolve_archive_path(
+        _candidate_archive_path_value(candidate),
+        ranked_input_dir=ranked_input_dir,
+    )
+    expected_sha = _candidate_archive_sha256(candidate)
+    byte_values = _candidate_archive_byte_values(candidate)
+    expected_bytes = next(iter(byte_values.values()), None)
+    if path is None:
+        blockers.append("archive_path_missing")
+    elif not path.is_file():
+        blockers.append("archive_file_missing")
+    if not _is_sha256(expected_sha):
+        blockers.append("archive_sha256_missing_or_invalid")
+    if expected_bytes is None:
+        blockers.append("archive_bytes_missing_or_invalid")
+    elif len(set(byte_values.values())) > 1:
+        fields = ",".join(f"{key}={value}" for key, value in sorted(byte_values.items()))
+        blockers.append(f"archive_bytes_field_mismatch:{fields}")
+    if path is not None and path.is_file():
+        actual_bytes = path.stat().st_size
+        actual_sha = _sha256_file(path)
+        if expected_bytes is not None and actual_bytes != expected_bytes:
+            blockers.append(f"archive_bytes_mismatch:{actual_bytes}!={expected_bytes}")
+        if _is_sha256(expected_sha) and actual_sha != expected_sha:
+            blockers.append("archive_sha256_mismatch")
+        try:
+            with zipfile.ZipFile(path) as zf:
+                if not zf.infolist():
+                    blockers.append("archive_zip_empty")
+        except (OSError, zipfile.BadZipFile):
+            blockers.append("archive_zip_unreadable")
+    return blockers
 
 
 def _candidate_blockers(
     candidate: dict,
     *,
+    ranked_input_dir: Path | None = None,
     active_floor_archive_bytes: int | None = DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES,
     active_floor_score: float | None = DEFAULT_ACTIVE_FLOOR_SCORE,
     allow_above_active_floor_dispatch: bool = False,
@@ -111,11 +499,33 @@ def _candidate_blockers(
     # gating predicate for the actuator.
     if candidate.get("ready_for_exact_eval_dispatch") is not True:
         blockers.append("candidate_not_ready_for_exact_eval_dispatch")
-    semantics = str(candidate.get("evidence_semantics") or "").strip().lower()
-    if semantics in BLOCKED_EVIDENCE_SEMANTICS or "prediction" in semantics or "proxy" in semantics:
-        blockers.append(f"blocked_evidence_semantics:{semantics or 'missing'}")
+    evidence_text = " ".join(
+        str(candidate.get(key) or "").strip().lower()
+        for key in ("evidence_semantics", "evidence_grade")
+        if candidate.get(key)
+    )
+    if (
+        evidence_text in BLOCKED_EVIDENCE_SEMANTICS
+        or any(marker in evidence_text for marker in BLOCKED_EVIDENCE_MARKERS)
+    ):
+        blockers.append(f"blocked_evidence_semantics:{evidence_text or 'missing'}")
+    predicted_score_fields = [key for key in PREDICTED_SCORE_FIELDS if key in candidate]
+    if predicted_score_fields:
+        blockers.append(
+            "predicted_score_field_present:"
+            + ",".join(sorted(predicted_score_fields))
+        )
     if candidate.get("score_claim") is True and candidate.get("score_claim_verified") is not True:
         blockers.append("unverified_score_claim")
+    blockers.extend(_target_mode_blockers(candidate))
+    blockers.extend(_self_neural_edge_blockers(candidate))
+    blockers.extend(
+        f"archive_custody:{blocker}"
+        for blocker in _archive_custody_blockers(
+            candidate,
+            ranked_input_dir=ranked_input_dir,
+        )
+    )
     archive_bytes = _candidate_archive_bytes(candidate)
     if (
         active_floor_archive_bytes is not None
@@ -130,6 +540,20 @@ def _candidate_blockers(
             blockers.append(
                 "above_active_floor_archive_bytes:"
                 f"{archive_bytes}>{active_floor_archive_bytes}{score_note}; "
+                "treat as research/calibration unless explicitly overridden"
+            )
+        elif not operator_override_reason:
+            blockers.append("above_active_floor_override_missing_reason")
+    exact_score = _candidate_exact_score(candidate)
+    if (
+        active_floor_score is not None
+        and exact_score is not None
+        and exact_score > active_floor_score
+    ):
+        if not allow_above_active_floor_dispatch:
+            blockers.append(
+                "above_active_floor_score:"
+                f"{exact_score:.12f}>{active_floor_score:.12f}; "
                 "treat as research/calibration unless explicitly overridden"
             )
         elif not operator_override_reason:
@@ -153,10 +577,10 @@ def _build_dispatch_cmd(
     if provider == "lightning":
         if not _LIGHTNING_DISPATCH.is_file():
             raise FileNotFoundError(f"missing lightning dispatcher: {_LIGHTNING_DISPATCH}")
-        archive_path = candidate.get("archive_path")
+        archive_path = _candidate_archive_path_value(candidate)
         if not archive_path:
             raise DispatchInputError(
-                f"candidate {candidate_id!r} missing archive_path for Lightning dispatch"
+                f"candidate {candidate_id!r} missing archive_path/candidate_archive_path for Lightning dispatch"
             )
         cmd = [
             sys.executable, str(_LIGHTNING_DISPATCH),
@@ -238,8 +662,8 @@ def _fire_one(
     return DispatchResult(
         candidate_id=candidate_id,
         label=label,
-        archive_sha256=candidate.get("archive_sha256") or candidate.get("expected_archive_sha256"),
-        archive_size_bytes=candidate.get("archive_size_bytes") or candidate.get("expected_archive_size_bytes"),
+        archive_sha256=_candidate_archive_sha256(candidate) or None,
+        archive_size_bytes=_candidate_archive_bytes(candidate),
         started_utc=started_utc,
         elapsed_seconds=elapsed,
         returncode=rc,
@@ -278,6 +702,7 @@ def _load_top_k(
         candidate_id = candidate.get("candidate_id", f"candidate[{idx}]")
         for blocker in _candidate_blockers(
             candidate,
+            ranked_input_dir=ranked_input.parent,
             active_floor_archive_bytes=active_floor_archive_bytes,
             active_floor_score=active_floor_score,
             allow_above_active_floor_dispatch=allow_above_active_floor_dispatch,

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import sys
+import zipfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
@@ -36,6 +38,27 @@ def _write_ranked_input(tmp_path: Path, candidates: list[dict]) -> Path:
     return ranked
 
 
+def _write_archive(path: Path, payload: bytes = b"fixture") -> Path:
+    info = zipfile.ZipInfo("x")
+    info.date_time = (1980, 1, 1, 0, 0, 0)
+    info.external_attr = 0o644 << 16
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr(info, payload)
+    return path
+
+
+def _ready_custody_candidate(tmp_path: Path, **overrides) -> dict:
+    archive = _write_archive(tmp_path / "archive.zip")
+    candidate = {
+        **_ready_lightning_candidate(),
+        "archive_path": archive.as_posix(),
+        "archive_size_bytes": archive.stat().st_size,
+        "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+    }
+    candidate.update(overrides)
+    return candidate
+
+
 def test_parallel_dispatch_lightning_command_uses_stack_dispatcher_flags() -> None:
     tool = _load_tool("parallel_dispatch_top_k")
 
@@ -63,10 +86,77 @@ def test_parallel_dispatch_rejects_above_active_floor_archive_by_default(
     tmp_path: Path,
 ) -> None:
     tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(tmp_path)
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(
+            ranked,
+            k=None,
+            active_floor_archive_bytes=candidate["archive_size_bytes"] - 1,
+        )
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "above_active_floor_archive_bytes" in message
+    assert str(candidate["archive_size_bytes"]) in message
+
+
+def test_parallel_dispatch_allows_above_active_floor_with_operator_reason(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(tmp_path)
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    loaded = tool._load_top_k(
+        ranked,
+        k=None,
+        active_floor_archive_bytes=candidate["archive_size_bytes"] - 1,
+        allow_above_active_floor_dispatch=True,
+        operator_override_reason="calibration dispatch for non-rate-axis candidate",
+    )
+
+    assert loaded == [candidate]
+
+
+def test_parallel_dispatch_accepts_candidate_archive_schema_with_exact_custody(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    archive = _write_archive(tmp_path / "pr101_candidate.zip", b"pr101")
     candidate = {
         **_ready_lightning_candidate(),
-        "archive_size_bytes": tool.DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES + 1,
+        "archive_path": None,
+        "candidate_archive_path": archive.as_posix(),
+        "candidate_archive_bytes": archive.stat().st_size,
+        "candidate_archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
     }
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    loaded = tool._load_top_k(ranked, k=None)
+    cmd = tool._build_dispatch_cmd(
+        loaded[0],
+        provider="lightning",
+        lane_script="scripts/ignored.sh",
+        label_prefix="batch",
+        estimated_cost=0.11,
+        max_dph=0.50,
+    )
+
+    assert loaded == [candidate]
+    assert "--archive" in cmd
+    assert archive.as_posix() in cmd
+
+
+def test_parallel_dispatch_rejects_ready_candidate_without_exact_archive_custody(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(tmp_path)
+    del candidate["archive_sha256"]
     ranked = _write_ranked_input(tmp_path, [candidate])
 
     try:
@@ -76,28 +166,179 @@ def test_parallel_dispatch_rejects_above_active_floor_archive_by_default(
     else:  # pragma: no cover - defensive
         raise AssertionError("expected DispatchInputError")
 
-    assert "above_active_floor_archive_bytes" in message
-    assert str(tool.DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES + 1) in message
+    assert "archive_custody:archive_sha256_missing_or_invalid" in message
 
 
-def test_parallel_dispatch_allows_above_active_floor_with_operator_reason(
+def test_parallel_dispatch_rejects_predicted_codecop_score_fields_even_with_custody(
     tmp_path: Path,
 ) -> None:
     tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(
+        tmp_path,
+        evidence_semantics="cpu_substrate_predicted_band",
+        predicted_score=0.207,
+    )
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "blocked_evidence_semantics:cpu_substrate_predicted_band" in message
+    assert "predicted_score_field_present:predicted_score" in message
+
+
+def test_parallel_dispatch_rejects_candidate_archive_bytes_above_floor_by_default(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    archive = _write_archive(tmp_path / "candidate_archive.zip")
     candidate = {
         **_ready_lightning_candidate(),
-        "archive_size_bytes": tool.DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES + 1,
+        "archive_path": None,
+        "candidate_archive_path": archive.as_posix(),
+        "candidate_archive_bytes": archive.stat().st_size,
+        "candidate_archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
     }
     ranked = _write_ranked_input(tmp_path, [candidate])
 
-    loaded = tool._load_top_k(
-        ranked,
-        k=None,
-        allow_above_active_floor_dispatch=True,
-        operator_override_reason="calibration dispatch for non-rate-axis candidate",
+    try:
+        tool._load_top_k(
+            ranked,
+            k=None,
+            active_floor_archive_bytes=candidate["candidate_archive_bytes"] - 1,
+        )
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "above_active_floor_archive_bytes" in message
+
+
+def test_parallel_dispatch_rejects_mismatched_archive_byte_fields(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(
+        tmp_path,
+        expected_archive_size_bytes=123,
     )
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "archive_custody:archive_bytes_field_mismatch" in message
+
+
+def test_parallel_dispatch_rejects_production_only_target_for_contest_dispatch(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(
+        tmp_path,
+        candidate_id="openpilot_edge_prod_probe",
+        optimization_target="openpilot_edge",
+        deployment_target="comma_ai_production",
+    )
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "non_contest_target_mode:" in message
+    assert "parallel_dispatch_top_k only dispatches contest exact-eval archives" in message
+
+
+def test_parallel_dispatch_allows_dual_contest_and_production_target_with_custody(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(
+        tmp_path,
+        candidate_id="dual_target_archive",
+        target_modes=["contest_exact_eval", "openpilot"],
+    )
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    loaded = tool._load_top_k(ranked, k=None)
 
     assert loaded == [candidate]
+
+
+def test_parallel_dispatch_rejects_self_neural_edge_probe_without_bit_change_proof(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(
+        tmp_path,
+        candidate_id="self_compress_edge_learning_probe",
+        target_modes=["contest_exact_eval", "openpilot"],
+    )
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "self_neural_edge_candidate_missing_charged_bits_changed_proof" in message
+
+
+def test_parallel_dispatch_accepts_self_neural_edge_probe_with_sha_diff_proof(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(
+        tmp_path,
+        candidate_id="neural_compression_contest_probe",
+        target_modes=["contest_exact_eval", "openpilot"],
+        source_payload_sha256="0" * 64,
+        candidate_payload_sha256="1" * 64,
+    )
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    loaded = tool._load_top_k(ranked, k=None)
+
+    assert loaded == [candidate]
+
+
+def test_parallel_dispatch_rejects_self_neural_edge_declared_no_op(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(
+        tmp_path,
+        candidate_id="neural_compression_noop_probe",
+        target_modes=["contest_exact_eval"],
+        source_archive_sha256="0" * 64,
+        candidate_archive_sha256="1" * 64,
+        no_op_payload=True,
+    )
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "self_neural_edge_candidate_missing_charged_bits_changed_proof" in message
 
 
 def test_feedback_loop_lightning_command_uses_stack_dispatcher_flags() -> None:

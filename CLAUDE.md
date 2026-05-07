@@ -651,6 +651,32 @@ Requirements:
 
 This is the openpilot standard: deterministic, reproducible, no runtime format negotiation, schema-first data contracts, fail-fast validation at every boundary. We are professional engineers contributing to production infrastructure. The ad-hoc approach is over.
 
+## Contest vs production target modes — non-negotiable
+
+Exact-eval dispatch tools are contest-score actuators. They may consume only
+candidates whose metadata targets contest exact eval, either implicitly or via
+`target_modes=["contest_exact_eval"]`. Production-only work for comma-ai,
+openpilot, edge devices, or optional on-device learning belongs in planning,
+benchmarks, and production runbooks until it intentionally emits a contest
+archive with full custody.
+
+For mixed contest/production lanes, declare the split explicitly:
+
+- `target_modes`: e.g. `["contest_exact_eval", "openpilot"]` for dual-purpose
+  archive work, or `["openpilot_edge"]` for production-only exploration.
+- `deployment_target`: e.g. `t4_contest_runtime`, `comma_ai_production`,
+  `openpilot_edge`, `desktop_research`, or `device_learning_optional`.
+- `score_affecting_payload_changed` or `charged_bits_changed`, plus old/new
+  archive or payload SHA-256s, whenever a self/neural/codegen/binary lane
+  claims it changes score-relevant bytes.
+
+Self-compression, neural compression, on-device learning, edge-learning,
+generated decoders, Rust/Zig/C kernels, and assembly kernels are first-class
+optimization directions. They are contest-admissible only when charged bits
+changed and exact archive custody exists. Outside contest mode they must be
+optional, deterministic, reproducibly built, and paired with scalar or portable
+fallbacks suitable for comma-ai/openpilot production review.
+
 ## Deployment version checklist — non-negotiable
 
 Before deploying ANY code to Modal, Kaggle, Lightning, or any remote platform:

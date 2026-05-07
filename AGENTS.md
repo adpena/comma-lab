@@ -354,6 +354,36 @@ Subagents and codex-spawned helpers must inherit these four constituencies
 in their commits — review their output for OSS hygiene, ledger entries,
 production fitness, and composability hooks before promoting.
 
+## Contest Versus Production Targeting
+
+Every candidate that could route through a dispatcher must declare enough
+target intent for tooling to distinguish contest score work from comma-ai /
+openpilot production exploration. The default target for exact-eval dispatch
+tools is `contest_exact_eval`; production-only candidates belong in planning
+ledgers, OSS/prototype benches, or production runbooks until they intentionally
+produce a contest archive.
+
+Use explicit metadata when a lane is not purely contest-scoring:
+
+- `target_modes`: for example `["contest_exact_eval"]`,
+  `["contest_exact_eval", "openpilot"]`, or `["openpilot_edge"]`.
+- `deployment_target`: for example `comma_ai_production`,
+  `openpilot_edge`, `t4_contest_runtime`, `desktop_research`, or
+  `device_learning_optional`.
+- `score_affecting_payload_changed` / `charged_bits_changed` plus old/new
+  archive or payload SHA-256s when a lane changes scored bytes.
+
+Self-compression, neural compression, on-device learning, edge-learning,
+generated decoders, Rust/Zig/C/assembly kernels, and binary codegen are valid
+research and production axes, but they are not valid contest dispatches unless
+charged archive bits actually changed and the manifest proves the old/new byte
+or SHA boundary. Outside contest mode they must remain optional capabilities
+with deterministic fallbacks, explicit toolchain provenance, and no hidden
+runtime negotiation. A production target can optimize latency, power, memory,
+device portability, maintainability, or upstreamability differently from the
+contest objective, but it must not be mislabeled as a contest score-lowering
+candidate.
+
 ## Public Release Hygiene And Hosted Supplements
 
 The public submission/report/site track may use Lightning.ai notebooks and
