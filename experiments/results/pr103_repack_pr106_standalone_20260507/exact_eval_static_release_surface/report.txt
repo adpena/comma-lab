@@ -1,0 +1,8 @@
+PR103-on-PR106 static exact-eval packet surface
+
+This is a static packet artifact only. It makes no score claim and no GPU dispatch was attempted.
+Candidate archive SHA-256: ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce
+Candidate archive bytes: 185578
+Candidate member: 0.bin
+Runtime proof: experiments/results/pr103_repack_pr106_standalone_20260507/final_runtime_packet_proof.json
+Remaining score/dispatch blockers: lane dispatch claim and exact CUDA auth eval.

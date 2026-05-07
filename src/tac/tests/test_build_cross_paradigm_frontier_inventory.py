@@ -57,14 +57,25 @@ def test_cross_paradigm_inventory_pins_required_score_path_rows() -> None:
     pr103 = rows["hnerv_pr103_pr106_ac_repack_runtime_closure"]
     assert pr103["action_class"] == "wire_pr103_pr106_runtime_adapter"
     assert pr103["priority_tier"] == 5
+    assert pr103["status"] == "static_release_surface_compliance_passed_exact_cuda_pending"
     assert "entropy_coding" in pr103["paradigms"]
     assert "src/tac/pr103_pr106_runtime_closure.py" in pr103["code_paths"]
+    assert "submissions/pr103_pr106_final_runtime/inflate.py" in pr103["code_paths"]
     assert "tools/prove_pr103_pr106_runtime_closure.py" in pr103["code_paths"]
+    assert "tools/prove_pr103_pr106_final_runtime_packet.py" in pr103["code_paths"]
     assert (
         "experiments/results/pr103_repack_pr106_standalone_20260507/runtime_closure.json"
         in pr103["evidence_paths"]
     )
-    assert "runtime packet" in pr103["next_patch"]
+    assert (
+        "experiments/results/pr103_repack_pr106_standalone_20260507/final_runtime_packet_proof.json"
+        in pr103["evidence_paths"]
+    )
+    assert (
+        "experiments/results/pr103_repack_pr106_standalone_20260507/pre_submission_compliance.static.json"
+        in pr103["evidence_paths"]
+    )
+    assert "exact CUDA auth eval" in pr103["next_patch"]
     assert any("exact CUDA" in blocker for blocker in pr103["blockers"])
 
     categorical = rows["categorical_qma9_clade_spade_openpilot"]

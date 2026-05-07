@@ -1,0 +1,186 @@
+{
+  "archive": {
+    "bytes": 185578,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 185470,
+        "file_size": 185470,
+        "local_header_name": "0.bin",
+        "name": "0.bin",
+        "sha256": "3272ec95a2ea5ec68feb1a53fa53f6b14bdae3883fac38ee2261cdadb1b16357",
+        "unsafe_reason": null
+      }
+    ],
+    "path": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive.zip",
+    "sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce"
+  },
+  "archive_manifest": {
+    "exists": true,
+    "path": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive_manifest.json"
+  },
+  "auth_eval": {
+    "exists": false,
+    "path": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/contest_auth_eval.json"
+  },
+  "checks": [
+    {
+      "details": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "0.bin",
+      "name": "zip_member_safe:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "central='0.bin' local='0.bin' local_reason=None",
+      "name": "zip_local_header_matches:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=1",
+      "name": "archive_zip_readable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['0.bin']",
+      "name": "zip_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['0.bin']",
+      "name": "zip_expected_single_member",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "packed_payload_count=0",
+      "name": "zip_at_most_one_packed_payload_container",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+      "name": "expected_archive_sha256_is_well_formed",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce actual=ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+      "name": "expected_archive_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=185578 actual=185578",
+      "name": "expected_archive_size_bytes_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/contest_auth_eval.json",
+      "name": "auth_eval_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive_manifest.json",
+      "name": "archive_manifest_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive_manifest.json",
+      "name": "archive_manifest_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce actual=ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+      "name": "archive_manifest_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=185578 actual=185578",
+      "name": "archive_manifest_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/report.txt",
+      "name": "report_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "",
+      "name": "public_scan_has_no_private_surface",
+      "passed": true,
+      "severity": "error"
+    }
+  ],
+  "dispatch_claims": {
+    "required": false
+  },
+  "passed": true,
+  "public_hygiene": {
+    "hits": [],
+    "scan_paths": [
+      "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface"
+    ]
+  },
+  "report": {
+    "exists": true,
+    "path": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/report.txt"
+  },
+  "schema": "pre_submission_compliance_check_v1",
+  "submission_dir": {
+    "path": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface",
+    "required_files": {
+      "archive.zip": {
+        "exists": true,
+        "path": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive.zip"
+      },
+      "inflate.sh": {
+        "exists": true,
+        "path": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/inflate.sh"
+      },
+      "report.txt": {
+        "exists": true,
+        "path": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/report.txt"
+      }
+    }
+  }
+}

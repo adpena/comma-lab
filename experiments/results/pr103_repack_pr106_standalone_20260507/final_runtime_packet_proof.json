@@ -1,0 +1,94 @@
+{
+  "candidate_archive": {
+    "archive_bytes": 185578,
+    "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+    "member_name": "0.bin",
+    "path": "experiments/results/pr103_repack_pr106_standalone_20260507/archive.zip",
+    "payload_bytes": 185470,
+    "payload_sha256": "3272ec95a2ea5ec68feb1a53fa53f6b14bdae3883fac38ee2261cdadb1b16357"
+  },
+  "checks": {
+    "brotli_constriction_dependency_custody": true,
+    "candidate_payload_sha_matches_runtime": true,
+    "inflate_sh_bash_n": true,
+    "runtime_closure_constants_match_proof_artifact": true,
+    "runtime_decode_matches_tac_closure": true,
+    "runtime_static_scan_no_scorer_or_tac_imports": true
+  },
+  "closure_artifact": "experiments/results/pr103_repack_pr106_standalone_20260507/runtime_closure.json",
+  "decode_proof": {
+    "matches_tac_closure": {
+      "latents_exact": true,
+      "latents_max_abs_diff": 0.0,
+      "max_state_dict_abs_diff": 0.0,
+      "state_dict_exact": true
+    },
+    "runtime_contract": {
+      "latents_shape": [
+        600,
+        28
+      ],
+      "meta": {
+        "base_channels": 36,
+        "eval_size": [
+          384,
+          512
+        ],
+        "latent_dim": 28,
+        "n_pairs": 600
+      },
+      "state_dict_params": 228958,
+      "state_dict_tensors": 28
+    }
+  },
+  "dependency_custody": {
+    "brotli": {
+      "pyproject_hard_dependency": true,
+      "uv_lock_entry": true
+    },
+    "constriction": {
+      "pyproject_hard_dependency": true,
+      "uv_lock_entry": true
+    },
+    "passed": true,
+    "runtime_import_versions": {
+      "brotli": "1.2.0",
+      "constriction": "0.4.2",
+      "numpy": "2.4.4",
+      "torch": "2.11.0"
+    }
+  },
+  "exact_cuda_remaining_blockers": [
+    "run pre_submission_compliance_check on a release surface after auth-eval artifact exists",
+    "claim dispatch lane before exact CUDA auth eval",
+    "run archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA"
+  ],
+  "inflate_sh_bash_n_stderr": "",
+  "passed": true,
+  "runtime_dir": "submissions/pr103_pr106_final_runtime",
+  "runtime_files": {
+    "__init__.py": {
+      "bytes": 52,
+      "exists": true,
+      "sha256": "78c3cd09aab62aed7f4ee12942d858cead5eb14bdd20a17c532eac5aab1a9e89"
+    },
+    "inflate.py": {
+      "bytes": 20711,
+      "exists": true,
+      "sha256": "62fec760534039e72e6cbf4007f940d49dcdb3a2d867c344cf0dc3f14fb34a6b"
+    },
+    "inflate.sh": {
+      "bytes": 1367,
+      "exists": true,
+      "sha256": "ce6b5438bbe9e4bfcedffe69ddce375daccb77da8a458b28c3776b31e806a815"
+    }
+  },
+  "runtime_static_scan": {
+    "forbidden_markers": [],
+    "passed": true
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "score_evidence_grade": "empirical_runtime_packet_closure",
+  "tool": "tools.prove_pr103_pr106_final_runtime_packet"
+}

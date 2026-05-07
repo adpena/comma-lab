@@ -1,0 +1,16 @@
+{
+  "schema": "pr103_pr106_static_release_surface_archive_manifest_v1",
+  "schema_version": 1,
+  "score_claim": false,
+  "dispatch_attempted": false,
+  "candidate_id": "pr103_ac_decoder_inside_pr106_ff_packed_v1",
+  "candidate_archive_bytes": 185578,
+  "candidate_archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+  "archive_bytes": 185578,
+  "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+  "candidate_member_name": "0.bin",
+  "candidate_payload_sha256": "3272ec95a2ea5ec68feb1a53fa53f6b14bdae3883fac38ee2261cdadb1b16357",
+  "runtime_adapter": "submissions/pr103_pr106_final_runtime/inflate.sh",
+  "runtime_adapter_payload_identity_proof": "experiments/results/pr103_repack_pr106_standalone_20260507/final_runtime_packet_proof.json",
+  "exact_cuda_auth_eval_required_before_score_claim": true
+}

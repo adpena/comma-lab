@@ -91,8 +91,8 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         title="PR103 AC decoder repack inside PR106 envelope",
         paradigms=("alpha_mask_payload", "entropy_coding", "public_frontier_replay"),
         role="stacker_rate_only",
-        status="byte_different_archive_runtime_closure_proven_runtime_packet_pending",
-        evidence_grade="empirical runtime-closure proof; no score claim until exact CUDA",
+        status="static_release_surface_compliance_passed_exact_cuda_pending",
+        evidence_grade="empirical runtime-packet closure plus static compliance; no score claim until exact CUDA",
         stackability=(
             "high: replaces the PR106 decoder section with PR103 arithmetic-coded bytes "
             "while preserving fixed PR106 latents; should compose before scorer-changing atoms"
@@ -101,26 +101,30 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         code_paths=(
             "src/tac/pr103_arithmetic_codec.py",
             "src/tac/pr103_pr106_runtime_closure.py",
+            "submissions/pr103_pr106_final_runtime/inflate.py",
+            "submissions/pr103_pr106_final_runtime/inflate.sh",
             "experiments/build_pr103_repacked_archive.py",
             "tools/prove_pr103_pr106_runtime_closure.py",
+            "tools/prove_pr103_pr106_final_runtime_packet.py",
         ),
         evidence_paths=(
             "experiments/results/pr103_repack_pr106_standalone_20260507/manifest.json",
             "experiments/results/pr103_repack_pr106_standalone_20260507/runtime_closure.json",
+            "experiments/results/pr103_repack_pr106_standalone_20260507/final_runtime_packet_proof.json",
+            "experiments/results/pr103_repack_pr106_standalone_20260507/pre_submission_compliance.static.json",
+            "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive_manifest.json",
             ".omx/research/pr103_pr106_runtime_closure_20260507_codex.md",
             ".omx/research/hnerv_pr103_lc_ac_schema_frontier_20260507_codex.md",
         ),
         next_patch=(
-            "Generate or copy the PR103-aware parser closure into a self-contained submission "
-            "runtime packet, close brotli/constriction dependency custody, then run strict "
-            "submission compliance before lane-claimed exact CUDA auth eval."
+            "Claim the PR103-on-PR106 exact-eval lane, run exact CUDA auth eval on the "
+            "byte-bound static release surface, then rerun contest-final compliance with "
+            "auth-eval JSON and terminal dispatch-claim linkage."
         ),
         blockers=(
-            "final submission runtime adapter not yet packetized",
-            "brotli/constriction dependency custody must be closed inside the runtime",
-            "strict contest compliance not yet run on final packet",
             "no lane dispatch claim",
             "no exact CUDA auth eval for this candidate archive SHA",
+            "contest-final compliance still requires auth-eval JSON and terminal dispatch claim",
         ),
     ),
     InventoryRow(
