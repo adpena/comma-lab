@@ -26,7 +26,12 @@ from pathlib import Path
 
 import pytest
 
+import experiments.pipeline as pipeline
 from experiments.pipeline import PipelineConfig, step_extract_masks
+from tac.cross_paradigm_wiring import (
+    SCHEMA as CROSS_PARADIGM_CONTRACT_SCHEMA,
+    build_cross_paradigm_runtime_contract,
+)
 
 _PIPELINE_PATH = (
     Path(__file__).resolve().parents[3] / "experiments" / "pipeline.py"
@@ -73,6 +78,257 @@ def test_cross_paradigm_flags_exist_with_safe_defaults() -> None:
     # Numeric calibration fields must be in their documented ranges.
     assert 0.0 < cfg.owv3_bit_budget_ratio <= 1.0
     assert cfg.owv3_protect_threshold > 0.0
+
+
+def test_default_cross_paradigm_contract_is_dispatch_neutral() -> None:
+    contract = build_cross_paradigm_runtime_contract(PipelineConfig())
+    payload = contract.to_dict()
+    assert payload["schema"] == CROSS_PARADIGM_CONTRACT_SCHEMA
+    assert payload["any_cross_paradigm_opt_in"] is False
+    assert payload["warnings"] == []
+    assert payload["blockers"] == []
+    assert payload["lanes"] == []
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["exact_eval_dispatch_attempted"] is False
+    assert payload["score_claim_created"] is False
+    assert payload["cuda_claim_created"] is False
+
+
+def test_cross_paradigm_flags_parse_into_pipeline_config(monkeypatch, tmp_path: Path) -> None:
+    captured: list[PipelineConfig] = []
+
+    def fake_run_compress(cfg: PipelineConfig) -> None:
+        captured.append(cfg)
+
+    monkeypatch.setattr(pipeline, "run_compress", fake_run_compress)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "pipeline",
+            "compress",
+            "--video",
+            "input.mkv",
+            "--checkpoint",
+            "renderer.pt",
+            "--output-dir",
+            str(tmp_path),
+            "--mask-codec",
+            "argmax_rle",
+            "--use-sensitivity-weighted",
+            "--sensitivity-map-path",
+            str(tmp_path / "sens.pt"),
+            "--owv3-bit-budget-ratio",
+            "0.5",
+            "--owv3-protect-threshold",
+            "0.002",
+            "--weight-compression",
+            "nwcs_sensitivity",
+            "--weight-codec-path",
+            str(tmp_path / "nwcs.pt"),
+            "--use-joint-codec-stack",
+            "--jcsp-score-marginals-path",
+            str(tmp_path / "marginals.json"),
+            "--use-raft-init",
+            "--use-riemannian-tto",
+            "--use-joint-scorer-aware",
+            "--joint-training-config-path",
+            str(tmp_path / "joint_training.json"),
+            "--use-learnable-entropy",
+            "--use-full-renderer-self-compress",
+        ],
+    )
+
+    assert pipeline.main() == 0
+    assert len(captured) == 1
+    cfg = captured[0]
+    assert cfg.mask_codec == "argmax_rle"
+    assert cfg.use_sensitivity_weighted is True
+    assert cfg.sensitivity_map_path == str(tmp_path / "sens.pt")
+    assert cfg.owv3_bit_budget_ratio == 0.5
+    assert cfg.owv3_protect_threshold == 0.002
+    assert cfg.weight_compression == "nwcs_sensitivity"
+    assert cfg.weight_codec_path == str(tmp_path / "nwcs.pt")
+    assert cfg.use_joint_codec_stack is True
+    assert cfg.jcsp_score_marginals_path == str(tmp_path / "marginals.json")
+    assert cfg.use_raft_init is True
+    assert cfg.use_riemannian_tto is True
+    assert cfg.use_joint_scorer_aware is True
+    assert cfg.joint_training_config_path == str(tmp_path / "joint_training.json")
+    assert cfg.use_learnable_entropy is True
+    assert cfg.use_full_renderer_self_compress is True
+
+
+def test_cross_paradigm_contract_reports_missing_artifact_blockers(tmp_path: Path) -> None:
+    cfg = PipelineConfig(
+        output_dir=str(tmp_path),
+        mask_codec="wavelet",
+        use_sensitivity_weighted=True,
+        sensitivity_map_path=str(tmp_path / "missing_sens.pt"),
+        weight_compression="nwcs_sensitivity",
+        weight_codec_path=str(tmp_path / "missing_nwcs.pt"),
+        use_joint_codec_stack=True,
+        jcsp_score_marginals_path=str(tmp_path / "missing_marginals.json"),
+        use_joint_scorer_aware=True,
+        joint_training_config_path=str(tmp_path / "missing_joint.json"),
+        use_raft_init=True,
+    )
+
+    contract = build_cross_paradigm_runtime_contract(cfg)
+    blockers = set(contract.blockers)
+
+    assert "alpha_mask_codec_registered_but_not_wired:wavelet" in blockers
+    assert "beta_sensitivity_map_artifact_missing" in blockers
+    assert "beta_nwcs_weight_codec_artifact_missing" in blockers
+    assert "beta_nwcs_sensitivity_map_artifact_missing" in blockers
+    assert "beta_nwcs_encoding_loop_not_wired" in blockers
+    assert "gamma_jcsp_score_marginals_artifact_missing" in blockers
+    assert "gamma_jcsp_runtime_parity_not_proven" in blockers
+    assert "gamma_jcsp_exact_eval_dispatch_requirements_missing" in blockers
+    assert "delta_joint_training_config_artifact_missing" in blockers
+    assert "delta_joint_scorer_aware_dispatch_not_wired" in blockers
+    assert "lapose_raft_init_dispatch_not_wired" in blockers
+    assert contract.to_dict()["ready_for_exact_eval_dispatch"] is False
+
+
+def test_run_compress_fails_closed_before_provenance_for_contract_blockers(
+    tmp_path: Path,
+) -> None:
+    cfg = PipelineConfig(
+        video="missing_video.mkv",
+        checkpoint="missing_renderer.pt",
+        output_dir=str(tmp_path),
+        use_joint_codec_stack=True,
+        jcsp_score_marginals_path=str(tmp_path / "missing_marginals.json"),
+    )
+
+    with pytest.raises(RuntimeError) as exc_info:
+        pipeline.run_compress(cfg)
+
+    message = str(exc_info.value)
+    assert "Cross-paradigm runtime contract blocked" in message
+    assert "gamma_jcsp_score_marginals_artifact_missing" in message
+    assert "gamma_jcsp_runtime_parity_not_proven" in message
+    assert not (tmp_path / "pipeline_config.json").exists()
+
+
+def test_cross_paradigm_contract_creates_no_score_or_cuda_claim(tmp_path: Path) -> None:
+    sens_path = tmp_path / "sens.pt"
+    sens_path.write_bytes(b"synthetic-sensitivity-placeholder")
+
+    cfg = PipelineConfig(
+        output_dir=str(tmp_path),
+        mask_codec="argmax_rle",
+        use_sensitivity_weighted=True,
+        sensitivity_map_path=str(sens_path),
+        use_riemannian_tto=True,
+    )
+
+    payload = build_cross_paradigm_runtime_contract(cfg).to_dict()
+    assert payload["blockers"] == []
+    assert payload["dispatch_attempted"] is False
+    assert payload["exact_eval_dispatch_attempted"] is False
+    assert payload["score_claim_created"] is False
+    assert payload["cuda_claim_created"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    for forbidden_key in (
+        "score",
+        "final_score",
+        "score_recomputed",
+        "contest_cuda_score",
+    ):
+        assert forbidden_key not in payload
+
+
+def test_beta_weight_path_reaches_compress_step_with_fp4_default(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    sens_path = tmp_path / "sens.pt"
+    sens_path.write_bytes(b"synthetic-sensitivity-placeholder")
+    calls: list[tuple[str, bool, Path]] = []
+
+    def touch(path: Path, payload: bytes = b"x") -> Path:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(payload)
+        return path
+
+    monkeypatch.setattr(
+        pipeline,
+        "_capture_provenance",
+        lambda cfg: {"config": {"unit_test": True}},
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "step_extract_masks",
+        lambda cfg: (
+            touch(tmp_path / "masks_full.mkv"),
+            touch(tmp_path / "masks_half.mkv"),
+        ),
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "step_export",
+        lambda cfg, iteration=0: touch(tmp_path / f"iter_{iteration}" / "renderer.bin"),
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "step_pose_tto",
+        lambda cfg, iteration=0: touch(tmp_path / f"iter_{iteration}" / "optimized_poses.bin"),
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "step_qat",
+        lambda cfg, iteration=0, mixed_precision_json=None: touch(
+            tmp_path / f"iter_{iteration}" / "renderer_qat.bin"
+        ),
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "step_fridrich_refine",
+        lambda cfg, iteration=0: touch(tmp_path / f"iter_{iteration}" / "best.pt"),
+    )
+
+    def fake_step_compress_weights(
+        cfg: PipelineConfig,
+        checkpoint_path: Path,
+        iteration: int = 0,
+        sensitivity_json: Path | None = None,
+    ) -> Path:
+        calls.append((cfg.weight_compression, cfg.use_sensitivity_weighted, checkpoint_path))
+        return touch(tmp_path / f"iter_{iteration}" / "renderer_owv3_sensitivity.bin")
+
+    monkeypatch.setattr(pipeline, "step_compress_weights", fake_step_compress_weights)
+    monkeypatch.setattr(
+        pipeline,
+        "step_archive",
+        lambda cfg, final_renderer, poses_path, iteration=0, corrections_bin=None: touch(
+            tmp_path / f"iter_{iteration}" / "archive.zip"
+        ),
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "step_eval",
+        lambda cfg, renderer_bin, archive_path, iteration=0, poses_path=None: {"score": None},
+    )
+
+    cfg = PipelineConfig(
+        video="missing_video.mkv",
+        checkpoint="missing_renderer.pt",
+        output_dir=str(tmp_path),
+        max_iterations=1,
+        weight_compression="fp4",
+        use_sensitivity_weighted=True,
+        sensitivity_map_path=str(sens_path),
+    )
+
+    pipeline.run_compress(cfg)
+
+    assert len(calls) == 1
+    mode, beta_flag, checkpoint_path = calls[0]
+    assert mode == "fp4"
+    assert beta_flag is True
+    assert checkpoint_path == tmp_path / "iter_0" / "best.pt"
 
 
 def test_each_cross_paradigm_flag_has_a_guard_site() -> None:

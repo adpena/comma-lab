@@ -2352,6 +2352,11 @@ def _capture_provenance(cfg: PipelineConfig) -> dict:
     the JSON alone with no human archeology.
     """
     prov: dict = {"config": asdict(cfg)}
+    from tac.cross_paradigm_wiring import build_cross_paradigm_runtime_contract
+
+    cross_paradigm_contract = build_cross_paradigm_runtime_contract(cfg)
+    if cross_paradigm_contract.any_cross_paradigm_opt_in:
+        prov["cross_paradigm_runtime_contract"] = cross_paradigm_contract.to_dict()
     # Always capture argv first so even an early exception in another probe
     # leaves a record of "what command was actually run".
     prov["sys_argv"] = list(sys.argv)
@@ -2474,6 +2479,27 @@ def _capture_provenance(cfg: PipelineConfig) -> dict:
 
     prov["timestamp_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     return prov
+
+
+def _validate_cross_paradigm_runtime_contract(
+    cfg: PipelineConfig,
+):
+    """Refuse cross-paradigm opt-ins that are only registered, not dispatchable."""
+    from tac.cross_paradigm_wiring import (
+        build_cross_paradigm_runtime_contract,
+        raise_for_cross_paradigm_blockers,
+    )
+
+    contract = build_cross_paradigm_runtime_contract(cfg)
+    if not contract.any_cross_paradigm_opt_in:
+        return contract
+
+    for warning in contract.warnings:
+        _log(f"Cross-paradigm runtime contract warning: {warning}", "WARN")
+    for blocker in contract.blockers:
+        _log(f"Cross-paradigm runtime contract blocker: {blocker}", "ERROR")
+    raise_for_cross_paradigm_blockers(contract)
+    return contract
 
 
 def step_multipass(
@@ -2602,6 +2628,8 @@ def run_compress(cfg: PipelineConfig) -> None:
     output_dir = Path(cfg.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    _validate_cross_paradigm_runtime_contract(cfg)
+
     # Save full provenance for reproducibility (R25 fix: was just asdict(cfg)).
     # R30 fix: on resume, append a `resumes` list rather than overwrite the
     # original timestamp/git_hash — otherwise the .done markers reference the
@@ -2686,7 +2714,14 @@ def run_compress(cfg: PipelineConfig) -> None:
             qat_best = Path(cfg.output_dir) / f"iter_{iteration}" / "qat_best_float.pt"
             best_ckpt = qat_best if qat_best.exists() else Path(cfg.checkpoint)
 
-        if cfg.weight_compression != "fp4" and best_ckpt.exists():
+        cross_paradigm_weight_path = (
+            cfg.use_sensitivity_weighted
+            or cfg.use_joint_codec_stack
+            or cfg.use_joint_scorer_aware
+            or cfg.use_learnable_entropy
+            or cfg.use_full_renderer_self_compress
+        )
+        if (cfg.weight_compression != "fp4" or cross_paradigm_weight_path) and best_ckpt.exists():
             final_renderer = step_compress_weights(
                 cfg, best_ckpt, iteration, sensitivity_json=sensitivity_json,
             )
