@@ -223,6 +223,7 @@ def _load_exact_eval_packet(lane: dict) -> dict[str, object]:
         "payload_diff_ready": bool(packet.get("payload_diff_ready")),
         "dry_run_ready": bool(packet.get("dry_run_ready")),
         "commands": dict(packet.get("commands") or {}),
+        "operator_next_steps": dict(packet.get("operator_next_steps") or {}),
     }
 
 
@@ -234,6 +235,13 @@ def _format_exact_eval_packets() -> str:
     lines = []
     for packet in _exact_eval_packet_summaries():
         commands = packet.get("commands") or {}
+        next_steps = packet.get("operator_next_steps") or {}
+        step_rows = next_steps.get("steps") if isinstance(next_steps, dict) else []
+        step_ids = (
+            ", ".join(str(step.get("id")) for step in step_rows if isinstance(step, dict))
+            if isinstance(step_rows, list)
+            else ""
+        )
         blockers = packet.get("blockers") or []
         missing_env = packet.get("missing_env") or []
         state = "READY" if packet.get("ready_for_submit") else "BLOCKED"
@@ -253,7 +261,9 @@ def _format_exact_eval_packets() -> str:
             f"    Submit:\n"
             f"      {commands.get('submit', '(missing)')}\n"
             f"    Harvest:\n"
-            f"      {commands.get('harvest', '(missing)')}"
+            f"      {commands.get('harvest', '(missing)')}\n"
+            f"    Copy-safe next steps:\n"
+            f"      {step_ids if step_ids else '(missing)'}"
         )
     return "\n\n".join(lines) if lines else "  (none)"
 

@@ -35,6 +35,14 @@ JCSP_RUNTIME_RAW_OUTPUT_PARITY_CONTRACT_SCHEMA = (
 JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA = (
     "jcsp_runtime_raw_output_parity_proof_v1"
 )
+JCSP_RUNTIME_RAW_OUTPUT_EMISSION_SCHEMA = "jcsp_runtime_raw_output_emission_v1"
+JCSP_RUNTIME_REAL_RAW_OUTPUT_SOURCE = "jcsp_runtime_bridge_emitted_rawvideo"
+JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_SOURCE = (
+    "jcsp_runtime_bridge_fixture_raw_passthrough"
+)
+JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_BLOCKER = (
+    "jcsp_fixture_raw_passthrough_not_dispatch_proof"
+)
 JCSP_MAGIC = b"JCSP"
 JCSK_MAGIC = b"JCSK"
 JCSP_VERSION = 1
@@ -189,7 +197,7 @@ def _raw_output_parity_contract(
         "expected_raw_outputs_sha256": _sha256_bytes(
             _canonical_json_bytes({"expected_raw_outputs": expected_raw_outputs})
         ),
-        "required_candidate_output_source": "jcsp_runtime_bridge_emitted_rawvideo",
+        "required_candidate_output_source": JCSP_RUNTIME_REAL_RAW_OUTPUT_SOURCE,
         "required_reference_output_source": (
             "contest_reference_runtime_or_byte_custody_baseline"
         ),
@@ -246,6 +254,7 @@ def prove_jcsp_runtime_raw_output_parity(
     candidate_raw_dir: str | Path,
     reference_raw_dir: str | Path,
     candidate_outputs_emitted_by_bridge: bool,
+    candidate_output_source: str | None = None,
     manifest_json: str | Path | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic byte-exact raw-output parity proof.
@@ -259,6 +268,19 @@ def prove_jcsp_runtime_raw_output_parity(
 
     expected = _dedupe(
         [_validate_raw_output_rel_path(str(item)) for item in expected_raw_outputs]
+    )
+    source = (
+        str(candidate_output_source)
+        if candidate_output_source is not None
+        else (
+            JCSP_RUNTIME_REAL_RAW_OUTPUT_SOURCE
+            if candidate_outputs_emitted_by_bridge
+            else "preexisting_or_unproven_raw_files"
+        )
+    )
+    source_is_real_bridge = bool(
+        candidate_outputs_emitted_by_bridge
+        and source == JCSP_RUNTIME_REAL_RAW_OUTPUT_SOURCE
     )
     rows: list[dict[str, Any]] = []
     blockers: list[str] = []
@@ -284,8 +306,10 @@ def prove_jcsp_runtime_raw_output_parity(
 
     if not expected:
         blockers.append("jcsp_expected_raw_outputs_missing")
-    if not candidate_outputs_emitted_by_bridge:
+    if not source_is_real_bridge:
         blockers.append("jcsp_candidate_outputs_not_emitted_by_bridge")
+        if candidate_outputs_emitted_by_bridge:
+            blockers.append(JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_BLOCKER)
 
     all_candidate_present = bool(expected) and all(
         row["candidate_is_file"] for row in rows
@@ -295,7 +319,7 @@ def prove_jcsp_runtime_raw_output_parity(
     )
     byte_exact = bool(expected) and all(row["byte_exact_match"] for row in rows)
     ready_for_output_parity = bool(
-        candidate_outputs_emitted_by_bridge
+        source_is_real_bridge
         and all_candidate_present
         and all_reference_present
         and byte_exact
@@ -307,10 +331,10 @@ def prove_jcsp_runtime_raw_output_parity(
         "candidate_outputs_emitted_by_bridge": bool(
             candidate_outputs_emitted_by_bridge
         ),
-        "candidate_output_source": (
-            "jcsp_runtime_bridge_emitted_rawvideo"
-            if candidate_outputs_emitted_by_bridge
-            else "preexisting_or_unproven_raw_files"
+        "candidate_output_source": source,
+        "candidate_outputs_from_real_bridge_rawvideo": source_is_real_bridge,
+        "fixture_raw_output_emission": (
+            source == JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_SOURCE
         ),
         "reference_output_source": "contest_reference_runtime_or_byte_custody_baseline",
         "candidate_raw_dir": str(Path(candidate_raw_dir)),
@@ -330,6 +354,208 @@ def prove_jcsp_runtime_raw_output_parity(
             if ready_for_output_parity
             else _dedupe([JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER, *blockers])
         ),
+    }
+    manifest = _with_manifest_sha256(manifest)
+    if manifest_json is not None:
+        _write_manifest(Path(manifest_json), manifest)
+    return manifest
+
+
+def _minimal_fixture_stream_path_contract(
+    expected_raw_outputs: Iterable[str],
+) -> dict[str, Any]:
+    expected = list(expected_raw_outputs)
+    return {
+        "schema": "jcsp_minimal_fixture_stream_path_v1",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "purpose": "local_raw_output_emission_fixture_only",
+        "container_magic": "JCSP",
+        "container_version": JCSP_VERSION,
+        "stream_codec_kind": KIND_RAW_PASSTHROUGH,
+        "stream_name_contract": (
+            "stream name must exactly equal expected .raw relative path"
+        ),
+        "stream_payload_contract": (
+            "payload bytes are written verbatim to that .raw path"
+        ),
+        "expected_raw_outputs": expected,
+        "expected_raw_output_count": len(expected),
+        "emitter": "emit_jcsp_fixture_raw_outputs",
+        "candidate_output_source": JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_SOURCE,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": [
+            JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_BLOCKER,
+            JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER,
+            "exact_cuda_auth_eval_missing",
+        ],
+    }
+
+
+def emit_jcsp_fixture_raw_outputs(
+    archive_dir: str | Path,
+    *,
+    expected_raw_outputs: Iterable[str],
+    output_dir: str | Path,
+    reference_raw_dir: str | Path | None = None,
+    member_name: str = JCSP_ARCHIVE_MEMBER_NAME,
+    manifest_json: str | Path | None = None,
+    parity_manifest_json: str | Path | None = None,
+) -> dict[str, Any]:
+    """Emit deterministic fixture ``.raw`` files from raw-passthrough streams.
+
+    This is a local bridge fixture, not the contest JCSP decoder.  The only
+    accepted stream path is ``KIND_RAW_PASSTHROUGH`` with a stream name exactly
+    matching an expected relative ``.raw`` output.  Arithmetic and hyperprior
+    streams still fail closed; fixture parity remains non-dispatchable unless a
+    later real decoder emits ``JCSP_RUNTIME_REAL_RAW_OUTPUT_SOURCE`` outputs.
+    """
+
+    expected = _dedupe(
+        [_validate_raw_output_rel_path(str(item)) for item in expected_raw_outputs]
+    )
+    output_root = Path(output_dir)
+    archive_root = Path(archive_dir)
+    member_path = archive_root / member_name
+    blockers: list[str] = []
+    emitted_rows: list[dict[str, Any]] = []
+    parity_proof: dict[str, Any] | None = None
+    parsed_summary: dict[str, Any] | None = None
+
+    if not expected:
+        blockers.append("jcsp_expected_raw_outputs_missing")
+    if not member_path.exists():
+        blockers.append("jcsp_member_missing_for_fixture_raw_output_emission")
+    elif not member_path.is_file():
+        blockers.append("jcsp_member_path_not_regular_file")
+
+    raw_streams_by_name: dict[str, dict[str, Any]] = {}
+    if not blockers:
+        blob = member_path.read_bytes()
+        if len(blob) < 4 or blob[:4] != JCSP_MAGIC:
+            blockers.append("jcsp_fixture_emitter_requires_real_jcsp_member")
+        else:
+            try:
+                parsed = _parse_real_jcsp_container(blob, include_payload=True)
+            except ValueError as exc:
+                blockers.append("jcsp_runtime_probe_parse_failed")
+                parsed_summary = {"parse_error": str(exc)}
+            else:
+                parsed_summary = {
+                    "container_magic": parsed["container_magic"],
+                    "container_version": parsed["container_version"],
+                    "stream_count": parsed["stream_count"],
+                    "noop_fixture": parsed["noop_fixture"],
+                }
+                for stream in parsed["streams"]:
+                    stream_name = str(stream["name"])
+                    try:
+                        rel = _validate_raw_output_rel_path(stream_name)
+                    except ValueError:
+                        blockers.append(
+                            "jcsp_fixture_stream_name_not_raw_output_path"
+                        )
+                        continue
+                    if int(stream["codec_kind"]) != KIND_RAW_PASSTHROUGH:
+                        blockers.append("jcsp_fixture_stream_not_raw_passthrough")
+                        continue
+                    if rel in raw_streams_by_name:
+                        blockers.append("jcsp_fixture_duplicate_raw_stream_name")
+                        continue
+                    raw_streams_by_name[rel] = stream
+
+                expected_set = set(expected)
+                stream_set = set(raw_streams_by_name)
+                if expected_set - stream_set:
+                    blockers.append("jcsp_fixture_missing_expected_raw_stream")
+                if stream_set - expected_set:
+                    blockers.append("jcsp_fixture_unexpected_raw_stream")
+                for rel in expected:
+                    if (output_root / rel).exists():
+                        blockers.append(
+                            "jcsp_fixture_raw_output_target_already_exists"
+                        )
+
+    blockers = _dedupe(blockers)
+    if not blockers:
+        for rel in expected:
+            stream = raw_streams_by_name[rel]
+            payload = bytes(stream["payload"])
+            path = output_root / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(payload)
+            emitted_rows.append(
+                {
+                    "path": rel,
+                    "bytes": len(payload),
+                    "sha256": _sha256_bytes(payload),
+                    "source_stream_name": str(stream["name"]),
+                    "source_codec_kind": int(stream["codec_kind"]),
+                    "candidate_output_source": JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_SOURCE,
+                }
+            )
+
+    if reference_raw_dir is not None and emitted_rows:
+        parity_proof = prove_jcsp_runtime_raw_output_parity(
+            expected,
+            candidate_raw_dir=output_root,
+            reference_raw_dir=reference_raw_dir,
+            candidate_outputs_emitted_by_bridge=True,
+            candidate_output_source=JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_SOURCE,
+            manifest_json=parity_manifest_json,
+        )
+
+    dispatch_blockers = _dedupe(
+        [
+            JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_BLOCKER,
+            JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER,
+            JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+            *blockers,
+            *(
+                parity_proof.get("dispatch_blockers", [])
+                if parity_proof is not None
+                else []
+            ),
+            "exact_cuda_auth_eval_missing",
+        ]
+    )
+    byte_exact_parity = bool(
+        parity_proof is not None
+        and parity_proof.get("byte_exact_raw_output_parity") is True
+    )
+    manifest: dict[str, Any] = {
+        "schema": JCSP_RUNTIME_RAW_OUTPUT_EMISSION_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "candidate_output_source": JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_SOURCE,
+        "candidate_outputs_from_real_bridge_rawvideo": False,
+        "member_name": member_name,
+        "member_present": member_path.exists(),
+        "expected_raw_outputs": expected,
+        "expected_raw_output_count": len(expected),
+        "candidate_raw_dir": str(output_root),
+        "reference_raw_dir": (
+            str(Path(reference_raw_dir)) if reference_raw_dir is not None else None
+        ),
+        "minimal_fixture_stream_path": _minimal_fixture_stream_path_contract(expected),
+        "parsed_container": parsed_summary,
+        "raw_output_emission_attempted": not blockers,
+        "fixture_raw_outputs_emitted": bool(emitted_rows),
+        "bridge_emits_contest_raw_outputs": False,
+        "emitted_raw_output_count": len(emitted_rows),
+        "emitted_raw_outputs": emitted_rows,
+        "output_parity_checked": parity_proof is not None,
+        "output_parity_artifact": (
+            str(Path(parity_manifest_json))
+            if parity_manifest_json is not None
+            else None
+        ),
+        "raw_output_parity_proof": parity_proof,
+        "byte_exact_fixture_raw_output_parity": byte_exact_parity,
+        "ready_for_output_parity": False,
+        "ready_for_submission_runtime_consumption": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": dispatch_blockers,
     }
     manifest = _with_manifest_sha256(manifest)
     if manifest_json is not None:
@@ -380,6 +606,9 @@ def _contest_output_contract(
         "existing_raw_outputs_at_probe": observed,
         "existing_raw_output_count": existing_count,
         "raw_output_parity_contract": parity_contract,
+        "minimal_fixture_stream_path": _minimal_fixture_stream_path_contract(
+            expected_raw_outputs
+        ),
         "required_raw_output_parity_proof_schema": (
             JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA
         ),
@@ -429,7 +658,11 @@ def _payload_magic_for_kind(
     return magic.decode("ascii", errors="replace")
 
 
-def _parse_real_jcsp_container(blob: bytes) -> dict[str, Any]:
+def _parse_real_jcsp_container(
+    blob: bytes,
+    *,
+    include_payload: bool = False,
+) -> dict[str, Any]:
     _require_available(blob, 0, 7, "JCSP header")
     if blob[:4] != JCSP_MAGIC:
         raise ValueError(f"bad JCSP magic {blob[:4]!r}")
@@ -496,19 +729,20 @@ def _parse_real_jcsp_container(blob: bytes) -> dict[str, Any]:
             payload=payload,
             stream_name=name,
         )
-        streams.append(
-            {
-                "index": index,
-                "name": name,
-                "codec_kind": int(codec_kind),
-                "admm_bytes_target": int(admm_bytes_target),
-                "actual_bytes": int(actual_bytes),
-                "score_delta_milli": int(score_delta_milli),
-                "marginal_milli": int(marginal_milli),
-                "payload_magic": payload_magic,
-                "payload_sha256": _sha256_bytes(payload),
-            }
-        )
+        row: dict[str, Any] = {
+            "index": index,
+            "name": name,
+            "codec_kind": int(codec_kind),
+            "admm_bytes_target": int(admm_bytes_target),
+            "actual_bytes": int(actual_bytes),
+            "score_delta_milli": int(score_delta_milli),
+            "marginal_milli": int(marginal_milli),
+            "payload_magic": payload_magic,
+            "payload_sha256": _sha256_bytes(payload),
+        }
+        if include_payload:
+            row["payload"] = payload
+        streams.append(row)
 
     _require_available(blob, cursor, 4, "JCSP KKT residual")
     (kkt_residual_milli,) = struct.unpack_from("<I", blob, cursor)

@@ -386,6 +386,49 @@ def test_pr91_entropy_failure_grammar_probe_cli_records_tool_manifest(tmp_path: 
     assert payload["token_word_order_probe"]["status"] == "not_attempted_by_request"
 
 
+def test_pr91_in_group_context_update_probe_cli_narrows_false_lead(tmp_path: Path) -> None:
+    if not DEFAULT_PR91_ARCHIVE.is_file():
+        pytest.skip("canonical PR91 archive not available")
+    out = tmp_path / "in_group_context_update_probe.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "audit_pr91_hpm1_in_group_context_update_probe.py"),
+            "--archive",
+            str(DEFAULT_PR91_ARCHIVE),
+            "--json-out",
+            str(out),
+        ],
+        check=True,
+        cwd=REPO,
+        text=True,
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["schema"] == "pr91_hpm1_in_group_context_update_probe_v1"
+    assert payload["score_claim"] is False
+    assert payload["dispatch_allowed"] is False
+    assert payload["tool_run_manifest"]["tool"] == (
+        "tools/audit_pr91_hpm1_in_group_context_update_probe.py"
+    )
+    assert payload["status"] == "narrowed_serial_in_group_context_false_lead"
+    probe = payload["in_group_context_update_probe"]
+    assert probe["status"] == "not_explained_by_serial_in_group_prefix_context"
+    assert probe["target_failure"] == {
+        "frame": 0,
+        "group": 10,
+        "symbol_in_group": 191,
+        "decoded_symbol_count_before_failure": 5951,
+    }
+    assert probe["replayed_to_target"]["matches_source_decoded_before"] is True
+    assert probe["serial_prefix_decode"]["passed"] is False
+    assert probe["serial_prefix_decode"]["exception_type"] == "AssertionError"
+    assert probe["serial_prefix_context"]["assigned_prior_symbols_in_group"] == 191
+    assert probe["row_comparison"]["source_argmax_symbol"] == 2
+    assert probe["row_comparison"]["serial_argmax_symbol"] == 2
+    assert probe["row_comparison"]["max_abs_probability_delta"] < 1e-6
+
 
 def test_pr91_probe_contracts_fail_closed_on_bad_inputs(tmp_path: Path) -> None:
     archive = _synthetic_hpm1_archive(tmp_path / "archive.zip")

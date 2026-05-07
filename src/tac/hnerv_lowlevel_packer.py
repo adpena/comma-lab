@@ -96,6 +96,7 @@ class BrotliRecodeChoice:
     candidate_bytes: int
     quality: int
     lgwin: int | None
+    lgblock: int | None
     candidate_sha256: str
     changed: bool
 
@@ -175,6 +176,7 @@ def brotli_recode_search(
     *,
     qualities: Iterable[int] = (9, 10, 11),
     lgwins: Iterable[int | None] = (None, 18, 20, 22, 24),
+    lgblocks: Iterable[int | None] = (None,),
     jobs: int = 1,
 ) -> tuple[BrotliRecodeChoice, bytes]:
     """Return the smallest deterministic brotli recode for one section."""
@@ -186,7 +188,7 @@ def brotli_recode_search(
     except brotli.error as exc:
         raise HnervLowlevelPackError(f"{section_name} is not brotli-decompressible") from exc
 
-    attempts: list[tuple[int, int | None]] = []
+    attempts: list[tuple[int, int | None, int | None]] = []
     for quality in qualities:
         q = int(quality)
         if not 0 <= q <= 11:
@@ -195,7 +197,16 @@ def brotli_recode_search(
             normalized_lgwin = None if lgwin is None else int(lgwin)
             if normalized_lgwin is not None and not 10 <= normalized_lgwin <= 24:
                 raise HnervLowlevelPackError(f"brotli lgwin out of range: {normalized_lgwin}")
-            attempts.append((q, normalized_lgwin))
+            for lgblock in lgblocks:
+                normalized_lgblock = None if lgblock is None else int(lgblock)
+                if normalized_lgblock == 0:
+                    normalized_lgblock = None
+                if normalized_lgblock is not None and not 16 <= normalized_lgblock <= 24:
+                    raise HnervLowlevelPackError(
+                        f"brotli lgblock out of range: {normalized_lgblock}"
+                    )
+                attempts.append((q, normalized_lgwin, normalized_lgblock))
+    attempts = sorted(set(attempts), key=lambda item: (item[0], _optional_sort(item[1]), _optional_sort(item[2])))
     if not attempts:
         raise HnervLowlevelPackError("brotli search did not evaluate any variants")
 
@@ -203,12 +214,23 @@ def brotli_recode_search(
     best_payload: bytes | None = None
     max_workers = _bounded_jobs(jobs, len(attempts))
     if max_workers == 1:
-        results = [_brotli_recode_attempt(section_name, compressed, raw, q, lgwin) for q, lgwin in attempts]
+        results = [
+            _brotli_recode_attempt(section_name, compressed, raw, q, lgwin, lgblock)
+            for q, lgwin, lgblock in attempts
+        ]
     else:
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [
-                executor.submit(_brotli_recode_attempt, section_name, compressed, raw, q, lgwin)
-                for q, lgwin in attempts
+                executor.submit(
+                    _brotli_recode_attempt,
+                    section_name,
+                    compressed,
+                    raw,
+                    q,
+                    lgwin,
+                    lgblock,
+                )
+                for q, lgwin, lgblock in attempts
             ]
             results = [future.result() for future in futures]
     for choice, candidate in results:
@@ -228,6 +250,7 @@ def build_lowlevel_brotli_repack_candidate(
     target_sections: Sequence[str] = REPACKABLE_SECTIONS,
     qualities: Iterable[int] = (9, 10, 11),
     lgwins: Iterable[int | None] = (None, 18, 20, 22, 24),
+    lgblocks: Iterable[int | None] = (None,),
     allow_rate_regression: bool = False,
     jobs: int = 1,
 ) -> dict[str, Any]:
@@ -260,6 +283,7 @@ def build_lowlevel_brotli_repack_candidate(
                 source_bytes,
                 qualities=qualities,
                 lgwins=lgwins,
+                lgblocks=lgblocks,
                 jobs=jobs,
             )
         except HnervLowlevelPackError as exc:
@@ -277,6 +301,7 @@ def build_lowlevel_brotli_repack_candidate(
                 "rate_positive": rate_positive,
                 "quality": choice.quality,
                 "lgwin": choice.lgwin,
+                "lgblock": choice.lgblock,
                 "source_section_sha256": sha256_bytes(source_bytes),
                 "candidate_section_sha256": choice.candidate_sha256,
                 "changed": choice.changed,
@@ -346,6 +371,8 @@ def build_lowlevel_brotli_repack_candidate(
         "source_archive_sha256": archive.archive_sha256,
         "source_archive_bytes": archive.archive_bytes,
         "source_member_name": archive.member_name,
+        "source_payload_sha256": sha256_bytes(archive.payload),
+        "source_payload_bytes": len(archive.payload),
         "candidate_archive_path": str(candidate_archive_path),
         "candidate_archive_sha256": candidate_archive_sha,
         "candidate_archive_bytes": candidate_archive_bytes,
@@ -365,15 +392,19 @@ def build_lowlevel_brotli_repack_candidate(
     }
 
 
-def _choice_sort_key(choice: BrotliRecodeChoice) -> tuple[int, int, int, int, str]:
-    lgwin_sort = -1 if choice.lgwin is None else choice.lgwin
+def _choice_sort_key(choice: BrotliRecodeChoice) -> tuple[int, int, int, int, int, str]:
     return (
         choice.candidate_bytes,
         0 if choice.changed else 1,
         choice.quality,
-        lgwin_sort,
+        _optional_sort(choice.lgwin),
+        _optional_sort(choice.lgblock),
         choice.candidate_sha256,
     )
+
+
+def _optional_sort(value: int | None) -> int:
+    return -1 if value is None else value
 
 
 def _bounded_jobs(jobs: int, attempt_count: int) -> int:
@@ -388,10 +419,13 @@ def _brotli_recode_attempt(
     raw: bytes,
     quality: int,
     lgwin: int | None,
+    lgblock: int | None,
 ) -> tuple[BrotliRecodeChoice, bytes]:
     kwargs: dict[str, int] = {"quality": quality}
     if lgwin is not None:
         kwargs["lgwin"] = lgwin
+    if lgblock is not None:
+        kwargs["lgblock"] = lgblock
     candidate = brotli.compress(raw, **kwargs)
     return (
         BrotliRecodeChoice(
@@ -401,6 +435,7 @@ def _brotli_recode_attempt(
             candidate_bytes=len(candidate),
             quality=quality,
             lgwin=lgwin,
+            lgblock=lgblock,
             candidate_sha256=sha256_bytes(candidate),
             changed=candidate != source,
         ),

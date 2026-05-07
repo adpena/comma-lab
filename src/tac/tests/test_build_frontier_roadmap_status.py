@@ -128,8 +128,8 @@ def test_frontier_roadmap_status_discovers_default_packet_manifests() -> None:
     )
     assert "wr01_apply_pr106x_half" in candidate_ids
     assert packet_selection["candidate_count"] >= 1
-    assert packet_selection["candidate_static_preflight_ready_count"] == 0
-    assert packet_selection["pareto_summary"]["frontier_count"] == 0
+    assert packet_selection["candidate_static_preflight_ready_count"] == 1
+    assert packet_selection["pareto_summary"]["frontier_count"] == 1
     assert packet_selection["report_blockers"] == []
     wr01 = next(
         row
@@ -138,10 +138,11 @@ def test_frontier_roadmap_status_discovers_default_packet_manifests() -> None:
     )
     assert wr01["archive_proof"]["byte_closed"] is True
     assert wr01["runtime_proof"]["runtime_closed"] is True
-    assert wr01["strict_candidate_preflight_ready"] is False
-    assert wr01["selection_decision"] == "strict_candidate_preflight_refused"
-    assert "strict:static_packet_ready_false" in wr01["candidate_blockers"]
-    assert "strict:static_blockers_reported" in wr01["candidate_blockers"]
+    assert wr01["strict_candidate_preflight_ready"] is True
+    assert wr01["candidate_static_preflight_ready"] is True
+    assert wr01["selection_decision"] == "needs_active_lane_claim_before_dispatch"
+    assert "missing_active_lane_dispatch_claim" in wr01["candidate_blockers"]
+    assert "claim:dispatch_claim_check_missing" in wr01["candidate_blockers"]
 
 
 def test_frontier_roadmap_status_consumes_field_meta_packet_manifests(tmp_path: Path) -> None:

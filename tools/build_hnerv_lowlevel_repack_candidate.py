@@ -43,6 +43,18 @@ def parse_lgwins(values: list[str] | None) -> list[int | None]:
     return out
 
 
+def parse_lgblocks(values: list[str] | None) -> list[int | None]:
+    if not values:
+        return [None]
+    out: list[int | None] = []
+    for value in values:
+        if value.lower() in {"none", "default"}:
+            out.append(None)
+        else:
+            out.append(int(value))
+    return out
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-archive", type=Path, required=True)
@@ -57,6 +69,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--quality", action="append", type=int, help="Brotli quality; repeatable.")
     parser.add_argument("--lgwin", action="append", help="Brotli lgwin or 'default'; repeatable.")
+    parser.add_argument("--lgblock", action="append", help="Brotli lgblock or 'default'; repeatable.")
     parser.add_argument(
         "--jobs",
         type=int,
@@ -93,6 +106,7 @@ def main(argv: list[str] | None = None) -> int:
         target_sections=args.target_section or REPACKABLE_SECTIONS,
         qualities=args.quality or [9, 10, 11],
         lgwins=parse_lgwins(args.lgwin),
+        lgblocks=parse_lgblocks(args.lgblock),
         allow_rate_regression=args.allow_rate_regression,
         jobs=args.jobs,
     )

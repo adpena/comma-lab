@@ -43,6 +43,8 @@ def test_briefing_runs_all_three_phases():
     assert "Phase 1 blocked readiness artifacts" in proc.stdout
     assert "pr91_hpm1_readiness_bundle" in proc.stdout
     assert "wr01_apply_pr106x_half" in proc.stdout
+    assert "Copy-safe next steps" in proc.stdout
+    assert "assert_packet_ready_for_submit" in proc.stdout
 
 
 def test_briefing_skip_pareto_omits_phase1():
@@ -105,6 +107,11 @@ def test_briefing_json_each_phase_has_n_total_or_n_configs():
     assert any(k in out["dashboard"] for k in ("n_total", "n_displayed"))
     assert any(k in out["reconciler"] for k in ("n_configs", "n_landed"))
     assert out["exact_eval_packets"][0]["lane_id"] == "wr01_apply_pr106x_half"
+    assert out["exact_eval_packets"][0]["operator_next_steps"]["schema"] == "wr01_operator_next_steps_v1"
+    assert (
+        out["exact_eval_packets"][0]["operator_next_steps"]["steps"][4]["id"]
+        == "assert_packet_ready_for_submit"
+    )
     assert out["non_dispatchable_readiness_artifacts"][0]["score_claim"] is False
 
 

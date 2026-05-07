@@ -141,6 +141,10 @@ PR91_HPM1_TOKEN_WORD_ORDER_CANDIDATES = (
     "reversed_little_uint32_words",
     "reversed_big_endian_uint32_words",
 )
+PR91_HPM1_SOURCE_FAILURE_FRAME = 0
+PR91_HPM1_SOURCE_FAILURE_GROUP = 10
+PR91_HPM1_SOURCE_FAILURE_SYMBOL_IN_GROUP = 191
+PR91_HPM1_SOURCE_FAILURE_DECODED_BEFORE = 5951
 
 _QUARANTINE_SPEC = (
     ".recovery_quarantine_20260505T004735Z/src/tac/pr91_hpm1_codec.recovery_spec.json"
@@ -1047,6 +1051,290 @@ def _run_hpm1_token_word_order_probe(
     }
 
 
+def _trace_hpm1_in_group_prefix_context_at_source_failure(
+    model: Any,
+    payload: Hpm1MaskPayload,
+    *,
+    probability_variant: str | Any,
+    prob_eps: float,
+    device: str,
+    source_trace: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Test whether same-group serial context clears the PR91 source failure.
+
+    The public source decodes a whole patch group against one probability
+    tensor, then writes the decoded symbols into ``cur``.  This bounded probe
+    replays the source loop only until the known first failure, then recomputes
+    the failing probability row after assigning the already-decoded symbols in
+    that same group into ``cur``.  It does not attempt a full serial decode.
+    """
+
+    started_at = time.time()
+    if torch is None or F is None:  # pragma: no cover - optional dependency path
+        raise Pr91Hpm1Error("dependency_contract", "torch_missing")
+    if _pr86_hpac_codec.constriction is None:  # pragma: no cover
+        raise Pr91Hpm1Error("dependency_contract", "constriction_missing")
+    if str(device) != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "hpm1_in_group_context_probe_is_cpu_only",
+            requested_device=device,
+        )
+
+    source_failure = source_trace.get("failure")
+    if not isinstance(source_failure, Mapping):
+        return {
+            "schema": "pr91_hpm1_in_group_context_update_probe_v1",
+            "status": "not_attempted_missing_source_failure_trace",
+            "passed": False,
+            "score_claim": False,
+            "dispatch_allowed": False,
+            "reason": "source_trace_did_not_record_a_failure",
+        }
+
+    target_frame = int(source_failure.get("frame", PR91_HPM1_SOURCE_FAILURE_FRAME))
+    target_group = int(source_failure.get("group", PR91_HPM1_SOURCE_FAILURE_GROUP))
+    target_symbol = int(
+        source_failure.get(
+            "symbol_in_group",
+            PR91_HPM1_SOURCE_FAILURE_SYMBOL_IN_GROUP,
+        )
+    )
+    target_decoded_before = int(
+        source_failure.get(
+            "decoded_symbol_count_before_failure",
+            PR91_HPM1_SOURCE_FAILURE_DECODED_BEFORE,
+        )
+    )
+    resolved = resolve_hpac_probability_variant(probability_variant)
+    dev = torch.device(device)
+    model = model.to(dev).eval()
+    masks = _group_masks(
+        payload.height,
+        payload.width,
+        P=payload.predictor_count,
+        delta=payload.delta,
+        device=dev,
+    )
+    words = _hpm1_token_words_for_candidate(payload, "source_little_uint32")
+    decoder = _pr86_hpac_codec.constriction.stream.queue.RangeDecoder(words)
+    decoded_prev = torch.zeros(
+        (1, payload.height, payload.width),
+        dtype=torch.long,
+        device=dev,
+    )
+    decoded_symbols = 0
+
+    with torch.no_grad():
+        for frame in range(target_frame + 1):
+            idx = torch.tensor([frame], dtype=torch.long, device=dev)
+            cur = torch.zeros(
+                (1, payload.height, payload.width),
+                dtype=torch.long,
+                device=dev,
+            )
+            for group, mask in enumerate(masks):
+                if mask is None:
+                    continue
+                cur_before_group = cur.clone()
+                logits = model(cur, idx, decoded_prev)
+                probs = F.softmax(logits.float(), dim=1)
+                probs_at_group = probs[0][:, mask].permute(1, 0).contiguous()
+                coords = mask.nonzero(as_tuple=False)
+                decoded = np.empty(int(probs_at_group.shape[0]), dtype=np.int64)
+                for symbol_in_group, row_tensor in enumerate(probs_at_group):
+                    row = row_tensor.cpu().numpy()
+                    if (
+                        frame == target_frame
+                        and group == target_group
+                        and symbol_in_group == target_symbol
+                    ):
+                        prefix = decoded[:symbol_in_group].astype(np.uint8, copy=False)
+                        serial_cur = cur_before_group.clone()
+                        if symbol_in_group:
+                            prefix_tensor = torch.from_numpy(
+                                decoded[:symbol_in_group]
+                            ).to(dev)
+                            serial_cur[
+                                0,
+                                coords[:symbol_in_group, 0],
+                                coords[:symbol_in_group, 1],
+                            ] = prefix_tensor
+                        serial_logits = model(serial_cur, idx, decoded_prev)
+                        serial_raw_row = (
+                            F.softmax(serial_logits.float(), dim=1)[
+                                0,
+                                :,
+                                coords[symbol_in_group, 0],
+                                coords[symbol_in_group, 1],
+                            ]
+                            .cpu()
+                            .numpy()
+                        )
+                        source_norm = _normalize_probability_row(
+                            row,
+                            prob_eps=prob_eps,
+                            variant=resolved,
+                        )
+                        serial_norm = _normalize_probability_row(
+                            serial_raw_row,
+                            prob_eps=prob_eps,
+                            variant=resolved,
+                        )
+                        serial_decode: dict[str, Any]
+                        try:
+                            serial_symbol = decoder.decode(
+                                _categorical_from_probs(
+                                    serial_raw_row,
+                                    prob_eps=prob_eps,
+                                    variant=resolved,
+                                )
+                            )
+                            serial_decode = {
+                                "status": "passed_source_failure_symbol",
+                                "passed": True,
+                                "decoded_symbol": int(serial_symbol),
+                                "exception_type": "",
+                            }
+                        except Exception as exc:
+                            serial_decode = {
+                                "status": "failed_at_source_failure_symbol",
+                                "passed": False,
+                                "exception_type": type(exc).__name__,
+                                "reason": "serial_prefix_context_still_hits_range_decoder_assertion",
+                            }
+                        source_sha = sha256_bytes(
+                            np.ascontiguousarray(source_norm).tobytes()
+                        )
+                        serial_sha = sha256_bytes(
+                            np.ascontiguousarray(serial_norm).tobytes()
+                        )
+                        serial_cleared_failure = serial_decode["passed"] is True
+                        return {
+                            "schema": "pr91_hpm1_in_group_context_update_probe_v1",
+                            "status": (
+                                "serial_prefix_context_changes_failure_symbol"
+                                if serial_cleared_failure
+                                else "not_explained_by_serial_in_group_prefix_context"
+                            ),
+                            "passed": bool(not serial_cleared_failure),
+                            "score_claim": False,
+                            "dispatch_allowed": False,
+                            "device": device,
+                            "probability_variant": resolved.name,
+                            "prob_eps": float(prob_eps),
+                            "target_failure": {
+                                "frame": target_frame,
+                                "group": target_group,
+                                "symbol_in_group": target_symbol,
+                                "decoded_symbol_count_before_failure": target_decoded_before,
+                            },
+                            "replayed_to_target": {
+                                "decoded_symbol_count_before_target": int(decoded_symbols),
+                                "matches_source_decoded_before": (
+                                    int(decoded_symbols) == target_decoded_before
+                                ),
+                            },
+                            "source_batch_row": {
+                                "sha256": source_sha,
+                                "values": [
+                                    round(float(value), 10)
+                                    for value in source_norm.tolist()
+                                ],
+                            },
+                            "serial_prefix_row": {
+                                "sha256": serial_sha,
+                                "values": [
+                                    round(float(value), 10)
+                                    for value in serial_norm.tolist()
+                                ],
+                            },
+                            "row_comparison": {
+                                "rows_equal": bool(np.array_equal(source_norm, serial_norm)),
+                                "max_abs_probability_delta": round(
+                                    float(np.max(np.abs(source_norm - serial_norm))),
+                                    12,
+                                ),
+                                "source_argmax_symbol": int(source_norm.argmax()),
+                                "serial_argmax_symbol": int(serial_norm.argmax()),
+                            },
+                            "serial_prefix_context": {
+                                "assigned_prior_symbols_in_group": int(prefix.size),
+                                "prefix_sha256": sha256_bytes(prefix.tobytes()),
+                                **_small_int_preview(prefix),
+                                "current_frame_before_group": _context_tensor_summary(
+                                    cur_before_group[0],
+                                    label="current_frame_before_failing_group_assignment",
+                                ),
+                                "current_frame_with_serial_prefix": _context_tensor_summary(
+                                    serial_cur[0],
+                                    label="current_frame_with_prior_symbols_in_failing_group",
+                                ),
+                            },
+                            "serial_prefix_decode": serial_decode,
+                            "narrowed_hypothesis": (
+                                "Assigning prior decoded symbols from the failing "
+                                "patch group into the current-frame context changes "
+                                "the failing probability row only slightly and does "
+                                "not clear the RangeDecoder assertion."
+                                if not serial_cleared_failure
+                                else "Same-group serial prefix context clears the exact source failure symbol; investigate full serial context replay before further probability variants."
+                            ),
+                            "elapsed_sec": round(time.time() - started_at, 3),
+                        }
+
+                    cat = _categorical_from_probs(row, prob_eps=prob_eps, variant=resolved)
+                    try:
+                        decoded[symbol_in_group] = decoder.decode(cat)
+                    except Exception as exc:
+                        return {
+                            "schema": "pr91_hpm1_in_group_context_update_probe_v1",
+                            "status": "failed_before_target_failure",
+                            "passed": False,
+                            "score_claim": False,
+                            "dispatch_allowed": False,
+                            "device": device,
+                            "probability_variant": resolved.name,
+                            "prob_eps": float(prob_eps),
+                            "unexpected_failure": {
+                                "frame": int(frame),
+                                "group": int(group),
+                                "symbol_in_group": int(symbol_in_group),
+                                "decoded_symbol_count_before_failure": int(decoded_symbols),
+                                "exception_type": type(exc).__name__,
+                            },
+                            "target_failure": {
+                                "frame": target_frame,
+                                "group": target_group,
+                                "symbol_in_group": target_symbol,
+                                "decoded_symbol_count_before_failure": target_decoded_before,
+                            },
+                            "elapsed_sec": round(time.time() - started_at, 3),
+                        }
+                    decoded_symbols += 1
+                cur[0, mask] = torch.from_numpy(decoded).to(dev)
+            decoded_prev = cur.clone()
+
+    return {
+        "schema": "pr91_hpm1_in_group_context_update_probe_v1",
+        "status": "target_failure_not_reached",
+        "passed": False,
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "device": device,
+        "probability_variant": resolved.name,
+        "prob_eps": float(prob_eps),
+        "target_failure": {
+            "frame": target_frame,
+            "group": target_group,
+            "symbol_in_group": target_symbol,
+            "decoded_symbol_count_before_failure": target_decoded_before,
+        },
+        "decoded_symbol_count": int(decoded_symbols),
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
+
+
 def run_pr91_hpm1_entropy_failure_grammar_probe(
     archive: Path = DEFAULT_PR91_ARCHIVE,
     *,
@@ -1184,6 +1472,117 @@ def run_pr91_hpm1_entropy_failure_grammar_probe(
         write_json_report(report, Path(output_dir) / "hpm1_entropy_failure_grammar_probe.json")
     if strict and report["ready_for_exact_eval_dispatch"] is not True:
         raise Pr91Hpm1Error("hpm1_entropy_failure_grammar_probe", str(report["status"]), report=report)
+    return _jsonable(report)
+
+
+def run_pr91_hpm1_in_group_context_update_probe(
+    archive: Path = DEFAULT_PR91_ARCHIVE,
+    *,
+    device: str = "cpu",
+    probability_variant: str = DEFAULT_HPAC_PROBABILITY_VARIANT,
+    prob_eps: float = PROB_EPS,
+    output_dir: Path | None = None,
+    strict: bool = False,
+    write_json: bool = True,
+) -> dict[str, Any]:
+    """Bounded PR91/HPM1 probe for the in-group serial-context hypothesis."""
+
+    started_at = time.time()
+    if str(device) != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "pr91_hpm1_in_group_context_update_probe_is_cpu_only",
+            requested_device=device,
+        )
+    archive_path = Path(archive)
+    payload = extract_pr91_hpm1_payload(archive_path)
+    dependency_report = collect_dependency_report(strict=False)
+    static_report = validate_hpm1_static_contract(payload)
+    relationship = compare_hpm1_to_pr86_hpac_contract(payload)
+    runtime_sources = analyze_pr91_hpm1_runtime_sources()
+    model = load_hpm1_hpac_model(payload, device=device)
+    source_trace = _trace_hpm1_entropy_decode_failure(
+        model,
+        payload,
+        probability_variant=probability_variant,
+        prob_eps=prob_eps,
+        max_frames=1,
+        device=device,
+    )
+    context_probe = _trace_hpm1_in_group_prefix_context_at_source_failure(
+        model,
+        payload,
+        probability_variant=probability_variant,
+        prob_eps=prob_eps,
+        device=device,
+        source_trace=source_trace,
+    )
+    narrowed = (
+        context_probe.get("status")
+        == "not_explained_by_serial_in_group_prefix_context"
+    )
+    report: dict[str, Any] = {
+        "schema": "pr91_hpm1_in_group_context_update_probe_v1",
+        "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_in_group_context_update_probe",
+        "recorded_at_utc": datetime.now(UTC).replace(microsecond=0).isoformat(),
+        "status": (
+            "narrowed_serial_in_group_context_false_lead"
+            if narrowed
+            else "serial_in_group_context_hypothesis_still_open"
+        ),
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "dispatch_performed": False,
+        "gpu_or_remote_work": False,
+        "local_only": True,
+        "ready_for_exact_eval_dispatch": False,
+        "promotion_eligible": False,
+        "evidence_grade": "local_hpm1_context_hypothesis_probe",
+        "device": device,
+        "archive": _archive_report(archive_path),
+        "hpm1_static_contract": static_report,
+        "pr86_hpac_relationship": relationship,
+        "dependency_report": dependency_report,
+        "runtime_source_contract": runtime_sources,
+        "payload": {
+            "config": payload.config(),
+            "tokens_bytes": len(payload.tokens),
+            "tokens_sha256": sha256_bytes(payload.tokens),
+            "hpac_bytes": len(payload.hpac),
+            "hpac_sha256": sha256_bytes(payload.hpac),
+        },
+        "source_entropy_failure_trace": source_trace,
+        "in_group_context_update_probe": context_probe,
+        "exact_missing_grammar": {
+            "status": "still_open_after_serial_in_group_context_probe",
+            "not_explained_by_this_probe": (
+                "same-group serial prefix assignment at the exact source failure"
+                if narrowed
+                else "",
+            ),
+            "remaining_open_classes": [
+                "encoder-side probability numeric contract",
+                "range-coder construction/finalization contract",
+                "context drift before the failing group",
+                "training-time token semantics not represented by the submitted decode source",
+            ],
+        },
+        "next_required_proofs": [
+            "recover an encoder-side HPAC token generator or full source archive",
+            "test probability quantization/range-coder construction against the traced failing row",
+            "obtain or derive PR91 semantic mask tokens for teacher-forced context windows",
+            "decode all 600 HPM1 frames and re-encode exact token bytes before any dispatch",
+        ],
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
+    if write_json and output_dir is not None:
+        write_json_report(report, Path(output_dir) / "in_group_context_update_probe.json")
+    if strict and report["ready_for_exact_eval_dispatch"] is not True:
+        raise Pr91Hpm1Error(
+            "hpm1_in_group_context_update_probe",
+            str(report["status"]),
+            report=report,
+        )
     return _jsonable(report)
 
 

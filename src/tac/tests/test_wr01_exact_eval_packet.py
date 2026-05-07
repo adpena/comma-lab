@@ -81,6 +81,28 @@ def test_wr01_exact_eval_packet_reports_missing_env_without_dispatch(tmp_path: P
     assert "'$LIGHTNING_SSH_TARGET'" not in payload["commands"]["submit"]
     assert "--remote $LIGHTNING_SSH_TARGET" in payload["commands"]["submit"]
     assert "tools/claim_lane_dispatch.py" in payload["commands"]["claim"]
+    assert "--predicted-eta-utc 2026-05-06T07:30Z" not in payload["commands"]["claim"]
+    next_steps = payload["operator_next_steps"]
+    assert next_steps["schema"] == "wr01_operator_next_steps_v1"
+    assert next_steps["copy_safe"] is True
+    assert next_steps["must_run_in_order"] is True
+    assert next_steps["first_remote_gpu_step"] == "submit_exact_cuda"
+    assert next_steps["current_blockers"] == payload["blockers"]
+    assert [step["id"] for step in next_steps["steps"]] == [
+        "verify_lightning_env",
+        "refresh_static_packet_no_dispatch",
+        "claim_lane_no_dispatch",
+        "refresh_packet_with_operator_exact_cuda_approval",
+        "assert_packet_ready_for_submit",
+        "submit_exact_cuda",
+        "harvest_after_completion",
+    ]
+    assert next_steps["steps"][0]["dispatches_remote_gpu"] is False
+    assert "LIGHTNING_SSH_TARGET" in next_steps["steps"][0]["copy_safe_command"]
+    assert "--operator-approved-exact-cuda" in next_steps["steps"][3]["copy_safe_command"]
+    assert "ready_for_submit=true" in next_steps["steps"][4]["copy_safe_command"]
+    assert next_steps["steps"][5]["dispatches_remote_gpu"] is True
+    assert "--stage-workspace --submit" in next_steps["steps"][5]["copy_safe_command"]
 
 
 def test_wr01_exact_eval_packet_builds_release_surface_and_refreshes_static_compliance(
@@ -361,6 +383,9 @@ def test_wr01_exact_eval_packet_accepts_matching_custody_artifacts(tmp_path: Pat
     assert payload["source_payload_sha256"] == source_payload_sha256
     assert payload["changed_section_sha256"] == changed_section_sha256
     assert payload["artifact_flag_violations"] == []
+    next_steps = payload["operator_next_steps"]
+    assert next_steps["current_blockers"] == []
+    assert next_steps["steps"][4]["id"] == "assert_packet_ready_for_submit"
 
 
 def test_wr01_exact_eval_packet_refuses_truthy_score_or_dispatch_flags(tmp_path: Path) -> None:

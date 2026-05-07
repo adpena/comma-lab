@@ -116,6 +116,76 @@ def _one_liner(cmd: list[str]) -> str:
     return " ".join(_q(item) for item in cmd)
 
 
+def _packet_output_path(args: argparse.Namespace) -> Path:
+    return args.json_out or args.result_dir / "wr01_exact_eval_packet.json"
+
+
+def _required_env_check_cmd() -> list[str]:
+    code = (
+        "import os,sys; "
+        "missing=[k for k in sys.argv[1:] if not os.environ.get(k)]; "
+        "raise SystemExit(('FATAL: missing Lightning env: '+', '.join(missing)) if missing else 0)"
+    )
+    return [".venv/bin/python", "-c", code, *REQUIRED_ENV]
+
+
+def _packet_ready_check_cmd(packet_path: Path) -> list[str]:
+    code = (
+        "import json,sys; "
+        "p=json.load(open(sys.argv[1])); "
+        "blockers=p.get('blockers') or []; "
+        "ready=p.get('ready_for_submit') is True and not blockers; "
+        "raise SystemExit(0 if ready else "
+        "'FATAL: WR01 packet not ready_for_submit=true; blockers=' + ','.join(map(str, blockers)))"
+    )
+    return [".venv/bin/python", "-c", code, packet_path.as_posix()]
+
+
+def _packet_refresh_cmd(
+    args: argparse.Namespace,
+    *,
+    packet_path: Path,
+    operator_approved_exact_cuda: bool,
+) -> list[str]:
+    cmd = [
+        ".venv/bin/python",
+        "tools/build_wr01_exact_eval_packet.py",
+        "--job-name",
+        args.job_name,
+        "--lane-id",
+        args.lane_id,
+        "--archive",
+        args.archive.as_posix(),
+        "--baseline-json",
+        args.baseline_json.as_posix(),
+        "--inflate-sh",
+        args.inflate_sh.as_posix(),
+        "--result-dir",
+        args.result_dir.as_posix(),
+        "--release-surface-dir",
+        args.release_surface_dir.as_posix(),
+        "--archive-sha256",
+        args.archive_sha256,
+        "--archive-bytes",
+        str(args.archive_bytes),
+        "--claims-path",
+        args.claims_path.as_posix(),
+        "--claim-ttl-hours",
+        str(args.claim_ttl_hours),
+        "--agent",
+        args.agent,
+        "--build-release-surface",
+        "--refresh-static-compliance",
+        "--json-out",
+        packet_path.as_posix(),
+    ]
+    if args.predicted_eta_utc:
+        cmd.extend(["--predicted-eta-utc", args.predicted_eta_utc])
+    if operator_approved_exact_cuda:
+        cmd.append("--operator-approved-exact-cuda")
+    return cmd
+
+
 def _artifact_status(path: Path) -> dict[str, Any]:
     full = _repo_path(path)
     return {
@@ -1196,6 +1266,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         f"WR01 half exact CUDA eval; archive_sha256={args.archive_sha256} "
         f"bytes={args.archive_bytes}; static_preflight={preflight.as_posix()}"
     )
+    packet_path = _packet_output_path(args)
     claim_cmd = [
         ".venv/bin/python",
         "tools/claim_lane_dispatch.py",
@@ -1208,13 +1279,17 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         args.job_name,
         "--agent",
         args.agent,
-        "--predicted-eta-utc",
-        args.predicted_eta_utc,
         "--status",
         "active_exact_eval",
         "--notes",
         notes,
     ]
+    if args.predicted_eta_utc:
+        status_index = claim_cmd.index("--status")
+        claim_cmd[status_index:status_index] = [
+            "--predicted-eta-utc",
+            args.predicted_eta_utc,
+        ]
     submit_cmd = [
         ".venv/bin/python",
         "scripts/lightning_exact_eval_repro.py",
@@ -1329,6 +1404,84 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         if archive_byte_delta is not None
         else None
     )
+    operator_next_steps = {
+        "schema": "wr01_operator_next_steps_v1",
+        "copy_safe": True,
+        "must_run_in_order": True,
+        "first_remote_gpu_step": "submit_exact_cuda",
+        "packet_path": packet_path.as_posix(),
+        "current_blockers": list(blockers),
+        "steps": [
+            {
+                "order": 1,
+                "id": "verify_lightning_env",
+                "dispatches_remote_gpu": False,
+                "writes_repo_state": False,
+                "purpose": "fail loudly until all Lightning identity and path env vars are loaded",
+                "copy_safe_command": _one_liner(_required_env_check_cmd()),
+            },
+            {
+                "order": 2,
+                "id": "refresh_static_packet_no_dispatch",
+                "dispatches_remote_gpu": False,
+                "writes_repo_state": True,
+                "purpose": "rebuild the static release surface, static compliance JSON, and packet before claiming",
+                "copy_safe_command": _one_liner(
+                    _packet_refresh_cmd(
+                        args,
+                        packet_path=packet_path,
+                        operator_approved_exact_cuda=False,
+                    )
+                ),
+            },
+            {
+                "order": 3,
+                "id": "claim_lane_no_dispatch",
+                "dispatches_remote_gpu": False,
+                "writes_repo_state": True,
+                "purpose": "record the Level-2 lane claim; this must fail if a same-lane active claim exists",
+                "copy_safe_command": _one_liner(claim_cmd),
+            },
+            {
+                "order": 4,
+                "id": "refresh_packet_with_operator_exact_cuda_approval",
+                "dispatches_remote_gpu": False,
+                "writes_repo_state": True,
+                "purpose": "operator's explicit exact-CUDA approval; still no remote job is submitted",
+                "copy_safe_command": _one_liner(
+                    _packet_refresh_cmd(
+                        args,
+                        packet_path=packet_path,
+                        operator_approved_exact_cuda=True,
+                    )
+                ),
+            },
+            {
+                "order": 5,
+                "id": "assert_packet_ready_for_submit",
+                "dispatches_remote_gpu": False,
+                "writes_repo_state": False,
+                "purpose": "fail loudly if env, claim, approval, or static custody drifted before submit",
+                "copy_safe_command": _one_liner(_packet_ready_check_cmd(packet_path)),
+            },
+            {
+                "order": 6,
+                "id": "submit_exact_cuda",
+                "dispatches_remote_gpu": True,
+                "writes_repo_state": True,
+                "purpose": "first remote/GPU action; run only after assert_packet_ready_for_submit passes",
+                "copy_safe_command": _one_liner(submit_cmd),
+            },
+            {
+                "order": 7,
+                "id": "harvest_after_completion",
+                "dispatches_remote_gpu": False,
+                "writes_repo_state": True,
+                "purpose": "harvest only after the Lightning exact CUDA job finishes",
+                "copy_safe_command": _one_liner(harvest_cmd),
+            },
+        ],
+    }
     return {
         "schema_version": 1,
         "schema": "wr01_exact_eval_operator_packet_v1",
@@ -1394,6 +1547,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "artifact_consistency_checks": consistency_checks,
         "release_surface": _release_surface_status(args.release_surface_dir),
         "artifacts": artifact_statuses,
+        "operator_next_steps": operator_next_steps,
         "commands": {
             "claim": _one_liner(claim_cmd),
             "submit": _one_liner(submit_cmd),
@@ -1452,7 +1606,11 @@ def main() -> int:
         help="UTC timestamp for deterministic claim-TTL checks, e.g. 2026-05-06T10:00:00Z.",
     )
     parser.add_argument("--agent", default="codex:gpt-5.5")
-    parser.add_argument("--predicted-eta-utc", default="2026-05-06T07:30Z")
+    parser.add_argument(
+        "--predicted-eta-utc",
+        default="",
+        help="Optional predicted ETA for the lane-claim row. Omitted from generated claim commands when empty.",
+    )
     parser.add_argument("--json-out", type=Path)
     args = parser.parse_args()
     if args.claim_ttl_hours <= 0:

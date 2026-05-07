@@ -360,7 +360,7 @@
   "changed_section_name": "latents_and_sidecar_brotli",
   "changed_section_sha256": "2d85c4891e06906833e6a106dd486184121159a2380b581dc0e0b7d56603e939",
   "commands": {
-    "claim": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id wr01_apply_pr106x_half --platform lightning --instance-job-id exact_eval_wr01_apply_pr106x_half_20260506 --agent codex:gpt-5.5 --predicted-eta-utc 2026-05-06T07:30Z --status active_exact_eval --notes 'WR01 half exact CUDA eval; archive_sha256=d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 bytes=186222; static_preflight=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json'",
+    "claim": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id wr01_apply_pr106x_half --platform lightning --instance-job-id exact_eval_wr01_apply_pr106x_half_20260506 --agent codex:gpt-5.5 --status active_exact_eval --notes 'WR01 half exact CUDA eval; archive_sha256=d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 bytes=186222; static_preflight=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json'",
     "harvest": ".venv/bin/python scripts/launch_lightning_batch_job.py harvest-ssh --state-path .omx/state/lightning_batch_jobs.json --job-name exact_eval_wr01_apply_pr106x_half_20260506 --ssh-target $LIGHTNING_SSH_TARGET --expected-archive-sha256 d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 --expected-archive-size-bytes 186222 --require-adjudication",
     "submit": ".venv/bin/python scripts/lightning_exact_eval_repro.py --job-name exact_eval_wr01_apply_pr106x_half_20260506 --stage-workspace --submit --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh --upstream-dir $LIGHTNING_UPSTREAM_DIR --remote $LIGHTNING_SSH_TARGET --remote-pact $LIGHTNING_REMOTE_PACT --studio $LIGHTNING_STUDIO --teamspace $LIGHTNING_TEAMSPACE --sdk-user $LIGHTNING_SDK_USER --machine ${LIGHTNING_MACHINE:-T4} --predicted-band 0.18 0.25 --regression-threshold 0.02 --max-posenet-relative 1.25 --max-segnet-relative 1.10 --max-sane-score 1.0 --component-trace --queue-metadata lane=wr01_apply_pr106x_half --queue-metadata archive_manifest=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --queue-metadata public_preflight=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --queue-metadata payload_section_diff=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/pre_submission_compliance.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_wr01_strength_summary_20260506_codex.json"
   },
@@ -449,6 +449,76 @@
     "LIGHTNING_SDK_USER"
   ],
   "operator_approved_exact_cuda": false,
+  "operator_next_steps": {
+    "copy_safe": true,
+    "current_blockers": [
+      "missing_lightning_environment",
+      "missing_active_lane_dispatch_claim",
+      "missing_operator_exact_cuda_approval"
+    ],
+    "first_remote_gpu_step": "submit_exact_cuda",
+    "must_run_in_order": true,
+    "packet_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
+    "schema": "wr01_operator_next_steps_v1",
+    "steps": [
+      {
+        "copy_safe_command": ".venv/bin/python -c 'import os,sys; missing=[k for k in sys.argv[1:] if not os.environ.get(k)]; raise SystemExit(('\"'\"'FATAL: missing Lightning env: '\"'\"'+'\"'\"', '\"'\"'.join(missing)) if missing else 0)' LIGHTNING_SSH_TARGET LIGHTNING_REMOTE_PACT LIGHTNING_UPSTREAM_DIR LIGHTNING_TEAMSPACE LIGHTNING_STUDIO LIGHTNING_SDK_USER",
+        "dispatches_remote_gpu": false,
+        "id": "verify_lightning_env",
+        "order": 1,
+        "purpose": "fail loudly until all Lightning identity and path env vars are loaded",
+        "writes_repo_state": false
+      },
+      {
+        "copy_safe_command": ".venv/bin/python tools/build_wr01_exact_eval_packet.py --job-name exact_eval_wr01_apply_pr106x_half_20260506 --lane-id wr01_apply_pr106x_half --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh --result-dir experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex --release-surface-dir experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface --archive-sha256 d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 --archive-bytes 186222 --claims-path .omx/state/active_lane_dispatch_claims.md --claim-ttl-hours 24 --agent codex:gpt-5.5 --build-release-surface --refresh-static-compliance --json-out experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
+        "dispatches_remote_gpu": false,
+        "id": "refresh_static_packet_no_dispatch",
+        "order": 2,
+        "purpose": "rebuild the static release surface, static compliance JSON, and packet before claiming",
+        "writes_repo_state": true
+      },
+      {
+        "copy_safe_command": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id wr01_apply_pr106x_half --platform lightning --instance-job-id exact_eval_wr01_apply_pr106x_half_20260506 --agent codex:gpt-5.5 --status active_exact_eval --notes 'WR01 half exact CUDA eval; archive_sha256=d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 bytes=186222; static_preflight=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json'",
+        "dispatches_remote_gpu": false,
+        "id": "claim_lane_no_dispatch",
+        "order": 3,
+        "purpose": "record the Level-2 lane claim; this must fail if a same-lane active claim exists",
+        "writes_repo_state": true
+      },
+      {
+        "copy_safe_command": ".venv/bin/python tools/build_wr01_exact_eval_packet.py --job-name exact_eval_wr01_apply_pr106x_half_20260506 --lane-id wr01_apply_pr106x_half --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh --result-dir experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex --release-surface-dir experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface --archive-sha256 d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 --archive-bytes 186222 --claims-path .omx/state/active_lane_dispatch_claims.md --claim-ttl-hours 24 --agent codex:gpt-5.5 --build-release-surface --refresh-static-compliance --json-out experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json --operator-approved-exact-cuda",
+        "dispatches_remote_gpu": false,
+        "id": "refresh_packet_with_operator_exact_cuda_approval",
+        "order": 4,
+        "purpose": "operator's explicit exact-CUDA approval; still no remote job is submitted",
+        "writes_repo_state": true
+      },
+      {
+        "copy_safe_command": ".venv/bin/python -c 'import json,sys; p=json.load(open(sys.argv[1])); blockers=p.get('\"'\"'blockers'\"'\"') or []; ready=p.get('\"'\"'ready_for_submit'\"'\"') is True and not blockers; raise SystemExit(0 if ready else '\"'\"'FATAL: WR01 packet not ready_for_submit=true; blockers='\"'\"' + '\"'\"','\"'\"'.join(map(str, blockers)))' experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
+        "dispatches_remote_gpu": false,
+        "id": "assert_packet_ready_for_submit",
+        "order": 5,
+        "purpose": "fail loudly if env, claim, approval, or static custody drifted before submit",
+        "writes_repo_state": false
+      },
+      {
+        "copy_safe_command": ".venv/bin/python scripts/lightning_exact_eval_repro.py --job-name exact_eval_wr01_apply_pr106x_half_20260506 --stage-workspace --submit --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh --upstream-dir $LIGHTNING_UPSTREAM_DIR --remote $LIGHTNING_SSH_TARGET --remote-pact $LIGHTNING_REMOTE_PACT --studio $LIGHTNING_STUDIO --teamspace $LIGHTNING_TEAMSPACE --sdk-user $LIGHTNING_SDK_USER --machine ${LIGHTNING_MACHINE:-T4} --predicted-band 0.18 0.25 --regression-threshold 0.02 --max-posenet-relative 1.25 --max-segnet-relative 1.10 --max-sane-score 1.0 --component-trace --queue-metadata lane=wr01_apply_pr106x_half --queue-metadata archive_manifest=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --queue-metadata public_preflight=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --queue-metadata payload_section_diff=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/pre_submission_compliance.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_wr01_strength_summary_20260506_codex.json",
+        "dispatches_remote_gpu": true,
+        "id": "submit_exact_cuda",
+        "order": 6,
+        "purpose": "first remote/GPU action; run only after assert_packet_ready_for_submit passes",
+        "writes_repo_state": true
+      },
+      {
+        "copy_safe_command": ".venv/bin/python scripts/launch_lightning_batch_job.py harvest-ssh --state-path .omx/state/lightning_batch_jobs.json --job-name exact_eval_wr01_apply_pr106x_half_20260506 --ssh-target $LIGHTNING_SSH_TARGET --expected-archive-sha256 d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 --expected-archive-size-bytes 186222 --require-adjudication",
+        "dispatches_remote_gpu": false,
+        "id": "harvest_after_completion",
+        "order": 7,
+        "purpose": "harvest only after the Lightning exact CUDA job finishes",
+        "writes_repo_state": true
+      }
+    ]
+  },
   "packet_kind": "wr01_exact_eval_operator_packet",
   "pareto_scope": "hnerv_rate_only_exact_archive",
   "payload_diff_ready": true,

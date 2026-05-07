@@ -1,0 +1,151 @@
+{
+  "attempts": [
+    {
+      "accepted_for_candidate": true,
+      "byte_delta": -1,
+      "candidate_bytes": 170126,
+      "candidate_section_sha256": "a812f1e837afd0e463a7f133b680ea6c027339ff8816db7012dd41253435afbf",
+      "changed": true,
+      "lgblock": 16,
+      "lgwin": null,
+      "quality": 10,
+      "rate_positive": true,
+      "raw_bytes": 229070,
+      "section_name": "decoder_packed_brotli",
+      "source_bytes": 170127,
+      "source_section_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c"
+    }
+  ],
+  "brotli_raw_equivalence": [
+    {
+      "candidate_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+      "raw_bytes": 229070,
+      "raw_equal": true,
+      "section_name": "decoder_packed_brotli",
+      "source_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703"
+    },
+    {
+      "candidate_raw_sha256": "a38778c6304bacba39705cd9c45af337d73bc90c6b7b4ccf2563febfc312328e",
+      "raw_bytes": 33712,
+      "raw_equal": true,
+      "section_name": "latents_and_sidecar_brotli",
+      "source_raw_sha256": "a38778c6304bacba39705cd9c45af337d73bc90c6b7b4ccf2563febfc312328e"
+    }
+  ],
+  "candidate_archive_bytes": 186079,
+  "candidate_archive_path": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/pr106x_lowlevel_brotli_hnerv_brotli_repack_candidate.zip",
+  "candidate_archive_sha256": "866dc135e9168d61fab02b6b1c218c4b1d6eed779154a6dc3095fd05e48024f2",
+  "candidate_diff": {
+    "brotli_raw_equivalence": [
+      {
+        "candidate_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+        "raw_bytes": 229070,
+        "raw_equal": true,
+        "section_name": "decoder_packed_brotli",
+        "source_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703"
+      },
+      {
+        "candidate_raw_sha256": "a38778c6304bacba39705cd9c45af337d73bc90c6b7b4ccf2563febfc312328e",
+        "raw_bytes": 33712,
+        "raw_equal": true,
+        "section_name": "latents_and_sidecar_brotli",
+        "source_raw_sha256": "a38778c6304bacba39705cd9c45af337d73bc90c6b7b4ccf2563febfc312328e"
+      }
+    ],
+    "candidate_archive_bytes": 186079,
+    "candidate_archive_sha256": "866dc135e9168d61fab02b6b1c218c4b1d6eed779154a6dc3095fd05e48024f2",
+    "candidate_payload_sha256": "0a83096defc59120ee551c45e73f69e089165df78ae706fbbe2be3e9bc284765",
+    "dispatch_attempted": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "sections": [
+      {
+        "candidate_bytes": 4,
+        "candidate_section_sha256": "115841267ee59f0a0eb54893ed966d4a6fcd413abe976f1bc4f32ff1aa4820e1",
+        "label": "PR106x-lowlevel-brotli",
+        "section_name": "packed_header_ff_len24",
+        "source_bytes": 4,
+        "source_section_sha256": "c670d1bee2140039bc6fc23599dd4bdc2ec00a659e0815945a7d60cfe6daccc7"
+      },
+      {
+        "candidate_bytes": 170126,
+        "candidate_section_sha256": "a812f1e837afd0e463a7f133b680ea6c027339ff8816db7012dd41253435afbf",
+        "label": "PR106x-lowlevel-brotli",
+        "section_name": "decoder_packed_brotli",
+        "source_bytes": 170127,
+        "source_section_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c"
+      }
+    ],
+    "source_archive_bytes": 186080,
+    "source_archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+    "source_label": "PR106x-lowlevel-brotli",
+    "source_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+    "tool": "tac.hnerv_lowlevel_packer.candidate_diff"
+  },
+  "candidate_diff_audit": {
+    "blockers": [],
+    "candidate_archive_sha256": "866dc135e9168d61fab02b6b1c218c4b1d6eed779154a6dc3095fd05e48024f2",
+    "changed_section_count": 2,
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "requires_archive_manifest_preflight",
+      "requires_lane_dispatch_claim",
+      "requires_exact_cuda_auth_eval"
+    ],
+    "rate_score_delta_if_components_equal": -6.65859e-07,
+    "ready_for_archive_preflight": true,
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "sections": [
+      {
+        "byte_delta": 0,
+        "candidate_bytes": 4,
+        "candidate_section_sha256": "115841267ee59f0a0eb54893ed966d4a6fcd413abe976f1bc4f32ff1aa4820e1",
+        "changed": true,
+        "label": "PR106x-lowlevel-brotli",
+        "optimization_role": "control_or_metadata",
+        "score_claim": false,
+        "section_name": "packed_header_ff_len24",
+        "source_bytes": 4,
+        "source_section_sha256": "c670d1bee2140039bc6fc23599dd4bdc2ec00a659e0815945a7d60cfe6daccc7"
+      },
+      {
+        "byte_delta": -1,
+        "candidate_bytes": 170126,
+        "candidate_section_sha256": "a812f1e837afd0e463a7f133b680ea6c027339ff8816db7012dd41253435afbf",
+        "changed": true,
+        "label": "PR106x-lowlevel-brotli",
+        "optimization_role": "decoder_weight_stream",
+        "score_claim": false,
+        "section_name": "decoder_packed_brotli",
+        "source_bytes": 170127,
+        "source_section_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c"
+      }
+    ],
+    "source_archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+    "tool": "tac.hnerv_section_repack.audit_candidate_section_diff",
+    "total_byte_delta": -1
+  },
+  "candidate_member_name": "x",
+  "candidate_payload_bytes": 185979,
+  "candidate_payload_sha256": "0a83096defc59120ee551c45e73f69e089165df78ae706fbbe2be3e9bc284765",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "requires_archive_manifest_preflight",
+    "requires_lane_dispatch_claim",
+    "requires_exact_cuda_auth_eval"
+  ],
+  "ready_for_archive_preflight": true,
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive_bytes": 186080,
+  "source_archive_path": "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/pr106x_hnerv_brotli_repack_candidate.zip",
+  "source_archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+  "source_label": "PR106x-lowlevel-brotli",
+  "source_member_name": "x",
+  "source_payload_bytes": 185980,
+  "source_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+  "tool": "tac.hnerv_lowlevel_packer.build_lowlevel_brotli_repack_candidate"
+}

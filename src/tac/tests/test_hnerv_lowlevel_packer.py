@@ -103,6 +103,7 @@ def test_brotli_recode_search_parallel_matches_serial() -> None:
         source,
         qualities=[9, 10, 11],
         lgwins=[None, 18, 20, 22],
+        lgblocks=[None, 16],
         jobs=1,
     )
     parallel_choice, parallel_payload = brotli_recode_search(
@@ -110,11 +111,13 @@ def test_brotli_recode_search_parallel_matches_serial() -> None:
         source,
         qualities=[9, 10, 11],
         lgwins=[None, 18, 20, 22],
+        lgblocks=[None, 16],
         jobs=4,
     )
 
     assert parallel_choice == serial_choice
     assert parallel_payload == serial_payload
+    assert parallel_choice.lgblock in {None, 16}
 
 
 def test_build_lowlevel_brotli_repack_candidate_blocks_noop(tmp_path: Path) -> None:
@@ -189,6 +192,8 @@ def test_build_hnerv_lowlevel_repack_candidate_cli(tmp_path: Path) -> None:
             "decoder_packed_brotli",
             "--quality",
             "11",
+            "--lgblock",
+            "default",
             "--json-out",
             str(json_out),
             "--fail-if-blocked",
