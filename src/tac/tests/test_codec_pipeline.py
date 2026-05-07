@@ -231,3 +231,53 @@ def test_manifest_score_claim_default_false() -> None:
     _, manifest = pipeline.encode(sd)
     assert manifest.score_claim is False
     assert manifest.score_evidence_grade == "predicted"
+
+
+# ---------------------------------------------------------------------------
+# Bug-hunter regression: Op2 latent_hi_symbols / n_latent_hi_symbols coupling
+# ---------------------------------------------------------------------------
+
+def test_op2_rejects_latent_hi_count_mismatch() -> None:
+    """Bug-hunter regression (CRITICAL #1, 2026-05-07): when a caller supplies
+    ``latent_hi_symbols`` but explicitly disagrees with the array length via
+    ``n_latent_hi_symbols`` Op2 must refuse to encode rather than silently
+    ship a mismatched merged-AC drain count."""
+    import numpy as np
+
+    sd = _synthetic_state_dict()
+    op = Op2_PR103ArithmeticCodec(
+        latent_hi_symbols=np.array([1, 2, 3], dtype=np.uint16),
+        n_latent_hi_symbols=99,  # explicit mismatch
+    )
+    pipeline = CodecPipeline([op])
+    with pytest.raises(ValueError, match="n_latent_hi_symbols"):
+        pipeline.encode(sd, skip_validate=True)
+
+
+def test_op2_rejects_n_hi_without_latent_array() -> None:
+    """If ``n_latent_hi_symbols > 0`` but ``latent_hi_symbols is None`` the
+    decoder would attempt to drain symbols that the encoder never embedded.
+    Op2 must refuse this configuration."""
+    sd = _synthetic_state_dict()
+    op = Op2_PR103ArithmeticCodec(
+        latent_hi_symbols=None,
+        n_latent_hi_symbols=17,
+    )
+    pipeline = CodecPipeline([op])
+    with pytest.raises(ValueError, match="latent_hi_symbols is None"):
+        pipeline.encode(sd, skip_validate=True)
+
+
+def test_op2_auto_derives_n_hi_when_default_zero() -> None:
+    """When the caller passes ``latent_hi_symbols=arr`` but leaves
+    ``n_latent_hi_symbols`` at its default 0, Op2 must auto-derive the drain
+    count from the array length so encode/decode stay consistent."""
+    import numpy as np
+
+    sd = _synthetic_state_dict()
+    arr = np.array([0, 1, 2, 0, 1], dtype=np.uint16)
+    op = Op2_PR103ArithmeticCodec(latent_hi_symbols=arr)
+    pipeline = CodecPipeline([op])
+    _, manifest = pipeline.encode(sd, skip_validate=True)
+    op_state = manifest.op_results[0].op_state
+    assert op_state["n_latent_hi_symbols"] == arr.size

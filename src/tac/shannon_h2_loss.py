@@ -14,12 +14,11 @@ Per Path B per-tensor Shannon analysis on PR106 substrate
 - brotli total: 170,096 B (sits at 1.015x H0; near-optimal for i.i.d. coding)
 - AC total: 161,388 B (PR103 indices)
 
-The delta-epsilon-zeta training target is **H2 -> H0 collapse**: train weights so that
-second-order conditional entropy collapses to first-order (i.e., weights
-are conditionally uniform given context). At the limit `H2 = H0`, AC and
-brotli are equivalent and both achieve the i.i.d. floor. Going further
-toward `H2 -> 0` would require structured weights - the **physics floor**
-is the architecture's intrinsic complexity.
+The measured PR106 H0-H2 gap is a prioritization signal for two different
+experiments: exploit existing conditional structure with a context-aware coder,
+or train a substrate whose native description length is lower under the chosen
+coder. This module estimates differentiable entropy terms only; it does not
+claim that forcing H2 toward H0 creates savings.
 
 This module provides **torch-differentiable surrogates** for H0 and H2
 that can be added to a training loss. The surrogates use soft histograms
@@ -197,14 +196,21 @@ def shannon_h2_loss(
     )  # shape (N, k)
     n = soft.shape[0]
     if n < 3:
-        # Degenerate; return H0 on the same alphabet.
-        return shannon_h0_loss(
+        # Degenerate (fewer than 3 weights: no trigram available). Fall
+        # back to H0 on the reduced alphabet, then rescale to full-alphabet
+        # bits/symbol so the unit contract matches the n>=3 branch.
+        # Bug-hunter fix 2026-05-07 (MEDIUM #3): without this rescale the
+        # degenerate branch would return bits-per-reduced-symbol while the
+        # main branch returns bits-per-full-symbol - a unit drift that
+        # would confuse h2_h0_ratio() readers on tiny tensors.
+        h0_reduced = shannon_h0_loss(
             weights,
             n_bits=reduced_bits,
             quant_range=quant_range,
             temperature=temperature,
             eps=eps,
         )
+        return h0_reduced * (n_bits / max(1, reduced_bits))
 
     # Trigram distribution: p(x_t, x_{t-1}, x_{t-2}) approximated as the
     # tensor-product of consecutive soft assignments along the flattened
@@ -248,9 +254,10 @@ def shannon_h2_h0_ratio(
     aggregate over 28 tensors). Lower = more compressible by context-aware
     coding; the i.i.d.-uniform regime has ratio = 1.0.
 
-    Use this as a delta-epsilon-zeta training-target signal: drive the ratio toward 1.0
-    (uniform conditional) OR drive H2 itself toward zero (structured
-    weights). The two regimes reflect different design choices.
+    Use this as a delta-epsilon-zeta targeting signal, not as a direct score
+    claim. Lower ratios identify tensors with more current conditional
+    structure for context-aware coding; training objectives should state
+    whether they preserve/exploit that structure or intentionally reshape it.
 
     Returns:
         scalar torch tensor in [0, 1] approximately (above 1 indicates

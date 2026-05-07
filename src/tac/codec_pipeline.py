@@ -469,6 +469,42 @@ class Op2_PR103ArithmeticCodec:
     ) -> EncodeResult:
         from tac.pr103_arithmetic_codec import encode_decoder_ac
 
+        # Bug-hunter fix 2026-05-07 (CRITICAL #1): when `latent_hi_symbols` is
+        # supplied as a non-empty array, the decoder MUST drain exactly that
+        # many symbols from the merged RangeDecoder. Honor an explicit caller
+        # `n_latent_hi_symbols` only when it matches the array length;
+        # otherwise auto-derive from the array (the encoder embeds them all,
+        # so any mismatch would silently corrupt the decoded state_dict).
+        # Without this guard, a caller that passed `latent_hi_symbols=arr` but
+        # forgot to set `n_latent_hi_symbols` (default 0) would land an
+        # encode-vs-decode mismatch that the test suite did not cover.
+        if self.latent_hi_symbols is not None:
+            try:
+                actual_hi_len = len(self.latent_hi_symbols)
+            except TypeError as exc:
+                raise ValueError(
+                    "Op2_PR103ArithmeticCodec.latent_hi_symbols must be a "
+                    f"sized array; got {type(self.latent_hi_symbols).__name__}"
+                ) from exc
+            if self.n_latent_hi_symbols not in (0, actual_hi_len):
+                raise ValueError(
+                    "Op2_PR103ArithmeticCodec: n_latent_hi_symbols="
+                    f"{self.n_latent_hi_symbols} does not match "
+                    f"len(latent_hi_symbols)={actual_hi_len}; the decoder "
+                    "would drain the wrong number of merged-AC symbols and "
+                    "silently corrupt the state_dict roundtrip"
+                )
+            effective_n_hi = actual_hi_len
+        else:
+            effective_n_hi = int(self.n_latent_hi_symbols)
+            if effective_n_hi != 0:
+                raise ValueError(
+                    "Op2_PR103ArithmeticCodec: n_latent_hi_symbols="
+                    f"{effective_n_hi} but latent_hi_symbols is None; "
+                    "decoder would attempt to drain symbols that were never "
+                    "embedded by the encoder"
+                )
+
         bytes_in = sum(t.numel() * t.element_size() for t in state_dict.values())
         result = encode_decoder_ac(
             state_dict,
@@ -492,7 +528,9 @@ class Op2_PR103ArithmeticCodec:
         }
         op_state: dict[str, Any] = {
             "section_lengths": section_lengths,
-            "n_latent_hi_symbols": self.n_latent_hi_symbols,
+            # Bug-hunter fix: record the EFFECTIVE drain count derived from
+            # the embedded array length, not the raw configured field.
+            "n_latent_hi_symbols": effective_n_hi,
             # JSON-serializable representation of the fallback set; the
             # CodecPipeline wraps op_state via json.dumps so we use a list.
             "ac_fallback_set": list(result.ac_fallback_set),
