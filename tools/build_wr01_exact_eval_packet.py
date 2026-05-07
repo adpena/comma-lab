@@ -42,6 +42,10 @@ DEFAULT_OUTPUT_DIR = Path(
 DEFAULT_RESULT_DIR = Path(
     "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex"
 )
+DEFAULT_RATE_ONLY_PRIORITY_PACKET = Path(
+    "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/"
+    "hnerv_lowlevel_exact_eval_packet.json"
+)
 DEFAULT_RELEASE_SURFACE_SUBDIR = "release_surface"
 RUNTIME_DECODE_VALIDATION_SCHEMA = "hnerv_wavelet_runtime_decode_validation.v1"
 RUNTIME_DECODE_VALIDATION_FILENAME = "hnerv_wavelet_runtime_decode_validation.json"
@@ -172,6 +176,18 @@ def _packet_ready_check_cmd(packet_path: Path) -> list[str]:
     return [".venv/bin/python", "-c", code, packet_path.as_posix()]
 
 
+def _adversarial_priority_check_cmd(packet_path: Path) -> list[str]:
+    code = (
+        "import json,sys; "
+        "p=json.load(open(sys.argv[1])); "
+        "r=p.get('adversarial_priority_review') or {}; "
+        "blockers=r.get('blockers') or []; "
+        "raise SystemExit(0 if not blockers else "
+        "'FATAL: WR01 adversarial priority gate blocked; blockers=' + ','.join(map(str, blockers)))"
+    )
+    return [".venv/bin/python", "-c", code, packet_path.as_posix()]
+
+
 def _packet_refresh_cmd(
     args: argparse.Namespace,
     *,
@@ -205,6 +221,8 @@ def _packet_refresh_cmd(
         str(args.claim_ttl_hours),
         "--agent",
         args.agent,
+        "--rate-only-priority-packet",
+        args.rate_only_priority_packet.as_posix(),
         "--build-release-surface",
         "--refresh-static-compliance",
         "--json-out",
@@ -818,6 +836,103 @@ def _dry_run_submit_readiness(payload: dict[str, Any]) -> dict[str, Any]:
             if remote_preflight_only
             else None
         ),
+    }
+
+
+def _rate_only_priority_reference(path: Path) -> dict[str, Any]:
+    full = _repo_path(path)
+    if not full.is_file():
+        return {
+            "schema": "wr01_rate_only_priority_reference_v1",
+            "path": _repo_display_path(path),
+            "exists": False,
+            "static_packet_ready": False,
+            "byte_delta": None,
+            "rate_only": False,
+            "blockers": ["rate_only_priority_packet_missing"],
+        }
+    payload = _read_json(path)
+    byte_delta = payload.get("byte_delta")
+    static_blockers = payload.get("static_blockers")
+    static_blockers = static_blockers if isinstance(static_blockers, list) else []
+    pareto_scope = str(payload.get("pareto_scope") or "")
+    family = str(payload.get("family") or "")
+    rate_only = "rate_only" in pareto_scope or "lowlevel_brotli_repack" in family
+    return {
+        "schema": "wr01_rate_only_priority_reference_v1",
+        "path": _repo_display_path(path),
+        "exists": True,
+        "candidate_id": payload.get("candidate_id") or payload.get("lane_id"),
+        "family": family,
+        "pareto_scope": pareto_scope,
+        "evidence_grade": payload.get("evidence_grade"),
+        "score_claim": payload.get("score_claim"),
+        "dispatch_attempted": payload.get("dispatch_attempted"),
+        "static_packet_ready": payload.get("static_packet_ready") is True and not static_blockers,
+        "ready_for_submit": payload.get("ready_for_submit") is True,
+        "byte_delta": byte_delta if isinstance(byte_delta, int) and not isinstance(byte_delta, bool) else None,
+        "archive_sha256": payload.get("archive_sha256"),
+        "archive_bytes": payload.get("archive_bytes"),
+        "source_archive_sha256": payload.get("source_archive_sha256"),
+        "source_archive_bytes": payload.get("source_archive_bytes"),
+        "rate_only": rate_only,
+        "blockers": static_blockers,
+    }
+
+
+def _adversarial_priority_review(
+    *,
+    rate_only_priority_packet: Path,
+    wr01_byte_delta: int | None,
+    static_packet_ready: bool,
+) -> dict[str, Any]:
+    reference = _rate_only_priority_reference(rate_only_priority_packet)
+    ref_delta = reference.get("byte_delta")
+    rate_only_preempts = (
+        static_packet_ready
+        and reference.get("exists") is True
+        and reference.get("static_packet_ready") is True
+        and reference.get("rate_only") is True
+        and isinstance(wr01_byte_delta, int)
+        and isinstance(ref_delta, int)
+        and ref_delta < wr01_byte_delta
+    )
+    blockers = (
+        ["adversarial_priority_review_prioritizes_rate_only_candidate"]
+        if rate_only_preempts
+        else []
+    )
+    return {
+        "schema": "wr01_adversarial_priority_review_v1",
+        "ready": not blockers,
+        "blockers": blockers,
+        "wr01_candidate": {
+            "byte_delta": wr01_byte_delta,
+            "static_packet_ready": static_packet_ready,
+            "score_family": "scorer_changing_wavelet_apply_transform",
+            "component_delta_claim": False,
+        },
+        "rate_only_reference": reference,
+        "fastest_safe_score_lowering_path": (
+            "dispatch_hnerv_rate_only_q10_before_wr01_if_lane_claim_and_env_clear"
+            if rate_only_preempts
+            else "wr01_may_continue_after_operator_env_claim_cuda_gates"
+        ),
+        "priority_decision": (
+            "defer_wr01_behind_hnerv_rate_only_reference"
+            if rate_only_preempts
+            else "wr01_not_preempted_by_configured_rate_only_reference"
+        ),
+        "failure_modes": [
+            "wr01_changes_decoded_latent_sidecar_bytes_so_segnet_or_posenet_drift_can_overwhelm_the_9_byte_rate_win",
+            "local_runtime_decode_validation_is_not_score_evidence",
+            "missing_lane_claim_or_lightning_environment_can_create_dispatch_conflicts_or_unharvestable_jobs",
+            "rate_only_reference_still_requires_exact_cuda_auth_eval_before_any_score_claim",
+        ],
+        "adversarial_notes": [
+            "Prefer a byte-closed rate-only HNeRV packet with a larger negative byte_delta before scorer-changing WR01.",
+            "WR01 remains a byte-custody exact-eval candidate; this gate only orders scarce exact-CUDA wall-clock.",
+        ],
     }
 
 
@@ -2183,26 +2298,6 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
     blockers.extend(runtime_decode_gate["blockers"])
     static_blockers = list(blockers)
     static_packet_ready = not static_blockers
-    operator_lane_blockers = []
-    if missing_env:
-        operator_lane_blockers.append("missing_lightning_environment")
-    if lane_claim_preflight["conflict_present"]:
-        operator_lane_blockers.append("active_lane_dispatch_claim_conflict")
-    if not lane_claim_preflight["active_claim_present"]:
-        operator_lane_blockers.append("missing_active_lane_dispatch_claim")
-    if not args.operator_approved_exact_cuda:
-        operator_lane_blockers.append("missing_operator_exact_cuda_approval")
-    blockers.extend(operator_lane_blockers)
-    ready_for_exact_eval_dispatch = static_packet_ready and not operator_lane_blockers
-    dispatch_gate = (
-        "blocked_static_packet_ready_until_static_blockers_clear"
-        if not static_packet_ready
-        else (
-            "eligible_for_cuda_auth_eval_after_lane_claim"
-            if ready_for_exact_eval_dispatch
-            else "blocked_operator_lane_gates_until_env_claim_approval"
-        )
-    )
     source_archive_bytes = manifest_payload.get("source_archive_bytes")
     archive_byte_delta = (
         args.archive_bytes - int(source_archive_bytes)
@@ -2213,6 +2308,33 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         archive_byte_delta * RATE_SCORE_PER_BYTE
         if archive_byte_delta is not None
         else None
+    )
+    byte_custody_exact_eval_candidate_ready = static_packet_ready
+    adversarial_priority_review = _adversarial_priority_review(
+        rate_only_priority_packet=args.rate_only_priority_packet,
+        wr01_byte_delta=archive_byte_delta,
+        static_packet_ready=static_packet_ready,
+    )
+    operator_lane_blockers = []
+    if missing_env:
+        operator_lane_blockers.append("missing_lightning_environment")
+    if lane_claim_preflight["conflict_present"]:
+        operator_lane_blockers.append("active_lane_dispatch_claim_conflict")
+    if not lane_claim_preflight["active_claim_present"]:
+        operator_lane_blockers.append("missing_active_lane_dispatch_claim")
+    if not args.operator_approved_exact_cuda:
+        operator_lane_blockers.append("missing_operator_exact_cuda_approval")
+    operator_lane_blockers.extend(adversarial_priority_review["blockers"])
+    blockers.extend(operator_lane_blockers)
+    ready_for_exact_eval_dispatch = static_packet_ready and not operator_lane_blockers
+    dispatch_gate = (
+        "blocked_static_packet_ready_until_static_blockers_clear"
+        if not static_packet_ready
+        else (
+            "eligible_for_cuda_auth_eval_after_lane_claim"
+            if ready_for_exact_eval_dispatch
+            else "blocked_operator_lane_gates_until_env_claim_approval"
+        )
     )
     operator_next_steps = {
         "schema": "wr01_operator_next_steps_v1",
@@ -2246,6 +2368,14 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
             },
             {
                 "order": 3,
+                "id": "review_adversarial_priority",
+                "dispatches_remote_gpu": False,
+                "writes_repo_state": False,
+                "purpose": "fail loudly if a safer byte-closed HNeRV rate-only packet should take the next exact-CUDA slot",
+                "copy_safe_command": _one_liner(_adversarial_priority_check_cmd(packet_path)),
+            },
+            {
+                "order": 4,
                 "id": "claim_lane_no_dispatch",
                 "dispatches_remote_gpu": False,
                 "writes_repo_state": True,
@@ -2253,7 +2383,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
                 "copy_safe_command": _one_liner(claim_cmd),
             },
             {
-                "order": 4,
+                "order": 5,
                 "id": "refresh_packet_with_operator_exact_cuda_approval",
                 "dispatches_remote_gpu": False,
                 "writes_repo_state": True,
@@ -2267,7 +2397,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
                 ),
             },
             {
-                "order": 5,
+                "order": 6,
                 "id": "assert_packet_ready_for_submit",
                 "dispatches_remote_gpu": False,
                 "writes_repo_state": False,
@@ -2275,7 +2405,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
                 "copy_safe_command": _one_liner(_packet_ready_check_cmd(packet_path)),
             },
             {
-                "order": 6,
+                "order": 7,
                 "id": "submit_exact_cuda",
                 "dispatches_remote_gpu": True,
                 "writes_repo_state": True,
@@ -2283,7 +2413,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
                 "copy_safe_command": _one_liner(submit_cmd),
             },
             {
-                "order": 7,
+                "order": 8,
                 "id": "harvest_after_completion",
                 "dispatches_remote_gpu": False,
                 "writes_repo_state": True,
@@ -2324,6 +2454,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "dispatch_unlocked": ready_for_exact_eval_dispatch,
         "ready_for_exact_eval_dispatch": ready_for_exact_eval_dispatch,
         "ready_for_exact_eval_dispatch_claim": ready_for_exact_eval_dispatch,
+        "byte_custody_exact_eval_candidate_ready": byte_custody_exact_eval_candidate_ready,
         "candidate_static_preflight_ready": static_packet_ready,
         "ready_for_submit": not blockers,
         "static_packet_ready": static_packet_ready,
@@ -2333,6 +2464,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "missing_env": missing_env,
         "missing_artifacts": missing_artifacts,
         "operator_approved_exact_cuda": bool(args.operator_approved_exact_cuda),
+        "adversarial_priority_review": adversarial_priority_review,
         "lane_claim_preflight": lane_claim_preflight,
         "lane_id": args.lane_id,
         "job_name": args.job_name,
@@ -2410,6 +2542,16 @@ def main() -> int:
     parser.add_argument("--archive-bytes", type=int, default=186222)
     parser.add_argument("--claims-path", type=Path, default=DEFAULT_CLAIMS_PATH)
     parser.add_argument("--claim-ttl-hours", type=int, default=DEFAULT_CLAIM_TTL_HOURS)
+    parser.add_argument(
+        "--rate-only-priority-packet",
+        type=Path,
+        default=DEFAULT_RATE_ONLY_PRIORITY_PACKET,
+        help=(
+            "Optional HNeRV rate-only packet used by the adversarial priority "
+            "gate. If it is static-ready and has a larger byte win than WR01, "
+            "WR01 submit readiness stays blocked until that priority decision is resolved."
+        ),
+    )
     parser.add_argument(
         "--operator-approved-exact-cuda",
         action="store_true",

@@ -467,6 +467,8 @@ def test_atoms_from_wr01_wavelet_plan_three_schema_branches() -> None:
             "source_payload_sha256": "f" * 64,
             "changed_section_name": "latents_and_sidecar_brotli",
             "changed_section_sha256": "0" * 64,
+            "static_packet_ready": True,
+            "byte_custody_exact_eval_candidate_ready": True,
             "ready_for_submit": False,
             "lane_id": "wr01_apply_pr106x_half",
             "job_name": "wr01_apply_pr106x_half_20260506",
@@ -487,11 +489,10 @@ def test_atoms_from_wr01_wavelet_plan_three_schema_branches() -> None:
     )
     # source_archive_sha256 must propagate through to the atom
     assert atom["source_archive_sha256"] == "e" * 64
-    # ready_for_submit=False → confidence 0.25 (planning-grade)
-    assert atom["confidence"] == 0.25
-    # blocker reflects the not-ready state
+    # Static custody is byte-closed, but operator submit gates are still pending.
+    assert atom["confidence"] == 0.4
     assert any(
-        "exact_eval_packet_not_ready_for_submit" in b
+        "exact_eval_packet_operator_gates_pending" in b
         for b in atom["dispatch_blockers"]
     )
 
@@ -504,6 +505,8 @@ def test_atoms_from_wr01_wavelet_plan_three_schema_branches() -> None:
             "source_archive_sha256": "e" * 64,
             "source_payload_sha256": "f" * 64,
             "changed_section_name": "section",
+            "static_packet_ready": True,
+            "byte_custody_exact_eval_candidate_ready": True,
             "ready_for_submit": True,
             "lane_id": "wr01_test_ready",
         }
@@ -540,6 +543,8 @@ def test_wr01_exact_eval_packet_uses_artifact_manifest_for_byte_closed_custody(
             "source_archive_bytes": 186231,
             "source_archive_sha256": "e" * 64,
             "changed_section_name": "latents_and_sidecar_brotli",
+            "static_packet_ready": True,
+            "byte_custody_exact_eval_candidate_ready": True,
             "ready_for_submit": False,
             "lane_id": "wr01_apply_pr106x_half",
             "artifacts": [

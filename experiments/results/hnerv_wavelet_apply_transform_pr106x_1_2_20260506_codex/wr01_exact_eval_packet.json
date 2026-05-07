@@ -1,4 +1,49 @@
 {
+  "adversarial_priority_review": {
+    "adversarial_notes": [
+      "Prefer a byte-closed rate-only HNeRV packet with a larger negative byte_delta before scorer-changing WR01.",
+      "WR01 remains a byte-custody exact-eval candidate; this gate only orders scarce exact-CUDA wall-clock."
+    ],
+    "blockers": [
+      "adversarial_priority_review_prioritizes_rate_only_candidate"
+    ],
+    "failure_modes": [
+      "wr01_changes_decoded_latent_sidecar_bytes_so_segnet_or_posenet_drift_can_overwhelm_the_9_byte_rate_win",
+      "local_runtime_decode_validation_is_not_score_evidence",
+      "missing_lane_claim_or_lightning_environment_can_create_dispatch_conflicts_or_unharvestable_jobs",
+      "rate_only_reference_still_requires_exact_cuda_auth_eval_before_any_score_claim"
+    ],
+    "fastest_safe_score_lowering_path": "dispatch_hnerv_rate_only_q10_before_wr01_if_lane_claim_and_env_clear",
+    "priority_decision": "defer_wr01_behind_hnerv_rate_only_reference",
+    "rate_only_reference": {
+      "archive_bytes": 186088,
+      "archive_sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+      "blockers": [],
+      "byte_delta": -151,
+      "candidate_id": "pr106_q10_151byte_brotli",
+      "dispatch_attempted": false,
+      "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+      "exists": true,
+      "family": "hnerv_lowlevel_brotli_repack",
+      "pareto_scope": "hnerv_rate_only_exact_archive",
+      "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json",
+      "rate_only": true,
+      "ready_for_submit": false,
+      "schema": "wr01_rate_only_priority_reference_v1",
+      "score_claim": false,
+      "source_archive_bytes": 186239,
+      "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+      "static_packet_ready": true
+    },
+    "ready": false,
+    "schema": "wr01_adversarial_priority_review_v1",
+    "wr01_candidate": {
+      "byte_delta": -9,
+      "component_delta_claim": false,
+      "score_family": "scorer_changing_wavelet_apply_transform",
+      "static_packet_ready": true
+    }
+  },
   "archive_bytes": 186222,
   "archive_identity": {
     "bytes": 186222,
@@ -362,8 +407,9 @@
   "blockers": [
     "missing_lightning_environment",
     "missing_active_lane_dispatch_claim",
-    "missing_operator_exact_cuda_approval"
+    "adversarial_priority_review_prioritizes_rate_only_candidate"
   ],
+  "byte_custody_exact_eval_candidate_ready": true,
   "byte_delta": -9,
   "candidate_id": "wr01_apply_pr106x_half",
   "candidate_static_preflight_ready": true,
@@ -458,18 +504,18 @@
     "LIGHTNING_STUDIO",
     "LIGHTNING_SDK_USER"
   ],
-  "operator_approved_exact_cuda": false,
+  "operator_approved_exact_cuda": true,
   "operator_lane_blockers": [
     "missing_lightning_environment",
     "missing_active_lane_dispatch_claim",
-    "missing_operator_exact_cuda_approval"
+    "adversarial_priority_review_prioritizes_rate_only_candidate"
   ],
   "operator_next_steps": {
     "copy_safe": true,
     "current_blockers": [
       "missing_lightning_environment",
       "missing_active_lane_dispatch_claim",
-      "missing_operator_exact_cuda_approval"
+      "adversarial_priority_review_prioritizes_rate_only_candidate"
     ],
     "first_remote_gpu_step": "submit_exact_cuda",
     "must_run_in_order": true,
@@ -485,7 +531,7 @@
         "writes_repo_state": false
       },
       {
-        "copy_safe_command": ".venv/bin/python tools/build_wr01_exact_eval_packet.py --job-name exact_eval_wr01_apply_pr106x_half_20260506 --lane-id wr01_apply_pr106x_half --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh --result-dir experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex --release-surface-dir experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface --archive-sha256 d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 --archive-bytes 186222 --claims-path .omx/state/active_lane_dispatch_claims.md --claim-ttl-hours 24 --agent codex:gpt-5.5 --build-release-surface --refresh-static-compliance --json-out experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
+        "copy_safe_command": ".venv/bin/python tools/build_wr01_exact_eval_packet.py --job-name exact_eval_wr01_apply_pr106x_half_20260506 --lane-id wr01_apply_pr106x_half --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh --result-dir experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex --release-surface-dir experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface --archive-sha256 d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 --archive-bytes 186222 --claims-path .omx/state/active_lane_dispatch_claims.md --claim-ttl-hours 24 --agent codex:gpt-5.5 --rate-only-priority-packet experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json --build-release-surface --refresh-static-compliance --json-out experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
         "dispatches_remote_gpu": false,
         "id": "refresh_static_packet_no_dispatch",
         "order": 2,
@@ -493,18 +539,26 @@
         "writes_repo_state": true
       },
       {
+        "copy_safe_command": ".venv/bin/python -c 'import json,sys; p=json.load(open(sys.argv[1])); r=p.get('\"'\"'adversarial_priority_review'\"'\"') or {}; blockers=r.get('\"'\"'blockers'\"'\"') or []; raise SystemExit(0 if not blockers else '\"'\"'FATAL: WR01 adversarial priority gate blocked; blockers='\"'\"' + '\"'\"','\"'\"'.join(map(str, blockers)))' experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
+        "dispatches_remote_gpu": false,
+        "id": "review_adversarial_priority",
+        "order": 3,
+        "purpose": "fail loudly if a safer byte-closed HNeRV rate-only packet should take the next exact-CUDA slot",
+        "writes_repo_state": false
+      },
+      {
         "copy_safe_command": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id wr01_apply_pr106x_half --platform lightning --instance-job-id exact_eval_wr01_apply_pr106x_half_20260506 --agent codex:gpt-5.5 --status active_exact_eval --notes 'WR01 half exact CUDA eval; archive_sha256=d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 bytes=186222; static_preflight=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json'",
         "dispatches_remote_gpu": false,
         "id": "claim_lane_no_dispatch",
-        "order": 3,
+        "order": 4,
         "purpose": "record the Level-2 lane claim; this must fail if a same-lane active claim exists",
         "writes_repo_state": true
       },
       {
-        "copy_safe_command": ".venv/bin/python tools/build_wr01_exact_eval_packet.py --job-name exact_eval_wr01_apply_pr106x_half_20260506 --lane-id wr01_apply_pr106x_half --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh --result-dir experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex --release-surface-dir experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface --archive-sha256 d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 --archive-bytes 186222 --claims-path .omx/state/active_lane_dispatch_claims.md --claim-ttl-hours 24 --agent codex:gpt-5.5 --build-release-surface --refresh-static-compliance --json-out experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json --operator-approved-exact-cuda",
+        "copy_safe_command": ".venv/bin/python tools/build_wr01_exact_eval_packet.py --job-name exact_eval_wr01_apply_pr106x_half_20260506 --lane-id wr01_apply_pr106x_half --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh --result-dir experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex --release-surface-dir experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface --archive-sha256 d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 --archive-bytes 186222 --claims-path .omx/state/active_lane_dispatch_claims.md --claim-ttl-hours 24 --agent codex:gpt-5.5 --rate-only-priority-packet experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json --build-release-surface --refresh-static-compliance --json-out experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json --operator-approved-exact-cuda",
         "dispatches_remote_gpu": false,
         "id": "refresh_packet_with_operator_exact_cuda_approval",
-        "order": 4,
+        "order": 5,
         "purpose": "operator's explicit exact-CUDA approval; still no remote job is submitted",
         "writes_repo_state": true
       },
@@ -512,7 +566,7 @@
         "copy_safe_command": ".venv/bin/python -c 'import json,sys; p=json.load(open(sys.argv[1])); blockers=p.get('\"'\"'blockers'\"'\"') or []; ready=p.get('\"'\"'ready_for_submit'\"'\"') is True and not blockers; raise SystemExit(0 if ready else '\"'\"'FATAL: WR01 packet not ready_for_submit=true; blockers='\"'\"' + '\"'\"','\"'\"'.join(map(str, blockers)))' experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
         "dispatches_remote_gpu": false,
         "id": "assert_packet_ready_for_submit",
-        "order": 5,
+        "order": 6,
         "purpose": "fail loudly if env, claim, approval, or static custody drifted before submit",
         "writes_repo_state": false
       },
@@ -520,7 +574,7 @@
         "copy_safe_command": ".venv/bin/python scripts/lightning_exact_eval_repro.py --job-name exact_eval_wr01_apply_pr106x_half_20260506 --stage-workspace --submit --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh --upstream-dir $LIGHTNING_UPSTREAM_DIR --remote $LIGHTNING_SSH_TARGET --remote-pact $LIGHTNING_REMOTE_PACT --studio $LIGHTNING_STUDIO --teamspace $LIGHTNING_TEAMSPACE --sdk-user $LIGHTNING_SDK_USER --machine ${LIGHTNING_MACHINE:-T4} --predicted-band 0.18 0.25 --regression-threshold 0.02 --max-posenet-relative 1.25 --max-segnet-relative 1.10 --max-sane-score 1.0 --component-trace --queue-metadata lane=wr01_apply_pr106x_half --queue-metadata archive_manifest=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --queue-metadata public_preflight=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --queue-metadata payload_section_diff=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/pre_submission_compliance.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_runtime_decode_validation.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_compress_time_runtime_decode_review.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_wr01_strength_summary_20260506_codex.json",
         "dispatches_remote_gpu": true,
         "id": "submit_exact_cuda",
-        "order": 6,
+        "order": 7,
         "purpose": "first remote/GPU action; run only after assert_packet_ready_for_submit passes",
         "writes_repo_state": true
       },
@@ -528,7 +582,7 @@
         "copy_safe_command": ".venv/bin/python scripts/launch_lightning_batch_job.py harvest-ssh --state-path .omx/state/lightning_batch_jobs.json --job-name exact_eval_wr01_apply_pr106x_half_20260506 --ssh-target $LIGHTNING_SSH_TARGET --expected-archive-sha256 d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 --expected-archive-size-bytes 186222 --require-adjudication",
         "dispatches_remote_gpu": false,
         "id": "harvest_after_completion",
-        "order": 7,
+        "order": 8,
         "purpose": "harvest only after the Lightning exact CUDA job finishes",
         "writes_repo_state": true
       }
@@ -542,7 +596,7 @@
   "ready_for_exact_eval_dispatch": false,
   "ready_for_exact_eval_dispatch_claim": false,
   "ready_for_submit": false,
-  "recorded_at_utc": "2026-05-07T04:18:10Z",
+  "recorded_at_utc": "2026-05-07T09:47:05Z",
   "release_surface": {
     "exists": true,
     "files": {
@@ -556,7 +610,7 @@
         "bytes": 3864,
         "exists": true,
         "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
-        "sha256": "c6418c0489ca2f7b514e5e5489182a6676ef5caf6042a6ddd8807da4b4085bb9"
+        "sha256": "4c93de758ab962e5e9e584bcef85791a74cd8c878aee6e9b1fbcbcbb5cc94453"
       },
       "inflate.sh": {
         "bytes": 681,
@@ -568,7 +622,7 @@
         "bytes": 1238,
         "exists": true,
         "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/report.txt",
-        "sha256": "e42f6b0178dbb9bdbc2a9d0f06f35f78580cdac483b497607cae96a2a49c9e23"
+        "sha256": "981fc16991b195e746d02861cf1a27ce56d0d459f886aeec82185ddcbcd1b15f"
       }
     },
     "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface",
@@ -586,7 +640,7 @@
         "bytes": 3864,
         "exists": true,
         "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
-        "sha256": "c6418c0489ca2f7b514e5e5489182a6676ef5caf6042a6ddd8807da4b4085bb9"
+        "sha256": "4c93de758ab962e5e9e584bcef85791a74cd8c878aee6e9b1fbcbcbb5cc94453"
       },
       "inflate.sh": {
         "bytes": 681,
@@ -598,7 +652,7 @@
         "bytes": 1238,
         "exists": true,
         "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/report.txt",
-        "sha256": "e42f6b0178dbb9bdbc2a9d0f06f35f78580cdac483b497607cae96a2a49c9e23"
+        "sha256": "981fc16991b195e746d02861cf1a27ce56d0d459f886aeec82185ddcbcd1b15f"
       }
     },
     "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface",
@@ -715,7 +769,7 @@
     "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
     "ready": true,
     "schema": "wr01_release_surface_manifest_consistency_v1",
-    "sha256": "c6418c0489ca2f7b514e5e5489182a6676ef5caf6042a6ddd8807da4b4085bb9"
+    "sha256": "4c93de758ab962e5e9e584bcef85791a74cd8c878aee6e9b1fbcbcbb5cc94453"
   },
   "runtime_decode_gate": {
     "blockers": [],

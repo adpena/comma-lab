@@ -323,6 +323,17 @@ def atoms_from_wr01_wavelet_plan(
             plan,
             keys=("archive_manifest_sha256", "candidate_archive_manifest_sha256"),
         ) or _sha256_file_if_exists(archive_manifest_path)
+        static_packet_ready = (
+            plan.get("byte_custody_exact_eval_candidate_ready") is True
+            or plan.get("static_packet_ready") is True
+            or plan.get("candidate_static_preflight_ready") is True
+        )
+        ready_for_submit = plan.get("ready_for_submit") is True
+        exact_eval_packet_blockers = []
+        if not static_packet_ready:
+            exact_eval_packet_blockers.append("exact_eval_packet_static_custody_not_ready")
+        if static_packet_ready and not ready_for_submit:
+            exact_eval_packet_blockers.append("exact_eval_packet_operator_gates_pending")
         return [
             normalize_cross_paradigm_atom(
                 {
@@ -337,7 +348,7 @@ def atoms_from_wr01_wavelet_plan(
                     # actual contest-CUDA score is operator-gated.
                     "expected_seg_dist_delta": 0.0,
                     "expected_pose_dist_delta": 0.0,
-                    "confidence": 0.5 if plan.get("ready_for_submit") else 0.25,
+                    "confidence": 0.5 if ready_for_submit else (0.4 if static_packet_ready else 0.25),
                     "interaction_assumptions": [
                         "scorer_changing_wavelet_residual",
                         "stack_after_raw_equal_rate_recodes",
@@ -352,9 +363,7 @@ def atoms_from_wr01_wavelet_plan(
                     "dispatch_blockers": [
                         "requires_stack_interaction_review",
                         "requires_exact_cuda_auth_eval",
-                        *([
-                            "exact_eval_packet_not_ready_for_submit"
-                        ] if not plan.get("ready_for_submit") else []),
+                        *exact_eval_packet_blockers,
                         *(plan.get("blockers") or []),
                     ],
                 }

@@ -41,6 +41,8 @@ def test_wr01_exact_eval_packet_reports_missing_env_without_dispatch(tmp_path: P
             str(REPO / "tools" / "build_wr01_exact_eval_packet.py"),
             "--claims-path",
             str(tmp_path / "claims.md"),
+            "--rate-only-priority-packet",
+            str(tmp_path / "missing_rate_only_priority.json"),
             "--now-utc",
             "2026-05-06T10:00:00Z",
             "--json-out",
@@ -67,6 +69,7 @@ def test_wr01_exact_eval_packet_reports_missing_env_without_dispatch(tmp_path: P
     assert payload["dispatch_unlocked"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["ready_for_exact_eval_dispatch_claim"] is False
+    assert payload["byte_custody_exact_eval_candidate_ready"] is True
     assert payload["candidate_static_preflight_ready"] is True
     assert payload["static_packet_ready"] is True
     assert payload["ready_for_submit"] is False
@@ -92,6 +95,8 @@ def test_wr01_exact_eval_packet_reports_missing_env_without_dispatch(tmp_path: P
     assert payload["dry_run_submit_readiness"]["remote_preflight_only"] is True
     assert payload["dry_run_queue_metadata"]["mismatches"] == []
     assert payload["operator_approved_exact_cuda"] is False
+    assert payload["adversarial_priority_review"]["ready"] is True
+    assert payload["adversarial_priority_review"]["blockers"] == []
     assert payload["artifact_flag_violations"] == []
     assert "--stage-workspace" in payload["commands"]["submit"]
     assert "'$LIGHTNING_SSH_TARGET'" not in payload["commands"]["submit"]
@@ -107,6 +112,7 @@ def test_wr01_exact_eval_packet_reports_missing_env_without_dispatch(tmp_path: P
     assert [step["id"] for step in next_steps["steps"]] == [
         "verify_lightning_env",
         "refresh_static_packet_no_dispatch",
+        "review_adversarial_priority",
         "claim_lane_no_dispatch",
         "refresh_packet_with_operator_exact_cuda_approval",
         "assert_packet_ready_for_submit",
@@ -115,10 +121,11 @@ def test_wr01_exact_eval_packet_reports_missing_env_without_dispatch(tmp_path: P
     ]
     assert next_steps["steps"][0]["dispatches_remote_gpu"] is False
     assert "LIGHTNING_SSH_TARGET" in next_steps["steps"][0]["copy_safe_command"]
-    assert "--operator-approved-exact-cuda" in next_steps["steps"][3]["copy_safe_command"]
-    assert "ready_for_submit=true" in next_steps["steps"][4]["copy_safe_command"]
-    assert next_steps["steps"][5]["dispatches_remote_gpu"] is True
-    assert "--stage-workspace --submit" in next_steps["steps"][5]["copy_safe_command"]
+    assert "adversarial priority gate" in next_steps["steps"][2]["copy_safe_command"]
+    assert "--operator-approved-exact-cuda" in next_steps["steps"][4]["copy_safe_command"]
+    assert "ready_for_submit=true" in next_steps["steps"][5]["copy_safe_command"]
+    assert next_steps["steps"][6]["dispatches_remote_gpu"] is True
+    assert "--stage-workspace --submit" in next_steps["steps"][6]["copy_safe_command"]
 
 
 def test_wr01_exact_eval_packet_builds_release_surface_and_refreshes_static_compliance(
@@ -167,6 +174,8 @@ def test_wr01_exact_eval_packet_builds_release_surface_and_refreshes_static_comp
             str(fixture["archive_bytes"]),
             "--claims-path",
             str(claims_path),
+            "--rate-only-priority-packet",
+            str(tmp_path / "missing_rate_only_priority.json"),
             "--now-utc",
             "2026-05-06T10:00:00Z",
             "--build-release-surface",
@@ -207,6 +216,8 @@ def test_wr01_exact_eval_packet_builds_release_surface_and_refreshes_static_comp
     assert payload["dispatch_unlocked"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["runtime_decode_gate_ready"] is True
+    assert payload["byte_custody_exact_eval_candidate_ready"] is True
+    assert payload["adversarial_priority_review"]["ready"] is True
     assert "missing_lightning_environment" in payload["blockers"]
     assert "missing_active_lane_dispatch_claim" in payload["blockers"]
     assert "missing_operator_exact_cuda_approval" in payload["blockers"]
@@ -377,6 +388,8 @@ def test_wr01_exact_eval_packet_accepts_matching_custody_artifacts(tmp_path: Pat
             str(archive_bytes),
             "--claims-path",
             str(claims_path),
+            "--rate-only-priority-packet",
+            str(tmp_path / "missing_rate_only_priority.json"),
             "--now-utc",
             "2026-05-06T10:00:00Z",
             "--operator-approved-exact-cuda",
@@ -391,6 +404,8 @@ def test_wr01_exact_eval_packet_accepts_matching_custody_artifacts(tmp_path: Pat
     payload = json.loads(out.read_text())
     assert payload["ready_for_submit"] is True
     assert payload["ready_for_exact_eval_dispatch"] is True
+    assert payload["byte_custody_exact_eval_candidate_ready"] is True
+    assert payload["adversarial_priority_review"]["ready"] is True
     assert payload["runtime_decode_gate_ready"] is True
     assert payload["runtime_decode_gate_blockers"] == []
     assert payload["runtime_decode_gate"]["ready"] is True
@@ -426,7 +441,7 @@ def test_wr01_exact_eval_packet_accepts_matching_custody_artifacts(tmp_path: Pat
     assert payload["artifact_flag_violations"] == []
     next_steps = payload["operator_next_steps"]
     assert next_steps["current_blockers"] == []
-    assert next_steps["steps"][4]["id"] == "assert_packet_ready_for_submit"
+    assert next_steps["steps"][5]["id"] == "assert_packet_ready_for_submit"
 
 
 def test_wr01_exact_eval_packet_refuses_truthy_score_or_dispatch_flags(tmp_path: Path) -> None:
@@ -579,6 +594,8 @@ def test_wr01_exact_eval_packet_refuses_truthy_score_or_dispatch_flags(tmp_path:
             str(archive_bytes),
             "--claims-path",
             str(claims_path),
+            "--rate-only-priority-packet",
+            str(tmp_path / "missing_rate_only_priority.json"),
             "--now-utc",
             "2026-05-06T10:00:00Z",
             "--operator-approved-exact-cuda",
@@ -746,6 +763,94 @@ def test_wr01_exact_eval_packet_requires_sha_linked_scoreless_runtime_review(
     } in payload["artifact_flag_violations"]
 
 
+def test_wr01_exact_eval_packet_adversarial_review_defers_to_rate_only_candidate(
+    tmp_path: Path,
+) -> None:
+    fixture = _write_matching_packet_artifacts(tmp_path)
+    rate_only_packet = tmp_path / "q10_rate_only_packet.json"
+    _write_json(
+        rate_only_packet,
+        {
+            "schema": "hnerv_lowlevel_exact_eval_operator_packet_v1",
+            "candidate_id": "pr106_q10_151byte_brotli",
+            "family": "hnerv_lowlevel_brotli_repack",
+            "pareto_scope": "hnerv_rate_only_exact_archive",
+            "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+            "score_claim": False,
+            "dispatch_attempted": False,
+            "static_packet_ready": True,
+            "static_blockers": [],
+            "ready_for_submit": False,
+            "byte_delta": -151,
+            "archive_sha256": "a" * 64,
+            "archive_bytes": 186088,
+            "source_archive_sha256": "b" * 64,
+            "source_archive_bytes": 186239,
+        },
+    )
+    claims_path = tmp_path / "claims.md"
+    _write_claims(claims_path, lane_id="lane", job_name="job")
+    out = tmp_path / "packet.json"
+    env = os.environ.copy()
+    for key in (
+        "LIGHTNING_SSH_TARGET",
+        "LIGHTNING_REMOTE_PACT",
+        "LIGHTNING_UPSTREAM_DIR",
+        "LIGHTNING_TEAMSPACE",
+        "LIGHTNING_STUDIO",
+        "LIGHTNING_SDK_USER",
+    ):
+        env[key] = "fixture"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_wr01_exact_eval_packet.py"),
+            "--job-name",
+            "job",
+            "--lane-id",
+            "lane",
+            "--archive",
+            str(fixture["archive"]),
+            "--baseline-json",
+            str(fixture["baseline"]),
+            "--result-dir",
+            str(fixture["result_dir"]),
+            "--archive-sha256",
+            str(fixture["archive_sha256"]),
+            "--archive-bytes",
+            str(fixture["archive_bytes"]),
+            "--claims-path",
+            str(claims_path),
+            "--rate-only-priority-packet",
+            str(rate_only_packet),
+            "--now-utc",
+            "2026-05-06T10:00:00Z",
+            "--operator-approved-exact-cuda",
+            "--json-out",
+            str(out),
+        ],
+        check=True,
+        text=True,
+        env=env,
+    )
+
+    payload = json.loads(out.read_text())
+    assert payload["static_packet_ready"] is True
+    assert payload["byte_custody_exact_eval_candidate_ready"] is True
+    assert payload["ready_for_submit"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["operator_lane_blockers"] == [
+        "adversarial_priority_review_prioritizes_rate_only_candidate"
+    ]
+    review = payload["adversarial_priority_review"]
+    assert review["ready"] is False
+    assert review["priority_decision"] == "defer_wr01_behind_hnerv_rate_only_reference"
+    assert review["rate_only_reference"]["candidate_id"] == "pr106_q10_151byte_brotli"
+    assert review["rate_only_reference"]["byte_delta"] == -151
+    assert review["wr01_candidate"]["byte_delta"] == payload["byte_delta"]
+
+
 def test_wr01_exact_eval_packet_blocks_noop_hashes_and_missing_source_custody(tmp_path: Path) -> None:
     fixture = _write_matching_packet_artifacts(
         tmp_path,
@@ -789,6 +894,8 @@ def test_wr01_exact_eval_packet_blocks_noop_hashes_and_missing_source_custody(tm
             str(fixture["archive_bytes"]),
             "--claims-path",
             str(claims_path),
+            "--rate-only-priority-packet",
+            str(tmp_path / "missing_rate_only_priority.json"),
             "--now-utc",
             "2026-05-06T10:00:00Z",
             "--operator-approved-exact-cuda",
@@ -846,6 +953,8 @@ def _run_packet_builder_for_fixture(tmp_path: Path, fixture: dict[str, object]) 
             str(fixture["archive_bytes"]),
             "--claims-path",
             str(claims_path),
+            "--rate-only-priority-packet",
+            str(tmp_path / "missing_rate_only_priority.json"),
             "--now-utc",
             "2026-05-06T10:00:00Z",
             "--operator-approved-exact-cuda",

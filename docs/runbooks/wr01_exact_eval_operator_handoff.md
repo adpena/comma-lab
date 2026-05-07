@@ -9,15 +9,16 @@ Packet authority:
 .venv/bin/python tools/build_wr01_exact_eval_packet.py \
   --build-release-surface \
   --refresh-static-compliance \
+  --operator-approved-exact-cuda \
   --json-out experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json
 ```
 
 The packet field `operator_next_steps` is the copy-safe ordered sequence. Run
 those steps in order. Step `submit_exact_cuda` is the first remote/GPU action;
 all earlier steps are local checks, static packet refresh, or the required
-Level-2 lane claim.
+adversarial priority review and Level-2 lane claim.
 
-The submit step must remain blocked until all three non-static blockers clear:
+The submit step must remain blocked until all operator-lane blockers clear:
 
 - `LIGHTNING_*` environment is loaded and verified.
 - `.omx/state/active_lane_dispatch_claims.md` has the matching active
@@ -25,6 +26,10 @@ The submit step must remain blocked until all three non-static blockers clear:
   `exact_eval_wr01_apply_pr106x_half_20260506`.
 - The operator intentionally runs the packet refresh step containing
   `--operator-approved-exact-cuda`.
+- `adversarial_priority_review.ready=true`. If the packet reports
+  `adversarial_priority_review_prioritizes_rate_only_candidate`, do not use the
+  next exact-CUDA slot for WR01 until the referenced HNeRV rate-only candidate
+  has been resolved or explicitly superseded.
 
 Before copying the submit command, run `assert_packet_ready_for_submit` from the
 packet. It fails loudly unless `ready_for_submit=true` and the blocker list is
