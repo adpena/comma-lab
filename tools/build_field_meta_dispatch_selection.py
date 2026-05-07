@@ -2138,6 +2138,12 @@ def _dispatch_identity_proof(claim: Mapping[str, Any]) -> dict[str, Any]:
 
 def _pareto_eligibility_blockers(row: Mapping[str, Any]) -> list[str]:
     blockers: list[str] = []
+    ingestion_contract = row.get("field_meta_ingestion_contract", {})
+    if (
+        isinstance(ingestion_contract, Mapping)
+        and ingestion_contract.get("local_field_meta_ingestion_ready") is not True
+    ):
+        blockers.append("field_meta_ingestion_contract_not_ready")
     if row.get("candidate_static_preflight_ready") is not True:
         blockers.append("candidate_static_preflight_not_ready")
     if row.get("proxy_row") is True:
@@ -2296,6 +2302,15 @@ def _exact_dispatch_blockers(row: Mapping[str, Any]) -> dict[str, Any]:
         *row.get("kkt_blockers", []),
         *row.get("selection_blockers", []),
     ]
+    ingestion_contract = row.get("field_meta_ingestion_contract", {})
+    if (
+        isinstance(ingestion_contract, Mapping)
+        and ingestion_contract.get("dispatch_ingestion_ready") is not True
+    ):
+        blockers.extend(
+            f"ingestion:{blocker}"
+            for blocker in ingestion_contract.get("dispatch_blockers", [])
+        )
     if row.get("pareto_eligible") is not True:
         blockers.append("pareto_ineligible_for_field_selection")
     elif row.get("pareto_frontier") is not True:
@@ -2434,6 +2449,95 @@ def _lexicographic_sort_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
         -float(values[8]),
         str(row["manifest_path"]),
     )
+
+
+def _field_meta_ingestion_contract(
+    *,
+    archive: Mapping[str, Any],
+    runtime: Mapping[str, Any],
+    strict_ready: bool,
+    proxy_row: bool,
+    planning_only: bool,
+    score_claim: bool,
+    dispatch_attempted: bool,
+) -> dict[str, Any]:
+    local_blockers: list[str] = []
+    dispatch_blockers: list[str] = []
+    if archive.get("byte_closed") is not True:
+        local_blockers.append("byte_closed_archive_proof_missing")
+    if runtime.get("runtime_closed") is not True:
+        local_blockers.append("runtime_tree_closure_proof_missing")
+    if strict_ready is not True:
+        dispatch_blockers.append("strict_candidate_preflight_not_ready")
+    if proxy_row:
+        dispatch_blockers.append("planning_or_proxy_packet_not_dispatch_ready")
+    if planning_only:
+        dispatch_blockers.append("planning_only_packet_not_dispatch_ready")
+    if score_claim:
+        dispatch_blockers.append("source_manifest_score_claim_true")
+    if dispatch_attempted:
+        dispatch_blockers.append("source_manifest_dispatch_attempted_true")
+    local_ready = not local_blockers
+    dispatch_ready = bool(local_ready and not dispatch_blockers)
+    return {
+        "schema": "field_meta_ingestion_contract_v1",
+        "status": "passed" if local_ready else "blocked",
+        "local_field_meta_ingestion_ready": local_ready,
+        "dispatch_ingestion_ready": dispatch_ready,
+        "byte_closed_archive_required": True,
+        "runtime_tree_closure_required": True,
+        "planning_only_is_score_evidence": False,
+        "proxy_packets_dispatch_ready": False,
+        "archive_byte_closed": archive.get("byte_closed") is True,
+        "runtime_closed": runtime.get("runtime_closed") is True,
+        "strict_candidate_preflight_ready": strict_ready,
+        "planning_only": planning_only,
+        "proxy_row": proxy_row,
+        "score_claim": score_claim,
+        "dispatch_attempted": dispatch_attempted,
+        "local_blockers": _unique_strings(local_blockers),
+        "dispatch_blockers": _unique_strings([*local_blockers, *dispatch_blockers]),
+    }
+
+
+def _score_evidence_contract(
+    *,
+    payload: Mapping[str, Any],
+    evidence_grade: str,
+    proxy_row: bool,
+    ingestion_contract: Mapping[str, Any],
+    expected_total_score_delta: float,
+) -> dict[str, Any]:
+    grade = evidence_grade.strip().lower()
+    source_score_lowering_evidence = payload.get("score_lowering_evidence")
+    exact_cuda_positive = payload.get("exact_positive_cuda_evidence") is True
+    exact_cuda_grade = grade in {"a", "a++"} or "contest_cuda_exact_eval_positive" in grade
+    blockers: list[str] = []
+    if ingestion_contract.get("local_field_meta_ingestion_ready") is not True:
+        blockers.append("field_meta_ingestion_contract_not_ready")
+    if proxy_row:
+        blockers.append("planning_or_proxy_packet_not_score_evidence")
+    if any(marker in grade for marker in PROXY_EVIDENCE_GRADE_MARKERS):
+        blockers.append("proxy_or_planning_evidence_grade_not_score_evidence")
+    if not (exact_cuda_positive or exact_cuda_grade):
+        blockers.append("missing_exact_cuda_positive_score_evidence")
+    if expected_total_score_delta >= 0.0:
+        blockers.append("expected_delta_not_score_lowering")
+    rankable = not blockers
+    return {
+        "schema": "field_meta_score_evidence_contract_v1",
+        "status": "passed" if rankable else "blocked",
+        "score_evidence_rankable": rankable,
+        "planning_priority_rankable": bool(
+            ingestion_contract.get("local_field_meta_ingestion_ready") is True and not proxy_row
+        ),
+        "planning_only_is_score_evidence": False,
+        "source_score_lowering_evidence": source_score_lowering_evidence,
+        "exact_positive_cuda_evidence": exact_cuda_positive,
+        "exact_cuda_grade": exact_cuda_grade,
+        "expected_total_score_delta": round(float(expected_total_score_delta), 12),
+        "blockers": _unique_strings(blockers),
+    }
 
 
 def _annotate_selection_scores(rows: list[dict[str, Any]]) -> None:
@@ -2576,6 +2680,34 @@ def _row_for_manifest(
     if payload.get("readiness_component_penalty_overwhelms_rate_gain") is True:
         selector_blockers.append("readiness_component_penalty_overwhelms_rate_gain")
         selector_blockers = _unique_strings(selector_blockers)
+    planning_only = bool(
+        payload.get("planning_only") is True
+        or (
+            payload.get("ready_for_exact_eval_dispatch") is False
+            and any(
+                marker in evidence_grade.strip().lower()
+                for marker in PROXY_EVIDENCE_GRADE_MARKERS
+            )
+        )
+    )
+    source_score_claim = payload.get("score_claim") is True
+    source_dispatch_attempted = payload.get("dispatch_attempted") is True
+    ingestion_contract = _field_meta_ingestion_contract(
+        archive=archive,
+        runtime=runtime,
+        strict_ready=strict_ready,
+        proxy_row=proxy_row,
+        planning_only=planning_only,
+        score_claim=source_score_claim,
+        dispatch_attempted=source_dispatch_attempted,
+    )
+    score_evidence_contract = _score_evidence_contract(
+        payload=payload,
+        evidence_grade=evidence_grade,
+        proxy_row=proxy_row,
+        ingestion_contract=ingestion_contract,
+        expected_total_score_delta=expected_score_delta,
+    )
     selector_static_ready = bool(static_ready and not selector_blockers)
     blockers = _unique_strings([*static_blockers, *selector_blockers, *dispatch_blockers])
     ready = bool(selector_static_ready and claim["active_lane_claim"] and not dispatch_blockers)
@@ -2651,7 +2783,12 @@ def _row_for_manifest(
         "readiness_component_penalty_overwhelms_rate_gain": (
             payload.get("readiness_component_penalty_overwhelms_rate_gain")
         ),
-        "score_lowering_evidence": payload.get("score_lowering_evidence"),
+        "source_score_lowering_evidence": payload.get("score_lowering_evidence"),
+        "score_lowering_evidence": score_evidence_contract["score_evidence_rankable"],
+        "field_meta_ingestion_contract": ingestion_contract,
+        "score_evidence_contract": score_evidence_contract,
+        "score_evidence_rankable": score_evidence_contract["score_evidence_rankable"],
+        "planning_priority_rankable": score_evidence_contract["planning_priority_rankable"],
         "proxy_row": proxy_row,
         "confidence": _candidate_confidence(payload),
         "score_claim": False,
@@ -2692,7 +2829,11 @@ def _row_for_manifest(
         "kkt_ready_for_field_planning": kkt_ready,
         "kkt_proof": kkt_proof,
         "kkt_blockers": kkt_blockers,
-        "pareto_eligible": bool(candidate_static_ready_after_dirty and not proxy_row),
+        "pareto_eligible": bool(
+            candidate_static_ready_after_dirty
+            and ingestion_contract["local_field_meta_ingestion_ready"]
+            and not proxy_row
+        ),
         "pareto_frontier": False,
         "pareto_dominated_by": [],
         "pareto_eligibility_blockers": [],
@@ -2775,6 +2916,11 @@ def build_selection_report(
     static_ready_count = sum(int(row["candidate_static_preflight_ready"]) for row in rows)
     dirty_blocked_count = sum(int(row["dirty_blocked"]) for row in rows)
     kkt_ready_count = sum(int(row["kkt_ready_for_field_planning"]) for row in rows)
+    ingestion_ready_count = sum(
+        int(row["field_meta_ingestion_contract"]["local_field_meta_ingestion_ready"])
+        for row in rows
+    )
+    score_evidence_rankable_count = sum(int(row["score_evidence_rankable"]) for row in rows)
     return {
         "schema_version": SCHEMA_VERSION,
         "tool": TOOL,
@@ -2813,6 +2959,8 @@ def build_selection_report(
         "candidate_count": len(rows),
         "candidate_local_preflight_ready_count": local_ready_count,
         "candidate_static_preflight_ready_count": static_ready_count,
+        "field_meta_ingestion_ready_count": ingestion_ready_count,
+        "score_evidence_rankable_count": score_evidence_rankable_count,
         "ready_candidate_count": ready_count,
         "field_selection_ready_for_exact_eval_dispatch": bool(
             selected and selected["field_selection_ready_for_exact_eval_dispatch"]

@@ -613,6 +613,71 @@ def test_dispatchable_proxy_row_is_refused_even_with_byte_closed_manifest(tmp_pa
     assert row["kkt_ready_for_field_planning"] is False
     assert "proxy_row_not_dispatchable" in row["dispatch_blockers"]
     assert "requested_dispatchable_proxy_row_refused" in row["dispatch_blockers"]
+    assert row["score_evidence_rankable"] is False
+    assert row["score_lowering_evidence"] is False
+    assert row["planning_priority_rankable"] is False
+    assert "planning_or_proxy_atom_not_score_evidence" in row["score_evidence_contract"]["blockers"]
+
+
+def test_byte_closed_planning_priority_is_not_score_evidence_without_exact_cuda(
+    tmp_path: Path,
+) -> None:
+    manifest = _archive_manifest(tmp_path)
+    ledger = build_atom_ledger(
+        [
+            {
+                "atom_id": "byte_closed_planning_priority",
+                "family": "mask_atom",
+                "family_group": "mask",
+                "pareto_scope": "mask",
+                "byte_delta": -10,
+                "confidence": 1.0,
+                "evidence_grade": "empirical_byte_raw_equal",
+                "raw_equal": True,
+                "interaction_assumptions": ["byte_closed_first_order"],
+                "archive_manifest_path": manifest.as_posix(),
+                "archive_manifest_sha256": sha256_file(manifest),
+                "kkt_proof": _kkt_proof(),
+            }
+        ],
+        base_pose_dist=0.01,
+        source="fixture",
+    )
+
+    row = ledger["rows"][0]
+    assert row["pareto_eligible"] is True
+    assert row["planning_priority_rankable"] is True
+    assert row["score_evidence_rankable"] is False
+    assert row["score_lowering_evidence"] is False
+    assert ledger["score_evidence_rankable_count"] == 0
+    assert row["score_evidence_contract"]["status"] == "blocked"
+    assert "missing_exact_cuda_positive_score_evidence" in row["score_evidence_contract"]["blockers"]
+
+
+def test_exact_cuda_positive_atom_can_be_ranked_as_score_evidence(tmp_path: Path) -> None:
+    manifest = _archive_manifest(tmp_path)
+    row = expected_atom_score_delta(
+        {
+            "atom_id": "exact_cuda_positive_atom",
+            "family": "mask_atom",
+            "family_group": "mask",
+            "byte_delta": -10,
+            "confidence": 1.0,
+            "evidence_grade": "A++",
+            "raw_equal": True,
+            "exact_positive_cuda_evidence": True,
+            "interaction_assumptions": ["exact_cuda_auth_eval_positive"],
+            "archive_manifest_path": manifest.as_posix(),
+            "archive_manifest_sha256": sha256_file(manifest),
+            "kkt_proof": _kkt_proof(),
+        },
+        base_pose_dist=0.01,
+    )
+
+    assert row["score_evidence_rankable"] is True
+    assert row["score_lowering_evidence"] is True
+    assert row["score_evidence_contract"]["status"] == "passed"
+    assert row["score_evidence_contract"]["blockers"] == []
 
 
 def test_unverified_archive_manifest_does_not_allow_stack_review(tmp_path: Path) -> None:

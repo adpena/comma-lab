@@ -903,6 +903,42 @@ def _proxy_row(evidence_grade: str, atom: Mapping[str, Any]) -> bool:
     )
 
 
+def _atom_score_evidence_contract(
+    *,
+    atom: Mapping[str, Any],
+    evidence_grade: str,
+    proxy_row: bool,
+    byte_closed_archive_manifest_attached: bool,
+    expected_total_score_delta: float,
+) -> dict[str, Any]:
+    grade = evidence_grade.strip().lower()
+    exact_cuda_positive = atom.get("exact_positive_cuda_evidence") is True
+    exact_cuda_grade = grade in {"a", "a++"} or "contest_cuda_exact_eval_positive" in grade
+    blockers: list[str] = []
+    if not byte_closed_archive_manifest_attached:
+        blockers.append("missing_byte_closed_archive_manifest")
+    if proxy_row:
+        blockers.append("planning_or_proxy_atom_not_score_evidence")
+    if any(marker in grade for marker in PROXY_EVIDENCE_GRADE_MARKERS):
+        blockers.append("proxy_or_planning_evidence_grade_not_score_evidence")
+    if not (exact_cuda_positive or exact_cuda_grade):
+        blockers.append("missing_exact_cuda_positive_score_evidence")
+    if expected_total_score_delta >= 0.0:
+        blockers.append("expected_delta_not_score_lowering")
+    rankable = not blockers
+    return {
+        "schema": "meta_lagrangian_atom_score_evidence_contract_v1",
+        "status": "passed" if rankable else "blocked",
+        "score_evidence_rankable": rankable,
+        "planning_priority_rankable": bool(byte_closed_archive_manifest_attached and not proxy_row),
+        "planning_only_is_score_evidence": False,
+        "exact_positive_cuda_evidence": exact_cuda_positive,
+        "exact_cuda_grade": exact_cuda_grade,
+        "expected_total_score_delta": round(float(expected_total_score_delta), 12),
+        "blockers": _unique_ordered_strings(blockers),
+    }
+
+
 def expected_atom_score_delta(
     atom: Mapping[str, Any],
     *,
@@ -991,6 +1027,13 @@ def expected_atom_score_delta(
     component_score = confidence * (seg_score + pose_score)
     rate_score = rate_score_delta(byte_delta)
     total = component_score + rate_score
+    score_evidence_contract = _atom_score_evidence_contract(
+        atom=atom,
+        evidence_grade=evidence_grade,
+        proxy_row=proxy_row,
+        byte_closed_archive_manifest_attached=byte_closed_archive_manifest_attached,
+        expected_total_score_delta=total,
+    )
     row = {
         "atom_id": atom_id,
         "family": family,
@@ -1001,6 +1044,10 @@ def expected_atom_score_delta(
         "interaction_assumptions": interaction_assumptions,
         "field_interaction_contract": field_interaction_contract,
         "score_claim": False,
+        "score_lowering_evidence": score_evidence_contract["score_evidence_rankable"],
+        "score_evidence_rankable": score_evidence_contract["score_evidence_rankable"],
+        "planning_priority_rankable": score_evidence_contract["planning_priority_rankable"],
+        "score_evidence_contract": score_evidence_contract,
         "evidence_grade": evidence_grade,
         "proxy_row": proxy_row,
         "expected_information_gain_nats": uncertainty["expected_information_gain_nats"],
@@ -1085,6 +1132,7 @@ def build_atom_ledger(
     pareto_eligible_count = 0
     kkt_ready_count = 0
     proxy_row_count = 0
+    score_evidence_rankable_count = 0
     for row in rows:
         family = str(row["family_group"])
         family_counts[family] = family_counts.get(family, 0) + 1
@@ -1092,6 +1140,7 @@ def build_atom_ledger(
         pareto_eligible_count += int(bool(row["pareto_eligible"]))
         kkt_ready_count += int(bool(row["kkt_ready_for_field_planning"]))
         proxy_row_count += int(bool(row["proxy_row"]))
+        score_evidence_rankable_count += int(bool(row["score_evidence_rankable"]))
         requested_dispatchable_refused_count += int(
             bool(row["requested_dispatchable"]) and not bool(row["dispatchable"])
         )
@@ -1113,6 +1162,7 @@ def build_atom_ledger(
         "pareto_eligible_count": pareto_eligible_count,
         "kkt_ready_for_field_planning_count": kkt_ready_count,
         "proxy_row_count": proxy_row_count,
+        "score_evidence_rankable_count": score_evidence_rankable_count,
         "requested_dispatchable_refused_count": requested_dispatchable_refused_count,
         "byte_closed_manifest_required_for_pareto": True,
         "byte_closed_manifest_required_for_kkt": True,

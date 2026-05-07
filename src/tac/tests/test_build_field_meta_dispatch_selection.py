@@ -960,6 +960,92 @@ def test_field_meta_selector_blocks_rate_only_delta_that_mismatches_byte_term(
     assert "rate_only_score_delta_reconciles_to_official_byte_rate_term" in row["next_required_proof"]
 
 
+def test_field_meta_selector_exposes_closed_ingestion_contract_without_score_evidence(
+    tmp_path: Path,
+) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="closed_not_score_evidence",
+        lane_id="lane_closed_not_score_evidence",
+        job_name="job_closed_not_score_evidence",
+        kkt_proof=_kkt_proof(),
+    )
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    assert report["field_meta_ingestion_ready_count"] == 1
+    assert report["score_evidence_rankable_count"] == 0
+    assert row["field_meta_ingestion_contract"]["schema"] == "field_meta_ingestion_contract_v1"
+    assert row["field_meta_ingestion_contract"]["local_field_meta_ingestion_ready"] is True
+    assert row["field_meta_ingestion_contract"]["dispatch_ingestion_ready"] is True
+    assert row["score_evidence_contract"]["score_evidence_rankable"] is False
+    assert row["score_evidence_contract"]["planning_priority_rankable"] is True
+    assert "missing_exact_cuda_positive_score_evidence" in row["score_evidence_contract"]["blockers"]
+    assert row["score_lowering_evidence"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_field_meta_selector_refuses_planning_packet_as_score_evidence_even_if_source_claims_it(
+    tmp_path: Path,
+) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="planning_claimed_score_evidence",
+        lane_id="lane_planning_claimed_score_evidence",
+        job_name="job_planning_claimed_score_evidence",
+        kkt_proof=_kkt_proof(),
+    )
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload["planning_only"] = True
+    payload["proxy_row"] = True
+    payload["evidence_grade"] = "planning_proxy"
+    payload["score_lowering_evidence"] = True
+    payload["exact_positive_cuda_evidence"] = True
+    manifest.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    assert row["source_score_lowering_evidence"] is True
+    assert row["score_lowering_evidence"] is False
+    assert row["score_evidence_rankable"] is False
+    assert row["planning_priority_rankable"] is False
+    assert row["field_meta_ingestion_contract"]["local_field_meta_ingestion_ready"] is True
+    assert row["field_meta_ingestion_contract"]["dispatch_ingestion_ready"] is False
+    assert "planning_only_packet_not_dispatch_ready" in row["field_meta_ingestion_contract"]["dispatch_blockers"]
+    assert "planning_or_proxy_packet_not_score_evidence" in row["score_evidence_contract"]["blockers"]
+    assert "proxy_or_planning_evidence_grade_not_score_evidence" in row["score_evidence_contract"]["blockers"]
+    assert row["pareto_eligible"] is False
+    assert "planning_or_proxy_packet" in row["pareto_eligibility_blockers"]
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_field_meta_selector_does_not_ingest_unclosed_runtime_as_dispatch_ready(
+    tmp_path: Path,
+) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="unclosed_runtime_packet",
+        lane_id="lane_unclosed_runtime_packet",
+        job_name="job_unclosed_runtime_packet",
+        runtime_tree_sha256=None,
+        kkt_proof=_kkt_proof(),
+    )
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    assert report["field_meta_ingestion_ready_count"] == 0
+    assert row["field_meta_ingestion_contract"]["local_field_meta_ingestion_ready"] is False
+    assert row["field_meta_ingestion_contract"]["dispatch_ingestion_ready"] is False
+    assert "runtime_tree_closure_proof_missing" in row["field_meta_ingestion_contract"]["local_blockers"]
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["field_selection_ready_for_exact_eval_dispatch"] is False
+    assert row["pareto_eligible"] is False
+    assert "field_meta_ingestion_contract_not_ready" in row["pareto_eligibility_blockers"]
+
+
 def test_build_field_meta_dispatch_selection_cli_writes_json(tmp_path: Path) -> None:
     manifest = _packet_manifest(
         tmp_path,
