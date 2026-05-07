@@ -142,6 +142,12 @@ def test_pr101_substitution_updates_manifest_and_meta_lagrangian_rows(
     assert row["expected_archive_size_bytes"] == row["archive_size_bytes"]
     assert row["archive_sha256"] == row["expected_archive_sha256"]
     assert row["archive_substitution_report_path"].endswith("substitution_report.json")
+    assert row["archive_member_name"] == "x"
+    assert row["source_archive_sha256"]
+    assert row["source_inner_member_sha256"]
+    assert row["replacement_decoder_blob_sha256"]
+    assert row["input_latent_blob_sha256"] == row["output_latent_blob_sha256"]
+    assert row["input_sidecar_blob_sha256"] == row["output_sidecar_blob_sha256"]
     assert "archive_substitution_surgery_pending" not in row["blockers"]
     assert "exact_runtime_parity_not_supplied" in row["blockers"]
     assert row["ready_for_exact_eval_dispatch"] is False
@@ -150,3 +156,82 @@ def test_pr101_substitution_updates_manifest_and_meta_lagrangian_rows(
     assert meta_rows[0]["candidate_id"] == row["candidate_id"]
     assert meta_rows[0]["archive_path"] == row["archive_path"]
     assert meta_rows[0]["archive_bytes"] == row["archive_size_bytes"]
+
+
+def test_pr101_archive_state_source_can_replace_loose_pt(
+    tmp_path: pathlib.Path,
+    monkeypatch,
+) -> None:
+    mod = _load_tool_module()
+
+    decoder_len = 162_164
+    latent_len = 15_387
+    replacement = b"\x55" * decoder_len
+
+    class FakeEncodeResult:
+        blob = replacement
+        bytes_out = len(replacement)
+
+    class Op1_PR101SplitBrotli:
+        def __init__(self, *, brotli_quality: int = 11) -> None:
+            self.brotli_quality = brotli_quality
+
+        def encode(self, state_dict, context):
+            _ = state_dict, context
+            return FakeEncodeResult()
+
+        def decode(self, blob, context):
+            _ = blob, context
+            return {}
+
+        def validate(self, before, after, context):
+            _ = before, after, context
+            return types.SimpleNamespace(ok=True, metrics={})
+
+    fake_module = types.ModuleType("fake_pr101_archive_state_codec_op")
+    fake_module.Op1_PR101SplitBrotli = Op1_PR101SplitBrotli
+    sys.modules[fake_module.__name__] = fake_module
+
+    source_archive = tmp_path / "source_pr101.zip"
+    inner = (b"\x11" * decoder_len) + (b"\x22" * latent_len) + b"\x33" * 607
+    info = zipfile.ZipInfo("x")
+    info.compress_type = zipfile.ZIP_STORED
+    with zipfile.ZipFile(source_archive, "w") as zf:
+        zf.writestr(info, inner)
+
+    state_source = {
+        "kind": "pr101_archive_decoder_blob",
+        "archive_path": source_archive.as_posix(),
+        "inner_member_name": "x",
+        "decoder_blob_bytes": decoder_len,
+        "decoder_blob_sha256": "decoder-sha",
+    }
+    monkeypatch.setattr(
+        mod,
+        "_load_state_dict_from_pr101_archive",
+        lambda archive: ({"dummy": torch.zeros(1)}, state_source),
+    )
+
+    manifest_path = tmp_path / "manifest.json"
+    rc = mod.main([
+        "--module", fake_module.__name__,
+        "--class", "Op1_PR101SplitBrotli",
+        "--state-dict-from-pr101-archive", str(source_archive),
+        "--param-grid", '{"brotli_quality": [11]}',
+        "--anchor-d-seg", "0.000671",
+        "--anchor-d-pose", "0.0000336",
+        "--anchor-archive-bytes", "178258",
+        "--baseline-substream-bytes", str(decoder_len),
+        "--label-prefix", "pr101_archive_state",
+        "--output", str(manifest_path),
+        "--substrate-archive-pr101", str(source_archive),
+        "--substituted-archive-output-dir", str(tmp_path / "archives"),
+    ])
+
+    assert rc == 0
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["state_dict_source"] == state_source
+    row = manifest["candidates"][0]
+    assert row["archive_path"]
+    assert row["archive_member_name"] == "x"
+    assert row["ready_for_exact_eval_dispatch"] is False

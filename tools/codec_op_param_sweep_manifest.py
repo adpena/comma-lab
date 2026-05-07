@@ -49,6 +49,7 @@ size). Predicted Δ-rate per candidate is
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib
 import itertools
 import json
@@ -135,6 +136,54 @@ def _load_state_dict(path: Path, key: str | None) -> dict[str, torch.Tensor]:
             f"loaded {path} is neither dict nor Tensor (got {type(obj).__name__})"
         )
     return {key: obj}
+
+
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _load_state_dict_from_pr101_archive(
+    archive_path: Path,
+) -> tuple[dict[str, torch.Tensor], dict[str, Any]]:
+    """Decode PR101's fixed decoder slice directly from ``archive.zip``.
+
+    This avoids creating a loose intermediate ``.pt`` file when the substrate
+    is the public PR101 archive itself, and records the source member/slice
+    custody in the sweep manifest.
+    """
+    if not archive_path.is_file():
+        raise SystemExit(f"PR101 archive path does not exist: {archive_path}")
+    sys.path.insert(0, str(REPO_ROOT / "tools"))
+    from pr101_archive_substitution_surgery import (
+        PR101_INNER_MEMBER_NAME,
+        _read_inner_blob,
+        _sha256,
+        _split_pr101_inner_blob,
+    )
+
+    from tac.pr101_split_brotli_codec import decode_decoder_compact
+
+    inner_blob = _read_inner_blob(archive_path)
+    decoder_blob, latent_blob, sidecar_blob = _split_pr101_inner_blob(inner_blob)
+    metadata = {
+        "kind": "pr101_archive_decoder_blob",
+        "archive_path": archive_path.as_posix(),
+        "archive_size_bytes": archive_path.stat().st_size,
+        "archive_sha256": _sha256_file(archive_path),
+        "inner_member_name": PR101_INNER_MEMBER_NAME,
+        "inner_member_bytes": len(inner_blob),
+        "inner_member_sha256": _sha256(inner_blob),
+        "decoder_blob_offset": 0,
+        "decoder_blob_bytes": len(decoder_blob),
+        "decoder_blob_sha256": _sha256(decoder_blob),
+        "latent_blob_offset": len(decoder_blob),
+        "latent_blob_bytes": len(latent_blob),
+        "latent_blob_sha256": _sha256(latent_blob),
+        "sidecar_blob_offset": len(decoder_blob) + len(latent_blob),
+        "sidecar_blob_bytes": len(sidecar_blob),
+        "sidecar_blob_sha256": _sha256(sidecar_blob),
+    }
+    return decode_decoder_compact(decoder_blob), metadata
 
 
 def _expand_param_grid(grid: dict[str, list]) -> list[dict[str, Any]]:
@@ -297,6 +346,7 @@ def emit_manifest(
     anchor_d_pose: float,
     anchor_archive_bytes: int,
     baseline_substream_bytes: int,
+    state_dict_source: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Emit the manifest dict in the shape parallel_dispatch_top_k consumes.
 
@@ -312,6 +362,7 @@ def emit_manifest(
             "archive_bytes": anchor_archive_bytes,
             "baseline_substream_bytes": baseline_substream_bytes,
         },
+        "state_dict_source": state_dict_source,
         "n_candidates": len(sorted_cands),
         "tool": "tools/codec_op_param_sweep_manifest.py",
         "generated_at_unix_seconds": int(time.time()),
@@ -334,10 +385,16 @@ def main(argv: list[str] | None = None) -> int:
                         help="Python module path of the CodecOp (e.g. tac.codec_pipeline_kl_pose)")
     parser.add_argument("--class", dest="class_name", required=True,
                         help="CodecOp class name within the module")
-    parser.add_argument("--state-dict-path", type=Path, required=True,
+    parser.add_argument("--state-dict-path", type=Path,
                         help="Path to a .pt file containing the substrate state_dict or tensor")
     parser.add_argument("--state-dict-key", default=None,
                         help="If the .pt file is a single tensor, wrap it under this key")
+    parser.add_argument(
+        "--state-dict-from-pr101-archive", type=Path, default=None,
+        help="Decode the state_dict from the decoder_blob inside a PR101-shaped "
+        "archive.zip and record source/member custody in the manifest. Mutually "
+        "exclusive with --state-dict-path.",
+    )
     parser.add_argument("--param-grid", default="{}",
                         help="JSON dict mapping CodecOp init param name → list of values to sweep")
     parser.add_argument("--anchor-d-seg", type=float, required=True,
@@ -381,10 +438,39 @@ def main(argv: list[str] | None = None) -> int:
         help="Directory under which per-candidate substituted archives are "
         "written (default: experiments/results/<label_prefix>_<candidate_id>/).",
     )
+    parser.add_argument(
+        "--atom-ledger-output", type=Path, default=None,
+        help="Optional path to a JSONL atom ledger; one row appended per "
+        "candidate so each sweep entry becomes a meta-Lagrangian atom. "
+        "Conventionally this is "
+        "experiments/results/bilevel_atom_ledger.jsonl (the cathedral's "
+        "shared blackboard). Each row carries the candidate's predicted "
+        "band, op identity, params, and evidence_grade=[CPU-prep]. Closes "
+        "the manifest -> ledger -> meta-Lagrangian loop.",
+    )
     args = parser.parse_args(argv)
 
     op_cls = _import_codec_op(args.module, args.class_name)
-    state_dict = _load_state_dict(args.state_dict_path, args.state_dict_key)
+    if (args.state_dict_path is None) == (args.state_dict_from_pr101_archive is None):
+        raise SystemExit(
+            "pass exactly one of --state-dict-path or --state-dict-from-pr101-archive"
+        )
+    if args.state_dict_from_pr101_archive is not None:
+        if args.state_dict_key is not None:
+            raise SystemExit(
+                "--state-dict-key is only valid with --state-dict-path"
+            )
+        state_dict, state_dict_source = _load_state_dict_from_pr101_archive(
+            args.state_dict_from_pr101_archive
+        )
+    else:
+        state_dict = _load_state_dict(args.state_dict_path, args.state_dict_key)
+        state_dict_source = {
+            "kind": "torch_state_dict_file",
+            "path": args.state_dict_path.as_posix(),
+            "sha256": _sha256_file(args.state_dict_path),
+            "state_dict_key": args.state_dict_key,
+        }
     try:
         param_grid = json.loads(args.param_grid)
     except json.JSONDecodeError as exc:
@@ -414,6 +500,7 @@ def main(argv: list[str] | None = None) -> int:
         anchor_d_pose=args.anchor_d_pose,
         anchor_archive_bytes=args.anchor_archive_bytes,
         baseline_substream_bytes=args.baseline_substream_bytes,
+        state_dict_source=state_dict_source,
     )
     manifest_rows_by_id = {row["candidate_id"]: row for row in manifest["candidates"]}
     # PR101 archive-substitution surgery wire-up (huge tranche #4):
@@ -474,6 +561,18 @@ def main(argv: list[str] | None = None) -> int:
                 "expected_archive_sha256": report.sha256_output_archive,
                 "archive_substitution_report_path": report_path.as_posix(),
                 "archive_substitution_schema": "pr101_decoder_blob_surgery_v1",
+                "archive_member_name": report.inner_member_name,
+                "source_archive_path": report.input_archive,
+                "source_archive_size_bytes": report.input_size_bytes,
+                "source_archive_sha256": report.sha256_input_archive,
+                "source_inner_member_sha256": report.sha256_input_inner_member,
+                "output_inner_member_sha256": report.sha256_output_inner_member,
+                "input_decoder_blob_sha256": report.sha256_input_decoder_blob,
+                "replacement_decoder_blob_sha256": report.sha256_replacement_decoder_blob,
+                "input_latent_blob_sha256": report.sha256_input_latent_blob,
+                "output_latent_blob_sha256": report.sha256_output_latent_blob,
+                "input_sidecar_blob_sha256": report.sha256_input_sidecar_blob,
+                "output_sidecar_blob_sha256": report.sha256_output_sidecar_blob,
             })
             manifest_row["blockers"] = [
                 blocker for blocker in manifest_row["blockers"]
@@ -520,6 +619,72 @@ def main(argv: list[str] | None = None) -> int:
             f"{args.meta_lagrangian_output} --lane-class "
             f"{args.meta_lagrangian_lane_class or args.class_name.lower()}"
         )
+
+    # Atom-ledger wire-up (tranche item #6): each sweep candidate becomes
+    # a row in the meta-Lagrangian atom ledger, closing the
+    # manifest -> ledger -> meta-Lagrangian -> Pareto loop.
+    if args.atom_ledger_output:
+        timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        args.atom_ledger_output.parent.mkdir(parents=True, exist_ok=True)
+        with args.atom_ledger_output.open("a") as f:
+            for candidate in candidates:
+                # Look up archive metadata from the manifest if surgery ran
+                manifest_row = next(
+                    (r for r in manifest["candidates"]
+                     if r["candidate_id"] == candidate.candidate_id),
+                    None,
+                )
+                archive_path = (
+                    manifest_row.get("archive_path")
+                    if manifest_row else None
+                )
+                archive_sha = (
+                    manifest_row.get("archive_sha256")
+                    if manifest_row else None
+                )
+                evidence_grade = (
+                    "[CPU-prep]" if archive_path is None
+                    else "[CPU-prep+substituted-archive]"
+                )
+                substrate_path = (
+                    state_dict_source.get("archive_path")
+                    or state_dict_source.get("path")
+                )
+                row = {
+                    "timestamp_utc": timestamp,
+                    "phase": None,
+                    "substrate_label": f"{args.label_prefix}/{candidate.candidate_id}",
+                    "substrate_path": substrate_path,
+                    "substrate_score_anchor": None,
+                    "contest_cuda_score": None,
+                    "evidence_grade": evidence_grade,
+                    "predicted_score": candidate.predicted_score,
+                    "predicted_band": list(candidate.predicted_band),
+                    "score_delta_vs_anchor": candidate.score_delta_vs_anchor,
+                    "rate_delta_vs_anchor": candidate.rate_delta_vs_anchor,
+                    "archive_bytes": (
+                        int(manifest_row["archive_size_bytes"])
+                        if manifest_row and manifest_row.get("archive_size_bytes")
+                        else int(candidate.predicted_archive_bytes)
+                    ),
+                    "archive_sha256": archive_sha,
+                    "archive_path": archive_path,
+                    "cathedral_op": (
+                        f"{args.module}.{args.class_name}"
+                    ),
+                    "op_params": dict(candidate.op_params),
+                    "notes": (
+                        f"sweep candidate from "
+                        f"tools/codec_op_param_sweep_manifest.py; "
+                        f"{candidate.evidence_semantics}"
+                    ),
+                }
+                f.write(json.dumps(row, sort_keys=True) + "\n")
+        print(
+            f"appended {len(candidates)} atom rows to {args.atom_ledger_output} "
+            f"(evidence_grade={evidence_grade})"
+        )
+
     return 0
 
 
