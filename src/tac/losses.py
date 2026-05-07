@@ -11,6 +11,10 @@ import math
 import torch
 import torch.nn.functional as F
 
+SEGMENTATION_SURROGATE_SOFT_COSINE = "soft_cosine"
+SEGMENTATION_SURROGATE_FISHER_RAO = "fisher_rao"
+DEFAULT_SEGNET_NUM_CLASSES = 5
+
 
 def bhattacharyya_distance(p: torch.Tensor, q: torch.Tensor, dim: int = 1) -> torch.Tensor:
     """True Bhattacharyya distance: -log(sum(sqrt(p*q))).
@@ -76,6 +80,122 @@ def _validate_kl_temperature(temperature: float, *, field: str = "temperature") 
     if not math.isfinite(value) or value <= 0.0:
         raise ValueError(f"{field} must be a finite positive number")
     return value
+
+
+def _validate_fisher_rao_eps(eps: float) -> float:
+    if isinstance(eps, bool):
+        raise ValueError("fisher_rao_eps must be a finite number in (0, 1e-3)")
+    try:
+        value = float(eps)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("fisher_rao_eps must be a finite number in (0, 1e-3)") from exc
+    if not math.isfinite(value) or value <= 0.0 or value >= 1e-3:
+        raise ValueError("fisher_rao_eps must be a finite number in (0, 1e-3)")
+    return value
+
+
+def _validate_segmentation_surrogate(surrogate: str) -> str:
+    if surrogate not in {
+        SEGMENTATION_SURROGATE_SOFT_COSINE,
+        SEGMENTATION_SURROGATE_FISHER_RAO,
+    }:
+        raise ValueError(
+            "segmentation surrogate must be one of "
+            f"{SEGMENTATION_SURROGATE_SOFT_COSINE!r}, "
+            f"{SEGMENTATION_SURROGATE_FISHER_RAO!r}; got {surrogate!r}"
+        )
+    return surrogate
+
+
+def segnet_fisher_rao_per_pixel(
+    pred_probs: torch.Tensor,
+    gt_probs: torch.Tensor,
+    *,
+    eps: float = 1e-6,
+    num_classes: int = DEFAULT_SEGNET_NUM_CLASSES,
+) -> torch.Tensor:
+    """Per-pixel normalized Fisher-Rao distance on SegNet class probabilities.
+
+    The official scorer uses hard SegNet argmax disagreement. This helper is a
+    differentiable geometry proxy on the probability simplex:
+
+    ``(2 * arccos(sum_c sqrt(p_c q_c)) / pi) ** 2``.
+
+    It is zero for identical distributions and one for disjoint one-hot labels,
+    matching the scale of hard argmax disagreement. It is a training proxy only;
+    score claims still require exact CUDA auth eval.
+    """
+    eps_value = _validate_fisher_rao_eps(eps)
+    if pred_probs.shape != gt_probs.shape:
+        raise ValueError(
+            f"pred_probs shape {tuple(pred_probs.shape)} does not match "
+            f"gt_probs shape {tuple(gt_probs.shape)}"
+        )
+    if pred_probs.ndim != 4:
+        raise ValueError(
+            "SegNet Fisher-Rao expects BCHW probability tensors; "
+            f"got shape {tuple(pred_probs.shape)}"
+        )
+    if pred_probs.shape[1] != num_classes:
+        raise ValueError(
+            f"SegNet Fisher-Rao expects {num_classes} classes, "
+            f"got {pred_probs.shape[1]}"
+        )
+    bc = torch.sqrt((pred_probs * gt_probs).clamp_min(eps_value * eps_value)).sum(dim=1)
+    bc = bc.clamp(min=0.0, max=1.0)
+    bc_safe = bc.clamp(max=1.0 - eps_value)
+    fr = (2.0 * torch.acos(bc_safe)) / math.pi
+    out = fr.pow(2)
+    return torch.where(bc >= 1.0 - eps_value, torch.zeros_like(out), out)
+
+
+def segnet_surrogate_per_pixel(
+    pred_logits: torch.Tensor,
+    gt_logits_or_probs: torch.Tensor,
+    *,
+    surrogate: str = SEGMENTATION_SURROGATE_SOFT_COSINE,
+    temperature: float = 1.0,
+    fisher_rao_eps: float = 1e-6,
+    gt_already_probs: bool = False,
+    num_classes: int = DEFAULT_SEGNET_NUM_CLASSES,
+) -> torch.Tensor:
+    """Return the differentiable per-pixel SegNet surrogate.
+
+    Defaults to the historical soft-cosine proxy. ``surrogate="fisher_rao"``
+    enables the Hilbert/information-geometry path while keeping cached-GT mode
+    fail-closed for non-unit temperatures, because cached GT stores only
+    ``softmax(logits)`` at temperature 1.
+    """
+    mode = _validate_segmentation_surrogate(surrogate)
+    temp = _validate_kl_temperature(temperature, field="segmentation_temperature")
+    if gt_already_probs and temp != 1.0:
+        raise ValueError(
+            "cached SegNet probabilities only support segmentation_temperature=1.0"
+        )
+    pred_probs = F.softmax(pred_logits / temp, dim=1)
+    gt_probs = (
+        gt_logits_or_probs
+        if gt_already_probs
+        else F.softmax(gt_logits_or_probs / temp, dim=1)
+    )
+    if mode == SEGMENTATION_SURROGATE_FISHER_RAO:
+        return segnet_fisher_rao_per_pixel(
+            pred_probs,
+            gt_probs,
+            eps=fisher_rao_eps,
+            num_classes=num_classes,
+        )
+    if pred_probs.shape != gt_probs.shape:
+        raise ValueError(
+            f"pred_probs shape {tuple(pred_probs.shape)} does not match "
+            f"gt_probs shape {tuple(gt_probs.shape)}"
+        )
+    if pred_probs.ndim != 4 or pred_probs.shape[1] != num_classes:
+        raise ValueError(
+            f"SegNet soft-cosine expects BCHW with {num_classes} classes, "
+            f"got shape {tuple(pred_probs.shape)}"
+        )
+    return 1.0 - (pred_probs * gt_probs).sum(dim=1)
 
 
 def _apply_class_weights(
@@ -226,10 +346,15 @@ def scorer_loss(
     posenet,
     segnet,
     class_weights: torch.Tensor | None = None,
+    segmentation_surrogate: str = SEGMENTATION_SURROGATE_SOFT_COSINE,
+    segmentation_temperature: float = 1.0,
+    fisher_rao_eps: float = 1e-6,
 ) -> tuple[torch.Tensor, float, float]:
     """Standard scorer loss: 100*seg + sqrt(10*pose).
 
-    Uses soft cosine for SegNet (differentiable proxy for argmax disagreement).
+    Uses soft cosine for SegNet by default (differentiable proxy for argmax
+    disagreement). ``segmentation_surrogate="fisher_rao"`` enables the
+    normalized Fisher-Rao simplex metric for scorer-aware training experiments.
 
     Args:
         class_weights: (NUM_CLASSES,) optional per-class weights for the
@@ -249,9 +374,14 @@ def scorer_loss(
 
     pose_dist = (fp_out["pose"][..., :6] - gp_out["pose"][..., :6]).pow(2).mean()
 
-    pred_soft = F.softmax(fs_out, dim=1)
-    gt_soft = F.softmax(gs_out, dim=1)
-    seg_per_pixel = 1.0 - (pred_soft * gt_soft).sum(dim=1)  # (B, H, W)
+    seg_per_pixel = segnet_surrogate_per_pixel(
+        fs_out,
+        gs_out,
+        surrogate=segmentation_surrogate,
+        temperature=segmentation_temperature,
+        fisher_rao_eps=fisher_rao_eps,
+        num_classes=gs_out.shape[1],
+    )
     if class_weights is not None:
         seg_per_pixel = _apply_class_weights(seg_per_pixel, gs_out, class_weights)
     seg_dist = seg_per_pixel.mean()
@@ -267,6 +397,9 @@ def scorer_loss_cached(
     posenet,
     segnet,
     class_weights: torch.Tensor | None = None,
+    segmentation_surrogate: str = SEGMENTATION_SURROGATE_SOFT_COSINE,
+    segmentation_temperature: float = 1.0,
+    fisher_rao_eps: float = 1e-6,
 ) -> tuple[torch.Tensor, float, float]:
     """Standard scorer loss using pre-cached GT scorer outputs.
 
@@ -292,8 +425,15 @@ def scorer_loss_cached(
 
     pose_dist = (fp_out["pose"][..., :6] - gt_pose_6).pow(2).mean()
 
-    pred_soft = F.softmax(fs_out, dim=1)
-    seg_per_pixel = 1.0 - (pred_soft * gt_seg_soft).sum(dim=1)  # (B, H, W)
+    seg_per_pixel = segnet_surrogate_per_pixel(
+        fs_out,
+        gt_seg_soft,
+        surrogate=segmentation_surrogate,
+        temperature=segmentation_temperature,
+        fisher_rao_eps=fisher_rao_eps,
+        gt_already_probs=True,
+        num_classes=gt_seg_soft.shape[1],
+    )
     if class_weights is not None:
         # Cached path: use the cached softmax as the GT-argmax source.
         # Equivalent to argmax(logits) since softmax is monotone.
@@ -313,6 +453,9 @@ def scorer_loss_with_aux(
     segnet,
     class_weights: torch.Tensor | None = None,
     num_classes: int = 5,
+    segmentation_surrogate: str = SEGMENTATION_SURROGATE_SOFT_COSINE,
+    segmentation_temperature: float = 1.0,
+    fisher_rao_eps: float = 1e-6,
 ) -> tuple[torch.Tensor, float, float, dict]:
     """Variant of :func:`scorer_loss` that also returns per-pair pose loss
     and per-class SegNet distortion for the Round 11 Finding 2 dual-update
@@ -337,9 +480,14 @@ def scorer_loss_with_aux(
     # (B,) per-pair pose distortion — collapse pose dims to mean.
     pose_dist_per_pair = pose_diff.detach().pow(2).mean(dim=tuple(range(1, pose_diff.ndim)))
 
-    pred_soft = F.softmax(fs_out, dim=1)
-    gt_soft = F.softmax(gs_out, dim=1)
-    seg_per_pixel = 1.0 - (pred_soft * gt_soft).sum(dim=1)
+    seg_per_pixel = segnet_surrogate_per_pixel(
+        fs_out,
+        gs_out,
+        surrogate=segmentation_surrogate,
+        temperature=segmentation_temperature,
+        fisher_rao_eps=fisher_rao_eps,
+        num_classes=num_classes,
+    )
     per_class_d = per_class_seg_distortion(seg_per_pixel, gs_out, num_classes)
     if class_weights is not None:
         seg_per_pixel = _apply_class_weights(seg_per_pixel, gs_out, class_weights)
@@ -361,6 +509,9 @@ def scorer_loss_cached_with_aux(
     segnet,
     class_weights: torch.Tensor | None = None,
     num_classes: int = 5,
+    segmentation_surrogate: str = SEGMENTATION_SURROGATE_SOFT_COSINE,
+    segmentation_temperature: float = 1.0,
+    fisher_rao_eps: float = 1e-6,
 ) -> tuple[torch.Tensor, float, float, dict]:
     """Cached counterpart to :func:`scorer_loss_with_aux`."""
     fx = _hwc_to_chw(filtered_pair_hwc)
@@ -370,8 +521,15 @@ def scorer_loss_cached_with_aux(
     pose_dist = pose_diff.pow(2).mean()
     pose_dist_per_pair = pose_diff.detach().pow(2).mean(dim=tuple(range(1, pose_diff.ndim)))
 
-    pred_soft = F.softmax(fs_out, dim=1)
-    seg_per_pixel = 1.0 - (pred_soft * gt_seg_soft).sum(dim=1)
+    seg_per_pixel = segnet_surrogate_per_pixel(
+        fs_out,
+        gt_seg_soft,
+        surrogate=segmentation_surrogate,
+        temperature=segmentation_temperature,
+        fisher_rao_eps=fisher_rao_eps,
+        gt_already_probs=True,
+        num_classes=num_classes,
+    )
     per_class_d = per_class_seg_distortion(seg_per_pixel, gt_seg_soft, num_classes)
     if class_weights is not None:
         seg_per_pixel = _apply_class_weights(
@@ -965,13 +1123,13 @@ def kl_distill_segnet_only(
     # 2026-04-27 council forensics (findings.md "Lane G — really dead, or
     # bugged?"): the prior `reduction="batchmean"` on a (B, 5, H, W)
     # SegNet logit tensor divides only by B, producing a value
-    # H × W = 384 × 512 = 196,608 larger than the per-pixel-per-class
+    # H x W = 384 x 512 = 196,608 larger than the per-pixel-per-class
     # mean the caller-weight contract assumes. (`batchmean` already
     # sums-over-class internally, so the missing divisor is exactly
-    # H × W, not H × W × C.) Empirical kl.item() ≈ 24,485 vs the true
+    # H x W, not H x W x C.) Empirical kl.item() ~= 24,485 vs the true
     # per-pixel-per-class mean of ~6.2e-3 nats. Every caller passing
     # kl_distill_weight=1.0 (DEN/SHIRAZ/WILDE/Lane-D training, Lane G
-    # pose TTO v1/v2) was implicitly running at ~5000× the intended
+    # pose TTO v1/v2) was implicitly running at ~5000x the intended
     # weight. Fix mirrors the canonical pattern in
     # `kl_distill_scorer_loss` (line 622+646): `reduction="none"` →
     # `.sum(dim=1)` (over class) → `.mean()` (over B, H, W). T² scaling
@@ -1157,14 +1315,14 @@ def feature_matching_loss(
 
     # Forward pass for filtered frames (with gradients)
     posenet_in_f = posenet.preprocess_input(fx)
-    fp_out = posenet(posenet_in_f)
+    posenet(posenet_in_f)
     handle.remove()
 
     # Forward pass for GT frames (no gradients)
     handle_gt = target_module.register_forward_hook(_hook_fn(features_gt))
     with torch.no_grad():
         posenet_in_g = posenet.preprocess_input(gx)
-        gp_out = posenet(posenet_in_g)
+        posenet(posenet_in_g)
     handle_gt.remove()
 
     feat_f = features_filtered[0]
@@ -1286,7 +1444,7 @@ def segnet_kl_divergence_loss(
     # 2026-04-27 council forensics (same bug class as kl_distill_segnet_only,
     # see findings.md "Lane G — really dead, or bugged?" + Check M in
     # preflight.py): `reduction="batchmean"` on a (B, C, H_seg, W_seg)
-    # tensor under-divides by H_seg × W_seg vs the canonical per-pixel
+    # tensor under-divides by H_seg x W_seg vs the canonical per-pixel
     # mean. Likely contributor to the historical "KL distill caused
     # PoseNet collapse as primary loss" failure mode in CLAUDE.md
     # Critical Lessons. Switched to per-pixel-per-class mean to match
@@ -1767,7 +1925,7 @@ def train_scorer_proxy(
     losses_history: list[float] = []
     batch_size = min(8, N)
 
-    for epoch in range(epochs):
+    for _epoch in range(epochs):
         perm = torch.randperm(N, device=device)
         epoch_loss = 0.0
         n_batches = 0

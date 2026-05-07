@@ -12,18 +12,6 @@ Usage:
 """
 from __future__ import annotations
 
-# DX-fix 2026-04-25: line-buffer stdout/stderr so progress logs flush
-# immediately when piped to log files (Python buffers ~8KB by default,
-# making long-running scripts appear silent for hours per the optimize_poses
-# incident on the A100 today).
-import sys as _dx_sys
-try:
-    _dx_sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
-    _dx_sys.stderr.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
-except (AttributeError, OSError):
-    pass
-
-
 import argparse
 import hashlib
 import json
@@ -32,12 +20,22 @@ import os as _os
 import random
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+# DX-fix 2026-04-25: line-buffer stdout/stderr so progress logs flush
+# immediately when piped to log files (Python buffers ~8KB by default,
+# making long-running scripts appear silent for hours per the optimize_poses
+# incident on the A100 today).
+try:
+    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
+    sys.stderr.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
+except (AttributeError, OSError):
+    pass
 
 # ── Path setup ──────────────────────────────────────────────────────────
 
@@ -54,12 +52,16 @@ if _upstream.exists() and str(_upstream) not in sys.path:
 
 # ── Imports (after path setup) ──────────────────────────────────────────
 
+from tac.contrib.wavelet_renderer import build_wavelet_renderer  # noqa: E402
 from tac.data import decode_video, pair_from_frames, pair_start_indices  # noqa: E402
+from tac.feature_masking import FeatureMasker  # noqa: E402
 from tac.fp4_quantize import (  # noqa: E402
     QATRendererFP4,
     dequantize_fp4,
     quantize_fp4,
 )
+from tac.fridrich_losses import dct_quant_loss  # noqa: E402
+from tac.loss_t2_xpred import x_prediction_loss  # noqa: E402
 from tac.losses import (  # noqa: E402
     _hwc_to_chw,
     eval_scorer_loss,
@@ -71,26 +73,21 @@ from tac.losses import (  # noqa: E402
     segnet_uncertainty_weighted_loss,
     uniward_quant_noise_loss,
 )
+from tac.mae_mask_aug import (  # noqa: E402
+    MAEMaskAugConfig,
+    MAEMaskAugmenter,
+)
 from tac.mask_codec import extract_masks, mask_pair_from_index  # noqa: E402
 from tac.profiles import PROFILES  # noqa: E402
-from tac.fridrich_losses import dct_quant_loss  # noqa: E402
-from tac.feature_masking import FeatureMasker  # noqa: E402
-from tac.loss_t2_xpred import x_prediction_loss  # noqa: E402
-from tac.renderer import build_renderer, simulate_eval_roundtrip  # noqa: E402
+from tac.renderer import simulate_eval_roundtrip  # noqa: E402
+from tac.scorer import detect_device, load_scorers  # noqa: E402
 from tac.self_augmentation_v2 import (  # noqa: E402
     HighSigmaSampler,
     HighSigmaStrategyConfig,
     apply_sigma_noise_to_input,
 )
-from tac.mae_mask_aug import (  # noqa: E402
-    MAEMaskAugConfig,
-    MAEMaskAugmenter,
-)
-from tac.contrib.wavelet_renderer import build_wavelet_renderer  # noqa: E402
-from tac.scorer import detect_device, load_scorers  # noqa: E402
 from tac.training import EMA  # noqa: E402
 from tac.utils import setup_signal_handlers, write_telemetry  # noqa: E402
-
 
 # ── Variant routing ─────────────────────────────────────────────────────
 #
@@ -301,7 +298,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     #
     # Without this, the model trains on (mask_t, mask_t1) where both are
     # ground-truth, but at inflate sees (warp(mask_t1), mask_t1) where
-    # mask_t is approximated. This train/inflate mismatch costs 0.05–0.10
+    # mask_t is approximated. This train/inflate mismatch costs 0.05-0.10
     # score points. Wiring closes the gap.
     #
     # Zoom scalars come from analytical lane-mark-speed estimation (no GT
@@ -417,6 +414,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                         "(e.g., '1,5,5,1,1' to boost lane + boundary "
                         "classes). Default None / empty = uniform "
                         "weighting (byte-identical to baseline).")
+    p.add_argument("--segmentation-surrogate", type=str,
+                   default="soft_cosine",
+                   choices=["soft_cosine", "fisher_rao"],
+                   help="SegNet scorer-loss training surrogate. Default "
+                        "'soft_cosine' preserves legacy behavior. "
+                        "'fisher_rao' enables the opt-in normalized "
+                        "Fisher-Rao simplex metric from the Hilbert/"
+                        "information-geometry workstream.")
+    p.add_argument("--segmentation-temperature", type=float, default=1.0,
+                   help="Temperature for the SegNet training surrogate. "
+                        "Cached-GT mode supports only 1.0 because it stores "
+                        "softmax probabilities, not raw teacher logits.")
+    p.add_argument("--fisher-rao-eps", type=float, default=1e-6,
+                   help="Numerical epsilon for --segmentation-surrogate "
+                        "fisher_rao. Must be in (0, 1e-3).")
 
     p.add_argument("--subsample", type=int, default=4,
                    help="Train on 1/N of pairs per epoch")
@@ -439,12 +451,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     # 'default', 14 set 'residual'). Pass None so _resolve consults profile,
     # falling back to 'default' only when neither CLI nor profile set it.
     # Without this fix, every 'residual'-profile training run was silently
-    # using the wrong codebook (potentially 4× worse small-magnitude weight
+    # using the wrong codebook (potentially 4x worse small-magnitude weight
     # preservation, which is exactly the bug the codebook was meant to fix).
     p.add_argument("--fp4-codebook", choices=("default", "residual"),
                    default=None,
                    help="FP4 codebook: 'default' = mask2mask uniform spacing, "
-                        "'residual' = denser-near-zero (4× better small-mag preservation). "
+                        "'residual' = denser-near-zero (4x better small-mag preservation). "
                         "Use 'residual' for renderers with a correction head.")
     p.add_argument("--fp4-stochastic", action="store_true", default=False,
                    help="Stochastic rounding during training (unbiased dither). "
@@ -479,8 +491,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="Lane S: swap bulk Conv2d for SelfCompressingConv2d "
                         "with per-channel learnable bit-depth.")
     # Lane SG (2026-04-28 council EUREKA #5): re-scope which layers stay FP32
-    # based on which scorer we are protecting. SegNet contributes 100×seg
-    # vs sqrt(10·pose) for PoseNet — at our operating point SegNet is 2-5×
+    # based on which scorer we are protecting. SegNet contributes 100x seg
+    # vs sqrt(10*pose) for PoseNet — at our operating point SegNet is 2-5x
     # more impactful per unit-distortion. Lane SG protects SegNet-relevant
     # layers (decoder out_conv, decode_head, class affines) instead of the
     # PoseNet-relevant layers (FiLM, motion.head, renderer.head).
@@ -1114,10 +1126,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args._segnet_class_weights_tensor = _parse_pcw(
         args.segnet_class_weights, num_classes=5,
     )
+    from tac.losses import segnet_surrogate_per_pixel as _segnet_surrogate_probe
+    # Fail bad Fisher-Rao/temperature config at boot. A one-pixel probe keeps
+    # this scorer-free and deterministic while reusing the canonical validator.
+    _probe_logits = torch.zeros(1, 5, 1, 1)
+    _segnet_surrogate_probe(
+        _probe_logits,
+        _probe_logits,
+        surrogate=args.segmentation_surrogate,
+        temperature=args.segmentation_temperature,
+        fisher_rao_eps=args.fisher_rao_eps,
+    )
     if args._segnet_class_weights_tensor is not None:
         print(
             f"[lane-ps] SegNet per-class weights ACTIVE: "
             f"{args._segnet_class_weights_tensor.tolist()}",
+            flush=True,
+        )
+    if args.segmentation_surrogate != "soft_cosine":
+        print(
+            f"[hilbert] SegNet segmentation surrogate ACTIVE: "
+            f"{args.segmentation_surrogate} "
+            f"(temperature={args.segmentation_temperature}, "
+            f"fisher_rao_eps={args.fisher_rao_eps})",
             flush=True,
         )
     # Yousfi #5 council wiring (2026-04-26): WILDE/SHIRAZ/DEN profiles set
@@ -1189,9 +1220,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "ramp_end_frac": float(parts[3]),
         }
     else:
-        args.mask_half_sim_prob_anneal = profile_vals.get(
-            "mask_half_sim_prob_anneal", None,
-        )
+        args.mask_half_sim_prob_anneal = profile_vals.get("mask_half_sim_prob_anneal")
     if args.mask_half_sim_prob_anneal is not None:
         sched = args.mask_half_sim_prob_anneal
         required_keys = {
@@ -1778,7 +1807,7 @@ def _peek_checkpoint_arch_meta(
     try:
         state = torch.load(str(ckpt_path), map_location=device,
                            weights_only=False)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"[resume] WARN: could not peek {ckpt_path} ({exc!r}); "
               f"profile pose_dim will be used as-is.", file=sys.stderr)
         return None
@@ -1800,7 +1829,7 @@ def _peek_checkpoint_arch_meta(
         if sd is None and all(isinstance(v, torch.Tensor) for v in state.values()):
             sd = state  # raw state_dict
     if isinstance(sd, dict):
-        has_film = any("film_" in k for k in sd.keys())
+        has_film = any("film_" in k for k in sd)
         synth = {"pose_dim": 6 if has_film else 0,
                  "_legacy_no_arch_meta": True}
         return synth
@@ -2225,7 +2254,6 @@ def train(args: argparse.Namespace):
     # radial zoom from FoE), no GT poses needed. RadialZoomWarp +
     # warp_inverse_masks come from tac.radial_zoom.
     sim_zoom_warp = None
-    sim_warp_cache: dict[int, torch.Tensor] = {}
     _need_zoom_warp = (
         getattr(args, "mask_half_sim_prob", 0.0) > 0
         or getattr(args, "use_zoom_flow", False)
@@ -2473,10 +2501,9 @@ def train(args: argparse.Namespace):
     # device move below. The swap is in-place — `model` is mutated.
     if getattr(args, "use_self_compress_codec", False):
         from tac.self_compress import (
-            swap_renderer_convs_with_self_compress,
-            renderer_average_bits_per_weight,
             get_protected_patterns,
-            SC_PROTECTED_NAME_PATTERNS,
+            renderer_average_bits_per_weight,
+            swap_renderer_convs_with_self_compress,
         )
         # Lane SG (2026-04-28, hardened by Codex F3 2026-04-28): pick the
         # protection list per chosen scorer prior and pass it as a
@@ -3177,6 +3204,11 @@ def train(args: argparse.Namespace):
                 _scorer_aux = None
                 if learnable_segnet_class_weights is not None:
                     _pcw = learnable_segnet_class_weights.weights().detach()
+                _seg_kwargs = {
+                    "segmentation_surrogate": args.segmentation_surrogate,
+                    "segmentation_temperature": args.segmentation_temperature,
+                    "fisher_rao_eps": args.fisher_rao_eps,
+                }
                 # When either learnable module is active, use the *_with_aux
                 # variant which returns per-pair pose distortion and
                 # per-class SegNet distortion (detached) for the explicit
@@ -3201,11 +3233,13 @@ def train(args: argparse.Namespace):
                         loss, pd, sd, _scorer_aux = scorer_loss_cached_with_aux(
                             rendered_pair, _gt_pose_6, _gt_seg_soft, posenet, segnet,
                             class_weights=_pcw,
+                            **_seg_kwargs,
                         )
                     else:
                         loss, pd, sd = scorer_loss_cached(
                             rendered_pair, _gt_pose_6, _gt_seg_soft, posenet, segnet,
                             class_weights=_pcw,
+                            **_seg_kwargs,
                         )
                     del _gt_pose_6, _gt_seg_soft
                 else:
@@ -3214,11 +3248,13 @@ def train(args: argparse.Namespace):
                         loss, pd, sd, _scorer_aux = scorer_loss_with_aux(
                             rendered_pair, gt_pair, posenet, segnet,
                             class_weights=_pcw,
+                            **_seg_kwargs,
                         )
                     else:
                         loss, pd, sd = scorer_loss(
                             rendered_pair, gt_pair, posenet, segnet,
                             class_weights=_pcw,
+                            **_seg_kwargs,
                         )
 
             # Trick 3: Even-frame SegNet skip
@@ -3276,7 +3312,7 @@ def train(args: argparse.Namespace):
                     #
                     # Kernel choice: 7 (odd) instead of 8 (even). Even kernel
                     # + reflect-pad in avg_pool2d gains 1 pixel on each axis
-                    # (H+2*pad-k+1 = H+1), which then breaks the diff×inv_var
+                    # (H+2*pad-k+1 = H+1), which then breaks the diff x inv_var
                     # broadcast. The original "8" was the source of the
                     # 1-pixel-asymmetry bug the docstring above warns about.
                     # Odd kernel of similar radius (k=7 → 3-pixel half-window
@@ -3322,7 +3358,7 @@ def train(args: argparse.Namespace):
                                   (grad_y_pred - grad_y_gt).abs().mean()
                     loss = loss + args.markov_weight * markov_loss
                 # Fridrich council #1 (2026-04-26): JPEG-Q-table-weighted DCT
-                # loss. Penalises low-frequency residual energy ~6× more than
+                # loss. Penalises low-frequency residual energy ~6x more than
                 # high-frequency, hiding error in DCT bins the scorers cannot
                 # see. Zero-overhead when weight=0 (call site is gated).
                 if args.dct_quant_weight > 0:
@@ -3614,10 +3650,13 @@ def train(args: argparse.Namespace):
 
         # Determine current phase label. 5-phase mode uses Quantizr's named
         # phases; legacy mode keeps the historical "pretrain"/"scorer" labels.
-        if use_5phase:
-            phase = f"phase{phase_idx}_{PHASE_NAMES[phase_idx]}"
-        else:
-            phase = "pretrain" if in_pretrain else "scorer"
+        phase = (
+            f"phase{phase_idx}_{PHASE_NAMES[phase_idx]}"
+            if use_5phase
+            else "pretrain"
+            if in_pretrain
+            else "scorer"
+        )
 
         # FP4 evaluation (skip during Phase 1 -- scorer scores are meaningless)
         is_eval_epoch = (not in_pretrain and
@@ -3929,7 +3968,7 @@ def train(args: argparse.Namespace):
                 "eval_pose": round(eval_pose, 8),
                 "eval_seg": round(eval_seg, 8),
                 "best_epoch": best_epoch,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "distillation_policy": getattr(args, "distillation_policy_provenance", None),
                 "distillation_policy_sha256": getattr(args, "distillation_policy_sha256", None),
                 "score_claim_eligible": False,
@@ -4167,7 +4206,7 @@ def train(args: argparse.Namespace):
             "--output-dir", str(out_dir),
             "--poses", str(args.auth_eval_poses),
         ]
-        print(f"\n[auth-eval] Launching CUDA auth eval against best checkpoint...")
+        print("\n[auth-eval] Launching CUDA auth eval against best checkpoint...")
         print(f"[auth-eval] cmd: {' '.join(cmd)}")
         try:
             proc = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
@@ -4190,11 +4229,11 @@ def train(args: argparse.Namespace):
                     "the run produced no authoritative score (CLAUDE.md violation)"
                 )
             print(f"[auth-eval] Result saved alongside checkpoint in {out_dir}")
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as exc:
             raise RuntimeError(
                 "[auth-eval] TIMED OUT after 15min — auth_eval_renderer is hung. "
                 "Investigate manually."
-            )
+            ) from exc
 
     return best_scorer
 
