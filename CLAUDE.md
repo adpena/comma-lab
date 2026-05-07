@@ -97,6 +97,12 @@ stacking, entropy coding, hidden gems, public PR deconstruction, categorical
 labels, foveation, pose, sensitivity, or paradigm wiring must either improve
 this solver or explicitly record why the new signal is not yet actionable.
 
+Continuously improve the solver toward learnable and solvable theoretical-floor
+discovery. No signal loss: keep exact CUDA outputs, archive bytes/SHA,
+runtime-tree hashes, commands, assumptions, negatives, calibration residuals,
+and cross-paradigm rows machine-readable so future agents can reseed the
+planner without reverse-engineering prose.
+
 Every stackable or substitutive idea should move toward a typed row consumed by
 the planner: candidate id, family, pareto scope, charged bytes, predicted
 SegNet/PoseNet/rate deltas, uncertainty, evidence grade, archive/runtime
@@ -118,6 +124,12 @@ Pareto/KKT/interaction prune -> select by score delta plus expected information
 gain -> build deterministic archive -> exact CUDA eval -> reseed the solver.
 Keep this path simpler, faster, more deterministic, and more complete every
 time it is touched.
+
+Planner recipes and dispatch snippets must use the current tool surfaces. Grep
+the real argparse/help contract before writing or invoking any flag, and record
+a blocker or add a reviewed interface when the solver needs a capability the
+tools do not expose. Never invent flags, schema keys, or evidence fields to
+make a theoretical plan look executable.
 
 ## CROSS-AGENT DISPATCH COORDINATION — NON-NEGOTIABLE
 

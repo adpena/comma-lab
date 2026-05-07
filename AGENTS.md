@@ -662,6 +662,13 @@ learnable, more deterministic, simpler to operate, or faster to solve. If the
 answer is yes, update the planner contract or record the explicit blocker in a
 dated `.omx/research/` ledger.
 
+Continuous improvement means pushing the planner toward learnable and solvable
+theoretical-floor discovery, not preserving a snapshot of today's ranker. No
+signal loss: keep exact CUDA outputs, byte custody, runtime-tree hashes,
+commands, assumptions, negatives, calibration residuals, and cross-paradigm
+rows machine-readable so future agents can reseed the solver instead of
+reconstructing intent from prose.
+
 Every stackable or substitutive atom should converge toward a shared field row:
 candidate id, family, paradigm(s), role, pareto scope, charged-byte delta,
 expected SegNet/PoseNet/rate deltas, confidence/uncertainty, evidence grade,
@@ -703,6 +710,12 @@ add focused tests for every new blocker or objective term; make selection fast
 enough for loop use; and preserve cross-platform behavior. A powerful equation
 that cannot emit a byte-closed archive, a dispatch packet, or a learnable
 feedback row is not yet useful.
+
+Planner recipes, dispatch snippets, and schema migrations must be grounded in
+the current tool surfaces. Grep the real argparse/help contract before writing
+or invoking any flag, and record a blocker or add a reviewed interface when the
+solver needs a capability the tools do not expose. Never invent flags, schema
+keys, or evidence fields to make a theoretical plan look executable.
 
 ### Hardware, Camera, And openpilot Priors
 
