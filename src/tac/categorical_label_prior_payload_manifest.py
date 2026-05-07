@@ -31,6 +31,20 @@ def _charged_name_list(charged_member_links: Any) -> list[str]:
     ]
 
 
+def canonical_categorical_label_prior_class_rows() -> list[dict[str, Any]]:
+    """Return the byte-closed semantic rows required in label-prior manifests."""
+
+    return [
+        {
+            "class_id": item.class_id,
+            "comma10k_id": item.comma10k_id,
+            "name": item.name,
+            "selfcomp_gray": SELFCOMP_CLASS_TO_GRAY[item.class_id],
+        }
+        for item in CONTEST_SEGNET_CLASSES
+    ]
+
+
 def build_categorical_label_prior_payload_manifest(
     *,
     source_archive_sha256: str,
@@ -68,15 +82,7 @@ def build_categorical_label_prior_payload_manifest(
         "selfcomp_gray_codebook": [
             SELFCOMP_CLASS_TO_GRAY[index] for index in range(len(SELFCOMP_CLASS_TO_GRAY))
         ],
-        "class_rows": [
-            {
-                "class_id": item.class_id,
-                "comma10k_id": item.comma10k_id,
-                "name": item.name,
-                "selfcomp_gray": SELFCOMP_CLASS_TO_GRAY[item.class_id],
-            }
-            for item in CONTEST_SEGNET_CLASSES
-        ],
+        "class_rows": canonical_categorical_label_prior_class_rows(),
         "charged_member_links": charged_member_links,
         "conditioning_priors": normalized_priors,
         "conditioning_prior_contract": audit_categorical_openpilot_mask_priors(
@@ -101,4 +107,5 @@ __all__ = [
     "RUNTIME_LABEL_CONTRACT",
     "SCHEMA_VERSION",
     "build_categorical_label_prior_payload_manifest",
+    "canonical_categorical_label_prior_class_rows",
 ]

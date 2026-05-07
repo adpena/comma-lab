@@ -213,6 +213,41 @@ def _base_candidate(tmp_path: Path) -> dict:
     }
 
 
+def _replace_charged_archive_member(candidate: dict, *, member_name: str, raw: bytes) -> None:
+    archive = Path(candidate["candidate_archive"]["path"])
+    with zipfile.ZipFile(archive) as source:
+        member_order = source.namelist()
+        payloads = {name: source.read(name) for name in member_order}
+    assert member_name in payloads
+    payloads[member_name] = raw
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as target:
+        for name in member_order:
+            target.writestr(_zip_info(name), payloads[name], compress_type=zipfile.ZIP_STORED)
+
+    for record in candidate["charged_members"]:
+        if record["name"] == member_name:
+            record["bytes"] = len(raw)
+            record["sha256"] = sha256_bytes(raw)
+
+    if member_name == LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER:
+        candidate["label_prior_payload_manifest"]["bytes"] = len(raw)
+        candidate["label_prior_payload_manifest"]["sha256"] = sha256_bytes(raw)
+
+    archive_member_manifest_path = Path(candidate["archive_member_manifest"]["path"])
+    archive_member_manifest = json.loads(archive_member_manifest_path.read_text(encoding="utf-8"))
+    archive_member_manifest["members"] = candidate["charged_members"]
+    archive_member_manifest["member_order"] = [
+        record["name"] for record in candidate["charged_members"]
+    ]
+    archive_member_manifest["member_count"] = len(candidate["charged_members"])
+    write_json(archive_member_manifest_path, archive_member_manifest)
+    candidate["archive_member_manifest"]["bytes"] = archive_member_manifest_path.stat().st_size
+    candidate["archive_member_manifest"]["sha256"] = sha256_file(archive_member_manifest_path)
+    candidate["archive_member_manifest_sha256"] = sha256_file(archive_member_manifest_path)
+    candidate["candidate_archive"]["bytes"] = archive.stat().st_size
+    candidate["candidate_archive"]["sha256"] = sha256_file(archive)
+
+
 def _structural_hpm1_inventory(payload_sha: str) -> dict:
     return {
         "schema_version": 1,
@@ -755,6 +790,39 @@ def test_audit_categorical_candidate_manifest_rejects_label_prior_payload_drift(
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["label_prior_payload_manifest"]["accepted"] is False
     assert "label_prior_payload_manifest_conditioning_priors_mismatch" in manifest["dispatch_blockers"]
+
+
+def test_audit_categorical_candidate_manifest_rejects_label_prior_class_row_drift(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    with zipfile.ZipFile(candidate["candidate_archive"]["path"]) as archive:
+        label_prior_payload_manifest = json.loads(
+            archive.read(LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER).decode("utf-8")
+        )
+    label_prior_payload_manifest["class_rows"][1]["comma10k_id"] = 6
+    drifted_manifest = json.dumps(
+        label_prior_payload_manifest,
+        indent=2,
+        sort_keys=True,
+    ).encode("utf-8") + b"\n"
+    _replace_charged_archive_member(
+        candidate,
+        member_name=LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
+        raw=drifted_manifest,
+    )
+    _attach_complete_dispatch_proofs(candidate, tmp_path)
+
+    manifest = audit_categorical_candidate_manifest(
+        candidate,
+        repo_root=REPO,
+        manifest_dir=tmp_path,
+    )
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["label_prior_payload_manifest"]["accepted"] is False
+    assert manifest["label_prior_payload_manifest"]["class_rows_match"] is False
+    assert manifest["dispatch_blockers"] == ["label_prior_payload_manifest_class_rows_mismatch"]
 
 
 def test_audit_categorical_candidate_manifest_checks_archive_member_fidelity(tmp_path: Path) -> None:

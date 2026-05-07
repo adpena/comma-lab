@@ -17,6 +17,7 @@ from tac.categorical_label_prior_payload_manifest import (
     LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
     LABEL_PRIOR_PAYLOAD_MANIFEST_ROLE,
     RUNTIME_LABEL_CONTRACT,
+    canonical_categorical_label_prior_class_rows,
 )
 from tac.categorical_openpilot_mask_prior_contract import (
     audit_categorical_openpilot_mask_priors,
@@ -582,6 +583,7 @@ def _label_prior_payload_manifest_report(
         "sha256": "",
         "label_contract": "",
         "conditioning_prior_count": 0,
+        "class_rows_match": False,
         "blockers": [],
     }
     if not isinstance(record, dict):
@@ -663,6 +665,10 @@ def _label_prior_payload_manifest_report(
             blockers.append("label_prior_payload_manifest_semantic_class_order_mismatch")
         if manifest_payload.get("selfcomp_gray_codebook") != expected_gray_codebook:
             blockers.append("label_prior_payload_manifest_selfcomp_gray_codebook_mismatch")
+        expected_class_rows = canonical_categorical_label_prior_class_rows()
+        summary["class_rows_match"] = manifest_payload.get("class_rows") == expected_class_rows
+        if not summary["class_rows_match"]:
+            blockers.append("label_prior_payload_manifest_class_rows_mismatch")
         if manifest_payload.get("conditioning_priors") != candidate_conditioning_priors:
             blockers.append("label_prior_payload_manifest_conditioning_priors_mismatch")
         priors = manifest_payload.get("conditioning_priors")
