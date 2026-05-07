@@ -48,6 +48,7 @@ def test_all_required_paradigm_adapters_emit_common_fields(tmp_path: Path) -> No
                     "variant": "brotli-q11",
                     "byte_delta_vs_source_section": -151,
                     "raw_equal": True,
+                    "dispatch_blockers": ["requires_archive_manifest_preflight"],
                     "archive_manifest_path": archive_manifest.as_posix(),
                     "archive_manifest_sha256": manifest_sha,
                 }
@@ -142,6 +143,16 @@ def test_all_required_paradigm_adapters_emit_common_fields(tmp_path: Path) -> No
     direct_ledger = build_atom_ledger(atoms, base_pose_dist=0.01, source="fixture")
     assert direct_ledger["atom_count"] == len(atoms)
     assert direct_ledger["ready_for_exact_eval_dispatch"] is False
+
+    cross_ledger = build_cross_paradigm_atom_ledger(
+        atoms,
+        base_pose_dist=0.01,
+        source="fixture",
+    )
+    hnerv_row = next(row for row in cross_ledger["rows"] if row["paradigm"] == "hnerv_rate_recode")
+    assert hnerv_row["byte_closed_archive_manifest_attached"] is True
+    assert "requires_archive_manifest_preflight" not in hnerv_row["source_dispatch_blockers"]
+    assert "requires_archive_manifest_preflight" not in hnerv_row["exact_dispatch_blockers"]["blockers"]
 
 
 def test_cross_paradigm_ledger_preserves_adapter_assumptions_and_blockers() -> None:

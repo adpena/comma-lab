@@ -28,6 +28,7 @@ DEFAULT_DISPATCH_BLOCKERS = (
     "requires_exact_cuda_auth_eval",
 )
 ARCHIVE_CUSTODY_SATISFIED_BLOCKERS = {
+    "requires_archive_manifest_preflight",
     "requires_byte_closed_archive_manifest_before_dispatch",
 }
 
