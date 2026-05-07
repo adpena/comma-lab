@@ -88,6 +88,16 @@ class TacLosslessBaselineTests(unittest.TestCase):
             self.assertTrue(np.array_equal(np.load(output_dir / "clip_a"), records[1].tokens))
             self.assertTrue(np.array_equal(np.load(output_dir / "clip_b"), records[0].tokens))
 
+    def test_rendered_global_prev_symbol_runtime_rejects_non_canonical_varints(self) -> None:
+        from tac.lossless.codecs import render_global_prev_symbol_position_major_runtime_module
+
+        namespace: dict[str, object] = {}
+        exec(render_global_prev_symbol_position_major_runtime_module(), namespace)
+
+        decoder = namespace["decode_uint16_prev_symbol_stream"]
+        with self.assertRaisesRegex(ValueError, "non-canonical context count"):
+            decoder(b"TPC1\x00\x80\x00")
+
     def test_evaluate_global_prev_symbol_position_major_submission_returns_measured_result(self) -> None:
         from tac.lossless.codecs import evaluate_lossless_baseline_submission
 
@@ -194,6 +204,16 @@ class TacLosslessBaselineTests(unittest.TestCase):
 
             self.assertTrue(np.array_equal(np.load(output_dir / "clip_a"), records["clip_a"]))
             self.assertTrue(np.array_equal(np.load(output_dir / "clip_b"), records["clip_b"]))
+
+    def test_rendered_prev_symbol_runtime_rejects_non_canonical_varints(self) -> None:
+        from tac.lossless.codecs import render_prev_symbol_position_major_runtime_module
+
+        namespace: dict[str, object] = {}
+        exec(render_prev_symbol_position_major_runtime_module(), namespace)
+
+        decoder = namespace["decode_uint16_prev_symbol_stream"]
+        with self.assertRaisesRegex(ValueError, "non-canonical context count"):
+            decoder(b"TPC1\x00\x80\x00")
 
     def test_evaluate_prev_symbol_position_major_submission_returns_measured_result(self) -> None:
         from tac.lossless.codecs import evaluate_lossless_baseline_submission

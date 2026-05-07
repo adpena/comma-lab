@@ -99,6 +99,38 @@ class TacLosslessRangeCoderTests(unittest.TestCase):
 
         self.assertEqual(restored, symbols)
 
+    def test_range_encoder_rejects_malformed_cumulative_tables_with_value_error(self) -> None:
+        from tac.lossless.range_coder import RangeEncoder
+
+        encoder = RangeEncoder()
+
+        with self.assertRaisesRegex(ValueError, "symbol is outside"):
+            encoder.encode(symbol=2, cumulative=[0, 3, 5], total=5)
+        with self.assertRaisesRegex(ValueError, "total"):
+            encoder.encode(symbol=0, cumulative=[0, 1], total=0)
+        with self.assertRaisesRegex(ValueError, "start at zero"):
+            encoder.encode(symbol=0, cumulative=[1, 2], total=2)
+        with self.assertRaisesRegex(ValueError, "strictly increasing"):
+            encoder.encode(symbol=0, cumulative=[0, 1, 1], total=1)
+
+    def test_range_decoder_rejects_invalid_targets_and_intervals_with_value_error(self) -> None:
+        from tac.lossless.range_coder import RangeDecoder
+
+        decoder = RangeDecoder(b"\x00")
+
+        with self.assertRaisesRegex(ValueError, "total"):
+            decoder.target(0)
+        with self.assertRaisesRegex(ValueError, "interval"):
+            decoder.update(low_count=2, high_count=2, total=4)
+        with self.assertRaisesRegex(ValueError, "interval"):
+            decoder.update(low_count=0, high_count=5, total=4)
+
+    def test_decode_static_symbols_rejects_empty_nonempty_range_stream(self) -> None:
+        from tac.lossless.range_coder import decode_static_symbols
+
+        with self.assertRaisesRegex(ValueError, "empty"):
+            decode_static_symbols(b"", count=1, frequencies=[1, 1])
+
 
 if __name__ == "__main__":
     unittest.main()

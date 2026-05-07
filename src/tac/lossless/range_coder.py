@@ -106,6 +106,47 @@ def cumulative_frequency_rows(frequencies):
     return cumulative[0] if squeeze else cumulative
 
 
+def _coerce_int(value, *, label: str) -> int:
+    try:
+        coerced = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must be an integer") from exc
+    if coerced != value:
+        raise ValueError(f"{label} must be an integer")
+    return coerced
+
+
+def _validate_positive_total(total: int) -> int:
+    value = _coerce_int(total, label="total")
+    if value <= 0:
+        raise ValueError("total must be positive")
+    return value
+
+
+def _validate_cumulative_table(cumulative: list[int], total: int) -> tuple[list[int], int, int]:
+    total_value = _validate_positive_total(total)
+    values = [_coerce_int(item, label="cumulative frequency") for item in cumulative]
+    if len(values) < 2:
+        raise ValueError("cumulative frequency table must contain at least two entries")
+    if values[0] != 0:
+        raise ValueError("cumulative frequency table must start at zero")
+    if values[-1] != total_value:
+        raise ValueError("cumulative frequency table must end at total")
+    previous = values[0]
+    for item in values[1:]:
+        if item <= previous:
+            raise ValueError("cumulative frequency table must be strictly increasing")
+        previous = item
+    return values, total_value, len(values) - 1
+
+
+def _validate_symbol(symbol: int, *, symbol_count: int) -> int:
+    index = _coerce_int(symbol, label="symbol")
+    if index < 0 or index >= symbol_count:
+        raise ValueError("symbol is outside the frequency table")
+    return index
+
+
 class _BitWriter:
     def __init__(self) -> None:
         self._buffer = bytearray()
@@ -179,6 +220,8 @@ class RangeEncoder:
             self._pending -= 1
 
     def encode(self, *, symbol: int, cumulative: list[int], total: int) -> None:
+        cumulative, total, symbol_count = _validate_cumulative_table(cumulative, total)
+        symbol = _validate_symbol(symbol, symbol_count=symbol_count)
         current_range = self._high - self._low + 1
         self._high = self._low + (current_range * cumulative[symbol + 1] // total) - 1
         self._low = self._low + (current_range * cumulative[symbol] // total)
@@ -207,6 +250,8 @@ class RangeEncoder:
 
 class RangeDecoder:
     def __init__(self, encoded: bytes) -> None:
+        if len(encoded) == 0:
+            raise ValueError("encoded range stream is empty")
         self._reader = _BitReader(encoded)
         self._low = 0
         self._high = FULL_RANGE - 1
@@ -214,11 +259,23 @@ class RangeDecoder:
         for _ in range(STATE_BITS):
             self._code = (self._code << 1) | self._reader.read()
 
+    def _validate_state(self) -> None:
+        if not (self._low <= self._code <= self._high):
+            raise ValueError("encoded range stream is inconsistent with decoder state")
+
     def target(self, total: int) -> int:
+        total = _validate_positive_total(total)
+        self._validate_state()
         current_range = self._high - self._low + 1
         return ((self._code - self._low + 1) * total - 1) // current_range
 
     def update(self, *, low_count: int, high_count: int, total: int) -> None:
+        low_count = _coerce_int(low_count, label="low_count")
+        high_count = _coerce_int(high_count, label="high_count")
+        total = _validate_positive_total(total)
+        if low_count < 0 or high_count <= low_count or high_count > total:
+            raise ValueError("range update interval must satisfy 0 <= low_count < high_count <= total")
+        self._validate_state()
         current_range = self._high - self._low + 1
         self._high = self._low + (current_range * high_count // total) - 1
         self._low = self._low + (current_range * low_count // total)
@@ -286,6 +343,8 @@ def encode_static_symbols(symbols, *, frequencies: list[int]) -> bytes:
 def decode_static_symbols(encoded: bytes, *, count: int, frequencies: list[int]) -> list[int]:
     if count < 0:
         raise ValueError("count must be non-negative")
+    if count > 0 and len(encoded) == 0:
+        raise ValueError("encoded range stream is empty")
     cumulative, total = _cumulative(frequencies)
     reader = _BitReader(encoded)
     low = 0
@@ -298,7 +357,11 @@ def decode_static_symbols(encoded: bytes, *, count: int, frequencies: list[int])
     for _ in range(count):
         current_range = high - low + 1
         scaled = ((code - low + 1) * total - 1) // current_range
+        if scaled < 0 or scaled >= total:
+            raise ValueError("encoded range stream is inconsistent with frequency table")
         symbol = bisect_right(cumulative, scaled) - 1
+        if symbol < 0 or symbol + 1 >= len(cumulative):
+            raise ValueError("encoded range stream is inconsistent with frequency table")
         restored.append(symbol)
 
         high = low + (current_range * cumulative[symbol + 1] // total) - 1

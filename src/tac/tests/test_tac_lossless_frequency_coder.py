@@ -258,6 +258,18 @@ class TacLosslessFrequencyCoderTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "payload"):
             decode_uint16_frequency_stream(b"TFC1\x00\x00\x01\x01")
 
+    def test_decode_rejects_non_canonical_frequency_varints(self) -> None:
+        from tac.lossless.frequency_coder import decode_uint16_frequency_stream
+
+        with self.assertRaisesRegex(ValueError, "non-canonical token count"):
+            decode_uint16_frequency_stream(b"TFC1\x80\x00\x00\x00")
+
+    def test_decode_rejects_non_canonical_prev_symbol_varints(self) -> None:
+        from tac.lossless.frequency_coder import decode_uint16_prev_symbol_stream
+
+        with self.assertRaisesRegex(ValueError, "non-canonical context count"):
+            decode_uint16_prev_symbol_stream(b"TPC1\x00\x80\x00")
+
     def test_encoder_rejects_non_uint16_symbols(self) -> None:
         from tac.lossless.frequency_coder import encode_uint16_frequency_stream
 

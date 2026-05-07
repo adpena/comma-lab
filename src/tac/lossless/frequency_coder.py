@@ -131,8 +131,12 @@ def _decode_varint(data: bytes, offset: int, *, label: str) -> tuple[int, int]:
             raise ValueError(f"truncated {label}")
         byte = data[cursor]
         cursor += 1
+        if shift == 63 and (byte & 0x7F) > 1:
+            raise ValueError(f"{label} exceeds supported bounds")
         value |= (byte & 0x7F) << shift
         if byte < 0x80:
+            if data[offset:cursor] != _encode_varint(value):
+                raise ValueError(f"non-canonical {label}")
             return value, cursor
         shift += 7
         if shift > 63:

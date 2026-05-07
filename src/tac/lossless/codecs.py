@@ -850,12 +850,25 @@ def _decode_varint(data: bytes, offset: int, *, label: str):
             raise ValueError(f"truncated {label}")
         byte = data[cursor]
         cursor += 1
+        if shift == 63 and (byte & 0x7F) > 1:
+            raise ValueError(f"{label} exceeds supported bounds")
         value |= (byte & 0x7F) << shift
         if byte < 0x80:
+            if cursor - offset != _varint_size(value):
+                raise ValueError(f"non-canonical {label}")
             return value, cursor
         shift += 7
         if shift > 63:
             raise ValueError(f"{label} exceeds supported bounds")
+
+
+def _varint_size(value: int):
+    size = 1
+    remaining = value >> 7
+    while remaining:
+        size += 1
+        remaining >>= 7
+    return size
 
 
 def _build_code_lengths(frequencies: dict[int, int]):
@@ -1102,12 +1115,25 @@ def _decode_varint(data: bytes, offset: int, *, label: str):
             raise ValueError(f"truncated {label}")
         byte = data[cursor]
         cursor += 1
+        if shift == 63 and (byte & 0x7F) > 1:
+            raise ValueError(f"{label} exceeds supported bounds")
         value |= (byte & 0x7F) << shift
         if byte < 0x80:
+            if cursor - offset != _varint_size(value):
+                raise ValueError(f"non-canonical {label}")
             return value, cursor
         shift += 7
         if shift > 63:
             raise ValueError(f"{label} exceeds supported bounds")
+
+
+def _varint_size(value: int):
+    size = 1
+    remaining = value >> 7
+    while remaining:
+        size += 1
+        remaining >>= 7
+    return size
 
 
 def _build_code_lengths(frequencies: dict[int, int]):
