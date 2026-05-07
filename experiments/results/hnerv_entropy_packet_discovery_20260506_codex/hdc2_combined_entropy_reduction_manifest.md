@@ -22,6 +22,16 @@
 - net_byte_delta_after_combined_targets: `-13565`
 - projected_rate_score_delta_after_combined_targets: `-0.009032376699102255`
 
+## Bounded Candidate
+
+- variant: `mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales`
+- bytes: `208821`
+- byte_reduction_vs_hdc2: `12560`
+- net_byte_delta_vs_frontier_section: `38694`
+- static_context_header_reduction_vs_hdc2: `21511`
+- payload_delta_vs_hdc2: `8951`
+- ready_for_exact_eval_dispatch: `false`
+
 ## Stream Evidence
 
 - roundtrip_valid: `true`

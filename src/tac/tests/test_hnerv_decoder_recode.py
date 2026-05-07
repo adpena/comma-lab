@@ -11,8 +11,10 @@ from tac.hnerv_decoder_recode import (
     PACKED_STATE_SCHEMA,
     build_structural_recode_profile,
     decode_global_prev_symbol_context_range_fixture,
+    decode_global_prev_symbol_mixed_context_fixture,
     decode_prev_symbol_context_range_fixture,
     encode_global_prev_symbol_context_range_fixture,
+    encode_global_prev_symbol_mixed_context_fixture,
     encode_prev_symbol_context_range_fixture,
     parse_packed_decoder_brotli,
 )
@@ -90,6 +92,25 @@ def test_structural_recode_profile_is_planning_only_and_raw_equal() -> None:
     assert global_context["context_count"] <= context_range["context_count"]
     assert global_context["context_token_count"] == context_range["context_token_count"]
     assert "byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales" in global_context
+    mixed_context = next(
+        row
+        for row in profile["variants"]
+        if row["variant"]
+        == "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales"
+    )
+    assert mixed_context["codec"] == "HDM2_global_prev_symbol_mixed_range_raw_schema_indexed_uint8"
+    assert mixed_context["parity_fixture"] is True
+    assert mixed_context["archive_ready"] is False
+    assert mixed_context["raw_equal"] is True
+    assert mixed_context["q_roundtrip_equal"] is True
+    assert mixed_context["schema_indexed"] is True
+    assert mixed_context["raw_context_count"] + mixed_context["range_context_count"] == mixed_context[
+        "context_count"
+    ]
+    assert mixed_context["mixed_payload_bytes"] == (
+        mixed_context["range_payload_bytes"] + mixed_context["raw_payload_bytes"]
+    )
+    assert "byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales" in mixed_context
     plan = profile["context_overhead_plan"]
     assert plan["score_claim"] is False
     assert plan["planning_only"] is True
@@ -107,6 +128,19 @@ def test_structural_recode_profile_is_planning_only_and_raw_equal() -> None:
     )
     assert plan["largest_accounted_gap"]["status"] == "already_realized_by_hdc2_fixture"
     assert plan["largest_remaining_safe_target"] == plan["remaining_target_ranking"][0]
+    bounded_candidate = plan["bounded_hdc2_mixed_context_candidate"]
+    assert bounded_candidate["variant"] == mixed_context["variant"]
+    assert bounded_candidate["score_claim"] is False
+    assert bounded_candidate["ready_for_exact_eval_dispatch"] is False
+    assert bounded_candidate["byte_reduction_vs_hdc2_bytes"] == (
+        global_context["bytes"] - mixed_context["bytes"]
+    )
+    assert bounded_candidate["static_context_header_reduction_vs_hdc2_bytes"] == (
+        global_context["header_bytes"] - mixed_context["header_bytes"]
+    )
+    assert bounded_candidate["payload_delta_vs_hdc2_bytes"] == (
+        mixed_context["mixed_payload_bytes"] - global_context["range_payload_bytes"]
+    )
 
 
 def test_context_range_fixture_roundtrips_and_is_deterministic() -> None:
@@ -142,6 +176,41 @@ def test_global_context_range_fixture_roundtrips_and_amortizes_context_table() -
     assert global_stats["context_count"] <= per_tensor_stats["context_count"]
     assert global_stats["header_bytes"] < per_tensor_stats["header_bytes"]
     assert len(global_payload) < len(per_tensor)
+
+
+def test_mixed_global_context_fixture_roundtrips_and_reduces_hdc2_bytes() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+
+    global_payload, global_stats = encode_global_prev_symbol_context_range_fixture(parsed)
+    mixed_payload, mixed_stats = encode_global_prev_symbol_mixed_context_fixture(parsed)
+    restored = decode_global_prev_symbol_mixed_context_fixture(mixed_payload)
+
+    assert mixed_payload.startswith(b"HDM2")
+    assert restored.to_raw() == parsed.to_raw()
+    assert restored.q_stream == parsed.q_stream
+    assert restored.scale_stream == parsed.scale_stream
+    assert mixed_stats["context_token_count"] == global_stats["context_token_count"]
+    assert mixed_stats["raw_context_count"] + mixed_stats["range_context_count"] == mixed_stats[
+        "context_count"
+    ]
+    assert mixed_stats["mixed_payload_bytes"] == (
+        mixed_stats["range_payload_bytes"] + mixed_stats["raw_payload_bytes"]
+    )
+    assert mixed_stats["schema_metadata_elided_vs_hdc2_bytes"] > 0
+    assert mixed_stats["header_bytes"] < global_stats["header_bytes"]
+    assert len(mixed_payload) < len(global_payload)
+
+
+def test_mixed_global_context_fixture_rejects_schema_record_count_mismatch() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+    payload, _stats = encode_global_prev_symbol_mixed_context_fixture(parsed)
+    broken = bytearray(payload)
+    broken[5] = broken[5] - 1
+
+    import pytest
+
+    with pytest.raises(Exception, match="fixed schema record count mismatch"):
+        decode_global_prev_symbol_mixed_context_fixture(bytes(broken))
 
 
 def test_context_range_fixture_rejects_duplicate_previous_symbol_context() -> None:

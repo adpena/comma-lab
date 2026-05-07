@@ -8,7 +8,9 @@ from typing import Any
 
 from tac.hnerv_decoder_recode import (
     decode_global_prev_symbol_context_range_fixture,
+    decode_global_prev_symbol_mixed_context_fixture,
     encode_global_prev_symbol_context_range_fixture,
+    encode_global_prev_symbol_mixed_context_fixture,
     parse_packed_decoder_brotli,
 )
 from tac.hnerv_lowlevel_packer import parse_ff_packed_brotli_hnerv, read_strict_single_member_zip
@@ -37,6 +39,7 @@ HDC2_STREAM_WORK_PRODUCT_TOOL_NAME = (
 )
 STRUCTURAL_RECODE_TOOL_NAME = "tac.hnerv_decoder_recode.build_structural_recode_profile"
 HDC2_VARIANT_NAME = "range_prev_symbol_global_q_streams_plus_raw_scales"
+HDM2_VARIANT_NAME = "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales"
 DEFAULT_DISCOVERY_ROOTS = (
     "experiments/results",
     ".omx/research/artifacts",
@@ -326,6 +329,11 @@ def build_hdc2_stream_byte_equivalence_work_product(
         actual=int(candidate_stats["range_payload_bytes"]),
     )
     _require_profile_int_match(hdc2, key="raw_scale_bytes", actual=len(parsed.scale_stream))
+    bounded_hdc2_recode_variants = _bounded_hdc2_recode_variants(
+        profile,
+        parsed=parsed,
+        source_raw=source_raw,
+    )
 
     if candidate_stream_path is not None:
         stream_path = Path(candidate_stream_path)
@@ -494,6 +502,7 @@ def build_hdc2_stream_byte_equivalence_work_product(
         "candidate_stream_section_manifest": candidate_stream_manifest,
         "decoded_output_equivalence_report": decoded_equivalence,
         "roundtrip_decode_validation_manifest": roundtrip,
+        "bounded_hdc2_recode_variants": bounded_hdc2_recode_variants,
         "remaining_blockers": [
             "byte_accounted_model_overhead_reduction_manifest_not_built",
             "byte_accounted_static_model_context_reduction_manifest_not_built",
@@ -823,6 +832,65 @@ def _variant_by_name(payload: Mapping[str, Any], name: str) -> Mapping[str, Any]
     return None
 
 
+def _bounded_hdc2_recode_variants(
+    profile: Mapping[str, Any],
+    *,
+    parsed: Any,
+    source_raw: bytes,
+) -> list[dict[str, Any]]:
+    """Return byte-closed bounded HDC2 follow-ups present in the source profile."""
+
+    hdm2 = _variant_by_name(profile, HDM2_VARIANT_NAME)
+    if hdm2 is None:
+        return []
+    candidate_stream, stats = encode_global_prev_symbol_mixed_context_fixture(parsed)
+    restored = decode_global_prev_symbol_mixed_context_fixture(candidate_stream)
+    candidate_raw = restored.to_raw()
+    _require_true(candidate_raw == source_raw, "hdm2.candidate_raw_equals_source_raw")
+    _require_profile_int_match(hdm2, key="bytes", actual=len(candidate_stream))
+    _require_profile_string_match(hdm2, key="sha256", actual=sha256_bytes(candidate_stream))
+    _require_profile_int_match(hdm2, key="header_bytes", actual=int(stats["header_bytes"]))
+    _require_profile_int_match(
+        hdm2,
+        key="range_payload_bytes",
+        actual=int(stats["range_payload_bytes"]),
+    )
+    _require_profile_nonnegative_int_match(
+        hdm2,
+        key="raw_payload_bytes",
+        actual=int(stats["raw_payload_bytes"]),
+    )
+    _require_profile_int_match(
+        hdm2,
+        key="mixed_payload_bytes",
+        actual=int(stats["mixed_payload_bytes"]),
+    )
+    return [
+        {
+            "variant": HDM2_VARIANT_NAME,
+            "codec": hdm2.get("codec"),
+            "bytes": len(candidate_stream),
+            "sha256": sha256_bytes(candidate_stream),
+            "raw_equal": candidate_raw == source_raw,
+            "q_roundtrip_equal": restored.q_stream == parsed.q_stream,
+            "scale_roundtrip_equal": restored.scale_stream == parsed.scale_stream,
+            "archive_ready": False,
+            "header_bytes": int(stats["header_bytes"]),
+            "mixed_payload_bytes": int(stats["mixed_payload_bytes"]),
+            "range_payload_bytes": int(stats["range_payload_bytes"]),
+            "raw_payload_bytes": int(stats["raw_payload_bytes"]),
+            "raw_scale_bytes": len(parsed.scale_stream),
+            "raw_context_count": int(stats["raw_context_count"]),
+            "range_context_count": int(stats["range_context_count"]),
+            "context_count": int(stats["context_count"]),
+            "context_token_count": int(stats["context_token_count"]),
+            "schema_metadata_elided_vs_hdc2_bytes": int(
+                stats["schema_metadata_elided_vs_hdc2_bytes"]
+            ),
+        }
+    ]
+
+
 def _adapted_target_row(
     *,
     label: str,
@@ -946,6 +1014,19 @@ def _runtime_manifest_from_exact_eval(path: Path, repo_root: Path) -> dict[str, 
 
 def _require_profile_int_match(payload: Mapping[str, Any], *, key: str, actual: int) -> None:
     expected = _positive_int(payload.get(key), key)
+    if expected != int(actual):
+        raise HnervEntropyCandidatePacketError(
+            f"profile {key} mismatch: expected {expected}, got {actual}"
+        )
+
+
+def _require_profile_nonnegative_int_match(
+    payload: Mapping[str, Any],
+    *,
+    key: str,
+    actual: int,
+) -> None:
+    expected = _nonnegative_int(payload.get(key), key)
     if expected != int(actual):
         raise HnervEntropyCandidatePacketError(
             f"profile {key} mismatch: expected {expected}, got {actual}"

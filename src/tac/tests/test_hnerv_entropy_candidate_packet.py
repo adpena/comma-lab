@@ -12,6 +12,7 @@ import pytest
 from tac.hnerv_decoder_recode import (
     PACKED_STATE_SCHEMA,
     encode_global_prev_symbol_context_range_fixture,
+    encode_global_prev_symbol_mixed_context_fixture,
     parse_packed_decoder_brotli,
 )
 from tac.hnerv_entropy_candidate_packet import (
@@ -131,6 +132,15 @@ def test_hdc2_stream_work_product_closes_stream_requirements_but_not_archive(
     assert candidate_stream["sha256"] == sha256_file(tmp_path / "candidate_hdc2.bin")
     assert work_product["decoded_output_equivalence_report"]["old_new_sha256_equal"] is True
     assert work_product["roundtrip_decode_validation_manifest"]["roundtrip_valid"] is True
+    bounded = work_product["bounded_hdc2_recode_variants"]
+    assert len(bounded) == 1
+    assert bounded[0]["variant"] == (
+        "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales"
+    )
+    assert bounded[0]["raw_equal"] is True
+    assert bounded[0]["q_roundtrip_equal"] is True
+    assert bounded[0]["scale_roundtrip_equal"] is True
+    assert bounded[0]["archive_ready"] is False
 
     assert manifest["invalid_requirement_artifacts"] == []
     assert SOURCE_ARCHIVE_REQUIREMENT_ID not in manifest["missing_artifacts"]
@@ -557,6 +567,7 @@ def _write_hdc2_fixture(tmp_path: Path) -> dict[str, Path]:
     write_stored_single_member_zip(archive_path, member_name="0.bin", payload=packed.to_bytes())
     parsed = parse_packed_decoder_brotli(source_brotli)
     hdc2_payload, stats = encode_global_prev_symbol_context_range_fixture(parsed)
+    hdm2_payload, hdm2_stats = encode_global_prev_symbol_mixed_context_fixture(parsed)
     profile = {
         "schema_version": 1,
         "tool": "tac.hnerv_decoder_recode.build_structural_recode_profile",
@@ -594,6 +605,29 @@ def _write_hdc2_fixture(tmp_path: Path) -> dict[str, Path]:
                 "sha256": sha256_bytes(hdc2_payload),
                 "context_count": int(stats["context_count"]),
                 "context_token_count": int(stats["context_token_count"]),
+            },
+            {
+                "variant": (
+                    "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales"
+                ),
+                "codec": "HDM2_global_prev_symbol_mixed_range_raw_schema_indexed_uint8",
+                "bytes": len(hdm2_payload),
+                "header_bytes": int(hdm2_stats["header_bytes"]),
+                "range_payload_bytes": int(hdm2_stats["range_payload_bytes"]),
+                "raw_payload_bytes": int(hdm2_stats["raw_payload_bytes"]),
+                "mixed_payload_bytes": int(hdm2_stats["mixed_payload_bytes"]),
+                "raw_scale_bytes": len(parsed.scale_stream),
+                "raw_equal": True,
+                "q_roundtrip_equal": True,
+                "scale_roundtrip_equal": True,
+                "sha256": sha256_bytes(hdm2_payload),
+                "context_count": int(hdm2_stats["context_count"]),
+                "context_token_count": int(hdm2_stats["context_token_count"]),
+                "raw_context_count": int(hdm2_stats["raw_context_count"]),
+                "range_context_count": int(hdm2_stats["range_context_count"]),
+                "schema_metadata_elided_vs_hdc2_bytes": int(
+                    hdm2_stats["schema_metadata_elided_vs_hdc2_bytes"]
+                ),
             }
         ],
     }

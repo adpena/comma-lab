@@ -149,6 +149,7 @@ def build_structural_recode_profile(
         _variant_huffman_global(parsed),
         _variant_context_range_per_tensor(parsed),
         _variant_context_range_global(parsed),
+        _variant_mixed_context_global(parsed),
     ]
     for row in variants:
         row["byte_delta_vs_source_section"] = int(row["bytes"]) - len(source_brotli)
@@ -167,6 +168,13 @@ def build_structural_recode_profile(
                 row["bytes"]
             ) - int(entropy_summary["per_tensor_prev_symbol_entropy_floor_plus_raw_scales_bytes"])
         if row["variant"] == "range_prev_symbol_global_q_streams_plus_raw_scales":
+            row["byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales"] = int(
+                row["bytes"]
+            ) - int(entropy_summary["per_tensor_prev_symbol_entropy_floor_plus_raw_scales_bytes"])
+        if (
+            row["variant"]
+            == "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales"
+        ):
             row["byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales"] = int(
                 row["bytes"]
             ) - int(entropy_summary["per_tensor_prev_symbol_entropy_floor_plus_raw_scales_bytes"])
@@ -213,6 +221,10 @@ def _context_overhead_plan(
 ) -> dict[str, Any]:
     hdc1 = _variant_by_name(variants, "range_prev_symbol_per_tensor_q_streams_plus_raw_scales")
     hdc2 = _variant_by_name(variants, "range_prev_symbol_global_q_streams_plus_raw_scales")
+    hdc2_mixed = _variant_by_name(
+        variants,
+        "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales",
+    )
     floor_bytes = int(entropy_summary["per_tensor_prev_symbol_entropy_floor_bytes"])
     floor_plus_scales = int(
         entropy_summary["per_tensor_prev_symbol_entropy_floor_plus_raw_scales_bytes"]
@@ -260,6 +272,39 @@ def _context_overhead_plan(
         },
     ]
     remaining_targets.sort(key=lambda row: (-int(row["bytes"]), str(row["gap_id"])))
+    mixed_candidate = None
+    if hdc2_mixed is not None:
+        mixed_bytes = int(hdc2_mixed["bytes"])
+        mixed_header = int(hdc2_mixed["header_bytes"])
+        mixed_payload = int(hdc2_mixed["mixed_payload_bytes"])
+        mixed_delta_vs_source = mixed_bytes - source_section_bytes
+        mixed_candidate = {
+            "variant": hdc2_mixed["variant"],
+            "codec": hdc2_mixed["codec"],
+            "score_claim": False,
+            "planning_only": True,
+            "archive_ready": False,
+            "ready_for_exact_eval_dispatch": False,
+            "bytes": mixed_bytes,
+            "byte_delta_vs_hdc2_bytes": mixed_bytes - int(hdc2["bytes"]),
+            "byte_reduction_vs_hdc2_bytes": int(hdc2["bytes"]) - mixed_bytes,
+            "byte_delta_vs_source_section": mixed_delta_vs_source,
+            "remaining_reduction_to_beat_source_section_bytes": max(
+                0,
+                mixed_delta_vs_source + 1,
+            ),
+            "header_bytes": mixed_header,
+            "static_context_header_reduction_vs_hdc2_bytes": hdc2_header - mixed_header,
+            "mixed_payload_bytes": mixed_payload,
+            "payload_delta_vs_hdc2_bytes": mixed_payload - hdc2_payload,
+            "raw_context_count": int(hdc2_mixed["raw_context_count"]),
+            "range_context_count": int(hdc2_mixed["range_context_count"]),
+            "raw_context_payload_bytes": int(hdc2_mixed["raw_payload_bytes"]),
+            "range_context_payload_bytes": int(hdc2_mixed["range_payload_bytes"]),
+            "schema_metadata_elided_vs_hdc2_bytes": int(
+                hdc2_mixed["schema_metadata_elided_vs_hdc2_bytes"]
+            ),
+        }
     return {
         "score_claim": False,
         "planning_only": True,
@@ -291,6 +336,7 @@ def _context_overhead_plan(
         },
         "largest_remaining_safe_target": remaining_targets[0],
         "remaining_target_ranking": remaining_targets,
+        "bounded_hdc2_mixed_context_candidate": mixed_candidate,
         "planner_verdict": (
             "target_hdc2_context_header_first_but_payload_gap_must_also_shrink"
             if minimum_payload_reduction_after_zero_header
@@ -563,6 +609,40 @@ def _variant_context_range_global(parsed: PackedDecoderRaw) -> dict[str, Any]:
     }
 
 
+def _variant_mixed_context_global(parsed: PackedDecoderRaw) -> dict[str, Any]:
+    payload, stats = encode_global_prev_symbol_mixed_context_fixture(parsed)
+    restored = decode_global_prev_symbol_mixed_context_fixture(payload)
+    return {
+        "variant": "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales",
+        "codec": "HDM2_global_prev_symbol_mixed_range_raw_schema_indexed_uint8",
+        "bytes": len(payload),
+        "sha256": sha256_bytes(payload),
+        "q_roundtrip_equal": restored.q_stream == parsed.q_stream,
+        "scale_roundtrip_equal": restored.scale_stream == parsed.scale_stream,
+        "raw_equal": restored.to_raw() == parsed.to_raw(),
+        "tensor_count": len(parsed.records),
+        "context_count": stats["context_count"],
+        "context_token_count": stats["context_token_count"],
+        "range_context_count": stats["range_context_count"],
+        "raw_context_count": stats["raw_context_count"],
+        "header_bytes": stats["header_bytes"],
+        "range_payload_bytes": stats["range_payload_bytes"],
+        "raw_payload_bytes": stats["raw_payload_bytes"],
+        "mixed_payload_bytes": stats["mixed_payload_bytes"],
+        "raw_scale_bytes": len(parsed.scale_stream),
+        "schema_indexed": True,
+        "schema_metadata_elided_vs_hdc2_bytes": stats["schema_metadata_elided_vs_hdc2_bytes"],
+        "parity_fixture": True,
+        "archive_ready": False,
+        "dispatch_blockers": [
+            "parity_fixture_only",
+            "requires_submission_runtime_decoder",
+            "requires_archive_builder_and_payload_diff",
+            "requires_exact_cuda_auth_eval",
+        ],
+    }
+
+
 def encode_prev_symbol_context_range_fixture(
     parsed: PackedDecoderRaw,
 ) -> tuple[bytes, dict[str, int]]:
@@ -787,6 +867,123 @@ def encode_global_prev_symbol_context_range_fixture(
     }
 
 
+def encode_global_prev_symbol_mixed_context_fixture(
+    parsed: PackedDecoderRaw,
+) -> tuple[bytes, dict[str, int]]:
+    """Encode q streams with a fixed-schema global context table and raw escapes.
+
+    HDM2 is a planning-only HDC2-family fixture. It keeps the same global
+    previous-symbol context semantics as HDC2, drops self-describing tensor
+    names/counts by relying on PACKED_STATE_SCHEMA order, and stores a context
+    as raw bytes when the static range model is locally more expensive.
+    """
+
+    if not parsed.records:
+        raise HnervDecoderRecodeError("HDM2 requires at least one record")
+    if len(parsed.records) != len(PACKED_STATE_SCHEMA):
+        raise HnervDecoderRecodeError("HDM2 requires the fixed packed decoder schema")
+
+    global_contexts: dict[int, list[int]] = {}
+    for record in parsed.records:
+        if not record.q_zz_u8:
+            raise HnervDecoderRecodeError(f"empty q stream for record {record.name}")
+        for previous, current in pairwise(record.q_zz_u8):
+            global_contexts.setdefault(int(previous), []).append(int(current))
+
+    out = io.BytesIO()
+    out.write(b"HDM2")
+    out.write(_varint_encode(1))
+    out.write(_varint_encode(len(parsed.records)))
+    header_bytes = 4 + 1 + len(_varint_encode(len(parsed.records)))
+    self_describing_record_metadata_bytes = 0
+
+    for record in parsed.records:
+        expected_shape = _shape_for_record_name(record.name)
+        if record.shape != expected_shape:
+            raise HnervDecoderRecodeError(f"HDM2 fixed schema mismatch for {record.name}")
+        encoded_name = record.name.encode("utf-8")
+        self_describing_record_metadata_bytes += (
+            len(_varint_encode(len(encoded_name)))
+            + len(encoded_name)
+            + len(_varint_encode(record.value_count))
+            + 1
+        )
+        out.write(bytes([record.q_zz_u8[0]]))
+        header_bytes += 1
+
+    out.write(_varint_encode(len(global_contexts)))
+    header_bytes += len(_varint_encode(len(global_contexts)))
+    range_payload_bytes = 0
+    raw_payload_bytes = 0
+    range_context_count = 0
+    raw_context_count = 0
+    context_token_count = 0
+    for previous_symbol in sorted(global_contexts):
+        stream = global_contexts[previous_symbol]
+        encoded, local_header_bytes = _encode_context_symbol_stream(stream)
+        token_count_bytes = _varint_encode(len(stream))
+        unique_count_bytes = _varint_encode(len(encoded["symbols"]))
+        payload_len_bytes = _varint_encode(len(encoded["payload"]))
+        range_header_bytes = (
+            1
+            + 1
+            + len(token_count_bytes)
+            + len(unique_count_bytes)
+            + len(payload_len_bytes)
+            + local_header_bytes
+        )
+        raw_header_bytes = 1 + 1 + len(token_count_bytes)
+        range_total_bytes = range_header_bytes + len(encoded["payload"])
+        raw_total_bytes = raw_header_bytes + len(stream)
+
+        out.write(bytes([previous_symbol]))
+        context_token_count += len(stream)
+        if raw_total_bytes < range_total_bytes:
+            out.write(bytes([1]))
+            out.write(token_count_bytes)
+            out.write(bytes(stream))
+            raw_context_count += 1
+            raw_payload_bytes += len(stream)
+            header_bytes += raw_header_bytes
+            continue
+
+        out.write(bytes([0]))
+        out.write(token_count_bytes)
+        out.write(unique_count_bytes)
+        out.write(payload_len_bytes)
+        previous_symbol_for_delta = 0
+        for index, symbol in enumerate(encoded["symbols"]):
+            delta = symbol if index == 0 else symbol - previous_symbol_for_delta
+            out.write(_varint_encode(delta))
+            out.write(_varint_encode(encoded["frequencies"][index]))
+            previous_symbol_for_delta = symbol
+        out.write(encoded["payload"])
+        range_context_count += 1
+        range_payload_bytes += len(encoded["payload"])
+        header_bytes += range_header_bytes
+
+    out.write(_varint_encode(len(parsed.scale_stream)))
+    out.write(parsed.scale_stream)
+    header_bytes += len(_varint_encode(len(parsed.scale_stream)))
+    payload = out.getvalue()
+    restored = decode_global_prev_symbol_mixed_context_fixture(payload)
+    if restored.to_raw() != parsed.to_raw():
+        raise HnervDecoderRecodeError("HDM2 mixed context fixture failed raw roundtrip")
+    return payload, {
+        "header_bytes": header_bytes,
+        "range_payload_bytes": range_payload_bytes,
+        "raw_payload_bytes": raw_payload_bytes,
+        "mixed_payload_bytes": range_payload_bytes + raw_payload_bytes,
+        "context_count": len(global_contexts),
+        "range_context_count": range_context_count,
+        "raw_context_count": raw_context_count,
+        "context_token_count": context_token_count,
+        "schema_metadata_elided_vs_hdc2_bytes": (
+            self_describing_record_metadata_bytes - len(parsed.records)
+        ),
+    }
+
+
 def decode_global_prev_symbol_context_range_fixture(payload: bytes) -> PackedDecoderRaw:
     """Decode an HDC2 global previous-symbol context fixture."""
 
@@ -861,6 +1058,92 @@ def decode_global_prev_symbol_context_range_fixture(payload: bytes) -> PackedDec
         raise HnervDecoderRecodeError("HDC2 fixture has trailing bytes")
     if scale_len != 4 * record_count:
         raise HnervDecoderRecodeError("HDC2 scale stream length does not match record count")
+    with_scales = []
+    for index, record in enumerate(restored_records):
+        with_scales.append(
+            dataclasses.replace(record, scale_f32=scale_stream[index * 4 : index * 4 + 4])
+        )
+    return PackedDecoderRaw(records=tuple(with_scales))
+
+
+def decode_global_prev_symbol_mixed_context_fixture(payload: bytes) -> PackedDecoderRaw:
+    """Decode an HDM2 global previous-symbol mixed range/raw fixture."""
+
+    if payload[:4] != b"HDM2":
+        raise HnervDecoderRecodeError("invalid HDM2 mixed context fixture magic")
+    cursor = 4
+    version, cursor = _varint_decode(payload, cursor, "version")
+    if version != 1:
+        raise HnervDecoderRecodeError(f"unsupported HDM2 version: {version}")
+    record_count, cursor = _varint_decode(payload, cursor, "record_count")
+    if record_count != len(PACKED_STATE_SCHEMA):
+        raise HnervDecoderRecodeError("HDM2 fixed schema record count mismatch")
+    records = [
+        PackedDecoderRecord(name=name, shape=shape, q_zz_u8=b"", scale_f32=b"")
+        for name, shape in PACKED_STATE_SCHEMA
+    ]
+    first_symbols = []
+    for _ in range(record_count):
+        first_symbols.append(_read_payload_exact(payload, cursor, 1, "first_symbol")[0])
+        cursor += 1
+
+    context_count, cursor = _varint_decode(payload, cursor, "context_count")
+    decoded_contexts: dict[int, list[int]] = {}
+    for _context_index in range(context_count):
+        previous_symbol = _read_payload_exact(payload, cursor, 1, "previous_symbol")[0]
+        cursor += 1
+        if previous_symbol in decoded_contexts:
+            raise HnervDecoderRecodeError("HDM2 duplicate previous-symbol context")
+        mode = _read_payload_exact(payload, cursor, 1, "context_mode")[0]
+        cursor += 1
+        token_count, cursor = _varint_decode(payload, cursor, "context_token_count")
+        if mode == 1:
+            raw = _read_payload_exact(payload, cursor, token_count, "raw_context_payload")
+            cursor += token_count
+            decoded_contexts[previous_symbol] = list(raw)
+            continue
+        if mode != 0:
+            raise HnervDecoderRecodeError(f"unsupported HDM2 context mode: {mode}")
+        unique_count, cursor = _varint_decode(payload, cursor, "unique_count")
+        payload_len, cursor = _varint_decode(payload, cursor, "context_payload_len")
+        symbols: list[int] = []
+        frequencies: list[int] = []
+        previous_symbol_for_delta = 0
+        for index in range(unique_count):
+            delta, cursor = _varint_decode(payload, cursor, "context_symbol_delta")
+            frequency, cursor = _varint_decode(payload, cursor, "context_frequency")
+            symbol = delta if index == 0 else previous_symbol_for_delta + delta
+            if symbol > 0xFF:
+                raise HnervDecoderRecodeError("HDM2 context symbol exceeds uint8 range")
+            symbols.append(symbol)
+            frequencies.append(frequency)
+            previous_symbol_for_delta = symbol
+        encoded = _read_payload_exact(payload, cursor, payload_len, "context_payload")
+        cursor += payload_len
+        indices = decode_static_symbols(encoded, count=token_count, frequencies=frequencies)
+        decoded_contexts[previous_symbol] = [symbols[int(index)] for index in indices]
+
+    restored_records = []
+    context_offsets = dict.fromkeys(decoded_contexts, 0)
+    for record, first in zip(records, first_symbols, strict=True):
+        q, context_offsets = _restore_prev_symbol_stream_with_offsets(
+            first,
+            decoded_contexts,
+            context_offsets,
+            value_count=record.value_count,
+        )
+        restored_records.append(dataclasses.replace(record, q_zz_u8=q))
+    for symbol, values in decoded_contexts.items():
+        if context_offsets[symbol] != len(values):
+            raise HnervDecoderRecodeError("HDM2 previous-symbol context has trailing values")
+
+    scale_len, cursor = _varint_decode(payload, cursor, "scale_len")
+    scale_stream = _read_payload_exact(payload, cursor, scale_len, "scale_stream")
+    cursor += scale_len
+    if cursor != len(payload):
+        raise HnervDecoderRecodeError("HDM2 fixture has trailing bytes")
+    if scale_len != 4 * record_count:
+        raise HnervDecoderRecodeError("HDM2 scale stream length does not match record count")
     with_scales = []
     for index, record in enumerate(restored_records):
         with_scales.append(
@@ -1016,8 +1299,10 @@ __all__ = [
     "PackedDecoderRecord",
     "build_structural_recode_profile",
     "decode_global_prev_symbol_context_range_fixture",
+    "decode_global_prev_symbol_mixed_context_fixture",
     "decode_prev_symbol_context_range_fixture",
     "encode_global_prev_symbol_context_range_fixture",
+    "encode_global_prev_symbol_mixed_context_fixture",
     "encode_prev_symbol_context_range_fixture",
     "parse_packed_decoder_brotli",
 ]

@@ -9,6 +9,82 @@
     "sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
     "variant": "brotli_q10_current_raw"
   },
+  "context_overhead_plan": {
+    "bounded_hdc2_mixed_context_candidate": {
+      "archive_ready": false,
+      "byte_delta_vs_hdc2_bytes": -12560,
+      "byte_delta_vs_source_section": 38543,
+      "byte_reduction_vs_hdc2_bytes": 12560,
+      "bytes": 208821,
+      "codec": "HDM2_global_prev_symbol_mixed_range_raw_schema_indexed_uint8",
+      "header_bytes": 19329,
+      "mixed_payload_bytes": 189380,
+      "payload_delta_vs_hdc2_bytes": 8951,
+      "planning_only": true,
+      "range_context_count": 60,
+      "range_context_payload_bytes": 147466,
+      "raw_context_count": 187,
+      "raw_context_payload_bytes": 41914,
+      "ready_for_exact_eval_dispatch": false,
+      "remaining_reduction_to_beat_source_section_bytes": 38544,
+      "schema_metadata_elided_vs_hdc2_bytes": 444,
+      "score_claim": false,
+      "static_context_header_reduction_vs_hdc2_bytes": 21511,
+      "variant": "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales"
+    },
+    "break_even_reduction_vs_source_from_hdc2_bytes": 51104,
+    "dispatch_blockers": [
+      "planning_only_context_overhead_accounting",
+      "requires_submission_runtime_decoder",
+      "requires_archive_builder_and_payload_diff",
+      "requires_exact_cuda_auth_eval"
+    ],
+    "floor_headroom_before_runtime_overhead_bytes": 13716,
+    "hdc1_header_bytes": 108477,
+    "hdc1_per_tensor_context_count": 2643,
+    "hdc1_range_payload_bytes": 158360,
+    "hdc1_to_hdc2_header_savings_bytes": 67637,
+    "hdc2_gap_to_prev_symbol_entropy_floor_plus_raw_scales_bytes": 64819,
+    "hdc2_global_context_count": 247,
+    "hdc2_header_bytes": 40840,
+    "hdc2_net_savings_vs_hdc1_bytes": 45568,
+    "hdc2_payload_gap_to_prev_symbol_entropy_floor_bytes": 23979,
+    "hdc2_range_payload_bytes": 180429,
+    "hdc2_range_payload_penalty_vs_hdc1_bytes": 22069,
+    "largest_accounted_gap": {
+      "bytes": 67637,
+      "gap_id": "hdc1_to_hdc2_context_header_amortization",
+      "status": "already_realized_by_hdc2_fixture"
+    },
+    "largest_remaining_safe_target": {
+      "bytes": 40840,
+      "gap_id": "hdc2_self_describing_context_header",
+      "status": "remaining_safe_accounting_target",
+      "target_action": "replace_or_codebook_share_context_table_metadata"
+    },
+    "minimum_payload_gap_reduction_after_zero_header_bytes": 10264,
+    "perfect_prev_symbol_floor_delta_vs_source_bytes": -13716,
+    "planner_verdict": "target_hdc2_context_header_first_but_payload_gap_must_also_shrink",
+    "planning_only": true,
+    "prev_symbol_entropy_floor_plus_raw_scales_bytes": 156562,
+    "ready_for_exact_eval_dispatch": false,
+    "remaining_target_ranking": [
+      {
+        "bytes": 40840,
+        "gap_id": "hdc2_self_describing_context_header",
+        "status": "remaining_safe_accounting_target",
+        "target_action": "replace_or_codebook_share_context_table_metadata"
+      },
+      {
+        "bytes": 23979,
+        "gap_id": "hdc2_range_payload_above_prev_symbol_entropy_floor",
+        "status": "remaining_entropy_gap_target",
+        "target_action": "improve_context_partition_or_range_payload_coding"
+      }
+    ],
+    "score_claim": false,
+    "source_section_bytes": 170278
+  },
   "dispatch_attempted": false,
   "dispatch_blockers": [
     "planning_only_structural_recode_profile",
@@ -259,6 +335,38 @@
       "sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f",
       "tensor_count": 28,
       "variant": "range_prev_symbol_global_q_streams_plus_raw_scales"
+    },
+    {
+      "archive_ready": false,
+      "byte_delta_vs_source_section": 38543,
+      "byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales": 52259,
+      "bytes": 208821,
+      "codec": "HDM2_global_prev_symbol_mixed_range_raw_schema_indexed_uint8",
+      "context_count": 247,
+      "context_token_count": 228930,
+      "dispatch_blockers": [
+        "parity_fixture_only",
+        "requires_submission_runtime_decoder",
+        "requires_archive_builder_and_payload_diff",
+        "requires_exact_cuda_auth_eval"
+      ],
+      "header_bytes": 19329,
+      "mixed_payload_bytes": 189380,
+      "parity_fixture": true,
+      "q_roundtrip_equal": true,
+      "range_context_count": 60,
+      "range_payload_bytes": 147466,
+      "rate_score_delta_if_runtime_supported_and_components_equal": 0.02566420163,
+      "raw_context_count": 187,
+      "raw_equal": true,
+      "raw_payload_bytes": 41914,
+      "raw_scale_bytes": 112,
+      "scale_roundtrip_equal": true,
+      "schema_indexed": true,
+      "schema_metadata_elided_vs_hdc2_bytes": 444,
+      "sha256": "4a1db82f170db62038ad683d6024920b1da59cd9e54e8fda8e3109605fc08bc5",
+      "tensor_count": 28,
+      "variant": "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales"
     }
   ]
 }

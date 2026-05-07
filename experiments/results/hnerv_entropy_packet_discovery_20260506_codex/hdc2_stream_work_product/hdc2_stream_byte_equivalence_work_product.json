@@ -1,4 +1,26 @@
 {
+  "bounded_hdc2_recode_variants": [
+    {
+      "archive_ready": false,
+      "bytes": 208821,
+      "codec": "HDM2_global_prev_symbol_mixed_range_raw_schema_indexed_uint8",
+      "context_count": 247,
+      "context_token_count": 228930,
+      "header_bytes": 19329,
+      "mixed_payload_bytes": 189380,
+      "q_roundtrip_equal": true,
+      "range_context_count": 60,
+      "range_payload_bytes": 147466,
+      "raw_context_count": 187,
+      "raw_equal": true,
+      "raw_payload_bytes": 41914,
+      "raw_scale_bytes": 112,
+      "scale_roundtrip_equal": true,
+      "schema_metadata_elided_vs_hdc2_bytes": 444,
+      "sha256": "4a1db82f170db62038ad683d6024920b1da59cd9e54e8fda8e3109605fc08bc5",
+      "variant": "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales"
+    }
+  ],
   "candidate_stream_file": {
     "bytes": 221381,
     "id": "candidate_hdc2_global_prev_symbol_stream",
@@ -171,10 +193,10 @@
     "sha256": "30b364d6b538f08987fc098198fb9cbbd9be4776d3f0a3bec8bf5bf7b10c2047"
   },
   "source_profile": {
-    "bytes": 9029,
+    "bytes": 13487,
     "id": "hnerv_decoder_structural_recode_profile",
     "path": "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",
-    "sha256": "fbb243ddd08c6fcd3a8252943df4887d15f45c0408448513f5997e26f4e087d0"
+    "sha256": "d7b31ac9ac97f148c75379fec3dcbfb0cebc8ee64fb6f87a616a224b3616578f"
   },
   "source_stream_section_manifest": {
     "dispatch_attempted": false,

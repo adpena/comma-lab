@@ -59,10 +59,33 @@ def test_hdc2_combined_entropy_manifest_requires_payload_and_model_reduction() -
                 "decoded_output_equal": True,
                 "old_new_sha256_equal": True,
             },
+            "bounded_hdc2_recode_variants": [
+                {
+                    "variant": (
+                        "mixed_range_raw_global_prev_symbol_schema_indexed_"
+                        "q_streams_plus_raw_scales"
+                    ),
+                    "codec": "HDM2_global_prev_symbol_mixed_range_raw_schema_indexed_uint8",
+                    "bytes": 208821,
+                    "raw_equal": True,
+                    "q_roundtrip_equal": True,
+                    "scale_roundtrip_equal": True,
+                    "archive_ready": False,
+                    "header_bytes": 19329,
+                    "mixed_payload_bytes": 189380,
+                    "range_payload_bytes": 147466,
+                    "raw_payload_bytes": 41914,
+                    "raw_scale_bytes": 112,
+                    "raw_context_count": 187,
+                    "range_context_count": 60,
+                    "schema_metadata_elided_vs_hdc2_bytes": 444,
+                }
+            ],
         },
     )
 
     accounting = manifest["byte_accounting"]
+    candidate = manifest["bounded_candidate"]
     assert manifest["score_claim"] is False
     assert manifest["dispatch_attempted"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
@@ -71,8 +94,23 @@ def test_hdc2_combined_entropy_manifest_requires_payload_and_model_reduction() -
     assert accounting["net_byte_delta_after_model_overhead_only"] == 10414
     assert accounting["minimum_payload_reduction_needed_after_zero_model_overhead_bytes"] == 10415
     assert accounting["net_byte_delta_after_combined_targets"] == -13565
+    assert accounting["best_bounded_candidate_bytes"] == 208821
+    assert accounting["bounded_candidate_reduction_vs_hdc2_bytes"] == 12560
+    assert accounting["net_byte_delta_after_best_bounded_candidate"] == 38694
+    assert (
+        accounting["remaining_reduction_to_beat_frontier_after_best_bounded_candidate_bytes"]
+        == 38695
+    )
+    assert candidate["score_claim"] is False
+    assert candidate["planning_only"] is True
+    assert candidate["ready_for_exact_eval_dispatch"] is False
+    assert candidate["byte_reduction_vs_hdc2_bytes"] == 12560
+    assert candidate["static_context_header_reduction_vs_hdc2_bytes"] == 21511
+    assert candidate["payload_delta_vs_hdc2_bytes"] == 8951
+    assert candidate["raw_context_count"] == 187
+    assert candidate["range_payload_bytes"] == 147466
+    assert candidate["raw_payload_bytes"] == 41914
     assert math.isclose(
         accounting["projected_rate_score_delta_after_combined_targets"],
         -13565 * 25.0 / 37_545_489,
     )
-

@@ -61,6 +61,12 @@ def build_hdc2_combined_entropy_manifest(
     projected_bytes_after_combined = actual_replacement_bytes - known_target_bytes
     net_after_model_only = projected_bytes_after_model_only - frontier_section_bytes
     net_after_combined = projected_bytes_after_combined - frontier_section_bytes
+    bounded_candidate = _best_bounded_candidate(
+        hdc2_work_product,
+        actual_replacement_bytes=actual_replacement_bytes,
+        frontier_section_bytes=frontier_section_bytes,
+        model_overhead_bytes=model_overhead_bytes,
+    )
 
     roundtrip_ready = (
         roundtrip.get("roundtrip_valid") is True
@@ -77,6 +83,40 @@ def build_hdc2_combined_entropy_manifest(
         blockers.append("unexpected_model_overhead_alone_rate_positive_recheck_accounting")
     if net_after_combined >= 0:
         blockers.append("combined_known_targets_not_rate_positive")
+
+    byte_accounting = {
+        "actual_hdc2_replacement_bytes": actual_replacement_bytes,
+        "current_frontier_section_bytes": frontier_section_bytes,
+        "net_byte_delta_now": actual_replacement_bytes - frontier_section_bytes,
+        "model_overhead_target_bytes": model_overhead_bytes,
+        "payload_entropy_gap_target_bytes": payload_gap_bytes,
+        "combined_known_target_bytes": known_target_bytes,
+        "projected_bytes_after_model_overhead_only": projected_bytes_after_model_only,
+        "net_byte_delta_after_model_overhead_only": net_after_model_only,
+        "projected_bytes_after_combined_targets": projected_bytes_after_combined,
+        "net_byte_delta_after_combined_targets": net_after_combined,
+        "projected_rate_score_delta_after_combined_targets": (
+            net_after_combined * RATE_SCORE_PER_BYTE
+        ),
+        "minimum_payload_reduction_needed_after_zero_model_overhead_bytes": (
+            max(0, net_after_model_only + 1)
+        ),
+    }
+    if bounded_candidate is not None:
+        byte_accounting.update(
+            {
+                "best_bounded_candidate_bytes": bounded_candidate["bytes"],
+                "bounded_candidate_reduction_vs_hdc2_bytes": bounded_candidate[
+                    "byte_reduction_vs_hdc2_bytes"
+                ],
+                "net_byte_delta_after_best_bounded_candidate": bounded_candidate[
+                    "net_byte_delta_vs_frontier_section"
+                ],
+                "remaining_reduction_to_beat_frontier_after_best_bounded_candidate_bytes": (
+                    bounded_candidate["remaining_reduction_to_beat_frontier_section_bytes"]
+                ),
+            }
+        )
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -106,24 +146,8 @@ def build_hdc2_combined_entropy_manifest(
             "source_stream_sha256": source_stream.get("sha256"),
             "source_stream_decoded_raw_sha256": source_stream.get("decoded_raw_sha256"),
         },
-        "byte_accounting": {
-            "actual_hdc2_replacement_bytes": actual_replacement_bytes,
-            "current_frontier_section_bytes": frontier_section_bytes,
-            "net_byte_delta_now": actual_replacement_bytes - frontier_section_bytes,
-            "model_overhead_target_bytes": model_overhead_bytes,
-            "payload_entropy_gap_target_bytes": payload_gap_bytes,
-            "combined_known_target_bytes": known_target_bytes,
-            "projected_bytes_after_model_overhead_only": projected_bytes_after_model_only,
-            "net_byte_delta_after_model_overhead_only": net_after_model_only,
-            "projected_bytes_after_combined_targets": projected_bytes_after_combined,
-            "net_byte_delta_after_combined_targets": net_after_combined,
-            "projected_rate_score_delta_after_combined_targets": (
-                net_after_combined * RATE_SCORE_PER_BYTE
-            ),
-            "minimum_payload_reduction_needed_after_zero_model_overhead_bytes": (
-                max(0, net_after_model_only + 1)
-            ),
-        },
+        "byte_accounting": byte_accounting,
+        "bounded_candidate": bounded_candidate,
         "closed_stream_evidence": {
             "roundtrip_valid": roundtrip.get("roundtrip_valid") is True,
             "raw_equal": roundtrip.get("raw_equal") is True,
@@ -151,6 +175,7 @@ def render_markdown(manifest: Mapping[str, Any]) -> str:
     target = _mapping(manifest.get("target"), "target")
     accounting = _mapping(manifest.get("byte_accounting"), "byte_accounting")
     evidence = _mapping(manifest.get("closed_stream_evidence"), "closed_stream_evidence")
+    candidate = manifest.get("bounded_candidate")
     lines = [
         "# HDC2 Combined Entropy Reduction Manifest",
         "",
@@ -176,18 +201,110 @@ def render_markdown(manifest: Mapping[str, Any]) -> str:
         f"- net_byte_delta_after_combined_targets: `{accounting.get('net_byte_delta_after_combined_targets')}`",
         f"- projected_rate_score_delta_after_combined_targets: `{accounting.get('projected_rate_score_delta_after_combined_targets')}`",
         "",
-        "## Stream Evidence",
-        "",
-        f"- roundtrip_valid: `{_bool_text(evidence.get('roundtrip_valid') is True)}`",
-        f"- raw_equal: `{_bool_text(evidence.get('raw_equal') is True)}`",
-        f"- decoded_output_equal: `{_bool_text(evidence.get('decoded_output_equal') is True)}`",
-        "",
-        "Interpretation: HDC2 model overhead alone is still byte-negative.",
-        "The next implementation must reduce both static context overhead and",
-        "range-payload entropy gap before archive construction is rational.",
-        "",
     ]
+    if isinstance(candidate, Mapping):
+        lines.extend(
+            [
+                "## Bounded Candidate",
+                "",
+                f"- variant: `{candidate.get('variant')}`",
+                f"- bytes: `{candidate.get('bytes')}`",
+                f"- byte_reduction_vs_hdc2: `{candidate.get('byte_reduction_vs_hdc2_bytes')}`",
+                f"- net_byte_delta_vs_frontier_section: `{candidate.get('net_byte_delta_vs_frontier_section')}`",
+                f"- static_context_header_reduction_vs_hdc2: `{candidate.get('static_context_header_reduction_vs_hdc2_bytes')}`",
+                f"- payload_delta_vs_hdc2: `{candidate.get('payload_delta_vs_hdc2_bytes')}`",
+                f"- ready_for_exact_eval_dispatch: `{_bool_text(candidate.get('ready_for_exact_eval_dispatch') is True)}`",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Stream Evidence",
+            "",
+            f"- roundtrip_valid: `{_bool_text(evidence.get('roundtrip_valid') is True)}`",
+            f"- raw_equal: `{_bool_text(evidence.get('raw_equal') is True)}`",
+            f"- decoded_output_equal: `{_bool_text(evidence.get('decoded_output_equal') is True)}`",
+            "",
+            "Interpretation: HDC2 model overhead alone is still byte-negative.",
+            "The next implementation must reduce both static context overhead and",
+            "range-payload entropy gap before archive construction is rational.",
+            "",
+        ]
+    )
     return "\n".join(lines)
+
+
+def _best_bounded_candidate(
+    hdc2_work_product: Mapping[str, Any],
+    *,
+    actual_replacement_bytes: int,
+    frontier_section_bytes: int,
+    model_overhead_bytes: int,
+) -> dict[str, Any] | None:
+    rows = hdc2_work_product.get("bounded_hdc2_recode_variants")
+    if rows is None:
+        return None
+    if not isinstance(rows, list):
+        raise Hdc2CombinedEntropyError("bounded_hdc2_recode_variants must be a list")
+
+    candidates: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, Mapping):
+            continue
+        if not (
+            row.get("raw_equal") is True
+            and row.get("q_roundtrip_equal") is True
+            and row.get("scale_roundtrip_equal") is True
+        ):
+            continue
+        candidate_bytes = _positive_int(row.get("bytes"), "bounded_candidate_bytes")
+        candidate_header = _optional_positive_int(row.get("header_bytes"), "candidate_header_bytes")
+        raw_scale_bytes = _optional_nonnegative_int(row.get("raw_scale_bytes"), "raw_scale_bytes")
+        mixed_payload = _optional_positive_int(row.get("mixed_payload_bytes"), "mixed_payload_bytes")
+        net_delta_vs_frontier = candidate_bytes - frontier_section_bytes
+        candidate = {
+            "variant": _nonempty_str(row.get("variant"), "bounded_candidate_variant"),
+            "codec": row.get("codec"),
+            "score_claim": False,
+            "planning_only": True,
+            "archive_ready": row.get("archive_ready") is True,
+            "ready_for_exact_eval_dispatch": False,
+            "bytes": candidate_bytes,
+            "byte_delta_vs_hdc2_bytes": candidate_bytes - actual_replacement_bytes,
+            "byte_reduction_vs_hdc2_bytes": actual_replacement_bytes - candidate_bytes,
+            "net_byte_delta_vs_frontier_section": net_delta_vs_frontier,
+            "remaining_reduction_to_beat_frontier_section_bytes": max(
+                0,
+                net_delta_vs_frontier + 1,
+            ),
+            "rate_score_delta_vs_frontier_section_if_runtime_supported": (
+                net_delta_vs_frontier * RATE_SCORE_PER_BYTE
+            ),
+        }
+        if candidate_header is not None:
+            candidate["header_bytes"] = candidate_header
+            candidate["static_context_header_reduction_vs_hdc2_bytes"] = (
+                model_overhead_bytes - candidate_header
+            )
+        if mixed_payload is not None and raw_scale_bytes is not None:
+            baseline_payload = actual_replacement_bytes - model_overhead_bytes - raw_scale_bytes
+            candidate["mixed_payload_bytes"] = mixed_payload
+            candidate["payload_delta_vs_hdc2_bytes"] = mixed_payload - baseline_payload
+        for key in (
+            "raw_context_count",
+            "range_context_count",
+            "raw_payload_bytes",
+            "range_payload_bytes",
+            "schema_metadata_elided_vs_hdc2_bytes",
+        ):
+            value = _optional_nonnegative_int(row.get(key), key)
+            if value is not None:
+                candidate[key] = value
+        candidates.append(candidate)
+
+    if not candidates:
+        return None
+    return min(candidates, key=lambda row: (int(row["bytes"]), str(row["variant"])))
 
 
 def _matching_combined_group(
@@ -239,6 +356,20 @@ def _positive_int(value: Any, label: str) -> int:
     return value
 
 
+def _optional_positive_int(value: Any, label: str) -> int | None:
+    if value is None:
+        return None
+    return _positive_int(value, label)
+
+
+def _optional_nonnegative_int(value: Any, label: str) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise Hdc2CombinedEntropyError(f"{label} must be a nonnegative integer")
+    return value
+
+
 def _nonempty_str(value: Any, label: str) -> str:
     if not isinstance(value, str) or not value:
         raise Hdc2CombinedEntropyError(f"{label} must be a nonempty string")
@@ -247,4 +378,3 @@ def _nonempty_str(value: Any, label: str) -> str:
 
 def _bool_text(value: bool) -> str:
     return "true" if value else "false"
-
