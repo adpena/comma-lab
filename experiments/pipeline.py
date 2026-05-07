@@ -333,6 +333,39 @@ class PipelineConfig:
     use_raft_init: bool = False
     use_riemannian_tto: bool = False
 
+    # PARADIGM-δεζ (Phase 1 scaffolding — multi-day post-deadline mandate).
+    # Each flag has default=False so existing pipelines run unchanged.
+    # Guards mirror the β/γ/α REGISTERED-BUT-NOT-WIRED pattern from commits
+    # 999211e5 / 9bdd3d56 / 77dc808a / 80455cf8 — each branch raises a
+    # WARN if the flag is set but Phase 2/3 dispatch has not yet landed,
+    # preventing the silent-no-op trap. See blueprint at
+    # ``.omx/research/paradigm_delta_epsilon_zeta_phase1_blueprint_20260507_claude.md``
+    # and lane registry entries lane_delta_joint_training,
+    # lane_epsilon_learnable_entropy, lane_zeta_self_compress_renderer.
+
+    # PARADIGM-δ (joint scorer-aware training). Routes the renderer training
+    # step through ``tac.joint_scorer_aware_training.JointScorerAwareLoss``
+    # (compress-time only; strict-scorer-rule). Requires
+    # ``joint_training_config_path`` to point at a serialized
+    # JointTrainingConfig artifact. Phase 2 implementation pending Gate 2
+    # (apogee_int6 [contest-CUDA] eval landing).
+    use_joint_scorer_aware: bool = False
+    joint_training_config_path: str = ""
+
+    # PARADIGM-ε (learned entropy prior codec). When True, the
+    # weight-compression step composes the Ballé hyperprior + arithmetic
+    # coder via ``tac.learnable_entropy_model``. Adds an OPTIONAL
+    # ``LEPR``-magic archive section (≤5KB). Phase 2 implementation
+    # pending Gate 3 (δ Phase-2 [contest-CUDA] empirical improvement).
+    use_learnable_entropy: bool = False
+
+    # PARADIGM-ζ (full-renderer self-compression NN). Extends
+    # tac.self_compress's postfilter pattern to the 88K-param renderer.
+    # Default protect_patterns include FiLM canonical substrings; the
+    # archive section uses magic ``ZETA``. Phase 2 implementation pending
+    # Gate 3.
+    use_full_renderer_self_compress: bool = False
+
 
 # ── Step implementations ─────────────────────────────────────────────────
 
@@ -1601,6 +1634,56 @@ def step_compress_weights(
             "does not emit contest raw outputs from jcsp.bin or prove output "
             "parity, strict preflight proof is missing, no lane was claimed, "
             "and no GPU/remote/eval dispatch was attempted."
+        )
+
+    # ── Cross-paradigm flag guards (PARADIGM-δ, PARADIGM-ε, PARADIGM-ζ) ──
+    # Phase 1 scaffolding (blueprint at
+    # ``.omx/research/paradigm_delta_epsilon_zeta_phase1_blueprint_20260507_claude.md``).
+    # Mirror of the WARN-on-unwired pattern from PARADIGM-β / PARADIGM-γ.
+    # All three branches are REGISTERED-BUT-NOT-WIRED in Phase 1; full
+    # dispatch wiring is staged behind:
+    #   - δ: Gate 2 (apogee_int6 [contest-CUDA] eval landing)
+    #   - ε / ζ: Gate 3 (δ Phase-2 [contest-CUDA] empirical improvement)
+    # See lane registry entries lane_delta_joint_training,
+    # lane_epsilon_learnable_entropy, lane_zeta_self_compress_renderer.
+    if cfg.use_joint_scorer_aware:
+        _log(
+            "PARADIGM-δ: cfg.use_joint_scorer_aware=True but the joint "
+            "scorer-aware training dispatch path "
+            "(tac.joint_scorer_aware_training.JointScorerAwareLoss) is "
+            "REGISTERED-BUT-NOT-WIRED (Phase 1 scaffold). Falling through to "
+            f"weight_compression={mode!r}. To enable, the operator must land "
+            "the Phase 2 dispatch branch + integration test (Gate 2 = "
+            "apogee_int6 [contest-CUDA] eval landing). See lane "
+            "lane_delta_joint_training in the registry. joint_training_config_path="
+            f"{cfg.joint_training_config_path!r}.",
+            "WARN",
+        )
+    if cfg.use_learnable_entropy:
+        _log(
+            "PARADIGM-ε: cfg.use_learnable_entropy=True but the learned "
+            "entropy prior codec dispatch path "
+            "(tac.learnable_entropy_model.LearnableEntropyModelCodec) is "
+            "REGISTERED-BUT-NOT-WIRED (Phase 1 scaffold). Falling through to "
+            f"weight_compression={mode!r} (no LEPR archive section). To "
+            "enable, the operator must land the Phase 2 dispatch branch + "
+            "integration test (Gate 3 = δ Phase-2 empirical improvement). "
+            "See lane lane_epsilon_learnable_entropy in the registry.",
+            "WARN",
+        )
+    if cfg.use_full_renderer_self_compress:
+        _log(
+            "PARADIGM-ζ: cfg.use_full_renderer_self_compress=True but the "
+            "full-renderer self-compression dispatch path "
+            "(tac.self_compress_full_renderer.FullRendererSelfCompress) is "
+            "REGISTERED-BUT-NOT-WIRED (Phase 1 scaffold). Falling through to "
+            f"weight_compression={mode!r} (no ZETA archive section). To "
+            "enable, the operator must land the Phase 2 dispatch branch + "
+            "integration test (Gate 3 = δ Phase-2 empirical improvement) — "
+            "and the QAT loop MUST honor the >=2000 step minimum + FiLM "
+            "protection per Selfcomp/Hotz revisions. See lane "
+            "lane_zeta_self_compress_renderer in the registry.",
+            "WARN",
         )
 
     # ── Lane J-NWC neural-weight-compression branch ─────────────────────
