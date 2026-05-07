@@ -1,0 +1,113 @@
+{
+  "blockers_remaining": [
+    "active_level2_lane_dispatch_claim",
+    "exact_cuda_auth_eval",
+    "contest_auth_eval_adjudication",
+    "operator_score_claim_review"
+  ],
+  "candidate_archive_source": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/substituted/pr101_lgwin18_pr101_lgwin18_auto_selectFalse_brotli_lgwin18_brotli_quality11/archive.zip",
+  "candidate_id": "pr101_lgwin18_hnerv_ft_microcodec",
+  "dispatch_attempted": false,
+  "local_inflate_parity": {
+    "attempted": false,
+    "raw_bytes_per_output_if_run": 3662409600,
+    "reason": "not_requested"
+  },
+  "manifest_sha256_excluding_self": "27583a82f252594c30d00a338c7f4fe3515a5437a47d1c7c2478a8bc528a0e26",
+  "packet_archive": {
+    "bytes": 178258,
+    "members": [
+      {
+        "bytes": 178158,
+        "compress_size": 178158,
+        "crc": "1bf71961",
+        "name": "x",
+        "sha256": "a7df36c2b11f88ca640e1bb259a526f80190c86e474e9b06204bb54657d3356c"
+      }
+    ],
+    "mode": "0644",
+    "relpath": "archive.zip",
+    "sha256": "c95c59933f95746f6b8dd5fb7b4450419a25c01b2c9f8dac6e586cd4b3582933"
+  },
+  "packet_dir": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet",
+  "recorded_at_utc": "2026-05-07T22:15:00Z",
+  "remote_gpu_run": false,
+  "runtime_checks": {
+    "inflate_sh_bash_n": {
+      "command": "bash -n /Users/adpena/Projects/pact/experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/inflate.sh",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "",
+      "stdout": ""
+    }
+  },
+  "runtime_custody": {
+    "copied_file_count": 5,
+    "deterministic_hash_basis": "sha256(canonical JSON of sorted relpath/mode/bytes/sha256 records)",
+    "excluded_dir_names": [
+      ".git",
+      ".mypy_cache",
+      ".pytest_cache",
+      "__pycache__"
+    ],
+    "excluded_file_names": [
+      ".DS_Store"
+    ],
+    "excluded_suffixes": [
+      ".pyc",
+      ".pyo"
+    ],
+    "runtime_files": [
+      {
+        "bytes": 1036,
+        "mode": "0644",
+        "relpath": "README.md",
+        "sha256": "eff899cec0ce4e7cb6766d6b8a7432960fc575b4719b88fedc16b08eeb4edbd4"
+      },
+      {
+        "bytes": 2073,
+        "mode": "0644",
+        "relpath": "inflate.py",
+        "sha256": "a3aede9d70877926c73af051b3809be330bdc934113667d72d3274d4e5fd4966"
+      },
+      {
+        "bytes": 529,
+        "mode": "0755",
+        "relpath": "inflate.sh",
+        "sha256": "abf18a6a5120be1d3de4362d7c7e0370b5371640869781b630ce0a7c24167429"
+      },
+      {
+        "bytes": 16734,
+        "mode": "0644",
+        "relpath": "src/codec.py",
+        "sha256": "637fa5e4b47bfb2595358903dfaafbbc7a7ca48d5f7ccd81c06d1397e060bb72"
+      },
+      {
+        "bytes": 2197,
+        "mode": "0755",
+        "relpath": "src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      }
+    ],
+    "runtime_tree_sha256": "5c822fbbf481a278b253d7099c1cf1f69795d828b0663f7b256b517661422ed3"
+  },
+  "schema": "pr101_runtime_packet_custody_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 178258,
+    "members": [
+      {
+        "bytes": 178158,
+        "compress_size": 178158,
+        "crc": "6d2a9081",
+        "name": "x",
+        "sha256": "5f1948f9572e65f71c614d2ff15764ee416522e25cb1b06c8b1299c1306e8aaf"
+      }
+    ],
+    "mode": "0644",
+    "relpath": "archive.zip",
+    "sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e"
+  },
+  "source_runtime_dir": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source/submissions/hnerv_ft_microcodec",
+  "tool": "tools.build_pr101_runtime_packet"
+}

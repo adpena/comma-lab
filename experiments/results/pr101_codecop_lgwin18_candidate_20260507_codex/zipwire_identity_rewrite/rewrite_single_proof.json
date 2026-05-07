@@ -1,0 +1,25 @@
+{
+  "mode": "identity",
+  "mutation_requested": false,
+  "byte_identical": true,
+  "input": {
+    "path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/substituted/pr101_lgwin18_pr101_lgwin18_auto_selectFalse_brotli_lgwin18_brotli_quality11/archive.zip",
+    "bytes": 178258,
+    "sha256": "c95c59933f95746f6b8dd5fb7b4450419a25c01b2c9f8dac6e586cd4b3582933"
+  },
+  "output": {
+    "path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/zipwire_identity_rewrite/archive.zip",
+    "bytes": 178258,
+    "sha256": "c95c59933f95746f6b8dd5fb7b4450419a25c01b2c9f8dac6e586cd4b3582933"
+  },
+  "member": {
+    "name": "x",
+    "compress_type": 0,
+    "header_offset": 0,
+    "payload_offset": 31,
+    "compressed_bytes": 178158,
+    "uncompressed_bytes": 178158,
+    "crc32": "1bf71961",
+    "payload_sha256": "a7df36c2b11f88ca640e1bb259a526f80190c86e474e9b06204bb54657d3356c"
+  }
+}
