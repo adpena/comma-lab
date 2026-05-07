@@ -422,6 +422,7 @@ def _looks_like_renderer_payload(data: bytes) -> bool:
         data.startswith(b"QZS3")
         or data.startswith(b"MQZ1")
         or data.startswith(b"QBF1")
+        or data.startswith(b"BFJ1")
         or data.startswith(b"QFAI")
         or data.startswith(b"\x80\x02")
         or data.startswith(b"PK\x03\x04")
@@ -437,6 +438,8 @@ def _renderer_payload_codec_label(data: bytes) -> str:
         return "brotli_mqz1"
     if data.startswith(b"QBF1"):
         return "brotli_qbf1"
+    if data.startswith(b"BFJ1"):
+        return "brotli_bfj1"
     if data.startswith(b"QFAI"):
         return "brotli_qfai"
     if data.startswith(b"\x80\x02"):

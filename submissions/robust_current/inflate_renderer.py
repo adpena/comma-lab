@@ -3826,7 +3826,9 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
            JointFrameGenerator architecture, grouped FP4/QV-packed weights.
         9c. QBF1 binary: JointFrameGenerator block-FP readiness container
            with strict pickle-free state_dict decoding.
-        9d. Torch-FP4 payload (PR #63 qpose14-style packer): same
+        9d. BFJ1 binary: Wave-Ω Ω-3 JointFrameGenerator block-FP container
+           with outer magic plus LZMA-compressed deterministic state_dict envelope.
+        9e. Torch-FP4 payload (PR #63 qpose14-style packer): same
            JointFrameGenerator architecture, Torch serialized block-FP4
            weights plus FP16 protected tensors.
        10. NWC1 binary (Lane J-NWC): Neural Weight Compression
@@ -4138,6 +4140,73 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
             file=sys.stderr,
         )
         return model
+
+    # ── BFJ1 format (Wave-Ω Ω-3): block-FP JointFrameGenerator ──
+    # 2026-05-07: per-block exponent-shift quantizer for JFG (88K params,
+    # FiLM-conditioned). FiLM-flagged layers stored raw at FP16; remaining
+    # Conv2d/Linear weights pass through int8 mantissa + int8 per-block
+    # exponent + lzma. HWOI permute is applied to 4D Conv2d weights as a
+    # Selfcomp-inspired layout heuristic; actual byte wins remain archive-
+    # and model-dependent until measured.
+    #
+    # On-disk format:
+    #   [4]  outer magic = b"BFJ1"
+    #   [...] lzma-compressed inner envelope (which itself starts with BFJ1)
+    #
+    # Decoder produces a JointFrameGenerator state_dict; the wrapped model
+    # is the standard _QZS3QuantizrFaithfulInflateShim used by all
+    # JFG-based renderer payloads (QZS3/MQZ1/QBF1/QFAI/QH0/etc.).
+    # Strict-scorer-rule compliant: pure CPU byte->tensor decode, no
+    # SegNet/PoseNet load at inflate. This loader is runtime plumbing only,
+    # not evidence that BFJ1 beats the current renderer payload.
+    if magic == b"BFJ1":
+        try:
+            from tac.block_fp_jfg import decompress_jfg_block_fp
+            from tac.quantizr_faithful_renderer import (
+                build_quantizr_faithful_renderer,
+            )
+        except ImportError as exc:
+            raise RuntimeError(
+                "BFJ1 (Wave-Ω Ω-3 block-FP JointFrameGenerator) format "
+                "requires the tac package "
+                "(tac.block_fp_jfg.decompress_jfg_block_fp + "
+                "tac.quantizr_faithful_renderer.build_quantizr_faithful_renderer). "
+                "The inflate container must include the tac wheel for "
+                f"Wave-Ω Ω-3 archives. Underlying error: {exc!r}"
+            ) from exc
+        state_dict = decompress_jfg_block_fp(raw_bytes)
+        # JFG architecture defaults (PR #55 / Lane Q-FAITHFUL). The on-disk
+        # state_dict contains the canonical key set; we infer arch overrides
+        # from tensor shapes (num_classes, pose_dim, cond_dim) but fall
+        # back to defaults when keys are absent.
+        try:
+            num_classes = int(state_dict["shared_trunk.embedding.weight"].shape[0])
+        except KeyError:
+            num_classes = 5
+        try:
+            pose_dim = int(state_dict["pose_mlp.0.weight"].shape[1])
+            cond_dim = int(state_dict["pose_mlp.0.weight"].shape[0])
+        except KeyError:
+            pose_dim = 6
+            cond_dim = 48
+        gen = build_quantizr_faithful_renderer(
+            num_classes=num_classes,
+            pose_dim=pose_dim,
+            cond_dim=cond_dim,
+            depth_mult=1,
+        )
+        gen.load_state_dict(state_dict, strict=True)
+        gen.to(device).eval()
+        wrapped = _QZS3QuantizrFaithfulInflateShim(gen).to(device).eval()
+        elapsed = time.monotonic() - t0
+        n_params = sum(p.numel() for p in gen.parameters())
+        print(
+            f"  Loaded BFJ1 (Wave-Ω Ω-3 block-FP) JointFrameGenerator from .bin "
+            f"({len(raw_bytes):,} bytes, {n_params:,} params, {elapsed:.1f}s) "
+            f"— strict-scorer-rule OK",
+            file=sys.stderr,
+        )
+        return wrapped
 
     # ── C3R1 format (Lane I): C3 residual PairGenerator ──
     # 2026-04-27: same lane as CCh1 but with the residual head added on top

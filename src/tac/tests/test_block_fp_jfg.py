@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import importlib.util
 import struct
+import sys
+from pathlib import Path
 
 import pytest
 import torch
@@ -20,6 +23,23 @@ from tac.block_fp_jfg import (
     quantize_jfg_block_fp,
     validate_film_layer_block_fp,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+UNPACK_RENDERER_PAYLOAD_PATH = (
+    REPO_ROOT / "submissions" / "robust_current" / "unpack_renderer_payload.py"
+)
+
+
+def _load_unpack_renderer_payload_module():
+    spec = importlib.util.spec_from_file_location(
+        "bfj1_unpack_renderer_payload_under_test",
+        UNPACK_RENDERER_PAYLOAD_PATH,
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def _state_dict() -> dict[str, torch.Tensor]:
@@ -247,6 +267,51 @@ def test_inflate_dispatch_can_load_bfj1_archive(tmp_path) -> None:
     for name, orig in sd.items():
         mse = (restored[name] - orig).pow(2).mean().item()
         assert mse < 0.01
+
+
+def test_robust_inflate_renderer_loads_bfj1_without_torch_load(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Contest runtime dispatches BFJ1 before any pickle/torch fallback."""
+    from submissions.robust_current import inflate_renderer
+    from tac.quantizr_faithful_renderer import build_quantizr_faithful_renderer
+
+    torch.manual_seed(9)
+    model = build_quantizr_faithful_renderer().eval()
+    cfg = BlockFPConfig(block_size=32, lzma_preset=1)
+    blob = compress_jfg_block_fp(
+        quantize_jfg_block_fp(model.state_dict(), cfg),
+        lzma_preset=1,
+    )
+    assert blob[:4] == MAGIC_BFJ1
+    renderer_path = tmp_path / "renderer.bin"
+    renderer_path.write_bytes(blob)
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("BFJ1 runtime path fell through to torch.load")
+
+    monkeypatch.setattr(inflate_renderer.torch, "load", forbidden)
+    wrapped = inflate_renderer._load_renderer(str(renderer_path), "cpu")
+
+    assert getattr(wrapped, "q_faithful", False) is True
+    assert inflate_renderer._is_asymmetric_model(wrapped)
+    assert wrapped.pose_dim == 6
+
+    mask = torch.zeros((1, 8, 8), dtype=torch.long)
+    pose = torch.zeros((1, wrapped.pose_dim), dtype=torch.float32)
+    with torch.no_grad():
+        pair = wrapped(mask, mask, pose=pose)
+    assert pair.shape == (1, 2, 384, 512, 3)
+    assert torch.isfinite(pair).all()
+
+
+def test_unpack_renderer_payload_recognizes_bfj1_renderer_payload() -> None:
+    unpacker = _load_unpack_renderer_payload_module()
+    payload = MAGIC_BFJ1 + b"synthetic-bfj1-body"
+
+    assert unpacker._looks_like_renderer_payload(payload) is True
+    assert unpacker._renderer_payload_codec_label(payload) == "brotli_bfj1"
 
 
 def test_compress_empty_dict_raises() -> None:

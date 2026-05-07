@@ -5,20 +5,14 @@ JointFrameGenerator (JFG) renderer (88K params, FiLM-conditioned). It is the
 Wave-Ω Ω-3 building block per the blueprint at
 ``.omx/research/wave_omega_stack_composition_blueprint_20260507_claude.md``.
 
-Origin (empirical anchor)
--------------------------
-Selfcomp (PR #56) achieved **0.387 bpw** on a 94K-param SegMap weight blob via
-a closely related block-FP scheme (per memory
+Origin (external design motivation)
+------------------------------------
+Selfcomp (PR #56) used a closely related block-FP idea on a SegMap weight blob
+(per memory
 ``reference_pr56_selfcomp_blob_byte_layout_proper_reverse_engineering_20260501.md``).
-The Selfcomp ratio is the empirical anchor for this codec — the design caveat
-documented in the blueprint is that JFG carries FiLM-conditioning layers
-whose weight distributions differ significantly from SegMap convolutions, so
-the 0.387 bpw transfer is **conditional on FiLM compressibility** and is
-NOT a verified prediction.
-
-[predicted, CONDITIONAL on FiLM-layer compressibility]
-    Applied to 88K JFG params: ~4.2 KB compressed weights vs current ~56 KB
-    FP4+brotli. Delta ~52 KB → rate score Δ ``25 × 52000 / 37545489 ≈ -0.035``.
+That is design motivation only. JFG carries FiLM-conditioning layers whose
+weight distributions differ from SegMap convolutions, so this module must earn
+its own byte and exact-eval evidence before it can support any score claim.
 
 Kill criterion
 --------------
@@ -73,9 +67,9 @@ For ``payload_kind == 0`` (block-FP int8 + exponent):
 For ``payload_kind == 1`` (protected raw FP16):
     [fp16_data]   ``actual_param_count * 2`` bytes (little-endian half-floats)
 
-The whole serialized envelope is then ``lzma.compress``-ed (Selfcomp's
-empirical "+5%" gain comes from a HWOI permute on Conv2d weights pre-lzma;
-applied here to Conv2d 4D tensors only).
+The whole serialized envelope is then ``lzma.compress``-ed. When enabled, HWOI
+permute is applied to Conv2d 4D tensors before LZMA as a deterministic layout
+heuristic; any archive-level benefit must be measured on the exact payload.
 
 Deterministic byte-order
 ------------------------
