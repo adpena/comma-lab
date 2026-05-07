@@ -1,0 +1,33 @@
+{
+  "inner_member_bytes": {
+    "bytes": 178158,
+    "sha256": "5f1948f9572e65f71c614d2ff15764ee416522e25cb1b06c8b1299c1306e8aaf"
+  },
+  "input_archive": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip",
+  "negative_vectors": {
+    "multi_member_must_raise": "any archive with >1 member must fail PR101 layout assertion",
+    "wrong_member_name_must_raise": "member name != 'x' must fail PR101 layout assertion"
+  },
+  "oracle": "Python zipfile + tools/pr101_archive_substitution_surgery._read_inner_blob",
+  "oracle_status": "python_reference",
+  "outer_archive": {
+    "bytes": 178258,
+    "sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e"
+  },
+  "schema": "pr101_archive_zip_layout_v1",
+  "single_member": {
+    "compress_type": 0,
+    "compressed_size": 178158,
+    "crc32": 1831506049,
+    "date_time": [
+      2026,
+      5,
+      4,
+      16,
+      48,
+      4
+    ],
+    "name": "x",
+    "uncompressed_size": 178158
+  }
+}

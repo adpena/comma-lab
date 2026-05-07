@@ -1,0 +1,209 @@
+{
+  "byte_identical_to_input": true,
+  "decoded_semantic_facts": {
+    "n_tensors": 28,
+    "schema_storage_order": [
+      "stem.weight",
+      "stem.bias",
+      "blocks.0.weight",
+      "blocks.0.bias",
+      "blocks.1.weight",
+      "blocks.1.bias",
+      "blocks.2.weight",
+      "blocks.2.bias",
+      "blocks.3.weight",
+      "blocks.3.bias",
+      "blocks.4.weight",
+      "blocks.4.bias",
+      "blocks.5.weight",
+      "blocks.5.bias",
+      "skips.2.weight",
+      "skips.2.bias",
+      "skips.3.weight",
+      "skips.3.bias",
+      "skips.4.weight",
+      "skips.4.bias",
+      "refine.0.weight",
+      "refine.0.bias",
+      "refine.1.weight",
+      "refine.1.bias",
+      "rgb_0.weight",
+      "rgb_0.bias",
+      "rgb_1.weight",
+      "rgb_1.bias"
+    ],
+    "tensor_dtypes": {
+      "blocks.0.bias": "torch.float32",
+      "blocks.0.weight": "torch.float32",
+      "blocks.1.bias": "torch.float32",
+      "blocks.1.weight": "torch.float32",
+      "blocks.2.bias": "torch.float32",
+      "blocks.2.weight": "torch.float32",
+      "blocks.3.bias": "torch.float32",
+      "blocks.3.weight": "torch.float32",
+      "blocks.4.bias": "torch.float32",
+      "blocks.4.weight": "torch.float32",
+      "blocks.5.bias": "torch.float32",
+      "blocks.5.weight": "torch.float32",
+      "refine.0.bias": "torch.float32",
+      "refine.0.weight": "torch.float32",
+      "refine.1.bias": "torch.float32",
+      "refine.1.weight": "torch.float32",
+      "rgb_0.bias": "torch.float32",
+      "rgb_0.weight": "torch.float32",
+      "rgb_1.bias": "torch.float32",
+      "rgb_1.weight": "torch.float32",
+      "skips.2.bias": "torch.float32",
+      "skips.2.weight": "torch.float32",
+      "skips.3.bias": "torch.float32",
+      "skips.3.weight": "torch.float32",
+      "skips.4.bias": "torch.float32",
+      "skips.4.weight": "torch.float32",
+      "stem.bias": "torch.float32",
+      "stem.weight": "torch.float32"
+    },
+    "tensor_shapes": {
+      "blocks.0.bias": [
+        144
+      ],
+      "blocks.0.weight": [
+        144,
+        36,
+        3,
+        3
+      ],
+      "blocks.1.bias": [
+        144
+      ],
+      "blocks.1.weight": [
+        144,
+        36,
+        3,
+        3
+      ],
+      "blocks.2.bias": [
+        108
+      ],
+      "blocks.2.weight": [
+        108,
+        36,
+        3,
+        3
+      ],
+      "blocks.3.bias": [
+        80
+      ],
+      "blocks.3.weight": [
+        80,
+        27,
+        3,
+        3
+      ],
+      "blocks.4.bias": [
+        72
+      ],
+      "blocks.4.weight": [
+        72,
+        20,
+        3,
+        3
+      ],
+      "blocks.5.bias": [
+        72
+      ],
+      "blocks.5.weight": [
+        72,
+        18,
+        3,
+        3
+      ],
+      "refine.0.bias": [
+        9
+      ],
+      "refine.0.weight": [
+        9,
+        18,
+        3,
+        3
+      ],
+      "refine.1.bias": [
+        18
+      ],
+      "refine.1.weight": [
+        18,
+        9,
+        3,
+        3
+      ],
+      "rgb_0.bias": [
+        3
+      ],
+      "rgb_0.weight": [
+        3,
+        18,
+        3,
+        3
+      ],
+      "rgb_1.bias": [
+        3
+      ],
+      "rgb_1.weight": [
+        3,
+        18,
+        3,
+        3
+      ],
+      "skips.2.bias": [
+        27
+      ],
+      "skips.2.weight": [
+        27,
+        36,
+        1,
+        1
+      ],
+      "skips.3.bias": [
+        20
+      ],
+      "skips.3.weight": [
+        20,
+        27,
+        1,
+        1
+      ],
+      "skips.4.bias": [
+        18
+      ],
+      "skips.4.weight": [
+        18,
+        20,
+        1,
+        1
+      ],
+      "stem.bias": [
+        1728
+      ],
+      "stem.weight": [
+        1728,
+        28
+      ]
+    }
+  },
+  "input_archive": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip",
+  "input_blob": {
+    "bytes": 162164,
+    "sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6"
+  },
+  "negative_vectors": {
+    "empty_input_must_raise": "decode_decoder_compact(b'') raises ValueError",
+    "truncated_input_must_raise": "decode_decoder_compact(decoder_blob[:1000]) raises ValueError or returns malformed state_dict \u2014 Python reference asserts this"
+  },
+  "oracle": "tac.pr101_split_brotli_codec.decode_decoder_compact",
+  "oracle_status": "python_reference",
+  "output_blob": {
+    "bytes": 162164,
+    "sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6"
+  },
+  "round_trip_verified": true,
+  "schema": "pr101_decoder_blob_v1"
+}

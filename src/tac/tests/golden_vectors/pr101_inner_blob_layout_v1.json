@@ -1,0 +1,33 @@
+{
+  "inner_blob": {
+    "bytes": 178158,
+    "member_name": "x",
+    "sha256": "5f1948f9572e65f71c614d2ff15764ee416522e25cb1b06c8b1299c1306e8aaf"
+  },
+  "input_archive": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip",
+  "negative_vectors": {
+    "decoder_replacement_wrong_len": "a decoder replacement with len != 162164 must fail at substitution (corrupts latent extraction)",
+    "inner_too_short": "inner blob with len < 177551 must fail at split"
+  },
+  "oracle": "tools/pr101_archive_substitution_surgery._split_pr101_inner_blob",
+  "oracle_status": "python_reference",
+  "schema": "pr101_inner_blob_layout_v1",
+  "splice_grammar": {
+    "decoder_blob": {
+      "length": 162164,
+      "offset": 0,
+      "sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6"
+    },
+    "latent_blob": {
+      "length": 15387,
+      "offset": 162164,
+      "sha256": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe"
+    },
+    "sidecar_blob": {
+      "length": 607,
+      "length_is_variable": true,
+      "offset": 177551,
+      "sha256": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f"
+    }
+  }
+}
