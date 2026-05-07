@@ -13423,13 +13423,25 @@ def check_remote_lane_argparse_arity(
         except (FileNotFoundError, PermissionError):
             continue
 
-        # Walk lines, find invocation starts. Handle line-continuation `\`.
+        # Walk lines, find invocation starts. Handle line-continuation `\`
+        # and bash array `VAR=( ... )` blocks.
         lines = text.splitlines()
         i = 0
         while i < len(lines):
             line = lines[i]
             # Skip comments
             if line.lstrip().startswith("#"):
+                i += 1
+                continue
+            # Skip lines where the python invocation is inside a quoted log/echo
+            # string (documentation, not a real invocation). Heuristic: line
+            # starts with `log "`, `log '`, `echo "`, `echo '`, `printf "`, or
+            # the python token is preceded by an unmatched-open `"` earlier on
+            # the line.
+            stripped = line.lstrip()
+            _LOG_PREFIXES = ('log "', "log '", 'echo "', "echo '",
+                             'printf "', "printf '", 'tee ', '>> ')
+            if any(stripped.startswith(p) for p in _LOG_PREFIXES):
                 i += 1
                 continue
             # Detect invocation start with python script .py
@@ -13441,16 +13453,41 @@ def check_remote_lane_argparse_arity(
             if not m:
                 i += 1
                 continue
+            # Reject if the matched python invocation is inside a quoted
+            # string (count unescaped " before match.start()).
+            quote_count = line.count('"', 0, m.start()) - line.count('\\"', 0, m.start())
+            if quote_count % 2 == 1:
+                i += 1
+                continue
             target_path = m.group("target")
             # Normalize relative path. Lane scripts use 'src/tac/experiments/X.py'
             # and 'experiments/X.py' — both should resolve.
             invocation_lineno = i + 1
+            # Detect bash-array context: previous non-blank, non-comment line
+            # ends with `=(` (e.g. `BUILD_CMD=(`).
+            in_bash_array = False
+            for _j in range(i - 1, max(i - 6, -1), -1):
+                _prev = lines[_j].rstrip()
+                if not _prev or _prev.lstrip().startswith("#"):
+                    continue
+                if re.search(r'\b\w+\s*\+?=\s*\(\s*$', _prev):
+                    in_bash_array = True
+                break
             # Collect continuation lines (lines ending with `\` are continued)
             full_cmd = line
             while line.rstrip().endswith("\\") and i + 1 < len(lines):
                 i += 1
                 line = lines[i]
                 full_cmd += "\n" + line
+            # If inside a bash array, keep absorbing until the closing `)`
+            # at the start of a non-comment line.
+            if in_bash_array:
+                while i + 1 < len(lines):
+                    i += 1
+                    next_line = lines[i]
+                    full_cmd += "\n" + next_line
+                    if next_line.lstrip().startswith(")"):
+                        break
 
             # Extract flag tokens from full_cmd; target_sig keys are stored
             # WITH `--` prefix, so prepend `--` when comparing.

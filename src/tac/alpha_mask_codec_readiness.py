@@ -4,6 +4,14 @@ This module does not train NeRV, wavelet, VQ-VAE, or grayscale-LUT mask
 codecs. It records the minimum deterministic decode-validation contract that
 must exist before a harness run can be treated as a reusable alpha-mask
 artifact. Exact CUDA auth eval remains the only score authority.
+
+ROUNDTRIP_NOT_REQUIRED: this module is a contract REGISTRY (frozen dataclass
+records describing per-family decode-validation requirements), not a codec
+that quantizes/encodes/decodes data. It does not have a quantize() function
+to roundtrip; the actual NeRV/wavelet/VQ-VAE/grayscale-LUT codec
+implementations live in src/tac/{nerv,wavelet,vqvae,grayscale_lut}_mask_codec.py
+and own their own roundtrip tests. The Check 46 filename glob (`*codec*.py`)
+matches this readiness file by accident.
 """
 from __future__ import annotations
 
