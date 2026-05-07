@@ -2,13 +2,22 @@
 title: PARADIGM-δεζ Phase 1 Blueprint — Joint Training + MDL/Bayesian + Self-Compression NN
 date: 2026-05-07
 author: Track 3 architecture subagent (claude-sonnet-4-6) + Track-1 coordinator persistence pass
-status: PHASE 1 DESIGN — not yet dispatched; Gate 0 approval pending
+status: PHASE 1 DESIGN — not yet dispatched; CPU/design work operator-approved, GPU gates pending
 target_band: 0.155-0.175 [predicted-band, NOT contest-CUDA]
 shannon_floor_realistic: 0.155
 shannon_floor_t_minus_65h: 0.224
 ---
 
 # PARADIGM-δεζ Phase 1 Blueprint
+
+## Coordinator rigor note
+
+This is a design blueprint and build-order prior, not evidence of a score. All
+bands are `prediction` until exact archive bytes are evaluated through
+`archive.zip -> inflate.sh -> upstream/evaluate.py` on CUDA and recorded in a
+structured `contest_auth_eval.json`. The byte arithmetic below is intentionally
+bounded by current archive size so component savings cannot silently exceed the
+available charged byte mass.
 
 ## 0. Executive Position
 
@@ -159,9 +168,11 @@ additional 15-20 KB if the from-scratch architecture trains stably.
 - `export_full_renderer_self_compress(renderer) -> bytes` (magic `b"ZETA"`)
 - `load_full_renderer_self_compress(blob, arch_config) -> renderer` (no scorer)
 
-**Predicted savings**: 88K params × 1.5 bpw / 8 = ~16.5 KB vs current ~56 KB
-FP4+brotli renderer. Delta: ~40 KB → score delta `25 × 40000 / 37545489 ≈
-0.027` [predicted]. **Largest single-component saving.**
+**Predicted savings**: 88K params × 1.5 bpw / 8 = ~16.5 KB before container and
+runtime overhead. The historical "current ~56 KB FP4+brotli renderer" estimate
+must be verified against the exact PR106 `p` slice before dispatch. Until then,
+use a bounded 20-40 KB renderer-rate prior → score delta
+`25 × [20000,40000] / 37545489 ≈ [0.013,0.027]` [prediction].
 
 ## 3. Composition Contract
 
@@ -205,19 +216,37 @@ Phase 2-3 empirical results.
 
 ## 4. Predicted-Score Arithmetic
 
-| Component | Current [contest-CUDA] | Post-δεζ [predicted] | Delta | Method |
+Current PR106x charged rate is bounded by exact archive bytes:
+
+```
+rate_current = 25 * 186080 / 37545489 = 0.1239
+```
+
+Do not add component byte deltas naively. NeRV mask savings, ζ renderer
+savings, ε prior overhead, SJ-KL sidecar cost, zip overhead, and rebuilt `p`
+container effects all compete inside the same 186 KB charged budget. The only
+promotable rate row is the measured archive byte count after composition.
+
+| Component | Current [contest-CUDA] | Post-δεζ planning prior | Delta | Method |
 |---|---|---|---|---|
-| seg_dist | 0.067 | 0.050 | -0.017 | δ joint-training (25% reduction) |
-| sqrt(10·pose) | 0.0184 | 0.012 | -0.006 | δ + adaptive λ_pose; Riemannian TTO compounds |
-| rate (bytes) | 0.124 | 0.080 | -0.044 | ζ ~40 KB + ε ~9 KB + NeRV ~150 KB |
-| **TOTAL** | **0.20935** | **0.142** | **-0.067** | Stack of orthogonal savings |
+| seg_dist | from exact PR106x JSON | 15-25% lower | prediction | δ joint-training; must pass scorer-basin parity |
+| sqrt(10·pose) | from exact PR106x JSON | 10-35% lower | prediction | δ + adaptive lambda_pose; Riemannian TTO compounds |
+| rate bytes | 186080 | 90000-135000 | prediction | bounded net of ζ/ε/NeRV/SJ-KL/container overhead |
+| rate term | 0.1239 | 0.0599-0.0899 | prediction | `25 * bytes / 37545489` |
 
-**0.142 is OPTIMISTIC central-case** — assumes all components compose at
-central estimates. Realistic range [0.155, 0.175] [predicted-band]. Conservative
-target for Phase 4 dispatch planning: **0.165 [predicted-band]**.
+Planning target bands:
 
-Shannon floor crosscheck: 0.155 council-derived realistic. Our 0.142 sits 0.013
-below — possible only if ζ hits ~16.5 KB AND δ eliminates proxy-auth gap.
+- Conservative stack: `0.175-0.209` [prediction] if distortion gains are weak
+  and bytes land near 135 KB.
+- Central stack: `0.155-0.175` [prediction] if δ improves at least one scorer
+  component and bytes land below 120 KB.
+- Upside research: `<0.155` [prediction] only if scorer-visible distortion
+  improves and final archive bytes land near or below 90 KB.
+
+The prior `0.142` row is not promoted as a dispatch target. It is retained only
+as an upside hypothesis requiring exact stacked CUDA evidence. The near-term
+score-lowering order remains: q10 exact eval first, then Wave-Ω Omega-1/2
+measurable runs, then δεζ GPU spend.
 
 ## 5. Sanity Ladder
 
