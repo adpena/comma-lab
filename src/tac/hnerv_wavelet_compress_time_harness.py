@@ -29,6 +29,10 @@ ATOM_PLAN_SCHEMA = "hnerv_wavelet_compress_time_atom_plan.v1"
 ATOM_PLAN_FILENAME = "hnerv_wavelet_compress_time_atom_plan.json"
 SELECTED_ATOMS_SCHEMA = "hnerv_wavelet_compress_time_selected_atoms.v1"
 SELECTED_ATOMS_FILENAME = "hnerv_wavelet_compress_time_selected_atoms.json"
+RUNTIME_DECODE_REVIEW_SCHEMA = "hnerv_wavelet_compress_time_runtime_decode_review.v1"
+RUNTIME_DECODE_REVIEW_FILENAME = "hnerv_wavelet_compress_time_runtime_decode_review.json"
+APPLY_TRANSFORM_TOOL = "tac.hnerv_wavelet_apply_transform.build_wavelet_apply_transform_candidate"
+APPLY_TRANSFORM_RUNTIME_DECODE_SCHEMA = "hnerv_wavelet_runtime_decode_validation.v1"
 WR01_FIXED_ATOM_WIRE_BYTES = 17
 
 
@@ -104,6 +108,7 @@ def build_wavelet_compress_time_harness(
     train_steps: int = 0,
     expected_source_archive_sha256: str | None = None,
     expected_source_archive_bytes: int | None = None,
+    runtime_apply_manifest: Mapping[str, Any] | None = None,
     exact_decode_validation: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic fail-closed WR01 compress-time harness manifest."""
@@ -147,6 +152,9 @@ def build_wavelet_compress_time_harness(
     )
     atom_plan_path = None if output_dir is None else Path(output_dir) / ATOM_PLAN_FILENAME
     selected_atoms_path = None if output_dir is None else Path(output_dir) / SELECTED_ATOMS_FILENAME
+    runtime_decode_review_path = (
+        None if output_dir is None else Path(output_dir) / RUNTIME_DECODE_REVIEW_FILENAME
+    )
     atom_plan_manifest, atom_plan_blockers = _build_atom_plan_manifest(
         source_archive=source_archive,
         source_label=source_label,
@@ -162,6 +170,15 @@ def build_wavelet_compress_time_harness(
         archive=archive,
         atom_plan=atom_plan_manifest,
         manifest_path=selected_atoms_path,
+    )
+    runtime_decode_review, runtime_decode_review_blockers = _build_runtime_decode_review_manifest(
+        source_archive=source_archive,
+        source_label=source_label,
+        archive=archive,
+        selected_atoms=selected_atoms_manifest,
+        source_sections=section_records,
+        runtime_apply_manifest=runtime_apply_manifest,
+        manifest_path=runtime_decode_review_path,
     )
     decode_validation = _decode_validation_placeholder(
         exact_decode_validation=exact_decode_validation,
@@ -180,6 +197,7 @@ def build_wavelet_compress_time_harness(
         *section_blockers,
         *atom_plan_blockers,
         *selected_atoms_blockers,
+        *runtime_decode_review_blockers,
         *decode_validation["blockers"],
         *pipeline_blockers,
     ]
@@ -203,6 +221,14 @@ def build_wavelet_compress_time_harness(
         "selected_atoms_manifest_path": str(selected_atoms_path) if selected_atoms_path is not None else None,
         "selected_atoms_manifest_sha256": selected_atoms_manifest["manifest_sha256_excluding_self"],
         "selected_atoms_schema": SELECTED_ATOMS_SCHEMA,
+        "runtime_decode_review_schema": RUNTIME_DECODE_REVIEW_SCHEMA,
+        "runtime_decode_review_manifest_path": (
+            str(runtime_decode_review_path) if runtime_decode_review_path is not None else None
+        ),
+        "runtime_decode_review_manifest_sha256": runtime_decode_review[
+            "manifest_sha256_excluding_self"
+        ],
+        "runtime_decode_review": runtime_decode_review,
         "trained_atoms_manifest_path": None,
         "wavelet_sidechannel_archive_path": None,
         "applied_candidate_archive_path": None,
@@ -243,6 +269,10 @@ def build_wavelet_compress_time_harness(
         "ready_for_compress_time_training": False,
         "ready_for_atom_plan_review": not atom_plan_blockers,
         "ready_for_selected_atom_review": not selected_atoms_blockers,
+        "ready_for_runtime_apply_review": runtime_decode_review["ready_for_runtime_apply_review"],
+        "ready_for_decode_validation_review": runtime_decode_review[
+            "ready_for_decode_validation_review"
+        ],
         "ready_for_wavelet_sidechannel_candidate": False,
         "ready_for_archive_preflight": False,
         "ready_for_exact_eval_dispatch": False,
@@ -274,6 +304,7 @@ def build_wavelet_compress_time_harness(
         output_root.mkdir(parents=True, exist_ok=True)
         write_json(atom_plan_path, atom_plan_manifest)
         write_json(selected_atoms_path, selected_atoms_manifest)
+        write_json(runtime_decode_review_path, runtime_decode_review)
         manifest_path = output_root / "hnerv_wavelet_compress_time_harness.json"
         manifest["manifest_path"] = str(manifest_path)
         manifest["manifest_sha256_excluding_self"] = _manifest_sha256_excluding_self(manifest)
@@ -609,6 +640,290 @@ def _build_selected_atoms_manifest(
         selected_manifest
     )
     return selected_manifest, structural_blockers
+
+
+def _build_runtime_decode_review_manifest(
+    *,
+    source_archive: str | Path,
+    source_label: str,
+    archive: Any,
+    selected_atoms: Mapping[str, Any],
+    source_sections: Sequence[Mapping[str, Any]],
+    runtime_apply_manifest: Mapping[str, Any] | None,
+    manifest_path: Path | None,
+) -> tuple[dict[str, Any], list[str]]:
+    blockers: list[str] = []
+    selected_atom_ids = [str(atom_id) for atom_id in selected_atoms.get("selected_atom_ids") or []]
+    selected_atom_id_set = set(selected_atom_ids)
+    selected_sections = {
+        str(section.get("section_name") or ""): section
+        for section in selected_atoms.get("sections") or []
+        if isinstance(section, Mapping)
+    }
+    source_section_by_name = {
+        str(section.get("section_name") or ""): section
+        for section in source_sections
+        if isinstance(section, Mapping)
+    }
+    runtime_payload = dict(runtime_apply_manifest) if runtime_apply_manifest is not None else None
+    runtime_manifest_sha256 = (
+        sha256_bytes(json_line(runtime_payload).encode("utf-8"))
+        if runtime_payload is not None
+        else None
+    )
+    runtime_blockers: list[str] = []
+    decode_blockers: list[str] = []
+    applied_atom_ids: list[str] = []
+    runtime_decode_validation: Mapping[str, Any] | None = None
+
+    if runtime_payload is None:
+        runtime_blockers.append("missing_runtime_apply_manifest")
+        decode_blockers.append("missing_runtime_decode_validation_manifest")
+    else:
+        if runtime_payload.get("tool") != APPLY_TRANSFORM_TOOL:
+            runtime_blockers.append("runtime_apply_manifest_tool_mismatch")
+        if runtime_payload.get("score_claim") is not False:
+            runtime_blockers.append("runtime_apply_manifest_score_claim_not_false")
+        if runtime_payload.get("dispatch_attempted") is not False:
+            runtime_blockers.append("runtime_apply_manifest_dispatch_attempted_not_false")
+        if runtime_payload.get("ready_for_exact_eval_dispatch") is not False:
+            runtime_blockers.append("runtime_apply_manifest_exact_eval_dispatch_not_blocked")
+        if runtime_payload.get("source_label") != str(source_label):
+            runtime_blockers.append("runtime_apply_manifest_source_label_mismatch")
+        if runtime_payload.get("source_archive_sha256") != archive.archive_sha256:
+            runtime_blockers.append("runtime_apply_manifest_source_archive_sha256_mismatch")
+        if runtime_payload.get("source_archive_bytes") != archive.archive_bytes:
+            runtime_blockers.append("runtime_apply_manifest_source_archive_bytes_mismatch")
+        if runtime_payload.get("source_payload_sha256") != sha256_bytes(archive.payload):
+            runtime_blockers.append("runtime_apply_manifest_source_payload_sha256_mismatch")
+        if runtime_payload.get("source_payload_bytes") != len(archive.payload):
+            runtime_blockers.append("runtime_apply_manifest_source_payload_bytes_mismatch")
+
+        section_name = str(
+            runtime_payload.get("changed_section_name")
+            or runtime_payload.get("section_name")
+            or ""
+        )
+        if not section_name:
+            runtime_blockers.append("runtime_apply_manifest_missing_changed_section_name")
+        elif section_name not in selected_sections:
+            runtime_blockers.append(f"runtime_apply_section_not_in_selected_atoms:{section_name}")
+        if section_name and section_name in source_section_by_name:
+            source_section = source_section_by_name[section_name]
+            if runtime_payload.get("source_section_sha256") != source_section.get("section_sha256"):
+                runtime_blockers.append("runtime_apply_manifest_source_section_sha256_mismatch")
+            selected_section = selected_sections.get(section_name)
+            if (
+                isinstance(selected_section, Mapping)
+                and runtime_payload.get("source_raw_sha256") != selected_section.get("raw_sha256")
+            ):
+                runtime_blockers.append("runtime_apply_manifest_source_raw_sha256_mismatch")
+        elif section_name:
+            runtime_blockers.append(f"runtime_apply_section_missing_source_record:{section_name}")
+
+        runtime_apply = runtime_payload.get("runtime_apply")
+        if not isinstance(runtime_apply, Mapping):
+            runtime_blockers.append("runtime_apply_manifest_missing_runtime_apply_block")
+            runtime_apply = {}
+        if runtime_apply.get("score_claim") is not False:
+            runtime_blockers.append("runtime_apply_block_score_claim_not_false")
+        if runtime_apply.get("dispatch_attempted") is not False:
+            runtime_blockers.append("runtime_apply_block_dispatch_attempted_not_false")
+        applied_atom_ids = [
+            str(atom_id)
+            for atom_id in (
+                runtime_payload.get("runtime_apply_atom_ids")
+                or runtime_apply.get("applied_atom_ids")
+                or []
+            )
+        ]
+        if not applied_atom_ids:
+            runtime_blockers.append("runtime_apply_manifest_missing_applied_atom_ids")
+        if len(applied_atom_ids) != len(set(applied_atom_ids)):
+            runtime_blockers.append("runtime_apply_manifest_duplicate_applied_atom_ids")
+        unknown_applied_atom_ids = sorted(set(applied_atom_ids) - selected_atom_id_set)
+        if unknown_applied_atom_ids:
+            runtime_blockers.append("runtime_apply_applied_atoms_not_selected")
+        transform_stats = runtime_payload.get("transform_stats")
+        if not isinstance(transform_stats, Mapping):
+            runtime_blockers.append("runtime_apply_manifest_missing_transform_stats")
+        else:
+            if transform_stats.get("score_claim") is not False:
+                runtime_blockers.append("runtime_apply_transform_stats_score_claim_not_false")
+            if int(transform_stats.get("applied_atom_count") or 0) != len(applied_atom_ids):
+                runtime_blockers.append("runtime_apply_applied_atom_count_mismatch")
+            if int(transform_stats.get("changed_raw_positions") or 0) <= 0:
+                runtime_blockers.append("runtime_apply_no_changed_raw_positions")
+
+        if "requires_exact_cuda_auth_eval" not in [
+            str(blocker) for blocker in runtime_payload.get("dispatch_blockers") or []
+        ]:
+            runtime_blockers.append("runtime_apply_manifest_missing_exact_eval_dispatch_blocker")
+        if "requires_lane_dispatch_claim" not in [
+            str(blocker) for blocker in runtime_payload.get("dispatch_blockers") or []
+        ]:
+            runtime_blockers.append("runtime_apply_manifest_missing_lane_claim_dispatch_blocker")
+
+        runtime_decode_validation_raw = runtime_payload.get("runtime_decode_validation")
+        if not isinstance(runtime_decode_validation_raw, Mapping):
+            decode_blockers.append("runtime_apply_manifest_missing_runtime_decode_validation")
+        else:
+            runtime_decode_validation = runtime_decode_validation_raw
+            decode_blockers.extend(
+                _validate_runtime_decode_validation_manifest(
+                    runtime_decode_validation=runtime_decode_validation,
+                    runtime_apply_manifest=runtime_payload,
+                    archive=archive,
+                    selected_sections=selected_sections,
+                    source_payload_sha256=sha256_bytes(archive.payload),
+                )
+            )
+
+    blockers.extend(runtime_blockers)
+    blockers.extend(decode_blockers)
+    review = {
+        "schema": RUNTIME_DECODE_REVIEW_SCHEMA,
+        "schema_version": SCHEMA_VERSION,
+        "tool": f"{TOOL}.runtime_decode_review",
+        "status": "ready" if not blockers else "blocked",
+        "review_mode": "selected_wr01_atoms_runtime_apply_decode_review_not_score",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "source_label": str(source_label),
+        "source_archive_path": str(source_archive),
+        "source_archive_sha256": archive.archive_sha256,
+        "source_archive_bytes": archive.archive_bytes,
+        "source_payload_sha256": sha256_bytes(archive.payload),
+        "source_payload_bytes": len(archive.payload),
+        "selected_atoms_schema": selected_atoms.get("schema"),
+        "selected_atoms_manifest_path": selected_atoms.get("manifest_path"),
+        "selected_atoms_manifest_sha256": selected_atoms.get("manifest_sha256_excluding_self"),
+        "selected_atom_count": len(selected_atom_ids),
+        "selected_atom_ids": selected_atom_ids,
+        "runtime_apply_manifest_path": (
+            runtime_payload.get("manifest_path") if runtime_payload is not None else None
+        ),
+        "runtime_apply_manifest_sha256": runtime_manifest_sha256,
+        "runtime_apply_tool": (
+            runtime_payload.get("tool") if runtime_payload is not None else None
+        ),
+        "runtime_apply_candidate_archive_path": (
+            runtime_payload.get("candidate_archive_path") if runtime_payload is not None else None
+        ),
+        "runtime_apply_candidate_archive_sha256": (
+            runtime_payload.get("candidate_archive_sha256") if runtime_payload is not None else None
+        ),
+        "runtime_apply_candidate_archive_bytes": (
+            runtime_payload.get("candidate_archive_bytes") if runtime_payload is not None else None
+        ),
+        "runtime_apply_changed_section_name": (
+            runtime_payload.get("changed_section_name") if runtime_payload is not None else None
+        ),
+        "runtime_apply_atom_count": len(applied_atom_ids),
+        "runtime_apply_atom_ids": applied_atom_ids,
+        "runtime_decode_validation_schema": (
+            runtime_decode_validation.get("schema") if runtime_decode_validation is not None else None
+        ),
+        "runtime_decode_validation_manifest_path": (
+            runtime_decode_validation.get("manifest_path")
+            if runtime_decode_validation is not None
+            else None
+        ),
+        "runtime_decode_validation_manifest_sha256": (
+            runtime_decode_validation.get("manifest_sha256_excluding_self")
+            if runtime_decode_validation is not None
+            else None
+        ),
+        "runtime_decode_validation_ready": (
+            runtime_decode_validation.get("ready_for_runtime_decode_review")
+            if runtime_decode_validation is not None
+            else False
+        ),
+        "ready_for_runtime_apply_review": not runtime_blockers,
+        "ready_for_decode_validation_review": not decode_blockers,
+        "ready_for_archive_preflight": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": blockers,
+        "runtime_apply_blockers": runtime_blockers,
+        "decode_validation_blockers": decode_blockers,
+        "dispatch_blockers": [
+            "runtime_decode_review_is_not_score_evidence",
+            "requires_archive_manifest_preflight",
+            "requires_component_response_or_exact_cuda_eval",
+            "requires_lane_dispatch_claim",
+            "requires_exact_cuda_auth_eval",
+        ],
+        "candidate_required_proof": [
+            "archive_manifest_preflight",
+            "component_response_or_exact_cuda_eval",
+            "lane_dispatch_claim",
+            "contest_cuda_auth_eval_json",
+        ],
+        "manifest_path": str(manifest_path) if manifest_path is not None else None,
+    }
+    review["manifest_sha256_excluding_self"] = _manifest_sha256_excluding_self(review)
+    return review, blockers
+
+
+def _validate_runtime_decode_validation_manifest(
+    *,
+    runtime_decode_validation: Mapping[str, Any],
+    runtime_apply_manifest: Mapping[str, Any],
+    archive: Any,
+    selected_sections: Mapping[str, Mapping[str, Any]],
+    source_payload_sha256: str,
+) -> list[str]:
+    blockers: list[str] = []
+    if runtime_decode_validation.get("schema") != APPLY_TRANSFORM_RUNTIME_DECODE_SCHEMA:
+        blockers.append("runtime_decode_validation_schema_mismatch")
+    if runtime_decode_validation.get("score_claim") is not False:
+        blockers.append("runtime_decode_validation_score_claim_not_false")
+    if runtime_decode_validation.get("dispatch_attempted") is not False:
+        blockers.append("runtime_decode_validation_dispatch_attempted_not_false")
+    if runtime_decode_validation.get("ready_for_runtime_decode_review") is not True:
+        blockers.append("runtime_decode_validation_not_ready")
+    if runtime_decode_validation.get("ready_for_exact_eval_dispatch") is not False:
+        blockers.append("runtime_decode_validation_exact_eval_dispatch_not_blocked")
+    if runtime_decode_validation.get("exact_cuda_auth_eval") is not False:
+        blockers.append("runtime_decode_validation_exact_cuda_auth_eval_not_false")
+    if runtime_decode_validation.get("source_archive_sha256") != archive.archive_sha256:
+        blockers.append("runtime_decode_validation_source_archive_sha256_mismatch")
+    if runtime_decode_validation.get("source_archive_bytes") != archive.archive_bytes:
+        blockers.append("runtime_decode_validation_source_archive_bytes_mismatch")
+    if runtime_decode_validation.get("source_payload_sha256") != source_payload_sha256:
+        blockers.append("runtime_decode_validation_source_payload_sha256_mismatch")
+    if runtime_decode_validation.get("candidate_archive_sha256") != runtime_apply_manifest.get(
+        "candidate_archive_sha256"
+    ):
+        blockers.append("runtime_decode_validation_candidate_archive_sha256_mismatch")
+    if runtime_decode_validation.get("candidate_archive_bytes") != runtime_apply_manifest.get(
+        "candidate_archive_bytes"
+    ):
+        blockers.append("runtime_decode_validation_candidate_archive_bytes_mismatch")
+    section_name = str(runtime_apply_manifest.get("changed_section_name") or "")
+    if runtime_decode_validation.get("section_name") != section_name:
+        blockers.append("runtime_decode_validation_section_name_mismatch")
+    if runtime_decode_validation.get("changed_section_only") is not True:
+        blockers.append("runtime_decode_validation_changed_section_only_not_true")
+    if section_name and section_name in selected_sections:
+        selected_section = selected_sections[section_name]
+        validation_sections = [
+            section
+            for section in runtime_decode_validation.get("sections") or []
+            if isinstance(section, Mapping) and section.get("section_name") == section_name
+        ]
+        if len(validation_sections) != 1:
+            blockers.append("runtime_decode_validation_changed_section_record_missing")
+        elif validation_sections[0].get("source_raw_sha256") != selected_section.get("raw_sha256"):
+            blockers.append("runtime_decode_validation_changed_section_source_raw_mismatch")
+    validation_blockers = runtime_decode_validation.get("blockers") or []
+    if validation_blockers:
+        blockers.append("runtime_decode_validation_has_blockers")
+    if "requires_exact_cuda_auth_eval" not in [
+        str(blocker) for blocker in runtime_decode_validation.get("dispatch_blockers") or []
+    ]:
+        blockers.append("runtime_decode_validation_missing_exact_eval_dispatch_blocker")
+    return blockers
 
 
 def _blocked_atom_plan_section(
@@ -954,6 +1269,8 @@ def _manifest_sha256_excluding_self(manifest: Mapping[str, Any]) -> str:
 __all__ = [
     "ATOM_PLAN_FILENAME",
     "ATOM_PLAN_SCHEMA",
+    "RUNTIME_DECODE_REVIEW_FILENAME",
+    "RUNTIME_DECODE_REVIEW_SCHEMA",
     "SCHEMA_VERSION",
     "SELECTED_ATOMS_FILENAME",
     "SELECTED_ATOMS_SCHEMA",

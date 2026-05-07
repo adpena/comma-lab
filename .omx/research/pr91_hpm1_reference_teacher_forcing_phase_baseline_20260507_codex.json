@@ -1,0 +1,544 @@
+{
+  "archive": {
+    "bundle_format": "pr85_v5_8byte_lengths",
+    "bytes": 222404,
+    "member_x_bytes": 222304,
+    "member_x_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+    "path": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+    "segment_bytes": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 145087,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    },
+    "segment_sha256": {
+      "bias": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+      "frac": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+      "frac2": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+      "frac3": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+      "mask": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+      "model": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc",
+      "pose": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c",
+      "post": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+      "randmulti": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+      "region": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+      "shift": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4"
+    },
+    "sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f"
+  },
+  "dependency_report": {
+    "expected": {
+      "constriction": "0.4.2",
+      "numpy": "2.4.4",
+      "pyppmd": "1.3.1",
+      "python": "3.12.13",
+      "torch": "2.11.0"
+    },
+    "mismatches": {},
+    "missing": [],
+    "observed": {
+      "constriction": "0.4.2",
+      "numpy": "2.4.4",
+      "pyppmd": "1.3.1",
+      "python": "3.12.13",
+      "torch": "2.11.0"
+    },
+    "status": "passed",
+    "strict": false
+  },
+  "device": "cpu",
+  "dispatch_allowed": false,
+  "dispatch_attempted": false,
+  "dispatch_performed": false,
+  "elapsed_sec": 26.302,
+  "evidence_grade": "empirical",
+  "evidence_limitations": [
+    "not score evidence",
+    "not full standalone HPM1 decode proof",
+    "not byte-exact re-encode proof",
+    "not dispatch-eligible"
+  ],
+  "evidence_scope": "local_cpu_hpm1_reference_teacher_forcing_hypothesis_probe",
+  "exact_missing_grammar": {
+    "not_explained_by_this_probe": "",
+    "remaining_open_classes": [
+      "encoder-side probability numeric contract",
+      "range-coder construction/finalization contract",
+      "true PR91 encoder semantic tokens if they differ from PR85/QMA9 reference",
+      "training-time token semantics not represented by submitted decode source"
+    ],
+    "status": "still_open_after_reference_teacher_forcing_probe"
+  },
+  "gpu_or_remote_work": false,
+  "hpm1_static_contract": {
+    "config": {
+      "channels": 64,
+      "delta": 2,
+      "height": 384,
+      "hpac_d_film": 8,
+      "hpac_len": 28243,
+      "n_frames": 600,
+      "ppmd_order": 4,
+      "predictor_count": 32,
+      "tokens_len": 116796,
+      "use_spm": 1,
+      "width": 512
+    },
+    "dispatch_allowed": false,
+    "failures": [],
+    "hpac": {
+      "bytes": 28243,
+      "sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd"
+    },
+    "schema": "pr91_hpm1_static_contract_v1",
+    "score_claim": false,
+    "status": "passed",
+    "tokens": {
+      "bytes": 116796,
+      "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+      "uint32_aligned": true
+    }
+  },
+  "local_only": true,
+  "next_required_proofs": [
+    "recover an encoder-side HPAC token generator or full source archive",
+    "test range-coder construction/finalization against the traced failing row",
+    "test probability quantization beyond the existing float32/float64/perfect matrix",
+    "decode all 600 HPM1 frames and re-encode exact token bytes before any dispatch"
+  ],
+  "payload": {
+    "config": {
+      "channels": 64,
+      "delta": 2,
+      "height": 384,
+      "hpac_d_film": 8,
+      "hpac_len": 28243,
+      "n_frames": 600,
+      "ppmd_order": 4,
+      "predictor_count": 32,
+      "tokens_len": 116796,
+      "use_spm": 1,
+      "width": 512
+    },
+    "hpac_bytes": 28243,
+    "hpac_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+    "tokens_bytes": 116796,
+    "tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b"
+  },
+  "pr86_hpac_relationship": {
+    "dispatch_allowed": false,
+    "expected_pr86_tokens_sha256": "14144bde496631f89a02646496bc2e66306bba6da149ddca37e21d85d175f225",
+    "expected_pr91_hpm1_hpac_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+    "hpac_model_matches_expected_pr91": true,
+    "pr86_archive": "experiments/results/public_pr86_intake_20260504_codex/archive.zip",
+    "pr86_archive_available": true,
+    "pr91_hpac_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+    "pr91_tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+    "score_claim": false,
+    "status": "passed_static_hpac_relationship",
+    "tokens_match_pr86_expected": false
+  },
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recorded_at_utc": "2026-05-07T02:44:46+00:00",
+  "reference_teacher_forcing_probe": {
+    "advanced_candidates": [
+      "phase_major_row_major"
+    ],
+    "candidate_results": [
+      {
+        "candidate": "phase_major_row_major",
+        "decoded_context": {
+          "byte_exact_reencode_proven": false,
+          "decoded_symbols_or_before_failure": 6926,
+          "exception_type": "AssertionError",
+          "failing_probability_row_sha256": "41c675875baa3f35b6b4dd4755d9ea196a95e2a74d6c139d5d55a058a2da3538",
+          "failure_signature": {
+            "decoded_symbol_count_before_failure": 6926,
+            "frame": 0,
+            "group": 11,
+            "symbol_in_group": 14
+          },
+          "full_decode_proven": false,
+          "passed": false,
+          "passes_source_failure_row": true,
+          "range_decoder_diagnostic": {
+            "exception_text": "Tried to decode from compressed data that is invalid for the employed entropy model.",
+            "not_stream_exhaustion": true,
+            "state_after_failed_decode": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_failed_decode_exception",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "state_before_decode": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "before_decode_attempt",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            }
+          },
+          "status": "failed_at_first_entropy_mismatch"
+        },
+        "description": "Off-contract probe: visit each P x P phase for the group first, then scan tiles row-major for that phase.",
+        "reference_teacher_forced_context": {
+          "advances_beyond_decoded_context": true,
+          "advances_beyond_source_failure_row": true,
+          "byte_exact_reencode_proven": false,
+          "canonical_reference_symbol_window": {
+            "end_symbol_in_group_exclusive": 444,
+            "failed_reference_pixel_yx": {
+              "x": 173,
+              "y": 98
+            },
+            "failed_reference_symbol": 2,
+            "failure_symbol_in_group": 437,
+            "frame": 0,
+            "group": 17,
+            "includes_failure_symbol": true,
+            "next_reference_symbol_count": 6,
+            "next_reference_symbols_sha256": "d04315527d2616bff6773f92b621a60040db824753e0d6a8f84aa2167940c165",
+            "reference_scope_note": "These are canonical PR85/QMA9 reference tokens under the requested layout, not proven PR91 encoder semantic tokens.",
+            "reference_symbols_sha256": "2803bd87445fb8fd3bc401408c216eebe98ad4f7ef2ef1bda43207c977c33105",
+            "rows": [
+              {
+                "pixel_yx": {
+                  "x": 109,
+                  "y": 98
+                },
+                "reference_symbol": 4,
+                "relative_to_failure": -2,
+                "symbol_in_group": 435
+              },
+              {
+                "pixel_yx": {
+                  "x": 141,
+                  "y": 98
+                },
+                "reference_symbol": 2,
+                "relative_to_failure": -1,
+                "symbol_in_group": 436
+              },
+              {
+                "pixel_yx": {
+                  "x": 173,
+                  "y": 98
+                },
+                "reference_symbol": 2,
+                "relative_to_failure": 0,
+                "symbol_in_group": 437
+              },
+              {
+                "pixel_yx": {
+                  "x": 205,
+                  "y": 98
+                },
+                "reference_symbol": 2,
+                "relative_to_failure": 1,
+                "symbol_in_group": 438
+              },
+              {
+                "pixel_yx": {
+                  "x": 237,
+                  "y": 98
+                },
+                "reference_symbol": 2,
+                "relative_to_failure": 2,
+                "symbol_in_group": 439
+              },
+              {
+                "pixel_yx": {
+                  "x": 269,
+                  "y": 98
+                },
+                "reference_symbol": 2,
+                "relative_to_failure": 3,
+                "symbol_in_group": 440
+              },
+              {
+                "pixel_yx": {
+                  "x": 301,
+                  "y": 98
+                },
+                "reference_symbol": 2,
+                "relative_to_failure": 4,
+                "symbol_in_group": 441
+              },
+              {
+                "pixel_yx": {
+                  "x": 333,
+                  "y": 98
+                },
+                "reference_symbol": 1,
+                "relative_to_failure": 5,
+                "symbol_in_group": 442
+              },
+              {
+                "pixel_yx": {
+                  "x": 365,
+                  "y": 98
+                },
+                "reference_symbol": 0,
+                "relative_to_failure": 6,
+                "symbol_in_group": 443
+              }
+            ],
+            "schema": "pr91_hpm1_reference_group_symbol_window_v1",
+            "start_symbol_in_group": 435,
+            "window_after": 6,
+            "window_before": 2,
+            "window_symbol_count": 9
+          },
+          "decoded_symbols_or_before_failure": 15989,
+          "exception_type": "AssertionError",
+          "failing_probability_row_sha256": "361eb359d1f6b370c66f4a3f83bc78d523c8d819df3bcd9b7a8e1645e38fb239",
+          "failure_signature": {
+            "decoded_symbol_count_before_failure": 15989,
+            "frame": 0,
+            "group": 17,
+            "symbol_in_group": 437
+          },
+          "first_decoded_reference_mismatch": {
+            "decoded_symbol": 2,
+            "frame": 0,
+            "global_symbol": 7,
+            "group": 0,
+            "pixel_yx": {
+              "x": 224,
+              "y": 0
+            },
+            "reference_symbol": 0,
+            "symbol_in_group": 7
+          },
+          "full_decode_proven": false,
+          "passed": false,
+          "range_decoder_diagnostic": {
+            "exception_text": "Tried to decode from compressed data that is invalid for the employed entropy model.",
+            "not_stream_exhaustion": true,
+            "state_after_failed_decode": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_failed_decode_exception",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "state_before_decode": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "before_decode_attempt",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            }
+          },
+          "reference_mismatch_count_before_failure": 5595,
+          "status": "failed_at_first_entropy_mismatch"
+        }
+      }
+    ],
+    "candidate_scope": {
+      "label": "phase-major row-major",
+      "requested_candidates": [
+        "phase_major_row_major"
+      ]
+    },
+    "dispatch_allowed": false,
+    "max_frames": 1,
+    "narrowed_hypothesis": "At least one spatial candidate advances under PR85/QMA9 reference teacher-forcing; recover true PR91 semantic tokens or encoder context before dismissing this class.",
+    "passed": false,
+    "prob_eps": 1e-07,
+    "probability_variant": "source_float64_perfect_false",
+    "reference_symbol_window": {
+      "scope": "canonical_reference_tokens_at_failure_row",
+      "window_after": 6,
+      "window_before": 2
+    },
+    "schema": "pr91_hpm1_reference_teacher_forcing_probe_v1",
+    "score_claim": false,
+    "status": "at_least_one_candidate_advanced_under_reference_teacher_forcing"
+  },
+  "reference_token_sha256_contract": {
+    "actual_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "expected_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "matches_expected": true,
+    "required": true
+  },
+  "reference_tokens": {
+    "bytes": 117964800,
+    "expected_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "layout": "legacy_assume_nhw",
+    "matches_expected_pr85_qma9_token_source": true,
+    "observed_range": {
+      "max": 4,
+      "min": 0
+    },
+    "path": "experiments/results/pr85_qma9_mode_sweep_20260504_codex/adaptive6pr.decoded.raw",
+    "render_order_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "render_transform": "none",
+    "returned_shape": [
+      600,
+      384,
+      512
+    ],
+    "sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "storage_order": "frame_major_header_height_by_header_width",
+    "storage_shape": [
+      600,
+      384,
+      512
+    ]
+  },
+  "runtime_source_contract": {
+    "contains_range_codec_cpp": true,
+    "file_count": 6,
+    "files": [
+      {
+        "bytes": 110051,
+        "path": "__pycache__/inflate.cpython-312.pyc",
+        "sha256": "f61d13b45251b738edba51486323229887a7dfd5a72dda48f660d1a6e7ac5085"
+      },
+      {
+        "bytes": 34363,
+        "path": "__pycache__/pr86_hpac.cpython-312.pyc",
+        "sha256": "72f5ad6cb03355d489b704df199d3ac20bb25ba5ddcfd889473021783ba310b7"
+      },
+      {
+        "bytes": 86673,
+        "path": "inflate.py",
+        "sha256": "9665d3832abd8f720617cad4e976536ef9ff4ce9a117623b9a00229c518a22ba"
+      },
+      {
+        "bytes": 228,
+        "path": "inflate.sh",
+        "sha256": "2c37f19e210f97c8926b70594e4d57fd8b0256dadace0cd55c28bbe6995ff027"
+      },
+      {
+        "bytes": 19657,
+        "path": "pr86_hpac.py",
+        "sha256": "f86f3067386928478d983817c9f9ee095ce6eb02aee8c0fbb7987cd0af1f9b01"
+      },
+      {
+        "bytes": 60201,
+        "path": "range_mask_codec.cpp",
+        "sha256": "23a6d9b622b231f61c73cd57eae3af96ca6133d07fab85e384a72e257317fb25"
+      }
+    ],
+    "missing_required_source_files": [],
+    "pycache_file_count": 2,
+    "pycache_files": [
+      {
+        "bytes": 110051,
+        "path": "__pycache__/inflate.cpython-312.pyc",
+        "sha256": "f61d13b45251b738edba51486323229887a7dfd5a72dda48f660d1a6e7ac5085"
+      },
+      {
+        "bytes": 34363,
+        "path": "__pycache__/pr86_hpac.cpython-312.pyc",
+        "sha256": "72f5ad6cb03355d489b704df199d3ac20bb25ba5ddcfd889473021783ba310b7"
+      }
+    ],
+    "pycache_only": false,
+    "required_source_files": [
+      "inflate.py",
+      "pr86_hpac.py"
+    ],
+    "required_source_files_present": true,
+    "score_claim": false,
+    "source_dir": "experiments/results/public_pr_archive_release_view/public_pr91_intake_20260505_auto/source/submissions/hpac_coder_hybrid",
+    "source_file_count": 4,
+    "source_files": [
+      {
+        "bytes": 86673,
+        "path": "inflate.py",
+        "sha256": "9665d3832abd8f720617cad4e976536ef9ff4ce9a117623b9a00229c518a22ba"
+      },
+      {
+        "bytes": 228,
+        "path": "inflate.sh",
+        "sha256": "2c37f19e210f97c8926b70594e4d57fd8b0256dadace0cd55c28bbe6995ff027"
+      },
+      {
+        "bytes": 19657,
+        "path": "pr86_hpac.py",
+        "sha256": "f86f3067386928478d983817c9f9ee095ce6eb02aee8c0fbb7987cd0af1f9b01"
+      },
+      {
+        "bytes": 60201,
+        "path": "range_mask_codec.cpp",
+        "sha256": "23a6d9b622b231f61c73cd57eae3af96ca6133d07fab85e384a72e257317fb25"
+      }
+    ],
+    "status": "passed_static_source_inventory"
+  },
+  "schema": "pr91_hpm1_reference_teacher_forcing_probe_v1",
+  "score_claim": false,
+  "source_order_baseline": {
+    "decoded_symbols_or_before_failure": 5951,
+    "failure_signature": {
+      "decoded_symbol_count_before_failure": 5951,
+      "frame": 0,
+      "group": 10,
+      "symbol_in_group": 191
+    },
+    "range_decoder_diagnostic": {
+      "exception_text": "Tried to decode from compressed data that is invalid for the employed entropy model.",
+      "not_stream_exhaustion": true,
+      "state_after_failed_decode": {
+        "api": "constriction.stream.queue.RangeDecoder",
+        "label": "after_failed_decode_exception",
+        "maybe_exhausted": false,
+        "public_state_surface": "maybe_exhausted_only"
+      },
+      "state_before_decode": {
+        "api": "constriction.stream.queue.RangeDecoder",
+        "label": "before_decode_attempt",
+        "maybe_exhausted": false,
+        "public_state_surface": "maybe_exhausted_only"
+      }
+    },
+    "status": "failed_at_first_entropy_mismatch"
+  },
+  "status": "reference_teacher_forcing_hypothesis_still_open",
+  "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_reference_teacher_forcing_probe",
+  "tool_run_manifest": {
+    "argv": [
+      "--archive",
+      "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+      "--reference-tokens",
+      "experiments/results/pr85_qma9_mode_sweep_20260504_codex/adaptive6pr.decoded.raw",
+      "--reference-layout",
+      "legacy_assume_nhw",
+      "--spatial-order-candidates",
+      "phase_major_row_major",
+      "--reference-window-before",
+      "2",
+      "--reference-window-after",
+      "6",
+      "--json-out",
+      ".omx/research/pr91_hpm1_reference_teacher_forcing_phase_baseline_20260507_codex_tmp.json"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "4d482fd724929943ac54b16c5283653f3c1859bb9637cd24053d7b62c958dfef",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 222404,
+        "path": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+        "sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f"
+      },
+      {
+        "bytes": 117964800,
+        "path": "experiments/results/pr85_qma9_mode_sweep_20260504_codex/adaptive6pr.decoded.raw",
+        "sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a"
+      }
+    ],
+    "output_path": ".omx/research/pr91_hpm1_reference_teacher_forcing_phase_baseline_20260507_codex_tmp.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/audit_pr91_hpm1_reference_teacher_forcing_probe.py"
+  }
+}

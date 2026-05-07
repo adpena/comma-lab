@@ -9,14 +9,21 @@ import brotli
 import pytest
 
 from tac.hnerv_lowlevel_packer import read_strict_single_member_zip, write_stored_single_member_zip
+from tac.hnerv_wavelet_apply_transform import build_wavelet_apply_transform_candidate
 from tac.hnerv_wavelet_compress_time_harness import (
     ATOM_PLAN_FILENAME,
     ATOM_PLAN_SCHEMA,
+    RUNTIME_DECODE_REVIEW_FILENAME,
+    RUNTIME_DECODE_REVIEW_SCHEMA,
     SELECTED_ATOMS_FILENAME,
     SELECTED_ATOMS_SCHEMA,
     WR01_FIXED_ATOM_WIRE_BYTES,
     HnervWaveletCompressTimeHarnessError,
     build_wavelet_compress_time_harness,
+)
+from tac.hnerv_wavelet_sidechannel import (
+    build_wavelet_sidechannel_archive_bytes,
+    encode_wavelet_atom_sidechannel,
 )
 
 REPO = Path(__file__).resolve().parents[3]
@@ -57,21 +64,28 @@ def test_wavelet_compress_time_harness_manifest_is_deterministic_and_fail_closed
     manifest_path = out_dir / "hnerv_wavelet_compress_time_harness.json"
     atom_plan_path = out_dir / ATOM_PLAN_FILENAME
     selected_atoms_path = out_dir / SELECTED_ATOMS_FILENAME
+    runtime_decode_review_path = out_dir / RUNTIME_DECODE_REVIEW_FILENAME
     assert manifest == repeat
     assert json.loads(manifest_path.read_text(encoding="utf-8")) == manifest
     assert json.loads(atom_plan_path.read_text(encoding="utf-8")) == manifest["atom_plan_manifest"]
     assert json.loads(selected_atoms_path.read_text(encoding="utf-8")) == manifest[
         "selected_atoms_manifest"
     ]
+    assert json.loads(runtime_decode_review_path.read_text(encoding="utf-8")) == manifest[
+        "output_manifest"
+    ]["runtime_decode_review"]
     assert manifest["score_claim"] is False
     assert manifest["dispatch_attempted"] is False
     assert manifest["ready_for_compress_time_training"] is False
     assert manifest["ready_for_atom_plan_review"] is True
     assert manifest["ready_for_selected_atom_review"] is True
+    assert manifest["ready_for_runtime_apply_review"] is False
+    assert manifest["ready_for_decode_validation_review"] is False
     assert manifest["ready_for_wavelet_sidechannel_candidate"] is False
     assert manifest["ready_for_archive_preflight"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert "missing_exact_decode_validation_manifest" in manifest["blockers"]
+    assert "missing_runtime_apply_manifest" in manifest["blockers"]
     assert "compress_time_atom_training_not_implemented" in manifest["blockers"]
     assert "compress_time_harness_scaffold_only" in manifest["dispatch_blockers"]
 
@@ -89,6 +103,15 @@ def test_wavelet_compress_time_harness_manifest_is_deterministic_and_fail_closed
     assert output_manifest["selected_atoms_manifest_sha256"] == manifest["selected_atoms_manifest"][
         "manifest_sha256_excluding_self"
     ]
+    assert output_manifest["runtime_decode_review_schema"] == RUNTIME_DECODE_REVIEW_SCHEMA
+    assert output_manifest["runtime_decode_review_manifest_path"] == str(runtime_decode_review_path)
+    assert output_manifest["runtime_decode_review_manifest_sha256"] == output_manifest[
+        "runtime_decode_review"
+    ]["manifest_sha256_excluding_self"]
+    assert output_manifest["runtime_decode_review"]["status"] == "blocked"
+    assert output_manifest["runtime_decode_review"]["ready_for_runtime_apply_review"] is False
+    assert output_manifest["runtime_decode_review"]["ready_for_decode_validation_review"] is False
+    assert "missing_runtime_apply_manifest" in output_manifest["runtime_decode_review"]["blockers"]
     assert input_manifest["source"]["source_archive_custody_mode"] == ("operator_expected_archive_identity_verified")
     assert input_manifest["config"]["seed"] == 123
     assert input_manifest["config"]["atom_budget"] == 7
@@ -241,6 +264,79 @@ def test_wavelet_compress_time_harness_exact_validation_remains_non_dispatchable
     assert "no_candidate_archive_emitted" in manifest["atom_plan_manifest"]["dispatch_blockers"]
 
 
+def test_wavelet_compress_time_harness_reviews_runtime_apply_decode_manifest(
+    tmp_path: Path,
+) -> None:
+    archive = _source_archive(tmp_path)
+    source = read_strict_single_member_zip(archive)
+    planning = build_wavelet_compress_time_harness(
+        source_archive=archive,
+        source_label="PR106x_WR01",
+        output_dir=tmp_path / "planning",
+        target_sections=("latents_and_sidecar_brotli",),
+        seed=123,
+        atom_budget=5,
+        block_size=16,
+        quant_step=2.0,
+        expected_source_archive_sha256=source.archive_sha256,
+        expected_source_archive_bytes=source.archive_bytes,
+    )
+    runtime_apply_manifest = _runtime_apply_manifest_for_selected_atoms(
+        tmp_path=tmp_path,
+        source_archive=archive,
+        selected_atoms_manifest=planning["selected_atoms_manifest"],
+    )
+    exact_decode_validation = {
+        "source_archive_sha256": source.archive_sha256,
+        "exact_decode_validation": True,
+        "validated_sections": ["latents_and_sidecar_brotli"],
+        "score_claim": False,
+    }
+
+    manifest = build_wavelet_compress_time_harness(
+        source_archive=archive,
+        source_label="PR106x_WR01",
+        output_dir=tmp_path / "reviewed",
+        target_sections=("latents_and_sidecar_brotli",),
+        seed=123,
+        atom_budget=5,
+        block_size=16,
+        quant_step=2.0,
+        expected_source_archive_sha256=source.archive_sha256,
+        expected_source_archive_bytes=source.archive_bytes,
+        runtime_apply_manifest=runtime_apply_manifest,
+        exact_decode_validation=exact_decode_validation,
+    )
+
+    review_path = tmp_path / "reviewed" / RUNTIME_DECODE_REVIEW_FILENAME
+    review = manifest["output_manifest"]["runtime_decode_review"]
+    assert json.loads(review_path.read_text(encoding="utf-8")) == review
+    assert review["schema"] == RUNTIME_DECODE_REVIEW_SCHEMA
+    assert review["status"] == "ready"
+    assert review["blockers"] == []
+    assert review["ready_for_runtime_apply_review"] is True
+    assert review["ready_for_decode_validation_review"] is True
+    assert review["ready_for_archive_preflight"] is False
+    assert review["ready_for_exact_eval_dispatch"] is False
+    assert review["score_claim"] is False
+    assert review["dispatch_attempted"] is False
+    assert review["runtime_apply_manifest_sha256"]
+    assert review["runtime_decode_validation_manifest_sha256"] == runtime_apply_manifest[
+        "runtime_decode_validation"
+    ]["manifest_sha256_excluding_self"]
+    assert set(review["runtime_apply_atom_ids"]) == set(
+        planning["selected_atoms_manifest"]["selected_atom_ids"]
+    )
+    assert manifest["ready_for_runtime_apply_review"] is True
+    assert manifest["ready_for_decode_validation_review"] is True
+    assert manifest["ready_for_archive_preflight"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert "missing_runtime_apply_manifest" not in manifest["blockers"]
+    assert "missing_exact_decode_validation_manifest" not in manifest["blockers"]
+    assert "compress_time_atom_training_not_implemented" in manifest["blockers"]
+    assert "requires_exact_cuda_auth_eval" in manifest["dispatch_blockers"]
+
+
 def test_build_hnerv_wavelet_compress_time_harness_cli_writes_same_manifest(
     tmp_path: Path,
 ) -> None:
@@ -300,6 +396,7 @@ def test_build_hnerv_wavelet_compress_time_harness_cli_writes_same_manifest(
     assert selected_atoms["candidate_archive_path"] is None
     assert atom_plan["ready_for_train_select_apply"] is False
     assert payload["output_manifest"]["decode_validation"]["exact_validation_available"] is False
+    assert payload["output_manifest"]["runtime_decode_review"]["status"] == "blocked"
 
 
 def _source_archive(tmp_path: Path) -> Path:
@@ -309,3 +406,35 @@ def _source_archive(tmp_path: Path) -> Path:
     archive = tmp_path / "source.zip"
     write_stored_single_member_zip(archive, member_name="x", payload=payload)
     return archive
+
+
+def _runtime_apply_manifest_for_selected_atoms(
+    *,
+    tmp_path: Path,
+    source_archive: Path,
+    selected_atoms_manifest: dict[str, object],
+) -> dict[str, object]:
+    source = read_strict_single_member_zip(source_archive)
+    sidechannel_blob = encode_wavelet_atom_sidechannel(
+        {
+            "sections": selected_atoms_manifest["sections"],
+        }
+    )
+    wavelet_payload = build_wavelet_sidechannel_archive_bytes(
+        source_payload=source.payload,
+        sidechannel_blob=sidechannel_blob,
+    )
+    wavelet_archive = tmp_path / "wavelet_for_selected_atoms.zip"
+    write_stored_single_member_zip(
+        wavelet_archive,
+        member_name=source.member_name,
+        payload=wavelet_payload,
+    )
+    return build_wavelet_apply_transform_candidate(
+        wavelet_archive=wavelet_archive,
+        output_dir=tmp_path / "runtime_apply",
+        source_label="PR106x_WR01",
+        strength_numerator=1,
+        strength_denominator=2,
+        source_archive=source_archive,
+    )

@@ -16,6 +16,8 @@ from tac.hnerv_lowlevel_packer import (
     write_stored_single_member_zip,
 )
 from tac.hnerv_wavelet_apply_transform import (
+    RUNTIME_DECODE_VALIDATION_FILENAME,
+    RUNTIME_DECODE_VALIDATION_SCHEMA,
     HnervWaveletApplyTransformError,
     apply_wr01_atoms_to_raw,
     build_wavelet_apply_transform_candidate,
@@ -192,7 +194,10 @@ def test_build_hnerv_wavelet_apply_transform_candidate_cli(tmp_path: Path) -> No
 
     manifest = json.loads(manifest_path.read_text())
     builder_manifest_path = out_dir / "hnerv_wavelet_apply_transform_candidate.json"
+    runtime_decode_validation_path = out_dir / RUNTIME_DECODE_VALIDATION_FILENAME
+    runtime_decode_validation = json.loads(runtime_decode_validation_path.read_text())
     assert json.loads(builder_manifest_path.read_text()) == manifest
+    assert runtime_decode_validation == manifest["runtime_decode_validation"]
     assert manifest["score_claim"] is False
     assert manifest["ready_for_archive_preflight"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
@@ -210,6 +215,33 @@ def test_build_hnerv_wavelet_apply_transform_candidate_cli(tmp_path: Path) -> No
         f"preflight; got {manifest.get('dispatch_blockers')}"
     )
     assert manifest["transform_stats"]["applied_atom_count"] == 1
+    assert manifest["runtime_apply"]["ready_for_runtime_apply_review"] is True
+    assert manifest["runtime_apply"]["applied_atom_count"] == 1
+    assert manifest["runtime_apply"]["applied_atom_ids"] == manifest["runtime_apply_atom_ids"]
+    assert len(manifest["runtime_apply_atom_ids"]) == 1
+    assert manifest["runtime_apply_atom_ids"][0].startswith("wr01-latents-and-sidecar-brotli-")
+    assert manifest["runtime_decode_validation_schema"] == RUNTIME_DECODE_VALIDATION_SCHEMA
+    assert manifest["runtime_decode_validation_manifest_path"] == str(runtime_decode_validation_path)
+    assert manifest["runtime_decode_validation_manifest_sha256"] == runtime_decode_validation[
+        "manifest_sha256_excluding_self"
+    ]
+    assert runtime_decode_validation["schema"] == RUNTIME_DECODE_VALIDATION_SCHEMA
+    assert runtime_decode_validation["validation_mode"] == "local_wr01_runtime_decode_validation_not_score"
+    assert runtime_decode_validation["ready_for_runtime_decode_review"] is True
+    assert runtime_decode_validation["ready_for_archive_preflight"] is False
+    assert runtime_decode_validation["ready_for_exact_eval_dispatch"] is False
+    assert runtime_decode_validation["exact_cuda_auth_eval"] is False
+    assert runtime_decode_validation["score_claim"] is False
+    assert runtime_decode_validation["blockers"] == []
+    assert runtime_decode_validation["changed_section_names"] == ["latents_and_sidecar_brotli"]
+    assert runtime_decode_validation["changed_section_only"] is True
+    changed_validation_section = next(
+        section
+        for section in runtime_decode_validation["sections"]
+        if section["section_name"] == "latents_and_sidecar_brotli"
+    )
+    assert changed_validation_section["section_changed"] is True
+    assert changed_validation_section["candidate_raw_sha256"] == manifest["candidate_raw_sha256"]
     candidate = read_strict_single_member_zip(manifest["candidate_archive_path"])
     assert candidate.payload[0] == 0xFF
     candidate_latents = brotli.decompress(

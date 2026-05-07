@@ -17,6 +17,7 @@ from tac.joint_codec_stack_orchestrator import (
     JCSP_ARCHIVE_MEMBER_NAME,
     JCSP_RUNTIME_RAW_OUTPUT_PARITY_CONTRACT_SCHEMA,
     JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA,
+    JCSP_STREAM_METADATA_SCHEMA,
     JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
     JCSP_SUBMISSION_RUNTIME_CONSUMPTION_SCHEMA,
     JCSP_SUBMISSION_RUNTIME_OUTPUT_CONTRACT_SCHEMA,
@@ -26,7 +27,9 @@ from tac.joint_codec_stack_orchestrator import (
     StreamSource,
     build_jcsp_archive_member,
     build_jcsp_noop_archive_fixture,
+    jcsp_stream_specs_manifest,
     load_jcsp_archive_member_for_runtime,
+    model_to_jcsp_streams,
     run_joint_codec_stack,
     run_sequential_codec_stack,
     unpack_jcsp_container,
@@ -43,6 +46,66 @@ def _balle_codec() -> BalleHyperpriorCodec:
         hyper_encoder=encoder,
         hyper_decoder=decoder,
     )
+
+
+def test_model_to_jcsp_streams_emits_deterministic_scoreless_stream_manifest() -> None:
+    forward = {
+        "z.bias": np.ones((2,), dtype=np.float32),
+        "mask.index": np.arange(6, dtype=np.uint8),
+        "a.weight": np.zeros((128, 128), dtype=np.float32),
+    }
+    reverse = {
+        "a.weight": forward["a.weight"],
+        "mask.index": forward["mask.index"],
+        "z.bias": forward["z.bias"],
+    }
+
+    streams = model_to_jcsp_streams(forward)
+    repeat_streams = model_to_jcsp_streams(reverse)
+    manifest = jcsp_stream_specs_manifest(streams)
+    repeat_manifest = jcsp_stream_specs_manifest(repeat_streams)
+
+    assert streams == repeat_streams
+    assert manifest == repeat_manifest
+    assert manifest["schema"] == JCSP_STREAM_METADATA_SCHEMA
+    assert manifest["score_claim"] is False
+    assert manifest["dispatch_attempted"] is False
+    assert manifest["stream_count"] == 3
+    assert [stream.name for stream in streams] == [
+        "a.weight",
+        "mask.index",
+        "z.bias",
+    ]
+    weight = streams[0]
+    assert weight.codec_kind == KIND_BALLE_HYPERPRIOR
+    assert weight.tensor_shape == (128, 128)
+    assert weight.tensor_dtype == "float32"
+    assert weight.raw_bytes == 128 * 128 * 4
+    assert weight.byte_estimate == 128 * 128 * 2
+    assert weight.score_marginal_source == "missing_score_marginal"
+    assert "score_marginal_artifact_missing" in weight.dispatch_blockers
+    assert "refuse_dispatch_if_decode_validation_missing" in (
+        weight.fail_closed_criteria
+    )
+    assert manifest["sidecar_policy"]["score_affecting_sidecars_allowed"] is False
+    assert "exact_cuda_auth_eval_missing" in manifest["promotion_blockers"]
+
+
+def test_model_to_jcsp_streams_fails_closed_on_stale_planning_annotations() -> None:
+    state = {"a.weight": np.zeros((4, 4), dtype=np.float32)}
+
+    with pytest.raises(ValueError, match=r"unknown streams: stale\.weight"):
+        model_to_jcsp_streams(
+            state,
+            score_marginals={"stale.weight": 1.0e-6},
+        )
+    with pytest.raises(ValueError, match=r"unknown streams: stale\.weight"):
+        model_to_jcsp_streams(
+            state,
+            codec_overrides={"stale.weight": KIND_ARITHMETIC_STATIC},
+        )
+    with pytest.raises(ValueError, match="explicit RAW_PASSTHROUGH"):
+        model_to_jcsp_streams(state, wet_streams=("a.*",))
 
 
 def test_balle_static_wins_records_actual_arithmetic_codec_kind() -> None:

@@ -41,11 +41,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--train-steps", type=int, default=0)
     parser.add_argument("--expected-source-archive-sha256")
     parser.add_argument("--expected-source-archive-bytes", type=int)
+    parser.add_argument(
+        "--runtime-apply-manifest",
+        type=Path,
+        help=(
+            "Optional manifest from build_hnerv_wavelet_apply_transform_candidate.py. "
+            "When provided, the harness writes a fail-closed runtime/decode review "
+            "manifest tying the applied WR01 atom IDs back to the selected atoms."
+        ),
+    )
     parser.add_argument("--exact-decode-validation", type=Path)
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--fail-if-blocked", action="store_true")
     args = parser.parse_args(argv)
 
+    runtime_apply_manifest = (
+        read_json(args.runtime_apply_manifest) if args.runtime_apply_manifest is not None else None
+    )
     exact_decode_validation = (
         read_json(args.exact_decode_validation) if args.exact_decode_validation is not None else None
     )
@@ -61,6 +73,7 @@ def main(argv: list[str] | None = None) -> int:
         train_steps=args.train_steps,
         expected_source_archive_sha256=args.expected_source_archive_sha256,
         expected_source_archive_bytes=args.expected_source_archive_bytes,
+        runtime_apply_manifest=runtime_apply_manifest,
         exact_decode_validation=exact_decode_validation,
     )
     text = json_text(manifest)

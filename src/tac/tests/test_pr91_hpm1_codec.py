@@ -661,6 +661,43 @@ def test_pr91_reference_teacher_forcing_probe_records_phase_major_next_row_artif
     assert row["range_decoder_diagnostic"]["state_before_decode"][
         "maybe_exhausted"
     ] is False
+    interpretation = row["failure_row_interpretation"]
+    assert interpretation["schema"] == "pr91_hpm1_failure_row_interpretation_v1"
+    assert interpretation["status"] == (
+        "not_explained_by_current_row_reference_symbol_probability"
+    )
+    assert interpretation["reference_symbol"] == 2
+    assert interpretation["reference_symbol_is_argmax"] is True
+    assert interpretation["reference_symbol_rank"] == 1
+    assert interpretation["reference_symbol_probability"] == pytest.approx(
+        0.6799724541
+    )
+    assert interpretation["decoder_not_stream_exhaustion"] is True
+    roundtrip = interpretation["single_row_range_model_roundtrip"]
+    assert roundtrip["schema"] == "pr91_hpm1_single_row_range_model_roundtrip_v1"
+    assert roundtrip["status"] == "passed_all_symbols_roundtrip"
+    assert roundtrip["all_symbols_roundtrip"] is True
+    assert roundtrip["failed_symbols"] == []
+    assert [entry["symbol"] for entry in roundtrip["symbol_results"]] == [0, 1, 2, 3, 4]
+    classification = report["hypothesis_classification"]
+    assert classification["schema"] == (
+        "pr91_hpm1_decode_failure_hypothesis_classification_v1"
+    )
+    assert classification["status"] == (
+        "narrowed_to_range_or_probability_context_grammar_after_phase_major_reference_row"
+    )
+    assert classification["row_ordering"]["status"] == (
+        "phase_major_advances_but_does_not_decode_full_prefix"
+    )
+    assert classification["semantic_token_interpretation"]["status"] == (
+        "not_explained_by_current_row_available_reference_symbol"
+    )
+    assert classification["range_coder_contract"]["status"] == (
+        "still_open_prior_range_state_or_encoder_finalization_contract"
+    )
+    assert classification["probability_context_grammar"]["status"] == (
+        "still_open_prior_context_or_probability_numeric_contract"
+    )
     reference_window = row["canonical_reference_symbol_window"]
     assert reference_window["failure_symbol_in_group"] == 437
     assert reference_window["window_before"] == 1

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Probe whether PR85/QMA9 semantic teacher-forcing advances PR91/HPM1 replay."""
+"""Probe PR91/HPM1 teacher forcing and classify the next entropy failure row."""
 
 from __future__ import annotations
 

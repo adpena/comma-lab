@@ -9,7 +9,7 @@ movement; exact CUDA auth eval remains the only score truth.
 from __future__ import annotations
 
 import dataclasses
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +28,8 @@ from tac.repo_io import json_text, sha256_file
 
 SCHEMA_VERSION = 1
 TOOL = "tac.hnerv_wavelet_apply_transform.build_wavelet_apply_transform_candidate"
+RUNTIME_DECODE_VALIDATION_SCHEMA = "hnerv_wavelet_runtime_decode_validation.v1"
+RUNTIME_DECODE_VALIDATION_FILENAME = "hnerv_wavelet_runtime_decode_validation.json"
 # Adversarial review 2026-05-06 (BUG #5): re-export shared constant — this name
 # stays stable for callers but its value comes from hnerv_lowlevel_packer.
 DEFAULT_SECTION = DEFAULT_WAVELET_SECTION
@@ -182,6 +184,32 @@ def build_wavelet_apply_transform_candidate(
     rate_score_delta = 25.0 * (candidate_archive_bytes - source_archive_bytes_estimate) / 37_545_489.0
     source_section_sha256 = sha256_bytes(source_section)
     candidate_section_sha256 = sha256_bytes(transformed_section)
+    runtime_atom_records = _runtime_atom_records(
+        section=section,
+        section_name=section_name,
+        source_section_sha256=source_section_sha256,
+    )
+    runtime_apply = {
+        "schema": "hnerv_wavelet_runtime_apply.v1",
+        "status": "applied",
+        "ready_for_runtime_apply_review": True,
+        "runtime_mode": transform_stats["runtime_mode"],
+        "section_name": section_name,
+        "source_section_sha256": source_section_sha256,
+        "candidate_section_sha256": candidate_section_sha256,
+        "source_raw_sha256": sha256_bytes(raw),
+        "candidate_raw_sha256": sha256_bytes(transformed_raw),
+        "source_raw_bytes": len(raw),
+        "candidate_raw_bytes": len(transformed_raw),
+        "strength_numerator": int(strength_numerator),
+        "strength_denominator": int(strength_denominator),
+        "applied_atom_count": int(transform_stats["applied_atom_count"]),
+        "skipped_atom_count": int(transform_stats["skipped_atom_count"]),
+        "applied_atom_ids": [str(atom["atom_id"]) for atom in runtime_atom_records],
+        "applied_atoms": runtime_atom_records,
+        "score_claim": False,
+        "dispatch_attempted": False,
+    }
     dispatch_blockers = [
         "requires_archive_manifest_preflight",
         "requires_component_response_or_exact_cuda_eval",
@@ -192,7 +220,28 @@ def build_wavelet_apply_transform_candidate(
         dispatch_blockers.insert(0, "requires_source_archive_sha256")
     if source_custody.get("source_archive_bytes") is None:
         dispatch_blockers.insert(0, "requires_source_archive_bytes")
+    runtime_decode_validation_path = output_root / RUNTIME_DECODE_VALIDATION_FILENAME
+    runtime_decode_validation = _build_runtime_decode_validation_manifest(
+        candidate_archive=candidate_archive,
+        candidate_archive_bytes=candidate_archive_bytes,
+        candidate_payload=candidate_payload,
+        candidate_packed=candidate_packed,
+        source_archive_sha256=source_custody.get("source_archive_sha256"),
+        source_archive_bytes=source_custody.get("source_archive_bytes"),
+        source_packed=packed,
+        source_payload=source_payload,
+        section_name=section_name,
+        source_raw=raw,
+        transformed_raw=transformed_raw,
+        runtime_apply=runtime_apply,
+        manifest_path=runtime_decode_validation_path,
+    )
+    runtime_decode_validation_path.write_text(
+        json_text(runtime_decode_validation),
+        encoding="utf-8",
+    )
     manifest = {
+        "schema": "hnerv_wavelet_apply_transform_candidate.v1",
         "schema_version": SCHEMA_VERSION,
         "tool": TOOL,
         "score_claim": False,
@@ -257,6 +306,15 @@ def build_wavelet_apply_transform_candidate(
         "strength_numerator": int(strength_numerator),
         "strength_denominator": int(strength_denominator),
         "transform_stats": transform_stats,
+        "runtime_apply": runtime_apply,
+        "runtime_apply_atom_count": len(runtime_atom_records),
+        "runtime_apply_atom_ids": [str(atom["atom_id"]) for atom in runtime_atom_records],
+        "runtime_decode_validation_schema": RUNTIME_DECODE_VALIDATION_SCHEMA,
+        "runtime_decode_validation_manifest_path": str(runtime_decode_validation_path),
+        "runtime_decode_validation_manifest_sha256": runtime_decode_validation[
+            "manifest_sha256_excluding_self"
+        ],
+        "runtime_decode_validation": runtime_decode_validation,
         # Round 5 R5-3 fix (2026-05-06, 80%): split-brain — old code set
         # `ready_for_archive_preflight: True` while keeping
         # `requires_archive_manifest_preflight` in dispatch_blockers. A
@@ -466,8 +524,283 @@ def _source_archive_custody(
     }
 
 
+def _runtime_atom_records(
+    *,
+    section: Mapping[str, Any],
+    section_name: str,
+    source_section_sha256: str,
+) -> list[dict[str, Any]]:
+    atoms = section.get("atoms")
+    if not isinstance(atoms, list):
+        raise HnervWaveletApplyTransformError("WR01 section atoms must be a list")
+    records: list[dict[str, Any]] = []
+    for atom in atoms:
+        if not isinstance(atom, Mapping):
+            continue
+        try:
+            raw_offset = int(atom.get("raw_offset"))
+            raw_end = int(atom.get("raw_end"))
+            level = int(atom.get("level", 0))
+            coefficient_index = int(atom.get("coefficient_index", 0))
+            coefficient_quantized = int(atom.get("coefficient_quantized"))
+        except (TypeError, ValueError):
+            continue
+        atom_id = _runtime_atom_id(
+            section_name=section_name,
+            source_section_sha256=source_section_sha256,
+            raw_offset=raw_offset,
+            raw_end=raw_end,
+            level=level,
+            coefficient_index=coefficient_index,
+            coefficient_quantized=coefficient_quantized,
+        )
+        records.append(
+            {
+                "atom_id": atom_id,
+                "section_name": section_name,
+                "source_section_sha256": source_section_sha256,
+                "raw_offset": raw_offset,
+                "raw_end": raw_end,
+                "level": level,
+                "coefficient_index": coefficient_index,
+                "coefficient_quantized": coefficient_quantized,
+                "score_claim": False,
+                "dispatch_attempted": False,
+            }
+        )
+    records.sort(
+        key=lambda atom: (
+            int(atom["raw_offset"]),
+            int(atom["level"]),
+            int(atom["coefficient_index"]),
+            int(atom["coefficient_quantized"]),
+            str(atom["atom_id"]),
+        )
+    )
+    for apply_order, atom in enumerate(records, start=1):
+        atom["runtime_apply_order"] = apply_order
+    return records
+
+
+def _runtime_atom_id(
+    *,
+    section_name: str,
+    source_section_sha256: str,
+    raw_offset: int,
+    raw_end: int,
+    level: int,
+    coefficient_index: int,
+    coefficient_quantized: int,
+) -> str:
+    section_slug = section_name.replace("_", "-")
+    payload = (
+        f"{section_name}:{source_section_sha256}:"
+        f"{raw_offset}:{raw_end}:{level}:{coefficient_index}:{coefficient_quantized}"
+    )
+    return f"wr01-{section_slug}-{sha256_bytes(payload.encode('utf-8'))[:16]}"
+
+
+def _build_runtime_decode_validation_manifest(
+    *,
+    candidate_archive: Path,
+    candidate_archive_bytes: int,
+    candidate_payload: bytes,
+    candidate_packed: Any,
+    source_archive_sha256: str | None,
+    source_archive_bytes: int | None,
+    source_packed: Any,
+    source_payload: bytes,
+    section_name: str,
+    source_raw: bytes,
+    transformed_raw: bytes,
+    runtime_apply: Mapping[str, Any],
+    manifest_path: Path,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    try:
+        reread = read_strict_single_member_zip(candidate_archive)
+    except Exception as exc:  # pragma: no cover - defensive custody surface
+        reread = None
+        blockers.append(f"candidate_archive_strict_read_failed:{type(exc).__name__}")
+    if reread is not None:
+        if reread.archive_sha256 != sha256_file(candidate_archive):
+            blockers.append("candidate_archive_sha256_reread_mismatch")
+        if reread.archive_bytes != int(candidate_archive_bytes):
+            blockers.append("candidate_archive_bytes_reread_mismatch")
+        if reread.payload != candidate_payload:
+            blockers.append("candidate_payload_reread_mismatch")
+        try:
+            parsed_candidate = parse_ff_packed_brotli_hnerv(reread.payload)
+        except Exception as exc:  # pragma: no cover - defensive custody surface
+            parsed_candidate = None
+            blockers.append(f"candidate_payload_hnerv_parse_failed:{type(exc).__name__}")
+    else:
+        parsed_candidate = None
+
+    sections = _runtime_decode_section_records(
+        source_packed=source_packed,
+        candidate_packed=parsed_candidate or candidate_packed,
+        expected_changed_section=section_name,
+        blockers=blockers,
+    )
+    changed_sections = [
+        str(section["section_name"])
+        for section in sections
+        if section.get("section_changed") is True
+    ]
+    if changed_sections != [section_name]:
+        blockers.append("runtime_decode_changed_section_set_mismatch")
+    changed_record = next(
+        (section for section in sections if section.get("section_name") == section_name),
+        None,
+    )
+    if changed_record is None:
+        blockers.append(f"runtime_decode_missing_changed_section:{section_name}")
+    else:
+        if changed_record.get("source_raw_sha256") != sha256_bytes(source_raw):
+            blockers.append(f"runtime_decode_source_raw_sha256_mismatch:{section_name}")
+        if changed_record.get("candidate_raw_sha256") != sha256_bytes(transformed_raw):
+            blockers.append(f"runtime_decode_candidate_raw_sha256_mismatch:{section_name}")
+    if runtime_apply.get("score_claim") is not False:
+        blockers.append("runtime_apply_score_claim_not_false")
+    if runtime_apply.get("dispatch_attempted") is not False:
+        blockers.append("runtime_apply_dispatch_attempted_not_false")
+    if int(runtime_apply.get("applied_atom_count") or 0) <= 0:
+        blockers.append("runtime_apply_no_applied_atoms")
+    if not runtime_apply.get("applied_atom_ids"):
+        blockers.append("runtime_apply_missing_applied_atom_ids")
+
+    manifest = {
+        "schema": RUNTIME_DECODE_VALIDATION_SCHEMA,
+        "schema_version": SCHEMA_VERSION,
+        "tool": f"{TOOL}.runtime_decode_validation",
+        "validation_mode": "local_wr01_runtime_decode_validation_not_score",
+        "status": "ready" if not blockers else "blocked",
+        "ready_for_runtime_decode_review": not blockers,
+        "ready_for_archive_preflight": False,
+        "ready_for_exact_eval_dispatch": False,
+        "fail_closed": bool(blockers),
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "source_archive_sha256": source_archive_sha256,
+        "source_archive_bytes": source_archive_bytes,
+        "source_payload_sha256": sha256_bytes(source_payload),
+        "source_payload_bytes": len(source_payload),
+        "candidate_archive_path": str(candidate_archive),
+        "candidate_archive_sha256": sha256_file(candidate_archive),
+        "candidate_archive_bytes": int(candidate_archive_bytes),
+        "candidate_payload_sha256": sha256_bytes(candidate_payload),
+        "candidate_payload_bytes": len(candidate_payload),
+        "section_name": section_name,
+        "changed_section_names": changed_sections,
+        "changed_section_only": changed_sections == [section_name],
+        "sections": sections,
+        "runtime_apply": dict(runtime_apply),
+        "exact_cuda_auth_eval": False,
+        "component_response_validation": False,
+        "blockers": blockers,
+        "dispatch_blockers": [
+            "runtime_decode_validation_is_not_score_evidence",
+            "requires_archive_manifest_preflight",
+            "requires_component_response_or_exact_cuda_eval",
+            "requires_lane_dispatch_claim",
+            "requires_exact_cuda_auth_eval",
+        ],
+        "manifest_path": str(manifest_path),
+    }
+    manifest["manifest_sha256_excluding_self"] = _manifest_sha256_excluding_self(manifest)
+    return manifest
+
+
+def _runtime_decode_section_records(
+    *,
+    source_packed: Any,
+    candidate_packed: Any,
+    expected_changed_section: str,
+    blockers: list[str],
+) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for section_name, source_section, candidate_section in _hnerv_section_bytes(
+        source_packed,
+        candidate_packed,
+    ):
+        section_changed = source_section != candidate_section
+        if section_changed != (section_name == expected_changed_section):
+            blockers.append(f"runtime_decode_unexpected_section_change:{section_name}")
+        record: dict[str, Any] = {
+            "section_name": section_name,
+            "source_section_sha256": sha256_bytes(source_section),
+            "candidate_section_sha256": sha256_bytes(candidate_section),
+            "source_section_bytes": len(source_section),
+            "candidate_section_bytes": len(candidate_section),
+            "section_changed": section_changed,
+            "expected_changed": section_name == expected_changed_section,
+            "score_claim": False,
+        }
+        if section_name == "packed_header_ff_len24":
+            record.update(
+                {
+                    "decode_probe_status": "not_required_for_header_section",
+                    "source_raw_sha256": sha256_bytes(source_section),
+                    "candidate_raw_sha256": sha256_bytes(candidate_section),
+                    "source_raw_bytes": len(source_section),
+                    "candidate_raw_bytes": len(candidate_section),
+                }
+            )
+        else:
+            try:
+                source_raw = brotli.decompress(source_section)
+                candidate_raw = brotli.decompress(candidate_section)
+            except brotli.error:
+                blockers.append(f"runtime_decode_brotli_decode_failed:{section_name}")
+                record.update(
+                    {
+                        "decode_probe_status": "brotli_decode_failed",
+                        "source_raw_sha256": None,
+                        "candidate_raw_sha256": None,
+                        "source_raw_bytes": None,
+                        "candidate_raw_bytes": None,
+                    }
+                )
+            else:
+                record.update(
+                    {
+                        "decode_probe_status": "local_brotli_decode_ok_not_score",
+                        "source_raw_sha256": sha256_bytes(source_raw),
+                        "candidate_raw_sha256": sha256_bytes(candidate_raw),
+                        "source_raw_bytes": len(source_raw),
+                        "candidate_raw_bytes": len(candidate_raw),
+                    }
+                )
+        records.append(record)
+    return records
+
+
+def _hnerv_section_bytes(source_packed: Any, candidate_packed: Any) -> Sequence[tuple[str, bytes, bytes]]:
+    return (
+        ("packed_header_ff_len24", source_packed.header, candidate_packed.header),
+        (
+            "decoder_packed_brotli",
+            source_packed.decoder_packed_brotli,
+            candidate_packed.decoder_packed_brotli,
+        ),
+        (
+            "latents_and_sidecar_brotli",
+            source_packed.latents_and_sidecar_brotli,
+            candidate_packed.latents_and_sidecar_brotli,
+        ),
+    )
+
+
+def _manifest_sha256_excluding_self(manifest: Mapping[str, Any]) -> str:
+    payload = {key: value for key, value in manifest.items() if key != "manifest_sha256_excluding_self"}
+    return sha256_bytes(json_text(payload).encode("utf-8"))
+
+
 __all__ = [
     "DEFAULT_SECTION",
+    "RUNTIME_DECODE_VALIDATION_FILENAME",
+    "RUNTIME_DECODE_VALIDATION_SCHEMA",
     "SCHEMA_VERSION",
     "TOOL",
     "HnervWaveletApplyTransformError",

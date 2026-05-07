@@ -936,6 +936,181 @@ def _range_decoder_state_summary(decoder: Any, *, label: str) -> dict[str, Any]:
     return state
 
 
+def _single_row_range_model_roundtrip(
+    raw_row: np.ndarray,
+    *,
+    probability_variant: str | Any,
+    prob_eps: float,
+) -> dict[str, Any]:
+    """Check local constriction single-row admissibility without touching PR91 bytes."""
+
+    if _pr86_hpac_codec.constriction is None:  # pragma: no cover
+        return {
+            "schema": "pr91_hpm1_single_row_range_model_roundtrip_v1",
+            "status": "not_attempted_constriction_missing",
+            "passed": False,
+            "score_claim": False,
+            "dispatch_allowed": False,
+        }
+    resolved = resolve_hpac_probability_variant(probability_variant)
+    row = np.ascontiguousarray(raw_row)
+    cat = _categorical_from_probs(row, prob_eps=prob_eps, variant=resolved)
+    symbol_results: list[dict[str, Any]] = []
+    failures: list[dict[str, Any]] = []
+    for symbol in range(int(row.size)):
+        try:
+            encoder = _pr86_hpac_codec.constriction.stream.queue.RangeEncoder()
+            encoder.encode(int(symbol), cat)
+            words = np.ascontiguousarray(encoder.get_compressed(), dtype=np.uint32)
+            decoder = _pr86_hpac_codec.constriction.stream.queue.RangeDecoder(words)
+            decoded = int(decoder.decode(cat))
+            passed = decoded == int(symbol)
+            result = {
+                "symbol": int(symbol),
+                "decoded_symbol": decoded,
+                "passed": passed,
+                "compressed_word_count": int(words.size),
+                "compressed_words_sha256": sha256_bytes(words.tobytes()),
+                "decoder_maybe_exhausted_after_decode": (
+                    bool(decoder.maybe_exhausted())
+                    if callable(getattr(decoder, "maybe_exhausted", None))
+                    else None
+                ),
+            }
+            if not passed:
+                failures.append(result)
+            symbol_results.append(result)
+        except Exception as exc:  # pragma: no cover - dependency-specific
+            failure = {
+                "symbol": int(symbol),
+                "passed": False,
+                "exception_type": type(exc).__name__,
+                "exception_text": str(exc),
+            }
+            failures.append(failure)
+            symbol_results.append(failure)
+    return {
+        "schema": "pr91_hpm1_single_row_range_model_roundtrip_v1",
+        "status": (
+            "passed_all_symbols_roundtrip"
+            if not failures
+            else "failed_single_row_roundtrip"
+        ),
+        "passed": not failures,
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "probability_variant": resolved.name,
+        "prob_eps": float(prob_eps),
+        "symbol_count": int(row.size),
+        "all_symbols_roundtrip": not failures,
+        "failed_symbols": [int(row["symbol"]) for row in failures],
+        "symbol_results": symbol_results,
+    }
+
+
+def _failure_row_interpretation(
+    raw_row: np.ndarray,
+    norm_row: np.ndarray,
+    *,
+    probability_variant: str | Any,
+    prob_eps: float,
+    decoder_state_before: Mapping[str, Any],
+    context_mode: str,
+    reference_symbol: int | None = None,
+) -> dict[str, Any]:
+    """Classify one failed entropy row without claiming stream parity."""
+
+    resolved = resolve_hpac_probability_variant(probability_variant)
+    normalized = np.ascontiguousarray(norm_row)
+    order = np.argsort(-normalized, kind="stable")
+    argmax_symbol = int(order[0]) if int(order.size) else None
+    single_row_roundtrip = _single_row_range_model_roundtrip(
+        np.ascontiguousarray(raw_row),
+        probability_variant=resolved,
+        prob_eps=prob_eps,
+    )
+    maybe_exhausted = decoder_state_before.get("maybe_exhausted")
+    diagnostic: dict[str, Any] = {
+        "schema": "pr91_hpm1_failure_row_interpretation_v1",
+        "status": "no_reference_symbol_available_for_semantic_row_classification",
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "context_mode": context_mode,
+        "probability_variant": resolved.name,
+        "prob_eps": float(prob_eps),
+        "normalized_row_sha256": sha256_bytes(normalized.tobytes()),
+        "argmax_symbol": argmax_symbol,
+        "argmax_probability": (
+            round(float(normalized[argmax_symbol]), 10)
+            if argmax_symbol is not None
+            else None
+        ),
+        "probability_order_desc": [int(symbol) for symbol in order.tolist()],
+        "decoder_not_stream_exhaustion": bool(maybe_exhausted is False),
+        "single_row_range_model_roundtrip": single_row_roundtrip,
+        "hypothesis_implications": [
+            "single-row categorical admissibility is local-only and does not prove the submitted range state",
+        ],
+    }
+    if reference_symbol is None:
+        return diagnostic
+
+    ref = int(reference_symbol)
+    if ref < 0 or ref >= int(normalized.size):
+        raise Pr91Hpm1Error(
+            "hpm1_failure_row_interpretation",
+            "reference_symbol_out_of_probability_row_range",
+            reference_symbol=ref,
+            row_size=int(normalized.size),
+        )
+    ref_rank = int(np.where(order == ref)[0][0]) + 1
+    ref_probability = float(normalized[ref])
+    ref_is_argmax = bool(argmax_symbol == ref)
+    immediate_semantic_row_mismatch = not ref_is_argmax
+    if (
+        ref_is_argmax
+        and ref_probability >= 0.5
+        and single_row_roundtrip.get("all_symbols_roundtrip") is True
+        and maybe_exhausted is False
+    ):
+        status = "not_explained_by_current_row_reference_symbol_probability"
+    elif immediate_semantic_row_mismatch:
+        status = "semantic_reference_symbol_probability_mismatch_still_open"
+    else:
+        status = "current_row_semantic_contract_inconclusive"
+    diagnostic.update(
+        {
+            "status": status,
+            "reference_symbol": ref,
+            "reference_symbol_probability": round(ref_probability, 10),
+            "reference_symbol_rank": ref_rank,
+            "reference_symbol_is_argmax": ref_is_argmax,
+            "immediate_semantic_row_mismatch": immediate_semantic_row_mismatch,
+            "model_row_supports_reference_symbol": bool(ref_probability > prob_eps),
+            "hypothesis_implications": [
+                *diagnostic["hypothesis_implications"],
+                (
+                    "available reference symbol is the failing-row argmax; "
+                    "this row is not explained by a bad PR85/QMA9 label"
+                    if ref_is_argmax
+                    else "available reference symbol is not the failing-row argmax"
+                ),
+                (
+                    "submitted stream failure is not RangeDecoder exhaustion"
+                    if maybe_exhausted is False
+                    else "RangeDecoder exhaustion status is unavailable or not false"
+                ),
+                (
+                    "local constriction can encode/decode every symbol for this categorical row"
+                    if single_row_roundtrip.get("all_symbols_roundtrip") is True
+                    else "local single-row categorical roundtrip did not pass all symbols"
+                ),
+            ],
+        }
+    )
+    return diagnostic
+
+
 def _reference_group_symbol_window(
     reference_symbols: np.ndarray,
     coords: Any,
@@ -1105,6 +1280,14 @@ def _trace_hpm1_spatial_order_decode_failure(
                         prefix = decoded[:symbol_in_group].astype(np.uint8, copy=False)
                         raw_row = np.ascontiguousarray(row)
                         norm_row = np.ascontiguousarray(normalized)
+                        failure_row_interpretation = _failure_row_interpretation(
+                            raw_row,
+                            norm_row,
+                            probability_variant=resolved,
+                            prob_eps=prob_eps,
+                            decoder_state_before=decoder_state_before,
+                            context_mode="decoded_spatial_order",
+                        )
                         return {
                             "status": "failed_at_first_entropy_mismatch",
                             "passed": False,
@@ -1175,6 +1358,7 @@ def _trace_hpm1_spatial_order_decode_failure(
                                     "max": round(float(norm_row.max()), 10),
                                 },
                             },
+                            "failure_row_interpretation": failure_row_interpretation,
                             "decoded_prefix_in_failing_group": {
                                 "symbol_count": int(prefix.size),
                                 "sha256": sha256_bytes(prefix.tobytes()),
@@ -1347,6 +1531,16 @@ def _trace_hpm1_reference_teacher_forced_spatial_order_failure(
                         prefix = decoded[:symbol_in_group].astype(np.uint8, copy=False)
                         raw_row = np.ascontiguousarray(row)
                         norm_row = np.ascontiguousarray(normalized)
+                        reference_symbol = int(ref_at_group[symbol_in_group])
+                        failure_row_interpretation = _failure_row_interpretation(
+                            raw_row,
+                            norm_row,
+                            probability_variant=resolved,
+                            prob_eps=prob_eps,
+                            decoder_state_before=decoder_state_before,
+                            context_mode="reference_teacher_forced",
+                            reference_symbol=reference_symbol,
+                        )
                         return {
                             "status": "failed_at_first_entropy_mismatch",
                             "passed": False,
@@ -1418,6 +1612,7 @@ def _trace_hpm1_reference_teacher_forced_spatial_order_failure(
                                     "max": round(float(norm_row.max()), 10),
                                 },
                             },
+                            "failure_row_interpretation": failure_row_interpretation,
                             "decoded_prefix_in_failing_group": {
                                 "symbol_count": int(prefix.size),
                                 "sha256": sha256_bytes(prefix.tobytes()),
@@ -1629,6 +1824,155 @@ def _run_hpm1_spatial_group_order_probe(
     }
 
 
+def _classify_reference_teacher_forcing_hypotheses(
+    candidate_results: list[dict[str, Any]],
+    *,
+    advanced_candidates: list[str],
+    source_decoded_before: int,
+) -> dict[str, Any]:
+    """Summarize which HPM1 failure classes remain after teacher forcing."""
+
+    best_row: dict[str, Any] | None = None
+    best_reference_before = -1
+    for row in candidate_results:
+        reference_context = row.get("reference_teacher_forced_context")
+        if not isinstance(reference_context, Mapping):
+            continue
+        decoded_before = int(
+            reference_context.get("decoded_symbols_or_before_failure") or -1
+        )
+        if decoded_before > best_reference_before:
+            best_reference_before = decoded_before
+            best_row = row
+
+    best_candidate = best_row.get("candidate") if best_row is not None else None
+    best_reference_context = (
+        best_row.get("reference_teacher_forced_context", {})
+        if best_row is not None
+        else {}
+    )
+    best_failure = (
+        best_reference_context.get("failure_signature")
+        if isinstance(best_reference_context, Mapping)
+        else None
+    )
+    best_interpretation = (
+        best_reference_context.get("failure_row_interpretation")
+        if isinstance(best_reference_context, Mapping)
+        and isinstance(best_reference_context.get("failure_row_interpretation"), Mapping)
+        else {}
+    )
+    single_row_roundtrip = (
+        best_interpretation.get("single_row_range_model_roundtrip", {})
+        if isinstance(best_interpretation, Mapping)
+        else {}
+    )
+    current_row_not_semantic = (
+        best_interpretation.get("status")
+        == "not_explained_by_current_row_reference_symbol_probability"
+    )
+    local_row_roundtrip_passed = (
+        single_row_roundtrip.get("all_symbols_roundtrip") is True
+    )
+    decoder_not_exhausted = (
+        best_interpretation.get("decoder_not_stream_exhaustion") is True
+        if isinstance(best_interpretation, Mapping)
+        else False
+    )
+
+    if advanced_candidates:
+        row_ordering_status = "phase_major_advances_but_does_not_decode_full_prefix"
+        row_ordering_note = (
+            "At least one off-source spatial order advances beyond source order, "
+            "but the best advanced candidate still fails before completing frame 0."
+        )
+    else:
+        row_ordering_status = "not_explained_by_requested_row_ordering_scope"
+        row_ordering_note = (
+            "No requested row-order candidate advanced under available reference "
+            "teacher forcing."
+        )
+    semantic_status = (
+        "not_explained_by_current_row_available_reference_symbol"
+        if current_row_not_semantic
+        else "semantic_token_interpretation_still_open"
+    )
+    range_status = (
+        "still_open_prior_range_state_or_encoder_finalization_contract"
+        if local_row_roundtrip_passed and decoder_not_exhausted
+        else "still_open_range_contract_inconclusive"
+    )
+    probability_status = "still_open_prior_context_or_probability_numeric_contract"
+    overall_status = (
+        "narrowed_to_range_or_probability_context_grammar_after_phase_major_reference_row"
+        if advanced_candidates and current_row_not_semantic and local_row_roundtrip_passed
+        else "hpm1_entropy_grammar_classes_still_open"
+    )
+
+    return {
+        "schema": "pr91_hpm1_decode_failure_hypothesis_classification_v1",
+        "status": overall_status,
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "best_reference_teacher_forced_candidate": best_candidate,
+        "best_reference_teacher_forced_decoded_symbols_or_before_failure": (
+            None if best_reference_before < 0 else best_reference_before
+        ),
+        "best_reference_teacher_forced_failure_signature": best_failure,
+        "source_decoded_symbols_or_before_failure": int(source_decoded_before),
+        "row_ordering": {
+            "status": row_ordering_status,
+            "advanced_candidates": list(advanced_candidates),
+            "note": row_ordering_note,
+        },
+        "semantic_token_interpretation": {
+            "status": semantic_status,
+            "available_reference_symbol": (
+                best_interpretation.get("reference_symbol")
+                if isinstance(best_interpretation, Mapping)
+                else None
+            ),
+            "available_reference_symbol_probability": (
+                best_interpretation.get("reference_symbol_probability")
+                if isinstance(best_interpretation, Mapping)
+                else None
+            ),
+            "available_reference_symbol_rank": (
+                best_interpretation.get("reference_symbol_rank")
+                if isinstance(best_interpretation, Mapping)
+                else None
+            ),
+            "true_pr91_encoder_tokens_still_open": True,
+        },
+        "range_coder_contract": {
+            "status": range_status,
+            "decoder_not_stream_exhaustion": bool(decoder_not_exhausted),
+            "single_row_local_roundtrip_all_symbols": bool(
+                local_row_roundtrip_passed
+            ),
+            "note": (
+                "The failed submitted stream state is not reproduced by a "
+                "single-row local model failure; prior range state, finalization, "
+                "or encoder-side construction remains open."
+            ),
+        },
+        "probability_context_grammar": {
+            "status": probability_status,
+            "note": (
+                "The public runtime gives no encoder-side probability trace, so "
+                "context drift or numeric probability grammar before the failing "
+                "row remains a fail-closed blocker."
+            ),
+        },
+        "fail_closed_blockers": [
+            "full_600_frame_hpm1_decode_not_proven",
+            "byte_exact_hpm1_reencode_not_proven",
+            "true_pr91_encoder_semantic_tokens_not_recovered",
+            "range_coder_full_stream_contract_not_recovered",
+        ],
+    }
+
+
 def _trace_hpm1_entropy_decode_failure(
     model: Any,
     payload: Hpm1MaskPayload,
@@ -1716,6 +2060,14 @@ def _trace_hpm1_entropy_decode_failure(
                         prefix = decoded[:symbol_in_group].astype(np.uint8, copy=False)
                         raw_row = np.ascontiguousarray(row)
                         norm_row = np.ascontiguousarray(normalized)
+                        failure_row_interpretation = _failure_row_interpretation(
+                            raw_row,
+                            norm_row,
+                            probability_variant=resolved,
+                            prob_eps=prob_eps,
+                            decoder_state_before=decoder_state_before,
+                            context_mode="source_entropy_decode",
+                        )
                         return {
                             "status": "failed_at_first_entropy_mismatch",
                             "passed": False,
@@ -1778,6 +2130,7 @@ def _trace_hpm1_entropy_decode_failure(
                                 "categorical_perfect": bool(resolved.categorical_perfect),
                                 "source_contract": bool(resolved.source_contract),
                             },
+                            "failure_row_interpretation": failure_row_interpretation,
                             "decoded_prefix_in_failing_group": {
                                 "symbol_count": int(prefix.size),
                                 "sha256": sha256_bytes(prefix.tobytes()),
@@ -2726,6 +3079,11 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
                         if isinstance(decoded_trace.get("range_decoder_diagnostic"), Mapping)
                         else None
                     ),
+                    "failure_row_interpretation": (
+                        decoded_trace.get("failure_row_interpretation")
+                        if isinstance(decoded_trace.get("failure_row_interpretation"), Mapping)
+                        else None
+                    ),
                 },
                 "reference_teacher_forced_context": {
                     "status": reference_trace.get("status"),
@@ -2758,6 +3116,14 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
                     "range_decoder_diagnostic": (
                         reference_trace.get("range_decoder_diagnostic")
                         if isinstance(reference_trace.get("range_decoder_diagnostic"), Mapping)
+                        else None
+                    ),
+                    "failure_row_interpretation": (
+                        reference_trace.get("failure_row_interpretation")
+                        if isinstance(
+                            reference_trace.get("failure_row_interpretation"),
+                            Mapping,
+                        )
                         else None
                     ),
                     "canonical_reference_symbol_window": (
@@ -2794,6 +3160,11 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
 
     narrowed = not advanced_candidates
     candidate_scope_label = _spatial_candidate_scope_label(requested_candidates)
+    hypothesis_classification = _classify_reference_teacher_forcing_hypotheses(
+        candidate_results,
+        advanced_candidates=advanced_candidates,
+        source_decoded_before=source_decoded_before,
+    )
     report: dict[str, Any] = {
         "schema": "pr91_hpm1_reference_teacher_forcing_probe_v1",
         "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_reference_teacher_forcing_probe",
@@ -2875,6 +3246,7 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
             },
             "candidate_results": candidate_results,
             "advanced_candidates": advanced_candidates,
+            "hypothesis_classification": hypothesis_classification,
             "narrowed_hypothesis": (
                 "Forcing the HPAC current/previous context from the available "
                 "PR85/QMA9 reference token tensor does not advance the requested "
@@ -2886,6 +3258,7 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
                 "or encoder context before dismissing this class."
             ),
         },
+        "hypothesis_classification": hypothesis_classification,
         "exact_missing_grammar": {
             "status": "still_open_after_reference_teacher_forcing_probe",
             "not_explained_by_this_probe": (
@@ -2899,6 +3272,7 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
                 "range-coder construction/finalization contract",
                 "true PR91 encoder semantic tokens if they differ from PR85/QMA9 reference",
                 "training-time token semantics not represented by submitted decode source",
+                "row ordering is only partial evidence until full decode/reencode parity exists",
             ],
         },
         "next_required_proofs": [
