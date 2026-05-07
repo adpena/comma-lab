@@ -103,9 +103,10 @@ else
         2>&1 | tee -a "$LOG_DIR/run.log" || { log "FATAL: pose TTO failed"; exit 4; }
 fi
 
-# Stage 2: Build archive with Riemannian poses
-log "=== Stage 2: archive with Riemannian poses ==="
-# (delegates to experiments/pipeline.py)
+# Phase 2: Build archive with Riemannian poses (delegated to experiments/pipeline.py)
+log "=== Phase 2 marker: archive with Riemannian poses (delegated step, no inline work) ==="
+# No work happens in this script — experiments/pipeline.py archive step picks
+# up after pose TTO produces optimized_poses.pt.
 
 # Stage 3: Contest-CUDA auth eval
 log "=== Stage 3: contest-CUDA auth eval ==="

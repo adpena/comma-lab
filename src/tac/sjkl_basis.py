@@ -658,3 +658,41 @@ def decode_full_sjkl_payload(payload: bytes) -> tuple[SJKLBasis, dict]:
     basis = decode_sjkl_basis(_SJKL_MAGIC + payload[cursor:basis_end])
     alpha_raw = payload[basis_end:block_end]
     return (basis, {"alpha_block_raw_bytes": alpha_raw, "block_len": block_len})
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Stubs for recovered Fisher/Lanczos rank helpers.
+#
+# `experiments/measure_sjkl_fisher_rank_20260501.py` imports these names
+# but the implementations were lost during a filter-repo cleanup. The stubs
+# raise NotImplementedError on first call so:
+#   1. Static dead-import scanner sees the symbol exists (preflight passes).
+#   2. Runtime callers fail loud with a clear "implement me" pointer instead
+#      of crashing with a confusing AttributeError on import.
+# Consumer signature inferred from experiments/measure_sjkl_fisher_rank_20260501.py.
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def fisher_matvec(seg: object, pose: object, frames: object, v: object) -> object:
+    raise NotImplementedError(
+        "tac.sjkl_basis.fisher_matvec was lost during filter-repo cleanup. "
+        "Reimplement: Fisher-information matrix-vector product over (seg, pose, "
+        "frames, v) using SegNet+PoseNet gradient products. Reference consumer: "
+        "experiments/measure_sjkl_fisher_rank_20260501.py:88."
+    )
+
+
+def lanczos_topk(matvec: object, n: int, k: int, *args: object, **kwargs: object) -> object:
+    raise NotImplementedError(
+        "tac.sjkl_basis.lanczos_topk was lost during filter-repo cleanup. "
+        "Reimplement: top-k Lanczos eigenvalue extraction over the matvec "
+        "operator. Reference consumer: experiments/measure_sjkl_fisher_rank_20260501.py:90."
+    )
+
+
+def effective_rank(eigvals: object, *, threshold: float = 1e-4) -> int:
+    raise NotImplementedError(
+        "tac.sjkl_basis.effective_rank was lost during filter-repo cleanup. "
+        "Reimplement: count eigenvalues above threshold (or use participation-"
+        "ratio formulation). Reference consumer: experiments/measure_sjkl_fisher_rank_20260501.py:94."
+    )

@@ -90,7 +90,12 @@ print('jcsp_stream_builder.model_to_stream_sources importable')
 print('quantize_tensor_symmetric importable')
 " 2>&1 | tee -a "$LOG_DIR/run.log"
 
-log "=== Stage 2: local-skeleton archive build (UNBLOCKED at commit f6c0035a) ==="
+log "=== Stage 2: local-skeleton archive build smoke (UNBLOCKED at commit f6c0035a) ==="
+"$PYBIN" -c "
+import sys; sys.path.insert(0, 'src')
+from tac.jcsp_stream_builder import jcsp_stream_source_local_archive_member
+print('jcsp_stream_source_local_archive_member importable')
+" 2>&1 | tee -a "$LOG_DIR/run.log"
 log "INFO: pipeline.step_compress_weights with cfg.use_joint_codec_stack=True"
 log "INFO:   now calls jcsp_stream_source_local_archive_member which produces"
 log "INFO:   a deterministic byte-closed JCSK skeleton archive at"
@@ -103,7 +108,7 @@ log "INFO:        + jcsp_score_marginals_path=marginals.json"
 log "INFO:   The pipeline raises NotImplementedError after the archive write,"
 log "INFO:   so the bytes exist but no contest-CUDA submission is attempted."
 
-log "=== Stage 3: contest-CUDA auth eval (BLOCKER: submission runtime does not consume jcsp.bin/JCSK) ==="
+log "=== Skipped phase 3: contest-CUDA auth eval (BLOCKER: submission runtime does not consume jcsp.bin/JCSK) ==="
 log "WARN: The submission runtime in submissions/exact_current/inflate.{sh,py}"
 log "WARN:   does not parse the JCSK skeleton magic byte. Until a runtime"
 log "WARN:   consumer ships, the local-skeleton archive cannot be evaluated"

@@ -68,16 +68,16 @@ from tac.hnerv_wavelet_apply_transform import apply_wr01_atoms_to_raw
 print('α-wavelet modules importable')
 " 2>&1 | tee -a "$LOG_DIR/run.log"
 
-log "=== Stage 1: compress-time wavelet training (BLOCKER) ==="
+log "=== Skipped phase 1: compress-time wavelet training (BLOCKER) ==="
 log "WARN: compress-time wavelet training harness not yet built."
 log "WARN: experiments/train_wavelet_mask.py is the proposed entry point."
 log "WARN: Required: WR01 atom planning + per-archive bit-budget allocation."
 
-log "=== Stage 2: decode roundtrip test (BLOCKER) ==="
+log "=== Skipped phase 2: decode roundtrip test (BLOCKER) ==="
 log "WARN: bit-identical decode roundtrip test against contest scorer not landed."
 log "WARN: Reference: src/tac/tests/test_hnerv_wavelet_sidechannel.py covers"
 log "WARN:   sidechannel encode/decode but not full mask-roundtrip."
 
-log "=== Stage 3: archive build (skipped pending Stages 1-2) ==="
-log "=== Stage 4: contest-CUDA auth eval (skipped) ==="
+log "=== Skipped phase 3: archive build (skipped pending Phases 1-2) ==="
+log "=== Skipped phase 4: contest-CUDA auth eval (skipped) ==="
 log "LANE_ALPHA_WAVELET_MASK_DONE score=N/A [contest-CUDA] paradigm=α-wavelet blocked=compress_time_training_harness_missing"

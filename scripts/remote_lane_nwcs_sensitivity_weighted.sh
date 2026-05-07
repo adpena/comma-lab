@@ -79,17 +79,17 @@ from tac.neural_weight_codec_sensitivity import SensitivityAwareWeightCodec
 print('NWCS module importable')
 " 2>&1 | tee -a "$LOG_DIR/run.log"
 
-log "=== Stage 1: NWCS codec training (BLOCKER: harness not built) ==="
+log "=== Skipped phase 1: NWCS codec training (BLOCKER: harness not built) ==="
 log "WARN: experiments/train_neural_weight_codec_sensitivity.py is the proposed"
 log "WARN:   entry point but has not yet been built. Without a trained codec"
 log "WARN:   checkpoint, cfg.weight_codec_path is unsatisfiable and the gate"
 log "WARN:   raises NotImplementedError on the first invocation."
 
-log "=== Stage 2: per-tensor encoding loop wiring (BLOCKER: pipeline.step_compress_weights) ==="
+log "=== Skipped phase 2: per-tensor encoding loop wiring (BLOCKER: pipeline.step_compress_weights) ==="
 log "INFO: pipeline.step_compress_weights at mode='nwcs_sensitivity' (commit 9922335c)"
 log "INFO:   has the gate but NOT the encoding loop. Reference β branch (commit 107f6fea)"
 log "INFO:   for the production-shape pattern: load model, walk tensors, encode each via"
 log "INFO:   SensitivityAwareWeightCodec, package via export_nwcs_renderer_container."
 
-log "=== Stage 3: contest-CUDA auth eval (skipped pending Stages 1-2) ==="
+log "=== Skipped phase 3: contest-CUDA auth eval (skipped pending Phases 1-2) ==="
 log "LANE_NWCS_SENSITIVITY_WEIGHTED_DONE score=N/A [contest-CUDA] paradigm=β-nwcs blocked=codec_training_harness_missing+per_tensor_encoding_loop_missing"

@@ -168,10 +168,11 @@ else
     log "STAGE 2 SKIPPED (no sensitivity map artifact)"
 fi
 
-# Stage 3: Build full submission archive
-log "=== Stage 3: full submission archive ==="
-# (delegates to experiments/pipeline.py archive step; renderer.bin from
-# Stage 2, masks + poses from cached or fresh extraction)
+# Phase 3: Build full submission archive (delegated to experiments/pipeline.py)
+log "=== Phase 3 marker: full submission archive (delegated step, no inline work) ==="
+# experiments/pipeline.py archive step consumes renderer.bin from Phase 2,
+# masks + poses from cached or fresh extraction. No work happens in this
+# script — the pipeline driver picks up after the renderer artifact lands.
 
 # Stage 4: Contest-CUDA auth eval
 log "=== Stage 4: contest-CUDA auth eval ==="
