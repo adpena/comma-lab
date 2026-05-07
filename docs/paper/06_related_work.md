@@ -38,7 +38,17 @@ Neural Wrapping [Khan et al. 2025] adds learned pre- and post-processing around 
 
 Our CPU-lane postfilter (stage 3 in our results) is a concrete instance of Neural Wrapping: a convolutional network applied after H.265 decoding, trained to minimize scorer distortion. The ceiling we hit (auth 1.33) demonstrates the fundamental limitation of the wrapping approach: information destroyed by quantization cannot be recovered by any postfilter, regardless of capacity.
 
-## 6.4 Adversarial examples and gradient masking
+## 6.4 PR lineage and bolt-on engineering on the public leaderboard
+
+The May 4 medal-band entries (gold PR #101 at 0.193, silver PR #103 at 0.195, bronze PR #102 at 0.195) share a common engineering pattern: each is a small, focused delta on PR #100's archive substrate (BradyMeighan, hnerv_lc_v2, 0.1954). Bit-level deconstruction of the archives reveals the lineage explicitly. PR #95 (AaronLeslie138, hnerv_muon) introduces the HNeRV decoder architecture; PR #98 adds a channel-postprocess delta; PR #100 adds the latent-correction sidecar that becomes the substrate for the medal-band; PR #101 wraps PR #100's bytes in a schema-driven decoder with split-Brotli streams and per-tensor byte-map permutations; PR #103 substitutes arithmetic coding for Brotli on the densest tensor blocks (8 tensors, ~290 bytes saved per the PR body); PR #102 is the most striking case — it ships PR #100's archive bytes verbatim and adjusts only the inference-time scale (0.0100 to 0.0095) plus per-frame channel nudges, no codec changes whatsoever.
+
+The strategic implication is that at this score band the contest does not reward bespoke from-scratch codec design. Once one team makes its inflate and compress code public via a PR, every other team can read it, fork it, and start bolting on. Engineering velocity becomes the differentiator, not novel theory. The silver entry was 241 lines of code in 2 files; the bronze entry was decoder-side scalar adjustment with zero new compression machinery. Three teams reached medal-band scores by adding focused engineering deltas to one prior submission's archive layout.
+
+A substrate-mismatch corollary follows. When we ported PR #101's split-Brotli + byte-maps codec onto the PR #106 substrate (different fine-tuned weights), the empirical saving was only 241 bytes — a roughly 33-fold shortfall versus the 7,963 bytes the same code achieved on PR #101's own substrate. Per-tensor byte-map permutations are tuned to a specific weight distribution; on a shifted substrate, the entropy structure that the byte-maps exploit no longer holds. Codec wins from one PR are not portable across substrates without retuning. We therefore expose an `auto_select_byte_maps` derivation in `tac.pr101_split_brotli_codec` that re-runs the per-tensor brotli search on the caller's actual weights, and we frame the four-way stack predictions in this paper as multiplicative on jointly trained weights rather than additive on borrowed substrates.
+
+This lineage analysis informs both the methodology used here — every score citation in this paper carries an explicit substrate tag — and the broader question of how contest-scale neural-compression work should be evaluated. Reproducibility in this setting requires not just the code but also the exact weight checkpoint the codec was tuned against, because the codec's gain function is itself substrate-dependent.
+
+## 6.5 Adversarial examples and gradient masking
 
 Athalye et al. [2018] identified *obfuscated gradients* as a common failure mode in adversarial robustness research: defenses that appear robust to gradient-based attacks but are actually masking the gradients rather than increasing true robustness. They cataloged three types: shattered gradients (non-differentiable operations), stochastic gradients (randomized defenses), and vanishing/exploding gradients.
 
@@ -46,7 +56,7 @@ Our gradient bug (Section 3) is an unintentional instance of shattered gradients
 
 Carlini and Wagner [2017] emphasized that evaluating adversarial defenses requires verifying that the optimization *actually works* --- checking gradient flow, confirming that the attack finds true local optima. The same discipline applies to any optimization through frozen networks: validate the gradient, not just the loss.
 
-## 6.5 Steganalysis and steganographic security
+## 6.6 Steganalysis and steganographic security
 
 The competition has a deep structural connection to steganalysis, first identified by Fridrich [2009]. In steganalysis, the goal is to detect whether an image has been modified (a message embedded). In our competition, the goal is to generate images that a detector (the scorer) cannot distinguish from originals. We are performing *inverse steganalysis*: embedding information (compressed representations) in a way that is undetectable by a specific analysis pipeline.
 
@@ -54,7 +64,7 @@ Fridrich's constrained optimization framework --- minimize the embedding payload
 
 Yousfi et al. [2020] extended Fridrich's framework to deep learning-based steganalysis, training detectors and embedders adversarially. The comma.ai challenge is a simplified version of this setup: we know the detector architecture (PoseNet + SegNet), and the detector is frozen. This asymmetry --- the defender (us) has complete white-box access to the detector --- is the opposite of real-world steganalysis, where the detector is unknown. It makes the problem easier in principle but introduces its own challenges, as our gradient bug demonstrates: white-box access is worthless if the gradients are broken.
 
-## 6.6 The Yousfi-Fridrich floor
+## 6.7 The Yousfi-Fridrich floor
 
 The standard Shannon rate-distortion bound `R_Sh(D)` quantifies the minimum bit-rate to transmit a source `X` such that a reconstruction `X̂` satisfies `E[d(X, X̂)] ≤ D` for some distortion measure `d`. In nearly all video-compression literature, `d` is a perceptual distortion (PSNR, MS-SSIM, LPIPS, or human-calibrated proxy). This contest is structurally different: the distortion is `d_task(X, X̂) = 100 · seg_dist(SegNet(X̂), SegNet(X)) + sqrt(10 · pose_dist(PoseNet(X̂), PoseNet(X)))` where SegNet and PoseNet are *frozen, public, fully-specified* neural networks. The relevant lower bound is therefore tighter than Shannon's `R_Sh(D)` for perceptual `d`.
 

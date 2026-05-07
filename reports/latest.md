@@ -1,5 +1,24 @@
 # Latest Report - 2026-05-04 PR106 belt_and_suspenders adapter contest-faithful status
 
+## Cross-PR Lineage Finding — 2026-05-07T16:00Z
+
+**The May 4 medal-band entries are bolt-ons on PR #100's substrate, not bespoke codecs.** Bit-level deconstruction of the gold/silver/bronze archives shows each medal entry inherits PR #100's archive layout (BradyMeighan, hnerv_lc_v2, 0.1954) and adds a small focused delta:
+
+- **Gold (PR #101 SajayR, 0.193)**: PR #100 substrate + schema-driven decoder + split-Brotli streams + per-tensor byte-map permutations
+- **Silver (PR #103 rem2, 0.195)**: PR #100 substrate + arithmetic-coding bolt-on (241 LOC in 2 files)
+- **Bronze (PR #102 EthanYangTW, 0.195)**: PR #100 archive bytes + inference-time scale 0.0095 + frame-0 nudges (zero new codec work)
+
+**Strategic implication**: at this score band the contest does not reward from-scratch codec design. Once one team makes its inflate/compress code public, every other team can read it and start bolting on. Engineering velocity wins.
+
+**Substrate-mismatch corollary**: PR101's per-tensor byte-maps were tuned against PR101's fine-tuned weights. On the PR106 substrate they yield only -241 bytes (33× shortfall vs the -7,963 bytes on PR101's own substrate). Codec wins are not portable across substrates without retuning. Surfaced into:
+
+- `.omx/research/findings.md` (top entry, 2026-05-07)
+- `docs/paper/06_related_work.md` (new §6.4 "PR lineage and bolt-on engineering")
+- `.omx/research/pr_extended_bit_level_lineage_pr95_pr100_pr101_pr103_20260507_claude.md` (full byte-level evidence)
+- `.omx/research/four_way_stack_composition_contract_20260507_claude.md` (canonical reuse pattern via `tac.codec_pipeline.CodecOp`)
+
+**Why now**: per user 2026-05-07: "that finding about the PR submission using another submissions stuff is interesting we should mention that in our writeup and everywhere and findings".
+
 ## Track A/B/C/D/E/F/G/H Addendum — 2026-05-07T11:00Z
 
 **Current frontier unchanged at 0.20935 [contest-CUDA]** (PR106x-lowlevel-brotli, 186080 bytes). This addendum records the parallel-dispatch session outputs that prepare the next score-lowering wave.

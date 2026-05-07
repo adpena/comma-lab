@@ -1,5 +1,75 @@
 # Findings
 
+## 2026-05-07 [STRATEGIC] Top-3 medal PRs build on each other's archives — bolt-on engineering, not bespoke codecs
+
+**Source**: bit-level deconstruction of PRs #95/#98/#100/#101/#102/#103 — see
+`.omx/research/pr_extended_bit_level_lineage_pr95_pr100_pr101_pr103_20260507_claude.md`
+and `docs/pr_family_evolution_timeline_20260504.md`.
+
+**The finding**: every top-3 medal entry inherits its archive substrate from
+an earlier PR. None of them ship a bespoke from-scratch codec.
+
+```
+PR #95   AaronLeslie138 / hnerv_muon          (root: HNeRV decoder architecture)
+   ↓
+PR #98   EthanYangTW   / hnerv_muon_finetuned (channel-postprocess delta)
+   ↓
+PR #100  BradyMeighan  / hnerv_lc_v2          178,981 B / 0.1954
+         "the substrate"  ─→ all top-3 medals derive from this submission
+   ↓
+   ├──→ PR #101  SajayR      / hnerv_ft_microcodec  178,258 B / 0.19284  GOLD
+   │                        (PR100 substrate + schema-driven split-Brotli + per-tensor byte-maps)
+   ├──→ PR #102  EthanYangTW / hnerv_lc_v2_scale095 178,981 B / 0.194987 BRONZE
+   │                        (PR100 archive bytes + inference-time scale 0.0095 + frame-0 nudges
+   │                         — ZERO new codec work; pure decoder-side tuning)
+   └──→ PR #103  rem2        / hnerv_lc_ac          178,223 B / 0.19487  SILVER
+                            (PR100 substrate + arithmetic-coding bolt-on, 241 LOC in 2 files)
+```
+
+**Why this matters strategically**:
+
+1. **The contest does not reward from-scratch codec design at this score band.**
+   At ~0.195, the winning move is a small, focused delta on someone else's
+   substrate. PR #102 demonstrates the extreme: zero codec changes, just
+   inference-time scalar adjustments, and lands a medal.
+2. **Submissions are public.** Once one team ships PR #100, every other team
+   can read its inflate/compress code and start bolting on. Engineering
+   velocity becomes the differentiator, not novel theory.
+3. **The May 4 race was decided by who shipped the smallest credible bolt-on
+   fastest.** Silver was 241 LOC in 2 files. Top 3 all submitted between
+   11:50 and 11:55 UTC — within a 5-minute window. See May 4 race postmortem
+   `feedback_may_4_hnerv_race_postmortem_20260505.md`.
+
+**Substrate-mismatch corollary** (engineering caveat for our reuse plans):
+PR101's per-tensor byte-maps were tuned against PR101's fine-tuned weights.
+On the PR106 substrate (different weights), porting PR101 unchanged yields
+**only -241 bytes** — a ~33× shortfall vs the -7,963 bytes the same code
+saved on PR101's own substrate. Codec wins are NOT portable across
+substrates without retuning. This is why our `tac.pr101_split_brotli_codec`
+ships an `auto_select_byte_maps` path that derives substrate-optimal maps
+at encode time, and why the four-way stack predictions are framed as
+**multiplicative on δεζ-trained weights, not additive on PR106**. See
+`docs/paper/06_related_work.md` § "PR lineage and bolt-on engineering" and
+`feedback_op1_substrate_mismatch_codec_engineering_reframe_20260507.md`.
+
+**Implications for our remaining roadmap**:
+
+- Build the canonical `CodecPipeline` (landed `b4562092` + `33bef6d3`) so we
+  can swap in any PR's bolt-on as a `CodecOp` and measure its impact on our
+  substrate empirically — then keep the wins, drop the losses.
+- Train δεζ weights with the bolt-on stack co-adapted (joint training =
+  task #307). Substrate-tuned weights × bolt-on stack > borrowed weights
+  × bolt-on stack.
+- Treat any new PR appearing on the leaderboard as an engineering signal
+  to be reverse-engineered + ported within hours, not days.
+
+**Score claims**: all numbers in this entry are public-leaderboard claims as
+disclosed in the PR bodies; no contest-CUDA recompute was needed (the upstream
+contest scorer's published score is itself a contest-CUDA measurement on the
+exact archive bytes the PR submitted).
+
+---
+
 ## 2026-04-25 [TECHNIQUE] Cool-Chic/C3 prototype lanes implemented but not promoted
 
 **Scope**: Implemented experimental renderer variants for the requested items 1 and 3:
