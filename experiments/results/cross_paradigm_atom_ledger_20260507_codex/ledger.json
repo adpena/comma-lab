@@ -96,10 +96,35 @@
     "rankable_dominated_count": 0,
     "rankable_frontier_count": 1,
     "scope_counts": {
+      "categorical_openpilot_mask:candidate_construction_plan_class_rows": {
+        "dominated": 0,
+        "eligible": 0,
+        "frontier": 0,
+        "ineligible": 5,
+        "missing_byte_closed_manifest": 5,
+        "proxy": 5,
+        "rankable": 5,
+        "total": 5
+      },
+      "hnerv_rate_equivalent_recode": {
+        "dominated": 0,
+        "eligible": 0,
+        "frontier": 0,
+        "ineligible": 9,
+        "missing_byte_closed_manifest": 9,
+        "proxy": 0,
+        "rankable": 9,
+        "total": 9
+      },
       "wr01_wavelet:latents_and_sidecar_brotli": {
         "dominated": 0,
+        "eligible": 1,
         "frontier": 1,
-        "rankable": 1
+        "ineligible": 0,
+        "missing_byte_closed_manifest": 0,
+        "proxy": 0,
+        "rankable": 1,
+        "total": 1
       }
     },
     "scope_default": "family_group"
@@ -4170,7 +4195,7 @@
       "--json-out",
       "experiments/results/cross_paradigm_atom_ledger_20260507_codex/ledger.json"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "ef42da9adf6c4d77e34544201578e67b2c142402b24266bc2ca281d5cb57afd1",
+    "canonical_payload_without_tool_manifest_sha256": "c0e9a39dff4b58cf9b3f2b643f1bd37f1cd152e7fd73b15ab1f0336053930d17",
     "dispatch_attempted": false,
     "input_files": [
       {

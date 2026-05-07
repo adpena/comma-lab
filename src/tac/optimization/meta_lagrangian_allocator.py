@@ -760,6 +760,28 @@ def _annotate_pareto_frontier(rows: list[dict[str, Any]]) -> dict[str, Any]:
         row["pareto_frontier"] = bool(row["pareto_eligible"])
         row["pareto_dominated_by"] = []
         row["pareto_objectives"] = _pareto_objectives(row)
+        scope = str(row["pareto_scope"])
+        stats = scope_counts.setdefault(
+            scope,
+            {
+                "total": 0,
+                "rankable": 0,
+                "eligible": 0,
+                "ineligible": 0,
+                "frontier": 0,
+                "dominated": 0,
+                "missing_byte_closed_manifest": 0,
+                "proxy": 0,
+            },
+        )
+        stats["total"] += 1
+        stats["rankable"] += int(bool(row["rankable"]))
+        stats["eligible"] += int(bool(row["pareto_eligible"]))
+        stats["ineligible"] += int(not bool(row["pareto_eligible"]))
+        stats["missing_byte_closed_manifest"] += int(
+            not bool(row["byte_closed_archive_manifest_attached"])
+        )
+        stats["proxy"] += int(bool(row["proxy_row"]))
     for row in rows:
         if not bool(row["pareto_eligible"]):
             row["pareto_frontier"] = False
@@ -776,8 +798,7 @@ def _annotate_pareto_frontier(rows: list[dict[str, Any]]) -> dict[str, Any]:
         else:
             frontier_count += 1
         scope = str(row["pareto_scope"])
-        stats = scope_counts.setdefault(scope, {"rankable": 0, "frontier": 0, "dominated": 0})
-        stats["rankable"] += 1
+        stats = scope_counts[scope]
         stats["frontier"] += int(bool(row["pareto_frontier"]))
         stats["dominated"] += int(not bool(row["pareto_frontier"]))
     _annotate_row_explanations(rows)

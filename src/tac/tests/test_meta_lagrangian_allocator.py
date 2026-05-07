@@ -293,6 +293,8 @@ def test_pareto_scope_preserves_orthogonal_families(tmp_path: Path) -> None:
     )
 
     assert ledger["pareto_summary"]["rankable_frontier_count"] == 2
+    assert ledger["pareto_summary"]["scope_counts"]["mask"]["frontier"] == 1
+    assert ledger["pareto_summary"]["scope_counts"]["pose"]["frontier"] == 1
     assert all(row["pareto_frontier"] is True for row in ledger["rows"])
 
 
@@ -330,6 +332,16 @@ def test_pareto_frontier_requires_verified_byte_closed_manifest(tmp_path: Path) 
     )
 
     assert ledger["pareto_eligible_count"] == 1
+    assert ledger["pareto_summary"]["scope_counts"]["mask"] == {
+        "total": 2,
+        "rankable": 2,
+        "eligible": 1,
+        "ineligible": 1,
+        "frontier": 1,
+        "dominated": 0,
+        "missing_byte_closed_manifest": 1,
+        "proxy": 0,
+    }
     assert ledger["rows"][0]["atom_id"] == "closed_weaker_delta"
     unclosed = next(row for row in ledger["rows"] if row["atom_id"] == "unclosed_proxy_best_delta")
     assert unclosed["rankable"] is True
