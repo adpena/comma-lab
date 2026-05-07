@@ -1,0 +1,162 @@
+{
+  "archive": {
+    "blockers": [],
+    "bytes": 178258,
+    "duplicate_member_names": [],
+    "member_count": 1,
+    "members": [
+      {
+        "blockers": [],
+        "compress_type": 0,
+        "compressed_bytes": 178158,
+        "computed_crc32": "1bf71961",
+        "crc32": "1bf71961",
+        "create_system": 3,
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "external_attr": 27525120,
+        "flag_bits": 0,
+        "header_offset": 0,
+        "local_central_name_match": true,
+        "local_header_name": "x",
+        "name": "x",
+        "payload_sha256": "a7df36c2b11f88ca640e1bb259a526f80190c86e474e9b06204bb54657d3356c",
+        "uncompressed_bytes": 178158
+      }
+    ],
+    "path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/substituted/pr101_lgwin18_pr101_lgwin18_auto_selectFalse_brotli_lgwin18_brotli_quality11/archive.zip",
+    "sha256": "c95c59933f95746f6b8dd5fb7b4450419a25c01b2c9f8dac6e586cd4b3582933",
+    "zip_strict": true
+  },
+  "contest_compliance": {
+    "blockers": [
+      "archive_only_packet_runtime_missing"
+    ],
+    "checked": true,
+    "contest_compliant_packet_shape": false,
+    "notes": [
+      "inspect/identity proof only; exact CUDA auth eval and lane claim still required"
+    ]
+  },
+  "golden_vectors": {
+    "archive_sha256": "c95c59933f95746f6b8dd5fb7b4450419a25c01b2c9f8dac6e586cd4b3582933",
+    "member_vectors": [
+      {
+        "blockers": [],
+        "compress_type": 0,
+        "compressed_bytes": 178158,
+        "computed_crc32": "1bf71961",
+        "crc32": "1bf71961",
+        "create_system": 3,
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "external_attr": 27525120,
+        "flag_bits": 0,
+        "header_offset": 0,
+        "local_central_name_match": true,
+        "local_header_name": "x",
+        "name": "x",
+        "payload_sha256": "a7df36c2b11f88ca640e1bb259a526f80190c86e474e9b06204bb54657d3356c",
+        "uncompressed_bytes": 178158
+      }
+    ],
+    "runtime_tree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "inflate_sh": null,
+  "mode": "inspect",
+  "native_zipwire": {
+    "archive": {
+      "blockers": [],
+      "bytes": 178258,
+      "duplicate_member_names": [],
+      "member_count": 1,
+      "members": [
+        {
+          "blockers": [],
+          "compress_type": 0,
+          "compressed_bytes": 178158,
+          "crc32": "1bf71961",
+          "flag_bits": 0,
+          "header_offset": 0,
+          "local_central_name_match": true,
+          "local_header": {
+            "compress_type": 0,
+            "compressed_bytes": 178158,
+            "crc32": "1bf71961",
+            "flag_bits": 0,
+            "uncompressed_bytes": 178158
+          },
+          "local_header_name": "x",
+          "name": "x",
+          "uncompressed_bytes": 178158
+        }
+      ],
+      "path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/substituted/pr101_lgwin18_pr101_lgwin18_auto_selectFalse_brotli_lgwin18_brotli_quality11/archive.zip",
+      "sha256": "c95c59933f95746f6b8dd5fb7b4450419a25c01b2c9f8dac6e586cd4b3582933",
+      "zip_strict": true
+    },
+    "archive_path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/substituted/pr101_lgwin18_pr101_lgwin18_auto_selectFalse_brotli_lgwin18_brotli_quality11/archive.zip",
+    "blockers": [],
+    "comparison": {
+      "compared_archive_fields": [
+        "bytes",
+        "sha256",
+        "member_count",
+        "duplicate_member_names",
+        "blockers",
+        "zip_strict"
+      ],
+      "compared_member_fields": [
+        "name",
+        "local_header_name",
+        "local_central_name_match",
+        "header_offset",
+        "compress_type",
+        "compressed_bytes",
+        "uncompressed_bytes",
+        "crc32",
+        "flag_bits",
+        "blockers"
+      ],
+      "matched": true,
+      "mismatches": []
+    },
+    "matched": true,
+    "process": {
+      "return_code": 0,
+      "stderr": ""
+    },
+    "requested": true,
+    "status": "matched",
+    "zipwire_bin": "runtime-rs/target/debug/zipwire"
+  },
+  "packet": {
+    "files": [],
+    "kind": "archive",
+    "path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/substituted/pr101_lgwin18_pr101_lgwin18_auto_selectFalse_brotli_lgwin18_brotli_quality11/archive.zip",
+    "tree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": "submission_packet_compiler.v1",
+  "score_claim": false,
+  "target_profile": "contest_one_video_replay",
+  "target_profile_policy": {
+    "allows_one_video_replay": true,
+    "allows_optional_device_learning": false,
+    "contest_dispatch_candidate": true,
+    "description": "Contest-only overfit replay; all score-affecting replay data and runtime code must be self-contained in the packet or fixed contest code.",
+    "requires_cross_video_generalization": false
+  }
+}

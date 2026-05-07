@@ -25,6 +25,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--target-profile", choices=TARGET_PROFILES, default="contest_one_video_replay")
     parser.add_argument("--output-dir", type=Path, default=None, help="required for identity mode")
     parser.add_argument("--json-out", type=Path, default=None, help="write manifest JSON here")
+    parser.add_argument(
+        "--zipwire-bin",
+        type=Path,
+        default=None,
+        help="optional native zipwire executable for explicit ZIP conformance comparison",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -33,6 +39,7 @@ def main(argv: list[str] | None = None) -> int:
             mode=args.mode,
             target_profile=args.target_profile,
             output_dir=args.output_dir,
+            zipwire_bin=args.zipwire_bin,
         )
     except PacketCompilerError as exc:
         print(f"FATAL: {exc}", file=sys.stderr)

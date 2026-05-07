@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
+import sys
 import zipfile
 from pathlib import Path
 
@@ -15,6 +17,8 @@ from tac.submission_packet_compiler import (
     compile_packet,
     inspect_packet,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def _write_archive(path: Path, members: list[tuple[str, bytes]]) -> Path:
@@ -37,6 +41,63 @@ def _write_packet(root: Path) -> Path:
     return root
 
 
+def _zipwire_archive_from_python_archive(archive: dict[str, object]) -> dict[str, object]:
+    members = []
+    for member in archive["members"]:  # type: ignore[index]
+        assert isinstance(member, dict)
+        members.append(
+            {
+                "name": member["name"],
+                "local_header_name": member["local_header_name"],
+                "local_central_name_match": member["local_central_name_match"],
+                "header_offset": member["header_offset"],
+                "compress_type": member["compress_type"],
+                "compressed_bytes": member["compressed_bytes"],
+                "uncompressed_bytes": member["uncompressed_bytes"],
+                "crc32": member["crc32"],
+                "flag_bits": member["flag_bits"],
+                "blockers": member["blockers"],
+                "local_header": {
+                    "flag_bits": member["flag_bits"],
+                    "compress_type": member["compress_type"],
+                    "crc32": member["crc32"],
+                    "compressed_bytes": member["compressed_bytes"],
+                    "uncompressed_bytes": member["uncompressed_bytes"],
+                },
+            }
+        )
+    return {
+        "path": archive["path"],
+        "bytes": archive["bytes"],
+        "sha256": archive["sha256"],
+        "member_count": archive["member_count"],
+        "duplicate_member_names": archive["duplicate_member_names"],
+        "members": members,
+        "blockers": archive["blockers"],
+        "zip_strict": archive["zip_strict"],
+    }
+
+
+def _write_fake_zipwire(
+    path: Path,
+    payload: dict[str, object],
+    *,
+    return_code: int = 0,
+) -> Path:
+    path.write_text(
+        "#!/usr/bin/env python3\n"
+        "import sys\n"
+        "if len(sys.argv) != 2:\n"
+        "    print('usage: fake_zipwire <archive.zip>', file=sys.stderr)\n"
+        "    raise SystemExit(2)\n"
+        f"sys.stdout.write({json.dumps(payload, sort_keys=True)!r} + '\\n')\n"
+        f"raise SystemExit({return_code})\n",
+        encoding="utf-8",
+    )
+    path.chmod(0o755)
+    return path
+
+
 def test_inspect_packet_emits_deterministic_golden_vectors(tmp_path: Path) -> None:
     packet = _write_packet(tmp_path / "packet")
 
@@ -50,6 +111,7 @@ def test_inspect_packet_emits_deterministic_golden_vectors(tmp_path: Path) -> No
     assert first["target_profile_policy"]["allows_one_video_replay"] is True
     assert first["score_claim"] is False
     assert first["ready_for_exact_eval_dispatch"] is False
+    assert first["native_zipwire"]["status"] == "not_requested"
     assert first["contest_compliance"]["blockers"] == []
     member = first["archive"]["members"][0]
     assert member["name"] == "x"
@@ -70,6 +132,83 @@ def test_identity_mode_copies_packet_bytes_and_writes_manifest(tmp_path: Path) -
     assert manifest["identity_rewrite"]["byte_identical_to_input_tree"] is True
     written = json.loads((output / MANIFEST_NAME).read_text(encoding="utf-8"))
     assert written["identity_rewrite"]["copied_file_count"] == 3
+
+
+def test_native_zipwire_match_records_conformance_details(tmp_path: Path) -> None:
+    packet = _write_packet(tmp_path / "packet")
+    python_archive = inspect_packet(packet)["archive"]
+    assert python_archive is not None
+    fake_zipwire = _write_fake_zipwire(
+        tmp_path / "fake_zipwire",
+        _zipwire_archive_from_python_archive(python_archive),
+    )
+
+    manifest = inspect_packet(packet, zipwire_bin=fake_zipwire)
+
+    native = manifest["native_zipwire"]
+    assert native["requested"] is True
+    assert native["status"] == "matched"
+    assert native["matched"] is True
+    assert native["comparison"]["mismatches"] == []
+    assert native["process"]["return_code"] == 0
+    assert manifest["contest_compliance"]["blockers"] == []
+
+
+def test_native_zipwire_mismatch_marks_blockers(tmp_path: Path) -> None:
+    packet = _write_packet(tmp_path / "packet")
+    python_archive = inspect_packet(packet)["archive"]
+    assert python_archive is not None
+    native_payload = _zipwire_archive_from_python_archive(python_archive)
+    assert isinstance(native_payload["members"], list)
+    native_payload["members"][0]["crc32"] = "00000000"  # type: ignore[index]
+    fake_zipwire = _write_fake_zipwire(tmp_path / "fake_zipwire", native_payload)
+
+    manifest = inspect_packet(packet, zipwire_bin=fake_zipwire)
+
+    native = manifest["native_zipwire"]
+    assert native["status"] == "mismatch"
+    assert native["matched"] is False
+    assert native["comparison"]["mismatches"] == [
+        {
+            "path": "members[0].crc32",
+            "python": python_archive["members"][0]["crc32"],
+            "native": "00000000",
+        }
+    ]
+    assert "native_zipwire:mismatch:members[0].crc32" in manifest["contest_compliance"]["blockers"]
+    assert manifest["contest_compliance"]["contest_compliant_packet_shape"] is False
+
+
+def test_cli_zipwire_flag_writes_native_section(tmp_path: Path) -> None:
+    packet = _write_packet(tmp_path / "packet")
+    python_archive = inspect_packet(packet)["archive"]
+    assert python_archive is not None
+    fake_zipwire = _write_fake_zipwire(
+        tmp_path / "fake_zipwire",
+        _zipwire_archive_from_python_archive(python_archive),
+    )
+    json_out = tmp_path / "manifest.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "submission_packet_compiler.py"),
+            str(packet),
+            "--zipwire-bin",
+            str(fake_zipwire),
+            "--json-out",
+            str(json_out),
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    written = json.loads(json_out.read_text(encoding="utf-8"))
+    assert written["native_zipwire"]["requested"] is True
+    assert written["native_zipwire"]["status"] == "matched"
 
 
 def test_duplicate_zip_members_fail_closed_in_manifest(tmp_path: Path) -> None:

@@ -12,6 +12,7 @@ import hashlib
 import json
 import stat
 import struct
+import subprocess
 import zipfile
 import zlib
 from pathlib import Path
@@ -66,6 +67,27 @@ TARGET_PROFILES = tuple(TARGET_PROFILE_POLICIES)
 MODES = ("inspect", "identity", "canonicalize", "optimize")
 SUPPORTED_ZIP_METHODS = {zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED}
 LOCAL_FILE_HEADER_SIG = 0x04034B50
+ZIPWIRE_TIMEOUT_SECONDS = 30.0
+ZIPWIRE_ARCHIVE_CORE_FIELDS = (
+    "bytes",
+    "sha256",
+    "member_count",
+    "duplicate_member_names",
+    "blockers",
+    "zip_strict",
+)
+ZIPWIRE_MEMBER_CORE_FIELDS = (
+    "name",
+    "local_header_name",
+    "local_central_name_match",
+    "header_offset",
+    "compress_type",
+    "compressed_bytes",
+    "uncompressed_bytes",
+    "crc32",
+    "flag_bits",
+    "blockers",
+)
 
 
 class PacketCompilerError(ValueError):
@@ -197,6 +219,178 @@ def _inspect_archive(archive_path: Path) -> dict[str, Any]:
     }
 
 
+def _native_zipwire_not_requested() -> dict[str, Any]:
+    return {
+        "requested": False,
+        "status": "not_requested",
+        "matched": None,
+        "blockers": [],
+    }
+
+
+def _value_for_json(value: Any) -> Any:
+    if isinstance(value, tuple):
+        return list(value)
+    return value
+
+
+def _zipwire_mismatch(path: str, python_value: Any, native_value: Any) -> dict[str, Any]:
+    return {
+        "path": path,
+        "python": _value_for_json(python_value),
+        "native": _value_for_json(native_value),
+    }
+
+
+def _compare_native_zipwire(
+    python_archive: dict[str, Any],
+    native_archive: dict[str, Any],
+) -> dict[str, Any]:
+    mismatches: list[dict[str, Any]] = []
+    for field in ZIPWIRE_ARCHIVE_CORE_FIELDS:
+        python_value = python_archive.get(field)
+        native_value = native_archive.get(field)
+        if native_value != python_value:
+            mismatches.append(_zipwire_mismatch(f"archive.{field}", python_value, native_value))
+
+    python_members = python_archive.get("members", [])
+    native_members = native_archive.get("members", [])
+    if not isinstance(native_members, list):
+        mismatches.append(_zipwire_mismatch("archive.members", python_members, native_members))
+        native_members = []
+    if len(native_members) != len(python_members):
+        mismatches.append(
+            _zipwire_mismatch("archive.members.length", len(python_members), len(native_members))
+        )
+
+    for index, python_member in enumerate(python_members):
+        if index >= len(native_members) or not isinstance(native_members[index], dict):
+            mismatches.append(
+                _zipwire_mismatch(f"members[{index}]", python_member, None)
+            )
+            continue
+        native_member = native_members[index]
+        for field in ZIPWIRE_MEMBER_CORE_FIELDS:
+            python_value = python_member.get(field)
+            native_value = native_member.get(field)
+            if native_value != python_value:
+                mismatches.append(
+                    _zipwire_mismatch(
+                        f"members[{index}].{field}",
+                        python_value,
+                        native_value,
+                    )
+                )
+
+    return {
+        "matched": not mismatches,
+        "mismatches": mismatches,
+        "compared_archive_fields": list(ZIPWIRE_ARCHIVE_CORE_FIELDS),
+        "compared_member_fields": list(ZIPWIRE_MEMBER_CORE_FIELDS),
+    }
+
+
+def _run_native_zipwire(
+    archive_path: Path,
+    python_archive: dict[str, Any] | None,
+    zipwire_bin: Path | str | None,
+) -> tuple[dict[str, Any], list[str]]:
+    if zipwire_bin is None:
+        return _native_zipwire_not_requested(), []
+
+    section: dict[str, Any] = {
+        "requested": True,
+        "zipwire_bin": _json_ready_path(Path(zipwire_bin)),
+        "archive_path": _json_ready_path(archive_path),
+        "status": "not_run",
+        "matched": False,
+        "blockers": [],
+    }
+    if python_archive is None:
+        section["status"] = "archive_missing"
+        blockers = ["native_zipwire:archive_zip_missing"]
+        section["blockers"] = blockers
+        return section, blockers
+
+    try:
+        completed = subprocess.run(
+            [str(zipwire_bin), str(archive_path)],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            timeout=ZIPWIRE_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        blockers = ["native_zipwire:timeout"]
+        section.update(
+            {
+                "status": "timeout",
+                "timeout_seconds": ZIPWIRE_TIMEOUT_SECONDS,
+                "stdout": exc.stdout or "",
+                "stderr": exc.stderr or "",
+                "blockers": blockers,
+            }
+        )
+        return section, blockers
+    except OSError as exc:
+        blockers = ["native_zipwire:execution_error"]
+        section.update(
+            {
+                "status": "execution_error",
+                "error": str(exc),
+                "blockers": blockers,
+            }
+        )
+        return section, blockers
+
+    section["process"] = {
+        "return_code": completed.returncode,
+        "stderr": completed.stderr,
+    }
+    try:
+        native_archive = json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        blockers = ["native_zipwire:invalid_json"]
+        section.update(
+            {
+                "status": "invalid_json",
+                "error": str(exc),
+                "stdout": completed.stdout,
+                "blockers": blockers,
+            }
+        )
+        return section, blockers
+    if not isinstance(native_archive, dict):
+        blockers = ["native_zipwire:invalid_json"]
+        section.update(
+            {
+                "status": "invalid_json",
+                "error": "zipwire stdout JSON must be an object",
+                "archive": native_archive,
+                "blockers": blockers,
+            }
+        )
+        return section, blockers
+
+    comparison = _compare_native_zipwire(python_archive, native_archive)
+    section["archive"] = native_archive
+    section["comparison"] = comparison
+    section["matched"] = bool(comparison["matched"])
+
+    blockers = [
+        f"native_zipwire:mismatch:{item['path']}"
+        for item in comparison["mismatches"]
+    ]
+    if completed.returncode != 0 and native_archive.get("zip_strict") is True:
+        blockers.append(f"native_zipwire:unexpected_nonzero_exit:{completed.returncode}")
+
+    section["status"] = "matched" if not blockers else "mismatch"
+    section["blockers"] = blockers
+    return section, blockers
+
+
 def _iter_packet_files(packet_path: Path) -> list[Path]:
     if packet_path.is_file():
         return [packet_path]
@@ -244,6 +438,7 @@ def inspect_packet(
     packet_path: Path | str,
     *,
     target_profile: str = "contest_one_video_replay",
+    zipwire_bin: Path | str | None = None,
 ) -> dict[str, Any]:
     """Inspect a contest packet and emit deterministic conformance vectors."""
     packet = Path(packet_path)
@@ -267,6 +462,12 @@ def inspect_packet(
         blockers.append("archive_only_packet_runtime_missing")
 
     runtime_rows = _runtime_tree_rows(packet)
+    native_zipwire, native_blockers = _run_native_zipwire(
+        archive_path,
+        archive,
+        zipwire_bin,
+    )
+    blockers.extend(native_blockers)
     return {
         "schema_version": SCHEMA_VERSION,
         "mode": "inspect",
@@ -281,6 +482,7 @@ def inspect_packet(
             "files": runtime_rows,
         },
         "archive": archive,
+        "native_zipwire": native_zipwire,
         "inflate_sh": (
             {
                 "path": _json_ready_path(inflate_path),
@@ -344,6 +546,7 @@ def compile_packet(
     mode: str = "inspect",
     target_profile: str = "contest_one_video_replay",
     output_dir: Path | str | None = None,
+    zipwire_bin: Path | str | None = None,
 ) -> dict[str, Any]:
     """Compile a packet in inspect or identity mode.
 
@@ -355,7 +558,7 @@ def compile_packet(
     if mode in {"canonicalize", "optimize"}:
         raise PacketCompilerError(f"{mode} mode is not implemented; fail closed")
     packet = Path(packet_path)
-    manifest = inspect_packet(packet, target_profile=target_profile)
+    manifest = inspect_packet(packet, target_profile=target_profile, zipwire_bin=zipwire_bin)
     manifest["mode"] = mode
     if mode == "identity":
         if output_dir is None:
