@@ -1,0 +1,16 @@
+{
+  "additions": 367,
+  "author": "EthanYangTW",
+  "changed_files": 7,
+  "closed_at": "2026-05-04T20:08:31Z",
+  "created_at": "2026-05-04T11:54:32Z",
+  "deletions": 0,
+  "head_repo": "EthanYangTW/comma_video_compression_challenge",
+  "head_sha": "1e330ec5633539c48278ce3cc96d2b15ea7a9eac",
+  "leaderboard_name": "manual",
+  "leaderboard_score": 0.0,
+  "merged_at": "2026-05-04T20:08:31Z",
+  "pr_number": 102,
+  "state": "closed",
+  "title": "hnerv_lc_v2_scale095_rplus1 submission (0.19538 CPU)"
+}

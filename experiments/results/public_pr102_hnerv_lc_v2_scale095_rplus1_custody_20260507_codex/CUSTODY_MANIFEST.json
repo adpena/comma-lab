@@ -1,0 +1,58 @@
+{
+  "schema": "pr102_zero_byte_inference_tuning_custody_manifest_v1",
+  "created_by": "codex",
+  "created_date": "2026-05-07",
+  "classification": "custody_unblocked_correct_archive_identified",
+  "pr": {
+    "number": 102,
+    "url": "https://github.com/commaai/comma_video_compression_challenge/pull/102",
+    "title": "hnerv_lc_v2_scale095_rplus1 submission (0.19538 CPU)",
+    "author": "EthanYangTW",
+    "head_repo": "EthanYangTW/comma_video_compression_challenge",
+    "head_sha": "1e330ec5633539c48278ce3cc96d2b15ea7a9eac",
+    "runtime_source_path": "submissions/hnerv_lc_v2_scale095_rplus1/"
+  },
+  "canonical_archive": {
+    "source_url": "https://github.com/user-attachments/files/27369164/archive.zip",
+    "local_path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/archive.zip",
+    "bytes": 178981,
+    "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+    "members": [
+      {
+        "name": "0.bin",
+        "bytes": 178873,
+        "sha256": "3234f0689164cfc95b7ee9f9cdf38ecf4d082cfb7048058e2b3ff0f54f864e43"
+      }
+    ]
+  },
+  "identity_matches": [
+    {
+      "label": "EthanYangTW v2-hnerv-lc-scale095 release",
+      "url": "https://github.com/EthanYangTW/comma_video_compression_challenge/releases/download/v2-hnerv-lc-scale095/archive.zip",
+      "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641"
+    },
+    {
+      "label": "BradyMeighan PR100 hnerv-lc-v2 release referenced by PR102 compress.sh",
+      "url": "https://github.com/BradyMeighan/comma_video_compression_challenge/releases/download/hnerv-lc-v2-archive/archive.zip",
+      "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641"
+    }
+  ],
+  "invalidated_prior_auto_intake": {
+    "local_path": "experiments/results/public_pr_archive_release_view/public_pr102_intake_20260505_auto/archive.zip",
+    "bytes": 276481,
+    "sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+    "member": "p",
+    "reason": "stale qpose14-r55-segactions-minp release asset, not PR102 HNeRV"
+  },
+  "supporting_artifacts": [
+    "FETCH_SUMMARY.json",
+    "public_pr102_intake_20260507_auto/archive_provenance.json",
+    "release_identity_checks/archive_identity_check.json",
+    "hnerv_payload_profile.json",
+    ".omx/research/pr102_zero_byte_inference_tuning_custody_unblock_20260507_codex.md"
+  ],
+  "exact_next_blockers": [
+    "Run exact local CUDA replay of the corrected archive and PR102 runtime source before any A/A++ score claim.",
+    "Classify the public CPU/CUDA divergence recorded on PR102 after exact replay."
+  ]
+}

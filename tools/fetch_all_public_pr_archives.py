@@ -17,9 +17,11 @@ For each scored PR on the live leaderboard, fetch:
   2. PR body (often contains archive download URL)
   3. archive.zip — searched in this order:
      a. direct .zip URL in PR body
-     b. GitHub release asset on the head_repo (gh api releases)
-     c. release asset in commaai/comma_video_compression_challenge releases
-     d. flagged as needing manual triage (with explicit reason)
+     b. direct .zip URL in PR comments
+     c. archive.zip path referenced by the PR body and present in the head tree
+     d. GitHub release asset on the head_repo, ranked by PR/name/body relevance
+     e. release asset in commaai/comma_video_compression_challenge releases
+     f. flagged as needing manual triage (with explicit reason)
   4. source tree at the PR's head SHA (shallow clone of the contestant's fork)
   5. SHA-256 of the archive (for byte-exact provenance audits)
 
@@ -55,6 +57,7 @@ import urllib.request
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import unquote
 
 try:
     from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
@@ -67,6 +70,14 @@ ensure_repo_imports(REPO)
 from tac.repo_io import read_json, sha256_file, write_json  # noqa: E402
 
 COMMA_REPO = "commaai/comma_video_compression_challenge"
+
+
+def _repo_relative_display(path: Path) -> str:
+    """Render repo-local paths when possible, without failing on relative inputs."""
+    try:
+        return str(path.resolve().relative_to(REPO.resolve()))
+    except ValueError:
+        return str(path)
 
 
 def _fetch_leaderboard() -> list[dict]:
@@ -100,6 +111,7 @@ def _gh_api(path: str, raise_on_fail: bool = False) -> dict | list | None:
 
 _ARCHIVE_URL_PATTERNS = [
     r"https?://github\.com/[^\s)\]]+/releases/download/[^\s)\]]+\.zip",
+    r"https?://github\.com/user-attachments/files/[^\s)\]]+\.zip",
     r"https?://github\.com/[^\s)\]]+\.zip",
     r"https?://huggingface\.co/[^\s)\]]+/resolve/[^\s)\]]+\.zip",
     r"https?://(?:www\.)?dropbox\.com/[^\s)\]]+\.zip",
@@ -107,18 +119,97 @@ _ARCHIVE_URL_PATTERNS = [
 ]
 
 
-def _extract_archive_url_from_body(body: str) -> str | None:
-    """First-pass: extract direct .zip URL from PR body."""
-    if not body:
-        return None
+def _dedupe_preserve_order(values: list[str]) -> list[str]:
+    return list(dict.fromkeys(values))
+
+
+def _extract_archive_urls_from_text(text: str) -> list[str]:
+    """Extract direct archive URLs from PR markdown text in encounter order."""
+    if not text:
+        return []
+    urls: list[str] = []
     for pat in _ARCHIVE_URL_PATTERNS:
-        m = re.search(pat, body)
-        if m:
-            return m.group(0).rstrip(").,;]>")
-    return None
+        for m in re.finditer(pat, text):
+            urls.append(m.group(0).rstrip(").,;]>"))
+    return _dedupe_preserve_order(urls)
 
 
-def _walk_releases_for_archive(head_repo: str, pr_num: int, body: str) -> list[str]:
+def _extract_archive_url_from_body(body: str) -> str | None:
+    """Backward-compatible first-pass helper for callers that expect one URL."""
+    urls = _extract_archive_urls_from_text(body)
+    return urls[0] if urls else None
+
+
+def _archive_path_hints_from_body(body: str) -> list[str]:
+    """Extract repository-relative archive.zip paths from PR body prose."""
+    if not body:
+        return []
+    candidates: list[str] = []
+    for token in re.findall(r"`([^`]*archive\.zip)`", body):
+        candidates.append(token.strip())
+    for token in re.findall(r"(?<![\w/.-])([A-Za-z0-9_./-]+archive\.zip)", body):
+        candidates.append(token.strip())
+
+    paths: list[str] = []
+    for candidate in candidates:
+        if re.match(r"https?://", candidate):
+            continue
+        normalized = candidate.strip().strip(".,;:()[]<>")
+        if not normalized or normalized.startswith("/") or ".." in Path(normalized).parts:
+            continue
+        paths.append(normalized)
+    return _dedupe_preserve_order(paths)
+
+
+def _archive_context_tokens(*texts: str) -> set[str]:
+    joined = " ".join(texts).lower().replace("-", "_")
+    raw = re.findall(r"[a-z0-9]+", joined)
+    stop = {
+        "archive",
+        "zip",
+        "submission",
+        "score",
+        "pull",
+        "pr",
+        "the",
+        "and",
+        "with",
+        "from",
+        "this",
+        "that",
+        "under",
+        "included",
+        "github",
+        "download",
+        "release",
+    }
+    return {token for token in raw if len(token) >= 3 and token not in stop}
+
+
+def _rank_archive_urls(urls: list[str], context_tokens: set[str], pr_num: int) -> list[str]:
+    def score(index_url: tuple[int, str]) -> tuple[int, int]:
+        index, url = index_url
+        normalized = unquote(url).lower().replace("-", "_")
+        token_hits = sum(1 for token in context_tokens if token in normalized)
+        pr_hits = int(f"pr{pr_num}" in normalized or f"pull_{pr_num}" in normalized or f"pull-{pr_num}" in normalized)
+        exact_archive = int(normalized.endswith("/archive.zip"))
+        return (-(10 * token_hits + 5 * pr_hits + exact_archive), index)
+
+    return [url for _, url in sorted(enumerate(_dedupe_preserve_order(urls)), key=score)]
+
+
+def _walk_pr_comments_for_archive(pr_num: int) -> list[str]:
+    """Read PR issue comments and return direct archive links."""
+    comments = _gh_api(f"repos/{COMMA_REPO}/issues/{pr_num}/comments?per_page=100")
+    if not comments or not isinstance(comments, list):
+        return []
+    urls: list[str] = []
+    for comment in comments:
+        urls.extend(_extract_archive_urls_from_text(comment.get("body") or ""))
+    return _dedupe_preserve_order(urls)
+
+
+def _walk_releases_for_archive(head_repo: str, pr_num: int, body: str, name: str = "") -> list[str]:
     """Second-pass: walk GitHub releases on the head_repo for archive.zip-like assets.
     Returns list of candidate URLs (caller picks/tries each)."""
     candidates = []
@@ -129,34 +220,40 @@ def _walk_releases_for_archive(head_repo: str, pr_num: int, body: str) -> list[s
         return candidates
     for rel in releases:
         for asset in rel.get("assets", []) or []:
-            name = (asset.get("name") or "").lower()
+            asset_name = (asset.get("name") or "").lower()
             url = asset.get("browser_download_url")
             if not url:
                 continue
             # Prefer assets that look like an archive submission
-            if name.endswith(".zip") and ("archive" in name or f"pr{pr_num}" in name or f"pull-{pr_num}" in name or "submission" in name):
+            if asset_name.endswith(".zip") and (
+                "archive" in asset_name
+                or f"pr{pr_num}" in asset_name
+                or f"pull-{pr_num}" in asset_name
+                or "submission" in asset_name
+            ):
                 candidates.append(url)
-            elif name.endswith(".zip"):
+            elif asset_name.endswith(".zip"):
                 candidates.append(url)  # any .zip in releases is a candidate
-    return candidates
+    return _rank_archive_urls(candidates, _archive_context_tokens(body, name), pr_num)
 
 
-def _walk_pr_commits_for_lfs(head_repo: str, head_sha: str) -> list[str]:
-    """Third-pass: check the PR's head commit for an archive.zip LFS pointer."""
+def _walk_pr_commits_for_lfs(head_repo: str, head_sha: str, body: str = "") -> list[str]:
+    """Third-pass: check the PR's head commit for archive.zip files."""
     if not head_repo or not head_sha:
         return []
     candidates = []
+    path_hints = set(_archive_path_hints_from_body(body))
     # Look for archive.zip in the tree
     tree = _gh_api(f"repos/{head_repo}/git/trees/{head_sha}?recursive=1")
     if not tree or not isinstance(tree, dict):
         return candidates
     for entry in tree.get("tree", []) or []:
         path = entry.get("path", "")
-        if path.endswith("archive.zip") and entry.get("size", 0) > 1000:
+        if path.endswith("archive.zip") and (path in path_hints or entry.get("size", 0) > 1000):
             # Direct download via raw.githubusercontent
             url = f"https://raw.githubusercontent.com/{head_repo}/{head_sha}/{path}"
             candidates.append(url)
-    return candidates
+    return _rank_archive_urls(candidates, _archive_context_tokens(body), 0)
 
 
 def _download_file(url: str, dest: Path, max_bytes: int = 500_000_000) -> tuple[bool, str]:
@@ -274,38 +371,42 @@ def _fetch_one_pr(pr_num: int, score: float, name: str, output_root: Path,
     else:
         candidates = []
         # Pass 1: direct URL in body
-        url1 = _extract_archive_url_from_body(body)
-        if url1:
-            candidates.append(url1)
-            log_lines.append(f"  body URL: {url1}")
-        # Pass 2: walk releases on head_repo
+        for url1 in _extract_archive_urls_from_text(body):
+            if url1 not in candidates:
+                candidates.append(url1)
+                log_lines.append(f"  body URL: {url1}")
+        # Pass 2: direct URLs in PR comments
+        for url_comment in _walk_pr_comments_for_archive(pr_num):
+            if url_comment not in candidates:
+                candidates.append(url_comment)
+                log_lines.append(f"  comment URL: {url_comment}")
+        # Pass 3: archive.zip in head SHA tree, body path hints first
+        url_tree_list = _walk_pr_commits_for_lfs(head_repo, head_sha, body)
+        for u in url_tree_list:
+            if u not in candidates:
+                candidates.append(u)
+                log_lines.append(f"  in-tree archive: {u}")
+        # Pass 4: walk releases on head_repo
         if head_repo:
-            url2_list = _walk_releases_for_archive(head_repo, pr_num, body)
+            url2_list = _walk_releases_for_archive(head_repo, pr_num, body, name)
             for u in url2_list:
                 if u not in candidates:
                     candidates.append(u)
                     log_lines.append(f"  head_repo release asset: {u}")
-        # Pass 3: walk releases on commaai/main repo
+        # Pass 5: walk releases on commaai/main repo
         if not candidates:
-            url3_list = _walk_releases_for_archive(COMMA_REPO, pr_num, body)
+            url3_list = _walk_releases_for_archive(COMMA_REPO, pr_num, body, name)
             for u in url3_list:
                 if u not in candidates:
                     candidates.append(u)
                     log_lines.append(f"  comma release asset: {u}")
-        # Pass 4: archive.zip in head SHA tree
-        if not candidates:
-            url4_list = _walk_pr_commits_for_lfs(head_repo, head_sha)
-            for u in url4_list:
-                if u not in candidates:
-                    candidates.append(u)
-                    log_lines.append(f"  in-tree archive: {u}")
 
         if not candidates:
             archive_status = "no_url_found_in_any_pass"
             archive_sha = None
             archive_size = None
             attempts = []
-            log_lines.append("✗ no archive URL found in body, head_repo releases, comma releases, OR head SHA tree")
+            log_lines.append("✗ no archive URL found in body, comments, head SHA tree, head_repo releases, OR comma releases")
         else:
             ok, status, sha, attempts = _try_archive_candidates(candidates, archive_dest)
             if ok:
@@ -366,7 +467,7 @@ def _fetch_one_pr(pr_num: int, score: float, name: str, output_root: Path,
         "score": score,
         "name": name,
         "status": "complete" if archive_status in ("downloaded", "exists_skipped") else "incomplete",
-        "dir": str(pr_dir.relative_to(REPO)),
+        "dir": _repo_relative_display(pr_dir),
         "archive_status": archive_status,
         "archive_sha256": archive_sha,
         "archive_size_bytes": archive_size,
@@ -442,7 +543,7 @@ def main(argv: list[str] | None = None) -> int:
     }
     summary_path = args.output_dir / "FETCH_SUMMARY.json"
     write_json(summary_path, summary)
-    print(f"\n[fetch] SUMMARY → {summary_path.relative_to(REPO)}")
+    print(f"\n[fetch] SUMMARY → {_repo_relative_display(summary_path)}")
     print(f"  attempted: {summary['total_attempted']}")
     print(f"  complete:  {summary['n_complete']}")
     print(f"  with archive: {summary['n_with_archive']}")

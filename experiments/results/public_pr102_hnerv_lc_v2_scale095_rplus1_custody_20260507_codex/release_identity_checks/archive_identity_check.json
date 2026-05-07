@@ -1,0 +1,106 @@
+{
+  "canonical_archive_bytes": 178981,
+  "canonical_archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+  "canonical_member_names": [
+    "0.bin"
+  ],
+  "identity_groups": {
+    "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746": [
+      "wrong_qpose_release_chosen_by_20260505_auto_intake",
+      "wrong_qpose_20260505_auto_intake_existing"
+    ],
+    "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641": [
+      "pr102_comment_attachment_canonical",
+      "ethanyang_head_repo_v2_hnerv_lc_scale095_release",
+      "brady_pr100_hnerv_lc_v2_release_referenced_by_compress_sh"
+    ]
+  },
+  "records": [
+    {
+      "bytes": 178981,
+      "label": "pr102_comment_attachment_canonical",
+      "members": [
+        {
+          "compress_size": 178873,
+          "file_size": 178873,
+          "first16_hex": "2a7a02005b5d7e7345d9f6016a81ee00",
+          "name": "0.bin",
+          "sha256": "3234f0689164cfc95b7ee9f9cdf38ecf4d082cfb7048058e2b3ff0f54f864e43",
+          "zip_method": 0
+        }
+      ],
+      "path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/archive.zip",
+      "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+      "url": "https://github.com/user-attachments/files/27369164/archive.zip"
+    },
+    {
+      "bytes": 178981,
+      "label": "ethanyang_head_repo_v2_hnerv_lc_scale095_release",
+      "members": [
+        {
+          "compress_size": 178873,
+          "file_size": 178873,
+          "first16_hex": "2a7a02005b5d7e7345d9f6016a81ee00",
+          "name": "0.bin",
+          "sha256": "3234f0689164cfc95b7ee9f9cdf38ecf4d082cfb7048058e2b3ff0f54f864e43",
+          "zip_method": 0
+        }
+      ],
+      "path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/release_identity_checks/ethanyang_v2_hnerv_lc_scale095_archive.zip",
+      "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+      "url": "https://github.com/EthanYangTW/comma_video_compression_challenge/releases/download/v2-hnerv-lc-scale095/archive.zip"
+    },
+    {
+      "bytes": 178981,
+      "label": "brady_pr100_hnerv_lc_v2_release_referenced_by_compress_sh",
+      "members": [
+        {
+          "compress_size": 178873,
+          "file_size": 178873,
+          "first16_hex": "2a7a02005b5d7e7345d9f6016a81ee00",
+          "name": "0.bin",
+          "sha256": "3234f0689164cfc95b7ee9f9cdf38ecf4d082cfb7048058e2b3ff0f54f864e43",
+          "zip_method": 0
+        }
+      ],
+      "path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/release_identity_checks/brady_pr100_hnerv_lc_v2_archive.zip",
+      "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+      "url": "https://github.com/BradyMeighan/comma_video_compression_challenge/releases/download/hnerv-lc-v2-archive/archive.zip"
+    },
+    {
+      "bytes": 276481,
+      "label": "wrong_qpose_release_chosen_by_20260505_auto_intake",
+      "members": [
+        {
+          "compress_size": 276381,
+          "file_size": 276381,
+          "first16_hex": "5b986843441527963b0ed3ed8b0c614c",
+          "name": "p",
+          "sha256": "f78c71d3086773e417c672734082a49ceb0ef5a0016cf406a920be7978fff252",
+          "zip_method": 0
+        }
+      ],
+      "path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/release_identity_checks/ethanyang_wrong_qpose_release_archive.zip",
+      "sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+      "url": "https://github.com/EthanYangTW/comma_video_compression_challenge/releases/download/qpose14-r55-segactions-minp/archive.zip"
+    },
+    {
+      "bytes": 276481,
+      "label": "wrong_qpose_20260505_auto_intake_existing",
+      "members": [
+        {
+          "compress_size": 276381,
+          "file_size": 276381,
+          "first16_hex": "5b986843441527963b0ed3ed8b0c614c",
+          "name": "p",
+          "sha256": "f78c71d3086773e417c672734082a49ceb0ef5a0016cf406a920be7978fff252",
+          "zip_method": 0
+        }
+      ],
+      "path": "experiments/results/public_pr_archive_release_view/public_pr102_intake_20260505_auto/archive.zip",
+      "sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+      "url": "existing local disputed auto-intake artifact"
+    }
+  ],
+  "schema": "pr102_archive_identity_check_v1"
+}

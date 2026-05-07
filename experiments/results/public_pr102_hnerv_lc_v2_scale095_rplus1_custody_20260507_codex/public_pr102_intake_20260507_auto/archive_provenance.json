@@ -1,0 +1,19 @@
+{
+  "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+  "archive_size_bytes": 178981,
+  "attempts": [
+    {
+      "result": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+      "success": true,
+      "url": "https://github.com/user-attachments/files/27369164/archive.zip",
+      "zip_members": [
+        "0.bin"
+      ]
+    }
+  ],
+  "candidates_tried": [
+    "https://github.com/user-attachments/files/27369164/archive.zip"
+  ],
+  "fetched_at_utc": "2026-05-07T15:48:43.536237+00:00",
+  "status": "downloaded"
+}

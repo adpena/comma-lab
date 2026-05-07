@@ -1,0 +1,22 @@
+{
+  "fetched_at_utc": "2026-05-07T15:48:43.536652+00:00",
+  "n_complete": 1,
+  "n_with_archive": 1,
+  "n_with_source": 1,
+  "needs_manual_triage": [],
+  "results": [
+    {
+      "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+      "archive_size_bytes": 178981,
+      "archive_status": "downloaded",
+      "dir": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto",
+      "name": "manual",
+      "pr": 102,
+      "score": 0.0,
+      "source_status": "skipped_exists",
+      "status": "complete"
+    }
+  ],
+  "schema": "fetch_all_public_pr_archives_v2",
+  "total_attempted": 1
+}
