@@ -812,7 +812,11 @@ def preflight_all(
         # - Check 53 (tools-have-argparse): operator-discoverability:
         #   tools/*.py + scripts/*.py with __main__ entry must wire
         #   argparse or click for --help.
-        check_no_bare_except(strict=False, verbose=verbose)
+        # Promoted STRICT 2026-05-06: live count 0 — scanner now exempts
+        # vendored harvested venvs (uv_project_env / site-packages) and the
+        # vast_harvest snapshots. Authored code in src/tac, scripts/, tools/,
+        # experiments/ has no bare-except violations.
+        check_no_bare_except(strict=True, verbose=verbose)
         # 2026-04-28 deep hardening pass 3: Checks 52 + 53 promoted to STRICT
         # after one-time cleanup pass. Subprocess: 31 violations triaged into
         # 2 classes — wrappers/best-effort (24 waivers with concrete reason)
@@ -15798,7 +15802,25 @@ def check_no_bare_except(
     skip_dirs = {
         "tests", "test", "upstream", "node_modules", ".venv", "venv",
         "build", "dist", "__pycache__",
+        # Vendored uv-managed venv from remote harvest snapshots
+        # (experiments/results/vast_harvest/.../uv_project_env/...).
+        "uv_project_env", "site-packages",
     }
+    # Vendored / harvested intake snapshots — same exclude markers as
+    # check_subprocess_run_checked. We don't own this code; it's evidence
+    # of public-PR / remote-host state, not authored code we can edit.
+    _VENDORED_INTAKE_MARKERS = (
+        "/pr_heads/",
+        "/leaderboard_intel_",
+        "/reverse_engineering_",
+        "/public_runtime_adapters_",
+        "/raw/kaggle_ingest/",
+        "/vendored/",
+        "_intake_",
+        "/av1_crf31_bicubic/",
+        "/comma_lab_public_export/",
+        "/vast_harvest/",
+    )
     for py_path in sorted(root.rglob("*.py")):
         # Skip the preflight file itself (contains regex patterns like
         # `except:` as string literals that would false-positive).
@@ -15811,6 +15833,9 @@ def check_no_bare_except(
         # Only scan src/tac, scripts/, tools/, experiments/.
         top = rel_parts[0] if rel_parts else ""
         if top not in {"src", "scripts", "tools", "experiments"}:
+            continue
+        rel_s = str(py_path.relative_to(root))
+        if any(marker in rel_s for marker in _VENDORED_INTAKE_MARKERS):
             continue
         try:
             text = py_path.read_text()

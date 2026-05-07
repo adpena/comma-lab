@@ -4032,6 +4032,9 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
                     int(value) for value in range_prefix_windows
                 ],
                 "replay_symbol_limit": int(range_prefix_replay_symbol_limit),
+                "max_target_decoded_before": int(
+                    range_prefix_max_target_decoded_before
+                ),
                 "scope": (
                     "local CPU reference-forced range-state prefix "
                     "reconstruction; not score or dispatch evidence"
