@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "artifact": "hdc2_hdm3_active_floor_blocker_classification",
+  "created_at_utc": "2026-05-07T21:25:16Z",
+  "agent": "Worker HDC2-489",
+  "score_claim": false,
+  "dispatch_attempted": false,
+  "remote_gpu_run": false,
+  "ready_for_exact_eval_dispatch": false,
+  "classification": "no_below_active_floor_candidate_found_in_this_tranche",
+  "active_floor": {
+    "label": "pr103_on_pr106_a++",
+    "archive_bytes": 185578,
+    "strict_below_floor_required_archive_bytes": 185577,
+    "score": 0.2089810755823297,
+    "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce"
+  },
+  "current_pr106x_source": {
+    "archive_path": "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/pr106x_hnerv_brotli_repack_candidate.zip",
+    "archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+    "archive_bytes": 186080,
+    "payload_bytes": 185980,
+    "payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+    "decoder_section_bytes": 170127,
+    "decoder_section_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+    "zip_overhead_bytes": 100
+  },
+  "current_hdm3_static_packet": {
+    "archive_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/pr106x_lowlevel_brotli_hdm3_archive_candidate.zip",
+    "archive_sha256": "5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771",
+    "archive_bytes": 186066,
+    "byte_delta_vs_source_archive": -14,
+    "byte_delta_vs_active_floor": 488,
+    "additional_reduction_required_to_be_strictly_below_active_floor_bytes": 489,
+    "payload_bytes": 185966,
+    "payload_sha256": "cb265692118961b9e1aeca090b5773f0de81c5a1acc882fc58057f10e16e6df7",
+    "decoder_section_bytes": 170113,
+    "decoder_section_sha256": "149a41ecf4d1614757c9369838e3a7cb9f03a648fe9b61a2317e9b7f2996b256",
+    "hdm3_stats": {
+      "header_bytes": 7,
+      "q_brotli_bytes": 169994,
+      "q_stream_bytes": 228958,
+      "raw_scale_bytes": 112,
+      "brotli_quality": 11
+    },
+    "raw_equivalence": {
+      "raw_equal": true,
+      "q_roundtrip_equal": true,
+      "scale_roundtrip_equal": true,
+      "source_decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+      "restored_decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703"
+    },
+    "runtime_custody": {
+      "static_packet_ready": true,
+      "ready_for_exact_eval_dispatch": false,
+      "remaining_dispatch_blockers": [
+        "lane_dispatch_claim_missing",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "readiness_artifact": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_exact_eval_packet_readiness.json"
+    }
+  },
+  "byte_probe_summary": [
+    {
+      "probe": "brotli_parameter_sweep_q_stream",
+      "best_projected_archive_bytes": 186066,
+      "byte_delta_vs_active_floor": 488,
+      "result": "no_improvement_beyond_current_hdm3",
+      "details": "quality 11 is best; modes generic/text/font tie at q_brotli_bytes=169994; lgwin/lgblock sweeps did not reduce byte count"
+    },
+    {
+      "probe": "stdlib_codec_and_simple_delta_transforms",
+      "best_projected_archive_bytes": 186066,
+      "byte_delta_vs_active_floor": 488,
+      "result": "no_candidate",
+      "details": "lzma, zlib, bz2, xor-prev, and delta-prev were all larger than HDM3 q Brotli"
+    },
+    {
+      "probe": "fixed_record_order_brotli",
+      "best_projected_archive_bytes": 186045,
+      "byte_delta_vs_active_floor": 467,
+      "result": "byte_different_but_not_below_floor",
+      "details": "biases_then_weights_alpha order reduced q Brotli to 169973 bytes, 21 bytes better than current HDM3"
+    },
+    {
+      "probe": "per_tensor_brotli_fixed_schema",
+      "best_projected_archive_bytes": 186052,
+      "byte_delta_vs_active_floor": 474,
+      "result": "byte_different_but_not_below_floor",
+      "details": "fixed per-record quality table summed q Brotli chunks to 169933 bytes, but required length overhead kept the stream above floor"
+    },
+    {
+      "probe": "adaptive_order0_arithmetic_bound",
+      "best_ideal_projected_archive_bytes": 185649,
+      "byte_delta_vs_active_floor": 71,
+      "result": "ideal_bound_still_not_below_floor",
+      "details": "per-record adaptive order-0 ideal payload was 169577 bytes before real coder overhead; exact 112 raw scale bytes and minimal stream overhead keep it above floor"
+    },
+    {
+      "probe": "axis_permutation_storage_transform",
+      "best_projected_archive_bytes": 186052,
+      "byte_delta_vs_active_floor": 474,
+      "result": "byte_different_but_not_below_floor",
+      "details": "independent 4D axis permutations did not improve whole-stream Brotli; per-tensor transformed split stayed above floor"
+    },
+    {
+      "probe": "fixed_split_stream_dp",
+      "best_projected_archive_bytes": 185956,
+      "byte_delta_vs_active_floor": 378,
+      "result": "best_local_probe_but_not_below_floor",
+      "details": "biases_then_weights order with 4 Brotli streams projected qsum=169879, stream=170003, archive=185956; no archive was materialized because it remains over active floor"
+    }
+  ],
+  "best_observed_or_projected_candidate": {
+    "status": "over_active_floor",
+    "archive_materialized": false,
+    "projected_archive_bytes": 185956,
+    "projected_byte_delta_vs_current_hdm3_archive": -110,
+    "projected_byte_delta_vs_active_floor": 378,
+    "additional_reduction_required_to_be_strictly_below_active_floor_bytes": 379,
+    "format_sketch": "fixed-schema biases_then_weights q stream partitioned into 4 Brotli chunks plus raw scales",
+    "raw_equality_expected": true,
+    "runtime_custody_closed": false,
+    "reason_not_promoted": "candidate remains above active archive floor and would require runtime-format changes without a below-floor byte result"
+  },
+  "blocked_reason": {
+    "primary": "not_below_active_archive_floor:185578",
+    "current_hdm3_gap_to_strict_below_floor_bytes": 489,
+    "best_probe_gap_to_strict_below_floor_bytes": 379,
+    "next_concrete_blocker": "find at least 379 more deterministic bytes beyond the best fixed split probe, or at least 489 bytes beyond current HDM3, while preserving exact raw decoder equality and a fail-closed runtime adapter"
+  },
+  "commands_evidence": [
+    "git status --short --branch",
+    "jq '{candidate_archive_bytes, source_archive_bytes, delta:(.candidate_archive_bytes-.source_archive_bytes), candidate_decoder_section_bytes, source_decoder_section_bytes, candidate_decoder_section_byte_delta, candidate_payload_bytes, source_payload_bytes, hdm3_stats, decoder_raw_equivalence, section_replacement_proof, dispatch_blockers, exact_eval_packet_readiness}' experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_archive_candidate_manifest.json",
+    "local deterministic Brotli mode/quality/lgwin/lgblock sweeps over PR106x q_stream",
+    "local stdlib codec, simple delta/XOR transform, record-order, per-tensor, adaptive-order0-bound, axis-permutation, and fixed split-stream DP probes"
+  ]
+}

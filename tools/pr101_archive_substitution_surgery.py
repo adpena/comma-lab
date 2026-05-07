@@ -20,9 +20,10 @@ The HNeRV decoder generates pose-aware frames implicitly from latents
   - **Op_KLPoseStream** targets a stream PR101 doesn't ship. CANNOT
     substitute on PR101 (would need a different substrate like PR100/PR106
     that ships poses_se3 separately).
-  - **Op_KLLatent** (not yet built) would need to match PR101's LZMA +
-    per-dim min/scale + uint8 codes wire format; the cathedral's KL pattern
-    is incompatible. CANNOT substitute without a forked inflate.
+  - **Op_KLLatent** is built for cathedral/raw-latent substrates, but PR101's
+    native latent stream uses LZMA + per-dim min/scale + uint8 codes. The
+    cathedral KL pattern is therefore incompatible with stock PR101 runtime
+    substitution. CANNOT substitute without a forked inflate.
 
 PR101 archive byte layout (from
 ``submissions/hnerv_ft_microcodec/src/codec.py:467``):
@@ -77,12 +78,19 @@ class SubstitutionReport:
     latent_blob_len: int
     sidecar_blob_offset: int
     sidecar_blob_len: int
+    inner_member_name: str
     inner_member_input_size: int
     inner_member_output_size: int
     sha256_input_archive: str
     sha256_output_archive: str
+    sha256_input_inner_member: str
+    sha256_output_inner_member: str
     sha256_input_decoder_blob: str
     sha256_replacement_decoder_blob: str
+    sha256_input_latent_blob: str
+    sha256_output_latent_blob: str
+    sha256_input_sidecar_blob: str
+    sha256_output_sidecar_blob: str
     bytes_delta: int
     notes: list[str]
 
@@ -191,12 +199,19 @@ def substitute_decoder_blob(
         latent_blob_len=len(latent_blob),
         sidecar_blob_offset=PR101_DECODER_BLOB_LEN + PR101_LATENT_BLOB_LEN,
         sidecar_blob_len=len(sidecar_blob),
+        inner_member_name=PR101_INNER_MEMBER_NAME,
         inner_member_input_size=len(input_blob),
         inner_member_output_size=len(new_inner),
         sha256_input_archive=_sha256(input_archive.read_bytes()),
         sha256_output_archive=_sha256(output_archive.read_bytes()),
+        sha256_input_inner_member=_sha256(input_blob),
+        sha256_output_inner_member=_sha256(new_inner),
         sha256_input_decoder_blob=_sha256(decoder_blob),
         sha256_replacement_decoder_blob=_sha256(replacement_decoder_blob),
+        sha256_input_latent_blob=_sha256(latent_blob),
+        sha256_output_latent_blob=_sha256(latent_blob),
+        sha256_input_sidecar_blob=_sha256(sidecar_blob),
+        sha256_output_sidecar_blob=_sha256(sidecar_blob),
         bytes_delta=output_size - input_size,
         notes=notes,
     )
@@ -246,12 +261,19 @@ def substitute_latent_blob(
         latent_blob_len=len(replacement_latent_blob),
         sidecar_blob_offset=PR101_DECODER_BLOB_LEN + PR101_LATENT_BLOB_LEN,
         sidecar_blob_len=len(sidecar_blob),
+        inner_member_name=PR101_INNER_MEMBER_NAME,
         inner_member_input_size=len(input_blob),
         inner_member_output_size=len(new_inner),
         sha256_input_archive=_sha256(input_archive.read_bytes()),
         sha256_output_archive=_sha256(output_archive.read_bytes()),
+        sha256_input_inner_member=_sha256(input_blob),
+        sha256_output_inner_member=_sha256(new_inner),
         sha256_input_decoder_blob=_sha256(decoder_blob),
         sha256_replacement_decoder_blob=_sha256(decoder_blob),
+        sha256_input_latent_blob=_sha256(latent_blob),
+        sha256_output_latent_blob=_sha256(replacement_latent_blob),
+        sha256_input_sidecar_blob=_sha256(sidecar_blob),
+        sha256_output_sidecar_blob=_sha256(sidecar_blob),
         bytes_delta=output_size - input_size,
         notes=[
             "latent_blob substituted; decoder + sidecar sections preserved.",
@@ -303,12 +325,19 @@ def substitute_sidecar_blob(
         latent_blob_len=len(latent_blob),
         sidecar_blob_offset=PR101_DECODER_BLOB_LEN + PR101_LATENT_BLOB_LEN,
         sidecar_blob_len=len(replacement_sidecar_blob),
+        inner_member_name=PR101_INNER_MEMBER_NAME,
         inner_member_input_size=len(input_blob),
         inner_member_output_size=len(new_inner),
         sha256_input_archive=_sha256(input_archive.read_bytes()),
         sha256_output_archive=_sha256(output_archive.read_bytes()),
+        sha256_input_inner_member=_sha256(input_blob),
+        sha256_output_inner_member=_sha256(new_inner),
         sha256_input_decoder_blob=_sha256(decoder_blob),
         sha256_replacement_decoder_blob=_sha256(decoder_blob),
+        sha256_input_latent_blob=_sha256(latent_blob),
+        sha256_output_latent_blob=_sha256(latent_blob),
+        sha256_input_sidecar_blob=_sha256(sidecar_blob),
+        sha256_output_sidecar_blob=_sha256(replacement_sidecar_blob),
         bytes_delta=output_size - input_size,
         notes=[
             "sidecar_blob substituted; decoder + latent sections preserved.",

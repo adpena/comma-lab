@@ -224,9 +224,26 @@ def apply_byte_map_inverse(arr_u8: np.ndarray, byte_map: str) -> np.ndarray:
 # Brotli stream packing / unpacking
 # ---------------------------------------------------------------------------
 
-def pack_brotli_stream(raw: bytes, *, quality: int = 11) -> bytes:
-    """Compress one schema-window of bytes via brotli at the given quality."""
-    return brotli.compress(raw, quality=quality)
+def pack_brotli_stream(
+    raw: bytes,
+    *,
+    quality: int = 11,
+    lgwin: int | None = None,
+    lgblock: int | None = None,
+) -> bytes:
+    """Compress one schema-window of bytes via Brotli.
+
+    ``lgwin``/``lgblock`` are optional because PR101's authored payload uses
+    Brotli defaults. Keeping them explicit lets archive-substitution candidates
+    test byte-different Brotli encodings that decode to the same raw tensor
+    stream while preserving PR101's fixed decoder-blob length.
+    """
+    kwargs: dict[str, int] = {"quality": quality}
+    if lgwin is not None:
+        kwargs["lgwin"] = lgwin
+    if lgblock is not None:
+        kwargs["lgblock"] = lgblock
+    return brotli.compress(raw, **kwargs)
 
 
 def decompress_brotli_streams(data: bytes, n_streams: int) -> bytes:
@@ -263,10 +280,7 @@ def _quantize_tensor(name: str, tensor: torch.Tensor, *, n_quant: int = N_QUANT)
     """Per-tensor symmetric INT8 quant. Identical to PR106's quantize_state_dict."""
     t = tensor.detach().cpu().float()
     abs_max = t.abs().max().item()
-    if abs_max > 0:
-        scale = abs_max / n_quant
-    else:
-        scale = 1.0
+    scale = abs_max / n_quant if abs_max > 0 else 1.0
     q = (t / scale).round().clamp(-n_quant, n_quant).to(torch.int8).numpy()
     return _QuantizedTensor(
         name=name,
@@ -336,6 +350,8 @@ def encode_decoder_compact(
     state_dict: dict[str, torch.Tensor],
     *,
     brotli_quality: int = 11,
+    brotli_lgwin: int | None = None,
+    brotli_lgblock: int | None = None,
     effective_byte_maps: dict[int, str] | None = None,
     auto_select: bool = False,
     auto_derive_all: bool = False,
@@ -355,6 +371,11 @@ def encode_decoder_compact(
     Args:
         state_dict: HNeRVDecoder state dict keyed by FIXED_STATE_SCHEMA names.
         brotli_quality: Brotli compression level (PR101 ships at 11).
+        brotli_lgwin / brotli_lgblock: optional Brotli encoder parameters.
+            Omitted values preserve PR101's authored default bitstream. These
+            knobs do not change the decoded raw tensor stream, but they can
+            change archive bytes and must still preserve PR101 fixed offsets
+            before stock-runtime substitution.
         effective_byte_maps: optional override mapping tensor_idx → map_name
             (one of "zig", "negzig", "twos", "off"). When None and
             ``auto_select=False``, PR101's DECODER_BYTE_MAPS is used. Round 2
@@ -398,7 +419,10 @@ def encode_decoder_compact(
     """
     if auto_select and effective_byte_maps is None:
         effective_byte_maps = auto_select_byte_maps(
-            state_dict, brotli_quality=brotli_quality
+            state_dict,
+            brotli_quality=brotli_quality,
+            brotli_lgwin=brotli_lgwin,
+            brotli_lgblock=brotli_lgblock,
         )
 
     # auto_derive_all + explicit overrides resolution. Explicit overrides
@@ -409,22 +433,18 @@ def encode_decoder_compact(
     ):
         # Lazy import to avoid a hard dependency cycle: derivers imports this
         # module's constants and helpers, so we resolve their imports late.
-        from tac.pr101_split_brotli_codec_derivers import (
-            derive_conv4_perms as _derive_conv4_perms,
-            derive_storage_order as _derive_storage_order,
-            derive_stream_ends as _derive_stream_ends,
-        )
+        from tac import pr101_split_brotli_codec_derivers as derivers
         if derived_storage_order is None and auto_derive_all:
-            derived_storage_order = _derive_storage_order(state_dict)
+            derived_storage_order = derivers.derive_storage_order(state_dict)
         if derived_conv4_perms is None and auto_derive_all:
-            derived_conv4_perms = _derive_conv4_perms(
+            derived_conv4_perms = derivers.derive_conv4_perms(
                 state_dict, brotli_quality=brotli_quality
             )
         if derived_stream_ends is None and auto_derive_all:
             # stream_ends needs storage_order; if not yet derived, fall back
             # to PR101 default for stream_ends derivation.
             so_for_se = derived_storage_order if derived_storage_order is not None else DECODER_STORAGE_ORDER
-            derived_stream_ends = _derive_stream_ends(
+            derived_stream_ends = derivers.derive_stream_ends(
                 state_dict, so_for_se, brotli_quality=brotli_quality
             )
 
@@ -459,7 +479,7 @@ def encode_decoder_compact(
     for name in schema_names:
         if name not in state_dict:
             raise Pr101SplitBrotliCodecError(f"missing tensor {name!r} in state_dict")
-    for idx, (name, _shape) in enumerate(FIXED_STATE_SCHEMA):
+    for name, _shape in FIXED_STATE_SCHEMA:
         quantized.append(_quantize_tensor(name, state_dict[name]))
 
     # 2) Build per-tensor on-disk payloads (mapped bytes + fp16 scale), in
@@ -489,7 +509,14 @@ def encode_decoder_compact(
     start = 0
     for end in active_stream_ends:
         window_raw = b"".join(parts_by_storage[start:end])
-        streams.append(pack_brotli_stream(window_raw, quality=brotli_quality))
+        streams.append(
+            pack_brotli_stream(
+                window_raw,
+                quality=brotli_quality,
+                lgwin=brotli_lgwin,
+                lgblock=brotli_lgblock,
+            )
+        )
         start = end
 
     return b"".join(streams)
@@ -499,6 +526,8 @@ def encode_decoder_compact_with_derivers(
     state_dict: dict[str, torch.Tensor],
     *,
     brotli_quality: int = 11,
+    brotli_lgwin: int | None = None,
+    brotli_lgblock: int | None = None,
     effective_byte_maps: dict[int, str] | None = None,
     auto_select: bool = True,
 ) -> tuple[bytes, dict[str, object]]:
@@ -518,23 +547,24 @@ def encode_decoder_compact_with_derivers(
     The caller passes ``params`` through to :func:`decode_decoder_compact`
     (with ``derived_*`` kwargs) for a byte-faithful roundtrip.
     """
-    from tac.pr101_split_brotli_codec_derivers import (
-        derive_conv4_perms as _derive_conv4_perms,
-        derive_storage_order as _derive_storage_order,
-        derive_stream_ends as _derive_stream_ends,
-    )
-    storage_order = _derive_storage_order(state_dict)
-    conv4_perms = _derive_conv4_perms(state_dict, brotli_quality=brotli_quality)
-    stream_ends = _derive_stream_ends(
+    from tac import pr101_split_brotli_codec_derivers as derivers
+    storage_order = derivers.derive_storage_order(state_dict)
+    conv4_perms = derivers.derive_conv4_perms(state_dict, brotli_quality=brotli_quality)
+    stream_ends = derivers.derive_stream_ends(
         state_dict, storage_order, brotli_quality=brotli_quality
     )
     if auto_select and effective_byte_maps is None:
         effective_byte_maps = auto_select_byte_maps(
-            state_dict, brotli_quality=brotli_quality
+            state_dict,
+            brotli_quality=brotli_quality,
+            brotli_lgwin=brotli_lgwin,
+            brotli_lgblock=brotli_lgblock,
         )
     blob = encode_decoder_compact(
         state_dict,
         brotli_quality=brotli_quality,
+        brotli_lgwin=brotli_lgwin,
+        brotli_lgblock=brotli_lgblock,
         effective_byte_maps=effective_byte_maps,
         derived_storage_order=storage_order,
         derived_stream_ends=stream_ends,
@@ -627,6 +657,8 @@ def validate_byte_map_savings(
     state_dict: dict[str, torch.Tensor],
     *,
     brotli_quality: int = 11,
+    brotli_lgwin: int | None = None,
+    brotli_lgblock: int | None = None,
 ) -> dict[int, dict[str, int]]:
     """For each tensor with a non-default ``byte_map``, measure the per-tensor
     brotli output bytes WITH vs WITHOUT the byte_map.
@@ -651,7 +683,14 @@ def validate_byte_map_savings(
     for idx in sorted(DECODER_BYTE_MAPS.keys()):
         # With the assigned byte_map.
         with_payload = _build_per_tensor_payload(quantized[idx], idx)
-        with_bytes = len(pack_brotli_stream(with_payload, quality=brotli_quality))
+        with_bytes = len(
+            pack_brotli_stream(
+                with_payload,
+                quality=brotli_quality,
+                lgwin=brotli_lgwin,
+                lgblock=brotli_lgblock,
+            )
+        )
 
         # Without (force default 'zig').
         qt = quantized[idx]
@@ -663,7 +702,14 @@ def validate_byte_map_savings(
         zig_mapped = _encode_mapped_u8(flat, "zig")
         scale_bytes = np.array([qt.scale], dtype=np.float16).tobytes()
         without_payload = zig_mapped.tobytes() + scale_bytes
-        without_bytes = len(pack_brotli_stream(without_payload, quality=brotli_quality))
+        without_bytes = len(
+            pack_brotli_stream(
+                without_payload,
+                quality=brotli_quality,
+                lgwin=brotli_lgwin,
+                lgblock=brotli_lgblock,
+            )
+        )
 
         delta = with_bytes - without_bytes
         results[idx] = {
@@ -689,6 +735,8 @@ def auto_select_byte_maps(
     state_dict: dict[str, torch.Tensor],
     *,
     brotli_quality: int = 11,
+    brotli_lgwin: int | None = None,
+    brotli_lgblock: int | None = None,
     candidate_maps: tuple[str, ...] = ("zig", "negzig", "twos", "off"),
 ) -> dict[int, str]:
     """Round 2 review CRITICAL fix: produce an ``effective_byte_maps`` dict
@@ -705,7 +753,8 @@ def auto_select_byte_maps(
     Args:
         state_dict: the actual weights to encode. The function quantizes them
             once and tries each candidate map.
-        brotli_quality: must match the encoder's quality (default 11).
+        brotli_quality / brotli_lgwin / brotli_lgblock: must match the
+            encoder's Brotli parameters.
         candidate_maps: tuple of map names to try per tensor. Subset of
             ``{"zig", "negzig", "twos", "off"}``.
 
@@ -755,7 +804,7 @@ def auto_select_byte_maps(
     for idx in range(len(FIXED_STATE_SCHEMA)):
         # Find which storage-order position this tensor occupies.
         try:
-            so_pos_for_idx = DECODER_STORAGE_ORDER.index(idx)
+            DECODER_STORAGE_ORDER.index(idx)
         except ValueError:
             continue  # tensor not in storage order — skip
         w_idx = storage_to_window[idx]
@@ -776,7 +825,14 @@ def auto_select_byte_maps(
                 else:
                     window_parts.append(default_payloads[tensor_idx])
             window_raw = b"".join(window_parts)
-            n = len(pack_brotli_stream(window_raw, quality=brotli_quality))
+            n = len(
+                pack_brotli_stream(
+                    window_raw,
+                    quality=brotli_quality,
+                    lgwin=brotli_lgwin,
+                    lgblock=brotli_lgblock,
+                )
+            )
             if best_bytes is None or n < best_bytes:
                 best_bytes = n
                 best_map = cand
@@ -794,7 +850,6 @@ def auto_select_byte_maps(
 
 
 __all__ = [
-    "auto_select_byte_maps",
     "BASE_CHANNELS",
     "CONV4_INVERSE_PERMS",
     "CONV4_STORAGE_PERMS",
@@ -811,6 +866,7 @@ __all__ = [
     "Pr101SplitBrotliCodecError",
     "apply_byte_map_inverse",
     "apply_conv4_perm",
+    "auto_select_byte_maps",
     "decode_decoder_compact",
     "decode_mapped_u8",
     "decompress_brotli_streams",

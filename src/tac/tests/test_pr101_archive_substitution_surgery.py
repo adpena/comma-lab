@@ -421,11 +421,56 @@ def test_byte_faithful_roundtrip_through_real_pr101_codec(tmp_path) -> None:
         output_archive=out,
     )
     assert report.sha256_input_decoder_blob == report.sha256_replacement_decoder_blob
+    assert report.inner_member_name == "x"
+    assert report.sha256_input_latent_blob == report.sha256_output_latent_blob
+    assert report.sha256_input_sidecar_blob == report.sha256_output_sidecar_blob
     out_inner = mod._read_inner_blob(out)
     out_dec, out_lat, out_side = mod._split_pr101_inner_blob(out_inner)
     assert out_dec == decoder_blob
     assert out_lat == _latent
     assert out_side == _sidecar
+
+
+def test_real_pr101_lgwin_variant_materializes_same_length_different_decoder(
+    tmp_path,
+) -> None:
+    """PR101 can carry a byte-different Brotli encoding of the same decoder raw
+    tensor stream while preserving the fixed 162,164-byte decoder slice."""
+    mod = _load_tool_module()
+    repo_root = pathlib.Path(__file__).resolve().parents[3]
+    canonical = (
+        repo_root
+        / "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip"
+    )
+    if not canonical.is_file():
+        pytest.skip("canonical PR101 intake not present")
+
+    from tac.pr101_split_brotli_codec import decode_decoder_compact, encode_decoder_compact
+
+    inner = mod._read_inner_blob(canonical)
+    decoder_blob, _latent, _sidecar = mod._split_pr101_inner_blob(inner)
+    state_dict = decode_decoder_compact(decoder_blob)
+    lgwin_blob = encode_decoder_compact(
+        state_dict,
+        brotli_quality=11,
+        brotli_lgwin=18,
+    )
+    assert len(lgwin_blob) == mod.PR101_DECODER_BLOB_LEN
+    assert lgwin_blob != decoder_blob
+    # Decodes to the same tensor stream under the stock PR101 byte-map contract.
+    assert encode_decoder_compact(decode_decoder_compact(lgwin_blob)) == decoder_blob
+
+    out = tmp_path / "lgwin18_pr101.zip"
+    report = mod.substitute_decoder_blob(
+        input_archive=canonical,
+        replacement_decoder_blob=lgwin_blob,
+        output_archive=out,
+    )
+    assert report.output_size_bytes == report.input_size_bytes
+    assert report.sha256_output_archive != report.sha256_input_archive
+    assert report.sha256_replacement_decoder_blob != report.sha256_input_decoder_blob
+    assert report.sha256_input_latent_blob == report.sha256_output_latent_blob
+    assert report.sha256_input_sidecar_blob == report.sha256_output_sidecar_blob
 
 
 def test_cli_substitute_writes_report(tmp_path, capsys) -> None:

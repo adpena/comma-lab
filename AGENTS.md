@@ -384,6 +384,88 @@ device portability, maintainability, or upstreamability differently from the
 contest objective, but it must not be mislabeled as a contest score-lowering
 candidate.
 
+## Cross-Language Conformance Tests
+
+Tests for archive parsers, codec grammars, entropy coders, byte transducers,
+generated decoders, and native ports must be written as reusable conformance
+assets, not just Python regression checks. Prefer golden vectors and manifests
+that another implementation in Rust, Zig, C, C++, assembly, or Python can run
+without understanding the original test harness.
+
+For every promoted byte-level primitive, include:
+
+- canonical input bytes, output bytes, SHA-256s, lengths, offsets, CRCs, and
+  charged-byte accounting;
+- decoded semantic facts such as tensor names, shapes, dtypes, scale factors,
+  byte maps, stream boundaries, entropy tables, and padding/tail-bit rules;
+- negative vectors for malformed headers, duplicate members, zip-slip names,
+  truncated streams, trailing data, bad CRC/SHA, impossible entropy symbols,
+  unsupported feature flags, and no-op candidate proofs;
+- deterministic output proofs: same input and config must emit byte-identical
+  output across repeated runs and across supported platforms;
+- explicit oracle status: Python-readable reference, native implementation
+  under test, or independently generated third-party vector.
+
+Python may remain the most readable oracle during deconstruction. Native
+implementations become authoritative only after they pass the same vectors
+byte-for-byte and fail closed on the same invalid inputs. Training loops can be
+research/proxy evidence, but fixed inference, inflate, packing, and bitstream
+transforms should be reducible to deterministic byte transducers whenever the
+wire contract is fully understood.
+
+## Deterministic Submission Packet Compiler
+
+The long-term native/codegen objective is a separate deterministic
+submission-packet compiler, not a collection of lane-local rewrite tricks. The
+compiler should be able to ingest any contest-compliant submission packet,
+deconstruct it into typed streams and conformance vectors, then emit either an
+identical packet or an intentionally byte-different packet whose changes are
+proven by manifest.
+
+The compiler has at least two legitimate targets:
+
+- `contest_one_video_replay`: overfit to the contest video. This target may
+  replace learned inference with deterministic replay, distilled byte
+  transducers, generated code, lookup tables, motion atoms, or fixed
+  per-frame/per-pair streams derived from the trained model's behavior on the
+  one scored video. It is valid only when all replay data and runtime code are
+  inside the packet or fixed contest code, the scored inflate path consumes
+  them, and exact CUDA auth eval validates the resulting archive.
+- `production_generalized`: works across videos and product targets. This
+  target may use the same deconstruction and native-codegen infrastructure, but
+  it must preserve generalization, device portability, maintainability,
+  openpilot/comma-ai integration constraints, and deterministic reproducible
+  builds across supported platforms.
+
+Minimum contract:
+
+- input: a contest packet with `archive.zip`, `inflate.sh`, runtime files, and
+  optional source/report material;
+- intake: strict ZIP validation, runtime-tree manifest, payload grammar
+  detection, member SHA-256s, charged bytes, exact offsets, decoder/codec
+  contracts, and unsupported-feature classification;
+- deconstruction: typed streams for masks, renderer weights, latents, poses,
+  sidechannels, entropy tables, generated code, and archive metadata whenever
+  the packet exposes them;
+- rewrite modes:
+  - `identity`: re-emit byte-identical output and prove archive/runtime parity;
+  - `canonicalize`: change only contest-irrelevant metadata when allowed by
+    compliance policy and report every changed byte;
+  - `optimize`: change score-affecting bytes only when a decoder/runtime
+    contract consumes them and exact old/new SHA plus charged-byte accounting
+    is recorded;
+- output: deterministic packet, conformance vectors, provenance JSON,
+  reproducible build/toolchain manifest for native helpers, and a strict
+  compliance report suitable for exact CUDA auth eval.
+
+The compiler must fail closed unless the transformed packet remains
+contest-compliant: all score-affecting artifacts inside `archive.zip` or fixed
+contest code, no scorer modifications, no hidden sidecars, deterministic
+inflate, no ZIP parser-divergence dependency, and no external network or local
+state dependency. Identity and canonicalization modes are useful for OSS and
+production even when `optimize` has no byte win; only `optimize` may create a
+score-lowering candidate, and only with charged-bit proof.
+
 ## Public Release Hygiene And Hosted Supplements
 
 The public submission/report/site track may use Lightning.ai notebooks and

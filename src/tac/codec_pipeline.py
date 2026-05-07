@@ -150,6 +150,8 @@ class Op1_PR101SplitBrotli:
     """
     name: str = "pr101_split_brotli"
     brotli_quality: int = 11
+    brotli_lgwin: int | None = None
+    brotli_lgblock: int | None = None
     auto_select: bool = True
     explicit_overrides: dict[int, str] | None = None
     auto_derive_all_constants: bool = False
@@ -179,7 +181,10 @@ class Op1_PR101SplitBrotli:
         elif self.auto_select:
             from tac.pr101_split_brotli_codec import auto_select_byte_maps
             effective_byte_maps = auto_select_byte_maps(
-                state_dict, brotli_quality=self.brotli_quality
+                state_dict,
+                brotli_quality=self.brotli_quality,
+                brotli_lgwin=self.brotli_lgwin,
+                brotli_lgblock=self.brotli_lgblock,
             )
         else:
             effective_byte_maps = None  # let PR101 default DECODER_BYTE_MAPS apply
@@ -206,6 +211,8 @@ class Op1_PR101SplitBrotli:
             blob = encode_decoder_compact(
                 state_dict,
                 brotli_quality=self.brotli_quality,
+                brotli_lgwin=self.brotli_lgwin,
+                brotli_lgblock=self.brotli_lgblock,
                 effective_byte_maps=effective_byte_maps,
                 derived_storage_order=storage_order,
                 derived_stream_ends=stream_ends,
@@ -220,6 +227,8 @@ class Op1_PR101SplitBrotli:
             blob = encode_decoder_compact(
                 state_dict,
                 brotli_quality=self.brotli_quality,
+                brotli_lgwin=self.brotli_lgwin,
+                brotli_lgblock=self.brotli_lgblock,
                 effective_byte_maps=effective_byte_maps,
                 auto_select=False,  # already computed above; do not re-derive
             )
@@ -280,7 +289,12 @@ class Op1_PR101SplitBrotli:
             findings.append(f"missing tensors: {sorted(missing)}")
         # Contrarian gate: per-byte-map regression check.
         if not missing:
-            results = validate_byte_map_savings(state_dict, brotli_quality=self.brotli_quality)
+            results = validate_byte_map_savings(
+                state_dict,
+                brotli_quality=self.brotli_quality,
+                brotli_lgwin=self.brotli_lgwin,
+                brotli_lgblock=self.brotli_lgblock,
+            )
             for idx, info in results.items():
                 if info["delta_bytes"] > 0:
                     findings.append(

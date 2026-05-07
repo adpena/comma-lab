@@ -167,6 +167,13 @@ def test_pack_brotli_stream_quality_default_is_eleven() -> None:
     assert brotli.decompress(packed) == raw
 
 
+def test_pack_brotli_stream_accepts_optional_window_params() -> None:
+    raw = b"window-variant" * 1000
+    packed = pack_brotli_stream(raw, quality=11, lgwin=18)
+    import brotli
+    assert brotli.decompress(packed) == raw
+
+
 def test_encoder_rejects_missing_tensor() -> None:
     sd = _synthetic_state_dict()
     del sd["stem.bias"]

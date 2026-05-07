@@ -677,6 +677,41 @@ changed and exact archive custody exists. Outside contest mode they must be
 optional, deterministic, reproducibly built, and paired with scalar or portable
 fallbacks suitable for comma-ai/openpilot production review.
 
+## Deterministic packet compiler — non-negotiable
+
+Low-level native/codegen work should converge into a separate deterministic
+submission-packet compiler. It must ingest a contest-compliant packet,
+deconstruct archive/runtime/payload bytes into a typed manifest and golden
+vectors, then emit either byte-identical output or an intentionally
+byte-different packet with exact old/new SHA-256 and charged-byte proof.
+
+The compiler must support separate target profiles:
+
+- `contest_one_video_replay`: contest-only, one-video overfit replay. It may
+  replace learned inference with deterministic generated code, fixed tables,
+  distilled byte transducers, or per-frame/per-pair streams derived from the
+  trained model's behavior on the scored video. It is admissible only when the
+  archive remains self-contained and exact CUDA auth eval validates it.
+- `production_generalized`: comma-ai/openpilot production target. It may reuse
+  the same byte-deconstruction machinery, but must preserve cross-video
+  behavior, portability, maintainability, and deterministic reproducible native
+  builds.
+
+Required modes:
+
+- `identity`: re-emit the packet with byte-for-byte parity.
+- `canonicalize`: normalize only compliance-approved metadata and report every
+  changed byte.
+- `optimize`: change score-affecting bytes only when the runtime consumes the
+  new contract and all artifacts remain inside the contest packet.
+
+The compiler must fail closed on hidden sidecars, scorer modifications,
+external state, network dependencies, unsupported ZIP features, parser
+divergence, non-deterministic native builds, missing golden vectors, or missing
+runtime-tree custody. This tool is the bridge from Python deconstruction to
+Rust/Zig/C/ASM ports: Python remains the oracle until native implementations
+pass the same vectors byte-for-byte.
+
 ## Deployment version checklist — non-negotiable
 
 Before deploying ANY code to Modal, Kaggle, Lightning, or any remote platform:

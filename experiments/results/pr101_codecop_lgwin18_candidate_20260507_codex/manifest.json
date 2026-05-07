@@ -1,0 +1,92 @@
+{
+  "anchor": {
+    "archive_bytes": 178258,
+    "baseline_substream_bytes": 162164,
+    "d_pose": 0.00017102,
+    "d_seg": 0.00066304
+  },
+  "candidates": [
+    {
+      "archive_member_name": "x",
+      "archive_path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/substituted/pr101_lgwin18_pr101_lgwin18_auto_selectFalse_brotli_lgwin18_brotli_quality11/archive.zip",
+      "archive_sha256": "c95c59933f95746f6b8dd5fb7b4450419a25c01b2c9f8dac6e586cd4b3582933",
+      "archive_size_bytes": 178258,
+      "archive_substitution_report_path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/substituted/pr101_lgwin18_pr101_lgwin18_auto_selectFalse_brotli_lgwin18_brotli_quality11/substitution_report.json",
+      "archive_substitution_schema": "pr101_decoder_blob_surgery_v1",
+      "blockers": [
+        "operator_override_to_flip_ready_for_dispatch_required",
+        "exact_runtime_parity_not_supplied",
+        "matching_lane_dispatch_claim_not_supplied"
+      ],
+      "bytes_in": 915832,
+      "bytes_out": 162164,
+      "candidate_id": "pr101_lgwin18_auto_selectFalse_brotli_lgwin18_brotli_quality11",
+      "candidate_substream_bytes": 162164,
+      "evidence_semantics": "cpu_substrate_predicted_band",
+      "expected_archive_sha256": "c95c59933f95746f6b8dd5fb7b4450419a25c01b2c9f8dac6e586cd4b3582933",
+      "expected_archive_size_bytes": 178258,
+      "input_decoder_blob_sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6",
+      "input_latent_blob_sha256": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe",
+      "input_sidecar_blob_sha256": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f",
+      "op_class": "Op1_PR101SplitBrotli",
+      "op_module": "tac.codec_pipeline",
+      "op_params": {
+        "auto_select": false,
+        "brotli_lgwin": 18,
+        "brotli_quality": 11
+      },
+      "output_inner_member_sha256": "a7df36c2b11f88ca640e1bb259a526f80190c86e474e9b06204bb54657d3356c",
+      "output_latent_blob_sha256": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe",
+      "output_sidecar_blob_sha256": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f",
+      "predicted_archive_bytes": 178258,
+      "predicted_band": [
+        0.22522148345685775,
+        0.2274850159539116
+      ],
+      "predicted_decomposition": {
+        "pose_share": 0.18269923004665778,
+        "pose_term": 0.04135456443973265,
+        "rate_share": 0.5243780922966286,
+        "rate_term": 0.11869468526565202,
+        "seg_share": 0.2929226776567136,
+        "seg_term": 0.066304,
+        "total": 0.22635324970538467
+      },
+      "predicted_score": 0.22635324970538467,
+      "rate_delta_vs_anchor": 0.0,
+      "ready_for_exact_eval_dispatch": false,
+      "replacement_decoder_blob_sha256": "ea7155370f0adaab5d0078ef9158de7abe8363ff7a09afd26cf699ed8b81600d",
+      "score_claim": false,
+      "score_delta_vs_anchor": 0.0,
+      "source_archive_path": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip",
+      "source_archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "source_archive_size_bytes": 178258,
+      "source_inner_member_sha256": "5f1948f9572e65f71c614d2ff15764ee416522e25cb1b06c8b1299c1306e8aaf"
+    }
+  ],
+  "evidence_semantics": "cpu_substrate_predicted_band",
+  "generated_at_unix_seconds": 1778188878,
+  "n_candidates": 1,
+  "next_blocking_step": "archive_substitution_surgery: substrate-specific CodecOp blob \u2192 archive zip member replacement, then operator override to flip ready_for_exact_eval_dispatch=True per-candidate",
+  "ready_for_exact_eval_dispatch_count": 0,
+  "schema_version": "codec_op_param_sweep_manifest.v1",
+  "state_dict_source": {
+    "archive_path": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip",
+    "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+    "archive_size_bytes": 178258,
+    "decoder_blob_bytes": 162164,
+    "decoder_blob_offset": 0,
+    "decoder_blob_sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6",
+    "inner_member_bytes": 178158,
+    "inner_member_name": "x",
+    "inner_member_sha256": "5f1948f9572e65f71c614d2ff15764ee416522e25cb1b06c8b1299c1306e8aaf",
+    "kind": "pr101_archive_decoder_blob",
+    "latent_blob_bytes": 15387,
+    "latent_blob_offset": 162164,
+    "latent_blob_sha256": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe",
+    "sidecar_blob_bytes": 607,
+    "sidecar_blob_offset": 177551,
+    "sidecar_blob_sha256": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f"
+  },
+  "tool": "tools/codec_op_param_sweep_manifest.py"
+}
