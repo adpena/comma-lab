@@ -1074,6 +1074,208 @@ def test_field_meta_selector_refuses_planning_packet_as_score_evidence_even_if_s
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_field_meta_selector_normalizes_hdm3_and_pr101_rate_recode_manifests(
+    tmp_path: Path,
+) -> None:
+    hdm3_archive = _zip_fixture(tmp_path / "hdm3.zip", "x", b"hdm3")
+    pr101_archive = _zip_fixture(tmp_path / "pr101.zip", "x", b"pr101")
+    hdm3_manifest = tmp_path / "hdm3_manifest.json"
+    hdm3_manifest.write_text(
+        json.dumps(
+            {
+                "tool": "tac.hnerv_hdm3_archive_candidate.build_hdm3_archive_candidate",
+                "candidate_archive_path": hdm3_archive.as_posix(),
+                "candidate_archive_sha256": hashlib.sha256(hdm3_archive.read_bytes()).hexdigest(),
+                "candidate_archive_bytes": hdm3_archive.stat().st_size,
+                "source_archive_bytes": hdm3_archive.stat().st_size + 14,
+                "candidate_rate_score_delta_if_runtime_supported_and_components_equal": -9.322025e-6,
+                "ready_for_exact_eval_dispatch": False,
+                "score_claim": False,
+                "dispatch_attempted": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    proof = tmp_path / "runtime_adapter_proof.with_tool_run.json"
+    proof.write_text(
+        json.dumps(
+            {
+                "candidate_archive_sha256": hashlib.sha256(hdm3_archive.read_bytes()).hexdigest(),
+                "ready_for_public_runtime_inflate": True,
+                "inflate_output_parity_proven_by_payload_identity": True,
+                "remaining_dispatch_blockers": [
+                    "strict_pre_submission_compliance_json_missing",
+                    "lane_dispatch_claim_missing",
+                    "exact_cuda_auth_eval_missing",
+                ],
+                "score_claim": False,
+                "dispatch_attempted": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    pr101_manifest = tmp_path / "pr101_manifest.json"
+    pr101_manifest.write_text(
+        json.dumps(
+            {
+                "tool": "tac.hnerv_pr101_schema_packer.build_pr101_schema_archive_candidate",
+                "candidate_archive_path": pr101_archive.as_posix(),
+                "candidate_archive_sha256": hashlib.sha256(pr101_archive.read_bytes()).hexdigest(),
+                "candidate_archive_bytes": pr101_archive.stat().st_size,
+                "source_archive_bytes": pr101_archive.stat().st_size + 36,
+                "candidate_rate_score_delta_if_runtime_supported_and_components_equal": -2.3970922e-5,
+                "ready_for_exact_eval_dispatch": False,
+                "score_claim": False,
+                "dispatch_attempted": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[hdm3_manifest, pr101_manifest])
+
+    rows = {row["candidate_id"]: row for row in report["rows"]}
+    hdm3 = rows["pr106x_hdm3_decoder_recode_14byte"]
+    assert hdm3["family_group"] == "hnerv_decoder_entropy_recode"
+    assert hdm3["pareto_scope"] == "hnerv_rate_only_exact_archive"
+    assert hdm3["byte_delta"] == -14
+    assert hdm3["expected_total_score_delta"] == -9.322025e-6
+    assert hdm3["rate_only_delta_proof"]["status"] == "passed"
+    assert hdm3["archive_proof"]["byte_closed"] is True
+    assert hdm3["runtime_proof"]["runtime_closed"] is False
+    assert hdm3["readiness_evidence_semantics"] == "hdm3_runtime_adapter_payload_identity"
+    assert "hdm3_runtime_adapter_archive_parity_proof_missing" not in hdm3["candidate_blockers"]
+    assert hdm3["frontier_row"]["family"] == "hnerv_hdm3_decoder_entropy_recode"
+    pr101 = rows["pr106x_pr101_schema_f32_recode_36byte"]
+    assert pr101["family"] == "hnerv_pr101_schema_decoder_recode"
+    assert pr101["byte_delta"] == -36
+    assert pr101["rate_only_delta_proof"]["status"] == "passed"
+    assert "fp16_scale_probe_is_scorer_changing_and_not_rate_only" in pr101["interaction_assumptions"]
+    assert pr101["archive_proof"]["byte_closed"] is True
+    assert pr101["ready_for_exact_eval_dispatch"] is False
+
+
+def test_field_meta_selector_normalizes_categorical_and_entropy_planning_manifests(
+    tmp_path: Path,
+) -> None:
+    categorical_archive = _zip_fixture(tmp_path / "categorical.zip", "categorical_payload.bin", b"labels")
+    categorical_manifest = tmp_path / "categorical_summary.json"
+    categorical_manifest.write_text(
+        json.dumps(
+            {
+                "kind": "categorical_byte_closed_local_candidate_build",
+                "archive_bytes": categorical_archive.stat().st_size,
+                "archive_sha256": hashlib.sha256(categorical_archive.read_bytes()).hexdigest(),
+                "paths": {"archive": categorical_archive.as_posix()},
+                "payload_source": {"source_archive_bytes": categorical_archive.stat().st_size + 52_679},
+                "readiness_blockers": ["decode_reencode_full_decode_not_proven"],
+                "ready_for_exact_eval_dispatch": False,
+                "score_claim": False,
+                "dispatch_attempted": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    entropy_manifest = tmp_path / "entropy.json"
+    entropy_manifest.write_text(
+        json.dumps(
+            {
+                "tool": "tac.hnerv_hdc2_combined_entropy",
+                "planning_only": True,
+                "score_claim": False,
+                "dispatch_attempted": False,
+                "ready_for_exact_eval_dispatch": False,
+                "byte_accounting": {
+                    "net_byte_delta_after_combined_targets": -13_565,
+                    "projected_rate_score_delta_after_combined_targets": -0.009032376699102255,
+                },
+                "target": {
+                    "frontier_archive_bytes": 186_080,
+                    "frontier_archive_sha256": "a" * 64,
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[categorical_manifest, entropy_manifest])
+
+    rows = {row["candidate_id"]: row for row in report["rows"]}
+    categorical = rows["categorical_openpilot_hpm1_payload_candidate"]
+    assert categorical["family_group"] == "categorical_selfcompression_mask_payload"
+    assert categorical["byte_delta"] == -52_679
+    assert categorical["archive_proof"]["byte_closed"] is True
+    assert categorical["proxy_row"] is False
+    assert categorical["planning_priority_rankable"] is False
+    assert "decode_reencode_identity_required_before_dispatch" in categorical["interaction_assumptions"]
+    entropy = rows["hnerv_hdc2_hdm3_combined_entropy_target"]
+    assert entropy["proxy_row"] is True
+    assert entropy["planning_priority_rankable"] is False
+    assert entropy["byte_delta"] == -13_565
+    assert entropy["expected_total_score_delta"] == -0.009032376699102255
+    assert "planning_or_proxy_packet" in entropy["pareto_eligibility_blockers"]
+
+
+def test_field_meta_selector_normalizes_pr102_zero_byte_runtime_tuning_custody(
+    tmp_path: Path,
+) -> None:
+    archive = _zip_fixture(tmp_path / "pr102.zip", "0.bin", b"runtime-tuning")
+    manifest = tmp_path / "pr102_custody.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "tool": "tools/audit_pr102_zero_byte_tuning_custody.py",
+                "correct_pr102_archive": {
+                    "path": archive.as_posix(),
+                    "bytes": archive.stat().st_size,
+                    "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+                },
+                "zero_byte_runtime_contract": {
+                    "archive_byte_delta": 0,
+                    "archive_payload_unchanged_from_pr100": True,
+                },
+                "dispatch_blockers": ["pr102_exact_cuda_replay_missing"],
+                "ready_for_exact_eval_dispatch": False,
+                "score_claim": False,
+                "dispatch_attempted": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    assert row["candidate_id"] == "pr102_zero_byte_runtime_tuning"
+    assert row["family_group"] == "hnerv_runtime_tuning"
+    assert row["byte_delta"] == 0
+    assert row["expected_total_score_delta"] == 0.0
+    assert row["archive_proof"]["byte_closed"] is True
+    assert row["runtime_proof"]["runtime_closed"] is False
+    assert row["proxy_row"] is False
+    assert row["pareto_eligible"] is False
+    assert "zero_byte_runtime_tuning_no_archive_delta" in row["interaction_assumptions"]
+    assert "pr102_exact_cuda_replay_missing" in row["candidate_blockers"]
+
+
 def test_field_meta_selector_does_not_ingest_unclosed_runtime_as_dispatch_ready(
     tmp_path: Path,
 ) -> None:
@@ -1129,6 +1331,15 @@ def test_build_field_meta_dispatch_selection_cli_writes_json(tmp_path: Path) -> 
     assert payload["ready_candidate_count"] == 0
     assert payload["selected_candidate"]["candidate_static_preflight_ready"] is True
     assert payload["selected_candidate"]["ready_for_exact_eval_dispatch"] is False
+
+
+def _zip_fixture(path: Path, member: str, payload: bytes) -> Path:
+    info = zipfile.ZipInfo(member)
+    info.date_time = (1980, 1, 1, 0, 0, 0)
+    info.external_attr = 0o644 << 16
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr(info, payload)
+    return path
 
 
 def _packet_manifest(

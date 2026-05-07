@@ -1747,6 +1747,474 @@ def _apogee_readiness_component_score_penalty(evidence_payload: Mapping[str, Any
     return seg_penalty + pose_penalty
 
 
+def _candidate_source_byte_delta(payload: Mapping[str, Any]) -> int | None:
+    candidate_bytes = _optional_numeric(payload.get("candidate_archive_bytes"))
+    source_bytes = _optional_numeric(payload.get("source_archive_bytes"))
+    if candidate_bytes is None or source_bytes is None:
+        return None
+    return int(candidate_bytes - source_bytes)
+
+
+def _append_artifact_paths(
+    normalized: dict[str, Any],
+    *,
+    manifest_path: Path,
+    repo_root: Path,
+    extra_paths: Iterable[Any] = (),
+) -> None:
+    normalized["artifact_paths"] = _ordered_unique_strings(
+        path
+        for path in [
+            *(_path_values(normalized.get("artifact_paths"))),
+            *[str(path) for path in extra_paths if str(path)],
+            repo_relative(manifest_path, repo_root),
+        ]
+        if path
+    )
+
+
+def _normalize_hnerv_hdm3_archive_candidate(
+    payload: Mapping[str, Any],
+    *,
+    manifest_path: Path,
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    if payload.get("tool") != "tac.hnerv_hdm3_archive_candidate.build_hdm3_archive_candidate":
+        return None
+    normalized = dict(payload)
+    normalized.setdefault("candidate_id", "pr106x_hdm3_decoder_recode_14byte")
+    normalized.setdefault("family", "hnerv_hdm3_decoder_entropy_recode")
+    normalized.setdefault("family_group", "hnerv_decoder_entropy_recode")
+    normalized.setdefault("pareto_scope", "hnerv_rate_only_exact_archive")
+    normalized.setdefault("paradigms", ["hidden_gem_entropy", "hnerv_frontier"])
+    normalized.setdefault("role", "rate_recode_substitute")
+    normalized.setdefault("action_class", "implement_hdm3_runtime_adapter_and_exact_eval_packet")
+    normalized.setdefault("priority_tier", 2)
+    normalized.setdefault("evidence_grade", "empirical_archive_candidate_runtime_blocked")
+    byte_delta = _candidate_source_byte_delta(payload)
+    if byte_delta is not None:
+        normalized.setdefault("byte_delta", byte_delta)
+    normalized.setdefault(
+        "expected_total_score_delta_rate_only",
+        payload.get("candidate_rate_score_delta_if_runtime_supported_and_components_equal"),
+    )
+    normalized.setdefault("expected_seg_dist_delta", 0.0)
+    normalized.setdefault("expected_pose_dist_delta", 0.0)
+    normalized.setdefault("expected_information_gain_nats", 0.05)
+    normalized.setdefault(
+        "interaction_assumptions",
+        [
+            "rate_only_decoder_raw_equivalent_recode",
+            "runtime_adapter_required_before_exact_eval",
+            "component_deltas_require_exact_cuda_confirmation",
+        ],
+    )
+    normalized.setdefault(
+        "code_paths",
+        [
+            "src/tac/hnerv_hdm3_archive_candidate.py",
+            "src/tac/hnerv_decoder_recode.py",
+            "src/tac/hnerv_hdm3_runtime_adapter.py",
+            "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/hdm3_normalize.py",
+        ],
+    )
+    proof_path = manifest_path.parent / "runtime_adapter_proof.with_tool_run.json"
+    if proof_path.is_file():
+        try:
+            proof = read_json(proof_path)
+        except (OSError, ValueError):
+            proof = {}
+        if (
+            isinstance(proof, Mapping)
+            and proof.get("candidate_archive_sha256") == normalized.get("candidate_archive_sha256")
+            and proof.get("ready_for_public_runtime_inflate") is True
+            and proof.get("inflate_output_parity_proven_by_payload_identity") is True
+        ):
+            obsolete_blockers = {
+                "hdm3_runtime_adapter_archive_parity_proof_missing",
+                "hdm3_runtime_tree_parity_manifest_missing",
+                "hdm3_inflate_output_parity_missing",
+            }
+            normalized["dispatch_blockers"] = _ordered_unique_strings(
+                [
+                    *[
+                        blocker
+                        for blocker in _string_list(normalized.get("dispatch_blockers"))
+                        if blocker not in obsolete_blockers
+                    ],
+                    *(_string_list(proof.get("remaining_dispatch_blockers"))),
+                ]
+            )
+            normalized["evidence_grade"] = (
+                "empirical_archive_candidate_runtime_adapter_parity_exact_cuda_blocked"
+            )
+            normalized["runtime_adapter_parity_proven"] = True
+            normalized["readiness_evidence_path"] = repo_relative(proof_path, repo_root)
+            normalized["readiness_evidence_sha256"] = sha256_file(proof_path)
+            normalized["readiness_evidence_semantics"] = "hdm3_runtime_adapter_payload_identity"
+    _append_artifact_paths(
+        normalized,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+        extra_paths=[
+            normalized.get("candidate_archive_path"),
+            normalized.get("source_archive_path"),
+            manifest_path.parent / "runtime_adapter_proof.with_tool_run.json",
+        ],
+    )
+    return normalized
+
+
+def _normalize_pr102_zero_byte_tuning_custody(
+    payload: Mapping[str, Any],
+    *,
+    manifest_path: Path,
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    if (
+        payload.get("tool") != "tools/audit_pr102_zero_byte_tuning_custody.py"
+        and payload.get("schema") != "pr102_zero_byte_inference_tuning_custody_manifest_v1"
+    ):
+        return None
+    normalized = dict(payload)
+    normalized.setdefault("candidate_id", "pr102_zero_byte_runtime_tuning")
+    normalized.setdefault("family", "hnerv_zero_byte_runtime_tuning")
+    normalized.setdefault("family_group", "hnerv_runtime_tuning")
+    normalized.setdefault("pareto_scope", "hnerv_zero_byte_runtime_tuning")
+    normalized.setdefault("paradigms", ["hidden_gem_runtime", "hnerv_frontier", "zero_byte_tuning"])
+    normalized.setdefault("role", "zero_byte_runtime_substitute")
+    normalized.setdefault("action_class", "port_runtime_constants_and_exact_replay")
+    normalized.setdefault("priority_tier", 2)
+    normalized.setdefault("evidence_grade", "external_custody_exact_replay_missing")
+    archive = payload.get("correct_pr102_archive")
+    if not isinstance(archive, Mapping):
+        archive = payload.get("canonical_archive")
+    if isinstance(archive, Mapping):
+        normalized.setdefault("candidate_archive_path", archive.get("path") or archive.get("local_path"))
+        normalized.setdefault("candidate_archive_sha256", archive.get("sha256"))
+        normalized.setdefault("candidate_archive_bytes", archive.get("bytes"))
+        normalized.setdefault("source_archive_bytes", archive.get("bytes"))
+    contract = payload.get("zero_byte_runtime_contract")
+    if isinstance(contract, Mapping):
+        normalized.setdefault("byte_delta", contract.get("archive_byte_delta"))
+    normalized.setdefault("expected_total_score_delta", 0.0)
+    normalized.setdefault("expected_seg_dist_delta", 0.0)
+    normalized.setdefault("expected_pose_dist_delta", 0.0)
+    normalized.setdefault("expected_information_gain_nats", 0.3)
+    normalized.setdefault(
+        "interaction_assumptions",
+        [
+            "zero_byte_runtime_tuning_no_archive_delta",
+            "requires_exact_cuda_replay_before_score_claim",
+            "no_op_control_required_before_current_stack_port",
+        ],
+    )
+    normalized.setdefault(
+        "dispatch_blockers",
+        _ordered_unique_strings(
+            [
+                *(_string_list(payload.get("dispatch_blockers"))),
+                *(_string_list(payload.get("exact_next_blockers"))),
+                "strict_pre_submission_compliance_json_missing",
+                "lane_dispatch_claim_missing",
+                "exact_cuda_auth_eval_missing",
+            ]
+        ),
+    )
+    normalized.setdefault(
+        "code_paths",
+        [
+            "tools/audit_pr102_zero_byte_tuning_custody.py",
+            "tools/fetch_all_public_pr_archives.py",
+        ],
+    )
+    _append_artifact_paths(
+        normalized,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+        extra_paths=[normalized.get("candidate_archive_path")],
+    )
+    return normalized
+
+
+def _normalize_hnerv_pr101_schema_candidate(
+    payload: Mapping[str, Any],
+    *,
+    manifest_path: Path,
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    if payload.get("tool") != "tac.hnerv_pr101_schema_packer.build_pr101_schema_archive_candidate":
+        return None
+    normalized = dict(payload)
+    normalized.setdefault("candidate_id", "pr106x_pr101_schema_f32_recode_36byte")
+    normalized.setdefault("family", "hnerv_pr101_schema_decoder_recode")
+    normalized.setdefault("family_group", "hnerv_decoder_entropy_recode")
+    normalized.setdefault("pareto_scope", "hnerv_rate_only_exact_archive")
+    normalized.setdefault("paradigms", ["hidden_gem_entropy", "hnerv_frontier", "pr101_schema"])
+    normalized.setdefault("role", "rate_recode_substitute")
+    normalized.setdefault("action_class", "implement_pr101_schema_runtime_adapter_and_exact_eval_packet")
+    normalized.setdefault("priority_tier", 2)
+    normalized.setdefault("evidence_grade", "empirical_archive_candidate_runtime_blocked")
+    byte_delta = _candidate_source_byte_delta(payload)
+    if byte_delta is not None:
+        normalized.setdefault("byte_delta", byte_delta)
+    normalized.setdefault(
+        "expected_total_score_delta_rate_only",
+        payload.get("candidate_rate_score_delta_if_runtime_supported_and_components_equal"),
+    )
+    normalized.setdefault("expected_seg_dist_delta", 0.0)
+    normalized.setdefault("expected_pose_dist_delta", 0.0)
+    normalized.setdefault("expected_information_gain_nats", 0.08)
+    normalized.setdefault(
+        "interaction_assumptions",
+        [
+            "rate_only_decoder_raw_equivalent_recode",
+            "runtime_adapter_required_before_exact_eval",
+            "fp16_scale_probe_is_scorer_changing_and_not_rate_only",
+            "component_deltas_require_exact_cuda_confirmation",
+        ],
+    )
+    normalized.setdefault(
+        "code_paths",
+        [
+            "src/tac/hnerv_pr101_schema_packer.py",
+            "tools/build_hnerv_pr101_schema_candidate.py",
+        ],
+    )
+    _append_artifact_paths(
+        normalized,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+        extra_paths=[normalized.get("candidate_archive_path"), normalized.get("source_archive_path")],
+    )
+    return normalized
+
+
+def _normalize_pr101_repacked_archive(
+    payload: Mapping[str, Any],
+    *,
+    manifest_path: Path,
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    if payload.get("tool") != "experiments.build_pr101_repacked_archive":
+        return None
+    normalized = dict(payload)
+    normalized.setdefault("candidate_id", "pr106_pr101_split_brotli_schema_port_241byte")
+    normalized.setdefault("family", "hnerv_pr101_split_brotli_schema_port")
+    normalized.setdefault("family_group", "hnerv_decoder_entropy_recode")
+    normalized.setdefault("pareto_scope", "hnerv_rate_only_exact_archive")
+    normalized.setdefault("paradigms", ["hidden_gem_entropy", "hnerv_frontier", "pr101_schema"])
+    normalized.setdefault("role", "rate_recode_substitute")
+    normalized.setdefault("action_class", "integrate_pr101_split_brotli_runtime_adapter")
+    normalized.setdefault("priority_tier", 2)
+    normalized.setdefault("evidence_grade", "empirical_archive_candidate_runtime_blocked")
+    normalized.setdefault("candidate_archive_path", payload.get("output_archive_path"))
+    normalized.setdefault("candidate_archive_sha256", payload.get("output_archive_sha256"))
+    normalized.setdefault("candidate_archive_bytes", payload.get("output_archive_bytes"))
+    normalized.setdefault("byte_delta", payload.get("archive_delta_bytes"))
+    normalized.setdefault(
+        "expected_total_score_delta_rate_only",
+        payload.get("predicted_score_delta_rate_component"),
+    )
+    normalized.setdefault("expected_seg_dist_delta", 0.0)
+    normalized.setdefault("expected_pose_dist_delta", 0.0)
+    normalized.setdefault("expected_information_gain_nats", 0.1)
+    normalized.setdefault(
+        "interaction_assumptions",
+        [
+            "rate_only_decoder_schema_repack_if_runtime_adapter_restores_payload",
+            "runtime_adapter_required_before_exact_eval",
+            "component_deltas_require_exact_cuda_confirmation",
+        ],
+    )
+    normalized.setdefault(
+        "dispatch_blockers",
+        _ordered_unique_strings(
+            [
+                *(_string_list(payload.get("runtime_adapter_blockers"))),
+                "strict_pre_submission_compliance_json_missing",
+                "lane_dispatch_claim_missing",
+                "exact_cuda_auth_eval_missing",
+            ]
+        ),
+    )
+    normalized.setdefault("code_paths", ["src/tac/pr101_split_brotli_codec.py"])
+    _append_artifact_paths(
+        normalized,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+        extra_paths=[normalized.get("output_archive_path"), normalized.get("source_archive_path")],
+    )
+    return normalized
+
+
+def _normalize_hnerv_pr103_lc_ac_schema(
+    payload: Mapping[str, Any],
+    *,
+    manifest_path: Path,
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    if payload.get("tool") != "tac.hnerv_pr103_lc_ac_schema":
+        return None
+    normalized = dict(payload)
+    normalized.setdefault("candidate_id", "pr103_lc_ac_schema_contract")
+    normalized.setdefault("family", "hnerv_pr103_lc_ac_arithmetic_schema")
+    normalized.setdefault("family_group", "hnerv_arithmetic_schema_contract")
+    normalized.setdefault("pareto_scope", "hnerv_arithmetic_schema_contract")
+    normalized.setdefault("paradigms", ["hidden_gem_entropy", "hnerv_frontier", "arithmetic_coding"])
+    normalized.setdefault("role", "schema_contract_for_future_recode")
+    normalized.setdefault("action_class", "build_byte_different_pr103_lc_ac_candidate")
+    normalized.setdefault("priority_tier", 3)
+    normalized.setdefault("evidence_grade", "planning_schema_review_invalid_for_score")
+    normalized.setdefault("planning_only", True)
+    normalized.setdefault("proxy_row", True)
+    stream = payload.get("merged_arithmetic_stream")
+    if isinstance(stream, Mapping):
+        normalized.setdefault("byte_delta", -int(stream.get("model_gap_bytes_estimate", 0) or 0))
+        normalized.setdefault("expected_information_gain_nats", 0.2)
+    normalized.setdefault("expected_total_score_delta", 0.0)
+    normalized.setdefault("expected_seg_dist_delta", 0.0)
+    normalized.setdefault("expected_pose_dist_delta", 0.0)
+    normalized.setdefault(
+        "interaction_assumptions",
+        [
+            "schema_review_only_no_candidate_archive",
+            "public_replay_fidelity_mismatch_blocks_score_claim",
+            "requires_byte_different_archive_before_pareto_ranking",
+        ],
+    )
+    source_archive = payload.get("source_archive")
+    replay_fidelity = payload.get("replay_fidelity")
+    _append_artifact_paths(
+        normalized,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+        extra_paths=[
+            source_archive.get("path") if isinstance(source_archive, Mapping) else "",
+            replay_fidelity.get("path") if isinstance(replay_fidelity, Mapping) else "",
+        ],
+    )
+    return normalized
+
+
+def _normalize_categorical_openpilot_candidate(
+    payload: Mapping[str, Any],
+    *,
+    manifest_path: Path,
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    if payload.get("kind") != "categorical_byte_closed_local_candidate_build":
+        return None
+    normalized = dict(payload)
+    normalized.setdefault("candidate_id", "categorical_openpilot_hpm1_payload_candidate")
+    normalized.setdefault("family", "categorical_qma9_clade_spade_openpilot")
+    normalized.setdefault("family_group", "categorical_selfcompression_mask_payload")
+    normalized.setdefault("pareto_scope", "categorical_mask_runtime")
+    normalized.setdefault(
+        "paradigms",
+        ["categorical_labels", "openpilot_priors", "self_compression", "mask_payload"],
+    )
+    normalized.setdefault("role", "substitutive_mask_payload_candidate")
+    normalized.setdefault("action_class", "prove_hpm1_decode_reencode_and_runtime_consumption")
+    normalized.setdefault("priority_tier", 2)
+    normalized.setdefault("evidence_grade", "empirical_byte_closed_runtime_blocked")
+    paths = payload.get("paths")
+    if isinstance(paths, Mapping):
+        normalized.setdefault("candidate_archive_path", paths.get("archive"))
+    normalized.setdefault("candidate_archive_sha256", payload.get("archive_sha256"))
+    normalized.setdefault("candidate_archive_bytes", payload.get("archive_bytes"))
+    source = payload.get("payload_source")
+    if isinstance(source, Mapping):
+        archive_bytes = _optional_numeric(payload.get("archive_bytes"))
+        source_bytes = _optional_numeric(source.get("source_archive_bytes"))
+        if archive_bytes is not None and source_bytes is not None:
+            normalized.setdefault("byte_delta", int(archive_bytes - source_bytes))
+    normalized.setdefault("expected_total_score_delta", 0.0)
+    normalized.setdefault("expected_seg_dist_delta", 0.0)
+    normalized.setdefault("expected_pose_dist_delta", 0.0)
+    normalized.setdefault("expected_information_gain_nats", 0.35)
+    normalized.setdefault(
+        "interaction_assumptions",
+        [
+            "substitutional_mask_payload_candidate",
+            "decode_reencode_identity_required_before_dispatch",
+            "label_permutation_control_passed_but_full_decode_missing",
+            "component_deltas_require_exact_cuda_confirmation",
+        ],
+    )
+    normalized.setdefault(
+        "dispatch_blockers",
+        _ordered_unique_strings(
+            [
+                *(_string_list(payload.get("readiness_blockers"))),
+                "strict_pre_submission_compliance_json_missing",
+                "lane_dispatch_claim_missing",
+                "exact_cuda_auth_eval_missing",
+            ]
+        ),
+    )
+    normalized.setdefault(
+        "code_paths",
+        [
+            "src/tac/categorical_candidate_readiness.py",
+            "src/tac/pr91_hpm1_codec.py",
+        ],
+    )
+    _append_artifact_paths(
+        normalized,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+        extra_paths=list(paths.values()) if isinstance(paths, Mapping) else [],
+    )
+    return normalized
+
+
+def _normalize_hdc2_combined_entropy_manifest(
+    payload: Mapping[str, Any],
+    *,
+    manifest_path: Path,
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    if payload.get("tool") != "tac.hnerv_hdc2_combined_entropy":
+        return None
+    normalized = dict(payload)
+    byte_accounting = payload.get("byte_accounting")
+    target = payload.get("target")
+    normalized.setdefault("candidate_id", "hnerv_hdc2_hdm3_combined_entropy_target")
+    normalized.setdefault("family", "hnerv_hdc2_hdm3_entropy_planning")
+    normalized.setdefault("family_group", "hnerv_decoder_entropy_recode")
+    normalized.setdefault("pareto_scope", "hnerv_entropy_planning")
+    normalized.setdefault("paradigms", ["hidden_gem_entropy", "hnerv_frontier", "arithmetic_coding"])
+    normalized.setdefault("role", "planning_target_for_decoder_entropy_recode")
+    normalized.setdefault("action_class", "implement_payload_entropy_gap_reduction")
+    normalized.setdefault("priority_tier", 3)
+    normalized.setdefault("evidence_grade", "planning_proxy_entropy_target")
+    normalized.setdefault("planning_only", True)
+    normalized.setdefault("proxy_row", True)
+    if isinstance(byte_accounting, Mapping):
+        normalized.setdefault("byte_delta", byte_accounting.get("net_byte_delta_after_combined_targets"))
+        normalized.setdefault(
+            "expected_total_score_delta",
+            byte_accounting.get("projected_rate_score_delta_after_combined_targets"),
+        )
+    normalized.setdefault("expected_information_gain_nats", 0.25)
+    normalized.setdefault("expected_seg_dist_delta", 0.0)
+    normalized.setdefault("expected_pose_dist_delta", 0.0)
+    normalized.setdefault(
+        "interaction_assumptions",
+        [
+            "planning_only_entropy_target",
+            "requires_actual_decoder_runtime_implementation",
+            "requires_candidate_archive_manifest_before_pareto_dispatch",
+        ],
+    )
+    if isinstance(target, Mapping):
+        normalized.setdefault("source_archive_sha256", target.get("frontier_archive_sha256"))
+        normalized.setdefault("source_archive_bytes", target.get("frontier_archive_bytes"))
+    _append_artifact_paths(normalized, manifest_path=manifest_path, repo_root=repo_root)
+    return normalized
+
+
 def _normalize_manifest_payload(
     payload: Mapping[str, Any],
     *,
@@ -1767,6 +2235,55 @@ def _normalize_manifest_payload(
     )
     if hnerv_lowlevel is not None:
         return hnerv_lowlevel
+    hdm3_archive = _normalize_hnerv_hdm3_archive_candidate(
+        payload,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+    )
+    if hdm3_archive is not None:
+        return hdm3_archive
+    pr102_zero_byte = _normalize_pr102_zero_byte_tuning_custody(
+        payload,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+    )
+    if pr102_zero_byte is not None:
+        return pr102_zero_byte
+    pr101_schema = _normalize_hnerv_pr101_schema_candidate(
+        payload,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+    )
+    if pr101_schema is not None:
+        return pr101_schema
+    pr101_repack = _normalize_pr101_repacked_archive(
+        payload,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+    )
+    if pr101_repack is not None:
+        return pr101_repack
+    pr103_lc_ac = _normalize_hnerv_pr103_lc_ac_schema(
+        payload,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+    )
+    if pr103_lc_ac is not None:
+        return pr103_lc_ac
+    categorical = _normalize_categorical_openpilot_candidate(
+        payload,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+    )
+    if categorical is not None:
+        return categorical
+    hdc2_entropy = _normalize_hdc2_combined_entropy_manifest(
+        payload,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+    )
+    if hdc2_entropy is not None:
+        return hdc2_entropy
     return dict(payload)
 
 
@@ -1879,6 +2396,19 @@ def _operator_current_blockers(payload: Mapping[str, Any]) -> list[str]:
         "dispatch_blockers",
         "approval_blockers",
         "refresh_blockers",
+        "static_blockers",
+    ):
+        blockers.extend(_string_list(payload.get(key)))
+    return _unique_strings(blockers)
+
+
+def _source_manifest_blockers(payload: Mapping[str, Any]) -> list[str]:
+    blockers: list[Any] = []
+    for key in (
+        "dispatch_blockers",
+        "readiness_blockers",
+        "runtime_adapter_blockers",
+        "exact_next_blockers",
         "static_blockers",
     ):
         blockers.extend(_string_list(payload.get(key)))
@@ -2677,6 +3207,7 @@ def _row_for_manifest(
     if packet_static_ready is not None and packet_static_ready is not True:
         static_blockers.append("packet_static_preflight_not_ready")
     static_blockers.extend(f"packet_static:{blocker}" for blocker in packet_static_blockers)
+    static_blockers.extend(_source_manifest_blockers(payload))
     static_blockers = _unique_strings(static_blockers)
     strict_ready = strict["candidate_static_preflight_ready"] is True
     base_static_ready = bool(strict_ready and archive["byte_closed"] and runtime["runtime_closed"] and not static_blockers)
