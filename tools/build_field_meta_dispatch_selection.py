@@ -2258,6 +2258,231 @@ def _normalize_hdc2_combined_entropy_manifest(
     return normalized
 
 
+def _normalize_full_stack_composition_matrix(
+    payload: Mapping[str, Any],
+    *,
+    manifest_path: Path,
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    stacks = payload.get("stacks")
+    if (
+        not isinstance(stacks, Sequence)
+        or isinstance(stacks, (str, bytes, bytearray))
+        or not stacks
+        or not payload.get("winner_stack_name")
+        or payload.get("winner_bytes_out") is None
+    ):
+        return None
+    normalized = dict(payload)
+    winner_name = str(payload.get("winner_stack_name") or "unknown_stack")
+    normalized.setdefault("candidate_id", f"full_stack_composition_matrix_{winner_name}")
+    normalized.setdefault("family", "cross_paradigm_full_stack_composition")
+    normalized.setdefault("family_group", "cross_paradigm_score_lowering_stack")
+    normalized.setdefault("pareto_scope", "cross_paradigm_stack_planning")
+    normalized.setdefault(
+        "paradigms",
+        [
+            "hnerv_frontier",
+            "pr101_schema_packing",
+            "apogee_int",
+            "alpha_mask_payload",
+            "beta_sensitivity",
+            "gamma_joint_codec",
+            "deltaepszeta_joint_training",
+            "meta_lagrangian",
+        ],
+    )
+    normalized.setdefault("role", "planning_matrix_for_cross_paradigm_stack_composition")
+    normalized.setdefault("action_class", "wire_winning_stack_into_byte_closed_archive_candidate")
+    normalized.setdefault("priority_tier", 2)
+    normalized["evidence_grade"] = "planning_proxy_cross_paradigm_stack_matrix"
+    normalized.setdefault("planning_only", True)
+    normalized.setdefault("proxy_row", True)
+    normalized["score_claim"] = False
+    normalized["dispatch_attempted"] = False
+    normalized["ready_for_exact_eval_dispatch"] = False
+    winner_bytes = _coerce_positive_int(payload.get("winner_bytes_out"))
+    first_stack = stacks[0] if isinstance(stacks[0], Mapping) else {}
+    baseline_bytes = _coerce_positive_int(first_stack.get("bytes_out"))
+    if winner_bytes is not None and baseline_bytes is not None:
+        normalized.setdefault("byte_delta", int(winner_bytes - baseline_bytes))
+        normalized.setdefault(
+            "synthetic_wrapper_byte_delta_vs_first_stack",
+            int(winner_bytes - baseline_bytes),
+        )
+    normalized.setdefault("expected_total_score_delta", 0.0)
+    normalized.setdefault(
+        "expected_total_score_delta_source",
+        "planning_proxy_matrix_no_exact_archive_score_delta",
+    )
+    normalized.setdefault("expected_seg_dist_delta", 0.0)
+    normalized.setdefault("expected_pose_dist_delta", 0.0)
+    normalized.setdefault("expected_information_gain_nats", 0.45)
+    normalized.setdefault(
+        "interaction_assumptions",
+        [
+            "synthetic_stack_matrix_not_exact_archive_evidence",
+            "requires_byte_closed_archive_builder_for_selected_stack",
+            "requires_component_delta_measurement_before_score_claim",
+            "requires_volterra_interaction_validation_for_multi_op_stack",
+        ],
+    )
+    normalized.setdefault(
+        "code_paths",
+        [
+            "src/tac/codec_pipeline.py",
+            "src/tac/codec_pipeline_full_stack.py",
+        ],
+    )
+    _append_artifact_paths(normalized, manifest_path=manifest_path, repo_root=repo_root)
+    return normalized
+
+
+def _normalize_alpha_mask_bakeoff_manifest(
+    payload: Mapping[str, Any],
+    *,
+    manifest_path: Path,
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    if payload.get("contract") != "alpha_mask_bakeoff_manifest_v1":
+        return None
+    normalized = dict(payload)
+    winner = payload.get("winner")
+    winner_op = "unknown"
+    if isinstance(winner, Mapping):
+        winner_op = str(winner.get("op_name") or winner_op)
+    normalized.setdefault("candidate_id", f"alpha_mask_bakeoff_{winner_op}")
+    normalized.setdefault("family", "alpha_mask_payload_bakeoff")
+    normalized.setdefault("family_group", "paradigm_alpha_mask_payload_overhaul")
+    normalized.setdefault("pareto_scope", "alpha_mask_payload_planning")
+    normalized.setdefault(
+        "paradigms",
+        [
+            "alpha_mask_payload",
+            "nerv_mask",
+            "wavelet_mask",
+            "vqvae_mask",
+            "grayscale_lut_mask",
+            "meta_lagrangian",
+        ],
+    )
+    normalized.setdefault("role", "mask_payload_encoder_bakeoff")
+    normalized.setdefault("action_class", "promote_alpha_mask_winner_to_decode_validated_archive")
+    normalized.setdefault("priority_tier", 2)
+    normalized["evidence_grade"] = "planning_proxy_alpha_mask_bakeoff_empirical"
+    normalized.setdefault("planning_only", True)
+    normalized.setdefault("proxy_row", True)
+    normalized["score_claim"] = False
+    normalized["dispatch_attempted"] = False
+    normalized["ready_for_exact_eval_dispatch"] = False
+    if isinstance(winner, Mapping):
+        delta_bytes = winner.get("delta_bytes")
+        if isinstance(delta_bytes, int) and not isinstance(delta_bytes, bool):
+            normalized.setdefault("byte_delta", delta_bytes)
+        normalized.setdefault("winner_op_name", winner_op)
+    normalized.setdefault("expected_total_score_delta", 0.0)
+    normalized.setdefault(
+        "expected_total_score_delta_source",
+        "planning_proxy_mask_bakeoff_no_exact_archive_score_delta",
+    )
+    normalized.setdefault("expected_seg_dist_delta", 0.0)
+    normalized.setdefault("expected_pose_dist_delta", 0.0)
+    normalized.setdefault("expected_information_gain_nats", 0.4)
+    normalized.setdefault(
+        "interaction_assumptions",
+        [
+            "synthetic_mask_tensor_bakeoff_not_archive_rate_evidence",
+            "requires_compress_time_training_harness",
+            "requires_decode_validation_and_component_parity",
+            "requires_exact_cuda_auth_eval_before_score_claim",
+        ],
+    )
+    normalized.setdefault(
+        "code_paths",
+        [
+            "src/tac/codec_pipeline_mask.py",
+            "src/tac/alpha_mask_codec_readiness.py",
+            "src/tac/nerv_mask_codec.py",
+            "src/tac/wavelet_mask_codec.py",
+            "src/tac/vqvae_mask_codec.py",
+            "src/tac/mask_grayscale_lut.py",
+        ],
+    )
+    _append_artifact_paths(normalized, manifest_path=manifest_path, repo_root=repo_root)
+    return normalized
+
+
+def _normalize_beta_sensitivity_substrate_manifest(
+    payload: Mapping[str, Any],
+    *,
+    manifest_path: Path,
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    beta = payload.get("beta_standalone")
+    pipelines = payload.get("pipelines")
+    note = str(payload.get("note") or "").lower()
+    if not isinstance(beta, Mapping) or not isinstance(pipelines, Mapping) or "sensitivity" not in note:
+        return None
+    normalized = dict(payload)
+    normalized.setdefault("candidate_id", "beta_sensitivity_substrate_transform")
+    normalized.setdefault("family", "beta_sensitivity_substrate_transform")
+    normalized.setdefault("family_group", "paradigm_beta_sensitivity_aware_everything")
+    normalized.setdefault("pareto_scope", "beta_sensitivity_planning")
+    normalized.setdefault(
+        "paradigms",
+        [
+            "beta_sensitivity",
+            "substrate_transform",
+            "joint_codec_stack",
+            "meta_lagrangian",
+        ],
+    )
+    normalized.setdefault("role", "sensitivity_aware_substrate_transform_planning")
+    normalized.setdefault("action_class", "wire_beta_substrate_transform_into_archive_candidate")
+    normalized.setdefault("priority_tier", 2)
+    normalized["evidence_grade"] = "planning_proxy_beta_sensitivity_substrate_transform"
+    normalized.setdefault("planning_only", True)
+    normalized.setdefault("proxy_row", True)
+    normalized["score_claim"] = False
+    normalized["dispatch_attempted"] = False
+    normalized["ready_for_exact_eval_dispatch"] = False
+    identity_bytes = _coerce_positive_int(beta.get("identity_blob_bytes"))
+    stub_bytes = _coerce_positive_int(beta.get("stub_low_blob_bytes"))
+    savings = beta.get("savings_bytes")
+    if identity_bytes is not None and stub_bytes is not None:
+        normalized.setdefault("byte_delta", int(stub_bytes - identity_bytes))
+    elif isinstance(savings, int) and not isinstance(savings, bool):
+        normalized.setdefault("byte_delta", -int(savings))
+    normalized.setdefault("expected_total_score_delta", 0.0)
+    normalized.setdefault(
+        "expected_total_score_delta_source",
+        "planning_proxy_beta_substrate_no_exact_archive_score_delta",
+    )
+    normalized.setdefault("expected_seg_dist_delta", 0.0)
+    normalized.setdefault("expected_pose_dist_delta", 0.0)
+    normalized.setdefault("expected_information_gain_nats", 0.38)
+    normalized.setdefault(
+        "interaction_assumptions",
+        [
+            "substrate_transform_bytes_are_internal_planning_measurement",
+            "requires_score_marginal_tensor_annotations",
+            "requires_decode_roundtrip_and_runtime_tree_closure",
+            "requires_exact_cuda_auth_eval_before_score_claim",
+        ],
+    )
+    normalized.setdefault(
+        "code_paths",
+        [
+            "src/tac/codec_pipeline_sensitivity.py",
+            "src/tac/sensitivity_map.py",
+            "src/tac/owv3_sensitivity_weighted.py",
+            "src/tac/neural_weight_codec_sensitivity.py",
+        ],
+    )
+    _append_artifact_paths(normalized, manifest_path=manifest_path, repo_root=repo_root)
+    return normalized
+
+
 def _normalize_manifest_payload(
     payload: Mapping[str, Any],
     *,
@@ -2327,6 +2552,27 @@ def _normalize_manifest_payload(
     )
     if hdc2_entropy is not None:
         return hdc2_entropy
+    full_stack = _normalize_full_stack_composition_matrix(
+        payload,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+    )
+    if full_stack is not None:
+        return full_stack
+    alpha_mask = _normalize_alpha_mask_bakeoff_manifest(
+        payload,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+    )
+    if alpha_mask is not None:
+        return alpha_mask
+    beta_sensitivity = _normalize_beta_sensitivity_substrate_manifest(
+        payload,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+    )
+    if beta_sensitivity is not None:
+        return beta_sensitivity
     return dict(payload)
 
 

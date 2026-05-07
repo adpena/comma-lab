@@ -9,6 +9,9 @@
   --manifest experiments/results/hnerv_pr103_lc_ac_schema_20260507_codex/manifest.json \
   --manifest experiments/results/categorical_openpilot_payload_candidate_20260506_codex/summary.json \
   --manifest experiments/results/hnerv_hdm3_entropy_packet_20260507_codex/hdc2_combined_entropy_reduction_manifest.json \
+  --manifest experiments/results/lane_codec_pipeline_full_stack_20260507T165402Z/composition_matrix.json \
+  --manifest experiments/results/lane_codec_pipeline_mask_20260507T165819Z/bakeoff_manifest.json \
+  --manifest experiments/results/lane_codec_pipeline_sensitivity_beta_20260507T161548Z/manifest.json \
   --claims-path .omx/state/active_lane_dispatch_claims.md \
   --now-utc 2026-05-07T12:30:00Z \
   --operator-approved-exact-cuda \

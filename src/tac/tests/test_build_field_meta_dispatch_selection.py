@@ -1281,6 +1281,112 @@ def test_field_meta_selector_normalizes_categorical_and_entropy_planning_manifes
     assert "planning_or_proxy_packet" in entropy["pareto_eligibility_blockers"]
 
 
+def test_field_meta_selector_ingests_cross_paradigm_planning_manifests(tmp_path: Path) -> None:
+    full_stack_manifest = tmp_path / "full_stack.json"
+    full_stack_manifest.write_text(
+        json.dumps(
+            {
+                "evidence_grade": "predicted",
+                "score_claim": False,
+                "winner_stack_name": "Op2_alone",
+                "winner_bytes_out": 200_666,
+                "stacks": [
+                    {
+                        "stack_name": "Op1_alone",
+                        "bytes_out": 200_719,
+                        "op_names": ["pr101_split_brotli"],
+                    },
+                    {
+                        "stack_name": "Op2_alone",
+                        "bytes_out": 200_666,
+                        "op_names": ["pr101_schema_pack"],
+                    },
+                ],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    alpha_manifest = tmp_path / "alpha_mask.json"
+    alpha_manifest.write_text(
+        json.dumps(
+            {
+                "contract": "alpha_mask_bakeoff_manifest_v1",
+                "schema_version": 1,
+                "score_claim": False,
+                "score_evidence_grade": "empirical",
+                "candidates": [
+                    {"op_name": "alpha_wavelet_mask", "ready": True, "bytes_out": 11_830},
+                    {"op_name": "alpha_vqvae_mask", "ready": True, "bytes_out": 6_163},
+                ],
+                "winner": {
+                    "op_name": "alpha_vqvae_mask",
+                    "bytes_in": 65_536,
+                    "bytes_out": 6_163,
+                    "delta_bytes": -59_373,
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    beta_manifest = tmp_path / "beta_sensitivity.json"
+    beta_manifest.write_text(
+        json.dumps(
+            {
+                "evidence_grade": "predicted",
+                "note": "beta paradigm sensitivity-aware substrate-transform CodecOp",
+                "beta_standalone": {
+                    "identity_blob_bytes": 847_399,
+                    "stub_low_blob_bytes": 231_106,
+                    "savings_bytes": 616_293,
+                },
+                "pipelines": {
+                    "[Op1]": {"wrapper_bytes": 200_719},
+                    "[beta_stub_low, Op1]": {"wrapper_bytes": 433_206},
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = build_selection_report(
+        repo_root=REPO,
+        manifest_paths=[full_stack_manifest, alpha_manifest, beta_manifest],
+    )
+
+    rows = {row["candidate_id"]: row for row in report["rows"]}
+    full_stack = rows["full_stack_composition_matrix_Op2_alone"]
+    assert full_stack["family_group"] == "cross_paradigm_score_lowering_stack"
+    assert full_stack["byte_delta"] == -53
+    assert full_stack["proxy_row"] is True
+    assert full_stack["score_evidence_rankable"] is False
+    assert "planning_or_proxy_packet" in full_stack["pareto_eligibility_blockers"]
+
+    alpha = rows["alpha_mask_bakeoff_alpha_vqvae_mask"]
+    assert alpha["family_group"] == "paradigm_alpha_mask_payload_overhaul"
+    assert alpha["byte_delta"] == -59_373
+    assert alpha["proxy_row"] is True
+    assert alpha["expected_total_score_delta"] == 0.0
+    assert "requires_decode_validation_and_component_parity" in alpha["interaction_assumptions"]
+
+    beta = rows["beta_sensitivity_substrate_transform"]
+    assert beta["family_group"] == "paradigm_beta_sensitivity_aware_everything"
+    assert beta["byte_delta"] == -616_293
+    assert beta["proxy_row"] is True
+    assert beta["planning_priority_rankable"] is False
+    assert beta["expected_total_score_delta_source"] == (
+        "planning_proxy_beta_substrate_no_exact_archive_score_delta"
+    )
+
+
 def test_field_meta_selector_normalizes_pr102_zero_byte_runtime_tuning_custody(
     tmp_path: Path,
 ) -> None:

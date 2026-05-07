@@ -6,7 +6,7 @@
     "schema": "field_meta_adversarial_gate_policy_v1",
     "score_claim_requires_exact_cuda_and_adversarial_review": true
   },
-  "candidate_count": 10,
+  "candidate_count": 13,
   "candidate_local_preflight_ready": true,
   "candidate_local_preflight_ready_count": 2,
   "candidate_preflight_ready_for_exact_eval_dispatch": false,
@@ -20,10 +20,10 @@
     "requires_exact_cuda_auth_eval_for_score_claim",
     "requires_adversarial_review_before_score_claim"
   ],
-  "field_meta_ingestion_ready_count": 2,
+  "field_meta_ingestion_ready_count": 3,
   "field_selection_ready_for_exact_eval_dispatch": false,
   "field_selection_ready_for_exact_eval_dispatch_count": 0,
-  "frontier_row_count": 10,
+  "frontier_row_count": 13,
   "frontier_row_fields": [
     "schema",
     "source_tool",
@@ -160,6 +160,65 @@
       "title": ""
     },
     {
+      "action_class": "implement_hdm3_runtime_adapter_and_exact_eval_packet",
+      "blockers": [
+        "strict_candidate_preflight_not_ready",
+        "strict:ready_for_exact_eval_dispatch_false",
+        "lane_dispatch_claim_missing",
+        "exact_cuda_auth_eval_missing",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "kkt_not_ready_for_field_planning",
+        "missing_dispatch_identity_for_lane_claim",
+        "pareto_ineligible_packet",
+        "strict_candidate_preflight_blocked",
+        "ingestion:strict_candidate_preflight_not_ready",
+        "pareto_ineligible_for_field_selection"
+      ],
+      "byte_delta": -14.0,
+      "candidate_id": "pr106x_hdm3_decoder_recode_14byte",
+      "candidate_static_preflight_ready": false,
+      "code_paths": [
+        "src/tac/hnerv_hdm3_archive_candidate.py",
+        "src/tac/hnerv_decoder_recode.py",
+        "src/tac/hnerv_hdm3_runtime_adapter.py",
+        "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/hdm3_normalize.py"
+      ],
+      "dispatch_attempted": false,
+      "evidence_grade": "empirical_archive_candidate_runtime_adapter_parity_static_packet_ready",
+      "evidence_paths": [],
+      "expected_information_gain_nats": 0.05,
+      "expected_pose_dist_delta": 0.0,
+      "expected_seg_dist_delta": 0.0,
+      "expected_total_score_delta": -9.322025e-06,
+      "family": "hnerv_hdm3_decoder_recode",
+      "family_group": "hnerv_decoder_entropy_recode",
+      "key": "pr106x_hdm3_decoder_recode_14byte",
+      "next_patch": "",
+      "next_required_proof": [
+        "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py",
+        "passed_kkt_proof_or_converged_admm_waterline_result",
+        "pareto_eligible_static_ready_non_proxy_candidate"
+      ],
+      "paradigms": [
+        "hidden_gem_entropy",
+        "hnerv_frontier"
+      ],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_scope": "hnerv_rate_only_exact_archive",
+      "planning_priority_rankable": true,
+      "priority_tier": 2,
+      "ready_for_exact_eval_dispatch": false,
+      "role": "rate_recode_substitute",
+      "schema": "cross_paradigm_frontier_row_v1",
+      "score_claim": false,
+      "score_evidence_rankable": false,
+      "source_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_archive_candidate_manifest.json",
+      "source_tool": "tools/build_field_meta_dispatch_selection.py",
+      "status": "strict_candidate_preflight_refused",
+      "title": ""
+    },
+    {
       "action_class": "integrate_pr101_split_brotli_runtime_adapter",
       "blockers": [
         "missing_byte_closed_runtime_proof",
@@ -229,6 +288,7 @@
         "pr101_schema_submission_runtime_adapter_not_integrated",
         "pr101_schema_runtime_tree_parity_manifest_missing",
         "pr101_schema_inflate_output_parity_missing",
+        "pr101_schema_submission_runtime_callsite_not_patched",
         "strict_pre_submission_compliance_json_missing",
         "lane_dispatch_claim_missing",
         "exact_cuda_auth_eval_missing",
@@ -282,70 +342,6 @@
       "score_claim": false,
       "score_evidence_rankable": false,
       "source_path": "experiments/results/hnerv_pr101_schema_candidate_20260507_codex/pr101_schema_archive_candidate_manifest.json",
-      "source_tool": "tools/build_field_meta_dispatch_selection.py",
-      "status": "needs_byte_closed_runtime_proof",
-      "title": ""
-    },
-    {
-      "action_class": "implement_hdm3_runtime_adapter_and_exact_eval_packet",
-      "blockers": [
-        "missing_byte_closed_runtime_proof",
-        "runtime:runtime_proof_missing",
-        "strict_candidate_preflight_not_ready",
-        "strict:ready_for_exact_eval_dispatch_false",
-        "lane_dispatch_claim_missing",
-        "exact_cuda_auth_eval_missing",
-        "kkt:kkt_proof_or_admm_result_missing",
-        "kkt_not_ready_for_field_planning",
-        "missing_dispatch_identity_for_lane_claim",
-        "non_byte_closed_runtime",
-        "pareto_ineligible_packet",
-        "strict_candidate_preflight_blocked",
-        "ingestion:runtime_tree_closure_proof_missing",
-        "ingestion:strict_candidate_preflight_not_ready",
-        "pareto_ineligible_for_field_selection"
-      ],
-      "byte_delta": -14.0,
-      "candidate_id": "pr106x_hdm3_decoder_recode_14byte",
-      "candidate_static_preflight_ready": false,
-      "code_paths": [
-        "src/tac/hnerv_hdm3_archive_candidate.py",
-        "src/tac/hnerv_decoder_recode.py",
-        "src/tac/hnerv_hdm3_runtime_adapter.py",
-        "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/hdm3_normalize.py"
-      ],
-      "dispatch_attempted": false,
-      "evidence_grade": "empirical_archive_candidate_runtime_adapter_parity_static_packet_ready",
-      "evidence_paths": [],
-      "expected_information_gain_nats": 0.05,
-      "expected_pose_dist_delta": 0.0,
-      "expected_seg_dist_delta": 0.0,
-      "expected_total_score_delta": -9.322025e-06,
-      "family": "hnerv_hdm3_decoder_recode",
-      "family_group": "hnerv_decoder_entropy_recode",
-      "key": "pr106x_hdm3_decoder_recode_14byte",
-      "next_patch": "",
-      "next_required_proof": [
-        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
-        "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py",
-        "passed_kkt_proof_or_converged_admm_waterline_result",
-        "pareto_eligible_static_ready_non_proxy_candidate"
-      ],
-      "paradigms": [
-        "hidden_gem_entropy",
-        "hnerv_frontier"
-      ],
-      "pareto_eligible": false,
-      "pareto_frontier": false,
-      "pareto_scope": "hnerv_rate_only_exact_archive",
-      "planning_priority_rankable": false,
-      "priority_tier": 2,
-      "ready_for_exact_eval_dispatch": false,
-      "role": "rate_recode_substitute",
-      "schema": "cross_paradigm_frontier_row_v1",
-      "score_claim": false,
-      "score_evidence_rankable": false,
-      "source_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_archive_candidate_manifest.json",
       "source_tool": "tools/build_field_meta_dispatch_selection.py",
       "status": "needs_byte_closed_runtime_proof",
       "title": ""
@@ -621,6 +617,218 @@
       "title": ""
     },
     {
+      "action_class": "wire_winning_stack_into_byte_closed_archive_candidate",
+      "blockers": [
+        "missing_byte_closed_archive_proof",
+        "archive:archive_identity_missing",
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing",
+        "strict_candidate_preflight_not_ready",
+        "strict:missing_distortion_model_gate",
+        "planning_or_proxy_packet",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "kkt_not_ready_for_field_planning",
+        "missing_dispatch_identity_for_lane_claim",
+        "non_byte_closed_archive",
+        "non_byte_closed_runtime",
+        "pareto_ineligible_packet",
+        "strict_candidate_preflight_blocked",
+        "ingestion:byte_closed_archive_proof_missing",
+        "ingestion:runtime_tree_closure_proof_missing",
+        "ingestion:strict_candidate_preflight_not_ready",
+        "ingestion:planning_or_proxy_packet_not_dispatch_ready",
+        "ingestion:planning_only_packet_not_dispatch_ready",
+        "pareto_ineligible_for_field_selection"
+      ],
+      "byte_delta": -53.0,
+      "candidate_id": "full_stack_composition_matrix_Op2_alone",
+      "candidate_static_preflight_ready": false,
+      "code_paths": [
+        "src/tac/codec_pipeline.py",
+        "src/tac/codec_pipeline_full_stack.py"
+      ],
+      "dispatch_attempted": false,
+      "evidence_grade": "planning_proxy_cross_paradigm_stack_matrix",
+      "evidence_paths": [],
+      "expected_information_gain_nats": 0.45,
+      "expected_pose_dist_delta": 0.0,
+      "expected_seg_dist_delta": 0.0,
+      "expected_total_score_delta": 0.0,
+      "family": "cross_paradigm_full_stack_composition",
+      "family_group": "cross_paradigm_score_lowering_stack",
+      "key": "full_stack_composition_matrix_Op2_alone",
+      "next_patch": "",
+      "next_required_proof": [
+        "local_archive_file_with_matching_sha256_and_bytes",
+        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+        "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py",
+        "passed_kkt_proof_or_converged_admm_waterline_result",
+        "pareto_eligible_static_ready_non_proxy_candidate"
+      ],
+      "paradigms": [
+        "hnerv_frontier",
+        "pr101_schema_packing",
+        "apogee_int",
+        "alpha_mask_payload",
+        "beta_sensitivity",
+        "gamma_joint_codec",
+        "deltaepszeta_joint_training",
+        "meta_lagrangian"
+      ],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_scope": "cross_paradigm_stack_planning",
+      "planning_priority_rankable": false,
+      "priority_tier": 2,
+      "ready_for_exact_eval_dispatch": false,
+      "role": "planning_matrix_for_cross_paradigm_stack_composition",
+      "schema": "cross_paradigm_frontier_row_v1",
+      "score_claim": false,
+      "score_evidence_rankable": false,
+      "source_path": "experiments/results/lane_codec_pipeline_full_stack_20260507T165402Z/composition_matrix.json",
+      "source_tool": "tools/build_field_meta_dispatch_selection.py",
+      "status": "needs_byte_closed_archive_proof",
+      "title": ""
+    },
+    {
+      "action_class": "promote_alpha_mask_winner_to_decode_validated_archive",
+      "blockers": [
+        "missing_byte_closed_archive_proof",
+        "archive:archive_identity_missing",
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing",
+        "planning_or_proxy_packet",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "kkt_not_ready_for_field_planning",
+        "missing_dispatch_identity_for_lane_claim",
+        "non_byte_closed_archive",
+        "non_byte_closed_runtime",
+        "pareto_ineligible_packet",
+        "ingestion:byte_closed_archive_proof_missing",
+        "ingestion:runtime_tree_closure_proof_missing",
+        "ingestion:planning_or_proxy_packet_not_dispatch_ready",
+        "ingestion:planning_only_packet_not_dispatch_ready",
+        "pareto_ineligible_for_field_selection"
+      ],
+      "byte_delta": -59373.0,
+      "candidate_id": "alpha_mask_bakeoff_alpha_vqvae_mask",
+      "candidate_static_preflight_ready": false,
+      "code_paths": [
+        "src/tac/codec_pipeline_mask.py",
+        "src/tac/alpha_mask_codec_readiness.py",
+        "src/tac/nerv_mask_codec.py",
+        "src/tac/wavelet_mask_codec.py",
+        "src/tac/vqvae_mask_codec.py",
+        "src/tac/mask_grayscale_lut.py"
+      ],
+      "dispatch_attempted": false,
+      "evidence_grade": "planning_proxy_alpha_mask_bakeoff_empirical",
+      "evidence_paths": [],
+      "expected_information_gain_nats": 0.4,
+      "expected_pose_dist_delta": 0.0,
+      "expected_seg_dist_delta": 0.0,
+      "expected_total_score_delta": 0.0,
+      "family": "alpha_mask_payload_bakeoff",
+      "family_group": "paradigm_alpha_mask_payload_overhaul",
+      "key": "alpha_mask_bakeoff_alpha_vqvae_mask",
+      "next_patch": "",
+      "next_required_proof": [
+        "local_archive_file_with_matching_sha256_and_bytes",
+        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+        "passed_kkt_proof_or_converged_admm_waterline_result",
+        "pareto_eligible_static_ready_non_proxy_candidate"
+      ],
+      "paradigms": [
+        "alpha_mask_payload",
+        "nerv_mask",
+        "wavelet_mask",
+        "vqvae_mask",
+        "grayscale_lut_mask",
+        "meta_lagrangian"
+      ],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_scope": "alpha_mask_payload_planning",
+      "planning_priority_rankable": false,
+      "priority_tier": 2,
+      "ready_for_exact_eval_dispatch": false,
+      "role": "mask_payload_encoder_bakeoff",
+      "schema": "cross_paradigm_frontier_row_v1",
+      "score_claim": false,
+      "score_evidence_rankable": false,
+      "source_path": "experiments/results/lane_codec_pipeline_mask_20260507T165819Z/bakeoff_manifest.json",
+      "source_tool": "tools/build_field_meta_dispatch_selection.py",
+      "status": "needs_byte_closed_archive_proof",
+      "title": ""
+    },
+    {
+      "action_class": "wire_beta_substrate_transform_into_archive_candidate",
+      "blockers": [
+        "missing_byte_closed_archive_proof",
+        "archive:archive_identity_missing",
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing",
+        "planning_or_proxy_packet",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "kkt_not_ready_for_field_planning",
+        "missing_dispatch_identity_for_lane_claim",
+        "non_byte_closed_archive",
+        "non_byte_closed_runtime",
+        "pareto_ineligible_packet",
+        "ingestion:byte_closed_archive_proof_missing",
+        "ingestion:runtime_tree_closure_proof_missing",
+        "ingestion:planning_or_proxy_packet_not_dispatch_ready",
+        "ingestion:planning_only_packet_not_dispatch_ready",
+        "pareto_ineligible_for_field_selection"
+      ],
+      "byte_delta": -616293.0,
+      "candidate_id": "beta_sensitivity_substrate_transform",
+      "candidate_static_preflight_ready": false,
+      "code_paths": [
+        "src/tac/codec_pipeline_sensitivity.py",
+        "src/tac/sensitivity_map.py",
+        "src/tac/owv3_sensitivity_weighted.py",
+        "src/tac/neural_weight_codec_sensitivity.py"
+      ],
+      "dispatch_attempted": false,
+      "evidence_grade": "planning_proxy_beta_sensitivity_substrate_transform",
+      "evidence_paths": [],
+      "expected_information_gain_nats": 0.38,
+      "expected_pose_dist_delta": 0.0,
+      "expected_seg_dist_delta": 0.0,
+      "expected_total_score_delta": 0.0,
+      "family": "beta_sensitivity_substrate_transform",
+      "family_group": "paradigm_beta_sensitivity_aware_everything",
+      "key": "beta_sensitivity_substrate_transform",
+      "next_patch": "",
+      "next_required_proof": [
+        "local_archive_file_with_matching_sha256_and_bytes",
+        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+        "passed_kkt_proof_or_converged_admm_waterline_result",
+        "pareto_eligible_static_ready_non_proxy_candidate"
+      ],
+      "paradigms": [
+        "beta_sensitivity",
+        "substrate_transform",
+        "joint_codec_stack",
+        "meta_lagrangian"
+      ],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_scope": "beta_sensitivity_planning",
+      "planning_priority_rankable": false,
+      "priority_tier": 2,
+      "ready_for_exact_eval_dispatch": false,
+      "role": "sensitivity_aware_substrate_transform_planning",
+      "schema": "cross_paradigm_frontier_row_v1",
+      "score_claim": false,
+      "score_evidence_rankable": false,
+      "source_path": "experiments/results/lane_codec_pipeline_sensitivity_beta_20260507T161548Z/manifest.json",
+      "source_tool": "tools/build_field_meta_dispatch_selection.py",
+      "status": "needs_byte_closed_archive_proof",
+      "title": ""
+    },
+    {
       "action_class": "build_byte_different_pr103_lc_ac_candidate",
       "blockers": [
         "missing_byte_closed_archive_proof",
@@ -727,13 +935,31 @@
       "expected_total_score_delta": "min"
     },
     "scope_counts": {
+      "alpha_mask_payload_planning": {
+        "dominated": 0,
+        "eligible": 0,
+        "frontier": 0,
+        "ineligible": 1
+      },
       "apogee_intN_calibration_component_penalty": {
         "dominated": 0,
         "eligible": 0,
         "frontier": 0,
         "ineligible": 1
       },
+      "beta_sensitivity_planning": {
+        "dominated": 0,
+        "eligible": 0,
+        "frontier": 0,
+        "ineligible": 1
+      },
       "categorical_mask_runtime": {
+        "dominated": 0,
+        "eligible": 0,
+        "frontier": 0,
+        "ineligible": 1
+      },
+      "cross_paradigm_stack_planning": {
         "dominated": 0,
         "eligible": 0,
         "frontier": 0,
@@ -1057,14 +1283,14 @@
         0.0
       ],
       "manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json",
-      "manifest_sha256": "0e4b65aab9d23bd2b8d41a1337e1c0690016c70d83a5d535877c8c7633ce3ade",
+      "manifest_sha256": "4ad03a191bf50a039ad73d042ed1926c638a56291b0950fbe85860c0fd1ec81f",
       "next_local_non_gpu_action": {
         "command": ".venv/bin/python -c 'import os,sys; missing=[k for k in sys.argv[1:] if not os.environ.get(k)]; raise SystemExit(('\"'\"'FATAL: missing Lightning env: '\"'\"'+'\"'\"', '\"'\"'.join(missing)) if missing else 0)' LIGHTNING_SSH_TARGET LIGHTNING_REMOTE_PACT LIGHTNING_UPSTREAM_DIR LIGHTNING_TEAMSPACE LIGHTNING_STUDIO LIGHTNING_SDK_USER",
         "copy_safe_command": ".venv/bin/python -c 'import os,sys; missing=[k for k in sys.argv[1:] if not os.environ.get(k)]; raise SystemExit(('\"'\"'FATAL: missing Lightning env: '\"'\"'+'\"'\"', '\"'\"'.join(missing)) if missing else 0)' LIGHTNING_SSH_TARGET LIGHTNING_REMOTE_PACT LIGHTNING_UPSTREAM_DIR LIGHTNING_TEAMSPACE LIGHTNING_STUDIO LIGHTNING_SDK_USER",
         "dispatches_remote_gpu": false,
         "id": "verify_lightning_env",
         "order": 1,
-        "purpose": "",
+        "purpose": "fail loudly until all Lightning identity and path env vars are loaded",
         "source": "operator_next_steps.steps",
         "writes_repo_state": false
       },
@@ -1167,7 +1393,7 @@
           "dispatches_remote_gpu": false,
           "id": "verify_lightning_env",
           "order": 1,
-          "purpose": "",
+          "purpose": "fail loudly until all Lightning identity and path env vars are loaded",
           "source": "operator_next_steps.steps",
           "writes_repo_state": false
         },
@@ -1248,13 +1474,13 @@
           {
             "blockers": [],
             "runtime_closed": true,
-            "runtime_tree_sha256": "f402908b2490718c4f7b76987335ec1a496cb12ab71c27e1e1aea4024d5712cb",
+            "runtime_tree_sha256": "2a3bbb259179152ca38e659370afdeeabf670bf1f96e2bc91568a7c9cfc93b47",
             "source": "public_replay_preflight.runtime",
             "status": "passed"
           }
         ],
         "runtime_closed": true,
-        "runtime_tree_sha256": "f402908b2490718c4f7b76987335ec1a496cb12ab71c27e1e1aea4024d5712cb",
+        "runtime_tree_sha256": "2a3bbb259179152ca38e659370afdeeabf670bf1f96e2bc91568a7c9cfc93b47",
         "source": "public_replay_preflight.runtime",
         "status": "passed"
       },
@@ -1799,6 +2025,550 @@
       },
       "strict_candidate_preflight_ready": true,
       "strict_candidate_static_preflight_ready": true,
+      "title": ""
+    },
+    {
+      "action_class": "implement_hdm3_runtime_adapter_and_exact_eval_packet",
+      "archive_proof": {
+        "blockers": [],
+        "byte_closed": true,
+        "bytes_actual": 186066,
+        "bytes_expected": 186066,
+        "path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/pr106x_lowlevel_brotli_hdm3_archive_candidate.zip",
+        "sha256_actual": "5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771",
+        "sha256_expected": "5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771",
+        "source": "candidate_archive_fields",
+        "status": "passed",
+        "zip_custody": {
+          "blockers": [],
+          "member_count": 1,
+          "member_names": [
+            "x"
+          ],
+          "status": "passed"
+        }
+      },
+      "byte_delta": -14,
+      "calibration_expected_total_score_delta": null,
+      "candidate_archive_bytes": 186066,
+      "candidate_archive_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/pr106x_lowlevel_brotli_hdm3_archive_candidate.zip",
+      "candidate_archive_sha256": "5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771",
+      "candidate_blockers": [
+        "strict_candidate_preflight_not_ready",
+        "strict:ready_for_exact_eval_dispatch_false",
+        "lane_dispatch_claim_missing",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "candidate_id": "pr106x_hdm3_decoder_recode_14byte",
+      "candidate_local_preflight_ready": false,
+      "candidate_preflight_next_required_proof": [
+        "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py"
+      ],
+      "candidate_preflight_ready_for_exact_eval_dispatch": false,
+      "candidate_static_preflight_ready": false,
+      "candidate_static_preflight_ready_before_dirty": false,
+      "candidate_watch_paths": [
+        "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_archive_candidate_manifest.json",
+        "src/tac/hnerv_hdm3_archive_candidate.py",
+        "src/tac/hnerv_decoder_recode.py",
+        "src/tac/hnerv_hdm3_runtime_adapter.py",
+        "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/hdm3_normalize.py",
+        "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/pr106x_lowlevel_brotli_hdm3_archive_candidate.zip",
+        "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/pr106x_hnerv_brotli_repack_candidate.zip",
+        "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/runtime_adapter_proof.with_tool_run.json",
+        "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_exact_eval_packet_readiness.json"
+      ],
+      "code_paths": [
+        "src/tac/hnerv_hdm3_archive_candidate.py",
+        "src/tac/hnerv_decoder_recode.py",
+        "src/tac/hnerv_hdm3_runtime_adapter.py",
+        "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/hdm3_normalize.py"
+      ],
+      "component_penalty_score_delta_from_readiness_evidence": null,
+      "confidence": 1.0,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [],
+      "dirty_blocked": false,
+      "dirty_path_blockers": [],
+      "dispatch_attempted": false,
+      "dispatch_claim_proof": {
+        "active_claim": null,
+        "active_lane_claim": false,
+        "blockers": [
+          "dispatch_instance_job_id_missing"
+        ],
+        "checked": true,
+        "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+        "instance_job_id": "",
+        "lane_id": "hnerv_hdm3_q_brotli_split_exact_eval",
+        "matching_claims": [],
+        "now_utc": "2026-05-07T12:30:00Z",
+        "status": "blocked",
+        "ttl_hours": 24.0
+      },
+      "dispatch_identity_proof": {
+        "blockers": [
+          "dispatch_instance_job_id_missing"
+        ],
+        "instance_job_id": "",
+        "lane_id": "hnerv_hdm3_q_brotli_split_exact_eval",
+        "status": "blocked"
+      },
+      "dispatch_refused": true,
+      "evidence_grade": "empirical_archive_candidate_runtime_adapter_parity_static_packet_ready",
+      "evidence_paths": [],
+      "exact_dispatch_blockers": {
+        "blocker_categories": {
+          "custody": [],
+          "dirty_worktree": [],
+          "dispatch_claim": [
+            "lane_dispatch_claim_missing",
+            "missing_dispatch_identity_for_lane_claim"
+          ],
+          "environment": [],
+          "exact_cuda_eval": [
+            "strict:ready_for_exact_eval_dispatch_false",
+            "exact_cuda_auth_eval_missing"
+          ],
+          "interaction_model": [],
+          "kkt_or_admm": [
+            "kkt:kkt_proof_or_admm_result_missing",
+            "kkt_not_ready_for_field_planning"
+          ],
+          "other": [],
+          "pareto_frontier": [
+            "pareto_ineligible_packet",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "proxy_or_planning": [],
+          "runtime": [],
+          "score_claim": [],
+          "strict_preflight": [
+            "strict_candidate_preflight_not_ready",
+            "strict_candidate_preflight_blocked",
+            "ingestion:strict_candidate_preflight_not_ready"
+          ]
+        },
+        "blocker_count": 11,
+        "blockers": [
+          "strict_candidate_preflight_not_ready",
+          "strict:ready_for_exact_eval_dispatch_false",
+          "lane_dispatch_claim_missing",
+          "exact_cuda_auth_eval_missing",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "kkt_not_ready_for_field_planning",
+          "missing_dispatch_identity_for_lane_claim",
+          "pareto_ineligible_packet",
+          "strict_candidate_preflight_blocked",
+          "ingestion:strict_candidate_preflight_not_ready",
+          "pareto_ineligible_for_field_selection"
+        ],
+        "candidate_preflight_ready_for_exact_eval_dispatch": false,
+        "dispatch_attempted": false,
+        "dispatch_refused": true,
+        "next_required_proof": [
+          "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py",
+          "passed_kkt_proof_or_converged_admm_waterline_result",
+          "pareto_eligible_static_ready_non_proxy_candidate"
+        ],
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "exact_dispatch_blockers_v1",
+        "score_claim": false
+      },
+      "expected_information_gain_nats": 0.05,
+      "expected_pose_dist_delta": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_seg_dist_delta": 0.0,
+      "expected_total_score_delta": -9.322025e-06,
+      "expected_total_score_delta_source": "expected_total_score_delta_rate_only",
+      "family": "hnerv_hdm3_decoder_recode",
+      "family_group": "hnerv_decoder_entropy_recode",
+      "field_interaction_contract": {
+        "assumption_count": 3,
+        "assumptions": [
+          "rate_only_decoder_raw_equivalent_recode",
+          "runtime_adapter_required_before_exact_eval",
+          "component_deltas_require_exact_cuda_confirmation"
+        ],
+        "blockers": [],
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [],
+        "interaction_model": "",
+        "schema": "field_interaction_contract_v1",
+        "status": "passed",
+        "volterra_order": null,
+        "volterra_order_source": "",
+        "volterra_scope": "undeclared_order_first_order_assumptions_only",
+        "volterra_terms": [],
+        "volterra_terms_declared": false
+      },
+      "field_meta_ingestion_contract": {
+        "archive_byte_closed": true,
+        "byte_closed_archive_required": true,
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "strict_candidate_preflight_not_ready"
+        ],
+        "dispatch_ingestion_ready": false,
+        "local_blockers": [],
+        "local_field_meta_ingestion_ready": true,
+        "planning_only": false,
+        "planning_only_is_score_evidence": false,
+        "proxy_packets_dispatch_ready": false,
+        "proxy_row": false,
+        "runtime_closed": true,
+        "runtime_tree_closure_required": true,
+        "schema": "field_meta_ingestion_contract_v1",
+        "score_claim": false,
+        "status": "passed",
+        "strict_candidate_preflight_ready": false
+      },
+      "field_selection_blockers": [
+        "strict_candidate_preflight_not_ready",
+        "strict:ready_for_exact_eval_dispatch_false",
+        "lane_dispatch_claim_missing",
+        "exact_cuda_auth_eval_missing",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "kkt_not_ready_for_field_planning",
+        "missing_dispatch_identity_for_lane_claim",
+        "pareto_ineligible_packet",
+        "strict_candidate_preflight_blocked",
+        "ingestion:strict_candidate_preflight_not_ready",
+        "pareto_ineligible_for_field_selection"
+      ],
+      "field_selection_next_required_proof": [
+        "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py",
+        "passed_kkt_proof_or_converged_admm_waterline_result",
+        "pareto_eligible_static_ready_non_proxy_candidate"
+      ],
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "field_selection_score_delta": -9.322025e-06,
+      "frontier_row": {
+        "action_class": "implement_hdm3_runtime_adapter_and_exact_eval_packet",
+        "blockers": [
+          "strict_candidate_preflight_not_ready",
+          "strict:ready_for_exact_eval_dispatch_false",
+          "lane_dispatch_claim_missing",
+          "exact_cuda_auth_eval_missing",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "kkt_not_ready_for_field_planning",
+          "missing_dispatch_identity_for_lane_claim",
+          "pareto_ineligible_packet",
+          "strict_candidate_preflight_blocked",
+          "ingestion:strict_candidate_preflight_not_ready",
+          "pareto_ineligible_for_field_selection"
+        ],
+        "byte_delta": -14.0,
+        "candidate_id": "pr106x_hdm3_decoder_recode_14byte",
+        "candidate_static_preflight_ready": false,
+        "code_paths": [
+          "src/tac/hnerv_hdm3_archive_candidate.py",
+          "src/tac/hnerv_decoder_recode.py",
+          "src/tac/hnerv_hdm3_runtime_adapter.py",
+          "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/hdm3_normalize.py"
+        ],
+        "dispatch_attempted": false,
+        "evidence_grade": "empirical_archive_candidate_runtime_adapter_parity_static_packet_ready",
+        "evidence_paths": [],
+        "expected_information_gain_nats": 0.05,
+        "expected_pose_dist_delta": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": -9.322025e-06,
+        "family": "hnerv_hdm3_decoder_recode",
+        "family_group": "hnerv_decoder_entropy_recode",
+        "key": "pr106x_hdm3_decoder_recode_14byte",
+        "next_patch": "",
+        "next_required_proof": [
+          "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py",
+          "passed_kkt_proof_or_converged_admm_waterline_result",
+          "pareto_eligible_static_ready_non_proxy_candidate"
+        ],
+        "paradigms": [
+          "hidden_gem_entropy",
+          "hnerv_frontier"
+        ],
+        "pareto_eligible": false,
+        "pareto_frontier": false,
+        "pareto_scope": "hnerv_rate_only_exact_archive",
+        "planning_priority_rankable": true,
+        "priority_tier": 2,
+        "ready_for_exact_eval_dispatch": false,
+        "role": "rate_recode_substitute",
+        "schema": "cross_paradigm_frontier_row_v1",
+        "score_claim": false,
+        "score_evidence_rankable": false,
+        "source_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_archive_candidate_manifest.json",
+        "source_tool": "tools/build_field_meta_dispatch_selection.py",
+        "status": "strict_candidate_preflight_refused",
+        "title": ""
+      },
+      "instance_job_id": "",
+      "interaction_assumptions": [
+        "rate_only_decoder_raw_equivalent_recode",
+        "runtime_adapter_required_before_exact_eval",
+        "component_deltas_require_exact_cuda_confirmation"
+      ],
+      "job_name": "",
+      "kkt_blockers": [
+        "strict_candidate_preflight_not_ready",
+        "strict:ready_for_exact_eval_dispatch_false",
+        "lane_dispatch_claim_missing",
+        "exact_cuda_auth_eval_missing",
+        "kkt:kkt_proof_or_admm_result_missing"
+      ],
+      "kkt_proof": {
+        "blockers": [
+          "kkt_proof_or_admm_result_missing"
+        ],
+        "candidates": [],
+        "kind": "",
+        "residual": null,
+        "source": "",
+        "status": "blocked",
+        "tolerance": null
+      },
+      "kkt_ready_for_field_planning": false,
+      "lane_id": "hnerv_hdm3_q_brotli_split_exact_eval",
+      "lexicographic_feasibility_tuple": [
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        -9.322025e-06,
+        0.05
+      ],
+      "manifest_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_archive_candidate_manifest.json",
+      "manifest_sha256": "70579de8ed404f3110e745bdb9f1622d919e321ce90511e0fa6ef6bbc95331a7",
+      "next_local_non_gpu_action": null,
+      "next_local_non_gpu_command": "",
+      "next_required_proof": [
+        "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py",
+        "passed_kkt_proof_or_converged_admm_waterline_result",
+        "pareto_eligible_static_ready_non_proxy_candidate"
+      ],
+      "non_dominated_frontier_reason": {
+        "dominated_by": [],
+        "eligibility_blockers": [
+          "candidate_static_preflight_not_ready"
+        ],
+        "eligible": false,
+        "frontier": false,
+        "objective_directions": {
+          "byte_delta": "min",
+          "candidate_static_preflight_ready": "max",
+          "confidence": "max",
+          "expected_pose_dist_delta": "min",
+          "expected_seg_dist_delta": "min",
+          "expected_total_score_delta": "min"
+        },
+        "objectives": {
+          "byte_delta": -14.0,
+          "candidate_static_preflight_ready": 0.0,
+          "confidence": 1.0,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "expected_total_score_delta": -9.322025e-06
+        },
+        "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+        "schema": "non_dominated_frontier_reason_v1",
+        "scope": "hnerv_rate_only_exact_archive",
+        "status": "ineligible"
+      },
+      "operator_approval_blockers": [],
+      "operator_approval_state": {
+        "approved": true,
+        "dispatch_unlocked_by_approval": false,
+        "manifest_operator_approved_exact_cuda": null,
+        "remaining_required_gates": [
+          "environment",
+          "active_lane_dispatch_claim",
+          "candidate_static_preflight",
+          "pareto_frontier",
+          "kkt_or_admm_proof",
+          "exact_cuda_auth_eval",
+          "adversarial_review_before_score_claim"
+        ],
+        "schema": "operator_approval_state_v1",
+        "selector_context_operator_approved_exact_cuda": true,
+        "source": "selector_context_operator_approved_exact_cuda"
+      },
+      "operator_claim_blockers": [
+        "lane_dispatch_claim_missing"
+      ],
+      "operator_current_blockers": [
+        "lane_dispatch_claim_missing",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "operator_environment_blockers": [],
+      "operator_next_steps_summary": {
+        "approval_blockers": [],
+        "claim_blockers": [
+          "lane_dispatch_claim_missing"
+        ],
+        "copy_safe": null,
+        "current_blockers": [
+          "lane_dispatch_claim_missing",
+          "exact_cuda_auth_eval_missing"
+        ],
+        "environment_blockers": [],
+        "first_remote_gpu_step": "",
+        "local_non_gpu_step_ids": [],
+        "must_run_in_order": null,
+        "next_local_non_gpu_action": null,
+        "next_local_non_gpu_command": "",
+        "operator_approval_state": {
+          "approved": true,
+          "dispatch_unlocked_by_approval": false,
+          "manifest_operator_approved_exact_cuda": null,
+          "remaining_required_gates": [
+            "environment",
+            "active_lane_dispatch_claim",
+            "candidate_static_preflight",
+            "pareto_frontier",
+            "kkt_or_admm_proof",
+            "exact_cuda_auth_eval",
+            "adversarial_review_before_score_claim"
+          ],
+          "schema": "operator_approval_state_v1",
+          "selector_context_operator_approved_exact_cuda": true,
+          "source": "selector_context_operator_approved_exact_cuda"
+        },
+        "packet_operator_next_steps_schema": "",
+        "packet_path": "",
+        "refresh_blockers": [],
+        "remote_gpu_step_ids": [],
+        "schema": "packet_operator_next_steps_summary_v1",
+        "source": "manifest_command_fields",
+        "static_refresh_command": "",
+        "static_refresh_schema": "",
+        "static_refresh_source": "",
+        "static_refresh_status": "not_recorded",
+        "step_count": 0
+      },
+      "operator_refresh_blockers": [],
+      "packet_kind": "1",
+      "paradigms": [
+        "hidden_gem_entropy",
+        "hnerv_frontier"
+      ],
+      "pareto_dominated_by": [],
+      "pareto_eligibility_blockers": [
+        "candidate_static_preflight_not_ready"
+      ],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_objectives": {
+        "byte_delta": -14.0,
+        "candidate_static_preflight_ready": 0.0,
+        "confidence": 1.0,
+        "expected_pose_dist_delta": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": -9.322025e-06
+      },
+      "pareto_scope": "hnerv_rate_only_exact_archive",
+      "planning_priority_rankable": true,
+      "priority_tier": 2,
+      "proxy_row": false,
+      "rate_only_delta_proof": {
+        "blockers": [],
+        "byte_delta": -14,
+        "declared_rate_only": true,
+        "expected_total_score_delta": -9.322025e-06,
+        "expected_total_score_delta_source": "expected_total_score_delta_rate_only",
+        "official_rate_score_delta": -9.322025e-06,
+        "schema": "rate_only_delta_proof_v1",
+        "status": "passed",
+        "tolerance": 1e-09
+      },
+      "readiness_component_penalty_overwhelms_rate_gain": null,
+      "readiness_evidence_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_exact_eval_packet_readiness.json",
+      "readiness_evidence_ready_for_exact_eval_dispatch": false,
+      "readiness_evidence_semantics": "hdm3_static_packet_runtime_adapter_payload_identity",
+      "readiness_evidence_sha256": "46ade7d60f46666c9b6620f042da97034b48150ea3e8c148cec61a0315c15209",
+      "ready_for_exact_eval_dispatch": false,
+      "role": "rate_recode_substitute",
+      "runtime_proof": {
+        "blockers": [],
+        "candidates": [
+          {
+            "blockers": [],
+            "runtime_closed": true,
+            "runtime_tree_sha256": "2a3bbb259179152ca38e659370afdeeabf670bf1f96e2bc91568a7c9cfc93b47",
+            "source": "fixed_runtime_preflight",
+            "status": "passed"
+          }
+        ],
+        "runtime_closed": true,
+        "runtime_tree_sha256": "2a3bbb259179152ca38e659370afdeeabf670bf1f96e2bc91568a7c9cfc93b47",
+        "source": "fixed_runtime_preflight",
+        "status": "passed"
+      },
+      "schema_version": 3,
+      "score_claim": false,
+      "score_evidence_contract": {
+        "blockers": [
+          "missing_exact_cuda_positive_score_evidence"
+        ],
+        "exact_cuda_grade": false,
+        "exact_positive_cuda_evidence": false,
+        "expected_total_score_delta": -9.322025e-06,
+        "planning_only_is_score_evidence": false,
+        "planning_priority_rankable": true,
+        "schema": "field_meta_score_evidence_contract_v1",
+        "score_evidence_rankable": false,
+        "source_score_lowering_evidence": null,
+        "status": "blocked"
+      },
+      "score_evidence_rankable": false,
+      "score_lowering_evidence": false,
+      "scorer_basin_parity_status": "",
+      "selection_blockers": [
+        "kkt_not_ready_for_field_planning",
+        "missing_dispatch_identity_for_lane_claim",
+        "pareto_ineligible_packet",
+        "strict_candidate_preflight_blocked"
+      ],
+      "selection_decision": "strict_candidate_preflight_refused",
+      "selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 25.0,
+        "missing_dispatch_identity_for_lane_claim": 250.0,
+        "pareto_ineligible_packet": 50.0,
+        "strict_candidate_preflight_blocked": 500.0
+      },
+      "selection_penalty_units": 825.0,
+      "source_ready_for_exact_eval_packet": true,
+      "source_score_lowering_evidence": null,
+      "source_static_packet_ready": true,
+      "static_candidate_blockers": [
+        "strict_candidate_preflight_not_ready",
+        "strict:ready_for_exact_eval_dispatch_false",
+        "lane_dispatch_claim_missing",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "strict_candidate_preflight": {
+        "blockers": [
+          {
+            "code": "ready_for_exact_eval_dispatch_false",
+            "detail": "ready_for_exact_eval_dispatch is false",
+            "severity": "blocking"
+          }
+        ],
+        "candidate_static_preflight_ready": false,
+        "lane_claim": {
+          "active_conflicts": [],
+          "checked": false,
+          "claims_path": null,
+          "lane_id": "hnerv_hdm3_q_brotli_split_exact_eval"
+        },
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
+        "warnings": []
+      },
+      "strict_candidate_preflight_ready": false,
+      "strict_candidate_static_preflight_ready": false,
       "title": ""
     },
     {
@@ -2395,6 +3165,7 @@
         "pr101_schema_submission_runtime_adapter_not_integrated",
         "pr101_schema_runtime_tree_parity_manifest_missing",
         "pr101_schema_inflate_output_parity_missing",
+        "pr101_schema_submission_runtime_callsite_not_patched",
         "strict_pre_submission_compliance_json_missing",
         "lane_dispatch_claim_missing",
         "exact_cuda_auth_eval_missing"
@@ -2487,6 +3258,7 @@
           "runtime": [
             "runtime:runtime_proof_missing",
             "pr101_schema_submission_runtime_adapter_not_integrated",
+            "pr101_schema_submission_runtime_callsite_not_patched",
             "ingestion:runtime_tree_closure_proof_missing"
           ],
           "score_claim": [],
@@ -2497,7 +3269,7 @@
             "ingestion:strict_candidate_preflight_not_ready"
           ]
         },
-        "blocker_count": 19,
+        "blocker_count": 20,
         "blockers": [
           "missing_byte_closed_runtime_proof",
           "runtime:runtime_proof_missing",
@@ -2506,6 +3278,7 @@
           "pr101_schema_submission_runtime_adapter_not_integrated",
           "pr101_schema_runtime_tree_parity_manifest_missing",
           "pr101_schema_inflate_output_parity_missing",
+          "pr101_schema_submission_runtime_callsite_not_patched",
           "strict_pre_submission_compliance_json_missing",
           "lane_dispatch_claim_missing",
           "exact_cuda_auth_eval_missing",
@@ -2592,6 +3365,7 @@
         "pr101_schema_submission_runtime_adapter_not_integrated",
         "pr101_schema_runtime_tree_parity_manifest_missing",
         "pr101_schema_inflate_output_parity_missing",
+        "pr101_schema_submission_runtime_callsite_not_patched",
         "strict_pre_submission_compliance_json_missing",
         "lane_dispatch_claim_missing",
         "exact_cuda_auth_eval_missing",
@@ -2623,6 +3397,7 @@
           "pr101_schema_submission_runtime_adapter_not_integrated",
           "pr101_schema_runtime_tree_parity_manifest_missing",
           "pr101_schema_inflate_output_parity_missing",
+          "pr101_schema_submission_runtime_callsite_not_patched",
           "strict_pre_submission_compliance_json_missing",
           "lane_dispatch_claim_missing",
           "exact_cuda_auth_eval_missing",
@@ -2696,6 +3471,7 @@
         "pr101_schema_submission_runtime_adapter_not_integrated",
         "pr101_schema_runtime_tree_parity_manifest_missing",
         "pr101_schema_inflate_output_parity_missing",
+        "pr101_schema_submission_runtime_callsite_not_patched",
         "strict_pre_submission_compliance_json_missing",
         "lane_dispatch_claim_missing",
         "exact_cuda_auth_eval_missing",
@@ -2726,7 +3502,7 @@
         0.08
       ],
       "manifest_path": "experiments/results/hnerv_pr101_schema_candidate_20260507_codex/pr101_schema_archive_candidate_manifest.json",
-      "manifest_sha256": "95d305714f4c99e010c29aa5e5167e770ee7eb410723d3a384fe4b7ac7da8aed",
+      "manifest_sha256": "932e7719b994ea9bbb52af56ce5e1dc502f9a1009143292f7ca1026527bff78a",
       "next_local_non_gpu_action": null,
       "next_local_non_gpu_command": "",
       "next_required_proof": [
@@ -2789,6 +3565,7 @@
         "pr101_schema_submission_runtime_adapter_not_integrated",
         "pr101_schema_runtime_tree_parity_manifest_missing",
         "pr101_schema_inflate_output_parity_missing",
+        "pr101_schema_submission_runtime_callsite_not_patched",
         "strict_pre_submission_compliance_json_missing",
         "lane_dispatch_claim_missing",
         "exact_cuda_auth_eval_missing"
@@ -2804,6 +3581,7 @@
           "pr101_schema_submission_runtime_adapter_not_integrated",
           "pr101_schema_runtime_tree_parity_manifest_missing",
           "pr101_schema_inflate_output_parity_missing",
+          "pr101_schema_submission_runtime_callsite_not_patched",
           "strict_pre_submission_compliance_json_missing",
           "lane_dispatch_claim_missing",
           "exact_cuda_auth_eval_missing"
@@ -2944,6 +3722,7 @@
         "pr101_schema_submission_runtime_adapter_not_integrated",
         "pr101_schema_runtime_tree_parity_manifest_missing",
         "pr101_schema_inflate_output_parity_missing",
+        "pr101_schema_submission_runtime_callsite_not_patched",
         "strict_pre_submission_compliance_json_missing",
         "lane_dispatch_claim_missing",
         "exact_cuda_auth_eval_missing"
@@ -2962,581 +3741,6 @@
           "checked": false,
           "claims_path": null,
           "lane_id": null
-        },
-        "ready_for_exact_eval_dispatch": false,
-        "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
-        "warnings": []
-      },
-      "strict_candidate_preflight_ready": false,
-      "strict_candidate_static_preflight_ready": false,
-      "title": ""
-    },
-    {
-      "action_class": "implement_hdm3_runtime_adapter_and_exact_eval_packet",
-      "archive_proof": {
-        "blockers": [],
-        "byte_closed": true,
-        "bytes_actual": 186066,
-        "bytes_expected": 186066,
-        "path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/pr106x_lowlevel_brotli_hdm3_archive_candidate.zip",
-        "sha256_actual": "5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771",
-        "sha256_expected": "5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771",
-        "source": "candidate_archive_fields",
-        "status": "passed",
-        "zip_custody": {
-          "blockers": [],
-          "member_count": 1,
-          "member_names": [
-            "x"
-          ],
-          "status": "passed"
-        }
-      },
-      "byte_delta": -14,
-      "calibration_expected_total_score_delta": null,
-      "candidate_archive_bytes": 186066,
-      "candidate_archive_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/pr106x_lowlevel_brotli_hdm3_archive_candidate.zip",
-      "candidate_archive_sha256": "5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771",
-      "candidate_blockers": [
-        "missing_byte_closed_runtime_proof",
-        "runtime:runtime_proof_missing",
-        "strict_candidate_preflight_not_ready",
-        "strict:ready_for_exact_eval_dispatch_false",
-        "lane_dispatch_claim_missing",
-        "exact_cuda_auth_eval_missing"
-      ],
-      "candidate_id": "pr106x_hdm3_decoder_recode_14byte",
-      "candidate_local_preflight_ready": false,
-      "candidate_preflight_next_required_proof": [
-        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
-        "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py"
-      ],
-      "candidate_preflight_ready_for_exact_eval_dispatch": false,
-      "candidate_static_preflight_ready": false,
-      "candidate_static_preflight_ready_before_dirty": false,
-      "candidate_watch_paths": [
-        "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_archive_candidate_manifest.json",
-        "src/tac/hnerv_hdm3_archive_candidate.py",
-        "src/tac/hnerv_decoder_recode.py",
-        "src/tac/hnerv_hdm3_runtime_adapter.py",
-        "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/hdm3_normalize.py",
-        "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/pr106x_lowlevel_brotli_hdm3_archive_candidate.zip",
-        "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/pr106x_hnerv_brotli_repack_candidate.zip",
-        "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/runtime_adapter_proof.with_tool_run.json",
-        "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_exact_eval_packet_readiness.json"
-      ],
-      "code_paths": [
-        "src/tac/hnerv_hdm3_archive_candidate.py",
-        "src/tac/hnerv_decoder_recode.py",
-        "src/tac/hnerv_hdm3_runtime_adapter.py",
-        "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/hdm3_normalize.py"
-      ],
-      "component_penalty_score_delta_from_readiness_evidence": null,
-      "confidence": 1.0,
-      "conflicts_with_atoms": [],
-      "conflicts_with_families": [],
-      "dirty_blocked": false,
-      "dirty_path_blockers": [],
-      "dispatch_attempted": false,
-      "dispatch_claim_proof": {
-        "active_claim": null,
-        "active_lane_claim": false,
-        "blockers": [
-          "dispatch_instance_job_id_missing"
-        ],
-        "checked": true,
-        "claims_path": ".omx/state/active_lane_dispatch_claims.md",
-        "instance_job_id": "",
-        "lane_id": "hnerv_hdm3_q_brotli_split_exact_eval",
-        "matching_claims": [],
-        "now_utc": "2026-05-07T12:30:00Z",
-        "status": "blocked",
-        "ttl_hours": 24.0
-      },
-      "dispatch_identity_proof": {
-        "blockers": [
-          "dispatch_instance_job_id_missing"
-        ],
-        "instance_job_id": "",
-        "lane_id": "hnerv_hdm3_q_brotli_split_exact_eval",
-        "status": "blocked"
-      },
-      "dispatch_refused": true,
-      "evidence_grade": "empirical_archive_candidate_runtime_adapter_parity_static_packet_ready",
-      "evidence_paths": [],
-      "exact_dispatch_blockers": {
-        "blocker_categories": {
-          "custody": [
-            "missing_byte_closed_runtime_proof",
-            "non_byte_closed_runtime"
-          ],
-          "dirty_worktree": [],
-          "dispatch_claim": [
-            "lane_dispatch_claim_missing",
-            "missing_dispatch_identity_for_lane_claim"
-          ],
-          "environment": [],
-          "exact_cuda_eval": [
-            "strict:ready_for_exact_eval_dispatch_false",
-            "exact_cuda_auth_eval_missing"
-          ],
-          "interaction_model": [],
-          "kkt_or_admm": [
-            "kkt:kkt_proof_or_admm_result_missing",
-            "kkt_not_ready_for_field_planning"
-          ],
-          "other": [],
-          "pareto_frontier": [
-            "pareto_ineligible_packet",
-            "pareto_ineligible_for_field_selection"
-          ],
-          "proxy_or_planning": [],
-          "runtime": [
-            "runtime:runtime_proof_missing",
-            "ingestion:runtime_tree_closure_proof_missing"
-          ],
-          "score_claim": [],
-          "strict_preflight": [
-            "strict_candidate_preflight_not_ready",
-            "strict_candidate_preflight_blocked",
-            "ingestion:strict_candidate_preflight_not_ready"
-          ]
-        },
-        "blocker_count": 15,
-        "blockers": [
-          "missing_byte_closed_runtime_proof",
-          "runtime:runtime_proof_missing",
-          "strict_candidate_preflight_not_ready",
-          "strict:ready_for_exact_eval_dispatch_false",
-          "lane_dispatch_claim_missing",
-          "exact_cuda_auth_eval_missing",
-          "kkt:kkt_proof_or_admm_result_missing",
-          "kkt_not_ready_for_field_planning",
-          "missing_dispatch_identity_for_lane_claim",
-          "non_byte_closed_runtime",
-          "pareto_ineligible_packet",
-          "strict_candidate_preflight_blocked",
-          "ingestion:runtime_tree_closure_proof_missing",
-          "ingestion:strict_candidate_preflight_not_ready",
-          "pareto_ineligible_for_field_selection"
-        ],
-        "candidate_preflight_ready_for_exact_eval_dispatch": false,
-        "dispatch_attempted": false,
-        "dispatch_refused": true,
-        "next_required_proof": [
-          "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
-          "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py",
-          "passed_kkt_proof_or_converged_admm_waterline_result",
-          "pareto_eligible_static_ready_non_proxy_candidate"
-        ],
-        "ready_for_exact_eval_dispatch": false,
-        "schema": "exact_dispatch_blockers_v1",
-        "score_claim": false
-      },
-      "expected_information_gain_nats": 0.05,
-      "expected_pose_dist_delta": 0.0,
-      "expected_score_variance": 0.0,
-      "expected_seg_dist_delta": 0.0,
-      "expected_total_score_delta": -9.322025e-06,
-      "expected_total_score_delta_source": "expected_total_score_delta_rate_only",
-      "family": "hnerv_hdm3_decoder_recode",
-      "family_group": "hnerv_decoder_entropy_recode",
-      "field_interaction_contract": {
-        "assumption_count": 3,
-        "assumptions": [
-          "rate_only_decoder_raw_equivalent_recode",
-          "runtime_adapter_required_before_exact_eval",
-          "component_deltas_require_exact_cuda_confirmation"
-        ],
-        "blockers": [],
-        "conflicts_with_atoms": [],
-        "conflicts_with_families": [],
-        "interaction_model": "",
-        "schema": "field_interaction_contract_v1",
-        "status": "passed",
-        "volterra_order": null,
-        "volterra_order_source": "",
-        "volterra_scope": "undeclared_order_first_order_assumptions_only",
-        "volterra_terms": [],
-        "volterra_terms_declared": false
-      },
-      "field_meta_ingestion_contract": {
-        "archive_byte_closed": true,
-        "byte_closed_archive_required": true,
-        "dispatch_attempted": false,
-        "dispatch_blockers": [
-          "runtime_tree_closure_proof_missing",
-          "strict_candidate_preflight_not_ready"
-        ],
-        "dispatch_ingestion_ready": false,
-        "local_blockers": [
-          "runtime_tree_closure_proof_missing"
-        ],
-        "local_field_meta_ingestion_ready": false,
-        "planning_only": false,
-        "planning_only_is_score_evidence": false,
-        "proxy_packets_dispatch_ready": false,
-        "proxy_row": false,
-        "runtime_closed": false,
-        "runtime_tree_closure_required": true,
-        "schema": "field_meta_ingestion_contract_v1",
-        "score_claim": false,
-        "status": "blocked",
-        "strict_candidate_preflight_ready": false
-      },
-      "field_selection_blockers": [
-        "missing_byte_closed_runtime_proof",
-        "runtime:runtime_proof_missing",
-        "strict_candidate_preflight_not_ready",
-        "strict:ready_for_exact_eval_dispatch_false",
-        "lane_dispatch_claim_missing",
-        "exact_cuda_auth_eval_missing",
-        "kkt:kkt_proof_or_admm_result_missing",
-        "kkt_not_ready_for_field_planning",
-        "missing_dispatch_identity_for_lane_claim",
-        "non_byte_closed_runtime",
-        "pareto_ineligible_packet",
-        "strict_candidate_preflight_blocked",
-        "ingestion:runtime_tree_closure_proof_missing",
-        "ingestion:strict_candidate_preflight_not_ready",
-        "pareto_ineligible_for_field_selection"
-      ],
-      "field_selection_next_required_proof": [
-        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
-        "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py",
-        "passed_kkt_proof_or_converged_admm_waterline_result",
-        "pareto_eligible_static_ready_non_proxy_candidate"
-      ],
-      "field_selection_ready_for_exact_eval_dispatch": false,
-      "field_selection_score_delta": -9.322025e-06,
-      "frontier_row": {
-        "action_class": "implement_hdm3_runtime_adapter_and_exact_eval_packet",
-        "blockers": [
-          "missing_byte_closed_runtime_proof",
-          "runtime:runtime_proof_missing",
-          "strict_candidate_preflight_not_ready",
-          "strict:ready_for_exact_eval_dispatch_false",
-          "lane_dispatch_claim_missing",
-          "exact_cuda_auth_eval_missing",
-          "kkt:kkt_proof_or_admm_result_missing",
-          "kkt_not_ready_for_field_planning",
-          "missing_dispatch_identity_for_lane_claim",
-          "non_byte_closed_runtime",
-          "pareto_ineligible_packet",
-          "strict_candidate_preflight_blocked",
-          "ingestion:runtime_tree_closure_proof_missing",
-          "ingestion:strict_candidate_preflight_not_ready",
-          "pareto_ineligible_for_field_selection"
-        ],
-        "byte_delta": -14.0,
-        "candidate_id": "pr106x_hdm3_decoder_recode_14byte",
-        "candidate_static_preflight_ready": false,
-        "code_paths": [
-          "src/tac/hnerv_hdm3_archive_candidate.py",
-          "src/tac/hnerv_decoder_recode.py",
-          "src/tac/hnerv_hdm3_runtime_adapter.py",
-          "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/hdm3_normalize.py"
-        ],
-        "dispatch_attempted": false,
-        "evidence_grade": "empirical_archive_candidate_runtime_adapter_parity_static_packet_ready",
-        "evidence_paths": [],
-        "expected_information_gain_nats": 0.05,
-        "expected_pose_dist_delta": 0.0,
-        "expected_seg_dist_delta": 0.0,
-        "expected_total_score_delta": -9.322025e-06,
-        "family": "hnerv_hdm3_decoder_recode",
-        "family_group": "hnerv_decoder_entropy_recode",
-        "key": "pr106x_hdm3_decoder_recode_14byte",
-        "next_patch": "",
-        "next_required_proof": [
-          "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
-          "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py",
-          "passed_kkt_proof_or_converged_admm_waterline_result",
-          "pareto_eligible_static_ready_non_proxy_candidate"
-        ],
-        "paradigms": [
-          "hidden_gem_entropy",
-          "hnerv_frontier"
-        ],
-        "pareto_eligible": false,
-        "pareto_frontier": false,
-        "pareto_scope": "hnerv_rate_only_exact_archive",
-        "planning_priority_rankable": false,
-        "priority_tier": 2,
-        "ready_for_exact_eval_dispatch": false,
-        "role": "rate_recode_substitute",
-        "schema": "cross_paradigm_frontier_row_v1",
-        "score_claim": false,
-        "score_evidence_rankable": false,
-        "source_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_archive_candidate_manifest.json",
-        "source_tool": "tools/build_field_meta_dispatch_selection.py",
-        "status": "needs_byte_closed_runtime_proof",
-        "title": ""
-      },
-      "instance_job_id": "",
-      "interaction_assumptions": [
-        "rate_only_decoder_raw_equivalent_recode",
-        "runtime_adapter_required_before_exact_eval",
-        "component_deltas_require_exact_cuda_confirmation"
-      ],
-      "job_name": "",
-      "kkt_blockers": [
-        "missing_byte_closed_runtime_proof",
-        "runtime:runtime_proof_missing",
-        "strict_candidate_preflight_not_ready",
-        "strict:ready_for_exact_eval_dispatch_false",
-        "lane_dispatch_claim_missing",
-        "exact_cuda_auth_eval_missing",
-        "kkt:kkt_proof_or_admm_result_missing"
-      ],
-      "kkt_proof": {
-        "blockers": [
-          "kkt_proof_or_admm_result_missing"
-        ],
-        "candidates": [],
-        "kind": "",
-        "residual": null,
-        "source": "",
-        "status": "blocked",
-        "tolerance": null
-      },
-      "kkt_ready_for_field_planning": false,
-      "lane_id": "hnerv_hdm3_q_brotli_split_exact_eval",
-      "lexicographic_feasibility_tuple": [
-        false,
-        false,
-        true,
-        false,
-        true,
-        false,
-        false,
-        -9.322025e-06,
-        0.05
-      ],
-      "manifest_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_archive_candidate_manifest.json",
-      "manifest_sha256": "2675903f48b424869c9d72ede95d460adecc6730e4831444eac68d5bd6c2c210",
-      "next_local_non_gpu_action": null,
-      "next_local_non_gpu_command": "",
-      "next_required_proof": [
-        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
-        "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py",
-        "passed_kkt_proof_or_converged_admm_waterline_result",
-        "pareto_eligible_static_ready_non_proxy_candidate"
-      ],
-      "non_dominated_frontier_reason": {
-        "dominated_by": [],
-        "eligibility_blockers": [
-          "field_meta_ingestion_contract_not_ready",
-          "candidate_static_preflight_not_ready"
-        ],
-        "eligible": false,
-        "frontier": false,
-        "objective_directions": {
-          "byte_delta": "min",
-          "candidate_static_preflight_ready": "max",
-          "confidence": "max",
-          "expected_pose_dist_delta": "min",
-          "expected_seg_dist_delta": "min",
-          "expected_total_score_delta": "min"
-        },
-        "objectives": {
-          "byte_delta": -14.0,
-          "candidate_static_preflight_ready": 0.0,
-          "confidence": 1.0,
-          "expected_pose_dist_delta": 0.0,
-          "expected_seg_dist_delta": 0.0,
-          "expected_total_score_delta": -9.322025e-06
-        },
-        "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
-        "schema": "non_dominated_frontier_reason_v1",
-        "scope": "hnerv_rate_only_exact_archive",
-        "status": "ineligible"
-      },
-      "operator_approval_blockers": [],
-      "operator_approval_state": {
-        "approved": true,
-        "dispatch_unlocked_by_approval": false,
-        "manifest_operator_approved_exact_cuda": null,
-        "remaining_required_gates": [
-          "environment",
-          "active_lane_dispatch_claim",
-          "candidate_static_preflight",
-          "pareto_frontier",
-          "kkt_or_admm_proof",
-          "exact_cuda_auth_eval",
-          "adversarial_review_before_score_claim"
-        ],
-        "schema": "operator_approval_state_v1",
-        "selector_context_operator_approved_exact_cuda": true,
-        "source": "selector_context_operator_approved_exact_cuda"
-      },
-      "operator_claim_blockers": [
-        "lane_dispatch_claim_missing"
-      ],
-      "operator_current_blockers": [
-        "lane_dispatch_claim_missing",
-        "exact_cuda_auth_eval_missing"
-      ],
-      "operator_environment_blockers": [],
-      "operator_next_steps_summary": {
-        "approval_blockers": [],
-        "claim_blockers": [
-          "lane_dispatch_claim_missing"
-        ],
-        "copy_safe": null,
-        "current_blockers": [
-          "lane_dispatch_claim_missing",
-          "exact_cuda_auth_eval_missing"
-        ],
-        "environment_blockers": [],
-        "first_remote_gpu_step": "",
-        "local_non_gpu_step_ids": [],
-        "must_run_in_order": null,
-        "next_local_non_gpu_action": null,
-        "next_local_non_gpu_command": "",
-        "operator_approval_state": {
-          "approved": true,
-          "dispatch_unlocked_by_approval": false,
-          "manifest_operator_approved_exact_cuda": null,
-          "remaining_required_gates": [
-            "environment",
-            "active_lane_dispatch_claim",
-            "candidate_static_preflight",
-            "pareto_frontier",
-            "kkt_or_admm_proof",
-            "exact_cuda_auth_eval",
-            "adversarial_review_before_score_claim"
-          ],
-          "schema": "operator_approval_state_v1",
-          "selector_context_operator_approved_exact_cuda": true,
-          "source": "selector_context_operator_approved_exact_cuda"
-        },
-        "packet_operator_next_steps_schema": "",
-        "packet_path": "",
-        "refresh_blockers": [],
-        "remote_gpu_step_ids": [],
-        "schema": "packet_operator_next_steps_summary_v1",
-        "source": "manifest_command_fields",
-        "static_refresh_command": "",
-        "static_refresh_schema": "",
-        "static_refresh_source": "",
-        "static_refresh_status": "not_recorded",
-        "step_count": 0
-      },
-      "operator_refresh_blockers": [],
-      "packet_kind": "1",
-      "paradigms": [
-        "hidden_gem_entropy",
-        "hnerv_frontier"
-      ],
-      "pareto_dominated_by": [],
-      "pareto_eligibility_blockers": [
-        "field_meta_ingestion_contract_not_ready",
-        "candidate_static_preflight_not_ready"
-      ],
-      "pareto_eligible": false,
-      "pareto_frontier": false,
-      "pareto_objectives": {
-        "byte_delta": -14.0,
-        "candidate_static_preflight_ready": 0.0,
-        "confidence": 1.0,
-        "expected_pose_dist_delta": 0.0,
-        "expected_seg_dist_delta": 0.0,
-        "expected_total_score_delta": -9.322025e-06
-      },
-      "pareto_scope": "hnerv_rate_only_exact_archive",
-      "planning_priority_rankable": false,
-      "priority_tier": 2,
-      "proxy_row": false,
-      "rate_only_delta_proof": {
-        "blockers": [],
-        "byte_delta": -14,
-        "declared_rate_only": true,
-        "expected_total_score_delta": -9.322025e-06,
-        "expected_total_score_delta_source": "expected_total_score_delta_rate_only",
-        "official_rate_score_delta": -9.322025e-06,
-        "schema": "rate_only_delta_proof_v1",
-        "status": "passed",
-        "tolerance": 1e-09
-      },
-      "readiness_component_penalty_overwhelms_rate_gain": null,
-      "readiness_evidence_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_exact_eval_packet_readiness.json",
-      "readiness_evidence_ready_for_exact_eval_dispatch": false,
-      "readiness_evidence_semantics": "hdm3_static_packet_runtime_adapter_payload_identity",
-      "readiness_evidence_sha256": "1cdd8db33363024f59183758bd539eb85ab12c5374ef2b5ca8988fe39cd82396",
-      "ready_for_exact_eval_dispatch": false,
-      "role": "rate_recode_substitute",
-      "runtime_proof": {
-        "blockers": [
-          "runtime_proof_missing"
-        ],
-        "candidates": [],
-        "runtime_closed": false,
-        "runtime_tree_sha256": "",
-        "source": "",
-        "status": "blocked"
-      },
-      "schema_version": 3,
-      "score_claim": false,
-      "score_evidence_contract": {
-        "blockers": [
-          "field_meta_ingestion_contract_not_ready",
-          "missing_exact_cuda_positive_score_evidence"
-        ],
-        "exact_cuda_grade": false,
-        "exact_positive_cuda_evidence": false,
-        "expected_total_score_delta": -9.322025e-06,
-        "planning_only_is_score_evidence": false,
-        "planning_priority_rankable": false,
-        "schema": "field_meta_score_evidence_contract_v1",
-        "score_evidence_rankable": false,
-        "source_score_lowering_evidence": null,
-        "status": "blocked"
-      },
-      "score_evidence_rankable": false,
-      "score_lowering_evidence": false,
-      "scorer_basin_parity_status": "",
-      "selection_blockers": [
-        "kkt_not_ready_for_field_planning",
-        "missing_dispatch_identity_for_lane_claim",
-        "non_byte_closed_runtime",
-        "pareto_ineligible_packet",
-        "strict_candidate_preflight_blocked"
-      ],
-      "selection_decision": "needs_byte_closed_runtime_proof",
-      "selection_penalty_terms": {
-        "kkt_not_ready_for_field_planning": 25.0,
-        "missing_dispatch_identity_for_lane_claim": 250.0,
-        "non_byte_closed_runtime": 1000.0,
-        "pareto_ineligible_packet": 50.0,
-        "strict_candidate_preflight_blocked": 500.0
-      },
-      "selection_penalty_units": 1825.0,
-      "source_ready_for_exact_eval_packet": true,
-      "source_score_lowering_evidence": null,
-      "source_static_packet_ready": true,
-      "static_candidate_blockers": [
-        "missing_byte_closed_runtime_proof",
-        "runtime:runtime_proof_missing",
-        "strict_candidate_preflight_not_ready",
-        "strict:ready_for_exact_eval_dispatch_false",
-        "lane_dispatch_claim_missing",
-        "exact_cuda_auth_eval_missing"
-      ],
-      "strict_candidate_preflight": {
-        "blockers": [
-          {
-            "code": "ready_for_exact_eval_dispatch_false",
-            "detail": "ready_for_exact_eval_dispatch is false",
-            "severity": "blocking"
-          }
-        ],
-        "candidate_static_preflight_ready": false,
-        "lane_claim": {
-          "active_conflicts": [],
-          "checked": false,
-          "claims_path": null,
-          "lane_id": "hnerv_hdm3_q_brotli_split_exact_eval"
         },
         "ready_for_exact_eval_dispatch": false,
         "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
@@ -6034,6 +6238,1774 @@
       "title": ""
     },
     {
+      "action_class": "wire_winning_stack_into_byte_closed_archive_candidate",
+      "archive_proof": {
+        "blockers": [
+          "archive_identity_missing"
+        ],
+        "byte_closed": false,
+        "bytes_actual": null,
+        "bytes_expected": null,
+        "path": "",
+        "sha256_actual": "",
+        "sha256_expected": "",
+        "source": "",
+        "status": "blocked",
+        "zip_custody": {
+          "blockers": [
+            "archive_file_missing_for_zip_custody"
+          ],
+          "member_count": 0,
+          "member_names": [],
+          "status": "blocked"
+        }
+      },
+      "byte_delta": -53,
+      "calibration_expected_total_score_delta": null,
+      "candidate_archive_bytes": null,
+      "candidate_archive_path": "",
+      "candidate_archive_sha256": "",
+      "candidate_blockers": [
+        "missing_byte_closed_archive_proof",
+        "archive:archive_identity_missing",
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing",
+        "strict_candidate_preflight_not_ready",
+        "strict:missing_distortion_model_gate"
+      ],
+      "candidate_id": "full_stack_composition_matrix_Op2_alone",
+      "candidate_local_preflight_ready": false,
+      "candidate_preflight_next_required_proof": [
+        "local_archive_file_with_matching_sha256_and_bytes",
+        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+        "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py"
+      ],
+      "candidate_preflight_ready_for_exact_eval_dispatch": false,
+      "candidate_static_preflight_ready": false,
+      "candidate_static_preflight_ready_before_dirty": false,
+      "candidate_watch_paths": [
+        "experiments/results/lane_codec_pipeline_full_stack_20260507T165402Z/composition_matrix.json",
+        "src/tac/codec_pipeline.py",
+        "src/tac/codec_pipeline_full_stack.py"
+      ],
+      "code_paths": [
+        "src/tac/codec_pipeline.py",
+        "src/tac/codec_pipeline_full_stack.py"
+      ],
+      "component_penalty_score_delta_from_readiness_evidence": null,
+      "confidence": 1.0,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [],
+      "dirty_blocked": false,
+      "dirty_path_blockers": [],
+      "dispatch_attempted": false,
+      "dispatch_claim_proof": {
+        "active_claim": null,
+        "active_lane_claim": false,
+        "blockers": [
+          "dispatch_lane_id_missing",
+          "dispatch_instance_job_id_missing"
+        ],
+        "checked": true,
+        "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+        "instance_job_id": "",
+        "lane_id": "",
+        "matching_claims": [],
+        "now_utc": "2026-05-07T12:30:00Z",
+        "status": "blocked",
+        "ttl_hours": 24.0
+      },
+      "dispatch_identity_proof": {
+        "blockers": [
+          "dispatch_lane_id_missing",
+          "dispatch_instance_job_id_missing"
+        ],
+        "instance_job_id": "",
+        "lane_id": "",
+        "status": "blocked"
+      },
+      "dispatch_refused": true,
+      "evidence_grade": "planning_proxy_cross_paradigm_stack_matrix",
+      "evidence_paths": [],
+      "exact_dispatch_blockers": {
+        "blocker_categories": {
+          "custody": [
+            "missing_byte_closed_archive_proof",
+            "archive:archive_identity_missing",
+            "missing_byte_closed_runtime_proof",
+            "non_byte_closed_archive",
+            "non_byte_closed_runtime",
+            "ingestion:byte_closed_archive_proof_missing"
+          ],
+          "dirty_worktree": [],
+          "dispatch_claim": [
+            "missing_dispatch_identity_for_lane_claim"
+          ],
+          "environment": [],
+          "exact_cuda_eval": [],
+          "interaction_model": [],
+          "kkt_or_admm": [
+            "kkt:kkt_proof_or_admm_result_missing",
+            "kkt_not_ready_for_field_planning"
+          ],
+          "other": [],
+          "pareto_frontier": [
+            "pareto_ineligible_packet",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "proxy_or_planning": [
+            "planning_or_proxy_packet",
+            "ingestion:planning_or_proxy_packet_not_dispatch_ready",
+            "ingestion:planning_only_packet_not_dispatch_ready"
+          ],
+          "runtime": [
+            "runtime:runtime_proof_missing",
+            "ingestion:runtime_tree_closure_proof_missing"
+          ],
+          "score_claim": [],
+          "strict_preflight": [
+            "strict_candidate_preflight_not_ready",
+            "strict:missing_distortion_model_gate",
+            "strict_candidate_preflight_blocked",
+            "ingestion:strict_candidate_preflight_not_ready"
+          ]
+        },
+        "blocker_count": 20,
+        "blockers": [
+          "missing_byte_closed_archive_proof",
+          "archive:archive_identity_missing",
+          "missing_byte_closed_runtime_proof",
+          "runtime:runtime_proof_missing",
+          "strict_candidate_preflight_not_ready",
+          "strict:missing_distortion_model_gate",
+          "planning_or_proxy_packet",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "kkt_not_ready_for_field_planning",
+          "missing_dispatch_identity_for_lane_claim",
+          "non_byte_closed_archive",
+          "non_byte_closed_runtime",
+          "pareto_ineligible_packet",
+          "strict_candidate_preflight_blocked",
+          "ingestion:byte_closed_archive_proof_missing",
+          "ingestion:runtime_tree_closure_proof_missing",
+          "ingestion:strict_candidate_preflight_not_ready",
+          "ingestion:planning_or_proxy_packet_not_dispatch_ready",
+          "ingestion:planning_only_packet_not_dispatch_ready",
+          "pareto_ineligible_for_field_selection"
+        ],
+        "candidate_preflight_ready_for_exact_eval_dispatch": false,
+        "dispatch_attempted": false,
+        "dispatch_refused": true,
+        "next_required_proof": [
+          "local_archive_file_with_matching_sha256_and_bytes",
+          "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+          "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py",
+          "passed_kkt_proof_or_converged_admm_waterline_result",
+          "pareto_eligible_static_ready_non_proxy_candidate"
+        ],
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "exact_dispatch_blockers_v1",
+        "score_claim": false
+      },
+      "expected_information_gain_nats": 0.45,
+      "expected_pose_dist_delta": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_seg_dist_delta": 0.0,
+      "expected_total_score_delta": 0.0,
+      "expected_total_score_delta_source": "planning_proxy_matrix_no_exact_archive_score_delta",
+      "family": "cross_paradigm_full_stack_composition",
+      "family_group": "cross_paradigm_score_lowering_stack",
+      "field_interaction_contract": {
+        "assumption_count": 4,
+        "assumptions": [
+          "synthetic_stack_matrix_not_exact_archive_evidence",
+          "requires_byte_closed_archive_builder_for_selected_stack",
+          "requires_component_delta_measurement_before_score_claim",
+          "requires_volterra_interaction_validation_for_multi_op_stack"
+        ],
+        "blockers": [],
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [],
+        "interaction_model": "",
+        "schema": "field_interaction_contract_v1",
+        "status": "passed",
+        "volterra_order": null,
+        "volterra_order_source": "",
+        "volterra_scope": "undeclared_order_first_order_assumptions_only",
+        "volterra_terms": [],
+        "volterra_terms_declared": false
+      },
+      "field_meta_ingestion_contract": {
+        "archive_byte_closed": false,
+        "byte_closed_archive_required": true,
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "byte_closed_archive_proof_missing",
+          "runtime_tree_closure_proof_missing",
+          "strict_candidate_preflight_not_ready",
+          "planning_or_proxy_packet_not_dispatch_ready",
+          "planning_only_packet_not_dispatch_ready"
+        ],
+        "dispatch_ingestion_ready": false,
+        "local_blockers": [
+          "byte_closed_archive_proof_missing",
+          "runtime_tree_closure_proof_missing"
+        ],
+        "local_field_meta_ingestion_ready": false,
+        "planning_only": true,
+        "planning_only_is_score_evidence": false,
+        "proxy_packets_dispatch_ready": false,
+        "proxy_row": true,
+        "runtime_closed": false,
+        "runtime_tree_closure_required": true,
+        "schema": "field_meta_ingestion_contract_v1",
+        "score_claim": false,
+        "status": "blocked",
+        "strict_candidate_preflight_ready": false
+      },
+      "field_selection_blockers": [
+        "missing_byte_closed_archive_proof",
+        "archive:archive_identity_missing",
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing",
+        "strict_candidate_preflight_not_ready",
+        "strict:missing_distortion_model_gate",
+        "planning_or_proxy_packet",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "kkt_not_ready_for_field_planning",
+        "missing_dispatch_identity_for_lane_claim",
+        "non_byte_closed_archive",
+        "non_byte_closed_runtime",
+        "pareto_ineligible_packet",
+        "strict_candidate_preflight_blocked",
+        "ingestion:byte_closed_archive_proof_missing",
+        "ingestion:runtime_tree_closure_proof_missing",
+        "ingestion:strict_candidate_preflight_not_ready",
+        "ingestion:planning_or_proxy_packet_not_dispatch_ready",
+        "ingestion:planning_only_packet_not_dispatch_ready",
+        "pareto_ineligible_for_field_selection"
+      ],
+      "field_selection_next_required_proof": [
+        "local_archive_file_with_matching_sha256_and_bytes",
+        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+        "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py",
+        "passed_kkt_proof_or_converged_admm_waterline_result",
+        "pareto_eligible_static_ready_non_proxy_candidate"
+      ],
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "field_selection_score_delta": 0.0,
+      "frontier_row": {
+        "action_class": "wire_winning_stack_into_byte_closed_archive_candidate",
+        "blockers": [
+          "missing_byte_closed_archive_proof",
+          "archive:archive_identity_missing",
+          "missing_byte_closed_runtime_proof",
+          "runtime:runtime_proof_missing",
+          "strict_candidate_preflight_not_ready",
+          "strict:missing_distortion_model_gate",
+          "planning_or_proxy_packet",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "kkt_not_ready_for_field_planning",
+          "missing_dispatch_identity_for_lane_claim",
+          "non_byte_closed_archive",
+          "non_byte_closed_runtime",
+          "pareto_ineligible_packet",
+          "strict_candidate_preflight_blocked",
+          "ingestion:byte_closed_archive_proof_missing",
+          "ingestion:runtime_tree_closure_proof_missing",
+          "ingestion:strict_candidate_preflight_not_ready",
+          "ingestion:planning_or_proxy_packet_not_dispatch_ready",
+          "ingestion:planning_only_packet_not_dispatch_ready",
+          "pareto_ineligible_for_field_selection"
+        ],
+        "byte_delta": -53.0,
+        "candidate_id": "full_stack_composition_matrix_Op2_alone",
+        "candidate_static_preflight_ready": false,
+        "code_paths": [
+          "src/tac/codec_pipeline.py",
+          "src/tac/codec_pipeline_full_stack.py"
+        ],
+        "dispatch_attempted": false,
+        "evidence_grade": "planning_proxy_cross_paradigm_stack_matrix",
+        "evidence_paths": [],
+        "expected_information_gain_nats": 0.45,
+        "expected_pose_dist_delta": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": 0.0,
+        "family": "cross_paradigm_full_stack_composition",
+        "family_group": "cross_paradigm_score_lowering_stack",
+        "key": "full_stack_composition_matrix_Op2_alone",
+        "next_patch": "",
+        "next_required_proof": [
+          "local_archive_file_with_matching_sha256_and_bytes",
+          "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+          "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py",
+          "passed_kkt_proof_or_converged_admm_waterline_result",
+          "pareto_eligible_static_ready_non_proxy_candidate"
+        ],
+        "paradigms": [
+          "hnerv_frontier",
+          "pr101_schema_packing",
+          "apogee_int",
+          "alpha_mask_payload",
+          "beta_sensitivity",
+          "gamma_joint_codec",
+          "deltaepszeta_joint_training",
+          "meta_lagrangian"
+        ],
+        "pareto_eligible": false,
+        "pareto_frontier": false,
+        "pareto_scope": "cross_paradigm_stack_planning",
+        "planning_priority_rankable": false,
+        "priority_tier": 2,
+        "ready_for_exact_eval_dispatch": false,
+        "role": "planning_matrix_for_cross_paradigm_stack_composition",
+        "schema": "cross_paradigm_frontier_row_v1",
+        "score_claim": false,
+        "score_evidence_rankable": false,
+        "source_path": "experiments/results/lane_codec_pipeline_full_stack_20260507T165402Z/composition_matrix.json",
+        "source_tool": "tools/build_field_meta_dispatch_selection.py",
+        "status": "needs_byte_closed_archive_proof",
+        "title": ""
+      },
+      "instance_job_id": "",
+      "interaction_assumptions": [
+        "synthetic_stack_matrix_not_exact_archive_evidence",
+        "requires_byte_closed_archive_builder_for_selected_stack",
+        "requires_component_delta_measurement_before_score_claim",
+        "requires_volterra_interaction_validation_for_multi_op_stack"
+      ],
+      "job_name": "",
+      "kkt_blockers": [
+        "missing_byte_closed_archive_proof",
+        "archive:archive_identity_missing",
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing",
+        "strict_candidate_preflight_not_ready",
+        "strict:missing_distortion_model_gate",
+        "planning_or_proxy_packet",
+        "kkt:kkt_proof_or_admm_result_missing"
+      ],
+      "kkt_proof": {
+        "blockers": [
+          "kkt_proof_or_admm_result_missing"
+        ],
+        "candidates": [],
+        "kind": "",
+        "residual": null,
+        "source": "",
+        "status": "blocked",
+        "tolerance": null
+      },
+      "kkt_ready_for_field_planning": false,
+      "lane_id": "",
+      "lexicographic_feasibility_tuple": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        0.0,
+        0.45
+      ],
+      "manifest_path": "experiments/results/lane_codec_pipeline_full_stack_20260507T165402Z/composition_matrix.json",
+      "manifest_sha256": "b67d31fabbc4a2dc59cc0ae64521a8678080ad787bcb44b81c68803cbf414cb7",
+      "next_local_non_gpu_action": null,
+      "next_local_non_gpu_command": "",
+      "next_required_proof": [
+        "local_archive_file_with_matching_sha256_and_bytes",
+        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+        "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py",
+        "passed_kkt_proof_or_converged_admm_waterline_result",
+        "pareto_eligible_static_ready_non_proxy_candidate"
+      ],
+      "non_dominated_frontier_reason": {
+        "dominated_by": [],
+        "eligibility_blockers": [
+          "field_meta_ingestion_contract_not_ready",
+          "candidate_static_preflight_not_ready",
+          "planning_or_proxy_packet"
+        ],
+        "eligible": false,
+        "frontier": false,
+        "objective_directions": {
+          "byte_delta": "min",
+          "candidate_static_preflight_ready": "max",
+          "confidence": "max",
+          "expected_pose_dist_delta": "min",
+          "expected_seg_dist_delta": "min",
+          "expected_total_score_delta": "min"
+        },
+        "objectives": {
+          "byte_delta": -53.0,
+          "candidate_static_preflight_ready": 0.0,
+          "confidence": 1.0,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "expected_total_score_delta": 0.0
+        },
+        "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+        "schema": "non_dominated_frontier_reason_v1",
+        "scope": "cross_paradigm_stack_planning",
+        "status": "ineligible"
+      },
+      "operator_approval_blockers": [],
+      "operator_approval_state": {
+        "approved": true,
+        "dispatch_unlocked_by_approval": false,
+        "manifest_operator_approved_exact_cuda": null,
+        "remaining_required_gates": [
+          "environment",
+          "active_lane_dispatch_claim",
+          "candidate_static_preflight",
+          "pareto_frontier",
+          "kkt_or_admm_proof",
+          "exact_cuda_auth_eval",
+          "adversarial_review_before_score_claim"
+        ],
+        "schema": "operator_approval_state_v1",
+        "selector_context_operator_approved_exact_cuda": true,
+        "source": "selector_context_operator_approved_exact_cuda"
+      },
+      "operator_claim_blockers": [],
+      "operator_current_blockers": [],
+      "operator_environment_blockers": [],
+      "operator_next_steps_summary": {
+        "approval_blockers": [],
+        "claim_blockers": [],
+        "copy_safe": null,
+        "current_blockers": [],
+        "environment_blockers": [],
+        "first_remote_gpu_step": "",
+        "local_non_gpu_step_ids": [],
+        "must_run_in_order": null,
+        "next_local_non_gpu_action": null,
+        "next_local_non_gpu_command": "",
+        "operator_approval_state": {
+          "approved": true,
+          "dispatch_unlocked_by_approval": false,
+          "manifest_operator_approved_exact_cuda": null,
+          "remaining_required_gates": [
+            "environment",
+            "active_lane_dispatch_claim",
+            "candidate_static_preflight",
+            "pareto_frontier",
+            "kkt_or_admm_proof",
+            "exact_cuda_auth_eval",
+            "adversarial_review_before_score_claim"
+          ],
+          "schema": "operator_approval_state_v1",
+          "selector_context_operator_approved_exact_cuda": true,
+          "source": "selector_context_operator_approved_exact_cuda"
+        },
+        "packet_operator_next_steps_schema": "",
+        "packet_path": "",
+        "refresh_blockers": [],
+        "remote_gpu_step_ids": [],
+        "schema": "packet_operator_next_steps_summary_v1",
+        "source": "manifest_command_fields",
+        "static_refresh_command": "",
+        "static_refresh_schema": "",
+        "static_refresh_source": "",
+        "static_refresh_status": "not_recorded",
+        "step_count": 0
+      },
+      "operator_refresh_blockers": [],
+      "packet_kind": "",
+      "paradigms": [
+        "hnerv_frontier",
+        "pr101_schema_packing",
+        "apogee_int",
+        "alpha_mask_payload",
+        "beta_sensitivity",
+        "gamma_joint_codec",
+        "deltaepszeta_joint_training",
+        "meta_lagrangian"
+      ],
+      "pareto_dominated_by": [],
+      "pareto_eligibility_blockers": [
+        "field_meta_ingestion_contract_not_ready",
+        "candidate_static_preflight_not_ready",
+        "planning_or_proxy_packet"
+      ],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_objectives": {
+        "byte_delta": -53.0,
+        "candidate_static_preflight_ready": 0.0,
+        "confidence": 1.0,
+        "expected_pose_dist_delta": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": 0.0
+      },
+      "pareto_scope": "cross_paradigm_stack_planning",
+      "planning_priority_rankable": false,
+      "priority_tier": 2,
+      "proxy_row": true,
+      "rate_only_delta_proof": {
+        "blockers": [],
+        "byte_delta": -53,
+        "declared_rate_only": false,
+        "expected_total_score_delta": 0.0,
+        "expected_total_score_delta_source": "planning_proxy_matrix_no_exact_archive_score_delta",
+        "official_rate_score_delta": -3.5290525e-05,
+        "schema": "rate_only_delta_proof_v1",
+        "status": "not_applicable",
+        "tolerance": 1e-09
+      },
+      "readiness_component_penalty_overwhelms_rate_gain": null,
+      "readiness_evidence_path": "",
+      "readiness_evidence_ready_for_exact_eval_dispatch": null,
+      "readiness_evidence_semantics": "",
+      "readiness_evidence_sha256": "",
+      "ready_for_exact_eval_dispatch": false,
+      "role": "planning_matrix_for_cross_paradigm_stack_composition",
+      "runtime_proof": {
+        "blockers": [
+          "runtime_proof_missing"
+        ],
+        "candidates": [],
+        "runtime_closed": false,
+        "runtime_tree_sha256": "",
+        "source": "",
+        "status": "blocked"
+      },
+      "schema_version": 3,
+      "score_claim": false,
+      "score_evidence_contract": {
+        "blockers": [
+          "field_meta_ingestion_contract_not_ready",
+          "planning_or_proxy_packet_not_score_evidence",
+          "proxy_or_planning_evidence_grade_not_score_evidence",
+          "missing_exact_cuda_positive_score_evidence",
+          "expected_delta_not_score_lowering"
+        ],
+        "exact_cuda_grade": false,
+        "exact_positive_cuda_evidence": false,
+        "expected_total_score_delta": 0.0,
+        "planning_only_is_score_evidence": false,
+        "planning_priority_rankable": false,
+        "schema": "field_meta_score_evidence_contract_v1",
+        "score_evidence_rankable": false,
+        "source_score_lowering_evidence": null,
+        "status": "blocked"
+      },
+      "score_evidence_rankable": false,
+      "score_lowering_evidence": false,
+      "scorer_basin_parity_status": "",
+      "selection_blockers": [
+        "kkt_not_ready_for_field_planning",
+        "missing_dispatch_identity_for_lane_claim",
+        "non_byte_closed_archive",
+        "non_byte_closed_runtime",
+        "pareto_ineligible_packet",
+        "planning_or_proxy_packet",
+        "strict_candidate_preflight_blocked"
+      ],
+      "selection_decision": "needs_byte_closed_archive_proof",
+      "selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 25.0,
+        "missing_dispatch_identity_for_lane_claim": 250.0,
+        "non_byte_closed_archive": 1000.0,
+        "non_byte_closed_runtime": 1000.0,
+        "pareto_ineligible_packet": 50.0,
+        "planning_or_proxy_packet": 75.0,
+        "strict_candidate_preflight_blocked": 500.0
+      },
+      "selection_penalty_units": 2900.0,
+      "source_ready_for_exact_eval_packet": null,
+      "source_score_lowering_evidence": null,
+      "source_static_packet_ready": null,
+      "static_candidate_blockers": [
+        "missing_byte_closed_archive_proof",
+        "archive:archive_identity_missing",
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing",
+        "strict_candidate_preflight_not_ready",
+        "strict:missing_distortion_model_gate"
+      ],
+      "strict_candidate_preflight": {
+        "blockers": [
+          {
+            "code": "missing_distortion_model_gate",
+            "detail": "score-affecting or Apogee-like payload change requires a passing distortion_model_status, scorer_basin_parity_status, or exact_positive_cuda_evidence tied to the candidate",
+            "severity": "blocking"
+          }
+        ],
+        "candidate_static_preflight_ready": false,
+        "lane_claim": {
+          "active_conflicts": [],
+          "checked": false,
+          "claims_path": null,
+          "lane_id": null
+        },
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
+        "warnings": []
+      },
+      "strict_candidate_preflight_ready": false,
+      "strict_candidate_static_preflight_ready": false,
+      "title": ""
+    },
+    {
+      "action_class": "promote_alpha_mask_winner_to_decode_validated_archive",
+      "archive_proof": {
+        "blockers": [
+          "archive_identity_missing"
+        ],
+        "byte_closed": false,
+        "bytes_actual": null,
+        "bytes_expected": null,
+        "path": "",
+        "sha256_actual": "",
+        "sha256_expected": "",
+        "source": "",
+        "status": "blocked",
+        "zip_custody": {
+          "blockers": [
+            "archive_file_missing_for_zip_custody"
+          ],
+          "member_count": 0,
+          "member_names": [],
+          "status": "blocked"
+        }
+      },
+      "byte_delta": -59373,
+      "calibration_expected_total_score_delta": null,
+      "candidate_archive_bytes": null,
+      "candidate_archive_path": "",
+      "candidate_archive_sha256": "",
+      "candidate_blockers": [
+        "missing_byte_closed_archive_proof",
+        "archive:archive_identity_missing",
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing"
+      ],
+      "candidate_id": "alpha_mask_bakeoff_alpha_vqvae_mask",
+      "candidate_local_preflight_ready": false,
+      "candidate_preflight_next_required_proof": [
+        "local_archive_file_with_matching_sha256_and_bytes",
+        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract"
+      ],
+      "candidate_preflight_ready_for_exact_eval_dispatch": false,
+      "candidate_static_preflight_ready": false,
+      "candidate_static_preflight_ready_before_dirty": false,
+      "candidate_watch_paths": [
+        "experiments/results/lane_codec_pipeline_mask_20260507T165819Z/bakeoff_manifest.json",
+        "src/tac/codec_pipeline_mask.py",
+        "src/tac/alpha_mask_codec_readiness.py",
+        "src/tac/nerv_mask_codec.py",
+        "src/tac/wavelet_mask_codec.py",
+        "src/tac/vqvae_mask_codec.py",
+        "src/tac/mask_grayscale_lut.py"
+      ],
+      "code_paths": [
+        "src/tac/codec_pipeline_mask.py",
+        "src/tac/alpha_mask_codec_readiness.py",
+        "src/tac/nerv_mask_codec.py",
+        "src/tac/wavelet_mask_codec.py",
+        "src/tac/vqvae_mask_codec.py",
+        "src/tac/mask_grayscale_lut.py"
+      ],
+      "component_penalty_score_delta_from_readiness_evidence": null,
+      "confidence": 1.0,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [],
+      "dirty_blocked": false,
+      "dirty_path_blockers": [],
+      "dispatch_attempted": false,
+      "dispatch_claim_proof": {
+        "active_claim": null,
+        "active_lane_claim": false,
+        "blockers": [
+          "dispatch_lane_id_missing",
+          "dispatch_instance_job_id_missing"
+        ],
+        "checked": true,
+        "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+        "instance_job_id": "",
+        "lane_id": "",
+        "matching_claims": [],
+        "now_utc": "2026-05-07T12:30:00Z",
+        "status": "blocked",
+        "ttl_hours": 24.0
+      },
+      "dispatch_identity_proof": {
+        "blockers": [
+          "dispatch_lane_id_missing",
+          "dispatch_instance_job_id_missing"
+        ],
+        "instance_job_id": "",
+        "lane_id": "",
+        "status": "blocked"
+      },
+      "dispatch_refused": true,
+      "evidence_grade": "planning_proxy_alpha_mask_bakeoff_empirical",
+      "evidence_paths": [],
+      "exact_dispatch_blockers": {
+        "blocker_categories": {
+          "custody": [
+            "missing_byte_closed_archive_proof",
+            "archive:archive_identity_missing",
+            "missing_byte_closed_runtime_proof",
+            "non_byte_closed_archive",
+            "non_byte_closed_runtime",
+            "ingestion:byte_closed_archive_proof_missing"
+          ],
+          "dirty_worktree": [],
+          "dispatch_claim": [
+            "missing_dispatch_identity_for_lane_claim"
+          ],
+          "environment": [],
+          "exact_cuda_eval": [],
+          "interaction_model": [],
+          "kkt_or_admm": [
+            "kkt:kkt_proof_or_admm_result_missing",
+            "kkt_not_ready_for_field_planning"
+          ],
+          "other": [],
+          "pareto_frontier": [
+            "pareto_ineligible_packet",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "proxy_or_planning": [
+            "planning_or_proxy_packet",
+            "ingestion:planning_or_proxy_packet_not_dispatch_ready",
+            "ingestion:planning_only_packet_not_dispatch_ready"
+          ],
+          "runtime": [
+            "runtime:runtime_proof_missing",
+            "ingestion:runtime_tree_closure_proof_missing"
+          ],
+          "score_claim": [],
+          "strict_preflight": []
+        },
+        "blocker_count": 16,
+        "blockers": [
+          "missing_byte_closed_archive_proof",
+          "archive:archive_identity_missing",
+          "missing_byte_closed_runtime_proof",
+          "runtime:runtime_proof_missing",
+          "planning_or_proxy_packet",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "kkt_not_ready_for_field_planning",
+          "missing_dispatch_identity_for_lane_claim",
+          "non_byte_closed_archive",
+          "non_byte_closed_runtime",
+          "pareto_ineligible_packet",
+          "ingestion:byte_closed_archive_proof_missing",
+          "ingestion:runtime_tree_closure_proof_missing",
+          "ingestion:planning_or_proxy_packet_not_dispatch_ready",
+          "ingestion:planning_only_packet_not_dispatch_ready",
+          "pareto_ineligible_for_field_selection"
+        ],
+        "candidate_preflight_ready_for_exact_eval_dispatch": false,
+        "dispatch_attempted": false,
+        "dispatch_refused": true,
+        "next_required_proof": [
+          "local_archive_file_with_matching_sha256_and_bytes",
+          "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+          "passed_kkt_proof_or_converged_admm_waterline_result",
+          "pareto_eligible_static_ready_non_proxy_candidate"
+        ],
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "exact_dispatch_blockers_v1",
+        "score_claim": false
+      },
+      "expected_information_gain_nats": 0.4,
+      "expected_pose_dist_delta": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_seg_dist_delta": 0.0,
+      "expected_total_score_delta": 0.0,
+      "expected_total_score_delta_source": "planning_proxy_mask_bakeoff_no_exact_archive_score_delta",
+      "family": "alpha_mask_payload_bakeoff",
+      "family_group": "paradigm_alpha_mask_payload_overhaul",
+      "field_interaction_contract": {
+        "assumption_count": 4,
+        "assumptions": [
+          "synthetic_mask_tensor_bakeoff_not_archive_rate_evidence",
+          "requires_compress_time_training_harness",
+          "requires_decode_validation_and_component_parity",
+          "requires_exact_cuda_auth_eval_before_score_claim"
+        ],
+        "blockers": [],
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [],
+        "interaction_model": "",
+        "schema": "field_interaction_contract_v1",
+        "status": "passed",
+        "volterra_order": null,
+        "volterra_order_source": "",
+        "volterra_scope": "undeclared_order_first_order_assumptions_only",
+        "volterra_terms": [],
+        "volterra_terms_declared": false
+      },
+      "field_meta_ingestion_contract": {
+        "archive_byte_closed": false,
+        "byte_closed_archive_required": true,
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "byte_closed_archive_proof_missing",
+          "runtime_tree_closure_proof_missing",
+          "planning_or_proxy_packet_not_dispatch_ready",
+          "planning_only_packet_not_dispatch_ready"
+        ],
+        "dispatch_ingestion_ready": false,
+        "local_blockers": [
+          "byte_closed_archive_proof_missing",
+          "runtime_tree_closure_proof_missing"
+        ],
+        "local_field_meta_ingestion_ready": false,
+        "planning_only": true,
+        "planning_only_is_score_evidence": false,
+        "proxy_packets_dispatch_ready": false,
+        "proxy_row": true,
+        "runtime_closed": false,
+        "runtime_tree_closure_required": true,
+        "schema": "field_meta_ingestion_contract_v1",
+        "score_claim": false,
+        "status": "blocked",
+        "strict_candidate_preflight_ready": true
+      },
+      "field_selection_blockers": [
+        "missing_byte_closed_archive_proof",
+        "archive:archive_identity_missing",
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing",
+        "planning_or_proxy_packet",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "kkt_not_ready_for_field_planning",
+        "missing_dispatch_identity_for_lane_claim",
+        "non_byte_closed_archive",
+        "non_byte_closed_runtime",
+        "pareto_ineligible_packet",
+        "ingestion:byte_closed_archive_proof_missing",
+        "ingestion:runtime_tree_closure_proof_missing",
+        "ingestion:planning_or_proxy_packet_not_dispatch_ready",
+        "ingestion:planning_only_packet_not_dispatch_ready",
+        "pareto_ineligible_for_field_selection"
+      ],
+      "field_selection_next_required_proof": [
+        "local_archive_file_with_matching_sha256_and_bytes",
+        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+        "passed_kkt_proof_or_converged_admm_waterline_result",
+        "pareto_eligible_static_ready_non_proxy_candidate"
+      ],
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "field_selection_score_delta": 0.0,
+      "frontier_row": {
+        "action_class": "promote_alpha_mask_winner_to_decode_validated_archive",
+        "blockers": [
+          "missing_byte_closed_archive_proof",
+          "archive:archive_identity_missing",
+          "missing_byte_closed_runtime_proof",
+          "runtime:runtime_proof_missing",
+          "planning_or_proxy_packet",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "kkt_not_ready_for_field_planning",
+          "missing_dispatch_identity_for_lane_claim",
+          "non_byte_closed_archive",
+          "non_byte_closed_runtime",
+          "pareto_ineligible_packet",
+          "ingestion:byte_closed_archive_proof_missing",
+          "ingestion:runtime_tree_closure_proof_missing",
+          "ingestion:planning_or_proxy_packet_not_dispatch_ready",
+          "ingestion:planning_only_packet_not_dispatch_ready",
+          "pareto_ineligible_for_field_selection"
+        ],
+        "byte_delta": -59373.0,
+        "candidate_id": "alpha_mask_bakeoff_alpha_vqvae_mask",
+        "candidate_static_preflight_ready": false,
+        "code_paths": [
+          "src/tac/codec_pipeline_mask.py",
+          "src/tac/alpha_mask_codec_readiness.py",
+          "src/tac/nerv_mask_codec.py",
+          "src/tac/wavelet_mask_codec.py",
+          "src/tac/vqvae_mask_codec.py",
+          "src/tac/mask_grayscale_lut.py"
+        ],
+        "dispatch_attempted": false,
+        "evidence_grade": "planning_proxy_alpha_mask_bakeoff_empirical",
+        "evidence_paths": [],
+        "expected_information_gain_nats": 0.4,
+        "expected_pose_dist_delta": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": 0.0,
+        "family": "alpha_mask_payload_bakeoff",
+        "family_group": "paradigm_alpha_mask_payload_overhaul",
+        "key": "alpha_mask_bakeoff_alpha_vqvae_mask",
+        "next_patch": "",
+        "next_required_proof": [
+          "local_archive_file_with_matching_sha256_and_bytes",
+          "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+          "passed_kkt_proof_or_converged_admm_waterline_result",
+          "pareto_eligible_static_ready_non_proxy_candidate"
+        ],
+        "paradigms": [
+          "alpha_mask_payload",
+          "nerv_mask",
+          "wavelet_mask",
+          "vqvae_mask",
+          "grayscale_lut_mask",
+          "meta_lagrangian"
+        ],
+        "pareto_eligible": false,
+        "pareto_frontier": false,
+        "pareto_scope": "alpha_mask_payload_planning",
+        "planning_priority_rankable": false,
+        "priority_tier": 2,
+        "ready_for_exact_eval_dispatch": false,
+        "role": "mask_payload_encoder_bakeoff",
+        "schema": "cross_paradigm_frontier_row_v1",
+        "score_claim": false,
+        "score_evidence_rankable": false,
+        "source_path": "experiments/results/lane_codec_pipeline_mask_20260507T165819Z/bakeoff_manifest.json",
+        "source_tool": "tools/build_field_meta_dispatch_selection.py",
+        "status": "needs_byte_closed_archive_proof",
+        "title": ""
+      },
+      "instance_job_id": "",
+      "interaction_assumptions": [
+        "synthetic_mask_tensor_bakeoff_not_archive_rate_evidence",
+        "requires_compress_time_training_harness",
+        "requires_decode_validation_and_component_parity",
+        "requires_exact_cuda_auth_eval_before_score_claim"
+      ],
+      "job_name": "",
+      "kkt_blockers": [
+        "missing_byte_closed_archive_proof",
+        "archive:archive_identity_missing",
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing",
+        "planning_or_proxy_packet",
+        "kkt:kkt_proof_or_admm_result_missing"
+      ],
+      "kkt_proof": {
+        "blockers": [
+          "kkt_proof_or_admm_result_missing"
+        ],
+        "candidates": [],
+        "kind": "",
+        "residual": null,
+        "source": "",
+        "status": "blocked",
+        "tolerance": null
+      },
+      "kkt_ready_for_field_planning": false,
+      "lane_id": "",
+      "lexicographic_feasibility_tuple": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        0.0,
+        0.4
+      ],
+      "manifest_path": "experiments/results/lane_codec_pipeline_mask_20260507T165819Z/bakeoff_manifest.json",
+      "manifest_sha256": "d9a861243a7014e7bd3407494a09c65e8d512f1447cd24bff12ef3d07ddee391",
+      "next_local_non_gpu_action": null,
+      "next_local_non_gpu_command": "",
+      "next_required_proof": [
+        "local_archive_file_with_matching_sha256_and_bytes",
+        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+        "passed_kkt_proof_or_converged_admm_waterline_result",
+        "pareto_eligible_static_ready_non_proxy_candidate"
+      ],
+      "non_dominated_frontier_reason": {
+        "dominated_by": [],
+        "eligibility_blockers": [
+          "field_meta_ingestion_contract_not_ready",
+          "candidate_static_preflight_not_ready",
+          "planning_or_proxy_packet"
+        ],
+        "eligible": false,
+        "frontier": false,
+        "objective_directions": {
+          "byte_delta": "min",
+          "candidate_static_preflight_ready": "max",
+          "confidence": "max",
+          "expected_pose_dist_delta": "min",
+          "expected_seg_dist_delta": "min",
+          "expected_total_score_delta": "min"
+        },
+        "objectives": {
+          "byte_delta": -59373.0,
+          "candidate_static_preflight_ready": 0.0,
+          "confidence": 1.0,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "expected_total_score_delta": 0.0
+        },
+        "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+        "schema": "non_dominated_frontier_reason_v1",
+        "scope": "alpha_mask_payload_planning",
+        "status": "ineligible"
+      },
+      "operator_approval_blockers": [],
+      "operator_approval_state": {
+        "approved": true,
+        "dispatch_unlocked_by_approval": false,
+        "manifest_operator_approved_exact_cuda": null,
+        "remaining_required_gates": [
+          "environment",
+          "active_lane_dispatch_claim",
+          "candidate_static_preflight",
+          "pareto_frontier",
+          "kkt_or_admm_proof",
+          "exact_cuda_auth_eval",
+          "adversarial_review_before_score_claim"
+        ],
+        "schema": "operator_approval_state_v1",
+        "selector_context_operator_approved_exact_cuda": true,
+        "source": "selector_context_operator_approved_exact_cuda"
+      },
+      "operator_claim_blockers": [],
+      "operator_current_blockers": [],
+      "operator_environment_blockers": [],
+      "operator_next_steps_summary": {
+        "approval_blockers": [],
+        "claim_blockers": [],
+        "copy_safe": null,
+        "current_blockers": [],
+        "environment_blockers": [],
+        "first_remote_gpu_step": "",
+        "local_non_gpu_step_ids": [],
+        "must_run_in_order": null,
+        "next_local_non_gpu_action": null,
+        "next_local_non_gpu_command": "",
+        "operator_approval_state": {
+          "approved": true,
+          "dispatch_unlocked_by_approval": false,
+          "manifest_operator_approved_exact_cuda": null,
+          "remaining_required_gates": [
+            "environment",
+            "active_lane_dispatch_claim",
+            "candidate_static_preflight",
+            "pareto_frontier",
+            "kkt_or_admm_proof",
+            "exact_cuda_auth_eval",
+            "adversarial_review_before_score_claim"
+          ],
+          "schema": "operator_approval_state_v1",
+          "selector_context_operator_approved_exact_cuda": true,
+          "source": "selector_context_operator_approved_exact_cuda"
+        },
+        "packet_operator_next_steps_schema": "",
+        "packet_path": "",
+        "refresh_blockers": [],
+        "remote_gpu_step_ids": [],
+        "schema": "packet_operator_next_steps_summary_v1",
+        "source": "manifest_command_fields",
+        "static_refresh_command": "",
+        "static_refresh_schema": "",
+        "static_refresh_source": "",
+        "static_refresh_status": "not_recorded",
+        "step_count": 0
+      },
+      "operator_refresh_blockers": [],
+      "packet_kind": "1",
+      "paradigms": [
+        "alpha_mask_payload",
+        "nerv_mask",
+        "wavelet_mask",
+        "vqvae_mask",
+        "grayscale_lut_mask",
+        "meta_lagrangian"
+      ],
+      "pareto_dominated_by": [],
+      "pareto_eligibility_blockers": [
+        "field_meta_ingestion_contract_not_ready",
+        "candidate_static_preflight_not_ready",
+        "planning_or_proxy_packet"
+      ],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_objectives": {
+        "byte_delta": -59373.0,
+        "candidate_static_preflight_ready": 0.0,
+        "confidence": 1.0,
+        "expected_pose_dist_delta": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": 0.0
+      },
+      "pareto_scope": "alpha_mask_payload_planning",
+      "planning_priority_rankable": false,
+      "priority_tier": 2,
+      "proxy_row": true,
+      "rate_only_delta_proof": {
+        "blockers": [],
+        "byte_delta": -59373,
+        "declared_rate_only": false,
+        "expected_total_score_delta": 0.0,
+        "expected_total_score_delta_source": "planning_proxy_mask_bakeoff_no_exact_archive_score_delta",
+        "official_rate_score_delta": -0.039534043624,
+        "schema": "rate_only_delta_proof_v1",
+        "status": "not_applicable",
+        "tolerance": 1e-09
+      },
+      "readiness_component_penalty_overwhelms_rate_gain": null,
+      "readiness_evidence_path": "",
+      "readiness_evidence_ready_for_exact_eval_dispatch": null,
+      "readiness_evidence_semantics": "",
+      "readiness_evidence_sha256": "",
+      "ready_for_exact_eval_dispatch": false,
+      "role": "mask_payload_encoder_bakeoff",
+      "runtime_proof": {
+        "blockers": [
+          "runtime_proof_missing"
+        ],
+        "candidates": [],
+        "runtime_closed": false,
+        "runtime_tree_sha256": "",
+        "source": "",
+        "status": "blocked"
+      },
+      "schema_version": 3,
+      "score_claim": false,
+      "score_evidence_contract": {
+        "blockers": [
+          "field_meta_ingestion_contract_not_ready",
+          "planning_or_proxy_packet_not_score_evidence",
+          "proxy_or_planning_evidence_grade_not_score_evidence",
+          "missing_exact_cuda_positive_score_evidence",
+          "expected_delta_not_score_lowering"
+        ],
+        "exact_cuda_grade": false,
+        "exact_positive_cuda_evidence": false,
+        "expected_total_score_delta": 0.0,
+        "planning_only_is_score_evidence": false,
+        "planning_priority_rankable": false,
+        "schema": "field_meta_score_evidence_contract_v1",
+        "score_evidence_rankable": false,
+        "source_score_lowering_evidence": null,
+        "status": "blocked"
+      },
+      "score_evidence_rankable": false,
+      "score_lowering_evidence": false,
+      "scorer_basin_parity_status": "",
+      "selection_blockers": [
+        "kkt_not_ready_for_field_planning",
+        "missing_dispatch_identity_for_lane_claim",
+        "non_byte_closed_archive",
+        "non_byte_closed_runtime",
+        "pareto_ineligible_packet",
+        "planning_or_proxy_packet"
+      ],
+      "selection_decision": "needs_byte_closed_archive_proof",
+      "selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 25.0,
+        "missing_dispatch_identity_for_lane_claim": 250.0,
+        "non_byte_closed_archive": 1000.0,
+        "non_byte_closed_runtime": 1000.0,
+        "pareto_ineligible_packet": 50.0,
+        "planning_or_proxy_packet": 75.0
+      },
+      "selection_penalty_units": 2400.0,
+      "source_ready_for_exact_eval_packet": null,
+      "source_score_lowering_evidence": null,
+      "source_static_packet_ready": null,
+      "static_candidate_blockers": [
+        "missing_byte_closed_archive_proof",
+        "archive:archive_identity_missing",
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing"
+      ],
+      "strict_candidate_preflight": {
+        "blockers": [],
+        "candidate_static_preflight_ready": true,
+        "lane_claim": {
+          "active_conflicts": [],
+          "checked": false,
+          "claims_path": null,
+          "lane_id": null
+        },
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
+        "warnings": []
+      },
+      "strict_candidate_preflight_ready": true,
+      "strict_candidate_static_preflight_ready": true,
+      "title": ""
+    },
+    {
+      "action_class": "wire_beta_substrate_transform_into_archive_candidate",
+      "archive_proof": {
+        "blockers": [
+          "archive_identity_missing"
+        ],
+        "byte_closed": false,
+        "bytes_actual": null,
+        "bytes_expected": null,
+        "path": "",
+        "sha256_actual": "",
+        "sha256_expected": "",
+        "source": "",
+        "status": "blocked",
+        "zip_custody": {
+          "blockers": [
+            "archive_file_missing_for_zip_custody"
+          ],
+          "member_count": 0,
+          "member_names": [],
+          "status": "blocked"
+        }
+      },
+      "byte_delta": -616293,
+      "calibration_expected_total_score_delta": null,
+      "candidate_archive_bytes": null,
+      "candidate_archive_path": "",
+      "candidate_archive_sha256": "",
+      "candidate_blockers": [
+        "missing_byte_closed_archive_proof",
+        "archive:archive_identity_missing",
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing"
+      ],
+      "candidate_id": "beta_sensitivity_substrate_transform",
+      "candidate_local_preflight_ready": false,
+      "candidate_preflight_next_required_proof": [
+        "local_archive_file_with_matching_sha256_and_bytes",
+        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract"
+      ],
+      "candidate_preflight_ready_for_exact_eval_dispatch": false,
+      "candidate_static_preflight_ready": false,
+      "candidate_static_preflight_ready_before_dirty": false,
+      "candidate_watch_paths": [
+        "experiments/results/lane_codec_pipeline_sensitivity_beta_20260507T161548Z/manifest.json",
+        "src/tac/codec_pipeline_sensitivity.py",
+        "src/tac/sensitivity_map.py",
+        "src/tac/owv3_sensitivity_weighted.py",
+        "src/tac/neural_weight_codec_sensitivity.py"
+      ],
+      "code_paths": [
+        "src/tac/codec_pipeline_sensitivity.py",
+        "src/tac/sensitivity_map.py",
+        "src/tac/owv3_sensitivity_weighted.py",
+        "src/tac/neural_weight_codec_sensitivity.py"
+      ],
+      "component_penalty_score_delta_from_readiness_evidence": null,
+      "confidence": 1.0,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [],
+      "dirty_blocked": false,
+      "dirty_path_blockers": [],
+      "dispatch_attempted": false,
+      "dispatch_claim_proof": {
+        "active_claim": null,
+        "active_lane_claim": false,
+        "blockers": [
+          "dispatch_lane_id_missing",
+          "dispatch_instance_job_id_missing"
+        ],
+        "checked": true,
+        "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+        "instance_job_id": "",
+        "lane_id": "",
+        "matching_claims": [],
+        "now_utc": "2026-05-07T12:30:00Z",
+        "status": "blocked",
+        "ttl_hours": 24.0
+      },
+      "dispatch_identity_proof": {
+        "blockers": [
+          "dispatch_lane_id_missing",
+          "dispatch_instance_job_id_missing"
+        ],
+        "instance_job_id": "",
+        "lane_id": "",
+        "status": "blocked"
+      },
+      "dispatch_refused": true,
+      "evidence_grade": "planning_proxy_beta_sensitivity_substrate_transform",
+      "evidence_paths": [],
+      "exact_dispatch_blockers": {
+        "blocker_categories": {
+          "custody": [
+            "missing_byte_closed_archive_proof",
+            "archive:archive_identity_missing",
+            "missing_byte_closed_runtime_proof",
+            "non_byte_closed_archive",
+            "non_byte_closed_runtime",
+            "ingestion:byte_closed_archive_proof_missing"
+          ],
+          "dirty_worktree": [],
+          "dispatch_claim": [
+            "missing_dispatch_identity_for_lane_claim"
+          ],
+          "environment": [],
+          "exact_cuda_eval": [],
+          "interaction_model": [],
+          "kkt_or_admm": [
+            "kkt:kkt_proof_or_admm_result_missing",
+            "kkt_not_ready_for_field_planning"
+          ],
+          "other": [],
+          "pareto_frontier": [
+            "pareto_ineligible_packet",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "proxy_or_planning": [
+            "planning_or_proxy_packet",
+            "ingestion:planning_or_proxy_packet_not_dispatch_ready",
+            "ingestion:planning_only_packet_not_dispatch_ready"
+          ],
+          "runtime": [
+            "runtime:runtime_proof_missing",
+            "ingestion:runtime_tree_closure_proof_missing"
+          ],
+          "score_claim": [],
+          "strict_preflight": []
+        },
+        "blocker_count": 16,
+        "blockers": [
+          "missing_byte_closed_archive_proof",
+          "archive:archive_identity_missing",
+          "missing_byte_closed_runtime_proof",
+          "runtime:runtime_proof_missing",
+          "planning_or_proxy_packet",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "kkt_not_ready_for_field_planning",
+          "missing_dispatch_identity_for_lane_claim",
+          "non_byte_closed_archive",
+          "non_byte_closed_runtime",
+          "pareto_ineligible_packet",
+          "ingestion:byte_closed_archive_proof_missing",
+          "ingestion:runtime_tree_closure_proof_missing",
+          "ingestion:planning_or_proxy_packet_not_dispatch_ready",
+          "ingestion:planning_only_packet_not_dispatch_ready",
+          "pareto_ineligible_for_field_selection"
+        ],
+        "candidate_preflight_ready_for_exact_eval_dispatch": false,
+        "dispatch_attempted": false,
+        "dispatch_refused": true,
+        "next_required_proof": [
+          "local_archive_file_with_matching_sha256_and_bytes",
+          "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+          "passed_kkt_proof_or_converged_admm_waterline_result",
+          "pareto_eligible_static_ready_non_proxy_candidate"
+        ],
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "exact_dispatch_blockers_v1",
+        "score_claim": false
+      },
+      "expected_information_gain_nats": 0.38,
+      "expected_pose_dist_delta": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_seg_dist_delta": 0.0,
+      "expected_total_score_delta": 0.0,
+      "expected_total_score_delta_source": "planning_proxy_beta_substrate_no_exact_archive_score_delta",
+      "family": "beta_sensitivity_substrate_transform",
+      "family_group": "paradigm_beta_sensitivity_aware_everything",
+      "field_interaction_contract": {
+        "assumption_count": 4,
+        "assumptions": [
+          "substrate_transform_bytes_are_internal_planning_measurement",
+          "requires_score_marginal_tensor_annotations",
+          "requires_decode_roundtrip_and_runtime_tree_closure",
+          "requires_exact_cuda_auth_eval_before_score_claim"
+        ],
+        "blockers": [],
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [],
+        "interaction_model": "",
+        "schema": "field_interaction_contract_v1",
+        "status": "passed",
+        "volterra_order": null,
+        "volterra_order_source": "",
+        "volterra_scope": "undeclared_order_first_order_assumptions_only",
+        "volterra_terms": [],
+        "volterra_terms_declared": false
+      },
+      "field_meta_ingestion_contract": {
+        "archive_byte_closed": false,
+        "byte_closed_archive_required": true,
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "byte_closed_archive_proof_missing",
+          "runtime_tree_closure_proof_missing",
+          "planning_or_proxy_packet_not_dispatch_ready",
+          "planning_only_packet_not_dispatch_ready"
+        ],
+        "dispatch_ingestion_ready": false,
+        "local_blockers": [
+          "byte_closed_archive_proof_missing",
+          "runtime_tree_closure_proof_missing"
+        ],
+        "local_field_meta_ingestion_ready": false,
+        "planning_only": true,
+        "planning_only_is_score_evidence": false,
+        "proxy_packets_dispatch_ready": false,
+        "proxy_row": true,
+        "runtime_closed": false,
+        "runtime_tree_closure_required": true,
+        "schema": "field_meta_ingestion_contract_v1",
+        "score_claim": false,
+        "status": "blocked",
+        "strict_candidate_preflight_ready": true
+      },
+      "field_selection_blockers": [
+        "missing_byte_closed_archive_proof",
+        "archive:archive_identity_missing",
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing",
+        "planning_or_proxy_packet",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "kkt_not_ready_for_field_planning",
+        "missing_dispatch_identity_for_lane_claim",
+        "non_byte_closed_archive",
+        "non_byte_closed_runtime",
+        "pareto_ineligible_packet",
+        "ingestion:byte_closed_archive_proof_missing",
+        "ingestion:runtime_tree_closure_proof_missing",
+        "ingestion:planning_or_proxy_packet_not_dispatch_ready",
+        "ingestion:planning_only_packet_not_dispatch_ready",
+        "pareto_ineligible_for_field_selection"
+      ],
+      "field_selection_next_required_proof": [
+        "local_archive_file_with_matching_sha256_and_bytes",
+        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+        "passed_kkt_proof_or_converged_admm_waterline_result",
+        "pareto_eligible_static_ready_non_proxy_candidate"
+      ],
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "field_selection_score_delta": 0.0,
+      "frontier_row": {
+        "action_class": "wire_beta_substrate_transform_into_archive_candidate",
+        "blockers": [
+          "missing_byte_closed_archive_proof",
+          "archive:archive_identity_missing",
+          "missing_byte_closed_runtime_proof",
+          "runtime:runtime_proof_missing",
+          "planning_or_proxy_packet",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "kkt_not_ready_for_field_planning",
+          "missing_dispatch_identity_for_lane_claim",
+          "non_byte_closed_archive",
+          "non_byte_closed_runtime",
+          "pareto_ineligible_packet",
+          "ingestion:byte_closed_archive_proof_missing",
+          "ingestion:runtime_tree_closure_proof_missing",
+          "ingestion:planning_or_proxy_packet_not_dispatch_ready",
+          "ingestion:planning_only_packet_not_dispatch_ready",
+          "pareto_ineligible_for_field_selection"
+        ],
+        "byte_delta": -616293.0,
+        "candidate_id": "beta_sensitivity_substrate_transform",
+        "candidate_static_preflight_ready": false,
+        "code_paths": [
+          "src/tac/codec_pipeline_sensitivity.py",
+          "src/tac/sensitivity_map.py",
+          "src/tac/owv3_sensitivity_weighted.py",
+          "src/tac/neural_weight_codec_sensitivity.py"
+        ],
+        "dispatch_attempted": false,
+        "evidence_grade": "planning_proxy_beta_sensitivity_substrate_transform",
+        "evidence_paths": [],
+        "expected_information_gain_nats": 0.38,
+        "expected_pose_dist_delta": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": 0.0,
+        "family": "beta_sensitivity_substrate_transform",
+        "family_group": "paradigm_beta_sensitivity_aware_everything",
+        "key": "beta_sensitivity_substrate_transform",
+        "next_patch": "",
+        "next_required_proof": [
+          "local_archive_file_with_matching_sha256_and_bytes",
+          "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+          "passed_kkt_proof_or_converged_admm_waterline_result",
+          "pareto_eligible_static_ready_non_proxy_candidate"
+        ],
+        "paradigms": [
+          "beta_sensitivity",
+          "substrate_transform",
+          "joint_codec_stack",
+          "meta_lagrangian"
+        ],
+        "pareto_eligible": false,
+        "pareto_frontier": false,
+        "pareto_scope": "beta_sensitivity_planning",
+        "planning_priority_rankable": false,
+        "priority_tier": 2,
+        "ready_for_exact_eval_dispatch": false,
+        "role": "sensitivity_aware_substrate_transform_planning",
+        "schema": "cross_paradigm_frontier_row_v1",
+        "score_claim": false,
+        "score_evidence_rankable": false,
+        "source_path": "experiments/results/lane_codec_pipeline_sensitivity_beta_20260507T161548Z/manifest.json",
+        "source_tool": "tools/build_field_meta_dispatch_selection.py",
+        "status": "needs_byte_closed_archive_proof",
+        "title": ""
+      },
+      "instance_job_id": "",
+      "interaction_assumptions": [
+        "substrate_transform_bytes_are_internal_planning_measurement",
+        "requires_score_marginal_tensor_annotations",
+        "requires_decode_roundtrip_and_runtime_tree_closure",
+        "requires_exact_cuda_auth_eval_before_score_claim"
+      ],
+      "job_name": "",
+      "kkt_blockers": [
+        "missing_byte_closed_archive_proof",
+        "archive:archive_identity_missing",
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing",
+        "planning_or_proxy_packet",
+        "kkt:kkt_proof_or_admm_result_missing"
+      ],
+      "kkt_proof": {
+        "blockers": [
+          "kkt_proof_or_admm_result_missing"
+        ],
+        "candidates": [],
+        "kind": "",
+        "residual": null,
+        "source": "",
+        "status": "blocked",
+        "tolerance": null
+      },
+      "kkt_ready_for_field_planning": false,
+      "lane_id": "",
+      "lexicographic_feasibility_tuple": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        0.0,
+        0.38
+      ],
+      "manifest_path": "experiments/results/lane_codec_pipeline_sensitivity_beta_20260507T161548Z/manifest.json",
+      "manifest_sha256": "d8e77f2c3fbb6af04cf029c67a935ee75ffc57499ee5e0e9a372db8d9f2aebae",
+      "next_local_non_gpu_action": null,
+      "next_local_non_gpu_command": "",
+      "next_required_proof": [
+        "local_archive_file_with_matching_sha256_and_bytes",
+        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+        "passed_kkt_proof_or_converged_admm_waterline_result",
+        "pareto_eligible_static_ready_non_proxy_candidate"
+      ],
+      "non_dominated_frontier_reason": {
+        "dominated_by": [],
+        "eligibility_blockers": [
+          "field_meta_ingestion_contract_not_ready",
+          "candidate_static_preflight_not_ready",
+          "planning_or_proxy_packet"
+        ],
+        "eligible": false,
+        "frontier": false,
+        "objective_directions": {
+          "byte_delta": "min",
+          "candidate_static_preflight_ready": "max",
+          "confidence": "max",
+          "expected_pose_dist_delta": "min",
+          "expected_seg_dist_delta": "min",
+          "expected_total_score_delta": "min"
+        },
+        "objectives": {
+          "byte_delta": -616293.0,
+          "candidate_static_preflight_ready": 0.0,
+          "confidence": 1.0,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "expected_total_score_delta": 0.0
+        },
+        "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+        "schema": "non_dominated_frontier_reason_v1",
+        "scope": "beta_sensitivity_planning",
+        "status": "ineligible"
+      },
+      "operator_approval_blockers": [],
+      "operator_approval_state": {
+        "approved": true,
+        "dispatch_unlocked_by_approval": false,
+        "manifest_operator_approved_exact_cuda": null,
+        "remaining_required_gates": [
+          "environment",
+          "active_lane_dispatch_claim",
+          "candidate_static_preflight",
+          "pareto_frontier",
+          "kkt_or_admm_proof",
+          "exact_cuda_auth_eval",
+          "adversarial_review_before_score_claim"
+        ],
+        "schema": "operator_approval_state_v1",
+        "selector_context_operator_approved_exact_cuda": true,
+        "source": "selector_context_operator_approved_exact_cuda"
+      },
+      "operator_claim_blockers": [],
+      "operator_current_blockers": [],
+      "operator_environment_blockers": [],
+      "operator_next_steps_summary": {
+        "approval_blockers": [],
+        "claim_blockers": [],
+        "copy_safe": null,
+        "current_blockers": [],
+        "environment_blockers": [],
+        "first_remote_gpu_step": "",
+        "local_non_gpu_step_ids": [],
+        "must_run_in_order": null,
+        "next_local_non_gpu_action": null,
+        "next_local_non_gpu_command": "",
+        "operator_approval_state": {
+          "approved": true,
+          "dispatch_unlocked_by_approval": false,
+          "manifest_operator_approved_exact_cuda": null,
+          "remaining_required_gates": [
+            "environment",
+            "active_lane_dispatch_claim",
+            "candidate_static_preflight",
+            "pareto_frontier",
+            "kkt_or_admm_proof",
+            "exact_cuda_auth_eval",
+            "adversarial_review_before_score_claim"
+          ],
+          "schema": "operator_approval_state_v1",
+          "selector_context_operator_approved_exact_cuda": true,
+          "source": "selector_context_operator_approved_exact_cuda"
+        },
+        "packet_operator_next_steps_schema": "",
+        "packet_path": "",
+        "refresh_blockers": [],
+        "remote_gpu_step_ids": [],
+        "schema": "packet_operator_next_steps_summary_v1",
+        "source": "manifest_command_fields",
+        "static_refresh_command": "",
+        "static_refresh_schema": "",
+        "static_refresh_source": "",
+        "static_refresh_status": "not_recorded",
+        "step_count": 0
+      },
+      "operator_refresh_blockers": [],
+      "packet_kind": "",
+      "paradigms": [
+        "beta_sensitivity",
+        "substrate_transform",
+        "joint_codec_stack",
+        "meta_lagrangian"
+      ],
+      "pareto_dominated_by": [],
+      "pareto_eligibility_blockers": [
+        "field_meta_ingestion_contract_not_ready",
+        "candidate_static_preflight_not_ready",
+        "planning_or_proxy_packet"
+      ],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_objectives": {
+        "byte_delta": -616293.0,
+        "candidate_static_preflight_ready": 0.0,
+        "confidence": 1.0,
+        "expected_pose_dist_delta": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": 0.0
+      },
+      "pareto_scope": "beta_sensitivity_planning",
+      "planning_priority_rankable": false,
+      "priority_tier": 2,
+      "proxy_row": true,
+      "rate_only_delta_proof": {
+        "blockers": [],
+        "byte_delta": -616293,
+        "declared_rate_only": false,
+        "expected_total_score_delta": 0.0,
+        "expected_total_score_delta_source": "planning_proxy_beta_substrate_no_exact_archive_score_delta",
+        "official_rate_score_delta": -0.410364211797,
+        "schema": "rate_only_delta_proof_v1",
+        "status": "not_applicable",
+        "tolerance": 1e-09
+      },
+      "readiness_component_penalty_overwhelms_rate_gain": null,
+      "readiness_evidence_path": "",
+      "readiness_evidence_ready_for_exact_eval_dispatch": null,
+      "readiness_evidence_semantics": "",
+      "readiness_evidence_sha256": "",
+      "ready_for_exact_eval_dispatch": false,
+      "role": "sensitivity_aware_substrate_transform_planning",
+      "runtime_proof": {
+        "blockers": [
+          "runtime_proof_missing"
+        ],
+        "candidates": [],
+        "runtime_closed": false,
+        "runtime_tree_sha256": "",
+        "source": "",
+        "status": "blocked"
+      },
+      "schema_version": 3,
+      "score_claim": false,
+      "score_evidence_contract": {
+        "blockers": [
+          "field_meta_ingestion_contract_not_ready",
+          "planning_or_proxy_packet_not_score_evidence",
+          "proxy_or_planning_evidence_grade_not_score_evidence",
+          "missing_exact_cuda_positive_score_evidence",
+          "expected_delta_not_score_lowering"
+        ],
+        "exact_cuda_grade": false,
+        "exact_positive_cuda_evidence": false,
+        "expected_total_score_delta": 0.0,
+        "planning_only_is_score_evidence": false,
+        "planning_priority_rankable": false,
+        "schema": "field_meta_score_evidence_contract_v1",
+        "score_evidence_rankable": false,
+        "source_score_lowering_evidence": null,
+        "status": "blocked"
+      },
+      "score_evidence_rankable": false,
+      "score_lowering_evidence": false,
+      "scorer_basin_parity_status": "",
+      "selection_blockers": [
+        "kkt_not_ready_for_field_planning",
+        "missing_dispatch_identity_for_lane_claim",
+        "non_byte_closed_archive",
+        "non_byte_closed_runtime",
+        "pareto_ineligible_packet",
+        "planning_or_proxy_packet"
+      ],
+      "selection_decision": "needs_byte_closed_archive_proof",
+      "selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 25.0,
+        "missing_dispatch_identity_for_lane_claim": 250.0,
+        "non_byte_closed_archive": 1000.0,
+        "non_byte_closed_runtime": 1000.0,
+        "pareto_ineligible_packet": 50.0,
+        "planning_or_proxy_packet": 75.0
+      },
+      "selection_penalty_units": 2400.0,
+      "source_ready_for_exact_eval_packet": null,
+      "source_score_lowering_evidence": null,
+      "source_static_packet_ready": null,
+      "static_candidate_blockers": [
+        "missing_byte_closed_archive_proof",
+        "archive:archive_identity_missing",
+        "missing_byte_closed_runtime_proof",
+        "runtime:runtime_proof_missing"
+      ],
+      "strict_candidate_preflight": {
+        "blockers": [],
+        "candidate_static_preflight_ready": true,
+        "lane_claim": {
+          "active_conflicts": [],
+          "checked": false,
+          "claims_path": null,
+          "lane_id": null
+        },
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
+        "warnings": []
+      },
+      "strict_candidate_preflight_ready": true,
+      "strict_candidate_static_preflight_ready": true,
+      "title": ""
+    },
+    {
       "action_class": "build_byte_different_pr103_lc_ac_candidate",
       "archive_proof": {
         "blockers": [
@@ -6998,14 +8970,14 @@
       0.0
     ],
     "manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json",
-    "manifest_sha256": "0e4b65aab9d23bd2b8d41a1337e1c0690016c70d83a5d535877c8c7633ce3ade",
+    "manifest_sha256": "4ad03a191bf50a039ad73d042ed1926c638a56291b0950fbe85860c0fd1ec81f",
     "next_local_non_gpu_action": {
       "command": ".venv/bin/python -c 'import os,sys; missing=[k for k in sys.argv[1:] if not os.environ.get(k)]; raise SystemExit(('\"'\"'FATAL: missing Lightning env: '\"'\"'+'\"'\"', '\"'\"'.join(missing)) if missing else 0)' LIGHTNING_SSH_TARGET LIGHTNING_REMOTE_PACT LIGHTNING_UPSTREAM_DIR LIGHTNING_TEAMSPACE LIGHTNING_STUDIO LIGHTNING_SDK_USER",
       "copy_safe_command": ".venv/bin/python -c 'import os,sys; missing=[k for k in sys.argv[1:] if not os.environ.get(k)]; raise SystemExit(('\"'\"'FATAL: missing Lightning env: '\"'\"'+'\"'\"', '\"'\"'.join(missing)) if missing else 0)' LIGHTNING_SSH_TARGET LIGHTNING_REMOTE_PACT LIGHTNING_UPSTREAM_DIR LIGHTNING_TEAMSPACE LIGHTNING_STUDIO LIGHTNING_SDK_USER",
       "dispatches_remote_gpu": false,
       "id": "verify_lightning_env",
       "order": 1,
-      "purpose": "",
+      "purpose": "fail loudly until all Lightning identity and path env vars are loaded",
       "source": "operator_next_steps.steps",
       "writes_repo_state": false
     },
@@ -7108,7 +9080,7 @@
         "dispatches_remote_gpu": false,
         "id": "verify_lightning_env",
         "order": 1,
-        "purpose": "",
+        "purpose": "fail loudly until all Lightning identity and path env vars are loaded",
         "source": "operator_next_steps.steps",
         "writes_repo_state": false
       },
@@ -7189,13 +9161,13 @@
         {
           "blockers": [],
           "runtime_closed": true,
-          "runtime_tree_sha256": "f402908b2490718c4f7b76987335ec1a496cb12ab71c27e1e1aea4024d5712cb",
+          "runtime_tree_sha256": "2a3bbb259179152ca38e659370afdeeabf670bf1f96e2bc91568a7c9cfc93b47",
           "source": "public_replay_preflight.runtime",
           "status": "passed"
         }
       ],
       "runtime_closed": true,
-      "runtime_tree_sha256": "f402908b2490718c4f7b76987335ec1a496cb12ab71c27e1e1aea4024d5712cb",
+      "runtime_tree_sha256": "2a3bbb259179152ca38e659370afdeeabf670bf1f96e2bc91568a7c9cfc93b47",
       "source": "public_replay_preflight.runtime",
       "status": "passed"
     },

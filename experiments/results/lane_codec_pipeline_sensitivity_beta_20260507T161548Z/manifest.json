@@ -1,0 +1,27 @@
+{
+  "note": "[empirical:experiments/results/lane_codec_pipeline_sensitivity_beta_20260507T161548Z/manifest.json] beta paradigm sensitivity-aware substrate-transform CodecOp",
+  "pipelines": {
+    "[Op1]": {
+      "wrapper_bytes": 200719,
+      "op1_blob_bytes": 200681
+    },
+    "[beta_uniform, Op1]": {
+      "wrapper_bytes": 1049472,
+      "beta_blob_bytes": 847399,
+      "op1_blob_bytes": 200681
+    },
+    "[beta_stub_low, Op1]": {
+      "wrapper_bytes": 433206,
+      "beta_blob_bytes": 231106,
+      "op1_blob_bytes": 200681
+    }
+  },
+  "beta_standalone": {
+    "identity_blob_bytes": 847399,
+    "stub_low_blob_bytes": 231106,
+    "savings_bytes": 616293,
+    "savings_pct": 72.73
+  },
+  "op1_subblob_byte_equivalent_uniform_vs_alone": true,
+  "evidence_grade": "predicted"
+}
