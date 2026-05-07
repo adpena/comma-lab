@@ -89,6 +89,36 @@ ready, submit the best exact A++ archive before operator sleep or hard deadline
 risk, then update with better replays if they land. Do not wait for the perfect
 future candidate when a valid current frontier can be disclosed now.
 
+## Meta-Lagrangian/Pareto solver — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+The meta-Lagrangian, Pareto, field-equation, and cross-paradigm selector stack
+is a living solver, not a one-off planning report. Any work on score lowering,
+stacking, entropy coding, hidden gems, public PR deconstruction, categorical
+labels, foveation, pose, sensitivity, or paradigm wiring must either improve
+this solver or explicitly record why the new signal is not yet actionable.
+
+Every stackable or substitutive idea should move toward a typed row consumed by
+the planner: candidate id, family, pareto scope, charged bytes, predicted
+SegNet/PoseNet/rate deltas, uncertainty, evidence grade, archive/runtime
+custody, interaction assumptions, conflicts, Volterra or higher-order terms,
+KKT/ADMM residuals, expected information gain, blockers, and next proof. If a
+research artifact can affect score but is not visible to the selector, it is
+orphaned work.
+
+Prefer solvable math over arbitrary sweeps. New knobs must be grounded in
+entropy/MDL, Fisher/Hessian/Jacobian or Frechet sensitivity, Dykstra/ADMM
+feasibility, Bayesian experimental design, optimal transport/camera geometry,
+component-response evidence, or a documented ablation. Heuristics stay tagged
+`planning_only` until evidence closes the loop. Every exact CUDA result and
+high-quality negative should reseed calibration, Pareto constraints, trust
+regions, interaction terms, or strict guards.
+
+The desired loop is: formulate objective and constraints -> emit typed atoms ->
+Pareto/KKT/interaction prune -> select by score delta plus expected information
+gain -> build deterministic archive -> exact CUDA eval -> reseed the solver.
+Keep this path simpler, faster, more deterministic, and more complete every
+time it is touched.
+
 ## CROSS-AGENT DISPATCH COORDINATION — NON-NEGOTIABLE
 
 **Before dispatching ANY training, eval, or remote-GPU job, claim the lane with `tools/claim_lane_dispatch.py claim ...`.** The helper owns the file lock, reads `.omx/state/active_lane_dispatch_claims.md`, inserts the newest row at the top, and refuses active same-`lane_id` conflicts inside the 24-hour TTL unless an explicit force flag with notes is used.

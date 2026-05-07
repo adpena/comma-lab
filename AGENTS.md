@@ -651,6 +651,59 @@ non-dispatchable in the artifact itself. A low byte estimate is not sufficient
 for dispatch unless the artifact also shows an archive-relevant state change
 and a plausible break-even component path.
 
+### Meta-Lagrangian, Pareto, And Learnable Field Solver
+
+The meta-Lagrangian/Pareto system is a living optimization kernel, not a static
+ranking report. Whenever an agent touches scoring, stacking, hidden-gem
+deconstruction, public-frontier intake, entropy coding, sensitivity maps,
+foveation, pose, categorical labels, or cross-paradigm wiring, it must ask
+whether the change should make the planner more complete, more correct, more
+learnable, more deterministic, simpler to operate, or faster to solve. If the
+answer is yes, update the planner contract or record the explicit blocker in a
+dated `.omx/research/` ledger.
+
+Every stackable or substitutive atom should converge toward a shared field row:
+candidate id, family, paradigm(s), role, pareto scope, charged-byte delta,
+expected SegNet/PoseNet/rate deltas, confidence/uncertainty, evidence grade,
+archive and runtime custody, interaction assumptions, conflicts, Volterra or
+higher-order interaction terms when known, KKT/ADMM residuals when applicable,
+expected information gain, blockers, and next required proof. Orphaned research
+artifacts that can affect score are incomplete until they are either wired into
+the cross-paradigm inventory/meta selector or explicitly marked non-actionable
+with evidence.
+
+Prefer solvable formulations over arbitrary sweeps. New thresholds, weights,
+field parameters, codebook choices, foveation radii, quantizer settings, and
+selection heuristics should be derived from at least one of: entropy-rate
+decomposition, MDL, Fisher/Hessian/Jacobian sensitivity, Frechet/adjoint
+derivatives, Dykstra/ADMM feasibility residuals, Bayesian experimental design,
+optimal transport/camera geometry, exact component-response data, or a
+documented ablation manifest. If a parameter is still heuristic, tag it as
+planning-only and keep it out of dispatch readiness until evidence arrives.
+
+The planner must learn from every exact result and every high-quality negative.
+Exact CUDA evals, byte-equivalent no-op controls, component collapses,
+decode/re-encode failures, runtime blockers, and successful hidden-gem repacks
+should become calibration rows, trust-region updates, Pareto constraints,
+interaction terms, or hard guards. The ideal loop is:
+
+```text
+formulate objective and constraints
+-> emit typed atoms/policies
+-> prune by custody, Pareto, KKT/ADMM, and interaction gates
+-> select by score delta plus expected information gain
+-> build deterministic candidate archive
+-> exact CUDA eval
+-> reseed calibration and planner weights
+```
+
+Keep this system elegant and operational. Remove stale planner fields and dead
+adapters when a better contract replaces them; keep JSON schemas deterministic;
+add focused tests for every new blocker or objective term; make selection fast
+enough for loop use; and preserve cross-platform behavior. A powerful equation
+that cannot emit a byte-closed archive, a dispatch packet, or a learnable
+feedback row is not yet useful.
+
 ### Hardware, Camera, And openpilot Priors
 
 The contest video was captured by real comma/openpilot hardware and scored on
