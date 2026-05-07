@@ -1,12 +1,10 @@
-"""Tests for ``tools.run_bilevel_optimization`` — magic-autopilot driver."""
+"""Tests for ``tools.run_bilevel_optimization`` : magic-autopilot driver."""
 
 from __future__ import annotations
 
 import importlib.util
 import json
 import pathlib
-
-import pytest
 
 
 def _load_driver_module():
@@ -47,7 +45,7 @@ def test_detect_substrates_returns_list_of_candidates(tmp_path: pathlib.Path) ->
     mod = _load_driver_module()
     repo = tmp_path / "fake_repo"
     repo.mkdir()
-    # Empty repo → no substrates
+    # Empty repo -> no substrates
     assert mod.detect_substrates(repo) == []
     # Add a fake PR106 state_dict
     pr106_dir = repo / "experiments/results/sensitivity_map_pr106_20260504_claude"
@@ -74,7 +72,7 @@ def test_detect_current_phase_handles_missing_registry(tmp_path: pathlib.Path) -
     mod = _load_driver_module()
     fake_repo = tmp_path / "fresh"
     fake_repo.mkdir()
-    # No .omx/state/lane_registry.json → fresh checkout, return phase 1
+    # No .omx/state/lane_registry.json -> fresh checkout, return phase 1
     assert mod.detect_current_phase(fake_repo) == 1
 
 
@@ -84,7 +82,7 @@ def test_detect_current_phase_handles_corrupt_registry(tmp_path: pathlib.Path) -
     state_dir = fake_repo / ".omx/state"
     state_dir.mkdir(parents=True)
     (state_dir / "lane_registry.json").write_text("{not valid json")
-    # Corrupt registry → fall back to phase 1
+    # Corrupt registry -> fall back to phase 1
     assert mod.detect_current_phase(fake_repo) == 1
 
 
@@ -99,7 +97,7 @@ def test_detect_current_phase_dict_schema(tmp_path: pathlib.Path) -> None:
             "lane_other": {"level": 1},
         }
     }))
-    # PR100 lane at L3 → advance past phase 1
+    # PR100 lane at L3 -> advance past phase 1
     assert mod.detect_current_phase(fake_repo) >= 2
 
 
@@ -119,11 +117,25 @@ def test_detect_current_phase_list_schema(tmp_path: pathlib.Path) -> None:
 
 
 def test_atom_ledger_appends_jsonl(tmp_path: pathlib.Path) -> None:
+    """Bug-hunter v3 (HIGH, integration seam): the prior version of this
+    test passed ``path="/tmp/fake"`` into the SubstrateCandidate constructor.
+    The atom ledger persists that path string into a JSONL on disk — a
+    direct violation of CLAUDE.md "Forbidden /tmp paths in any persisted
+    artifact". Tests are the authoritative source for what the canonical
+    contract permits; using /tmp here implicitly blesses /tmp as an
+    acceptable substrate path. Now we use ``tmp_path / "fake_substrate.pt"``
+    so the persisted record references a non-/tmp path under pytest's
+    own scratch dir."""
     mod = _load_driver_module()
     repo = tmp_path / "ledger_repo"
     repo.mkdir()
+    fake_substrate_path = tmp_path / "fake_substrate.pt"
     candidate = mod.SubstrateCandidate(
-        label="test", path="/tmp/fake", bytes=100, score_anchor=0.2, notes="test",
+        label="test",
+        path=str(fake_substrate_path),
+        bytes=100,
+        score_anchor=0.2,
+        notes="test",
     )
     path = mod.append_to_atom_ledger(
         repo,
@@ -141,14 +153,25 @@ def test_atom_ledger_appends_jsonl(tmp_path: pathlib.Path) -> None:
     assert record["phase"] == 1
     assert record["contest_cuda_score"] == 0.18
     assert record["evidence_grade"] == "[contest-CUDA]"
+    # CLAUDE.md non-negotiable: persisted substrate path must not be /tmp.
+    assert not record["substrate_path"].startswith("/tmp/"), (
+        f"substrate_path {record['substrate_path']!r} starts with /tmp/; "
+        "violates CLAUDE.md 'Forbidden /tmp paths in any persisted artifact'"
+    )
 
 
 def test_atom_ledger_marks_cpu_prep_when_no_score(tmp_path: pathlib.Path) -> None:
+    """See sister test for the /tmp-path rationale."""
     mod = _load_driver_module()
     repo = tmp_path / "ledger_cpu"
     repo.mkdir()
+    fake_substrate_path = tmp_path / "fake_cpu_substrate.pt"
     candidate = mod.SubstrateCandidate(
-        label="cpu", path="/tmp/cpu", bytes=50, score_anchor=None, notes="",
+        label="cpu",
+        path=str(fake_substrate_path),
+        bytes=50,
+        score_anchor=None,
+        notes="",
     )
     path = mod.append_to_atom_ledger(
         repo, phase=2, substrate=candidate,
@@ -158,6 +181,9 @@ def test_atom_ledger_marks_cpu_prep_when_no_score(tmp_path: pathlib.Path) -> Non
     line = path.read_text().strip().splitlines()[-1]
     record = json.loads(line)
     assert record["evidence_grade"] == "[CPU-prep]"
+    assert not record["substrate_path"].startswith("/tmp/"), (
+        f"substrate_path {record['substrate_path']!r} starts with /tmp/"
+    )
 
 
 def test_run_phase_1_blocks_when_no_substrate(tmp_path: pathlib.Path) -> None:
@@ -174,3 +200,39 @@ def test_phase_trajectory_target_score_is_below_medal_band_for_phases_2_plus() -
     for ph in range(2, 8):
         target = float(mod.PHASE_TRAJECTORY[ph]["target_score"])
         assert target < 0.193, f"phase {ph} target {target} not below medal band 0.193"
+
+
+# ---------------------------------------------------------------------------
+# Bug-hunter v3: /tmp leak guard (integration seam)
+# ---------------------------------------------------------------------------
+
+def test_real_atom_ledger_has_no_tmp_paths() -> None:
+    """Bug-hunter v3 (HIGH, integration seam): scan the actual repo's
+    ``experiments/results/bilevel_atom_ledger.jsonl`` for any persisted
+    /tmp substrate paths. CLAUDE.md "Forbidden /tmp paths in any persisted
+    artifact" applies; this test is the canonical guard.
+
+    If the ledger file does not yet exist (fresh checkout), the test
+    passes trivially (nothing to scan).
+    """
+    repo_root = pathlib.Path(__file__).resolve().parents[3]
+    ledger = repo_root / "experiments/results/bilevel_atom_ledger.jsonl"
+    if not ledger.exists():
+        return  # nothing to scan
+    bad_lines: list[tuple[int, str]] = []
+    with ledger.open(encoding="utf-8") as f:
+        for i, line in enumerate(f, 1):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            sp = record.get("substrate_path", "")
+            if isinstance(sp, str) and sp.startswith("/tmp/"):
+                bad_lines.append((i, sp))
+    assert not bad_lines, (
+        "bilevel_atom_ledger.jsonl contains /tmp substrate_path entries "
+        f"(violates CLAUDE.md transient-evidence trap): {bad_lines[:5]}"
+    )
