@@ -1,0 +1,2 @@
+.venv/bin/python tools/build_cross_paradigm_frontier_inventory.py \
+  --json-out experiments/results/cross_paradigm_frontier_inventory_20260507_codex/inventory.json
