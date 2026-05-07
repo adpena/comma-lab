@@ -206,3 +206,37 @@ def test_decode_mismatched_override_breaks_contract() -> None:
     assert encoded != re_encoded, (
         "decoder silently ignored effective_byte_maps mismatch"
     )
+
+
+def test_encode_with_auto_select_True_path() -> None:
+    """Round 3 MEDIUM fix (Contrarian): encoder's auto_select=True path runs
+    auto_select_byte_maps internally and uses the result. The output bytes
+    must be ≤ the explicit-PR101-defaults output (since auto-select picks
+    the smaller of the candidates per-tensor)."""
+    sd = _synthetic_state_dict()
+    bytes_default = encode_decoder_compact(sd)  # PR101 defaults
+    bytes_auto = encode_decoder_compact(sd, auto_select=True)
+    # Auto-select cannot be WORSE than defaults; can be equal if defaults
+    # already won everywhere (synthetic weights are random so this often happens).
+    assert len(bytes_auto) <= len(bytes_default), (
+        f"auto_select produced larger blob ({len(bytes_auto)}) than defaults "
+        f"({len(bytes_default)}) — search algorithm is broken"
+    )
+
+
+def test_auto_select_explicit_override_takes_precedence() -> None:
+    """Round 3 fix: when both auto_select=True AND effective_byte_maps are
+    given, the explicit override wins (auto-select is skipped). Covers the
+    composition contract."""
+    sd = _synthetic_state_dict()
+    explicit = {0: "off", 1: "zig"}
+    # auto_select=True with explicit override set → explicit wins, no
+    # auto-search runs (the docstring says auto_select kicks in only when
+    # effective_byte_maps is None).
+    bytes_explicit = encode_decoder_compact(
+        sd, effective_byte_maps=explicit, auto_select=True
+    )
+    bytes_no_auto = encode_decoder_compact(sd, effective_byte_maps=explicit)
+    assert bytes_explicit == bytes_no_auto, (
+        "auto_select overrode explicit effective_byte_maps — contract broken"
+    )

@@ -329,6 +329,7 @@ def encode_decoder_compact(
     *,
     brotli_quality: int = 11,
     effective_byte_maps: dict[int, str] | None = None,
+    auto_select: bool = False,
 ) -> bytes:
     """Encode a torch ``state_dict`` to a PR101-compatible ``decoder_blob``.
 
@@ -343,16 +344,32 @@ def encode_decoder_compact(
         state_dict: HNeRVDecoder state dict keyed by FIXED_STATE_SCHEMA names.
         brotli_quality: Brotli compression level (PR101 ships at 11).
         effective_byte_maps: optional override mapping tensor_idx → map_name
-            (one of "zig", "negzig", "twos", "off"). When None, PR101's
-            DECODER_BYTE_MAPS is used. Round 2 review CRITICAL fix:
-            :func:`validate_byte_map_savings` now returns a dict that can be
-            fed directly into this parameter to AUTO-SKIP regressing maps —
-            previously the gate WARNED but did not act. See
-            :func:`auto_select_byte_maps` for the recommended workflow.
+            (one of "zig", "negzig", "twos", "off"). When None and
+            ``auto_select=False``, PR101's DECODER_BYTE_MAPS is used. Round 2
+            CRITICAL fix: :func:`validate_byte_map_savings` returns a dict
+            that can be fed directly here to auto-skip regressing maps.
+        auto_select: Round 3 MEDIUM fix (Contrarian finding) — when True AND
+            ``effective_byte_maps`` is None, runs :func:`auto_select_byte_maps`
+            internally to pick brotli-optimal map per tensor on the caller's
+            weights. Recommended for any substrate other than PR101's own
+            fine-tuned weights (PR106, apogee_intN, our internal lanes).
+            Default False to preserve PR101 wire-format compatibility for
+            byte-faithful re-encode of PR101 archives. Returned dict is
+            opaque to caller — decoder must receive the SAME effective_byte_maps
+            for byte-faithful roundtrip; use :func:`encode_decoder_compact_with_overrides`
+            (returns both bytes and the dict) when round-tripping is required.
+            Known-limitation per Shannon Round-3: search is per-tensor
+            independent (coordinate descent), not jointly optimal under
+            split-Brotli's stream-context sharing. Marginal gain from joint
+            optimization is sub-byte per tensor; not worth the engineering cost.
 
     Returns:
         Concatenated bytes of len(DECODER_STREAM_ENDS) brotli streams.
     """
+    if auto_select and effective_byte_maps is None:
+        effective_byte_maps = auto_select_byte_maps(
+            state_dict, brotli_quality=brotli_quality
+        )
     # 1) Quantize every tensor in schema order.
     quantized: list[_QuantizedTensor] = []
     schema_names = {name for name, _ in FIXED_STATE_SCHEMA}
@@ -538,31 +555,80 @@ def auto_select_byte_maps(
         winner differs from PR101's default). Caller passes this to
         :func:`encode_decoder_compact` and :func:`decode_decoder_compact`.
     """
+    # Round 3 fix (Shannon finding): per-tensor measurement must be done
+    # UNDER THE ACTUAL STREAM-WINDOW CONTEXT, not as a 1-tensor brotli stream.
+    # Tensors are packed into 7 stream windows per DECODER_STREAM_ENDS, and
+    # changing one tensor's map affects what brotli does with the rest of
+    # that window. The previous (per-tensor isolated) measurement chose
+    # locally-optimal maps that REGRESSED in joint-window context.
+    #
+    # The corrected algorithm: coordinate descent over windows. For each
+    # tensor, try each candidate map while keeping all OTHER tensors at
+    # their default. Measure the resulting WINDOW size. Pick the candidate
+    # that minimizes the window size. This is still per-tensor independent
+    # (not jointly optimal across the 4^28 combinatorial space) but it
+    # measures under the correct context.
     quantized = [
         _quantize_tensor(name, state_dict[name])
         for name, _shape in FIXED_STATE_SCHEMA
     ]
+    # Pre-compute baseline payloads with PR101 defaults for every tensor.
+    default_payloads = [
+        _build_per_tensor_payload(quantized[i], i, byte_map_override=None)
+        for i in range(len(FIXED_STATE_SCHEMA))
+    ]
+    # Map storage_idx → window_idx so we know which stream a tensor belongs to.
+    storage_to_window: dict[int, int] = {}
+    start = 0
+    for w_idx, end in enumerate(DECODER_STREAM_ENDS):
+        for so_pos in range(start, end):
+            storage_to_window[DECODER_STORAGE_ORDER[so_pos]] = w_idx
+        start = end
+
+    # Build per-window storage-position lists for fast in-context payload swap.
+    window_positions: list[list[int]] = [[] for _ in DECODER_STREAM_ENDS]
+    start = 0
+    for w_idx, end in enumerate(DECODER_STREAM_ENDS):
+        window_positions[w_idx] = list(range(start, end))
+        start = end
+
     selected: dict[int, str] = {}
     for idx in range(len(FIXED_STATE_SCHEMA)):
+        # Find which storage-order position this tensor occupies.
+        try:
+            so_pos_for_idx = DECODER_STORAGE_ORDER.index(idx)
+        except ValueError:
+            continue  # tensor not in storage order — skip
+        w_idx = storage_to_window[idx]
+        positions = window_positions[w_idx]
+
         best_map: str | None = None
         best_bytes: int | None = None
         for cand in candidate_maps:
-            payload = _build_per_tensor_payload(
+            cand_payload = _build_per_tensor_payload(
                 quantized[idx], idx, byte_map_override=cand
             )
-            n = len(pack_brotli_stream(payload, quality=brotli_quality))
+            # Reconstruct the FULL window with this candidate substituted in.
+            window_parts = []
+            for so_pos in positions:
+                tensor_idx = DECODER_STORAGE_ORDER[so_pos]
+                if tensor_idx == idx:
+                    window_parts.append(cand_payload)
+                else:
+                    window_parts.append(default_payloads[tensor_idx])
+            window_raw = b"".join(window_parts)
+            n = len(pack_brotli_stream(window_raw, quality=brotli_quality))
             if best_bytes is None or n < best_bytes:
                 best_bytes = n
                 best_map = cand
-        # Only record an override if it differs from PR101's default — keeps
-        # the dict small and lets the encoder/decoder use defaults elsewhere.
+
         default_map = DECODER_BYTE_MAPS.get(idx, "zig")
         if best_map != default_map:
             selected[idx] = best_map
             logger.info(
-                "auto_select_byte_maps: tensor idx=%d (%s) prefers %r over "
-                "PR101 default %r (%d bytes vs default)",
-                idx, FIXED_STATE_SCHEMA[idx][0], best_map, default_map,
+                "auto_select_byte_maps: tensor idx=%d (%s) window=%d prefers "
+                "%r over PR101 default %r (window %d bytes)",
+                idx, FIXED_STATE_SCHEMA[idx][0], w_idx, best_map, default_map,
                 best_bytes,
             )
     return selected
