@@ -15497,6 +15497,17 @@ _ORPHAN_CHECK_EXEMPT_MODULES = {
     "meta_lagrangian_allocator",        # meta-Lagrangian rate allocator
     "openpilot_features",               # openpilot feature extractor primitive
     "raft_radial_pose",                 # RAFT-derived radial pose helper
+    # 2026-05-07 batch 3 — additional library-only modules confirmed by
+    # docstring inspection (no test_<name>.py but explicitly documented as
+    # library/scaffold/diagnostic tools, not deployable producers):
+    # - categorical_candidate_runtime_skeleton: paradigm-α charged-archive
+    #   runtime consumer skeleton (sibling of lapose_foveation_runtime_skeleton);
+    #   "still not a contest decoder and never claims score readiness".
+    # - forensics: scorer-visible artifact analysis tools (manual diagnostic).
+    # - quantization_audit: INT8 dequantization drift measurement diagnostic.
+    "categorical_candidate_runtime_skeleton",
+    "forensics",
+    "quantization_audit",
 }
 
 
