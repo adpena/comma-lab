@@ -27,6 +27,7 @@ from tac.pr91_hpm1_codec import (
     reconstruct_raw_tokens_from_mod5_residual_symbols,
     run_pr91_hpm1_context_window_probe,
     run_pr91_hpm1_entropy_failure_grammar_probe,
+    run_pr91_hpm1_failure_row_probability_scan_probe,
     run_pr91_hpm1_first_symbol_state_probe,
     run_pr91_hpm1_next_row_suffix_scan_probe,
     run_pr91_hpm1_preflight,
@@ -728,6 +729,91 @@ def test_pr91_next_row_suffix_scan_cli_records_tool_manifest(tmp_path: Path) -> 
     assert payload["next_row_suffix_scan"]["suffix_scan"]["valid_next_row_count"] == 0
     assert payload["tool_run_manifest"]["tool"] == (
         "tools/audit_pr91_hpm1_next_row_suffix_scan_probe.py"
+    )
+
+
+def test_pr91_failure_row_probability_scan_narrows_tile_major_blocker() -> None:
+    if not DEFAULT_PR91_ARCHIVE.is_file():
+        pytest.skip("canonical PR91 archive not available")
+
+    report = run_pr91_hpm1_failure_row_probability_scan_probe(
+        DEFAULT_PR91_ARCHIVE,
+        spatial_order_candidate="tile_major_row_major",
+        write_json=False,
+    )
+
+    assert report["schema"] == "pr91_hpm1_failure_row_probability_scan_probe_v1"
+    assert report["score_claim"] is False
+    assert report["dispatch_allowed"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["status"] == "narrowed_failure_row_probability_numeric_false_lead"
+    assert report["grand_council_stop_rule"]["material_unlock_found"] is False
+    assert report["grand_council_stop_rule"]["redirect_recommendation"] == (
+        "stop HPM1 wall-clock unless a real encoder trace/source appears; "
+        "prioritize other frontier replacements or categorical candidates"
+    )
+    trace = report["failure_row_probability_probe"]["prefix_trace"]
+    assert trace["schema"] == "pr91_hpm1_failure_row_probability_scan_trace_v1"
+    assert trace["decoded_symbol_count_before_failure"] == 8274
+    assert trace["failure"]["frame"] == 0
+    assert trace["failure"]["group"] == 12
+    assert trace["failure"]["symbol_in_group"] == 210
+    assert trace["failure"]["failing_probability_row"]["normalized_sha256"] == (
+        "8216c3d82263ef0fc10c88ddf28439b0916ae83865c8d14d9e37bd785bd2b7cd"
+    )
+    scan = trace["failure_row_probability_scan"]
+    assert scan["classification"] == (
+        "failure_row_not_decodable_under_probability_numeric_scan"
+    )
+    assert scan["candidate_rows_tested"] == 192
+    assert scan["decodable_candidate_count"] == 0
+    assert scan["baseline_source_variant_decodes"] is False
+    assert scan["failures_by_exception_type"] == {"AssertionError": 192}
+
+
+def test_pr91_failure_row_probability_scan_cli_records_tool_manifest(
+    tmp_path: Path,
+) -> None:
+    if not DEFAULT_PR91_ARCHIVE.is_file():
+        pytest.skip("canonical PR91 archive not available")
+    out = tmp_path / "failure_row_probability_scan_probe.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(
+                REPO
+                / "tools"
+                / "audit_pr91_hpm1_failure_row_probability_scan_probe.py"
+            ),
+            "--archive",
+            str(DEFAULT_PR91_ARCHIVE),
+            "--scan-variants",
+            "source_float64_perfect_false",
+            "--scan-prob-eps-values",
+            "1e-7",
+            "--uniform-mix-masses",
+            "0",
+            "--json-out",
+            str(out),
+        ],
+        check=True,
+        cwd=REPO,
+        text=True,
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["schema"] == "pr91_hpm1_failure_row_probability_scan_probe_v1"
+    assert payload["status"] == "narrowed_failure_row_probability_numeric_false_lead"
+    assert payload["score_claim"] is False
+    assert payload["dispatch_allowed"] is False
+    scan = payload["failure_row_probability_probe"]["prefix_trace"][
+        "failure_row_probability_scan"
+    ]
+    assert scan["candidate_rows_tested"] == 1
+    assert scan["decodable_candidate_count"] == 0
+    assert payload["tool_run_manifest"]["tool"] == (
+        "tools/audit_pr91_hpm1_failure_row_probability_scan_probe.py"
     )
 
 

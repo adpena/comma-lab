@@ -162,6 +162,24 @@ DEFAULT_PR91_HPM1_RANGE_PREFIX_REPLAY_SYMBOL_LIMIT = 2048
 DEFAULT_PR91_HPM1_RANGE_PREFIX_MAX_TARGET_DECODED_BEFORE = 4096
 DEFAULT_PR91_HPM1_SYMBOL_BRIDGE_PREFIX_SYMBOLS = 32
 DEFAULT_PR91_HPM1_SYMBOL_BRIDGE_MAX_SYMBOLS = 4096
+DEFAULT_PR91_HPM1_FAILURE_ROW_PROB_EPS_VALUES = (
+    1e-12,
+    1e-9,
+    1e-7,
+    1e-6,
+    1e-5,
+    1e-4,
+    1e-3,
+    1e-2,
+)
+DEFAULT_PR91_HPM1_FAILURE_ROW_UNIFORM_MIX_MASSES = (
+    0.0,
+    1e-6,
+    1e-5,
+    1e-4,
+    1e-3,
+    1e-2,
+)
 
 _QUARANTINE_SPEC = (
     ".recovery_quarantine_20260505T004735Z/src/tac/pr91_hpm1_codec.recovery_spec.json"
@@ -3291,6 +3309,386 @@ def _trace_hpm1_next_row_suffix_scan(
     }
 
 
+def _validate_failure_row_prob_eps_values(
+    values: tuple[float, ...] | list[float],
+) -> tuple[float, ...]:
+    requested = tuple(float(value) for value in values)
+    bad = [
+        value
+        for value in requested
+        if not np.isfinite(value) or float(value) <= 0.0 or float(value) >= 0.2
+    ]
+    if bad:
+        raise Pr91Hpm1Error(
+            "hpm1_failure_row_probability_scan",
+            "prob_eps_values_must_be_finite_positive_and_below_point_two",
+            bad_values=bad,
+        )
+    return tuple(dict.fromkeys(requested))
+
+
+def _validate_failure_row_uniform_mix_masses(
+    values: tuple[float, ...] | list[float],
+) -> tuple[float, ...]:
+    requested = tuple(float(value) for value in values)
+    bad = [
+        value
+        for value in requested
+        if not np.isfinite(value) or float(value) < 0.0 or float(value) >= 1.0
+    ]
+    if bad:
+        raise Pr91Hpm1Error(
+            "hpm1_failure_row_probability_scan",
+            "uniform_mix_masses_must_be_finite_and_in_unit_interval",
+            bad_values=bad,
+        )
+    return tuple(dict.fromkeys(requested))
+
+
+def _probability_row_with_uniform_mix(
+    row: np.ndarray,
+    *,
+    uniform_mix_mass: float,
+) -> np.ndarray:
+    base = np.asarray(row, dtype=np.float64)
+    denom = float(base.sum())
+    if base.ndim != 1 or int(base.size) != 5 or denom <= 0.0:
+        raise Pr91Hpm1Error(
+            "hpm1_failure_row_probability_scan",
+            "expected_positive_five_symbol_probability_row",
+            shape=list(base.shape),
+            sum=denom,
+        )
+    normalized = base / denom
+    mix = float(uniform_mix_mass)
+    if mix == 0.0:
+        return np.ascontiguousarray(normalized, dtype=np.float64)
+    mixed = (1.0 - mix) * normalized + mix * (1.0 / float(base.size))
+    return np.ascontiguousarray(mixed, dtype=np.float64)
+
+
+def _scan_failure_row_probability_contract(
+    decoder_before: Any,
+    raw_row: np.ndarray,
+    *,
+    variants: tuple[str, ...],
+    prob_eps_values: tuple[float, ...],
+    uniform_mix_masses: tuple[float, ...],
+    decodable_preview_limit: int,
+) -> dict[str, Any]:
+    """Try bounded categorical-row numeric variants against one range state."""
+
+    decodable_rows: list[dict[str, Any]] = []
+    decodable_count = 0
+    tested = 0
+    failures_by_exception: dict[str, int] = {}
+    first_decodable_by_variant: dict[str, dict[str, Any]] = {}
+    first_decodable_by_mix: dict[str, dict[str, Any]] = {}
+    baseline_source_passed = False
+    smallest_uniform_mix_decodable: float | None = None
+
+    for variant_name in variants:
+        resolved = resolve_hpac_probability_variant(variant_name)
+        for eps in prob_eps_values:
+            for mix in uniform_mix_masses:
+                tested += 1
+                candidate_row = _probability_row_with_uniform_mix(
+                    raw_row,
+                    uniform_mix_mass=mix,
+                )
+                decoder = decoder_before.clone()
+                normalized = np.ascontiguousarray(
+                    _normalize_probability_row(
+                        candidate_row,
+                        prob_eps=eps,
+                        variant=resolved,
+                    )
+                )
+                try:
+                    decoded_symbol = int(
+                        decoder.decode(
+                            _categorical_from_probs(
+                                candidate_row,
+                                prob_eps=eps,
+                                variant=resolved,
+                            )
+                        )
+                    )
+                except Exception as exc:
+                    failures_by_exception[type(exc).__name__] = (
+                        failures_by_exception.get(type(exc).__name__, 0) + 1
+                    )
+                    continue
+
+                decodable_count += 1
+                order = np.argsort(-normalized, kind="stable")
+                row_record = {
+                    "variant": resolved.name,
+                    "source_contract_variant": bool(resolved.source_contract),
+                    "prob_eps": float(eps),
+                    "uniform_mix_mass": float(mix),
+                    "decoded_symbol": int(decoded_symbol),
+                    "decoded_symbol_probability": round(
+                        float(normalized[decoded_symbol]),
+                        10,
+                    ),
+                    "decoded_symbol_rank": int(
+                        np.where(order == decoded_symbol)[0][0] + 1
+                    ),
+                    "argmax_symbol": int(order[0]),
+                    "normalized_probability_row_sha256": sha256_bytes(
+                        normalized.tobytes()
+                    ),
+                    "normalized_probability_values": [
+                        round(float(value), 10)
+                        for value in normalized.tolist()
+                    ],
+                }
+                if (
+                    resolved.name == DEFAULT_HPAC_PROBABILITY_VARIANT
+                    and float(eps) == PROB_EPS
+                    and float(mix) == 0.0
+                ):
+                    baseline_source_passed = True
+                smallest_uniform_mix_decodable = (
+                    float(mix)
+                    if smallest_uniform_mix_decodable is None
+                    else min(smallest_uniform_mix_decodable, float(mix))
+                )
+                first_decodable_by_variant.setdefault(resolved.name, row_record)
+                first_decodable_by_mix.setdefault(str(float(mix)), row_record)
+                if len(decodable_rows) < int(decodable_preview_limit):
+                    decodable_rows.append(row_record)
+
+    return {
+        "schema": "pr91_hpm1_failure_row_probability_contract_scan_v1",
+        "scope": (
+            "single failing probability row decoded from the cloned range state "
+            "immediately before the candidate entropy exception"
+        ),
+        "variants_tested": list(variants),
+        "prob_eps_values_tested": [float(value) for value in prob_eps_values],
+        "uniform_mix_masses_tested": [float(value) for value in uniform_mix_masses],
+        "candidate_rows_tested": int(tested),
+        "decodable_candidate_count": int(decodable_count),
+        "decodable_preview_limit": int(decodable_preview_limit),
+        "decodable_candidate_preview": decodable_rows,
+        "baseline_source_variant_decodes": bool(baseline_source_passed),
+        "failures_by_exception_type": failures_by_exception,
+        "first_decodable_by_variant": first_decodable_by_variant,
+        "first_decodable_by_uniform_mix_mass": first_decodable_by_mix,
+        "smallest_uniform_mix_mass_decodable": smallest_uniform_mix_decodable,
+        "classification": (
+            "failure_row_decodes_under_probability_numeric_mutation"
+            if decodable_count
+            else "failure_row_not_decodable_under_probability_numeric_scan"
+        ),
+    }
+
+
+def _trace_hpm1_failure_row_probability_scan(
+    model: Any,
+    payload: Hpm1MaskPayload,
+    *,
+    probability_variant: str | Any,
+    prob_eps: float,
+    device: str,
+    spatial_order_candidate: str,
+    scan_variants: tuple[str, ...],
+    scan_prob_eps_values: tuple[float, ...],
+    uniform_mix_masses: tuple[float, ...],
+    decodable_preview_limit: int,
+) -> dict[str, Any]:
+    """Replay to the first failure and scan row-local categorical variants."""
+
+    if torch is None or F is None:  # pragma: no cover - optional dependency path
+        raise Pr91Hpm1Error("dependency_contract", "torch_missing")
+    if _pr86_hpac_codec.constriction is None:  # pragma: no cover
+        raise Pr91Hpm1Error("dependency_contract", "constriction_missing")
+    if str(device) != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "hpm1_failure_row_probability_scan_is_cpu_only",
+            requested_device=device,
+        )
+    if int(decodable_preview_limit) < 0:
+        raise Pr91Hpm1Error(
+            "hpm1_failure_row_probability_scan",
+            "decodable_preview_limit_must_be_nonnegative",
+            decodable_preview_limit=decodable_preview_limit,
+        )
+    _spatial_order_description(spatial_order_candidate)
+
+    started_at = time.time()
+    resolved = resolve_hpac_probability_variant(probability_variant)
+    dev = torch.device(device)
+    model = model.to(dev).eval()
+    masks = _group_masks(
+        payload.height,
+        payload.width,
+        P=payload.predictor_count,
+        delta=payload.delta,
+        device=dev,
+    )
+    words = _hpm1_token_words_for_candidate(payload, "source_little_uint32")
+    decoder = _pr86_hpac_codec.constriction.stream.queue.RangeDecoder(words)
+    if not hasattr(decoder, "clone"):
+        raise Pr91Hpm1Error(
+            "hpm1_failure_row_probability_scan",
+            "range_decoder_clone_unavailable",
+        )
+
+    decoded_prev = torch.zeros(
+        (1, payload.height, payload.width),
+        dtype=torch.long,
+        device=dev,
+    )
+    decoded_symbols = 0
+    failure_report: dict[str, Any] | None = None
+    probability_scan: dict[str, Any] | None = None
+
+    with torch.no_grad():
+        for frame in range(payload.n_frames):
+            idx = torch.tensor([frame], dtype=torch.long, device=dev)
+            cur = torch.zeros(
+                (1, payload.height, payload.width),
+                dtype=torch.long,
+                device=dev,
+            )
+            frame_start_symbols = decoded_symbols
+            for group, mask in enumerate(masks):
+                if mask is None:
+                    continue
+                group_start_symbols = decoded_symbols
+                coords = _hpm1_group_coords_for_spatial_order(
+                    payload,
+                    group=group,
+                    mask=mask,
+                    candidate=spatial_order_candidate,
+                    device=dev,
+                )
+                coord_rows = coords[:, 0].detach().cpu().numpy()
+                coord_cols = coords[:, 1].detach().cpu().numpy()
+                logits = model(cur, idx, decoded_prev)
+                probs = F.softmax(logits.float(), dim=1)
+                probs_at_group = (
+                    probs[0][:, coords[:, 0], coords[:, 1]]
+                    .permute(1, 0)
+                    .contiguous()
+                )
+                probs_np = probs_at_group.cpu().numpy()
+                decoded = np.empty(int(probs_at_group.shape[0]), dtype=np.int64)
+                for symbol_in_group, row in enumerate(probs_np):
+                    raw_row = np.ascontiguousarray(row)
+                    normalized = np.ascontiguousarray(
+                        _normalize_probability_row(
+                            raw_row,
+                            prob_eps=prob_eps,
+                            variant=resolved,
+                        )
+                    )
+                    cat = _categorical_from_probs(
+                        raw_row,
+                        prob_eps=prob_eps,
+                        variant=resolved,
+                    )
+                    decoder_state_before = _range_decoder_state_summary(
+                        decoder,
+                        label="before_failure_row_probability_scan_decode",
+                    )
+                    decoder_before = decoder.clone()
+                    try:
+                        decoded_symbol = int(decoder.decode(cat))
+                    except Exception as exc:
+                        y = int(coord_rows[symbol_in_group])
+                        x = int(coord_cols[symbol_in_group])
+                        probability_scan = _scan_failure_row_probability_contract(
+                            decoder_before,
+                            raw_row,
+                            variants=scan_variants,
+                            prob_eps_values=scan_prob_eps_values,
+                            uniform_mix_masses=uniform_mix_masses,
+                            decodable_preview_limit=decodable_preview_limit,
+                        )
+                        failure_report = {
+                            "stage": "submitted_tokens_decode",
+                            "reason": "hpac_entropy_decode_contract_mismatch",
+                            "exception_type": type(exc).__name__,
+                            "exception_text": str(exc),
+                            "frame": int(frame),
+                            "group": int(group),
+                            "symbol_in_group": int(symbol_in_group),
+                            "decoded_symbol_count_before_failure": int(decoded_symbols),
+                            "group_start_decoded_symbols": int(group_start_symbols),
+                            "frame_start_decoded_symbols": int(frame_start_symbols),
+                            "pixel_yx": {"y": y, "x": x},
+                            "range_decoder_diagnostic": {
+                                "state_before_decode": decoder_state_before,
+                                "state_after_failed_decode": _range_decoder_state_summary(
+                                    decoder,
+                                    label="after_failure_row_probability_scan_decode_exception",
+                                ),
+                                "not_stream_exhaustion": bool(
+                                    decoder_state_before.get("maybe_exhausted") is False
+                                ),
+                            },
+                            "failing_probability_row": {
+                                "raw_softmax_sha256": sha256_bytes(raw_row.tobytes()),
+                                "normalized_sha256": sha256_bytes(normalized.tobytes()),
+                                "normalized_values": [
+                                    round(float(value), 10)
+                                    for value in normalized.tolist()
+                                ],
+                                "argmax_symbol": int(normalized.argmax()),
+                            },
+                        }
+                        break
+
+                    decoded[symbol_in_group] = decoded_symbol
+                    decoded_symbols += 1
+                if failure_report is not None:
+                    break
+                cur[0, coords[:, 0], coords[:, 1]] = torch.from_numpy(decoded).to(dev)
+            if failure_report is not None:
+                break
+            decoded_prev = cur.clone()
+
+    return {
+        "schema": "pr91_hpm1_failure_row_probability_scan_trace_v1",
+        "status": (
+            "classified_first_entropy_failure_probability_row"
+            if failure_report is not None
+            else "no_entropy_failure_observed"
+        ),
+        "passed": failure_report is not None,
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "full_decode_proven": False,
+        "byte_exact_reencode_proven": False,
+        "device": device,
+        "baseline_probability_variant": resolved.name,
+        "baseline_prob_eps": float(prob_eps),
+        "spatial_order_candidate": spatial_order_candidate,
+        "spatial_order_description": _spatial_order_description(spatial_order_candidate),
+        "decoded_symbol_count_before_failure": int(decoded_symbols),
+        "failure": failure_report,
+        "failure_row_probability_scan": probability_scan,
+        "blocker_tightening": (
+            "The failed range state can decode the same model row only after "
+            "probability numeric mutation; encoder-side probability/range "
+            "numeric drift remains plausible."
+            if probability_scan
+            and probability_scan.get("classification")
+            == "failure_row_decodes_under_probability_numeric_mutation"
+            else "The failed range state does not decode the same model row "
+            "under the bounded numeric scan; earlier context/order drift or "
+            "unmodeled range construction remains more likely than a simple "
+            "failure-row epsilon/perfect flag issue."
+        ),
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
+
+
 def _trace_hpm1_reference_teacher_forced_spatial_order_failure(
     model: Any,
     payload: Hpm1MaskPayload,
@@ -5849,6 +6247,178 @@ def run_pr91_hpm1_next_row_suffix_scan_probe(
     if strict and report["ready_for_exact_eval_dispatch"] is not True:
         raise Pr91Hpm1Error(
             "hpm1_next_row_suffix_scan_probe",
+            str(report["status"]),
+            report=report,
+        )
+    return _jsonable(report)
+
+
+def run_pr91_hpm1_failure_row_probability_scan_probe(
+    archive: Path = DEFAULT_PR91_ARCHIVE,
+    *,
+    device: str = "cpu",
+    probability_variant: str = DEFAULT_HPAC_PROBABILITY_VARIANT,
+    prob_eps: float = PROB_EPS,
+    spatial_order_candidate: str = "tile_major_row_major",
+    scan_variants: tuple[str, ...] | list[str] | None = None,
+    scan_prob_eps_values: tuple[float, ...] | list[float] = (
+        DEFAULT_PR91_HPM1_FAILURE_ROW_PROB_EPS_VALUES
+    ),
+    uniform_mix_masses: tuple[float, ...] | list[float] = (
+        DEFAULT_PR91_HPM1_FAILURE_ROW_UNIFORM_MIX_MASSES
+    ),
+    decodable_preview_limit: int = 16,
+    output_dir: Path | None = None,
+    strict: bool = False,
+    write_json: bool = True,
+) -> dict[str, Any]:
+    """Classify whether the first failure row is a local probability issue."""
+
+    started_at = time.time()
+    if str(device) != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "pr91_hpm1_failure_row_probability_scan_probe_is_cpu_only",
+            requested_device=device,
+        )
+    _spatial_order_description(spatial_order_candidate)
+    requested_variants = _validate_probe_variants(
+        tuple(scan_variants)
+        if scan_variants is not None
+        else supported_hpac_probability_variant_names()
+    )
+    eps_values = _validate_failure_row_prob_eps_values(scan_prob_eps_values)
+    mix_values = _validate_failure_row_uniform_mix_masses(uniform_mix_masses)
+    archive_path = Path(archive)
+    payload = extract_pr91_hpm1_payload(archive_path)
+    dependency_report = collect_dependency_report(strict=False)
+    static_report = validate_hpm1_static_contract(payload)
+    relationship = compare_hpm1_to_pr86_hpac_contract(payload)
+    runtime_sources = analyze_pr91_hpm1_runtime_sources()
+    model = load_hpm1_hpac_model(payload, device=device)
+    trace = _trace_hpm1_failure_row_probability_scan(
+        model,
+        payload,
+        probability_variant=probability_variant,
+        prob_eps=prob_eps,
+        device=device,
+        spatial_order_candidate=spatial_order_candidate,
+        scan_variants=requested_variants,
+        scan_prob_eps_values=eps_values,
+        uniform_mix_masses=mix_values,
+        decodable_preview_limit=decodable_preview_limit,
+    )
+    probability_scan = trace.get("failure_row_probability_scan", {})
+    row_decodes_under_scan = (
+        isinstance(probability_scan, Mapping)
+        and probability_scan.get("classification")
+        == "failure_row_decodes_under_probability_numeric_mutation"
+    )
+    if row_decodes_under_scan:
+        status = "probability_numeric_contract_still_plausible_at_failure_row"
+        narrowed = (
+            "strict source categorical row, because it still fails; at least "
+            "one bounded numeric mutation makes the same row decodable"
+        )
+        redirect_recommendation = (
+            "continue only with encoder-side probability/range construction "
+            "recovery; do not spend on semantic token replacement yet"
+        )
+    else:
+        status = "narrowed_failure_row_probability_numeric_false_lead"
+        narrowed = (
+            "failure-row epsilon/perfect/uniform-mix categorical construction "
+            "within the bounded scan"
+        )
+        redirect_recommendation = (
+            "stop HPM1 wall-clock unless a real encoder trace/source appears; "
+            "prioritize other frontier replacements or categorical candidates"
+        )
+
+    report: dict[str, Any] = {
+        "schema": "pr91_hpm1_failure_row_probability_scan_probe_v1",
+        "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_failure_row_probability_scan_probe",
+        "recorded_at_utc": datetime.now(UTC).replace(microsecond=0).isoformat(),
+        "status": status,
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "dispatch_attempted": False,
+        "dispatch_performed": False,
+        "gpu_or_remote_work": False,
+        "local_only": True,
+        "ready_for_exact_eval_dispatch": False,
+        "promotion_eligible": False,
+        "evidence_grade": "empirical",
+        "evidence_scope": "local_cpu_hpm1_failure_row_probability_contract_scan",
+        "evidence_limitations": [
+            "not score evidence",
+            "not full standalone HPM1 decode proof",
+            "not byte-exact re-encode proof",
+            "not dispatch-eligible",
+        ],
+        "device": device,
+        "archive": _archive_report(archive_path),
+        "hpm1_static_contract": static_report,
+        "pr86_hpac_relationship": relationship,
+        "dependency_report": dependency_report,
+        "runtime_source_contract": runtime_sources,
+        "payload": {
+            "config": payload.config(),
+            "tokens_bytes": len(payload.tokens),
+            "tokens_sha256": sha256_bytes(payload.tokens),
+            "hpac_bytes": len(payload.hpac),
+            "hpac_sha256": sha256_bytes(payload.hpac),
+        },
+        "failure_row_probability_probe": {
+            "schema": "pr91_hpm1_failure_row_probability_scan_probe_v1",
+            "status": trace.get("status"),
+            "passed": bool(trace.get("passed") is True),
+            "score_claim": False,
+            "dispatch_allowed": False,
+            "baseline_probability_variant": resolve_hpac_probability_variant(
+                probability_variant
+            ).name,
+            "baseline_prob_eps": float(prob_eps),
+            "spatial_order_candidate": spatial_order_candidate,
+            "scan_variants": list(requested_variants),
+            "scan_prob_eps_values": [float(value) for value in eps_values],
+            "uniform_mix_masses": [float(value) for value in mix_values],
+            "decodable_preview_limit": int(decodable_preview_limit),
+            "prefix_trace": trace,
+        },
+        "grand_council_stop_rule": {
+            "hpm1_remains_forensic": True,
+            "full_decode_reencode_parity_required": True,
+            "exact_runtime_closure_required": True,
+            "material_unlock_found": bool(row_decodes_under_scan),
+            "redirect_recommendation": redirect_recommendation,
+        },
+        "exact_missing_grammar": {
+            "status": "still_open_after_failure_row_probability_scan",
+            "narrowed_by_this_probe": narrowed,
+            "remaining_open_classes": [
+                "earlier context/order drift before the tile-major failure row",
+                "range-coder construction/finalization contract",
+                "true PR91 encoder semantic tokens if public runtime semantics differ",
+                "unmodeled encoder-side probability numeric path outside the bounded scan",
+                "byte-exact full-stream reencode",
+            ],
+        },
+        "next_required_proofs": [
+            "only continue HPM1 if a real encoder trace/source or decodable probability mutation points to a bounded repair",
+            "decode all 600 HPM1 frames and re-encode exact token bytes before any dispatch",
+            "prove exact runtime closure before treating HPM1 as a frontier replacement",
+        ],
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
+    if write_json and output_dir is not None:
+        write_json_report(
+            report,
+            Path(output_dir) / "failure_row_probability_scan_probe.json",
+        )
+    if strict and report["ready_for_exact_eval_dispatch"] is not True:
+        raise Pr91Hpm1Error(
+            "hpm1_failure_row_probability_scan_probe",
             str(report["status"]),
             report=report,
         )
