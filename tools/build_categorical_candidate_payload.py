@@ -22,6 +22,7 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.categorical_payload_candidate import (  # noqa: E402
     DECODE_REENCODE_BLOCKED_PROOF_FILENAME,
+    HPM1_SEMANTIC_PARITY_FILENAME,
     LABEL_PERMUTATION_CONTROL_FILENAME,
     RUNTIME_EXECUTION_PROOF_FILENAME,
     CategoricalPayloadCandidateError,
@@ -91,6 +92,7 @@ def main(argv: list[str] | None = None) -> int:
     readiness_path = args.out_dir / "readiness.json"
     manifest_path = args.out_dir / "archive_member_manifest.json"
     hpm1_structural_inventory_path = args.out_dir / "hpm1_structural_inventory.json"
+    hpm1_semantic_parity_path = args.out_dir / HPM1_SEMANTIC_PARITY_FILENAME
     runtime_execution_proof_path = args.out_dir / RUNTIME_EXECUTION_PROOF_FILENAME
     label_permutation_control_path = args.out_dir / LABEL_PERMUTATION_CONTROL_FILENAME
     decode_reencode_blocked_proof_path = args.out_dir / DECODE_REENCODE_BLOCKED_PROOF_FILENAME
@@ -102,6 +104,11 @@ def main(argv: list[str] | None = None) -> int:
         *(
             [hpm1_structural_inventory_path]
             if hpm1_structural_inventory_path.is_file()
+            else []
+        ),
+        *(
+            [hpm1_semantic_parity_path]
+            if hpm1_semantic_parity_path.is_file()
             else []
         ),
         *(

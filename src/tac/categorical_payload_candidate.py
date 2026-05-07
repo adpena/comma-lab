@@ -32,6 +32,7 @@ from tac.categorical_candidate_readiness import (
     DETERMINISTIC_ZIP_DATE_TIME,
     DETERMINISTIC_ZIP_FILE_MODE,
     DETERMINISTIC_ZIP_INFLATE_MODE,
+    HPM1_SEMANTIC_PARITY_FAIL_CLOSED_CONTRACT,
     RUNTIME_EXECUTION_PROOF_KIND,
     RUNTIME_LOADER_PARITY_CONTRACT,
     audit_categorical_candidate_manifest,
@@ -53,6 +54,8 @@ from tac.pr91_hpm1_codec import (
     EXPECTED_PR91_HPM1_MASK_BYTES,
     EXPECTED_PR91_HPM1_MASK_SHA256,
     EXPECTED_PR91_MEMBER_X_SHA256,
+    Pr91Hpm1Error,
+    run_pr91_hpm1_semantic_decode_trench,
 )
 from tac.repo_io import json_text, repo_relative, sha256_bytes, sha256_file, write_json
 from tac.semantic_label_contract import CONTEST_SEGNET_CLASS_NAME_TUPLE, SELFCOMP_CLASS_TO_GRAY
@@ -67,6 +70,7 @@ RUNTIME_PROOF_SKELETON_CONTRACT = "categorical_runtime_consumer_proof_skeleton_v
 RUNTIME_EXECUTION_PROOF_FILENAME = "runtime_execution_proof.json"
 LABEL_PERMUTATION_CONTROL_FILENAME = "label_permutation_control.json"
 HPM1_STRUCTURAL_INVENTORY_FILENAME = "hpm1_structural_inventory.json"
+HPM1_SEMANTIC_PARITY_FILENAME = "hpm1_semantic_parity_fail_closed.json"
 DECODE_REENCODE_BLOCKED_PROOF_FILENAME = "decode_reencode_blocked_proof.json"
 RUNTIME_CONSUMER_REPO_PATH = "src/tac/categorical_candidate_runtime_skeleton.py"
 MEMBER_ROLES = {
@@ -513,6 +517,115 @@ def _write_decode_reencode_blocked_proof(
     }
 
 
+def _write_hpm1_semantic_parity_fail_closed(
+    *,
+    out_dir: Path,
+    categorical_payload: bytes,
+    payload_source: dict[str, Any],
+    candidate_archive_sha256: str,
+) -> dict[str, Any] | None:
+    """Write a PR91/HPM1 semantic divergence proof without claiming decode parity."""
+
+    payload_sha = sha256_bytes(categorical_payload)
+    if payload_sha != EXPECTED_PR91_HPM1_MASK_SHA256:
+        return None
+    source_archive_raw = payload_source.get("source_archive_path")
+    if not isinstance(source_archive_raw, str) or not source_archive_raw:
+        return None
+    source_archive_path = Path(source_archive_raw)
+    if not source_archive_path.is_absolute():
+        source_archive_path = REPO_ROOT / source_archive_path
+    if not source_archive_path.is_file():
+        return None
+
+    try:
+        trench = run_pr91_hpm1_semantic_decode_trench(
+            source_archive_path,
+            device="cpu",
+            probability_row_count=1,
+            prefix_max_frames=1,
+            attempt_prefix_decode=True,
+            output_dir=None,
+            strict=False,
+            write_json=False,
+        )
+    except (Pr91Hpm1Error, RuntimeError, ImportError, ValueError) as exc:
+        trench = {
+            "status": "failed_closed_semantic_parity_probe_exception",
+            "hpac_model_load": {"loaded": False, "blockers": [type(exc).__name__]},
+            "probability_row_probe": {"passed": False, "blockers": [type(exc).__name__]},
+            "prefix_decode": {
+                "attempted": True,
+                "passed": False,
+                "failure_reason": type(exc).__name__,
+                "failure_context": {},
+            },
+            "full_decode": {"passed": False},
+            "byte_exact_semantic_reencode": {"passed": False, "byte_exact": False},
+            "semantic_decode_blockers": [type(exc).__name__],
+        }
+
+    prefix_decode = trench.get("prefix_decode") if isinstance(trench, dict) else {}
+    prefix_failed = isinstance(prefix_decode, dict) and prefix_decode.get("passed") is False
+    failure_context = prefix_decode.get("failure_context") if isinstance(prefix_decode, dict) else {}
+    required_context = {
+        "frame",
+        "group",
+        "symbol_in_group",
+        "decoded_symbol_count_before_failure",
+        "probability_variant",
+    }
+    divergence_caught = prefix_failed and isinstance(failure_context, dict) and required_context <= set(
+        failure_context
+    )
+    proof = {
+        "schema_version": SCHEMA_VERSION,
+        "kind": "hpm1_semantic_parity_fail_closed",
+        "hpm1_semantic_parity_contract": HPM1_SEMANTIC_PARITY_FAIL_CLOSED_CONTRACT,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "producer_tool": "tac.categorical_payload_candidate.build_categorical_payload_candidate",
+        "proof_scope": "hpm1_prefix_probability_range_semantic_parity_fail_closed",
+        "candidate_archive_sha256": candidate_archive_sha256,
+        "payload_member": "categorical_payload.bin",
+        "payload_member_sha256": payload_sha,
+        "source_archive_path": repo_relative(source_archive_path, REPO_ROOT),
+        "semantic_trench_schema": trench.get("schema", "") if isinstance(trench, dict) else "",
+        "semantic_trench_status": trench.get("status", "") if isinstance(trench, dict) else "",
+        "hpac_model_load": trench.get("hpac_model_load", {}) if isinstance(trench, dict) else {},
+        "probability_row_probe": trench.get("probability_row_probe", {}) if isinstance(trench, dict) else {},
+        "prefix_decode": prefix_decode if isinstance(prefix_decode, dict) else {},
+        "divergence_caught_before_exact_eval": divergence_caught,
+        "full_decode": trench.get("full_decode", {"passed": False}) if isinstance(trench, dict) else {"passed": False},
+        "byte_exact_semantic_reencode": (
+            trench.get("byte_exact_semantic_reencode", {"passed": False, "byte_exact": False})
+            if isinstance(trench, dict)
+            else {"passed": False, "byte_exact": False}
+        ),
+        "semantic_decode_blockers": (
+            trench.get("semantic_decode_blockers", []) if isinstance(trench, dict) else []
+        ),
+        "dispatch_blockers": [
+            "hpm1_semantic_prefix_divergence_not_repaired",
+            "full_hpm1_decode_600_frames_not_proven",
+            "byte_exact_hpm1_reencode_not_proven",
+        ],
+    }
+    proof_path = out_dir / HPM1_SEMANTIC_PARITY_FILENAME
+    write_json(proof_path, proof)
+    return {
+        "path": HPM1_SEMANTIC_PARITY_FILENAME,
+        "bytes": proof_path.stat().st_size,
+        "sha256": sha256_file(proof_path),
+        "contract": HPM1_SEMANTIC_PARITY_FAIL_CLOSED_CONTRACT,
+        "payload_member": "categorical_payload.bin",
+        "payload_member_sha256": payload_sha,
+        "candidate_archive_sha256": candidate_archive_sha256,
+        "divergence_caught_before_exact_eval": divergence_caught,
+    }
+
+
 def build_categorical_payload_candidate(
     *,
     out_dir: str | Path,
@@ -642,6 +755,12 @@ def build_categorical_payload_candidate(
         payload_member_sha256=payload_sha,
         hpm1_structural_inventory=hpm1_structural_inventory,
     )
+    hpm1_semantic_parity = _write_hpm1_semantic_parity_fail_closed(
+        out_dir=out,
+        categorical_payload=categorical_payload,
+        payload_source=payload_source,
+        candidate_archive_sha256=archive_sha,
+    )
 
     archive_member_manifest = {
         "schema_version": SCHEMA_VERSION,
@@ -701,6 +820,11 @@ def build_categorical_payload_candidate(
         **(
             {"hpm1_structural_decode_inventory": hpm1_structural_inventory}
             if hpm1_structural_inventory is not None
+            else {}
+        ),
+        **(
+            {"hpm1_semantic_parity_fail_closed": hpm1_semantic_parity}
+            if hpm1_semantic_parity is not None
             else {}
         ),
         "runtime_loader_parity": {
@@ -827,6 +951,16 @@ def build_categorical_payload_candidate(
                 if hpm1_structural_inventory is not None
                 else {}
             ),
+            **(
+                {
+                    "hpm1_semantic_parity_fail_closed": repo_relative(
+                        out / HPM1_SEMANTIC_PARITY_FILENAME,
+                        root,
+                    )
+                }
+                if hpm1_semantic_parity is not None
+                else {}
+            ),
             "runtime_execution_proof": repo_relative(
                 out / RUNTIME_EXECUTION_PROOF_FILENAME,
                 root,
@@ -848,6 +982,11 @@ def build_categorical_payload_candidate(
             if hpm1_structural_inventory is not None
             else {}
         ),
+        **(
+            {"hpm1_semantic_parity_fail_closed": hpm1_semantic_parity}
+            if hpm1_semantic_parity is not None
+            else {}
+        ),
         "readiness_blockers": readiness["dispatch_blockers"],
         "runtime_execution_proof": runtime_execution_proof,
         "label_permutation_control": label_permutation_control,
@@ -866,6 +1005,7 @@ __all__ = [
     "ARCHIVE_MEMBER_MANIFEST_KIND",
     "BUILD_KIND",
     "CANDIDATE_KIND",
+    "HPM1_SEMANTIC_PARITY_FILENAME",
     "HPM1_STRUCTURAL_INVENTORY_FILENAME",
     "LABEL_PERMUTATION_CONTROL_FILENAME",
     "LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT",

@@ -23,6 +23,7 @@ from tac.categorical_candidate_readiness import (
     EXACT_EVAL_DISPATCH_REQUIREMENTS_CONTRACT,
     EXACT_EVAL_ENTRYPOINT,
     EXACT_EVAL_PATH,
+    HPM1_SEMANTIC_PARITY_FAIL_CLOSED_CONTRACT,
     HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT,
     REQUIRED_CONTROL_NAMES,
     RUNTIME_EXECUTION_PROOF_KIND,
@@ -265,6 +266,49 @@ def _structural_hpm1_inventory(payload_sha: str) -> dict:
         "full_decode": {"passed": False},
         "byte_exact_semantic_reencode": {"passed": False},
         "unsupported_wire_constructs": [{"name": "hpac_autoregressive_probability_rows"}],
+    }
+
+
+def _hpm1_semantic_parity_fail_closed(
+    *,
+    payload_sha: str,
+    candidate_archive_sha: str,
+) -> dict:
+    return {
+        "schema_version": 1,
+        "kind": "hpm1_semantic_parity_fail_closed",
+        "hpm1_semantic_parity_contract": HPM1_SEMANTIC_PARITY_FAIL_CLOSED_CONTRACT,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "candidate_archive_sha256": candidate_archive_sha,
+        "payload_member": "categorical_payload.bin",
+        "payload_member_sha256": payload_sha,
+        "hpac_model_load": {
+            "loaded": True,
+            "status": "passed_hpac_model_load",
+        },
+        "probability_row_probe": {
+            "passed": True,
+            "status": "passed_probability_row_inventory",
+        },
+        "prefix_decode": {
+            "attempted": True,
+            "status": "failed_closed",
+            "passed": False,
+            "failure_stage": "submitted_tokens_decode",
+            "failure_reason": "hpac_entropy_decode_contract_mismatch",
+            "failure_context": {
+                "frame": 0,
+                "group": 10,
+                "symbol_in_group": 191,
+                "decoded_symbol_count_before_failure": 5951,
+                "probability_variant": "source_float64_perfect_false",
+            },
+        },
+        "divergence_caught_before_exact_eval": True,
+        "full_decode": {"passed": False},
+        "byte_exact_semantic_reencode": {"passed": False, "byte_exact": False},
     }
 
 
@@ -515,6 +559,85 @@ def test_audit_categorical_candidate_manifest_accepts_structural_hpm1_inventory(
     assert manifest["hpm1_structural_decode_inventory"]["unsupported_wire_constructs"] == [
         "hpac_autoregressive_probability_rows"
     ]
+
+
+def test_audit_categorical_candidate_manifest_accepts_fail_closed_hpm1_semantic_parity(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    payload_sha = candidate["decode_reencode_parity"]["payload_member_sha256"]
+    archive_sha = candidate["candidate_archive"]["sha256"]
+    proof_path = tmp_path / "hpm1_semantic_parity_fail_closed.json"
+    write_json(
+        proof_path,
+        _hpm1_semantic_parity_fail_closed(
+            payload_sha=payload_sha,
+            candidate_archive_sha=archive_sha,
+        ),
+    )
+    candidate["hpm1_semantic_parity_fail_closed"] = {
+        "path": proof_path.name,
+        "bytes": proof_path.stat().st_size,
+        "sha256": sha256_file(proof_path),
+        "contract": HPM1_SEMANTIC_PARITY_FAIL_CLOSED_CONTRACT,
+        "payload_member": "categorical_payload.bin",
+        "payload_member_sha256": payload_sha,
+        "candidate_archive_sha256": archive_sha,
+    }
+
+    manifest = audit_categorical_candidate_manifest(
+        candidate,
+        repo_root=REPO,
+        manifest_dir=tmp_path,
+    )
+
+    semantic = manifest["hpm1_semantic_parity_fail_closed"]
+    assert semantic["accepted"] is True
+    assert semantic["divergence_caught_before_exact_eval"] is True
+    assert semantic["hpac_model_loaded"] is True
+    assert semantic["probability_rows_inventoried"] is True
+    assert semantic["failure_context"]["decoded_symbol_count_before_failure"] == 5951
+    assert "hpm1_semantic_parity_prefix_divergence_not_caught" not in manifest["dispatch_blockers"]
+
+
+def test_audit_categorical_candidate_manifest_rejects_hpm1_semantic_parity_claim(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    payload_sha = candidate["decode_reencode_parity"]["payload_member_sha256"]
+    archive_sha = candidate["candidate_archive"]["sha256"]
+    proof_path = tmp_path / "hpm1_semantic_parity_fail_closed.json"
+    proof = _hpm1_semantic_parity_fail_closed(
+        payload_sha=payload_sha,
+        candidate_archive_sha=archive_sha,
+    )
+    proof["prefix_decode"]["passed"] = True
+    proof["divergence_caught_before_exact_eval"] = False
+    proof["full_decode"] = {"passed": True}
+    proof["byte_exact_semantic_reencode"] = {"passed": True, "byte_exact": True}
+    write_json(proof_path, proof)
+    candidate["hpm1_semantic_parity_fail_closed"] = {
+        "path": proof_path.name,
+        "bytes": proof_path.stat().st_size,
+        "sha256": sha256_file(proof_path),
+        "contract": HPM1_SEMANTIC_PARITY_FAIL_CLOSED_CONTRACT,
+        "payload_member": "categorical_payload.bin",
+        "payload_member_sha256": payload_sha,
+        "candidate_archive_sha256": archive_sha,
+    }
+
+    manifest = audit_categorical_candidate_manifest(
+        candidate,
+        repo_root=REPO,
+        manifest_dir=tmp_path,
+    )
+    blockers = set(manifest["dispatch_blockers"])
+
+    assert manifest["hpm1_semantic_parity_fail_closed"]["accepted"] is False
+    assert "hpm1_semantic_parity_prefix_divergence_not_caught" in blockers
+    assert "hpm1_semantic_parity_divergence_gate_missing" in blockers
+    assert "hpm1_semantic_parity_must_not_claim_full_decode" in blockers
+    assert "hpm1_semantic_parity_must_not_claim_semantic_reencode" in blockers
 
 
 def test_audit_categorical_candidate_manifest_rejects_unsafe_structural_hpm1_inventory_path(

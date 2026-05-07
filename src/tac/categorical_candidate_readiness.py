@@ -34,6 +34,7 @@ DECODE_REENCODE_INDEPENDENT_PROOF_KIND = "categorical_decode_reencode_independen
 RUNTIME_EXECUTION_PROOF_KIND = "categorical_runtime_execution_independent_proof"
 EXACT_EVAL_DISPATCH_REQUIREMENTS_CONTRACT = "categorical_exact_eval_dispatch_requirements_v1"
 HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT = "hpm1_payload_structural_decode_inventory_v1"
+HPM1_SEMANTIC_PARITY_FAIL_CLOSED_CONTRACT = "hpm1_semantic_parity_fail_closed_v1"
 CANDIDATE_MANIFEST_KINDS = (
     "categorical_candidate_manifest",
     "categorical_candidate_fixture_manifest",
@@ -1005,6 +1006,163 @@ def _hpm1_structural_inventory_report(
     return summary, blockers
 
 
+def _hpm1_semantic_parity_fail_closed_report(
+    report: Any,
+    *,
+    payload_member: str,
+    payload_member_sha256: str,
+    candidate_archive_sha256: str,
+    repo_root: Path,
+    manifest_dir: Path | None,
+) -> tuple[dict[str, Any], list[str]]:
+    blockers: list[str] = []
+    summary: dict[str, Any] = {
+        "schema_version": SCHEMA_VERSION,
+        "contract": HPM1_SEMANTIC_PARITY_FAIL_CLOSED_CONTRACT,
+        "declared": isinstance(report, dict),
+        "accepted": False,
+        "path": "",
+        "bytes": None,
+        "sha256": "",
+        "payload_member": payload_member,
+        "payload_member_sha256": payload_member_sha256,
+        "candidate_archive_sha256": candidate_archive_sha256,
+        "divergence_caught_before_exact_eval": False,
+        "hpac_model_loaded": False,
+        "probability_rows_inventoried": False,
+        "prefix_decode_passed": None,
+        "failure_reason": "",
+        "failure_context": {},
+        "full_decode_proven": False,
+        "byte_exact_semantic_reencode_proven": False,
+        "blockers": [],
+    }
+    if report is None:
+        return summary, blockers
+    if not isinstance(report, dict):
+        blockers.append("hpm1_semantic_parity_record_not_object")
+        summary["blockers"] = blockers
+        return summary, blockers
+
+    if report.get("contract") != HPM1_SEMANTIC_PARITY_FAIL_CLOSED_CONTRACT:
+        blockers.append("hpm1_semantic_parity_contract_mismatch")
+    if report.get("payload_member") != payload_member:
+        blockers.append("hpm1_semantic_parity_payload_member_mismatch")
+    if report.get("payload_member_sha256") != payload_member_sha256:
+        blockers.append("hpm1_semantic_parity_payload_sha256_mismatch")
+    if report.get("candidate_archive_sha256") != candidate_archive_sha256:
+        blockers.append("hpm1_semantic_parity_candidate_archive_sha256_mismatch")
+
+    raw_path = report.get("path")
+    path_is_safe = _safe_member_name(raw_path)
+    if not path_is_safe:
+        blockers.append("hpm1_semantic_parity_path_unsafe")
+    path = (
+        _resolve_path(raw_path, repo_root=repo_root, manifest_dir=manifest_dir)
+        if path_is_safe
+        else None
+    )
+    if path is None:
+        blockers.append("hpm1_semantic_parity_path_missing")
+    elif not path.exists():
+        blockers.append("hpm1_semantic_parity_path_missing")
+        summary["path"] = repo_relative(path, repo_root)
+    elif not path.is_file():
+        blockers.append("hpm1_semantic_parity_path_not_file")
+        summary["path"] = repo_relative(path, repo_root)
+    else:
+        raw = path.read_bytes()
+        actual_sha = sha256_bytes(raw)
+        summary.update({"path": repo_relative(path, repo_root), "bytes": len(raw), "sha256": actual_sha})
+        if report.get("bytes") != len(raw):
+            blockers.append("hpm1_semantic_parity_bytes_mismatch")
+        if report.get("sha256") != actual_sha:
+            blockers.append("hpm1_semantic_parity_sha256_mismatch")
+        try:
+            payload = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            payload = None
+            blockers.append("hpm1_semantic_parity_json_invalid")
+        if isinstance(payload, dict):
+            if payload.get("schema_version") != SCHEMA_VERSION:
+                blockers.append("hpm1_semantic_parity_schema_version_invalid")
+            if payload.get("kind") != "hpm1_semantic_parity_fail_closed":
+                blockers.append("hpm1_semantic_parity_kind_invalid")
+            if payload.get("hpm1_semantic_parity_contract") != HPM1_SEMANTIC_PARITY_FAIL_CLOSED_CONTRACT:
+                blockers.append("hpm1_semantic_parity_payload_contract_invalid")
+            if payload.get("score_claim") is not False:
+                blockers.append("hpm1_semantic_parity_score_claim_must_be_false")
+            if payload.get("dispatch_attempted") is not False:
+                blockers.append("hpm1_semantic_parity_dispatch_attempted_must_be_false")
+            if payload.get("ready_for_exact_eval_dispatch") is not False:
+                blockers.append("hpm1_semantic_parity_ready_for_exact_eval_must_be_false")
+            if payload.get("candidate_archive_sha256") != candidate_archive_sha256:
+                blockers.append("hpm1_semantic_parity_payload_candidate_archive_sha256_mismatch")
+            if payload.get("payload_member") != payload_member:
+                blockers.append("hpm1_semantic_parity_payload_member_record_mismatch")
+            if payload.get("payload_member_sha256") != payload_member_sha256:
+                blockers.append("hpm1_semantic_parity_payload_sha256_record_mismatch")
+
+            hpac_model = payload.get("hpac_model_load")
+            hpac_loaded = isinstance(hpac_model, dict) and hpac_model.get("loaded") is True
+            summary["hpac_model_loaded"] = hpac_loaded
+            if not hpac_loaded:
+                blockers.append("hpm1_semantic_parity_hpac_model_not_loaded")
+
+            probability_rows = payload.get("probability_row_probe")
+            probability_rows_ok = isinstance(probability_rows, dict) and probability_rows.get("passed") is True
+            summary["probability_rows_inventoried"] = probability_rows_ok
+            if not probability_rows_ok:
+                blockers.append("hpm1_semantic_parity_probability_rows_not_inventoried")
+
+            prefix_decode = payload.get("prefix_decode")
+            prefix_failed = isinstance(prefix_decode, dict) and prefix_decode.get("passed") is False
+            summary["prefix_decode_passed"] = (
+                prefix_decode.get("passed") if isinstance(prefix_decode, dict) else None
+            )
+            failure_reason = prefix_decode.get("failure_reason") if isinstance(prefix_decode, dict) else ""
+            failure_context = prefix_decode.get("failure_context") if isinstance(prefix_decode, dict) else {}
+            summary["failure_reason"] = failure_reason if isinstance(failure_reason, str) else ""
+            summary["failure_context"] = failure_context if isinstance(failure_context, dict) else {}
+            if not prefix_failed:
+                blockers.append("hpm1_semantic_parity_prefix_divergence_not_caught")
+            elif not isinstance(failure_reason, str) or not failure_reason:
+                blockers.append("hpm1_semantic_parity_failure_reason_missing")
+            elif not isinstance(failure_context, dict):
+                blockers.append("hpm1_semantic_parity_failure_context_missing")
+            else:
+                required_context = (
+                    "frame",
+                    "group",
+                    "symbol_in_group",
+                    "decoded_symbol_count_before_failure",
+                    "probability_variant",
+                )
+                for key in required_context:
+                    if key not in failure_context:
+                        blockers.append(f"hpm1_semantic_parity_failure_context_missing:{key}")
+
+            divergence = payload.get("divergence_caught_before_exact_eval") is True
+            summary["divergence_caught_before_exact_eval"] = divergence
+            if not divergence:
+                blockers.append("hpm1_semantic_parity_divergence_gate_missing")
+
+            full_decode = payload.get("full_decode")
+            full_decode_proven = isinstance(full_decode, dict) and full_decode.get("passed") is True
+            summary["full_decode_proven"] = full_decode_proven
+            if full_decode_proven:
+                blockers.append("hpm1_semantic_parity_must_not_claim_full_decode")
+            reencode = payload.get("byte_exact_semantic_reencode")
+            semantic_reencode_proven = isinstance(reencode, dict) and reencode.get("passed") is True
+            summary["byte_exact_semantic_reencode_proven"] = semantic_reencode_proven
+            if semantic_reencode_proven:
+                blockers.append("hpm1_semantic_parity_must_not_claim_semantic_reencode")
+
+    summary["accepted"] = not blockers
+    summary["blockers"] = blockers
+    return summary, blockers
+
+
 def _contains_marker(value: Any, marker: str) -> bool:
     if not isinstance(value, str):
         return False
@@ -1776,6 +1934,16 @@ def audit_categorical_candidate_manifest(
     )
     blockers.extend(hpm1_structural_blockers)
 
+    hpm1_semantic_parity, hpm1_semantic_parity_blockers = _hpm1_semantic_parity_fail_closed_report(
+        payload.get("hpm1_semantic_parity_fail_closed"),
+        payload_member=decode_reencode_parity["payload_member"],
+        payload_member_sha256=decode_reencode_parity["payload_member_sha256"],
+        candidate_archive_sha256=candidate_archive_sha256,
+        repo_root=root,
+        manifest_dir=manifest_base,
+    )
+    blockers.extend(hpm1_semantic_parity_blockers)
+
     construction_plan = audit_categorical_charged_label_plan(
         payload.get("candidate_construction_plan"),
         charged_member_names=member_names,
@@ -1891,6 +2059,7 @@ def audit_categorical_candidate_manifest(
         "decode_reencode_parity": decode_reencode_parity,
         "exact_eval_dispatch_requirements": exact_eval_dispatch_requirements,
         "hpm1_structural_decode_inventory": hpm1_structural_inventory,
+        "hpm1_semantic_parity_fail_closed": hpm1_semantic_parity,
         "candidate_construction_plan": construction_plan,
         "conditioning_prior_contract": conditioning_prior_contract,
         "charged_member_summary": {
@@ -1923,6 +2092,7 @@ __all__ = [
     "EXACT_EVAL_DISPATCH_REQUIREMENTS_CONTRACT",
     "EXACT_EVAL_ENTRYPOINT",
     "EXACT_EVAL_PATH",
+    "HPM1_SEMANTIC_PARITY_FAIL_CLOSED_CONTRACT",
     "HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT",
     "LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT",
     "LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER",
