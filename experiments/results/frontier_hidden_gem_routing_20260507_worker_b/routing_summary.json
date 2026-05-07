@@ -1,0 +1,207 @@
+{
+  "candidates_considered": [
+    {
+      "archive_bytes": 178258,
+      "archive_sha256": "c95c59933f95746f6b8dd5fb7b4450419a25c01b2c9f8dac6e586cd4b3582933",
+      "artifact": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/archive.zip",
+      "classification": "rate_only_below_floor_but_cpu_blocked",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "static_exact_eval_packet_not_ready",
+        "pre_submission_compliance_failed:missing_report_txt",
+        "pre_submission_compliance_failed:public_hygiene_local_absolute_operator_path",
+        "exact_runtime_parity/runtime-tree custody not established by CPU validator",
+        "lane_dispatch_claim_missing",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "evidence_grade": "empirical",
+      "id": "pr101_codecop_lgwin18",
+      "next_cpu_prep_action": "repair the full_runtime_packet release surface without changing archive bytes: add/redact the report/public-hygiene surface, rerun strict pre_submission_compliance into a local artifact, and bind runtime-tree plus inflate-output parity before any lane claim",
+      "rate_only_floor_outcome": "beats_185578_byte_floor_by_7320_bytes",
+      "score_claim": false,
+      "selector_outcome": "not_selected_static_exact_eval_packet_not_ready"
+    },
+    {
+      "archive_bytes": null,
+      "archive_sha256": null,
+      "artifact": "experiments/results/pr101_codecop_sweep_20260507_codex/manifest.json",
+      "classification": "rate_only_below_floor_predicted_no_archive",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "archive_substitution_surgery_pending",
+        "candidate_archive_missing",
+        "archive_sha256_missing",
+        "exact_runtime_parity_not_supplied",
+        "lane_dispatch_claim_missing",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "evidence_grade": "prediction_cpu_substrate_predicted_band",
+      "id": "pr101_codecop_sweep_auto_select_true",
+      "next_cpu_prep_action": "materialize the auto_selectTrue substitution archive, then run the same local decoder parity, strict archive manifest, and release-surface checks used for the lgwin18 packet",
+      "predicted_archive_bytes": 178252,
+      "rate_only_floor_outcome": "would_be_below_185578_byte_floor_if_materialized",
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 179979,
+      "archive_sha256": "9bfea530158ab498a55ec626804c5e9eb1bb80da14a2f2d21d7262c1841bc2fe",
+      "artifact": "experiments/results/categorical_openpilot_payload_candidate_refresh_20260507_codex/archive.zip",
+      "classification": "scorer_changing_byte_closed_but_runtime_parity_blocked",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "runtime_loader_parity_semantic_runtime_output_parity_not_proven",
+        "runtime_execution_proof_hpm1_full_decode_reencode_parity_not_proven",
+        "exact_eval_dispatch_requirements_missing"
+      ],
+      "evidence_grade": "planning_manifest_audit",
+      "id": "categorical_hpm1_refresh",
+      "next_cpu_prep_action": "debug the HPM1 entropy decode contract mismatch at frame 0 group 10 symbol 191, then prove full decode/reencode and semantic runtime-output parity on the byte-closed archive",
+      "rate_only_floor_outcome": "not_rate_only_policy_blocked; scorer-changing path still requires semantic parity",
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 186222,
+      "archive_sha256": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "artifact": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
+      "classification": "scorer_changing_candidate_static_preflight_refused",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "strict_candidate_preflight_not_ready",
+        "strict:dispatch_gate_blocked",
+        "strict:dispatch_unlocked_false",
+        "component_response_or_exact_cuda_evidence_missing",
+        "lane_dispatch_claim_missing",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+      "id": "wr01_apply_pr106x_half",
+      "next_cpu_prep_action": "refresh strict candidate preflight and produce component-response/adversarial review showing decoded-output change is plausibly scorer-positive before any exact-eval lane claim",
+      "rate_only_floor_outcome": "not treated as rate-only by field-meta, but strict preflight blocks exact-eval routing",
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 186066,
+      "archive_sha256": "5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771",
+      "artifact": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_archive_candidate_manifest.json",
+      "classification": "rate_only_above_floor",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "rate_only_candidate_not_below_active_pr103_pr106_a_plus_plus_floor:185578",
+        "lane_dispatch_claim_missing",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "evidence_grade": "empirical_archive_candidate_runtime_adapter_parity_static_packet_ready",
+      "id": "hdm3",
+      "next_cpu_prep_action": "do not dispatch as-is; only re-enter exact-eval routing if rebased below 185578 bytes or paired with an explicit scorer-changing stack path",
+      "rate_only_floor_outcome": "blocked_plus_488_bytes_over_185578_floor",
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 186088,
+      "archive_sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+      "artifact": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json",
+      "classification": "rate_only_above_floor",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "rate_only_candidate_not_below_active_pr103_pr106_a_plus_plus_floor:185578",
+        "lane_dispatch_claim_missing",
+        "claim:dispatch_claim_latest_status_terminal",
+        "kkt_not_ready_for_field_planning",
+        "pareto_ineligible_packet"
+      ],
+      "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+      "id": "pr106_q10_151byte_brotli",
+      "next_cpu_prep_action": "retire from exact-eval spend until rebased below the active floor or converted into a scorer-changing stack-path candidate",
+      "rate_only_floor_outcome": "blocked_plus_510_bytes_over_185578_floor",
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 186079,
+      "archive_sha256": "866dc135e9168d61fab02b6b1c218c4b1d6eed779154a6dc3095fd05e48024f2",
+      "artifact": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/hnerv_lowlevel_exact_eval_packet.json",
+      "classification": "rate_only_above_floor",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "rate_only_candidate_not_below_active_pr103_pr106_a_plus_plus_floor:185578",
+        "lane_dispatch_claim_missing",
+        "kkt_not_ready_for_field_planning",
+        "pareto_ineligible_packet"
+      ],
+      "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+      "id": "pr106x_lgblock16_1byte_brotli",
+      "next_cpu_prep_action": "keep as Brotli saturation evidence only; no exact-eval spend before an anchor-relative below-floor archive exists",
+      "rate_only_floor_outcome": "blocked_plus_501_bytes_over_185578_floor",
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 186239,
+      "archive_sha256": "cb9976bd33468475aac54a98c3baff996101c144b00e8d7e2c5107c86cda6182",
+      "artifact": "experiments/results/pr106_surgery_local_smoke_20260507T220718Z/substitution_report.json",
+      "classification": "no_op_control_not_candidate",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "charged_bits_changed_false",
+        "score_affecting_payload_changed_false",
+        "rate_only_above_floor"
+      ],
+      "evidence_grade": "empirical_no_op_control",
+      "id": "pr106_surgery_identity_smoke",
+      "next_cpu_prep_action": "use only as decoder-section surgery control/provenance; do not route to exact eval",
+      "rate_only_floor_outcome": "not eligible; charged_bits_changed=false and above floor",
+      "score_claim": false
+    }
+  ],
+  "dispatch_attempted": false,
+  "do_not_dispatch": [
+    "No GPU dispatch was attempted by this worker.",
+    "Do not exact-eval HDM3, PR106 q10, or PR106x lgblock16 as rate-only candidates while they remain above 185578 bytes.",
+    "Do not promote PR101 codecop or categorical/HPM1 rows as score claims without exact CUDA auth eval and the missing CPU proofs."
+  ],
+  "generated_at_utc": "2026-05-07T22:26:35Z",
+  "gpu_dispatch_attempted": false,
+  "planning_only": true,
+  "policy": {
+    "active_exact_eval_artifact": "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/contest_auth_eval.adjudicated.json",
+    "active_exact_eval_score_recomputed_from_components": 0.20898105277982337,
+    "active_rate_only_floor_archive_bytes": 185578,
+    "active_rate_only_floor_archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+    "active_rate_only_floor_label": "PR103-on-PR106 A++",
+    "rate_only_exact_eval_spend_rule": "candidate archive bytes must be below 185578 unless an explicit scorer-changing stack path is declared",
+    "scorer_changing_stack_rule": "must still pass local static preflight, component-risk review, lane claim, and exact CUDA before any score claim"
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "tool_outputs": {
+    "field_meta_selection_json": "experiments/results/frontier_hidden_gem_routing_20260507_worker_b/field_meta_selection.json",
+    "frontier_entropy_gap_ranking_json": "experiments/results/frontier_hidden_gem_routing_20260507_worker_b/frontier_entropy_gap_ranking.json",
+    "hidden_gem_readiness_json": "experiments/results/frontier_hidden_gem_routing_20260507_worker_b/hidden_gem_readiness.json",
+    "hidden_gems_json": "experiments/results/frontier_hidden_gem_routing_20260507_worker_b/hidden_gems.json",
+    "hnerv_entropy_selection_json": "experiments/results/frontier_hidden_gem_routing_20260507_worker_b/hnerv_entropy_selection.json",
+    "pr101_codecop_lgwin18_pre_submission_compliance_json": "experiments/results/frontier_hidden_gem_routing_20260507_worker_b/pr101_codecop_lgwin18_pre_submission_compliance.json",
+    "roadmap_status_json": "experiments/results/frontier_hidden_gem_routing_20260507_worker_b/roadmap_status.json"
+  },
+  "top_next_cpu_prep_targets": [
+    {
+      "id": "pr101_codecop_lgwin18",
+      "next_artifact": "passing strict pre_submission_compliance JSON plus runtime-tree/inflate-output parity manifest under the existing full_runtime_packet archive SHA",
+      "rank": 1,
+      "why": "byte-closed archive is 178258 bytes, below the 185578-byte rate-only floor; closest CPU work is release-surface/preflight hardening, not GPU dispatch"
+    },
+    {
+      "id": "categorical_hpm1_refresh",
+      "next_artifact": "full HPM1 decode/reencode parity proof and semantic runtime-output parity proof for archive SHA 9bfea530158ab498a55ec626804c5e9eb1bb80da14a2f2d21d7262c1841bc2fe",
+      "rank": 2,
+      "why": "byte-closed scorer-changing candidate with charged runtime members, but exact-eval routing is blocked by HPM1 decode/reencode and semantic runtime parity"
+    },
+    {
+      "id": "pr101_codecop_sweep_auto_select_true",
+      "next_artifact": "materialized archive.zip plus substitution report, local decoder parity, and selector-ingestable manifest",
+      "rank": 3,
+      "why": "predicted 178252-byte below-floor row is the smallest codecop variant, but it has no archive or SHA yet"
+    }
+  ],
+  "worker": "worker_b"
+}

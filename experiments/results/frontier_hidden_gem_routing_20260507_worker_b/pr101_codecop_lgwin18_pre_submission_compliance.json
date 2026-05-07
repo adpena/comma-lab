@@ -1,0 +1,260 @@
+{
+  "archive": {
+    "bytes": 178258,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 178158,
+        "file_size": 178158,
+        "local_header_name": "x",
+        "name": "x",
+        "sha256": "a7df36c2b11f88ca640e1bb259a526f80190c86e474e9b06204bb54657d3356c",
+        "unsafe_reason": null
+      }
+    ],
+    "path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/archive.zip",
+    "sha256": "c95c59933f95746f6b8dd5fb7b4450419a25c01b2c9f8dac6e586cd4b3582933"
+  },
+  "archive_manifest": {
+    "exists": false,
+    "path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/archive_manifest.json"
+  },
+  "auth_eval": {
+    "exists": false,
+    "path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/contest_auth_eval.json"
+  },
+  "checks": [
+    {
+      "details": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/archive.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "x",
+      "name": "zip_member_safe:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "central='x' local='x' local_reason=None",
+      "name": "zip_local_header_matches:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=1",
+      "name": "archive_zip_readable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['x']",
+      "name": "zip_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['x']",
+      "name": "zip_expected_single_member",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "packed_payload_count=0",
+      "name": "zip_at_most_one_packed_payload_container",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "c95c59933f95746f6b8dd5fb7b4450419a25c01b2c9f8dac6e586cd4b3582933",
+      "name": "expected_archive_sha256_is_well_formed",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=c95c59933f95746f6b8dd5fb7b4450419a25c01b2c9f8dac6e586cd4b3582933 actual=c95c59933f95746f6b8dd5fb7b4450419a25c01b2c9f8dac6e586cd4b3582933",
+      "name": "expected_archive_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=178258 actual=178258",
+      "name": "expected_archive_size_bytes_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/contest_auth_eval.json",
+      "name": "auth_eval_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/inflate.sh",
+      "name": "submission_runtime_inflate_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "pre_submission_runtime_dependency_manifest_v1",
+      "name": "submission_runtime_manifest_computable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "runtime_tree_sha256=5c154efdb92edd941253285639bc53a6addbada27b8bdd7aad9eb4a3adbb8772",
+      "name": "submission_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submission=5c154efdb92edd941253285639bc53a6addbada27b8bdd7aad9eb4a3adbb8772 auth_eval_candidates={}",
+      "name": "submission_runtime_tree_matches_auth_eval",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/archive_manifest.json",
+      "name": "archive_manifest_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/report.txt",
+      "name": "report_exists",
+      "passed": false,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/runtime_custody_manifest.json:37, experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/runtime_custody_manifest.json:37: public release hygiene violation: local absolute operator path. Redact into a placeholder, local manifest, or private custody artifact before GitHub/site publish.",
+      "name": "public_scan_has_no_private_surface",
+      "passed": false,
+      "severity": "error"
+    }
+  ],
+  "dispatch_claims": {
+    "required": false
+  },
+  "passed": false,
+  "public_hygiene": {
+    "hits": [
+      "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/runtime_custody_manifest.json:37",
+      "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/runtime_custody_manifest.json:37: public release hygiene violation: local absolute operator path. Redact into a placeholder, local manifest, or private custody artifact before GitHub/site publish."
+    ],
+    "scan_paths": [
+      "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet"
+    ]
+  },
+  "report": {
+    "exists": false,
+    "path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/report.txt"
+  },
+  "schema": "pre_submission_compliance_check_v1",
+  "submission_dir": {
+    "path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet",
+    "required_files": {
+      "archive.zip": {
+        "exists": true,
+        "path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/archive.zip"
+      },
+      "inflate.sh": {
+        "exists": true,
+        "path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/inflate.sh"
+      },
+      "report.txt": {
+        "exists": false,
+        "path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/report.txt"
+      }
+    }
+  },
+  "submission_runtime": {
+    "basis": "contest_auth_eval_runtime_dependency_manifest_v1_without_custody_files",
+    "excluded_custody_filenames": [
+      "archive_manifest.json",
+      "contest_auth_eval.json",
+      "report.txt"
+    ],
+    "excluded_custody_prefixes": [
+      "pre_submission_compliance."
+    ],
+    "external_dependency_roots": [],
+    "files": [
+      {
+        "bytes": 2073,
+        "relative_path": "inflate.py",
+        "repo_relative_path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/inflate.py",
+        "sha256": "a3aede9d70877926c73af051b3809be330bdc934113667d72d3274d4e5fd4966"
+      },
+      {
+        "bytes": 529,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/inflate.sh",
+        "sha256": "abf18a6a5120be1d3de4362d7c7e0370b5371640869781b630ce0a7c24167429"
+      },
+      {
+        "bytes": 3676,
+        "relative_path": "runtime_custody_manifest.json",
+        "repo_relative_path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/runtime_custody_manifest.json",
+        "sha256": "f4c8474a4a49e861298d2a9f5263c557ea4b1fc05ea5519f34a68d3515853239"
+      },
+      {
+        "bytes": 16734,
+        "relative_path": "src/codec.py",
+        "repo_relative_path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/src/codec.py",
+        "sha256": "637fa5e4b47bfb2595358903dfaafbbc7a7ca48d5f7ccd81c06d1397e060bb72"
+      },
+      {
+        "bytes": 2197,
+        "relative_path": "src/model.py",
+        "repo_relative_path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet/src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      }
+    ],
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "full_runtime_packet",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_file_count": 5,
+    "runtime_root": "/Users/adpena/Projects/pact/experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/full_runtime_packet",
+    "runtime_tree_sha256": "5c154efdb92edd941253285639bc53a6addbada27b8bdd7aad9eb4a3adbb8772",
+    "schema": "pre_submission_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  }
+}
