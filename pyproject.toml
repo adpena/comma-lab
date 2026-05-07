@@ -69,6 +69,12 @@ dependencies = [
     # for deterministic CPU-planning sweeps over candidate parameter spaces.
     # Pure Python, small wheel, no native build dependencies.
     "cmaes>=0.13,<1.0",
+    # Optuna TPE / NSGA-II / multi-objective optimizer used by
+    # tools/codec_op_optuna_search.py — typically beats CMA-ES on
+    # integer-only param spaces (brotli quality / lgwin / lgblock).
+    # Per the cmaes-adjacent-libraries hypernerd verdict
+    # (feedback_cmaes_adjacent_libraries_hypernerd_verdict_20260507.md).
+    "optuna>=4.0,<5.0",
 ]
 
 [project.optional-dependencies]
