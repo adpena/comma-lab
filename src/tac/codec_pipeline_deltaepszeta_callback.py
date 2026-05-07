@@ -64,7 +64,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from tac.codec_pipeline import CodecPipeline, PipelineManifest
+from tac.codec_pipeline import CodecPipeline
 
 if TYPE_CHECKING:
     import torch
@@ -195,7 +195,7 @@ class CodecPipelineAwareTrainingCallback:
 
     def report(
         self,
-        state_dict: dict[str, "torch.Tensor"],
+        state_dict: dict[str, torch.Tensor],
         epoch: int,
         *,
         archive_size_target: int | None = None,
@@ -246,9 +246,9 @@ class CodecPipelineAwareTrainingCallback:
 
     def add_to_loss(
         self,
-        loss: float | "torch.Tensor",
+        loss: float | torch.Tensor,
         archive_size_target: int = 200_000,
-    ) -> float | "torch.Tensor":
+    ) -> float | torch.Tensor:
         """Return a soft penalty for archive-size overshoot.
 
         Stub-mode (default, ``self.lambda_penalty == 0``): returns 0. The

@@ -14,20 +14,15 @@ Strict-scorer-rule: pure CPU codec measurement; no scorer load anywhere.
 from __future__ import annotations
 
 import json
-import shutil
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 
 import pytest
 import torch
 
 from tac.codec_pipeline import CodecPipeline, Op1_PR101SplitBrotli
-from tac.codec_pipeline_deltaepszeta_callback import (
-    CodecPipelineAwareTrainingCallback,
-    EpochReport,
-)
+from tac.codec_pipeline_deltaepszeta_callback import CodecPipelineAwareTrainingCallback
 from tac.pr101_split_brotli_codec import FIXED_STATE_SCHEMA
-
 
 # ---------------------------------------------------------------------------
 # Synthetic state_dict + log dir helpers
@@ -230,7 +225,6 @@ def test_add_to_loss_preserves_torch_tensor_dtype_device(lane_log_dir: Path) -> 
     """When called with a torch.Tensor loss, the stub-mode return must
     stay a tensor (not silently upcast to a Python float). This protects
     callers that do ``loss = pixel_loss + cb.add_to_loss(loss, ...)``."""
-    sd = _synthetic_state_dict()
     pipeline = CodecPipeline([Op1_PR101SplitBrotli(auto_select=False)])
     cb = CodecPipelineAwareTrainingCallback(pipeline=pipeline, log_dir=lane_log_dir)
     loss = torch.tensor(1.5)
