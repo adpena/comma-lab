@@ -385,7 +385,8 @@ PACK_MANIFEST="$PACK_DIR/sjkl_c067_archive_manifest.json"
     --source-archive "$SOURCE_ARCHIVE_ABS" \
     --sjkl-bin "$SJKL_BIN" \
     --output-dir "$PACK_DIR" \
-    --sjkl-member-name p 2>&1 | tee "$OUT_DIR/build_sjkl_c067_archive.log"
+    --sjkl-member-name sjkl.bin \
+    --max-sjkl-bytes "$MAX_SJKL_BYTES" 2>&1 | tee "$OUT_DIR/build_sjkl_c067_archive.log"
 PIPE_RC=("${PIPESTATUS[@]}")
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     log "FATAL: build_sjkl_c067_archive.py failed rc=${PIPE_RC[0]}"
@@ -403,7 +404,7 @@ if payload.get("score_claim") is not False:
     raise SystemExit("FATAL: pack manifest must keep score_claim=false")
 logical = payload.get("payload_member_names", {}).get("output_logical_runtime_members", [])
 if "sjkl.bin" not in logical:
-    raise SystemExit(f"FATAL: sjkl.bin missing from packed logical members: {logical}")
+    raise SystemExit(f"FATAL: sjkl.bin missing from output runtime members: {logical}")
 if payload.get("runtime_contract", {}).get("score_affecting_payload_charged_in_archive") is not True:
     raise SystemExit("FATAL: sjkl.bin must be charged inside the archive payload")
 proof = payload.get("runtime_contract", {}).get("runtime_apply_proof") or {}

@@ -39,13 +39,18 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
+import importlib.util
 import json
 import sys
+import tempfile
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+RUNTIME_SJKL_MEMBER_NAME = "sjkl.bin"
+INFLATE_RENDERER_PATH = REPO_ROOT / "submissions" / "robust_current" / "inflate_renderer.py"
 
 
 @dataclass(frozen=True)
@@ -55,6 +60,7 @@ class ArchiveBuildConfig:
     output_dir: Path
     archive_layout: str
     sjkl_member_name: str
+    max_sjkl_bytes: int | None = None
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -66,7 +72,105 @@ def _sha256_file(path: Path) -> str:
 
 
 def _utc_now() -> str:
-    return dt.datetime.now(tz=dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return dt.datetime.now(tz=dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _repo_rel(path: Path) -> str:
+    return str(path.relative_to(REPO_ROOT) if path.is_relative_to(REPO_ROOT) else path)
+
+
+def _load_inflate_renderer_runtime() -> Any:
+    if str(REPO_ROOT / "src") not in sys.path:
+        sys.path.insert(0, str(REPO_ROOT / "src"))
+    spec = importlib.util.spec_from_file_location(
+        "_sjkl_archive_builder_inflate_renderer", INFLATE_RENDERER_PATH
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot import inflate renderer from {INFLATE_RENDERER_PATH}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _build_runtime_apply_proof(sjkl_bytes: bytes, *, sjkl_member_name: str) -> dict[str, Any]:
+    """Prove the default inflate runtime can decode and apply the charged payload.
+
+    This is a local proof hook only. It does not load scorer modules and it does
+    not claim score movement; exact CUDA auth eval remains the score truth.
+    """
+    if sjkl_member_name != RUNTIME_SJKL_MEMBER_NAME:
+        return {
+            "schema": "sjkl_runtime_apply_proof_v1",
+            "verified": False,
+            "failure_class": "non_default_member_name",
+            "reason": (
+                f"default inflate runtime only auto-loads {RUNTIME_SJKL_MEMBER_NAME!r}; "
+                f"got {sjkl_member_name!r}"
+            ),
+        }
+
+    try:
+        import torch
+    except Exception as exc:  # pragma: no cover - environment-specific import failure
+        return {
+            "schema": "sjkl_runtime_apply_proof_v1",
+            "verified": False,
+            "failure_class": "torch_unavailable",
+            "reason": repr(exc),
+        }
+
+    try:
+        runtime = _load_inflate_renderer_runtime()
+        with tempfile.TemporaryDirectory(prefix="sjkl-runtime-proof-") as tmp:
+            archive_dir = Path(tmp)
+            (archive_dir / RUNTIME_SJKL_MEMBER_NAME).write_bytes(sjkl_bytes)
+            state = runtime._load_sjkl_residual_from_archive_dir(archive_dir)
+            if state is None:
+                raise RuntimeError("runtime loader returned None for sjkl.bin")
+            basis = state["basis"]
+            pair_indices = state.get("pair_indices")
+            pair_start = 0 if pair_indices is None else int(pair_indices[0])
+            pairs = torch.zeros(
+                1,
+                2,
+                int(basis.target_h),
+                int(basis.target_w),
+                3,
+                dtype=torch.float32,
+            )
+            before = pairs.clone()
+            after = runtime._apply_sjkl_residual_to_pairs(
+                pairs,
+                state,
+                pair_start=pair_start,
+            )
+            changed_l1 = float((after - before).abs().sum().item())
+            applied = int(state.get("applied_pair_count", 0))
+            verified = applied > 0 and changed_l1 > 0.0
+            return {
+                "schema": "sjkl_runtime_apply_proof_v1",
+                "verified": verified,
+                "failure_class": None if verified else "no_effect_on_probe_pair",
+                "member_name": RUNTIME_SJKL_MEMBER_NAME,
+                "runtime_loader": _repo_rel(INFLATE_RENDERER_PATH),
+                "target_shape": [int(basis.target_h), int(basis.target_w)],
+                "alpha_block_format": state.get("alpha_block_format"),
+                "pair_start": int(pair_start),
+                "applied_pair_count": applied,
+                "probe_delta_l1": changed_l1,
+                "skip_reasons": list(state.get("skip_reasons", [])),
+                "scorer_modules_loaded": False,
+            }
+    except Exception as exc:
+        return {
+            "schema": "sjkl_runtime_apply_proof_v1",
+            "verified": False,
+            "failure_class": "runtime_decode_or_apply_failed",
+            "reason": repr(exc),
+            "member_name": sjkl_member_name,
+            "runtime_loader": _repo_rel(INFLATE_RENDERER_PATH),
+            "scorer_modules_loaded": False,
+        }
 
 
 def _build_top_level_sibling(cfg: ArchiveBuildConfig) -> dict:
@@ -81,9 +185,26 @@ def _build_top_level_sibling(cfg: ArchiveBuildConfig) -> dict:
         raise SystemExit(f"FATAL: source archive not found: {cfg.source_archive}")
     if not cfg.sjkl_bin.is_file():
         raise SystemExit(f"FATAL: sjkl.bin not found: {cfg.sjkl_bin}")
+    if cfg.sjkl_member_name != RUNTIME_SJKL_MEMBER_NAME:
+        raise SystemExit(
+            f"FATAL: SJ-KL exact-evaluable runtime contract requires member "
+            f"'{RUNTIME_SJKL_MEMBER_NAME}', got '{cfg.sjkl_member_name}'. "
+            "Do not use 'p' or a custom name unless a reviewed packed-payload "
+            "runtime contract is implemented."
+        )
     sjkl_bytes = cfg.sjkl_bin.read_bytes()
     if not sjkl_bytes:
         raise SystemExit("FATAL: sjkl.bin is empty")
+    max_sjkl_bytes = int(cfg.max_sjkl_bytes) if cfg.max_sjkl_bytes is not None else len(sjkl_bytes)
+    if max_sjkl_bytes <= 0:
+        raise SystemExit(f"FATAL: max_sjkl_bytes must be positive, got {max_sjkl_bytes}")
+    if len(sjkl_bytes) > max_sjkl_bytes:
+        raise SystemExit(
+            f"FATAL: sjkl.bin size {len(sjkl_bytes)} > max_sjkl_bytes {max_sjkl_bytes}"
+        )
+    runtime_apply_proof = _build_runtime_apply_proof(sjkl_bytes, sjkl_member_name=cfg.sjkl_member_name)
+    if runtime_apply_proof.get("verified") is not True:
+        raise SystemExit(f"FATAL: SJ-KL runtime apply proof failed: {runtime_apply_proof}")
 
     cfg.output_dir.mkdir(parents=True, exist_ok=True)
     out_archive = cfg.output_dir / "archive.zip"
@@ -111,7 +232,7 @@ def _build_top_level_sibling(cfg: ArchiveBuildConfig) -> dict:
         zout.writestr(zi_sjkl, sjkl_bytes)
 
     return {
-        "out_archive_path": str(out_archive.relative_to(REPO_ROOT) if out_archive.is_relative_to(REPO_ROOT) else out_archive),
+        "out_archive_path": _repo_rel(out_archive),
         "out_archive_bytes": out_archive.stat().st_size,
         "out_archive_sha256": _sha256_file(out_archive),
         "source_archive_path": str(cfg.source_archive),
@@ -121,8 +242,31 @@ def _build_top_level_sibling(cfg: ArchiveBuildConfig) -> dict:
         "sjkl_bin_bytes": len(sjkl_bytes),
         "sjkl_bin_sha256": _sha256_bytes(sjkl_bytes),
         "sjkl_member_name": cfg.sjkl_member_name,
+        "sjkl_payload": {
+            "member_name": cfg.sjkl_member_name,
+            "path": str(cfg.sjkl_bin),
+            "bytes": len(sjkl_bytes),
+            "sha256": _sha256_bytes(sjkl_bytes),
+            "max_bytes": max_sjkl_bytes,
+        },
         "n_source_members": len(source_members),
         "source_member_names": [name for name, _, _ in source_members],
+        "payload_member_names": {
+            "source_archive_members": [name for name, _, _ in source_members],
+            "output_archive_members": [name for name, _, _ in source_members] + [cfg.sjkl_member_name],
+            "output_logical_runtime_members": [name for name, _, _ in source_members] + [cfg.sjkl_member_name],
+            "sjkl_member_is_default_runtime_name": True,
+        },
+        "runtime_contract": {
+            "schema": "sjkl_top_level_runtime_contract_v1",
+            "layout": "top_level_sibling",
+            "default_inflate_member_name": RUNTIME_SJKL_MEMBER_NAME,
+            "score_affecting_payload_charged_in_archive": True,
+            "scorer_load_allowed_at_inflate": False,
+            "sidecars_allowed": False,
+            "requires_sjkl_require_applied_for_exact_eval": True,
+            "runtime_apply_proof": runtime_apply_proof,
+        },
         "archive_layout": "top_level_sibling",
         "score_claim": False,
         "evidence_grade": "queued_exact_cuda_required_for_score",
@@ -183,6 +327,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="top_level_sibling preserves source bytes exactly; packed_rpk1 is a safe stub.")
     parser.add_argument("--sjkl-member-name", default="sjkl.bin",
                         help="ZIP member name under which sjkl.bin will be added.")
+    parser.add_argument("--max-sjkl-bytes", type=int, default=None,
+                        help="Optional fail-closed cap for charged sjkl.bin bytes.")
     return parser
 
 
@@ -194,6 +340,7 @@ def main(argv: list[str] | None = None) -> int:
         output_dir=args.output_dir,
         archive_layout=args.archive_layout,
         sjkl_member_name=args.sjkl_member_name,
+        max_sjkl_bytes=args.max_sjkl_bytes,
     )
     build_sjkl_c067_archive(cfg)
     return 0

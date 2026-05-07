@@ -57,11 +57,12 @@ def test_sjkl_c067_remote_script_packs_charged_payload_deterministically() -> No
     assert "experiments/build_sjkl_c067_archive.py" in text
     assert "--source-archive" in text
     assert "--sjkl-bin" in text
-    assert "--sjkl-member-name p" in text
+    assert "--sjkl-member-name sjkl.bin" in text
+    assert "--max-sjkl-bytes \"$MAX_SJKL_BYTES\"" in text
     assert "if int(sjkl.get(\"bytes\", -1)) > int(sjkl.get(\"max_bytes\", -1))" in text
     assert "sjkl_c067_archive_manifest.json" in text
     assert "output_logical_runtime_members" in text
-    assert "sjkl.bin missing from packed logical members" in text
+    assert "sjkl.bin missing from output runtime members" in text
     assert "score_affecting_payload_charged_in_archive" in text
     assert "SJ-KL runtime-apply proof is absent" in text
     assert "zipfile.ZipFile" not in text
