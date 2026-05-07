@@ -28,15 +28,32 @@ Evidence tag: `[scorer-basin-parity:CPU]`
 The 10-probe / 4-Hutchinson-sample parity run passed:
 
 - `ready_for_exact_eval_dispatch`: `true`
+- `score_claim`: `false`
+- `promotion_eligible`: `false`
+- `evidence_grade`: `empirical`
 - `scorer_basin_parity_status`: `pass`
 - `pose_dist_delta`: `+1.0792740795295686e-04`
 - `pose_threshold`: `1.0e-03`
 - `seg_dist_delta`: `+9.618123876862228e-04`
 - `seg_threshold`: `5.0e-03`
 - `hessian_trace_lossless`: `2.7495672440185547e+06`
-- `hessian_trace_quantized`: `2.8226146886596680e+06`
-- `hessian_log_ratio`: `+0.011387251887827765`
+- `hessian_trace_quantized`: `2.8684887436523438e+06`
+- `hessian_log_ratio`: `+0.01840776094147193`
 - `hessian_log_ratio_tolerance`: `1.0`
+- `absolute_pose_ceiling`: `1.0e-02`
+- `absolute_seg_ceiling`: `2.0e-02`
+
+Additional hardened custody fields from the rerun:
+
+- `latents_match_exact`: `true`
+- `candidate_latents_sha256`:
+  `10f7d166d680bb507151260176d5ecaac3b8239f20c3dad2198bcd919c81e225`
+- `lossless_latents_sha256`:
+  `10f7d166d680bb507151260176d5ecaac3b8239f20c3dad2198bcd919c81e225`
+- candidate payload member: `0.bin`, `170342` bytes,
+  SHA-256 `4bcb81864af2e50a6366adb0c1e9c0846a0ab31f33350c1c80f3c5f7503e3424`
+- lossless payload member: `0.bin`, `186131` bytes,
+  SHA-256 `7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7`
 
 Interpretation: this is positive local basin-geometry readiness evidence for
 apogee_int6. It clears the local non-proxy readiness blocker but does not create

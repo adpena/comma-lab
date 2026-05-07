@@ -69,6 +69,11 @@ DEFAULT_SEG_DIST_DELTA_THRESHOLD = 5.0e-3
 # explosion is a textbook basin shift.
 DEFAULT_HESSIAN_LOG_RATIO_TOLERANCE = 1.0
 
+# Absolute ceilings prevent a "bad anchor versus bad candidate" comparison
+# from passing just because both reconstructions live in the same bad basin.
+DEFAULT_ABSOLUTE_POSE_CEILING = 1.0e-2
+DEFAULT_ABSOLUTE_SEG_CEILING = 2.0e-2
+
 
 # ---------------------------------------------------------------------------
 # Report dataclass
@@ -94,6 +99,9 @@ class ParityReport:
     pose_threshold: float
     seg_threshold: float
     hessian_log_ratio_tolerance: float
+
+    absolute_pose_ceiling: float
+    absolute_seg_ceiling: float
 
     n_probes: int
     n_hessian_samples: int
@@ -135,8 +143,19 @@ def hutchinson_trace_estimate(
     for _ in range(n_samples):
         # Sample Rademacher (+/-1) vectors
         vs = [
-            (torch.randint(0, 2, p.shape, generator=generator, dtype=torch.int8) * 2 - 1).to(
-                dtype=p.dtype, device=p.device
+            (
+                torch.randint(
+                    0,
+                    2,
+                    p.shape,
+                    generator=generator,
+                    dtype=torch.int8,
+                    device=p.device,
+                )
+                * 2
+                - 1
+            ).to(
+                dtype=p.dtype,
             )
             for p in parameters
         ]
@@ -419,6 +438,8 @@ def compute_scorer_basin_parity(
     pose_threshold: float = DEFAULT_POSE_DIST_DELTA_THRESHOLD,
     seg_threshold: float = DEFAULT_SEG_DIST_DELTA_THRESHOLD,
     hessian_log_ratio_tolerance: float = DEFAULT_HESSIAN_LOG_RATIO_TOLERANCE,
+    absolute_pose_ceiling: float = DEFAULT_ABSOLUTE_POSE_CEILING,
+    absolute_seg_ceiling: float = DEFAULT_ABSOLUTE_SEG_CEILING,
     n_hessian_samples: int = 4,
     n_hessian_pairs: int = 2,
     anchor_frame_shas: Sequence[str] = (),
@@ -437,6 +458,8 @@ def compute_scorer_basin_parity(
             two state dicts in the apogee_intN pipeline).
         gt_frames: ``(n_probes, 2, H, W, 3)`` uint8 GT frame pairs.
         n_probes: how many latent pairs to use for distortion measurement.
+        absolute_pose_ceiling, absolute_seg_ceiling: maximum allowed absolute
+            scorer distances for both the lossless anchor and the candidate.
         n_hessian_samples: number of Hutchinson samples per Hessian trace.
         n_hessian_pairs: number of latent pairs to use for the Hessian probe.
         anchor_frame_shas: optional SHA-256 of GT frame bytes for forensic ref.
@@ -509,7 +532,7 @@ def compute_scorer_basin_parity(
         latents[:n_hessian_pairs].clone(),
         gt_frames[:n_hessian_pairs].clone(),
         n_samples=n_hessian_samples,
-        seed=seed + 1,
+        seed=seed,
         n_probes_for_hessian=n_hessian_pairs,
     )
 
@@ -530,9 +553,29 @@ def compute_scorer_basin_parity(
         failure_reasons.append(
             f"pose_dist_delta {pose_delta:.3e} exceeds threshold {pose_threshold:.3e}"
         )
+    if pose_lossless > absolute_pose_ceiling:
+        failure_reasons.append(
+            f"pose_dist_lossless {pose_lossless:.3e} exceeds absolute ceiling "
+            f"{absolute_pose_ceiling:.3e}"
+        )
+    if pose_quantized > absolute_pose_ceiling:
+        failure_reasons.append(
+            f"pose_dist_quantized {pose_quantized:.3e} exceeds absolute ceiling "
+            f"{absolute_pose_ceiling:.3e}"
+        )
     if seg_delta > seg_threshold:
         failure_reasons.append(
             f"seg_dist_delta {seg_delta:.3e} exceeds threshold {seg_threshold:.3e}"
+        )
+    if seg_lossless > absolute_seg_ceiling:
+        failure_reasons.append(
+            f"seg_dist_lossless {seg_lossless:.3e} exceeds absolute ceiling "
+            f"{absolute_seg_ceiling:.3e}"
+        )
+    if seg_quantized > absolute_seg_ceiling:
+        failure_reasons.append(
+            f"seg_dist_quantized {seg_quantized:.3e} exceeds absolute ceiling "
+            f"{absolute_seg_ceiling:.3e}"
         )
     if abs(log_ratio) > hessian_log_ratio_tolerance:
         failure_reasons.append(
@@ -556,6 +599,8 @@ def compute_scorer_basin_parity(
         pose_threshold=pose_threshold,
         seg_threshold=seg_threshold,
         hessian_log_ratio_tolerance=hessian_log_ratio_tolerance,
+        absolute_pose_ceiling=absolute_pose_ceiling,
+        absolute_seg_ceiling=absolute_seg_ceiling,
         n_probes=n_probes,
         n_hessian_samples=n_hessian_samples,
         anchor_frame_shas=tuple(anchor_frame_shas),

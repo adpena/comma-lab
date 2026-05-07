@@ -11,7 +11,9 @@ real HNeRV decoder) to keep CI fast and dependency-light. The tests verify:
 
 from __future__ import annotations
 
+import json
 import math
+import zipfile
 
 import einops
 import pytest
@@ -159,6 +161,7 @@ def test_parity_passes_on_benign_perturbation() -> None:
         n_probes=4,
         n_hessian_samples=2,
         n_hessian_pairs=2,
+        absolute_seg_ceiling=0.10,
         device="cpu",
         seed=42,
     )
@@ -346,6 +349,7 @@ def test_emit_evidence_json_schema_matches_gate6(tmp_path) -> None:
         n_probes=2,
         n_hessian_samples=2,
         n_hessian_pairs=2,
+        absolute_seg_ceiling=0.10,
         device="cpu",
         seed=42,
     )
@@ -367,7 +371,10 @@ def test_emit_evidence_json_schema_matches_gate6(tmp_path) -> None:
     assert payload["archive_sha256"] == payload["candidate_archive_sha256"]
     assert payload["ready_for_exact_eval_dispatch"] is True
     assert payload["scorer_basin_parity_status"] == "pass"
-    assert payload["evidence_grade"] == "ready"
+    assert payload["evidence_grade"] == "empirical"
+    assert payload["readiness_status"] == "pass"
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
     # The forbidden-marker scan in Gate 6 will reject any of these strings,
     # even in nested fields. Verify our notes don't accidentally include them.
     forbidden = (
@@ -383,3 +390,112 @@ def test_emit_evidence_json_schema_matches_gate6(tmp_path) -> None:
     # The full report should be embedded for forensics
     assert "parity_report" in payload
     assert payload["parity_report"]["basin_parity_passed"] is True
+
+
+def test_emit_evidence_json_records_payload_and_latent_custody(tmp_path) -> None:
+    import importlib.util
+    import sys as _sys
+    from pathlib import Path
+
+    tool_path = (
+        Path(__file__).resolve().parents[3]
+        / "tools"
+        / "build_scorer_basin_parity_evidence.py"
+    )
+    spec = importlib.util.spec_from_file_location("build_scorer_basin_parity_evidence", tool_path)
+    assert spec and spec.loader
+    cli_mod = importlib.util.module_from_spec(spec)
+    _sys.modules["build_scorer_basin_parity_evidence"] = cli_mod
+    for cand in (
+        str(Path(__file__).resolve().parents[3] / "src"),
+        str(Path(__file__).resolve().parents[3]),
+    ):
+        if cand not in _sys.path:
+            _sys.path.insert(0, cand)
+    spec.loader.exec_module(cli_mod)
+
+    report = ParityReport(
+        pose_dist_lossless=1e-4,
+        pose_dist_quantized=2e-4,
+        pose_dist_delta=1e-4,
+        seg_dist_lossless=1e-3,
+        seg_dist_quantized=2e-3,
+        seg_dist_delta=1e-3,
+        hessian_trace_lossless=10.0,
+        hessian_trace_quantized=11.0,
+        hessian_log_ratio=0.04,
+        basin_parity_passed=True,
+        pose_threshold=1e-3,
+        seg_threshold=5e-3,
+        hessian_log_ratio_tolerance=1.0,
+        absolute_pose_ceiling=1e-2,
+        absolute_seg_ceiling=2e-2,
+        n_probes=2,
+        n_hessian_samples=1,
+        anchor_frame_shas=("abc",),
+        device="cpu",
+        computed_utc="2026-05-07T00:00:00Z",
+    )
+
+    out = tmp_path / "custody.json"
+    cli_mod.emit_evidence_json(
+        output_json_path=out,
+        candidate_archive=tmp_path / "candidate.zip",
+        candidate_archive_sha="cafebabe" * 8,
+        lossless_archive=tmp_path / "lossless.zip",
+        lossless_archive_sha="deadbeef" * 8,
+        report=report,
+        candidate_payload_meta={"member_name": "0.bin", "member_sha256": "a"},
+        lossless_payload_meta={"member_name": "0.bin", "member_sha256": "b"},
+        candidate_latents_sha256="latents",
+        lossless_latents_sha256="latents",
+    )
+    payload = json.loads(out.read_text())
+    assert payload["candidate_payload_member"]["member_name"] == "0.bin"
+    assert payload["lossless_payload_member"]["member_sha256"] == "b"
+    assert payload["candidate_latents_sha256"] == "latents"
+    assert payload["latents_match_exact"] is True
+
+
+def test_zip_payload_reader_rejects_ambiguous_or_unsafe_members(tmp_path) -> None:
+    import importlib.util
+    import sys as _sys
+    from pathlib import Path
+
+    tool_path = (
+        Path(__file__).resolve().parents[3]
+        / "tools"
+        / "build_scorer_basin_parity_evidence.py"
+    )
+    spec = importlib.util.spec_from_file_location("build_scorer_basin_parity_evidence", tool_path)
+    assert spec and spec.loader
+    cli_mod = importlib.util.module_from_spec(spec)
+    _sys.modules["build_scorer_basin_parity_evidence"] = cli_mod
+    for cand in (
+        str(Path(__file__).resolve().parents[3] / "src"),
+        str(Path(__file__).resolve().parents[3]),
+    ):
+        if cand not in _sys.path:
+            _sys.path.insert(0, cand)
+    spec.loader.exec_module(cli_mod)
+
+    good = tmp_path / "good.zip"
+    with zipfile.ZipFile(good, "w") as zf:
+        zf.writestr("0.bin", b"abc")
+    info, payload, meta = cli_mod._safe_payload_member(good)
+    assert info.filename == "0.bin"
+    assert payload == b"abc"
+    assert meta["member_bytes"] == 3
+
+    multi = tmp_path / "multi.zip"
+    with zipfile.ZipFile(multi, "w") as zf:
+        zf.writestr("0.bin", b"abc")
+        zf.writestr("1.bin", b"def")
+    with pytest.raises(ValueError, match="exactly one"):
+        cli_mod._safe_payload_member(multi)
+
+    unsafe = tmp_path / "unsafe.zip"
+    with zipfile.ZipFile(unsafe, "w") as zf:
+        zf.writestr("../0.bin", b"abc")
+    with pytest.raises(ValueError, match="unsafe ZIP member"):
+        cli_mod._safe_payload_member(unsafe)

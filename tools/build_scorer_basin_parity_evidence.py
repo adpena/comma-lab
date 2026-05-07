@@ -108,16 +108,58 @@ def _load_apogee_intn_decoder_module() -> tuple:
     )
 
 
-def _read_zip_payload(archive_zip: Path) -> bytes:
-    """Read the single ``0.bin`` member from the archive ZIP."""
+def _safe_payload_member(archive_zip: Path) -> tuple[zipfile.ZipInfo, bytes, dict]:
+    """Read the single safe ``.bin`` payload member from the archive ZIP.
+
+    This is a readiness gate, so ambiguous ZIPs fail closed: no hidden
+    members, resource forks, absolute paths, parent traversal, duplicate names,
+    or multiple ``.bin`` payloads.
+    """
 
     with zipfile.ZipFile(archive_zip) as zf:
-        names = zf.namelist()
-        # Standard apogee/PR106 layout has only one .bin member.
-        bin_names = [n for n in names if n.endswith(".bin")]
-        if not bin_names:
-            raise ValueError(f"no .bin member in {archive_zip}: {names}")
-        return zf.read(bin_names[0])
+        infos = zf.infolist()
+        names = [info.filename for info in infos]
+        if len(names) != len(set(names)):
+            raise ValueError(f"{archive_zip}: duplicate ZIP member names are forbidden")
+        for name in names:
+            parts = Path(name).parts
+            if (
+                not name
+                or name.startswith("/")
+                or name.startswith("\\")
+                or ".." in parts
+                or name.startswith("__MACOSX/")
+                or "/__MACOSX/" in name
+                or Path(name).name.startswith(".")
+                or name.startswith(".")
+            ):
+                raise ValueError(f"{archive_zip}: unsafe ZIP member {name!r}")
+
+        bin_infos = [info for info in infos if info.filename.endswith(".bin")]
+        if len(bin_infos) != 1:
+            raise ValueError(
+                f"{archive_zip}: expected exactly one .bin payload member; "
+                f"found {[info.filename for info in bin_infos]!r} in {names!r}"
+            )
+        info = bin_infos[0]
+        payload = zf.read(info)
+        meta = {
+            "member_name": info.filename,
+            "member_bytes": len(payload),
+            "member_sha256": sha256_bytes(payload),
+            "member_crc32": f"{info.CRC:08x}",
+            "compress_type": int(info.compress_type),
+            "zip_file_size": int(info.file_size),
+            "zip_compress_size": int(info.compress_size),
+        }
+        return info, payload, meta
+
+
+def _read_zip_payload(archive_zip: Path) -> bytes:
+    """Read the single safe payload bytes from the archive ZIP."""
+
+    _, payload, _ = _safe_payload_member(archive_zip)
+    return payload
 
 
 def _parse_archive_to_state(
@@ -130,16 +172,18 @@ def _parse_archive_to_state(
     Returns (state_dict, latents, meta).
     """
 
-    payload = _read_zip_payload(archive_zip)
+    _, payload, payload_meta = _safe_payload_member(archive_zip)
     if not payload:
         raise ValueError(f"empty .bin payload in {archive_zip}")
     magic = payload[0]
     if magic == 0xFF:
         # PR106 packed-archive layout
-        return parse_packed_archive(payload)
+        state, latents, meta = parse_packed_archive(payload)
+        return state, latents, meta, payload_meta
     if (magic & 0xF0) == 0xA0:
         # apogee_intN
-        return parse_apogee_intn_archive(payload)
+        state, latents, meta = parse_apogee_intn_archive(payload)
+        return state, latents, meta, payload_meta
     raise ValueError(
         f"{archive_zip}: unsupported magic byte 0x{magic:02X} - expected 0xFF (PR106) or 0xA[4-8] (apogee_intN)"
     )
@@ -234,6 +278,10 @@ def emit_evidence_json(
     lossless_archive: Path,
     lossless_archive_sha: str,
     report: ParityReport,
+    candidate_payload_meta: dict | None = None,
+    lossless_payload_meta: dict | None = None,
+    candidate_latents_sha256: str = "",
+    lossless_latents_sha256: str = "",
     extra_notes: str = "",
 ) -> None:
     """Write a Gate-6-compatible readiness-evidence JSON file.
@@ -244,7 +292,10 @@ def emit_evidence_json(
       - status = "pass" | "fail" (semantically same as basin_parity_passed)
       - scorer_basin_parity_status = "pass" | "fail" (Gate 6 verifies this directly)
       - ready_for_exact_eval_dispatch = bool
-      - evidence_grade = "ready" | "negative"
+      - evidence_grade = empirical | A-negative
+      - readiness_status = pass | fail
+      - score_claim = false
+      - promotion_eligible = false
       - notes = human-readable summary including the [scorer-basin-parity:CPU] tag
       - pose_dist_delta / seg_dist_delta = numeric deltas
       - basin_parity_passed = bool
@@ -252,7 +303,7 @@ def emit_evidence_json(
     """
 
     status = "pass" if report.basin_parity_passed else "fail"
-    evidence_grade = "ready" if report.basin_parity_passed else "negative"
+    evidence_grade = "empirical" if report.basin_parity_passed else "A-negative"
 
     note_tag = f"[scorer-basin-parity:{report.device.upper()}]"
     notes_lines: list[str] = [
@@ -286,7 +337,18 @@ def emit_evidence_json(
         "status": status,
         "scorer_basin_parity_status": status,
         "ready_for_exact_eval_dispatch": bool(report.basin_parity_passed),
+        "readiness_status": status,
         "evidence_grade": evidence_grade,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "candidate_payload_member": candidate_payload_meta or {},
+        "lossless_payload_member": lossless_payload_meta or {},
+        "candidate_latents_sha256": candidate_latents_sha256,
+        "lossless_latents_sha256": lossless_latents_sha256,
+        "latents_match_exact": (
+            bool(candidate_latents_sha256)
+            and candidate_latents_sha256 == lossless_latents_sha256
+        ),
         "pose_dist_delta": float(report.pose_dist_delta),
         "seg_dist_delta": float(report.seg_dist_delta),
         "basin_parity_passed": bool(report.basin_parity_passed),
@@ -443,10 +505,10 @@ def main(argv: list[str] | None = None) -> int:
         _load_apogee_intn_decoder_module()
     )
 
-    cand_sd, cand_latents, cand_meta = _parse_archive_to_state(
+    cand_sd, cand_latents, cand_meta, cand_payload_meta = _parse_archive_to_state(
         candidate_archive, parse_apogee_intn_archive, parse_packed_archive
     )
-    loss_sd, loss_latents, loss_meta = _parse_archive_to_state(
+    loss_sd, loss_latents, loss_meta, loss_payload_meta = _parse_archive_to_state(
         lossless_archive, parse_apogee_intn_archive, parse_packed_archive
     )
 
@@ -472,10 +534,27 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 3
 
-    # Use lossless latents as the shared reference (they're frame-pair-aligned
-    # GT-encodings; the apogee repacker preserves them bit-exact, so cand and
-    # loss latents should match).
-    latents = loss_latents.to(device)
+    cand_latents_cpu = cand_latents.detach().cpu().contiguous()
+    loss_latents_cpu = loss_latents.detach().cpu().contiguous()
+    cand_latents_sha = sha256_bytes(cand_latents_cpu.numpy().tobytes())
+    loss_latents_sha = sha256_bytes(loss_latents_cpu.numpy().tobytes())
+    if cand_latents_cpu.shape != loss_latents_cpu.shape or not torch.equal(
+        cand_latents_cpu, loss_latents_cpu
+    ):
+        logger.error(
+            "candidate/lossless latents mismatch: candidate_shape=%s lossless_shape=%s "
+            "candidate_sha=%s lossless_sha=%s",
+            tuple(cand_latents_cpu.shape),
+            tuple(loss_latents_cpu.shape),
+            cand_latents_sha,
+            loss_latents_sha,
+        )
+        return 3
+
+    # Apogee intN preserves latents bit-exact. Use candidate latents after the
+    # fail-closed equality check so a future latent-changing candidate cannot
+    # receive readiness evidence for the wrong reconstruction.
+    latents = cand_latents.to(device)
 
     # ---- 2. Build decoder shell ------------------------------------------
     decoder = HNeRVDecoder(
@@ -548,6 +627,10 @@ def main(argv: list[str] | None = None) -> int:
         lossless_archive=lossless_archive,
         lossless_archive_sha=lossless_sha,
         report=report,
+        candidate_payload_meta=cand_payload_meta,
+        lossless_payload_meta=loss_payload_meta,
+        candidate_latents_sha256=cand_latents_sha,
+        lossless_latents_sha256=loss_latents_sha,
         extra_notes=extra_notes,
     )
 

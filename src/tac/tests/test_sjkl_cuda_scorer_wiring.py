@@ -1,6 +1,6 @@
 """Track-B Omega-1 CUDA scorer wiring smoke tests.
 
-Exercises the JFG + SegNet + PoseNet differentiable score_fn integration in
+Exercises the direct-pixel SegNet + PoseNet differentiable score_fn integration in
 ``experiments/build_sjkl_residual.py`` from a CPU-only test environment by
 injecting stub modules through the ``_SCORE_FN_FACTORY_OVERRIDE`` hook.
 
@@ -9,7 +9,7 @@ SegNet + PoseNet checkpoints (~90 MB) on a CUDA device. The override-hook
 approach replaces just the score_fn factory while exercising every other code
 path: BuildConfig parsing, anchor reshape, Lanczos basis solve via the new
 ``score_fn``, alpha-block sparse encode, brotli compression, sjkl.bin
-roundtrip, magic-byte / manifest correctness. The actual JFG-aware contest
+roundtrip, magic-byte / manifest correctness. The current direct-pixel contest
 score formula ``100 * seg_dist + sqrt(10 * pose_dist + eps)`` is unit-tested
 separately by direct invocation of ``_build_cuda_jfg_contest_score_fn`` on
 nano stub modules.
@@ -113,7 +113,7 @@ class _StubJFG(torch.nn.Module):
 def _build_stub_score_fn(anchor_frame: torch.Tensor, cfg: object) -> tuple[object, dict]:
     """Factory hook installed via _SCORE_FN_FACTORY_OVERRIDE for tests.
 
-    Builds the JFG-aware contest score_fn against stub SegNet+PoseNet in the
+    Builds the direct-pixel contest score_fn against stub SegNet+PoseNet in the
     CPU test environment. The actual ``_build_cuda_jfg_contest_score_fn``
     helper from the builder module is exercised end-to-end here.
 
@@ -254,8 +254,9 @@ def test_jfg_contest_score_fn_returns_scalar_and_is_finite():
     s_anchor = score_fn(anchor)
     assert torch.isfinite(s_anchor).item()
     # meta carries provenance tags
-    assert meta["scorer_fisher_mode"] == "cuda_jfg_contest_score"
-    assert meta["scorer_fisher_jfg_in_loop"] is True
+    assert meta["scorer_fisher_mode"] == "cuda_direct_pixel_contest_score_proxy"
+    assert meta["scorer_fisher_jfg_in_loop"] is False
+    assert meta["scorer_fisher_jfg_argument_used"] is False
     assert "100 * seg_dist + sqrt(10 * pose_dist + 1e-12)" in meta["score_formula"]
     assert meta["scorer_fisher_score_claim"] is False
 
@@ -338,7 +339,7 @@ def test_full_pipeline_with_stub_factory_override(tmp_path):
     assert manifest["sjkl_bin_bytes"] == sjkl_path.stat().st_size
     # The stub override emits provenance fields
     assert manifest.get("test_override") == "stub_modules_cpu"
-    assert manifest.get("scorer_fisher_jfg_in_loop") is True
+    assert manifest.get("scorer_fisher_jfg_in_loop") is False
 
 
 def test_renderer_checkpoint_missing_file_raises(tmp_path):

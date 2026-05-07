@@ -243,7 +243,7 @@ def _build_cuda_jfg_contest_score_fn(
     target_h: int,
     target_w: int,
 ) -> tuple[object, dict]:
-    """Build a JFG-aware contest-faithful differentiable score_fn.
+    """Build a direct-pixel contest-scorer differentiable score_fn.
 
     The returned ``score_fn(flat)`` re-shapes ``flat`` into a candidate frame
     pair, forwards through SegNet+PoseNet, and returns the contest formula::
@@ -261,16 +261,15 @@ def _build_cuda_jfg_contest_score_fn(
         everywhere. Hard ``argmax`` is used in the contest scorer; the soft
         proxy is the canonical replacement for compress-time gradients.
 
-    The JFG is in the differentiable graph so the Fisher basis is sensitive to
-    the *generator-mediated* score directions, not just direct pixel
-    perturbations of the rendered frame. ``flat`` is interpreted as the
-    flattened candidate RGB frame already in the renderer output range
-    [0, 255]; the JFG forward hook is a passthrough so the same anchor frame
-    can drive both proxy variants.
+    ``flat`` is interpreted as the flattened candidate RGB frame already in
+    the renderer output range [0, 255]. The current helper does **not** route
+    through JFG; the ``jfg`` argument is retained for API compatibility with
+    the Track-B scaffold, and metadata marks ``scorer_fisher_jfg_in_loop`` as
+    false so manifests cannot overclaim generator-mediated Fisher evidence.
 
     Args:
         anchor_frame: flat (D,) RGB tensor at the linearization point.
-        jfg: loaded JointFrameGenerator (eval, frozen).
+        jfg: loaded JointFrameGenerator placeholder (unused in this helper).
         posenet, segnet: frozen PoseNet/SegNet from
             ``tac.scorer.load_differentiable_scorers``.
         target_h, target_w: spatial shape that ``flat`` should reshape to
@@ -327,10 +326,11 @@ def _build_cuda_jfg_contest_score_fn(
         )
 
     return score_fn, {
-        "scorer_fisher_mode": "cuda_jfg_contest_score",
+        "scorer_fisher_mode": "cuda_direct_pixel_contest_score_proxy",
         "scorer_fisher_frame_shape": [3, int(target_h), int(target_w)],
         "scorer_fisher_score_claim": False,
-        "scorer_fisher_jfg_in_loop": True,
+        "scorer_fisher_jfg_in_loop": False,
+        "scorer_fisher_jfg_argument_used": False,
         "score_formula": "100 * seg_dist + sqrt(10 * pose_dist + 1e-12)",
         "seg_dist_proxy": "soft_1_minus_softmax_at_target_argmax",
     }
