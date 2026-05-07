@@ -19,6 +19,8 @@ Cross-ref: project_cross_paradigm_pipeline_wiring_landed_20260506.md
 from __future__ import annotations
 
 import re
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -49,6 +51,8 @@ CROSS_PARADIGM_OTHER_FIELDS: tuple[str, ...] = (
     "owv3_bit_budget_ratio",
     "owv3_protect_threshold",
     "mask_codec",
+    "jcsp_score_marginals_path",
+    "joint_training_config_path",
 )
 
 
@@ -187,3 +191,41 @@ def test_other_cross_paradigm_fields_present() -> None:
             f"Cross-paradigm companion field {name!r} missing from "
             f"PipelineConfig — wiring drift."
         )
+
+
+def test_cross_paradigm_compress_cli_exposes_registered_fields() -> None:
+    """Registered PipelineConfig fields must be reachable from operator CLI.
+
+    The parser builds PipelineConfig from argparse fields, so a dataclass field
+    without a matching CLI flag is a dead operational lane even if guarded in
+    code.
+    """
+
+    proc = subprocess.run(
+        [sys.executable, str(_PIPELINE_PATH), "compress", "--help"],
+        cwd=_PIPELINE_PATH.parents[1],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    help_text = proc.stdout
+    for flag in (
+        "--mask-codec",
+        "--use-sensitivity-weighted",
+        "--sensitivity-map-path",
+        "--owv3-bit-budget-ratio",
+        "--owv3-protect-threshold",
+        "--use-joint-codec-stack",
+        "--jcsp-score-marginals-path",
+        "--use-raft-init",
+        "--use-riemannian-tto",
+        "--use-joint-scorer-aware",
+        "--joint-training-config-path",
+        "--use-learnable-entropy",
+        "--use-full-renderer-self-compress",
+        "--weight-codec-path",
+    ):
+        assert flag in help_text
+    assert "nwcs_sensitivity" in help_text
+    assert "nwc" in help_text

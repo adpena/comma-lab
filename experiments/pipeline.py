@@ -2966,8 +2966,39 @@ def main() -> int:
     comp.add_argument("--mask-crf", type=int, default=50)
     # Weight compression
     comp.add_argument("--weight-compression", type=str, default="fp4",
-                      choices=["fp4", "int4_lzma2", "auto"],
-                      help="Weight compression: fp4 (default), int4_lzma2, or auto")
+                      choices=["fp4", "int4_lzma2", "auto", "nwc", "nwcs_sensitivity"],
+                      help="Weight compression: fp4 (default), int4_lzma2, auto, "
+                           "nwc, or nwcs_sensitivity")
+    comp.add_argument("--weight-codec-path", default="",
+                      help="Pretrained neural weight codec checkpoint for nwc/nwcs_sensitivity")
+    # Cross-paradigm operator-visible controls. Defaults preserve legacy
+    # behavior; registered-but-unwired lanes still fail closed in their step
+    # guards instead of silently falling through.
+    comp.add_argument("--use-sensitivity-weighted", action="store_true",
+                      help="PARADIGM-beta: route weight compression through sensitivity-weighted OWV3")
+    comp.add_argument("--sensitivity-map-path", default="",
+                      help="Serialized real SensitivityMap artifact required by beta lanes")
+    comp.add_argument("--owv3-bit-budget-ratio", type=float, default=0.7)
+    comp.add_argument("--owv3-protect-threshold", type=float, default=1e-3)
+    comp.add_argument("--use-joint-codec-stack", action="store_true",
+                      help="PARADIGM-gamma: build JCSP member; fails closed until runtime parity")
+    comp.add_argument("--jcsp-score-marginals-path", default="",
+                      help="Per-tensor dScore/dByte marginals artifact required by JCSP")
+    comp.add_argument("--mask-codec", default="av1_monochrome",
+                      choices=["av1_monochrome", "argmax_rle", "nerv", "wavelet", "vqvae", "grayscale_lut"],
+                      help="PARADIGM-alpha mask codec; research codecs fail closed until wired")
+    comp.add_argument("--use-raft-init", action="store_true",
+                      help="PARADIGM-la-pose: request RAFT pose initialization; fails closed until wired")
+    comp.add_argument("--use-riemannian-tto", action="store_true",
+                      help="PARADIGM-la-pose: route pose TTO through SE(3) Riemannian optimizer")
+    comp.add_argument("--use-joint-scorer-aware", action="store_true",
+                      help="PARADIGM-delta: registered scorer-aware training flag; fails closed")
+    comp.add_argument("--joint-training-config-path", default="",
+                      help="JointTrainingConfig artifact for scorer-aware training")
+    comp.add_argument("--use-learnable-entropy", action="store_true",
+                      help="PARADIGM-epsilon: registered learned entropy prior flag; fails closed")
+    comp.add_argument("--use-full-renderer-self-compress", action="store_true",
+                      help="PARADIGM-zeta: registered full-renderer self-compression flag; fails closed")
     # Iteration
     comp.add_argument("--max-iterations", type=int, default=10,
                       help="Safety bound on convergence cycles (stops earlier when converged)")
