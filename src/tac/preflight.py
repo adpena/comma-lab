@@ -15498,43 +15498,63 @@ def check_no_orphan_src_tac_modules(
             continue
         candidates.append(stem)
 
-    # Build the union of all reference texts.
-    profiles_text = ""
-    train_text = ""
+    # Build the union of referenced `tac.<module>` names in one pass. A prior
+    # implementation concatenated all source text and ran one regex per module;
+    # recursive scan surfaces made that O(modules * bytes) and timeout-prone.
+    reference_names: set[str] = set()
+
+    def scan_text(text: str) -> None:
+        for match in re.finditer(r"\btac\.([A-Za-z_][A-Za-z0-9_]*)\b", text):
+            reference_names.add(match.group(1))
+
+    def scan_file(path: Path) -> None:
+        try:
+            scan_text(path.read_text())
+        except (OSError, UnicodeDecodeError):
+            return
+
     profiles_path = src_tac / "profiles.py"
     train_path = src_tac / "experiments" / "train_renderer.py"
-    try:
-        profiles_text = profiles_path.read_text()
-    except (OSError, UnicodeDecodeError):
-        pass
-    try:
-        train_text = train_path.read_text()
-    except (OSError, UnicodeDecodeError):
-        pass
+    scan_file(profiles_path)
+    scan_file(train_path)
 
-    scripts_text = ""
     scripts_dir = root / "scripts"
     if scripts_dir.is_dir():
         for sh in sorted(scripts_dir.glob("remote_lane_*.sh")):
-            try:
-                scripts_text += sh.read_text() + "\n"
-            except (OSError, UnicodeDecodeError):
-                continue
-    experiments_text = ""
+            scan_file(sh)
     exp_dir = root / "experiments"
     if exp_dir.is_dir():
-        for py in sorted(exp_dir.glob("*.py")):
-            try:
-                experiments_text += py.read_text() + "\n"
-            except (OSError, UnicodeDecodeError):
+        # Recursive scan: experiments/**/*.py covers nested experiment dirs
+        # (kaggle_kernels/, results/{lane}/, etc.) which import tac.* modules.
+        for py in sorted(exp_dir.rglob("*.py")):
+            # Skip cached intake / harvest snapshots
+            rel_s = str(py.relative_to(root))
+            if "_intake_" in rel_s or "/__pycache__/" in rel_s:
                 continue
+            scan_file(py)
+    # Cross-references: src/tac/**/*.py (research, visualization, experiments,
+    # submissions subdirs — modules legitimately import each other internally).
+    for py in sorted(src_tac.rglob("*.py")):
+        # Skip the file itself wouldn't false-positive (the regex matches
+        # `tac.<name>` not the bare module name) but also skip tests/.
+        rel_parts = py.relative_to(src_tac).parts
+        if "tests" in rel_parts or "__pycache__" in rel_parts:
+            continue
+        scan_file(py)
+    # Tools dir: dispatch + diagnostic scripts that import tac.*
+    tools_dir = root / "tools"
+    if tools_dir.is_dir():
+        for py in sorted(tools_dir.rglob("*.py")):
+            scan_file(py)
+    # Submissions: inflate / runtime code may import tac.* modules
+    sub_dir = root / "submissions"
+    if sub_dir.is_dir():
+        for py in sorted(sub_dir.rglob("*.py")):
+            scan_file(py)
 
-    haystack = profiles_text + "\n" + train_text + "\n" + scripts_text + "\n" + experiments_text
     violations: list[str] = []
     for name in candidates:
-        # Match `tac.<name>` (import / from-import) — covers all 4 reference types.
-        pattern = rf"\btac\.{re.escape(name)}\b"
-        if not re.search(pattern, haystack):
+        if name not in reference_names:
             violations.append(
                 f"src/tac/{name}.py: no reference in profiles.py / train_renderer.py / "
                 f"remote_lane_*.sh / experiments/*.py — orphan module suspected. "
