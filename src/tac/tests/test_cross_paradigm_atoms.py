@@ -178,10 +178,18 @@ def test_cross_paradigm_ledger_preserves_adapter_assumptions_and_blockers() -> N
     hnerv = next(row for row in ledger["rows"] if row["paradigm"] == "hnerv_rate_recode")
     assert "rate_only_raw_equal_required" in hnerv["interaction_assumptions"]
     assert "hnerv_rate_recode_requires_raw_equal_proof" in hnerv["adapter_dispatch_blockers"]
+    assert (
+        "hnerv_rate_recode_requires_raw_equal_proof"
+        in hnerv["exact_dispatch_blockers"]["blockers"]
+    )
     lapose = next(row for row in ledger["rows"] if row["paradigm"] == "lapose_planning")
     assert lapose["rankable"] is False
     assert "allocated_global_response_not_rankable" in lapose["dispatch_blockers"]
     assert "planning_only_lapose_motion_atoms" in lapose["source_dispatch_blockers"]
+    assert (
+        "planning_only_lapose_motion_atoms"
+        in lapose["exact_dispatch_blockers"]["blockers"]
+    )
     assert ledger["dispatch_attempted"] is False
 
 

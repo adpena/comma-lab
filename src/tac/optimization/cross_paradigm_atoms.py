@@ -68,7 +68,10 @@ def build_cross_paradigm_atom_ledger(
     normalized = [normalize_cross_paradigm_atom(atom) for atom in atoms]
     _reject_duplicate_atom_ids(normalized)
 
-    from tac.optimization.meta_lagrangian_allocator import build_atom_ledger
+    from tac.optimization.meta_lagrangian_allocator import (
+        _annotate_row_explanations,
+        build_atom_ledger,
+    )
 
     ledger = build_atom_ledger(
         normalized,
@@ -102,6 +105,7 @@ def build_cross_paradigm_atom_ledger(
         row["dispatch_blockers"] = _unique_strings(
             [*row["dispatch_blockers"], *source_blockers]
         )
+        _annotate_row_explanations([row])
     ledger["allocator_tool"] = ledger["tool"]
     ledger["tool"] = "tac.optimization.cross_paradigm_atoms.build_cross_paradigm_atom_ledger"
     ledger["cross_paradigm_schema_version"] = SCHEMA_VERSION
