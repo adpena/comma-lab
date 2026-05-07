@@ -88,9 +88,30 @@ Cleared gates in that run:
 - `lane_registry_consistent`
 - `apogee_evidence_semantics`
 
-Current status: evidence-complete locally, still not dispatch-ready under the
-strict sanity policy unless that policy is revised for rate-only lossy repacks
-or an explicit operator override is used and recorded.
+Supersession note, later 2026-05-07: commit `c1d42ddf` revised
+`tools/predispatch_sanity.py` so the `sanity_lossy_vs_lossless` gate uses the
+official contest byte-rate term instead of a blanket "lossy cannot beat
+lossless" rule. A smaller lossy archive may now pass this gate only when:
+
+- the candidate is fewer charged bytes than the lossless anchor;
+- the predicted high score is no lower than the official rate-only floor;
+- exact-SHA non-proxy readiness evidence is present and valid.
+
+With the same scorer-basin parity evidence, the current apogee_int6 predispatch
+check passes locally:
+
+- `anchors_sufficient`: passed
+- `sanity_lossy_vs_lossless`: passed; `15789` fewer charged bytes, official
+  rate-only floor `0.1989`
+- `distortion_model_gate`: passed
+- `hazard_scan`: passed
+- `lane_registry_consistent`: passed
+- `apogee_evidence_semantics`: passed
+
+Current status: evidence-complete locally and no longer blocked by the stale
+lossy-vs-lossless sanity policy. It is still not a score claim and still needs
+an active lane dispatch claim, a real remote exact-CUDA environment, exact CUDA
+auth eval, adjudication, and score-claim review before promotion.
 
 ## Command
 
