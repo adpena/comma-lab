@@ -1,7 +1,9 @@
 {
   "dirty_blocked_row_count": 0,
-  "dirty_path_count": 9,
+  "dirty_path_count": 11,
   "dirty_paths": [
+    "experiments/results/frontier_roadmap_status_20260506_post_takeover/roadmap_status.json",
+    "experiments/results/frontier_roadmap_status_20260506_post_takeover/roadmap_status.md",
     "experiments/results/public_pr100_intake_20260504_codex/source",
     "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source",
     "experiments/results/public_pr103_intake_20260504_codex/source",
@@ -28,11 +30,11 @@
       ],
       "needs_byte_closed_candidate": [
         "categorical_qma9_clade_spade_openpilot",
-        "joint_admm_balle_arithmetic_stack",
         "sensitivity_omega_w_v3",
         "selfcompress_mdl_fp4_tto"
       ],
       "needs_research_or_contract_hardening": [
+        "joint_admm_balle_arithmetic_stack",
         "hnerv_per_tensor_context_entropy",
         "telescopic_foveation_field",
         "lapose_motion_atom_allocator",
@@ -57,10 +59,10 @@
     ],
     "field_meta_candidate_packet_selection": {
       "candidate_count": 1,
-      "candidate_local_preflight_ready": true,
-      "candidate_local_preflight_ready_count": 1,
-      "candidate_static_preflight_ready": true,
-      "candidate_static_preflight_ready_count": 1,
+      "candidate_local_preflight_ready": false,
+      "candidate_local_preflight_ready_count": 0,
+      "candidate_static_preflight_ready": false,
+      "candidate_static_preflight_ready_count": 0,
       "dirty_blocked_candidate_count": 0,
       "dispatch_attempted": false,
       "dispatch_blockers": [
@@ -85,8 +87,8 @@
       "pareto_summary": {
         "dominated_count": 0,
         "eligibility": "candidate_static_preflight_ready_and_non_proxy_and_not_dirty; dispatch readiness still additionally requires an active lane claim",
-        "eligible_count": 1,
-        "frontier_count": 1,
+        "eligible_count": 0,
+        "frontier_count": 0,
         "objective_direction": {
           "byte_delta": "min",
           "candidate_static_preflight_ready": "max",
@@ -98,9 +100,9 @@
         "scope_counts": {
           "hnerv_rate_only_exact_archive": {
             "dominated": 0,
-            "eligible": 1,
-            "frontier": 1,
-            "ineligible": 0
+            "eligible": 0,
+            "frontier": 0,
+            "ineligible": 1
           }
         },
         "scope_default": "family_group"
@@ -131,13 +133,21 @@
           },
           "byte_delta": -9,
           "candidate_blockers": [
-            "missing_active_lane_dispatch_claim",
-            "claim:dispatch_claim_check_missing"
+            "strict_candidate_preflight_not_ready",
+            "strict:dispatch_gate_blocked",
+            "strict:dispatch_unlocked_false",
+            "strict:ready_for_exact_eval_dispatch_claim_false",
+            "strict:static_packet_ready_false",
+            "strict:candidate_static_preflight_ready_false",
+            "strict:static_blockers_reported",
+            "packet_static_preflight_not_ready",
+            "packet_static:pre_submission_compliance_failed",
+            "packet_static:dry_run_queue_payload_section_diff_mismatch"
           ],
           "candidate_id": "wr01_apply_pr106x_half",
-          "candidate_local_preflight_ready": true,
-          "candidate_static_preflight_ready": true,
-          "candidate_static_preflight_ready_before_dirty": true,
+          "candidate_local_preflight_ready": false,
+          "candidate_static_preflight_ready": false,
+          "candidate_static_preflight_ready_before_dirty": false,
           "candidate_watch_paths": [
             "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json"
           ],
@@ -175,8 +185,7 @@
               "custody": [],
               "dirty_worktree": [],
               "dispatch_claim": [
-                "missing_active_lane_dispatch_claim",
-                "claim:dispatch_claim_check_missing"
+                "strict:ready_for_exact_eval_dispatch_claim_false"
               ],
               "exact_cuda_eval": [],
               "interaction_model": [],
@@ -184,26 +193,53 @@
                 "kkt:kkt_proof_or_admm_result_missing",
                 "kkt_not_ready_for_field_planning"
               ],
-              "other": [],
-              "pareto_frontier": [],
+              "other": [
+                "packet_static:pre_submission_compliance_failed",
+                "packet_static:dry_run_queue_payload_section_diff_mismatch"
+              ],
+              "pareto_frontier": [
+                "pareto_ineligible_packet",
+                "pareto_ineligible_for_field_selection"
+              ],
               "proxy_or_planning": [],
               "runtime": [],
               "score_claim": [],
-              "strict_preflight": []
+              "strict_preflight": [
+                "strict_candidate_preflight_not_ready",
+                "strict:dispatch_gate_blocked",
+                "strict:dispatch_unlocked_false",
+                "strict:static_packet_ready_false",
+                "strict:candidate_static_preflight_ready_false",
+                "strict:static_blockers_reported",
+                "packet_static_preflight_not_ready",
+                "strict_candidate_preflight_blocked"
+              ]
             },
-            "blocker_count": 4,
+            "blocker_count": 15,
             "blockers": [
-              "missing_active_lane_dispatch_claim",
-              "claim:dispatch_claim_check_missing",
+              "strict_candidate_preflight_not_ready",
+              "strict:dispatch_gate_blocked",
+              "strict:dispatch_unlocked_false",
+              "strict:ready_for_exact_eval_dispatch_claim_false",
+              "strict:static_packet_ready_false",
+              "strict:candidate_static_preflight_ready_false",
+              "strict:static_blockers_reported",
+              "packet_static_preflight_not_ready",
+              "packet_static:pre_submission_compliance_failed",
+              "packet_static:dry_run_queue_payload_section_diff_mismatch",
               "kkt:kkt_proof_or_admm_result_missing",
-              "kkt_not_ready_for_field_planning"
+              "kkt_not_ready_for_field_planning",
+              "pareto_ineligible_packet",
+              "strict_candidate_preflight_blocked",
+              "pareto_ineligible_for_field_selection"
             ],
             "candidate_preflight_ready_for_exact_eval_dispatch": false,
             "dispatch_attempted": false,
             "dispatch_refused": true,
             "next_required_proof": [
-              "matching_active_level2_lane_claim_for_manifest_lane_and_job",
-              "passed_kkt_proof_or_converged_admm_waterline_result"
+              "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py",
+              "passed_kkt_proof_or_converged_admm_waterline_result",
+              "pareto_eligible_static_ready_non_proxy_candidate"
             ],
             "ready_for_exact_eval_dispatch": false,
             "schema": "exact_dispatch_blockers_v1",
@@ -243,6 +279,16 @@
             "no composability assumption with categorical, sensitivity, or pose atoms until stacked archive eval exists"
           ],
           "kkt_blockers": [
+            "strict_candidate_preflight_not_ready",
+            "strict:dispatch_gate_blocked",
+            "strict:dispatch_unlocked_false",
+            "strict:ready_for_exact_eval_dispatch_claim_false",
+            "strict:static_packet_ready_false",
+            "strict:candidate_static_preflight_ready_false",
+            "strict:static_blockers_reported",
+            "packet_static_preflight_not_ready",
+            "packet_static:pre_submission_compliance_failed",
+            "packet_static:dry_run_queue_payload_section_diff_mismatch",
             "kkt:kkt_proof_or_admm_result_missing"
           ],
           "kkt_proof": {
@@ -259,25 +305,27 @@
           "kkt_ready_for_field_planning": false,
           "lexicographic_feasibility_tuple": [
             false,
+            false,
             true,
             true,
             true,
-            true,
-            true,
+            false,
             false,
             -5.992731e-06,
             0.0
           ],
           "manifest_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
-          "manifest_sha256": "115127287b802d24181928888ed1a3414cfaf8af94d87ef5cb9a514d756c3112",
+          "manifest_sha256": "5af812f68c52393027439f988e347bb1da8a29337ec0bda479e0a89629625413",
           "next_required_proof": [
-            "matching_active_level2_lane_claim_for_manifest_lane_and_job"
+            "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py"
           ],
           "non_dominated_frontier_reason": {
             "dominated_by": [],
-            "eligibility_blockers": [],
-            "eligible": true,
-            "frontier": true,
+            "eligibility_blockers": [
+              "candidate_static_preflight_not_ready"
+            ],
+            "eligible": false,
+            "frontier": false,
             "objective_directions": {
               "byte_delta": "min",
               "candidate_static_preflight_ready": "max",
@@ -288,25 +336,27 @@
             },
             "objectives": {
               "byte_delta": -9.0,
-              "candidate_static_preflight_ready": 1.0,
+              "candidate_static_preflight_ready": 0.0,
               "confidence": 1.0,
               "expected_pose_dist_delta": 0.0,
               "expected_seg_dist_delta": 0.0,
               "expected_total_score_delta": -5.9927305780995425e-06
             },
-            "reason": "non_dominated_within_pareto_scope",
+            "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
             "schema": "non_dominated_frontier_reason_v1",
             "scope": "hnerv_rate_only_exact_archive",
-            "status": "non_dominated"
+            "status": "ineligible"
           },
           "packet_kind": "wr01_exact_eval_operator_packet",
           "pareto_dominated_by": [],
-          "pareto_eligibility_blockers": [],
-          "pareto_eligible": true,
-          "pareto_frontier": true,
+          "pareto_eligibility_blockers": [
+            "candidate_static_preflight_not_ready"
+          ],
+          "pareto_eligible": false,
+          "pareto_frontier": false,
           "pareto_objectives": {
             "byte_delta": -9.0,
-            "candidate_static_preflight_ready": 1.0,
+            "candidate_static_preflight_ready": 0.0,
             "confidence": 1.0,
             "expected_pose_dist_delta": 0.0,
             "expected_seg_dist_delta": 0.0,
@@ -335,18 +385,62 @@
           "score_claim": false,
           "selection_blockers": [
             "kkt_not_ready_for_field_planning",
-            "missing_active_lane_dispatch_claim"
+            "pareto_ineligible_packet",
+            "strict_candidate_preflight_blocked"
           ],
-          "selection_decision": "needs_active_lane_claim_before_dispatch",
+          "selection_decision": "strict_candidate_preflight_refused",
           "selection_penalty_terms": {
             "kkt_not_ready_for_field_planning": 25.0,
-            "missing_active_lane_dispatch_claim": 100.0
+            "pareto_ineligible_packet": 50.0,
+            "strict_candidate_preflight_blocked": 500.0
           },
-          "selection_penalty_units": 125.0,
-          "static_candidate_blockers": [],
+          "selection_penalty_units": 575.0,
+          "static_candidate_blockers": [
+            "strict_candidate_preflight_not_ready",
+            "strict:dispatch_gate_blocked",
+            "strict:dispatch_unlocked_false",
+            "strict:ready_for_exact_eval_dispatch_claim_false",
+            "strict:static_packet_ready_false",
+            "strict:candidate_static_preflight_ready_false",
+            "strict:static_blockers_reported",
+            "packet_static_preflight_not_ready",
+            "packet_static:pre_submission_compliance_failed",
+            "packet_static:dry_run_queue_payload_section_diff_mismatch"
+          ],
           "strict_candidate_preflight": {
-            "blockers": [],
-            "candidate_static_preflight_ready": true,
+            "blockers": [
+              {
+                "code": "dispatch_gate_blocked",
+                "detail": "dispatch_gate='blocked_static_packet_ready_until_static_blockers_clear'",
+                "severity": "blocking"
+              },
+              {
+                "code": "dispatch_unlocked_false",
+                "detail": "dispatch_unlocked is false",
+                "severity": "blocking"
+              },
+              {
+                "code": "ready_for_exact_eval_dispatch_claim_false",
+                "detail": "ready_for_exact_eval_dispatch_claim is false",
+                "severity": "blocking"
+              },
+              {
+                "code": "static_packet_ready_false",
+                "detail": "static_packet_ready is false",
+                "severity": "blocking"
+              },
+              {
+                "code": "candidate_static_preflight_ready_false",
+                "detail": "candidate_static_preflight_ready is false",
+                "severity": "blocking"
+              },
+              {
+                "code": "static_blockers_reported",
+                "detail": "static_blockers: pre_submission_compliance_failed, dry_run_queue_payload_section_diff_mismatch",
+                "severity": "blocking"
+              }
+            ],
+            "candidate_static_preflight_ready": false,
             "lane_claim": {
               "active_conflicts": [],
               "checked": false,
@@ -357,8 +451,8 @@
             "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
             "warnings": []
           },
-          "strict_candidate_preflight_ready": true,
-          "strict_candidate_static_preflight_ready": true
+          "strict_candidate_preflight_ready": false,
+          "strict_candidate_static_preflight_ready": false
         }
       ],
       "schema_version": 2,
@@ -385,13 +479,21 @@
         },
         "byte_delta": -9,
         "candidate_blockers": [
-          "missing_active_lane_dispatch_claim",
-          "claim:dispatch_claim_check_missing"
+          "strict_candidate_preflight_not_ready",
+          "strict:dispatch_gate_blocked",
+          "strict:dispatch_unlocked_false",
+          "strict:ready_for_exact_eval_dispatch_claim_false",
+          "strict:static_packet_ready_false",
+          "strict:candidate_static_preflight_ready_false",
+          "strict:static_blockers_reported",
+          "packet_static_preflight_not_ready",
+          "packet_static:pre_submission_compliance_failed",
+          "packet_static:dry_run_queue_payload_section_diff_mismatch"
         ],
         "candidate_id": "wr01_apply_pr106x_half",
-        "candidate_local_preflight_ready": true,
-        "candidate_static_preflight_ready": true,
-        "candidate_static_preflight_ready_before_dirty": true,
+        "candidate_local_preflight_ready": false,
+        "candidate_static_preflight_ready": false,
+        "candidate_static_preflight_ready_before_dirty": false,
         "candidate_watch_paths": [
           "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json"
         ],
@@ -429,8 +531,7 @@
             "custody": [],
             "dirty_worktree": [],
             "dispatch_claim": [
-              "missing_active_lane_dispatch_claim",
-              "claim:dispatch_claim_check_missing"
+              "strict:ready_for_exact_eval_dispatch_claim_false"
             ],
             "exact_cuda_eval": [],
             "interaction_model": [],
@@ -438,26 +539,53 @@
               "kkt:kkt_proof_or_admm_result_missing",
               "kkt_not_ready_for_field_planning"
             ],
-            "other": [],
-            "pareto_frontier": [],
+            "other": [
+              "packet_static:pre_submission_compliance_failed",
+              "packet_static:dry_run_queue_payload_section_diff_mismatch"
+            ],
+            "pareto_frontier": [
+              "pareto_ineligible_packet",
+              "pareto_ineligible_for_field_selection"
+            ],
             "proxy_or_planning": [],
             "runtime": [],
             "score_claim": [],
-            "strict_preflight": []
+            "strict_preflight": [
+              "strict_candidate_preflight_not_ready",
+              "strict:dispatch_gate_blocked",
+              "strict:dispatch_unlocked_false",
+              "strict:static_packet_ready_false",
+              "strict:candidate_static_preflight_ready_false",
+              "strict:static_blockers_reported",
+              "packet_static_preflight_not_ready",
+              "strict_candidate_preflight_blocked"
+            ]
           },
-          "blocker_count": 4,
+          "blocker_count": 15,
           "blockers": [
-            "missing_active_lane_dispatch_claim",
-            "claim:dispatch_claim_check_missing",
+            "strict_candidate_preflight_not_ready",
+            "strict:dispatch_gate_blocked",
+            "strict:dispatch_unlocked_false",
+            "strict:ready_for_exact_eval_dispatch_claim_false",
+            "strict:static_packet_ready_false",
+            "strict:candidate_static_preflight_ready_false",
+            "strict:static_blockers_reported",
+            "packet_static_preflight_not_ready",
+            "packet_static:pre_submission_compliance_failed",
+            "packet_static:dry_run_queue_payload_section_diff_mismatch",
             "kkt:kkt_proof_or_admm_result_missing",
-            "kkt_not_ready_for_field_planning"
+            "kkt_not_ready_for_field_planning",
+            "pareto_ineligible_packet",
+            "strict_candidate_preflight_blocked",
+            "pareto_ineligible_for_field_selection"
           ],
           "candidate_preflight_ready_for_exact_eval_dispatch": false,
           "dispatch_attempted": false,
           "dispatch_refused": true,
           "next_required_proof": [
-            "matching_active_level2_lane_claim_for_manifest_lane_and_job",
-            "passed_kkt_proof_or_converged_admm_waterline_result"
+            "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py",
+            "passed_kkt_proof_or_converged_admm_waterline_result",
+            "pareto_eligible_static_ready_non_proxy_candidate"
           ],
           "ready_for_exact_eval_dispatch": false,
           "schema": "exact_dispatch_blockers_v1",
@@ -497,6 +625,16 @@
           "no composability assumption with categorical, sensitivity, or pose atoms until stacked archive eval exists"
         ],
         "kkt_blockers": [
+          "strict_candidate_preflight_not_ready",
+          "strict:dispatch_gate_blocked",
+          "strict:dispatch_unlocked_false",
+          "strict:ready_for_exact_eval_dispatch_claim_false",
+          "strict:static_packet_ready_false",
+          "strict:candidate_static_preflight_ready_false",
+          "strict:static_blockers_reported",
+          "packet_static_preflight_not_ready",
+          "packet_static:pre_submission_compliance_failed",
+          "packet_static:dry_run_queue_payload_section_diff_mismatch",
           "kkt:kkt_proof_or_admm_result_missing"
         ],
         "kkt_proof": {
@@ -513,25 +651,27 @@
         "kkt_ready_for_field_planning": false,
         "lexicographic_feasibility_tuple": [
           false,
+          false,
           true,
           true,
           true,
-          true,
-          true,
+          false,
           false,
           -5.992731e-06,
           0.0
         ],
         "manifest_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
-        "manifest_sha256": "115127287b802d24181928888ed1a3414cfaf8af94d87ef5cb9a514d756c3112",
+        "manifest_sha256": "5af812f68c52393027439f988e347bb1da8a29337ec0bda479e0a89629625413",
         "next_required_proof": [
-          "matching_active_level2_lane_claim_for_manifest_lane_and_job"
+          "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py"
         ],
         "non_dominated_frontier_reason": {
           "dominated_by": [],
-          "eligibility_blockers": [],
-          "eligible": true,
-          "frontier": true,
+          "eligibility_blockers": [
+            "candidate_static_preflight_not_ready"
+          ],
+          "eligible": false,
+          "frontier": false,
           "objective_directions": {
             "byte_delta": "min",
             "candidate_static_preflight_ready": "max",
@@ -542,25 +682,27 @@
           },
           "objectives": {
             "byte_delta": -9.0,
-            "candidate_static_preflight_ready": 1.0,
+            "candidate_static_preflight_ready": 0.0,
             "confidence": 1.0,
             "expected_pose_dist_delta": 0.0,
             "expected_seg_dist_delta": 0.0,
             "expected_total_score_delta": -5.9927305780995425e-06
           },
-          "reason": "non_dominated_within_pareto_scope",
+          "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
           "schema": "non_dominated_frontier_reason_v1",
           "scope": "hnerv_rate_only_exact_archive",
-          "status": "non_dominated"
+          "status": "ineligible"
         },
         "packet_kind": "wr01_exact_eval_operator_packet",
         "pareto_dominated_by": [],
-        "pareto_eligibility_blockers": [],
-        "pareto_eligible": true,
-        "pareto_frontier": true,
+        "pareto_eligibility_blockers": [
+          "candidate_static_preflight_not_ready"
+        ],
+        "pareto_eligible": false,
+        "pareto_frontier": false,
         "pareto_objectives": {
           "byte_delta": -9.0,
-          "candidate_static_preflight_ready": 1.0,
+          "candidate_static_preflight_ready": 0.0,
           "confidence": 1.0,
           "expected_pose_dist_delta": 0.0,
           "expected_seg_dist_delta": 0.0,
@@ -589,18 +731,62 @@
         "score_claim": false,
         "selection_blockers": [
           "kkt_not_ready_for_field_planning",
-          "missing_active_lane_dispatch_claim"
+          "pareto_ineligible_packet",
+          "strict_candidate_preflight_blocked"
         ],
-        "selection_decision": "needs_active_lane_claim_before_dispatch",
+        "selection_decision": "strict_candidate_preflight_refused",
         "selection_penalty_terms": {
           "kkt_not_ready_for_field_planning": 25.0,
-          "missing_active_lane_dispatch_claim": 100.0
+          "pareto_ineligible_packet": 50.0,
+          "strict_candidate_preflight_blocked": 500.0
         },
-        "selection_penalty_units": 125.0,
-        "static_candidate_blockers": [],
+        "selection_penalty_units": 575.0,
+        "static_candidate_blockers": [
+          "strict_candidate_preflight_not_ready",
+          "strict:dispatch_gate_blocked",
+          "strict:dispatch_unlocked_false",
+          "strict:ready_for_exact_eval_dispatch_claim_false",
+          "strict:static_packet_ready_false",
+          "strict:candidate_static_preflight_ready_false",
+          "strict:static_blockers_reported",
+          "packet_static_preflight_not_ready",
+          "packet_static:pre_submission_compliance_failed",
+          "packet_static:dry_run_queue_payload_section_diff_mismatch"
+        ],
         "strict_candidate_preflight": {
-          "blockers": [],
-          "candidate_static_preflight_ready": true,
+          "blockers": [
+            {
+              "code": "dispatch_gate_blocked",
+              "detail": "dispatch_gate='blocked_static_packet_ready_until_static_blockers_clear'",
+              "severity": "blocking"
+            },
+            {
+              "code": "dispatch_unlocked_false",
+              "detail": "dispatch_unlocked is false",
+              "severity": "blocking"
+            },
+            {
+              "code": "ready_for_exact_eval_dispatch_claim_false",
+              "detail": "ready_for_exact_eval_dispatch_claim is false",
+              "severity": "blocking"
+            },
+            {
+              "code": "static_packet_ready_false",
+              "detail": "static_packet_ready is false",
+              "severity": "blocking"
+            },
+            {
+              "code": "candidate_static_preflight_ready_false",
+              "detail": "candidate_static_preflight_ready is false",
+              "severity": "blocking"
+            },
+            {
+              "code": "static_blockers_reported",
+              "detail": "static_blockers: pre_submission_compliance_failed, dry_run_queue_payload_section_diff_mismatch",
+              "severity": "blocking"
+            }
+          ],
+          "candidate_static_preflight_ready": false,
           "lane_claim": {
             "active_conflicts": [],
             "checked": false,
@@ -611,8 +797,8 @@
           "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
           "warnings": []
         },
-        "strict_candidate_preflight_ready": true,
-        "strict_candidate_static_preflight_ready": true
+        "strict_candidate_preflight_ready": false,
+        "strict_candidate_static_preflight_ready": false
       },
       "selection_penalties": {
         "dirty_path_blocked": 10000.0,
@@ -834,29 +1020,31 @@
       "title": "Categorical QMA9 plus CLADE/SPADE/openpilot labels"
     },
     {
-      "action_class": "build_end_to_end_noop_stack_fixture",
+      "action_class": "wire_jcsp_submission_runtime_consumer",
       "blockers": [
-        "fixture-only manifest is intentionally not dispatchable",
-        "no byte-closed JCSP archive member",
+        "submission runtime detects but refuses jcsp.bin consumption",
+        "Balle hyperprior stream codecs must be instantiated and charged for non-fixture model streams",
         "side information must be charged",
+        "no lane dispatch claim",
+        "no exact CUDA auth eval for stacked JCSP archive",
         "individual components do not imply score composability"
       ],
       "dirty_path_blockers": [],
       "dispatch_attempted": false,
-      "evidence_grade": "planning/component empirical plus typed fixture manifest",
+      "evidence_grade": "empirical byte-closed JCSP archive member plus runtime-loader parity",
       "key": "joint_admm_balle_arithmetic_stack",
       "missing_code_path_count": 0,
       "missing_evidence_path_count": 0,
-      "next_patch": "Replace the fixture-only contract with a byte-closed JCSP archive member and runtime loader parity, then claim a lane before exact CUDA auth eval.",
+      "next_patch": "Wire submissions/robust_current to decode/consume jcsp.bin and emit contest outputs, then claim a lane before exact CUDA auth eval.",
       "priority_tier": 40,
-      "readiness_stage": "needs_byte_closed_candidate_or_fixture",
+      "readiness_stage": "needs_research_or_contract_hardening",
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "medium-high if it can replace HNeRV sections with a smaller scorer-stable stack",
       "role": "stack_or_replacement_orchestrator",
       "safe_to_touch_now": true,
       "score_claim": false,
       "stackability": "high in architecture, unproven in exact archive",
-      "status": "typed_noop_stack_manifest_landed_not_archive_dispatchable",
+      "status": "byte_closed_jcsp_member_landed_runtime_consumption_blocked",
       "title": "Joint ADMM plus Balle hyperprior plus arithmetic stack"
     },
     {
@@ -1072,9 +1260,9 @@
   "score_claim": false,
   "stage_counts": {
     "exact_evidence_present_review_before_promotion": 1,
-    "needs_byte_closed_candidate_or_fixture": 4,
+    "needs_byte_closed_candidate_or_fixture": 3,
     "needs_lane_claim_and_exact_cuda": 1,
-    "needs_research_or_contract_hardening": 6
+    "needs_research_or_contract_hardening": 7
   },
   "tool": "tools/build_frontier_roadmap_status.py"
 }
