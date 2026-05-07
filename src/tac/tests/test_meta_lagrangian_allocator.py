@@ -298,6 +298,64 @@ def test_pareto_scope_preserves_orthogonal_families(tmp_path: Path) -> None:
     assert all(row["pareto_frontier"] is True for row in ledger["rows"])
 
 
+def test_pareto_frontier_uses_verified_archive_bytes_as_concrete_objective(
+    tmp_path: Path,
+) -> None:
+    smaller_manifest = _archive_manifest(
+        tmp_path,
+        name="smaller-archive-manifest.json",
+        archive_bytes=100,
+        archive_sha256="1" * 64,
+    )
+    larger_manifest = _archive_manifest(
+        tmp_path,
+        name="larger-archive-manifest.json",
+        archive_bytes=200,
+        archive_sha256="2" * 64,
+    )
+    common = {
+        "family": "hnerv_decoder_rate_recode",
+        "family_group": "hnerv_recode",
+        "pareto_scope": "hnerv_recode",
+        "byte_delta": -10,
+        "expected_seg_dist_delta": 0.0,
+        "expected_pose_dist_delta": 0.0,
+        "confidence": 1.0,
+        "evidence_grade": "empirical_byte_raw_equal",
+        "raw_equal": True,
+    }
+    ledger = build_atom_ledger(
+        [
+            {
+                **common,
+                "atom_id": "larger_archive_same_declared_delta",
+                "archive_manifest_path": larger_manifest.as_posix(),
+                "archive_manifest_sha256": sha256_file(larger_manifest),
+            },
+            {
+                **common,
+                "atom_id": "smaller_archive_same_declared_delta",
+                "archive_manifest_path": smaller_manifest.as_posix(),
+                "archive_manifest_sha256": sha256_file(smaller_manifest),
+            },
+        ],
+        base_pose_dist=0.01,
+        source="fixture",
+    )
+
+    assert ledger["pareto_summary"]["objective_direction"]["archive_bytes"] == "min"
+    assert ledger["pareto_summary"]["rankable_frontier_count"] == 1
+    assert ledger["pareto_summary"]["rankable_dominated_count"] == 1
+    assert ledger["rows"][0]["atom_id"] == "smaller_archive_same_declared_delta"
+    assert ledger["rows"][0]["pareto_objectives"]["archive_bytes"] == 100.0
+    larger = next(
+        row for row in ledger["rows"] if row["atom_id"] == "larger_archive_same_declared_delta"
+    )
+    assert larger["pareto_frontier"] is False
+    assert larger["pareto_dominated_by"] == ["smaller_archive_same_declared_delta"]
+    assert larger["pareto_objectives"]["archive_bytes"] == 200.0
+
+
 def test_pareto_frontier_requires_verified_byte_closed_manifest(tmp_path: Path) -> None:
     manifest = _archive_manifest(tmp_path)
     ledger = build_atom_ledger(
@@ -766,13 +824,19 @@ def test_build_meta_lagrangian_atom_ledger_cli(tmp_path: Path) -> None:
     assert payload["ready_for_exact_eval_dispatch"] is False
 
 
-def _archive_manifest(tmp_path: Path) -> Path:
-    manifest = tmp_path / "archive-manifest.json"
+def _archive_manifest(
+    tmp_path: Path,
+    *,
+    name: str = "archive-manifest.json",
+    archive_bytes: int = 123,
+    archive_sha256: str = "a" * 64,
+) -> Path:
+    manifest = tmp_path / name
     manifest.write_text(
         json.dumps(
             {
                 "schema_version": 1,
-                "archive": {"bytes": 123, "sha256": "a" * 64},
+                "archive": {"bytes": archive_bytes, "sha256": archive_sha256},
                 "score_claim": False,
             },
             sort_keys=True,

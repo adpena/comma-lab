@@ -46,12 +46,14 @@ KKT_PROOF_FAIL_STATUSES = {
 PARETO_EPS = 1e-12
 PARETO_MINIMIZE_OBJECTIVES = (
     "expected_total_score_delta",
+    "archive_bytes",
     "byte_delta",
     "expected_seg_dist_delta",
     "expected_pose_dist_delta",
 )
 PARETO_OBJECTIVE_DIRECTIONS = {
     "expected_total_score_delta": "min",
+    "archive_bytes": "min",
     "byte_delta": "min",
     "expected_seg_dist_delta": "min",
     "expected_pose_dist_delta": "min",
@@ -720,7 +722,7 @@ def _kkt_proof(atom: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _pareto_objectives(row: Mapping[str, Any]) -> dict[str, float]:
-    return {
+    objectives = {
         "expected_total_score_delta": float(row["expected_total_score_delta"]),
         "byte_delta": float(row["byte_delta"]),
         "expected_seg_dist_delta": float(row["expected_seg_dist_delta"]),
@@ -728,6 +730,27 @@ def _pareto_objectives(row: Mapping[str, Any]) -> dict[str, float]:
         "confidence": float(row["confidence"]),
         "archive_ready_for_stack_review": float(bool(row["archive_ready_for_stack_review"])),
     }
+    archive_custody = row.get("archive_manifest_custody")
+    if isinstance(archive_custody, Mapping):
+        archive_bytes = archive_custody.get("archive_bytes")
+        if isinstance(archive_bytes, int) and not isinstance(archive_bytes, bool):
+            objectives["archive_bytes"] = float(archive_bytes)
+    return objectives
+
+
+def _pareto_objective_value(row: Mapping[str, Any], objective: str) -> float | None:
+    objectives = row.get("pareto_objectives")
+    value = (
+        objectives.get(objective)
+        if isinstance(objectives, Mapping) and objective in objectives
+        else row.get(objective)
+    )
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return None
+    out = float(value)
+    if not math.isfinite(out):
+        return None
+    return out
 
 
 def _dominates_pareto(a: Mapping[str, Any], b: Mapping[str, Any]) -> bool:
@@ -744,14 +767,18 @@ def _dominates_pareto(a: Mapping[str, Any], b: Mapping[str, Any]) -> bool:
         return False
     strictly_better = False
     for objective in PARETO_MINIMIZE_OBJECTIVES:
-        av = float(a[objective])
-        bv = float(b[objective])
+        av = _pareto_objective_value(a, objective)
+        bv = _pareto_objective_value(b, objective)
+        if av is None or bv is None:
+            return False
         if av > bv + PARETO_EPS:
             return False
         strictly_better = strictly_better or av < bv - PARETO_EPS
     for objective in ("confidence", "archive_ready_for_stack_review"):
-        av = float(a[objective])
-        bv = float(b[objective])
+        av = _pareto_objective_value(a, objective)
+        bv = _pareto_objective_value(b, objective)
+        if av is None or bv is None:
+            return False
         if av < bv - PARETO_EPS:
             return False
         strictly_better = strictly_better or av > bv + PARETO_EPS
