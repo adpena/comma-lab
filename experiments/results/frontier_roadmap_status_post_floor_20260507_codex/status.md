@@ -3,7 +3,7 @@
 Live-safe operator roadmap. It does not claim scores or dispatch work.
 
 - row_count: `13`
-- dirty_path_count: `62`
+- dirty_path_count: `64`
 - dirty_blocked_row_count: `0`
 - next_unblocked_keys: `categorical_qma9_clade_spade_openpilot, joint_admm_balle_arithmetic_stack, hnerv_per_tensor_context_entropy, telescopic_foveation_field, lapose_motion_atom_allocator`
 
@@ -21,6 +21,8 @@ Live-safe operator roadmap. It does not claim scores or dispatch work.
 - kkt_ready_candidate_packet_count: `0`
 - selected_candidate_packet: `pr106_q10_151byte_brotli`
 - selected_candidate_decision: `rate_only_candidate_above_active_pr103_pr106_floor`
+- selected_candidate_dispatchable: `False`
+- effective_dispatch_candidate: `none`
 - selected_candidate_frontier_reason: `not_on_frontier_until_pareto_eligibility_blockers_clear`
 - selected_candidate_exact_blocker_count: `13`
 - selected_candidate_next_local_non_gpu_step: `verify_lightning_env`

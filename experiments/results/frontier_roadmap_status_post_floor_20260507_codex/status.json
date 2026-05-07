@@ -1,8 +1,10 @@
 {
   "dirty_blocked_row_count": 0,
-  "dirty_path_count": 62,
+  "dirty_path_count": 64,
   "dirty_paths": [
     ".claude/scheduled_tasks.lock",
+    "experiments/results/cma_pr101_real_substrate_20260507T222605Z/",
+    "experiments/results/frontier_hidden_gem_routing_20260507_worker_b/",
     "experiments/results/frontier_roadmap_status_20260507_codex/rebuild_command.txt",
     "experiments/results/frontier_roadmap_status_20260507_codex/status.json",
     "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/candidate_hdm3_restored_legacy_payload.bin",
@@ -61,9 +63,9 @@
     "experiments/results/recovered_42_dead/recovery_metadata.json",
     "experiments/results/recovered_99999_phantom/recovery_metadata.json",
     "reports/raw/kaggle_ingest/kaggle-dilated-h64-long1000-retry-v6-20260410T234220Z/comma_video_compression_challenge",
-    "src/tac/score_geometry_stacking.py",
-    "src/tac/tests/test_score_geometry_stacking.py",
-    "tools/score_topology_ascii.py"
+    "src/tac/jcsp_stream_manifest.py",
+    "src/tac/tests/test_build_frontier_roadmap_status.py",
+    "tools/build_frontier_roadmap_status.py"
   ],
   "dispatch_attempted": false,
   "dispatch_blockers": [
@@ -102,6 +104,7 @@
       "requires_lane_dispatch_claim",
       "requires_exact_cuda_auth_eval"
     ],
+    "effective_dispatch_candidate_id": null,
     "end_of_tranche_report_required": [
       "changed paths and owning workers",
       "focused tests plus all-lanes preflight result",
@@ -2946,6 +2949,32 @@
     "ready_for_exact_eval_dispatch": false,
     "schema": "next_comprehensive_tranche_v1",
     "score_claim": false,
+    "selected_candidate_dispatch_status": {
+      "candidate_id": "pr106_q10_151byte_brotli",
+      "dispatch_blockers": [
+        "rate_only_candidate_not_below_active_pr103_pr106_a_plus_plus_floor:185578",
+        "missing_active_lane_dispatch_claim",
+        "claim:dispatch_claim_check_missing",
+        "missing_lightning_environment",
+        "missing_env:LIGHTNING_SSH_TARGET",
+        "missing_env:LIGHTNING_REMOTE_PACT",
+        "missing_env:LIGHTNING_UPSTREAM_DIR",
+        "missing_env:LIGHTNING_TEAMSPACE",
+        "missing_env:LIGHTNING_STUDIO",
+        "missing_env:LIGHTNING_SDK_USER",
+        "kkt_not_ready_for_field_planning",
+        "pareto_ineligible_packet",
+        "pareto_ineligible_for_field_selection"
+      ],
+      "effective_dispatch_candidate_id": null,
+      "exact_dispatch_blocker_count": 13,
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "selected_candidate_dispatch_status_v1",
+      "selected_row_dispatchable": false,
+      "selected_row_present": true,
+      "selection_decision": "rate_only_candidate_above_active_pr103_pr106_floor"
+    },
     "workstreams": [
       {
         "acceptance_gates": [

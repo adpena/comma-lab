@@ -58,6 +58,13 @@ def test_frontier_roadmap_status_is_non_dispatching_and_dirty_aware() -> None:
     assert payload["next_comprehensive_tranche"]["dispatch_attempted"] is False
     assert payload["next_comprehensive_tranche"]["ready_for_exact_eval_dispatch"] is False
     assert payload["next_comprehensive_tranche"]["schema"] == "next_comprehensive_tranche_v1"
+    assert payload["next_comprehensive_tranche"]["effective_dispatch_candidate_id"] is None
+    assert (
+        payload["next_comprehensive_tranche"]["selected_candidate_dispatch_status"][
+            "selected_row_dispatchable"
+        ]
+        is False
+    )
     assert "requires_lane_dispatch_claim" in payload["next_comprehensive_tranche"]["dispatch_blockers"]
 
     wr01 = rows["hnerv_wavelet_wr01_apply"]
@@ -108,6 +115,8 @@ def test_frontier_roadmap_status_markdown_is_operator_briefing() -> None:
     assert "Next Comprehensive Tranche" in markdown
     assert "candidate_static_preflight_ready_count" in markdown
     assert "field_selection_ready_candidate_packet_count" in markdown
+    assert "selected_candidate_dispatchable" in markdown
+    assert "effective_dispatch_candidate" in markdown
     assert "selected_candidate_frontier_reason" in markdown
     assert "selected_candidate_exact_blocker_count" in markdown
     assert "selected_candidate_next_local_non_gpu_step" in markdown
@@ -182,6 +191,11 @@ def test_frontier_roadmap_status_discovers_default_packet_manifests() -> None:
     assert q10["candidate_static_preflight_ready"] is False
     assert q10["pareto_frontier"] is False
     assert q10["selection_decision"] == "rate_only_candidate_above_active_pr103_pr106_floor"
+    dispatch_status = payload["next_comprehensive_tranche"]["selected_candidate_dispatch_status"]
+    assert dispatch_status["candidate_id"] == "pr106_q10_151byte_brotli"
+    assert dispatch_status["selected_row_dispatchable"] is False
+    assert dispatch_status["effective_dispatch_candidate_id"] is None
+    assert dispatch_status["exact_dispatch_blocker_count"] > 0
     assert q10["active_rate_only_floor_policy"]["active_floor_archive_bytes"] == (
         ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES
     )
@@ -298,6 +312,11 @@ def test_frontier_roadmap_status_consumes_field_meta_packet_manifests(tmp_path: 
     )
     assert packet_selection["selected_candidate"]["selection_decision"] == "static_candidate_acquire_kkt_and_lane_claim_before_dispatch"
     assert packet_selection["selected_candidate"]["ready_for_exact_eval_dispatch"] is False
+    dispatch_status = payload["next_comprehensive_tranche"]["selected_candidate_dispatch_status"]
+    assert dispatch_status["candidate_id"] == "generic_packet"
+    assert dispatch_status["selected_row_dispatchable"] is False
+    assert dispatch_status["effective_dispatch_candidate_id"] is None
+    assert "kkt:kkt_proof_or_admm_result_missing" in dispatch_status["dispatch_blockers"]
     assert payload["ready_for_exact_eval_dispatch"] is False
 
 

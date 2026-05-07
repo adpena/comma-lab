@@ -110,6 +110,59 @@ def _keys_present(rows_by_key: dict[str, dict[str, Any]], keys: tuple[str, ...])
     return [key for key in keys if key in rows_by_key]
 
 
+def _selected_candidate_dispatch_status(packet_selection: dict[str, Any]) -> dict[str, Any]:
+    """Summarize whether the selector's top row is actually dispatchable.
+
+    ``selected_candidate`` in the field-meta selector is the best current row
+    under the lexicographic planning order. It may still be blocked. This
+    status prevents operator artifacts from reading a blocked top row as
+    authorization to spend exact-eval wall clock.
+    """
+
+    selected = packet_selection.get("selected_candidate")
+    if not isinstance(selected, dict):
+        return {
+            "schema": "selected_candidate_dispatch_status_v1",
+            "candidate_id": None,
+            "selected_row_present": False,
+            "selected_row_dispatchable": False,
+            "effective_dispatch_candidate_id": None,
+            "ready_for_exact_eval_dispatch": False,
+            "field_selection_ready_for_exact_eval_dispatch": False,
+            "selection_decision": "none",
+            "exact_dispatch_blocker_count": 0,
+            "dispatch_blockers": ["no_selected_candidate_packet"],
+        }
+    exact_blockers = selected.get("exact_dispatch_blockers")
+    if not isinstance(exact_blockers, dict):
+        exact_blockers = {}
+    blockers = [
+        str(item)
+        for item in exact_blockers.get("blockers", [])
+        if isinstance(item, str) and item
+    ]
+    ready = (
+        selected.get("field_selection_ready_for_exact_eval_dispatch") is True
+        and exact_blockers.get("ready_for_exact_eval_dispatch") is True
+        and not blockers
+    )
+    candidate_id = selected.get("candidate_id")
+    return {
+        "schema": "selected_candidate_dispatch_status_v1",
+        "candidate_id": str(candidate_id) if candidate_id else None,
+        "selected_row_present": True,
+        "selected_row_dispatchable": ready,
+        "effective_dispatch_candidate_id": str(candidate_id) if ready and candidate_id else None,
+        "ready_for_exact_eval_dispatch": ready,
+        "field_selection_ready_for_exact_eval_dispatch": (
+            selected.get("field_selection_ready_for_exact_eval_dispatch") is True
+        ),
+        "selection_decision": str(selected.get("selection_decision") or ""),
+        "exact_dispatch_blocker_count": int(exact_blockers.get("blocker_count") or len(blockers)),
+        "dispatch_blockers": blockers,
+    }
+
+
 def build_next_comprehensive_tranche(
     rows: list[dict[str, Any]],
     *,
@@ -251,6 +304,45 @@ def build_next_comprehensive_tranche(
         ]
         stream["dirty_blocked_keys"] = dirty_blocked_keys
         stream["all_keys_safe_to_touch_now"] = not dirty_blocked_keys
+    packet_selection = field_meta_candidate_packet_selection or {
+        "schema_version": 3,
+        "tool": "tools/build_field_meta_dispatch_selection.py",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "candidate_preflight_ready_for_exact_eval_dispatch": False,
+        "candidate_local_preflight_ready": False,
+        "candidate_static_preflight_ready": False,
+        "candidate_count": 0,
+        "candidate_local_preflight_ready_count": 0,
+        "candidate_static_preflight_ready_count": 0,
+        "ready_candidate_count": 0,
+        "field_selection_ready_for_exact_eval_dispatch": False,
+        "field_selection_ready_for_exact_eval_dispatch_count": 0,
+        "dirty_blocked_candidate_count": 0,
+        "kkt_ready_for_field_planning_count": 0,
+        "pareto_summary": {
+            "frontier_count": 0,
+            "dominated_count": 0,
+            "eligible_count": 0,
+            "scope_counts": {},
+        },
+        "lexicographic_feasibility_order": [
+            "field_selection_ready_for_exact_eval_dispatch desc",
+            "candidate_static_preflight_ready desc",
+            "archive_proof.byte_closed desc",
+            "runtime_proof.runtime_closed desc",
+            "clean_worktree_overlap desc",
+            "pareto_frontier desc",
+            "kkt_ready_for_field_planning desc",
+            "expected_total_score_delta asc",
+            "expected_information_gain_nats desc",
+        ],
+        "selected_candidate": None,
+        "rows": [],
+        "report_blockers": ["no_candidate_packet_manifests_supplied"],
+    }
+    selected_dispatch_status = _selected_candidate_dispatch_status(packet_selection)
     return {
         "schema": "next_comprehensive_tranche_v1",
         "name": "byte-closed frontier closure and field-selected exact-eval tranche",
@@ -267,45 +359,11 @@ def build_next_comprehensive_tranche(
             "needs_byte_closed_candidate": byte_closed_candidates,
             "needs_research_or_contract_hardening": research_hardening_candidates,
         },
-        "field_meta_candidate_packet_selection": field_meta_candidate_packet_selection
-        or {
-            "schema_version": 3,
-            "tool": "tools/build_field_meta_dispatch_selection.py",
-            "score_claim": False,
-            "dispatch_attempted": False,
-            "ready_for_exact_eval_dispatch": False,
-            "candidate_preflight_ready_for_exact_eval_dispatch": False,
-            "candidate_local_preflight_ready": False,
-            "candidate_static_preflight_ready": False,
-            "candidate_count": 0,
-            "candidate_local_preflight_ready_count": 0,
-            "candidate_static_preflight_ready_count": 0,
-            "ready_candidate_count": 0,
-            "field_selection_ready_for_exact_eval_dispatch": False,
-            "field_selection_ready_for_exact_eval_dispatch_count": 0,
-            "dirty_blocked_candidate_count": 0,
-            "kkt_ready_for_field_planning_count": 0,
-            "pareto_summary": {
-                "frontier_count": 0,
-                "dominated_count": 0,
-                "eligible_count": 0,
-                "scope_counts": {},
-            },
-            "lexicographic_feasibility_order": [
-                "field_selection_ready_for_exact_eval_dispatch desc",
-                "candidate_static_preflight_ready desc",
-                "archive_proof.byte_closed desc",
-                "runtime_proof.runtime_closed desc",
-                "clean_worktree_overlap desc",
-                "pareto_frontier desc",
-                "kkt_ready_for_field_planning desc",
-                "expected_total_score_delta asc",
-                "expected_information_gain_nats desc",
-            ],
-            "selected_candidate": None,
-            "rows": [],
-            "report_blockers": ["no_candidate_packet_manifests_supplied"],
-        },
+        "field_meta_candidate_packet_selection": packet_selection,
+        "selected_candidate_dispatch_status": selected_dispatch_status,
+        "effective_dispatch_candidate_id": selected_dispatch_status[
+            "effective_dispatch_candidate_id"
+        ],
         "workstreams": workstreams,
         "global_acceptance_gates": [
             "no score claim without exact CUDA auth eval JSON",
@@ -431,6 +489,7 @@ def build_roadmap_status(
 
 def render_markdown(payload: dict[str, Any]) -> str:
     packet_selection = payload["next_comprehensive_tranche"]["field_meta_candidate_packet_selection"]
+    dispatch_status = payload["next_comprehensive_tranche"]["selected_candidate_dispatch_status"]
     selected_packet = packet_selection.get("selected_candidate") or {}
     selected_operator = selected_packet.get("operator_next_steps_summary") or {}
     selected_next_action = selected_operator.get("next_local_non_gpu_action") or {}
@@ -458,6 +517,8 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- kkt_ready_candidate_packet_count: `{packet_selection['kkt_ready_for_field_planning_count']}`",
         f"- selected_candidate_packet: `{_md(selected_packet.get('candidate_id') or 'none')}`",
         f"- selected_candidate_decision: `{_md(selected_packet.get('selection_decision') or 'none')}`",
+        f"- selected_candidate_dispatchable: `{_md(dispatch_status['selected_row_dispatchable'])}`",
+        f"- effective_dispatch_candidate: `{_md(dispatch_status['effective_dispatch_candidate_id'] or 'none')}`",
         f"- selected_candidate_frontier_reason: `{_md((selected_packet.get('non_dominated_frontier_reason') or {}).get('reason') or 'none')}`",
         f"- selected_candidate_exact_blocker_count: `{_md((selected_packet.get('exact_dispatch_blockers') or {}).get('blocker_count') or 0)}`",
         f"- selected_candidate_next_local_non_gpu_step: `{_md(selected_next_action.get('id') or 'none')}`",
