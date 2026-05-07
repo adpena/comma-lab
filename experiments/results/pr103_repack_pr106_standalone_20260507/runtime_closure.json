@@ -1,0 +1,88 @@
+{
+  "candidate_archive": {
+    "archive_bytes": 185578,
+    "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+    "decoder_section_bytes": 169617,
+    "decoder_section_sha256": "854278d7bb049a59b44a0fa85cbb849752ba84f02fbd7d91480c1a1ffcac42e5",
+    "latents_section_bytes": 15849,
+    "latents_section_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+    "member_name": "0.bin",
+    "payload_bytes": 185470,
+    "payload_sha256": "3272ec95a2ea5ec68feb1a53fa53f6b14bdae3883fac38ee2261cdadb1b16357"
+  },
+  "decoded_runtime_contract": {
+    "latents_shape": [
+      600,
+      28
+    ],
+    "meta": {
+      "base_channels": 36,
+      "eval_size": [
+        384,
+        512
+      ],
+      "latent_dim": 28,
+      "n_pairs": 600
+    },
+    "state_dict_params": 228958,
+    "state_dict_tensors": 28
+  },
+  "exact_cuda_remaining_blockers": [
+    "copy_or_generate_runtime_adapter_into_submission_tree",
+    "ensure constriction/brotli dependency closure inside runtime environment",
+    "run pre_submission_compliance_check on final archive/runtime packet",
+    "claim dispatch lane before exact CUDA auth eval",
+    "run archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA"
+  ],
+  "fail_closed_contract": [
+    "decoder_section_sha256_must_match",
+    "latents_section_sha256_must_match",
+    "section_lengths_sum_must_equal_decoder_bytes",
+    "ac_fallback_set_must_match_fallback_section",
+    "ac_fallback_set_indices_must_be_pr103_ac_indices"
+  ],
+  "manifest_consistency": {
+    "checks": {
+      "output_archive_bytes": true,
+      "output_archive_sha256": true,
+      "output_decoder_section_bytes": true,
+      "output_latents_section_bytes": true,
+      "runtime_adapter_required": true
+    },
+    "manifest_score_claim": false,
+    "manifest_score_evidence_grade": "[predicted]",
+    "manifest_tool": "experiments.build_pr103_repacked_archive",
+    "passed": true
+  },
+  "runtime_closure": {
+    "ac_auto_fallback": true,
+    "ac_fallback_set": [],
+    "adaptive_lgwin": true,
+    "brotli_quality": 11,
+    "decoder_section_bytes": 169617,
+    "decoder_section_sha256": "854278d7bb049a59b44a0fa85cbb849752ba84f02fbd7d91480c1a1ffcac42e5",
+    "format": "pr103_ac_decoder_inside_pr106_ff_packed_v1",
+    "latents_section_bytes": 15849,
+    "latents_section_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+    "n_latent_hi_symbols": 0,
+    "schema_version": 1,
+    "section_lengths": {
+      "ac_fallback": 0,
+      "br": 7192,
+      "hi_hist": 0,
+      "hists": 989,
+      "merged_ac": 161380
+    }
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "score_evidence_grade": "empirical_runtime_closure",
+  "source_archive": {
+    "archive_bytes": 186239,
+    "archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+    "member_name": "0.bin",
+    "payload_bytes": 186131,
+    "payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7"
+  },
+  "tool": "tac.pr103_pr106_runtime_closure"
+}
