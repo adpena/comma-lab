@@ -23,6 +23,36 @@
       "id": "entropy_audit_json",
       "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/entropy_overhead_audit_from_pr106_decoder_recode_profile.json",
       "sha256": "0514a47f7e786f5353d4a3329a3f7be734d03dbd0816b7376dde536c5d639d82"
+    },
+    {
+      "bytes": 2229,
+      "id": "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256",
+      "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256.json",
+      "sha256": "80fb2b1711ea9c256b03bbc0f7d0b801a5afa0ee7cd0a5d2fb7a7b9349cc4b23"
+    },
+    {
+      "bytes": 969,
+      "id": "source_stream_section_sha256_byte_range_and_symbol_count",
+      "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/source_stream_section_sha256_byte_range_and_symbol_count.json",
+      "sha256": "0ff2bee04ae7fed3ad2bbd7aac6d22229155bd01958de86aa275cd999c052eed"
+    },
+    {
+      "bytes": 1351,
+      "id": "candidate_stream_section_sha256_byte_range_and_byte_count",
+      "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/candidate_stream_section_sha256_byte_range_and_byte_count.json",
+      "sha256": "60a6011b19c8f5aebf49625f1bd9a5879dc0e132e508f1d12bbfdce63bd4b472"
+    },
+    {
+      "bytes": 1039,
+      "id": "old_new_decoded_output_sha256_equality_report",
+      "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/old_new_decoded_output_sha256_equality_report.json",
+      "sha256": "3a621e1da87900e5e3b89680efe4a9b170d96a0c0472f495517aba700a12600c"
+    },
+    {
+      "bytes": 777,
+      "id": "roundtrip_decode_validation_manifest",
+      "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/roundtrip_decode_validation_manifest.json",
+      "sha256": "d6fedb748580eb92c4cfd27d4666eabcaffcd32629ecc131ef975b6026d43562"
     }
   ],
   "byte_equivalence_requirements": [
@@ -36,20 +66,10 @@
     "missing_artifact:byte_accounted_model_overhead_reduction_manifest",
     "missing_artifact:byte_accounted_static_model_context_reduction_manifest",
     "missing_artifact:old_new_model_context_table_diff",
-    "missing_artifact:source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256",
-    "missing_artifact:source_stream_section_sha256_byte_range_and_symbol_count",
-    "missing_artifact:candidate_stream_section_sha256_byte_range_and_byte_count",
-    "missing_artifact:old_new_decoded_output_sha256_equality_report",
-    "missing_artifact:roundtrip_decode_validation_manifest",
     "missing_artifact:candidate_archive_manifest_with_member_sha256s",
     "missing_artifact:strict_pre_submission_compliance_json",
     "missing_artifact:meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions",
     "missing_artifact:runtime_tree_parity_manifest",
-    "missing_source_archive_manifest",
-    "missing_source_stream_sha256_and_byte_range",
-    "missing_candidate_stream_sha256_and_byte_range",
-    "missing_decoded_output_byte_equivalence_report",
-    "missing_roundtrip_decode_validation_manifest",
     "missing_candidate_archive_manifest",
     "missing_runtime_tree_parity_manifest",
     "packet_manifest_is_not_dispatch_authorization",
@@ -59,15 +79,11 @@
   ],
   "gpu_required": false,
   "invalid_json_artifacts": [],
+  "invalid_requirement_artifacts": [],
   "missing_artifacts": [
     "byte_accounted_model_overhead_reduction_manifest",
     "byte_accounted_static_model_context_reduction_manifest",
     "old_new_model_context_table_diff",
-    "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256",
-    "source_stream_section_sha256_byte_range_and_symbol_count",
-    "candidate_stream_section_sha256_byte_range_and_byte_count",
-    "old_new_decoded_output_sha256_equality_report",
-    "roundtrip_decode_validation_manifest",
     "candidate_archive_manifest_with_member_sha256s",
     "strict_pre_submission_compliance_json",
     "meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions",
@@ -111,64 +127,89 @@
       "sha256": null
     },
     {
-      "available": false,
-      "bytes": null,
+      "available": true,
+      "bytes": 2229,
       "id": "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256",
-      "missing_reason": "not_provided",
-      "path": "",
-      "provided": false,
+      "json_parseable": true,
+      "missing_reason": "",
+      "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256.json",
+      "provided": true,
       "ready_for_exact_eval_dispatch": false,
       "requirement_group": "source_custody",
       "score_claim": false,
-      "sha256": null
+      "sha256": "80fb2b1711ea9c256b03bbc0f7d0b801a5afa0ee7cd0a5d2fb7a7b9349cc4b23",
+      "validation": {
+        "blockers": [],
+        "valid": true
+      }
     },
     {
-      "available": false,
-      "bytes": null,
+      "available": true,
+      "bytes": 969,
       "id": "source_stream_section_sha256_byte_range_and_symbol_count",
-      "missing_reason": "not_provided",
-      "path": "",
-      "provided": false,
+      "json_parseable": true,
+      "missing_reason": "",
+      "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/source_stream_section_sha256_byte_range_and_symbol_count.json",
+      "provided": true,
       "ready_for_exact_eval_dispatch": false,
       "requirement_group": "source_custody",
       "score_claim": false,
-      "sha256": null
+      "sha256": "0ff2bee04ae7fed3ad2bbd7aac6d22229155bd01958de86aa275cd999c052eed",
+      "validation": {
+        "blockers": [],
+        "valid": true
+      }
     },
     {
-      "available": false,
-      "bytes": null,
+      "available": true,
+      "bytes": 1351,
       "id": "candidate_stream_section_sha256_byte_range_and_byte_count",
-      "missing_reason": "not_provided",
-      "path": "",
-      "provided": false,
+      "json_parseable": true,
+      "missing_reason": "",
+      "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/candidate_stream_section_sha256_byte_range_and_byte_count.json",
+      "provided": true,
       "ready_for_exact_eval_dispatch": false,
       "requirement_group": "byte_equivalence",
       "score_claim": false,
-      "sha256": null
+      "sha256": "60a6011b19c8f5aebf49625f1bd9a5879dc0e132e508f1d12bbfdce63bd4b472",
+      "validation": {
+        "blockers": [],
+        "valid": true
+      }
     },
     {
-      "available": false,
-      "bytes": null,
+      "available": true,
+      "bytes": 1039,
       "id": "old_new_decoded_output_sha256_equality_report",
-      "missing_reason": "not_provided",
-      "path": "",
-      "provided": false,
+      "json_parseable": true,
+      "missing_reason": "",
+      "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/old_new_decoded_output_sha256_equality_report.json",
+      "provided": true,
       "ready_for_exact_eval_dispatch": false,
       "requirement_group": "byte_equivalence",
       "score_claim": false,
-      "sha256": null
+      "sha256": "3a621e1da87900e5e3b89680efe4a9b170d96a0c0472f495517aba700a12600c",
+      "validation": {
+        "blockers": [],
+        "valid": true
+      }
     },
     {
-      "available": false,
-      "bytes": null,
+      "available": true,
+      "bytes": 777,
       "id": "roundtrip_decode_validation_manifest",
-      "missing_reason": "not_provided",
-      "path": "",
-      "provided": false,
+      "json_parseable": true,
+      "missing_reason": "",
+      "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/roundtrip_decode_validation_manifest.json",
+      "provided": true,
       "ready_for_exact_eval_dispatch": false,
       "requirement_group": "byte_equivalence",
       "score_claim": false,
-      "sha256": null
+      "sha256": "d6fedb748580eb92c4cfd27d4666eabcaffcd32629ecc131ef975b6026d43562",
+      "validation": {
+        "blockers": [],
+        "valid": true
+      }
     },
     {
       "available": false,
@@ -224,20 +265,10 @@
     "missing_artifact:byte_accounted_model_overhead_reduction_manifest",
     "missing_artifact:byte_accounted_static_model_context_reduction_manifest",
     "missing_artifact:old_new_model_context_table_diff",
-    "missing_artifact:source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256",
-    "missing_artifact:source_stream_section_sha256_byte_range_and_symbol_count",
-    "missing_artifact:candidate_stream_section_sha256_byte_range_and_byte_count",
-    "missing_artifact:old_new_decoded_output_sha256_equality_report",
-    "missing_artifact:roundtrip_decode_validation_manifest",
     "missing_artifact:candidate_archive_manifest_with_member_sha256s",
     "missing_artifact:strict_pre_submission_compliance_json",
     "missing_artifact:meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions",
     "missing_artifact:runtime_tree_parity_manifest",
-    "missing_source_archive_manifest",
-    "missing_source_stream_sha256_and_byte_range",
-    "missing_candidate_stream_sha256_and_byte_range",
-    "missing_decoded_output_byte_equivalence_report",
-    "missing_roundtrip_decode_validation_manifest",
     "missing_candidate_archive_manifest",
     "missing_runtime_tree_parity_manifest"
   ],
@@ -380,19 +411,50 @@
   "tool_run_manifest": {
     "argv": [
       "--entropy-audit",
-      "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",
-      "--entropy-audit-json-out",
       "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/entropy_overhead_audit_from_pr106_decoder_recode_profile.json",
+      "--hdc2-stream-work-product-profile",
+      "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",
+      "--hdc2-stream-work-product-source-archive",
+      "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+      "--hdc2-stream-work-product-source-exact-eval-json",
+      "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json",
+      "--hdc2-stream-work-product-dir",
+      "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product",
       "--json-out",
       "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/candidate_packet_from_pr106_entropy_audit.json"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "e275165865bdfa09c69b1283fe762adda81b08f80bb4fef06440c0f3556591be",
+    "canonical_payload_without_tool_manifest_sha256": "cc67e463eca72959048ddf481fdbff6a6272cc2502ec106c0b9174528edc0ff8",
     "dispatch_attempted": false,
     "input_files": [
       {
         "bytes": 18138,
         "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/entropy_overhead_audit_from_pr106_decoder_recode_profile.json",
         "sha256": "0514a47f7e786f5353d4a3329a3f7be734d03dbd0816b7376dde536c5d639d82"
+      },
+      {
+        "bytes": 2229,
+        "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256.json",
+        "sha256": "80fb2b1711ea9c256b03bbc0f7d0b801a5afa0ee7cd0a5d2fb7a7b9349cc4b23"
+      },
+      {
+        "bytes": 969,
+        "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/source_stream_section_sha256_byte_range_and_symbol_count.json",
+        "sha256": "0ff2bee04ae7fed3ad2bbd7aac6d22229155bd01958de86aa275cd999c052eed"
+      },
+      {
+        "bytes": 1351,
+        "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/candidate_stream_section_sha256_byte_range_and_byte_count.json",
+        "sha256": "60a6011b19c8f5aebf49625f1bd9a5879dc0e132e508f1d12bbfdce63bd4b472"
+      },
+      {
+        "bytes": 1039,
+        "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/old_new_decoded_output_sha256_equality_report.json",
+        "sha256": "3a621e1da87900e5e3b89680efe4a9b170d96a0c0472f495517aba700a12600c"
+      },
+      {
+        "bytes": 777,
+        "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/roundtrip_decode_validation_manifest.json",
+        "sha256": "d6fedb748580eb92c4cfd27d4666eabcaffcd32629ecc131ef975b6026d43562"
       }
     ],
     "output_path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/candidate_packet_from_pr106_entropy_audit.json",

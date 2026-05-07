@@ -12,13 +12,13 @@ non-authoritative by callers.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, MutableMapping
+from typing import Any
 
 import torch
 import torch.nn as nn
-
 
 SENSITIVITY_MAP_FORMAT = "tac_score_sensitivity_map_v1"
 CERTIFIED_SENSITIVITY_MAP_CERTIFICATION_FORMAT = "component_sensitivity_map_certification_v1"
@@ -37,6 +37,115 @@ _CERTIFICATION_TRUE_FIELDS = (
     "promotion_eligible",
 )
 _CERTIFICATION_COMPONENTS = {"posenet", "segnet", "combined"}
+_REAL_SENSITIVITY_BAD_BOOL_KEYS = frozenset(
+    {
+        "advisory_only",
+        "debug",
+        "design_mode",
+        "dummy",
+        "dummy_sensitivity",
+        "fake",
+        "fake_sensitivity",
+        "is_debug",
+        "is_planning",
+        "is_planning_only",
+        "is_smoke",
+        "is_stub",
+        "local_proxy",
+        "non_authoritative",
+        "non_promotable",
+        "planning",
+        "planning_only",
+        "proxy",
+        "proxy_only",
+        "random",
+        "random_sensitivity",
+        "smoke",
+        "smoke_test",
+        "source_archive_stale",
+        "stale",
+        "stub",
+        "synthetic",
+        "synthetic_sensitivity",
+        "uniform",
+        "uniform_sensitivity",
+    }
+)
+_REAL_SENSITIVITY_TEXT_KEYS = frozenset(
+    {
+        "evidence_grade",
+        "kind",
+        "mode",
+        "notes",
+        "provenance",
+        "source",
+        "source_kind",
+        "status",
+        "tag",
+    }
+)
+_REAL_SENSITIVITY_BAD_TEXT_MARKERS = (
+    "stub",
+    "planning-only",
+    "planning_only",
+    "design-mode",
+    "design_mode",
+    "advisory-only",
+    "advisory_only",
+    "advisory only",
+    "debug",
+    "diagnostic",
+    "dummy",
+    "fake",
+    "local_proxy",
+    "non_authoritative",
+    "non_promotable",
+    "placeholder",
+    "proxy_only",
+    "random_sensitivity",
+    "smoke",
+    "stale",
+    "superseded",
+    "synthetic",
+    "uniform_sensitivity",
+)
+_REAL_SENSITIVITY_SOURCE_SHA_KEYS = (
+    "source_archive_sha256",
+    "source_archive_sha",
+    "baseline_archive_sha256",
+)
+_REAL_SENSITIVITY_SOURCE_BYTES_KEYS = (
+    "source_archive_bytes",
+    "baseline_archive_bytes",
+)
+_REAL_SENSITIVITY_MODEL_SHA_KEYS = (
+    "model_sha256",
+    "checkpoint_sha256",
+    "state_dict_sha256",
+    "state_dict_source_sha256",
+    "decoder_state_dict_sha256",
+    "model_state_dict_sha256",
+    "baseline_model_sha256",
+    "baseline_checkpoint_sha256",
+)
+_REAL_SENSITIVITY_MODEL_ID_KEYS = (
+    "model_id",
+    "checkpoint_id",
+    "state_dict_id",
+    "decoder_model_id",
+    "baseline_model_id",
+)
+_REAL_SENSITIVITY_CERTIFICATION_SUMMARY_SHA_KEYS = (
+    "certification_summary_sha256",
+    "component_sensitivity_summary_sha256",
+    "component_sensitivity_manifest_sha256",
+    "certified_component_sensitivity_manifest_sha256",
+)
+_REAL_SENSITIVITY_COMPONENT_KEYS = (
+    "component",
+    "component_scope",
+    "scorer_target",
+)
 
 
 class SensitivityMapError(ValueError):
@@ -315,6 +424,332 @@ def validate_certified_sensitivity_map_metadata(
     return out
 
 
+def _flatten_metadata(metadata: Mapping[str, Any], prefix: str = ""):
+    for key, value in metadata.items():
+        full_key = f"{prefix}.{key}" if prefix else str(key)
+        if isinstance(value, Mapping):
+            yield from _flatten_metadata(value, full_key)
+        else:
+            yield full_key, value
+
+
+def _metadata_value(metadata: Mapping[str, Any], keys: tuple[str, ...]) -> Any | None:
+    for key in keys:
+        if key in metadata:
+            return metadata[key]
+    for container in ("source_archive", "baseline_archive", "source", "certification"):
+        nested = metadata.get(container)
+        if not isinstance(nested, Mapping):
+            continue
+        for key in keys:
+            if key in nested:
+                return nested[key]
+        if any(candidate.endswith("sha256") for candidate in keys):
+            for key in ("sha256", "archive_sha256"):
+                if key in nested:
+                    return nested[key]
+        if any(candidate.endswith("bytes") for candidate in keys) and "bytes" in nested:
+            return nested["bytes"]
+    return None
+
+
+def _metadata_values(metadata: Mapping[str, Any], keys: tuple[str, ...]):
+    for key in keys:
+        if key in metadata:
+            yield key, metadata[key]
+    for container in ("source_archive", "baseline_archive", "source", "model", "checkpoint", "certification"):
+        nested = metadata.get(container)
+        if not isinstance(nested, Mapping):
+            continue
+        for key in keys:
+            if key in nested:
+                yield f"{container}.{key}", nested[key]
+        if any(candidate.endswith("sha256") for candidate in keys):
+            for key in ("sha256", "archive_sha256", "model_sha256", "checkpoint_sha256"):
+                if key in nested:
+                    yield f"{container}.{key}", nested[key]
+        if any(candidate.endswith("bytes") for candidate in keys) and "bytes" in nested:
+            yield f"{container}.bytes", nested["bytes"]
+
+
+def _normalise_expected_sha256(value: str, *, label: str) -> str:
+    digest = str(value).strip().lower()
+    if len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+        raise SensitivityMapError(f"expected {label} SHA must be a 64-hex digest")
+    return digest
+
+
+def _compare_expected_sha256(
+    metadata: Mapping[str, Any],
+    keys: tuple[str, ...],
+    expected: str,
+    *,
+    label: str,
+) -> list[str]:
+    failures: list[str] = []
+    try:
+        actual = _normalise_expected_sha256(expected, label=label)
+    except SensitivityMapError as exc:
+        return [str(exc)]
+    observed = list(_metadata_values(metadata, keys))
+    if not observed:
+        return [f"metadata missing 64-hex {label} SHA"]
+    for source, recorded in observed:
+        if not isinstance(recorded, str):
+            failures.append(f"metadata {source} {label} SHA is not a string: {recorded!r}")
+            continue
+        digest = recorded.strip().lower()
+        if len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+            failures.append(f"metadata {source} {label} SHA is not a 64-hex digest: {recorded!r}")
+            continue
+        if digest != actual:
+            failures.append(
+                f"metadata {source} {label} SHA is stale or mismatched: "
+                f"metadata={digest} actual={actual}"
+            )
+    return failures
+
+
+def _compare_expected_string(
+    metadata: Mapping[str, Any],
+    keys: tuple[str, ...],
+    expected: str,
+    *,
+    label: str,
+) -> list[str]:
+    failures: list[str] = []
+    actual = str(expected)
+    observed = list(_metadata_values(metadata, keys))
+    if not observed:
+        return [f"metadata missing {label} binding"]
+    for source, recorded in observed:
+        if not isinstance(recorded, str):
+            failures.append(f"metadata {source} {label} is not a string: {recorded!r}")
+        elif recorded != actual:
+            failures.append(
+                f"metadata {source} {label} is stale or mismatched: "
+                f"metadata={recorded!r} actual={actual!r}"
+            )
+    return failures
+
+
+def _component_scope_failures(metadata: Mapping[str, Any], component: str) -> list[str]:
+    failures: list[str] = []
+    for key in _REAL_SENSITIVITY_COMPONENT_KEYS:
+        if key not in metadata:
+            continue
+        value = metadata[key]
+        if isinstance(value, str):
+            if value != component:
+                failures.append(
+                    f"metadata {key}={value!r} does not match component={component!r}"
+                )
+        elif isinstance(value, (list, tuple)):
+            if component not in value:
+                failures.append(
+                    f"metadata {key} does not include component={component!r}: {value!r}"
+                )
+        elif value is not None:
+            failures.append(f"metadata {key} has unsupported component binding: {value!r}")
+    return failures
+
+
+def real_sensitivity_metadata_blockers(metadata: Mapping[str, Any]) -> list[str]:
+    """Return stub/proxy/planning markers that disqualify a real map."""
+    if not isinstance(metadata, Mapping):
+        return ["metadata is not a mapping"]
+    blockers: list[str] = []
+    for full_key, value in _flatten_metadata(metadata):
+        key = full_key.rsplit(".", 1)[-1]
+        key_norm = key.lower().replace("-", "_")
+        if key_norm in _REAL_SENSITIVITY_BAD_BOOL_KEYS and value is True:
+            blockers.append(f"{full_key}=true")
+        if key_norm in _REAL_SENSITIVITY_TEXT_KEYS and isinstance(value, str):
+            value_norm = value.lower()
+            for marker in _REAL_SENSITIVITY_BAD_TEXT_MARKERS:
+                if marker in value_norm:
+                    blockers.append(f"{full_key} contains {marker!r}")
+                    break
+        if key_norm in {"status", "mode", "kind"} and isinstance(value, str):
+            value_exact = value.strip().lower().replace("_", "-")
+            if value_exact in {"planning", "design", "debug", "proxy", "prototype"}:
+                blockers.append(f"{full_key}={value!r}")
+    return blockers
+
+
+def validate_real_sensitivity_artifact(
+    sensitivities: Mapping[str, torch.Tensor],
+    metadata: Mapping[str, Any],
+    *,
+    source_archive_sha256: str | None = None,
+    source_archive_bytes: int | None = None,
+    model_sha256: str | None = None,
+    checkpoint_sha256: str | None = None,
+    model_id: str | None = None,
+    certification_summary_sha256: str | None = None,
+    component: str | None = None,
+    reject_uniform: bool = True,
+) -> dict[str, Any]:
+    """Fail closed unless a sensitivity artifact is promotion-capable.
+
+    This is the integration gate for archive builders and dispatch dry-runs.
+    It rejects diagnostic/stub/proxy metadata, requires certified CUDA
+    component-response provenance, checks optional source archive / model /
+    certification-summary custody, and refuses empty, all-zero, or uniform
+    tensor payloads before candidate bytes are emitted.
+    """
+    if not isinstance(sensitivities, Mapping) or not sensitivities:
+        raise SensitivityMapError("real sensitivity artifact requires non-empty sensitivities")
+    if not isinstance(metadata, Mapping):
+        raise SensitivityMapError("real sensitivity artifact requires metadata mapping")
+
+    failures: list[str] = []
+    failures.extend(real_sensitivity_metadata_blockers(metadata))
+
+    try:
+        certification = validate_certified_sensitivity_map_metadata(
+            metadata,
+            component=component,
+        )
+    except SensitivityMapError as exc:
+        failures.append(f"certification rejected: {exc}")
+        certification = {}
+
+    if component is not None:
+        failures.extend(_component_scope_failures(metadata, component))
+
+    flat_values: list[torch.Tensor] = []
+    for key, value in sensitivities.items():
+        if not torch.is_tensor(value):
+            failures.append(f"{key}: sensitivity is not a tensor")
+            continue
+        try:
+            vec = validate_sensitivity_vector(
+                value.reshape(-1),
+                expected_channels=int(value.numel()),
+                name=str(key),
+            )
+        except SensitivityMapError as exc:
+            failures.append(str(exc))
+            continue
+        if vec.numel() == 0:
+            failures.append(f"{key}: sensitivity is empty")
+            continue
+        flat_values.append(vec)
+
+    if not flat_values:
+        failures.append("sensitivity artifact has no tensor values")
+    else:
+        all_values = torch.cat(flat_values).float()
+        if float(all_values.clamp_min(0).sum().item()) <= 0.0:
+            failures.append("sensitivity artifact has no positive scorer signal")
+        if reject_uniform and all_values.numel() > 1 and torch.allclose(
+            all_values,
+            all_values[:1].expand_as(all_values),
+            rtol=0.0,
+            atol=1e-12,
+        ):
+            failures.append(
+                "sensitivity artifact is uniform; dummy/stub sensitivity is non-promotable"
+            )
+
+    if source_archive_sha256 is not None:
+        failures.extend(
+            _compare_expected_sha256(
+                metadata,
+                _REAL_SENSITIVITY_SOURCE_SHA_KEYS,
+                source_archive_sha256,
+                label="source archive",
+            )
+        )
+
+    if source_archive_bytes is not None:
+        actual_bytes = int(source_archive_bytes)
+        recorded_bytes = _metadata_value(metadata, _REAL_SENSITIVITY_SOURCE_BYTES_KEYS)
+        if recorded_bytes is not None:
+            try:
+                recorded_bytes_int = int(recorded_bytes)
+            except (TypeError, ValueError):
+                failures.append(
+                    f"metadata source archive bytes is not an integer: {recorded_bytes!r}"
+                )
+            else:
+                if recorded_bytes_int != actual_bytes:
+                    failures.append(
+                        "metadata source archive bytes is stale or mismatched: "
+                        f"metadata={recorded_bytes_int} actual={actual_bytes}"
+                    )
+        certified_bytes = certification.get("baseline_archive_bytes")
+        if (
+            isinstance(certified_bytes, int)
+            and not isinstance(certified_bytes, bool)
+            and certified_bytes != actual_bytes
+        ):
+            failures.append(
+                "certification baseline_archive_bytes is stale or mismatched: "
+                f"metadata={certified_bytes} actual={actual_bytes}"
+            )
+
+    expected_model_sha256 = model_sha256
+    if checkpoint_sha256 is not None:
+        if expected_model_sha256 is not None:
+            try:
+                model_digest = _normalise_expected_sha256(expected_model_sha256, label="model")
+                checkpoint_digest = _normalise_expected_sha256(checkpoint_sha256, label="checkpoint")
+            except SensitivityMapError as exc:
+                failures.append(str(exc))
+                checkpoint_digest = model_digest = ""
+            if model_digest and checkpoint_digest and model_digest != checkpoint_digest:
+                failures.append(
+                    "model_sha256 and checkpoint_sha256 expectations disagree: "
+                    f"model={model_digest} checkpoint={checkpoint_digest}"
+                )
+        else:
+            expected_model_sha256 = checkpoint_sha256
+    if expected_model_sha256 is not None:
+        failures.extend(
+            _compare_expected_sha256(
+                metadata,
+                _REAL_SENSITIVITY_MODEL_SHA_KEYS,
+                expected_model_sha256,
+                label="model/checkpoint",
+            )
+        )
+    if model_id is not None:
+        failures.extend(
+            _compare_expected_string(
+                metadata,
+                _REAL_SENSITIVITY_MODEL_ID_KEYS,
+                model_id,
+                label="model id",
+            )
+        )
+    if certification_summary_sha256 is not None:
+        failures.extend(
+            _compare_expected_sha256(
+                metadata,
+                _REAL_SENSITIVITY_CERTIFICATION_SUMMARY_SHA_KEYS,
+                certification_summary_sha256,
+                label="certification summary",
+            )
+        )
+
+    if failures:
+        raise SensitivityMapError("; ".join(failures))
+
+    n_values = int(sum(vec.numel() for vec in flat_values))
+    return {
+        "n_tensors": len(sensitivities),
+        "n_values": n_values,
+        "certification": certification,
+        "source_archive_sha256": source_archive_sha256,
+        "source_archive_bytes": source_archive_bytes,
+        "model_sha256": expected_model_sha256,
+        "model_id": model_id,
+        "certification_summary_sha256": certification_summary_sha256,
+    }
+
+
 def save_certified_sensitivity_map(
     path: str | Path,
     sensitivities: Mapping[str, torch.Tensor],
@@ -370,18 +805,20 @@ def sensitivity_cv_distance(
 
 
 __all__ = [
-    "SENSITIVITY_MAP_FORMAT",
     "CERTIFIED_SENSITIVITY_MAP_CERTIFICATION_FORMAT",
+    "SENSITIVITY_MAP_FORMAT",
     "SensitivityMapError",
     "SensitivityMapStats",
-    "require_authoritative_device",
-    "validate_sensitivity_vector",
     "conv_weight_shapes",
-    "resolve_layer_sensitivity",
-    "validate_sensitivity_map_for_model",
-    "save_sensitivity_map",
     "load_sensitivity_map",
+    "real_sensitivity_metadata_blockers",
+    "require_authoritative_device",
+    "resolve_layer_sensitivity",
     "save_certified_sensitivity_map",
-    "validate_certified_sensitivity_map_metadata",
+    "save_sensitivity_map",
     "sensitivity_cv_distance",
+    "validate_certified_sensitivity_map_metadata",
+    "validate_real_sensitivity_artifact",
+    "validate_sensitivity_map_for_model",
+    "validate_sensitivity_vector",
 ]

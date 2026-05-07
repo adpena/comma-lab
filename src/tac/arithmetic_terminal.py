@@ -56,7 +56,7 @@ bit-deterministically.
 CLAUDE.md compliance
 --------------------
 * COMPRESS-time + INFLATE-time. Inflate path uses no scorer load.
-* Encoder verifies decoder roundtrip on every call.
+* Public encoders verify decoder roundtrip on every call.
 * Bit-deterministic on all platforms (CPython int math).
 """
 from __future__ import annotations
@@ -84,6 +84,7 @@ from tac.balle_hyperprior_codec import (
 
 _ATBH_MAGIC: bytes = b"ATBH"
 _ATBH_VERSION: int = 1
+_ATBH_FIXED_HEADER_SIZE: int = 4 + 2 + 2 + 4 + 8 + 4 + 4
 
 # σ-step for the q8 quantization grid. The σ range is [SIGMA_MIN, SIGMA_MAX]
 # = [0.05, 32]; with 256 levels the step is (32 - 0.05) / 255 ≈ 0.1253 per
@@ -127,7 +128,11 @@ def encode_static(
         )
     if offset is None:
         raise ValueError("encode_static: offset is required")
-    return encode_qints_arithmetic(qints, num_symbols=num_symbols, offset=offset)
+    blob = encode_qints_arithmetic(qints, num_symbols=num_symbols, offset=offset)
+    decoded = decode_static(blob=blob, expected_dtype=np.ascontiguousarray(qints).dtype)
+    if not np.array_equal(decoded, np.ascontiguousarray(qints).ravel()):
+        raise ValueError("encode_static: decoder roundtrip verification failed")
+    return blob
 
 
 def decode_static(
@@ -240,7 +245,11 @@ def encode_hyperprior(
     out.write(sigma_q8.tobytes())
     out.write(struct.pack("<Q", len(payload)))
     out.write(payload)
-    return out.getvalue()
+    blob = out.getvalue()
+    decoded = decode_hyperprior(blob=blob, expected_dtype=flat.dtype)
+    if not np.array_equal(decoded, flat):
+        raise ValueError("encode_hyperprior: decoder roundtrip verification failed")
+    return blob
 
 
 def decode_hyperprior(
@@ -251,6 +260,11 @@ def decode_hyperprior(
     """ATBHv1 arithmetic terminal decoder (matched to ``encode_hyperprior``)."""
     if blob is None:
         raise ValueError("decode_hyperprior: blob is required")
+    if len(blob) < _ATBH_FIXED_HEADER_SIZE:
+        raise ValueError(
+            f"decode_hyperprior: truncated fixed header "
+            f"(got {len(blob)} bytes, need at least {_ATBH_FIXED_HEADER_SIZE})"
+        )
     if blob[:4] != _ATBH_MAGIC:
         raise ValueError(
             f"decode_hyperprior: bad magic {blob[:4]!r}, expected {_ATBH_MAGIC!r}"
@@ -264,24 +278,45 @@ def decode_hyperprior(
         )
     (num_symbols,) = struct.unpack_from("<H", blob, cursor)
     cursor += 2
+    if num_symbols < 2:
+        raise ValueError(f"decode_hyperprior: num_symbols must be >= 2, got {num_symbols}")
     (offset,) = struct.unpack_from("<i", blob, cursor)
     cursor += 4
     (n_total,) = struct.unpack_from("<Q", blob, cursor)
     cursor += 8
     (block_size,) = struct.unpack_from("<I", blob, cursor)
     cursor += 4
+    if block_size < 1:
+        raise ValueError(f"decode_hyperprior: block_size must be >= 1, got {block_size}")
     (n_blocks,) = struct.unpack_from("<I", blob, cursor)
     cursor += 4
+    expected_blocks = (int(n_total) + int(block_size) - 1) // int(block_size)
+    if n_blocks != expected_blocks:
+        raise ValueError(
+            f"decode_hyperprior: n_blocks {n_blocks} does not match "
+            f"ceil(n_total/block_size) {expected_blocks}"
+        )
+    if len(blob) < cursor + n_blocks + 8:
+        raise ValueError(
+            "decode_hyperprior: truncated sigma/header payload "
+            f"(got {len(blob)} bytes, need at least {cursor + n_blocks + 8})"
+        )
     sigma_q8 = np.frombuffer(blob[cursor : cursor + n_blocks], dtype=np.uint8).copy()
     cursor += n_blocks
     (payload_len,) = struct.unpack_from("<Q", blob, cursor)
     cursor += 8
-    payload = blob[cursor : cursor + payload_len]
-    if len(payload) != payload_len:
+    expected_end = cursor + int(payload_len)
+    if expected_end > len(blob):
         raise ValueError(
             f"decode_hyperprior: payload truncated "
-            f"(got {len(payload)}, declared {payload_len})"
+            f"(got {len(blob) - cursor}, declared {payload_len})"
         )
+    if expected_end != len(blob):
+        raise ValueError(
+            f"decode_hyperprior: trailing bytes after payload "
+            f"(payload_end={expected_end}, blob_len={len(blob)})"
+        )
+    payload = blob[cursor : cursor + payload_len]
 
     sigma_dec = np.fromiter(
         (_q8_to_sigma(int(q)) for q in sigma_q8),

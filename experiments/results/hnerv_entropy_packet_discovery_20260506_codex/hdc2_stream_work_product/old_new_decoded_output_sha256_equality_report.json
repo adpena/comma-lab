@@ -1,0 +1,27 @@
+{
+  "blockers_remaining_for_full_archive_equivalence": [
+    "candidate_archive_manifest_missing",
+    "runtime_tree_parity_manifest_missing",
+    "full_inflate_output_equivalence_not_run",
+    "exact_cuda_auth_eval_not_run"
+  ],
+  "decoded_object": "hnerv_decoder_raw_bytes",
+  "decoded_output_equal": true,
+  "dispatch_attempted": false,
+  "equivalence_scope": "decoder_stream_raw_bytes_only_not_video_output_or_archive_runtime",
+  "new_decoded_output": {
+    "bytes": 229070,
+    "sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703"
+  },
+  "old_decoded_output": {
+    "bytes": 229070,
+    "sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703"
+  },
+  "old_new_sha256_equal": true,
+  "ready_for_exact_eval_dispatch": false,
+  "requirement_id": "old_new_decoded_output_sha256_equality_report",
+  "schema_version": 1,
+  "score_claim": false,
+  "source_label": "public_pr106_belt_and_suspenders",
+  "tool": "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+}

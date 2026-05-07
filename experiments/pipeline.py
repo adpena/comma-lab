@@ -1460,10 +1460,21 @@ def step_compress_weights(
             )
         else:
             from tac.owv3_sensitivity_weighted import encode_owv3_archive
-            from tac.sensitivity_map import load_sensitivity_map
+            from tac.sensitivity_map import (
+                SensitivityMapError,
+                load_sensitivity_map,
+                validate_real_sensitivity_artifact,
+            )
             from tac.renderer import build_renderer
 
             sensitivities, sens_metadata = load_sensitivity_map(sens_path)
+            try:
+                validate_real_sensitivity_artifact(sensitivities, sens_metadata)
+            except SensitivityMapError as exc:
+                raise RuntimeError(
+                    "PARADIGM-β: refusing to build OWV3 archive with "
+                    f"non-real sensitivity artifact {sens_path!r}: {exc}"
+                ) from exc
             # Adversarial review 2026-05-06 fix: weights_only=True is the
             # safe path (CLAUDE.md FORBIDDEN PATTERN: arbitrary torch.load on
             # checkpoints from external sources — Vast.ai/Modal/Lightning

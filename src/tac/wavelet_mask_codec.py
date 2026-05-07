@@ -501,6 +501,8 @@ def decode_wavelet_codec(blob: bytes) -> torch.Tensor:
         raise ValueError(
             f"Wavelet magic mismatch: expected {WAVELET_MAGIC!r}, got {blob[:4]!r}"
         )
+    if len(blob) < 4 + 2 + 6 + 1 + 8 + 1 + 2:
+        raise ValueError(f"Wavelet payload truncated header: got {len(blob)} bytes")
     pos = 4
     version = struct.unpack_from("<H", blob, pos)[0]
     pos += 2
@@ -540,6 +542,16 @@ def decode_wavelet_codec(blob: bytes) -> torch.Tensor:
         freq[int(k)] = int(v)
     total, payload_size = struct.unpack_from("<II", blob, pos)
     pos += 8
+    payload_end = pos + int(payload_size)
+    if payload_end > len(blob):
+        raise ValueError(
+            f"Wavelet arithmetic payload truncated: declared {payload_size} bytes, "
+            f"available {len(blob) - pos}"
+        )
+    if payload_end != len(blob):
+        raise ValueError(
+            f"Wavelet payload has trailing bytes: payload_end={payload_end}, blob_len={len(blob)}"
+        )
     payload = blob[pos : pos + payload_size]
 
     # Total count of indices = sum over subband shapes

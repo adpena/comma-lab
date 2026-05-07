@@ -78,3 +78,38 @@ the scored-output boundary fail-closed:
 This does not reconstruct scorer-visible masks or frames. Readiness remains
 blocked by `runtime_loader_parity_not_passed` and `exact_cuda_auth_eval_missing`.
 No GPU, remote dispatch, score claim, or lane claim was performed.
+
+## Scorer-Visible Bridge Addendum
+
+Evidence grade: empirical local fail-closed bridge audit
+Score claim: false
+Dispatch attempted: false
+Lane claim: false
+
+Added a deterministic `lapose_foveation_scorer_visible_bridge_v1` report to the
+LFV1 runtime skeleton and candidate readiness audit. The report is recomputed
+from the packaged archive members plus the packaged `runtime_consumer.py` source
+and separates:
+
+- charged LFV1 structural consumption, which is proven locally;
+- scorer-visible renderer/mask output bridging, which is not present;
+- scored runtime output parity, which remains false until an exact runtime path
+  changes frames or masks and exact CUDA auth eval runs.
+
+The current LFV1 local archive contains only:
+
+- `inflate.sh`
+- `lapose_foveation_tuples.lfv1`
+- `runtime_consumer.py`
+- `runtime_consumer_proof_skeleton.json`
+
+It does not package any renderer, SegMap, mask stream, pose/zoom stream, or
+foveation parameter stream that the LFV1 tuples can modify. The readiness
+blockers now name the exact missing bridge:
+
+- `lapose_foveation_renderer_or_mask_output_path_missing`
+- `lapose_foveation_runtime_does_not_reference_scorer_visible_output_path`
+- `lapose_foveation_scorer_visible_output_parity_not_proven`
+
+This is still non-dispatchable and non-scoring. No GPU, remote dispatch, score
+claim, or lane claim was performed.

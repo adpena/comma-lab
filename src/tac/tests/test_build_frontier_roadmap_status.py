@@ -130,6 +130,9 @@ def test_frontier_roadmap_status_consumes_field_meta_packet_manifests(tmp_path: 
                 "job_name": "job_generic_packet",
                 "dispatch_unlocked": True,
                 "ready_for_exact_eval_dispatch_claim": True,
+                "family_group": "fixture_packet_family",
+                "pareto_scope": "fixture_packet_family",
+                "interaction_assumptions": ["fixture_first_order_packet"],
                 "archive": {
                     "path": archive.as_posix(),
                     "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
@@ -161,8 +164,80 @@ def test_frontier_roadmap_status_consumes_field_meta_packet_manifests(tmp_path: 
     assert packet_selection["candidate_local_preflight_ready_count"] == 1
     assert packet_selection["candidate_static_preflight_ready_count"] == 1
     assert packet_selection["ready_candidate_count"] == 0
+    assert packet_selection["pareto_summary"]["frontier_count"] == 1
+    assert packet_selection["kkt_ready_for_field_planning_count"] == 0
     assert packet_selection["selected_candidate"]["candidate_id"] == "generic_packet"
     assert packet_selection["selected_candidate"]["strict_candidate_preflight_ready"] is True
     assert packet_selection["selected_candidate"]["candidate_static_preflight_ready"] is True
+    assert packet_selection["selected_candidate"]["kkt_ready_for_field_planning"] is False
+    assert "kkt:kkt_proof_or_admm_result_missing" in packet_selection["selected_candidate"]["kkt_blockers"]
+    assert packet_selection["selected_candidate"]["selection_decision"] == "needs_active_lane_claim_before_dispatch"
     assert packet_selection["selected_candidate"]["ready_for_exact_eval_dispatch"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_frontier_roadmap_status_passes_dirty_paths_to_packet_selector(tmp_path: Path) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="dirty_packet",
+        code_paths=["src/tac/optimization/dirty_packet_owner.py"],
+    )
+
+    payload = build_roadmap_status(
+        repo_root=REPO,
+        dirty_paths=["src/tac/optimization/dirty_packet_owner.py"],
+        packet_manifest_paths=[manifest],
+    )
+
+    packet_selection = payload["next_comprehensive_tranche"][
+        "field_meta_candidate_packet_selection"
+    ]
+    row = packet_selection["rows"][0]
+    assert packet_selection["dirty_blocked_candidate_count"] == 1
+    assert row["candidate_id"] == "dirty_packet"
+    assert row["dirty_blocked"] is True
+    assert row["candidate_static_preflight_ready"] is False
+    assert row["selection_decision"] == "refused_dirty_worktree_overlap"
+
+
+def _packet_manifest(
+    root: Path,
+    *,
+    candidate_id: str,
+    code_paths: list[str] | None = None,
+) -> Path:
+    root.mkdir(parents=True, exist_ok=True)
+    archive = root / "archive.zip"
+    info = zipfile.ZipInfo("x")
+    info.date_time = (1980, 1, 1, 0, 0, 0)
+    info.external_attr = 0o644 << 16
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr(info, b"field meta packet archive")
+    payload = {
+        "candidate_id": candidate_id,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "dispatch_gate": "eligible_for_cuda_auth_eval_after_lane_claim",
+        "lane_id": f"lane_{candidate_id}",
+        "job_name": f"job_{candidate_id}",
+        "dispatch_unlocked": True,
+        "ready_for_exact_eval_dispatch_claim": True,
+        "family_group": "fixture_packet_family",
+        "pareto_scope": "fixture_packet_family",
+        "interaction_assumptions": ["fixture_first_order_packet"],
+        "archive": {
+            "path": archive.as_posix(),
+            "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+            "bytes": archive.stat().st_size,
+        },
+        "fixed_runtime_preflight": {
+            "ready_for_fixed_runtime_exact_eval": True,
+            "runtime_tree_sha256": "c" * 64,
+            "remaining_blockers": [],
+        },
+    }
+    if code_paths is not None:
+        payload["code_paths"] = code_paths
+    manifest = root / "manifest.json"
+    manifest.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return manifest

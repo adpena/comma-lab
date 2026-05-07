@@ -45,6 +45,7 @@ def test_expected_atom_score_delta_combines_rate_seg_pose_and_priors(tmp_path: P
             "conflicts_with_families": ["whole_mask_replacement"],
             "conflicts_with_atoms": ["atom:global_crf"],
             "interaction_assumptions": ["first_order_local_patch"],
+            "kkt_proof": _kkt_proof(),
             "archive_manifest_path": manifest.as_posix(),
             "archive_manifest_sha256": sha256_file(manifest),
         },
@@ -227,7 +228,10 @@ def test_pareto_frontier_marks_dominated_atoms_within_scope(tmp_path: Path) -> N
     assert dominated["pareto_dominated_by"] == ["dominator"]
     assert dominated["pareto_objectives"]["byte_delta"] == -100.0
     assert dominated["selection_penalty_terms"]["pareto_dominated_atom"] > 0.0
-    assert dominated["selection_score_delta"] > dominated["expected_total_score_delta"]
+    assert dominated["selection_score_delta"] == pytest.approx(
+        dominated["expected_total_score_delta"]
+    )
+    assert dominated["selection_penalty_units"] > 0.0
 
 
 def test_pareto_scope_preserves_orthogonal_families(tmp_path: Path) -> None:
@@ -308,7 +312,10 @@ def test_pareto_frontier_requires_verified_byte_closed_manifest(tmp_path: Path) 
     assert unclosed["pareto_frontier"] is False
     assert "missing_byte_closed_archive_manifest" in unclosed["kkt_blockers"]
     assert unclosed["selection_penalty_terms"]["missing_byte_closed_archive_manifest"] > 0.0
-    assert unclosed["selection_score_delta"] > unclosed["expected_total_score_delta"]
+    assert unclosed["selection_score_delta"] == pytest.approx(
+        unclosed["expected_total_score_delta"]
+    )
+    assert unclosed["selection_penalty_units"] > 0.0
 
 
 def test_selection_penalizes_proxy_and_unclosed_rows_before_raw_delta(tmp_path: Path) -> None:
@@ -368,8 +375,64 @@ def test_selection_penalizes_proxy_and_unclosed_rows_before_raw_delta(tmp_path: 
     assert unclosed["byte_closed_archive_manifest_attached"] is False
     assert unclosed["selection_penalty_terms"]["missing_byte_closed_archive_manifest"] > 0.0
     assert ledger["selection_policy"] == (
-        "penalize_non_rankable_proxy_non_byte_closed_dominated_and_kkt_blocked_rows"
+        "lexicographic_feasibility_tuple_orders_rows_before_pure_expected_score_delta; "
+        "penalty_terms_are_diagnostic_only"
     )
+
+
+def test_kkt_ready_requires_real_kkt_proof(tmp_path: Path) -> None:
+    manifest = _archive_manifest(tmp_path)
+    row = expected_atom_score_delta(
+        {
+            "atom_id": "missing_kkt_proof",
+            "family": "mask_atom",
+            "family_group": "mask",
+            "byte_delta": -1,
+            "confidence": 1.0,
+            "evidence_grade": "empirical",
+            "raw_equal": True,
+            "interaction_assumptions": ["first_order"],
+            "archive_manifest_path": manifest.as_posix(),
+            "archive_manifest_sha256": sha256_file(manifest),
+        },
+        base_pose_dist=0.01,
+    )
+
+    assert row["kkt_ready_for_field_planning"] is False
+    assert row["kkt_proof"]["status"] == "blocked"
+    assert "kkt:kkt_proof_or_admm_result_missing" in row["kkt_blockers"]
+    assert row["selection_penalty_terms"]["kkt_not_ready_for_field_planning"] > 0.0
+    assert row["selection_score_delta"] == pytest.approx(row["expected_total_score_delta"])
+    assert row["lexicographic_feasibility_tuple"][5] is False
+
+
+def test_converged_admm_result_can_make_atom_kkt_ready(tmp_path: Path) -> None:
+    manifest = _archive_manifest(tmp_path)
+    row = expected_atom_score_delta(
+        {
+            "atom_id": "admm_kkt_ready",
+            "family": "joint_stack",
+            "family_group": "joint_stack",
+            "byte_delta": -1,
+            "confidence": 1.0,
+            "evidence_grade": "empirical",
+            "raw_equal": True,
+            "interaction_assumptions": ["admm_waterline_checked"],
+            "archive_manifest_path": manifest.as_posix(),
+            "archive_manifest_sha256": sha256_file(manifest),
+            "admm_result": {
+                "converged": True,
+                "waterline_kkt_residual": 0.001,
+                "kkt_waterline_satisfied": True,
+            },
+        },
+        base_pose_dist=0.01,
+    )
+
+    assert row["kkt_ready_for_field_planning"] is True
+    assert row["kkt_proof"]["kind"] == "admm_result"
+    assert row["selection_score_delta"] == pytest.approx(row["expected_total_score_delta"])
+    assert row["lexicographic_feasibility_tuple"][5] is True
 
 
 def test_information_gain_and_uncertainty_are_preserved_and_tiebreak_ranked(
@@ -572,3 +635,11 @@ def _archive_manifest(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return manifest
+
+
+def _kkt_proof() -> dict[str, object]:
+    return {
+        "status": "passed",
+        "stationarity_residual": 0.0,
+        "stationarity_tolerance": 0.001,
+    }

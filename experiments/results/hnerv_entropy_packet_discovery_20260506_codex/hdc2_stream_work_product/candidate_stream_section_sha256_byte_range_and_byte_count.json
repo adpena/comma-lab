@@ -1,0 +1,33 @@
+{
+  "candidate_archive_manifest_available": false,
+  "candidate_archive_sha256": "",
+  "candidate_stream_file": {
+    "bytes": 221381,
+    "id": "candidate_hdc2_global_prev_symbol_stream",
+    "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/candidate_hdc2_global_prev_symbol_stream.bin",
+    "sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f"
+  },
+  "dispatch_attempted": false,
+  "ready_for_exact_eval_dispatch": false,
+  "requirement_id": "candidate_stream_section_sha256_byte_range_and_byte_count",
+  "schema_version": 1,
+  "score_claim": false,
+  "source_label": "public_pr106_belt_and_suspenders",
+  "stream": {
+    "byte_count": 221381,
+    "byte_range_basis": "standalone_candidate_stream_file",
+    "bytes": 221381,
+    "codec": "HDC2_global_prev_symbol_range_uint8",
+    "context_count": 247,
+    "context_token_count": 228930,
+    "end": 221381,
+    "header_bytes": 40840,
+    "name": "decoder_hdc2_global_prev_symbol_range_uint8",
+    "range_payload_bytes": 180429,
+    "raw_scale_bytes": 112,
+    "sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f",
+    "start": 0,
+    "variant": "range_prev_symbol_global_q_streams_plus_raw_scales"
+  },
+  "tool": "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+}

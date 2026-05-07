@@ -16,7 +16,6 @@ the sensitivity-map format, swaps build_renderer kwargs) this test fails.
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -24,7 +23,10 @@ import torch
 
 from experiments.pipeline import PipelineConfig, step_compress_weights
 from tac.renderer import build_renderer
-from tac.sensitivity_map import save_sensitivity_map
+from tac.sensitivity_map import (
+    CERTIFIED_SENSITIVITY_MAP_CERTIFICATION_FORMAT,
+    save_sensitivity_map,
+)
 
 
 def _build_tiny_model_and_save_checkpoint(ckpt_dir: Path) -> tuple[torch.nn.Module, Path]:
@@ -48,11 +50,10 @@ def _build_tiny_model_and_save_checkpoint(ckpt_dir: Path) -> tuple[torch.nn.Modu
     return model, ckpt_path
 
 
-def _save_synthetic_sensitivity_map(
+def _save_certified_sensitivity_map(
     model: torch.nn.Module, sens_path: Path
 ) -> dict[str, torch.Tensor]:
-    """Synthesize a per-conv sensitivity dict and save it via the canonical
-    saver. Mirrors the GPU sensitivity-sweep output format."""
+    """Save a shape-valid certified per-conv map for the dispatch gate."""
     sensitivities: dict[str, torch.Tensor] = {}
     for name, mod in model.named_modules():
         if isinstance(mod, torch.nn.Conv2d):
@@ -66,7 +67,28 @@ def _save_synthetic_sensitivity_map(
         sensitivities,
         metadata={
             "source": "test_pipeline_beta_dispatch",
-            "synthetic": True,
+            "component": "combined",
+            "device": "cuda",
+            "promotion_eligible": True,
+            "official_component_response": True,
+            "canonical_scorer_path": True,
+            "certification": {
+                "format": CERTIFIED_SENSITIVITY_MAP_CERTIFICATION_FORMAT,
+                "component": "combined",
+                "device": "cuda",
+                "official_component_response": True,
+                "canonical_scorer_path": True,
+                "promotion_eligible": True,
+                "source_map_sha256": "a" * 64,
+                "official_response_curve_sha256": "b" * 64,
+                "stability_sha256": "c" * 64,
+                "sample_plan_sha256": "d" * 64,
+                "baseline_archive_sha256": "e" * 64,
+                "baseline_archive_bytes": 123,
+                "contest_auth_eval_json_sha256": "f" * 64,
+                "review_clean_passes": 3,
+                "review_unresolved_blockers": [],
+            },
         },
     )
     return sensitivities
@@ -80,7 +102,7 @@ def test_beta_dispatch_with_valid_artifact_produces_archive(tmp_path: Path) -> N
     model, ckpt_path = _build_tiny_model_and_save_checkpoint(ckpt_dir)
 
     sens_path = tmp_path / "sensitivity_map.pt"
-    _save_synthetic_sensitivity_map(model, sens_path)
+    _save_certified_sensitivity_map(model, sens_path)
 
     output_dir = tmp_path / "results"
     cfg = PipelineConfig(
@@ -111,6 +133,35 @@ def test_beta_dispatch_with_valid_artifact_produces_archive(tmp_path: Path) -> N
         f"got {metadata.get('mode')!r}"
     )
     assert metadata.get("archive_bytes") == archive_path.stat().st_size
+
+
+def test_beta_dispatch_rejects_stub_sensitivity_before_archive_build(tmp_path: Path) -> None:
+    ckpt_dir = tmp_path / "checkpoint"
+    ckpt_dir.mkdir()
+    model, ckpt_path = _build_tiny_model_and_save_checkpoint(ckpt_dir)
+
+    sensitivities = {}
+    for name, mod in model.named_modules():
+        if isinstance(mod, torch.nn.Conv2d):
+            sensitivities[name] = torch.linspace(1e-4, 1e-2, mod.out_channels)
+    sens_path = tmp_path / "stub_sensitivity_map.pt"
+    save_sensitivity_map(
+        sens_path,
+        sensitivities,
+        metadata={"device": "cpu", "is_stub": True, "tag": "[stub-design-mode]"},
+    )
+
+    output_dir = tmp_path / "results"
+    cfg = PipelineConfig(
+        output_dir=str(output_dir),
+        use_sensitivity_weighted=True,
+        sensitivity_map_path=str(sens_path),
+    )
+
+    with pytest.raises(RuntimeError, match=r"non-real sensitivity artifact.*is_stub"):
+        step_compress_weights(cfg, ckpt_path, iteration=0)
+
+    assert not (output_dir / "iter_0" / "renderer_owv3_sensitivity.bin").exists()
 
 
 def test_beta_dispatch_falls_through_when_path_missing(
@@ -171,5 +222,5 @@ def test_beta_dispatch_falls_through_when_path_nonexistent(tmp_path: Path) -> No
 
     beta_archive = output_dir / "iter_0" / "renderer_owv3_sensitivity.bin"
     assert not beta_archive.exists(), (
-        f"β dispatch ran despite non-existent sensitivity_map_path"
+        "β dispatch ran despite non-existent sensitivity_map_path"
     )

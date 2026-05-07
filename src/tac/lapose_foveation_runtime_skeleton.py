@@ -9,10 +9,12 @@ output parity, no-op controls, and exact CUDA auth eval remain blockers.
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
 import struct
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -25,7 +27,37 @@ ROW_STRUCT = struct.Struct("<BHHHHHH")
 RUNTIME_PROOF_SKELETON_CONTRACT = "lapose_foveation_runtime_consumer_proof_skeleton_v1"
 RUNTIME_EFFECT_CONTROLS_CONTRACT = "lapose_foveation_runtime_effect_controls_v1"
 RUNTIME_STRUCTURAL_OUTPUT_CONTRACT = "lapose_foveation_runtime_structural_output_v1"
+RUNTIME_SCORER_VISIBLE_BRIDGE_CONTRACT = "lapose_foveation_scorer_visible_bridge_v1"
 UINT16_MAX = 65_535
+SCORER_VISIBLE_MEMBER_GROUPS = {
+    "mask_or_segmentation_stream": (
+        "masks.mkv",
+        "grayscale.mkv",
+        "masks.alpha4.mkv",
+        "masks.amrc",
+        "masks.nrv",
+        "masks.cdo1",
+        "masks.cdo1.xz",
+        "masks.cdo1.zlib",
+        "masks.cdo1.br",
+    ),
+    "renderer_or_segmap_runtime": (
+        "renderer.bin",
+        "renderer_payload.bin",
+        "renderer_payload.bin.br",
+        "p",
+        "segmap_weights.tar.xz",
+        "payload.bin",
+    ),
+    "pose_or_geometry_stream": (
+        "optimized_poses.pt",
+        "optimized_poses.bin",
+        "optimized_poses.qp1",
+        "zoom_scalars.bin",
+        "zoom_scalars.pt",
+        "foveation_params.bin",
+    ),
+}
 
 
 class RuntimeSkeletonError(RuntimeError):
@@ -49,6 +81,142 @@ def _canonical_json_sha256(payload: dict[str, Any]) -> str:
         "utf-8"
     )
     return _sha256_bytes(raw)
+
+
+def _member_group_report(member_names: Sequence[str]) -> dict[str, dict[str, Any]]:
+    present = set(member_names)
+    return {
+        group: {
+            "required_any_of": list(candidates),
+            "present_members": [name for name in candidates if name in present],
+            "present": any(name in present for name in candidates),
+        }
+        for group, candidates in SCORER_VISIBLE_MEMBER_GROUPS.items()
+    }
+
+
+def _runtime_symbol_names(runtime_consumer_source: str) -> set[str]:
+    try:
+        tree = ast.parse(runtime_consumer_source)
+    except SyntaxError:
+        return set()
+    symbols: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+            symbols.add(node.name)
+    return symbols
+
+
+def _runtime_source_references(runtime_consumer_source: str) -> dict[str, bool]:
+    symbols = _runtime_symbol_names(runtime_consumer_source)
+    return {
+        "references_lfv1_member": PAYLOAD_MEMBER in runtime_consumer_source,
+        "references_lfv1_decoder": "_decode_lfv1" in symbols,
+        "references_mask_stream_member": bool(
+            symbols
+            & {
+                "apply_lfv1_to_mask_output",
+                "apply_lfv1_to_segmentation_stream",
+                "write_lfv1_masks",
+            }
+        ),
+        "references_renderer_runtime_member": bool(
+            symbols
+            & {
+                "apply_lfv1_to_renderer_output",
+                "apply_lfv1_to_rgb_frames",
+                "write_lfv1_rendered_frames",
+            }
+        ),
+        "references_pose_or_geometry_member": bool(
+            symbols
+            & {
+                "apply_lfv1_to_pose_output",
+                "apply_lfv1_to_zoom_scalars",
+                "write_lfv1_pose_geometry",
+            }
+        ),
+        "references_foveation_loader": bool(
+            symbols
+            & {
+                "apply_lfv1_to_foveation_params",
+                "load_foveation_params",
+                "functional_hyperbolic_foveation",
+            }
+        ),
+        "references_frame_write_path": "write_scorer_visible_frames" in symbols,
+    }
+
+
+def build_scorer_visible_bridge_report(
+    archive_member_names: Sequence[str],
+    *,
+    runtime_consumer_source: str = "",
+) -> dict[str, Any]:
+    """Report whether LFV1 has a deterministic path to scorer-visible outputs."""
+
+    names = sorted(str(name) for name in archive_member_names if isinstance(name, str))
+    groups = _member_group_report(names)
+    source_refs = _runtime_source_references(runtime_consumer_source)
+    has_lfv1_payload = PAYLOAD_MEMBER in names
+    has_renderer_or_mask_path = (
+        groups["mask_or_segmentation_stream"]["present"]
+        or groups["renderer_or_segmap_runtime"]["present"]
+    )
+    runtime_references_scorer_visible_path = any(
+        source_refs[key]
+        for key in (
+            "references_mask_stream_member",
+            "references_renderer_runtime_member",
+            "references_pose_or_geometry_member",
+            "references_foveation_loader",
+            "references_frame_write_path",
+        )
+    )
+    bridge_path_present = (
+        has_lfv1_payload
+        and has_renderer_or_mask_path
+        and runtime_references_scorer_visible_path
+    )
+    blockers: list[str] = []
+    if not has_lfv1_payload:
+        blockers.append("lapose_foveation_lfv1_member_missing")
+    if not has_renderer_or_mask_path:
+        blockers.append("lapose_foveation_renderer_or_mask_output_path_missing")
+    if not runtime_references_scorer_visible_path:
+        blockers.append("lapose_foveation_runtime_does_not_reference_scorer_visible_output_path")
+    blockers.append("lapose_foveation_scorer_visible_output_parity_not_proven")
+
+    return {
+        "schema_version": 1,
+        "contract": RUNTIME_SCORER_VISIBLE_BRIDGE_CONTRACT,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "passed": False,
+        "bridge_path_present": bridge_path_present,
+        "archive_member_names": names,
+        "archive_member_groups": groups,
+        "runtime_source_references": source_refs,
+        "required_bridge": {
+            "charged_lfv1_tuple_member": PAYLOAD_MEMBER,
+            "must_map_lfv1_to": [
+                "renderer-conditioned RGB frame output",
+                "mask or segmentation stream consumed by inflate",
+                "pose, zoom, or foveation geometry consumed by inflate",
+            ],
+            "must_prove": [
+                "LFV1 mutation changes scorer-visible frames or masks",
+                "identity/no-op controls are byte-exact",
+                "exact CUDA auth eval on exact archive bytes",
+            ],
+        },
+        "blockers": blockers,
+        "fail_closed_reason": (
+            "LFV1 tuple bytes affect only the runtime skeleton structural digest; "
+            "no packaged renderer/mask output bridge applies them to scorer-visible outputs."
+        ),
+    }
 
 
 def _required_int(value: Any, *, label: str, low: int, high: int) -> int:
@@ -395,6 +563,15 @@ def verify_charged_members(archive_root: str | Path) -> dict[str, Any]:
             }
         )
 
+    try:
+        runtime_source = runtime_path.read_text(encoding="utf-8")
+    except OSError:
+        runtime_source = ""
+    scorer_visible_bridge = build_scorer_visible_bridge_report(
+        [path.name for path in root.iterdir() if path.is_file()],
+        runtime_consumer_source=runtime_source,
+    )
+
     return {
         "schema_version": 1,
         "kind": "lapose_foveation_runtime_skeleton_member_check",
@@ -404,6 +581,7 @@ def verify_charged_members(archive_root: str | Path) -> dict[str, Any]:
         "charged_members_verified": records,
         "lfv1_payload_decode": decoded,
         "runtime_effect_controls": runtime_effect_controls,
+        "scorer_visible_bridge": scorer_visible_bridge,
         "structural_runtime_consumption_proven": runtime_effect_controls[
             "structural_runtime_consumption"
         ]["passed"],
@@ -414,6 +592,7 @@ def verify_charged_members(archive_root: str | Path) -> dict[str, Any]:
         "dispatch_blockers": [
             "lapose_foveation_runtime_skeleton_not_a_decoder",
             "lapose_foveation_scored_runtime_output_parity_missing",
+            *scorer_visible_bridge["blockers"],
             "exact_cuda_auth_eval_missing",
         ],
     }

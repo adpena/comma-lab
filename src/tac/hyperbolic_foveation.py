@@ -527,7 +527,13 @@ def load_foveation_params(
                 f"bad foveation payload size in {path}: got {len(body)} bytes, "
                 f"expected {expected}"
             )
-        size = (int(h), int(w)) if image_size is None else _as_image_size(image_size)
+        header_size = (int(h), int(w))
+        if image_size is not None and _as_image_size(image_size) != header_size:
+            raise ValueError(
+                f"foveation header image_size {header_size} does not match "
+                f"expected {tuple(_as_image_size(image_size))}"
+            )
+        size = header_size
     else:
         if len(raw) % (5 * 4) != 0:
             raise ValueError(

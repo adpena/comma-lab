@@ -18,6 +18,7 @@ from tac.sensitivity_map import (
     save_sensitivity_map,
     sensitivity_cv_distance,
     validate_certified_sensitivity_map_metadata,
+    validate_real_sensitivity_artifact,
     validate_sensitivity_map_for_model,
     validate_sensitivity_vector,
 )
@@ -195,3 +196,53 @@ def test_certified_sensitivity_map_metadata_is_fail_closed(tmp_path: Path) -> No
     loaded, loaded_meta = load_sensitivity_map(path)
     assert torch.equal(loaded["layer.weight"], torch.ones(3))
     assert loaded_meta["official_component_response"] is True
+
+
+def test_real_sensitivity_artifact_rejects_stub_uniform_and_stale_source() -> None:
+    cert = _certification("combined")
+    metadata = {
+        "component": "combined",
+        "device": "cuda",
+        "promotion_eligible": True,
+        "official_component_response": True,
+        "canonical_scorer_path": True,
+        "certification": cert,
+    }
+    proof = validate_real_sensitivity_artifact(
+        {"layer.weight": torch.tensor([0.25, 1.0, 2.0])},
+        metadata,
+        source_archive_sha256="e" * 64,
+        source_archive_bytes=686635,
+        component="combined",
+    )
+    assert proof["n_tensors"] == 1
+    assert proof["n_values"] == 3
+    assert proof["certification"]["component"] == "combined"
+
+    stub = {**metadata, "is_stub": True, "tag": "[stub-design-mode]"}
+    with pytest.raises(SensitivityMapError, match="is_stub"):
+        validate_real_sensitivity_artifact(
+            {"layer.weight": torch.tensor([0.25, 1.0, 2.0])},
+            stub,
+            source_archive_sha256="e" * 64,
+            source_archive_bytes=686635,
+            component="combined",
+        )
+
+    with pytest.raises(SensitivityMapError, match="uniform"):
+        validate_real_sensitivity_artifact(
+            {"layer.weight": torch.ones(3)},
+            metadata,
+            source_archive_sha256="e" * 64,
+            source_archive_bytes=686635,
+            component="combined",
+        )
+
+    with pytest.raises(SensitivityMapError, match="stale or mismatched"):
+        validate_real_sensitivity_artifact(
+            {"layer.weight": torch.tensor([0.25, 1.0, 2.0])},
+            metadata,
+            source_archive_sha256="f" * 64,
+            source_archive_bytes=686635,
+            component="combined",
+        )

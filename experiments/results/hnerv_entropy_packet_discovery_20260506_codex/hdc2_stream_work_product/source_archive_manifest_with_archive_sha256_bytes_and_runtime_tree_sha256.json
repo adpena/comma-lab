@@ -1,0 +1,50 @@
+{
+  "archive": {
+    "bytes": 186239,
+    "member_bytes": 186131,
+    "member_name": "0.bin",
+    "member_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+    "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+    "sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+  },
+  "dispatch_attempted": false,
+  "inflate_runtime_manifest": {
+    "files": [
+      {
+        "bytes": 1032,
+        "relative_path": "inflate.sh",
+        "sha256": "da3375673901a2de4bb2439a0cdf92c5d4232b436ab396bab8bd93a953ac96c0"
+      }
+    ],
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 0,
+      "files": [],
+      "module_count": 0,
+      "parse_errors": [],
+      "root_import_modules": [],
+      "runtime_root_name": "pr106_belt_and_suspenders_adapter",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_file_count": 1,
+    "runtime_root": "/teamspace/studios/this_studio/pact/experiments/results/public_runtime_adapters_20260504_codex/pr106_belt_and_suspenders_adapter",
+    "runtime_tree_sha256": "7f4f458f23f5c92d1e94891c27fd429266081ac66b359f40b7ce68ef4acd17dd",
+    "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "requirement_id": "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256",
+  "runtime_manifest_source_json": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json",
+  "runtime_tree_sha256": "7f4f458f23f5c92d1e94891c27fd429266081ac66b359f40b7ce68ef4acd17dd",
+  "schema_version": 1,
+  "score_claim": false,
+  "score_evidence_grade": "invalid",
+  "source_label": "public_pr106_belt_and_suspenders",
+  "tool": "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+}

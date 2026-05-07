@@ -32,6 +32,14 @@ log() { echo "[lane-raft-init] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log
 PROVENANCE="$LOG_DIR/provenance.json"
 HEARTBEAT="$LOG_DIR/heartbeat.log"
 GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
+
+# NVDEC probe MUST run before any GPU-work invocation (including the
+# torch.cuda.is_available() query in the provenance block below) so a
+# bad-host case is caught in 5s instead of after $0.20+ of work.
+# (feedback_vastai_nvdec_host_variation, commit eef64293.)
+log "=== NVDEC pre-flight ==="
+bash "$WORKSPACE/scripts/probe_nvdec.sh" || { log "FATAL: NVDEC failed"; exit 2; }
+
 "$PYBIN" -c "
 import json, time, torch
 prov = {
@@ -55,8 +63,7 @@ print(json.dumps(prov))
 HB_PID=$!
 trap 'kill $HB_PID 2>/dev/null || true' EXIT
 
-log "=== Stage 0: NVDEC + RAFT module check ==="
-bash "$WORKSPACE/scripts/probe_nvdec.sh" || { log "FATAL: NVDEC failed"; exit 2; }
+log "=== Stage 0: RAFT module check (NVDEC already probed above) ==="
 "$PYBIN" -c "
 import sys; sys.path.insert(0, 'src')
 from tac.raft_pose import compute_raft_flow, flow_to_pose_dim0

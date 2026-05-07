@@ -28,10 +28,52 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.repo_io import json_text, read_json, repo_relative, sha256_file  # noqa: E402
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 TOOL = "tools/build_field_meta_dispatch_selection.py"
 STRICT_PREFLIGHT = "experiments/preflight_candidate_manifest_dispatch_readiness.py"
 HEX_CHARS = set("0123456789abcdef")
+PARETO_EPS = 1e-12
+PROXY_EVIDENCE_GRADE_MARKERS = (
+    "planning",
+    "proxy",
+    "prediction",
+)
+PARETO_MINIMIZE_OBJECTIVES = (
+    "expected_total_score_delta",
+    "byte_delta",
+    "expected_seg_dist_delta",
+    "expected_pose_dist_delta",
+)
+PARETO_MAXIMIZE_OBJECTIVES = (
+    "confidence",
+    "candidate_static_preflight_ready",
+)
+KKT_PROOF_PASS_STATUSES = {
+    "pass",
+    "passed",
+    "ready",
+    "verified",
+}
+KKT_PROOF_FAIL_STATUSES = {
+    "blocked",
+    "fail",
+    "failed",
+    "invalid",
+    "missing",
+    "not_ready",
+}
+SELECTION_PENALTIES = {
+    "dirty_path_blocked": 10_000.0,
+    "non_byte_closed_archive": 1_000.0,
+    "non_byte_closed_runtime": 1_000.0,
+    "strict_candidate_preflight_blocked": 500.0,
+    "missing_dispatch_identity_for_lane_claim": 250.0,
+    "missing_active_lane_dispatch_claim": 100.0,
+    "planning_or_proxy_packet": 75.0,
+    "pareto_ineligible_packet": 50.0,
+    "kkt_not_ready_for_field_planning": 25.0,
+    "pareto_dominated_packet": 10.0,
+}
 TERMINAL_CLAIM_STATUS_PREFIXES = (
     "completed_",
     "completed_score=",
@@ -82,6 +124,17 @@ def _unique_strings(values: Iterable[Any]) -> list[str]:
     return out
 
 
+def _ordered_unique_strings(values: Iterable[Any]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value)
+        if text and text not in seen:
+            seen.add(text)
+            out.append(text)
+    return out
+
+
 def _nested(mapping: Mapping[str, Any], path: Sequence[str]) -> Any:
     value: Any = mapping
     for key in path:
@@ -97,6 +150,32 @@ def _first_nonempty_string(mapping: Mapping[str, Any], paths: Sequence[Sequence[
         if isinstance(value, str) and value.strip():
             return value.strip()
     return ""
+
+
+def _first_numeric(mapping: Mapping[str, Any], paths: Sequence[Sequence[str]], default: float = 0.0) -> float:
+    for path in paths:
+        value = _nested(mapping, path)
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int | float):
+            return float(value)
+    return default
+
+
+def _first_bool(mapping: Mapping[str, Any], paths: Sequence[Sequence[str]]) -> bool | None:
+    for path in paths:
+        value = _nested(mapping, path)
+        if isinstance(value, bool):
+            return value
+    return None
+
+
+def _optional_numeric(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int | float):
+        return float(value)
+    return None
 
 
 def _coerce_positive_int(value: Any) -> int | None:
@@ -123,6 +202,83 @@ def _display_path(path: Path | None, *, repo_root: Path) -> str:
     if path is None:
         return ""
     return repo_relative(path, repo_root)
+
+
+def _repo_relative_if_possible(path: Path, *, repo_root: Path) -> str:
+    try:
+        return path.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _path_matches(candidate: str, dirty_path: str) -> bool:
+    candidate = candidate.strip()
+    dirty_path = dirty_path.strip()
+    if not candidate or not dirty_path:
+        return False
+    return (
+        dirty_path == candidate
+        or dirty_path.startswith(candidate.rstrip("/") + "/")
+        or candidate.startswith(dirty_path.rstrip("/") + "/")
+    )
+
+
+def _path_values(value: Any) -> list[str]:
+    out: list[str] = []
+    for item in _string_list(value):
+        text = item.strip()
+        if text:
+            out.append(text)
+    return out
+
+
+def _candidate_watch_paths(payload: Mapping[str, Any], *, manifest_path: Path, repo_root: Path) -> list[str]:
+    paths: list[str] = [_repo_relative_if_possible(manifest_path, repo_root=repo_root)]
+    for key in (
+        "code_paths",
+        "evidence_paths",
+        "source_paths",
+        "input_paths",
+        "artifact_paths",
+        "changed_paths",
+        "runtime_paths",
+    ):
+        paths.extend(_path_values(payload.get(key)))
+    for section_path, key in (
+        (("tool_run_manifest",), "input_paths"),
+        (("tool_run_manifest",), "output_paths"),
+        (("candidate_bundle",), "code_paths"),
+        (("candidate_bundle",), "evidence_paths"),
+        (("dispatch_readiness",), "evidence_paths"),
+        (("exact_eval_dispatch_gate",), "evidence_paths"),
+        (("dispatch_gate",), "evidence_paths"),
+    ):
+        section = _nested(payload, section_path)
+        if isinstance(section, Mapping):
+            paths.extend(_path_values(section.get(key)))
+    normalized: list[str] = []
+    for path in paths:
+        candidate = Path(path)
+        if candidate.is_absolute():
+            normalized.append(_repo_relative_if_possible(candidate, repo_root=repo_root))
+        else:
+            normalized.append(path)
+    return _ordered_unique_strings(normalized)
+
+
+def _dirty_paths_for_payload(
+    payload: Mapping[str, Any],
+    *,
+    manifest_path: Path,
+    repo_root: Path,
+    dirty_paths: Sequence[str] | None,
+) -> tuple[list[str], list[str]]:
+    watch_paths = _candidate_watch_paths(payload, manifest_path=manifest_path, repo_root=repo_root)
+    matches: list[str] = []
+    for dirty_path in dirty_paths or []:
+        if any(_path_matches(path, str(dirty_path)) for path in watch_paths):
+            matches.append(str(dirty_path))
+    return sorted(set(matches)), watch_paths
 
 
 def _unsafe_zip_member_name(name: str) -> str | None:
@@ -681,6 +837,325 @@ def _numeric_first(payload: Mapping[str, Any], keys: Sequence[str], default: flo
     return default
 
 
+def _candidate_family(payload: Mapping[str, Any]) -> tuple[str, str, str]:
+    family = _first_nonempty_string(
+        payload,
+        (
+            ("family",),
+            ("atom_family",),
+            ("family_group",),
+            ("meta_lagrangian_atom", "family"),
+            ("meta_lagrangian_atom", "family_group"),
+            ("meta_lagrangian_atom_export", "atom_template", "family"),
+            ("meta_lagrangian_atom_export", "atom_template", "family_group"),
+            ("selected_target", "family"),
+            ("selected_target", "family_group"),
+            ("selected_target", "meta_lagrangian_atom_export", "atom_template", "family"),
+            ("selected_target", "meta_lagrangian_atom_export", "atom_template", "family_group"),
+        ),
+    )
+    family_group = _first_nonempty_string(
+        payload,
+        (
+            ("family_group",),
+            ("family",),
+            ("atom_family",),
+            ("meta_lagrangian_atom", "family_group"),
+            ("meta_lagrangian_atom", "family"),
+            ("meta_lagrangian_atom_export", "atom_template", "family_group"),
+            ("meta_lagrangian_atom_export", "atom_template", "family"),
+            ("selected_target", "family_group"),
+            ("selected_target", "family"),
+            ("selected_target", "meta_lagrangian_atom_export", "atom_template", "family_group"),
+            ("selected_target", "meta_lagrangian_atom_export", "atom_template", "family"),
+        ),
+    )
+    if not family:
+        family = "unknown"
+    if not family_group:
+        family_group = family
+    pareto_scope = _first_nonempty_string(
+        payload,
+        (
+            ("pareto_scope",),
+            ("meta_lagrangian_atom", "pareto_scope"),
+            ("meta_lagrangian_atom_export", "atom_template", "pareto_scope"),
+            ("selected_target", "pareto_scope"),
+            ("selected_target", "meta_lagrangian_atom_export", "atom_template", "pareto_scope"),
+        ),
+    )
+    if not pareto_scope:
+        pareto_scope = family_group
+    return family, family_group, pareto_scope
+
+
+def _candidate_evidence_grade(payload: Mapping[str, Any]) -> str:
+    grade = _first_nonempty_string(
+        payload,
+        (
+            ("evidence_grade",),
+            ("evidence_semantics",),
+            ("meta_lagrangian_atom", "evidence_grade"),
+            ("meta_lagrangian_atom_export", "atom_template", "evidence_grade"),
+            ("selected_target", "evidence_grade"),
+            ("selected_target", "meta_lagrangian_atom_export", "atom_template", "evidence_grade"),
+        ),
+    )
+    return grade or "unknown"
+
+
+def _candidate_interaction_assumptions(payload: Mapping[str, Any]) -> list[str]:
+    values: list[Any] = []
+    for path in (
+        ("interaction_assumptions",),
+        ("meta_lagrangian_atom", "interaction_assumptions"),
+        ("meta_lagrangian_atom_export", "atom_template", "interaction_assumptions"),
+        ("selected_target", "interaction_assumptions"),
+        ("selected_target", "meta_lagrangian_atom_export", "atom_template", "interaction_assumptions"),
+    ):
+        values.extend(_string_list(_nested(payload, path)))
+    return _ordered_unique_strings(values)
+
+
+def _candidate_conflicts(payload: Mapping[str, Any], field: str) -> list[str]:
+    values: list[Any] = []
+    for path in (
+        (field,),
+        ("meta_lagrangian_atom", field),
+        ("meta_lagrangian_atom_export", "atom_template", field),
+        ("selected_target", field),
+        ("selected_target", "meta_lagrangian_atom_export", "atom_template", field),
+    ):
+        values.extend(_string_list(_nested(payload, path)))
+    return sorted({str(value) for value in values if str(value)})
+
+
+def _candidate_proxy_row(payload: Mapping[str, Any], evidence_grade: str) -> bool:
+    grade = evidence_grade.strip().lower()
+    explicit_proxy = _first_bool(
+        payload,
+        (
+            ("proxy_row",),
+            ("planning_only",),
+            ("meta_lagrangian_atom", "proxy_row"),
+            ("meta_lagrangian_atom_export", "atom_template", "proxy_row"),
+            ("selected_target", "planning_only"),
+            ("selected_target", "meta_lagrangian_atom_export", "atom_template", "proxy_row"),
+        ),
+    )
+    if explicit_proxy is True:
+        return True
+    return any(marker in grade for marker in PROXY_EVIDENCE_GRADE_MARKERS)
+
+
+def _candidate_confidence(payload: Mapping[str, Any]) -> float:
+    value = _first_numeric(
+        payload,
+        (
+            ("confidence",),
+            ("meta_lagrangian_atom", "confidence"),
+            ("meta_lagrangian_atom_export", "atom_template", "confidence"),
+            ("selected_target", "confidence"),
+            ("selected_target", "meta_lagrangian_atom_export", "atom_template", "confidence"),
+        ),
+        default=1.0,
+    )
+    return max(0.0, min(1.0, value))
+
+
+def _proof_status_passed(section: Mapping[str, Any]) -> bool | None:
+    status = str(section.get("status") or section.get("state") or "").strip().lower()
+    if status in KKT_PROOF_PASS_STATUSES:
+        return True
+    if status in KKT_PROOF_FAIL_STATUSES:
+        return False
+    for key in (
+        "verified",
+        "passed",
+        "kkt_ready_for_field_planning",
+        "ready_for_field_planning",
+        "kkt_waterline_satisfied",
+        "waterline_satisfied",
+    ):
+        value = section.get(key)
+        if isinstance(value, bool):
+            return value
+    return None
+
+
+def _proof_residual(section: Mapping[str, Any]) -> tuple[float | None, str]:
+    for key in (
+        "kkt_residual",
+        "waterline_kkt_residual",
+        "max_kkt_violation",
+        "stationarity_residual",
+        "primal_residual",
+        "dual_residual",
+    ):
+        value = _optional_numeric(section.get(key))
+        if value is not None:
+            return value, key
+    residuals = section.get("residuals")
+    if isinstance(residuals, Mapping):
+        numeric_values = [
+            float(value)
+            for value in residuals.values()
+            if _optional_numeric(value) is not None
+        ]
+        if numeric_values:
+            return max(abs(value) for value in numeric_values), "residuals"
+    return None, ""
+
+
+def _proof_tolerance(section: Mapping[str, Any]) -> tuple[float | None, str]:
+    for key in (
+        "kkt_tolerance",
+        "kkt_tol",
+        "waterline_kkt_tol",
+        "kkt_waterline_tol",
+        "max_kkt_violation_tolerance",
+        "stationarity_tolerance",
+    ):
+        value = _optional_numeric(section.get(key))
+        if value is not None:
+            return value, key
+    return None, ""
+
+
+def _kkt_proof_candidate(source: str, section: Mapping[str, Any]) -> dict[str, Any]:
+    blockers: list[str] = []
+    passed = _proof_status_passed(section)
+    residual, residual_source = _proof_residual(section)
+    tolerance, tolerance_source = _proof_tolerance(section)
+    if passed is False:
+        blockers.append("kkt_proof_status_not_passed")
+    if residual is None:
+        blockers.append("kkt_proof_residual_missing")
+    if tolerance is not None and residual is not None and abs(residual) > tolerance:
+        blockers.append("kkt_proof_residual_exceeds_tolerance")
+    if passed is None and not (residual is not None and tolerance is not None and abs(residual) <= tolerance):
+        blockers.append("kkt_proof_pass_status_missing")
+    return {
+        "source": source,
+        "kind": "kkt_proof",
+        "status": "passed" if not blockers else "blocked",
+        "residual": residual,
+        "residual_source": residual_source,
+        "tolerance": tolerance,
+        "tolerance_source": tolerance_source,
+        "blockers": _unique_strings(blockers),
+    }
+
+
+def _admm_result_candidate(
+    source: str,
+    section: Mapping[str, Any],
+    config: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    config = config or {}
+    converged = section.get("converged")
+    if converged is not True:
+        blockers.append("admm_result_not_converged")
+    residual = _optional_numeric(
+        section.get("waterline_kkt_residual", section.get("kkt_waterline_residual"))
+    )
+    tolerance = _optional_numeric(
+        section.get(
+            "kkt_waterline_tol",
+            section.get(
+                "waterline_kkt_tol",
+                config.get("kkt_waterline_tol", config.get("waterline_kkt_tol")),
+            ),
+        )
+    )
+    satisfied = section.get("kkt_waterline_satisfied", section.get("waterline_satisfied"))
+    if residual is None:
+        blockers.append("admm_result_kkt_residual_missing")
+    if satisfied is False:
+        blockers.append("admm_result_kkt_waterline_not_satisfied")
+    if tolerance is not None and residual is not None and abs(residual) > tolerance:
+        blockers.append("admm_result_kkt_residual_exceeds_tolerance")
+    if satisfied is not True and not (residual is not None and tolerance is not None and abs(residual) <= tolerance):
+        blockers.append("admm_result_kkt_satisfaction_missing")
+    return {
+        "source": source,
+        "kind": "admm_result",
+        "status": "passed" if not blockers else "blocked",
+        "converged": converged is True,
+        "residual": residual,
+        "residual_source": "waterline_kkt_residual" if "waterline_kkt_residual" in section else "kkt_waterline_residual",
+        "tolerance": tolerance,
+        "tolerance_source": "kkt_waterline_tol",
+        "blockers": _unique_strings(blockers),
+    }
+
+
+def _mapping_candidates(payload: Mapping[str, Any], paths: Sequence[Sequence[str]]) -> list[tuple[str, Mapping[str, Any]]]:
+    candidates: list[tuple[str, Mapping[str, Any]]] = []
+    for path in paths:
+        value = _nested(payload, path)
+        if isinstance(value, Mapping):
+            candidates.append((".".join(path), value))
+    return candidates
+
+
+def _kkt_proof(payload: Mapping[str, Any]) -> dict[str, Any]:
+    proof_paths = (
+        ("kkt_proof",),
+        ("field_kkt_proof",),
+        ("meta_lagrangian_kkt_proof",),
+        ("meta_lagrangian_atom", "kkt_proof"),
+        ("meta_lagrangian_atom_export", "kkt_proof"),
+        ("meta_lagrangian_atom_export", "atom_template", "kkt_proof"),
+        ("selected_target", "kkt_proof"),
+        ("selected_target", "meta_lagrangian_atom_export", "kkt_proof"),
+        ("selected_target", "meta_lagrangian_atom_export", "atom_template", "kkt_proof"),
+    )
+    admm_paths = (
+        ("admm_result",),
+        ("admm", "result"),
+        ("joint_admm", "result"),
+        ("meta_lagrangian_atom", "admm_result"),
+        ("meta_lagrangian_atom_export", "admm_result"),
+        ("meta_lagrangian_atom_export", "atom_template", "admm_result"),
+        ("selected_target", "admm_result"),
+        ("selected_target", "meta_lagrangian_atom_export", "admm_result"),
+        ("selected_target", "meta_lagrangian_atom_export", "atom_template", "admm_result"),
+    )
+    candidates = [
+        _kkt_proof_candidate(source, section)
+        for source, section in _mapping_candidates(payload, proof_paths)
+    ]
+    admm_config = payload.get("admm_config")
+    config = admm_config if isinstance(admm_config, Mapping) else {}
+    candidates.extend(
+        _admm_result_candidate(source, section, config=config)
+        for source, section in _mapping_candidates(payload, admm_paths)
+    )
+    candidates.sort(key=lambda item: (item["status"] != "passed", item["source"]))
+    if not candidates:
+        return {
+            "status": "blocked",
+            "source": "",
+            "kind": "",
+            "residual": None,
+            "tolerance": None,
+            "candidates": [],
+            "blockers": ["kkt_proof_or_admm_result_missing"],
+        }
+    selected = candidates[0]
+    return {
+        "status": selected["status"],
+        "source": selected["source"],
+        "kind": selected["kind"],
+        "residual": selected.get("residual"),
+        "tolerance": selected.get("tolerance"),
+        "candidates": candidates,
+        "blockers": list(selected["blockers"]),
+    }
+
+
 def _byte_delta(payload: Mapping[str, Any]) -> int:
     for key in (
         "candidate_archive_byte_delta_vs_source_estimate",
@@ -688,6 +1163,19 @@ def _byte_delta(payload: Mapping[str, Any]) -> int:
         "byte_delta",
     ):
         value = payload.get(key)
+        if isinstance(value, int) and not isinstance(value, bool):
+            return value
+    for path in (
+        ("meta_lagrangian_atom", "byte_delta"),
+        ("meta_lagrangian_atom", "estimated_byte_delta"),
+        ("meta_lagrangian_atom_export", "atom_template", "byte_delta"),
+        ("meta_lagrangian_atom_export", "atom_template", "estimated_byte_delta"),
+        ("selected_target", "byte_delta"),
+        ("selected_target", "estimated_byte_delta"),
+        ("selected_target", "meta_lagrangian_atom_export", "atom_template", "byte_delta"),
+        ("selected_target", "meta_lagrangian_atom_export", "atom_template", "estimated_byte_delta"),
+    ):
+        value = _nested(payload, path)
         if isinstance(value, int) and not isinstance(value, bool):
             return value
     archive_bytes = _coerce_positive_int(payload.get("archive_bytes", payload.get("candidate_archive_bytes")))
@@ -699,6 +1187,8 @@ def _byte_delta(payload: Mapping[str, Any]) -> int:
 
 def _next_required_proofs(blockers: Sequence[str]) -> list[str]:
     out: list[str] = []
+    if "dirty_worktree_overlap" in blockers:
+        out.append("clean_or_isolate_dirty_candidate_paths_before_selection")
     if "missing_byte_closed_archive_proof" in blockers:
         out.append("local_archive_file_with_matching_sha256_and_bytes")
     if "missing_byte_closed_runtime_proof" in blockers:
@@ -728,6 +1218,185 @@ def _dispatch_identity_proof(claim: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _pareto_objectives(row: Mapping[str, Any]) -> dict[str, float]:
+    return {
+        "expected_total_score_delta": float(row["expected_total_score_delta"]),
+        "byte_delta": float(row["byte_delta"]),
+        "expected_seg_dist_delta": float(row["expected_seg_dist_delta"]),
+        "expected_pose_dist_delta": float(row["expected_pose_dist_delta"]),
+        "confidence": float(row["confidence"]),
+        "candidate_static_preflight_ready": float(bool(row["candidate_static_preflight_ready"])),
+    }
+
+
+def _dominates_pareto(a: Mapping[str, Any], b: Mapping[str, Any]) -> bool:
+    if a.get("pareto_eligible") is not True or b.get("pareto_eligible") is not True:
+        return False
+    if str(a["pareto_scope"]) != str(b["pareto_scope"]):
+        return False
+    strictly_better = False
+    for objective in PARETO_MINIMIZE_OBJECTIVES:
+        av = float(a[objective])
+        bv = float(b[objective])
+        if av > bv + PARETO_EPS:
+            return False
+        strictly_better = strictly_better or av < bv - PARETO_EPS
+    for objective in PARETO_MAXIMIZE_OBJECTIVES:
+        av = float(a[objective])
+        bv = float(b[objective])
+        if av < bv - PARETO_EPS:
+            return False
+        strictly_better = strictly_better or av > bv + PARETO_EPS
+    return strictly_better
+
+
+def _annotate_pareto_frontier(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    frontier_count = 0
+    dominated_count = 0
+    scope_counts: dict[str, dict[str, int]] = {}
+    for row in rows:
+        row["pareto_frontier"] = bool(row["pareto_eligible"])
+        row["pareto_dominated_by"] = []
+        row["pareto_objectives"] = _pareto_objectives(row)
+    for row in rows:
+        scope = str(row["pareto_scope"])
+        stats = scope_counts.setdefault(
+            scope,
+            {"eligible": 0, "frontier": 0, "dominated": 0, "ineligible": 0},
+        )
+        if row.get("pareto_eligible") is not True:
+            row["pareto_frontier"] = False
+            stats["ineligible"] += 1
+            continue
+        stats["eligible"] += 1
+        dominators = [
+            str(other["candidate_id"])
+            for other in rows
+            if other is not row and _dominates_pareto(other, row)
+        ]
+        if dominators:
+            row["pareto_frontier"] = False
+            row["pareto_dominated_by"] = sorted(dominators)
+            dominated_count += 1
+            stats["dominated"] += 1
+        else:
+            frontier_count += 1
+            stats["frontier"] += 1
+    return {
+        "objective_direction": {
+            "expected_total_score_delta": "min",
+            "byte_delta": "min",
+            "expected_seg_dist_delta": "min",
+            "expected_pose_dist_delta": "min",
+            "confidence": "max",
+            "candidate_static_preflight_ready": "max",
+        },
+        "scope_default": "family_group",
+        "eligibility": (
+            "candidate_static_preflight_ready_and_non_proxy_and_not_dirty; "
+            "dispatch readiness still additionally requires an active lane claim"
+        ),
+        "frontier_count": frontier_count,
+        "dominated_count": dominated_count,
+        "eligible_count": sum(int(row.get("pareto_eligible") is True) for row in rows),
+        "scope_counts": dict(sorted(scope_counts.items())),
+    }
+
+
+def _selection_penalty_terms(row: Mapping[str, Any]) -> dict[str, float]:
+    terms: dict[str, float] = {}
+    if row.get("dirty_blocked") is True:
+        terms["dirty_path_blocked"] = SELECTION_PENALTIES["dirty_path_blocked"]
+    if row.get("archive_proof", {}).get("byte_closed") is not True:
+        terms["non_byte_closed_archive"] = SELECTION_PENALTIES["non_byte_closed_archive"]
+    if row.get("runtime_proof", {}).get("runtime_closed") is not True:
+        terms["non_byte_closed_runtime"] = SELECTION_PENALTIES["non_byte_closed_runtime"]
+    if row.get("strict_candidate_preflight_ready") is not True:
+        terms["strict_candidate_preflight_blocked"] = SELECTION_PENALTIES[
+            "strict_candidate_preflight_blocked"
+        ]
+    if row.get("dispatch_identity_proof", {}).get("status") != "passed":
+        terms["missing_dispatch_identity_for_lane_claim"] = SELECTION_PENALTIES[
+            "missing_dispatch_identity_for_lane_claim"
+        ]
+    if row.get("candidate_static_preflight_ready") is True and row.get("ready_for_exact_eval_dispatch") is not True:
+        terms["missing_active_lane_dispatch_claim"] = SELECTION_PENALTIES[
+            "missing_active_lane_dispatch_claim"
+        ]
+    if row.get("proxy_row") is True:
+        terms["planning_or_proxy_packet"] = SELECTION_PENALTIES["planning_or_proxy_packet"]
+    if row.get("pareto_eligible") is not True:
+        terms["pareto_ineligible_packet"] = SELECTION_PENALTIES["pareto_ineligible_packet"]
+    elif row.get("pareto_frontier") is not True:
+        terms["pareto_dominated_packet"] = SELECTION_PENALTIES["pareto_dominated_packet"]
+    if row.get("kkt_ready_for_field_planning") is not True:
+        terms["kkt_not_ready_for_field_planning"] = SELECTION_PENALTIES[
+            "kkt_not_ready_for_field_planning"
+        ]
+    return {key: terms[key] for key in sorted(terms)}
+
+
+def _selection_decision(row: Mapping[str, Any]) -> str:
+    if row.get("ready_for_exact_eval_dispatch") is True:
+        return "ready_for_exact_eval_dispatch_after_active_claim"
+    if row.get("dirty_blocked") is True:
+        return "refused_dirty_worktree_overlap"
+    if row.get("candidate_static_preflight_ready") is True:
+        return "needs_active_lane_claim_before_dispatch"
+    if row.get("candidate_local_preflight_ready") is True:
+        return "needs_dispatch_identity_before_lane_claim"
+    if row.get("archive_proof", {}).get("byte_closed") is not True:
+        return "needs_byte_closed_archive_proof"
+    if row.get("runtime_proof", {}).get("runtime_closed") is not True:
+        return "needs_byte_closed_runtime_proof"
+    if row.get("strict_candidate_preflight_ready") is not True:
+        return "strict_candidate_preflight_refused"
+    return "blocked_until_required_proofs_land"
+
+
+def _lexicographic_feasibility_tuple(row: Mapping[str, Any]) -> list[Any]:
+    return [
+        bool(row["ready_for_exact_eval_dispatch"]),
+        bool(row["candidate_static_preflight_ready"]),
+        bool(row["archive_proof"]["byte_closed"]),
+        bool(row["runtime_proof"]["runtime_closed"]),
+        not bool(row["dirty_blocked"]),
+        bool(row["pareto_frontier"]),
+        bool(row["kkt_ready_for_field_planning"]),
+        round(float(row["expected_total_score_delta"]), 12),
+        round(float(row["expected_information_gain_nats"]), 12),
+    ]
+
+
+def _lexicographic_sort_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
+    values = row["lexicographic_feasibility_tuple"]
+    return (
+        not bool(values[0]),
+        not bool(values[1]),
+        not bool(values[2]),
+        not bool(values[3]),
+        not bool(values[4]),
+        not bool(values[5]),
+        not bool(values[6]),
+        float(values[7]),
+        -float(values[8]),
+        str(row["manifest_path"]),
+    )
+
+
+def _annotate_selection_scores(rows: list[dict[str, Any]]) -> None:
+    for row in rows:
+        terms = _selection_penalty_terms(row)
+        penalty = round(sum(terms.values()), 12)
+        row["selection_penalty_terms"] = {key: round(value, 12) for key, value in terms.items()}
+        row["selection_penalty_units"] = penalty
+        row["field_selection_score_delta"] = round(float(row["expected_total_score_delta"]), 12)
+        row["selection_blockers"] = list(terms)
+        row["selection_decision"] = _selection_decision(row)
+        row["dispatch_refused"] = row.get("ready_for_exact_eval_dispatch") is not True
+        row["lexicographic_feasibility_tuple"] = _lexicographic_feasibility_tuple(row)
+
+
 def _row_for_manifest(
     manifest_path: Path,
     *,
@@ -735,6 +1404,7 @@ def _row_for_manifest(
     claims_path: Path | None,
     now_utc: str | None,
     ttl_hours: float,
+    dirty_paths: Sequence[str] | None,
 ) -> dict[str, Any]:
     payload = read_json(manifest_path)
     if not isinstance(payload, dict):
@@ -783,19 +1453,101 @@ def _row_for_manifest(
         dispatch_blockers.append("missing_active_lane_dispatch_claim")
         dispatch_blockers.extend(f"claim:{blocker}" for blocker in claim["blockers"])
     dispatch_blockers = _unique_strings(dispatch_blockers)
+    dirty_matches, watch_paths = _dirty_paths_for_payload(
+        payload,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+        dirty_paths=dirty_paths,
+    )
+    if dirty_matches:
+        dispatch_blockers.append("dirty_worktree_overlap")
+        dispatch_blockers.extend(f"dirty:{path}" for path in dirty_matches)
+        dispatch_blockers = _unique_strings(dispatch_blockers)
     blockers = _unique_strings([*static_blockers, *dispatch_blockers])
     ready = bool(static_ready and claim["active_lane_claim"] and not dispatch_blockers)
+    family, family_group, pareto_scope = _candidate_family(payload)
+    evidence_grade = _candidate_evidence_grade(payload)
+    proxy_row = _candidate_proxy_row(payload, evidence_grade)
+    interaction_assumptions = _candidate_interaction_assumptions(payload)
+    kkt_proof = _kkt_proof(payload)
+    kkt_blockers: list[str] = []
+    candidate_static_ready_after_dirty = bool(static_ready and not dirty_matches)
+    if not static_ready:
+        kkt_blockers.extend(static_blockers or ["candidate_static_preflight_not_ready"])
+    if dirty_matches:
+        kkt_blockers.append("dirty_worktree_overlap")
+    if proxy_row:
+        kkt_blockers.append("planning_or_proxy_packet")
+    if not interaction_assumptions:
+        kkt_blockers.append("missing_interaction_assumptions")
+    if kkt_proof["status"] != "passed":
+        kkt_blockers.extend(f"kkt:{blocker}" for blocker in kkt_proof["blockers"])
+    kkt_blockers = _unique_strings(kkt_blockers)
+    kkt_ready = not kkt_blockers
+    expected_seg_delta = _first_numeric(
+        payload,
+        (
+            ("expected_seg_dist_delta",),
+            ("meta_lagrangian_atom", "expected_seg_dist_delta"),
+            ("meta_lagrangian_atom_export", "atom_template", "expected_seg_dist_delta"),
+            ("selected_target", "expected_seg_dist_delta"),
+            ("selected_target", "meta_lagrangian_atom_export", "atom_template", "expected_seg_dist_delta"),
+        ),
+    )
+    expected_pose_delta = _first_numeric(
+        payload,
+        (
+            ("expected_pose_dist_delta",),
+            ("meta_lagrangian_atom", "expected_pose_dist_delta"),
+            ("meta_lagrangian_atom_export", "atom_template", "expected_pose_dist_delta"),
+            ("selected_target", "expected_pose_dist_delta"),
+            ("selected_target", "meta_lagrangian_atom_export", "atom_template", "expected_pose_dist_delta"),
+        ),
+    )
+    expected_info_gain = _first_numeric(
+        payload,
+        (
+            ("expected_information_gain_nats",),
+            ("information_gain_nats",),
+            ("meta_lagrangian_atom", "expected_information_gain_nats"),
+            ("meta_lagrangian_atom_export", "atom_template", "expected_information_gain_nats"),
+            ("selected_target", "expected_information_gain_nats"),
+            ("selected_target", "meta_lagrangian_atom_export", "atom_template", "expected_information_gain_nats"),
+        ),
+    )
+    expected_score_variance = _first_numeric(
+        payload,
+        (
+            ("expected_score_variance",),
+            ("predicted_score_variance",),
+            ("score_variance",),
+            ("meta_lagrangian_atom", "expected_score_variance"),
+            ("meta_lagrangian_atom_export", "atom_template", "expected_score_variance"),
+            ("selected_target", "expected_score_variance"),
+            ("selected_target", "meta_lagrangian_atom_export", "atom_template", "expected_score_variance"),
+        ),
+    )
     return {
         "schema_version": SCHEMA_VERSION,
         "manifest_path": repo_relative(manifest_path, repo_root),
         "manifest_sha256": manifest_sha256,
         "candidate_id": _candidate_id(payload, manifest_path),
         "packet_kind": str(payload.get("packet_kind") or payload.get("schema") or payload.get("schema_version") or ""),
+        "family": family,
+        "family_group": family_group,
+        "pareto_scope": pareto_scope,
+        "conflicts_with_families": _candidate_conflicts(payload, "conflicts_with_families"),
+        "conflicts_with_atoms": _candidate_conflicts(payload, "conflicts_with_atoms"),
+        "interaction_assumptions": interaction_assumptions,
+        "evidence_grade": evidence_grade,
+        "proxy_row": proxy_row,
+        "confidence": _candidate_confidence(payload),
         "score_claim": False,
         "dispatch_attempted": False,
         "ready_for_exact_eval_dispatch": ready,
         "candidate_local_preflight_ready": base_static_ready,
-        "candidate_static_preflight_ready": static_ready,
+        "candidate_static_preflight_ready": candidate_static_ready_after_dirty,
+        "candidate_static_preflight_ready_before_dirty": static_ready,
         "static_candidate_blockers": static_blockers,
         "dispatch_identity_proof": identity,
         "dispatch_claim_proof": claim,
@@ -804,15 +1556,25 @@ def _row_for_manifest(
         "strict_candidate_preflight": strict,
         "archive_proof": archive,
         "runtime_proof": runtime,
+        "dirty_path_blockers": dirty_matches,
+        "dirty_blocked": bool(dirty_matches),
+        "candidate_watch_paths": watch_paths,
         "byte_delta": _byte_delta(payload),
         "expected_total_score_delta": _numeric_first(
             payload,
             ("expected_total_score_delta", "rate_score_delta_vs_source_estimate", "score_delta"),
         ),
-        "expected_information_gain_nats": _numeric_first(
-            payload,
-            ("expected_information_gain_nats", "information_gain_nats"),
-        ),
+        "expected_seg_dist_delta": expected_seg_delta,
+        "expected_pose_dist_delta": expected_pose_delta,
+        "expected_information_gain_nats": expected_info_gain,
+        "expected_score_variance": expected_score_variance,
+        "kkt_ready_for_field_planning": kkt_ready,
+        "kkt_proof": kkt_proof,
+        "kkt_blockers": kkt_blockers,
+        "pareto_eligible": bool(candidate_static_ready_after_dirty and not proxy_row),
+        "pareto_frontier": False,
+        "pareto_dominated_by": [],
+        "pareto_objectives": {},
         "candidate_blockers": blockers,
         "next_required_proof": _next_required_proofs(blockers),
     }
@@ -847,6 +1609,7 @@ def build_selection_report(
     claims_path: Path | None = None,
     now_utc: str | None = None,
     ttl_hours: float = 24.0,
+    dirty_paths: Sequence[str] | None = None,
 ) -> dict[str, Any]:
     manifests = _expand_manifest_inputs(
         repo_root=repo_root,
@@ -860,25 +1623,27 @@ def build_selection_report(
             claims_path=claims_path,
             now_utc=now_utc,
             ttl_hours=ttl_hours,
+            dirty_paths=dirty_paths,
         )
         for path in manifests
     ]
+    pareto_summary = _annotate_pareto_frontier(rows)
+    _annotate_selection_scores(rows)
     rows.sort(
         key=lambda row: (
-            not bool(row["ready_for_exact_eval_dispatch"]),
-            not bool(row["candidate_static_preflight_ready"]),
+            *_lexicographic_sort_key(row),
             not bool(row["candidate_local_preflight_ready"]),
+            not bool(row["pareto_eligible"]),
             len(row["candidate_blockers"]),
-            float(row["expected_total_score_delta"]),
             int(row["byte_delta"]),
-            -float(row["expected_information_gain_nats"]),
-            str(row["manifest_path"]),
         )
     )
     selected = rows[0] if rows else None
     ready_count = sum(int(row["ready_for_exact_eval_dispatch"]) for row in rows)
     local_ready_count = sum(int(row["candidate_local_preflight_ready"]) for row in rows)
     static_ready_count = sum(int(row["candidate_static_preflight_ready"]) for row in rows)
+    dirty_blocked_count = sum(int(row["dirty_blocked"]) for row in rows)
+    kkt_ready_count = sum(int(row["kkt_ready_for_field_planning"]) for row in rows)
     return {
         "schema_version": SCHEMA_VERSION,
         "tool": TOOL,
@@ -892,6 +1657,28 @@ def build_selection_report(
         "candidate_local_preflight_ready_count": local_ready_count,
         "candidate_static_preflight_ready_count": static_ready_count,
         "ready_candidate_count": ready_count,
+        "dirty_blocked_candidate_count": dirty_blocked_count,
+        "kkt_ready_for_field_planning_count": kkt_ready_count,
+        "pareto_summary": pareto_summary,
+        "selection_penalties": dict(sorted(SELECTION_PENALTIES.items())),
+        "lexicographic_feasibility_order": [
+            "ready_for_exact_eval_dispatch desc",
+            "candidate_static_preflight_ready desc",
+            "archive_proof.byte_closed desc",
+            "runtime_proof.runtime_closed desc",
+            "clean_worktree_overlap desc",
+            "pareto_frontier desc",
+            "kkt_ready_for_field_planning desc",
+            "expected_total_score_delta asc",
+            "expected_information_gain_nats desc",
+        ],
+        "selection_policy": (
+            "field packet selection is planning-only: exact-eval-ready rows sort first; "
+            "otherwise the explicit lexicographic feasibility tuple orders byte-closed, "
+            "clean, Pareto-frontier, KKT-proof-backed rows before pure expected-score "
+            "deltas, with expected-information-gain as a tie-breaker; penalty terms are "
+            "diagnostic only"
+        ),
         "selected_candidate": selected,
         "rows": rows,
         "dispatch_blockers": [
@@ -911,6 +1698,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--claims-path", type=Path)
     parser.add_argument("--now-utc")
     parser.add_argument("--ttl-hours", type=float, default=24.0)
+    parser.add_argument("--dirty-path", action="append", default=[])
     parser.add_argument("--json-out", type=Path)
     return parser.parse_args(argv)
 
@@ -924,6 +1712,7 @@ def main(argv: list[str] | None = None) -> int:
         claims_path=args.claims_path,
         now_utc=args.now_utc,
         ttl_hours=args.ttl_hours,
+        dirty_paths=args.dirty_path,
     )
     text = json_text(report)
     if args.json_out:

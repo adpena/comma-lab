@@ -28,6 +28,7 @@ from tac.categorical_candidate_readiness import (
     RUNTIME_LOADER_PARITY_CONTRACT,
     audit_categorical_candidate_manifest,
 )
+from tac.categorical_openpilot_mask_prior_contract import RUNTIME_LABEL_CONTRACT
 from tac.hpm1_payload_structure import (
     HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT,
     build_hpm1_structural_decode_inventory,
@@ -264,6 +265,7 @@ def build_categorical_payload_candidate(
     archive_path = out / "archive.zip"
     member_records = _write_archive(archive_path, member_payloads)
     archive_sha = sha256_file(archive_path)
+    charged_sha_by_name = {record["name"]: record["sha256"] for record in member_records}
     hpm1_structural_inventory = _write_hpm1_structural_inventory(
         out_dir=out,
         categorical_payload=categorical_payload,
@@ -284,31 +286,54 @@ def build_categorical_payload_candidate(
     write_json(archive_member_manifest_path, archive_member_manifest)
     archive_member_manifest_sha = sha256_file(archive_member_manifest_path)
 
+    conditioning_priors = [
+        {
+            "family": "qma9",
+            "name": "local_categorical_payload",
+            "usage": "inflate_runtime_conditioning",
+            "runtime_consumed": True,
+            "charged_member": "categorical_payload.bin",
+            "charged_member_sha256": charged_sha_by_name["categorical_payload.bin"],
+            "label_contract": RUNTIME_LABEL_CONTRACT,
+            "source_provenance": {
+                "kind": "charged_archive_member",
+                "charged_member": "categorical_payload.bin",
+                "sha256": charged_sha_by_name["categorical_payload.bin"],
+                "source_kind": payload_source.get("kind", ""),
+            },
+        },
+        {
+            "family": "openpilot_priors",
+            "name": "ego_lane_atom_ranker",
+            "usage": "compression_time_atom_ranking_only",
+            "runtime_consumed": False,
+            "label_contract": "openpilot_prior_hints_non_runtime",
+            "source_provenance": {
+                "kind": "compression_time_only_derivation",
+                "source": "categorical_candidate_plan.openpilot_prior_hints",
+                "runtime_consumed": False,
+            },
+        },
+        {
+            "family": "clade_spade",
+            "name": "canonical_class_codebook_conditioning",
+            "usage": "inflate_runtime_conditioning",
+            "runtime_consumed": True,
+            "charged_member": "class_codebook.json",
+            "charged_member_sha256": charged_sha_by_name["class_codebook.json"],
+            "label_contract": RUNTIME_LABEL_CONTRACT,
+            "source_provenance": {
+                "kind": "charged_archive_member",
+                "charged_member": "class_codebook.json",
+                "sha256": charged_sha_by_name["class_codebook.json"],
+                "source": "build_categorical_class_codebook",
+            },
+        },
+    ]
     construction_plan = build_categorical_charged_label_plan(
         source_archive_sha256=source_archive_sha256,
         charged_members=member_records,
-        conditioning_priors=[
-            {
-                "family": "qma9",
-                "name": "local_categorical_payload",
-                "usage": "inflate_runtime_conditioning",
-                "runtime_consumed": True,
-                "charged_member": "categorical_payload.bin",
-            },
-            {
-                "family": "openpilot_priors",
-                "name": "ego_lane_atom_ranker",
-                "usage": "compression_time_atom_ranking_only",
-                "runtime_consumed": False,
-            },
-            {
-                "family": "clade_spade",
-                "name": "canonical_class_codebook_conditioning",
-                "usage": "inflate_runtime_conditioning",
-                "runtime_consumed": True,
-                "charged_member": "class_codebook.json",
-            },
-        ],
+        conditioning_priors=conditioning_priors,
         candidate_archive_sha256=archive_sha,
         archive_member_manifest_sha256=archive_member_manifest_sha,
     )

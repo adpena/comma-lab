@@ -29,6 +29,20 @@ PROXY_EVIDENCE_GRADE_MARKERS = (
     "proxy",
     "prediction",
 )
+KKT_PROOF_PASS_STATUSES = {
+    "pass",
+    "passed",
+    "ready",
+    "verified",
+}
+KKT_PROOF_FAIL_STATUSES = {
+    "blocked",
+    "fail",
+    "failed",
+    "invalid",
+    "missing",
+    "not_ready",
+}
 PARETO_EPS = 1e-12
 PARETO_MINIMIZE_OBJECTIVES = (
     "expected_total_score_delta",
@@ -110,6 +124,14 @@ def _unique_ordered_strings(values: Iterable[Any]) -> list[str]:
             out.append(text)
             seen.add(text)
     return out
+
+
+def _optional_numeric(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int | float):
+        return float(value)
+    return None
 
 
 def _optional_non_negative_float(atom: Mapping[str, Any], keys: Iterable[str], *, label: str) -> tuple[float, list[str]]:
@@ -320,6 +342,167 @@ def _archive_manifest_custody(path_value: str, sha256_value: str) -> dict[str, A
     }
 
 
+def _proof_status_passed(section: Mapping[str, Any]) -> bool | None:
+    status = str(section.get("status") or section.get("state") or "").strip().lower()
+    if status in KKT_PROOF_PASS_STATUSES:
+        return True
+    if status in KKT_PROOF_FAIL_STATUSES:
+        return False
+    for key in (
+        "verified",
+        "passed",
+        "kkt_ready_for_field_planning",
+        "ready_for_field_planning",
+        "kkt_waterline_satisfied",
+        "waterline_satisfied",
+    ):
+        value = section.get(key)
+        if isinstance(value, bool):
+            return value
+    return None
+
+
+def _proof_residual(section: Mapping[str, Any]) -> tuple[float | None, str]:
+    for key in (
+        "kkt_residual",
+        "waterline_kkt_residual",
+        "max_kkt_violation",
+        "stationarity_residual",
+        "primal_residual",
+        "dual_residual",
+    ):
+        value = _optional_numeric(section.get(key))
+        if value is not None:
+            return value, key
+    residuals = section.get("residuals")
+    if isinstance(residuals, Mapping):
+        numeric_values = [
+            float(value)
+            for value in residuals.values()
+            if _optional_numeric(value) is not None
+        ]
+        if numeric_values:
+            return max(abs(value) for value in numeric_values), "residuals"
+    return None, ""
+
+
+def _proof_tolerance(section: Mapping[str, Any]) -> tuple[float | None, str]:
+    for key in (
+        "kkt_tolerance",
+        "kkt_tol",
+        "waterline_kkt_tol",
+        "kkt_waterline_tol",
+        "max_kkt_violation_tolerance",
+        "stationarity_tolerance",
+    ):
+        value = _optional_numeric(section.get(key))
+        if value is not None:
+            return value, key
+    return None, ""
+
+
+def _kkt_proof_candidate(source: str, section: Mapping[str, Any]) -> dict[str, Any]:
+    blockers: list[str] = []
+    passed = _proof_status_passed(section)
+    residual, residual_source = _proof_residual(section)
+    tolerance, tolerance_source = _proof_tolerance(section)
+    if passed is False:
+        blockers.append("kkt_proof_status_not_passed")
+    if residual is None:
+        blockers.append("kkt_proof_residual_missing")
+    if tolerance is not None and residual is not None and abs(residual) > tolerance:
+        blockers.append("kkt_proof_residual_exceeds_tolerance")
+    if passed is None and not (residual is not None and tolerance is not None and abs(residual) <= tolerance):
+        blockers.append("kkt_proof_pass_status_missing")
+    return {
+        "source": source,
+        "kind": "kkt_proof",
+        "status": "passed" if not blockers else "blocked",
+        "residual": residual,
+        "residual_source": residual_source,
+        "tolerance": tolerance,
+        "tolerance_source": tolerance_source,
+        "blockers": _unique_ordered_strings(blockers),
+    }
+
+
+def _admm_result_candidate(
+    source: str,
+    section: Mapping[str, Any],
+    config: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    config = config or {}
+    converged = section.get("converged")
+    if converged is not True:
+        blockers.append("admm_result_not_converged")
+    residual = _optional_numeric(
+        section.get("waterline_kkt_residual", section.get("kkt_waterline_residual"))
+    )
+    tolerance = _optional_numeric(
+        section.get(
+            "kkt_waterline_tol",
+            section.get(
+                "waterline_kkt_tol",
+                config.get("kkt_waterline_tol", config.get("waterline_kkt_tol")),
+            ),
+        )
+    )
+    satisfied = section.get("kkt_waterline_satisfied", section.get("waterline_satisfied"))
+    if residual is None:
+        blockers.append("admm_result_kkt_residual_missing")
+    if satisfied is False:
+        blockers.append("admm_result_kkt_waterline_not_satisfied")
+    if tolerance is not None and residual is not None and abs(residual) > tolerance:
+        blockers.append("admm_result_kkt_residual_exceeds_tolerance")
+    if satisfied is not True and not (residual is not None and tolerance is not None and abs(residual) <= tolerance):
+        blockers.append("admm_result_kkt_satisfaction_missing")
+    return {
+        "source": source,
+        "kind": "admm_result",
+        "status": "passed" if not blockers else "blocked",
+        "converged": converged is True,
+        "residual": residual,
+        "tolerance": tolerance,
+        "blockers": _unique_ordered_strings(blockers),
+    }
+
+
+def _kkt_proof(atom: Mapping[str, Any]) -> dict[str, Any]:
+    candidates: list[dict[str, Any]] = []
+    for key in ("kkt_proof", "field_kkt_proof", "meta_lagrangian_kkt_proof"):
+        section = atom.get(key)
+        if isinstance(section, Mapping):
+            candidates.append(_kkt_proof_candidate(key, section))
+    admm_config = atom.get("admm_config")
+    config = admm_config if isinstance(admm_config, Mapping) else {}
+    for key in ("admm_result",):
+        section = atom.get(key)
+        if isinstance(section, Mapping):
+            candidates.append(_admm_result_candidate(key, section, config=config))
+    candidates.sort(key=lambda item: (item["status"] != "passed", item["source"]))
+    if not candidates:
+        return {
+            "status": "blocked",
+            "source": "",
+            "kind": "",
+            "residual": None,
+            "tolerance": None,
+            "candidates": [],
+            "blockers": ["kkt_proof_or_admm_result_missing"],
+        }
+    selected = candidates[0]
+    return {
+        "status": selected["status"],
+        "source": selected["source"],
+        "kind": selected["kind"],
+        "residual": selected.get("residual"),
+        "tolerance": selected.get("tolerance"),
+        "candidates": candidates,
+        "blockers": list(selected["blockers"]),
+    }
+
+
 def _pareto_objectives(row: Mapping[str, Any]) -> dict[str, float]:
     return {
         "expected_total_score_delta": float(row["expected_total_score_delta"]),
@@ -439,16 +622,46 @@ def _annotate_selection_scores(rows: list[dict[str, Any]]) -> None:
         terms = _selection_penalty_terms(row)
         penalty = sum(terms.values())
         row["selection_penalty_terms"] = {key: round(value, 12) for key, value in sorted(terms.items())}
-        row["selection_penalty_score_delta"] = round(penalty, 12)
-        row["selection_score_delta"] = round(
-            float(row["expected_total_score_delta"]) + penalty,
-            12,
-        )
+        row["selection_penalty_units"] = round(penalty, 12)
+        row["selection_score_delta"] = round(float(row["expected_total_score_delta"]), 12)
         row["selection_blockers"] = list(row["selection_penalty_terms"])
         row["selection_policy"] = (
             "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows "
-            "sort before raw expected-score deltas; information gain is a deterministic tie-breaker"
+            "sort lexicographically before pure expected-score deltas; information "
+            "gain is a deterministic tie-breaker; penalties are diagnostic only"
         )
+        row["lexicographic_feasibility_tuple"] = _lexicographic_feasibility_tuple(row)
+
+
+def _lexicographic_feasibility_tuple(row: Mapping[str, Any]) -> list[Any]:
+    return [
+        bool(row["ready_for_exact_eval_dispatch"]),
+        bool(row["rankable"]),
+        bool(row["byte_closed_archive_manifest_attached"]),
+        not bool(row["proxy_row"]),
+        bool(row["pareto_frontier"]),
+        bool(row["kkt_ready_for_field_planning"]),
+        round(float(row["expected_total_score_delta"]), 12),
+        round(float(row["expected_information_gain_nats"]), 12),
+    ]
+
+
+def _lexicographic_sort_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
+    values = row["lexicographic_feasibility_tuple"]
+    return (
+        not bool(values[0]),
+        not bool(values[1]),
+        not bool(values[2]),
+        not bool(values[3]),
+        not bool(values[4]),
+        not bool(values[5]),
+        float(values[6]),
+        -float(values[7]),
+        int(row["byte_delta"]),
+        str(row["family_group"]),
+        str(row["pareto_scope"]),
+        str(row["atom_id"]),
+    )
 
 
 def _proxy_row(evidence_grade: str, atom: Mapping[str, Any]) -> bool:
@@ -522,6 +735,7 @@ def expected_atom_score_delta(
         dispatch_blockers.append("requested_dispatchable_requires_external_exact_readiness_artifact")
     if atom.get("score_claim") is True:
         dispatch_blockers.append("source_atom_score_claim_true")
+    kkt_proof = _kkt_proof(atom)
     kkt_blockers = [
         *rank_blockers,
         *archive_manifest_custody["blockers"],
@@ -532,6 +746,8 @@ def expected_atom_score_delta(
         kkt_blockers.append("proxy_evidence_not_kkt_ready")
     if not interaction_assumptions:
         kkt_blockers.append("missing_interaction_assumptions")
+    if kkt_proof["status"] != "passed":
+        kkt_blockers.extend(f"kkt:{blocker}" for blocker in kkt_proof["blockers"])
     kkt_ready_for_field_planning = bool(not kkt_blockers)
     seg_score = 100.0 * expected_seg_delta
     pose_score = pose_score_delta(base_pose_dist, expected_pose_delta)
@@ -583,12 +799,14 @@ def expected_atom_score_delta(
         "pareto_dominated_by": [],
         "pareto_objectives": {},
         "kkt_ready_for_field_planning": kkt_ready_for_field_planning,
+        "kkt_proof": kkt_proof,
         "kkt_blockers": _unique_ordered_strings(kkt_blockers),
         "selection_penalty_terms": {},
-        "selection_penalty_score_delta": 0.0,
+        "selection_penalty_units": 0.0,
         "selection_score_delta": round(total, 12),
         "selection_blockers": [],
         "selection_policy": "pending_pareto_annotation",
+        "lexicographic_feasibility_tuple": [],
         "ready_for_exact_eval_dispatch": False,
         "dispatchable": False,
         "dispatch_blockers": _unique_ordered_strings(dispatch_blockers),
@@ -611,18 +829,8 @@ def build_atom_ledger(
     _annotate_selection_scores(rows)
     rows.sort(
         key=lambda row: (
-            not bool(row["rankable"]),
-            not bool(row["byte_closed_archive_manifest_attached"]),
-            bool(row["proxy_row"]),
+            *_lexicographic_sort_key(row),
             not bool(row["pareto_eligible"]),
-            not bool(row["pareto_frontier"]),
-            not bool(row["kkt_ready_for_field_planning"]),
-            float(row["selection_score_delta"]),
-            -float(row["expected_information_gain_nats"]),
-            int(row["byte_delta"]),
-            str(row["family_group"]),
-            str(row["pareto_scope"]),
-            str(row["atom_id"]),
         )
     )
     family_counts: dict[str, int] = {}
@@ -665,8 +873,19 @@ def build_atom_ledger(
         "byte_closed_manifest_required_for_kkt": True,
         "proxy_rows_dispatchable": False,
         "selection_policy": (
-            "penalize_non_rankable_proxy_non_byte_closed_dominated_and_kkt_blocked_rows"
+            "lexicographic_feasibility_tuple_orders_rows_before_pure_expected_score_delta; "
+            "penalty_terms_are_diagnostic_only"
         ),
+        "lexicographic_feasibility_order": [
+            "ready_for_exact_eval_dispatch desc",
+            "rankable desc",
+            "byte_closed_archive_manifest_attached desc",
+            "non_proxy_row desc",
+            "pareto_frontier desc",
+            "kkt_ready_for_field_planning desc",
+            "expected_total_score_delta asc",
+            "expected_information_gain_nats desc",
+        ],
         "selection_penalties": dict(sorted(SELECTION_PENALTIES.items())),
         "rows": rows,
         "dispatch_blockers": [

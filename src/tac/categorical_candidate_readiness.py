@@ -21,9 +21,10 @@ CANDIDATE_MANIFEST_CONTRACT = "categorical_byte_closed_candidate_manifest_v1"
 ARCHIVE_MEMBER_MANIFEST_CONTRACT = "categorical_archive_member_manifest_v1"
 RUNTIME_LOADER_PARITY_CONTRACT = "categorical_runtime_loader_parity_v1"
 DECODE_REENCODE_PARITY_CONTRACT = "categorical_decode_reencode_parity_v1"
-HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT = (
-    "hpm1_payload_structural_decode_inventory_v1"
-)
+DECODE_REENCODE_INDEPENDENT_PROOF_KIND = "categorical_decode_reencode_independent_proof"
+RUNTIME_EXECUTION_PROOF_KIND = "categorical_runtime_execution_independent_proof"
+EXACT_EVAL_DISPATCH_REQUIREMENTS_CONTRACT = "categorical_exact_eval_dispatch_requirements_v1"
+HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT = "hpm1_payload_structural_decode_inventory_v1"
 CANDIDATE_MANIFEST_KINDS = (
     "categorical_candidate_manifest",
     "categorical_candidate_fixture_manifest",
@@ -61,6 +62,16 @@ REQUIRED_CONTROL_NAMES = (
 REQUIRED_MEMBER_ROLES = ("categorical_payload", "decoder_or_runtime_consumer")
 CONTEST_ARCHIVE_CONTRACT = "contest_archive_zip"
 CONTEST_INFLATE_MEMBER = "inflate.sh"
+EXACT_EVAL_ENTRYPOINT = "experiments/contest_auth_eval.py"
+EXACT_EVAL_PATH = "archive.zip -> inflate.sh -> upstream/evaluate.py"
+DISPATCH_CLAIMS_PATH = ".omx/state/active_lane_dispatch_claims.md"
+TERMINAL_DISPATCH_STATUS_PREFIXES = (
+    "completed",
+    "failed",
+    "stopped",
+    "refused_dispatch",
+    "stale_superseded",
+)
 LOCAL_FILE_HEADER_SIGNATURE = 0x04034B50
 CENTRAL_DIRECTORY_SIGNATURE = 0x02014B50
 END_OF_CENTRAL_DIRECTORY_SIGNATURE = 0x06054B50
@@ -94,11 +105,7 @@ def _safe_member_name(name: Any) -> bool:
 
 
 def _archive_member_manifest_kind_valid(value: Any) -> bool:
-    return (
-        isinstance(value, str)
-        and value.startswith("categorical_")
-        and value.endswith("archive_member_manifest")
-    )
+    return isinstance(value, str) and value.startswith("categorical_") and value.endswith("archive_member_manifest")
 
 
 def _resolve_path(path_value: Any, *, repo_root: Path, manifest_dir: Path | None) -> Path | None:
@@ -128,6 +135,98 @@ def _control_passed(value: Any) -> bool:
     return False
 
 
+def _artifact_proof_report(
+    record: Any,
+    *,
+    repo_root: Path,
+    manifest_dir: Path | None,
+    required_kind: str,
+    prefix: str,
+) -> tuple[dict[str, Any], list[str], dict[str, Any] | None]:
+    blockers: list[str] = []
+    summary: dict[str, Any] = {
+        "declared": isinstance(record, dict),
+        "accepted": False,
+        "path": "",
+        "exists": False,
+        "bytes": None,
+        "sha256": "",
+        "kind": "",
+        "independent_proof": False,
+        "producer_tool": "",
+        "proof_scope": "",
+        "blockers": [],
+    }
+    if not isinstance(record, dict):
+        blockers.append(f"{prefix}_proof_artifact_missing")
+        summary["blockers"] = blockers
+        return summary, blockers, None
+
+    path = _resolve_path(
+        record.get("path"),
+        repo_root=repo_root,
+        manifest_dir=manifest_dir,
+    )
+    if path is None or not path.exists():
+        blockers.append(f"{prefix}_proof_artifact_path_missing")
+    elif not path.is_file():
+        blockers.append(f"{prefix}_proof_artifact_path_not_file")
+    else:
+        raw = path.read_bytes()
+        actual_sha = sha256_bytes(raw)
+        summary.update(
+            {
+                "path": repo_relative(path, repo_root),
+                "exists": True,
+                "bytes": len(raw),
+                "sha256": actual_sha,
+            }
+        )
+        if record.get("bytes") != len(raw):
+            blockers.append(f"{prefix}_proof_artifact_bytes_mismatch")
+        if record.get("sha256") != actual_sha:
+            blockers.append(f"{prefix}_proof_artifact_sha256_mismatch")
+        try:
+            payload = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            blockers.append(f"{prefix}_proof_artifact_json_invalid")
+            payload = None
+        if isinstance(payload, dict):
+            kind = payload.get("kind")
+            producer_tool = payload.get("producer_tool", payload.get("tool", ""))
+            proof_scope = payload.get("proof_scope", "")
+            summary.update(
+                {
+                    "kind": kind if isinstance(kind, str) else "",
+                    "independent_proof": payload.get("independent_proof") is True,
+                    "producer_tool": producer_tool if isinstance(producer_tool, str) else "",
+                    "proof_scope": proof_scope if isinstance(proof_scope, str) else "",
+                }
+            )
+            if payload.get("schema_version") != SCHEMA_VERSION:
+                blockers.append(f"{prefix}_proof_schema_version_missing_or_invalid")
+            if kind != required_kind:
+                blockers.append(f"{prefix}_proof_kind_missing_or_invalid")
+            if payload.get("independent_proof") is not True:
+                blockers.append(f"{prefix}_proof_independent_flag_missing")
+            if payload.get("score_claim") is not False:
+                blockers.append(f"{prefix}_proof_score_claim_must_be_false")
+            if payload.get("dispatch_attempted") is not False:
+                blockers.append(f"{prefix}_proof_dispatch_attempted_must_be_false")
+            if (
+                payload.get("manifest_declared") is True
+                or payload.get("no_op_control") is True
+                or payload.get("proof_source") in {"candidate_manifest", "no_op_control"}
+            ):
+                blockers.append(f"{prefix}_proof_must_not_be_manifest_declared_no_op")
+        else:
+            payload = None
+
+    summary["accepted"] = not blockers
+    summary["blockers"] = blockers
+    return summary, blockers, payload
+
+
 def _runtime_loader_parity_report(
     report: Any,
     *,
@@ -135,6 +234,8 @@ def _runtime_loader_parity_report(
     member_records: list[dict[str, Any]],
     archive_members: dict[str, bytes],
     repo_root: Path,
+    manifest_dir: Path | None,
+    candidate_archive_sha256: str,
 ) -> tuple[dict[str, Any], list[str]]:
     blockers: list[str] = []
     expected_runtime_path = repo_relative(runtime_path, repo_root) if runtime_path else ""
@@ -153,6 +254,11 @@ def _runtime_loader_parity_report(
         "sidecar_free": False,
         "fallback_used": None,
         "loaded_charged_members": [],
+        "runtime_execution_proof": {
+            "declared": False,
+            "accepted": False,
+            "blockers": ["runtime_execution_proof_artifact_missing"],
+        },
         "blockers": [],
     }
     if not isinstance(report, dict):
@@ -231,6 +337,55 @@ def _runtime_loader_parity_report(
                 blockers.append(f"runtime_loader_parity_loaded_charged_member_not_declared:{item}")
     summary["loaded_charged_members"] = loaded_member_names
 
+    proof_summary, proof_blockers, proof_payload = _artifact_proof_report(
+        report.get("runtime_execution_proof", report.get("proof_artifact")),
+        repo_root=repo_root,
+        manifest_dir=manifest_dir,
+        required_kind=RUNTIME_EXECUTION_PROOF_KIND,
+        prefix="runtime_execution",
+    )
+    if proof_payload is not None:
+        if proof_payload.get("candidate_archive_sha256") != candidate_archive_sha256:
+            proof_blockers.append("runtime_execution_proof_candidate_archive_sha256_mismatch")
+        if proof_payload.get("runtime_consumer_sha256") != runtime_sha:
+            proof_blockers.append("runtime_execution_proof_runtime_consumer_sha256_mismatch")
+        if proof_payload.get("loader_member") != loader_member_str:
+            proof_blockers.append("runtime_execution_proof_loader_member_mismatch")
+        if proof_payload.get("loader_member_sha256") != loader_sha:
+            proof_blockers.append("runtime_execution_proof_loader_member_sha256_mismatch")
+        if proof_payload.get("runtime_executed") is not True:
+            proof_blockers.append("runtime_execution_proof_runtime_not_executed")
+        if proof_payload.get("executed_archive_inflate") is not True:
+            proof_blockers.append("runtime_execution_proof_inflate_not_executed")
+        if proof_payload.get("sidecar_free") is not True:
+            proof_blockers.append("runtime_execution_proof_sidecar_free_not_proven")
+        if proof_payload.get("fallback_used") is not False:
+            proof_blockers.append("runtime_execution_proof_fallback_used")
+        consumed_members = proof_payload.get("consumed_charged_members")
+        if not isinstance(consumed_members, list) or not consumed_members:
+            proof_blockers.append("runtime_execution_proof_consumed_charged_members_missing")
+            proof_summary["consumed_charged_members"] = []
+        else:
+            consumed_member_names = [item for item in consumed_members if isinstance(item, str)]
+            proof_summary["consumed_charged_members"] = consumed_member_names
+            if len(consumed_member_names) != len(consumed_members):
+                proof_blockers.append("runtime_execution_proof_consumed_charged_members_invalid")
+            for member in loaded_member_names:
+                if member not in consumed_member_names:
+                    proof_blockers.append(f"runtime_execution_proof_missing_loaded_member:{member}")
+        output_sha = proof_payload.get(
+            "runtime_output_sha256",
+            proof_payload.get("decoded_output_sha256"),
+        )
+        proof_summary["runtime_output_sha256"] = output_sha if isinstance(output_sha, str) else ""
+        if not _is_sha256(output_sha):
+            proof_blockers.append("runtime_execution_proof_output_sha256_missing_or_invalid")
+    proof_blockers = list(dict.fromkeys(proof_blockers))
+    proof_summary["accepted"] = not proof_blockers
+    proof_summary["blockers"] = proof_blockers
+    summary["runtime_execution_proof"] = proof_summary
+    blockers.extend(proof_blockers)
+
     accepted = not blockers
     summary["accepted"] = accepted
     summary["blockers"] = blockers
@@ -242,6 +397,9 @@ def _decode_reencode_parity_report(
     *,
     member_records: list[dict[str, Any]],
     archive_members: dict[str, bytes],
+    repo_root: Path,
+    manifest_dir: Path | None,
+    candidate_archive_sha256: str,
 ) -> tuple[dict[str, Any], list[str]]:
     blockers: list[str] = []
     summary: dict[str, Any] = {
@@ -257,6 +415,11 @@ def _decode_reencode_parity_report(
         "byte_exact_reencode": False,
         "reencoded_payload_sha256": "",
         "sidecar_free": False,
+        "independent_proof": {
+            "declared": False,
+            "accepted": False,
+            "blockers": ["decode_reencode_independent_proof_artifact_missing"],
+        },
         "blockers": [],
     }
     if not isinstance(report, dict):
@@ -334,6 +497,200 @@ def _decode_reencode_parity_report(
     if not sidecar_free:
         blockers.append("decode_reencode_sidecar_free_not_proven")
 
+    proof_summary, proof_blockers, proof_payload = _artifact_proof_report(
+        report.get("independent_proof_artifact", report.get("proof_artifact")),
+        repo_root=repo_root,
+        manifest_dir=manifest_dir,
+        required_kind=DECODE_REENCODE_INDEPENDENT_PROOF_KIND,
+        prefix="decode_reencode_independent",
+    )
+    if proof_payload is not None:
+        if proof_payload.get("candidate_archive_sha256") != candidate_archive_sha256:
+            proof_blockers.append("decode_reencode_independent_proof_candidate_archive_sha256_mismatch")
+        if proof_payload.get("payload_member") != payload_member_str:
+            proof_blockers.append("decode_reencode_independent_proof_payload_member_mismatch")
+        if proof_payload.get("payload_member_sha256") != payload_sha:
+            proof_blockers.append("decode_reencode_independent_proof_payload_member_sha256_mismatch")
+        if proof_payload.get("proof_scope") != "full_decode_reencode":
+            proof_blockers.append("decode_reencode_independent_proof_scope_invalid")
+        proof_full_decode = proof_payload.get("full_decode")
+        proof_full_ok = isinstance(proof_full_decode, dict) and proof_full_decode.get("passed") is True
+        if not proof_full_ok:
+            proof_blockers.append("decode_reencode_independent_proof_full_decode_not_proven")
+        else:
+            proof_frame_count = proof_full_decode.get("frame_count")
+            if not isinstance(proof_frame_count, int) or proof_frame_count <= 0:
+                proof_blockers.append("decode_reencode_independent_proof_full_decode_frame_count_invalid")
+            proof_decoded_sha = proof_full_decode.get(
+                "decoded_masks_sha256",
+                proof_full_decode.get("decoded_payload_sha256"),
+            )
+            if not _is_sha256(proof_decoded_sha):
+                proof_blockers.append("decode_reencode_independent_proof_full_decode_sha256_missing_or_invalid")
+        proof_reencode = proof_payload.get("byte_exact_reencode")
+        proof_reencode_ok = isinstance(proof_reencode, dict) and proof_reencode.get("passed") is True
+        if not proof_reencode_ok:
+            proof_blockers.append("decode_reencode_independent_proof_byte_exact_reencode_not_proven")
+        else:
+            proof_reencoded_sha = proof_reencode.get(
+                "reencoded_payload_sha256",
+                proof_reencode.get("reencoded_member_sha256"),
+            )
+            if proof_reencode.get("byte_exact") is not True:
+                proof_blockers.append("decode_reencode_independent_proof_byte_exact_flag_not_true")
+            if proof_reencoded_sha != payload_sha:
+                proof_blockers.append("decode_reencode_independent_proof_reencoded_payload_sha256_mismatch")
+        if proof_payload.get("sidecar_free") is not True:
+            proof_blockers.append("decode_reencode_independent_proof_sidecar_free_not_proven")
+    proof_blockers = list(dict.fromkeys(proof_blockers))
+    proof_summary["accepted"] = not proof_blockers
+    proof_summary["blockers"] = proof_blockers
+    summary["independent_proof"] = proof_summary
+    blockers.extend(proof_blockers)
+
+    summary["accepted"] = not blockers
+    summary["blockers"] = blockers
+    return summary, blockers
+
+
+def _status_is_terminal(value: Any) -> bool:
+    if not isinstance(value, str) or not value:
+        return False
+    return value.startswith(TERMINAL_DISPATCH_STATUS_PREFIXES)
+
+
+def _exact_eval_dispatch_requirements_report(
+    report: Any,
+    *,
+    candidate_archive_sha256: str,
+    candidate_archive_bytes: int | None,
+) -> tuple[dict[str, Any], list[str]]:
+    blockers: list[str] = []
+    summary: dict[str, Any] = {
+        "schema_version": SCHEMA_VERSION,
+        "contract": EXACT_EVAL_DISPATCH_REQUIREMENTS_CONTRACT,
+        "declared": isinstance(report, dict),
+        "accepted": False,
+        "ready_for_exact_eval_dispatch_claim": False,
+        "lane_claim": {
+            "declared": False,
+            "active": False,
+            "lane_id": "",
+            "instance_job_id": "",
+            "claims_path": "",
+            "claim_status": "",
+        },
+        "exact_cuda": {
+            "declared": False,
+            "device": "",
+            "entrypoint": "",
+            "eval_path": "",
+            "archive_sha256": "",
+            "archive_bytes": None,
+            "full_sample_count": False,
+        },
+        "blockers": [],
+    }
+    if not isinstance(report, dict):
+        blockers.append("exact_eval_dispatch_requirements_missing")
+        summary["blockers"] = blockers
+        return summary, blockers
+
+    if report.get("schema_version") != SCHEMA_VERSION:
+        blockers.append("exact_eval_dispatch_schema_version_missing_or_invalid")
+    if report.get("exact_eval_dispatch_requirements_contract") != EXACT_EVAL_DISPATCH_REQUIREMENTS_CONTRACT:
+        blockers.append("exact_eval_dispatch_contract_missing_or_invalid")
+    ready_claim = report.get("ready_for_exact_eval_dispatch_claim") is True
+    summary["ready_for_exact_eval_dispatch_claim"] = ready_claim
+    if not ready_claim:
+        blockers.append("exact_eval_dispatch_ready_claim_missing")
+    if report.get("score_claim") is not False:
+        blockers.append("exact_eval_dispatch_score_claim_must_be_false")
+    if report.get("dispatch_attempted") is not False:
+        blockers.append("exact_eval_dispatch_dispatch_attempted_must_be_false")
+
+    lane_claim = report.get("lane_claim", report.get("claim"))
+    if not isinstance(lane_claim, dict):
+        blockers.append("exact_eval_dispatch_lane_claim_missing")
+    else:
+        lane_id = lane_claim.get("lane_id")
+        instance_job_id = lane_claim.get(
+            "instance_job_id",
+            lane_claim.get("job_name"),
+        )
+        claims_path = lane_claim.get("claims_path")
+        claim_status = lane_claim.get("claim_status", lane_claim.get("status"))
+        claimed_with = lane_claim.get("claimed_with", "")
+        lane_summary = {
+            "declared": True,
+            "active": lane_claim.get("active") is True,
+            "lane_id": lane_id if isinstance(lane_id, str) else "",
+            "instance_job_id": instance_job_id if isinstance(instance_job_id, str) else "",
+            "claims_path": claims_path if isinstance(claims_path, str) else "",
+            "claim_status": claim_status if isinstance(claim_status, str) else "",
+        }
+        summary["lane_claim"] = lane_summary
+        if not isinstance(lane_id, str) or not lane_id:
+            blockers.append("exact_eval_dispatch_lane_id_missing")
+        if not isinstance(instance_job_id, str) or not instance_job_id:
+            blockers.append("exact_eval_dispatch_instance_job_id_missing")
+        if claims_path != DISPATCH_CLAIMS_PATH:
+            blockers.append("exact_eval_dispatch_claims_path_not_canonical")
+        if lane_claim.get("active") is not True:
+            blockers.append("exact_eval_dispatch_lane_claim_not_active")
+        if not isinstance(claim_status, str) or not claim_status:
+            blockers.append("exact_eval_dispatch_lane_claim_status_missing")
+        elif _status_is_terminal(claim_status):
+            blockers.append("exact_eval_dispatch_lane_claim_status_terminal")
+        if (
+            not isinstance(claimed_with, str)
+            or "tools/claim_lane_dispatch.py" not in claimed_with
+            or " claim" not in f" {claimed_with} "
+        ):
+            blockers.append("exact_eval_dispatch_lane_claim_helper_not_represented")
+
+    exact_cuda = report.get("exact_cuda")
+    if not isinstance(exact_cuda, dict):
+        blockers.append("exact_eval_dispatch_cuda_requirements_missing")
+    else:
+        archive_bytes = exact_cuda.get("archive_bytes")
+        cuda_summary = {
+            "declared": True,
+            "device": exact_cuda.get("device") if isinstance(exact_cuda.get("device"), str) else "",
+            "entrypoint": exact_cuda.get("entrypoint") if isinstance(exact_cuda.get("entrypoint"), str) else "",
+            "eval_path": exact_cuda.get("eval_path") if isinstance(exact_cuda.get("eval_path"), str) else "",
+            "archive_sha256": exact_cuda.get("archive_sha256")
+            if isinstance(exact_cuda.get("archive_sha256"), str)
+            else "",
+            "archive_bytes": archive_bytes if isinstance(archive_bytes, int) else None,
+            "full_sample_count": exact_cuda.get("full_sample_count") is True,
+        }
+        summary["exact_cuda"] = cuda_summary
+        if exact_cuda.get("required") is not True:
+            blockers.append("exact_eval_dispatch_cuda_required_not_true")
+        if exact_cuda.get("device") != "cuda":
+            blockers.append("exact_eval_dispatch_device_not_cuda")
+        if exact_cuda.get("entrypoint") != EXACT_EVAL_ENTRYPOINT:
+            blockers.append("exact_eval_dispatch_entrypoint_not_canonical")
+        if exact_cuda.get("eval_path") != EXACT_EVAL_PATH:
+            blockers.append("exact_eval_dispatch_eval_path_not_canonical")
+        exact_archive_sha = exact_cuda.get("archive_sha256")
+        if not _is_sha256(exact_archive_sha):
+            blockers.append("exact_eval_dispatch_archive_sha256_missing_or_invalid")
+        elif exact_archive_sha != candidate_archive_sha256:
+            blockers.append("exact_eval_dispatch_archive_sha256_mismatch")
+        if not isinstance(archive_bytes, int) or archive_bytes <= 0:
+            blockers.append("exact_eval_dispatch_archive_bytes_missing_or_invalid")
+        elif archive_bytes != candidate_archive_bytes:
+            blockers.append("exact_eval_dispatch_archive_bytes_mismatch")
+        if exact_cuda.get("full_sample_count") is not True:
+            blockers.append("exact_eval_dispatch_full_sample_count_not_required")
+        if exact_cuda.get("contest_auth_eval_json_required") is not True:
+            blockers.append("exact_eval_dispatch_contest_auth_eval_json_not_required")
+        if exact_cuda.get("score_claim_after_eval_only") is not True:
+            blockers.append("exact_eval_dispatch_score_claim_after_eval_only_missing")
+
+    blockers = list(dict.fromkeys(blockers))
     summary["accepted"] = not blockers
     summary["blockers"] = blockers
     return summary, blockers
@@ -380,9 +737,7 @@ def _hpm1_structural_inventory_report(
     if report.get("full_decode_proven") is not False:
         blockers.append("hpm1_structural_inventory_must_not_claim_full_decode")
     if report.get("byte_exact_semantic_reencode_proven") is not False:
-        blockers.append(
-            "hpm1_structural_inventory_must_not_claim_semantic_reencode"
-        )
+        blockers.append("hpm1_structural_inventory_must_not_claim_semantic_reencode")
 
     raw_path = report.get("path")
     path_is_safe = _safe_member_name(raw_path)
@@ -429,21 +784,14 @@ def _hpm1_structural_inventory_report(
                 blockers.append("hpm1_structural_inventory_schema_version_invalid")
             if payload.get("kind") != "hpm1_payload_structural_decode_inventory":
                 blockers.append("hpm1_structural_inventory_kind_invalid")
-            if (
-                payload.get("hpm1_structural_decode_inventory_contract")
-                != HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT
-            ):
+            if payload.get("hpm1_structural_decode_inventory_contract") != HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT:
                 blockers.append("hpm1_structural_inventory_payload_contract_invalid")
             if payload.get("score_claim") is not False:
                 blockers.append("hpm1_structural_inventory_score_claim_must_be_false")
             if payload.get("dispatch_attempted") is not False:
-                blockers.append(
-                    "hpm1_structural_inventory_dispatch_attempted_must_be_false"
-                )
+                blockers.append("hpm1_structural_inventory_dispatch_attempted_must_be_false")
             if payload.get("ready_for_exact_eval_dispatch") is not False:
-                blockers.append(
-                    "hpm1_structural_inventory_ready_for_exact_eval_must_be_false"
-                )
+                blockers.append("hpm1_structural_inventory_ready_for_exact_eval_must_be_false")
             segment = payload.get("segment")
             if not isinstance(segment, dict):
                 blockers.append("hpm1_structural_inventory_segment_missing")
@@ -458,18 +806,14 @@ def _hpm1_structural_inventory_report(
             )
             summary["structural_reencode_matches_source"] = structural_matches
             if not structural_matches:
-                blockers.append(
-                    "hpm1_structural_inventory_structural_reencode_not_proven"
-                )
+                blockers.append("hpm1_structural_inventory_structural_reencode_not_proven")
             full_decode = payload.get("full_decode")
             full_decode_proven = isinstance(full_decode, dict) and full_decode.get("passed") is True
             summary["full_decode_proven"] = full_decode_proven
             if full_decode_proven:
                 blockers.append("hpm1_structural_inventory_claims_full_decode")
             reencode = payload.get("byte_exact_semantic_reencode")
-            semantic_reencode_proven = (
-                isinstance(reencode, dict) and reencode.get("passed") is True
-            )
+            semantic_reencode_proven = isinstance(reencode, dict) and reencode.get("passed") is True
             summary["byte_exact_semantic_reencode_proven"] = semantic_reencode_proven
             if semantic_reencode_proven:
                 blockers.append("hpm1_structural_inventory_claims_semantic_reencode")
@@ -484,9 +828,7 @@ def _hpm1_structural_inventory_report(
                     if isinstance(row, dict) and isinstance(row.get("name"), str)
                 ]
                 if len(unsupported_names) != len(unsupported):
-                    blockers.append(
-                        "hpm1_structural_inventory_unsupported_constructs_invalid"
-                    )
+                    blockers.append("hpm1_structural_inventory_unsupported_constructs_invalid")
             summary["unsupported_wire_constructs"] = unsupported_names
 
     summary["accepted"] = not blockers
@@ -498,9 +840,7 @@ def _contains_marker(value: Any, marker: str) -> bool:
     if not isinstance(value, str):
         return False
     normalized = value.lower().replace("-", "_")
-    if marker == "proxy" and (
-        "non_proxy" in normalized or "no_proxy" in normalized or "proxy_free" in normalized
-    ):
+    if marker == "proxy" and ("non_proxy" in normalized or "no_proxy" in normalized or "proxy_free" in normalized):
         return False
     return marker in normalized
 
@@ -538,10 +878,7 @@ def _audit_candidate_rows(payload: dict[str, Any]) -> tuple[dict[str, Any], list
                 reasons.append("proxy_marker")
             if any(key in row and _declared_marker_value(row.get(key)) for key in SIDECAR_ROW_KEYS):
                 reasons.append("sidecar_marker")
-            if any(
-                _contains_marker(row.get(key), "sidecar")
-                for key in ("role", "source", "tag", "name")
-            ):
+            if any(_contains_marker(row.get(key), "sidecar") for key in ("role", "source", "tag", "name")):
                 reasons.append("sidecar_marker")
             if reasons:
                 reason_set = sorted(set(reasons))
@@ -735,14 +1072,8 @@ def _zip_wire_contract(archive_path: Path, infos: list[zipfile.ZipInfo]) -> dict
         )
     local_names = [row["filename"] for row in local_headers]
     central_names = [info.filename for info in infos]
-    duplicate_local_names = sorted(
-        {name for name in local_names if local_names.count(name) > 1}
-    )
-    unsafe_names = sorted(
-        name
-        for name in [*local_names, *central_names]
-        if not _safe_member_name(name)
-    )
+    duplicate_local_names = sorted({name for name in local_names if local_names.count(name) > 1})
+    unsafe_names = sorted(name for name in [*local_names, *central_names] if not _safe_member_name(name))
     passed = (
         len(local_headers) == len(infos)
         and not duplicate_local_names
@@ -863,16 +1194,9 @@ def audit_categorical_candidate_manifest(
                     blockers.append("archive_member_manifest_not_object")
                 else:
                     if loaded.get("schema_version") != SCHEMA_VERSION:
-                        blockers.append(
-                            "archive_member_manifest_schema_version_missing_or_invalid"
-                        )
-                    if (
-                        loaded.get("archive_member_manifest_contract")
-                        != ARCHIVE_MEMBER_MANIFEST_CONTRACT
-                    ):
-                        blockers.append(
-                            "archive_member_manifest_contract_missing_or_invalid"
-                        )
+                        blockers.append("archive_member_manifest_schema_version_missing_or_invalid")
+                    if loaded.get("archive_member_manifest_contract") != ARCHIVE_MEMBER_MANIFEST_CONTRACT:
+                        blockers.append("archive_member_manifest_contract_missing_or_invalid")
                     if not _archive_member_manifest_kind_valid(loaded.get("kind")):
                         blockers.append("archive_member_manifest_kind_missing_or_invalid")
                     manifest_payload = loaded
@@ -961,6 +1285,7 @@ def audit_categorical_candidate_manifest(
     conditioning_prior_contract = audit_categorical_openpilot_mask_priors(
         payload.get("conditioning_priors"),
         charged_member_names=member_names,
+        charged_members=member_records,
     )
     blockers.extend(conditioning_prior_contract["dispatch_blockers"])
     warnings.extend(conditioning_prior_contract["warnings"])
@@ -974,9 +1299,7 @@ def audit_categorical_candidate_manifest(
         elif manifest_members != charged_members:
             blockers.append("archive_member_manifest_members_mismatch")
         else:
-            expected_member_order = [
-                record.get("name", "") for record in manifest_members if isinstance(record, dict)
-            ]
+            expected_member_order = [record.get("name", "") for record in manifest_members if isinstance(record, dict)]
             if manifest_member_order != expected_member_order:
                 blockers.append("archive_member_manifest_member_order_mismatch")
             if manifest_member_count != len(manifest_members):
@@ -992,6 +1315,8 @@ def audit_categorical_candidate_manifest(
     archive_error: str | None = None
     archive_untracked_members: list[str] = []
     archive_member_order_matches_manifest = False
+    candidate_archive_sha256 = ""
+    candidate_archive_bytes: int | None = None
     archive_wire_contract: dict[str, Any] = {
         "schema_version": 1,
         "passed": False,
@@ -1012,6 +1337,8 @@ def audit_categorical_candidate_manifest(
         else:
             actual_bytes = archive_path.stat().st_size
             actual_sha = sha256_file(archive_path)
+            candidate_archive_bytes = actual_bytes
+            candidate_archive_sha256 = actual_sha
             if archive_record.get("bytes") != actual_bytes:
                 blockers.append("candidate_archive_bytes_mismatch")
             if archive_record.get("sha256") != actual_sha:
@@ -1067,6 +1394,8 @@ def audit_categorical_candidate_manifest(
         member_records=member_records,
         archive_members=archive_members,
         repo_root=root,
+        manifest_dir=manifest_base,
+        candidate_archive_sha256=candidate_archive_sha256,
     )
     blockers.extend(runtime_loader_blockers)
 
@@ -1074,32 +1403,43 @@ def audit_categorical_candidate_manifest(
         payload.get("decode_reencode_parity"),
         member_records=member_records,
         archive_members=archive_members,
+        repo_root=root,
+        manifest_dir=manifest_base,
+        candidate_archive_sha256=candidate_archive_sha256,
     )
     blockers.extend(decode_reencode_blockers)
 
-    hpm1_structural_inventory, hpm1_structural_blockers = (
-        _hpm1_structural_inventory_report(
-            payload.get("hpm1_structural_decode_inventory"),
-            payload_member=decode_reencode_parity["payload_member"],
-            payload_member_sha256=decode_reencode_parity["payload_member_sha256"],
-            repo_root=root,
-            manifest_dir=manifest_base,
-        )
+    hpm1_structural_inventory, hpm1_structural_blockers = _hpm1_structural_inventory_report(
+        payload.get("hpm1_structural_decode_inventory"),
+        payload_member=decode_reencode_parity["payload_member"],
+        payload_member_sha256=decode_reencode_parity["payload_member_sha256"],
+        repo_root=root,
+        manifest_dir=manifest_base,
     )
     blockers.extend(hpm1_structural_blockers)
 
     construction_plan = audit_categorical_charged_label_plan(
         payload.get("candidate_construction_plan"),
         charged_member_names=member_names,
+        charged_members=member_records,
     )
     if construction_plan["declared"] and construction_plan["accepted"] is not True:
         blockers.extend(
-            f"candidate_construction_plan_{blocker}"
-            for blocker in construction_plan["validation_blockers"]
+            f"candidate_construction_plan_{blocker}" for blocker in construction_plan["validation_blockers"]
         )
 
     candidate_rows, candidate_row_blockers = _audit_candidate_rows(payload)
     blockers.extend(candidate_row_blockers)
+
+    exact_eval_dispatch_requirements, exact_eval_dispatch_blockers = _exact_eval_dispatch_requirements_report(
+        payload.get(
+            "exact_eval_dispatch_requirements",
+            payload.get("exact_eval_dispatch", payload.get("dispatch_readiness")),
+        ),
+        candidate_archive_sha256=candidate_archive_sha256,
+        candidate_archive_bytes=candidate_archive_bytes,
+    )
+    blockers.extend(exact_eval_dispatch_blockers)
 
     ready = len(blockers) == 0
     return {
@@ -1142,9 +1482,7 @@ def audit_categorical_candidate_manifest(
         "archive_member_manifest": {
             "path": repo_relative(manifest_path, root) if manifest_path is not None else "",
             "exists": bool(manifest_path is not None and manifest_path.exists()),
-            "schema_version": (
-                manifest_payload.get("schema_version") if isinstance(manifest_payload, dict) else None
-            ),
+            "schema_version": (manifest_payload.get("schema_version") if isinstance(manifest_payload, dict) else None),
             "kind": manifest_payload.get("kind", "") if isinstance(manifest_payload, dict) else "",
             "contract": (
                 manifest_payload.get("archive_member_manifest_contract", "")
@@ -1155,8 +1493,7 @@ def audit_categorical_candidate_manifest(
             "schema_valid": (
                 isinstance(manifest_payload, dict)
                 and manifest_payload.get("schema_version") == SCHEMA_VERSION
-                and manifest_payload.get("archive_member_manifest_contract")
-                == ARCHIVE_MEMBER_MANIFEST_CONTRACT
+                and manifest_payload.get("archive_member_manifest_contract") == ARCHIVE_MEMBER_MANIFEST_CONTRACT
                 and _archive_member_manifest_kind_valid(manifest_payload.get("kind"))
             ),
             "bytes": manifest_path.stat().st_size if manifest_path is not None and manifest_path.exists() else None,
@@ -1168,12 +1505,10 @@ def audit_categorical_candidate_manifest(
                 and manifest_payload.get("members") == charged_members
             ),
             "member_order_matches_charged_members": (
-                manifest_payload is not None
-                and manifest_payload.get("member_order") == member_names
+                manifest_payload is not None and manifest_payload.get("member_order") == member_names
             ),
             "member_count_matches_charged_members": (
-                manifest_payload is not None
-                and manifest_payload.get("member_count") == len(member_names)
+                manifest_payload is not None and manifest_payload.get("member_count") == len(member_names)
             ),
         },
         "semantic_contract": {
@@ -1187,16 +1522,14 @@ def audit_categorical_candidate_manifest(
         "runtime_consumer": {
             "path": repo_relative(runtime_path, root) if runtime_path is not None else "",
             "exists": bool(runtime_path is not None and runtime_path.exists()),
-            "sha256": sha256_file(runtime_path)
-            if runtime_path is not None and runtime_path.is_file()
-            else "",
+            "sha256": sha256_file(runtime_path) if runtime_path is not None and runtime_path.is_file() else "",
             "consumes_charged_members": (
-                isinstance(runtime_consumer, dict)
-                and runtime_consumer.get("consumes_charged_members") is True
+                isinstance(runtime_consumer, dict) and runtime_consumer.get("consumes_charged_members") is True
             ),
         },
         "runtime_loader_parity": runtime_loader_parity,
         "decode_reencode_parity": decode_reencode_parity,
+        "exact_eval_dispatch_requirements": exact_eval_dispatch_requirements,
         "hpm1_structural_decode_inventory": hpm1_structural_inventory,
         "candidate_construction_plan": construction_plan,
         "conditioning_prior_contract": conditioning_prior_contract,
@@ -1219,15 +1552,21 @@ __all__ = [
     "CANDIDATE_MANIFEST_KINDS",
     "CONTEST_ARCHIVE_CONTRACT",
     "CONTEST_INFLATE_MEMBER",
+    "DECODE_REENCODE_INDEPENDENT_PROOF_KIND",
     "DECODE_REENCODE_PARITY_CONTRACT",
     "DETERMINISTIC_ZIP_ALLOWED_COMPRESS_TYPES",
     "DETERMINISTIC_ZIP_CREATE_SYSTEM",
     "DETERMINISTIC_ZIP_DATE_TIME",
     "DETERMINISTIC_ZIP_FILE_MODE",
     "DETERMINISTIC_ZIP_INFLATE_MODE",
+    "DISPATCH_CLAIMS_PATH",
+    "EXACT_EVAL_DISPATCH_REQUIREMENTS_CONTRACT",
+    "EXACT_EVAL_ENTRYPOINT",
+    "EXACT_EVAL_PATH",
     "HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT",
     "REQUIRED_CONTROL_NAMES",
     "REQUIRED_MEMBER_ROLES",
+    "RUNTIME_EXECUTION_PROOF_KIND",
     "RUNTIME_LOADER_PARITY_CONTRACT",
     "SCHEMA_VERSION",
     "audit_categorical_candidate_manifest",

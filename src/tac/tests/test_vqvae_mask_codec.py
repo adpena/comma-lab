@@ -141,6 +141,19 @@ def test_decode_rejects_bad_magic():
         decode_vqvae_codec(b"BADX" + b"\x00" * 30)
 
 
+def test_decode_rejects_truncated_and_trailing_payload_bytes():
+    masks = torch.zeros(2, 16, 24, dtype=torch.int64)
+    masks[:, 8:, :] = 1
+    cb = build_codebook_top_k(masks, patch_size=4, k=4)
+    config = VQVAEConfig(patch_size=4, codebook_size=4, num_classes=5)
+    blob = encode_vqvae_codec(masks, codebook=cb, config=config)
+
+    with pytest.raises(ValueError, match="truncated"):
+        decode_vqvae_codec(blob[:-1])
+    with pytest.raises(ValueError, match="trailing bytes"):
+        decode_vqvae_codec(blob + b"junk")
+
+
 def test_encode_rejects_bad_codebook_shape():
     masks = _make_synthetic_masks(t=2, h=16, w=24)
     cb = torch.zeros(8, 5, 5, dtype=torch.int64)  # wrong patch size

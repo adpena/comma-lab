@@ -13,16 +13,23 @@ from tac.categorical_candidate_plan import (
 from tac.categorical_candidate_readiness import (
     ARCHIVE_MEMBER_MANIFEST_CONTRACT,
     CANDIDATE_MANIFEST_CONTRACT,
+    DECODE_REENCODE_INDEPENDENT_PROOF_KIND,
     DECODE_REENCODE_PARITY_CONTRACT,
     DETERMINISTIC_ZIP_CREATE_SYSTEM,
     DETERMINISTIC_ZIP_DATE_TIME,
     DETERMINISTIC_ZIP_FILE_MODE,
     DETERMINISTIC_ZIP_INFLATE_MODE,
+    DISPATCH_CLAIMS_PATH,
+    EXACT_EVAL_DISPATCH_REQUIREMENTS_CONTRACT,
+    EXACT_EVAL_ENTRYPOINT,
+    EXACT_EVAL_PATH,
     HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT,
     REQUIRED_CONTROL_NAMES,
+    RUNTIME_EXECUTION_PROOF_KIND,
     RUNTIME_LOADER_PARITY_CONTRACT,
     audit_categorical_candidate_manifest,
 )
+from tac.categorical_openpilot_mask_prior_contract import RUNTIME_LABEL_CONTRACT
 from tac.repo_io import sha256_bytes, sha256_file, write_json
 from tac.semantic_label_contract import CONTEST_SEGNET_CLASS_NAME_TUPLE, SELFCOMP_CLASS_TO_GRAY
 
@@ -46,7 +53,7 @@ def _base_candidate(tmp_path: Path) -> dict:
     runtime_source_sha = sha256_bytes(runtime_source_raw)
     member_payloads = [
         ("categorical_payload.bin", b"\x00\x01\x01\x02categorical", "categorical_payload"),
-        ("class_codebook.json", b"{\"class_order\":\"contest\"}\n", "decoder_table"),
+        ("class_codebook.json", b'{"class_order":"contest"}\n', "decoder_table"),
         ("inflate.sh", b"#!/usr/bin/env bash\nset -euo pipefail\n", "inflate_entrypoint"),
         ("runtime_decoder.py", runtime_source_raw, "decoder_or_runtime_consumer"),
     ]
@@ -63,6 +70,7 @@ def _base_candidate(tmp_path: Path) -> dict:
         for name, raw, role in member_payloads
     ]
     payload_sha = charged_members[0]["sha256"]
+    charged_sha_by_name = {record["name"]: record["sha256"] for record in charged_members}
     archive_member_manifest = {
         "schema_version": 1,
         "kind": "categorical_test_archive_member_manifest",
@@ -94,9 +102,7 @@ def _base_candidate(tmp_path: Path) -> dict:
             "sha256": sha256_file(archive),
         },
         "semantic_class_order": list(CONTEST_SEGNET_CLASS_NAME_TUPLE),
-        "selfcomp_gray_codebook": [
-            SELFCOMP_CLASS_TO_GRAY[index] for index in range(len(SELFCOMP_CLASS_TO_GRAY))
-        ],
+        "selfcomp_gray_codebook": [SELFCOMP_CLASS_TO_GRAY[index] for index in range(len(SELFCOMP_CLASS_TO_GRAY))],
         "runtime_consumer": {
             "path": RUNTIME_CONSUMER_REPO_PATH,
             "consumes_charged_members": True,
@@ -145,6 +151,12 @@ def _base_candidate(tmp_path: Path) -> dict:
                 "name": "ego_lane_atom_ranker",
                 "usage": "compression_time_atom_ranking_only",
                 "runtime_consumed": False,
+                "label_contract": "openpilot_prior_hints_non_runtime",
+                "source_provenance": {
+                    "kind": "compression_time_only_derivation",
+                    "source": "test_fixture_openpilot_prior_hints",
+                    "runtime_consumed": False,
+                },
             },
             {
                 "family": "clade_spade",
@@ -152,6 +164,14 @@ def _base_candidate(tmp_path: Path) -> dict:
                 "usage": "inflate_runtime_conditioning",
                 "runtime_consumed": True,
                 "charged_member": "class_codebook.json",
+                "charged_member_sha256": charged_sha_by_name["class_codebook.json"],
+                "label_contract": RUNTIME_LABEL_CONTRACT,
+                "source_provenance": {
+                    "kind": "charged_archive_member",
+                    "charged_member": "class_codebook.json",
+                    "sha256": charged_sha_by_name["class_codebook.json"],
+                    "source": "test_fixture_class_codebook",
+                },
             },
         ],
         "charged_members": charged_members,
@@ -175,23 +195,118 @@ def _structural_hpm1_inventory(payload_sha: str) -> dict:
         },
         "full_decode": {"passed": False},
         "byte_exact_semantic_reencode": {"passed": False},
-        "unsupported_wire_constructs": [
-            {"name": "hpac_autoregressive_probability_rows"}
-        ],
+        "unsupported_wire_constructs": [{"name": "hpac_autoregressive_probability_rows"}],
     }
 
 
-def test_audit_categorical_candidate_manifest_accepts_byte_closed_fixture(tmp_path: Path) -> None:
+def _attach_complete_dispatch_proofs(candidate: dict, tmp_path: Path) -> None:
+    payload_member = candidate["decode_reencode_parity"]["payload_member"]
+    payload_sha = candidate["decode_reencode_parity"]["payload_member_sha256"]
+    archive_sha = candidate["candidate_archive"]["sha256"]
+    archive_bytes = candidate["candidate_archive"]["bytes"]
+    decode_proof = {
+        "schema_version": 1,
+        "kind": DECODE_REENCODE_INDEPENDENT_PROOF_KIND,
+        "independent_proof": True,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "producer_tool": "src/tac/tests/independent_decode_reencode_fixture.py",
+        "proof_scope": "full_decode_reencode",
+        "candidate_archive_sha256": archive_sha,
+        "payload_member": payload_member,
+        "payload_member_sha256": payload_sha,
+        "full_decode": {
+            "passed": True,
+            "frame_count": 1,
+            "decoded_masks_sha256": "b" * 64,
+        },
+        "byte_exact_reencode": {
+            "passed": True,
+            "byte_exact": True,
+            "reencoded_payload_sha256": payload_sha,
+        },
+        "sidecar_free": True,
+    }
+    decode_proof_path = tmp_path / "decode_reencode_independent_proof.json"
+    write_json(decode_proof_path, decode_proof)
+    candidate["decode_reencode_parity"]["independent_proof_artifact"] = {
+        "path": decode_proof_path.name,
+        "bytes": decode_proof_path.stat().st_size,
+        "sha256": sha256_file(decode_proof_path),
+    }
+
+    runtime_parity = candidate["runtime_loader_parity"]
+    runtime_proof = {
+        "schema_version": 1,
+        "kind": RUNTIME_EXECUTION_PROOF_KIND,
+        "independent_proof": True,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "producer_tool": "src/tac/tests/runtime_execution_fixture.py",
+        "proof_scope": "archive_inflate_runtime_execution",
+        "candidate_archive_sha256": archive_sha,
+        "runtime_consumer_sha256": runtime_parity["runtime_consumer_sha256"],
+        "loader_member": runtime_parity["loader_member"],
+        "loader_member_sha256": runtime_parity["loader_member_sha256"],
+        "runtime_executed": True,
+        "executed_archive_inflate": True,
+        "sidecar_free": True,
+        "fallback_used": False,
+        "consumed_charged_members": runtime_parity["loaded_charged_members"],
+        "runtime_output_sha256": "c" * 64,
+    }
+    runtime_proof_path = tmp_path / "runtime_execution_independent_proof.json"
+    write_json(runtime_proof_path, runtime_proof)
+    runtime_parity["runtime_execution_proof"] = {
+        "path": runtime_proof_path.name,
+        "bytes": runtime_proof_path.stat().st_size,
+        "sha256": sha256_file(runtime_proof_path),
+    }
+
+    candidate["exact_eval_dispatch_requirements"] = {
+        "schema_version": 1,
+        "exact_eval_dispatch_requirements_contract": (EXACT_EVAL_DISPATCH_REQUIREMENTS_CONTRACT),
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch_claim": True,
+        "lane_claim": {
+            "lane_id": "categorical_fixture_exact_eval",
+            "instance_job_id": "categorical-fixture-exact-cuda",
+            "claims_path": DISPATCH_CLAIMS_PATH,
+            "claim_status": "eval",
+            "active": True,
+            "claimed_with": ("tools/claim_lane_dispatch.py claim --lane-id categorical_fixture_exact_eval"),
+        },
+        "exact_cuda": {
+            "required": True,
+            "device": "cuda",
+            "entrypoint": EXACT_EVAL_ENTRYPOINT,
+            "eval_path": EXACT_EVAL_PATH,
+            "archive_sha256": archive_sha,
+            "archive_bytes": archive_bytes,
+            "full_sample_count": True,
+            "contest_auth_eval_json_required": True,
+            "score_claim_after_eval_only": True,
+        },
+    }
+
+
+def test_audit_categorical_candidate_manifest_fails_closed_on_self_attested_parity(
+    tmp_path: Path,
+) -> None:
     candidate = _base_candidate(tmp_path)
 
     manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+    blockers = set(manifest["dispatch_blockers"])
 
     assert manifest["score_claim"] is False
     assert manifest["dispatch_attempted"] is False
-    assert manifest["ready_for_exact_eval_dispatch"] is True
+    assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["promotion_eligible"] is False
-    assert manifest["evidence_grade"] == "archive_readiness_audit"
-    assert manifest["dispatch_blockers"] == []
+    assert manifest["evidence_grade"] == "planning_manifest_audit"
+    assert "decode_reencode_independent_proof_artifact_missing" in blockers
+    assert "runtime_execution_proof_artifact_missing" in blockers
+    assert "exact_eval_dispatch_requirements_missing" in blockers
     assert manifest["candidate_manifest"]["schema_valid"] is True
     assert manifest["candidate_manifest"]["contract"] == CANDIDATE_MANIFEST_CONTRACT
     assert manifest["candidate_archive"]["contract"] == "contest_archive_zip"
@@ -199,22 +314,15 @@ def test_audit_categorical_candidate_manifest_accepts_byte_closed_fixture(tmp_pa
     assert manifest["candidate_archive"]["member_order_matches_manifest"] is True
     assert manifest["candidate_archive"]["zip_determinism_contract"]["passed"] is True
     assert manifest["archive_member_manifest"]["schema_valid"] is True
-    assert (
-        manifest["archive_member_manifest"]["member_order_matches_charged_members"] is True
-    )
-    assert (
-        manifest["archive_member_manifest"]["member_count_matches_charged_members"] is True
-    )
+    assert manifest["archive_member_manifest"]["member_order_matches_charged_members"] is True
+    assert manifest["archive_member_manifest"]["member_count_matches_charged_members"] is True
     assert manifest["semantic_contract"]["matches_candidate"] is True
     assert manifest["runtime_consumer"]["consumes_charged_members"] is True
-    assert manifest["runtime_loader_parity"]["accepted"] is True
+    assert manifest["runtime_loader_parity"]["accepted"] is False
     assert manifest["runtime_loader_parity"]["loader_member"] == "runtime_decoder.py"
-    assert (
-        manifest["runtime_loader_parity"]["contract"]
-        == RUNTIME_LOADER_PARITY_CONTRACT
-    )
+    assert manifest["runtime_loader_parity"]["contract"] == RUNTIME_LOADER_PARITY_CONTRACT
     assert manifest["conditioning_prior_contract"]["passed"] is True
-    assert manifest["decode_reencode_parity"]["accepted"] is True
+    assert manifest["decode_reencode_parity"]["accepted"] is False
     assert manifest["decode_reencode_parity"]["payload_member"] == "categorical_payload.bin"
     assert manifest["conditioning_prior_contract"]["runtime_consumed_count"] == 1
     assert manifest["conditioning_prior_contract"]["compression_time_only_count"] == 1
@@ -224,10 +332,81 @@ def test_audit_categorical_candidate_manifest_accepts_byte_closed_fixture(tmp_pa
     assert manifest["hpm1_structural_decode_inventory"]["declared"] is False
 
 
+def test_audit_categorical_candidate_manifest_accepts_complete_dispatch_proofs(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    _attach_complete_dispatch_proofs(candidate, tmp_path)
+
+    manifest = audit_categorical_candidate_manifest(
+        candidate,
+        repo_root=REPO,
+        manifest_dir=tmp_path,
+    )
+
+    assert manifest["ready_for_exact_eval_dispatch"] is True
+    assert manifest["dispatch_blockers"] == []
+    assert manifest["runtime_loader_parity"]["accepted"] is True
+    assert manifest["runtime_loader_parity"]["runtime_execution_proof"]["accepted"] is True
+    assert manifest["decode_reencode_parity"]["accepted"] is True
+    assert manifest["decode_reencode_parity"]["independent_proof"]["accepted"] is True
+    assert manifest["exact_eval_dispatch_requirements"]["accepted"] is True
+    assert manifest["exact_eval_dispatch_requirements"]["exact_cuda"]["entrypoint"] == EXACT_EVAL_ENTRYPOINT
+
+
+def test_audit_categorical_candidate_manifest_rejects_no_op_proof_artifact(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    _attach_complete_dispatch_proofs(candidate, tmp_path)
+    proof_path = tmp_path / "decode_reencode_independent_proof.json"
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    proof["proof_source"] = "candidate_manifest"
+    proof["no_op_control"] = True
+    write_json(proof_path, proof)
+    candidate["decode_reencode_parity"]["independent_proof_artifact"] = {
+        "path": proof_path.name,
+        "bytes": proof_path.stat().st_size,
+        "sha256": sha256_file(proof_path),
+    }
+
+    manifest = audit_categorical_candidate_manifest(
+        candidate,
+        repo_root=REPO,
+        manifest_dir=tmp_path,
+    )
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert "decode_reencode_independent_proof_must_not_be_manifest_declared_no_op" in manifest["dispatch_blockers"]
+
+
+def test_audit_categorical_candidate_manifest_requires_lane_claim_and_cuda_contract(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    _attach_complete_dispatch_proofs(candidate, tmp_path)
+    candidate["exact_eval_dispatch_requirements"].pop("lane_claim")
+    candidate["exact_eval_dispatch_requirements"]["exact_cuda"]["device"] = "cpu"
+    candidate["exact_eval_dispatch_requirements"]["exact_cuda"]["entrypoint"] = "upstream/evaluate.py"
+
+    manifest = audit_categorical_candidate_manifest(
+        candidate,
+        repo_root=REPO,
+        manifest_dir=tmp_path,
+    )
+    blockers = set(manifest["dispatch_blockers"])
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert "exact_eval_dispatch_lane_claim_missing" in blockers
+    assert "exact_eval_dispatch_device_not_cuda" in blockers
+    assert "exact_eval_dispatch_entrypoint_not_canonical" in blockers
+
+
 def test_audit_categorical_candidate_manifest_accepts_structural_hpm1_inventory(
     tmp_path: Path,
 ) -> None:
     candidate = _base_candidate(tmp_path)
+    _attach_complete_dispatch_proofs(candidate, tmp_path)
     payload_sha = candidate["decode_reencode_parity"]["payload_member_sha256"]
     inventory_path = tmp_path / "hpm1_structural_inventory.json"
     write_json(inventory_path, _structural_hpm1_inventory(payload_sha))
@@ -250,12 +429,10 @@ def test_audit_categorical_candidate_manifest_accepts_structural_hpm1_inventory(
 
     assert manifest["ready_for_exact_eval_dispatch"] is True
     assert manifest["hpm1_structural_decode_inventory"]["accepted"] is True
-    assert manifest["hpm1_structural_decode_inventory"][
-        "structural_reencode_matches_source"
-    ] is True
-    assert manifest["hpm1_structural_decode_inventory"][
-        "unsupported_wire_constructs"
-    ] == ["hpac_autoregressive_probability_rows"]
+    assert manifest["hpm1_structural_decode_inventory"]["structural_reencode_matches_source"] is True
+    assert manifest["hpm1_structural_decode_inventory"]["unsupported_wire_constructs"] == [
+        "hpac_autoregressive_probability_rows"
+    ]
 
 
 def test_audit_categorical_candidate_manifest_rejects_unsafe_structural_hpm1_inventory_path(
@@ -283,10 +460,7 @@ def test_audit_categorical_candidate_manifest_rejects_unsafe_structural_hpm1_inv
     )
 
     assert manifest["ready_for_exact_eval_dispatch"] is False
-    assert (
-        "hpm1_structural_inventory_path_unsafe"
-        in manifest["dispatch_blockers"]
-    )
+    assert "hpm1_structural_inventory_path_unsafe" in manifest["dispatch_blockers"]
 
 
 def test_audit_categorical_candidate_manifest_rejects_traversal_structural_hpm1_inventory_path(
@@ -314,10 +488,7 @@ def test_audit_categorical_candidate_manifest_rejects_traversal_structural_hpm1_
     )
 
     assert manifest["ready_for_exact_eval_dispatch"] is False
-    assert (
-        "hpm1_structural_inventory_path_unsafe"
-        in manifest["dispatch_blockers"]
-    )
+    assert "hpm1_structural_inventory_path_unsafe" in manifest["dispatch_blockers"]
 
 
 def test_audit_categorical_candidate_manifest_rejects_bad_structural_hpm1_inventory(
@@ -330,9 +501,7 @@ def test_audit_categorical_candidate_manifest_rejects_bad_structural_hpm1_invent
         "sha256": "0" * 64,
         "contract": HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT,
         "payload_member": "categorical_payload.bin",
-        "payload_member_sha256": candidate["decode_reencode_parity"][
-            "payload_member_sha256"
-        ],
+        "payload_member_sha256": candidate["decode_reencode_parity"]["payload_member_sha256"],
         "full_decode_proven": False,
         "byte_exact_semantic_reencode_proven": False,
     }
@@ -344,16 +513,14 @@ def test_audit_categorical_candidate_manifest_rejects_bad_structural_hpm1_invent
     )
 
     assert manifest["ready_for_exact_eval_dispatch"] is False
-    assert (
-        "hpm1_structural_inventory_path_missing"
-        in manifest["dispatch_blockers"]
-    )
+    assert "hpm1_structural_inventory_path_missing" in manifest["dispatch_blockers"]
 
 
 def test_categorical_charged_label_plan_grounds_classes_and_stays_non_dispatchable(
     tmp_path: Path,
 ) -> None:
     candidate = _base_candidate(tmp_path)
+    _attach_complete_dispatch_proofs(candidate, tmp_path)
     plan = build_categorical_charged_label_plan(
         source_archive_sha256=candidate["source_archive_sha256"],
         charged_members=candidate["charged_members"],
@@ -363,7 +530,11 @@ def test_categorical_charged_label_plan_grounds_classes_and_stays_non_dispatchab
     )
     candidate["candidate_construction_plan"] = plan
 
-    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+    manifest = audit_categorical_candidate_manifest(
+        candidate,
+        repo_root=REPO,
+        manifest_dir=tmp_path,
+    )
     construction = manifest["candidate_construction_plan"]
 
     assert manifest["ready_for_exact_eval_dispatch"] is True
@@ -398,10 +569,7 @@ def test_categorical_construction_plan_cannot_claim_dispatch_readiness(
 
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["candidate_construction_plan"]["accepted"] is False
-    assert (
-        "candidate_construction_plan_ready_for_exact_eval_dispatch_must_be_false"
-        in manifest["dispatch_blockers"]
-    )
+    assert "candidate_construction_plan_ready_for_exact_eval_dispatch_must_be_false" in manifest["dispatch_blockers"]
 
 
 def test_audit_categorical_candidate_manifest_rejects_uncharged_runtime_openpilot_prior(
@@ -422,10 +590,7 @@ def test_audit_categorical_candidate_manifest_rejects_uncharged_runtime_openpilo
 
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["conditioning_prior_contract"]["passed"] is False
-    assert (
-        "conditioning_prior_charged_member_missing_or_unsafe:"
-        "openpilot_priors:supercombo_lane_features"
-    ) in blockers
+    assert ("conditioning_prior_charged_member_missing_or_unsafe:openpilot_priors:supercombo_lane_features") in blockers
 
 
 def test_audit_categorical_candidate_manifest_rejects_undeclared_clade_spade_member(
@@ -446,8 +611,58 @@ def test_audit_categorical_candidate_manifest_rejects_undeclared_clade_spade_mem
 
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert (
-        "conditioning_prior_charged_member_not_declared:"
-        "clade_spade:class_affine_table:missing_clade_table.bin"
+        "conditioning_prior_charged_member_not_declared:clade_spade:class_affine_table:missing_clade_table.bin"
+    ) in manifest["dispatch_blockers"]
+
+
+def test_audit_categorical_candidate_manifest_requires_runtime_prior_provenance(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    clade_prior = candidate["conditioning_priors"][1]
+    clade_prior.pop("charged_member_sha256")
+    clade_prior.pop("label_contract")
+    clade_prior.pop("source_provenance")
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+    blockers = set(manifest["dispatch_blockers"])
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert (
+        "conditioning_prior_charged_member_sha256_missing_or_invalid:clade_spade:fixture_class_conditioning"
+    ) in blockers
+    assert ("conditioning_prior_label_contract_missing_or_invalid:clade_spade:fixture_class_conditioning") in blockers
+    assert ("conditioning_prior_source_provenance_missing:clade_spade:fixture_class_conditioning") in blockers
+
+
+def test_audit_categorical_candidate_manifest_rejects_prior_sha_mismatch(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    clade_prior = candidate["conditioning_priors"][1]
+    clade_prior["charged_member_sha256"] = "0" * 64
+    clade_prior["source_provenance"]["sha256"] = "0" * 64
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert ("conditioning_prior_charged_member_sha256_mismatch:clade_spade:fixture_class_conditioning") in manifest[
+        "dispatch_blockers"
+    ]
+
+
+def test_audit_categorical_candidate_manifest_rejects_uncharged_prior_sidecar_path(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    openpilot_prior = candidate["conditioning_priors"][0]
+    openpilot_prior["source_provenance"]["sidecar_path"] = "reports/raw/openpilot.npy"
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert (
+        "conditioning_prior_source_provenance_uncharged_sidecar_path:openpilot_priors:ego_lane_atom_ranker:sidecar_path"
     ) in manifest["dispatch_blockers"]
 
 
@@ -476,10 +691,7 @@ def test_audit_categorical_candidate_manifest_checks_archive_member_fidelity(tmp
     manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
 
     assert manifest["ready_for_exact_eval_dispatch"] is False
-    assert (
-        "charged_member_archive_sha256_mismatch:categorical_payload.bin"
-        in manifest["dispatch_blockers"]
-    )
+    assert "charged_member_archive_sha256_mismatch:categorical_payload.bin" in manifest["dispatch_blockers"]
 
 
 def test_audit_categorical_candidate_manifest_rejects_central_local_name_mismatch(
@@ -695,7 +907,7 @@ def test_audit_categorical_candidate_manifest_rejects_nondeterministic_zip_metad
     # reversed member order from writestr(name, ...).
     payloads = {
         "categorical_payload.bin": b"\x00\x01\x01\x02categorical",
-        "class_codebook.json": b"{\"class_order\":\"contest\"}\n",
+        "class_codebook.json": b'{"class_order":"contest"}\n',
         "inflate.sh": b"#!/usr/bin/env bash\nset -euo pipefail\n",
         "runtime_decoder.py": b"#!/usr/bin/env python3\n",
     }
@@ -824,7 +1036,8 @@ def test_audit_categorical_candidate_readiness_cli_records_tool_manifest(tmp_pat
     manifest = json.loads(out.read_text(encoding="utf-8"))
     tool_run = manifest["tool_run_manifest"]
     assert manifest["kind"] == "categorical_candidate_readiness"
-    assert manifest["ready_for_exact_eval_dispatch"] is True
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert "exact_eval_dispatch_requirements_missing" in manifest["dispatch_blockers"]
     assert tool_run["tool"] == "tools/audit_categorical_candidate_readiness.py"
     assert tool_run["score_claim"] is False
     assert len(tool_run["input_files"]) == 3

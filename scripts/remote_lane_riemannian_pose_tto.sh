@@ -37,6 +37,14 @@ log() { echo "[lane-riemannian] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.lo
 PROVENANCE="$LOG_DIR/provenance.json"
 HEARTBEAT="$LOG_DIR/heartbeat.log"
 GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
+
+# NVDEC probe MUST run before any GPU-work invocation (including the
+# nvidia-smi/torch.cuda queries below) so a bad-host case is caught in 5s
+# instead of after $0.20+ of work.
+# (feedback_vastai_nvdec_host_variation, commit eef64293.)
+log "=== NVDEC pre-flight ==="
+bash "$WORKSPACE/scripts/probe_nvdec.sh" || { log "FATAL: NVDEC probe failed"; exit 2; }
+
 GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1 | head -1)
 "$PYBIN" -c "
 import json, time, torch
@@ -67,9 +75,8 @@ print(json.dumps(prov))
 HB_PID=$!
 trap 'kill $HB_PID 2>/dev/null || true' EXIT
 
-# Stage 0: NVDEC + wiring verification
-log "=== Stage 0: NVDEC probe + wiring check ==="
-bash "$WORKSPACE/scripts/probe_nvdec.sh" || { log "FATAL: NVDEC probe failed"; exit 2; }
+# Stage 0: wiring verification (NVDEC already probed above)
+log "=== Stage 0: wiring check (NVDEC already probed) ==="
 "$PYBIN" -c "
 import sys; sys.path.insert(0, 'src')
 from experiments.pipeline import PipelineConfig

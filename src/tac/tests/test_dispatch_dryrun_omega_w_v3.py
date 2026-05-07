@@ -153,17 +153,24 @@ def test_real_sensitivity_metadata_requires_certification(tmp_path: Path) -> Non
 def test_default_dryrun_preserves_stub_mode_without_real_sensitivity_gate(monkeypatch, capsys) -> None:
     called_real_gate = False
 
+    def _stage3(
+        workdir: Path,
+        sensitivity_path: Path,
+        source_archive: Path,
+        *,
+        enforce_stub_byte_exact: bool,
+        allow_stub_design_mode: bool,
+    ) -> str:
+        (workdir / "apogee_v2_archive.zip").write_bytes(b"archive")
+        return "stage3"
+
     monkeypatch.setattr(dryrun, "check_wrapper_exists_and_parses", lambda: "wrapper")
     monkeypatch.setattr(dryrun, "check_pr106_artifact", lambda source_archive: "archive")
     monkeypatch.setattr(dryrun, "check_sensitivity_on_disk", lambda sensitivity_path: "stub")
     monkeypatch.setattr(dryrun, "check_producer_scripts_exist", lambda: "scripts")
     monkeypatch.setattr(dryrun, "check_inflate_adapter_modules", lambda: "inflate")
     monkeypatch.setattr(dryrun, "check_stage1_extract_e2e", lambda workdir, source_archive: "stage1")
-    monkeypatch.setattr(
-        dryrun,
-        "check_stage3_repack",
-        lambda workdir, sensitivity_path, source_archive, *, enforce_stub_byte_exact: "stage3",
-    )
+    monkeypatch.setattr(dryrun, "check_stage3_repack", _stage3)
     monkeypatch.setattr(dryrun, "check_parser_roundtrip", lambda workdir: "parser")
 
     def _unexpected_real_gate(*args, **kwargs):
@@ -184,17 +191,24 @@ def test_default_dryrun_preserves_stub_mode_without_real_sensitivity_gate(monkey
 def test_require_real_sensitivity_adds_metadata_gate(monkeypatch, capsys) -> None:
     calls: list[str] = []
 
+    def _stage3(
+        workdir: Path,
+        sensitivity_path: Path,
+        source_archive: Path,
+        *,
+        enforce_stub_byte_exact: bool,
+        allow_stub_design_mode: bool,
+    ) -> str:
+        (workdir / "apogee_v2_archive.zip").write_bytes(b"archive")
+        return "stage3"
+
     monkeypatch.setattr(dryrun, "check_wrapper_exists_and_parses", lambda: "wrapper")
     monkeypatch.setattr(dryrun, "check_pr106_artifact", lambda source_archive: "archive")
     monkeypatch.setattr(dryrun, "check_sensitivity_on_disk", lambda sensitivity_path: "sensitivity")
     monkeypatch.setattr(dryrun, "check_producer_scripts_exist", lambda: "scripts")
     monkeypatch.setattr(dryrun, "check_inflate_adapter_modules", lambda: "inflate")
     monkeypatch.setattr(dryrun, "check_stage1_extract_e2e", lambda workdir, source_archive: "stage1")
-    monkeypatch.setattr(
-        dryrun,
-        "check_stage3_repack",
-        lambda workdir, sensitivity_path, source_archive, *, enforce_stub_byte_exact: "stage3",
-    )
+    monkeypatch.setattr(dryrun, "check_stage3_repack", _stage3)
     monkeypatch.setattr(dryrun, "check_parser_roundtrip", lambda workdir: "parser")
 
     def _real_gate(sensitivity_path: Path, source_archive: Path) -> str:

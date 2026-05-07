@@ -33,9 +33,8 @@ Output channel reduction (per-tensor):
 
 CUDA REQUIRED for honest β-Fisher (per CLAUDE.md "MPS auth eval is NOISE" — the
 score-gradient on MPS will not match contest-CUDA T4 within FIM eigenvalue
-tolerance). For DESIGN-time sanity check, --device cpu/mps is allowed but
-output sensitivity is `[advisory only]` and downstream water-fill Δ-band
-becomes invalid.
+tolerance). For DESIGN-time parser plumbing, --device cpu/mps requires the
+explicit --allow-stub-design-mode flag and emits a non-promotable stub.
 
 Usage (CUDA dispatch, $0.50 RTX 4090):
     .venv/bin/python experiments/build_sensitivity_map_pr106.py \\
@@ -48,7 +47,6 @@ Usage (CUDA dispatch, $0.50 RTX 4090):
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 import time
 from pathlib import Path
@@ -61,12 +59,18 @@ PR106_SRC_PATH = Path(__file__).parent / "results" / (
 )
 sys.path.insert(0, str(PR106_SRC_PATH.resolve()))
 
-from model import HNeRVDecoder  # type: ignore[import-not-found]  # noqa: E402
+from tac.sensitivity_map import save_sensitivity_map
 
-from tac.sensitivity_map import save_sensitivity_map  # noqa: E402
+REAL_PR106_CONTEST_PAIR_ITERATOR_IMPLEMENTED = False
+REAL_PR106_CONTEST_PAIR_ITERATOR_BLOCKER = (
+    "PR106 β-Fisher producer still lacks a reviewed canonical "
+    "archive.zip -> inflate.sh -> upstream/evaluate.py pair iterator."
+)
 
 
-def _load_pr106_decoder(state_dict_path: Path, device: torch.device) -> HNeRVDecoder:
+def _load_pr106_decoder(state_dict_path: Path, device: torch.device) -> torch.nn.Module:
+    from model import HNeRVDecoder  # type: ignore[import-not-found]
+
     sd = torch.load(state_dict_path, map_location="cpu", weights_only=False)
     if not isinstance(sd, dict):
         raise ValueError(f"{state_dict_path}: expected dict, got {type(sd)}")
@@ -78,6 +82,10 @@ def _load_pr106_decoder(state_dict_path: Path, device: torch.device) -> HNeRVDec
         print(f"WARN: unexpected keys when loading state_dict: {unexpected}", file=sys.stderr)
     model.to(device).eval()
     return model
+
+
+def _allow_stub_design_mode(device: str, allow_stub_design_mode: bool) -> bool:
+    return device != "cuda" and bool(allow_stub_design_mode)
 
 
 def _reduce_to_per_output_channel(name: str, grad_sq: torch.Tensor) -> torch.Tensor:
@@ -129,6 +137,15 @@ def main() -> int:
                              "output is tagged [advisory only].")
     parser.add_argument("--n-pairs", type=int, default=600,
                         help="Number of frame-pairs to accumulate FIM over.")
+    parser.add_argument(
+        "--allow-stub-design-mode",
+        action="store_true",
+        help=(
+            "Allow non-CUDA design-mode all-ones sensitivity for local parser "
+            "plumbing only. CUDA mode never emits a stub; missing scorer-pair "
+            "wiring fails closed."
+        ),
+    )
     args = parser.parse_args()
 
     if args.device == "cuda" and not torch.cuda.is_available():
@@ -136,6 +153,14 @@ def main() -> int:
               "FAIL LOUD per CLAUDE.md silent-CPU-fallback rule.", file=sys.stderr)
         return 2
     if args.device != "cuda":
+        if not args.allow_stub_design_mode:
+            print(
+                f"ERROR: --device {args.device} requires --allow-stub-design-mode. "
+                "Non-CUDA sensitivity is local plumbing only and must be "
+                "explicitly non-promotable.",
+                file=sys.stderr,
+            )
+            return 2
         print(f"WARN: --device {args.device} — output sensitivity tagged [advisory only]. "
               f"For honest β-Fisher use --device cuda on T4-equivalent.", file=sys.stderr)
 
@@ -159,6 +184,7 @@ def main() -> int:
         n: torch.zeros_like(p, device=device) for n, p in model.named_parameters()
     }
 
+    stub_design_mode = False
     try:
         # GPU dispatch path: real β-Fisher accumulation
         posenet = None  # type: ignore
@@ -173,8 +199,20 @@ def main() -> int:
                 if p.grad is not None:
                     grad_sq_acc[n] += p.grad.detach() ** 2
     except NotImplementedError as e:
+        if not _allow_stub_design_mode(args.device, args.allow_stub_design_mode):
+            print(
+                f"[sensitivity-pr106] FATAL: real contest-pair iterator is not wired: {e}",
+                file=sys.stderr,
+            )
+            print(
+                "[sensitivity-pr106] Refusing to emit a dummy/stub sensitivity map "
+                "for a CUDA/promotable run.",
+                file=sys.stderr,
+            )
+            return 3
+        stub_design_mode = True
         print(f"[sensitivity-pr106] DESIGN-MODE: {e}", file=sys.stderr)
-        print(f"[sensitivity-pr106] DESIGN-MODE: emitting stub all-ones sensitivity (no GPU available)", file=sys.stderr)
+        print("[sensitivity-pr106] DESIGN-MODE: emitting stub all-ones sensitivity (no GPU available)", file=sys.stderr)
         # Stub sensitivity = all-ones-per-channel so downstream wiring is testable
         # without GPU. Tagged [stub] in metadata so water-fill knows to refuse use.
         for n, p in model.named_parameters():
@@ -191,13 +229,15 @@ def main() -> int:
         "score_formula": "100*seg + sqrt(10*pose) per CLAUDE.md",
         "n_pairs": n_pairs_eff,
         "device": str(device),
-        "is_stub": (args.device != "cuda"),
-        "tag": "[contest-CUDA]" if args.device == "cuda" else "[stub-design-mode]",
+        "is_stub": stub_design_mode,
+        "tag": "[stub-design-mode]" if stub_design_mode else "[contest-CUDA]",
         "n_params_total": n_params,
         "state_dict_source": str(args.state_dict),
         "latents_source": str(args.latents),
         "ts_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
+    if stub_design_mode:
+        metadata["stub_reason"] = "contest_pair_iterator_not_wired"
     save_sensitivity_map(args.out, sensitivities, metadata=metadata)
     print(f"[sensitivity-pr106] saved {args.out}")
     print(f"[sensitivity-pr106] tag: {metadata['tag']}")

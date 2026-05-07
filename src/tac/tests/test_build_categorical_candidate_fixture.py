@@ -55,11 +55,9 @@ def test_build_categorical_candidate_fixture_is_deterministic_and_blocked(
     )
     assert candidate["fixture_only"] is True
     assert candidate["candidate_manifest_contract"] == CANDIDATE_MANIFEST_CONTRACT
-    assert (
-        candidate["runtime_loader_parity"]["runtime_loader_parity_contract"]
-        == RUNTIME_LOADER_PARITY_CONTRACT
-    )
-    assert readiness["runtime_loader_parity"]["accepted"] is True
+    assert candidate["runtime_loader_parity"]["runtime_loader_parity_contract"] == RUNTIME_LOADER_PARITY_CONTRACT
+    assert readiness["runtime_loader_parity"]["accepted"] is False
+    assert "runtime_execution_proof_artifact_missing" in readiness["runtime_loader_parity"]["blockers"]
     assert readiness["candidate_construction_plan"]["accepted"] is True
     assert readiness["candidate_construction_plan"]["ready_for_exact_eval_dispatch"] is False
     assert candidate["score_claim"] is False
@@ -100,10 +98,7 @@ def test_build_categorical_candidate_fixture_is_deterministic_and_blocked(
         assert modes["categorical_payload.bin"] == 0o644
 
     archive_member_manifest = read_json(out_a / "archive_member_manifest.json")
-    assert (
-        archive_member_manifest["archive_member_manifest_contract"]
-        == ARCHIVE_MEMBER_MANIFEST_CONTRACT
-    )
+    assert archive_member_manifest["archive_member_manifest_contract"] == ARCHIVE_MEMBER_MANIFEST_CONTRACT
     assert archive_member_manifest["member_order"] == member_order
     assert archive_member_manifest["member_count"] == len(member_order)
     with zipfile.ZipFile(archive_a) as archive:

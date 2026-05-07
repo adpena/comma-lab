@@ -71,3 +71,44 @@ rate-candidate packet handoff layer and makes no score claim.
   reconstructable symbol counts; valid stream-profile input still requires
   full `streams[*].label`, `streams[*].actual_bytes_or_bytes_charged`, and
   `streams[*].symbol_counts_full_histogram`.
+
+## 2026-05-06 HDC2 Stream Byte-Equivalence Work Product
+
+- [empirical:experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/hdc2_stream_byte_equivalence_work_product.json]
+  `tools/build_hnerv_entropy_candidate_packet.py` now materializes a
+  byte-closed HDC2 stream work product from the PR106 structural recode
+  profile and source archive. This writes the actual candidate stream bytes at
+  `experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/candidate_hdc2_global_prev_symbol_stream.bin`.
+- The candidate HDC2 stream is deterministic and matches the structural profile
+  fixture: `bytes=221381`, `sha256=41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f`,
+  `header_bytes=40840`, `range_payload_bytes=180429`, `raw_scale_bytes=112`.
+- The source stream manifest records the exact PR106 packed decoder section
+  inside `0.bin`: start `4`, end `170282`, bytes `170278`, SHA-256
+  `654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004`.
+- The stream-level decoded object is only `hnerv_decoder_raw_bytes`; it is not
+  video output and not an archive/runtime equivalence claim. The old/new raw
+  decoder SHA-256s match at
+  `f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703`,
+  and the HDC2 roundtrip reports `raw_equal=true`,
+  `q_roundtrip_equal=true`, and `scale_roundtrip_equal=true`.
+- [empirical:experiments/results/hnerv_entropy_packet_discovery_20260506_codex/candidate_packet_from_pr106_entropy_audit.json]
+  Packet validation now treats supplied requirement artifacts as unavailable
+  unless their JSON satisfies a requirement-specific contract. The refreshed
+  packet accepts the source archive, source stream, candidate stream,
+  decoder-raw equality, and roundtrip manifests, while leaving dispatch
+  fail-closed.
+- Remaining exact blockers are unchanged in kind: no byte-accounted model
+  overhead reduction manifest, no static model-context table diff, no candidate
+  archive manifest, no strict pre-submission compliance JSON, no
+  meta-lagrangian atom export, no runtime-tree parity manifest, no dispatch
+  claim, and no exact CUDA auth eval. The HDC2 fixture is byte-equivalent but
+  rate-negative versus the source decoder section, so it is not a promotable
+  rate candidate by itself.
+
+Verification:
+
+```bash
+.venv/bin/python -m pytest src/tac/tests/test_hnerv_entropy_candidate_packet.py -q
+```
+
+Result: `13 passed`.

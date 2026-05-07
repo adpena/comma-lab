@@ -337,6 +337,7 @@ def _closed_stack_ledger(
                 "evidence_grade": "empirical",
                 "raw_equal": True,
                 "interaction_assumptions": ["first_order_mask_patch"],
+                "kkt_proof": _kkt_proof(),
                 "archive_manifest_path": manifest.as_posix(),
                 "archive_manifest_sha256": manifest_sha,
                 **(first_extra or {}),
@@ -353,6 +354,7 @@ def _closed_stack_ledger(
                 "evidence_grade": "empirical",
                 "raw_equal": True,
                 "interaction_assumptions": ["first_order_pose_patch"],
+                "kkt_proof": _kkt_proof(),
                 "archive_manifest_path": manifest.as_posix(),
                 "archive_manifest_sha256": manifest_sha,
                 **(second_extra or {}),
@@ -377,3 +379,11 @@ def _archive_manifest(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return manifest
+
+
+def _kkt_proof() -> dict[str, object]:
+    return {
+        "status": "passed",
+        "stationarity_residual": 0.0,
+        "stationarity_tolerance": 0.001,
+    }

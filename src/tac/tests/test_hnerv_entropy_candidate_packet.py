@@ -1,20 +1,34 @@
 from __future__ import annotations
 
 import json
+import math
 import subprocess
 import sys
 from pathlib import Path
 
+import brotli
 import pytest
 
+from tac.hnerv_decoder_recode import (
+    PACKED_STATE_SCHEMA,
+    encode_global_prev_symbol_context_range_fixture,
+    parse_packed_decoder_brotli,
+)
 from tac.hnerv_entropy_candidate_packet import (
+    CANDIDATE_STREAM_REQUIREMENT_ID,
+    DECODED_OUTPUT_EQUIVALENCE_REQUIREMENT_ID,
+    ROUNDTRIP_REQUIREMENT_ID,
+    SOURCE_ARCHIVE_REQUIREMENT_ID,
+    SOURCE_STREAM_REQUIREMENT_ID,
     HnervEntropyCandidatePacketError,
     build_candidate_packet_manifest,
+    build_hdc2_stream_byte_equivalence_work_product,
     discover_candidate_audit_inputs,
     discovery_report_input_paths,
 )
+from tac.hnerv_lowlevel_packer import PackedHnervPayload, write_stored_single_member_zip
 from tac.optimization.entropy_codec_gap_audit import build_entropy_codec_gap_audit
-from tac.repo_io import json_text, sha256_file
+from tac.repo_io import json_text, sha256_bytes, sha256_file
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -47,7 +61,7 @@ def test_candidate_packet_records_selected_target_and_missing_artifacts(tmp_path
     assert "requires_exact_cuda_auth_eval" in manifest["dispatch_blockers"]
 
 
-def test_candidate_packet_hashes_all_available_requirements_but_stays_non_dispatchable(
+def test_candidate_packet_rejects_placeholder_requirement_artifacts(
     tmp_path: Path,
 ) -> None:
     audit_path = tmp_path / "entropy_audit.json"
@@ -68,22 +82,76 @@ def test_candidate_packet_hashes_all_available_requirements_but_stays_non_dispat
         repo_root=REPO,
     )
 
-    assert manifest["missing_artifacts"] == []
-    assert manifest["readiness_blockers"] == []
-    assert manifest["ready_for_local_packet_review"] is True
-    assert manifest["ready_for_archive_preflight"] is True
-    assert manifest["ready_for_exact_eval_dispatch"] is False
-    assert manifest["dispatch_blockers"] == [
-        "packet_manifest_is_not_dispatch_authorization",
-        "requires_operator_review_of_byte_equivalence_runtime_parity_and_archive_manifest",
-        "requires_lane_dispatch_claim_before_gpu",
-        "requires_exact_cuda_auth_eval",
+    assert SOURCE_ARCHIVE_REQUIREMENT_ID in manifest["invalid_requirement_artifacts"]
+    assert SOURCE_STREAM_REQUIREMENT_ID in manifest["invalid_requirement_artifacts"]
+    assert CANDIDATE_STREAM_REQUIREMENT_ID in manifest["invalid_requirement_artifacts"]
+    assert DECODED_OUTPUT_EQUIVALENCE_REQUIREMENT_ID in manifest["invalid_requirement_artifacts"]
+    assert ROUNDTRIP_REQUIREMENT_ID in manifest["invalid_requirement_artifacts"]
+    assert SOURCE_ARCHIVE_REQUIREMENT_ID in manifest["missing_artifacts"]
+    assert f"invalid_requirement_artifact:{SOURCE_ARCHIVE_REQUIREMENT_ID}" in manifest[
+        "readiness_blockers"
     ]
+    assert manifest["ready_for_local_packet_review"] is False
+    assert manifest["ready_for_archive_preflight"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
     records = {row["id"]: row for row in manifest["packet_requirements"]}
-    for requirement_id, artifact in artifacts.items():
-        assert records[requirement_id]["available"] is True
-        assert records[requirement_id]["sha256"] == sha256_file(artifact)
-    assert {row["id"] for row in manifest["available_inputs"]} == {"entropy_audit_json", *artifacts}
+    assert records[SOURCE_ARCHIVE_REQUIREMENT_ID]["available"] is False
+    assert records[SOURCE_ARCHIVE_REQUIREMENT_ID]["missing_reason"] == "validation_blockers"
+    assert records[SOURCE_ARCHIVE_REQUIREMENT_ID]["sha256"] == sha256_file(
+        artifacts[SOURCE_ARCHIVE_REQUIREMENT_ID]
+    )
+    assert {row["id"] for row in manifest["available_inputs"]} == {"entropy_audit_json"}
+
+
+def test_hdc2_stream_work_product_closes_stream_requirements_but_not_archive(
+    tmp_path: Path,
+) -> None:
+    fixture = _write_hdc2_fixture(tmp_path)
+    work_product = build_hdc2_stream_byte_equivalence_work_product(
+        fixture["profile_path"],
+        fixture["archive_path"],
+        source_exact_eval_json_path=fixture["exact_eval_path"],
+        candidate_stream_path=tmp_path / "candidate_hdc2.bin",
+        repo_root=tmp_path,
+    )
+    artifacts = _write_hdc2_requirement_artifacts(tmp_path, work_product)
+
+    manifest = build_candidate_packet_manifest(
+        fixture["profile_path"],
+        artifact_paths=artifacts,
+        repo_root=tmp_path,
+    )
+
+    assert work_product["score_claim"] is False
+    assert work_product["dispatch_attempted"] is False
+    assert work_product["ready_for_exact_eval_dispatch"] is False
+    candidate_stream = work_product["candidate_stream_file"]
+    assert candidate_stream["path"] == "candidate_hdc2.bin"
+    assert candidate_stream["bytes"] > 0
+    assert candidate_stream["sha256"] == sha256_file(tmp_path / "candidate_hdc2.bin")
+    assert work_product["decoded_output_equivalence_report"]["old_new_sha256_equal"] is True
+    assert work_product["roundtrip_decode_validation_manifest"]["roundtrip_valid"] is True
+
+    assert manifest["invalid_requirement_artifacts"] == []
+    assert SOURCE_ARCHIVE_REQUIREMENT_ID not in manifest["missing_artifacts"]
+    assert SOURCE_STREAM_REQUIREMENT_ID not in manifest["missing_artifacts"]
+    assert CANDIDATE_STREAM_REQUIREMENT_ID not in manifest["missing_artifacts"]
+    assert DECODED_OUTPUT_EQUIVALENCE_REQUIREMENT_ID not in manifest["missing_artifacts"]
+    assert ROUNDTRIP_REQUIREMENT_ID not in manifest["missing_artifacts"]
+    assert "byte_accounted_model_overhead_reduction_manifest" in manifest["missing_artifacts"]
+    assert "candidate_archive_manifest_with_member_sha256s" in manifest["missing_artifacts"]
+    assert "runtime_tree_parity_manifest" in manifest["missing_artifacts"]
+    assert "missing_candidate_archive_manifest" in manifest["readiness_blockers"]
+    assert "missing_runtime_tree_parity_manifest" in manifest["readiness_blockers"]
+    assert manifest["ready_for_local_packet_review"] is False
+    assert manifest["ready_for_archive_preflight"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    available_ids = {row["id"] for row in manifest["available_inputs"]}
+    assert SOURCE_ARCHIVE_REQUIREMENT_ID in available_ids
+    assert SOURCE_STREAM_REQUIREMENT_ID in available_ids
+    assert CANDIDATE_STREAM_REQUIREMENT_ID in available_ids
+    assert DECODED_OUTPUT_EQUIVALENCE_REQUIREMENT_ID in available_ids
+    assert ROUNDTRIP_REQUIREMENT_ID in available_ids
 
 
 def test_candidate_packet_can_build_audit_from_stream_profile(tmp_path: Path) -> None:
@@ -293,7 +361,91 @@ def test_build_hnerv_entropy_candidate_packet_cli_writes_manifest(tmp_path: Path
     assert payload["tool_run_manifest"]["tool"] == "tools/build_hnerv_entropy_candidate_packet.py"
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["packet_requirements"][0]["id"] == "roundtrip_payload_recode_manifest"
-    assert any(row["id"] == "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256" for row in payload["available_inputs"])
+    assert "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256" in payload[
+        "invalid_requirement_artifacts"
+    ]
+    source_record = next(
+        row
+        for row in payload["packet_requirements"]
+        if row["id"] == "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256"
+    )
+    assert source_record["missing_reason"] == "validation_blockers"
+
+
+def test_build_hnerv_entropy_candidate_packet_cli_materializes_hdc2_stream_work_product(
+    tmp_path: Path,
+) -> None:
+    fixture = _write_hdc2_fixture(tmp_path)
+    output_dir = tmp_path / "hdc2"
+    packet_out = tmp_path / "packet.json"
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_hnerv_entropy_candidate_packet.py"),
+            "--entropy-audit",
+            str(fixture["profile_path"]),
+            "--hdc2-stream-work-product-profile",
+            str(fixture["profile_path"]),
+            "--hdc2-stream-work-product-source-archive",
+            str(fixture["archive_path"]),
+            "--hdc2-stream-work-product-source-exact-eval-json",
+            str(fixture["exact_eval_path"]),
+            "--hdc2-stream-work-product-dir",
+            str(output_dir),
+            "--json-out",
+            str(packet_out),
+            "--fail-if-missing",
+        ],
+        cwd=REPO,
+        text=True,
+        check=False,
+    )
+
+    assert proc.returncode == 1
+    packet = json.loads(packet_out.read_text(encoding="utf-8"))
+    assert (output_dir / "candidate_hdc2_global_prev_symbol_stream.bin").is_file()
+    assert (
+        output_dir / f"{SOURCE_STREAM_REQUIREMENT_ID}.json"
+    ).is_file()
+    assert SOURCE_STREAM_REQUIREMENT_ID not in packet["missing_artifacts"]
+    assert CANDIDATE_STREAM_REQUIREMENT_ID not in packet["missing_artifacts"]
+    assert ROUNDTRIP_REQUIREMENT_ID not in packet["missing_artifacts"]
+    assert "candidate_archive_manifest_with_member_sha256s" in packet["missing_artifacts"]
+    assert packet["ready_for_exact_eval_dispatch"] is False
+
+
+def test_build_hnerv_entropy_candidate_packet_cli_requires_hdc2_exact_eval_json(
+    tmp_path: Path,
+) -> None:
+    fixture = _write_hdc2_fixture(tmp_path)
+    output_dir = tmp_path / "hdc2"
+    packet_out = tmp_path / "packet.json"
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_hnerv_entropy_candidate_packet.py"),
+            "--entropy-audit",
+            str(fixture["profile_path"]),
+            "--hdc2-stream-work-product-profile",
+            str(fixture["profile_path"]),
+            "--hdc2-stream-work-product-source-archive",
+            str(fixture["archive_path"]),
+            "--hdc2-stream-work-product-dir",
+            str(output_dir),
+            "--json-out",
+            str(packet_out),
+        ],
+        cwd=REPO,
+        text=True,
+        check=False,
+        capture_output=True,
+    )
+
+    assert proc.returncode == 2
+    assert "--hdc2-stream-work-product-source-exact-eval-json" in proc.stderr
+    assert not packet_out.exists()
 
 
 def test_build_hnerv_entropy_candidate_packet_cli_discovers_missing_source_inputs(
@@ -391,6 +543,113 @@ def _streams() -> list[dict]:
             "codec_surface": "src/tac/hnerv_decoder_recode.py",
         },
     ]
+
+
+def _write_hdc2_fixture(tmp_path: Path) -> dict[str, Path]:
+    source_raw = _packed_decoder_raw_fixture()
+    source_brotli = brotli.compress(source_raw, quality=11)
+    packed = PackedHnervPayload(
+        header=b"",
+        decoder_packed_brotli=source_brotli,
+        latents_and_sidecar_brotli=b"latent-sidecar",
+    )
+    archive_path = tmp_path / "source.zip"
+    write_stored_single_member_zip(archive_path, member_name="0.bin", payload=packed.to_bytes())
+    parsed = parse_packed_decoder_brotli(source_brotli)
+    hdc2_payload, stats = encode_global_prev_symbol_context_range_fixture(parsed)
+    profile = {
+        "schema_version": 1,
+        "tool": "tac.hnerv_decoder_recode.build_structural_recode_profile",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_archive_preflight": False,
+        "ready_for_exact_eval_dispatch": False,
+        "source_label": "fixture_hnerv_archive",
+        "source_archive_sha256": sha256_file(archive_path),
+        "source_decoder_section_sha256": sha256_bytes(source_brotli),
+        "source_decoder_section_bytes": len(source_brotli),
+        "source_decoder_raw_sha256": sha256_bytes(source_raw),
+        "source_decoder_raw_bytes": len(source_raw),
+        "record_count": len(PACKED_STATE_SCHEMA),
+        "q_stream_bytes": len(parsed.q_stream),
+        "scale_stream_bytes": len(parsed.scale_stream),
+        "entropy_summary": {
+            "score_claim": False,
+            "per_tensor_prev_symbol_entropy_floor_plus_raw_scales_bytes": max(
+                1,
+                len(hdc2_payload) - 7,
+            ),
+        },
+        "variants": [
+            {
+                "variant": "range_prev_symbol_global_q_streams_plus_raw_scales",
+                "codec": "HDC2_global_prev_symbol_range_uint8",
+                "bytes": len(hdc2_payload),
+                "header_bytes": int(stats["header_bytes"]),
+                "range_payload_bytes": int(stats["range_payload_bytes"]),
+                "raw_scale_bytes": len(parsed.scale_stream),
+                "raw_equal": True,
+                "q_roundtrip_equal": True,
+                "scale_roundtrip_equal": True,
+                "sha256": sha256_bytes(hdc2_payload),
+                "context_count": int(stats["context_count"]),
+                "context_token_count": int(stats["context_token_count"]),
+            }
+        ],
+    }
+    profile_path = tmp_path / "profile.json"
+    profile_path.write_text(json_text(profile), encoding="utf-8")
+    exact_eval_path = tmp_path / "contest_auth_eval.json"
+    exact_eval_path.write_text(
+        json_text(
+            {
+                "score_claim": False,
+                "provenance": {
+                    "archive_sha256": sha256_file(archive_path),
+                    "archive_size_bytes": archive_path.stat().st_size,
+                    "inflate_runtime_manifest": {
+                        "runtime_tree_sha256": "e" * 64,
+                        "files": [],
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    return {
+        "archive_path": archive_path,
+        "profile_path": profile_path,
+        "exact_eval_path": exact_eval_path,
+    }
+
+
+def _packed_decoder_raw_fixture() -> bytes:
+    q_parts = []
+    scale_parts = []
+    for index, (_name, shape) in enumerate(PACKED_STATE_SCHEMA):
+        count = math.prod(shape)
+        q_parts.append(bytes((index * 17 + offset) % 251 for offset in range(count)))
+        scale_parts.append(bytes([index, index + 1, index + 2, index + 3]))
+    return b"".join(q_parts) + b"".join(scale_parts)
+
+
+def _write_hdc2_requirement_artifacts(
+    tmp_path: Path,
+    work_product: dict,
+) -> dict[str, Path]:
+    name_to_requirement = {
+        "source_archive_manifest": SOURCE_ARCHIVE_REQUIREMENT_ID,
+        "source_stream_section_manifest": SOURCE_STREAM_REQUIREMENT_ID,
+        "candidate_stream_section_manifest": CANDIDATE_STREAM_REQUIREMENT_ID,
+        "decoded_output_equivalence_report": DECODED_OUTPUT_EQUIVALENCE_REQUIREMENT_ID,
+        "roundtrip_decode_validation_manifest": ROUNDTRIP_REQUIREMENT_ID,
+    }
+    artifacts = {}
+    for name, requirement_id in name_to_requirement.items():
+        path = tmp_path / f"{requirement_id}.json"
+        path.write_text(json_text(work_product[name]), encoding="utf-8")
+        artifacts[requirement_id] = path
+    return artifacts
 
 
 def _structural_recode_profile() -> dict:

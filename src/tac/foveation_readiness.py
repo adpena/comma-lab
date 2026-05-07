@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 from typing import Any
 import zipfile
@@ -244,8 +245,10 @@ def _audit_runtime_consumer(
         report["read_error"] = f"{type(exc).__name__}: {exc}"
         blockers.append("foveation_runtime_consumer_not_text")
         return report
-    report["references_charged_member"] = FOVEATION_MEMBER in text
-    report["references_loader"] = "load_foveation_params" in text or "HFV1" in text
+    proof = _runtime_consumer_ast_proof(text)
+    report.update(proof)
+    report["references_charged_member"] = bool(proof["references_charged_member"])
+    report["references_loader"] = bool(proof["references_loader"])
     if not report["references_charged_member"]:
         blockers.append("foveation_runtime_consumer_missing_member_reference")
     if not report["references_loader"]:
@@ -254,6 +257,58 @@ def _audit_runtime_consumer(
         while "foveation_runtime_consumer_not_proven" in blockers:
             blockers.remove("foveation_runtime_consumer_not_proven")
     return report
+
+
+def _runtime_consumer_ast_proof(text: str) -> dict[str, Any]:
+    """Return structural proof that runtime code references charged HFV1 bytes."""
+
+    try:
+        tree = ast.parse(text)
+    except SyntaxError as exc:
+        return {
+            "ast_parse_error": f"{type(exc).__name__}: {exc}",
+            "references_charged_member": False,
+            "references_loader": False,
+            "load_foveation_params_call_count": 0,
+        }
+
+    assigned_strings: dict[str, set[str]] = {}
+    direct_strings: set[str] = set()
+    call_count = 0
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            direct_strings.add(node.value)
+        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    assigned_strings.setdefault(target.id, set()).add(node.value.value)
+        if isinstance(node, ast.Call):
+            func = node.func
+            func_name = ""
+            if isinstance(func, ast.Name):
+                func_name = func.id
+            elif isinstance(func, ast.Attribute):
+                func_name = func.attr
+            if func_name == "load_foveation_params":
+                call_count += 1
+                for arg in node.args:
+                    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                        direct_strings.add(arg.value)
+                    elif isinstance(arg, ast.Name):
+                        direct_strings.update(assigned_strings.get(arg.id, set()))
+                for keyword in node.keywords:
+                    value = keyword.value
+                    if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                        direct_strings.add(value.value)
+                    elif isinstance(value, ast.Name):
+                        direct_strings.update(assigned_strings.get(value.id, set()))
+
+    return {
+        "ast_parse_error": "",
+        "references_charged_member": FOVEATION_MEMBER in direct_strings,
+        "references_loader": call_count > 0,
+        "load_foveation_params_call_count": call_count,
+    }
 
 
 __all__ = ["FOVEATION_MEMBER", "SCHEMA_VERSION", "audit_foveation_params"]

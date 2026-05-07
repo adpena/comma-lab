@@ -24,6 +24,7 @@ from tac.lapose_foveation_payload_candidate import (
 from tac.lapose_foveation_runtime_skeleton import (
     PROOF_MEMBER,
     RUNTIME_EFFECT_CONTROLS_CONTRACT,
+    RUNTIME_SCORER_VISIBLE_BRIDGE_CONTRACT,
     build_runtime_effect_control_report,
 )
 from tac.repo_io import read_json, sha256_bytes, sha256_file, write_json
@@ -98,8 +99,21 @@ def test_build_lapose_foveation_payload_archive_is_byte_closed_and_fail_closed(
     assert readiness["lfv1_payload_decode"]["accepted"] is True
     assert readiness["runtime_effect_controls"]["accepted"] is True
     assert readiness["runtime_effect_controls"]["contract"] == RUNTIME_EFFECT_CONTROLS_CONTRACT
+    assert candidate["scorer_visible_bridge"]["contract"] == RUNTIME_SCORER_VISIBLE_BRIDGE_CONTRACT
+    assert candidate["scorer_visible_bridge"]["bridge_path_present"] is False
+    assert readiness["scorer_visible_bridge"]["accepted"] is True
+    assert readiness["scorer_visible_bridge"]["bridge_path_present"] is False
+    assert readiness["scorer_visible_bridge"]["archive_member_groups"][
+        "mask_or_segmentation_stream"
+    ]["present"] is False
+    assert readiness["scorer_visible_bridge"]["archive_member_groups"][
+        "renderer_or_segmap_runtime"
+    ]["present"] is False
     assert readiness["runtime_consumption_audit"]["structural_runtime_consumption"]["passed"] is True
     assert readiness["runtime_consumption_audit"]["scored_runtime_output_parity"]["passed"] is False
+    assert readiness["runtime_consumption_audit"]["scorer_visible_bridge"][
+        "bridge_path_present"
+    ] is False
     assert readiness_file["tool_run_manifest"]["tool"] == (
         "tools/build_lapose_foveation_payload_archive.py"
     )
@@ -107,9 +121,13 @@ def test_build_lapose_foveation_payload_archive_is_byte_closed_and_fail_closed(
 
     blockers = set(readiness["dispatch_blockers"])
     assert "runtime_loader_parity_not_passed" in blockers
+    assert "lapose_foveation_renderer_or_mask_output_path_missing" in blockers
+    assert "lapose_foveation_runtime_does_not_reference_scorer_visible_output_path" in blockers
+    assert "lapose_foveation_scorer_visible_output_parity_not_proven" in blockers
     assert "exact_cuda_auth_eval_missing" in blockers
     assert not any(blocker.startswith("no_op_control_not_passed:") for blocker in blockers)
     assert not any(blocker.startswith("runtime_effect_controls_") for blocker in blockers)
+    assert not any(blocker.startswith("scorer_visible_bridge_") for blocker in blockers)
     assert readiness["no_op_controls"]["failed_controls"] == []
     assert set(readiness["no_op_controls"]["passed_controls"]) == {
         "lfv1_identity_decode_control",
@@ -143,6 +161,7 @@ def test_build_lapose_foveation_payload_archive_is_byte_closed_and_fail_closed(
     assert proof_skeleton["proof_status"]["archive_contains_payload_and_runtime"] is True
     assert proof_skeleton["proof_status"]["runtime_output_parity"] is False
     assert proof_skeleton["proof_status"]["structural_runtime_consumption"] is True
+    assert proof_skeleton["proof_status"]["scorer_visible_output_bridge"] is False
     assert proof_skeleton["proof_status"]["scored_runtime_output_parity"] is False
     assert proof_skeleton["proof_status"]["noop_controls"] is True
 
@@ -195,12 +214,18 @@ def test_lapose_foveation_runtime_skeleton_verifies_members_then_exits_fail_clos
     assert report["runtime_effect_controls"]["runtime_effect_controls_contract"] == (
         RUNTIME_EFFECT_CONTROLS_CONTRACT
     )
+    assert report["scorer_visible_bridge"]["contract"] == RUNTIME_SCORER_VISIBLE_BRIDGE_CONTRACT
+    assert report["scorer_visible_bridge"]["bridge_path_present"] is False
+    assert "lapose_foveation_renderer_or_mask_output_path_missing" in report[
+        "scorer_visible_bridge"
+    ]["blockers"]
     assert report["structural_runtime_consumption_proven"] is True
     assert report["runtime_output_parity_proven"] is False
     assert report["scored_runtime_output_parity_proven"] is False
     assert report["noop_controls_proven"] is True
     assert "exact_cuda_auth_eval_missing" in report["dispatch_blockers"]
     assert "lapose_foveation_scored_runtime_output_parity_missing" in report["dispatch_blockers"]
+    assert "lapose_foveation_renderer_or_mask_output_path_missing" in report["dispatch_blockers"]
 
 
 def test_lfv1_runtime_effect_controls_identity_and_structural_mutation() -> None:

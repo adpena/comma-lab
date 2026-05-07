@@ -81,6 +81,7 @@ def test_build_categorical_candidate_payload_is_byte_closed_and_fail_closed(
     assert readiness["runtime_loader_parity"]["accepted"] is False
     assert readiness["runtime_loader_parity"]["sidecar_free"] is True
     assert readiness["decode_reencode_parity"]["accepted"] is False
+    assert readiness["conditioning_prior_contract"]["passed"] is True
     assert readiness_file["ready_for_exact_eval_dispatch"] is False
     assert readiness_file["tool_run_manifest"]["tool"] == "tools/build_categorical_candidate_payload.py"
     blockers = set(readiness["dispatch_blockers"])
@@ -96,13 +97,27 @@ def test_build_categorical_candidate_payload_is_byte_closed_and_fail_closed(
     assert archive_member_manifest["member_order"] == list(MEMBER_ORDER)
     assert archive_member_manifest["member_count"] == len(MEMBER_ORDER)
     assert {record["name"] for record in archive_member_manifest["members"]} == set(MEMBER_ORDER)
+    charged_by_name = {record["name"]: record for record in archive_member_manifest["members"]}
+
+    prior_by_name = {row["name"]: row for row in candidate["conditioning_priors"]}
+    qma9_prior = prior_by_name["local_categorical_payload"]
+    assert qma9_prior["charged_member"] == "categorical_payload.bin"
+    assert qma9_prior["charged_member_sha256"] == charged_by_name["categorical_payload.bin"]["sha256"]
+    assert qma9_prior["source_provenance"]["kind"] == "charged_archive_member"
+    assert qma9_prior["source_provenance"]["charged_member"] == "categorical_payload.bin"
+    assert qma9_prior["source_provenance"]["sha256"] == charged_by_name["categorical_payload.bin"]["sha256"]
+    clade_prior = prior_by_name["canonical_class_codebook_conditioning"]
+    assert clade_prior["charged_member"] == "class_codebook.json"
+    assert clade_prior["charged_member_sha256"] == charged_by_name["class_codebook.json"]["sha256"]
+    assert clade_prior["source_provenance"]["kind"] == "charged_archive_member"
+    openpilot_prior = prior_by_name["ego_lane_atom_ranker"]
+    assert openpilot_prior["runtime_consumed"] is False
+    assert openpilot_prior["source_provenance"]["kind"] == "compression_time_only_derivation"
 
     with zipfile.ZipFile(archive_a) as archive:
         assert archive.namelist() == list(MEMBER_ORDER)
         class_codebook = json.loads(archive.read("class_codebook.json").decode("utf-8"))
-        proof_skeleton = json.loads(
-            archive.read("runtime_consumer_proof_skeleton.json").decode("utf-8")
-        )
+        proof_skeleton = json.loads(archive.read("runtime_consumer_proof_skeleton.json").decode("utf-8"))
     assert class_codebook["class_codebook_contract"] == CATEGORICAL_CLASS_CODEBOOK_CONTRACT
     assert proof_skeleton["runtime_consumer_proof_skeleton_contract"] == RUNTIME_PROOF_SKELETON_CONTRACT
     assert proof_skeleton["ready_for_exact_eval_dispatch"] is False
@@ -161,9 +176,7 @@ def test_build_categorical_candidate_payload_emits_hpm1_structural_inventory(
 
     inventory_record = candidate["hpm1_structural_decode_inventory"]
     assert inventory_record["contract"] == HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT
-    assert inventory_record["payload_member_sha256"] == candidate["decode_reencode_parity"][
-        "payload_member_sha256"
-    ]
+    assert inventory_record["payload_member_sha256"] == candidate["decode_reencode_parity"]["payload_member_sha256"]
     assert inventory_record["structural_reencode_matches_source"] is True
     assert inventory_record["full_decode_proven"] is False
     assert inventory_record["byte_exact_semantic_reencode_proven"] is False
@@ -171,15 +184,7 @@ def test_build_categorical_candidate_payload_emits_hpm1_structural_inventory(
     assert inventory["full_decode"]["passed"] is False
     assert inventory["byte_exact_semantic_reencode"]["passed"] is False
     assert readiness["hpm1_structural_decode_inventory"]["accepted"] is True
-    assert readiness["hpm1_structural_decode_inventory"][
-        "structural_reencode_matches_source"
-    ] is True
+    assert readiness["hpm1_structural_decode_inventory"]["structural_reencode_matches_source"] is True
     assert "hpm1_structural_inventory" in summary["paths"]
-    assert (
-        "decode_reencode_full_decode_not_proven"
-        in readiness["dispatch_blockers"]
-    )
-    assert (
-        "decode_reencode_byte_exact_reencode_not_proven"
-        in readiness["dispatch_blockers"]
-    )
+    assert "decode_reencode_full_decode_not_proven" in readiness["dispatch_blockers"]
+    assert "decode_reencode_byte_exact_reencode_not_proven" in readiness["dispatch_blockers"]

@@ -63,7 +63,8 @@ def test_audit_foveation_params_accepts_archive_and_runtime_consumer_proofs(
         zf.writestr("foveation_params.bin", params.read_bytes())
     runtime.write_text(
         "from tac.hyperbolic_foveation import load_foveation_params\n"
-        "MEMBER = 'foveation_params.bin'\n",
+        "MEMBER = 'foveation_params.bin'\n"
+        "params = load_foveation_params(MEMBER)\n",
         encoding="utf-8",
     )
 
@@ -229,3 +230,44 @@ def test_audit_foveation_params_reports_load_error_for_corrupt_payload(tmp_path:
     assert manifest["ok"] is False
     assert "load_error" in manifest
     assert "foveation_payload_load_failed" in manifest["dispatch_blockers"]
+
+
+def test_audit_foveation_params_rejects_comment_only_runtime_proof(tmp_path: Path) -> None:
+    params = tmp_path / "foveation_params.bin"
+    archive = tmp_path / "archive.zip"
+    runtime = tmp_path / "inflate_renderer.py"
+    hf = HyperbolicFoveation((64, 96), n_frames=1, init_alpha=0.05, init_R=12.0)
+    save_foveation_params(hf, params)
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("foveation_params.bin", params.read_bytes())
+    runtime.write_text("# load_foveation_params('foveation_params.bin')\n", encoding="utf-8")
+
+    manifest = audit_foveation_params(
+        params,
+        repo_root=tmp_path,
+        expected_frames=1,
+        expected_image_size=(64, 96),
+        candidate_archive=archive,
+        runtime_consumer=runtime,
+    )
+
+    assert manifest["runtime_consumer"]["references_charged_member"] is False
+    assert manifest["runtime_consumer"]["references_loader"] is False
+    assert "foveation_runtime_consumer_not_proven" in manifest["dispatch_blockers"]
+
+
+def test_audit_foveation_params_rejects_header_image_size_mismatch(tmp_path: Path) -> None:
+    params = tmp_path / "foveation_params.bin"
+    hf = HyperbolicFoveation((384, 512), n_frames=1)
+    save_foveation_params(hf, params)
+
+    manifest = audit_foveation_params(
+        params,
+        repo_root=tmp_path,
+        expected_frames=1,
+        expected_image_size=(64, 96),
+    )
+
+    assert manifest["ok"] is False
+    assert "foveation_payload_load_failed" in manifest["dispatch_blockers"]
+    assert "header image_size" in manifest["load_error"]

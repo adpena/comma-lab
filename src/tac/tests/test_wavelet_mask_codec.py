@@ -136,6 +136,17 @@ def test_decode_rejects_bad_magic():
         decode_wavelet_codec(b"BADX" + b"\x00" * 20)
 
 
+def test_decode_rejects_truncated_and_trailing_payload_bytes():
+    masks = _make_synthetic_masks(t=2, h=16, w=24, seed=123)
+    config = WaveletConfig(levels=2, step_ll=0.01, step_detail=0.01)
+    blob = encode_wavelet_codec(masks, config=config)
+
+    with pytest.raises(ValueError, match="truncated"):
+        decode_wavelet_codec(blob[:-1])
+    with pytest.raises(ValueError, match="trailing bytes"):
+        decode_wavelet_codec(blob + b"junk")
+
+
 def test_encode_rejects_invalid_classes():
     masks = _make_synthetic_masks(t=2, h=16, w=24)
     masks[0, 0, 0] = 5  # out of range for num_classes=5 (must be < 5)

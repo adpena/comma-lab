@@ -799,7 +799,7 @@ def optimize_poses_batch(
         pose_mode: 'full-6dof' (default) or 'radial-zoom'. With
             'radial-zoom', the optimizable parameter is (B, 1) (the
             canonical "z forward" component); it is projected to 6-DOF
-            via [zoom, 0, 0, 0, 0, 0] before being passed to the
+            via [zoom, frozen_baseline_1..5] before being passed to the
             renderer. The renderer was trained on 6-DOF input so the
             projection is mandatory. Per memory
             project_posenet_rank1_discovery the PoseNet Jacobian is
@@ -1039,7 +1039,13 @@ def optimize_poses_batch(
 
         pose_in = posenet.preprocess_input(pairs_chw)
         pose_out = posenet(pose_in)["pose"][..., :6]  # (B, 6)
-        pose_loss = F.mse_loss(pose_out, pose_targets[:pose_out.shape[0]].to(device))
+        pose_target = pose_targets[:pose_out.shape[0]].to(device)
+        pose_loss_dims = (
+            (0,)
+            if pose_mode == "radial-zoom"
+            else tuple(range(pose_out.shape[-1]))
+        )
+        pose_loss = _posenet_mse_loss(pose_out, pose_target, pose_loss_dims)
 
         # Combined loss
         total_loss = seg_weight * seg_loss + pose_weight * pose_loss

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import torch
 import torch.nn as nn
+import pytest
 from torch.autograd import gradcheck
 
 
@@ -217,6 +218,21 @@ def test_per_frame_param_packing_bit_exact_roundtrip(tmp_path) -> None:
     assert torch.equal(hf.o.detach().float(), hf2.o.detach())
     assert hf2.image_size == (384, 512)
     assert hf2.n_frames == n_frames
+
+
+def test_hfv1_header_image_size_cannot_be_overridden(tmp_path) -> None:
+    from tac.hyperbolic_foveation import (
+        HyperbolicFoveation,
+        load_foveation_params,
+        save_foveation_params,
+    )
+
+    hf = HyperbolicFoveation((384, 512), n_frames=2)
+    path = tmp_path / "foveation_params.bin"
+    save_foveation_params(hf, path)
+
+    with pytest.raises(ValueError, match="header image_size"):
+        load_foveation_params(path, image_size=(64, 96))
 
 
 def test_origin_at_corner_does_not_nan() -> None:

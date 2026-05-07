@@ -225,8 +225,7 @@ def check_real_sensitivity_metadata(
         from tac.sensitivity_map import (
             SensitivityMapError,
             load_sensitivity_map,
-            require_authoritative_device,
-            validate_certified_sensitivity_map_metadata,
+            validate_real_sensitivity_artifact,
         )
     except Exception as e:  # pragma: no cover - import failure is environment-specific.
         raise CheckFailure(f"cannot import tac.sensitivity_map: {e}") from e
@@ -236,70 +235,18 @@ def check_real_sensitivity_metadata(
     except Exception as e:
         raise CheckFailure(f"{_display_path(sensitivity_path)} is not a valid sensitivity map: {e}") from e
 
-    failures: list[str] = []
-    if not sensitivities:
-        failures.append("sensitivity map has no tensor entries")
-
     try:
-        require_authoritative_device(metadata.get("device"))
-    except SensitivityMapError as e:
-        failures.append(str(e))
-    try:
-        certification = validate_certified_sensitivity_map_metadata(metadata)
-    except SensitivityMapError as e:
-        failures.append(f"certification rejected: {e}")
-        certification = {}
-
-    failures.extend(_real_sensitivity_metadata_blockers(metadata))
-
-    actual_sha = sha256_file(source_archive)
-    recorded_sha = _metadata_value(
-        metadata,
-        REAL_SENSITIVITY_SOURCE_SHA_KEYS + REAL_SENSITIVITY_CERTIFIED_SOURCE_SHA_KEYS,
-    )
-    if not isinstance(recorded_sha, str) or len(recorded_sha.strip()) != 64:
-        failures.append("metadata missing 64-hex source archive SHA")
-    elif recorded_sha.strip().lower() != actual_sha:
-        failures.append(
-            "metadata source archive SHA is stale or mismatched: "
-            f"metadata={recorded_sha.strip().lower()} actual={actual_sha}"
+        proof = validate_real_sensitivity_artifact(
+            sensitivities,
+            metadata,
+            source_archive_sha256=sha256_file(source_archive),
+            source_archive_bytes=source_archive.stat().st_size,
         )
-    certified_sha = certification.get("baseline_archive_sha256")
-    if isinstance(certified_sha, str) and certified_sha != actual_sha:
-        failures.append(
-            "certification baseline_archive_sha256 is stale or mismatched: "
-            f"metadata={certified_sha} actual={actual_sha}"
-        )
+    except SensitivityMapError as e:
+        raise CheckFailure(f"real sensitivity metadata rejected: {e}") from e
 
-    recorded_bytes = _metadata_value(
-        metadata,
-        REAL_SENSITIVITY_SOURCE_BYTES_KEYS + REAL_SENSITIVITY_CERTIFIED_SOURCE_BYTES_KEYS,
-    )
-    if recorded_bytes is not None:
-        try:
-            recorded_bytes_int = int(recorded_bytes)
-        except (TypeError, ValueError):
-            failures.append(f"metadata source archive bytes is not an integer: {recorded_bytes!r}")
-        else:
-            actual_bytes = source_archive.stat().st_size
-            if recorded_bytes_int != actual_bytes:
-                failures.append(
-                    "metadata source archive bytes is stale or mismatched: "
-                    f"metadata={recorded_bytes_int} actual={actual_bytes}"
-                )
-    certified_bytes = certification.get("baseline_archive_bytes")
-    if isinstance(certified_bytes, int) and not isinstance(certified_bytes, bool):
-        actual_bytes = source_archive.stat().st_size
-        if certified_bytes != actual_bytes:
-            failures.append(
-                "certification baseline_archive_bytes is stale or mismatched: "
-                f"metadata={certified_bytes} actual={actual_bytes}"
-            )
-
-    if failures:
-        joined = "; ".join(failures)
-        raise CheckFailure(f"real sensitivity metadata rejected: {joined}")
-
+    certification = proof["certification"]
+    actual_sha = proof["source_archive_sha256"]
     return (
         f"real sensitivity metadata OK ({len(sensitivities)} tensors, "
         f"certified component={certification.get('component')!r}, "
@@ -344,6 +291,7 @@ def check_stage3_repack(
     source_archive: Path = PR106_ARCHIVE,
     *,
     enforce_stub_byte_exact: bool = True,
+    allow_stub_design_mode: bool = False,
 ) -> str:
     """Stage 3 must produce EXACTLY 164,087 bytes in default stub mode."""
     try:
@@ -355,6 +303,7 @@ def check_stage3_repack(
             source_archive,
             workdir,
             target_bytes=145000,
+            allow_stub_design_mode=allow_stub_design_mode,
             verbose=False,
         )
     except Exception as exc:
@@ -481,6 +430,7 @@ def run_dryrun(
                         sensitivity_path,
                         source_archive,
                         enforce_stub_byte_exact=enforce_stub_byte_exact,
+                        allow_stub_design_mode=not require_real_sensitivity,
                     )
                     if any(p for p in passes if stage3_name in p):
                         _attempt("parser-roundtrip", check_parser_roundtrip, workdir)

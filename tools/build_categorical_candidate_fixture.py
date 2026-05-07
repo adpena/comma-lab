@@ -27,6 +27,7 @@ from tac.categorical_candidate_readiness import (  # noqa: E402
     RUNTIME_LOADER_PARITY_CONTRACT,
     audit_categorical_candidate_manifest,
 )
+from tac.categorical_openpilot_mask_prior_contract import RUNTIME_LABEL_CONTRACT  # noqa: E402
 from tac.repo_io import json_text, sha256_bytes, sha256_file, write_json  # noqa: E402
 from tac.semantic_label_contract import CONTEST_SEGNET_CLASS_NAME_TUPLE, SELFCOMP_CLASS_TO_GRAY  # noqa: E402
 from tac.tool_manifest import attach_tool_run_manifest  # noqa: E402
@@ -46,8 +47,7 @@ MEMBER_ROLES = {
 def _member_payloads() -> dict[str, bytes]:
     return {
         "inflate.sh": (
-            b"#!/usr/bin/env bash\nset -euo pipefail\n"
-            b"echo 'fixture-only categorical candidate' >&2\nexit 2\n"
+            b"#!/usr/bin/env bash\nset -euo pipefail\necho 'fixture-only categorical candidate' >&2\nexit 2\n"
         ),
         "categorical_payload.bin": b"QMA9_fixture_payload_not_a_score_candidate\n",
         "class_codebook.json": json_text(build_categorical_class_codebook()).encode("utf-8"),
@@ -100,10 +100,9 @@ def build_fixture(*, out_dir: Path, source_archive_sha256: str) -> dict[str, Any
     }
     archive_member_manifest_path = out_dir / "archive_member_manifest.json"
     write_json(archive_member_manifest_path, archive_member_manifest)
-    archive_member_manifest_sha = sha256_bytes(
-        json_text(archive_member_manifest).encode("utf-8")
-    )
+    archive_member_manifest_sha = sha256_bytes(json_text(archive_member_manifest).encode("utf-8"))
     candidate_archive_sha = sha256_file(archive_path)
+    member_by_name = {record["name"]: record for record in member_records}
     construction_plan = build_categorical_charged_label_plan(
         source_archive_sha256=source_archive_sha256,
         charged_members=member_records,
@@ -113,6 +112,12 @@ def build_fixture(*, out_dir: Path, source_archive_sha256: str) -> dict[str, Any
                 "name": "ego_lane_atom_ranker",
                 "usage": "compression_time_atom_ranking_only",
                 "runtime_consumed": False,
+                "label_contract": "openpilot_prior_hints_non_runtime",
+                "source_provenance": {
+                    "kind": "compression_time_only_derivation",
+                    "source": "fixture_openpilot_prior_hints",
+                    "runtime_consumed": False,
+                },
             },
             {
                 "family": "clade_spade",
@@ -120,6 +125,14 @@ def build_fixture(*, out_dir: Path, source_archive_sha256: str) -> dict[str, Any
                 "usage": "inflate_runtime_conditioning",
                 "runtime_consumed": True,
                 "charged_member": "class_codebook.json",
+                "charged_member_sha256": member_by_name["class_codebook.json"]["sha256"],
+                "label_contract": RUNTIME_LABEL_CONTRACT,
+                "source_provenance": {
+                    "kind": "charged_archive_member",
+                    "charged_member": "class_codebook.json",
+                    "sha256": member_by_name["class_codebook.json"]["sha256"],
+                    "source": "fixture_class_codebook",
+                },
             },
         ],
         candidate_archive_sha256=candidate_archive_sha,
@@ -147,9 +160,7 @@ def build_fixture(*, out_dir: Path, source_archive_sha256: str) -> dict[str, Any
             "sha256": candidate_archive_sha,
         },
         "semantic_class_order": list(CONTEST_SEGNET_CLASS_NAME_TUPLE),
-        "selfcomp_gray_codebook": [
-            SELFCOMP_CLASS_TO_GRAY[index] for index in range(len(SELFCOMP_CLASS_TO_GRAY))
-        ],
+        "selfcomp_gray_codebook": [SELFCOMP_CLASS_TO_GRAY[index] for index in range(len(SELFCOMP_CLASS_TO_GRAY))],
         "runtime_consumer": {
             "path": RUNTIME_CONSUMER_REPO_PATH,
             "consumes_charged_members": True,

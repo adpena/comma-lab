@@ -64,7 +64,8 @@ def workdir():
              "--sensitivity", str(SENSITIVITY_STUB),
              "--pr106-archive", str(PR106_ARCHIVE),
              "--target-bytes", "145000",
-             "--out-dir", str(tmp_path)],
+             "--out-dir", str(tmp_path),
+             "--allow-stub-design-mode"],
             check=True, capture_output=True,
         )
         yield tmp_path

@@ -424,6 +424,8 @@ def decode_vqvae_codec(blob: bytes) -> torch.Tensor:
     """Decode VQM1 payload back to (T, H, W) int64 mask tensor."""
     if blob[:4] != VQVAE_MAGIC:
         raise ValueError(f"VQ-VAE magic mismatch: expected {VQVAE_MAGIC!r}, got {blob[:4]!r}")
+    if len(blob) < 4 + 2 + 6 + 4 + 4:
+        raise ValueError(f"VQ-VAE payload truncated header: got {len(blob)} bytes")
     pos = 4
     version = struct.unpack_from("<H", blob, pos)[0]
     pos += 2
@@ -435,11 +437,23 @@ def decode_vqvae_codec(blob: bytes) -> torch.Tensor:
     pos += 4
     cb_byte_len = struct.unpack_from("<I", blob, pos)[0]
     pos += 4
+    cb_end = pos + int(cb_byte_len)
+    expected_cb_bytes = int(cb_size) * int(patch_size) * int(patch_size)
+    if cb_byte_len != expected_cb_bytes:
+        raise ValueError(
+            f"VQ-VAE codebook byte length {cb_byte_len} does not match expected "
+            f"{expected_cb_bytes}"
+        )
+    if cb_end > len(blob):
+        raise ValueError(
+            f"VQ-VAE codebook payload truncated: declared {cb_byte_len} bytes, "
+            f"available {len(blob) - pos}"
+        )
     cb_arr = np.frombuffer(blob[pos : pos + cb_byte_len], dtype=np.int8).reshape(
         cb_size, patch_size, patch_size
     )
     codebook = torch.from_numpy(cb_arr.astype(np.int64).copy())
-    pos += cb_byte_len
+    pos = cb_end
 
     n_freq = struct.unpack_from("<H", blob, pos)[0]
     pos += 2
@@ -450,6 +464,16 @@ def decode_vqvae_codec(blob: bytes) -> torch.Tensor:
         freq[int(k)] = int(v)
     total, payload_size = struct.unpack_from("<II", blob, pos)
     pos += 8
+    payload_end = pos + int(payload_size)
+    if payload_end > len(blob):
+        raise ValueError(
+            f"VQ-VAE arithmetic payload truncated: declared {payload_size} bytes, "
+            f"available {len(blob) - pos}"
+        )
+    if payload_end != len(blob):
+        raise ValueError(
+            f"VQ-VAE payload has trailing bytes: payload_end={payload_end}, blob_len={len(blob)}"
+        )
     payload = blob[pos : pos + payload_size]
 
     n_h, n_w = h // patch_size, w // patch_size

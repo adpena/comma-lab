@@ -201,6 +201,141 @@ def test_field_meta_selector_is_deterministic_and_orders_static_ready_packets_fi
     assert first["selected_candidate"]["ready_for_exact_eval_dispatch"] is False
 
 
+def test_field_meta_selector_exposes_pareto_kkt_and_information_gain(
+    tmp_path: Path,
+) -> None:
+    common = {
+        "lane_id": "lane_pareto",
+        "job_name": "job_pareto",
+        "family_group": "hnerv_rate_recode",
+        "pareto_scope": "hnerv_rate_recode",
+        "interaction_assumptions": ["rate_only_byte_equivalent"],
+        "kkt_proof": _kkt_proof(),
+    }
+    dominator = _packet_manifest(
+        tmp_path / "dominator",
+        candidate_id="dominator",
+        expected_score_delta=-0.0003,
+        byte_delta=-30,
+        expected_seg_dist_delta=-0.0002,
+        expected_pose_dist_delta=-0.00002,
+        expected_information_gain_nats=0.2,
+        **common,
+    )
+    dominated = _packet_manifest(
+        tmp_path / "dominated",
+        candidate_id="dominated",
+        expected_score_delta=-0.0001,
+        byte_delta=-10,
+        expected_seg_dist_delta=-0.0001,
+        expected_pose_dist_delta=-0.00001,
+        expected_information_gain_nats=0.9,
+        **common,
+    )
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[dominated, dominator])
+
+    assert report["pareto_summary"]["frontier_count"] == 1
+    assert report["pareto_summary"]["dominated_count"] == 1
+    assert report["kkt_ready_for_field_planning_count"] == 2
+    assert report["selected_candidate"]["candidate_id"] == "dominator"
+    first = report["rows"][0]
+    assert first["pareto_frontier"] is True
+    assert first["kkt_ready_for_field_planning"] is True
+    assert first["lexicographic_feasibility_tuple"][6] is True
+    assert first["field_selection_score_delta"] == first["expected_total_score_delta"]
+    assert first["expected_information_gain_nats"] == 0.2
+    second = report["rows"][1]
+    assert second["candidate_id"] == "dominated"
+    assert second["pareto_frontier"] is False
+    assert second["pareto_dominated_by"] == ["dominator"]
+    assert second["selection_penalty_terms"]["pareto_dominated_packet"] > 0.0
+
+
+def test_field_meta_selector_requires_real_kkt_proof_before_kkt_ready(
+    tmp_path: Path,
+) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="no_kkt_proof",
+        lane_id="lane_no_kkt_proof",
+        job_name="job_no_kkt_proof",
+    )
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    assert report["kkt_ready_for_field_planning_count"] == 0
+    assert row["candidate_static_preflight_ready"] is True
+    assert row["kkt_ready_for_field_planning"] is False
+    assert row["kkt_proof"]["status"] == "blocked"
+    assert "kkt:kkt_proof_or_admm_result_missing" in row["kkt_blockers"]
+    assert row["selection_penalty_terms"]["kkt_not_ready_for_field_planning"] > 0.0
+    assert row["field_selection_score_delta"] == row["expected_total_score_delta"]
+
+
+def test_field_meta_selector_accepts_converged_admm_result_as_kkt_proof(
+    tmp_path: Path,
+) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="admm_kkt_ready",
+        lane_id="lane_admm_kkt_ready",
+        job_name="job_admm_kkt_ready",
+        admm_result={
+            "converged": True,
+            "waterline_kkt_residual": 0.002,
+            "kkt_waterline_satisfied": True,
+        },
+    )
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    assert report["kkt_ready_for_field_planning_count"] == 1
+    assert row["kkt_ready_for_field_planning"] is True
+    assert row["kkt_proof"]["kind"] == "admm_result"
+    assert row["lexicographic_feasibility_tuple"][6] is True
+
+
+def test_field_meta_selector_penalizes_dirty_packet_over_raw_delta(
+    tmp_path: Path,
+) -> None:
+    dirty = _packet_manifest(
+        tmp_path / "dirty",
+        candidate_id="dirty_raw_best",
+        lane_id="lane_dirty_raw_best",
+        job_name="job_dirty_raw_best",
+        expected_score_delta=-10.0,
+        code_paths=["src/tac/optimization/dirty_packet_owner.py"],
+        interaction_assumptions=["dirty_candidate_pending_other_worker"],
+    )
+    clean = _packet_manifest(
+        tmp_path / "clean",
+        candidate_id="clean_weaker",
+        lane_id="lane_clean_weaker",
+        job_name="job_clean_weaker",
+        expected_score_delta=-0.0001,
+        interaction_assumptions=["clean_candidate_first_order"],
+    )
+
+    report = build_selection_report(
+        repo_root=REPO,
+        manifest_paths=[dirty, clean],
+        dirty_paths=["src/tac/optimization/dirty_packet_owner.py"],
+    )
+
+    assert report["dirty_blocked_candidate_count"] == 1
+    assert report["selected_candidate"]["candidate_id"] == "clean_weaker"
+    dirty_row = next(row for row in report["rows"] if row["candidate_id"] == "dirty_raw_best")
+    assert dirty_row["dirty_blocked"] is True
+    assert dirty_row["candidate_static_preflight_ready"] is False
+    assert dirty_row["selection_decision"] == "refused_dirty_worktree_overlap"
+    assert dirty_row["selection_penalty_terms"]["dirty_path_blocked"] > 0.0
+    assert dirty_row["field_selection_score_delta"] == dirty_row["expected_total_score_delta"]
+    assert dirty_row["next_required_proof"][0] == "clean_or_isolate_dirty_candidate_paths_before_selection"
+
+
 def test_build_field_meta_dispatch_selection_cli_writes_json(tmp_path: Path) -> None:
     manifest = _packet_manifest(
         tmp_path,
@@ -240,6 +375,17 @@ def _packet_manifest(
     runtime_tree_sha256: str | None = "b" * 64,
     dispatch_gate: str = "eligible_for_cuda_auth_eval_after_lane_claim",
     expected_score_delta: float = -0.0001,
+    byte_delta: int = -9,
+    expected_seg_dist_delta: float = 0.0,
+    expected_pose_dist_delta: float = 0.0,
+    expected_information_gain_nats: float = 0.1,
+    family_group: str = "fixture_family",
+    pareto_scope: str = "fixture_family",
+    interaction_assumptions: list[str] | None = None,
+    code_paths: list[str] | None = None,
+    evidence_paths: list[str] | None = None,
+    kkt_proof: dict[str, object] | None = None,
+    admm_result: dict[str, object] | None = None,
     lane_id: str | None = None,
     job_name: str | None = None,
     valid_zip: bool = True,
@@ -267,16 +413,29 @@ def _packet_manifest(
         "dispatch_gate": dispatch_gate,
         "dispatch_unlocked": True,
         "ready_for_exact_eval_dispatch_claim": True,
+        "family_group": family_group,
+        "pareto_scope": pareto_scope,
+        "interaction_assumptions": interaction_assumptions or ["fixture_first_order"],
         "archive": {
             "path": archive.as_posix(),
             "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
             "bytes": archive.stat().st_size,
         },
         "fixed_runtime_preflight": fixed_runtime,
-        "byte_delta": -9,
+        "byte_delta": byte_delta,
         "expected_total_score_delta": expected_score_delta,
-        "expected_information_gain_nats": 0.1,
+        "expected_seg_dist_delta": expected_seg_dist_delta,
+        "expected_pose_dist_delta": expected_pose_dist_delta,
+        "expected_information_gain_nats": expected_information_gain_nats,
     }
+    if code_paths is not None:
+        payload["code_paths"] = code_paths
+    if evidence_paths is not None:
+        payload["evidence_paths"] = evidence_paths
+    if kkt_proof is not None:
+        payload["kkt_proof"] = kkt_proof
+    if admm_result is not None:
+        payload["admm_result"] = admm_result
     if lane_id is not None:
         payload["lane_id"] = lane_id
     if job_name is not None:
@@ -284,6 +443,14 @@ def _packet_manifest(
     manifest = root / "manifest.json"
     manifest.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return manifest
+
+
+def _kkt_proof() -> dict[str, object]:
+    return {
+        "status": "passed",
+        "stationarity_residual": 0.0,
+        "stationarity_tolerance": 0.001,
+    }
 
 
 def _claims_file(root: Path, *, lane_id: str, job_name: str) -> Path:

@@ -23,6 +23,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
+import pytest
 import torch
 
 REPO = Path(__file__).resolve().parents[3]
@@ -161,6 +162,88 @@ def test_posenet_loss_full_6dof_all_dims():
     loss.backward()
     assert pose_output.grad is not None
     assert (pose_output.grad[0] != 0).all()
+
+
+class _TinyRenderer(torch.nn.Module):
+    def forward(
+        self,
+        masks_t: torch.Tensor,
+        masks_t1: torch.Tensor,
+        *,
+        pose: torch.Tensor,
+        **_: object,
+    ) -> torch.Tensor:
+        batch, h, w = masks_t.shape
+        frames_chw = pose.new_zeros(batch, 2, 3, h, w)
+        frames_chw[:, 0, 0, 0, 0] = pose[:, 0]
+        frames_chw[:, 0, 1, 0, 0] = pose[:, 1]
+        frames_chw[:, 0, 2, 0, 0] = pose[:, 2]
+        frames_chw[:, 1, 0, 0, 0] = pose[:, 3]
+        frames_chw[:, 1, 1, 0, 0] = pose[:, 4]
+        frames_chw[:, 1, 2, 0, 0] = pose[:, 5]
+        return frames_chw.permute(0, 1, 3, 4, 2).contiguous()
+
+
+class _TinyPoseNet(torch.nn.Module):
+    def preprocess_input(self, x: torch.Tensor) -> torch.Tensor:
+        return x
+
+    def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
+        pose = torch.stack(
+            [
+                x[:, 0, 0, 0, 0],
+                x[:, 0, 1, 0, 0],
+                x[:, 0, 2, 0, 0],
+                x[:, 1, 0, 0, 0],
+                x[:, 1, 1, 0, 0],
+                x[:, 1, 2, 0, 0],
+            ],
+            dim=-1,
+        )
+        return {"pose": pose}
+
+
+class _TinySegNet(torch.nn.Module):
+    def preprocess_input(self, x: torch.Tensor) -> torch.Tensor:
+        return x
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x.new_zeros(x.shape[0], 5, x.shape[-2], x.shape[-1])
+
+
+def test_radial_zoom_batch_routes_pose_loss_through_masked_helper():
+    """Regression for Reviewer D: radial-zoom must not score frozen dims 1-5."""
+    mod = _load_optimize_poses()
+    masks_t = torch.zeros(1, 2, 2, dtype=torch.long)
+    masks_t1 = torch.zeros(1, 2, 2, dtype=torch.long)
+    gt_masks = torch.zeros(2, 2, 2, dtype=torch.long)
+    init_poses = torch.zeros(1, 6, dtype=torch.float32)
+    pose_targets = torch.tensor(
+        [[1.0, 10.0, 10.0, 10.0, 10.0, 10.0]],
+        dtype=torch.float32,
+    )
+
+    _optimized, metrics = mod.optimize_poses_batch(
+        renderer=_TinyRenderer(),
+        masks_t=masks_t,
+        masks_t1=masks_t1,
+        gt_masks=gt_masks,
+        pose_targets=pose_targets,
+        posenet=_TinyPoseNet(),
+        segnet=_TinySegNet(),
+        init_poses=init_poses,
+        device=torch.device("cpu"),
+        steps=1,
+        lr=0.0,
+        seg_weight=0.0,
+        pose_weight=1.0,
+        eval_roundtrip=False,
+        log_every=100,
+        pose_mode="radial-zoom",
+    )
+
+    assert metrics["final_pose_loss"] == pytest.approx(1.0)
+    assert metrics["final_pose_loss"] != pytest.approx((1.0 + 5 * 100.0) / 6.0)
 
 
 def test_train_inference_bit_exact_parity():

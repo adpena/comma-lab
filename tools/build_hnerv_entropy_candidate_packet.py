@@ -16,8 +16,10 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.hnerv_entropy_candidate_packet import (  # noqa: E402
+    HDC2_STREAM_ARTIFACT_REQUIREMENTS,
     HnervEntropyCandidatePacketError,
     build_candidate_packet_manifest,
+    build_hdc2_stream_byte_equivalence_work_product,
     discover_candidate_audit_inputs,
     discovery_report_input_paths,
     existing_artifact_input_paths,
@@ -81,6 +83,35 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--runtime-tree-parity-manifest", type=Path)
     parser.add_argument("--strict-pre-submission-compliance-json", type=Path)
     parser.add_argument("--meta-lagrangian-atom-json", type=Path)
+    parser.add_argument(
+        "--hdc2-stream-work-product-profile",
+        type=Path,
+        help=(
+            "HNeRV structural-recode profile used to materialize byte-closed "
+            "HDC2 stream-level source/candidate manifests."
+        ),
+    )
+    parser.add_argument(
+        "--hdc2-stream-work-product-source-archive",
+        type=Path,
+        help="Source HNeRV single-member archive for HDC2 stream work-product extraction.",
+    )
+    parser.add_argument(
+        "--hdc2-stream-work-product-source-exact-eval-json",
+        type=Path,
+        help=(
+            "Source exact-eval JSON required for runtime-tree custody when "
+            "--hdc2-stream-work-product-dir is used."
+        ),
+    )
+    parser.add_argument(
+        "--hdc2-stream-work-product-dir",
+        type=Path,
+        help=(
+            "Directory for HDC2 stream work-product JSONs and candidate stream bytes. "
+            "Generated artifacts are attached to the candidate packet."
+        ),
+    )
     parser.add_argument("--json-out", type=Path)
     parser.add_argument(
         "--entropy-audit-json-out",
@@ -115,6 +146,24 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
         artifacts = artifact_paths_from_args(args)
+        if args.hdc2_stream_work_product_dir is not None:
+            if args.hdc2_stream_work_product_profile is None:
+                raise HnervEntropyCandidatePacketError(
+                    "--hdc2-stream-work-product-dir requires --hdc2-stream-work-product-profile"
+                )
+            if args.hdc2_stream_work_product_source_archive is None:
+                raise HnervEntropyCandidatePacketError(
+                    "--hdc2-stream-work-product-dir requires "
+                    "--hdc2-stream-work-product-source-archive"
+                )
+            if args.hdc2_stream_work_product_source_exact_eval_json is None:
+                raise HnervEntropyCandidatePacketError(
+                    "--hdc2-stream-work-product-dir requires "
+                    "--hdc2-stream-work-product-source-exact-eval-json"
+                )
+            generated = _materialize_hdc2_stream_work_product(args)
+            for requirement_id, path in generated.items():
+                _add_artifact(artifacts, requirement_id, path)
         entropy_audit = args.entropy_audit
         if args.discovery_only or entropy_audit is None:
             discovery = discover_candidate_audit_inputs(
@@ -204,6 +253,39 @@ def _add_artifact(artifacts: dict[str, Path], requirement_id: str, path: Path) -
     if requirement_id in artifacts:
         raise HnervEntropyCandidatePacketError(f"duplicate artifact requirement id: {requirement_id}")
     artifacts[requirement_id] = path
+
+
+def _materialize_hdc2_stream_work_product(args: argparse.Namespace) -> dict[str, Path]:
+    output_dir = args.hdc2_stream_work_product_dir
+    assert output_dir is not None
+    output_dir.mkdir(parents=True, exist_ok=True)
+    candidate_stream_path = output_dir / "candidate_hdc2_global_prev_symbol_stream.bin"
+    work_product = build_hdc2_stream_byte_equivalence_work_product(
+        args.hdc2_stream_work_product_profile,
+        args.hdc2_stream_work_product_source_archive,
+        source_exact_eval_json_path=args.hdc2_stream_work_product_source_exact_eval_json,
+        candidate_stream_path=candidate_stream_path,
+        repo_root=REPO_ROOT,
+    )
+    named_payloads = {
+        "source_archive_manifest": work_product["source_archive_manifest"],
+        "source_stream_section_manifest": work_product["source_stream_section_manifest"],
+        "candidate_stream_section_manifest": work_product["candidate_stream_section_manifest"],
+        "decoded_output_equivalence_report": work_product["decoded_output_equivalence_report"],
+        "roundtrip_decode_validation_manifest": work_product[
+            "roundtrip_decode_validation_manifest"
+        ],
+    }
+    generated: dict[str, Path] = {}
+    for name, payload in named_payloads.items():
+        path = output_dir / f"{HDC2_STREAM_ARTIFACT_REQUIREMENTS[name]}.json"
+        path.write_text(json_text(payload), encoding="utf-8")
+        generated[HDC2_STREAM_ARTIFACT_REQUIREMENTS[name]] = path
+    (output_dir / "hdc2_stream_byte_equivalence_work_product.json").write_text(
+        json_text(work_product),
+        encoding="utf-8",
+    )
+    return generated
 
 
 if __name__ == "__main__":

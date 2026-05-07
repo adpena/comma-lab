@@ -12,6 +12,7 @@ from pathlib import PurePosixPath
 from typing import Any
 
 from tac.categorical_openpilot_mask_prior_contract import (
+    RUNTIME_LABEL_CONTRACT,
     audit_categorical_openpilot_mask_priors,
 )
 from tac.semantic_label_contract import (
@@ -210,6 +211,7 @@ def build_categorical_charged_label_plan(
     conditioning_prior_contract = audit_categorical_openpilot_mask_priors(
         conditioning_priors,
         charged_member_names=member_names,
+        charged_members=records,
     )
 
     plan_blockers: list[str] = []
@@ -282,6 +284,7 @@ def audit_categorical_charged_label_plan(
     plan: Any,
     *,
     charged_member_names: list[str],
+    charged_members: Any = None,
 ) -> dict[str, Any]:
     """Audit a declared categorical construction plan without making it dispatchable."""
 
@@ -386,6 +389,7 @@ def audit_categorical_charged_label_plan(
     recomputed_conditioning = audit_categorical_openpilot_mask_priors(
         plan.get("conditioning_priors"),
         charged_member_names=sorted(charged_names),
+        charged_members=charged_members,
     )
     if recomputed_conditioning["passed"] is not True:
         validation_blockers.extend(recomputed_conditioning["dispatch_blockers"])
@@ -423,6 +427,7 @@ __all__ = [
     "CATEGORICAL_CONSTRUCTION_PLAN_CONTRACT",
     "CATEGORICAL_CONSTRUCTION_PLAN_KIND",
     "PRIMARY_LABEL_SOURCES",
+    "RUNTIME_LABEL_CONTRACT",
     "SCHEMA_VERSION",
     "audit_categorical_charged_label_plan",
     "build_categorical_charged_label_plan",

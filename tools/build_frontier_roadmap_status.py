@@ -27,7 +27,7 @@ from tac.repo_io import json_text  # noqa: E402
 from tools.build_cross_paradigm_frontier_inventory import build_inventory  # noqa: E402
 from tools.build_field_meta_dispatch_selection import build_selection_report  # noqa: E402
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def git_dirty_paths(repo_root: Path) -> list[str]:
@@ -213,12 +213,12 @@ def build_next_comprehensive_tranche(
             "id": "field_meta_selection",
             "objective": (
                 "Let the meta-Lagrangian/field-equation planner choose the exact next "
-                "candidate only after Pareto, KKT, custody, and interaction gates pass."
+                "candidate only after Pareto, KKT-proof, custody, and interaction gates pass."
             ),
             "keys": _keys_present(rows_by_key, ("meta_lagrangian_cross_paradigm_allocator",)),
             "acceptance_gates": [
                 "candidate rows carry family/conflict and byte-closed manifest fields",
-                "proxy, dominated, non-KKT, and non-byte-closed rows are penalized or refused",
+                "proxy, dominated, non-KKT-proof, and non-byte-closed rows carry diagnostic blockers",
                 "expected-information-gain is recorded separately from predicted score",
                 "selected exact-eval packet has a matching active lane claim plus candidate-specific static preflight",
             ],
@@ -248,7 +248,7 @@ def build_next_comprehensive_tranche(
         "objective": (
             "Prepare score-reduction attempts by converting the strongest current "
             "planning surfaces into byte-closed, runtime-consumed candidates, then "
-            "select any exact CUDA packet only through Pareto/KKT/meta-Lagrangian gates."
+            "select any exact CUDA packet only through Pareto/KKT-proof/meta-Lagrangian gates."
         ),
         "candidate_pools": {
             "exact_eval_or_review": exact_eval_candidates,
@@ -257,7 +257,7 @@ def build_next_comprehensive_tranche(
         },
         "field_meta_candidate_packet_selection": field_meta_candidate_packet_selection
         or {
-            "schema_version": 1,
+            "schema_version": 2,
             "tool": "tools/build_field_meta_dispatch_selection.py",
             "score_claim": False,
             "dispatch_attempted": False,
@@ -268,6 +268,25 @@ def build_next_comprehensive_tranche(
             "candidate_local_preflight_ready_count": 0,
             "candidate_static_preflight_ready_count": 0,
             "ready_candidate_count": 0,
+            "dirty_blocked_candidate_count": 0,
+            "kkt_ready_for_field_planning_count": 0,
+            "pareto_summary": {
+                "frontier_count": 0,
+                "dominated_count": 0,
+                "eligible_count": 0,
+                "scope_counts": {},
+            },
+            "lexicographic_feasibility_order": [
+                "ready_for_exact_eval_dispatch desc",
+                "candidate_static_preflight_ready desc",
+                "archive_proof.byte_closed desc",
+                "runtime_proof.runtime_closed desc",
+                "clean_worktree_overlap desc",
+                "pareto_frontier desc",
+                "kkt_ready_for_field_planning desc",
+                "expected_total_score_delta asc",
+                "expected_information_gain_nats desc",
+            ],
             "selected_candidate": None,
             "rows": [],
             "report_blockers": ["no_candidate_packet_manifests_supplied"],
@@ -353,6 +372,7 @@ def build_roadmap_status(
         manifest_globs=packet_manifest_globs or [],
         claims_path=claims_path,
         now_utc=now_utc,
+        dirty_paths=live_dirty_paths,
     )
     next_tranche = build_next_comprehensive_tranche(
         rows,
@@ -403,7 +423,11 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- candidate_local_preflight_ready_count: `{packet_selection['candidate_local_preflight_ready_count']}`",
         f"- candidate_static_preflight_ready_count: `{packet_selection['candidate_static_preflight_ready_count']}`",
         f"- ready_candidate_packet_count: `{packet_selection['ready_candidate_count']}`",
+        f"- dirty_blocked_candidate_packet_count: `{packet_selection['dirty_blocked_candidate_count']}`",
+        f"- pareto_frontier_candidate_packet_count: `{packet_selection['pareto_summary']['frontier_count']}`",
+        f"- kkt_ready_candidate_packet_count: `{packet_selection['kkt_ready_for_field_planning_count']}`",
         f"- selected_candidate_packet: `{_md(selected_packet.get('candidate_id') or 'none')}`",
+        f"- selected_candidate_decision: `{_md(selected_packet.get('selection_decision') or 'none')}`",
         "",
         "| workstream | keys | dirty-blocked keys | acceptance gates |",
         "|---|---|---|---|",

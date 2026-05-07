@@ -6,6 +6,12 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from tac.hnerv_decoder_recode import (
+    decode_global_prev_symbol_context_range_fixture,
+    encode_global_prev_symbol_context_range_fixture,
+    parse_packed_decoder_brotli,
+)
+from tac.hnerv_lowlevel_packer import parse_ff_packed_brotli_hnerv, read_strict_single_member_zip
 from tac.optimization.entropy_codec_gap_audit import (
     BYTE_EQUIVALENCE_BLOCKERS,
     COMMON_EXACT_NEXT_ARTIFACT_REQUIREMENTS,
@@ -18,14 +24,19 @@ from tac.optimization.entropy_codec_gap_audit import (
 from tac.optimization.entropy_codec_gap_audit import (
     DISPATCH_BLOCKERS as ENTROPY_DISPATCH_BLOCKERS,
 )
-from tac.repo_io import read_json, repo_relative, sha256_file
+from tac.repo_io import read_json, repo_relative, sha256_bytes, sha256_file
 
 SCHEMA_VERSION = 1
 DISCOVERY_SCHEMA_VERSION = 1
+HDC2_STREAM_WORK_PRODUCT_SCHEMA_VERSION = 1
 TOOL_NAME = "tac.hnerv_entropy_candidate_packet"
 DISCOVERY_TOOL_NAME = "tac.hnerv_entropy_candidate_packet.discover_candidate_audit_inputs"
 ADAPTED_AUDIT_TOOL_NAME = "tac.hnerv_entropy_candidate_packet.hnerv_profile_entropy_overhead_adapter"
+HDC2_STREAM_WORK_PRODUCT_TOOL_NAME = (
+    "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+)
 STRUCTURAL_RECODE_TOOL_NAME = "tac.hnerv_decoder_recode.build_structural_recode_profile"
+HDC2_VARIANT_NAME = "range_prev_symbol_global_q_streams_plus_raw_scales"
 DEFAULT_DISCOVERY_ROOTS = (
     "experiments/results",
     ".omx/research/artifacts",
@@ -61,6 +72,21 @@ PACKET_DISPATCH_BLOCKERS = [
     "requires_lane_dispatch_claim_before_gpu",
     "requires_exact_cuda_auth_eval",
 ]
+SOURCE_ARCHIVE_REQUIREMENT_ID = (
+    "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256"
+)
+SOURCE_STREAM_REQUIREMENT_ID = "source_stream_section_sha256_byte_range_and_symbol_count"
+CANDIDATE_STREAM_REQUIREMENT_ID = "candidate_stream_section_sha256_byte_range_and_byte_count"
+DECODED_OUTPUT_EQUIVALENCE_REQUIREMENT_ID = "old_new_decoded_output_sha256_equality_report"
+ROUNDTRIP_REQUIREMENT_ID = "roundtrip_decode_validation_manifest"
+
+HDC2_STREAM_ARTIFACT_REQUIREMENTS = {
+    "source_archive_manifest": SOURCE_ARCHIVE_REQUIREMENT_ID,
+    "source_stream_section_manifest": SOURCE_STREAM_REQUIREMENT_ID,
+    "candidate_stream_section_manifest": CANDIDATE_STREAM_REQUIREMENT_ID,
+    "decoded_output_equivalence_report": DECODED_OUTPUT_EQUIVALENCE_REQUIREMENT_ID,
+    "roundtrip_decode_validation_manifest": ROUNDTRIP_REQUIREMENT_ID,
+}
 
 
 class HnervEntropyCandidatePacketError(ValueError):
@@ -114,6 +140,11 @@ def build_candidate_packet_manifest(
         for row in requirement_rows
         if row.get("json_parse_error")
     ]
+    invalid_requirement_artifacts = [
+        str(row["id"])
+        for row in requirement_rows
+        if row.get("validation", {}).get("valid") is False
+    ]
     unsatisfied_byte_equivalence_blockers = _unsatisfied_byte_equivalence_blockers(
         target,
         available_ids={
@@ -126,6 +157,10 @@ def build_candidate_packet_manifest(
         [
             *(f"missing_artifact:{artifact_id}" for artifact_id in missing_artifacts),
             *(f"invalid_json_artifact:{artifact_id}" for artifact_id in invalid_json_artifacts),
+            *(
+                f"invalid_requirement_artifact:{artifact_id}"
+                for artifact_id in invalid_requirement_artifacts
+            ),
             *unsatisfied_byte_equivalence_blockers,
         ]
     )
@@ -162,6 +197,7 @@ def build_candidate_packet_manifest(
         "readiness_blockers": readiness_blockers,
         "missing_artifacts": missing_artifacts,
         "invalid_json_artifacts": invalid_json_artifacts,
+        "invalid_requirement_artifacts": invalid_requirement_artifacts,
         "audit_source": _file_record("entropy_audit_json", audit_path, root),
         "audit_source_kind": audit_source_kind,
         "audit_summary": {
@@ -224,6 +260,253 @@ def existing_artifact_input_paths(
         if path.is_file():
             out.append(path)
     return out
+
+
+def build_hdc2_stream_byte_equivalence_work_product(
+    structural_profile_path: str | Path,
+    source_archive_path: str | Path,
+    *,
+    source_exact_eval_json_path: str | Path | None = None,
+    candidate_stream_path: str | Path | None = None,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Build byte-closed HDC2 stream manifests from an existing structural profile.
+
+    This closes only the local decoder-stream byte-equivalence artifacts. It
+    does not build a candidate archive, does not install a runtime decoder, and
+    does not authorize exact eval dispatch.
+    """
+
+    root = Path(repo_root) if repo_root is not None else Path.cwd()
+    profile_path = Path(structural_profile_path)
+    archive_path = Path(source_archive_path)
+    exact_eval_path = Path(source_exact_eval_json_path) if source_exact_eval_json_path else None
+    profile = read_json(profile_path)
+    if not _looks_like_hnerv_structural_recode_profile(profile):
+        raise HnervEntropyCandidatePacketError(
+            "HDC2 stream work product requires a HNeRV structural recode profile"
+        )
+    assert isinstance(profile, Mapping)
+    hdc2 = _variant_by_name(profile, HDC2_VARIANT_NAME)
+    if hdc2 is None:
+        raise HnervEntropyCandidatePacketError(f"structural profile missing {HDC2_VARIANT_NAME}")
+
+    source_archive = read_strict_single_member_zip(archive_path)
+    expected_archive_sha256 = str(profile.get("source_archive_sha256") or "")
+    if expected_archive_sha256 and source_archive.archive_sha256 != expected_archive_sha256:
+        raise HnervEntropyCandidatePacketError(
+            "source archive SHA-256 does not match structural profile: "
+            f"expected {expected_archive_sha256}, got {source_archive.archive_sha256}"
+        )
+    packed = parse_ff_packed_brotli_hnerv(source_archive.payload)
+    source_section = packed.decoder_packed_brotli
+    _require_profile_int_match(
+        profile,
+        key="source_decoder_section_bytes",
+        actual=len(source_section),
+    )
+    _require_profile_string_match(
+        profile,
+        key="source_decoder_section_sha256",
+        actual=sha256_bytes(source_section),
+    )
+
+    parsed = parse_packed_decoder_brotli(source_section)
+    source_raw = parsed.to_raw()
+    candidate_stream, candidate_stats = encode_global_prev_symbol_context_range_fixture(parsed)
+    restored = decode_global_prev_symbol_context_range_fixture(candidate_stream)
+    candidate_raw = restored.to_raw()
+    _require_true(candidate_raw == source_raw, "hdc2.candidate_raw_equals_source_raw")
+    _require_profile_int_match(hdc2, key="bytes", actual=len(candidate_stream))
+    _require_profile_string_match(hdc2, key="sha256", actual=sha256_bytes(candidate_stream))
+    _require_profile_int_match(hdc2, key="header_bytes", actual=int(candidate_stats["header_bytes"]))
+    _require_profile_int_match(
+        hdc2,
+        key="range_payload_bytes",
+        actual=int(candidate_stats["range_payload_bytes"]),
+    )
+    _require_profile_int_match(hdc2, key="raw_scale_bytes", actual=len(parsed.scale_stream))
+
+    if candidate_stream_path is not None:
+        stream_path = Path(candidate_stream_path)
+        stream_path.parent.mkdir(parents=True, exist_ok=True)
+        stream_path.write_bytes(candidate_stream)
+        candidate_stream_file = _file_record(
+            "candidate_hdc2_global_prev_symbol_stream",
+            stream_path,
+            root,
+        )
+    else:
+        candidate_stream_file = {
+            "id": "candidate_hdc2_global_prev_symbol_stream",
+            "path": "",
+            "bytes": len(candidate_stream),
+            "sha256": sha256_bytes(candidate_stream),
+        }
+
+    runtime = _runtime_manifest_from_exact_eval(exact_eval_path, root) if exact_eval_path else None
+    source_section_start = len(packed.header)
+    source_section_end = source_section_start + len(source_section)
+    source_label = str(profile.get("source_label") or "")
+    source_archive_manifest = {
+        "schema_version": HDC2_STREAM_WORK_PRODUCT_SCHEMA_VERSION,
+        "tool": HDC2_STREAM_WORK_PRODUCT_TOOL_NAME,
+        "requirement_id": SOURCE_ARCHIVE_REQUIREMENT_ID,
+        "source_label": source_label,
+        "score_claim": False,
+        "score_evidence_grade": "invalid",
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "archive": {
+            "path": repo_relative(archive_path, root),
+            "bytes": source_archive.archive_bytes,
+            "sha256": source_archive.archive_sha256,
+            "member_name": source_archive.member_name,
+            "member_bytes": source_archive.member_bytes,
+            "member_sha256": sha256_bytes(source_archive.payload),
+        },
+        "runtime_tree_sha256": str((runtime or {}).get("runtime_tree_sha256") or ""),
+        "inflate_runtime_manifest": (runtime or {}).get("inflate_runtime_manifest"),
+        "runtime_manifest_source_json": repo_relative(exact_eval_path, root) if exact_eval_path else "",
+    }
+    source_stream_manifest = {
+        "schema_version": HDC2_STREAM_WORK_PRODUCT_SCHEMA_VERSION,
+        "tool": HDC2_STREAM_WORK_PRODUCT_TOOL_NAME,
+        "requirement_id": SOURCE_STREAM_REQUIREMENT_ID,
+        "source_label": source_label,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "source_archive_sha256": source_archive.archive_sha256,
+        "source_member_name": source_archive.member_name,
+        "stream": {
+            "name": "decoder_packed_brotli",
+            "codec": "brotli",
+            "bytes": len(source_section),
+            "sha256": sha256_bytes(source_section),
+            "start": source_section_start,
+            "end": source_section_end,
+            "byte_range_basis": "single_member_payload_offset",
+            "symbol_count": len(source_raw),
+            "decoded_raw_bytes": len(source_raw),
+            "decoded_raw_sha256": sha256_bytes(source_raw),
+            "q_stream_bytes": len(parsed.q_stream),
+            "scale_stream_bytes": len(parsed.scale_stream),
+        },
+    }
+    candidate_stream_manifest = {
+        "schema_version": HDC2_STREAM_WORK_PRODUCT_SCHEMA_VERSION,
+        "tool": HDC2_STREAM_WORK_PRODUCT_TOOL_NAME,
+        "requirement_id": CANDIDATE_STREAM_REQUIREMENT_ID,
+        "source_label": source_label,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "candidate_archive_sha256": "",
+        "candidate_archive_manifest_available": False,
+        "candidate_stream_file": candidate_stream_file,
+        "stream": {
+            "name": "decoder_hdc2_global_prev_symbol_range_uint8",
+            "codec": "HDC2_global_prev_symbol_range_uint8",
+            "variant": HDC2_VARIANT_NAME,
+            "bytes": len(candidate_stream),
+            "byte_count": len(candidate_stream),
+            "sha256": sha256_bytes(candidate_stream),
+            "start": 0,
+            "end": len(candidate_stream),
+            "byte_range_basis": "standalone_candidate_stream_file",
+            "header_bytes": int(candidate_stats["header_bytes"]),
+            "range_payload_bytes": int(candidate_stats["range_payload_bytes"]),
+            "raw_scale_bytes": len(parsed.scale_stream),
+            "context_count": int(candidate_stats["context_count"]),
+            "context_token_count": int(candidate_stats["context_token_count"]),
+        },
+    }
+    decoded_equivalence = {
+        "schema_version": HDC2_STREAM_WORK_PRODUCT_SCHEMA_VERSION,
+        "tool": HDC2_STREAM_WORK_PRODUCT_TOOL_NAME,
+        "requirement_id": DECODED_OUTPUT_EQUIVALENCE_REQUIREMENT_ID,
+        "source_label": source_label,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "decoded_object": "hnerv_decoder_raw_bytes",
+        "equivalence_scope": "decoder_stream_raw_bytes_only_not_video_output_or_archive_runtime",
+        "old_new_sha256_equal": sha256_bytes(source_raw) == sha256_bytes(candidate_raw),
+        "decoded_output_equal": source_raw == candidate_raw,
+        "old_decoded_output": {
+            "bytes": len(source_raw),
+            "sha256": sha256_bytes(source_raw),
+        },
+        "new_decoded_output": {
+            "bytes": len(candidate_raw),
+            "sha256": sha256_bytes(candidate_raw),
+        },
+        "blockers_remaining_for_full_archive_equivalence": [
+            "candidate_archive_manifest_missing",
+            "runtime_tree_parity_manifest_missing",
+            "full_inflate_output_equivalence_not_run",
+            "exact_cuda_auth_eval_not_run",
+        ],
+    }
+    roundtrip = {
+        "schema_version": HDC2_STREAM_WORK_PRODUCT_SCHEMA_VERSION,
+        "tool": HDC2_STREAM_WORK_PRODUCT_TOOL_NAME,
+        "requirement_id": ROUNDTRIP_REQUIREMENT_ID,
+        "source_label": source_label,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "roundtrip_valid": True,
+        "raw_equal": source_raw == candidate_raw,
+        "q_roundtrip_equal": parsed.q_stream == restored.q_stream,
+        "scale_roundtrip_equal": parsed.scale_stream == restored.scale_stream,
+        "source_decoder_raw_sha256": sha256_bytes(source_raw),
+        "candidate_decoded_raw_sha256": sha256_bytes(candidate_raw),
+        "candidate_stream_sha256": sha256_bytes(candidate_stream),
+        "candidate_stream_bytes": len(candidate_stream),
+    }
+    work_product = {
+        "schema_version": HDC2_STREAM_WORK_PRODUCT_SCHEMA_VERSION,
+        "tool": HDC2_STREAM_WORK_PRODUCT_TOOL_NAME,
+        "planning_only": True,
+        "score_claim": False,
+        "score_evidence_grade": "invalid",
+        "dispatch_attempted": False,
+        "gpu_required": False,
+        "ready_for_exact_eval_dispatch": False,
+        "ready_for_archive_preflight": False,
+        "source_profile": _file_record("hnerv_decoder_structural_recode_profile", profile_path, root),
+        "source_archive": _file_record("source_archive_zip", archive_path, root),
+        "source_exact_eval_json": (
+            _file_record("source_exact_eval_json", exact_eval_path, root) if exact_eval_path else None
+        ),
+        "closed_requirement_ids": [
+            SOURCE_ARCHIVE_REQUIREMENT_ID,
+            SOURCE_STREAM_REQUIREMENT_ID,
+            CANDIDATE_STREAM_REQUIREMENT_ID,
+            DECODED_OUTPUT_EQUIVALENCE_REQUIREMENT_ID,
+            ROUNDTRIP_REQUIREMENT_ID,
+        ],
+        "candidate_stream_file": candidate_stream_file,
+        "source_archive_manifest": source_archive_manifest,
+        "source_stream_section_manifest": source_stream_manifest,
+        "candidate_stream_section_manifest": candidate_stream_manifest,
+        "decoded_output_equivalence_report": decoded_equivalence,
+        "roundtrip_decode_validation_manifest": roundtrip,
+        "remaining_blockers": [
+            "byte_accounted_model_overhead_reduction_manifest_not_built",
+            "byte_accounted_static_model_context_reduction_manifest_not_built",
+            "old_new_model_context_table_diff_not_built",
+            "candidate_archive_manifest_missing",
+            "strict_pre_submission_compliance_json_missing",
+            "meta_lagrangian_atom_export_missing",
+            "runtime_tree_parity_manifest_missing",
+            "requires_lane_dispatch_claim_before_gpu",
+            "requires_exact_cuda_auth_eval",
+        ],
+    }
+    return work_product
 
 
 def discover_candidate_audit_inputs(
@@ -637,6 +920,48 @@ def _exact_next_artifact_requirements(target_kind: str) -> list[str]:
     )
 
 
+def _runtime_manifest_from_exact_eval(path: Path, repo_root: Path) -> dict[str, Any]:
+    payload = read_json(path)
+    if not isinstance(payload, Mapping):
+        raise HnervEntropyCandidatePacketError("source exact-eval JSON must be an object")
+    provenance = payload.get("provenance")
+    if not isinstance(provenance, Mapping):
+        raise HnervEntropyCandidatePacketError("source exact-eval JSON missing provenance")
+    runtime = provenance.get("inflate_runtime_manifest")
+    if not isinstance(runtime, Mapping):
+        raise HnervEntropyCandidatePacketError(
+            "source exact-eval JSON missing provenance.inflate_runtime_manifest"
+        )
+    runtime_tree_sha256 = str(runtime.get("runtime_tree_sha256") or "")
+    if not _is_sha256(runtime_tree_sha256):
+        raise HnervEntropyCandidatePacketError(
+            "source exact-eval JSON runtime_tree_sha256 is missing or invalid"
+        )
+    return {
+        "source_json": _file_record("source_exact_eval_json", path, repo_root),
+        "runtime_tree_sha256": runtime_tree_sha256,
+        "inflate_runtime_manifest": dict(runtime),
+    }
+
+
+def _require_profile_int_match(payload: Mapping[str, Any], *, key: str, actual: int) -> None:
+    expected = _positive_int(payload.get(key), key)
+    if expected != int(actual):
+        raise HnervEntropyCandidatePacketError(
+            f"profile {key} mismatch: expected {expected}, got {actual}"
+        )
+
+
+def _require_profile_string_match(payload: Mapping[str, Any], *, key: str, actual: str) -> None:
+    expected = str(payload.get(key) or "")
+    if not expected:
+        raise HnervEntropyCandidatePacketError(f"profile {key} is missing")
+    if expected != actual:
+        raise HnervEntropyCandidatePacketError(
+            f"profile {key} mismatch: expected {expected}, got {actual}"
+        )
+
+
 def _optional_positive_int_from_mapping(payload: Any, key: str) -> int | None:
     if not isinstance(payload, Mapping):
         return None
@@ -997,14 +1322,274 @@ def _requirement_record(requirement_id: str, path: Path | None, repo_root: Path)
     row["available"] = True
     if path.suffix.lower() == ".json":
         try:
-            read_json(path)
+            payload = read_json(path)
             row["json_parseable"] = True
         except Exception as exc:
             row["available"] = False
             row["json_parseable"] = False
             row["json_parse_error"] = str(exc)
             row["missing_reason"] = "json_parse_error"
+        else:
+            validation = _validate_requirement_artifact(requirement_id, payload)
+            row["validation"] = validation
+            if validation["valid"] is not True:
+                row["available"] = False
+                row["missing_reason"] = "validation_blockers"
+                row["validation_blockers"] = list(validation["blockers"])
     return row
+
+
+def _validate_requirement_artifact(requirement_id: str, payload: Any) -> dict[str, Any]:
+    blockers: list[str] = []
+    if not isinstance(payload, Mapping):
+        return {
+            "valid": False,
+            "blockers": [f"{requirement_id}:json_root_not_object"],
+        }
+    if payload.get("score_claim") is True:
+        blockers.append(f"{requirement_id}:score_claim_true")
+    if payload.get("dispatch_attempted") is True:
+        blockers.append(f"{requirement_id}:dispatch_attempted_true")
+    if payload.get("ready_for_exact_eval_dispatch") is True:
+        blockers.append(f"{requirement_id}:ready_for_exact_eval_dispatch_true")
+
+    if requirement_id == SOURCE_ARCHIVE_REQUIREMENT_ID:
+        blockers.extend(_validate_source_archive_manifest(payload, requirement_id))
+    elif requirement_id == SOURCE_STREAM_REQUIREMENT_ID:
+        blockers.extend(_validate_source_stream_manifest(payload, requirement_id))
+    elif requirement_id == CANDIDATE_STREAM_REQUIREMENT_ID:
+        blockers.extend(_validate_candidate_stream_manifest(payload, requirement_id))
+    elif requirement_id == DECODED_OUTPUT_EQUIVALENCE_REQUIREMENT_ID:
+        blockers.extend(_validate_decoded_output_equivalence(payload, requirement_id))
+    elif requirement_id == ROUNDTRIP_REQUIREMENT_ID:
+        blockers.extend(_validate_roundtrip_manifest(payload, requirement_id))
+    elif requirement_id == "candidate_archive_manifest_with_member_sha256s":
+        blockers.extend(_validate_candidate_archive_manifest(payload, requirement_id))
+    elif requirement_id == "runtime_tree_parity_manifest":
+        blockers.extend(_validate_runtime_tree_parity_manifest(payload, requirement_id))
+    elif requirement_id == "meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions":
+        blockers.extend(_validate_meta_lagrangian_atom_manifest(payload, requirement_id))
+    else:
+        blockers.append(f"{requirement_id}:no_requirement_validator")
+    return {
+        "valid": not blockers,
+        "blockers": _unique_ordered(blockers),
+    }
+
+
+def _validate_source_archive_manifest(payload: Mapping[str, Any], requirement_id: str) -> list[str]:
+    archive = payload.get("archive")
+    if not isinstance(archive, Mapping):
+        return [f"{requirement_id}:archive_object_missing"]
+    return [
+        *_require_sha_field(archive, "sha256", requirement_id),
+        *_require_positive_int_field(archive, "bytes", requirement_id),
+        *_require_nonempty_string_field(archive, "member_name", requirement_id),
+        *_require_sha_field(archive, "member_sha256", requirement_id),
+        *_require_positive_int_field(archive, "member_bytes", requirement_id),
+        *_require_sha_field(payload, "runtime_tree_sha256", requirement_id),
+    ]
+
+
+def _validate_source_stream_manifest(payload: Mapping[str, Any], requirement_id: str) -> list[str]:
+    stream = payload.get("stream")
+    if not isinstance(stream, Mapping):
+        return [f"{requirement_id}:stream_object_missing"]
+    return [
+        *_require_sha_field(payload, "source_archive_sha256", requirement_id),
+        *_require_nonempty_string_field(payload, "source_member_name", requirement_id),
+        *_validate_stream_byte_range(stream, requirement_id),
+        *_require_positive_int_field(stream, "symbol_count", requirement_id),
+        *_require_sha_field(stream, "decoded_raw_sha256", requirement_id),
+    ]
+
+
+def _validate_candidate_stream_manifest(payload: Mapping[str, Any], requirement_id: str) -> list[str]:
+    stream = payload.get("stream")
+    if not isinstance(stream, Mapping):
+        return [f"{requirement_id}:stream_object_missing"]
+    blockers = [
+        *_validate_stream_byte_range(stream, requirement_id),
+        *_require_positive_int_field(stream, "byte_count", requirement_id),
+    ]
+    stream_file = payload.get("candidate_stream_file")
+    if not isinstance(stream_file, Mapping):
+        blockers.append(f"{requirement_id}:candidate_stream_file_object_missing")
+    else:
+        blockers.extend(_require_sha_field(stream_file, "sha256", requirement_id))
+        blockers.extend(_require_positive_int_field(stream_file, "bytes", requirement_id))
+        if (
+            _field_as_int(stream_file, "bytes") is not None
+            and _field_as_int(stream, "bytes") is not None
+            and _field_as_int(stream_file, "bytes") != _field_as_int(stream, "bytes")
+        ):
+            blockers.append(f"{requirement_id}:candidate_stream_file_bytes_mismatch")
+        if str(stream_file.get("sha256") or "") and str(stream_file.get("sha256") or "") != str(
+            stream.get("sha256") or ""
+        ):
+            blockers.append(f"{requirement_id}:candidate_stream_file_sha256_mismatch")
+    return blockers
+
+
+def _validate_decoded_output_equivalence(
+    payload: Mapping[str, Any],
+    requirement_id: str,
+) -> list[str]:
+    blockers: list[str] = []
+    if payload.get("old_new_sha256_equal") is not True:
+        blockers.append(f"{requirement_id}:old_new_sha256_equal_not_true")
+    if payload.get("decoded_output_equal") is not True:
+        blockers.append(f"{requirement_id}:decoded_output_equal_not_true")
+    old = payload.get("old_decoded_output")
+    new = payload.get("new_decoded_output")
+    if not isinstance(old, Mapping) or not isinstance(new, Mapping):
+        blockers.append(f"{requirement_id}:old_or_new_decoded_output_object_missing")
+        return blockers
+    blockers.extend(_require_sha_field(old, "sha256", requirement_id))
+    blockers.extend(_require_sha_field(new, "sha256", requirement_id))
+    blockers.extend(_require_positive_int_field(old, "bytes", requirement_id))
+    blockers.extend(_require_positive_int_field(new, "bytes", requirement_id))
+    if str(old.get("sha256") or "") != str(new.get("sha256") or ""):
+        blockers.append(f"{requirement_id}:decoded_output_sha256_mismatch")
+    if _field_as_int(old, "bytes") != _field_as_int(new, "bytes"):
+        blockers.append(f"{requirement_id}:decoded_output_bytes_mismatch")
+    return blockers
+
+
+def _validate_roundtrip_manifest(payload: Mapping[str, Any], requirement_id: str) -> list[str]:
+    blockers: list[str] = []
+    for key in ("roundtrip_valid", "raw_equal", "q_roundtrip_equal", "scale_roundtrip_equal"):
+        if payload.get(key) is not True:
+            blockers.append(f"{requirement_id}:{key}_not_true")
+    blockers.extend(_require_sha_field(payload, "source_decoder_raw_sha256", requirement_id))
+    blockers.extend(_require_sha_field(payload, "candidate_decoded_raw_sha256", requirement_id))
+    blockers.extend(_require_sha_field(payload, "candidate_stream_sha256", requirement_id))
+    blockers.extend(_require_positive_int_field(payload, "candidate_stream_bytes", requirement_id))
+    if str(payload.get("source_decoder_raw_sha256") or "") != str(
+        payload.get("candidate_decoded_raw_sha256") or ""
+    ):
+        blockers.append(f"{requirement_id}:decoded_raw_sha256_mismatch")
+    return blockers
+
+
+def _validate_candidate_archive_manifest(payload: Mapping[str, Any], requirement_id: str) -> list[str]:
+    archive = payload.get("archive")
+    blockers: list[str] = []
+    if isinstance(archive, Mapping):
+        blockers.extend(_require_sha_field(archive, "sha256", requirement_id))
+        blockers.extend(_require_positive_int_field(archive, "bytes", requirement_id))
+    else:
+        blockers.extend(_require_sha_field(payload, "candidate_archive_sha256", requirement_id))
+        blockers.extend(_require_positive_int_field(payload, "candidate_archive_bytes", requirement_id))
+    members = payload.get("members")
+    if not isinstance(members, Sequence) or isinstance(members, (str, bytes, bytearray)) or not members:
+        blockers.append(f"{requirement_id}:members_missing")
+    return blockers
+
+
+def _validate_runtime_tree_parity_manifest(payload: Mapping[str, Any], requirement_id: str) -> list[str]:
+    blockers = [
+        *_require_sha_field(payload, "source_runtime_tree_sha256", requirement_id),
+        *_require_sha_field(payload, "candidate_runtime_tree_sha256", requirement_id),
+    ]
+    if payload.get("runtime_tree_sha256_equal") is not True:
+        blockers.append(f"{requirement_id}:runtime_tree_sha256_equal_not_true")
+    if str(payload.get("source_runtime_tree_sha256") or "") != str(
+        payload.get("candidate_runtime_tree_sha256") or ""
+    ):
+        blockers.append(f"{requirement_id}:runtime_tree_sha256_mismatch")
+    return blockers
+
+
+def _validate_meta_lagrangian_atom_manifest(
+    payload: Mapping[str, Any],
+    requirement_id: str,
+) -> list[str]:
+    blockers = []
+    atom = payload.get("atom")
+    if not isinstance(atom, Mapping):
+        atom = payload
+    for key in (
+        "atom_id",
+        "family",
+        "family_group",
+        "pareto_scope",
+        "evidence_grade",
+        "archive_manifest_path",
+    ):
+        blockers.extend(_require_nonempty_string_field(atom, key, requirement_id))
+    for key in (
+        "byte_delta",
+        "expected_seg_dist_delta",
+        "expected_pose_dist_delta",
+        "confidence",
+    ):
+        if key not in atom or isinstance(atom.get(key), bool) or not isinstance(atom.get(key), int | float):
+            blockers.append(f"{requirement_id}:{key}_missing_or_not_numeric")
+    blockers.extend(_require_sha_field(atom, "archive_manifest_sha256", requirement_id))
+    assumptions = atom.get("interaction_assumptions")
+    if (
+        not isinstance(assumptions, Sequence)
+        or isinstance(assumptions, (str, bytes, bytearray))
+        or not assumptions
+    ):
+        blockers.append(f"{requirement_id}:interaction_assumptions_missing")
+    if atom.get("raw_equal") is not True:
+        blockers.append(f"{requirement_id}:raw_equal_not_true")
+    return blockers
+
+
+def _validate_stream_byte_range(stream: Mapping[str, Any], requirement_id: str) -> list[str]:
+    blockers = [
+        *_require_nonempty_string_field(stream, "name", requirement_id),
+        *_require_positive_int_field(stream, "bytes", requirement_id),
+        *_require_sha_field(stream, "sha256", requirement_id),
+    ]
+    start = _field_as_int(stream, "start")
+    end = _field_as_int(stream, "end")
+    bytes_value = _field_as_int(stream, "bytes")
+    if start is None or start < 0:
+        blockers.append(f"{requirement_id}:start_missing_or_negative")
+    if end is None or end <= 0:
+        blockers.append(f"{requirement_id}:end_missing_or_nonpositive")
+    if start is not None and end is not None and bytes_value is not None and end - start != bytes_value:
+        blockers.append(f"{requirement_id}:byte_range_does_not_match_bytes")
+    return blockers
+
+
+def _require_sha_field(payload: Mapping[str, Any], key: str, requirement_id: str) -> list[str]:
+    value = str(payload.get(key) or "")
+    if not _is_sha256(value):
+        return [f"{requirement_id}:{key}_missing_or_invalid_sha256"]
+    return []
+
+
+def _require_nonempty_string_field(
+    payload: Mapping[str, Any],
+    key: str,
+    requirement_id: str,
+) -> list[str]:
+    if not str(payload.get(key) or ""):
+        return [f"{requirement_id}:{key}_missing"]
+    return []
+
+
+def _require_positive_int_field(payload: Mapping[str, Any], key: str, requirement_id: str) -> list[str]:
+    value = _field_as_int(payload, key)
+    if value is None or value <= 0:
+        return [f"{requirement_id}:{key}_missing_or_nonpositive"]
+    return []
+
+
+def _field_as_int(payload: Mapping[str, Any], key: str) -> int | None:
+    value = payload.get(key)
+    if isinstance(value, bool) or not isinstance(value, int):
+        return None
+    return int(value)
+
+
+def _is_sha256(value: str) -> bool:
+    return len(value) == 64 and all(char in "0123456789abcdefABCDEF" for char in value)
 
 
 def _file_record(
@@ -1074,11 +1659,14 @@ __all__ = [
     "ADAPTED_AUDIT_TOOL_NAME",
     "BLOCKER_TO_REQUIREMENT",
     "DISCOVERY_REQUIRED_SOURCE_ARTIFACTS",
+    "HDC2_STREAM_ARTIFACT_REQUIREMENTS",
+    "HDC2_STREAM_WORK_PRODUCT_TOOL_NAME",
     "PACKET_DISPATCH_BLOCKERS",
     "SCHEMA_VERSION",
     "TOOL_NAME",
     "HnervEntropyCandidatePacketError",
     "build_candidate_packet_manifest",
+    "build_hdc2_stream_byte_equivalence_work_product",
     "discover_candidate_audit_inputs",
     "discovery_report_input_paths",
     "existing_artifact_input_paths",

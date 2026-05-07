@@ -19,6 +19,7 @@ from tac.raft_radial_pose import (
     MODE_COMPRESS_TIME_PRIOR,
     MODE_INFLATE_RECOMPUTE,
     RAFT_RADIAL_VERSION,
+    NormalizedFlowCalibration,
     PoseCalibration,
     RaftRadialPoseConfig,
     VALID_MODES,
@@ -29,6 +30,13 @@ from tac.raft_radial_pose import (
     estimate_pose_compress_time_prior,
     evaluate_disagreement,
 )
+
+
+def _to_pixel_flow(flow_normalized: np.ndarray, cal: NormalizedFlowCalibration) -> np.ndarray:
+    flow_px = flow_normalized.copy()
+    flow_px[..., 0] *= np.float32(cal.fx)
+    flow_px[..., 1] *= np.float32(cal.fy)
+    return flow_px.astype(np.float32)
 
 
 # ── basis builder ─────────────────────────────────────────────────────
@@ -43,14 +51,38 @@ def test_radial_basis_shape():
 
 
 def test_radial_basis_first_two_columns_are_pure_translation():
-    """B[:, 0] = (1, 0); B[:, 1] = (0, 1) at every pixel."""
-    B = build_radial_basis(h=4, w=4, n_basis=6)
-    # B_0: u=1, v=0 at every pixel
-    assert np.allclose(B[0::2, 0], 1.0)
+    """B[:, 0] and B[:, 1] are proxy-depth translation fields."""
+    cal = NormalizedFlowCalibration(
+        fx=100.0, fy=100.0, cx=1.5, cy=1.5, proxy_depth_m=20.0,
+    )
+    B = build_radial_basis(h=4, w=4, n_basis=6, calibration=cal)
+    rho = 1.0 / cal.proxy_depth_m
+    # B_0: normalized u=-rho, v=0 at every pixel
+    assert np.allclose(B[0::2, 0], -rho)
     assert np.allclose(B[1::2, 0], 0.0)
-    # B_1: u=0, v=1
+    # B_1: normalized u=0, v=-rho
     assert np.allclose(B[0::2, 1], 0.0)
-    assert np.allclose(B[1::2, 1], 1.0)
+    assert np.allclose(B[1::2, 1], -rho)
+
+
+def test_calibrated_rotation_basis_keeps_normalized_coordinate_constants():
+    """Pitch/yaw must include the Longuet-Higgins constant terms.
+
+    At the principal point x=y=0:
+      pitch omega_x has normalized flow (0, -1)
+      yaw omega_y has normalized flow (1, 0)
+      roll omega_z is zero.
+    The former proxy basis omitted these constants and therefore could not
+    represent calibrated rotation around the optical center.
+    """
+    cal = NormalizedFlowCalibration(
+        fx=100.0, fy=100.0, cx=1.0, cy=1.0, proxy_depth_m=30.0,
+    )
+    B = build_radial_basis(h=3, w=3, n_basis=6, calibration=cal)
+    center = (1 * 3 + 1) * 2
+    assert np.allclose(B[center:center + 2, 3], [0.0, 0.0])
+    assert np.allclose(B[center:center + 2, 4], [0.0, -1.0])
+    assert np.allclose(B[center:center + 2, 5], [1.0, 0.0])
 
 
 def test_radial_basis_rejects_invalid_dims():
@@ -70,9 +102,15 @@ def test_radial_basis_rejects_non6_n_basis():
 def test_pure_translation_recovers_alpha_0_1():
     """Pure horizontal translation flow projects entirely onto B_0."""
     h, w, T = 16, 32, 5
-    flow = np.zeros((T, h, w, 2), dtype=np.float32)
-    flow[..., 0] = 0.7  # u = 0.7 everywhere; v = 0
-    alpha, residual = compute_radial_basis_from_flow(flow_field=flow, n_basis=6)
+    cal = NormalizedFlowCalibration(
+        fx=40.0, fy=40.0, cx=(w - 1) / 2, cy=(h - 1) / 2, proxy_depth_m=25.0,
+    )
+    B = build_radial_basis(h=h, w=w, n_basis=6, calibration=cal)
+    flow_flat = (0.7 * B[:, 0]).reshape(h, w, 2)
+    flow = np.tile(_to_pixel_flow(flow_flat, cal)[None], (T, 1, 1, 1))
+    alpha, residual = compute_radial_basis_from_flow(
+        flow_field=flow, n_basis=6, calibration=cal,
+    )
     assert alpha.shape == (T, 6)
     # alpha[:, 0] should be ~0.7; other dims ~0
     assert np.allclose(alpha[:, 0], 0.7, atol=1e-5)
@@ -84,16 +122,43 @@ def test_pure_translation_recovers_alpha_0_1():
 def test_pure_roll_recovers_alpha_3():
     """Pure roll flow projects entirely onto B_3."""
     h, w, T = 16, 32, 3
+    cal = NormalizedFlowCalibration(
+        fx=40.0, fy=40.0, cx=(w - 1) / 2, cy=(h - 1) / 2, proxy_depth_m=30.0,
+    )
     # Build flow = 0.5 * B_3
-    B = build_radial_basis(h=h, w=w, n_basis=6)
+    B = build_radial_basis(h=h, w=w, n_basis=6, calibration=cal)
     flow_flat = (0.5 * B[:, 3]).reshape(h, w, 2)
-    flow = np.tile(flow_flat[None], (T, 1, 1, 1))
-    alpha, residual = compute_radial_basis_from_flow(flow_field=flow, n_basis=6)
+    flow = np.tile(_to_pixel_flow(flow_flat, cal)[None], (T, 1, 1, 1))
+    alpha, residual = compute_radial_basis_from_flow(
+        flow_field=flow, n_basis=6, calibration=cal,
+    )
     assert np.allclose(alpha[:, 3], 0.5, atol=1e-5)
     # Other dims zero
     other_dims = [0, 1, 2, 4, 5]
     for d in other_dims:
         assert np.allclose(alpha[:, d], 0.0, atol=1e-5)
+
+
+def test_pixel_flow_is_focal_normalized_before_lsq():
+    """A yaw coefficient should recover from raw pixel flow scaled by fx/fy."""
+    h, w, T = 5, 5, 2
+    cal = NormalizedFlowCalibration(
+        fx=80.0, fy=120.0, cx=2.0, cy=2.0, proxy_depth_m=30.0,
+    )
+    B = build_radial_basis(h=h, w=w, n_basis=6, calibration=cal)
+    coeff = 0.25
+    flow_normalized = (coeff * B[:, 5]).reshape(h, w, 2)
+    flow_px = np.tile(_to_pixel_flow(flow_normalized, cal)[None], (T, 1, 1, 1))
+
+    # At the principal point yaw's normalized u is +coeff, so raw pixel flow
+    # is fx*coeff. This guards against fitting pixel magnitudes as if they
+    # were normalized coordinates.
+    assert flow_px[0, 2, 2, 0] == pytest.approx(cal.fx * coeff)
+    alpha, residual = compute_radial_basis_from_flow(
+        flow_field=flow_px, n_basis=6, calibration=cal,
+    )
+    assert np.allclose(alpha[:, 5], coeff, atol=1e-5)
+    assert np.max(np.abs(residual)) < 1e-4
 
 
 def test_decompose_rejects_wrong_shape():
@@ -238,12 +303,15 @@ def test_mode_a_end_to_end_zero_mse_when_pose_is_alpha():
     end-to-end pipeline should recover near-zero MSE."""
     # Build synthetic flow that's a pure scaling of basis B_0 + B_3 over time
     h, w, T = 16, 16, 60
+    cal = NormalizedFlowCalibration(
+        fx=40.0, fy=40.0, cx=(w - 1) / 2, cy=(h - 1) / 2, proxy_depth_m=30.0,
+    )
     rng = np.random.default_rng(seed=123)
     # Random per-frame mix of basis coefficients
     coeffs = rng.standard_normal((T, 6)).astype(np.float32) * 0.3
-    B = build_radial_basis(h=h, w=w, n_basis=6)
-    flow_flat_per_frame = coeffs @ B.T  # (T, h*w*2)
-    flow_field = flow_flat_per_frame.reshape(T, h, w, 2)
+    B = build_radial_basis(h=h, w=w, n_basis=6, calibration=cal)
+    flow_flat_per_frame = coeffs @ B.T  # (T, h*w*2), normalized flow
+    flow_field = _to_pixel_flow(flow_flat_per_frame.reshape(T, h, w, 2), cal)
     # Contest pose for calibration: linear function of the basis coefficients
     A_true = rng.standard_normal((6, 6)).astype(np.float32)
     b_true = rng.standard_normal(6).astype(np.float32)
@@ -254,6 +322,7 @@ def test_mode_a_end_to_end_zero_mse_when_pose_is_alpha():
         calibration_window=30,
         image_h=h,
         image_w=w,
+        flow_calibration=cal,
     )
     pose_estimated, cal, metrics = estimate_pose_compress_time_prior(
         flow_field=flow_field,
@@ -289,7 +358,7 @@ def test_mode_a_entrypoint_rejects_mode_b_config():
 
 
 def test_version_pinned():
-    assert RAFT_RADIAL_VERSION == 1
+    assert RAFT_RADIAL_VERSION == 2
 
 
 def test_valid_modes_pinned():

@@ -22,7 +22,9 @@ from tac.lapose_foveation_runtime_skeleton import (
     PROOF_MEMBER,
     RUNTIME_EFFECT_CONTROLS_CONTRACT,
     RUNTIME_PROOF_SKELETON_CONTRACT,
+    RUNTIME_SCORER_VISIBLE_BRIDGE_CONTRACT,
     build_runtime_effect_control_report,
+    build_scorer_visible_bridge_report,
 )
 from tac.repo_io import json_text, repo_relative, sha256_bytes, sha256_file, write_json
 
@@ -147,6 +149,7 @@ def _runtime_proof_skeleton(
     runtime_consumer_bytes: int,
     decoded_payload: dict[str, Any],
     runtime_effect_controls: dict[str, Any],
+    scorer_visible_bridge: dict[str, Any],
 ) -> dict[str, Any]:
     return {
         "schema_version": SCHEMA_VERSION,
@@ -179,12 +182,14 @@ def _runtime_proof_skeleton(
             "structural_runtime_consumption": runtime_effect_controls[
                 "structural_runtime_consumption"
             ]["passed"],
+            "scorer_visible_output_bridge": scorer_visible_bridge["bridge_path_present"],
             "scored_runtime_output_parity": False,
             "runtime_output_parity": False,
             "noop_controls": runtime_effect_controls["passed"],
             "exact_cuda_auth_eval": False,
         },
         "dispatch_blockers": [
+            *scorer_visible_bridge["blockers"],
             "lapose_foveation_scored_runtime_output_parity_not_proven",
             "exact_cuda_auth_eval_missing",
         ],
@@ -227,6 +232,11 @@ def build_lapose_foveation_payload_archive_candidate(
 
     payload_sha = sha256_bytes(lfv1_payload)
     runtime_consumer_sha = sha256_bytes(runtime_consumer)
+    runtime_consumer_source = runtime_consumer.decode("utf-8", errors="replace")
+    scorer_visible_bridge = build_scorer_visible_bridge_report(
+        MEMBER_ORDER,
+        runtime_consumer_source=runtime_consumer_source,
+    )
     proof_skeleton = json_text(
         _runtime_proof_skeleton(
             payload_source=payload_source,
@@ -236,6 +246,7 @@ def build_lapose_foveation_payload_archive_candidate(
             runtime_consumer_bytes=len(runtime_consumer),
             decoded_payload=decoded_payload,
             runtime_effect_controls=runtime_effect_controls,
+            scorer_visible_bridge=scorer_visible_bridge,
         )
     ).encode("utf-8")
     member_payloads = {
@@ -313,6 +324,7 @@ def build_lapose_foveation_payload_archive_candidate(
             ],
             "blocker": "scored_runtime_output_parity_not_proven",
         },
+        "scorer_visible_bridge": scorer_visible_bridge,
         "payload_decode": {
             "schema_version": SCHEMA_VERSION,
             "payload_decode_contract": LFV1_PAYLOAD_DECODE_CONTRACT,
@@ -775,6 +787,80 @@ def _runtime_effect_controls_report(
     return summary, blockers
 
 
+def _scorer_visible_bridge_report(
+    report: Any,
+    *,
+    archive_members: dict[str, bytes],
+) -> tuple[dict[str, Any], list[str], list[str]]:
+    validation_blockers: list[str] = []
+    dispatch_blockers: list[str] = []
+    summary: dict[str, Any] = {
+        "schema_version": SCHEMA_VERSION,
+        "contract": RUNTIME_SCORER_VISIBLE_BRIDGE_CONTRACT,
+        "declared": isinstance(report, dict),
+        "accepted": False,
+        "passed": False,
+        "bridge_path_present": False,
+        "archive_member_groups": {},
+        "runtime_source_references": {},
+        "declared_blockers": [],
+        "validation_blockers": [],
+    }
+    if not isinstance(report, dict):
+        validation_blockers.append("scorer_visible_bridge_report_missing")
+        summary["validation_blockers"] = validation_blockers
+        return summary, validation_blockers, dispatch_blockers
+
+    if report.get("schema_version") != SCHEMA_VERSION:
+        validation_blockers.append("scorer_visible_bridge_schema_version_missing_or_invalid")
+    if report.get("contract") != RUNTIME_SCORER_VISIBLE_BRIDGE_CONTRACT:
+        validation_blockers.append("scorer_visible_bridge_contract_missing_or_invalid")
+    if report.get("score_claim") is not False:
+        validation_blockers.append("scorer_visible_bridge_score_claim_must_be_false")
+    if report.get("dispatch_attempted") is not False:
+        validation_blockers.append("scorer_visible_bridge_dispatch_attempted_must_be_false")
+    if report.get("ready_for_exact_eval_dispatch") is not False:
+        validation_blockers.append("scorer_visible_bridge_ready_for_exact_eval_dispatch_must_be_false")
+    if report.get("passed") is not False:
+        validation_blockers.append("scorer_visible_bridge_must_remain_fail_closed")
+
+    runtime_raw = archive_members.get(RUNTIME_CONSUMER_MEMBER)
+    runtime_source = ""
+    if runtime_raw is None:
+        validation_blockers.append("scorer_visible_bridge_runtime_member_missing")
+    else:
+        try:
+            runtime_source = runtime_raw.decode("utf-8")
+        except UnicodeDecodeError:
+            validation_blockers.append("scorer_visible_bridge_runtime_member_not_text")
+
+    expected = build_scorer_visible_bridge_report(
+        sorted(archive_members),
+        runtime_consumer_source=runtime_source,
+    )
+    if report != expected:
+        validation_blockers.append("scorer_visible_bridge_report_mismatch")
+
+    declared = report.get("blockers")
+    if isinstance(declared, list) and all(isinstance(item, str) for item in declared):
+        dispatch_blockers.extend(declared)
+    else:
+        validation_blockers.append("scorer_visible_bridge_blockers_missing_or_invalid")
+
+    summary.update(
+        {
+            "accepted": not validation_blockers,
+            "passed": report.get("passed") is True,
+            "bridge_path_present": report.get("bridge_path_present") is True,
+            "archive_member_groups": report.get("archive_member_groups", {}),
+            "runtime_source_references": report.get("runtime_source_references", {}),
+            "declared_blockers": dispatch_blockers,
+            "validation_blockers": validation_blockers,
+        }
+    )
+    return summary, validation_blockers, dispatch_blockers
+
+
 def audit_lapose_foveation_payload_candidate(
     payload: dict[str, Any],
     *,
@@ -1027,6 +1113,15 @@ def audit_lapose_foveation_payload_candidate(
     )
     blockers.extend(runtime_effect_blockers)
 
+    scorer_visible_bridge, bridge_validation_blockers, bridge_dispatch_blockers = (
+        _scorer_visible_bridge_report(
+            payload.get("scorer_visible_bridge"),
+            archive_members=archive_members,
+        )
+    )
+    blockers.extend(bridge_validation_blockers)
+    blockers.extend(bridge_dispatch_blockers)
+
     exact_cuda_auth_eval = payload.get("exact_cuda_auth_eval")
     if not isinstance(exact_cuda_auth_eval, dict) or exact_cuda_auth_eval.get("passed") is not True:
         blockers.append("exact_cuda_auth_eval_missing")
@@ -1084,6 +1179,7 @@ def audit_lapose_foveation_payload_candidate(
         "runtime_loader_parity": runtime_loader_parity,
         "no_op_controls": no_op_summary,
         "runtime_effect_controls": runtime_effect_controls,
+        "scorer_visible_bridge": scorer_visible_bridge,
         "runtime_consumption_audit": {
             "structural_runtime_consumption": runtime_effect_controls[
                 "structural_runtime_consumption"
@@ -1091,11 +1187,13 @@ def audit_lapose_foveation_payload_candidate(
             "scored_runtime_output_parity": runtime_effect_controls[
                 "scored_runtime_output_parity"
             ],
+            "scorer_visible_bridge": scorer_visible_bridge,
             "scored_runtime_output_parity_required": True,
         },
         "runtime_contract": {
             "charged_member_required": PAYLOAD_MEMBER,
             "runtime_consumer_required": True,
+            "scorer_visible_output_bridge_required": True,
             "runtime_output_parity_required": True,
             "noop_controls_required": True,
             "exact_cuda_auth_eval_required": True,
