@@ -96,6 +96,15 @@ def test_build_targets_basic_shape(tmp_path: pathlib.Path) -> None:
     assert abs(total_weight - 1.0) < 1e-9
 
 
+def test_build_targets_accepts_fixed_timestamp(tmp_path: pathlib.Path) -> None:
+    mod = _load_tool_module()
+    src = _synthetic_shannon_json(tmp_path)
+
+    targets = mod.build_targets(src, started_at_utc="2026-05-07T18:49:21Z")
+
+    assert targets["started_at_utc"] == "2026-05-07T18:49:21Z"
+
+
 def test_targets_sorted_by_prize_descending(tmp_path: pathlib.Path) -> None:
     mod = _load_tool_module()
     src = _synthetic_shannon_json(tmp_path)
@@ -105,19 +114,30 @@ def test_targets_sorted_by_prize_descending(tmp_path: pathlib.Path) -> None:
 
 
 def test_headroom_non_negative(tmp_path: pathlib.Path) -> None:
-    """Per the H₂ ≤ H₀ identity, headroom must be non-negative for every tensor."""
+    """Per the H2 <= H0 identity, headroom must be non-negative for every tensor."""
     mod = _load_tool_module()
     src = _synthetic_shannon_json(tmp_path)
     targets = mod.build_targets(src)
     for r in targets["per_tensor"]:
         assert r["headroom_bits"] >= 0.0, (
             f"tensor {r['name']} has negative headroom_bits "
-            f"({r['headroom_bits']}); H₂ > H₀ is impossible"
+            f"({r['headroom_bits']}); H2 > H0 is impossible"
         )
 
 
+def test_entropy_order_violation_fails_closed(tmp_path: pathlib.Path) -> None:
+    mod = _load_tool_module()
+    src = _synthetic_shannon_json(tmp_path)
+    payload = json.loads(src.read_text(encoding="utf-8"))
+    payload["per_tensor"][0]["H2_bits"] = payload["per_tensor"][0]["H0_bits"] + 0.25
+    src.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="entropy order invariant violated"):
+        mod.build_targets(src)
+
+
 def test_prize_matches_headroom_times_symbols(tmp_path: pathlib.Path) -> None:
-    """Sanity: prize_bytes = headroom_bits × n_symbols / 8."""
+    """Sanity: prize_bytes = headroom_bits * n_symbols / 8."""
     mod = _load_tool_module()
     src = _synthetic_shannon_json(tmp_path)
     targets = mod.build_targets(src)
@@ -127,8 +147,9 @@ def test_prize_matches_headroom_times_symbols(tmp_path: pathlib.Path) -> None:
 
 
 def test_resolve_shannon_json_picks_newest(tmp_path: pathlib.Path) -> None:
-    """When given a glob, the resolver picks the lexicographically last match
-    (which is the newest by UTC-stamp convention)."""
+    """When given a glob, the resolver picks the most-recently-modified
+    file. With UTC-stamped sibling dirs created in time order, mtime and
+    lex order agree."""
     mod = _load_tool_module()
     a = tmp_path / "lane_per_tensor_shannon_pr106_20260101T000000Z"
     b = tmp_path / "lane_per_tensor_shannon_pr106_20261231T000000Z"
@@ -139,6 +160,41 @@ def test_resolve_shannon_json_picks_newest(tmp_path: pathlib.Path) -> None:
     glob_pattern = str(tmp_path / "lane_per_tensor_shannon_pr106_*/per_tensor_shannon.json")
     resolved = mod._resolve_shannon_json(glob_pattern)
     assert resolved.parent == b
+
+
+def test_resolve_shannon_json_mtime_beats_lex_order(tmp_path: pathlib.Path) -> None:
+    """Bug-hunter v2 (new MEDIUM): when mtime disagrees with lex order
+    (e.g., a backup with a lex-late name was created earlier, or a hand-
+    edited file regenerated a lex-early name later), the resolver must
+    follow mtime, not lex order. The prior pure-lex resolver would have
+    picked the stale lex-late file."""
+    import os
+    import time
+
+    mod = _load_tool_module()
+    # Lex-late directory has the OLDER per_tensor_shannon.json.
+    older_lex_late = tmp_path / "lane_per_tensor_shannon_pr106_zzzz_OLDER"
+    newer_lex_early = tmp_path / "lane_per_tensor_shannon_pr106_aaaa_NEWER"
+    older_lex_late.mkdir()
+    newer_lex_early.mkdir()
+    older_path = older_lex_late / "per_tensor_shannon.json"
+    newer_path = newer_lex_early / "per_tensor_shannon.json"
+    older_path.write_text("{}")
+    # Touch older_path to a time well before now.
+    older_mtime = time.time() - 10_000.0
+    os.utime(older_path, (older_mtime, older_mtime))
+    # Newer file: write later AND set its mtime to "now".
+    newer_path.write_text("{}")
+    now = time.time()
+    os.utime(newer_path, (now, now))
+
+    glob_pattern = str(tmp_path / "lane_per_tensor_shannon_pr106_*/per_tensor_shannon.json")
+    resolved = mod._resolve_shannon_json(glob_pattern)
+    assert resolved.parent == newer_lex_early, (
+        f"resolver should pick the most-recently-modified file; lex-late "
+        f"sibling was older. Got {resolved.parent.name}, expected "
+        f"{newer_lex_early.name}."
+    )
 
 
 def test_render_markdown_contains_score_disclaimer(tmp_path: pathlib.Path) -> None:
@@ -172,8 +228,8 @@ def test_pr106_real_shannon_json_loads_cleanly(tmp_path: pathlib.Path) -> None:
         pytest.skip("no PR106 Shannon analysis present")
     mod = _load_tool_module()
     targets = mod.build_targets(pathlib.Path(paths[-1]))
-    # On real PR106 substrate, H₂/H₀ ≈ 0.531 per Path B finding.
+    # On real PR106 substrate, H2/H0 ~= 0.531 per Path B finding.
     ratio = targets["summary"]["ratio_h2_over_h0"]
-    assert 0.40 <= ratio <= 0.65, f"PR106 H₂/H₀ ratio out of band: {ratio}"
-    # Total prize must be positive (H₂ < H₀ aggregate).
+    assert 0.40 <= ratio <= 0.65, f"PR106 H2/H0 ratio out of band: {ratio}"
+    # Total prize must be positive (H2 < H0 aggregate).
     assert targets["summary"]["total_prize_bytes"] > 0
