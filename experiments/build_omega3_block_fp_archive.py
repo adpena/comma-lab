@@ -7,9 +7,9 @@ Pipeline (per blueprint Phase 3):
        QFAI, QH0/QM0, or raw torch state_dict renderer member).
     2. Validate every FiLM layer with
        :func:`tac.block_fp_jfg.validate_film_layer_block_fp`. Kill on first
-       failure with a clear error message — Contrarian's Phase F gate.
+       failure with a clear error message - Contrarian's Phase F gate.
     3. Quantize with :func:`quantize_jfg_block_fp` (FiLM layers protected
-       by default — stored raw at FP16).
+       by default - stored raw at FP16).
     4. Compress with :func:`compress_jfg_block_fp` (lzma + HWOI permute).
     5. Repack archive: source archive members but with the renderer
        payload replaced by the BFJ1 binary. Pose / mask members are
@@ -22,8 +22,8 @@ CUDA policy: pure-CPU only. This codec is byte-deterministic and never
 loads SegNet/PoseNet (strict-scorer-rule). No GPU spend.
 
 Score-tagging policy: ALL numerical predictions in the manifest are
-labeled ``[predicted]`` — never ``[contest-CUDA]``. The actual contest
-score must come from a separate ``inflate.sh`` → ``upstream/evaluate.py``
+labeled ``[predicted]`` - never ``[contest-CUDA]``. The actual contest
+score must come from a separate ``inflate.sh`` -> ``upstream/evaluate.py``
 run on the EXACT archive bytes produced here.
 
 Usage::
@@ -68,7 +68,7 @@ from tac.block_fp_jfg import (
     validate_film_layer_block_fp,
 )
 
-# ── Source-archive loaders ────────────────────────────────────────────────
+# Source-archive loaders
 
 
 def _sha256_path(path: Path) -> str:
@@ -181,7 +181,7 @@ def _identify_source_renderer_member(zf: zipfile.ZipFile) -> str:
     return names[0]
 
 
-# ── Manifest ──────────────────────────────────────────────────────────────
+# Manifest
 
 
 @dataclass
@@ -215,7 +215,7 @@ class BuildManifest:
         return json.dumps(d, indent=2, sort_keys=True)
 
 
-# ── Main pipeline ─────────────────────────────────────────────────────────
+# Main pipeline
 
 
 def _validate_all_film_layers(
@@ -246,7 +246,7 @@ def _validate_all_film_layers(
                 f"roundtrip_mse={result.roundtrip_mse:.6e} > "
                 f"threshold={result.threshold:.6e} "
                 f"(effective_bpw={result.effective_bpw:.3f}). "
-                f"Per Contrarian's Phase F precondition (blueprint §Component 3), "
+                f"Per Contrarian's Phase F precondition (blueprint Component 3), "
                 f"this lane is killed. The FiLM weights are too sensitive for "
                 f"block-FP at this block_size."
             )
@@ -281,7 +281,7 @@ def _rebuild_archive(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Build a Wave-Ω Ω-3 block-FP JointFrameGenerator archive.",
+        description="Build a Wave-Omega Omega-3 block-FP JointFrameGenerator archive.",
     )
     parser.add_argument(
         "--source-archive",
@@ -487,12 +487,12 @@ def main(argv: list[str] | None = None) -> int:
             "magnitude": float(predicted_rate_delta),
             "tag": "[predicted]",
             "derivation": (
-                "25 * byte_savings / 37545489 — conditional on FiLM "
+                "25 * byte_savings / 37545489 - conditional on FiLM "
                 "compressibility (Contrarian's caveat)."
             ),
         },
         notes=[
-            "Wave-Ω Ω-3 block-FP JFG transplant (Track F).",
+            "Wave-Omega Omega-3 block-FP JFG transplant (Track F).",
             "Strict-scorer-rule: codec is pure CPU byte<->tensor math.",
             "Score must come from contest-CUDA inflate.sh + evaluate.py "
             "on the EXACT archive bytes; this manifest claims none.",

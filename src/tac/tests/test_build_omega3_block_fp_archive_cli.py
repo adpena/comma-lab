@@ -196,7 +196,7 @@ def test_cli_smoke_on_synthetic_jfg(tmp_path: Path) -> None:
                 "optimized_poses.pt"
             )
 
-    # Round-trip: BFJ1 → state_dict.
+    # Round-trip: BFJ1 -> state_dict.
     from tac.block_fp_jfg import decompress_jfg_block_fp
     restored = decompress_jfg_block_fp(new_renderer_blob)
     assert set(restored.keys()) == set(sd.keys())
@@ -223,7 +223,7 @@ def test_cli_kills_on_film_mse_violation(tmp_path: Path) -> None:
         "--block-size",
         "64",
         "--validate-film-mse-threshold",
-        "1e-30",  # impossible — guaranteed kill
+        "1e-30",  # impossible - guaranteed kill
         "--max-bytes",
         "1000000",
         "--lzma-preset",
