@@ -415,11 +415,130 @@ class CodecPipeline:
         return decoded_state, replayed
 
 
+# ---------------------------------------------------------------------------
+# Op 2 wrapper: tac.pr103_arithmetic_codec
+# ---------------------------------------------------------------------------
+
+@dataclass
+class Op2_PR103ArithmeticCodec:
+    """Op 2: PR103 arithmetic-coded decoder + adaptive lgwin Brotli.
+
+    Wraps :func:`tac.pr103_arithmetic_codec.encode_decoder_ac` and
+    :func:`decode_decoder_ac`. PR103 is the silver-medal (0.195) submission
+    that replaced PR101's split-Brotli with arithmetic coding on
+    AC_TENSOR_INDICES plus a merged RangeEncoder + adaptive lgwin Brotli
+    search on the non-AC tensors. Empirical: -420 bytes vs Op 1 substrate,
+    -661 bytes vs PR106 baseline (subagent measurement, commit 35abccf5).
+
+    The op_state required by the decoder:
+        - ``section_lengths``: dict with keys ``br, hists, merged_ac, hi_hist``
+        - ``n_latent_hi_symbols``: int, how many latent-hi symbols to drain
+          from the merged RangeDecoder AFTER the 8 weight streams.
+    """
+    name: str = "pr103_arithmetic_codec"
+    brotli_quality: int = 11
+    adaptive_lgwin: bool = True
+    latent_hi_symbols: Any = None  # np.ndarray | None — embedded latent-hi
+    n_latent_hi_symbols: int = 0  # decoder-side drain count
+
+    def encode(
+        self,
+        state_dict: dict[str, torch.Tensor],
+        *,
+        context: dict[str, Any],
+    ) -> EncodeResult:
+        from tac.pr103_arithmetic_codec import encode_decoder_ac
+
+        bytes_in = sum(t.numel() * t.element_size() for t in state_dict.values())
+        result = encode_decoder_ac(
+            state_dict,
+            brotli_quality=self.brotli_quality,
+            adaptive_lgwin=self.adaptive_lgwin,
+            latent_hi_symbols=self.latent_hi_symbols,
+            return_layout=True,
+        )
+        # `result` is EncodedAcDecoderBlob when return_layout=True.
+        # non_ac_brotli_streams is a tuple of per-stream bytes; the wire
+        # format concatenates them, so the "br" section length is the SUM
+        # of stream lengths (not the tuple count).
+        br_total = sum(len(s) for s in result.non_ac_brotli_streams)
+        section_lengths = {
+            "br": br_total,
+            "hists": len(result.histograms_blob),
+            "merged_ac": len(result.merged_ac_blob),
+            "hi_hist": len(result.latent_hi_hist_blob),
+        }
+        op_state: dict[str, Any] = {
+            "section_lengths": section_lengths,
+            "n_latent_hi_symbols": self.n_latent_hi_symbols,
+        }
+        return EncodeResult(
+            blob=result.blob,
+            bytes_in=bytes_in,
+            bytes_out=len(result.blob),
+            op_name=self.name,
+            op_state=op_state,
+        )
+
+    def decode(
+        self,
+        blob: bytes,
+        *,
+        op_state: dict[str, Any],
+        context: dict[str, Any],
+    ) -> dict[str, torch.Tensor]:
+        from tac.pr103_arithmetic_codec import decode_decoder_ac
+        section_lengths = op_state.get("section_lengths")
+        if section_lengths is None:
+            raise ValueError(
+                "Op 2 decode missing section_lengths in op_state — "
+                "encoder must have populated it"
+            )
+        n_hi = int(op_state.get("n_latent_hi_symbols", 0))
+        decoded = decode_decoder_ac(
+            blob,
+            section_lengths=section_lengths,
+            n_latent_hi_symbols=n_hi,
+        )
+        return decoded.state_dict
+
+    def validate(
+        self,
+        state_dict: dict[str, torch.Tensor],
+        *,
+        context: dict[str, Any],
+    ) -> ValidationReport:
+        from tac.pr103_arithmetic_codec import (
+            FIXED_STATE_SCHEMA as PR103_SCHEMA,
+            validate_ac_savings,
+        )
+        findings: list[str] = []
+        schema_names = {name for name, _ in PR103_SCHEMA}
+        missing = schema_names - set(state_dict.keys())
+        if missing:
+            findings.append(f"missing tensors: {sorted(missing)}")
+        if not missing:
+            # Contrarian gate: AC savings audit per AC_TENSOR_INDICES.
+            results = validate_ac_savings(state_dict)
+            for idx, info in results.items():
+                if info.get("delta_bytes", 0) > 0:
+                    findings.append(
+                        f"AC regresses tensor idx={idx} by {info['delta_bytes']}B "
+                        f"vs brotli baseline (auto-fallback to brotli will mitigate)"
+                    )
+        return ValidationReport(
+            passed=not findings or all("auto-fallback" in f for f in findings),
+            op_name=self.name,
+            findings=findings,
+        )
+
+
 __all__ = [
     "CodecOp",
     "CodecPipeline",
     "EncodeResult",
     "Op1_PR101SplitBrotli",
+    "Op2_PR103ArithmeticCodec",
     "PipelineManifest",
     "ValidationReport",
 ]

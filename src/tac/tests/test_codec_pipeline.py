@@ -19,6 +19,7 @@ from tac.codec_pipeline import (
     CodecPipeline,
     EncodeResult,
     Op1_PR101SplitBrotli,
+    Op2_PR103ArithmeticCodec,
     PipelineManifest,
     ValidationReport,
 )
@@ -161,6 +162,63 @@ def test_manifest_records_per_op_byte_savings() -> None:
     assert op_dict["name"] == "pr101_split_brotli"
     assert op_dict["bytes_in"] > op_dict["bytes_out"]  # codec compresses
     assert op_dict["delta_bytes"] < 0  # negative = bytes saved
+
+
+# ---------------------------------------------------------------------------
+# Op 2 wiring + Op1+Op2 composition
+# ---------------------------------------------------------------------------
+
+def test_op2_satisfies_codec_op_protocol() -> None:
+    op = Op2_PR103ArithmeticCodec()
+    assert isinstance(op, CodecOp)
+    assert op.name == "pr103_arithmetic_codec"
+
+
+def test_op2_alone_encode_decode_roundtrip() -> None:
+    sd = _synthetic_state_dict()
+    pipeline = CodecPipeline([Op2_PR103ArithmeticCodec()])
+    blob, manifest = pipeline.encode(sd)
+    assert blob[:4] == b"CPL1"
+    decoded, replayed = pipeline.decode(blob)
+    assert replayed == ["pr103_arithmetic_codec"]
+    assert set(decoded.keys()) == set(sd.keys())
+
+
+def test_op1_op2_composition_via_cpl1() -> None:
+    """Op 1 + Op 2 stored in CPL1 wrapper (substitutional composition mode).
+
+    Both ops encode the same state_dict. The wrapper preserves both blobs +
+    op_state — useful for forensics + side-by-side byte-impact comparison.
+    Per the composition contract memo: substitutional composition is one
+    of three modes (substitutional / substrate-transform / decorator).
+    """
+    sd = _synthetic_state_dict()
+    pipeline = CodecPipeline([
+        Op1_PR101SplitBrotli(auto_select=False),
+        Op2_PR103ArithmeticCodec(),
+    ])
+    blob, manifest = pipeline.encode(sd)
+    decoded, replayed = pipeline.decode(blob)
+    assert replayed == ["pr101_split_brotli", "pr103_arithmetic_codec"]
+    assert set(decoded.keys()) == set(sd.keys())
+    # Per-op byte impact recorded in manifest.
+    op1_bytes = manifest.op_results[0].bytes_out
+    op2_bytes = manifest.op_results[1].bytes_out
+    assert op1_bytes > 0 and op2_bytes > 0
+
+
+def test_op2_op_state_includes_section_lengths() -> None:
+    """The Op 2 decoder REQUIRES section_lengths (PR103 wire format hardcodes
+    them). The pipeline encoder must populate this op_state field."""
+    sd = _synthetic_state_dict()
+    pipeline = CodecPipeline([Op2_PR103ArithmeticCodec()])
+    _, manifest = pipeline.encode(sd)
+    op_state = manifest.op_results[0].op_state
+    assert "section_lengths" in op_state
+    section_lengths = op_state["section_lengths"]
+    assert set(section_lengths.keys()) == {"br", "hists", "merged_ac", "hi_hist"}
+    for k, v in section_lengths.items():
+        assert v >= 0, f"section {k!r} length must be non-negative"
 
 
 def test_manifest_score_claim_default_false() -> None:
