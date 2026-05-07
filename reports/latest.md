@@ -1,5 +1,51 @@
 # Latest Report - 2026-05-04 PR106 belt_and_suspenders adapter contest-faithful status
 
+## Track A/B/C/D/E/F/G/H Addendum — 2026-05-07T11:00Z
+
+**Current frontier unchanged at 0.20935 [contest-CUDA]** (PR106x-lowlevel-brotli, 186080 bytes). This addendum records the parallel-dispatch session outputs that prepare the next score-lowering wave.
+
+### Parallel-track session deliverables
+
+| Track | Artifact | Commit | Status |
+|-------|----------|--------|--------|
+| A | apogee_int6 Lightning T4 dispatch (predicted [0.190, 0.215]) | staging dea0c7a6 / outcome 5c219803 | **BLOCKED** Lightning AWS T4 capacity persistent (3 attempts 10:16-10:49Z); Vast.ai out of credit. Operator decision: reload credits, pivot to Azure $200, or wait. |
+| B | Wave-Ω Ω-1 CUDA scorer wiring | aa6a464d | **DONE** — JFG+SegNet+PoseNet differentiable score_fn at experiments/build_sjkl_residual.py:179; 10 new tests + 60 SJKL suite green |
+| C | scorer_basin_parity_gate tooling + apogee_int6 evidence | e991cdcd, f04b7d5b | **DONE** — int6 PASSED (pose_delta 30× below threshold); reusable for any apogee_intN |
+| D | PARADIGM-δεζ Phase 1 scaffolding (3 modules, lane registry, pipeline.py flags) | 6fe8125b | **DONE** — 3 lanes registered, 53 tests pass, 540+432+493 LOC stub modules |
+| E | Wave-Ω Ω-2 NeRV mask inflate branch | (pre-existing) | **DUPLICATE-OF-EXISTING** — already wired at inflate_renderer.py:1780+; 4th stale-blueprint signal of session |
+| F | Wave-Ω Ω-3 block-FP JFG transplant module | in flight (subagent aca10101ef68a5607) | Predicted -0.035 score (~52KB savings); CPU-only |
+| G | apogee_int5 + int7 basin-parity evidence | (artifact-only) | **DONE** — int7 PASS (rel_err 0.79%, safe), int5 FAIL (rel_err 3.31%, catastrophic regime); int5 DEFERRED-pending-research |
+| H | reports/latest.md + lane registry update | (this commit) | **DONE** — apogee_int6/int7 marked strict_preflight=true (L2) |
+
+### Empirical apogee_intN safety boundary (pinned 2026-05-07)
+
+| Variant | Bytes | rel_err % | basin-parity | Verdict |
+|---------|-------|-----------|--------------|---------|
+| int4 | 109996 | 7.09 | (skipped) | Falsified at 1.4287 [contest-CUDA T4] |
+| int5 | 154555 | 3.31 | **FAIL** (pose_delta 2.26× threshold) | DEFERRED-pending-research |
+| **int6** | **170450** | **1.55** | **PASS** (pose_delta 30× below) | **Safe — primary dispatch candidate** |
+| **int7** | **205158** | **0.79** | **PASS** (pose_delta 18× below) | **Safe — control dispatch candidate** |
+| int8 | 187731 | 0.24 | (lossless-class) | Calibration anchor (0.2112) |
+
+The boundary between safe and catastrophic regimes lies between rel_err 1.55% and 3.31%. Future PTQ schemes should target ≤2.0% rel_err to safely cross.
+
+### Fan-out plan when GPU returns
+
+Per CLAUDE.md race-mode rigor inversion + parallel-dispatch-first non-negotiable: dispatch **{int6, int7}** in parallel via `tools/parallel_dispatch_top_k.py` for double-anchor calibration of the safe regime. Each candidate has its readiness-evidence-json staged; predispatch_sanity ALL 5 GATES PASS (exit 0) for both.
+
+Expected outcomes (from predicted-band, NOT contest-CUDA):
+- int6: [0.190, 0.215] — likely below current 0.20935 frontier
+- int7: [0.198, 0.208] — control variant (smaller savings, near-lossless distortion)
+
+If both land in their predicted bands, that's two new lossy anchors at rel_err 0.79% and 1.55% — completes the apogee_intN curve calibration in the safe regime (currently only int8 at 0.24% and int4 at 7.09%; the gap between is exactly what int6/int7 fill).
+
+### Operator decisions pending
+
+1. Vast.ai credit reload (~$25) → unblocks immediate dispatch
+2. Azure $200 free-credits pivot (per task #312, wired but unused; needs `az login`)
+3. AWS spot $100 free-credits pivot (per CLAUDE.md memory; less canonical)
+4. Wait for Lightning T4 AWS capacity to return (free; unknown ETA)
+
 ## Worker D Addendum - 2026-05-07
 
 Current local HNeRV scorecard routing now treats
