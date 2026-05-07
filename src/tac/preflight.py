@@ -15503,9 +15503,23 @@ def check_no_orphan_src_tac_modules(
     # recursive scan surfaces made that O(modules * bytes) and timeout-prone.
     reference_names: set[str] = set()
 
+    # Match both `tac.<name>` (covers `import tac.foo` + `from tac.foo import X`)
+    # AND `from tac import <name>` style sibling imports common in
+    # library-internal cross-references.
+    _DOTTED_RE = re.compile(r"\btac\.([A-Za-z_][A-Za-z0-9_]*)\b")
+    _FROM_RE = re.compile(
+        r"from\s+tac\s+import\s+([A-Za-z_][A-Za-z0-9_,\s]*)"
+    )
+
     def scan_text(text: str) -> None:
-        for match in re.finditer(r"\btac\.([A-Za-z_][A-Za-z0-9_]*)\b", text):
+        for match in _DOTTED_RE.finditer(text):
             reference_names.add(match.group(1))
+        for match in _FROM_RE.finditer(text):
+            # Split the imported names list (may be `a, b, c` or `(a, b)`)
+            for name in match.group(1).replace("(", "").replace(")", "").split(","):
+                stripped = name.strip()
+                if stripped:
+                    reference_names.add(stripped)
 
     def scan_file(path: Path) -> None:
         try:
