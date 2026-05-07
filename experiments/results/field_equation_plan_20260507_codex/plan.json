@@ -31,8 +31,8 @@
     "blocker_counts": {
       "kkt_blockers_present": 15,
       "kkt_not_ready_for_field_planning": 15,
-      "missing_byte_closed_archive_manifest": 9,
-      "pareto_ineligible_atom": 14,
+      "missing_byte_closed_archive_manifest": 8,
+      "pareto_ineligible_atom": 13,
       "proxy_evidence_not_dispatch_design_ready": 5
     },
     "design_ready_count": 0,
@@ -49,9 +49,7 @@
         "design_ready": false,
         "dispatch_attempted": false,
         "dispatch_design_blockers": [
-          "pareto_ineligible_atom",
           "kkt_not_ready_for_field_planning",
-          "missing_byte_closed_archive_manifest",
           "kkt_blockers_present"
         ],
         "expected_improvement": 0.000100544702,
@@ -376,14 +374,14 @@
   "kkt_blocker_counts": {
     "byte_violation": 7,
     "kkt:kkt_proof_or_admm_result_missing": 15,
-    "missing_byte_closed_archive_manifest": 9,
-    "pareto_ineligible_atom": 14,
+    "missing_byte_closed_archive_manifest": 8,
+    "pareto_ineligible_atom": 13,
     "proxy_evidence_not_kkt_ready": 5
   },
   "kkt_ready_for_field_planning_count": 0,
   "locally_descending_count": 0,
   "objective": "J = expected_total_score_delta + lambda_byte*g_byte + lambda_seg*g_seg + lambda_pose*g_pose + lambda_confidence*g_confidence",
-  "pareto_eligible_count": 1,
+  "pareto_eligible_count": 2,
   "proxy_row_count": 5,
   "ready_for_exact_eval_dispatch": false,
   "research_basis": {
@@ -732,6 +730,95 @@
     "tool": "tac.optimization.research_basis"
   },
   "rows": [
+    {
+      "archive_manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/archive_manifest.json",
+      "archive_manifest_sha256": "ed59c6f7c8e37e441d6a1f978567b29b645b7d0b45d5f66fc1b2974475187745",
+      "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:brotli_q10_current_raw",
+      "byte_closed_archive_manifest_attached": true,
+      "confidence": 1.0,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [],
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "hnerv_rate_recode_requires_raw_equal_proof",
+        "planning_only_structural_recode_profile",
+        "requires_runtime_decoder_implementation",
+        "kkt:kkt_proof_or_admm_result_missing",
+        "field_equation_planning_only",
+        "research_basis_is_not_score_evidence"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+      "expected_information_gain_nats": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "hnerv_rate_recode",
+      "family_group": "hnerv_rate_equivalent_recode",
+      "frechet_derivatives": {
+        "d_bytes_d_epsilon": -151.0,
+        "d_pose_dist_d_epsilon": 0.0,
+        "d_rate_score_d_epsilon": -0.000100544702,
+        "d_score_d_epsilon": -0.000100544702,
+        "d_seg_dist_d_epsilon": 0.0
+      },
+      "interaction_assumptions": [
+        "rate_only_raw_equal_required",
+        "stack_before_scorer_changing_atoms",
+        "conflicts_with_decoder_replacement_for_same_section"
+      ],
+      "kkt": {
+        "constraint_residuals": {
+          "byte_violation": 0.0,
+          "confidence_violation": 0.0,
+          "pose_violation": 0.0,
+          "seg_violation": 0.0
+        },
+        "kkt_blockers": [
+          "kkt:kkt_proof_or_admm_result_missing"
+        ],
+        "locally_descending": false,
+        "selection_penalty_score_delta": 10.0,
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0
+        },
+        "stationarity_residual": 9.999899455298
+      },
+      "kkt_ready_for_field_planning": false,
+      "mdl": {
+        "data_byte_delta": -151.0,
+        "description_length_delta_bytes": -151.0,
+        "description_length_rate_score_delta": -0.000100544702,
+        "model_byte_delta": 0.0
+      },
+      "meta_lagrangian_selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0
+      },
+      "meta_lagrangian_selection_score_delta": -0.000100544702,
+      "observation_noise_variance": 0.0,
+      "pareto_dominated_by": [],
+      "pareto_eligible": true,
+      "pareto_frontier": true,
+      "pareto_scope": "hnerv_rate_equivalent_recode",
+      "proxy_row": false,
+      "rankable": true,
+      "ready_for_exact_eval_dispatch": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "variational_action_delta": 9.999899455298
+    },
     {
       "archive_manifest_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
       "archive_manifest_sha256": "f106d31d1ffc5f5e991e3e96faef6f849b4020521538c4d819610ab548e48f91",
@@ -1356,106 +1443,6 @@
       ],
       "score_claim": false,
       "variational_action_delta": 85.0
-    },
-    {
-      "archive_manifest_path": "",
-      "archive_manifest_sha256": "",
-      "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:brotli_q10_current_raw",
-      "byte_closed_archive_manifest_attached": false,
-      "confidence": 1.0,
-      "conflicts_with_atoms": [],
-      "conflicts_with_families": [],
-      "dispatch_attempted": false,
-      "dispatch_blockers": [
-        "planning_only_lagrangian_atom",
-        "requires_exact_cuda_auth_eval",
-        "requires_byte_closed_archive",
-        "cross_paradigm_atom_is_planning_only",
-        "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
-        "hnerv_rate_recode_requires_raw_equal_proof",
-        "planning_only_structural_recode_profile",
-        "requires_runtime_decoder_implementation",
-        "requires_archive_manifest_preflight",
-        "missing_byte_closed_archive_manifest",
-        "kkt:kkt_proof_or_admm_result_missing",
-        "pareto_ineligible_atom",
-        "field_equation_planning_only",
-        "research_basis_is_not_score_evidence"
-      ],
-      "dispatchable": false,
-      "evidence_grade": "empirical_byte_raw_equal",
-      "expected_information_gain_nats": 0.0,
-      "expected_score_variance": 0.0,
-      "expected_uncertainty_reduction": {
-        "has_uncertainty_signal": false,
-        "source_fields": [],
-        "total_variance_reduction": 0.0
-      },
-      "family": "hnerv_rate_recode",
-      "family_group": "hnerv_rate_equivalent_recode",
-      "frechet_derivatives": {
-        "d_bytes_d_epsilon": -151.0,
-        "d_pose_dist_d_epsilon": 0.0,
-        "d_rate_score_d_epsilon": -0.000100544702,
-        "d_score_d_epsilon": -0.000100544702,
-        "d_seg_dist_d_epsilon": 0.0
-      },
-      "interaction_assumptions": [
-        "rate_only_raw_equal_required",
-        "stack_before_scorer_changing_atoms",
-        "conflicts_with_decoder_replacement_for_same_section"
-      ],
-      "kkt": {
-        "constraint_residuals": {
-          "byte_violation": 0.0,
-          "confidence_violation": 0.0,
-          "pose_violation": 0.0,
-          "seg_violation": 0.0
-        },
-        "kkt_blockers": [
-          "missing_byte_closed_archive_manifest",
-          "kkt:kkt_proof_or_admm_result_missing",
-          "pareto_ineligible_atom"
-        ],
-        "locally_descending": false,
-        "selection_penalty_score_delta": 135.0,
-        "selection_penalty_terms": {
-          "kkt_not_ready_for_field_planning": 10.0,
-          "missing_byte_closed_archive_manifest": 100.0,
-          "pareto_ineligible_atom": 25.0
-        },
-        "stationarity_residual": 134.999899455298
-      },
-      "kkt_ready_for_field_planning": false,
-      "mdl": {
-        "data_byte_delta": -151.0,
-        "description_length_delta_bytes": -151.0,
-        "description_length_rate_score_delta": -0.000100544702,
-        "model_byte_delta": 0.0
-      },
-      "meta_lagrangian_selection_penalty_terms": {
-        "kkt_not_ready_for_field_planning": 10.0,
-        "missing_byte_closed_archive_manifest": 100.0,
-        "pareto_ineligible_atom": 25.0
-      },
-      "meta_lagrangian_selection_score_delta": -0.000100544702,
-      "observation_noise_variance": 0.0,
-      "pareto_dominated_by": [],
-      "pareto_eligible": false,
-      "pareto_frontier": false,
-      "pareto_scope": "hnerv_rate_equivalent_recode",
-      "proxy_row": false,
-      "rankable": true,
-      "ready_for_exact_eval_dispatch": false,
-      "research_basis_ids": [
-        "fridrich_stc_2011",
-        "fridrich_pq_wetpaper_2004",
-        "balle_e2e_2017",
-        "balle_hyperprior_2018"
-      ],
-      "score_claim": false,
-      "variational_action_delta": 134.999899455298
     },
     {
       "archive_manifest_path": "",
