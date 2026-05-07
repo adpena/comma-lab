@@ -138,11 +138,21 @@ class Op1_PR101SplitBrotli:
     :func:`decode_decoder_compact`. Optionally runs the Round-3 ``auto_select``
     path that derives the brotli-optimal byte_map per tensor under joint
     stream-window context.
+
+    Substrate-adaptive derivers (task #394, 2026-05-07): when
+    ``auto_derive_all_constants=True``, all 5 PR101 hardcoded constants
+    (storage_order, stream_ends, conv4_perms, byte_maps, latent_dim_order)
+    are derived from the input ``state_dict`` instead of using PR101's
+    own-substrate defaults. The derived constants are threaded through
+    ``op_state`` so :func:`decode` reproduces them byte-faithfully. Default
+    False to preserve PR101 wire-format compatibility for the canonical
+    PR101 archive replay path.
     """
     name: str = "pr101_split_brotli"
     brotli_quality: int = 11
     auto_select: bool = True
     explicit_overrides: dict[int, str] | None = None
+    auto_derive_all_constants: bool = False
 
     def encode(
         self,
@@ -174,14 +184,46 @@ class Op1_PR101SplitBrotli:
         else:
             effective_byte_maps = None  # let PR101 default DECODER_BYTE_MAPS apply
 
-        blob = encode_decoder_compact(
-            state_dict,
-            brotli_quality=self.brotli_quality,
-            effective_byte_maps=effective_byte_maps,
-            auto_select=False,  # already computed above; do not re-derive
-        )
-
         op_state: dict[str, Any] = {}
+
+        if self.auto_derive_all_constants:
+            # Task #394: substrate-adaptive deriver path. Run all 4 decoder-blob
+            # derivers (byte_maps already computed above; storage_order +
+            # stream_ends + conv4_perms below) on this state_dict and thread
+            # the derived constants through op_state so decode roundtrips.
+            from tac.pr101_split_brotli_codec_derivers import (
+                derive_conv4_perms,
+                derive_storage_order,
+                derive_stream_ends,
+            )
+            storage_order = derive_storage_order(state_dict)
+            conv4_perms = derive_conv4_perms(
+                state_dict, brotli_quality=self.brotli_quality
+            )
+            stream_ends = derive_stream_ends(
+                state_dict, storage_order, brotli_quality=self.brotli_quality
+            )
+            blob = encode_decoder_compact(
+                state_dict,
+                brotli_quality=self.brotli_quality,
+                effective_byte_maps=effective_byte_maps,
+                derived_storage_order=storage_order,
+                derived_stream_ends=stream_ends,
+                derived_conv4_perms=conv4_perms,
+            )
+            op_state["derived_storage_order"] = list(storage_order)
+            op_state["derived_stream_ends"] = list(stream_ends)
+            op_state["derived_conv4_perms"] = {
+                str(idx): list(perm) for idx, perm in conv4_perms.items()
+            }
+        else:
+            blob = encode_decoder_compact(
+                state_dict,
+                brotli_quality=self.brotli_quality,
+                effective_byte_maps=effective_byte_maps,
+                auto_select=False,  # already computed above; do not re-derive
+            )
+
         if effective_byte_maps is not None:
             op_state["effective_byte_maps"] = effective_byte_maps
         return EncodeResult(
@@ -201,7 +243,24 @@ class Op1_PR101SplitBrotli:
     ) -> dict[str, torch.Tensor]:
         from tac.pr101_split_brotli_codec import decode_decoder_compact
         overrides = op_state.get("effective_byte_maps")
-        return decode_decoder_compact(blob, effective_byte_maps=overrides)
+        # Task #394: if encode used the substrate-adaptive deriver path,
+        # op_state carries derived storage_order / stream_ends / conv4_perms.
+        # Re-hydrate them into the kwarg shapes ``decode_decoder_compact``
+        # expects (tuples for orderings, dict[int, tuple] for perms).
+        derived_storage_order = op_state.get("derived_storage_order")
+        derived_stream_ends = op_state.get("derived_stream_ends")
+        derived_conv4_perms_raw = op_state.get("derived_conv4_perms")
+        kwargs: dict[str, Any] = {"effective_byte_maps": overrides}
+        if derived_storage_order is not None:
+            kwargs["derived_storage_order"] = tuple(derived_storage_order)
+        if derived_stream_ends is not None:
+            kwargs["derived_stream_ends"] = tuple(derived_stream_ends)
+        if derived_conv4_perms_raw is not None:
+            kwargs["derived_conv4_perms"] = {
+                int(idx): tuple(perm)
+                for idx, perm in derived_conv4_perms_raw.items()
+            }
+        return decode_decoder_compact(blob, **kwargs)
 
     def validate(
         self,

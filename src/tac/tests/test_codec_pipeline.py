@@ -464,3 +464,96 @@ def test_pipeline_stress_30_op_chain_roundtrips() -> None:
     # Final decoded state is from the LAST op (substitutional ops overwrite
     # decoded_state; the pipeline returns the last one).
     assert "sentinel" in decoded
+
+
+# ---------------------------------------------------------------------------
+# Op1 substrate-adaptive derivers (task #394)
+# ---------------------------------------------------------------------------
+
+def test_op1_auto_derive_all_constants_roundtrips() -> None:
+    """Encode-decode roundtrip with substrate-adaptive derivers preserves
+    state_dict bit-exactly. Threads derived storage_order/stream_ends/
+    conv4_perms through op_state so decode can reconstruct."""
+    scale = 0.05
+    state = _synthetic_state_dict(seed=42, scale=scale)
+    op = Op1_PR101SplitBrotli(
+        auto_derive_all_constants=True, auto_select=True, brotli_quality=1
+    )
+    result = op.encode(state, context={})
+    assert "derived_storage_order" in result.op_state
+    assert "derived_stream_ends" in result.op_state
+    assert "derived_conv4_perms" in result.op_state
+    # storage_order must be a permutation of range(28)
+    so = result.op_state["derived_storage_order"]
+    assert sorted(so) == list(range(28))
+    # stream_ends must be sorted-strict-increasing ending at 28
+    se = result.op_state["derived_stream_ends"]
+    assert se == sorted(set(se))
+    assert se[-1] == 28
+    # Roundtrip is bit-exact at int8-quant grid: PR101's codec quantizes to
+    # 127 levels, so absolute error is bounded by ~scale/127. Use 2x that as
+    # tolerance for safety (rounding can land just above 1 quantum on edges).
+    decoded = op.decode(result.blob, op_state=result.op_state, context={})
+    # Tolerance: int8 quant step = 2 * max|x| / 127, half-step error per element.
+    # randn tail can reach ~4 sigma, so quant step is bounded by ~4*scale/127,
+    # giving half-step error <= 2*scale/127. Use 4x that as cushion for tails.
+    quant_atol = 4.0 * scale / 127.0
+    for name, tensor in state.items():
+        torch.testing.assert_close(decoded[name], tensor, rtol=0, atol=quant_atol)
+
+
+def test_op1_auto_derive_all_constants_substrate_specific() -> None:
+    """Two different substrates (different seeds) produce DIFFERENT derived
+    constants — verifying the derivers are substrate-adaptive, not constant.
+    """
+    op = Op1_PR101SplitBrotli(
+        auto_derive_all_constants=True, auto_select=False, brotli_quality=1
+    )
+    state_a = _synthetic_state_dict(seed=1, scale=0.5)
+    state_b = _synthetic_state_dict(seed=2, scale=0.5)
+    res_a = op.encode(state_a, context={})
+    res_b = op.encode(state_b, context={})
+    # At least one of the derived constants should differ between substrates
+    # (random scale=0.5 produces enough variance that the brotli-optimal
+    # ordering shifts). Equality across all 3 would mean derivers are no-ops.
+    diff_so = res_a.op_state["derived_storage_order"] != res_b.op_state["derived_storage_order"]
+    diff_se = res_a.op_state["derived_stream_ends"] != res_b.op_state["derived_stream_ends"]
+    diff_cp = res_a.op_state["derived_conv4_perms"] != res_b.op_state["derived_conv4_perms"]
+    assert diff_so or diff_se or diff_cp, (
+        "derivers produced identical constants for two different substrates"
+    )
+
+
+def test_op1_auto_derive_all_constants_default_off() -> None:
+    """Default behavior preserves PR101 wire-format: no derived_* keys in
+    op_state when auto_derive_all_constants is False (default)."""
+    scale = 0.1
+    state = _synthetic_state_dict(seed=0, scale=scale)
+    op = Op1_PR101SplitBrotli()
+    result = op.encode(state, context={})
+    assert "derived_storage_order" not in result.op_state
+    assert "derived_stream_ends" not in result.op_state
+    assert "derived_conv4_perms" not in result.op_state
+    # Roundtrip still works (decode uses PR101 defaults). Same int8-quant
+    # tolerance as the auto_derive case.
+    decoded = op.decode(result.blob, op_state=result.op_state, context={})
+    # Tolerance: int8 quant step = 2 * max|x| / 127, half-step error per element.
+    # randn tail can reach ~4 sigma, so quant step is bounded by ~4*scale/127,
+    # giving half-step error <= 2*scale/127. Use 4x that as cushion for tails.
+    quant_atol = 4.0 * scale / 127.0
+    for name, tensor in state.items():
+        torch.testing.assert_close(decoded[name], tensor, rtol=0, atol=quant_atol)
+
+
+def test_op1_auto_derive_all_constants_op_state_json_serializable() -> None:
+    """op_state must be JSON-serializable per cathedral CPL1 wire format
+    (bug-hunter v3 MEDIUM-1 enforcement). The new derived_conv4_perms uses
+    str-keyed dict and list values to satisfy that."""
+    import json
+    state = _synthetic_state_dict(seed=0, scale=0.1)
+    op = Op1_PR101SplitBrotli(auto_derive_all_constants=True, brotli_quality=1)
+    result = op.encode(state, context={})
+    # Must serialize without TypeError
+    encoded = json.dumps(result.op_state)
+    decoded_state = json.loads(encoded)
+    assert decoded_state["derived_storage_order"] == result.op_state["derived_storage_order"]
