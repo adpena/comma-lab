@@ -735,7 +735,13 @@ def preflight_all(
         # off-manifold pattern. Lane GP v2 = 89.66, Lane M-V1 = 2.35 from
         # this exact bug. 9 live violations: needs audit + waivers before
         # STRICT promotion. See project_lane_gp_v2_audit_20260429.
-        check_no_off_manifold_pose_zeros(strict=False, verbose=verbose)
+        # Promoted STRICT 2026-05-06: live count 0 — scanner now exempts
+        # vendored public-PR intake clones (public_pr_archive_release_view +
+        # path-substring _intake_ markers) and uv_project_env site-packages.
+        # The 3 authored-code uses (joint_admm protocol-conformance check;
+        # PR67 line-search rank-1 col0 lift; explicit no-GT smoke mode) all
+        # carry inline `# OFF_MANIFOLD_OK:` waivers documenting intent.
+        check_no_off_manifold_pose_zeros(strict=True, verbose=verbose)
         # Check 76 WARN-ONLY: every masks.mkv referenced as a lane anchor
         # SHOULD be full resolution (≥384×512). Lane UNIWARD v7 = 53.61
         # (anchored on 64×48 masks), matches historical 2026-04-21 disaster
@@ -13158,9 +13164,29 @@ def check_no_off_manifold_pose_zeros(
     """
     root = repo_root or REPO_ROOT
     skip_parts = {"__pycache__", ".venv", ".git", ".pytest_cache",
-                  "build", "dist", "node_modules", "tests"}
+                  "build", "dist", "node_modules", "tests",
+                  # Vendored uv-managed venvs from remote harvest snapshots
+                  "uv_project_env", "site-packages",
+                  # Public-PR intake clones — vendored upstream code we don't
+                  # own; off-manifold-pose patterns there are not our bugs.
+                  "public_pr_archive_release_view"}
     # Skip self (preflight.py contains regex patterns as strings)
     skip_files = {"preflight.py"}
+    # Path-substring vendored markers (consistent with bare-except + subprocess
+    # scanners). Public PR intake snapshots and harvested instance dirs.
+    _VENDORED_INTAKE_PATH_MARKERS = (
+        "/pr_heads/",
+        "/leaderboard_intel_",
+        "/reverse_engineering_",
+        "/public_runtime_adapters_",
+        "/raw/kaggle_ingest/",
+        "/vendored/",
+        "_intake_",
+        "/av1_crf31_bicubic/",
+        "/comma_lab_public_export/",
+        "/vast_harvest/",
+        "/public_pr_archive_release_view/",
+    )
 
     # Match `torch.zeros(<anything>, 6` (with the 6 as 2nd positional arg).
     # The trailing context allows extra args (dtype, device, etc).
@@ -13179,6 +13205,9 @@ def check_no_off_manifold_pose_zeros(
             if f.name in skip_files:
                 continue
             if _is_oss_export_mirror_path(f):
+                continue
+            rel_s = str(f.relative_to(root))
+            if any(marker in rel_s for marker in _VENDORED_INTAKE_PATH_MARKERS):
                 continue
             try:
                 text = f.read_text(errors="ignore")

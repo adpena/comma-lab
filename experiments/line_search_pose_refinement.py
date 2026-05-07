@@ -372,7 +372,7 @@ def pose_atom_selection_summary(
 def pose_from_col0_torch(col0_chunk: torch.Tensor) -> torch.Tensor:
     """Lift a uint16-range int tensor into a (N, 6) pose tensor (cols 1+ zero)."""
     n = col0_chunk.shape[0]
-    pose = torch.zeros((n, 6), device=col0_chunk.device)
+    pose = torch.zeros((n, 6), device=col0_chunk.device)  # OFF_MANIFOLD_OK: PR67 line-search rank-1 recipe lifts a single-axis col0 byte stream into the col0 slot of a 6-DOF tensor; cols 1-5 are intentionally zero per the published PR67 score-aware coordinate descent
     pose[:, 0] = col0_chunk.to(dtype=torch.float32) / VELOCITY_SCALE + VELOCITY_OFFSET
     return pose
 
@@ -1323,7 +1323,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Build target tensor: forward GT through PoseNet (real path) or zeros (smoke)
     if args.no_gt or args.gt_mkv is None:
-        target = torch.zeros((col0.shape[0], 6), dtype=torch.float32)
+        target = torch.zeros((col0.shape[0], 6), dtype=torch.float32)  # OFF_MANIFOLD_OK: explicit smoke/no-GT mode; banner below tells operator "refinement is bogus" so this is never used for scoring
         print("[init] no-GT mode: target=0 (smoke / development; refinement is bogus)")
     else:
         assert_dali_runtime_dependency_available()

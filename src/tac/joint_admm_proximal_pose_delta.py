@@ -219,7 +219,7 @@ def build_pose_delta_frontier(
 # Compile-time check that the wrapper actually conforms to the Protocol.
 # (Catches accidental drift at import time, not just at run_admm time.)
 _assert_protocol: StreamProximalCodec = PoseDeltaProximalCodec(
-    poses=torch.zeros(2, 6),
+    poses=torch.zeros(2, 6),  # OFF_MANIFOLD_OK: compile-time Protocol-conformance check, never used at runtime
     frontier=[PoseDeltaFrontierSample(delta_bits=8, bytes_used=100, score_cost=0.001)],
 )
 
