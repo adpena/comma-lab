@@ -106,4 +106,4 @@ export PREDICTED_HIGH="2.50"
 export CONTROLLED_BASELINE="C067 A++ frontier with PMG-HOTSPOT CMG3 residual mask self-compression; H100 diagnostic only"
 export REQUIRED_SOURCE_SHA256S="$(cat "$OUT/source_sha256s.expected")"
 bash scripts/remote_archive_only_eval.sh
-log "done"
+log "PMG_HOTSPOT_C067_EVAL_DONE [contest-CUDA] forensic-only-replay (PMG-HOTSPOT C067 was an exact-negative score; this run is preserved for forensics, not promotion)"

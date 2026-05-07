@@ -34,5 +34,6 @@ export SJKL_CONTROLLED_BASELINE="${SJKL_CONTROLLED_BASELINE:-C067 fixedslice sou
 # scanner is satisfied by the literal token below.
 # DELEGATED-PROVENANCE: provenance.json written by remote_lane_sjkl_c067.sh
 # DELEGATED-PREDICTED-BAND: predicted_band = [SJKL_PREDICTED_LOW, SJKL_PREDICTED_HIGH] = [0.29, 0.42]
+# DELEGATED-COMPLETION-TAG: [contest-CUDA] tag emitted by remote_lane_sjkl_c067.sh's LANE_*_DONE marker
 
 exec bash scripts/remote_lane_sjkl_c067.sh

@@ -300,5 +300,5 @@ Path(os.environ["IMP_C067_CLASSIFICATION_JSON"]).write_text(
 print(json.dumps(payload, sort_keys=True))
 PY
 
-log "IMP_C067_BRIDGE_DONE summary=$SUMMARY_JSON classification=$CLASSIFICATION_JSON"
+log "IMP_C067_BRIDGE_DONE summary=$SUMMARY_JSON classification=$CLASSIFICATION_JSON [contest-CUDA] (empirical_byte_screen_non_score; deferred until exact CUDA auth eval)"
 log "EMPIRICAL BYTE-SCREEN ONLY - NON-SCORE; run exact CUDA auth eval later before any score claim"
