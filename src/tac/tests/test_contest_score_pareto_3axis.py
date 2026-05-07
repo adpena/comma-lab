@@ -200,6 +200,48 @@ def test_load_candidate_handles_full_evidence(tmp_path: pathlib.Path) -> None:
     )
 
 
+def test_load_candidate_handles_contest_final_anchor_schema(tmp_path: pathlib.Path) -> None:
+    mod = _load_tool_module()
+    evidence = tmp_path / "pre_submission_compliance.contest_final.json"
+    payload = {
+        "auth_eval": {
+            "record": {
+                "archive_bytes": 185578,
+                "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+                "avg_posenet_dist": 0.0000336,
+                "avg_segnet_dist": 0.00067082,
+                "score": 0.20898105277982337,
+            },
+            "strict_formula": {
+                "archive_bytes": 185578,
+                "avg_posenet_dist": 0.0000336,
+                "avg_segnet_dist": 0.00067082,
+                "score": 0.2089810755823297,
+            },
+            "anchor_proof": {
+                "archive": {
+                    "path": "experiments/results/pr103/archive.zip",
+                    "sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+                }
+            },
+        }
+    }
+    evidence.write_text(json.dumps(payload), encoding="utf-8")
+
+    cand = mod.load_candidate_from_evidence(evidence)
+
+    assert cand is not None
+    assert cand.d_seg == 0.00067082
+    assert cand.d_pose == 0.0000336
+    assert cand.archive_bytes == 185578
+    assert cand.archive_path == "experiments/results/pr103/archive.zip"
+    assert (
+        cand.archive_sha256
+        == "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce"
+    )
+    assert cand.score == pytest.approx(0.2089810755823297, rel=1e-12)
+
+
 def test_load_candidate_skips_partial_evidence(tmp_path: pathlib.Path) -> None:
     """Evidence missing any of the 3 axes returns None — cathedral discipline:
     no candidate enters the 3-axis frontier without complete contest-CUDA
@@ -241,12 +283,12 @@ def test_importance_flip_above_threshold() -> None:
     # constructor doesn't auto-fill it).
     high_pose2 = mod.Candidate(
         "high2", d_seg=0.001, d_pose=1e-3, archive_bytes=200,
-        importance_flip_above=1e-3 > mod.IMPORTANCE_FLIP_POSE_FLOOR,
+        importance_flip_above=mod.IMPORTANCE_FLIP_POSE_FLOOR < 1e-3,
     )
     assert high_pose2.importance_flip_above is True
     low_pose2 = mod.Candidate(
         "low2", d_seg=0.001, d_pose=1e-5, archive_bytes=200,
-        importance_flip_above=1e-5 > mod.IMPORTANCE_FLIP_POSE_FLOOR,
+        importance_flip_above=mod.IMPORTANCE_FLIP_POSE_FLOOR < 1e-5,
     )
     assert low_pose2.importance_flip_above is False
 

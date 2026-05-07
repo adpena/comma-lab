@@ -44,7 +44,6 @@ Usage::
 import argparse
 import glob
 import json
-import math
 import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -56,7 +55,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 # silently drift from the canonical formula.
 sys.path.insert(0, str(REPO_ROOT / "src"))
 try:
-    from tac.contest_rate_distortion_system import (  # noqa: E402
+    from tac.contest_rate_distortion_system import (
         CONTEST_POSE_WEIGHT,
         CONTEST_RATE_WEIGHT,
         CONTEST_RAW_VIDEO_BYTES,
@@ -66,12 +65,12 @@ try:
         importance_flip_threshold,
     )
     IMPORTANCE_FLIP_POSE_FLOOR = importance_flip_threshold()
-except ImportError as exc:  # pragma: no cover — clear error if cathedral missing
+except ImportError as exc:  # pragma: no cover - clear error if cathedral missing
     raise SystemExit(
         "tac.contest_rate_distortion_system not importable; this tool is part "
         "of the cathedral and requires the canonical contest_score formula. "
         f"Import error: {exc}"
-    )
+    ) from None
 
 
 # ---------------------------------------------------------------------------
@@ -123,6 +122,14 @@ def dominates(a: Candidate, b: Candidate) -> bool:
 
 def _extract_d_seg(payload: dict[str, Any]) -> float | None:
     auth = payload.get("auth_eval", {}) or {}
+    if isinstance(auth, dict):
+        strict_formula = auth.get("strict_formula") if isinstance(auth.get("strict_formula"), dict) else {}
+        record = auth.get("record") if isinstance(auth.get("record"), dict) else {}
+        for container in (strict_formula, record):
+            for key in ("avg_segnet_dist", "seg_distortion", "d_seg", "segnet_distortion"):
+                v = container.get(key)
+                if v is not None:
+                    return float(v)
     for key in ("seg_distortion", "d_seg", "segnet_distortion"):
         v = auth.get(key)
         if v is None:
@@ -134,6 +141,14 @@ def _extract_d_seg(payload: dict[str, Any]) -> float | None:
 
 def _extract_d_pose(payload: dict[str, Any]) -> float | None:
     auth = payload.get("auth_eval", {}) or {}
+    if isinstance(auth, dict):
+        strict_formula = auth.get("strict_formula") if isinstance(auth.get("strict_formula"), dict) else {}
+        record = auth.get("record") if isinstance(auth.get("record"), dict) else {}
+        for container in (strict_formula, record):
+            for key in ("avg_posenet_dist", "pose_distortion", "d_pose", "posenet_distortion"):
+                v = container.get(key)
+                if v is not None:
+                    return float(v)
     for key in ("pose_distortion", "d_pose", "posenet_distortion"):
         v = auth.get(key)
         if v is None:
@@ -148,13 +163,34 @@ def _extract_archive_bytes(payload: dict[str, Any]) -> int | None:
         v = payload.get(key)
         if v is None:
             auth = payload.get("auth_eval", {}) or {}
-            v = auth.get(key)
+            if isinstance(auth, dict):
+                strict_formula = (
+                    auth.get("strict_formula")
+                    if isinstance(auth.get("strict_formula"), dict)
+                    else {}
+                )
+                record = auth.get("record") if isinstance(auth.get("record"), dict) else {}
+                v = strict_formula.get(key, record.get(key, auth.get(key)))
         if v is not None:
             return int(v)
     return None
 
 
 def _extract_archive_path(payload: dict[str, Any], evidence_path: Path) -> str | None:
+    auth = payload.get("auth_eval") if isinstance(payload.get("auth_eval"), dict) else {}
+    anchor_proof = (
+        auth.get("anchor_proof")
+        if isinstance(auth.get("anchor_proof"), dict)
+        else {}
+    )
+    anchor_archive = (
+        anchor_proof.get("archive")
+        if isinstance(anchor_proof.get("archive"), dict)
+        else {}
+    )
+    anchor_path = anchor_archive.get("path")
+    if anchor_path:
+        return str(anchor_path)
     for key in ("archive_path", "archive"):
         v = payload.get(key)
         if v is not None:
@@ -167,6 +203,23 @@ def _extract_archive_path(payload: dict[str, Any], evidence_path: Path) -> str |
 
 def _extract_archive_sha(payload: dict[str, Any]) -> str | None:
     auth = payload.get("auth_eval", {}) or {}
+    if isinstance(auth, dict):
+        anchor_proof = (
+            auth.get("anchor_proof")
+            if isinstance(auth.get("anchor_proof"), dict)
+            else {}
+        )
+        anchor_archive = (
+            anchor_proof.get("archive")
+            if isinstance(anchor_proof.get("archive"), dict)
+            else {}
+        )
+        record = auth.get("record") if isinstance(auth.get("record"), dict) else {}
+        for container in (anchor_archive, record):
+            for key in ("archive_sha256", "sha256"):
+                v = container.get(key)
+                if v is not None:
+                    return str(v)
     for key in ("archive_sha256", "sha256"):
         v = auth.get(key)
         if v is None:
