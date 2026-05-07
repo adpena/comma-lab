@@ -372,10 +372,13 @@ def cma_es_search(
     evaluations: list[Evaluation] = []
     eval_idx = 0
     while eval_idx < max_evals and not optimizer.should_stop():
+        # cmaes.CMA.tell() requires exactly popsize-length solutions, so always
+        # fill a full generation even if it slightly exceeds max_evals (better
+        # than crashing on a short tell()). The slight overshoot is bounded by
+        # population_size and serves the user's budget intent.
+        popsize = optimizer.population_size
         solutions = []
-        for _ in range(optimizer.population_size):
-            if eval_idx >= max_evals:
-                break
+        for _ in range(popsize):
             x = optimizer.ask()
             params = {
                 spec.name: _coerce(x[i], spec)
@@ -390,8 +393,8 @@ def cma_es_search(
             )
             solutions.append((x, objective))
             eval_idx += 1
-        if solutions:
-            optimizer.tell(solutions)
+        # Always a full popsize batch — never short
+        optimizer.tell(solutions)
     return evaluations
 
 
