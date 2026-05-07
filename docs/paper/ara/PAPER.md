@@ -54,6 +54,11 @@ machine-executable knowledge package that replaces a single PDF narrative.
   stale build-provenance parser fields are quarantined in the final bundle.
 - **Live work (Era 3):** Selfcomp paradigm portfolio (8 Modal lanes); not
   reported until [contest-CUDA] verified.
+- **Public-frontier forensic note:** PR102 is tracked as a zero-byte
+  inference-tuning submission over PR100 archive custody: the PR102 source
+  fetches BradyMeighan's `hnerv-lc-v2-archive/archive.zip` by SHA-256, while
+  PR102 changes runtime constants only. Treat this as lineage/composition
+  evidence, not a local score claim, until exact CUDA replay lands.
 - **Why the writeup matters:** the challenge has a separate writeup prize.
   This Ara package is engineered for both human-reader skim and agent-reviewer
   reproduction. It is not an arXiv/preprint commitment.

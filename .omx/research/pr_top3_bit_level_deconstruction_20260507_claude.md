@@ -62,13 +62,31 @@ If we apply this trick (split-Brotli + byte-map permutations) to OUR `decoder_pa
 
 ## PR #102 (bronze, hnerv_lc_v2_scale095_rplus1, 0.194987)
 
-Per PR body: "Archive payload UNCHANGED from PR #100; only inference-time code constants changed (latent correction scale 0.0100 → 0.0095, frame 0 red channel +1)."
+Per PR body: "Archive payload UNCHANGED from PR #100; only inference-time code constants changed (latent correction scale 0.0100 -> 0.0095, frame 0 red channel +1)."
 
-→ PR #102 archive is BYTE-IDENTICAL to PR #100 (Brady's hnerv_lc_v2). The 0.001 score improvement vs PR #100 (0.196) comes purely from inflate-time inference adjustments, no archive change.
+Fresh custody on 2026-05-07 confirms the stronger byte-level lineage:
 
-This means **we can re-use the PR #100 archive bytes wholesale** and gain 0.001 score by just applying:
+- PR102 `compress.sh` fetches BradyMeighan's PR100 release asset
+  `hnerv-lc-v2-archive/archive.zip`.
+- The expected SHA in PR102 source is
+  `afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641`.
+- The corrected PR102 archive from the maintainer comment attachment has the
+  same SHA and is byte-identical to PR100.
+- The stale local PR102 auto-intake was wrong: it captured EthanYangTW's older
+  qpose release asset (`276481` bytes, member `p`) instead of the HNeRV archive
+  (`178981` bytes, member `0.bin`).
+
+Therefore PR102 is a zero-byte archive reuse plus source-only runtime-tuning
+submission over PR100's HNeRV LC-v2 archive. This is a credited
+lineage/composition fact, not an A/A++ local score claim. The public rounded
+score improvement versus PR100 should be treated as external until exact CUDA
+replay of the corrected archive and PR102 runtime lands.
+
+If exact replay confirms the public PR102 delta, this means **we can re-use the
+PR #100 archive bytes wholesale** and test the claimed ~0.001 score gain by
+just applying:
 1. Latent correction scale 0.0100 → 0.0095 (one float constant change in inflate.py)
-2. `up[:, 0, 0].sub_(1.0)` (frame 0 red channel −1, free byte savings via decode-time hardcoding)
+2. `up[:, 0, 0].add_(1.0)` (frame 0 red channel +1, free decode-time hardcoding)
 
 Engineering trick: **inference-time tuning is free score reduction** (no archive bytes change).
 
@@ -99,7 +117,7 @@ All three top-3 PRs share:
 
 Differences:
 - **PR101**: split into 7 Brotli streams + per-tensor byte permutation maps + ranked-Huffman sidecar
-- **PR102**: PR100 archive bytes verbatim + inference-time tuning (scale 0.0100→0.0095, frame-0 red −1)
+- **PR102**: PR100 archive bytes verbatim + inference-time tuning (scale 0.0100->0.0095, frame-0 red +1)
 - **PR103**: arithmetic coding on densest payloads + adaptive lgwin + 9 AC streams merged into 1 RangeEncoder
 
 ## Engineering opportunities for our internal frontier
@@ -140,7 +158,12 @@ Differences:
 
 - PR101 codec source: `experiments/results/public_pr_intake_full/public_pr101_intake_20260505_auto/source/submissions/hnerv_ft_microcodec/src/codec.py`
 - PR101 README: same dir, `README.md`
-- PR102 PR body: `experiments/results/public_pr_intake_full/public_pr102_intake_20260505_auto/pr_body.md`
+- PR102 corrected custody:
+  `.omx/research/pr102_zero_byte_inference_tuning_custody_unblock_20260507_codex.md`
+- PR102 corrected archive manifest:
+  `experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/CUSTODY_MANIFEST.json`
+- PR102 old auto-intake caveat:
+  `experiments/results/public_pr_intake_full/public_pr102_intake_20260505_auto/pr_body.md`
 - PR103 PR body: `experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/pr_body.md`
 - Adapters: `experiments/public_runtime_adapters/pr10{1,2,3}_*_adapter/inflate.sh`
 - Council 5/5 ENDORSE replay-first sequencing (`feedback_grand_council_universal_auto_resume_pattern_20260507.md` plus the in-line micro-deliberation in this session)

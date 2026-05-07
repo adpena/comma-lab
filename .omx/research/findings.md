@@ -9,6 +9,19 @@ and `docs/pr_family_evolution_timeline_20260504.md`.
 **The finding**: every top-3 medal entry inherits its archive substrate from
 an earlier PR. None of them ship a bespoke from-scratch codec.
 
+**2026-05-07 custody addendum**: PR102 is the cleanest example. Its source
+`compress.sh` fetches BradyMeighan's PR100 `hnerv-lc-v2-archive/archive.zip`
+release asset by SHA-256, and the corrected PR102 archive is byte-identical to
+PR100:
+
+- archive bytes: `178981`
+- archive SHA-256:
+  `afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641`
+- member: `0.bin`, `178873` bytes,
+  `3234f0689164cfc95b7ee9f9cdf38ecf4d082cfb7048058e2b3ff0f54f864e43`
+- runtime-only changes: `DELTA_SCALE = 0.0095` and
+  `up[:, 0, 0].add_(1.0)`
+
 ```
 PR #95   AaronLeslie138 / hnerv_muon          (root: HNeRV decoder architecture)
    ↓
@@ -64,9 +77,10 @@ at encode time, and why the four-way stack predictions are framed as
   to be reverse-engineered + ported within hours, not days.
 
 **Score claims**: all numbers in this entry are public-leaderboard claims as
-disclosed in the PR bodies; no contest-CUDA recompute was needed (the upstream
-contest scorer's published score is itself a contest-CUDA measurement on the
-exact archive bytes the PR submitted).
+disclosed in PR bodies or the public README, not local A/A++ recomputes. The
+PR102 lineage/custody finding is byte-exact, but its score interpretation still
+requires exact CUDA replay with the corrected archive and PR102 runtime before
+we make a local score-grade claim.
 
 ---
 

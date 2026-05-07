@@ -21,6 +21,17 @@
 > `docs/paper/04_results.md` for ranked rows and `docs/paper_outline.md` for
 > the evidence-grade roadmap.
 
+> **2026-05-07 public-frontier forensics note.** PR102 should be discussed as a
+> zero-byte inference-tuning submission over PR100 archive custody. Its source
+> `compress.sh` fetches BradyMeighan's `hnerv-lc-v2-archive/archive.zip` by
+> SHA-256, and the corrected PR102 archive is byte-identical to PR100
+> (`178981` bytes,
+> `afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641`).
+> The only source-level changes are `DELTA_SCALE = 0.0095` and
+> `up[:, 0, 0].add_(1.0)` at inflate time. This is a lineage/composition
+> finding and an engineering lesson about public-frontier velocity; do not
+> present it as our local score claim until exact CUDA replay lands.
+
 ## Abstract (historical draft - not publication-ready)
 
 We present a system for task-aware video compression that achieves a contest-CUDA score of `1.05` on comma.ai's video compression challenge through a paradigm shift from codec post-filtering to neural rendering. Our approach evolved through two paradigms and a third in active development: (Era 1) a CNN post-filter on codec output reaching `1.73` while bound to AV1; (Era 2) a neural renderer with dilated-h64 architecture that bypasses the codec entirely, with pose TTO at compress time and KL distillation on the SegNet logits at weight=0.002, reaching `1.05` [contest-CUDA] verified on the EXACT submission archive bytes; (Era 3, live) the Selfcomp-paradigm portfolio (grayscale-LUT mask, single-mask + 6-DOF affine duality, analytical pose, block-FP weight self-compression at 1.017 bpw, 94K-param SegMap) — eight Modal lanes in flight as of submission deadline. Key technical contributions are: discovery of a 23x MPS-vs-CUDA PoseNet drift that invalidated months of MPS-measured scores; the rank-1 PoseNet Jacobian analysis showing why pose TTO must warm-start from baseline poses; the KL distillation weight sensitivity result (≥ 0.01 collapses PoseNet, 0.002 sustains the boundary signal); and the engineering-rigor catalog of 78 strict preflight checks that made every score reproducible. We report 30+ negative results including the catastrophic 53.61 mask-resolution disaster (48x64 instead of 384x512), the Lane GP Runge phenomenon at degree-10 polynomial, and the UNIWARD encoder no-op finding.
