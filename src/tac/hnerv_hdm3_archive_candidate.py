@@ -9,6 +9,9 @@ before exact CUDA dispatch is valid.
 
 from __future__ import annotations
 
+import shutil
+import stat
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -26,11 +29,27 @@ from tac.hnerv_lowlevel_packer import (
     sha256_bytes,
     write_stored_single_member_zip,
 )
-from tac.repo_io import repo_relative, sha256_file, write_json
+from tac.repo_io import read_json, repo_relative, sha256_file, write_json
 
 SCHEMA_VERSION = 1
 TOOL = "tac.hnerv_hdm3_archive_candidate.build_hdm3_archive_candidate"
 HDM3_VARIANT_NAME = "hdm3_q_brotli_split_fixed_schema_q_stream_plus_raw_scales"
+RATE_SCORE_PER_BYTE = 25.0 / 37_545_489
+EXACT_PACKET_READINESS_FILENAME = "hdm3_exact_eval_packet_readiness.json"
+STATIC_RELEASE_SURFACE_DIRNAME = "exact_eval_static_release_surface"
+STATIC_COMPLIANCE_FILENAMES = (
+    "pre_submission_compliance.static.json",
+    "pre_submission_compliance.json",
+)
+RUNTIME_ADAPTER_PROOF_FILENAMES = (
+    "runtime_adapter_proof.with_tool_run.json",
+    "runtime_adapter_proof.json",
+)
+HDM3_EXACT_EVAL_LANE_ID = "hnerv_hdm3_q_brotli_split_exact_eval"
+HDM3_RUNTIME_INFLATE = (
+    "experiments/public_runtime_adapters/"
+    "pr106_belt_and_suspenders_adapter/inflate.sh"
+)
 
 
 class HnervHdm3ArchiveCandidateError(ValueError):
@@ -113,10 +132,15 @@ def build_hdm3_archive_candidate(
             archive_build_blockers.append("candidate_payload_sha256_unchanged")
         ready_for_archive_preflight = not archive_build_blockers
 
-    runtime_adapter = _runtime_adapter_blocker_report()
     manifest: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "tool": TOOL,
+        "contract": "hnerv_hdm3_archive_candidate_manifest_v1",
+        "candidate_id": "pr106x_hdm3_decoder_recode_14byte",
+        "lane_id": HDM3_EXACT_EVAL_LANE_ID,
+        "family": "hnerv_hdm3_decoder_recode",
+        "pareto_scope": "hnerv_rate_only_exact_archive",
+        "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
         "score_claim": False,
         "dispatch_attempted": False,
         "ready_for_exact_eval_dispatch": False,
@@ -171,41 +195,545 @@ def build_hdm3_archive_candidate(
             "byte_different_archive": bool(candidate_archive_sha and candidate_archive_sha != source.archive_sha256),
             "byte_different_payload": bool(candidate_payload_sha and candidate_payload_sha != sha256_bytes(source.payload)),
         },
-        "runtime_adapter_proof": runtime_adapter,
         "archive_build_blockers": archive_build_blockers,
-        "dispatch_blockers": [
-            *archive_build_blockers,
-            *runtime_adapter["dispatch_blockers"],
-            "strict_pre_submission_compliance_json_missing",
-            "lane_dispatch_claim_missing",
-            "exact_cuda_auth_eval_missing",
-        ],
     }
+    if candidate_archive_path is not None and ready_for_archive_preflight:
+        manifest["exact_eval_release_surface"] = materialize_hdm3_exact_eval_release_surface(
+            manifest=manifest,
+            output_dir=output_root,
+            repo_root=repo,
+        )
+    readiness = build_hdm3_exact_eval_packet_readiness(
+        manifest,
+        output_dir=output_root,
+        repo_root=repo,
+        write=True,
+    )
+    manifest["runtime_adapter_proof"] = readiness["runtime_adapter_payload_identity"]
+    manifest["exact_eval_packet_readiness"] = {
+        "contract": "hnerv_hdm3_exact_eval_packet_readiness_link_v1",
+        "path": repo_relative(output_root / EXACT_PACKET_READINESS_FILENAME, repo),
+        "sha256": sha256_file(output_root / EXACT_PACKET_READINESS_FILENAME),
+        "static_packet_ready": readiness["static_packet_ready"],
+        "ready_for_exact_eval_dispatch": readiness["ready_for_exact_eval_dispatch"],
+        "remaining_dispatch_blockers": readiness["dispatch_blockers"],
+    }
+    manifest["dispatch_blockers"] = list(readiness["dispatch_blockers"])
+    write_json(output_root / "hdm3_archive_candidate_manifest.json", manifest)
+    readiness = build_hdm3_exact_eval_packet_readiness(
+        manifest,
+        output_dir=output_root,
+        repo_root=repo,
+        write=True,
+    )
+    manifest["exact_eval_packet_readiness"]["sha256"] = sha256_file(
+        output_root / EXACT_PACKET_READINESS_FILENAME
+    )
+    manifest["dispatch_blockers"] = list(readiness["dispatch_blockers"])
     write_json(output_root / "hdm3_archive_candidate_manifest.json", manifest)
     return manifest
 
 
-def _runtime_adapter_blocker_report() -> dict[str, Any]:
+def materialize_hdm3_exact_eval_release_surface(
+    *,
+    manifest: Mapping[str, Any],
+    output_dir: str | Path,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Write a static local release surface for strict packet checks.
+
+    This is not a contest submission and does not include auth-eval output. It
+    exists so the static file/ZIP/report surface can be checked before any GPU
+    dispatch is considered.
+    """
+
+    repo = Path(repo_root) if repo_root is not None else Path.cwd()
+    release_dir = Path(output_dir) / STATIC_RELEASE_SURFACE_DIRNAME
+    release_dir.mkdir(parents=True, exist_ok=True)
+    archive_src = _resolve_repo_path(manifest.get("candidate_archive_path"), repo)
+    archive_dst = release_dir / "archive.zip"
+    shutil.copyfile(archive_src, archive_dst)
+
+    inflate_path = release_dir / "inflate.sh"
+    inflate_path.write_text(_release_surface_inflate_wrapper_text(), encoding="utf-8")
+    current_mode = stat.S_IMODE(inflate_path.stat().st_mode)
+    inflate_path.chmod(current_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+    archive_manifest_path = release_dir / "archive_manifest.json"
+    archive_manifest = {
+        "schema": "hnerv_hdm3_static_release_surface_archive_manifest_v1",
+        "schema_version": SCHEMA_VERSION,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "candidate_id": manifest.get("candidate_id"),
+        "lane_id": manifest.get("lane_id"),
+        "archive_sha256": manifest.get("candidate_archive_sha256"),
+        "archive_bytes": manifest.get("candidate_archive_bytes"),
+        "candidate_archive_sha256": manifest.get("candidate_archive_sha256"),
+        "candidate_archive_bytes": manifest.get("candidate_archive_bytes"),
+        "candidate_member_name": manifest.get("candidate_member_name"),
+        "candidate_payload_sha256": manifest.get("candidate_payload_sha256"),
+        "source_archive_sha256": manifest.get("source_archive_sha256"),
+        "source_archive_bytes": manifest.get("source_archive_bytes"),
+        "source_payload_sha256": manifest.get("source_payload_sha256"),
+        "runtime_adapter": HDM3_RUNTIME_INFLATE,
+        "runtime_adapter_payload_identity_proof_required": True,
+        "exact_cuda_auth_eval_required_before_score_claim": True,
+    }
+    write_json(archive_manifest_path, archive_manifest)
+
+    report_path = release_dir / "report.txt"
+    report_path.write_text(
+        _release_surface_report_text(manifest),
+        encoding="utf-8",
+    )
+
     return {
         "schema_version": SCHEMA_VERSION,
-        "contract": "hnerv_hdm3_runtime_adapter_proof_v1",
-        "content_detection_required": True,
-        "legacy_brotli_fallback_required": True,
-        "hdm3_decoder_fixture_raw_equal": True,
-        "submission_runtime_integrated": True,
+        "contract": "hnerv_hdm3_static_release_surface_v1",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "path": repo_relative(release_dir, repo),
+        "archive_path": repo_relative(archive_dst, repo),
+        "archive_sha256": sha256_file(archive_dst),
+        "archive_bytes": archive_dst.stat().st_size,
+        "inflate_sh": repo_relative(inflate_path, repo),
+        "report_txt": repo_relative(report_path, repo),
+        "archive_manifest_json": repo_relative(archive_manifest_path, repo),
+        "strict_pre_submission_compliance_command": [
+            ".venv/bin/python",
+            "scripts/pre_submission_compliance_check.py",
+            "--submission-dir",
+            repo_relative(release_dir, repo),
+            "--archive",
+            repo_relative(archive_dst, repo),
+            "--archive-manifest-json",
+            repo_relative(archive_manifest_path, repo),
+            "--expect-single-member",
+            str(manifest.get("candidate_member_name") or ""),
+            "--expected-archive-sha256",
+            str(manifest.get("candidate_archive_sha256") or ""),
+            "--expected-archive-size-bytes",
+            str(manifest.get("candidate_archive_bytes") or ""),
+            "--public-scan-path",
+            repo_relative(release_dir, repo),
+            "--json-out",
+            repo_relative(Path(output_dir) / STATIC_COMPLIANCE_FILENAMES[0], repo),
+            "--strict",
+        ],
+    }
+
+
+def build_hdm3_exact_eval_packet_readiness(
+    manifest: Mapping[str, Any],
+    *,
+    output_dir: str | Path,
+    repo_root: str | Path | None = None,
+    runtime_adapter_proof_path: str | Path | None = None,
+    strict_pre_submission_compliance_path: str | Path | None = None,
+    write: bool = False,
+) -> dict[str, Any]:
+    """Build the operator-facing HDM3 exact-eval packet readiness artifact.
+
+    The artifact can mark the local static packet as ready only when the archive
+    build, runtime payload-identity proof, and strict static compliance report
+    are all closed. It never marks exact GPU dispatch ready; Level-2 lane claim
+    and exact CUDA auth eval remain explicit blockers.
+    """
+
+    repo = Path(repo_root) if repo_root is not None else Path.cwd()
+    output_root = Path(output_dir)
+    runtime_identity = _runtime_adapter_payload_identity_evidence(
+        manifest,
+        output_dir=output_root,
+        repo_root=repo,
+        runtime_adapter_proof_path=runtime_adapter_proof_path,
+    )
+    static_compliance = _strict_static_compliance_evidence(
+        manifest,
+        output_dir=output_root,
+        repo_root=repo,
+        strict_pre_submission_compliance_path=strict_pre_submission_compliance_path,
+    )
+    release_surface = manifest.get("exact_eval_release_surface")
+    if not isinstance(release_surface, Mapping):
+        release_surface = {
+            "contract": "hnerv_hdm3_static_release_surface_v1",
+            "present": False,
+            "blockers": ["exact_eval_static_release_surface_missing"],
+        }
+
+    archive_build_blockers = _string_list(manifest.get("archive_build_blockers"))
+    static_blockers = _ordered_unique(
+        [
+            *archive_build_blockers,
+            *runtime_identity["blockers"],
+            *static_compliance["blockers"],
+            *_string_list(release_surface.get("blockers")),
+        ]
+    )
+    static_packet_ready = not static_blockers
+    dispatch_blockers = _ordered_unique(
+        [
+            *static_blockers,
+            "lane_dispatch_claim_missing",
+            "exact_cuda_auth_eval_missing",
+        ]
+    )
+    byte_delta = _optional_int(manifest.get("candidate_archive_bytes")) - _optional_int(
+        manifest.get("source_archive_bytes")
+    )
+    packet = {
+        "schema_version": SCHEMA_VERSION,
+        "contract": "hnerv_hdm3_exact_eval_packet_readiness_v1",
+        "packet_kind": "hnerv_hdm3_exact_eval_operator_packet_readiness",
+        "tool": TOOL,
+        "candidate_id": manifest.get("candidate_id"),
+        "lane_id": manifest.get("lane_id"),
+        "family": manifest.get("family"),
+        "pareto_scope": manifest.get("pareto_scope"),
+        "evidence_grade": (
+            "empirical_archive_candidate_runtime_adapter_parity_static_packet_ready"
+            if static_packet_ready
+            else "empirical_archive_candidate_static_packet_blocked"
+        ),
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "remote_gpu_run": False,
+        "ready_for_exact_eval_packet": static_packet_ready,
+        "static_packet_ready": static_packet_ready,
+        "candidate_static_preflight_ready": static_packet_ready,
+        "ready_for_exact_eval_dispatch": False,
+        "readiness_scope": (
+            "static local exact-eval packet only; no lane claim, no remote GPU "
+            "dispatch, no CUDA auth eval, and no score claim"
+        ),
+        "dispatch_gate": (
+            "blocked_until_level2_lane_claim_and_exact_cuda_auth_eval"
+        ),
+        "byte_delta": byte_delta,
+        "expected_total_score_delta_rate_only_if_components_equal": (
+            byte_delta * RATE_SCORE_PER_BYTE
+        ),
+        "expected_seg_dist_delta": 0.0,
+        "expected_pose_dist_delta": 0.0,
+        "source_archive_path": manifest.get("source_archive_path"),
+        "source_archive_sha256": manifest.get("source_archive_sha256"),
+        "source_archive_bytes": manifest.get("source_archive_bytes"),
+        "candidate_archive_path": manifest.get("candidate_archive_path"),
+        "candidate_archive_sha256": manifest.get("candidate_archive_sha256"),
+        "candidate_archive_bytes": manifest.get("candidate_archive_bytes"),
+        "candidate_member_name": manifest.get("candidate_member_name"),
+        "candidate_payload_sha256": manifest.get("candidate_payload_sha256"),
+        "candidate_payload_bytes": manifest.get("candidate_payload_bytes"),
+        "runtime_adapter_payload_identity": runtime_identity,
+        "static_release_surface": dict(release_surface),
+        "strict_static_compliance": static_compliance,
+        "static_blockers": static_blockers,
+        "dispatch_blockers": dispatch_blockers,
+        "score_blockers": [
+            "exact_cuda_auth_eval_missing",
+            "contest_auth_eval_adjudication_missing",
+            "operator_score_claim_review_missing",
+        ],
+        "lane_dispatch_claim": {
+            "required_before_gpu": True,
+            "active_claim_present": False,
+            "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+            "claim_command_template": [
+                "tools/claim_lane_dispatch.py",
+                "claim",
+                "--lane-id",
+                str(manifest.get("lane_id") or HDM3_EXACT_EVAL_LANE_ID),
+                "--platform",
+                "<lightning|vast|modal>",
+                "--instance-job-id",
+                "<job-id>",
+                "--agent",
+                "<agent>",
+                "--status",
+                "eval",
+                "--notes",
+                "HDM3 exact CUDA auth eval for candidate archive "
+                f"{manifest.get('candidate_archive_sha256')}",
+            ],
+        },
+        "exact_cuda_auth_eval": {
+            "required_before_score_claim": True,
+            "present": False,
+            "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
+            "command_template": [
+                ".venv/bin/python",
+                "experiments/contest_auth_eval.py",
+                "--archive",
+                str(manifest.get("candidate_archive_path") or "<candidate-archive.zip>"),
+                "--inflate-sh",
+                HDM3_RUNTIME_INFLATE,
+                "--upstream-dir",
+                "upstream",
+                "--device",
+                "cuda",
+            ],
+        },
+        "operator_next_steps": [
+            "If pursuing exact eval, record a Level-2 lane claim before any GPU job.",
+            "Run exact CUDA auth eval on the exact candidate archive bytes.",
+            "Only after exact CUDA JSON exists, run contest-final compliance and adjudication.",
+        ],
+    }
+    if write:
+        write_json(output_root / EXACT_PACKET_READINESS_FILENAME, packet)
+    return packet
+
+
+def _runtime_adapter_payload_identity_evidence(
+    manifest: Mapping[str, Any],
+    *,
+    output_dir: Path,
+    repo_root: Path,
+    runtime_adapter_proof_path: str | Path | None,
+) -> dict[str, Any]:
+    proof_path = _first_existing_path(
+        output_dir,
+        RUNTIME_ADAPTER_PROOF_FILENAMES,
+        repo_root=repo_root,
+        explicit=runtime_adapter_proof_path,
+    )
+    blockers: list[str] = []
+    proof: Mapping[str, Any] = {}
+    if proof_path is None:
+        blockers.append("hdm3_runtime_adapter_archive_parity_proof_missing")
+    else:
+        loaded = _read_json_object(proof_path)
+        if loaded is None:
+            blockers.append("hdm3_runtime_adapter_archive_parity_proof_invalid")
+        else:
+            proof = loaded
+    if proof:
+        if proof.get("candidate_archive_sha256") != manifest.get("candidate_archive_sha256"):
+            blockers.append("hdm3_runtime_adapter_archive_sha256_mismatch")
+        if proof.get("score_claim") is not False:
+            blockers.append("hdm3_runtime_adapter_proof_score_claim_not_false")
+        if proof.get("dispatch_attempted") is not False:
+            blockers.append("hdm3_runtime_adapter_proof_dispatch_attempted_not_false")
+        if proof.get("ready_for_public_runtime_inflate") is not True:
+            blockers.append("hdm3_runtime_adapter_public_runtime_inflate_not_ready")
+        if proof.get("inflate_output_parity_proven_by_payload_identity") is not True:
+            blockers.append("hdm3_inflate_output_parity_not_proven_by_payload_identity")
+        if proof.get("restored_payload_matches_source") is not True:
+            blockers.append("hdm3_restored_payload_not_source_identical")
+        if proof.get("restored_decoder_section_matches_source") is not True:
+            blockers.append("hdm3_restored_decoder_section_not_source_identical")
+        if proof.get("latents_and_sidecar_match_source") is not True:
+            blockers.append("hdm3_latents_sidecar_not_preserved")
+
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "contract": "hnerv_hdm3_runtime_adapter_payload_identity_evidence_v1",
         "runtime_adapter_module": "tac.hnerv_hdm3_runtime_adapter",
         "runtime_normalizer_path": (
             "experiments/public_runtime_adapters/"
             "pr106_belt_and_suspenders_adapter/hdm3_normalize.py"
         ),
-        "runtime_tree_parity_manifest_present": False,
+        "runtime_inflate_sh": HDM3_RUNTIME_INFLATE,
+        "proof_path": repo_relative(proof_path, repo_root) if proof_path is not None else "",
+        "proof_sha256": sha256_file(proof_path) if proof_path is not None and proof_path.is_file() else "",
+        "proof_contract": proof.get("contract") if proof else "",
+        "candidate_archive_sha256_matches": not proof
+        or proof.get("candidate_archive_sha256") == manifest.get("candidate_archive_sha256"),
+        "payload_identity_proven": proof.get("inflate_output_parity_proven_by_payload_identity") is True
+        if proof
+        else False,
+        "restored_payload_matches_source": proof.get("restored_payload_matches_source") is True
+        if proof
+        else False,
+        "restored_decoder_section_matches_source": proof.get("restored_decoder_section_matches_source") is True
+        if proof
+        else False,
+        "latents_and_sidecar_match_source": proof.get("latents_and_sidecar_match_source") is True
+        if proof
+        else False,
+        "ready_for_public_runtime_inflate": proof.get("ready_for_public_runtime_inflate") is True
+        if proof
+        else False,
+        "runtime_adapter_parity_proven": not blockers,
         "ready_for_exact_eval_dispatch": False,
-        "dispatch_blockers": [
-            "hdm3_runtime_adapter_archive_parity_proof_missing",
-            "hdm3_runtime_tree_parity_manifest_missing",
-            "hdm3_inflate_output_parity_missing",
-        ],
+        "blockers": blockers,
     }
+
+
+def _strict_static_compliance_evidence(
+    manifest: Mapping[str, Any],
+    *,
+    output_dir: Path,
+    repo_root: Path,
+    strict_pre_submission_compliance_path: str | Path | None,
+) -> dict[str, Any]:
+    compliance_path = _first_existing_path(
+        output_dir,
+        STATIC_COMPLIANCE_FILENAMES,
+        repo_root=repo_root,
+        explicit=strict_pre_submission_compliance_path,
+    )
+    blockers: list[str] = []
+    failed_checks: list[str] = []
+    payload: Mapping[str, Any] = {}
+    if compliance_path is None:
+        blockers.append("strict_pre_submission_compliance_json_missing")
+    else:
+        loaded = _read_json_object(compliance_path)
+        if loaded is None:
+            blockers.append("strict_pre_submission_compliance_json_invalid")
+        else:
+            payload = loaded
+    if payload:
+        if payload.get("schema") != "pre_submission_compliance_check_v1":
+            blockers.append("strict_pre_submission_compliance_schema_unexpected")
+        archive = payload.get("archive")
+        archive_sha = archive.get("sha256") if isinstance(archive, Mapping) else None
+        archive_bytes = archive.get("bytes") if isinstance(archive, Mapping) else None
+        if archive_sha != manifest.get("candidate_archive_sha256"):
+            blockers.append("strict_pre_submission_compliance_archive_sha_mismatch")
+        if archive_bytes != manifest.get("candidate_archive_bytes"):
+            blockers.append("strict_pre_submission_compliance_archive_bytes_mismatch")
+        failed_checks = _failed_compliance_checks(payload)
+        if failed_checks:
+            blockers.append("strict_pre_submission_compliance_failed")
+        if (
+            payload.get("passed") is not True
+            and "strict_pre_submission_compliance_failed" not in blockers
+        ):
+            blockers.append("strict_pre_submission_compliance_not_passed")
+
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "contract": "hnerv_hdm3_strict_static_compliance_evidence_v1",
+        "path": (
+            repo_relative(compliance_path, repo_root)
+            if compliance_path is not None
+            else repo_relative(output_dir / STATIC_COMPLIANCE_FILENAMES[0], repo_root)
+        ),
+        "sha256": (
+            sha256_file(compliance_path)
+            if compliance_path is not None and compliance_path.is_file()
+            else ""
+        ),
+        "present": compliance_path is not None,
+        "passed": payload.get("passed") is True if payload else False,
+        "failed_error_checks": failed_checks,
+        "blockers": blockers,
+    }
+
+
+def _failed_compliance_checks(payload: Mapping[str, Any]) -> list[str]:
+    checks = payload.get("checks")
+    if not isinstance(checks, list):
+        return []
+    failed: list[str] = []
+    for check in checks:
+        if (
+            isinstance(check, Mapping)
+            and check.get("severity") == "error"
+            and check.get("passed") is False
+        ):
+            failed.append(str(check.get("name")))
+    return failed
+
+
+def _release_surface_inflate_wrapper_text() -> str:
+    return (
+        "#!/usr/bin/env bash\n"
+        "# Static HDM3 exact-eval packet wrapper. Delegates to the reviewed\n"
+        "# PR106 HDM3-normalizing runtime adapter; no score claim is made here.\n"
+        "set -euo pipefail\n"
+        'HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\n'
+        'if REPO_ROOT="$(git -C "$HERE" rev-parse --show-toplevel 2>/dev/null)"; then\n'
+        "  :\n"
+        "else\n"
+        '  REPO_ROOT="$(cd "$HERE/../../../.." && pwd)"\n'
+        "fi\n"
+        f'ADAPTER_INFLATE="${{REPO_ROOT}}/{HDM3_RUNTIME_INFLATE}"\n'
+        'if [ ! -x "$ADAPTER_INFLATE" ]; then\n'
+        '  echo "FATAL: HDM3 adapter inflate.sh missing or not executable: $ADAPTER_INFLATE" >&2\n'
+        "  exit 66\n"
+        "fi\n"
+        'exec "$ADAPTER_INFLATE" "$@"\n'
+    )
+
+
+def _release_surface_report_text(manifest: Mapping[str, Any]) -> str:
+    return "\n".join(
+        [
+            "HDM3 HNeRV static exact-eval packet surface",
+            "",
+            "This is a static packet artifact only. It makes no score claim and no GPU dispatch was attempted.",
+            f"Candidate archive SHA-256: {manifest.get('candidate_archive_sha256')}",
+            f"Candidate archive bytes: {manifest.get('candidate_archive_bytes')}",
+            f"Candidate member: {manifest.get('candidate_member_name')}",
+            f"Source archive SHA-256: {manifest.get('source_archive_sha256')}",
+            "Remaining score/dispatch blockers: lane dispatch claim and exact CUDA auth eval.",
+            "",
+        ]
+    )
+
+
+def _read_json_object(path: Path) -> dict[str, Any] | None:
+    try:
+        payload = read_json(path)
+    except (OSError, ValueError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _first_existing_path(
+    output_dir: Path,
+    names: tuple[str, ...],
+    *,
+    repo_root: Path,
+    explicit: str | Path | None = None,
+) -> Path | None:
+    candidates: list[Path] = []
+    if explicit is not None:
+        candidates.append(_resolve_repo_path(explicit, repo_root))
+    candidates.extend(output_dir / name for name in names)
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _resolve_repo_path(value: Any, repo_root: Path) -> Path:
+    if value in (None, ""):
+        raise HnervHdm3ArchiveCandidateError("missing required artifact path")
+    path = Path(str(value))
+    return path if path.is_absolute() else repo_root / path
+
+
+def _string_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    if isinstance(value, tuple):
+        return [str(item) for item in value]
+    if value in (None, ""):
+        return []
+    return [str(value)]
+
+
+def _ordered_unique(values: list[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        if value and value not in seen:
+            out.append(value)
+            seen.add(value)
+    return out
+
+
+def _optional_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _slug(value: str) -> str:
@@ -218,4 +746,6 @@ __all__ = [
     "HDM3_VARIANT_NAME",
     "HnervHdm3ArchiveCandidateError",
     "build_hdm3_archive_candidate",
+    "build_hdm3_exact_eval_packet_readiness",
+    "materialize_hdm3_exact_eval_release_surface",
 ]

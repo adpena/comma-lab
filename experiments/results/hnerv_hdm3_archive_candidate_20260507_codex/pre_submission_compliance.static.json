@@ -1,0 +1,186 @@
+{
+  "archive": {
+    "bytes": 186066,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 185966,
+        "file_size": 185966,
+        "local_header_name": "x",
+        "name": "x",
+        "sha256": "cb265692118961b9e1aeca090b5773f0de81c5a1acc882fc58057f10e16e6df7",
+        "unsafe_reason": null
+      }
+    ],
+    "path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/exact_eval_static_release_surface/archive.zip",
+    "sha256": "5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771"
+  },
+  "archive_manifest": {
+    "exists": true,
+    "path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/exact_eval_static_release_surface/archive_manifest.json"
+  },
+  "auth_eval": {
+    "exists": false,
+    "path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/exact_eval_static_release_surface/contest_auth_eval.json"
+  },
+  "checks": [
+    {
+      "details": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/exact_eval_static_release_surface/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/exact_eval_static_release_surface/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/exact_eval_static_release_surface/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/exact_eval_static_release_surface/archive.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "x",
+      "name": "zip_member_safe:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "central='x' local='x' local_reason=None",
+      "name": "zip_local_header_matches:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=1",
+      "name": "archive_zip_readable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['x']",
+      "name": "zip_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['x']",
+      "name": "zip_expected_single_member",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "packed_payload_count=0",
+      "name": "zip_at_most_one_packed_payload_container",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771",
+      "name": "expected_archive_sha256_is_well_formed",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771 actual=5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771",
+      "name": "expected_archive_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=186066 actual=186066",
+      "name": "expected_archive_size_bytes_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/exact_eval_static_release_surface/contest_auth_eval.json",
+      "name": "auth_eval_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/exact_eval_static_release_surface/archive_manifest.json",
+      "name": "archive_manifest_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/exact_eval_static_release_surface/archive_manifest.json",
+      "name": "archive_manifest_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771 actual=5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771",
+      "name": "archive_manifest_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=186066 actual=186066",
+      "name": "archive_manifest_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/exact_eval_static_release_surface/report.txt",
+      "name": "report_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "",
+      "name": "public_scan_has_no_private_surface",
+      "passed": true,
+      "severity": "error"
+    }
+  ],
+  "dispatch_claims": {
+    "required": false
+  },
+  "passed": true,
+  "public_hygiene": {
+    "hits": [],
+    "scan_paths": [
+      "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/exact_eval_static_release_surface"
+    ]
+  },
+  "report": {
+    "exists": true,
+    "path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/exact_eval_static_release_surface/report.txt"
+  },
+  "schema": "pre_submission_compliance_check_v1",
+  "submission_dir": {
+    "path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/exact_eval_static_release_surface",
+    "required_files": {
+      "archive.zip": {
+        "exists": true,
+        "path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/exact_eval_static_release_surface/archive.zip"
+      },
+      "inflate.sh": {
+        "exists": true,
+        "path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/exact_eval_static_release_surface/inflate.sh"
+      },
+      "report.txt": {
+        "exists": true,
+        "path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/exact_eval_static_release_surface/report.txt"
+      }
+    }
+  }
+}

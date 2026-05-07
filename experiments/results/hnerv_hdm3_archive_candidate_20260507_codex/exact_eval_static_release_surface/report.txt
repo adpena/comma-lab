@@ -1,0 +1,8 @@
+HDM3 HNeRV static exact-eval packet surface
+
+This is a static packet artifact only. It makes no score claim and no GPU dispatch was attempted.
+Candidate archive SHA-256: 5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771
+Candidate archive bytes: 186066
+Candidate member: x
+Source archive SHA-256: b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f
+Remaining score/dispatch blockers: lane dispatch claim and exact CUDA auth eval.

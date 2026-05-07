@@ -1,0 +1,20 @@
+{
+  "archive_bytes": 186066,
+  "archive_sha256": "5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771",
+  "candidate_archive_bytes": 186066,
+  "candidate_archive_sha256": "5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771",
+  "candidate_id": "pr106x_hdm3_decoder_recode_14byte",
+  "candidate_member_name": "x",
+  "candidate_payload_sha256": "cb265692118961b9e1aeca090b5773f0de81c5a1acc882fc58057f10e16e6df7",
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval_required_before_score_claim": true,
+  "lane_id": "hnerv_hdm3_q_brotli_split_exact_eval",
+  "runtime_adapter": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh",
+  "runtime_adapter_payload_identity_proof_required": true,
+  "schema": "hnerv_hdm3_static_release_surface_archive_manifest_v1",
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive_bytes": 186080,
+  "source_archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+  "source_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171"
+}

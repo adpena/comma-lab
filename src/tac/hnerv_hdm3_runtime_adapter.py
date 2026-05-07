@@ -171,6 +171,7 @@ def _proof(
     return {
         "schema_version": SCHEMA_VERSION,
         "contract": "hnerv_hdm3_runtime_adapter_proof_v1",
+        "proof_scope": "payload_identity_and_legacy_decoder_normalization_only",
         "mode": mode,
         "score_claim": False,
         "dispatch_attempted": False,
@@ -194,6 +195,10 @@ def _proof(
         "ready_for_public_runtime_inflate": raw_sha == restored_raw_sha
         and input_latents_sha == output_latents_sha,
         "ready_for_exact_eval_dispatch": False,
+        "exact_eval_packet_readiness_artifact_required": True,
+        "strict_static_compliance_required": True,
+        "lane_dispatch_claim_required_before_gpu": True,
+        "exact_cuda_auth_eval_required_before_score": True,
         "remaining_dispatch_blockers": [
             "exact_inflate_output_parity_missing",
             "strict_pre_submission_compliance_json_missing",

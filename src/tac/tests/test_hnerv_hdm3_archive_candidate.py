@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import zipfile
@@ -12,7 +13,10 @@ from tac.hnerv_decoder_recode import (
     PACKED_STATE_SCHEMA,
     decode_hdm3_q_brotli_split_fixture,
 )
-from tac.hnerv_hdm3_archive_candidate import build_hdm3_archive_candidate
+from tac.hnerv_hdm3_archive_candidate import (
+    build_hdm3_archive_candidate,
+    build_hdm3_exact_eval_packet_readiness,
+)
 from tac.hnerv_lowlevel_packer import (
     parse_ff_packed_brotli_hnerv,
     read_strict_single_member_zip,
@@ -49,10 +53,30 @@ def test_build_hdm3_archive_candidate_is_byte_closed_but_not_dispatch_ready(
     assert manifest["decoder_raw_equivalence"]["raw_equal"] is True
     assert manifest["decoder_raw_equivalence"]["q_roundtrip_equal"] is True
     assert manifest["decoder_raw_equivalence"]["scale_roundtrip_equal"] is True
-    assert manifest["runtime_adapter_proof"]["submission_runtime_integrated"] is True
+    assert manifest["runtime_adapter_proof"]["runtime_adapter_parity_proven"] is False
     assert manifest["runtime_adapter_proof"]["runtime_adapter_module"] == "tac.hnerv_hdm3_runtime_adapter"
     assert "hdm3_runtime_adapter_archive_parity_proof_missing" in manifest["dispatch_blockers"]
+    assert "strict_pre_submission_compliance_json_missing" in manifest["dispatch_blockers"]
     assert "exact_cuda_auth_eval_missing" in manifest["dispatch_blockers"]
+    assert manifest["exact_eval_packet_readiness"]["static_packet_ready"] is False
+    readiness_path = REPO / manifest["exact_eval_packet_readiness"]["path"]
+    if not readiness_path.exists():
+        readiness_path = Path(manifest["exact_eval_packet_readiness"]["path"])
+    readiness = json.loads(readiness_path.read_text(encoding="utf-8"))
+    assert readiness["ready_for_exact_eval_packet"] is False
+    assert readiness["ready_for_exact_eval_dispatch"] is False
+    assert readiness["lane_dispatch_claim"]["required_before_gpu"] is True
+
+    release_surface = manifest["exact_eval_release_surface"]
+    release_archive = REPO / release_surface["archive_path"]
+    release_inflate = REPO / release_surface["inflate_sh"]
+    release_report = REPO / release_surface["report_txt"]
+    release_manifest = REPO / release_surface["archive_manifest_json"]
+    for path in (release_archive, release_inflate, release_report, release_manifest):
+        if not path.exists():
+            path = Path(str(path).removeprefix(f"{REPO.as_posix()}/"))
+        assert path.exists()
+    assert os.access(release_inflate, os.X_OK)
 
     candidate_archive = REPO / manifest["candidate_archive_path"]
     if not candidate_archive.exists():
@@ -70,6 +94,86 @@ def test_build_hdm3_archive_candidate_is_byte_closed_but_not_dispatch_ready(
         infos = zf.infolist()
     assert [info.filename for info in infos] == ["x"]
     assert infos[0].date_time == (1980, 1, 1, 0, 0, 0)
+
+
+def test_hdm3_exact_eval_packet_readiness_clears_static_only_with_strict_inputs(
+    tmp_path: Path,
+) -> None:
+    source_archive = _source_archive(tmp_path)
+    out = tmp_path / "out"
+    manifest = build_hdm3_archive_candidate(
+        source_archive=source_archive,
+        output_dir=out,
+        source_label="PR106x frontier",
+        repo_root=REPO,
+    )
+    proof_path = out / "runtime_adapter_proof.with_tool_run.json"
+    proof_path.write_text(
+        json.dumps(
+            {
+                "contract": "hnerv_hdm3_runtime_adapter_archive_parity_v1",
+                "candidate_archive_sha256": manifest["candidate_archive_sha256"],
+                "score_claim": False,
+                "dispatch_attempted": False,
+                "ready_for_public_runtime_inflate": True,
+                "inflate_output_parity_proven_by_payload_identity": True,
+                "restored_payload_matches_source": True,
+                "restored_decoder_section_matches_source": True,
+                "latents_and_sidecar_match_source": True,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    compliance_path = out / "pre_submission_compliance.static.json"
+    compliance_path.write_text(
+        json.dumps(
+            {
+                "schema": "pre_submission_compliance_check_v1",
+                "passed": True,
+                "archive": {
+                    "sha256": manifest["candidate_archive_sha256"],
+                    "bytes": manifest["candidate_archive_bytes"],
+                },
+                "checks": [
+                    {
+                        "name": "archive_exists",
+                        "passed": True,
+                        "severity": "error",
+                        "details": "synthetic static compliance closure",
+                    }
+                ],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    readiness = build_hdm3_exact_eval_packet_readiness(
+        manifest,
+        output_dir=out,
+        repo_root=REPO,
+        write=True,
+    )
+
+    assert readiness["score_claim"] is False
+    assert readiness["dispatch_attempted"] is False
+    assert readiness["ready_for_exact_eval_packet"] is True
+    assert readiness["static_packet_ready"] is True
+    assert readiness["ready_for_exact_eval_dispatch"] is False
+    assert readiness["runtime_adapter_payload_identity"]["runtime_adapter_parity_proven"] is True
+    assert readiness["strict_static_compliance"]["passed"] is True
+    assert readiness["static_blockers"] == []
+    assert readiness["dispatch_blockers"] == [
+        "lane_dispatch_claim_missing",
+        "exact_cuda_auth_eval_missing",
+    ]
+    assert (out / "hdm3_exact_eval_packet_readiness.json").exists()
 
 
 def test_build_hdm3_archive_candidate_fails_closed_without_rate_win(tmp_path: Path) -> None:
