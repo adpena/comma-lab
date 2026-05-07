@@ -30,6 +30,7 @@ from tools.build_field_meta_dispatch_selection import build_selection_report  # 
 SCHEMA_VERSION = 3
 DEFAULT_PACKET_MANIFEST_GLOBS = (
     "experiments/results/**/wr01_exact_eval_packet.json",
+    "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_*/hnerv_lowlevel_exact_eval_packet.json",
 )
 
 

@@ -1,0 +1,56 @@
+{
+  "archive": {
+    "bytes": 186079,
+    "path": "archive.zip",
+    "sha256": "866dc135e9168d61fab02b6b1c218c4b1d6eed779154a6dc3095fd05e48024f2",
+    "source_path": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/pr106x_lowlevel_brotli_hnerv_brotli_repack_candidate.zip"
+  },
+  "candidate_archive_bytes": 186079,
+  "candidate_archive_sha256": "866dc135e9168d61fab02b6b1c218c4b1d6eed779154a6dc3095fd05e48024f2",
+  "candidate_id": "pr106x_lgblock16_1byte_brotli",
+  "candidate_payload_sha256": "0a83096defc59120ee551c45e73f69e089165df78ae706fbbe2be3e9bc284765",
+  "dispatch_attempted": false,
+  "inflate_sh": {
+    "delegates_to": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh",
+    "path": "inflate.sh",
+    "wrapper_sha256": "ae5c88193316a1ec1cbe9d6d6ba4cb2149a4f674ef018bffdeb8a5cb59e1bf83"
+  },
+  "job_name": "exact_eval_pr106x_lgblock16_1byte_brotli_20260507",
+  "manifest_links": {
+    "candidate_manifest": {
+      "exists": true,
+      "repo_path": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/manifest.json"
+    },
+    "exact_eval_packet": {
+      "exists": false,
+      "repo_path": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/hnerv_lowlevel_exact_eval_packet.json"
+    },
+    "payload_section_diff": {
+      "exists": true,
+      "repo_path": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/payload_section_diff_vs_source.json"
+    },
+    "public_replay_preflight": {
+      "exists": true,
+      "repo_path": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/public_replay_preflight.json"
+    }
+  },
+  "recorded_at_utc": "2026-05-07T12:00:00Z",
+  "release_surface_scope": "static_upload_files_only_no_auth_eval_no_dispatch",
+  "remaining_required_for_score_or_dispatch": [
+    "exact_cuda_auth_eval",
+    "contest_auth_eval_adjudication",
+    "active_level2_lane_dispatch_claim",
+    "operator_score_claim_review"
+  ],
+  "remote_gpu_run": false,
+  "report": {
+    "path": "report.txt",
+    "sha256": "c17857b06d4da6c69b4908d01b22215059de5f2bf99de6cc131a223be40ed2df"
+  },
+  "schema": "hnerv_lowlevel_release_surface_manifest_v1",
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive_bytes": 186080,
+  "source_archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+  "source_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171"
+}

@@ -43,6 +43,46 @@ def test_field_meta_selector_reports_static_ready_but_not_dispatch_ready_without
     ]
 
 
+def test_field_meta_selector_ingests_hnerv_lowlevel_result_manifest_as_local_candidate() -> None:
+    manifest = (
+        REPO
+        / "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/result.json"
+    )
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    assert report["candidate_count"] == 1
+    assert report["candidate_static_preflight_ready_count"] == 0
+    assert report["ready_candidate_count"] == 0
+    assert row["candidate_id"] == "pr106x_lgblock16_lowlevel_brotli_1byte"
+    assert row["family_group"] == "hnerv_lowlevel_brotli_repack"
+    assert row["evidence_grade"] == (
+        "empirical local archive candidate; raw-equivalence audit only until exact CUDA"
+    )
+    assert row["interaction_assumptions"] == [
+        "rate_only_raw_equivalent_brotli_repack",
+        "component_deltas_require_exact_cuda_confirmation",
+    ]
+    assert row["field_interaction_contract"]["status"] == "passed"
+    assert row["byte_delta"] == -1
+    assert row["expected_total_score_delta"] == -6.65859e-7
+    assert row["score_claim"] is False
+    assert row["dispatch_attempted"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["archive_proof"]["byte_closed"] is True
+    assert row["archive_proof"]["path"] == (
+        "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/"
+        "pr106x_lowlevel_brotli_hnerv_brotli_repack_candidate.zip"
+    )
+    assert row["runtime_proof"]["runtime_closed"] is True
+    assert "strict_candidate_preflight_not_ready" in row["candidate_blockers"]
+    assert "strict:ready_for_exact_eval_dispatch_false" in row["candidate_blockers"]
+    assert "missing_dispatch_identity_for_lane_claim" in row["exact_dispatch_blockers"]["blockers"]
+    assert "kkt:kkt_proof_or_admm_result_missing" in row["exact_dispatch_blockers"]["blockers"]
+    assert row["selection_decision"] == "strict_candidate_preflight_refused"
+
+
 def test_field_meta_selector_requires_lane_and_job_identity_for_static_ready(
     tmp_path: Path,
 ) -> None:

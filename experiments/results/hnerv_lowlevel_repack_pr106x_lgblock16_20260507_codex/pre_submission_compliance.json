@@ -1,0 +1,186 @@
+{
+  "archive": {
+    "bytes": 186079,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 185979,
+        "file_size": 185979,
+        "local_header_name": "x",
+        "name": "x",
+        "sha256": "0a83096defc59120ee551c45e73f69e089165df78ae706fbbe2be3e9bc284765",
+        "unsafe_reason": null
+      }
+    ],
+    "path": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/release_surface/archive.zip",
+    "sha256": "866dc135e9168d61fab02b6b1c218c4b1d6eed779154a6dc3095fd05e48024f2"
+  },
+  "archive_manifest": {
+    "exists": true,
+    "path": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/release_surface/archive_manifest.json"
+  },
+  "auth_eval": {
+    "exists": false,
+    "path": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/release_surface/contest_auth_eval.json"
+  },
+  "checks": [
+    {
+      "details": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/release_surface/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/release_surface/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/release_surface/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/release_surface/archive.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "x",
+      "name": "zip_member_safe:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "central='x' local='x' local_reason=None",
+      "name": "zip_local_header_matches:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=1",
+      "name": "archive_zip_readable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['x']",
+      "name": "zip_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['x']",
+      "name": "zip_expected_single_member",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "packed_payload_count=0",
+      "name": "zip_at_most_one_packed_payload_container",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "866dc135e9168d61fab02b6b1c218c4b1d6eed779154a6dc3095fd05e48024f2",
+      "name": "expected_archive_sha256_is_well_formed",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=866dc135e9168d61fab02b6b1c218c4b1d6eed779154a6dc3095fd05e48024f2 actual=866dc135e9168d61fab02b6b1c218c4b1d6eed779154a6dc3095fd05e48024f2",
+      "name": "expected_archive_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=186079 actual=186079",
+      "name": "expected_archive_size_bytes_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/release_surface/contest_auth_eval.json",
+      "name": "auth_eval_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/release_surface/archive_manifest.json",
+      "name": "archive_manifest_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/release_surface/archive_manifest.json",
+      "name": "archive_manifest_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=866dc135e9168d61fab02b6b1c218c4b1d6eed779154a6dc3095fd05e48024f2 actual=866dc135e9168d61fab02b6b1c218c4b1d6eed779154a6dc3095fd05e48024f2",
+      "name": "archive_manifest_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=186079 actual=186079",
+      "name": "archive_manifest_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/release_surface/report.txt",
+      "name": "report_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "",
+      "name": "public_scan_has_no_private_surface",
+      "passed": true,
+      "severity": "error"
+    }
+  ],
+  "dispatch_claims": {
+    "required": false
+  },
+  "passed": true,
+  "public_hygiene": {
+    "hits": [],
+    "scan_paths": [
+      "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/release_surface"
+    ]
+  },
+  "report": {
+    "exists": true,
+    "path": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/release_surface/report.txt"
+  },
+  "schema": "pre_submission_compliance_check_v1",
+  "submission_dir": {
+    "path": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/release_surface",
+    "required_files": {
+      "archive.zip": {
+        "exists": true,
+        "path": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/release_surface/archive.zip"
+      },
+      "inflate.sh": {
+        "exists": true,
+        "path": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/release_surface/inflate.sh"
+      },
+      "report.txt": {
+        "exists": true,
+        "path": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/release_surface/report.txt"
+      }
+    }
+  }
+}

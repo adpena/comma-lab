@@ -26,6 +26,7 @@ from tac.pr91_hpm1_codec import (
     run_pr91_hpm1_preflight,
     run_pr91_hpm1_probability_variant_matrix,
     run_pr91_hpm1_semantic_decode_trench,
+    run_pr91_hpm1_spatial_group_order_probe,
     split_hpm1_mask_segment,
     validate_hpm1_static_contract,
 )
@@ -430,6 +431,91 @@ def test_pr91_in_group_context_update_probe_cli_narrows_false_lead(tmp_path: Pat
     assert probe["row_comparison"]["max_abs_probability_delta"] < 1e-6
 
 
+def test_pr91_spatial_group_order_probe_records_candidate_failure_rows() -> None:
+    if not DEFAULT_PR91_ARCHIVE.is_file():
+        pytest.skip("canonical PR91 archive not available")
+
+    report = run_pr91_hpm1_spatial_group_order_probe(
+        DEFAULT_PR91_ARCHIVE,
+        write_json=False,
+    )
+
+    assert report["schema"] == "pr91_hpm1_spatial_group_order_probe_v1"
+    assert report["score_claim"] is False
+    assert report["dispatch_allowed"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["status"] == "spatial_group_order_hypothesis_still_open"
+    probe = report["spatial_group_order_probe"]
+    assert probe["source_order_reproduces_exact_failure_row"] is True
+    assert probe["non_source_candidates_passing_source_failure_row"] == [
+        "tile_major_row_major",
+        "phase_major_row_major",
+    ]
+    rows = {row["candidate"]: row for row in probe["candidate_results"]}
+    assert rows["source_mask_row_major"]["failure_signature"] == {
+        "frame": 0,
+        "group": 10,
+        "symbol_in_group": 191,
+        "decoded_symbol_count_before_failure": 5951,
+    }
+    assert rows["full_col_major"]["failure_signature"] == {
+        "frame": 0,
+        "group": 5,
+        "symbol_in_group": 473,
+        "decoded_symbol_count_before_failure": 2201,
+    }
+    assert rows["tile_major_row_major"]["failure_signature"] == {
+        "frame": 0,
+        "group": 12,
+        "symbol_in_group": 210,
+        "decoded_symbol_count_before_failure": 8274,
+    }
+    assert rows["phase_major_row_major"]["failure_signature"] == {
+        "frame": 0,
+        "group": 11,
+        "symbol_in_group": 14,
+        "decoded_symbol_count_before_failure": 6926,
+    }
+    assert rows["tile_major_row_major"]["passes_source_failure_row"] is True
+    assert rows["phase_major_row_major"]["passes_source_failure_row"] is True
+    assert rows["full_col_major"]["passes_source_failure_row"] is False
+
+
+def test_pr91_spatial_group_order_probe_cli_records_tool_manifest(tmp_path: Path) -> None:
+    if not DEFAULT_PR91_ARCHIVE.is_file():
+        pytest.skip("canonical PR91 archive not available")
+    out = tmp_path / "spatial_group_order_probe.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "audit_pr91_hpm1_spatial_group_order_probe.py"),
+            "--archive",
+            str(DEFAULT_PR91_ARCHIVE),
+            "--spatial-order-candidates",
+            "source_mask_row_major,full_col_major",
+            "--json-out",
+            str(out),
+        ],
+        check=True,
+        cwd=REPO,
+        text=True,
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["schema"] == "pr91_hpm1_spatial_group_order_probe_v1"
+    assert payload["score_claim"] is False
+    assert payload["dispatch_allowed"] is False
+    assert payload["tool_run_manifest"]["tool"] == (
+        "tools/audit_pr91_hpm1_spatial_group_order_probe.py"
+    )
+    rows = payload["spatial_group_order_probe"]["candidate_results"]
+    assert [row["candidate"] for row in rows] == [
+        "source_mask_row_major",
+        "full_col_major",
+    ]
+
+
 def test_pr91_probe_contracts_fail_closed_on_bad_inputs(tmp_path: Path) -> None:
     archive = _synthetic_hpm1_archive(tmp_path / "archive.zip")
 
@@ -443,6 +529,11 @@ def test_pr91_probe_contracts_fail_closed_on_bad_inputs(tmp_path: Path) -> None:
         )
     with pytest.raises(Pr91Hpm1Error, match="expected_canonical_pr91_archive"):
         run_pr91_hpm1_context_window_probe(archive)
+    with pytest.raises(Pr91Hpm1Error, match="unsupported_spatial_order_candidate"):
+        run_pr91_hpm1_spatial_group_order_probe(
+            archive,
+            candidates=("bad_spatial_order",),
+        )
 
 
 def test_preflight_pr91_pr92_replay_contracts_accepts_synthetic_pr92_and_blocks_pr91(

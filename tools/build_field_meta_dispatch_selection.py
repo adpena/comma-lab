@@ -1316,6 +1316,112 @@ def _byte_delta(payload: Mapping[str, Any]) -> int:
     return 0
 
 
+def _hnerv_lowlevel_total_byte_delta(payload: Mapping[str, Any]) -> int | None:
+    audit = payload.get("candidate_diff_audit")
+    if isinstance(audit, Mapping):
+        value = audit.get("total_byte_delta")
+        if isinstance(value, int) and not isinstance(value, bool):
+            return value
+    archive_bytes = _coerce_positive_int(payload.get("candidate_archive_bytes"))
+    source_bytes = _coerce_positive_int(payload.get("source_archive_bytes"))
+    if archive_bytes is not None and source_bytes is not None:
+        return archive_bytes - source_bytes
+    return None
+
+
+def _hnerv_lowlevel_candidate_id(
+    payload: Mapping[str, Any],
+    *,
+    manifest_path: Path,
+) -> str:
+    attempts = payload.get("attempts")
+    accepted_attempts = (
+        [
+            attempt
+            for attempt in attempts
+            if isinstance(attempt, Mapping) and attempt.get("accepted_for_candidate") is True
+        ]
+        if isinstance(attempts, Sequence) and not isinstance(attempts, (str, bytes, bytearray))
+        else []
+    )
+    lgblocks = {
+        int(attempt["lgblock"])
+        for attempt in accepted_attempts
+        if isinstance(attempt.get("lgblock"), int) and not isinstance(attempt.get("lgblock"), bool)
+    }
+    byte_delta = _hnerv_lowlevel_total_byte_delta(payload)
+    source_label = str(payload.get("source_label") or "").lower()
+    if "pr106x" in source_label and lgblocks == {16} and byte_delta == -1:
+        return "pr106x_lgblock16_lowlevel_brotli_1byte"
+    return manifest_path.parent.name or manifest_path.stem
+
+
+def _normalize_hnerv_lowlevel_result_manifest(
+    payload: Mapping[str, Any],
+    *,
+    manifest_path: Path,
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    if payload.get("tool") != "tac.hnerv_lowlevel_packer.build_lowlevel_brotli_repack_candidate":
+        return None
+    normalized = dict(payload)
+    normalized.setdefault(
+        "candidate_id",
+        _hnerv_lowlevel_candidate_id(payload, manifest_path=manifest_path),
+    )
+    normalized.setdefault("family", "hnerv_lowlevel_brotli_repack")
+    normalized.setdefault("family_group", "hnerv_lowlevel_brotli_repack")
+    normalized.setdefault("pareto_scope", "hnerv_lowlevel_brotli_repack")
+    normalized.setdefault(
+        "evidence_grade",
+        "empirical local archive candidate; raw-equivalence audit only until exact CUDA",
+    )
+    normalized.setdefault(
+        "interaction_assumptions",
+        [
+            "rate_only_raw_equivalent_brotli_repack",
+            "component_deltas_require_exact_cuda_confirmation",
+        ],
+    )
+    byte_delta = _hnerv_lowlevel_total_byte_delta(payload)
+    if byte_delta is not None:
+        normalized.setdefault("byte_delta", byte_delta)
+    audit = payload.get("candidate_diff_audit")
+    if isinstance(audit, Mapping):
+        score_delta = audit.get("rate_score_delta_if_components_equal")
+        if isinstance(score_delta, int | float) and not isinstance(score_delta, bool):
+            normalized.setdefault("expected_total_score_delta", float(score_delta))
+    normalized.setdefault("expected_seg_dist_delta", 0.0)
+    normalized.setdefault("expected_pose_dist_delta", 0.0)
+    normalized.setdefault("expected_information_gain_nats", 0.0)
+    artifact_paths = [
+        *(_path_values(normalized.get("artifact_paths"))),
+        str(normalized.get("candidate_archive_path") or ""),
+        str(normalized.get("source_archive_path") or ""),
+        repo_relative(manifest_path, repo_root),
+    ]
+    normalized["artifact_paths"] = _ordered_unique_strings(
+        path for path in artifact_paths if path
+    )
+    return normalized
+
+
+def _normalize_manifest_payload(
+    payload: Mapping[str, Any],
+    *,
+    manifest_path: Path,
+    repo_root: Path,
+) -> dict[str, Any]:
+    hnerv_lowlevel = _normalize_hnerv_lowlevel_result_manifest(
+        payload,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+    )
+    if hnerv_lowlevel is not None:
+        return hnerv_lowlevel
+    return dict(payload)
+
+
 def _next_required_proofs(blockers: Sequence[str]) -> list[str]:
     out: list[str] = []
     if "dirty_worktree_overlap" in blockers:
@@ -1653,6 +1759,11 @@ def _row_for_manifest(
     payload = read_json(manifest_path)
     if not isinstance(payload, dict):
         raise SystemExit(f"packet manifest must be a JSON object: {manifest_path}")
+    payload = _normalize_manifest_payload(
+        payload,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+    )
     manifest_sha256 = sha256_file(manifest_path)
     archive = _archive_proof(payload, manifest_path=manifest_path, repo_root=repo_root)
     runtime = _runtime_proof(payload, manifest_path=manifest_path)

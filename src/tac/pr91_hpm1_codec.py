@@ -141,6 +141,12 @@ PR91_HPM1_TOKEN_WORD_ORDER_CANDIDATES = (
     "reversed_little_uint32_words",
     "reversed_big_endian_uint32_words",
 )
+PR91_HPM1_SPATIAL_ORDER_CANDIDATES = (
+    "source_mask_row_major",
+    "full_col_major",
+    "tile_major_row_major",
+    "phase_major_row_major",
+)
 PR91_HPM1_SOURCE_FAILURE_FRAME = 0
 PR91_HPM1_SOURCE_FAILURE_GROUP = 10
 PR91_HPM1_SOURCE_FAILURE_SYMBOL_IN_GROUP = 191
@@ -751,6 +757,459 @@ def _failure_row_signature(trace: Mapping[str, Any]) -> dict[str, int] | None:
     if not all(key in failure for key in keys):
         return None
     return {key: int(failure[key]) for key in keys}
+
+
+def _spatial_order_description(candidate: str) -> str:
+    if candidate == "source_mask_row_major":
+        return (
+            "Submitted PR91 source order: boolean-mask indexing over the full "
+            "H x W grid, which visits masked positions in row-major order."
+        )
+    if candidate == "full_col_major":
+        return (
+            "Off-contract probe: visit the same full-grid masked positions in "
+            "column-major order."
+        )
+    if candidate == "tile_major_row_major":
+        return (
+            "Off-contract probe: visit patch tiles row-major, then row-major "
+            "within each P x P tile for positions belonging to the group."
+        )
+    if candidate == "phase_major_row_major":
+        return (
+            "Off-contract probe: visit each P x P phase for the group first, "
+            "then scan tiles row-major for that phase."
+        )
+    raise Pr91Hpm1Error(
+        "hpm1_spatial_order_probe",
+        "unsupported_spatial_order_candidate",
+        candidate=candidate,
+        supported=list(PR91_HPM1_SPATIAL_ORDER_CANDIDATES),
+    )
+
+
+def _validate_spatial_order_candidates(candidates: tuple[str, ...]) -> tuple[str, ...]:
+    requested = tuple(dict.fromkeys(str(name) for name in candidates if str(name)))
+    if not requested:
+        raise Pr91Hpm1Error(
+            "hpm1_spatial_order_probe",
+            "at_least_one_spatial_order_candidate_required",
+        )
+    for name in requested:
+        _spatial_order_description(name)
+    return requested
+
+
+def _hpm1_group_coords_for_spatial_order(
+    payload: Hpm1MaskPayload,
+    *,
+    group: int,
+    mask: Any,
+    candidate: str,
+    device: Any,
+) -> Any:
+    """Return [row, col] coordinates for one HPM1 group-order hypothesis."""
+
+    _spatial_order_description(candidate)
+    source_coords = mask.nonzero(as_tuple=False).to(dtype=torch.long, device=device)
+    if candidate == "source_mask_row_major":
+        return source_coords.contiguous()
+
+    h = int(payload.height)
+    w = int(payload.width)
+    p = int(payload.predictor_count)
+    delta = int(payload.delta)
+    if candidate == "full_col_major":
+        order = torch.argsort(source_coords[:, 1] * h + source_coords[:, 0])
+        return source_coords[order].contiguous()
+
+    nrp = h // p
+    ncp = w // p
+    rows: list[tuple[int, int]] = []
+    if candidate == "tile_major_row_major":
+        for tile_r in range(nrp):
+            row_base = tile_r * p
+            for tile_c in range(ncp):
+                col_base = tile_c * p
+                for pr in range(p):
+                    for pc in range(p):
+                        if pc + delta * pr == int(group):
+                            rows.append((row_base + pr, col_base + pc))
+    elif candidate == "phase_major_row_major":
+        for pr in range(p):
+            for pc in range(p):
+                if pc + delta * pr != int(group):
+                    continue
+                for tile_r in range(nrp):
+                    row = tile_r * p + pr
+                    for tile_c in range(ncp):
+                        rows.append((row, tile_c * p + pc))
+    else:  # pragma: no cover - guarded by _spatial_order_description above
+        raise AssertionError(candidate)
+
+    coords = torch.tensor(rows, dtype=torch.long, device=device)
+    if int(coords.shape[0]) != int(source_coords.shape[0]):
+        raise Pr91Hpm1Error(
+            "hpm1_spatial_order_probe",
+            "candidate_coord_count_mismatch",
+            candidate=candidate,
+            group=group,
+            expected=int(source_coords.shape[0]),
+            actual=int(coords.shape[0]),
+        )
+    source_set = {
+        (int(row), int(col))
+        for row, col in source_coords.detach().cpu().numpy().tolist()
+    }
+    candidate_set = {
+        (int(row), int(col))
+        for row, col in coords.detach().cpu().numpy().tolist()
+    }
+    if candidate_set != source_set:
+        raise Pr91Hpm1Error(
+            "hpm1_spatial_order_probe",
+            "candidate_coord_set_mismatch",
+            candidate=candidate,
+            group=group,
+        )
+    return coords.contiguous()
+
+
+def _coords_summary(coords: Any) -> dict[str, Any]:
+    arr = coords.detach().cpu().numpy().astype(np.uint16, copy=False)
+    return {
+        "count": int(arr.shape[0]),
+        "sha256": sha256_bytes(np.ascontiguousarray(arr).tobytes()),
+        "first": [
+            [int(row), int(col)]
+            for row, col in arr[:8].astype(np.int64, copy=False).tolist()
+        ],
+        "last": [
+            [int(row), int(col)]
+            for row, col in arr[-8:].astype(np.int64, copy=False).tolist()
+        ],
+    }
+
+
+def _trace_hpm1_spatial_order_decode_failure(
+    model: Any,
+    payload: Hpm1MaskPayload,
+    *,
+    probability_variant: str | Any,
+    prob_eps: float,
+    max_frames: int | None,
+    device: str,
+    spatial_order_candidate: str,
+) -> dict[str, Any]:
+    """Replay HPM1 with one source-context spatial traversal hypothesis."""
+
+    if torch is None or F is None:  # pragma: no cover - optional dependency path
+        raise Pr91Hpm1Error("dependency_contract", "torch_missing")
+    if _pr86_hpac_codec.constriction is None:  # pragma: no cover
+        raise Pr91Hpm1Error("dependency_contract", "constriction_missing")
+    if str(device) != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "hpm1_spatial_order_probe_is_cpu_only",
+            requested_device=device,
+        )
+
+    _spatial_order_description(spatial_order_candidate)
+    resolved = resolve_hpac_probability_variant(probability_variant)
+    frame_count = int(payload.n_frames if max_frames is None else min(int(max_frames), payload.n_frames))
+    if frame_count <= 0:
+        raise Pr91Hpm1Error(
+            "hpm1_spatial_order_probe",
+            "frame_count_must_be_positive",
+            max_frames=max_frames,
+        )
+    dev = torch.device(device)
+    model = model.to(dev).eval()
+    masks = _group_masks(
+        payload.height,
+        payload.width,
+        P=payload.predictor_count,
+        delta=payload.delta,
+        device=dev,
+    )
+    words = _hpm1_token_words_for_candidate(payload, "source_little_uint32")
+    decoder = _pr86_hpac_codec.constriction.stream.queue.RangeDecoder(words)
+    decoded_prev = torch.zeros((1, payload.height, payload.width), dtype=torch.long, device=dev)
+    decoded_symbols = 0
+    decoded_frames = np.empty((frame_count, payload.height, payload.width), dtype=np.uint8)
+    started_at = time.time()
+
+    with torch.no_grad():
+        for frame in range(frame_count):
+            idx = torch.tensor([frame], dtype=torch.long, device=dev)
+            cur = torch.zeros((1, payload.height, payload.width), dtype=torch.long, device=dev)
+            frame_start_symbols = decoded_symbols
+            for group, mask in enumerate(masks):
+                if mask is None:
+                    continue
+                group_start_symbols = decoded_symbols
+                coords = _hpm1_group_coords_for_spatial_order(
+                    payload,
+                    group=group,
+                    mask=mask,
+                    candidate=spatial_order_candidate,
+                    device=dev,
+                )
+                logits = model(cur, idx, decoded_prev)
+                probs = F.softmax(logits.float(), dim=1)
+                probs_at_group = (
+                    probs[0][:, coords[:, 0], coords[:, 1]]
+                    .permute(1, 0)
+                    .contiguous()
+                )
+                probs_np = probs_at_group.cpu().numpy()
+                decoded = np.empty(int(probs_at_group.shape[0]), dtype=np.int64)
+                for symbol_in_group, row in enumerate(probs_np):
+                    normalized = _normalize_probability_row(
+                        row,
+                        prob_eps=prob_eps,
+                        variant=resolved,
+                    )
+                    cat = _categorical_from_probs(row, prob_eps=prob_eps, variant=resolved)
+                    try:
+                        decoded[symbol_in_group] = decoder.decode(cat)
+                    except Exception as exc:
+                        prefix = decoded[:symbol_in_group].astype(np.uint8, copy=False)
+                        raw_row = np.ascontiguousarray(row)
+                        norm_row = np.ascontiguousarray(normalized)
+                        return {
+                            "status": "failed_at_first_entropy_mismatch",
+                            "passed": False,
+                            "score_claim": False,
+                            "dispatch_allowed": False,
+                            "device": device,
+                            "probability_variant": resolved.name,
+                            "prob_eps": float(prob_eps),
+                            "spatial_order_candidate": spatial_order_candidate,
+                            "spatial_order_description": _spatial_order_description(
+                                spatial_order_candidate
+                            ),
+                            "failure": {
+                                "stage": "submitted_tokens_decode",
+                                "reason": "hpac_entropy_decode_contract_mismatch",
+                                "exception_type": type(exc).__name__,
+                                "frame": int(frame),
+                                "group": int(group),
+                                "symbol_in_group": int(symbol_in_group),
+                                "decoded_symbol_count_before_failure": int(decoded_symbols),
+                                "group_start_decoded_symbols": int(group_start_symbols),
+                                "frame_start_decoded_symbols": int(frame_start_symbols),
+                            },
+                            "token_stream": {
+                                "bytes": len(payload.tokens),
+                                "sha256": sha256_bytes(payload.tokens),
+                                **_token_words_summary(words),
+                                "word_order_candidate": "source_little_uint32",
+                            },
+                            "group_geometry": {
+                                "symbols_in_group": int(probs_at_group.shape[0]),
+                                "mask_true_count": int(mask.sum().item()),
+                                "mask_sha256": sha256_bytes(
+                                    mask.cpu().numpy().astype(np.uint8).tobytes()
+                                ),
+                                "coords": _coords_summary(coords),
+                            },
+                            "failing_probability_row": {
+                                "raw_softmax": {
+                                    "dtype": str(raw_row.dtype),
+                                    "sha256": sha256_bytes(raw_row.tobytes()),
+                                    "values": [
+                                        round(float(value), 10)
+                                        for value in raw_row.tolist()
+                                    ],
+                                    "sum": round(float(raw_row.sum()), 10),
+                                },
+                                "normalized_for_categorical": {
+                                    "dtype": str(norm_row.dtype),
+                                    "sha256": sha256_bytes(norm_row.tobytes()),
+                                    "values": [
+                                        round(float(value), 10)
+                                        for value in norm_row.tolist()
+                                    ],
+                                    "sum": round(float(norm_row.sum()), 10),
+                                    "argmax_symbol": int(norm_row.argmax()),
+                                    "min": round(float(norm_row.min()), 10),
+                                    "max": round(float(norm_row.max()), 10),
+                                },
+                            },
+                            "decoded_prefix_in_failing_group": {
+                                "symbol_count": int(prefix.size),
+                                "sha256": sha256_bytes(prefix.tobytes()),
+                                **_small_int_preview(prefix),
+                            },
+                            "context_before_failing_group": {
+                                "current_frame": _context_tensor_summary(
+                                    cur[0],
+                                    label="current_frame_tokens_before_group_assignment",
+                                ),
+                                "previous_frame": _context_tensor_summary(
+                                    decoded_prev[0],
+                                    label="previous_frame_tokens",
+                                ),
+                            },
+                            "source_context_contract": {
+                                "source_loop": (
+                                    "group mask -> probabilities at selected "
+                                    "positions -> decode symbols -> assign the "
+                                    "group into cur"
+                                ),
+                                "candidate_changes": (
+                                    "only the selected-position traversal order "
+                                    "within each PR91 patch group"
+                                ),
+                            },
+                            "elapsed_sec": round(time.time() - started_at, 3),
+                        }
+                    decoded_symbols += 1
+                cur[0, coords[:, 0], coords[:, 1]] = torch.from_numpy(decoded).to(dev)
+            decoded_frames[frame] = cur[0].cpu().numpy().astype(np.uint8)
+            decoded_prev = cur.clone()
+
+    return {
+        "status": "passed_requested_prefix_decode",
+        "passed": True,
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "device": device,
+        "probability_variant": resolved.name,
+        "prob_eps": float(prob_eps),
+        "spatial_order_candidate": spatial_order_candidate,
+        "spatial_order_description": _spatial_order_description(spatial_order_candidate),
+        "decoded_frames": int(decoded_frames.shape[0]),
+        "decoded_symbols": int(decoded_symbols),
+        "decoded_tokens": {
+            "shape": list(decoded_frames.shape),
+            "sha256": sha256_bytes(decoded_frames.tobytes()),
+        },
+        "full_decode_proven": max_frames is None and int(decoded_frames.shape[0]) == payload.n_frames,
+        "byte_exact_reencode_proven": False,
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
+
+
+def _run_hpm1_spatial_group_order_probe(
+    model: Any,
+    payload: Hpm1MaskPayload,
+    *,
+    probability_variant: str | Any,
+    prob_eps: float,
+    max_frames: int | None,
+    device: str,
+    candidates: tuple[str, ...] = PR91_HPM1_SPATIAL_ORDER_CANDIDATES,
+) -> dict[str, Any]:
+    """Classify whether the mismatch is a simple spatial traversal mismatch."""
+
+    started_at = time.time()
+    requested = _validate_spatial_order_candidates(candidates)
+    expected_source_signature = {
+        "frame": PR91_HPM1_SOURCE_FAILURE_FRAME,
+        "group": PR91_HPM1_SOURCE_FAILURE_GROUP,
+        "symbol_in_group": PR91_HPM1_SOURCE_FAILURE_SYMBOL_IN_GROUP,
+        "decoded_symbol_count_before_failure": PR91_HPM1_SOURCE_FAILURE_DECODED_BEFORE,
+    }
+    candidate_results: list[dict[str, Any]] = []
+    non_source_past_source_failure: list[str] = []
+    source_order_reproduces = False
+    source_decoded_before = PR91_HPM1_SOURCE_FAILURE_DECODED_BEFORE
+    best_non_source_decoded = -1
+
+    for candidate in requested:
+        trace = _trace_hpm1_spatial_order_decode_failure(
+            model,
+            payload,
+            probability_variant=probability_variant,
+            prob_eps=prob_eps,
+            max_frames=max_frames,
+            device=device,
+            spatial_order_candidate=candidate,
+        )
+        signature = _failure_row_signature(trace)
+        decoded_before = (
+            int(signature["decoded_symbol_count_before_failure"])
+            if signature is not None
+            else int(trace.get("decoded_symbols", 0))
+        )
+        if candidate == "source_mask_row_major":
+            source_order_reproduces = signature == expected_source_signature
+            if signature is not None:
+                source_decoded_before = int(signature["decoded_symbol_count_before_failure"])
+        elif trace.get("passed") is True or decoded_before > source_decoded_before:
+            non_source_past_source_failure.append(candidate)
+        if candidate != "source_mask_row_major":
+            best_non_source_decoded = max(best_non_source_decoded, decoded_before)
+
+        candidate_results.append(
+            {
+                "candidate": candidate,
+                "description": _spatial_order_description(candidate),
+                "status": trace.get("status"),
+                "passed": bool(trace.get("passed") is True),
+                "failure_signature": signature,
+                "decoded_symbols_or_before_failure": decoded_before,
+                "passes_source_failure_row": (
+                    bool(trace.get("passed") is True)
+                    or decoded_before > source_decoded_before
+                ),
+                "exception_type": (
+                    trace.get("failure", {}).get("exception_type")
+                    if isinstance(trace.get("failure"), Mapping)
+                    else None
+                ),
+                "failing_probability_row_sha256": (
+                    trace.get("failing_probability_row", {})
+                    .get("normalized_for_categorical", {})
+                    .get("sha256")
+                    if isinstance(trace.get("failing_probability_row"), Mapping)
+                    else None
+                ),
+                "group_coords_sha256": (
+                    trace.get("group_geometry", {})
+                    .get("coords", {})
+                    .get("sha256")
+                    if isinstance(trace.get("group_geometry"), Mapping)
+                    else None
+                ),
+                "elapsed_sec": trace.get("elapsed_sec"),
+            }
+        )
+
+    narrowed = source_order_reproduces and not non_source_past_source_failure
+    status = (
+        "not_explained_by_spatial_group_traversal_order"
+        if narrowed
+        else "spatial_group_order_hypothesis_still_open"
+    )
+    return {
+        "schema": "pr91_hpm1_spatial_group_order_probe_v1",
+        "status": status,
+        "passed": bool(narrowed),
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "device": device,
+        "probability_variant": resolve_hpac_probability_variant(probability_variant).name,
+        "prob_eps": float(prob_eps),
+        "max_frames": max_frames,
+        "expected_source_failure_signature": expected_source_signature,
+        "source_order_reproduces_exact_failure_row": source_order_reproduces,
+        "non_source_candidates_passing_source_failure_row": non_source_past_source_failure,
+        "best_non_source_decoded_symbols_or_before_failure": (
+            None if best_non_source_decoded < 0 else best_non_source_decoded
+        ),
+        "candidate_results": candidate_results,
+        "narrowed_hypothesis": (
+            "The PR91 HPM1 mismatch is not explained by source-adjacent "
+            "full-grid, tile-major, or phase-major spatial traversal order "
+            "for HPAC patch-group symbols."
+            if narrowed
+            else "At least one non-source spatial traversal candidate decoded past the source failure row; inspect that candidate before testing broader probability grammar."
+        ),
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
 
 
 def _trace_hpm1_entropy_decode_failure(
@@ -1580,6 +2039,113 @@ def run_pr91_hpm1_in_group_context_update_probe(
     if strict and report["ready_for_exact_eval_dispatch"] is not True:
         raise Pr91Hpm1Error(
             "hpm1_in_group_context_update_probe",
+            str(report["status"]),
+            report=report,
+        )
+    return _jsonable(report)
+
+
+def run_pr91_hpm1_spatial_group_order_probe(
+    archive: Path = DEFAULT_PR91_ARCHIVE,
+    *,
+    device: str = "cpu",
+    probability_variant: str = DEFAULT_HPAC_PROBABILITY_VARIANT,
+    prob_eps: float = PROB_EPS,
+    max_frames: int | None = 1,
+    candidates: tuple[str, ...] = PR91_HPM1_SPATIAL_ORDER_CANDIDATES,
+    output_dir: Path | None = None,
+    strict: bool = False,
+    write_json: bool = True,
+) -> dict[str, Any]:
+    """Bounded PR91/HPM1 probe for spatial patch-group traversal order."""
+
+    started_at = time.time()
+    if str(device) != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "pr91_hpm1_spatial_group_order_probe_is_cpu_only",
+            requested_device=device,
+        )
+    requested_candidates = _validate_spatial_order_candidates(candidates)
+    archive_path = Path(archive)
+    payload = extract_pr91_hpm1_payload(archive_path)
+    dependency_report = collect_dependency_report(strict=False)
+    static_report = validate_hpm1_static_contract(payload)
+    relationship = compare_hpm1_to_pr86_hpac_contract(payload)
+    runtime_sources = analyze_pr91_hpm1_runtime_sources()
+    model = load_hpm1_hpac_model(payload, device=device)
+    spatial_probe = _run_hpm1_spatial_group_order_probe(
+        model,
+        payload,
+        probability_variant=probability_variant,
+        prob_eps=prob_eps,
+        max_frames=max_frames,
+        device=device,
+        candidates=requested_candidates,
+    )
+    narrowed = (
+        spatial_probe.get("status")
+        == "not_explained_by_spatial_group_traversal_order"
+    )
+    report: dict[str, Any] = {
+        "schema": "pr91_hpm1_spatial_group_order_probe_v1",
+        "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_spatial_group_order_probe",
+        "recorded_at_utc": datetime.now(UTC).replace(microsecond=0).isoformat(),
+        "status": (
+            "narrowed_spatial_group_order_false_lead"
+            if narrowed
+            else "spatial_group_order_hypothesis_still_open"
+        ),
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "dispatch_performed": False,
+        "gpu_or_remote_work": False,
+        "local_only": True,
+        "ready_for_exact_eval_dispatch": False,
+        "promotion_eligible": False,
+        "evidence_grade": "local_hpm1_source_context_hypothesis_probe",
+        "device": device,
+        "archive": _archive_report(archive_path),
+        "hpm1_static_contract": static_report,
+        "pr86_hpac_relationship": relationship,
+        "dependency_report": dependency_report,
+        "runtime_source_contract": runtime_sources,
+        "payload": {
+            "config": payload.config(),
+            "tokens_bytes": len(payload.tokens),
+            "tokens_sha256": sha256_bytes(payload.tokens),
+            "hpac_bytes": len(payload.hpac),
+            "hpac_sha256": sha256_bytes(payload.hpac),
+        },
+        "spatial_group_order_probe": spatial_probe,
+        "exact_missing_grammar": {
+            "status": "still_open_after_spatial_group_order_probe",
+            "not_explained_by_this_probe": (
+                "source-adjacent spatial traversal order for HPAC patch-group symbols"
+                if narrowed
+                else "not_applicable_spatial_group_order_hypothesis_still_open"
+            ),
+            "remaining_open_classes": [
+                "encoder-side probability numeric contract",
+                "range-coder construction/finalization contract",
+                "context drift from semantics not visible in submitted decode source",
+                "training-time token semantics not represented by the submitted decode source",
+            ],
+        },
+        "next_required_proofs": [
+            "recover an encoder-side HPAC token generator or full source archive",
+            "test range-coder construction/finalization against the traced failing row",
+            "test probability quantization beyond the existing float32/float64/perfect matrix",
+            "obtain semantic mask tokens for teacher-forced context-window probes",
+            "decode all 600 HPM1 frames and re-encode exact token bytes before any dispatch",
+        ],
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
+    if write_json and output_dir is not None:
+        write_json_report(report, Path(output_dir) / "spatial_group_order_probe.json")
+    if strict and report["ready_for_exact_eval_dispatch"] is not True:
+        raise Pr91Hpm1Error(
+            "hpm1_spatial_group_order_probe",
             str(report["status"]),
             report=report,
         )

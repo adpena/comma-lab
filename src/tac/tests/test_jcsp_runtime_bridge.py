@@ -135,6 +135,24 @@ def test_runtime_bridge_detects_real_jcsp_but_refuses_consumption(
     assert parity_contract["expected_raw_output_count"] == 1
     assert parity_contract["preexisting_raw_outputs_are_not_parity_proof"] is True
     assert parity_contract["ready_for_output_parity"] is False
+    decoder_interface = output_contract["decoder_interface"]
+    assert decoder_interface["schema"] == bridge.JCSP_RUNTIME_DECODER_ADAPTER_SCHEMA
+    assert decoder_interface["production_decoder_adapter_wired"] is False
+    assert decoder_interface["fixture_passthrough_adapter_available"] is True
+    assert decoder_interface["required_candidate_output_source_for_dispatch"] == (
+        bridge.JCSP_RUNTIME_REAL_RAW_OUTPUT_SOURCE
+    )
+    assert bridge.JCSP_RUNTIME_REAL_DECODER_BLOCKER in (
+        decoder_interface["dispatch_blockers"]
+    )
+    fixture_adapter = decoder_interface["fixture_adapter"]
+    assert fixture_adapter["adapter_id"] == "jcsp_fixture_raw_passthrough_adapter_v1"
+    assert fixture_adapter["emits_real_decoded_rawvideo"] is False
+    assert fixture_adapter["fixture_passthrough"] is True
+    assert fixture_adapter["non_production"] is True
+    assert bridge.JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_BLOCKER in (
+        fixture_adapter["dispatch_blockers"]
+    )
     fixture_path = output_contract["minimal_fixture_stream_path"]
     assert fixture_path["stream_codec_kind"] == bridge.KIND_RAW_PASSTHROUGH
     assert fixture_path["expected_raw_outputs"] == [
@@ -151,6 +169,9 @@ def test_runtime_bridge_detects_real_jcsp_but_refuses_consumption(
     assert output_contract["output_parity_checked"] is False
     assert output_contract["ready_for_submission_runtime_consumption"] is False
     assert output_contract["existing_raw_output_count"] == 0
+    assert bridge.JCSP_RUNTIME_REAL_DECODER_BLOCKER in (
+        output_contract["dispatch_blockers"]
+    )
     assert bridge.JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER in (
         output_contract["dispatch_blockers"]
     )
@@ -326,13 +347,27 @@ def test_fixture_raw_passthrough_emitter_writes_expected_raw_and_proves_sha(
         bridge.JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_SOURCE
     )
     assert manifest["candidate_outputs_from_real_bridge_rawvideo"] is False
+    assert manifest["decoder_adapter"]["adapter_kind"] == "fixture_raw_passthrough"
+    assert manifest["decoder_adapter"]["non_production"] is True
+    assert manifest["decoder_interface"]["production_decoder_adapter_wired"] is False
+    assert bridge.JCSP_RUNTIME_REAL_DECODER_BLOCKER in (
+        manifest["decoder_interface"]["dispatch_blockers"]
+    )
     assert manifest["fixture_raw_outputs_emitted"] is True
     assert manifest["bridge_emits_contest_raw_outputs"] is False
+    assert manifest["real_decoded_rawvideo_stream_count"] == 0
+    assert manifest["fixture_passthrough_stream_count"] == 1
     assert manifest["emitted_raw_output_count"] == 1
     [row] = manifest["emitted_raw_outputs"]
+    assert row["schema"] == bridge.JCSP_RUNTIME_DECODED_STREAM_SCHEMA
     assert row["path"] == "route/video.raw"
     assert row["bytes"] == len(payload)
     assert row["sha256"] == hashlib.sha256(payload).hexdigest()
+    assert row["decoder_adapter_id"] == "jcsp_fixture_raw_passthrough_adapter_v1"
+    assert row["decoded_stream_kind"] == "fixture_raw_passthrough"
+    assert row["real_decoded_rawvideo"] is False
+    assert row["fixture_passthrough"] is True
+    assert bridge.JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_BLOCKER in row["dispatch_blockers"]
     assert manifest["output_parity_checked"] is True
     assert manifest["byte_exact_fixture_raw_output_parity"] is True
     assert manifest["ready_for_output_parity"] is False

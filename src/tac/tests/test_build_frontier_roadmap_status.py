@@ -125,10 +125,12 @@ def test_frontier_roadmap_status_discovers_default_packet_manifests() -> None:
 
     assert DEFAULT_PACKET_MANIFEST_GLOBS == (
         "experiments/results/**/wr01_exact_eval_packet.json",
+        "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_*/hnerv_lowlevel_exact_eval_packet.json",
     )
     assert "wr01_apply_pr106x_half" in candidate_ids
-    assert packet_selection["candidate_count"] >= 1
-    assert packet_selection["candidate_static_preflight_ready_count"] == 1
+    assert "pr106x_lgblock16_1byte_brotli" in candidate_ids
+    assert packet_selection["candidate_count"] >= 2
+    assert packet_selection["candidate_static_preflight_ready_count"] == 2
     assert packet_selection["pareto_summary"]["frontier_count"] == 1
     assert packet_selection["report_blockers"] == []
     wr01 = next(
@@ -143,6 +145,20 @@ def test_frontier_roadmap_status_discovers_default_packet_manifests() -> None:
     assert wr01["selection_decision"] == "needs_active_lane_claim_before_dispatch"
     assert "missing_active_lane_dispatch_claim" in wr01["candidate_blockers"]
     assert "claim:dispatch_claim_check_missing" in wr01["candidate_blockers"]
+    lgblock16 = next(
+        row
+        for row in packet_selection["rows"]
+        if row["candidate_id"] == "pr106x_lgblock16_1byte_brotli"
+    )
+    assert lgblock16["family_group"] == "hnerv_lowlevel_brotli_repack"
+    assert lgblock16["byte_delta"] == -1
+    assert lgblock16["archive_proof"]["byte_closed"] is True
+    assert lgblock16["runtime_proof"]["runtime_closed"] is True
+    assert lgblock16["candidate_static_preflight_ready"] is True
+    assert lgblock16["selection_decision"] == "needs_active_lane_claim_before_dispatch"
+    assert "missing_active_lane_dispatch_claim" in lgblock16["candidate_blockers"]
+    assert "claim:dispatch_claim_check_missing" in lgblock16["candidate_blockers"]
+    assert "pareto_dominated_packet" in lgblock16["exact_dispatch_blockers"]["blockers"]
 
 
 def test_frontier_roadmap_status_consumes_field_meta_packet_manifests(tmp_path: Path) -> None:

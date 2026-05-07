@@ -97,11 +97,13 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         evidence_paths=(
             "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/contest_auth_eval.adjudicated.json",
             "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/manifest.json",
+            "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/result.json",
             ".omx/research/hnerv_decoder_recode_pr106_20260506_codex.md",
         ),
         next_patch=(
-            "Promote only exact-evaluated archive SHAs; keep PR106 q10 as archive-preflight-ready "
-            "until lane claim and exact CUDA auth eval."
+            "Promote only exact-evaluated archive SHAs; surface PR106x lgblock16 -1B and "
+            "PR106 q10 as local archive candidates until candidate-specific preflight, lane "
+            "claim, and exact CUDA auth eval land."
         ),
         blockers=("requires exact eval for each rebuilt archive SHA",),
     ),

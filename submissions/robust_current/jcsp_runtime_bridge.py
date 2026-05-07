@@ -14,6 +14,7 @@ import json
 import struct
 import sys
 from collections.abc import Iterable, Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +44,9 @@ JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_SOURCE = (
 JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_BLOCKER = (
     "jcsp_fixture_raw_passthrough_not_dispatch_proof"
 )
+JCSP_RUNTIME_DECODER_ADAPTER_SCHEMA = "jcsp_runtime_decoder_adapter_contract_v1"
+JCSP_RUNTIME_DECODED_STREAM_SCHEMA = "jcsp_runtime_decoded_stream_v1"
+JCSP_RUNTIME_REAL_DECODER_BLOCKER = "jcsp_real_stream_decoder_adapter_missing"
 JCSP_MAGIC = b"JCSP"
 JCSK_MAGIC = b"JCSK"
 JCSP_VERSION = 1
@@ -131,6 +135,180 @@ def _validate_raw_output_rel_path(raw_output: str) -> str:
     if not text.endswith(".raw"):
         raise ValueError(f"raw output path must end with .raw: {text!r}")
     return text
+
+
+@dataclass(frozen=True)
+class DecodedRawOutputStream:
+    path: str
+    payload: bytes
+    source_stream_name: str
+    source_codec_kind: int
+    candidate_output_source: str
+    decoder_adapter_id: str
+    decoded_stream_kind: str
+    real_decoded_rawvideo: bool
+    fixture_passthrough: bool
+    dispatch_blockers: tuple[str, ...]
+
+    def manifest_row(self) -> dict[str, Any]:
+        return {
+            "schema": JCSP_RUNTIME_DECODED_STREAM_SCHEMA,
+            "path": self.path,
+            "bytes": len(self.payload),
+            "sha256": _sha256_bytes(self.payload),
+            "source_stream_name": self.source_stream_name,
+            "source_codec_kind": int(self.source_codec_kind),
+            "candidate_output_source": self.candidate_output_source,
+            "decoder_adapter_id": self.decoder_adapter_id,
+            "decoded_stream_kind": self.decoded_stream_kind,
+            "real_decoded_rawvideo": bool(self.real_decoded_rawvideo),
+            "fixture_passthrough": bool(self.fixture_passthrough),
+            "dispatch_blockers": list(self.dispatch_blockers),
+        }
+
+
+class RawOutputDecoderAdapter:
+    adapter_id = "jcsp_raw_output_decoder_adapter"
+    adapter_kind = "abstract"
+    candidate_output_source = JCSP_RUNTIME_REAL_RAW_OUTPUT_SOURCE
+    emits_real_rawvideo = False
+    fixture_passthrough = False
+    non_production = False
+
+    def contract(self, expected_raw_outputs: Iterable[str]) -> dict[str, Any]:
+        expected = list(expected_raw_outputs)
+        dispatch_blockers = [JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER]
+        if not self.emits_real_rawvideo:
+            dispatch_blockers.append(JCSP_RUNTIME_REAL_DECODER_BLOCKER)
+        if self.fixture_passthrough:
+            dispatch_blockers.append(JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_BLOCKER)
+        return {
+            "schema": JCSP_RUNTIME_DECODER_ADAPTER_SCHEMA,
+            "score_claim": False,
+            "dispatch_attempted": False,
+            "adapter_id": self.adapter_id,
+            "adapter_kind": self.adapter_kind,
+            "candidate_output_source": self.candidate_output_source,
+            "required_candidate_output_source_for_dispatch": (
+                JCSP_RUNTIME_REAL_RAW_OUTPUT_SOURCE
+            ),
+            "emits_real_decoded_rawvideo": bool(self.emits_real_rawvideo),
+            "fixture_passthrough": bool(self.fixture_passthrough),
+            "non_production": bool(self.non_production),
+            "expected_raw_outputs": expected,
+            "expected_raw_output_count": len(expected),
+            "ready_for_output_parity": False,
+            "ready_for_submission_runtime_consumption": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_blockers": _dedupe(dispatch_blockers),
+        }
+
+    def decode_stream(
+        self,
+        stream: Mapping[str, Any],
+        *,
+        expected_raw_outputs: set[str],
+    ) -> tuple[DecodedRawOutputStream | None, str | None]:
+        raise NotImplementedError("raw output decoder adapter is not implemented")
+
+
+class FixtureRawPassthroughDecoderAdapter(RawOutputDecoderAdapter):
+    adapter_id = "jcsp_fixture_raw_passthrough_adapter_v1"
+    adapter_kind = "fixture_raw_passthrough"
+    candidate_output_source = JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_SOURCE
+    emits_real_rawvideo = False
+    fixture_passthrough = True
+    non_production = True
+
+    def contract(self, expected_raw_outputs: Iterable[str]) -> dict[str, Any]:
+        payload = super().contract(expected_raw_outputs)
+        payload.update(
+            {
+                "accepted_codec_kind": KIND_RAW_PASSTHROUGH,
+                "stream_name_contract": (
+                    "stream name must exactly equal expected .raw relative path"
+                ),
+                "stream_payload_contract": (
+                    "payload bytes are written verbatim to that .raw path"
+                ),
+            }
+        )
+        payload["dispatch_blockers"] = _dedupe(
+            [
+                JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_BLOCKER,
+                JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER,
+                JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+                *payload["dispatch_blockers"],
+                "exact_cuda_auth_eval_missing",
+            ]
+        )
+        return payload
+
+    def decode_stream(
+        self,
+        stream: Mapping[str, Any],
+        *,
+        expected_raw_outputs: set[str],
+    ) -> tuple[DecodedRawOutputStream | None, str | None]:
+        stream_name = str(stream.get("name", ""))
+        try:
+            rel = _validate_raw_output_rel_path(stream_name)
+        except ValueError:
+            return None, "jcsp_fixture_stream_name_not_raw_output_path"
+        if int(stream.get("codec_kind", -1)) != KIND_RAW_PASSTHROUGH:
+            return None, "jcsp_fixture_stream_not_raw_passthrough"
+        if rel not in expected_raw_outputs:
+            return None, "jcsp_fixture_unexpected_raw_stream"
+        return (
+            DecodedRawOutputStream(
+                path=rel,
+                payload=bytes(stream.get("payload", b"")),
+                source_stream_name=stream_name,
+                source_codec_kind=int(stream["codec_kind"]),
+                candidate_output_source=self.candidate_output_source,
+                decoder_adapter_id=self.adapter_id,
+                decoded_stream_kind=self.adapter_kind,
+                real_decoded_rawvideo=False,
+                fixture_passthrough=True,
+                dispatch_blockers=(
+                    JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_BLOCKER,
+                    JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER,
+                    JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+                ),
+            ),
+            None,
+        )
+
+
+def _decoder_interface_contract(
+    expected_raw_outputs: Iterable[str],
+) -> dict[str, Any]:
+    expected = list(expected_raw_outputs)
+    fixture_adapter = FixtureRawPassthroughDecoderAdapter()
+    return {
+        "schema": JCSP_RUNTIME_DECODER_ADAPTER_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "purpose": "runtime boundary between decoded JCSP streams and rawvideo output",
+        "required_candidate_output_source_for_dispatch": (
+            JCSP_RUNTIME_REAL_RAW_OUTPUT_SOURCE
+        ),
+        "production_decoder_adapter_wired": False,
+        "fixture_passthrough_adapter_available": True,
+        "fixture_passthrough_is_non_dispatch_proof": True,
+        "expected_raw_outputs": expected,
+        "expected_raw_output_count": len(expected),
+        "fixture_adapter": fixture_adapter.contract(expected),
+        "ready_for_output_parity": False,
+        "ready_for_submission_runtime_consumption": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": [
+            JCSP_RUNTIME_REAL_DECODER_BLOCKER,
+            JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER,
+            JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+            "exact_cuda_auth_eval_missing",
+        ],
+    }
 
 
 def _expected_raw_outputs_from_names_file(
@@ -365,6 +543,7 @@ def _minimal_fixture_stream_path_contract(
     expected_raw_outputs: Iterable[str],
 ) -> dict[str, Any]:
     expected = list(expected_raw_outputs)
+    adapter = FixtureRawPassthroughDecoderAdapter()
     return {
         "schema": "jcsp_minimal_fixture_stream_path_v1",
         "score_claim": False,
@@ -383,6 +562,7 @@ def _minimal_fixture_stream_path_contract(
         "expected_raw_output_count": len(expected),
         "emitter": "emit_jcsp_fixture_raw_outputs",
         "candidate_output_source": JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_SOURCE,
+        "decoder_adapter": adapter.contract(expected),
         "ready_for_exact_eval_dispatch": False,
         "dispatch_blockers": [
             JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_BLOCKER,
@@ -421,6 +601,7 @@ def emit_jcsp_fixture_raw_outputs(
     emitted_rows: list[dict[str, Any]] = []
     parity_proof: dict[str, Any] | None = None
     parsed_summary: dict[str, Any] | None = None
+    decoder_adapter = FixtureRawPassthroughDecoderAdapter()
 
     if not expected:
         blockers.append("jcsp_expected_raw_outputs_missing")
@@ -429,7 +610,7 @@ def emit_jcsp_fixture_raw_outputs(
     elif not member_path.is_file():
         blockers.append("jcsp_member_path_not_regular_file")
 
-    raw_streams_by_name: dict[str, dict[str, Any]] = {}
+    decoded_streams_by_name: dict[str, DecodedRawOutputStream] = {}
     if not blockers:
         blob = member_path.read_bytes()
         if len(blob) < 4 or blob[:4] != JCSP_MAGIC:
@@ -447,25 +628,25 @@ def emit_jcsp_fixture_raw_outputs(
                     "stream_count": parsed["stream_count"],
                     "noop_fixture": parsed["noop_fixture"],
                 }
+                expected_set = set(expected)
                 for stream in parsed["streams"]:
-                    stream_name = str(stream["name"])
-                    try:
-                        rel = _validate_raw_output_rel_path(stream_name)
-                    except ValueError:
-                        blockers.append(
-                            "jcsp_fixture_stream_name_not_raw_output_path"
-                        )
+                    decoded, blocker = decoder_adapter.decode_stream(
+                        stream,
+                        expected_raw_outputs=expected_set,
+                    )
+                    if blocker is not None:
+                        blockers.append(blocker)
                         continue
-                    if int(stream["codec_kind"]) != KIND_RAW_PASSTHROUGH:
-                        blockers.append("jcsp_fixture_stream_not_raw_passthrough")
+                    if decoded is None:
+                        blockers.append("jcsp_fixture_decoder_returned_no_stream")
                         continue
-                    if rel in raw_streams_by_name:
+                    rel = decoded.path
+                    if rel in decoded_streams_by_name:
                         blockers.append("jcsp_fixture_duplicate_raw_stream_name")
                         continue
-                    raw_streams_by_name[rel] = stream
+                    decoded_streams_by_name[rel] = decoded
 
-                expected_set = set(expected)
-                stream_set = set(raw_streams_by_name)
+                stream_set = set(decoded_streams_by_name)
                 if expected_set - stream_set:
                     blockers.append("jcsp_fixture_missing_expected_raw_stream")
                 if stream_set - expected_set:
@@ -479,21 +660,11 @@ def emit_jcsp_fixture_raw_outputs(
     blockers = _dedupe(blockers)
     if not blockers:
         for rel in expected:
-            stream = raw_streams_by_name[rel]
-            payload = bytes(stream["payload"])
+            decoded = decoded_streams_by_name[rel]
             path = output_root / rel
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(payload)
-            emitted_rows.append(
-                {
-                    "path": rel,
-                    "bytes": len(payload),
-                    "sha256": _sha256_bytes(payload),
-                    "source_stream_name": str(stream["name"]),
-                    "source_codec_kind": int(stream["codec_kind"]),
-                    "candidate_output_source": JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_SOURCE,
-                }
-            )
+            path.write_bytes(decoded.payload)
+            emitted_rows.append(decoded.manifest_row())
 
     if reference_raw_dir is not None and emitted_rows:
         parity_proof = prove_jcsp_runtime_raw_output_parity(
@@ -537,11 +708,19 @@ def emit_jcsp_fixture_raw_outputs(
         "reference_raw_dir": (
             str(Path(reference_raw_dir)) if reference_raw_dir is not None else None
         ),
+        "decoder_interface": _decoder_interface_contract(expected),
+        "decoder_adapter": decoder_adapter.contract(expected),
         "minimal_fixture_stream_path": _minimal_fixture_stream_path_contract(expected),
         "parsed_container": parsed_summary,
         "raw_output_emission_attempted": not blockers,
         "fixture_raw_outputs_emitted": bool(emitted_rows),
         "bridge_emits_contest_raw_outputs": False,
+        "real_decoded_rawvideo_stream_count": sum(
+            1 for row in emitted_rows if row["real_decoded_rawvideo"]
+        ),
+        "fixture_passthrough_stream_count": sum(
+            1 for row in emitted_rows if row["fixture_passthrough"]
+        ),
         "emitted_raw_output_count": len(emitted_rows),
         "emitted_raw_outputs": emitted_rows,
         "output_parity_checked": parity_proof is not None,
@@ -584,6 +763,7 @@ def _contest_output_contract(
         blockers.extend(
             [
                 JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER,
+                JCSP_RUNTIME_REAL_DECODER_BLOCKER,
                 "jcsp_stream_decode_emit_frames_missing",
                 "jcsp_raw_output_emission_missing",
             ]
@@ -605,6 +785,7 @@ def _contest_output_contract(
         "expected_raw_output_count": len(expected_raw_outputs),
         "existing_raw_outputs_at_probe": observed,
         "existing_raw_output_count": existing_count,
+        "decoder_interface": _decoder_interface_contract(expected_raw_outputs),
         "raw_output_parity_contract": parity_contract,
         "minimal_fixture_stream_path": _minimal_fixture_stream_path_contract(
             expected_raw_outputs

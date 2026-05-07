@@ -89,6 +89,13 @@ def test_cross_paradigm_inventory_pins_required_score_path_rows() -> None:
     assert "src/tac/optimization/entropy_codec_gap_audit.py" in entropy["code_paths"]
     assert "tools/audit_entropy_codec_gap.py" in entropy["code_paths"]
 
+    lowlevel = rows["hnerv_lowlevel_brotli_repack"]
+    assert (
+        "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/result.json"
+        in lowlevel["evidence_paths"]
+    )
+    assert "PR106x lgblock16 -1B" in lowlevel["next_patch"]
+
     lapose = rows["lapose_motion_atom_allocator"]
     assert lapose["role"] == "proposal_allocator"
     assert "meta_lagrangian" in lapose["paradigms"]

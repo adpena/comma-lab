@@ -1,0 +1,20 @@
+HNeRV low-level Brotli static release surface
+recorded_at_utc: 2026-05-07T12:00:00Z
+candidate_id: pr106x_lgblock16_1byte_brotli
+family: hnerv_lowlevel_brotli_repack
+scope: upload-file static surface only
+score_claim: false
+dispatch_attempted: false
+remote_gpu_run: false
+evidence_grade: empirical_archive_candidate_until_exact_cuda
+archive_sha256: 866dc135e9168d61fab02b6b1c218c4b1d6eed779154a6dc3095fd05e48024f2
+archive_size_bytes: 186079
+archive_member: x
+source_archive_sha256: b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f
+source_archive_size_bytes: 186080
+byte_delta_vs_source_archive: -1
+candidate_manifest: experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/manifest.json
+payload_section_diff: experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/payload_section_diff_vs_source.json
+public_replay_preflight: experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/public_replay_preflight.json
+remaining_for_score_or_dispatch: exact CUDA auth eval, adjudication, active lane claim, operator approval
+notes: This file intentionally records no score and no promotion claim.
