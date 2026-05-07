@@ -15880,6 +15880,8 @@ def check_subprocess_run_checked(
     # Vendored / third-party intake snapshots — same exclude markers as the
     # MPS-fallback check above. We can't fix code we don't own; intake
     # directories are evidence of public-PR state, not our authored code.
+    # The comma_lab_public_export mirror is also exempt — it's a frozen
+    # OSS staging snapshot, not authored code we can edit (see _is_in_oss_export).
     _VENDORED_INTAKE_MARKERS = (
         "/pr_heads/",
         "/leaderboard_intel_",
@@ -15889,6 +15891,7 @@ def check_subprocess_run_checked(
         "/vendored/",
         "_intake_",
         "/av1_crf31_bicubic/",
+        "/comma_lab_public_export/",
     )
     for py_path in sorted(root.rglob("*.py")):
         if py_path.resolve() == Path(__file__).resolve():
@@ -17554,6 +17557,17 @@ def check_lane_scripts_set_up_inflate_environment(
 
     canonical_module_substr = "experiments/contest_auth_eval.py"
     canonical_guard_grep = "PYTHON_INFLATE=renderer"
+    # Path (c): invocation of scripts/remote_archive_only_eval.sh, which is
+    # the canonical archive-eval wrapper that routes through the F5-guarded
+    # experiments/contest_auth_eval.py at line 378. Lanes that delegate to
+    # it inherit the guard.
+    canonical_archive_only_eval_substr = "remote_archive_only_eval.sh"
+    # Path (d): exec/source of another remote_lane_*.sh that itself contains
+    # the canonical contest_auth_eval.py reference. Thin wrapper scripts
+    # (e.g. remote_lane_sjkl_c067_v3_cap8k.sh) exec the canonical driver.
+    _exec_delegate_re = re.compile(
+        r"\bexec\s+(?:\S+\s+)*scripts/(remote_lane_[\w-]+\.sh)"
+    )
 
     for path in sorted(scripts_dir.glob("remote_lane_*.sh")):
         n_scanned += 1
@@ -17571,14 +17585,38 @@ def check_lane_scripts_set_up_inflate_environment(
         # Acceptance path (b): has its own PYTHON_INFLATE=renderer pre-check
         if canonical_guard_grep in text:
             continue
-        # Otherwise this lane bypasses both guards — flag it.
+        # Acceptance path (c): delegates to scripts/remote_archive_only_eval.sh
+        # which routes through the F5-guarded contest_auth_eval.py.
+        if canonical_archive_only_eval_substr in text:
+            continue
+        # Acceptance path (d): exec's another remote_lane_*.sh that itself
+        # has the canonical reference. Resolve transitively (one hop).
+        delegate_satisfied = False
+        for m in _exec_delegate_re.finditer(text):
+            delegate_path = scripts_dir / m.group(1)
+            if not delegate_path.is_file():
+                continue
+            try:
+                delegate_text = delegate_path.read_text(errors="ignore")
+            except OSError:
+                continue
+            if (canonical_module_substr in delegate_text
+                or canonical_archive_only_eval_substr in delegate_text
+                or canonical_guard_grep in delegate_text):
+                delegate_satisfied = True
+                break
+        if delegate_satisfied:
+            continue
+        # Otherwise this lane bypasses all guards — flag it.
         rel = str(path.relative_to(root))
         violations.append(
             f"{rel}: calls contest_auth_eval but neither (a) routes through "
             f"experiments/contest_auth_eval.py (which has the F5 config.env "
-            f"guard) nor (b) checks PYTHON_INFLATE=renderer locally. The lane "
-            f"may train successfully then crash at Stage 3 with extracted/0.mkv "
-            f"missing. See Codex F5 (2026-04-28)."
+            f"guard), (b) checks PYTHON_INFLATE=renderer locally, "
+            f"(c) delegates to scripts/remote_archive_only_eval.sh, nor "
+            f"(d) exec's a remote_lane_*.sh that has the canonical reference. "
+            f"The lane may train successfully then crash at Stage 3 with "
+            f"extracted/0.mkv missing. See Codex F5 (2026-04-28)."
         )
 
     if verbose:
