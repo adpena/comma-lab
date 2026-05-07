@@ -29,6 +29,12 @@ from tac.categorical_candidate_readiness import (
     RUNTIME_LOADER_PARITY_CONTRACT,
     audit_categorical_candidate_manifest,
 )
+from tac.categorical_label_prior_payload_manifest import (
+    LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT,
+    LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
+    LABEL_PRIOR_PAYLOAD_MANIFEST_ROLE,
+    build_categorical_label_prior_payload_manifest,
+)
 from tac.categorical_openpilot_mask_prior_contract import RUNTIME_LABEL_CONTRACT
 from tac.repo_io import sha256_bytes, sha256_file, write_json
 from tac.semantic_label_contract import CONTEST_SEGNET_CLASS_NAME_TUPLE, SELFCOMP_CLASS_TO_GRAY
@@ -48,6 +54,7 @@ def _zip_info(name: str) -> zipfile.ZipInfo:
 
 def _base_candidate(tmp_path: Path) -> dict:
     archive = tmp_path / "candidate.zip"
+    source_archive_sha = "a" * 64
     runtime_source = REPO / RUNTIME_CONSUMER_REPO_PATH
     runtime_source_raw = runtime_source.read_bytes()
     runtime_source_sha = sha256_bytes(runtime_source_raw)
@@ -57,6 +64,56 @@ def _base_candidate(tmp_path: Path) -> dict:
         ("inflate.sh", b"#!/usr/bin/env bash\nset -euo pipefail\n", "inflate_entrypoint"),
         ("runtime_decoder.py", runtime_source_raw, "decoder_or_runtime_consumer"),
     ]
+    payload_sha = sha256_bytes(member_payloads[0][1])
+    class_codebook_sha = sha256_bytes(member_payloads[1][1])
+    conditioning_priors = [
+        {
+            "family": "openpilot_priors",
+            "name": "ego_lane_atom_ranker",
+            "usage": "compression_time_atom_ranking_only",
+            "runtime_consumed": False,
+            "label_contract": "openpilot_prior_hints_non_runtime",
+            "source_provenance": {
+                "kind": "compression_time_only_derivation",
+                "source": "test_fixture_openpilot_prior_hints",
+                "runtime_consumed": False,
+            },
+        },
+        {
+            "family": "clade_spade",
+            "name": "fixture_class_conditioning",
+            "usage": "inflate_runtime_conditioning",
+            "runtime_consumed": True,
+            "charged_member": "class_codebook.json",
+            "charged_member_sha256": class_codebook_sha,
+            "label_contract": RUNTIME_LABEL_CONTRACT,
+            "source_provenance": {
+                "kind": "charged_archive_member",
+                "charged_member": "class_codebook.json",
+                "sha256": class_codebook_sha,
+                "source": "test_fixture_class_codebook",
+            },
+        },
+    ]
+    label_prior_payload_manifest = json.dumps(
+        build_categorical_label_prior_payload_manifest(
+            source_archive_sha256=source_archive_sha,
+            payload_member="categorical_payload.bin",
+            payload_member_sha256=payload_sha,
+            class_codebook_member="class_codebook.json",
+            class_codebook_sha256=class_codebook_sha,
+            conditioning_priors=conditioning_priors,
+        ),
+        indent=2,
+        sort_keys=True,
+    ).encode("utf-8") + b"\n"
+    member_payloads.append(
+        (
+            LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
+            label_prior_payload_manifest,
+            LABEL_PRIOR_PAYLOAD_MANIFEST_ROLE,
+        )
+    )
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
         for name, raw, _role in member_payloads:
             zf.writestr(_zip_info(name), raw, compress_type=zipfile.ZIP_STORED)
@@ -69,8 +126,6 @@ def _base_candidate(tmp_path: Path) -> dict:
         }
         for name, raw, role in member_payloads
     ]
-    payload_sha = charged_members[0]["sha256"]
-    charged_sha_by_name = {record["name"]: record["sha256"] for record in charged_members}
     archive_member_manifest = {
         "schema_version": 1,
         "kind": "categorical_test_archive_member_manifest",
@@ -88,7 +143,7 @@ def _base_candidate(tmp_path: Path) -> dict:
         "candidate_manifest_contract": CANDIDATE_MANIFEST_CONTRACT,
         "score_claim": False,
         "dispatch_attempted": False,
-        "source_archive_sha256": "a" * 64,
+        "source_archive_sha256": source_archive_sha,
         "archive_member_manifest_sha256": sha256_file(archive_member_manifest_path),
         "archive_member_manifest": {
             "path": archive_member_manifest_path.as_posix(),
@@ -107,6 +162,12 @@ def _base_candidate(tmp_path: Path) -> dict:
             "path": RUNTIME_CONSUMER_REPO_PATH,
             "consumes_charged_members": True,
         },
+        "label_prior_payload_manifest": {
+            "member": LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
+            "bytes": len(label_prior_payload_manifest),
+            "sha256": sha256_bytes(label_prior_payload_manifest),
+            "contract": LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT,
+        },
         "runtime_loader_parity": {
             "schema_version": 1,
             "runtime_loader_parity_contract": RUNTIME_LOADER_PARITY_CONTRACT,
@@ -123,6 +184,7 @@ def _base_candidate(tmp_path: Path) -> dict:
             "loaded_charged_members": [
                 "categorical_payload.bin",
                 "class_codebook.json",
+                LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
             ],
         },
         "decode_reencode_parity": {
@@ -145,35 +207,7 @@ def _base_candidate(tmp_path: Path) -> dict:
             },
             "sidecar_free": True,
         },
-        "conditioning_priors": [
-            {
-                "family": "openpilot_priors",
-                "name": "ego_lane_atom_ranker",
-                "usage": "compression_time_atom_ranking_only",
-                "runtime_consumed": False,
-                "label_contract": "openpilot_prior_hints_non_runtime",
-                "source_provenance": {
-                    "kind": "compression_time_only_derivation",
-                    "source": "test_fixture_openpilot_prior_hints",
-                    "runtime_consumed": False,
-                },
-            },
-            {
-                "family": "clade_spade",
-                "name": "fixture_class_conditioning",
-                "usage": "inflate_runtime_conditioning",
-                "runtime_consumed": True,
-                "charged_member": "class_codebook.json",
-                "charged_member_sha256": charged_sha_by_name["class_codebook.json"],
-                "label_contract": RUNTIME_LABEL_CONTRACT,
-                "source_provenance": {
-                    "kind": "charged_archive_member",
-                    "charged_member": "class_codebook.json",
-                    "sha256": charged_sha_by_name["class_codebook.json"],
-                    "source": "test_fixture_class_codebook",
-                },
-            },
-        ],
+        "conditioning_priors": conditioning_priors,
         "charged_members": charged_members,
         "no_op_controls": {name: {"passed": True} for name in REQUIRED_CONTROL_NAMES},
     }
@@ -318,6 +352,9 @@ def test_audit_categorical_candidate_manifest_fails_closed_on_self_attested_pari
     assert manifest["archive_member_manifest"]["member_count_matches_charged_members"] is True
     assert manifest["semantic_contract"]["matches_candidate"] is True
     assert manifest["runtime_consumer"]["consumes_charged_members"] is True
+    assert manifest["label_prior_payload_manifest"]["accepted"] is True
+    assert manifest["label_prior_payload_manifest"]["member"] == LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER
+    assert manifest["label_prior_payload_manifest"]["label_contract"] == RUNTIME_LABEL_CONTRACT
     assert manifest["runtime_loader_parity"]["accepted"] is False
     assert manifest["runtime_loader_parity"]["loader_member"] == "runtime_decoder.py"
     assert manifest["runtime_loader_parity"]["contract"] == RUNTIME_LOADER_PARITY_CONTRACT
@@ -347,6 +384,7 @@ def test_audit_categorical_candidate_manifest_accepts_complete_dispatch_proofs(
     assert manifest["ready_for_exact_eval_dispatch"] is True
     assert manifest["dispatch_blockers"] == []
     assert manifest["runtime_loader_parity"]["accepted"] is True
+    assert manifest["label_prior_payload_manifest"]["accepted"] is True
     assert manifest["runtime_loader_parity"]["runtime_execution_proof"]["accepted"] is True
     assert manifest["decode_reencode_parity"]["accepted"] is True
     assert manifest["decode_reencode_parity"]["independent_proof"]["accepted"] is True
@@ -684,6 +722,32 @@ def test_audit_categorical_candidate_manifest_fails_closed_on_label_and_control_
     assert "runtime_consumer_does_not_declare_charged_member_use" in blockers
 
 
+def test_audit_categorical_candidate_manifest_requires_charged_label_prior_payload_manifest(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    candidate.pop("label_prior_payload_manifest")
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["label_prior_payload_manifest"]["declared"] is False
+    assert "label_prior_payload_manifest_record_missing" in manifest["dispatch_blockers"]
+
+
+def test_audit_categorical_candidate_manifest_rejects_label_prior_payload_drift(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    candidate["conditioning_priors"][0]["name"] = "drifted_openpilot_ranker"
+
+    manifest = audit_categorical_candidate_manifest(candidate, repo_root=REPO)
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["label_prior_payload_manifest"]["accepted"] is False
+    assert "label_prior_payload_manifest_conditioning_priors_mismatch" in manifest["dispatch_blockers"]
+
+
 def test_audit_categorical_candidate_manifest_checks_archive_member_fidelity(tmp_path: Path) -> None:
     candidate = _base_candidate(tmp_path)
     candidate["charged_members"][0]["sha256"] = "f" * 64
@@ -905,12 +969,11 @@ def test_audit_categorical_candidate_manifest_rejects_nondeterministic_zip_metad
     archive = Path(candidate["candidate_archive"]["path"])
     # Preserve charged-member bytes/hashes, but keep default ZIP metadata and a
     # reversed member order from writestr(name, ...).
-    payloads = {
-        "categorical_payload.bin": b"\x00\x01\x01\x02categorical",
-        "class_codebook.json": b'{"class_order":"contest"}\n',
-        "inflate.sh": b"#!/usr/bin/env bash\nset -euo pipefail\n",
-        "runtime_decoder.py": b"#!/usr/bin/env python3\n",
-    }
+    with zipfile.ZipFile(archive) as source_zip:
+        payloads = {
+            record["name"]: source_zip.read(record["name"])
+            for record in candidate["charged_members"]
+        }
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
         for name in reversed([record["name"] for record in candidate["charged_members"]]):
             zf.writestr(name, payloads[name])

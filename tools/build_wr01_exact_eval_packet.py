@@ -41,6 +41,8 @@ DEFAULT_RESULT_DIR = Path(
 )
 DEFAULT_CLAIMS_PATH = Path(".omx/state/active_lane_dispatch_claims.md")
 DEFAULT_CLAIM_TTL_HOURS = 24
+CONTEST_ORIGINAL_BYTES = 37_545_489
+RATE_SCORE_PER_BYTE = 25.0 / CONTEST_ORIGINAL_BYTES
 TERMINAL_CLAIM_PREFIXES = (
     "completed_",
     "failed_",
@@ -943,10 +945,43 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         blockers.append("missing_active_lane_dispatch_claim")
     if not args.operator_approved_exact_cuda:
         blockers.append("missing_operator_exact_cuda_approval")
+    source_archive_bytes = manifest_payload.get("source_archive_bytes")
+    archive_byte_delta = (
+        args.archive_bytes - int(source_archive_bytes)
+        if isinstance(source_archive_bytes, int) and not isinstance(source_archive_bytes, bool)
+        else None
+    )
+    expected_total_score_delta = (
+        archive_byte_delta * RATE_SCORE_PER_BYTE
+        if archive_byte_delta is not None
+        else None
+    )
     return {
         "schema_version": 1,
+        "schema": "wr01_exact_eval_operator_packet_v1",
+        "packet_kind": "wr01_exact_eval_operator_packet",
         "tool": "tools/build_wr01_exact_eval_packet.py",
         "recorded_at_utc": _format_utc(now_utc),
+        "candidate_id": args.lane_id,
+        "family": "hnerv_wavelet_wr01_apply_transform",
+        "family_group": "hnerv_wavelet_wr01_apply",
+        "pareto_scope": "hnerv_rate_only_exact_archive",
+        "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+        "confidence": 1.0,
+        "proxy_row": False,
+        "byte_delta": archive_byte_delta,
+        "expected_total_score_delta": expected_total_score_delta,
+        "expected_seg_dist_delta": 0.0,
+        "expected_pose_dist_delta": 0.0,
+        "expected_information_gain_nats": 0.0,
+        "expected_score_variance": 0.0,
+        "interaction_assumptions": [
+            "rate-only single-member archive transform; no intentional SegNet or PoseNet distortion change",
+            "archive and runtime parity are necessary but exact CUDA auth eval is required before any score claim",
+            "no composability assumption with categorical, sensitivity, or pose atoms until stacked archive eval exists",
+        ],
+        "conflicts_with_families": [],
+        "conflicts_with_atoms": [],
         "score_claim": False,
         "dispatch_attempted": False,
         "ready_for_submit": not blockers,

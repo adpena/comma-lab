@@ -9,7 +9,9 @@ import pytest
 from experiments.build_hnerv_frontier_scorecard import (
     candidate_indexes,
     followup_targets,
+    hidden_gem_byte_mass_ranking,
     inspect_single_member_archive,
+    next_exact_evaluable_target,
     payload_equivalence_groups,
     payload_section_manifests,
     profile_indexes,
@@ -102,6 +104,63 @@ def test_payload_sha_profile_fallback_tracks_byte_identical_repack(tmp_path: Pat
     assert manifests[0]["sections"][1]["optimization_role"] == "latent_stream"
     assert manifests[1]["profile_match_key"] == "member_sha256"
     assert "Payload Section Manifests" in render_markdown([original_row, repack_row])
+
+
+def test_hidden_gem_ranking_prefers_current_frontier_before_larger_predecessor(
+    tmp_path: Path,
+) -> None:
+    predecessor_payload = b"\xff\x0c\x00\x00bigger-dec!!latent"
+    frontier_payload = b"\xff\x08\x00\x00decoder!latent"
+    predecessor_dir = tmp_path / "predecessor"
+    frontier_dir = tmp_path / "frontier"
+    predecessor_dir.mkdir()
+    frontier_dir.mkdir()
+    predecessor_info = _write_archive(predecessor_dir / "archive.zip", "0.bin", predecessor_payload)
+    frontier_info = _write_archive(frontier_dir / "archive.zip", "x", frontier_payload)
+    predecessor_eval = _write_eval(predecessor_dir, predecessor_info, score=0.251)
+    frontier_eval = _write_eval(frontier_dir, frontier_info, score=0.250)
+    profile_path = tmp_path / "profiles.json"
+    profile_path.write_text(
+        json.dumps(
+            [
+                {
+                    **predecessor_info,
+                    "kind": "ff_packed_brotli_hnerv",
+                    "sections": [
+                        _section("decoder_packed_brotli", 4, 16, predecessor_payload),
+                        _section("latents_and_sidecar_brotli", 16, len(predecessor_payload), predecessor_payload),
+                    ],
+                },
+                {
+                    **frontier_info,
+                    "kind": "ff_packed_brotli_hnerv",
+                    "sections": [
+                        _section("decoder_packed_brotli", 4, 12, frontier_payload),
+                        _section("latents_and_sidecar_brotli", 12, len(frontier_payload), frontier_payload),
+                    ],
+                },
+            ]
+        )
+    )
+
+    indexes = profile_indexes([profile_path])
+    predecessor_row = row_from_eval("PR106", predecessor_eval, indexes)
+    frontier_row = row_from_eval("PR106x-lowlevel-brotli", frontier_eval, indexes)
+
+    ranking = hidden_gem_byte_mass_ranking([predecessor_row, frontier_row])
+    target = next_exact_evaluable_target([predecessor_row, frontier_row])
+
+    assert ranking[0]["label"] == "PR106x-lowlevel-brotli"
+    assert ranking[0]["section"] == "decoder_packed_brotli"
+    assert ranking[0]["priority"] == "current_frontier_primary"
+    assert ranking[0]["score_gap_to_current_frontier"] == 0.0
+    assert ranking[0]["score_claim"] is False
+    assert ranking[0]["dispatch_attempted"] is False
+    assert target == ranking[0]
+    md = render_markdown([predecessor_row, frontier_row])
+    assert "Next Exact-Evaluable Target" in md
+    assert "Hidden-Gem Byte-Mass Ranking" in md
+    assert "| PR106x-lowlevel-brotli | `decoder_packed_brotli` |" in md
 
 
 def test_candidate_manifest_marks_lossless_brotli_repack_as_local_control(tmp_path: Path) -> None:
@@ -213,6 +272,7 @@ def _write_eval(
     lane_dir: Path,
     archive_info: dict[str, object],
     *,
+    score: float = 0.25,
     extra: dict[str, object] | None = None,
 ) -> Path:
     payload = {
@@ -229,7 +289,7 @@ def _write_eval(
         },
         "score_pose_contribution": 0.02,
         "score_rate_contribution": 0.03,
-        "score_recomputed_from_components": 0.25,
+        "score_recomputed_from_components": score,
         "score_seg_contribution": 0.2,
     }
     if extra:

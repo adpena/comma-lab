@@ -2,11 +2,12 @@
   "archive_member_manifest_contract": "categorical_archive_member_manifest_v1",
   "fixture_only": false,
   "kind": "categorical_local_candidate_archive_member_manifest",
-  "member_count": 5,
+  "member_count": 6,
   "member_order": [
     "categorical_payload.bin",
     "class_codebook.json",
     "inflate.sh",
+    "label_prior_payload_manifest.json",
     "runtime_consumer.py",
     "runtime_consumer_proof_skeleton.json"
   ],
@@ -30,16 +31,22 @@
       "sha256": "96c609ffb891c2717ccc055f81a7255a7946383f8f54fca2f1b41fdb88f26062"
     },
     {
-      "bytes": 2690,
-      "name": "runtime_consumer.py",
-      "role": "decoder_or_runtime_consumer",
-      "sha256": "4fb6740b3e859068dbdbe159545c49b927a8b017b6046412ef5edddcb5fcba6d"
+      "bytes": 5403,
+      "name": "label_prior_payload_manifest.json",
+      "role": "label_prior_payload_manifest",
+      "sha256": "0be3c41d3f0f83eafe7f2c38a8d257a4dcb815973b22595b003c7592d1107f0d"
     },
     {
-      "bytes": 1731,
+      "bytes": 5110,
+      "name": "runtime_consumer.py",
+      "role": "decoder_or_runtime_consumer",
+      "sha256": "d4473f3f031e1949bc9f90be49c54e759a4bd0039921dc81bb4667d6140576a8"
+    },
+    {
+      "bytes": 1931,
       "name": "runtime_consumer_proof_skeleton.json",
       "role": "runtime_consumer_proof",
-      "sha256": "72cd6236aeff5b62657c99be07ee7f8d3d8857759daff74601976e86ee3e21f0"
+      "sha256": "7ed7dcb8aa7ca2390268d14696397612d7f49c88d2a3e43841df33e85392461a"
     }
   ],
   "schema_version": 1

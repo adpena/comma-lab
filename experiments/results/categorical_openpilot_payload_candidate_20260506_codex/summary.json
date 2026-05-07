@@ -1,6 +1,6 @@
 {
-  "archive_bytes": 152235,
-  "archive_sha256": "106af3ed6917d6115586463ef35e43119add5db002fd19f3da7cd8065a63eb8d",
+  "archive_bytes": 160400,
+  "archive_sha256": "3455c82708b1d628e17fb21cf3ccb334a4375e023a80217681c10912224881ac",
   "charged_members": [
     {
       "bytes": 145087,
@@ -21,16 +21,22 @@
       "sha256": "96c609ffb891c2717ccc055f81a7255a7946383f8f54fca2f1b41fdb88f26062"
     },
     {
-      "bytes": 2690,
-      "name": "runtime_consumer.py",
-      "role": "decoder_or_runtime_consumer",
-      "sha256": "4fb6740b3e859068dbdbe159545c49b927a8b017b6046412ef5edddcb5fcba6d"
+      "bytes": 5403,
+      "name": "label_prior_payload_manifest.json",
+      "role": "label_prior_payload_manifest",
+      "sha256": "0be3c41d3f0f83eafe7f2c38a8d257a4dcb815973b22595b003c7592d1107f0d"
     },
     {
-      "bytes": 1731,
+      "bytes": 5110,
+      "name": "runtime_consumer.py",
+      "role": "decoder_or_runtime_consumer",
+      "sha256": "d4473f3f031e1949bc9f90be49c54e759a4bd0039921dc81bb4667d6140576a8"
+    },
+    {
+      "bytes": 1931,
       "name": "runtime_consumer_proof_skeleton.json",
       "role": "runtime_consumer_proof",
-      "sha256": "72cd6236aeff5b62657c99be07ee7f8d3d8857759daff74601976e86ee3e21f0"
+      "sha256": "7ed7dcb8aa7ca2390268d14696397612d7f49c88d2a3e43841df33e85392461a"
     }
   ],
   "dispatch_attempted": false,
@@ -43,7 +49,7 @@
     "path": "hpm1_structural_inventory.json",
     "payload_member": "categorical_payload.bin",
     "payload_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
-    "sha256": "985d5b944e61208020dbadf3d5a43233a0a6d494bf156010d3f16c09b45a8bba",
+    "sha256": "453095759e19defd3e8f0b1011495c9b50d6b60dffe904b3c31fe10348d15e37",
     "structural_reencode_matches_source": true,
     "unsupported_wire_constructs": [
       "hpac_autoregressive_probability_rows",
@@ -79,9 +85,12 @@
     "no_op_control_not_passed:label_permutation_fail_closed_control",
     "no_op_control_not_passed:runtime_consumes_conditioning_control",
     "runtime_loader_parity_not_passed",
+    "runtime_execution_proof_artifact_missing",
     "decode_reencode_parity_not_passed",
     "decode_reencode_full_decode_not_proven",
-    "decode_reencode_byte_exact_reencode_not_proven"
+    "decode_reencode_byte_exact_reencode_not_proven",
+    "decode_reencode_independent_proof_artifact_missing",
+    "exact_eval_dispatch_requirements_missing"
   ],
   "ready_for_exact_eval_dispatch": false,
   "schema_version": 1,
@@ -93,7 +102,7 @@
       "--payload-source",
       "pr91-hpm1-mask"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "8401d40d0cb907a767b88327173b3d857f087917167763c83f930396357d11b9",
+    "canonical_payload_without_tool_manifest_sha256": "257bc4ad7012173cac1a3d0f3915c55b25dccf5229f91cc3f24164b640a21fc3",
     "dispatch_attempted": false,
     "input_files": [
       {
@@ -102,29 +111,29 @@
         "sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f"
       },
       {
-        "bytes": 152235,
+        "bytes": 160400,
         "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/archive.zip",
-        "sha256": "106af3ed6917d6115586463ef35e43119add5db002fd19f3da7cd8065a63eb8d"
+        "sha256": "3455c82708b1d628e17fb21cf3ccb334a4375e023a80217681c10912224881ac"
       },
       {
-        "bytes": 14233,
+        "bytes": 18004,
         "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/candidate.json",
-        "sha256": "d37049c482cd505db9cc365055a03611f2c111a68fd6eb862ddeabee36dcc193"
+        "sha256": "915d4b77530747e4a96845168c892a9cbf35ef4619010ebde3c33a649b380c13"
       },
       {
-        "bytes": 1379,
+        "bytes": 1634,
         "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/archive_member_manifest.json",
-        "sha256": "b62af504996161baaf5b2297140a296cad4ebde61334919dc8a43b69d61f47c1"
+        "sha256": "1b478173e1f3ed98d025ba19b2a2315e46d40722270434fd7b35761cd9ea9e98"
       },
       {
         "bytes": 12612,
         "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/hpm1_structural_inventory.json",
-        "sha256": "985d5b944e61208020dbadf3d5a43233a0a6d494bf156010d3f16c09b45a8bba"
+        "sha256": "453095759e19defd3e8f0b1011495c9b50d6b60dffe904b3c31fe10348d15e37"
       },
       {
-        "bytes": 20041,
+        "bytes": 26518,
         "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
-        "sha256": "f3eb23120c2c613934860f419f8298e06131e3c5efb7665758497715f2d92dfa"
+        "sha256": "35612fee8f2cd87dcdf069f7b22b7054b74a960577d9c0c894f0657fe92bd1a7"
       }
     ],
     "output_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/summary.json",

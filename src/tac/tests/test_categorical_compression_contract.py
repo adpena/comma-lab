@@ -33,6 +33,7 @@ def test_categorical_contract_requires_charged_runtime_consumption() -> None:
     charged = contract["charged_byte_contract"]
     assert charged["every_decoder_table_is_archive_member"] is True
     assert charged["every_label_remap_is_archive_member"] is True
+    assert charged["label_prior_payload_manifest_is_archive_member"] is True
     assert charged["sidecars_outside_archive_forbidden"] is True
     families = contract["conditioning_families"]
     assert families["clade_spade"]["parameters_must_be_charged"] is True

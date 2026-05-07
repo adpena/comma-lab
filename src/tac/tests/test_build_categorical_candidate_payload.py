@@ -17,6 +17,10 @@ from tac.categorical_candidate_readiness import (
     RUNTIME_LOADER_PARITY_CONTRACT,
     audit_categorical_candidate_manifest,
 )
+from tac.categorical_label_prior_payload_manifest import (
+    LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT,
+    LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
+)
 from tac.categorical_payload_candidate import (
     MEMBER_ORDER,
     RUNTIME_PROOF_SKELETON_CONTRACT,
@@ -82,6 +86,8 @@ def test_build_categorical_candidate_payload_is_byte_closed_and_fail_closed(
     assert readiness["runtime_loader_parity"]["sidecar_free"] is True
     assert readiness["decode_reencode_parity"]["accepted"] is False
     assert readiness["conditioning_prior_contract"]["passed"] is True
+    assert readiness["label_prior_payload_manifest"]["accepted"] is True
+    assert readiness["label_prior_payload_manifest"]["member"] == LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER
     assert readiness_file["ready_for_exact_eval_dispatch"] is False
     assert readiness_file["tool_run_manifest"]["tool"] == "tools/build_categorical_candidate_payload.py"
     blockers = set(readiness["dispatch_blockers"])
@@ -113,15 +119,28 @@ def test_build_categorical_candidate_payload_is_byte_closed_and_fail_closed(
     openpilot_prior = prior_by_name["ego_lane_atom_ranker"]
     assert openpilot_prior["runtime_consumed"] is False
     assert openpilot_prior["source_provenance"]["kind"] == "compression_time_only_derivation"
+    label_prior_manifest_record = candidate["label_prior_payload_manifest"]
+    assert label_prior_manifest_record["member"] == LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER
+    assert label_prior_manifest_record["contract"] == LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT
 
     with zipfile.ZipFile(archive_a) as archive:
         assert archive.namelist() == list(MEMBER_ORDER)
         class_codebook = json.loads(archive.read("class_codebook.json").decode("utf-8"))
+        label_prior_payload_manifest = json.loads(
+            archive.read(LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER).decode("utf-8")
+        )
         proof_skeleton = json.loads(archive.read("runtime_consumer_proof_skeleton.json").decode("utf-8"))
     assert class_codebook["class_codebook_contract"] == CATEGORICAL_CLASS_CODEBOOK_CONTRACT
+    assert (
+        label_prior_payload_manifest["label_prior_payload_manifest_contract"]
+        == LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT
+    )
+    assert label_prior_payload_manifest["conditioning_priors"] == candidate["conditioning_priors"]
+    assert label_prior_payload_manifest["label_contract"] == "contest_zero_based_comma10k_order"
     assert proof_skeleton["runtime_consumer_proof_skeleton_contract"] == RUNTIME_PROOF_SKELETON_CONTRACT
     assert proof_skeleton["ready_for_exact_eval_dispatch"] is False
     assert proof_skeleton["proof_status"]["archive_contains_payload_codebook_and_runtime"] is True
+    assert proof_skeleton["proof_status"]["charged_label_prior_payload_manifest"] is True
     assert proof_skeleton["proof_status"]["full_decode_reencode_parity"] is False
     assert proof_skeleton["proof_status"]["runtime_output_parity"] is False
 

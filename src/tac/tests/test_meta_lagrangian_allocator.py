@@ -45,6 +45,9 @@ def test_expected_atom_score_delta_combines_rate_seg_pose_and_priors(tmp_path: P
             "conflicts_with_families": ["whole_mask_replacement"],
             "conflicts_with_atoms": ["atom:global_crf"],
             "interaction_assumptions": ["first_order_local_patch"],
+            "interaction_model": "first_order_volterra_local_patch",
+            "volterra_order": 1,
+            "volterra_terms": ["linear_pair_response"],
             "kkt_proof": _kkt_proof(),
             "archive_manifest_path": manifest.as_posix(),
             "archive_manifest_sha256": sha256_file(manifest),
@@ -59,13 +62,28 @@ def test_expected_atom_score_delta_combines_rate_seg_pose_and_priors(tmp_path: P
     assert row["conflicts_with_families"] == ["whole_mask_replacement"]
     assert row["conflicts_with_atoms"] == ["atom:global_crf"]
     assert row["interaction_assumptions"] == ["first_order_local_patch"]
+    assert row["field_interaction_contract"]["schema"] == "field_interaction_contract_v1"
+    assert row["field_interaction_contract"]["status"] == "passed"
+    assert row["field_interaction_contract"]["assumptions"] == ["first_order_local_patch"]
+    assert row["field_interaction_contract"]["interaction_model"] == "first_order_volterra_local_patch"
+    assert row["field_interaction_contract"]["volterra_order"] == 1
+    assert row["field_interaction_contract"]["volterra_terms"] == ["linear_pair_response"]
     assert row["byte_closed_archive_manifest_attached"] is True
     assert row["archive_manifest_custody"]["verified"] is True
     assert row["pareto_eligible"] is True
+    assert row["non_dominated_frontier_reason"]["schema"] == "non_dominated_frontier_reason_v1"
+    assert row["non_dominated_frontier_reason"]["status"] == "non_dominated"
+    assert row["non_dominated_frontier_reason"]["reason"] == "non_dominated_within_pareto_scope"
     assert row["archive_ready_for_stack_review"] is True
     assert row["kkt_ready_for_field_planning"] is True
     assert row["dispatchable"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["exact_dispatch_blockers"]["schema"] == "exact_dispatch_blockers_v1"
+    assert "requires_exact_cuda_auth_eval" in row["exact_dispatch_blockers"]["blockers"]
+    assert (
+        "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+        in row["exact_dispatch_blockers"]["next_required_proof"]
+    )
 
 
 def test_hnerv_profile_atoms_rank_rate_only_variants() -> None:
@@ -226,8 +244,15 @@ def test_pareto_frontier_marks_dominated_atoms_within_scope(tmp_path: Path) -> N
     dominated = next(row for row in ledger["rows"] if row["atom_id"] == "dominated")
     assert dominated["pareto_frontier"] is False
     assert dominated["pareto_dominated_by"] == ["dominator"]
+    assert dominated["non_dominated_frontier_reason"]["status"] == "dominated"
+    assert dominated["non_dominated_frontier_reason"]["dominated_by"] == ["dominator"]
+    assert (
+        dominated["non_dominated_frontier_reason"]["reason"]
+        == "dominated_within_pareto_scope_by_byte_closed_non_proxy_candidate"
+    )
     assert dominated["pareto_objectives"]["byte_delta"] == -100.0
     assert dominated["selection_penalty_terms"]["pareto_dominated_atom"] > 0.0
+    assert "pareto_dominated_within_scope" in dominated["exact_dispatch_blockers"]["blockers"]
     assert dominated["selection_score_delta"] == pytest.approx(
         dominated["expected_total_score_delta"]
     )
@@ -310,8 +335,17 @@ def test_pareto_frontier_requires_verified_byte_closed_manifest(tmp_path: Path) 
     assert unclosed["rankable"] is True
     assert unclosed["pareto_eligible"] is False
     assert unclosed["pareto_frontier"] is False
+    assert unclosed["pareto_eligibility_blockers"] == ["missing_byte_closed_archive_manifest"]
+    assert unclosed["non_dominated_frontier_reason"]["status"] == "ineligible"
+    assert unclosed["non_dominated_frontier_reason"]["eligibility_blockers"] == [
+        "missing_byte_closed_archive_manifest"
+    ]
     assert "missing_byte_closed_archive_manifest" in unclosed["kkt_blockers"]
     assert unclosed["selection_penalty_terms"]["missing_byte_closed_archive_manifest"] > 0.0
+    assert (
+        "verified_byte_closed_archive_manifest_with_sha256_and_bytes"
+        in unclosed["exact_dispatch_blockers"]["next_required_proof"]
+    )
     assert unclosed["selection_score_delta"] == pytest.approx(
         unclosed["expected_total_score_delta"]
     )

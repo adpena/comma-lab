@@ -61,6 +61,7 @@ def build_categorical_compression_contract() -> dict[str, Any]:
         "charged_byte_contract": {
             "every_decoder_table_is_archive_member": True,
             "every_label_remap_is_archive_member": True,
+            "label_prior_payload_manifest_is_archive_member": True,
             "every_conditioning_weight_or_codebook_is_archive_member": True,
             "sidecars_outside_archive_forbidden": True,
         },

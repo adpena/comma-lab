@@ -1,11 +1,11 @@
 {
-  "archive_member_manifest_sha256": "b62af504996161baaf5b2297140a296cad4ebde61334919dc8a43b69d61f47c1",
+  "archive_member_manifest_sha256": "1b478173e1f3ed98d025ba19b2a2315e46d40722270434fd7b35761cd9ea9e98",
   "byte_closed_archive_parity": {
     "proof_path": "",
     "proven": false,
     "required": true
   },
-  "candidate_archive_sha256": "106af3ed6917d6115586463ef35e43119add5db002fd19f3da7cd8065a63eb8d",
+  "candidate_archive_sha256": "3455c82708b1d628e17fb21cf3ccb334a4375e023a80217681c10912224881ac",
   "candidate_construction_ready": true,
   "charged_member_summary": {
     "optional_roles": {
@@ -42,6 +42,9 @@
       ],
       "inflate_entrypoint": [
         "inflate.sh"
+      ],
+      "label_prior_payload_manifest": [
+        "label_prior_payload_manifest.json"
       ],
       "runtime_consumer_proof": [
         "runtime_consumer_proof_skeleton.json"
@@ -119,32 +122,41 @@
     "records": [
       {
         "charged_member": "categorical_payload.bin",
+        "charged_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
         "compression_time_only": false,
         "family": "qma9",
         "index": 0,
+        "label_contract": "contest_zero_based_comma10k_order",
         "name": "local_categorical_payload",
         "requires_charged_member": true,
         "runtime_consumed": true,
+        "source_provenance_kind": "charged_archive_member",
         "usage": "inflate_runtime_conditioning"
       },
       {
         "charged_member": "",
+        "charged_member_sha256": "",
         "compression_time_only": true,
         "family": "openpilot_priors",
         "index": 1,
+        "label_contract": "openpilot_prior_hints_non_runtime",
         "name": "ego_lane_atom_ranker",
         "requires_charged_member": false,
         "runtime_consumed": false,
+        "source_provenance_kind": "compression_time_only_derivation",
         "usage": "compression_time_atom_ranking_only"
       },
       {
         "charged_member": "class_codebook.json",
+        "charged_member_sha256": "6db870e7e05cc310ca25897e8d3ccac4f6fff06ad22ea57c157dbf8086ba29d0",
         "compression_time_only": false,
         "family": "clade_spade",
         "index": 2,
+        "label_contract": "contest_zero_based_comma10k_order",
         "name": "canonical_class_codebook_conditioning",
         "requires_charged_member": true,
         "runtime_consumed": true,
+        "source_provenance_kind": "charged_archive_member",
         "usage": "inflate_runtime_conditioning"
       }
     ],
@@ -155,22 +167,44 @@
   "conditioning_priors": [
     {
       "charged_member": "categorical_payload.bin",
+      "charged_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
       "family": "qma9",
+      "label_contract": "contest_zero_based_comma10k_order",
       "name": "local_categorical_payload",
       "runtime_consumed": true,
+      "source_provenance": {
+        "charged_member": "categorical_payload.bin",
+        "kind": "charged_archive_member",
+        "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+        "source_kind": "pr91_hpm1_mask_segment"
+      },
       "usage": "inflate_runtime_conditioning"
     },
     {
       "family": "openpilot_priors",
+      "label_contract": "openpilot_prior_hints_non_runtime",
       "name": "ego_lane_atom_ranker",
       "runtime_consumed": false,
+      "source_provenance": {
+        "kind": "compression_time_only_derivation",
+        "runtime_consumed": false,
+        "source": "categorical_candidate_plan.openpilot_prior_hints"
+      },
       "usage": "compression_time_atom_ranking_only"
     },
     {
       "charged_member": "class_codebook.json",
+      "charged_member_sha256": "6db870e7e05cc310ca25897e8d3ccac4f6fff06ad22ea57c157dbf8086ba29d0",
       "family": "clade_spade",
+      "label_contract": "contest_zero_based_comma10k_order",
       "name": "canonical_class_codebook_conditioning",
       "runtime_consumed": true,
+      "source_provenance": {
+        "charged_member": "class_codebook.json",
+        "kind": "charged_archive_member",
+        "sha256": "6db870e7e05cc310ca25897e8d3ccac4f6fff06ad22ea57c157dbf8086ba29d0",
+        "source": "build_categorical_class_codebook"
+      },
       "usage": "inflate_runtime_conditioning"
     }
   ],

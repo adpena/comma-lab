@@ -141,6 +141,10 @@ PROVEN_BASELINE_FEATMATCH = {
     "segnet_loss_weight": 100.0,
     # Round 2B B6: marker for council/dispatch gates that this profile is
     # NOT contest-CUDA-validated and requires explicit research approval.
+    # PROFILE_KEY_RESOLVED:_council_status
+    # ↑ Metadata-only marker (no cfg consumer); council/dispatch gates
+    # read it directly from the profile dict via
+    # ``profile.get("_council_status")`` rather than via PipelineConfig.
     "_council_status": "research_only_no_contest_cuda_evidence",
 }
 

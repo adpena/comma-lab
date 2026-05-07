@@ -1,24 +1,24 @@
 {
   "archive_member_manifest": {
-    "bytes": 1379,
+    "bytes": 1634,
     "path": "archive_member_manifest.json",
-    "sha256": "b62af504996161baaf5b2297140a296cad4ebde61334919dc8a43b69d61f47c1"
+    "sha256": "1b478173e1f3ed98d025ba19b2a2315e46d40722270434fd7b35761cd9ea9e98"
   },
-  "archive_member_manifest_sha256": "b62af504996161baaf5b2297140a296cad4ebde61334919dc8a43b69d61f47c1",
+  "archive_member_manifest_sha256": "1b478173e1f3ed98d025ba19b2a2315e46d40722270434fd7b35761cd9ea9e98",
   "candidate_archive": {
-    "bytes": 152235,
+    "bytes": 160400,
     "path": "archive.zip",
-    "sha256": "106af3ed6917d6115586463ef35e43119add5db002fd19f3da7cd8065a63eb8d"
+    "sha256": "3455c82708b1d628e17fb21cf3ccb334a4375e023a80217681c10912224881ac"
   },
   "candidate_archive_contract": "contest_archive_zip",
   "candidate_construction_plan": {
-    "archive_member_manifest_sha256": "b62af504996161baaf5b2297140a296cad4ebde61334919dc8a43b69d61f47c1",
+    "archive_member_manifest_sha256": "1b478173e1f3ed98d025ba19b2a2315e46d40722270434fd7b35761cd9ea9e98",
     "byte_closed_archive_parity": {
       "proof_path": "",
       "proven": false,
       "required": true
     },
-    "candidate_archive_sha256": "106af3ed6917d6115586463ef35e43119add5db002fd19f3da7cd8065a63eb8d",
+    "candidate_archive_sha256": "3455c82708b1d628e17fb21cf3ccb334a4375e023a80217681c10912224881ac",
     "candidate_construction_ready": true,
     "charged_member_summary": {
       "optional_roles": {
@@ -55,6 +55,9 @@
         ],
         "inflate_entrypoint": [
           "inflate.sh"
+        ],
+        "label_prior_payload_manifest": [
+          "label_prior_payload_manifest.json"
         ],
         "runtime_consumer_proof": [
           "runtime_consumer_proof_skeleton.json"
@@ -132,32 +135,41 @@
       "records": [
         {
           "charged_member": "categorical_payload.bin",
+          "charged_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
           "compression_time_only": false,
           "family": "qma9",
           "index": 0,
+          "label_contract": "contest_zero_based_comma10k_order",
           "name": "local_categorical_payload",
           "requires_charged_member": true,
           "runtime_consumed": true,
+          "source_provenance_kind": "charged_archive_member",
           "usage": "inflate_runtime_conditioning"
         },
         {
           "charged_member": "",
+          "charged_member_sha256": "",
           "compression_time_only": true,
           "family": "openpilot_priors",
           "index": 1,
+          "label_contract": "openpilot_prior_hints_non_runtime",
           "name": "ego_lane_atom_ranker",
           "requires_charged_member": false,
           "runtime_consumed": false,
+          "source_provenance_kind": "compression_time_only_derivation",
           "usage": "compression_time_atom_ranking_only"
         },
         {
           "charged_member": "class_codebook.json",
+          "charged_member_sha256": "6db870e7e05cc310ca25897e8d3ccac4f6fff06ad22ea57c157dbf8086ba29d0",
           "compression_time_only": false,
           "family": "clade_spade",
           "index": 2,
+          "label_contract": "contest_zero_based_comma10k_order",
           "name": "canonical_class_codebook_conditioning",
           "requires_charged_member": true,
           "runtime_consumed": true,
+          "source_provenance_kind": "charged_archive_member",
           "usage": "inflate_runtime_conditioning"
         }
       ],
@@ -168,22 +180,44 @@
     "conditioning_priors": [
       {
         "charged_member": "categorical_payload.bin",
+        "charged_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
         "family": "qma9",
+        "label_contract": "contest_zero_based_comma10k_order",
         "name": "local_categorical_payload",
         "runtime_consumed": true,
+        "source_provenance": {
+          "charged_member": "categorical_payload.bin",
+          "kind": "charged_archive_member",
+          "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+          "source_kind": "pr91_hpm1_mask_segment"
+        },
         "usage": "inflate_runtime_conditioning"
       },
       {
         "family": "openpilot_priors",
+        "label_contract": "openpilot_prior_hints_non_runtime",
         "name": "ego_lane_atom_ranker",
         "runtime_consumed": false,
+        "source_provenance": {
+          "kind": "compression_time_only_derivation",
+          "runtime_consumed": false,
+          "source": "categorical_candidate_plan.openpilot_prior_hints"
+        },
         "usage": "compression_time_atom_ranking_only"
       },
       {
         "charged_member": "class_codebook.json",
+        "charged_member_sha256": "6db870e7e05cc310ca25897e8d3ccac4f6fff06ad22ea57c157dbf8086ba29d0",
         "family": "clade_spade",
+        "label_contract": "contest_zero_based_comma10k_order",
         "name": "canonical_class_codebook_conditioning",
         "runtime_consumed": true,
+        "source_provenance": {
+          "charged_member": "class_codebook.json",
+          "kind": "charged_archive_member",
+          "sha256": "6db870e7e05cc310ca25897e8d3ccac4f6fff06ad22ea57c157dbf8086ba29d0",
+          "source": "build_categorical_class_codebook"
+        },
         "usage": "inflate_runtime_conditioning"
       }
     ],
@@ -262,37 +296,65 @@
       "sha256": "96c609ffb891c2717ccc055f81a7255a7946383f8f54fca2f1b41fdb88f26062"
     },
     {
-      "bytes": 2690,
-      "name": "runtime_consumer.py",
-      "role": "decoder_or_runtime_consumer",
-      "sha256": "4fb6740b3e859068dbdbe159545c49b927a8b017b6046412ef5edddcb5fcba6d"
+      "bytes": 5403,
+      "name": "label_prior_payload_manifest.json",
+      "role": "label_prior_payload_manifest",
+      "sha256": "0be3c41d3f0f83eafe7f2c38a8d257a4dcb815973b22595b003c7592d1107f0d"
     },
     {
-      "bytes": 1731,
+      "bytes": 5110,
+      "name": "runtime_consumer.py",
+      "role": "decoder_or_runtime_consumer",
+      "sha256": "d4473f3f031e1949bc9f90be49c54e759a4bd0039921dc81bb4667d6140576a8"
+    },
+    {
+      "bytes": 1931,
       "name": "runtime_consumer_proof_skeleton.json",
       "role": "runtime_consumer_proof",
-      "sha256": "72cd6236aeff5b62657c99be07ee7f8d3d8857759daff74601976e86ee3e21f0"
+      "sha256": "7ed7dcb8aa7ca2390268d14696397612d7f49c88d2a3e43841df33e85392461a"
     }
   ],
   "conditioning_priors": [
     {
       "charged_member": "categorical_payload.bin",
+      "charged_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
       "family": "qma9",
+      "label_contract": "contest_zero_based_comma10k_order",
       "name": "local_categorical_payload",
       "runtime_consumed": true,
+      "source_provenance": {
+        "charged_member": "categorical_payload.bin",
+        "kind": "charged_archive_member",
+        "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+        "source_kind": "pr91_hpm1_mask_segment"
+      },
       "usage": "inflate_runtime_conditioning"
     },
     {
       "family": "openpilot_priors",
+      "label_contract": "openpilot_prior_hints_non_runtime",
       "name": "ego_lane_atom_ranker",
       "runtime_consumed": false,
+      "source_provenance": {
+        "kind": "compression_time_only_derivation",
+        "runtime_consumed": false,
+        "source": "categorical_candidate_plan.openpilot_prior_hints"
+      },
       "usage": "compression_time_atom_ranking_only"
     },
     {
       "charged_member": "class_codebook.json",
+      "charged_member_sha256": "6db870e7e05cc310ca25897e8d3ccac4f6fff06ad22ea57c157dbf8086ba29d0",
       "family": "clade_spade",
+      "label_contract": "contest_zero_based_comma10k_order",
       "name": "canonical_class_codebook_conditioning",
       "runtime_consumed": true,
+      "source_provenance": {
+        "charged_member": "class_codebook.json",
+        "kind": "charged_archive_member",
+        "sha256": "6db870e7e05cc310ca25897e8d3ccac4f6fff06ad22ea57c157dbf8086ba29d0",
+        "source": "build_categorical_class_codebook"
+      },
       "usage": "inflate_runtime_conditioning"
     }
   ],
@@ -328,7 +390,7 @@
     "path": "hpm1_structural_inventory.json",
     "payload_member": "categorical_payload.bin",
     "payload_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
-    "sha256": "985d5b944e61208020dbadf3d5a43233a0a6d494bf156010d3f16c09b45a8bba",
+    "sha256": "453095759e19defd3e8f0b1011495c9b50d6b60dffe904b3c31fe10348d15e37",
     "structural_reencode_matches_source": true,
     "unsupported_wire_constructs": [
       "hpac_autoregressive_probability_rows",
@@ -339,6 +401,18 @@
     ]
   },
   "kind": "categorical_qma9_clade_spade_openpilot_candidate_manifest",
+  "label_prior_payload_manifest": {
+    "bytes": 5403,
+    "contract": "categorical_label_prior_payload_manifest_v1",
+    "member": "label_prior_payload_manifest.json",
+    "sha256": "0be3c41d3f0f83eafe7f2c38a8d257a4dcb815973b22595b003c7592d1107f0d"
+  },
+  "label_prior_payload_manifest_member": {
+    "bytes": 5403,
+    "contract": "categorical_label_prior_payload_manifest_v1",
+    "name": "label_prior_payload_manifest.json",
+    "sha256": "0be3c41d3f0f83eafe7f2c38a8d257a4dcb815973b22595b003c7592d1107f0d"
+  },
   "no_op_controls": {
     "charged_member_presence_control": {
       "passed": true,
@@ -375,10 +449,10 @@
     "path": "src/tac/categorical_candidate_runtime_skeleton.py"
   },
   "runtime_consumer_proof_skeleton_member": {
-    "bytes": 1731,
+    "bytes": 1931,
     "contract": "categorical_runtime_consumer_proof_skeleton_v1",
     "name": "runtime_consumer_proof_skeleton.json",
-    "sha256": "72cd6236aeff5b62657c99be07ee7f8d3d8857759daff74601976e86ee3e21f0"
+    "sha256": "7ed7dcb8aa7ca2390268d14696397612d7f49c88d2a3e43841df33e85392461a"
   },
   "runtime_loader_parity": {
     "blocker": "runtime_output_parity_not_proven",
@@ -388,13 +462,14 @@
     "loaded_charged_members": [
       "categorical_payload.bin",
       "class_codebook.json",
+      "label_prior_payload_manifest.json",
       "runtime_consumer_proof_skeleton.json"
     ],
     "loader_member": "runtime_consumer.py",
-    "loader_member_sha256": "4fb6740b3e859068dbdbe159545c49b927a8b017b6046412ef5edddcb5fcba6d",
+    "loader_member_sha256": "d4473f3f031e1949bc9f90be49c54e759a4bd0039921dc81bb4667d6140576a8",
     "passed": false,
     "runtime_consumer_path": "src/tac/categorical_candidate_runtime_skeleton.py",
-    "runtime_consumer_sha256": "4fb6740b3e859068dbdbe159545c49b927a8b017b6046412ef5edddcb5fcba6d",
+    "runtime_consumer_sha256": "d4473f3f031e1949bc9f90be49c54e759a4bd0039921dc81bb4667d6140576a8",
     "runtime_loader_parity_contract": "categorical_runtime_loader_parity_v1",
     "schema_version": 1,
     "score_claim": false,

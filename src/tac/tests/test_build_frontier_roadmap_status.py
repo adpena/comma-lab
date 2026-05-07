@@ -101,6 +101,9 @@ def test_frontier_roadmap_status_markdown_is_operator_briefing() -> None:
     assert "Live-safe operator roadmap" in markdown
     assert "Next Comprehensive Tranche" in markdown
     assert "candidate_static_preflight_ready_count" in markdown
+    assert "field_selection_ready_candidate_packet_count" in markdown
+    assert "selected_candidate_frontier_reason" in markdown
+    assert "selected_candidate_exact_blocker_count" in markdown
     assert "dirty-blocked keys" in markdown
     assert "`rate_frontier_closure`" in markdown
     assert "`field_meta_selection`" in markdown
@@ -164,6 +167,7 @@ def test_frontier_roadmap_status_consumes_field_meta_packet_manifests(tmp_path: 
     assert packet_selection["candidate_local_preflight_ready_count"] == 1
     assert packet_selection["candidate_static_preflight_ready_count"] == 1
     assert packet_selection["ready_candidate_count"] == 0
+    assert packet_selection["field_selection_ready_for_exact_eval_dispatch_count"] == 0
     assert packet_selection["pareto_summary"]["frontier_count"] == 1
     assert packet_selection["kkt_ready_for_field_planning_count"] == 0
     assert packet_selection["selected_candidate"]["candidate_id"] == "generic_packet"
@@ -171,6 +175,14 @@ def test_frontier_roadmap_status_consumes_field_meta_packet_manifests(tmp_path: 
     assert packet_selection["selected_candidate"]["candidate_static_preflight_ready"] is True
     assert packet_selection["selected_candidate"]["kkt_ready_for_field_planning"] is False
     assert "kkt:kkt_proof_or_admm_result_missing" in packet_selection["selected_candidate"]["kkt_blockers"]
+    assert (
+        "kkt:kkt_proof_or_admm_result_missing"
+        in packet_selection["selected_candidate"]["exact_dispatch_blockers"]["blockers"]
+    )
+    assert (
+        packet_selection["selected_candidate"]["non_dominated_frontier_reason"]["reason"]
+        == "non_dominated_within_pareto_scope"
+    )
     assert packet_selection["selected_candidate"]["selection_decision"] == "needs_active_lane_claim_before_dispatch"
     assert packet_selection["selected_candidate"]["ready_for_exact_eval_dispatch"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False

@@ -1,5 +1,24 @@
 # Latest Report - 2026-05-04 PR106 belt_and_suspenders adapter contest-faithful status
 
+## Worker D Addendum - 2026-05-07
+
+Current local HNeRV scorecard routing now treats
+`PR106x-lowlevel-brotli` as the lowest exact CUDA row already in custody:
+score `0.20935073680571203`, bytes `186080`, archive SHA-256
+`b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f`,
+eval artifact
+`experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/contest_auth_eval.adjudicated.json`.
+This is an existing exact lossless-repack control, not a new family claim.
+
+The next exact-evaluable score-lowering target closest to that frontier is the
+same archive's `decoder_packed_brotli` section: `170127` charged bytes,
+section SHA-256
+`07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c`.
+Next gate is a byte-different archive with old/new section SHA-256 and charged
+byte proof, followed by exact CUDA auth eval only after the Level 2 lane claim.
+No dispatch was attempted for this update. Durable note:
+`.omx/research/hnerv_frontier_hidden_gem_ranking_20260507_worker_d.md`.
+
 ## Current Floor — NEW EXACT PUBLIC FRONTIER
 
 **Best contest-CUDA artifact in the current claim matrix: PR106 `belt_and_suspenders` adapter replay = `0.20945673680571203` [A++].**
@@ -358,4 +377,3 @@ apogee_int5 at $0.30 — RECOMMENDED).
 8. **Lane SJ-KL C067 GPU dispatch (~$0.30)** — uses C067 base archive (not PR106), so dispatchable in parallel with the PR106-stacking lanes. Predicted score band TBD pending first run.
 
 **Total dispatch matrix: 4 lanes × ~$0.30 = ~$1.20** for the highest-EV sweep that would land the first contest-CUDA score below PR106's 0.20946.
-

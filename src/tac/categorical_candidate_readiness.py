@@ -10,6 +10,13 @@ from typing import Any
 
 from tac.categorical_candidate_plan import audit_categorical_charged_label_plan
 from tac.categorical_compression_contract import build_categorical_compression_contract
+from tac.categorical_label_prior_payload_manifest import (
+    LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT,
+    LABEL_PRIOR_PAYLOAD_MANIFEST_KIND,
+    LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
+    LABEL_PRIOR_PAYLOAD_MANIFEST_ROLE,
+    RUNTIME_LABEL_CONTRACT,
+)
 from tac.categorical_openpilot_mask_prior_contract import (
     audit_categorical_openpilot_mask_priors,
 )
@@ -548,6 +555,155 @@ def _decode_reencode_parity_report(
     summary["independent_proof"] = proof_summary
     blockers.extend(proof_blockers)
 
+    summary["accepted"] = not blockers
+    summary["blockers"] = blockers
+    return summary, blockers
+
+
+def _label_prior_payload_manifest_report(
+    record: Any,
+    *,
+    member_records: list[dict[str, Any]],
+    archive_members: dict[str, bytes],
+    candidate_source_archive_sha256: Any,
+    candidate_conditioning_priors: Any,
+    expected_class_order: list[str],
+    expected_gray_codebook: list[int],
+) -> tuple[dict[str, Any], list[str]]:
+    blockers: list[str] = []
+    summary: dict[str, Any] = {
+        "schema_version": SCHEMA_VERSION,
+        "contract": LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT,
+        "declared": isinstance(record, dict),
+        "accepted": False,
+        "member": "",
+        "bytes": None,
+        "sha256": "",
+        "label_contract": "",
+        "conditioning_prior_count": 0,
+        "blockers": [],
+    }
+    if not isinstance(record, dict):
+        blockers.append("label_prior_payload_manifest_record_missing")
+        summary["blockers"] = blockers
+        return summary, blockers
+
+    member = record.get("member", record.get("name"))
+    member_str = member if isinstance(member, str) else ""
+    summary["member"] = member_str
+    if not _safe_member_name(member_str):
+        blockers.append("label_prior_payload_manifest_member_missing_or_unsafe")
+
+    if record.get("contract") != LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT:
+        blockers.append("label_prior_payload_manifest_contract_record_missing_or_invalid")
+    if not isinstance(record.get("bytes"), int) or record.get("bytes") <= 0:
+        blockers.append("label_prior_payload_manifest_record_bytes_invalid")
+    if not _is_sha256(record.get("sha256")):
+        blockers.append("label_prior_payload_manifest_record_sha256_invalid")
+
+    charged_by_name = {item["name"]: item for item in member_records if item.get("name")}
+    charged_record = charged_by_name.get(member_str)
+    if member_str and charged_record is None:
+        blockers.append("label_prior_payload_manifest_member_not_charged")
+    elif charged_record is not None:
+        if charged_record.get("role") != LABEL_PRIOR_PAYLOAD_MANIFEST_ROLE:
+            blockers.append("label_prior_payload_manifest_charged_role_invalid")
+        if charged_record.get("bytes") != record.get("bytes"):
+            blockers.append("label_prior_payload_manifest_charged_bytes_mismatch")
+        if charged_record.get("sha256") != record.get("sha256"):
+            blockers.append("label_prior_payload_manifest_charged_sha256_mismatch")
+
+    raw = archive_members.get(member_str)
+    if member_str and raw is None:
+        blockers.append("label_prior_payload_manifest_member_missing_from_archive")
+        summary["blockers"] = blockers
+        return summary, blockers
+
+    manifest_payload: dict[str, Any] | None = None
+    if raw is not None:
+        actual_sha = sha256_bytes(raw)
+        summary["bytes"] = len(raw)
+        summary["sha256"] = actual_sha
+        if record.get("bytes") != len(raw):
+            blockers.append("label_prior_payload_manifest_member_bytes_mismatch")
+        if record.get("sha256") != actual_sha:
+            blockers.append("label_prior_payload_manifest_member_sha256_mismatch")
+        try:
+            loaded = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            blockers.append("label_prior_payload_manifest_json_invalid")
+            loaded = None
+        if isinstance(loaded, dict):
+            manifest_payload = loaded
+        else:
+            blockers.append("label_prior_payload_manifest_not_object")
+
+    if manifest_payload is not None:
+        if manifest_payload.get("schema_version") != SCHEMA_VERSION:
+            blockers.append("label_prior_payload_manifest_schema_version_missing_or_invalid")
+        if manifest_payload.get("kind") != LABEL_PRIOR_PAYLOAD_MANIFEST_KIND:
+            blockers.append("label_prior_payload_manifest_kind_missing_or_invalid")
+        if manifest_payload.get("label_prior_payload_manifest_contract") != LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT:
+            blockers.append("label_prior_payload_manifest_contract_missing_or_invalid")
+        if manifest_payload.get("score_claim") is not False:
+            blockers.append("label_prior_payload_manifest_score_claim_must_be_false")
+        if manifest_payload.get("dispatch_attempted") is not False:
+            blockers.append("label_prior_payload_manifest_dispatch_attempted_must_be_false")
+        if manifest_payload.get("ready_for_exact_eval_dispatch") is not False:
+            blockers.append("label_prior_payload_manifest_ready_for_exact_eval_must_be_false")
+        if manifest_payload.get("source_archive_sha256") != candidate_source_archive_sha256:
+            blockers.append("label_prior_payload_manifest_source_archive_sha256_mismatch")
+
+        label_contract = manifest_payload.get("label_contract")
+        summary["label_contract"] = label_contract if isinstance(label_contract, str) else ""
+        if label_contract != RUNTIME_LABEL_CONTRACT:
+            blockers.append("label_prior_payload_manifest_label_contract_mismatch")
+        if manifest_payload.get("semantic_class_order") != expected_class_order:
+            blockers.append("label_prior_payload_manifest_semantic_class_order_mismatch")
+        if manifest_payload.get("selfcomp_gray_codebook") != expected_gray_codebook:
+            blockers.append("label_prior_payload_manifest_selfcomp_gray_codebook_mismatch")
+        if manifest_payload.get("conditioning_priors") != candidate_conditioning_priors:
+            blockers.append("label_prior_payload_manifest_conditioning_priors_mismatch")
+        priors = manifest_payload.get("conditioning_priors")
+        summary["conditioning_prior_count"] = len(priors) if isinstance(priors, list) else 0
+
+        prior_contract = audit_categorical_openpilot_mask_priors(
+            priors,
+            charged_member_names=sorted(charged_by_name),
+            charged_members=member_records,
+        )
+        summary["conditioning_prior_contract"] = prior_contract
+        for blocker in prior_contract["dispatch_blockers"]:
+            blockers.append(f"label_prior_payload_manifest_{blocker}")
+
+        charged_member_links = manifest_payload.get("charged_member_links")
+        if not isinstance(charged_member_links, list) or not charged_member_links:
+            blockers.append("label_prior_payload_manifest_charged_member_links_missing")
+        else:
+            for index, link in enumerate(charged_member_links):
+                if not isinstance(link, dict):
+                    blockers.append(f"label_prior_payload_manifest_charged_member_link_{index}_not_object")
+                    continue
+                name = link.get("name")
+                digest = link.get("sha256")
+                if not _safe_member_name(name):
+                    blockers.append(f"label_prior_payload_manifest_charged_member_link_{index}_name_invalid")
+                    continue
+                if name not in charged_by_name:
+                    blockers.append(f"label_prior_payload_manifest_charged_member_link_not_charged:{name}")
+                    continue
+                if digest != charged_by_name[name].get("sha256"):
+                    blockers.append(f"label_prior_payload_manifest_charged_member_link_sha256_mismatch:{name}")
+
+        required_controls = manifest_payload.get("required_no_op_controls")
+        if not isinstance(required_controls, list):
+            blockers.append("label_prior_payload_manifest_required_controls_missing")
+        else:
+            for control_name in REQUIRED_CONTROL_NAMES:
+                if control_name not in required_controls:
+                    blockers.append(f"label_prior_payload_manifest_required_control_missing:{control_name}")
+
+    blockers = list(dict.fromkeys(blockers))
     summary["accepted"] = not blockers
     summary["blockers"] = blockers
     return summary, blockers
@@ -1388,6 +1544,22 @@ def audit_categorical_candidate_manifest(
             blockers.append("candidate_archive_untracked_members")
             warnings.append(f"archive contains untracked members: {archive_untracked_members}")
 
+    label_prior_payload_manifest, label_prior_payload_manifest_blockers = (
+        _label_prior_payload_manifest_report(
+            payload.get(
+                "label_prior_payload_manifest",
+                payload.get("label_prior_payload_manifest_member"),
+            ),
+            member_records=member_records,
+            archive_members=archive_members,
+            candidate_source_archive_sha256=payload.get("source_archive_sha256"),
+            candidate_conditioning_priors=payload.get("conditioning_priors"),
+            expected_class_order=expected_names,
+            expected_gray_codebook=expected_gray,
+        )
+    )
+    blockers.extend(label_prior_payload_manifest_blockers)
+
     runtime_loader_parity, runtime_loader_blockers = _runtime_loader_parity_report(
         payload.get("runtime_loader_parity"),
         runtime_path=runtime_path,
@@ -1527,6 +1699,7 @@ def audit_categorical_candidate_manifest(
                 isinstance(runtime_consumer, dict) and runtime_consumer.get("consumes_charged_members") is True
             ),
         },
+        "label_prior_payload_manifest": label_prior_payload_manifest,
         "runtime_loader_parity": runtime_loader_parity,
         "decode_reencode_parity": decode_reencode_parity,
         "exact_eval_dispatch_requirements": exact_eval_dispatch_requirements,
@@ -1564,6 +1737,9 @@ __all__ = [
     "EXACT_EVAL_ENTRYPOINT",
     "EXACT_EVAL_PATH",
     "HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT",
+    "LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT",
+    "LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER",
+    "LABEL_PRIOR_PAYLOAD_MANIFEST_ROLE",
     "REQUIRED_CONTROL_NAMES",
     "REQUIRED_MEMBER_ROLES",
     "RUNTIME_EXECUTION_PROOF_KIND",

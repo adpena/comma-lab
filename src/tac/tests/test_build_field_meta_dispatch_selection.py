@@ -83,6 +83,7 @@ def test_field_meta_selector_requires_matching_active_claim_for_dispatch_ready(
         candidate_id="claimed_candidate",
         lane_id="lane_claimed_candidate",
         job_name="job_claimed_candidate",
+        kkt_proof=_kkt_proof(),
     )
     claims = _claims_file(tmp_path, lane_id="lane_claimed_candidate", job_name="job_claimed_candidate")
 
@@ -97,14 +98,47 @@ def test_field_meta_selector_requires_matching_active_claim_for_dispatch_ready(
     assert report["candidate_static_preflight_ready_count"] == 1
     assert report["ready_candidate_count"] == 1
     assert report["ready_for_exact_eval_dispatch"] is True
+    assert report["field_selection_ready_for_exact_eval_dispatch"] is True
+    assert report["field_selection_ready_for_exact_eval_dispatch_count"] == 1
     assert row["candidate_static_preflight_ready"] is True
     assert row["ready_for_exact_eval_dispatch"] is True
+    assert row["field_selection_ready_for_exact_eval_dispatch"] is True
+    assert row["exact_dispatch_blockers"]["blocker_count"] == 0
     assert row["dispatch_claim_proof"]["checked"] is True
     assert row["dispatch_claim_proof"]["active_lane_claim"] is True
     assert row["dispatch_claim_proof"]["active_claim"]["instance_job_id"] == "job_claimed_candidate"
     assert row["next_required_proof"] == [
         "exact_cuda_auth_eval_on_selected_archive_bytes",
     ]
+
+
+def test_field_meta_selector_keeps_active_claim_blocked_by_missing_kkt_for_field_selection(
+    tmp_path: Path,
+) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="claimed_no_kkt",
+        lane_id="lane_claimed_no_kkt",
+        job_name="job_claimed_no_kkt",
+    )
+    claims = _claims_file(tmp_path, lane_id="lane_claimed_no_kkt", job_name="job_claimed_no_kkt")
+
+    report = build_selection_report(
+        repo_root=REPO,
+        manifest_paths=[manifest],
+        claims_path=claims,
+        now_utc="2026-05-06T12:00:00Z",
+    )
+
+    row = report["rows"][0]
+    assert row["ready_for_exact_eval_dispatch"] is True
+    assert row["field_selection_ready_for_exact_eval_dispatch"] is False
+    assert report["field_selection_ready_for_exact_eval_dispatch_count"] == 0
+    assert "kkt:kkt_proof_or_admm_result_missing" in row["exact_dispatch_blockers"]["blockers"]
+    assert (
+        "passed_kkt_proof_or_converged_admm_waterline_result"
+        in row["exact_dispatch_blockers"]["next_required_proof"]
+    )
 
 
 def test_field_meta_selector_rejects_non_zip_archive_even_with_matching_sha(
@@ -210,6 +244,9 @@ def test_field_meta_selector_exposes_pareto_kkt_and_information_gain(
         "family_group": "hnerv_rate_recode",
         "pareto_scope": "hnerv_rate_recode",
         "interaction_assumptions": ["rate_only_byte_equivalent"],
+        "interaction_model": "first_order_volterra_rate_recode",
+        "volterra_order": 1,
+        "volterra_terms": ["rate_only_linear_section"],
         "kkt_proof": _kkt_proof(),
     }
     dominator = _packet_manifest(
@@ -241,15 +278,28 @@ def test_field_meta_selector_exposes_pareto_kkt_and_information_gain(
     assert report["selected_candidate"]["candidate_id"] == "dominator"
     first = report["rows"][0]
     assert first["pareto_frontier"] is True
+    assert first["field_interaction_contract"]["status"] == "passed"
+    assert first["field_interaction_contract"]["assumptions"] == ["rate_only_byte_equivalent"]
+    assert first["field_interaction_contract"]["interaction_model"] == "first_order_volterra_rate_recode"
+    assert first["field_interaction_contract"]["volterra_order"] == 1
+    assert first["field_interaction_contract"]["volterra_terms"] == ["rate_only_linear_section"]
+    assert first["non_dominated_frontier_reason"]["schema"] == "non_dominated_frontier_reason_v1"
+    assert first["non_dominated_frontier_reason"]["status"] == "non_dominated"
+    assert first["non_dominated_frontier_reason"]["reason"] == "non_dominated_within_pareto_scope"
     assert first["kkt_ready_for_field_planning"] is True
     assert first["lexicographic_feasibility_tuple"][6] is True
     assert first["field_selection_score_delta"] == first["expected_total_score_delta"]
     assert first["expected_information_gain_nats"] == 0.2
+    assert first["exact_dispatch_blockers"]["schema"] == "exact_dispatch_blockers_v1"
+    assert "missing_active_lane_dispatch_claim" in first["exact_dispatch_blockers"]["blockers"]
     second = report["rows"][1]
     assert second["candidate_id"] == "dominated"
     assert second["pareto_frontier"] is False
     assert second["pareto_dominated_by"] == ["dominator"]
+    assert second["non_dominated_frontier_reason"]["status"] == "dominated"
+    assert second["non_dominated_frontier_reason"]["dominated_by"] == ["dominator"]
     assert second["selection_penalty_terms"]["pareto_dominated_packet"] > 0.0
+    assert "pareto_dominated_within_scope" in second["exact_dispatch_blockers"]["blockers"]
 
 
 def test_field_meta_selector_requires_real_kkt_proof_before_kkt_ready(
@@ -270,6 +320,8 @@ def test_field_meta_selector_requires_real_kkt_proof_before_kkt_ready(
     assert row["kkt_ready_for_field_planning"] is False
     assert row["kkt_proof"]["status"] == "blocked"
     assert "kkt:kkt_proof_or_admm_result_missing" in row["kkt_blockers"]
+    assert row["field_interaction_contract"]["status"] == "passed"
+    assert "kkt:kkt_proof_or_admm_result_missing" in row["exact_dispatch_blockers"]["blockers"]
     assert row["selection_penalty_terms"]["kkt_not_ready_for_field_planning"] > 0.0
     assert row["field_selection_score_delta"] == row["expected_total_score_delta"]
 
@@ -382,6 +434,9 @@ def _packet_manifest(
     family_group: str = "fixture_family",
     pareto_scope: str = "fixture_family",
     interaction_assumptions: list[str] | None = None,
+    interaction_model: str | None = None,
+    volterra_order: int | None = None,
+    volterra_terms: list[str] | None = None,
     code_paths: list[str] | None = None,
     evidence_paths: list[str] | None = None,
     kkt_proof: dict[str, object] | None = None,
@@ -428,6 +483,12 @@ def _packet_manifest(
         "expected_pose_dist_delta": expected_pose_dist_delta,
         "expected_information_gain_nats": expected_information_gain_nats,
     }
+    if interaction_model is not None:
+        payload["interaction_model"] = interaction_model
+    if volterra_order is not None:
+        payload["volterra_order"] = volterra_order
+    if volterra_terms is not None:
+        payload["volterra_terms"] = volterra_terms
     if code_paths is not None:
         payload["code_paths"] = code_paths
     if evidence_paths is not None:

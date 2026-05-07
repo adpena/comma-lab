@@ -50,6 +50,27 @@ PARETO_MINIMIZE_OBJECTIVES = (
     "expected_seg_dist_delta",
     "expected_pose_dist_delta",
 )
+PARETO_OBJECTIVE_DIRECTIONS = {
+    "expected_total_score_delta": "min",
+    "byte_delta": "min",
+    "expected_seg_dist_delta": "min",
+    "expected_pose_dist_delta": "min",
+    "confidence": "max",
+    "archive_ready_for_stack_review": "max",
+}
+BLOCKER_CATEGORY_KEYS = (
+    "custody",
+    "runtime",
+    "dispatch_claim",
+    "kkt_or_admm",
+    "pareto_frontier",
+    "interaction_model",
+    "proxy_or_planning",
+    "dirty_worktree",
+    "score_claim",
+    "exact_cuda_eval",
+    "other",
+)
 SELECTION_PENALTIES = {
     "non_rankable_atom": 1_000.0,
     "missing_byte_closed_archive_manifest": 100.0,
@@ -132,6 +153,190 @@ def _optional_numeric(value: Any) -> float | None:
     if isinstance(value, int | float):
         return float(value)
     return None
+
+
+def _optional_int_field(mapping: Mapping[str, Any], keys: Iterable[str]) -> tuple[int | None, str, list[str]]:
+    for key in keys:
+        if key not in mapping or mapping.get(key) is None:
+            continue
+        value = mapping.get(key)
+        if isinstance(value, bool):
+            return None, key, [f"{key}_must_be_integer"]
+        if isinstance(value, int):
+            if value < 0:
+                return None, key, [f"{key}_must_be_non_negative"]
+            return value, key, []
+        return None, key, [f"{key}_must_be_integer"]
+    return None, "", []
+
+
+def _field_interaction_contract(
+    atom: Mapping[str, Any],
+    *,
+    assumptions: list[str],
+    conflicts_with_families: list[str],
+    conflicts_with_atoms: list[str],
+) -> dict[str, Any]:
+    volterra_order, volterra_order_source, volterra_blockers = _optional_int_field(
+        atom,
+        ("volterra_order", "interaction_order", "max_interaction_order"),
+    )
+    volterra_terms = _sorted_unique_string_list(
+        atom.get("volterra_terms", atom.get("higher_order_interaction_terms"))
+    )
+    interaction_model = str(
+        atom.get("interaction_model")
+        or atom.get("volterra_model")
+        or atom.get("field_interaction_model")
+        or ""
+    )
+    blockers = list(volterra_blockers)
+    if not assumptions:
+        blockers.append("missing_interaction_assumptions")
+    return {
+        "schema": "field_interaction_contract_v1",
+        "status": "passed" if not blockers else "blocked",
+        "assumptions": assumptions,
+        "assumption_count": len(assumptions),
+        "conflicts_with_families": conflicts_with_families,
+        "conflicts_with_atoms": conflicts_with_atoms,
+        "interaction_model": interaction_model,
+        "volterra_order": volterra_order,
+        "volterra_order_source": volterra_order_source,
+        "volterra_terms": volterra_terms,
+        "volterra_terms_declared": bool(volterra_terms),
+        "volterra_scope": (
+            "declared_order"
+            if volterra_order is not None
+            else "undeclared_order_first_order_assumptions_only"
+        ),
+        "blockers": _unique_ordered_strings(blockers),
+    }
+
+
+def _pareto_eligibility_blockers(row: Mapping[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    if row.get("rankable") is not True:
+        blockers.append("non_rankable_atom")
+    if row.get("byte_closed_archive_manifest_attached") is not True:
+        blockers.append("missing_byte_closed_archive_manifest")
+    if row.get("proxy_row") is True:
+        blockers.append("proxy_row")
+    return blockers
+
+
+def _non_dominated_frontier_reason(row: Mapping[str, Any]) -> dict[str, Any]:
+    eligibility_blockers = _pareto_eligibility_blockers(row)
+    dominated_by = _sorted_unique_string_list(row.get("pareto_dominated_by"))
+    if eligibility_blockers:
+        status = "ineligible"
+        reason = "not_on_frontier_until_pareto_eligibility_blockers_clear"
+    elif dominated_by:
+        status = "dominated"
+        reason = "dominated_within_pareto_scope_by_byte_closed_non_proxy_candidate"
+    elif row.get("pareto_frontier") is True:
+        status = "non_dominated"
+        reason = "non_dominated_within_pareto_scope"
+    else:
+        status = "blocked"
+        reason = "pareto_frontier_annotation_missing_or_blocked"
+    return {
+        "schema": "non_dominated_frontier_reason_v1",
+        "status": status,
+        "reason": reason,
+        "scope": str(row.get("pareto_scope") or ""),
+        "eligible": bool(row.get("pareto_eligible")),
+        "frontier": bool(row.get("pareto_frontier")),
+        "dominated_by": dominated_by,
+        "eligibility_blockers": eligibility_blockers,
+        "objective_directions": dict(PARETO_OBJECTIVE_DIRECTIONS),
+        "objectives": dict(row.get("pareto_objectives") or {}),
+    }
+
+
+def _blocker_categories(blockers: Iterable[Any]) -> dict[str, list[str]]:
+    categories: dict[str, list[str]] = {key: [] for key in BLOCKER_CATEGORY_KEYS}
+    for blocker in _unique_ordered_strings(blockers):
+        lowered = blocker.lower()
+        if any(token in lowered for token in ("archive", "byte_closed", "manifest", "custody", "zip")):
+            categories["custody"].append(blocker)
+        elif "runtime" in lowered:
+            categories["runtime"].append(blocker)
+        elif "claim" in lowered or "lane" in lowered or "dispatch_identity" in lowered:
+            categories["dispatch_claim"].append(blocker)
+        elif "kkt" in lowered or "admm" in lowered:
+            categories["kkt_or_admm"].append(blocker)
+        elif "pareto" in lowered or "dominated" in lowered or "frontier" in lowered:
+            categories["pareto_frontier"].append(blocker)
+        elif "interaction" in lowered or "volterra" in lowered or "conflict" in lowered:
+            categories["interaction_model"].append(blocker)
+        elif "proxy" in lowered or "planning" in lowered:
+            categories["proxy_or_planning"].append(blocker)
+        elif "dirty" in lowered or "worktree" in lowered:
+            categories["dirty_worktree"].append(blocker)
+        elif "score_claim" in lowered:
+            categories["score_claim"].append(blocker)
+        elif "cuda" in lowered or "auth_eval" in lowered or "exact_eval" in lowered:
+            categories["exact_cuda_eval"].append(blocker)
+        else:
+            categories["other"].append(blocker)
+    return categories
+
+
+def _atom_next_required_proofs(row: Mapping[str, Any]) -> list[str]:
+    proofs: list[str] = []
+    if row.get("byte_closed_archive_manifest_attached") is not True:
+        proofs.append("verified_byte_closed_archive_manifest_with_sha256_and_bytes")
+    if row.get("proxy_row") is True:
+        proofs.append("non_proxy_empirical_or_cuda_evidence")
+    if row.get("field_interaction_contract", {}).get("status") != "passed":
+        proofs.append("explicit_interaction_assumptions_or_volterra_scope")
+    if row.get("kkt_ready_for_field_planning") is not True:
+        proofs.append("passed_kkt_proof_or_converged_admm_waterline_result")
+    if row.get("pareto_eligible") is not True:
+        proofs.append("pareto_eligible_byte_closed_non_proxy_rankable_atom")
+    elif row.get("pareto_frontier") is not True:
+        proofs.append("non_dominated_candidate_or_explicit_pareto_scope_override")
+    proofs.append("candidate_packet_static_preflight_and_exact_cuda_auth_eval")
+    return _unique_ordered_strings(proofs)
+
+
+def _exact_dispatch_blockers(row: Mapping[str, Any]) -> dict[str, Any]:
+    blockers: list[str] = [
+        *row.get("dispatch_blockers", []),
+        *row.get("kkt_blockers", []),
+        *row.get("selection_blockers", []),
+    ]
+    if row.get("pareto_eligible") is not True:
+        blockers.append("pareto_ineligible_for_field_selection")
+    elif row.get("pareto_frontier") is not True:
+        blockers.append("pareto_dominated_within_scope")
+    if row.get("kkt_ready_for_field_planning") is not True:
+        blockers.append("kkt_not_ready_for_field_planning")
+    if row.get("field_interaction_contract", {}).get("status") != "passed":
+        blockers.append("field_interaction_contract_blocked")
+    blockers = _unique_ordered_strings(blockers)
+    return {
+        "schema": "exact_dispatch_blockers_v1",
+        "ready_for_exact_eval_dispatch": bool(row.get("ready_for_exact_eval_dispatch")),
+        "dispatchable": bool(row.get("dispatchable")),
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "blockers": blockers,
+        "blocker_count": len(blockers),
+        "blocker_categories": _blocker_categories(blockers),
+        "next_required_proof": _atom_next_required_proofs(row),
+    }
+
+
+def _annotate_row_explanations(rows: Iterable[dict[str, Any]]) -> None:
+    for row in rows:
+        row["pareto_eligibility_blockers"] = _pareto_eligibility_blockers(row)
+        row["non_dominated_frontier_reason"] = _non_dominated_frontier_reason(row)
+        row["exact_dispatch_blockers"] = _exact_dispatch_blockers(row)
+        row["field_selection_ready_for_exact_eval_dispatch"] = bool(
+            row["exact_dispatch_blockers"]["ready_for_exact_eval_dispatch"]
+        )
 
 
 def _optional_non_negative_float(atom: Mapping[str, Any], keys: Iterable[str], *, label: str) -> tuple[float, list[str]]:
@@ -575,15 +780,9 @@ def _annotate_pareto_frontier(rows: list[dict[str, Any]]) -> dict[str, Any]:
         stats["rankable"] += 1
         stats["frontier"] += int(bool(row["pareto_frontier"]))
         stats["dominated"] += int(not bool(row["pareto_frontier"]))
+    _annotate_row_explanations(rows)
     return {
-        "objective_direction": {
-            "expected_total_score_delta": "min",
-            "byte_delta": "min",
-            "expected_seg_dist_delta": "min",
-            "expected_pose_dist_delta": "min",
-            "confidence": "max",
-            "archive_ready_for_stack_review": "max",
-        },
+        "objective_direction": dict(PARETO_OBJECTIVE_DIRECTIONS),
         "scope_default": "family_group",
         "eligibility": "rankable_verified_byte_closed_archive_manifest_and_non_proxy",
         "rankable_frontier_count": frontier_count,
@@ -700,6 +899,12 @@ def expected_atom_score_delta(
     conflicts_with_families = _sorted_unique_string_list(atom.get("conflicts_with_families"))
     conflicts_with_atoms = _sorted_unique_string_list(atom.get("conflicts_with_atoms"))
     interaction_assumptions = _sorted_unique_string_list(atom.get("interaction_assumptions"))
+    field_interaction_contract = _field_interaction_contract(
+        atom,
+        assumptions=interaction_assumptions,
+        conflicts_with_families=conflicts_with_families,
+        conflicts_with_atoms=conflicts_with_atoms,
+    )
     rankable, rank_blockers = _rankable_atom(atom, evidence_grade, confidence)
     if family == "unknown":
         rank_blockers.append("missing_atom_family")
@@ -762,6 +967,7 @@ def expected_atom_score_delta(
         "conflicts_with_families": conflicts_with_families,
         "conflicts_with_atoms": conflicts_with_atoms,
         "interaction_assumptions": interaction_assumptions,
+        "field_interaction_contract": field_interaction_contract,
         "score_claim": False,
         "evidence_grade": evidence_grade,
         "proxy_row": proxy_row,
@@ -797,6 +1003,8 @@ def expected_atom_score_delta(
         "pareto_eligible": bool(rankable and byte_closed_archive_manifest_attached and not proxy_row),
         "pareto_frontier": bool(rankable and byte_closed_archive_manifest_attached and not proxy_row),
         "pareto_dominated_by": [],
+        "pareto_eligibility_blockers": [],
+        "non_dominated_frontier_reason": {},
         "pareto_objectives": {},
         "kkt_ready_for_field_planning": kkt_ready_for_field_planning,
         "kkt_proof": kkt_proof,
@@ -808,11 +1016,15 @@ def expected_atom_score_delta(
         "selection_policy": "pending_pareto_annotation",
         "lexicographic_feasibility_tuple": [],
         "ready_for_exact_eval_dispatch": False,
+        "field_selection_ready_for_exact_eval_dispatch": False,
         "dispatchable": False,
         "dispatch_blockers": _unique_ordered_strings(dispatch_blockers),
+        "exact_dispatch_blockers": {},
     }
     row["pareto_objectives"] = _pareto_objectives(row)
+    _annotate_row_explanations([row])
     _annotate_selection_scores([row])
+    _annotate_row_explanations([row])
     return row
 
 
@@ -827,6 +1039,7 @@ def build_atom_ledger(
     rows = [expected_atom_score_delta(atom, base_pose_dist=base_pose_dist) for atom in atoms]
     pareto_summary = _annotate_pareto_frontier(rows)
     _annotate_selection_scores(rows)
+    _annotate_row_explanations(rows)
     rows.sort(
         key=lambda row: (
             *_lexicographic_sort_key(row),

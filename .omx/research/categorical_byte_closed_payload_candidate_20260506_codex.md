@@ -85,3 +85,41 @@ custody test.
   archive members.
 - Only after those local gates pass, claim a lane before any exact CUDA auth
   eval. No lane claim or dispatch happened in this patch.
+
+## Charged Label-Prior Manifest Addendum - 2026-05-07
+
+Evidence grade: local byte-closed contract hardening
+Score claim: false
+Dispatch attempted: false
+Ready for exact eval dispatch: false
+
+Worker B added a charged `label_prior_payload_manifest.json` archive member so
+the categorical/openpilot conditioning priors are now bound to deterministic
+archive bytes instead of living only in `candidate.json`.
+
+Regenerated archive custody:
+
+- `archive.zip`: 160400 bytes, SHA-256
+  `3455c82708b1d628e17fb21cf3ccb334a4375e023a80217681c10912224881ac`
+- `label_prior_payload_manifest.json`: 5403 bytes, SHA-256
+  `0be3c41d3f0f83eafe7f2c38a8d257a4dcb815973b22595b003c7592d1107f0d`
+- `runtime_consumer.py`: 5110 bytes, SHA-256
+  `d4473f3f031e1949bc9f90be49c54e759a4bd0039921dc81bb4667d6140576a8`
+
+Readiness now reports `label_prior_payload_manifest.accepted=true` and still
+reports `ready_for_exact_eval_dispatch=false`. Current blockers remain the
+intended local proof gates:
+
+- `no_op_control_not_passed:decode_reencode_identity_control`
+- `no_op_control_not_passed:label_permutation_fail_closed_control`
+- `no_op_control_not_passed:runtime_consumes_conditioning_control`
+- `runtime_loader_parity_not_passed`
+- `runtime_execution_proof_artifact_missing`
+- `decode_reencode_parity_not_passed`
+- `decode_reencode_full_decode_not_proven`
+- `decode_reencode_byte_exact_reencode_not_proven`
+- `decode_reencode_independent_proof_artifact_missing`
+- `exact_eval_dispatch_requirements_missing`
+
+No remote dispatch, lane claim, CUDA eval, or score claim happened in this
+addendum.

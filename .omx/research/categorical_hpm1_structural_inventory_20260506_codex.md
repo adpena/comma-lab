@@ -112,3 +112,23 @@ Results:
   `score_claim=false`, `dispatch_attempted=false`
 
 No GPU, remote dispatch, lane claim, or score claim happened.
+
+## Worker B Supersession Note - 2026-05-07
+
+The HPM1 payload bytes and semantic blockers are unchanged, but the candidate
+archive was regenerated after adding the charged label-prior payload manifest.
+The structural inventory was therefore re-emitted with the new candidate
+archive reference.
+
+Updated artifact custody:
+
+- `archive.zip`: 160400 bytes, SHA-256
+  `3455c82708b1d628e17fb21cf3ccb334a4375e023a80217681c10912224881ac`
+- `hpm1_structural_inventory.json`: 12612 bytes, SHA-256
+  `453095759e19defd3e8f0b1011495c9b50d6b60dffe904b3c31fe10348d15e37`
+- `categorical_payload.bin`: 145087 bytes, SHA-256
+  `a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc`
+
+The inventory remains structural only: it does not prove full semantic
+decode/re-encode parity, runtime output parity, exact CUDA auth eval readiness,
+or any score claim.

@@ -27,9 +27,59 @@
       "ok": true
     },
     {
+      "actual": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+      "expected": "64-char lowercase hex sha256",
+      "name": "manifest_source_archive_sha256_malformed",
+      "ok": true
+    },
+    {
       "actual": 186231,
       "expected": "present",
       "name": "manifest_source_archive_bytes_missing",
+      "ok": true
+    },
+    {
+      "actual": 186231,
+      "expected": "positive integer bytes",
+      "name": "manifest_source_archive_bytes_not_positive_int",
+      "ok": true
+    },
+    {
+      "actual": "verified_source_archive_payload_match",
+      "expected": [
+        "verified_source_archive_payload_match",
+        "operator_supplied_source_archive_identity"
+      ],
+      "name": "manifest_source_archive_custody_mode_invalid",
+      "ok": true
+    },
+    {
+      "actual": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/archive.zip",
+      "expected": "present",
+      "name": "manifest_source_archive_path_missing",
+      "ok": true
+    },
+    {
+      "actual": {
+        "bytes": 186231,
+        "exists": true,
+        "path": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/archive.zip",
+        "sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e"
+      },
+      "expected": "existing source archive path",
+      "name": "manifest_source_archive_path_missing_on_disk",
+      "ok": true
+    },
+    {
+      "actual": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+      "expected": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+      "name": "manifest_source_archive_path_sha256_mismatch",
+      "ok": true
+    },
+    {
+      "actual": 186231,
+      "expected": 186231,
+      "name": "manifest_source_archive_path_bytes_mismatch",
       "ok": true
     },
     {
@@ -39,9 +89,51 @@
       "ok": true
     },
     {
+      "actual": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+      "expected": "64-char lowercase hex sha256",
+      "name": "manifest_candidate_archive_sha256_malformed",
+      "ok": true
+    },
+    {
       "actual": 186222,
       "expected": 186222,
       "name": "manifest_candidate_archive_bytes_mismatch",
+      "ok": true
+    },
+    {
+      "actual": 186222,
+      "expected": "positive integer bytes",
+      "name": "manifest_candidate_archive_bytes_not_positive_int",
+      "ok": true
+    },
+    {
+      "actual": {
+        "candidate_archive_sha256": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+        "source_archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e"
+      },
+      "expected": "different source/candidate archive sha256",
+      "name": "manifest_candidate_archive_sha256_equals_source_archive_sha256_noop",
+      "ok": true
+    },
+    {
+      "actual": "803a0940f92ec1cb1b70e9815fb6c666650b5371625e17103104baa21e96b4e7",
+      "expected": "64-char lowercase hex sha256",
+      "name": "manifest_candidate_payload_sha256_malformed",
+      "ok": true
+    },
+    {
+      "actual": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "expected": "64-char lowercase hex sha256",
+      "name": "manifest_source_payload_sha256_malformed",
+      "ok": true
+    },
+    {
+      "actual": {
+        "candidate_payload_sha256": "803a0940f92ec1cb1b70e9815fb6c666650b5371625e17103104baa21e96b4e7",
+        "source_payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7"
+      },
+      "expected": "different source/candidate payload sha256",
+      "name": "manifest_candidate_payload_sha256_equals_source_payload_sha256_noop",
       "ok": true
     },
     {
@@ -78,6 +170,27 @@
       "actual": "2d85c4891e06906833e6a106dd486184121159a2380b581dc0e0b7d56603e939",
       "expected": "present",
       "name": "manifest_changed_section_sha256_missing",
+      "ok": true
+    },
+    {
+      "actual": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+      "expected": "64-char lowercase hex sha256",
+      "name": "manifest_changed_section_source_sha256_malformed",
+      "ok": true
+    },
+    {
+      "actual": "2d85c4891e06906833e6a106dd486184121159a2380b581dc0e0b7d56603e939",
+      "expected": "64-char lowercase hex sha256",
+      "name": "manifest_changed_section_sha256_malformed",
+      "ok": true
+    },
+    {
+      "actual": {
+        "candidate_section_sha256": "2d85c4891e06906833e6a106dd486184121159a2380b581dc0e0b7d56603e939",
+        "source_section_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32"
+      },
+      "expected": "different source/candidate changed-section sha256",
+      "name": "manifest_changed_section_candidate_sha256_equals_source_sha256_noop",
       "ok": true
     },
     {
@@ -159,10 +272,10 @@
       "ok": true
     },
     {
-      "actual": null,
+      "actual": "exact_eval_wr01_apply_pr106x_half_20260506",
       "expected": "exact_eval_wr01_apply_pr106x_half_20260506",
       "name": "dry_run_job_name_mismatch",
-      "ok": false
+      "ok": true
     },
     {
       "actual": "wr01_apply_pr106x_half",
@@ -190,6 +303,7 @@
     }
   ],
   "artifact_consistency_ok": false,
+  "artifact_flag_violations": [],
   "artifacts": [
     {
       "bytes": 186222,
@@ -234,10 +348,13 @@
   ],
   "blockers": [
     "pre_submission_compliance_failed",
-    "dry_run_job_name_mismatch",
     "dry_run_queue_payload_section_diff_mismatch",
-    "missing_lightning_environment"
+    "missing_lightning_environment",
+    "missing_active_lane_dispatch_claim",
+    "missing_operator_exact_cuda_approval"
   ],
+  "byte_delta": -9,
+  "candidate_id": "wr01_apply_pr106x_half",
   "changed_section_name": "latents_and_sidecar_brotli",
   "changed_section_sha256": "2d85c4891e06906833e6a106dd486184121159a2380b581dc0e0b7d56603e939",
   "commands": {
@@ -246,8 +363,17 @@
     "submit": ".venv/bin/python scripts/lightning_exact_eval_repro.py --job-name exact_eval_wr01_apply_pr106x_half_20260506 --stage-workspace --submit --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh --upstream-dir $LIGHTNING_UPSTREAM_DIR --remote $LIGHTNING_SSH_TARGET --remote-pact $LIGHTNING_REMOTE_PACT --studio $LIGHTNING_STUDIO --teamspace $LIGHTNING_TEAMSPACE --sdk-user $LIGHTNING_SDK_USER --machine ${LIGHTNING_MACHINE:-T4} --predicted-band 0.18 0.25 --regression-threshold 0.02 --max-posenet-relative 1.25 --max-segnet-relative 1.10 --max-sane-score 1.0 --component-trace --queue-metadata lane=wr01_apply_pr106x_half --queue-metadata archive_manifest=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --queue-metadata public_preflight=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --queue-metadata payload_section_diff=experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/pre_submission_compliance.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json --extra-artifact experiments/results/hnerv_wavelet_apply_transform_wr01_strength_summary_20260506_codex.json"
   },
   "compliance_ok": false,
+  "confidence": 1.0,
+  "conflicts_with_atoms": [],
+  "conflicts_with_families": [],
   "dispatch_attempted": false,
   "dry_run_ready": true,
+  "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+  "expected_information_gain_nats": 0.0,
+  "expected_pose_dist_delta": 0.0,
+  "expected_score_variance": 0.0,
+  "expected_seg_dist_delta": 0.0,
+  "expected_total_score_delta": -5.9927305780995425e-06,
   "failed_compliance_checks": [
     {
       "details": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/archive.zip",
@@ -280,7 +406,24 @@
       "severity": "error"
     }
   ],
+  "family": "hnerv_wavelet_wr01_apply_transform",
+  "family_group": "hnerv_wavelet_wr01_apply",
+  "interaction_assumptions": [
+    "rate-only single-member archive transform; no intentional SegNet or PoseNet distortion change",
+    "archive and runtime parity are necessary but exact CUDA auth eval is required before any score claim",
+    "no composability assumption with categorical, sensitivity, or pose atoms until stacked archive eval exists"
+  ],
   "job_name": "exact_eval_wr01_apply_pr106x_half_20260506",
+  "lane_claim_preflight": {
+    "active_claim_present": false,
+    "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+    "claims_path_exists": true,
+    "conflict_present": false,
+    "conflicting_active_claims": [],
+    "matching_active_claims": [],
+    "matching_terminal_claims": [],
+    "ttl_hours": 24
+  },
   "lane_id": "wr01_apply_pr106x_half",
   "missing_artifacts": [],
   "missing_env": [
@@ -291,14 +434,31 @@
     "LIGHTNING_STUDIO",
     "LIGHTNING_SDK_USER"
   ],
+  "operator_approved_exact_cuda": false,
+  "packet_kind": "wr01_exact_eval_operator_packet",
+  "pareto_scope": "hnerv_rate_only_exact_archive",
   "payload_diff_ready": true,
   "preflight_ready": true,
+  "proxy_row": false,
   "ready_for_submit": false,
-  "recorded_at_utc": "2026-05-06T13:54:55Z",
+  "recorded_at_utc": "2026-05-06T20:00:00Z",
+  "schema": "wr01_exact_eval_operator_packet_v1",
   "schema_version": 1,
   "score_claim": false,
   "source_archive_bytes": 186231,
+  "source_archive_custody_mode": "verified_source_archive_payload_match",
+  "source_archive_identity": {
+    "bytes": 186231,
+    "exists": true,
+    "path": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/archive.zip",
+    "sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e"
+  },
   "source_archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
   "source_payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+  "static_blockers": [
+    "pre_submission_compliance_failed",
+    "dry_run_queue_payload_section_diff_mismatch"
+  ],
+  "static_packet_ready": false,
   "tool": "tools/build_wr01_exact_eval_packet.py"
 }

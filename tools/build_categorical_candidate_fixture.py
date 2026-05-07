@@ -27,6 +27,12 @@ from tac.categorical_candidate_readiness import (  # noqa: E402
     RUNTIME_LOADER_PARITY_CONTRACT,
     audit_categorical_candidate_manifest,
 )
+from tac.categorical_label_prior_payload_manifest import (  # noqa: E402
+    LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT,
+    LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
+    LABEL_PRIOR_PAYLOAD_MANIFEST_ROLE,
+    build_categorical_label_prior_payload_manifest,
+)
 from tac.categorical_openpilot_mask_prior_contract import RUNTIME_LABEL_CONTRACT  # noqa: E402
 from tac.repo_io import json_text, sha256_bytes, sha256_file, write_json  # noqa: E402
 from tac.semantic_label_contract import CONTEST_SEGNET_CLASS_NAME_TUPLE, SELFCOMP_CLASS_TO_GRAY  # noqa: E402
@@ -40,12 +46,48 @@ MEMBER_ROLES = {
     "inflate.sh": "inflate_entrypoint",
     "categorical_payload.bin": "categorical_payload",
     "class_codebook.json": "decoder_table",
+    LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER: LABEL_PRIOR_PAYLOAD_MANIFEST_ROLE,
     "runtime_decoder.py": "decoder_or_runtime_consumer",
 }
 
 
-def _member_payloads() -> dict[str, bytes]:
-    return {
+def _conditioning_priors(
+    *,
+    class_codebook_sha256: str,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "family": "openpilot_priors",
+            "name": "ego_lane_atom_ranker",
+            "usage": "compression_time_atom_ranking_only",
+            "runtime_consumed": False,
+            "label_contract": "openpilot_prior_hints_non_runtime",
+            "source_provenance": {
+                "kind": "compression_time_only_derivation",
+                "source": "fixture_openpilot_prior_hints",
+                "runtime_consumed": False,
+            },
+        },
+        {
+            "family": "clade_spade",
+            "name": "canonical_class_codebook_conditioning",
+            "usage": "inflate_runtime_conditioning",
+            "runtime_consumed": True,
+            "charged_member": "class_codebook.json",
+            "charged_member_sha256": class_codebook_sha256,
+            "label_contract": RUNTIME_LABEL_CONTRACT,
+            "source_provenance": {
+                "kind": "charged_archive_member",
+                "charged_member": "class_codebook.json",
+                "sha256": class_codebook_sha256,
+                "source": "fixture_class_codebook",
+            },
+        },
+    ]
+
+
+def _member_payloads(*, source_archive_sha256: str) -> tuple[dict[str, bytes], list[dict[str, Any]]]:
+    member_payloads = {
         "inflate.sh": (
             b"#!/usr/bin/env bash\nset -euo pipefail\necho 'fixture-only categorical candidate' >&2\nexit 2\n"
         ),
@@ -53,6 +95,20 @@ def _member_payloads() -> dict[str, bytes]:
         "class_codebook.json": json_text(build_categorical_class_codebook()).encode("utf-8"),
         "runtime_decoder.py": (REPO_ROOT / RUNTIME_CONSUMER_REPO_PATH).read_bytes(),
     }
+    conditioning_priors = _conditioning_priors(
+        class_codebook_sha256=sha256_bytes(member_payloads["class_codebook.json"]),
+    )
+    member_payloads[LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER] = json_text(
+        build_categorical_label_prior_payload_manifest(
+            source_archive_sha256=source_archive_sha256,
+            payload_member="categorical_payload.bin",
+            payload_member_sha256=sha256_bytes(member_payloads["categorical_payload.bin"]),
+            class_codebook_member="class_codebook.json",
+            class_codebook_sha256=sha256_bytes(member_payloads["class_codebook.json"]),
+            conditioning_priors=conditioning_priors,
+        )
+    ).encode("utf-8")
+    return member_payloads, conditioning_priors
 
 
 def _zip_info(name: str) -> zipfile.ZipInfo:
@@ -84,7 +140,9 @@ def _write_archive(path: Path, member_payloads: dict[str, bytes]) -> list[dict[s
 
 def build_fixture(*, out_dir: Path, source_archive_sha256: str) -> dict[str, Any]:
     archive_path = out_dir / "archive.zip"
-    member_payloads = _member_payloads()
+    member_payloads, conditioning_priors = _member_payloads(
+        source_archive_sha256=source_archive_sha256,
+    )
     member_records = _write_archive(archive_path, member_payloads)
     runtime_source_path = REPO_ROOT / RUNTIME_CONSUMER_REPO_PATH
     runtime_source_sha = sha256_file(runtime_source_path)
@@ -102,39 +160,10 @@ def build_fixture(*, out_dir: Path, source_archive_sha256: str) -> dict[str, Any
     write_json(archive_member_manifest_path, archive_member_manifest)
     archive_member_manifest_sha = sha256_bytes(json_text(archive_member_manifest).encode("utf-8"))
     candidate_archive_sha = sha256_file(archive_path)
-    member_by_name = {record["name"]: record for record in member_records}
     construction_plan = build_categorical_charged_label_plan(
         source_archive_sha256=source_archive_sha256,
         charged_members=member_records,
-        conditioning_priors=[
-            {
-                "family": "openpilot_priors",
-                "name": "ego_lane_atom_ranker",
-                "usage": "compression_time_atom_ranking_only",
-                "runtime_consumed": False,
-                "label_contract": "openpilot_prior_hints_non_runtime",
-                "source_provenance": {
-                    "kind": "compression_time_only_derivation",
-                    "source": "fixture_openpilot_prior_hints",
-                    "runtime_consumed": False,
-                },
-            },
-            {
-                "family": "clade_spade",
-                "name": "canonical_class_codebook_conditioning",
-                "usage": "inflate_runtime_conditioning",
-                "runtime_consumed": True,
-                "charged_member": "class_codebook.json",
-                "charged_member_sha256": member_by_name["class_codebook.json"]["sha256"],
-                "label_contract": RUNTIME_LABEL_CONTRACT,
-                "source_provenance": {
-                    "kind": "charged_archive_member",
-                    "charged_member": "class_codebook.json",
-                    "sha256": member_by_name["class_codebook.json"]["sha256"],
-                    "source": "fixture_class_codebook",
-                },
-            },
-        ],
+        conditioning_priors=conditioning_priors,
         candidate_archive_sha256=candidate_archive_sha,
         archive_member_manifest_sha256=archive_member_manifest_sha,
     )
@@ -165,6 +194,12 @@ def build_fixture(*, out_dir: Path, source_archive_sha256: str) -> dict[str, Any
             "path": RUNTIME_CONSUMER_REPO_PATH,
             "consumes_charged_members": True,
         },
+        "label_prior_payload_manifest": {
+            "member": LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
+            "bytes": len(member_payloads[LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER]),
+            "sha256": sha256_bytes(member_payloads[LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER]),
+            "contract": LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT,
+        },
         "runtime_loader_parity": {
             "schema_version": 1,
             "runtime_loader_parity_contract": RUNTIME_LOADER_PARITY_CONTRACT,
@@ -181,6 +216,7 @@ def build_fixture(*, out_dir: Path, source_archive_sha256: str) -> dict[str, Any
             "loaded_charged_members": [
                 "categorical_payload.bin",
                 "class_codebook.json",
+                LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
             ],
         },
         "candidate_construction_plan": construction_plan,

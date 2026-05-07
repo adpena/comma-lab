@@ -16,6 +16,10 @@ from tac.categorical_candidate_readiness import (
     RUNTIME_LOADER_PARITY_CONTRACT,
     audit_categorical_candidate_manifest,
 )
+from tac.categorical_label_prior_payload_manifest import (
+    LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT,
+    LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
+)
 from tac.repo_io import read_json, sha256_file
 
 REPO = Path(__file__).resolve().parents[3]
@@ -58,6 +62,8 @@ def test_build_categorical_candidate_fixture_is_deterministic_and_blocked(
     assert candidate["runtime_loader_parity"]["runtime_loader_parity_contract"] == RUNTIME_LOADER_PARITY_CONTRACT
     assert readiness["runtime_loader_parity"]["accepted"] is False
     assert "runtime_execution_proof_artifact_missing" in readiness["runtime_loader_parity"]["blockers"]
+    assert readiness["label_prior_payload_manifest"]["accepted"] is True
+    assert readiness["label_prior_payload_manifest"]["member"] == LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER
     assert readiness["candidate_construction_plan"]["accepted"] is True
     assert readiness["candidate_construction_plan"]["ready_for_exact_eval_dispatch"] is False
     assert candidate["score_claim"] is False
@@ -85,6 +91,7 @@ def test_build_categorical_candidate_fixture_is_deterministic_and_blocked(
             "categorical_payload.bin",
             "class_codebook.json",
             "inflate.sh",
+            LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
             "runtime_decoder.py",
         ]
         assert archive.namelist() == [
@@ -103,9 +110,17 @@ def test_build_categorical_candidate_fixture_is_deterministic_and_blocked(
     assert archive_member_manifest["member_count"] == len(member_order)
     with zipfile.ZipFile(archive_a) as archive:
         class_codebook = json.loads(archive.read("class_codebook.json").decode("utf-8"))
+        label_prior_payload_manifest = json.loads(
+            archive.read(LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER).decode("utf-8")
+        )
     assert class_codebook["class_codebook_contract"] == CATEGORICAL_CLASS_CODEBOOK_CONTRACT
     assert class_codebook["classes"][0]["name"] == "road"
     assert class_codebook["classes"][1]["default_quant_bits"] == 8
+    assert (
+        label_prior_payload_manifest["label_prior_payload_manifest_contract"]
+        == LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT
+    )
+    assert label_prior_payload_manifest["conditioning_priors"] == candidate["conditioning_priors"]
 
 
 def test_build_categorical_candidate_fixture_records_tool_manifest(tmp_path: Path) -> None:

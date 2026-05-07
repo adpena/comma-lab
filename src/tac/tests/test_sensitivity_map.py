@@ -10,6 +10,8 @@ import torch.nn as nn
 from tac.sensitivity_map import (
     CERTIFIED_SENSITIVITY_MAP_CERTIFICATION_FORMAT,
     SensitivityMapError,
+    build_contiguous_pair_manifest,
+    canonical_sensitivity_json_bytes,
     conv_weight_shapes,
     load_sensitivity_map,
     require_authoritative_device,
@@ -17,6 +19,7 @@ from tac.sensitivity_map import (
     save_certified_sensitivity_map,
     save_sensitivity_map,
     sensitivity_cv_distance,
+    sensitivity_manifest_sha256,
     validate_certified_sensitivity_map_metadata,
     validate_real_sensitivity_artifact,
     validate_sensitivity_map_for_model,
@@ -134,6 +137,30 @@ def test_save_load_and_cv_distance_round_trip(tmp_path: Path) -> None:
             {"x.weight": torch.tensor([1.0, -1.0])},
             {"x.weight": torch.tensor([1.0, 1.0])},
         )
+
+
+def test_contiguous_pair_manifest_is_deterministic_and_frame_aligned() -> None:
+    manifest = build_contiguous_pair_manifest(
+        3,
+        latent_rows=10,
+        source_bindings={"source_archive_sha256": "a" * 64},
+    )
+    assert manifest["format"] == "tac_sensitivity_pair_manifest_v1"
+    assert manifest["n_pairs"] == 3
+    assert manifest["pairs"] == [
+        {"pair_index": 0, "latent_index": 0, "frame_start": 0, "frame_indices": [0, 1]},
+        {"pair_index": 1, "latent_index": 1, "frame_start": 2, "frame_indices": [2, 3]},
+        {"pair_index": 2, "latent_index": 2, "frame_start": 4, "frame_indices": [4, 5]},
+    ]
+    assert manifest["source_bindings"]["source_archive_sha256"] == "a" * 64
+
+    text_a = canonical_sensitivity_json_bytes(manifest)
+    text_b = canonical_sensitivity_json_bytes(dict(reversed(list(manifest.items()))))
+    assert text_a == text_b
+    assert sensitivity_manifest_sha256(manifest) == sensitivity_manifest_sha256(manifest)
+
+    with pytest.raises(SensitivityMapError, match="exceeds latent rows"):
+        build_contiguous_pair_manifest(4, latent_rows=3)
 
 
 def _certification(component: str = "combined") -> dict[str, object]:

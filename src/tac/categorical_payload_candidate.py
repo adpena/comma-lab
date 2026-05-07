@@ -28,6 +28,12 @@ from tac.categorical_candidate_readiness import (
     RUNTIME_LOADER_PARITY_CONTRACT,
     audit_categorical_candidate_manifest,
 )
+from tac.categorical_label_prior_payload_manifest import (
+    LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT,
+    LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
+    LABEL_PRIOR_PAYLOAD_MANIFEST_ROLE,
+    build_categorical_label_prior_payload_manifest,
+)
 from tac.categorical_openpilot_mask_prior_contract import RUNTIME_LABEL_CONTRACT
 from tac.hpm1_payload_structure import (
     HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT,
@@ -56,6 +62,7 @@ MEMBER_ROLES = {
     "categorical_payload.bin": "categorical_payload",
     "class_codebook.json": "decoder_table",
     "inflate.sh": "inflate_entrypoint",
+    LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER: LABEL_PRIOR_PAYLOAD_MANIFEST_ROLE,
     "runtime_consumer.py": "decoder_or_runtime_consumer",
     "runtime_consumer_proof_skeleton.json": "runtime_consumer_proof",
 }
@@ -131,6 +138,7 @@ def _runtime_proof_skeleton(
     payload_source: dict[str, Any],
     payload_sha256: str,
     class_codebook_sha256: str,
+    label_prior_payload_manifest_sha256: str,
     runtime_consumer_sha256: str,
 ) -> dict[str, Any]:
     return {
@@ -145,10 +153,12 @@ def _runtime_proof_skeleton(
         "charged_member_sha256": {
             "categorical_payload.bin": payload_sha256,
             "class_codebook.json": class_codebook_sha256,
+            LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER: label_prior_payload_manifest_sha256,
             "runtime_consumer.py": runtime_consumer_sha256,
         },
         "proof_status": {
             "archive_contains_payload_codebook_and_runtime": True,
+            "charged_label_prior_payload_manifest": True,
             "full_decode_reencode_parity": False,
             "runtime_output_parity": False,
             "exact_cuda_auth_eval": False,
@@ -247,45 +257,6 @@ def build_categorical_payload_candidate(
     payload_sha = sha256_bytes(categorical_payload)
     class_codebook_sha = sha256_bytes(class_codebook)
     runtime_consumer_sha = sha256_bytes(runtime_consumer)
-    proof_skeleton = json_text(
-        _runtime_proof_skeleton(
-            payload_source=payload_source,
-            payload_sha256=payload_sha,
-            class_codebook_sha256=class_codebook_sha,
-            runtime_consumer_sha256=runtime_consumer_sha,
-        )
-    ).encode("utf-8")
-    member_payloads = {
-        "categorical_payload.bin": categorical_payload,
-        "class_codebook.json": class_codebook,
-        "inflate.sh": _inflate_script(),
-        "runtime_consumer.py": runtime_consumer,
-        "runtime_consumer_proof_skeleton.json": proof_skeleton,
-    }
-    archive_path = out / "archive.zip"
-    member_records = _write_archive(archive_path, member_payloads)
-    archive_sha = sha256_file(archive_path)
-    charged_sha_by_name = {record["name"]: record["sha256"] for record in member_records}
-    hpm1_structural_inventory = _write_hpm1_structural_inventory(
-        out_dir=out,
-        categorical_payload=categorical_payload,
-        payload_source=payload_source,
-        candidate_archive_path=archive_path,
-    )
-
-    archive_member_manifest = {
-        "schema_version": SCHEMA_VERSION,
-        "kind": ARCHIVE_MEMBER_MANIFEST_KIND,
-        "archive_member_manifest_contract": ARCHIVE_MEMBER_MANIFEST_CONTRACT,
-        "fixture_only": False,
-        "member_count": len(member_records),
-        "member_order": [record["name"] for record in member_records],
-        "members": member_records,
-    }
-    archive_member_manifest_path = out / "archive_member_manifest.json"
-    write_json(archive_member_manifest_path, archive_member_manifest)
-    archive_member_manifest_sha = sha256_file(archive_member_manifest_path)
-
     conditioning_priors = [
         {
             "family": "qma9",
@@ -293,12 +264,12 @@ def build_categorical_payload_candidate(
             "usage": "inflate_runtime_conditioning",
             "runtime_consumed": True,
             "charged_member": "categorical_payload.bin",
-            "charged_member_sha256": charged_sha_by_name["categorical_payload.bin"],
+            "charged_member_sha256": payload_sha,
             "label_contract": RUNTIME_LABEL_CONTRACT,
             "source_provenance": {
                 "kind": "charged_archive_member",
                 "charged_member": "categorical_payload.bin",
-                "sha256": charged_sha_by_name["categorical_payload.bin"],
+                "sha256": payload_sha,
                 "source_kind": payload_source.get("kind", ""),
             },
         },
@@ -320,16 +291,67 @@ def build_categorical_payload_candidate(
             "usage": "inflate_runtime_conditioning",
             "runtime_consumed": True,
             "charged_member": "class_codebook.json",
-            "charged_member_sha256": charged_sha_by_name["class_codebook.json"],
+            "charged_member_sha256": class_codebook_sha,
             "label_contract": RUNTIME_LABEL_CONTRACT,
             "source_provenance": {
                 "kind": "charged_archive_member",
                 "charged_member": "class_codebook.json",
-                "sha256": charged_sha_by_name["class_codebook.json"],
+                "sha256": class_codebook_sha,
                 "source": "build_categorical_class_codebook",
             },
         },
     ]
+    label_prior_payload_manifest = json_text(
+        build_categorical_label_prior_payload_manifest(
+            source_archive_sha256=source_archive_sha256,
+            payload_member="categorical_payload.bin",
+            payload_member_sha256=payload_sha,
+            class_codebook_member="class_codebook.json",
+            class_codebook_sha256=class_codebook_sha,
+            conditioning_priors=conditioning_priors,
+        )
+    ).encode("utf-8")
+    label_prior_payload_manifest_sha = sha256_bytes(label_prior_payload_manifest)
+    proof_skeleton = json_text(
+        _runtime_proof_skeleton(
+            payload_source=payload_source,
+            payload_sha256=payload_sha,
+            class_codebook_sha256=class_codebook_sha,
+            label_prior_payload_manifest_sha256=label_prior_payload_manifest_sha,
+            runtime_consumer_sha256=runtime_consumer_sha,
+        )
+    ).encode("utf-8")
+    member_payloads = {
+        "categorical_payload.bin": categorical_payload,
+        "class_codebook.json": class_codebook,
+        "inflate.sh": _inflate_script(),
+        LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER: label_prior_payload_manifest,
+        "runtime_consumer.py": runtime_consumer,
+        "runtime_consumer_proof_skeleton.json": proof_skeleton,
+    }
+    archive_path = out / "archive.zip"
+    member_records = _write_archive(archive_path, member_payloads)
+    archive_sha = sha256_file(archive_path)
+    hpm1_structural_inventory = _write_hpm1_structural_inventory(
+        out_dir=out,
+        categorical_payload=categorical_payload,
+        payload_source=payload_source,
+        candidate_archive_path=archive_path,
+    )
+
+    archive_member_manifest = {
+        "schema_version": SCHEMA_VERSION,
+        "kind": ARCHIVE_MEMBER_MANIFEST_KIND,
+        "archive_member_manifest_contract": ARCHIVE_MEMBER_MANIFEST_CONTRACT,
+        "fixture_only": False,
+        "member_count": len(member_records),
+        "member_order": [record["name"] for record in member_records],
+        "members": member_records,
+    }
+    archive_member_manifest_path = out / "archive_member_manifest.json"
+    write_json(archive_member_manifest_path, archive_member_manifest)
+    archive_member_manifest_sha = sha256_file(archive_member_manifest_path)
+
     construction_plan = build_categorical_charged_label_plan(
         source_archive_sha256=source_archive_sha256,
         charged_members=member_records,
@@ -366,6 +388,12 @@ def build_categorical_payload_candidate(
             "path": RUNTIME_CONSUMER_REPO_PATH,
             "consumes_charged_members": True,
         },
+        "label_prior_payload_manifest": {
+            "member": LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
+            "bytes": len(label_prior_payload_manifest),
+            "sha256": label_prior_payload_manifest_sha,
+            "contract": LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT,
+        },
         **(
             {"hpm1_structural_decode_inventory": hpm1_structural_inventory}
             if hpm1_structural_inventory is not None
@@ -387,6 +415,7 @@ def build_categorical_payload_candidate(
             "loaded_charged_members": [
                 "categorical_payload.bin",
                 "class_codebook.json",
+                LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
                 "runtime_consumer_proof_skeleton.json",
             ],
             "blocker": "runtime_output_parity_not_proven",
@@ -440,6 +469,12 @@ def build_categorical_payload_candidate(
             "bytes": len(proof_skeleton),
             "sha256": sha256_bytes(proof_skeleton),
             "contract": RUNTIME_PROOF_SKELETON_CONTRACT,
+        },
+        "label_prior_payload_manifest_member": {
+            "name": LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
+            "bytes": len(label_prior_payload_manifest),
+            "sha256": label_prior_payload_manifest_sha,
+            "contract": LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT,
         },
         "candidate_rows": [
             {
@@ -514,6 +549,8 @@ __all__ = [
     "BUILD_KIND",
     "CANDIDATE_KIND",
     "HPM1_STRUCTURAL_INVENTORY_FILENAME",
+    "LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT",
+    "LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER",
     "MEMBER_ORDER",
     "RUNTIME_CONSUMER_REPO_PATH",
     "RUNTIME_PROOF_SKELETON_CONTRACT",

@@ -343,6 +343,101 @@ def followup_targets(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     )
 
 
+def frontier_eligible_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        row
+        for row in rows
+        if row.get("canonical_frontier_eligible") is True
+        and isinstance(row.get("score"), int | float)
+    ]
+
+
+def current_frontier(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    eligible = frontier_eligible_rows(rows)
+    if not eligible:
+        return None
+    row = min(eligible, key=lambda item: float(item["score"]))
+    return {
+        "label": row["label"],
+        "score": row.get("score"),
+        "archive_bytes": row.get("archive_bytes"),
+        "archive_sha256": row.get("archive_sha256"),
+        "frontier_scope": row.get("frontier_scope"),
+        "evidence_grade": row.get("evidence_grade"),
+        "eval_artifact": row.get("eval_artifact"),
+    }
+
+
+def _rate_mass_score(bytes_: Any) -> float | None:
+    if not isinstance(bytes_, int):
+        return None
+    return 25.0 * bytes_ / 37_545_489
+
+
+def hidden_gem_byte_mass_ranking(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Rank exact-evaluable byte targets by frontier proximity before byte mass."""
+    frontier = current_frontier(rows)
+    if not frontier or not isinstance(frontier.get("score"), int | float):
+        return []
+    frontier_score = float(frontier["score"])
+    targets: list[dict[str, Any]] = []
+    for row in frontier_eligible_rows(rows):
+        score = float(row["score"])
+        score_gap = score - frontier_score
+        for section in row.get("payload_sections") or row.get("top_payload_sections") or []:
+            section_name = section.get("name")
+            section_bytes = section.get("bytes")
+            if not section_name or not isinstance(section_bytes, int) or section_bytes <= 0:
+                continue
+            role = section_optimization_role(str(section_name))
+            if role == "control_or_metadata":
+                priority = "low"
+            elif row.get("label") == frontier["label"]:
+                priority = "current_frontier_primary"
+            else:
+                priority = "near_frontier_secondary"
+            targets.append(
+                {
+                    "label": row["label"],
+                    "section": section_name,
+                    "optimization_role": role,
+                    "section_bytes": section_bytes,
+                    "section_sha256": section.get("sha256"),
+                    "entropy_bits_per_byte": section.get("entropy_bits_per_byte"),
+                    "score_gap_to_current_frontier": round(score_gap, 12),
+                    "frontier_label": frontier["label"],
+                    "frontier_score": frontier_score,
+                    "archive_sha256": row.get("archive_sha256"),
+                    "payload_sha256": row.get("payload_sha256"),
+                    "rate_mass_score_if_removed": _rate_mass_score(section_bytes),
+                    "exact_evaluable_next_gate": (
+                        "build byte-different archive with old/new section SHA-256 and "
+                        "charged-byte proof, then exact CUDA auth eval after lane claim"
+                    ),
+                    "priority": priority,
+                    "score_claim": False,
+                    "dispatch_attempted": False,
+                }
+            )
+    return sorted(
+        targets,
+        key=lambda item: (
+            float(item["score_gap_to_current_frontier"]),
+            0 if item["priority"] == "current_frontier_primary" else 1,
+            -(item["section_bytes"] if isinstance(item["section_bytes"], int) else -1),
+            str(item["label"]),
+            str(item["section"]),
+        ),
+    )
+
+
+def next_exact_evaluable_target(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for target in hidden_gem_byte_mass_ranking(rows):
+        if target.get("priority") != "low":
+            return target
+    return None
+
+
 def section_optimization_role(section_name: str) -> str:
     """Classify a payload section into a byte-optimization role."""
     lowered = str(section_name).lower()
@@ -482,6 +577,53 @@ def render_markdown(rows: list[dict[str, Any]]) -> str:
                     action=target["suggested_action"],
                 )
             )
+    next_target = next_exact_evaluable_target(rows)
+    ranking = hidden_gem_byte_mass_ranking(rows)
+    if next_target:
+        lines.extend(
+            [
+                "",
+                "## Next Exact-Evaluable Target",
+                "",
+                "| frontier | target label | section | role | bytes | score gap | required next gate |",
+                "|---|---|---|---|---:|---:|---|",
+                "| {frontier} | {label} | `{section}` | `{role}` | {bytes_} | {gap:.12f} | {gate} |".format(
+                    frontier=next_target["frontier_label"],
+                    label=next_target["label"],
+                    section=next_target["section"],
+                    role=next_target["optimization_role"],
+                    bytes_=next_target["section_bytes"],
+                    gap=next_target["score_gap_to_current_frontier"],
+                    gate=next_target["exact_evaluable_next_gate"],
+                ),
+                "",
+                "This target is ranked by exact-frontier proximity first, then charged",
+                "payload byte mass. It is a routing target only; it is not a new score",
+                "claim.",
+            ]
+        )
+    if ranking:
+        lines.extend(
+            [
+                "",
+                "## Hidden-Gem Byte-Mass Ranking",
+                "",
+                "| rank | label | section | role | bytes | score gap | priority |",
+                "|---:|---|---|---|---:|---:|---|",
+            ]
+        )
+        for rank, target in enumerate(ranking[:12], start=1):
+            lines.append(
+                "| {rank} | {label} | `{section}` | `{role}` | {bytes_} | {gap:.12f} | `{priority}` |".format(
+                    rank=rank,
+                    label=target["label"],
+                    section=target["section"],
+                    role=target["optimization_role"],
+                    bytes_=target["section_bytes"],
+                    gap=target["score_gap_to_current_frontier"],
+                    priority=target["priority"],
+                )
+            )
     manifests = payload_section_manifests(rows)
     if manifests:
         lines.extend(
@@ -565,6 +707,9 @@ def main() -> int:
         "payload_equivalence_groups": payload_equivalence_groups(rows),
         "payload_section_manifests": payload_section_manifests(rows),
         "followup_targets": followup_targets(rows),
+        "current_frontier": current_frontier(rows),
+        "next_exact_evaluable_target": next_exact_evaluable_target(rows),
+        "hidden_gem_byte_mass_ranking": hidden_gem_byte_mass_ranking(rows),
         "rows": sorted(rows, key=lambda item: item["score"] if item["score"] is not None else 999),
     }
     args.json_out.parent.mkdir(parents=True, exist_ok=True)

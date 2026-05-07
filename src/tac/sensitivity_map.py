@@ -12,6 +12,8 @@ non-authoritative by callers.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,6 +23,7 @@ import torch
 import torch.nn as nn
 
 SENSITIVITY_MAP_FORMAT = "tac_score_sensitivity_map_v1"
+SENSITIVITY_PAIR_MANIFEST_FORMAT = "tac_sensitivity_pair_manifest_v1"
 CERTIFIED_SENSITIVITY_MAP_CERTIFICATION_FORMAT = "component_sensitivity_map_certification_v1"
 
 _CERTIFICATION_SHA_FIELDS = (
@@ -160,6 +163,82 @@ class SensitivityMapStats:
     n_channels: int
     min_value: float
     max_value: float
+
+
+def canonical_sensitivity_json_bytes(payload: Mapping[str, Any]) -> bytes:
+    """Return canonical JSON bytes for sensitivity manifests and SHA binding."""
+    return (
+        json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    ).encode("utf-8")
+
+
+def sensitivity_manifest_sha256(payload: Mapping[str, Any]) -> str:
+    """Return SHA-256 over the canonical sensitivity-manifest JSON contract."""
+    return hashlib.sha256(canonical_sensitivity_json_bytes(payload)).hexdigest()
+
+
+def build_contiguous_pair_manifest(
+    n_pairs: int,
+    *,
+    latent_rows: int,
+    start_pair_index: int = 0,
+    seq_len: int = 2,
+    source_bindings: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build the deterministic pair/sample plan used by β-Fisher producers.
+
+    The upstream evaluator consumes non-overlapping frame sequences of length
+    two. PR106's HNeRV latents are row-aligned to those evaluator pair indices,
+    so row ``i`` protects video frames ``2*i`` and ``2*i+1`` by default.
+    """
+    for label, value in {
+        "n_pairs": n_pairs,
+        "latent_rows": latent_rows,
+        "start_pair_index": start_pair_index,
+        "seq_len": seq_len,
+    }.items():
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise SensitivityMapError(f"{label} must be an integer")
+    if n_pairs <= 0:
+        raise SensitivityMapError("n_pairs must be positive")
+    if latent_rows <= 0:
+        raise SensitivityMapError("latent_rows must be positive")
+    if start_pair_index < 0:
+        raise SensitivityMapError("start_pair_index must be non-negative")
+    if seq_len <= 0:
+        raise SensitivityMapError("seq_len must be positive")
+    if start_pair_index + n_pairs > latent_rows:
+        raise SensitivityMapError(
+            "pair manifest exceeds latent rows: "
+            f"start_pair_index={start_pair_index}, n_pairs={n_pairs}, "
+            f"latent_rows={latent_rows}"
+        )
+
+    pairs: list[dict[str, Any]] = []
+    for pair_index in range(start_pair_index, start_pair_index + n_pairs):
+        frame_start = pair_index * seq_len
+        pairs.append(
+            {
+                "pair_index": pair_index,
+                "latent_index": pair_index,
+                "frame_start": frame_start,
+                "frame_indices": [frame_start + offset for offset in range(seq_len)],
+            }
+        )
+
+    manifest: dict[str, Any] = {
+        "format": SENSITIVITY_PAIR_MANIFEST_FORMAT,
+        "selection": "contiguous_pr106_latent_rows",
+        "pair_index_base": 0,
+        "start_pair_index": start_pair_index,
+        "n_pairs": n_pairs,
+        "latent_rows": latent_rows,
+        "seq_len": seq_len,
+        "pairs": pairs,
+    }
+    if source_bindings:
+        manifest["source_bindings"] = dict(source_bindings)
+    return manifest
 
 
 def require_authoritative_device(device: str | torch.device | None) -> None:
@@ -806,9 +885,12 @@ def sensitivity_cv_distance(
 
 __all__ = [
     "CERTIFIED_SENSITIVITY_MAP_CERTIFICATION_FORMAT",
+    "SENSITIVITY_PAIR_MANIFEST_FORMAT",
     "SENSITIVITY_MAP_FORMAT",
     "SensitivityMapError",
     "SensitivityMapStats",
+    "build_contiguous_pair_manifest",
+    "canonical_sensitivity_json_bytes",
     "conv_weight_shapes",
     "load_sensitivity_map",
     "real_sensitivity_metadata_blockers",
@@ -817,6 +899,7 @@ __all__ = [
     "save_certified_sensitivity_map",
     "save_sensitivity_map",
     "sensitivity_cv_distance",
+    "sensitivity_manifest_sha256",
     "validate_certified_sensitivity_map_metadata",
     "validate_real_sensitivity_artifact",
     "validate_sensitivity_map_for_model",

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import subprocess
 import sys
@@ -40,6 +41,15 @@ def test_wr01_exact_eval_packet_reports_missing_env_without_dispatch(tmp_path: P
     )
 
     payload = json.loads(out.read_text())
+    assert payload["schema"] == "wr01_exact_eval_operator_packet_v1"
+    assert payload["packet_kind"] == "wr01_exact_eval_operator_packet"
+    assert payload["candidate_id"] == "wr01_apply_pr106x_half"
+    assert payload["family_group"] == "hnerv_wavelet_wr01_apply"
+    assert payload["evidence_grade"] == "empirical_archive_candidate_until_exact_cuda"
+    assert payload["byte_delta"] == -9
+    assert math.isclose(payload["expected_total_score_delta"], -9 * 25 / 37_545_489)
+    assert payload["interaction_assumptions"]
+    assert payload["proxy_row"] is False
     assert payload["score_claim"] is False
     assert payload["dispatch_attempted"] is False
     assert payload["ready_for_submit"] is False
@@ -222,6 +232,18 @@ def test_wr01_exact_eval_packet_accepts_matching_custody_artifacts(tmp_path: Pat
 
     payload = json.loads(out.read_text())
     assert payload["ready_for_submit"] is True
+    assert payload["candidate_id"] == "lane"
+    assert payload["family"] == "hnerv_wavelet_wr01_apply_transform"
+    assert payload["pareto_scope"] == "hnerv_rate_only_exact_archive"
+    assert payload["byte_delta"] == archive_bytes - 123
+    assert math.isclose(
+        payload["expected_total_score_delta"],
+        (archive_bytes - 123) * 25 / 37_545_489,
+    )
+    assert payload["expected_seg_dist_delta"] == 0.0
+    assert payload["expected_pose_dist_delta"] == 0.0
+    assert payload["conflicts_with_families"] == []
+    assert payload["conflicts_with_atoms"] == []
     assert payload["blockers"] == []
     assert payload["artifact_consistency_ok"] is True
     assert payload["static_packet_ready"] is True
