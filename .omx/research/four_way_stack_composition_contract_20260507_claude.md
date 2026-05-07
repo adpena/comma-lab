@@ -126,8 +126,11 @@ For any pipeline assembly:
 1. **β/δεζ run upstream of the pipeline** — they produce the state_dict that
    gets fed in.
 2. **Pipeline runs ops in order** — Op 1 → Op 2 → Op 3 → ... Each op sees
-   the same state_dict by default (linear-over-state-dict mode); a future v2
-   pipeline may chain reconstructions for ops that re-quantize.
+   the current state_dict. Substitutional ops leave the current state
+   unchanged; substrate-transform ops set `transforms_state_dict=True`, and
+   their decoded reconstruction becomes the input seen by downstream ops.
+   This makes beta sensitivity and apogee-int real stackable substrate
+   transforms instead of decorative manifest rows.
 3. **α (mask-encoder) is a separate pipeline** — masks live in `masks.mkv`,
    not in the decoder weights. They get their own `CodecPipeline` instance
    when the bakeoff lands.
@@ -177,6 +180,28 @@ no extrapolation. Any score in any artifact must carry `[contest-CUDA]` or
 ---
 
 ## What this contract canonicalizes
+
+### 2026-05-07 Codex update — substrate transforms are now real
+
+The canonical orchestrator now supports a conservative opt-in transform
+contract:
+
+- default/substitutional ops observe the current state and emit independent
+  blobs;
+- ops with `transforms_state_dict=True` are decoded immediately after encode;
+- the decoded state becomes the state fed to later ops.
+
+`Op_SensitivityPreprocess` and `Op3_ApogeeIntN_Substrate` are the first two
+transform ops. Focused validation:
+
+- `.venv/bin/python -m pytest src/tac/tests/test_codec_pipeline.py src/tac/tests/test_codec_pipeline_apogee_int.py src/tac/tests/test_codec_pipeline_joint_admm.py src/tac/tests/test_codec_pipeline_sensitivity.py src/tac/tests/test_codec_pipeline_mask.py -q`
+  -> 86 passed.
+- `.venv/bin/python -m ruff check src/tac/codec_pipeline.py src/tac/codec_pipeline_apogee_int.py src/tac/codec_pipeline_joint_admm.py src/tac/codec_pipeline_sensitivity.py src/tac/tests/test_codec_pipeline.py src/tac/tests/test_codec_pipeline_apogee_int.py src/tac/tests/test_codec_pipeline_joint_admm.py src/tac/tests/test_codec_pipeline_sensitivity.py src/tac/tests/test_codec_pipeline_mask.py`
+  -> clean.
+
+This does not claim a contest score. It makes the cross-paradigm stack
+mechanically testable so future HNeRV-frontier or non-HNeRV representation
+candidates can be substituted and compared by exact archive bytes.
 
 **Before**: each lane re-invented the wrapper format, the manifest schema,
 the validation gate, the byte-impact reporting, the idempotency test.

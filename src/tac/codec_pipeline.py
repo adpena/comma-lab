@@ -47,9 +47,11 @@ import hashlib
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Protocol, runtime_checkable
+from datetime import UTC
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
-import torch
+if TYPE_CHECKING:
+    import torch
 
 logger = logging.getLogger(__name__)
 
@@ -90,9 +92,11 @@ class CodecOp(Protocol):
     """Protocol every pipeline op must satisfy.
 
     Each op is responsible for one bit-level transformation (split-Brotli,
-    arithmetic coding, byte-map permutation, etc.). Ops compose by feeding
-    one's output into the next as raw bytes; the pipeline orchestrator
-    threads the ``op_state`` for decoder reconstruction.
+    arithmetic coding, byte-map permutation, etc.). Substitutional ops emit an
+    independent blob for the current state. Substrate-transform ops may expose
+    ``transforms_state_dict=True``; when they do, the pipeline decodes that
+    blob immediately and feeds the reconstructed state to downstream ops. The
+    pipeline always threads ``op_state`` for decoder reconstruction.
     """
     name: str
 
@@ -310,28 +314,29 @@ class CodecPipeline:
         started = time.time()
         results: list[EncodeResult] = []
 
-        # Pre-encode validation of every op (Contrarian gate).
-        if not skip_validate:
-            for op in self.ops:
-                rep = op.validate(state_dict, context=ctx)
+        # Encode chain: substitutional ops observe the current state_dict and
+        # emit independent blobs. Substrate-transform ops opt in with
+        # ``transforms_state_dict=True``; after they encode, their decoded
+        # reconstruction becomes the current state for downstream ops. This
+        # keeps PR101/PR103-style alternatives substitutional while making beta
+        # sensitivity and apogee-int substrate transforms genuinely stackable.
+        current_state = dict(state_dict)
+        for op in self.ops:
+            if not skip_validate:
+                rep = op.validate(current_state, context=ctx)
                 if not rep.passed:
                     raise ValueError(
                         f"CodecPipeline.encode aborted: op {op.name!r} validation "
                         f"failed with findings {rep.findings}"
                     )
-
-        # Encode chain: only Op-0 sees the raw state_dict; subsequent ops can
-        # in principle take the prior op's reconstruction as input. For now
-        # the v1 pipeline is "linear over the state_dict" — every op sees the
-        # same state_dict and produces a blob; the wrapper concatenates them.
-        # Future v2 may chain reconstructions for ops that re-quantize.
-        for op in self.ops:
-            res = op.encode(state_dict, context=ctx)
+            res = op.encode(current_state, context=ctx)
             results.append(res)
+            if bool(getattr(op, "transforms_state_dict", False)):
+                current_state = op.decode(res.blob, op_state=res.op_state, context=ctx)
 
         # Wrap into the deterministic CPL1 container.
-        import struct
         import json
+        import struct
         out = bytearray()
         out += self.MAGIC
         out += struct.pack("<I", len(results))
@@ -347,9 +352,9 @@ class CodecPipeline:
 
         final = bytes(out)
         elapsed = time.time() - started
-        from datetime import datetime, timezone
+        from datetime import datetime
         manifest = PipelineManifest(
-            started_at_utc=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            started_at_utc=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
             elapsed_seconds=elapsed,
             op_results=results,
             final_blob_sha256=hashlib.sha256(final).hexdigest(),
@@ -370,8 +375,8 @@ class CodecPipeline:
         Returns:
             (state_dict, op_names_replayed) — for forensic confirmation.
         """
-        import struct
         import json
+        import struct
 
         ctx = dict(context) if context is not None else {}
         if blob[:4] != self.MAGIC:
@@ -390,12 +395,20 @@ class CodecPipeline:
         decoded_state: dict[str, torch.Tensor] | None = None
         replayed: list[str] = []
         for i in range(n_ops):
-            name_len = struct.unpack_from("<H", blob, cursor)[0]; cursor += 2
-            op_name = blob[cursor:cursor+name_len].decode("utf-8"); cursor += name_len
-            state_len = struct.unpack_from("<I", blob, cursor)[0]; cursor += 4
-            op_state = json.loads(blob[cursor:cursor+state_len].decode("utf-8")); cursor += state_len
-            blob_len = struct.unpack_from("<I", blob, cursor)[0]; cursor += 4
-            op_blob = blob[cursor:cursor+blob_len]; cursor += blob_len
+            name_len = struct.unpack_from("<H", blob, cursor)[0]
+            cursor += 2
+            op_name = blob[cursor : cursor + name_len].decode("utf-8")
+            cursor += name_len
+            state_len = struct.unpack_from("<I", blob, cursor)[0]
+            cursor += 4
+            op_state = json.loads(
+                blob[cursor : cursor + state_len].decode("utf-8")
+            )
+            cursor += state_len
+            blob_len = struct.unpack_from("<I", blob, cursor)[0]
+            cursor += 4
+            op_blob = blob[cursor : cursor + blob_len]
+            cursor += blob_len
 
             expected_op = self.ops[i]
             if expected_op.name != op_name:
@@ -510,6 +523,8 @@ class Op2_PR103ArithmeticCodec:
     ) -> ValidationReport:
         from tac.pr103_arithmetic_codec import (
             FIXED_STATE_SCHEMA as PR103_SCHEMA,
+        )
+        from tac.pr103_arithmetic_codec import (
             validate_ac_savings,
         )
         findings: list[str] = []
