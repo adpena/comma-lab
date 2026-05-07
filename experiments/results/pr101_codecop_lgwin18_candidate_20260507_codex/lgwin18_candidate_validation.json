@@ -1,0 +1,205 @@
+{
+  "candidate_archive": {
+    "archive_sha256": "c95c59933f95746f6b8dd5fb7b4450419a25c01b2c9f8dac6e586cd4b3582933",
+    "archive_size_bytes": 178258,
+    "decoder_blob": {
+      "bytes": 162164,
+      "sha256": "ea7155370f0adaab5d0078ef9158de7abe8363ff7a09afd26cf699ed8b81600d"
+    },
+    "inner_member": {
+      "bytes": 178158,
+      "name": "x",
+      "sha256": "a7df36c2b11f88ca640e1bb259a526f80190c86e474e9b06204bb54657d3356c"
+    },
+    "latent_blob": {
+      "bytes": 15387,
+      "sha256": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe"
+    },
+    "path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/substituted/pr101_lgwin18_pr101_lgwin18_auto_selectFalse_brotli_lgwin18_brotli_quality11/archive.zip",
+    "sidecar_blob": {
+      "bytes": 607,
+      "sha256": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f"
+    }
+  },
+  "checks": {
+    "archive_size_preserved": true,
+    "candidate_archive_byte_different": true,
+    "candidate_decoder_blob_byte_different": true,
+    "candidate_inner_member_byte_different": true,
+    "candidate_sha256_matches_expected": true,
+    "candidate_size_matches_expected": true,
+    "charged_bits_changed": true,
+    "decoder_blob_length_preserved": true,
+    "expected_candidate_sha256": "c95c59933f95746f6b8dd5fb7b4450419a25c01b2c9f8dac6e586cd4b3582933",
+    "expected_candidate_size_bytes": 178258,
+    "latent_blob_preserved": true,
+    "score_affecting_payload_changed": true,
+    "sidecar_blob_preserved": true
+  },
+  "decoder_parity_checks": {
+    "candidate_default_reencode": {
+      "matches_source_decoder_blob": true,
+      "sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6"
+    },
+    "decoder_state_dict_parity": {
+      "compared_tensors": 28,
+      "failures": [],
+      "passed": true
+    },
+    "source_default_reencode": {
+      "matches_source_decoder_blob": true,
+      "sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6"
+    },
+    "source_lgwin_reencode": {
+      "brotli_lgwin": 18,
+      "brotli_quality": 11,
+      "matches_candidate_decoder_blob": true,
+      "sha256": "ea7155370f0adaab5d0078ef9158de7abe8363ff7a09afd26cf699ed8b81600d"
+    }
+  },
+  "dispatch": {
+    "gpu_dispatch_authorized_by_this_tool": false,
+    "gpu_dispatch_performed": false
+  },
+  "evidence_grade": "empirical",
+  "evidence_limits": [
+    "local byte custody only",
+    "local PR101 decoder parity only",
+    "no contest scorer import",
+    "no CUDA auth eval",
+    "no SegNet/PoseNet/component estimates",
+    "no GPU dispatch"
+  ],
+  "exact_eval_blockers": [
+    "exact runtime parity/runtime-tree custody is not established by this CPU validator",
+    "matching active lane dispatch claim is required before any GPU dispatch",
+    "CUDA auth eval on archive.zip -> inflate.sh -> upstream/evaluate.py has not been run"
+  ],
+  "schema_version": "pr101_lgwin18_candidate_validation.v2",
+  "score_claim": false,
+  "source_archive": {
+    "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+    "archive_size_bytes": 178258,
+    "decoder_blob": {
+      "bytes": 162164,
+      "sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6"
+    },
+    "inner_member": {
+      "bytes": 178158,
+      "name": "x",
+      "sha256": "5f1948f9572e65f71c614d2ff15764ee416522e25cb1b06c8b1299c1306e8aaf"
+    },
+    "latent_blob": {
+      "bytes": 15387,
+      "sha256": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe"
+    },
+    "path": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip",
+    "sidecar_blob": {
+      "bytes": 607,
+      "sha256": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f"
+    }
+  },
+  "substitution_report": {
+    "checks": {
+      "decoder_blob_input_len": {
+        "actual": 162164,
+        "expected": 162164,
+        "passed": true
+      },
+      "decoder_blob_replacement_len": {
+        "actual": 162164,
+        "expected": 162164,
+        "passed": true
+      },
+      "input_size_bytes": {
+        "actual": 178258,
+        "expected": 178258,
+        "passed": true
+      },
+      "latent_blob_len": {
+        "actual": 15387,
+        "expected": 15387,
+        "passed": true
+      },
+      "output_size_bytes": {
+        "actual": 178258,
+        "expected": 178258,
+        "passed": true
+      },
+      "sha256_input_archive": {
+        "actual": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+        "expected": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+        "passed": true
+      },
+      "sha256_input_decoder_blob": {
+        "actual": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6",
+        "expected": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6",
+        "passed": true
+      },
+      "sha256_input_inner_member": {
+        "actual": "5f1948f9572e65f71c614d2ff15764ee416522e25cb1b06c8b1299c1306e8aaf",
+        "expected": "5f1948f9572e65f71c614d2ff15764ee416522e25cb1b06c8b1299c1306e8aaf",
+        "passed": true
+      },
+      "sha256_input_latent_blob": {
+        "actual": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe",
+        "expected": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe",
+        "passed": true
+      },
+      "sha256_input_sidecar_blob": {
+        "actual": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f",
+        "expected": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f",
+        "passed": true
+      },
+      "sha256_output_archive": {
+        "actual": "c95c59933f95746f6b8dd5fb7b4450419a25c01b2c9f8dac6e586cd4b3582933",
+        "expected": "c95c59933f95746f6b8dd5fb7b4450419a25c01b2c9f8dac6e586cd4b3582933",
+        "passed": true
+      },
+      "sha256_output_inner_member": {
+        "actual": "a7df36c2b11f88ca640e1bb259a526f80190c86e474e9b06204bb54657d3356c",
+        "expected": "a7df36c2b11f88ca640e1bb259a526f80190c86e474e9b06204bb54657d3356c",
+        "passed": true
+      },
+      "sha256_output_latent_blob": {
+        "actual": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe",
+        "expected": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe",
+        "passed": true
+      },
+      "sha256_output_sidecar_blob": {
+        "actual": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f",
+        "expected": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f",
+        "passed": true
+      },
+      "sha256_replacement_decoder_blob": {
+        "actual": "ea7155370f0adaab5d0078ef9158de7abe8363ff7a09afd26cf699ed8b81600d",
+        "expected": "ea7155370f0adaab5d0078ef9158de7abe8363ff7a09afd26cf699ed8b81600d",
+        "passed": true
+      },
+      "sidecar_blob_len": {
+        "actual": 607,
+        "expected": 607,
+        "passed": true
+      }
+    },
+    "errors": [],
+    "path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/substituted/pr101_lgwin18_pr101_lgwin18_auto_selectFalse_brotli_lgwin18_brotli_quality11/substitution_report.json",
+    "provided": true
+  },
+  "target_profile": "contest_one_video_replay",
+  "target_profile_context": {
+    "contest_one_video_replay": "PR101 is a fixed contest-video replay packet; local byte and decoder parity are relevant preconditions for exact auth eval.",
+    "policy": {
+      "allows_one_video_replay": true,
+      "allows_optional_device_learning": false,
+      "contest_dispatch_candidate": true,
+      "description": "Contest-only overfit replay; all score-affecting replay data and runtime code must be self-contained in the packet or fixed contest code.",
+      "requires_cross_video_generalization": false
+    },
+    "primary": "contest_one_video_replay",
+    "production_generalized": "not claimed by this validation; no cross-video or openpilot generalization evidence is produced"
+  },
+  "tool": "tools/validate_pr101_lgwin18_candidate.py",
+  "validation_blockers": [],
+  "verdict": "LOCAL_RUNTIME_PARITY_PASS_EXACT_EVAL_BLOCKED_NO_SCORE_CLAIM"
+}
