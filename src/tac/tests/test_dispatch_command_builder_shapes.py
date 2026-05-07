@@ -278,6 +278,43 @@ def test_parallel_dispatch_allows_dual_contest_and_production_target_with_custod
     assert loaded == [candidate]
 
 
+def test_parallel_dispatch_allows_contest_generalized_profile_with_custody(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(
+        tmp_path,
+        candidate_id="contest_generalized_native_rewrite",
+        target_modes=["contest_generalized"],
+    )
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    loaded = tool._load_top_k(ranked, k=None)
+
+    assert loaded == [candidate]
+
+
+def test_parallel_dispatch_rejects_edge_adaptive_profile_without_contest_marker(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(
+        tmp_path,
+        candidate_id="production_edge_adaptive_native_probe",
+        target_modes=["production_edge_adaptive"],
+    )
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "non_contest_target_mode:production_edge_adaptive" in message
+
+
 def test_parallel_dispatch_rejects_self_neural_edge_probe_without_bit_change_proof(
     tmp_path: Path,
 ) -> None:
