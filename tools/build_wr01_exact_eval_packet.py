@@ -872,6 +872,127 @@ def _check_required_runtime_dispatch_blockers(
         )
 
 
+def _release_surface_manifest_consistency(
+    *,
+    release_surface_dir: Path,
+    archive_identity: dict[str, Any],
+    manifest: Path,
+    preflight: Path,
+    payload_diff: Path,
+    runtime_decode_validation: Path,
+    runtime_decode_review: Path,
+) -> dict[str, Any]:
+    """Validate an existing static release manifest against packet custody.
+
+    The release surface is optional for synthetic packet fixtures, but once an
+    archive_manifest.json exists it must not become a stale side record.
+    """
+
+    blockers: list[str] = []
+    checks: list[dict[str, Any]] = []
+    path = release_surface_dir / "archive_manifest.json"
+    full = _repo_path(path)
+    exists = full.is_file()
+    payload = _read_json(path) if exists else {}
+    if not exists:
+        return {
+            "schema": "wr01_release_surface_manifest_consistency_v1",
+            "path": _repo_display_path(path),
+            "exists": False,
+            "ready": True,
+            "blockers": [],
+            "checks": [],
+            "note": "release surface manifest absent; no stale manifest to validate",
+        }
+
+    _check_equal(
+        checks,
+        blockers,
+        "release_surface_manifest_score_claim_not_false",
+        payload.get("score_claim"),
+        False,
+    )
+    _check_equal(
+        checks,
+        blockers,
+        "release_surface_manifest_dispatch_attempted_not_false",
+        payload.get("dispatch_attempted"),
+        False,
+    )
+    _check_equal(
+        checks,
+        blockers,
+        "release_surface_manifest_remote_gpu_run_not_false",
+        payload.get("remote_gpu_run"),
+        False,
+    )
+    _check_equal(
+        checks,
+        blockers,
+        "release_surface_manifest_candidate_archive_sha256_mismatch",
+        payload.get("candidate_archive_sha256"),
+        archive_identity["sha256"],
+    )
+    _check_equal(
+        checks,
+        blockers,
+        "release_surface_manifest_candidate_archive_bytes_mismatch",
+        payload.get("candidate_archive_bytes"),
+        archive_identity["bytes"],
+    )
+    _check_equal(
+        checks,
+        blockers,
+        "release_surface_manifest_archive_sha256_mismatch",
+        _get_path(payload, "archive", "sha256"),
+        archive_identity["sha256"],
+    )
+    _check_equal(
+        checks,
+        blockers,
+        "release_surface_manifest_archive_bytes_mismatch",
+        _get_path(payload, "archive", "bytes"),
+        archive_identity["bytes"],
+    )
+    required_links = {
+        "candidate_manifest": manifest,
+        "public_replay_preflight": preflight,
+        "payload_section_diff": payload_diff,
+        "runtime_decode_validation": runtime_decode_validation,
+        "runtime_decode_review": runtime_decode_review,
+    }
+    links = payload.get("manifest_links")
+    links = links if isinstance(links, dict) else {}
+    for name, expected_path in required_links.items():
+        link = links.get(name)
+        link = link if isinstance(link, dict) else {}
+        _check_equal(
+            checks,
+            blockers,
+            f"release_surface_manifest_link_missing:{name}",
+            link.get("exists"),
+            True,
+        )
+        _check_condition(
+            checks,
+            blockers,
+            f"release_surface_manifest_link_path_mismatch:{name}",
+            _paths_equivalent(link.get("repo_path"), expected_path),
+            actual=link.get("repo_path"),
+            expected=_repo_display_path(expected_path),
+        )
+    return {
+        "schema": "wr01_release_surface_manifest_consistency_v1",
+        "path": _repo_display_path(path),
+        "exists": True,
+        "sha256": _sha256_file(path),
+        "bytes": full.stat().st_size,
+        "ready": not blockers,
+        "blockers": blockers,
+        "checks": checks,
+    }
+
+
 def _check_declared_manifest_sha256(
     checks: list[dict[str, Any]],
     blockers: list[str],
@@ -1546,6 +1667,15 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         preflight=preflight,
         payload_diff=payload_diff,
     )
+    release_surface_manifest_consistency = _release_surface_manifest_consistency(
+        release_surface_dir=args.release_surface_dir,
+        archive_identity=archive_identity,
+        manifest=manifest,
+        preflight=preflight,
+        payload_diff=payload_diff,
+        runtime_decode_validation=runtime_decode_validation,
+        runtime_decode_review=runtime_decode_review,
+    )
     runtime_decode_gate = _runtime_decode_gate_diagnostics(
         result_dir=result_dir,
         manifest_path=manifest,
@@ -2042,11 +2172,14 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         blockers.append("payload_section_diff_not_ready")
     if not dry_run_ready:
         blockers.append("lightning_dry_run_not_ready")
+    if not release_surface_manifest_consistency["ready"]:
+        blockers.append("release_surface_manifest_not_ready")
     if not runtime_decode_gate["ready"]:
         blockers.append("runtime_decode_gate_not_ready")
     if artifact_flag_violations:
         blockers.append("artifact_score_or_dispatch_flag_violation")
     blockers.extend(consistency_blockers)
+    blockers.extend(release_surface_manifest_consistency["blockers"])
     blockers.extend(runtime_decode_gate["blockers"])
     static_blockers = list(blockers)
     static_packet_ready = not static_blockers
@@ -2221,6 +2354,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "dry_run_ready": dry_run_ready,
         "dry_run_submit_readiness": dry_run_submit_readiness,
         "dry_run_queue_metadata": dry_run_queue_metadata,
+        "release_surface_manifest_consistency": release_surface_manifest_consistency,
         "runtime_decode_gate_ready": runtime_decode_gate["ready"],
         "runtime_decode_gate_blockers": runtime_decode_gate["blockers"],
         "runtime_decode_gate": runtime_decode_gate,

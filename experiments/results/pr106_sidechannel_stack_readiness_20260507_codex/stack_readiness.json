@@ -35,6 +35,13 @@
       "ready_for_exact_eval_dispatch": false,
       "remote_gpu_run": null,
       "score_claim": false,
+      "static_custody": {
+        "blockers": [],
+        "exists": false,
+        "path": null,
+        "ready": null,
+        "schema": "wr01_static_custody_summary_v1"
+      },
       "static_packet_ready": null
     },
     "lrl1": {
@@ -69,6 +76,13 @@
       "ready_for_exact_eval_dispatch": null,
       "remote_gpu_run": null,
       "score_claim": false,
+      "static_custody": {
+        "blockers": [],
+        "exists": false,
+        "path": null,
+        "ready": null,
+        "schema": "wr01_static_custody_summary_v1"
+      },
       "static_packet_ready": null
     },
     "three_sister_stack": {
@@ -103,6 +117,13 @@
       "ready_for_exact_eval_dispatch": null,
       "remote_gpu_run": null,
       "score_claim": false,
+      "static_custody": {
+        "blockers": [],
+        "exists": false,
+        "path": null,
+        "ready": null,
+        "schema": "wr01_static_custody_summary_v1"
+      },
       "static_packet_ready": null
     },
     "wavelet_apply_gate": {
@@ -143,6 +164,13 @@
       "ready_for_exact_eval_dispatch": false,
       "remote_gpu_run": null,
       "score_claim": false,
+      "static_custody": {
+        "blockers": [],
+        "exists": false,
+        "path": null,
+        "ready": null,
+        "schema": "wr01_static_custody_summary_v1"
+      },
       "static_packet_ready": null
     },
     "wavelet_noop_stack": {
@@ -184,6 +212,13 @@
       "ready_for_exact_eval_dispatch": false,
       "remote_gpu_run": null,
       "score_claim": false,
+      "static_custody": {
+        "blockers": [],
+        "exists": false,
+        "path": null,
+        "ready": null,
+        "schema": "wr01_static_custody_summary_v1"
+      },
       "static_packet_ready": null
     },
     "wavelet_sidechannel": {
@@ -222,6 +257,13 @@
       "ready_for_exact_eval_dispatch": false,
       "remote_gpu_run": null,
       "score_claim": false,
+      "static_custody": {
+        "blockers": [],
+        "exists": false,
+        "path": null,
+        "ready": null,
+        "schema": "wr01_static_custody_summary_v1"
+      },
       "static_packet_ready": null
     },
     "wr01_exact_eval_packet": {
@@ -231,7 +273,7 @@
           "bytes": 3864,
           "exists": true,
           "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
-          "sha256": "4553efa43b1e5ec81f18c9a0b6688ab0b7b7677f49255559a7378cedf37e08fd"
+          "sha256": "c6418c0489ca2f7b514e5e5489182a6676ef5caf6042a6ddd8807da4b4085bb9"
         },
         "bytes": 186222,
         "exists": true,
@@ -242,7 +284,7 @@
       },
       "artifact_exists": true,
       "artifact_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
-      "artifact_sha256": "cc1999364d2cd7f53d6608063e91dd87d79993476132a0cbf8822a97874698f8",
+      "artifact_sha256": "0e59293e4750b79914db239230d563658673aa5e051a483657188582fe7e13ca",
       "byte_delta_vs_stack_source": -9,
       "candidate_static_preflight_ready": true,
       "dispatch_attempted": false,
@@ -260,6 +302,15 @@
       "ready_for_exact_eval_dispatch": false,
       "remote_gpu_run": null,
       "score_claim": false,
+      "static_custody": {
+        "blockers": [],
+        "bytes": 3864,
+        "exists": true,
+        "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
+        "ready": true,
+        "schema": "wr01_release_surface_manifest_consistency_v1",
+        "sha256": "c6418c0489ca2f7b514e5e5489182a6676ef5caf6042a6ddd8807da4b4085bb9"
+      },
       "static_packet_ready": true
     },
     "yshift": {
@@ -294,6 +345,13 @@
       "ready_for_exact_eval_dispatch": null,
       "remote_gpu_run": null,
       "score_claim": false,
+      "static_custody": {
+        "blockers": [],
+        "exists": false,
+        "path": null,
+        "ready": null,
+        "schema": "wr01_static_custody_summary_v1"
+      },
       "static_packet_ready": null
     }
   },
@@ -378,8 +436,13 @@
       "scope_counts": {
         "pr106_sidechannel_stack": {
           "dominated": 0,
+          "eligible": 1,
           "frontier": 1,
-          "rankable": 1
+          "ineligible": 5,
+          "missing_byte_closed_manifest": 5,
+          "proxy": 5,
+          "rankable": 1,
+          "total": 6
         }
       },
       "scope_default": "family_group"
@@ -402,14 +465,14 @@
           "manifest_json_valid": true,
           "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
           "score_claim_false": true,
-          "sha256": "4553efa43b1e5ec81f18c9a0b6688ab0b7b7677f49255559a7378cedf37e08fd",
-          "sha256_actual": "4553efa43b1e5ec81f18c9a0b6688ab0b7b7677f49255559a7378cedf37e08fd",
+          "sha256": "c6418c0489ca2f7b514e5e5489182a6676ef5caf6042a6ddd8807da4b4085bb9",
+          "sha256_actual": "c6418c0489ca2f7b514e5e5489182a6676ef5caf6042a6ddd8807da4b4085bb9",
           "sha256_matches": true,
           "sha256_valid": true,
           "verified": true
         },
         "archive_manifest_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
-        "archive_manifest_sha256": "4553efa43b1e5ec81f18c9a0b6688ab0b7b7677f49255559a7378cedf37e08fd",
+        "archive_manifest_sha256": "c6418c0489ca2f7b514e5e5489182a6676ef5caf6042a6ddd8807da4b4085bb9",
         "archive_ready_for_stack_review": true,
         "atom_id": "pr106_sidechannel_stack:wr01_exact_eval_packet",
         "byte_closed_archive_manifest_attached": true,
@@ -425,7 +488,7 @@
         "dispatchable": false,
         "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
         "evidence_source_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
-        "evidence_source_sha256": "cc1999364d2cd7f53d6608063e91dd87d79993476132a0cbf8822a97874698f8",
+        "evidence_source_sha256": "0e59293e4750b79914db239230d563658673aa5e051a483657188582fe7e13ca",
         "exact_dispatch_blockers": {
           "blocker_categories": {
             "custody": [],

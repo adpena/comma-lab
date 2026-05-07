@@ -212,6 +212,8 @@ def test_wr01_exact_eval_packet_builds_release_surface_and_refreshes_static_comp
     assert "missing_operator_exact_cuda_approval" in payload["blockers"]
     assert payload["release_surface_generation"]["files"]["archive.zip"]["sha256"] == fixture["archive_sha256"]
     assert payload["static_compliance_refresh"]["returncode"] == 0
+    assert payload["release_surface_manifest_consistency"]["ready"] is True
+    assert payload["release_surface_manifest_consistency"]["blockers"] == []
 
 
 def test_wr01_exact_eval_packet_accepts_matching_custody_artifacts(tmp_path: Path) -> None:
@@ -609,6 +611,73 @@ def test_wr01_exact_eval_packet_refuses_truthy_score_or_dispatch_flags(tmp_path:
             "expected": False,
         },
     ]
+
+
+def test_wr01_exact_eval_packet_fails_closed_on_stale_release_surface_manifest(
+    tmp_path: Path,
+) -> None:
+    fixture = _write_matching_packet_artifacts(tmp_path)
+    result_dir = fixture["result_dir"]
+    stale_sha = "f" * 64
+    release_surface = result_dir / "release_surface"
+    release_surface.mkdir()
+    _write_json(
+        release_surface / "archive_manifest.json",
+        {
+            "schema": "wr01_release_surface_manifest_v1",
+            "score_claim": False,
+            "dispatch_attempted": False,
+            "remote_gpu_run": False,
+            "candidate_archive_sha256": stale_sha,
+            "candidate_archive_bytes": fixture["archive_bytes"],
+            "archive": {
+                "sha256": stale_sha,
+                "bytes": fixture["archive_bytes"],
+            },
+            "manifest_links": {
+                "candidate_manifest": {
+                    "exists": True,
+                    "repo_path": (result_dir / "manifest.json").as_posix(),
+                },
+                "public_replay_preflight": {
+                    "exists": True,
+                    "repo_path": (result_dir / "public_replay_preflight.json").as_posix(),
+                },
+                "payload_section_diff": {
+                    "exists": True,
+                    "repo_path": (result_dir / "payload_section_diff_vs_pr106x.json").as_posix(),
+                },
+                "runtime_decode_validation": {
+                    "exists": True,
+                    "repo_path": (
+                        result_dir / "hnerv_wavelet_runtime_decode_validation.json"
+                    ).as_posix(),
+                },
+                "runtime_decode_review": {
+                    "exists": True,
+                    "repo_path": (
+                        result_dir
+                        / "hnerv_wavelet_compress_time_runtime_decode_review.json"
+                    ).as_posix(),
+                },
+            },
+        },
+    )
+
+    payload = _run_packet_builder_for_fixture(tmp_path, fixture)
+
+    assert payload["ready_for_submit"] is False
+    assert payload["static_packet_ready"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert "release_surface_manifest_not_ready" in payload["static_blockers"]
+    assert (
+        "release_surface_manifest_candidate_archive_sha256_mismatch"
+        in payload["release_surface_manifest_consistency"]["blockers"]
+    )
+    assert (
+        "release_surface_manifest_archive_sha256_mismatch"
+        in payload["release_surface_manifest_consistency"]["blockers"]
+    )
 
 
 def test_wr01_exact_eval_packet_fails_closed_without_runtime_decode_review(

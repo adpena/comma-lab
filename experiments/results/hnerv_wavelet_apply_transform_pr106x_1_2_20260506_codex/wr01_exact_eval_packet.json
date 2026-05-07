@@ -542,7 +542,7 @@
   "ready_for_exact_eval_dispatch": false,
   "ready_for_exact_eval_dispatch_claim": false,
   "ready_for_submit": false,
-  "recorded_at_utc": "2026-05-07T03:22:59Z",
+  "recorded_at_utc": "2026-05-07T04:18:10Z",
   "release_surface": {
     "exists": true,
     "files": {
@@ -556,7 +556,7 @@
         "bytes": 3864,
         "exists": true,
         "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
-        "sha256": "4553efa43b1e5ec81f18c9a0b6688ab0b7b7677f49255559a7378cedf37e08fd"
+        "sha256": "c6418c0489ca2f7b514e5e5489182a6676ef5caf6042a6ddd8807da4b4085bb9"
       },
       "inflate.sh": {
         "bytes": 681,
@@ -568,7 +568,7 @@
         "bytes": 1238,
         "exists": true,
         "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/report.txt",
-        "sha256": "e749718e01a0e7b42d4abdcb8785e618d5cd7e8e3a299cfd730e5f5f388b9a05"
+        "sha256": "e42f6b0178dbb9bdbc2a9d0f06f35f78580cdac483b497607cae96a2a49c9e23"
       }
     },
     "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface",
@@ -586,7 +586,7 @@
         "bytes": 3864,
         "exists": true,
         "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
-        "sha256": "4553efa43b1e5ec81f18c9a0b6688ab0b7b7677f49255559a7378cedf37e08fd"
+        "sha256": "c6418c0489ca2f7b514e5e5489182a6676ef5caf6042a6ddd8807da4b4085bb9"
       },
       "inflate.sh": {
         "bytes": 681,
@@ -598,11 +598,124 @@
         "bytes": 1238,
         "exists": true,
         "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/report.txt",
-        "sha256": "e749718e01a0e7b42d4abdcb8785e618d5cd7e8e3a299cfd730e5f5f388b9a05"
+        "sha256": "e42f6b0178dbb9bdbc2a9d0f06f35f78580cdac483b497607cae96a2a49c9e23"
       }
     },
     "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface",
     "schema": "wr01_release_surface_generation_v1"
+  },
+  "release_surface_manifest_consistency": {
+    "blockers": [],
+    "bytes": 3864,
+    "checks": [
+      {
+        "actual": false,
+        "expected": false,
+        "name": "release_surface_manifest_score_claim_not_false",
+        "ok": true
+      },
+      {
+        "actual": false,
+        "expected": false,
+        "name": "release_surface_manifest_dispatch_attempted_not_false",
+        "ok": true
+      },
+      {
+        "actual": false,
+        "expected": false,
+        "name": "release_surface_manifest_remote_gpu_run_not_false",
+        "ok": true
+      },
+      {
+        "actual": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+        "expected": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+        "name": "release_surface_manifest_candidate_archive_sha256_mismatch",
+        "ok": true
+      },
+      {
+        "actual": 186222,
+        "expected": 186222,
+        "name": "release_surface_manifest_candidate_archive_bytes_mismatch",
+        "ok": true
+      },
+      {
+        "actual": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+        "expected": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+        "name": "release_surface_manifest_archive_sha256_mismatch",
+        "ok": true
+      },
+      {
+        "actual": 186222,
+        "expected": 186222,
+        "name": "release_surface_manifest_archive_bytes_mismatch",
+        "ok": true
+      },
+      {
+        "actual": true,
+        "expected": true,
+        "name": "release_surface_manifest_link_missing:candidate_manifest",
+        "ok": true
+      },
+      {
+        "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
+        "expected": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
+        "name": "release_surface_manifest_link_path_mismatch:candidate_manifest",
+        "ok": true
+      },
+      {
+        "actual": true,
+        "expected": true,
+        "name": "release_surface_manifest_link_missing:public_replay_preflight",
+        "ok": true
+      },
+      {
+        "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json",
+        "expected": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json",
+        "name": "release_surface_manifest_link_path_mismatch:public_replay_preflight",
+        "ok": true
+      },
+      {
+        "actual": true,
+        "expected": true,
+        "name": "release_surface_manifest_link_missing:payload_section_diff",
+        "ok": true
+      },
+      {
+        "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json",
+        "expected": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json",
+        "name": "release_surface_manifest_link_path_mismatch:payload_section_diff",
+        "ok": true
+      },
+      {
+        "actual": true,
+        "expected": true,
+        "name": "release_surface_manifest_link_missing:runtime_decode_validation",
+        "ok": true
+      },
+      {
+        "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_runtime_decode_validation.json",
+        "expected": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_runtime_decode_validation.json",
+        "name": "release_surface_manifest_link_path_mismatch:runtime_decode_validation",
+        "ok": true
+      },
+      {
+        "actual": true,
+        "expected": true,
+        "name": "release_surface_manifest_link_missing:runtime_decode_review",
+        "ok": true
+      },
+      {
+        "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_compress_time_runtime_decode_review.json",
+        "expected": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_compress_time_runtime_decode_review.json",
+        "name": "release_surface_manifest_link_path_mismatch:runtime_decode_review",
+        "ok": true
+      }
+    ],
+    "exists": true,
+    "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
+    "ready": true,
+    "schema": "wr01_release_surface_manifest_consistency_v1",
+    "sha256": "c6418c0489ca2f7b514e5e5489182a6676ef5caf6042a6ddd8807da4b4085bb9"
   },
   "runtime_decode_gate": {
     "blockers": [],

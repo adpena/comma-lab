@@ -57,6 +57,9 @@ def test_pr106_stack_readiness_emits_fail_closed_meta_lagrangian_ledger(
     assert wr01["archive_ready_for_stack_review"] is True
     assert wr01["ready_for_exact_eval_dispatch"] is False
     assert "requires_exact_cuda_auth_eval" in wr01["exact_dispatch_blockers"]["blockers"]
+    assert payload["artifact_summaries"]["wr01_exact_eval_packet"]["static_custody"][
+        "ready"
+    ] is True
 
     latent = rows["pr106_sidechannel_stack:latent"]
     assert latent["proxy_row"] is True
@@ -86,6 +89,45 @@ def test_pr106_stack_readiness_blocks_truthy_score_claim(tmp_path: Path) -> None
 
     assert payload["ready_for_local_stack_planning"] is False
     assert "latent_score_claim_true" in payload["blockers"]
+
+
+def test_pr106_stack_readiness_surfaces_wr01_static_custody_blockers(
+    tmp_path: Path,
+) -> None:
+    fixture = _write_fixture(tmp_path)
+    wr01_payload = json.loads(fixture["wr01_packet"].read_text(encoding="utf-8"))
+    wr01_payload["static_packet_ready"] = False
+    wr01_payload["release_surface_manifest_consistency"] = {
+        "schema": "wr01_release_surface_manifest_consistency_v1",
+        "path": "release_surface/archive_manifest.json",
+        "exists": True,
+        "ready": False,
+        "blockers": ["release_surface_manifest_candidate_archive_sha256_mismatch"],
+    }
+    fixture["wr01_packet"].write_text(json.dumps(wr01_payload), encoding="utf-8")
+
+    payload = build_pr106_sidechannel_stack_readiness_from_paths(
+        repo_root=tmp_path,
+        baseline_json_path=fixture["baseline"],
+        pr106_anchor_archive=fixture["anchor"],
+        latent_metadata_path=fixture["latent_metadata"],
+        yshift_metadata_path=fixture["yshift_metadata"],
+        lrl1_metadata_path=fixture["lrl1_metadata"],
+        three_sister_stacked_metadata_path=fixture["three_sister_metadata"],
+        wavelet_sidechannel_manifest_path=fixture["wavelet_manifest"],
+        wavelet_stacked_metadata_path=fixture["wavelet_stack_metadata"],
+        wavelet_apply_gate_path=fixture["wavelet_gate"],
+        wr01_exact_eval_packet_path=fixture["wr01_packet"],
+    )
+
+    assert "wr01_static_custody_not_ready" in payload["blockers"]
+    static_custody = payload["artifact_summaries"]["wr01_exact_eval_packet"][
+        "static_custody"
+    ]
+    assert static_custody["ready"] is False
+    assert static_custody["blockers"] == [
+        "release_surface_manifest_candidate_archive_sha256_mismatch"
+    ]
 
 
 def test_build_pr106_sidechannel_stack_readiness_cli(tmp_path: Path) -> None:
@@ -245,6 +287,13 @@ def _write_fixture(tmp_path: Path) -> dict[str, Path]:
                         "path": archive_manifest.as_posix(),
                     }
                 }
+            },
+            "release_surface_manifest_consistency": {
+                "schema": "wr01_release_surface_manifest_consistency_v1",
+                "path": archive_manifest.as_posix(),
+                "exists": True,
+                "ready": True,
+                "blockers": [],
             },
         },
     )

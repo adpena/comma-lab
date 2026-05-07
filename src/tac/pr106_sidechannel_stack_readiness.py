@@ -208,6 +208,7 @@ def _artifact_summary(
         "ready_for_exact_eval_dispatch": payload.get("ready_for_exact_eval_dispatch"),
         "static_packet_ready": payload.get("static_packet_ready"),
         "candidate_static_preflight_ready": payload.get("candidate_static_preflight_ready"),
+        "static_custody": _static_custody_summary(payload),
         "archive": archive_identity,
         "byte_delta_vs_stack_source": byte_delta,
         "evidence_grade": _evidence_grade(name, payload),
@@ -413,6 +414,9 @@ def _stack_blockers(artifact_summaries: Mapping[str, Mapping[str, Any]]) -> list
     wr01 = artifact_summaries.get("wr01_exact_eval_packet", {})
     if wr01.get("static_packet_ready") is not True:
         blockers.append("wr01_static_packet_not_ready")
+    static_custody = wr01.get("static_custody")
+    if isinstance(static_custody, Mapping) and static_custody.get("ready") is False:
+        blockers.append("wr01_static_custody_not_ready")
     wavelet_gate = artifact_summaries.get("wavelet_apply_gate", {})
     for blocker in wavelet_gate.get("dispatch_blockers", []):
         blockers.append(f"wavelet_gate:{blocker}")
@@ -446,6 +450,27 @@ def _exact_cuda_artifact(repo_root: Path, payload: Mapping[str, Any]) -> dict[st
         "path": _display(repo_root, full),
         "sha256": sha256_file(full),
         "bytes": full.stat().st_size,
+    }
+
+
+def _static_custody_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
+    consistency = payload.get("release_surface_manifest_consistency")
+    if isinstance(consistency, Mapping):
+        return {
+            "schema": consistency.get("schema"),
+            "path": consistency.get("path"),
+            "exists": consistency.get("exists"),
+            "sha256": consistency.get("sha256"),
+            "bytes": consistency.get("bytes"),
+            "ready": consistency.get("ready"),
+            "blockers": _string_list(consistency.get("blockers")),
+        }
+    return {
+        "schema": "wr01_static_custody_summary_v1",
+        "path": None,
+        "exists": False,
+        "ready": None,
+        "blockers": [],
     }
 
 
