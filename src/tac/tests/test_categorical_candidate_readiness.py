@@ -825,6 +825,44 @@ def test_audit_categorical_candidate_manifest_rejects_label_prior_class_row_drif
     assert manifest["dispatch_blockers"] == ["label_prior_payload_manifest_class_rows_mismatch"]
 
 
+def test_audit_categorical_candidate_manifest_rejects_label_prior_embedded_contract_drift(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    with zipfile.ZipFile(candidate["candidate_archive"]["path"]) as archive:
+        label_prior_payload_manifest = json.loads(
+            archive.read(LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER).decode("utf-8")
+        )
+    label_prior_payload_manifest["conditioning_prior_contract"]["runtime_consumed_count"] = 0
+    drifted_manifest = json.dumps(
+        label_prior_payload_manifest,
+        indent=2,
+        sort_keys=True,
+    ).encode("utf-8") + b"\n"
+    _replace_charged_archive_member(
+        candidate,
+        member_name=LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
+        raw=drifted_manifest,
+    )
+    _attach_complete_dispatch_proofs(candidate, tmp_path)
+
+    manifest = audit_categorical_candidate_manifest(
+        candidate,
+        repo_root=REPO,
+        manifest_dir=tmp_path,
+    )
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["label_prior_payload_manifest"]["accepted"] is False
+    assert (
+        manifest["label_prior_payload_manifest"]["conditioning_prior_contract_matches_recomputed"]
+        is False
+    )
+    assert manifest["dispatch_blockers"] == [
+        "label_prior_payload_manifest_conditioning_prior_contract_mismatch"
+    ]
+
+
 def test_audit_categorical_candidate_manifest_checks_archive_member_fidelity(tmp_path: Path) -> None:
     candidate = _base_candidate(tmp_path)
     candidate["charged_members"][0]["sha256"] = "f" * 64

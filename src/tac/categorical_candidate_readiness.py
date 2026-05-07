@@ -584,6 +584,7 @@ def _label_prior_payload_manifest_report(
         "label_contract": "",
         "conditioning_prior_count": 0,
         "class_rows_match": False,
+        "conditioning_prior_contract_matches_recomputed": False,
         "blockers": [],
     }
     if not isinstance(record, dict):
@@ -680,6 +681,11 @@ def _label_prior_payload_manifest_report(
             charged_members=member_records,
         )
         summary["conditioning_prior_contract"] = prior_contract
+        summary["conditioning_prior_contract_matches_recomputed"] = (
+            manifest_payload.get("conditioning_prior_contract") == prior_contract
+        )
+        if not summary["conditioning_prior_contract_matches_recomputed"]:
+            blockers.append("label_prior_payload_manifest_conditioning_prior_contract_mismatch")
         for blocker in prior_contract["dispatch_blockers"]:
             blockers.append(f"label_prior_payload_manifest_{blocker}")
 

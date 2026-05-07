@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import json
 import logging
 import shutil
 import stat
@@ -114,6 +115,211 @@ def write_deterministic_zip_file(
         compress_type=compress_type,
         compresslevel=compresslevel,
     )
+
+
+def _canonical_json_bytes(payload: dict) -> bytes:
+    return json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+
+
+def _is_sha256(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(char in "0123456789abcdef" for char in value.lower())
+    )
+
+
+def _coerce_typed_sidechannel_member(raw: TypedSidechannelMember | dict) -> TypedSidechannelMember:
+    if isinstance(raw, TypedSidechannelMember):
+        return raw
+    if not isinstance(raw, dict):
+        raise TypeError(
+            "typed sidechannel entries must be TypedSidechannelMember or dict, "
+            f"got {type(raw).__name__}"
+        )
+    return TypedSidechannelMember(**raw)
+
+
+def _typed_sidechannel_contract_row(entry: TypedSidechannelMember) -> tuple[dict, Path]:
+    member_name = validate_archive_member_name(entry.member_name)
+    expected_name = _TYPED_SIDECHANNEL_ALLOWED_MEMBERS.get(entry.kind)
+    if expected_name is None:
+        allowed = ", ".join(sorted(_TYPED_SIDECHANNEL_ALLOWED_MEMBERS))
+        raise ValueError(f"unknown typed sidechannel kind {entry.kind!r}; allowed: {allowed}")
+    if member_name != expected_name:
+        raise ValueError(
+            f"typed sidechannel kind {entry.kind!r} must use member "
+            f"{expected_name!r}, got {member_name!r}"
+        )
+    source_path = Path(entry.source_path)
+    if not source_path.is_file():
+        raise FileNotFoundError(f"typed sidechannel source missing: {source_path}")
+    payload = source_path.read_bytes()
+    dispatch_blockers: list[str] = []
+    if entry.consumed_by_runtime and not entry.runtime_consumer:
+        dispatch_blockers.append(f"{entry.kind}_runtime_consumer_missing")
+    if entry.consumed_by_runtime and not _is_sha256(entry.runtime_consumption_proof_sha256):
+        dispatch_blockers.append(f"{entry.kind}_runtime_consumption_proof_sha256_missing")
+    if entry.score_affecting and not entry.consumed_by_runtime:
+        dispatch_blockers.append(f"{entry.kind}_score_affecting_member_not_consumed_by_runtime")
+    row = {
+        "member_name": member_name,
+        "kind": entry.kind,
+        "bytes": len(payload),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+        "score_affecting": bool(entry.score_affecting),
+        "consumed_by_runtime": bool(entry.consumed_by_runtime),
+        "runtime_consumer": entry.runtime_consumer,
+        "runtime_consumption_proof_sha256": entry.runtime_consumption_proof_sha256,
+        "dispatch_ready": not dispatch_blockers,
+        "dispatch_blockers": dispatch_blockers,
+        "notes": entry.notes,
+    }
+    return row, source_path
+
+
+def build_typed_sidechannel_contract(
+    entries: list[TypedSidechannelMember | dict] | tuple[TypedSidechannelMember | dict, ...] | None,
+) -> tuple[list[dict], dict[str, Path]]:
+    """Normalize typed sidechannel archive metadata and source paths.
+
+    The returned rows are deterministic and suitable for
+    ``typed_sidechannels.json``. The path mapping is keyed by archive member
+    name and is consumed by ``build_submission_archive``.
+    """
+    if not entries:
+        return [], {}
+    rows: list[dict] = []
+    sources: dict[str, Path] = {}
+    seen: set[str] = set()
+    for raw in entries:
+        row, source_path = _typed_sidechannel_contract_row(
+            _coerce_typed_sidechannel_member(raw)
+        )
+        name = str(row["member_name"])
+        if name in seen:
+            raise ValueError(f"duplicate typed sidechannel member: {name!r}")
+        seen.add(name)
+        rows.append(row)
+        sources[name] = source_path
+    rows.sort(key=lambda row: (str(row["kind"]), str(row["member_name"])))
+    return rows, sources
+
+
+def _typed_sidechannel_contract_payload(rows: list[dict]) -> dict:
+    blockers = sorted(
+        {
+            str(blocker)
+            for row in rows
+            for blocker in row.get("dispatch_blockers", [])
+        }
+    )
+    return {
+        "schema": TYPED_SIDECHANNEL_CONTRACT_SCHEMA,
+        "score_claim": False,
+        "dispatch_ready": not blockers,
+        "dispatch_blockers": blockers,
+        "members": rows,
+    }
+
+
+def _read_typed_sidechannel_contract(zf: zipfile.ZipFile) -> dict | None:
+    names = zf.namelist()
+    if TYPED_SIDECHANNEL_CONTRACT_MEMBER not in names:
+        return None
+    try:
+        raw = zf.read(TYPED_SIDECHANNEL_CONTRACT_MEMBER)
+        payload = json.loads(raw.decode("utf-8"))
+    except Exception as exc:
+        raise ValueError(f"{TYPED_SIDECHANNEL_CONTRACT_MEMBER}: invalid JSON: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"{TYPED_SIDECHANNEL_CONTRACT_MEMBER}: contract must be an object")
+    if payload.get("schema") != TYPED_SIDECHANNEL_CONTRACT_SCHEMA:
+        raise ValueError(
+            f"{TYPED_SIDECHANNEL_CONTRACT_MEMBER}: unsupported schema "
+            f"{payload.get('schema')!r}"
+        )
+    members = payload.get("members")
+    if not isinstance(members, list):
+        raise ValueError(f"{TYPED_SIDECHANNEL_CONTRACT_MEMBER}: members must be a list")
+    return payload
+
+
+def _validate_typed_sidechannel_contract(zf: zipfile.ZipFile) -> tuple[dict | None, list[str], list[str]]:
+    """Validate typed sidechannel metadata.
+
+    Returns ``(contract, allowed_member_names, errors)``. Structural errors are
+    archive-validation errors; unconsumed score-affecting rows are dispatch
+    blockers carried in the contract rather than silent score evidence.
+    """
+    errors: list[str] = []
+    try:
+        contract = _read_typed_sidechannel_contract(zf)
+    except ValueError as exc:
+        return None, [], [str(exc)]
+    if contract is None:
+        return None, [], []
+
+    allowed: list[str] = [TYPED_SIDECHANNEL_CONTRACT_MEMBER]
+    seen: set[str] = set()
+    names = set(zf.namelist())
+    members = contract["members"]
+    for index, raw_row in enumerate(members):
+        if not isinstance(raw_row, dict):
+            errors.append(f"typed sidechannel row {index} is not an object")
+            continue
+        member_name = raw_row.get("member_name")
+        kind = raw_row.get("kind")
+        if not isinstance(member_name, str):
+            errors.append(f"typed sidechannel row {index} has non-string member_name")
+            continue
+        try:
+            member_name = validate_archive_member_name(member_name)
+        except ValueError as exc:
+            errors.append(f"typed sidechannel row {index}: {exc}")
+            continue
+        expected_name = _TYPED_SIDECHANNEL_ALLOWED_MEMBERS.get(str(kind))
+        if expected_name is None:
+            errors.append(f"typed sidechannel row {index} has unknown kind {kind!r}")
+            continue
+        if member_name != expected_name:
+            errors.append(
+                f"typed sidechannel row {index} kind {kind!r} must use "
+                f"{expected_name!r}, got {member_name!r}"
+            )
+        if member_name in seen:
+            errors.append(f"duplicate typed sidechannel member: {member_name!r}")
+        seen.add(member_name)
+        allowed.append(member_name)
+        if member_name not in names:
+            errors.append(f"typed sidechannel member missing from archive: {member_name}")
+            continue
+        data = zf.read(member_name)
+        if raw_row.get("bytes") != len(data):
+            errors.append(
+                f"typed sidechannel {member_name} byte count mismatch: "
+                f"contract={raw_row.get('bytes')!r} actual={len(data)}"
+            )
+        actual_sha = hashlib.sha256(data).hexdigest()
+        if raw_row.get("sha256") != actual_sha:
+            errors.append(
+                f"typed sidechannel {member_name} sha256 mismatch: "
+                f"contract={raw_row.get('sha256')!r} actual={actual_sha}"
+            )
+        if raw_row.get("score_affecting") and raw_row.get("consumed_by_runtime"):
+            if not raw_row.get("runtime_consumer"):
+                errors.append(f"typed sidechannel {member_name} claims runtime consumption without runtime_consumer")
+            if not _is_sha256(raw_row.get("runtime_consumption_proof_sha256")):
+                errors.append(
+                    f"typed sidechannel {member_name} claims runtime consumption without "
+                    "runtime_consumption_proof_sha256"
+                )
+    return contract, allowed, errors
 
 
 def deterministic_zip_directory(
@@ -247,6 +453,34 @@ _SEG_TILE_ACTION_MAX_TILE_EXCLUSIVE = (
     384 // _SEG_TILE_ACTION_DEFAULT_TILE_SIZE
 ) * (512 // _SEG_TILE_ACTION_DEFAULT_TILE_SIZE)
 _RENDERER_PAYLOAD_MEMBERS = ("renderer_payload.bin", "renderer_payload.bin.br", "p")
+TYPED_SIDECHANNEL_CONTRACT_MEMBER = "typed_sidechannels.json"
+TYPED_SIDECHANNEL_CONTRACT_SCHEMA = "typed_sidechannel_members_v1"
+_TYPED_SIDECHANNEL_ALLOWED_MEMBERS = {
+    "categorical_payload": "categorical_payload.bin",
+    "lapose_lfv1": "lapose_foveation_tuples.lfv1",
+    "sjkl_residual": "sjkl.bin",
+    "jcsp_stream": "jcsp.bin",
+    "hnerv_hdm3": "hdm3.bin",
+}
+
+
+@dataclass(frozen=True)
+class TypedSidechannelMember:
+    """Opt-in charged sidechannel member plus its runtime consumption claim.
+
+    This is intentionally metadata-only. Adding one of these members to an
+    archive records byte custody and stack intent, but a score-affecting member
+    is not dispatch-ready until a reviewed runtime consumption proof is present.
+    """
+
+    member_name: str
+    source_path: Path | str
+    kind: str
+    score_affecting: bool = True
+    consumed_by_runtime: bool = False
+    runtime_consumer: str = ""
+    runtime_consumption_proof_sha256: str = ""
+    notes: str = ""
 
 
 def _read_seg_tile_action_uvarint(buf: bytes, cursor: int) -> tuple[int, int]:
@@ -1019,8 +1253,11 @@ class ArchiveValidationResult:
     files_found: dict[str, int] = field(default_factory=dict)
     files_missing: list[str] = field(default_factory=list)
     files_unexpected: list[str] = field(default_factory=list)
+    typed_sidechannel_contract: dict | None = None
     warnings: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    dispatch_ready: bool = True
+    dispatch_blockers: list[str] = field(default_factory=list)
     md5: str = ""
 
     def summary(self) -> str:
@@ -1039,6 +1276,13 @@ class ArchiveValidationResult:
             lines.append(f"  MISSING: {', '.join(self.files_missing)}")
         if self.files_unexpected:
             lines.append(f"  UNEXPECTED: {', '.join(self.files_unexpected)}")
+        if self.typed_sidechannel_contract is not None:
+            lines.append(
+                "  Typed sidechannels: "
+                f"{len(self.typed_sidechannel_contract.get('members', []))}"
+            )
+        if not self.dispatch_ready:
+            lines.append(f"  DISPATCH BLOCKERS: {', '.join(self.dispatch_blockers)}")
         for w in self.warnings:
             lines.append(f"  WARNING: {w}")
         for e in self.errors:
@@ -1089,6 +1333,30 @@ def validate_archive(
         archive_names = set(archive_names_list)
         for info, name in zip(infos, archive_names_list, strict=True):
             result.files_found[name] = info.file_size
+        (
+            result.typed_sidechannel_contract,
+            typed_sidechannel_allowed,
+            typed_sidechannel_errors,
+        ) = _validate_typed_sidechannel_contract(zf)
+        for err in typed_sidechannel_errors:
+            result.errors.append(err)
+            result.valid = False
+        if result.typed_sidechannel_contract is not None:
+            blockers = sorted(
+                {
+                    str(blocker)
+                    for row in result.typed_sidechannel_contract.get("members", [])
+                    if isinstance(row, dict)
+                    for blocker in row.get("dispatch_blockers", [])
+                }
+            )
+            result.dispatch_blockers.extend(blockers)
+            if blockers:
+                result.dispatch_ready = False
+                result.warnings.append(
+                    "typed sidechannel members are structurally byte-closed but "
+                    "not dispatch-ready: " + ", ".join(blockers)
+                )
 
         # Check required files present
         for req in required:
@@ -1098,8 +1366,9 @@ def validate_archive(
                 result.valid = False
 
         # Check for unexpected files
+        allowed_names = required | set(typed_sidechannel_allowed)
         for name in archive_names:
-            if name not in required:
+            if name not in allowed_names:
                 result.files_unexpected.append(name)
                 msg = f"Unexpected file in archive: {name}"
                 if strict:
@@ -1481,6 +1750,7 @@ def build_submission_archive(
     gradient_corrections_bin: Path | str | None = None,
     zoom_scalars_bin: Path | str | None = None,
     foveation_params_bin: Path | str | None = None,
+    typed_sidechannels: list[TypedSidechannelMember | dict] | tuple[TypedSidechannelMember | dict, ...] | None = None,
     manifest: ArchiveManifest = RENDERER_SUBMISSION_MANIFEST,
     validate: bool = True,
     use_brotli: bool = False,
@@ -1507,6 +1777,9 @@ def build_submission_archive(
         optimized_poses_pt: Path to optimized_poses.pt
         optimized_poses_bin: Path to optimized_poses.bin (raw fp16, smaller)
         optimized_embedding_pt: Path to optimized_embedding.pt (optional)
+        typed_sidechannels: Optional typed sidechannel members. These add
+            member bytes plus ``typed_sidechannels.json`` metadata, but do not
+            imply dispatch readiness unless runtime consumption proof is present.
         manifest: Expected contents manifest
         validate: If True, validate after building (default True)
         use_brotli: If True, Brotli-compress each artifact before adding
@@ -1524,6 +1797,9 @@ def build_submission_archive(
         ValueError: if validation fails.
     """
     output_path = Path(output_path)
+    typed_sidechannel_rows, typed_sidechannel_sources = build_typed_sidechannel_contract(
+        typed_sidechannels
+    )
 
     # Map manifest fields to source paths
     source_map: dict[str, Path | None] = {
@@ -1549,6 +1825,9 @@ def build_submission_archive(
     }
 
     required = manifest.required_files()
+    typed_sidechannel_contract = _typed_sidechannel_contract_payload(
+        typed_sidechannel_rows
+    ) if typed_sidechannel_rows else None
 
     # Verify all required source files exist BEFORE creating the archive
     for name in required:
@@ -1711,6 +1990,24 @@ def build_submission_archive(
                     compresslevel=9,
                 )
                 logger.info("  Added %s (%d bytes)", name, src.stat().st_size)
+        for name in sorted(typed_sidechannel_sources):
+            src = typed_sidechannel_sources[name]
+            write_deterministic_zip_file(
+                zf,
+                src,
+                name,
+                compress_type=zipfile.ZIP_STORED,
+                compresslevel=None,
+            )
+            logger.info("  Added typed sidechannel %s (%d bytes)", name, src.stat().st_size)
+        if typed_sidechannel_contract is not None:
+            write_deterministic_zip_member(
+                zf,
+                TYPED_SIDECHANNEL_CONTRACT_MEMBER,
+                _canonical_json_bytes(typed_sidechannel_contract),
+                compress_type=zipfile.ZIP_STORED,
+                compresslevel=None,
+            )
 
     # Determine expected archive names for validation
     if use_brotli:
