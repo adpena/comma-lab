@@ -31,10 +31,23 @@ from tools.build_cross_paradigm_frontier_inventory import build_inventory  # noq
 from tools.build_field_meta_dispatch_selection import build_selection_report  # noqa: E402
 
 SCHEMA_VERSION = 4
+GLOBAL_ROADMAP_BUILD_PREFLIGHT_PATHS = (
+    "tools/build_frontier_roadmap_status.py",
+    "tools/build_cross_paradigm_frontier_inventory.py",
+    "tools/build_field_meta_dispatch_selection.py",
+    "experiments/preflight_candidate_manifest_dispatch_readiness.py",
+)
 DEFAULT_PACKET_MANIFEST_GLOBS = (
     "experiments/results/**/wr01_exact_eval_packet.json",
     "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_*/hnerv_lowlevel_exact_eval_packet.json",
     "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_*/hnerv_lowlevel_exact_eval_packet.json",
+    "experiments/results/categorical_openpilot_payload_candidate*/candidate.json",
+    "experiments/results/hnerv_hdm3_archive_candidate_*/hdm3_archive_candidate_manifest.json",
+    "experiments/results/hnerv_hdm3_entropy_packet_*/hdc2_combined_entropy_reduction_manifest.json",
+    "experiments/results/frontier_hidden_gem_routing_*/hidden_gem_readiness.json",
+    "experiments/results/cross_paradigm_atom_ledger_*/ledger.json",
+    "experiments/results/field_equation_plan_*/plan.json",
+    "experiments/results/**/field_meta_selection*.json",
 )
 
 
@@ -81,7 +94,11 @@ def _path_matches(candidate: str, dirty_path: str) -> bool:
 def dirty_paths_for_row(row: dict[str, Any], dirty_paths: list[str]) -> list[str]:
     """Return dirty paths that intersect a frontier row's code/evidence paths."""
 
-    watched = [*row.get("code_paths", []), *row.get("evidence_paths", [])]
+    watched = [
+        *GLOBAL_ROADMAP_BUILD_PREFLIGHT_PATHS,
+        *row.get("code_paths", []),
+        *row.get("evidence_paths", []),
+    ]
     matches = []
     for dirty_path in dirty_paths:
         if any(_path_matches(str(path), dirty_path) for path in watched):

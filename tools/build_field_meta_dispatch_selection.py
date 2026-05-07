@@ -47,6 +47,12 @@ STRICT_PREFLIGHT = "experiments/preflight_candidate_manifest_dispatch_readiness.
 HEX_CHARS = set("0123456789abcdef")
 PARETO_EPS = 1e-12
 RATE_ONLY_SCORE_EPS = 1e-9
+GLOBAL_SELECTOR_BUILD_PREFLIGHT_PATHS = (
+    TOOL,
+    "tools/build_frontier_roadmap_status.py",
+    "tools/build_cross_paradigm_frontier_inventory.py",
+    STRICT_PREFLIGHT,
+)
 PROXY_EVIDENCE_GRADE_MARKERS = (
     "planning",
     "proxy",
@@ -270,7 +276,10 @@ def _path_values(value: Any) -> list[str]:
 
 
 def _candidate_watch_paths(payload: Mapping[str, Any], *, manifest_path: Path, repo_root: Path) -> list[str]:
-    paths: list[str] = [_repo_relative_if_possible(manifest_path, repo_root=repo_root)]
+    paths: list[str] = [
+        _repo_relative_if_possible(manifest_path, repo_root=repo_root),
+        *GLOBAL_SELECTOR_BUILD_PREFLIGHT_PATHS,
+    ]
     for key in (
         "code_paths",
         "evidence_paths",
@@ -281,6 +290,10 @@ def _candidate_watch_paths(payload: Mapping[str, Any], *, manifest_path: Path, r
         "runtime_paths",
     ):
         paths.extend(_path_values(payload.get(key)))
+    for key in ("tool", "source_tool", "builder_tool"):
+        tool_path = payload.get(key)
+        if isinstance(tool_path, str) and tool_path.endswith(".py"):
+            paths.append(tool_path)
     for section_path, key in (
         (("tool_run_manifest",), "input_paths"),
         (("tool_run_manifest",), "output_paths"),
@@ -2184,7 +2197,10 @@ def _normalize_categorical_openpilot_candidate(
     manifest_path: Path,
     repo_root: Path,
 ) -> dict[str, Any] | None:
-    if payload.get("kind") != "categorical_byte_closed_local_candidate_build":
+    if payload.get("kind") not in {
+        "categorical_byte_closed_local_candidate_build",
+        "categorical_qma9_clade_spade_openpilot_candidate_manifest",
+    }:
         return None
     normalized = dict(payload)
     normalized.setdefault("candidate_id", "categorical_openpilot_hpm1_payload_candidate")
@@ -2202,11 +2218,21 @@ def _normalize_categorical_openpilot_candidate(
     paths = payload.get("paths")
     if isinstance(paths, Mapping):
         normalized.setdefault("candidate_archive_path", paths.get("archive"))
+    candidate_archive = payload.get("candidate_archive")
+    if isinstance(candidate_archive, Mapping):
+        normalized.setdefault("candidate_archive_path", candidate_archive.get("path"))
+        normalized.setdefault("candidate_archive_sha256", candidate_archive.get("sha256"))
+        normalized.setdefault("candidate_archive_bytes", candidate_archive.get("bytes"))
     normalized.setdefault("candidate_archive_sha256", payload.get("archive_sha256"))
     normalized.setdefault("candidate_archive_bytes", payload.get("archive_bytes"))
     source = payload.get("payload_source")
     if isinstance(source, Mapping):
+        normalized.setdefault("source_archive_path", source.get("source_archive_path"))
+        normalized.setdefault("source_archive_sha256", source.get("source_archive_sha256"))
+        normalized.setdefault("source_archive_bytes", source.get("source_archive_bytes"))
         archive_bytes = _optional_numeric(payload.get("archive_bytes"))
+        if archive_bytes is None and isinstance(candidate_archive, Mapping):
+            archive_bytes = _optional_numeric(candidate_archive.get("bytes"))
         source_bytes = _optional_numeric(source.get("source_archive_bytes"))
         if archive_bytes is not None and source_bytes is not None:
             normalized.setdefault("byte_delta", int(archive_bytes - source_bytes))
@@ -2223,11 +2249,23 @@ def _normalize_categorical_openpilot_candidate(
             "component_deltas_require_exact_cuda_confirmation",
         ],
     )
+    readiness_blockers = _string_list(payload.get("readiness_blockers"))
+    decode_reencode = payload.get("decode_reencode_parity")
+    if isinstance(decode_reencode, Mapping) and decode_reencode.get("passed") is not True:
+        readiness_blockers.append("categorical_decode_reencode_parity_not_proven")
+    runtime_loader = payload.get("runtime_loader_parity")
+    if (
+        isinstance(runtime_loader, Mapping)
+        and runtime_loader.get("semantic_runtime_output_parity_proven") is not True
+    ):
+        readiness_blockers.append("categorical_semantic_runtime_output_parity_not_proven")
+    if payload.get("ready_for_exact_eval_dispatch") is False:
+        readiness_blockers.append("ready_for_exact_eval_dispatch_false")
     normalized.setdefault(
         "dispatch_blockers",
         _ordered_unique_strings(
             [
-                *(_string_list(payload.get("readiness_blockers"))),
+                *readiness_blockers,
                 "strict_pre_submission_compliance_json_missing",
                 "lane_dispatch_claim_missing",
                 "exact_cuda_auth_eval_missing",
@@ -2238,15 +2276,190 @@ def _normalize_categorical_openpilot_candidate(
         "code_paths",
         [
             "src/tac/categorical_candidate_readiness.py",
+            "src/tac/categorical_candidate_runtime_skeleton.py",
+            "src/tac/categorical_payload_candidate.py",
             "src/tac/pr91_hpm1_codec.py",
+            "tools/build_categorical_candidate_payload.py",
         ],
     )
+    source_paths = _path_values(normalized.get("source_paths"))
+    for section in (
+        payload.get("decode_reencode_parity"),
+        payload.get("runtime_loader_parity"),
+        payload.get("label_permutation_control"),
+        payload.get("hpm1_structural_decode_inventory"),
+        payload.get("archive_member_manifest"),
+    ):
+        if isinstance(section, Mapping):
+            path = section.get("path")
+            if isinstance(path, str) and path:
+                source_paths.append(path)
+            proof = section.get("runtime_execution_proof")
+            if isinstance(proof, Mapping) and isinstance(proof.get("path"), str):
+                source_paths.append(proof["path"])
+            artifact = section.get("independent_proof_artifact")
+            if isinstance(artifact, Mapping) and isinstance(artifact.get("path"), str):
+                source_paths.append(artifact["path"])
+    if source_paths:
+        normalized["source_paths"] = _ordered_unique_strings(source_paths)
     _append_artifact_paths(
         normalized,
         manifest_path=manifest_path,
         repo_root=repo_root,
-        extra_paths=list(paths.values()) if isinstance(paths, Mapping) else [],
+        extra_paths=[
+            *(list(paths.values()) if isinstance(paths, Mapping) else []),
+            normalized.get("candidate_archive_path"),
+            normalized.get("source_archive_path"),
+            *source_paths,
+        ],
     )
+    return normalized
+
+
+def _normalize_hidden_gem_readiness(
+    payload: Mapping[str, Any],
+    *,
+    manifest_path: Path,
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    entries = payload.get("entries")
+    summary = payload.get("summary")
+    if (
+        not isinstance(entries, Sequence)
+        or isinstance(entries, (str, bytes, bytearray))
+        or not isinstance(summary, Mapping)
+    ):
+        return None
+    rows = [row for row in entries if isinstance(row, Mapping)]
+    evidence_paths: list[str] = []
+    integration_targets: list[str] = []
+    categories: list[str] = []
+    blockers: list[str] = ["hidden_gem_readiness_registry_is_planning_only"]
+    for row in rows:
+        categories.extend(_string_list(row.get("category")))
+        blockers.extend(_string_list(row.get("dispatch_blockers")))
+        for item in row.get("evidence") or []:
+            if isinstance(item, Mapping) and isinstance(item.get("path"), str):
+                evidence_paths.append(item["path"])
+        for item in row.get("integration_targets") or []:
+            if isinstance(item, Mapping) and isinstance(item.get("path"), str):
+                integration_targets.append(item["path"])
+    normalized = dict(payload)
+    normalized["candidate_id"] = "hidden_gem_readiness_registry"
+    normalized["family"] = "hidden_gem_registry"
+    normalized["family_group"] = "cross_paradigm_hidden_gems"
+    normalized["pareto_scope"] = "hidden_gem_registry_planning"
+    normalized["paradigms"] = _ordered_unique_strings(categories or ["hidden_gems"])
+    normalized["role"] = "hidden_gem_registry_readiness_audit"
+    normalized["action_class"] = "convert_registry_rows_to_byte_closed_candidate_manifests"
+    normalized["priority_tier"] = 3
+    normalized["evidence_grade"] = "planning_hidden_gem_registry_audit"
+    normalized["planning_only"] = True
+    normalized["proxy_row"] = True
+    normalized["score_claim"] = False
+    normalized["dispatch_attempted"] = False
+    normalized["ready_for_exact_eval_dispatch"] = False
+    normalized["expected_total_score_delta"] = 0.0
+    normalized["expected_total_score_delta_source"] = "hidden_gem_registry_audit_no_score_delta"
+    normalized["expected_seg_dist_delta"] = 0.0
+    normalized["expected_pose_dist_delta"] = 0.0
+    normalized["expected_information_gain_nats"] = 0.2
+    normalized["dispatch_blockers"] = _ordered_unique_strings(blockers)
+    normalized["interaction_assumptions"] = [
+        "registry_readiness_is_not_archive_evidence",
+        "each_hidden_gem_requires_byte_closed_candidate_manifest_before_dispatch",
+    ]
+    normalized["code_paths"] = [
+        "src/tac/hidden_gems.py",
+        "src/tac/hidden_gem_readiness.py",
+        "tools/audit_hidden_gem_readiness.py",
+        "tools/list_hidden_gems.py",
+    ]
+    normalized["evidence_paths"] = _ordered_unique_strings(evidence_paths)
+    normalized["source_paths"] = _ordered_unique_strings(integration_targets)
+    _append_artifact_paths(
+        normalized,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+        extra_paths=[*evidence_paths, *integration_targets],
+    )
+    return normalized
+
+
+def _normalize_meta_adapter_summary(
+    payload: Mapping[str, Any],
+    *,
+    manifest_path: Path,
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    tool = payload.get("tool")
+    if tool not in {
+        "tac.optimization.cross_paradigm_atoms.build_cross_paradigm_atom_ledger",
+        "tac.optimization.field_equation_planner.build_field_equation_plan",
+        TOOL,
+    }:
+        return None
+    rows = payload.get("rows")
+    frontier_rows = payload.get("frontier_rows")
+    if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes, bytearray)):
+        rows = frontier_rows
+    if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes, bytearray)):
+        return None
+    row_mappings = [row for row in rows if isinstance(row, Mapping)]
+    if tool == TOOL:
+        candidate_id = "field_meta_selection_report"
+        family = "field_meta_selection_report"
+        code_paths = [TOOL, STRICT_PREFLIGHT]
+    elif "field_equation" in str(tool):
+        candidate_id = "field_equation_plan_meta_adapter"
+        family = "field_equation_plan"
+        code_paths = [
+            "src/tac/optimization/field_equation_planner.py",
+            "src/tac/optimization/meta_lagrangian_allocator.py",
+            "tools/build_field_equation_plan.py",
+        ]
+    else:
+        candidate_id = "cross_paradigm_atom_ledger_meta_adapter"
+        family = "cross_paradigm_atom_ledger"
+        code_paths = [
+            "src/tac/optimization/cross_paradigm_atoms.py",
+            "src/tac/optimization/meta_lagrangian_allocator.py",
+            "tools/build_cross_paradigm_atom_ledger.py",
+        ]
+    blockers = [
+        "meta_adapter_summary_is_planning_only",
+        *(_string_list(payload.get("dispatch_blockers"))),
+    ]
+    for row in row_mappings:
+        blockers.extend(_string_list(row.get("dispatch_blockers")))
+        blockers.extend(_string_list(row.get("blockers")))
+    normalized = dict(payload)
+    normalized["candidate_id"] = candidate_id
+    normalized["family"] = family
+    normalized["family_group"] = "cross_paradigm_meta_adapter"
+    normalized["pareto_scope"] = "meta_adapter_planning"
+    normalized["paradigms"] = ["meta_lagrangian", "cross_paradigm"]
+    normalized["role"] = "meta_adapter_planning_summary"
+    normalized["action_class"] = "materialize_adapter_rows_as_candidate_packet_manifests"
+    normalized["priority_tier"] = 3
+    normalized["evidence_grade"] = "planning_meta_adapter_summary"
+    normalized["planning_only"] = True
+    normalized["proxy_row"] = True
+    normalized["score_claim"] = False
+    normalized["dispatch_attempted"] = False
+    normalized["ready_for_exact_eval_dispatch"] = False
+    normalized["expected_total_score_delta"] = 0.0
+    normalized["expected_total_score_delta_source"] = "meta_adapter_summary_no_direct_score_delta"
+    normalized["expected_seg_dist_delta"] = 0.0
+    normalized["expected_pose_dist_delta"] = 0.0
+    normalized["expected_information_gain_nats"] = 0.25
+    normalized["dispatch_blockers"] = _ordered_unique_strings(blockers)
+    normalized["interaction_assumptions"] = [
+        "meta_adapter_output_is_planning_control_surface",
+        "embedded_rows_require_own_byte_closed_manifest_before_dispatch",
+    ]
+    normalized["code_paths"] = code_paths
+    _append_artifact_paths(normalized, manifest_path=manifest_path, repo_root=repo_root)
     return normalized
 
 
@@ -2583,6 +2796,20 @@ def _normalize_manifest_payload(
     )
     if categorical is not None:
         return categorical
+    hidden_gem = _normalize_hidden_gem_readiness(
+        payload,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+    )
+    if hidden_gem is not None:
+        return hidden_gem
+    meta_adapter = _normalize_meta_adapter_summary(
+        payload,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+    )
+    if meta_adapter is not None:
+        return meta_adapter
     hdc2_entropy = _normalize_hdc2_combined_entropy_manifest(
         payload,
         manifest_path=manifest_path,
@@ -3714,6 +3941,7 @@ def _row_for_manifest(
         "action_class": str(payload.get("action_class") or payload.get("next_action_class") or ""),
         "priority_tier": payload.get("priority_tier"),
         "code_paths": _ordered_unique_strings(_path_values(payload.get("code_paths"))),
+        "source_paths": _ordered_unique_strings(_path_values(payload.get("source_paths"))),
         "evidence_paths": _ordered_unique_strings(_path_values(payload.get("evidence_paths"))),
         "conflicts_with_families": conflicts_with_families,
         "conflicts_with_atoms": conflicts_with_atoms,

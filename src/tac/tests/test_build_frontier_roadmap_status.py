@@ -11,6 +11,7 @@ from tac.hnerv_entropy_frontier_selector import (
 )
 from tools.build_frontier_roadmap_status import (
     DEFAULT_PACKET_MANIFEST_GLOBS,
+    GLOBAL_ROADMAP_BUILD_PREFLIGHT_PATHS,
     build_roadmap_status,
     dirty_paths_for_row,
     render_markdown,
@@ -36,6 +37,20 @@ def test_dirty_paths_for_row_matches_exact_and_nested_paths() -> None:
         "experiments/results/example",
         "src/tac/hnerv_wavelet_apply_transform.py",
     ]
+
+
+def test_dirty_paths_for_row_blocks_global_roadmap_modules_without_row_code_paths() -> None:
+    row = {
+        "code_paths": [],
+        "evidence_paths": [],
+    }
+
+    assert dirty_paths_for_row(
+        row,
+        ["experiments/preflight_candidate_manifest_dispatch_readiness.py"],
+    ) == ["experiments/preflight_candidate_manifest_dispatch_readiness.py"]
+    for path in GLOBAL_ROADMAP_BUILD_PREFLIGHT_PATHS:
+        assert path in dirty_paths_for_row(row, [path])
 
 
 def test_frontier_roadmap_status_is_non_dispatching_and_dirty_aware() -> None:
@@ -148,10 +163,24 @@ def test_frontier_roadmap_status_discovers_default_packet_manifests() -> None:
         "experiments/results/**/wr01_exact_eval_packet.json",
         "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_*/hnerv_lowlevel_exact_eval_packet.json",
         "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_*/hnerv_lowlevel_exact_eval_packet.json",
+        "experiments/results/categorical_openpilot_payload_candidate*/candidate.json",
+        "experiments/results/hnerv_hdm3_archive_candidate_*/hdm3_archive_candidate_manifest.json",
+        "experiments/results/hnerv_hdm3_entropy_packet_*/hdc2_combined_entropy_reduction_manifest.json",
+        "experiments/results/frontier_hidden_gem_routing_*/hidden_gem_readiness.json",
+        "experiments/results/cross_paradigm_atom_ledger_*/ledger.json",
+        "experiments/results/field_equation_plan_*/plan.json",
+        "experiments/results/**/field_meta_selection*.json",
     )
     assert "wr01_apply_pr106x_half" in candidate_ids
     assert "pr106_q10_151byte_brotli" in candidate_ids
     assert "pr106x_lgblock16_1byte_brotli" in candidate_ids
+    assert "categorical_openpilot_hpm1_payload_candidate" in candidate_ids
+    assert "pr106x_hdm3_decoder_recode_14byte" in candidate_ids
+    assert "hnerv_hdc2_hdm3_combined_entropy_target" in candidate_ids
+    assert "hidden_gem_readiness_registry" in candidate_ids
+    assert "cross_paradigm_atom_ledger_meta_adapter" in candidate_ids
+    assert "field_equation_plan_meta_adapter" in candidate_ids
+    assert "field_meta_selection_report" in candidate_ids
     assert packet_selection["candidate_count"] >= 3
     assert packet_selection["candidate_static_preflight_ready_count"] == 0
     assert packet_selection["pareto_summary"]["frontier_count"] == 0

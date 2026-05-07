@@ -17,6 +17,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -71,6 +72,17 @@ TERMINAL_CLAIM_PREFIXES = (
     "stale_assumed_dead",
     "stale_superseded",
     "stopped",
+)
+BUILD_CODE_PATHS = (
+    "tools/build_hnerv_lowlevel_exact_eval_packet.py",
+    "src/tac/hnerv_lowlevel_packer.py",
+    "src/tac/repo_io.py",
+    "experiments/preflight_public_replay_intake.py",
+    "experiments/preflight_candidate_manifest_dispatch_readiness.py",
+    "scripts/pre_submission_compliance_check.py",
+    "scripts/lightning_exact_eval_repro.py",
+    "scripts/launch_lightning_batch_job.py",
+    "tools/claim_lane_dispatch.py",
 )
 _CLAIM_SEPARATOR_RE = re.compile(r"^\|\s*-+\s*(\|\s*-+\s*)+\|\s*$")
 
@@ -163,6 +175,71 @@ def _release_surface_status(release_dir: Path) -> dict[str, Any]:
         "exists": _repo_path(release_dir).is_dir(),
         "files": files,
     }
+
+
+def _existing_repo_rel_paths(paths: list[Path]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for path in paths:
+        full = _repo_path(path)
+        if not full.exists():
+            continue
+        rel = _repo_rel(path)
+        if rel not in seen:
+            seen.add(rel)
+            out.append(rel)
+    return out
+
+
+def _runtime_module_paths(source_inflate: Path) -> list[str]:
+    paths: list[Path] = [source_inflate]
+    source_full = _repo_path(source_inflate)
+    runtime_dir = source_full.parent
+    if runtime_dir.is_dir():
+        for child in sorted(runtime_dir.iterdir(), key=lambda item: item.name):
+            if child.name.startswith(".") or child.name == "__pycache__":
+                continue
+            if child.suffix in {".py", ".sh", ".txt"} and child.is_file():
+                paths.append(child)
+    return _existing_repo_rel_paths(paths)
+
+
+def _packet_code_paths(args: argparse.Namespace) -> list[str]:
+    return _existing_repo_rel_paths([Path(path) for path in BUILD_CODE_PATHS]) + [
+        path
+        for path in _runtime_module_paths(args.inflate_sh)
+        if path not in BUILD_CODE_PATHS
+    ]
+
+
+def _packet_source_paths(
+    args: argparse.Namespace,
+    *,
+    candidate_result: Mapping[str, Any],
+    public_preflight_path: Path,
+    payload_diff_path: Path,
+    compliance_path: Path,
+    manifest_path: Path,
+    packet_path: Path,
+) -> list[str]:
+    paths: list[Path] = [
+        args.candidate_result,
+        args.archive,
+        args.baseline_json,
+        args.inflate_sh,
+        args.upstream_dir / "evaluate.py",
+        public_preflight_path,
+        payload_diff_path,
+        compliance_path,
+        manifest_path,
+        packet_path,
+    ]
+    paths.extend(Path(path) for path in _packet_code_paths(args))
+    for key in ("source_archive_path", "candidate_archive_path"):
+        value = candidate_result.get(key)
+        if isinstance(value, str) and value:
+            paths.append(Path(value))
+    return _existing_repo_rel_paths(paths)
 
 
 def _remaining_required_for_score_or_dispatch(
@@ -479,6 +556,8 @@ def _candidate_manifest(
     public_preflight_path: Path,
     payload_diff_path: Path,
     compliance_path: Path,
+    code_paths: list[str],
+    source_paths: list[str],
     public_preflight: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     byte_delta = int(candidate_result["candidate_archive_bytes"]) - int(candidate_result["source_archive_bytes"])
@@ -521,6 +600,8 @@ def _candidate_manifest(
             "lane claim, environment, submit, harvest, and score-adjudication gates still apply"
         ),
         "proxy_row": False,
+        "code_paths": code_paths,
+        "source_paths": source_paths,
         "source_archive_custody_mode": "verified_source_archive_payload_match",
         "source_archive_path": candidate_result.get("source_archive_path"),
         "source_archive_sha256": candidate_result.get("source_archive_sha256"),
@@ -707,6 +788,8 @@ def build_release_surface(
             "this release surface remains static and non-dispatched"
         ),
         "release_surface_scope": "static_upload_files_only_no_auth_eval_no_dispatch",
+        "code_paths": _packet_code_paths(args),
+        "source_paths": _runtime_module_paths(args.inflate_sh),
         "candidate_archive_sha256": candidate_result.get("candidate_archive_sha256"),
         "candidate_archive_bytes": candidate_result.get("candidate_archive_bytes"),
         "candidate_payload_sha256": candidate_result.get("candidate_payload_sha256"),
@@ -1196,6 +1279,17 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
     payload_diff_path = args.result_dir / "payload_section_diff_vs_source.json"
     compliance_path = args.result_dir / "pre_submission_compliance.json"
     manifest_path = args.result_dir / "manifest.json"
+    packet_path = _packet_output_path(args)
+    code_paths = _packet_code_paths(args)
+    source_paths = _packet_source_paths(
+        args,
+        candidate_result=candidate_result,
+        public_preflight_path=public_preflight_path,
+        payload_diff_path=payload_diff_path,
+        compliance_path=compliance_path,
+        manifest_path=manifest_path,
+        packet_path=packet_path,
+    )
 
     if not static_blockers:
         public_preflight_refresh = refresh_public_replay_preflight(args)
@@ -1219,6 +1313,8 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
             public_preflight_path=public_preflight_path,
             payload_diff_path=payload_diff_path,
             compliance_path=compliance_path,
+            code_paths=code_paths,
+            source_paths=source_paths,
             public_preflight=public_preflight_payload,
         )
         manifest_path.write_text(json_text(manifest), encoding="utf-8")
@@ -1271,6 +1367,8 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
             public_preflight_path=public_preflight_path,
             payload_diff_path=payload_diff_path,
             compliance_path=compliance_path,
+            code_paths=code_paths,
+            source_paths=source_paths,
             public_preflight=public_preflight_payload,
         )
         manifest_path.write_text(json_text(manifest), encoding="utf-8")
@@ -1294,7 +1392,6 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "contest_auth_eval_adjudication_not_run_for_candidate",
         "operator_score_claim_review_not_done",
     ]
-    packet_path = _packet_output_path(args)
     byte_delta = int(candidate_result["candidate_archive_bytes"]) - int(candidate_result["source_archive_bytes"])
     expected_delta = byte_delta * RATE_SCORE_PER_BYTE
     kkt_proof = _rate_only_raw_equivalent_kkt_proof(
@@ -1318,6 +1415,8 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "score_claim": False,
         "dispatch_attempted": False,
         "remote_gpu_run": False,
+        "code_paths": code_paths,
+        "source_paths": source_paths,
         "static_packet_ready": static_ready,
         "candidate_static_preflight_ready": static_ready,
         "operator_approved_exact_cuda": bool(args.operator_approved_exact_cuda),

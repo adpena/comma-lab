@@ -9,6 +9,7 @@ from tac.hnerv_entropy_frontier_selector import (
     ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
     RATE_ONLY_FLOOR_BLOCKER_PREFIX,
     build_hnerv_entropy_frontier_selection,
+    build_rate_only_floor_proof,
     render_markdown,
 )
 from tac.repo_io import json_text, sha256_file
@@ -202,12 +203,12 @@ def test_selects_static_ready_candidate_when_it_beats_active_byte_floor(tmp_path
     assert selected["exact_evaluable_after_lane_claim"] is True
 
 
-def test_selects_rate_only_candidate_above_floor_only_with_scorer_changing_stack_path(
+def test_blocks_rate_only_candidate_above_floor_with_arbitrary_scorer_changing_stack_path_string(
     tmp_path: Path,
 ) -> None:
     candidate = _write_manifest(
         tmp_path,
-        "stacked.json",
+        "string_bypass.json",
         {
             "score_claim": False,
             "dispatch_attempted": False,
@@ -233,15 +234,64 @@ def test_selects_rate_only_candidate_above_floor_only_with_scorer_changing_stack
     )
 
     manifest = build_hnerv_entropy_frontier_selection(
-        [("stacked", candidate)],
+        [("string_bypass", candidate)],
         repo_root=tmp_path,
     )
 
-    selected = manifest["selected_next_candidate"]
-    assert selected["label"] == "stacked"
-    assert selected["candidate_archive_bytes"] == ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES + 100
-    assert selected["scorer_changing_stack_path_declared"] is True
-    assert selected["exact_evaluable_after_lane_claim"] is True
+    row = manifest["ranked_candidates"][0]
+    assert manifest["selected_next_candidate"] is None
+    assert row["label"] == "string_bypass"
+    assert row["candidate_archive_bytes"] == ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES + 100
+    assert row["scorer_changing_stack_path_declared"] is True
+    assert row["exact_evaluable_after_lane_claim"] is False
+    assert f"{RATE_ONLY_FLOOR_BLOCKER_PREFIX}:{ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES}" in row[
+        "hard_blockers"
+    ]
+    proof = row["rate_only_floor_proof"]
+    assert proof["scorer_changing_stack_path_payload"] == {
+        "scorer_changing_stack_path": "wr01_after_pr103_pr106_floor"
+    }
+    assert proof["scorer_changing_stack_path_structured"] is False
+    assert proof["scorer_changing_stack_path_meaningful"] is False
+    assert "scorer_changing_stack_path_proof_unstructured" in proof["blockers"]
+
+
+def test_preserves_structured_scorer_changing_stack_path_payload_in_floor_proof() -> None:
+    stack_path = {
+        "id": "wr01_pose_residual_stack",
+        "expected_seg_dist_delta": 0.0,
+        "expected_pose_dist_delta": -0.0003,
+        "charged_scorer_changing_bytes": 96,
+        "scorer_changing_members": ["renderer.bin"],
+        "runtime_consumed_scorer_changing_bytes": True,
+    }
+    proof = build_rate_only_floor_proof(
+        {
+            "scorer_changing_stack_path": stack_path,
+            "exact_eval_packet_readiness": {
+                "remaining_dispatch_blockers": [
+                    "lane_dispatch_claim_missing",
+                    "exact_cuda_auth_eval_missing",
+                ],
+            },
+        },
+        candidate_archive_bytes=ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES + 100,
+        declared_rate_only=True,
+    )
+
+    assert proof["beats_active_floor"] is False
+    assert proof["exact_eval_spend_allowed_by_policy"] is True
+    assert proof["scorer_changing_stack_path_payload"] == {
+        "scorer_changing_stack_path": stack_path
+    }
+    assert proof["scorer_changing_stack_path_structured"] is True
+    assert proof["scorer_changing_stack_path_meaningful"] is True
+    assert proof["scorer_changing_stack_path_proof"]["component_delta_proof"] is True
+    assert proof["scorer_changing_stack_path_proof"]["charged_scorer_changing_bytes"] is True
+    assert proof["scorer_changing_stack_path_proof"][
+        "runtime_consumed_scorer_changing_bytes"
+    ] is True
+    assert proof["blockers"] == []
 
 
 def test_missing_candidate_archive_blocks_exact_evaluable_row(tmp_path: Path) -> None:

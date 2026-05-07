@@ -22,6 +22,15 @@ ACTIVE_RATE_ONLY_FLOOR_SCORE = 0.2089810755823297
 RATE_ONLY_FLOOR_BLOCKER_PREFIX = (
     "rate_only_candidate_not_below_active_pr103_pr106_a_plus_plus_floor"
 )
+SCORER_CHANGING_STACK_PATH_KEYS = (
+    "scorer_changing_stack_path",
+    "scorer_changing_stack_paths",
+    "score_changing_stack_path",
+    "score_changing_stack_paths",
+    "scorer_changing_stack_plan",
+    "scorer_changing_stack_manifest",
+)
+SCORER_CHANGING_TEXT_STACK_KEYS = ("stack_path", "stack_paths", "stack_plan", "stack_manifest")
 
 
 class HnervEntropyFrontierSelectorError(ValueError):
@@ -103,7 +112,7 @@ def build_hnerv_entropy_frontier_selection(
             },
             "rate_only_exact_eval_spend_requires": [
                 "candidate_archive_bytes_below_active_rate_only_floor",
-                "or_explicit_scorer_changing_stack_path_declaration",
+                "or_structured_scorer_changing_stack_path_proof",
             ],
             "exact_evaluable_after_lane_claim_requires": [
                 "candidate_archive_bytes_and_sha256",
@@ -403,21 +412,24 @@ def build_rate_only_floor_proof(
     """Return the planning-only active-floor gate for rate-only exact-eval spend."""
 
     declaration = scorer_changing_stack_path_declaration(payload)
+    structured_proof = declaration["structured_proof"]
     blockers: list[str] = []
     beats_floor: bool | None = None
     if (
         declared_rate_only
         and active_rate_only_floor_archive_bytes is not None
-        and not declaration["declared"]
     ):
         if candidate_archive_bytes is None:
             blockers.append("rate_only_candidate_archive_bytes_missing_for_active_floor_policy")
         else:
             beats_floor = candidate_archive_bytes < active_rate_only_floor_archive_bytes
             if not beats_floor:
-                blockers.append(
-                    f"{RATE_ONLY_FLOOR_BLOCKER_PREFIX}:{active_rate_only_floor_archive_bytes}"
-                )
+                if declaration["declared"]:
+                    blockers.extend(structured_proof["blockers"])
+                if not declaration["declared"] or structured_proof["meaningful"] is not True:
+                    blockers.append(
+                        f"{RATE_ONLY_FLOOR_BLOCKER_PREFIX}:{active_rate_only_floor_archive_bytes}"
+                    )
     return {
         "schema": "rate_only_frontier_floor_policy_v1",
         "planning_only": True,
@@ -431,6 +443,10 @@ def build_rate_only_floor_proof(
         "beats_active_floor": beats_floor,
         "scorer_changing_stack_path_declared": declaration["declared"],
         "scorer_changing_stack_path_sources": declaration["sources"],
+        "scorer_changing_stack_path_payload": declaration["payload"],
+        "scorer_changing_stack_path_structured": structured_proof["structured"],
+        "scorer_changing_stack_path_meaningful": structured_proof["meaningful"],
+        "scorer_changing_stack_path_proof": structured_proof,
         "exact_eval_spend_allowed_by_policy": not blockers,
         "blockers": _unique_ordered(blockers),
     }
@@ -439,18 +455,31 @@ def build_rate_only_floor_proof(
 def scorer_changing_stack_path_declaration(payload: Mapping[str, Any]) -> dict[str, Any]:
     """Detect an explicit scorer-changing stack-path declaration in a manifest."""
 
-    sources: list[str] = []
-    for key in (
-        "scorer_changing_stack_path",
-        "scorer_changing_stack_paths",
-        "score_changing_stack_path",
-        "score_changing_stack_paths",
-        "scorer_changing_stack_plan",
-        "scorer_changing_stack_manifest",
+    existing = payload.get("scorer_changing_stack_path_declaration")
+    if (
+        isinstance(existing, Mapping)
+        and existing.get("schema") == "scorer_changing_stack_path_declaration_v1"
     ):
+        out = dict(existing)
+        out.setdefault("sources", [])
+        out.setdefault("payload", {})
+        out.setdefault(
+            "structured_proof",
+            _structured_scorer_changing_stack_proof(
+                payload,
+                declared=out.get("declared") is True,
+                declaration_payload=out["payload"] if isinstance(out["payload"], Mapping) else {},
+            ),
+        )
+        return out
+
+    sources: list[str] = []
+    original_payload: dict[str, Any] = {}
+    for key in SCORER_CHANGING_STACK_PATH_KEYS:
         if _has_nonempty_declaration(payload.get(key)):
             sources.append(key)
-    for key in ("stack_path", "stack_paths", "stack_plan", "stack_manifest"):
+            original_payload[key] = payload.get(key)
+    for key in SCORER_CHANGING_TEXT_STACK_KEYS:
         text = _declaration_text(payload.get(key)).lower()
         if text and (
             "scorer_changing" in text
@@ -459,10 +488,19 @@ def scorer_changing_stack_path_declaration(payload: Mapping[str, Any]) -> dict[s
             or "score-changing" in text
         ):
             sources.append(key)
+            original_payload[key] = payload.get(key)
+    sources = _unique_ordered(sources)
+    proof = _structured_scorer_changing_stack_proof(
+        payload,
+        declared=bool(sources),
+        declaration_payload=original_payload,
+    )
     return {
         "schema": "scorer_changing_stack_path_declaration_v1",
         "declared": bool(sources),
-        "sources": _unique_ordered(sources),
+        "sources": sources,
+        "payload": original_payload,
+        "structured_proof": proof,
     }
 
 
@@ -478,9 +516,11 @@ def _apply_rate_only_frontier_floor(
     archive_bytes = row.get("candidate_archive_bytes")
     if not isinstance(archive_bytes, int):
         return row
-    proof_payload = {"scorer_changing_stack_path": True} if row.get(
-        "scorer_changing_stack_path_declared"
-    ) is True else {}
+    proof_payload = {
+        "scorer_changing_stack_path_declaration": row.get(
+            "scorer_changing_stack_path_declaration", {}
+        )
+    }
     proof = build_rate_only_floor_proof(
         proof_payload,
         candidate_archive_bytes=archive_bytes,
@@ -500,6 +540,249 @@ def _apply_rate_only_frontier_floor(
         [*out.get("blocking_reasons", []), *proof["blockers"]]
     )
     return out
+
+
+def _structured_scorer_changing_stack_proof(
+    payload: Mapping[str, Any],
+    *,
+    declared: bool,
+    declaration_payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    structured = declared and any(
+        _is_structured_declaration(value) for value in declaration_payload.values()
+    )
+    component_delta = _has_nonzero_expected_component_delta(payload)
+    component_risk = _has_component_risk_proof(payload)
+    charged_bytes = _has_positive_scorer_changing_bytes(payload)
+    member_bytes = _has_scorer_changing_member_proof(payload)
+    runtime_consumed = _has_runtime_consumed_scorer_changing_bytes(payload)
+    exact_eval_blocker_state = _has_explicit_exact_eval_blocker_state(payload)
+    blockers: list[str] = []
+    if declared and not structured:
+        blockers.append("scorer_changing_stack_path_proof_unstructured")
+    if declared and not (component_delta or component_risk):
+        blockers.append("scorer_changing_stack_path_component_delta_or_risk_missing")
+    if declared and not charged_bytes:
+        blockers.append("scorer_changing_stack_path_charged_bytes_missing")
+    if declared and not member_bytes:
+        blockers.append("scorer_changing_stack_path_member_bytes_missing")
+    if declared and not runtime_consumed:
+        blockers.append("scorer_changing_stack_path_runtime_consumption_missing")
+    if declared and not exact_eval_blocker_state:
+        blockers.append("scorer_changing_stack_path_exact_eval_blocker_state_missing")
+    return {
+        "schema": "scorer_changing_stack_path_structured_proof_v1",
+        "structured": structured,
+        "meaningful": (
+            structured
+            and (component_delta or component_risk)
+            and charged_bytes
+            and member_bytes
+            and runtime_consumed
+            and exact_eval_blocker_state
+        ),
+        "component_delta_proof": component_delta,
+        "component_risk_proof": component_risk,
+        "charged_scorer_changing_bytes": charged_bytes,
+        "member_scorer_changing_bytes": member_bytes,
+        "runtime_consumed_scorer_changing_bytes": runtime_consumed,
+        "explicit_exact_eval_blocker_state": exact_eval_blocker_state,
+        "blockers": _unique_ordered(blockers),
+    }
+
+
+def _is_structured_declaration(value: Any) -> bool:
+    if isinstance(value, Mapping):
+        return bool(value)
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray, str)):
+        return any(isinstance(item, Mapping) and bool(item) for item in value)
+    return False
+
+
+def _has_nonzero_expected_component_delta(payload: Mapping[str, Any]) -> bool:
+    direct_keys = (
+        "expected_seg_dist_delta",
+        "expected_pose_dist_delta",
+        "expected_seg_delta",
+        "expected_pose_delta",
+        "seg_dist_delta",
+        "pose_dist_delta",
+        "seg_delta",
+        "pose_delta",
+    )
+    if any(_is_nonzero_number(value) for value in _values_for_keys(payload, direct_keys)):
+        return True
+    for value in _values_for_keys(
+        payload,
+        (
+            "expected_component_deltas",
+            "component_deltas",
+            "expected_distortion_deltas",
+            "distortion_deltas",
+        ),
+    ):
+        if _mapping_has_nonzero_seg_or_pose_delta(value):
+            return True
+    return False
+
+
+def _has_component_risk_proof(payload: Mapping[str, Any]) -> bool:
+    return any(
+        _is_structured_declaration(value)
+        for value in _values_for_keys(
+            payload,
+            (
+                "component_risk_proof",
+                "component_risk",
+                "scorer_component_risk_proof",
+                "distortion_risk_proof",
+                "scorer_basin_risk_proof",
+            ),
+        )
+    )
+
+
+def _has_positive_scorer_changing_bytes(payload: Mapping[str, Any]) -> bool:
+    return any(
+        _is_positive_number(value)
+        for value in _values_for_keys(
+            payload,
+            (
+                "charged_scorer_changing_bytes",
+                "scorer_changing_charged_bytes",
+                "scorer_changing_bytes",
+                "charged_member_bytes",
+                "changed_member_bytes",
+                "charged_component_bytes",
+            ),
+        )
+    )
+
+
+def _has_scorer_changing_member_proof(payload: Mapping[str, Any]) -> bool:
+    return any(
+        _has_nonempty_member_value(value)
+        for value in _values_for_keys(
+            payload,
+            (
+                "scorer_changing_members",
+                "scorer_changing_archive_members",
+                "charged_scorer_changing_members",
+                "runtime_consumed_members",
+                "runtime_consumed_member_names",
+                "changed_members",
+            ),
+        )
+    )
+
+
+def _has_runtime_consumed_scorer_changing_bytes(payload: Mapping[str, Any]) -> bool:
+    if any(
+        _is_truthy_runtime_consumption(value)
+        for value in _values_for_keys(
+            payload,
+            (
+                "runtime_consumed_scorer_changing_bytes",
+                "runtime_consumes_scorer_changing_bytes",
+                "runtime_consumed",
+                "consumed_by_inflate",
+                "inflate_consumes_scorer_changing_bytes",
+                "decoder_consumes_scorer_changing_bytes",
+            ),
+        )
+    ):
+        return True
+    return any(
+        _has_nonempty_member_value(value)
+        for value in _values_for_keys(
+            payload,
+            ("runtime_consumed_members", "runtime_consumed_member_names"),
+        )
+    )
+
+
+def _has_explicit_exact_eval_blocker_state(payload: Mapping[str, Any]) -> bool:
+    if any(_is_exact_eval_blocker_text(item) for item in _collect_blockers(payload)):
+        return True
+    return any(
+        _is_exact_eval_blocker_text(_declaration_text(value))
+        for value in _values_for_keys(
+            payload,
+            (
+                "exact_eval_blocker_state",
+                "exact_eval_blockers",
+                "exact_cuda_blocker_state",
+                "exact_cuda_remaining_blockers",
+                "remaining_exact_eval_blockers",
+            ),
+        )
+    )
+
+
+def _values_for_keys(value: Any, keys: Sequence[str]) -> list[Any]:
+    normalized = {_normalize_key(key) for key in keys}
+    found: list[Any] = []
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            if _normalize_key(str(key)) in normalized:
+                found.append(item)
+            found.extend(_values_for_keys(item, keys))
+    elif isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray, str)):
+        for item in value:
+            found.extend(_values_for_keys(item, keys))
+    return found
+
+
+def _mapping_has_nonzero_seg_or_pose_delta(value: Any) -> bool:
+    if not isinstance(value, Mapping):
+        return False
+    for key, item in value.items():
+        normalized = _normalize_key(str(key))
+        if ("seg" in normalized or "pose" in normalized) and _is_nonzero_number(item):
+            return True
+    return False
+
+
+def _has_nonempty_member_value(value: Any) -> bool:
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, Mapping):
+        return bool(value)
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray, str)):
+        return any(_has_nonempty_member_value(item) for item in value)
+    return False
+
+
+def _is_truthy_runtime_consumption(value: Any) -> bool:
+    if value is True:
+        return True
+    if _is_positive_number(value):
+        return True
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "yes", "runtime_consumed", "consumed_by_inflate"}
+    return _has_nonempty_member_value(value)
+
+
+def _is_positive_number(value: Any) -> bool:
+    return not isinstance(value, bool) and isinstance(value, (int, float)) and value > 0
+
+
+def _is_nonzero_number(value: Any) -> bool:
+    return not isinstance(value, bool) and isinstance(value, (int, float)) and value != 0
+
+
+def _is_exact_eval_blocker_text(text: str) -> bool:
+    normalized = text.lower().replace("-", "_").replace(" ", "_")
+    return (
+        "exact_cuda" in normalized
+        or "auth_eval" in normalized
+        or "contest_auth_eval" in normalized
+        or "upstream/evaluate.py" in normalized
+    )
+
+
+def _normalize_key(value: str) -> str:
+    return value.lower().replace("-", "_").replace(" ", "_")
 
 
 def _next_required_proofs(selected: Mapping[str, Any] | None) -> list[str]:

@@ -881,6 +881,31 @@ def test_field_meta_selector_penalizes_dirty_packet_over_raw_delta(
     assert dirty_row["next_required_proof"][0] == "clean_or_isolate_dirty_candidate_paths_before_selection"
 
 
+def test_field_meta_selector_dirty_blocks_global_modules_without_manifest_code_paths(
+    tmp_path: Path,
+) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="global_selector_dirty",
+        lane_id="lane_global_selector_dirty",
+        job_name="job_global_selector_dirty",
+    )
+
+    report = build_selection_report(
+        repo_root=REPO,
+        manifest_paths=[manifest],
+        dirty_paths=["tools/build_field_meta_dispatch_selection.py"],
+    )
+
+    row = report["rows"][0]
+    assert row["code_paths"] == []
+    assert row["dirty_blocked"] is True
+    assert row["dirty_path_blockers"] == ["tools/build_field_meta_dispatch_selection.py"]
+    assert "tools/build_field_meta_dispatch_selection.py" in row["candidate_watch_paths"]
+    assert row["candidate_static_preflight_ready"] is False
+    assert row["selection_decision"] == "refused_dirty_worktree_overlap"
+
+
 def test_field_meta_selector_ranks_q10_over_forensic_cross_paradigm_packets(
     tmp_path: Path,
 ) -> None:
@@ -1061,7 +1086,7 @@ def test_field_meta_selector_blocks_rate_only_candidate_above_pr103_pr106_floor(
     )
 
 
-def test_field_meta_selector_allows_rate_only_above_floor_with_scorer_changing_stack_path(
+def test_field_meta_selector_blocks_unstructured_scorer_changing_stack_path_above_floor(
     tmp_path: Path,
 ) -> None:
     manifest = _packet_manifest(
@@ -1090,11 +1115,17 @@ def test_field_meta_selector_allows_rate_only_above_floor_with_scorer_changing_s
 
     row = report["rows"][0]
     assert row["candidate_archive_bytes"] >= ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES
-    assert row["rate_only_delta_proof"]["status"] == "passed"
+    assert row["rate_only_delta_proof"]["status"] == "blocked"
     assert row["active_rate_only_floor_policy"]["scorer_changing_stack_path_declared"] is True
-    assert row["active_rate_only_floor_policy"]["exact_eval_spend_allowed_by_policy"] is True
-    assert row["candidate_static_preflight_ready"] is True
-    assert row["selection_decision"] == "needs_active_lane_claim_before_dispatch"
+    assert row["active_rate_only_floor_policy"]["scorer_changing_stack_path_meaningful"] is False
+    assert row["active_rate_only_floor_policy"]["exact_eval_spend_allowed_by_policy"] is False
+    assert "scorer_changing_stack_path_proof_unstructured" in row["candidate_blockers"]
+    assert (
+        f"{RATE_ONLY_FLOOR_BLOCKER_PREFIX}:{ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES}"
+        in row["candidate_blockers"]
+    )
+    assert row["candidate_static_preflight_ready"] is False
+    assert row["selection_decision"] == "rate_only_candidate_above_active_pr103_pr106_floor"
 
 
 def test_field_meta_selector_exposes_closed_ingestion_contract_without_score_evidence(

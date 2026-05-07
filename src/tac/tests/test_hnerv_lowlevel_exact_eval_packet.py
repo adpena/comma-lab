@@ -70,6 +70,11 @@ def test_lowlevel_exact_eval_packet_builds_static_release_surface(tmp_path: Path
     assert packet["score_claim"] is False
     assert packet["dispatch_attempted"] is False
     assert packet["remote_gpu_run"] is False
+    assert "tools/build_hnerv_lowlevel_exact_eval_packet.py" in packet["code_paths"]
+    assert "experiments/preflight_candidate_manifest_dispatch_readiness.py" in packet["code_paths"]
+    assert "scripts/pre_submission_compliance_check.py" in packet["code_paths"]
+    assert str(fixture["inflate_sh"]) in packet["source_paths"]
+    assert str(fixture["runtime_py"]) in packet["source_paths"]
     assert packet["static_packet_ready"] is True
     assert packet["ready_for_exact_eval_dispatch_claim"] is True
     assert packet["ready_for_submit"] is False
@@ -98,6 +103,9 @@ def test_lowlevel_exact_eval_packet_builds_static_release_surface(tmp_path: Path
 
     manifest = json.loads((result_dir / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["schema"] == "hnerv_lowlevel_exact_eval_candidate_manifest_v1"
+    assert manifest["code_paths"] == packet["code_paths"]
+    assert manifest["source_paths"] == packet["source_paths"]
+    assert "src/tac/hnerv_lowlevel_packer.py" in manifest["code_paths"]
     assert manifest["dispatch_gate"] == "eligible_for_cuda_auth_eval_after_lane_claim"
     assert manifest["fixed_runtime_preflight"]["ready_for_fixed_runtime_exact_eval"] is True
     assert manifest["exact_eval_runtime_contract"]["ready_for_exact_eval_runtime"] is True
@@ -389,6 +397,8 @@ def test_lowlevel_exact_eval_packet_accepts_public_pr106_member_name(tmp_path: P
     release_manifest = json.loads(
         (result_dir / "release_surface" / "archive_manifest.json").read_text(encoding="utf-8")
     )
+    assert "tools/build_hnerv_lowlevel_exact_eval_packet.py" in release_manifest["code_paths"]
+    assert str(fixture["inflate_sh"]) in release_manifest["source_paths"]
     assert release_manifest["archive"]["path"] == "archive.zip"
 
 
@@ -430,6 +440,7 @@ def _write_lowlevel_fixture(root: Path, *, member_name: str = "x") -> dict[str, 
         "candidate_archive_sha256": _sha256(candidate_archive),
         "result_json": result_json,
         "inflate_sh": inflate_sh,
+        "runtime_py": inflate_sh.parent / "inflate.py",
         "upstream_dir": upstream_dir,
         "baseline_json": baseline_json,
     }
