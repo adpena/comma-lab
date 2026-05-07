@@ -16,11 +16,10 @@ import pytest
 
 from tac.preflight import (
     MetaBugViolation,
+    check_deploy_script_profiles_exist_in_registry,
     check_no_orphan_src_tac_modules,
     check_profile_loss_modes_in_validator_allowlist,
-    check_deploy_script_profiles_exist_in_registry,
 )
-
 
 # ── Check 48: orphan src/tac modules ─────────────────────────────────────────
 
@@ -73,6 +72,49 @@ def test_check_48_strict_raises(tmp_path: Path) -> None:
         check_no_orphan_src_tac_modules(
             repo_root=tmp_path, strict=True, verbose=False,
         )
+
+
+def test_check_48_ignores_oss_export_mirror_references(tmp_path: Path) -> None:
+    """OSS-publication mirrors must not keep live src/tac modules alive."""
+    (tmp_path / "src" / "tac").mkdir(parents=True)
+    (tmp_path / "src" / "tac" / "mirror_only.py").write_text("# candidate\n")
+    (tmp_path / "src" / "tac" / "profiles.py").write_text("# nothing\n")
+    (tmp_path / "src" / "tac" / "experiments").mkdir()
+    (tmp_path / "src" / "tac" / "experiments" / "train_renderer.py").write_text(
+        "# nothing\n"
+    )
+    mirror = tmp_path / "experiments" / "comma_lab_public_export"
+    mirror.mkdir(parents=True)
+    (mirror / "consumer.py").write_text("import tac.mirror_only\n")
+
+    violations = check_no_orphan_src_tac_modules(
+        repo_root=tmp_path, strict=False, verbose=False,
+    )
+
+    assert any("mirror_only.py" in v for v in violations), (
+        "comma_lab_public_export is a regenerated mirror and must not satisfy "
+        f"live-code orphan references: {violations}"
+    )
+
+
+def test_check_48_counts_non_mirror_experiment_references(tmp_path: Path) -> None:
+    """Non-mirror experiment tools remain valid wiring evidence."""
+    (tmp_path / "src" / "tac").mkdir(parents=True)
+    (tmp_path / "src" / "tac" / "wired_by_experiment.py").write_text("# candidate\n")
+    (tmp_path / "src" / "tac" / "profiles.py").write_text("# nothing\n")
+    (tmp_path / "src" / "tac" / "experiments").mkdir()
+    (tmp_path / "src" / "tac" / "experiments" / "train_renderer.py").write_text(
+        "# nothing\n"
+    )
+    experiments = tmp_path / "experiments" / "live_tool"
+    experiments.mkdir(parents=True)
+    (experiments / "consumer.py").write_text("import tac.wired_by_experiment\n")
+
+    violations = check_no_orphan_src_tac_modules(
+        repo_root=tmp_path, strict=False, verbose=False,
+    )
+
+    assert not any("wired_by_experiment.py" in v for v in violations), violations
 
 
 # ── Check 49: profile loss_mode allowlist parity ─────────────────────────────
@@ -242,13 +284,16 @@ def test_check_48_runs_on_live_codebase() -> None:
     """Check 48 must execute on the live repo without crashing.
 
     Warn-only initially. The live violation count IS expected to be > 0
-    until a cleanup pass; this test just guards crash-free execution.
+    until a cleanup pass; this test pins the current cleanup frontier so the
+    backlog cannot silently regress.
     """
     violations = check_no_orphan_src_tac_modules(
         strict=False, verbose=False,
     )
-    # 121 modules in src/tac — bound at 100 to catch regressions.
-    assert len(violations) <= 100, (
+    # 2026-05-07 cleanup frontier: 10 remaining unresolved modules after
+    # commits 8969f6d2 and 2c30e0b8. Keep this bound tight until Check 48 can
+    # promote to strict at zero.
+    assert len(violations) <= 10, (
         f"Live codebase has {len(violations)} orphan module(s); "
-        f"expected ≤ 100 (sanity bound): {violations[:5]}"
+        f"expected ≤ 10 (cleanup frontier guard): {violations[:5]}"
     )
