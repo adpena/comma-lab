@@ -1,22 +1,27 @@
 {
-  "blockers": [],
-  "candidate_id": "pr106_q10_151byte_brotli",
-  "dispatch_performed": false,
-  "lane_claim": {
-    "active_conflicts": [],
-    "checked": false,
-    "claims_path": null,
-    "lane_id": "pr106_q10_151byte_brotli"
-  },
-  "manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/manifest.json",
-  "ready_for_exact_eval_dispatch": true,
-  "remote_jobs_dispatched": false,
-  "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
-  "score_claim": false,
-  "warnings": [
+  "blockers": [
     {
-      "code": "lane_claim_still_required",
-      "detail": "dispatch_gate='eligible_for_cuda_auth_eval_after_lane_claim'; verify active Level-2 lane claim before GPU dispatch"
+      "code": "missing_active_lane_dispatch_claim",
+      "detail": "standalone dispatch readiness requires a matching active Level-2 lane claim",
+      "severity": "blocking"
     }
-  ]
+  ],
+  "command": ".venv/bin/python experiments/preflight_candidate_manifest_dispatch_readiness.py --manifest experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/manifest.json --claims-path .omx/state/active_lane_dispatch_claims.md --now-utc 2026-05-07T12:30:00Z --ttl-hours 24 --json-out experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/dispatch_readiness_preflight.json",
+  "json_out": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/dispatch_readiness_preflight.json",
+  "lane_claim": {
+    "active_claim_present": false,
+    "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+    "claims_path_exists": true,
+    "conflict_present": false,
+    "conflicting_active_claims": [],
+    "job_name": "exact_eval_pr106_q10_151byte_brotli_20260507",
+    "lane_id": "pr106_q10_151byte_brotli",
+    "matching_active_claims": [],
+    "ttl_hours": 24
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "returncode": 0,
+  "schema": "hnerv_lowlevel_dispatch_readiness_preflight_refresh_v1",
+  "stderr_tail": "",
+  "stdout_tail": "{\n  \"blockers\": [],\n  \"candidate_id\": \"pr106_q10_151byte_brotli\",\n  \"dispatch_performed\": false,\n  \"lane_claim\": {\n    \"active_conflicts\": [],\n    \"checked\": true,\n    \"claim_count\": 878,\n    \"claims_path\": \".omx/state/active_lane_dispatch_claims.md\",\n    \"lane_id\": \"pr106_q10_151byte_brotli\",\n    \"now_utc\": \"2026-05-07T12:30:00Z\",\n    \"ttl_hours\": 24.0\n  },\n  \"manifest_path\": \"experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/manifest.json\",\n  \"ready_for_exact_eval_dispatch\": true,\n  \"remote_jobs_dispatched\": false,\n  \"schema\": \"candidate_manifest_dispatch_readiness_preflight_v1\",\n  \"score_claim\": false,\n  \"warnings\": [\n    {\n      \"code\": \"lane_claim_still_required\",\n      \"detail\": \"dispatch_gate='eligible_for_cuda_auth_eval_after_lane_claim'; verify active Level-2 lane claim before GPU dispatch\"\n    }\n  ]\n}\n"
 }
