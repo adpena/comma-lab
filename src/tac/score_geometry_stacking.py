@@ -229,7 +229,217 @@ def predict_stacking(
     )
 
 
+@dataclass(frozen=True)
+class TripleStackingPrediction:
+    """Three-lane stacking prediction with closed-form Volterra correction.
+
+    Same shape as `StackingPrediction` for two lanes. The pose-pose-pose
+    correction is the third-order Taylor remainder for the pose sqrt term
+    when ALL THREE lanes touch pose. For mixed touches it reduces to the
+    pairwise pose-pose corrections plus a residual.
+
+    The four-way stack composition (cathedral phase 4 integration) becomes
+    natural in this framework: encode each pair correction analytically,
+    then apply the empirical substrate-mismatch correction term per lane
+    pair from past sanity-check evidence.
+    """
+
+    focal_d_seg: float
+    focal_d_pose: float
+    focal_archive_bytes: int
+    focal_score: float
+
+    delta_d_pose_a: float
+    delta_d_pose_b: float
+    delta_d_pose_c: float
+    delta_d_seg_a: float
+    delta_d_seg_b: float
+    delta_d_seg_c: float
+    delta_bytes_a: int
+    delta_bytes_b: int
+    delta_bytes_c: int
+
+    score_after_a_only: float
+    score_after_b_only: float
+    score_after_c_only: float
+    score_after_ab: float
+    score_after_ac: float
+    score_after_bc: float
+    score_after_abc: float
+
+    individual_gain_a: float
+    individual_gain_b: float
+    individual_gain_c: float
+    sum_individual_gains: float
+    stacked_gain: float
+
+    pairwise_pose_corrections: dict[str, float]
+    triple_pose_correction: float
+    """The third-order Volterra residual: stacked_gain - sum_individual_gains -
+    sum of pairwise corrections. For pose-pose-pose this is the pure
+    third-order term; for any mixed combination the linear axes contribute 0
+    so this isolates the genuine triple interaction.
+    """
+
+    nominal_stack_ratio: float
+    notes: list[str]
+
+
+def predict_triple_stacking(
+    *,
+    focal_d_seg: float,
+    focal_d_pose: float,
+    focal_archive_bytes: int,
+    delta_d_seg_a: float = 0.0,
+    delta_d_pose_a: float = 0.0,
+    delta_bytes_a: int = 0,
+    delta_d_seg_b: float = 0.0,
+    delta_d_pose_b: float = 0.0,
+    delta_bytes_b: int = 0,
+    delta_d_seg_c: float = 0.0,
+    delta_d_pose_c: float = 0.0,
+    delta_bytes_c: int = 0,
+) -> TripleStackingPrediction:
+    """Predict three-lane stacked outcome with full Volterra decomposition.
+
+    Output exposes individual gains, pairwise stacked gains (AB / AC / BC),
+    and the full triple gain (ABC). The triple_pose_correction is the
+    residual after subtracting individual gains and pairwise corrections —
+    pure third-order pose interaction.
+    """
+    for d in (
+        delta_d_seg_a, delta_d_pose_a, delta_d_seg_b, delta_d_pose_b,
+        delta_d_seg_c, delta_d_pose_c,
+    ):
+        if d < 0:
+            raise ValueError("lane deltas must be positive improvements")
+    if delta_bytes_a < 0 or delta_bytes_b < 0 or delta_bytes_c < 0:
+        raise ValueError("byte deltas must be positive improvements")
+
+    def _score_at(seg_drop: float, pose_drop: float, byte_drop: int) -> float:
+        return contest_score(
+            max(focal_d_seg - seg_drop, 0.0),
+            max(focal_d_pose - pose_drop, 0.0),
+            max(focal_archive_bytes - byte_drop, 0),
+        )
+
+    focal_score = _score_at(0.0, 0.0, 0)
+    s_a = _score_at(delta_d_seg_a, delta_d_pose_a, delta_bytes_a)
+    s_b = _score_at(delta_d_seg_b, delta_d_pose_b, delta_bytes_b)
+    s_c = _score_at(delta_d_seg_c, delta_d_pose_c, delta_bytes_c)
+    s_ab = _score_at(
+        delta_d_seg_a + delta_d_seg_b,
+        delta_d_pose_a + delta_d_pose_b,
+        delta_bytes_a + delta_bytes_b,
+    )
+    s_ac = _score_at(
+        delta_d_seg_a + delta_d_seg_c,
+        delta_d_pose_a + delta_d_pose_c,
+        delta_bytes_a + delta_bytes_c,
+    )
+    s_bc = _score_at(
+        delta_d_seg_b + delta_d_seg_c,
+        delta_d_pose_b + delta_d_pose_c,
+        delta_bytes_b + delta_bytes_c,
+    )
+    s_abc = _score_at(
+        delta_d_seg_a + delta_d_seg_b + delta_d_seg_c,
+        delta_d_pose_a + delta_d_pose_b + delta_d_pose_c,
+        delta_bytes_a + delta_bytes_b + delta_bytes_c,
+    )
+
+    g_a = focal_score - s_a
+    g_b = focal_score - s_b
+    g_c = focal_score - s_c
+    sum_individual = g_a + g_b + g_c
+    triple_gain = focal_score - s_abc
+
+    # Pairwise pose-pose corrections (only nonzero if both pose deltas > 0)
+    def _pair_pose_correction(p_da: float, p_db: float) -> float:
+        p = focal_d_pose
+        pa = max(p - p_da, 0.0)
+        pb = max(p - p_db, 0.0)
+        pab = max(p - p_da - p_db, 0.0)
+        return -(
+            math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT * p)
+            - math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT * pa)
+            - math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT * pb)
+            + math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT * pab)
+        )
+
+    corr_ab = _pair_pose_correction(delta_d_pose_a, delta_d_pose_b)
+    corr_ac = _pair_pose_correction(delta_d_pose_a, delta_d_pose_c)
+    corr_bc = _pair_pose_correction(delta_d_pose_b, delta_d_pose_c)
+
+    # Triple correction: residual after individual + pairwise
+    pairwise_total = corr_ab + corr_ac + corr_bc
+    triple_correction = triple_gain - sum_individual - pairwise_total
+
+    nominal_ratio = (
+        triple_gain / sum_individual if sum_individual > 0 else 1.0
+    )
+
+    notes: list[str] = []
+    pose_count = sum(
+        1 for d in (delta_d_pose_a, delta_d_pose_b, delta_d_pose_c) if d > 0
+    )
+    if pose_count == 3:
+        notes.append(
+            f"All three lanes touch pose. Triple Volterra correction = "
+            f"{triple_correction:+.6f} (positive = super-additive at the "
+            f"third order; pose compounds further as we approach Shannon floor)."
+        )
+    elif pose_count == 2:
+        notes.append(
+            "Two lanes touch pose; one disjoint. Pairwise pose correction is "
+            "non-zero; triple correction should be ~0 since the third lane is "
+            "linear."
+        )
+    elif pose_count <= 1:
+        notes.append(
+            "At most one pose lane; stacking is purely additive at every order."
+        )
+
+    return TripleStackingPrediction(
+        focal_d_seg=focal_d_seg,
+        focal_d_pose=focal_d_pose,
+        focal_archive_bytes=focal_archive_bytes,
+        focal_score=focal_score,
+        delta_d_pose_a=delta_d_pose_a,
+        delta_d_pose_b=delta_d_pose_b,
+        delta_d_pose_c=delta_d_pose_c,
+        delta_d_seg_a=delta_d_seg_a,
+        delta_d_seg_b=delta_d_seg_b,
+        delta_d_seg_c=delta_d_seg_c,
+        delta_bytes_a=delta_bytes_a,
+        delta_bytes_b=delta_bytes_b,
+        delta_bytes_c=delta_bytes_c,
+        score_after_a_only=s_a,
+        score_after_b_only=s_b,
+        score_after_c_only=s_c,
+        score_after_ab=s_ab,
+        score_after_ac=s_ac,
+        score_after_bc=s_bc,
+        score_after_abc=s_abc,
+        individual_gain_a=g_a,
+        individual_gain_b=g_b,
+        individual_gain_c=g_c,
+        sum_individual_gains=sum_individual,
+        stacked_gain=triple_gain,
+        pairwise_pose_corrections={
+            "AB": corr_ab,
+            "AC": corr_ac,
+            "BC": corr_bc,
+        },
+        triple_pose_correction=triple_correction,
+        nominal_stack_ratio=nominal_ratio,
+        notes=notes,
+    )
+
+
 __all__ = [
     "StackingPrediction",
+    "TripleStackingPrediction",
     "predict_stacking",
+    "predict_triple_stacking",
 ]

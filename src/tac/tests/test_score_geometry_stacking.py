@@ -6,7 +6,7 @@ import math
 import pytest
 
 from tac.score_geometry import contest_score
-from tac.score_geometry_stacking import predict_stacking
+from tac.score_geometry_stacking import predict_stacking, predict_triple_stacking
 
 
 def test_disjoint_axes_purely_additive() -> None:
@@ -155,3 +155,95 @@ def test_sum_of_post_stack_decomp_equals_score_after_stack() -> None:
         pred.focal_archive_bytes - pred.delta_bytes_a - pred.delta_bytes_b,
     )
     assert math.isclose(pred.score_after_stack, expected, rel_tol=1e-12)
+
+
+# ---------------------------------------------------------------------------
+# Triple stacking (third-order Volterra)
+# ---------------------------------------------------------------------------
+
+
+def test_triple_pose_lanes_super_additive() -> None:
+    """All three lanes touch pose → stacked > sum of individuals."""
+    pred = predict_triple_stacking(
+        focal_d_seg=0.0,
+        focal_d_pose=1e-4,
+        focal_archive_bytes=200_000,
+        delta_d_pose_a=2e-5,
+        delta_d_pose_b=2e-5,
+        delta_d_pose_c=2e-5,
+    )
+    assert pred.stacked_gain > pred.sum_individual_gains
+    assert pred.nominal_stack_ratio > 1.0
+    # Pairwise corrections should all be positive (super-additive)
+    for label, corr in pred.pairwise_pose_corrections.items():
+        assert corr > 0, f"pairwise correction {label} not super-additive"
+
+
+def test_triple_disjoint_axes_purely_additive() -> None:
+    """Three lanes, each touching a different axis (seg / pose / bytes)
+    → stacked == sum (linear axes have no interaction; one pose lane
+    has no pairwise pose-pose partner)."""
+    pred = predict_triple_stacking(
+        focal_d_seg=0.001,
+        focal_d_pose=1e-4,
+        focal_archive_bytes=200_000,
+        delta_d_seg_a=1e-4,
+        delta_d_pose_b=1e-5,
+        delta_bytes_c=5_000,
+    )
+    # All pairwise pose corrections must be 0 (only B touches pose)
+    for label, corr in pred.pairwise_pose_corrections.items():
+        assert corr == 0, f"unexpected nonzero pairwise correction at {label}"
+    # Triple correction should be 0 too
+    assert math.isclose(pred.triple_pose_correction, 0.0, abs_tol=1e-9)
+    # And the stack ratio should be ~1.0
+    assert math.isclose(pred.nominal_stack_ratio, 1.0, rel_tol=1e-9)
+
+
+def test_triple_two_pose_one_seg() -> None:
+    """Two pose lanes + one seg lane. Pairwise pose correction non-zero
+    on the AB pair only; AC and BC corrections == 0."""
+    pred = predict_triple_stacking(
+        focal_d_seg=0.0,
+        focal_d_pose=1e-4,
+        focal_archive_bytes=200_000,
+        delta_d_pose_a=2e-5,
+        delta_d_pose_b=2e-5,
+        delta_d_seg_c=1e-4,
+    )
+    assert pred.pairwise_pose_corrections["AB"] > 0
+    assert pred.pairwise_pose_corrections["AC"] == 0
+    assert pred.pairwise_pose_corrections["BC"] == 0
+    # Triple correction should be ~0 since C is linear
+    assert math.isclose(pred.triple_pose_correction, 0.0, abs_tol=1e-9)
+
+
+def test_triple_stack_score_consistency() -> None:
+    """The triple-stacked score must match the contest formula."""
+    pred = predict_triple_stacking(
+        focal_d_seg=0.0,
+        focal_d_pose=2e-4,
+        focal_archive_bytes=200_000,
+        delta_d_pose_a=3e-5,
+        delta_d_pose_b=2e-5,
+        delta_d_pose_c=1e-5,
+    )
+    expected = contest_score(0.0, 2e-4 - 3e-5 - 2e-5 - 1e-5, 200_000)
+    assert math.isclose(pred.score_after_abc, expected, rel_tol=1e-12)
+
+
+def test_triple_negative_deltas_rejected() -> None:
+    with pytest.raises(ValueError, match="positive improvements"):
+        predict_triple_stacking(
+            focal_d_seg=0.001,
+            focal_d_pose=1e-4,
+            focal_archive_bytes=200_000,
+            delta_d_pose_a=-1e-5,
+        )
+    with pytest.raises(ValueError, match="positive improvements"):
+        predict_triple_stacking(
+            focal_d_seg=0.001,
+            focal_d_pose=1e-4,
+            focal_archive_bytes=200_000,
+            delta_bytes_b=-100,
+        )
