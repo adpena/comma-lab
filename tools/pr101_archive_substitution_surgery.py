@@ -7,6 +7,10 @@ the cathedral has CodecOps that produce wire-format-compatible blobs, but
 to actually dispatch a substituted archive to contest-CUDA we need
 byte-level substrate surgery on the existing archive.
 
+The CLI intentionally exposes decoder substitution only. The module also
+contains latent/sidecar section splicers for forensic and future actuator work,
+but those still require PR101-grammar proof before dispatch use.
+
 Critical scope finding (2026-05-07): PR101 has **no separate pose stream**.
 The HNeRV decoder generates pose-aware frames implicitly from latents
 (see ``inflate.py:42`` — ``decoder(latents[i:j])``). Therefore:
@@ -48,7 +52,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import struct
 import zipfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -196,6 +199,124 @@ def substitute_decoder_blob(
         sha256_replacement_decoder_blob=_sha256(replacement_decoder_blob),
         bytes_delta=output_size - input_size,
         notes=notes,
+    )
+
+
+def substitute_latent_blob(
+    *,
+    input_archive: Path,
+    replacement_latent_blob: bytes,
+    output_archive: Path,
+) -> SubstitutionReport:
+    """Substitute the latent_blob section in a PR101 archive.
+
+    Same defensive contract as substitute_decoder_blob: PR101's
+    parse_archive uses fixed offsets, so the replacement length MUST
+    equal LATENT_BLOB_LEN (15,387 bytes) — anything else corrupts
+    sidecar_blob extraction. Decoder + sidecar sections are preserved
+    byte-faithfully.
+
+    Caveat: PR101's decode_latents_compact expects an LZMA stream over
+    a specific (per-dim min/scale + temporal-delta uint8) format. Any
+    replacement that doesn't satisfy that structure will fail at
+    parse-time inside PR101's inflate. The defensive guard here is
+    length only; structural correctness is the caller's responsibility.
+    """
+    if len(replacement_latent_blob) != PR101_LATENT_BLOB_LEN:
+        raise ValueError(
+            f"replacement_latent_blob length {len(replacement_latent_blob)} "
+            f"!= LATENT_BLOB_LEN {PR101_LATENT_BLOB_LEN}; PR101's inflate "
+            f"uses fixed offsets and would corrupt sidecar_blob extraction"
+        )
+    input_blob = _read_inner_blob(input_archive)
+    decoder_blob, latent_blob, sidecar_blob = _split_pr101_inner_blob(input_blob)
+    new_inner = decoder_blob + replacement_latent_blob + sidecar_blob
+    _write_pr101_archive(new_inner, output_archive)
+    input_size = input_archive.stat().st_size
+    output_size = output_archive.stat().st_size
+    return SubstitutionReport(
+        input_archive=str(input_archive),
+        output_archive=str(output_archive),
+        input_size_bytes=input_size,
+        output_size_bytes=output_size,
+        decoder_blob_offset=0,
+        decoder_blob_input_len=len(decoder_blob),
+        decoder_blob_replacement_len=len(decoder_blob),
+        latent_blob_offset=PR101_DECODER_BLOB_LEN,
+        latent_blob_len=len(replacement_latent_blob),
+        sidecar_blob_offset=PR101_DECODER_BLOB_LEN + PR101_LATENT_BLOB_LEN,
+        sidecar_blob_len=len(sidecar_blob),
+        inner_member_input_size=len(input_blob),
+        inner_member_output_size=len(new_inner),
+        sha256_input_archive=_sha256(input_archive.read_bytes()),
+        sha256_output_archive=_sha256(output_archive.read_bytes()),
+        sha256_input_decoder_blob=_sha256(decoder_blob),
+        sha256_replacement_decoder_blob=_sha256(decoder_blob),
+        bytes_delta=output_size - input_size,
+        notes=[
+            "latent_blob substituted; decoder + sidecar sections preserved.",
+            f"input latent sha256={_sha256(latent_blob)}; "
+            f"replacement latent sha256={_sha256(replacement_latent_blob)}",
+        ],
+    )
+
+
+def substitute_sidecar_blob(
+    *,
+    input_archive: Path,
+    replacement_sidecar_blob: bytes,
+    output_archive: Path,
+) -> SubstitutionReport:
+    """Substitute the sidecar_blob section in a PR101 archive.
+
+    The sidecar is the LAST section, so its length is NOT fixed by
+    parse_archive's offset arithmetic — any non-empty replacement is
+    valid (PR101 reads ``archive_bytes[DECODER + LATENT:]`` as a tail
+    slice). Decoder + latent are preserved byte-faithfully.
+
+    Caveat: PR101's apply_latent_sidecar interprets these bytes as a
+    Brotli stream of (dim, delta_x100) pairs with prefix metadata.
+    Replacements that don't satisfy that grammar will fail at parse-time.
+    The defensive guard here is "non-empty"; structural correctness is
+    the caller's responsibility.
+    """
+    if not replacement_sidecar_blob:
+        raise ValueError(
+            "replacement_sidecar_blob is empty; PR101's apply_latent_sidecar "
+            "requires at least the structural prefix"
+        )
+    input_blob = _read_inner_blob(input_archive)
+    decoder_blob, latent_blob, sidecar_blob = _split_pr101_inner_blob(input_blob)
+    new_inner = decoder_blob + latent_blob + replacement_sidecar_blob
+    _write_pr101_archive(new_inner, output_archive)
+    input_size = input_archive.stat().st_size
+    output_size = output_archive.stat().st_size
+    return SubstitutionReport(
+        input_archive=str(input_archive),
+        output_archive=str(output_archive),
+        input_size_bytes=input_size,
+        output_size_bytes=output_size,
+        decoder_blob_offset=0,
+        decoder_blob_input_len=len(decoder_blob),
+        decoder_blob_replacement_len=len(decoder_blob),
+        latent_blob_offset=PR101_DECODER_BLOB_LEN,
+        latent_blob_len=len(latent_blob),
+        sidecar_blob_offset=PR101_DECODER_BLOB_LEN + PR101_LATENT_BLOB_LEN,
+        sidecar_blob_len=len(replacement_sidecar_blob),
+        inner_member_input_size=len(input_blob),
+        inner_member_output_size=len(new_inner),
+        sha256_input_archive=_sha256(input_archive.read_bytes()),
+        sha256_output_archive=_sha256(output_archive.read_bytes()),
+        sha256_input_decoder_blob=_sha256(decoder_blob),
+        sha256_replacement_decoder_blob=_sha256(decoder_blob),
+        bytes_delta=output_size - input_size,
+        notes=[
+            "sidecar_blob substituted; decoder + latent sections preserved.",
+            f"input sidecar sha256={_sha256(sidecar_blob)} ({len(sidecar_blob)} B); "
+            f"replacement sidecar sha256={_sha256(replacement_sidecar_blob)} "
+            f"({len(replacement_sidecar_blob)} B)",
+            f"sidecar_size_delta = {len(replacement_sidecar_blob) - len(sidecar_blob):+}",
+        ],
     )
 
 

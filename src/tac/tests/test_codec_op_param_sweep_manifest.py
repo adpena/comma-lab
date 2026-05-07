@@ -8,8 +8,13 @@ from __future__ import annotations
 
 import importlib.util
 import inspect
+import json
 import pathlib
 import sys
+import types
+import zipfile
+
+import torch
 
 
 def _load_tool_module():
@@ -64,3 +69,84 @@ def test_to_meta_lagrangian_candidates_emits_strict_evaluate_schema() -> None:
     accepted = set(inspect.signature(MetaLagrangianSearch.evaluate_candidate).parameters)
     accepted.discard("self")
     assert set(rows[0]).issubset(accepted)
+
+
+def test_pr101_substitution_updates_manifest_and_meta_lagrangian_rows(
+    tmp_path: pathlib.Path,
+) -> None:
+    mod = _load_tool_module()
+
+    decoder_len = 162_164
+    latent_len = 15_387
+    replacement = b"\x44" * decoder_len
+
+    class FakeEncodeResult:
+        blob = replacement
+        bytes_out = len(replacement)
+
+    class Op1_PR101SplitBrotli:
+        def __init__(self, *, brotli_quality: int = 11) -> None:
+            self.brotli_quality = brotli_quality
+
+        def encode(self, state_dict, context):
+            _ = state_dict, context
+            return FakeEncodeResult()
+
+        def decode(self, blob, context):
+            _ = blob, context
+            return {}
+
+        def validate(self, before, after, context):
+            _ = before, after, context
+            return types.SimpleNamespace(ok=True, metrics={})
+
+    fake_module = types.ModuleType("fake_pr101_codec_op")
+    fake_module.Op1_PR101SplitBrotli = Op1_PR101SplitBrotli
+    sys.modules[fake_module.__name__] = fake_module
+
+    source_archive = tmp_path / "source_pr101.zip"
+    inner = (b"\x11" * decoder_len) + (b"\x22" * latent_len) + b"\x33" * 607
+    info = zipfile.ZipInfo("x")
+    info.compress_type = zipfile.ZIP_STORED
+    with zipfile.ZipFile(source_archive, "w") as zf:
+        zf.writestr(info, inner)
+
+    state_dict_path = tmp_path / "state.pt"
+    torch.save({"dummy": torch.zeros(1)}, state_dict_path)
+    manifest_path = tmp_path / "manifest.json"
+    meta_path = tmp_path / "meta.json"
+    archive_root = tmp_path / "archives"
+
+    rc = mod.main([
+        "--module", fake_module.__name__,
+        "--class", "Op1_PR101SplitBrotli",
+        "--state-dict-path", str(state_dict_path),
+        "--param-grid", '{"brotli_quality": [11]}',
+        "--anchor-d-seg", "0.000671",
+        "--anchor-d-pose", "0.0000336",
+        "--anchor-archive-bytes", "185578",
+        "--baseline-substream-bytes", str(decoder_len),
+        "--label-prefix", "pr101_test",
+        "--output", str(manifest_path),
+        "--meta-lagrangian-output", str(meta_path),
+        "--substrate-archive-pr101", str(source_archive),
+        "--substituted-archive-output-dir", str(archive_root),
+    ])
+
+    assert rc == 0
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    row = manifest["candidates"][0]
+    assert row["archive_path"]
+    assert pathlib.Path(row["archive_path"]).is_file()
+    assert row["archive_size_bytes"] == pathlib.Path(row["archive_path"]).stat().st_size
+    assert row["expected_archive_size_bytes"] == row["archive_size_bytes"]
+    assert row["archive_sha256"] == row["expected_archive_sha256"]
+    assert row["archive_substitution_report_path"].endswith("substitution_report.json")
+    assert "archive_substitution_surgery_pending" not in row["blockers"]
+    assert "exact_runtime_parity_not_supplied" in row["blockers"]
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+    meta_rows = json.loads(meta_path.read_text(encoding="utf-8"))
+    assert meta_rows[0]["candidate_id"] == row["candidate_id"]
+    assert meta_rows[0]["archive_path"] == row["archive_path"]
+    assert meta_rows[0]["archive_bytes"] == row["archive_size_bytes"]

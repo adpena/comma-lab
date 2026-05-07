@@ -11,19 +11,20 @@ fire a parallel dispatch on a sweep of those knobs, the operator needs:
      reference (d_seg, d_pose) and the cathedral's canonical formula
   3. A JSON manifest in the shape ``parallel_dispatch_top_k.py`` consumes
 
-This tool emits that manifest. It does NOT perform archive surgery
-(substituting the CodecOp's encoded blob into a contest archive); that
-remains the next blocking actuator step before the operator can run
-``parallel_dispatch_top_k.py`` on the manifest.
+This tool emits that manifest. By default it is planning-only. With
+``--substrate-archive-pr101`` it can also perform the reviewed PR101
+decoder-blob substitution path for ``Op1_PR101SplitBrotli`` candidates and
+write archive custody fields back into the manifest.
 
 The manifest's candidates are flagged
 ``ready_for_exact_eval_dispatch=False`` and ``evidence_semantics=
 "cpu_substrate_predicted_band"`` because predicted-band evidence is
 NOT a contest-CUDA result. To actually dispatch, the operator must:
 
-  (a) perform archive-substitution surgery (substrate-specific, not
-      this tool's scope)
-  (b) flip ``ready_for_exact_eval_dispatch=True`` with an explicit
+  (a) perform archive-substitution surgery, either with the PR101 actuator
+      here or a substrate-specific actuator elsewhere
+  (b) prove runtime parity + active lane claim, then flip
+      ``ready_for_exact_eval_dispatch=True`` with an explicit
       operator override note
 
 Usage::
@@ -414,13 +415,7 @@ def main(argv: list[str] | None = None) -> int:
         anchor_archive_bytes=args.anchor_archive_bytes,
         baseline_substream_bytes=args.baseline_substream_bytes,
     )
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(manifest, indent=2, sort_keys=True))
-    print(f"wrote {args.output} (n_candidates={manifest['n_candidates']})")
-    print(
-        f"top candidate: {manifest['candidates'][0]['candidate_id']} "
-        f"predicted_score={manifest['candidates'][0]['predicted_score']:.5f}"
-    )
+    manifest_rows_by_id = {row["candidate_id"]: row for row in manifest["candidates"]}
     # PR101 archive-substitution surgery wire-up (huge tranche #4):
     # for wire-format-compatible CodecOps + a PR101 substrate archive,
     # produce a real substituted archive per candidate so dispatch is
@@ -466,9 +461,28 @@ def main(argv: list[str] | None = None) -> int:
                 replacement_decoder_blob=blob_result.blob,
                 output_archive=archive_out,
             )
-            (cand_dir / "substitution_report.json").write_text(
+            report_path = cand_dir / "substitution_report.json"
+            report_path.write_text(
                 json.dumps(asdict(report), indent=2, sort_keys=True)
             )
+            manifest_row = manifest_rows_by_id[candidate.candidate_id]
+            manifest_row.update({
+                "archive_path": archive_out.as_posix(),
+                "archive_size_bytes": archive_out.stat().st_size,
+                "expected_archive_size_bytes": archive_out.stat().st_size,
+                "archive_sha256": report.sha256_output_archive,
+                "expected_archive_sha256": report.sha256_output_archive,
+                "archive_substitution_report_path": report_path.as_posix(),
+                "archive_substitution_schema": "pr101_decoder_blob_surgery_v1",
+            })
+            manifest_row["blockers"] = [
+                blocker for blocker in manifest_row["blockers"]
+                if blocker != "archive_substitution_surgery_pending"
+            ]
+            manifest_row["blockers"].extend([
+                "exact_runtime_parity_not_supplied",
+                "matching_lane_dispatch_claim_not_supplied",
+            ])
             print(
                 f"  candidate {candidate.candidate_id}: substituted "
                 f"archive_bytes={archive_out.stat().st_size} "
@@ -476,10 +490,26 @@ def main(argv: list[str] | None = None) -> int:
                 f"-> {archive_out}"
             )
 
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(json.dumps(manifest, indent=2, sort_keys=True))
+    print(f"wrote {args.output} (n_candidates={manifest['n_candidates']})")
+    print(
+        f"top candidate: {manifest['candidates'][0]['candidate_id']} "
+        f"predicted_score={manifest['candidates'][0]['predicted_score']:.5f}"
+    )
     if args.meta_lagrangian_output:
         ml_candidates = to_meta_lagrangian_candidates(
             candidates, lane_class=args.meta_lagrangian_lane_class,
         )
+        for row in ml_candidates:
+            manifest_row = manifest_rows_by_id.get(row["candidate_id"])
+            if manifest_row is None or not manifest_row.get("archive_path"):
+                continue
+            row["archive_path"] = manifest_row["archive_path"]
+            row["archive_bytes"] = int(
+                manifest_row.get("archive_size_bytes")
+                or manifest_row["predicted_archive_bytes"]
+            )
         args.meta_lagrangian_output.parent.mkdir(parents=True, exist_ok=True)
         args.meta_lagrangian_output.write_text(
             json.dumps(ml_candidates, indent=2, sort_keys=True)

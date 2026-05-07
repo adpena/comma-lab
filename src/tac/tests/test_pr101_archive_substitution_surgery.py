@@ -139,6 +139,75 @@ def test_substitute_with_different_blob_changes_decoder_only(tmp_path) -> None:
     assert sidecar == b"\xc3" * 607
 
 
+def test_substitute_latent_blob_changes_latent_only(tmp_path) -> None:
+    mod = _load_tool_module()
+    archive = _make_synthetic_pr101_archive(tmp_path)
+    new_latent = b"\xee" * mod.PR101_LATENT_BLOB_LEN
+    out = tmp_path / "latent_subst.zip"
+
+    report = mod.substitute_latent_blob(
+        input_archive=archive,
+        replacement_latent_blob=new_latent,
+        output_archive=out,
+    )
+
+    output_inner = mod._read_inner_blob(out)
+    decoder, latent, sidecar = mod._split_pr101_inner_blob(output_inner)
+    assert decoder == b"\xa1" * mod.PR101_DECODER_BLOB_LEN
+    assert latent == new_latent
+    assert sidecar == b"\xc3" * 607
+    assert report.latent_blob_len == mod.PR101_LATENT_BLOB_LEN
+    assert "latent_blob substituted" in report.notes[0]
+
+
+def test_substitute_latent_blob_rejects_wrong_length(tmp_path) -> None:
+    mod = _load_tool_module()
+    archive = _make_synthetic_pr101_archive(tmp_path)
+
+    with pytest.raises(ValueError, match=r"replacement_latent_blob length .+ != LATENT_BLOB_LEN"):
+        mod.substitute_latent_blob(
+            input_archive=archive,
+            replacement_latent_blob=b"\xee" * (mod.PR101_LATENT_BLOB_LEN - 1),
+            output_archive=tmp_path / "latent_bad.zip",
+        )
+
+
+def test_substitute_sidecar_blob_changes_tail_only_and_may_change_length(tmp_path) -> None:
+    mod = _load_tool_module()
+    archive = _make_synthetic_pr101_archive(tmp_path)
+    new_sidecar = b"\x99" * 128
+    out = tmp_path / "sidecar_subst.zip"
+
+    report = mod.substitute_sidecar_blob(
+        input_archive=archive,
+        replacement_sidecar_blob=new_sidecar,
+        output_archive=out,
+    )
+
+    output_inner = mod._read_inner_blob(out)
+    decoder, latent, sidecar = mod._split_pr101_inner_blob(output_inner)
+    assert decoder == b"\xa1" * mod.PR101_DECODER_BLOB_LEN
+    assert latent == b"\xb2" * mod.PR101_LATENT_BLOB_LEN
+    assert sidecar == new_sidecar
+    assert report.sidecar_blob_len == len(new_sidecar)
+    assert report.inner_member_output_size == (
+        mod.PR101_DECODER_BLOB_LEN + mod.PR101_LATENT_BLOB_LEN + len(new_sidecar)
+    )
+    assert "sidecar_blob substituted" in report.notes[0]
+
+
+def test_substitute_sidecar_blob_rejects_empty_replacement(tmp_path) -> None:
+    mod = _load_tool_module()
+    archive = _make_synthetic_pr101_archive(tmp_path)
+
+    with pytest.raises(ValueError, match="replacement_sidecar_blob is empty"):
+        mod.substitute_sidecar_blob(
+            input_archive=archive,
+            replacement_sidecar_blob=b"",
+            output_archive=tmp_path / "sidecar_bad.zip",
+        )
+
+
 def test_substitute_rejects_wrong_length_replacement(tmp_path) -> None:
     """Substituting a wrong-length blob would corrupt PR101's inflate
     (latent_blob extraction uses a fixed offset). Defensive guard
@@ -200,6 +269,113 @@ def test_cli_verify_emits_json(tmp_path, capsys) -> None:
     assert rc == 0
     out = json.loads(capsys.readouterr().out)
     assert out["decoder_blob"]["matches_expected"] is True
+
+
+def test_substitute_latent_blob_preserves_decoder_and_sidecar(tmp_path) -> None:
+    """Latent substitution: decoder + sidecar sections must be byte-faithfully
+    preserved; only the latent slice changes."""
+    mod = _load_tool_module()
+    archive = _make_synthetic_pr101_archive(tmp_path)
+    new_latent = b"\xee" * mod.PR101_LATENT_BLOB_LEN
+    out = tmp_path / "latent_subst.zip"
+    report = mod.substitute_latent_blob(
+        input_archive=archive,
+        replacement_latent_blob=new_latent,
+        output_archive=out,
+    )
+    output_inner = mod._read_inner_blob(out)
+    decoder, latent, sidecar = mod._split_pr101_inner_blob(output_inner)
+    assert decoder == b"\xa1" * mod.PR101_DECODER_BLOB_LEN
+    assert latent == new_latent
+    assert sidecar == b"\xc3" * 607
+    assert report.latent_blob_len == mod.PR101_LATENT_BLOB_LEN
+
+
+def test_substitute_latent_rejects_wrong_length(tmp_path) -> None:
+    mod = _load_tool_module()
+    archive = _make_synthetic_pr101_archive(tmp_path)
+    out = tmp_path / "should_not_write.zip"
+    with pytest.raises(ValueError, match=r"length .+ != LATENT_BLOB_LEN"):
+        mod.substitute_latent_blob(
+            input_archive=archive,
+            replacement_latent_blob=b"\xff" * (mod.PR101_LATENT_BLOB_LEN - 100),
+            output_archive=out,
+        )
+    assert not out.exists()
+
+
+def test_substitute_sidecar_preserves_decoder_and_latent(tmp_path) -> None:
+    """Sidecar substitution: decoder + latent sections preserved; sidecar
+    can be ANY non-empty length (it's the tail section). Verifies a
+    different-length sidecar replaces correctly + bytes_delta reflects
+    the size change."""
+    mod = _load_tool_module()
+    archive = _make_synthetic_pr101_archive(tmp_path)
+    # Use a SHORTER sidecar (500 bytes vs default 607) to test variable length
+    new_sidecar = b"\xdd" * 500
+    out = tmp_path / "sidecar_subst.zip"
+    report = mod.substitute_sidecar_blob(
+        input_archive=archive,
+        replacement_sidecar_blob=new_sidecar,
+        output_archive=out,
+    )
+    output_inner = mod._read_inner_blob(out)
+    decoder, latent, sidecar = mod._split_pr101_inner_blob(output_inner)
+    assert decoder == b"\xa1" * mod.PR101_DECODER_BLOB_LEN
+    assert latent == b"\xb2" * mod.PR101_LATENT_BLOB_LEN
+    assert sidecar == new_sidecar
+    assert report.sidecar_blob_len == 500
+    # Sidecar shrinkage by 107 bytes → archive shrinks by ~107 (modulo ZIP overhead)
+    assert report.bytes_delta < 0
+
+
+def test_substitute_sidecar_rejects_empty(tmp_path) -> None:
+    mod = _load_tool_module()
+    archive = _make_synthetic_pr101_archive(tmp_path)
+    out = tmp_path / "empty_sidecar.zip"
+    with pytest.raises(ValueError, match="sidecar_blob is empty"):
+        mod.substitute_sidecar_blob(
+            input_archive=archive,
+            replacement_sidecar_blob=b"",
+            output_archive=out,
+        )
+    assert not out.exists()
+
+
+def test_bug_hunter_substitute_decoder_with_too_long_blob(tmp_path) -> None:
+    """Adversarial: pass a blob LONGER than DECODER_BLOB_LEN. Must reject
+    (corruption guard). This catches a class of bugs where caller code
+    accidentally wraps the blob in extra metadata bytes."""
+    mod = _load_tool_module()
+    archive = _make_synthetic_pr101_archive(tmp_path)
+    too_long = b"\xff" * (mod.PR101_DECODER_BLOB_LEN + 100)
+    out = tmp_path / "should_not_write.zip"
+    with pytest.raises(ValueError, match=r"length .+ != DECODER_BLOB_LEN"):
+        mod.substitute_decoder_blob(
+            input_archive=archive,
+            replacement_decoder_blob=too_long,
+            output_archive=out,
+        )
+    assert not out.exists()
+
+
+def test_bug_hunter_corrupt_input_archive(tmp_path) -> None:
+    """Adversarial: input archive has the right structure but inner blob
+    is too short to even contain the fixed decoder + latent sections.
+    Must surface the error clearly."""
+    mod = _load_tool_module()
+    short_archive = tmp_path / "too_short.zip"
+    info = zipfile.ZipInfo(filename=mod.PR101_INNER_MEMBER_NAME)
+    info.compress_type = zipfile.ZIP_STORED
+    with zipfile.ZipFile(short_archive, "w") as zf:
+        zf.writestr(info, b"\x00" * 1000)  # < DECODER + LATENT minimum
+    out = tmp_path / "out.zip"
+    with pytest.raises(ValueError, match=r"< required minimum"):
+        mod.substitute_decoder_blob(
+            input_archive=short_archive,
+            replacement_decoder_blob=b"\xff" * mod.PR101_DECODER_BLOB_LEN,
+            output_archive=out,
+        )
 
 
 def test_byte_faithful_roundtrip_through_real_pr101_codec(tmp_path) -> None:
