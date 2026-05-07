@@ -83,7 +83,7 @@ case "$PROVIDER" in
         --repo-dir "$PWD" --upstream-dir "$PWD/upstream" \
         --teamspace "comma-lab" --studio "lossy-compression-challenge" --user "adpena" \
         --inflate-sh "$PWD/$adapter" \
-        --predicted-band 0.190 0.200 \
+        --predicted-band $(awk -v s="$expected_score" 'BEGIN { printf "%.4f %.4f", s-0.001, s+0.001 }') \
         --baseline-score "$expected_score" \
         --baseline-archive-bytes "$(stat -c '%s' "$archive" 2>/dev/null || stat -f '%z' "$archive")" \
         --infer-expected-archive --adjudicate --regression-threshold 0.001 \
