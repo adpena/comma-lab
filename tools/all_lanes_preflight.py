@@ -562,6 +562,8 @@ def _run_cross_paradigm_frontier_inventory_gate() -> tuple[bool, str]:
         return False, "cross-paradigm inventory emitted no rows"
     row_keys = {str(row.get("key")) for row in rows if isinstance(row, dict)}
     required_keys = {
+        "hnerv_pr103_pr106_ac_repack_runtime_closure",
+        "hnerv_wavelet_wr01_apply",
         "categorical_qma9_clade_spade_openpilot",
         "lapose_motion_atom_allocator",
         "meta_lagrangian_cross_paradigm_allocator",
@@ -585,9 +587,11 @@ def _run_cross_paradigm_frontier_inventory_gate() -> tuple[bool, str]:
     action_queue = payload.get("frontier_action_queue")
     if not isinstance(action_queue, list) or len(action_queue) != len(rows):
         return False, "cross-paradigm inventory action queue must cover every row"
-    first = action_queue[0] if action_queue else {}
-    if not isinstance(first, dict) or first.get("key") != "hnerv_wavelet_wr01_apply":
-        return False, "cross-paradigm inventory action queue lost WR01 first-tranche routing"
+    routing_failures = _cross_paradigm_queue_routing_failures(action_queue)
+    if routing_failures:
+        return False, "cross-paradigm inventory action queue routing failed:\n" + "\n".join(
+            routing_failures
+        )
     for item in action_queue:
         if not isinstance(item, dict):
             return False, "cross-paradigm inventory action queue contains a non-object row"
@@ -600,6 +604,30 @@ def _run_cross_paradigm_frontier_inventory_gate() -> tuple[bool, str]:
         f"({len(rows)} rows; 0 missing code/evidence paths; "
         "geometry feedback fail-closed; action queue inventory-only)"
     )
+
+
+def _cross_paradigm_queue_routing_failures(action_queue: list[object]) -> list[str]:
+    """Validate first-tranche score-path routing without freezing one top key."""
+    failures: list[str] = []
+    if not action_queue:
+        return ["action_queue_empty"]
+    keys: list[str] = []
+    for item in action_queue:
+        if isinstance(item, dict):
+            keys.append(str(item.get("key") or ""))
+        else:
+            keys.append("")
+    first_tranche = set(keys[:3])
+    required_first_tranche = {
+        "hnerv_pr103_pr106_ac_repack_runtime_closure",
+        "hnerv_wavelet_wr01_apply",
+    }
+    missing = sorted(required_first_tranche - first_tranche)
+    if missing:
+        failures.append(
+            "first_tranche_missing_required_score_path_row(s): " + ", ".join(missing)
+        )
+    return failures
 
 
 def _geometry_feedback_inventory_failures(payload: dict[str, object]) -> list[str]:

@@ -26,6 +26,27 @@ def test_all_lanes_cross_paradigm_gate_accepts_fail_closed_geometry_contracts() 
     payload = build_inventory(repo_root=REPO)
 
     assert module._geometry_feedback_inventory_failures(payload) == []
+    assert module._cross_paradigm_queue_routing_failures(
+        payload["frontier_action_queue"]
+    ) == []
+
+
+def test_all_lanes_cross_paradigm_gate_rejects_lost_first_tranche_route() -> None:
+    module = _load_all_lanes_module()
+    payload = build_inventory(repo_root=REPO)
+    queue = [
+        row
+        for row in payload["frontier_action_queue"]
+        if row["key"] != "hnerv_wavelet_wr01_apply"
+    ]
+    queue.append(next(row for row in payload["frontier_action_queue"] if row["key"] == "hnerv_wavelet_wr01_apply"))
+
+    failures = module._cross_paradigm_queue_routing_failures(queue)
+
+    assert (
+        "first_tranche_missing_required_score_path_row(s): hnerv_wavelet_wr01_apply"
+        in failures
+    )
 
 
 def test_all_lanes_cross_paradigm_gate_rejects_missing_geometry_contract() -> None:
