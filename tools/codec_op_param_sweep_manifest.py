@@ -247,6 +247,55 @@ def build_sweep_candidates(
     return candidates
 
 
+def to_meta_lagrangian_candidates(
+    candidates: list[SweepCandidate], *, lane_class: str | None = None
+) -> list[dict[str, Any]]:
+    """Convert sweep candidates to the schema consumed by
+    :func:`tac.optimizer.meta_lagrangian.MetaLagrangianSearch.evaluate_all`
+    (via ``tools/meta_lagrangian_search_cli.py --candidates-json``).
+
+    The search engine expects each candidate dict to carry
+    ``candidate_id``, ``archive_bytes``, ``rel_err_pct``, ``n_layers``,
+    ``lane_class``, and optional ``archive_path`` keys.
+
+    Mapping rationale:
+      - ``archive_bytes`` ← ``predicted_archive_bytes`` (the substituted size)
+      - ``rel_err_pct`` ← 0.0 (CodecOp substitution doesn't change weight
+        precision; the legacy field's semantics don't apply to stream-codec
+        substitutions, so the deterministic-error case is 0)
+      - ``n_layers`` ← 0 (stream codecs target poses/latents/masks, not
+        decoder layers; the legacy field's semantics don't apply)
+      - ``lane_class`` ← caller override, else derived from ``op_class``
+        (lower-cased), so calibration anchors at
+        ``.omx/calibration/anchors_<lane_class>.json`` are looked up
+      - ``archive_path`` ← None (substitution surgery hasn't run yet;
+        the cathedral discipline for this is documented in the manifest's
+        ``next_blocking_step``)
+    """
+    out: list[dict[str, Any]] = []
+    for c in candidates:
+        derived_lane_class = lane_class or c.op_class.lower()
+        out.append({
+            "candidate_id": c.candidate_id,
+            "archive_bytes": int(c.predicted_archive_bytes),
+            "rel_err_pct": 0.0,
+            "n_layers": 0,
+            "lane_class": derived_lane_class,
+            "archive_path": None,
+            # Pass-through fields so the search engine can surface them in
+            # its ranked report (non-required but useful for forensics).
+            "predicted_band": list(c.predicted_band),
+            "predicted_score": c.predicted_score,
+            "score_delta_vs_anchor": c.score_delta_vs_anchor,
+            "rate_delta_vs_anchor": c.rate_delta_vs_anchor,
+            "evidence_semantics": c.evidence_semantics,
+            "op_module": c.op_module,
+            "op_class": c.op_class,
+            "op_params": dict(c.op_params),
+        })
+    return out
+
+
 def emit_manifest(
     candidates: list[SweepCandidate],
     *,
@@ -307,7 +356,22 @@ def main(argv: list[str] | None = None) -> int:
                         help="Bytes the substrate's existing target stream contributes")
     parser.add_argument("--label-prefix", default="codec_op_sweep")
     parser.add_argument("--band-uncertainty-pct", type=float, default=0.005)
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True,
+                        help="Output path for the full sweep manifest (JSON)")
+    parser.add_argument(
+        "--meta-lagrangian-output", type=Path, default=None,
+        help="If set, ALSO emit a candidate-list JSON in the schema "
+        "consumed by tools/meta_lagrangian_search_cli.py --candidates-json. "
+        "Bridges the sweep adapter into the search engine; with this file "
+        "in hand, run: meta_lagrangian_search_cli.py --candidates-json "
+        "<path> --lane-class <op_class.lower()>",
+    )
+    parser.add_argument(
+        "--meta-lagrangian-lane-class", default=None,
+        help="Override the lane_class field in the meta-Lagrangian "
+        "candidate dicts (anchors_<lane_class>.json must exist). "
+        "Default: derived from op_class.lower().",
+    )
     args = parser.parse_args(argv)
 
     op_cls = _import_codec_op(args.module, args.class_name)
@@ -349,6 +413,20 @@ def main(argv: list[str] | None = None) -> int:
         f"top candidate: {manifest['candidates'][0]['candidate_id']} "
         f"predicted_score={manifest['candidates'][0]['predicted_score']:.5f}"
     )
+    if args.meta_lagrangian_output:
+        ml_candidates = to_meta_lagrangian_candidates(
+            candidates, lane_class=args.meta_lagrangian_lane_class,
+        )
+        args.meta_lagrangian_output.parent.mkdir(parents=True, exist_ok=True)
+        args.meta_lagrangian_output.write_text(
+            json.dumps(ml_candidates, indent=2, sort_keys=True)
+        )
+        print(
+            f"wrote {args.meta_lagrangian_output} ({len(ml_candidates)} candidates) — "
+            f"feed into: meta_lagrangian_search_cli.py --candidates-json "
+            f"{args.meta_lagrangian_output} --lane-class "
+            f"{args.meta_lagrangian_lane_class or args.class_name.lower()}"
+        )
     return 0
 
 
