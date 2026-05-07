@@ -32,7 +32,6 @@
 
 ## Warnings
 
-- `scorecard_current_frontier_field_missing_or_stale`: scorecard rows and entropy ranker select target, but current_frontier is absent or not target
 - `exact_eval_pact_commit_unavailable`: exact eval provenance could not record pact_commit; runtime tree and file hashes remain recorded
 - `public_preflight_runtime_tree_differs_from_exact_eval`: local public preflight runtime hash differs from exact eval runtime hash; compare future runs by runtime tree
 

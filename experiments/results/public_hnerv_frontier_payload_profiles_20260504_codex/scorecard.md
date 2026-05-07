@@ -32,6 +32,33 @@
 | PR105 | `packed_header_ff_len24` | 4 | 2.000000 | build byte-different archive, then exact CUDA replay | payload grammar audit |
 | PR105x | `packed_header_ff_len24` | 4 | 2.000000 | build byte-different archive, then exact CUDA replay | payload grammar audit |
 
+## Next Exact-Evaluable Target
+
+| frontier | target label | section | role | bytes | score gap | required next gate |
+|---|---|---|---|---:|---:|---|
+| PR106x-lowlevel-brotli | PR106x-lowlevel-brotli | `decoder_packed_brotli` | `decoder_weight_stream` | 170127 | 0.000000000000 | build byte-different archive with old/new section SHA-256 and charged-byte proof, then exact CUDA auth eval after lane claim |
+
+This target is ranked by exact-frontier proximity first, then charged
+payload byte mass. It is a routing target only; it is not a new score
+claim.
+
+## Hidden-Gem Byte-Mass Ranking
+
+| rank | label | section | role | bytes | score gap | priority |
+|---:|---|---|---|---:|---:|---|
+| 1 | PR106x-lowlevel-brotli | `decoder_packed_brotli` | `decoder_weight_stream` | 170127 | 0.000000000000 | `current_frontier_primary` |
+| 2 | PR106x-lowlevel-brotli | `latents_and_sidecar_brotli` | `latent_stream` | 15849 | 0.000000000000 | `current_frontier_primary` |
+| 3 | PR106x-lowlevel-brotli | `packed_header_ff_len24` | `control_or_metadata` | 4 | 0.000000000000 | `low` |
+| 4 | PR106x | `decoder_packed_brotli` | `decoder_weight_stream` | 170278 | 0.000100500000 | `near_frontier_secondary` |
+| 5 | PR106x | `latents_and_sidecar_brotli` | `latent_stream` | 15849 | 0.000100500000 | `near_frontier_secondary` |
+| 6 | PR106x | `packed_header_ff_len24` | `control_or_metadata` | 4 | 0.000100500000 | `low` |
+| 7 | PR106 | `decoder_packed_brotli` | `decoder_weight_stream` | 170278 | 0.000106000000 | `near_frontier_secondary` |
+| 8 | PR106 | `latents_and_sidecar_brotli` | `latent_stream` | 15849 | 0.000106000000 | `near_frontier_secondary` |
+| 9 | PR106 | `packed_header_ff_len24` | `control_or_metadata` | 4 | 0.000106000000 | `low` |
+| 10 | PR105x | `decoder_packed_brotli` | `decoder_weight_stream` | 161891 | 0.021081093064 | `near_frontier_secondary` |
+| 11 | PR105x | `latents_and_sidecar_brotli` | `latent_stream` | 15854 | 0.021081093064 | `near_frontier_secondary` |
+| 12 | PR105x | `packed_header_ff_len24` | `control_or_metadata` | 4 | 0.021081093064 | `low` |
+
 ## Payload Section Manifests
 
 | label | section | role | bytes | sha256 | required proof |

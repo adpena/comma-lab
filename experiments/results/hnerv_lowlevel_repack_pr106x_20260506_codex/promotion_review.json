@@ -303,13 +303,13 @@
       "--md-out",
       "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/promotion_review.md"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "2654593949c94610213395dc0922a377bab482931dbe5335493cd0639eb9c6e4",
+    "canonical_payload_without_tool_manifest_sha256": "637e2cd0724c3f07f768e30787b71913ad4051f3688c419d880df5e3f38092c9",
     "dispatch_attempted": false,
     "input_files": [
       {
-        "bytes": 38566,
+        "bytes": 54222,
         "path": "experiments/results/public_hnerv_frontier_payload_profiles_20260504_codex/scorecard.json",
-        "sha256": "2452d5b445b0e8be720e6475eb13dadaeea61edb85eb6f8a115e01b996321559"
+        "sha256": "be5a426990ba21c7912f971ab247fb6ab0fcbae7c0a570c6118dc1a89f47cf52"
       },
       {
         "bytes": 13951,
@@ -354,15 +354,6 @@
     "tool": "tools/review_hnerv_lossless_brotli_control.py"
   },
   "warnings": [
-    {
-      "evidence": {
-        "current_frontier": null,
-        "target_label": "PR106x-lowlevel-brotli"
-      },
-      "id": "scorecard_current_frontier_field_missing_or_stale",
-      "message": "scorecard rows and entropy ranker select target, but current_frontier is absent or not target",
-      "severity": "warning"
-    },
     {
       "evidence": {
         "pact_commit": "<error:CalledProcessError(128, ['git', 'rev-parse', 'HEAD'])>"
