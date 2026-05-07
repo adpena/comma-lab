@@ -126,7 +126,12 @@ def test_lowlevel_exact_eval_packet_builds_static_release_surface(tmp_path: Path
     compliance = json.loads((result_dir / "pre_submission_compliance.json").read_text(encoding="utf-8"))
     assert compliance["passed"] is True
     readiness = json.loads((result_dir / "dispatch_readiness_preflight.json").read_text(encoding="utf-8"))
-    assert readiness["ready_for_exact_eval_dispatch"] is True
+    assert readiness["ready_for_exact_eval_dispatch"] is False
+    assert readiness["lane_claim"]["active_claim_present"] is False
+    assert any(
+        row["code"] == "missing_active_lane_dispatch_claim"
+        for row in readiness["blockers"]
+    )
     assert (packet_path).is_file()
 
 

@@ -810,12 +810,42 @@ def refresh_dispatch_readiness(args: argparse.Namespace) -> dict[str, Any]:
         "experiments/preflight_candidate_manifest_dispatch_readiness.py",
         "--manifest",
         (args.result_dir / "manifest.json").as_posix(),
+        "--claims-path",
+        args.claims_path.as_posix(),
+        "--now-utc",
+        args.now_utc,
+        "--ttl-hours",
+        str(args.claim_ttl_hours),
         "--json-out",
         output.as_posix(),
-        "--fail-if-not-ready",
     ]
     payload = _run_json_cmd(cmd, output)
+    claim_report = lane_claim_preflight(args, now_utc=_now_utc(args))
+    if not claim_report["active_claim_present"]:
+        blockers = payload.setdefault("blockers", [])
+        if isinstance(blockers, list):
+            blockers.append(
+                {
+                    "code": "missing_active_lane_dispatch_claim",
+                    "severity": "blocking",
+                    "detail": "standalone dispatch readiness requires a matching active Level-2 lane claim",
+                }
+            )
+        payload["ready_for_exact_eval_dispatch"] = False
+    if claim_report["conflict_present"]:
+        blockers = payload.setdefault("blockers", [])
+        if isinstance(blockers, list):
+            blockers.append(
+                {
+                    "code": "active_lane_dispatch_claim_conflict",
+                    "severity": "blocking",
+                    "detail": "active same-lane claim exists for a different job",
+                }
+            )
+        payload["ready_for_exact_eval_dispatch"] = False
+    payload["lane_claim"] = claim_report
     payload["schema"] = "hnerv_lowlevel_dispatch_readiness_preflight_refresh_v1"
+    output.write_text(json_text(payload), encoding="utf-8")
     return payload
 
 
@@ -1098,12 +1128,23 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         dispatch_readiness_refresh = refresh_dispatch_readiness(args)
         dispatch_readiness = read_json(_repo_path(args.result_dir / "dispatch_readiness_preflight.json"))
         if not isinstance(dispatch_readiness, dict) or dispatch_readiness.get("ready_for_exact_eval_dispatch") is not True:
-            static_blockers.append(
-                {
-                    "code": "candidate_manifest_dispatch_readiness_failed",
-                    "detail": dispatch_readiness.get("blockers") if isinstance(dispatch_readiness, dict) else None,
-                }
-            )
+            blockers = dispatch_readiness.get("blockers") if isinstance(dispatch_readiness, dict) else None
+            blocker_codes = {
+                str(item.get("code"))
+                for item in blockers
+                if isinstance(item, dict) and item.get("code")
+            } if isinstance(blockers, list) else set()
+            claim_only_blockers = {
+                "missing_active_lane_dispatch_claim",
+                "active_lane_dispatch_claim_conflict",
+            }
+            if not blocker_codes or not blocker_codes.issubset(claim_only_blockers):
+                static_blockers.append(
+                    {
+                        "code": "candidate_manifest_dispatch_readiness_failed",
+                        "detail": blockers,
+                    }
+                )
 
     static_ready = not static_blockers
     if not static_ready:
