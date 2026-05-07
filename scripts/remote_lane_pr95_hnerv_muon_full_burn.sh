@@ -103,6 +103,7 @@ manifest = {
     "status": "no_checkpoint_yet",
     "score_claim": False,
     "evidence_grade": "training_snapshot_until_exact_cuda_eval",
+    "predicted_band": "training_snapshot_only_no_score_predicted",
 }
 runs = sorted(
     [p for p in ckpt_root.glob("run_*") if p.is_dir()],

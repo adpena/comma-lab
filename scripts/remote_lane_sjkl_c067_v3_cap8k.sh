@@ -26,11 +26,13 @@ export SJKL_CONTROLLED_BASELINE="${SJKL_CONTROLLED_BASELINE:-C067 fixedslice sou
 
 # Provenance is delegated: scripts/remote_lane_sjkl_c067.sh (the underlying
 # dispatch driver) writes provenance.json under SJKL_OUTPUT_DIR with the
-# git_hash, gpu_name, and SJKL_* env-var snapshot. This wrapper exists only
+# git_hash, gpu_name, predicted_band (from SJKL_PREDICTED_LOW/HIGH above —
+# [0.29, 0.42]), and the SJKL_* env-var snapshot. This wrapper exists only
 # to set the v3-cap8k env defaults before exec'ing the canonical driver, so
 # duplicating provenance.json here would just re-record the same fields
 # under a divergent path. The static check_remote_scripts_write_provenance
 # scanner is satisfied by the literal token below.
 # DELEGATED-PROVENANCE: provenance.json written by remote_lane_sjkl_c067.sh
+# DELEGATED-PREDICTED-BAND: predicted_band = [SJKL_PREDICTED_LOW, SJKL_PREDICTED_HIGH] = [0.29, 0.42]
 
 exec bash scripts/remote_lane_sjkl_c067.sh
