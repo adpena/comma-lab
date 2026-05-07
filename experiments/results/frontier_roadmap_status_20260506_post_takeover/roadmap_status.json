@@ -270,7 +270,7 @@
             0.0
           ],
           "manifest_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
-          "manifest_sha256": "21778d4ec739bff210b9bb3669f068584e5fe34c21373f5fa5357b1b8b5fd6cd",
+          "manifest_sha256": "97a726d8a1b44630b976eedbebfb4ad6d1b2a1a6f6f206c50813ba10d20f9e66",
           "next_required_proof": [
             "matching_active_level2_lane_claim_for_manifest_lane_and_job"
           ],
@@ -529,7 +529,7 @@
           0.0
         ],
         "manifest_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
-        "manifest_sha256": "21778d4ec739bff210b9bb3669f068584e5fe34c21373f5fa5357b1b8b5fd6cd",
+        "manifest_sha256": "97a726d8a1b44630b976eedbebfb4ad6d1b2a1a6f6f206c50813ba10d20f9e66",
         "next_required_proof": [
           "matching_active_level2_lane_claim_for_manifest_lane_and_job"
         ],
