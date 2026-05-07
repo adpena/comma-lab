@@ -42,14 +42,20 @@ if [ ! -x "$PYBIN" ]; then
   exit 4
 fi
 
-"$PYBIN" - <<'PY'
+"$PYBIN" - <<'PY' || { echo "FATAL: PR103 dependency check failed (round-1 review CRITICAL fix)" >&2; exit 6; }
+import sys
 import brotli
 print(f"[pr103-adapter] brotli={getattr(brotli, '__version__', 'unknown')}")
 try:
     import constriction
     print(f"[pr103-adapter] constriction={getattr(constriction, '__version__', 'unknown')}")
 except ImportError as e:
-    print(f"[pr103-adapter] WARNING constriction not available ({e}); arithmetic-coded streams will fail")
+    # PR103 hnerv_lc_ac uses constriction range-coder for the 8 largest weight
+    # tensors and latent-hi byte stream. Without it, decode fails silently
+    # mid-inflate. HARD-FAIL at startup (Yousfi round-1 CRITICAL finding).
+    print(f"[pr103-adapter] FATAL: constriction package missing — arithmetic-coded "
+          f"streams cannot be decoded. Install via `uv pip install constriction`.", file=sys.stderr)
+    sys.exit(7)
 PY
 
 mkdir -p "$OUTPUT_DIR"
