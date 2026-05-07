@@ -9,6 +9,7 @@ before exact CUDA dispatch is valid.
 
 from __future__ import annotations
 
+import importlib.util
 import shutil
 import stat
 from collections.abc import Mapping
@@ -45,10 +46,15 @@ RUNTIME_ADAPTER_PROOF_FILENAMES = (
     "runtime_adapter_proof.with_tool_run.json",
     "runtime_adapter_proof.json",
 )
+RUNTIME_TREE_CLOSURE_FILENAME = "hdm3_runtime_tree_closure.json"
 HDM3_EXACT_EVAL_LANE_ID = "hnerv_hdm3_q_brotli_split_exact_eval"
 HDM3_RUNTIME_INFLATE = (
     "experiments/public_runtime_adapters/"
     "pr106_belt_and_suspenders_adapter/inflate.sh"
+)
+HDM3_UPSTREAM_DIR = "upstream"
+CONTEST_AUTH_EVAL_RUNTIME_MANIFEST_SOURCE = (
+    "experiments/contest_auth_eval.py::_runtime_dependency_manifest"
 )
 
 
@@ -210,6 +216,10 @@ def build_hdm3_archive_candidate(
         write=True,
     )
     manifest["runtime_adapter_proof"] = readiness["runtime_adapter_payload_identity"]
+    manifest["runtime_tree_inflate_output_parity"] = readiness[
+        "runtime_tree_inflate_output_parity"
+    ]
+    manifest["fixed_runtime_preflight"] = readiness["fixed_runtime_preflight"]
     manifest["exact_eval_packet_readiness"] = {
         "contract": "hnerv_hdm3_exact_eval_packet_readiness_link_v1",
         "path": repo_relative(output_root / EXACT_PACKET_READINESS_FILENAME, repo),
@@ -226,8 +236,22 @@ def build_hdm3_archive_candidate(
         repo_root=repo,
         write=True,
     )
+    manifest["runtime_adapter_proof"] = readiness["runtime_adapter_payload_identity"]
+    manifest["runtime_tree_inflate_output_parity"] = readiness[
+        "runtime_tree_inflate_output_parity"
+    ]
+    manifest["fixed_runtime_preflight"] = readiness["fixed_runtime_preflight"]
     manifest["exact_eval_packet_readiness"]["sha256"] = sha256_file(
         output_root / EXACT_PACKET_READINESS_FILENAME
+    )
+    manifest["exact_eval_packet_readiness"]["static_packet_ready"] = readiness[
+        "static_packet_ready"
+    ]
+    manifest["exact_eval_packet_readiness"]["ready_for_exact_eval_dispatch"] = readiness[
+        "ready_for_exact_eval_dispatch"
+    ]
+    manifest["exact_eval_packet_readiness"]["remaining_dispatch_blockers"] = list(
+        readiness["dispatch_blockers"]
     )
     manifest["dispatch_blockers"] = list(readiness["dispatch_blockers"])
     write_json(output_root / "hdm3_archive_candidate_manifest.json", manifest)
@@ -364,10 +388,19 @@ def build_hdm3_exact_eval_packet_readiness(
         }
 
     archive_build_blockers = _string_list(manifest.get("archive_build_blockers"))
+    runtime_tree_contract = build_hdm3_runtime_tree_inflate_output_parity_contract(
+        manifest=manifest,
+        runtime_adapter_payload_identity=runtime_identity,
+        output_dir=output_root,
+        repo_root=repo,
+        write=write,
+    )
+    fixed_runtime_preflight = _fixed_runtime_preflight(runtime_tree_contract)
     static_blockers = _ordered_unique(
         [
             *archive_build_blockers,
             *runtime_identity["blockers"],
+            *runtime_tree_contract["blockers"],
             *static_compliance["blockers"],
             *_string_list(release_surface.get("blockers")),
         ]
@@ -427,6 +460,8 @@ def build_hdm3_exact_eval_packet_readiness(
         "candidate_payload_sha256": manifest.get("candidate_payload_sha256"),
         "candidate_payload_bytes": manifest.get("candidate_payload_bytes"),
         "runtime_adapter_payload_identity": runtime_identity,
+        "runtime_tree_inflate_output_parity": runtime_tree_contract,
+        "fixed_runtime_preflight": fixed_runtime_preflight,
         "static_release_surface": dict(release_surface),
         "strict_static_compliance": static_compliance,
         "static_blockers": static_blockers,
@@ -484,6 +519,123 @@ def build_hdm3_exact_eval_packet_readiness(
     if write:
         write_json(output_root / EXACT_PACKET_READINESS_FILENAME, packet)
     return packet
+
+
+def build_hdm3_runtime_tree_inflate_output_parity_contract(
+    *,
+    manifest: Mapping[str, Any],
+    runtime_adapter_payload_identity: Mapping[str, Any],
+    output_dir: str | Path,
+    repo_root: str | Path | None = None,
+    write: bool = False,
+) -> dict[str, Any]:
+    """Build the non-GPU HDM3 runtime-tree and inflate-parity contract.
+
+    This closes only the fixed runtime tree and the adapter input payload
+    identity proof. It does not execute CUDA auth eval and cannot establish a
+    score or component parity claim.
+    """
+
+    repo = Path(repo_root) if repo_root is not None else Path.cwd()
+    output_root = Path(output_dir)
+    blockers: list[str] = []
+    runtime_manifest: Mapping[str, Any] = {}
+    try:
+        runtime_manifest = _canonical_runtime_dependency_manifest(
+            repo / HDM3_RUNTIME_INFLATE,
+            repo / HDM3_UPSTREAM_DIR,
+            repo_root=repo,
+        )
+    except HnervHdm3ArchiveCandidateError as exc:
+        blockers.append(f"hdm3_runtime_tree_manifest_failed:{exc}")
+
+    runtime_tree_sha256 = str(runtime_manifest.get("runtime_tree_sha256") or "")
+    if not _is_sha256(runtime_tree_sha256):
+        blockers.append("hdm3_runtime_tree_sha256_missing_or_invalid")
+    if runtime_adapter_payload_identity.get("runtime_adapter_parity_proven") is not True:
+        blockers.append("hdm3_runtime_adapter_payload_identity_not_proven")
+    if runtime_adapter_payload_identity.get("payload_identity_proven") is not True:
+        blockers.append("hdm3_inflate_output_payload_identity_not_proven")
+    if runtime_adapter_payload_identity.get("ready_for_public_runtime_inflate") is not True:
+        blockers.append("hdm3_public_runtime_inflate_not_ready")
+
+    closed = not blockers
+    contract = {
+        "schema_version": SCHEMA_VERSION,
+        "contract": "hnerv_hdm3_runtime_tree_inflate_output_parity_contract_v1",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "remote_gpu_run": False,
+        "candidate_archive_sha256": manifest.get("candidate_archive_sha256"),
+        "candidate_archive_bytes": manifest.get("candidate_archive_bytes"),
+        "source_archive_sha256": manifest.get("source_archive_sha256"),
+        "source_archive_bytes": manifest.get("source_archive_bytes"),
+        "runtime_inflate_sh": HDM3_RUNTIME_INFLATE,
+        "upstream_dir": HDM3_UPSTREAM_DIR,
+        "runtime_tree_manifest_source": CONTEST_AUTH_EVAL_RUNTIME_MANIFEST_SOURCE,
+        "path": repo_relative(output_root / RUNTIME_TREE_CLOSURE_FILENAME, repo),
+        "runtime_manifest_schema": runtime_manifest.get("schema") if runtime_manifest else "",
+        "runtime_tree_sha256": runtime_tree_sha256,
+        "runtime_file_count": runtime_manifest.get("runtime_file_count", 0)
+        if runtime_manifest
+        else 0,
+        "external_dependency_root_count": len(
+            runtime_manifest.get("external_dependency_roots") or []
+        )
+        if runtime_manifest
+        else 0,
+        "repo_local_tac_import_file_count": (
+            runtime_manifest.get("repo_local_tac_import_manifest", {}).get("file_count", 0)
+            if isinstance(runtime_manifest.get("repo_local_tac_import_manifest"), Mapping)
+            else 0
+        )
+        if runtime_manifest
+        else 0,
+        "runtime_tree_closure_proven": closed,
+        "inflate_output_parity_proof_kind": "adapter_payload_identity_to_public_runtime_input",
+        "inflate_output_parity_scope": (
+            "HDM3 candidate payload normalizes to the exact source legacy "
+            "payload before public PR106 inflate.py consumes it; this is a "
+            "byte identity contract for the runtime input, not a CUDA frame "
+            "or scorer parity result."
+        ),
+        "inflate_output_parity_proven_by_payload_identity": (
+            runtime_adapter_payload_identity.get("payload_identity_proven") is True
+        ),
+        "exact_frame_output_parity_run": False,
+        "exact_cuda_auth_eval_required_before_score": True,
+        "lane_dispatch_claim_required_before_gpu": True,
+        "ready_for_fixed_runtime_exact_eval_readiness": closed,
+        "ready_for_exact_eval_dispatch": False,
+        "ready_for_score_claim": False,
+        "blockers": _ordered_unique(blockers),
+        "remaining_blockers": _ordered_unique(blockers),
+    }
+    if runtime_manifest:
+        contract["inflate_runtime_manifest"] = dict(runtime_manifest)
+    if write:
+        write_json(output_root / RUNTIME_TREE_CLOSURE_FILENAME, contract)
+    return contract
+
+
+def _fixed_runtime_preflight(contract: Mapping[str, Any]) -> dict[str, Any]:
+    blockers = _string_list(contract.get("blockers"))
+    closed = contract.get("runtime_tree_closure_proven") is True and not blockers
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "contract": "hnerv_hdm3_fixed_runtime_preflight_v1",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "remote_gpu_run": False,
+        "runtime_tree_sha256": str(contract.get("runtime_tree_sha256") or ""),
+        "runtime_tree_source": str(contract.get("path") or RUNTIME_TREE_CLOSURE_FILENAME),
+        "runtime_tree_manifest_source": contract.get("runtime_tree_manifest_source"),
+        "ready_for_fixed_runtime_exact_eval_readiness": closed,
+        "ready_for_exact_eval_dispatch": False,
+        "exact_cuda_auth_eval_required_before_score": True,
+        "blockers": blockers,
+        "remaining_blockers": blockers,
+    }
 
 
 def _runtime_adapter_payload_identity_evidence(
@@ -729,6 +881,10 @@ def _ordered_unique(values: list[str]) -> list[str]:
     return out
 
 
+def _is_sha256(value: str) -> bool:
+    return len(value) == 64 and all(ch in "0123456789abcdef" for ch in value.lower())
+
+
 def _optional_int(value: Any) -> int:
     try:
         return int(value)
@@ -742,10 +898,41 @@ def _slug(value: str) -> str:
     return slug or "hnerv"
 
 
+def _canonical_runtime_dependency_manifest(
+    inflate_sh: Path,
+    upstream_dir: Path,
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
+    contest_auth_eval = repo_root / "experiments" / "contest_auth_eval.py"
+    if not contest_auth_eval.is_file():
+        raise HnervHdm3ArchiveCandidateError("contest_auth_eval.py missing")
+    if not inflate_sh.is_file():
+        raise HnervHdm3ArchiveCandidateError(f"runtime inflate.sh missing: {inflate_sh}")
+    spec = importlib.util.spec_from_file_location(
+        "_hdm3_contest_auth_eval_runtime_manifest",
+        contest_auth_eval,
+    )
+    if spec is None or spec.loader is None:
+        raise HnervHdm3ArchiveCandidateError("contest_auth_eval.py import spec unavailable")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    manifest_func = getattr(module, "_runtime_dependency_manifest", None)
+    if manifest_func is None:
+        raise HnervHdm3ArchiveCandidateError(
+            "contest_auth_eval._runtime_dependency_manifest unavailable"
+        )
+    manifest = manifest_func(inflate_sh, upstream_dir, repo_root=repo_root)
+    if not isinstance(manifest, dict):
+        raise HnervHdm3ArchiveCandidateError("runtime dependency manifest is not JSON object")
+    return manifest
+
+
 __all__ = [
     "HDM3_VARIANT_NAME",
     "HnervHdm3ArchiveCandidateError",
     "build_hdm3_archive_candidate",
     "build_hdm3_exact_eval_packet_readiness",
+    "build_hdm3_runtime_tree_inflate_output_parity_contract",
     "materialize_hdm3_exact_eval_release_surface",
 ]

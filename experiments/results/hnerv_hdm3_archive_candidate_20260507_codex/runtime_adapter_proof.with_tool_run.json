@@ -32,6 +32,7 @@
       "exact_cuda_auth_eval_missing"
     ],
     "restored_decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+    "runtime_tree_closure_contract_required": true,
     "schema_version": 1,
     "score_claim": false,
     "strict_static_compliance_required": true
@@ -68,9 +69,9 @@
   "restored_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
   "runtime_adapter_files": [
     {
-      "bytes": 9226,
+      "bytes": 9282,
       "path": "src/tac/hnerv_hdm3_runtime_adapter.py",
-      "sha256": "7bde320084d954ff7a0c856e7a288648459bdf193f3d7d3edea575bb0cbe3242"
+      "sha256": "2b6cf6ff038777da7308ac362b0e907ffe4f5655078baf4f46ab604078efef0c"
     },
     {
       "bytes": 1102,
@@ -107,7 +108,7 @@
       "--json-out",
       "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/runtime_adapter_proof.with_tool_run.json"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "33827d6293d592843135b3d5fdef0d47e1366df1ce3fbdd6c7c084e5ecf2db33",
+    "canonical_payload_without_tool_manifest_sha256": "e32ae4d4166db7386937d1bc2f9f7b32b775dde1354dc526d6f2de5d04e40af7",
     "dispatch_attempted": false,
     "input_files": [
       {

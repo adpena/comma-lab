@@ -1,0 +1,357 @@
+{
+  "blockers": [],
+  "candidate_archive_bytes": 186066,
+  "candidate_archive_sha256": "5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771",
+  "contract": "hnerv_hdm3_runtime_tree_inflate_output_parity_contract_v1",
+  "dispatch_attempted": false,
+  "exact_cuda_auth_eval_required_before_score": true,
+  "exact_frame_output_parity_run": false,
+  "external_dependency_root_count": 1,
+  "inflate_output_parity_proof_kind": "adapter_payload_identity_to_public_runtime_input",
+  "inflate_output_parity_proven_by_payload_identity": true,
+  "inflate_output_parity_scope": "HDM3 candidate payload normalizes to the exact source legacy payload before public PR106 inflate.py consumes it; this is a byte identity contract for the runtime input, not a CUDA frame or scorer parity result.",
+  "inflate_runtime_manifest": {
+    "external_dependency_roots": [
+      {
+        "exists": true,
+        "files": [
+          {
+            "bytes": 991,
+            "relative_path": "compress.sh",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/compress.sh",
+            "sha256": "c4c94c43d36884bc9bd5c6ff8624a8e6c3828103e3a4f4cf3fc68c8f22ba31f3"
+          },
+          {
+            "bytes": 2197,
+            "relative_path": "inflate.py",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.py",
+            "sha256": "e64529b2ab3fea2dea377629d69288a56afd7258f456e5ae48072c107d05e79a"
+          },
+          {
+            "bytes": 811,
+            "relative_path": "inflate.sh",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh",
+            "sha256": "0cb9c3df78ad870cadd2ac6d46007b6c1aeb6a61c76b7800ae74a00addafb885"
+          },
+          {
+            "bytes": 12060,
+            "relative_path": "src/codec.py",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/src/codec.py",
+            "sha256": "404bf6efa5effb0e021bee62374465abfc5210d1bb6aeaa5188d82ef48773c41"
+          },
+          {
+            "bytes": 6721,
+            "relative_path": "src/data.py",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/src/data.py",
+            "sha256": "db0016ba8e854daa0d01563108ab1c76b6046578fe5f54af479abd34c600ab42"
+          },
+          {
+            "bytes": 6892,
+            "relative_path": "src/losses.py",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/src/losses.py",
+            "sha256": "757725dc64681d90ebd83057c956ca3d72e02e06f778571b599d99fac7b17368"
+          },
+          {
+            "bytes": 2197,
+            "relative_path": "src/model.py",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/src/model.py",
+            "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+          },
+          {
+            "bytes": 3785,
+            "relative_path": "src/optim.py",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/src/optim.py",
+            "sha256": "6c79f7559e4fdf23ec1ab60fcdad29f785f8e223dc6cf426d9cf0bc38555d3c6"
+          },
+          {
+            "bytes": 4661,
+            "relative_path": "src/score.py",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/src/score.py",
+            "sha256": "c8c4421fd26faa5c97ebade2919f9ba02c916bca3806fa95ba5159f221c4ef7f"
+          },
+          {
+            "bytes": 2870,
+            "relative_path": "src/stages/codec_stage.py",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/src/stages/codec_stage.py",
+            "sha256": "1ddd7ccac9427a4679f0bf884409cd22173219412f1962f92ed711cef2d54c55"
+          },
+          {
+            "bytes": 11658,
+            "relative_path": "src/stages/common.py",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/src/stages/common.py",
+            "sha256": "ad766d0639269eba70af5e5c26ef71267dfe8350e0335cdc506b198a08febdef"
+          },
+          {
+            "bytes": 1456,
+            "relative_path": "src/stages/stage1_v328_ce.py",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/src/stages/stage1_v328_ce.py",
+            "sha256": "a43a44fa4cdc17d83e81f94006228268fed78f2b641c73b9562124bfc995c2b7"
+          },
+          {
+            "bytes": 1216,
+            "relative_path": "src/stages/stage2_v331_softplus.py",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/src/stages/stage2_v331_softplus.py",
+            "sha256": "1203339dc5319f81d2f571a11be166a034bcb9b1a9bb346f823d68a9331aec20"
+          },
+          {
+            "bytes": 1206,
+            "relative_path": "src/stages/stage3_v332_smooth.py",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/src/stages/stage3_v332_smooth.py",
+            "sha256": "119fe4e1718502973c38fcd94163ea935e2ce7776ada833c4d41661225a73695"
+          },
+          {
+            "bytes": 1233,
+            "relative_path": "src/stages/stage4_v332_qat.py",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/src/stages/stage4_v332_qat.py",
+            "sha256": "aaf7f704f0fcf3a7860bca1be589cfd6b90a217b529d77ffc7abc826d42114af"
+          },
+          {
+            "bytes": 1329,
+            "relative_path": "src/stages/stage5_c1a_l7.py",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/src/stages/stage5_c1a_l7.py",
+            "sha256": "6e1c4f8a1abdde16d6086f5c38dc523207ca1ca04b89cc72a0a2f58fe0ea0dbf"
+          },
+          {
+            "bytes": 1208,
+            "relative_path": "src/stages/stage6_lambda_sweep.py",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/src/stages/stage6_lambda_sweep.py",
+            "sha256": "fe3893d388d7820d365d0b088a0800df800c6963e2e101e6e451b1172e6d453b"
+          },
+          {
+            "bytes": 1255,
+            "relative_path": "src/stages/stage7_sigma_sweep.py",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/src/stages/stage7_sigma_sweep.py",
+            "sha256": "8b8b812bb4bc49e560e6fe2e1dd6b3fecb36c60bcdaeb1a5411e5697653e4443"
+          },
+          {
+            "bytes": 1866,
+            "relative_path": "src/stages/stage8_muon_finetune.py",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/src/stages/stage8_muon_finetune.py",
+            "sha256": "9e036c99b7fc58fa24f954be251bebb5af4cddd3b84fe408b9ebc2b94b58ed5f"
+          },
+          {
+            "bytes": 2488,
+            "relative_path": "src/train.py",
+            "repo_relative_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/src/train.py",
+            "sha256": "d88610929db7f42b7a3522a77ded29b2a9a4e7abe63eae7bc5915fa4b8e58b79"
+          }
+        ],
+        "repo_relative_root": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders",
+        "root": "/Users/adpena/Projects/pact/experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders"
+      }
+    ],
+    "files": [
+      {
+        "bytes": 1102,
+        "relative_path": "hdm3_normalize.py",
+        "repo_relative_path": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/hdm3_normalize.py",
+        "sha256": "3561c609cf597cf095f2b28439929dddf7ec20e54b3d120912f519fde128dee8"
+      },
+      {
+        "bytes": 2385,
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh",
+        "sha256": "a9bad807419677fb7d0d3162f70114cdc249e1ed717e417b484fc716a2c9d6aa"
+      }
+    ],
+    "repo_local_tac_import_manifest": {
+      "discovery": "static_ast_recursive_import_closure",
+      "file_count": 26,
+      "files": [
+        {
+          "bytes": 3090,
+          "module": "tac",
+          "relative_path": "src/tac/__init__.py",
+          "sha256": "38c87d4295b3ec26f4ef5f96f27a4a34f6003b2355fbe5c06bac1b3cd95e66c7"
+        },
+        {
+          "bytes": 35513,
+          "module": "tac.architectures",
+          "relative_path": "src/tac/architectures.py",
+          "sha256": "fd21f739b05dce8385745b3a257bdd76b2f46b0af9efac77e95ac0559bdd9728"
+        },
+        {
+          "bytes": 43384,
+          "module": "tac.arithmetic_qint_codec",
+          "relative_path": "src/tac/arithmetic_qint_codec.py",
+          "sha256": "f840393cee6b758f1227ac8eb5f34b4526ab229f08e74268bed0021bdc36049d"
+        },
+        {
+          "bytes": 34945,
+          "module": "tac.block_fp_codec",
+          "relative_path": "src/tac/block_fp_codec.py",
+          "sha256": "22e5a77d17a23c2202b74825e885b7cb54c55d6ee4e18008cd0587484ec4bdca"
+        },
+        {
+          "bytes": 9254,
+          "module": "tac.camera",
+          "relative_path": "src/tac/camera.py",
+          "sha256": "ef1683f5468219e110ad2d226f773d9830889229454e28693add01ef638a88d9"
+        },
+        {
+          "bytes": 9329,
+          "module": "tac.data",
+          "relative_path": "src/tac/data.py",
+          "sha256": "61a39364b2967ebab7c1244bc9a2bc46809cc91d85c53566b59b60cfe8b9c5c9"
+        },
+        {
+          "bytes": 10156,
+          "module": "tac.evaluate",
+          "relative_path": "src/tac/evaluate.py",
+          "sha256": "7afc3d623276c02547f8a31511103c68a209353523d30d5a3d724fddb7cdc9e4"
+        },
+        {
+          "bytes": 60909,
+          "module": "tac.hnerv_decoder_recode",
+          "relative_path": "src/tac/hnerv_decoder_recode.py",
+          "sha256": "09c1689009fed97b942c61dd9aec40c93222b03b097efe3c2ff0bf4745435376"
+        },
+        {
+          "bytes": 9282,
+          "module": "tac.hnerv_hdm3_runtime_adapter",
+          "relative_path": "src/tac/hnerv_hdm3_runtime_adapter.py",
+          "sha256": "2b6cf6ff038777da7308ac362b0e907ffe4f5655078baf4f46ab604078efef0c"
+        },
+        {
+          "bytes": 26406,
+          "module": "tac.hnerv_lowlevel_packer",
+          "relative_path": "src/tac/hnerv_lowlevel_packer.py",
+          "sha256": "378a77b7799a82a9921412313e58d70c964a5a67fff20ec3e293f36f43b85c69"
+        },
+        {
+          "bytes": 20269,
+          "module": "tac.hnerv_section_repack",
+          "relative_path": "src/tac/hnerv_section_repack.py",
+          "sha256": "69dbd99d7b06f1609f3163d1debc44ff4fb5ba002b705239602125a0f6520766"
+        },
+        {
+          "bytes": 8951,
+          "module": "tac.lora_pose",
+          "relative_path": "src/tac/lora_pose.py",
+          "sha256": "60bd996645dc54f43fcffa769614d660056442b7ff3685df6d7bfac6db5e0b16"
+        },
+        {
+          "bytes": 12662,
+          "module": "tac.lora_pose_v2",
+          "relative_path": "src/tac/lora_pose_v2.py",
+          "sha256": "f8bfb519efa5d74e0ee13a2437ce54225ac58164a5785042a78dbe2d810397d9"
+        },
+        {
+          "bytes": 2940,
+          "module": "tac.lossless",
+          "relative_path": "src/tac/lossless/__init__.py",
+          "sha256": "2d62d9d49dbed80daf874c9504865d186fb41334d8fdacdfec13078c2ef096c8"
+        },
+        {
+          "bytes": 27867,
+          "module": "tac.lossless.frequency_coder",
+          "relative_path": "src/tac/lossless/frequency_coder.py",
+          "sha256": "0f6353b69623c22f2ebbbf889c6fe7c05d156558b6846681cfdc603c3a38dec8"
+        },
+        {
+          "bytes": 13568,
+          "module": "tac.lossless.range_coder",
+          "relative_path": "src/tac/lossless/range_coder.py",
+          "sha256": "806c2de0e118c0b398f9757f29907eceb848f3724094af3ff66124e5e048cb68"
+        },
+        {
+          "bytes": 2146,
+          "module": "tac.models",
+          "relative_path": "src/tac/models.py",
+          "sha256": "5182bfeac975b138d7e6e2b1364c0bde1c8e2cb38217fc268f7447c405538fcf"
+        },
+        {
+          "bytes": 9341,
+          "module": "tac.pose_delta_codec",
+          "relative_path": "src/tac/pose_delta_codec.py",
+          "sha256": "7b50f1a5646691df050845f88dc3aa11dde1c045e1c4b3e013fa0add6c2f8458"
+        },
+        {
+          "bytes": 19515,
+          "module": "tac.pose_delta_codec_v2",
+          "relative_path": "src/tac/pose_delta_codec_v2.py",
+          "sha256": "46bb16843662d0c8ce896fafd126a70588875a44c4dc2e3a4f475d09406ec4eb"
+        },
+        {
+          "bytes": 181623,
+          "module": "tac.profiles",
+          "relative_path": "src/tac/profiles.py",
+          "sha256": "107c206d6670b8e05763abeb52073f60ea46df9620a609cf09f7889abb36f947"
+        },
+        {
+          "bytes": 13931,
+          "module": "tac.psd_lumaskip_renderer",
+          "relative_path": "src/tac/psd_lumaskip_renderer.py",
+          "sha256": "3978c7bed70795ddab3b87e3a48f52864aaa6d8657aaacd8a8074f4ae6e3381a"
+        },
+        {
+          "bytes": 41635,
+          "module": "tac.quantization",
+          "relative_path": "src/tac/quantization.py",
+          "sha256": "d650275312bae3faa4d16072efbafac0d93189088165586bd7a0ab397d27c681"
+        },
+        {
+          "bytes": 2162,
+          "module": "tac.repo_io",
+          "relative_path": "src/tac/repo_io.py",
+          "sha256": "a6cef28b68dc01e7ade55d1650d92e4d225b745971187114e5ad57e8ae36ebb5"
+        },
+        {
+          "bytes": 18562,
+          "module": "tac.scorer",
+          "relative_path": "src/tac/scorer.py",
+          "sha256": "d7cc469e4b3171ca80a3806f45848d72c3c31aea390f0140bdaa0c2637420373"
+        },
+        {
+          "bytes": 3741,
+          "module": "tac.semantic_label_contract",
+          "relative_path": "src/tac/semantic_label_contract.py",
+          "sha256": "d54c992b86f2ac22e2380338e3c23f1cf573a1d8b58b13a4d23c57bfca942352"
+        },
+        {
+          "bytes": 84507,
+          "module": "tac.submission_archive",
+          "relative_path": "src/tac/submission_archive.py",
+          "sha256": "bfe06196fc321c112294eceae9a6541d83cae5c2c37cc416094a17136b018edd"
+        }
+      ],
+      "module_count": 31,
+      "parse_errors": [],
+      "root_import_modules": [
+        "tac.hnerv_hdm3_runtime_adapter"
+      ],
+      "runtime_root_name": "pr106_belt_and_suspenders_adapter",
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "tac_root_relative_path": "src/tac",
+      "unresolved_modules": []
+    },
+    "runtime_file_count": 2,
+    "runtime_root": "/Users/adpena/Projects/pact/experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter",
+    "runtime_tree_sha256": "2a3bbb259179152ca38e659370afdeeabf670bf1f96e2bc91568a7c9cfc93b47",
+    "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+    "upstream_evaluate_py": {
+      "bytes": 6005,
+      "relative_path": "evaluate.py",
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "lane_dispatch_claim_required_before_gpu": true,
+  "path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_runtime_tree_closure.json",
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_fixed_runtime_exact_eval_readiness": true,
+  "ready_for_score_claim": false,
+  "remaining_blockers": [],
+  "remote_gpu_run": false,
+  "repo_local_tac_import_file_count": 26,
+  "runtime_file_count": 2,
+  "runtime_inflate_sh": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh",
+  "runtime_manifest_schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+  "runtime_tree_closure_proven": true,
+  "runtime_tree_manifest_source": "experiments/contest_auth_eval.py::_runtime_dependency_manifest",
+  "runtime_tree_sha256": "2a3bbb259179152ca38e659370afdeeabf670bf1f96e2bc91568a7c9cfc93b47",
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive_bytes": 186080,
+  "source_archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+  "upstream_dir": "upstream"
+}

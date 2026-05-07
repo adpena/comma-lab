@@ -55,6 +55,10 @@ def test_build_hdm3_archive_candidate_is_byte_closed_but_not_dispatch_ready(
     assert manifest["decoder_raw_equivalence"]["scale_roundtrip_equal"] is True
     assert manifest["runtime_adapter_proof"]["runtime_adapter_parity_proven"] is False
     assert manifest["runtime_adapter_proof"]["runtime_adapter_module"] == "tac.hnerv_hdm3_runtime_adapter"
+    assert manifest["fixed_runtime_preflight"]["ready_for_fixed_runtime_exact_eval_readiness"] is False
+    assert "hdm3_runtime_adapter_payload_identity_not_proven" in manifest["fixed_runtime_preflight"][
+        "blockers"
+    ]
     assert "hdm3_runtime_adapter_archive_parity_proof_missing" in manifest["dispatch_blockers"]
     assert "strict_pre_submission_compliance_json_missing" in manifest["dispatch_blockers"]
     assert "exact_cuda_auth_eval_missing" in manifest["dispatch_blockers"]
@@ -167,6 +171,20 @@ def test_hdm3_exact_eval_packet_readiness_clears_static_only_with_strict_inputs(
     assert readiness["static_packet_ready"] is True
     assert readiness["ready_for_exact_eval_dispatch"] is False
     assert readiness["runtime_adapter_payload_identity"]["runtime_adapter_parity_proven"] is True
+    runtime_contract = readiness["runtime_tree_inflate_output_parity"]
+    assert runtime_contract["runtime_tree_closure_proven"] is True
+    assert runtime_contract["inflate_output_parity_proven_by_payload_identity"] is True
+    assert runtime_contract["exact_frame_output_parity_run"] is False
+    assert runtime_contract["ready_for_exact_eval_dispatch"] is False
+    assert len(runtime_contract["runtime_tree_sha256"]) == 64
+    assert runtime_contract["runtime_tree_manifest_source"].endswith(
+        "contest_auth_eval.py::_runtime_dependency_manifest"
+    )
+    assert readiness["fixed_runtime_preflight"]["ready_for_fixed_runtime_exact_eval_readiness"] is True
+    assert readiness["fixed_runtime_preflight"]["ready_for_exact_eval_dispatch"] is False
+    assert readiness["fixed_runtime_preflight"]["runtime_tree_sha256"] == runtime_contract[
+        "runtime_tree_sha256"
+    ]
     assert readiness["strict_static_compliance"]["passed"] is True
     assert readiness["static_blockers"] == []
     assert readiness["dispatch_blockers"] == [
@@ -174,6 +192,7 @@ def test_hdm3_exact_eval_packet_readiness_clears_static_only_with_strict_inputs(
         "exact_cuda_auth_eval_missing",
     ]
     assert (out / "hdm3_exact_eval_packet_readiness.json").exists()
+    assert (out / "hdm3_runtime_tree_closure.json").exists()
 
 
 def test_build_hdm3_archive_candidate_fails_closed_without_rate_win(tmp_path: Path) -> None:

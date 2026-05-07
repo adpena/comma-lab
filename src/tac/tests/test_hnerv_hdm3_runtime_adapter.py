@@ -50,6 +50,7 @@ def test_restore_hdm3_payload_to_legacy_brotli_preserves_raw_decoder_and_latents
     assert proof["ready_for_exact_eval_dispatch"] is False
     assert proof["proof_scope"] == "payload_identity_and_legacy_decoder_normalization_only"
     assert proof["exact_eval_packet_readiness_artifact_required"] is True
+    assert proof["runtime_tree_closure_contract_required"] is True
     assert proof["strict_static_compliance_required"] is True
     assert proof["lane_dispatch_claim_required_before_gpu"] is True
     assert proof["exact_cuda_auth_eval_required_before_score"] is True

@@ -196,6 +196,7 @@ def _proof(
         and input_latents_sha == output_latents_sha,
         "ready_for_exact_eval_dispatch": False,
         "exact_eval_packet_readiness_artifact_required": True,
+        "runtime_tree_closure_contract_required": True,
         "strict_static_compliance_required": True,
         "lane_dispatch_claim_required_before_gpu": True,
         "exact_cuda_auth_eval_required_before_score": True,
