@@ -1,0 +1,1968 @@
+{
+  "artifact_summaries": {
+    "latent": {
+      "archive": {
+        "archive_manifest": {
+          "allocator_path": "",
+          "exists": false,
+          "path": "",
+          "sha256": ""
+        },
+        "bytes": 186262,
+        "exists": true,
+        "path": "experiments/results/lane_pr106_latent_sidecar_cpu_smoke_20260505/sidecar_archive.zip",
+        "sha256": "5560af2a6a47db14c0f6ad04eaf832d32f88df103d1eb238a904bb166eb87242",
+        "source_bytes": 186239,
+        "source_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+      },
+      "artifact_exists": true,
+      "artifact_path": "experiments/results/lane_pr106_latent_sidecar_cpu_smoke_20260505/build_metadata.json",
+      "artifact_sha256": "d09b51f356a048fba0c655e098fa5c2e094850f5fe98d040ec56cd270673fd9a",
+      "byte_delta_vs_stack_source": 23,
+      "candidate_static_preflight_ready": null,
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "cpu_smoke_or_heuristic_builder_output",
+        "requires_scorer_backed_cuda_latent_search",
+        "requires_exact_cuda_auth_eval",
+        "latent_requires_exact_cuda_auth_eval"
+      ],
+      "evidence_grade": "empirical_build_only",
+      "exact_cuda_artifact": null,
+      "kind": "sidechannel",
+      "name": "latent",
+      "ready_for_archive_preflight": null,
+      "ready_for_exact_eval_dispatch": false,
+      "remote_gpu_run": null,
+      "score_claim": false,
+      "static_packet_ready": null
+    },
+    "lrl1": {
+      "archive": {
+        "archive_manifest": {
+          "allocator_path": "",
+          "exists": false,
+          "path": "",
+          "sha256": ""
+        },
+        "bytes": 186289,
+        "exists": true,
+        "path": "/tmp/lrl1_smoke_20260505T140305Z/pr106_lrl1_sidechannel_archive.zip",
+        "sha256": "983e34a01c60604eb87b1f971ed989527f4aa5d60c9f8f5ee494c041e6f50e6f",
+        "source_bytes": 186239,
+        "source_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+      },
+      "artifact_exists": true,
+      "artifact_path": "experiments/results/lane_pr106_lrl1_cpu_smoke_20260505T140325Z/build_metadata.json",
+      "artifact_sha256": "2c2083d4ef656912400b5e4ac16a304c6723c7b029a2fd40f6925d9b62eb5a68",
+      "byte_delta_vs_stack_source": 50,
+      "candidate_static_preflight_ready": null,
+      "dispatch_attempted": null,
+      "dispatch_blockers": [
+        "lrl1_requires_exact_cuda_auth_eval"
+      ],
+      "evidence_grade": "empirical_local_scaffold_planning",
+      "exact_cuda_artifact": null,
+      "kind": "sidechannel",
+      "name": "lrl1",
+      "ready_for_archive_preflight": null,
+      "ready_for_exact_eval_dispatch": null,
+      "remote_gpu_run": null,
+      "score_claim": false,
+      "static_packet_ready": null
+    },
+    "three_sister_stack": {
+      "archive": {
+        "archive_manifest": {
+          "allocator_path": "",
+          "exists": false,
+          "path": "",
+          "sha256": ""
+        },
+        "bytes": 186348,
+        "exists": true,
+        "path": "/tmp/pr106_stacked_3sister_20260505T140325Z/pr106_stacked_archive.zip",
+        "sha256": "28a3c751f2280e702c8ef58c8430407bffa79a1e7914ec879a15c6314d710bd6",
+        "source_bytes": 186239,
+        "source_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+      },
+      "artifact_exists": true,
+      "artifact_path": "experiments/results/lane_pr106_stacked_3sister_cpu_smoke_20260505T140325Z/build_metadata.json",
+      "artifact_sha256": "cae0fbbe0632f119a681ec33ae5b1bc162acb909b2926ed94f7359f88d31f85e",
+      "byte_delta_vs_stack_source": 109,
+      "candidate_static_preflight_ready": null,
+      "dispatch_attempted": null,
+      "dispatch_blockers": [
+        "three_sister_stack_requires_exact_cuda_auth_eval"
+      ],
+      "evidence_grade": "empirical_stack_scaffold_planning",
+      "exact_cuda_artifact": null,
+      "kind": "stack",
+      "name": "three_sister_stack",
+      "ready_for_archive_preflight": null,
+      "ready_for_exact_eval_dispatch": null,
+      "remote_gpu_run": null,
+      "score_claim": false,
+      "static_packet_ready": null
+    },
+    "wavelet_apply_gate": {
+      "archive": {
+        "archive_manifest": {
+          "allocator_path": "",
+          "exists": false,
+          "path": "",
+          "sha256": ""
+        },
+        "bytes": null,
+        "exists": false,
+        "path": "",
+        "sha256": "4e9846a98bf7b5d543552dabe34fd067d5b039ee1d3a75eebb83ff67bb88a993",
+        "source_bytes": 186239,
+        "source_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e"
+      },
+      "artifact_exists": true,
+      "artifact_path": "experiments/results/hnerv_wavelet_apply_gate_pr106x_20260506_codex.json",
+      "artifact_sha256": "8cf77a6c59f1d3421701de27f2bfd688d2cca3b812e40c0f90fcc90465af6940",
+      "byte_delta_vs_stack_source": 387,
+      "candidate_static_preflight_ready": null,
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "requires_reviewed_wr01_apply_transform",
+        "requires_component_benefit_evidence_over_break_even",
+        "requires_archive_manifest_preflight",
+        "requires_exact_cuda_auth_eval",
+        "wr01_rate_penalty_must_be_recovered_by_distortion",
+        "wr01_runtime_mode_is_explicit_noop",
+        "wavelet_apply_gate_requires_exact_cuda_auth_eval"
+      ],
+      "evidence_grade": "empirical_local_scaffold_planning",
+      "exact_cuda_artifact": null,
+      "kind": "gate",
+      "name": "wavelet_apply_gate",
+      "ready_for_archive_preflight": false,
+      "ready_for_exact_eval_dispatch": false,
+      "remote_gpu_run": null,
+      "score_claim": false,
+      "static_packet_ready": null
+    },
+    "wavelet_noop_stack": {
+      "archive": {
+        "archive_manifest": {
+          "allocator_path": "",
+          "exists": false,
+          "path": "",
+          "sha256": ""
+        },
+        "bytes": 186626,
+        "exists": true,
+        "path": "experiments/results/pr106_stacked_wavelet_wr01_noop_20260506_codex/pr106_stacked_archive.zip",
+        "sha256": "e1d22ae5e712944d5c5dd55a4a048eca17f98461ab643c74b6d7ec56b8bd64f1",
+        "source_bytes": 186239,
+        "source_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+      },
+      "artifact_exists": true,
+      "artifact_path": "experiments/results/pr106_stacked_wavelet_wr01_noop_20260506_codex/build_metadata.json",
+      "artifact_sha256": "475e73a0fbd083cdbe28625c9e8617685694cb19c701bd0fd9012461c06a5051",
+      "byte_delta_vs_stack_source": 387,
+      "candidate_static_preflight_ready": null,
+      "dispatch_attempted": null,
+      "dispatch_blockers": [
+        "compose_time_scaffold_only",
+        "requires_sister_sidechannels_to_win_exact_cuda_before_stack_dispatch",
+        "requires_archive_manifest_preflight",
+        "requires_exact_cuda_auth_eval",
+        "wavelet_wr01_runtime_mode_is_explicit_noop",
+        "wavelet_wr01_rate_regression_without_distortion_benefit",
+        "requires_reviewed_wavelet_apply_transform",
+        "wavelet_noop_stack_requires_exact_cuda_auth_eval"
+      ],
+      "evidence_grade": "empirical_stack_scaffold_planning",
+      "exact_cuda_artifact": null,
+      "kind": "stack",
+      "name": "wavelet_noop_stack",
+      "ready_for_archive_preflight": false,
+      "ready_for_exact_eval_dispatch": false,
+      "remote_gpu_run": null,
+      "score_claim": false,
+      "static_packet_ready": null
+    },
+    "wavelet_sidechannel": {
+      "archive": {
+        "archive_manifest": {
+          "allocator_path": "",
+          "exists": false,
+          "path": "",
+          "sha256": ""
+        },
+        "bytes": 186619,
+        "exists": true,
+        "path": "experiments/results/hnerv_wavelet_sidechannel_pr106x_20260506_codex/hnerv_wavelet_sidechannel_candidate.zip",
+        "sha256": "4e9846a98bf7b5d543552dabe34fd067d5b039ee1d3a75eebb83ff67bb88a993",
+        "source_bytes": 186231,
+        "source_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e"
+      },
+      "artifact_exists": true,
+      "artifact_path": "experiments/results/hnerv_wavelet_sidechannel_pr106x_20260506_codex/manifest.json",
+      "artifact_sha256": "7c6a666adee9d0585defaa87bf6d7a7d0b4160a4837a1b18ad1420439695d009",
+      "byte_delta_vs_stack_source": 388,
+      "candidate_static_preflight_ready": null,
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "candidate_sidechannel_not_applied_by_inflate_runtime",
+        "requires_inflate_runtime_integration",
+        "requires_archive_manifest_preflight",
+        "requires_exact_cuda_auth_eval",
+        "wavelet_sidechannel_requires_exact_cuda_auth_eval"
+      ],
+      "evidence_grade": "empirical_local_scaffold_planning",
+      "exact_cuda_artifact": null,
+      "kind": "sidechannel",
+      "name": "wavelet_sidechannel",
+      "ready_for_archive_preflight": false,
+      "ready_for_exact_eval_dispatch": false,
+      "remote_gpu_run": null,
+      "score_claim": false,
+      "static_packet_ready": null
+    },
+    "wr01_exact_eval_packet": {
+      "archive": {
+        "archive_manifest": {
+          "allocator_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
+          "bytes": 3864,
+          "exists": true,
+          "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
+          "sha256": "4553efa43b1e5ec81f18c9a0b6688ab0b7b7677f49255559a7378cedf37e08fd"
+        },
+        "bytes": 186222,
+        "exists": true,
+        "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip",
+        "sha256": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+        "source_bytes": 186231,
+        "source_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e"
+      },
+      "artifact_exists": true,
+      "artifact_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
+      "artifact_sha256": "cc1999364d2cd7f53d6608063e91dd87d79993476132a0cbf8822a97874698f8",
+      "byte_delta_vs_stack_source": -9,
+      "candidate_static_preflight_ready": true,
+      "dispatch_attempted": false,
+      "dispatch_blockers": [
+        "missing_lightning_environment",
+        "missing_active_lane_dispatch_claim",
+        "missing_operator_exact_cuda_approval",
+        "wr01_exact_eval_packet_requires_exact_cuda_auth_eval"
+      ],
+      "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+      "exact_cuda_artifact": null,
+      "kind": "packet",
+      "name": "wr01_exact_eval_packet",
+      "ready_for_archive_preflight": null,
+      "ready_for_exact_eval_dispatch": false,
+      "remote_gpu_run": null,
+      "score_claim": false,
+      "static_packet_ready": true
+    },
+    "yshift": {
+      "archive": {
+        "archive_manifest": {
+          "allocator_path": "",
+          "exists": false,
+          "path": "",
+          "sha256": ""
+        },
+        "bytes": 186283,
+        "exists": true,
+        "path": "/tmp/yshift_smoke_20260505T140305Z/pr106_yshift_sidechannel_archive.zip",
+        "sha256": "0930148490ea7897ec80f7658dd0e8c227cd92575cdfd730a3a4312ad2965678",
+        "source_bytes": 186239,
+        "source_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+      },
+      "artifact_exists": true,
+      "artifact_path": "experiments/results/lane_pr106_yshift_cpu_smoke_20260505T140325Z/build_metadata.json",
+      "artifact_sha256": "91f45c42a476f2992e867853e5c3fabe536e97fd46d5fd58bd7e37890761cc23",
+      "byte_delta_vs_stack_source": 44,
+      "candidate_static_preflight_ready": null,
+      "dispatch_attempted": null,
+      "dispatch_blockers": [
+        "yshift_requires_exact_cuda_auth_eval"
+      ],
+      "evidence_grade": "empirical_local_scaffold_planning",
+      "exact_cuda_artifact": null,
+      "kind": "sidechannel",
+      "name": "yshift",
+      "ready_for_archive_preflight": null,
+      "ready_for_exact_eval_dispatch": null,
+      "remote_gpu_run": null,
+      "score_claim": false,
+      "static_packet_ready": null
+    }
+  },
+  "baseline": {
+    "archive_size_bytes": 186231,
+    "avg_posenet_dist": 3.351e-05,
+    "avg_segnet_dist": 0.00067142,
+    "path": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json",
+    "score_recomputed_from_components": 0.20945123680571204
+  },
+  "blocker_count": 17,
+  "blockers": [
+    "stack_readiness_is_local_planning_only",
+    "requires_exact_cuda_auth_eval_before_score_claim",
+    "requires_no_dispatch_lane_claim_before_remote_submit",
+    "latent_exact_cuda_artifact_missing",
+    "yshift_exact_cuda_artifact_missing",
+    "lrl1_exact_cuda_artifact_missing",
+    "wr01_exact_eval_packet_exact_cuda_artifact_missing",
+    "wavelet_gate:requires_reviewed_wr01_apply_transform",
+    "wavelet_gate:requires_component_benefit_evidence_over_break_even",
+    "wavelet_gate:requires_archive_manifest_preflight",
+    "wavelet_gate:requires_exact_cuda_auth_eval",
+    "wavelet_gate:wr01_rate_penalty_must_be_recovered_by_distortion",
+    "wavelet_gate:wr01_runtime_mode_is_explicit_noop",
+    "wavelet_gate:wavelet_apply_gate_requires_exact_cuda_auth_eval",
+    "planning_only_atom_ranking",
+    "requires_stack_interaction_review",
+    "requires_exact_cuda_auth_eval"
+  ],
+  "candidate_exact_cuda_artifacts": {
+    "latent": null,
+    "lrl1": null,
+    "three_sister_stack": null,
+    "wavelet_apply_gate": null,
+    "wavelet_noop_stack": null,
+    "wavelet_sidechannel": null,
+    "wr01_exact_eval_packet": null,
+    "yshift": null
+  },
+  "dispatch_attempted": false,
+  "meta_lagrangian_atom_ledger": {
+    "atom_count": 6,
+    "base_pose_dist": 3.351e-05,
+    "byte_closed_archive_manifest_attached_count": 1,
+    "byte_closed_manifest_required_for_kkt": true,
+    "byte_closed_manifest_required_for_pareto": true,
+    "conflict_family_counts": {},
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "planning_only_atom_ranking",
+      "requires_stack_interaction_review",
+      "requires_exact_cuda_auth_eval"
+    ],
+    "family_group_counts": {
+      "pr106_sidechannel_stack": 6
+    },
+    "kkt_ready_for_field_planning_count": 0,
+    "lexicographic_feasibility_order": [
+      "ready_for_exact_eval_dispatch desc",
+      "rankable desc",
+      "byte_closed_archive_manifest_attached desc",
+      "non_proxy_row desc",
+      "pareto_frontier desc",
+      "kkt_ready_for_field_planning desc",
+      "expected_total_score_delta asc",
+      "expected_information_gain_nats desc"
+    ],
+    "pareto_eligible_count": 1,
+    "pareto_summary": {
+      "eligibility": "rankable_verified_byte_closed_archive_manifest_and_non_proxy",
+      "objective_direction": {
+        "archive_ready_for_stack_review": "max",
+        "byte_delta": "min",
+        "confidence": "max",
+        "expected_pose_dist_delta": "min",
+        "expected_seg_dist_delta": "min",
+        "expected_total_score_delta": "min"
+      },
+      "rankable_dominated_count": 0,
+      "rankable_frontier_count": 1,
+      "scope_counts": {
+        "pr106_sidechannel_stack": {
+          "dominated": 0,
+          "frontier": 1,
+          "rankable": 1
+        }
+      },
+      "scope_default": "family_group"
+    },
+    "proxy_row_count": 5,
+    "proxy_rows_dispatchable": false,
+    "ready_for_exact_eval_dispatch": false,
+    "requested_dispatchable_refused_count": 0,
+    "rows": [
+      {
+        "allocation_inference": false,
+        "archive_manifest_custody": {
+          "archive_bytes": 186222,
+          "archive_bytes_valid": true,
+          "archive_sha256": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628",
+          "archive_sha256_valid": true,
+          "blockers": [],
+          "exists": true,
+          "is_file": true,
+          "manifest_json_valid": true,
+          "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
+          "score_claim_false": true,
+          "sha256": "4553efa43b1e5ec81f18c9a0b6688ab0b7b7677f49255559a7378cedf37e08fd",
+          "sha256_actual": "4553efa43b1e5ec81f18c9a0b6688ab0b7b7677f49255559a7378cedf37e08fd",
+          "sha256_matches": true,
+          "sha256_valid": true,
+          "verified": true
+        },
+        "archive_manifest_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
+        "archive_manifest_sha256": "4553efa43b1e5ec81f18c9a0b6688ab0b7b7677f49255559a7378cedf37e08fd",
+        "archive_ready_for_stack_review": true,
+        "atom_id": "pr106_sidechannel_stack:wr01_exact_eval_packet",
+        "byte_closed_archive_manifest_attached": true,
+        "byte_delta": -9,
+        "class_support": [],
+        "confidence": 1.0,
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [],
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+        "evidence_source_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
+        "evidence_source_sha256": "cc1999364d2cd7f53d6608063e91dd87d79993476132a0cbf8822a97874698f8",
+        "exact_dispatch_blockers": {
+          "blocker_categories": {
+            "custody": [],
+            "dirty_worktree": [],
+            "dispatch_claim": [],
+            "exact_cuda_eval": [
+              "requires_exact_cuda_auth_eval"
+            ],
+            "interaction_model": [],
+            "kkt_or_admm": [
+              "kkt:kkt_proof_status_not_passed",
+              "kkt:kkt_proof_residual_missing",
+              "kkt_not_ready_for_field_planning"
+            ],
+            "other": [],
+            "pareto_frontier": [],
+            "proxy_or_planning": [
+              "planning_only_lagrangian_atom"
+            ],
+            "runtime": [],
+            "score_claim": []
+          },
+          "blocker_count": 5,
+          "blockers": [
+            "planning_only_lagrangian_atom",
+            "requires_exact_cuda_auth_eval",
+            "kkt:kkt_proof_status_not_passed",
+            "kkt:kkt_proof_residual_missing",
+            "kkt_not_ready_for_field_planning"
+          ],
+          "dispatch_attempted": false,
+          "dispatchable": false,
+          "next_required_proof": [
+            "passed_kkt_proof_or_converged_admm_waterline_result",
+            "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+          ],
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "exact_dispatch_blockers_v1",
+          "score_claim": false
+        },
+        "expected_information_gain_nats": 0.0,
+        "expected_pose_dist_delta": 0.0,
+        "expected_score_variance": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": -5.992731e-06,
+        "expected_uncertainty_reduction": {
+          "has_uncertainty_signal": false,
+          "source_fields": [],
+          "total_variance_reduction": 0.0
+        },
+        "family": "hnerv_wavelet_wr01_apply_transform",
+        "family_group": "pr106_sidechannel_stack",
+        "field_interaction_contract": {
+          "assumption_count": 2,
+          "assumptions": [
+            "archive/runtime custody is necessary but insufficient for score promotion",
+            "rate-only WR01 apply packet is stackable only after exact CUDA component response"
+          ],
+          "blockers": [],
+          "conflicts_with_atoms": [],
+          "conflicts_with_families": [],
+          "interaction_model": "",
+          "schema": "field_interaction_contract_v1",
+          "status": "passed",
+          "volterra_order": null,
+          "volterra_order_source": "",
+          "volterra_scope": "undeclared_order_first_order_assumptions_only",
+          "volterra_terms": [],
+          "volterra_terms_declared": false
+        },
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "geometry_priors": [],
+        "hard_pair_support": [],
+        "interaction_assumptions": [
+          "archive/runtime custody is necessary but insufficient for score promotion",
+          "rate-only WR01 apply packet is stackable only after exact CUDA component response"
+        ],
+        "kkt_blockers": [
+          "kkt:kkt_proof_status_not_passed",
+          "kkt:kkt_proof_residual_missing"
+        ],
+        "kkt_proof": {
+          "blockers": [
+            "kkt_proof_status_not_passed",
+            "kkt_proof_residual_missing"
+          ],
+          "candidates": [
+            {
+              "blockers": [
+                "kkt_proof_status_not_passed",
+                "kkt_proof_residual_missing"
+              ],
+              "kind": "kkt_proof",
+              "residual": null,
+              "residual_source": "",
+              "source": "kkt_proof",
+              "status": "blocked",
+              "tolerance": null,
+              "tolerance_source": ""
+            }
+          ],
+          "kind": "kkt_proof",
+          "residual": null,
+          "source": "kkt_proof",
+          "status": "blocked",
+          "tolerance": null
+        },
+        "kkt_ready_for_field_planning": false,
+        "lexicographic_feasibility_tuple": [
+          false,
+          true,
+          true,
+          true,
+          true,
+          false,
+          -5.992731e-06,
+          0.0
+        ],
+        "non_dominated_frontier_reason": {
+          "dominated_by": [],
+          "eligibility_blockers": [],
+          "eligible": true,
+          "frontier": true,
+          "objective_directions": {
+            "archive_ready_for_stack_review": "max",
+            "byte_delta": "min",
+            "confidence": "max",
+            "expected_pose_dist_delta": "min",
+            "expected_seg_dist_delta": "min",
+            "expected_total_score_delta": "min"
+          },
+          "objectives": {
+            "archive_ready_for_stack_review": 1.0,
+            "byte_delta": -9.0,
+            "confidence": 1.0,
+            "expected_pose_dist_delta": 0.0,
+            "expected_seg_dist_delta": 0.0,
+            "expected_total_score_delta": -5.992731e-06
+          },
+          "reason": "non_dominated_within_pareto_scope",
+          "schema": "non_dominated_frontier_reason_v1",
+          "scope": "pr106_sidechannel_stack",
+          "status": "non_dominated"
+        },
+        "observation_noise_variance": 0.0,
+        "openpilot_priors": [],
+        "pair_support": [],
+        "pareto_dominated_by": [],
+        "pareto_eligibility_blockers": [],
+        "pareto_eligible": true,
+        "pareto_frontier": true,
+        "pareto_objectives": {
+          "archive_ready_for_stack_review": 1.0,
+          "byte_delta": -9.0,
+          "confidence": 1.0,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "expected_total_score_delta": -5.992731e-06
+        },
+        "pareto_scope": "pr106_sidechannel_stack",
+        "pose_score_delta_confidence_weighted": 0.0,
+        "proxy_row": false,
+        "rankable": true,
+        "rate_score_delta": -5.992731e-06,
+        "ready_for_exact_eval_dispatch": false,
+        "requested_dispatchable": false,
+        "research_basis_ids": [
+          "PR106-sidechannel-stack-local-readiness"
+        ],
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 0.0,
+        "selection_blockers": [
+          "kkt_not_ready_for_field_planning"
+        ],
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0
+        },
+        "selection_penalty_units": 10.0,
+        "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+        "selection_score_delta": -5.992731e-06,
+        "source_archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e"
+      },
+      {
+        "allocation_inference": false,
+        "archive_manifest_custody": {
+          "archive_bytes": null,
+          "archive_bytes_valid": false,
+          "archive_sha256": "",
+          "archive_sha256_valid": false,
+          "blockers": [],
+          "exists": false,
+          "is_file": false,
+          "manifest_json_valid": false,
+          "path": "",
+          "score_claim_false": false,
+          "sha256": "",
+          "sha256_matches": false,
+          "sha256_valid": false,
+          "verified": false
+        },
+        "archive_manifest_path": "",
+        "archive_manifest_sha256": "",
+        "archive_ready_for_stack_review": false,
+        "atom_id": "pr106_sidechannel_stack:latent",
+        "byte_closed_archive_manifest_attached": false,
+        "byte_delta": 23,
+        "class_support": [],
+        "confidence": 0.0,
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [],
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval",
+          "source_marked_non_rankable",
+          "requires_byte_closed_archive",
+          "proxy_row_not_dispatchable"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "empirical_build_only",
+        "evidence_source_path": "experiments/results/lane_pr106_latent_sidecar_cpu_smoke_20260505/build_metadata.json",
+        "evidence_source_sha256": "d09b51f356a048fba0c655e098fa5c2e094850f5fe98d040ec56cd270673fd9a",
+        "exact_dispatch_blockers": {
+          "blocker_categories": {
+            "custody": [
+              "requires_byte_closed_archive",
+              "missing_byte_closed_archive_manifest"
+            ],
+            "dirty_worktree": [],
+            "dispatch_claim": [],
+            "exact_cuda_eval": [
+              "requires_exact_cuda_auth_eval"
+            ],
+            "interaction_model": [],
+            "kkt_or_admm": [
+              "proxy_evidence_not_kkt_ready",
+              "kkt:kkt_proof_status_not_passed",
+              "kkt:kkt_proof_residual_missing",
+              "kkt_not_ready_for_field_planning"
+            ],
+            "other": [
+              "source_marked_non_rankable",
+              "non_rankable_atom"
+            ],
+            "pareto_frontier": [
+              "pareto_ineligible_atom",
+              "pareto_ineligible_for_field_selection"
+            ],
+            "proxy_or_planning": [
+              "planning_only_lagrangian_atom",
+              "proxy_row_not_dispatchable",
+              "proxy_row"
+            ],
+            "runtime": [],
+            "score_claim": []
+          },
+          "blocker_count": 14,
+          "blockers": [
+            "planning_only_lagrangian_atom",
+            "requires_exact_cuda_auth_eval",
+            "source_marked_non_rankable",
+            "requires_byte_closed_archive",
+            "proxy_row_not_dispatchable",
+            "missing_byte_closed_archive_manifest",
+            "proxy_evidence_not_kkt_ready",
+            "kkt:kkt_proof_status_not_passed",
+            "kkt:kkt_proof_residual_missing",
+            "kkt_not_ready_for_field_planning",
+            "non_rankable_atom",
+            "pareto_ineligible_atom",
+            "proxy_row",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "dispatch_attempted": false,
+          "dispatchable": false,
+          "next_required_proof": [
+            "verified_byte_closed_archive_manifest_with_sha256_and_bytes",
+            "non_proxy_empirical_or_cuda_evidence",
+            "passed_kkt_proof_or_converged_admm_waterline_result",
+            "pareto_eligible_byte_closed_non_proxy_rankable_atom",
+            "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+          ],
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "exact_dispatch_blockers_v1",
+          "score_claim": false
+        },
+        "expected_information_gain_nats": 0.0,
+        "expected_pose_dist_delta": 0.0,
+        "expected_score_variance": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": 1.5314756e-05,
+        "expected_uncertainty_reduction": {
+          "has_uncertainty_signal": false,
+          "source_fields": [],
+          "total_variance_reduction": 0.0
+        },
+        "family": "pr106_latent_sidecar",
+        "family_group": "pr106_sidechannel_stack",
+        "field_interaction_contract": {
+          "assumption_count": 2,
+          "assumptions": [
+            "local CPU smoke byte deltas are planning inputs, not score evidence",
+            "sidechannel atoms compose only after sister lanes have candidate-specific exact CUDA evidence"
+          ],
+          "blockers": [],
+          "conflicts_with_atoms": [],
+          "conflicts_with_families": [],
+          "interaction_model": "",
+          "schema": "field_interaction_contract_v1",
+          "status": "passed",
+          "volterra_order": null,
+          "volterra_order_source": "",
+          "volterra_scope": "undeclared_order_first_order_assumptions_only",
+          "volterra_terms": [],
+          "volterra_terms_declared": false
+        },
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "geometry_priors": [],
+        "hard_pair_support": [],
+        "interaction_assumptions": [
+          "local CPU smoke byte deltas are planning inputs, not score evidence",
+          "sidechannel atoms compose only after sister lanes have candidate-specific exact CUDA evidence"
+        ],
+        "kkt_blockers": [
+          "source_marked_non_rankable",
+          "missing_byte_closed_archive_manifest",
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_status_not_passed",
+          "kkt:kkt_proof_residual_missing"
+        ],
+        "kkt_proof": {
+          "blockers": [
+            "kkt_proof_status_not_passed",
+            "kkt_proof_residual_missing"
+          ],
+          "candidates": [
+            {
+              "blockers": [
+                "kkt_proof_status_not_passed",
+                "kkt_proof_residual_missing"
+              ],
+              "kind": "kkt_proof",
+              "residual": null,
+              "residual_source": "",
+              "source": "kkt_proof",
+              "status": "blocked",
+              "tolerance": null,
+              "tolerance_source": ""
+            }
+          ],
+          "kind": "kkt_proof",
+          "residual": null,
+          "source": "kkt_proof",
+          "status": "blocked",
+          "tolerance": null
+        },
+        "kkt_ready_for_field_planning": false,
+        "lexicographic_feasibility_tuple": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          1.5314756e-05,
+          0.0
+        ],
+        "non_dominated_frontier_reason": {
+          "dominated_by": [],
+          "eligibility_blockers": [
+            "non_rankable_atom",
+            "missing_byte_closed_archive_manifest",
+            "proxy_row"
+          ],
+          "eligible": false,
+          "frontier": false,
+          "objective_directions": {
+            "archive_ready_for_stack_review": "max",
+            "byte_delta": "min",
+            "confidence": "max",
+            "expected_pose_dist_delta": "min",
+            "expected_seg_dist_delta": "min",
+            "expected_total_score_delta": "min"
+          },
+          "objectives": {
+            "archive_ready_for_stack_review": 0.0,
+            "byte_delta": 23.0,
+            "confidence": 0.0,
+            "expected_pose_dist_delta": 0.0,
+            "expected_seg_dist_delta": 0.0,
+            "expected_total_score_delta": 1.5314756e-05
+          },
+          "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+          "schema": "non_dominated_frontier_reason_v1",
+          "scope": "pr106_sidechannel_stack",
+          "status": "ineligible"
+        },
+        "observation_noise_variance": 0.0,
+        "openpilot_priors": [],
+        "pair_support": [],
+        "pareto_dominated_by": [],
+        "pareto_eligibility_blockers": [
+          "non_rankable_atom",
+          "missing_byte_closed_archive_manifest",
+          "proxy_row"
+        ],
+        "pareto_eligible": false,
+        "pareto_frontier": false,
+        "pareto_objectives": {
+          "archive_ready_for_stack_review": 0.0,
+          "byte_delta": 23.0,
+          "confidence": 0.0,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "expected_total_score_delta": 1.5314756e-05
+        },
+        "pareto_scope": "pr106_sidechannel_stack",
+        "pose_score_delta_confidence_weighted": 0.0,
+        "proxy_row": true,
+        "rankable": false,
+        "rate_score_delta": 1.5314756e-05,
+        "ready_for_exact_eval_dispatch": false,
+        "requested_dispatchable": false,
+        "research_basis_ids": [
+          "PR106-sidechannel-stack-local-readiness"
+        ],
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 0.0,
+        "selection_blockers": [
+          "kkt_not_ready_for_field_planning",
+          "missing_byte_closed_archive_manifest",
+          "non_rankable_atom",
+          "pareto_ineligible_atom",
+          "proxy_row"
+        ],
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "missing_byte_closed_archive_manifest": 100.0,
+          "non_rankable_atom": 1000.0,
+          "pareto_ineligible_atom": 25.0,
+          "proxy_row": 50.0
+        },
+        "selection_penalty_units": 1185.0,
+        "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+        "selection_score_delta": 1.5314756e-05,
+        "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+      },
+      {
+        "allocation_inference": false,
+        "archive_manifest_custody": {
+          "archive_bytes": null,
+          "archive_bytes_valid": false,
+          "archive_sha256": "",
+          "archive_sha256_valid": false,
+          "blockers": [],
+          "exists": false,
+          "is_file": false,
+          "manifest_json_valid": false,
+          "path": "",
+          "score_claim_false": false,
+          "sha256": "",
+          "sha256_matches": false,
+          "sha256_valid": false,
+          "verified": false
+        },
+        "archive_manifest_path": "",
+        "archive_manifest_sha256": "",
+        "archive_ready_for_stack_review": false,
+        "atom_id": "pr106_sidechannel_stack:yshift",
+        "byte_closed_archive_manifest_attached": false,
+        "byte_delta": 44,
+        "class_support": [],
+        "confidence": 0.0,
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [],
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval",
+          "source_marked_non_rankable",
+          "requires_byte_closed_archive",
+          "proxy_row_not_dispatchable"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "empirical_local_scaffold_planning",
+        "evidence_source_path": "experiments/results/lane_pr106_yshift_cpu_smoke_20260505T140325Z/build_metadata.json",
+        "evidence_source_sha256": "91f45c42a476f2992e867853e5c3fabe536e97fd46d5fd58bd7e37890761cc23",
+        "exact_dispatch_blockers": {
+          "blocker_categories": {
+            "custody": [
+              "requires_byte_closed_archive",
+              "missing_byte_closed_archive_manifest"
+            ],
+            "dirty_worktree": [],
+            "dispatch_claim": [],
+            "exact_cuda_eval": [
+              "requires_exact_cuda_auth_eval"
+            ],
+            "interaction_model": [],
+            "kkt_or_admm": [
+              "proxy_evidence_not_kkt_ready",
+              "kkt:kkt_proof_status_not_passed",
+              "kkt:kkt_proof_residual_missing",
+              "kkt_not_ready_for_field_planning"
+            ],
+            "other": [
+              "source_marked_non_rankable",
+              "non_rankable_atom"
+            ],
+            "pareto_frontier": [
+              "pareto_ineligible_atom",
+              "pareto_ineligible_for_field_selection"
+            ],
+            "proxy_or_planning": [
+              "planning_only_lagrangian_atom",
+              "proxy_row_not_dispatchable",
+              "proxy_row"
+            ],
+            "runtime": [],
+            "score_claim": []
+          },
+          "blocker_count": 14,
+          "blockers": [
+            "planning_only_lagrangian_atom",
+            "requires_exact_cuda_auth_eval",
+            "source_marked_non_rankable",
+            "requires_byte_closed_archive",
+            "proxy_row_not_dispatchable",
+            "missing_byte_closed_archive_manifest",
+            "proxy_evidence_not_kkt_ready",
+            "kkt:kkt_proof_status_not_passed",
+            "kkt:kkt_proof_residual_missing",
+            "kkt_not_ready_for_field_planning",
+            "non_rankable_atom",
+            "pareto_ineligible_atom",
+            "proxy_row",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "dispatch_attempted": false,
+          "dispatchable": false,
+          "next_required_proof": [
+            "verified_byte_closed_archive_manifest_with_sha256_and_bytes",
+            "non_proxy_empirical_or_cuda_evidence",
+            "passed_kkt_proof_or_converged_admm_waterline_result",
+            "pareto_eligible_byte_closed_non_proxy_rankable_atom",
+            "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+          ],
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "exact_dispatch_blockers_v1",
+          "score_claim": false
+        },
+        "expected_information_gain_nats": 0.0,
+        "expected_pose_dist_delta": 0.0,
+        "expected_score_variance": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": 2.9297794e-05,
+        "expected_uncertainty_reduction": {
+          "has_uncertainty_signal": false,
+          "source_fields": [],
+          "total_variance_reduction": 0.0
+        },
+        "family": "pr106_yshift_sidechannel",
+        "family_group": "pr106_sidechannel_stack",
+        "field_interaction_contract": {
+          "assumption_count": 2,
+          "assumptions": [
+            "local CPU smoke byte deltas are planning inputs, not score evidence",
+            "sidechannel atoms compose only after sister lanes have candidate-specific exact CUDA evidence"
+          ],
+          "blockers": [],
+          "conflicts_with_atoms": [],
+          "conflicts_with_families": [],
+          "interaction_model": "",
+          "schema": "field_interaction_contract_v1",
+          "status": "passed",
+          "volterra_order": null,
+          "volterra_order_source": "",
+          "volterra_scope": "undeclared_order_first_order_assumptions_only",
+          "volterra_terms": [],
+          "volterra_terms_declared": false
+        },
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "geometry_priors": [],
+        "hard_pair_support": [],
+        "interaction_assumptions": [
+          "local CPU smoke byte deltas are planning inputs, not score evidence",
+          "sidechannel atoms compose only after sister lanes have candidate-specific exact CUDA evidence"
+        ],
+        "kkt_blockers": [
+          "source_marked_non_rankable",
+          "missing_byte_closed_archive_manifest",
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_status_not_passed",
+          "kkt:kkt_proof_residual_missing"
+        ],
+        "kkt_proof": {
+          "blockers": [
+            "kkt_proof_status_not_passed",
+            "kkt_proof_residual_missing"
+          ],
+          "candidates": [
+            {
+              "blockers": [
+                "kkt_proof_status_not_passed",
+                "kkt_proof_residual_missing"
+              ],
+              "kind": "kkt_proof",
+              "residual": null,
+              "residual_source": "",
+              "source": "kkt_proof",
+              "status": "blocked",
+              "tolerance": null,
+              "tolerance_source": ""
+            }
+          ],
+          "kind": "kkt_proof",
+          "residual": null,
+          "source": "kkt_proof",
+          "status": "blocked",
+          "tolerance": null
+        },
+        "kkt_ready_for_field_planning": false,
+        "lexicographic_feasibility_tuple": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          2.9297794e-05,
+          0.0
+        ],
+        "non_dominated_frontier_reason": {
+          "dominated_by": [],
+          "eligibility_blockers": [
+            "non_rankable_atom",
+            "missing_byte_closed_archive_manifest",
+            "proxy_row"
+          ],
+          "eligible": false,
+          "frontier": false,
+          "objective_directions": {
+            "archive_ready_for_stack_review": "max",
+            "byte_delta": "min",
+            "confidence": "max",
+            "expected_pose_dist_delta": "min",
+            "expected_seg_dist_delta": "min",
+            "expected_total_score_delta": "min"
+          },
+          "objectives": {
+            "archive_ready_for_stack_review": 0.0,
+            "byte_delta": 44.0,
+            "confidence": 0.0,
+            "expected_pose_dist_delta": 0.0,
+            "expected_seg_dist_delta": 0.0,
+            "expected_total_score_delta": 2.9297794e-05
+          },
+          "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+          "schema": "non_dominated_frontier_reason_v1",
+          "scope": "pr106_sidechannel_stack",
+          "status": "ineligible"
+        },
+        "observation_noise_variance": 0.0,
+        "openpilot_priors": [],
+        "pair_support": [],
+        "pareto_dominated_by": [],
+        "pareto_eligibility_blockers": [
+          "non_rankable_atom",
+          "missing_byte_closed_archive_manifest",
+          "proxy_row"
+        ],
+        "pareto_eligible": false,
+        "pareto_frontier": false,
+        "pareto_objectives": {
+          "archive_ready_for_stack_review": 0.0,
+          "byte_delta": 44.0,
+          "confidence": 0.0,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "expected_total_score_delta": 2.9297794e-05
+        },
+        "pareto_scope": "pr106_sidechannel_stack",
+        "pose_score_delta_confidence_weighted": 0.0,
+        "proxy_row": true,
+        "rankable": false,
+        "rate_score_delta": 2.9297794e-05,
+        "ready_for_exact_eval_dispatch": false,
+        "requested_dispatchable": false,
+        "research_basis_ids": [
+          "PR106-sidechannel-stack-local-readiness"
+        ],
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 0.0,
+        "selection_blockers": [
+          "kkt_not_ready_for_field_planning",
+          "missing_byte_closed_archive_manifest",
+          "non_rankable_atom",
+          "pareto_ineligible_atom",
+          "proxy_row"
+        ],
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "missing_byte_closed_archive_manifest": 100.0,
+          "non_rankable_atom": 1000.0,
+          "pareto_ineligible_atom": 25.0,
+          "proxy_row": 50.0
+        },
+        "selection_penalty_units": 1185.0,
+        "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+        "selection_score_delta": 2.9297794e-05,
+        "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+      },
+      {
+        "allocation_inference": false,
+        "archive_manifest_custody": {
+          "archive_bytes": null,
+          "archive_bytes_valid": false,
+          "archive_sha256": "",
+          "archive_sha256_valid": false,
+          "blockers": [],
+          "exists": false,
+          "is_file": false,
+          "manifest_json_valid": false,
+          "path": "",
+          "score_claim_false": false,
+          "sha256": "",
+          "sha256_matches": false,
+          "sha256_valid": false,
+          "verified": false
+        },
+        "archive_manifest_path": "",
+        "archive_manifest_sha256": "",
+        "archive_ready_for_stack_review": false,
+        "atom_id": "pr106_sidechannel_stack:lrl1",
+        "byte_closed_archive_manifest_attached": false,
+        "byte_delta": 50,
+        "class_support": [],
+        "confidence": 0.0,
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [],
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval",
+          "source_marked_non_rankable",
+          "requires_byte_closed_archive",
+          "proxy_row_not_dispatchable"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "empirical_local_scaffold_planning",
+        "evidence_source_path": "experiments/results/lane_pr106_lrl1_cpu_smoke_20260505T140325Z/build_metadata.json",
+        "evidence_source_sha256": "2c2083d4ef656912400b5e4ac16a304c6723c7b029a2fd40f6925d9b62eb5a68",
+        "exact_dispatch_blockers": {
+          "blocker_categories": {
+            "custody": [
+              "requires_byte_closed_archive",
+              "missing_byte_closed_archive_manifest"
+            ],
+            "dirty_worktree": [],
+            "dispatch_claim": [],
+            "exact_cuda_eval": [
+              "requires_exact_cuda_auth_eval"
+            ],
+            "interaction_model": [],
+            "kkt_or_admm": [
+              "proxy_evidence_not_kkt_ready",
+              "kkt:kkt_proof_status_not_passed",
+              "kkt:kkt_proof_residual_missing",
+              "kkt_not_ready_for_field_planning"
+            ],
+            "other": [
+              "source_marked_non_rankable",
+              "non_rankable_atom"
+            ],
+            "pareto_frontier": [
+              "pareto_ineligible_atom",
+              "pareto_ineligible_for_field_selection"
+            ],
+            "proxy_or_planning": [
+              "planning_only_lagrangian_atom",
+              "proxy_row_not_dispatchable",
+              "proxy_row"
+            ],
+            "runtime": [],
+            "score_claim": []
+          },
+          "blocker_count": 14,
+          "blockers": [
+            "planning_only_lagrangian_atom",
+            "requires_exact_cuda_auth_eval",
+            "source_marked_non_rankable",
+            "requires_byte_closed_archive",
+            "proxy_row_not_dispatchable",
+            "missing_byte_closed_archive_manifest",
+            "proxy_evidence_not_kkt_ready",
+            "kkt:kkt_proof_status_not_passed",
+            "kkt:kkt_proof_residual_missing",
+            "kkt_not_ready_for_field_planning",
+            "non_rankable_atom",
+            "pareto_ineligible_atom",
+            "proxy_row",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "dispatch_attempted": false,
+          "dispatchable": false,
+          "next_required_proof": [
+            "verified_byte_closed_archive_manifest_with_sha256_and_bytes",
+            "non_proxy_empirical_or_cuda_evidence",
+            "passed_kkt_proof_or_converged_admm_waterline_result",
+            "pareto_eligible_byte_closed_non_proxy_rankable_atom",
+            "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+          ],
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "exact_dispatch_blockers_v1",
+          "score_claim": false
+        },
+        "expected_information_gain_nats": 0.0,
+        "expected_pose_dist_delta": 0.0,
+        "expected_score_variance": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": 3.3292948e-05,
+        "expected_uncertainty_reduction": {
+          "has_uncertainty_signal": false,
+          "source_fields": [],
+          "total_variance_reduction": 0.0
+        },
+        "family": "pr106_lrl1_sidechannel",
+        "family_group": "pr106_sidechannel_stack",
+        "field_interaction_contract": {
+          "assumption_count": 2,
+          "assumptions": [
+            "local CPU smoke byte deltas are planning inputs, not score evidence",
+            "sidechannel atoms compose only after sister lanes have candidate-specific exact CUDA evidence"
+          ],
+          "blockers": [],
+          "conflicts_with_atoms": [],
+          "conflicts_with_families": [],
+          "interaction_model": "",
+          "schema": "field_interaction_contract_v1",
+          "status": "passed",
+          "volterra_order": null,
+          "volterra_order_source": "",
+          "volterra_scope": "undeclared_order_first_order_assumptions_only",
+          "volterra_terms": [],
+          "volterra_terms_declared": false
+        },
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "geometry_priors": [],
+        "hard_pair_support": [],
+        "interaction_assumptions": [
+          "local CPU smoke byte deltas are planning inputs, not score evidence",
+          "sidechannel atoms compose only after sister lanes have candidate-specific exact CUDA evidence"
+        ],
+        "kkt_blockers": [
+          "source_marked_non_rankable",
+          "missing_byte_closed_archive_manifest",
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_status_not_passed",
+          "kkt:kkt_proof_residual_missing"
+        ],
+        "kkt_proof": {
+          "blockers": [
+            "kkt_proof_status_not_passed",
+            "kkt_proof_residual_missing"
+          ],
+          "candidates": [
+            {
+              "blockers": [
+                "kkt_proof_status_not_passed",
+                "kkt_proof_residual_missing"
+              ],
+              "kind": "kkt_proof",
+              "residual": null,
+              "residual_source": "",
+              "source": "kkt_proof",
+              "status": "blocked",
+              "tolerance": null,
+              "tolerance_source": ""
+            }
+          ],
+          "kind": "kkt_proof",
+          "residual": null,
+          "source": "kkt_proof",
+          "status": "blocked",
+          "tolerance": null
+        },
+        "kkt_ready_for_field_planning": false,
+        "lexicographic_feasibility_tuple": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          3.3292948e-05,
+          0.0
+        ],
+        "non_dominated_frontier_reason": {
+          "dominated_by": [],
+          "eligibility_blockers": [
+            "non_rankable_atom",
+            "missing_byte_closed_archive_manifest",
+            "proxy_row"
+          ],
+          "eligible": false,
+          "frontier": false,
+          "objective_directions": {
+            "archive_ready_for_stack_review": "max",
+            "byte_delta": "min",
+            "confidence": "max",
+            "expected_pose_dist_delta": "min",
+            "expected_seg_dist_delta": "min",
+            "expected_total_score_delta": "min"
+          },
+          "objectives": {
+            "archive_ready_for_stack_review": 0.0,
+            "byte_delta": 50.0,
+            "confidence": 0.0,
+            "expected_pose_dist_delta": 0.0,
+            "expected_seg_dist_delta": 0.0,
+            "expected_total_score_delta": 3.3292948e-05
+          },
+          "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+          "schema": "non_dominated_frontier_reason_v1",
+          "scope": "pr106_sidechannel_stack",
+          "status": "ineligible"
+        },
+        "observation_noise_variance": 0.0,
+        "openpilot_priors": [],
+        "pair_support": [],
+        "pareto_dominated_by": [],
+        "pareto_eligibility_blockers": [
+          "non_rankable_atom",
+          "missing_byte_closed_archive_manifest",
+          "proxy_row"
+        ],
+        "pareto_eligible": false,
+        "pareto_frontier": false,
+        "pareto_objectives": {
+          "archive_ready_for_stack_review": 0.0,
+          "byte_delta": 50.0,
+          "confidence": 0.0,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "expected_total_score_delta": 3.3292948e-05
+        },
+        "pareto_scope": "pr106_sidechannel_stack",
+        "pose_score_delta_confidence_weighted": 0.0,
+        "proxy_row": true,
+        "rankable": false,
+        "rate_score_delta": 3.3292948e-05,
+        "ready_for_exact_eval_dispatch": false,
+        "requested_dispatchable": false,
+        "research_basis_ids": [
+          "PR106-sidechannel-stack-local-readiness"
+        ],
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 0.0,
+        "selection_blockers": [
+          "kkt_not_ready_for_field_planning",
+          "missing_byte_closed_archive_manifest",
+          "non_rankable_atom",
+          "pareto_ineligible_atom",
+          "proxy_row"
+        ],
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "missing_byte_closed_archive_manifest": 100.0,
+          "non_rankable_atom": 1000.0,
+          "pareto_ineligible_atom": 25.0,
+          "proxy_row": 50.0
+        },
+        "selection_penalty_units": 1185.0,
+        "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+        "selection_score_delta": 3.3292948e-05,
+        "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+      },
+      {
+        "allocation_inference": false,
+        "archive_manifest_custody": {
+          "archive_bytes": null,
+          "archive_bytes_valid": false,
+          "archive_sha256": "",
+          "archive_sha256_valid": false,
+          "blockers": [],
+          "exists": false,
+          "is_file": false,
+          "manifest_json_valid": false,
+          "path": "",
+          "score_claim_false": false,
+          "sha256": "",
+          "sha256_matches": false,
+          "sha256_valid": false,
+          "verified": false
+        },
+        "archive_manifest_path": "",
+        "archive_manifest_sha256": "",
+        "archive_ready_for_stack_review": false,
+        "atom_id": "pr106_sidechannel_stack:three_sister_stack",
+        "byte_closed_archive_manifest_attached": false,
+        "byte_delta": 109,
+        "class_support": [],
+        "confidence": 0.0,
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [],
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval",
+          "source_marked_non_rankable",
+          "requires_byte_closed_archive",
+          "proxy_row_not_dispatchable"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "empirical_stack_scaffold_planning",
+        "evidence_source_path": "experiments/results/lane_pr106_stacked_3sister_cpu_smoke_20260505T140325Z/build_metadata.json",
+        "evidence_source_sha256": "cae0fbbe0632f119a681ec33ae5b1bc162acb909b2926ed94f7359f88d31f85e",
+        "exact_dispatch_blockers": {
+          "blocker_categories": {
+            "custody": [
+              "requires_byte_closed_archive",
+              "missing_byte_closed_archive_manifest"
+            ],
+            "dirty_worktree": [],
+            "dispatch_claim": [],
+            "exact_cuda_eval": [
+              "requires_exact_cuda_auth_eval"
+            ],
+            "interaction_model": [],
+            "kkt_or_admm": [
+              "proxy_evidence_not_kkt_ready",
+              "kkt:kkt_proof_status_not_passed",
+              "kkt:kkt_proof_residual_missing",
+              "kkt_not_ready_for_field_planning"
+            ],
+            "other": [
+              "source_marked_non_rankable",
+              "non_rankable_atom"
+            ],
+            "pareto_frontier": [
+              "pareto_ineligible_atom",
+              "pareto_ineligible_for_field_selection"
+            ],
+            "proxy_or_planning": [
+              "planning_only_lagrangian_atom",
+              "proxy_row_not_dispatchable",
+              "proxy_row"
+            ],
+            "runtime": [],
+            "score_claim": []
+          },
+          "blocker_count": 14,
+          "blockers": [
+            "planning_only_lagrangian_atom",
+            "requires_exact_cuda_auth_eval",
+            "source_marked_non_rankable",
+            "requires_byte_closed_archive",
+            "proxy_row_not_dispatchable",
+            "missing_byte_closed_archive_manifest",
+            "proxy_evidence_not_kkt_ready",
+            "kkt:kkt_proof_status_not_passed",
+            "kkt:kkt_proof_residual_missing",
+            "kkt_not_ready_for_field_planning",
+            "non_rankable_atom",
+            "pareto_ineligible_atom",
+            "proxy_row",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "dispatch_attempted": false,
+          "dispatchable": false,
+          "next_required_proof": [
+            "verified_byte_closed_archive_manifest_with_sha256_and_bytes",
+            "non_proxy_empirical_or_cuda_evidence",
+            "passed_kkt_proof_or_converged_admm_waterline_result",
+            "pareto_eligible_byte_closed_non_proxy_rankable_atom",
+            "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+          ],
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "exact_dispatch_blockers_v1",
+          "score_claim": false
+        },
+        "expected_information_gain_nats": 0.0,
+        "expected_pose_dist_delta": 0.0,
+        "expected_score_variance": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": 7.2578626e-05,
+        "expected_uncertainty_reduction": {
+          "has_uncertainty_signal": false,
+          "source_fields": [],
+          "total_variance_reduction": 0.0
+        },
+        "family": "pr106_three_sister_stack",
+        "family_group": "pr106_sidechannel_stack",
+        "field_interaction_contract": {
+          "assumption_count": 2,
+          "assumptions": [
+            "local CPU smoke byte deltas are planning inputs, not score evidence",
+            "sidechannel atoms compose only after sister lanes have candidate-specific exact CUDA evidence"
+          ],
+          "blockers": [],
+          "conflicts_with_atoms": [],
+          "conflicts_with_families": [],
+          "interaction_model": "",
+          "schema": "field_interaction_contract_v1",
+          "status": "passed",
+          "volterra_order": null,
+          "volterra_order_source": "",
+          "volterra_scope": "undeclared_order_first_order_assumptions_only",
+          "volterra_terms": [],
+          "volterra_terms_declared": false
+        },
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "geometry_priors": [],
+        "hard_pair_support": [],
+        "interaction_assumptions": [
+          "local CPU smoke byte deltas are planning inputs, not score evidence",
+          "sidechannel atoms compose only after sister lanes have candidate-specific exact CUDA evidence"
+        ],
+        "kkt_blockers": [
+          "source_marked_non_rankable",
+          "missing_byte_closed_archive_manifest",
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_status_not_passed",
+          "kkt:kkt_proof_residual_missing"
+        ],
+        "kkt_proof": {
+          "blockers": [
+            "kkt_proof_status_not_passed",
+            "kkt_proof_residual_missing"
+          ],
+          "candidates": [
+            {
+              "blockers": [
+                "kkt_proof_status_not_passed",
+                "kkt_proof_residual_missing"
+              ],
+              "kind": "kkt_proof",
+              "residual": null,
+              "residual_source": "",
+              "source": "kkt_proof",
+              "status": "blocked",
+              "tolerance": null,
+              "tolerance_source": ""
+            }
+          ],
+          "kind": "kkt_proof",
+          "residual": null,
+          "source": "kkt_proof",
+          "status": "blocked",
+          "tolerance": null
+        },
+        "kkt_ready_for_field_planning": false,
+        "lexicographic_feasibility_tuple": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          7.2578626e-05,
+          0.0
+        ],
+        "non_dominated_frontier_reason": {
+          "dominated_by": [],
+          "eligibility_blockers": [
+            "non_rankable_atom",
+            "missing_byte_closed_archive_manifest",
+            "proxy_row"
+          ],
+          "eligible": false,
+          "frontier": false,
+          "objective_directions": {
+            "archive_ready_for_stack_review": "max",
+            "byte_delta": "min",
+            "confidence": "max",
+            "expected_pose_dist_delta": "min",
+            "expected_seg_dist_delta": "min",
+            "expected_total_score_delta": "min"
+          },
+          "objectives": {
+            "archive_ready_for_stack_review": 0.0,
+            "byte_delta": 109.0,
+            "confidence": 0.0,
+            "expected_pose_dist_delta": 0.0,
+            "expected_seg_dist_delta": 0.0,
+            "expected_total_score_delta": 7.2578626e-05
+          },
+          "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+          "schema": "non_dominated_frontier_reason_v1",
+          "scope": "pr106_sidechannel_stack",
+          "status": "ineligible"
+        },
+        "observation_noise_variance": 0.0,
+        "openpilot_priors": [],
+        "pair_support": [],
+        "pareto_dominated_by": [],
+        "pareto_eligibility_blockers": [
+          "non_rankable_atom",
+          "missing_byte_closed_archive_manifest",
+          "proxy_row"
+        ],
+        "pareto_eligible": false,
+        "pareto_frontier": false,
+        "pareto_objectives": {
+          "archive_ready_for_stack_review": 0.0,
+          "byte_delta": 109.0,
+          "confidence": 0.0,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "expected_total_score_delta": 7.2578626e-05
+        },
+        "pareto_scope": "pr106_sidechannel_stack",
+        "pose_score_delta_confidence_weighted": 0.0,
+        "proxy_row": true,
+        "rankable": false,
+        "rate_score_delta": 7.2578626e-05,
+        "ready_for_exact_eval_dispatch": false,
+        "requested_dispatchable": false,
+        "research_basis_ids": [
+          "PR106-sidechannel-stack-local-readiness"
+        ],
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 0.0,
+        "selection_blockers": [
+          "kkt_not_ready_for_field_planning",
+          "missing_byte_closed_archive_manifest",
+          "non_rankable_atom",
+          "pareto_ineligible_atom",
+          "proxy_row"
+        ],
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "missing_byte_closed_archive_manifest": 100.0,
+          "non_rankable_atom": 1000.0,
+          "pareto_ineligible_atom": 25.0,
+          "proxy_row": 50.0
+        },
+        "selection_penalty_units": 1185.0,
+        "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+        "selection_score_delta": 7.2578626e-05,
+        "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+      },
+      {
+        "allocation_inference": false,
+        "archive_manifest_custody": {
+          "archive_bytes": null,
+          "archive_bytes_valid": false,
+          "archive_sha256": "",
+          "archive_sha256_valid": false,
+          "blockers": [],
+          "exists": false,
+          "is_file": false,
+          "manifest_json_valid": false,
+          "path": "",
+          "score_claim_false": false,
+          "sha256": "",
+          "sha256_matches": false,
+          "sha256_valid": false,
+          "verified": false
+        },
+        "archive_manifest_path": "",
+        "archive_manifest_sha256": "",
+        "archive_ready_for_stack_review": false,
+        "atom_id": "pr106_sidechannel_stack:wavelet_noop_stack",
+        "byte_closed_archive_manifest_attached": false,
+        "byte_delta": 387,
+        "class_support": [],
+        "confidence": 0.0,
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [],
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval",
+          "source_marked_non_rankable",
+          "requires_byte_closed_archive",
+          "proxy_row_not_dispatchable"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "empirical_stack_scaffold_planning",
+        "evidence_source_path": "experiments/results/pr106_stacked_wavelet_wr01_noop_20260506_codex/build_metadata.json",
+        "evidence_source_sha256": "475e73a0fbd083cdbe28625c9e8617685694cb19c701bd0fd9012461c06a5051",
+        "exact_dispatch_blockers": {
+          "blocker_categories": {
+            "custody": [
+              "requires_byte_closed_archive",
+              "missing_byte_closed_archive_manifest"
+            ],
+            "dirty_worktree": [],
+            "dispatch_claim": [],
+            "exact_cuda_eval": [
+              "requires_exact_cuda_auth_eval"
+            ],
+            "interaction_model": [],
+            "kkt_or_admm": [
+              "proxy_evidence_not_kkt_ready",
+              "kkt:kkt_proof_status_not_passed",
+              "kkt:kkt_proof_residual_missing",
+              "kkt_not_ready_for_field_planning"
+            ],
+            "other": [
+              "source_marked_non_rankable",
+              "non_rankable_atom"
+            ],
+            "pareto_frontier": [
+              "pareto_ineligible_atom",
+              "pareto_ineligible_for_field_selection"
+            ],
+            "proxy_or_planning": [
+              "planning_only_lagrangian_atom",
+              "proxy_row_not_dispatchable",
+              "proxy_row"
+            ],
+            "runtime": [],
+            "score_claim": []
+          },
+          "blocker_count": 14,
+          "blockers": [
+            "planning_only_lagrangian_atom",
+            "requires_exact_cuda_auth_eval",
+            "source_marked_non_rankable",
+            "requires_byte_closed_archive",
+            "proxy_row_not_dispatchable",
+            "missing_byte_closed_archive_manifest",
+            "proxy_evidence_not_kkt_ready",
+            "kkt:kkt_proof_status_not_passed",
+            "kkt:kkt_proof_residual_missing",
+            "kkt_not_ready_for_field_planning",
+            "non_rankable_atom",
+            "pareto_ineligible_atom",
+            "proxy_row",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "dispatch_attempted": false,
+          "dispatchable": false,
+          "next_required_proof": [
+            "verified_byte_closed_archive_manifest_with_sha256_and_bytes",
+            "non_proxy_empirical_or_cuda_evidence",
+            "passed_kkt_proof_or_converged_admm_waterline_result",
+            "pareto_eligible_byte_closed_non_proxy_rankable_atom",
+            "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+          ],
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "exact_dispatch_blockers_v1",
+          "score_claim": false
+        },
+        "expected_information_gain_nats": 0.0,
+        "expected_pose_dist_delta": 0.0,
+        "expected_score_variance": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": 0.000257687415,
+        "expected_uncertainty_reduction": {
+          "has_uncertainty_signal": false,
+          "source_fields": [],
+          "total_variance_reduction": 0.0
+        },
+        "family": "pr106_wavelet_noop_stack",
+        "family_group": "pr106_sidechannel_stack",
+        "field_interaction_contract": {
+          "assumption_count": 2,
+          "assumptions": [
+            "local CPU smoke byte deltas are planning inputs, not score evidence",
+            "sidechannel atoms compose only after sister lanes have candidate-specific exact CUDA evidence"
+          ],
+          "blockers": [],
+          "conflicts_with_atoms": [],
+          "conflicts_with_families": [],
+          "interaction_model": "",
+          "schema": "field_interaction_contract_v1",
+          "status": "passed",
+          "volterra_order": null,
+          "volterra_order_source": "",
+          "volterra_scope": "undeclared_order_first_order_assumptions_only",
+          "volterra_terms": [],
+          "volterra_terms_declared": false
+        },
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "geometry_priors": [],
+        "hard_pair_support": [],
+        "interaction_assumptions": [
+          "local CPU smoke byte deltas are planning inputs, not score evidence",
+          "sidechannel atoms compose only after sister lanes have candidate-specific exact CUDA evidence"
+        ],
+        "kkt_blockers": [
+          "source_marked_non_rankable",
+          "missing_byte_closed_archive_manifest",
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_status_not_passed",
+          "kkt:kkt_proof_residual_missing"
+        ],
+        "kkt_proof": {
+          "blockers": [
+            "kkt_proof_status_not_passed",
+            "kkt_proof_residual_missing"
+          ],
+          "candidates": [
+            {
+              "blockers": [
+                "kkt_proof_status_not_passed",
+                "kkt_proof_residual_missing"
+              ],
+              "kind": "kkt_proof",
+              "residual": null,
+              "residual_source": "",
+              "source": "kkt_proof",
+              "status": "blocked",
+              "tolerance": null,
+              "tolerance_source": ""
+            }
+          ],
+          "kind": "kkt_proof",
+          "residual": null,
+          "source": "kkt_proof",
+          "status": "blocked",
+          "tolerance": null
+        },
+        "kkt_ready_for_field_planning": false,
+        "lexicographic_feasibility_tuple": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          0.000257687415,
+          0.0
+        ],
+        "non_dominated_frontier_reason": {
+          "dominated_by": [],
+          "eligibility_blockers": [
+            "non_rankable_atom",
+            "missing_byte_closed_archive_manifest",
+            "proxy_row"
+          ],
+          "eligible": false,
+          "frontier": false,
+          "objective_directions": {
+            "archive_ready_for_stack_review": "max",
+            "byte_delta": "min",
+            "confidence": "max",
+            "expected_pose_dist_delta": "min",
+            "expected_seg_dist_delta": "min",
+            "expected_total_score_delta": "min"
+          },
+          "objectives": {
+            "archive_ready_for_stack_review": 0.0,
+            "byte_delta": 387.0,
+            "confidence": 0.0,
+            "expected_pose_dist_delta": 0.0,
+            "expected_seg_dist_delta": 0.0,
+            "expected_total_score_delta": 0.000257687415
+          },
+          "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+          "schema": "non_dominated_frontier_reason_v1",
+          "scope": "pr106_sidechannel_stack",
+          "status": "ineligible"
+        },
+        "observation_noise_variance": 0.0,
+        "openpilot_priors": [],
+        "pair_support": [],
+        "pareto_dominated_by": [],
+        "pareto_eligibility_blockers": [
+          "non_rankable_atom",
+          "missing_byte_closed_archive_manifest",
+          "proxy_row"
+        ],
+        "pareto_eligible": false,
+        "pareto_frontier": false,
+        "pareto_objectives": {
+          "archive_ready_for_stack_review": 0.0,
+          "byte_delta": 387.0,
+          "confidence": 0.0,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "expected_total_score_delta": 0.000257687415
+        },
+        "pareto_scope": "pr106_sidechannel_stack",
+        "pose_score_delta_confidence_weighted": 0.0,
+        "proxy_row": true,
+        "rankable": false,
+        "rate_score_delta": 0.000257687415,
+        "ready_for_exact_eval_dispatch": false,
+        "requested_dispatchable": false,
+        "research_basis_ids": [
+          "PR106-sidechannel-stack-local-readiness"
+        ],
+        "score_claim": false,
+        "seg_score_delta_confidence_weighted": 0.0,
+        "selection_blockers": [
+          "kkt_not_ready_for_field_planning",
+          "missing_byte_closed_archive_manifest",
+          "non_rankable_atom",
+          "pareto_ineligible_atom",
+          "proxy_row"
+        ],
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "missing_byte_closed_archive_manifest": 100.0,
+          "non_rankable_atom": 1000.0,
+          "pareto_ineligible_atom": 25.0,
+          "proxy_row": 50.0
+        },
+        "selection_penalty_units": 1185.0,
+        "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+        "selection_score_delta": 0.000257687415,
+        "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+      }
+    ],
+    "schema_version": 2,
+    "score_claim": false,
+    "selection_penalties": {
+      "kkt_not_ready_for_field_planning": 10.0,
+      "missing_byte_closed_archive_manifest": 100.0,
+      "non_rankable_atom": 1000.0,
+      "pareto_dominated_atom": 5.0,
+      "pareto_ineligible_atom": 25.0,
+      "proxy_row": 50.0,
+      "requested_dispatchable_refused": 1.0
+    },
+    "selection_policy": "lexicographic_feasibility_tuple_orders_rows_before_pure_expected_score_delta; penalty_terms_are_diagnostic_only",
+    "source": "pr106_sidechannel_stack_readiness",
+    "tool": "tac.optimization.meta_lagrangian_allocator.build_atom_ledger"
+  },
+  "no_score_claim_policy": "all rows are planning-only until a candidate-specific exact CUDA auth-eval artifact exists",
+  "pr106_anchor_archive": {
+    "bytes": 186239,
+    "exists": true,
+    "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+    "sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+  },
+  "ready_for_archive_preflight": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_local_stack_planning": true,
+  "remote_gpu_run": false,
+  "schema": "pr106_sidechannel_stack_readiness.v1",
+  "score_claim": false,
+  "stack_sequence": [
+    "latent",
+    "yshift",
+    "lrl1",
+    "wr01_apply_transform",
+    "three_sister_stack",
+    "wavelet_noop_stack"
+  ]
+}
