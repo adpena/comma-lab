@@ -5,8 +5,6 @@ from __future__ import annotations
 import importlib.util
 import pathlib
 
-import pytest
-
 
 def _load_tool_module():
     repo_root = pathlib.Path(__file__).resolve().parents[3]
@@ -45,7 +43,7 @@ def test_medal_band_anchors_have_three_entries() -> None:
 
 
 def test_gap_components_sum_to_total_gap() -> None:
-    """seg_Δ + pose_Δ + rate_Δ must equal total_gap exactly (linearity)."""
+    """seg_delta + pose_delta + rate_delta must equal total_gap exactly."""
     mod = _load_tool_module()
     target = mod.PR103_PR106_ANCHOR
     refs = mod.medal_band_anchors()
@@ -82,6 +80,59 @@ def test_render_markdown_emits_table_header() -> None:
     mod = _load_tool_module()
     md = mod.render_markdown(mod.PR103_PR106_ANCHOR, mod.medal_band_anchors())
     assert "Gap to medal-band references" in md
-    assert "seg_Δ" in md
-    assert "pose_Δ" in md
-    assert "rate_Δ" in md
+    assert "seg_delta" in md
+    assert "pose_delta" in md
+    assert "rate_delta" in md
+
+
+# ---------------------------------------------------------------------------
+# Bug-hunter v3: silent zero-pose back-solve (integration seam)
+# ---------------------------------------------------------------------------
+
+def test_back_solve_pose_warns_when_underdetermined() -> None:
+    """Bug-hunter v3 (MEDIUM, integration seam): when seg_estimate + rate_term
+    already exceed reported score, pose back-solves to <= 0 — previously the
+    function silently returned 0.0, producing misleading gap-decomposition
+    tables where pose_term=0 looked like a measurement instead of a guess.
+    Now it emits a UserWarning so operators can see the underdetermined case
+    in test logs and tooling output."""
+    import warnings
+
+    mod = _load_tool_module()
+    # Construct an over-estimated seg that drives pose back-solve negative:
+    # for score=0.193, bytes=178258, seg=0.001:
+    #   rate_term = 25 * 178258 / 37545489 ~= 0.1187
+    #   seg_term = 100 * 0.001 = 0.1
+    #   pose_term = 0.193 - 0.1 - 0.1187 = -0.0257  (negative)
+    with warnings.catch_warnings(record=True) as captured:
+        warnings.simplefilter("always", UserWarning)
+        result = mod._back_solve_pose(score=0.193, bytes_=178258, seg=0.001)
+    assert result == 0.0
+    assert any(
+        "underdetermined" in str(w.message) or "back-solve" in str(w.message)
+        for w in captured
+    ), (
+        "expected UserWarning on negative pose back-solve; got: "
+        f"{[str(w.message) for w in captured]}"
+    )
+
+
+def test_back_solve_pose_no_warn_in_canonical_case() -> None:
+    """Conversely, the canonical case (seg=0.00067082, score=0.193,
+    bytes=178258) should not emit a warning — pose_term is positive."""
+    import warnings
+
+    mod = _load_tool_module()
+    with warnings.catch_warnings(record=True) as captured:
+        warnings.simplefilter("always", UserWarning)
+        result = mod._back_solve_pose(
+            score=0.193, bytes_=178258, seg=0.00067082,
+        )
+    assert result > 0.0
+    # No back-solve warnings for the canonical seg estimate.
+    backsolve_warnings = [
+        w for w in captured if "back-solve" in str(w.message) or "underdetermined" in str(w.message)
+    ]
+    assert backsolve_warnings == [], (
+        f"unexpected back-solve warning: {[str(w.message) for w in backsolve_warnings]}"
+    )

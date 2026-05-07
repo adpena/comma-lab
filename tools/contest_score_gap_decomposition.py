@@ -21,14 +21,13 @@ already on disk; this tool does NOT invoke any scorer.
 
 Cross-references:
 
-- :mod:`tac.contest_rate_distortion_system` — contest formula + decomposition
-- ``feedback_pr106_substrate_is_below_medal_band_20260507`` — Path-B
+- :mod:`tac.contest_rate_distortion_system`: contest formula + decomposition
+- ``feedback_pr106_substrate_is_below_medal_band_20260507``: Path-B
   investigation prescription
-- ``experiments/results/pr103_repack_pr106_standalone_20260507/`` — PR103-on-PR106 anchor
+- ``experiments/results/pr103_repack_pr106_standalone_20260507/``: PR103-on-PR106 anchor
 """
 
 import json
-import math
 import pathlib
 import sys
 from dataclasses import dataclass
@@ -36,10 +35,9 @@ from dataclasses import dataclass
 # Local import (tools live in repo root; tac is the canonical lib).
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "src"))
 
-from tac.contest_rate_distortion_system import (  # noqa: E402
+from tac.contest_rate_distortion_system import (
     contest_score_decomposition,
 )
-
 
 # ---------------------------------------------------------------------------
 # Reference anchors (from public PR bodies + our local artifacts)
@@ -63,7 +61,7 @@ PR103_PR106_ANCHOR = ScoreAnchor(
     seg=0.00067082,
     pose=0.0000336,
     bytes=185_578,
-    reported_score=0.20898105277982337,
+    reported_score=0.2089810755823297,
     source="experiments/results/pr103_repack_pr106_standalone_20260507/",
     evidence_grade="[contest-CUDA T4]",
 )
@@ -72,21 +70,45 @@ PR103_PR106_ANCHOR = ScoreAnchor(
 # Public medal-band reference points. seg/pose values are NOT in the public
 # PR bodies (only the total score is); we back-solve approximate values from
 # the published score under the canonical formula. These are PROXIES, not
-# measured values — tagged "[public-PR-claim back-solved]" accordingly.
+# measured values; tagged "[public-PR-claim back-solved]" accordingly.
 #
 # Method: assume each medal entry's seg term is small (~0.05-0.07 share),
 # rate is computed directly from bytes, pose is the residual.
 def _back_solve_pose(*, score: float, bytes_: int, seg: float) -> float:
+    """Back-solve pose distortion from total score, given seg + bytes.
+
+    Bug-hunter v3 integration-seam fix 2026-05-07: previously, when the
+    seg + rate terms already exceeded the published score (e.g. when the
+    operator passes an over-estimated seg_estimate), the function silently
+    returned 0.0. That produced misleading gap-decomposition tables where
+    "pose_term=0" looked like a real measurement instead of an
+    underdetermined back-solve. We now emit a UserWarning so the operator
+    knows the seg estimate is too high for this anchor; the table consumer
+    can see the warning in the test log or the decompose_anchor JSON
+    payload (see ``ScoreAnchor.pose_underdetermined`` in the JSON output).
+    """
+    import warnings
+
     from tac.contest_rate_distortion_system import (
+        CONTEST_POSE_WEIGHT,
         CONTEST_RATE_WEIGHT,
         CONTEST_RAW_VIDEO_BYTES,
         CONTEST_SEG_WEIGHT,
-        CONTEST_POSE_WEIGHT,
     )
     rate_term = CONTEST_RATE_WEIGHT * bytes_ / CONTEST_RAW_VIDEO_BYTES
     seg_term = CONTEST_SEG_WEIGHT * seg
     pose_term = score - seg_term - rate_term
     if pose_term <= 0:
+        warnings.warn(
+            f"_back_solve_pose: seg+rate terms ({seg_term + rate_term:.6f}) "
+            f"already exceed reported score {score:.6f} for "
+            f"bytes={bytes_:,} seg={seg:.6e}; pose back-solves to <= 0 "
+            f"(returned 0.0). The seg estimate may be too high; the "
+            f"resulting decomposition's pose share is underdetermined "
+            f"and the table consumer should treat pose_term=0 as a guess.",
+            UserWarning,
+            stacklevel=2,
+        )
         return 0.0
     return (pose_term * pose_term) / CONTEST_POSE_WEIGHT
 
@@ -96,7 +118,7 @@ def medal_band_anchors() -> list[ScoreAnchor]:
 
     Source: PR bodies on the public challenge repo. seg estimated at the
     canonical contest baseline; pose back-solved from total minus seg + rate.
-    These are approximations — useful for SHARE comparison, not for
+    These are approximations; useful for SHARE comparison, not for
     score-claim use.
     """
     # Educated estimates of seg distortion for the 3 medal-band PRs based on
@@ -105,7 +127,7 @@ def medal_band_anchors() -> list[ScoreAnchor]:
     seg_estimate = 0.00067082
     return [
         ScoreAnchor(
-            label="PR101 (gold) — back-solved",
+            label="PR101 (gold) - back-solved",
             seg=seg_estimate,
             pose=_back_solve_pose(score=0.193, bytes_=178_258, seg=seg_estimate),
             bytes=178_258,
@@ -114,7 +136,7 @@ def medal_band_anchors() -> list[ScoreAnchor]:
             evidence_grade="[public-PR-claim back-solved]",
         ),
         ScoreAnchor(
-            label="PR103 (silver) — back-solved",
+            label="PR103 (silver) - back-solved",
             seg=seg_estimate,
             pose=_back_solve_pose(score=0.195, bytes_=178_223, seg=seg_estimate),
             bytes=178_223,
@@ -123,7 +145,7 @@ def medal_band_anchors() -> list[ScoreAnchor]:
             evidence_grade="[public-PR-claim back-solved]",
         ),
         ScoreAnchor(
-            label="PR102 (bronze) — back-solved",
+            label="PR102 (bronze) - back-solved",
             seg=seg_estimate,
             pose=_back_solve_pose(score=0.195, bytes_=178_981, seg=seg_estimate),
             bytes=178_981,
@@ -201,7 +223,7 @@ def render_markdown(target: ScoreAnchor, refs: list[ScoreAnchor]) -> str:
         "",
         "## Gap to medal-band references",
         "",
-        "| reference | ref_total | gap (target - ref) | seg_Δ | pose_Δ | rate_Δ |",
+        "| reference | ref_total | gap (target - ref) | seg_delta | pose_delta | rate_delta |",
         "|---|---:|---:|---:|---:|---:|",
     ]
     gaps = gap_analysis(target, refs)
@@ -216,8 +238,8 @@ def render_markdown(target: ScoreAnchor, refs: list[ScoreAnchor]) -> str:
         "",
         "## Interpretation",
         "",
-        "Each gap row sums to the total: **gap = seg_Δ + pose_Δ + rate_Δ**.",
-        "The dominant axis is the largest |Δ| — that's where the implementation",
+        "Each gap row sums to the total: **gap = seg_delta + pose_delta + rate_delta**.",
+        "The dominant axis is the largest absolute delta; that's where the implementation",
         "bug or substrate mismatch is concentrated.",
         "",
         "## Caveats",
@@ -228,7 +250,7 @@ def render_markdown(target: ScoreAnchor, refs: list[ScoreAnchor]) -> str:
         "  is sensitive.",
         "- Score claims are `[contest-CUDA T4]` (target) or",
         "  `[public-PR-claim back-solved]` (references). NEITHER converted to",
-        "  `[contest-CUDA]` for the references — that would require running",
+        "  `[contest-CUDA]` for the references; that would require running",
         "  the public PRs through our local contest-CUDA pipeline.",
     ])
     return "\n".join(lines)
