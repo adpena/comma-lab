@@ -52,6 +52,11 @@ def test_wr01_exact_eval_packet_reports_missing_env_without_dispatch(tmp_path: P
     assert payload["proxy_row"] is False
     assert payload["score_claim"] is False
     assert payload["dispatch_attempted"] is False
+    assert payload["dispatch_gate"] == "blocked_static_packet_ready_until_static_blockers_clear"
+    assert payload["dispatch_unlocked"] is False
+    assert payload["ready_for_exact_eval_dispatch_claim"] is False
+    assert payload["candidate_static_preflight_ready"] is False
+    assert payload["static_packet_ready"] is False
     assert payload["ready_for_submit"] is False
     assert "missing_lightning_environment" in payload["blockers"]
     assert payload["source_archive_sha256"] == "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e"
@@ -247,6 +252,10 @@ def test_wr01_exact_eval_packet_accepts_matching_custody_artifacts(tmp_path: Pat
     assert payload["blockers"] == []
     assert payload["artifact_consistency_ok"] is True
     assert payload["static_packet_ready"] is True
+    assert payload["candidate_static_preflight_ready"] is True
+    assert payload["dispatch_gate"] == "eligible_for_cuda_auth_eval_after_lane_claim"
+    assert payload["dispatch_unlocked"] is True
+    assert payload["ready_for_exact_eval_dispatch_claim"] is True
     assert payload["operator_approved_exact_cuda"] is True
     assert payload["lane_claim_preflight"]["active_claim_present"] is True
     assert payload["source_archive_sha256"] == source_archive_sha256
@@ -419,6 +428,9 @@ def test_wr01_exact_eval_packet_refuses_truthy_score_or_dispatch_flags(tmp_path:
 
     payload = json.loads(out.read_text())
     assert payload["ready_for_submit"] is False
+    assert payload["static_packet_ready"] is False
+    assert payload["candidate_static_preflight_ready"] is False
+    assert payload["dispatch_unlocked"] is False
     assert "artifact_score_or_dispatch_flag_violation" in payload["blockers"]
     assert payload["artifact_flag_violations"] == [
         {
@@ -493,6 +505,8 @@ def test_wr01_exact_eval_packet_blocks_noop_hashes_and_missing_source_custody(tm
     payload = json.loads(out.read_text())
     assert payload["ready_for_submit"] is False
     assert payload["static_packet_ready"] is False
+    assert payload["candidate_static_preflight_ready"] is False
+    assert payload["dispatch_gate"] == "blocked_static_packet_ready_until_static_blockers_clear"
     assert "manifest_source_archive_custody_mode_invalid" in payload["blockers"]
     assert "manifest_candidate_payload_sha256_equals_source_payload_sha256_noop" in payload["blockers"]
     assert "manifest_changed_section_candidate_sha256_equals_source_sha256_noop" in payload["blockers"]

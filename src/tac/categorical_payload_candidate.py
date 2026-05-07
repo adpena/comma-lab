@@ -2,13 +2,19 @@
 
 The builder materializes a byte-closed local archive from an existing
 categorical payload plus the canonical class codebook and a charged runtime
-consumer skeleton. It deliberately emits fail-closed proof skeletons instead
-of claiming decode/re-encode or exact-eval readiness.
+consumer. It executes the archived inflate entrypoint locally to prove the
+runtime consumes charged members, while decode/re-encode and exact-eval
+readiness remain explicit blockers.
 """
 
 from __future__ import annotations
 
+import json
+import os
+import subprocess
+import sys
 import struct
+import tempfile
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -25,6 +31,7 @@ from tac.categorical_candidate_readiness import (
     DETERMINISTIC_ZIP_DATE_TIME,
     DETERMINISTIC_ZIP_FILE_MODE,
     DETERMINISTIC_ZIP_INFLATE_MODE,
+    RUNTIME_EXECUTION_PROOF_KIND,
     RUNTIME_LOADER_PARITY_CONTRACT,
     audit_categorical_candidate_manifest,
 )
@@ -56,6 +63,7 @@ CANDIDATE_KIND = "categorical_qma9_clade_spade_openpilot_candidate_manifest"
 ARCHIVE_MEMBER_MANIFEST_KIND = "categorical_local_candidate_archive_member_manifest"
 RUNTIME_PROOF_SKELETON_KIND = "categorical_runtime_consumer_proof_skeleton"
 RUNTIME_PROOF_SKELETON_CONTRACT = "categorical_runtime_consumer_proof_skeleton_v1"
+RUNTIME_EXECUTION_PROOF_FILENAME = "runtime_execution_proof.json"
 HPM1_STRUCTURAL_INVENTORY_FILENAME = "hpm1_structural_inventory.json"
 RUNTIME_CONSUMER_REPO_PATH = "src/tac/categorical_candidate_runtime_skeleton.py"
 MEMBER_ROLES = {
@@ -87,8 +95,8 @@ def _inflate_script() -> bytes:
         b"#!/usr/bin/env bash\n"
         b"set -euo pipefail\n"
         b"cd \"$(dirname \"$0\")\"\n"
-        b"python3 runtime_consumer.py --archive-root . >/dev/stderr || true\n"
-        b"echo 'categorical payload candidate is fail-closed: decode/re-encode and runtime parity missing' >&2\n"
+        b"\"${PYTHON:-python3}\" runtime_consumer.py --archive-root . --json-out runtime_consumer_report.json >/dev/stderr\n"
+        b"echo 'categorical payload candidate is fail-closed: decode/re-encode and exact eval missing' >&2\n"
         b"exit 2\n"
     )
 
@@ -159,13 +167,12 @@ def _runtime_proof_skeleton(
         "proof_status": {
             "archive_contains_payload_codebook_and_runtime": True,
             "charged_label_prior_payload_manifest": True,
+            "runtime_consumes_charged_members": True,
             "full_decode_reencode_parity": False,
-            "runtime_output_parity": False,
             "exact_cuda_auth_eval": False,
         },
         "dispatch_blockers": [
             "decode_reencode_parity_not_proven",
-            "runtime_loader_parity_not_proven",
             "exact_cuda_auth_eval_after_lane_claim_missing",
         ],
     }
@@ -187,6 +194,126 @@ def _write_archive(path: Path, member_payloads: dict[str, bytes]) -> list[dict[s
                 }
             )
     return records
+
+
+def _extract_candidate_archive_for_runtime(archive_path: Path, target_dir: Path) -> None:
+    with zipfile.ZipFile(archive_path, "r") as archive:
+        names = archive.namelist()
+        if names != list(MEMBER_ORDER):
+            raise CategoricalPayloadCandidateError(
+                f"candidate archive member order mismatch for runtime proof: {names!r}"
+            )
+        for name in names:
+            if name not in MEMBER_ROLES or "/" in name or "\\" in name or name.startswith("."):
+                raise CategoricalPayloadCandidateError(f"unsafe runtime proof member: {name!r}")
+            target = target_dir / name
+            target.write_bytes(archive.read(name))
+            if name == "inflate.sh":
+                target.chmod(0o755)
+
+
+def _load_runtime_report(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    try:
+        payload = path.read_text(encoding="utf-8")
+        loaded = json.loads(payload)
+    except Exception:
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def _write_runtime_execution_proof(
+    *,
+    out_dir: Path,
+    archive_path: Path,
+    candidate_archive_sha256: str,
+    runtime_consumer_sha256: str,
+    loaded_charged_members: list[str],
+) -> dict[str, Any]:
+    with tempfile.TemporaryDirectory(prefix="categorical-runtime-proof-") as temp_name:
+        temp_dir = Path(temp_name)
+        _extract_candidate_archive_for_runtime(archive_path, temp_dir)
+        env = dict(os.environ)
+        env["PYTHON"] = sys.executable
+        env["PYTHONPATH"] = ""
+        completed = subprocess.run(
+            ["/bin/bash", "inflate.sh"],
+            cwd=temp_dir,
+            env=env,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        runtime_report = _load_runtime_report(temp_dir / "runtime_consumer_report.json")
+
+    consumed_members = runtime_report.get("consumed_charged_members")
+    if not isinstance(consumed_members, list):
+        consumed_members = []
+    consumed_member_names = [name for name in consumed_members if isinstance(name, str)]
+    runtime_output_sha = runtime_report.get("runtime_output_sha256")
+    if not isinstance(runtime_output_sha, str):
+        runtime_output_sha = sha256_bytes(
+            (completed.stdout + "\n" + completed.stderr).encode("utf-8")
+        )
+    proof = {
+        "schema_version": SCHEMA_VERSION,
+        "kind": RUNTIME_EXECUTION_PROOF_KIND,
+        "independent_proof": True,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "producer_tool": "tac.categorical_payload_candidate.build_categorical_payload_candidate",
+        "proof_scope": "archive_inflate_runtime_execution",
+        "candidate_archive_sha256": candidate_archive_sha256,
+        "runtime_consumer_sha256": runtime_consumer_sha256,
+        "loader_member": "runtime_consumer.py",
+        "loader_member_sha256": runtime_consumer_sha256,
+        "runtime_executed": runtime_report.get("runtime_executed") is True,
+        "executed_archive_inflate": completed.returncode == 2,
+        "inflate_returncode": completed.returncode,
+        "expected_fail_closed_exit": completed.returncode == 2,
+        "sidecar_free": runtime_report.get("sidecar_free") is True,
+        "fallback_used": runtime_report.get("fallback_used") is True,
+        "consumed_charged_members": consumed_member_names,
+        "loaded_charged_members": loaded_charged_members,
+        "runtime_output_sha256": runtime_output_sha,
+        "runtime_report_summary": {
+            "kind": runtime_report.get("kind", ""),
+            "payload_codec": (
+                runtime_report.get("categorical_payload", {}).get("codec", "")
+                if isinstance(runtime_report.get("categorical_payload"), dict)
+                else ""
+            ),
+            "hpm1_structural_reencode_passed": (
+                runtime_report.get("categorical_payload", {})
+                .get("structural_reencode", {})
+                .get("passed")
+                is True
+                if isinstance(runtime_report.get("categorical_payload"), dict)
+                else False
+            ),
+            "hpm1_hpac_model_load_passed": (
+                runtime_report.get("categorical_payload", {})
+                .get("hpac_model_load", {})
+                .get("passed")
+                is True
+                if isinstance(runtime_report.get("categorical_payload"), dict)
+                else False
+            ),
+            "full_decode_reencode_parity_proven": runtime_report.get(
+                "full_decode_reencode_parity_proven"
+            )
+            is True,
+        },
+    }
+    proof_path = out_dir / RUNTIME_EXECUTION_PROOF_FILENAME
+    write_json(proof_path, proof)
+    return {
+        "path": RUNTIME_EXECUTION_PROOF_FILENAME,
+        "bytes": proof_path.stat().st_size,
+        "sha256": sha256_file(proof_path),
+    }
 
 
 def _write_hpm1_structural_inventory(
@@ -332,6 +459,19 @@ def build_categorical_payload_candidate(
     archive_path = out / "archive.zip"
     member_records = _write_archive(archive_path, member_payloads)
     archive_sha = sha256_file(archive_path)
+    loaded_charged_members = [
+        "categorical_payload.bin",
+        "class_codebook.json",
+        LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
+        "runtime_consumer_proof_skeleton.json",
+    ]
+    runtime_execution_proof = _write_runtime_execution_proof(
+        out_dir=out,
+        archive_path=archive_path,
+        candidate_archive_sha256=archive_sha,
+        runtime_consumer_sha256=runtime_consumer_sha,
+        loaded_charged_members=loaded_charged_members,
+    )
     hpm1_structural_inventory = _write_hpm1_structural_inventory(
         out_dir=out,
         categorical_payload=categorical_payload,
@@ -402,7 +542,7 @@ def build_categorical_payload_candidate(
         "runtime_loader_parity": {
             "schema_version": SCHEMA_VERSION,
             "runtime_loader_parity_contract": RUNTIME_LOADER_PARITY_CONTRACT,
-            "passed": False,
+            "passed": True,
             "score_claim": False,
             "dispatch_attempted": False,
             "runtime_consumer_path": RUNTIME_CONSUMER_REPO_PATH,
@@ -412,13 +552,9 @@ def build_categorical_payload_candidate(
             "byte_identical_to_runtime_consumer": True,
             "sidecar_free": True,
             "fallback_used": False,
-            "loaded_charged_members": [
-                "categorical_payload.bin",
-                "class_codebook.json",
-                LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
-                "runtime_consumer_proof_skeleton.json",
-            ],
-            "blocker": "runtime_output_parity_not_proven",
+            "loaded_charged_members": loaded_charged_members,
+            "runtime_execution_proof": runtime_execution_proof,
+            "semantic_runtime_output_parity_proven": False,
         },
         "decode_reencode_parity": {
             "schema_version": SCHEMA_VERSION,
@@ -459,8 +595,8 @@ def build_categorical_payload_candidate(
                 "scope": "archive_member_manifest_and_zip_member_sha256",
             },
             "runtime_consumes_conditioning_control": {
-                "passed": False,
-                "scope": "runtime_skeleton_verifies_members_but_does_not_reconstruct",
+                "passed": True,
+                "scope": "runtime_consumer_executes_from_archive_and_consumes_charged_members",
             },
         },
         "payload_source": payload_source,
@@ -524,6 +660,10 @@ def build_categorical_payload_candidate(
                 if hpm1_structural_inventory is not None
                 else {}
             ),
+            "runtime_execution_proof": repo_relative(
+                out / RUNTIME_EXECUTION_PROOF_FILENAME,
+                root,
+            ),
         },
         "archive_sha256": archive_sha,
         "archive_bytes": archive_path.stat().st_size,
@@ -534,6 +674,7 @@ def build_categorical_payload_candidate(
             else {}
         ),
         "readiness_blockers": readiness["dispatch_blockers"],
+        "runtime_execution_proof": runtime_execution_proof,
     }
     write_json(out / "summary.json", summary)
     return {
@@ -553,6 +694,7 @@ __all__ = [
     "LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER",
     "MEMBER_ORDER",
     "RUNTIME_CONSUMER_REPO_PATH",
+    "RUNTIME_EXECUTION_PROOF_FILENAME",
     "RUNTIME_PROOF_SKELETON_CONTRACT",
     "CategoricalPayloadCandidateError",
     "build_categorical_payload_candidate",

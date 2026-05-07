@@ -53,7 +53,7 @@ def test_jcsp_flag_invalidates_cached_fp4_and_requires_marginals(
     assert stale_renderer.read_bytes() == b"stale-fp4"
 
 
-def test_jcsp_present_marginals_writes_local_skeleton_then_raises(
+def test_jcsp_present_marginals_writes_archive_member_then_raises(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -88,7 +88,7 @@ def test_jcsp_present_marginals_writes_local_skeleton_then_raises(
         jcsp_score_marginals_path=str(artifact),
     )
 
-    with pytest.raises(NotImplementedError, match="local byte-closed skeleton"):
+    with pytest.raises(NotImplementedError, match="byte-closed JCSP archive member"):
         pipeline.step_compress_weights(
             cfg,
             tmp_path / "checkpoint.pt",
@@ -97,24 +97,30 @@ def test_jcsp_present_marginals_writes_local_skeleton_then_raises(
 
     iter_dir = output_dir / "iter_0"
     assert iter_dir.exists()
-    archive_path = iter_dir / "jcsp_local_skeleton_archive.zip"
-    manifest_path = iter_dir / "jcsp_local_skeleton_manifest.json"
+    archive_path = iter_dir / "jcsp_archive_member.zip"
+    manifest_path = iter_dir / "jcsp_archive_member_manifest.json"
     assert sorted(path.name for path in iter_dir.iterdir()) == [
-        "jcsp_local_skeleton_archive.zip",
-        "jcsp_local_skeleton_manifest.json",
+        "jcsp_archive_member.zip",
+        "jcsp_archive_member_manifest.json",
     ]
     assert archive_path.exists()
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    assert manifest["schema"] == "jcsp_local_archive_member_skeleton_contract_v1"
+    assert manifest["schema"] == "jcsp_stream_source_archive_member_contract_v1"
     assert manifest["score_claim"] is False
-    assert manifest["ready_for_runtime_loader"] is False
+    assert manifest["ready_for_runtime_loader"] is True
     assert manifest["ready_for_exact_eval_dispatch"] is False
-    assert manifest["skeleton_manifest"]["archive_bytes_written"] is True
-    assert manifest["skeleton_manifest"]["runtime_payloads_encoded"] is False
-    assert manifest["skeleton_manifest"]["stream_count"] == 1
+    assert manifest["archive_bytes_written"] is True
+    assert manifest["runtime_payloads_encoded"] is True
+    assert manifest["stream_count"] == 1
+    assert manifest["runtime_loader_parity"]["stream_count"] == 1
+    assert manifest["runtime_loader_parity"]["streams"][0]["payload_magic"] == "AQv1"
+    assert manifest["stream_archive_byte_reconciliation"][
+        "stream_payload_bytes_reconciled"
+    ] is True
     assert not (iter_dir / ".done_compress_weights").exists()
     assert any(
         "archive_bytes_written=True" in msg
+        and "ready_for_runtime_loader=True" in msg
         and "ready_for_exact_eval_dispatch=False" in msg
         for _level, msg in logs
     )

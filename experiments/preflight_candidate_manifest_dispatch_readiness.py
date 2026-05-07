@@ -344,6 +344,30 @@ def _audit_gate_mapping(
         )
 
 
+def _audit_static_packet_readiness(
+    manifest: Mapping[str, Any],
+    *,
+    blockers: list[dict[str, Any]],
+) -> None:
+    """Honor builder-owned static readiness fields when a packet reports them."""
+
+    for key in ("static_packet_ready", "candidate_static_preflight_ready"):
+        if manifest.get(key) is False:
+            _append_blocker(
+                blockers,
+                f"{key}_false",
+                f"{key} is false",
+            )
+    for key in ("static_blockers", "static_candidate_blockers"):
+        reported = _stringify_items(manifest.get(key))
+        if reported:
+            _append_blocker(
+                blockers,
+                f"{key}_reported",
+                f"{key}: {', '.join(reported[:8])}",
+            )
+
+
 def _parse_utc(value: str) -> dt.datetime | None:
     value = value.strip()
     if value.endswith("Z"):
@@ -515,6 +539,8 @@ def build_preflight(
     for key in FALSE_READY_FIELDS:
         if key in manifest and manifest[key] is False:
             _append_blocker(blockers, f"{key}_false", f"{key} is false")
+
+    _audit_static_packet_readiness(manifest, blockers=blockers)
 
     if manifest.get("score_claim") is True:
         _append_blocker(

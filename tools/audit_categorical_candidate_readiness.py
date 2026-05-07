@@ -75,6 +75,25 @@ def _hpm1_structural_inventory_path(candidate_json: Path, payload: dict) -> Path
     return REPO_ROOT / path
 
 
+def _runtime_execution_proof_path(candidate_json: Path, payload: dict) -> Path | None:
+    runtime = payload.get("runtime_loader_parity")
+    if not isinstance(runtime, dict):
+        return None
+    proof = runtime.get("runtime_execution_proof")
+    if not isinstance(proof, dict):
+        return None
+    raw_path = proof.get("path")
+    if not isinstance(raw_path, str) or not raw_path:
+        return None
+    path = Path(raw_path)
+    if path.is_absolute():
+        return path
+    local = candidate_json.parent / path
+    if local.exists():
+        return local
+    return REPO_ROOT / path
+
+
 def main(argv: list[str] | None = None) -> int:
     raw_argv = list(sys.argv[1:] if argv is None else argv)
     args = parse_args(raw_argv)
@@ -99,6 +118,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     if hpm1_structural_inventory_path is not None and hpm1_structural_inventory_path.exists():
         input_paths.append(hpm1_structural_inventory_path)
+    runtime_execution_proof_path = _runtime_execution_proof_path(
+        args.candidate_json,
+        source_payload,
+    )
+    if runtime_execution_proof_path is not None and runtime_execution_proof_path.exists():
+        input_paths.append(runtime_execution_proof_path)
     payload = attach_tool_run_manifest(
         payload,
         tool=Path(__file__).relative_to(REPO_ROOT).as_posix(),

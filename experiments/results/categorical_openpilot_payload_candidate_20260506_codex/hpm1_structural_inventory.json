@@ -56,10 +56,10 @@
     ]
   },
   "candidate_archive": {
-    "bytes": 160400,
+    "bytes": 169725,
     "exists": true,
     "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/archive.zip",
-    "sha256": "3455c82708b1d628e17fb21cf3ccb334a4375e023a80217681c10912224881ac"
+    "sha256": "6a5bf1f3c4d6d2b6cb752979caa72a31b994825d24ee42ae90eeaa58f44abd7d"
   },
   "decoded_geometry_contract": {
     "decoded_shape_nhw": [

@@ -105,6 +105,40 @@ def test_allows_byte_closed_manifest_but_records_lane_claim_warning(
     )
 
 
+def test_blocks_reported_static_packet_blockers(tmp_path: Path) -> None:
+    manifest = _write_manifest(
+        tmp_path / "manifest.json",
+        {
+            "candidate_id": "wr01_apply_pr106x_half",
+            "score_claim": False,
+            "dispatch_gate": "blocked_static_packet_ready_until_static_blockers_clear",
+            "dispatch_unlocked": False,
+            "ready_for_exact_eval_dispatch_claim": False,
+            "static_packet_ready": False,
+            "static_blockers": [
+                "pre_submission_compliance_failed",
+                "dry_run_queue_payload_section_diff_mismatch",
+            ],
+        },
+    )
+
+    payload = module.build_preflight(manifest)
+
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    codes = [blocker["code"] for blocker in payload["blockers"]]
+    assert codes.count("dispatch_gate_blocked") == 1
+    assert "dispatch_unlocked_false" in codes
+    assert "ready_for_exact_eval_dispatch_claim_false" in codes
+    assert "static_packet_ready_false" in codes
+    assert "static_blockers_reported" in codes
+    detail_by_code = {blocker["code"]: blocker["detail"] for blocker in payload["blockers"]}
+    assert "pre_submission_compliance_failed" in detail_by_code["static_blockers_reported"]
+    assert (
+        "dry_run_queue_payload_section_diff_mismatch"
+        in detail_by_code["static_blockers_reported"]
+    )
+
+
 def test_preflight_output_is_deterministic_without_claims_path(tmp_path: Path) -> None:
     manifest = _write_manifest(
         tmp_path / "manifest.json",

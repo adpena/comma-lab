@@ -28,6 +28,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Iterable, Mapping
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -43,9 +44,13 @@ from tac.joint_codec_stack_orchestrator import (
     KIND_RAW_PASSTHROUGH,
     JCSPTensorStreamSpec,
     StreamSource,
+    build_jcsp_archive_member,
     build_jcsp_local_skeleton_archive_member,
+    jcsp_model_stream_archive_readiness,
     jcsp_stream_specs_manifest,
+    load_jcsp_archive_member_for_runtime,
     model_to_jcsp_streams,
+    run_sequential_codec_stack,
 )
 
 if TYPE_CHECKING:
@@ -54,6 +59,9 @@ if TYPE_CHECKING:
 
 JCSP_STREAM_SOURCE_DRY_RUN_SCHEMA = "jcsp_stream_source_dry_run_v1"
 JCSP_STREAM_SOURCE_LOCAL_ARCHIVE_MEMBER_SCHEMA = JCSP_LOCAL_SKELETON_SCHEMA
+JCSP_STREAM_SOURCE_ARCHIVE_MEMBER_SCHEMA = (
+    "jcsp_stream_source_archive_member_contract_v1"
+)
 
 
 def _coerce_to_float32_numpy(tensor: Any) -> np.ndarray:
@@ -761,9 +769,150 @@ def jcsp_stream_source_local_archive_member(
     )
 
 
+def _unique_strings(values: Iterable[object]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value)
+        if text not in seen:
+            seen.add(text)
+            out.append(text)
+    return out
+
+
+def jcsp_stream_source_archive_member(
+    model: Any,
+    *,
+    score_marginals_path: str | Path,
+    num_levels: int = 15,
+    codec_overrides: Mapping[str, int] | None = None,
+    balle_codecs: Mapping[str, BalleHyperpriorCodec] | None = None,
+    raw_passthrough_bytes_by_name: Mapping[str, bytes] | None = None,
+    wet_streams: Iterable[str] | None = None,
+    include_buffers: bool = True,
+    member_name: str = JCSP_ARCHIVE_MEMBER_NAME,
+    archive_path_for_manifest: str | Path | None = None,
+) -> tuple[bytes, dict[str, Any]]:
+    """Build a byte-closed one-member ZIP carrying a real ``JCSP`` container.
+
+    This is the runtime-loader-parity closure step after the local ``JCSK``
+    preview. It quantizes/builds concrete ``StreamSource`` payloads, packs a
+    real ``JCSP`` member, validates the archive through the runtime contract,
+    and records per-stream charged bytes from the actual member payload. It
+    still does not make a score claim or unlock dispatch: the submission
+    runtime detects ``jcsp.bin`` but refuses consumption until a real stream
+    consumer emits contest outputs.
+    """
+
+    artifact_path = Path(score_marginals_path)
+    score_marginals = load_jcsp_score_marginals(artifact_path)
+    streams, specs = model_to_stream_sources(
+        model,
+        score_marginals=score_marginals,
+        num_levels=num_levels,
+        codec_overrides=codec_overrides,
+        balle_codecs=balle_codecs,
+        raw_passthrough_bytes_by_name=raw_passthrough_bytes_by_name,
+        wet_streams=wet_streams,
+        include_buffers=include_buffers,
+    )
+    result = run_sequential_codec_stack(streams=streams)
+    archive_bytes = build_jcsp_archive_member(
+        container_bytes=result.container_bytes,
+        member_name=member_name,
+    )
+    archive_contract = load_jcsp_archive_member_for_runtime(
+        archive_bytes=archive_bytes,
+        member_name=member_name,
+        require_single_member=True,
+    )
+    archive_closed_specs = [
+        replace(
+            spec,
+            bytes_charged=int(stream.actual_bytes),
+            bytes_charged_source="jcsp_container_member_payload",
+        )
+        for spec, stream in zip(specs, result.streams, strict=True)
+    ]
+    readiness = jcsp_model_stream_archive_readiness(
+        streams=archive_closed_specs,
+        archive_bytes=archive_bytes,
+        member_name=member_name,
+    )
+    raw_artifact = artifact_path.read_bytes()
+    dispatch_blockers = _unique_strings(
+        [
+            *readiness["dispatch_blockers"],
+            "strict_candidate_preflight_proof_missing",
+            "no_lane_dispatch_claim",
+            "exact_cuda_auth_eval_missing",
+        ]
+    )
+    archive_path_text = (
+        str(Path(archive_path_for_manifest))
+        if archive_path_for_manifest is not None
+        else ""
+    )
+    payload: dict[str, Any] = {
+        "schema": JCSP_STREAM_SOURCE_ARCHIVE_MEMBER_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_runtime_loader": True,
+        "ready_for_submission_runtime_consumption": False,
+        "ready_for_exact_eval_dispatch": False,
+        "archive_member_payload_kind": "jcsp_runtime_container",
+        "archive_member_name": member_name,
+        "container_bytes_built": True,
+        "archive_bytes_written": True,
+        "stream_source_objects_built": True,
+        "runtime_payloads_encoded": True,
+        "stream_count": len(streams),
+        "score_marginals_artifact": {
+            "path": str(artifact_path),
+            "bytes": len(raw_artifact),
+            "sha256": hashlib.sha256(raw_artifact).hexdigest(),
+            "format": "deterministic_json",
+            "marginal_count": len(score_marginals),
+        },
+        "stream_manifest_sha256": readiness["stream_manifest_sha256"],
+        "archive_path": archive_path_text,
+        "candidate_archive_path": archive_path_text,
+        "archive_sha256": readiness["archive_sha256"],
+        "archive_bytes": int(readiness["archive_bytes"]),
+        "candidate_archive_sha256": readiness["archive_sha256"],
+        "candidate_archive_bytes": int(readiness["archive_bytes"]),
+        "member_name": readiness["member_name"],
+        "member_sha256": readiness["member_sha256"],
+        "member_bytes": int(readiness["member_bytes"]),
+        "byte_closed_archive_member": True,
+        "single_member_no_sidecars": readiness["single_member_no_sidecars"],
+        "runtime_loader_parity": archive_contract["jcsp_runtime_parity"],
+        "runtime_consumption_contract": readiness["runtime_consumption_contract"],
+        "stream_archive_byte_reconciliation": readiness[
+            "stream_archive_byte_reconciliation"
+        ],
+        "jcsp_model_stream_archive_readiness": readiness,
+        "runtime": {
+            "ready_for_runtime_loader": True,
+            "ready_for_submission_runtime_consumption": False,
+            "runtime_tree_sha256": None,
+            "blockers": [
+                JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+                "submission_runtime_stream_consumer_missing",
+                "runtime_tree_sha256_missing_until_submission_consumer_lands",
+            ],
+        },
+        "dispatch_blockers": dispatch_blockers,
+    }
+    payload["manifest_sha256"] = _canonical_json_sha256(payload)
+    return archive_bytes, payload
+
+
 __all__ = [
+    "JCSP_STREAM_SOURCE_ARCHIVE_MEMBER_SCHEMA",
     "JCSP_STREAM_SOURCE_DRY_RUN_SCHEMA",
     "JCSP_STREAM_SOURCE_LOCAL_ARCHIVE_MEMBER_SCHEMA",
+    "jcsp_stream_source_archive_member",
     "jcsp_stream_source_dry_run_metadata",
     "jcsp_stream_source_local_archive_member",
     "load_jcsp_score_marginals",

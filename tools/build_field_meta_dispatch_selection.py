@@ -1684,6 +1684,11 @@ def _row_for_manifest(
             for blocker in strict["blockers"]
             if isinstance(blocker, Mapping)
         )
+    packet_static_ready = payload.get("static_packet_ready")
+    packet_static_blockers = _string_list(payload.get("static_blockers"))
+    if packet_static_ready is not None and packet_static_ready is not True:
+        static_blockers.append("packet_static_preflight_not_ready")
+    static_blockers.extend(f"packet_static:{blocker}" for blocker in packet_static_blockers)
     static_blockers = _unique_strings(static_blockers)
     strict_ready = strict["candidate_static_preflight_ready"] is True
     base_static_ready = bool(strict_ready and archive["byte_closed"] and runtime["runtime_closed"] and not static_blockers)

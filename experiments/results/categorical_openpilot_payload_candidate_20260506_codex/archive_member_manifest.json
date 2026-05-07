@@ -25,10 +25,10 @@
       "sha256": "6db870e7e05cc310ca25897e8d3ccac4f6fff06ad22ea57c157dbf8086ba29d0"
     },
     {
-      "bytes": 233,
+      "bytes": 274,
       "name": "inflate.sh",
       "role": "inflate_entrypoint",
-      "sha256": "96c609ffb891c2717ccc055f81a7255a7946383f8f54fca2f1b41fdb88f26062"
+      "sha256": "4e39eb6168a86d192cc13b3a3728e38f8cd6c77c8359eeb6c4b8e8af9db9845a"
     },
     {
       "bytes": 5403,
@@ -37,16 +37,16 @@
       "sha256": "0be3c41d3f0f83eafe7f2c38a8d257a4dcb815973b22595b003c7592d1107f0d"
     },
     {
-      "bytes": 5110,
+      "bytes": 14424,
       "name": "runtime_consumer.py",
       "role": "decoder_or_runtime_consumer",
-      "sha256": "d4473f3f031e1949bc9f90be49c54e759a4bd0039921dc81bb4667d6140576a8"
+      "sha256": "7054d44e7eec663e0d60095acbf39f2daaa3096c4625819490efd77c17b62096"
     },
     {
-      "bytes": 1931,
+      "bytes": 1901,
       "name": "runtime_consumer_proof_skeleton.json",
       "role": "runtime_consumer_proof",
-      "sha256": "7ed7dcb8aa7ca2390268d14696397612d7f49c88d2a3e43841df33e85392461a"
+      "sha256": "84216287e6c04a91a69fd83b5432a0e48f2761d484cf0387f27bd45f48684226"
     }
   ],
   "schema_version": 1

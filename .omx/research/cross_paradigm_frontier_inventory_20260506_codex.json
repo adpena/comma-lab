@@ -2,7 +2,6 @@
   "action_class_counts": {
     "attach_byte_closed_manifest_gate": 1,
     "build_byte_closed_categorical_candidate": 1,
-    "build_end_to_end_noop_stack_fixture": 1,
     "calibrate_planning_signal_and_attach_archive_consumer": 1,
     "charge_runtime_geometry_consumer_contract": 1,
     "claim_exact_eval_packet_after_static_gate": 1,
@@ -11,7 +10,8 @@
     "exact_eval_or_promote_measured_rate_candidate": 1,
     "prove_deterministic_export_and_inflate_closure": 1,
     "reduce_entropy_model_overhead": 1,
-    "replace_stub_sensitivity_with_certified_cuda_artifact": 1
+    "replace_stub_sensitivity_with_certified_cuda_artifact": 1,
+    "wire_jcsp_submission_runtime_consumer": 1
   },
   "dispatch_attempted": false,
   "dispatch_blockers": [
@@ -83,15 +83,17 @@
       "status": "byte_closed_local_candidate_artifact_landed_blocked_on_parity"
     },
     {
-      "action_class": "build_end_to_end_noop_stack_fixture",
+      "action_class": "wire_jcsp_submission_runtime_consumer",
       "blockers": [
-        "fixture-only manifest is intentionally not dispatchable",
-        "no byte-closed JCSP archive member",
+        "submission runtime detects but refuses jcsp.bin consumption",
+        "Balle hyperprior stream codecs must be instantiated and charged for non-fixture model streams",
         "side information must be charged",
+        "no lane dispatch claim",
+        "no exact CUDA auth eval for stacked JCSP archive",
         "individual components do not imply score composability"
       ],
       "key": "joint_admm_balle_arithmetic_stack",
-      "next_patch": "Replace the fixture-only contract with a byte-closed JCSP archive member and runtime loader parity, then claim a lane before exact CUDA auth eval.",
+      "next_patch": "Wire submissions/robust_current to decode/consume jcsp.bin and emit contest outputs, then claim a lane before exact CUDA auth eval.",
       "paradigms": [
         "gamma_joint_codec",
         "entropy_coding",
@@ -101,7 +103,7 @@
       "ready_for_exact_eval_dispatch": false,
       "role": "stack_or_replacement_orchestrator",
       "score_claim": false,
-      "status": "typed_noop_stack_manifest_landed_not_archive_dispatchable"
+      "status": "byte_closed_jcsp_member_landed_runtime_consumption_blocked"
     },
     {
       "action_class": "reduce_entropy_model_overhead",
@@ -975,31 +977,37 @@
       "title": "Sensitivity-aware Omega-W-V3"
     },
     {
-      "action_class": "build_end_to_end_noop_stack_fixture",
+      "action_class": "wire_jcsp_submission_runtime_consumer",
       "blockers": [
-        "fixture-only manifest is intentionally not dispatchable",
-        "no byte-closed JCSP archive member",
+        "submission runtime detects but refuses jcsp.bin consumption",
+        "Balle hyperprior stream codecs must be instantiated and charged for non-fixture model streams",
         "side information must be charged",
+        "no lane dispatch claim",
+        "no exact CUDA auth eval for stacked JCSP archive",
         "individual components do not imply score composability"
       ],
       "code_paths": [
         "src/tac/joint_codec_stack_orchestrator.py",
+        "src/tac/jcsp_stream_builder.py",
         "src/tac/joint_admm_coordinator.py",
         "src/tac/balle_hyperprior_codec.py",
         "src/tac/arithmetic_qint_codec.py",
         "src/tac/stack_compositions.py",
+        "experiments/pipeline.py",
+        "submissions/robust_current/jcsp_runtime_bridge.py",
         "tools/audit_arithmetic_qint_optimality.py",
         "tools/build_joint_stack_noop_manifest.py",
         "src/tac/entropy_archive.py"
       ],
-      "evidence_grade": "planning/component empirical plus typed fixture manifest",
+      "evidence_grade": "empirical byte-closed JCSP archive member plus runtime-loader parity",
       "evidence_paths": [
         "docs/score_aware_sidechannel_paradigm_20260504.md",
         "experiments/results/joint_stack_noop_manifest_20260506_codex/manifest.json",
-        ".omx/research/joint_stack_noop_manifest_20260506_codex.md"
+        ".omx/research/joint_stack_noop_manifest_20260506_codex.md",
+        ".omx/research/jcsp_runtime_parity_hardening_20260506_codex.md"
       ],
       "key": "joint_admm_balle_arithmetic_stack",
-      "next_patch": "Replace the fixture-only contract with a byte-closed JCSP archive member and runtime loader parity, then claim a lane before exact CUDA auth eval.",
+      "next_patch": "Wire submissions/robust_current to decode/consume jcsp.bin and emit contest outputs, then claim a lane before exact CUDA auth eval.",
       "paradigms": [
         "gamma_joint_codec",
         "entropy_coding",
@@ -1009,15 +1017,18 @@
         "code": {
           "existing": [
             "src/tac/joint_codec_stack_orchestrator.py",
+            "src/tac/jcsp_stream_builder.py",
             "src/tac/joint_admm_coordinator.py",
             "src/tac/balle_hyperprior_codec.py",
             "src/tac/arithmetic_qint_codec.py",
             "src/tac/stack_compositions.py",
+            "experiments/pipeline.py",
+            "submissions/robust_current/jcsp_runtime_bridge.py",
             "tools/audit_arithmetic_qint_optimality.py",
             "tools/build_joint_stack_noop_manifest.py",
             "src/tac/entropy_archive.py"
           ],
-          "existing_count": 8,
+          "existing_count": 11,
           "missing": [],
           "missing_count": 0
         },
@@ -1025,9 +1036,10 @@
           "existing": [
             "docs/score_aware_sidechannel_paradigm_20260504.md",
             "experiments/results/joint_stack_noop_manifest_20260506_codex/manifest.json",
-            ".omx/research/joint_stack_noop_manifest_20260506_codex.md"
+            ".omx/research/joint_stack_noop_manifest_20260506_codex.md",
+            ".omx/research/jcsp_runtime_parity_hardening_20260506_codex.md"
           ],
-          "existing_count": 3,
+          "existing_count": 4,
           "missing": [],
           "missing_count": 0
         }
@@ -1039,7 +1051,7 @@
       "score_claim": false,
       "score_snapshot": null,
       "stackability": "high in architecture, unproven in exact archive",
-      "status": "typed_noop_stack_manifest_landed_not_archive_dispatchable",
+      "status": "byte_closed_jcsp_member_landed_runtime_consumption_blocked",
       "title": "Joint ADMM plus Balle hyperprior plus arithmetic stack"
     },
     {

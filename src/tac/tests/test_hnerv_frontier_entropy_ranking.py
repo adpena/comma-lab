@@ -1,0 +1,219 @@
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+from tac.hnerv_frontier_entropy_ranking import (
+    build_frontier_entropy_gap_ranking,
+    render_markdown,
+)
+from tac.repo_io import json_text
+
+REPO = Path(__file__).resolve().parents[3]
+
+
+def test_frontier_entropy_ranking_maps_hdc2_to_current_lowlevel_section() -> None:
+    manifest = build_frontier_entropy_gap_ranking(
+        _scorecard(),
+        entropy_audits=[_entropy_audit()],
+        candidate_manifests=[_candidate_manifest()],
+    )
+
+    assert manifest["score_claim"] is False
+    assert manifest["dispatch_attempted"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["current_frontier"]["label"] == "PR106x-lowlevel-brotli"
+
+    next_action = manifest["next_rate_only_action"]
+    assert next_action["action_id"] == "review_current_exact_lossless_brotli_control_before_promotion"
+    assert next_action["dispatch_allowed"] is False
+
+    rows = manifest["entropy_gap_ranking"]
+    assert rows[0]["target_kind"] == "known_model_overhead"
+    assert rows[0]["frontier_section"] == "decoder_packed_brotli"
+    assert rows[0]["frontier_anchor_source"] == "candidate_diff_source_to_current_section_sha256"
+    assert rows[0]["net_byte_delta_vs_source_section"] == 40
+    assert rows[0]["net_byte_delta_vs_current_frontier_section"] == 50
+    assert rows[0]["net_byte_delta_after_target_vs_current_frontier_section"] == 10
+    assert rows[0]["minimum_additional_reduction_after_target_to_beat_current_bytes"] == 11
+    assert rows[0]["readiness_stage"] == "target_alone_insufficient_for_rate_positive_archive"
+
+    combined = manifest["combined_entropy_gap_groups"][0]
+    assert combined["known_target_bytes"] == 60
+    assert combined["net_byte_delta_vs_current_frontier_section"] == 50
+    assert combined["net_byte_delta_after_known_targets_vs_current_frontier_section"] == -10
+    assert combined["verdict"] == "combined_targets_can_cross_rate_positive_if_byte_equivalent"
+
+    entropy_action = manifest["next_entropy_research_action"]
+    assert entropy_action["action_id"] == "build_combined_entropy_overhead_reduction_manifest"
+    assert entropy_action["minimum_section_bytes_to_beat"] == 89
+    assert "HNeRV Frontier Entropy Gap Ranking" in render_markdown(manifest)
+    assert "Combined Entropy Gap Groups" in render_markdown(manifest)
+
+
+def test_rank_hnerv_frontier_entropy_gaps_cli_writes_json_and_markdown(tmp_path: Path) -> None:
+    scorecard = tmp_path / "scorecard.json"
+    entropy = tmp_path / "entropy.json"
+    candidate = tmp_path / "candidate.json"
+    json_out = tmp_path / "ranking.json"
+    md_out = tmp_path / "ranking.md"
+    scorecard.write_text(json_text(_scorecard()), encoding="utf-8")
+    entropy.write_text(json_text(_entropy_audit()), encoding="utf-8")
+    candidate.write_text(json_text(_candidate_manifest()), encoding="utf-8")
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "rank_hnerv_frontier_entropy_gaps.py"),
+            "--scorecard",
+            str(scorecard),
+            "--entropy-audit",
+            str(entropy),
+            "--candidate-manifest",
+            str(candidate),
+            "--json-out",
+            str(json_out),
+            "--md-out",
+            str(md_out),
+        ],
+        cwd=REPO,
+        check=True,
+        text=True,
+    )
+
+    payload = json.loads(json_out.read_text(encoding="utf-8"))
+    assert payload["tool"] == "tac.hnerv_frontier_entropy_ranking"
+    assert payload["tool_run_manifest"]["tool"] == "tools/rank_hnerv_frontier_entropy_gaps.py"
+    assert payload["next_entropy_research_action"]["dispatch_allowed"] is False
+    assert "Next Entropy Research Action" in md_out.read_text(encoding="utf-8")
+
+
+def _scorecard() -> dict:
+    return {
+        "schema_version": 1,
+        "score_truth": "exact_cuda_auth_eval_json",
+        "rows": [
+            {
+                "label": "PR106x",
+                "canonical_frontier_eligible": True,
+                "score": 0.21,
+                "archive_bytes": 200,
+                "archive_sha256": "1" * 64,
+                "payload_sha256": "2" * 64,
+                "runtime_tree_sha256": "3" * 64,
+                "evidence_grade": "A++",
+                "frontier_scope": "exact_local_cuda_custody",
+                "eval_artifact": "old.json",
+                "payload_sections": [
+                    _section("decoder_packed_brotli", 100, "a" * 64),
+                    _section("latents_and_sidecar_brotli", 12, "b" * 64),
+                ],
+            },
+            {
+                "label": "PR106x-lowlevel-brotli",
+                "canonical_frontier_eligible": True,
+                "score": 0.2,
+                "archive_bytes": 190,
+                "archive_sha256": "c" * 64,
+                "payload_sha256": "d" * 64,
+                "runtime_tree_sha256": "e" * 64,
+                "evidence_grade": "A++",
+                "frontier_scope": "exact_local_cuda_custody_lossless_repack_control",
+                "eval_artifact": "frontier.json",
+                "payload_sections": [
+                    _section("decoder_packed_brotli", 90, "f" * 64),
+                    _section("latents_and_sidecar_brotli", 12, "b" * 64),
+                ],
+            },
+        ],
+    }
+
+
+def _entropy_audit() -> dict:
+    return {
+        "schema_version": 1,
+        "tool": "fixture_entropy_audit",
+        "source_label": "PR106x",
+        "source_archive_sha256": "1" * 64,
+        "source_decoder_section_sha256": "a" * 64,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "streams": [
+            {
+                "label": "PR106x:hdc2_global_prev_symbol_contexts",
+                "actual_bytes": 140,
+                "source_decoder_section_bytes": 100,
+                "source_decoder_section_sha256": "a" * 64,
+            }
+        ],
+        "entropy_overhead_target_ranking": [
+            {
+                "rank": 1,
+                "label": "PR106x:hdc2_global_prev_symbol_contexts",
+                "target_kind": "known_model_overhead",
+                "target_action": "reduce_or_share_static_model_context_metadata",
+                "target_bytes": 40,
+                "target_bytes_field": "hdc2.header_bytes",
+                "required_next_artifact": "byte_accounted_model_overhead_reduction_manifest",
+                "actual_bytes": 140,
+                "source_decoder_section_sha256": "a" * 64,
+                "byte_equivalence_blockers": ["missing_candidate_archive_manifest"],
+            },
+            {
+                "rank": 2,
+                "label": "PR106x:hdc2_global_prev_symbol_contexts",
+                "target_kind": "known_payload_entropy_gap",
+                "target_action": "prototype_byte_equivalent_entropy_coder_for_encoded_payload",
+                "target_bytes": 20,
+                "target_bytes_field": "hdc2.payload_gap",
+                "required_next_artifact": "roundtrip_payload_recode_manifest",
+                "actual_bytes": 140,
+                "source_decoder_section_sha256": "a" * 64,
+                "byte_equivalence_blockers": ["missing_candidate_archive_manifest"],
+            },
+        ],
+    }
+
+
+def _candidate_manifest() -> dict:
+    return {
+        "candidate_archive_sha256": "c" * 64,
+        "candidate_archive_bytes": 190,
+        "source_archive_sha256": "1" * 64,
+        "source_archive_bytes": 200,
+        "source_label": "PR106x",
+        "brotli_raw_equivalence": [
+            {
+                "section_name": "decoder_packed_brotli",
+                "raw_equal": True,
+            }
+        ],
+        "candidate_diff_audit": {
+            "blockers": [],
+            "total_byte_delta": -10,
+            "rate_score_delta_if_components_equal": -0.000006,
+            "sections": [
+                {
+                    "section_name": "decoder_packed_brotli",
+                    "source_section_sha256": "a" * 64,
+                    "candidate_section_sha256": "f" * 64,
+                    "source_bytes": 100,
+                    "candidate_bytes": 90,
+                    "byte_delta": -10,
+                }
+            ],
+        },
+    }
+
+
+def _section(name: str, size: int, sha: str) -> dict:
+    return {
+        "name": name,
+        "bytes": size,
+        "start": 0,
+        "end": size,
+        "sha256": sha,
+        "entropy_bits_per_byte": 7.9,
+    }

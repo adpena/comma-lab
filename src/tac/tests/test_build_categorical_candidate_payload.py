@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import json
 import subprocess
 import sys
@@ -7,6 +8,7 @@ import zipfile
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from tac.categorical_candidate_plan import CATEGORICAL_CLASS_CODEBOOK_CONTRACT
 from tac.categorical_candidate_readiness import (
@@ -14,6 +16,7 @@ from tac.categorical_candidate_readiness import (
     CANDIDATE_MANIFEST_CONTRACT,
     DECODE_REENCODE_PARITY_CONTRACT,
     HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT,
+    RUNTIME_EXECUTION_PROOF_KIND,
     RUNTIME_LOADER_PARITY_CONTRACT,
     audit_categorical_candidate_manifest,
 )
@@ -23,6 +26,7 @@ from tac.categorical_label_prior_payload_manifest import (
 )
 from tac.categorical_payload_candidate import (
     MEMBER_ORDER,
+    RUNTIME_EXECUTION_PROOF_FILENAME,
     RUNTIME_PROOF_SKELETON_CONTRACT,
 )
 from tac.pr91_hpm1_codec import build_hpm1_mask_segment
@@ -31,11 +35,32 @@ from tac.repo_io import read_json, sha256_file
 REPO = Path(__file__).resolve().parents[3]
 
 
+def _valid_hpm1_hpac_payload() -> bytes:
+    torch = pytest.importorskip("torch")
+    pyppmd = pytest.importorskip("pyppmd")
+    from tac.pr86_hpac_codec import HPACMini, PPMD_MAX_ORDER, PPMD_MEM_SIZE
+
+    model = HPACMini(num_pairs=2, P=2, delta=1, ch=4, d_film=2, use_spm=True)
+    with torch.no_grad():
+        for param in model.parameters():
+            param.zero_()
+        for buffer in model.buffers():
+            if torch.is_floating_point(buffer):
+                buffer.zero_()
+    buf = io.BytesIO()
+    torch.save(model.state_dict(), buf)
+    return pyppmd.compress(
+        buf.getvalue(),
+        max_order=PPMD_MAX_ORDER,
+        mem_size=PPMD_MEM_SIZE,
+    )
+
+
 def test_build_categorical_candidate_payload_is_byte_closed_and_fail_closed(
     tmp_path: Path,
 ) -> None:
     payload_path = tmp_path / "categorical_payload.bin"
-    payload_path.write_bytes(b"HPM1_local_categorical_payload_bytes\n")
+    payload_path.write_bytes(b"opaque_local_categorical_payload_bytes\n")
     out_a = tmp_path / "a"
     out_b = tmp_path / "b"
 
@@ -82,8 +107,10 @@ def test_build_categorical_candidate_payload_is_byte_closed_and_fail_closed(
     assert readiness["candidate_archive"]["zip_determinism_contract"]["passed"] is True
     assert readiness["archive_member_manifest"]["member_order_matches_charged_members"] is True
     assert readiness["archive_member_manifest"]["member_count_matches_charged_members"] is True
-    assert readiness["runtime_loader_parity"]["accepted"] is False
+    assert candidate["runtime_loader_parity"]["passed"] is True
+    assert readiness["runtime_loader_parity"]["accepted"] is True
     assert readiness["runtime_loader_parity"]["sidecar_free"] is True
+    assert readiness["runtime_loader_parity"]["runtime_execution_proof"]["accepted"] is True
     assert readiness["decode_reencode_parity"]["accepted"] is False
     assert readiness["conditioning_prior_contract"]["passed"] is True
     assert readiness["label_prior_payload_manifest"]["accepted"] is True
@@ -91,12 +118,13 @@ def test_build_categorical_candidate_payload_is_byte_closed_and_fail_closed(
     assert readiness_file["ready_for_exact_eval_dispatch"] is False
     assert readiness_file["tool_run_manifest"]["tool"] == "tools/build_categorical_candidate_payload.py"
     blockers = set(readiness["dispatch_blockers"])
-    assert "runtime_loader_parity_not_passed" in blockers
+    assert "runtime_loader_parity_not_passed" not in blockers
+    assert "runtime_execution_proof_artifact_missing" not in blockers
     assert "decode_reencode_parity_not_passed" in blockers
     assert "decode_reencode_full_decode_not_proven" in blockers
     assert "decode_reencode_byte_exact_reencode_not_proven" in blockers
     assert "no_op_control_not_passed:decode_reencode_identity_control" in blockers
-    assert "no_op_control_not_passed:runtime_consumes_conditioning_control" in blockers
+    assert "no_op_control_not_passed:runtime_consumes_conditioning_control" not in blockers
 
     archive_member_manifest = read_json(out_a / "archive_member_manifest.json")
     assert archive_member_manifest["archive_member_manifest_contract"] == ARCHIVE_MEMBER_MANIFEST_CONTRACT
@@ -141,23 +169,33 @@ def test_build_categorical_candidate_payload_is_byte_closed_and_fail_closed(
     assert proof_skeleton["ready_for_exact_eval_dispatch"] is False
     assert proof_skeleton["proof_status"]["archive_contains_payload_codebook_and_runtime"] is True
     assert proof_skeleton["proof_status"]["charged_label_prior_payload_manifest"] is True
+    assert proof_skeleton["proof_status"]["runtime_consumes_charged_members"] is True
     assert proof_skeleton["proof_status"]["full_decode_reencode_parity"] is False
-    assert proof_skeleton["proof_status"]["runtime_output_parity"] is False
 
     assert summary["kind"] == "categorical_byte_closed_local_candidate_build"
     assert summary["ready_for_exact_eval_dispatch"] is False
     assert summary["tool_run_manifest"]["tool"] == "tools/build_categorical_candidate_payload.py"
     assert summary["archive_sha256"] == sha256_file(archive_a)
-    assert "runtime_loader_parity_not_passed" in summary["readiness_blockers"]
+    assert "runtime_loader_parity_not_passed" not in summary["readiness_blockers"]
+    runtime_proof = read_json(out_a / RUNTIME_EXECUTION_PROOF_FILENAME)
+    assert runtime_proof["kind"] == RUNTIME_EXECUTION_PROOF_KIND
+    assert runtime_proof["independent_proof"] is True
+    assert runtime_proof["executed_archive_inflate"] is True
+    assert runtime_proof["expected_fail_closed_exit"] is True
+    assert runtime_proof["runtime_executed"] is True
+    assert runtime_proof["sidecar_free"] is True
+    assert runtime_proof["fallback_used"] is False
+    assert runtime_proof["runtime_report_summary"]["payload_codec"] == "opaque_categorical_payload"
 
 
 def test_build_categorical_candidate_payload_emits_hpm1_structural_inventory(
     tmp_path: Path,
 ) -> None:
     payload_path = tmp_path / "categorical_payload.bin"
+    hpac = _valid_hpm1_hpac_payload()
     payload = build_hpm1_mask_segment(
         (np.arange(16, dtype=np.uint32) % 5).tobytes(),
-        b"synthetic-hpac-ppmd",
+        hpac,
         N=2,
         H=4,
         W=4,
@@ -192,6 +230,7 @@ def test_build_categorical_candidate_payload_emits_hpm1_structural_inventory(
     readiness = read_json(out_dir / "readiness.json")
     summary = read_json(out_dir / "summary.json")
     inventory = read_json(out_dir / "hpm1_structural_inventory.json")
+    runtime_proof = read_json(out_dir / RUNTIME_EXECUTION_PROOF_FILENAME)
 
     inventory_record = candidate["hpm1_structural_decode_inventory"]
     assert inventory_record["contract"] == HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT
@@ -204,6 +243,10 @@ def test_build_categorical_candidate_payload_emits_hpm1_structural_inventory(
     assert inventory["byte_exact_semantic_reencode"]["passed"] is False
     assert readiness["hpm1_structural_decode_inventory"]["accepted"] is True
     assert readiness["hpm1_structural_decode_inventory"]["structural_reencode_matches_source"] is True
+    assert readiness["runtime_loader_parity"]["accepted"] is True
+    assert readiness["runtime_loader_parity"]["runtime_execution_proof"]["accepted"] is True
+    assert runtime_proof["runtime_report_summary"]["payload_codec"] == "HPM1"
+    assert runtime_proof["runtime_report_summary"]["hpm1_structural_reencode_passed"] is True
     assert "hpm1_structural_inventory" in summary["paths"]
     assert "decode_reencode_full_decode_not_proven" in readiness["dispatch_blockers"]
     assert "decode_reencode_byte_exact_reencode_not_proven" in readiness["dispatch_blockers"]

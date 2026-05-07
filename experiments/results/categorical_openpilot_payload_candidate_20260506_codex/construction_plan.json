@@ -1,11 +1,11 @@
 {
-  "archive_member_manifest_sha256": "1b478173e1f3ed98d025ba19b2a2315e46d40722270434fd7b35761cd9ea9e98",
+  "archive_member_manifest_sha256": "b9d5b86f64de5945e8cb60455d94450a1e6986953a55d41a179cfecd15dd3dea",
   "byte_closed_archive_parity": {
     "proof_path": "",
     "proven": false,
     "required": true
   },
-  "candidate_archive_sha256": "3455c82708b1d628e17fb21cf3ccb334a4375e023a80217681c10912224881ac",
+  "candidate_archive_sha256": "6a5bf1f3c4d6d2b6cb752979caa72a31b994825d24ee42ae90eeaa58f44abd7d",
   "candidate_construction_ready": true,
   "charged_member_summary": {
     "optional_roles": {

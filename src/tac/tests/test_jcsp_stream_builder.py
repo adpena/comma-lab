@@ -22,8 +22,10 @@ import pytest
 import torch
 
 from tac.jcsp_stream_builder import (
+    JCSP_STREAM_SOURCE_ARCHIVE_MEMBER_SCHEMA,
     JCSP_STREAM_SOURCE_DRY_RUN_SCHEMA,
     JCSP_STREAM_SOURCE_LOCAL_ARCHIVE_MEMBER_SCHEMA,
+    jcsp_stream_source_archive_member,
     jcsp_stream_source_dry_run_metadata,
     jcsp_stream_source_local_archive_member,
     load_jcsp_score_marginals,
@@ -33,6 +35,7 @@ from tac.jcsp_stream_builder import (
 )
 from tac.joint_codec_stack_orchestrator import (
     JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER,
+    JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
     KIND_ARITHMETIC_STATIC,
     KIND_BALLE_HYPERPRIOR,
     KIND_RAW_PASSTHROUGH,
@@ -249,6 +252,78 @@ def test_model_to_stream_sources_end_to_end_into_jcsp_container() -> None:
         s["codec_kind"] == KIND_ARITHMETIC_STATIC for s in parsed["streams"]
     )
     assert result.total_bytes == len(result.container_bytes)
+
+
+def test_jcsp_stream_source_archive_member_closes_real_jcsp_member(
+    tmp_path,
+) -> None:
+    artifact = tmp_path / "marginals.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "score_marginals": {
+                    "a.weight": 1e-6,
+                    "b.weight": 2e-6,
+                }
+            },
+            sort_keys=True,
+        )
+    )
+    state_dict = {
+        "b.weight": torch.zeros(8, dtype=torch.float32),
+        "a.weight": torch.linspace(-1.0, 1.0, 16, dtype=torch.float32),
+    }
+    archive_path = tmp_path / "jcsp_archive_member.zip"
+
+    archive_a, manifest_a = jcsp_stream_source_archive_member(
+        state_dict,
+        score_marginals_path=artifact,
+        archive_path_for_manifest=archive_path,
+    )
+    archive_b, manifest_b = jcsp_stream_source_archive_member(
+        state_dict,
+        score_marginals_path=artifact,
+        archive_path_for_manifest=archive_path,
+    )
+
+    assert archive_a == archive_b
+    assert manifest_a == manifest_b
+    assert manifest_a["schema"] == JCSP_STREAM_SOURCE_ARCHIVE_MEMBER_SCHEMA
+    assert manifest_a["score_claim"] is False
+    assert manifest_a["dispatch_attempted"] is False
+    assert manifest_a["ready_for_runtime_loader"] is True
+    assert manifest_a["ready_for_submission_runtime_consumption"] is False
+    assert manifest_a["ready_for_exact_eval_dispatch"] is False
+    assert manifest_a["archive_member_payload_kind"] == "jcsp_runtime_container"
+    assert manifest_a["archive_path"] == str(archive_path)
+    assert manifest_a["archive_bytes"] == len(archive_a)
+    assert manifest_a["archive_sha256"] == hashlib.sha256(archive_a).hexdigest()
+    assert manifest_a["candidate_archive_sha256"] == manifest_a["archive_sha256"]
+    assert manifest_a["byte_closed_archive_member"] is True
+    assert manifest_a["runtime_payloads_encoded"] is True
+    assert manifest_a["runtime_loader_parity"]["schema"] == (
+        "jcsp_runtime_loader_parity_v1"
+    )
+    assert [row["name"] for row in manifest_a["runtime_loader_parity"]["streams"]] == [
+        "a.weight",
+        "b.weight",
+    ]
+    assert all(
+        row["payload_magic"] == "AQv1"
+        for row in manifest_a["runtime_loader_parity"]["streams"]
+    )
+    reconciliation = manifest_a["stream_archive_byte_reconciliation"]
+    assert reconciliation["stream_payload_bytes_reconciled"] is True
+    assert all(
+        row["bytes_charged_reconciled"] is True
+        for row in reconciliation["per_stream"]
+    )
+    assert "stream_bytes_charged_reconciliation_missing" not in (
+        manifest_a["dispatch_blockers"]
+    )
+    assert JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER in (
+        manifest_a["dispatch_blockers"]
+    )
 
 
 def test_load_jcsp_score_marginals_rejects_duplicate_json_keys(tmp_path) -> None:

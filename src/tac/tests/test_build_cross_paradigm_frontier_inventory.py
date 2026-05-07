@@ -123,7 +123,7 @@ def test_cross_paradigm_inventory_action_queue_routes_next_tranche() -> None:
     ]
     assert queue[0]["action_class"] == "claim_exact_eval_packet_after_static_gate"
     assert queue[2]["action_class"] == "build_byte_closed_categorical_candidate"
-    assert payload["action_class_counts"]["build_end_to_end_noop_stack_fixture"] == 1
+    assert payload["action_class_counts"]["wire_jcsp_submission_runtime_consumer"] == 1
 
 
 def test_cross_paradigm_inventory_paths_are_current_on_main() -> None:

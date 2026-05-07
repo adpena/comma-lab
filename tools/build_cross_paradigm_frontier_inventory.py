@@ -41,7 +41,7 @@ ACTION_CLASS_BY_KEY = {
     "lapose_motion_atom_allocator": "calibrate_planning_signal_and_attach_archive_consumer",
     "meta_lagrangian_cross_paradigm_allocator": "attach_byte_closed_manifest_gate",
     "sensitivity_omega_w_v3": "replace_stub_sensitivity_with_certified_cuda_artifact",
-    "joint_admm_balle_arithmetic_stack": "build_end_to_end_noop_stack_fixture",
+    "joint_admm_balle_arithmetic_stack": "wire_jcsp_submission_runtime_consumer",
     "telescopic_foveation_field": "charge_runtime_geometry_consumer_contract",
     "raft_radial_openpilot_pose": "emit_pose_disagreement_readiness_artifact",
     "selfcompress_mdl_fp4_tto": "prove_deterministic_export_and_inflate_closure",
@@ -308,16 +308,19 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         title="Joint ADMM plus Balle hyperprior plus arithmetic stack",
         paradigms=("gamma_joint_codec", "entropy_coding", "hyperprior"),
         role="stack_or_replacement_orchestrator",
-        status="typed_noop_stack_manifest_landed_not_archive_dispatchable",
-        evidence_grade="planning/component empirical plus typed fixture manifest",
+        status="byte_closed_jcsp_member_landed_runtime_consumption_blocked",
+        evidence_grade="empirical byte-closed JCSP archive member plus runtime-loader parity",
         stackability="high in architecture, unproven in exact archive",
         replacement_potential="medium-high if it can replace HNeRV sections with a smaller scorer-stable stack",
         code_paths=(
             "src/tac/joint_codec_stack_orchestrator.py",
+            "src/tac/jcsp_stream_builder.py",
             "src/tac/joint_admm_coordinator.py",
             "src/tac/balle_hyperprior_codec.py",
             "src/tac/arithmetic_qint_codec.py",
             "src/tac/stack_compositions.py",
+            "experiments/pipeline.py",
+            "submissions/robust_current/jcsp_runtime_bridge.py",
             "tools/audit_arithmetic_qint_optimality.py",
             "tools/build_joint_stack_noop_manifest.py",
             "src/tac/entropy_archive.py",
@@ -326,15 +329,18 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "docs/score_aware_sidechannel_paradigm_20260504.md",
             "experiments/results/joint_stack_noop_manifest_20260506_codex/manifest.json",
             ".omx/research/joint_stack_noop_manifest_20260506_codex.md",
+            ".omx/research/jcsp_runtime_parity_hardening_20260506_codex.md",
         ),
         next_patch=(
-            "Replace the fixture-only contract with a byte-closed JCSP archive member and "
-            "runtime loader parity, then claim a lane before exact CUDA auth eval."
+            "Wire submissions/robust_current to decode/consume jcsp.bin and emit contest outputs, "
+            "then claim a lane before exact CUDA auth eval."
         ),
         blockers=(
-            "fixture-only manifest is intentionally not dispatchable",
-            "no byte-closed JCSP archive member",
+            "submission runtime detects but refuses jcsp.bin consumption",
+            "Balle hyperprior stream codecs must be instantiated and charged for non-fixture model streams",
             "side information must be charged",
+            "no lane dispatch claim",
+            "no exact CUDA auth eval for stacked JCSP archive",
             "individual components do not imply score composability",
         ),
     ),

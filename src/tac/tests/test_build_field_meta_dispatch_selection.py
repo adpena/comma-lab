@@ -75,6 +75,39 @@ def test_field_meta_selector_requires_lane_and_job_identity_for_static_ready(
     ]
 
 
+def test_field_meta_selector_honors_packet_static_blockers(tmp_path: Path) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="packet_static_blocked",
+        lane_id="lane_packet_static_blocked",
+        job_name="job_packet_static_blocked",
+        static_packet_ready=False,
+        static_blockers=[
+            "pre_submission_compliance_failed",
+            "dry_run_queue_payload_section_diff_mismatch",
+        ],
+    )
+
+    report = build_selection_report(
+        repo_root=REPO,
+        manifest_paths=[manifest],
+        now_utc="2026-05-06T10:00:00Z",
+    )
+
+    row = report["selected_candidate"]
+    assert row["candidate_id"] == "packet_static_blocked"
+    assert row["candidate_local_preflight_ready"] is False
+    assert row["candidate_static_preflight_ready"] is False
+    assert row["pareto_eligible"] is False
+    assert row["selection_decision"] == "strict_candidate_preflight_refused"
+    assert "packet_static_preflight_not_ready" in row["static_candidate_blockers"]
+    assert "packet_static:pre_submission_compliance_failed" in row["static_candidate_blockers"]
+    assert (
+        "packet_static:dry_run_queue_payload_section_diff_mismatch"
+        in row["exact_dispatch_blockers"]["blockers"]
+    )
+
+
 def test_field_meta_selector_requires_matching_active_claim_for_dispatch_ready(
     tmp_path: Path,
 ) -> None:
@@ -207,6 +240,49 @@ def test_field_meta_selector_never_overrides_strict_candidate_preflight(
         blocker.startswith("strict:dispatch_gate_blocked")
         for blocker in row["candidate_blockers"]
     )
+
+
+def test_field_meta_selector_surfaces_packet_static_blockers(
+    tmp_path: Path,
+) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="wr01_static_blocked",
+        lane_id="lane_wr01_static_blocked",
+        job_name="job_wr01_static_blocked",
+    )
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload.update(
+        {
+            "dispatch_gate": "blocked_static_packet_ready_until_static_blockers_clear",
+            "dispatch_unlocked": False,
+            "ready_for_exact_eval_dispatch_claim": False,
+            "static_packet_ready": False,
+            "static_blockers": [
+                "pre_submission_compliance_failed",
+                "dry_run_queue_payload_section_diff_mismatch",
+            ],
+        }
+    )
+    manifest.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    assert report["candidate_local_preflight_ready"] is False
+    assert report["candidate_static_preflight_ready"] is False
+    assert row["strict_candidate_preflight_ready"] is False
+    assert row["archive_proof"]["byte_closed"] is True
+    assert row["runtime_proof"]["runtime_closed"] is True
+    assert "strict_candidate_preflight_not_ready" in row["candidate_blockers"]
+    assert "strict:static_packet_ready_false" in row["candidate_blockers"]
+    assert "strict:static_blockers_reported" in row["candidate_blockers"]
+    assert row["selection_decision"] == "strict_candidate_preflight_refused"
+    assert row["non_dominated_frontier_reason"]["status"] == "ineligible"
+    assert row["pareto_eligibility_blockers"] == ["candidate_static_preflight_not_ready"]
+    assert row["next_required_proof"] == [
+        "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py"
+    ]
 
 
 def test_field_meta_selector_is_deterministic_and_orders_static_ready_packets_first(
@@ -443,6 +519,8 @@ def _packet_manifest(
     admm_result: dict[str, object] | None = None,
     lane_id: str | None = None,
     job_name: str | None = None,
+    static_packet_ready: bool | None = None,
+    static_blockers: list[str] | None = None,
     valid_zip: bool = True,
 ) -> Path:
     root.mkdir(parents=True, exist_ok=True)
@@ -483,6 +561,10 @@ def _packet_manifest(
         "expected_pose_dist_delta": expected_pose_dist_delta,
         "expected_information_gain_nats": expected_information_gain_nats,
     }
+    if static_packet_ready is not None:
+        payload["static_packet_ready"] = static_packet_ready
+    if static_blockers is not None:
+        payload["static_blockers"] = static_blockers
     if interaction_model is not None:
         payload["interaction_model"] = interaction_model
     if volterra_order is not None:

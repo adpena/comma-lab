@@ -65,7 +65,7 @@ REQUIRED_ENV = (
 
 
 def _format_utc(value: dt.datetime) -> str:
-    return value.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return value.astimezone(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _parse_utc(value: str | None) -> dt.datetime | None:
@@ -81,8 +81,8 @@ def _parse_utc(value: str | None) -> dt.datetime | None:
     except ValueError:
         return None
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=dt.timezone.utc)
-    return parsed.astimezone(dt.timezone.utc)
+        parsed = parsed.replace(tzinfo=dt.UTC)
+    return parsed.astimezone(dt.UTC)
 
 
 def _now_utc(args: argparse.Namespace) -> dt.datetime:
@@ -91,7 +91,7 @@ def _now_utc(args: argparse.Namespace) -> dt.datetime:
         return parsed
     if args.now_utc:
         raise ValueError(f"--now-utc is not ISO-8601 UTC-compatible: {args.now_utc}")
-    return dt.datetime.now(tz=dt.timezone.utc).replace(microsecond=0)
+    return dt.datetime.now(tz=dt.UTC).replace(microsecond=0)
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -200,7 +200,7 @@ def _parse_claim_rows(text: str) -> list[dict[str, str]]:
         cells = [cell.strip() for cell in line.strip("|").split("|")]
         if len(cells) < len(keys):
             continue
-        claims.append(dict(zip(keys, cells[: len(keys)])))
+        claims.append(dict(zip(keys, cells[: len(keys)], strict=False)))
     return claims
 
 
@@ -937,6 +937,12 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         blockers.append("artifact_score_or_dispatch_flag_violation")
     blockers.extend(consistency_blockers)
     static_blockers = list(blockers)
+    static_packet_ready = not static_blockers
+    dispatch_gate = (
+        "eligible_for_cuda_auth_eval_after_lane_claim"
+        if static_packet_ready
+        else "blocked_static_packet_ready_until_static_blockers_clear"
+    )
     if missing_env:
         blockers.append("missing_lightning_environment")
     if lane_claim_preflight["conflict_present"]:
@@ -984,8 +990,12 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "conflicts_with_atoms": [],
         "score_claim": False,
         "dispatch_attempted": False,
+        "dispatch_gate": dispatch_gate,
+        "dispatch_unlocked": static_packet_ready,
+        "ready_for_exact_eval_dispatch_claim": static_packet_ready,
+        "candidate_static_preflight_ready": static_packet_ready,
         "ready_for_submit": not blockers,
-        "static_packet_ready": not static_blockers,
+        "static_packet_ready": static_packet_ready,
         "blockers": blockers,
         "static_blockers": static_blockers,
         "missing_env": missing_env,

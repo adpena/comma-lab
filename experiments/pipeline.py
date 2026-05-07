@@ -1400,7 +1400,7 @@ def step_compress_weights(
     # mode is now derived from the cross-paradigm flags BEFORE the cache
     # comparison.
     if cfg.use_joint_codec_stack:
-        effective_mode = "joint_codec_stack_local_skeleton"
+        effective_mode = "joint_codec_stack_archive_member"
     elif cfg.use_sensitivity_weighted and cfg.sensitivity_map_path and Path(cfg.sensitivity_map_path).exists():
         effective_mode = "owv3_sensitivity_weighted"
     else:
@@ -1564,21 +1564,20 @@ def step_compress_weights(
                 f"work is the per-tensor marginals harness + the "
                 f"run_admm/run_sequential_codec_stack invocation."
             )
-        from tac.jcsp_stream_builder import (
-            jcsp_stream_source_local_archive_member,
-        )
+        from tac.jcsp_stream_builder import jcsp_stream_source_archive_member
 
         model = _load_renderer_for_jcsp_dry_run(cfg, checkpoint_path)
-        archive_bytes, skeleton_contract = jcsp_stream_source_local_archive_member(
+        archive_path = iter_dir / "jcsp_archive_member.zip"
+        manifest_path = iter_dir / "jcsp_archive_member_manifest.json"
+        archive_bytes, archive_contract = jcsp_stream_source_archive_member(
             model,
             score_marginals_path=marginals_path,
+            archive_path_for_manifest=archive_path,
         )
-        archive_path = iter_dir / "jcsp_local_skeleton_archive.zip"
-        manifest_path = iter_dir / "jcsp_local_skeleton_manifest.json"
         archive_path.write_bytes(archive_bytes)
         manifest_path.write_text(
             json.dumps(
-                skeleton_contract,
+                archive_contract,
                 sort_keys=True,
                 indent=2,
                 allow_nan=False,
@@ -1586,20 +1585,21 @@ def step_compress_weights(
             + "\n"
         )
         _log(
-            "PARADIGM-gamma JCSP local skeleton wrote "
-            f"{skeleton_contract['skeleton_manifest']['stream_count']} "
-            f"stream preview rows to {archive_path} "
-            f"(archive_sha256={skeleton_contract['archive_sha256']}, "
+            "PARADIGM-gamma JCSP archive member wrote "
+            f"{archive_contract['stream_count']} encoded stream payloads to "
+            f"{archive_path} "
+            f"(archive_sha256={archive_contract['archive_sha256']}, "
             "archive_bytes_written=True, "
+            "ready_for_runtime_loader=True, "
             "ready_for_exact_eval_dispatch=False).",
             "WARN",
         )
         raise NotImplementedError(
-            "PARADIGM-gamma JCSP dispatch: local byte-closed skeleton archive "
+            "PARADIGM-gamma JCSP dispatch: byte-closed JCSP archive member "
             f"was written at {archive_path} with manifest {manifest_path}, "
-            "but it is not dispatch-ready. The submission runtime does not "
-            "consume jcsp.bin, strict preflight proof is missing, no lane was "
-            "claimed, and no GPU/remote/eval dispatch was attempted."
+            "but it is not dispatch-ready. The submission runtime detects but "
+            "does not consume jcsp.bin, strict preflight proof is missing, no "
+            "lane was claimed, and no GPU/remote/eval dispatch was attempted."
         )
 
     # ── Lane J-NWC neural-weight-compression branch ─────────────────────
