@@ -1,0 +1,225 @@
+"""Tests for the closed-form contest score geometry analyzer."""
+from __future__ import annotations
+
+import math
+
+import pytest
+
+from tac.contest_rate_distortion_system import contest_score as canonical_contest_score
+from tac.score_geometry import (
+    CONTEST_REFERENCE_BYTES,
+    contest_score,
+    equal_score_curve_archive_bytes,
+    equal_score_curve_d_pose,
+    importance_flip_threshold,
+    information_floor,
+    marginal_value_per_byte,
+    operating_regime,
+    project_onto_pareto_envelope,
+    score_decomposition,
+    score_gradient,
+)
+
+# ---------------------------------------------------------------------------
+# Sanity: known-anchor scores
+# ---------------------------------------------------------------------------
+
+
+def test_pr103_on_pr106_anchor_reproduces_exact_formula() -> None:
+    """The active A++ anchor reproduces from exact formula components."""
+    score = contest_score(d_seg=0.00067082, d_pose=0.0000336, archive_bytes=185_578)
+    assert math.isclose(score, 0.2089810755823297, rel_tol=1e-12)
+
+
+def test_pure_python_score_matches_canonical_torch_formula() -> None:
+    """Keep this planning helper numerically tied to the canonical formula."""
+    pure = contest_score(d_seg=0.00067082, d_pose=0.0000336, archive_bytes=185_578)
+    canonical = canonical_contest_score(
+        seg_distortion=0.00067082,
+        pose_distortion=0.0000336,
+        archive_bytes=185_578,
+    )
+    assert math.isclose(pure, float(canonical), rel_tol=1e-12)
+
+
+def test_pure_rate_floor_is_dominant_at_active_anchor_bytes() -> None:
+    """An archive with d_seg=0 + d_pose=0 only pays the rate term."""
+    score = contest_score(d_seg=0.0, d_pose=0.0, archive_bytes=185_578)
+    expected_rate = 25.0 * 185_578 / CONTEST_REFERENCE_BYTES
+    assert math.isclose(score, expected_rate, rel_tol=1e-12)
+    assert math.isclose(score, information_floor(185_578), rel_tol=1e-12)
+
+
+def test_decomposition_sums_to_total() -> None:
+    decomp = score_decomposition(d_seg=0.001, d_pose=1e-4, archive_bytes=178258)
+    assert math.isclose(
+        decomp.total,
+        contest_score(0.001, 1e-4, 178258),
+        rel_tol=1e-12,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Importance flip
+# ---------------------------------------------------------------------------
+
+
+def test_flip_threshold_is_2_5e_4() -> None:
+    """The closed-form threshold is exactly 10 / (4*100*100) = 2.5e-4."""
+    assert math.isclose(importance_flip_threshold(), 2.5e-4, rel_tol=1e-12)
+
+
+def test_at_flip_threshold_seg_pose_marginals_equal() -> None:
+    """At d_pose = flip_threshold, dS/d(seg) == dS/d(pose) by construction."""
+    threshold = importance_flip_threshold()
+    grad = score_gradient(0.0, threshold)
+    assert math.isclose(grad.d_seg, grad.d_pose, rel_tol=1e-9)
+
+
+def test_below_flip_pose_dominates() -> None:
+    """At PR106 frontier (d_pose ~ 3.4e-5 << 2.5e-4) pose dominates."""
+    regime = operating_regime(3.4e-5)
+    assert regime.pose_dominates
+    assert not regime.seg_dominates
+    # Marginal pose-vs-seg ratio should be > 1: pose marginal exceeds seg
+    pose_over_seg = 1.0 / regime.marginal_ratio_seg_over_pose
+    assert pose_over_seg > 1.0
+    # CLAUDE.md cites 2.71x at PR106's pose_avg=3.4e-5
+    assert math.isclose(pose_over_seg, 2.71, rel_tol=0.05), (
+        f"PR106-frontier pose-dominance ratio drift: got {pose_over_seg}"
+    )
+
+
+def test_above_flip_seg_dominates() -> None:
+    """Legacy 1.x regime (d_pose ~ 0.18) is seg-dominated."""
+    regime = operating_regime(0.18)
+    assert regime.seg_dominates
+    assert not regime.pose_dominates
+    # CLAUDE.md cites SegNet ~7x more cost-effective at the OLD operating
+    # point in cost-effectiveness terms. The marginal ratio (per unit of
+    # axis) is much steeper because pose contribution flattens.
+    assert regime.marginal_ratio_seg_over_pose > 5.0
+
+
+def test_at_d_pose_zero_pose_marginal_is_infinite() -> None:
+    """d_pose=0 is the singularity of the sqrt; pose marginal is unbounded."""
+    grad = score_gradient(0.0, 0.0)
+    assert math.isinf(grad.d_pose)
+    assert grad.d_seg == 100.0
+
+
+# ---------------------------------------------------------------------------
+# Marginal value per byte
+# ---------------------------------------------------------------------------
+
+
+def test_marginal_value_per_byte_axis_constants() -> None:
+    """Bytes axis is constant; seg axis is constant 100."""
+    bytes_per = marginal_value_per_byte("bytes")
+    assert math.isclose(bytes_per, 25.0 / CONTEST_REFERENCE_BYTES, rel_tol=1e-12)
+    seg_per = marginal_value_per_byte("seg")
+    assert seg_per == 100.0
+
+
+def test_marginal_value_per_byte_pose_depends_on_op_point() -> None:
+    """Pose marginal must change with operating point."""
+    pose_marginal_legacy = marginal_value_per_byte("pose", d_pose_at_operating_point=0.18)
+    pose_marginal_pr106 = marginal_value_per_byte("pose", d_pose_at_operating_point=3.4e-5)
+    assert pose_marginal_pr106 > pose_marginal_legacy
+    # Specifically, PR106 marginal is ~70x larger than legacy 1.x marginal
+    ratio = pose_marginal_pr106 / pose_marginal_legacy
+    assert ratio > 50.0, f"expected ~70x amplification, got {ratio}"
+
+
+# ---------------------------------------------------------------------------
+# Pareto envelope
+# ---------------------------------------------------------------------------
+
+
+def test_pareto_envelope_at_floor_returns_floor_score() -> None:
+    """If candidate equals all floors, the slack is zero on every axis."""
+    envelope, slack = project_onto_pareto_envelope(
+        d_seg=0.0, d_pose=0.0, archive_bytes=178258,
+        seg_floor=0.0, pose_floor=0.0, byte_floor=178258,
+    )
+    assert math.isclose(envelope, contest_score(0.0, 0.0, 178258))
+    assert slack["seg_slack"] == 0.0
+    assert slack["pose_slack"] == 0.0
+    assert slack["byte_slack"] == 0.0
+
+
+def test_pareto_envelope_slack_reflects_axis_gap() -> None:
+    """Score-slack on each axis equals the per-axis term-gap."""
+    envelope, slack = project_onto_pareto_envelope(
+        d_seg=0.001, d_pose=1e-4, archive_bytes=200000,
+        seg_floor=0.0, pose_floor=0.0, byte_floor=178258,
+    )
+    expected_byte_score_slack = 25.0 * (200000 - 178258) / CONTEST_REFERENCE_BYTES
+    assert math.isclose(slack["byte_score_slack"], expected_byte_score_slack, rel_tol=1e-9)
+    # Total slack reconstructs the actual score - envelope
+    actual_score = contest_score(0.001, 1e-4, 200000)
+    total_slack = slack["seg_score_slack"] + slack["pose_score_slack"] + slack["byte_score_slack"]
+    assert math.isclose(actual_score - envelope, total_slack, rel_tol=1e-9)
+
+
+def test_pareto_envelope_rejects_below_floor() -> None:
+    """A candidate that violates a stated floor raises ValueError."""
+    with pytest.raises(ValueError):
+        project_onto_pareto_envelope(
+            d_seg=0.0, d_pose=0.0, archive_bytes=100,
+            byte_floor=178258,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Inverse curves (dispatch budgeting)
+# ---------------------------------------------------------------------------
+
+
+def test_equal_score_curve_d_pose_round_trip() -> None:
+    """For a target score, computing required d_pose then re-scoring yields target.
+
+    Use feasible inputs: at d_seg=1e-4 + B=160_000 the seg+rate terms are ~0.1166
+    leaving ~0.073 in the pose budget for a 0.190 target.
+    """
+    target = 0.190
+    d_seg = 1e-4
+    archive_bytes = 160_000
+    required_pose = equal_score_curve_d_pose(target, d_seg, archive_bytes)
+    assert required_pose is not None
+    re_scored = contest_score(d_seg, required_pose, archive_bytes)
+    assert math.isclose(re_scored, target, rel_tol=1e-9)
+
+
+def test_equal_score_curve_archive_bytes_round_trip() -> None:
+    target = 0.190
+    d_seg = 0.001
+    d_pose = 5e-5
+    required_bytes = equal_score_curve_archive_bytes(target, d_seg, d_pose)
+    assert required_bytes is not None
+    re_scored = contest_score(d_seg, d_pose, required_bytes)
+    # Byte rounding causes ~0.5/N_REF score noise; allow it
+    assert abs(re_scored - target) < 25.0 / CONTEST_REFERENCE_BYTES
+
+
+def test_equal_score_curve_returns_none_when_unreachable() -> None:
+    """If seg+rate already exceeds target, no pose value can reach it."""
+    target = 0.05
+    # seg term alone = 100 * 0.001 = 0.1 > 0.05
+    assert equal_score_curve_d_pose(target, d_seg=0.001, archive_bytes=178258) is None
+
+
+# ---------------------------------------------------------------------------
+# Negative / edge inputs
+# ---------------------------------------------------------------------------
+
+
+def test_negative_inputs_raise() -> None:
+    with pytest.raises(ValueError):
+        contest_score(-1, 0, 0)
+    with pytest.raises(ValueError):
+        contest_score(0, -1, 0)
+    with pytest.raises(ValueError):
+        contest_score(0, 0, -1)
+    with pytest.raises(ValueError):
+        score_gradient(0.0, -1)
