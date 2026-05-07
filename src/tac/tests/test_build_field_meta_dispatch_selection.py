@@ -7,6 +7,7 @@ import sys
 import zipfile
 from pathlib import Path
 
+from tac.frontier_rows import FRONTIER_ROW_FIELDS, FRONTIER_ROW_SCHEMA
 from tools.build_field_meta_dispatch_selection import build_selection_report
 
 REPO = Path(__file__).resolve().parents[3]
@@ -984,6 +985,58 @@ def test_field_meta_selector_exposes_closed_ingestion_contract_without_score_evi
     assert "missing_exact_cuda_positive_score_evidence" in row["score_evidence_contract"]["blockers"]
     assert row["score_lowering_evidence"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_field_meta_selector_emits_comparable_frontier_rows(tmp_path: Path) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="categorical_frontier_fixture",
+        family_group="categorical_qma9_clade_spade_openpilot",
+        pareto_scope="categorical_mask_runtime",
+        lane_id="lane_categorical_frontier_fixture",
+        job_name="job_categorical_frontier_fixture",
+        kkt_proof=_kkt_proof(),
+    )
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload["paradigms"] = ["categorical_masks", "openpilot_priors", "meta_lagrangian"]
+    payload["role"] = "replacement_or_mask_stacker"
+    payload["action_class"] = "build_byte_closed_categorical_candidate"
+    manifest.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    frontier_row = row["frontier_row"]
+    assert report["frontier_row_schema"] == FRONTIER_ROW_SCHEMA
+    assert report["frontier_row_fields"] == list(FRONTIER_ROW_FIELDS)
+    assert report["frontier_row_count"] == report["candidate_count"] == 1
+    assert report["frontier_rows"] == [frontier_row]
+    assert list(frontier_row) == list(FRONTIER_ROW_FIELDS)
+    assert frontier_row["schema"] == FRONTIER_ROW_SCHEMA
+    assert frontier_row["source_tool"] == "tools/build_field_meta_dispatch_selection.py"
+    assert frontier_row["source_path"] == row["manifest_path"]
+    assert frontier_row["candidate_id"] == row["candidate_id"]
+    assert frontier_row["family_group"] == "categorical_qma9_clade_spade_openpilot"
+    assert frontier_row["pareto_scope"] == "categorical_mask_runtime"
+    assert frontier_row["paradigms"] == [
+        "categorical_masks",
+        "openpilot_priors",
+        "meta_lagrangian",
+    ]
+    assert frontier_row["role"] == "replacement_or_mask_stacker"
+    assert frontier_row["action_class"] == "build_byte_closed_categorical_candidate"
+    assert frontier_row["candidate_static_preflight_ready"] is True
+    assert frontier_row["pareto_eligible"] is True
+    assert frontier_row["pareto_frontier"] is True
+    assert frontier_row["ready_for_exact_eval_dispatch"] is False
+    assert frontier_row["score_claim"] is False
+    assert frontier_row["dispatch_attempted"] is False
+    assert frontier_row["expected_total_score_delta"] == row["expected_total_score_delta"]
+    assert "missing_active_lane_dispatch_claim" in frontier_row["blockers"]
+    assert (
+        "matching_active_level2_lane_claim_for_manifest_lane_and_job"
+        in frontier_row["next_required_proof"]
+    )
 
 
 def test_field_meta_selector_refuses_planning_packet_as_score_evidence_even_if_source_claims_it(

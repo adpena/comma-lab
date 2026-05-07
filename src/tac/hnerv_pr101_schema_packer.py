@@ -35,6 +35,7 @@ from tac.repo_io import repo_relative, sha256_file, write_json
 SCHEMA_VERSION = 1
 TOOL = "tac.hnerv_pr101_schema_packer.build_pr101_schema_archive_candidate"
 VARIANT_NAME = "pr101_schema_split_brotli_f32_scale_raw_equal"
+FP16_SCALE_PROBE_VARIANT_NAME = "pr101_schema_split_brotli_fp16_scale_runtime_probe"
 
 DECODER_STORAGE_ORDER = (
     14, 22, 7, 6, 19, 10, 25, 4, 20, 9, 12, 15, 5, 11,
@@ -81,48 +82,81 @@ def encode_pr101_schema_split_fixture(
 
     _validate_schema_constants()
     parts = _schema_record_payloads(parsed)
-    streams: list[bytes] = []
-    stream_rows: list[dict[str, Any]] = []
-    start = 0
-    for stream_index, end in enumerate(DECODER_STREAM_ENDS):
-        raw = b"".join(parts[start:end])
-        compressed = brotli.compress(raw, quality=quality)
-        streams.append(compressed)
-        stream_rows.append(
-            {
-                "stream_index": stream_index,
-                "record_start": start,
-                "record_end": end,
-                "record_count": end - start,
-                "raw_bytes": len(raw),
-                "brotli_bytes": len(compressed),
-                "sha256": sha256_bytes(compressed),
-            }
-        )
-        start = end
-    payload = b"".join(streams)
+    payload, stats = _compress_schema_parts(
+        parts,
+        variant=VARIANT_NAME,
+        quality=quality,
+        scale_bytes_per_record=4,
+    )
     restored = decode_pr101_schema_split_fixture(payload)
     if restored.to_raw() != parsed.to_raw():
         raise HnervPr101SchemaPackerError("PR101 schema split fixture failed raw roundtrip")
+    stats["decoder_storage_order"] = list(DECODER_STORAGE_ORDER)
+    stats["decoder_stream_ends"] = list(DECODER_STREAM_ENDS)
+    stats["decoder_byte_maps"] = {str(key): value for key, value in DECODER_BYTE_MAPS.items()}
+    return payload, stats
+
+
+def encode_pr101_schema_split_fp16_scale_probe(
+    parsed: PackedDecoderRaw,
+    *,
+    quality: int = 11,
+) -> tuple[bytes, dict[str, Any]]:
+    """Encode a PR101-native fp16-scale probe without raw-equivalence claims.
+
+    PR101 stores one fp16 scale per tensor. Porting that to PR106 changes the
+    reconstructed decoder weights, so this probe is a numerical/runtime parity
+    target, not a byte-equivalent replacement.
+    """
+
+    _validate_schema_constants()
+    parts, scale_rows = _schema_record_payloads_fp16_scale_probe(parsed)
+    payload, stats = _compress_schema_parts(
+        parts,
+        variant=FP16_SCALE_PROBE_VARIANT_NAME,
+        quality=quality,
+        scale_bytes_per_record=2,
+    )
+    restored = decode_pr101_schema_split_fp16_scale_probe(payload)
+    q_equal = restored.q_stream == parsed.q_stream
+    if not q_equal:
+        raise HnervPr101SchemaPackerError("PR101 fp16-scale probe failed q roundtrip")
+    stats["q_roundtrip_equal"] = q_equal
+    stats["scale_raw_equal"] = restored.scale_stream == parsed.scale_stream
+    stats["scale_rows"] = scale_rows
+    stats["max_abs_scale_error"] = max(row["abs_scale_error"] for row in scale_rows)
+    stats["max_rel_scale_error"] = max(row["rel_scale_error"] for row in scale_rows)
+    stats["max_abs_weight_error_bound"] = max(
+        row["max_abs_weight_error_bound"] for row in scale_rows
+    )
+    stats["decoder_storage_order"] = list(DECODER_STORAGE_ORDER)
+    stats["decoder_stream_ends"] = list(DECODER_STREAM_ENDS)
+    stats["decoder_byte_maps"] = {str(key): value for key, value in DECODER_BYTE_MAPS.items()}
     return payload, {
-        "schema_version": SCHEMA_VERSION,
-        "variant": VARIANT_NAME,
-        "brotli_quality": quality,
-        "stream_count": len(streams),
-        "record_count": len(DECODER_STORAGE_ORDER),
-        "scale_bytes_per_record": 4,
-        "raw_bytes": sum(len(part) for part in parts),
-        "payload_bytes": len(payload),
-        "stream_rows": stream_rows,
-        "decoder_storage_order": list(DECODER_STORAGE_ORDER),
-        "decoder_stream_ends": list(DECODER_STREAM_ENDS),
-        "decoder_byte_maps": {str(key): value for key, value in DECODER_BYTE_MAPS.items()},
+        **stats,
+        "runtime_parity_required": True,
+        "raw_equivalence_claim": False,
+        "dispatch_blockers": [
+            "pr101_fp16_scale_runtime_adapter_not_integrated",
+            "pr101_fp16_scale_inflate_output_parity_missing",
+            "pr101_fp16_scale_exact_cuda_auth_eval_missing",
+        ],
     }
 
 
 def decode_pr101_schema_split_fixture(payload: bytes) -> PackedDecoderRaw:
     """Decode a PR101-style f32-scale split-stream fixture to PR106 raw records."""
 
+    return _decode_pr101_schema_split(payload, scale_bytes_per_record=4)
+
+
+def decode_pr101_schema_split_fp16_scale_probe(payload: bytes) -> PackedDecoderRaw:
+    """Decode a PR101-native fp16-scale probe to PR106-shaped records."""
+
+    return _decode_pr101_schema_split(payload, scale_bytes_per_record=2)
+
+
+def _decode_pr101_schema_split(payload: bytes, *, scale_bytes_per_record: int) -> PackedDecoderRaw:
     raw = _decompress_concatenated_brotli_streams(payload, len(DECODER_STREAM_ENDS))
     cursor = 0
     records_by_name: dict[str, PackedDecoderRecord] = {}
@@ -131,8 +165,16 @@ def decode_pr101_schema_split_fixture(payload: bytes) -> PackedDecoderRaw:
         value_count = _prod(shape)
         mapped = np.frombuffer(_read_exact(raw, cursor, value_count, f"{name}:q"), dtype=np.uint8)
         cursor += value_count
-        scale_f32 = _read_exact(raw, cursor, 4, f"{name}:scale_f32")
-        cursor += 4
+        scale_raw = _read_exact(raw, cursor, scale_bytes_per_record, f"{name}:scale")
+        cursor += scale_bytes_per_record
+        if scale_bytes_per_record == 4:
+            scale_f32 = scale_raw
+        elif scale_bytes_per_record == 2:
+            scale_f32 = _scale_fp16_bytes_to_f32_bytes(scale_raw)
+        else:
+            raise HnervPr101SchemaPackerError(
+                f"unsupported PR101 schema scale byte width: {scale_bytes_per_record}"
+            )
         q_storage = _decode_mapped_u8(mapped, DECODER_BYTE_MAPS.get(fixed_index, "zig"))
         if len(shape) == 4:
             storage_perm = CONV4_STORAGE_PERMS[fixed_index]
@@ -166,6 +208,7 @@ def build_pr101_schema_archive_candidate(
     output_dir: str | Path,
     source_label: str,
     allow_rate_regression: bool = False,
+    emit_fp16_probe_archive: bool = False,
     repo_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Build a fail-closed PR101-style decoder-section archive candidate."""
@@ -180,6 +223,7 @@ def build_pr101_schema_archive_candidate(
     parsed = parse_packed_decoder_brotli(packed.decoder_packed_brotli)
     source_raw = brotli.decompress(packed.decoder_packed_brotli)
     stream, stats = encode_pr101_schema_split_fixture(parsed)
+    fp16_probe_stream, fp16_probe_stats = encode_pr101_schema_split_fp16_scale_probe(parsed)
     restored = decode_pr101_schema_split_fixture(stream)
     raw_equal = restored.to_raw() == source_raw
     byte_delta = len(stream) - len(packed.decoder_packed_brotli)
@@ -218,7 +262,29 @@ def build_pr101_schema_archive_candidate(
             blockers.append("candidate_archive_sha256_unchanged")
         ready_for_archive_preflight = not blockers
 
+    fp16_probe_archive_path: Path | None = None
+    fp16_probe_archive_sha = ""
+    fp16_probe_archive_bytes: int | None = None
+    fp16_probe_payload = b""
+    if emit_fp16_probe_archive:
+        fp16_probe_payload = PackedHnervPayload(
+            header=packed.header,
+            decoder_packed_brotli=fp16_probe_stream,
+            latents_and_sidecar_brotli=packed.latents_and_sidecar_brotli,
+        ).to_bytes()
+        fp16_probe_archive_path = (
+            output_root / f"{_slug(source_label)}_pr101_schema_fp16_scale_probe.zip"
+        )
+        write_stored_single_member_zip(
+            fp16_probe_archive_path,
+            member_name=source.member_name,
+            payload=fp16_probe_payload,
+        )
+        fp16_probe_archive_sha = sha256_file(fp16_probe_archive_path)
+        fp16_probe_archive_bytes = fp16_probe_archive_path.stat().st_size
+
     runtime_adapter = _runtime_adapter_blocker_report()
+    fp16_probe_delta = len(fp16_probe_stream) - len(packed.decoder_packed_brotli)
     manifest: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "tool": TOOL,
@@ -255,6 +321,39 @@ def build_pr101_schema_archive_candidate(
         "candidate_payload_sha256": sha256_bytes(candidate_payload) if candidate_payload else "",
         "candidate_payload_bytes": len(candidate_payload) if candidate_payload else None,
         "schema_split_stats": stats,
+        "fp16_scale_probe": {
+            "variant": FP16_SCALE_PROBE_VARIANT_NAME,
+            "score_claim": False,
+            "ready_for_archive_preflight": False,
+            "ready_for_exact_eval_dispatch": False,
+            "source_decoder_section_bytes": len(packed.decoder_packed_brotli),
+            "probe_decoder_section_sha256": sha256_bytes(fp16_probe_stream),
+            "probe_decoder_section_bytes": len(fp16_probe_stream),
+            "probe_decoder_section_byte_delta_vs_source": fp16_probe_delta,
+            "probe_decoder_section_byte_delta_vs_f32_schema": len(fp16_probe_stream) - len(stream),
+            "probe_archive_bytes_if_materialized": (
+                source.archive_bytes + fp16_probe_delta if not emit_fp16_probe_archive else fp16_probe_archive_bytes
+            ),
+            "probe_archive_path": (
+                repo_relative(fp16_probe_archive_path, repo)
+                if fp16_probe_archive_path is not None
+                else ""
+            ),
+            "probe_archive_sha256": fp16_probe_archive_sha,
+            "probe_payload_sha256": sha256_bytes(fp16_probe_payload) if fp16_probe_payload else "",
+            "probe_payload_bytes": len(fp16_probe_payload) if fp16_probe_payload else None,
+            "rate_score_delta_if_runtime_supported_and_components_equal": round(
+                fp16_probe_delta * (25 / 37_545_489),
+                12,
+            ),
+            "q_roundtrip_equal": fp16_probe_stats["q_roundtrip_equal"],
+            "scale_raw_equal": fp16_probe_stats["scale_raw_equal"],
+            "max_abs_scale_error": fp16_probe_stats["max_abs_scale_error"],
+            "max_rel_scale_error": fp16_probe_stats["max_rel_scale_error"],
+            "max_abs_weight_error_bound": fp16_probe_stats["max_abs_weight_error_bound"],
+            "stats": fp16_probe_stats,
+            "dispatch_blockers": fp16_probe_stats["dispatch_blockers"],
+        },
         "decoder_raw_equivalence": {
             "contract": "pr101_schema_decoder_raw_equivalence_v1",
             "source_decoder_raw_sha256": sha256_bytes(source_raw),
@@ -287,6 +386,83 @@ def _schema_record_payloads(parsed: PackedDecoderRaw) -> list[bytes]:
         mapped = _encode_mapped_u8(q.reshape(-1), DECODER_BYTE_MAPS.get(fixed_index, "zig"))
         parts.append(mapped.tobytes() + record.scale_f32)
     return parts
+
+
+def _schema_record_payloads_fp16_scale_probe(
+    parsed: PackedDecoderRaw,
+) -> tuple[list[bytes], list[dict[str, Any]]]:
+    records_by_name = {record.name: record for record in parsed.records}
+    parts: list[bytes] = []
+    rows: list[dict[str, Any]] = []
+    for fixed_index in DECODER_STORAGE_ORDER:
+        name, shape = FIXED_STATE_SCHEMA[fixed_index]
+        record = records_by_name[name]
+        q = _zigzag_decode_u8(np.frombuffer(record.q_zz_u8, dtype=np.uint8)).reshape(shape)
+        if len(shape) == 4:
+            q = np.transpose(q, CONV4_STORAGE_PERMS[fixed_index]).copy()
+        mapped = _encode_mapped_u8(q.reshape(-1), DECODER_BYTE_MAPS.get(fixed_index, "zig"))
+        scale_fp16 = _scale_f32_bytes_to_fp16_bytes(record.scale_f32)
+        source_scale = _scale_f32_bytes_to_float(record.scale_f32)
+        restored_scale = _scale_f32_bytes_to_float(_scale_fp16_bytes_to_f32_bytes(scale_fp16))
+        abs_scale_error = abs(restored_scale - source_scale)
+        rel_scale_error = abs_scale_error / abs(source_scale) if source_scale else abs_scale_error
+        max_abs_q = int(np.max(np.abs(q.astype(np.int16)))) if q.size else 0
+        rows.append(
+            {
+                "fixed_schema_index": fixed_index,
+                "name": name,
+                "shape": list(shape),
+                "q_value_count": int(q.size),
+                "max_abs_q": max_abs_q,
+                "source_scale_f32": source_scale,
+                "restored_scale_from_fp16": restored_scale,
+                "abs_scale_error": abs_scale_error,
+                "rel_scale_error": rel_scale_error,
+                "max_abs_weight_error_bound": abs_scale_error * max_abs_q,
+            }
+        )
+        parts.append(mapped.tobytes() + scale_fp16)
+    return parts, rows
+
+
+def _compress_schema_parts(
+    parts: list[bytes],
+    *,
+    variant: str,
+    quality: int,
+    scale_bytes_per_record: int,
+) -> tuple[bytes, dict[str, Any]]:
+    streams: list[bytes] = []
+    stream_rows: list[dict[str, Any]] = []
+    start = 0
+    for stream_index, end in enumerate(DECODER_STREAM_ENDS):
+        raw = b"".join(parts[start:end])
+        compressed = brotli.compress(raw, quality=quality)
+        streams.append(compressed)
+        stream_rows.append(
+            {
+                "stream_index": stream_index,
+                "record_start": start,
+                "record_end": end,
+                "record_count": end - start,
+                "raw_bytes": len(raw),
+                "brotli_bytes": len(compressed),
+                "sha256": sha256_bytes(compressed),
+            }
+        )
+        start = end
+    payload = b"".join(streams)
+    return payload, {
+        "schema_version": SCHEMA_VERSION,
+        "variant": variant,
+        "brotli_quality": quality,
+        "stream_count": len(streams),
+        "record_count": len(DECODER_STORAGE_ORDER),
+        "scale_bytes_per_record": scale_bytes_per_record,
+        "raw_bytes": sum(len(part) for part in parts),
+        "payload_bytes": len(payload),
+        "stream_rows": stream_rows,
+    }
 
 
 def _decompress_concatenated_brotli_streams(payload: bytes, n_streams: int) -> bytes:
@@ -341,6 +517,29 @@ def _decode_mapped_u8(values: np.ndarray, byte_map: str) -> np.ndarray:
     raise HnervPr101SchemaPackerError(f"unknown decoder byte map: {byte_map}")
 
 
+def _scale_f32_bytes_to_float(scale_f32: bytes) -> float:
+    if len(scale_f32) != 4:
+        raise HnervPr101SchemaPackerError("f32 scale must be exactly 4 bytes")
+    value = float(np.frombuffer(scale_f32, dtype="<f4", count=1)[0])
+    if not np.isfinite(value):
+        raise HnervPr101SchemaPackerError("non-finite f32 scale")
+    return value
+
+
+def _scale_f32_bytes_to_fp16_bytes(scale_f32: bytes) -> bytes:
+    value = _scale_f32_bytes_to_float(scale_f32)
+    return np.asarray([np.float16(value)], dtype="<f2").tobytes()
+
+
+def _scale_fp16_bytes_to_f32_bytes(scale_fp16: bytes) -> bytes:
+    if len(scale_fp16) != 2:
+        raise HnervPr101SchemaPackerError("fp16 scale must be exactly 2 bytes")
+    value = float(np.frombuffer(scale_fp16, dtype="<f2", count=1)[0])
+    if not np.isfinite(value):
+        raise HnervPr101SchemaPackerError("non-finite fp16 scale")
+    return np.asarray([np.float32(value)], dtype="<f4").tobytes()
+
+
 def _validate_schema_constants() -> None:
     if sorted(DECODER_STORAGE_ORDER) != list(range(len(FIXED_STATE_SCHEMA))):
         raise HnervPr101SchemaPackerError("DECODER_STORAGE_ORDER is not a schema permutation")
@@ -391,9 +590,12 @@ __all__ = [
     "DECODER_BYTE_MAPS",
     "DECODER_STORAGE_ORDER",
     "DECODER_STREAM_ENDS",
+    "FP16_SCALE_PROBE_VARIANT_NAME",
     "VARIANT_NAME",
     "HnervPr101SchemaPackerError",
     "build_pr101_schema_archive_candidate",
     "decode_pr101_schema_split_fixture",
+    "decode_pr101_schema_split_fp16_scale_probe",
     "encode_pr101_schema_split_fixture",
+    "encode_pr101_schema_split_fp16_scale_probe",
 ]

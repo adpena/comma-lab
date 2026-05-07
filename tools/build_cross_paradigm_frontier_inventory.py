@@ -24,6 +24,11 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.frontier_rows import (  # noqa: E402
+    FRONTIER_ROW_FIELDS,
+    FRONTIER_ROW_SCHEMA,
+    build_frontier_row,
+)
 from tac.geometry_feedback_readiness import (  # noqa: E402
     GEOMETRY_FEEDBACK_ROADMAP_KEYS,
     build_geometry_feedback_runtime_contract,
@@ -571,6 +576,38 @@ def build_inventory(*, repo_root: Path) -> dict[str, Any]:
             "score_claim": False,
             "ready_for_exact_eval_dispatch": False,
         }
+        row_payload["frontier_row"] = build_frontier_row(
+            source_tool="tools/build_cross_paradigm_frontier_inventory.py",
+            key=row.key,
+            candidate_id=row.key,
+            title=row.title,
+            family=row.key,
+            family_group=row.key,
+            pareto_scope=row.key,
+            paradigms=row.paradigms,
+            role=row.role,
+            status=row.status,
+            evidence_grade=row.evidence_grade,
+            action_class=row_payload["action_class"],
+            priority_tier=row_payload["priority_tier"],
+            score_claim=False,
+            dispatch_attempted=False,
+            candidate_static_preflight_ready=False,
+            ready_for_exact_eval_dispatch=False,
+            pareto_eligible=False,
+            pareto_frontier=False,
+            score_evidence_rankable=False,
+            planning_priority_rankable=False,
+            blockers=blockers,
+            next_required_proof=(
+                "candidate_specific_archive_manifest",
+                "lane_dispatch_claim",
+                "exact_cuda_auth_eval",
+            ),
+            next_patch=row.next_patch,
+            code_paths=row.code_paths,
+            evidence_paths=row.evidence_paths,
+        )
         if geometry_contract is not None:
             row_payload["geometry_feedback_contract"] = geometry_contract
         rows.append(row_payload)
@@ -598,6 +635,10 @@ def build_inventory(*, repo_root: Path) -> dict[str, Any]:
             ),
         },
         "row_count": len(rows),
+        "frontier_row_schema": FRONTIER_ROW_SCHEMA,
+        "frontier_row_fields": list(FRONTIER_ROW_FIELDS),
+        "frontier_row_count": len(rows),
+        "frontier_rows": [row["frontier_row"] for row in rows],
         "role_counts": dict(sorted(role_counts.items())),
         "paradigm_counts": dict(sorted(paradigm_counts.items())),
         "action_class_counts": dict(sorted(action_class_counts.items())),

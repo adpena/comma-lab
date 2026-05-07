@@ -15,10 +15,13 @@ from tac.hnerv_lowlevel_packer import (
 )
 from tac.hnerv_pr101_schema_packer import (
     DECODER_STREAM_ENDS,
+    FP16_SCALE_PROBE_VARIANT_NAME,
     VARIANT_NAME,
     build_pr101_schema_archive_candidate,
     decode_pr101_schema_split_fixture,
+    decode_pr101_schema_split_fp16_scale_probe,
     encode_pr101_schema_split_fixture,
+    encode_pr101_schema_split_fp16_scale_probe,
 )
 
 REPO = Path(__file__).resolve().parents[3]
@@ -37,6 +40,24 @@ def test_pr101_schema_split_fixture_roundtrips_pr106_raw() -> None:
     assert stats["raw_bytes"] == len(parsed.to_raw())
     assert len(stats["stream_rows"]) == len(DECODER_STREAM_ENDS)
     assert payload == encode_pr101_schema_split_fixture(parsed)[0]
+
+
+def test_pr101_schema_fp16_scale_probe_preserves_q_but_not_raw_scales() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+
+    payload, stats = encode_pr101_schema_split_fp16_scale_probe(parsed)
+    restored = decode_pr101_schema_split_fp16_scale_probe(payload)
+
+    assert restored.q_stream == parsed.q_stream
+    assert restored.scale_stream != parsed.scale_stream
+    assert restored.to_raw() != parsed.to_raw()
+    assert stats["variant"] == FP16_SCALE_PROBE_VARIANT_NAME
+    assert stats["scale_bytes_per_record"] == 2
+    assert stats["q_roundtrip_equal"] is True
+    assert stats["scale_raw_equal"] is False
+    assert stats["raw_equivalence_claim"] is False
+    assert stats["runtime_parity_required"] is True
+    assert stats["payload_bytes"] <= encode_pr101_schema_split_fixture(parsed)[1]["payload_bytes"]
 
 
 def test_build_pr101_schema_archive_candidate_allows_forensic_archive_with_override(
@@ -62,6 +83,11 @@ def test_build_pr101_schema_archive_candidate_allows_forensic_archive_with_overr
     assert manifest["candidate_variant"] == VARIANT_NAME
     assert manifest["candidate_archive_sha256"] != source.archive_sha256
     assert manifest["decoder_raw_equivalence"]["raw_equal"] is True
+    assert manifest["fp16_scale_probe"]["variant"] == FP16_SCALE_PROBE_VARIANT_NAME
+    assert manifest["fp16_scale_probe"]["score_claim"] is False
+    assert manifest["fp16_scale_probe"]["q_roundtrip_equal"] is True
+    assert manifest["fp16_scale_probe"]["scale_raw_equal"] is False
+    assert manifest["fp16_scale_probe"]["ready_for_exact_eval_dispatch"] is False
     assert "pr101_schema_submission_runtime_adapter_not_integrated" in manifest["dispatch_blockers"]
     assert "exact_cuda_auth_eval_missing" in manifest["dispatch_blockers"]
 
@@ -119,6 +145,39 @@ def test_build_hnerv_pr101_schema_candidate_cli_writes_manifest(tmp_path: Path) 
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["tool_run_manifest"]["tool"] == "tools/build_hnerv_pr101_schema_candidate.py"
     assert Path(payload["candidate_archive_path"]).exists()
+
+
+def test_build_hnerv_pr101_schema_candidate_cli_can_emit_fp16_probe_archive(tmp_path: Path) -> None:
+    source_archive = _source_archive(tmp_path)
+    json_out = tmp_path / "result.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_hnerv_pr101_schema_candidate.py"),
+            "--source-archive",
+            str(source_archive),
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--source-label",
+            "PR106x",
+            "--allow-rate-regression",
+            "--emit-fp16-probe-archive",
+            "--json-out",
+            str(json_out),
+            "--fail-if-blocked",
+        ],
+        check=True,
+        text=True,
+    )
+
+    payload = json.loads(json_out.read_text(encoding="utf-8"))
+    probe = payload["fp16_scale_probe"]
+    assert probe["score_claim"] is False
+    assert probe["ready_for_exact_eval_dispatch"] is False
+    assert probe["probe_archive_sha256"]
+    assert Path(probe["probe_archive_path"]).exists()
+    assert "pr101_fp16_scale_exact_cuda_auth_eval_missing" in probe["dispatch_blockers"]
 
 
 def _source_archive(tmp_path: Path, *, source_quality: int = 0) -> Path:

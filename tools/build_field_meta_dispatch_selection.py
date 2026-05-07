@@ -26,6 +26,11 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.frontier_rows import (  # noqa: E402
+    FRONTIER_ROW_FIELDS,
+    FRONTIER_ROW_SCHEMA,
+    build_frontier_row,
+)
 from tac.optimization.meta_lagrangian_allocator import rate_score_delta  # noqa: E402
 from tac.repo_io import json_text, read_json, repo_relative, sha256_file  # noqa: E402
 
@@ -926,6 +931,31 @@ def _candidate_family(payload: Mapping[str, Any]) -> tuple[str, str, str]:
     if not pareto_scope:
         pareto_scope = family_group
     return family, family_group, pareto_scope
+
+
+def _candidate_paradigms(
+    payload: Mapping[str, Any],
+    *,
+    family: str,
+    family_group: str,
+) -> list[str]:
+    values: list[Any] = []
+    for path in (
+        ("paradigms",),
+        ("paradigm",),
+        ("meta_lagrangian_atom", "paradigms"),
+        ("meta_lagrangian_atom", "paradigm"),
+        ("meta_lagrangian_atom_export", "atom_template", "paradigms"),
+        ("meta_lagrangian_atom_export", "atom_template", "paradigm"),
+        ("selected_target", "paradigms"),
+        ("selected_target", "paradigm"),
+        ("selected_target", "meta_lagrangian_atom_export", "atom_template", "paradigms"),
+        ("selected_target", "meta_lagrangian_atom_export", "atom_template", "paradigm"),
+    ):
+        values.extend(_string_list(_nested(payload, path)))
+    if not values:
+        values.extend([family_group or family])
+    return _ordered_unique_strings(values)
 
 
 def _candidate_evidence_grade(payload: Mapping[str, Any]) -> str:
@@ -2347,6 +2377,46 @@ def _annotate_row_explanations(rows: Iterable[dict[str, Any]]) -> None:
         row["field_selection_ready_for_exact_eval_dispatch"] = bool(
             row["exact_dispatch_blockers"]["ready_for_exact_eval_dispatch"]
         )
+        _refresh_frontier_row(row)
+
+
+def _refresh_frontier_row(row: dict[str, Any]) -> None:
+    row["frontier_row"] = build_frontier_row(
+        source_tool=TOOL,
+        source_path=str(row.get("manifest_path") or ""),
+        key=str(row.get("candidate_id") or ""),
+        candidate_id=str(row.get("candidate_id") or ""),
+        title=str(row.get("title") or ""),
+        family=str(row.get("family") or ""),
+        family_group=str(row.get("family_group") or ""),
+        pareto_scope=str(row.get("pareto_scope") or ""),
+        paradigms=row.get("paradigms") or (),
+        role=str(row.get("role") or ""),
+        status=str(row.get("selection_decision") or "candidate_packet_ingested"),
+        evidence_grade=str(row.get("evidence_grade") or ""),
+        action_class=str(row.get("action_class") or ""),
+        priority_tier=row.get("priority_tier"),
+        score_claim=False,
+        dispatch_attempted=False,
+        candidate_static_preflight_ready=bool(row.get("candidate_static_preflight_ready")),
+        ready_for_exact_eval_dispatch=bool(row.get("field_selection_ready_for_exact_eval_dispatch")),
+        pareto_eligible=bool(row.get("pareto_eligible")),
+        pareto_frontier=bool(row.get("pareto_frontier")),
+        score_evidence_rankable=bool(row.get("score_evidence_rankable")),
+        planning_priority_rankable=bool(row.get("planning_priority_rankable")),
+        expected_total_score_delta=row.get("expected_total_score_delta"),
+        byte_delta=row.get("byte_delta"),
+        expected_seg_dist_delta=row.get("expected_seg_dist_delta"),
+        expected_pose_dist_delta=row.get("expected_pose_dist_delta"),
+        expected_information_gain_nats=row.get("expected_information_gain_nats"),
+        blockers=row.get("field_selection_blockers") or row.get("candidate_blockers") or (),
+        next_required_proof=row.get("field_selection_next_required_proof")
+        or row.get("next_required_proof")
+        or (),
+        next_patch=str(row.get("next_local_non_gpu_command") or ""),
+        code_paths=row.get("code_paths") or (),
+        evidence_paths=row.get("evidence_paths") or (),
+    )
 
 
 def _selection_penalty_terms(row: Mapping[str, Any]) -> dict[str, float]:
@@ -2631,6 +2701,11 @@ def _row_for_manifest(
         dispatch_blockers.extend(f"dirty:{path}" for path in dirty_matches)
         dispatch_blockers = _unique_strings(dispatch_blockers)
     family, family_group, pareto_scope = _candidate_family(payload)
+    paradigms = _candidate_paradigms(
+        payload,
+        family=family,
+        family_group=family_group,
+    )
     evidence_grade = _candidate_evidence_grade(payload)
     proxy_row = _candidate_proxy_row(payload, evidence_grade)
     interaction_assumptions = _candidate_interaction_assumptions(payload)
@@ -2762,6 +2837,13 @@ def _row_for_manifest(
         "family": family,
         "family_group": family_group,
         "pareto_scope": pareto_scope,
+        "paradigms": paradigms,
+        "title": str(payload.get("title") or payload.get("name") or ""),
+        "role": str(payload.get("role") or payload.get("packet_role") or ""),
+        "action_class": str(payload.get("action_class") or payload.get("next_action_class") or ""),
+        "priority_tier": payload.get("priority_tier"),
+        "code_paths": _ordered_unique_strings(_path_values(payload.get("code_paths"))),
+        "evidence_paths": _ordered_unique_strings(_path_values(payload.get("evidence_paths"))),
         "conflicts_with_families": conflicts_with_families,
         "conflicts_with_atoms": conflicts_with_atoms,
         "interaction_assumptions": interaction_assumptions,
@@ -2839,6 +2921,7 @@ def _row_for_manifest(
         "pareto_eligibility_blockers": [],
         "non_dominated_frontier_reason": {},
         "pareto_objectives": {},
+        "frontier_row": {},
         "candidate_blockers": blockers,
         "candidate_preflight_next_required_proof": candidate_preflight_next_required_proof,
         "next_required_proof": candidate_preflight_next_required_proof,
@@ -2957,6 +3040,10 @@ def build_selection_report(
         "candidate_local_preflight_ready": bool(selected and selected["candidate_local_preflight_ready"]),
         "candidate_static_preflight_ready": bool(selected and selected["candidate_static_preflight_ready"]),
         "candidate_count": len(rows),
+        "frontier_row_schema": FRONTIER_ROW_SCHEMA,
+        "frontier_row_fields": list(FRONTIER_ROW_FIELDS),
+        "frontier_row_count": len(rows),
+        "frontier_rows": [row["frontier_row"] for row in rows],
         "candidate_local_preflight_ready_count": local_ready_count,
         "candidate_static_preflight_ready_count": static_ready_count,
         "field_meta_ingestion_ready_count": ingestion_ready_count,

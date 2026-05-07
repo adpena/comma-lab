@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from tac.frontier_rows import FRONTIER_ROW_FIELDS, FRONTIER_ROW_SCHEMA
 from tac.geometry_feedback_readiness import (
     GEOMETRY_FEEDBACK_ROADMAP_KEYS,
     UNCHARGED_GEOMETRY_FEEDBACK_BLOCKER,
@@ -173,6 +174,31 @@ def test_cross_paradigm_inventory_action_queue_routes_next_tranche() -> None:
     assert queue[0]["action_class"] == "claim_exact_eval_packet_after_static_gate"
     assert queue[2]["action_class"] == "build_byte_closed_categorical_candidate"
     assert payload["action_class_counts"]["wire_jcsp_submission_runtime_consumer"] == 1
+
+
+def test_cross_paradigm_inventory_emits_comparable_frontier_rows() -> None:
+    payload = build_inventory(repo_root=REPO)
+
+    assert payload["frontier_row_schema"] == FRONTIER_ROW_SCHEMA
+    assert payload["frontier_row_fields"] == list(FRONTIER_ROW_FIELDS)
+    assert payload["frontier_row_count"] == payload["row_count"]
+    assert len(payload["frontier_rows"]) == payload["row_count"]
+    for row, frontier_row in zip(payload["rows"], payload["frontier_rows"], strict=True):
+        assert row["frontier_row"] == frontier_row
+        assert list(frontier_row) == list(FRONTIER_ROW_FIELDS)
+        assert frontier_row["schema"] == FRONTIER_ROW_SCHEMA
+        assert frontier_row["source_tool"] == "tools/build_cross_paradigm_frontier_inventory.py"
+        assert frontier_row["candidate_id"] == row["key"]
+        assert frontier_row["family_group"] == row["key"]
+        assert frontier_row["pareto_scope"] == row["key"]
+        assert frontier_row["paradigms"] == row["paradigms"]
+        assert frontier_row["score_claim"] is False
+        assert frontier_row["dispatch_attempted"] is False
+        assert frontier_row["candidate_static_preflight_ready"] is False
+        assert frontier_row["ready_for_exact_eval_dispatch"] is False
+        assert frontier_row["pareto_eligible"] is False
+        assert frontier_row["pareto_frontier"] is False
+        assert "exact_cuda_auth_eval" in frontier_row["next_required_proof"]
 
 
 def test_cross_paradigm_inventory_paths_are_current_on_main() -> None:
