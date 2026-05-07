@@ -32,6 +32,17 @@ ARCHIVE_SRC="$CANDIDATE_DIR/archive.zip"
 mkdir -p "$OUT"
 log() { echo "[pmg-hotspot-c067-h100] $(date -u +%FT%TZ) $*" | tee -a "$OUT/driver.log"; }
 
+# Heartbeat — feedback_vastai_launch_returns_success_before_lane_starts.
+# The watchdog polls heartbeat.log freshness as the only ground-truth lane
+# readiness signal. remote_archive_only_eval.sh writes its own heartbeat to
+# its $LOG_DIR; we also write one at the wrapper level so a parent watchdog
+# can detect failures BEFORE we reach the eval child.
+HEARTBEAT="$OUT/heartbeat.log"
+echo "$(date -u +%FT%TZ) wrapper-start pid=$$" >> "$HEARTBEAT"
+( while true; do echo "$(date -u +%FT%TZ) heartbeat pid=$$" >> "$HEARTBEAT"; sleep 60; done ) &
+HEARTBEAT_PID=$!
+trap 'kill $HEARTBEAT_PID 2>/dev/null || true' EXIT
+
 # Provenance — feedback_canonical_remote_bootstraps mandate.
 PROVENANCE="$OUT/provenance.json"
 GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")

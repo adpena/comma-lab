@@ -40,6 +40,16 @@ export SJKL_PREDICTED_LOW="${SJKL_PREDICTED_LOW:-0.29}"
 export SJKL_PREDICTED_HIGH="${SJKL_PREDICTED_HIGH:-0.42}"
 export SJKL_CONTROLLED_BASELINE="${SJKL_CONTROLLED_BASELINE:-C067 fixedslice source archive plus charged tiny SJ-KL residual payload; v3 k=2 alpha=4 anchors=8 cap=8192B; no score claim until contest_auth_eval.json}"
 
+# Heartbeat — feedback_vastai_launch_returns_success_before_lane_starts.
+# This wrapper exec's scripts/remote_lane_sjkl_c067.sh (which runs the
+# canonical heartbeat write loop). exec replaces the process so any
+# backgrounded heartbeat we start would die immediately. Instead we write a
+# single wrapper-start marker so a watchdog observing the run can confirm
+# the wrapper actually ran before the canonical driver took over.
+mkdir -p "$SJKL_OUTPUT_DIR"
+HEARTBEAT="$SJKL_OUTPUT_DIR/heartbeat.log"
+echo "$(date -u +%FT%TZ) wrapper-pre-exec pid=$$ delegate=remote_lane_sjkl_c067.sh" >> "$HEARTBEAT"
+
 # Provenance is delegated: scripts/remote_lane_sjkl_c067.sh (the underlying
 # dispatch driver) writes provenance.json under SJKL_OUTPUT_DIR with the
 # git_hash, gpu_name, predicted_band (from SJKL_PREDICTED_LOW/HIGH above —

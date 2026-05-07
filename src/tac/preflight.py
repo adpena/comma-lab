@@ -12495,6 +12495,21 @@ _DEPLOY_SCANNER_EXEMPT_PRODUCERS = frozenset({
     # a producer — it never writes the artifact, only validates archives that
     # contain it. Invoked by operators before lane dispatch + by Check 64.
     "experiments/canonical_local_auth_eval_smoke.py",
+    # CDO1 byte-closed mask-overlay archive builder. Local-only, scorer-free,
+    # always records score_claim=false. Foveation_params.bin reference is in
+    # the byte-closed archive payload, not a deployable training output.
+    # PARADIGM-α deferred dispatch (project_paradigm_alpha_architecture_clarification_20260506).
+    "experiments/build_c067_decoded_delta_overlay_candidate.py",
+    # Local Q-FAITHFUL successor pose/geometry dispatch gate. CPU-only,
+    # never runs scorers, never dispatches. Inspects candidate provenance
+    # to decide whether a future training burn is allowed by the contract.
+    # foveation_params.bin appears as a contract-checked candidate member.
+    "experiments/preflight_qfaithful_successor_geometry_contract.py",
+    # LA-POSE foveation runtime skeleton (LFV1 charged archive member).
+    # Fail-closed runtime contract proof skeleton; not a contest decoder.
+    # Cross-paradigm la-pose dispatch is operator-gated (PARADIGM-la-pose
+    # in project_cross_paradigm_pipeline_wiring_landed_20260506).
+    "src/tac/lapose_foveation_runtime_skeleton.py",
 })
 
 # Directory prefixes that run on alternative platforms (NOT Vast.ai), so
