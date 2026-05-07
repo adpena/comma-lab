@@ -1,11 +1,11 @@
-"""Bilevel optimization driver — the magic-autopilot conductor.
+"""Bilevel optimization driver : the magic-autopilot conductor.
 
 Per Grand Council 2026-05-07 verdict
 (`.omx/research/grand_council_optimal_path_to_shannon_floor_20260507.md`),
 the optimal path to lowest-score is a bilevel optimization with three
 nested loops:
 
-    OUTER:  δεζ joint training reshapes substrate θ
+    OUTER:  dezeta joint training reshapes substrate theta
     MIDDLE: meta-Lagrangian search over codec/architecture/paradigm atoms
     INNER:  Joint-ADMM allocates rate-distortion budget across streams
 
@@ -26,9 +26,9 @@ contest-CUDA scores) auto-updates lane_maturity gates.
 |------:|-------:|----------------------------------------|------|
 |     1 |  0.190 | PR100 + Op1+Op2+Op2.5 stack            | yes  |
 |     2 |  0.183 | RAFT poses (Path-B pose-axis fix)      | yes  |
-|     3 |  0.165 | δεζ training on PR100                  | yes  |
-|     4 |  0.155 | Ballé hyperprior un-STUB + γ           | yes  |
-|     5 |  0.145 | α masks + wavelet + SIREN              | yes  |
+|     3 |  0.165 | dezeta training on PR100                  | yes  |
+|     4 |  0.155 | Balle hyperprior un-STUB + gamma           | yes  |
+|     5 |  0.145 | alpha masks + wavelet + SIREN              | yes  |
 |     6 |  0.135 | telescopic foveation + UNIWARD         | yes  |
 |     7 |  0.125 | YF-floor research                      | yes  |
 
@@ -42,20 +42,20 @@ The driver runs the **CPU-side preparation** for any phase:
 - Gate-state computation
 - Meta-Lagrangian atom-ledger updates from prior phase outputs
 
-GPU-bound work (contest-CUDA evaluation, δεζ training) is QUEUED, not
+GPU-bound work (contest-CUDA evaluation, dezeta training) is QUEUED, not
 executed by this driver. The dispatch playbook
 `scripts/deferred_dispatch_playbook_pr103_pr106_standalone_20260507.sh`
 is the gate-5 executor that consumes this driver's output.
 
 ## Magic ingredients
 
-1. **Substrate auto-detection** — picks PR100, PR106, or δεζ-trained from
+1. **Substrate auto-detection** : picks PR100, PR106, or dezeta-trained from
    disk; no operator hand-holding.
-2. **Phase auto-routing** — read lane_registry, compute next gate to attack.
-3. **Continual-learning ledger** — every phase's contest-CUDA score
+2. **Phase auto-routing** : read lane_registry, compute next gate to attack.
+3. **Continual-learning ledger** : every phase's contest-CUDA score
    appends to `experiments/results/bilevel_atom_ledger.jsonl`; the
    meta-Lagrangian middle-loop consumes it.
-4. **Reports auto-update** — `reports/latest.md` gets the new frontier
+4. **Reports auto-update** : `reports/latest.md` gets the new frontier
    anchor automatically when a contest-CUDA score lands.
 
 ## Strict-scorer-rule
@@ -107,31 +107,31 @@ PHASE_TRAJECTORY: dict[int, dict[str, object]] = {
         "substrate_hint": "PR100 + RAFT-flow-derived poses",
     },
     3: {
-        "label": "δεζ joint training on PR100",
+        "label": "dezeta joint training on PR100",
         "target_score": 0.165,
         "estimated_gpu_usd": 145,
         "wall_clock_days": 30,
         "gpu_required": True,
         "cathedral_op": "tac.codec_pipeline_deltaepszeta_callback + tac.shannon_h2_loss",
-        "substrate_hint": "δεζ-trained PR100 substrate",
+        "substrate_hint": "dezeta-trained PR100 substrate",
     },
     4: {
-        "label": "Ballé hyperprior un-STUB + γ paradigm",
+        "label": "Balle hyperprior un-STUB + gamma paradigm",
         "target_score": 0.155,
         "estimated_gpu_usd": 250,
         "wall_clock_days": 45,
         "gpu_required": True,
         "cathedral_op": "Op_GammaJointADMM(substrate_aware_init=True)",
-        "substrate_hint": "δεζ-trained + Ballé prior-fit",
+        "substrate_hint": "dezeta-trained + Balle prior-fit",
     },
     5: {
-        "label": "α masks + wavelet + SIREN",
+        "label": "alpha masks + wavelet + SIREN",
         "target_score": 0.145,
         "estimated_gpu_usd": 400,
         "wall_clock_days": 60,
         "gpu_required": True,
         "cathedral_op": "tac.codec_pipeline_mask + Op_WaveletResidual + Op_SIREN",
-        "substrate_hint": "δεζ-trained + Ballé + mask bakeoff winner",
+        "substrate_hint": "dezeta-trained + Balle + mask bakeoff winner",
     },
     6: {
         "label": "telescopic foveation + UNIWARD",
@@ -239,7 +239,7 @@ def detect_current_phase(repo_root: pathlib.Path) -> int:
         return 1
 
     lanes_raw = registry.get("lanes", {})
-    # Registry schema variation: dict[name → lane] OR list[lane-with-id]
+    # Registry schema variation: dict[name -> lane] OR list[lane-with-id]
     if isinstance(lanes_raw, dict):
         lane_items = list(lanes_raw.items())
     elif isinstance(lanes_raw, list):
@@ -253,13 +253,13 @@ def detect_current_phase(repo_root: pathlib.Path) -> int:
             for name, lane in lane_items
         )
 
-    # Phase 1: PR100-anchor lane at L3? No → still in phase 1.
+    # Phase 1: PR100-anchor lane at L3? No -> still in phase 1.
     if not _has_lane_at_level("pr100", 3):
         return 1
     # Phase 2: RAFT-poses lane at L3?
     if not _has_lane_at_level("raft", 3):
         return 2
-    # Phase 3: δεζ-trained substrate at L3?
+    # Phase 3: dezeta-trained substrate at L3?
     if not (_has_lane_at_level("deltaepszeta", 3) or _has_lane_at_level("delta_epsilon_zeta", 3)):
         return 3
 
@@ -337,7 +337,7 @@ def emit_phase_manifest(
 
 
 # ---------------------------------------------------------------------------
-# Phase 1 — PR100 anchor + Op1+Op2 cathedral autopilot (CPU prep)
+# Phase 1 : PR100 anchor + Op1+Op2 cathedral autopilot (CPU prep)
 # ---------------------------------------------------------------------------
 
 def run_phase_1(repo_root: pathlib.Path) -> dict[str, object]:
@@ -390,7 +390,7 @@ def run_phase_1(repo_root: pathlib.Path) -> dict[str, object]:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
-        description="Bilevel optimization driver — magic-autopilot conductor",
+        description="Bilevel optimization driver : magic-autopilot conductor",
     )
     p.add_argument(
         "--phase",
@@ -423,7 +423,7 @@ def main(argv: list[str] | None = None) -> int:
         for ph, spec in PHASE_TRAJECTORY.items():
             print(
                 f"  {ph:<6} "
-                f"{str(spec['target_score']):<8} "
+                f"{spec['target_score']!s:<8} "
                 f"${spec['estimated_gpu_usd']:<7} "
                 f"{spec['wall_clock_days']:<6} "
                 f"{spec['label']}"
@@ -500,7 +500,7 @@ def main(argv: list[str] | None = None) -> int:
             return 4
         chosen = substrates[0]  # placeholder; real driver picks per phase spec
         print(f"[bilevel] phase {phase} requires GPU; CPU prep complete.")
-        print(f"[bilevel] queued for GPU dispatch when billing returns.")
+        print("[bilevel] queued for GPU dispatch when billing returns.")
         manifest_path = emit_phase_manifest(
             repo_root,
             phase=phase,

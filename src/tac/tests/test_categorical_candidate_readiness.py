@@ -479,6 +479,7 @@ def test_audit_categorical_candidate_manifest_fails_closed_on_self_attested_pari
     assert manifest["label_prior_payload_manifest"]["accepted"] is True
     assert manifest["label_prior_payload_manifest"]["member"] == LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER
     assert manifest["label_prior_payload_manifest"]["label_contract"] == RUNTIME_LABEL_CONTRACT
+    assert manifest["label_prior_payload_manifest"]["typed_label_atoms_match"] is True
     assert manifest["runtime_loader_parity"]["accepted"] is False
     assert manifest["runtime_loader_parity"]["loader_member"] == "runtime_decoder.py"
     assert manifest["runtime_loader_parity"]["contract"] == RUNTIME_LOADER_PARITY_CONTRACT
@@ -1065,6 +1066,43 @@ def test_audit_categorical_candidate_manifest_rejects_label_prior_class_row_drif
     assert manifest["label_prior_payload_manifest"]["accepted"] is False
     assert manifest["label_prior_payload_manifest"]["class_rows_match"] is False
     assert manifest["dispatch_blockers"] == ["label_prior_payload_manifest_class_rows_mismatch"]
+
+
+def test_audit_categorical_candidate_manifest_rejects_typed_label_atom_drift(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    with zipfile.ZipFile(candidate["candidate_archive"]["path"]) as archive:
+        label_prior_payload_manifest = json.loads(
+            archive.read(LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER).decode("utf-8")
+        )
+    label_prior_payload_manifest["typed_label_atoms"]["atoms"][1][
+        "openpilot_prior_hint"
+    ] = "wrong_prior"
+    drifted_manifest = json.dumps(
+        label_prior_payload_manifest,
+        indent=2,
+        sort_keys=True,
+    ).encode("utf-8") + b"\n"
+    _replace_charged_archive_member(
+        candidate,
+        member_name=LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
+        raw=drifted_manifest,
+    )
+    _attach_complete_dispatch_proofs(candidate, tmp_path)
+
+    manifest = audit_categorical_candidate_manifest(
+        candidate,
+        repo_root=REPO,
+        manifest_dir=tmp_path,
+    )
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["label_prior_payload_manifest"]["accepted"] is False
+    assert manifest["label_prior_payload_manifest"]["typed_label_atoms_match"] is False
+    assert manifest["dispatch_blockers"] == [
+        "label_prior_payload_manifest_typed_label_atoms_mismatch"
+    ]
 
 
 def test_audit_categorical_candidate_manifest_rejects_label_prior_embedded_contract_drift(

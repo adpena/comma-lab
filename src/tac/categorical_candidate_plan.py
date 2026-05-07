@@ -11,6 +11,11 @@ from __future__ import annotations
 from pathlib import PurePosixPath
 from typing import Any
 
+from tac.categorical_label_atoms import (
+    OPENPILOT_PRIOR_HINTS,
+    build_categorical_typed_label_atoms,
+    semantic_priority_weight_ppm,
+)
 from tac.categorical_openpilot_mask_prior_contract import (
     RUNTIME_LABEL_CONTRACT,
     audit_categorical_openpilot_mask_priors,
@@ -44,14 +49,6 @@ PRIMARY_LABEL_SOURCES: tuple[dict[str, str], ...] = (
         "used_for": "five-label openpilot semantic grouping",
     },
 )
-
-_OPENPILOT_PRIOR_HINTS = {
-    "road": "road_geometry_track_prior",
-    "lane_markings": "lane_marking_track_prior",
-    "undrivable": "scene_layout_prior",
-    "movable": "dynamic_object_filter_prior",
-    "my_car": "ego_car_filter_prior",
-}
 
 
 def _is_sha256(value: Any) -> bool:
@@ -139,11 +136,6 @@ def _member_role_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _semantic_priority_weight_ppm(class_id: int) -> int:
-    total_bits = sum(SEMANTIC_QUANTIZATION_DEFAULT_BITS.values())
-    return round(SEMANTIC_QUANTIZATION_DEFAULT_BITS[class_id] * 1_000_000 / total_bits)
-
-
 def _class_row(
     *,
     class_id: int,
@@ -158,8 +150,8 @@ def _class_row(
         "comma10k_color": item.comma10k_color,
         "selfcomp_gray": SELFCOMP_CLASS_TO_GRAY[item.class_id],
         "default_quant_bits": SEMANTIC_QUANTIZATION_DEFAULT_BITS[item.class_id],
-        "semantic_priority_weight_ppm": _semantic_priority_weight_ppm(item.class_id),
-        "openpilot_prior_hint": _OPENPILOT_PRIOR_HINTS[item.name],
+        "semantic_priority_weight_ppm": semantic_priority_weight_ppm(item.class_id),
+        "openpilot_prior_hint": OPENPILOT_PRIOR_HINTS[item.name],
         "charged_label_member": charged_label_member,
         "categorical_payload_member": payload_member,
     }
@@ -185,10 +177,11 @@ def build_categorical_class_codebook() -> dict[str, Any]:
                 "comma10k_color": item.comma10k_color,
                 "selfcomp_gray": SELFCOMP_CLASS_TO_GRAY[item.class_id],
                 "default_quant_bits": SEMANTIC_QUANTIZATION_DEFAULT_BITS[item.class_id],
-                "openpilot_prior_hint": _OPENPILOT_PRIOR_HINTS[item.name],
+                "openpilot_prior_hint": OPENPILOT_PRIOR_HINTS[item.name],
             }
             for item in CONTEST_SEGNET_CLASSES
         ],
+        "typed_label_atoms": build_categorical_typed_label_atoms(),
     }
 
 
@@ -256,6 +249,7 @@ def build_categorical_charged_label_plan(
             )
             for item in CONTEST_SEGNET_CLASSES
         ],
+        "typed_label_atoms": build_categorical_typed_label_atoms(),
         "charged_member_summary": role_summary,
         "runtime_consumer_member": runtime_member,
         "conditioning_priors": conditioning_priors if isinstance(conditioning_priors, list) else [],
@@ -326,6 +320,8 @@ def audit_categorical_charged_label_plan(
         validation_blockers.append("ready_for_exact_eval_dispatch_must_be_false")
     if plan.get("semantic_class_order") != list(CONTEST_SEGNET_CLASS_NAME_TUPLE):
         validation_blockers.append("semantic_class_order_mismatch")
+    if plan.get("typed_label_atoms") != build_categorical_typed_label_atoms():
+        validation_blockers.append("typed_label_atoms_mismatch")
 
     class_rows = plan.get("class_rows")
     expected_rows = [

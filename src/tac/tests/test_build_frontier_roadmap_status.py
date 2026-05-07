@@ -47,7 +47,7 @@ def test_frontier_roadmap_status_is_non_dispatching_and_dirty_aware() -> None:
     assert payload["score_claim"] is False
     assert payload["dispatch_attempted"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
-    assert payload["row_count"] == 12
+    assert payload["row_count"] == 13
     assert payload["dirty_path_count"] == 2
     assert "requires_exact_cuda_auth_eval" in payload["dispatch_blockers"]
     assert payload["next_comprehensive_tranche"]["score_claim"] is False

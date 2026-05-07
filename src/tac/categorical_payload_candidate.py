@@ -287,6 +287,13 @@ def _write_runtime_execution_proof(
         "runtime_output_sha256": runtime_output_sha,
         "runtime_report_summary": {
             "kind": runtime_report.get("kind", ""),
+            "typed_label_atom_count": (
+                runtime_report.get("class_codebook", {})
+                .get("typed_label_atoms", {})
+                .get("atom_count")
+                if isinstance(runtime_report.get("class_codebook"), dict)
+                else None
+            ),
             "payload_codec": (
                 runtime_report.get("categorical_payload", {}).get("codec", "")
                 if isinstance(runtime_report.get("categorical_payload"), dict)

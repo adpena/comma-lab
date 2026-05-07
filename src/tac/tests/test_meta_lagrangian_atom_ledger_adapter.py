@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import pathlib
+import sys
 
 import pytest
 
@@ -13,146 +14,234 @@ def _load_tool_module():
     repo_root = pathlib.Path(__file__).resolve().parents[3]
     path = repo_root / "tools" / "meta_lagrangian_atom_ledger_adapter.py"
     spec = importlib.util.spec_from_file_location(
-        "meta_lagrangian_atom_ledger_adapter", path,
+        "meta_lagrangian_atom_ledger_adapter",
+        path,
     )
     if spec is None or spec.loader is None:
         raise RuntimeError(f"could not load {path}")
     mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)
     return mod
 
 
 def _write_ledger(path: pathlib.Path, records: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w") as f:
-        for r in records:
-            f.write(json.dumps(r) + "\n")
+    with path.open("w") as handle:
+        for record in records:
+            handle.write(json.dumps(record) + "\n")
 
 
 def test_read_ledger_handles_missing_file(tmp_path: pathlib.Path) -> None:
     mod = _load_tool_module()
+
     assert mod.read_atom_ledger(tmp_path / "nope.jsonl") == []
 
 
-def test_read_ledger_skips_blank_and_corrupt_lines(tmp_path: pathlib.Path) -> None:
+def test_read_ledger_fails_closed_on_corrupt_jsonl(
+    tmp_path: pathlib.Path,
+) -> None:
     mod = _load_tool_module()
     path = tmp_path / "ledger.jsonl"
-    path.write_text(
-        "\n"
-        '{"phase": 1, "contest_cuda_score": 0.18}\n'
-        "{not valid json\n"
-        "\n"
-        '{"phase": 2, "contest_cuda_score": 0.15}\n'
-    )
-    records = mod.read_atom_ledger(path)
-    assert len(records) == 2
-    assert records[0]["phase"] == 1
-    assert records[1]["phase"] == 2
+    path.write_text('{"phase": 1}\n{not valid json\n')
+
+    with pytest.raises(mod.LedgerFormatError, match="invalid JSONL record"):
+        mod.read_atom_ledger(path)
 
 
-def test_record_to_atom_extracts_fields() -> None:
+def test_read_ledger_can_explicitly_skip_corrupt_lines(
+    tmp_path: pathlib.Path,
+) -> None:
     mod = _load_tool_module()
-    rec = {
-        "phase": 2,
+    path = tmp_path / "ledger.jsonl"
+    path.write_text('{"phase": 1}\n{not valid json\n{"phase": 2}\n')
+
+    records = mod.read_atom_ledger(path, strict=False)
+
+    assert [record["phase"] for record in records] == [1, 2]
+
+
+def test_cpu_prep_row_preserves_context_but_is_fail_closed() -> None:
+    mod = _load_tool_module()
+    record = {
+        "phase": 1,
         "substrate_label": "PR101 (gold)",
-        "contest_cuda_score": 0.193,
-        "archive_bytes": 178_258,
+        "substrate_score_anchor": 0.193,
+        "contest_cuda_score": None,
+        "archive_bytes": None,
+        "archive_sha256": None,
+        "evidence_grade": "[CPU-prep]",
+        "cathedral_op": "Op1+Op2",
+        "notes": "awaiting GPU",
+    }
+
+    atom = mod.record_to_atom(record, idx=0)
+
+    assert atom.phase == 1
+    assert atom.substrate_label == "PR101 (gold)"
+    assert atom.evidence_grade == "[CPU-prep]"
+    assert atom.score is None
+    assert atom.score_delta_vs_substrate_anchor is None
+    assert atom.byte_delta_vs_substrate_anchor is None
+    assert atom.archive_custody["has_archive_bytes"] is False
+    assert atom.fail_closed is True
+    assert atom.ready_for_meta_lagrangian_search is False
+    assert "missing_archive_bytes" in atom.blockers
+
+
+def test_complete_row_emits_strict_search_candidate(
+    tmp_path: pathlib.Path,
+) -> None:
+    mod = _load_tool_module()
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive-bytes")
+    digest = mod._sha256_file(archive)
+    record = {
+        "phase": 2,
+        "candidate_id": "phase2_ready",
+        "substrate_label": "PR101 (gold)",
+        "substrate_score_anchor": 0.200,
+        "substrate_archive_bytes": 120,
+        "contest_cuda_score": 0.190,
+        "archive_path": str(archive),
+        "archive_bytes": archive.stat().st_size,
+        "archive_sha256": digest,
         "evidence_grade": "[contest-CUDA]",
         "cathedral_op": "Op1+Op2",
-        "archive_sha256": "deadbeef",
-        "notes": "test",
+        "rel_err_pct": 0.25,
+        "n_layers": 13,
+        "lane_class": "apogee_intN",
     }
-    atom = mod.record_to_atom(rec, idx=0)
-    assert atom.score == 0.193
-    assert atom.rate_bytes == 178_258
-    assert atom.evidence_grade == "[contest-CUDA]"
-    assert atom.archive_sha256 == "deadbeef"
+
+    atom = mod.record_to_atom(record, idx=0, repo_root=tmp_path)
+    candidate = atom.to_search_candidate()
+
+    assert atom.fail_closed is False
+    assert atom.ready_for_meta_lagrangian_search is True
+    assert atom.ready_for_exact_eval_dispatch is False
+    assert atom.score_claim is False
+    assert atom.score_delta_vs_substrate_anchor == pytest.approx(-0.010)
+    assert atom.byte_delta_vs_substrate_anchor == archive.stat().st_size - 120
+    assert set(candidate) == {
+        "candidate_id",
+        "archive_bytes",
+        "rel_err_pct",
+        "n_layers",
+        "lane_class",
+        "archive_path",
+    }
+    assert candidate["candidate_id"] == "phase2_ready"
+    assert candidate["archive_bytes"] == archive.stat().st_size
+    assert candidate["rel_err_pct"] == 0.25
+    assert candidate["n_layers"] == 13
 
 
-def test_record_to_atom_handles_none_score() -> None:
+def test_archive_custody_mismatch_blocks_candidate(
+    tmp_path: pathlib.Path,
+) -> None:
     mod = _load_tool_module()
-    rec = {
-        "phase": 1, "substrate_label": "test",
-        "contest_cuda_score": None, "archive_bytes": None,
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive-bytes")
+    record = {
+        "phase": 2,
+        "substrate_label": "PR101",
+        "contest_cuda_score": 0.190,
+        "archive_path": str(archive),
+        "archive_bytes": archive.stat().st_size + 1,
+        "archive_sha256": "a" * 64,
+        "evidence_grade": "[contest-CUDA]",
+        "rel_err_pct": 0.25,
+        "n_layers": 13,
     }
-    atom = mod.record_to_atom(rec, idx=0)
-    assert atom.score is None
-    assert atom.rate_bytes is None
+
+    atom = mod.record_to_atom(record, idx=0, repo_root=tmp_path)
+
+    assert atom.fail_closed is True
+    assert atom.ready_for_meta_lagrangian_search is False
+    assert "archive_custody_bytes_mismatch" in atom.blockers
+    assert "archive_custody_sha256_mismatch" in atom.blockers
 
 
-def test_pareto_filter_removes_strictly_dominated(tmp_path: pathlib.Path) -> None:
+def test_emit_writes_rows_and_strict_candidates(
+    tmp_path: pathlib.Path,
+) -> None:
+    mod = _load_tool_module()
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"ready")
+    ready_record = {
+        "phase": 2,
+        "candidate_id": "ready",
+        "substrate_label": "PR101",
+        "contest_cuda_score": 0.190,
+        "archive_path": str(archive),
+        "archive_bytes": archive.stat().st_size,
+        "archive_sha256": mod._sha256_file(archive),
+        "evidence_grade": "[contest-CUDA]",
+        "rel_err_pct": 0.25,
+        "n_layers": 13,
+        "lane_class": "apogee_intN",
+    }
+    blocked_record = {
+        "phase": 1,
+        "substrate_label": "PR101",
+        "contest_cuda_score": None,
+        "archive_bytes": None,
+        "archive_sha256": None,
+        "evidence_grade": "[CPU-prep]",
+    }
+    atoms = [
+        mod.record_to_atom(ready_record, idx=0, repo_root=tmp_path),
+        mod.record_to_atom(blocked_record, idx=1, repo_root=tmp_path),
+    ]
+    rows_output = tmp_path / "rows.json"
+    candidates_output = tmp_path / "candidates.json"
+
+    payload = mod.emit_meta_lagrangian_input(
+        atoms,
+        rows_output,
+        candidates_output_path=candidates_output,
+    )
+    candidates = json.loads(candidates_output.read_text())
+    rows_payload = json.loads(rows_output.read_text())
+
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["n_rows"] == 2
+    assert payload["ready_candidate_count"] == 1
+    assert payload["fail_closed_count"] == 1
+    assert candidates == payload["candidates_for_meta_lagrangian_search_cli"]
+    assert candidates == [
+        {
+            "candidate_id": "ready",
+            "archive_bytes": archive.stat().st_size,
+            "rel_err_pct": 0.25,
+            "n_layers": 13,
+            "lane_class": "apogee_intN",
+            "archive_path": str(archive),
+        }
+    ]
+    assert rows_payload["rows"][1]["fail_closed"] is True
+
+
+def test_pareto_filter_removes_strictly_dominated() -> None:
     mod = _load_tool_module()
     atoms = [
-        # (atom_id, op, sub, rate, score, grade, sha, notes)
         mod.MetaLagrangianAtom("a1", "op", "s", 100, 0.20, "[contest-CUDA]", None, ""),
-        mod.MetaLagrangianAtom("a2", "op", "s", 100, 0.21, "[contest-CUDA]", None, ""),  # dominated by a1
-        mod.MetaLagrangianAtom("a3", "op", "s", 80,  0.22, "[contest-CUDA]", None, ""),  # not dominated (smaller rate)
-        mod.MetaLagrangianAtom("a4", "op", "s", 50,  0.30, "[contest-CUDA]", None, ""),  # not dominated (smallest rate)
+        mod.MetaLagrangianAtom("a2", "op", "s", 100, 0.21, "[contest-CUDA]", None, ""),
+        mod.MetaLagrangianAtom("a3", "op", "s", 80, 0.22, "[contest-CUDA]", None, ""),
+        mod.MetaLagrangianAtom("a4", "op", "s", 50, 0.30, "[contest-CUDA]", None, ""),
     ]
-    nd = mod.filter_pareto_non_dominated(atoms)
-    nd_ids = {a.atom_id for a in nd}
-    assert "a1" in nd_ids
-    assert "a2" not in nd_ids  # strictly dominated by a1
-    assert "a3" in nd_ids
-    assert "a4" in nd_ids
 
+    nd_ids = {atom.atom_id for atom in mod.filter_pareto_non_dominated(atoms)}
 
-def test_pareto_filter_excludes_atoms_with_missing_data(tmp_path: pathlib.Path) -> None:
-    mod = _load_tool_module()
-    atoms = [
-        mod.MetaLagrangianAtom("complete", "op", "s", 100, 0.20, "[contest-CUDA]", None, ""),
-        mod.MetaLagrangianAtom("no_score", "op", "s", 100, None, "[CPU-prep]", None, ""),
-        mod.MetaLagrangianAtom("no_rate", "op", "s", None, 0.20, "[contest-CUDA]", None, ""),
-    ]
-    nd = mod.filter_pareto_non_dominated(atoms)
-    ids = {a.atom_id for a in nd}
-    assert "complete" in ids
-    assert "no_score" not in ids
-    assert "no_rate" not in ids
-
-
-def test_emit_meta_lagrangian_input_writes_json(tmp_path: pathlib.Path) -> None:
-    mod = _load_tool_module()
-    ledger = tmp_path / "ledger.jsonl"
-    _write_ledger(ledger, [
-        {"phase": 1, "substrate_label": "PR101", "contest_cuda_score": 0.193,
-         "archive_bytes": 178_258, "evidence_grade": "[contest-CUDA]",
-         "cathedral_op": "Op1+Op2"},
-        {"phase": 2, "substrate_label": "PR101+RAFT", "contest_cuda_score": 0.180,
-         "archive_bytes": 175_000, "evidence_grade": "[contest-CUDA]",
-         "cathedral_op": "Op1+Op2+RAFT"},
-    ])
-    atoms = mod.ledger_to_atoms(ledger)
-    output = tmp_path / "atoms.json"
-    payload = mod.emit_meta_lagrangian_input(atoms, output, pareto_only=False)
-    assert payload["n_atoms"] == 2
-    assert output.exists()
-    loaded = json.loads(output.read_text())
-    assert loaded["score_claim"] is False
-    assert loaded["evidence_grade"] == "[empirical]"
-    assert len(loaded["atoms"]) == 2
-
-
-def test_emit_with_pareto_only_filters(tmp_path: pathlib.Path) -> None:
-    mod = _load_tool_module()
-    ledger = tmp_path / "ledger.jsonl"
-    _write_ledger(ledger, [
-        # a1 dominates a2 (same rate, lower score)
-        {"phase": 1, "substrate_label": "a1", "contest_cuda_score": 0.193, "archive_bytes": 178_000, "cathedral_op": "x"},
-        {"phase": 1, "substrate_label": "a2", "contest_cuda_score": 0.200, "archive_bytes": 178_000, "cathedral_op": "x"},
-    ])
-    atoms = mod.ledger_to_atoms(ledger)
-    output = tmp_path / "pareto.json"
-    payload = mod.emit_meta_lagrangian_input(atoms, output, pareto_only=True)
-    assert payload["pareto_only"] is True
-    assert payload["n_atoms"] == 1
+    assert nd_ids == {"a1", "a3", "a4"}
 
 
 def test_ledger_to_atoms_real_repo() -> None:
-    """Real repo's ledger should be readable (may be empty)."""
     mod = _load_tool_module()
     repo_root = pathlib.Path(__file__).resolve().parents[3]
     ledger = repo_root / "experiments/results/bilevel_atom_ledger.jsonl"
-    atoms = mod.ledger_to_atoms(ledger)
-    # Just verify it doesn't crash; ledger may be empty on fresh checkout.
+
+    atoms = mod.ledger_to_atoms(ledger, repo_root=repo_root)
+
     assert isinstance(atoms, list)

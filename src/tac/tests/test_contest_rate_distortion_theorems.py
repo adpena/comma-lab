@@ -7,18 +7,19 @@ proof-of-correctness for the cathedral's math.
 
 Theorems verified:
 
-1. **Monotonicity in B**: ``∂S/∂B > 0`` always (more bytes ⇒ higher score).
-2. **Linearity in d_seg**: ``∂²S/∂d_seg² = 0`` (S is affine in d_seg).
-3. **Strict concavity in d_pose**: ``∂²S/∂d_pose² < 0`` (sqrt is concave;
+1. **Monotonicity in B**: ``dS/dB > 0`` always (more bytes means higher score).
+2. **Linearity in d_seg**: ``d2S/dd_seg2 = 0`` (S is affine in d_seg).
+3. **Strict concavity in d_pose**: ``d2S/dd_pose2 < 0`` (sqrt is concave;
    pose marginal decreases as d_pose increases).
 4. **Importance-flip identity**: at ``d_pose = importance_flip_threshold()``,
-   ``∂S/∂d_pose = ∂S/∂d_seg`` exactly.
-5. **First-order Taylor consistency**: small-step ΔS ≈ ⟨∇S, Δx⟩.
+   ``dS/dd_pose = dS/dd_seg`` exactly.
+5. **First-order Taylor consistency**: small-step dS approximately equals
+   dot(grad S, dx).
 6. **Decomposition reconstruction**: per-term decomposition sums to total.
 7. **Zero-state identity**: S(0, 0, 0) = 0 (modulo 1e-30 clamp on pose).
-8. **Pose-term concavity proof**: midpoint sqrt(10·avg(p1,p2)) ≥ avg(sqrt(10·p1), sqrt(10·p2)).
+8. **Pose-term concavity proof**: midpoint sqrt(10*avg(p1,p2)) >= avg(sqrt(10*p1), sqrt(10*p2)).
 9. **Operating-point flip direction**: at PR106 frontier (d_pose=3.36e-5),
-   pose marginal > seg marginal AND > rate marginal × CONTEST_RAW_VIDEO_BYTES.
+   pose marginal > seg marginal AND > rate marginal * CONTEST_RAW_VIDEO_BYTES.
 """
 
 from __future__ import annotations
@@ -38,13 +39,12 @@ from tac.contest_rate_distortion_system import (
     importance_flip_threshold,
 )
 
-
 # ---------------------------------------------------------------------------
 # Theorem 1: Monotonicity in B
 # ---------------------------------------------------------------------------
 
 def test_score_strictly_monotone_in_archive_bytes() -> None:
-    """For any (seg, pose), S(B + ΔB) > S(B) when ΔB > 0."""
+    """For any (seg, pose), S(B + dB) > S(B) when dB > 0."""
     seg, pose = 6.7e-4, 3.36e-5
     s_lo = float(contest_score(seg_distortion=seg, pose_distortion=pose, archive_bytes=100_000))
     s_hi = float(contest_score(seg_distortion=seg, pose_distortion=pose, archive_bytes=200_000))
@@ -54,11 +54,11 @@ def test_score_strictly_monotone_in_archive_bytes() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Theorem 2: Linearity in d_seg (∂²S/∂d_seg² = 0)
+# Theorem 2: Linearity in d_seg (d2S/dd_seg2 = 0)
 # ---------------------------------------------------------------------------
 
 def test_score_linear_in_seg_distortion() -> None:
-    """For all (pose, B), S is affine in seg: S(αs1 + (1-α)s2) = αS(s1) + (1-α)S(s2)."""
+    """For all (pose, B), S is affine in seg under convex interpolation."""
     pose, B = 3.36e-5, 185_578
     s1, s2, alpha = 1e-3, 5e-3, 0.3
     s_mix_lhs = float(contest_score(
@@ -77,7 +77,7 @@ def test_score_linear_in_seg_distortion() -> None:
 # ---------------------------------------------------------------------------
 
 def test_score_strictly_concave_in_pose_distortion() -> None:
-    """For all p1 < p2, sqrt(10·(p1+p2)/2) > (sqrt(10·p1) + sqrt(10·p2))/2."""
+    """For all p1 < p2, sqrt is strictly concave on the positive pose axis."""
     p1, p2 = 1e-5, 1e-3
     seg, B = 0.0, 0.0  # isolate pose contribution
     midpoint_score = float(contest_score(
@@ -87,12 +87,12 @@ def test_score_strictly_concave_in_pose_distortion() -> None:
         float(contest_score(seg_distortion=seg, pose_distortion=p1, archive_bytes=B))
         + float(contest_score(seg_distortion=seg, pose_distortion=p2, archive_bytes=B))
     )
-    # Strict concavity: midpoint of sqrt > average of sqrts (when p1 ≠ p2).
+    # Strict concavity: midpoint of sqrt > average of sqrts (when p1 != p2).
     assert midpoint_score > avg_endpoints
 
 
 def test_pose_marginal_decreases_in_pose_distortion() -> None:
-    """∂S/∂d_pose is monotonically decreasing in d_pose (concavity ⇒ decreasing marginal)."""
+    """dS/dd_pose is monotonically decreasing in d_pose."""
     pose_vals = [3.36e-5, 1e-4, 1e-3, 1e-2, 0.18]
     marginals = [
         contest_score_marginals(seg_distortion=0.001, pose_distortion=p, archive_bytes=200_000)["dS_dpose"]
@@ -110,7 +110,7 @@ def test_pose_marginal_decreases_in_pose_distortion() -> None:
 # ---------------------------------------------------------------------------
 
 def test_marginals_equal_exactly_at_flip_threshold() -> None:
-    """At d_pose = importance_flip_threshold(), ∂S/∂d_pose = ∂S/∂d_seg = 100 exactly."""
+    """At d_pose = importance_flip_threshold(), dS/dd_pose = dS/dd_seg = 100 exactly."""
     threshold = importance_flip_threshold()
     m = contest_score_marginals(seg_distortion=0.001, pose_distortion=threshold, archive_bytes=100_000)
     assert abs(m["dS_dpose"] - CONTEST_SEG_WEIGHT) < 1e-9
@@ -134,7 +134,7 @@ def test_above_threshold_seg_dominates() -> None:
 # ---------------------------------------------------------------------------
 
 def test_first_order_taylor_agrees_with_finite_difference() -> None:
-    """ΔS ≈ ⟨∇S, Δx⟩ at small step. Validates marginals against numerical diff."""
+    """Small-step dS agrees with the dot product between marginals and dx."""
     seg0, pose0, B0 = 6.7e-4, 3.36e-5, 185_578
     s0 = float(contest_score(seg_distortion=seg0, pose_distortion=pose0, archive_bytes=B0))
     grad = contest_score_marginals(seg_distortion=seg0, pose_distortion=pose0, archive_bytes=B0)
@@ -172,7 +172,7 @@ def test_decomposition_shares_sum_to_one() -> None:
 
 def test_score_at_origin_is_essentially_zero() -> None:
     s = float(contest_score(seg_distortion=0.0, pose_distortion=0.0, archive_bytes=0))
-    # sqrt(10·1e-30) ≈ 3.16e-15; the clamp produces a tiny positive value.
+    # sqrt(10*1e-30) ~= 3.16e-15; the clamp produces a tiny positive value.
     assert 0.0 <= s < 1e-10
 
 
@@ -181,15 +181,11 @@ def test_score_at_origin_is_essentially_zero() -> None:
 # ---------------------------------------------------------------------------
 
 def test_pr103_pr106_anchor_score_reproduces_to_seven_decimals() -> None:
-    """The contest-CUDA T4 anchor: 0.20898105277982337 at 185,578 bytes,
+    """The strict contest-formula anchor: 0.2089810755823297 at 185,578 bytes,
     seg=0.00067082, pose=0.0000336.
-
-    Tolerance 1e-7 because the anchor's seg/pose values are quoted to ~5
-    significant figures; sqrt-non-linearity amplifies that uncertainty
-    into the 8th decimal of the score.
     """
     s = float(contest_score(seg_distortion=0.00067082, pose_distortion=0.0000336, archive_bytes=185_578))
-    assert abs(s - 0.20898105277982337) < 1e-7
+    assert abs(s - 0.2089810755823297) < 1e-12
 
 
 # ---------------------------------------------------------------------------
@@ -197,11 +193,11 @@ def test_pr103_pr106_anchor_score_reproduces_to_seven_decimals() -> None:
 # ---------------------------------------------------------------------------
 
 def test_pr106_frontier_pose_dominates_seg_marginal_by_2_71x() -> None:
-    """At PR106 frontier (d_pose=3.36e-5), pose marginal is ~2.71× the seg marginal."""
+    """At PR106 frontier, pose marginal is about 2.71x the seg marginal."""
     m = contest_score_marginals(seg_distortion=6.7e-4, pose_distortion=3.36e-5, archive_bytes=185_578)
     ratio = m["dS_dpose"] / m["dS_dseg"]
-    # Pose ≈ sqrt(10) / (2·sqrt(3.36e-5)) = sqrt(10) / (2 · 5.797e-3) ≈ 272.78
-    # Seg ≈ 100. Ratio ≈ 2.7278.
+    # Pose ~= sqrt(10) / (2*sqrt(3.36e-5)) ~= 272.78.
+    # Seg ~= 100. Ratio ~= 2.7278.
     assert 2.72 < ratio < 2.74
 
 
@@ -238,19 +234,19 @@ def test_autograd_archive_bytes_marginal_matches_analytical_exactly() -> None:
 # ---------------------------------------------------------------------------
 
 def test_hessian_diagonal_d2S_d_pose2_is_negative_via_finite_diff() -> None:
-    """Concavity in pose: ∂²S/∂d_pose² < 0. Verify via central difference on the marginal."""
+    """Concavity in pose: d2S/dd_pose2 < 0 via central difference."""
     p0, h = 3.36e-5, 1e-7
     m_lo = contest_score_marginals(seg_distortion=0.001, pose_distortion=p0 - h, archive_bytes=200_000)
     m_hi = contest_score_marginals(seg_distortion=0.001, pose_distortion=p0 + h, archive_bytes=200_000)
     second_derivative = (m_hi["dS_dpose"] - m_lo["dS_dpose"]) / (2 * h)
-    # Analytical: d²/dp² (sqrt(10p)) = -sqrt(10)/(4·p^(3/2))
+    # Analytical: d2/dp2(sqrt(10p)) = -sqrt(10)/(4*p^(3/2)).
     expected = -math.sqrt(CONTEST_POSE_WEIGHT) / (4.0 * p0**1.5)
     assert second_derivative < 0
     assert abs(second_derivative - expected) / abs(expected) < 1e-2
 
 
 def test_hessian_diagonal_d2S_d_seg2_is_zero_via_finite_diff() -> None:
-    """Linearity in seg: ∂²S/∂d_seg² = 0."""
+    """Linearity in seg: d2S/dd_seg2 = 0."""
     s0, h = 1e-3, 1e-6
     m_lo = contest_score_marginals(seg_distortion=s0 - h, pose_distortion=3.36e-5, archive_bytes=200_000)
     m_hi = contest_score_marginals(seg_distortion=s0 + h, pose_distortion=3.36e-5, archive_bytes=200_000)

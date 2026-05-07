@@ -13,8 +13,8 @@ Strict-scorer-rule: pure CPU; no scorer load anywhere.
 """
 from __future__ import annotations
 
-import torch
 import pytest
+import torch
 
 from tac.codec_pipeline import CodecOp, CodecPipeline
 from tac.codec_pipeline_raft_pose import (
@@ -24,7 +24,7 @@ from tac.codec_pipeline_raft_pose import (
 
 
 def _synthetic_poses(n_frames: int = 600, seed: int = 0) -> torch.Tensor:
-    """Smooth synthetic 6DOF poses (cumulative random walk) — mimics RAFT
+    """Smooth synthetic 6DOF poses (cumulative random walk) - mimics RAFT
     output on a driving video chunk."""
     g = torch.Generator().manual_seed(seed)
     deltas = torch.randn(n_frames, 6, generator=g) * 0.01
@@ -172,7 +172,7 @@ def test_encode_size_scales_with_n_frames() -> None:
 
 def test_encode_size_quality_monotonic_for_smooth_data() -> None:
     """Higher Brotli quality should not produce a STRICTLY larger output for
-    smooth data — q=11 is the standard target. Check q=11 <= q=1 within a
+    smooth data; q=11 is the standard target. Check q=11 <= q=1 within a
     small slack."""
     poses = _synthetic_poses(n_frames=600)
     op_low = Op_RAFTPoseStream(brotli_quality=1)

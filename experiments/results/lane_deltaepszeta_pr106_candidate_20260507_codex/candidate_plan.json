@@ -1,0 +1,193 @@
+{
+  "byte_change_requirement": {
+    "baseline_renderer_input_sha256": "dd6d5afcb7c5887b2ed0c543a4c5fa8abde7d43b4fbded301236cef68c03e87f",
+    "blockers": [
+      "missing_trained_payload",
+      "missing_candidate_archive"
+    ],
+    "candidate_archive_contains_trained_payload_sha": null,
+    "candidate_archive_differs_from_renderer_input": false,
+    "candidate_archive_present": false,
+    "candidate_archive_sha256": null,
+    "required": true,
+    "satisfied": false,
+    "trained_payload_byte_delta_vs_renderer_input": null,
+    "trained_payload_differs_from_renderer_input": false,
+    "trained_payload_sha256": null
+  },
+  "candidate": {
+    "family": "delta_epsilon_zeta_pr106_hnerv",
+    "purpose": "planning bridge from PR106 Shannon targets to a future byte-closed trained payload/archive"
+  },
+  "created_at_utc": "2026-05-07T20:00:00Z",
+  "evidence_grade": "[empirical]",
+  "h2_pressure_plan": {
+    "aggregate_loss_weight": 0.9429944682025071,
+    "aggregate_prize_bytes": 74100.16281830217,
+    "aggregate_prize_bytes_ceiled": 74101,
+    "loss_expression": "sum(row.loss_weight_normalized * shannon_h2_loss(state_dict[row.name], n_bits=8) for row in selected_top_tensors)",
+    "nonzero_h2_pressure": true,
+    "notes": [
+      "H2 pressure is a training/planning signal only.",
+      "Final byte evidence must come from a distinct trained payload and archive.",
+      "Final score evidence must come from exact CUDA auth eval on archive bytes."
+    ],
+    "selected_tensor_count": 8,
+    "shannon_h2_loss_api": "tac.shannon_h2_loss.shannon_h2_loss",
+    "training_byte_telemetry_api": "tac.codec_pipeline_deltaepszeta_callback.CodecPipelineAwareTrainingCallback"
+  },
+  "manifest": {
+    "candidate_archive": null,
+    "candidate_archive_zip_manifest": null,
+    "renderer_or_payload_input": {
+      "bytes": 924277,
+      "path": "experiments/results/sensitivity_map_pr106_20260504_claude/state_dict.pt",
+      "role": "renderer_or_payload_input",
+      "sha256": "dd6d5afcb7c5887b2ed0c543a4c5fa8abde7d43b4fbded301236cef68c03e87f"
+    },
+    "reused_apis": {
+      "codec_pipeline_deltaepszeta_callback": "tac.codec_pipeline_deltaepszeta_callback.CodecPipelineAwareTrainingCallback",
+      "shannon_h2_loss": "tac.shannon_h2_loss.shannon_h2_loss",
+      "target_builder_output": "tools/build_deltaepszeta_training_targets.py schema_version=1"
+    },
+    "targets_json": {
+      "bytes": 13483,
+      "path": "experiments/results/lane_deltaepszeta_targets_pr106_20260507T184921Z/targets.json",
+      "role": "targets_json",
+      "sha256": "43616c6322bed602819f15977f2a26b244b94fa9db8a4de6ce1676a6a8636c53"
+    },
+    "trained_payload": null
+  },
+  "readiness": {
+    "blockers": [
+      "missing_trained_payload",
+      "missing_candidate_archive"
+    ],
+    "fail_closed": true,
+    "ready_for_byte_closed_candidate": false,
+    "ready_for_exact_eval_dispatch": false,
+    "ready_for_exact_eval_dispatch_reason": "planning-only bridge; run contest compliance, dispatch claim, and exact CUDA auth eval after a real trained archive exists"
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "score_fields": {
+    "archive_score": null,
+    "component_distances": null,
+    "score_claim_reason": "no scorer was run by this planning tool",
+    "score_formula_applied": false
+  },
+  "selected_top_tensors": [
+    {
+      "H0_bits": 6.318339380474207,
+      "H2_bits": 2.673718664624633,
+      "headroom_bits": 3.6446207158495736,
+      "idx": 6,
+      "in_pr103_ac_set": true,
+      "loss_weight_normalized": 0.2028715282962416,
+      "n_symbols": 34992,
+      "name": "blocks.2.weight",
+      "prize_bytes": 15941.571011126034,
+      "prize_bytes_ceiled": 15942
+    },
+    {
+      "H0_bits": 5.917281097400046,
+      "H2_bits": 3.461866634687959,
+      "headroom_bits": 2.455414462712087,
+      "idx": 4,
+      "in_pr103_ac_set": true,
+      "loss_weight_normalized": 0.1822352167711474,
+      "n_symbols": 46656,
+      "name": "blocks.1.weight",
+      "prize_bytes": 14319.977146536892,
+      "prize_bytes_ceiled": 14320
+    },
+    {
+      "H0_bits": 5.828560266344522,
+      "H2_bits": 3.552704561013515,
+      "headroom_bits": 2.275855705331007,
+      "idx": 2,
+      "in_pr103_ac_set": true,
+      "loss_weight_normalized": 0.16890877857856765,
+      "n_symbols": 46656,
+      "name": "blocks.0.weight",
+      "prize_bytes": 13272.790473490431,
+      "prize_bytes_ceiled": 13273
+    },
+    {
+      "H0_bits": 6.19040153185643,
+      "H2_bits": 2.2662120573668387,
+      "headroom_bits": 3.924189474489591,
+      "idx": 8,
+      "in_pr103_ac_set": true,
+      "loss_weight_normalized": 0.12135180068283083,
+      "n_symbols": 19440,
+      "name": "blocks.3.weight",
+      "prize_bytes": 9535.780423009706,
+      "prize_bytes_ceiled": 9536
+    },
+    {
+      "H0_bits": 6.6577632834186,
+      "H2_bits": 1.321064844733199,
+      "headroom_bits": 5.336698438685401,
+      "idx": 10,
+      "in_pr103_ac_set": true,
+      "loss_weight_normalized": 0.11002152494517513,
+      "n_symbols": 12960,
+      "name": "blocks.4.weight",
+      "prize_bytes": 8645.45147067035,
+      "prize_bytes_ceiled": 8646
+    },
+    {
+      "H0_bits": 5.222101227699564,
+      "H2_bits": 4.0053807381624,
+      "headroom_bits": 1.2167204895371642,
+      "idx": 0,
+      "in_pr103_ac_set": true,
+      "loss_weight_normalized": 0.09364672350418049,
+      "n_symbols": 48384,
+      "name": "stem.weight",
+      "prize_bytes": 7358.725520720769,
+      "prize_bytes_ceiled": 7359
+    },
+    {
+      "H0_bits": 5.266252631485049,
+      "H2_bits": 2.8721639925769833,
+      "headroom_bits": 2.3940886389080656,
+      "idx": 12,
+      "in_pr103_ac_set": true,
+      "loss_weight_normalized": 0.0444209387769569,
+      "n_symbols": 11664,
+      "name": "blocks.5.weight",
+      "prize_bytes": 3490.5812355279595,
+      "prize_bytes_ceiled": 3491
+    },
+    {
+      "H0_bits": 7.203411495331799,
+      "H2_bits": 0.095608082276161,
+      "headroom_bits": 7.107803413055637,
+      "idx": 1,
+      "in_pr103_ac_set": false,
+      "loss_weight_normalized": 0.019537956647407043,
+      "n_symbols": 1728,
+      "name": "stem.bias",
+      "prize_bytes": 1535.2855372200177,
+      "prize_bytes_ceiled": 1536
+    }
+  ],
+  "targets": {
+    "loaded": true,
+    "n_tensors": 28,
+    "path": "experiments/results/lane_deltaepszeta_targets_pr106_20260507T184921Z/targets.json",
+    "source_shannon_analysis": "experiments/results/lane_per_tensor_shannon_pr106_20260507T173846Z/per_tensor_shannon.json",
+    "substrate": "experiments/results/sensitivity_map_pr106_20260504_claude/state_dict.pt",
+    "summary": {
+      "ratio_h2_over_h0": 0.5310198722921764,
+      "total_brotli_bytes": 170096,
+      "total_n_symbols": 228958,
+      "total_prize_bytes": 78580,
+      "total_shannon_floor_h0_bytes": 167570,
+      "total_shannon_floor_h2_bytes": 88983
+    }
+  },
+  "tool": "experiments/build_deltaepszeta_pr106_candidate.py"
+}

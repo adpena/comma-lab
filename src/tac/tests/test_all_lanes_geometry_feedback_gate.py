@@ -37,16 +37,49 @@ def test_all_lanes_cross_paradigm_gate_rejects_lost_first_tranche_route() -> Non
     queue = [
         row
         for row in payload["frontier_action_queue"]
-        if row["key"] != "hnerv_wavelet_wr01_apply"
+        if row["key"] != "categorical_qma9_clade_spade_openpilot"
     ]
-    queue.append(next(row for row in payload["frontier_action_queue"] if row["key"] == "hnerv_wavelet_wr01_apply"))
+    queue.append(
+        next(
+            row
+            for row in payload["frontier_action_queue"]
+            if row["key"] == "categorical_qma9_clade_spade_openpilot"
+        )
+    )
 
     failures = module._cross_paradigm_queue_routing_failures(queue)
 
     assert (
-        "first_tranche_missing_required_score_path_row(s): hnerv_wavelet_wr01_apply"
+        "first_tranche_missing_required_score_path_row(s): categorical_qma9_clade_spade_openpilot"
         in failures
     )
+
+
+def test_all_lanes_cross_paradigm_gate_pins_promoted_pr103_anchor() -> None:
+    module = _load_all_lanes_module()
+    payload = build_inventory(repo_root=REPO)
+
+    assert module._cross_paradigm_pr103_anchor_failures(payload["rows"]) == []
+
+    row = next(
+        row
+        for row in payload["rows"]
+        if row["key"] == "hnerv_pr103_pr106_ac_repack_runtime_closure"
+    )
+    row["score_snapshot"]["archive_bytes"] = 186239
+
+    assert module._cross_paradigm_pr103_anchor_failures(payload["rows"]) == [
+        "anchor_archive_bytes_drift: 186239"
+    ]
+
+    row["score_snapshot"]["archive_bytes"] = 185578
+    row["score_snapshot"]["compliance_passed"] = False
+    row["score_snapshot"]["compliance_failed_checks"] = ["auth_eval_promotable_stamp"]
+
+    assert module._cross_paradigm_pr103_anchor_failures(payload["rows"])[:2] == [
+        "anchor_contest_final_compliance_not_passed",
+        "anchor_contest_final_failed_checks: auth_eval_promotable_stamp",
+    ]
 
 
 def test_all_lanes_cross_paradigm_gate_rejects_missing_geometry_contract() -> None:

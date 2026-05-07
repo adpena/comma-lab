@@ -55,9 +55,26 @@ def test_cross_paradigm_inventory_pins_required_score_path_rows() -> None:
         assert rows[key]["blockers"]
 
     pr103 = rows["hnerv_pr103_pr106_ac_repack_runtime_closure"]
-    assert pr103["action_class"] == "wire_pr103_pr106_runtime_adapter"
-    assert pr103["priority_tier"] == 5
-    assert pr103["status"] == "static_release_surface_compliance_passed_exact_cuda_pending"
+    assert pr103["action_class"] == "maintain_exact_eval_anchor_and_pivot"
+    assert pr103["priority_tier"] == 900
+    assert pr103["status"] == "exact_cuda_a++_anchor_promoted"
+    assert pr103["role"] == "current_exact_rate_anchor"
+    assert pr103["score_snapshot"]["score"] == 0.2089810755823297
+    assert pr103["score_snapshot"]["report_reconstructed_score"] == 0.20898105277982337
+    assert pr103["score_snapshot"]["score_basis"] == (
+        "auth_eval_report_components_plus_exact_archive_bytes"
+    )
+    assert pr103["score_snapshot"]["anchor_proof_schema"] == (
+        "pre_submission_compliance_anchor_proof_v1"
+    )
+    assert pr103["score_snapshot"]["compliance_passed"] is True
+    assert pr103["score_snapshot"]["compliance_failed_checks"] == []
+    assert pr103["score_snapshot"]["compliance_check_count"] > 0
+    assert pr103["score_snapshot"]["archive_bytes"] == 185578
+    assert (
+        pr103["score_snapshot"]["archive_sha256"]
+        == "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce"
+    )
     assert "entropy_coding" in pr103["paradigms"]
     assert "src/tac/pr103_pr106_runtime_closure.py" in pr103["code_paths"]
     assert "submissions/pr103_pr106_final_runtime/inflate.py" in pr103["code_paths"]
@@ -75,14 +92,26 @@ def test_cross_paradigm_inventory_pins_required_score_path_rows() -> None:
         "experiments/results/pr103_repack_pr106_standalone_20260507/pre_submission_compliance.static.json"
         in pr103["evidence_paths"]
     )
-    assert "exact CUDA auth eval" in pr103["next_patch"]
-    assert any("exact CUDA" in blocker for blocker in pr103["blockers"])
+    assert (
+        "experiments/results/pr103_repack_pr106_standalone_20260507/pre_submission_compliance.contest_final.json"
+        in pr103["evidence_paths"]
+    )
+    assert pr103["score_snapshot"]["path"] == (
+        "experiments/results/pr103_repack_pr106_standalone_20260507/"
+        "pre_submission_compliance.contest_final.json"
+    )
+    assert (
+        ".omx/research/pr103_pr106_ac_repack_exact_eval_20260507_codex.md"
+        in pr103["evidence_paths"]
+    )
+    assert "185578 bytes" in pr103["next_patch"]
+    assert any("completed anchor" in blocker for blocker in pr103["blockers"])
 
     categorical = rows["categorical_qma9_clade_spade_openpilot"]
     assert "categorical_masks" in categorical["paradigms"]
     assert "openpilot_priors" in categorical["paradigms"]
     assert categorical["action_class"] == "build_byte_closed_categorical_candidate"
-    assert categorical["priority_tier"] == 30
+    assert categorical["priority_tier"] == 10
     assert categorical["status"] == "byte_closed_local_candidate_artifact_landed_blocked_on_parity"
     assert "src/tac/categorical_candidate_readiness.py" in categorical["code_paths"]
     assert "src/tac/categorical_candidate_runtime_skeleton.py" in categorical["code_paths"]
@@ -190,16 +219,16 @@ def test_cross_paradigm_inventory_action_queue_routes_next_tranche() -> None:
     queue = payload["frontier_action_queue"]
 
     assert [row["key"] for row in queue[:5]] == [
-        "hnerv_pr103_pr106_ac_repack_runtime_closure",
-        "hnerv_wavelet_wr01_apply",
-        "hnerv_lowlevel_brotli_repack",
         "categorical_qma9_clade_spade_openpilot",
         "joint_admm_balle_arithmetic_stack",
+        "hnerv_per_tensor_context_entropy",
+        "telescopic_foveation_field",
+        "lapose_motion_atom_allocator",
     ]
-    assert queue[0]["action_class"] == "wire_pr103_pr106_runtime_adapter"
-    assert queue[1]["action_class"] == "claim_exact_eval_packet_after_static_gate"
-    assert queue[3]["action_class"] == "build_byte_closed_categorical_candidate"
-    assert payload["action_class_counts"]["wire_pr103_pr106_runtime_adapter"] == 1
+    assert queue[0]["action_class"] == "build_byte_closed_categorical_candidate"
+    assert queue[1]["action_class"] == "wire_jcsp_submission_runtime_consumer"
+    assert queue[-1]["action_class"] == "maintain_exact_eval_anchor_and_pivot"
+    assert payload["action_class_counts"]["maintain_exact_eval_anchor_and_pivot"] == 1
     assert payload["action_class_counts"]["wire_jcsp_submission_runtime_consumer"] == 1
 
 
@@ -223,9 +252,25 @@ def test_cross_paradigm_inventory_emits_comparable_frontier_rows() -> None:
         assert frontier_row["dispatch_attempted"] is False
         assert frontier_row["candidate_static_preflight_ready"] is False
         assert frontier_row["ready_for_exact_eval_dispatch"] is False
-        assert frontier_row["pareto_eligible"] is False
-        assert frontier_row["pareto_frontier"] is False
+        if row["key"] == "hnerv_pr103_pr106_ac_repack_runtime_closure":
+            assert frontier_row["pareto_eligible"] is True
+            assert frontier_row["pareto_frontier"] is True
+            assert frontier_row["planning_priority_rankable"] is True
+        else:
+            assert frontier_row["pareto_eligible"] is False
+            assert frontier_row["pareto_frontier"] is False
+            assert frontier_row["planning_priority_rankable"] is False
         assert "exact_cuda_auth_eval" in frontier_row["next_required_proof"]
+    pr103 = next(
+        row for row in payload["frontier_rows"] if row["key"] == "hnerv_pr103_pr106_ac_repack_runtime_closure"
+    )
+    assert pr103["score_evidence_rankable"] is True
+    assert pr103["score_evidence_path"].endswith(
+        "pre_submission_compliance.contest_final.json"
+    )
+    assert pr103["exact_score"] == 0.2089810755823297
+    assert pr103["archive_bytes"] == 185578
+    assert pr103["archive_sha256"] == "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce"
 
 
 def test_cross_paradigm_inventory_paths_are_current_on_main() -> None:

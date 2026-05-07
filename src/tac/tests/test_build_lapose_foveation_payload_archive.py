@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import struct
 import subprocess
 import sys
 import zipfile
@@ -107,6 +108,18 @@ def test_build_lapose_foveation_payload_archive_is_byte_closed_and_fail_closed(
     )
     assert candidate["lfv1_foveation_params_bridge"]["passed"] is True
     assert candidate["lfv1_foveation_params_bridge"]["target_member"] == FOVEATION_PARAMS_MEMBER
+    decoded_rows = candidate["lfv1_payload"]["decoded"]["rows"]
+    expected_target_frame_count = 2 * max(row["pair_index"] for row in decoded_rows) + 2
+    assert candidate["lfv1_foveation_params_bridge"]["target_frame_count"] == (
+        expected_target_frame_count
+    )
+    assert candidate["lfv1_foveation_params_bridge"]["pair_to_frame_policy"] == (
+        "contest_pair_maps_to_frames_2k_and_2k_plus_1"
+    )
+    assert [
+        row["target_frame_indices"]
+        for row in candidate["lfv1_foveation_params_bridge"]["applied_rows"]
+    ] == [[2 * row["pair_index"], 2 * row["pair_index"] + 1] for row in decoded_rows]
     assert readiness["lfv1_foveation_params_bridge"]["accepted"] is True
     assert readiness["lfv1_foveation_params_bridge"]["passed"] is True
     assert readiness["lfv1_foveation_params_bridge"]["derived_bytes_match"] is True
@@ -173,7 +186,12 @@ def test_build_lapose_foveation_payload_archive_is_byte_closed_and_fail_closed(
         )
         proof_skeleton = json.loads(archive.read(PROOF_MEMBER).decode("utf-8"))
     assert foveation_params[:4] == b"HFV1"
+    magic, n_frames, height, width = struct.Struct("<4sIII").unpack(foveation_params[:16])
+    assert magic == b"HFV1"
+    assert n_frames == expected_target_frame_count
+    assert (height, width) == (200, 320)
     assert bridge["passed"] is True
+    assert bridge["pair_to_frame_policy"] == "contest_pair_maps_to_frames_2k_and_2k_plus_1"
     assert proof_skeleton["runtime_consumer_proof_skeleton_contract"] == (
         RUNTIME_PROOF_SKELETON_CONTRACT
     )

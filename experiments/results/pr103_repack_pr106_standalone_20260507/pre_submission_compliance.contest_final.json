@@ -1,0 +1,381 @@
+{
+  "archive": {
+    "bytes": 185578,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 185470,
+        "file_size": 185470,
+        "local_header_name": "0.bin",
+        "name": "0.bin",
+        "sha256": "3272ec95a2ea5ec68feb1a53fa53f6b14bdae3883fac38ee2261cdadb1b16357",
+        "unsafe_reason": null
+      }
+    ],
+    "path": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive.zip",
+    "sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce"
+  },
+  "archive_manifest": {
+    "exists": true,
+    "path": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive_manifest.json"
+  },
+  "auth_eval": {
+    "anchor_proof": {
+      "archive": {
+        "bytes": 185578,
+        "members": [
+          {
+            "compress_size": 185470,
+            "file_size": 185470,
+            "local_header_name": "0.bin",
+            "name": "0.bin",
+            "sha256": "3272ec95a2ea5ec68feb1a53fa53f6b14bdae3883fac38ee2261cdadb1b16357",
+            "unsafe_reason": null
+          }
+        ],
+        "path": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive.zip",
+        "sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce"
+      },
+      "auth_eval": {
+        "contest_auth_eval_elapsed_seconds": 62.886833658999876,
+        "cuda_version": "13.0",
+        "device": "cuda",
+        "eval_command_sanitized": [
+          "experiments/contest_auth_eval.py",
+          "--archive",
+          "archive.zip",
+          "--inflate-sh",
+          "submissions/pr103_pr106_final_runtime/inflate.sh",
+          "--upstream-dir",
+          "upstream",
+          "--device",
+          "cuda"
+        ],
+        "evaluate_elapsed_seconds": 38.373517383000035,
+        "evidence_grade": "A++",
+        "gpu_driver": "580.126.09",
+        "gpu_model": "Tesla T4",
+        "gpu_t4_match": true,
+        "inflate_elapsed_seconds": 24.51128634600036,
+        "samples": 600,
+        "tool": "experiments/contest_auth_eval.py",
+        "torch_version": "2.11.0+cu130",
+        "upstream_commit": "11ad728f563d8970929e8947a1cf6124ee6303e4",
+        "upstream_evaluate_py": {
+          "bytes": 6005,
+          "relative_path": "evaluate.py",
+          "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+        }
+      },
+      "auth_eval_local_custody_ignored_by_git": true,
+      "auth_eval_local_custody_path": "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/contest_auth_eval.adjudicated.json",
+      "record_score_source": "tools.auth_eval_records.parse_auth_eval_payload",
+      "runtime": {
+        "runtime_file_count": 3,
+        "runtime_files": [
+          {
+            "bytes": 52,
+            "repo_relative_path": "submissions/pr103_pr106_final_runtime/__init__.py",
+            "sha256": "78c3cd09aab62aed7f4ee12942d858cead5eb14bdd20a17c532eac5aab1a9e89"
+          },
+          {
+            "bytes": 20711,
+            "repo_relative_path": "submissions/pr103_pr106_final_runtime/inflate.py",
+            "sha256": "62fec760534039e72e6cbf4007f940d49dcdb3a2d867c344cf0dc3f14fb34a6b"
+          },
+          {
+            "bytes": 1367,
+            "repo_relative_path": "submissions/pr103_pr106_final_runtime/inflate.sh",
+            "sha256": "ce6b5438bbe9e4bfcedffe69ddce375daccb77da8a458b28c3776b31e806a815"
+          }
+        ],
+        "runtime_tree_sha256": "54db9e5ddee85ae7f486fae900ff3907932efb1c8d3062bc264b0e5c7456d8f6",
+        "runtime_tree_sha256_candidates": {
+          "provenance.inflate_runtime_manifest.runtime_tree_sha256": "54db9e5ddee85ae7f486fae900ff3907932efb1c8d3062bc264b0e5c7456d8f6"
+        }
+      },
+      "schema": "pre_submission_compliance_anchor_proof_v1",
+      "score_basis": {
+        "archive_bytes": 185578,
+        "archive_rate_unscaled": 0.004942750912100252,
+        "avg_posenet_dist": 3.36e-05,
+        "avg_segnet_dist": 0.00067082,
+        "basis": "auth_eval_report_components_plus_exact_archive_bytes",
+        "note": "contest_auth_eval reconstructs score from upstream report fields; this strict value recomputes the contest formula from those report components and exact charged archive bytes for clean-checkout anchor comparisons",
+        "report_reconstructed_score": 0.20898105277982337,
+        "score": 0.2089810755823297,
+        "score_delta_vs_report_reconstruction": 2.2802506327579408e-08
+      }
+    },
+    "exists": true,
+    "path": "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/contest_auth_eval.adjudicated.json",
+    "record": {
+      "archive_bytes": 185578,
+      "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+      "avg_posenet_dist": 3.36e-05,
+      "avg_segnet_dist": 0.00067082,
+      "device": "cuda",
+      "evidence_grade": "A++",
+      "gpu_t4_match": true,
+      "promotion_eligible": true,
+      "rate_unscaled": 0.00494275,
+      "samples": 600,
+      "score": 0.20898105277982337,
+      "score_claim_valid": true
+    },
+    "runtime_tree_candidates": {
+      "provenance.inflate_runtime_manifest.runtime_tree_sha256": "54db9e5ddee85ae7f486fae900ff3907932efb1c8d3062bc264b0e5c7456d8f6"
+    },
+    "strict_formula": {
+      "archive_bytes": 185578,
+      "archive_rate_unscaled": 0.004942750912100252,
+      "avg_posenet_dist": 3.36e-05,
+      "avg_segnet_dist": 0.00067082,
+      "basis": "auth_eval_report_components_plus_exact_archive_bytes",
+      "note": "contest_auth_eval reconstructs score from upstream report fields; this strict value recomputes the contest formula from those report components and exact charged archive bytes for clean-checkout anchor comparisons",
+      "report_reconstructed_score": 0.20898105277982337,
+      "score": 0.2089810755823297,
+      "score_delta_vs_report_reconstruction": 2.2802506327579408e-08
+    }
+  },
+  "checks": [
+    {
+      "details": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "0.bin",
+      "name": "zip_member_safe:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "central='0.bin' local='0.bin' local_reason=None",
+      "name": "zip_local_header_matches:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=1",
+      "name": "archive_zip_readable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['0.bin']",
+      "name": "zip_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "members=['0.bin']",
+      "name": "zip_expected_single_member",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "packed_payload_count=0",
+      "name": "zip_at_most_one_packed_payload_container",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+      "name": "expected_archive_sha256_is_well_formed",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce actual=ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+      "name": "expected_archive_sha256_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=185578 actual=185578",
+      "name": "expected_archive_size_bytes_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/contest_auth_eval.adjudicated.json",
+      "name": "auth_eval_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/contest_auth_eval.adjudicated.json",
+      "name": "auth_eval_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "canonical auth eval parser",
+      "name": "auth_eval_score_parseable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce actual=ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+      "name": "auth_eval_archive_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=185578 actual=185578",
+      "name": "auth_eval_archive_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "",
+      "name": "auth_eval_has_components",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "record=0.20898105277982337 recomputed=0.2089810755823297",
+      "name": "auth_eval_score_recomputes",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "strict=0.2089810755823297 record=0.20898105277982337 delta=2.2802506327579408e-08",
+      "name": "auth_eval_strict_formula_score_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "device=cuda samples=600 gpu_t4_match=True",
+      "name": "auth_eval_t4_equivalent",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "promotion=True claim=True grade=A++",
+      "name": "auth_eval_promotable_stamp",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': '54db9e5ddee85ae7f486fae900ff3907932efb1c8d3062bc264b0e5c7456d8f6'}",
+      "name": "auth_eval_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=54db9e5ddee85ae7f486fae900ff3907932efb1c8d3062bc264b0e5c7456d8f6 candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': '54db9e5ddee85ae7f486fae900ff3907932efb1c8d3062bc264b0e5c7456d8f6'}",
+      "name": "auth_eval_runtime_tree_expected_match",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive_manifest.json",
+      "name": "archive_manifest_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive_manifest.json",
+      "name": "archive_manifest_json_object",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce actual=ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+      "name": "archive_manifest_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "claimed=185578 actual=185578",
+      "name": "archive_manifest_size_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/report.txt",
+      "name": "report_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "ec0890c2d2317dca",
+      "name": "report_mentions_archive_sha256",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "185578",
+      "name": "report_mentions_archive_size_bytes",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/state/active_lane_dispatch_claims.md",
+      "name": "dispatch_claims_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "lane_id=hnerv_pr103_pr106_ac_repack_exact_eval job_id=pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z",
+      "name": "dispatch_claim_terminal_row",
+      "passed": true,
+      "severity": "error"
+    }
+  ],
+  "dispatch_claims": {
+    "exists": true,
+    "path": ".omx/state/active_lane_dispatch_claims.md",
+    "rows": 890
+  },
+  "passed": true,
+  "report": {
+    "exists": true,
+    "path": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/report.txt"
+  },
+  "schema": "pre_submission_compliance_check_v1",
+  "submission_dir": {
+    "path": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface",
+    "required_files": {
+      "archive.zip": {
+        "exists": true,
+        "path": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive.zip"
+      },
+      "inflate.sh": {
+        "exists": true,
+        "path": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/inflate.sh"
+      },
+      "report.txt": {
+        "exists": true,
+        "path": "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/report.txt"
+      }
+    }
+  }
+}

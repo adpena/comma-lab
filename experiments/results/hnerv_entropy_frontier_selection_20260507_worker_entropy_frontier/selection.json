@@ -1,0 +1,348 @@
+{
+  "active_candidate": {
+    "active_excluded": true,
+    "allowed_remaining_blockers": [
+      "run pre_submission_compliance_check on a release surface after auth-eval artifact exists",
+      "claim dispatch lane before exact CUDA auth eval"
+    ],
+    "archive_changed": null,
+    "blocking_reasons": [
+      "run archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA"
+    ],
+    "byte_delta_vs_source_archive": null,
+    "candidate_archive_bytes": 185578,
+    "candidate_archive_exists": true,
+    "candidate_archive_file_bytes": 185578,
+    "candidate_archive_file_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+    "candidate_archive_path": "experiments/results/pr103_repack_pr106_standalone_20260507/archive.zip",
+    "candidate_archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+    "candidate_payload_sha256": "3272ec95a2ea5ec68feb1a53fa53f6b14bdae3883fac38ee2261cdadb1b16357",
+    "dispatch_attempted": false,
+    "exact_evaluable_after_lane_claim": false,
+    "hard_blockers": [
+      "run archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA"
+    ],
+    "identity_blockers": [],
+    "label": "active_pr103_pr106",
+    "manifest_bytes": 2809,
+    "manifest_path": "experiments/results/pr103_repack_pr106_standalone_20260507/final_runtime_packet_proof.json",
+    "manifest_sha256": "575cc55d21ca751c68fca71cf5b19e4e99b26e52c436b5aa8b10f9f5ef8c1121",
+    "payload_changed": null,
+    "rate_score_delta_if_components_equal": null,
+    "ready_for_archive_preflight": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "source_archive_bytes": null,
+    "source_archive_sha256": "",
+    "source_payload_sha256": "",
+    "static_packet_ready": true
+  },
+  "active_candidate_byte_floor": 185578,
+  "active_candidates": [
+    {
+      "active_excluded": true,
+      "allowed_remaining_blockers": [
+        "run pre_submission_compliance_check on a release surface after auth-eval artifact exists",
+        "claim dispatch lane before exact CUDA auth eval"
+      ],
+      "archive_changed": null,
+      "blocking_reasons": [
+        "run archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA"
+      ],
+      "byte_delta_vs_source_archive": null,
+      "candidate_archive_bytes": 185578,
+      "candidate_archive_exists": true,
+      "candidate_archive_file_bytes": 185578,
+      "candidate_archive_file_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+      "candidate_archive_path": "experiments/results/pr103_repack_pr106_standalone_20260507/archive.zip",
+      "candidate_archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+      "candidate_payload_sha256": "3272ec95a2ea5ec68feb1a53fa53f6b14bdae3883fac38ee2261cdadb1b16357",
+      "dispatch_attempted": false,
+      "exact_evaluable_after_lane_claim": false,
+      "hard_blockers": [
+        "run archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA"
+      ],
+      "identity_blockers": [],
+      "label": "active_pr103_pr106",
+      "manifest_bytes": 2809,
+      "manifest_path": "experiments/results/pr103_repack_pr106_standalone_20260507/final_runtime_packet_proof.json",
+      "manifest_sha256": "575cc55d21ca751c68fca71cf5b19e4e99b26e52c436b5aa8b10f9f5ef8c1121",
+      "payload_changed": null,
+      "rate_score_delta_if_components_equal": null,
+      "ready_for_archive_preflight": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema_version": 1,
+      "score_claim": false,
+      "source_archive_bytes": null,
+      "source_archive_sha256": "",
+      "source_payload_sha256": "",
+      "static_packet_ready": true
+    }
+  ],
+  "blocked_smaller_than_selected": [],
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "selection_manifest_is_not_dispatch_authorization",
+    "requires_level2_lane_claim_before_gpu",
+    "requires_exact_cuda_auth_eval_for_selected_archive_sha"
+  ],
+  "gpu_required": false,
+  "next_required_proofs": [
+    "static_exact_eval_packet_ready_candidate",
+    "candidate_archive_bytes_and_sha256",
+    "payload_change_proof"
+  ],
+  "planning_only": true,
+  "ranked_candidates": [
+    {
+      "active_candidate_byte_floor": 185578,
+      "active_excluded": false,
+      "allowed_remaining_blockers": [],
+      "archive_changed": true,
+      "blocking_reasons": [
+        "static_exact_eval_packet_not_ready",
+        "pr101_split_brotli_runtime_adapter_not_yet_integrated",
+        "pr106_inflate_will_fail_on_pr101_decoder_format",
+        "not_below_active_candidate_byte_floor:185578"
+      ],
+      "byte_delta_vs_active_candidate": 420,
+      "byte_delta_vs_source_archive": -241,
+      "candidate_archive_bytes": 185998,
+      "candidate_archive_exists": true,
+      "candidate_archive_file_bytes": 185998,
+      "candidate_archive_file_sha256": "219844e77442fb352424a7f232d9a25f52e3f28d93b80fce800874ded94853aa",
+      "candidate_archive_path": "experiments/results/pr101_repack_pr106_20260507T152608Z_claude/archive.zip",
+      "candidate_archive_sha256": "219844e77442fb352424a7f232d9a25f52e3f28d93b80fce800874ded94853aa",
+      "candidate_payload_sha256": "",
+      "dispatch_attempted": false,
+      "exact_evaluable_after_lane_claim": false,
+      "hard_blockers": [
+        "pr101_split_brotli_runtime_adapter_not_yet_integrated",
+        "pr106_inflate_will_fail_on_pr101_decoder_format",
+        "not_below_active_candidate_byte_floor:185578"
+      ],
+      "identity_blockers": [],
+      "label": "pr101_split_brotli",
+      "manifest_bytes": 3242,
+      "manifest_path": "experiments/results/pr101_repack_pr106_20260507T152608Z_claude/manifest.json",
+      "manifest_sha256": "82e1c62666a7fafff5449402df7cb6d5b01ff25a24541abbef9e9cf27459c87e",
+      "payload_changed": null,
+      "rate_score_delta_if_components_equal": -0.000160472008,
+      "ready_for_archive_preflight": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema_version": 1,
+      "score_claim": false,
+      "source_archive_bytes": 186239,
+      "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+      "source_payload_sha256": "",
+      "static_packet_ready": false
+    },
+    {
+      "active_candidate_byte_floor": 185578,
+      "active_excluded": false,
+      "allowed_remaining_blockers": [
+        "lane_dispatch_claim_missing",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "archive_changed": true,
+      "blocking_reasons": [
+        "static_exact_eval_packet_not_ready",
+        "pr101_schema_runtime_tree_parity_manifest_missing",
+        "pr101_schema_inflate_output_parity_missing",
+        "strict_pre_submission_compliance_json_missing",
+        "not_below_active_candidate_byte_floor:185578"
+      ],
+      "byte_delta_vs_active_candidate": 466,
+      "byte_delta_vs_source_archive": -36,
+      "candidate_archive_bytes": 186044,
+      "candidate_archive_exists": true,
+      "candidate_archive_file_bytes": 186044,
+      "candidate_archive_file_sha256": "a927bd957b34d18a85230ac1a784331c6b6ad9b25bde7532d646c875b7548d6e",
+      "candidate_archive_path": "experiments/results/hnerv_pr101_schema_candidate_20260507_codex/pr106x_lowlevel_brotli_pr101_schema_candidate.zip",
+      "candidate_archive_sha256": "a927bd957b34d18a85230ac1a784331c6b6ad9b25bde7532d646c875b7548d6e",
+      "candidate_payload_sha256": "7056e69953739ebd016d473bd7bfab650b8fd58cffab5e8aad0ddb2358df6ab0",
+      "dispatch_attempted": false,
+      "exact_evaluable_after_lane_claim": false,
+      "hard_blockers": [
+        "pr101_schema_runtime_tree_parity_manifest_missing",
+        "pr101_schema_inflate_output_parity_missing",
+        "strict_pre_submission_compliance_json_missing",
+        "not_below_active_candidate_byte_floor:185578"
+      ],
+      "identity_blockers": [],
+      "label": "pr101_schema",
+      "manifest_bytes": 40728,
+      "manifest_path": "experiments/results/hnerv_pr101_schema_candidate_20260507_codex/manifest.with_tool_run.json",
+      "manifest_sha256": "4385f194c8e0d5e71440686d34fd2d024dcbf41db5c1fa7d905a1538fafdbe84",
+      "payload_changed": true,
+      "rate_score_delta_if_components_equal": -2.3970922e-05,
+      "ready_for_archive_preflight": true,
+      "ready_for_exact_eval_dispatch": false,
+      "schema_version": 1,
+      "score_claim": false,
+      "source_archive_bytes": 186080,
+      "source_archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+      "source_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+      "static_packet_ready": false
+    },
+    {
+      "active_candidate_byte_floor": 185578,
+      "active_excluded": false,
+      "allowed_remaining_blockers": [
+        "lane_dispatch_claim_missing",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "archive_changed": true,
+      "blocking_reasons": [
+        "not_below_active_candidate_byte_floor:185578"
+      ],
+      "byte_delta_vs_active_candidate": 488,
+      "byte_delta_vs_source_archive": -14,
+      "candidate_archive_bytes": 186066,
+      "candidate_archive_exists": true,
+      "candidate_archive_file_bytes": 186066,
+      "candidate_archive_file_sha256": "5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771",
+      "candidate_archive_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/pr106x_lowlevel_brotli_hdm3_archive_candidate.zip",
+      "candidate_archive_sha256": "5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771",
+      "candidate_payload_sha256": "cb265692118961b9e1aeca090b5773f0de81c5a1acc882fc58057f10e16e6df7",
+      "dispatch_attempted": false,
+      "exact_evaluable_after_lane_claim": false,
+      "hard_blockers": [
+        "not_below_active_candidate_byte_floor:185578"
+      ],
+      "identity_blockers": [],
+      "label": "hdm3",
+      "manifest_bytes": 25707,
+      "manifest_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_archive_candidate_manifest.json",
+      "manifest_sha256": "70579de8ed404f3110e745bdb9f1622d919e321ce90511e0fa6ef6bbc95331a7",
+      "payload_changed": true,
+      "rate_score_delta_if_components_equal": -9.322025e-06,
+      "ready_for_archive_preflight": true,
+      "ready_for_exact_eval_dispatch": false,
+      "schema_version": 1,
+      "score_claim": false,
+      "source_archive_bytes": 186080,
+      "source_archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+      "source_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+      "static_packet_ready": true
+    },
+    {
+      "active_candidate_byte_floor": 185578,
+      "active_excluded": false,
+      "allowed_remaining_blockers": [
+        "requires_lane_dispatch_claim",
+        "requires_exact_cuda_auth_eval"
+      ],
+      "archive_changed": true,
+      "blocking_reasons": [
+        "static_exact_eval_packet_not_ready",
+        "requires_archive_manifest_preflight",
+        "not_below_active_candidate_byte_floor:185578"
+      ],
+      "byte_delta_vs_active_candidate": 510,
+      "byte_delta_vs_source_archive": -151,
+      "candidate_archive_bytes": 186088,
+      "candidate_archive_exists": true,
+      "candidate_archive_file_bytes": 186088,
+      "candidate_archive_file_sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+      "candidate_archive_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip",
+      "candidate_archive_sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+      "candidate_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+      "dispatch_attempted": false,
+      "exact_evaluable_after_lane_claim": false,
+      "hard_blockers": [
+        "requires_archive_manifest_preflight",
+        "not_below_active_candidate_byte_floor:185578"
+      ],
+      "identity_blockers": [],
+      "label": "pr106_q10",
+      "manifest_bytes": 6165,
+      "manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/manifest.json",
+      "manifest_sha256": "831c27b094b7c64e2ccd36948644d7763dc7dd0f5eec5760ac9214c058c5298a",
+      "payload_changed": true,
+      "rate_score_delta_if_components_equal": -0.000100544702,
+      "ready_for_archive_preflight": true,
+      "ready_for_exact_eval_dispatch": false,
+      "schema_version": 1,
+      "score_claim": false,
+      "source_archive_bytes": 186239,
+      "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+      "source_payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "static_packet_ready": false
+    }
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "selected_next_candidate": null,
+  "selected_next_candidate_label": null,
+  "selection_policy": {
+    "active_candidate_bytes_are_rate_only_floor": true,
+    "active_candidates_excluded": true,
+    "exact_evaluable_after_lane_claim_requires": [
+      "candidate_archive_bytes_and_sha256",
+      "byte_different_archive",
+      "payload_changed_when_source_payload_sha256_is_available",
+      "static_exact_eval_packet_ready",
+      "score_claim_false",
+      "dispatch_attempted_false",
+      "no_remaining_blockers_except_lane_claim_and_exact_cuda"
+    ],
+    "purpose": "select_next_static_ready_hnerv_entropy_candidate_after_active_eval",
+    "sort": "candidate_archive_bytes ascending, then label, then manifest path"
+  },
+  "tool": "tac.hnerv_entropy_frontier_selector",
+  "tool_run_manifest": {
+    "argv": [
+      "--active-candidate",
+      "active_pr103_pr106=experiments/results/pr103_repack_pr106_standalone_20260507/final_runtime_packet_proof.json",
+      "--candidate",
+      "pr101_schema=experiments/results/hnerv_pr101_schema_candidate_20260507_codex/manifest.with_tool_run.json",
+      "--candidate",
+      "pr101_split_brotli=experiments/results/pr101_repack_pr106_20260507T152608Z_claude/manifest.json",
+      "--candidate",
+      "hdm3=experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_archive_candidate_manifest.json",
+      "--candidate",
+      "pr106_q10=experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/manifest.json",
+      "--json-out",
+      "experiments/results/hnerv_entropy_frontier_selection_20260507_worker_entropy_frontier/selection.json",
+      "--md-out",
+      "experiments/results/hnerv_entropy_frontier_selection_20260507_worker_entropy_frontier/selection.md"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "55d94f87c44821a4067417c3646215eb3bb8d969cce3abee5757c105e53dda2b",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 40728,
+        "path": "experiments/results/hnerv_pr101_schema_candidate_20260507_codex/manifest.with_tool_run.json",
+        "sha256": "4385f194c8e0d5e71440686d34fd2d024dcbf41db5c1fa7d905a1538fafdbe84"
+      },
+      {
+        "bytes": 3242,
+        "path": "experiments/results/pr101_repack_pr106_20260507T152608Z_claude/manifest.json",
+        "sha256": "82e1c62666a7fafff5449402df7cb6d5b01ff25a24541abbef9e9cf27459c87e"
+      },
+      {
+        "bytes": 25707,
+        "path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_archive_candidate_manifest.json",
+        "sha256": "70579de8ed404f3110e745bdb9f1622d919e321ce90511e0fa6ef6bbc95331a7"
+      },
+      {
+        "bytes": 6165,
+        "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/manifest.json",
+        "sha256": "831c27b094b7c64e2ccd36948644d7763dc7dd0f5eec5760ac9214c058c5298a"
+      },
+      {
+        "bytes": 2809,
+        "path": "experiments/results/pr103_repack_pr106_standalone_20260507/final_runtime_packet_proof.json",
+        "sha256": "575cc55d21ca751c68fca71cf5b19e4e99b26e52c436b5aa8b10f9f5ef8c1121"
+      }
+    ],
+    "output_path": "experiments/results/hnerv_entropy_frontier_selection_20260507_worker_entropy_frontier/selection.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/select_hnerv_entropy_frontier_candidate.py"
+  }
+}

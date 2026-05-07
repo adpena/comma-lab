@@ -572,6 +572,11 @@ def _run_cross_paradigm_frontier_inventory_gate() -> tuple[bool, str]:
     missing_keys = sorted(required_keys - row_keys)
     if missing_keys:
         return False, "cross-paradigm inventory missing required row(s): " + ", ".join(missing_keys)
+    anchor_failures = _cross_paradigm_pr103_anchor_failures(rows)
+    if anchor_failures:
+        return False, "cross-paradigm inventory PR103 anchor contract failed:\n" + "\n".join(
+            anchor_failures
+        )
     geometry_failures = _geometry_feedback_inventory_failures(payload)
     if geometry_failures:
         return False, "cross-paradigm inventory geometry feedback contract failed:\n" + "\n".join(
@@ -607,7 +612,7 @@ def _run_cross_paradigm_frontier_inventory_gate() -> tuple[bool, str]:
 
 
 def _cross_paradigm_queue_routing_failures(action_queue: list[object]) -> list[str]:
-    """Validate first-tranche score-path routing without freezing one top key."""
+    """Validate post-anchor first-tranche routing."""
     failures: list[str] = []
     if not action_queue:
         return ["action_queue_empty"]
@@ -617,16 +622,89 @@ def _cross_paradigm_queue_routing_failures(action_queue: list[object]) -> list[s
             keys.append(str(item.get("key") or ""))
         else:
             keys.append("")
-    first_tranche = set(keys[:3])
-    required_first_tranche = {
-        "hnerv_pr103_pr106_ac_repack_runtime_closure",
-        "hnerv_wavelet_wr01_apply",
-    }
-    missing = sorted(required_first_tranche - first_tranche)
+    required_first_tranche = [
+        "categorical_qma9_clade_spade_openpilot",
+        "joint_admm_balle_arithmetic_stack",
+        "hnerv_per_tensor_context_entropy",
+        "telescopic_foveation_field",
+        "lapose_motion_atom_allocator",
+    ]
+    first_tranche = keys[: len(required_first_tranche)]
+    missing = sorted(set(required_first_tranche) - set(first_tranche))
     if missing:
         failures.append(
             "first_tranche_missing_required_score_path_row(s): " + ", ".join(missing)
         )
+    elif first_tranche != required_first_tranche:
+        failures.append(
+            "first_tranche_order_mismatch: expected "
+            + ", ".join(required_first_tranche)
+            + "; observed "
+            + ", ".join(first_tranche)
+        )
+    return failures
+
+
+def _cross_paradigm_pr103_anchor_failures(rows: list[object]) -> list[str]:
+    by_key = {
+        str(row.get("key")): row
+        for row in rows
+        if isinstance(row, dict) and row.get("key") is not None
+    }
+    anchor = by_key.get("hnerv_pr103_pr106_ac_repack_runtime_closure")
+    if anchor is None:
+        return ["hnerv_pr103_pr106_ac_repack_runtime_closure: missing anchor row"]
+    failures: list[str] = []
+    expected = {
+        "status": "exact_cuda_a++_anchor_promoted",
+        "action_class": "maintain_exact_eval_anchor_and_pivot",
+        "role": "current_exact_rate_anchor",
+        "priority_tier": 900,
+    }
+    for field, value in expected.items():
+        if anchor.get(field) != value:
+            failures.append(f"anchor_{field}_drift: expected {value!r}, got {anchor.get(field)!r}")
+    if anchor.get("score_claim") is not False:
+        failures.append("anchor_score_claim_must_remain_false")
+    if anchor.get("ready_for_exact_eval_dispatch") is not False:
+        failures.append("anchor_ready_for_exact_eval_dispatch_must_remain_false")
+    snapshot = anchor.get("score_snapshot")
+    if not isinstance(snapshot, dict):
+        failures.append("anchor_score_snapshot_missing")
+        return failures
+    if snapshot.get("compliance_passed") is not True:
+        failures.append("anchor_contest_final_compliance_not_passed")
+    failed_checks = snapshot.get("compliance_failed_checks")
+    if failed_checks:
+        failures.append(
+            "anchor_contest_final_failed_checks: "
+            + ", ".join(str(item) for item in failed_checks)
+        )
+    if int(snapshot.get("compliance_check_count", 0)) <= 0:
+        failures.append("anchor_contest_final_checks_missing")
+    if snapshot.get("score") != 0.2089810755823297:
+        failures.append(f"anchor_score_drift: {snapshot.get('score')!r}")
+    if snapshot.get("report_reconstructed_score") != 0.20898105277982337:
+        failures.append(
+            "anchor_report_reconstructed_score_drift: "
+            f"{snapshot.get('report_reconstructed_score')!r}"
+        )
+    if snapshot.get("score_basis") != "auth_eval_report_components_plus_exact_archive_bytes":
+        failures.append(f"anchor_score_basis_drift: {snapshot.get('score_basis')!r}")
+    if snapshot.get("anchor_proof_schema") != "pre_submission_compliance_anchor_proof_v1":
+        failures.append(
+            f"anchor_self_contained_proof_missing: {snapshot.get('anchor_proof_schema')!r}"
+        )
+    if snapshot.get("archive_bytes") != 185578:
+        failures.append(f"anchor_archive_bytes_drift: {snapshot.get('archive_bytes')!r}")
+    if (
+        snapshot.get("archive_sha256")
+        != "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce"
+    ):
+        failures.append(f"anchor_archive_sha256_drift: {snapshot.get('archive_sha256')!r}")
+    score_path = str(snapshot.get("path") or "")
+    if not score_path.endswith("pre_submission_compliance.contest_final.json"):
+        failures.append(f"anchor_score_snapshot_path_not_tracked_compliance_json: {score_path!r}")
     return failures
 
 

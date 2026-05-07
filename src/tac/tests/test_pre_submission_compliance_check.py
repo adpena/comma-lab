@@ -104,6 +104,60 @@ def test_pre_submission_check_passes_strict_happy_path(tmp_path: Path) -> None:
         )
     )
     assert report["passed"], [c for c in report["checks"] if not c["passed"]]
+    strict_formula = report["auth_eval"]["strict_formula"]
+    assert strict_formula["basis"] == "auth_eval_report_components_plus_exact_archive_bytes"
+    assert strict_formula["score"] == strict_formula["report_reconstructed_score"]
+    assert report["auth_eval"]["anchor_proof"]["schema"] == (
+        "pre_submission_compliance_anchor_proof_v1"
+    )
+    assert report["auth_eval"]["anchor_proof"]["score_basis"] == strict_formula
+
+
+def test_pre_submission_check_records_strict_formula_when_report_score_uses_rounded_rate(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    auth_path = tmp_path / "submission" / "contest_auth_eval.json"
+    auth = json.loads(auth_path.read_text(encoding="utf-8"))
+    strict_score = auth["score_recomputed_from_components"]
+    rounded_rate_score = (
+        100 * auth["avg_segnet_dist"]
+        + (10 * auth["avg_posenet_dist"]) ** 0.5
+        + 25 * round(auth["archive_size_bytes"] / 37_545_489, 8)
+    )
+    auth["canonical_score"] = rounded_rate_score
+    auth["score_recomputed_from_components"] = rounded_rate_score
+    auth_path.write_text(json.dumps(auth, indent=2) + "\n", encoding="utf-8")
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--auth-eval-json",
+                str(auth_path),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+            ]
+        )
+    )
+
+    assert report["passed"], [c for c in report["checks"] if not c["passed"]]
+    strict_formula = report["auth_eval"]["strict_formula"]
+    assert strict_formula["score"] == strict_score
+    assert strict_formula["report_reconstructed_score"] == rounded_rate_score
+    assert strict_formula["score_delta_vs_report_reconstruction"] == (
+        strict_score - rounded_rate_score
+    )
+    assert report["auth_eval"]["anchor_proof"]["score_basis"]["score"] == strict_score
 
 
 def test_pre_submission_check_fails_zip_slip_member(tmp_path: Path) -> None:

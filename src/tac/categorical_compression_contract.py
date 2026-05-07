@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from tac.categorical_label_atoms import build_categorical_typed_label_atoms
 from tac.semantic_label_contract import (
     CONTEST_SEGNET_CLASSES,
     NUM_CONTEST_SEGNET_CLASSES,
@@ -39,6 +40,7 @@ def build_categorical_compression_contract() -> dict[str, Any]:
         "promotion_eligible": False,
         "class_count": NUM_CONTEST_SEGNET_CLASSES,
         "classes": classes,
+        "typed_label_atoms": build_categorical_typed_label_atoms(),
         "conditioning_families": {
             "qma9": {
                 "role": "charged semantic mask stream or replacement mask grammar",

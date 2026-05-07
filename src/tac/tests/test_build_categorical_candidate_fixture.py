@@ -16,6 +16,7 @@ from tac.categorical_candidate_readiness import (
     RUNTIME_LOADER_PARITY_CONTRACT,
     audit_categorical_candidate_manifest,
 )
+from tac.categorical_label_atoms import build_categorical_typed_label_atoms
 from tac.categorical_label_prior_payload_manifest import (
     LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT,
     LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
@@ -85,6 +86,7 @@ def test_build_categorical_candidate_fixture_is_deterministic_and_blocked(
     ]
     assert construction_plan["class_rows"][1]["charged_label_member"] == "class_codebook.json"
     assert construction_plan["class_rows"][1]["openpilot_prior_hint"] == "lane_marking_track_prior"
+    assert construction_plan["typed_label_atoms"] == build_categorical_typed_label_atoms()
 
     with zipfile.ZipFile(archive_a) as archive:
         member_order = [
@@ -116,11 +118,16 @@ def test_build_categorical_candidate_fixture_is_deterministic_and_blocked(
     assert class_codebook["class_codebook_contract"] == CATEGORICAL_CLASS_CODEBOOK_CONTRACT
     assert class_codebook["classes"][0]["name"] == "road"
     assert class_codebook["classes"][1]["default_quant_bits"] == 8
+    assert class_codebook["typed_label_atoms"] == build_categorical_typed_label_atoms()
     assert (
         label_prior_payload_manifest["label_prior_payload_manifest_contract"]
         == LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT
     )
     assert label_prior_payload_manifest["conditioning_priors"] == candidate["conditioning_priors"]
+    assert (
+        label_prior_payload_manifest["typed_label_atoms"]
+        == build_categorical_typed_label_atoms()
+    )
 
 
 def test_build_categorical_candidate_fixture_records_tool_manifest(tmp_path: Path) -> None:

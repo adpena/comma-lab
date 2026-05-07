@@ -1,4 +1,4 @@
-"""Op_RAFTPoseStream — Phase 2 keystone pose-stream codec for the canonical
+"""Op_RAFTPoseStream - Phase 2 keystone pose-stream codec for the canonical
 :class:`tac.codec_pipeline.CodecPipeline`.
 
 Per Grand Council bilevel-optimization deliberation
@@ -21,7 +21,7 @@ Wire format (CPL1 sub-blob, deterministic, byte-exact):
     per_axis_scales    : pose_dim x f64_LE  (per-axis quantization scale)
     quantized_payload  : brotli(int16_LE * n_frames * pose_dim)
 
-The decoder is bit-faithful within the int16 quantization grid — i.e. the
+The decoder is bit-faithful within the int16 quantization grid; i.e. the
 roundtrip preserves the integer codes exactly; the float reconstruction is
 ``q * scale``. Reconstruction error is bounded by ``scale / 32767`` per axis.
 
@@ -38,7 +38,7 @@ Op_state schema (threaded through CodecPipeline manifest):
 
 CLAUDE.md compliance:
     - Strict-scorer-rule: pure CPU + numpy + brotli + torch (no scorers).
-    - No MPS, no CUDA dispatch — encoder runs in plain CPU.
+    - No MPS, no CUDA dispatch - encoder runs in plain CPU.
     - No /tmp paths.
     - Score claims: this op reports BYTES only; predicted score impact tagged
       ``[predicted-band only]`` in council deliberation, NOT in module output.
@@ -53,16 +53,12 @@ from __future__ import annotations
 
 import struct
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import brotli
 import torch
 
 from tac.codec_pipeline import EncodeResult, ValidationReport
-
-if TYPE_CHECKING:
-    pass
-
 
 _RPS_MAGIC = b"RPS1"
 _POSE_DIM = 6
@@ -367,7 +363,7 @@ class Op_RAFTPoseStream:
             return ValidationReport(
                 passed=False, op_name=self.name, findings=findings
             )
-        # Hard gate: reject NaN/Inf — they would corrupt the int16 round.
+        # Hard gate: reject NaN/Inf; they would corrupt the int16 round.
         as_float = poses.to(torch.float64)
         if torch.isnan(as_float).any():
             findings.append(f"{POSE_KEY!r} contains NaN values")
@@ -379,8 +375,8 @@ class Op_RAFTPoseStream:
             return ValidationReport(
                 passed=False, op_name=self.name, findings=findings
             )
-        # Soft warn: extreme magnitude. Logged as a finding but still passes
-        # — exotic synthetic substrates may legitimately exceed the bound.
+        # Soft warn: extreme magnitude. Logged as a finding but still passes;
+        # exotic synthetic substrates may legitimately exceed the bound.
         max_abs = float(as_float.abs().max().item())
         warning_only = False
         if max_abs > self.magnitude_warn_threshold:
@@ -397,6 +393,6 @@ class Op_RAFTPoseStream:
 
 
 __all__ = [
-    "Op_RAFTPoseStream",
     "POSE_KEY",
+    "Op_RAFTPoseStream",
 ]

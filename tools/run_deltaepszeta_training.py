@@ -1,4 +1,4 @@
-"""δεζ-aware training driver — Phase 3 keystone.
+"""delta-epsilon-zeta-aware training driver - Phase 3 keystone.
 
 Per Grand Council bilevel-optimization deliberation
 (``.omx/research/grand_council_optimal_path_to_shannon_floor_20260507.md``),
@@ -6,12 +6,12 @@ Per Grand Council bilevel-optimization deliberation
 substrate whose native description length is lower under the chosen codec.
 This driver wires:
 
-- :func:`tac.shannon_h2_loss.shannon_h0_loss` — differentiable rate proxy.
-- ``tools.build_deltaepszeta_training_targets`` JSON — per-tensor weights.
+- :func:`tac.shannon_h2_loss.shannon_h0_loss` - differentiable rate proxy.
+- ``tools.build_deltaepszeta_training_targets`` JSON - per-tensor weights.
 - :class:`tac.codec_pipeline_deltaepszeta_callback.CodecPipelineAwareTrainingCallback`
-  — end-of-epoch ground-truth archive-bytes signal from the canonical
+  - end-of-epoch ground-truth archive-bytes signal from the canonical
   :class:`tac.codec_pipeline.CodecPipeline`.
-- :func:`tools.run_bilevel_optimization.detect_substrates` — substrate
+- :func:`tools.run_bilevel_optimization.detect_substrates` - substrate
   auto-detection (called via the shared helper module).
 
 The training loop:
@@ -22,9 +22,9 @@ The training loop:
    - distortion proxy: caller-supplied callable (default = MSE vs the
      reference state_dict, suitable for a sanity-loop).
    - rate proxy: weighted ``shannon_h0_loss`` over per-tensor weights.
-   - combined Lagrangian:  ``loss = distortion + λ * rate``.
+   - combined Lagrangian:  ``loss = distortion + lambda * rate``.
 3. Per-epoch:
-   - dual-ascent on λ when rate proxy exceeds ``rate_budget``.
+   - dual-ascent on lambda when rate proxy exceeds ``rate_budget``.
    - invokes the CodecPipelineAwareTrainingCallback for the empirical
      archive-bytes signal.
 4. Writes a JSONL log + final state_dict checkpoint.
@@ -32,7 +32,7 @@ The training loop:
 CLAUDE.md compliance:
     - Strict-scorer-rule: NO scorer load. Distortion is operator-supplied
       (default = MSE-vs-reference). For Phase 3 sanity-loop a simple MSE is
-      fine; real δεζ runs supply a perceptual surrogate.
+      fine; real delta-epsilon-zeta runs supply a perceptual surrogate.
     - No /tmp paths: log_dir under ``experiments/results/<lane_id>/...``.
     - No score claims: this driver reports loss / rate / bytes only.
     - Pure CPU (PyTorch CPU tensors) by default; torch will auto-device only
@@ -55,19 +55,13 @@ import dataclasses
 import json
 import pathlib
 import sys
+from collections.abc import Callable, Iterable
 from datetime import UTC, datetime
-from typing import Callable, Iterable
 
 import torch
 
 # Make `tac` importable from tools/.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "src"))
-
-from tac.codec_pipeline import CodecPipeline  # noqa: E402
-from tac.codec_pipeline_deltaepszeta_callback import (  # noqa: E402
-    CodecPipelineAwareTrainingCallback,
-)
-from tac.shannon_h2_loss import shannon_h0_loss  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -85,7 +79,7 @@ class DeltaEpsZetaTrainingConfig:
         lambda_init: initial Lagrange multiplier on the rate term.
         lambda_step: dual-ascent step size when the rate proxy exceeds
             ``rate_budget_bits``.
-        rate_budget_bits: per-symbol H0 ceiling. The dual-ascent loop ramps λ
+        rate_budget_bits: per-symbol H0 ceiling. The dual-ascent loop ramps lambda
             up while the measured H0 exceeds this; ramps down when below.
             (Lower-bound is 0.0; multiplier never goes negative.)
         per_tensor_weights: optional dict ``{tensor_name -> weight}`` that
@@ -141,7 +135,7 @@ def make_mse_distortion_fn(
     reference state_dict.
 
     The closure captures the reference tensors detached. This is the default
-    distortion for the Phase 3 sanity-loop — a real δεζ run supplies a
+    distortion for the Phase 3 sanity-loop - a real delta-epsilon-zeta run supplies a
     perceptual surrogate (e.g., logits MSE on a held-out feature map) but the
     pattern is identical: take a state_dict, return a scalar tensor.
     """
@@ -167,14 +161,14 @@ def make_mse_distortion_fn(
 # ---------------------------------------------------------------------------
 
 class DeltaEpsZetaTrainingDriver:
-    """δεζ-aware training driver.
+    """delta-epsilon-zeta-aware training driver.
 
     Composition:
         - state_dict (operator-supplied, on disk) -> ``nn.ParameterDict``.
         - distortion_fn(state_dict) -> scalar loss term.
         - rate_term = sum_i w_i * shannon_h0_loss(state[i]).
         - loss = distortion + lambda * rate_term.
-        - λ ramps via dual-ascent against ``rate_budget_bits``.
+        - lambda ramps via dual-ascent against ``rate_budget_bits``.
         - end-of-epoch: pipeline-aware callback fires for empirical archive
           bytes; result appended to JSONL log.
     """
@@ -185,7 +179,7 @@ class DeltaEpsZetaTrainingDriver:
         config: DeltaEpsZetaTrainingConfig,
         *,
         distortion_fn: Callable[[dict[str, torch.Tensor]], torch.Tensor] | None = None,
-        callback: CodecPipelineAwareTrainingCallback | None = None,
+        callback: object | None = None,
     ) -> None:
         # CLAUDE.md /tmp guard.
         log_dir_str = str(config.log_dir)
@@ -256,11 +250,13 @@ class DeltaEpsZetaTrainingDriver:
 
     def _rate_term(self) -> torch.Tensor:
         """Per-tensor weighted H0 rate proxy."""
+        from tac.shannon_h2_loss import shannon_h0_loss
+
         weights = self._config.per_tensor_weights or {}
         if not weights:
             # Uniform: 1/N over all params.
             n = max(1, len(self._params))
-            weights = {k: 1.0 / n for k in self._params}
+            weights = dict.fromkeys(self._params, 1.0 / n)
         total = torch.tensor(0.0)
         for name, p in self._params.items():
             w = float(weights.get(name, 0.0))
@@ -277,7 +273,7 @@ class DeltaEpsZetaTrainingDriver:
     def step_once(self) -> StepReport:
         """Run one optimizer step; return the StepReport for that step."""
         self._optimizer.zero_grad(set_to_none=True)
-        state = {k: p for k, p in self._params.items()}
+        state = dict(self._params.items())
         distortion = self._distortion_fn(state)
         rate = self._rate_term()
         loss = distortion + self._lambda * rate
@@ -295,8 +291,8 @@ class DeltaEpsZetaTrainingDriver:
         return report
 
     def _ramp_lambda(self, observed_rate_bits: float) -> None:
-        """Dual-ascent: ramp λ when rate exceeds budget, ramp down otherwise.
-        λ is clamped at 0 (no negative multipliers).
+        """Dual-ascent: ramp lambda when rate exceeds budget, ramp down otherwise.
+        lambda is clamped at 0 (no negative multipliers).
         """
         budget = self._config.rate_budget_bits
         step = self._config.lambda_step
@@ -323,7 +319,7 @@ class DeltaEpsZetaTrainingDriver:
                 all_rows.append(stamped)
                 self._append_log(stamped)
                 last_rate = stamped.rate_bits
-            # End-of-epoch: dual-ascent on λ + callback fires.
+            # End-of-epoch: dual-ascent on lambda + callback fires.
             self._ramp_lambda(last_rate)
             if self._callback is not None:
                 self._callback.report(
@@ -351,7 +347,7 @@ def _utc_timestamp() -> str:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
-        description="δεζ-aware training driver (Phase 3 keystone)",
+        description="delta-epsilon-zeta-aware training driver (Phase 3 keystone)",
     )
     p.add_argument(
         "--state-dict",
@@ -448,7 +444,7 @@ def main(argv: list[str] | None = None) -> int:
     rows = driver.train()
     ckpt_path = driver.save_checkpoint(log_dir / "final_state_dict.pt")
     print(f"trained {len(rows)} steps")
-    print(f"final λ:        {driver.lambda_value:.6g}")
+    print(f"final lambda:   {driver.lambda_value:.6g}")
     print(f"log:            {driver.log_path}")
     print(f"checkpoint:     {ckpt_path}")
     return 0

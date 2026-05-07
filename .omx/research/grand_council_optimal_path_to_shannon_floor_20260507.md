@@ -421,3 +421,85 @@ Phases 1-7 trajectory and the integration wiring above. The lowest
 score achievable in the YF-floor regime is 0.125-0.155 [predicted].
 Phase 1 (PR100 canonical-winner replay) is the next concrete dispatch
 when GPU billing is available; everything else flows from there.
+
+---
+
+## Codex senior-engineering review addendum
+
+**Verdict**: keep this memo as a strategic synthesis, but do not treat it as
+an executable or evidence-complete control plane until the following
+corrections are satisfied.
+
+### Required corrections before canonical execution
+
+1. **Evidence-grade all score numbers.**
+   The PR103-on-PR106 anchor is exact CUDA T4, but the strict contest formula
+   score is `0.2089810755823297`; the report-reconstructed score is
+   `0.20898105277982337`. Roadmaps, inventory rows, and proof gates should
+   cite both only when they also explain the rounded-rate delta. Phase targets
+   such as `0.190`, `0.165`, `0.155`, `0.145`, and `0.125` remain
+   `[prediction]` until exact archive eval exists.
+
+2. **Do not encode 0.155 as a floor or ceiling.**
+   The current mandate is lowest score possible with no artificial lower
+   limit. Treat `0.155` as a useful waypoint from earlier Wave-Omega council
+   reasoning, not a stopping condition and not a proven lower bound.
+
+3. **Replace loose "sub-Shannon" wording with task-aware rate-distortion.**
+   The scientifically precise claim is: for the contest scorer, a task-aware
+   sufficient-statistic code can beat generic pixel/video/independent-entropy
+   proxy rates by not spending bits on scorer-invisible information. It is not
+   evidence for violating an information-theoretic Shannon bound once the
+   correct sufficient statistic and distortion functional are specified.
+
+4. **PR100-107 1:1 reproduction is Phase 0.**
+   Before using PR100/101/102/103/105/106/107 as stack atoms, each must have:
+   archive SHA, member SHA, source/runtime custody, README/report capture,
+   `compress`/`inflate` behavior, binary grammar notes, decode/re-encode
+   parity status, no-op controls where relevant, and smallest missing proof.
+   Detached public clones are forensic inputs only; promoted artifacts land on
+   `main` through explicit review.
+
+5. **Phases should run in parallel where write scopes are independent.**
+   The sequential table is useful for narrative, but wall-clock optimal work is
+   parallel: PR100-107 custody, delta-epsilon-zeta target-to-candidate bridge,
+   alpha categorical/VQ mask bridge, PR91/HPM1 categorical recovery, HDC2/HDM3
+   entropy closure, and RAFT/LA/telescopic foveation runtime proof can advance
+   concurrently with disjoint files.
+
+6. **Do not prematurely defer CLADE/SPADE/LA-pose.**
+   The memo's "intentionally not in this design" section is too strong. These
+   lanes should be categorized as active sidecars pending runtime-visible
+   proof, especially categorical labeling/self-compression, CLADE/SPADE-style
+   semantic priors, RAFT-derived pose, LA-pose, and telescopic foveation. They
+   should not block the delta-epsilon-zeta path, but they remain candidates for
+   stacking or substitution.
+
+7. **Every phase needs a dispatchable artifact contract.**
+   A phase is not complete when a model, memo, or callback exists. It is
+   complete when it emits a deterministic byte-different candidate archive or
+   a fail-closed blocker artifact with: old/new SHA-256, charged bytes,
+   runtime tree SHA, changed payload proof, no-op control, lane-claim status,
+   strict compliance JSON, and exact CUDA readiness.
+
+### Revised immediate implementation order
+
+1. Stabilize and commit the current PR103-on-PR106 strict-score anchor,
+   categorical label atoms, entropy-frontier selector, H2 target audit, and
+   preflight hardening.
+2. Build the PR100-107 reproduction/deconstruction ledger so every public
+   frontier atom has byte-level custody and a precise missing-proof row.
+3. Build the delta-epsilon-zeta PR106 candidate bridge: consume
+   `targets.json`, prove nonzero H2 pressure on top tensors, emit changed-byte
+   requirements and fail-closed readiness until a trained payload/archive
+   exists.
+4. In parallel, push the largest stackable sidecars:
+   alpha VQ/categorical mask replacement, PR91/HPM1 categorical parity,
+   HDC2/HDM3 entropy closure, RAFT/LA/telescopic foveation runtime consumer,
+   and Balle/JCSP runtime parity.
+5. Extend meta-Lagrangian/Pareto to rank only artifacts with explicit custody
+   state, evidence grade, expected information gain, and KKT/Pareto status.
+
+This addendum supersedes roadmap wording that treats predictions as measured
+facts, treats 0.155 as a hard floor, or defers semantic/pose/foveation sidecars
+without runtime-visible proof.

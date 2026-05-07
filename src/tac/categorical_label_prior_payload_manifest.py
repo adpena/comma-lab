@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from tac.categorical_label_atoms import build_categorical_typed_label_atoms
 from tac.categorical_openpilot_mask_prior_contract import (
     RUNTIME_LABEL_CONTRACT,
     audit_categorical_openpilot_mask_priors,
@@ -83,6 +84,7 @@ def build_categorical_label_prior_payload_manifest(
             SELFCOMP_CLASS_TO_GRAY[index] for index in range(len(SELFCOMP_CLASS_TO_GRAY))
         ],
         "class_rows": canonical_categorical_label_prior_class_rows(),
+        "typed_label_atoms": build_categorical_typed_label_atoms(),
         "charged_member_links": charged_member_links,
         "conditioning_priors": normalized_priors,
         "conditioning_prior_contract": audit_categorical_openpilot_mask_priors(

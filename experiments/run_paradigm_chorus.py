@@ -1,4 +1,4 @@
-"""Paradigm chorus — exercise α/β/γ/δεζ + Op1-4 cathedral on synthetic substrate.
+"""Paradigm chorus: exercise alpha/beta/gamma/dezeta + Op1-4 cathedral.
 
 Per user 2026-05-07 ("we are leaving meat on the bone with current HNeRV
 frontier; keep pushing all paradigm and cross-paradigm work"), this demo
@@ -7,7 +7,7 @@ runs every cathedral op end-to-end on a synthetic substrate and reports:
 1. **Per-paradigm readiness**: which paradigm wraps validate cleanly,
    which abort, which run but don't compete.
 2. **Per-op byte impact**: side-by-side comparison of Op1, Op2, Op3,
-   α/β/γ/δεζ wraps on the same substrate.
+   alpha/beta/gamma/dezeta wraps on the same substrate.
 3. **Cathedral health**: total tests passing, paradigms registered,
    gates GREEN, contest-CUDA score reproduction.
 
@@ -20,17 +20,18 @@ involved.
 
 Cross-references:
 
-- :mod:`tac.codec_pipeline` — Op1/Op2 wraps + CodecPipeline orchestrator
-- :mod:`tac.codec_pipeline_apogee_int` — Op3 substrate-transform
-- :mod:`tac.codec_pipeline_mask` — α paradigm (mask-encoder bakeoff)
-- :mod:`tac.codec_pipeline_sensitivity` — β paradigm (preprocessing)
-- :mod:`tac.codec_pipeline_joint_admm` — γ paradigm (Boyd ADMM wrap)
-- :mod:`tac.codec_pipeline_deltaepszeta_callback` — δεζ training-time signal
-- :mod:`tac.codec_pipeline_full_stack` — Op4 orchestrator (composition matrix)
-- :mod:`tac.contest_rate_distortion_system` — contest objective coupling
-- ``feedback_canonical_codec_pipeline_session_complete_20260507`` — full session
+- :mod:`tac.codec_pipeline`: Op1/Op2 wraps + CodecPipeline orchestrator
+- :mod:`tac.codec_pipeline_apogee_int`: Op3 substrate-transform
+- :mod:`tac.codec_pipeline_mask`: alpha paradigm (mask-encoder bakeoff)
+- :mod:`tac.codec_pipeline_sensitivity`: beta paradigm (preprocessing)
+- :mod:`tac.codec_pipeline_joint_admm`: gamma paradigm (Boyd ADMM wrap)
+- :mod:`tac.codec_pipeline_deltaepszeta_callback`: dezeta training-time signal
+- :mod:`tac.codec_pipeline_full_stack`: Op4 orchestrator (composition matrix)
+- :mod:`tac.contest_rate_distortion_system`: contest objective coupling
+- ``feedback_canonical_codec_pipeline_session_complete_20260507``: full session
 """
 
+import importlib.util
 import json
 import pathlib
 import sys
@@ -41,9 +42,6 @@ from tac.codec_pipeline import (
     CodecPipeline,
     Op1_PR101SplitBrotli,
     Op2_PR103ArithmeticCodec,
-)
-from tac.contest_rate_distortion_system import (
-    contest_score_decomposition,
 )
 from tac.pr101_split_brotli_codec import FIXED_STATE_SCHEMA
 
@@ -94,11 +92,11 @@ def try_op(
 
 def main(argv: list[str] | None = None) -> int:
     import argparse
-    p = argparse.ArgumentParser(description="Paradigm chorus — cathedral health check")
+    p = argparse.ArgumentParser(description="Paradigm chorus: cathedral health check")
     p.add_argument("--seed", type=int, default=0)
     args = p.parse_args(argv)
 
-    print("Cathedral paradigm chorus — synthetic substrate")
+    print("Cathedral paradigm chorus: synthetic substrate")
     print("=" * 70)
 
     sd = synthetic_substrate(seed=args.seed)
@@ -139,46 +137,48 @@ def main(argv: list[str] | None = None) -> int:
     except ImportError as e:
         rows.append({"label": "Op 3 (apogee_int6)", "status": "import_failed", "bytes": None, "message": str(e)[:120]})
 
-    # α paradigm — mask-encoder bakeoff (different input contract; report scaffold-only)
+    # Alpha paradigm: mask-encoder bakeoff (different input contract; report scaffold-only)
     try:
-        import tac.codec_pipeline_mask as _alpha
+        if importlib.util.find_spec("tac.codec_pipeline_mask") is None:
+            raise ImportError("tac.codec_pipeline_mask")
         rows.append({
-            "label": "α paradigm (mask-encoder bakeoff)",
+            "label": "alpha paradigm (mask-encoder bakeoff)",
             "status": "scaffold_separate_pipeline",
             "bytes": None,
-            "message": "α uses MaskInput dict, not state_dict; demo skips here",
+            "message": "alpha uses MaskInput dict, not state_dict; demo skips here",
         })
     except ImportError as e:
-        rows.append({"label": "α paradigm", "status": "import_failed", "bytes": None, "message": str(e)[:120]})
+        rows.append({"label": "alpha paradigm", "status": "import_failed", "bytes": None, "message": str(e)[:120]})
 
-    # β paradigm — sensitivity preprocessing (uniform = identity short-circuit)
+    # Beta paradigm: sensitivity preprocessing (uniform = identity short-circuit)
     try:
         from tac.codec_pipeline_sensitivity import Op_SensitivityPreprocess
         rows.append(try_op(
-            "β paradigm (sensitivity uniform identity)",
+            "beta paradigm (sensitivity uniform identity)",
             lambda: Op_SensitivityPreprocess(sensitivity_source="uniform"),
             sd,
         ))
     except ImportError as e:
-        rows.append({"label": "β paradigm", "status": "import_failed", "bytes": None, "message": str(e)[:120]})
+        rows.append({"label": "beta paradigm", "status": "import_failed", "bytes": None, "message": str(e)[:120]})
 
-    # γ paradigm — Joint-ADMM
+    # Gamma paradigm: Joint-ADMM
     try:
         from tac.codec_pipeline_joint_admm import Op_GammaJointADMM
         rows.append(try_op(
-            "γ paradigm (Joint-ADMM, max_iters=2)",
+            "gamma paradigm (Joint-ADMM, max_iters=2)",
             lambda: Op_GammaJointADMM(max_admm_iters=2),
             sd,
         ))
     except ImportError as e:
-        rows.append({"label": "γ paradigm", "status": "import_failed", "bytes": None, "message": str(e)[:120]})
+        rows.append({"label": "gamma paradigm", "status": "import_failed", "bytes": None, "message": str(e)[:120]})
 
-    # δεζ — training-time callback (not encode-time; verify it constructs cleanly)
+    # Dezeta: training-time callback (not encode-time; verify it constructs cleanly)
     try:
+        import datetime as _dt
+
         from tac.codec_pipeline_deltaepszeta_callback import (
             CodecPipelineAwareTrainingCallback,
         )
-        import datetime as _dt
         ts = _dt.datetime.now(_dt.UTC).strftime("%Y%m%dT%H%M%SZ")
         log_dir = pathlib.Path(f"experiments/results/lane_paradigm_chorus_{ts}/training_log")
         log_dir.mkdir(parents=True, exist_ok=True)
@@ -188,13 +188,13 @@ def main(argv: list[str] | None = None) -> int:
         )
         bytes_dict = callback.report(sd, epoch=0)
         rows.append({
-            "label": "δεζ paradigm (training callback, epoch 0)",
+            "label": "dezeta paradigm (training callback, epoch 0)",
             "status": "GREEN",
             "bytes": sum(bytes_dict.values()),
             "message": f"per-op {bytes_dict}",
         })
     except Exception as e:
-        rows.append({"label": "δεζ paradigm", "status": "construct_failed", "bytes": None, "message": str(e)[:120]})
+        rows.append({"label": "dezeta paradigm", "status": "construct_failed", "bytes": None, "message": str(e)[:120]})
 
     # Op 4: full-stack composition matrix runner
     try:
@@ -211,7 +211,7 @@ def main(argv: list[str] | None = None) -> int:
     print("| paradigm | status | bytes | message |")
     print("|---|---|---:|---|")
     for r in rows:
-        bytes_str = f"{r['bytes']:,}" if r["bytes"] is not None else "—"
+        bytes_str = f"{r['bytes']:,}" if r["bytes"] is not None else "-"
         msg = str(r["message"])[:60]
         print(f"| {r['label']} | {r['status']} | {bytes_str} | {msg} |")
 

@@ -16,10 +16,10 @@ both:
 For each match, it:
   1. Reads the contest-CUDA score from the evidence file
   2. Computes the lane id from the directory name
-  3. Calls `tools.lane_maturity.py mark` to advance the lane through the
+  3. With ``--apply``, calls `tools.lane_maturity.py mark` to advance the lane through the
      gate ladder (impl_complete + real_archive_empirical + contest_cuda)
-  4. Appends a record to `experiments/results/bilevel_atom_ledger.jsonl`
-  5. Updates `reports/latest.md` if the new score beats the current
+  4. With ``--apply``, appends a record to `experiments/results/bilevel_atom_ledger.jsonl`
+  5. With ``--apply``, updates `reports/latest.md` if the new score beats the current
      frontier
 
 Strict-scorer-rule: pure CPU + json + filesystem. No scorer load. The
@@ -72,7 +72,13 @@ def _try_read_score(evidence_path: pathlib.Path) -> tuple[float, dict] | None:
     if isinstance(data, dict):
         auth = data.get("auth_eval") or {}
         if isinstance(auth, dict):
-            score = auth.get("score") or auth.get("score_total")
+            strict_formula = auth.get("strict_formula") or {}
+            score = (
+                strict_formula.get("score")
+                if isinstance(strict_formula, dict)
+                else None
+            )
+            score = score or auth.get("score") or auth.get("score_total")
             if isinstance(score, (int, float)):
                 return float(score), data
         # Pattern 2: top-level `score` key
@@ -103,11 +109,13 @@ def discover_contest_cuda_artifacts(
         "contest_auth_eval.adjudicated.json",
         "contest_final.json",
     )
-    for lane_dir in sorted(base.iterdir()):
+    lane_dirs = [base] if (base / "archive.zip").is_file() else []
+    lane_dirs.extend(path for path in sorted(base.iterdir()) if path.is_dir())
+    for lane_dir in lane_dirs:
         if not lane_dir.is_dir():
             continue
-        archive = lane_dir / "archive.zip"
-        if not archive.exists():
+        archive_path = lane_dir / "archive.zip"
+        if not archive_path.exists():
             continue
         for candidate_name in candidate_evidence_names:
             evidence = lane_dir / candidate_name
@@ -119,17 +127,28 @@ def discover_contest_cuda_artifacts(
             score, blob = parsed
             sha = None
             if isinstance(blob, dict):
+                auth = blob.get("auth_eval") or {}
+                archive_blob = blob.get("archive") or {}
+                anchor = auth.get("anchor_proof") if isinstance(auth, dict) else {}
+                anchor_archive = (
+                    anchor.get("archive") if isinstance(anchor, dict) else {}
+                )
                 sha = (
                     blob.get("archive_sha256")
-                    or (blob.get("archive") or {}).get("sha256")
-                    or (blob.get("auth_eval") or {}).get("archive_sha256")
+                    or archive_blob.get("sha256")
+                    or (auth.get("archive_sha256") if isinstance(auth, dict) else None)
+                    or (
+                        anchor_archive.get("sha256")
+                        if isinstance(anchor_archive, dict)
+                        else None
+                    )
                 )
             out.append(ContestCudaArtifact(
                 lane_dir=str(lane_dir),
-                archive_path=str(archive),
+                archive_path=str(archive_path),
                 evidence_path=str(evidence),
                 score=score,
-                archive_bytes=archive.stat().st_size,
+                archive_bytes=archive_path.stat().st_size,
                 archive_sha256=str(sha) if sha is not None else None,
                 evidence_grade="[contest-CUDA]",
             ))
@@ -305,26 +324,37 @@ def update_reports_latest_if_frontier(
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Auto-promote contest-CUDA artifacts")
     p.add_argument("--repo-root", default=None)
-    p.add_argument("--dry-run", action="store_true", help="show what would happen, don't actually mark gates / edit reports")
+    p.add_argument(
+        "--apply",
+        action="store_true",
+        help="mutate lane gates, atom ledger, and reports/latest.md; default is dry-run",
+    )
+    p.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="deprecated alias for the default non-mutating mode",
+    )
     p.add_argument("--results-subdir", default="experiments/results")
     args = p.parse_args(argv)
 
     repo_root = pathlib.Path(args.repo_root) if args.repo_root else pathlib.Path(__file__).resolve().parent.parent
     artifacts = discover_contest_cuda_artifacts(repo_root, results_subdir=args.results_subdir)
+    dry_run = not args.apply or args.dry_run
 
     print(f"[auto-promote] discovered {len(artifacts)} contest-CUDA artifact(s)")
+    print(f"[auto-promote] mode: {'apply' if not dry_run else 'dry-run'}")
     for art in artifacts:
         lane_id = lane_id_from_dir(art.lane_dir)
         print(f"\n[auto-promote] lane: {lane_id}")
         print(f"  archive: {art.archive_path} ({art.archive_bytes:,} B)")
         print(f"  score:   {art.score} {art.evidence_grade}")
         print(f"  sha256:  {art.archive_sha256}")
-        gate_result = mark_lane_gates(repo_root, lane_id, art, dry_run=args.dry_run)
+        gate_result = mark_lane_gates(repo_root, lane_id, art, dry_run=dry_run)
         print(f"  gates:   {gate_result['status']}")
-        if not args.dry_run:
+        if not dry_run:
             ledger_path = append_to_atom_ledger(repo_root, art, lane_id)
             print(f"  ledger:  appended to {ledger_path}")
-        report_result = update_reports_latest_if_frontier(repo_root, art, lane_id, dry_run=args.dry_run)
+        report_result = update_reports_latest_if_frontier(repo_root, art, lane_id, dry_run=dry_run)
         print(f"  reports: {report_result['status']}")
     return 0
 

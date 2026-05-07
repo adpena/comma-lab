@@ -25,6 +25,15 @@ def test_categorical_contract_pins_class_order_and_grayscale_codebook() -> None:
     ]
     assert [row["selfcomp_gray"] for row in contract["classes"]] == [0, 255, 64, 192, 128]
     assert [row["default_quant_bits"] for row in contract["classes"]] == [8, 8, 4, 6, 4]
+    typed_atoms = contract["typed_label_atoms"]
+    assert typed_atoms["typed_label_atoms_contract"] == "categorical_typed_label_atoms_v1"
+    assert [row["atom_id"] for row in typed_atoms["atoms"]] == [
+        "contest_class_0_road",
+        "contest_class_1_lane_markings",
+        "contest_class_2_undrivable",
+        "contest_class_3_movable",
+        "contest_class_4_my_car",
+    ]
 
 
 def test_categorical_contract_requires_charged_runtime_consumption() -> None:

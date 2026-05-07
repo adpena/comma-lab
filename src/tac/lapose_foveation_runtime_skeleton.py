@@ -64,6 +64,7 @@ SCORER_VISIBLE_MEMBER_GROUPS = {
         FOVEATION_PARAMS_MEMBER,
     ),
 }
+PAIR_TO_FRAME_POLICY = "contest_pair_maps_to_frames_2k_and_2k_plus_1"
 
 
 class RuntimeSkeletonError(RuntimeError):
@@ -103,6 +104,14 @@ def _default_foveation_row(frame_width: int, frame_height: int) -> tuple[float, 
     )
 
 
+def _pair_frame_indices(pair_index: int) -> tuple[int, int]:
+    """Map one scorer pair index to its two rendered frame indices."""
+
+    if pair_index < 0:
+        raise RuntimeSkeletonError("pair_index must be non-negative")
+    return 2 * int(pair_index), 2 * int(pair_index) + 1
+
+
 def lower_lfv1_to_foveation_params(decoded: dict[str, Any]) -> tuple[bytes, dict[str, Any]]:
     """Lower decoded LFV1 tuples into a deterministic HFV1 geometry payload.
 
@@ -113,13 +122,14 @@ def lower_lfv1_to_foveation_params(decoded: dict[str, Any]) -> tuple[bytes, dict
     frame_width = int(decoded["frame_width"])
     frame_height = int(decoded["frame_height"])
     rows = decoded["rows"]
-    n_frames = max(int(row["pair_index"]) for row in rows) + 1 if rows else 1
+    n_frames = max(_pair_frame_indices(int(row["pair_index"]))[1] for row in rows) + 1 if rows else 1
     n_frames = max(n_frames, 1)
     radius_high = max(math.hypot(float(frame_width), float(frame_height)), 1.0)
     params = [_default_foveation_row(frame_width, frame_height) for _ in range(n_frames)]
     applied_rows: list[dict[str, Any]] = []
     for row in rows:
-        frame_index = int(row["pair_index"])
+        pair_index = int(row["pair_index"])
+        target_frame_indices = _pair_frame_indices(pair_index)
         quantized = row["quantized"]
         values = (
             _dequantize_u16(int(quantized["alpha"]), 0.0, 8.0),
@@ -128,14 +138,15 @@ def lower_lfv1_to_foveation_params(decoded: dict[str, Any]) -> tuple[bytes, dict
             _dequantize_u16(int(quantized["origin_x"]), 0.0, float(max(frame_width - 1, 0))),
             _dequantize_u16(int(quantized["origin_y"]), 0.0, float(max(frame_height - 1, 0))),
         )
-        params[frame_index] = values
+        for frame_index in target_frame_indices:
+            params[frame_index] = values
         applied_rows.append(
             {
                 "row_index": int(row["row_index"]),
-                "pair_index": frame_index,
+                "pair_index": pair_index,
                 "opcode": int(row["opcode"]),
                 "target_member": FOVEATION_PARAMS_MEMBER,
-                "target_frame_index": frame_index,
+                "target_frame_indices": list(target_frame_indices),
             }
         )
     body = b"".join(FOVEATION_ROW_STRUCT.pack(*values) for values in params)
@@ -156,6 +167,7 @@ def lower_lfv1_to_foveation_params(decoded: dict[str, Any]) -> tuple[bytes, dict
         "target_wire_format": FOVEATION_MAGIC.decode("ascii"),
         "source_row_count": int(decoded["row_count"]),
         "target_frame_count": int(n_frames),
+        "pair_to_frame_policy": PAIR_TO_FRAME_POLICY,
         "image_size": {"height": frame_height, "width": frame_width},
         "duplicate_pair_policy": "last_lfv1_tuple_for_pair_index_wins",
         "applied_rows": applied_rows,
@@ -486,9 +498,11 @@ def _structural_output(decoded: dict[str, Any]) -> dict[str, Any]:
     routes: list[dict[str, Any]] = []
     for row in decoded["rows"]:
         quantized = row["quantized"]
+        pair_index = int(row["pair_index"])
         routes.append(
             {
-                "pair_index": int(row["pair_index"]),
+                "pair_index": pair_index,
+                "target_frame_indices": list(_pair_frame_indices(pair_index)),
                 "opcode": int(row["opcode"]),
                 "quantized_alpha": int(quantized["alpha"]),
                 "quantized_radius": int(quantized["radius"]),

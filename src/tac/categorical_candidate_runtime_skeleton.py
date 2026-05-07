@@ -34,6 +34,13 @@ CONTEST_SEGNET_CLASS_ORDER = (
     "movable",
     "my_car",
 )
+CONTEST_SEGNET_CLASS_ROWS = (
+    (0, 1, "road", "#402020", 0, 8, "road_geometry_track_prior", 266667),
+    (1, 2, "lane_markings", "#ff0000", 255, 8, "lane_marking_track_prior", 266667),
+    (2, 3, "undrivable", "#808060", 64, 4, "scene_layout_prior", 133333),
+    (3, 4, "movable", "#00ff66", 192, 6, "dynamic_object_filter_prior", 200000),
+    (4, 5, "my_car", "#cc00ff", 128, 4, "ego_car_filter_prior", 133333),
+)
 HPM1_MAGIC = b"HPM1"
 HPM1_HEADER_BYTES = 48
 
@@ -68,6 +75,62 @@ def _load_json_object(path: Path, *, label: str) -> dict[str, Any]:
     return payload
 
 
+def _expected_typed_label_atoms() -> dict[str, Any]:
+    atoms = [
+        {
+            "atom_id": f"contest_class_{class_id}_{name}",
+            "atom_type": "semantic_class_label_prior",
+            "stack_stage": "representation",
+            "label_contract": RUNTIME_LABEL_CONTRACT,
+            "usage": "compression_time_atom_ranking_only",
+            "runtime_consumed": False,
+            "class_id": class_id,
+            "comma10k_id": comma10k_id,
+            "name": name,
+            "comma10k_color": color,
+            "selfcomp_gray": selfcomp_gray,
+            "default_quant_bits": default_bits,
+            "semantic_priority_weight_ppm": weight_ppm,
+            "openpilot_prior_hint": prior_hint,
+            "runtime_policy": "runtime use requires charged archive member provenance",
+        }
+        for (
+            class_id,
+            comma10k_id,
+            name,
+            color,
+            selfcomp_gray,
+            default_bits,
+            prior_hint,
+            weight_ppm,
+        ) in CONTEST_SEGNET_CLASS_ROWS
+    ]
+    return {
+        "schema_version": 1,
+        "kind": "categorical_typed_label_atoms",
+        "typed_label_atoms_contract": "categorical_typed_label_atoms_v1",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "label_contract": RUNTIME_LABEL_CONTRACT,
+        "atom_count": len(atoms),
+        "atoms": atoms,
+    }
+
+
+def _verify_typed_label_atoms(payload: dict[str, Any], *, label: str) -> dict[str, Any]:
+    expected = _expected_typed_label_atoms()
+    if payload.get("typed_label_atoms") != expected:
+        raise RuntimeConsumerError(f"{label} typed label atoms mismatch")
+    return {
+        "contract": expected["typed_label_atoms_contract"],
+        "atom_count": expected["atom_count"],
+        "atom_ids_sha256": _sha256_bytes(
+            "\n".join(row["atom_id"] for row in expected["atoms"]).encode("utf-8")
+        ),
+    }
+
+
 def _verify_class_codebook(path: Path) -> dict[str, Any]:
     payload = _load_json_object(path, label="class codebook")
     if payload.get("class_codebook_contract") != CLASS_CODEBOOK_CONTRACT:
@@ -83,11 +146,13 @@ def _verify_class_codebook(path: Path) -> dict[str, Any]:
     class_ids = [row.get("class_id") for row in classes if isinstance(row, dict)]
     if class_ids != list(range(len(CONTEST_SEGNET_CLASS_ORDER))):
         raise RuntimeConsumerError("class codebook class ids mismatch")
+    typed_label_atoms = _verify_typed_label_atoms(payload, label="class codebook")
     return {
         "contract": payload.get("class_codebook_contract", ""),
         "label_contract": payload.get("class_id_contract", ""),
         "class_count": len(classes),
         "class_order": names,
+        "typed_label_atoms": typed_label_atoms,
     }
 
 
@@ -107,12 +172,17 @@ def _verify_label_prior_payload_manifest(path: Path) -> dict[str, Any]:
         raise RuntimeConsumerError("label prior payload manifest label contract mismatch")
     if payload.get("semantic_class_order") != list(CONTEST_SEGNET_CLASS_ORDER):
         raise RuntimeConsumerError("label prior payload manifest class order mismatch")
+    typed_label_atoms = _verify_typed_label_atoms(
+        payload,
+        label="label prior payload manifest",
+    )
     return {
         "contract": payload.get("label_prior_payload_manifest_contract", ""),
         "label_contract": payload.get("label_contract", ""),
         "conditioning_prior_count": len(payload.get("conditioning_priors", []))
         if isinstance(payload.get("conditioning_priors"), list)
         else 0,
+        "typed_label_atoms": typed_label_atoms,
     }
 
 

@@ -87,6 +87,10 @@ def _score(seg_dist: float, pose_dist: float, archive_bytes: int) -> float:
     return 100 * seg_dist + math.sqrt(10 * pose_dist) + 25 * archive_bytes / ORIGINAL_VIDEO_BYTES
 
 
+def _rate_from_archive_bytes(archive_bytes: int) -> float:
+    return archive_bytes / ORIGINAL_VIDEO_BYTES
+
+
 def unsafe_zip_name(name: str) -> str | None:
     if not name:
         return "empty_member_name"
@@ -249,6 +253,116 @@ def _runtime_tree_candidates(payload: dict[str, Any]) -> dict[str, str]:
     return candidates
 
 
+def _safe_provenance_snapshot(
+    payload: dict[str, Any],
+    *,
+    archive: dict[str, Any],
+    record: Any,
+    strict_formula: dict[str, Any] | None,
+    auth_eval_path: Path,
+    runtime_candidates: dict[str, str],
+) -> dict[str, Any]:
+    """Build a small clean-checkout proof from a local auth-eval artifact.
+
+    The raw Lightning auth-eval JSON lives in ignored custody because it carries
+    provider-local paths. This snapshot preserves the exact facts needed for
+    archive/score/runtree reproducibility without committing provider logs.
+    """
+
+    provenance = payload.get("provenance")
+    if not isinstance(provenance, dict):
+        provenance = {}
+    runtime_manifest = provenance.get("inflate_runtime_manifest")
+    if not isinstance(runtime_manifest, dict):
+        runtime_manifest = {}
+    runtime_files = runtime_manifest.get("files")
+    if not isinstance(runtime_files, list):
+        runtime_files = []
+
+    def _runtime_file(row: Any) -> dict[str, Any] | None:
+        if not isinstance(row, dict):
+            return None
+        rel = row.get("repo_relative_path") or row.get("relative_path")
+        sha = row.get("sha256")
+        size = row.get("bytes")
+        if rel is None or sha is None or size is None:
+            return None
+        return {
+            "repo_relative_path": str(rel),
+            "bytes": int(size),
+            "sha256": str(sha),
+        }
+
+    runtime_file_rows = [
+        item for item in (_runtime_file(row) for row in runtime_files) if item is not None
+    ]
+    def _repoish(raw: Any, fallback: str) -> str:
+        text = str(raw or "")
+        if "/pact/" in text:
+            return text.split("/pact/", 1)[1]
+        if not text or text.startswith("/"):
+            return fallback
+        return text
+
+    eval_args = [
+        "experiments/contest_auth_eval.py",
+        "--archive",
+        "archive.zip",
+        "--inflate-sh",
+        _repoish(
+            provenance.get("inflate_script"),
+            "submissions/pr103_pr106_final_runtime/inflate.sh",
+        ),
+        "--upstream-dir",
+        "upstream",
+        "--device",
+        str(record.device),
+    ]
+    upstream_eval = runtime_manifest.get("upstream_evaluate_py")
+    return {
+        "schema": "pre_submission_compliance_anchor_proof_v1",
+        "auth_eval_local_custody_path": _rel(auth_eval_path),
+        "auth_eval_local_custody_ignored_by_git": True,
+        "score_basis": strict_formula,
+        "record_score_source": "tools.auth_eval_records.parse_auth_eval_payload",
+        "archive": {
+            "path": archive.get("path"),
+            "bytes": archive.get("bytes"),
+            "sha256": archive.get("sha256"),
+            "members": archive.get("members", []),
+        },
+        "auth_eval": {
+            "evidence_grade": record.evidence_grade,
+            "device": record.device,
+            "samples": record.samples,
+            "gpu_t4_match": record.gpu_t4_match,
+            "gpu_model": provenance.get("gpu_model"),
+            "gpu_driver": provenance.get("gpu_driver"),
+            "cuda_version": provenance.get("cuda_version"),
+            "torch_version": provenance.get("torch_version"),
+            "contest_auth_eval_elapsed_seconds": payload.get(
+                "contest_auth_eval_elapsed_seconds"
+            ),
+            "inflate_elapsed_seconds": payload.get("inflate_elapsed_seconds"),
+            "evaluate_elapsed_seconds": payload.get("evaluate_elapsed_seconds"),
+            "eval_command_sanitized": eval_args,
+            "tool": provenance.get("tool"),
+            "upstream_commit": provenance.get("upstream_commit"),
+            "upstream_evaluate_py": upstream_eval
+            if isinstance(upstream_eval, dict)
+            else None,
+        },
+        "runtime": {
+            "runtime_tree_sha256_candidates": runtime_candidates,
+            "runtime_tree_sha256": runtime_manifest.get("runtime_tree_sha256"),
+            "runtime_files": runtime_file_rows,
+            "runtime_file_count": runtime_manifest.get(
+                "runtime_file_count", len(runtime_file_rows)
+            ),
+        },
+    }
+
+
 def inspect_auth_eval(path: Path, archive: dict[str, Any], args: argparse.Namespace) -> tuple[dict[str, Any], list[Check]]:
     checks: list[Check] = []
     exists = path.is_file()
@@ -276,9 +390,33 @@ def inspect_auth_eval(path: Path, archive: dict[str, Any], args: argparse.Namesp
     )
     if record is not None:
         _add(checks, "auth_eval_has_components", record.avg_segnet_dist is not None and record.avg_posenet_dist is not None, "")
+        strict_formula: dict[str, Any] | None = None
         if record.avg_segnet_dist is not None and record.avg_posenet_dist is not None and archive_bytes is not None:
             recomputed = _score(record.avg_segnet_dist, record.avg_posenet_dist, int(archive_bytes))
+            score_delta = recomputed - float(record.score)
+            strict_formula = {
+                "basis": "auth_eval_report_components_plus_exact_archive_bytes",
+                "score": recomputed,
+                "report_reconstructed_score": float(record.score),
+                "score_delta_vs_report_reconstruction": score_delta,
+                "archive_rate_unscaled": _rate_from_archive_bytes(int(archive_bytes)),
+                "avg_segnet_dist": record.avg_segnet_dist,
+                "avg_posenet_dist": record.avg_posenet_dist,
+                "archive_bytes": int(archive_bytes),
+                "note": (
+                    "contest_auth_eval reconstructs score from upstream report fields; "
+                    "this strict value recomputes the contest formula from those report "
+                    "components and exact charged archive bytes for clean-checkout "
+                    "anchor comparisons"
+                ),
+            }
             _add(checks, "auth_eval_score_recomputes", abs(recomputed - float(record.score)) < 1e-6, f"record={record.score} recomputed={recomputed}")
+            _add(
+                checks,
+                "auth_eval_strict_formula_score_recorded",
+                math.isfinite(recomputed),
+                f"strict={recomputed} record={record.score} delta={score_delta}",
+            )
         _add(
             checks,
             "auth_eval_t4_equivalent",
@@ -313,6 +451,19 @@ def inspect_auth_eval(path: Path, archive: dict[str, Any], args: argparse.Namesp
         "path": _rel(path),
         "exists": True,
         "record": asdict(record) if record else None,
+        "strict_formula": strict_formula if record else None,
+        "anchor_proof": (
+            _safe_provenance_snapshot(
+                payload,
+                archive=archive,
+                record=record,
+                strict_formula=strict_formula,
+                auth_eval_path=path,
+                runtime_candidates=runtime_candidates,
+            )
+            if record and strict_formula is not None
+            else None
+        ),
         "runtime_tree_candidates": runtime_candidates,
     }, checks
 

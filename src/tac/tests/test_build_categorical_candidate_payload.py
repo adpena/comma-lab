@@ -21,6 +21,7 @@ from tac.categorical_candidate_readiness import (
     RUNTIME_LOADER_PARITY_CONTRACT,
     audit_categorical_candidate_manifest,
 )
+from tac.categorical_label_atoms import build_categorical_typed_label_atoms
 from tac.categorical_label_prior_payload_manifest import (
     LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT,
     LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
@@ -173,9 +174,14 @@ def test_build_categorical_candidate_payload_is_byte_closed_and_fail_closed(
         )
         proof_skeleton = json.loads(archive.read("runtime_consumer_proof_skeleton.json").decode("utf-8"))
     assert class_codebook["class_codebook_contract"] == CATEGORICAL_CLASS_CODEBOOK_CONTRACT
+    assert class_codebook["typed_label_atoms"] == build_categorical_typed_label_atoms()
     assert (
         label_prior_payload_manifest["label_prior_payload_manifest_contract"]
         == LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT
+    )
+    assert (
+        label_prior_payload_manifest["typed_label_atoms"]
+        == build_categorical_typed_label_atoms()
     )
     assert label_prior_payload_manifest["conditioning_priors"] == candidate["conditioning_priors"]
     assert label_prior_payload_manifest["label_contract"] == "contest_zero_based_comma10k_order"
@@ -199,6 +205,7 @@ def test_build_categorical_candidate_payload_is_byte_closed_and_fail_closed(
     assert runtime_proof["runtime_executed"] is True
     assert runtime_proof["sidecar_free"] is True
     assert runtime_proof["fallback_used"] is False
+    assert runtime_proof["runtime_report_summary"]["typed_label_atom_count"] == 5
     assert runtime_proof["runtime_report_summary"]["payload_codec"] == "opaque_categorical_payload"
     label_control = read_json(out_a / LABEL_PERMUTATION_CONTROL_FILENAME)
     assert label_control["kind"] == "categorical_label_permutation_fail_closed_control"

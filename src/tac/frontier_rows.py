@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from typing import Any
 
-FRONTIER_ROW_SCHEMA = "cross_paradigm_frontier_row_v1"
+FRONTIER_ROW_SCHEMA = "cross_paradigm_frontier_row_v2"
 FRONTIER_ROW_FIELDS: tuple[str, ...] = (
     "schema",
     "source_tool",
@@ -29,6 +29,10 @@ FRONTIER_ROW_FIELDS: tuple[str, ...] = (
     "pareto_eligible",
     "pareto_frontier",
     "score_evidence_rankable",
+    "score_evidence_path",
+    "exact_score",
+    "archive_bytes",
+    "archive_sha256",
     "planning_priority_rankable",
     "expected_total_score_delta",
     "byte_delta",
@@ -102,6 +106,10 @@ def build_frontier_row(
     pareto_eligible: bool = False,
     pareto_frontier: bool = False,
     score_evidence_rankable: bool = False,
+    score_evidence_path: str = "",
+    exact_score: Any = None,
+    archive_bytes: Any = None,
+    archive_sha256: str = "",
     planning_priority_rankable: bool = False,
     expected_total_score_delta: Any = None,
     byte_delta: Any = None,
@@ -143,6 +151,10 @@ def build_frontier_row(
         "pareto_eligible": bool(pareto_eligible),
         "pareto_frontier": bool(pareto_frontier),
         "score_evidence_rankable": bool(score_evidence_rankable),
+        "score_evidence_path": score_evidence_path,
+        "exact_score": _optional_float(exact_score),
+        "archive_bytes": _optional_int(archive_bytes),
+        "archive_sha256": archive_sha256 or "",
         "planning_priority_rankable": bool(planning_priority_rankable),
         "expected_total_score_delta": _optional_float(expected_total_score_delta),
         "byte_delta": _optional_float(byte_delta),

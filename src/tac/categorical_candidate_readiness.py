@@ -11,6 +11,7 @@ from typing import Any
 
 from tac.categorical_candidate_plan import audit_categorical_charged_label_plan
 from tac.categorical_compression_contract import build_categorical_compression_contract
+from tac.categorical_label_atoms import build_categorical_typed_label_atoms
 from tac.categorical_label_prior_payload_manifest import (
     LABEL_PRIOR_PAYLOAD_MANIFEST_CONTRACT,
     LABEL_PRIOR_PAYLOAD_MANIFEST_KIND,
@@ -662,6 +663,7 @@ def _label_prior_payload_manifest_report(
         "label_contract": "",
         "conditioning_prior_count": 0,
         "class_rows_match": False,
+        "typed_label_atoms_match": False,
         "conditioning_prior_contract_matches_recomputed": False,
         "blockers": [],
     }
@@ -748,6 +750,12 @@ def _label_prior_payload_manifest_report(
         summary["class_rows_match"] = manifest_payload.get("class_rows") == expected_class_rows
         if not summary["class_rows_match"]:
             blockers.append("label_prior_payload_manifest_class_rows_mismatch")
+        expected_typed_label_atoms = build_categorical_typed_label_atoms()
+        summary["typed_label_atoms_match"] = (
+            manifest_payload.get("typed_label_atoms") == expected_typed_label_atoms
+        )
+        if not summary["typed_label_atoms_match"]:
+            blockers.append("label_prior_payload_manifest_typed_label_atoms_mismatch")
         if manifest_payload.get("conditioning_priors") != candidate_conditioning_priors:
             blockers.append("label_prior_payload_manifest_conditioning_priors_mismatch")
         priors = manifest_payload.get("conditioning_priors")

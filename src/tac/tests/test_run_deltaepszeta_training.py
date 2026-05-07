@@ -4,7 +4,7 @@ Coverage:
 - driver constructs from a synthetic substrate
 - one optimizer step reduces the loss
 - end-of-epoch callback fires and writes JSONL
-- λ ramps when rate proxy exceeds budget
+- lambda ramps when rate proxy exceeds budget
 - JSONL log writes valid records (parse-back)
 - checkpoint saves and reloads bit-faithfully
 - /tmp log_dir is rejected (transient-evidence trap)
@@ -17,15 +17,9 @@ from __future__ import annotations
 import importlib.util
 import json
 import pathlib
-import sys
 
 import pytest
 import torch
-
-# Tools directory is not on sys.path by default; add it.
-_REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
-_TOOLS = _REPO_ROOT / "tools"
-sys.path.insert(0, str(_TOOLS))
 
 from tac.codec_pipeline import CodecPipeline, Op1_PR101SplitBrotli
 from tac.codec_pipeline_deltaepszeta_callback import (
@@ -33,8 +27,23 @@ from tac.codec_pipeline_deltaepszeta_callback import (
 )
 from tac.pr101_split_brotli_codec import FIXED_STATE_SCHEMA
 
-# Now safe to import the driver module.
-import run_deltaepszeta_training as drv  # type: ignore  # noqa: E402
+_REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
+
+
+def _load_driver_module():
+    tool_path = _REPO_ROOT / "tools" / "run_deltaepszeta_training.py"
+    spec = importlib.util.spec_from_file_location("run_deltaepszeta_training", tool_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"could not load {tool_path}")
+    mod = importlib.util.module_from_spec(spec)
+    import sys
+
+    sys.modules[spec.name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+drv = _load_driver_module()
 
 
 def _synthetic_state_dict(seed: int = 0, scale: float = 0.1) -> dict[str, torch.Tensor]:
@@ -123,7 +132,7 @@ def test_one_step_reduces_loss_on_synthetic(tmp_path: pathlib.Path) -> None:
         state_dict=perturbed, config=cfg, distortion_fn=distortion,
     )
     first = driver.step_once()
-    second = driver.step_once()
+    driver.step_once()
     third = driver.step_once()
     # Loss should non-increase at each step (allowing tiny stochastic noise).
     assert third.loss <= first.loss + 1e-9
@@ -157,7 +166,7 @@ def test_train_runs_full_loop_writes_jsonl(tmp_path: pathlib.Path) -> None:
 # ---------------------------------------------------------------------------
 
 def test_lambda_ramps_when_rate_exceeds_budget(tmp_path: pathlib.Path) -> None:
-    """Set a tiny rate budget so the rate proxy exceeds it; λ should ramp UP
+    """Set a tiny rate budget so the rate proxy exceeds it; lambda should ramp UP
     after the first epoch."""
     sd = _synthetic_state_dict(seed=2, scale=1.0)  # larger scale -> larger H0
     cfg = drv.DeltaEpsZetaTrainingConfig(
@@ -169,12 +178,12 @@ def test_lambda_ramps_when_rate_exceeds_budget(tmp_path: pathlib.Path) -> None:
     driver = drv.DeltaEpsZetaTrainingDriver(state_dict=sd, config=cfg)
     initial_lambda = driver.lambda_value
     driver.train()
-    # After 2 epochs of overshoot, λ should have ramped strictly above init.
+    # After 2 epochs of overshoot, lambda should have ramped strictly above init.
     assert driver.lambda_value > initial_lambda
 
 
 def test_lambda_clamps_at_zero(tmp_path: pathlib.Path) -> None:
-    """When rate budget is huge, λ should ramp DOWN but never go negative."""
+    """When rate budget is huge, lambda should ramp DOWN but never go negative."""
     sd = _synthetic_state_dict(seed=3, scale=1e-6)
     cfg = drv.DeltaEpsZetaTrainingConfig(
         n_epochs=5, steps_per_epoch=1,

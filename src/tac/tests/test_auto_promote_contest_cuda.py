@@ -6,8 +6,6 @@ import importlib.util
 import json
 import pathlib
 
-import pytest
-
 
 def _load_tool_module():
     repo_root = pathlib.Path(__file__).resolve().parents[3]
@@ -63,6 +61,29 @@ def test_discover_finds_one_artifact(tmp_path: pathlib.Path) -> None:
     assert len(artifacts) == 1
     assert artifacts[0].score == 0.20898
     assert artifacts[0].evidence_grade == "[contest-CUDA]"
+
+
+def test_discover_prefers_strict_formula_score(tmp_path: pathlib.Path) -> None:
+    mod = _load_tool_module()
+    repo = tmp_path / "fake_repo"
+    lane_dir = repo / "experiments/results/pr103_strict"
+    lane_dir.mkdir(parents=True)
+    (lane_dir / "archive.zip").write_bytes(b"\x00")
+    (lane_dir / "pre_submission_compliance.contest_final.json").write_text(
+        json.dumps(
+            {
+                "auth_eval": {
+                    "score": 0.20898105277982337,
+                    "strict_formula": {"score": 0.2089810755823297},
+                }
+            }
+        )
+    )
+
+    artifacts = mod.discover_contest_cuda_artifacts(repo)
+
+    assert len(artifacts) == 1
+    assert artifacts[0].score == 0.2089810755823297
 
 
 def test_discover_skips_lane_dir_without_archive(tmp_path: pathlib.Path) -> None:

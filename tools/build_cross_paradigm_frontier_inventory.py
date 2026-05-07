@@ -38,7 +38,7 @@ from tac.repo_io import json_text  # noqa: E402
 SCHEMA_VERSION = 1
 DEFAULT_ACTION_CLASS = "research_review_before_local_patch"
 ACTION_CLASS_BY_KEY = {
-    "hnerv_pr103_pr106_ac_repack_runtime_closure": "wire_pr103_pr106_runtime_adapter",
+    "hnerv_pr103_pr106_ac_repack_runtime_closure": "maintain_exact_eval_anchor_and_pivot",
     "hnerv_lowlevel_brotli_repack": "exact_eval_or_promote_measured_rate_candidate",
     "hnerv_per_tensor_context_entropy": "reduce_entropy_model_overhead",
     "hnerv_wavelet_wr01_apply": "claim_exact_eval_packet_after_static_gate",
@@ -53,19 +53,19 @@ ACTION_CLASS_BY_KEY = {
     "selfcompress_mdl_fp4_tto": "prove_deterministic_export_and_inflate_closure",
 }
 PRIORITY_TIER_BY_KEY = {
-    "hnerv_pr103_pr106_ac_repack_runtime_closure": 5,
-    "hnerv_wavelet_wr01_apply": 10,
-    "hnerv_lowlevel_brotli_repack": 20,
-    "categorical_qma9_clade_spade_openpilot": 30,
-    "joint_admm_balle_arithmetic_stack": 40,
-    "hnerv_per_tensor_context_entropy": 50,
-    "sensitivity_omega_w_v3": 60,
-    "telescopic_foveation_field": 70,
-    "lapose_motion_atom_allocator": 80,
+    "categorical_qma9_clade_spade_openpilot": 10,
+    "joint_admm_balle_arithmetic_stack": 20,
+    "hnerv_per_tensor_context_entropy": 30,
+    "telescopic_foveation_field": 40,
+    "lapose_motion_atom_allocator": 50,
+    "hnerv_wavelet_wr01_apply": 60,
+    "sensitivity_omega_w_v3": 70,
+    "selfcompress_mdl_fp4_tto": 80,
+    "hnerv_lowlevel_brotli_repack": 90,
     "raft_radial_openpilot_pose": 90,
     "cmg3_predictive_mask_grammar": 100,
     "meta_lagrangian_cross_paradigm_allocator": 110,
-    "selfcompress_mdl_fp4_tto": 120,
+    "hnerv_pr103_pr106_ac_repack_runtime_closure": 900,
 }
 
 
@@ -90,9 +90,9 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         key="hnerv_pr103_pr106_ac_repack_runtime_closure",
         title="PR103 AC decoder repack inside PR106 envelope",
         paradigms=("alpha_mask_payload", "entropy_coding", "public_frontier_replay"),
-        role="stacker_rate_only",
-        status="static_release_surface_compliance_passed_exact_cuda_pending",
-        evidence_grade="empirical runtime-packet closure plus static compliance; no score claim until exact CUDA",
+        role="current_exact_rate_anchor",
+        status="exact_cuda_a++_anchor_promoted",
+        evidence_grade="A++ contest T4 exact CUDA plus contest-final compliance",
         stackability=(
             "high: replaces the PR106 decoder section with PR103 arithmetic-coded bytes "
             "while preserving fixed PR106 latents; should compose before scorer-changing atoms"
@@ -112,20 +112,21 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "experiments/results/pr103_repack_pr106_standalone_20260507/runtime_closure.json",
             "experiments/results/pr103_repack_pr106_standalone_20260507/final_runtime_packet_proof.json",
             "experiments/results/pr103_repack_pr106_standalone_20260507/pre_submission_compliance.static.json",
+            "experiments/results/pr103_repack_pr106_standalone_20260507/pre_submission_compliance.contest_final.json",
             "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive_manifest.json",
             ".omx/research/pr103_pr106_runtime_closure_20260507_codex.md",
             ".omx/research/hnerv_pr103_lc_ac_schema_frontier_20260507_codex.md",
+            ".omx/research/pr103_pr106_ac_repack_exact_eval_20260507_codex.md",
         ),
         next_patch=(
-            "Claim the PR103-on-PR106 exact-eval lane, run exact CUDA auth eval on the "
-            "byte-bound static release surface, then rerun contest-final compliance with "
-            "auth-eval JSON and terminal dispatch-claim linkage."
+            "Use strict formula score 0.2089810755823297 at 185578 bytes as "
+            "the current A++ HNeRV rate anchor (report-reconstructed score "
+            "0.20898105277982337), feed it into Pareto/meta-Lagrangian "
+            "calibration, and require future rate-only HNeRV candidates to "
+            "beat this byte floor or stack cleanly before spending exact-eval "
+            "wall clock."
         ),
-        blockers=(
-            "no lane dispatch claim",
-            "no exact CUDA auth eval for this candidate archive SHA",
-            "contest-final compliance still requires auth-eval JSON and terminal dispatch claim",
-        ),
+        blockers=("completed anchor; next score movement requires a new lower-byte or scorer-changing candidate",),
     ),
     InventoryRow(
         key="hnerv_lowlevel_brotli_repack",
@@ -525,11 +526,66 @@ def _path_status(paths: tuple[str, ...], *, repo_root: Path) -> dict[str, Any]:
 
 def _score_snapshot(row: InventoryRow, *, repo_root: Path) -> dict[str, Any] | None:
     for relpath in row.evidence_paths:
-        if not relpath.endswith("contest_auth_eval.adjudicated.json"):
+        if not (
+            relpath.endswith("contest_auth_eval.adjudicated.json")
+            or relpath.endswith("pre_submission_compliance.contest_final.json")
+        ):
             continue
         payload = _load_json(repo_root / relpath)
         if not isinstance(payload, dict):
             continue
+        auth_eval = payload.get("auth_eval") if isinstance(payload.get("auth_eval"), dict) else {}
+        auth_record = (
+            auth_eval.get("record") if isinstance(auth_eval.get("record"), dict) else {}
+        )
+        if auth_record:
+            checks = payload.get("checks") if isinstance(payload.get("checks"), list) else []
+            failed_checks = [
+                str(check.get("name"))
+                for check in checks
+                if isinstance(check, dict) and check.get("passed") is not True
+            ]
+            strict_formula = (
+                auth_eval.get("strict_formula")
+                if isinstance(auth_eval.get("strict_formula"), dict)
+                else {}
+            )
+            anchor_proof = (
+                auth_eval.get("anchor_proof")
+                if isinstance(auth_eval.get("anchor_proof"), dict)
+                else {}
+            )
+            score = strict_formula.get("score", auth_record.get("score"))
+            archive_bytes = strict_formula.get(
+                "archive_bytes",
+                auth_record.get("archive_bytes"),
+            )
+            seg_dist = strict_formula.get(
+                "avg_segnet_dist",
+                auth_record.get("avg_segnet_dist"),
+            )
+            pose_dist = strict_formula.get(
+                "avg_posenet_dist",
+                auth_record.get("avg_posenet_dist"),
+            )
+            return {
+                "path": relpath,
+                "compliance_passed": payload.get("passed") is True,
+                "compliance_failed_checks": failed_checks,
+                "compliance_check_count": len(checks),
+                "score": score,
+                "report_reconstructed_score": auth_record.get("score"),
+                "score_basis": strict_formula.get("basis"),
+                "score_delta_vs_report_reconstruction": strict_formula.get(
+                    "score_delta_vs_report_reconstruction"
+                ),
+                "anchor_proof_schema": anchor_proof.get("schema"),
+                "archive_bytes": archive_bytes,
+                "archive_sha256": auth_record.get("archive_sha256"),
+                "seg_dist": seg_dist,
+                "pose_dist": pose_dist,
+            }
+        provenance = payload.get("provenance") if isinstance(payload.get("provenance"), dict) else {}
         score = payload.get(
             "score_recomputed_from_components",
             payload.get("canonical_score", payload.get("final_score", payload.get("score"))),
@@ -543,7 +599,10 @@ def _score_snapshot(row: InventoryRow, *, repo_root: Path) -> dict[str, Any] | N
                 "bytes",
                 payload.get("archive_bytes", payload.get("archive_size_bytes")),
             ),
-            "archive_sha256": archive.get("sha256", payload.get("archive_sha256")),
+            "archive_sha256": archive.get(
+                "sha256",
+                payload.get("archive_sha256", provenance.get("archive_sha256")),
+            ),
             "seg_dist": components.get("seg_dist", payload.get("seg_dist", payload.get("avg_segnet_dist"))),
             "pose_dist": components.get(
                 "pose_dist",
@@ -596,6 +655,12 @@ def build_inventory(*, repo_root: Path) -> dict[str, Any]:
         evidence_status = _path_status(row.evidence_paths, repo_root=repo_root)
         geometry_contract = _geometry_feedback_contract(row)
         blockers = _row_blockers(row, geometry_contract)
+        score_snapshot = _score_snapshot(row, repo_root=repo_root)
+        score_evidence_rankable = score_snapshot is not None and row.evidence_grade.startswith("A++")
+        exact_anchor_rankable = (
+            score_evidence_rankable
+            and row.key == "hnerv_pr103_pr106_ac_repack_runtime_closure"
+        )
         row_payload = {
             "key": row.key,
             "title": row.title,
@@ -611,7 +676,7 @@ def build_inventory(*, repo_root: Path) -> dict[str, Any]:
                 "code": code_status,
                 "evidence": evidence_status,
             },
-            "score_snapshot": _score_snapshot(row, repo_root=repo_root),
+            "score_snapshot": score_snapshot,
             "next_patch": row.next_patch,
             "blockers": blockers,
             "action_class": _action_class(row),
@@ -637,10 +702,14 @@ def build_inventory(*, repo_root: Path) -> dict[str, Any]:
             dispatch_attempted=False,
             candidate_static_preflight_ready=False,
             ready_for_exact_eval_dispatch=False,
-            pareto_eligible=False,
-            pareto_frontier=False,
-            score_evidence_rankable=False,
-            planning_priority_rankable=False,
+            pareto_eligible=exact_anchor_rankable,
+            pareto_frontier=exact_anchor_rankable,
+            score_evidence_rankable=score_evidence_rankable,
+            score_evidence_path=(score_snapshot or {}).get("path", ""),
+            exact_score=(score_snapshot or {}).get("score"),
+            archive_bytes=(score_snapshot or {}).get("archive_bytes"),
+            archive_sha256=(score_snapshot or {}).get("archive_sha256", ""),
+            planning_priority_rankable=exact_anchor_rankable,
             blockers=blockers,
             next_required_proof=(
                 "candidate_specific_archive_manifest",

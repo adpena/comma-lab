@@ -1,0 +1,1813 @@
+{
+  "created_at_utc": "2026-05-07T20:00:00Z",
+  "evidence_grade": "[empirical:local-custody-inventory]",
+  "pr_range": [
+    100,
+    107
+  ],
+  "repo_root": ".",
+  "rows": [
+    {
+      "archive": {
+        "blockers": [],
+        "bytes": 178981,
+        "duplicate_members": [],
+        "is_zip": true,
+        "member_count": 1,
+        "members": [
+          {
+            "bytes": 178873,
+            "compressed_bytes": 178873,
+            "crc32": "99b32852",
+            "name": "0.bin",
+            "order": 0,
+            "prefix_ascii": "*z..[]~sE...j...",
+            "prefix_hex": "2a7a02005b5d7e7345d9f6016a81ee00",
+            "sha256": "3234f0689164cfc95b7ee9f9cdf38ecf4d082cfb7048058e2b3ff0f54f864e43",
+            "unsafe_name": false
+          }
+        ],
+        "path": "experiments/results/public_pr_intake_full/public_pr100_intake_20260505_auto/archive.zip",
+        "present": true,
+        "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+        "unsafe_members": []
+      },
+      "archive_basis": "public_pr_intake_full_archive",
+      "author": "BradyMeighan",
+      "binary_understanding": {
+        "compress_reproduction_status": "missing_or_external",
+        "decode_reencode_parity_status": "missing_or_external",
+        "payload_prefixes_recorded": true,
+        "wire_grammar_status": "member_prefix_only",
+        "zip_member_manifest_present": true
+      },
+      "closed_at": "2026-05-04T17:51:10Z",
+      "created_at": "2026-05-04T09:59:47Z",
+      "diff_size": {
+        "additions": 299,
+        "changed_files": 6,
+        "deletions": 0
+      },
+      "exact_eval_artifacts": [
+        {
+          "archive": {
+            "bytes": 178981,
+            "path": "experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/archive.zip",
+            "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641"
+          },
+          "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+          "archive_size_bytes": 178981,
+          "avg_posenet_dist": 0.00017198,
+          "avg_segnet_dist": 0.00067623,
+          "device": "cuda",
+          "dir": "experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z",
+          "json_files": [],
+          "log_files": [
+            "experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/adjudication.log",
+            "experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/auth_eval.log"
+          ],
+          "runtime_tree_sha256": "ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832",
+          "score": 0.22826947142244708,
+          "score_basis": "canonical_score",
+          "source": "experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/auth_eval.log",
+          "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/auth_eval.log"
+        }
+      ],
+      "exact_eval_summary": {
+        "identity_basis": [
+          "archive_sha256",
+          "device",
+          "runtime_tree_sha256"
+        ],
+        "same_archive_cuda_scored_eval_count": 1,
+        "same_archive_device_runtime_identity_count": 1,
+        "same_archive_eval_dir_count": 1,
+        "same_archive_replay_identities": [
+          {
+            "archive_bytes": 178981,
+            "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+            "device": "cuda",
+            "runtime_tree_sha256": "ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832",
+            "score_basis": "canonical_score",
+            "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/auth_eval.log"
+          }
+        ],
+        "same_archive_scored_eval_count": 1,
+        "same_archive_structured_json_eval_count": 0,
+        "total_eval_dir_count": 1
+      },
+      "head_repo": "BradyMeighan/comma_video_compression_challenge",
+      "head_sha": "0a8d343a5dc7f9e93d9d0e6cb8bc15f6c626c050",
+      "intake": {
+        "archive_provenance": {
+          "bytes": 252,
+          "path": "experiments/results/public_pr_intake_full/public_pr100_intake_20260505_auto/archive_provenance.json",
+          "sha256": "a7bf81f2fdfc2d4c810e9fddc312f31838837100f4c9aebf31715d2acca6b65b"
+        },
+        "archive_provenance_status": "exists_skipped",
+        "dir": "experiments/results/public_pr_intake_full/public_pr100_intake_20260505_auto",
+        "metadata": {
+          "bytes": 467,
+          "path": "experiments/results/public_pr_intake_full/public_pr100_intake_20260505_auto/pr_metadata.json",
+          "sha256": "b915fa85494b8b4010086ca38a5d3400e2aba637681911fab680dc244714a069"
+        }
+      },
+      "leaderboard_name": "hnerv_lc_v2",
+      "leaderboard_replay_drift": {
+        "identity_basis": [
+          "archive_sha256",
+          "device",
+          "runtime_tree_sha256"
+        ],
+        "leaderboard_score": 0.195,
+        "local_scores_by_device": {
+          "cuda": [
+            {
+              "avg_posenet_dist": 0.00017198,
+              "avg_segnet_dist": 0.00067623,
+              "dir": "experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z",
+              "replay_identity": {
+                "archive_bytes": 178981,
+                "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+                "device": "cuda",
+                "runtime_tree_sha256": "ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832",
+                "score_basis": "canonical_score",
+                "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/auth_eval.log"
+              },
+              "runtime_tree_sha256": "ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832",
+              "score": 0.22826947142244708,
+              "score_basis": "canonical_score"
+            }
+          ]
+        },
+        "matches": [],
+        "note": "A mismatch is not automatically a bad local replay. Public PR comments show some PR100+ rows were evaluated once on CUDA and again on CPU; the leaderboard may follow the CPU result while this repo's score claims still require CUDA for promoted internal lanes.",
+        "same_archive_scored_eval_count": 1,
+        "status": "leaderboard_mismatches_same_archive_cuda_replay"
+      },
+      "leaderboard_score": 0.195,
+      "merged_at": null,
+      "missing_proofs": [
+        "compress_entrypoint_missing",
+        "compress_to_archive_1to1_reproduction_required",
+        "decode_reencode_parity_proof_required",
+        "same_archive_structured_exact_eval_json_missing",
+        "structured_exact_eval_json_missing"
+      ],
+      "pr": 100,
+      "ready_for_stack_atom": false,
+      "research_notes": [
+        ".omx/research/pr100_107_public_score_drift_20260507_codex.md",
+        ".omx/research/pr100_107_reproduction_deconstruction_ledger_20260507_codex.md",
+        ".omx/research/pr107_post_submission_hardening_pr100_replay_addendum_20260504_codex.md",
+        ".omx/research/pr_extended_bit_level_lineage_pr95_pr100_pr101_pr103_20260507_claude.md",
+        ".omx/research/public_pr100_hnerv_lc_v2_replay_20260504_codex.md"
+      ],
+      "source": {
+        "key_files": {
+          "compress_py": null,
+          "compress_sh": null,
+          "inflate_py": {
+            "bytes": 4963,
+            "path": "experiments/results/public_pr_intake_full/public_pr100_intake_20260505_auto/source/submissions/hnerv_lc_v2/inflate.py",
+            "sha256": "2b94d042f090155a19606e98f00f4bf1986974a3c3ad7059ae7b1c4ee23605db"
+          },
+          "inflate_sh": {
+            "bytes": 705,
+            "path": "experiments/results/public_pr_intake_full/public_pr100_intake_20260505_auto/source/submissions/hnerv_lc_v2/inflate.sh",
+            "sha256": "aaccd126c0b1f411c81c8129add87c85f74c8f6177f1da290ee2b21645890247"
+          },
+          "readme": null,
+          "report": null
+        },
+        "source_file_count": 6,
+        "source_files_sha256": "596fbedd4477bb3f8ea8e8a890807f1bd32418361b32e2a808184f2bd7483f26",
+        "submission_dir": "experiments/results/public_pr_intake_full/public_pr100_intake_20260505_auto/source/submissions/hnerv_lc_v2",
+        "submission_dir_present": true
+      },
+      "title": "hnerv_lc_v2 submission (0.1954)"
+    },
+    {
+      "archive": {
+        "blockers": [],
+        "bytes": 178258,
+        "duplicate_members": [],
+        "is_zip": true,
+        "member_count": 1,
+        "members": [
+          {
+            "bytes": 178158,
+            "compressed_bytes": 178158,
+            "crc32": "6d2a9081",
+            "name": "x",
+            "order": 0,
+            "prefix_ascii": "....e.f...-.....",
+            "prefix_hex": "1bcd03f865a666a5c6022d1208b408a4",
+            "sha256": "5f1948f9572e65f71c614d2ff15764ee416522e25cb1b06c8b1299c1306e8aaf",
+            "unsafe_name": false
+          }
+        ],
+        "path": "experiments/results/public_pr_intake_full/public_pr101_intake_20260505_auto/archive.zip",
+        "present": true,
+        "sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+        "unsafe_members": []
+      },
+      "archive_basis": "public_pr_intake_full_archive",
+      "author": "SajayR",
+      "binary_understanding": {
+        "compress_reproduction_status": "missing_or_external",
+        "decode_reencode_parity_status": "missing_or_external",
+        "payload_prefixes_recorded": true,
+        "wire_grammar_status": "member_prefix_only",
+        "zip_member_manifest_present": true
+      },
+      "closed_at": "2026-05-04T17:51:16Z",
+      "created_at": "2026-05-04T11:50:13Z",
+      "diff_size": {
+        "additions": 660,
+        "changed_files": 5,
+        "deletions": 0
+      },
+      "exact_eval_artifacts": [
+        {
+          "archive": {
+            "bytes": 178258,
+            "path": "experiments/results/lightning_batch/exact_eval_public_pr101_hnerv_ft_microcodec_t4_20260504T1302Z/archive.zip",
+            "sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e"
+          },
+          "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+          "archive_size_bytes": 178258,
+          "avg_posenet_dist": 0.00017102,
+          "avg_segnet_dist": 0.00066304,
+          "device": "cuda",
+          "dir": "experiments/results/lightning_batch/exact_eval_public_pr101_hnerv_ft_microcodec_t4_20260504T1302Z",
+          "json_files": [],
+          "log_files": [
+            "experiments/results/lightning_batch/exact_eval_public_pr101_hnerv_ft_microcodec_t4_20260504T1302Z/adjudication.log",
+            "experiments/results/lightning_batch/exact_eval_public_pr101_hnerv_ft_microcodec_t4_20260504T1302Z/auth_eval.log"
+          ],
+          "runtime_tree_sha256": "e42d650f119cc4a51732f3fd084baeb19f094de97d3fc4367401ca2e8abf2b57",
+          "score": 0.22635331443973267,
+          "score_basis": "canonical_score",
+          "source": "experiments/results/lightning_batch/exact_eval_public_pr101_hnerv_ft_microcodec_t4_20260504T1302Z/auth_eval.log",
+          "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr101_hnerv_ft_microcodec_t4_20260504T1302Z/auth_eval.log"
+        }
+      ],
+      "exact_eval_summary": {
+        "identity_basis": [
+          "archive_sha256",
+          "device",
+          "runtime_tree_sha256"
+        ],
+        "same_archive_cuda_scored_eval_count": 1,
+        "same_archive_device_runtime_identity_count": 1,
+        "same_archive_eval_dir_count": 1,
+        "same_archive_replay_identities": [
+          {
+            "archive_bytes": 178258,
+            "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+            "device": "cuda",
+            "runtime_tree_sha256": "e42d650f119cc4a51732f3fd084baeb19f094de97d3fc4367401ca2e8abf2b57",
+            "score_basis": "canonical_score",
+            "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr101_hnerv_ft_microcodec_t4_20260504T1302Z/auth_eval.log"
+          }
+        ],
+        "same_archive_scored_eval_count": 1,
+        "same_archive_structured_json_eval_count": 0,
+        "total_eval_dir_count": 1
+      },
+      "head_repo": "SajayR/comma_video_compression_challenge",
+      "head_sha": "ec7e366844fd8cffff33184e7ad92df22e93a908",
+      "intake": {
+        "archive_provenance": {
+          "bytes": 252,
+          "path": "experiments/results/public_pr_intake_full/public_pr101_intake_20260505_auto/archive_provenance.json",
+          "sha256": "7c66a0193f4c4c1f3d3e32a9ec9c5c8d125344728f61f48248fe2877b60950d6"
+        },
+        "archive_provenance_status": "exists_skipped",
+        "dir": "experiments/results/public_pr_intake_full/public_pr101_intake_20260505_auto",
+        "metadata": {
+          "bytes": 466,
+          "path": "experiments/results/public_pr_intake_full/public_pr101_intake_20260505_auto/pr_metadata.json",
+          "sha256": "412b0b8d1a1d8c531e9f2008478726641791c7ff2281bac3f6ced1fd76a8ba47"
+        }
+      },
+      "leaderboard_name": "hnerv_ft_microcodec",
+      "leaderboard_replay_drift": {
+        "identity_basis": [
+          "archive_sha256",
+          "device",
+          "runtime_tree_sha256"
+        ],
+        "leaderboard_score": 0.193,
+        "local_scores_by_device": {
+          "cuda": [
+            {
+              "avg_posenet_dist": 0.00017102,
+              "avg_segnet_dist": 0.00066304,
+              "dir": "experiments/results/lightning_batch/exact_eval_public_pr101_hnerv_ft_microcodec_t4_20260504T1302Z",
+              "replay_identity": {
+                "archive_bytes": 178258,
+                "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+                "device": "cuda",
+                "runtime_tree_sha256": "e42d650f119cc4a51732f3fd084baeb19f094de97d3fc4367401ca2e8abf2b57",
+                "score_basis": "canonical_score",
+                "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr101_hnerv_ft_microcodec_t4_20260504T1302Z/auth_eval.log"
+              },
+              "runtime_tree_sha256": "e42d650f119cc4a51732f3fd084baeb19f094de97d3fc4367401ca2e8abf2b57",
+              "score": 0.22635331443973267,
+              "score_basis": "canonical_score"
+            }
+          ]
+        },
+        "matches": [],
+        "note": "A mismatch is not automatically a bad local replay. Public PR comments show some PR100+ rows were evaluated once on CUDA and again on CPU; the leaderboard may follow the CPU result while this repo's score claims still require CUDA for promoted internal lanes.",
+        "same_archive_scored_eval_count": 1,
+        "status": "leaderboard_mismatches_same_archive_cuda_replay"
+      },
+      "leaderboard_score": 0.193,
+      "merged_at": null,
+      "missing_proofs": [
+        "compress_entrypoint_missing",
+        "compress_to_archive_1to1_reproduction_required",
+        "decode_reencode_parity_proof_required",
+        "same_archive_structured_exact_eval_json_missing",
+        "structured_exact_eval_json_missing"
+      ],
+      "pr": 101,
+      "ready_for_stack_atom": false,
+      "research_notes": [
+        ".omx/research/pr101_pr103_hidden_gem_candidate_classification_20260507_worker_pr101_pr103.md",
+        ".omx/research/pr101_schema_decoder_packing_signal_20260507_codex.md",
+        ".omx/research/pr_extended_bit_level_lineage_pr95_pr100_pr101_pr103_20260507_claude.md"
+      ],
+      "source": {
+        "key_files": {
+          "compress_py": null,
+          "compress_sh": null,
+          "inflate_py": {
+            "bytes": 2073,
+            "path": "experiments/results/public_pr_intake_full/public_pr101_intake_20260505_auto/source/submissions/hnerv_ft_microcodec/inflate.py",
+            "sha256": "a3aede9d70877926c73af051b3809be330bdc934113667d72d3274d4e5fd4966"
+          },
+          "inflate_sh": {
+            "bytes": 529,
+            "path": "experiments/results/public_pr_intake_full/public_pr101_intake_20260505_auto/source/submissions/hnerv_ft_microcodec/inflate.sh",
+            "sha256": "abf18a6a5120be1d3de4362d7c7e0370b5371640869781b630ce0a7c24167429"
+          },
+          "readme": {
+            "bytes": 1036,
+            "path": "experiments/results/public_pr_intake_full/public_pr101_intake_20260505_auto/source/submissions/hnerv_ft_microcodec/README.md",
+            "sha256": "eff899cec0ce4e7cb6766d6b8a7432960fc575b4719b88fedc16b08eeb4edbd4"
+          },
+          "report": null
+        },
+        "source_file_count": 5,
+        "source_files_sha256": "8337f157bdab58cf2a0e66171e5da83a461b2f1a164f5ed3c92adf97b886ac93",
+        "submission_dir": "experiments/results/public_pr_intake_full/public_pr101_intake_20260505_auto/source/submissions/hnerv_ft_microcodec",
+        "submission_dir_present": true
+      },
+      "title": "add hnerv ft microcodec submission"
+    },
+    {
+      "archive": {
+        "blockers": [],
+        "bytes": 178981,
+        "duplicate_members": [],
+        "is_zip": true,
+        "member_count": 1,
+        "members": [
+          {
+            "bytes": 178873,
+            "compressed_bytes": 178873,
+            "crc32": "99b32852",
+            "name": "0.bin",
+            "order": 0,
+            "prefix_ascii": "*z..[]~sE...j...",
+            "prefix_hex": "2a7a02005b5d7e7345d9f6016a81ee00",
+            "sha256": "3234f0689164cfc95b7ee9f9cdf38ecf4d082cfb7048058e2b3ff0f54f864e43",
+            "unsafe_name": false
+          }
+        ],
+        "path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/archive.zip",
+        "present": true,
+        "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+        "unsafe_members": []
+      },
+      "archive_basis": "pr102_zero_byte_tuning_corrected_archive",
+      "author": "EthanYangTW",
+      "binary_understanding": {
+        "compress_reproduction_status": "missing_or_external",
+        "decode_reencode_parity_status": "missing_or_external",
+        "payload_prefixes_recorded": true,
+        "wire_grammar_status": "member_prefix_only",
+        "zip_member_manifest_present": true
+      },
+      "closed_at": "2026-05-04T20:08:31Z",
+      "created_at": "2026-05-04T11:54:32Z",
+      "diff_size": {
+        "additions": 367,
+        "changed_files": 7,
+        "deletions": 0
+      },
+      "exact_eval_artifacts": [],
+      "exact_eval_summary": {
+        "identity_basis": [
+          "archive_sha256",
+          "device",
+          "runtime_tree_sha256"
+        ],
+        "same_archive_cuda_scored_eval_count": 0,
+        "same_archive_device_runtime_identity_count": 0,
+        "same_archive_eval_dir_count": 0,
+        "same_archive_replay_identities": [],
+        "same_archive_scored_eval_count": 0,
+        "same_archive_structured_json_eval_count": 0,
+        "total_eval_dir_count": 0
+      },
+      "head_repo": "EthanYangTW/comma_video_compression_challenge",
+      "head_sha": "1e330ec5633539c48278ce3cc96d2b15ea7a9eac",
+      "intake": {
+        "archive_provenance": {
+          "bytes": 569,
+          "path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/archive_provenance.json",
+          "sha256": "7dcf89e119d3923e4c133ca4ec4ef92ff60e6dbacea34ba74d937558e140d1e9"
+        },
+        "archive_provenance_status": "downloaded",
+        "dir": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto",
+        "metadata": {
+          "bytes": 498,
+          "path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/pr_metadata.json",
+          "sha256": "e9f9efae19a3cc0660457ac273bd8845f65d5ba31ff1b869d037c149c49ebe65"
+        }
+      },
+      "leaderboard_name": "hnerv_lc_v2_scale095_rplus1",
+      "leaderboard_replay_drift": {
+        "identity_basis": [
+          "archive_sha256",
+          "device",
+          "runtime_tree_sha256"
+        ],
+        "leaderboard_score": 0.195,
+        "same_archive_scored_eval_count": 0,
+        "status": "no_same_archive_score_to_compare"
+      },
+      "leaderboard_score": 0.195,
+      "merged_at": "2026-05-04T20:08:31Z",
+      "missing_proofs": [
+        "compress_to_archive_1to1_reproduction_required",
+        "decode_reencode_parity_proof_required",
+        "exact_cuda_replay_missing",
+        "same_archive_structured_exact_eval_json_missing",
+        "structured_exact_eval_json_missing"
+      ],
+      "pr": 102,
+      "ready_for_stack_atom": false,
+      "research_notes": [
+        ".omx/research/pr102_zero_byte_inference_tuning_custody_unblock_20260507_codex.md",
+        ".omx/research/pr102_zero_byte_tuning_custody_20260507_codex.md"
+      ],
+      "source": {
+        "key_files": {
+          "compress_py": null,
+          "compress_sh": {
+            "bytes": 1316,
+            "path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/source/submissions/hnerv_lc_v2_scale095_rplus1/compress.sh",
+            "sha256": "8505b162f72ac7aa8a1a96b74f9904b5ff7eb3b79753024ab3c2c0311312cdc8"
+          },
+          "inflate_py": {
+            "bytes": 5110,
+            "path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/source/submissions/hnerv_lc_v2_scale095_rplus1/inflate.py",
+            "sha256": "6b7eb1fc1577c49378cd9837c8484ecbe0f46872b40576fec1291b27bd284a6c"
+          },
+          "inflate_sh": {
+            "bytes": 705,
+            "path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/source/submissions/hnerv_lc_v2_scale095_rplus1/inflate.sh",
+            "sha256": "aaccd126c0b1f411c81c8129add87c85f74c8f6177f1da290ee2b21645890247"
+          },
+          "readme": {
+            "bytes": 639,
+            "path": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/source/submissions/hnerv_lc_v2_scale095_rplus1/README.md",
+            "sha256": "d4ccd8c76013739a8f420110874adb320568b57e08c4163f76c6299f52b071ba"
+          },
+          "report": null
+        },
+        "source_file_count": 7,
+        "source_files_sha256": "8a3499aa0b2468fac8d41ae8eead11b4203155768956abe4dbf5199cfd5a895e",
+        "submission_dir": "experiments/results/public_pr102_hnerv_lc_v2_scale095_rplus1_custody_20260507_codex/public_pr102_intake_20260507_auto/source/submissions/hnerv_lc_v2_scale095_rplus1",
+        "submission_dir_present": true
+      },
+      "title": "hnerv_lc_v2_scale095_rplus1 submission (0.19538 CPU)"
+    },
+    {
+      "archive": {
+        "blockers": [],
+        "bytes": 178223,
+        "duplicate_members": [],
+        "is_zip": true,
+        "member_count": 1,
+        "members": [
+          {
+            "bytes": 178123,
+            "compressed_bytes": 178123,
+            "crc32": "c75b8cb2",
+            "name": "x",
+            "order": 0,
+            "prefix_ascii": "'\"@$....(.....3.",
+            "prefix_hex": "27224024dc1cf81e281c171fa01a331e",
+            "sha256": "dd92b065b8fbd2bfe9de837eb110a971c2675ecca4247e2658b4628b464d72ec",
+            "unsafe_name": false
+          }
+        ],
+        "path": "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/archive.zip",
+        "present": true,
+        "sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30",
+        "unsafe_members": []
+      },
+      "archive_basis": "public_pr_intake_full_archive",
+      "author": "rem2",
+      "binary_understanding": {
+        "compress_reproduction_status": "missing_or_external",
+        "decode_reencode_parity_status": "merged_arithmetic_stream_byte_identical",
+        "dispatch_blockers": [
+          "pr103_lc_ac_schema_manifest_is_not_dispatch_authorization",
+          "replay_fidelity:public_leaderboard_score_mismatch",
+          "candidate_archive_missing",
+          "old_new_archive_sha256_pair_missing",
+          "candidate_runtime_adapter_missing",
+          "strict_pre_submission_compliance_json_missing",
+          "lane_dispatch_claim_missing",
+          "exact_cuda_auth_eval_missing"
+        ],
+        "merged_arithmetic_stream": {
+          "decoded_symbol_count": 237561,
+          "reencoded_byte_identical": true,
+          "reencoded_bytes": 153856,
+          "reencoded_sha256": "08f0a219b395e6783c522bacc8239f01dcb3d27d9f7f8d2291a7478d04859de7",
+          "source_bytes": 153856,
+          "source_sha256": "08f0a219b395e6783c522bacc8239f01dcb3d27d9f7f8d2291a7478d04859de7"
+        },
+        "payload_prefixes_recorded": true,
+        "schema_manifest": "experiments/results/hnerv_pr103_lc_ac_schema_20260507_codex/manifest.json",
+        "wire_grammar_status": "fixed_pr103_lc_ac_section_layout",
+        "zip_member_manifest_present": true
+      },
+      "closed_at": "2026-05-04T17:51:27Z",
+      "created_at": "2026-05-04T11:55:56Z",
+      "diff_size": {
+        "additions": 241,
+        "changed_files": 2,
+        "deletions": 0
+      },
+      "exact_eval_artifacts": [
+        {
+          "archive": {
+            "bytes": 178223,
+            "path": "experiments/results/lightning_batch/exact_eval_public_pr103_hnerv_lc_ac_t4_20260504T1245Z/archive.zip",
+            "sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30"
+          },
+          "archive_sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30",
+          "archive_size_bytes": 178223,
+          "avg_posenet_dist": 0.00017198,
+          "avg_segnet_dist": 0.00067623,
+          "device": "cuda",
+          "dir": "experiments/results/lightning_batch/exact_eval_public_pr103_hnerv_lc_ac_t4_20260504T1245Z",
+          "json_files": [],
+          "log_files": [
+            "experiments/results/lightning_batch/exact_eval_public_pr103_hnerv_lc_ac_t4_20260504T1245Z/adjudication.log",
+            "experiments/results/lightning_batch/exact_eval_public_pr103_hnerv_lc_ac_t4_20260504T1245Z/auth_eval.log"
+          ],
+          "runtime_tree_sha256": "2fb80e7c6ed2f6a4a7df3d6830f4a21bd259d5eb9ca0a93298e9d5a246b5defc",
+          "score": 0.2277649714224471,
+          "score_basis": "canonical_score",
+          "source": "experiments/results/lightning_batch/exact_eval_public_pr103_hnerv_lc_ac_t4_20260504T1245Z/auth_eval.log",
+          "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr103_hnerv_lc_ac_t4_20260504T1245Z/auth_eval.log"
+        },
+        {
+          "archive": {
+            "bytes": 185578,
+            "path": "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/archive.zip",
+            "sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce"
+          },
+          "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+          "archive_size_bytes": 185578,
+          "avg_posenet_dist": 3.36e-05,
+          "avg_segnet_dist": 0.00067082,
+          "device": "cuda",
+          "dir": "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z",
+          "json_files": [
+            "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/contest_auth_eval.adjudicated.json",
+            "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/contest_auth_eval.json"
+          ],
+          "log_files": [
+            "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/adjudication.log",
+            "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/auth_eval.log"
+          ],
+          "runtime_tree_sha256": "54db9e5ddee85ae7f486fae900ff3907932efb1c8d3062bc264b0e5c7456d8f6",
+          "score": 0.20898105277982337,
+          "score_basis": "canonical_score",
+          "structured_result_source": "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/contest_auth_eval.adjudicated.json"
+        }
+      ],
+      "exact_eval_summary": {
+        "identity_basis": [
+          "archive_sha256",
+          "device",
+          "runtime_tree_sha256"
+        ],
+        "same_archive_cuda_scored_eval_count": 1,
+        "same_archive_device_runtime_identity_count": 1,
+        "same_archive_eval_dir_count": 1,
+        "same_archive_replay_identities": [
+          {
+            "archive_bytes": 178223,
+            "archive_sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30",
+            "device": "cuda",
+            "runtime_tree_sha256": "2fb80e7c6ed2f6a4a7df3d6830f4a21bd259d5eb9ca0a93298e9d5a246b5defc",
+            "score_basis": "canonical_score",
+            "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr103_hnerv_lc_ac_t4_20260504T1245Z/auth_eval.log"
+          }
+        ],
+        "same_archive_scored_eval_count": 1,
+        "same_archive_structured_json_eval_count": 0,
+        "total_eval_dir_count": 2
+      },
+      "head_repo": "rem2/comma_video_compression_challenge",
+      "head_sha": "d20270750e603346056f4e867cddd4744272c9d8",
+      "intake": {
+        "archive_provenance": {
+          "bytes": 252,
+          "path": "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/archive_provenance.json",
+          "sha256": "f4473da998dfcc6ed65ccf3e3bfab74ef9d907620533bb5f683cd64f3e98bfba"
+        },
+        "archive_provenance_status": "exists_skipped",
+        "dir": "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto",
+        "metadata": {
+          "bytes": 449,
+          "path": "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/pr_metadata.json",
+          "sha256": "5a617416c3549e7a6ce0a783c7e8f85ff76d531caf87e66b7876cd34caed0d01"
+        }
+      },
+      "leaderboard_name": "hnerv_lc_ac",
+      "leaderboard_replay_drift": {
+        "identity_basis": [
+          "archive_sha256",
+          "device",
+          "runtime_tree_sha256"
+        ],
+        "leaderboard_score": 0.195,
+        "local_scores_by_device": {
+          "cuda": [
+            {
+              "avg_posenet_dist": 0.00017198,
+              "avg_segnet_dist": 0.00067623,
+              "dir": "experiments/results/lightning_batch/exact_eval_public_pr103_hnerv_lc_ac_t4_20260504T1245Z",
+              "replay_identity": {
+                "archive_bytes": 178223,
+                "archive_sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30",
+                "device": "cuda",
+                "runtime_tree_sha256": "2fb80e7c6ed2f6a4a7df3d6830f4a21bd259d5eb9ca0a93298e9d5a246b5defc",
+                "score_basis": "canonical_score",
+                "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr103_hnerv_lc_ac_t4_20260504T1245Z/auth_eval.log"
+              },
+              "runtime_tree_sha256": "2fb80e7c6ed2f6a4a7df3d6830f4a21bd259d5eb9ca0a93298e9d5a246b5defc",
+              "score": 0.2277649714224471,
+              "score_basis": "canonical_score"
+            }
+          ]
+        },
+        "matches": [],
+        "note": "A mismatch is not automatically a bad local replay. Public PR comments show some PR100+ rows were evaluated once on CUDA and again on CPU; the leaderboard may follow the CPU result while this repo's score claims still require CUDA for promoted internal lanes.",
+        "same_archive_scored_eval_count": 1,
+        "status": "leaderboard_mismatches_same_archive_cuda_replay"
+      },
+      "leaderboard_score": 0.195,
+      "merged_at": null,
+      "missing_proofs": [
+        "compress_entrypoint_missing",
+        "compress_to_archive_1to1_reproduction_required",
+        "same_archive_structured_exact_eval_json_missing",
+        "structured_exact_eval_json_missing"
+      ],
+      "pr": 103,
+      "ready_for_stack_atom": false,
+      "research_notes": [
+        ".omx/research/hnerv_pr103_lc_ac_schema_frontier_20260507_codex.md",
+        ".omx/research/pr101_pr103_hidden_gem_candidate_classification_20260507_worker_pr101_pr103.md",
+        ".omx/research/pr103_pr106_ac_repack_exact_eval_20260507_codex.md",
+        ".omx/research/pr103_pr106_runtime_closure_20260507_codex.md",
+        ".omx/research/pr_extended_bit_level_lineage_pr95_pr100_pr101_pr103_20260507_claude.md"
+      ],
+      "source": {
+        "key_files": {
+          "compress_py": null,
+          "compress_sh": null,
+          "inflate_py": {
+            "bytes": 8069,
+            "path": "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/source/submissions/hnerv_lc_ac/inflate.py",
+            "sha256": "ff65369b4105ee8fabd9926bba29b62b82d159810ebfc06acc62d48913d89934"
+          },
+          "inflate_sh": {
+            "bytes": 425,
+            "path": "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/source/submissions/hnerv_lc_ac/inflate.sh",
+            "sha256": "95bfd7d06f373ba45a2b4f4199ce0683117f656b514ed8bedd2f99ef61e37fe1"
+          },
+          "readme": null,
+          "report": null
+        },
+        "source_file_count": 2,
+        "source_files_sha256": "a189239ef2c84933487c648fff886d9b9191e4cf8a645208a366cb457ca89cfd",
+        "submission_dir": "experiments/results/public_pr_intake_full/public_pr103_intake_20260505_auto/source/submissions/hnerv_lc_ac",
+        "submission_dir_present": true
+      },
+      "title": "hnerv_lc_ac submission (0.19)"
+    },
+    {
+      "archive": {
+        "blockers": [],
+        "bytes": 178637,
+        "duplicate_members": [],
+        "is_zip": true,
+        "member_count": 1,
+        "members": [
+          {
+            "bytes": 178529,
+            "compressed_bytes": 178529,
+            "crc32": "d08e0c9e",
+            "name": "0.bin",
+            "order": 0,
+            "prefix_ascii": "P....O. ..n..N#p",
+            "prefix_hex": "500000001b4f00201d076eacc64e2370",
+            "sha256": "0a0f2cac1961f3ab5128e70ff10c0287a66949d435b5ee7a4dcf2017917910a3",
+            "unsafe_name": false
+          }
+        ],
+        "path": "experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto/archive.zip",
+        "present": true,
+        "sha256": "6564c32a9edeeaf08abd7f0ea673ba2fda23444605ca207eb4ba794cc66797b8",
+        "unsafe_members": []
+      },
+      "archive_basis": "public_pr_intake_full_archive",
+      "author": "patattzel",
+      "binary_understanding": {
+        "compress_reproduction_status": "missing_or_external",
+        "decode_reencode_parity_status": "missing_or_external",
+        "payload_prefixes_recorded": true,
+        "wire_grammar_status": "member_prefix_only",
+        "zip_member_manifest_present": true
+      },
+      "closed_at": "2026-05-04T17:51:34Z",
+      "created_at": "2026-05-04T11:56:00Z",
+      "diff_size": {
+        "additions": 2068,
+        "changed_files": 27,
+        "deletions": 0
+      },
+      "exact_eval_artifacts": [],
+      "exact_eval_summary": {
+        "identity_basis": [
+          "archive_sha256",
+          "device",
+          "runtime_tree_sha256"
+        ],
+        "same_archive_cuda_scored_eval_count": 0,
+        "same_archive_device_runtime_identity_count": 0,
+        "same_archive_eval_dir_count": 0,
+        "same_archive_replay_identities": [],
+        "same_archive_scored_eval_count": 0,
+        "same_archive_structured_json_eval_count": 0,
+        "total_eval_dir_count": 0
+      },
+      "head_repo": "patattzel/comma_video_compression_challenge",
+      "head_sha": "f1c59d895325f2d2835e843ce72be3443983a4b4",
+      "intake": {
+        "archive_provenance": {
+          "bytes": 252,
+          "path": "experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto/archive_provenance.json",
+          "sha256": "2657a37920b3cde612e04d4056659a847d7b6ede79efd15d4191785957d37556"
+        },
+        "archive_provenance_status": "exists_skipped",
+        "dir": "experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto",
+        "metadata": {
+          "bytes": 449,
+          "path": "experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto/pr_metadata.json",
+          "sha256": "48be2bbb80d864db556a124b2d8848303a76563b148a4d2bd19c176411f34a36"
+        }
+      },
+      "leaderboard_name": "qhnerv_ft_best",
+      "leaderboard_replay_drift": {
+        "identity_basis": [
+          "archive_sha256",
+          "device",
+          "runtime_tree_sha256"
+        ],
+        "leaderboard_score": 0.231,
+        "same_archive_scored_eval_count": 0,
+        "status": "no_same_archive_score_to_compare"
+      },
+      "leaderboard_score": 0.231,
+      "merged_at": null,
+      "missing_proofs": [
+        "compress_to_archive_1to1_reproduction_required",
+        "decode_reencode_parity_proof_required",
+        "exact_cuda_replay_missing",
+        "research_note_missing",
+        "same_archive_structured_exact_eval_json_missing",
+        "structured_exact_eval_json_missing"
+      ],
+      "pr": 104,
+      "ready_for_stack_atom": false,
+      "research_notes": [],
+      "source": {
+        "key_files": {
+          "compress_py": null,
+          "compress_sh": {
+            "bytes": 991,
+            "path": "experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto/source/submissions/qhnerv_ft_best/compress.sh",
+            "sha256": "c4c94c43d36884bc9bd5c6ff8624a8e6c3828103e3a4f4cf3fc68c8f22ba31f3"
+          },
+          "inflate_py": {
+            "bytes": 2158,
+            "path": "experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto/source/submissions/qhnerv_ft_best/inflate.py",
+            "sha256": "fdc1e9af70a8f6b47f84c3978a29cb872dbc3dbdc6c123bda72ea494221a0e26"
+          },
+          "inflate_sh": {
+            "bytes": 811,
+            "path": "experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto/source/submissions/qhnerv_ft_best/inflate.sh",
+            "sha256": "0cb9c3df78ad870cadd2ac6d46007b6c1aeb6a61c76b7800ae74a00addafb885"
+          },
+          "readme": {
+            "bytes": 341,
+            "path": "experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto/source/submissions/qhnerv_ft_best/README.md",
+            "sha256": "78bc0d6adfb00edc8bec9fa7be30b9d5a12a89f12416d9dc74edb4bfcb224bd1"
+          },
+          "report": null
+        },
+        "source_file_count": 23,
+        "source_files_sha256": "2f2a1dd6576c68b3933c033e0d4dee832d0b49c0e88d268ae9eb480d7ad764d3",
+        "submission_dir": "experiments/results/public_pr_intake_full/public_pr104_intake_20260505_auto/source/submissions/qhnerv_ft_best",
+        "submission_dir_present": true
+      },
+      "title": "qhnerv_ft_best"
+    },
+    {
+      "archive": {
+        "blockers": [],
+        "bytes": 177857,
+        "duplicate_members": [],
+        "is_zip": true,
+        "member_count": 1,
+        "members": [
+          {
+            "bytes": 177749,
+            "compressed_bytes": 177749,
+            "crc32": "492094c7",
+            "name": "0.bin",
+            "order": 0,
+            "prefix_ascii": ".cx.[.~s...y....",
+            "prefix_hex": "ff6378025bcd7e73ae90c0790000de1b",
+            "sha256": "5f88fa8ed26816cf6e86a00cf3c88915963c2a84f899173fd6820359df29aad0",
+            "unsafe_name": false
+          }
+        ],
+        "path": "experiments/results/public_pr_intake_full/public_pr105_intake_20260505_auto/archive.zip",
+        "present": true,
+        "sha256": "597ba0732810eba08cdae619b679d211d398bc0249b8831898f7096d5beece1d",
+        "unsafe_members": []
+      },
+      "archive_basis": "public_pr_intake_full_archive",
+      "author": "valtterivalo",
+      "binary_understanding": {
+        "compress_reproduction_status": "missing_or_external",
+        "decode_reencode_parity_status": "missing_or_external",
+        "payload_prefixes_recorded": true,
+        "wire_grammar_status": "member_prefix_only",
+        "zip_member_manifest_present": true
+      },
+      "closed_at": "2026-05-04T20:09:10Z",
+      "created_at": "2026-05-04T11:56:48Z",
+      "diff_size": {
+        "additions": 1776,
+        "changed_files": 21,
+        "deletions": 0
+      },
+      "exact_eval_artifacts": [
+        {
+          "archive": {
+            "bytes": 177857,
+            "path": "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_adapter_t4_20260504T1330Z/archive.zip",
+            "sha256": "597ba0732810eba08cdae619b679d211d398bc0249b8831898f7096d5beece1d"
+          },
+          "archive_sha256": "597ba0732810eba08cdae619b679d211d398bc0249b8831898f7096d5beece1d",
+          "archive_size_bytes": 177857,
+          "avg_posenet_dist": 0.00017267,
+          "avg_segnet_dist": 0.00070456,
+          "device": "cuda",
+          "dir": "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_adapter_t4_20260504T1330Z",
+          "json_files": [
+            "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json",
+            "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_adapter_t4_20260504T1330Z/contest_auth_eval.json"
+          ],
+          "log_files": [
+            "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_adapter_t4_20260504T1330Z/adjudication.log",
+            "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_adapter_t4_20260504T1330Z/auth_eval.log"
+          ],
+          "runtime_tree_sha256": "2ebae7632b279a736f359690eb359a8f030e7f57630ea26152591cbe05021ab6",
+          "score": 0.23043732986984997,
+          "score_basis": "canonical_score",
+          "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json"
+        },
+        {
+          "archive": {
+            "bytes": 177849,
+            "path": "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_xrepack_t4_20260504T1342Z/archive.zip",
+            "sha256": "692a46931f66416ab71270661f580a4b5bb2e5a887b19c51aabbb8851493feab"
+          },
+          "archive_sha256": "692a46931f66416ab71270661f580a4b5bb2e5a887b19c51aabbb8851493feab",
+          "archive_size_bytes": 177849,
+          "avg_posenet_dist": 0.00017267,
+          "avg_segnet_dist": 0.00070456,
+          "device": "cuda",
+          "dir": "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_xrepack_t4_20260504T1342Z",
+          "json_files": [
+            "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json",
+            "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_xrepack_t4_20260504T1342Z/contest_auth_eval.json"
+          ],
+          "log_files": [
+            "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_xrepack_t4_20260504T1342Z/adjudication.log",
+            "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_xrepack_t4_20260504T1342Z/auth_eval.log"
+          ],
+          "runtime_tree_sha256": "c97211b6deaf0796869e2201a50c3008d26cb5561a77312d539c097bee4aa7e1",
+          "score": 0.23043182986984995,
+          "score_basis": "canonical_score",
+          "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json"
+        }
+      ],
+      "exact_eval_summary": {
+        "identity_basis": [
+          "archive_sha256",
+          "device",
+          "runtime_tree_sha256"
+        ],
+        "same_archive_cuda_scored_eval_count": 1,
+        "same_archive_device_runtime_identity_count": 1,
+        "same_archive_eval_dir_count": 1,
+        "same_archive_replay_identities": [
+          {
+            "archive_bytes": 177857,
+            "archive_sha256": "597ba0732810eba08cdae619b679d211d398bc0249b8831898f7096d5beece1d",
+            "device": "cuda",
+            "runtime_tree_sha256": "2ebae7632b279a736f359690eb359a8f030e7f57630ea26152591cbe05021ab6",
+            "score_basis": "canonical_score",
+            "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json"
+          }
+        ],
+        "same_archive_scored_eval_count": 1,
+        "same_archive_structured_json_eval_count": 1,
+        "total_eval_dir_count": 2
+      },
+      "head_repo": "valtterivalo/comma_video_compression_challenge-1",
+      "head_sha": "9376a6f86c76cb576b5f25afd8c789a8a727077f",
+      "intake": {
+        "archive_provenance": {
+          "bytes": 252,
+          "path": "experiments/results/public_pr_intake_full/public_pr105_intake_20260505_auto/archive_provenance.json",
+          "sha256": "b339af9f361f83ac13a8a75e8e424bd918ab46a1bc2903a6b57ff2f36993a175"
+        },
+        "archive_provenance_status": "exists_skipped",
+        "dir": "experiments/results/public_pr_intake_full/public_pr105_intake_20260505_auto",
+        "metadata": {
+          "bytes": 481,
+          "path": "experiments/results/public_pr_intake_full/public_pr105_intake_20260505_auto/pr_metadata.json",
+          "sha256": "173f22f229966b85969372cb0d980a44812b6f81904be7121ef518fa623c811b"
+        }
+      },
+      "leaderboard_name": "kitchen_sink",
+      "leaderboard_replay_drift": {
+        "identity_basis": [
+          "archive_sha256",
+          "device",
+          "runtime_tree_sha256"
+        ],
+        "leaderboard_score": 0.198,
+        "local_scores_by_device": {
+          "cuda": [
+            {
+              "avg_posenet_dist": 0.00017267,
+              "avg_segnet_dist": 0.00070456,
+              "dir": "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_adapter_t4_20260504T1330Z",
+              "replay_identity": {
+                "archive_bytes": 177857,
+                "archive_sha256": "597ba0732810eba08cdae619b679d211d398bc0249b8831898f7096d5beece1d",
+                "device": "cuda",
+                "runtime_tree_sha256": "2ebae7632b279a736f359690eb359a8f030e7f57630ea26152591cbe05021ab6",
+                "score_basis": "canonical_score",
+                "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr105_kitchen_sink_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json"
+              },
+              "runtime_tree_sha256": "2ebae7632b279a736f359690eb359a8f030e7f57630ea26152591cbe05021ab6",
+              "score": 0.23043732986984997,
+              "score_basis": "canonical_score"
+            }
+          ]
+        },
+        "matches": [],
+        "note": "A mismatch is not automatically a bad local replay. Public PR comments show some PR100+ rows were evaluated once on CUDA and again on CPU; the leaderboard may follow the CPU result while this repo's score claims still require CUDA for promoted internal lanes.",
+        "same_archive_scored_eval_count": 1,
+        "status": "leaderboard_mismatches_same_archive_cuda_replay"
+      },
+      "leaderboard_score": 0.198,
+      "merged_at": "2026-05-04T20:09:10Z",
+      "missing_proofs": [
+        "compress_to_archive_1to1_reproduction_required",
+        "decode_reencode_parity_proof_required",
+        "research_note_missing"
+      ],
+      "pr": 105,
+      "ready_for_stack_atom": false,
+      "research_notes": [],
+      "source": {
+        "key_files": {
+          "compress_py": null,
+          "compress_sh": {
+            "bytes": 991,
+            "path": "experiments/results/public_pr_intake_full/public_pr105_intake_20260505_auto/source/submissions/kitchen_sink/compress.sh",
+            "sha256": "c4c94c43d36884bc9bd5c6ff8624a8e6c3828103e3a4f4cf3fc68c8f22ba31f3"
+          },
+          "inflate_py": {
+            "bytes": 2158,
+            "path": "experiments/results/public_pr_intake_full/public_pr105_intake_20260505_auto/source/submissions/kitchen_sink/inflate.py",
+            "sha256": "fdc1e9af70a8f6b47f84c3978a29cb872dbc3dbdc6c123bda72ea494221a0e26"
+          },
+          "inflate_sh": {
+            "bytes": 811,
+            "path": "experiments/results/public_pr_intake_full/public_pr105_intake_20260505_auto/source/submissions/kitchen_sink/inflate.sh",
+            "sha256": "0cb9c3df78ad870cadd2ac6d46007b6c1aeb6a61c76b7800ae74a00addafb885"
+          },
+          "readme": {
+            "bytes": 323,
+            "path": "experiments/results/public_pr_intake_full/public_pr105_intake_20260505_auto/source/submissions/kitchen_sink/README.md",
+            "sha256": "fd6fd432cf49654aea177d0c189f03069b8cdfb4a80eb2b08c0c676d1607bcf7"
+          },
+          "report": null
+        },
+        "source_file_count": 21,
+        "source_files_sha256": "d775da5493809fdd3896261f0225afd7b7b3af6e02362c25639dffa2b76f8724",
+        "submission_dir": "experiments/results/public_pr_intake_full/public_pr105_intake_20260505_auto/source/submissions/kitchen_sink",
+        "submission_dir_present": true
+      },
+      "title": "kitchen_sink (0.19797)"
+    },
+    {
+      "archive": {
+        "blockers": [],
+        "bytes": 186239,
+        "duplicate_members": [],
+        "is_zip": true,
+        "member_count": 1,
+        "members": [
+          {
+            "bytes": 186131,
+            "compressed_bytes": 186131,
+            "crc32": "aab0e853",
+            "name": "0.bin",
+            "order": 0,
+            "prefix_ascii": ".&..[.~s.Hp...._",
+            "prefix_hex": "ff2699025bcd7e73ac48701e0000b55f",
+            "sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+            "unsafe_name": false
+          }
+        ],
+        "path": "experiments/results/public_pr_intake_full/public_pr106_intake_20260505_auto/archive.zip",
+        "present": true,
+        "sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+        "unsafe_members": []
+      },
+      "archive_basis": "public_pr_intake_full_archive",
+      "author": "valtterivalo",
+      "binary_understanding": {
+        "compress_reproduction_status": "missing_or_external",
+        "decode_reencode_parity_status": "missing_or_external",
+        "payload_prefixes_recorded": true,
+        "wire_grammar_status": "member_prefix_only",
+        "zip_member_manifest_present": true
+      },
+      "closed_at": "2026-05-04T20:09:54Z",
+      "created_at": "2026-05-04T11:57:01Z",
+      "diff_size": {
+        "additions": 1780,
+        "changed_files": 21,
+        "deletions": 0
+      },
+      "exact_eval_artifacts": [
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/apogee_int4_pr106_20260505T080729Z",
+          "json_files": [],
+          "log_files": [],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": {
+            "bytes": 186080,
+            "path": "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/archive.zip",
+            "sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f"
+          },
+          "archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+          "archive_size_bytes": 186080,
+          "avg_posenet_dist": 3.351e-05,
+          "avg_segnet_dist": 0.00067142,
+          "device": "cuda",
+          "dir": "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506",
+          "json_files": [
+            "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/contest_auth_eval.adjudicated.json",
+            "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/contest_auth_eval.json"
+          ],
+          "log_files": [
+            "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/auth_eval.log",
+            "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/component_trace.log"
+          ],
+          "runtime_tree_sha256": "bb6baee66c61781f285fee5862ab499b8eb1fec93edeea046cb3019289638fd3",
+          "score": 0.20935073680571203,
+          "score_basis": "canonical_score",
+          "structured_result_source": "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/contest_auth_eval.adjudicated.json"
+        },
+        {
+          "archive": {
+            "bytes": 186239,
+            "path": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/archive.zip",
+            "sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+          },
+          "archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+          "archive_size_bytes": 186239,
+          "avg_posenet_dist": 3.351e-05,
+          "avg_segnet_dist": 0.00067142,
+          "device": "cuda",
+          "dir": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z",
+          "json_files": [
+            "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json",
+            "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.json"
+          ],
+          "log_files": [
+            "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/adjudication.log",
+            "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/auth_eval.log"
+          ],
+          "runtime_tree_sha256": "7f4f458f23f5c92d1e94891c27fd429266081ac66b359f40b7ce68ef4acd17dd",
+          "score": 0.20945673680571203,
+          "score_basis": "canonical_score",
+          "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json"
+        },
+        {
+          "archive": {
+            "bytes": 186239,
+            "path": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_t4_20260504T1300Z/archive.zip",
+            "sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+          },
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_t4_20260504T1300Z",
+          "json_files": [],
+          "log_files": [
+            "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_t4_20260504T1300Z/auth_eval.log"
+          ],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": {
+            "bytes": 186231,
+            "path": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/archive.zip",
+            "sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e"
+          },
+          "archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+          "archive_size_bytes": 186231,
+          "avg_posenet_dist": 3.351e-05,
+          "avg_segnet_dist": 0.00067142,
+          "device": "cuda",
+          "dir": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z",
+          "json_files": [
+            "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json",
+            "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.json"
+          ],
+          "log_files": [
+            "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/adjudication.log",
+            "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/auth_eval.log"
+          ],
+          "runtime_tree_sha256": "02bbb2052ea0f5d123a6143077ce5dcda78363ffca2424214040473ac0bcb2fa",
+          "score": 0.20945123680571204,
+          "score_basis": "canonical_score",
+          "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_xrepack_t4_20260504T1342Z/contest_auth_eval.adjudicated.json"
+        },
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/lane_apogee_int4_pr106_20260505T154835Z",
+          "json_files": [],
+          "log_files": [],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/lane_apogee_int4_pr106_20260505T155147Z",
+          "json_files": [],
+          "log_files": [],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/lane_apogee_int4_pr106_20260505T163631Z",
+          "json_files": [],
+          "log_files": [],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/lane_apogee_int4_pr106_20260505T163921Z",
+          "json_files": [],
+          "log_files": [],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/lane_apogee_int4_pr106_20260505T164022Z",
+          "json_files": [],
+          "log_files": [],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/lane_pr106_yshift_score_table_20260506T0732Z",
+          "json_files": [],
+          "log_files": [],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/lane_pr106_yshift_score_table_20260506T0739Z",
+          "json_files": [],
+          "log_files": [
+            "experiments/results/lightning_batch/lane_pr106_yshift_score_table_20260506T0739Z/batch_run.log"
+          ],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/lane_pr106_yshift_score_table_20260506T202357Z",
+          "json_files": [],
+          "log_files": [],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/lane_pr106_yshift_score_table_batch_printcheck",
+          "json_files": [],
+          "log_files": [],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/lane_pr106_yshift_score_table_dryrun_20260506T0731Z",
+          "json_files": [],
+          "log_files": [],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/lane_pr106_yshift_score_table_printcheck",
+          "json_files": [],
+          "log_files": [],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/lane_pr106_yshift_score_table_snapshot_printcheck",
+          "json_files": [],
+          "log_files": [],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/lane_pr106_yshift_score_table_test",
+          "json_files": [],
+          "log_files": [],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": {
+            "bytes": 185578,
+            "path": "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/archive.zip",
+            "sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce"
+          },
+          "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+          "archive_size_bytes": 185578,
+          "avg_posenet_dist": 3.36e-05,
+          "avg_segnet_dist": 0.00067082,
+          "device": "cuda",
+          "dir": "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z",
+          "json_files": [
+            "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/contest_auth_eval.adjudicated.json",
+            "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/contest_auth_eval.json"
+          ],
+          "log_files": [
+            "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/adjudication.log",
+            "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/auth_eval.log"
+          ],
+          "runtime_tree_sha256": "54db9e5ddee85ae7f486fae900ff3907932efb1c8d3062bc264b0e5c7456d8f6",
+          "score": 0.20898105277982337,
+          "score_basis": "canonical_score",
+          "structured_result_source": "experiments/results/lightning_batch/pr103_pr106_ac_repack_exact_eval_t4_20260507T181300Z/contest_auth_eval.adjudicated.json"
+        },
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/pr106_latent_sidecar_loop_dispatch_20260505T155645Z",
+          "json_files": [],
+          "log_files": [],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/pr106_lrl1_sidechannel_loop_dispatch_20260505T155651Z",
+          "json_files": [],
+          "log_files": [],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        },
+        {
+          "archive": null,
+          "avg_posenet_dist": null,
+          "avg_segnet_dist": null,
+          "device": null,
+          "dir": "experiments/results/lightning_batch/pr106_yshift_sidechannel_loop_dispatch_20260505T155648Z",
+          "json_files": [],
+          "log_files": [],
+          "runtime_tree_sha256": null,
+          "score": null,
+          "score_basis": null,
+          "structured_result_source": null
+        }
+      ],
+      "exact_eval_summary": {
+        "identity_basis": [
+          "archive_sha256",
+          "device",
+          "runtime_tree_sha256"
+        ],
+        "same_archive_cuda_scored_eval_count": 1,
+        "same_archive_device_runtime_identity_count": 1,
+        "same_archive_eval_dir_count": 2,
+        "same_archive_replay_identities": [
+          {
+            "archive_bytes": 186239,
+            "archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+            "device": "cuda",
+            "runtime_tree_sha256": "7f4f458f23f5c92d1e94891c27fd429266081ac66b359f40b7ce68ef4acd17dd",
+            "score_basis": "canonical_score",
+            "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json"
+          }
+        ],
+        "same_archive_scored_eval_count": 1,
+        "same_archive_structured_json_eval_count": 1,
+        "total_eval_dir_count": 22
+      },
+      "head_repo": "valtterivalo/comma_video_compression_challenge-1",
+      "head_sha": "339910eb2da2048796c8555cb964c5d8cb5c194e",
+      "intake": {
+        "archive_provenance": {
+          "bytes": 252,
+          "path": "experiments/results/public_pr_intake_full/public_pr106_intake_20260505_auto/archive_provenance.json",
+          "sha256": "23732f7464bfbe9927053ad1e9ab067cbeb3428aefccb95df8ade70548f3c264"
+        },
+        "archive_provenance_status": "exists_skipped",
+        "dir": "experiments/results/public_pr_intake_full/public_pr106_intake_20260505_auto",
+        "metadata": {
+          "bytes": 495,
+          "path": "experiments/results/public_pr_intake_full/public_pr106_intake_20260505_auto/pr_metadata.json",
+          "sha256": "b3916075b917c538673f15785411daaa6746786cb76d0f16fedcc8ca6a657248"
+        }
+      },
+      "leaderboard_name": "belt_and_suspenders",
+      "leaderboard_replay_drift": {
+        "identity_basis": [
+          "archive_sha256",
+          "device",
+          "runtime_tree_sha256"
+        ],
+        "leaderboard_score": 0.209,
+        "local_scores_by_device": {
+          "cuda": [
+            {
+              "avg_posenet_dist": 3.351e-05,
+              "avg_segnet_dist": 0.00067142,
+              "dir": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z",
+              "replay_identity": {
+                "archive_bytes": 186239,
+                "archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+                "device": "cuda",
+                "runtime_tree_sha256": "7f4f458f23f5c92d1e94891c27fd429266081ac66b359f40b7ce68ef4acd17dd",
+                "score_basis": "canonical_score",
+                "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json"
+              },
+              "runtime_tree_sha256": "7f4f458f23f5c92d1e94891c27fd429266081ac66b359f40b7ce68ef4acd17dd",
+              "score": 0.20945673680571203,
+              "score_basis": "canonical_score"
+            }
+          ]
+        },
+        "matches": [
+          {
+            "avg_posenet_dist": 3.351e-05,
+            "avg_segnet_dist": 0.00067142,
+            "device": "cuda",
+            "dir": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z",
+            "replay_identity": {
+              "archive_bytes": 186239,
+              "archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+              "device": "cuda",
+              "runtime_tree_sha256": "7f4f458f23f5c92d1e94891c27fd429266081ac66b359f40b7ce68ef4acd17dd",
+              "score_basis": "canonical_score",
+              "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json"
+            },
+            "runtime_tree_sha256": "7f4f458f23f5c92d1e94891c27fd429266081ac66b359f40b7ce68ef4acd17dd",
+            "score": 0.20945673680571203,
+            "score_basis": "canonical_score"
+          }
+        ],
+        "note": "A mismatch is not automatically a bad local replay. Public PR comments show some PR100+ rows were evaluated once on CUDA and again on CPU; the leaderboard may follow the CPU result while this repo's score claims still require CUDA for promoted internal lanes.",
+        "same_archive_scored_eval_count": 1,
+        "status": "leaderboard_matches_same_archive_local_replay"
+      },
+      "leaderboard_score": 0.209,
+      "merged_at": "2026-05-04T20:09:54Z",
+      "missing_proofs": [
+        "compress_to_archive_1to1_reproduction_required",
+        "decode_reencode_parity_proof_required"
+      ],
+      "pr": 106,
+      "ready_for_stack_atom": false,
+      "research_notes": [
+        ".omx/research/grand_council_pr106_substrate_findings_zig_default_20260507.md",
+        ".omx/research/hnerv_decoder_recode_pr106_20260506_codex.md",
+        ".omx/research/hnerv_pr106x_section_repack_plan_20260505_codex.md",
+        ".omx/research/lightning_plan_disposition_wr01_apply_pr106x_half_20260507_codex.md",
+        ".omx/research/pr103_pr106_ac_repack_exact_eval_20260507_codex.md",
+        ".omx/research/pr103_pr106_runtime_closure_20260507_codex.md",
+        ".omx/research/pr106_latent_sidecar_manifest_canonicalization_20260506_codex.md",
+        ".omx/research/pr106_lrl1_artifact_reducer_20260506_codex.md",
+        ".omx/research/pr106_lrl1_sidechannel_custody_metadata_20260506_codex.md",
+        ".omx/research/pr106_sidechannel_stack_gate_20260506_codex.md",
+        ".omx/research/pr106_sidechannel_stack_readiness_20260507_codex.md",
+        ".omx/research/pr106_sister_archive_zip_metadata_20260506_codex.md",
+        ".omx/research/pr106_stacked_archive_sha_custody_20260506_codex.md",
+        ".omx/research/pr106_stacked_sister_anchor_custody_20260506_codex.md",
+        ".omx/research/pr106_yshift_cuda_score_table_producer_20260506_codex.md",
+        ".omx/research/pr106_yshift_lightning_batch_dispatch_20260506_codex.md",
+        ".omx/research/pr106_yshift_lightning_launcher_guard_20260506_codex.md",
+        ".omx/research/pr106_yshift_score_table_batching_20260506_codex.md",
+        ".omx/research/pr106_yshift_score_table_builder_20260506_codex.md",
+        ".omx/research/pr106_yshift_score_table_manifest_custody_20260506_codex.md",
+        ".omx/research/pr106_yshift_score_table_manifest_gate_20260506_codex.md",
+        ".omx/research/pr106_yshift_score_table_npy_pickle_hardening_20260506_codex.md",
+        ".omx/research/pr106_yshift_scorer_backed_selector_20260506_codex.md",
+        ".omx/research/pr106x_archive_diet_audit_20260507_claude.md",
+        "reverse_engineering/orphan_pyc_recovery_20260505_codex/.omx/auto_memory_snapshot_20260504T230223Z/feedback_arithmetic_qint_codec_pr106_latents_unviable_brotli_already_below_entropy_20260504.md",
+        "reverse_engineering/orphan_pyc_recovery_20260505_codex/.omx/auto_memory_snapshot_20260504T230223Z/feedback_audit_pr106_revival_plans_consolidated_findings_20260504.md",
+        "reverse_engineering/orphan_pyc_recovery_20260505_codex/.omx/auto_memory_snapshot_20260504T230223Z/feedback_block_fp_codec_pr106_unviable_at_default_ternary_20260504.md",
+        "reverse_engineering/orphan_pyc_recovery_20260505_codex/.omx/auto_memory_snapshot_20260504T230223Z/feedback_pr106_no_mask_channel_lanes_05_06_falsified_20260504.md",
+        "reverse_engineering/orphan_pyc_recovery_20260505_codex/.omx/auto_memory_snapshot_20260504T230223Z/feedback_qzs3_codec_pr106_unviable_jointframegenerator_locked_20260504.md"
+      ],
+      "source": {
+        "key_files": {
+          "compress_py": null,
+          "compress_sh": {
+            "bytes": 991,
+            "path": "experiments/results/public_pr_intake_full/public_pr106_intake_20260505_auto/source/submissions/belt_and_suspenders/compress.sh",
+            "sha256": "c4c94c43d36884bc9bd5c6ff8624a8e6c3828103e3a4f4cf3fc68c8f22ba31f3"
+          },
+          "inflate_py": {
+            "bytes": 2197,
+            "path": "experiments/results/public_pr_intake_full/public_pr106_intake_20260505_auto/source/submissions/belt_and_suspenders/inflate.py",
+            "sha256": "e64529b2ab3fea2dea377629d69288a56afd7258f456e5ae48072c107d05e79a"
+          },
+          "inflate_sh": {
+            "bytes": 811,
+            "path": "experiments/results/public_pr_intake_full/public_pr106_intake_20260505_auto/source/submissions/belt_and_suspenders/inflate.sh",
+            "sha256": "0cb9c3df78ad870cadd2ac6d46007b6c1aeb6a61c76b7800ae74a00addafb885"
+          },
+          "readme": {
+            "bytes": 434,
+            "path": "experiments/results/public_pr_intake_full/public_pr106_intake_20260505_auto/source/submissions/belt_and_suspenders/README.md",
+            "sha256": "0374a9cecd6fdef2869d16bd0b4668ffeffa7887895bdae94a2a6db5a06260de"
+          },
+          "report": null
+        },
+        "source_file_count": 21,
+        "source_files_sha256": "f3083c1e10cac792e097d9ed9323991e290a3140279e6c4ae5f3faf715257b03",
+        "submission_dir": "experiments/results/public_pr_intake_full/public_pr106_intake_20260505_auto/source/submissions/belt_and_suspenders",
+        "submission_dir_present": true
+      },
+      "title": "belt_and_suspenders (0.20946)"
+    },
+    {
+      "archive": {
+        "blockers": [],
+        "bytes": 178392,
+        "duplicate_members": [],
+        "is_zip": true,
+        "member_count": 1,
+        "members": [
+          {
+            "bytes": 178284,
+            "compressed_bytes": 178284,
+            "crc32": "f4a2e754",
+            "name": "0.bin",
+            "order": 0,
+            "prefix_ascii": "P....O. ..n..N#p",
+            "prefix_hex": "500000001b4f00201d076eacc64e2370",
+            "sha256": "fce200db2fe087cc6a051945b3fda2c37f5bbb3e19b8f20a1aea7201db0c9f5f",
+            "unsafe_name": false
+          }
+        ],
+        "path": "experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/archive.zip",
+        "present": true,
+        "sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+        "unsafe_members": []
+      },
+      "archive_basis": "public_pr_intake_full_archive",
+      "author": "adpena",
+      "binary_understanding": {
+        "compress_reproduction_status": "missing_or_external",
+        "decode_reencode_parity_status": "missing_or_external",
+        "payload_prefixes_recorded": true,
+        "wire_grammar_status": "member_prefix_only",
+        "zip_member_manifest_present": true
+      },
+      "closed_at": "2026-05-04T17:51:52Z",
+      "created_at": "2026-05-04T12:10:42Z",
+      "diff_size": {
+        "additions": 1665,
+        "changed_files": 20,
+        "deletions": 0
+      },
+      "exact_eval_artifacts": [
+        {
+          "archive": {
+            "bytes": 178392,
+            "path": "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/archive.zip",
+            "sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb"
+          },
+          "archive_sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+          "archive_size_bytes": 178392,
+          "avg_posenet_dist": 0.00017394,
+          "avg_segnet_dist": 0.00068841,
+          "device": "cuda",
+          "dir": "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z",
+          "json_files": [],
+          "log_files": [
+            "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/adjudication.log",
+            "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/auth_eval.log"
+          ],
+          "runtime_tree_sha256": "0232154c17410621325ec1647e0f0723b3310d63b0d4bc4bf7bbb5e9aa2fccd0",
+          "score": 0.22933111465960354,
+          "score_basis": "canonical_score",
+          "source": "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/auth_eval.log",
+          "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/auth_eval.log"
+        }
+      ],
+      "exact_eval_summary": {
+        "identity_basis": [
+          "archive_sha256",
+          "device",
+          "runtime_tree_sha256"
+        ],
+        "same_archive_cuda_scored_eval_count": 1,
+        "same_archive_device_runtime_identity_count": 1,
+        "same_archive_eval_dir_count": 1,
+        "same_archive_replay_identities": [
+          {
+            "archive_bytes": 178392,
+            "archive_sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+            "device": "cuda",
+            "runtime_tree_sha256": "0232154c17410621325ec1647e0f0723b3310d63b0d4bc4bf7bbb5e9aa2fccd0",
+            "score_basis": "canonical_score",
+            "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/auth_eval.log"
+          }
+        ],
+        "same_archive_scored_eval_count": 1,
+        "same_archive_structured_json_eval_count": 0,
+        "total_eval_dir_count": 1
+      },
+      "head_repo": "adpena/comma_video_compression_challenge",
+      "head_sha": "20c411b58c9270dfb6ce19742e657fefd1f54829",
+      "intake": {
+        "archive_provenance": {
+          "bytes": 252,
+          "path": "experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/archive_provenance.json",
+          "sha256": "926674078670f9e0151893ab9eac8a8957e0b53a29c833572a46f7429da68ef1"
+        },
+        "archive_provenance_status": "exists_skipped",
+        "dir": "experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto",
+        "metadata": {
+          "bytes": 447,
+          "path": "experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/pr_metadata.json",
+          "sha256": "c56e7b466db2e4bf3a509e3e4f30fdcdd0c8b49c0cae9feb27332c7b6feb9c1a"
+        }
+      },
+      "leaderboard_name": "apogee",
+      "leaderboard_replay_drift": {
+        "identity_basis": [
+          "archive_sha256",
+          "device",
+          "runtime_tree_sha256"
+        ],
+        "leaderboard_score": 0.229,
+        "local_scores_by_device": {
+          "cuda": [
+            {
+              "avg_posenet_dist": 0.00017394,
+              "avg_segnet_dist": 0.00068841,
+              "dir": "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z",
+              "replay_identity": {
+                "archive_bytes": 178392,
+                "archive_sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+                "device": "cuda",
+                "runtime_tree_sha256": "0232154c17410621325ec1647e0f0723b3310d63b0d4bc4bf7bbb5e9aa2fccd0",
+                "score_basis": "canonical_score",
+                "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/auth_eval.log"
+              },
+              "runtime_tree_sha256": "0232154c17410621325ec1647e0f0723b3310d63b0d4bc4bf7bbb5e9aa2fccd0",
+              "score": 0.22933111465960354,
+              "score_basis": "canonical_score"
+            }
+          ]
+        },
+        "matches": [
+          {
+            "avg_posenet_dist": 0.00017394,
+            "avg_segnet_dist": 0.00068841,
+            "device": "cuda",
+            "dir": "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z",
+            "replay_identity": {
+              "archive_bytes": 178392,
+              "archive_sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+              "device": "cuda",
+              "runtime_tree_sha256": "0232154c17410621325ec1647e0f0723b3310d63b0d4bc4bf7bbb5e9aa2fccd0",
+              "score_basis": "canonical_score",
+              "structured_result_source": "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/auth_eval.log"
+            },
+            "runtime_tree_sha256": "0232154c17410621325ec1647e0f0723b3310d63b0d4bc4bf7bbb5e9aa2fccd0",
+            "score": 0.22933111465960354,
+            "score_basis": "canonical_score"
+          }
+        ],
+        "note": "A mismatch is not automatically a bad local replay. Public PR comments show some PR100+ rows were evaluated once on CUDA and again on CPU; the leaderboard may follow the CPU result while this repo's score claims still require CUDA for promoted internal lanes.",
+        "same_archive_scored_eval_count": 1,
+        "status": "leaderboard_matches_same_archive_local_replay"
+      },
+      "leaderboard_score": 0.229,
+      "merged_at": null,
+      "missing_proofs": [
+        "compress_entrypoint_missing",
+        "compress_to_archive_1to1_reproduction_required",
+        "decode_reencode_parity_proof_required",
+        "same_archive_structured_exact_eval_json_missing",
+        "structured_exact_eval_json_missing"
+      ],
+      "pr": 107,
+      "ready_for_stack_atom": false,
+      "research_notes": [
+        ".omx/research/pr107_post_submission_hardening_pr100_replay_addendum_20260504_codex.md"
+      ],
+      "source": {
+        "key_files": {
+          "compress_py": null,
+          "compress_sh": null,
+          "inflate_py": {
+            "bytes": 2375,
+            "path": "experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee/inflate.py",
+            "sha256": "fdfbfec9bebae59424ad3fd56191074369d3958e77ccd8e645559d28d3d252cd"
+          },
+          "inflate_sh": {
+            "bytes": 542,
+            "path": "experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee/inflate.sh",
+            "sha256": "a24c0d11d18eca1e9680f2e46c800222115bf02f8c70e1c78c18aa2f0a8953f7"
+          },
+          "readme": null,
+          "report": null
+        },
+        "source_file_count": 20,
+        "source_files_sha256": "c009fe8c729e0e61b9bc8f0aa76c8241ab5d39c9e8e313d2c448801a1691aef1",
+        "submission_dir": "experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee",
+        "submission_dir_present": true
+      },
+      "title": "apogee submission (0.2293)"
+    }
+  ],
+  "schema_version": 1,
+  "score_claim": false,
+  "summary": {
+    "leaderboard_replay_drift_count": 4,
+    "missing_decode_reencode_count": 7,
+    "missing_exact_cuda_count": 2,
+    "missing_same_archive_structured_json_count": 6,
+    "missing_structured_json_count": 6,
+    "ready_for_stack_atom_count": 0,
+    "row_count": 8
+  },
+  "tool": "tools/build_pr100_107_reproduction_ledger.py"
+}
