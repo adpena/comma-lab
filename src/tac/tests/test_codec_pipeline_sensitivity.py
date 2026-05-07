@@ -33,6 +33,9 @@ from tac.codec_pipeline import (
     Op1_PR101SplitBrotli,
 )
 from tac.codec_pipeline_sensitivity import (
+    _BETA_IDENTITY_CONTEXT_KEY,
+    _BETA_IDENTITY_MARKER_BLOB,
+    _BETA_IDENTITY_MARKER_MAGIC,
     SUPPORTED_SENSITIVITY_SOURCES,
     Op_SensitivityPreprocess,
     SensitivityPreprocessError,
@@ -78,10 +81,13 @@ def test_op_satisfies_codec_op_protocol() -> None:
 # ---------------------------------------------------------------------------
 
 def test_identity_is_bit_faithful_roundtrip() -> None:
+    """Identity short-circuit: encode + decode share the SAME ``context``
+    dict so the substrate stash is visible at decode time."""
     sd = _synthetic_state_dict()
     op = Op_SensitivityPreprocess.identity()
-    res = op.encode(sd, context={})
-    decoded = op.decode(res.blob, op_state=res.op_state, context={})
+    ctx: dict[str, object] = {}
+    res = op.encode(sd, context=ctx)
+    decoded = op.decode(res.blob, op_state=res.op_state, context=ctx)
 
     assert set(decoded.keys()) == set(sd.keys())
     for name, tensor in sd.items():
@@ -97,6 +103,26 @@ def test_identity_is_bit_faithful_roundtrip() -> None:
     assert res.op_state["n_high"] == 0
     assert res.op_state["n_mid"] == len(sd)
     assert res.op_state["n_low"] == 0
+    # Identity short-circuit flag is set.
+    assert res.op_state["is_identity"] is True
+
+
+def test_identity_legacy_bit_faithful_roundtrip_when_optimize_disabled() -> None:
+    """Legacy behaviour preserved: ``optimize_identity=False`` re-enables
+    the full BetaPSD payload so the blob is self-contained even without
+    a shared context."""
+    sd = _synthetic_state_dict()
+    op = Op_SensitivityPreprocess.identity(optimize_identity=False)
+    res = op.encode(sd, context={})
+    # Separate context dict at decode — works because the blob is full payload.
+    decoded = op.decode(res.blob, op_state=res.op_state, context={})
+
+    assert set(decoded.keys()) == set(sd.keys())
+    for name, tensor in sd.items():
+        assert torch.equal(decoded[name], tensor.detach())
+    assert res.op_state["is_identity"] is False
+    # Legacy payload is materially larger than the 12-byte marker.
+    assert res.bytes_out > 1000
 
 
 # ---------------------------------------------------------------------------
@@ -211,19 +237,27 @@ def test_stub_classifies_low_to_int4_high_to_fp16() -> None:
 
 def test_stub_low_sens_blob_smaller_than_identity_blob() -> None:
     """Pre-quantizing low-sensitivity tensors to int4 should produce a more
-    compressible beta blob than identity transform on the same state_dict."""
+    compressible beta blob than the LEGACY identity transform (full
+    BetaPSD payload) on the same state_dict.
+
+    This test compares against ``optimize_identity=False`` because the
+    Council short-circuit fix (2026-05-07) turned the optimised identity
+    path into a 12-byte marker — so the only meaningful "identity payload
+    vs stub-low-sens payload" comparison is against the legacy path that
+    actually serialises the full state_dict.
+    """
     sd = _synthetic_state_dict()
     scores = _stub_scores_mostly_low(sd)
 
-    op_identity = Op_SensitivityPreprocess.identity()
-    res_identity = op_identity.encode(sd, context={})
+    op_identity_legacy = Op_SensitivityPreprocess.identity(optimize_identity=False)
+    res_identity = op_identity_legacy.encode(sd, context={})
 
     op_stub = Op_SensitivityPreprocess(sensitivity_source="stub")
     res_stub = op_stub.encode(sd, context={"sensitivity_scores": scores})
 
     assert res_stub.bytes_out < res_identity.bytes_out, (
         f"stub-low-sensitivity beta blob ({res_stub.bytes_out}B) should be smaller "
-        f"than identity beta blob ({res_identity.bytes_out}B); "
+        f"than legacy identity beta blob ({res_identity.bytes_out}B); "
         f"int4 substrate was supposed to give us empirical byte savings"
     )
 
@@ -303,6 +337,139 @@ def test_byte_deterministic_with_stub_scores() -> None:
     res_a = op.encode(sd, context={"sensitivity_scores": dict(scores)})
     res_b = op.encode(sd, context={"sensitivity_scores": dict(scores)})
     assert res_a.blob == res_b.blob
+
+
+# ---------------------------------------------------------------------------
+# Identity short-circuit (Council fix 2026-05-07)
+# ---------------------------------------------------------------------------
+
+def test_beta_identity_emits_minimal_blob() -> None:
+    """The identity short-circuit must emit a TINY marker blob (< 100 bytes),
+    not a full BetaPSD-of-the-state_dict payload.
+
+    Council fix 2026-05-07 (Selfcomp + Boyd) — the prior behaviour ballooned
+    PR106 to 274,411 B for a no-op transform.
+    """
+    sd = _synthetic_state_dict()
+    op = Op_SensitivityPreprocess.identity()
+    res = op.encode(sd, context={})
+    assert res.op_state["is_identity"] is True
+    assert res.bytes_out < 100, (
+        f"identity short-circuit must emit < 100 bytes; got {res.bytes_out}B "
+        f"(blob magic={res.blob[:8]!r})"
+    )
+    # Blob is exactly the published marker.
+    assert res.blob == _BETA_IDENTITY_MARKER_BLOB
+    assert res.blob[: len(_BETA_IDENTITY_MARKER_MAGIC)] == _BETA_IDENTITY_MARKER_MAGIC
+
+
+def test_beta_identity_pipeline_total_near_op1_alone() -> None:
+    """Pipeline ``[β_identity, Op1]`` total bytes must be within 1% of
+    ``[Op1]`` alone — the β identity short-circuit costs only the CPL1
+    wrapper overhead for a 12-byte marker, not a full state_dict payload.
+
+    Empirical anchor from PR106 measured pre-fix:
+    ``beta_identity_then_Op1=445,840 B`` vs ``Op1_alone=170,037 B``
+    (2.6× ballooning). Post-fix the pipeline overhead is the CPL1 envelope
+    bytes plus 12 marker bytes.
+    """
+    sd = _synthetic_state_dict()
+    overrides = {0: "negzig", 5: "off"}
+
+    pipe_op1_only = CodecPipeline([
+        Op1_PR101SplitBrotli(auto_select=False, explicit_overrides=overrides),
+    ])
+    pipe_beta_op1 = CodecPipeline([
+        Op_SensitivityPreprocess.identity(),
+        Op1_PR101SplitBrotli(auto_select=False, explicit_overrides=overrides),
+    ])
+
+    blob_op1, _ = pipe_op1_only.encode(sd)
+    blob_beta_op1, _ = pipe_beta_op1.encode(sd)
+
+    n_op1 = len(blob_op1)
+    n_beta_op1 = len(blob_beta_op1)
+    overhead = n_beta_op1 - n_op1
+    overhead_pct = overhead / n_op1
+    # Within 1% of Op1_alone — strict bound per the task spec.
+    assert overhead_pct < 0.01, (
+        f"identity-pipeline overhead {overhead}B ({overhead_pct:.3%} of Op1_alone "
+        f"{n_op1}B) must be < 1% of Op1_alone — Council fix should have closed "
+        f"the substrate ballooning"
+    )
+    # Hard floor: the overhead must be at least the marker size (12 bytes) +
+    # the CPL1 per-op envelope (16 bytes name+state+blob length headers +
+    # the op name string + the json-encoded op_state). We don't pin the
+    # exact number to avoid coupling to op_state schema changes.
+    assert overhead > 0, (
+        "β identity adds at least the CPL1 envelope + marker bytes"
+    )
+
+
+def test_beta_identity_decode_without_context_returns_empty_dict() -> None:
+    """At decompress time the CPL1 wrapper does not have the original
+    substrate in context. β-identity decode must return an empty dict
+    (which the pipeline overrides with the next op's decoded state).
+    """
+    op = Op_SensitivityPreprocess.identity()
+    sd = _synthetic_state_dict()
+    res = op.encode(sd, context={})
+    # Decode with a SEPARATE empty context — no substrate stashed.
+    decoded = op.decode(res.blob, op_state=res.op_state, context={})
+    assert decoded == {}
+
+
+def test_beta_identity_in_pipeline_decompress_roundtrips_via_op1() -> None:
+    """End-to-end: encode through ``[β_identity, Op1]``, decode the CPL1
+    wrapper without context, get the full state_dict back via Op 1's blob
+    (β identity decode at decompress correctly returns empty, then Op 1
+    overrides decoded_state with the real reconstruction).
+    """
+    sd = _synthetic_state_dict()
+    pipe = CodecPipeline([
+        Op_SensitivityPreprocess.identity(),
+        Op1_PR101SplitBrotli(auto_select=False),
+    ])
+    blob, _ = pipe.encode(sd)
+    decoded, replayed = pipe.decode(blob)
+    assert replayed == ["sensitivity_preprocess", "pr101_split_brotli"]
+    assert set(decoded.keys()) == set(sd.keys())
+    for name, shape in FIXED_STATE_SCHEMA:
+        assert tuple(decoded[name].shape) == shape
+
+
+def test_beta_identity_marker_blob_decode_rejects_corrupt_magic() -> None:
+    """Decoder must refuse a blob that flags is_identity=True but lacks
+    the marker magic (defends against op_state corruption / schema drift)."""
+    op = Op_SensitivityPreprocess.identity()
+    bogus_blob = b"NOTAMAGIC" + b"\x00\x00\x00\x00"
+    with pytest.raises(SensitivityPreprocessError, match="lacks marker magic"):
+        op.decode(bogus_blob, op_state={"is_identity": True}, context={})
+
+
+def test_beta_identity_context_stash_is_isolated_per_call() -> None:
+    """Two encodes with separate context dicts produce independent stashes;
+    the second encode does not see the first's substrate."""
+    sd_a = _synthetic_state_dict(seed=0)
+    sd_b = _synthetic_state_dict(seed=1)
+    op = Op_SensitivityPreprocess.identity()
+
+    ctx_a: dict[str, object] = {}
+    res_a = op.encode(sd_a, context=ctx_a)
+    decoded_a = op.decode(res_a.blob, op_state=res_a.op_state, context=ctx_a)
+
+    ctx_b: dict[str, object] = {}
+    res_b = op.encode(sd_b, context=ctx_b)
+    decoded_b = op.decode(res_b.blob, op_state=res_b.op_state, context=ctx_b)
+
+    # Different inputs, but the BLOBS are byte-identical (just the marker).
+    assert res_a.blob == res_b.blob
+    # Stashes are isolated per-call (different ctx dicts).
+    assert ctx_a[_BETA_IDENTITY_CONTEXT_KEY] is not ctx_b[_BETA_IDENTITY_CONTEXT_KEY]
+    # And each decode returns the correct corresponding substrate.
+    for name in sd_a:
+        assert torch.equal(decoded_a[name], sd_a[name])
+        assert torch.equal(decoded_b[name], sd_b[name])
 
 
 # ---------------------------------------------------------------------------

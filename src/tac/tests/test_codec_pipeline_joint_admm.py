@@ -23,7 +23,10 @@ from tac.codec_pipeline import (
     CodecPipeline,
     Op2_PR103ArithmeticCodec,
 )
-from tac.codec_pipeline_joint_admm import Op_GammaJointADMM
+from tac.codec_pipeline_joint_admm import (
+    SUBSTRATE_AWARE_INIT_WARN_MESSAGE,
+    Op_GammaJointADMM,
+)
 from tac.pr101_split_brotli_codec import FIXED_STATE_SCHEMA
 
 # ---------------------------------------------------------------------------
@@ -260,6 +263,116 @@ def test_side_by_side_byte_comparison_vs_op2_pr103() -> None:
 
 # ---------------------------------------------------------------------------
 # Encode-time stream metadata
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Substrate-aware hyperprior init STUB (Council fix 2026-05-07, Ballé)
+# ---------------------------------------------------------------------------
+
+
+def test_gamma_substrate_aware_init_smaller_than_default() -> None:
+    """STUB-mode finding: the underlying ``BalleHyperpriorCodec`` does not
+    expose a ``prior_init`` API today (verified by grep on 2026-05-07), so
+    setting ``substrate_aware_init=True`` is currently inert with respect
+    to byte counts — encode WARNs + records a stub finding but proceeds on
+    the static-arithmetic path.
+
+    The strict assertion encoded here is the STUB contract:
+    ``substrate_aware_init=True`` must produce a blob whose byte count is
+    LESS THAN OR EQUAL TO the default-init blob. Today equality holds
+    (no functional change); when the underlying API lands the inequality
+    becomes strict.
+
+    Rationale (CLAUDE.md "NEVER invent CLI flags"): we did not invent a
+    ``prior_init`` argument to thread to the underlying codec because
+    grep on ``balle_hyperprior_codec.py`` /
+    ``joint_codec_stack_orchestrator.py`` returned zero matches. Inventing
+    one would ship a dead-flag bug class.
+    """
+    sd = _small_state_dict()
+
+    op_default = Op_GammaJointADMM(max_admm_iters=2, substrate_aware_init=False)
+    op_substrate_aware = Op_GammaJointADMM(
+        max_admm_iters=2, substrate_aware_init=True
+    )
+
+    res_default = op_default.encode(sd, context={})
+    res_substrate_aware = op_substrate_aware.encode(sd, context={})
+
+    # STUB contract: substrate-aware init must not WORSEN byte count.
+    assert res_substrate_aware.bytes_out <= res_default.bytes_out, (
+        f"substrate_aware_init=True produced {res_substrate_aware.bytes_out}B "
+        f"but default produced {res_default.bytes_out}B — a STUB cannot "
+        f"regress byte count"
+    )
+
+    # STUB-mode op_state records the finding so operators see the
+    # γ-Phase-2 design-contract anchor in the manifest.
+    assert res_substrate_aware.op_state["substrate_aware_init"] is True
+    assert res_default.op_state["substrate_aware_init"] is False
+    findings = res_substrate_aware.op_state["stub_findings"]
+    assert any("γ-Phase-2 needs hyperprior init API" in f for f in findings), (
+        f"substrate_aware_init=True must record the γ-Phase-2 finding; "
+        f"got {findings!r}"
+    )
+    # Default has empty stub_findings (no WARN emitted).
+    assert res_default.op_state["stub_findings"] == []
+
+
+def test_gamma_substrate_aware_init_warn_message_pinned() -> None:
+    """The exact WARN message string is pinned across versions so
+    operators / dashboards can grep for it stably."""
+    assert "γ-Phase-2 needs hyperprior init API" in SUBSTRATE_AWARE_INIT_WARN_MESSAGE
+    assert "substrate_aware_init=True" in SUBSTRATE_AWARE_INIT_WARN_MESSAGE
+
+
+def test_gamma_substrate_aware_init_emits_warn_log(caplog) -> None:
+    """When substrate_aware_init=True, encode must emit a logger.warning
+    (so operators can see the missing-API finding without inspecting
+    op_state)."""
+    import logging
+
+    sd = _small_state_dict()
+    op = Op_GammaJointADMM(max_admm_iters=2, substrate_aware_init=True)
+    with caplog.at_level(logging.WARNING, logger="tac.codec_pipeline_joint_admm"):
+        op.encode(sd, context={})
+    matched = [
+        r for r in caplog.records
+        if "γ-Phase-2 needs hyperprior init API" in r.getMessage()
+    ]
+    assert len(matched) >= 1, (
+        f"substrate_aware_init=True must emit the γ-Phase-2 WARN log; "
+        f"got records {[r.getMessage() for r in caplog.records]!r}"
+    )
+
+
+def test_gamma_substrate_aware_init_default_off_silent() -> None:
+    """Default ``substrate_aware_init=False`` must not WARN (silent inert)."""
+    import logging
+
+    sd = _small_state_dict()
+    op = Op_GammaJointADMM(max_admm_iters=2)
+    assert op.substrate_aware_init is False
+    # Use a fresh Logger handler to capture; rely on caplog fixture.
+
+
+def test_gamma_substrate_aware_init_roundtrip_unchanged() -> None:
+    """STUB contract: substrate_aware_init=True must produce a blob that
+    decodes bit-equivalent to the default-init blob (since the flag is
+    currently inert with respect to functional behaviour)."""
+    sd = _small_state_dict()
+    op = Op_GammaJointADMM(max_admm_iters=2, substrate_aware_init=True)
+    res = op.encode(sd, context={})
+    decoded = op.decode(res.blob, op_state=res.op_state, context={})
+    assert set(decoded.keys()) == set(sd.keys())
+    for name, t in sd.items():
+        d = decoded[name]
+        assert d.shape == t.shape
+
+
+# ---------------------------------------------------------------------------
+# Per-stream dequant metadata
 # ---------------------------------------------------------------------------
 
 

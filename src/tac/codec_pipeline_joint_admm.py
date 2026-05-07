@@ -51,6 +51,44 @@ extension is a reviewed precomputed-qint corpus path. This wrapper does not
 currently implement that bypass; it always uses its internal deterministic int8
 quantisation pass.
 
+Substrate-aware hyperprior initialization (Council STUB 2026-05-07)
+-------------------------------------------------------------------
+Ballé's Grand Council position
+(``.omx/research/grand_council_pr106_substrate_findings_zig_default_20260507.md``)
+flagged that gamma's PR106 regression (202,544 B vs Op2_alone's 169,755 B,
++33K B) stems from the hyperprior using default factorized priors that don't
+model PR106's actual tensor distributions. His CPU-only fix prescription:
+**substrate-aware INITIALIZATION** of the hyperprior from per-tensor
+empirical histograms before invoking the joint orchestrator.
+
+Status: the underlying :class:`tac.balle_hyperprior_codec.BalleHyperpriorCodec`
+does NOT expose a ``prior_init`` parameter — its hyperprior network is
+trained end-to-end and the static-arithmetic baseline (the path gamma
+actually uses today via ``KIND_ARITHMETIC_STATIC``) builds the symbol
+frequency table from the qint stream itself, so the static prior is
+already substrate-aware by construction.
+
+Per CLAUDE.md "NEVER invent CLI flags" we GREPPED the underlying codec
+APIs (``balle_hyperprior_codec.py``, ``joint_codec_stack_orchestrator.py``,
+``arithmetic_qint_codec.py``) for ``prior_init`` / ``substrate_aware_init``
+/ ``empirical_prior`` keywords on 2026-05-07: zero matches. Inventing a
+flag the underlying codec would silently ignore would ship a dead-flag
+bug class (the ``feedback_dead_flag_wiring_pattern`` memory).
+
+Fix landed: a ``substrate_aware_init: bool = False`` flag is exposed on
+:class:`Op_GammaJointADMM` as a STUB. When True, the encoder logs a
+WARN-level message that the hyperprior init API is missing ("γ-Phase-2
+needs hyperprior init API"), records a finding in ``op_state``, and
+proceeds with the existing static-arithmetic path (the WARN does not
+abort encode — the existing behaviour is byte-identical regardless of
+the flag). When False (default), the flag is silently inert.
+
+When the underlying ``BalleHyperpriorCodec`` grows a ``prior_init`` /
+``hyperprior_warmstart_from_histogram`` API, this STUB graduates: encode
+will pre-compute per-tensor histograms and pass them through context to
+the orchestrator. Until then this flag is a forensic record + design
+contract anchor, not a functional behaviour change.
+
 References
 ----------
 * :mod:`tac.codec_pipeline` - ``CodecOp`` Protocol, ``CodecPipeline``
@@ -66,6 +104,7 @@ References
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
@@ -73,6 +112,25 @@ import numpy as np
 import torch
 
 from tac.codec_pipeline import EncodeResult, ValidationReport
+
+logger = logging.getLogger(__name__)
+
+# Council STUB 2026-05-07 (Ballé): substrate-aware hyperprior initialisation
+# is the prescribed CPU-only fix for the +33K B PR106 regression. The
+# underlying ``BalleHyperpriorCodec`` does not yet expose a ``prior_init``
+# API (verified by grep on 2026-05-07; per CLAUDE.md "NEVER invent CLI
+# flags"). Until the underlying codec grows the API, the flag is a STUB:
+# WARN-only behaviour, no functional change. The exact WARN string is
+# pinned here so tests + the substrate-aware-init flag's forensic record
+# can match against it stably.
+SUBSTRATE_AWARE_INIT_WARN_MESSAGE = (
+    "Op_GammaJointADMM(substrate_aware_init=True): γ-Phase-2 needs "
+    "hyperprior init API. The underlying tac.balle_hyperprior_codec does "
+    "not yet expose a prior_init / empirical_prior parameter; encode "
+    "proceeds with the existing static-arithmetic path (no functional "
+    "change). When the underlying API lands, this STUB will graduate to "
+    "pre-computing per-tensor histograms and threading them via context."
+)
 
 # ---------------------------------------------------------------------------
 # Per-tensor symmetric int8 quantisation helpers
@@ -147,6 +205,14 @@ class Op_GammaJointADMM:
         (the orchestrator's auto-fallback path also covers BHv1
         static-wins). Future work: wire a Ballé codec instance per
         large tensor when ``context['use_balle_hyperprior']=True``.
+    substrate_aware_init : bool
+        Council STUB 2026-05-07 (Ballé). When True, encode logs a WARN
+        about the missing ``prior_init`` API on the underlying Ballé
+        codec and records a "γ-Phase-2 needs hyperprior init API"
+        finding in ``op_state['stub_findings']``. No functional change
+        to byte counts or roundtrip behaviour today; the flag is the
+        design-contract anchor for the fix that requires GPU training
+        of an end-to-end hyperprior. Default False (silent inert).
     name : str
         ``"gamma_joint_admm"``.
     """
@@ -154,6 +220,7 @@ class Op_GammaJointADMM:
     rho_init: float = 1.0
     max_admm_iters: int = 50
     balle_quality: int = 4
+    substrate_aware_init: bool = False
     name: str = "gamma_joint_admm"
 
     # ---- Validation ---------------------------------------------------------
@@ -241,6 +308,18 @@ class Op_GammaJointADMM:
             t.numel() * t.element_size() for t in state_dict.values()
         )
 
+        # Council STUB 2026-05-07 (Ballé): substrate-aware hyperprior init
+        # is the prescribed CPU-only fix for the +33K B PR106 regression.
+        # The underlying BalleHyperpriorCodec does not yet expose a
+        # prior_init API (verified by grep). When set, log a WARN and
+        # record a finding in op_state; do NOT invent flags / silently
+        # mutate behaviour. Encode proceeds with the existing static
+        # arithmetic path.
+        stub_findings: list[str] = []
+        if self.substrate_aware_init:
+            logger.warning(SUBSTRATE_AWARE_INIT_WARN_MESSAGE)
+            stub_findings.append(SUBSTRATE_AWARE_INIT_WARN_MESSAGE)
+
         # Stable encoding order: sorted by tensor name. JCSv1 packing is
         # deterministic given identical input order; sorted keys give
         # bit-determinism across runs.
@@ -301,6 +380,8 @@ class Op_GammaJointADMM:
             "admm_iters": int(result.iters),
             "admm_converged": bool(result.converged),
             "stream_count": len(stream_meta),
+            "substrate_aware_init": bool(self.substrate_aware_init),
+            "stub_findings": stub_findings,
         }
 
         return EncodeResult(
@@ -407,4 +488,5 @@ class Op_GammaJointADMM:
 
 __all__ = [
     "Op_GammaJointADMM",
+    "SUBSTRATE_AWARE_INIT_WARN_MESSAGE",
 ]

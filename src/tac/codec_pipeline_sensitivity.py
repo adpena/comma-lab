@@ -78,6 +78,44 @@ the substrate that downstream Op 1/Op 2 expect), so dtype_id is 0 in all
 current configurations; the byte is reserved for a future fp16-on-the-wire
 optimization.
 
+Identity short-circuit (Council fix 2026-05-07)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When :attr:`Op_SensitivityPreprocess.optimize_identity` is True (the default)
+**and** the configuration is identity (every tensor lands in the *mid*
+band, no transformation applied), encode emits a TINY 12-byte marker
+blob (``magic + 4-byte zero "n_tensors"``) instead of serialising the
+full fp32 substrate. The op_state records ``is_identity=True``.
+
+The decoder, when it sees ``is_identity=True``, looks up the original
+substrate from the shared ``context["_beta_identity_substrate"]`` slot
+that encode populated. Within a single :class:`CodecPipeline.encode`
+call, the orchestrator threads the same ``ctx`` dict through every op's
+encode + the immediate substrate-transform decode, so the next op
+(Op 1 / Op 2 / etc.) sees the original substrate without any byte cost
+beyond the 12-byte marker.
+
+For standalone (non-pipeline) encode + decode the caller MUST pass the
+SAME context dict to both calls (encode mutates it, decode reads it).
+Tests cover both the pipeline-threaded path and the same-context path.
+
+At decompress time the pipeline does NOT have the original substrate in
+context (we only ship the BLOB), so β-identity decode without context
+returns an empty state_dict. This is intentional and safe: the pipeline
+loop in :meth:`CodecPipeline.decode` overrides ``decoded_state`` on every
+iteration and returns only the LAST op's decoded state, so the empty
+β output is discarded. Operators using β identity *as the only op*
+without context would receive an empty state_dict — that mode is
+explicitly degenerate and not part of the supported configuration
+(β identity is meant to compose, not to ship alone).
+
+This optimisation closes a 274,411 B substrate ballooning on PR106
+(``[empirical:experiments/results/lane_codec_pipeline_full_stack_pr106_20260507T172731Z/composition_matrix_pr106.json]``)
+where the ``beta_identity_then_Op1`` stack measured 445,840 B vs
+Op1_alone's 170,037 B — beta was paying full state_dict bytes for a
+no-op transform. Selfcomp + Boyd flagged this in the Grand Council
+review at ``.omx/research/grand_council_pr106_substrate_findings_zig_default_20260507.md``.
+
 Strict-scorer-rule: this op never loads scorers. Sensitivity must be supplied
 upstream (via the artifact or stub dict).
 
@@ -247,6 +285,16 @@ SUPPORTED_SENSITIVITY_SOURCES: frozenset[str] = frozenset(
 # will re-encode anyway). Quality 11 is overkill since beta is not the final
 # encoding stage.
 DEFAULT_BROTLI_QUALITY = 9
+
+# Identity short-circuit (Council fix 2026-05-07): when beta detects that
+# every tensor lands in the mid band (i.e. the configured op IS the identity
+# transform), encode emits a tiny 12-byte marker blob instead of the full
+# BetaPSD payload. The shared ``context`` dict is used to thread the original
+# substrate through to the in-pipeline decode call. Constants keep the magic
+# bytes and the context key DRY across encode/decode + tests.
+_BETA_IDENTITY_MARKER_MAGIC = b"BetaIDv0"  # 8 bytes, distinct from BetaPSD magic.
+_BETA_IDENTITY_MARKER_BLOB = _BETA_IDENTITY_MARKER_MAGIC + struct.pack("<I", 0)
+_BETA_IDENTITY_CONTEXT_KEY = "_beta_identity_substrate"
 
 
 class SensitivityPreprocessError(ValueError):
@@ -442,6 +490,14 @@ class Op_SensitivityPreprocess:
         low_bits: bit-depth for low-sensitivity tensors. Default 4 (int4
             substrate). Range 2..8.
         brotli_quality: brotli quality for the inter-op blob. Default 9.
+        optimize_identity: when True (default) and every tensor classifies
+            to the *mid* band (no transform applied), emit a 12-byte marker
+            blob and thread the original substrate through ``context``
+            instead of serialising the full fp32 state_dict. Closes the
+            274,411 B substrate ballooning observed on PR106 in the
+            Council review (zig_default findings 2026-05-07). Set to
+            False to force the full BetaPSD payload (legacy behaviour
+            useful for forensic / comparative measurements).
 
     Invariants:
         * Bit-faithful roundtrip *of the transformed state_dict* - encode
@@ -449,6 +505,10 @@ class Op_SensitivityPreprocess:
           ops would have encoded.
         * Identity behavior when constructed via
           :meth:`Op_SensitivityPreprocess.identity`.
+        * Identity short-circuit: when configured for identity AND
+          ``optimize_identity=True``, the emitted blob is the 12-byte
+          marker; encode + decode share the input substrate via the
+          shared ``context`` dict ``_beta_identity_substrate`` slot.
         * Validation rejects unknown ``sensitivity_source``.
     """
 
@@ -459,6 +519,7 @@ class Op_SensitivityPreprocess:
     low_threshold: float = 0.1
     low_bits: int = 4
     brotli_quality: int = DEFAULT_BROTLI_QUALITY
+    optimize_identity: bool = True
 
     @classmethod
     def identity(cls, **kwargs: Any) -> Op_SensitivityPreprocess:
@@ -570,7 +631,7 @@ class Op_SensitivityPreprocess:
         *,
         context: dict[str, Any] | None = None,
     ) -> EncodeResult:
-        ctx = context or {}
+        ctx = context if context is not None else {}
         # Reject unknown sensitivity_source eagerly even if the caller
         # passed skip_validate=True at the pipeline level - encoding with
         # an unknown source would silently be uniform, which is a
@@ -583,12 +644,26 @@ class Op_SensitivityPreprocess:
 
         bytes_in = sum(t.numel() * t.element_size() for t in state_dict.values())
         classes, scores = self._classify_state_dict(state_dict, ctx)
-        transformed = _apply_classification(state_dict, classes, low_bits=self.low_bits)
 
-        # Serialize via the deterministic BetaPSD wire format (see module
-        # docstring). brotli compresses the result for inter-op transit.
-        raw_bytes = _serialize_state_dict(transformed)
-        blob = brotli.compress(raw_bytes, quality=self.brotli_quality)
+        n_high = sum(1 for c in classes.values() if c == _CLASS_HIGH)
+        n_mid = sum(1 for c in classes.values() if c == _CLASS_MID)
+        n_low = sum(1 for c in classes.values() if c == _CLASS_LOW)
+
+        # Identity short-circuit: when every tensor lands in the mid band
+        # the op is a no-op transform. Emit a 12-byte marker blob and stash
+        # the input substrate in the shared context dict so the immediate
+        # in-pipeline decode (or a same-context standalone decode) can
+        # carry the substrate through without paying the full fp32 byte
+        # cost. Council fix 2026-05-07 (Selfcomp + Boyd) — closes the
+        # 274,411 B PR106 ballooning measured at
+        # ``experiments/results/lane_codec_pipeline_full_stack_pr106_20260507T172731Z/composition_matrix_pr106.json``.
+        is_identity = (
+            self.optimize_identity
+            and self.sensitivity_source == "uniform"
+            and n_high == 0
+            and n_low == 0
+            and n_mid == len(classes)
+        )
 
         op_state: dict[str, Any] = {
             "sensitivity_source": self.sensitivity_source,
@@ -597,10 +672,32 @@ class Op_SensitivityPreprocess:
             "low_bits": self.low_bits,
             "classes": classes,
             "scores": scores,
-            "n_high": sum(1 for c in classes.values() if c == _CLASS_HIGH),
-            "n_mid": sum(1 for c in classes.values() if c == _CLASS_MID),
-            "n_low": sum(1 for c in classes.values() if c == _CLASS_LOW),
+            "n_high": n_high,
+            "n_mid": n_mid,
+            "n_low": n_low,
+            "is_identity": is_identity,
         }
+
+        if is_identity:
+            # Stash the substrate so decode can return it without the
+            # serialised payload. ``ctx`` is the same dict the pipeline
+            # threads through every op for this encode + the immediate
+            # substrate-transform decode (see CodecPipeline.encode).
+            ctx[_BETA_IDENTITY_CONTEXT_KEY] = dict(state_dict)
+            blob = _BETA_IDENTITY_MARKER_BLOB
+            return EncodeResult(
+                blob=blob,
+                bytes_in=bytes_in,
+                bytes_out=len(blob),
+                op_name=self.name,
+                op_state=op_state,
+            )
+
+        # Non-identity path: full BetaPSD wire format.
+        transformed = _apply_classification(state_dict, classes, low_bits=self.low_bits)
+        raw_bytes = _serialize_state_dict(transformed)
+        blob = brotli.compress(raw_bytes, quality=self.brotli_quality)
+
         return EncodeResult(
             blob=blob,
             bytes_in=bytes_in,
@@ -616,6 +713,30 @@ class Op_SensitivityPreprocess:
         op_state: dict[str, Any],
         context: dict[str, Any] | None = None,
     ) -> dict[str, torch.Tensor]:
+        ctx = context if context is not None else {}
+
+        # Identity short-circuit: when op_state flags is_identity, the
+        # blob is a 12-byte marker. Pull the substrate from the shared
+        # context dict that encode populated. If the context slot is
+        # missing (e.g. CPL1 wrapper decode at decompress time, where we
+        # only have the wire bytes), return an empty dict — the pipeline
+        # decode loop overrides decoded_state on every op iteration and
+        # returns the LAST op's state, so this empty short-circuit is
+        # correctly discarded for ``[β_identity, Op1, ...]`` configs.
+        # Operators using β_identity as the only op with no context get
+        # an empty dict; that mode is degenerate (β-identity is meant to
+        # compose with downstream encoders, not to ship alone).
+        if op_state.get("is_identity"):
+            if blob[: len(_BETA_IDENTITY_MARKER_MAGIC)] != _BETA_IDENTITY_MARKER_MAGIC:
+                raise SensitivityPreprocessError(
+                    f"is_identity=True but blob lacks marker magic "
+                    f"{_BETA_IDENTITY_MARKER_MAGIC!r} (got {blob[:8]!r})"
+                )
+            stashed = ctx.get(_BETA_IDENTITY_CONTEXT_KEY)
+            if stashed is None:
+                return {}
+            return dict(stashed)
+
         raw_bytes = brotli.decompress(blob)
         return _deserialize_state_dict(raw_bytes)
 
@@ -623,6 +744,9 @@ class Op_SensitivityPreprocess:
 __all__ = [
     "DEFAULT_BROTLI_QUALITY",
     "SUPPORTED_SENSITIVITY_SOURCES",
+    "_BETA_IDENTITY_CONTEXT_KEY",
+    "_BETA_IDENTITY_MARKER_BLOB",
+    "_BETA_IDENTITY_MARKER_MAGIC",
     "Op_SensitivityPreprocess",
     "SensitivityPreprocessError",
 ]
