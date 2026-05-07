@@ -105,6 +105,7 @@ References
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -325,6 +326,24 @@ class Op_GammaJointADMM:
         # bit-determinism across runs.
         ordered_items = sorted(state_dict.items(), key=lambda kv: kv[0])
 
+        # Bug-hunter v3 fix 2026-05-07 (LOW, integration seam): the previous
+        # comment claimed "Caller-supplied real marginals may override
+        # per-stream via context['score_marginals']" but the code never
+        # read that key — a dead-comment that the dead-flag-wiring linter
+        # would flag. Now we DO honor ``context['score_marginals']``, a
+        # ``Mapping[str, float]`` keyed by the stream's tensor_name. Missing
+        # keys fall back to the tiny non-zero default (1e-6) which keeps
+        # the KKT waterline scale finite. Per CLAUDE.md "NEVER invent CLI
+        # flags": this contract is now under test
+        # (test_op_gamma_admm_honors_context_score_marginals) so the
+        # codepath is real, not promised.
+        score_marginals = context.get("score_marginals") if context else None
+        if score_marginals is not None and not isinstance(score_marginals, Mapping):
+            raise TypeError(
+                "context['score_marginals'] must be a Mapping[str, float] "
+                f"keyed by tensor name; got {type(score_marginals).__name__}"
+            )
+
         streams: list[StreamSource] = []
         # Per-stream metadata for the decoder side (in the same order as
         # `ordered_items`, which equals the order JCSv1 packs the streams).
@@ -332,6 +351,29 @@ class Op_GammaJointADMM:
         for tensor_name, tensor in ordered_items:
             qints, scale = _quantise_to_int8(tensor)
             stream_name = self._encode_stream_name(tensor_name)
+            # Honor caller-supplied marginal if present; else tiny default
+            # (1e-6). Tiny non-zero default keeps the orchestrator's KKT
+            # waterline residual scale finite (zero marginal across all
+            # streams produces a divide-by-zero in the residual normalisation).
+            if score_marginals is not None:
+                m_raw = score_marginals.get(tensor_name)
+                marginal_val = (
+                    float(m_raw) if m_raw is not None else 1e-6
+                )
+                if not np.isfinite(marginal_val):
+                    raise ValueError(
+                        f"context['score_marginals'][{tensor_name!r}] = "
+                        f"{m_raw!r} is not finite"
+                    )
+                if marginal_val < 0.0:
+                    raise ValueError(
+                        f"context['score_marginals'][{tensor_name!r}] = "
+                        f"{m_raw!r} is negative; the coordinator's KKT "
+                        "convention requires non-negative marginals "
+                        "(positive ⇒ more bytes lower score)."
+                    )
+            else:
+                marginal_val = 1e-6
             streams.append(
                 StreamSource(
                     name=stream_name,
@@ -339,14 +381,7 @@ class Op_GammaJointADMM:
                     num_symbols=2 * _INT8_QMAX + 1,  # 255 symbols
                     offset=_INT8_QMAX,                # maps [-127, 127] -> [0, 254]
                     codec_kind=KIND_ARITHMETIC_STATIC,
-                    # Tiny non-zero marginal: the orchestrator's ADMM uses
-                    # marginals to compute the KKT waterline residual; an
-                    # all-zero marginal produces a divide-by-zero / infinity
-                    # in the residual scale. Caller-supplied real marginals
-                    # may override per-stream via context['score_marginals'];
-                    # the wrap defaults to a tiny constant so structural
-                    # encode succeeds even without scorer-aware planning.
-                    score_per_byte_marginal=1e-6,
+                    score_per_byte_marginal=marginal_val,
                 )
             )
             stream_meta.append(

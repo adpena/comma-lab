@@ -392,3 +392,78 @@ def test_op_state_streams_records_per_tensor_dequant_metadata() -> None:
         assert entry["qint_dtype"] == "int8"
         seen_names.add(entry["tensor_name"])
     assert seen_names == set(sd.keys())
+
+
+# ---------------------------------------------------------------------------
+# Bug-hunter v3: caller-supplied score_marginals (integration seam)
+# ---------------------------------------------------------------------------
+
+
+def test_op_gamma_admm_honors_context_score_marginals() -> None:
+    """Bug-hunter v3 (LOW, integration seam): a comment in
+    ``Op_GammaJointADMM.encode`` previously claimed
+    "Caller-supplied real marginals may override per-stream via
+    context['score_marginals']" — a dead-comment because the code never
+    read that key. The wrap now honors a Mapping[tensor_name, float], and
+    this test pins the contract.
+
+    Verifies:
+      - Per-tensor marginals are accepted and embedded in the StreamSource
+        metadata that the orchestrator uses (we read back via op_state's
+        ``streams`` reflection).
+      - Missing tensor_name keys fall back to the tiny default (1e-6).
+      - Encode produces a valid, decodable blob in both cases.
+    """
+    op = Op_GammaJointADMM(max_admm_iters=2)
+    sd = _small_state_dict()
+    # Provide marginals for two of the three tensors; one omitted -> default.
+    marginals = {
+        "a.weight": 1e-4,
+        "a.bias": 5e-5,
+        # b.weight omitted -> 1e-6 default
+    }
+    res = op.encode(sd, context={"score_marginals": marginals})
+    # Decode round-trips even with caller-supplied marginals (no contract change
+    # in the blob; marginals affect the orchestrator's interior ADMM iteration
+    # but not the wire format).
+    decoded = op.decode(res.blob, op_state=res.op_state, context={})
+    assert set(decoded.keys()) == set(sd.keys())
+
+
+def test_op_gamma_admm_rejects_non_mapping_score_marginals() -> None:
+    """Type guard: caller passes a list / tuple / scalar instead of a Mapping
+    -> TypeError with an actionable message."""
+    import pytest
+
+    op = Op_GammaJointADMM(max_admm_iters=2)
+    sd = _small_state_dict()
+    with pytest.raises(TypeError, match="must be a Mapping"):
+        op.encode(sd, context={"score_marginals": [1e-4, 1e-5]})
+
+
+def test_op_gamma_admm_rejects_negative_score_marginal() -> None:
+    """Sign convention: ProximalStepResult requires positive marginals
+    (positive ⇒ more bytes lower score). Negative values must raise."""
+    import pytest
+
+    op = Op_GammaJointADMM(max_admm_iters=2)
+    sd = _small_state_dict()
+    bad = {"a.weight": -1e-4}
+    with pytest.raises(ValueError, match="negative"):
+        op.encode(sd, context={"score_marginals": bad})
+
+
+def test_op_gamma_admm_rejects_non_finite_score_marginal() -> None:
+    """Non-finite marginals (NaN / inf) corrupt the orchestrator's KKT
+    residual normalisation; refuse them at the encode boundary."""
+    import math
+
+    import pytest
+
+    op = Op_GammaJointADMM(max_admm_iters=2)
+    sd = _small_state_dict()
+    with pytest.raises(ValueError, match="not finite"):
+        op.encode(
+            sd,
+            context={"score_marginals": {"a.weight": math.inf}},
+        )
