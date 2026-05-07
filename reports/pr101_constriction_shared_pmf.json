@@ -1,0 +1,151 @@
+{
+  "archive_overhead_bytes": 16094,
+  "charged_bits_changed": false,
+  "comparison_brotli_optuna_optimum_bytes": 178144,
+  "comparison_per_tensor_constriction_marginal_bytes": 190718,
+  "comparison_per_tensor_marginal_floor_bytes": 175916,
+  "dispatch_blockers": [
+    "packet_estimate_only",
+    "shared_pmf_not_wired_into_decoder",
+    "no_archive_substitution_performed",
+    "missing_exact_cuda_auth_eval"
+  ],
+  "elapsed_seconds": 0.0007822513580322266,
+  "encoded_payload_bytes": 186592,
+  "evidence_grade": "empirical",
+  "evidence_semantics": "cpu_shared_pmf_range_coder_packet_estimate",
+  "input_state_dict": "experiments/results/cma_pr101_real_substrate_20260507T222605Z/pr101_decoder_state_dict.pt",
+  "input_state_dict_sha256": "b863362aaba1b9cae9b944f5e5b1a43a53ca824b7899ed7b80a2e2146d66f053",
+  "n_categories": 255,
+  "n_tensors": 28,
+  "per_tensor": [
+    {
+      "n_elements": 48384,
+      "name": "stem.weight"
+    },
+    {
+      "n_elements": 1728,
+      "name": "stem.bias"
+    },
+    {
+      "n_elements": 46656,
+      "name": "blocks.0.weight"
+    },
+    {
+      "n_elements": 144,
+      "name": "blocks.0.bias"
+    },
+    {
+      "n_elements": 46656,
+      "name": "blocks.1.weight"
+    },
+    {
+      "n_elements": 144,
+      "name": "blocks.1.bias"
+    },
+    {
+      "n_elements": 34992,
+      "name": "blocks.2.weight"
+    },
+    {
+      "n_elements": 108,
+      "name": "blocks.2.bias"
+    },
+    {
+      "n_elements": 19440,
+      "name": "blocks.3.weight"
+    },
+    {
+      "n_elements": 80,
+      "name": "blocks.3.bias"
+    },
+    {
+      "n_elements": 12960,
+      "name": "blocks.4.weight"
+    },
+    {
+      "n_elements": 72,
+      "name": "blocks.4.bias"
+    },
+    {
+      "n_elements": 11664,
+      "name": "blocks.5.weight"
+    },
+    {
+      "n_elements": 72,
+      "name": "blocks.5.bias"
+    },
+    {
+      "n_elements": 972,
+      "name": "skips.2.weight"
+    },
+    {
+      "n_elements": 27,
+      "name": "skips.2.bias"
+    },
+    {
+      "n_elements": 540,
+      "name": "skips.3.weight"
+    },
+    {
+      "n_elements": 20,
+      "name": "skips.3.bias"
+    },
+    {
+      "n_elements": 360,
+      "name": "skips.4.weight"
+    },
+    {
+      "n_elements": 18,
+      "name": "skips.4.bias"
+    },
+    {
+      "n_elements": 1458,
+      "name": "refine.0.weight"
+    },
+    {
+      "n_elements": 9,
+      "name": "refine.0.bias"
+    },
+    {
+      "n_elements": 1458,
+      "name": "refine.1.weight"
+    },
+    {
+      "n_elements": 18,
+      "name": "refine.1.bias"
+    },
+    {
+      "n_elements": 486,
+      "name": "rgb_0.weight"
+    },
+    {
+      "n_elements": 3,
+      "name": "rgb_0.bias"
+    },
+    {
+      "n_elements": 486,
+      "name": "rgb_1.weight"
+    },
+    {
+      "n_elements": 3,
+      "name": "rgb_1.bias"
+    }
+  ],
+  "pmf_overhead_bytes": 510,
+  "ready_for_exact_eval_dispatch": false,
+  "savings_vs_brotli_optuna": -25052,
+  "savings_vs_per_tensor_constriction": -12478,
+  "savings_vs_per_tensor_marginal_floor": -27280,
+  "schema": "pr101_constriction_shared_pmf_floor.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "shared_pmf_n_unique_symbols": 246,
+  "smoothing": 1.0,
+  "theoretical_bits_at_pooled_pmf": 1492670.4327363763,
+  "theoretical_bytes_at_pooled_pmf": 186584,
+  "tool": "tools/pr101_constriction_shared_pmf_floor.py",
+  "total_archive_with_overhead": 203196,
+  "total_symbols": 228958,
+  "total_with_pmf_overhead": 187102
+}

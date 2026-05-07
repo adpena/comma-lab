@@ -1,0 +1,219 @@
+{
+  "actual_payload_minus_predicted": 31038,
+  "alpha": 1.0,
+  "archive_bytes_no_zip": 183144,
+  "archive_bytes_with_zip_overhead": 199238,
+  "comparison_brotli_optuna_archive_bytes": 178144,
+  "comparison_brotli_optuna_payload_bytes": 162050,
+  "decode_elapsed_seconds": 0.44718408584594727,
+  "encode_elapsed_seconds": 0.502161979675293,
+  "encode_rows": [
+    {
+      "first_symbol": 127,
+      "n_symbols": 48384,
+      "name": "stem.weight",
+      "payload_bytes": 35248,
+      "scale": 0.01201629638671875
+    },
+    {
+      "first_symbol": 200,
+      "n_symbols": 1728,
+      "name": "stem.bias",
+      "payload_bytes": 1724,
+      "scale": 0.0166015625
+    },
+    {
+      "first_symbol": 84,
+      "n_symbols": 46656,
+      "name": "blocks.0.weight",
+      "payload_bytes": 36236,
+      "scale": 0.0047454833984375
+    },
+    {
+      "first_symbol": 168,
+      "n_symbols": 144,
+      "name": "blocks.0.bias",
+      "payload_bytes": 148,
+      "scale": 0.006805419921875
+    },
+    {
+      "first_symbol": 129,
+      "n_symbols": 46656,
+      "name": "blocks.1.weight",
+      "payload_bytes": 36376,
+      "scale": 0.004058837890625
+    },
+    {
+      "first_symbol": 105,
+      "n_symbols": 144,
+      "name": "blocks.1.bias",
+      "payload_bytes": 148,
+      "scale": 0.006923675537109375
+    },
+    {
+      "first_symbol": 127,
+      "n_symbols": 34992,
+      "name": "blocks.2.weight",
+      "payload_bytes": 28920,
+      "scale": 0.00323486328125
+    },
+    {
+      "first_symbol": 146,
+      "n_symbols": 108,
+      "name": "blocks.2.bias",
+      "payload_bytes": 112,
+      "scale": 0.006053924560546875
+    },
+    {
+      "first_symbol": 159,
+      "n_symbols": 19440,
+      "name": "blocks.3.weight",
+      "payload_bytes": 16524,
+      "scale": 0.0031909942626953125
+    },
+    {
+      "first_symbol": 121,
+      "n_symbols": 80,
+      "name": "blocks.3.bias",
+      "payload_bytes": 84,
+      "scale": 0.011566162109375
+    },
+    {
+      "first_symbol": 141,
+      "n_symbols": 12960,
+      "name": "blocks.4.weight",
+      "payload_bytes": 11932,
+      "scale": 0.0025844573974609375
+    },
+    {
+      "first_symbol": 159,
+      "n_symbols": 72,
+      "name": "blocks.4.bias",
+      "payload_bytes": 76,
+      "scale": 0.0095977783203125
+    },
+    {
+      "first_symbol": 145,
+      "n_symbols": 11664,
+      "name": "blocks.5.weight",
+      "payload_bytes": 9504,
+      "scale": 0.006439208984375
+    },
+    {
+      "first_symbol": 119,
+      "n_symbols": 72,
+      "name": "blocks.5.bias",
+      "payload_bytes": 76,
+      "scale": 0.0163726806640625
+    },
+    {
+      "first_symbol": 114,
+      "n_symbols": 972,
+      "name": "skips.2.weight",
+      "payload_bytes": 956,
+      "scale": 0.0037708282470703125
+    },
+    {
+      "first_symbol": 44,
+      "n_symbols": 27,
+      "name": "skips.2.bias",
+      "payload_bytes": 28,
+      "scale": 0.005413055419921875
+    },
+    {
+      "first_symbol": 71,
+      "n_symbols": 540,
+      "name": "skips.3.weight",
+      "payload_bytes": 540,
+      "scale": 0.003002166748046875
+    },
+    {
+      "first_symbol": 152,
+      "n_symbols": 20,
+      "name": "skips.3.bias",
+      "payload_bytes": 24,
+      "scale": 0.00738525390625
+    },
+    {
+      "first_symbol": 95,
+      "n_symbols": 360,
+      "name": "skips.4.weight",
+      "payload_bytes": 360,
+      "scale": 0.0027942657470703125
+    },
+    {
+      "first_symbol": 54,
+      "n_symbols": 18,
+      "name": "skips.4.bias",
+      "payload_bytes": 20,
+      "scale": 0.006145477294921875
+    },
+    {
+      "first_symbol": 122,
+      "n_symbols": 1458,
+      "name": "refine.0.weight",
+      "payload_bytes": 1396,
+      "scale": 0.007617950439453125
+    },
+    {
+      "first_symbol": 39,
+      "n_symbols": 9,
+      "name": "refine.0.bias",
+      "payload_bytes": 12,
+      "scale": 0.007480621337890625
+    },
+    {
+      "first_symbol": 153,
+      "n_symbols": 1458,
+      "name": "refine.1.weight",
+      "payload_bytes": 1420,
+      "scale": 0.003505706787109375
+    },
+    {
+      "first_symbol": 102,
+      "n_symbols": 18,
+      "name": "refine.1.bias",
+      "payload_bytes": 20,
+      "scale": 0.01419830322265625
+    },
+    {
+      "first_symbol": 138,
+      "n_symbols": 486,
+      "name": "rgb_0.weight",
+      "payload_bytes": 480,
+      "scale": 0.007236480712890625
+    },
+    {
+      "first_symbol": 254,
+      "n_symbols": 3,
+      "name": "rgb_0.bias",
+      "payload_bytes": 4,
+      "scale": 0.01030731201171875
+    },
+    {
+      "first_symbol": 197,
+      "n_symbols": 486,
+      "name": "rgb_1.weight",
+      "payload_bytes": 484,
+      "scale": 0.005481719970703125
+    },
+    {
+      "first_symbol": 0,
+      "n_symbols": 3,
+      "name": "rgb_1.bias",
+      "payload_bytes": 4,
+      "scale": 0.00592041015625
+    }
+  ],
+  "input_state_dict": "experiments/results/cma_pr101_real_substrate_20260507T222605Z/pr101_decoder_state_dict.pt",
+  "mismatches": [],
+  "n_mismatched_tensors": 0,
+  "n_tensors": 28,
+  "n_total_symbols": 228958,
+  "predicted_provable_markov1_payload_bytes": 152106,
+  "round_trip_byte_faithful": true,
+  "savings_vs_brotli_archive": -21094,
+  "savings_vs_brotli_payload": -21094,
+  "schema": "pr101_markov1_aac_codec.v1",
+  "tool": "tools/pr101_markov1_aac_codec.py"
+}

@@ -1,0 +1,436 @@
+{
+  "alpha": 1.0,
+  "archive_overhead_bytes": 16094,
+  "boundary_overhead_bytes": 112,
+  "charged_bits_changed": false,
+  "comparison_brotli_optuna_optimum_bytes": 178144,
+  "dispatch_blockers": [
+    "theoretical_bits_only",
+    "no_actual_adaptive_coder_bitstream",
+    "no_archive_substitution_performed",
+    "missing_exact_cuda_auth_eval"
+  ],
+  "elapsed_seconds": 0.13169312477111816,
+  "evidence_grade": "derivation",
+  "evidence_semantics": "cpu_theoretical_adaptive_ac_bound",
+  "input_state_dict": "experiments/results/cma_pr101_real_substrate_20260507T222605Z/pr101_decoder_state_dict.pt",
+  "input_state_dict_sha256": "b863362aaba1b9cae9b944f5e5b1a43a53ca824b7899ed7b80a2e2146d66f053",
+  "interleaved_aac_bits": 1494341.5815204987,
+  "interleaved_aac_bytes": 186793,
+  "interleaved_aac_total_archive": 202999,
+  "interleaved_meta": {
+    "boundary_overhead_bytes": 112,
+    "n_total_symbols": 228958
+  },
+  "joint_aac_bits": 1494341.5815204696,
+  "joint_aac_bytes": 186793,
+  "joint_aac_total_archive": 202999,
+  "joint_results": [
+    {
+      "amortized_bits_per_element": 5.25966036197771,
+      "joint_aac_bits_for_this_tensor": 254483.40695392952,
+      "n_elements": 48384,
+      "name": "stem.weight",
+      "running_pmf_total_seen_after": 48384
+    },
+    {
+      "amortized_bits_per_element": 9.993821896009363,
+      "joint_aac_bits_for_this_tensor": 17269.32423630418,
+      "n_elements": 1728,
+      "name": "stem.bias",
+      "running_pmf_total_seen_after": 50112
+    },
+    {
+      "amortized_bits_per_element": 7.043763823043886,
+      "joint_aac_bits_for_this_tensor": 328633.8449279355,
+      "n_elements": 46656,
+      "name": "blocks.0.weight",
+      "running_pmf_total_seen_after": 96768
+    },
+    {
+      "amortized_bits_per_element": 8.973819937196144,
+      "joint_aac_bits_for_this_tensor": 1292.2300709562446,
+      "n_elements": 144,
+      "name": "blocks.0.bias",
+      "running_pmf_total_seen_after": 96912
+    },
+    {
+      "amortized_bits_per_element": 6.503833914892822,
+      "joint_aac_bits_for_this_tensor": 303442.8751332395,
+      "n_elements": 46656,
+      "name": "blocks.1.weight",
+      "running_pmf_total_seen_after": 143568
+    },
+    {
+      "amortized_bits_per_element": 8.724907172326045,
+      "joint_aac_bits_for_this_tensor": 1256.3866328149504,
+      "n_elements": 144,
+      "name": "blocks.1.bias",
+      "running_pmf_total_seen_after": 143712
+    },
+    {
+      "amortized_bits_per_element": 6.7803241022654595,
+      "joint_aac_bits_for_this_tensor": 237257.10098647294,
+      "n_elements": 34992,
+      "name": "blocks.2.weight",
+      "running_pmf_total_seen_after": 178704
+    },
+    {
+      "amortized_bits_per_element": 9.164024078320093,
+      "joint_aac_bits_for_this_tensor": 989.71460045857,
+      "n_elements": 108,
+      "name": "blocks.2.bias",
+      "running_pmf_total_seen_after": 178812
+    },
+    {
+      "amortized_bits_per_element": 6.822414398017011,
+      "joint_aac_bits_for_this_tensor": 132627.73589745068,
+      "n_elements": 19440,
+      "name": "blocks.3.weight",
+      "running_pmf_total_seen_after": 198252
+    },
+    {
+      "amortized_bits_per_element": 7.714083049606126,
+      "joint_aac_bits_for_this_tensor": 617.12664396849,
+      "n_elements": 80,
+      "name": "blocks.3.bias",
+      "running_pmf_total_seen_after": 198332
+    },
+    {
+      "amortized_bits_per_element": 7.4346140439190656,
+      "joint_aac_bits_for_this_tensor": 96352.59800919109,
+      "n_elements": 12960,
+      "name": "blocks.4.weight",
+      "running_pmf_total_seen_after": 211292
+    },
+    {
+      "amortized_bits_per_element": 8.416191702170993,
+      "joint_aac_bits_for_this_tensor": 605.9658025563115,
+      "n_elements": 72,
+      "name": "blocks.4.bias",
+      "running_pmf_total_seen_after": 211364
+    },
+    {
+      "amortized_bits_per_element": 6.450239078722299,
+      "joint_aac_bits_for_this_tensor": 75235.58861421689,
+      "n_elements": 11664,
+      "name": "blocks.5.weight",
+      "running_pmf_total_seen_after": 223028
+    },
+    {
+      "amortized_bits_per_element": 7.499886920300016,
+      "joint_aac_bits_for_this_tensor": 539.9918582616011,
+      "n_elements": 72,
+      "name": "blocks.5.bias",
+      "running_pmf_total_seen_after": 223100
+    },
+    {
+      "amortized_bits_per_element": 7.613095018307037,
+      "joint_aac_bits_for_this_tensor": 7399.92835779444,
+      "n_elements": 972,
+      "name": "skips.2.weight",
+      "running_pmf_total_seen_after": 224072
+    },
+    {
+      "amortized_bits_per_element": 8.923787337507115,
+      "joint_aac_bits_for_this_tensor": 240.9422581126921,
+      "n_elements": 27,
+      "name": "skips.2.bias",
+      "running_pmf_total_seen_after": 224099
+    },
+    {
+      "amortized_bits_per_element": 8.220600292610156,
+      "joint_aac_bits_for_this_tensor": 4439.124158009484,
+      "n_elements": 540,
+      "name": "skips.3.weight",
+      "running_pmf_total_seen_after": 224639
+    },
+    {
+      "amortized_bits_per_element": 8.857656258033112,
+      "joint_aac_bits_for_this_tensor": 177.15312516066223,
+      "n_elements": 20,
+      "name": "skips.3.bias",
+      "running_pmf_total_seen_after": 224659
+    },
+    {
+      "amortized_bits_per_element": 8.38216541355497,
+      "joint_aac_bits_for_this_tensor": 3017.5795488797894,
+      "n_elements": 360,
+      "name": "skips.4.weight",
+      "running_pmf_total_seen_after": 225019
+    },
+    {
+      "amortized_bits_per_element": 10.503005568580601,
+      "joint_aac_bits_for_this_tensor": 189.05410023445083,
+      "n_elements": 18,
+      "name": "skips.4.bias",
+      "running_pmf_total_seen_after": 225037
+    },
+    {
+      "amortized_bits_per_element": 6.807366616235007,
+      "joint_aac_bits_for_this_tensor": 9925.14052647064,
+      "n_elements": 1458,
+      "name": "refine.0.weight",
+      "running_pmf_total_seen_after": 226495
+    },
+    {
+      "amortized_bits_per_element": 10.750234913505622,
+      "joint_aac_bits_for_this_tensor": 96.7521142215506,
+      "n_elements": 9,
+      "name": "refine.0.bias",
+      "running_pmf_total_seen_after": 226504
+    },
+    {
+      "amortized_bits_per_element": 7.502406628660335,
+      "joint_aac_bits_for_this_tensor": 10938.508864586769,
+      "n_elements": 1458,
+      "name": "refine.1.weight",
+      "running_pmf_total_seen_after": 227962
+    },
+    {
+      "amortized_bits_per_element": 10.396247560433821,
+      "joint_aac_bits_for_this_tensor": 187.13245608780878,
+      "n_elements": 18,
+      "name": "refine.1.bias",
+      "running_pmf_total_seen_after": 227980
+    },
+    {
+      "amortized_bits_per_element": 7.223632753688716,
+      "joint_aac_bits_for_this_tensor": 3510.685518292716,
+      "n_elements": 486,
+      "name": "rgb_0.weight",
+      "running_pmf_total_seen_after": 228466
+    },
+    {
+      "amortized_bits_per_element": 9.06771724021865,
+      "joint_aac_bits_for_this_tensor": 27.203151720655953,
+      "n_elements": 3,
+      "name": "rgb_0.bias",
+      "running_pmf_total_seen_after": 228469
+    },
+    {
+      "amortized_bits_per_element": 7.3150172154560895,
+      "joint_aac_bits_for_this_tensor": 3555.0983667116593,
+      "n_elements": 486,
+      "name": "rgb_1.weight",
+      "running_pmf_total_seen_after": 228955
+    },
+    {
+      "amortized_bits_per_element": 11.129535476682028,
+      "joint_aac_bits_for_this_tensor": 33.38860643004608,
+      "n_elements": 3,
+      "name": "rgb_1.bias",
+      "running_pmf_total_seen_after": 228958
+    }
+  ],
+  "n_categories": 255,
+  "per_tensor_aac_bits": 1295792.1447534456,
+  "per_tensor_aac_bytes": 161975,
+  "per_tensor_aac_total_archive": 178181,
+  "per_tensor_results": [
+    {
+      "adaptive_ac_bits": 254483.40695392952,
+      "adaptive_ac_bytes": 31811,
+      "amortized_bits_per_element": 5.25966036197771,
+      "n_elements": 48384,
+      "name": "stem.weight"
+    },
+    {
+      "adaptive_ac_bits": 13026.000334714234,
+      "adaptive_ac_bytes": 1629,
+      "amortized_bits_per_element": 7.5381946381448115,
+      "n_elements": 1728,
+      "name": "stem.bias"
+    },
+    {
+      "adaptive_ac_bits": 260212.78478515072,
+      "adaptive_ac_bytes": 32527,
+      "amortized_bits_per_element": 5.5772630483785735,
+      "n_elements": 46656,
+      "name": "blocks.0.weight"
+    },
+    {
+      "adaptive_ac_bits": 1149.2398107606016,
+      "adaptive_ac_bytes": 144,
+      "amortized_bits_per_element": 7.980832019170844,
+      "n_elements": 144,
+      "name": "blocks.0.bias"
+    },
+    {
+      "adaptive_ac_bits": 261193.40737444573,
+      "adaptive_ac_bytes": 32650,
+      "amortized_bits_per_element": 5.59828119372526,
+      "n_elements": 46656,
+      "name": "blocks.1.weight"
+    },
+    {
+      "adaptive_ac_bits": 1142.4849232584384,
+      "adaptive_ac_bytes": 143,
+      "amortized_bits_per_element": 7.9339230781836,
+      "n_elements": 144,
+      "name": "blocks.1.bias"
+    },
+    {
+      "adaptive_ac_bits": 205061.46029432886,
+      "adaptive_ac_bytes": 25633,
+      "amortized_bits_per_element": 5.860238348603363,
+      "n_elements": 34992,
+      "name": "blocks.2.weight"
+    },
+    {
+      "adaptive_ac_bits": 871.6777131545498,
+      "adaptive_ac_bytes": 109,
+      "amortized_bits_per_element": 8.071089936616202,
+      "n_elements": 108,
+      "name": "blocks.2.bias"
+    },
+    {
+      "adaptive_ac_bits": 113625.84758578273,
+      "adaptive_ac_bytes": 14204,
+      "amortized_bits_per_element": 5.844951007499112,
+      "n_elements": 19440,
+      "name": "blocks.3.weight"
+    },
+    {
+      "adaptive_ac_bits": 636.4732664038974,
+      "adaptive_ac_bytes": 80,
+      "amortized_bits_per_element": 7.955915830048717,
+      "n_elements": 80,
+      "name": "blocks.3.bias"
+    },
+    {
+      "adaptive_ac_bits": 82407.84431992036,
+      "adaptive_ac_bytes": 10301,
+      "amortized_bits_per_element": 6.358629962956818,
+      "n_elements": 12960,
+      "name": "blocks.4.weight"
+    },
+    {
+      "adaptive_ac_bits": 575.6954170895428,
+      "adaptive_ac_bytes": 72,
+      "amortized_bits_per_element": 7.9957696817992066,
+      "n_elements": 72,
+      "name": "blocks.4.bias"
+    },
+    {
+      "adaptive_ac_bits": 62794.61901969777,
+      "adaptive_ac_bytes": 7850,
+      "amortized_bits_per_element": 5.383626459164761,
+      "n_elements": 11664,
+      "name": "blocks.5.weight"
+    },
+    {
+      "adaptive_ac_bits": 566.1104545888219,
+      "adaptive_ac_bytes": 71,
+      "amortized_bits_per_element": 7.862645202622526,
+      "n_elements": 72,
+      "name": "blocks.5.bias"
+    },
+    {
+      "adaptive_ac_bits": 6258.328511579088,
+      "adaptive_ac_bytes": 783,
+      "amortized_bits_per_element": 6.4386095798138765,
+      "n_elements": 972,
+      "name": "skips.2.weight"
+    },
+    {
+      "adaptive_ac_bits": 213.18298227437498,
+      "adaptive_ac_bytes": 27,
+      "amortized_bits_per_element": 7.895666010162036,
+      "n_elements": 27,
+      "name": "skips.2.bias"
+    },
+    {
+      "adaptive_ac_bits": 3745.0550487819537,
+      "adaptive_ac_bytes": 469,
+      "amortized_bits_per_element": 6.9352871273739884,
+      "n_elements": 540,
+      "name": "skips.3.weight"
+    },
+    {
+      "adaptive_ac_bits": 160.93561862213818,
+      "adaptive_ac_bytes": 21,
+      "amortized_bits_per_element": 8.046780931106909,
+      "n_elements": 20,
+      "name": "skips.3.bias"
+    },
+    {
+      "adaptive_ac_bits": 2504.2535592740805,
+      "adaptive_ac_bytes": 314,
+      "amortized_bits_per_element": 6.956259886872446,
+      "n_elements": 360,
+      "name": "skips.4.weight"
+    },
+    {
+      "adaptive_ac_bits": 144.74482939825782,
+      "adaptive_ac_bytes": 19,
+      "amortized_bits_per_element": 8.041379411014324,
+      "n_elements": 18,
+      "name": "skips.4.bias"
+    },
+    {
+      "adaptive_ac_bits": 8790.693096486637,
+      "adaptive_ac_bytes": 1099,
+      "amortized_bits_per_element": 6.029281959181507,
+      "n_elements": 1458,
+      "name": "refine.0.weight"
+    },
+    {
+      "adaptive_ac_bits": 72.15062932959064,
+      "adaptive_ac_bytes": 10,
+      "amortized_bits_per_element": 8.016736592176738,
+      "n_elements": 9,
+      "name": "refine.0.bias"
+    },
+    {
+      "adaptive_ac_bits": 9418.403541753338,
+      "adaptive_ac_bytes": 1178,
+      "amortized_bits_per_element": 6.459810385290355,
+      "n_elements": 1458,
+      "name": "refine.1.weight"
+    },
+    {
+      "adaptive_ac_bits": 143.74482939825782,
+      "adaptive_ac_bytes": 18,
+      "amortized_bits_per_element": 7.985823855458768,
+      "n_elements": 18,
+      "name": "refine.1.bias"
+    },
+    {
+      "adaptive_ac_bits": 3227.3490080165425,
+      "adaptive_ac_bytes": 404,
+      "amortized_bits_per_element": 6.640635818964079,
+      "n_elements": 486,
+      "name": "rgb_0.weight"
+    },
+    {
+      "adaptive_ac_bits": 23.999977986052738,
+      "adaptive_ac_bytes": 3,
+      "amortized_bits_per_element": 7.999992662017579,
+      "n_elements": 3,
+      "name": "rgb_0.bias"
+    },
+    {
+      "adaptive_ac_bits": 3318.250889333066,
+      "adaptive_ac_bytes": 415,
+      "amortized_bits_per_element": 6.827676727022769,
+      "n_elements": 486,
+      "name": "rgb_1.weight"
+    },
+    {
+      "adaptive_ac_bits": 23.999977986052738,
+      "adaptive_ac_bytes": 3,
+      "amortized_bits_per_element": 7.999992662017579,
+      "n_elements": 3,
+      "name": "rgb_1.bias"
+    }
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "savings_interleaved_aac_vs_brotli": -24855,
+  "savings_joint_aac_vs_brotli": -24855,
+  "savings_per_tensor_aac_vs_brotli": -37,
+  "schema": "pr101_adaptive_arithmetic_coding.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "tool": "tools/pr101_adaptive_arithmetic_coding.py"
+}

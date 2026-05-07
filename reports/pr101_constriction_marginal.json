@@ -1,0 +1,287 @@
+{
+  "charged_bits_changed": false,
+  "comparison_brotli_optuna_optimum_bytes": 178144,
+  "comparison_per_tensor_marginal_floor_bytes": 175916,
+  "dispatch_blockers": [
+    "packet_estimate_only",
+    "pmf_storage_not_wired_into_decoder",
+    "no_archive_substitution_performed",
+    "missing_exact_cuda_auth_eval"
+  ],
+  "elapsed_seconds": 0.051590919494628906,
+  "evidence_grade": "empirical",
+  "evidence_semantics": "cpu_range_coder_marginal_pmf_packet_estimate",
+  "input_state_dict": "experiments/results/cma_pr101_real_substrate_20260507T222605Z/pr101_decoder_state_dict.pt",
+  "input_state_dict_sha256": "b863362aaba1b9cae9b944f5e5b1a43a53ca824b7899ed7b80a2e2146d66f053",
+  "n_categories": 255,
+  "n_tensors": 28,
+  "per_tensor": [
+    {
+      "encoded_payload_bytes": 31612,
+      "n_elements": 48384,
+      "n_unique_symbols": 118,
+      "name": "stem.weight",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 252864.3643780517,
+      "theoretical_bytes_at_empirical_pmf": 31609
+    },
+    {
+      "encoded_payload_bytes": 1568,
+      "n_elements": 1728,
+      "n_unique_symbols": 194,
+      "name": "stem.bias",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 12538.812130476224,
+      "theoretical_bytes_at_empirical_pmf": 1568
+    },
+    {
+      "encoded_payload_bytes": 32332,
+      "n_elements": 46656,
+      "n_unique_symbols": 131,
+      "name": "blocks.0.weight",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 258643.93557544934,
+      "theoretical_bytes_at_empirical_pmf": 32331
+    },
+    {
+      "encoded_payload_bytes": 132,
+      "n_elements": 144,
+      "n_unique_symbols": 101,
+      "name": "blocks.0.bias",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 1040.24439590113,
+      "theoretical_bytes_at_empirical_pmf": 131
+    },
+    {
+      "encoded_payload_bytes": 32456,
+      "n_elements": 46656,
+      "n_unique_symbols": 151,
+      "name": "blocks.1.weight",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 259637.60265167142,
+      "theoretical_bytes_at_empirical_pmf": 32455
+    },
+    {
+      "encoded_payload_bytes": 132,
+      "n_elements": 144,
+      "n_unique_symbols": 96,
+      "name": "blocks.1.bias",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 1032.4143209025724,
+      "theoretical_bytes_at_empirical_pmf": 130
+    },
+    {
+      "encoded_payload_bytes": 25456,
+      "n_elements": 34992,
+      "n_unique_symbols": 172,
+      "name": "blocks.2.weight",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 203636.90894561738,
+      "theoretical_bytes_at_empirical_pmf": 25455
+    },
+    {
+      "encoded_payload_bytes": 100,
+      "n_elements": 108,
+      "n_unique_symbols": 88,
+      "name": "blocks.2.bias",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 786.3545296775784,
+      "theoretical_bytes_at_empirical_pmf": 99
+    },
+    {
+      "encoded_payload_bytes": 14048,
+      "n_elements": 19440,
+      "n_unique_symbols": 155,
+      "name": "blocks.3.weight",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 112351.0045143902,
+      "theoretical_bytes_at_empirical_pmf": 14044
+    },
+    {
+      "encoded_payload_bytes": 72,
+      "n_elements": 80,
+      "n_unique_symbols": 63,
+      "name": "blocks.3.bias",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 568.51205781463,
+      "theoretical_bytes_at_empirical_pmf": 72
+    },
+    {
+      "encoded_payload_bytes": 10172,
+      "n_elements": 12960,
+      "n_unique_symbols": 206,
+      "name": "blocks.4.weight",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 81349.75512399337,
+      "theoretical_bytes_at_empirical_pmf": 10169
+    },
+    {
+      "encoded_payload_bytes": 68,
+      "n_elements": 72,
+      "n_unique_symbols": 60,
+      "name": "blocks.4.bias",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 514.0671714243232,
+      "theoretical_bytes_at_empirical_pmf": 65
+    },
+    {
+      "encoded_payload_bytes": 7704,
+      "n_elements": 11664,
+      "n_unique_symbols": 92,
+      "name": "blocks.5.weight",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 61598.141451559604,
+      "theoretical_bytes_at_empirical_pmf": 7700
+    },
+    {
+      "encoded_payload_bytes": 64,
+      "n_elements": 72,
+      "n_unique_symbols": 53,
+      "name": "blocks.5.bias",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 502.98197166089756,
+      "theoretical_bytes_at_empirical_pmf": 63
+    },
+    {
+      "encoded_payload_bytes": 728,
+      "n_elements": 972,
+      "n_unique_symbols": 77,
+      "name": "skips.2.weight",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 5797.52409946653,
+      "theoretical_bytes_at_empirical_pmf": 725
+    },
+    {
+      "encoded_payload_bytes": 24,
+      "n_elements": 27,
+      "n_unique_symbols": 23,
+      "name": "skips.2.bias",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 187.42803651188285,
+      "theoretical_bytes_at_empirical_pmf": 24
+    },
+    {
+      "encoded_payload_bytes": 432,
+      "n_elements": 540,
+      "n_unique_symbols": 92,
+      "name": "skips.3.weight",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 3428.3888925550546,
+      "theoretical_bytes_at_empirical_pmf": 429
+    },
+    {
+      "encoded_payload_bytes": 20,
+      "n_elements": 20,
+      "n_unique_symbols": 20,
+      "name": "skips.3.bias",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 142.06575616824043,
+      "theoretical_bytes_at_empirical_pmf": 18
+    },
+    {
+      "encoded_payload_bytes": 284,
+      "n_elements": 360,
+      "n_unique_symbols": 73,
+      "name": "skips.4.weight",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 2256.51049290226,
+      "theoretical_bytes_at_empirical_pmf": 283
+    },
+    {
+      "encoded_payload_bytes": 20,
+      "n_elements": 18,
+      "n_unique_symbols": 18,
+      "name": "skips.4.bias",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 127.66962853655738,
+      "theoretical_bytes_at_empirical_pmf": 16
+    },
+    {
+      "encoded_payload_bytes": 1028,
+      "n_elements": 1458,
+      "n_unique_symbols": 73,
+      "name": "refine.0.weight",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 8212.715701076735,
+      "theoretical_bytes_at_empirical_pmf": 1027
+    },
+    {
+      "encoded_payload_bytes": 8,
+      "n_elements": 9,
+      "n_unique_symbols": 9,
+      "name": "refine.0.bias",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 63.39954707422607,
+      "theoretical_bytes_at_empirical_pmf": 8
+    },
+    {
+      "encoded_payload_bytes": 1112,
+      "n_elements": 1458,
+      "n_unique_symbols": 110,
+      "name": "refine.1.weight",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 8872.416882221984,
+      "theoretical_bytes_at_empirical_pmf": 1110
+    },
+    {
+      "encoded_payload_bytes": 16,
+      "n_elements": 18,
+      "n_unique_symbols": 17,
+      "name": "refine.1.bias",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 126.49970353511507,
+      "theoretical_bytes_at_empirical_pmf": 16
+    },
+    {
+      "encoded_payload_bytes": 368,
+      "n_elements": 486,
+      "n_unique_symbols": 69,
+      "name": "rgb_0.weight",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 2918.3003196768077,
+      "theoretical_bytes_at_empirical_pmf": 365
+    },
+    {
+      "encoded_payload_bytes": 4,
+      "n_elements": 3,
+      "n_unique_symbols": 3,
+      "name": "rgb_0.bias",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 21.033681766269762,
+      "theoretical_bytes_at_empirical_pmf": 3
+    },
+    {
+      "encoded_payload_bytes": 380,
+      "n_elements": 486,
+      "n_unique_symbols": 76,
+      "name": "rgb_1.weight",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 3015.549977657838,
+      "theoretical_bytes_at_empirical_pmf": 377
+    },
+    {
+      "encoded_payload_bytes": 4,
+      "n_elements": 3,
+      "n_unique_symbols": 3,
+      "name": "rgb_1.bias",
+      "pmf_overhead_bytes": 510,
+      "theoretical_bits_at_empirical_pmf": 21.033681766269762,
+      "theoretical_bytes_at_empirical_pmf": 3
+    }
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "savings_vs_brotli_optuna": -12574,
+  "savings_vs_marginal_floor": -14802,
+  "schema": "pr101_constriction_marginal_floor.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "smoothing": 1.0,
+  "tool": "tools/pr101_constriction_marginal_floor.py",
+  "total_archive_overhead_bytes": 16094,
+  "total_archive_with_overhead": 190718,
+  "total_encoded_payload_bytes": 160344,
+  "total_pmf_overhead_bytes": 14280,
+  "total_theoretical_bits_at_empirical_pmf": 1282255.635619506,
+  "total_theoretical_bytes_at_empirical_pmf": 160282,
+  "total_with_pmf_overhead": 174624
+}

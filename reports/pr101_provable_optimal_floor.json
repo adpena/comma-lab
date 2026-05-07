@@ -1,0 +1,85 @@
+{
+  "archive_overhead_bytes": 16094,
+  "charged_bits_changed": false,
+  "dispatch_blockers": [
+    "entropy_floor_ladder_only",
+    "model_table_overhead_omitted_for_context_rows",
+    "no_actual_context_coder_bitstream",
+    "no_archive_substitution_performed",
+    "missing_exact_cuda_auth_eval"
+  ],
+  "empirical_encoders": [
+    {
+      "bytes_archive": 178144,
+      "bytes_payload": 162050,
+      "name": "brotli_optuna_optimum",
+      "ratio_to_per_tensor_floor": 1.0139405088160578
+    },
+    {
+      "bytes_archive": 178181,
+      "bytes_payload": 161975,
+      "name": "per_tensor_aac_zero_pmf",
+      "ratio_to_per_tensor_floor": 1.0134712367508854
+    },
+    {
+      "bytes_archive": 202999,
+      "bytes_payload": 186793,
+      "name": "joint_aac_zero_pmf",
+      "ratio_to_per_tensor_floor": 1.1687564915969015
+    }
+  ],
+  "evidence_grade": "derivation",
+  "evidence_semantics": "cpu_model_class_entropy_floor_ladder",
+  "input_state_dict": "experiments/results/cma_pr101_real_substrate_20260507T222605Z/pr101_decoder_state_dict.pt",
+  "input_state_dict_sha256": "b863362aaba1b9cae9b944f5e5b1a43a53ca824b7899ed7b80a2e2146d66f053",
+  "n_categories": 255,
+  "n_total_symbols": 228958,
+  "provable_floors": [
+    {
+      "bits": 784096.3627091256,
+      "bytes_archive": 114107,
+      "bytes_payload": 98013,
+      "description": "2nd-order Markov oracle: P(s_n | s_{n-1}, s_{n-2}). Context table overhead omitted.",
+      "model_table_overhead_included": false,
+      "name": "markov2_per_tensor"
+    },
+    {
+      "bits": 1216841.361772633,
+      "bytes_archive": 168200,
+      "bytes_payload": 152106,
+      "description": "1st-order Markov oracle: P(s_n | s_{n-1}). Context table overhead omitted.",
+      "model_table_overhead_included": false,
+      "name": "markov1_per_tensor"
+    },
+    {
+      "bits": 1278574.086865211,
+      "bytes_archive": 175916,
+      "bytes_payload": 159822,
+      "description": "Each tensor encoded against its own empirical PMF. Provable per-tensor-marginal floor.",
+      "model_table_overhead_included": false,
+      "name": "iid_per_tensor"
+    },
+    {
+      "bits": 1278574.086865211,
+      "bytes_archive": 175916,
+      "bytes_payload": 159822,
+      "description": "Same as iid_per_tensor; tensor index treated as side-info.",
+      "model_table_overhead_included": false,
+      "name": "conditional_on_tensor"
+    },
+    {
+      "bits": 1492670.4327363742,
+      "bytes_archive": 202678,
+      "bytes_payload": 186584,
+      "description": "All symbols treated as iid from a single pooled empirical PMF. Provable iid-pooled floor.",
+      "model_table_overhead_included": false,
+      "name": "iid_joint_pooled"
+    }
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "pr101_compression_floor_ladder.v2",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "shannon_source_coding_theorem_statement": "For a declared source model, no uniquely-decodable prefix code can beat that model's entropy in expectation; arithmetic or range coders can approach the model code length closely. These rows are model-class floors, not a proof of the unrestricted global optimum over all possible compressors.",
+  "tool": "tools/pr101_provable_optimal_floor.py"
+}
