@@ -1,0 +1,3525 @@
+{
+  "archive": {
+    "bundle_format": "pr85_v5_8byte_lengths",
+    "bytes": 222404,
+    "member_x_bytes": 222304,
+    "member_x_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+    "path": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+    "segment_bytes": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 145087,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    },
+    "segment_sha256": {
+      "bias": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+      "frac": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+      "frac2": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+      "frac3": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+      "mask": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+      "model": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc",
+      "pose": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c",
+      "post": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+      "randmulti": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+      "region": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+      "shift": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4"
+    },
+    "sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f"
+  },
+  "dependency_report": {
+    "expected": {
+      "constriction": "0.4.2",
+      "numpy": "2.4.4",
+      "pyppmd": "1.3.1",
+      "python": "3.12.13",
+      "torch": "2.11.0"
+    },
+    "mismatches": {},
+    "missing": [],
+    "observed": {
+      "constriction": "0.4.2",
+      "numpy": "2.4.4",
+      "pyppmd": "1.3.1",
+      "python": "3.12.13",
+      "torch": "2.11.0"
+    },
+    "status": "passed",
+    "strict": false
+  },
+  "device": "cpu",
+  "dispatch_allowed": false,
+  "dispatch_attempted": false,
+  "dispatch_performed": false,
+  "elapsed_sec": 0.831,
+  "evidence_grade": "empirical",
+  "evidence_scope": "local_cpu_pr91_hpm1_range_uint32_contract_prefix",
+  "exact_fail_closed_findings": {
+    "byte_exact_reencode_proven": false,
+    "first_mismatch_evidence": {
+      "earliest_submitted_reference_decode_mismatch": {
+        "decoded_symbol": 4,
+        "matched_prefix_symbol_count": 1,
+        "probability_variant": "source_float32_perfect_false",
+        "reference_symbol": 2,
+        "symbol_index": 1,
+        "word_order_candidate": "big_endian_uint32_words"
+      },
+      "local_reemit_word_mismatch": {
+        "byte_offset": 0,
+        "common_prefix_word_count": 0,
+        "local_word_hex": "0x2e9d9815",
+        "preferred_variant": true,
+        "probability_variant": "source_float64_perfect_false",
+        "reason": "word_value_mismatch",
+        "submitted_word_hex": "0x9b5c86f6",
+        "submitted_word_order_candidate": "source_little_uint32",
+        "word_index": 0
+      },
+      "source_little_submitted_reference_decode_mismatch": {
+        "decoded_symbol": 2,
+        "matched_prefix_symbol_count": 7,
+        "probability_variant": "source_float64_perfect_false",
+        "reference_symbol": 0,
+        "symbol_index": 7,
+        "word_order_candidate": "source_little_uint32"
+      }
+    },
+    "full_decode_proven": false,
+    "ready_for_exact_eval_dispatch": false
+  },
+  "gpu_or_remote_work": false,
+  "hpm1_static_contract": {
+    "config": {
+      "channels": 64,
+      "delta": 2,
+      "height": 384,
+      "hpac_d_film": 8,
+      "hpac_len": 28243,
+      "n_frames": 600,
+      "ppmd_order": 4,
+      "predictor_count": 32,
+      "tokens_len": 116796,
+      "use_spm": 1,
+      "width": 512
+    },
+    "dispatch_allowed": false,
+    "failures": [],
+    "hpac": {
+      "bytes": 28243,
+      "sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd"
+    },
+    "schema": "pr91_hpm1_static_contract_v1",
+    "score_claim": false,
+    "status": "passed",
+    "tokens": {
+      "bytes": 116796,
+      "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+      "uint32_aligned": true
+    }
+  },
+  "local_only": true,
+  "next_required_artifact": "recover a PR91-specific encoder-side symbol/probability/range trace that makes the submitted uint32 stream replay and re-emit byte-exactly before any dispatch",
+  "payload": {
+    "config": {
+      "channels": 64,
+      "delta": 2,
+      "height": 384,
+      "hpac_d_film": 8,
+      "hpac_len": 28243,
+      "n_frames": 600,
+      "ppmd_order": 4,
+      "predictor_count": 32,
+      "tokens_len": 116796,
+      "use_spm": 1,
+      "width": 512
+    },
+    "hpac_bytes": 28243,
+    "hpac_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+    "tokens_bytes": 116796,
+    "tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b"
+  },
+  "pr86_hpac_relationship": {
+    "dispatch_allowed": false,
+    "expected_pr86_tokens_sha256": "14144bde496631f89a02646496bc2e66306bba6da149ddca37e21d85d175f225",
+    "expected_pr91_hpm1_hpac_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+    "hpac_model_matches_expected_pr91": true,
+    "pr86_archive": "experiments/results/public_pr86_intake_20260504_codex/archive.zip",
+    "pr86_archive_available": true,
+    "pr91_hpac_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+    "pr91_tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+    "score_claim": false,
+    "status": "passed_static_hpac_relationship",
+    "tokens_match_pr86_expected": false
+  },
+  "prefix_collection": {
+    "positions": [
+      {
+        "frame": 0,
+        "global_symbol": 0,
+        "group": 0,
+        "pixel_yx": {
+          "x": 0,
+          "y": 0
+        },
+        "reference_symbol": 2,
+        "symbol_in_group": 0
+      },
+      {
+        "frame": 0,
+        "global_symbol": 1,
+        "group": 0,
+        "pixel_yx": {
+          "x": 32,
+          "y": 0
+        },
+        "reference_symbol": 2,
+        "symbol_in_group": 1
+      },
+      {
+        "frame": 0,
+        "global_symbol": 2,
+        "group": 0,
+        "pixel_yx": {
+          "x": 64,
+          "y": 0
+        },
+        "reference_symbol": 2,
+        "symbol_in_group": 2
+      },
+      {
+        "frame": 0,
+        "global_symbol": 3,
+        "group": 0,
+        "pixel_yx": {
+          "x": 96,
+          "y": 0
+        },
+        "reference_symbol": 2,
+        "symbol_in_group": 3
+      },
+      {
+        "frame": 0,
+        "global_symbol": 4,
+        "group": 0,
+        "pixel_yx": {
+          "x": 128,
+          "y": 0
+        },
+        "reference_symbol": 2,
+        "symbol_in_group": 4
+      },
+      {
+        "frame": 0,
+        "global_symbol": 5,
+        "group": 0,
+        "pixel_yx": {
+          "x": 160,
+          "y": 0
+        },
+        "reference_symbol": 2,
+        "symbol_in_group": 5
+      },
+      {
+        "frame": 0,
+        "global_symbol": 6,
+        "group": 0,
+        "pixel_yx": {
+          "x": 192,
+          "y": 0
+        },
+        "reference_symbol": 2,
+        "symbol_in_group": 6
+      },
+      {
+        "frame": 0,
+        "global_symbol": 7,
+        "group": 0,
+        "pixel_yx": {
+          "x": 224,
+          "y": 0
+        },
+        "reference_symbol": 0,
+        "symbol_in_group": 7
+      }
+    ],
+    "spatial_order_candidate": "phase_major_row_major",
+    "symbol_limit": 8
+  },
+  "promotion_eligible": false,
+  "range_contract": {
+    "classification": {
+      "any_local_reemit_exact_word_match": false,
+      "any_submitted_word_order_replay_passed": false,
+      "best_source_little_local_word_common_prefix": 0,
+      "best_submitted_replay": {
+        "first_mismatch": {
+          "decoded_symbol": 2,
+          "reference_symbol": 0,
+          "symbol_index": 7
+        },
+        "matched_prefix_symbol_count": 7,
+        "passed": false,
+        "probability_variant": "source_float64_perfect_false",
+        "status": "decoded_symbol_mismatch",
+        "word_order_candidate": "source_little_uint32"
+      },
+      "clone_direct_finalization_disagrees": false,
+      "default_source_little_local_word_common_prefix": 0,
+      "default_source_little_matched_prefix_symbol_count": 7,
+      "dispatch_allowed": false,
+      "finalization_sensitive_full_vs_truncated_replay": false,
+      "likely_blocker_class": "context_row_probability_or_reference_symbol_grammar",
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "pr91_hpm1_range_contract_classification_v1",
+      "scope_note": "This classification is a bounded local prefix diagnostic. It is not a full HPM1 decode, byte-exact reencode proof, score claim, or dispatch unlock.",
+      "score_claim": false,
+      "status": "submitted_stream_does_not_decode_reference_prefix",
+      "symbol_count": 8
+    },
+    "default_probability_variant": "source_float64_perfect_false",
+    "dispatch_allowed": false,
+    "dispatch_attempted": false,
+    "dispatch_performed": false,
+    "evidence_grade": "empirical",
+    "first_mismatch_evidence": {
+      "earliest_submitted_reference_decode_mismatch": {
+        "decoded_symbol": 4,
+        "matched_prefix_symbol_count": 1,
+        "probability_variant": "source_float32_perfect_false",
+        "reference_symbol": 2,
+        "symbol_index": 1,
+        "word_order_candidate": "big_endian_uint32_words"
+      },
+      "local_reemit_word_mismatch": {
+        "byte_offset": 0,
+        "common_prefix_word_count": 0,
+        "local_word_hex": "0x2e9d9815",
+        "preferred_variant": true,
+        "probability_variant": "source_float64_perfect_false",
+        "reason": "word_value_mismatch",
+        "submitted_word_hex": "0x9b5c86f6",
+        "submitted_word_order_candidate": "source_little_uint32",
+        "word_index": 0
+      },
+      "source_little_submitted_reference_decode_mismatch": {
+        "decoded_symbol": 2,
+        "matched_prefix_symbol_count": 7,
+        "probability_variant": "source_float64_perfect_false",
+        "reference_symbol": 0,
+        "symbol_index": 7,
+        "word_order_candidate": "source_little_uint32"
+      }
+    },
+    "gpu_or_remote_work": false,
+    "local_only": true,
+    "local_reemit_hypotheses": [
+      {
+        "clone_direct_word_comparison": {
+          "common_prefix_word_count": 1,
+          "exact_match": true,
+          "first_mismatch": null,
+          "local_label": "source_float64_perfect_false:clone_get_compressed",
+          "local_word_count": 1,
+          "submitted_label": "source_float64_perfect_false:direct_get_compressed",
+          "submitted_word_count": 1
+        },
+        "clone_direct_words_equal": true,
+        "emitted_words": {
+          "first_words_hex": [
+            "0x2e9d9815"
+          ],
+          "last_words_hex": [
+            "0x2e9d9815"
+          ],
+          "sha256": "fc4393852bd6c5c1c608fb918a7af6918d6aa4c1b24c45c4724a853de3a13802",
+          "uint32_word_count": 1
+        },
+        "encoder_state_before_finalization": {
+          "api": "constriction.stream.queue.RangeEncoder",
+          "compressed_words_snapshot": {
+            "first_words_hex": [
+              "0x2e9d9815"
+            ],
+            "last_words_hex": [
+              "0x2e9d9815"
+            ],
+            "sha256": "fc4393852bd6c5c1c608fb918a7af6918d6aa4c1b24c45c4724a853de3a13802",
+            "uint32_word_count": 1
+          },
+          "is_empty": 0,
+          "label": "after_encoding_8_symbols",
+          "num_bits": 32,
+          "num_words": 1,
+          "pos": {
+            "interval": [
+              3359008109493373335,
+              422075683448280528
+            ],
+            "queue_index": 0
+          }
+        },
+        "finalization": "clone_get_compressed",
+        "finalization_sensitivity": {
+          "submitted_full_stream_replay": {
+            "decoded_prefix": {
+              "count": 8,
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+            },
+            "decoded_symbol_count": 8,
+            "decoder_state_after_mismatch": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_range_contract_symbol_mismatch",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "first_mismatch": {
+              "decoded_symbol": 2,
+              "reference_symbol": 0,
+              "symbol_index": 7
+            },
+            "matched_prefix_symbol_count": 7,
+            "passed": false,
+            "status": "decoded_symbol_mismatch"
+          },
+          "submitted_same_word_count_replay": {
+            "decoded_prefix": {
+              "count": 8,
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+            },
+            "decoded_symbol_count": 8,
+            "decoder_state_after_mismatch": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_range_contract_symbol_mismatch",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "first_mismatch": {
+              "decoded_symbol": 2,
+              "reference_symbol": 0,
+              "symbol_index": 7
+            },
+            "matched_prefix_symbol_count": 7,
+            "passed": false,
+            "status": "decoded_symbol_mismatch"
+          },
+          "submitted_same_word_count_scope": "submitted stream truncated to the local standalone finalized prefix word count",
+          "submitted_same_word_count_words": {
+            "first_words_hex": [
+              "0x9b5c86f6"
+            ],
+            "last_words_hex": [
+              "0x9b5c86f6"
+            ],
+            "sha256": "b73ef75801a53e501a877255b1f50b6aeae8d443305b32388a91685e97c3c78c",
+            "uint32_word_count": 1
+          }
+        },
+        "local_replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              0
+            ],
+            "sha256": "ca0b56fda4333c4917fbe87d85149df70786766a4bd9832ca11b30d7306c1fbd"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_replay": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_prefix_replay",
+            "maybe_exhausted": true,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "matched_prefix_symbol_count": 8,
+          "passed": true,
+          "status": "decoded_reference_prefix"
+        },
+        "probability_variant": "source_float64_perfect_false",
+        "submitted_word_comparisons": [
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_false:clone_get_compressed",
+              "local_word_hex": "0x2e9d9815",
+              "reason": "word_value_mismatch",
+              "submitted_label": "source_little_uint32",
+              "submitted_word_hex": "0x9b5c86f6",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_false:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "source_little_uint32",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_false:clone_get_compressed",
+              "local_word_hex": "0x2e9d9815",
+              "reason": "word_value_mismatch",
+              "submitted_label": "source_native_uint32",
+              "submitted_word_hex": "0x9b5c86f6",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_false:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "source_native_uint32",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_false:clone_get_compressed",
+              "local_word_hex": "0x2e9d9815",
+              "reason": "word_value_mismatch",
+              "submitted_label": "big_endian_uint32_words",
+              "submitted_word_hex": "0xf6865c9b",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_false:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "big_endian_uint32_words",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_false:clone_get_compressed",
+              "local_word_hex": "0x2e9d9815",
+              "reason": "word_value_mismatch",
+              "submitted_label": "reversed_little_uint32_words",
+              "submitted_word_hex": "0xa3cabc6d",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_false:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "reversed_little_uint32_words",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_false:clone_get_compressed",
+              "local_word_hex": "0x2e9d9815",
+              "reason": "word_value_mismatch",
+              "submitted_label": "reversed_big_endian_uint32_words",
+              "submitted_word_hex": "0x6dbccaa3",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_false:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "reversed_big_endian_uint32_words",
+            "submitted_word_count": 29199
+          }
+        ]
+      },
+      {
+        "clone_direct_word_comparison": {
+          "common_prefix_word_count": 1,
+          "exact_match": true,
+          "first_mismatch": null,
+          "local_label": "source_float64_perfect_false:clone_get_compressed",
+          "local_word_count": 1,
+          "submitted_label": "source_float64_perfect_false:direct_get_compressed",
+          "submitted_word_count": 1
+        },
+        "clone_direct_words_equal": true,
+        "emitted_words": {
+          "first_words_hex": [
+            "0x2e9d9815"
+          ],
+          "last_words_hex": [
+            "0x2e9d9815"
+          ],
+          "sha256": "fc4393852bd6c5c1c608fb918a7af6918d6aa4c1b24c45c4724a853de3a13802",
+          "uint32_word_count": 1
+        },
+        "encoder_state_before_finalization": {
+          "api": "constriction.stream.queue.RangeEncoder",
+          "compressed_words_snapshot": {
+            "first_words_hex": [
+              "0x2e9d9815"
+            ],
+            "last_words_hex": [
+              "0x2e9d9815"
+            ],
+            "sha256": "fc4393852bd6c5c1c608fb918a7af6918d6aa4c1b24c45c4724a853de3a13802",
+            "uint32_word_count": 1
+          },
+          "is_empty": 0,
+          "label": "after_encoding_8_symbols",
+          "num_bits": 32,
+          "num_words": 1,
+          "pos": {
+            "interval": [
+              3359008109493373335,
+              422075683448280528
+            ],
+            "queue_index": 0
+          }
+        },
+        "finalization": "direct_get_compressed",
+        "finalization_sensitivity": {
+          "submitted_full_stream_replay": {
+            "decoded_prefix": {
+              "count": 8,
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+            },
+            "decoded_symbol_count": 8,
+            "decoder_state_after_mismatch": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_range_contract_symbol_mismatch",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "first_mismatch": {
+              "decoded_symbol": 2,
+              "reference_symbol": 0,
+              "symbol_index": 7
+            },
+            "matched_prefix_symbol_count": 7,
+            "passed": false,
+            "status": "decoded_symbol_mismatch"
+          },
+          "submitted_same_word_count_replay": {
+            "decoded_prefix": {
+              "count": 8,
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+            },
+            "decoded_symbol_count": 8,
+            "decoder_state_after_mismatch": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_range_contract_symbol_mismatch",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "first_mismatch": {
+              "decoded_symbol": 2,
+              "reference_symbol": 0,
+              "symbol_index": 7
+            },
+            "matched_prefix_symbol_count": 7,
+            "passed": false,
+            "status": "decoded_symbol_mismatch"
+          },
+          "submitted_same_word_count_scope": "submitted stream truncated to the local standalone finalized prefix word count",
+          "submitted_same_word_count_words": {
+            "first_words_hex": [
+              "0x9b5c86f6"
+            ],
+            "last_words_hex": [
+              "0x9b5c86f6"
+            ],
+            "sha256": "b73ef75801a53e501a877255b1f50b6aeae8d443305b32388a91685e97c3c78c",
+            "uint32_word_count": 1
+          }
+        },
+        "local_replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              0
+            ],
+            "sha256": "ca0b56fda4333c4917fbe87d85149df70786766a4bd9832ca11b30d7306c1fbd"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_replay": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_prefix_replay",
+            "maybe_exhausted": true,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "matched_prefix_symbol_count": 8,
+          "passed": true,
+          "status": "decoded_reference_prefix"
+        },
+        "probability_variant": "source_float64_perfect_false",
+        "submitted_word_comparisons": [
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_false:direct_get_compressed",
+              "local_word_hex": "0x2e9d9815",
+              "reason": "word_value_mismatch",
+              "submitted_label": "source_little_uint32",
+              "submitted_word_hex": "0x9b5c86f6",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_false:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "source_little_uint32",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_false:direct_get_compressed",
+              "local_word_hex": "0x2e9d9815",
+              "reason": "word_value_mismatch",
+              "submitted_label": "source_native_uint32",
+              "submitted_word_hex": "0x9b5c86f6",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_false:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "source_native_uint32",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_false:direct_get_compressed",
+              "local_word_hex": "0x2e9d9815",
+              "reason": "word_value_mismatch",
+              "submitted_label": "big_endian_uint32_words",
+              "submitted_word_hex": "0xf6865c9b",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_false:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "big_endian_uint32_words",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_false:direct_get_compressed",
+              "local_word_hex": "0x2e9d9815",
+              "reason": "word_value_mismatch",
+              "submitted_label": "reversed_little_uint32_words",
+              "submitted_word_hex": "0xa3cabc6d",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_false:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "reversed_little_uint32_words",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_false:direct_get_compressed",
+              "local_word_hex": "0x2e9d9815",
+              "reason": "word_value_mismatch",
+              "submitted_label": "reversed_big_endian_uint32_words",
+              "submitted_word_hex": "0x6dbccaa3",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_false:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "reversed_big_endian_uint32_words",
+            "submitted_word_count": 29199
+          }
+        ]
+      },
+      {
+        "clone_direct_word_comparison": {
+          "common_prefix_word_count": 1,
+          "exact_match": true,
+          "first_mismatch": null,
+          "local_label": "source_float32_perfect_false:clone_get_compressed",
+          "local_word_count": 1,
+          "submitted_label": "source_float32_perfect_false:direct_get_compressed",
+          "submitted_word_count": 1
+        },
+        "clone_direct_words_equal": true,
+        "emitted_words": {
+          "first_words_hex": [
+            "0x2e9d9855"
+          ],
+          "last_words_hex": [
+            "0x2e9d9855"
+          ],
+          "sha256": "cf569ce5af6ad0be42af507b6729b220c6bbb160d37538a137aeeed13cfbfd0a",
+          "uint32_word_count": 1
+        },
+        "encoder_state_before_finalization": {
+          "api": "constriction.stream.queue.RangeEncoder",
+          "compressed_words_snapshot": {
+            "first_words_hex": [
+              "0x2e9d9855"
+            ],
+            "last_words_hex": [
+              "0x2e9d9855"
+            ],
+            "sha256": "cf569ce5af6ad0be42af507b6729b220c6bbb160d37538a137aeeed13cfbfd0a",
+            "uint32_word_count": 1
+          },
+          "is_empty": 0,
+          "label": "after_encoding_8_symbols",
+          "num_bits": 32,
+          "num_words": 1,
+          "pos": {
+            "interval": [
+              3359008387832029891,
+              422075818006950672
+            ],
+            "queue_index": 0
+          }
+        },
+        "finalization": "clone_get_compressed",
+        "finalization_sensitivity": {
+          "submitted_full_stream_replay": {
+            "decoded_prefix": {
+              "count": 8,
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+            },
+            "decoded_symbol_count": 8,
+            "decoder_state_after_mismatch": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_range_contract_symbol_mismatch",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "first_mismatch": {
+              "decoded_symbol": 2,
+              "reference_symbol": 0,
+              "symbol_index": 7
+            },
+            "matched_prefix_symbol_count": 7,
+            "passed": false,
+            "status": "decoded_symbol_mismatch"
+          },
+          "submitted_same_word_count_replay": {
+            "decoded_prefix": {
+              "count": 8,
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+            },
+            "decoded_symbol_count": 8,
+            "decoder_state_after_mismatch": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_range_contract_symbol_mismatch",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "first_mismatch": {
+              "decoded_symbol": 2,
+              "reference_symbol": 0,
+              "symbol_index": 7
+            },
+            "matched_prefix_symbol_count": 7,
+            "passed": false,
+            "status": "decoded_symbol_mismatch"
+          },
+          "submitted_same_word_count_scope": "submitted stream truncated to the local standalone finalized prefix word count",
+          "submitted_same_word_count_words": {
+            "first_words_hex": [
+              "0x9b5c86f6"
+            ],
+            "last_words_hex": [
+              "0x9b5c86f6"
+            ],
+            "sha256": "b73ef75801a53e501a877255b1f50b6aeae8d443305b32388a91685e97c3c78c",
+            "uint32_word_count": 1
+          }
+        },
+        "local_replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              0
+            ],
+            "sha256": "ca0b56fda4333c4917fbe87d85149df70786766a4bd9832ca11b30d7306c1fbd"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_replay": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_prefix_replay",
+            "maybe_exhausted": true,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "matched_prefix_symbol_count": 8,
+          "passed": true,
+          "status": "decoded_reference_prefix"
+        },
+        "probability_variant": "source_float32_perfect_false",
+        "submitted_word_comparisons": [
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_false:clone_get_compressed",
+              "local_word_hex": "0x2e9d9855",
+              "reason": "word_value_mismatch",
+              "submitted_label": "source_little_uint32",
+              "submitted_word_hex": "0x9b5c86f6",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_false:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "source_little_uint32",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_false:clone_get_compressed",
+              "local_word_hex": "0x2e9d9855",
+              "reason": "word_value_mismatch",
+              "submitted_label": "source_native_uint32",
+              "submitted_word_hex": "0x9b5c86f6",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_false:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "source_native_uint32",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_false:clone_get_compressed",
+              "local_word_hex": "0x2e9d9855",
+              "reason": "word_value_mismatch",
+              "submitted_label": "big_endian_uint32_words",
+              "submitted_word_hex": "0xf6865c9b",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_false:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "big_endian_uint32_words",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_false:clone_get_compressed",
+              "local_word_hex": "0x2e9d9855",
+              "reason": "word_value_mismatch",
+              "submitted_label": "reversed_little_uint32_words",
+              "submitted_word_hex": "0xa3cabc6d",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_false:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "reversed_little_uint32_words",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_false:clone_get_compressed",
+              "local_word_hex": "0x2e9d9855",
+              "reason": "word_value_mismatch",
+              "submitted_label": "reversed_big_endian_uint32_words",
+              "submitted_word_hex": "0x6dbccaa3",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_false:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "reversed_big_endian_uint32_words",
+            "submitted_word_count": 29199
+          }
+        ]
+      },
+      {
+        "clone_direct_word_comparison": {
+          "common_prefix_word_count": 1,
+          "exact_match": true,
+          "first_mismatch": null,
+          "local_label": "source_float32_perfect_false:clone_get_compressed",
+          "local_word_count": 1,
+          "submitted_label": "source_float32_perfect_false:direct_get_compressed",
+          "submitted_word_count": 1
+        },
+        "clone_direct_words_equal": true,
+        "emitted_words": {
+          "first_words_hex": [
+            "0x2e9d9855"
+          ],
+          "last_words_hex": [
+            "0x2e9d9855"
+          ],
+          "sha256": "cf569ce5af6ad0be42af507b6729b220c6bbb160d37538a137aeeed13cfbfd0a",
+          "uint32_word_count": 1
+        },
+        "encoder_state_before_finalization": {
+          "api": "constriction.stream.queue.RangeEncoder",
+          "compressed_words_snapshot": {
+            "first_words_hex": [
+              "0x2e9d9855"
+            ],
+            "last_words_hex": [
+              "0x2e9d9855"
+            ],
+            "sha256": "cf569ce5af6ad0be42af507b6729b220c6bbb160d37538a137aeeed13cfbfd0a",
+            "uint32_word_count": 1
+          },
+          "is_empty": 0,
+          "label": "after_encoding_8_symbols",
+          "num_bits": 32,
+          "num_words": 1,
+          "pos": {
+            "interval": [
+              3359008387832029891,
+              422075818006950672
+            ],
+            "queue_index": 0
+          }
+        },
+        "finalization": "direct_get_compressed",
+        "finalization_sensitivity": {
+          "submitted_full_stream_replay": {
+            "decoded_prefix": {
+              "count": 8,
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+            },
+            "decoded_symbol_count": 8,
+            "decoder_state_after_mismatch": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_range_contract_symbol_mismatch",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "first_mismatch": {
+              "decoded_symbol": 2,
+              "reference_symbol": 0,
+              "symbol_index": 7
+            },
+            "matched_prefix_symbol_count": 7,
+            "passed": false,
+            "status": "decoded_symbol_mismatch"
+          },
+          "submitted_same_word_count_replay": {
+            "decoded_prefix": {
+              "count": 8,
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+            },
+            "decoded_symbol_count": 8,
+            "decoder_state_after_mismatch": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_range_contract_symbol_mismatch",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "first_mismatch": {
+              "decoded_symbol": 2,
+              "reference_symbol": 0,
+              "symbol_index": 7
+            },
+            "matched_prefix_symbol_count": 7,
+            "passed": false,
+            "status": "decoded_symbol_mismatch"
+          },
+          "submitted_same_word_count_scope": "submitted stream truncated to the local standalone finalized prefix word count",
+          "submitted_same_word_count_words": {
+            "first_words_hex": [
+              "0x9b5c86f6"
+            ],
+            "last_words_hex": [
+              "0x9b5c86f6"
+            ],
+            "sha256": "b73ef75801a53e501a877255b1f50b6aeae8d443305b32388a91685e97c3c78c",
+            "uint32_word_count": 1
+          }
+        },
+        "local_replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              0
+            ],
+            "sha256": "ca0b56fda4333c4917fbe87d85149df70786766a4bd9832ca11b30d7306c1fbd"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_replay": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_prefix_replay",
+            "maybe_exhausted": true,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "matched_prefix_symbol_count": 8,
+          "passed": true,
+          "status": "decoded_reference_prefix"
+        },
+        "probability_variant": "source_float32_perfect_false",
+        "submitted_word_comparisons": [
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_false:direct_get_compressed",
+              "local_word_hex": "0x2e9d9855",
+              "reason": "word_value_mismatch",
+              "submitted_label": "source_little_uint32",
+              "submitted_word_hex": "0x9b5c86f6",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_false:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "source_little_uint32",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_false:direct_get_compressed",
+              "local_word_hex": "0x2e9d9855",
+              "reason": "word_value_mismatch",
+              "submitted_label": "source_native_uint32",
+              "submitted_word_hex": "0x9b5c86f6",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_false:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "source_native_uint32",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_false:direct_get_compressed",
+              "local_word_hex": "0x2e9d9855",
+              "reason": "word_value_mismatch",
+              "submitted_label": "big_endian_uint32_words",
+              "submitted_word_hex": "0xf6865c9b",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_false:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "big_endian_uint32_words",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_false:direct_get_compressed",
+              "local_word_hex": "0x2e9d9855",
+              "reason": "word_value_mismatch",
+              "submitted_label": "reversed_little_uint32_words",
+              "submitted_word_hex": "0xa3cabc6d",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_false:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "reversed_little_uint32_words",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_false:direct_get_compressed",
+              "local_word_hex": "0x2e9d9855",
+              "reason": "word_value_mismatch",
+              "submitted_label": "reversed_big_endian_uint32_words",
+              "submitted_word_hex": "0x6dbccaa3",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_false:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "reversed_big_endian_uint32_words",
+            "submitted_word_count": 29199
+          }
+        ]
+      },
+      {
+        "clone_direct_word_comparison": {
+          "common_prefix_word_count": 1,
+          "exact_match": true,
+          "first_mismatch": null,
+          "local_label": "source_float64_perfect_true:clone_get_compressed",
+          "local_word_count": 1,
+          "submitted_label": "source_float64_perfect_true:direct_get_compressed",
+          "submitted_word_count": 1
+        },
+        "clone_direct_words_equal": true,
+        "emitted_words": {
+          "first_words_hex": [
+            "0x2e9d9431"
+          ],
+          "last_words_hex": [
+            "0x2e9d9431"
+          ],
+          "sha256": "847eed2daab7bab83f828052dfb2c193d85f25f8a2f9ac8c77238453da9b52d1",
+          "uint32_word_count": 1
+        },
+        "encoder_state_before_finalization": {
+          "api": "constriction.stream.queue.RangeEncoder",
+          "compressed_words_snapshot": {
+            "first_words_hex": [
+              "0x2e9d9431"
+            ],
+            "last_words_hex": [
+              "0x2e9d9431"
+            ],
+            "sha256": "847eed2daab7bab83f828052dfb2c193d85f25f8a2f9ac8c77238453da9b52d1",
+            "uint32_word_count": 1
+          },
+          "is_empty": 0,
+          "label": "after_encoding_8_symbols",
+          "num_bits": 32,
+          "num_words": 1,
+          "pos": {
+            "interval": [
+              3359003832996403228,
+              422076377961327456
+            ],
+            "queue_index": 0
+          }
+        },
+        "finalization": "clone_get_compressed",
+        "finalization_sensitivity": {
+          "submitted_full_stream_replay": {
+            "decoded_prefix": {
+              "count": 8,
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+            },
+            "decoded_symbol_count": 8,
+            "decoder_state_after_mismatch": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_range_contract_symbol_mismatch",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "first_mismatch": {
+              "decoded_symbol": 2,
+              "reference_symbol": 0,
+              "symbol_index": 7
+            },
+            "matched_prefix_symbol_count": 7,
+            "passed": false,
+            "status": "decoded_symbol_mismatch"
+          },
+          "submitted_same_word_count_replay": {
+            "decoded_prefix": {
+              "count": 8,
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+            },
+            "decoded_symbol_count": 8,
+            "decoder_state_after_mismatch": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_range_contract_symbol_mismatch",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "first_mismatch": {
+              "decoded_symbol": 2,
+              "reference_symbol": 0,
+              "symbol_index": 7
+            },
+            "matched_prefix_symbol_count": 7,
+            "passed": false,
+            "status": "decoded_symbol_mismatch"
+          },
+          "submitted_same_word_count_scope": "submitted stream truncated to the local standalone finalized prefix word count",
+          "submitted_same_word_count_words": {
+            "first_words_hex": [
+              "0x9b5c86f6"
+            ],
+            "last_words_hex": [
+              "0x9b5c86f6"
+            ],
+            "sha256": "b73ef75801a53e501a877255b1f50b6aeae8d443305b32388a91685e97c3c78c",
+            "uint32_word_count": 1
+          }
+        },
+        "local_replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              0
+            ],
+            "sha256": "ca0b56fda4333c4917fbe87d85149df70786766a4bd9832ca11b30d7306c1fbd"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_replay": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_prefix_replay",
+            "maybe_exhausted": true,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "matched_prefix_symbol_count": 8,
+          "passed": true,
+          "status": "decoded_reference_prefix"
+        },
+        "probability_variant": "source_float64_perfect_true",
+        "submitted_word_comparisons": [
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_true:clone_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "source_little_uint32",
+              "submitted_word_hex": "0x9b5c86f6",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_true:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "source_little_uint32",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_true:clone_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "source_native_uint32",
+              "submitted_word_hex": "0x9b5c86f6",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_true:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "source_native_uint32",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_true:clone_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "big_endian_uint32_words",
+              "submitted_word_hex": "0xf6865c9b",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_true:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "big_endian_uint32_words",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_true:clone_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "reversed_little_uint32_words",
+              "submitted_word_hex": "0xa3cabc6d",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_true:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "reversed_little_uint32_words",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_true:clone_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "reversed_big_endian_uint32_words",
+              "submitted_word_hex": "0x6dbccaa3",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_true:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "reversed_big_endian_uint32_words",
+            "submitted_word_count": 29199
+          }
+        ]
+      },
+      {
+        "clone_direct_word_comparison": {
+          "common_prefix_word_count": 1,
+          "exact_match": true,
+          "first_mismatch": null,
+          "local_label": "source_float64_perfect_true:clone_get_compressed",
+          "local_word_count": 1,
+          "submitted_label": "source_float64_perfect_true:direct_get_compressed",
+          "submitted_word_count": 1
+        },
+        "clone_direct_words_equal": true,
+        "emitted_words": {
+          "first_words_hex": [
+            "0x2e9d9431"
+          ],
+          "last_words_hex": [
+            "0x2e9d9431"
+          ],
+          "sha256": "847eed2daab7bab83f828052dfb2c193d85f25f8a2f9ac8c77238453da9b52d1",
+          "uint32_word_count": 1
+        },
+        "encoder_state_before_finalization": {
+          "api": "constriction.stream.queue.RangeEncoder",
+          "compressed_words_snapshot": {
+            "first_words_hex": [
+              "0x2e9d9431"
+            ],
+            "last_words_hex": [
+              "0x2e9d9431"
+            ],
+            "sha256": "847eed2daab7bab83f828052dfb2c193d85f25f8a2f9ac8c77238453da9b52d1",
+            "uint32_word_count": 1
+          },
+          "is_empty": 0,
+          "label": "after_encoding_8_symbols",
+          "num_bits": 32,
+          "num_words": 1,
+          "pos": {
+            "interval": [
+              3359003832996403228,
+              422076377961327456
+            ],
+            "queue_index": 0
+          }
+        },
+        "finalization": "direct_get_compressed",
+        "finalization_sensitivity": {
+          "submitted_full_stream_replay": {
+            "decoded_prefix": {
+              "count": 8,
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+            },
+            "decoded_symbol_count": 8,
+            "decoder_state_after_mismatch": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_range_contract_symbol_mismatch",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "first_mismatch": {
+              "decoded_symbol": 2,
+              "reference_symbol": 0,
+              "symbol_index": 7
+            },
+            "matched_prefix_symbol_count": 7,
+            "passed": false,
+            "status": "decoded_symbol_mismatch"
+          },
+          "submitted_same_word_count_replay": {
+            "decoded_prefix": {
+              "count": 8,
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+            },
+            "decoded_symbol_count": 8,
+            "decoder_state_after_mismatch": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_range_contract_symbol_mismatch",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "first_mismatch": {
+              "decoded_symbol": 2,
+              "reference_symbol": 0,
+              "symbol_index": 7
+            },
+            "matched_prefix_symbol_count": 7,
+            "passed": false,
+            "status": "decoded_symbol_mismatch"
+          },
+          "submitted_same_word_count_scope": "submitted stream truncated to the local standalone finalized prefix word count",
+          "submitted_same_word_count_words": {
+            "first_words_hex": [
+              "0x9b5c86f6"
+            ],
+            "last_words_hex": [
+              "0x9b5c86f6"
+            ],
+            "sha256": "b73ef75801a53e501a877255b1f50b6aeae8d443305b32388a91685e97c3c78c",
+            "uint32_word_count": 1
+          }
+        },
+        "local_replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              0
+            ],
+            "sha256": "ca0b56fda4333c4917fbe87d85149df70786766a4bd9832ca11b30d7306c1fbd"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_replay": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_prefix_replay",
+            "maybe_exhausted": true,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "matched_prefix_symbol_count": 8,
+          "passed": true,
+          "status": "decoded_reference_prefix"
+        },
+        "probability_variant": "source_float64_perfect_true",
+        "submitted_word_comparisons": [
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_true:direct_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "source_little_uint32",
+              "submitted_word_hex": "0x9b5c86f6",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_true:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "source_little_uint32",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_true:direct_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "source_native_uint32",
+              "submitted_word_hex": "0x9b5c86f6",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_true:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "source_native_uint32",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_true:direct_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "big_endian_uint32_words",
+              "submitted_word_hex": "0xf6865c9b",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_true:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "big_endian_uint32_words",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_true:direct_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "reversed_little_uint32_words",
+              "submitted_word_hex": "0xa3cabc6d",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_true:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "reversed_little_uint32_words",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float64_perfect_true:direct_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "reversed_big_endian_uint32_words",
+              "submitted_word_hex": "0x6dbccaa3",
+              "word_index": 0
+            },
+            "local_label": "source_float64_perfect_true:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "reversed_big_endian_uint32_words",
+            "submitted_word_count": 29199
+          }
+        ]
+      },
+      {
+        "clone_direct_word_comparison": {
+          "common_prefix_word_count": 1,
+          "exact_match": true,
+          "first_mismatch": null,
+          "local_label": "source_float32_perfect_true:clone_get_compressed",
+          "local_word_count": 1,
+          "submitted_label": "source_float32_perfect_true:direct_get_compressed",
+          "submitted_word_count": 1
+        },
+        "clone_direct_words_equal": true,
+        "emitted_words": {
+          "first_words_hex": [
+            "0x2e9d9431"
+          ],
+          "last_words_hex": [
+            "0x2e9d9431"
+          ],
+          "sha256": "847eed2daab7bab83f828052dfb2c193d85f25f8a2f9ac8c77238453da9b52d1",
+          "uint32_word_count": 1
+        },
+        "encoder_state_before_finalization": {
+          "api": "constriction.stream.queue.RangeEncoder",
+          "compressed_words_snapshot": {
+            "first_words_hex": [
+              "0x2e9d9431"
+            ],
+            "last_words_hex": [
+              "0x2e9d9431"
+            ],
+            "sha256": "847eed2daab7bab83f828052dfb2c193d85f25f8a2f9ac8c77238453da9b52d1",
+            "uint32_word_count": 1
+          },
+          "is_empty": 0,
+          "label": "after_encoding_8_symbols",
+          "num_bits": 32,
+          "num_words": 1,
+          "pos": {
+            "interval": [
+              3359003832996403228,
+              422076377961327456
+            ],
+            "queue_index": 0
+          }
+        },
+        "finalization": "clone_get_compressed",
+        "finalization_sensitivity": {
+          "submitted_full_stream_replay": {
+            "decoded_prefix": {
+              "count": 8,
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+            },
+            "decoded_symbol_count": 8,
+            "decoder_state_after_mismatch": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_range_contract_symbol_mismatch",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "first_mismatch": {
+              "decoded_symbol": 2,
+              "reference_symbol": 0,
+              "symbol_index": 7
+            },
+            "matched_prefix_symbol_count": 7,
+            "passed": false,
+            "status": "decoded_symbol_mismatch"
+          },
+          "submitted_same_word_count_replay": {
+            "decoded_prefix": {
+              "count": 8,
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+            },
+            "decoded_symbol_count": 8,
+            "decoder_state_after_mismatch": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_range_contract_symbol_mismatch",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "first_mismatch": {
+              "decoded_symbol": 2,
+              "reference_symbol": 0,
+              "symbol_index": 7
+            },
+            "matched_prefix_symbol_count": 7,
+            "passed": false,
+            "status": "decoded_symbol_mismatch"
+          },
+          "submitted_same_word_count_scope": "submitted stream truncated to the local standalone finalized prefix word count",
+          "submitted_same_word_count_words": {
+            "first_words_hex": [
+              "0x9b5c86f6"
+            ],
+            "last_words_hex": [
+              "0x9b5c86f6"
+            ],
+            "sha256": "b73ef75801a53e501a877255b1f50b6aeae8d443305b32388a91685e97c3c78c",
+            "uint32_word_count": 1
+          }
+        },
+        "local_replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              0
+            ],
+            "sha256": "ca0b56fda4333c4917fbe87d85149df70786766a4bd9832ca11b30d7306c1fbd"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_replay": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_prefix_replay",
+            "maybe_exhausted": true,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "matched_prefix_symbol_count": 8,
+          "passed": true,
+          "status": "decoded_reference_prefix"
+        },
+        "probability_variant": "source_float32_perfect_true",
+        "submitted_word_comparisons": [
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_true:clone_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "source_little_uint32",
+              "submitted_word_hex": "0x9b5c86f6",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_true:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "source_little_uint32",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_true:clone_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "source_native_uint32",
+              "submitted_word_hex": "0x9b5c86f6",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_true:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "source_native_uint32",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_true:clone_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "big_endian_uint32_words",
+              "submitted_word_hex": "0xf6865c9b",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_true:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "big_endian_uint32_words",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_true:clone_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "reversed_little_uint32_words",
+              "submitted_word_hex": "0xa3cabc6d",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_true:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "reversed_little_uint32_words",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_true:clone_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "reversed_big_endian_uint32_words",
+              "submitted_word_hex": "0x6dbccaa3",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_true:clone_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "reversed_big_endian_uint32_words",
+            "submitted_word_count": 29199
+          }
+        ]
+      },
+      {
+        "clone_direct_word_comparison": {
+          "common_prefix_word_count": 1,
+          "exact_match": true,
+          "first_mismatch": null,
+          "local_label": "source_float32_perfect_true:clone_get_compressed",
+          "local_word_count": 1,
+          "submitted_label": "source_float32_perfect_true:direct_get_compressed",
+          "submitted_word_count": 1
+        },
+        "clone_direct_words_equal": true,
+        "emitted_words": {
+          "first_words_hex": [
+            "0x2e9d9431"
+          ],
+          "last_words_hex": [
+            "0x2e9d9431"
+          ],
+          "sha256": "847eed2daab7bab83f828052dfb2c193d85f25f8a2f9ac8c77238453da9b52d1",
+          "uint32_word_count": 1
+        },
+        "encoder_state_before_finalization": {
+          "api": "constriction.stream.queue.RangeEncoder",
+          "compressed_words_snapshot": {
+            "first_words_hex": [
+              "0x2e9d9431"
+            ],
+            "last_words_hex": [
+              "0x2e9d9431"
+            ],
+            "sha256": "847eed2daab7bab83f828052dfb2c193d85f25f8a2f9ac8c77238453da9b52d1",
+            "uint32_word_count": 1
+          },
+          "is_empty": 0,
+          "label": "after_encoding_8_symbols",
+          "num_bits": 32,
+          "num_words": 1,
+          "pos": {
+            "interval": [
+              3359003832996403228,
+              422076377961327456
+            ],
+            "queue_index": 0
+          }
+        },
+        "finalization": "direct_get_compressed",
+        "finalization_sensitivity": {
+          "submitted_full_stream_replay": {
+            "decoded_prefix": {
+              "count": 8,
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+            },
+            "decoded_symbol_count": 8,
+            "decoder_state_after_mismatch": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_range_contract_symbol_mismatch",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "first_mismatch": {
+              "decoded_symbol": 2,
+              "reference_symbol": 0,
+              "symbol_index": 7
+            },
+            "matched_prefix_symbol_count": 7,
+            "passed": false,
+            "status": "decoded_symbol_mismatch"
+          },
+          "submitted_same_word_count_replay": {
+            "decoded_prefix": {
+              "count": 8,
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+            },
+            "decoded_symbol_count": 8,
+            "decoder_state_after_mismatch": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_range_contract_symbol_mismatch",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "first_mismatch": {
+              "decoded_symbol": 2,
+              "reference_symbol": 0,
+              "symbol_index": 7
+            },
+            "matched_prefix_symbol_count": 7,
+            "passed": false,
+            "status": "decoded_symbol_mismatch"
+          },
+          "submitted_same_word_count_scope": "submitted stream truncated to the local standalone finalized prefix word count",
+          "submitted_same_word_count_words": {
+            "first_words_hex": [
+              "0x9b5c86f6"
+            ],
+            "last_words_hex": [
+              "0x9b5c86f6"
+            ],
+            "sha256": "b73ef75801a53e501a877255b1f50b6aeae8d443305b32388a91685e97c3c78c",
+            "uint32_word_count": 1
+          }
+        },
+        "local_replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              0
+            ],
+            "sha256": "ca0b56fda4333c4917fbe87d85149df70786766a4bd9832ca11b30d7306c1fbd"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_replay": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_prefix_replay",
+            "maybe_exhausted": true,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "matched_prefix_symbol_count": 8,
+          "passed": true,
+          "status": "decoded_reference_prefix"
+        },
+        "probability_variant": "source_float32_perfect_true",
+        "submitted_word_comparisons": [
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_true:direct_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "source_little_uint32",
+              "submitted_word_hex": "0x9b5c86f6",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_true:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "source_little_uint32",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_true:direct_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "source_native_uint32",
+              "submitted_word_hex": "0x9b5c86f6",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_true:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "source_native_uint32",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_true:direct_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "big_endian_uint32_words",
+              "submitted_word_hex": "0xf6865c9b",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_true:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "big_endian_uint32_words",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_true:direct_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "reversed_little_uint32_words",
+              "submitted_word_hex": "0xa3cabc6d",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_true:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "reversed_little_uint32_words",
+            "submitted_word_count": 29199
+          },
+          {
+            "common_prefix_word_count": 0,
+            "exact_match": false,
+            "first_mismatch": {
+              "byte_offset": 0,
+              "common_prefix_word_count": 0,
+              "local_label": "source_float32_perfect_true:direct_get_compressed",
+              "local_word_hex": "0x2e9d9431",
+              "reason": "word_value_mismatch",
+              "submitted_label": "reversed_big_endian_uint32_words",
+              "submitted_word_hex": "0x6dbccaa3",
+              "word_index": 0
+            },
+            "local_label": "source_float32_perfect_true:direct_get_compressed",
+            "local_word_count": 1,
+            "submitted_label": "reversed_big_endian_uint32_words",
+            "submitted_word_count": 29199
+          }
+        ]
+      }
+    ],
+    "next_required_artifacts": [
+      "recover true PR91 encoder semantic symbols or context rows",
+      "prove full submitted-token decode before re-encode work",
+      "prove byte-exact range uint32 re-emission before any dispatch"
+    ],
+    "prefix": {
+      "probability_rows": {
+        "count": 8,
+        "dtype": "float32",
+        "first_row": [
+          0.0064796745,
+          5.46637e-05,
+          0.9658758044,
+          0.0167099535,
+          0.0108798463
+        ],
+        "sha256": "c670f106abff43976aa5e102858d39248158c00371a57f0478d09bb176280534",
+        "shape": [
+          8,
+          5
+        ]
+      },
+      "reference_symbols": {
+        "count": 8,
+        "first_symbols": [
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          0
+        ],
+        "sha256": "ca0b56fda4333c4917fbe87d85149df70786766a4bd9832ca11b30d7306c1fbd"
+      },
+      "symbol_count": 8
+    },
+    "prob_eps": 1e-07,
+    "probability_variants": [
+      "source_float64_perfect_false",
+      "source_float32_perfect_false",
+      "source_float64_perfect_true",
+      "source_float32_perfect_true"
+    ],
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "pr91_hpm1_range_contract_rows_manifest_v1",
+    "score_claim": false,
+    "status": "submitted_stream_does_not_decode_reference_prefix",
+    "submitted_word_order_replays": [
+      {
+        "probability_variant": "source_float64_perfect_false",
+        "replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2
+            ],
+            "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 2,
+            "reference_symbol": 0,
+            "symbol_index": 7
+          },
+          "matched_prefix_symbol_count": 7,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0x9b5c86f6",
+            "0xc3e3f98a",
+            "0xf6f1efc5",
+            "0x12458e3f",
+            "0x13c6f92f",
+            "0x00000000",
+            "0x00000000",
+            "0x1edbc12d"
+          ],
+          "last_words_hex": [
+            "0x21ba8197",
+            "0x9cfe9ecd",
+            "0x6cad5e80",
+            "0xc7afa705",
+            "0x98e4980f",
+            "0x76208ae1",
+            "0x69051875",
+            "0xa3cabc6d"
+          ],
+          "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "source_little_uint32"
+      },
+      {
+        "probability_variant": "source_float32_perfect_false",
+        "replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2
+            ],
+            "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 2,
+            "reference_symbol": 0,
+            "symbol_index": 7
+          },
+          "matched_prefix_symbol_count": 7,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0x9b5c86f6",
+            "0xc3e3f98a",
+            "0xf6f1efc5",
+            "0x12458e3f",
+            "0x13c6f92f",
+            "0x00000000",
+            "0x00000000",
+            "0x1edbc12d"
+          ],
+          "last_words_hex": [
+            "0x21ba8197",
+            "0x9cfe9ecd",
+            "0x6cad5e80",
+            "0xc7afa705",
+            "0x98e4980f",
+            "0x76208ae1",
+            "0x69051875",
+            "0xa3cabc6d"
+          ],
+          "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "source_little_uint32"
+      },
+      {
+        "probability_variant": "source_float64_perfect_true",
+        "replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2
+            ],
+            "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 2,
+            "reference_symbol": 0,
+            "symbol_index": 7
+          },
+          "matched_prefix_symbol_count": 7,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0x9b5c86f6",
+            "0xc3e3f98a",
+            "0xf6f1efc5",
+            "0x12458e3f",
+            "0x13c6f92f",
+            "0x00000000",
+            "0x00000000",
+            "0x1edbc12d"
+          ],
+          "last_words_hex": [
+            "0x21ba8197",
+            "0x9cfe9ecd",
+            "0x6cad5e80",
+            "0xc7afa705",
+            "0x98e4980f",
+            "0x76208ae1",
+            "0x69051875",
+            "0xa3cabc6d"
+          ],
+          "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "source_little_uint32"
+      },
+      {
+        "probability_variant": "source_float32_perfect_true",
+        "replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2
+            ],
+            "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 2,
+            "reference_symbol": 0,
+            "symbol_index": 7
+          },
+          "matched_prefix_symbol_count": 7,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0x9b5c86f6",
+            "0xc3e3f98a",
+            "0xf6f1efc5",
+            "0x12458e3f",
+            "0x13c6f92f",
+            "0x00000000",
+            "0x00000000",
+            "0x1edbc12d"
+          ],
+          "last_words_hex": [
+            "0x21ba8197",
+            "0x9cfe9ecd",
+            "0x6cad5e80",
+            "0xc7afa705",
+            "0x98e4980f",
+            "0x76208ae1",
+            "0x69051875",
+            "0xa3cabc6d"
+          ],
+          "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "source_little_uint32"
+      },
+      {
+        "probability_variant": "source_float64_perfect_false",
+        "replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2
+            ],
+            "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 2,
+            "reference_symbol": 0,
+            "symbol_index": 7
+          },
+          "matched_prefix_symbol_count": 7,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0x9b5c86f6",
+            "0xc3e3f98a",
+            "0xf6f1efc5",
+            "0x12458e3f",
+            "0x13c6f92f",
+            "0x00000000",
+            "0x00000000",
+            "0x1edbc12d"
+          ],
+          "last_words_hex": [
+            "0x21ba8197",
+            "0x9cfe9ecd",
+            "0x6cad5e80",
+            "0xc7afa705",
+            "0x98e4980f",
+            "0x76208ae1",
+            "0x69051875",
+            "0xa3cabc6d"
+          ],
+          "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "source_native_uint32"
+      },
+      {
+        "probability_variant": "source_float32_perfect_false",
+        "replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2
+            ],
+            "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 2,
+            "reference_symbol": 0,
+            "symbol_index": 7
+          },
+          "matched_prefix_symbol_count": 7,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0x9b5c86f6",
+            "0xc3e3f98a",
+            "0xf6f1efc5",
+            "0x12458e3f",
+            "0x13c6f92f",
+            "0x00000000",
+            "0x00000000",
+            "0x1edbc12d"
+          ],
+          "last_words_hex": [
+            "0x21ba8197",
+            "0x9cfe9ecd",
+            "0x6cad5e80",
+            "0xc7afa705",
+            "0x98e4980f",
+            "0x76208ae1",
+            "0x69051875",
+            "0xa3cabc6d"
+          ],
+          "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "source_native_uint32"
+      },
+      {
+        "probability_variant": "source_float64_perfect_true",
+        "replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2
+            ],
+            "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 2,
+            "reference_symbol": 0,
+            "symbol_index": 7
+          },
+          "matched_prefix_symbol_count": 7,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0x9b5c86f6",
+            "0xc3e3f98a",
+            "0xf6f1efc5",
+            "0x12458e3f",
+            "0x13c6f92f",
+            "0x00000000",
+            "0x00000000",
+            "0x1edbc12d"
+          ],
+          "last_words_hex": [
+            "0x21ba8197",
+            "0x9cfe9ecd",
+            "0x6cad5e80",
+            "0xc7afa705",
+            "0x98e4980f",
+            "0x76208ae1",
+            "0x69051875",
+            "0xa3cabc6d"
+          ],
+          "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "source_native_uint32"
+      },
+      {
+        "probability_variant": "source_float32_perfect_true",
+        "replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2
+            ],
+            "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 2,
+            "reference_symbol": 0,
+            "symbol_index": 7
+          },
+          "matched_prefix_symbol_count": 7,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0x9b5c86f6",
+            "0xc3e3f98a",
+            "0xf6f1efc5",
+            "0x12458e3f",
+            "0x13c6f92f",
+            "0x00000000",
+            "0x00000000",
+            "0x1edbc12d"
+          ],
+          "last_words_hex": [
+            "0x21ba8197",
+            "0x9cfe9ecd",
+            "0x6cad5e80",
+            "0xc7afa705",
+            "0x98e4980f",
+            "0x76208ae1",
+            "0x69051875",
+            "0xa3cabc6d"
+          ],
+          "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "source_native_uint32"
+      },
+      {
+        "probability_variant": "source_float64_perfect_false",
+        "replay": {
+          "decoded_prefix": {
+            "count": 2,
+            "first_symbols": [
+              2,
+              4
+            ],
+            "sha256": "421dd6c30feb9149b349ae67525aae7556eb6c552e0b363edd78f8a8d8646ab8"
+          },
+          "decoded_symbol_count": 2,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 4,
+            "reference_symbol": 2,
+            "symbol_index": 1
+          },
+          "matched_prefix_symbol_count": 1,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0xf6865c9b",
+            "0x8af9e3c3",
+            "0xc5eff1f6",
+            "0x3f8e4512",
+            "0x2ff9c613",
+            "0x00000000",
+            "0x00000000",
+            "0x2dc1db1e"
+          ],
+          "last_words_hex": [
+            "0x9781ba21",
+            "0xcd9efe9c",
+            "0x805ead6c",
+            "0x05a7afc7",
+            "0x0f98e498",
+            "0xe18a2076",
+            "0x75180569",
+            "0x6dbccaa3"
+          ],
+          "sha256": "519d614d8cd8e03e0f23d3c0d58f70e1492ae4677887f19ba3353e77262f1132",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "big_endian_uint32_words"
+      },
+      {
+        "probability_variant": "source_float32_perfect_false",
+        "replay": {
+          "decoded_prefix": {
+            "count": 2,
+            "first_symbols": [
+              2,
+              4
+            ],
+            "sha256": "421dd6c30feb9149b349ae67525aae7556eb6c552e0b363edd78f8a8d8646ab8"
+          },
+          "decoded_symbol_count": 2,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 4,
+            "reference_symbol": 2,
+            "symbol_index": 1
+          },
+          "matched_prefix_symbol_count": 1,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0xf6865c9b",
+            "0x8af9e3c3",
+            "0xc5eff1f6",
+            "0x3f8e4512",
+            "0x2ff9c613",
+            "0x00000000",
+            "0x00000000",
+            "0x2dc1db1e"
+          ],
+          "last_words_hex": [
+            "0x9781ba21",
+            "0xcd9efe9c",
+            "0x805ead6c",
+            "0x05a7afc7",
+            "0x0f98e498",
+            "0xe18a2076",
+            "0x75180569",
+            "0x6dbccaa3"
+          ],
+          "sha256": "519d614d8cd8e03e0f23d3c0d58f70e1492ae4677887f19ba3353e77262f1132",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "big_endian_uint32_words"
+      },
+      {
+        "probability_variant": "source_float64_perfect_true",
+        "replay": {
+          "decoded_prefix": {
+            "count": 2,
+            "first_symbols": [
+              2,
+              4
+            ],
+            "sha256": "421dd6c30feb9149b349ae67525aae7556eb6c552e0b363edd78f8a8d8646ab8"
+          },
+          "decoded_symbol_count": 2,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 4,
+            "reference_symbol": 2,
+            "symbol_index": 1
+          },
+          "matched_prefix_symbol_count": 1,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0xf6865c9b",
+            "0x8af9e3c3",
+            "0xc5eff1f6",
+            "0x3f8e4512",
+            "0x2ff9c613",
+            "0x00000000",
+            "0x00000000",
+            "0x2dc1db1e"
+          ],
+          "last_words_hex": [
+            "0x9781ba21",
+            "0xcd9efe9c",
+            "0x805ead6c",
+            "0x05a7afc7",
+            "0x0f98e498",
+            "0xe18a2076",
+            "0x75180569",
+            "0x6dbccaa3"
+          ],
+          "sha256": "519d614d8cd8e03e0f23d3c0d58f70e1492ae4677887f19ba3353e77262f1132",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "big_endian_uint32_words"
+      },
+      {
+        "probability_variant": "source_float32_perfect_true",
+        "replay": {
+          "decoded_prefix": {
+            "count": 2,
+            "first_symbols": [
+              2,
+              4
+            ],
+            "sha256": "421dd6c30feb9149b349ae67525aae7556eb6c552e0b363edd78f8a8d8646ab8"
+          },
+          "decoded_symbol_count": 2,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 4,
+            "reference_symbol": 2,
+            "symbol_index": 1
+          },
+          "matched_prefix_symbol_count": 1,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0xf6865c9b",
+            "0x8af9e3c3",
+            "0xc5eff1f6",
+            "0x3f8e4512",
+            "0x2ff9c613",
+            "0x00000000",
+            "0x00000000",
+            "0x2dc1db1e"
+          ],
+          "last_words_hex": [
+            "0x9781ba21",
+            "0xcd9efe9c",
+            "0x805ead6c",
+            "0x05a7afc7",
+            "0x0f98e498",
+            "0xe18a2076",
+            "0x75180569",
+            "0x6dbccaa3"
+          ],
+          "sha256": "519d614d8cd8e03e0f23d3c0d58f70e1492ae4677887f19ba3353e77262f1132",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "big_endian_uint32_words"
+      },
+      {
+        "probability_variant": "source_float64_perfect_false",
+        "replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2
+            ],
+            "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 2,
+            "reference_symbol": 0,
+            "symbol_index": 7
+          },
+          "matched_prefix_symbol_count": 7,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0xa3cabc6d",
+            "0x69051875",
+            "0x76208ae1",
+            "0x98e4980f",
+            "0xc7afa705",
+            "0x6cad5e80",
+            "0x9cfe9ecd",
+            "0x21ba8197"
+          ],
+          "last_words_hex": [
+            "0x1edbc12d",
+            "0x00000000",
+            "0x00000000",
+            "0x13c6f92f",
+            "0x12458e3f",
+            "0xf6f1efc5",
+            "0xc3e3f98a",
+            "0x9b5c86f6"
+          ],
+          "sha256": "c181e1ce372f932eaa43776f633eabeb3d40a98085f90f2fc096533c1ab9fecd",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "reversed_little_uint32_words"
+      },
+      {
+        "probability_variant": "source_float32_perfect_false",
+        "replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2
+            ],
+            "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 2,
+            "reference_symbol": 0,
+            "symbol_index": 7
+          },
+          "matched_prefix_symbol_count": 7,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0xa3cabc6d",
+            "0x69051875",
+            "0x76208ae1",
+            "0x98e4980f",
+            "0xc7afa705",
+            "0x6cad5e80",
+            "0x9cfe9ecd",
+            "0x21ba8197"
+          ],
+          "last_words_hex": [
+            "0x1edbc12d",
+            "0x00000000",
+            "0x00000000",
+            "0x13c6f92f",
+            "0x12458e3f",
+            "0xf6f1efc5",
+            "0xc3e3f98a",
+            "0x9b5c86f6"
+          ],
+          "sha256": "c181e1ce372f932eaa43776f633eabeb3d40a98085f90f2fc096533c1ab9fecd",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "reversed_little_uint32_words"
+      },
+      {
+        "probability_variant": "source_float64_perfect_true",
+        "replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2
+            ],
+            "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 2,
+            "reference_symbol": 0,
+            "symbol_index": 7
+          },
+          "matched_prefix_symbol_count": 7,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0xa3cabc6d",
+            "0x69051875",
+            "0x76208ae1",
+            "0x98e4980f",
+            "0xc7afa705",
+            "0x6cad5e80",
+            "0x9cfe9ecd",
+            "0x21ba8197"
+          ],
+          "last_words_hex": [
+            "0x1edbc12d",
+            "0x00000000",
+            "0x00000000",
+            "0x13c6f92f",
+            "0x12458e3f",
+            "0xf6f1efc5",
+            "0xc3e3f98a",
+            "0x9b5c86f6"
+          ],
+          "sha256": "c181e1ce372f932eaa43776f633eabeb3d40a98085f90f2fc096533c1ab9fecd",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "reversed_little_uint32_words"
+      },
+      {
+        "probability_variant": "source_float32_perfect_true",
+        "replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2
+            ],
+            "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 2,
+            "reference_symbol": 0,
+            "symbol_index": 7
+          },
+          "matched_prefix_symbol_count": 7,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0xa3cabc6d",
+            "0x69051875",
+            "0x76208ae1",
+            "0x98e4980f",
+            "0xc7afa705",
+            "0x6cad5e80",
+            "0x9cfe9ecd",
+            "0x21ba8197"
+          ],
+          "last_words_hex": [
+            "0x1edbc12d",
+            "0x00000000",
+            "0x00000000",
+            "0x13c6f92f",
+            "0x12458e3f",
+            "0xf6f1efc5",
+            "0xc3e3f98a",
+            "0x9b5c86f6"
+          ],
+          "sha256": "c181e1ce372f932eaa43776f633eabeb3d40a98085f90f2fc096533c1ab9fecd",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "reversed_little_uint32_words"
+      },
+      {
+        "probability_variant": "source_float64_perfect_false",
+        "replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2
+            ],
+            "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 2,
+            "reference_symbol": 0,
+            "symbol_index": 7
+          },
+          "matched_prefix_symbol_count": 7,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0x6dbccaa3",
+            "0x75180569",
+            "0xe18a2076",
+            "0x0f98e498",
+            "0x05a7afc7",
+            "0x805ead6c",
+            "0xcd9efe9c",
+            "0x9781ba21"
+          ],
+          "last_words_hex": [
+            "0x2dc1db1e",
+            "0x00000000",
+            "0x00000000",
+            "0x2ff9c613",
+            "0x3f8e4512",
+            "0xc5eff1f6",
+            "0x8af9e3c3",
+            "0xf6865c9b"
+          ],
+          "sha256": "3485f6cad54600f83824a9feb580a5adcbf5f58fcdccc2cba0118932a3834024",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "reversed_big_endian_uint32_words"
+      },
+      {
+        "probability_variant": "source_float32_perfect_false",
+        "replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2
+            ],
+            "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 2,
+            "reference_symbol": 0,
+            "symbol_index": 7
+          },
+          "matched_prefix_symbol_count": 7,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0x6dbccaa3",
+            "0x75180569",
+            "0xe18a2076",
+            "0x0f98e498",
+            "0x05a7afc7",
+            "0x805ead6c",
+            "0xcd9efe9c",
+            "0x9781ba21"
+          ],
+          "last_words_hex": [
+            "0x2dc1db1e",
+            "0x00000000",
+            "0x00000000",
+            "0x2ff9c613",
+            "0x3f8e4512",
+            "0xc5eff1f6",
+            "0x8af9e3c3",
+            "0xf6865c9b"
+          ],
+          "sha256": "3485f6cad54600f83824a9feb580a5adcbf5f58fcdccc2cba0118932a3834024",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "reversed_big_endian_uint32_words"
+      },
+      {
+        "probability_variant": "source_float64_perfect_true",
+        "replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2
+            ],
+            "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 2,
+            "reference_symbol": 0,
+            "symbol_index": 7
+          },
+          "matched_prefix_symbol_count": 7,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0x6dbccaa3",
+            "0x75180569",
+            "0xe18a2076",
+            "0x0f98e498",
+            "0x05a7afc7",
+            "0x805ead6c",
+            "0xcd9efe9c",
+            "0x9781ba21"
+          ],
+          "last_words_hex": [
+            "0x2dc1db1e",
+            "0x00000000",
+            "0x00000000",
+            "0x2ff9c613",
+            "0x3f8e4512",
+            "0xc5eff1f6",
+            "0x8af9e3c3",
+            "0xf6865c9b"
+          ],
+          "sha256": "3485f6cad54600f83824a9feb580a5adcbf5f58fcdccc2cba0118932a3834024",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "reversed_big_endian_uint32_words"
+      },
+      {
+        "probability_variant": "source_float32_perfect_true",
+        "replay": {
+          "decoded_prefix": {
+            "count": 8,
+            "first_symbols": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2
+            ],
+            "sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310"
+          },
+          "decoded_symbol_count": 8,
+          "decoder_state_after_mismatch": {
+            "api": "constriction.stream.queue.RangeDecoder",
+            "label": "after_range_contract_symbol_mismatch",
+            "maybe_exhausted": false,
+            "public_state_surface": "maybe_exhausted_only"
+          },
+          "first_mismatch": {
+            "decoded_symbol": 2,
+            "reference_symbol": 0,
+            "symbol_index": 7
+          },
+          "matched_prefix_symbol_count": 7,
+          "passed": false,
+          "status": "decoded_symbol_mismatch"
+        },
+        "submitted_words": {
+          "first_words_hex": [
+            "0x6dbccaa3",
+            "0x75180569",
+            "0xe18a2076",
+            "0x0f98e498",
+            "0x05a7afc7",
+            "0x805ead6c",
+            "0xcd9efe9c",
+            "0x9781ba21"
+          ],
+          "last_words_hex": [
+            "0x2dc1db1e",
+            "0x00000000",
+            "0x00000000",
+            "0x2ff9c613",
+            "0x3f8e4512",
+            "0xc5eff1f6",
+            "0x8af9e3c3",
+            "0xf6865c9b"
+          ],
+          "sha256": "3485f6cad54600f83824a9feb580a5adcbf5f58fcdccc2cba0118932a3834024",
+          "uint32_word_count": 29199
+        },
+        "word_order_candidate": "reversed_big_endian_uint32_words"
+      }
+    ]
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "recorded_at_utc": "2026-05-07T22:32:36+00:00",
+  "reference_token_sha256_contract": {
+    "actual_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "expected_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "matches_expected": true,
+    "required": true
+  },
+  "reference_tokens": {
+    "bytes": 117964800,
+    "expected_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "layout": "legacy_assume_nhw",
+    "matches_expected_pr85_qma9_token_source": true,
+    "observed_range": {
+      "max": 4,
+      "min": 0
+    },
+    "path": "experiments/results/pr85_qma9_mode_sweep_20260504_codex/adaptive6pr.decoded.raw",
+    "render_order_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "render_transform": "none",
+    "returned_shape": [
+      600,
+      384,
+      512
+    ],
+    "sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "storage_order": "frame_major_header_height_by_header_width",
+    "storage_shape": [
+      600,
+      384,
+      512
+    ]
+  },
+  "schema": "pr91_hpm1_range_contract_diagnostic_v1",
+  "score_claim": false,
+  "status": "submitted_stream_does_not_decode_reference_prefix",
+  "tool": "tac.pr91_hpm1_range_contract.run_pr91_hpm1_range_contract_diagnostic",
+  "tool_run_manifest": {
+    "argv": [
+      "--symbol-limit",
+      "8",
+      "--json-out",
+      ".omx/research/pr91_hpm1_range_contract_diagnostic_20260507_codex.json"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "9cc9021aa0238ac79dface61d69d31a89ed0bb6447cf7d3436fc4bcc23349913",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 222404,
+        "path": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+        "sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f"
+      },
+      {
+        "bytes": 117964800,
+        "path": "experiments/results/pr85_qma9_mode_sweep_20260504_codex/adaptive6pr.decoded.raw",
+        "sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a"
+      }
+    ],
+    "output_path": ".omx/research/pr91_hpm1_range_contract_diagnostic_20260507_codex.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/audit_pr91_hpm1_range_contract.py"
+  }
+}
