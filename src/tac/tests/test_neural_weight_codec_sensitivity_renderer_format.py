@@ -20,7 +20,6 @@ from tac.neural_weight_codec_sensitivity import (
     load_nwcs_renderer_container,
 )
 
-
 _LEN = struct.Struct("<q")
 
 
@@ -189,6 +188,6 @@ def test_renderer_export_dispatch_loads_nwcs_tensor_only_container(tmp_path: Pat
 
     assert detect_checkpoint_type(bin_path) == "neural_weight_compression_sensitivity_v1"
     model = load_nwcs_sensitivity_compressed_checkpoint(bin_path, device="cpu")
-    state = getattr(model, "_nwcs_state_dict")
+    state = model._nwcs_state_dict
     assert state["layer.weight"].shape == tensor.shape
     assert torch.isfinite(state["layer.weight"]).all()

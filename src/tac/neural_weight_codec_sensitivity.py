@@ -15,7 +15,7 @@ Composition of three existing techniques:
 Why a NEW lane (vs hand-stacking the three at deploy time)?  Because the
 codebook design changes when sensitivity is known up-front:
 
-    * Per-block sensitivity (Hessian magnitude × hard-pair gradient norm)
+    * Per-block sensitivity (Fisher diagonal proxy over hard-pair gradients)
       is computed against the Lane G v3 anchor renderer.
     * Block sensitivities are bucketed by quantile (default 4 buckets).
     * Each bucket gets its own VQ codebook size: high-sensitivity blocks
@@ -48,12 +48,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from tac.neural_weight_codec import (
-    WeightCodec,
-    WeightCodecConfig,
-    tensor_to_blocks,
-)
-
+from tac.neural_weight_codec import WeightCodec, WeightCodecConfig
 
 __all__ = [
     "NWCS_RENDERER_MAGIC",
@@ -62,9 +57,11 @@ __all__ = [
     "SensitivityAwareCodecConfig",
     "SensitivityAwareWeightCodec",
     "compute_per_block_sensitivity",
-    "encode_with_variable_codebook",
     "decode_with_per_block_codebook",
+    "encode_with_variable_codebook",
+    "encode_with_variable_codebook_manifest",
     "export_nwcs_renderer_container",
+    "inspect_variable_codebook_stream",
     "is_nwcs_renderer_container",
     "load_nwcs_renderer_container",
 ]
@@ -102,7 +99,7 @@ class NWCSRendererTensorEntry:
         dtype: str | None = None,
         original_dtype: str | None = None,
         block_metadata: dict[str, Any] | None = None,
-    ) -> "NWCSRendererTensorEntry":
+    ) -> NWCSRendererTensorEntry:
         """Build metadata for an already encoded per-tensor NWCS blob.
 
         This helper does not encode the tensor. It records the original tensor
@@ -499,7 +496,7 @@ class SensitivityAwareCodecConfig:
     """Static config for a sensitivity-aware NWC codec.
 
     Default codebook ladder is [4, 16, 64, 256], keyed by sensitivity
-    quantile (Q1..Q4). Operators may override; sizes must all be ≤ 256
+    quantile (Q1..Q4). Operators may override; sizes must all be <= 256
     so codes still fit in uint8.
 
     block_size matches the underlying base codec.
@@ -513,7 +510,7 @@ class SensitivityAwareCodecConfig:
     """Weight applied to high-sensitivity blocks during VQ-VAE training.
 
     When training the codec on a corpus, a block whose sensitivity falls
-    in the top quartile contributes ``importance_weight`` × MSE to the
+    in the top quartile contributes ``importance_weight`` x MSE to the
     reconstruction loss. Default 2.0 is a conservative choice; ablations
     in [0.5, 5.0] are reasonable.
     """
@@ -521,15 +518,17 @@ class SensitivityAwareCodecConfig:
     def __post_init__(self) -> None:
         if not self.codebook_sizes:
             raise ValueError("codebook_sizes must be non-empty")
+        if len(self.codebook_sizes) > 255:
+            raise ValueError("codebook_sizes must have at most 255 buckets")
         for k in self.codebook_sizes:
             if k <= 0 or k > 256:
                 raise ValueError(
-                    f"codebook size {k} not in (0, 256] — must fit in uint8"
+                    f"codebook size {k} not in (0, 256] - must fit in uint8"
                 )
         if self.block_size <= 0 or self.latent_dim <= 0:
             raise ValueError("block_size and latent_dim must be positive")
         if self.importance_weight < 0:
-            raise ValueError("importance_weight must be ≥ 0")
+            raise ValueError("importance_weight must be >= 0")
 
 
 # ── Sensitivity computation ───────────────────────────────────────────────
@@ -547,10 +546,8 @@ def compute_per_block_sensitivity(
     """Compute a per-block sensitivity score for every floating-point
     parameter of ``model``.
 
-    The score is the elementwise product of two signals:
-
-        Hessian magnitude   ≈ ⟨∂L/∂w⟩²    (gradient-squared diagonal proxy)
-        hard-pair magnitude = |∂L_pair/∂w|  averaged across pairs
+    The score is a diagonal Fisher proxy over hard-pair gradients:
+    ``E[(dL/dw)^2]``.
 
     Sensitivity is then aggregated from per-element to per-block via
     ``mean(|score|)``. Returns a dict keyed by parameter NAME mapping to
@@ -578,7 +575,7 @@ def compute_per_block_sensitivity(
           left dirty afterwards.
         * Skips bias-shaped tensors (1-D, < 2048 elements) to match the
           base codec's corpus-builder filter.
-        * The hard_pairs / gt_pairs need not be on any specific device —
+        * The hard_pairs / gt_pairs need not be on any specific device -
           they are moved to ``next(model.parameters()).device``.
     """
     if hessian_proxy != "grad_squared":
@@ -590,7 +587,6 @@ def compute_per_block_sensitivity(
     gt = gt_pairs.to(device)
 
     params = [(name, p) for name, p in model.named_parameters() if p.requires_grad]
-    grad_sums: dict[str, torch.Tensor] = {n: torch.zeros_like(p) for n, p in params}
     grad_sq_sums: dict[str, torch.Tensor] = {n: torch.zeros_like(p) for n, p in params}
 
     n_pairs = hard.shape[0]
@@ -611,10 +607,9 @@ def compute_per_block_sensitivity(
             create_graph=False,
             allow_unused=True,
         )
-        for (name, _), g in zip(params, grads):
+        for (name, _), g in zip(params, grads, strict=True):
             if g is None:
                 continue
-            grad_sums[name] = grad_sums[name] + g.detach().abs()
             grad_sq_sums[name] = grad_sq_sums[name] + g.detach() ** 2
 
     out: dict[str, torch.Tensor] = {}
@@ -622,15 +617,12 @@ def compute_per_block_sensitivity(
         if not torch.is_floating_point(p):
             continue
         if p.dim() == 1 and p.numel() < 2048:
-            # bias filter — same heuristic as base codec corpus builder
+            # bias filter - same heuristic as base codec corpus builder
             continue
         if p.numel() < block_size:
             continue
-        # mean over pairs
-        gmag = (grad_sums[name] / float(n_pairs)).reshape(-1)
         ghess = (grad_sq_sums[name] / float(n_pairs)).reshape(-1)
-        # Fisher diagonal proxy: E[g^2].  The gradient magnitude accumulator is
-        # retained for diagnostics, but multiplying by it would produce |g|^3.
+        # Fisher diagonal proxy: E[g^2].
         per_elem = ghess
         # aggregate to blocks (drop tail; same as tensor_to_blocks)
         n_blocks = per_elem.numel() // block_size
@@ -649,7 +641,7 @@ def _bucket_by_quantile(
     sensitivity: torch.Tensor, n_buckets: int
 ) -> torch.Tensor:
     """Return a long tensor of bucket indices in [0, n_buckets-1] for each
-    block, using quantile-edges of the sensitivity distribution.
+    block, using deterministic rank-quantiles of the sensitivity distribution.
 
     Bucket 0 = lowest sensitivity, n_buckets-1 = highest.
     """
@@ -658,14 +650,27 @@ def _bucket_by_quantile(
         name="sensitivity",
         allow_empty=True,
     )
+    if n_buckets <= 0:
+        raise ValueError("n_buckets must be positive")
+    if n_buckets > 255:
+        raise ValueError("n_buckets must fit in uint8")
     if sensitivity.numel() == 0:
         return torch.zeros(0, dtype=torch.long)
     if n_buckets <= 1:
         return torch.zeros_like(sensitivity, dtype=torch.long)
-    qs = torch.linspace(0.0, 1.0, n_buckets + 1)[1:-1]
-    edges = torch.quantile(sensitivity.float(), qs)
-    bucket = torch.bucketize(sensitivity.float(), edges)
-    return bucket.long().clamp(max=n_buckets - 1)
+    if float(sensitivity.min().item()) == float(sensitivity.max().item()):
+        return torch.zeros_like(sensitivity, dtype=torch.long)
+
+    # Rank-based quantiles avoid platform-dependent interpolation and make tie
+    # handling explicit: equal values are ordered by original block index.
+    values = [float(v) for v in sensitivity.tolist()]
+    order = sorted(range(len(values)), key=lambda idx: (values[idx], idx))
+    bucket = torch.empty(len(values), dtype=torch.long)
+    total = len(values)
+    for rank, original_idx in enumerate(order):
+        bucket_idx = ((rank + 1) * n_buckets - 1) // total
+        bucket[original_idx] = min(n_buckets - 1, int(bucket_idx))
+    return bucket
 
 
 def _validate_block_sensitivities(
@@ -691,6 +696,51 @@ def _validate_block_sensitivities(
     return out
 
 
+def _validate_nwcs_stream_shape(shape: list[int], *, label: str) -> None:
+    if not shape:
+        raise ValueError(f"{label} must have at least one dimension")
+    if len(shape) > 8:
+        raise ValueError(f"{label} has too many dimensions: {len(shape)}")
+    max_u32 = (1 << 32) - 1
+    for index, dim in enumerate(shape):
+        if dim < 0:
+            raise ValueError(f"{label}[{index}] is negative")
+        if dim > max_u32:
+            raise ValueError(f"{label}[{index}] exceeds uint32")
+
+
+def _validate_u32(value: int, *, label: str) -> int:
+    max_u32 = (1 << 32) - 1
+    if value < 0 or value > max_u32:
+        raise ValueError(f"{label} must fit in uint32, got {value}")
+    return int(value)
+
+
+def _tensor_to_uint8_bytes(values: torch.Tensor, *, label: str) -> bytes:
+    vals = values.detach().cpu().reshape(-1).to(torch.long)
+    if vals.numel() == 0:
+        return b""
+    lo = int(vals.min().item())
+    hi = int(vals.max().item())
+    if lo < 0 or hi > 255:
+        raise ValueError(f"{label} values must fit in uint8, got range [{lo}, {hi}]")
+    return bytes(int(v) for v in vals.tolist())
+
+
+def _tensor_to_float16_le_bytes(values: torch.Tensor) -> bytes:
+    import numpy as np
+
+    arr = (
+        values.detach()
+        .cpu()
+        .to(torch.float16)
+        .contiguous()
+        .numpy()
+        .astype(np.dtype("<f2"), copy=False)
+    )
+    return arr.tobytes()
+
+
 # ── Codec module ──────────────────────────────────────────────────────────
 
 
@@ -704,11 +754,11 @@ class SensitivityAwareWeightCodec(WeightCodec):
     with a small per-block header byte indicating which bucket was used.
 
     Design notes:
-        * The encoder/decoder MLPs are SHARED across buckets — only the
+        * The encoder/decoder MLPs are SHARED across buckets - only the
           codebooks differ. This keeps codec parameter count comparable
-          to the base codec (encoder + decoder + sum(K) × latent_dim).
+          to the base codec (encoder + decoder + sum(K) x latent_dim).
         * For the default ladder [4, 16, 64, 256] @ latent_dim=16, the
-          codebooks total 340 × 16 = 5440 floats = 21.7 KB. Shared MLPs
+          codebooks total 340 x 16 = 5440 floats = 21.7 KB. Shared MLPs
           are unchanged from the base codec.
         * The per-block bucket header is 1 byte (uint8); for the default
           4-bucket config only 2 bits are used. This is the small
@@ -774,11 +824,11 @@ class SensitivityAwareWeightCodec(WeightCodec):
         device: str | torch.device = "cpu",
         log_interval: int = 100,
         seed: int = 1234,
-    ) -> tuple["SensitivityAwareWeightCodec", list[float]]:
+    ) -> tuple[SensitivityAwareWeightCodec, list[float]]:
         """Train the codec with importance-weighted reconstruction loss.
 
         High-sensitivity blocks (top quartile by default) get an extra
-        ``importance_weight`` × MSE penalty, biasing the codec toward
+        ``importance_weight`` x MSE penalty, biasing the codec toward
         better reconstruction on the blocks that matter for the scorer.
         """
         if corpus.dim() != 2 or corpus.shape[1] != self.config.block_size:
@@ -862,14 +912,14 @@ class SensitivityAwareWeightCodec(WeightCodec):
 # NWCS1 binary layout (single tensor):
 #
 #   [4 B] uint32 ndim
-#   [4 B × ndim] uint32 shape
+#   [4 B x ndim] uint32 shape
 #   [4 B] uint32 n_blocks
 #   [1 B] uint8 n_buckets
-#   [2 B × n_buckets] uint16 bucket sizes (codebook K's; K may be up to 256)
-#   [n_blocks × 1 B] uint8 bucket id per block
-#   [n_blocks × 2 B] float16 per-block scale
-#   [n_blocks × 1 B] uint8 codebook index per block (within its bucket; K=256 stored as 0)
-#   [tail × 2 B] float16 leftover-tail elements
+#   [2 B x n_buckets] uint16 bucket sizes (codebook K's; K may be up to 256)
+#   [n_blocks x 1 B] uint8 bucket id per block
+#   [n_blocks x 2 B] float16 per-block scale
+#   [n_blocks x 1 B] uint8 codebook index per block (within its bucket; K=256 stored as 0)
+#   [tail x 2 B] float16 leftover-tail elements
 #
 # Note: a codebook size of K=256 stores indices 0..255 into a uint8 byte
 # (the max value uint8 can represent), but the *count* 256 itself does
@@ -893,6 +943,28 @@ def encode_with_variable_codebook(
     Returns:
         bytes blob in NWCS1 layout above.
     """
+    blob, _manifest = _encode_with_variable_codebook_impl(codec, weights, sensitivities)
+    return blob
+
+
+def encode_with_variable_codebook_manifest(
+    codec: SensitivityAwareWeightCodec,
+    weights: torch.Tensor,
+    sensitivities: torch.Tensor,
+) -> tuple[bytes, dict[str, Any]]:
+    """Encode one tensor and return a deterministic stream manifest.
+
+    The manifest is a build/debug artifact only. It records byte accounting and
+    tensor-stream structure, and explicitly carries no score or dispatch claim.
+    """
+    return _encode_with_variable_codebook_impl(codec, weights, sensitivities)
+
+
+def _encode_with_variable_codebook_impl(
+    codec: SensitivityAwareWeightCodec,
+    weights: torch.Tensor,
+    sensitivities: torch.Tensor,
+) -> tuple[bytes, dict[str, Any]]:
     if not torch.is_floating_point(weights):
         raise TypeError(f"encode expects floating tensor, got {weights.dtype}")
     device = next(codec.parameters()).device
@@ -901,6 +973,9 @@ def encode_with_variable_codebook(
     N = flat.numel()
     n_blocks = N // Bs
     tail_n = N - n_blocks * Bs
+    shape = [int(s) for s in weights.shape]
+    _validate_nwcs_stream_shape(shape, label="NWCS1.encode shape")
+    _validate_u32(n_blocks, label="NWCS1.encode n_blocks")
 
     sensitivities = _validate_block_sensitivities(
         sensitivities,
@@ -908,8 +983,12 @@ def encode_with_variable_codebook(
         expected_len=int(n_blocks),
         allow_empty=(n_blocks == 0),
     )
+    if n_blocks > 0 and float(sensitivities.sum().item()) <= 0.0:
+        raise ValueError("sensitivities must contain positive scorer signal")
 
     n_buckets = len(codec.sens_config.codebook_sizes)
+    if n_buckets > 255:
+        raise ValueError("NWCS1.encode n_buckets must fit in uint8")
     buckets = _bucket_by_quantile(sensitivities, n_buckets).to(device)
 
     if n_blocks == 0:
@@ -934,20 +1013,174 @@ def encode_with_variable_codebook(
     tail = flat[n_blocks * Bs :] if tail_n > 0 else torch.zeros(0, device=device)
 
     buf = bytearray()
-    shape = list(weights.shape)
     buf.extend(struct.pack("<I", len(shape)))
     for s in shape:
-        buf.extend(struct.pack("<I", int(s)))
+        buf.extend(struct.pack("<I", _validate_u32(int(s), label="NWCS1.encode shape dim")))
     buf.extend(struct.pack("<I", int(n_blocks)))
     buf.extend(struct.pack("<B", int(n_buckets)))
     for K in codec.sens_config.codebook_sizes:
-        # uint16 — 256 fits even though uint8 cannot hold the count.
+        # uint16 - 256 fits even though uint8 cannot hold the count.
         buf.extend(struct.pack("<H", int(K)))
-    buf.extend(bucket_ids.cpu().to(torch.uint8).numpy().tobytes())
-    buf.extend(scales.cpu().to(torch.float16).numpy().tobytes())
-    buf.extend(codes.cpu().to(torch.uint8).numpy().tobytes())
-    buf.extend(tail.cpu().to(torch.float16).numpy().tobytes())
-    return bytes(buf)
+    buf.extend(_tensor_to_uint8_bytes(bucket_ids, label="bucket id"))
+    buf.extend(_tensor_to_float16_le_bytes(scales))
+    buf.extend(_tensor_to_uint8_bytes(codes, label="code index"))
+    buf.extend(_tensor_to_float16_le_bytes(tail))
+    blob = bytes(buf)
+    manifest = inspect_variable_codebook_stream(blob, block_size=Bs)
+    if sensitivities.numel() > 0:
+        manifest["sensitivity"] = {
+            "blocks": int(sensitivities.numel()),
+            "min": float(sensitivities.min().item()),
+            "max": float(sensitivities.max().item()),
+            "sum": float(sensitivities.sum().item()),
+        }
+    else:
+        manifest["sensitivity"] = {
+            "blocks": 0,
+            "min": None,
+            "max": None,
+            "sum": 0.0,
+        }
+    return blob, manifest
+
+
+def inspect_variable_codebook_stream(
+    blob: bytes | bytearray | memoryview,
+    *,
+    block_size: int,
+) -> dict[str, Any]:
+    """Parse a single-tensor NWCS1 stream and return byte/accounting metadata.
+
+    This is intentionally a strict parser: malformed or internally inconsistent
+    streams raise ``ValueError`` before they can be embedded in a renderer
+    container.
+    """
+    data = bytes(blob)
+    if block_size <= 0:
+        raise ValueError("block_size must be positive")
+    offset = 0
+    total_len = len(data)
+
+    def _read(fmt: str, label: str) -> tuple[int, ...]:
+        nonlocal offset
+        size = struct.calcsize(fmt)
+        end = offset + size
+        if end > total_len:
+            raise ValueError(f"NWCS1.inspect truncated {label}")
+        values = struct.unpack_from(fmt, data, offset)
+        offset = end
+        return values
+
+    ndim = _read("<I", "ndim")[0]
+    if ndim == 0 or ndim > 8:
+        raise ValueError(f"NWCS1.inspect: implausible ndim={ndim}")
+    shape = [int(_read("<I", "shape")[0]) for _ in range(ndim)]
+    _validate_nwcs_stream_shape(shape, label="NWCS1.inspect shape")
+    n_blocks = int(_read("<I", "n_blocks")[0])
+    n_buckets = int(_read("<B", "n_buckets")[0])
+    if n_buckets <= 0:
+        raise ValueError("NWCS1.inspect: n_buckets must be positive")
+    bucket_sizes = [int(_read("<H", "bucket size")[0]) for _ in range(n_buckets)]
+    for index, size in enumerate(bucket_sizes):
+        if size <= 0 or size > 256:
+            raise ValueError(f"NWCS1.inspect: invalid bucket size {index}: {size}")
+
+    numel = 1
+    for dim in shape:
+        numel *= dim
+    expected_n_blocks = numel // int(block_size)
+    if n_blocks != expected_n_blocks:
+        raise ValueError(
+            "NWCS1.inspect: n_blocks mismatch "
+            f"(declared={n_blocks}, expected={expected_n_blocks})"
+        )
+    tail_elements = numel % int(block_size)
+
+    bucket_ids_offset = offset
+    bucket_ids_buf = data[offset: offset + n_blocks]
+    offset += n_blocks
+    scales_offset = offset
+    scales_bytes = n_blocks * 2
+    offset += scales_bytes
+    codes_offset = offset
+    codes_buf = data[offset: offset + n_blocks]
+    offset += n_blocks
+
+    tail_bytes = tail_elements * 2
+    tail_offset = offset
+    offset += tail_bytes
+    if offset > total_len:
+        raise ValueError(
+            f"NWCS1.inspect truncated stream: declared={offset}, available={total_len}"
+        )
+    if offset != total_len:
+        raise ValueError(f"NWCS1.inspect trailing bytes: {total_len - offset}")
+
+    bucket_counts = [0 for _ in range(n_buckets)]
+    if len(bucket_ids_buf) != n_blocks:
+        raise ValueError("NWCS1.inspect bucket id count mismatch")
+    if len(codes_buf) != n_blocks:
+        raise ValueError("NWCS1.inspect code count mismatch")
+    for idx, raw_bucket in enumerate(bucket_ids_buf):
+        bucket = int(raw_bucket)
+        if bucket >= n_buckets:
+            raise ValueError("NWCS1.inspect bucket id outside bucket table")
+        code = int(codes_buf[idx])
+        if code >= bucket_sizes[bucket]:
+            raise ValueError(f"NWCS1.inspect code index outside bucket {bucket}")
+        bucket_counts[bucket] += 1
+
+    fixed_header_bytes = 4 + (4 * int(ndim)) + 4 + 1 + (2 * n_buckets)
+    byte_accounting = {
+        "fixed_header_bytes": fixed_header_bytes,
+        "shape_bytes": 4 * int(ndim),
+        "n_blocks_bytes": 4,
+        "n_buckets_bytes": 1,
+        "bucket_sizes_bytes": 2 * n_buckets,
+        "bucket_ids_bytes": n_blocks,
+        "scales_bytes": scales_bytes,
+        "codes_bytes": n_blocks,
+        "tail_bytes": tail_bytes,
+        "payload_bytes": n_blocks * 4 + tail_bytes,
+        "total_bytes": total_len,
+    }
+    component_total = (
+        fixed_header_bytes
+        + byte_accounting["bucket_ids_bytes"]
+        + byte_accounting["scales_bytes"]
+        + byte_accounting["codes_bytes"]
+        + byte_accounting["tail_bytes"]
+    )
+    if component_total != total_len:
+        raise ValueError(
+            "NWCS1.inspect byte accounting mismatch: "
+            f"{component_total} != {total_len}"
+        )
+
+    return {
+        "format": "nwcs_variable_codebook_stream_v1",
+        "version": 1,
+        "shape": shape,
+        "numel": int(numel),
+        "block_size": int(block_size),
+        "num_blocks": int(n_blocks),
+        "tail_elements": int(tail_elements),
+        "n_buckets": int(n_buckets),
+        "codebook_sizes": bucket_sizes,
+        "bucket_counts": bucket_counts,
+        "stream_offsets": {
+            "bucket_ids": int(bucket_ids_offset),
+            "scales": int(scales_offset),
+            "codes": int(codes_offset),
+            "tail": int(tail_offset),
+        },
+        "byte_accounting": byte_accounting,
+        "claim_status": {
+            "score_claim": False,
+            "dispatch_claim": False,
+            "evidence_grade": "empirical",
+        },
+    }
 
 
 def decode_with_per_block_codebook(
@@ -1015,13 +1248,20 @@ def decode_with_per_block_codebook(
             "guarantee matching codebook ladder before retrying decode"
         )
 
+    numel = 1
+    for s in shape:
+        numel *= int(s)
+    expected_n_blocks = numel // Bs
+    if n_blocks != expected_n_blocks:
+        raise ValueError(
+            "NWCS1.decode n_blocks mismatch "
+            f"(declared={n_blocks}, expected={expected_n_blocks})"
+        )
+
     bucket_ids_buf = _take(n_blocks, "bucket ids")
     scales_buf = _take(n_blocks * 2, "scales")
     codes_buf = _take(n_blocks, "codes")
 
-    numel = 1
-    for s in shape:
-        numel *= int(s)
     tail_n = numel - n_blocks * Bs
     if tail_n < 0:
         raise ValueError(
@@ -1043,7 +1283,7 @@ def decode_with_per_block_codebook(
         if int(bucket_ids.max().item()) >= n_buckets:
             raise ValueError("NWCS1.decode bucket id outside bucket table")
         scales = torch.from_numpy(
-            np.frombuffer(scales_buf, dtype=np.float16).copy()
+            np.frombuffer(scales_buf, dtype=np.dtype("<f2")).copy()
         ).to(device=device, dtype=torch.float32)
         if scales.numel() != n_blocks:
             raise ValueError(
@@ -1073,7 +1313,7 @@ def decode_with_per_block_codebook(
 
     if tail_n > 0:
         tail = torch.from_numpy(
-            np.frombuffer(tail_buf, dtype=np.float16).copy()
+            np.frombuffer(tail_buf, dtype=np.dtype("<f2")).copy()
         ).to(device=device, dtype=torch.float32)
     else:
         tail = torch.zeros(0, device=device, dtype=torch.float32)

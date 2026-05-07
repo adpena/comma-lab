@@ -16,13 +16,13 @@ from typing import Any
 
 from tac import preflight as _tac_preflight
 
-
 check_no_mps_fallback_default = _tac_preflight.check_no_mps_fallback_default
 check_42_train_inference_parity = _tac_preflight.check_pose_projection_train_inference_parity
 check_dispatch_cli_shell_hazards = _tac_preflight.check_dispatch_cli_shell_hazards
 check_reverse_engineering_tree_curation = _tac_preflight.check_reverse_engineering_tree_curation
 check_feature_flags_have_live_objective_effect = _tac_preflight.check_feature_flags_have_live_objective_effect
 check_public_release_hygiene = _tac_preflight.check_public_release_hygiene
+check_remote_lane_scripts_use_computed_payloads = _tac_preflight.check_remote_lane_scripts_use_computed_payloads
 preflight_all = _tac_preflight.preflight_all
 
 
@@ -33,6 +33,7 @@ ANCHOR_CHECKS = {
     "check_reverse_engineering_tree_curation": "reverse-engineering tree custody and raw-artifact guard",
     "check_feature_flags_have_live_objective_effect": "dead flag and no-op objective guard",
     "check_public_release_hygiene": "public docs/site/notebook private-surface guard",
+    "check_remote_lane_scripts_use_computed_payloads": "remote-lane no-op guard for encode-then-discard payload staging",
 }
 
 
@@ -81,6 +82,7 @@ __all__ = [
     "check_feature_flags_have_live_objective_effect",
     "check_no_mps_fallback_default",
     "check_public_release_hygiene",
+    "check_remote_lane_scripts_use_computed_payloads",
     "check_reverse_engineering_tree_curation",
     "emit_catalog",
     "preflight_all",

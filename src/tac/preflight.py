@@ -532,12 +532,12 @@ def preflight_all(
         check_training_paths_use_ema_correctly(strict=True, verbose=verbose)
 
         # Check 89 (Council B UNIWARD NO-OP incident): encode-then-discard
-        # antipattern in remote_lane_*.sh scripts. WARN-ONLY initially —
-        # 14 live hits need per-lane manual classification (legitimate
-        # "cp anchor base then encode + replace one file" vs the UNIWARD
-        # bug where encode runs but Stage 4 cp overwrites the encoded
-        # payload). Promote to STRICT after sweep + waivers added.
-        check_remote_lane_scripts_use_computed_payloads(strict=False, verbose=verbose)
+        # antipattern in remote_lane_*.sh scripts. Initially warn-only while
+        # 14 live hits were classified as intentional anchor staging vs true
+        # no-op payload discard. Promoted to STRICT after the 2026-05-07
+        # live-codebase sweep returned 0 violations with focused regression
+        # coverage for bad, clean, waived, and live-repo paths.
+        check_remote_lane_scripts_use_computed_payloads(strict=True, verbose=verbose)
 
         # 2026-04-27 meta-bug audit (commit a57731a0): 12 NEW checks for
         # additional bug classes from session + memory. 4 land at 0 live

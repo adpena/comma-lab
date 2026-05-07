@@ -18,8 +18,9 @@ from tac.neural_weight_codec_sensitivity import (
     compute_per_block_sensitivity,
     decode_with_per_block_codebook,
     encode_with_variable_codebook,
+    encode_with_variable_codebook_manifest,
+    inspect_variable_codebook_stream,
 )
-
 
 # ── Fixtures ──────────────────────────────────────────────────────────────
 
@@ -49,9 +50,9 @@ def test_per_block_sensitivity_correlates_with_hessian():
     """
     torch.manual_seed(7)
     model = _make_toy_model(in_features=16)
-    # Build hard pairs whose first half-channel has 10× larger magnitude
+    # Build hard pairs whose first half-channel has 10x larger magnitude
     # than the second half. Gradient w.r.t. weights connected to the loud
-    # half should be ≈ 10× larger.
+    # half should be about 10x larger.
     n_pairs = 8
     hard = torch.randn(n_pairs, 16)
     hard[:, :8] *= 10.0  # loud channels
@@ -71,7 +72,7 @@ def test_per_block_sensitivity_correlates_with_hessian():
     by_row = w0.reshape(32, 2)
     loud_mean = by_row[:, 0].mean().item()
     quiet_mean = by_row[:, 1].mean().item()
-    # Loud blocks should be at least 4× more sensitive than quiet
+    # Loud blocks should be at least 4x more sensitive than quiet
     # (squared-gradient Fisher proxy gives roughly a 10² separation).
     assert loud_mean > 4.0 * quiet_mean, (
         f"loud_mean={loud_mean:.4e}, quiet_mean={quiet_mean:.4e}"
@@ -268,6 +269,66 @@ def test_encode_decode_roundtrip_with_variable_codebook():
     assert err < weights.abs().mean().item() * 2.0  # loose, ensures non-pathological
 
 
+def test_encode_manifest_is_repeatable_accounted_and_non_claiming():
+    torch.manual_seed(41)
+    cfg = SensitivityAwareCodecConfig(
+        block_size=4, latent_dim=4, hidden=8, codebook_sizes=[4, 16, 64, 256]
+    )
+    codec = SensitivityAwareWeightCodec(cfg)
+    weights = torch.linspace(-1.5, 1.25, 18, dtype=torch.float32).reshape(3, 6)
+    sensitivities = torch.tensor([0.30, 0.10, 0.30, 0.90], dtype=torch.float32)
+
+    blob1, manifest1 = encode_with_variable_codebook_manifest(
+        codec, weights, sensitivities
+    )
+    blob2, manifest2 = encode_with_variable_codebook_manifest(
+        codec, weights, sensitivities
+    )
+    inspected = inspect_variable_codebook_stream(blob1, block_size=cfg.block_size)
+
+    assert blob1 == blob2
+    assert manifest1 == manifest2
+    assert {k: v for k, v in manifest1.items() if k != "sensitivity"} == inspected
+    assert manifest1["shape"] == [3, 6]
+    assert manifest1["num_blocks"] == 4
+    assert manifest1["tail_elements"] == 2
+    assert manifest1["bucket_counts"] == [1, 1, 1, 1]
+    assert manifest1["byte_accounting"] == {
+        "fixed_header_bytes": 25,
+        "shape_bytes": 8,
+        "n_blocks_bytes": 4,
+        "n_buckets_bytes": 1,
+        "bucket_sizes_bytes": 8,
+        "bucket_ids_bytes": 4,
+        "scales_bytes": 8,
+        "codes_bytes": 4,
+        "tail_bytes": 4,
+        "payload_bytes": 20,
+        "total_bytes": len(blob1),
+    }
+    assert manifest1["claim_status"] == {
+        "score_claim": False,
+        "dispatch_claim": False,
+        "evidence_grade": "empirical",
+    }
+
+
+def test_encode_uses_little_endian_float16_tail_bytes():
+    cfg = SensitivityAwareCodecConfig(
+        block_size=8, latent_dim=4, hidden=8, codebook_sizes=[4]
+    )
+    codec = SensitivityAwareWeightCodec(cfg)
+    weights = torch.tensor([1.5, -2.0, 0.25], dtype=torch.float32)
+
+    blob, manifest = encode_with_variable_codebook_manifest(
+        codec, weights, torch.empty(0)
+    )
+
+    tail_offset = manifest["stream_offsets"]["tail"]
+    assert blob[tail_offset:] == struct.pack("<eee", 1.5, -2.0, 0.25)
+    assert manifest["byte_accounting"]["tail_bytes"] == 6
+
+
 # ── 5. Byte-size breakdown: header overhead < 5% ─────────────────────────
 
 
@@ -293,7 +354,7 @@ def test_byte_size_breakdown_per_codebook_size():
     #   shape (4 dims)  = 16
     #   n_blocks        = 4
     #   n_buckets       = 1
-    #   bucket sizes    = 4 buckets × 2 B (uint16) = 8
+    #   bucket sizes    = 4 buckets x 2 B (uint16) = 8
     #   bucket ids      = n_blocks (1 byte each)
     #   scales          = n_blocks * 2 bytes (fp16)
     #   codes           = n_blocks * 1 byte
@@ -307,10 +368,8 @@ def test_byte_size_breakdown_per_codebook_size():
         f"NWCS1 layout mismatch: got {len(blob)} bytes, expected {expected_total}"
     )
 
-    # Bucket-id overhead must be < 5% of total + per-block payload
-    overhead_frac = bucket_id_bytes / (bucket_id_bytes + body_bytes)
     # bucket_ids are 1B; per-block payload (scales + codes) is 3B
-    # → overhead = 1/(1+3) = 25%. NOT < 5%.
+    # so overhead = 1/(1+3) = 25%. NOT < 5%.
     # The intended "5% small" criterion applies to the FIXED header (25 bytes),
     # not the bucket-id stream. Adjust the assertion: fixed header < 5% of total.
     fixed_header_frac = fixed_header / len(blob)
@@ -357,6 +416,17 @@ def test_encode_rejects_negative_or_nonfinite_sensitivity():
         )
 
 
+def test_encode_rejects_zero_signal_sensitivity_for_nonempty_stream():
+    cfg = SensitivityAwareCodecConfig(
+        block_size=8, latent_dim=8, hidden=32, codebook_sizes=[4, 16, 64, 256]
+    )
+    codec = SensitivityAwareWeightCodec(cfg)
+    weights = torch.randn(4, 4)
+
+    with pytest.raises(ValueError, match="positive scorer signal"):
+        encode_with_variable_codebook(codec, weights, torch.zeros(2))
+
+
 def test_decode_codebook_size_mismatch_raises():
     cfg = SensitivityAwareCodecConfig(
         block_size=8, latent_dim=8, hidden=32, codebook_sizes=[4, 16, 64, 256]
@@ -401,4 +471,23 @@ def test_decode_rejects_invalid_bucket_id():
     blob[bucket_id_offset] = len(cfg.codebook_sizes)
 
     with pytest.raises(ValueError, match="bucket id outside"):
+        decode_with_per_block_codebook(codec, bytes(blob))
+
+
+def test_stream_parser_and_decode_reject_n_blocks_mismatch():
+    cfg = SensitivityAwareCodecConfig(
+        block_size=8, latent_dim=8, hidden=32, codebook_sizes=[4, 16, 64, 256]
+    )
+    codec = SensitivityAwareWeightCodec(cfg)
+    weights = torch.randn(4, 4)
+    sens = torch.tensor([0.1, 0.9])
+    blob = bytearray(encode_with_variable_codebook(codec, weights, sens))
+
+    ndim = struct.unpack_from("<I", blob, 0)[0]
+    n_blocks_offset = 4 + (4 * ndim)
+    struct.pack_into("<I", blob, n_blocks_offset, 1)
+
+    with pytest.raises(ValueError, match="n_blocks mismatch"):
+        inspect_variable_codebook_stream(bytes(blob), block_size=cfg.block_size)
+    with pytest.raises(ValueError, match="n_blocks mismatch"):
         decode_with_per_block_codebook(codec, bytes(blob))
