@@ -476,6 +476,39 @@ def test_pr91_semantic_decode_trench_loads_model_rows_and_refuses_parity(
     assert "prefix_decode_not_attempted" in report["semantic_decode_blockers"]
 
 
+def test_pr91_semantic_decode_trench_attaches_missing_symbol_bridge_proof() -> None:
+    if not DEFAULT_PR91_ARCHIVE.is_file():
+        pytest.skip("canonical PR91 archive not available")
+    if not DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE.is_file():
+        pytest.skip("PR85/QMA9 decoded reference token source not available")
+
+    report = run_pr91_hpm1_semantic_decode_trench(
+        DEFAULT_PR91_ARCHIVE,
+        probability_row_count=1,
+        prefix_max_frames=1,
+        semantic_bridge_symbol_count=8,
+        write_json=False,
+    )
+
+    bridge = report["semantic_symbol_bridge_probe"]
+    assert report["prefix_decode"]["status"] == "failed_closed"
+    assert bridge["attempted"] is True
+    assert bridge["passed"] is True
+    assert bridge["bridge_found"] is False
+    assert bridge["bridge_missing"] is True
+    assert bridge["decoded_symbol_count"] == 8
+    assert bridge["first_identity_mismatch"] == {
+        "symbol_index": 7,
+        "candidate_symbol": 0,
+        "submitted_symbol": 2,
+    }
+    assert (
+        "semantic_symbol_bridge_missing:no_simple_pr85_qma9_to_pr91_prefix_bridge"
+        in report["semantic_decode_blockers"]
+    )
+    assert report["prefix_decode"]["semantic_symbol_bridge_probe"] == bridge
+
+
 def test_pr91_entropy_failure_grammar_probe_records_exact_failure_row() -> None:
     if not DEFAULT_PR91_ARCHIVE.is_file():
         pytest.skip("canonical PR91 archive not available")

@@ -1033,6 +1033,10 @@ def _hpm1_semantic_parity_fail_closed_report(
         "prefix_decode_passed": None,
         "failure_reason": "",
         "failure_context": {},
+        "semantic_symbol_bridge_checked": False,
+        "semantic_symbol_bridge_missing": False,
+        "semantic_symbol_bridge_status": "",
+        "semantic_symbol_bridge_missing_classes": [],
         "full_decode_proven": False,
         "byte_exact_semantic_reencode_proven": False,
         "blockers": [],
@@ -1141,6 +1145,45 @@ def _hpm1_semantic_parity_fail_closed_report(
                 for key in required_context:
                     if key not in failure_context:
                         blockers.append(f"hpm1_semantic_parity_failure_context_missing:{key}")
+
+            semantic_bridge = None
+            if isinstance(prefix_decode, dict):
+                semantic_bridge = prefix_decode.get("semantic_symbol_bridge_probe")
+            if semantic_bridge is None:
+                semantic_bridge = payload.get("semantic_symbol_bridge_probe")
+            if isinstance(semantic_bridge, dict):
+                summary["semantic_symbol_bridge_checked"] = (
+                    semantic_bridge.get("attempted") is True
+                )
+                summary["semantic_symbol_bridge_missing"] = (
+                    semantic_bridge.get("bridge_missing") is True
+                )
+                status = semantic_bridge.get("status", "")
+                summary["semantic_symbol_bridge_status"] = status if isinstance(status, str) else ""
+                missing_classes = semantic_bridge.get(
+                    "tested_bridge_classes",
+                    semantic_bridge.get("remaining_open_classes", []),
+                )
+                if isinstance(missing_classes, list):
+                    summary["semantic_symbol_bridge_missing_classes"] = [
+                        str(item) for item in missing_classes
+                    ]
+                if semantic_bridge.get("score_claim") is not False:
+                    blockers.append("hpm1_semantic_parity_symbol_bridge_score_claim_must_be_false")
+                if semantic_bridge.get("dispatch_allowed") is not False:
+                    blockers.append("hpm1_semantic_parity_symbol_bridge_dispatch_allowed")
+                if semantic_bridge.get("dispatch_attempted") is not False:
+                    blockers.append("hpm1_semantic_parity_symbol_bridge_dispatch_attempted")
+                if semantic_bridge.get("attempted") is not True:
+                    blockers.append("hpm1_semantic_parity_symbol_bridge_not_attempted")
+                if semantic_bridge.get("prefix_completed") is not True:
+                    blockers.append("hpm1_semantic_parity_symbol_bridge_prefix_not_completed")
+                if semantic_bridge.get("bridge_found") is not False:
+                    blockers.append("hpm1_semantic_parity_symbol_bridge_still_open")
+                if semantic_bridge.get("bridge_missing") is not True:
+                    blockers.append("hpm1_semantic_parity_symbol_bridge_missing_not_proven")
+                if semantic_bridge.get("passed") is not True:
+                    blockers.append("hpm1_semantic_parity_symbol_bridge_not_passed")
 
             divergence = payload.get("divergence_caught_before_exact_eval") is True
             summary["divergence_caught_before_exact_eval"] = divergence

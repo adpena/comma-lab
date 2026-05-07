@@ -648,6 +648,44 @@
     "schema_version": 1
   },
   "fixture_only": false,
+  "hpm1_semantic_parity_fail_closed": {
+    "accepted": true,
+    "blockers": [],
+    "byte_exact_semantic_reencode_proven": false,
+    "bytes": 9197,
+    "candidate_archive_sha256": "6a5bf1f3c4d6d2b6cb752979caa72a31b994825d24ee42ae90eeaa58f44abd7d",
+    "contract": "hpm1_semantic_parity_fail_closed_v1",
+    "declared": true,
+    "divergence_caught_before_exact_eval": true,
+    "failure_context": {
+      "decoded_symbol_count_before_failure": 5951,
+      "frame": 0,
+      "frame_start_decoded_symbols": 0,
+      "group": 10,
+      "group_start_decoded_symbols": 5760,
+      "probability_variant": "source_float64_perfect_false",
+      "symbol_in_group": 191
+    },
+    "failure_reason": "hpac_entropy_decode_contract_mismatch",
+    "full_decode_proven": false,
+    "hpac_model_loaded": true,
+    "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/hpm1_semantic_parity_fail_closed.json",
+    "payload_member": "categorical_payload.bin",
+    "payload_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+    "prefix_decode_passed": false,
+    "probability_rows_inventoried": true,
+    "schema_version": 1,
+    "semantic_symbol_bridge_checked": true,
+    "semantic_symbol_bridge_missing": true,
+    "semantic_symbol_bridge_missing_classes": [
+      "identity_reference_symbol",
+      "global_label_permutation",
+      "constant_mod5_offset",
+      "previous_frame_mod5_residual"
+    ],
+    "semantic_symbol_bridge_status": "no_simple_pr85_qma9_to_pr91_symbol_bridge_for_prefix",
+    "sha256": "fdf4efa20bc635b4b2f52b63f51dc0aed6d993edaab045f71d4a88f3659adc08"
+  },
   "hpm1_structural_decode_inventory": {
     "accepted": true,
     "blockers": [],
@@ -675,6 +713,7 @@
     "accepted": true,
     "blockers": [],
     "bytes": 5403,
+    "class_rows_match": true,
     "conditioning_prior_contract": {
       "compression_time_only_count": 1,
       "declared": true,
@@ -726,6 +765,7 @@
       "schema_version": 1,
       "warnings": []
     },
+    "conditioning_prior_contract_matches_recomputed": true,
     "conditioning_prior_count": 3,
     "contract": "categorical_label_prior_payload_manifest_v1",
     "declared": true,
@@ -817,7 +857,7 @@
       "--source-archive",
       "experiments/results/public_pr91_intake_20260504_codex/archive.zip"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "0ed4a39dcabbbd420e35bf3cf9483a6b422412c5f57b053c400ea48aa0316e91",
+    "canonical_payload_without_tool_manifest_sha256": "24423bfd5ac3118df8f969881e56f220a4e583e967822145f2720d3d25aae3c3",
     "dispatch_attempted": false,
     "input_files": [
       {
@@ -831,9 +871,9 @@
         "sha256": "6a5bf1f3c4d6d2b6cb752979caa72a31b994825d24ee42ae90eeaa58f44abd7d"
       },
       {
-        "bytes": 19973,
+        "bytes": 20521,
         "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/candidate.json",
-        "sha256": "341cab40fc1a6dfa7433b8084253348fea36b825db4de8e6a84b774f888ba1d0"
+        "sha256": "471851933fecd5b3882e494a87ee32f1d1e30ff28260cb42b5c22781bf223263"
       },
       {
         "bytes": 1635,
@@ -844,6 +884,11 @@
         "bytes": 12612,
         "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/hpm1_structural_inventory.json",
         "sha256": "22ef9f6fd015f9023c23807ad72f15570c9312b95f46a63100ea44f10ab36a7c"
+      },
+      {
+        "bytes": 9197,
+        "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/hpm1_semantic_parity_fail_closed.json",
+        "sha256": "fdf4efa20bc635b4b2f52b63f51dc0aed6d993edaab045f71d4a88f3659adc08"
       },
       {
         "bytes": 1534,

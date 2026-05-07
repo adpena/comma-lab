@@ -1,0 +1,299 @@
+{
+  "byte_exact_semantic_reencode": {
+    "byte_exact": false,
+    "passed": false,
+    "reencoded_hpm1_sha256": "",
+    "refusal_reason": "semantic_decode_or_range_reencode_parity_not_proven"
+  },
+  "candidate_archive_sha256": "6a5bf1f3c4d6d2b6cb752979caa72a31b994825d24ee42ae90eeaa58f44abd7d",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "hpm1_semantic_prefix_divergence_not_repaired",
+    "full_hpm1_decode_600_frames_not_proven",
+    "byte_exact_hpm1_reencode_not_proven"
+  ],
+  "divergence_caught_before_exact_eval": true,
+  "full_decode": {
+    "decoded_masks_sha256": "",
+    "frame_count": 0,
+    "passed": false,
+    "refusal_reason": "full_600_frame_hpm1_decode_not_proven"
+  },
+  "hpac_model_load": {
+    "blockers": [],
+    "compressed_hpac": {
+      "bytes": 28243,
+      "ppmd_mem_size": 16777216,
+      "ppmd_order": 4,
+      "sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd"
+    },
+    "decompressed_torch_state": {
+      "bytes": 55856,
+      "sha256": "0710789f72200a640c1f3b2f6bc0d2f037affaa086f73b2c9e5034e006e80ac1"
+    },
+    "device": "cpu",
+    "loaded": true,
+    "model": {
+      "P": 32,
+      "ch": 64,
+      "delta": 2,
+      "frame_embed_dim": 8,
+      "frame_embed_num_embeddings": 600,
+      "num_classes": 5,
+      "type": "HPACMini",
+      "use_spm": true
+    },
+    "status": "passed_hpac_model_load"
+  },
+  "hpm1_semantic_parity_contract": "hpm1_semantic_parity_fail_closed_v1",
+  "kind": "hpm1_semantic_parity_fail_closed",
+  "payload_member": "categorical_payload.bin",
+  "payload_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+  "prefix_decode": {
+    "attempted": true,
+    "failure_context": {
+      "decoded_symbol_count_before_failure": 5951,
+      "frame": 0,
+      "frame_start_decoded_symbols": 0,
+      "group": 10,
+      "group_start_decoded_symbols": 5760,
+      "probability_variant": "source_float64_perfect_false",
+      "symbol_in_group": 191
+    },
+    "failure_reason": "hpac_entropy_decode_contract_mismatch",
+    "failure_stage": "submitted_tokens_decode",
+    "max_frames": 1,
+    "passed": false,
+    "semantic_symbol_bridge_probe": {
+      "attempted": true,
+      "best_mod5_offset_bridge": {
+        "all_symbols_match": false,
+        "candidate": "reference_plus_0_mod5",
+        "first_mismatch": {
+          "candidate_symbol": 0,
+          "submitted_symbol": 2,
+          "symbol_index": 7
+        },
+        "match_count": 18,
+        "mismatch_count": 14,
+        "symbol_count": 32
+      },
+      "bridge_found": false,
+      "bridge_missing": true,
+      "bridge_summary_status": "no_simple_reference_to_submitted_symbol_bridge_for_prefix",
+      "decoded_symbol_count": 32,
+      "dispatch_allowed": false,
+      "dispatch_attempted": false,
+      "first_identity_mismatch": {
+        "candidate_symbol": 0,
+        "submitted_symbol": 2,
+        "symbol_index": 7
+      },
+      "global_label_permutation_bridge": {
+        "conflicting_reference_symbols": [],
+        "consistent_permutation_count": 0,
+        "perfect_candidate_found": false,
+        "status": "no_consistent_permutation"
+      },
+      "identity_bridge": {
+        "all_symbols_match": false,
+        "candidate": "identity_reference_symbol",
+        "first_mismatch": {
+          "candidate_symbol": 0,
+          "submitted_symbol": 2,
+          "symbol_index": 7
+        },
+        "match_count": 18,
+        "mismatch_count": 14,
+        "symbol_count": 32
+      },
+      "local_only": true,
+      "not_explained_by_this_probe": "identity, global label permutation, constant mod5 offset, or previous-frame mod5 residual bridge for the requested prefix",
+      "passed": true,
+      "prefix_completed": true,
+      "previous_frame_residual_bridges": [
+        {
+          "all_symbols_match": false,
+          "candidate": "reference_minus_previous_mod5",
+          "first_mismatch": {
+            "candidate_symbol": 0,
+            "submitted_symbol": 2,
+            "symbol_index": 7
+          },
+          "match_count": 18,
+          "mismatch_count": 14,
+          "symbol_count": 32
+        },
+        {
+          "all_symbols_match": false,
+          "candidate": "reference_plus_previous_mod5",
+          "first_mismatch": {
+            "candidate_symbol": 0,
+            "submitted_symbol": 2,
+            "symbol_index": 7
+          },
+          "match_count": 18,
+          "mismatch_count": 14,
+          "symbol_count": 32
+        }
+      ],
+      "reference_tokens": {
+        "layout": "legacy_assume_nhw",
+        "matches_expected_pr85_qma9_token_source": true,
+        "path": "experiments/results/pr85_qma9_mode_sweep_20260504_codex/adaptive6pr.decoded.raw",
+        "sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a"
+      },
+      "remaining_open_classes": [
+        "true PR91 encoder semantic tokens not visible in public runtime",
+        "encoder-side probability numeric contract",
+        "range-coder construction/finalization contract",
+        "phase-major reference context remains only a prior until full decode/reencode parity"
+      ],
+      "requested_symbol_count": 32,
+      "schema": "pr91_hpm1_semantic_symbol_bridge_fail_closed_summary_v1",
+      "score_claim": false,
+      "spatial_order_candidate": "phase_major_row_major",
+      "status": "no_simple_pr85_qma9_to_pr91_symbol_bridge_for_prefix",
+      "symbol_sequences": {
+        "first_previous_reference_symbols": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "first_reference_submitted_mismatch": {
+          "reference_symbol": 0,
+          "submitted_symbol": 2,
+          "symbol_index": 7
+        },
+        "first_reference_symbols": [
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          0,
+          0,
+          0,
+          4,
+          4,
+          2,
+          2,
+          2,
+          2
+        ],
+        "first_submitted_symbols": [
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "previous_reference_symbols_sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+        "reference_symbols_sha256": "960df346fb022d5d5bed770044a5ef58cdc557d1b21bb8c32ffa9cbbdf4d6ad2",
+        "submitted_symbols_sha256": "75877bb41d393b5fb8455ce60ecd8dda001d06316496b14dfa7f895656eeca4a"
+      },
+      "tested_bridge_classes": [
+        "identity_reference_symbol",
+        "global_label_permutation",
+        "constant_mod5_offset",
+        "previous_frame_mod5_residual"
+      ]
+    },
+    "status": "failed_closed"
+  },
+  "probability_row_probe": {
+    "byte_exact_reencode_proven": false,
+    "device": "cpu",
+    "dispatch_allowed": false,
+    "first_nonempty_group": 0,
+    "full_decode_proven": false,
+    "passed": true,
+    "prob_eps": 1e-07,
+    "raw_softmax_rows": {
+      "dtype": "float32",
+      "first_row": [
+        0.0064796745,
+        5.46637e-05,
+        0.9658758044,
+        0.0167099535,
+        0.0108798463
+      ],
+      "sha256": "5a88eca69e22c98c47e7ca6da8ee599c4477fd04becbda912de6548632ea0d1d",
+      "shape": [
+        1,
+        5
+      ]
+    },
+    "recorded_rows": 1,
+    "requested_rows": 1,
+    "score_claim": false,
+    "status": "passed_probability_row_inventory",
+    "symbols_in_group": 192,
+    "variant_rows": [
+      {
+        "categorical_constructed_first_row": true,
+        "categorical_error": "",
+        "categorical_perfect": false,
+        "first_normalized_row": [
+          0.0064796749,
+          5.46637e-05,
+          0.96587586,
+          0.0167099545,
+          0.0108798469
+        ],
+        "normalized_rows_sha256": "b5f5c2c8a5d3614f5045115c306ea7d4ee6a12daef72565e58be86b7759b7503",
+        "normalized_rows_shape": [
+          1,
+          5
+        ],
+        "probability_dtype": "float64",
+        "row_sum_max": 1.0,
+        "row_sum_min": 1.0,
+        "source_contract": true,
+        "variant": "source_float64_perfect_false"
+      }
+    ]
+  },
+  "producer_tool": "tac.categorical_payload_candidate.build_categorical_payload_candidate",
+  "proof_scope": "hpm1_prefix_probability_range_semantic_parity_fail_closed",
+  "ready_for_exact_eval_dispatch": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "semantic_decode_blockers": [
+    "byte_exact_hpm1_reencode_not_proven",
+    "exact_cuda_auth_eval_not_allowed_without_local_parity",
+    "full_hpm1_decode_600_frames_not_proven",
+    "prefix_decode_failed:hpac_entropy_decode_contract_mismatch",
+    "runtime_hpm1_loader_sidecar_free_not_proven",
+    "semantic_symbol_bridge_missing:no_simple_pr85_qma9_to_pr91_prefix_bridge"
+  ],
+  "semantic_trench_schema": "pr91_hpm1_semantic_decode_trench_v1",
+  "semantic_trench_status": "blocked_prefix_decode_entropy_contract_mismatch_after_model_load",
+  "source_archive_path": "experiments/results/public_pr91_intake_20260504_codex/archive.zip"
+}

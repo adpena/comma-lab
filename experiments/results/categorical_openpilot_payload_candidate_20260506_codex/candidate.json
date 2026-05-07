@@ -389,6 +389,16 @@
   },
   "dispatch_attempted": false,
   "fixture_only": false,
+  "hpm1_semantic_parity_fail_closed": {
+    "bytes": 9197,
+    "candidate_archive_sha256": "6a5bf1f3c4d6d2b6cb752979caa72a31b994825d24ee42ae90eeaa58f44abd7d",
+    "contract": "hpm1_semantic_parity_fail_closed_v1",
+    "divergence_caught_before_exact_eval": true,
+    "path": "hpm1_semantic_parity_fail_closed.json",
+    "payload_member": "categorical_payload.bin",
+    "payload_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+    "sha256": "fdf4efa20bc635b4b2f52b63f51dc0aed6d993edaab045f71d4a88f3659adc08"
+  },
   "hpm1_structural_decode_inventory": {
     "byte_exact_semantic_reencode_proven": false,
     "bytes": 12612,

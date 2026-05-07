@@ -1861,6 +1861,111 @@ def _summarize_reference_to_submitted_symbol_bridge(
     }
 
 
+def _compact_bridge_candidate(row: Any) -> dict[str, Any]:
+    if not isinstance(row, Mapping):
+        return {}
+    return {
+        "candidate": row.get("candidate", ""),
+        "symbol_count": int(row.get("symbol_count", 0) or 0),
+        "match_count": int(row.get("match_count", 0) or 0),
+        "mismatch_count": int(row.get("mismatch_count", 0) or 0),
+        "all_symbols_match": row.get("all_symbols_match") is True,
+        "first_mismatch": row.get("first_mismatch"),
+    }
+
+
+def _semantic_symbol_bridge_fail_closed_summary(
+    trace: Mapping[str, Any],
+    *,
+    requested_symbol_count: int,
+    spatial_order_candidate: str,
+    reference_report: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Return a compact proof that the available PR85/QMA9 bridge is missing."""
+
+    bridge_summary = trace.get("bridge_summary")
+    bridge = bridge_summary if isinstance(bridge_summary, Mapping) else {}
+    prefix_completed = trace.get("prefix_completed") is True
+    bridge_found = bridge.get("bridge_found") is True
+    bridge_missing = bool(prefix_completed and bridge and not bridge_found)
+    permutation = bridge.get("global_label_permutation_bridge")
+    permutation_summary = permutation if isinstance(permutation, Mapping) else {}
+    residual_rows = bridge.get("previous_frame_residual_bridges")
+    residual_candidates = [
+        _compact_bridge_candidate(row)
+        for row in residual_rows
+        if isinstance(row, Mapping)
+    ] if isinstance(residual_rows, list) else []
+    return {
+        "schema": "pr91_hpm1_semantic_symbol_bridge_fail_closed_summary_v1",
+        "attempted": True,
+        "passed": bridge_missing,
+        "status": (
+            "no_simple_pr85_qma9_to_pr91_symbol_bridge_for_prefix"
+            if bridge_missing
+            else "semantic_symbol_bridge_not_failed_closed"
+        ),
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "dispatch_attempted": False,
+        "local_only": True,
+        "spatial_order_candidate": spatial_order_candidate,
+        "requested_symbol_count": int(requested_symbol_count),
+        "decoded_symbol_count": int(trace.get("decoded_symbol_count", 0) or 0),
+        "prefix_completed": prefix_completed,
+        "bridge_found": bridge_found,
+        "bridge_missing": bridge_missing,
+        "bridge_summary_status": bridge.get("status", ""),
+        "tested_bridge_classes": [
+            "identity_reference_symbol",
+            "global_label_permutation",
+            "constant_mod5_offset",
+            "previous_frame_mod5_residual",
+        ],
+        "not_explained_by_this_probe": (
+            "identity, global label permutation, constant mod5 offset, or "
+            "previous-frame mod5 residual bridge for the requested prefix"
+            if bridge_missing
+            else ""
+        ),
+        "remaining_open_classes": [
+            "true PR91 encoder semantic tokens not visible in public runtime",
+            "encoder-side probability numeric contract",
+            "range-coder construction/finalization contract",
+            "phase-major reference context remains only a prior until full decode/reencode parity",
+        ],
+        "first_identity_mismatch": bridge.get("first_identity_mismatch"),
+        "identity_bridge": _compact_bridge_candidate(bridge.get("identity_bridge")),
+        "best_mod5_offset_bridge": _compact_bridge_candidate(
+            bridge.get("best_mod5_offset_bridge")
+        ),
+        "global_label_permutation_bridge": {
+            "status": permutation_summary.get("status", ""),
+            "perfect_candidate_found": (
+                permutation_summary.get("perfect_candidate_found") is True
+            ),
+            "consistent_permutation_count": int(
+                permutation_summary.get("consistent_permutation_count", 0) or 0
+            ),
+            "conflicting_reference_symbols": permutation_summary.get(
+                "conflicting_reference_symbols",
+                [],
+            ),
+        },
+        "previous_frame_residual_bridges": residual_candidates,
+        "symbol_sequences": trace.get("symbol_sequences", {}),
+        "reference_tokens": {
+            "path": reference_report.get("path"),
+            "layout": reference_report.get("layout"),
+            "sha256": reference_report.get("sha256"),
+            "matches_expected_pr85_qma9_token_source": (
+                reference_report.get("matches_expected_pr85_qma9_token_source")
+                is True
+            ),
+        },
+    }
+
+
 def _trace_hpm1_reference_forced_symbol_bridge_prefix(
     model: Any,
     payload: Hpm1MaskPayload,
@@ -6428,12 +6533,17 @@ def run_pr91_hpm1_failure_row_probability_scan_probe(
 def run_pr91_hpm1_semantic_decode_trench(
     archive: Path = DEFAULT_PR91_ARCHIVE,
     *,
+    reference_tokens_path: Path | None = DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE,
+    reference_layout: str = "legacy_assume_nhw",
+    semantic_bridge_spatial_order_candidate: str = "phase_major_row_major",
+    semantic_bridge_symbol_count: int = DEFAULT_PR91_HPM1_SYMBOL_BRIDGE_PREFIX_SYMBOLS,
     device: str = "cpu",
     probability_variants: tuple[str, ...] | list[str] | None = None,
     probability_row_count: int = 8,
     prob_eps: float = PROB_EPS,
     prefix_max_frames: int | None = 1,
     attempt_prefix_decode: bool = True,
+    attempt_semantic_symbol_bridge: bool = True,
     output_dir: Path | None = None,
     strict: bool = False,
     write_json: bool = True,
@@ -6646,6 +6756,116 @@ def run_pr91_hpm1_semantic_decode_trench(
                 "failure_context": dict(exc.fields),
             }
 
+    semantic_symbol_bridge: dict[str, Any] = {
+        "schema": "pr91_hpm1_semantic_symbol_bridge_fail_closed_summary_v1",
+        "attempted": False,
+        "passed": False,
+        "status": "not_attempted",
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "dispatch_attempted": False,
+        "local_only": True,
+        "bridge_found": False,
+        "bridge_missing": False,
+        "blockers": [],
+    }
+    if (
+        model is not None
+        and attempt_semantic_symbol_bridge
+        and attempt_prefix_decode
+        and prefix_decode.get("status") == "failed_closed"
+    ):
+        if reference_tokens_path is None:
+            semantic_symbol_bridge.update(
+                {
+                    "status": "not_attempted_missing_reference_tokens_path",
+                    "blockers": ["reference_tokens_path_missing"],
+                }
+            )
+            blockers.append("semantic_symbol_bridge_not_attempted_missing_reference_tokens")
+        else:
+            try:
+                _spatial_order_description(semantic_bridge_spatial_order_candidate)
+                reference_tokens, reference_report = _load_reference_tokens(
+                    Path(reference_tokens_path),
+                    payload.n_frames,
+                    payload.height,
+                    payload.width,
+                    reference_layout,
+                )
+                bridge_trace = _trace_hpm1_reference_forced_symbol_bridge_prefix(
+                    model,
+                    payload,
+                    reference_tokens,
+                    probability_variant=DEFAULT_HPAC_PROBABILITY_VARIANT,
+                    prob_eps=prob_eps,
+                    device=device,
+                    spatial_order_candidate=semantic_bridge_spatial_order_candidate,
+                    symbol_count=semantic_bridge_symbol_count,
+                    row_preview_limit=8,
+                    mismatch_limit=8,
+                )
+                semantic_symbol_bridge = _semantic_symbol_bridge_fail_closed_summary(
+                    bridge_trace,
+                    requested_symbol_count=semantic_bridge_symbol_count,
+                    spatial_order_candidate=semantic_bridge_spatial_order_candidate,
+                    reference_report=reference_report,
+                )
+                if semantic_symbol_bridge.get("bridge_missing") is True:
+                    blockers.append(
+                        "semantic_symbol_bridge_missing:"
+                        "no_simple_pr85_qma9_to_pr91_prefix_bridge"
+                    )
+                else:
+                    blockers.append("semantic_symbol_bridge_missing_not_proven")
+            except (Pr91Hpm1Error, Pr86HpacReplayError) as exc:
+                semantic_symbol_bridge.update(
+                    {
+                        "status": "failed_closed_semantic_symbol_bridge_probe",
+                        "failure_contract": exc.contract,
+                        "failure_reason": exc.code,
+                        "failure_context": dict(exc.fields),
+                        "blockers": [exc.code],
+                    }
+                )
+                blockers.append(f"semantic_symbol_bridge_probe_failed:{exc.code}")
+            except (RuntimeError, ImportError, ValueError) as exc:
+                semantic_symbol_bridge.update(
+                    {
+                        "status": "failed_closed_semantic_symbol_bridge_probe",
+                        "failure_reason": type(exc).__name__,
+                        "failure_text": str(exc),
+                        "blockers": [type(exc).__name__],
+                    }
+                )
+                blockers.append(
+                    f"semantic_symbol_bridge_probe_failed:{type(exc).__name__}"
+                )
+    elif attempt_semantic_symbol_bridge and not attempt_prefix_decode:
+        semantic_symbol_bridge.update(
+            {
+                "status": "not_attempted_prefix_decode_disabled",
+                "blockers": ["prefix_decode_not_attempted"],
+            }
+        )
+    elif attempt_semantic_symbol_bridge and model is None:
+        semantic_symbol_bridge.update(
+            {
+                "status": "not_attempted_model_not_loaded",
+                "blockers": ["hpac_model_not_loaded"],
+            }
+        )
+    elif not attempt_semantic_symbol_bridge:
+        semantic_symbol_bridge.update(
+            {
+                "status": "not_attempted_by_request",
+                "blockers": ["semantic_symbol_bridge_not_attempted"],
+            }
+        )
+
+    if semantic_symbol_bridge.get("attempted") is True:
+        prefix_decode["semantic_symbol_bridge_probe"] = semantic_symbol_bridge
+
     if model_load["loaded"] and prefix_decode["status"] == "failed_closed":
         status = "blocked_prefix_decode_entropy_contract_mismatch_after_model_load"
     elif model_load["loaded"] and probability_row_probe.get("passed") is True:
@@ -6685,6 +6905,7 @@ def run_pr91_hpm1_semantic_decode_trench(
         "reconstructed_state_inventory": reconstructed_state_inventory,
         "probability_row_probe": probability_row_probe,
         "prefix_decode": prefix_decode,
+        "semantic_symbol_bridge_probe": semantic_symbol_bridge,
         "full_decode": {
             "passed": False,
             "frame_count": 0,

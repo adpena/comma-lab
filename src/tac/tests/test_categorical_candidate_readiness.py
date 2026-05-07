@@ -305,6 +305,33 @@ def _hpm1_semantic_parity_fail_closed(
                 "decoded_symbol_count_before_failure": 5951,
                 "probability_variant": "source_float64_perfect_false",
             },
+            "semantic_symbol_bridge_probe": {
+                "schema": "pr91_hpm1_semantic_symbol_bridge_fail_closed_summary_v1",
+                "attempted": True,
+                "passed": True,
+                "status": "no_simple_pr85_qma9_to_pr91_symbol_bridge_for_prefix",
+                "score_claim": False,
+                "dispatch_allowed": False,
+                "dispatch_attempted": False,
+                "local_only": True,
+                "spatial_order_candidate": "phase_major_row_major",
+                "requested_symbol_count": 64,
+                "decoded_symbol_count": 64,
+                "prefix_completed": True,
+                "bridge_found": False,
+                "bridge_missing": True,
+                "tested_bridge_classes": [
+                    "identity_reference_symbol",
+                    "global_label_permutation",
+                    "constant_mod5_offset",
+                    "previous_frame_mod5_residual",
+                ],
+                "first_identity_mismatch": {
+                    "symbol_index": 7,
+                    "candidate_symbol": 0,
+                    "submitted_symbol": 2,
+                },
+            },
         },
         "divergence_caught_before_exact_eval": True,
         "full_decode": {"passed": False},
@@ -597,6 +624,13 @@ def test_audit_categorical_candidate_manifest_accepts_fail_closed_hpm1_semantic_
     assert semantic["hpac_model_loaded"] is True
     assert semantic["probability_rows_inventoried"] is True
     assert semantic["failure_context"]["decoded_symbol_count_before_failure"] == 5951
+    assert semantic["semantic_symbol_bridge_checked"] is True
+    assert semantic["semantic_symbol_bridge_missing"] is True
+    assert (
+        semantic["semantic_symbol_bridge_status"]
+        == "no_simple_pr85_qma9_to_pr91_symbol_bridge_for_prefix"
+    )
+    assert "global_label_permutation" in semantic["semantic_symbol_bridge_missing_classes"]
     assert "hpm1_semantic_parity_prefix_divergence_not_caught" not in manifest["dispatch_blockers"]
 
 
@@ -638,6 +672,46 @@ def test_audit_categorical_candidate_manifest_rejects_hpm1_semantic_parity_claim
     assert "hpm1_semantic_parity_divergence_gate_missing" in blockers
     assert "hpm1_semantic_parity_must_not_claim_full_decode" in blockers
     assert "hpm1_semantic_parity_must_not_claim_semantic_reencode" in blockers
+
+
+def test_audit_categorical_candidate_manifest_rejects_unclosed_hpm1_symbol_bridge(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    payload_sha = candidate["decode_reencode_parity"]["payload_member_sha256"]
+    archive_sha = candidate["candidate_archive"]["sha256"]
+    proof_path = tmp_path / "hpm1_semantic_parity_fail_closed.json"
+    proof = _hpm1_semantic_parity_fail_closed(
+        payload_sha=payload_sha,
+        candidate_archive_sha=archive_sha,
+    )
+    bridge = proof["prefix_decode"]["semantic_symbol_bridge_probe"]
+    bridge["passed"] = False
+    bridge["bridge_found"] = True
+    bridge["bridge_missing"] = False
+    bridge["status"] = "simple_symbol_bridge_hypothesis_still_open"
+    write_json(proof_path, proof)
+    candidate["hpm1_semantic_parity_fail_closed"] = {
+        "path": proof_path.name,
+        "bytes": proof_path.stat().st_size,
+        "sha256": sha256_file(proof_path),
+        "contract": HPM1_SEMANTIC_PARITY_FAIL_CLOSED_CONTRACT,
+        "payload_member": "categorical_payload.bin",
+        "payload_member_sha256": payload_sha,
+        "candidate_archive_sha256": archive_sha,
+    }
+
+    manifest = audit_categorical_candidate_manifest(
+        candidate,
+        repo_root=REPO,
+        manifest_dir=tmp_path,
+    )
+    blockers = set(manifest["dispatch_blockers"])
+
+    assert manifest["hpm1_semantic_parity_fail_closed"]["accepted"] is False
+    assert "hpm1_semantic_parity_symbol_bridge_still_open" in blockers
+    assert "hpm1_semantic_parity_symbol_bridge_missing_not_proven" in blockers
+    assert "hpm1_semantic_parity_symbol_bridge_not_passed" in blockers
 
 
 def test_audit_categorical_candidate_manifest_rejects_unsafe_structural_hpm1_inventory_path(
