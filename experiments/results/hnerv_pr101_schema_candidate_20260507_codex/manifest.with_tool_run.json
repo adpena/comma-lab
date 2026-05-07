@@ -12,30 +12,6 @@
   "candidate_rate_positive": true,
   "candidate_rate_score_delta_if_runtime_supported_and_components_equal": -2.3970922e-05,
   "candidate_variant": "pr101_schema_split_brotli_f32_scale_raw_equal",
-  "hidden_gem_classification": {
-    "blockers": [
-      "pr101_schema_submission_runtime_adapter_not_integrated",
-      "pr101_schema_inflate_output_parity_missing",
-      "strict_pre_submission_compliance_json_missing",
-      "lane_dispatch_claim_missing",
-      "exact_cuda_auth_eval_missing"
-    ],
-    "candidate_id": "PR101-schema-f32-on-PR106x",
-    "classification": "stack_candidate",
-    "classification_evidence_grade": "empirical",
-    "dispatch_attempted": false,
-    "evidence_semantics": "byte_equivalence_only_raw_decoder_equal_no_score_claim",
-    "next_actions": [
-      "integrate fail-closed runtime content detection for the PR101 schema stream",
-      "record runtime-tree parity manifest and inflate-output parity",
-      "run strict pre-submission compliance before any lane claim or CUDA dispatch"
-    ],
-    "rationale": "Raw decoder bytes are restored exactly while charged bytes shrink by 36; this is a pack/layout component that can stack after runtime-adapter parity.",
-    "ready_for_exact_eval_dispatch": false,
-    "score_claim": false,
-    "stack_candidate": true,
-    "substitute_candidate": false
-  },
   "decoder_raw_equivalence": {
     "contract": "pr101_schema_decoder_raw_equivalence_v1",
     "raw_equal": true,
@@ -51,9 +27,712 @@
     "lane_dispatch_claim_missing",
     "exact_cuda_auth_eval_missing"
   ],
+  "fp16_scale_probe": {
+    "dispatch_blockers": [
+      "pr101_fp16_scale_runtime_adapter_not_integrated",
+      "pr101_fp16_scale_inflate_output_parity_missing",
+      "pr101_fp16_scale_exact_cuda_auth_eval_missing"
+    ],
+    "hidden_gem_classification": {
+      "blockers": [
+        "pr101_fp16_scale_runtime_adapter_not_integrated",
+        "pr101_fp16_scale_inflate_output_parity_missing",
+        "pr101_fp16_scale_exact_cuda_auth_eval_missing"
+      ],
+      "candidate_id": "PR101-fp16-scale-on-PR106x",
+      "classification": "substitute_candidate_probe",
+      "classification_evidence_grade": "empirical",
+      "conditional_stack_candidate_after_exact_cuda": true,
+      "dispatch_attempted": false,
+      "evidence_semantics": "q_roundtrip_equal_but_scale_raw_not_equal_no_score_claim",
+      "next_actions": [
+        "prove inflate-output parity or classify the scale quantization delta before dispatch",
+        "integrate the runtime adapter with legacy fallback",
+        "only compare score after exact CUDA auth eval on exact archive bytes"
+      ],
+      "rationale": "The q-stream roundtrips but fp16 scales change restored weights, so this is a scorer-facing substitute probe rather than a lossless pack-only row.",
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "stack_candidate": false,
+      "substitute_candidate": true
+    },
+    "max_abs_scale_error": 4.408881068229675e-06,
+    "max_abs_weight_error_bound": 0.0005599278956651688,
+    "max_rel_scale_error": 0.0003232605350608376,
+    "probe_archive_bytes_if_materialized": 185990,
+    "probe_archive_path": "",
+    "probe_archive_sha256": "",
+    "probe_decoder_section_byte_delta_vs_f32_schema": -54,
+    "probe_decoder_section_byte_delta_vs_source": -90,
+    "probe_decoder_section_bytes": 170037,
+    "probe_decoder_section_sha256": "d320f9493dc473f443bd13afc8bbdbd781a6bd43f1340fa5b1b5c2d4d1d0cf4c",
+    "probe_payload_bytes": null,
+    "probe_payload_sha256": "",
+    "q_roundtrip_equal": true,
+    "rate_score_delta_if_runtime_supported_and_components_equal": -5.9927306e-05,
+    "ready_for_archive_preflight": false,
+    "ready_for_exact_eval_dispatch": false,
+    "scale_raw_equal": false,
+    "score_claim": false,
+    "source_decoder_section_bytes": 170127,
+    "stats": {
+      "brotli_quality": 11,
+      "decoder_byte_maps": {
+        "14": "negzig",
+        "20": "twos",
+        "27": "off",
+        "9": "negzig"
+      },
+      "decoder_storage_order": [
+        14,
+        22,
+        7,
+        6,
+        19,
+        10,
+        25,
+        4,
+        20,
+        9,
+        12,
+        15,
+        5,
+        11,
+        18,
+        1,
+        21,
+        3,
+        27,
+        13,
+        2,
+        26,
+        24,
+        17,
+        16,
+        23,
+        8,
+        0
+      ],
+      "decoder_stream_ends": [
+        1,
+        2,
+        22,
+        23,
+        26,
+        27,
+        28
+      ],
+      "dispatch_blockers": [
+        "pr101_fp16_scale_runtime_adapter_not_integrated",
+        "pr101_fp16_scale_inflate_output_parity_missing",
+        "pr101_fp16_scale_exact_cuda_auth_eval_missing"
+      ],
+      "hidden_gem_classification": {
+        "blockers": [
+          "pr101_fp16_scale_runtime_adapter_not_integrated",
+          "pr101_fp16_scale_inflate_output_parity_missing",
+          "pr101_fp16_scale_exact_cuda_auth_eval_missing"
+        ],
+        "candidate_id": "PR101-fp16-scale-on-PR106x",
+        "classification": "substitute_candidate_probe",
+        "classification_evidence_grade": "empirical",
+        "conditional_stack_candidate_after_exact_cuda": true,
+        "dispatch_attempted": false,
+        "evidence_semantics": "q_roundtrip_equal_but_scale_raw_not_equal_no_score_claim",
+        "next_actions": [
+          "prove inflate-output parity or classify the scale quantization delta before dispatch",
+          "integrate the runtime adapter with legacy fallback",
+          "only compare score after exact CUDA auth eval on exact archive bytes"
+        ],
+        "rationale": "The q-stream roundtrips but fp16 scales change restored weights, so this is a scorer-facing substitute probe rather than a lossless pack-only row.",
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "stack_candidate": false,
+        "substitute_candidate": true
+      },
+      "max_abs_scale_error": 4.408881068229675e-06,
+      "max_abs_weight_error_bound": 0.0005599278956651688,
+      "max_rel_scale_error": 0.0003232605350608376,
+      "payload_bytes": 170037,
+      "q_roundtrip_equal": true,
+      "raw_bytes": 229014,
+      "raw_equivalence_claim": false,
+      "record_count": 28,
+      "runtime_parity_required": true,
+      "scale_bytes_per_record": 2,
+      "scale_raw_equal": false,
+      "scale_rows": [
+        {
+          "abs_scale_error": 5.124602466821671e-07,
+          "fixed_schema_index": 14,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 6.508245132863522e-05,
+          "name": "skips.2.weight",
+          "q_value_count": 972,
+          "rel_scale_error": 0.00013612630789643294,
+          "restored_scale_from_fp16": 0.003765106201171875,
+          "shape": [
+            27,
+            36,
+            1,
+            1
+          ],
+          "source_scale_f32": 0.003764593740925193
+        },
+        {
+          "abs_scale_error": 4.23286110162735e-07,
+          "fixed_schema_index": 22,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 5.375733599066734e-05,
+          "name": "refine.1.weight",
+          "q_value_count": 1458,
+          "rel_scale_error": 0.00012145422799002873,
+          "restored_scale_from_fp16": 0.0034847259521484375,
+          "shape": [
+            18,
+            9,
+            3,
+            3
+          ],
+          "source_scale_f32": 0.0034851492382586002
+        },
+        {
+          "abs_scale_error": 5.550682544708252e-07,
+          "fixed_schema_index": 7,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 7.04936683177948e-05,
+          "name": "blocks.2.bias",
+          "q_value_count": 108,
+          "rel_scale_error": 9.173673649946159e-05,
+          "restored_scale_from_fp16": 0.00605010986328125,
+          "shape": [
+            108
+          ],
+          "source_scale_f32": 0.006050664931535721
+        },
+        {
+          "abs_scale_error": 6.505288183689117e-07,
+          "fixed_schema_index": 6,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 8.261715993285179e-05,
+          "name": "blocks.2.weight",
+          "q_value_count": 34992,
+          "rel_scale_error": 0.00020105889096951979,
+          "restored_scale_from_fp16": 0.00323486328125,
+          "shape": [
+            108,
+            36,
+            3,
+            3
+          ],
+          "source_scale_f32": 0.003235513810068369
+        },
+        {
+          "abs_scale_error": 1.032371073961258e-06,
+          "fixed_schema_index": 19,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 0.00013111112639307976,
+          "name": "skips.4.bias",
+          "q_value_count": 18,
+          "rel_scale_error": 0.00016822586063234865,
+          "restored_scale_from_fp16": 0.006137847900390625,
+          "shape": [
+            18
+          ],
+          "source_scale_f32": 0.006136815529316664
+        },
+        {
+          "abs_scale_error": 8.381903171539307e-07,
+          "fixed_schema_index": 10,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 0.0001064501702785492,
+          "name": "blocks.4.weight",
+          "q_value_count": 12960,
+          "rel_scale_error": 0.0003232605350608376,
+          "restored_scale_from_fp16": 0.0025920867919921875,
+          "shape": [
+            72,
+            20,
+            3,
+            3
+          ],
+          "source_scale_f32": 0.0025929249823093414
+        },
+        {
+          "abs_scale_error": 2.9802322387695312e-08,
+          "fixed_schema_index": 25,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 3.7848949432373047e-06,
+          "name": "rgb_0.bias",
+          "q_value_count": 3,
+          "rel_scale_error": 2.889229818007414e-06,
+          "restored_scale_from_fp16": 0.01031494140625,
+          "shape": [
+            3
+          ],
+          "source_scale_f32": 0.010314971208572388
+        },
+        {
+          "abs_scale_error": 7.548369467258453e-07,
+          "fixed_schema_index": 4,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 9.586429223418236e-05,
+          "name": "blocks.1.weight",
+          "q_value_count": 46656,
+          "rel_scale_error": 0.00018565920643459763,
+          "restored_scale_from_fp16": 0.00406646728515625,
+          "shape": [
+            144,
+            36,
+            3,
+            3
+          ],
+          "source_scale_f32": 0.004065712448209524
+        },
+        {
+          "abs_scale_error": 8.461065590381622e-07,
+          "fixed_schema_index": 20,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 0.0001074555329978466,
+          "name": "refine.0.weight",
+          "q_value_count": 1458,
+          "rel_scale_error": 0.00011096866976413997,
+          "restored_scale_from_fp16": 0.007625579833984375,
+          "shape": [
+            9,
+            18,
+            3,
+            3
+          ],
+          "source_scale_f32": 0.007624733727425337
+        },
+        {
+          "abs_scale_error": 8.484348654747009e-07,
+          "fixed_schema_index": 9,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 0.00010775122791528702,
+          "name": "blocks.3.bias",
+          "q_value_count": 80,
+          "rel_scale_error": 7.339794877306586e-05,
+          "restored_scale_from_fp16": 0.01155853271484375,
+          "shape": [
+            80
+          ],
+          "source_scale_f32": 0.011559381149709225
+        },
+        {
+          "abs_scale_error": 5.271285772323608e-07,
+          "fixed_schema_index": 12,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 6.694532930850983e-05,
+          "name": "blocks.5.weight",
+          "q_value_count": 11664,
+          "rel_scale_error": 8.191755388973781e-05,
+          "restored_scale_from_fp16": 0.006435394287109375,
+          "shape": [
+            72,
+            18,
+            3,
+            3
+          ],
+          "source_scale_f32": 0.006434867158532143
+        },
+        {
+          "abs_scale_error": 1.8998980522155762e-07,
+          "fixed_schema_index": 15,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 2.4128705263137817e-05,
+          "name": "skips.2.bias",
+          "q_value_count": 27,
+          "rel_scale_error": 3.509720894607211e-05,
+          "restored_scale_from_fp16": 0.005413055419921875,
+          "shape": [
+            27
+          ],
+          "source_scale_f32": 0.0054132454097270966
+        },
+        {
+          "abs_scale_error": 5.587935447692871e-08,
+          "fixed_schema_index": 5,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 7.096678018569946e-06,
+          "name": "blocks.1.bias",
+          "q_value_count": 144,
+          "rel_scale_error": 8.061945841997685e-06,
+          "restored_scale_from_fp16": 0.006931304931640625,
+          "shape": [
+            144
+          ],
+          "source_scale_f32": 0.006931249052286148
+        },
+        {
+          "abs_scale_error": 2.6458874344825745e-06,
+          "fixed_schema_index": 11,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 0.00033602770417928696,
+          "name": "blocks.4.bias",
+          "q_value_count": 72,
+          "rel_scale_error": 0.00027575309178811953,
+          "restored_scale_from_fp16": 0.0095977783203125,
+          "shape": [
+            72
+          ],
+          "source_scale_f32": 0.009595132432878017
+        },
+        {
+          "abs_scale_error": 1.1757947504520416e-07,
+          "fixed_schema_index": 18,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 1.4932593330740929e-05,
+          "name": "skips.4.weight",
+          "q_value_count": 360,
+          "rel_scale_error": 4.2105814329367356e-05,
+          "restored_scale_from_fp16": 0.0027923583984375,
+          "shape": [
+            18,
+            20,
+            1,
+            1
+          ],
+          "source_scale_f32": 0.002792475977912545
+        },
+        {
+          "abs_scale_error": 2.378597855567932e-06,
+          "fixed_schema_index": 1,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 0.0003020819276571274,
+          "name": "stem.bias",
+          "q_value_count": 1728,
+          "rel_scale_error": 0.0001432960722400722,
+          "restored_scale_from_fp16": 0.0166015625,
+          "shape": [
+            1728
+          ],
+          "source_scale_f32": 0.016599183902144432
+        },
+        {
+          "abs_scale_error": 7.166527211666107e-07,
+          "fixed_schema_index": 21,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 9.101489558815956e-05,
+          "name": "refine.0.bias",
+          "q_value_count": 9,
+          "rel_scale_error": 9.57127825447249e-05,
+          "restored_scale_from_fp16": 0.007488250732421875,
+          "shape": [
+            9
+          ],
+          "source_scale_f32": 0.007487534079700708
+        },
+        {
+          "abs_scale_error": 1.2950040400028229e-06,
+          "fixed_schema_index": 3,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 0.0001644655130803585,
+          "name": "blocks.0.bias",
+          "q_value_count": 144,
+          "rel_scale_error": 0.0001901473323888187,
+          "restored_scale_from_fp16": 0.006809234619140625,
+          "shape": [
+            144
+          ],
+          "source_scale_f32": 0.006810529623180628
+        },
+        {
+          "abs_scale_error": 1.1869706213474274e-06,
+          "fixed_schema_index": 27,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 0.00015074526891112328,
+          "name": "rgb_1.bias",
+          "q_value_count": 3,
+          "rel_scale_error": 0.00020117635684534322,
+          "restored_scale_from_fp16": 0.005901336669921875,
+          "shape": [
+            3
+          ],
+          "source_scale_f32": 0.005900149699300528
+        },
+        {
+          "abs_scale_error": 4.408881068229675e-06,
+          "fixed_schema_index": 13,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 0.0005599278956651688,
+          "name": "blocks.5.bias",
+          "q_value_count": 72,
+          "rel_scale_error": 0.00026921029259075727,
+          "restored_scale_from_fp16": 0.0163726806640625,
+          "shape": [
+            72
+          ],
+          "source_scale_f32": 0.01637708954513073
+        },
+        {
+          "abs_scale_error": 1.0617077350616455e-07,
+          "fixed_schema_index": 2,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 1.3483688235282898e-05,
+          "name": "blocks.0.weight",
+          "q_value_count": 46656,
+          "rel_scale_error": 2.244468271684615e-05,
+          "restored_scale_from_fp16": 0.004730224609375,
+          "shape": [
+            144,
+            36,
+            3,
+            3
+          ],
+          "source_scale_f32": 0.004730330780148506
+        },
+        {
+          "abs_scale_error": 1.3844110071659088e-06,
+          "fixed_schema_index": 26,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 0.00017582019791007042,
+          "name": "rgb_1.weight",
+          "q_value_count": 486,
+          "rel_scale_error": 0.00025213588266768076,
+          "restored_scale_from_fp16": 0.005489349365234375,
+          "shape": [
+            3,
+            18,
+            3,
+            3
+          ],
+          "source_scale_f32": 0.005490733776241541
+        },
+        {
+          "abs_scale_error": 1.802109181880951e-07,
+          "fixed_schema_index": 24,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 2.2886786609888077e-05,
+          "name": "rgb_0.weight",
+          "q_value_count": 486,
+          "rel_scale_error": 2.4890614752519436e-05,
+          "restored_scale_from_fp16": 0.00724029541015625,
+          "shape": [
+            3,
+            18,
+            3,
+            3
+          ],
+          "source_scale_f32": 0.007240115199238062
+        },
+        {
+          "abs_scale_error": 1.584179699420929e-06,
+          "fixed_schema_index": 17,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 0.00020119082182645798,
+          "name": "skips.3.bias",
+          "q_value_count": 20,
+          "rel_scale_error": 0.00021445978387345637,
+          "restored_scale_from_fp16": 0.00738525390625,
+          "shape": [
+            20
+          ],
+          "source_scale_f32": 0.007386838085949421
+        },
+        {
+          "abs_scale_error": 9.133946150541306e-07,
+          "fixed_schema_index": 16,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 0.00011600111611187458,
+          "name": "skips.3.weight",
+          "q_value_count": 540,
+          "rel_scale_error": 0.0003053078663665212,
+          "restored_scale_from_fp16": 0.0029926300048828125,
+          "shape": [
+            20,
+            27,
+            1,
+            1
+          ],
+          "source_scale_f32": 0.0029917166102677584
+        },
+        {
+          "abs_scale_error": 1.7695128917694092e-06,
+          "fixed_schema_index": 23,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 0.00022472813725471497,
+          "name": "refine.1.bias",
+          "q_value_count": 18,
+          "rel_scale_error": 0.00012467993348653654,
+          "restored_scale_from_fp16": 0.014190673828125,
+          "shape": [
+            18
+          ],
+          "source_scale_f32": 0.01419244334101677
+        },
+        {
+          "abs_scale_error": 7.071066647768021e-07,
+          "fixed_schema_index": 8,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 8.980254642665386e-05,
+          "name": "blocks.3.weight",
+          "q_value_count": 19440,
+          "rel_scale_error": 0.00022194326861120736,
+          "restored_scale_from_fp16": 0.003185272216796875,
+          "shape": [
+            80,
+            27,
+            3,
+            3
+          ],
+          "source_scale_f32": 0.003185979323461652
+        },
+        {
+          "abs_scale_error": 8.223578333854675e-07,
+          "fixed_schema_index": 0,
+          "max_abs_q": 127,
+          "max_abs_weight_error_bound": 0.00010443944483995438,
+          "name": "stem.weight",
+          "q_value_count": 48384,
+          "rel_scale_error": 6.848504943449421e-05,
+          "restored_scale_from_fp16": 0.0120086669921875,
+          "shape": [
+            1728,
+            28
+          ],
+          "source_scale_f32": 0.012007844634354115
+        }
+      ],
+      "schema_version": 1,
+      "stream_count": 7,
+      "stream_rows": [
+        {
+          "brotli_bytes": 806,
+          "raw_bytes": 974,
+          "record_count": 1,
+          "record_end": 1,
+          "record_start": 0,
+          "sha256": "a2210c3a9844109877e7e35cf37f6a5c7b615f7b6ecf49c694903ff73abfcbdd",
+          "stream_index": 0
+        },
+        {
+          "brotli_bytes": 1307,
+          "raw_bytes": 1460,
+          "record_count": 1,
+          "record_end": 2,
+          "record_start": 1,
+          "sha256": "c7d9415c5a603d11eeaf1243ebd83de8ba2bdf490bc0c7981ac192116e44611b",
+          "stream_index": 1
+        },
+        {
+          "brotli_bytes": 119906,
+          "raw_bytes": 157680,
+          "record_count": 20,
+          "record_end": 22,
+          "record_start": 2,
+          "sha256": "7c9b9563914683599ce8ea4aafd9ffce77aa0f16de5ba96d2a950a287a1773e2",
+          "stream_index": 2
+        },
+        {
+          "brotli_bytes": 417,
+          "raw_bytes": 488,
+          "record_count": 1,
+          "record_end": 23,
+          "record_start": 22,
+          "sha256": "0dbaeef51f222d38d3fdb5d4f989ff3b96006fc7b6f1ae2b4ce735b3188eb773",
+          "stream_index": 3
+        },
+        {
+          "brotli_bytes": 554,
+          "raw_bytes": 584,
+          "record_count": 3,
+          "record_end": 26,
+          "record_start": 23,
+          "sha256": "c842d8ac9286fce4601ad1ad2b5a9f0469c2b5e27ca30b9dc3df3d4ded9e0594",
+          "stream_index": 4
+        },
+        {
+          "brotli_bytes": 15228,
+          "raw_bytes": 19442,
+          "record_count": 1,
+          "record_end": 27,
+          "record_start": 26,
+          "sha256": "30a8f07ed3058268fe9ffb09cc1e529a36daeaa30f6dc884ea6c1eff92446782",
+          "stream_index": 5
+        },
+        {
+          "brotli_bytes": 31819,
+          "raw_bytes": 48386,
+          "record_count": 1,
+          "record_end": 28,
+          "record_start": 27,
+          "sha256": "b517fbb58660e373c3be0f1ed8498ece5ae691d5069e45a97ce5fbd619a9d80b",
+          "stream_index": 6
+        }
+      ],
+      "variant": "pr101_schema_split_brotli_fp16_scale_runtime_probe"
+    },
+    "variant": "pr101_schema_split_brotli_fp16_scale_runtime_probe"
+  },
+  "hidden_gem_classification": {
+    "blockers": [
+      "pr101_schema_submission_runtime_adapter_not_integrated",
+      "pr101_schema_runtime_tree_parity_manifest_missing",
+      "pr101_schema_inflate_output_parity_missing",
+      "strict_pre_submission_compliance_json_missing",
+      "lane_dispatch_claim_missing",
+      "exact_cuda_auth_eval_missing"
+    ],
+    "candidate_id": "PR101-schema-f32-on-PR106x",
+    "classification": "stack_candidate",
+    "classification_evidence_grade": "empirical",
+    "dispatch_attempted": false,
+    "evidence_semantics": "byte_equivalence_only_raw_decoder_equal_no_score_claim",
+    "next_actions": [
+      "integrate fail-closed runtime content detection for the PR101 schema stream",
+      "record runtime-tree parity manifest and inflate-output parity",
+      "run strict pre-submission compliance before any lane claim or CUDA dispatch"
+    ],
+    "rationale": "Raw decoder bytes are restored exactly while charged bytes shrink; this is a pack/layout component that can stack after runtime-adapter integration and exact CUDA auth eval.",
+    "ready_for_exact_eval_dispatch": false,
+    "runtime_adapter_payload_parity_closed": true,
+    "score_claim": false,
+    "stack_candidate": true,
+    "substitute_candidate": false
+  },
   "ready_for_archive_preflight": true,
   "ready_for_exact_eval_dispatch": false,
   "runtime_adapter_proof": {
+    "candidate_decoder_raw_equal_to_source": true,
+    "candidate_latents_preserved": true,
+    "candidate_legacy_decode_without_adapter": false,
+    "candidate_restored_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+    "candidate_schema_payload_proof": {
+      "contract": "pr101_schema_payload_runtime_adapter_parity_v1",
+      "decoder_raw_equal": true,
+      "decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+      "decoder_section_byte_delta_runtime_only": 36,
+      "dispatch_attempted": false,
+      "input_decoder_section_bytes": 170091,
+      "input_decoder_section_sha256": "85bf49aa45766b9d71046940d5b87d196453618b2625d5bbbef5e143bbb73f35",
+      "input_payload_bytes": 185944,
+      "input_payload_sha256": "7056e69953739ebd016d473bd7bfab650b8fd58cffab5e8aad0ddb2358df6ab0",
+      "latents_and_sidecar_input_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+      "latents_and_sidecar_output_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+      "latents_and_sidecar_preserved": true,
+      "legacy_brotli_quality": 10,
+      "legacy_decode_without_adapter": false,
+      "mode": "pr101_schema_restored_to_legacy_brotli",
+      "output_decoder_section_bytes": 170127,
+      "output_decoder_section_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+      "output_payload_bytes": 185980,
+      "output_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+      "payload_changed": true,
+      "provided": true,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_public_runtime_inflate": true,
+      "remaining_dispatch_blockers": [
+        "exact_inflate_output_parity_missing",
+        "strict_pre_submission_compliance_json_missing",
+        "lane_dispatch_claim_missing",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "restored_decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+      "schema_version": 1,
+      "score_claim": false
+    },
     "content_detection_required": true,
     "contract": "pr101_schema_runtime_adapter_proof_v1",
     "dispatch_blockers": [
@@ -62,9 +741,46 @@
       "pr101_schema_inflate_output_parity_missing"
     ],
     "legacy_brotli_fallback_required": true,
+    "legacy_brotli_quality": 10,
     "ready_for_exact_eval_dispatch": false,
+    "ready_for_public_runtime_inflate": true,
     "runtime_tree_parity_manifest_present": false,
+    "schema_payload_adapter_parity_closed": true,
     "schema_version": 1,
+    "source_legacy_payload_proof": {
+      "contract": "pr101_schema_payload_runtime_adapter_parity_v1",
+      "decoder_raw_equal": true,
+      "decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+      "decoder_section_byte_delta_runtime_only": 0,
+      "dispatch_attempted": false,
+      "input_decoder_section_bytes": 170127,
+      "input_decoder_section_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+      "input_payload_bytes": 185980,
+      "input_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+      "latents_and_sidecar_input_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+      "latents_and_sidecar_output_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+      "latents_and_sidecar_preserved": true,
+      "legacy_brotli_quality": null,
+      "legacy_decode_without_adapter": true,
+      "mode": "legacy_brotli_passthrough",
+      "output_decoder_section_bytes": 170127,
+      "output_decoder_section_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+      "output_payload_bytes": 185980,
+      "output_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+      "payload_changed": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_public_runtime_inflate": true,
+      "remaining_dispatch_blockers": [
+        "exact_inflate_output_parity_missing",
+        "strict_pre_submission_compliance_json_missing",
+        "lane_dispatch_claim_missing",
+        "exact_cuda_auth_eval_missing"
+      ],
+      "restored_decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+      "schema_version": 1,
+      "score_claim": false
+    },
+    "source_restored_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
     "submission_runtime_integrated": false
   },
   "schema_split_stats": {
@@ -213,7 +929,7 @@
       "experiments/results/hnerv_pr101_schema_candidate_20260507_codex/manifest.with_tool_run.json",
       "--fail-if-blocked"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "49e64b8ce651ba742081d27ca83061afbfc5615b1fa2638584d1e071e8415352",
+    "canonical_payload_without_tool_manifest_sha256": "bbac6a56ebffe3151b4b2fbe874ae40bebb9aa07cdfc712989f59dc2586ac155",
     "dispatch_attempted": false,
     "input_files": [
       {

@@ -68,10 +68,64 @@ def test_pr103_schema_manifest_is_fail_closed_without_candidate_or_exact_eval(
     assert manifest["source_archive"]["sha256"]
     assert manifest["merged_arithmetic_stream"]["reencoded_byte_identical"] is True
     assert manifest["old_new_archive_sha256_pair"]["closed"] is False
+    assert manifest["runtime_adapter_classification"]["source_schema_contract_closed"] is True
+    assert manifest["runtime_adapter_classification"]["byte_different_candidate_provided"] is False
     assert "candidate_archive_missing" in manifest["readiness_blockers"]
     assert "old_new_archive_sha256_pair_missing" in manifest["readiness_blockers"]
+    assert "candidate_runtime_adapter_missing" in manifest["readiness_blockers"]
     assert "exact_cuda_auth_eval_missing" in manifest["dispatch_blockers"]
     assert manifest["next_arithmetic_schema_targets"]
+
+
+def test_pr103_schema_manifest_classifies_byte_different_candidate_archive(
+    tmp_path: Path,
+) -> None:
+    fixture = _synthetic_lc_ac_fixture()
+    source_archive = tmp_path / "source.zip"
+    candidate_archive = tmp_path / "candidate.zip"
+    write_stored_single_member_zip(source_archive, member_name="x", payload=fixture["payload"])
+    write_stored_single_member_zip(
+        candidate_archive,
+        member_name="x",
+        payload=fixture["payload"] + brotli.compress(b"candidate-sidecar"),
+    )
+
+    manifest = build_pr103_lc_ac_schema_manifest(
+        source_archive=source_archive,
+        source_label="fixture-pr103",
+        candidate_archive=candidate_archive,
+        repo_root=tmp_path,
+        layout=fixture["layout"],
+        stream_specs=fixture["stream_specs"],
+        hi_symbol_count=fixture["hi_symbol_count"],
+    )
+
+    candidate = manifest["candidate_archive"]
+    classification = manifest["runtime_adapter_classification"]
+    assert candidate["provided"] is True
+    assert candidate["archive_sha256_differs_from_source"] is True
+    assert candidate["member_sha256_differs_from_source"] is True
+    assert candidate["payload_lc_ac_schema_compatible"] is True
+    assert candidate["section_diffs_vs_source"] == [
+        {
+            "name": "sidecar_corrections_brotli",
+            "source_bytes": 0,
+            "candidate_bytes": len(brotli.compress(b"candidate-sidecar")),
+            "source_sha256": (
+                "e3b0c44298fc1c149afbf4c8996fb924"
+                "27ae41e4649b934ca495991b7852b855"
+            ),
+            "candidate_sha256": candidate["payload_sections"][-1]["sha256"],
+        }
+    ]
+    assert classification["byte_different_candidate_provided"] is True
+    assert classification["candidate_lc_ac_schema_compatible"] is True
+    assert manifest["old_new_archive_sha256_pair"]["closed"] is True
+    assert "candidate_archive_missing" not in manifest["readiness_blockers"]
+    assert "old_new_archive_sha256_pair_missing" not in manifest["readiness_blockers"]
+    assert "candidate_runtime_adapter_missing" in manifest["readiness_blockers"]
+    assert "candidate_inflate_output_parity_missing" in manifest["readiness_blockers"]
+    assert manifest["ready_for_exact_eval_dispatch"] is False
 
 
 def test_public_pr103_archive_schema_profile_if_available() -> None:

@@ -6,9 +6,11 @@ import sys
 from pathlib import Path
 
 import brotli
+import pytest
 
 from tac.hnerv_decoder_recode import PACKED_STATE_SCHEMA, parse_packed_decoder_brotli
 from tac.hnerv_lowlevel_packer import (
+    PackedHnervPayload,
     parse_ff_packed_brotli_hnerv,
     read_strict_single_member_zip,
     write_stored_single_member_zip,
@@ -22,6 +24,7 @@ from tac.hnerv_pr101_schema_packer import (
     decode_pr101_schema_split_fp16_scale_probe,
     encode_pr101_schema_split_fixture,
     encode_pr101_schema_split_fp16_scale_probe,
+    restore_pr101_schema_payload_to_legacy_brotli,
 )
 
 REPO = Path(__file__).resolve().parents[3]
@@ -57,7 +60,53 @@ def test_pr101_schema_fp16_scale_probe_preserves_q_but_not_raw_scales() -> None:
     assert stats["scale_raw_equal"] is False
     assert stats["raw_equivalence_claim"] is False
     assert stats["runtime_parity_required"] is True
+    assert stats["hidden_gem_classification"]["classification"] == "substitute_candidate_probe"
+    assert stats["hidden_gem_classification"]["score_claim"] is False
     assert stats["payload_bytes"] <= encode_pr101_schema_split_fixture(parsed)[1]["payload_bytes"]
+
+
+def test_pr101_schema_runtime_adapter_restores_legacy_brotli_payload() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+    schema_stream, _stats = encode_pr101_schema_split_fixture(parsed)
+    legacy_decoder = brotli.compress(parsed.to_raw(), quality=5)
+    candidate_payload = PackedHnervPayload(
+        header=b"\xff" + len(schema_stream).to_bytes(3, "little"),
+        decoder_packed_brotli=schema_stream,
+        latents_and_sidecar_brotli=brotli.compress(b"latents", quality=5),
+    ).to_bytes()
+
+    with pytest.raises(brotli.error):
+        brotli.decompress(schema_stream)
+
+    restored_payload, proof = restore_pr101_schema_payload_to_legacy_brotli(
+        candidate_payload,
+        require_pr101_schema=True,
+    )
+
+    restored = parse_ff_packed_brotli_hnerv(restored_payload)
+    assert proof["mode"] == "pr101_schema_restored_to_legacy_brotli"
+    assert proof["score_claim"] is False
+    assert proof["dispatch_attempted"] is False
+    assert proof["legacy_decode_without_adapter"] is False
+    assert proof["ready_for_public_runtime_inflate"] is True
+    assert proof["ready_for_exact_eval_dispatch"] is False
+    assert proof["payload_changed"] is True
+    assert brotli.decompress(restored.decoder_packed_brotli) == parsed.to_raw()
+    assert restored.latents_and_sidecar_brotli == parse_ff_packed_brotli_hnerv(
+        candidate_payload
+    ).latents_and_sidecar_brotli
+
+    legacy_payload = PackedHnervPayload(
+        header=b"\xff" + len(legacy_decoder).to_bytes(3, "little"),
+        decoder_packed_brotli=legacy_decoder,
+        latents_and_sidecar_brotli=restored.latents_and_sidecar_brotli,
+    ).to_bytes()
+    passthrough_payload, passthrough = restore_pr101_schema_payload_to_legacy_brotli(
+        legacy_payload
+    )
+    assert passthrough_payload == legacy_payload
+    assert passthrough["mode"] == "legacy_brotli_passthrough"
+    assert passthrough["legacy_decode_without_adapter"] is True
 
 
 def test_build_pr101_schema_archive_candidate_allows_forensic_archive_with_override(
@@ -85,9 +134,20 @@ def test_build_pr101_schema_archive_candidate_allows_forensic_archive_with_overr
     assert manifest["decoder_raw_equivalence"]["raw_equal"] is True
     assert manifest["fp16_scale_probe"]["variant"] == FP16_SCALE_PROBE_VARIANT_NAME
     assert manifest["fp16_scale_probe"]["score_claim"] is False
+    assert manifest["fp16_scale_probe"]["hidden_gem_classification"]["substitute_candidate"] is True
     assert manifest["fp16_scale_probe"]["q_roundtrip_equal"] is True
     assert manifest["fp16_scale_probe"]["scale_raw_equal"] is False
     assert manifest["fp16_scale_probe"]["ready_for_exact_eval_dispatch"] is False
+    assert manifest["runtime_adapter_proof"]["schema_payload_adapter_parity_closed"] is True
+    assert manifest["runtime_adapter_proof"]["candidate_legacy_decode_without_adapter"] is False
+    assert manifest["runtime_adapter_proof"]["ready_for_public_runtime_inflate"] is True
+    expected_classification = (
+        "stack_candidate"
+        if manifest["candidate_decoder_section_byte_delta"] < 0
+        else "blocked_schema_probe"
+    )
+    assert manifest["hidden_gem_classification"]["classification"] == expected_classification
+    assert manifest["hidden_gem_classification"]["runtime_adapter_payload_parity_closed"] is True
     assert "pr101_schema_submission_runtime_adapter_not_integrated" in manifest["dispatch_blockers"]
     assert "exact_cuda_auth_eval_missing" in manifest["dispatch_blockers"]
 

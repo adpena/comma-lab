@@ -356,7 +356,13 @@ def build_pr103_lc_ac_schema_manifest(
     )
     adjudication = _load_adjudication_record(exact_adjudication_log, repo)
     replay_fidelity = _load_replay_fidelity(replay_fidelity_json, repo)
-    candidate = _candidate_archive_record(candidate_archive, repo)
+    candidate = _candidate_archive_record(
+        candidate_archive,
+        repo,
+        source=source,
+        layout=layout,
+        ac_stream_count=len(stream_specs),
+    )
 
     source_exact_blockers = _source_exact_eval_blockers(
         source_archive=source.archive_sha256,
@@ -364,10 +370,12 @@ def build_pr103_lc_ac_schema_manifest(
         adjudication=adjudication,
     )
     replay_blockers = list(replay_fidelity.get("blockers") or [])
-    archive_pair_closed = candidate.get("provided") is True and (
-        candidate.get("sha256") not in {"", source.archive_sha256}
-    )
+    archive_pair_closed = candidate.get("archive_sha256_differs_from_source") is True
     schema_blockers = list(merged["blockers"])
+    runtime_adapter_classification = _runtime_adapter_classification(
+        merged=merged,
+        candidate=candidate,
+    )
     readiness_blockers = _unique_ordered(
         [
             *schema_blockers,
@@ -375,7 +383,7 @@ def build_pr103_lc_ac_schema_manifest(
             *(f"replay_fidelity:{item}" for item in replay_blockers),
             *([] if candidate.get("provided") else ["candidate_archive_missing"]),
             *([] if archive_pair_closed else ["old_new_archive_sha256_pair_missing"]),
-            "candidate_runtime_adapter_missing",
+            *runtime_adapter_classification["blockers"],
             "strict_pre_submission_compliance_json_missing",
             "lane_dispatch_claim_missing",
             "exact_cuda_auth_eval_missing",
@@ -410,6 +418,7 @@ def build_pr103_lc_ac_schema_manifest(
         "source_exact_adjudication": adjudication,
         "replay_fidelity": replay_fidelity,
         "candidate_archive": candidate,
+        "runtime_adapter_classification": runtime_adapter_classification,
         "old_new_archive_sha256_pair": {
             "old": source.archive_sha256,
             "new": str(candidate.get("sha256") or ""),
@@ -636,7 +645,14 @@ def _load_replay_fidelity(path: str | Path | None, repo: Path) -> dict[str, Any]
     }
 
 
-def _candidate_archive_record(path: str | Path | None, repo: Path) -> dict[str, Any]:
+def _candidate_archive_record(
+    path: str | Path | None,
+    repo: Path,
+    *,
+    source: Any,
+    layout: Pr103LcAcLayout,
+    ac_stream_count: int,
+) -> dict[str, Any]:
     if path is None:
         return {
             "provided": False,
@@ -647,15 +663,138 @@ def _candidate_archive_record(path: str | Path | None, repo: Path) -> dict[str, 
             "dispatch_attempted": False,
             "ready_for_exact_eval_dispatch": False,
         }
-    source = Path(path)
+    candidate_path = Path(path)
+    archive = read_strict_single_member_zip(candidate_path)
+    compatibility = _candidate_lc_ac_compatibility(
+        archive.payload,
+        layout=layout,
+        ac_stream_count=ac_stream_count,
+    )
+    section_diffs: list[dict[str, Any]] = []
+    if compatibility["payload_lc_ac_schema_compatible"]:
+        candidate_sections = {
+            row["name"]: row
+            for row in parse_pr103_lc_ac_payload(archive.payload, layout=layout).section_records()
+        }
+        source_sections = {
+            row["name"]: row
+            for row in parse_pr103_lc_ac_payload(source.payload, layout=layout).section_records()
+        }
+        for name, candidate_row in candidate_sections.items():
+            source_row = source_sections.get(name)
+            changed = source_row is None or (
+                source_row.get("sha256") != candidate_row.get("sha256")
+                or source_row.get("bytes") != candidate_row.get("bytes")
+            )
+            if changed:
+                section_diffs.append(
+                    {
+                        "name": name,
+                        "source_bytes": source_row.get("bytes") if source_row else None,
+                        "candidate_bytes": candidate_row.get("bytes"),
+                        "source_sha256": source_row.get("sha256") if source_row else "",
+                        "candidate_sha256": candidate_row.get("sha256"),
+                    }
+                )
+        for name, source_row in source_sections.items():
+            if name not in candidate_sections:
+                section_diffs.append(
+                    {
+                        "name": name,
+                        "source_bytes": source_row.get("bytes"),
+                        "candidate_bytes": None,
+                        "source_sha256": source_row.get("sha256"),
+                        "candidate_sha256": "",
+                    }
+                )
+    source_payload_sha = sha256_bytes(source.payload)
+    source_archive_bytes = int(source.archive_bytes)
+    source_member_bytes = int(source.member_bytes)
+    archive_changed = archive.archive_sha256 != source.archive_sha256
+    member_changed = sha256_bytes(archive.payload) != source_payload_sha
     return {
         "provided": True,
-        "path": repo_relative(source, repo),
-        "bytes": source.stat().st_size,
-        "sha256": sha256_file(source),
+        "path": repo_relative(candidate_path, repo),
+        "bytes": archive.archive_bytes,
+        "sha256": archive.archive_sha256,
+        "member_name": archive.member_name,
+        "member_bytes": archive.member_bytes,
+        "member_sha256": sha256_bytes(archive.payload),
+        "zip_overhead_bytes": archive.archive_bytes - archive.member_bytes,
+        "archive_sha256_differs_from_source": archive_changed,
+        "member_sha256_differs_from_source": member_changed,
+        "archive_byte_delta_vs_source": archive.archive_bytes - source_archive_bytes,
+        "member_byte_delta_vs_source": archive.member_bytes - source_member_bytes,
+        "section_diffs_vs_source": section_diffs,
+        **compatibility,
         "score_claim": False,
         "dispatch_attempted": False,
         "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _candidate_lc_ac_compatibility(
+    payload: bytes,
+    *,
+    layout: Pr103LcAcLayout,
+    ac_stream_count: int,
+) -> dict[str, Any]:
+    try:
+        parsed = parse_pr103_lc_ac_payload(payload, layout=layout)
+        auxiliary = decode_pr103_auxiliary_models(parsed, ac_stream_count=ac_stream_count)
+    except (HnervPr103LcAcSchemaError, brotli.error) as exc:
+        return {
+            "payload_lc_ac_schema_compatible": False,
+            "payload_lc_ac_schema_error": str(exc),
+            "payload_sections": [],
+            "auxiliary_model_decode": {},
+        }
+    auxiliary.pop("_histograms_array", None)
+    auxiliary.pop("_hi_histogram_array", None)
+    return {
+        "payload_lc_ac_schema_compatible": True,
+        "payload_lc_ac_schema_error": "",
+        "payload_sections": parsed.section_records(),
+        "auxiliary_model_decode": auxiliary,
+    }
+
+
+def _runtime_adapter_classification(
+    *,
+    merged: Mapping[str, Any],
+    candidate: Mapping[str, Any],
+) -> dict[str, Any]:
+    candidate_provided = candidate.get("provided") is True
+    archive_changed = candidate.get("archive_sha256_differs_from_source") is True
+    member_changed = candidate.get("member_sha256_differs_from_source") is True
+    schema_compatible = candidate.get("payload_lc_ac_schema_compatible") is True
+    source_schema_closed = not list(merged.get("blockers") or [])
+    blockers = []
+    if not candidate_provided:
+        blockers.append("candidate_runtime_adapter_missing")
+    else:
+        if not archive_changed or not member_changed:
+            blockers.append("candidate_byte_difference_missing")
+        if not schema_compatible:
+            blockers.append("candidate_lc_ac_schema_compatibility_missing")
+        blockers.extend(
+            [
+                "candidate_runtime_adapter_missing",
+                "candidate_inflate_output_parity_missing",
+            ]
+        )
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "contract": "pr103_lc_ac_runtime_adapter_classification_v1",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "source_schema_contract_closed": source_schema_closed,
+        "byte_different_candidate_provided": candidate_provided and archive_changed and member_changed,
+        "candidate_lc_ac_schema_compatible": schema_compatible,
+        "candidate_runtime_adapter_integrated": False,
+        "candidate_inflate_output_parity_present": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": blockers,
     }
 
 
