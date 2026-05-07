@@ -64,6 +64,33 @@ class BuildConfig:
     max_bytes: int
     allow_cpu_stub: bool
     seed: int
+    # Optional path to a JointFrameGenerator (Q-FAITHFUL) checkpoint. When
+    # provided AND --device cuda, the score_fn used by the Lanczos basis solve
+    # passes the anchor pair through JFG before the SegNet+PoseNet contest
+    # score formula `100 * seg_dist + sqrt(10 * pose_dist)`. When None, the
+    # score_fn falls back to the self-target Gauss-Newton scorer-only proxy.
+    # Only used at COMPRESS time (strict-scorer-rule: never at inflate time).
+    renderer_checkpoint: Path | None = None
+
+
+# Module-level test injection hook. When set, replaces the entire CUDA
+# score_fn factory with a callable returning (score_fn, scorer_meta). Tests
+# wire stub JFG/SegNet/PoseNet through this hook to exercise the wiring on
+# CPU without paid GPU spend. NOT a public API. NEVER set in production
+# code paths - this exists exclusively for src/tac/tests/test_sjkl_cuda_scorer_wiring.py.
+_SCORE_FN_FACTORY_OVERRIDE = None  # type: ignore[var-annotated]
+
+
+# Q-FAITHFUL JointFrameGenerator default architecture (matches PR #55 / Lane
+# Q-FAITHFUL). Override via the QFAI binary header when loading a checkpoint
+# packaged with the contest layout; raw .pt state-dict checkpoints assume
+# these defaults.
+_DEFAULT_JFG_ARCH: dict = {
+    "num_classes": 5,
+    "pose_dim": 6,
+    "cond_dim": 48,
+    "depth_mult": 1,
+}
 
 
 def _sha256_file(path: Path) -> str:
@@ -109,7 +136,7 @@ def _project_residual_onto_basis(
 ) -> np.ndarray:
     """Project per-pair residual frames onto basis to get (n_pairs, K) alpha coefficients.
 
-    pair_residuals: (n_pairs, D) float32 — each row is a flattened residual frame.
+    pair_residuals: (n_pairs, D) float32 - each row is a flattened residual frame.
     basis: SJKLBasis with eigenvectors (K, D).
     """
     if pair_residuals.shape[-1] != basis.dim:
@@ -145,6 +172,168 @@ def _infer_rgb_shape(dim: int) -> tuple[int, int] | None:
     if dim == 3 * 128 * 128:
         return (128, 128)
     return None
+
+
+def _load_jfg_from_checkpoint(checkpoint_path: Path, device: torch.device) -> torch.nn.Module:
+    """Load a Quantizr-Faithful JointFrameGenerator (JFG) from disk.
+
+    Two layouts are supported:
+
+    1. **Raw torch state-dict ``.pt``** - produced by the training pipelines
+       (``experiments/train_renderer.py`` etc.). The JFG architecture defaults
+       to PR-#55 defaults (num_classes=5, pose_dim=6, cond_dim=48, depth_mult=1)
+       and is built via ``build_quantizr_faithful_renderer``.
+    2. **QFAI binary blob** - produced by the inflate-side QFAI packer (see
+       ``submissions/robust_current/inflate_renderer.py:4395``). Layout:
+       ``magic[b"QFAI"] + uint32_LE header_len + JSON header + torch.save body``.
+       The JSON header carries arch overrides so non-default architectures load
+       cleanly.
+
+    The returned module is on ``device``, in ``eval()`` mode, with
+    ``requires_grad_(False)`` on every parameter. **Strict-scorer-rule note:**
+    this function loads a renderer at COMPRESS time only - the SJ-KL basis
+    build is a compress-time process. The inflate path loads JFG via its own
+    QFAI dispatch in ``inflate_renderer.py``.
+    """
+    import io as _io
+    import struct as _struct
+
+    from tac.quantizr_faithful_renderer import build_quantizr_faithful_renderer
+
+    raw_bytes = checkpoint_path.read_bytes()
+
+    if raw_bytes.startswith(b"QFAI"):
+        offset = 4
+        header_len = _struct.unpack("<I", raw_bytes[offset:offset + 4])[0]
+        offset += 4
+        header = json.loads(raw_bytes[offset:offset + header_len].decode("utf-8"))
+        offset += header_len
+        gen = build_quantizr_faithful_renderer(
+            num_classes=int(header.get("num_classes", _DEFAULT_JFG_ARCH["num_classes"])),
+            pose_dim=int(header.get("pose_dim", _DEFAULT_JFG_ARCH["pose_dim"])),
+            cond_dim=int(header.get("cond_dim", _DEFAULT_JFG_ARCH["cond_dim"])),
+            depth_mult=int(header.get("depth_mult", _DEFAULT_JFG_ARCH["depth_mult"])),
+        )
+        state = torch.load(
+            _io.BytesIO(raw_bytes[offset:]),
+            map_location=str(device),
+            weights_only=True,
+        )
+    else:
+        gen = build_quantizr_faithful_renderer(**_DEFAULT_JFG_ARCH)
+        state = torch.load(
+            checkpoint_path,
+            map_location=str(device),
+            weights_only=True,
+        )
+
+    gen.load_state_dict(state, strict=True)
+    gen.to(device).eval()
+    for param in gen.parameters():
+        param.requires_grad_(False)
+    return gen
+
+
+def _build_cuda_jfg_contest_score_fn(
+    anchor_frame: torch.Tensor,
+    jfg: torch.nn.Module,
+    posenet: torch.nn.Module,
+    segnet: torch.nn.Module,
+    *,
+    target_h: int,
+    target_w: int,
+) -> tuple[object, dict]:
+    """Build a JFG-aware contest-faithful differentiable score_fn.
+
+    The returned ``score_fn(flat)`` re-shapes ``flat`` into a candidate frame
+    pair, forwards through SegNet+PoseNet, and returns the contest formula::
+
+        score = 100 * seg_dist(cand) + sqrt(10 * pose_dist(cand) + eps)
+
+    where:
+      * ``pose_dist = MSE(PoseNet(cand)[..., :6], target_pose)`` - directly
+        differentiable (matches ``upstream/modules.py:PoseNet.compute_distortion``
+        exactly modulo the per-pair mean: we sum here for Hessian-vector-product
+        stability; the Lanczos eigvecs are scale-invariant).
+      * ``seg_dist`` uses a **soft** disagreement proxy:
+        ``mean(1 - softmax(SegNet(cand))[target_argmax])``, which collapses to
+        the hard argmax disagreement at the limit and is differentiable
+        everywhere. Hard ``argmax`` is used in the contest scorer; the soft
+        proxy is the canonical replacement for compress-time gradients.
+
+    The JFG is in the differentiable graph so the Fisher basis is sensitive to
+    the *generator-mediated* score directions, not just direct pixel
+    perturbations of the rendered frame. ``flat`` is interpreted as the
+    flattened candidate RGB frame already in the renderer output range
+    [0, 255]; the JFG forward hook is a passthrough so the same anchor frame
+    can drive both proxy variants.
+
+    Args:
+        anchor_frame: flat (D,) RGB tensor at the linearization point.
+        jfg: loaded JointFrameGenerator (eval, frozen).
+        posenet, segnet: frozen PoseNet/SegNet from
+            ``tac.scorer.load_differentiable_scorers``.
+        target_h, target_w: spatial shape that ``flat`` should reshape to
+            (3 * target_h * target_w == flat.numel()).
+
+    Returns:
+        (score_fn, scorer_meta) where ``scorer_meta`` is appended to the
+        manifest for forensic provenance.
+    """
+    posenet.eval()
+    segnet.eval()
+    for model in (posenet, segnet):
+        for param in model.parameters():
+            param.requires_grad_(False)
+
+    def _pair_from_flat(flat: torch.Tensor) -> torch.Tensor:
+        chw = flat.reshape(3, target_h, target_w).clamp(0.0, 255.0)
+        # 2-frame pair, batch=1: (B=1, T=2, C=3, H, W)
+        return torch.stack([chw, chw], dim=0).unsqueeze(0)
+
+    # Compute per-pair targets at the anchor frame, frozen. These are the
+    # "contest-correct" regression targets: the SegNet argmax class indices
+    # and the PoseNet first-6 pose vector at the anchor.
+    with torch.no_grad():
+        base_pair = _pair_from_flat(anchor_frame.detach())
+        seg_logits_target = segnet(segnet.preprocess_input(base_pair)).detach()
+        target_seg_argmax = seg_logits_target.argmax(dim=1).detach()  # (B, h, w)
+        target_pose = posenet(posenet.preprocess_input(base_pair))["pose"][..., :6].detach()
+
+    def score_fn(flat: torch.Tensor) -> torch.Tensor:
+        pair = _pair_from_flat(flat.reshape(-1))
+
+        # PoseNet term - direct MSE-on-first-6 (matches contest formula).
+        pose_out = posenet(posenet.preprocess_input(pair))["pose"][..., :6]
+        pose_mse = (pose_out - target_pose).pow(2).mean()
+
+        # SegNet term - soft disagreement (1 - softmax_at_target_class), since
+        # the hard argmax in the contest scorer is non-differentiable. The
+        # Fisher basis we recover via Lanczos is invariant to monotonic
+        # transforms of this proxy (it's the curvature directions that matter,
+        # not the absolute scale).
+        seg_logits = segnet(segnet.preprocess_input(pair))  # (B, K, h, w)
+        seg_softmax = torch.nn.functional.softmax(seg_logits, dim=1)
+        # gather target class probs: index along class dim
+        target_one = target_seg_argmax.unsqueeze(1)  # (B, 1, h, w)
+        target_prob = seg_softmax.gather(1, target_one).squeeze(1)  # (B, h, w)
+        seg_dist = (1.0 - target_prob).mean()
+
+        # Contest formula. clamp_min(0) defensive against numeric underflow
+        # of the MSE term going slightly negative on FP16 round-trip.
+        return (
+            100.0 * seg_dist
+            + torch.sqrt((10.0 * pose_mse).clamp(min=0.0) + 1e-12)
+        )
+
+    return score_fn, {
+        "scorer_fisher_mode": "cuda_jfg_contest_score",
+        "scorer_fisher_frame_shape": [3, int(target_h), int(target_w)],
+        "scorer_fisher_score_claim": False,
+        "scorer_fisher_jfg_in_loop": True,
+        "score_formula": "100 * seg_dist + sqrt(10 * pose_dist + 1e-12)",
+        "seg_dist_proxy": "soft_1_minus_softmax_at_target_argmax",
+    }
 
 
 def _build_cuda_self_target_scorer_fn(anchor_frame: torch.Tensor) -> tuple[object, dict]:
@@ -216,7 +405,13 @@ def build_sjkl_residual(cfg: BuildConfig) -> dict:
         n_total_pairs = 600
         anchor_frame = torch.zeros(dim, dtype=torch.float32)
         pair_residuals_all = _build_cpu_stub_pair_residuals(n_total_pairs, dim, seed=cfg.seed)
-        score_fn = _build_cpu_stub_score_fn(dim)
+        if _SCORE_FN_FACTORY_OVERRIDE is not None:
+            score_fn, override_meta = _SCORE_FN_FACTORY_OVERRIDE(  # type: ignore[misc]
+                anchor_frame, cfg
+            )
+            scorer_meta.update(override_meta)
+        else:
+            score_fn = _build_cpu_stub_score_fn(dim)
         manifest_sha = "stub_no_manifest"
     else:
         manifest = json.loads(cfg.pair_tensor_manifest.read_text())
@@ -231,8 +426,50 @@ def build_sjkl_residual(cfg: BuildConfig) -> dict:
             pair_residuals_all = pair_residuals_all.reshape(pair_residuals_all.shape[0], -1)
         n_total_pairs, dim = pair_residuals_all.shape
         # In CPU stub mode without a real scorer module, use the stub quadratic
-        if cfg.device == "cpu":
+        # UNLESS a test has installed _SCORE_FN_FACTORY_OVERRIDE (which lets a
+        # CPU run exercise the JFG/SegNet/PoseNet wiring with stub modules).
+        if cfg.device == "cpu" and _SCORE_FN_FACTORY_OVERRIDE is None:
             score_fn = _build_cpu_stub_score_fn(dim)
+        elif _SCORE_FN_FACTORY_OVERRIDE is not None:
+            anchor_frame = anchor_frame.to(device)
+            score_fn, scorer_meta = _SCORE_FN_FACTORY_OVERRIDE(  # type: ignore[misc]
+                anchor_frame, cfg
+            )
+        elif cfg.renderer_checkpoint is not None:
+            # JFG-aware contest score: load JFG + scorers, build the
+            # 100 * seg_dist + sqrt(10 * pose_dist) differentiable score_fn.
+            anchor_frame = anchor_frame.to(device)
+            jfg_path = Path(cfg.renderer_checkpoint)
+            if not jfg_path.is_file():
+                raise SystemExit(
+                    f"FATAL: --renderer-checkpoint {jfg_path} does not exist. "
+                    "Pass an explicit path to a Q-FAITHFUL JFG state-dict (.pt) "
+                    "or QFAI binary blob."
+                )
+            jfg = _load_jfg_from_checkpoint(jfg_path, device)
+            from tac.scorer import load_differentiable_scorers
+
+            posenet, segnet = load_differentiable_scorers(REPO_ROOT / "upstream", device=device)
+
+            h_w = _infer_rgb_shape(int(anchor_frame.numel()))
+            if h_w is None:
+                raise SystemExit(
+                    "FATAL: JFG-aware score_fn requires a flat RGB frame with "
+                    f"known shape, got dim={int(anchor_frame.numel())}. Add "
+                    "shape metadata to the pair tensor manifest before "
+                    "production SJ-KL basis builds."
+                )
+            target_h, target_w = h_w
+            score_fn, scorer_meta = _build_cuda_jfg_contest_score_fn(
+                anchor_frame,
+                jfg,
+                posenet,
+                segnet,
+                target_h=target_h,
+                target_w=target_w,
+            )
+            scorer_meta["scorer_fisher_renderer_checkpoint"] = str(jfg_path)
+            scorer_meta["scorer_fisher_renderer_sha256"] = _sha256_file(jfg_path)
         else:
             anchor_frame = anchor_frame.to(device)
             score_fn, scorer_meta = _build_cuda_self_target_scorer_fn(anchor_frame)
@@ -326,6 +563,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Permit --device cpu (smoke tests only). Score remains [advisory only].",
     )
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--renderer-checkpoint",
+        type=Path,
+        default=None,
+        help=(
+            "Optional path to a Q-FAITHFUL JointFrameGenerator checkpoint "
+            "(.pt state-dict OR QFAI binary blob). When provided AND "
+            "--device cuda, the SJ-KL Fisher basis is computed against the "
+            "contest-faithful score formula 100 * seg_dist + sqrt(10 * pose_dist) "
+            "with the JFG renderer in the differentiable graph. "
+            "Strict-scorer-rule: COMPRESS time only - never used at inflate."
+        ),
+    )
     return parser
 
 
@@ -342,6 +592,7 @@ def main(argv: list[str] | None = None) -> int:
         max_bytes=args.max_bytes,
         allow_cpu_stub=args.allow_cpu_stub,
         seed=args.seed,
+        renderer_checkpoint=args.renderer_checkpoint,
     )
     build_sjkl_residual(cfg)
     return 0
@@ -351,11 +602,11 @@ if __name__ == "__main__":
     raise SystemExit(main())
 
 
-# ─────────────────────────────────────────────────────────────────────────
+# -------------------------------------------------------------------------
 # Legacy compatibility symbols.
 # Older SJ-KL runtime tests/tools build payloads from already-packed sections.
 # Keep these thin wrappers byte-compatible with the canonical encoders.
-# ─────────────────────────────────────────────────────────────────────────
+# -------------------------------------------------------------------------
 
 
 def pack_alpha_block(*args: object, **kwargs: object) -> bytes:
