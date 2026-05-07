@@ -5,6 +5,7 @@ members = [
   "crates/qma-codec",
   "crates/raw-writer",
   "crates/residual-codec",
-  "crates/stbm1br-codec"
+  "crates/stbm1br-codec",
+  "crates/zipwire"
 ]
 resolver = "2"

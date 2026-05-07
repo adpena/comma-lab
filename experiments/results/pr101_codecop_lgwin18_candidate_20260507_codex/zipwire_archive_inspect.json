@@ -1,0 +1,30 @@
+{
+  "path": "experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex/substituted/pr101_lgwin18_pr101_lgwin18_auto_selectFalse_brotli_lgwin18_brotli_quality11/archive.zip",
+  "bytes": 178258,
+  "sha256": "c95c59933f95746f6b8dd5fb7b4450419a25c01b2c9f8dac6e586cd4b3582933",
+  "member_count": 1,
+  "duplicate_member_names": [],
+  "members": [
+    {
+      "name": "x",
+      "local_header_name": "x",
+      "local_central_name_match": true,
+      "header_offset": 0,
+      "compress_type": 0,
+      "compressed_bytes": 178158,
+      "uncompressed_bytes": 178158,
+      "crc32": "1bf71961",
+      "flag_bits": 0,
+      "blockers": [],
+      "local_header": {
+        "flag_bits": 0,
+        "compress_type": 0,
+        "crc32": "1bf71961",
+        "compressed_bytes": 178158,
+        "uncompressed_bytes": 178158
+      }
+    }
+  ],
+  "blockers": [],
+  "zip_strict": true
+}
