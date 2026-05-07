@@ -213,7 +213,11 @@ def test_op2_op_state_includes_section_lengths() -> None:
     op_state = manifest.op_results[0].op_state
     assert "section_lengths" in op_state
     section_lengths = op_state["section_lengths"]
-    assert set(section_lengths.keys()) == {"br", "hists", "merged_ac", "hi_hist"}
+    # ac_fallback section landed 2026-05-07 for substrate-mismatch protection
+    # (per-tensor AC auto-fallback gate); empty bytes-len when no tensor regressed.
+    assert set(section_lengths.keys()) == {
+        "br", "hists", "merged_ac", "hi_hist", "ac_fallback",
+    }
     for k, v in section_lengths.items():
         assert v >= 0, f"section {k!r} length must be non-negative"
 

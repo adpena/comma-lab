@@ -453,6 +453,13 @@ class Op2_PR103ArithmeticCodec:
     adaptive_lgwin: bool = True
     latent_hi_symbols: Any = None  # np.ndarray | None — embedded latent-hi
     n_latent_hi_symbols: int = 0  # decoder-side drain count
+    ac_auto_fallback: bool = True
+    """Per-tensor AC auto-fallback (substrate-mismatch protection landed
+    2026-05-07). When True (default), each AC_TENSOR_INDICES tensor is measured
+    against its brotli baseline and falls back to brotli encoding if it
+    regresses. The selected fallback set is recorded in op_state as
+    ``ac_fallback_set`` and replayed by the decoder. Empirical PR106-int6
+    substrate: -11,498 B savings vs ``ac_auto_fallback=False``."""
 
     def encode(
         self,
@@ -469,6 +476,7 @@ class Op2_PR103ArithmeticCodec:
             adaptive_lgwin=self.adaptive_lgwin,
             latent_hi_symbols=self.latent_hi_symbols,
             return_layout=True,
+            ac_auto_fallback=self.ac_auto_fallback,
         )
         # `result` is EncodedAcDecoderBlob when return_layout=True.
         # non_ac_brotli_streams is a tuple of per-stream bytes; the wire
@@ -480,10 +488,14 @@ class Op2_PR103ArithmeticCodec:
             "hists": len(result.histograms_blob),
             "merged_ac": len(result.merged_ac_blob),
             "hi_hist": len(result.latent_hi_hist_blob),
+            "ac_fallback": len(result.ac_fallback_blob),
         }
         op_state: dict[str, Any] = {
             "section_lengths": section_lengths,
             "n_latent_hi_symbols": self.n_latent_hi_symbols,
+            # JSON-serializable representation of the fallback set; the
+            # CodecPipeline wraps op_state via json.dumps so we use a list.
+            "ac_fallback_set": list(result.ac_fallback_set),
         }
         return EncodeResult(
             blob=result.blob,
@@ -508,10 +520,12 @@ class Op2_PR103ArithmeticCodec:
                 "encoder must have populated it"
             )
         n_hi = int(op_state.get("n_latent_hi_symbols", 0))
+        ac_fallback_set = tuple(op_state.get("ac_fallback_set", ()) or ())
         decoded = decode_decoder_ac(
             blob,
             section_lengths=section_lengths,
             n_latent_hi_symbols=n_hi,
+            ac_fallback_set=ac_fallback_set,
         )
         return decoded.state_dict
 

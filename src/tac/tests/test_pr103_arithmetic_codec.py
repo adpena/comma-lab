@@ -35,9 +35,9 @@ from tac.pr103_arithmetic_codec import (
     AC_TENSOR_INDICES,
     ADAPTIVE_LGWIN_MAX,
     ADAPTIVE_LGWIN_MIN,
+    MERGED_RANGE_ENCODER,
     DecodedAcDecoderBlob,
     EncodedAcDecoderBlob,
-    MERGED_RANGE_ENCODER,
     Pr103ArithmeticCodecError,
     adaptive_lgwin_search,
     decode_decoder_ac,
@@ -142,6 +142,47 @@ def test_encode_decode_roundtrip_no_latent_hi() -> None:
         f"non-idempotent encode: layout.blob len {len(layout.blob)} "
         f"vs layout_b.blob len {len(layout_b.blob)}"
     )
+
+
+def test_encode_decode_roundtrip_with_all_ac_tensors_falling_back(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Per-tensor AC auto-fallback is part of the decoder contract.
+
+    Force the encode-side audit to decide every AC tensor regresses, then prove
+    the fallback brotli section plus ``ac_fallback_set`` reconstructs the same
+    post-quantization state.
+    """
+    import tac.pr103_arithmetic_codec as pr103
+
+    sd = _synthetic_state_dict()
+    original_pack_ac_stream = pr103.pack_ac_stream
+
+    def inflated_pack_ac_stream(symbols: np.ndarray, histogram: np.ndarray) -> bytes:
+        return original_pack_ac_stream(symbols, histogram) + b"forced-regression" * 2048
+
+    monkeypatch.setattr(pr103, "pack_ac_stream", inflated_pack_ac_stream)
+    layout = encode_decoder_ac(sd, return_layout=True)
+
+    assert layout.ac_fallback_set == AC_TENSOR_INDICES
+    assert layout.histograms_blob == b""
+    assert layout.merged_ac_blob == b""
+    assert layout.ac_fallback_blob
+
+    section_lengths = {
+        "br": sum(len(s) for s in layout.non_ac_brotli_streams),
+        "hists": len(layout.histograms_blob),
+        "merged_ac": len(layout.merged_ac_blob),
+        "hi_hist": len(layout.latent_hi_hist_blob),
+        "ac_fallback": len(layout.ac_fallback_blob),
+    }
+    decoded = decode_decoder_ac(
+        layout.blob,
+        section_lengths=section_lengths,
+        ac_fallback_set=layout.ac_fallback_set,
+    )
+    layout_b = encode_decoder_ac(decoded.state_dict, return_layout=True)
+    assert layout.blob == layout_b.blob
 
 
 def test_encode_decode_roundtrip_with_latent_hi() -> None:
@@ -287,7 +328,7 @@ def test_validate_ac_savings_returns_all_ac_indices() -> None:
     sd = _synthetic_state_dict()
     audit = validate_ac_savings(sd)
     assert set(audit.keys()) == set(AC_TENSOR_INDICES)
-    for idx, info in audit.items():
+    for _idx, info in audit.items():
         for key in ("ac_bytes", "brotli_bytes", "delta_bytes", "n_symbols"):
             assert key in info
         assert info["ac_bytes"] > 0
@@ -400,7 +441,191 @@ def test_adaptive_lgwin_off_produces_valid_blob() -> None:
         "hists": len(layout.histograms_blob),
         "merged_ac": len(layout.merged_ac_blob),
         "hi_hist": len(layout.latent_hi_hist_blob),
+        "ac_fallback": len(layout.ac_fallback_blob),
     }
-    decoded = decode_decoder_ac(layout.blob, section_lengths=section_lengths)
+    decoded = decode_decoder_ac(
+        layout.blob,
+        section_lengths=section_lengths,
+        ac_fallback_set=layout.ac_fallback_set,
+    )
     for name, _shape in FIXED_STATE_SCHEMA:
         assert decoded.state_dict[name].shape == sd[name].shape
+
+
+# ---------------------------------------------------------------------------
+# Per-tensor AC auto-fallback (substrate-mismatch protection landed 2026-05-07)
+# ---------------------------------------------------------------------------
+
+
+def _force_ac_regression(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Make the encode-side AC-vs-brotli audit deterministically regress.
+
+    The fallback gate is about routing after the audit finds a regression, not
+    about a fragile synthetic source distribution. Keep the test deterministic
+    by inflating audit-only ``pack_ac_stream`` output.
+    """
+    import tac.pr103_arithmetic_codec as pr103
+
+    original_pack_ac_stream = pr103.pack_ac_stream
+
+    def inflated_pack_ac_stream(symbols: np.ndarray, histogram: np.ndarray) -> bytes:
+        return original_pack_ac_stream(symbols, histogram) + b"forced-regression" * 2048
+
+    monkeypatch.setattr(pr103, "pack_ac_stream", inflated_pack_ac_stream)
+
+
+def test_ac_auto_fallback_default_on(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The default ``ac_auto_fallback=True`` activates when an AC tensor regresses
+    vs its brotli baseline. This test forces the audit path to report
+    regressions and proves the fallback set is populated.
+
+    Note on byte semantics: ``_force_ac_regression`` rigs the AUDIT only; the
+    actual brotli fallback uses real brotli. On synthetic Gaussian-distribution
+    weights, AC actually beats brotli for these specific u8 streams, so when
+    the audit lies and forces all 8 tensors to fall back, the produced blob
+    can be modestly LARGER than the OFF path (~70 B on the test fixture).
+    The fallback gate's purpose is substrate-mismatch protection on REAL
+    inputs (per :func:`test_pr106_substrate_savings_on_int6`); this test only
+    validates that the gate FIRES when the audit reports a regression.
+    """
+    _force_ac_regression(monkeypatch)
+    sd = _synthetic_state_dict()
+    layout_on = encode_decoder_ac(sd, return_layout=True)
+    layout_off = encode_decoder_ac(sd, ac_auto_fallback=False, return_layout=True)
+    assert isinstance(layout_on, EncodedAcDecoderBlob)
+    assert isinstance(layout_off, EncodedAcDecoderBlob)
+    # Gate fired correctly: every AC index reported regression and was diverted.
+    assert layout_on.ac_fallback_set == AC_TENSOR_INDICES
+    # OFF path bypassed the gate: empty fallback set, all AC encodes preserved.
+    assert layout_off.ac_fallback_set == ()
+    # The ON-path blob carries the fallback brotli section; OFF does not.
+    assert len(layout_on.ac_fallback_blob) > 0
+    assert layout_off.ac_fallback_blob == b""
+
+
+def test_ac_auto_fallback_off_preserves_old_behavior() -> None:
+    """Setting ``ac_auto_fallback=False`` reproduces strict PR103-faithful
+    behavior: every AC_TENSOR_INDICES tensor goes through AC; the
+    ac_fallback_set is empty and the ac_fallback_blob is empty."""
+    sd = _synthetic_state_dict()
+    layout = encode_decoder_ac(sd, ac_auto_fallback=False, return_layout=True)
+    assert layout.ac_fallback_set == ()
+    assert layout.ac_fallback_blob == b""
+
+
+def test_decode_with_fallback_set_roundtrips(monkeypatch: pytest.MonkeyPatch) -> None:
+    """encode (fallback ON) → decode (with the same fallback_set) → state_dict
+    that round-trips bit-identically when re-encoded.
+
+    The forced audit regression exercises the brotli-side decoder path for the
+    fallback tensors.
+    """
+    _force_ac_regression(monkeypatch)
+    sd = _synthetic_state_dict()
+    layout = encode_decoder_ac(sd, return_layout=True)
+    assert layout.ac_fallback_set == AC_TENSOR_INDICES
+    section_lengths = {
+        "br": sum(len(s) for s in layout.non_ac_brotli_streams),
+        "hists": len(layout.histograms_blob),
+        "merged_ac": len(layout.merged_ac_blob),
+        "hi_hist": len(layout.latent_hi_hist_blob),
+        "ac_fallback": len(layout.ac_fallback_blob),
+    }
+    decoded = decode_decoder_ac(
+        layout.blob,
+        section_lengths=section_lengths,
+        ac_fallback_set=layout.ac_fallback_set,
+    )
+    # Re-encode the recovered state — bit-identical idempotent round-trip.
+    layout_b = encode_decoder_ac(decoded.state_dict, return_layout=True)
+    assert layout.blob == layout_b.blob, (
+        f"non-idempotent encode under fallback ({len(layout.blob)} vs "
+        f"{len(layout_b.blob)} bytes)"
+    )
+    assert layout.ac_fallback_set == layout_b.ac_fallback_set
+
+
+def test_decode_rejects_fallback_set_outside_ac_indices() -> None:
+    """The decoder must reject a fallback_set that contains indices not in
+    AC_TENSOR_INDICES — that means the encoder/decoder are out of sync and
+    the bytes will not be reconstructable."""
+    sd = _synthetic_state_dict()
+    layout = encode_decoder_ac(sd, ac_auto_fallback=False, return_layout=True)
+    section_lengths = {
+        "br": sum(len(s) for s in layout.non_ac_brotli_streams),
+        "hists": len(layout.histograms_blob),
+        "merged_ac": len(layout.merged_ac_blob),
+        "hi_hist": len(layout.latent_hi_hist_blob),
+        "ac_fallback": len(layout.ac_fallback_blob),
+    }
+    with pytest.raises(Pr103ArithmeticCodecError):
+        decode_decoder_ac(
+            layout.blob,
+            section_lengths=section_lengths,
+            ac_fallback_set=(0, 1),  # idx 1 is NOT in AC_TENSOR_INDICES
+        )
+
+
+def test_op2_codec_pipeline_threads_fallback_through_op_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The Op2 wrapper must:
+    1. Default ``ac_auto_fallback=True``.
+    2. Record ``ac_fallback_set`` in op_state as a JSON-serializable list.
+    3. Round-trip via the CodecPipeline: encode → CPL1 wrapper → decode → state_dict
+       even when fallback fires.
+    """
+    from tac.codec_pipeline import CodecPipeline, Op2_PR103ArithmeticCodec
+    _force_ac_regression(monkeypatch)
+    sd = _synthetic_state_dict()
+    # Default-on threading: pipeline encode populates op_state[ac_fallback_set].
+    pipe = CodecPipeline([Op2_PR103ArithmeticCodec()])
+    blob, manifest = pipe.encode(sd, skip_validate=True)
+    res = manifest.op_results[0]
+    assert "ac_fallback_set" in res.op_state
+    assert isinstance(res.op_state["ac_fallback_set"], list)
+    assert tuple(res.op_state["ac_fallback_set"]) == AC_TENSOR_INDICES
+    # Round-trip via pipeline decode (which threads op_state internally).
+    sd_back, replayed = pipe.decode(blob)
+    assert replayed == ["pr103_arithmetic_codec"]
+    for name, _shape in FIXED_STATE_SCHEMA:
+        assert sd_back[name].shape == sd[name].shape
+
+
+def test_pr106_substrate_savings_on_int6() -> None:
+    """Empirical PR106-substrate savings: when Op3(int6) substrate-transforms
+    the PR106 weights and hands them to Op2, the ac_auto_fallback ON path
+    must produce strictly FEWER bytes than the OFF path.
+
+    The PR106 state_dict is the canonical real-archive substrate from
+    ``experiments/results/sensitivity_map_pr106_20260504_claude/state_dict.pt``;
+    after int6 quantization, tensors 0/2/4 regress vs brotli by thousands of
+    bytes (per the substrate-mismatch finding 2026-05-07).
+    """
+    from pathlib import Path
+
+    from tac.codec_pipeline import CodecPipeline, Op2_PR103ArithmeticCodec
+    from tac.codec_pipeline_apogee_int import Op3_ApogeeIntN_Substrate
+    sd_path = Path("experiments/results/sensitivity_map_pr106_20260504_claude/state_dict.pt")
+    if not sd_path.exists():
+        pytest.skip(f"PR106 substrate not available at {sd_path}")
+    sd = torch.load(sd_path, weights_only=True, map_location="cpu")
+    pipe_off = CodecPipeline([
+        Op3_ApogeeIntN_Substrate(bits=6),
+        Op2_PR103ArithmeticCodec(ac_auto_fallback=False),
+    ])
+    pipe_on = CodecPipeline([
+        Op3_ApogeeIntN_Substrate(bits=6),
+        Op2_PR103ArithmeticCodec(ac_auto_fallback=True),
+    ])
+    _, m_off = pipe_off.encode(sd, skip_validate=True)
+    _, m_on = pipe_on.encode(sd, skip_validate=True)
+    op2_off = m_off.op_results[1].bytes_out
+    op2_on = m_on.op_results[1].bytes_out
+    # Strict assertion: on int6 substrate, ON must beat OFF (regressions exist).
+    assert op2_on < op2_off, (
+        f"Op2 fallback ON ({op2_on}) did not beat OFF ({op2_off}) on PR106 int6"
+    )
+    # Sanity: fallback set must be non-empty here.
+    fb = m_on.op_results[1].op_state["ac_fallback_set"]
+    assert fb, f"expected non-empty fallback set on int6 substrate, got {fb!r}"
