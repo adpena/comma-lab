@@ -791,7 +791,10 @@ def preflight_all(
         # Promoted STRICT 2026-05-06: live count 0 — all profile loss_mode
         # values resolved against the validator allowlist.
         check_profile_loss_modes_in_validator_allowlist(strict=True, verbose=verbose)
-        check_deploy_script_profiles_exist_in_registry(strict=False, verbose=verbose)
+        # Promoted STRICT 2026-05-06: live count 0 — added `lane_g_v3` alias
+        # to PROFILES dict (commit pending), all remote_lane_*.sh --profile
+        # invocations now resolve.
+        check_deploy_script_profiles_exist_in_registry(strict=True, verbose=verbose)
 
         # 2026-04-28 deep DX hardening pass 2: 3 NEW meta-bug checks
         # (51, 52, 53) for silent-swallow / unchecked-subprocess /

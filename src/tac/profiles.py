@@ -4128,6 +4128,13 @@ PROFILES = {
     "dilated_h64_half_frame_v3_annealed_kldistill": (
         DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL
     ),
+    # Colloquial alias used in scripts + memory entries. "Lane G v3" is the
+    # only currently-Level-3 lane (1.05 [contest-CUDA] LANDED 2026-04-29);
+    # its anchor profile is the dilated-h64 half-frame V3 annealed KL-distill
+    # variant. Operator-friendly alias for `--profile lane_g_v3` invocations
+    # in `experiments/pipeline.py compress` (e.g.
+    # scripts/remote_lane_owv3_sensitivity_weighted.sh:156).
+    "lane_g_v3": DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL,
     # Lane H-V3 (forensic-audit revival): half-frame revival via JOINT
     # warp-expansion training. Anchored on Lane G v3 1.05; curriculum
     # mask_half_sim_prob 0.0 → 1.0 with aggressive 5%-15% ramp. Endpoint=1.0
