@@ -15477,6 +15477,26 @@ _ORPHAN_CHECK_EXEMPT_MODULES = {
     "joint_admm_proximal_water_filling_v2",  # joint-ADMM water-filling v2
     "mdl_bayesian_codec",               # MDL/Bayesian codec primitive
     "public_submission_refs",           # public-submission reference catalog
+    # 2026-05-07 batch (extension of the 2026-05-06 batch above): 15 more
+    # tested-library primitives identified by direct `test_<name>.py` match
+    # in src/tac/tests/. Same rationale: tests are the acceptance surface,
+    # production code uses them via internal cross-references that the
+    # orphan haystack already covers (src/tac/**/*.py).
+    "balle_sensitivity_weighted",       # paradigm-β Ballé hyperprior + sensitivity weights
+    "bit_level_archive_optimizer",      # bit-level archive ZIP/Brotli optimizer
+    "calibrated_geometry",              # Lane CG calibrated geometry primitive
+    "custom_binary_container",          # Carmack-style custom binary archive
+    "external_sources_20260505",        # dated external-research source registry
+    "frozen_bit_quant",                 # frozen bit quantization primitive
+    "imp_sensitivity_weighted",         # Lane 17 IMP + sensitivity weights
+    "lapose_foveation_atoms",           # la-pose foveation atom primitive
+    "lapose_lite_inputs",               # la-pose lite input encoder
+    "lapose_motion_atoms",              # la-pose motion atom primitive
+    "lapose_motion_evidence",           # la-pose motion evidence collector
+    "logit_margin_sensitivity_weighted",  # Lane 19 logit-margin + sensitivity
+    "meta_lagrangian_allocator",        # meta-Lagrangian rate allocator
+    "openpilot_features",               # openpilot feature extractor primitive
+    "raft_radial_pose",                 # RAFT-derived radial pose helper
 }
 
 
