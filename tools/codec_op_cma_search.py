@@ -17,7 +17,9 @@ Each evaluation:
   2. Instantiates the CodecOp with those parameters
   3. Runs encode() on the supplied state_dict
   4. Records bytes_out + reconstruction RMS as the fitness signal
-  5. Optionally appends one row per eval to the bilevel atom ledger
+  5. Annotates the local byte/RMS Pareto frontier
+  6. Optionally appends one planning-only row per eval to the bilevel
+     atom ledger
 
 Termination: budget-based (max number of evaluations) or
 convergence-based (when sigma drops below a threshold for CMA-ES).
@@ -27,11 +29,12 @@ PR106 frontier per single-op tuning pass per the prior subagent's
 synthesis. Pilot 2-D before committing to 4-D+ to verify the
 landscape is genuinely non-convex.
 
-CLAUDE.md compliance:
-  - Strict-scorer-rule: pure CPU + numpy + brotli + torch + cathedral
-    contest-score formula. No scorer load.
+AGENTS.md compliance:
+  - Strict-scorer-rule: pure CPU + torch + CodecOp encode/decode. No
+    scorer load and no archive mutation.
   - Random-search fallback is fully deterministic given a seed.
-  - Per-eval cost = brotli (95% per the hot-path audit memo).
+  - Outputs are planning/forensic evidence only. They are not contest
+    score claims, dispatch readiness, or charged-bit-change proofs.
 
 Usage::
 
@@ -62,9 +65,21 @@ import torch
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from tac.contest_rate_distortion_system import (  # noqa: E402
-    contest_score,
-)
+TOOL_NAME = "tools/codec_op_cma_search.py"
+REPORT_SCHEMA = "codec_op_cma_search_report_v1"
+LEDGER_ROW_SCHEMA = "codec_op_cma_search_eval_v1"
+EVIDENCE_SEMANTICS = "cpu_codec_op_search_forensic"
+EVIDENCE_GRADE = "[CPU-prep+cma_search]"
+TARGET_MODES = ["contest_exact_eval_planning"]
+DEPLOYMENT_TARGET = "desktop_research"
+DISPATCH_BLOCKERS = [
+    "cpu_only_codec_op_search",
+    "no_archive_substitution_performed",
+    "no_score_affecting_payload_change_proof",
+    "missing_byte_closed_archive_manifest",
+    "missing_exact_cuda_auth_eval",
+]
+FAILED_FITNESS_PENALTY = 1.0e30
 
 
 @dataclass
@@ -83,64 +98,145 @@ class Evaluation:
     eval_idx: int
     params: dict[str, Any]
     bytes_out: int
-    reconstruction_rms: float
-    fitness: float
+    reconstruction_rms: float | None
+    fitness: float | None
     timestamp_utc: str
     error: str | None = None
+    pareto_frontier: bool = False
+    pareto_dominated_by: list[int] = field(default_factory=list)
 
 
 @dataclass
 class SearchReport:
+    schema: str
+    tool: str
     op_module: str
     op_class: str
     n_evaluations: int
+    n_successful: int
     n_failed: int
+    pareto_frontier_count: int
     best_eval: Evaluation | None
     all_evaluations: list[Evaluation] = field(default_factory=list)
     optimizer: str = "random_search"
     seed: int = 0
+    evidence_semantics: str = EVIDENCE_SEMANTICS
+    target_modes: list[str] = field(default_factory=lambda: list(TARGET_MODES))
+    deployment_target: str = DEPLOYMENT_TARGET
+    ready_for_exact_eval_dispatch: bool = False
+    score_claim: bool = False
+    dispatch_attempted: bool = False
+    score_affecting_payload_changed: bool = False
+    charged_bits_changed: bool = False
+    dispatch_blockers: list[str] = field(default_factory=lambda: list(DISPATCH_BLOCKERS))
+    parameter_space: list[dict[str, Any]] = field(default_factory=list)
 
 
 def _import_codec_op(module: str, class_name: str):
-    mod = importlib.import_module(module)
-    return getattr(mod, class_name)
+    try:
+        mod = importlib.import_module(module)
+    except ImportError as exc:
+        raise SystemExit(f"could not import module {module!r}: {exc}") from None
+    if not hasattr(mod, class_name):
+        raise SystemExit(f"module {module!r} has no class {class_name!r}")
+    cls = getattr(mod, class_name)
+    for required in ("encode", "decode"):
+        if not hasattr(cls, required):
+            raise SystemExit(
+                f"{module}.{class_name} missing CodecOp method {required!r}"
+            )
+    return cls
 
 
 def _load_state_dict(path: Path, key: str | None) -> dict[str, torch.Tensor]:
+    if not path.is_file():
+        raise SystemExit(f"state_dict path does not exist: {path}")
     obj = torch.load(path, map_location="cpu", weights_only=False)
     if isinstance(obj, dict):
+        for name, value in obj.items():
+            if not isinstance(name, str):
+                raise SystemExit(
+                    f"state_dict key {name!r} is not a string"
+                )
+            if not isinstance(value, torch.Tensor):
+                raise SystemExit(
+                    f"state_dict value for {name!r} is not a Tensor "
+                    f"(got {type(value).__name__})"
+                )
         return obj
     if key is None:
         raise SystemExit(
             f"loaded {path} is a tensor not a dict; pass --state-dict-key"
         )
+    if not isinstance(obj, torch.Tensor):
+        raise SystemExit(
+            f"loaded {path} is neither dict nor Tensor "
+            f"(got {type(obj).__name__})"
+        )
     return {key: obj}
 
 
 def _parse_param_spec(spec_json: str) -> list[ParamSpec]:
-    raw = json.loads(spec_json)
+    try:
+        raw = json.loads(spec_json)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"--param-spec is not valid JSON: {exc}") from None
     if not isinstance(raw, dict):
         raise SystemExit("--param-spec must be a JSON dict")
+    if not raw:
+        raise SystemExit("--param-spec must contain at least one parameter")
     specs: list[ParamSpec] = []
     for name, body in raw.items():
+        if not isinstance(name, str) or not name:
+            raise SystemExit("--param-spec parameter names must be non-empty strings")
         if not isinstance(body, dict):
             raise SystemExit(f"--param-spec entry {name!r} must be a dict")
+        param_type = str(body.get("type", "float"))
+        if param_type not in {"int", "float"}:
+            raise SystemExit(
+                f"--param-spec entry {name!r} has unsupported type "
+                f"{param_type!r}; expected 'int' or 'float'"
+            )
+        try:
+            low = float(body["low"])
+            high = float(body["high"])
+            init = float(body.get("init", (low + high) / 2))
+        except KeyError as exc:
+            raise SystemExit(
+                f"--param-spec entry {name!r} missing required key {exc.args[0]!r}"
+            ) from None
+        except (TypeError, ValueError) as exc:
+            raise SystemExit(
+                f"--param-spec entry {name!r} low/high/init must be numeric: {exc}"
+            ) from None
+        if not (math.isfinite(low) and math.isfinite(high) and math.isfinite(init)):
+            raise SystemExit(f"--param-spec entry {name!r} bounds/init must be finite")
+        if high < low:
+            raise SystemExit(f"--param-spec entry {name!r} high must be >= low")
+        log = bool(body.get("log", False))
+        if log and (low <= 0.0 or high <= 0.0):
+            raise SystemExit(f"--param-spec entry {name!r} log range must be > 0")
         specs.append(ParamSpec(
             name=name,
-            type=body.get("type", "float"),
-            low=float(body["low"]),
-            high=float(body["high"]),
-            init=float(body.get("init", (body["low"] + body["high"]) / 2)),
-            log=bool(body.get("log", False)),
+            type=param_type,
+            low=low,
+            high=high,
+            init=init,
+            log=log,
         ))
     return specs
 
 
 def _coerce(value: float, spec: ParamSpec) -> Any:
     """Clamp + cast a continuous sample to the parameter's actual type."""
+    value = float(value)
+    if not math.isfinite(value):
+        raise ValueError(f"{spec.name}: sampled value must be finite")
     clamped = max(spec.low, min(spec.high, value))
     if spec.type == "int":
-        return int(round(clamped))
+        return round(clamped)
+    if spec.type != "float":
+        raise ValueError(f"{spec.name}: unsupported parameter type {spec.type!r}")
     return float(clamped)
 
 
@@ -155,41 +251,54 @@ def _evaluate(
     try:
         op = op_cls(**params)
         result = op.encode(state_dict, context={})
+        bytes_out = int(result.bytes_out)
+        if bytes_out < 0:
+            raise ValueError(f"CodecOp returned negative bytes_out={bytes_out}")
         decoded = op.decode(
             result.blob, op_state=result.op_state, context={}
         )
+        if not isinstance(decoded, dict):
+            raise ValueError(
+                f"CodecOp decode returned {type(decoded).__name__}, expected dict"
+            )
         # Reconstruction RMS over all tensors that survive the roundtrip
         rms_sum = 0.0
         rms_count = 0
         for k, original in state_dict.items():
+            if not isinstance(original, torch.Tensor):
+                continue
             if k not in decoded:
                 continue
             recon = decoded[k]
+            if not isinstance(recon, torch.Tensor):
+                continue
             if recon.shape != original.shape:
                 continue
             diff = (recon.float() - original.float()).flatten()
             rms_sum += float((diff * diff).mean().item())
             rms_count += 1
-        rms = math.sqrt(rms_sum / max(rms_count, 1))
+        if rms_count == 0:
+            raise ValueError("CodecOp decode produced no matching tensor outputs")
+        rms = math.sqrt(rms_sum / rms_count)
         # Fitness: bytes_out + 1e6 * RMS (penalty for high reconstruction
         # error; the codec must roundtrip cleanly to be useful). Lower
         # is better.
-        fitness = float(result.bytes_out) + 1e6 * rms
+        fitness = float(bytes_out) + 1e6 * rms
         return Evaluation(
             eval_idx=eval_idx,
             params=dict(params),
-            bytes_out=int(result.bytes_out),
+            bytes_out=bytes_out,
             reconstruction_rms=rms,
             fitness=fitness,
             timestamp_utc=timestamp,
         )
-    except Exception as exc:  # noqa: BLE001 — surface op-side errors
+    except Exception as exc:
         return Evaluation(
             eval_idx=eval_idx,
             params=dict(params),
             bytes_out=-1,
-            reconstruction_rms=float("inf"),
-            fitness=float("inf"),
+            reconstruction_rms=None,
+            fitness=None,
             timestamp_utc=timestamp,
             error=f"{type(exc).__name__}: {exc}",
         )
@@ -208,6 +317,8 @@ def random_search(
     parameter independently from a uniform distribution over its
     [low, high] range (or log-uniform if ``log=True``).
     """
+    if max_evals <= 0:
+        return []
     rng = random.Random(seed)
     evaluations: list[Evaluation] = []
     # First evaluate at the init point (sanity baseline)
@@ -240,6 +351,8 @@ def cma_es_search(
 
     Falls back to random-search if the library is missing.
     """
+    if max_evals <= 0:
+        return []
     try:
         from cmaes import CMA  # type: ignore[import-not-found]
     except ImportError:
@@ -270,11 +383,77 @@ def cma_es_search(
             }
             ev = _evaluate(op_cls, params, state_dict, eval_idx)
             evaluations.append(ev)
-            solutions.append((x, ev.fitness))
+            objective = (
+                float(ev.fitness)
+                if ev.fitness is not None and math.isfinite(ev.fitness)
+                else FAILED_FITNESS_PENALTY
+            )
+            solutions.append((x, objective))
             eval_idx += 1
         if solutions:
             optimizer.tell(solutions)
     return evaluations
+
+
+def _valid_for_pareto(ev: Evaluation) -> bool:
+    return (
+        ev.error is None
+        and ev.bytes_out >= 0
+        and ev.reconstruction_rms is not None
+        and math.isfinite(ev.reconstruction_rms)
+        and ev.fitness is not None
+        and math.isfinite(ev.fitness)
+    )
+
+
+def annotate_pareto_frontier(evaluations: list[Evaluation]) -> None:
+    """Mark local non-dominated evaluations over (bytes_out, RMS).
+
+    This is a CPU planning frontier only. It ranks CodecOp parameter
+    settings for follow-up without implying archive readiness or score truth.
+    """
+    valid = [ev for ev in evaluations if _valid_for_pareto(ev)]
+    for ev in evaluations:
+        ev.pareto_frontier = False
+        ev.pareto_dominated_by = []
+    for ev in valid:
+        dominated_by: list[int] = []
+        assert ev.reconstruction_rms is not None
+        for other in valid:
+            if other.eval_idx == ev.eval_idx:
+                continue
+            assert other.reconstruction_rms is not None
+            no_worse = (
+                other.bytes_out <= ev.bytes_out
+                and other.reconstruction_rms <= ev.reconstruction_rms
+            )
+            strictly_better = (
+                other.bytes_out < ev.bytes_out
+                or other.reconstruction_rms < ev.reconstruction_rms
+            )
+            if no_worse and strictly_better:
+                dominated_by.append(other.eval_idx)
+        ev.pareto_dominated_by = sorted(dominated_by)
+        ev.pareto_frontier = not dominated_by
+
+
+def _evaluation_sort_key(ev: Evaluation) -> tuple[Any, ...]:
+    return (
+        ev.error is not None,
+        not ev.pareto_frontier,
+        ev.fitness if ev.fitness is not None else FAILED_FITNESS_PENALTY,
+        ev.bytes_out if ev.bytes_out >= 0 else sys.maxsize,
+        (
+            ev.reconstruction_rms
+            if ev.reconstruction_rms is not None
+            else float("inf")
+        ),
+        ev.eval_idx,
+    )
+
+
+def _param_space_payload(specs: list[ParamSpec]) -> list[dict[str, Any]]:
+    return [asdict(spec) for spec in specs]
 
 
 def append_atom_ledger_rows(
@@ -287,34 +466,59 @@ def append_atom_ledger_rows(
 ) -> None:
     """Append one row per evaluation to the bilevel atom ledger.
 
-    Schema follows the cathedral's convention with
-    ``evidence_grade=[CPU-prep+cma_search]`` and
-    ``target_modes=["contest_exact_eval"]`` per the codex contract.
+    Rows are intentionally planning-only. A CodecOp parameter trial has
+    not created a substituted archive, changed charged contest bytes, or
+    passed exact CUDA auth eval, so it must not advertise dispatch readiness.
     """
+    annotate_pareto_frontier(evaluations)
     ledger_path.parent.mkdir(parents=True, exist_ok=True)
     with ledger_path.open("a") as f:
         for ev in evaluations:
+            blockers = list(DISPATCH_BLOCKERS)
+            if ev.error is not None:
+                blockers.append("evaluation_failed")
             row = {
+                "schema": LEDGER_ROW_SCHEMA,
+                "tool": TOOL_NAME,
                 "timestamp_utc": ev.timestamp_utc,
                 "phase": None,
+                "atom_id": f"{substrate_label}/eval_{ev.eval_idx}",
+                "family": "codec_op_param_search",
+                "family_group": f"codec_op_param_search:{op_class}",
+                "pareto_scope": f"{op_module}.{op_class}",
                 "substrate_label": f"{substrate_label}/eval_{ev.eval_idx}",
                 "cathedral_op": f"{op_module}.{op_class}",
                 "op_params": ev.params,
+                "byte_delta": 0,
                 "bytes_out": ev.bytes_out,
                 "reconstruction_rms": ev.reconstruction_rms,
                 "fitness": ev.fitness,
+                "pareto_frontier": ev.pareto_frontier,
+                "pareto_dominated_by": list(ev.pareto_dominated_by),
                 "error": ev.error,
-                "evidence_grade": "[CPU-prep+cma_search]",
-                "target_modes": ["contest_exact_eval"],
-                "deployment_target": "t4_contest_runtime",
-                "score_affecting_payload_changed": True,
-                "charged_bits_changed": True,
+                "evidence_grade": EVIDENCE_GRADE,
+                "evidence_semantics": EVIDENCE_SEMANTICS,
+                "target_modes": list(TARGET_MODES),
+                "deployment_target": DEPLOYMENT_TARGET,
+                "ready_for_exact_eval_dispatch": False,
+                "field_selection_ready_for_exact_eval_dispatch": False,
+                "dispatchable": False,
+                "dispatch_attempted": False,
+                "score_claim": False,
+                "score_affecting_payload_changed": False,
+                "charged_bits_changed": False,
+                "dispatch_blockers": blockers,
+                "planning_objectives": {
+                    "bytes_out": ev.bytes_out,
+                    "reconstruction_rms": ev.reconstruction_rms,
+                    "fitness": ev.fitness,
+                },
                 "notes": (
-                    "CMA-ES (or random-search fallback) candidate "
-                    "from tools/codec_op_cma_search.py"
+                    "CMA-ES/random CodecOp parameter-search trial; CPU-only "
+                    "forensic planning row, no archive substitution or score claim."
                 ),
             }
-            f.write(json.dumps(row, sort_keys=True) + "\n")
+            f.write(json.dumps(row, allow_nan=False, sort_keys=True) + "\n")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -345,6 +549,8 @@ def main(argv: list[str] | None = None) -> int:
         help="Prefix for atom-ledger substrate_label.",
     )
     args = parser.parse_args(argv)
+    if args.max_evals < 1:
+        raise SystemExit("--max-evals must be >= 1")
 
     op_cls = _import_codec_op(args.module, args.class_name)
     state_dict = _load_state_dict(args.state_dict_path, args.state_dict_key)
@@ -358,25 +564,35 @@ def main(argv: list[str] | None = None) -> int:
         evaluations = random_search(
             op_cls, state_dict, specs, args.max_evals, seed=args.seed,
         )
+    annotate_pareto_frontier(evaluations)
 
     optimizer_name = (
         "cma_es" if args.optimizer == "cma_es"
         and _cmaes_available() else "random_search"
     )
-    valid_evals = [e for e in evaluations if e.error is None]
-    best = min(valid_evals, key=lambda e: e.fitness, default=None)
+    valid_evals = [e for e in evaluations if _valid_for_pareto(e)]
+    best = min(valid_evals, key=_evaluation_sort_key, default=None)
     report = SearchReport(
+        schema=REPORT_SCHEMA,
+        tool=TOOL_NAME,
         op_module=args.module,
         op_class=args.class_name,
         n_evaluations=len(evaluations),
+        n_successful=len(valid_evals),
         n_failed=len([e for e in evaluations if e.error is not None]),
+        pareto_frontier_count=len([e for e in evaluations if e.pareto_frontier]),
         best_eval=best,
         all_evaluations=evaluations,
         optimizer=optimizer_name,
         seed=args.seed,
+        parameter_space=_param_space_payload(specs),
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(asdict(report), indent=2, sort_keys=True))
+    args.output.write_text(
+        json.dumps(asdict(report), allow_nan=False, indent=2, sort_keys=True)
+        + "\n",
+        encoding="utf-8",
+    )
     print(f"wrote {args.output} (n_evals={len(evaluations)}, "
           f"n_failed={report.n_failed}, optimizer={optimizer_name})")
     if best:
