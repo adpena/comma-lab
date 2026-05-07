@@ -1,0 +1,153 @@
+{
+  "evidence_grade": "predicted",
+  "evidence_tag": "[empirical:experiments/results/lane_council_fixes_pr106_20260507T174118Z/composition_matrix.json]",
+  "generated_at_utc": "2026-05-07T17:41:45Z",
+  "note": "Synthetic state_dict; this is a per-stack byte-impact record on a FIXED_STATE_SCHEMA-shaped fp32 input. NOT a contest-CUDA score claim. Per CLAUDE.md any score derived from these deltas requires a contest-CUDA replay on a real archive.",
+  "score_claim": false,
+  "stacks": [
+    {
+      "bytes_out": 170075,
+      "final_blob_sha256": "2fef6e1e6950f978960c4c88d45396cdec4ffd389d37b263d9439c1c31898c8a",
+      "op_names": [
+        "pr101_split_brotli"
+      ],
+      "per_op_bytes": [
+        {
+          "bytes_out": 170037,
+          "op": "pr101_split_brotli"
+        }
+      ],
+      "stack_name": "Op1_alone"
+    },
+    {
+      "bytes_out": 169792,
+      "final_blob_sha256": "0b4b5487fde10ce11e63c95a1775367a8d5cb742f90aa7d971addbe050af7d54",
+      "op_names": [
+        "pr103_arithmetic_codec"
+      ],
+      "per_op_bytes": [
+        {
+          "bytes_out": 169617,
+          "op": "pr103_arithmetic_codec"
+        }
+      ],
+      "stack_name": "Op2_alone"
+    },
+    {
+      "bytes_out": 202592,
+      "final_blob_sha256": "ee3b52191e6ba9bd0d15628964b4844554ec53f45eed1ab73794bc0d8bc8458a",
+      "op_names": [
+        "gamma_joint_admm"
+      ],
+      "per_op_bytes": [
+        {
+          "bytes_out": 198359,
+          "op": "gamma_joint_admm"
+        }
+      ],
+      "stack_name": "Op_GammaJointADMM_alone"
+    },
+    {
+      "bytes_out": 171460,
+      "final_blob_sha256": "593b59a367254682e3d8a851c01881735b0dcb6001864296601e6b48a069a6a3",
+      "op_names": [
+        "sensitivity_preprocess",
+        "pr101_split_brotli"
+      ],
+      "per_op_bytes": [
+        {
+          "bytes_out": 12,
+          "op": "sensitivity_preprocess"
+        },
+        {
+          "bytes_out": 170037,
+          "op": "pr101_split_brotli"
+        }
+      ],
+      "stack_name": "beta_identity_then_Op1"
+    },
+    {
+      "bytes_out": 309540,
+      "final_blob_sha256": "fc3e5ffbd0bae29de97160d79b659a856d289dfee393bdd210640cbac9e13616",
+      "op_names": [
+        "apogee_intN_substrate",
+        "pr101_split_brotli"
+      ],
+      "per_op_bytes": [
+        {
+          "bytes_out": 172852,
+          "op": "apogee_intN_substrate"
+        },
+        {
+          "bytes_out": 136125,
+          "op": "pr101_split_brotli"
+        }
+      ],
+      "stack_name": "Op3_int6_then_Op1"
+    },
+    {
+      "bytes_out": 309500,
+      "final_blob_sha256": "59c0bf424502b0e9c3414295e8568fc961679e6d3b81b5e55d898bbbc5cec0e8",
+      "op_names": [
+        "apogee_intN_substrate",
+        "pr103_arithmetic_codec"
+      ],
+      "per_op_bytes": [
+        {
+          "bytes_out": 172852,
+          "op": "apogee_intN_substrate"
+        },
+        {
+          "bytes_out": 135940,
+          "op": "pr103_arithmetic_codec"
+        }
+      ],
+      "stack_name": "Op3_int6_then_Op2"
+    },
+    {
+      "bytes_out": 363230,
+      "final_blob_sha256": "367f2c411e05ce1b9ae60e07666f77a6c7a75f5a201d39ef326028c319159bb0",
+      "op_names": [
+        "apogee_intN_substrate",
+        "pr101_split_brotli"
+      ],
+      "per_op_bytes": [
+        {
+          "bytes_out": 201472,
+          "op": "apogee_intN_substrate"
+        },
+        {
+          "bytes_out": 161195,
+          "op": "pr101_split_brotli"
+        }
+      ],
+      "stack_name": "Op3_int7_then_Op1"
+    },
+    {
+      "bytes_out": 310885,
+      "final_blob_sha256": "baeda406d672378568da081c2d78d12abc9a3fd52b38309304a7ba5819e8724c",
+      "op_names": [
+        "sensitivity_preprocess",
+        "apogee_intN_substrate",
+        "pr103_arithmetic_codec"
+      ],
+      "per_op_bytes": [
+        {
+          "bytes_out": 12,
+          "op": "sensitivity_preprocess"
+        },
+        {
+          "bytes_out": 172852,
+          "op": "apogee_intN_substrate"
+        },
+        {
+          "bytes_out": 135940,
+          "op": "pr103_arithmetic_codec"
+        }
+      ],
+      "stack_name": "beta_identity_then_Op3_int6_then_Op2"
+    }
+  ],
+  "winner_bytes_out": 169792,
+  "winner_stack_name": "Op2_alone"
+}

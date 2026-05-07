@@ -1,0 +1,100 @@
+{
+  "after_manifest": "experiments/results/lane_council_fixes_pr106_20260507T174118Z/composition_matrix.json",
+  "before_manifest": "experiments/results/lane_codec_pipeline_full_stack_pr106_20260507T172731Z/composition_matrix_pr106.json",
+  "comparison": [
+    {
+      "after_bytes": 170075,
+      "before_bytes": 170075,
+      "delta_bytes": 0,
+      "delta_pct": 0.0,
+      "per_op_bytes_after": {
+        "pr101_split_brotli": 170037
+      },
+      "stack_name": "Op1_alone"
+    },
+    {
+      "after_bytes": 169792,
+      "before_bytes": 169755,
+      "delta_bytes": 37,
+      "delta_pct": 0.0218,
+      "per_op_bytes_after": {
+        "pr103_arithmetic_codec": 169617
+      },
+      "stack_name": "Op2_alone"
+    },
+    {
+      "after_bytes": 202592,
+      "before_bytes": 202544,
+      "delta_bytes": 48,
+      "delta_pct": 0.0237,
+      "per_op_bytes_after": {
+        "gamma_joint_admm": 198359
+      },
+      "stack_name": "Op_GammaJointADMM_alone"
+    },
+    {
+      "after_bytes": 171460,
+      "before_bytes": 445840,
+      "delta_bytes": -274380,
+      "delta_pct": -61.5423,
+      "per_op_bytes_after": {
+        "pr101_split_brotli": 170037,
+        "sensitivity_preprocess": 12
+      },
+      "stack_name": "beta_identity_then_Op1"
+    },
+    {
+      "after_bytes": 309540,
+      "before_bytes": 309540,
+      "delta_bytes": 0,
+      "delta_pct": 0.0,
+      "per_op_bytes_after": {
+        "apogee_intN_substrate": 172852,
+        "pr101_split_brotli": 136125
+      },
+      "stack_name": "Op3_int6_then_Op1"
+    },
+    {
+      "after_bytes": 309500,
+      "before_bytes": 321319,
+      "delta_bytes": -11819,
+      "delta_pct": -3.6783,
+      "per_op_bytes_after": {
+        "apogee_intN_substrate": 172852,
+        "pr103_arithmetic_codec": 135940
+      },
+      "stack_name": "Op3_int6_then_Op2"
+    },
+    {
+      "after_bytes": 363230,
+      "before_bytes": 363230,
+      "delta_bytes": 0,
+      "delta_pct": 0.0,
+      "per_op_bytes_after": {
+        "apogee_intN_substrate": 201472,
+        "pr101_split_brotli": 161195
+      },
+      "stack_name": "Op3_int7_then_Op1"
+    },
+    {
+      "after_bytes": 310885,
+      "before_bytes": 597084,
+      "delta_bytes": -286199,
+      "delta_pct": -47.9328,
+      "per_op_bytes_after": {
+        "apogee_intN_substrate": 172852,
+        "pr103_arithmetic_codec": 135940,
+        "sensitivity_preprocess": 12
+      },
+      "stack_name": "beta_identity_then_Op3_int6_then_Op2"
+    }
+  ],
+  "evidence_grade": "[empirical]",
+  "fix_council_ref": ".omx/research/grand_council_pr106_substrate_findings_zig_default_20260507.md",
+  "fixes": [
+    "Fix 1: \u03b2-identity short-circuit (Selfcomp + Boyd) \u2014 emit 12-byte marker when uniform/all-mid; thread substrate via shared context dict",
+    "Fix 2: \u03b3 substrate-aware init STUB (Ball\u00e9) \u2014 substrate_aware_init flag with WARN-only behaviour; underlying Ball\u00e9 codec lacks prior_init API (verified by grep 2026-05-07)"
+  ],
+  "score_claim": false,
+  "substrate": "experiments/results/sensitivity_map_pr106_20260504_claude/state_dict.pt"
+}
