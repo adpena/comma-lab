@@ -82,8 +82,24 @@ DEFAULT_PR91_RELEASE_RUNTIME_SOURCE_DIR = (
 )
 DEFAULT_PR91_RUNTIME_SOURCE_DIR = DEFAULT_PR91_RELEASE_RUNTIME_SOURCE_DIR
 PR91_REQUIRED_RUNTIME_SOURCE_FILES = (
+    "inflate.sh",
     "inflate.py",
     "pr86_hpac.py",
+    "range_mask_codec.cpp",
+)
+PR91_EXPECTED_RUNTIME_SOURCE_SHA256 = {
+    # Public PR91 intake/release runtime hash manifest:
+    # .omx/research/public_pr91_hpac_hybrid_intake_20260504_codex.md
+    # experiments/results/public_pr_archive_release_view/public_pr91_intake_20260505_auto/source/
+    "inflate.sh": "2c37f19e210f97c8926b70594e4d57fd8b0256dadace0cd55c28bbe6995ff027",
+    "inflate.py": "9665d3832abd8f720617cad4e976536ef9ff4ce9a117623b9a00229c518a22ba",
+    "pr86_hpac.py": "f86f3067386928478d983817c9f9ee095ce6eb02aee8c0fbb7987cd0af1f9b01",
+    "range_mask_codec.cpp": "23a6d9b622b231f61c73cd57eae3af96ca6133d07fab85e384a72e257317fb25",
+}
+PR91_RUNTIME_SOURCE_SHA256_MANIFEST_SOURCES = (
+    ".omx/research/public_pr91_hpac_hybrid_intake_20260504_codex.md",
+    "experiments/results/public_pr_archive_release_view/"
+    "public_pr91_intake_20260505_auto/source/submissions/hpac_coder_hybrid",
 )
 DEFAULT_PR91_ARCHIVE = (
     REPO_ROOT
@@ -372,15 +388,34 @@ def _extract_first_call_body(*args: Any, **kwargs: Any) -> Any:
 
 
 def analyze_pr91_hpm1_runtime_sources(*args: Any, **kwargs: Any) -> Any:
-    source_dir = Path(kwargs.get("source_dir") or DEFAULT_PR91_RUNTIME_SOURCE_DIR)
+    source_dir_arg = kwargs.get("source_dir") or (args[0] if args else None)
+    source_dir = Path(source_dir_arg or DEFAULT_PR91_RUNTIME_SOURCE_DIR)
+    required_files = tuple(
+        kwargs.get("required_source_files") or PR91_REQUIRED_RUNTIME_SOURCE_FILES
+    )
+    expected_sha256 = dict(
+        kwargs.get("expected_source_sha256s")
+        or PR91_EXPECTED_RUNTIME_SOURCE_SHA256
+    )
+    missing_expected_sha256 = sorted(
+        name for name in required_files if not expected_sha256.get(name)
+    )
+    expected_manifest_sources = list(PR91_RUNTIME_SOURCE_SHA256_MANIFEST_SOURCES)
     if not source_dir.is_dir():
         return {
             "status": "failed_closed_missing_sources",
             "source_dir": repo_rel(source_dir),
             "score_claim": False,
+            "dispatch_allowed": False,
+            "ready_for_exact_eval_dispatch": False,
+            "expected_runtime_source_sha256": expected_sha256,
+            "expected_runtime_source_manifest_sources": expected_manifest_sources,
             "required_source_files_present": False,
-            "required_source_files": list(PR91_REQUIRED_RUNTIME_SOURCE_FILES),
-            "missing_required_source_files": list(PR91_REQUIRED_RUNTIME_SOURCE_FILES),
+            "required_source_files_match_expected": False,
+            "required_source_files": list(required_files),
+            "missing_required_source_files": list(required_files),
+            "missing_expected_source_sha256": missing_expected_sha256,
+            "mismatched_required_source_files": [],
         }
     files = []
     source_files = []
@@ -390,6 +425,14 @@ def analyze_pr91_hpm1_runtime_sources(*args: Any, **kwargs: Any) -> Any:
             rel = path.relative_to(source_dir).as_posix()
             data = path.read_bytes()
             record = {"path": rel, "bytes": len(data), "sha256": sha256_bytes(data)}
+            if rel in expected_sha256:
+                record.update(
+                    {
+                        "expected_sha256": expected_sha256[rel],
+                        "matches_expected_sha256": record["sha256"]
+                        == expected_sha256[rel],
+                    }
+                )
             files.append(record)
             if rel.startswith("__pycache__/") or rel.endswith(".pyc"):
                 pycache_files.append(record)
@@ -397,28 +440,56 @@ def analyze_pr91_hpm1_runtime_sources(*args: Any, **kwargs: Any) -> Any:
                 source_files.append(record)
     present_paths = {row["path"] for row in files}
     missing_required = [
-        name for name in PR91_REQUIRED_RUNTIME_SOURCE_FILES if name not in present_paths
+        name for name in required_files if name not in present_paths
+    ]
+    by_path = {row["path"]: row for row in files}
+    mismatched_required = [
+        {
+            "path": name,
+            "expected_sha256": expected_sha256.get(name, ""),
+            "sha256": str(by_path.get(name, {}).get("sha256", "")),
+            "bytes": by_path.get(name, {}).get("bytes"),
+        }
+        for name in required_files
+        if name in by_path
+        and expected_sha256.get(name)
+        and by_path[name].get("sha256") != expected_sha256[name]
     ]
     required_present = not missing_required
-    pycache_only = bool(files) and not source_files
-    status = (
-        "passed_static_source_inventory"
-        if required_present and not pycache_only
-        else "failed_closed_missing_required_runtime_sources"
+    required_match_expected = (
+        required_present
+        and not missing_expected_sha256
+        and not mismatched_required
     )
+    pycache_only = bool(files) and not source_files
+    if pycache_only or not required_present:
+        status = "failed_closed_missing_required_runtime_sources"
+    elif missing_expected_sha256:
+        status = "failed_closed_missing_expected_runtime_source_sha256"
+    elif mismatched_required:
+        status = "failed_closed_runtime_source_sha256_mismatch"
+    else:
+        status = "passed_static_source_inventory"
     return {
         "status": status,
         "source_dir": repo_rel(source_dir),
         "score_claim": False,
+        "dispatch_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
         "file_count": len(files),
         "source_file_count": len(source_files),
         "pycache_file_count": len(pycache_files),
         "files": files,
         "source_files": source_files,
         "pycache_files": pycache_files,
-        "required_source_files": list(PR91_REQUIRED_RUNTIME_SOURCE_FILES),
+        "expected_runtime_source_sha256": expected_sha256,
+        "expected_runtime_source_manifest_sources": expected_manifest_sources,
+        "required_source_files": list(required_files),
         "missing_required_source_files": missing_required,
+        "missing_expected_source_sha256": missing_expected_sha256,
+        "mismatched_required_source_files": mismatched_required,
         "required_source_files_present": required_present,
+        "required_source_files_match_expected": required_match_expected,
         "pycache_only": pycache_only,
         "contains_range_codec_cpp": any(row["path"].endswith("range_mask_codec.cpp") for row in files),
     }
@@ -7314,7 +7385,9 @@ def run_pr91_hpm1_preflight(
         "recorded_at_utc": datetime.now(UTC).replace(microsecond=0).isoformat(),
         "status": "blocked_hpm1_probability_range_contract_mismatch",
         "score_claim": False,
+        "dispatch_allowed": False,
         "dispatch_performed": False,
+        "ready_for_exact_eval_dispatch": False,
         "gpu_or_remote_work": False,
         "local_only": True,
         "device": device,

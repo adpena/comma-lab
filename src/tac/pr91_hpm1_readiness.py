@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import struct
 import zipfile
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from tac.pr85_bundle import HPM1_MAGIC, Pr85BundleError, parse_pr85_bundle
 from tac.pr91_hpm1_codec import (
@@ -369,13 +370,31 @@ def audit_pr91_hpm1_readiness(
     )
 
     runtime_inventory = analyze_pr91_hpm1_runtime_sources(source_dir=runtime_dir)
+    runtime_inventory_passed = (
+        runtime_inventory.get("status") == "passed_static_source_inventory"
+    )
+    runtime_inventory_failed_status = (
+        "missing"
+        if runtime_inventory.get("status")
+        in {
+            "failed_closed_missing_required_runtime_sources",
+            "failed_closed_missing_sources",
+        }
+        else "failed_closed"
+    )
     gates["runtime_source_inventory"] = _gate(
-        passed=runtime_inventory.get("status") == "passed_static_source_inventory",
-        reason="public PR91 runtime source inventory includes required release sources"
-        if runtime_inventory.get("status") == "passed_static_source_inventory"
-        else "public PR91 runtime source inventory missing required release sources",
+        passed=runtime_inventory_passed,
+        reason=(
+            "public PR91 runtime source inventory includes byte-matching "
+            "required release sources"
+        )
+        if runtime_inventory_passed
+        else (
+            "public PR91 runtime source inventory missing or mismatched "
+            "against required release source SHA-256s"
+        ),
         required_for_dispatch=True,
-        failed_status="missing",
+        failed_status=runtime_inventory_failed_status,
     )
     parity = _audit_decode_reencode_parity_report(
         parity_report,
@@ -423,6 +442,7 @@ def audit_pr91_hpm1_readiness(
         "schema_version": SCHEMA_VERSION,
         "kind": KIND,
         "score_claim": False,
+        "dispatch_allowed": False,
         "dispatch_attempted": False,
         "ready_for_exact_eval_dispatch": ready,
         "promotion_eligible": False,
@@ -455,6 +475,8 @@ def _audit_decode_reencode_parity_report(
         return {
             "present": False,
             "accepted": False,
+            "dispatch_allowed": False,
+            "ready_for_exact_eval_dispatch": False,
             "full_decode_600_frames": False,
             "byte_exact_reencode": False,
             "runtime_loader_sidecar_free": False,
@@ -503,6 +525,8 @@ def _audit_decode_reencode_parity_report(
     return {
         "present": True,
         "accepted": accepted,
+        "dispatch_allowed": False,
+        "ready_for_exact_eval_dispatch": False,
         "full_decode_600_frames": full_ok and accepted,
         "byte_exact_reencode": reencode_ok and accepted,
         "runtime_loader_sidecar_free": runtime_ok and accepted,

@@ -15,6 +15,7 @@ from tac.pr91_hpm1_codec import (
     EXPECTED_PR91_HPM1_MASK_SHA256,
     EXPECTED_PR91_HPM1_TOKENS_SHA256,
     EXPECTED_PR91_MEMBER_X_SHA256,
+    PR91_EXPECTED_RUNTIME_SOURCE_SHA256,
     analyze_pr91_hpm1_runtime_sources,
 )
 from tac.pr91_hpm1_readiness import audit_pr91_hpm1_readiness
@@ -27,6 +28,7 @@ def test_pr91_hpm1_readiness_fails_closed_on_missing_archive(tmp_path: Path) -> 
 
     assert report["kind"] == "pr91_hpm1_readiness"
     assert report["score_claim"] is False
+    assert report["dispatch_allowed"] is False
     assert report["dispatch_attempted"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
     assert report["promotion_eligible"] is False
@@ -43,6 +45,7 @@ def test_pr91_hpm1_readiness_rejects_non_pr91_single_x_archive(tmp_path: Path) -
     report = audit_pr91_hpm1_readiness(archive=archive)
 
     assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["dispatch_allowed"] is False
     assert report["member_x"]["exists"] is True
     assert report["member_x"]["matches_expected"] is False
     assert report["hpm1_mask_segment"]["exists"] is False
@@ -60,6 +63,7 @@ def test_pr91_hpm1_readiness_rejects_duplicate_zip_members(tmp_path: Path) -> No
     report = audit_pr91_hpm1_readiness(archive=archive)
 
     assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["dispatch_allowed"] is False
     assert report["member_x"]["zip_report"]["duplicates"] == ["x"]
     assert "member_x_custody" in report["dispatch_blockers"]
     assert "zip_wire_contract" in report["dispatch_blockers"]
@@ -79,6 +83,7 @@ def test_pr91_hpm1_readiness_rejects_central_local_name_mismatch(tmp_path: Path)
     wire = report["member_x"]["zip_report"]["wire_contract"]
 
     assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["dispatch_allowed"] is False
     assert report["member_x"]["zip_report"]["status"] == "zip_member_read_failed"
     assert wire["passed"] is False
     assert wire["central_local_name_mismatches"]
@@ -95,6 +100,7 @@ def test_pr91_hpm1_readiness_rejects_unsafe_zip_member_name(tmp_path: Path) -> N
     wire = report["member_x"]["zip_report"]["wire_contract"]
 
     assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["dispatch_allowed"] is False
     assert wire["passed"] is False
     assert wire["unsafe_names"] == ["../x", "../x"]
     assert "member_x_custody" in report["dispatch_blockers"]
@@ -112,9 +118,18 @@ def test_pr91_hpm1_readiness_static_real_archive_passes_but_dispatch_stays_block
     assert report["member_x"]["zip_report"]["wire_contract"]["passed"] is True
     assert report["gates"]["zip_wire_contract"]["passed"] is True
     assert report["runtime_source_inventory"]["required_source_files_present"] is True
+    assert report["runtime_source_inventory"]["required_source_files_match_expected"] is True
     assert report["runtime_source_inventory"]["pycache_only"] is False
     runtime_paths = {row["path"] for row in report["runtime_source_inventory"]["files"]}
-    assert {"inflate.py", "pr86_hpac.py"} <= runtime_paths
+    assert set(PR91_EXPECTED_RUNTIME_SOURCE_SHA256) <= runtime_paths
+    for path, expected_sha256 in PR91_EXPECTED_RUNTIME_SOURCE_SHA256.items():
+        row = next(
+            row
+            for row in report["runtime_source_inventory"]["files"]
+            if row["path"] == path
+        )
+        assert row["expected_sha256"] == expected_sha256
+        assert row["matches_expected_sha256"] is True
     assert report["gates"]["runtime_source_inventory"]["required_for_dispatch"] is True
     assert report["gates"]["runtime_source_inventory"]["passed"] is True
     assert report["hpm1_mask_segment"]["matches_expected"] is True
@@ -123,6 +138,7 @@ def test_pr91_hpm1_readiness_static_real_archive_passes_but_dispatch_stays_block
     assert report["hpm1_payload"]["hpac_sha256"] == EXPECTED_PR91_HPM1_HPAC_SHA256
     assert report["gates"]["static_archive_custody"]["passed"] is True
     assert report["gates"]["hpm1_token_hpac_custody"]["passed"] is True
+    assert report["dispatch_allowed"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
     assert report["dispatch_blockers"] == [
         "byte_exact_hpm1_reencode",
@@ -143,8 +159,61 @@ def test_pr91_hpm1_runtime_inventory_rejects_pycache_only_sources(tmp_path: Path
 
     assert report["status"] == "failed_closed_missing_required_runtime_sources"
     assert report["required_source_files_present"] is False
+    assert report["required_source_files_match_expected"] is False
+    assert report["dispatch_allowed"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
     assert report["pycache_only"] is True
-    assert report["missing_required_source_files"] == ["inflate.py", "pr86_hpac.py"]
+    assert report["missing_required_source_files"] == [
+        "inflate.sh",
+        "inflate.py",
+        "pr86_hpac.py",
+        "range_mask_codec.cpp",
+    ]
+
+
+def test_pr91_hpm1_runtime_inventory_rejects_required_source_sha_mismatch(
+    tmp_path: Path,
+) -> None:
+    runtime_dir = tmp_path / "runtime"
+    runtime_dir.mkdir()
+    for name in PR91_EXPECTED_RUNTIME_SOURCE_SHA256:
+        (runtime_dir / name).write_text(f"mutated {name}\n", encoding="utf-8")
+
+    report = analyze_pr91_hpm1_runtime_sources(source_dir=runtime_dir)
+
+    assert report["status"] == "failed_closed_runtime_source_sha256_mismatch"
+    assert report["required_source_files_present"] is True
+    assert report["required_source_files_match_expected"] is False
+    assert report["dispatch_allowed"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert [row["path"] for row in report["mismatched_required_source_files"]] == [
+        "inflate.sh",
+        "inflate.py",
+        "pr86_hpac.py",
+        "range_mask_codec.cpp",
+    ]
+
+
+def test_pr91_hpm1_runtime_inventory_rejects_missing_expected_hash(
+    tmp_path: Path,
+) -> None:
+    runtime_dir = tmp_path / "runtime"
+    runtime_dir.mkdir()
+    for name in ("inflate.py", "pr86_hpac.py"):
+        (runtime_dir / name).write_text("source\n", encoding="utf-8")
+
+    report = analyze_pr91_hpm1_runtime_sources(
+        source_dir=runtime_dir,
+        required_source_files=("inflate.py", "pr86_hpac.py"),
+        expected_source_sha256s={"inflate.py": "0" * 64},
+    )
+
+    assert report["status"] == "failed_closed_missing_expected_runtime_source_sha256"
+    assert report["missing_expected_source_sha256"] == ["pr86_hpac.py"]
+    assert report["required_source_files_present"] is True
+    assert report["required_source_files_match_expected"] is False
+    assert report["dispatch_allowed"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
 
 
 @pytest.mark.skipif(not DEFAULT_PR91_ARCHIVE.is_file(), reason="PR91 public archive not present")
@@ -158,10 +227,13 @@ def test_pr91_hpm1_readiness_accepts_decode_reencode_parity_report_but_keeps_exa
     report = audit_pr91_hpm1_readiness(parity_report=parity_report)
 
     assert report["decode_reencode_parity"]["accepted"] is True
+    assert report["decode_reencode_parity"]["dispatch_allowed"] is False
+    assert report["decode_reencode_parity"]["ready_for_exact_eval_dispatch"] is False
     assert report["gates"]["full_hpm1_decode_600_frames"]["passed"] is True
     assert report["gates"]["byte_exact_hpm1_reencode"]["passed"] is True
     assert report["gates"]["runtime_hpm1_loader_without_sidecars"]["passed"] is True
     assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["dispatch_allowed"] is False
     assert report["dispatch_blockers"] == ["exact_cuda_auth_eval_after_parity"]
 
 
@@ -202,6 +274,7 @@ def test_audit_pr91_hpm1_readiness_cli_records_tool_manifest(tmp_path: Path) -> 
     tool_run = payload["tool_run_manifest"]
     assert payload["kind"] == "pr91_hpm1_readiness"
     assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["dispatch_allowed"] is False
     assert payload["score_claim"] is False
     assert tool_run["tool"] == "tools/audit_pr91_hpm1_readiness.py"
     assert tool_run["score_claim"] is False

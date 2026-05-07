@@ -390,7 +390,9 @@ def test_pr91_preflight_is_local_only_and_blocks_dispatch(tmp_path: Path) -> Non
 
     assert report["status"] == "blocked_hpm1_probability_range_contract_mismatch"
     assert report["score_claim"] is False
+    assert report["dispatch_allowed"] is False
     assert report["dispatch_performed"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
     assert report["dispatch_unlocked"] is False
     assert report["hpm1_static_contract"]["status"] == "passed"
 
