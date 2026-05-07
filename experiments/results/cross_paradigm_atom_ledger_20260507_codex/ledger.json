@@ -23,8 +23,8 @@
     "parity_fixture_only": 3,
     "planning_only_structural_recode_profile": 9,
     "requires_archive_builder_and_payload_diff": 3,
-    "requires_archive_manifest_preflight": 9,
-    "requires_byte_closed_archive_manifest_before_dispatch": 9,
+    "requires_archive_manifest_preflight": 8,
+    "requires_byte_closed_archive_manifest_before_dispatch": 8,
     "requires_exact_cuda_auth_eval": 15,
     "requires_runtime_decoder_implementation": 9,
     "requires_stack_interaction_review": 15,
@@ -33,7 +33,7 @@
   "allocator_tool": "tac.optimization.meta_lagrangian_allocator.build_atom_ledger",
   "atom_count": 15,
   "base_pose_dist": 3.351e-05,
-  "byte_closed_archive_manifest_attached_count": 6,
+  "byte_closed_archive_manifest_attached_count": 7,
   "byte_closed_manifest_required_for_kkt": true,
   "byte_closed_manifest_required_for_pareto": true,
   "common_atom_fields": [
@@ -83,7 +83,7 @@
     "hnerv_rate_recode": 9,
     "wr01_wavelet": 1
   },
-  "pareto_eligible_count": 1,
+  "pareto_eligible_count": 2,
   "pareto_summary": {
     "eligibility": "rankable_verified_byte_closed_archive_manifest_and_non_proxy",
     "objective_direction": {
@@ -95,7 +95,7 @@
       "expected_total_score_delta": "min"
     },
     "rankable_dominated_count": 0,
-    "rankable_frontier_count": 1,
+    "rankable_frontier_count": 2,
     "scope_counts": {
       "categorical_openpilot_mask:candidate_construction_plan_class_rows": {
         "dominated": 0,
@@ -109,10 +109,10 @@
       },
       "hnerv_rate_equivalent_recode": {
         "dominated": 0,
-        "eligible": 0,
-        "frontier": 0,
-        "ineligible": 9,
-        "missing_byte_closed_manifest": 9,
+        "eligible": 1,
+        "frontier": 1,
+        "ineligible": 8,
+        "missing_byte_closed_manifest": 8,
         "proxy": 0,
         "rankable": 9,
         "total": 9
@@ -135,6 +135,249 @@
   "ready_for_exact_eval_dispatch": false,
   "requested_dispatchable_refused_count": 0,
   "rows": [
+    {
+      "adapter": "hnerv_rate_recode_profile",
+      "adapter_dispatch_blockers": [
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_exact_cuda_auth_eval",
+        "hnerv_rate_recode_requires_raw_equal_proof",
+        "planning_only_structural_recode_profile",
+        "requires_runtime_decoder_implementation"
+      ],
+      "allocation_inference": false,
+      "archive_manifest_custody": {
+        "archive_bytes": 186088,
+        "archive_bytes_valid": true,
+        "archive_sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+        "archive_sha256_valid": true,
+        "blockers": [],
+        "exists": true,
+        "is_file": true,
+        "manifest_json_valid": true,
+        "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/archive_manifest.json",
+        "score_claim_false": true,
+        "sha256": "ed59c6f7c8e37e441d6a1f978567b29b645b7d0b45d5f66fc1b2974475187745",
+        "sha256_actual": "ed59c6f7c8e37e441d6a1f978567b29b645b7d0b45d5f66fc1b2974475187745",
+        "sha256_matches": true,
+        "sha256_valid": true,
+        "verified": true
+      },
+      "archive_manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/archive_manifest.json",
+      "archive_manifest_sha256": "ed59c6f7c8e37e441d6a1f978567b29b645b7d0b45d5f66fc1b2974475187745",
+      "archive_ready_for_stack_review": true,
+      "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:brotli_q10_current_raw",
+      "byte_closed_archive_manifest_attached": true,
+      "byte_delta": -151,
+      "class_support": [],
+      "confidence": 1.0,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [],
+      "cross_paradigm_schema_version": 1,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "hnerv_rate_recode_requires_raw_equal_proof",
+        "planning_only_structural_recode_profile",
+        "requires_runtime_decoder_implementation"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+      "evidence_source_path": "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",
+      "evidence_source_sha256": "c8400288270a077cb8c7bf2a2c7c16483748a9aa9dede407e3cd1543c4733dd2",
+      "exact_dispatch_blockers": {
+        "blocker_categories": {
+          "custody": [],
+          "dirty_worktree": [],
+          "dispatch_claim": [],
+          "exact_cuda_eval": [
+            "requires_exact_cuda_auth_eval"
+          ],
+          "interaction_model": [
+            "requires_stack_interaction_review"
+          ],
+          "kkt_or_admm": [
+            "kkt:kkt_proof_or_admm_result_missing",
+            "kkt_not_ready_for_field_planning"
+          ],
+          "other": [
+            "hnerv_rate_recode_requires_raw_equal_proof"
+          ],
+          "pareto_frontier": [],
+          "proxy_or_planning": [
+            "planning_only_lagrangian_atom",
+            "cross_paradigm_atom_is_planning_only",
+            "planning_only_structural_recode_profile"
+          ],
+          "runtime": [
+            "requires_runtime_decoder_implementation"
+          ],
+          "score_claim": []
+        },
+        "blocker_count": 9,
+        "blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval",
+          "cross_paradigm_atom_is_planning_only",
+          "requires_stack_interaction_review",
+          "hnerv_rate_recode_requires_raw_equal_proof",
+          "planning_only_structural_recode_profile",
+          "requires_runtime_decoder_implementation",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "kkt_not_ready_for_field_planning"
+        ],
+        "dispatch_attempted": false,
+        "dispatchable": false,
+        "next_required_proof": [
+          "passed_kkt_proof_or_converged_admm_waterline_result",
+          "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+        ],
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "exact_dispatch_blockers_v1",
+        "score_claim": false
+      },
+      "expected_information_gain_nats": 0.0,
+      "expected_pose_dist_delta": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_seg_dist_delta": 0.0,
+      "expected_total_score_delta": -0.000100544702,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "hnerv_rate_recode",
+      "family_group": "hnerv_rate_equivalent_recode",
+      "field_interaction_contract": {
+        "assumption_count": 3,
+        "assumptions": [
+          "conflicts_with_decoder_replacement_for_same_section",
+          "rate_only_raw_equal_required",
+          "stack_before_scorer_changing_atoms"
+        ],
+        "blockers": [],
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [],
+        "interaction_model": "",
+        "schema": "field_interaction_contract_v1",
+        "status": "passed",
+        "volterra_order": null,
+        "volterra_order_source": "",
+        "volterra_scope": "undeclared_order_first_order_assumptions_only",
+        "volterra_terms": [],
+        "volterra_terms_declared": false
+      },
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "geometry_priors": [],
+      "hard_pair_support": [],
+      "interaction_assumptions": [
+        "rate_only_raw_equal_required",
+        "stack_before_scorer_changing_atoms",
+        "conflicts_with_decoder_replacement_for_same_section"
+      ],
+      "kkt_blockers": [
+        "kkt:kkt_proof_or_admm_result_missing"
+      ],
+      "kkt_proof": {
+        "blockers": [
+          "kkt_proof_or_admm_result_missing"
+        ],
+        "candidates": [],
+        "kind": "",
+        "residual": null,
+        "source": "",
+        "status": "blocked",
+        "tolerance": null
+      },
+      "kkt_ready_for_field_planning": false,
+      "lexicographic_feasibility_tuple": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        -0.000100544702,
+        0.0
+      ],
+      "non_dominated_frontier_reason": {
+        "dominated_by": [],
+        "eligibility_blockers": [],
+        "eligible": true,
+        "frontier": true,
+        "objective_directions": {
+          "archive_ready_for_stack_review": "max",
+          "byte_delta": "min",
+          "confidence": "max",
+          "expected_pose_dist_delta": "min",
+          "expected_seg_dist_delta": "min",
+          "expected_total_score_delta": "min"
+        },
+        "objectives": {
+          "archive_ready_for_stack_review": 1.0,
+          "byte_delta": -151.0,
+          "confidence": 1.0,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "expected_total_score_delta": -0.000100544702
+        },
+        "reason": "non_dominated_within_pareto_scope",
+        "schema": "non_dominated_frontier_reason_v1",
+        "scope": "hnerv_rate_equivalent_recode",
+        "status": "non_dominated"
+      },
+      "observation_noise_variance": 0.0,
+      "openpilot_priors": [],
+      "pair_support": [],
+      "paradigm": "hnerv_rate_recode",
+      "pareto_dominated_by": [],
+      "pareto_eligibility_blockers": [],
+      "pareto_eligible": true,
+      "pareto_frontier": true,
+      "pareto_objectives": {
+        "archive_ready_for_stack_review": 1.0,
+        "byte_delta": -151.0,
+        "confidence": 1.0,
+        "expected_pose_dist_delta": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": -0.000100544702
+      },
+      "pareto_scope": "hnerv_rate_equivalent_recode",
+      "pose_score_delta_confidence_weighted": 0.0,
+      "proxy_row": false,
+      "rankable": true,
+      "rate_score_delta": -0.000100544702,
+      "ready_for_exact_eval_dispatch": false,
+      "requested_dispatchable": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "seg_score_delta_confidence_weighted": 0.0,
+      "selection_blockers": [
+        "kkt_not_ready_for_field_planning"
+      ],
+      "selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0
+      },
+      "selection_penalty_units": 10.0,
+      "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+      "selection_score_delta": -0.000100544702,
+      "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+      "source_dispatch_blockers": [
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_exact_cuda_auth_eval",
+        "hnerv_rate_recode_requires_raw_equal_proof",
+        "planning_only_structural_recode_profile",
+        "requires_runtime_decoder_implementation"
+      ]
+    },
     {
       "adapter": "wr01_wavelet_plan",
       "adapter_dispatch_blockers": [
@@ -193,27 +436,42 @@
         "blocker_categories": {
           "custody": [],
           "dirty_worktree": [],
-          "dispatch_claim": [],
-          "exact_cuda_eval": [
-            "requires_exact_cuda_auth_eval"
+          "dispatch_claim": [
+            "missing_active_lane_dispatch_claim"
           ],
-          "interaction_model": [],
+          "exact_cuda_eval": [
+            "requires_exact_cuda_auth_eval",
+            "exact_eval_packet_not_ready_for_submit",
+            "missing_operator_exact_cuda_approval"
+          ],
+          "interaction_model": [
+            "requires_stack_interaction_review"
+          ],
           "kkt_or_admm": [
             "kkt:kkt_proof_or_admm_result_missing",
             "kkt_not_ready_for_field_planning"
           ],
-          "other": [],
+          "other": [
+            "missing_lightning_environment"
+          ],
           "pareto_frontier": [],
           "proxy_or_planning": [
-            "planning_only_lagrangian_atom"
+            "planning_only_lagrangian_atom",
+            "cross_paradigm_atom_is_planning_only"
           ],
           "runtime": [],
           "score_claim": []
         },
-        "blocker_count": 4,
+        "blocker_count": 10,
         "blockers": [
           "planning_only_lagrangian_atom",
           "requires_exact_cuda_auth_eval",
+          "cross_paradigm_atom_is_planning_only",
+          "requires_stack_interaction_review",
+          "exact_eval_packet_not_ready_for_submit",
+          "missing_lightning_environment",
+          "missing_active_lane_dispatch_claim",
+          "missing_operator_exact_cuda_approval",
           "kkt:kkt_proof_or_admm_result_missing",
           "kkt_not_ready_for_field_planning"
         ],
@@ -443,15 +701,26 @@
           "dirty_worktree": [],
           "dispatch_claim": [],
           "exact_cuda_eval": [
-            "requires_exact_cuda_auth_eval"
+            "requires_exact_cuda_auth_eval",
+            "exact_eval_dispatch_requirements_missing"
           ],
-          "interaction_model": [],
+          "interaction_model": [
+            "requires_stack_interaction_review"
+          ],
           "kkt_or_admm": [
             "proxy_evidence_not_kkt_ready",
             "kkt:kkt_proof_or_admm_result_missing",
             "kkt_not_ready_for_field_planning"
           ],
-          "other": [],
+          "other": [
+            "categorical_mask_requires_decode_reencode_parity",
+            "no_op_control_not_passed:decode_reencode_identity_control",
+            "decode_reencode_parity_not_passed",
+            "decode_reencode_full_decode_not_proven",
+            "decode_reencode_byte_exact_reencode_not_proven",
+            "decode_reencode_independent_proof_full_decode_not_proven",
+            "decode_reencode_independent_proof_byte_exact_reencode_not_proven"
+          ],
           "pareto_frontier": [
             "pareto_ineligible_atom",
             "pareto_ineligible_for_field_selection"
@@ -459,16 +728,30 @@
           "proxy_or_planning": [
             "planning_only_lagrangian_atom",
             "proxy_row_not_dispatchable",
+            "cross_paradigm_atom_is_planning_only",
             "proxy_row"
           ],
-          "runtime": [],
+          "runtime": [
+            "categorical_mask_requires_charged_runtime_consumer"
+          ],
           "score_claim": []
         },
-        "blocker_count": 9,
+        "blocker_count": 20,
         "blockers": [
           "planning_only_lagrangian_atom",
           "requires_exact_cuda_auth_eval",
           "proxy_row_not_dispatchable",
+          "cross_paradigm_atom_is_planning_only",
+          "requires_stack_interaction_review",
+          "categorical_mask_requires_charged_runtime_consumer",
+          "categorical_mask_requires_decode_reencode_parity",
+          "no_op_control_not_passed:decode_reencode_identity_control",
+          "decode_reencode_parity_not_passed",
+          "decode_reencode_full_decode_not_proven",
+          "decode_reencode_byte_exact_reencode_not_proven",
+          "decode_reencode_independent_proof_full_decode_not_proven",
+          "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+          "exact_eval_dispatch_requirements_missing",
           "proxy_evidence_not_kkt_ready",
           "kkt:kkt_proof_or_admm_result_missing",
           "kkt_not_ready_for_field_planning",
@@ -725,15 +1008,26 @@
           "dirty_worktree": [],
           "dispatch_claim": [],
           "exact_cuda_eval": [
-            "requires_exact_cuda_auth_eval"
+            "requires_exact_cuda_auth_eval",
+            "exact_eval_dispatch_requirements_missing"
           ],
-          "interaction_model": [],
+          "interaction_model": [
+            "requires_stack_interaction_review"
+          ],
           "kkt_or_admm": [
             "proxy_evidence_not_kkt_ready",
             "kkt:kkt_proof_or_admm_result_missing",
             "kkt_not_ready_for_field_planning"
           ],
-          "other": [],
+          "other": [
+            "categorical_mask_requires_decode_reencode_parity",
+            "no_op_control_not_passed:decode_reencode_identity_control",
+            "decode_reencode_parity_not_passed",
+            "decode_reencode_full_decode_not_proven",
+            "decode_reencode_byte_exact_reencode_not_proven",
+            "decode_reencode_independent_proof_full_decode_not_proven",
+            "decode_reencode_independent_proof_byte_exact_reencode_not_proven"
+          ],
           "pareto_frontier": [
             "pareto_ineligible_atom",
             "pareto_ineligible_for_field_selection"
@@ -741,16 +1035,30 @@
           "proxy_or_planning": [
             "planning_only_lagrangian_atom",
             "proxy_row_not_dispatchable",
+            "cross_paradigm_atom_is_planning_only",
             "proxy_row"
           ],
-          "runtime": [],
+          "runtime": [
+            "categorical_mask_requires_charged_runtime_consumer"
+          ],
           "score_claim": []
         },
-        "blocker_count": 9,
+        "blocker_count": 20,
         "blockers": [
           "planning_only_lagrangian_atom",
           "requires_exact_cuda_auth_eval",
           "proxy_row_not_dispatchable",
+          "cross_paradigm_atom_is_planning_only",
+          "requires_stack_interaction_review",
+          "categorical_mask_requires_charged_runtime_consumer",
+          "categorical_mask_requires_decode_reencode_parity",
+          "no_op_control_not_passed:decode_reencode_identity_control",
+          "decode_reencode_parity_not_passed",
+          "decode_reencode_full_decode_not_proven",
+          "decode_reencode_byte_exact_reencode_not_proven",
+          "decode_reencode_independent_proof_full_decode_not_proven",
+          "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+          "exact_eval_dispatch_requirements_missing",
           "proxy_evidence_not_kkt_ready",
           "kkt:kkt_proof_or_admm_result_missing",
           "kkt_not_ready_for_field_planning",
@@ -1007,15 +1315,26 @@
           "dirty_worktree": [],
           "dispatch_claim": [],
           "exact_cuda_eval": [
-            "requires_exact_cuda_auth_eval"
+            "requires_exact_cuda_auth_eval",
+            "exact_eval_dispatch_requirements_missing"
           ],
-          "interaction_model": [],
+          "interaction_model": [
+            "requires_stack_interaction_review"
+          ],
           "kkt_or_admm": [
             "proxy_evidence_not_kkt_ready",
             "kkt:kkt_proof_or_admm_result_missing",
             "kkt_not_ready_for_field_planning"
           ],
-          "other": [],
+          "other": [
+            "categorical_mask_requires_decode_reencode_parity",
+            "no_op_control_not_passed:decode_reencode_identity_control",
+            "decode_reencode_parity_not_passed",
+            "decode_reencode_full_decode_not_proven",
+            "decode_reencode_byte_exact_reencode_not_proven",
+            "decode_reencode_independent_proof_full_decode_not_proven",
+            "decode_reencode_independent_proof_byte_exact_reencode_not_proven"
+          ],
           "pareto_frontier": [
             "pareto_ineligible_atom",
             "pareto_ineligible_for_field_selection"
@@ -1023,16 +1342,30 @@
           "proxy_or_planning": [
             "planning_only_lagrangian_atom",
             "proxy_row_not_dispatchable",
+            "cross_paradigm_atom_is_planning_only",
             "proxy_row"
           ],
-          "runtime": [],
+          "runtime": [
+            "categorical_mask_requires_charged_runtime_consumer"
+          ],
           "score_claim": []
         },
-        "blocker_count": 9,
+        "blocker_count": 20,
         "blockers": [
           "planning_only_lagrangian_atom",
           "requires_exact_cuda_auth_eval",
           "proxy_row_not_dispatchable",
+          "cross_paradigm_atom_is_planning_only",
+          "requires_stack_interaction_review",
+          "categorical_mask_requires_charged_runtime_consumer",
+          "categorical_mask_requires_decode_reencode_parity",
+          "no_op_control_not_passed:decode_reencode_identity_control",
+          "decode_reencode_parity_not_passed",
+          "decode_reencode_full_decode_not_proven",
+          "decode_reencode_byte_exact_reencode_not_proven",
+          "decode_reencode_independent_proof_full_decode_not_proven",
+          "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+          "exact_eval_dispatch_requirements_missing",
           "proxy_evidence_not_kkt_ready",
           "kkt:kkt_proof_or_admm_result_missing",
           "kkt_not_ready_for_field_planning",
@@ -1289,15 +1622,26 @@
           "dirty_worktree": [],
           "dispatch_claim": [],
           "exact_cuda_eval": [
-            "requires_exact_cuda_auth_eval"
+            "requires_exact_cuda_auth_eval",
+            "exact_eval_dispatch_requirements_missing"
           ],
-          "interaction_model": [],
+          "interaction_model": [
+            "requires_stack_interaction_review"
+          ],
           "kkt_or_admm": [
             "proxy_evidence_not_kkt_ready",
             "kkt:kkt_proof_or_admm_result_missing",
             "kkt_not_ready_for_field_planning"
           ],
-          "other": [],
+          "other": [
+            "categorical_mask_requires_decode_reencode_parity",
+            "no_op_control_not_passed:decode_reencode_identity_control",
+            "decode_reencode_parity_not_passed",
+            "decode_reencode_full_decode_not_proven",
+            "decode_reencode_byte_exact_reencode_not_proven",
+            "decode_reencode_independent_proof_full_decode_not_proven",
+            "decode_reencode_independent_proof_byte_exact_reencode_not_proven"
+          ],
           "pareto_frontier": [
             "pareto_ineligible_atom",
             "pareto_ineligible_for_field_selection"
@@ -1305,16 +1649,30 @@
           "proxy_or_planning": [
             "planning_only_lagrangian_atom",
             "proxy_row_not_dispatchable",
+            "cross_paradigm_atom_is_planning_only",
             "proxy_row"
           ],
-          "runtime": [],
+          "runtime": [
+            "categorical_mask_requires_charged_runtime_consumer"
+          ],
           "score_claim": []
         },
-        "blocker_count": 9,
+        "blocker_count": 20,
         "blockers": [
           "planning_only_lagrangian_atom",
           "requires_exact_cuda_auth_eval",
           "proxy_row_not_dispatchable",
+          "cross_paradigm_atom_is_planning_only",
+          "requires_stack_interaction_review",
+          "categorical_mask_requires_charged_runtime_consumer",
+          "categorical_mask_requires_decode_reencode_parity",
+          "no_op_control_not_passed:decode_reencode_identity_control",
+          "decode_reencode_parity_not_passed",
+          "decode_reencode_full_decode_not_proven",
+          "decode_reencode_byte_exact_reencode_not_proven",
+          "decode_reencode_independent_proof_full_decode_not_proven",
+          "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+          "exact_eval_dispatch_requirements_missing",
           "proxy_evidence_not_kkt_ready",
           "kkt:kkt_proof_or_admm_result_missing",
           "kkt_not_ready_for_field_planning",
@@ -1571,15 +1929,26 @@
           "dirty_worktree": [],
           "dispatch_claim": [],
           "exact_cuda_eval": [
-            "requires_exact_cuda_auth_eval"
+            "requires_exact_cuda_auth_eval",
+            "exact_eval_dispatch_requirements_missing"
           ],
-          "interaction_model": [],
+          "interaction_model": [
+            "requires_stack_interaction_review"
+          ],
           "kkt_or_admm": [
             "proxy_evidence_not_kkt_ready",
             "kkt:kkt_proof_or_admm_result_missing",
             "kkt_not_ready_for_field_planning"
           ],
-          "other": [],
+          "other": [
+            "categorical_mask_requires_decode_reencode_parity",
+            "no_op_control_not_passed:decode_reencode_identity_control",
+            "decode_reencode_parity_not_passed",
+            "decode_reencode_full_decode_not_proven",
+            "decode_reencode_byte_exact_reencode_not_proven",
+            "decode_reencode_independent_proof_full_decode_not_proven",
+            "decode_reencode_independent_proof_byte_exact_reencode_not_proven"
+          ],
           "pareto_frontier": [
             "pareto_ineligible_atom",
             "pareto_ineligible_for_field_selection"
@@ -1587,16 +1956,30 @@
           "proxy_or_planning": [
             "planning_only_lagrangian_atom",
             "proxy_row_not_dispatchable",
+            "cross_paradigm_atom_is_planning_only",
             "proxy_row"
           ],
-          "runtime": [],
+          "runtime": [
+            "categorical_mask_requires_charged_runtime_consumer"
+          ],
           "score_claim": []
         },
-        "blocker_count": 9,
+        "blocker_count": 20,
         "blockers": [
           "planning_only_lagrangian_atom",
           "requires_exact_cuda_auth_eval",
           "proxy_row_not_dispatchable",
+          "cross_paradigm_atom_is_planning_only",
+          "requires_stack_interaction_review",
+          "categorical_mask_requires_charged_runtime_consumer",
+          "categorical_mask_requires_decode_reencode_parity",
+          "no_op_control_not_passed:decode_reencode_identity_control",
+          "decode_reencode_parity_not_passed",
+          "decode_reencode_full_decode_not_proven",
+          "decode_reencode_byte_exact_reencode_not_proven",
+          "decode_reencode_independent_proof_full_decode_not_proven",
+          "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+          "exact_eval_dispatch_requirements_missing",
           "proxy_evidence_not_kkt_ready",
           "kkt:kkt_proof_or_admm_result_missing",
           "kkt_not_ready_for_field_planning",
@@ -1810,263 +2193,6 @@
       "archive_manifest_path": "",
       "archive_manifest_sha256": "",
       "archive_ready_for_stack_review": false,
-      "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:brotli_q10_current_raw",
-      "byte_closed_archive_manifest_attached": false,
-      "byte_delta": -151,
-      "class_support": [],
-      "confidence": 1.0,
-      "conflicts_with_atoms": [],
-      "conflicts_with_families": [],
-      "cross_paradigm_schema_version": 1,
-      "dispatch_blockers": [
-        "planning_only_lagrangian_atom",
-        "requires_exact_cuda_auth_eval",
-        "requires_byte_closed_archive",
-        "cross_paradigm_atom_is_planning_only",
-        "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
-        "hnerv_rate_recode_requires_raw_equal_proof",
-        "planning_only_structural_recode_profile",
-        "requires_runtime_decoder_implementation",
-        "requires_archive_manifest_preflight"
-      ],
-      "dispatchable": false,
-      "evidence_grade": "empirical_byte_raw_equal",
-      "evidence_source_path": "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",
-      "evidence_source_sha256": "d7b31ac9ac97f148c75379fec3dcbfb0cebc8ee64fb6f87a616a224b3616578f",
-      "exact_dispatch_blockers": {
-        "blocker_categories": {
-          "custody": [
-            "requires_byte_closed_archive",
-            "missing_byte_closed_archive_manifest"
-          ],
-          "dirty_worktree": [],
-          "dispatch_claim": [],
-          "exact_cuda_eval": [
-            "requires_exact_cuda_auth_eval"
-          ],
-          "interaction_model": [],
-          "kkt_or_admm": [
-            "kkt:kkt_proof_or_admm_result_missing",
-            "kkt_not_ready_for_field_planning"
-          ],
-          "other": [],
-          "pareto_frontier": [
-            "pareto_ineligible_atom",
-            "pareto_ineligible_for_field_selection"
-          ],
-          "proxy_or_planning": [
-            "planning_only_lagrangian_atom"
-          ],
-          "runtime": [],
-          "score_claim": []
-        },
-        "blocker_count": 8,
-        "blockers": [
-          "planning_only_lagrangian_atom",
-          "requires_exact_cuda_auth_eval",
-          "requires_byte_closed_archive",
-          "missing_byte_closed_archive_manifest",
-          "kkt:kkt_proof_or_admm_result_missing",
-          "kkt_not_ready_for_field_planning",
-          "pareto_ineligible_atom",
-          "pareto_ineligible_for_field_selection"
-        ],
-        "dispatch_attempted": false,
-        "dispatchable": false,
-        "next_required_proof": [
-          "verified_byte_closed_archive_manifest_with_sha256_and_bytes",
-          "passed_kkt_proof_or_converged_admm_waterline_result",
-          "pareto_eligible_byte_closed_non_proxy_rankable_atom",
-          "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
-        ],
-        "ready_for_exact_eval_dispatch": false,
-        "schema": "exact_dispatch_blockers_v1",
-        "score_claim": false
-      },
-      "expected_information_gain_nats": 0.0,
-      "expected_pose_dist_delta": 0.0,
-      "expected_score_variance": 0.0,
-      "expected_seg_dist_delta": 0.0,
-      "expected_total_score_delta": -0.000100544702,
-      "expected_uncertainty_reduction": {
-        "has_uncertainty_signal": false,
-        "source_fields": [],
-        "total_variance_reduction": 0.0
-      },
-      "family": "hnerv_rate_recode",
-      "family_group": "hnerv_rate_equivalent_recode",
-      "field_interaction_contract": {
-        "assumption_count": 3,
-        "assumptions": [
-          "conflicts_with_decoder_replacement_for_same_section",
-          "rate_only_raw_equal_required",
-          "stack_before_scorer_changing_atoms"
-        ],
-        "blockers": [],
-        "conflicts_with_atoms": [],
-        "conflicts_with_families": [],
-        "interaction_model": "",
-        "schema": "field_interaction_contract_v1",
-        "status": "passed",
-        "volterra_order": null,
-        "volterra_order_source": "",
-        "volterra_scope": "undeclared_order_first_order_assumptions_only",
-        "volterra_terms": [],
-        "volterra_terms_declared": false
-      },
-      "field_selection_ready_for_exact_eval_dispatch": false,
-      "geometry_priors": [],
-      "hard_pair_support": [],
-      "interaction_assumptions": [
-        "rate_only_raw_equal_required",
-        "stack_before_scorer_changing_atoms",
-        "conflicts_with_decoder_replacement_for_same_section"
-      ],
-      "kkt_blockers": [
-        "missing_byte_closed_archive_manifest",
-        "kkt:kkt_proof_or_admm_result_missing"
-      ],
-      "kkt_proof": {
-        "blockers": [
-          "kkt_proof_or_admm_result_missing"
-        ],
-        "candidates": [],
-        "kind": "",
-        "residual": null,
-        "source": "",
-        "status": "blocked",
-        "tolerance": null
-      },
-      "kkt_ready_for_field_planning": false,
-      "lexicographic_feasibility_tuple": [
-        false,
-        true,
-        false,
-        true,
-        false,
-        false,
-        -0.000100544702,
-        0.0
-      ],
-      "non_dominated_frontier_reason": {
-        "dominated_by": [],
-        "eligibility_blockers": [
-          "missing_byte_closed_archive_manifest"
-        ],
-        "eligible": false,
-        "frontier": false,
-        "objective_directions": {
-          "archive_ready_for_stack_review": "max",
-          "byte_delta": "min",
-          "confidence": "max",
-          "expected_pose_dist_delta": "min",
-          "expected_seg_dist_delta": "min",
-          "expected_total_score_delta": "min"
-        },
-        "objectives": {
-          "archive_ready_for_stack_review": 0.0,
-          "byte_delta": -151.0,
-          "confidence": 1.0,
-          "expected_pose_dist_delta": 0.0,
-          "expected_seg_dist_delta": 0.0,
-          "expected_total_score_delta": -0.000100544702
-        },
-        "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
-        "schema": "non_dominated_frontier_reason_v1",
-        "scope": "hnerv_rate_equivalent_recode",
-        "status": "ineligible"
-      },
-      "observation_noise_variance": 0.0,
-      "openpilot_priors": [],
-      "pair_support": [],
-      "paradigm": "hnerv_rate_recode",
-      "pareto_dominated_by": [],
-      "pareto_eligibility_blockers": [
-        "missing_byte_closed_archive_manifest"
-      ],
-      "pareto_eligible": false,
-      "pareto_frontier": false,
-      "pareto_objectives": {
-        "archive_ready_for_stack_review": 0.0,
-        "byte_delta": -151.0,
-        "confidence": 1.0,
-        "expected_pose_dist_delta": 0.0,
-        "expected_seg_dist_delta": 0.0,
-        "expected_total_score_delta": -0.000100544702
-      },
-      "pareto_scope": "hnerv_rate_equivalent_recode",
-      "pose_score_delta_confidence_weighted": 0.0,
-      "proxy_row": false,
-      "rankable": true,
-      "rate_score_delta": -0.000100544702,
-      "ready_for_exact_eval_dispatch": false,
-      "requested_dispatchable": false,
-      "research_basis_ids": [
-        "fridrich_stc_2011",
-        "fridrich_pq_wetpaper_2004",
-        "balle_e2e_2017",
-        "balle_hyperprior_2018"
-      ],
-      "score_claim": false,
-      "seg_score_delta_confidence_weighted": 0.0,
-      "selection_blockers": [
-        "kkt_not_ready_for_field_planning",
-        "missing_byte_closed_archive_manifest",
-        "pareto_ineligible_atom"
-      ],
-      "selection_penalty_terms": {
-        "kkt_not_ready_for_field_planning": 10.0,
-        "missing_byte_closed_archive_manifest": 100.0,
-        "pareto_ineligible_atom": 25.0
-      },
-      "selection_penalty_units": 135.0,
-      "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
-      "selection_score_delta": -0.000100544702,
-      "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
-      "source_dispatch_blockers": [
-        "cross_paradigm_atom_is_planning_only",
-        "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
-        "requires_exact_cuda_auth_eval",
-        "hnerv_rate_recode_requires_raw_equal_proof",
-        "planning_only_structural_recode_profile",
-        "requires_runtime_decoder_implementation",
-        "requires_archive_manifest_preflight"
-      ]
-    },
-    {
-      "adapter": "hnerv_rate_recode_profile",
-      "adapter_dispatch_blockers": [
-        "cross_paradigm_atom_is_planning_only",
-        "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
-        "requires_exact_cuda_auth_eval",
-        "hnerv_rate_recode_requires_raw_equal_proof",
-        "planning_only_structural_recode_profile",
-        "requires_runtime_decoder_implementation",
-        "requires_archive_manifest_preflight"
-      ],
-      "allocation_inference": false,
-      "archive_manifest_custody": {
-        "archive_bytes": null,
-        "archive_bytes_valid": false,
-        "archive_sha256": "",
-        "archive_sha256_valid": false,
-        "blockers": [],
-        "exists": false,
-        "is_file": false,
-        "manifest_json_valid": false,
-        "path": "",
-        "score_claim_false": false,
-        "sha256": "",
-        "sha256_matches": false,
-        "sha256_valid": false,
-        "verified": false
-      },
-      "archive_manifest_path": "",
-      "archive_manifest_sha256": "",
-      "archive_ready_for_stack_review": false,
       "atom_id": "hnerv_rate_recode:public_pr106_belt_and_suspenders:brotli_q11_current_raw",
       "byte_closed_archive_manifest_attached": false,
       "byte_delta": 0,
@@ -2090,11 +2216,13 @@
       "dispatchable": false,
       "evidence_grade": "empirical_byte_raw_equal",
       "evidence_source_path": "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",
-      "evidence_source_sha256": "d7b31ac9ac97f148c75379fec3dcbfb0cebc8ee64fb6f87a616a224b3616578f",
+      "evidence_source_sha256": "c8400288270a077cb8c7bf2a2c7c16483748a9aa9dede407e3cd1543c4733dd2",
       "exact_dispatch_blockers": {
         "blocker_categories": {
           "custody": [
             "requires_byte_closed_archive",
+            "requires_byte_closed_archive_manifest_before_dispatch",
+            "requires_archive_manifest_preflight",
             "missing_byte_closed_archive_manifest"
           ],
           "dirty_worktree": [],
@@ -2102,27 +2230,42 @@
           "exact_cuda_eval": [
             "requires_exact_cuda_auth_eval"
           ],
-          "interaction_model": [],
+          "interaction_model": [
+            "requires_stack_interaction_review"
+          ],
           "kkt_or_admm": [
             "kkt:kkt_proof_or_admm_result_missing",
             "kkt_not_ready_for_field_planning"
           ],
-          "other": [],
+          "other": [
+            "hnerv_rate_recode_requires_raw_equal_proof"
+          ],
           "pareto_frontier": [
             "pareto_ineligible_atom",
             "pareto_ineligible_for_field_selection"
           ],
           "proxy_or_planning": [
-            "planning_only_lagrangian_atom"
+            "planning_only_lagrangian_atom",
+            "cross_paradigm_atom_is_planning_only",
+            "planning_only_structural_recode_profile"
           ],
-          "runtime": [],
+          "runtime": [
+            "requires_runtime_decoder_implementation"
+          ],
           "score_claim": []
         },
-        "blocker_count": 8,
+        "blocker_count": 15,
         "blockers": [
           "planning_only_lagrangian_atom",
           "requires_exact_cuda_auth_eval",
           "requires_byte_closed_archive",
+          "cross_paradigm_atom_is_planning_only",
+          "requires_stack_interaction_review",
+          "requires_byte_closed_archive_manifest_before_dispatch",
+          "hnerv_rate_recode_requires_raw_equal_proof",
+          "planning_only_structural_recode_profile",
+          "requires_runtime_decoder_implementation",
+          "requires_archive_manifest_preflight",
           "missing_byte_closed_archive_manifest",
           "kkt:kkt_proof_or_admm_result_missing",
           "kkt_not_ready_for_field_planning",
@@ -2347,11 +2490,13 @@
       "dispatchable": false,
       "evidence_grade": "empirical_byte_raw_equal",
       "evidence_source_path": "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",
-      "evidence_source_sha256": "d7b31ac9ac97f148c75379fec3dcbfb0cebc8ee64fb6f87a616a224b3616578f",
+      "evidence_source_sha256": "c8400288270a077cb8c7bf2a2c7c16483748a9aa9dede407e3cd1543c4733dd2",
       "exact_dispatch_blockers": {
         "blocker_categories": {
           "custody": [
             "requires_byte_closed_archive",
+            "requires_byte_closed_archive_manifest_before_dispatch",
+            "requires_archive_manifest_preflight",
             "missing_byte_closed_archive_manifest"
           ],
           "dirty_worktree": [],
@@ -2359,27 +2504,42 @@
           "exact_cuda_eval": [
             "requires_exact_cuda_auth_eval"
           ],
-          "interaction_model": [],
+          "interaction_model": [
+            "requires_stack_interaction_review"
+          ],
           "kkt_or_admm": [
             "kkt:kkt_proof_or_admm_result_missing",
             "kkt_not_ready_for_field_planning"
           ],
-          "other": [],
+          "other": [
+            "hnerv_rate_recode_requires_raw_equal_proof"
+          ],
           "pareto_frontier": [
             "pareto_ineligible_atom",
             "pareto_ineligible_for_field_selection"
           ],
           "proxy_or_planning": [
-            "planning_only_lagrangian_atom"
+            "planning_only_lagrangian_atom",
+            "cross_paradigm_atom_is_planning_only",
+            "planning_only_structural_recode_profile"
           ],
-          "runtime": [],
+          "runtime": [
+            "requires_runtime_decoder_implementation"
+          ],
           "score_claim": []
         },
-        "blocker_count": 8,
+        "blocker_count": 15,
         "blockers": [
           "planning_only_lagrangian_atom",
           "requires_exact_cuda_auth_eval",
           "requires_byte_closed_archive",
+          "cross_paradigm_atom_is_planning_only",
+          "requires_stack_interaction_review",
+          "requires_byte_closed_archive_manifest_before_dispatch",
+          "hnerv_rate_recode_requires_raw_equal_proof",
+          "planning_only_structural_recode_profile",
+          "requires_runtime_decoder_implementation",
+          "requires_archive_manifest_preflight",
           "missing_byte_closed_archive_manifest",
           "kkt:kkt_proof_or_admm_result_missing",
           "kkt_not_ready_for_field_planning",
@@ -2604,11 +2764,13 @@
       "dispatchable": false,
       "evidence_grade": "empirical_byte_raw_equal",
       "evidence_source_path": "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",
-      "evidence_source_sha256": "d7b31ac9ac97f148c75379fec3dcbfb0cebc8ee64fb6f87a616a224b3616578f",
+      "evidence_source_sha256": "c8400288270a077cb8c7bf2a2c7c16483748a9aa9dede407e3cd1543c4733dd2",
       "exact_dispatch_blockers": {
         "blocker_categories": {
           "custody": [
             "requires_byte_closed_archive",
+            "requires_byte_closed_archive_manifest_before_dispatch",
+            "requires_archive_manifest_preflight",
             "missing_byte_closed_archive_manifest"
           ],
           "dirty_worktree": [],
@@ -2616,27 +2778,42 @@
           "exact_cuda_eval": [
             "requires_exact_cuda_auth_eval"
           ],
-          "interaction_model": [],
+          "interaction_model": [
+            "requires_stack_interaction_review"
+          ],
           "kkt_or_admm": [
             "kkt:kkt_proof_or_admm_result_missing",
             "kkt_not_ready_for_field_planning"
           ],
-          "other": [],
+          "other": [
+            "hnerv_rate_recode_requires_raw_equal_proof"
+          ],
           "pareto_frontier": [
             "pareto_ineligible_atom",
             "pareto_ineligible_for_field_selection"
           ],
           "proxy_or_planning": [
-            "planning_only_lagrangian_atom"
+            "planning_only_lagrangian_atom",
+            "cross_paradigm_atom_is_planning_only",
+            "planning_only_structural_recode_profile"
           ],
-          "runtime": [],
+          "runtime": [
+            "requires_runtime_decoder_implementation"
+          ],
           "score_claim": []
         },
-        "blocker_count": 8,
+        "blocker_count": 15,
         "blockers": [
           "planning_only_lagrangian_atom",
           "requires_exact_cuda_auth_eval",
           "requires_byte_closed_archive",
+          "cross_paradigm_atom_is_planning_only",
+          "requires_stack_interaction_review",
+          "requires_byte_closed_archive_manifest_before_dispatch",
+          "hnerv_rate_recode_requires_raw_equal_proof",
+          "planning_only_structural_recode_profile",
+          "requires_runtime_decoder_implementation",
+          "requires_archive_manifest_preflight",
           "missing_byte_closed_archive_manifest",
           "kkt:kkt_proof_or_admm_result_missing",
           "kkt_not_ready_for_field_planning",
@@ -2861,11 +3038,13 @@
       "dispatchable": false,
       "evidence_grade": "empirical_byte_raw_equal",
       "evidence_source_path": "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",
-      "evidence_source_sha256": "d7b31ac9ac97f148c75379fec3dcbfb0cebc8ee64fb6f87a616a224b3616578f",
+      "evidence_source_sha256": "c8400288270a077cb8c7bf2a2c7c16483748a9aa9dede407e3cd1543c4733dd2",
       "exact_dispatch_blockers": {
         "blocker_categories": {
           "custody": [
             "requires_byte_closed_archive",
+            "requires_byte_closed_archive_manifest_before_dispatch",
+            "requires_archive_manifest_preflight",
             "missing_byte_closed_archive_manifest"
           ],
           "dirty_worktree": [],
@@ -2873,27 +3052,42 @@
           "exact_cuda_eval": [
             "requires_exact_cuda_auth_eval"
           ],
-          "interaction_model": [],
+          "interaction_model": [
+            "requires_stack_interaction_review"
+          ],
           "kkt_or_admm": [
             "kkt:kkt_proof_or_admm_result_missing",
             "kkt_not_ready_for_field_planning"
           ],
-          "other": [],
+          "other": [
+            "hnerv_rate_recode_requires_raw_equal_proof"
+          ],
           "pareto_frontier": [
             "pareto_ineligible_atom",
             "pareto_ineligible_for_field_selection"
           ],
           "proxy_or_planning": [
-            "planning_only_lagrangian_atom"
+            "planning_only_lagrangian_atom",
+            "cross_paradigm_atom_is_planning_only",
+            "planning_only_structural_recode_profile"
           ],
-          "runtime": [],
+          "runtime": [
+            "requires_runtime_decoder_implementation"
+          ],
           "score_claim": []
         },
-        "blocker_count": 8,
+        "blocker_count": 15,
         "blockers": [
           "planning_only_lagrangian_atom",
           "requires_exact_cuda_auth_eval",
           "requires_byte_closed_archive",
+          "cross_paradigm_atom_is_planning_only",
+          "requires_stack_interaction_review",
+          "requires_byte_closed_archive_manifest_before_dispatch",
+          "hnerv_rate_recode_requires_raw_equal_proof",
+          "planning_only_structural_recode_profile",
+          "requires_runtime_decoder_implementation",
+          "requires_archive_manifest_preflight",
           "missing_byte_closed_archive_manifest",
           "kkt:kkt_proof_or_admm_result_missing",
           "kkt_not_ready_for_field_planning",
@@ -3118,11 +3312,13 @@
       "dispatchable": false,
       "evidence_grade": "empirical_byte_raw_equal",
       "evidence_source_path": "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",
-      "evidence_source_sha256": "d7b31ac9ac97f148c75379fec3dcbfb0cebc8ee64fb6f87a616a224b3616578f",
+      "evidence_source_sha256": "c8400288270a077cb8c7bf2a2c7c16483748a9aa9dede407e3cd1543c4733dd2",
       "exact_dispatch_blockers": {
         "blocker_categories": {
           "custody": [
             "requires_byte_closed_archive",
+            "requires_byte_closed_archive_manifest_before_dispatch",
+            "requires_archive_manifest_preflight",
             "missing_byte_closed_archive_manifest"
           ],
           "dirty_worktree": [],
@@ -3130,27 +3326,42 @@
           "exact_cuda_eval": [
             "requires_exact_cuda_auth_eval"
           ],
-          "interaction_model": [],
+          "interaction_model": [
+            "requires_stack_interaction_review"
+          ],
           "kkt_or_admm": [
             "kkt:kkt_proof_or_admm_result_missing",
             "kkt_not_ready_for_field_planning"
           ],
-          "other": [],
+          "other": [
+            "hnerv_rate_recode_requires_raw_equal_proof"
+          ],
           "pareto_frontier": [
             "pareto_ineligible_atom",
             "pareto_ineligible_for_field_selection"
           ],
           "proxy_or_planning": [
-            "planning_only_lagrangian_atom"
+            "planning_only_lagrangian_atom",
+            "cross_paradigm_atom_is_planning_only",
+            "planning_only_structural_recode_profile"
           ],
-          "runtime": [],
+          "runtime": [
+            "requires_runtime_decoder_implementation"
+          ],
           "score_claim": []
         },
-        "blocker_count": 8,
+        "blocker_count": 15,
         "blockers": [
           "planning_only_lagrangian_atom",
           "requires_exact_cuda_auth_eval",
           "requires_byte_closed_archive",
+          "cross_paradigm_atom_is_planning_only",
+          "requires_stack_interaction_review",
+          "requires_byte_closed_archive_manifest_before_dispatch",
+          "hnerv_rate_recode_requires_raw_equal_proof",
+          "planning_only_structural_recode_profile",
+          "requires_runtime_decoder_implementation",
+          "requires_archive_manifest_preflight",
           "missing_byte_closed_archive_manifest",
           "kkt:kkt_proof_or_admm_result_missing",
           "kkt_not_ready_for_field_planning",
@@ -3381,11 +3592,14 @@
       "dispatchable": false,
       "evidence_grade": "empirical_byte_raw_equal",
       "evidence_source_path": "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",
-      "evidence_source_sha256": "d7b31ac9ac97f148c75379fec3dcbfb0cebc8ee64fb6f87a616a224b3616578f",
+      "evidence_source_sha256": "c8400288270a077cb8c7bf2a2c7c16483748a9aa9dede407e3cd1543c4733dd2",
       "exact_dispatch_blockers": {
         "blocker_categories": {
           "custody": [
             "requires_byte_closed_archive",
+            "requires_byte_closed_archive_manifest_before_dispatch",
+            "requires_archive_manifest_preflight",
+            "requires_archive_builder_and_payload_diff",
             "missing_byte_closed_archive_manifest"
           ],
           "dirty_worktree": [],
@@ -3393,27 +3607,47 @@
           "exact_cuda_eval": [
             "requires_exact_cuda_auth_eval"
           ],
-          "interaction_model": [],
+          "interaction_model": [
+            "requires_stack_interaction_review"
+          ],
           "kkt_or_admm": [
             "kkt:kkt_proof_or_admm_result_missing",
             "kkt_not_ready_for_field_planning"
           ],
-          "other": [],
+          "other": [
+            "hnerv_rate_recode_requires_raw_equal_proof",
+            "parity_fixture_only"
+          ],
           "pareto_frontier": [
             "pareto_ineligible_atom",
             "pareto_ineligible_for_field_selection"
           ],
           "proxy_or_planning": [
-            "planning_only_lagrangian_atom"
+            "planning_only_lagrangian_atom",
+            "cross_paradigm_atom_is_planning_only",
+            "planning_only_structural_recode_profile"
           ],
-          "runtime": [],
+          "runtime": [
+            "requires_runtime_decoder_implementation",
+            "requires_submission_runtime_decoder"
+          ],
           "score_claim": []
         },
-        "blocker_count": 8,
+        "blocker_count": 18,
         "blockers": [
           "planning_only_lagrangian_atom",
           "requires_exact_cuda_auth_eval",
           "requires_byte_closed_archive",
+          "cross_paradigm_atom_is_planning_only",
+          "requires_stack_interaction_review",
+          "requires_byte_closed_archive_manifest_before_dispatch",
+          "hnerv_rate_recode_requires_raw_equal_proof",
+          "planning_only_structural_recode_profile",
+          "requires_runtime_decoder_implementation",
+          "requires_archive_manifest_preflight",
+          "parity_fixture_only",
+          "requires_submission_runtime_decoder",
+          "requires_archive_builder_and_payload_diff",
           "missing_byte_closed_archive_manifest",
           "kkt:kkt_proof_or_admm_result_missing",
           "kkt_not_ready_for_field_planning",
@@ -3647,11 +3881,14 @@
       "dispatchable": false,
       "evidence_grade": "empirical_byte_raw_equal",
       "evidence_source_path": "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",
-      "evidence_source_sha256": "d7b31ac9ac97f148c75379fec3dcbfb0cebc8ee64fb6f87a616a224b3616578f",
+      "evidence_source_sha256": "c8400288270a077cb8c7bf2a2c7c16483748a9aa9dede407e3cd1543c4733dd2",
       "exact_dispatch_blockers": {
         "blocker_categories": {
           "custody": [
             "requires_byte_closed_archive",
+            "requires_byte_closed_archive_manifest_before_dispatch",
+            "requires_archive_manifest_preflight",
+            "requires_archive_builder_and_payload_diff",
             "missing_byte_closed_archive_manifest"
           ],
           "dirty_worktree": [],
@@ -3659,27 +3896,47 @@
           "exact_cuda_eval": [
             "requires_exact_cuda_auth_eval"
           ],
-          "interaction_model": [],
+          "interaction_model": [
+            "requires_stack_interaction_review"
+          ],
           "kkt_or_admm": [
             "kkt:kkt_proof_or_admm_result_missing",
             "kkt_not_ready_for_field_planning"
           ],
-          "other": [],
+          "other": [
+            "hnerv_rate_recode_requires_raw_equal_proof",
+            "parity_fixture_only"
+          ],
           "pareto_frontier": [
             "pareto_ineligible_atom",
             "pareto_ineligible_for_field_selection"
           ],
           "proxy_or_planning": [
-            "planning_only_lagrangian_atom"
+            "planning_only_lagrangian_atom",
+            "cross_paradigm_atom_is_planning_only",
+            "planning_only_structural_recode_profile"
           ],
-          "runtime": [],
+          "runtime": [
+            "requires_runtime_decoder_implementation",
+            "requires_submission_runtime_decoder"
+          ],
           "score_claim": []
         },
-        "blocker_count": 8,
+        "blocker_count": 18,
         "blockers": [
           "planning_only_lagrangian_atom",
           "requires_exact_cuda_auth_eval",
           "requires_byte_closed_archive",
+          "cross_paradigm_atom_is_planning_only",
+          "requires_stack_interaction_review",
+          "requires_byte_closed_archive_manifest_before_dispatch",
+          "hnerv_rate_recode_requires_raw_equal_proof",
+          "planning_only_structural_recode_profile",
+          "requires_runtime_decoder_implementation",
+          "requires_archive_manifest_preflight",
+          "parity_fixture_only",
+          "requires_submission_runtime_decoder",
+          "requires_archive_builder_and_payload_diff",
           "missing_byte_closed_archive_manifest",
           "kkt:kkt_proof_or_admm_result_missing",
           "kkt_not_ready_for_field_planning",
@@ -3913,11 +4170,14 @@
       "dispatchable": false,
       "evidence_grade": "empirical_byte_raw_equal",
       "evidence_source_path": "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",
-      "evidence_source_sha256": "d7b31ac9ac97f148c75379fec3dcbfb0cebc8ee64fb6f87a616a224b3616578f",
+      "evidence_source_sha256": "c8400288270a077cb8c7bf2a2c7c16483748a9aa9dede407e3cd1543c4733dd2",
       "exact_dispatch_blockers": {
         "blocker_categories": {
           "custody": [
             "requires_byte_closed_archive",
+            "requires_byte_closed_archive_manifest_before_dispatch",
+            "requires_archive_manifest_preflight",
+            "requires_archive_builder_and_payload_diff",
             "missing_byte_closed_archive_manifest"
           ],
           "dirty_worktree": [],
@@ -3925,27 +4185,47 @@
           "exact_cuda_eval": [
             "requires_exact_cuda_auth_eval"
           ],
-          "interaction_model": [],
+          "interaction_model": [
+            "requires_stack_interaction_review"
+          ],
           "kkt_or_admm": [
             "kkt:kkt_proof_or_admm_result_missing",
             "kkt_not_ready_for_field_planning"
           ],
-          "other": [],
+          "other": [
+            "hnerv_rate_recode_requires_raw_equal_proof",
+            "parity_fixture_only"
+          ],
           "pareto_frontier": [
             "pareto_ineligible_atom",
             "pareto_ineligible_for_field_selection"
           ],
           "proxy_or_planning": [
-            "planning_only_lagrangian_atom"
+            "planning_only_lagrangian_atom",
+            "cross_paradigm_atom_is_planning_only",
+            "planning_only_structural_recode_profile"
           ],
-          "runtime": [],
+          "runtime": [
+            "requires_runtime_decoder_implementation",
+            "requires_submission_runtime_decoder"
+          ],
           "score_claim": []
         },
-        "blocker_count": 8,
+        "blocker_count": 18,
         "blockers": [
           "planning_only_lagrangian_atom",
           "requires_exact_cuda_auth_eval",
           "requires_byte_closed_archive",
+          "cross_paradigm_atom_is_planning_only",
+          "requires_stack_interaction_review",
+          "requires_byte_closed_archive_manifest_before_dispatch",
+          "hnerv_rate_recode_requires_raw_equal_proof",
+          "planning_only_structural_recode_profile",
+          "requires_runtime_decoder_implementation",
+          "requires_archive_manifest_preflight",
+          "parity_fixture_only",
+          "requires_submission_runtime_decoder",
+          "requires_archive_builder_and_payload_diff",
           "missing_byte_closed_archive_manifest",
           "kkt:kkt_proof_or_admm_result_missing",
           "kkt_not_ready_for_field_planning",
@@ -4148,13 +4428,13 @@
       "--json-out",
       "experiments/results/cross_paradigm_atom_ledger_20260507_codex/ledger.json"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "effa03bdd37642103433fb75735e62774bc2d96396589c23a9826996ed2d3c20",
+    "canonical_payload_without_tool_manifest_sha256": "36347f26e296bc6700eac4dd2afb82476c5ce4d03af794e94fc7b704045e5e2d",
     "dispatch_attempted": false,
     "input_files": [
       {
-        "bytes": 13487,
+        "bytes": 17744,
         "path": "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",
-        "sha256": "d7b31ac9ac97f148c75379fec3dcbfb0cebc8ee64fb6f87a616a224b3616578f"
+        "sha256": "c8400288270a077cb8c7bf2a2c7c16483748a9aa9dede407e3cd1543c4733dd2"
       },
       {
         "bytes": 63146,

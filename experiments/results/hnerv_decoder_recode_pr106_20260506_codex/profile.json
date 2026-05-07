@@ -9,6 +9,40 @@
     "sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
     "variant": "brotli_q10_current_raw"
   },
+  "byte_closed_candidate_packet_count": 1,
+  "byte_closed_candidate_packets": [
+    {
+      "archive_manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/archive_manifest.json",
+      "archive_manifest_sha256": "ed59c6f7c8e37e441d6a1f978567b29b645b7d0b45d5f66fc1b2974475187745",
+      "byte_delta": -151,
+      "candidate_archive_bytes": 186088,
+      "candidate_archive_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip",
+      "candidate_archive_sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+      "candidate_member_name": "0.bin",
+      "candidate_result_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/manifest.json",
+      "candidate_result_sha256": "831c27b094b7c64e2ccd36948644d7763dc7dd0f5eec5760ac9214c058c5298a",
+      "dispatch_attempted": false,
+      "packet_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json",
+      "packet_sha256": "7f03a6f5d982f700335c2670f1b33fa136a83a5c645d118c3fbd5173da68008b",
+      "ready_for_exact_eval_dispatch": false,
+      "score_blockers": [
+        "exact_cuda_auth_eval_not_run_for_candidate",
+        "contest_auth_eval_adjudication_not_run_for_candidate",
+        "operator_score_claim_review_not_done"
+      ],
+      "score_claim": false,
+      "section_name": "decoder_packed_brotli",
+      "section_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+      "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+      "static_packet_ready": true,
+      "submit_blockers": [
+        "missing_lightning_environment",
+        "missing_active_lane_dispatch_claim",
+        "missing_operator_exact_cuda_approval"
+      ],
+      "variant": "brotli_q10_current_raw"
+    }
+  ],
   "context_overhead_plan": {
     "bounded_hdc2_mixed_context_candidate": {
       "archive_ready": false,
@@ -215,6 +249,35 @@
   "source_decoder_section_sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
   "source_label": "public_pr106_belt_and_suspenders",
   "tool": "tac.hnerv_decoder_recode.build_structural_recode_profile",
+  "tool_run_manifest": {
+    "argv": [
+      "--profile",
+      "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",
+      "--packet",
+      "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json",
+      "--json-out",
+      "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "688e58ec601146863053cc78c545420f2146a257b29aaea2b2758e9729fdf339",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 13487,
+        "path": "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",
+        "sha256": "d7b31ac9ac97f148c75379fec3dcbfb0cebc8ee64fb6f87a616a224b3616578f"
+      },
+      {
+        "bytes": 26891,
+        "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json",
+        "sha256": "7f03a6f5d982f700335c2670f1b33fa136a83a5c645d118c3fbd5173da68008b"
+      }
+    ],
+    "output_path": "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/attach_hnerv_rate_recode_packet_links.py"
+  },
   "variants": [
     {
       "byte_delta_vs_source_section": 0,
@@ -227,12 +290,24 @@
       "variant": "brotli_q11_current_raw"
     },
     {
+      "archive_manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/archive_manifest.json",
+      "archive_manifest_sha256": "ed59c6f7c8e37e441d6a1f978567b29b645b7d0b45d5f66fc1b2974475187745",
+      "byte_closed_candidate_packet_attached": true,
+      "byte_closed_packet_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json",
+      "byte_closed_packet_sha256": "7f03a6f5d982f700335c2670f1b33fa136a83a5c645d118c3fbd5173da68008b",
       "byte_delta_vs_source_section": -151,
       "bytes": 170127,
+      "candidate_archive_bytes": 186088,
+      "candidate_archive_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip",
+      "candidate_archive_sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
       "codec": "brotli",
+      "dispatch_attempted": false,
+      "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
       "quality": 10,
       "rate_score_delta_if_runtime_supported_and_components_equal": -0.000100544702,
       "raw_equal": true,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
       "sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
       "variant": "brotli_q10_current_raw"
     },

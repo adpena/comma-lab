@@ -1,0 +1,107 @@
+{
+  "artifact_links": {
+    "candidate_result": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/manifest.json",
+    "payload_section_diff": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/payload_section_diff_vs_source.json",
+    "pre_submission_compliance": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/pre_submission_compliance.json",
+    "public_replay_preflight": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/public_replay_preflight.json"
+  },
+  "byte_delta": -151,
+  "candidate_archive_bytes": 186088,
+  "candidate_archive_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip",
+  "candidate_archive_sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+  "candidate_id": "pr106_q10_151byte_brotli",
+  "candidate_member_name": "0.bin",
+  "candidate_payload_bytes": 185980,
+  "candidate_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+  "candidate_static_preflight_ready": true,
+  "dispatch_attempted": false,
+  "dispatch_gate": "eligible_for_cuda_auth_eval_after_lane_claim",
+  "dispatch_performed": false,
+  "dispatch_unlocked": true,
+  "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+  "exact_eval_runtime_contract": {
+    "inflate_sh": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh",
+    "ready_for_exact_eval_runtime": true,
+    "remaining_blockers": []
+  },
+  "expected_pose_dist_delta": 0.0,
+  "expected_seg_dist_delta": 0.0,
+  "expected_total_score_delta_rate_only": -0.00010054470192144788,
+  "family": "hnerv_lowlevel_brotli_repack",
+  "fixed_runtime_preflight": {
+    "inflate_sh": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh",
+    "ready_for_fixed_runtime_exact_eval": true,
+    "remaining_blockers": [],
+    "upstream_dir": "upstream"
+  },
+  "job_name": "exact_eval_pr106_q10_151byte_brotli_20260507",
+  "lane_id": "pr106_q10_151byte_brotli",
+  "linked_lowlevel_changes": [
+    {
+      "byte_delta": 0,
+      "candidate_bytes": 4,
+      "candidate_section_sha256": "c670d1bee2140039bc6fc23599dd4bdc2ec00a659e0815945a7d60cfe6daccc7",
+      "changed": true,
+      "label": "PR106",
+      "optimization_role": "control_or_metadata",
+      "score_claim": false,
+      "section_name": "packed_header_ff_len24",
+      "source_bytes": 4,
+      "source_section_sha256": "7939f08db7d18dd4176e8e11b1232a9be6b2371db7a4e63c1c0871fb520148b6"
+    },
+    {
+      "byte_delta": -151,
+      "candidate_bytes": 170127,
+      "candidate_section_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+      "changed": true,
+      "label": "PR106",
+      "optimization_role": "decoder_weight_stream",
+      "score_claim": false,
+      "section_name": "decoder_packed_brotli",
+      "source_bytes": 170278,
+      "source_section_sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004"
+    }
+  ],
+  "pareto_scope": "hnerv_rate_only_exact_archive",
+  "proxy_row": false,
+  "raw_equivalence": [
+    {
+      "candidate_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+      "raw_bytes": 229070,
+      "raw_equal": true,
+      "section_name": "decoder_packed_brotli",
+      "source_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703"
+    },
+    {
+      "candidate_raw_sha256": "a38778c6304bacba39705cd9c45af337d73bc90c6b7b4ccf2563febfc312328e",
+      "raw_bytes": 33712,
+      "raw_equal": true,
+      "section_name": "latents_and_sidecar_brotli",
+      "source_raw_sha256": "a38778c6304bacba39705cd9c45af337d73bc90c6b7b4ccf2563febfc312328e"
+    }
+  ],
+  "ready_for_exact_eval_dispatch_claim": true,
+  "recorded_at_utc": "2026-05-07T12:30:00Z",
+  "remote_jobs_dispatched": false,
+  "schema": "hnerv_lowlevel_exact_eval_candidate_manifest_v1",
+  "schema_version": 1,
+  "score_blockers": [
+    "exact_cuda_auth_eval_not_run_for_candidate",
+    "contest_auth_eval_adjudication_not_run_for_candidate"
+  ],
+  "score_claim": false,
+  "source_archive_bytes": 186239,
+  "source_archive_custody_mode": "verified_source_archive_payload_match",
+  "source_archive_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+  "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+  "source_member_name": "0.bin",
+  "source_payload_bytes": null,
+  "source_payload_sha256": null,
+  "static_blockers": [],
+  "static_packet_ready": true,
+  "submit_blockers_until_operator_action": [
+    "requires_level2_lane_dispatch_claim",
+    "requires_operator_exact_cuda_approval",
+    "requires_lightning_environment"
+  ]
+}

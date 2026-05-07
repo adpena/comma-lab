@@ -1,0 +1,60 @@
+{
+  "allowed_linked_change_contract": "one byte-neutral packed_header_ff_len24 control update plus one rate-positive Brotli payload section whose decompressed raw bytes match",
+  "blockers": [],
+  "brotli_raw_equivalence": [
+    {
+      "candidate_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+      "raw_bytes": 229070,
+      "raw_equal": true,
+      "section_name": "decoder_packed_brotli",
+      "source_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703"
+    },
+    {
+      "candidate_raw_sha256": "a38778c6304bacba39705cd9c45af337d73bc90c6b7b4ccf2563febfc312328e",
+      "raw_bytes": 33712,
+      "raw_equal": true,
+      "section_name": "latents_and_sidecar_brotli",
+      "source_raw_sha256": "a38778c6304bacba39705cd9c45af337d73bc90c6b7b4ccf2563febfc312328e"
+    }
+  ],
+  "candidate_archive_bytes": 186088,
+  "candidate_archive_sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+  "candidate_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+  "changed_section_count": 2,
+  "dispatch_attempted": false,
+  "expected_total_score_delta_rate_only": -0.00010054470192144788,
+  "ready_for_archive_preflight": true,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "hnerv_lowlevel_payload_section_diff_v1",
+  "schema_version": 1,
+  "score_claim": false,
+  "sections": [
+    {
+      "byte_delta": 0,
+      "candidate_bytes": 4,
+      "candidate_sha256": "c670d1bee2140039bc6fc23599dd4bdc2ec00a659e0815945a7d60cfe6daccc7",
+      "changed": true,
+      "name": "packed_header_ff_len24",
+      "optimization_role": "control_or_metadata",
+      "score_claim": false,
+      "source_bytes": 4,
+      "source_sha256": "7939f08db7d18dd4176e8e11b1232a9be6b2371db7a4e63c1c0871fb520148b6"
+    },
+    {
+      "byte_delta": -151,
+      "candidate_bytes": 170127,
+      "candidate_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+      "changed": true,
+      "name": "decoder_packed_brotli",
+      "optimization_role": "decoder_weight_stream",
+      "score_claim": false,
+      "source_bytes": 170278,
+      "source_sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004"
+    }
+  ],
+  "source_archive_bytes": 186239,
+  "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+  "source_payload_sha256": null,
+  "tool": "tools/build_hnerv_lowlevel_exact_eval_packet.py",
+  "total_byte_delta": -151
+}

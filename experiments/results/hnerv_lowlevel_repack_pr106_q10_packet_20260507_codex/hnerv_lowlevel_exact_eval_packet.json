@@ -1,0 +1,416 @@
+{
+  "archive_bytes": 186088,
+  "archive_identity": {
+    "bytes": 186088,
+    "exists": true,
+    "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip",
+    "sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7"
+  },
+  "archive_sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+  "artifacts": {
+    "candidate_result": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/manifest.json",
+    "dispatch_readiness_preflight": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/dispatch_readiness_preflight.json",
+    "manifest": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/manifest.json",
+    "packet": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json",
+    "payload_section_diff": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/payload_section_diff_vs_source.json",
+    "pre_submission_compliance": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/pre_submission_compliance.json",
+    "public_replay_preflight": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/public_replay_preflight.json",
+    "release_surface": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface"
+  },
+  "byte_delta": -151,
+  "candidate_id": "pr106_q10_151byte_brotli",
+  "candidate_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+  "candidate_static_preflight_ready": true,
+  "commands": {
+    "claim": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id pr106_q10_151byte_brotli --platform lightning --instance-job-id exact_eval_pr106_q10_151byte_brotli_20260507 --agent codex:gpt-5.5 --status active_exact_eval --notes 'PR106x lgblock16 1-byte Brotli exact CUDA eval; archive_sha256=626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7 bytes=186088; static_packet=experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json'",
+    "harvest": ".venv/bin/python scripts/launch_lightning_batch_job.py harvest-ssh --state-path .omx/state/lightning_batch_jobs.json --job-name exact_eval_pr106_q10_151byte_brotli_20260507 --ssh-target $LIGHTNING_SSH_TARGET --expected-archive-sha256 626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7 --expected-archive-size-bytes 186088 --require-adjudication",
+    "submit": ".venv/bin/python scripts/lightning_exact_eval_repro.py --job-name exact_eval_pr106_q10_151byte_brotli_20260507 --stage-workspace --submit --archive experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh --upstream-dir $LIGHTNING_UPSTREAM_DIR --remote $LIGHTNING_SSH_TARGET --remote-pact $LIGHTNING_REMOTE_PACT --studio $LIGHTNING_STUDIO --teamspace $LIGHTNING_TEAMSPACE --sdk-user $LIGHTNING_SDK_USER --machine ${LIGHTNING_MACHINE:-T4} --predicted-band 0.18 0.25 --regression-threshold 0.01 --max-posenet-relative 1.01 --max-segnet-relative 1.01 --max-sane-score 1.0 --component-trace --queue-metadata lane=pr106_q10_151byte_brotli --queue-metadata archive_manifest=experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/manifest.json --queue-metadata public_preflight=experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/public_replay_preflight.json --queue-metadata payload_section_diff=experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/payload_section_diff_vs_source.json --extra-artifact experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/manifest.json --extra-artifact experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/public_replay_preflight.json --extra-artifact experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/pre_submission_compliance.json --extra-artifact experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/payload_section_diff_vs_source.json --extra-artifact experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json"
+  },
+  "dispatch_attempted": false,
+  "dispatch_gate": "eligible_for_cuda_auth_eval_after_lane_claim",
+  "dispatch_unlocked": true,
+  "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+  "expected_total_score_delta_rate_only": -0.00010054470192144788,
+  "family": "hnerv_lowlevel_brotli_repack",
+  "job_name": "exact_eval_pr106_q10_151byte_brotli_20260507",
+  "lane_claim_preflight": {
+    "active_claim_present": false,
+    "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+    "claims_path_exists": true,
+    "conflict_present": false,
+    "conflicting_active_claims": [],
+    "job_name": "exact_eval_pr106_q10_151byte_brotli_20260507",
+    "lane_id": "pr106_q10_151byte_brotli",
+    "matching_active_claims": [],
+    "ttl_hours": 24
+  },
+  "lane_id": "pr106_q10_151byte_brotli",
+  "missing_env": [
+    "LIGHTNING_SSH_TARGET",
+    "LIGHTNING_REMOTE_PACT",
+    "LIGHTNING_UPSTREAM_DIR",
+    "LIGHTNING_TEAMSPACE",
+    "LIGHTNING_STUDIO",
+    "LIGHTNING_SDK_USER"
+  ],
+  "operator_approved_exact_cuda": false,
+  "operator_next_steps": {
+    "copy_safe": true,
+    "current_submit_blockers": [
+      "missing_lightning_environment",
+      "missing_active_lane_dispatch_claim",
+      "missing_operator_exact_cuda_approval"
+    ],
+    "first_remote_gpu_step": "submit_exact_cuda",
+    "must_run_in_order": true,
+    "packet_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json",
+    "schema": "hnerv_lowlevel_operator_next_steps_v1",
+    "steps": [
+      {
+        "copy_safe_command": ".venv/bin/python -c 'import os,sys; missing=[k for k in sys.argv[1:] if not os.environ.get(k)]; raise SystemExit(('\"'\"'FATAL: missing Lightning env: '\"'\"'+'\"'\"', '\"'\"'.join(missing)) if missing else 0)' LIGHTNING_SSH_TARGET LIGHTNING_REMOTE_PACT LIGHTNING_UPSTREAM_DIR LIGHTNING_TEAMSPACE LIGHTNING_STUDIO LIGHTNING_SDK_USER",
+        "dispatches_remote_gpu": false,
+        "id": "verify_lightning_env",
+        "order": 1,
+        "writes_repo_state": false
+      },
+      {
+        "copy_safe_command": ".venv/bin/python tools/build_hnerv_lowlevel_exact_eval_packet.py --candidate-result experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/manifest.json --archive experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip --archive-sha256 626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7 --archive-bytes 186088 --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh --upstream-dir upstream --result-dir experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex --release-surface-dir experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface --lane-id pr106_q10_151byte_brotli --job-name exact_eval_pr106_q10_151byte_brotli_20260507 --claims-path .omx/state/active_lane_dispatch_claims.md --claim-ttl-hours 24 --agent codex:gpt-5.5 --now-utc 2026-05-07T12:30:00Z --json-out experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json",
+        "dispatches_remote_gpu": false,
+        "id": "refresh_static_packet_no_dispatch",
+        "order": 2,
+        "writes_repo_state": true
+      },
+      {
+        "copy_safe_command": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id pr106_q10_151byte_brotli --platform lightning --instance-job-id exact_eval_pr106_q10_151byte_brotli_20260507 --agent codex:gpt-5.5 --status active_exact_eval --notes 'PR106x lgblock16 1-byte Brotli exact CUDA eval; archive_sha256=626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7 bytes=186088; static_packet=experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json'",
+        "dispatches_remote_gpu": false,
+        "id": "claim_lane_no_dispatch",
+        "order": 3,
+        "writes_repo_state": true
+      },
+      {
+        "copy_safe_command": ".venv/bin/python tools/build_hnerv_lowlevel_exact_eval_packet.py --candidate-result experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/manifest.json --archive experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip --archive-sha256 626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7 --archive-bytes 186088 --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh --upstream-dir upstream --result-dir experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex --release-surface-dir experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface --lane-id pr106_q10_151byte_brotli --job-name exact_eval_pr106_q10_151byte_brotli_20260507 --claims-path .omx/state/active_lane_dispatch_claims.md --claim-ttl-hours 24 --agent codex:gpt-5.5 --now-utc 2026-05-07T12:30:00Z --json-out experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json --operator-approved-exact-cuda",
+        "dispatches_remote_gpu": false,
+        "id": "refresh_with_operator_exact_cuda_approval",
+        "order": 4,
+        "writes_repo_state": true
+      },
+      {
+        "copy_safe_command": ".venv/bin/python scripts/lightning_exact_eval_repro.py --job-name exact_eval_pr106_q10_151byte_brotli_20260507 --stage-workspace --submit --archive experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh --upstream-dir $LIGHTNING_UPSTREAM_DIR --remote $LIGHTNING_SSH_TARGET --remote-pact $LIGHTNING_REMOTE_PACT --studio $LIGHTNING_STUDIO --teamspace $LIGHTNING_TEAMSPACE --sdk-user $LIGHTNING_SDK_USER --machine ${LIGHTNING_MACHINE:-T4} --predicted-band 0.18 0.25 --regression-threshold 0.01 --max-posenet-relative 1.01 --max-segnet-relative 1.01 --max-sane-score 1.0 --component-trace --queue-metadata lane=pr106_q10_151byte_brotli --queue-metadata archive_manifest=experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/manifest.json --queue-metadata public_preflight=experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/public_replay_preflight.json --queue-metadata payload_section_diff=experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/payload_section_diff_vs_source.json --extra-artifact experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/manifest.json --extra-artifact experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/public_replay_preflight.json --extra-artifact experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/pre_submission_compliance.json --extra-artifact experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/payload_section_diff_vs_source.json --extra-artifact experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json",
+        "dispatches_remote_gpu": true,
+        "id": "submit_exact_cuda",
+        "order": 5,
+        "writes_repo_state": true
+      },
+      {
+        "copy_safe_command": ".venv/bin/python scripts/launch_lightning_batch_job.py harvest-ssh --state-path .omx/state/lightning_batch_jobs.json --job-name exact_eval_pr106_q10_151byte_brotli_20260507 --ssh-target $LIGHTNING_SSH_TARGET --expected-archive-sha256 626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7 --expected-archive-size-bytes 186088 --require-adjudication",
+        "dispatches_remote_gpu": false,
+        "id": "harvest_after_completion",
+        "order": 6,
+        "writes_repo_state": true
+      }
+    ]
+  },
+  "packet_kind": "hnerv_lowlevel_exact_eval_operator_packet",
+  "pareto_scope": "hnerv_rate_only_exact_archive",
+  "ready_for_exact_eval_dispatch_claim": true,
+  "ready_for_submit": false,
+  "recorded_at_utc": "2026-05-07T12:30:00Z",
+  "refreshes": {
+    "dispatch_readiness": {
+      "command": ".venv/bin/python experiments/preflight_candidate_manifest_dispatch_readiness.py --manifest experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/manifest.json --json-out experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/dispatch_readiness_preflight.json --fail-if-not-ready",
+      "json_out": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/dispatch_readiness_preflight.json",
+      "returncode": 0,
+      "schema": "hnerv_lowlevel_dispatch_readiness_preflight_refresh_v1",
+      "stderr_tail": "",
+      "stdout_tail": "{\n  \"blockers\": [],\n  \"candidate_id\": \"pr106_q10_151byte_brotli\",\n  \"dispatch_performed\": false,\n  \"lane_claim\": {\n    \"active_conflicts\": [],\n    \"checked\": false,\n    \"claims_path\": null,\n    \"lane_id\": \"pr106_q10_151byte_brotli\"\n  },\n  \"manifest_path\": \"experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/manifest.json\",\n  \"ready_for_exact_eval_dispatch\": true,\n  \"remote_jobs_dispatched\": false,\n  \"schema\": \"candidate_manifest_dispatch_readiness_preflight_v1\",\n  \"score_claim\": false,\n  \"warnings\": [\n    {\n      \"code\": \"lane_claim_still_required\",\n      \"detail\": \"dispatch_gate='eligible_for_cuda_auth_eval_after_lane_claim'; verify active Level-2 lane claim before GPU dispatch\"\n    }\n  ]\n}\n"
+    },
+    "public_replay_preflight": {
+      "command": ".venv/bin/python experiments/preflight_public_replay_intake.py --archive experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip --inflate-sh experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh --upstream-dir upstream --expected-archive-sha256 626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7 --expected-archive-size-bytes 186088 --json-out experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/public_replay_preflight.json --fail-if-not-ready",
+      "json_out": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/public_replay_preflight.json",
+      "returncode": 0,
+      "schema": "hnerv_lowlevel_public_replay_preflight_refresh_v1",
+      "stderr_tail": "",
+      "stdout_tail": "3e4443\"\n        },\n        {\n          \"bytes\": 1866,\n          \"path\": \"src/stages/stage8_muon_finetune.py\",\n          \"root\": \"experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders\",\n          \"sha256\": \"9e036c99b7fc58fa24f954be251bebb5af4cddd3b84fe408b9ebc2b94b58ed5f\"\n        },\n        {\n          \"bytes\": 2488,\n          \"path\": \"src/train.py\",\n          \"root\": \"experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders\",\n          \"sha256\": \"d88610929db7f42b7a3522a77ded29b2a9a4e7abe63eae7bc5915fa4b8e58b79\"\n        }\n      ],\n      \"runtime_root\": \"experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter\",\n      \"source_bytes_py_sh\": 70104,\n      \"status\": \"passed\",\n      \"violations\": []\n    },\n    \"status\": \"passed\"\n  },\n  \"schema\": \"public_replay_intake_preflight_v1\",\n  \"score_claim\": false,\n  \"tool\": \"experiments/preflight_public_replay_intake.py\"\n}\n"
+    },
+    "release_surface_generation": {
+      "files": {
+        "archive.zip": {
+          "bytes": 186088,
+          "exists": true,
+          "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/archive.zip",
+          "sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7"
+        },
+        "archive_manifest.json": {
+          "bytes": 2392,
+          "exists": true,
+          "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/archive_manifest.json",
+          "sha256": "ed59c6f7c8e37e441d6a1f978567b29b645b7d0b45d5f66fc1b2974475187745"
+        },
+        "inflate.sh": {
+          "bytes": 631,
+          "exists": true,
+          "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/inflate.sh",
+          "sha256": "ae5c88193316a1ec1cbe9d6d6ba4cb2149a4f674ef018bffdeb8a5cb59e1bf83"
+        },
+        "report.txt": {
+          "bytes": 1160,
+          "exists": true,
+          "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/report.txt",
+          "sha256": "cb7deaa93801cca50e31591402edc36efc068f7689fd1e7d92bdd112347c823d"
+        }
+      },
+      "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface",
+      "schema": "hnerv_lowlevel_release_surface_generation_v1"
+    },
+    "static_compliance": {
+      "command": ".venv/bin/python scripts/pre_submission_compliance_check.py --submission-dir experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface --archive experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/archive.zip --archive-manifest-json experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/archive_manifest.json --expect-single-member 0.bin --expected-archive-sha256 626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7 --expected-archive-size-bytes 186088 --public-scan-path experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface --json-out experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/pre_submission_compliance.json --strict",
+      "json_out": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/pre_submission_compliance.json",
+      "returncode": 0,
+      "schema": "hnerv_lowlevel_static_compliance_refresh_v1",
+      "stderr_tail": "",
+      "stdout_tail": ""
+    }
+  },
+  "release_surface": {
+    "exists": true,
+    "files": {
+      "archive.zip": {
+        "bytes": 186088,
+        "exists": true,
+        "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/archive.zip",
+        "sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7"
+      },
+      "archive_manifest.json": {
+        "bytes": 2392,
+        "exists": true,
+        "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/archive_manifest.json",
+        "sha256": "ed59c6f7c8e37e441d6a1f978567b29b645b7d0b45d5f66fc1b2974475187745"
+      },
+      "inflate.sh": {
+        "bytes": 631,
+        "exists": true,
+        "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/inflate.sh",
+        "sha256": "ae5c88193316a1ec1cbe9d6d6ba4cb2149a4f674ef018bffdeb8a5cb59e1bf83"
+      },
+      "report.txt": {
+        "bytes": 1160,
+        "exists": true,
+        "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/report.txt",
+        "sha256": "cb7deaa93801cca50e31591402edc36efc068f7689fd1e7d92bdd112347c823d"
+      }
+    },
+    "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface",
+    "schema": "hnerv_lowlevel_release_surface_status_v1"
+  },
+  "remote_gpu_run": false,
+  "schema": "hnerv_lowlevel_exact_eval_operator_packet_v1",
+  "schema_version": 1,
+  "score_blockers": [
+    "exact_cuda_auth_eval_not_run_for_candidate",
+    "contest_auth_eval_adjudication_not_run_for_candidate",
+    "operator_score_claim_review_not_done"
+  ],
+  "score_claim": false,
+  "source_archive_bytes": 186239,
+  "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+  "source_payload_sha256": null,
+  "static_blockers": [],
+  "static_packet_ready": true,
+  "submit_blockers": [
+    "missing_lightning_environment",
+    "missing_active_lane_dispatch_claim",
+    "missing_operator_exact_cuda_approval"
+  ],
+  "tool": "tools/build_hnerv_lowlevel_exact_eval_packet.py",
+  "validation_checks": [
+    {
+      "detail": false,
+      "name": "candidate_result_score_claim_false",
+      "passed": true
+    },
+    {
+      "detail": false,
+      "name": "candidate_result_dispatch_attempted_false",
+      "passed": true
+    },
+    {
+      "detail": true,
+      "name": "candidate_result_archive_preflight_ready",
+      "passed": true
+    },
+    {
+      "detail": {
+        "bytes": 186088,
+        "exists": true,
+        "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip",
+        "sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7"
+      },
+      "name": "candidate_archive_exists",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+        "expected": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7"
+      },
+      "name": "candidate_archive_sha256_matches_result",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": 186088,
+        "expected": 186088
+      },
+      "name": "candidate_archive_bytes_matches_result",
+      "passed": true
+    },
+    {
+      "detail": {
+        "candidate_archive_sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+        "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+      },
+      "name": "candidate_archive_sha256_differs_from_source",
+      "passed": true
+    },
+    {
+      "detail": {
+        "candidate_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+        "source_payload_sha256": null
+      },
+      "name": "candidate_payload_sha256_differs_from_source",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": "0.bin",
+        "expected": "0.bin"
+      },
+      "name": "candidate_archive_single_member_matches_result",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+        "expected": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171"
+      },
+      "name": "candidate_payload_sha256_matches_archive_member",
+      "passed": true
+    },
+    {
+      "detail": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+      "name": "source_archive_path_present",
+      "passed": true
+    },
+    {
+      "detail": {
+        "bytes": 186239,
+        "exists": true,
+        "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+        "sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+      },
+      "name": "source_archive_exists",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+        "expected": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+      },
+      "name": "source_archive_sha256_matches_result",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual": 186239,
+        "expected": 186239
+      },
+      "name": "source_archive_bytes_matches_result",
+      "passed": true
+    },
+    {
+      "detail": "dict",
+      "name": "candidate_diff_audit_object_present",
+      "passed": true
+    },
+    {
+      "detail": [],
+      "name": "candidate_diff_audit_blocker_free",
+      "passed": true
+    },
+    {
+      "detail": true,
+      "name": "candidate_diff_audit_ready_for_archive_preflight",
+      "passed": true
+    },
+    {
+      "detail": -151,
+      "name": "candidate_diff_audit_total_byte_delta_negative",
+      "passed": true
+    },
+    {
+      "detail": {
+        "count": 1,
+        "sections": [
+          "packed_header_ff_len24",
+          "decoder_packed_brotli"
+        ]
+      },
+      "name": "linked_header_control_change_count",
+      "passed": true
+    },
+    {
+      "detail": {
+        "count": 1,
+        "sections": [
+          "packed_header_ff_len24",
+          "decoder_packed_brotli"
+        ]
+      },
+      "name": "single_payload_brotli_section_change",
+      "passed": true
+    },
+    {
+      "detail": {
+        "byte_delta": 0,
+        "candidate_bytes": 4,
+        "candidate_section_sha256": "c670d1bee2140039bc6fc23599dd4bdc2ec00a659e0815945a7d60cfe6daccc7",
+        "changed": true,
+        "label": "PR106",
+        "optimization_role": "control_or_metadata",
+        "score_claim": false,
+        "section_name": "packed_header_ff_len24",
+        "source_bytes": 4,
+        "source_section_sha256": "7939f08db7d18dd4176e8e11b1232a9be6b2371db7a4e63c1c0871fb520148b6"
+      },
+      "name": "linked_header_change_is_byte_neutral_control",
+      "passed": true
+    },
+    {
+      "detail": {
+        "byte_delta": -151,
+        "candidate_bytes": 170127,
+        "candidate_section_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+        "changed": true,
+        "label": "PR106",
+        "optimization_role": "decoder_weight_stream",
+        "score_claim": false,
+        "section_name": "decoder_packed_brotli",
+        "source_bytes": 170278,
+        "source_section_sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004"
+      },
+      "name": "payload_change_is_rate_positive",
+      "passed": true
+    },
+    {
+      "detail": {
+        "candidate_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+        "raw_bytes": 229070,
+        "raw_equal": true,
+        "section_name": "decoder_packed_brotli",
+        "source_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703"
+      },
+      "name": "payload_change_raw_equivalence_closed",
+      "passed": true
+    }
+  ]
+}

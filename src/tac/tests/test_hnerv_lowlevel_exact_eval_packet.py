@@ -190,7 +190,43 @@ def test_lowlevel_exact_eval_packet_cli_materializes_packet(tmp_path: Path) -> N
     assert packet["artifacts"]["release_surface"].endswith("release_surface")
 
 
-def _write_lowlevel_fixture(root: Path) -> dict[str, object]:
+def test_lowlevel_exact_eval_packet_accepts_public_pr106_member_name(tmp_path: Path) -> None:
+    fixture = _write_lowlevel_fixture(tmp_path, member_name="0.bin")
+    result_dir = tmp_path / "public_member_packet"
+
+    args = module.build_arg_parser().parse_args(
+        [
+            "--candidate-result",
+            str(fixture["result_json"]),
+            "--archive",
+            str(fixture["candidate_archive"]),
+            "--baseline-json",
+            str(fixture["baseline_json"]),
+            "--inflate-sh",
+            str(fixture["inflate_sh"]),
+            "--upstream-dir",
+            str(fixture["upstream_dir"]),
+            "--result-dir",
+            str(result_dir),
+            "--release-surface-dir",
+            str(result_dir / "release_surface"),
+            "--now-utc",
+            "2026-05-07T12:00:00Z",
+        ]
+    )
+
+    packet = module.build_packet(args)
+
+    assert packet["static_packet_ready"] is True
+    compliance = json.loads((result_dir / "pre_submission_compliance.json").read_text(encoding="utf-8"))
+    assert compliance["passed"] is True
+    release_manifest = json.loads(
+        (result_dir / "release_surface" / "archive_manifest.json").read_text(encoding="utf-8")
+    )
+    assert release_manifest["archive"]["path"] == "archive.zip"
+
+
+def _write_lowlevel_fixture(root: Path, *, member_name: str = "x") -> dict[str, object]:
     source_decoder_raw = (b"decoder-record-" * 3000) + b"source"
     latent_raw = b"latent-row-" * 2000
     source_decoder = brotli.compress(source_decoder_raw, quality=1)
@@ -204,8 +240,8 @@ def _write_lowlevel_fixture(root: Path) -> dict[str, object]:
 
     source_archive = root / "source.zip"
     candidate_archive = root / "candidate.zip"
-    write_stored_single_member_zip(source_archive, member_name="x", payload=source_payload)
-    write_stored_single_member_zip(candidate_archive, member_name="x", payload=candidate_payload)
+    write_stored_single_member_zip(source_archive, member_name=member_name, payload=source_payload)
+    write_stored_single_member_zip(candidate_archive, member_name=member_name, payload=candidate_payload)
 
     inflate_sh = _write_runtime(root / "runtime")
     upstream_dir = root / "upstream"
@@ -214,7 +250,13 @@ def _write_lowlevel_fixture(root: Path) -> dict[str, object]:
     baseline_json = root / "baseline.json"
     baseline_json.write_text("{}\n", encoding="utf-8")
     result_json = root / "result.json"
-    result = _candidate_result(source_archive, candidate_archive, source_payload, candidate_payload)
+    result = _candidate_result(
+        source_archive,
+        candidate_archive,
+        source_payload,
+        candidate_payload,
+        member_name=member_name,
+    )
     result_json.write_text(json_text(result), encoding="utf-8")
     return {
         "source_archive": source_archive,
@@ -253,7 +295,14 @@ def _archive_bytes(path: Path) -> int:
     return path.stat().st_size
 
 
-def _candidate_result(source_archive: Path, candidate_archive: Path, source_payload: bytes, candidate_payload: bytes) -> dict:
+def _candidate_result(
+    source_archive: Path,
+    candidate_archive: Path,
+    source_payload: bytes,
+    candidate_payload: bytes,
+    *,
+    member_name: str,
+) -> dict:
     source_decoder_len = int.from_bytes(source_payload[1:4], "little")
     candidate_decoder_len = int.from_bytes(candidate_payload[1:4], "little")
     source_header = source_payload[:4]
@@ -269,9 +318,9 @@ def _candidate_result(source_archive: Path, candidate_archive: Path, source_payl
     decoder_byte_delta = len(candidate_decoder) - len(source_decoder)
     archive_byte_delta = _archive_bytes(candidate_archive) - _archive_bytes(source_archive)
     with zipfile.ZipFile(source_archive) as zf:
-        source_member_bytes = len(zf.read("x"))
+        source_member_bytes = len(zf.read(member_name))
     with zipfile.ZipFile(candidate_archive) as zf:
-        candidate_member_bytes = len(zf.read("x"))
+        candidate_member_bytes = len(zf.read(member_name))
     return {
         "schema_version": 1,
         "tool": "tac.hnerv_lowlevel_packer.build_lowlevel_brotli_repack_candidate",
@@ -283,13 +332,13 @@ def _candidate_result(source_archive: Path, candidate_archive: Path, source_payl
         "source_archive_path": str(source_archive),
         "source_archive_sha256": source_archive_sha,
         "source_archive_bytes": _archive_bytes(source_archive),
-        "source_member_name": "x",
+        "source_member_name": member_name,
         "source_payload_sha256": source_payload_sha,
         "source_payload_bytes": source_member_bytes,
         "candidate_archive_path": str(candidate_archive),
         "candidate_archive_sha256": candidate_archive_sha,
         "candidate_archive_bytes": _archive_bytes(candidate_archive),
-        "candidate_member_name": "x",
+        "candidate_member_name": member_name,
         "candidate_payload_sha256": candidate_payload_sha,
         "candidate_payload_bytes": candidate_member_bytes,
         "brotli_raw_equivalence": [

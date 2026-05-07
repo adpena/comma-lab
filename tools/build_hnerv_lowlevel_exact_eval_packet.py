@@ -679,6 +679,12 @@ def refresh_public_replay_preflight(args: argparse.Namespace) -> dict[str, Any]:
 
 def refresh_static_compliance(args: argparse.Namespace) -> dict[str, Any]:
     output = args.result_dir / "pre_submission_compliance.json"
+    candidate_result = read_json(_repo_path(args.candidate_result))
+    if not isinstance(candidate_result, dict):
+        raise ValueError(f"candidate result must be a JSON object: {args.candidate_result}")
+    expected_member = str(candidate_result.get("candidate_member_name") or "")
+    if not expected_member:
+        raise ValueError("candidate result missing candidate_member_name")
     cmd = [
         sys.executable,
         "scripts/pre_submission_compliance_check.py",
@@ -689,7 +695,7 @@ def refresh_static_compliance(args: argparse.Namespace) -> dict[str, Any]:
         "--archive-manifest-json",
         (args.release_surface_dir / "archive_manifest.json").as_posix(),
         "--expect-single-member",
-        "x",
+        expected_member,
         "--expected-archive-sha256",
         args.archive_sha256,
         "--expected-archive-size-bytes",
