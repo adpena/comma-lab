@@ -9,6 +9,15 @@ if [[ "${ALLOW_REPLAY_EXACT_NEGATIVE_PMG:-0}" != "1" ]]; then
   exit 88
 fi
 
+# Stage 0: NVDEC probe — fail in <30s on bad-NVDEC hosts before any cost.
+# Per feedback_vastai_nvdec_host_variation, NVDEC failure rate is ~30-50% across
+# Vast.ai host pools. Even though scripts/remote_archive_only_eval.sh probes
+# again before the eval, hoisting the probe ahead of source-SHA validation
+# and archive-copy keeps the failure-detection time at minimum.
+if [ "${SKIP_NVDEC_PROBE:-0}" != "1" ] && [ -f "$WORKSPACE/scripts/probe_nvdec.sh" ]; then
+  bash "$WORKSPACE/scripts/probe_nvdec.sh" || exit 2
+fi
+
 OUT="experiments/results/vast_live_harvest/pmg_hotspot_c067_h100_20260502T1350Z"
 CANDIDATE_DIR="experiments/results/pmg_hotspot_candidate_c067_20260502"
 ARCHIVE_SRC="$CANDIDATE_DIR/archive.zip"

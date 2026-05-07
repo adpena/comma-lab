@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# NO_NVDEC_NEEDED — thin delegating wrapper. The canonical driver
+# scripts/remote_lane_sjkl_c067.sh declares NO_NVDEC_NEEDED itself
+# (operates on already-decoded tensor inputs from
+# SJKL_PREPARED_TENSOR_DIR; no NVDEC path involved). This wrapper only
+# overrides env defaults before exec'ing that driver, so the same
+# opt-out applies textually here for the static
+# check_remote_scripts_probe_nvdec_early scanner.
+#
 # SJ-KL C067 v3 bounded diagnostic wrapper.
 #
 # This is the narrow successor to the v2 L40S diagnostic:
