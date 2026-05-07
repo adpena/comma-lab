@@ -1,5 +1,40 @@
 # writeup working notes
 
+## 2026-05-07 cross-PR lineage finding
+
+The top-3 medal entries in the May 4 race all build on PR #100 (BradyMeighan,
+hnerv_lc_v2, 0.1954) as their archive substrate. None of them are bespoke
+from-scratch codecs:
+
+- gold (PR #101 SajayR, 0.193) = PR #100 substrate + schema-driven
+  split-Brotli + per-tensor byte-map permutations
+- silver (PR #103 rem2, 0.195) = PR #100 substrate + arithmetic-coding
+  bolt-on, 241 LOC across 2 files
+- bronze (PR #102 EthanYangTW, 0.195) = PR #100 archive bytes verbatim +
+  inference-time scale 0.0095 + frame-0 channel nudges, ZERO new codec work
+
+The strategic shape: at this score band the contest does not reward
+from-scratch codec design. Public PRs are checkpoints that lock in score
+AND publish the exact compress/inflate code, and once that code is public
+every other team can fork it and start bolting on. Engineering velocity
+becomes the differentiator. Three teams reached medal-band scores by adding
+focused engineering deltas to one prior submission's archive layout.
+
+A substrate-mismatch corollary follows. PR101's per-tensor byte-maps were
+tuned against PR101's fine-tuned weights; on the PR106 substrate the
+empirical saving was only -241 bytes (a 33x shortfall vs the -7,963 bytes
+the same code achieved on PR101's own substrate). Codec wins are not
+portable across substrates without retuning. Our `tac.pr101_split_brotli_codec`
+ships an `auto_select_byte_maps` derivation precisely because of this, and
+the four-way stack predictions are framed as multiplicative on jointly
+trained weights, not additive on borrowed substrates.
+
+Cross-references with full byte-level evidence:
+- `.omx/research/pr_extended_bit_level_lineage_pr95_pr100_pr101_pr103_20260507_claude.md`
+- `.omx/research/findings.md` (top entry, 2026-05-07)
+- `docs/paper/06_related_work.md` §6.4 PR lineage and bolt-on engineering
+- `.omx/research/four_way_stack_composition_contract_20260507_claude.md`
+
 ## current state - 2026-05-04
 
 The writeup is now a contest-faithful semantic-bundle story centered on the
