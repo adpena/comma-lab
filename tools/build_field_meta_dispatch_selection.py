@@ -936,6 +936,13 @@ def _candidate_interaction_assumptions(payload: Mapping[str, Any]) -> list[str]:
         ("selected_target", "meta_lagrangian_atom_export", "atom_template", "interaction_assumptions"),
     ):
         values.extend(_string_list(_nested(payload, path)))
+    if not values and str(payload.get("family") or "") == "hnerv_lowlevel_brotli_repack":
+        values.extend(
+            [
+                "rate_only_raw_equivalent_brotli_repack",
+                "component_deltas_require_exact_cuda_confirmation",
+            ]
+        )
     return _ordered_unique_strings(values)
 
 
@@ -2226,7 +2233,12 @@ def _row_for_manifest(
         "byte_delta": _byte_delta(payload),
         "expected_total_score_delta": _numeric_first(
             payload,
-            ("expected_total_score_delta", "rate_score_delta_vs_source_estimate", "score_delta"),
+            (
+                "expected_total_score_delta",
+                "expected_total_score_delta_rate_only",
+                "rate_score_delta_vs_source_estimate",
+                "score_delta",
+            ),
         ),
         "expected_seg_dist_delta": expected_seg_delta,
         "expected_pose_dist_delta": expected_pose_delta,

@@ -165,6 +165,38 @@ def test_field_meta_selector_ingests_hnerv_lowlevel_result_manifest_as_local_can
     assert row["selection_decision"] == "strict_candidate_preflight_refused"
 
 
+def test_field_meta_selector_uses_hnerv_rate_only_packet_delta(tmp_path: Path) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="pr106_q10_151byte_brotli",
+        family_group="hnerv_lowlevel_brotli_repack",
+        pareto_scope="hnerv_rate_only_exact_archive",
+        lane_id="pr106_q10_151byte_brotli",
+        job_name="exact_eval_pr106_q10_151byte_brotli_20260507",
+        expected_score_delta=0.0,
+        byte_delta=-151,
+    )
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload.pop("expected_total_score_delta")
+    payload["family"] = "hnerv_lowlevel_brotli_repack"
+    payload["expected_total_score_delta_rate_only"] = -0.00010054470192144788
+    payload.pop("interaction_assumptions")
+    manifest.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    assert row["byte_delta"] == -151
+    assert row["expected_total_score_delta"] == -0.00010054470192144788
+    assert row["field_selection_score_delta"] == -0.000100544702
+    assert row["interaction_assumptions"] == [
+        "rate_only_raw_equivalent_brotli_repack",
+        "component_deltas_require_exact_cuda_confirmation",
+    ]
+    assert row["field_interaction_contract"]["status"] == "passed"
+    assert "field_interaction_contract_blocked" not in row["exact_dispatch_blockers"]["blockers"]
+
+
 def test_field_meta_selector_summarizes_nested_static_compliance_refresh() -> None:
     manifest = (
         REPO
