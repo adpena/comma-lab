@@ -19,7 +19,9 @@ from tac.hnerv_pr101_schema_packer import (
     DECODER_STREAM_ENDS,
     FP16_SCALE_PROBE_VARIANT_NAME,
     VARIANT_NAME,
+    HnervPr101SchemaPackerError,
     build_pr101_schema_archive_candidate,
+    decode_pr101_schema_or_legacy_decoder_raw,
     decode_pr101_schema_split_fixture,
     decode_pr101_schema_split_fp16_scale_probe,
     encode_pr101_schema_split_fixture,
@@ -107,6 +109,44 @@ def test_pr101_schema_runtime_adapter_restores_legacy_brotli_payload() -> None:
     assert passthrough_payload == legacy_payload
     assert passthrough["mode"] == "legacy_brotli_passthrough"
     assert passthrough["legacy_decode_without_adapter"] is True
+    assert (
+        passthrough["decoder_section_adapter_proof"]["mode"]
+        == "legacy_pr106_brotli"
+    )
+
+
+def test_runtime_decoder_section_adapter_content_detects_and_fails_closed() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+    schema_stream, _stats = encode_pr101_schema_split_fixture(parsed)
+    legacy_decoder = brotli.compress(parsed.to_raw(), quality=5)
+
+    legacy_raw, legacy_proof = decode_pr101_schema_or_legacy_decoder_raw(legacy_decoder)
+    schema_raw, schema_proof = decode_pr101_schema_or_legacy_decoder_raw(schema_stream)
+    required_schema_raw, required_schema_proof = decode_pr101_schema_or_legacy_decoder_raw(
+        schema_stream,
+        require_pr101_schema=True,
+    )
+
+    assert legacy_raw == parsed.to_raw()
+    assert schema_raw == parsed.to_raw()
+    assert required_schema_raw == parsed.to_raw()
+    assert legacy_proof["mode"] == "legacy_pr106_brotli"
+    assert schema_proof["mode"] == "pr101_schema_split_brotli"
+    assert required_schema_proof["mode"] == "pr101_schema_split_brotli"
+    assert legacy_proof["legacy_decode_without_adapter"] is True
+    assert schema_proof["legacy_decode_without_adapter"] is False
+    assert schema_proof["runtime_consumable_decoder_raw"] is True
+    assert schema_proof["fail_closed_unknown_decoder_section"] is True
+
+    with pytest.raises(HnervPr101SchemaPackerError, match="not PR101 schema-split"):
+        decode_pr101_schema_or_legacy_decoder_raw(
+            legacy_decoder,
+            require_pr101_schema=True,
+        )
+    with pytest.raises(HnervPr101SchemaPackerError, match="neither valid legacy"):
+        decode_pr101_schema_or_legacy_decoder_raw(b"not-a-decoder-section")
+    with pytest.raises(HnervPr101SchemaPackerError, match="raw length mismatch"):
+        decode_pr101_schema_or_legacy_decoder_raw(brotli.compress(b"bad raw", quality=5))
 
 
 def test_build_pr101_schema_archive_candidate_allows_forensic_archive_with_override(
@@ -141,6 +181,16 @@ def test_build_pr101_schema_archive_candidate_allows_forensic_archive_with_overr
     assert manifest["runtime_adapter_proof"]["schema_payload_adapter_parity_closed"] is True
     assert manifest["runtime_adapter_proof"]["candidate_legacy_decode_without_adapter"] is False
     assert manifest["runtime_adapter_proof"]["ready_for_public_runtime_inflate"] is True
+    assert manifest["runtime_decoder_section_adapter"]["adapter_code_path_ready"] is True
+    assert manifest["runtime_decoder_section_adapter"]["submission_runtime_patch_applied"] is False
+    assert (
+        manifest["runtime_decoder_section_adapter"]["candidate_decoder_adapter_proof"]["mode"]
+        == "pr101_schema_split_brotli"
+    )
+    assert (
+        "pr101_schema_submission_runtime_callsite_not_patched"
+        in manifest["runtime_decoder_section_adapter"]["integration_blockers"]
+    )
     expected_classification = (
         "stack_candidate"
         if manifest["candidate_decoder_section_byte_delta"] < 0

@@ -37,6 +37,7 @@ TOOL = "tac.hnerv_pr101_schema_packer.build_pr101_schema_archive_candidate"
 VARIANT_NAME = "pr101_schema_split_brotli_f32_scale_raw_equal"
 FP16_SCALE_PROBE_VARIANT_NAME = "pr101_schema_split_brotli_fp16_scale_runtime_probe"
 LEGACY_BROTLI_QUALITY = 10
+RUNTIME_DECODER_ADAPTER_CONTRACT = "pr101_schema_runtime_decoder_section_adapter_v1"
 
 DECODER_STORAGE_ORDER = (
     14, 22, 7, 6, 19, 10, 25, 4, 20, 9, 12, 15, 5, 11,
@@ -74,6 +75,63 @@ class HnervPr101SchemaPackerError(ValueError):
     """Raised when a PR101 schema-packing input is invalid."""
 
 
+def decode_pr101_schema_or_legacy_decoder_raw(
+    decoder_section: bytes,
+    *,
+    require_pr101_schema: bool = False,
+) -> tuple[bytes, dict[str, Any]]:
+    """Return PR106 packed-decoder raw bytes from a supported decoder section.
+
+    This is the runtime-facing adapter contract. It content-detects the
+    decoder section as either legacy PR106 single-Brotli bytes or PR101
+    schema-split concatenated Brotli bytes. Unknown, ambiguous, truncated, or
+    length-invalid sections raise :class:`HnervPr101SchemaPackerError` before
+    any score-affecting decode can proceed.
+    """
+
+    if not decoder_section:
+        raise HnervPr101SchemaPackerError("empty HNeRV decoder section")
+
+    if not require_pr101_schema:
+        try:
+            raw_decoder = brotli.decompress(decoder_section)
+        except brotli.error as legacy_exc:
+            legacy_error = str(legacy_exc) or legacy_exc.__class__.__name__
+        else:
+            _validate_packed_decoder_raw(raw_decoder, label="legacy PR106 Brotli decoder")
+            return raw_decoder, _runtime_decoder_section_adapter_proof(
+                mode="legacy_pr106_brotli",
+                input_decoder=decoder_section,
+                output_raw_decoder=raw_decoder,
+                legacy_decode_without_adapter=True,
+                require_pr101_schema=require_pr101_schema,
+            )
+    else:
+        legacy_error = "skipped because require_pr101_schema=True"
+
+    try:
+        restored = decode_pr101_schema_split_fixture(decoder_section)
+    except HnervPr101SchemaPackerError as schema_exc:
+        if require_pr101_schema:
+            raise HnervPr101SchemaPackerError(
+                f"decoder section is not PR101 schema-split: {schema_exc}"
+            ) from schema_exc
+        raise HnervPr101SchemaPackerError(
+            "decoder section is neither valid legacy PR106 Brotli nor PR101 "
+            f"schema-split; legacy_error={legacy_error}; schema_error={schema_exc}"
+        ) from schema_exc
+
+    raw_decoder = restored.to_raw()
+    _validate_packed_decoder_raw(raw_decoder, label="PR101 schema-split decoder")
+    return raw_decoder, _runtime_decoder_section_adapter_proof(
+        mode="pr101_schema_split_brotli",
+        input_decoder=decoder_section,
+        output_raw_decoder=raw_decoder,
+        legacy_decode_without_adapter=False,
+        require_pr101_schema=require_pr101_schema,
+    )
+
+
 def restore_pr101_schema_payload_to_legacy_brotli(
     payload: bytes,
     *,
@@ -94,39 +152,49 @@ def restore_pr101_schema_payload_to_legacy_brotli(
     input_decoder_sha = sha256_bytes(decoder)
     input_latents_sha = sha256_bytes(packed.latents_and_sidecar_brotli)
 
+    raw_decoder = b""
+    decoder_adapter_proof: dict[str, Any] | None = None
     if not require_pr101_schema:
         try:
-            raw_decoder = brotli.decompress(decoder)
-        except brotli.error:
-            raw_decoder = b""
-        else:
-            proof = _runtime_adapter_payload_proof(
-                mode="legacy_brotli_passthrough",
-                input_payload=payload,
-                output_payload=payload,
-                input_decoder_sha=input_decoder_sha,
-                output_decoder_sha=input_decoder_sha,
-                input_decoder_bytes=len(decoder),
-                output_decoder_bytes=len(decoder),
-                raw_decoder=raw_decoder,
-                restored_raw_decoder=raw_decoder,
-                input_latents_sha=input_latents_sha,
-                output_latents_sha=input_latents_sha,
-                brotli_quality=None,
-                legacy_decode_without_adapter=True,
+            raw_decoder, decoder_adapter_proof = decode_pr101_schema_or_legacy_decoder_raw(
+                decoder
             )
-            return payload, proof
+        except HnervPr101SchemaPackerError:
+            decoder_adapter_proof = None
+        else:
+            if decoder_adapter_proof["mode"] == "legacy_pr106_brotli":
+                proof = _runtime_adapter_payload_proof(
+                    mode="legacy_brotli_passthrough",
+                    input_payload=payload,
+                    output_payload=payload,
+                    input_decoder_sha=input_decoder_sha,
+                    output_decoder_sha=input_decoder_sha,
+                    input_decoder_bytes=len(decoder),
+                    output_decoder_bytes=len(decoder),
+                    raw_decoder=raw_decoder,
+                    restored_raw_decoder=raw_decoder,
+                    input_latents_sha=input_latents_sha,
+                    output_latents_sha=input_latents_sha,
+                    brotli_quality=None,
+                    legacy_decode_without_adapter=True,
+                    decoder_section_adapter_proof=decoder_adapter_proof,
+                )
+                return payload, proof
 
-    try:
-        raw_decoder = decode_pr101_schema_split_fixture(decoder).to_raw()
-    except HnervPr101SchemaPackerError as exc:
-        if require_pr101_schema:
+    if decoder_adapter_proof is None or decoder_adapter_proof["mode"] != "pr101_schema_split_brotli":
+        try:
+            raw_decoder, decoder_adapter_proof = decode_pr101_schema_or_legacy_decoder_raw(
+                decoder,
+                require_pr101_schema=True,
+            )
+        except HnervPr101SchemaPackerError as exc:
+            if require_pr101_schema:
+                raise HnervPr101SchemaPackerError(
+                    f"payload decoder section is not PR101 schema-split: {exc}"
+                ) from exc
             raise HnervPr101SchemaPackerError(
-                f"payload decoder section is not PR101 schema-split: {exc}"
+                "decoder section is neither legacy Brotli nor PR101 schema-split"
             ) from exc
-        raise HnervPr101SchemaPackerError(
-            "decoder section is neither legacy Brotli nor PR101 schema-split"
-        ) from exc
 
     restored_decoder = brotli.compress(raw_decoder, quality=brotli_quality)
     try:
@@ -157,6 +225,7 @@ def restore_pr101_schema_payload_to_legacy_brotli(
         output_latents_sha=sha256_bytes(packed.latents_and_sidecar_brotli),
         brotli_quality=brotli_quality,
         legacy_decode_without_adapter=False,
+        decoder_section_adapter_proof=decoder_adapter_proof,
     )
     return restored_payload, proof
 
@@ -383,18 +452,29 @@ def build_pr101_schema_archive_candidate(
             == packed.latents_and_sidecar_brotli
         ),
     )
+    runtime_decoder_adapter = _runtime_decoder_section_adapter_report(
+        source_decoder_section=packed.decoder_packed_brotli,
+        candidate_decoder_section=stream,
+        candidate_decoder_raw_equal=raw_equal,
+    )
     fp16_probe_delta = len(fp16_probe_stream) - len(packed.decoder_packed_brotli)
+    dispatch_blockers = list(
+        dict.fromkeys(
+            [
+                *blockers,
+                *runtime_adapter["dispatch_blockers"],
+                *runtime_decoder_adapter["integration_blockers"],
+                "strict_pre_submission_compliance_json_missing",
+                "lane_dispatch_claim_missing",
+                "exact_cuda_auth_eval_missing",
+            ]
+        )
+    )
     hidden_gem_classification = _f32_hidden_gem_classification(
         byte_delta=byte_delta,
         raw_equal=raw_equal,
         runtime_adapter=runtime_adapter,
-        dispatch_blockers=[
-            *blockers,
-            *runtime_adapter["dispatch_blockers"],
-            "strict_pre_submission_compliance_json_missing",
-            "lane_dispatch_claim_missing",
-            "exact_cuda_auth_eval_missing",
-        ],
+        dispatch_blockers=dispatch_blockers,
     )
     manifest: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
@@ -473,15 +553,10 @@ def build_pr101_schema_archive_candidate(
             "raw_equal": raw_equal,
         },
         "runtime_adapter_proof": runtime_adapter,
+        "runtime_decoder_section_adapter": runtime_decoder_adapter,
         "hidden_gem_classification": hidden_gem_classification,
         "archive_build_blockers": blockers,
-        "dispatch_blockers": [
-            *blockers,
-            *runtime_adapter["dispatch_blockers"],
-            "strict_pre_submission_compliance_json_missing",
-            "lane_dispatch_claim_missing",
-            "exact_cuda_auth_eval_missing",
-        ],
+        "dispatch_blockers": dispatch_blockers,
     }
     write_json(output_root / "pr101_schema_archive_candidate_manifest.json", manifest)
     return manifest
@@ -584,9 +659,14 @@ def _decompress_concatenated_brotli_streams(payload: bytes, n_streams: int) -> b
     for _ in range(n_streams):
         decoder = brotli.Decompressor()
         chunks: list[bytes] = []
-        while cursor < len(payload) and not decoder.is_finished():
-            chunks.append(decoder.process(payload[cursor : cursor + 1]))
-            cursor += 1
+        try:
+            while cursor < len(payload) and not decoder.is_finished():
+                chunks.append(decoder.process(payload[cursor : cursor + 1]))
+                cursor += 1
+        except brotli.error as exc:
+            raise HnervPr101SchemaPackerError(
+                "invalid PR101 schema Brotli stream"
+            ) from exc
         if not decoder.is_finished():
             raise HnervPr101SchemaPackerError("truncated PR101 schema Brotli stream")
         outputs.append(b"".join(chunks))
@@ -726,6 +806,91 @@ def _runtime_adapter_blocker_report(
     }
 
 
+def _runtime_decoder_section_adapter_report(
+    *,
+    source_decoder_section: bytes,
+    candidate_decoder_section: bytes,
+    candidate_decoder_raw_equal: bool,
+) -> dict[str, Any]:
+    source_raw = b""
+    candidate_raw = b""
+    blockers: list[str] = []
+    try:
+        source_raw, source_proof = decode_pr101_schema_or_legacy_decoder_raw(
+            source_decoder_section
+        )
+    except HnervPr101SchemaPackerError as exc:
+        source_proof = {
+            "provided": False,
+            "error": str(exc),
+            "runtime_consumable_decoder_raw": False,
+        }
+        blockers.append("pr101_schema_source_decoder_adapter_rejected")
+    try:
+        candidate_raw, candidate_proof = decode_pr101_schema_or_legacy_decoder_raw(
+            candidate_decoder_section,
+            require_pr101_schema=True,
+        )
+    except HnervPr101SchemaPackerError as exc:
+        candidate_proof = {
+            "provided": False,
+            "error": str(exc),
+            "runtime_consumable_decoder_raw": False,
+        }
+        blockers.append("pr101_schema_candidate_decoder_adapter_rejected")
+
+    candidate_raw_equal_to_source = (
+        bool(source_raw)
+        and bool(candidate_raw)
+        and sha256_bytes(source_raw) == sha256_bytes(candidate_raw)
+        and candidate_decoder_raw_equal
+    )
+    adapter_code_path_ready = (
+        candidate_raw_equal_to_source
+        and source_proof.get("runtime_consumable_decoder_raw") is True
+        and candidate_proof.get("runtime_consumable_decoder_raw") is True
+    )
+    if not adapter_code_path_ready:
+        blockers.append("pr101_schema_runtime_decoder_adapter_not_closed")
+    integration_blockers = [
+        *blockers,
+        "pr101_schema_submission_runtime_adapter_not_integrated",
+        "pr101_schema_submission_runtime_callsite_not_patched",
+        "pr101_schema_runtime_tree_parity_manifest_missing",
+        "pr101_schema_inflate_output_parity_missing",
+    ]
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "contract": RUNTIME_DECODER_ADAPTER_CONTRACT,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "content_detection_order": [
+            "legacy_pr106_single_brotli",
+            "pr101_schema_split_concatenated_brotli",
+        ],
+        "fail_closed_unknown_decoder_section": True,
+        "source_decoder_adapter_proof": source_proof,
+        "candidate_decoder_adapter_proof": candidate_proof,
+        "source_decoder_raw_sha256": sha256_bytes(source_raw) if source_raw else "",
+        "candidate_decoder_raw_sha256": (
+            sha256_bytes(candidate_raw) if candidate_raw else ""
+        ),
+        "candidate_decoder_raw_equal_to_source": candidate_raw_equal_to_source,
+        "adapter_code_path_ready": adapter_code_path_ready,
+        "ready_for_runtime_callsite_patch": adapter_code_path_ready,
+        "runtime_patch_owned_by_this_turn": False,
+        "submission_runtime_patch_applied": False,
+        "runtime_tree_parity_manifest_present": False,
+        "inflate_output_parity_present": False,
+        "ready_for_exact_eval_dispatch": False,
+        "integration_targets": [
+            "submissions/pr106_latent_sidecar/src/codec.py::decode_packed_decoder",
+            "submissions/apogee_v2/src/codec.py::decode_packed_decoder",
+        ],
+        "integration_blockers": list(dict.fromkeys(integration_blockers)),
+    }
+
+
 def _runtime_adapter_payload_proof(
     *,
     mode: str,
@@ -741,6 +906,7 @@ def _runtime_adapter_payload_proof(
     output_latents_sha: str,
     brotli_quality: int | None,
     legacy_decode_without_adapter: bool,
+    decoder_section_adapter_proof: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     raw_sha = sha256_bytes(raw_decoder)
     restored_raw_sha = sha256_bytes(restored_raw_decoder)
@@ -770,6 +936,7 @@ def _runtime_adapter_payload_proof(
         "latents_and_sidecar_output_sha256": output_latents_sha,
         "latents_and_sidecar_preserved": latents_preserved,
         "legacy_brotli_quality": brotli_quality,
+        "decoder_section_adapter_proof": decoder_section_adapter_proof or {},
         "ready_for_public_runtime_inflate": raw_equal and latents_preserved,
         "ready_for_exact_eval_dispatch": False,
         "remaining_dispatch_blockers": [
@@ -850,6 +1017,59 @@ def _read_exact(payload: bytes, cursor: int, size: int, label: str) -> bytes:
     return payload[cursor:end]
 
 
+def _validate_packed_decoder_raw(raw_decoder: bytes, *, label: str) -> None:
+    q_bytes = sum(_prod(shape) for _name, shape in PACKED_STATE_SCHEMA)
+    expected = q_bytes + 4 * len(PACKED_STATE_SCHEMA)
+    if len(raw_decoder) != expected:
+        raise HnervPr101SchemaPackerError(
+            f"{label} raw length mismatch: expected {expected}, got {len(raw_decoder)}"
+        )
+    scales = np.frombuffer(raw_decoder[q_bytes:], dtype="<f4")
+    if scales.size != len(PACKED_STATE_SCHEMA):
+        raise HnervPr101SchemaPackerError(
+            f"{label} scale count mismatch: expected {len(PACKED_STATE_SCHEMA)}, got {scales.size}"
+        )
+    if not np.all(np.isfinite(scales)):
+        raise HnervPr101SchemaPackerError(f"{label} contains non-finite decoder scales")
+
+
+def _runtime_decoder_section_adapter_proof(
+    *,
+    mode: str,
+    input_decoder: bytes,
+    output_raw_decoder: bytes,
+    legacy_decode_without_adapter: bool,
+    require_pr101_schema: bool,
+) -> dict[str, Any]:
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "contract": RUNTIME_DECODER_ADAPTER_CONTRACT,
+        "mode": mode,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "require_pr101_schema": require_pr101_schema,
+        "legacy_decode_without_adapter": legacy_decode_without_adapter,
+        "input_decoder_section_sha256": sha256_bytes(input_decoder),
+        "input_decoder_section_bytes": len(input_decoder),
+        "output_decoder_raw_sha256": sha256_bytes(output_raw_decoder),
+        "output_decoder_raw_bytes": len(output_raw_decoder),
+        "expected_decoder_raw_bytes": sum(
+            _prod(shape) for _name, shape in PACKED_STATE_SCHEMA
+        )
+        + 4 * len(PACKED_STATE_SCHEMA),
+        "runtime_consumable_decoder_raw": True,
+        "fail_closed_unknown_decoder_section": True,
+        "adapter_code_path_ready": True,
+        "ready_for_exact_eval_dispatch": False,
+        "remaining_integration_blockers": [
+            "submission_runtime_decode_packed_decoder_callsite_not_patched",
+            "runtime_tree_parity_manifest_missing",
+            "inflate_output_parity_missing",
+            "exact_cuda_auth_eval_missing",
+        ],
+    }
+
+
 def _prod(shape: tuple[int, ...]) -> int:
     value = 1
     for dim in shape:
@@ -871,6 +1091,7 @@ __all__ = [
     "VARIANT_NAME",
     "HnervPr101SchemaPackerError",
     "build_pr101_schema_archive_candidate",
+    "decode_pr101_schema_or_legacy_decoder_raw",
     "decode_pr101_schema_split_fixture",
     "decode_pr101_schema_split_fp16_scale_probe",
     "encode_pr101_schema_split_fixture",
