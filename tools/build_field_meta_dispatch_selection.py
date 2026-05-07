@@ -1577,15 +1577,131 @@ def _normalize_apogee_intn_repack_metadata(
     normalized.setdefault("expected_seg_dist_delta", 0.0)
     normalized.setdefault("expected_pose_dist_delta", 0.0)
     normalized.setdefault("expected_information_gain_nats", 0.0)
+    evidence = _find_apogee_readiness_evidence(
+        normalized,
+        candidate_id=str(normalized["candidate_id"]),
+        candidate_sha256=str(candidate_sha),
+        repo_root=repo_root,
+        manifest_path=manifest_path,
+    )
+    if evidence is not None:
+        evidence_path, evidence_payload = evidence
+        normalized["readiness_evidence_path"] = repo_relative(evidence_path, repo_root)
+        normalized["readiness_evidence_sha256"] = sha256_file(evidence_path)
+        normalized["readiness_evidence_semantics"] = evidence_payload.get("evidence_semantics")
+        normalized["scorer_basin_parity_status"] = evidence_payload.get("scorer_basin_parity_status")
+        normalized["distortion_model_status"] = "scorer_basin_parity_gate"
+        normalized["readiness_evidence_ready_for_exact_eval_dispatch"] = (
+            evidence_payload.get("ready_for_exact_eval_dispatch") is True
+        )
+        component_penalty = _apogee_readiness_component_score_penalty(evidence_payload)
+        rate_delta = _optional_numeric(normalized.get("rate_component_score_delta_vs_pr106"))
+        if component_penalty is not None and rate_delta is not None:
+            normalized["component_penalty_score_delta_from_readiness_evidence"] = component_penalty
+            normalized["expected_total_score_delta"] = rate_delta + component_penalty
+            normalized["expected_total_score_delta_source"] = (
+                "rate_component_score_delta_vs_pr106_plus_readiness_component_penalty"
+            )
+            normalized["proxy_row"] = False
+            normalized["evidence_grade"] = "empirical_calibration_not_score_lowering"
+            normalized["score_lowering_evidence"] = normalized["expected_total_score_delta"] < 0.0
+            if normalized["expected_total_score_delta"] >= 0.0:
+                normalized["pareto_scope"] = "apogee_intN_calibration_component_penalty"
+                normalized["dispatch_blockers"] = _ordered_unique_strings(
+                    [
+                        *(_string_list(normalized.get("dispatch_blockers"))),
+                        "readiness_component_penalty_overwhelms_rate_gain",
+                    ]
+                )
+        report = evidence_payload.get("parity_report")
+        if isinstance(report, Mapping):
+            pose_delta = _optional_numeric(report.get("pose_dist_delta"))
+            seg_delta = _optional_numeric(report.get("seg_dist_delta"))
+            if pose_delta is not None:
+                normalized["expected_pose_dist_delta"] = pose_delta
+            if seg_delta is not None:
+                normalized["expected_seg_dist_delta"] = seg_delta
     artifact_paths = [
         *(_path_values(normalized.get("artifact_paths"))),
         archive_path,
         repo_relative(manifest_path, repo_root),
     ]
+    if evidence is not None:
+        artifact_paths.append(repo_relative(evidence[0], repo_root))
     normalized["artifact_paths"] = _ordered_unique_strings(
         path for path in artifact_paths if path
     )
     return normalized
+
+
+def _find_apogee_readiness_evidence(
+    payload: Mapping[str, Any],
+    *,
+    candidate_id: str,
+    candidate_sha256: str,
+    repo_root: Path,
+    manifest_path: Path,
+) -> tuple[Path, Mapping[str, Any]] | None:
+    paths: list[Path] = []
+    for value in (
+        payload.get("readiness_evidence_json"),
+        payload.get("readiness_evidence_path"),
+        payload.get("scorer_basin_parity_evidence_json"),
+    ):
+        path = _resolve_local_path(value, repo_root=repo_root, manifest_dir=manifest_path.parent)
+        if path is not None:
+            paths.append(path)
+    paths.extend(sorted(repo_root.glob(f"experiments/results/{candidate_id}_basin_parity_*/parity_evidence.json")))
+    seen: set[Path] = set()
+    for path in paths:
+        try:
+            resolved = path.resolve()
+        except OSError:
+            continue
+        if resolved in seen or not resolved.is_file():
+            continue
+        seen.add(resolved)
+        try:
+            evidence_payload = read_json(resolved)
+        except (OSError, ValueError):
+            continue
+        if not isinstance(evidence_payload, Mapping):
+            continue
+        if evidence_payload.get("candidate_archive_sha256") != candidate_sha256:
+            continue
+        if evidence_payload.get("evidence_semantics") != "scorer_basin_parity_gate":
+            continue
+        if evidence_payload.get("scorer_basin_parity_status") not in {"pass", "passed"}:
+            continue
+        return resolved, evidence_payload
+    return None
+
+
+def _apogee_readiness_component_score_penalty(evidence_payload: Mapping[str, Any]) -> float | None:
+    report = evidence_payload.get("parity_report")
+    if not isinstance(report, Mapping):
+        report = {}
+    seg_delta = _optional_numeric(evidence_payload.get("seg_dist_delta"))
+    if seg_delta is None:
+        seg_delta = _optional_numeric(report.get("seg_dist_delta"))
+    pose_lossless = _optional_numeric(report.get("pose_dist_lossless"))
+    pose_quantized = _optional_numeric(report.get("pose_dist_quantized"))
+    pose_delta = _optional_numeric(evidence_payload.get("pose_dist_delta"))
+    if pose_delta is None:
+        pose_delta = _optional_numeric(report.get("pose_dist_delta"))
+    if seg_delta is None and pose_lossless is None and pose_quantized is None and pose_delta is None:
+        return None
+    seg_penalty = 100.0 * max(float(seg_delta or 0.0), 0.0)
+    pose_penalty = 0.0
+    if pose_lossless is not None and pose_quantized is not None:
+        pose_penalty = max(
+            (10.0 * max(pose_quantized, 0.0)) ** 0.5
+            - (10.0 * max(pose_lossless, 0.0)) ** 0.5,
+            0.0,
+        )
+    elif pose_delta is not None:
+        pose_penalty = max((10.0 * max(pose_delta, 0.0)) ** 0.5, 0.0)
+    return seg_penalty + pose_penalty
 
 
 def _normalize_manifest_payload(
@@ -2437,6 +2553,9 @@ def _row_for_manifest(
         expected_pose_dist_delta=expected_pose_delta,
     )
     selector_blockers = _unique_strings(rate_only_delta_proof["blockers"])
+    if payload.get("score_lowering_evidence") is False:
+        selector_blockers.append("readiness_component_penalty_overwhelms_rate_gain")
+        selector_blockers = _unique_strings(selector_blockers)
     selector_static_ready = bool(static_ready and not selector_blockers)
     blockers = _unique_strings([*static_blockers, *selector_blockers, *dispatch_blockers])
     ready = bool(selector_static_ready and claim["active_lane_claim"] and not dispatch_blockers)
@@ -2496,6 +2615,17 @@ def _row_for_manifest(
         "interaction_assumptions": interaction_assumptions,
         "field_interaction_contract": field_interaction_contract,
         "evidence_grade": evidence_grade,
+        "readiness_evidence_path": str(payload.get("readiness_evidence_path") or ""),
+        "readiness_evidence_sha256": str(payload.get("readiness_evidence_sha256") or ""),
+        "readiness_evidence_semantics": str(payload.get("readiness_evidence_semantics") or ""),
+        "readiness_evidence_ready_for_exact_eval_dispatch": (
+            payload.get("readiness_evidence_ready_for_exact_eval_dispatch")
+        ),
+        "scorer_basin_parity_status": str(payload.get("scorer_basin_parity_status") or ""),
+        "component_penalty_score_delta_from_readiness_evidence": _optional_numeric(
+            payload.get("component_penalty_score_delta_from_readiness_evidence")
+        ),
+        "score_lowering_evidence": payload.get("score_lowering_evidence"),
         "proxy_row": proxy_row,
         "confidence": _candidate_confidence(payload),
         "score_claim": False,

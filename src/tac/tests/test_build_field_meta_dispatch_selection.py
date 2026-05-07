@@ -290,6 +290,60 @@ def test_field_meta_selector_normalizes_apogee_intn_forensic_metadata(tmp_path: 
     assert row["rate_only_delta_proof"]["status"] == "not_applicable"
 
 
+def test_field_meta_selector_ingests_apogee_parity_evidence_as_calibration(tmp_path: Path) -> None:
+    archive = tmp_path / "apogee_int6_archive.zip"
+    info = zipfile.ZipInfo("0.bin")
+    info.date_time = (1980, 1, 1, 0, 0, 0)
+    info.external_attr = 0o644 << 16
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr(info, bytes([0xA6]) + b"fixture-apogee-int6")
+    evidence = tmp_path / "parity_evidence.json"
+    evidence.write_text(
+        json.dumps(
+            {
+                "candidate_archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+                "evidence_semantics": "scorer_basin_parity_gate",
+                "parity_report": {
+                    "pose_dist_lossless": 0.0001678224216448143,
+                    "pose_dist_quantized": 0.00027574982959777117,
+                    "seg_dist_delta": 0.0009618123876862228,
+                },
+                "ready_for_exact_eval_dispatch": True,
+                "scorer_basin_parity_status": "pass",
+            }
+        ),
+        encoding="utf-8",
+    )
+    metadata = {
+        "archive_path": archive.as_posix(),
+        "archive_size_bytes": archive.stat().st_size,
+        "bits": 6,
+        "candidate_archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+        "delta_bytes": -15789,
+        "rate_component_score_delta_vs_pr106": -0.010513247010845963,
+        "readiness_evidence_json": evidence.as_posix(),
+        "ready_for_exact_eval_dispatch": False,
+        "score_affecting_payload_changed": True,
+        "score_claim": False,
+        "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+    }
+    manifest = tmp_path / "repack_metadata.json"
+    manifest.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    assert row["readiness_evidence_semantics"] == "scorer_basin_parity_gate"
+    assert row["scorer_basin_parity_status"] == "pass"
+    assert row["proxy_row"] is False
+    assert row["pareto_scope"] == "apogee_intN_calibration_component_penalty"
+    assert row["expected_total_score_delta"] > 0.09
+    assert row["expected_total_score_delta_source"] == (
+        "expected_total_score_delta"
+    )
+    assert "readiness_component_penalty_overwhelms_rate_gain" in row["candidate_blockers"]
+
+
 def test_field_meta_selector_summarizes_nested_static_compliance_refresh() -> None:
     manifest = (
         REPO
