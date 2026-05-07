@@ -14,6 +14,7 @@ import json
 import re
 from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
 from tac.optimization.research_basis import research_basis_ids_for_family
@@ -300,6 +301,14 @@ def atoms_from_wr01_wavelet_plan(
         section_name = str(plan.get("changed_section_name") or "section")
         source_label = str(plan.get("lane_id") or plan.get("job_name") or "wr01_exact_eval")
         atom_id = f"wr01_wavelet:{_slug(source_label)}:{_slug(section_name)}:exact_eval_packet"
+        archive_manifest_path = _first_str(
+            plan,
+            keys=("archive_manifest_path", "candidate_archive_manifest_path"),
+        ) or _artifact_path_for_suffix(plan.get("artifacts"), "/manifest.json")
+        archive_manifest_sha256 = _first_str(
+            plan,
+            keys=("archive_manifest_sha256", "candidate_archive_manifest_sha256"),
+        ) or _sha256_file_if_exists(archive_manifest_path)
         return [
             normalize_cross_paradigm_atom(
                 {
@@ -320,12 +329,8 @@ def atoms_from_wr01_wavelet_plan(
                         "stack_after_raw_equal_rate_recodes",
                         "exact_eval_packet_documents_byte_closed_archive",
                     ],
-                    "archive_manifest_path": str(
-                        plan.get("artifacts", {}).get("manifest_path", "")
-                        if isinstance(plan.get("artifacts"), Mapping)
-                        else ""
-                    ) or evidence_source_path,
-                    "archive_manifest_sha256": str(plan.get("archive_sha256") or ""),
+                    "archive_manifest_path": archive_manifest_path,
+                    "archive_manifest_sha256": archive_manifest_sha256,
                     "source_archive_sha256": str(plan.get("source_archive_sha256") or ""),
                     "evidence_grade": "exact_eval_packet_byte_closed",
                     "evidence_source_path": evidence_source_path,
@@ -426,10 +431,28 @@ def atoms_from_categorical_openpilot_mask_plan(
 
     plan_grade = str(plan.get("evidence_grade") or "prediction")
     source_archive_sha256 = _first_str(plan, keys=("source_archive_sha256", "input_archive_sha256"))
+    archive_manifest_path = _first_str(
+        plan,
+        keys=("archive_manifest_path", "candidate_archive_manifest_path"),
+    )
+    archive_manifest_sha256 = _first_str(
+        plan,
+        keys=("archive_manifest_sha256", "candidate_archive_manifest_sha256"),
+    )
     atoms: list[dict[str, Any]] = []
     for source_name, row in _categorical_rows(plan):
         family = str(row.get("family") or row.get("atom_family") or source_name or "mask_atom")
-        row_id = str(row.get("atom_id") or row.get("policy_name") or _stable_digest(row)[:12])
+        class_id = _first_present(row, "class_id", "comma10k_id", default=None)
+        row_id = str(
+            row.get("atom_id")
+            or row.get("policy_name")
+            or (
+                f"class_{class_id}_{row.get('name')}"
+                if class_id is not None and row.get("name")
+                else ""
+            )
+            or _stable_digest(row)[:12]
+        )
         score_saved_proxy = _float_value(
             _first_present(
                 row,
@@ -477,12 +500,14 @@ def atoms_from_categorical_openpilot_mask_plan(
                 row,
                 plan,
                 keys=("archive_manifest_path", "candidate_archive_manifest_path"),
-            ),
+            )
+            or archive_manifest_path,
             "archive_manifest_sha256": _first_str(
                 row,
                 plan,
                 keys=("archive_manifest_sha256", "candidate_archive_manifest_sha256"),
-            ),
+            )
+            or archive_manifest_sha256,
             "evidence_grade": str(row.get("evidence_grade") or plan_grade),
             "dispatch_blockers": _unique_strings(
                 [
@@ -494,12 +519,13 @@ def atoms_from_categorical_openpilot_mask_plan(
             ),
             "pair_support": _int_list(row.get("pair_indices") or row.get("pair_support")),
             "hard_pair_support": _int_list(row.get("hard_pair_support")),
-            "class_support": _int_list(row.get("class_ids") or row.get("class_support")),
+            "class_support": _int_list(row.get("class_ids") or row.get("class_support") or class_id),
             "geometry_priors": _string_list(row.get("geometry_priors")),
             "openpilot_priors": _unique_strings(
                 [
                     *_string_list(plan.get("openpilot_priors")),
                     *_string_list(row.get("openpilot_priors")),
+                    *_string_list(row.get("openpilot_prior_hint")),
                     *(["openpilot_prior_required"] if _plan_mentions_openpilot(plan, row) else []),
                 ]
             ),
@@ -695,7 +721,11 @@ def _wr01_apply_manifest_atom(
         keys=("archive_manifest_sha256", "candidate_archive_manifest_sha256", "manifest_sha256"),
     )
     if manifest_path and not manifest_sha and evidence_source_sha256:
-        manifest_sha = evidence_source_sha256
+        manifest_sha = (
+            _sha256_file_if_exists(manifest_path)
+            if manifest_path != evidence_source_path
+            else evidence_source_sha256
+        )
     return {
         "adapter": "wr01_wavelet_apply_manifest",
         "paradigm": "wr01_wavelet",
@@ -740,6 +770,13 @@ def _wr01_apply_manifest_atom(
 def _categorical_rows(plan: Mapping[str, Any]) -> list[tuple[str, Mapping[str, Any]]]:
     rows: list[tuple[str, Mapping[str, Any]]] = []
     rows.extend(("top_atoms", row) for row in _mapping_rows(plan.get("top_atoms") or []))
+    rows.extend(("class_rows", row) for row in _mapping_rows(plan.get("class_rows") or []))
+    candidate_construction_plan = plan.get("candidate_construction_plan")
+    if isinstance(candidate_construction_plan, Mapping):
+        rows.extend(
+            ("candidate_construction_plan_class_rows", row)
+            for row in _mapping_rows(candidate_construction_plan.get("class_rows") or [])
+        )
     atom_tables = plan.get("atom_tables")
     if isinstance(atom_tables, Mapping):
         for table_name in sorted(str(key) for key in atom_tables):
@@ -756,6 +793,41 @@ def _categorical_rows(plan: Mapping[str, Any]) -> list[tuple[str, Mapping[str, A
             for row in _mapping_rows(plan.get("candidate_policies") or [])
         )
     return sorted(rows, key=lambda item: (item[0], str(item[1].get("atom_id") or item[1].get("policy_name") or _stable_digest(item[1]))))
+
+
+def _artifact_path_for_suffix(value: Any, suffix: str) -> str:
+    """Return the first artifact path ending in ``suffix`` from list/dict payloads."""
+
+    paths: list[str] = []
+    if isinstance(value, Mapping):
+        for item in value.values():
+            if isinstance(item, str):
+                paths.append(item)
+            elif isinstance(item, Mapping) and isinstance(item.get("path"), str):
+                paths.append(str(item["path"]))
+    elif isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        for item in value:
+            if isinstance(item, str):
+                paths.append(item)
+            elif isinstance(item, Mapping) and isinstance(item.get("path"), str):
+                paths.append(str(item["path"]))
+    for path in sorted(paths):
+        if path.endswith(suffix):
+            return path
+    return ""
+
+
+def _sha256_file_if_exists(path_value: str) -> str:
+    if not path_value:
+        return ""
+    path = Path(path_value)
+    if not path.is_file():
+        return ""
+    h = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def _lapose_rows(payload: Mapping[str, Any]) -> list[Mapping[str, Any]]:

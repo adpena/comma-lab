@@ -24,7 +24,20 @@ REPO = Path(__file__).resolve().parents[3]
 
 
 def test_all_required_paradigm_adapters_emit_common_fields(tmp_path: Path) -> None:
-    archive_manifest = _archive_manifest(tmp_path)
+    archive_manifest = tmp_path / "manifest.json"
+    archive_manifest.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "candidate_archive_bytes": 186222,
+                "candidate_archive_sha256": "d" * 64,
+                "score_claim": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     manifest_sha = sha256_file(archive_manifest)
     hnerv = atoms_from_hnerv_rate_recode_profile(
         {
@@ -192,6 +205,38 @@ def test_adapters_are_deterministic_under_input_order_changes() -> None:
 
     assert forward == reverse
     assert [atom["atom_id"] for atom in forward] == sorted(atom["atom_id"] for atom in forward)
+
+
+def test_categorical_readiness_candidate_construction_class_rows_surface() -> None:
+    atoms = atoms_from_categorical_openpilot_mask_plan(
+        {
+            "evidence_grade": "planning_manifest",
+            "source_archive_sha256": "a" * 64,
+            "dispatch_blockers": ["real_byte_closed_archive_parity_missing"],
+            "candidate_construction_plan": {
+                "class_rows": [
+                    {
+                        "class_id": 1,
+                        "name": "lane_markings",
+                        "default_quant_bits": 8,
+                        "openpilot_prior_hint": "lane_marking_track_prior",
+                        "semantic_priority_weight_ppm": 266667,
+                    }
+                ]
+            },
+        }
+    )
+
+    assert len(atoms) == 1
+    atom = atoms[0]
+    assert atom["atom_id"] == (
+        "categorical_openpilot_mask:candidate_construction_plan_class_rows:"
+        "class_1_lane_markings"
+    )
+    assert atom["class_support"] == [1]
+    assert "lane_marking_track_prior" in atom["openpilot_priors"]
+    assert "real_byte_closed_archive_parity_missing" in atom["dispatch_blockers"]
+    assert atom["source_archive_sha256"] == "a" * 64
 
 
 def test_invalid_confidence_and_duplicate_ids_fail_closed() -> None:
@@ -396,3 +441,55 @@ def test_atoms_from_wr01_wavelet_plan_three_schema_branches() -> None:
         f"ready_for_submit=True should boost confidence to 0.5, "
         f"got {branch3_ready[0]['confidence']}"
     )
+
+
+def test_wr01_exact_eval_packet_uses_artifact_manifest_for_byte_closed_custody(
+    tmp_path: Path,
+) -> None:
+    archive_manifest = tmp_path / "manifest.json"
+    archive_manifest.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "candidate_archive_bytes": 186222,
+                "candidate_archive_sha256": "d" * 64,
+                "score_claim": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    manifest_sha = sha256_file(archive_manifest)
+
+    atoms = atoms_from_wr01_wavelet_plan(
+        {
+            "archive_bytes": 186222,
+            "archive_sha256": "d" * 64,
+            "source_archive_bytes": 186231,
+            "source_archive_sha256": "e" * 64,
+            "changed_section_name": "latents_and_sidecar_brotli",
+            "ready_for_submit": False,
+            "lane_id": "wr01_apply_pr106x_half",
+            "artifacts": [
+                {"path": str(tmp_path / "runtime_decode_validation.json")},
+                {"path": archive_manifest.as_posix()},
+            ],
+        }
+    )
+
+    assert len(atoms) == 1
+    atom = atoms[0]
+    assert atom["archive_manifest_path"] == archive_manifest.as_posix()
+    assert atom["archive_manifest_sha256"] == manifest_sha
+
+    ledger = build_cross_paradigm_atom_ledger(
+        atoms,
+        base_pose_dist=0.00003351,
+        source="fixture",
+    )
+
+    row = ledger["rows"][0]
+    assert row["byte_closed_archive_manifest_attached"] is True
+    assert row["archive_manifest_custody"]["verified"] is True
+    assert row["archive_ready_for_stack_review"] is True
