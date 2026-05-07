@@ -13,6 +13,7 @@ from tac.hnerv_decoder_recode import (
     PACKED_STATE_SCHEMA,
     encode_global_prev_symbol_context_range_fixture,
     encode_global_prev_symbol_mixed_context_fixture,
+    encode_hdm3_q_brotli_split_fixture,
     parse_packed_decoder_brotli,
 )
 from tac.hnerv_entropy_candidate_packet import (
@@ -148,14 +149,32 @@ def test_hdc2_stream_work_product_closes_stream_requirements_but_not_archive(
     assert work_product["old_new_model_context_table_diff"]["raw_equal"] is True
     assert work_product["old_new_model_context_table_diff"]["header_bytes_delta"] < 0
     bounded = work_product["bounded_hdc2_recode_variants"]
-    assert len(bounded) == 1
-    assert bounded[0]["variant"] == (
+    assert len(bounded) == 2
+    hdm2 = next(
+        row
+        for row in bounded
+        if row["variant"]
+        == "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales"
+    )
+    hdm3 = next(
+        row
+        for row in bounded
+        if row["variant"] == "hdm3_q_brotli_split_fixed_schema_q_stream_plus_raw_scales"
+    )
+    assert hdm2["variant"] == (
         "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales"
     )
-    assert bounded[0]["raw_equal"] is True
-    assert bounded[0]["q_roundtrip_equal"] is True
-    assert bounded[0]["scale_roundtrip_equal"] is True
-    assert bounded[0]["archive_ready"] is False
+    assert hdm2["raw_equal"] is True
+    assert hdm2["q_roundtrip_equal"] is True
+    assert hdm2["scale_roundtrip_equal"] is True
+    assert hdm2["archive_ready"] is False
+    assert hdm3["codec"] == "HDM3_fixed_schema_q_brotli_raw_scales"
+    assert hdm3["raw_equal"] is True
+    assert hdm3["q_roundtrip_equal"] is True
+    assert hdm3["scale_roundtrip_equal"] is True
+    assert hdm3["header_bytes"] == 7
+    assert hdm3["q_brotli_bytes"] > 0
+    assert hdm3["candidate_stream_file"]["bytes"] == hdm3["bytes"]
 
     assert manifest["invalid_requirement_artifacts"] == []
     assert SOURCE_ARCHIVE_REQUIREMENT_ID not in manifest["missing_artifacts"]
@@ -439,6 +458,7 @@ def test_build_hnerv_entropy_candidate_packet_cli_materializes_hdc2_stream_work_
     assert proc.returncode == 1
     packet = json.loads(packet_out.read_text(encoding="utf-8"))
     assert (output_dir / "candidate_hdc2_global_prev_symbol_stream.bin").is_file()
+    assert (output_dir / "candidate_hdm3_q_brotli_split_stream.bin").is_file()
     assert (
         output_dir / f"{SOURCE_STREAM_REQUIREMENT_ID}.json"
     ).is_file()
@@ -600,6 +620,7 @@ def _write_hdc2_fixture(tmp_path: Path) -> dict[str, Path]:
     parsed = parse_packed_decoder_brotli(source_brotli)
     hdc2_payload, stats = encode_global_prev_symbol_context_range_fixture(parsed)
     hdm2_payload, hdm2_stats = encode_global_prev_symbol_mixed_context_fixture(parsed)
+    hdm3_payload, hdm3_stats = encode_hdm3_q_brotli_split_fixture(parsed)
     profile = {
         "schema_version": 1,
         "tool": "tac.hnerv_decoder_recode.build_structural_recode_profile",
@@ -660,6 +681,19 @@ def _write_hdc2_fixture(tmp_path: Path) -> dict[str, Path]:
                 "schema_metadata_elided_vs_hdc2_bytes": int(
                     hdm2_stats["schema_metadata_elided_vs_hdc2_bytes"]
                 ),
+            },
+            {
+                "variant": "hdm3_q_brotli_split_fixed_schema_q_stream_plus_raw_scales",
+                "codec": "HDM3_fixed_schema_q_brotli_raw_scales",
+                "bytes": len(hdm3_payload),
+                "header_bytes": int(hdm3_stats["header_bytes"]),
+                "q_brotli_bytes": int(hdm3_stats["q_brotli_bytes"]),
+                "q_stream_bytes": int(hdm3_stats["q_stream_bytes"]),
+                "raw_scale_bytes": int(hdm3_stats["raw_scale_bytes"]),
+                "raw_equal": True,
+                "q_roundtrip_equal": True,
+                "scale_roundtrip_equal": True,
+                "sha256": sha256_bytes(hdm3_payload),
             }
         ],
     }

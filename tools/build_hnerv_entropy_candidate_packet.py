@@ -265,6 +265,7 @@ def _materialize_hdc2_stream_work_product(args: argparse.Namespace) -> dict[str,
         args.hdc2_stream_work_product_source_archive,
         source_exact_eval_json_path=args.hdc2_stream_work_product_source_exact_eval_json,
         candidate_stream_path=candidate_stream_path,
+        bounded_candidate_stream_dir=output_dir,
         repo_root=REPO_ROOT,
     )
     named_payloads = {

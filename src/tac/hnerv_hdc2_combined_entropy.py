@@ -106,6 +106,8 @@ def build_hdc2_combined_entropy_manifest(
         remaining_after_bounded = bounded_candidate[
             "remaining_reduction_to_beat_frontier_section_bytes"
         ]
+        if bounded_candidate["archive_build_gate"] is not True:
+            blockers.append("bounded_candidate_archive_build_gate_not_passed")
         bounded_break_even = {
             "current_best_variant": bounded_candidate["variant"],
             "current_best_bytes": bounded_candidate["bytes"],
@@ -116,9 +118,12 @@ def build_hdc2_combined_entropy_manifest(
                 "reduce_raw_payload_bytes_with_secondary_entropy_code_or_run_model",
                 "elide_static_context_header_bytes_without_reintroducing_self_describing_schema",
             ],
-            "archive_build_gate": (
-                "candidate_stream_bytes_must_be_less_than_current_frontier_section_bytes"
+            "archive_build_gate": bounded_candidate["archive_build_gate"],
+            "archive_build_gate_rule": (
+                "candidate_stream_bytes_must_be_less_than_current_frontier_section_bytes_"
+                "and_raw_equality_closed"
             ),
+            "archive_build_gate_blockers": list(bounded_candidate["archive_build_gate_blockers"]),
         }
         byte_accounting.update(
             {
@@ -130,6 +135,9 @@ def build_hdc2_combined_entropy_manifest(
                     "net_byte_delta_vs_frontier_section"
                 ],
                 "remaining_reduction_to_beat_frontier_after_best_bounded_candidate_bytes": remaining_after_bounded,
+                "best_bounded_candidate_archive_build_gate": bounded_candidate[
+                    "archive_build_gate"
+                ],
             }
         )
     else:
@@ -232,6 +240,7 @@ def render_markdown(manifest: Mapping[str, Any]) -> str:
                 f"- net_byte_delta_vs_frontier_section: `{candidate.get('net_byte_delta_vs_frontier_section')}`",
                 f"- static_context_header_reduction_vs_hdc2: `{candidate.get('static_context_header_reduction_vs_hdc2_bytes')}`",
                 f"- payload_delta_vs_hdc2: `{candidate.get('payload_delta_vs_hdc2_bytes')}`",
+                f"- archive_build_gate: `{_bool_text(candidate.get('archive_build_gate') is True)}`",
                 f"- ready_for_exact_eval_dispatch: `{_bool_text(candidate.get('ready_for_exact_eval_dispatch') is True)}`",
                 "",
             ]
@@ -242,7 +251,8 @@ def render_markdown(manifest: Mapping[str, Any]) -> str:
                     "## Break-Even Gate",
                     "",
                     f"- remaining_reduction_to_beat_frontier_section_bytes: `{break_even.get('remaining_reduction_to_beat_frontier_section_bytes')}`",
-                    f"- archive_build_gate: `{break_even.get('archive_build_gate')}`",
+                    f"- archive_build_gate: `{_bool_text(break_even.get('archive_build_gate') is True)}`",
+                    f"- archive_build_gate_rule: `{break_even.get('archive_build_gate_rule')}`",
                     "",
                 ]
             )
@@ -280,23 +290,39 @@ def _best_bounded_candidate(
     for row in rows:
         if not isinstance(row, Mapping):
             continue
-        if not (
+        raw_equality_closed = (
             row.get("raw_equal") is True
             and row.get("q_roundtrip_equal") is True
             and row.get("scale_roundtrip_equal") is True
-        ):
+        )
+        if not raw_equality_closed:
             continue
         candidate_bytes = _positive_int(row.get("bytes"), "bounded_candidate_bytes")
         candidate_header = _optional_positive_int(row.get("header_bytes"), "candidate_header_bytes")
         raw_scale_bytes = _optional_nonnegative_int(row.get("raw_scale_bytes"), "raw_scale_bytes")
         mixed_payload = _optional_positive_int(row.get("mixed_payload_bytes"), "mixed_payload_bytes")
+        q_brotli_bytes = _optional_positive_int(row.get("q_brotli_bytes"), "q_brotli_bytes")
         net_delta_vs_frontier = candidate_bytes - frontier_section_bytes
+        archive_build_gate_blockers = []
+        if candidate_bytes >= frontier_section_bytes:
+            archive_build_gate_blockers.append(
+                "candidate_stream_bytes_not_less_than_current_frontier_section_bytes"
+            )
+        if not raw_equality_closed:
+            archive_build_gate_blockers.append("candidate_raw_equality_not_closed")
         candidate = {
             "variant": _nonempty_str(row.get("variant"), "bounded_candidate_variant"),
             "codec": row.get("codec"),
             "score_claim": False,
             "planning_only": True,
             "archive_ready": row.get("archive_ready") is True,
+            "archive_build_gate": not archive_build_gate_blockers,
+            "archive_build_gate_rule": (
+                "candidate_stream_bytes_must_be_less_than_current_frontier_section_bytes_"
+                "and_raw_equality_closed"
+            ),
+            "archive_build_gate_blockers": archive_build_gate_blockers,
+            "raw_equality_closed": raw_equality_closed,
             "ready_for_exact_eval_dispatch": False,
             "bytes": candidate_bytes,
             "byte_delta_vs_hdc2_bytes": candidate_bytes - actual_replacement_bytes,
@@ -315,10 +341,22 @@ def _best_bounded_candidate(
             candidate["static_context_header_reduction_vs_hdc2_bytes"] = (
                 model_overhead_bytes - candidate_header
             )
-        if mixed_payload is not None and raw_scale_bytes is not None:
+        if raw_scale_bytes is not None:
+            candidate["raw_scale_bytes"] = raw_scale_bytes
+        payload_for_hdc2_comparison = mixed_payload if mixed_payload is not None else q_brotli_bytes
+        if payload_for_hdc2_comparison is not None and raw_scale_bytes is not None:
             baseline_payload = actual_replacement_bytes - model_overhead_bytes - raw_scale_bytes
+            candidate["payload_delta_vs_hdc2_bytes"] = (
+                payload_for_hdc2_comparison - baseline_payload
+            )
+        if mixed_payload is not None:
             candidate["mixed_payload_bytes"] = mixed_payload
-            candidate["payload_delta_vs_hdc2_bytes"] = mixed_payload - baseline_payload
+        if q_brotli_bytes is not None:
+            candidate["q_brotli_bytes"] = q_brotli_bytes
+        for key in ("q_stream_bytes", "brotli_quality"):
+            value = _optional_positive_int(row.get(key), key)
+            if value is not None:
+                candidate[key] = value
         for key in (
             "raw_context_count",
             "range_context_count",
@@ -329,6 +367,9 @@ def _best_bounded_candidate(
             value = _optional_nonnegative_int(row.get(key), key)
             if value is not None:
                 candidate[key] = value
+        stream_file = row.get("candidate_stream_file")
+        if isinstance(stream_file, Mapping):
+            candidate["candidate_stream_file"] = dict(stream_file)
         candidates.append(candidate)
 
     if not candidates:

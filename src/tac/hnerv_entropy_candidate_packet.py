@@ -9,8 +9,10 @@ from typing import Any
 from tac.hnerv_decoder_recode import (
     decode_global_prev_symbol_context_range_fixture,
     decode_global_prev_symbol_mixed_context_fixture,
+    decode_hdm3_q_brotli_split_fixture,
     encode_global_prev_symbol_context_range_fixture,
     encode_global_prev_symbol_mixed_context_fixture,
+    encode_hdm3_q_brotli_split_fixture,
     parse_packed_decoder_brotli,
 )
 from tac.hnerv_lowlevel_packer import parse_ff_packed_brotli_hnerv, read_strict_single_member_zip
@@ -40,6 +42,7 @@ HDC2_STREAM_WORK_PRODUCT_TOOL_NAME = (
 STRUCTURAL_RECODE_TOOL_NAME = "tac.hnerv_decoder_recode.build_structural_recode_profile"
 HDC2_VARIANT_NAME = "range_prev_symbol_global_q_streams_plus_raw_scales"
 HDM2_VARIANT_NAME = "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales"
+HDM3_VARIANT_NAME = "hdm3_q_brotli_split_fixed_schema_q_stream_plus_raw_scales"
 DEFAULT_DISCOVERY_ROOTS = (
     "experiments/results",
     ".omx/research/artifacts",
@@ -278,6 +281,7 @@ def build_hdc2_stream_byte_equivalence_work_product(
     *,
     source_exact_eval_json_path: str | Path | None = None,
     candidate_stream_path: str | Path | None = None,
+    bounded_candidate_stream_dir: str | Path | None = None,
     repo_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Build byte-closed HDC2 stream manifests from an existing structural profile.
@@ -340,8 +344,13 @@ def build_hdc2_stream_byte_equivalence_work_product(
         profile,
         parsed=parsed,
         source_raw=source_raw,
+        output_dir=Path(bounded_candidate_stream_dir) if bounded_candidate_stream_dir else None,
+        repo_root=root,
     )
-    bounded_hdm2 = bounded_hdc2_recode_variants[0] if bounded_hdc2_recode_variants else None
+    bounded_hdm2 = next(
+        (row for row in bounded_hdc2_recode_variants if row["variant"] == HDM2_VARIANT_NAME),
+        None,
+    )
 
     if candidate_stream_path is not None:
         stream_path = Path(candidate_stream_path)
@@ -1012,12 +1021,44 @@ def _bounded_hdc2_recode_variants(
     *,
     parsed: Any,
     source_raw: bytes,
+    output_dir: Path | None,
+    repo_root: Path,
 ) -> list[dict[str, Any]]:
     """Return byte-closed bounded HDC2 follow-ups present in the source profile."""
 
+    candidates = []
+    hdm2 = _bounded_hdm2_recode_variant(
+        profile,
+        parsed=parsed,
+        source_raw=source_raw,
+        output_dir=output_dir,
+        repo_root=repo_root,
+    )
+    if hdm2 is not None:
+        candidates.append(hdm2)
+    hdm3 = _bounded_hdm3_recode_variant(
+        profile,
+        parsed=parsed,
+        source_raw=source_raw,
+        output_dir=output_dir,
+        repo_root=repo_root,
+    )
+    if hdm3 is not None:
+        candidates.append(hdm3)
+    return candidates
+
+
+def _bounded_hdm2_recode_variant(
+    profile: Mapping[str, Any],
+    *,
+    parsed: Any,
+    source_raw: bytes,
+    output_dir: Path | None,
+    repo_root: Path,
+) -> dict[str, Any] | None:
     hdm2 = _variant_by_name(profile, HDM2_VARIANT_NAME)
     if hdm2 is None:
-        return []
+        return None
     candidate_stream, stats = encode_global_prev_symbol_mixed_context_fixture(parsed)
     restored = decode_global_prev_symbol_mixed_context_fixture(candidate_stream)
     candidate_raw = restored.to_raw()
@@ -1040,30 +1081,106 @@ def _bounded_hdc2_recode_variants(
         key="mixed_payload_bytes",
         actual=int(stats["mixed_payload_bytes"]),
     )
-    return [
-        {
-            "variant": HDM2_VARIANT_NAME,
-            "codec": hdm2.get("codec"),
-            "bytes": len(candidate_stream),
-            "sha256": sha256_bytes(candidate_stream),
-            "raw_equal": candidate_raw == source_raw,
-            "q_roundtrip_equal": restored.q_stream == parsed.q_stream,
-            "scale_roundtrip_equal": restored.scale_stream == parsed.scale_stream,
-            "archive_ready": False,
-            "header_bytes": int(stats["header_bytes"]),
-            "mixed_payload_bytes": int(stats["mixed_payload_bytes"]),
-            "range_payload_bytes": int(stats["range_payload_bytes"]),
-            "raw_payload_bytes": int(stats["raw_payload_bytes"]),
-            "raw_scale_bytes": len(parsed.scale_stream),
-            "raw_context_count": int(stats["raw_context_count"]),
-            "range_context_count": int(stats["range_context_count"]),
-            "context_count": int(stats["context_count"]),
-            "context_token_count": int(stats["context_token_count"]),
-            "schema_metadata_elided_vs_hdc2_bytes": int(
-                stats["schema_metadata_elided_vs_hdc2_bytes"]
-            ),
+    return {
+        "variant": HDM2_VARIANT_NAME,
+        "codec": hdm2.get("codec"),
+        "bytes": len(candidate_stream),
+        "sha256": sha256_bytes(candidate_stream),
+        "raw_equal": candidate_raw == source_raw,
+        "q_roundtrip_equal": restored.q_stream == parsed.q_stream,
+        "scale_roundtrip_equal": restored.scale_stream == parsed.scale_stream,
+        "archive_ready": False,
+        "header_bytes": int(stats["header_bytes"]),
+        "mixed_payload_bytes": int(stats["mixed_payload_bytes"]),
+        "range_payload_bytes": int(stats["range_payload_bytes"]),
+        "raw_payload_bytes": int(stats["raw_payload_bytes"]),
+        "raw_scale_bytes": len(parsed.scale_stream),
+        "raw_context_count": int(stats["raw_context_count"]),
+        "range_context_count": int(stats["range_context_count"]),
+        "context_count": int(stats["context_count"]),
+        "context_token_count": int(stats["context_token_count"]),
+        "schema_metadata_elided_vs_hdc2_bytes": int(
+            stats["schema_metadata_elided_vs_hdc2_bytes"]
+        ),
+        "candidate_stream_file": _bounded_candidate_stream_file(
+            "candidate_hdm2_mixed_context_stream",
+            "candidate_hdm2_mixed_context_stream.bin",
+            candidate_stream,
+            output_dir=output_dir,
+            repo_root=repo_root,
+        ),
+    }
+
+
+def _bounded_hdm3_recode_variant(
+    profile: Mapping[str, Any],
+    *,
+    parsed: Any,
+    source_raw: bytes,
+    output_dir: Path | None,
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    hdm3 = _variant_by_name(profile, HDM3_VARIANT_NAME)
+    if hdm3 is None:
+        return None
+    candidate_stream, stats = encode_hdm3_q_brotli_split_fixture(parsed)
+    restored = decode_hdm3_q_brotli_split_fixture(candidate_stream)
+    candidate_raw = restored.to_raw()
+    _require_true(candidate_raw == source_raw, "hdm3.candidate_raw_equals_source_raw")
+    _require_profile_int_match(hdm3, key="bytes", actual=len(candidate_stream))
+    _require_profile_string_match(hdm3, key="sha256", actual=sha256_bytes(candidate_stream))
+    _require_profile_int_match(hdm3, key="header_bytes", actual=int(stats["header_bytes"]))
+    _require_profile_int_match(
+        hdm3,
+        key="q_brotli_bytes",
+        actual=int(stats["q_brotli_bytes"]),
+    )
+    _require_profile_int_match(hdm3, key="q_stream_bytes", actual=int(stats["q_stream_bytes"]))
+    _require_profile_int_match(hdm3, key="raw_scale_bytes", actual=int(stats["raw_scale_bytes"]))
+    return {
+        "variant": HDM3_VARIANT_NAME,
+        "codec": hdm3.get("codec"),
+        "bytes": len(candidate_stream),
+        "sha256": sha256_bytes(candidate_stream),
+        "raw_equal": candidate_raw == source_raw,
+        "q_roundtrip_equal": restored.q_stream == parsed.q_stream,
+        "scale_roundtrip_equal": restored.scale_stream == parsed.scale_stream,
+        "archive_ready": False,
+        "header_bytes": int(stats["header_bytes"]),
+        "q_brotli_bytes": int(stats["q_brotli_bytes"]),
+        "q_stream_bytes": int(stats["q_stream_bytes"]),
+        "raw_scale_bytes": int(stats["raw_scale_bytes"]),
+        "brotli_quality": int(stats["brotli_quality"]),
+        "fixed_schema": True,
+        "candidate_stream_file": _bounded_candidate_stream_file(
+            "candidate_hdm3_q_brotli_split_stream",
+            "candidate_hdm3_q_brotli_split_stream.bin",
+            candidate_stream,
+            output_dir=output_dir,
+            repo_root=repo_root,
+        ),
+    }
+
+
+def _bounded_candidate_stream_file(
+    record_id: str,
+    filename: str,
+    payload: bytes,
+    *,
+    output_dir: Path | None,
+    repo_root: Path,
+) -> dict[str, Any]:
+    if output_dir is None:
+        return {
+            "id": record_id,
+            "path": "",
+            "bytes": len(payload),
+            "sha256": sha256_bytes(payload),
         }
-    ]
+    path = output_dir / filename
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(payload)
+    return _file_record(record_id, path, repo_root)
 
 
 def _adapted_target_row(
