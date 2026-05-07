@@ -202,14 +202,43 @@ log "  masks.mkv extracted ($(stat -c '%s' "$LOG_DIR/extracted/masks.mkv" 2>/dev
 log "  Lane A poses to bundle: $ANCHOR_LANE_A_POSES"
 
 # ──────────────────────────────────────────────────────────────────────────
-# Stage 2: train Q-FAITHFUL JointFrameGenerator (NEW from epoch 0).
+# Stage 2: train Q-FAITHFUL JointFrameGenerator (auto-resume on preemption).
 # Dispatch to variant="quantizr_faithful" via the q_faithful_dilated_88k
 # profile. The 5-stage QAT happens inside train_renderer.py natively.
+#
+# AUTO-RESUME ENGINEERING (2026-05-07): preemption fix per
+# feedback_q_faithful_4090_preemption_redeploy_h100_20260501. Vast/Modal can
+# preempt mid-training (instance 35959478 was lost at ep 810/3000). Without
+# resume the next dispatch starts from epoch 0 → 800 epochs of GPU spend wasted.
+# Engineering fix: detect prior training_state_q_faithful_modal.pt under
+# $LOG_DIR/train/ (or override via RESUME_FROM env) and pass --resume-from
+# automatically. train_renderer.py already supports the flag — only the
+# dispatch wrapper was missing it.
 # ──────────────────────────────────────────────────────────────────────────
 log "=== Stage 2: train Q-FAITHFUL JointFrameGenerator (5-stage QAT) ==="
 log "   --profile q_faithful_dilated_88k (variant=quantizr_faithful)"
 log "   --eval-roundtrip + --kl-distill-weight 0.002 + --kl-distill-temperature 2.0"
 log "   total epochs ~3000; ~12h on RTX 4090"
+
+# Auto-resume: env override > local-disk auto-detect > start fresh.
+RESUME_ARGS=()
+RESUME_FROM="${RESUME_FROM:-}"
+if [ -z "$RESUME_FROM" ]; then
+    # Auto-detect newest training_state checkpoint from prior preempted run.
+    AUTO_RESUME=$(ls -t "$LOG_DIR/train/training_state_q_faithful_modal.pt" 2>/dev/null | head -1)
+    if [ -n "$AUTO_RESUME" ] && [ -f "$AUTO_RESUME" ]; then
+        RESUME_FROM="$AUTO_RESUME"
+        log "  AUTO-RESUME: detected $RESUME_FROM ($(stat -c '%s' "$RESUME_FROM" 2>/dev/null || stat -f '%z' "$RESUME_FROM") bytes)"
+    fi
+fi
+if [ -n "$RESUME_FROM" ]; then
+    [ -f "$RESUME_FROM" ] || { echo "FATAL: RESUME_FROM=$RESUME_FROM not a file" >&2; exit 3; }
+    RESUME_ARGS=(--resume-from "$RESUME_FROM")
+    log "  RESUMING from $RESUME_FROM (preempted run survives via auto-resume)"
+else
+    log "  NO resume checkpoint detected — starting fresh from epoch 0"
+fi
+
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 "$PYBIN" -u src/tac/experiments/train_renderer.py \
     --profile q_faithful_dilated_88k \
@@ -218,6 +247,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
     --tag q_faithful_modal \
     --qfaithful-training-poses "$ANCHOR_LANE_A_POSES" \
     --no-auth-eval-on-best \
+    "${RESUME_ARGS[@]}" \
     --output-dir "$LOG_DIR/train" 2>&1 | tee "$LOG_DIR/train.log" | tail -50
     PIPE_RC=("${PIPESTATUS[@]}")
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
