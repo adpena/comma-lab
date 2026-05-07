@@ -15,8 +15,11 @@ from tac.balle_hyperprior_codec import (
 from tac.joint_codec_stack_orchestrator import (
     JCSP_ARCHIVE_MEMBER_CONTRACT_SCHEMA,
     JCSP_ARCHIVE_MEMBER_NAME,
+    JCSP_RUNTIME_AQ_RAWVIDEO_ADAPTER_ID,
+    JCSP_RUNTIME_RAW_OUTPUT_CONSUMER_READINESS_SCHEMA,
     JCSP_RUNTIME_RAW_OUTPUT_PARITY_CONTRACT_SCHEMA,
     JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA,
+    JCSP_RUNTIME_REAL_AQ_PREFLIGHT_ADAPTER_ID,
     JCSP_STREAM_METADATA_SCHEMA,
     JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
     JCSP_SUBMISSION_RUNTIME_CONSUMPTION_SCHEMA,
@@ -271,9 +274,39 @@ def test_jcsp_noop_archive_fixture_is_deterministic_and_loader_consumes_member()
         "jcsp_runtime_bridge_emitted_rawvideo"
     )
     assert parity_contract["preexisting_raw_outputs_are_not_parity_proof"] is True
+    assert output_contract["bridge_has_fail_closed_raw_output_consumer"] is True
+    consumer_contract = output_contract["raw_output_consumer_contract"]
+    assert consumer_contract["schema"] == (
+        JCSP_RUNTIME_RAW_OUTPUT_CONSUMER_READINESS_SCHEMA
+    )
+    assert consumer_contract["planning_bridge_mode"] == "plan-real-raw-outputs"
+    assert consumer_contract["emission_bridge_mode"] == "emit-real-raw-outputs"
+    assert consumer_contract["runtime_preflight_adapter_id"] == (
+        JCSP_RUNTIME_REAL_AQ_PREFLIGHT_ADAPTER_ID
+    )
+    assert consumer_contract["decoder_adapter_id"] == (
+        JCSP_RUNTIME_AQ_RAWVIDEO_ADAPTER_ID
+    )
+    assert consumer_contract["accepted_codec_kind"] == KIND_ARITHMETIC_STATIC
+    assert consumer_contract["accepted_payload_magics"] == ["AQv1", "AQc1"]
+    assert consumer_contract["no_scorer_at_inflate"] is True
+    assert consumer_contract["score_affecting_sidecars_allowed"] is False
+    assert consumer_contract["ready_for_exact_eval_dispatch"] is False
+    assert "jcsp_expected_raw_outputs_unknown" in (
+        consumer_contract["dispatch_blockers"]
+    )
+    assert "jcsp_runtime_preflight_adapter_not_run" in (
+        consumer_contract["dispatch_blockers"]
+    )
     assert output_contract["bridge_emits_contest_raw_outputs"] is False
     assert output_contract["output_parity_checked"] is False
     assert output_contract["ready_for_submission_runtime_consumption"] is False
+    assert "jcsp_stream_decode_emit_frames_missing" not in (
+        output_contract["dispatch_blockers"]
+    )
+    assert "jcsp_runtime_preflight_adapter_not_run" in (
+        output_contract["dispatch_blockers"]
+    )
     assert JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER in (
         contract["dispatch_blockers"]
     )

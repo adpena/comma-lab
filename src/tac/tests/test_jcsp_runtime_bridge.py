@@ -511,6 +511,88 @@ def test_real_aq_rawvideo_emitter_decodes_expected_raw_and_proves_sha(
     assert proof["dispatch_blockers"] == []
 
 
+def test_real_aq_rawvideo_readiness_plans_outputs_without_writing(
+    tmp_path: Path,
+) -> None:
+    bridge = _load_bridge_module()
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    payload = bytes(range(36))
+    (archive_dir / "jcsp.bin").write_bytes(
+        _real_rawvideo_jcsp_bytes("route/video.raw", payload)
+    )
+    manifest_path = tmp_path / "readiness.json"
+
+    first = bridge.plan_jcsp_real_raw_output_emission(
+        archive_dir,
+        expected_raw_outputs=["route/video.raw"],
+        manifest_json=manifest_path,
+    )
+    second = bridge.plan_jcsp_real_raw_output_emission(
+        archive_dir,
+        expected_raw_outputs=["route/video.raw"],
+    )
+
+    assert first == second
+    assert json.loads(manifest_path.read_text(encoding="utf-8")) == first
+    assert first["schema"] == (
+        bridge.JCSP_RUNTIME_RAW_OUTPUT_CONSUMER_READINESS_SCHEMA
+    )
+    assert first["score_claim"] is False
+    assert first["dispatch_attempted"] is False
+    assert first["no_scorer_at_inflate"] is True
+    assert first["score_affecting_sidecars_allowed"] is False
+    assert first["raw_output_files_written"] is False
+    assert not any(tmp_path.rglob("*.raw"))
+    assert first["decodes_required_member"] is True
+    assert first["consumes_required_member"] is False
+    assert first["would_emit_contest_raw_outputs"] is True
+    assert first["would_emit_raw_output_count"] == 1
+    [row] = first["would_emit_raw_outputs"]
+    assert row["path"] == "route/video.raw"
+    assert row["bytes"] == len(payload)
+    assert row["sha256"] == hashlib.sha256(payload).hexdigest()
+    assert row["real_decoded_rawvideo"] is True
+    assert first["decode_failures"] == []
+    assert first["ready_for_raw_output_emission"] is True
+    assert first["ready_for_output_parity"] is False
+    assert first["ready_for_submission_runtime_consumption"] is False
+    assert first["ready_for_exact_eval_dispatch"] is False
+    assert "jcsp_raw_output_emission_not_run" in first["dispatch_blockers"]
+    assert bridge.JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER in first["dispatch_blockers"]
+    assert JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER in first["dispatch_blockers"]
+    assert "exact_cuda_auth_eval_missing" in first["dispatch_blockers"]
+
+
+def test_real_aq_rawvideo_readiness_reports_refusal_reason(
+    tmp_path: Path,
+) -> None:
+    bridge = _load_bridge_module()
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    (archive_dir / "jcsp.bin").write_bytes(
+        _real_rawvideo_jcsp_bytes("route/video.raw", bytes(range(36)))
+    )
+
+    manifest = bridge.plan_jcsp_real_raw_output_emission(
+        archive_dir,
+        expected_raw_outputs=["other/video.raw"],
+    )
+
+    assert manifest["would_emit_contest_raw_outputs"] is False
+    assert manifest["would_emit_raw_output_count"] == 0
+    assert manifest["ready_for_raw_output_emission"] is False
+    assert "jcsp_aq_rawvideo_unexpected_raw_stream" in manifest["dispatch_blockers"]
+    assert "jcsp_aq_rawvideo_missing_expected_raw_stream" in (
+        manifest["dispatch_blockers"]
+    )
+    [failure] = manifest["decode_failures"]
+    assert failure["stream_name"] == "route/video.raw"
+    assert failure["blocker"] == "jcsp_aq_rawvideo_unexpected_raw_stream"
+    assert bridge.JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER in manifest["dispatch_blockers"]
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
 def test_real_aq_rawvideo_decoder_accepts_compact_aqc1_payload() -> None:
     bridge = _load_bridge_module()
     payload = bytes([0, 7, 7, 7, 255, 0, 255, 7] * 4)
@@ -731,6 +813,46 @@ def test_runtime_bridge_cli_fails_closed_when_jcsp_member_present(
     ]
     assert manifest["contest_output_contract"]["bridge_emits_contest_raw_outputs"] is False
     assert not (inflated_dir / "route" / "video.raw").exists()
+
+
+def test_runtime_bridge_cli_plans_real_aq_without_writing_raw(
+    tmp_path: Path,
+) -> None:
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    payload = bytes(range(36))
+    (archive_dir / "jcsp.bin").write_bytes(
+        _real_rawvideo_jcsp_bytes("route/video.raw", payload)
+    )
+    names_file = tmp_path / "names.txt"
+    names_file.write_text("route/video.hevc\n", encoding="utf-8")
+    manifest_path = tmp_path / "plan.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(BRIDGE_PATH),
+            str(archive_dir),
+            "--mode",
+            "plan-real-raw-outputs",
+            "--video-names-file",
+            str(names_file),
+            "--manifest-json",
+            str(manifest_path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 44
+    assert "consumer readiness manifest" in result.stderr
+    assert not any(tmp_path.rglob("*.raw"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["would_emit_contest_raw_outputs"] is True
+    assert manifest["raw_output_files_written"] is False
+    assert manifest["ready_for_submission_runtime_consumption"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
 
 
 def test_runtime_bridge_cli_real_aq_preflight_emits_raw_but_blocks_exact_eval(

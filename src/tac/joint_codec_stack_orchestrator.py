@@ -169,6 +169,18 @@ JCSP_RUNTIME_RAW_OUTPUT_PARITY_CONTRACT_SCHEMA: str = (
 JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA: str = (
     "jcsp_runtime_raw_output_parity_proof_v1"
 )
+JCSP_RUNTIME_RAW_OUTPUT_CONSUMER_READINESS_SCHEMA: str = (
+    "jcsp_runtime_raw_output_consumer_readiness_v1"
+)
+JCSP_RUNTIME_AQ_RAWVIDEO_ADAPTER_ID: str = (
+    "jcsp_arithmetic_uint8_rawvideo_adapter_v1"
+)
+JCSP_RUNTIME_AQ_RAWVIDEO_STREAM_KIND: str = (
+    "arithmetic_static_uint8_rawvideo_v1"
+)
+JCSP_RUNTIME_REAL_AQ_PREFLIGHT_ADAPTER_ID: str = (
+    "jcsp_real_aq_rawvideo_runtime_preflight_adapter_v1"
+)
 
 # Codec kind flags
 KIND_ARITHMETIC_STATIC: int = 0
@@ -1675,6 +1687,51 @@ def _jcsp_runtime_raw_output_parity_contract() -> dict[str, Any]:
     }
 
 
+def _jcsp_runtime_raw_output_consumer_contract() -> dict[str, Any]:
+    """Return the fail-closed narrow runtime consumer readiness contract."""
+
+    return {
+        "schema": JCSP_RUNTIME_RAW_OUTPUT_CONSUMER_READINESS_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "runtime_bridge_modes": [
+            "probe",
+            "plan-real-raw-outputs",
+            "emit-real-raw-outputs",
+        ],
+        "planning_bridge_mode": "plan-real-raw-outputs",
+        "emission_bridge_mode": "emit-real-raw-outputs",
+        "runtime_preflight_adapter_id": JCSP_RUNTIME_REAL_AQ_PREFLIGHT_ADAPTER_ID,
+        "decoder_adapter_id": JCSP_RUNTIME_AQ_RAWVIDEO_ADAPTER_ID,
+        "decoder_stream_kind": JCSP_RUNTIME_AQ_RAWVIDEO_STREAM_KIND,
+        "accepted_codec_kind": KIND_ARITHMETIC_STATIC,
+        "accepted_payload_magics": ["AQv1", "AQc1"],
+        "stream_name_contract": (
+            "stream name must exactly equal expected .raw relative path"
+        ),
+        "stream_payload_contract": (
+            "AQ num_symbols=256, offset=0, decoded nonempty bytes are RGB24 "
+            "rawvideo with length divisible by 3"
+        ),
+        "expected_raw_outputs_known": False,
+        "no_scorer_at_inflate": True,
+        "score_affecting_sidecars_allowed": False,
+        "candidate_output_source": "jcsp_runtime_bridge_emitted_rawvideo",
+        "would_emit_contest_raw_outputs": False,
+        "raw_output_files_written": False,
+        "ready_for_raw_output_emission": False,
+        "ready_for_output_parity": False,
+        "ready_for_submission_runtime_consumption": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": [
+            "jcsp_expected_raw_outputs_unknown",
+            "jcsp_runtime_preflight_adapter_not_run",
+            JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER,
+            "exact_cuda_auth_eval_missing",
+        ],
+    }
+
+
 def _jcsp_submission_runtime_consumption_contract(
     *,
     member_name: str,
@@ -1682,12 +1739,15 @@ def _jcsp_submission_runtime_consumption_contract(
     """Return the fail-closed runtime consumption gate for JCSP archives."""
 
     raw_output_parity_contract = _jcsp_runtime_raw_output_parity_contract()
+    raw_output_consumer_contract = _jcsp_runtime_raw_output_consumer_contract()
     output_contract = {
         "schema": JCSP_SUBMISSION_RUNTIME_OUTPUT_CONTRACT_SCHEMA,
         "score_claim": False,
         "dispatch_attempted": False,
         "required_when_jcsp_member_present": True,
         "contest_output_format": "one uint8 RGB rawvideo .raw per names_file entry",
+        "bridge_has_fail_closed_raw_output_consumer": True,
+        "raw_output_consumer_contract": raw_output_consumer_contract,
         "bridge_emits_contest_raw_outputs": False,
         "raw_output_emission_attempted": False,
         "raw_output_parity_contract": raw_output_parity_contract,
@@ -1700,8 +1760,9 @@ def _jcsp_submission_runtime_consumption_contract(
         "ready_for_submission_runtime_consumption": False,
         "dispatch_blocker": JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER,
         "dispatch_blockers": [
+            "jcsp_expected_raw_outputs_unknown",
+            "jcsp_runtime_preflight_adapter_not_run",
             JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER,
-            "jcsp_stream_decode_emit_frames_missing",
             "jcsp_raw_output_emission_missing",
         ],
     }
@@ -1722,8 +1783,9 @@ def _jcsp_submission_runtime_consumption_contract(
         "contest_output_contract": output_contract,
         "evidence": (
             "submissions/robust_current probes jcsp.bin during inflate and "
-            "fails closed, but does not yet decode JCSP streams, emit raw "
-            "contest outputs, or prove output parity"
+            "has a fail-closed narrow AQ/rawvideo preflight consumer for "
+            "real JCSP bytes, but archive-level readiness does not know the "
+            "contest names file, output parity artifact, or exact CUDA eval"
         ),
     }
 
@@ -2369,8 +2431,12 @@ __all__ = [
     "JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER",
     "JCSP_LOCAL_SKELETON_SCHEMA",
     "JCSP_MODEL_STREAM_ARCHIVE_READINESS_SCHEMA",
+    "JCSP_RUNTIME_AQ_RAWVIDEO_ADAPTER_ID",
+    "JCSP_RUNTIME_AQ_RAWVIDEO_STREAM_KIND",
+    "JCSP_RUNTIME_RAW_OUTPUT_CONSUMER_READINESS_SCHEMA",
     "JCSP_RUNTIME_RAW_OUTPUT_PARITY_CONTRACT_SCHEMA",
     "JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA",
+    "JCSP_RUNTIME_REAL_AQ_PREFLIGHT_ADAPTER_ID",
     "JCSP_STREAM_ARCHIVE_BYTE_RECONCILIATION_SCHEMA",
     "JCSP_STREAM_METADATA_SCHEMA",
     "JCSP_SUBMISSION_RUNTIME_BRIDGE_PROBE_SCHEMA",

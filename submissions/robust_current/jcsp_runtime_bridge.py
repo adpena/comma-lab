@@ -39,6 +39,9 @@ JCSP_RUNTIME_RAW_OUTPUT_PARITY_CONTRACT_SCHEMA = (
 JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA = (
     "jcsp_runtime_raw_output_parity_proof_v1"
 )
+JCSP_RUNTIME_RAW_OUTPUT_CONSUMER_READINESS_SCHEMA = (
+    "jcsp_runtime_raw_output_consumer_readiness_v1"
+)
 JCSP_RUNTIME_RAW_OUTPUT_EMISSION_SCHEMA = "jcsp_runtime_raw_output_emission_v1"
 JCSP_RUNTIME_REAL_RAW_OUTPUT_SOURCE = "jcsp_runtime_bridge_emitted_rawvideo"
 JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_SOURCE = (
@@ -1136,6 +1139,155 @@ def _parsed_container_summary(parsed: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def plan_jcsp_real_raw_output_emission(
+    archive_dir: str | Path,
+    *,
+    expected_raw_outputs: Iterable[str],
+    member_name: str = JCSP_ARCHIVE_MEMBER_NAME,
+    manifest_json: str | Path | None = None,
+) -> dict[str, Any]:
+    """Plan the narrow real JCSP AQ/rawvideo consumer without writing files.
+
+    The plan proves which contest ``.raw`` members the current bridge would
+    emit, or records deterministic refusal blockers.  It decodes in memory,
+    imports no scorer code, reads no sidecars, writes no raw outputs, and never
+    clears exact-eval dispatch.
+    """
+
+    expected = _dedupe(
+        [_validate_raw_output_rel_path(str(item)) for item in expected_raw_outputs]
+    )
+    archive_root = Path(archive_dir)
+    member_path = archive_root / member_name
+    blockers: list[str] = []
+    decode_failures: list[dict[str, Any]] = []
+    parsed_summary: dict[str, Any] | None = None
+    decoder_adapter = ArithmeticUint8RawVideoDecoderAdapter()
+
+    if not expected:
+        blockers.append("jcsp_expected_raw_outputs_missing")
+    if not member_path.exists():
+        blockers.append("jcsp_member_missing_for_real_raw_output_readiness")
+    elif not member_path.is_file():
+        blockers.append("jcsp_member_path_not_regular_file")
+
+    decoded_streams_by_name: dict[str, DecodedRawOutputStream] = {}
+    if not blockers:
+        blob = member_path.read_bytes()
+        if len(blob) < 4 or blob[:4] != JCSP_MAGIC:
+            blockers.append("jcsp_real_readiness_requires_real_jcsp_member")
+        else:
+            try:
+                parsed = _parse_real_jcsp_container(blob, include_payload=True)
+            except ValueError as exc:
+                blockers.append("jcsp_runtime_probe_parse_failed")
+                parsed_summary = {"parse_error": str(exc)}
+            else:
+                parsed_summary = _parsed_container_summary(parsed)
+                expected_set = set(expected)
+                for stream in parsed["streams"]:
+                    decoded, blocker = decoder_adapter.decode_stream(
+                        stream,
+                        expected_raw_outputs=expected_set,
+                    )
+                    if blocker is not None:
+                        blockers.append(blocker)
+                        decode_failures.append(
+                            {
+                                "stream_name": stream.get("name"),
+                                "codec_kind": stream.get("codec_kind"),
+                                "payload_magic": stream.get("payload_magic"),
+                                "blocker": blocker,
+                            }
+                        )
+                        continue
+                    if decoded is None:
+                        blocker = "jcsp_aq_rawvideo_decoder_returned_no_stream"
+                        blockers.append(blocker)
+                        decode_failures.append(
+                            {
+                                "stream_name": stream.get("name"),
+                                "codec_kind": stream.get("codec_kind"),
+                                "payload_magic": stream.get("payload_magic"),
+                                "blocker": blocker,
+                            }
+                        )
+                        continue
+                    rel = decoded.path
+                    if rel in decoded_streams_by_name:
+                        blocker = "jcsp_aq_rawvideo_duplicate_raw_stream_name"
+                        blockers.append(blocker)
+                        decode_failures.append(
+                            {
+                                "stream_name": stream.get("name"),
+                                "codec_kind": stream.get("codec_kind"),
+                                "payload_magic": stream.get("payload_magic"),
+                                "blocker": blocker,
+                            }
+                        )
+                        continue
+                    decoded_streams_by_name[rel] = decoded
+
+                stream_set = set(decoded_streams_by_name)
+                if expected_set - stream_set:
+                    blockers.append("jcsp_aq_rawvideo_missing_expected_raw_stream")
+                if stream_set - expected_set:
+                    blockers.append("jcsp_aq_rawvideo_unexpected_raw_stream")
+
+    blockers = _dedupe(blockers)
+    would_emit_rows: list[dict[str, Any]] = []
+    if not blockers:
+        would_emit_rows = [
+            decoded_streams_by_name[rel].manifest_row() for rel in expected
+        ]
+    ready_for_raw_output_emission = bool(expected and would_emit_rows and not blockers)
+    dispatch_blockers = _dedupe(
+        [
+            *blockers,
+            *(
+                ["jcsp_raw_output_emission_not_run"]
+                if ready_for_raw_output_emission
+                else []
+            ),
+            JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER,
+            JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
+            "exact_cuda_auth_eval_missing",
+        ]
+    )
+    manifest: dict[str, Any] = {
+        "schema": JCSP_RUNTIME_RAW_OUTPUT_CONSUMER_READINESS_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "runtime_action": "plan_real_aq_rawvideo_output_emission",
+        "no_scorer_at_inflate": True,
+        "score_affecting_sidecars_allowed": False,
+        "raw_output_files_written": False,
+        "candidate_output_source": JCSP_RUNTIME_REAL_RAW_OUTPUT_SOURCE,
+        "member_name": member_name,
+        "member_present": member_path.exists(),
+        "detects_required_member": member_path.exists(),
+        "decodes_required_member": ready_for_raw_output_emission,
+        "consumes_required_member": False,
+        "expected_raw_outputs": expected,
+        "expected_raw_output_count": len(expected),
+        "decoder_adapter": decoder_adapter.contract(expected),
+        "parsed_container": parsed_summary,
+        "would_emit_contest_raw_outputs": ready_for_raw_output_emission,
+        "would_emit_raw_output_count": len(would_emit_rows),
+        "would_emit_raw_outputs": would_emit_rows,
+        "decode_failures": decode_failures,
+        "ready_for_raw_output_emission": ready_for_raw_output_emission,
+        "ready_for_output_parity": False,
+        "ready_for_submission_runtime_consumption": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": dispatch_blockers,
+    }
+    manifest = _with_manifest_sha256(manifest)
+    if manifest_json is not None:
+        _write_manifest(Path(manifest_json), manifest)
+    return manifest
+
+
 def emit_jcsp_real_raw_outputs(
     archive_dir: str | Path,
     *,
@@ -1838,11 +1990,11 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("archive_dir", help="inflater archive directory")
     parser.add_argument(
         "--mode",
-        choices=("probe", "emit-real-raw-outputs"),
+        choices=("probe", "plan-real-raw-outputs", "emit-real-raw-outputs"),
         default="probe",
         help=(
-            "probe only, or run the fail-closed real AQ rawvideo preflight "
-            "emitter"
+            "probe only, plan the real AQ rawvideo consumer without writes, "
+            "or run the fail-closed real AQ rawvideo preflight emitter"
         ),
     )
     parser.add_argument(
@@ -1888,6 +2040,46 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(sys.argv[1:] if argv is None else argv)
+    if args.mode == "plan-real-raw-outputs":
+        expected_raw_outputs, names_error = _expected_raw_outputs_from_names_file(
+            args.video_names_file
+        )
+        manifest = plan_jcsp_real_raw_output_emission(
+            args.archive_dir,
+            member_name=args.member_name,
+            expected_raw_outputs=expected_raw_outputs,
+            manifest_json=args.manifest_json,
+        )
+        if names_error is not None:
+            manifest["ready_for_raw_output_emission"] = False
+            manifest["ready_for_output_parity"] = False
+            manifest["ready_for_submission_runtime_consumption"] = False
+            manifest["ready_for_exact_eval_dispatch"] = False
+            manifest["video_names_file_parse_error"] = names_error
+            manifest["dispatch_blockers"] = _dedupe(
+                [
+                    *manifest.get("dispatch_blockers", []),
+                    "jcsp_video_names_file_parse_failed",
+                    "exact_cuda_auth_eval_missing",
+                ]
+            )
+            manifest = _with_manifest_sha256(manifest)
+            _write_manifest(Path(args.manifest_json), manifest)
+        if not manifest["member_present"]:
+            return 0
+        print(
+            "[jcsp-runtime-bridge] wrote deterministic real AQ rawvideo "
+            f"consumer readiness manifest: {args.manifest_json}",
+            file=sys.stderr,
+        )
+        print(
+            "[jcsp-runtime-bridge] FATAL: real AQ rawvideo consumer plan "
+            "does not run branch dispatch; blockers="
+            f"{','.join(manifest.get('dispatch_blockers', []))}",
+            file=sys.stderr,
+        )
+        return EXIT_JCSP_MEMBER_REFUSED
+
     if args.mode == "emit-real-raw-outputs":
         output_dir = args.output_dir or args.inflated_dir
         if output_dir is None:
