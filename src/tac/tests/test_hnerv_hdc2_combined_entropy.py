@@ -86,6 +86,7 @@ def test_hdc2_combined_entropy_manifest_requires_payload_and_model_reduction() -
 
     accounting = manifest["byte_accounting"]
     candidate = manifest["bounded_candidate"]
+    break_even = manifest["bounded_candidate_break_even_plan"]
     assert manifest["score_claim"] is False
     assert manifest["dispatch_attempted"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
@@ -110,6 +111,16 @@ def test_hdc2_combined_entropy_manifest_requires_payload_and_model_reduction() -
     assert candidate["raw_context_count"] == 187
     assert candidate["range_payload_bytes"] == 147466
     assert candidate["raw_payload_bytes"] == 41914
+    assert break_even["current_best_variant"] == candidate["variant"]
+    assert break_even["remaining_reduction_to_beat_frontier_section_bytes"] == 38695
+    assert break_even["archive_build_gate"] == (
+        "candidate_stream_bytes_must_be_less_than_current_frontier_section_bytes"
+    )
+    assert break_even["required_next_reduction_sources"] == [
+        "reduce_range_payload_bytes_with_better_context_or_escape_policy",
+        "reduce_raw_payload_bytes_with_secondary_entropy_code_or_run_model",
+        "elide_static_context_header_bytes_without_reintroducing_self_describing_schema",
+    ]
     assert math.isclose(
         accounting["projected_rate_score_delta_after_combined_targets"],
         -13565 * 25.0 / 37_545_489,

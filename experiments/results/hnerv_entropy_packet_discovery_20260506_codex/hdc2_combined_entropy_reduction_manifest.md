@@ -32,6 +32,11 @@
 - payload_delta_vs_hdc2: `8951`
 - ready_for_exact_eval_dispatch: `false`
 
+## Break-Even Gate
+
+- remaining_reduction_to_beat_frontier_section_bytes: `38695`
+- archive_build_gate: `candidate_stream_bytes_must_be_less_than_current_frontier_section_bytes`
+
 ## Stream Evidence
 
 - roundtrip_valid: `true`

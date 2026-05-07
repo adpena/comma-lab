@@ -103,6 +103,23 @@ def build_hdc2_combined_entropy_manifest(
         ),
     }
     if bounded_candidate is not None:
+        remaining_after_bounded = bounded_candidate[
+            "remaining_reduction_to_beat_frontier_section_bytes"
+        ]
+        bounded_break_even = {
+            "current_best_variant": bounded_candidate["variant"],
+            "current_best_bytes": bounded_candidate["bytes"],
+            "frontier_section_bytes": frontier_section_bytes,
+            "remaining_reduction_to_beat_frontier_section_bytes": remaining_after_bounded,
+            "required_next_reduction_sources": [
+                "reduce_range_payload_bytes_with_better_context_or_escape_policy",
+                "reduce_raw_payload_bytes_with_secondary_entropy_code_or_run_model",
+                "elide_static_context_header_bytes_without_reintroducing_self_describing_schema",
+            ],
+            "archive_build_gate": (
+                "candidate_stream_bytes_must_be_less_than_current_frontier_section_bytes"
+            ),
+        }
         byte_accounting.update(
             {
                 "best_bounded_candidate_bytes": bounded_candidate["bytes"],
@@ -112,11 +129,11 @@ def build_hdc2_combined_entropy_manifest(
                 "net_byte_delta_after_best_bounded_candidate": bounded_candidate[
                     "net_byte_delta_vs_frontier_section"
                 ],
-                "remaining_reduction_to_beat_frontier_after_best_bounded_candidate_bytes": (
-                    bounded_candidate["remaining_reduction_to_beat_frontier_section_bytes"]
-                ),
+                "remaining_reduction_to_beat_frontier_after_best_bounded_candidate_bytes": remaining_after_bounded,
             }
         )
+    else:
+        bounded_break_even = None
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -148,6 +165,7 @@ def build_hdc2_combined_entropy_manifest(
         },
         "byte_accounting": byte_accounting,
         "bounded_candidate": bounded_candidate,
+        "bounded_candidate_break_even_plan": bounded_break_even,
         "closed_stream_evidence": {
             "roundtrip_valid": roundtrip.get("roundtrip_valid") is True,
             "raw_equal": roundtrip.get("raw_equal") is True,
@@ -203,6 +221,7 @@ def render_markdown(manifest: Mapping[str, Any]) -> str:
         "",
     ]
     if isinstance(candidate, Mapping):
+        break_even = manifest.get("bounded_candidate_break_even_plan")
         lines.extend(
             [
                 "## Bounded Candidate",
@@ -217,6 +236,16 @@ def render_markdown(manifest: Mapping[str, Any]) -> str:
                 "",
             ]
         )
+        if isinstance(break_even, Mapping):
+            lines.extend(
+                [
+                    "## Break-Even Gate",
+                    "",
+                    f"- remaining_reduction_to_beat_frontier_section_bytes: `{break_even.get('remaining_reduction_to_beat_frontier_section_bytes')}`",
+                    f"- archive_build_gate: `{break_even.get('archive_build_gate')}`",
+                    "",
+                ]
+            )
     lines.extend(
         [
             "## Stream Evidence",
