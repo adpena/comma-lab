@@ -5,6 +5,7 @@ import subprocess
 import sys
 
 import comma_lab.preflight.strict_checks as strict_checks
+from comma_lab import preflight as comma_preflight
 from tac import preflight as tac_preflight
 
 
@@ -17,6 +18,16 @@ def test_strict_check_wrappers_point_at_live_tac_checks() -> None:
         strict_checks.check_remote_lane_scripts_use_computed_payloads
         is tac_preflight.check_remote_lane_scripts_use_computed_payloads
     )
+
+
+def test_package_level_lazy_exports_cover_anchor_checks() -> None:
+    assert comma_preflight.check_reverse_engineering_tree_curation is strict_checks.check_reverse_engineering_tree_curation
+    assert (
+        comma_preflight.check_remote_lane_scripts_use_computed_payloads
+        is strict_checks.check_remote_lane_scripts_use_computed_payloads
+    )
+    assert "check_reverse_engineering_tree_curation" in dir(comma_preflight)
+    assert "check_remote_lane_scripts_use_computed_payloads" in dir(comma_preflight)
 
 
 def test_emit_catalog_contains_ara_anchor_checks() -> None:

@@ -10,6 +10,8 @@ __all__ = [
     "check_feature_flags_have_live_objective_effect",
     "check_no_mps_fallback_default",
     "check_public_release_hygiene",
+    "check_remote_lane_scripts_use_computed_payloads",
+    "check_reverse_engineering_tree_curation",
     "emit_catalog",
     "preflight_all",
 ]
