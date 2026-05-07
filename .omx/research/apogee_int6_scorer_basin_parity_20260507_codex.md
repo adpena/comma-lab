@@ -91,27 +91,32 @@ Cleared gates in that run:
 Supersession note, later 2026-05-07: commit `c1d42ddf` revised
 `tools/predispatch_sanity.py` so the `sanity_lossy_vs_lossless` gate uses the
 official contest byte-rate term instead of a blanket "lossy cannot beat
-lossless" rule. A smaller lossy archive may now pass this gate only when:
+lossless" rule. A follow-up hardening charges positive component deltas recorded
+by SHA-tied readiness evidence before allowing byte savings to justify a
+below-lossless predicted score. A smaller lossy archive may pass this gate only
+when:
 
 - the candidate is fewer charged bytes than the lossless anchor;
-- the predicted high score is no lower than the official rate-only floor;
+- the predicted high score is no lower than the official rate-distortion floor;
 - exact-SHA non-proxy readiness evidence is present and valid.
 
 With the same scorer-basin parity evidence, the current apogee_int6 predispatch
-check passes locally:
+check is still blocked, but for the correct mathematical reason:
 
 - `anchors_sufficient`: passed
-- `sanity_lossy_vs_lossless`: passed; `15789` fewer charged bytes, official
-  rate-only floor `0.1989`
+- `sanity_lossy_vs_lossless`: failed; `15789` fewer charged bytes gives
+  `rate_delta=-0.010513`, but the local parity evidence records positive
+  component deltas implying `component_penalty=+0.107727`, so the
+  SHA-tied rate-distortion floor is approximately `0.3067`
 - `distortion_model_gate`: passed
 - `hazard_scan`: passed
 - `lane_registry_consistent`: passed
 - `apogee_evidence_semantics`: passed
 
-Current status: evidence-complete locally and no longer blocked by the stale
-lossy-vs-lossless sanity policy. It is still not a score claim and still needs
-an active lane dispatch claim, a real remote exact-CUDA environment, exact CUDA
-auth eval, adjudication, and score-claim review before promotion.
+Current status: evidence-complete locally for calibration, but not a
+score-lowering dispatch target under current evidence. The next exact-CUDA slot
+should prioritize the q10 rate-only target unless the operator explicitly wants
+apogee_int6 as calibration spend, with a lane claim and no score claim.
 
 ## Command
 

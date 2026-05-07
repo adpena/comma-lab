@@ -163,6 +163,12 @@ def test_lossy_smaller_archive_with_parity_evidence_allows_rate_term_gain(tmp_pa
             {
                 "candidate_archive_sha256": mod.sha256_file(archive),
                 "evidence_semantics": "scorer_basin_parity_gate",
+                "parity_report": {
+                    "pose_dist_delta": 0.0,
+                    "pose_dist_lossless": 1.0e-4,
+                    "pose_dist_quantized": 1.0e-4,
+                    "seg_dist_delta": 0.0,
+                },
                 "ready_for_exact_eval_dispatch": True,
                 "evidence_grade": "empirical",
                 "scorer_basin_parity_status": "passed",
@@ -184,7 +190,86 @@ def test_lossy_smaller_archive_with_parity_evidence_allows_rate_term_gain(tmp_pa
 
     sanity_gate = next(g for g in result.gates if g.name == "sanity_lossy_vs_lossless")
     assert sanity_gate.passed, sanity_gate.detail
-    assert "official rate-only floor" in sanity_gate.detail
+    assert "official rate-distortion floor" in sanity_gate.detail
+
+
+def test_lossy_smaller_archive_blocks_when_parity_deltas_overwhelm_rate_gain(tmp_path: Path) -> None:
+    """Parity readiness is not score-lowering evidence when deltas are positive."""
+    mod = _load_module()
+    anchors_dir = _make_anchors_file(tmp_path, [
+        {
+            "lane_id": "lane_pr106_baseline",
+            "rel_err_pct_per_weight": 0.0,
+            "archive_bytes": 186_239,
+            "contest_cuda_score": 0.20945673,
+            "avg_pose_dist": 3.4e-5,
+            "avg_seg_dist": 0.00067819,
+            "rate_unscaled": 186_239 / 37_545_489,
+            "measured_utc": "2026-05-05T17:25Z",
+            "job_id": "pr106",
+            "archive_sha256": "ab",
+        },
+        {
+            "lane_id": "lane_apogee_int8",
+            "rel_err_pct_per_weight": 0.24,
+            "archive_bytes": 187_731,
+            "contest_cuda_score": 0.21119,
+            "avg_pose_dist": 3.38e-5,
+            "avg_seg_dist": 0.000678,
+            "rate_unscaled": 187_731 / 37_545_489,
+            "measured_utc": "2026-05-05T18:02Z",
+            "job_id": "int8",
+            "archive_sha256": "cd",
+        },
+        {
+            "lane_id": "lane_apogee_int4",
+            "rel_err_pct_per_weight": 7.09,
+            "archive_bytes": 109_996,
+            "contest_cuda_score": 1.4287,
+            "avg_pose_dist": 0.0237,
+            "avg_seg_dist": 0.00868,
+            "rate_unscaled": 109_996 / 37_545_489,
+            "measured_utc": "2026-05-05T17:40Z",
+            "job_id": "int4",
+            "archive_sha256": "ef",
+        },
+    ])
+    archive = tmp_path / "apogee_int6_archive.zip"
+    archive.write_bytes(b"x" * 170_450)
+    evidence = tmp_path / "parity.json"
+    evidence.write_text(
+        json.dumps(
+            {
+                "candidate_archive_sha256": mod.sha256_file(archive),
+                "evidence_semantics": "scorer_basin_parity_gate",
+                "parity_report": {
+                    "pose_dist_lossless": 0.0001678224216448143,
+                    "pose_dist_quantized": 0.00027574982959777117,
+                    "seg_dist_delta": 0.0009618123876862228,
+                },
+                "ready_for_exact_eval_dispatch": True,
+                "evidence_grade": "empirical",
+                "scorer_basin_parity_status": "passed",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = mod.predispatch_sanity(
+        archive_path=archive,
+        predicted_low=0.199,
+        predicted_high=0.204,
+        rel_err_pct=2.0,
+        lane_class="test_lane",
+        distortion_proxy_was_run=True,
+        anchors_dir=anchors_dir,
+        readiness_evidence_json=evidence,
+    )
+
+    sanity_gate = next(g for g in result.gates if g.name == "sanity_lossy_vs_lossless")
+    assert not sanity_gate.passed
+    assert "rate-distortion floor" in sanity_gate.detail
+    assert "not score-lowering evidence" in sanity_gate.detail
 
 
 def test_high_rel_err_without_proxy_BLOCKS(tmp_path: Path) -> None:

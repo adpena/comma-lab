@@ -149,8 +149,10 @@ def _gate_sanity_lossy_vs_lossless(
     if predicted_high < lossless_score:
         candidate_bytes = archive_path.stat().st_size
         official_rate_delta = 25.0 * (candidate_bytes - lossless_bytes) / CONTEST_ORIGINAL_BYTES
-        rate_only_floor = lossless_score + official_rate_delta
-        if candidate_bytes < lossless_bytes and predicted_high >= rate_only_floor - 1e-12:
+        component_penalty = _readiness_evidence_component_score_penalty(evidence_json_path)
+        component_penalty_value = component_penalty if component_penalty is not None else 0.0
+        rate_distortion_floor = lossless_score + official_rate_delta + component_penalty_value
+        if candidate_bytes < lossless_bytes and predicted_high >= rate_distortion_floor - 1e-12:
             evidence_gate = _validate_non_proxy_readiness_evidence(
                 archive_path=archive_path,
                 evidence_json_path=evidence_json_path,
@@ -163,8 +165,11 @@ def _gate_sanity_lossy_vs_lossless(
                     detail=(
                         f"predicted_high={predicted_high:.4f} < lossless baseline "
                         f"{lossless_score:.4f}, but candidate is {lossless_bytes - candidate_bytes} "
-                        "charged bytes smaller; official rate-only floor is "
-                        f"{rate_only_floor:.4f}, and {evidence_gate.detail}"
+                        "charged bytes smaller; official rate-distortion floor is "
+                        f"{rate_distortion_floor:.4f} "
+                        f"(rate_delta={official_rate_delta:.6f}, "
+                        f"component_penalty={component_penalty_value:.6f}), "
+                        f"and {evidence_gate.detail}"
                     ),
                 )
             return GateResult(
@@ -172,9 +177,21 @@ def _gate_sanity_lossy_vs_lossless(
                 passed=False,
                 detail=(
                     f"lossy predicted_high={predicted_high:.4f} is below lossless baseline "
-                    f"{lossless_score:.4f} only within the official rate-only floor "
-                    f"{rate_only_floor:.4f}, but exact-byte non-proxy readiness evidence "
-                    f"is missing or invalid: {evidence_gate.detail}"
+                    f"{lossless_score:.4f} only within the official rate-distortion floor "
+                    f"{rate_distortion_floor:.4f}, but exact-byte non-proxy readiness "
+                    f"evidence is missing or invalid: {evidence_gate.detail}"
+                ),
+            )
+        if candidate_bytes < lossless_bytes and predicted_high < rate_distortion_floor:
+            return GateResult(
+                name="sanity_lossy_vs_lossless",
+                passed=False,
+                detail=(
+                    f"predicted_high={predicted_high:.4f} is below the SHA-tied "
+                    f"rate-distortion floor {rate_distortion_floor:.4f} "
+                    f"(lossless={lossless_score:.4f}, rate_delta={official_rate_delta:.6f}, "
+                    f"component_penalty={component_penalty_value:.6f}). "
+                    "Parity/readiness evidence is not score-lowering evidence."
                 ),
             )
         return GateResult(
@@ -191,6 +208,57 @@ def _gate_sanity_lossy_vs_lossless(
         passed=True,
         detail=f"predicted_high {predicted_high:.4f} ≥ lossless {lossless_score:.4f}",
     )
+
+
+def _readiness_evidence_component_score_penalty(evidence_json_path: Path | None) -> float | None:
+    """Return nonnegative score penalty implied by readiness component deltas.
+
+    The evidence may prove the candidate stays in the same scorer basin without
+    proving it lowers score. If it records component deltas, charge positive
+    deltas against the official score formula before letting byte savings justify
+    a below-lossless predicted score.
+    """
+    if evidence_json_path is None:
+        return None
+    try:
+        payload = read_json(evidence_json_path)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    report = payload.get("parity_report")
+    if not isinstance(report, dict):
+        report = {}
+    seg_delta = _finite_float(payload.get("seg_dist_delta"))
+    if seg_delta is None:
+        seg_delta = _finite_float(report.get("seg_dist_delta"))
+    pose_lossless = _finite_float(report.get("pose_dist_lossless"))
+    pose_quantized = _finite_float(report.get("pose_dist_quantized"))
+    pose_delta = _finite_float(payload.get("pose_dist_delta"))
+    if pose_delta is None:
+        pose_delta = _finite_float(report.get("pose_dist_delta"))
+
+    seg_penalty = 100.0 * max(float(seg_delta or 0.0), 0.0)
+    pose_penalty = 0.0
+    if pose_lossless is not None and pose_quantized is not None:
+        pose_penalty = max(
+            (10.0 * max(pose_quantized, 0.0)) ** 0.5
+            - (10.0 * max(pose_lossless, 0.0)) ** 0.5,
+            0.0,
+        )
+    elif pose_delta is not None:
+        pose_penalty = max((10.0 * max(pose_delta, 0.0)) ** 0.5, 0.0)
+    return seg_penalty + pose_penalty
+
+
+def _finite_float(value: object) -> float | None:
+    try:
+        out = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    if out != out or out in {float("inf"), float("-inf")}:
+        return None
+    return out
 
 
 def _gate_distortion_proxy(
