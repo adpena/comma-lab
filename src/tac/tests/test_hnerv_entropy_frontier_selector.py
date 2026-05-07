@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 
 from tac.hnerv_entropy_frontier_selector import (
+    ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
+    RATE_ONLY_FLOOR_BLOCKER_PREFIX,
     build_hnerv_entropy_frontier_selection,
     render_markdown,
 )
@@ -24,7 +26,11 @@ def test_active_pr103_byte_floor_blocks_hdm3_and_records_smaller_blocked_pr101(
             "tool": "tools.prove_pr103_pr106_final_runtime_packet",
             "score_claim": False,
             "passed": True,
-            "candidate_archive": _archive(tmp_path, "pr103_active.zip", b"active-pr103"),
+            "candidate_archive": _archive(
+                tmp_path,
+                "pr103_active.zip",
+                b"a" * ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
+            ),
             "exact_cuda_remaining_blockers": [
                 "claim dispatch lane before exact CUDA auth eval",
                 "run archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA",
@@ -58,7 +64,11 @@ def test_active_pr103_byte_floor_blocks_hdm3_and_records_smaller_blocked_pr101(
             "score_claim": False,
             "dispatch_attempted": False,
             "ready_for_archive_preflight": True,
-            **_flat_candidate(tmp_path, "hdm3.zip", b"selected-hdm3"),
+            **_flat_candidate(
+                tmp_path,
+                "hdm3.zip",
+                b"h" * (ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES + 1),
+            ),
             "source_archive_sha256": "d" * 64,
             "source_archive_bytes": 30,
             "source_payload_sha256": "e" * 64,
@@ -83,7 +93,11 @@ def test_active_pr103_byte_floor_blocks_hdm3_and_records_smaller_blocked_pr101(
             "score_claim": False,
             "dispatch_attempted": False,
             "ready_for_archive_preflight": True,
-            **_flat_candidate(tmp_path, "q10.zip", b"larger-q10-candidate"),
+            **_flat_candidate(
+                tmp_path,
+                "q10.zip",
+                b"q" * (ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES + 2),
+            ),
             "source_archive_sha256": "0" * 64,
             "source_archive_bytes": 40,
             "source_payload_sha256": "1" * 64,
@@ -107,14 +121,15 @@ def test_active_pr103_byte_floor_blocks_hdm3_and_records_smaller_blocked_pr101(
     )
 
     assert manifest["selected_next_candidate"] is None
-    assert manifest["active_candidate_byte_floor"] == len(b"active-pr103")
+    assert manifest["active_candidate_byte_floor"] == ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES
+    assert manifest["active_rate_only_floor_archive_bytes"] == ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES
     assert manifest["active_candidate"]["label"] == "active_pr103"
     assert manifest["active_candidate"]["active_excluded"] is True
     assert manifest["blocked_smaller_than_selected"] == []
     hdm3_row = next(row for row in manifest["ranked_candidates"] if row["label"] == "hdm3")
     assert hdm3_row["exact_evaluable_after_lane_claim"] is False
-    assert hdm3_row["byte_delta_vs_active_candidate"] == len(b"selected-hdm3") - len(b"active-pr103")
-    assert f"not_below_active_candidate_byte_floor:{len(b'active-pr103')}" in hdm3_row[
+    assert hdm3_row["byte_delta_vs_active_rate_only_floor"] == 1
+    assert f"{RATE_ONLY_FLOOR_BLOCKER_PREFIX}:{ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES}" in hdm3_row[
         "hard_blockers"
     ]
     pr101_row = next(row for row in manifest["ranked_candidates"] if row["label"] == "pr101_schema")
@@ -127,7 +142,7 @@ def test_active_pr103_byte_floor_blocks_hdm3_and_records_smaller_blocked_pr101(
     markdown = render_markdown(manifest)
     assert "active_candidate_byte_floor" in markdown
     assert "Ranked Candidates" in markdown
-    assert "not_below_active_candidate_byte_floor" in markdown
+    assert RATE_ONLY_FLOOR_BLOCKER_PREFIX in markdown
 
 
 def test_selects_static_ready_candidate_when_it_beats_active_byte_floor(tmp_path: Path) -> None:
@@ -138,7 +153,11 @@ def test_selects_static_ready_candidate_when_it_beats_active_byte_floor(tmp_path
             "tool": "tools.prove_pr103_pr106_final_runtime_packet",
             "score_claim": False,
             "passed": True,
-            "candidate_archive": _archive(tmp_path, "active_large.zip", b"x" * 20),
+            "candidate_archive": _archive(
+                tmp_path,
+                "active_large.zip",
+                b"x" * ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
+            ),
             "exact_cuda_remaining_blockers": [
                 "claim dispatch lane before exact CUDA auth eval",
                 "run archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA",
@@ -152,7 +171,11 @@ def test_selects_static_ready_candidate_when_it_beats_active_byte_floor(tmp_path
             "score_claim": False,
             "dispatch_attempted": False,
             "ready_for_archive_preflight": True,
-            **_flat_candidate(tmp_path, "hdm3.zip", b"selected-hdm3"),
+            **_flat_candidate(
+                tmp_path,
+                "hdm3.zip",
+                b"h" * (ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES - 1),
+            ),
             "source_archive_sha256": "d" * 64,
             "source_archive_bytes": 30,
             "source_payload_sha256": "e" * 64,
@@ -174,8 +197,50 @@ def test_selects_static_ready_candidate_when_it_beats_active_byte_floor(tmp_path
     )
 
     selected = manifest["selected_next_candidate"]
-    assert manifest["active_candidate_byte_floor"] == 20
+    assert manifest["active_candidate_byte_floor"] == ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES
     assert selected["label"] == "hdm3"
+    assert selected["exact_evaluable_after_lane_claim"] is True
+
+
+def test_selects_rate_only_candidate_above_floor_only_with_scorer_changing_stack_path(
+    tmp_path: Path,
+) -> None:
+    candidate = _write_manifest(
+        tmp_path,
+        "stacked.json",
+        {
+            "score_claim": False,
+            "dispatch_attempted": False,
+            "ready_for_archive_preflight": True,
+            "scorer_changing_stack_path": "wr01_after_pr103_pr106_floor",
+            **_flat_candidate(
+                tmp_path,
+                "stacked.zip",
+                b"s" * (ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES + 100),
+            ),
+            "source_archive_sha256": "d" * 64,
+            "source_archive_bytes": ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
+            "source_payload_sha256": "e" * 64,
+            "candidate_payload_sha256": "f" * 64,
+            "exact_eval_packet_readiness": {
+                "static_packet_ready": True,
+                "remaining_dispatch_blockers": [
+                    "lane_dispatch_claim_missing",
+                    "exact_cuda_auth_eval_missing",
+                ],
+            },
+        },
+    )
+
+    manifest = build_hnerv_entropy_frontier_selection(
+        [("stacked", candidate)],
+        repo_root=tmp_path,
+    )
+
+    selected = manifest["selected_next_candidate"]
+    assert selected["label"] == "stacked"
+    assert selected["candidate_archive_bytes"] == ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES + 100
+    assert selected["scorer_changing_stack_path_declared"] is True
     assert selected["exact_evaluable_after_lane_claim"] is True
 
 

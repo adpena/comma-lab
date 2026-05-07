@@ -23,6 +23,9 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.hnerv_entropy_frontier_selector import (  # noqa: E402
+    ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
+)
 from tac.repo_io import json_text  # noqa: E402
 from tools.build_cross_paradigm_frontier_inventory import build_inventory  # noqa: E402
 from tools.build_field_meta_dispatch_selection import build_selection_report  # noqa: E402
@@ -155,6 +158,10 @@ def build_next_comprehensive_tranche(
             "acceptance_gates": [
                 "candidate archive manifest records exact bytes and SHA-256",
                 "decoder/runtime parity proves output equivalence or declares scorer-changing scope",
+                (
+                    "rate-only exact-eval spend requires archive bytes below "
+                    f"{ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES} or an explicit scorer-changing stack path"
+                ),
                 "entropy-gap target ranking names concrete next artifact, not only a family",
                 "ready_for_exact_eval_dispatch remains false until static preflight and matching active claim pass",
             ],
@@ -303,6 +310,10 @@ def build_next_comprehensive_tranche(
         "global_acceptance_gates": [
             "no score claim without exact CUDA auth eval JSON",
             "no remote/GPU dispatch without an active lane claim",
+            (
+                "no rate-only exact-eval spend at or above the active "
+                f"{ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES}-byte PR103-on-PR106 A++ floor"
+            ),
             "archive.zip -> inflate.sh -> upstream/evaluate.py remains canonical",
             "all runtime inputs are charged archive members or fixed contest code",
             "all builders are deterministic and cross-platform by default",

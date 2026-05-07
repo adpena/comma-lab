@@ -8,6 +8,10 @@ import zipfile
 from pathlib import Path
 
 from tac.frontier_rows import FRONTIER_ROW_FIELDS, FRONTIER_ROW_SCHEMA
+from tac.hnerv_entropy_frontier_selector import (
+    ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
+    RATE_ONLY_FLOOR_BLOCKER_PREFIX,
+)
 from tools.build_field_meta_dispatch_selection import build_selection_report
 
 REPO = Path(__file__).resolve().parents[3]
@@ -217,9 +221,12 @@ def test_field_meta_selector_ingests_hnerv_lowlevel_result_manifest_as_local_can
     assert row["runtime_proof"]["runtime_closed"] is True
     assert "strict_candidate_preflight_not_ready" in row["candidate_blockers"]
     assert "strict:ready_for_exact_eval_dispatch_false" in row["candidate_blockers"]
+    assert f"{RATE_ONLY_FLOOR_BLOCKER_PREFIX}:{ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES}" in row[
+        "candidate_blockers"
+    ]
     assert "missing_dispatch_identity_for_lane_claim" in row["exact_dispatch_blockers"]["blockers"]
     assert "kkt:kkt_proof_or_admm_result_missing" in row["exact_dispatch_blockers"]["blockers"]
-    assert row["selection_decision"] == "strict_candidate_preflight_refused"
+    assert row["selection_decision"] == "rate_only_candidate_above_active_pr103_pr106_floor"
 
 
 def test_field_meta_selector_uses_hnerv_rate_only_packet_delta(tmp_path: Path) -> None:
@@ -1010,6 +1017,84 @@ def test_field_meta_selector_blocks_rate_only_delta_that_mismatches_byte_term(
     assert row["candidate_static_preflight_ready"] is False
     assert row["pareto_eligible"] is False
     assert "rate_only_score_delta_reconciles_to_official_byte_rate_term" in row["next_required_proof"]
+
+
+def test_field_meta_selector_blocks_rate_only_candidate_above_pr103_pr106_floor(
+    tmp_path: Path,
+) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="above_floor_rate_only",
+        lane_id="lane_above_floor_rate_only",
+        job_name="job_above_floor_rate_only",
+        family_group="hnerv_lowlevel_brotli_repack",
+        pareto_scope="hnerv_rate_only_exact_archive",
+        byte_delta=-151,
+        expected_score_delta=0.0,
+        interaction_assumptions=["rate_only_raw_equivalent_brotli_repack"],
+        kkt_proof=_kkt_proof(),
+    )
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    archive = Path(payload["archive"]["path"])
+    _zip_fixture(archive, "x", b"x" * ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES)
+    payload["archive"]["sha256"] = hashlib.sha256(archive.read_bytes()).hexdigest()
+    payload["archive"]["bytes"] = archive.stat().st_size
+    payload.pop("expected_total_score_delta")
+    payload["expected_total_score_delta_rate_only"] = -0.00010054470192144788
+    manifest.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    reason = f"{RATE_ONLY_FLOOR_BLOCKER_PREFIX}:{ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES}"
+    assert row["candidate_archive_bytes"] >= ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES
+    assert row["rate_only_delta_proof"]["status"] == "blocked"
+    assert row["active_rate_only_floor_policy"]["beats_active_floor"] is False
+    assert row["active_rate_only_floor_policy"]["exact_eval_spend_allowed_by_policy"] is False
+    assert reason in row["candidate_blockers"]
+    assert row["candidate_static_preflight_ready"] is False
+    assert row["pareto_eligible"] is False
+    assert row["selection_decision"] == "rate_only_candidate_above_active_pr103_pr106_floor"
+    assert (
+        "rate_only_candidate_below_185578_byte_floor_or_scorer_changing_stack_path"
+        in row["next_required_proof"]
+    )
+
+
+def test_field_meta_selector_allows_rate_only_above_floor_with_scorer_changing_stack_path(
+    tmp_path: Path,
+) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="above_floor_stack_path",
+        lane_id="lane_above_floor_stack_path",
+        job_name="job_above_floor_stack_path",
+        family_group="hnerv_lowlevel_brotli_repack",
+        pareto_scope="hnerv_rate_only_exact_archive",
+        byte_delta=-151,
+        expected_score_delta=0.0,
+        interaction_assumptions=["rate_only_raw_equivalent_brotli_repack"],
+        kkt_proof=_kkt_proof(),
+    )
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    archive = Path(payload["archive"]["path"])
+    _zip_fixture(archive, "x", b"x" * ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES)
+    payload["archive"]["sha256"] = hashlib.sha256(archive.read_bytes()).hexdigest()
+    payload["archive"]["bytes"] = archive.stat().st_size
+    payload.pop("expected_total_score_delta")
+    payload["expected_total_score_delta_rate_only"] = -0.00010054470192144788
+    payload["scorer_changing_stack_path"] = "wr01_after_pr103_pr106_floor"
+    manifest.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    assert row["candidate_archive_bytes"] >= ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES
+    assert row["rate_only_delta_proof"]["status"] == "passed"
+    assert row["active_rate_only_floor_policy"]["scorer_changing_stack_path_declared"] is True
+    assert row["active_rate_only_floor_policy"]["exact_eval_spend_allowed_by_policy"] is True
+    assert row["candidate_static_preflight_ready"] is True
+    assert row["selection_decision"] == "needs_active_lane_claim_before_dispatch"
 
 
 def test_field_meta_selector_exposes_closed_ingestion_contract_without_score_evidence(

@@ -16,6 +16,12 @@ from tac.repo_io import read_json, repo_relative, sha256_file
 SCHEMA_VERSION = 1
 TOOL_NAME = "tac.hnerv_entropy_frontier_selector"
 RATE_SCORE_PER_BYTE = 25.0 / 37_545_489
+ACTIVE_RATE_ONLY_FLOOR_LABEL = "PR103-on-PR106 A++"
+ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES = 185_578
+ACTIVE_RATE_ONLY_FLOOR_SCORE = 0.2089810755823297
+RATE_ONLY_FLOOR_BLOCKER_PREFIX = (
+    "rate_only_candidate_not_below_active_pr103_pr106_a_plus_plus_floor"
+)
 
 
 class HnervEntropyFrontierSelectorError(ValueError):
@@ -26,6 +32,7 @@ def build_hnerv_entropy_frontier_selection(
     candidates: Sequence[tuple[str, str | Path]],
     *,
     active_candidates: Sequence[tuple[str, str | Path]] | None = None,
+    active_rate_only_floor_archive_bytes: int | None = ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
     repo_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Rank local HNeRV entropy candidates and select the next exact-eval packet.
@@ -57,8 +64,12 @@ def build_hnerv_entropy_frontier_selection(
         and isinstance(smallest_active.get("candidate_archive_bytes"), int)
         else None
     )
+    rate_only_floor = _effective_rate_only_floor(
+        active_byte_floor=active_byte_floor,
+        active_rate_only_floor_archive_bytes=active_rate_only_floor_archive_bytes,
+    )
     candidate_rows = [
-        _apply_active_byte_floor(row, active_byte_floor=active_byte_floor)
+        _apply_rate_only_frontier_floor(row, active_rate_only_floor_archive_bytes=rate_only_floor)
         for row in candidate_rows
     ]
     exact_evaluable = [row for row in candidate_rows if row["exact_evaluable_after_lane_claim"] is True]
@@ -85,6 +96,15 @@ def build_hnerv_entropy_frontier_selection(
             "sort": "candidate_archive_bytes ascending, then label, then manifest path",
             "active_candidates_excluded": True,
             "active_candidate_bytes_are_rate_only_floor": active_byte_floor is not None,
+            "active_rate_only_floor": {
+                "label": ACTIVE_RATE_ONLY_FLOOR_LABEL,
+                "archive_bytes": rate_only_floor,
+                "score": ACTIVE_RATE_ONLY_FLOOR_SCORE,
+            },
+            "rate_only_exact_eval_spend_requires": [
+                "candidate_archive_bytes_below_active_rate_only_floor",
+                "or_explicit_scorer_changing_stack_path_declaration",
+            ],
             "exact_evaluable_after_lane_claim_requires": [
                 "candidate_archive_bytes_and_sha256",
                 "byte_different_archive",
@@ -98,6 +118,8 @@ def build_hnerv_entropy_frontier_selection(
         "active_candidates": active_rows,
         "active_candidate": smallest_active,
         "active_candidate_byte_floor": active_byte_floor,
+        "active_rate_only_floor_archive_bytes": rate_only_floor,
+        "active_rate_only_floor_label": ACTIVE_RATE_ONLY_FLOOR_LABEL,
         "selected_next_candidate": selected,
         "selected_next_candidate_label": selected.get("label") if isinstance(selected, Mapping) else None,
         "ranked_candidates": sorted(candidate_rows, key=_selection_sort_key),
@@ -133,6 +155,7 @@ def render_markdown(manifest: Mapping[str, Any]) -> str:
                 f"- archive_bytes: `{active.get('candidate_archive_bytes')}`",
                 f"- archive_sha256: `{active.get('candidate_archive_sha256')}`",
                 f"- active_candidate_byte_floor: `{manifest.get('active_candidate_byte_floor')}`",
+                f"- active_rate_only_floor_archive_bytes: `{manifest.get('active_rate_only_floor_archive_bytes')}`",
                 "",
             ]
         )
@@ -146,6 +169,8 @@ def render_markdown(manifest: Mapping[str, Any]) -> str:
                 f"- archive_bytes: `{selected.get('candidate_archive_bytes')}`",
                 f"- archive_sha256: `{selected.get('candidate_archive_sha256')}`",
                 f"- payload_changed: `{_bool_text(selected.get('payload_changed') is True)}`",
+                f"- rate_only_candidate: `{_bool_text(selected.get('rate_only_candidate') is True)}`",
+                f"- scorer_changing_stack_path_declared: `{_bool_text(selected.get('scorer_changing_stack_path_declared') is True)}`",
                 f"- byte_delta_vs_source_archive: `{selected.get('byte_delta_vs_source_archive')}`",
                 f"- exact_evaluable_after_lane_claim: `{_bool_text(selected.get('exact_evaluable_after_lane_claim') is True)}`",
                 f"- allowed_remaining_blockers: `{', '.join(selected.get('allowed_remaining_blockers') or [])}`",
@@ -309,6 +334,7 @@ def _candidate_record(label: str, path: Path, root: Path, *, active: bool) -> di
         blocking_reasons.append("candidate_archive_bytes_file_mismatch")
         exact_evaluable = False
 
+    stack_declaration = scorer_changing_stack_path_declaration(payload)
     return {
         "schema_version": SCHEMA_VERSION,
         "label": label,
@@ -338,6 +364,9 @@ def _candidate_record(label: str, path: Path, root: Path, *, active: bool) -> di
         ),
         "archive_changed": archive_changed,
         "payload_changed": payload_changed,
+        "rate_only_candidate": _declares_rate_only_candidate(payload),
+        "scorer_changing_stack_path_declaration": stack_declaration,
+        "scorer_changing_stack_path_declared": stack_declaration["declared"],
         "ready_for_archive_preflight": _ready_for_archive_preflight(payload),
         "static_packet_ready": static_packet_ready,
         "score_claim": score_claim,
@@ -351,25 +380,125 @@ def _candidate_record(label: str, path: Path, root: Path, *, active: bool) -> di
     }
 
 
-def _apply_active_byte_floor(
-    row: dict[str, Any],
+def _effective_rate_only_floor(
     *,
     active_byte_floor: int | None,
+    active_rate_only_floor_archive_bytes: int | None,
+) -> int | None:
+    floors = [
+        floor
+        for floor in (active_byte_floor, active_rate_only_floor_archive_bytes)
+        if isinstance(floor, int) and not isinstance(floor, bool) and floor > 0
+    ]
+    return min(floors) if floors else None
+
+
+def build_rate_only_floor_proof(
+    payload: Mapping[str, Any],
+    *,
+    candidate_archive_bytes: int | None,
+    declared_rate_only: bool,
+    active_rate_only_floor_archive_bytes: int | None = ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
+) -> dict[str, Any]:
+    """Return the planning-only active-floor gate for rate-only exact-eval spend."""
+
+    declaration = scorer_changing_stack_path_declaration(payload)
+    blockers: list[str] = []
+    beats_floor: bool | None = None
+    if (
+        declared_rate_only
+        and active_rate_only_floor_archive_bytes is not None
+        and not declaration["declared"]
+    ):
+        if candidate_archive_bytes is None:
+            blockers.append("rate_only_candidate_archive_bytes_missing_for_active_floor_policy")
+        else:
+            beats_floor = candidate_archive_bytes < active_rate_only_floor_archive_bytes
+            if not beats_floor:
+                blockers.append(
+                    f"{RATE_ONLY_FLOOR_BLOCKER_PREFIX}:{active_rate_only_floor_archive_bytes}"
+                )
+    return {
+        "schema": "rate_only_frontier_floor_policy_v1",
+        "planning_only": True,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "active_floor_label": ACTIVE_RATE_ONLY_FLOOR_LABEL,
+        "active_floor_archive_bytes": active_rate_only_floor_archive_bytes,
+        "active_floor_score": ACTIVE_RATE_ONLY_FLOOR_SCORE,
+        "candidate_archive_bytes": candidate_archive_bytes,
+        "declared_rate_only": declared_rate_only,
+        "beats_active_floor": beats_floor,
+        "scorer_changing_stack_path_declared": declaration["declared"],
+        "scorer_changing_stack_path_sources": declaration["sources"],
+        "exact_eval_spend_allowed_by_policy": not blockers,
+        "blockers": _unique_ordered(blockers),
+    }
+
+
+def scorer_changing_stack_path_declaration(payload: Mapping[str, Any]) -> dict[str, Any]:
+    """Detect an explicit scorer-changing stack-path declaration in a manifest."""
+
+    sources: list[str] = []
+    for key in (
+        "scorer_changing_stack_path",
+        "scorer_changing_stack_paths",
+        "score_changing_stack_path",
+        "score_changing_stack_paths",
+        "scorer_changing_stack_plan",
+        "scorer_changing_stack_manifest",
+    ):
+        if _has_nonempty_declaration(payload.get(key)):
+            sources.append(key)
+    for key in ("stack_path", "stack_paths", "stack_plan", "stack_manifest"):
+        text = _declaration_text(payload.get(key)).lower()
+        if text and (
+            "scorer_changing" in text
+            or "scorer-changing" in text
+            or "score_changing" in text
+            or "score-changing" in text
+        ):
+            sources.append(key)
+    return {
+        "schema": "scorer_changing_stack_path_declaration_v1",
+        "declared": bool(sources),
+        "sources": _unique_ordered(sources),
+    }
+
+
+def _apply_rate_only_frontier_floor(
+    row: dict[str, Any],
+    *,
+    active_rate_only_floor_archive_bytes: int | None,
 ) -> dict[str, Any]:
     """Block rate-only candidates that do not improve the active byte floor."""
 
-    if active_byte_floor is None or not isinstance(row.get("candidate_archive_bytes"), int):
+    if active_rate_only_floor_archive_bytes is None or row.get("rate_only_candidate") is not True:
         return row
-    archive_bytes = int(row["candidate_archive_bytes"])
-    if archive_bytes < active_byte_floor:
+    archive_bytes = row.get("candidate_archive_bytes")
+    if not isinstance(archive_bytes, int):
         return row
-    reason = f"not_below_active_candidate_byte_floor:{active_byte_floor}"
+    proof_payload = {"scorer_changing_stack_path": True} if row.get(
+        "scorer_changing_stack_path_declared"
+    ) is True else {}
+    proof = build_rate_only_floor_proof(
+        proof_payload,
+        candidate_archive_bytes=archive_bytes,
+        declared_rate_only=True,
+        active_rate_only_floor_archive_bytes=active_rate_only_floor_archive_bytes,
+    )
     out = dict(row)
+    out["rate_only_floor_proof"] = proof
+    if proof["exact_eval_spend_allowed_by_policy"] is True:
+        return out
     out["exact_evaluable_after_lane_claim"] = False
-    out["active_candidate_byte_floor"] = active_byte_floor
-    out["byte_delta_vs_active_candidate"] = archive_bytes - active_byte_floor
-    out["hard_blockers"] = _unique_ordered([*out.get("hard_blockers", []), reason])
-    out["blocking_reasons"] = _unique_ordered([*out.get("blocking_reasons", []), reason])
+    out["active_rate_only_floor_archive_bytes"] = active_rate_only_floor_archive_bytes
+    out["byte_delta_vs_active_rate_only_floor"] = archive_bytes - active_rate_only_floor_archive_bytes
+    out["rate_only_floor_proof"] = proof
+    out["hard_blockers"] = _unique_ordered([*out.get("hard_blockers", []), *proof["blockers"]])
+    out["blocking_reasons"] = _unique_ordered(
+        [*out.get("blocking_reasons", []), *proof["blockers"]]
+    )
     return out
 
 
@@ -438,6 +567,70 @@ def _collect_blockers(payload: Mapping[str, Any]) -> list[str]:
         for child_key in child_keys:
             values.extend(_string_items(parent.get(child_key)))
     return _unique_ordered(values)
+
+
+def _declares_rate_only_candidate(payload: Mapping[str, Any]) -> bool:
+    if payload.get("rate_only") is True:
+        return True
+    for key in (
+        "expected_total_score_delta_rate_only",
+        "candidate_rate_score_delta_if_runtime_supported_and_components_equal",
+        "rate_score_delta_if_components_equal",
+    ):
+        if payload.get(key) is not None:
+            return True
+    token_blob = " ".join(
+        _declaration_text(payload.get(key))
+        for key in (
+            "tool",
+            "family",
+            "family_group",
+            "pareto_scope",
+            "role",
+            "action_class",
+            "evidence_grade",
+            "interaction_assumptions",
+            "packet_kind",
+        )
+    ).strip().lower()
+    if not token_blob:
+        return True
+    return any(
+        token in token_blob
+        for token in (
+            "rate_only",
+            "rate-only",
+            "raw_equivalent",
+            "raw-equivalent",
+            "byte_equivalent",
+            "byte-equivalent",
+            "components_equal",
+        )
+    )
+
+
+def _has_nonempty_declaration(value: Any) -> bool:
+    if value is True:
+        return True
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, Mapping):
+        return bool(value)
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray, str)):
+        return any(_has_nonempty_declaration(item) for item in value)
+    return False
+
+
+def _declaration_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, Mapping):
+        return " ".join(f"{key} {_declaration_text(item)}" for key, item in value.items())
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray, str)):
+        return " ".join(_declaration_text(item) for item in value)
+    return str(value)
 
 
 def _is_allowed_remaining_blocker(value: str) -> bool:
@@ -565,7 +758,12 @@ def _bool_text(value: bool) -> str:
 
 
 __all__ = [
+    "ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES",
+    "ACTIVE_RATE_ONLY_FLOOR_LABEL",
+    "ACTIVE_RATE_ONLY_FLOOR_SCORE",
     "HnervEntropyFrontierSelectorError",
     "build_hnerv_entropy_frontier_selection",
+    "build_rate_only_floor_proof",
     "render_markdown",
+    "scorer_changing_stack_path_declaration",
 ]

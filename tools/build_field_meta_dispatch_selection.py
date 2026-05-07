@@ -31,6 +31,13 @@ from tac.frontier_rows import (  # noqa: E402
     FRONTIER_ROW_SCHEMA,
     build_frontier_row,
 )
+from tac.hnerv_entropy_frontier_selector import (  # noqa: E402
+    ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
+    ACTIVE_RATE_ONLY_FLOOR_LABEL,
+    ACTIVE_RATE_ONLY_FLOOR_SCORE,
+    RATE_ONLY_FLOOR_BLOCKER_PREFIX,
+    build_rate_only_floor_proof,
+)
 from tac.optimization.meta_lagrangian_allocator import rate_score_delta  # noqa: E402
 from tac.repo_io import json_text, read_json, repo_relative, sha256_file  # noqa: E402
 
@@ -1239,6 +1246,7 @@ def _rate_only_delta_proof(
     expected_total_score_delta_source: str,
     expected_seg_dist_delta: float,
     expected_pose_dist_delta: float,
+    candidate_archive_bytes: int | None,
 ) -> dict[str, Any]:
     declared = _declares_rate_only_delta(
         payload=payload,
@@ -1256,6 +1264,13 @@ def _rate_only_delta_proof(
             blockers.append("rate_only_expected_pose_delta_nonzero")
         if abs(expected_total_score_delta - expected_rate_delta) > RATE_ONLY_SCORE_EPS:
             blockers.append("rate_only_score_delta_mismatch")
+    floor_proof = build_rate_only_floor_proof(
+        payload,
+        candidate_archive_bytes=candidate_archive_bytes,
+        declared_rate_only=declared,
+        active_rate_only_floor_archive_bytes=ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
+    )
+    blockers.extend(floor_proof["blockers"])
     return {
         "schema": "rate_only_delta_proof_v1",
         "declared_rate_only": declared,
@@ -1264,6 +1279,7 @@ def _rate_only_delta_proof(
         "official_rate_score_delta": round(expected_rate_delta, 12),
         "expected_total_score_delta": round(expected_total_score_delta, 12),
         "expected_total_score_delta_source": expected_total_score_delta_source,
+        "active_rate_only_floor_policy": floor_proof,
         "tolerance": RATE_ONLY_SCORE_EPS,
         "blockers": _unique_strings(blockers),
     }
@@ -2957,6 +2973,8 @@ def _operator_next_steps_summary(
 
 def _next_required_proofs(blockers: Sequence[str]) -> list[str]:
     out: list[str] = []
+    if any(RATE_ONLY_FLOOR_BLOCKER_PREFIX in blocker for blocker in blockers):
+        out.append("rate_only_candidate_below_185578_byte_floor_or_scorer_changing_stack_path")
     if any("environment" in blocker.lower() or "missing_env" in blocker.lower() for blocker in blockers):
         out.append("lightning_or_remote_exact_eval_environment_available")
     if "dirty_worktree_overlap" in blockers:
@@ -2978,9 +2996,14 @@ def _next_required_proofs(blockers: Sequence[str]) -> list[str]:
 
 def _field_selection_next_required_proofs(row: Mapping[str, Any]) -> list[str]:
     next_required_proof = list(row.get("candidate_preflight_next_required_proof") or row.get("next_required_proof") or [])
+    if any(RATE_ONLY_FLOOR_BLOCKER_PREFIX in blocker for blocker in row.get("candidate_blockers", [])):
+        next_required_proof.append("rate_only_candidate_below_185578_byte_floor_or_scorer_changing_stack_path")
     if row.get("operator_environment_blockers"):
         next_required_proof.append("lightning_or_remote_exact_eval_environment_available")
-    if any("rate_only" in blocker for blocker in row.get("candidate_blockers", [])):
+    if any(
+        "rate_only" in blocker and RATE_ONLY_FLOOR_BLOCKER_PREFIX not in blocker
+        for blocker in row.get("candidate_blockers", [])
+    ):
         next_required_proof.append("rate_only_score_delta_reconciles_to_official_byte_rate_term")
     if row.get("kkt_ready_for_field_planning") is not True:
         next_required_proof.append("passed_kkt_proof_or_converged_admm_waterline_result")
@@ -3296,6 +3319,8 @@ def _selection_penalty_terms(row: Mapping[str, Any]) -> dict[str, float]:
 def _selection_decision(row: Mapping[str, Any]) -> str:
     if row.get("dirty_blocked") is True:
         return "refused_dirty_worktree_overlap"
+    if any(RATE_ONLY_FLOOR_BLOCKER_PREFIX in blocker for blocker in row.get("candidate_blockers", [])):
+        return "rate_only_candidate_above_active_pr103_pr106_floor"
     if row.get("field_selection_ready_for_exact_eval_dispatch") is True:
         return "field_selection_ready_for_exact_eval_dispatch_after_active_claim"
     if row.get("ready_for_exact_eval_dispatch") is True:
@@ -3581,6 +3606,9 @@ def _row_for_manifest(
         ),
     )
     expected_score_delta, expected_score_delta_source = _expected_total_score_delta(payload)
+    candidate_archive_bytes_for_policy = _coerce_positive_int(archive.get("bytes_actual"))
+    if candidate_archive_bytes_for_policy is None:
+        candidate_archive_bytes_for_policy = _coerce_positive_int(archive.get("bytes_expected"))
     rate_only_delta_proof = _rate_only_delta_proof(
         payload=payload,
         family=family,
@@ -3592,6 +3620,7 @@ def _row_for_manifest(
         expected_total_score_delta_source=expected_score_delta_source,
         expected_seg_dist_delta=expected_seg_delta,
         expected_pose_dist_delta=expected_pose_delta,
+        candidate_archive_bytes=candidate_archive_bytes_for_policy,
     )
     selector_blockers = _unique_strings(rate_only_delta_proof["blockers"])
     if payload.get("readiness_component_penalty_overwhelms_rate_gain") is True:
@@ -3756,6 +3785,7 @@ def _row_for_manifest(
         "expected_seg_dist_delta": expected_seg_delta,
         "expected_pose_dist_delta": expected_pose_delta,
         "rate_only_delta_proof": rate_only_delta_proof,
+        "active_rate_only_floor_policy": rate_only_delta_proof["active_rate_only_floor_policy"],
         "expected_information_gain_nats": expected_info_gain,
         "expected_score_variance": expected_score_variance,
         "kkt_ready_for_field_planning": kkt_ready,
@@ -3878,6 +3908,12 @@ def build_selection_report(
             "schema": "field_meta_adversarial_gate_policy_v1",
             "operator_approval_is_not_dispatch_readiness": True,
             "rate_only_delta_must_match_official_byte_rate_term": True,
+            "rate_only_exact_eval_spend_requires_active_floor_or_scorer_changing_stack_path": True,
+            "active_rate_only_floor": {
+                "label": ACTIVE_RATE_ONLY_FLOOR_LABEL,
+                "archive_bytes": ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
+                "score": ACTIVE_RATE_ONLY_FLOOR_SCORE,
+            },
             "pareto_dominated_packets_sort_behind_non_dominated_static_ready_packets": True,
             "score_claim_requires_exact_cuda_and_adversarial_review": True,
         },
@@ -3922,8 +3958,10 @@ def build_selection_report(
             "field packet selection is planning-only: exact-eval-ready rows sort first; "
             "otherwise the explicit lexicographic feasibility tuple orders byte-closed, "
             "clean, Pareto-frontier, KKT-proof-backed rows before pure expected-score "
-            "deltas, with expected-information-gain as a tie-breaker; penalty terms are "
-            "diagnostic only"
+            "deltas, with expected-information-gain as a tie-breaker; rate-only rows "
+            f"must beat the {ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES}-byte "
+            "PR103-on-PR106 A++ floor or declare a scorer-changing stack path; "
+            "penalty terms are diagnostic only"
         ),
         "selected_candidate": selected,
         "rows": rows,

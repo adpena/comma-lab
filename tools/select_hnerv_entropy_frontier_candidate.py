@@ -16,6 +16,7 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.hnerv_entropy_frontier_selector import (  # noqa: E402
+    ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
     HnervEntropyFrontierSelectorError,
     build_hnerv_entropy_frontier_selection,
     render_markdown,
@@ -40,6 +41,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         metavar="LABEL=PATH",
         help="Already queued/running candidate to record and exclude. Repeatable.",
     )
+    parser.add_argument(
+        "--active-rate-only-floor-archive-bytes",
+        type=int,
+        default=ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
+        help=(
+            "Current rate-only exact-eval spend byte floor. Rate-only candidates at or "
+            "above this floor are blocked unless they declare a scorer-changing stack path."
+        ),
+    )
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--md-out", type=Path)
     parser.add_argument(
@@ -59,6 +69,7 @@ def main(argv: list[str] | None = None) -> int:
         manifest = build_hnerv_entropy_frontier_selection(
             candidates,
             active_candidates=active,
+            active_rate_only_floor_archive_bytes=args.active_rate_only_floor_archive_bytes,
             repo_root=REPO_ROOT,
         )
     except HnervEntropyFrontierSelectorError as exc:

@@ -5,6 +5,10 @@ import json
 import zipfile
 from pathlib import Path
 
+from tac.hnerv_entropy_frontier_selector import (
+    ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
+    RATE_ONLY_FLOOR_BLOCKER_PREFIX,
+)
 from tools.build_frontier_roadmap_status import (
     DEFAULT_PACKET_MANIFEST_GLOBS,
     build_roadmap_status,
@@ -92,6 +96,7 @@ def test_frontier_roadmap_status_is_non_dispatching_and_dirty_aware() -> None:
     ]
     assert workstreams["scorer_changing_mask_payload"]["all_keys_safe_to_touch_now"] is False
     assert "no remote/GPU dispatch without an active lane claim" in tranche["global_acceptance_gates"]
+    assert any("no rate-only exact-eval spend" in gate for gate in tranche["global_acceptance_gates"])
 
 
 def test_frontier_roadmap_status_markdown_is_operator_briefing() -> None:
@@ -139,8 +144,8 @@ def test_frontier_roadmap_status_discovers_default_packet_manifests() -> None:
     assert "pr106_q10_151byte_brotli" in candidate_ids
     assert "pr106x_lgblock16_1byte_brotli" in candidate_ids
     assert packet_selection["candidate_count"] >= 3
-    assert packet_selection["candidate_static_preflight_ready_count"] == 2
-    assert packet_selection["pareto_summary"]["frontier_count"] == 1
+    assert packet_selection["candidate_static_preflight_ready_count"] == 0
+    assert packet_selection["pareto_summary"]["frontier_count"] == 0
     assert packet_selection["report_blockers"] == []
     wr01 = next(
         row
@@ -174,15 +179,25 @@ def test_frontier_roadmap_status_discovers_default_packet_manifests() -> None:
     assert q10["byte_delta"] == -151
     assert q10["archive_proof"]["byte_closed"] is True
     assert q10["runtime_proof"]["runtime_closed"] is True
-    assert q10["candidate_static_preflight_ready"] is True
-    assert q10["pareto_frontier"] is True
-    assert q10["selection_decision"] == "needs_active_lane_claim_before_dispatch"
+    assert q10["candidate_static_preflight_ready"] is False
+    assert q10["pareto_frontier"] is False
+    assert q10["selection_decision"] == "rate_only_candidate_above_active_pr103_pr106_floor"
+    assert q10["active_rate_only_floor_policy"]["active_floor_archive_bytes"] == (
+        ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES
+    )
+    assert q10["active_rate_only_floor_policy"]["beats_active_floor"] is False
+    assert f"{RATE_ONLY_FLOOR_BLOCKER_PREFIX}:{ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES}" in q10[
+        "candidate_blockers"
+    ]
     assert "missing_active_lane_dispatch_claim" in q10["candidate_blockers"]
     assert "claim:dispatch_claim_check_missing" in q10["candidate_blockers"]
-    assert q10["next_required_proof"] == [
-        "matching_active_level2_lane_claim_for_manifest_lane_and_job",
-        "lightning_or_remote_exact_eval_environment_available",
+    assert "rate_only_candidate_below_185578_byte_floor_or_scorer_changing_stack_path" in q10[
+        "next_required_proof"
     ]
+    assert "matching_active_level2_lane_claim_for_manifest_lane_and_job" in q10[
+        "next_required_proof"
+    ]
+    assert "lightning_or_remote_exact_eval_environment_available" in q10["next_required_proof"]
     assert q10["operator_next_steps_summary"]["static_refresh_status"] == "passed"
     lgblock16 = next(
         row
@@ -193,10 +208,13 @@ def test_frontier_roadmap_status_discovers_default_packet_manifests() -> None:
     assert lgblock16["byte_delta"] == -1
     assert lgblock16["archive_proof"]["byte_closed"] is True
     assert lgblock16["runtime_proof"]["runtime_closed"] is True
-    assert lgblock16["candidate_static_preflight_ready"] is True
+    assert lgblock16["candidate_static_preflight_ready"] is False
     assert lgblock16["pareto_frontier"] is False
-    assert lgblock16["pareto_dominated_by"] == ["pr106_q10_151byte_brotli"]
-    assert lgblock16["selection_decision"] == "static_candidate_pareto_dominated_before_dispatch"
+    assert lgblock16["pareto_dominated_by"] == []
+    assert lgblock16["selection_decision"] == "rate_only_candidate_above_active_pr103_pr106_floor"
+    assert f"{RATE_ONLY_FLOOR_BLOCKER_PREFIX}:{ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES}" in lgblock16[
+        "candidate_blockers"
+    ]
     assert "missing_active_lane_dispatch_claim" in lgblock16["candidate_blockers"]
     assert "claim:dispatch_claim_check_missing" in lgblock16["candidate_blockers"]
     assert lgblock16["operator_next_steps_summary"]["static_refresh_status"] == "passed"
@@ -206,7 +224,7 @@ def test_frontier_roadmap_status_discovers_default_packet_manifests() -> None:
     assert lgblock16["operator_next_steps_summary"]["static_refresh_source"] == (
         "refreshes.static_compliance"
     )
-    assert "pareto_dominated_packet" in lgblock16["exact_dispatch_blockers"]["blockers"]
+    assert "pareto_ineligible_for_field_selection" in lgblock16["exact_dispatch_blockers"]["blockers"]
 
 
 def test_frontier_roadmap_status_consumes_field_meta_packet_manifests(tmp_path: Path) -> None:
