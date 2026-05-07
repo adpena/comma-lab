@@ -21,6 +21,7 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.categorical_payload_candidate import (  # noqa: E402
+    DECODE_REENCODE_BLOCKED_PROOF_FILENAME,
     LABEL_PERMUTATION_CONTROL_FILENAME,
     RUNTIME_EXECUTION_PROOF_FILENAME,
     CategoricalPayloadCandidateError,
@@ -92,6 +93,7 @@ def main(argv: list[str] | None = None) -> int:
     hpm1_structural_inventory_path = args.out_dir / "hpm1_structural_inventory.json"
     runtime_execution_proof_path = args.out_dir / RUNTIME_EXECUTION_PROOF_FILENAME
     label_permutation_control_path = args.out_dir / LABEL_PERMUTATION_CONTROL_FILENAME
+    decode_reencode_blocked_proof_path = args.out_dir / DECODE_REENCODE_BLOCKED_PROOF_FILENAME
     generated_input_paths = [
         *[path for path in input_paths if path.is_file()],
         archive_path,
@@ -110,6 +112,11 @@ def main(argv: list[str] | None = None) -> int:
         *(
             [label_permutation_control_path]
             if label_permutation_control_path.is_file()
+            else []
+        ),
+        *(
+            [decode_reencode_blocked_proof_path]
+            if decode_reencode_blocked_proof_path.is_file()
             else []
         ),
     ]

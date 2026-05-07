@@ -39,6 +39,13 @@
       "sha256": "84216287e6c04a91a69fd83b5432a0e48f2761d484cf0387f27bd45f48684226"
     }
   ],
+  "decode_reencode_blocked_proof": {
+    "accepted_expected": false,
+    "bytes": 1335,
+    "kind": "categorical_decode_reencode_independent_proof",
+    "path": "decode_reencode_blocked_proof.json",
+    "sha256": "8d9b5fc43be2894ebe9e008a5a085f9241c0d27f94414351567609bd02586159"
+  },
   "dispatch_attempted": false,
   "fixture_only": false,
   "hpm1_structural_decode_inventory": {
@@ -91,6 +98,7 @@
     "archive_member_manifest": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/archive_member_manifest.json",
     "candidate": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/candidate.json",
     "construction_plan": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/construction_plan.json",
+    "decode_reencode_blocked_proof": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/decode_reencode_blocked_proof.json",
     "hpm1_structural_inventory": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/hpm1_structural_inventory.json",
     "label_permutation_control": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/label_permutation_control.json",
     "readiness": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
@@ -113,7 +121,8 @@
     "decode_reencode_parity_not_passed",
     "decode_reencode_full_decode_not_proven",
     "decode_reencode_byte_exact_reencode_not_proven",
-    "decode_reencode_independent_proof_artifact_missing",
+    "decode_reencode_independent_proof_full_decode_not_proven",
+    "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
     "exact_eval_dispatch_requirements_missing"
   ],
   "ready_for_exact_eval_dispatch": false,
@@ -127,9 +136,13 @@
   "tool_run_manifest": {
     "argv": [
       "--out-dir",
-      "experiments/results/categorical_openpilot_payload_candidate_20260506_codex"
+      "experiments/results/categorical_openpilot_payload_candidate_20260506_codex",
+      "--payload-source",
+      "pr91-hpm1-mask",
+      "--source-archive",
+      "experiments/results/public_pr91_intake_20260504_codex/archive.zip"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "0b422b8dc23500c6082b6d02575c101c1d01f58663ee1717ec9d28f0dcfd2df3",
+    "canonical_payload_without_tool_manifest_sha256": "575a92b06b023d0efcba725283b4e39c02137cab977794420e19576b890f8eac",
     "dispatch_attempted": false,
     "input_files": [
       {
@@ -143,9 +156,9 @@
         "sha256": "6a5bf1f3c4d6d2b6cb752979caa72a31b994825d24ee42ae90eeaa58f44abd7d"
       },
       {
-        "bytes": 19677,
+        "bytes": 19973,
         "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/candidate.json",
-        "sha256": "93e5a20bed0f2b8f09f31590a1f0c4ac0ef3d1ae9c2fa76ebeb4f01ef33e20be"
+        "sha256": "341cab40fc1a6dfa7433b8084253348fea36b825db4de8e6a84b774f888ba1d0"
       },
       {
         "bytes": 1635,
@@ -168,9 +181,14 @@
         "sha256": "c32e7fb5defa68c84a11470d7724e8a3e4049e108524c9a74e095df30f1ddb68"
       },
       {
-        "bytes": 28395,
+        "bytes": 1335,
+        "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/decode_reencode_blocked_proof.json",
+        "sha256": "8d9b5fc43be2894ebe9e008a5a085f9241c0d27f94414351567609bd02586159"
+      },
+      {
+        "bytes": 29344,
         "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
-        "sha256": "afab4478f255a5bf02d68a84d3226ce290d74970cc1746a95469331388202b5d"
+        "sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c"
       }
     ],
     "output_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/summary.json",

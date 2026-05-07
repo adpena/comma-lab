@@ -26,6 +26,7 @@ from tac.categorical_candidate_plan import (
 from tac.categorical_candidate_readiness import (
     ARCHIVE_MEMBER_MANIFEST_CONTRACT,
     CANDIDATE_MANIFEST_CONTRACT,
+    DECODE_REENCODE_INDEPENDENT_PROOF_KIND,
     DECODE_REENCODE_PARITY_CONTRACT,
     DETERMINISTIC_ZIP_CREATE_SYSTEM,
     DETERMINISTIC_ZIP_DATE_TIME,
@@ -66,6 +67,7 @@ RUNTIME_PROOF_SKELETON_CONTRACT = "categorical_runtime_consumer_proof_skeleton_v
 RUNTIME_EXECUTION_PROOF_FILENAME = "runtime_execution_proof.json"
 LABEL_PERMUTATION_CONTROL_FILENAME = "label_permutation_control.json"
 HPM1_STRUCTURAL_INVENTORY_FILENAME = "hpm1_structural_inventory.json"
+DECODE_REENCODE_BLOCKED_PROOF_FILENAME = "decode_reencode_blocked_proof.json"
 RUNTIME_CONSUMER_REPO_PATH = "src/tac/categorical_candidate_runtime_skeleton.py"
 MEMBER_ROLES = {
     "categorical_payload.bin": "categorical_payload",
@@ -452,6 +454,65 @@ def _write_hpm1_structural_inventory(
     }
 
 
+def _write_decode_reencode_blocked_proof(
+    *,
+    out_dir: Path,
+    candidate_archive_sha256: str,
+    payload_member_sha256: str,
+    hpm1_structural_inventory: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Write an independent negative proof for the current semantic parity blocker."""
+
+    unsupported = (
+        hpm1_structural_inventory.get("unsupported_wire_constructs", [])
+        if hpm1_structural_inventory is not None
+        else []
+    )
+    proof = {
+        "schema_version": SCHEMA_VERSION,
+        "kind": DECODE_REENCODE_INDEPENDENT_PROOF_KIND,
+        "independent_proof": True,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "producer_tool": "tac.categorical_payload_candidate.build_categorical_payload_candidate",
+        "proof_scope": "full_decode_reencode",
+        "candidate_archive_sha256": candidate_archive_sha256,
+        "payload_member": "categorical_payload.bin",
+        "payload_member_sha256": payload_member_sha256,
+        "full_decode": {
+            "passed": False,
+            "frame_count": None,
+            "decoded_masks_sha256": "",
+            "blocker": "hpm1_semantic_decode_not_proven",
+        },
+        "byte_exact_reencode": {
+            "passed": False,
+            "byte_exact": False,
+            "reencoded_payload_sha256": "",
+            "blocker": "hpm1_byte_exact_semantic_reencode_not_proven",
+        },
+        "sidecar_free": True,
+        "negative_proof": {
+            "status": "blocked_on_hpm1_semantic_decode_reencode",
+            "structural_inventory_attached": hpm1_structural_inventory is not None,
+            "structural_reencode_matches_source": bool(
+                hpm1_structural_inventory
+                and hpm1_structural_inventory.get("structural_reencode_matches_source") is True
+            ),
+            "unsupported_wire_constructs": list(unsupported),
+        },
+    }
+    proof_path = out_dir / DECODE_REENCODE_BLOCKED_PROOF_FILENAME
+    write_json(proof_path, proof)
+    return {
+        "path": DECODE_REENCODE_BLOCKED_PROOF_FILENAME,
+        "bytes": proof_path.stat().st_size,
+        "sha256": sha256_file(proof_path),
+        "kind": DECODE_REENCODE_INDEPENDENT_PROOF_KIND,
+        "accepted_expected": False,
+    }
+
+
 def build_categorical_payload_candidate(
     *,
     out_dir: str | Path,
@@ -575,6 +636,12 @@ def build_categorical_payload_candidate(
         payload_source=payload_source,
         candidate_archive_path=archive_path,
     )
+    decode_reencode_blocked_proof = _write_decode_reencode_blocked_proof(
+        out_dir=out,
+        candidate_archive_sha256=archive_sha,
+        payload_member_sha256=payload_sha,
+        hpm1_structural_inventory=hpm1_structural_inventory,
+    )
 
     archive_member_manifest = {
         "schema_version": SCHEMA_VERSION,
@@ -674,6 +741,7 @@ def build_categorical_payload_candidate(
                 "blocker": "byte_exact_reencode_not_proven",
             },
             "sidecar_free": True,
+            "independent_proof_artifact": decode_reencode_blocked_proof,
         },
         "candidate_construction_plan": construction_plan,
         "conditioning_priors": construction_plan["conditioning_priors"],
@@ -767,6 +835,10 @@ def build_categorical_payload_candidate(
                 out / LABEL_PERMUTATION_CONTROL_FILENAME,
                 root,
             ),
+            "decode_reencode_blocked_proof": repo_relative(
+                out / DECODE_REENCODE_BLOCKED_PROOF_FILENAME,
+                root,
+            ),
         },
         "archive_sha256": archive_sha,
         "archive_bytes": archive_path.stat().st_size,
@@ -779,6 +851,7 @@ def build_categorical_payload_candidate(
         "readiness_blockers": readiness["dispatch_blockers"],
         "runtime_execution_proof": runtime_execution_proof,
         "label_permutation_control": label_permutation_control,
+        "decode_reencode_blocked_proof": decode_reencode_blocked_proof,
     }
     write_json(out / "summary.json", summary)
     return {

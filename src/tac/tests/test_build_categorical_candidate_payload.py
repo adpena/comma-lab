@@ -14,6 +14,7 @@ from tac.categorical_candidate_plan import CATEGORICAL_CLASS_CODEBOOK_CONTRACT
 from tac.categorical_candidate_readiness import (
     ARCHIVE_MEMBER_MANIFEST_CONTRACT,
     CANDIDATE_MANIFEST_CONTRACT,
+    DECODE_REENCODE_INDEPENDENT_PROOF_KIND,
     DECODE_REENCODE_PARITY_CONTRACT,
     HPM1_STRUCTURAL_DECODE_INVENTORY_CONTRACT,
     RUNTIME_EXECUTION_PROOF_KIND,
@@ -25,6 +26,7 @@ from tac.categorical_label_prior_payload_manifest import (
     LABEL_PRIOR_PAYLOAD_MANIFEST_MEMBER,
 )
 from tac.categorical_payload_candidate import (
+    DECODE_REENCODE_BLOCKED_PROOF_FILENAME,
     LABEL_PERMUTATION_CONTROL_FILENAME,
     MEMBER_ORDER,
     RUNTIME_EXECUTION_PROOF_FILENAME,
@@ -124,6 +126,9 @@ def test_build_categorical_candidate_payload_is_byte_closed_and_fail_closed(
     assert "decode_reencode_parity_not_passed" in blockers
     assert "decode_reencode_full_decode_not_proven" in blockers
     assert "decode_reencode_byte_exact_reencode_not_proven" in blockers
+    assert "decode_reencode_independent_proof_artifact_missing" not in blockers
+    assert "decode_reencode_independent_proof_full_decode_not_proven" in blockers
+    assert "decode_reencode_independent_proof_byte_exact_reencode_not_proven" in blockers
     assert "no_op_control_not_passed:decode_reencode_identity_control" in blockers
     assert "no_op_control_not_passed:label_permutation_fail_closed_control" not in blockers
     assert "no_op_control_not_passed:runtime_consumes_conditioning_control" not in blockers
@@ -195,6 +200,16 @@ def test_build_categorical_candidate_payload_is_byte_closed_and_fail_closed(
     assert label_control["mutation"]["operation"] == "reverse_classes_order"
     assert label_control["failure_contract"]["fail_closed"] is True
     assert summary["label_permutation_control"]["passed"] is True
+    blocked_proof = read_json(out_a / DECODE_REENCODE_BLOCKED_PROOF_FILENAME)
+    assert blocked_proof["kind"] == DECODE_REENCODE_INDEPENDENT_PROOF_KIND
+    assert blocked_proof["independent_proof"] is True
+    assert blocked_proof["score_claim"] is False
+    assert blocked_proof["dispatch_attempted"] is False
+    assert blocked_proof["proof_scope"] == "full_decode_reencode"
+    assert blocked_proof["full_decode"]["passed"] is False
+    assert blocked_proof["byte_exact_reencode"]["passed"] is False
+    assert blocked_proof["sidecar_free"] is True
+    assert summary["decode_reencode_blocked_proof"]["kind"] == DECODE_REENCODE_INDEPENDENT_PROOF_KIND
 
 
 def test_build_categorical_candidate_payload_emits_hpm1_structural_inventory(
@@ -260,5 +275,11 @@ def test_build_categorical_candidate_payload_emits_hpm1_structural_inventory(
     assert runtime_proof["runtime_report_summary"]["payload_codec"] == "HPM1"
     assert runtime_proof["runtime_report_summary"]["hpm1_structural_reencode_passed"] is True
     assert "hpm1_structural_inventory" in summary["paths"]
+    assert "decode_reencode_blocked_proof" in summary["paths"]
     assert "decode_reencode_full_decode_not_proven" in readiness["dispatch_blockers"]
     assert "decode_reencode_byte_exact_reencode_not_proven" in readiness["dispatch_blockers"]
+    assert "decode_reencode_independent_proof_artifact_missing" not in readiness["dispatch_blockers"]
+    blocked_proof = read_json(out_dir / DECODE_REENCODE_BLOCKED_PROOF_FILENAME)
+    assert blocked_proof["negative_proof"]["structural_inventory_attached"] is True
+    assert blocked_proof["negative_proof"]["structural_reencode_matches_source"] is True
+    assert "hpac_autoregressive_probability_rows" in blocked_proof["negative_proof"]["unsupported_wire_constructs"]

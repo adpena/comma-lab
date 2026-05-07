@@ -373,6 +373,13 @@
       "frame_count": null,
       "passed": false
     },
+    "independent_proof_artifact": {
+      "accepted_expected": false,
+      "bytes": 1335,
+      "kind": "categorical_decode_reencode_independent_proof",
+      "path": "decode_reencode_blocked_proof.json",
+      "sha256": "8d9b5fc43be2894ebe9e008a5a085f9241c0d27f94414351567609bd02586159"
+    },
     "passed": false,
     "payload_member": "categorical_payload.bin",
     "payload_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",

@@ -1,0 +1,37 @@
+{
+  "byte_exact_reencode": {
+    "blocker": "hpm1_byte_exact_semantic_reencode_not_proven",
+    "byte_exact": false,
+    "passed": false,
+    "reencoded_payload_sha256": ""
+  },
+  "candidate_archive_sha256": "6a5bf1f3c4d6d2b6cb752979caa72a31b994825d24ee42ae90eeaa58f44abd7d",
+  "dispatch_attempted": false,
+  "full_decode": {
+    "blocker": "hpm1_semantic_decode_not_proven",
+    "decoded_masks_sha256": "",
+    "frame_count": null,
+    "passed": false
+  },
+  "independent_proof": true,
+  "kind": "categorical_decode_reencode_independent_proof",
+  "negative_proof": {
+    "status": "blocked_on_hpm1_semantic_decode_reencode",
+    "structural_inventory_attached": true,
+    "structural_reencode_matches_source": true,
+    "unsupported_wire_constructs": [
+      "hpac_autoregressive_probability_rows",
+      "constriction_range_decoder_uint32_queue_replay",
+      "hpac_context_update_order",
+      "range_encoder_uint32_reemit",
+      "contest_runtime_sidecar_free_hpm1_loader"
+    ]
+  },
+  "payload_member": "categorical_payload.bin",
+  "payload_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+  "producer_tool": "tac.categorical_payload_candidate.build_categorical_payload_candidate",
+  "proof_scope": "full_decode_reencode",
+  "schema_version": 1,
+  "score_claim": false,
+  "sidecar_free": true
+}
