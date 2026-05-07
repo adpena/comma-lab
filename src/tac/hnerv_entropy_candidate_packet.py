@@ -89,6 +89,13 @@ HDC2_STREAM_ARTIFACT_REQUIREMENTS = {
     "candidate_stream_section_manifest": CANDIDATE_STREAM_REQUIREMENT_ID,
     "decoded_output_equivalence_report": DECODED_OUTPUT_EQUIVALENCE_REQUIREMENT_ID,
     "roundtrip_decode_validation_manifest": ROUNDTRIP_REQUIREMENT_ID,
+    "byte_accounted_model_overhead_reduction_manifest": (
+        "byte_accounted_model_overhead_reduction_manifest"
+    ),
+    "byte_accounted_static_model_context_reduction_manifest": (
+        "byte_accounted_static_model_context_reduction_manifest"
+    ),
+    "old_new_model_context_table_diff": "old_new_model_context_table_diff",
 }
 
 
@@ -334,6 +341,7 @@ def build_hdc2_stream_byte_equivalence_work_product(
         parsed=parsed,
         source_raw=source_raw,
     )
+    bounded_hdm2 = bounded_hdc2_recode_variants[0] if bounded_hdc2_recode_variants else None
 
     if candidate_stream_path is not None:
         stream_path = Path(candidate_stream_path)
@@ -474,6 +482,58 @@ def build_hdc2_stream_byte_equivalence_work_product(
         "candidate_stream_sha256": sha256_bytes(candidate_stream),
         "candidate_stream_bytes": len(candidate_stream),
     }
+    byte_accounted_model_overhead = {
+        "schema_version": HDC2_STREAM_WORK_PRODUCT_SCHEMA_VERSION,
+        "tool": HDC2_STREAM_WORK_PRODUCT_TOOL_NAME,
+        "requirement_id": "byte_accounted_model_overhead_reduction_manifest",
+        "source_label": source_label,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "target_kind": "known_model_overhead",
+        "target_bytes": int(candidate_stats["header_bytes"]),
+        "target_bytes_field": "hdc2.header_bytes",
+        "accounting_closed": True,
+        "source_variant": {
+            "variant": HDC2_VARIANT_NAME,
+            "bytes": len(candidate_stream),
+            "sha256": sha256_bytes(candidate_stream),
+            "header_bytes": int(candidate_stats["header_bytes"]),
+            "range_payload_bytes": int(candidate_stats["range_payload_bytes"]),
+            "raw_scale_bytes": len(parsed.scale_stream),
+            "accounted_bytes": (
+                int(candidate_stats["header_bytes"])
+                + int(candidate_stats["range_payload_bytes"])
+                + len(parsed.scale_stream)
+            ),
+        },
+        "byte_accounting": {
+            "actual_bytes": len(candidate_stream),
+            "known_model_overhead_bytes": int(candidate_stats["header_bytes"]),
+            "known_encoded_payload_bytes": int(candidate_stats["range_payload_bytes"])
+            + len(parsed.scale_stream),
+            "known_container_overhead_bytes": 0,
+            "known_unattributed_bytes": 0,
+        },
+        "remaining_for_archive_candidate": [
+            "runtime_decoder_contract",
+            "candidate_archive_manifest",
+            "strict_pre_submission_compliance_json",
+            "exact_cuda_auth_eval",
+        ],
+    }
+    byte_accounted_static_context = _static_context_reduction_manifest(
+        source_label=source_label,
+        candidate_stream=candidate_stream,
+        candidate_stats=candidate_stats,
+        bounded_hdm2=bounded_hdm2,
+    )
+    old_new_context_diff = _old_new_model_context_table_diff(
+        source_label=source_label,
+        hdc2_stream=candidate_stream,
+        hdc2_stats=candidate_stats,
+        bounded_hdm2=bounded_hdm2,
+    )
     work_product = {
         "schema_version": HDC2_STREAM_WORK_PRODUCT_SCHEMA_VERSION,
         "tool": HDC2_STREAM_WORK_PRODUCT_TOOL_NAME,
@@ -502,11 +562,11 @@ def build_hdc2_stream_byte_equivalence_work_product(
         "candidate_stream_section_manifest": candidate_stream_manifest,
         "decoded_output_equivalence_report": decoded_equivalence,
         "roundtrip_decode_validation_manifest": roundtrip,
+        "byte_accounted_model_overhead_reduction_manifest": byte_accounted_model_overhead,
+        "byte_accounted_static_model_context_reduction_manifest": byte_accounted_static_context,
+        "old_new_model_context_table_diff": old_new_context_diff,
         "bounded_hdc2_recode_variants": bounded_hdc2_recode_variants,
         "remaining_blockers": [
-            "byte_accounted_model_overhead_reduction_manifest_not_built",
-            "byte_accounted_static_model_context_reduction_manifest_not_built",
-            "old_new_model_context_table_diff_not_built",
             "candidate_archive_manifest_missing",
             "strict_pre_submission_compliance_json_missing",
             "meta_lagrangian_atom_export_missing",
@@ -516,6 +576,121 @@ def build_hdc2_stream_byte_equivalence_work_product(
         ],
     }
     return work_product
+
+
+def _static_context_reduction_manifest(
+    *,
+    source_label: str,
+    candidate_stream: bytes,
+    candidate_stats: Mapping[str, int],
+    bounded_hdm2: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    hdc2_header = int(candidate_stats["header_bytes"])
+    manifest: dict[str, Any] = {
+        "schema_version": HDC2_STREAM_WORK_PRODUCT_SCHEMA_VERSION,
+        "tool": HDC2_STREAM_WORK_PRODUCT_TOOL_NAME,
+        "requirement_id": "byte_accounted_static_model_context_reduction_manifest",
+        "source_label": source_label,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "source_variant": {
+            "variant": HDC2_VARIANT_NAME,
+            "bytes": len(candidate_stream),
+            "sha256": sha256_bytes(candidate_stream),
+            "header_bytes": hdc2_header,
+            "context_count": int(candidate_stats["context_count"]),
+            "context_token_count": int(candidate_stats["context_token_count"]),
+        },
+        "candidate_variant": None,
+        "accounting_closed": bounded_hdm2 is not None,
+        "static_context_header_reduction_bytes": 0,
+        "blockers": [],
+    }
+    if bounded_hdm2 is None:
+        manifest["blockers"] = ["bounded_hdm2_context_recode_missing"]
+        return manifest
+    hdm2_header = int(bounded_hdm2["header_bytes"])
+    manifest.update(
+        {
+            "candidate_variant": {
+                "variant": bounded_hdm2["variant"],
+                "bytes": int(bounded_hdm2["bytes"]),
+                "sha256": bounded_hdm2["sha256"],
+                "header_bytes": hdm2_header,
+                "context_count": int(bounded_hdm2["context_count"]),
+                "context_token_count": int(bounded_hdm2["context_token_count"]),
+                "raw_context_count": int(bounded_hdm2["raw_context_count"]),
+                "range_context_count": int(bounded_hdm2["range_context_count"]),
+                "raw_equal": bounded_hdm2["raw_equal"],
+            },
+            "static_context_header_reduction_bytes": hdc2_header - hdm2_header,
+            "schema_metadata_elided_vs_hdc2_bytes": int(
+                bounded_hdm2["schema_metadata_elided_vs_hdc2_bytes"]
+            ),
+        }
+    )
+    return manifest
+
+
+def _old_new_model_context_table_diff(
+    *,
+    source_label: str,
+    hdc2_stream: bytes,
+    hdc2_stats: Mapping[str, int],
+    bounded_hdm2: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "schema_version": HDC2_STREAM_WORK_PRODUCT_SCHEMA_VERSION,
+        "tool": HDC2_STREAM_WORK_PRODUCT_TOOL_NAME,
+        "requirement_id": "old_new_model_context_table_diff",
+        "source_label": source_label,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "old_variant": {
+            "variant": HDC2_VARIANT_NAME,
+            "sha256": sha256_bytes(hdc2_stream),
+            "bytes": len(hdc2_stream),
+            "header_bytes": int(hdc2_stats["header_bytes"]),
+            "context_count": int(hdc2_stats["context_count"]),
+            "context_token_count": int(hdc2_stats["context_token_count"]),
+        },
+        "new_variant": None,
+        "raw_equal": False,
+        "context_token_count_equal": False,
+        "context_count_equal": False,
+        "header_bytes_delta": 0,
+        "blockers": [],
+    }
+    if bounded_hdm2 is None:
+        payload["blockers"] = ["bounded_hdm2_context_recode_missing"]
+        return payload
+    payload.update(
+        {
+            "new_variant": {
+                "variant": bounded_hdm2["variant"],
+                "sha256": bounded_hdm2["sha256"],
+                "bytes": int(bounded_hdm2["bytes"]),
+                "header_bytes": int(bounded_hdm2["header_bytes"]),
+                "context_count": int(bounded_hdm2["context_count"]),
+                "context_token_count": int(bounded_hdm2["context_token_count"]),
+                "raw_context_count": int(bounded_hdm2["raw_context_count"]),
+                "range_context_count": int(bounded_hdm2["range_context_count"]),
+            },
+            "raw_equal": bounded_hdm2["raw_equal"] is True,
+            "context_token_count_equal": int(hdc2_stats["context_token_count"])
+            == int(bounded_hdm2["context_token_count"]),
+            "context_count_equal": int(hdc2_stats["context_count"])
+            == int(bounded_hdm2["context_count"]),
+            "header_bytes_delta": int(bounded_hdm2["header_bytes"])
+            - int(hdc2_stats["header_bytes"]),
+            "schema_metadata_elided_vs_hdc2_bytes": int(
+                bounded_hdm2["schema_metadata_elided_vs_hdc2_bytes"]
+            ),
+        }
+    )
+    return payload
 
 
 def discover_candidate_audit_inputs(
@@ -1450,6 +1625,12 @@ def _validate_requirement_artifact(requirement_id: str, payload: Any) -> dict[st
         blockers.extend(_validate_runtime_tree_parity_manifest(payload, requirement_id))
     elif requirement_id == "meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions":
         blockers.extend(_validate_meta_lagrangian_atom_manifest(payload, requirement_id))
+    elif requirement_id == "byte_accounted_model_overhead_reduction_manifest":
+        blockers.extend(_validate_byte_accounted_model_overhead(payload, requirement_id))
+    elif requirement_id == "byte_accounted_static_model_context_reduction_manifest":
+        blockers.extend(_validate_static_context_reduction(payload, requirement_id))
+    elif requirement_id == "old_new_model_context_table_diff":
+        blockers.extend(_validate_old_new_context_table_diff(payload, requirement_id))
     else:
         blockers.append(f"{requirement_id}:no_requirement_validator")
     return {
@@ -1582,6 +1763,109 @@ def _validate_runtime_tree_parity_manifest(payload: Mapping[str, Any], requireme
     return blockers
 
 
+def _validate_byte_accounted_model_overhead(
+    payload: Mapping[str, Any],
+    requirement_id: str,
+) -> list[str]:
+    blockers: list[str] = []
+    if payload.get("accounting_closed") is not True:
+        blockers.append(f"{requirement_id}:accounting_closed_not_true")
+    blockers.extend(_require_positive_int_field(payload, "target_bytes", requirement_id))
+    source = payload.get("source_variant")
+    if not isinstance(source, Mapping):
+        blockers.append(f"{requirement_id}:source_variant_object_missing")
+        return blockers
+    for key in ("bytes", "header_bytes", "range_payload_bytes", "raw_scale_bytes", "accounted_bytes"):
+        if key == "raw_scale_bytes":
+            blockers.extend(_require_nonnegative_int_field(source, key, requirement_id))
+        else:
+            blockers.extend(_require_positive_int_field(source, key, requirement_id))
+    blockers.extend(_require_sha_field(source, "sha256", requirement_id))
+    accounted = _field_as_int(source, "accounted_bytes")
+    total = _field_as_int(source, "bytes")
+    header = _field_as_int(source, "header_bytes")
+    payload_bytes = _field_as_int(source, "range_payload_bytes")
+    scale = _field_as_int(source, "raw_scale_bytes")
+    if None not in (accounted, total, header, payload_bytes, scale):
+        if accounted != header + payload_bytes + scale:
+            blockers.append(f"{requirement_id}:accounted_bytes_sum_mismatch")
+        if accounted != total:
+            blockers.append(f"{requirement_id}:accounted_bytes_total_mismatch")
+        if _field_as_int(payload, "target_bytes") != header:
+            blockers.append(f"{requirement_id}:target_bytes_header_mismatch")
+    accounting = payload.get("byte_accounting")
+    if not isinstance(accounting, Mapping):
+        blockers.append(f"{requirement_id}:byte_accounting_object_missing")
+    else:
+        for key in (
+            "actual_bytes",
+            "known_model_overhead_bytes",
+            "known_encoded_payload_bytes",
+            "known_container_overhead_bytes",
+            "known_unattributed_bytes",
+        ):
+            if key in {"known_container_overhead_bytes", "known_unattributed_bytes"}:
+                blockers.extend(_require_nonnegative_int_field(accounting, key, requirement_id))
+            else:
+                blockers.extend(_require_positive_int_field(accounting, key, requirement_id))
+    return blockers
+
+
+def _validate_static_context_reduction(
+    payload: Mapping[str, Any],
+    requirement_id: str,
+) -> list[str]:
+    blockers: list[str] = []
+    if payload.get("accounting_closed") is not True:
+        blockers.append(f"{requirement_id}:accounting_closed_not_true")
+    source = payload.get("source_variant")
+    candidate = payload.get("candidate_variant")
+    if not isinstance(source, Mapping) or not isinstance(candidate, Mapping):
+        blockers.append(f"{requirement_id}:source_or_candidate_variant_object_missing")
+        return blockers
+    for variant_label, variant in (("source", source), ("candidate", candidate)):
+        blockers.extend(_require_nonempty_string_field(variant, "variant", requirement_id))
+        blockers.extend(_require_sha_field(variant, "sha256", requirement_id))
+        for key in ("bytes", "header_bytes", "context_count", "context_token_count"):
+            blockers.extend(_require_positive_int_field(variant, key, requirement_id))
+        if variant_label == "candidate" and variant.get("raw_equal") is not True:
+            blockers.append(f"{requirement_id}:candidate_raw_equal_not_true")
+    reduction = _field_as_int(payload, "static_context_header_reduction_bytes")
+    if reduction is None or reduction <= 0:
+        blockers.append(f"{requirement_id}:static_context_header_reduction_bytes_missing_or_nonpositive")
+    schema_elided = _field_as_int(payload, "schema_metadata_elided_vs_hdc2_bytes")
+    if schema_elided is None or schema_elided <= 0:
+        blockers.append(f"{requirement_id}:schema_metadata_elided_vs_hdc2_bytes_missing_or_nonpositive")
+    return blockers
+
+
+def _validate_old_new_context_table_diff(
+    payload: Mapping[str, Any],
+    requirement_id: str,
+) -> list[str]:
+    blockers: list[str] = []
+    old = payload.get("old_variant")
+    new = payload.get("new_variant")
+    if not isinstance(old, Mapping) or not isinstance(new, Mapping):
+        blockers.append(f"{requirement_id}:old_or_new_variant_object_missing")
+        return blockers
+    for variant in (old, new):
+        blockers.extend(_require_nonempty_string_field(variant, "variant", requirement_id))
+        blockers.extend(_require_sha_field(variant, "sha256", requirement_id))
+        for key in ("bytes", "header_bytes", "context_count", "context_token_count"):
+            blockers.extend(_require_positive_int_field(variant, key, requirement_id))
+    if payload.get("raw_equal") is not True:
+        blockers.append(f"{requirement_id}:raw_equal_not_true")
+    if payload.get("context_token_count_equal") is not True:
+        blockers.append(f"{requirement_id}:context_token_count_equal_not_true")
+    if payload.get("context_count_equal") is not True:
+        blockers.append(f"{requirement_id}:context_count_equal_not_true")
+    delta = payload.get("header_bytes_delta")
+    if isinstance(delta, bool) or not isinstance(delta, int) or delta >= 0:
+        blockers.append(f"{requirement_id}:header_bytes_delta_missing_or_nonnegative")
+    return blockers
+
+
 def _validate_meta_lagrangian_atom_manifest(
     payload: Mapping[str, Any],
     requirement_id: str,
@@ -1659,6 +1943,13 @@ def _require_positive_int_field(payload: Mapping[str, Any], key: str, requiremen
     value = _field_as_int(payload, key)
     if value is None or value <= 0:
         return [f"{requirement_id}:{key}_missing_or_nonpositive"]
+    return []
+
+
+def _require_nonnegative_int_field(payload: Mapping[str, Any], key: str, requirement_id: str) -> list[str]:
+    value = _field_as_int(payload, key)
+    if value is None or value < 0:
+        return [f"{requirement_id}:{key}_missing_or_negative"]
     return []
 
 

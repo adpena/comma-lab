@@ -275,6 +275,13 @@ def _materialize_hdc2_stream_work_product(args: argparse.Namespace) -> dict[str,
         "roundtrip_decode_validation_manifest": work_product[
             "roundtrip_decode_validation_manifest"
         ],
+        "byte_accounted_model_overhead_reduction_manifest": work_product[
+            "byte_accounted_model_overhead_reduction_manifest"
+        ],
+        "byte_accounted_static_model_context_reduction_manifest": work_product[
+            "byte_accounted_static_model_context_reduction_manifest"
+        ],
+        "old_new_model_context_table_diff": work_product["old_new_model_context_table_diff"],
     }
     generated: dict[str, Path] = {}
     for name, payload in named_payloads.items():

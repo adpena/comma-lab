@@ -18,6 +18,7 @@ from tac.hnerv_decoder_recode import (
 from tac.hnerv_entropy_candidate_packet import (
     CANDIDATE_STREAM_REQUIREMENT_ID,
     DECODED_OUTPUT_EQUIVALENCE_REQUIREMENT_ID,
+    HDC2_STREAM_ARTIFACT_REQUIREMENTS,
     ROUNDTRIP_REQUIREMENT_ID,
     SOURCE_ARCHIVE_REQUIREMENT_ID,
     SOURCE_STREAM_REQUIREMENT_ID,
@@ -132,6 +133,20 @@ def test_hdc2_stream_work_product_closes_stream_requirements_but_not_archive(
     assert candidate_stream["sha256"] == sha256_file(tmp_path / "candidate_hdc2.bin")
     assert work_product["decoded_output_equivalence_report"]["old_new_sha256_equal"] is True
     assert work_product["roundtrip_decode_validation_manifest"]["roundtrip_valid"] is True
+    assert work_product["byte_accounted_model_overhead_reduction_manifest"][
+        "accounting_closed"
+    ] is True
+    assert work_product["byte_accounted_model_overhead_reduction_manifest"][
+        "target_bytes"
+    ] == work_product["candidate_stream_section_manifest"]["stream"]["header_bytes"]
+    assert work_product["byte_accounted_static_model_context_reduction_manifest"][
+        "accounting_closed"
+    ] is True
+    assert work_product["byte_accounted_static_model_context_reduction_manifest"][
+        "static_context_header_reduction_bytes"
+    ] > 0
+    assert work_product["old_new_model_context_table_diff"]["raw_equal"] is True
+    assert work_product["old_new_model_context_table_diff"]["header_bytes_delta"] < 0
     bounded = work_product["bounded_hdc2_recode_variants"]
     assert len(bounded) == 1
     assert bounded[0]["variant"] == (
@@ -148,7 +163,13 @@ def test_hdc2_stream_work_product_closes_stream_requirements_but_not_archive(
     assert CANDIDATE_STREAM_REQUIREMENT_ID not in manifest["missing_artifacts"]
     assert DECODED_OUTPUT_EQUIVALENCE_REQUIREMENT_ID not in manifest["missing_artifacts"]
     assert ROUNDTRIP_REQUIREMENT_ID not in manifest["missing_artifacts"]
-    assert "byte_accounted_model_overhead_reduction_manifest" in manifest["missing_artifacts"]
+    assert "byte_accounted_model_overhead_reduction_manifest" not in manifest[
+        "missing_artifacts"
+    ]
+    assert "byte_accounted_static_model_context_reduction_manifest" not in manifest[
+        "missing_artifacts"
+    ]
+    assert "old_new_model_context_table_diff" not in manifest["missing_artifacts"]
     assert "candidate_archive_manifest_with_member_sha256s" in manifest["missing_artifacts"]
     assert "runtime_tree_parity_manifest" in manifest["missing_artifacts"]
     assert "missing_candidate_archive_manifest" in manifest["readiness_blockers"]
@@ -162,6 +183,9 @@ def test_hdc2_stream_work_product_closes_stream_requirements_but_not_archive(
     assert CANDIDATE_STREAM_REQUIREMENT_ID in available_ids
     assert DECODED_OUTPUT_EQUIVALENCE_REQUIREMENT_ID in available_ids
     assert ROUNDTRIP_REQUIREMENT_ID in available_ids
+    assert "byte_accounted_model_overhead_reduction_manifest" in available_ids
+    assert "byte_accounted_static_model_context_reduction_manifest" in available_ids
+    assert "old_new_model_context_table_diff" in available_ids
 
 
 def test_candidate_packet_can_build_audit_from_stream_profile(tmp_path: Path) -> None:
@@ -418,9 +442,17 @@ def test_build_hnerv_entropy_candidate_packet_cli_materializes_hdc2_stream_work_
     assert (
         output_dir / f"{SOURCE_STREAM_REQUIREMENT_ID}.json"
     ).is_file()
+    assert (
+        output_dir / "byte_accounted_model_overhead_reduction_manifest.json"
+    ).is_file()
+    assert (output_dir / "old_new_model_context_table_diff.json").is_file()
     assert SOURCE_STREAM_REQUIREMENT_ID not in packet["missing_artifacts"]
     assert CANDIDATE_STREAM_REQUIREMENT_ID not in packet["missing_artifacts"]
     assert ROUNDTRIP_REQUIREMENT_ID not in packet["missing_artifacts"]
+    assert "byte_accounted_model_overhead_reduction_manifest" not in packet[
+        "missing_artifacts"
+    ]
+    assert "old_new_model_context_table_diff" not in packet["missing_artifacts"]
     assert "candidate_archive_manifest_with_member_sha256s" in packet["missing_artifacts"]
     assert packet["ready_for_exact_eval_dispatch"] is False
 
@@ -671,15 +703,8 @@ def _write_hdc2_requirement_artifacts(
     tmp_path: Path,
     work_product: dict,
 ) -> dict[str, Path]:
-    name_to_requirement = {
-        "source_archive_manifest": SOURCE_ARCHIVE_REQUIREMENT_ID,
-        "source_stream_section_manifest": SOURCE_STREAM_REQUIREMENT_ID,
-        "candidate_stream_section_manifest": CANDIDATE_STREAM_REQUIREMENT_ID,
-        "decoded_output_equivalence_report": DECODED_OUTPUT_EQUIVALENCE_REQUIREMENT_ID,
-        "roundtrip_decode_validation_manifest": ROUNDTRIP_REQUIREMENT_ID,
-    }
     artifacts = {}
-    for name, requirement_id in name_to_requirement.items():
+    for name, requirement_id in HDC2_STREAM_ARTIFACT_REQUIREMENTS.items():
         path = tmp_path / f"{requirement_id}.json"
         path.write_text(json_text(work_product[name]), encoding="utf-8")
         artifacts[requirement_id] = path
