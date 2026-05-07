@@ -30,6 +30,7 @@ from tac.pr91_hpm1_codec import (
     run_pr91_hpm1_failure_row_probability_scan_probe,
     run_pr91_hpm1_first_symbol_state_probe,
     run_pr91_hpm1_next_row_suffix_scan_probe,
+    run_pr91_hpm1_phase_major_prefix_reencode_blocker_probe,
     run_pr91_hpm1_preflight,
     run_pr91_hpm1_probability_variant_matrix,
     run_pr91_hpm1_reference_teacher_forcing_probe,
@@ -1251,6 +1252,95 @@ def test_pr91_reference_teacher_forcing_probe_records_phase_major_next_row_artif
     assert range_prefix["target_decoded_symbols_before_failure"] == 15989
     assert range_prefix["range_prefix_max_target_decoded_before"] == 4096
     assert "slow forensic runs" in range_prefix["reason"]
+
+
+def test_pr91_phase_major_prefix_reencode_blocker_records_exact_seed_failure() -> None:
+    if not DEFAULT_PR91_ARCHIVE.is_file():
+        pytest.skip("canonical PR91 archive not available")
+    if not DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE.is_file():
+        pytest.skip("PR85/QMA9 decoded reference token source not available")
+
+    report = run_pr91_hpm1_phase_major_prefix_reencode_blocker_probe(
+        DEFAULT_PR91_ARCHIVE,
+        reference_tokens_path=DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE,
+        range_prefix_seed_symbol_counts=(1, 8, 64),
+        range_prefix_replay_symbol_limit=64,
+        range_prefix_max_target_decoded_before=20000,
+        write_json=False,
+    )
+
+    assert report["schema"] == "pr91_hpm1_phase_major_prefix_reencode_blocker_v1"
+    assert report["status"] == (
+        "blocked_phase_major_reference_prefix_not_byte_exact_reencode"
+    )
+    assert report["score_claim"] is False
+    assert report["dispatch_allowed"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["blocker_classified"] is True
+    assert report["archive"]["sha256"] == (
+        "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f"
+    )
+    assert report["reference_tokens"]["sha256"] == (
+        "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a"
+    )
+    range_probe = report["range_state_prefix_probe"]
+    assert range_probe["status"] == "target_failure_reproduced_with_reference_context"
+    assert range_probe["target_failure_reproduced"] is True
+    assert range_probe["observed_failure"] == {
+        "decoded_symbol_count_before_failure": 15989,
+        "frame": 0,
+        "group": 17,
+        "symbol_in_group": 437,
+    }
+    rows_before = range_probe["probability_row_sequence_hashes"][
+        "rows_before_failure"
+    ]
+    assert rows_before["count"] == 15989
+    assert rows_before["normalized_for_categorical_sha256"] == (
+        "eafd81c8b25c675b79ad0b3096274d9ba4e4c8c0084d9d1195cae61a57edf638"
+    )
+    exact_findings = report["exact_fail_closed_findings"]
+    assert exact_findings["first_local_reference_word_mismatch"] == {
+        "checkpoint_label": "first_1_symbols",
+        "common_prefix_word_count": 0,
+        "local_word_count": 1,
+        "submitted_total_word_count": 29199,
+        "symbol_count": 1,
+    }
+    assert exact_findings["first_submitted_reference_prefix_failure"] == {
+        "checkpoint_label": "first_8_symbols",
+        "decoded_symbol_count": 8,
+        "first_mismatch": {
+            "decoded_symbol": 2,
+            "reference_symbol": 0,
+            "symbol_index": 7,
+        },
+        "status": "decoded_symbol_mismatch",
+        "symbol_count": 8,
+    }
+    assert exact_findings["byte_exact_reencode_proven"] is False
+
+
+def test_pr91_phase_major_prefix_reencode_blocker_cli_help_lists_controls() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(
+                REPO
+                / "tools"
+                / "audit_pr91_hpm1_phase_major_prefix_reencode_blocker.py"
+            ),
+            "--help",
+        ],
+        check=True,
+        cwd=REPO,
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+
+    assert "--range-prefix-seed-symbol-counts" in result.stdout
+    assert "--range-prefix-replay-symbol-limit" in result.stdout
+    assert "--range-prefix-max-target-decoded-before" in result.stdout
 
 
 def test_pr91_semantic_symbol_bridge_probe_narrows_first_8_phase_major_seed() -> None:

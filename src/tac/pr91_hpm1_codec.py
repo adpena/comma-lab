@@ -5883,6 +5883,316 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
     return _jsonable(report)
 
 
+def _phase_major_prefix_checkpoint_summary(
+    checkpoint_results: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for checkpoint in checkpoint_results:
+        rows.append(
+            {
+                "label": checkpoint.get("label"),
+                "symbol_count": checkpoint.get("symbol_count"),
+                "symbols_before_failure_remaining": checkpoint.get(
+                    "symbols_before_failure_remaining"
+                ),
+                "includes_failure_symbol": checkpoint.get("includes_failure_symbol"),
+                "local_reference_prefix_words": checkpoint.get(
+                    "local_reference_prefix_words"
+                ),
+                "submitted_same_word_count_prefix": checkpoint.get(
+                    "submitted_same_word_count_prefix"
+                ),
+                "submitted_word_comparison": checkpoint.get(
+                    "submitted_word_comparison"
+                ),
+                "submitted_full_stream_prefix_replay": checkpoint.get(
+                    "submitted_full_stream_prefix_replay"
+                ),
+            }
+        )
+    return rows
+
+
+def _summarize_phase_major_prefix_reencode_blocker(
+    reference_teacher_forcing_report: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Extract the phase-major prefix re-encode blocker from a full probe."""
+
+    probe = reference_teacher_forcing_report.get("reference_teacher_forcing_probe", {})
+    if not isinstance(probe, Mapping):
+        raise Pr91Hpm1Error(
+            "phase_major_prefix_reencode_blocker",
+            "missing_reference_teacher_forcing_probe",
+        )
+    candidate_results = probe.get("candidate_results", [])
+    phase_row: Mapping[str, Any] | None = None
+    if isinstance(candidate_results, list):
+        for row in candidate_results:
+            if isinstance(row, Mapping) and row.get("candidate") == "phase_major_row_major":
+                phase_row = row
+                break
+    if phase_row is None:
+        raise Pr91Hpm1Error(
+            "phase_major_prefix_reencode_blocker",
+            "missing_phase_major_candidate_result",
+        )
+    reference_context = phase_row.get("reference_teacher_forced_context", {})
+    if not isinstance(reference_context, Mapping):
+        raise Pr91Hpm1Error(
+            "phase_major_prefix_reencode_blocker",
+            "missing_phase_major_reference_context",
+        )
+    prefix_probe = reference_context.get("range_state_prefix_probe", {})
+    if not isinstance(prefix_probe, Mapping):
+        raise Pr91Hpm1Error(
+            "phase_major_prefix_reencode_blocker",
+            "missing_phase_major_range_prefix_probe",
+        )
+    reconstruction = prefix_probe.get("range_prefix_reconstruction", {})
+    if not isinstance(reconstruction, Mapping):
+        raise Pr91Hpm1Error(
+            "phase_major_prefix_reencode_blocker",
+            "missing_range_prefix_reconstruction",
+        )
+    classification = reconstruction.get("classification", {})
+    if not isinstance(classification, Mapping):
+        raise Pr91Hpm1Error(
+            "phase_major_prefix_reencode_blocker",
+            "missing_range_prefix_classification",
+        )
+
+    class_status = str(classification.get("status", ""))
+    target_reproduced = bool(prefix_probe.get("target_failure_reproduced") is True)
+    first_word_mismatch = classification.get("first_local_reference_word_mismatch")
+    first_reference_failure = classification.get(
+        "first_submitted_reference_prefix_failure"
+    )
+    if (
+        target_reproduced
+        and class_status == "submitted_stream_reference_symbol_mismatch_in_seed_prefix"
+    ):
+        status = "blocked_phase_major_reference_prefix_not_byte_exact_reencode"
+        blocker_class = (
+            "phase_major_pr85_qma9_reference_symbols_do_not_reproduce_submitted_hpm1_stream"
+        )
+    elif (
+        target_reproduced
+        and class_status == "local_reference_prefix_words_diverge_from_submitted_stream"
+    ):
+        status = "blocked_phase_major_reference_prefix_words_diverge"
+        blocker_class = "phase_major_range_encoder_reemit_mismatch"
+    else:
+        status = "phase_major_prefix_reencode_blocker_inconclusive"
+        blocker_class = "phase_major_range_prefix_needs_deeper_probe"
+
+    archive_report = reference_teacher_forcing_report.get("archive", {})
+    reference_tokens = reference_teacher_forcing_report.get("reference_tokens", {})
+    payload = reference_teacher_forcing_report.get("payload", {})
+    source_order_baseline = reference_teacher_forcing_report.get(
+        "source_order_baseline", {}
+    )
+    checkpoint_results = reconstruction.get("checkpoint_results", [])
+    if not isinstance(checkpoint_results, list):
+        checkpoint_results = []
+    probability_hashes = prefix_probe.get("probability_row_sequence_hashes", {})
+    if not isinstance(probability_hashes, Mapping):
+        probability_hashes = {}
+    failure = prefix_probe.get("failure", {})
+    if not isinstance(failure, Mapping):
+        failure = {}
+    submitted_stream = prefix_probe.get("submitted_token_stream", {})
+    if not isinstance(submitted_stream, Mapping):
+        submitted_stream = {}
+
+    return _jsonable(
+        {
+            "schema": "pr91_hpm1_phase_major_prefix_reencode_blocker_v1",
+            "tool": (
+                "tac.pr91_hpm1_codec."
+                "run_pr91_hpm1_phase_major_prefix_reencode_blocker_probe"
+            ),
+            "status": status,
+            "score_claim": False,
+            "dispatch_allowed": False,
+            "dispatch_attempted": False,
+            "dispatch_performed": False,
+            "gpu_or_remote_work": False,
+            "local_only": True,
+            "ready_for_exact_eval_dispatch": False,
+            "promotion_eligible": False,
+            "evidence_grade": "empirical",
+            "evidence_scope": (
+                "local_cpu_phase_major_reference_prefix_reencode_blocker"
+            ),
+            "blocker_class": blocker_class,
+            "blocker_classified": status.startswith("blocked_"),
+            "archive": {
+                "path": archive_report.get("path"),
+                "bytes": archive_report.get("bytes"),
+                "sha256": archive_report.get("sha256"),
+                "member_x_sha256": archive_report.get("member_x_sha256"),
+            },
+            "reference_tokens": {
+                "path": reference_tokens.get("path"),
+                "bytes": reference_tokens.get("bytes"),
+                "sha256": reference_tokens.get("sha256"),
+                "matches_expected_pr85_qma9_token_source": reference_tokens.get(
+                    "matches_expected_pr85_qma9_token_source"
+                ),
+                "layout": reference_tokens.get("layout"),
+            },
+            "payload": {
+                "config": payload.get("config"),
+                "tokens_bytes": payload.get("tokens_bytes"),
+                "tokens_sha256": payload.get("tokens_sha256"),
+                "hpac_bytes": payload.get("hpac_bytes"),
+                "hpac_sha256": payload.get("hpac_sha256"),
+            },
+            "source_order_baseline": source_order_baseline,
+            "phase_major_reference_teacher_forcing": {
+                "candidate": "phase_major_row_major",
+                "decoded_context": phase_row.get("decoded_context"),
+                "reference_teacher_forced_context": {
+                    "status": reference_context.get("status"),
+                    "passed": reference_context.get("passed"),
+                    "failure_signature": reference_context.get("failure_signature"),
+                    "decoded_symbols_or_before_failure": reference_context.get(
+                        "decoded_symbols_or_before_failure"
+                    ),
+                    "full_decode_proven": reference_context.get(
+                        "full_decode_proven"
+                    ),
+                    "byte_exact_reencode_proven": reference_context.get(
+                        "byte_exact_reencode_proven"
+                    ),
+                    "advances_beyond_decoded_context": reference_context.get(
+                        "advances_beyond_decoded_context"
+                    ),
+                    "advances_beyond_source_failure_row": reference_context.get(
+                        "advances_beyond_source_failure_row"
+                    ),
+                    "failing_probability_row_sha256": reference_context.get(
+                        "failing_probability_row_sha256"
+                    ),
+                    "reference_mismatch_count_before_failure": reference_context.get(
+                        "reference_mismatch_count_before_failure"
+                    ),
+                    "first_decoded_reference_mismatch": reference_context.get(
+                        "first_decoded_reference_mismatch"
+                    ),
+                },
+            },
+            "range_state_prefix_probe": {
+                "schema": prefix_probe.get("schema"),
+                "status": prefix_probe.get("status"),
+                "target_failure": prefix_probe.get("target_failure"),
+                "observed_failure": prefix_probe.get("observed_failure"),
+                "target_failure_reproduced": prefix_probe.get(
+                    "target_failure_reproduced"
+                ),
+                "target_group_start_decoded_symbols": prefix_probe.get(
+                    "target_group_start_decoded_symbols"
+                ),
+                "submitted_token_stream": submitted_stream,
+                "probability_row_sequence_hashes": probability_hashes,
+                "range_prefix_reconstruction": {
+                    "schema": reconstruction.get("schema"),
+                    "window_symbols_before_failure": reconstruction.get(
+                        "window_symbols_before_failure"
+                    ),
+                    "seed_symbol_counts": reconstruction.get("seed_symbol_counts"),
+                    "checkpoint_symbol_counts": reconstruction.get(
+                        "checkpoint_symbol_counts"
+                    ),
+                    "checkpoint_results": _phase_major_prefix_checkpoint_summary(
+                        checkpoint_results
+                    ),
+                    "classification": classification,
+                },
+                "failure": {
+                    "stage": failure.get("stage"),
+                    "reason": failure.get("reason"),
+                    "exception_type": failure.get("exception_type"),
+                    "exception_text": failure.get("exception_text"),
+                    "frame": failure.get("frame"),
+                    "group": failure.get("group"),
+                    "symbol_in_group": failure.get("symbol_in_group"),
+                    "decoded_symbol_count_before_failure": failure.get(
+                        "decoded_symbol_count_before_failure"
+                    ),
+                    "group_start_decoded_symbols": failure.get(
+                        "group_start_decoded_symbols"
+                    ),
+                    "failing_probability_row": failure.get(
+                        "failing_probability_row"
+                    ),
+                    "failure_row_interpretation": failure.get(
+                        "failure_row_interpretation"
+                    ),
+                },
+            },
+            "exact_fail_closed_findings": {
+                "target_failure_reproduced": target_reproduced,
+                "first_local_reference_word_mismatch": first_word_mismatch,
+                "first_submitted_reference_prefix_failure": first_reference_failure,
+                "full_decode_proven": False,
+                "byte_exact_reencode_proven": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "next_required_artifact": (
+                "true PR91 encoder semantic symbols/probability rows or a "
+                "byte-exact range reemit proof before this path can leave "
+                "fail-closed status"
+            ),
+        }
+    )
+
+
+def run_pr91_hpm1_phase_major_prefix_reencode_blocker_probe(
+    archive: Path = DEFAULT_PR91_ARCHIVE,
+    *,
+    reference_tokens_path: Path = DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE,
+    reference_layout: str = "legacy_assume_nhw",
+    device: str = "cpu",
+    probability_variant: str = DEFAULT_HPAC_PROBABILITY_VARIANT,
+    prob_eps: float = PROB_EPS,
+    range_prefix_seed_symbol_counts: tuple[int, ...] | list[int] = (1, 8, 64),
+    range_prefix_replay_symbol_limit: int = 64,
+    range_prefix_max_target_decoded_before: int = 20000,
+    output_dir: Path | None = None,
+    write_json: bool = True,
+) -> dict[str, Any]:
+    """Classify the phase-major PR85/QMA9 prefix re-encode blocker."""
+
+    report = run_pr91_hpm1_reference_teacher_forcing_probe(
+        archive,
+        reference_tokens_path=reference_tokens_path,
+        reference_layout=reference_layout,
+        device=device,
+        probability_variant=probability_variant,
+        prob_eps=prob_eps,
+        max_frames=1,
+        candidates=("phase_major_row_major",),
+        strict=False,
+        write_json=False,
+        require_expected_reference_sha=True,
+        reference_window_before=1,
+        reference_window_after=3,
+        run_range_prefix_probe=True,
+        range_prefix_window_symbols=(1,),
+        range_prefix_seed_symbol_counts=range_prefix_seed_symbol_counts,
+        range_prefix_replay_symbol_limit=range_prefix_replay_symbol_limit,
+        range_prefix_max_target_decoded_before=range_prefix_max_target_decoded_before,
+    )
+    summary = _summarize_phase_major_prefix_reencode_blocker(report)
+    if write_json and output_dir is not None:
+        write_json_report(
+            summary,
+            Path(output_dir) / "phase_major_prefix_reencode_blocker.json",
+        )
+    return summary
+
+
 def run_pr91_hpm1_semantic_symbol_bridge_probe(
     archive: Path = DEFAULT_PR91_ARCHIVE,
     *,
