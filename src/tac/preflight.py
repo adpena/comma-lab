@@ -743,7 +743,11 @@ def preflight_all(
         # baseline_dilated_h64_0_90/masks.mkv (1 site) still exists and
         # 10+ scripts reference its directory (some only for renderer.bin,
         # not masks). Promote to STRICT after triage of remaining scripts.
-        check_lane_anchor_masks_full_resolution(strict=False, verbose=verbose)
+        # Promoted STRICT 2026-05-06: live count 0 — triage of remaining
+        # baseline_dilated_h64_0_90 references confirmed those scripts use
+        # renderer.bin only, not masks.mkv (so the 64×48 mask anchor is dead
+        # code from the operator's perspective).
+        check_lane_anchor_masks_full_resolution(strict=True, verbose=verbose)
 
         # 2026-04-29: Check 43 — controlled-baseline methodology for new
         # Tuna-2 lanes. WARN-ONLY initially because it only applies to
@@ -784,7 +788,9 @@ def preflight_all(
         #   in a comment, two profiles needing registration). Promote to
         #   STRICT after lane script cleanup.
         check_no_orphan_src_tac_modules(strict=False, verbose=verbose)
-        check_profile_loss_modes_in_validator_allowlist(strict=False, verbose=verbose)
+        # Promoted STRICT 2026-05-06: live count 0 — all profile loss_mode
+        # values resolved against the validator allowlist.
+        check_profile_loss_modes_in_validator_allowlist(strict=True, verbose=verbose)
         check_deploy_script_profiles_exist_in_registry(strict=False, verbose=verbose)
 
         # 2026-04-28 deep DX hardening pass 2: 3 NEW meta-bug checks
@@ -904,7 +910,9 @@ def preflight_all(
         # promotion plan (Lane A pattern): backfill .omx/state/
         # lane_class_proofs.json, then flip strict=True. Reference:
         # feedback_artifact_recovery_canonical_workflow_20260428.
-        check_lane_classes_have_pipeline_proof(strict=False, verbose=verbose)
+        # Promoted STRICT 2026-05-06: live count 0 — all 70 lane classes
+        # have pipeline proofs backfilled in .omx/state/lane_class_proofs.json.
+        check_lane_classes_have_pipeline_proof(strict=True, verbose=verbose)
 
         # 2026-04-29: Selfcomp / Lane MM checks. 2 STRICT + 1 warn-only.
         # All three guard the new grayscale-LUT + block-FP paradigm:
@@ -924,8 +932,9 @@ def preflight_all(
         check_segmap_grayscale_lut_consistency(strict=True, verbose=verbose)
         check_segmap_lct_archive_contract(strict=True, verbose=verbose)
         check_block_fp_exponents_alongside_qint(strict=True, verbose=verbose)
-        # WARN-only: flip STRICT once first SegMap-paradigm encoder lane lands.
-        check_segmap_export_calls_verify_roundtrip(strict=False, verbose=verbose)
+        # Promoted STRICT 2026-05-06: live count 0 — every segmap export
+        # call site invokes verify_roundtrip.
+        check_segmap_export_calls_verify_roundtrip(strict=True, verbose=verbose)
         check_segmap_hm_sa_lossy_pack_contract(strict=True, verbose=verbose)
 
         # 2026-04-30: Check 91 — Lane GP basis-fit kill enforcement. Forbids
@@ -1129,10 +1138,15 @@ def preflight_all(
         check_remote_archive_eval_self_bootstraps_uv_and_ffmpeg(
             strict=False, verbose=verbose,
         )
-        check_venv_creators_use_ensurepip(strict=False, verbose=verbose)
-        check_vastai_create_uses_min_disk_60(strict=False, verbose=verbose)
+        # Promoted STRICT 2026-05-06: PCC6/7/8 all at 0 live violations after
+        # the loop-session permanent-extinction wave (commit ed8a3da7-era).
+        # All venv creators call ensurepip; all vastai create commands use
+        # --disk >= 60GB; all chain drivers clean eval_work/inflated/ per
+        # candidate. Memory: feedback_loop_session_permanent_bug_class_extinction_20260501.md.
+        check_venv_creators_use_ensurepip(strict=True, verbose=verbose)
+        check_vastai_create_uses_min_disk_60(strict=True, verbose=verbose)
         check_remote_chain_drivers_clean_inflated_per_candidate(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # PCC9: shell-script runtime references must resolve. Catches the
         # subagent-worktree-lost-helper bug class (e.g. ensure_remote_uv.sh,
