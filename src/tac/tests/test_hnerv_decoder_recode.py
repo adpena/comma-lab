@@ -12,9 +12,11 @@ from tac.hnerv_decoder_recode import (
     build_structural_recode_profile,
     decode_global_prev_symbol_context_range_fixture,
     decode_global_prev_symbol_mixed_context_fixture,
+    decode_hdm3_q_brotli_split_fixture,
     decode_prev_symbol_context_range_fixture,
     encode_global_prev_symbol_context_range_fixture,
     encode_global_prev_symbol_mixed_context_fixture,
+    encode_hdm3_q_brotli_split_fixture,
     encode_prev_symbol_context_range_fixture,
     parse_packed_decoder_brotli,
 )
@@ -111,6 +113,22 @@ def test_structural_recode_profile_is_planning_only_and_raw_equal() -> None:
         mixed_context["range_payload_bytes"] + mixed_context["raw_payload_bytes"]
     )
     assert "byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales" in mixed_context
+    hdm3 = next(
+        row
+        for row in profile["variants"]
+        if row["variant"]
+        == "hdm3_q_brotli_split_fixed_schema_q_stream_plus_raw_scales"
+    )
+    assert hdm3["codec"] == "HDM3_fixed_schema_q_brotli_raw_scales"
+    assert hdm3["parity_fixture"] is True
+    assert hdm3["archive_ready"] is False
+    assert hdm3["raw_equal"] is True
+    assert hdm3["q_roundtrip_equal"] is True
+    assert hdm3["scale_roundtrip_equal"] is True
+    assert hdm3["q_stream_bytes"] == profile["q_stream_bytes"]
+    assert hdm3["raw_scale_bytes"] == profile["scale_stream_bytes"]
+    assert hdm3["header_bytes"] == 7
+    assert "byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales" in hdm3
     plan = profile["context_overhead_plan"]
     assert plan["score_claim"] is False
     assert plan["planning_only"] is True
@@ -199,6 +217,23 @@ def test_mixed_global_context_fixture_roundtrips_and_reduces_hdc2_bytes() -> Non
     assert mixed_stats["schema_metadata_elided_vs_hdc2_bytes"] > 0
     assert mixed_stats["header_bytes"] < global_stats["header_bytes"]
     assert len(mixed_payload) < len(global_payload)
+
+
+def test_hdm3_q_brotli_split_fixture_roundtrips_and_reduces_raw_q_bytes() -> None:
+    parsed = parse_packed_decoder_brotli(brotli.compress(_synthetic_context_decoder_raw(), quality=5))
+
+    payload, stats = encode_hdm3_q_brotli_split_fixture(parsed)
+    restored = decode_hdm3_q_brotli_split_fixture(payload)
+
+    assert payload.startswith(b"HDM3")
+    assert restored.to_raw() == parsed.to_raw()
+    assert restored.q_stream == parsed.q_stream
+    assert restored.scale_stream == parsed.scale_stream
+    assert stats["header_bytes"] == 7
+    assert stats["q_stream_bytes"] == len(parsed.q_stream)
+    assert stats["raw_scale_bytes"] == len(parsed.scale_stream)
+    assert stats["q_brotli_bytes"] < len(parsed.q_stream)
+    assert len(payload) == 7 + stats["q_brotli_bytes"] + stats["raw_scale_bytes"]
 
 
 def test_mixed_global_context_fixture_rejects_schema_record_count_mismatch() -> None:

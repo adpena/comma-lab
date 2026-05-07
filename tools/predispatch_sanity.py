@@ -247,7 +247,10 @@ def _readiness_evidence_component_score_penalty(evidence_json_path: Path | None)
             0.0,
         )
     elif pose_delta is not None:
-        pose_penalty = max((10.0 * max(pose_delta, 0.0)) ** 0.5, 0.0)
+        # A pose-distance delta is not itself an official score delta because
+        # score uses sqrt(10 * pose_dist). Without both absolute endpoints the
+        # baseline is unknown, so fail closed instead of pretending baseline=0.
+        return None
     return seg_penalty + pose_penalty
 
 
@@ -450,6 +453,11 @@ def _gate_apogee_evidence_semantics(
     distortion_status = str(payload.get("distortion_model_status", "")).lower()
     parity_status = str(payload.get("scorer_basin_parity_status", "")).lower()
     exact_positive = payload.get("exact_positive_cuda_evidence") is True
+    if semantics != "contest_cuda_exact_eval_positive":
+        blockers.append(
+            "apogee_intN requires contest_cuda_exact_eval_positive for normal predispatch pass; "
+            f"{semantics or 'missing'} is calibration-only and requires an explicit override"
+        )
     if semantics == "contest_faithful_distortion_model" and distortion_status not in APOGEE_PASS_STATUSES:
         blockers.append("contest_faithful_distortion_model requires passing distortion_model_status")
     if semantics == "scorer_basin_parity_gate" and parity_status not in APOGEE_PASS_STATUSES:

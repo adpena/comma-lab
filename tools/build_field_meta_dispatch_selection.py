@@ -1121,6 +1121,11 @@ def _candidate_confidence(payload: Mapping[str, Any]) -> float:
 def _expected_total_score_delta(payload: Mapping[str, Any]) -> tuple[float, str]:
     """Return the selector score delta and the source field used for custody."""
 
+    explicit_delta = _optional_numeric(payload.get("expected_total_score_delta"))
+    explicit_source = payload.get("expected_total_score_delta_source")
+    if explicit_delta is not None and isinstance(explicit_source, str) and explicit_source:
+        return explicit_delta, explicit_source
+
     rate_only_delta = _first_numeric_with_source(
         payload,
         (
@@ -1598,15 +1603,22 @@ def _normalize_apogee_intn_repack_metadata(
         component_penalty = _apogee_readiness_component_score_penalty(evidence_payload)
         rate_delta = _optional_numeric(normalized.get("rate_component_score_delta_vs_pr106"))
         if component_penalty is not None and rate_delta is not None:
+            expected_delta = rate_delta + component_penalty
+            semantics = str(evidence_payload.get("evidence_semantics") or "")
             normalized["component_penalty_score_delta_from_readiness_evidence"] = component_penalty
-            normalized["expected_total_score_delta"] = rate_delta + component_penalty
+            normalized["calibration_expected_total_score_delta"] = expected_delta
+            normalized["readiness_component_penalty_overwhelms_rate_gain"] = expected_delta >= 0.0
+            normalized["expected_total_score_delta"] = expected_delta
             normalized["expected_total_score_delta_source"] = (
                 "rate_component_score_delta_vs_pr106_plus_readiness_component_penalty"
             )
             normalized["proxy_row"] = False
             normalized["evidence_grade"] = "empirical_calibration_not_score_lowering"
-            normalized["score_lowering_evidence"] = normalized["expected_total_score_delta"] < 0.0
-            if normalized["expected_total_score_delta"] >= 0.0:
+            normalized["score_lowering_evidence"] = (
+                semantics == "contest_cuda_exact_eval_positive"
+                and evidence_payload.get("exact_positive_cuda_evidence") is True
+            )
+            if normalized["readiness_component_penalty_overwhelms_rate_gain"]:
                 normalized["pareto_scope"] = "apogee_intN_calibration_component_penalty"
                 normalized["dispatch_blockers"] = _ordered_unique_strings(
                     [
@@ -1701,7 +1713,7 @@ def _apogee_readiness_component_score_penalty(evidence_payload: Mapping[str, Any
             0.0,
         )
     elif pose_delta is not None:
-        pose_penalty = max((10.0 * max(pose_delta, 0.0)) ** 0.5, 0.0)
+        return None
     return seg_penalty + pose_penalty
 
 
@@ -2561,7 +2573,7 @@ def _row_for_manifest(
         expected_pose_dist_delta=expected_pose_delta,
     )
     selector_blockers = _unique_strings(rate_only_delta_proof["blockers"])
-    if payload.get("score_lowering_evidence") is False:
+    if payload.get("readiness_component_penalty_overwhelms_rate_gain") is True:
         selector_blockers.append("readiness_component_penalty_overwhelms_rate_gain")
         selector_blockers = _unique_strings(selector_blockers)
     selector_static_ready = bool(static_ready and not selector_blockers)
@@ -2632,6 +2644,12 @@ def _row_for_manifest(
         "scorer_basin_parity_status": str(payload.get("scorer_basin_parity_status") or ""),
         "component_penalty_score_delta_from_readiness_evidence": _optional_numeric(
             payload.get("component_penalty_score_delta_from_readiness_evidence")
+        ),
+        "calibration_expected_total_score_delta": _optional_numeric(
+            payload.get("calibration_expected_total_score_delta")
+        ),
+        "readiness_component_penalty_overwhelms_rate_gain": (
+            payload.get("readiness_component_penalty_overwhelms_rate_gain")
         ),
         "score_lowering_evidence": payload.get("score_lowering_evidence"),
         "proxy_row": proxy_row,

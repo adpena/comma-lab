@@ -272,6 +272,26 @@ def test_lossy_smaller_archive_blocks_when_parity_deltas_overwhelm_rate_gain(tmp
     assert "not score-lowering evidence" in sanity_gate.detail
 
 
+def test_readiness_component_penalty_fails_closed_without_absolute_pose_distances(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    evidence = tmp_path / "pose_delta_only.json"
+    evidence.write_text(
+        json.dumps(
+            {
+                "candidate_archive_sha256": "a" * 64,
+                "evidence_semantics": "scorer_basin_parity_gate",
+                "pose_dist_delta": 1.0e-4,
+                "seg_dist_delta": 0.0,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert mod._readiness_evidence_component_score_penalty(evidence) is None
+
+
 def test_high_rel_err_without_proxy_BLOCKS(tmp_path: Path) -> None:
     """rel_err > 1% requires the distortion proxy to have been run."""
     mod = _load_module()
@@ -427,7 +447,7 @@ def test_apogee_readiness_evidence_rejects_local_proxy_json(tmp_path: Path) -> N
     assert "unsupported evidence_semantics" in gate.detail
 
 
-def test_apogee_readiness_evidence_accepts_parity_gate_for_exact_sha(tmp_path: Path) -> None:
+def test_apogee_readiness_evidence_treats_parity_gate_as_calibration_only(tmp_path: Path) -> None:
     mod = _load_module()
     archive = tmp_path / "archive.zip"
     archive.write_bytes(b"apogee bytes")
@@ -448,7 +468,8 @@ def test_apogee_readiness_evidence_accepts_parity_gate_for_exact_sha(tmp_path: P
         archive_path=archive,
         evidence_json_path=evidence,
     )
-    assert gate.passed
+    assert not gate.passed
+    assert "calibration-only" in gate.detail
 
 
 def test_low_rel_err_without_proxy_PASSES_proxy_gate(tmp_path: Path) -> None:

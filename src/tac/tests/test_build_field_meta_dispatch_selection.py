@@ -351,8 +351,11 @@ def test_field_meta_selector_ingests_apogee_parity_evidence_as_calibration(tmp_p
     assert row["proxy_row"] is False
     assert row["pareto_scope"] == "apogee_intN_calibration_component_penalty"
     assert row["expected_total_score_delta"] > 0.09
+    assert row["calibration_expected_total_score_delta"] == row["expected_total_score_delta"]
+    assert row["readiness_component_penalty_overwhelms_rate_gain"] is True
+    assert row["score_lowering_evidence"] is False
     assert row["expected_total_score_delta_source"] == (
-        "expected_total_score_delta"
+        "rate_component_score_delta_vs_pr106_plus_readiness_component_penalty"
     )
     assert "readiness_component_penalty_overwhelms_rate_gain" in row["candidate_blockers"]
 

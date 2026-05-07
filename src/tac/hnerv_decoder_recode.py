@@ -150,6 +150,7 @@ def build_structural_recode_profile(
         _variant_context_range_per_tensor(parsed),
         _variant_context_range_global(parsed),
         _variant_mixed_context_global(parsed),
+        _variant_hdm3_q_brotli_split(parsed),
     ]
     for row in variants:
         row["byte_delta_vs_source_section"] = int(row["bytes"]) - len(source_brotli)
@@ -174,6 +175,13 @@ def build_structural_recode_profile(
         if (
             row["variant"]
             == "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales"
+        ):
+            row["byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales"] = int(
+                row["bytes"]
+            ) - int(entropy_summary["per_tensor_prev_symbol_entropy_floor_plus_raw_scales_bytes"])
+        if (
+            row["variant"]
+            == "hdm3_q_brotli_split_fixed_schema_q_stream_plus_raw_scales"
         ):
             row["byte_gap_vs_per_tensor_prev_symbol_entropy_floor_plus_raw_scales"] = int(
                 row["bytes"]
@@ -643,6 +651,34 @@ def _variant_mixed_context_global(parsed: PackedDecoderRaw) -> dict[str, Any]:
     }
 
 
+def _variant_hdm3_q_brotli_split(parsed: PackedDecoderRaw) -> dict[str, Any]:
+    payload, stats = encode_hdm3_q_brotli_split_fixture(parsed)
+    restored = decode_hdm3_q_brotli_split_fixture(payload)
+    return {
+        "variant": "hdm3_q_brotli_split_fixed_schema_q_stream_plus_raw_scales",
+        "codec": "HDM3_fixed_schema_q_brotli_raw_scales",
+        "bytes": len(payload),
+        "sha256": sha256_bytes(payload),
+        "q_roundtrip_equal": restored.q_stream == parsed.q_stream,
+        "scale_roundtrip_equal": restored.scale_stream == parsed.scale_stream,
+        "raw_equal": restored.to_raw() == parsed.to_raw(),
+        "tensor_count": len(parsed.records),
+        "q_brotli_bytes": stats["q_brotli_bytes"],
+        "q_stream_bytes": stats["q_stream_bytes"],
+        "raw_scale_bytes": stats["raw_scale_bytes"],
+        "header_bytes": stats["header_bytes"],
+        "brotli_quality": stats["brotli_quality"],
+        "parity_fixture": True,
+        "archive_ready": False,
+        "dispatch_blockers": [
+            "parity_fixture_only",
+            "requires_submission_runtime_decoder",
+            "requires_archive_builder_and_payload_diff",
+            "requires_exact_cuda_auth_eval",
+        ],
+    }
+
+
 def encode_prev_symbol_context_range_fixture(
     parsed: PackedDecoderRaw,
 ) -> tuple[bytes, dict[str, int]]:
@@ -984,6 +1020,41 @@ def encode_global_prev_symbol_mixed_context_fixture(
     }
 
 
+def encode_hdm3_q_brotli_split_fixture(
+    parsed: PackedDecoderRaw,
+    *,
+    quality: int = 11,
+) -> tuple[bytes, dict[str, Any]]:
+    """Encode fixed-schema q bytes as Brotli plus raw fp32 scales.
+
+    HDM3 is a deterministic planning/runtime fixture, not an archive claim. It
+    removes all tensor-name/count metadata by relying on PACKED_STATE_SCHEMA,
+    stores Brotli(q_stream, quality=11), and appends the raw scale stream.
+    """
+
+    q_stream = parsed.q_stream
+    scale_stream = parsed.scale_stream
+    compressed = brotli.compress(q_stream, quality=quality)
+    if len(compressed) > 0xFFFFFF:
+        raise HnervDecoderRecodeError("HDM3 q Brotli payload exceeds len24")
+    out = io.BytesIO()
+    out.write(b"HDM3")
+    out.write(len(compressed).to_bytes(3, "little"))
+    out.write(compressed)
+    out.write(scale_stream)
+    payload = out.getvalue()
+    restored = decode_hdm3_q_brotli_split_fixture(payload)
+    if restored.to_raw() != parsed.to_raw():
+        raise HnervDecoderRecodeError("HDM3 q Brotli split fixture failed raw roundtrip")
+    return payload, {
+        "header_bytes": 7,
+        "brotli_quality": quality,
+        "q_brotli_bytes": len(compressed),
+        "q_stream_bytes": len(q_stream),
+        "raw_scale_bytes": len(scale_stream),
+    }
+
+
 def decode_global_prev_symbol_context_range_fixture(payload: bytes) -> PackedDecoderRaw:
     """Decode an HDC2 global previous-symbol context fixture."""
 
@@ -1152,6 +1223,47 @@ def decode_global_prev_symbol_mixed_context_fixture(payload: bytes) -> PackedDec
     return PackedDecoderRaw(records=tuple(with_scales))
 
 
+def decode_hdm3_q_brotli_split_fixture(payload: bytes) -> PackedDecoderRaw:
+    """Decode an HDM3 fixed-schema q-Brotli/raw-scale fixture."""
+
+    if payload[:4] != b"HDM3":
+        raise HnervDecoderRecodeError("invalid HDM3 q Brotli split fixture magic")
+    cursor = 4
+    compressed_len = int.from_bytes(
+        _read_payload_exact(payload, cursor, 3, "q_brotli_len24"),
+        "little",
+    )
+    cursor += 3
+    compressed = _read_payload_exact(payload, cursor, compressed_len, "compressed_hdm3_payload")
+    cursor += compressed_len
+    scale_len = 4 * len(PACKED_STATE_SCHEMA)
+    scale_stream = _read_payload_exact(payload, cursor, scale_len, "scale_stream")
+    cursor += scale_len
+    if cursor != len(payload):
+        raise HnervDecoderRecodeError("HDM3 fixture has trailing bytes")
+    try:
+        q_stream = brotli.decompress(compressed)
+    except brotli.error as exc:
+        raise HnervDecoderRecodeError(f"HDM3 brotli decompression failed: {exc}") from exc
+    expected_q_len = sum(math.prod(shape) for _name, shape in PACKED_STATE_SCHEMA)
+    if len(q_stream) != expected_q_len:
+        raise HnervDecoderRecodeError("HDM3 q stream length mismatch")
+    records = []
+    q_cursor = 0
+    for index, (name, shape) in enumerate(PACKED_STATE_SCHEMA):
+        value_count = math.prod(shape)
+        records.append(
+            PackedDecoderRecord(
+                name=name,
+                shape=shape,
+                q_zz_u8=q_stream[q_cursor : q_cursor + value_count],
+                scale_f32=scale_stream[index * 4 : index * 4 + 4],
+            )
+        )
+        q_cursor += value_count
+    return PackedDecoderRaw(records=tuple(records))
+
+
 def _encode_context_symbol_stream(stream: list[int]) -> tuple[dict[str, Any], int]:
     counts = Counter(stream)
     symbols = sorted(counts)
@@ -1300,9 +1412,11 @@ __all__ = [
     "build_structural_recode_profile",
     "decode_global_prev_symbol_context_range_fixture",
     "decode_global_prev_symbol_mixed_context_fixture",
+    "decode_hdm3_q_brotli_split_fixture",
     "decode_prev_symbol_context_range_fixture",
     "encode_global_prev_symbol_context_range_fixture",
     "encode_global_prev_symbol_mixed_context_fixture",
+    "encode_hdm3_q_brotli_split_fixture",
     "encode_prev_symbol_context_range_fixture",
     "parse_packed_decoder_brotli",
 ]
