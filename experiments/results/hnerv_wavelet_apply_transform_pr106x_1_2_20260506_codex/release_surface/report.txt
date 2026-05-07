@@ -1,0 +1,21 @@
+WR01 static release surface
+recorded_at_utc: 2026-05-07T00:00:00Z
+candidate_id: wr01_apply_pr106x_half
+family: hnerv_wavelet_wr01_apply_transform
+scope: upload-file static surface only
+score_claim: false
+dispatch_attempted: false
+remote_gpu_run: false
+evidence_grade: empirical_archive_candidate_until_exact_cuda
+archive_sha256: d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628
+archive_size_bytes: 186222
+archive_member: x
+source_archive_sha256: d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e
+source_archive_size_bytes: 186231
+changed_section_name: latents_and_sidecar_brotli
+changed_section_sha256: 2d85c4891e06906833e6a106dd486184121159a2380b581dc0e0b7d56603e939
+candidate_manifest: experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json
+public_replay_preflight: experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json
+payload_section_diff: experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/payload_section_diff_vs_pr106x.json
+remaining_for_score_or_dispatch: exact CUDA auth eval, adjudication, terminal dispatch claim
+notes: This file intentionally records no score and no promotion claim.

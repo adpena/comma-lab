@@ -9,7 +9,10 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import shlex
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +42,7 @@ DEFAULT_OUTPUT_DIR = Path(
 DEFAULT_RESULT_DIR = Path(
     "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex"
 )
+DEFAULT_RELEASE_SURFACE_SUBDIR = "release_surface"
 DEFAULT_CLAIMS_PATH = Path(".omx/state/active_lane_dispatch_claims.md")
 DEFAULT_CLAIM_TTL_HOURS = 24
 CONTEST_ORIGINAL_BYTES = 37_545_489
@@ -125,6 +129,20 @@ def _repo_path(path: Path) -> Path:
     return path if path.is_absolute() else REPO_ROOT / path
 
 
+def _repo_display_path(path: Path) -> str:
+    full = _repo_path(path)
+    try:
+        return full.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+    except ValueError:
+        return full.as_posix()
+
+
+def _release_relative_path(release_dir: Path, target: Path) -> str:
+    base = _repo_path(release_dir)
+    full = _repo_path(target)
+    return os.path.relpath(full, start=base).replace(os.sep, "/")
+
+
 def _sha256_file(path: Path) -> str | None:
     full = _repo_path(path)
     if not full.is_file():
@@ -143,6 +161,238 @@ def _archive_identity(path: Path) -> dict[str, Any]:
         "exists": full.is_file(),
         "sha256": _sha256_file(path),
         "bytes": full.stat().st_size if full.is_file() else None,
+    }
+
+
+def _release_surface_status(release_dir: Path) -> dict[str, Any]:
+    files = {}
+    for rel in ("archive.zip", "inflate.sh", "report.txt", "archive_manifest.json"):
+        path = release_dir / rel
+        full = _repo_path(path)
+        files[rel] = {
+            "path": _repo_display_path(path),
+            "exists": full.is_file(),
+            "bytes": full.stat().st_size if full.is_file() else None,
+            "sha256": _sha256_file(path) if full.is_file() else None,
+        }
+    return {
+        "schema": "wr01_release_surface_status_v1",
+        "path": _repo_display_path(release_dir),
+        "exists": _repo_path(release_dir).is_dir(),
+        "files": files,
+    }
+
+
+def _inflate_wrapper_text(source_inflate: Path) -> str:
+    source_full = _repo_path(source_inflate)
+    try:
+        source_rel = source_full.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+    except ValueError:
+        source_rel = None
+    if source_rel is None:
+        source_line = f"SOURCE_INFLATE={shlex.quote(source_full.as_posix())}"
+    else:
+        source_line = f'SOURCE_INFLATE="${{REPO_ROOT}}/{source_rel}"'
+    return (
+        "#!/usr/bin/env bash\n"
+        "# Deterministic WR01 static release-surface wrapper.\n"
+        "# Delegates to the audited PR106 runtime without mutating the public-intake tree.\n"
+        "set -euo pipefail\n"
+        'HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\n'
+        'if REPO_ROOT="$(git -C "$HERE" rev-parse --show-toplevel 2>/dev/null)"; then\n'
+        "  :\n"
+        "else\n"
+        '  REPO_ROOT="$(cd "$HERE/../../../.." && pwd)"\n'
+        "fi\n"
+        f"{source_line}\n"
+        'if [ ! -x "$SOURCE_INFLATE" ]; then\n'
+        '  echo "FATAL: delegated inflate.sh is missing or not executable: $SOURCE_INFLATE" >&2\n'
+        "  exit 66\n"
+        "fi\n"
+        'exec "$SOURCE_INFLATE" "$@"\n'
+    )
+
+
+def _release_surface_report_text(
+    *,
+    args: argparse.Namespace,
+    now_utc: dt.datetime,
+    archive_identity: dict[str, Any],
+    manifest_payload: dict[str, Any],
+) -> str:
+    lines = [
+        "WR01 static release surface",
+        f"recorded_at_utc: {_format_utc(now_utc)}",
+        f"candidate_id: {args.lane_id}",
+        "family: hnerv_wavelet_wr01_apply_transform",
+        "scope: upload-file static surface only",
+        "score_claim: false",
+        "dispatch_attempted: false",
+        "remote_gpu_run: false",
+        "evidence_grade: empirical_archive_candidate_until_exact_cuda",
+        f"archive_sha256: {archive_identity['sha256']}",
+        f"archive_size_bytes: {archive_identity['bytes']}",
+        f"archive_member: {manifest_payload.get('candidate_member_name', 'x')}",
+        f"source_archive_sha256: {manifest_payload.get('source_archive_sha256')}",
+        f"source_archive_size_bytes: {manifest_payload.get('source_archive_bytes')}",
+        f"changed_section_name: {manifest_payload.get('changed_section_name')}",
+        f"changed_section_sha256: {manifest_payload.get('changed_section_sha256')}",
+        f"candidate_manifest: {_repo_display_path(args.result_dir / 'manifest.json')}",
+        f"public_replay_preflight: {_repo_display_path(args.result_dir / 'public_replay_preflight.json')}",
+        f"payload_section_diff: {_repo_display_path(args.result_dir / 'payload_section_diff_vs_pr106x.json')}",
+        "remaining_for_score_or_dispatch: exact CUDA auth eval, adjudication, terminal dispatch claim",
+        "notes: This file intentionally records no score and no promotion claim.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def build_release_surface(args: argparse.Namespace, *, now_utc: dt.datetime) -> dict[str, Any]:
+    release_dir = args.release_surface_dir
+    release_full = _repo_path(release_dir)
+    archive_identity = _archive_identity(args.archive)
+    if not archive_identity["exists"]:
+        raise FileNotFoundError(f"archive does not exist: {args.archive}")
+    if archive_identity["sha256"] != args.archive_sha256:
+        raise ValueError(
+            f"archive sha256 mismatch: expected={args.archive_sha256} actual={archive_identity['sha256']}"
+        )
+    if archive_identity["bytes"] != args.archive_bytes:
+        raise ValueError(
+            f"archive bytes mismatch: expected={args.archive_bytes} actual={archive_identity['bytes']}"
+        )
+    source_inflate_full = _repo_path(args.inflate_sh)
+    if not source_inflate_full.is_file():
+        raise FileNotFoundError(f"inflate.sh does not exist: {args.inflate_sh}")
+
+    manifest = args.result_dir / "manifest.json"
+    manifest_payload = _read_json(manifest) if _repo_path(manifest).is_file() else {}
+    release_full.mkdir(parents=True, exist_ok=True)
+
+    archive_dst = release_full / "archive.zip"
+    shutil.copyfile(_repo_path(args.archive), archive_dst)
+    archive_dst.chmod(0o644)
+
+    inflate_dst = release_full / "inflate.sh"
+    inflate_dst.write_text(_inflate_wrapper_text(args.inflate_sh), encoding="utf-8")
+    inflate_dst.chmod(0o755)
+
+    report_dst = release_full / "report.txt"
+    report_dst.write_text(
+        _release_surface_report_text(
+            args=args,
+            now_utc=now_utc,
+            archive_identity=archive_identity,
+            manifest_payload=manifest_payload,
+        ),
+        encoding="utf-8",
+    )
+    report_dst.chmod(0o644)
+
+    linked_paths = {
+        "candidate_manifest": args.result_dir / "manifest.json",
+        "public_replay_preflight": args.result_dir / "public_replay_preflight.json",
+        "payload_section_diff": args.result_dir / "payload_section_diff_vs_pr106x.json",
+        "lightning_exact_eval_dry_run": args.result_dir / "lightning_exact_eval_dry_run.json",
+        "wr01_exact_eval_packet": args.result_dir / "wr01_exact_eval_packet.json",
+    }
+    surface_manifest = {
+        "schema": "wr01_release_surface_manifest_v1",
+        "schema_version": 1,
+        "recorded_at_utc": _format_utc(now_utc),
+        "candidate_id": args.lane_id,
+        "job_name": args.job_name,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "remote_gpu_run": False,
+        "release_surface_scope": "static_upload_files_only_no_auth_eval_no_dispatch",
+        "candidate_archive_sha256": archive_identity["sha256"],
+        "candidate_archive_bytes": archive_identity["bytes"],
+        "archive": {
+            "path": "archive.zip",
+            "source_path": _repo_display_path(args.archive),
+            "sha256": archive_identity["sha256"],
+            "bytes": archive_identity["bytes"],
+        },
+        "inflate_sh": {
+            "path": "inflate.sh",
+            "delegates_to": _repo_display_path(args.inflate_sh),
+            "wrapper_sha256": _sha256_file(release_dir / "inflate.sh"),
+        },
+        "report": {
+            "path": "report.txt",
+            "sha256": _sha256_file(release_dir / "report.txt"),
+        },
+        "manifest_links": {
+            name: {
+                "repo_path": _repo_display_path(path),
+                "release_surface_relative_path": _release_relative_path(release_dir, path),
+                "exists": _repo_path(path).is_file(),
+            }
+            for name, path in linked_paths.items()
+        },
+        "source_archive_sha256": manifest_payload.get("source_archive_sha256"),
+        "source_archive_bytes": manifest_payload.get("source_archive_bytes"),
+        "source_archive_path": manifest_payload.get("source_archive_path"),
+        "candidate_payload_sha256": manifest_payload.get("candidate_payload_sha256"),
+        "changed_section_name": manifest_payload.get("changed_section_name"),
+        "changed_section_sha256": manifest_payload.get("changed_section_sha256"),
+        "remaining_required_for_score_or_dispatch": [
+            "exact_cuda_auth_eval",
+            "contest_auth_eval_adjudication",
+            "terminal_dispatch_claim",
+            "operator_score_claim_review",
+        ],
+    }
+    manifest_dst = release_full / "archive_manifest.json"
+    manifest_dst.write_text(
+        json.dumps(surface_manifest, indent=2, sort_keys=True, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+    manifest_dst.chmod(0o644)
+    return {
+        "schema": "wr01_release_surface_generation_v1",
+        "path": _repo_display_path(release_dir),
+        "files": _release_surface_status(release_dir)["files"],
+    }
+
+
+def refresh_static_compliance(args: argparse.Namespace) -> dict[str, Any]:
+    release_dir = args.release_surface_dir
+    output = args.result_dir / "pre_submission_compliance.json"
+    cmd = [
+        sys.executable,
+        "scripts/pre_submission_compliance_check.py",
+        "--submission-dir",
+        release_dir.as_posix(),
+        "--archive",
+        (release_dir / "archive.zip").as_posix(),
+        "--archive-manifest-json",
+        (release_dir / "archive_manifest.json").as_posix(),
+        "--expect-single-member",
+        "x",
+        "--expected-archive-sha256",
+        args.archive_sha256,
+        "--expected-archive-size-bytes",
+        str(args.archive_bytes),
+        "--public-scan-path",
+        release_dir.as_posix(),
+        "--json-out",
+        output.as_posix(),
+        "--strict",
+    ]
+    result = subprocess.run(cmd, cwd=REPO_ROOT, check=False, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(
+            "static WR01 release-surface compliance refresh failed "
+            f"with exit={result.returncode}: {result.stderr[-4000:]}"
+        )
+    return {
+        "schema": "wr01_static_compliance_refresh_v1",
+        "command": _one_liner([".venv/bin/python", *cmd[1:]]),
+        "json_out": _repo_display_path(output),
+        "returncode": result.returncode,
+        "stdout_tail": result.stdout[-1000:],
+        "stderr_tail": result.stderr[-1000:],
     }
 
 
@@ -876,12 +1126,18 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         _get_path(_first_archive_member(compliance_payload) or {}, "sha256"),
         manifest_payload.get("candidate_payload_sha256"),
     )
-    _check_equal(
+    compliance_manifest_path = _get_path(compliance_payload, "archive_manifest", "path")
+    allowed_compliance_manifest_paths = [
+        manifest.as_posix(),
+        (args.release_surface_dir / "archive_manifest.json").as_posix(),
+    ]
+    _check_condition(
         consistency_checks,
         consistency_blockers,
         "compliance_manifest_path_mismatch",
-        _get_path(compliance_payload, "archive_manifest", "path"),
-        manifest.as_posix(),
+        compliance_manifest_path in allowed_compliance_manifest_paths,
+        actual=compliance_manifest_path,
+        expected=allowed_compliance_manifest_paths,
     )
     _check_equal(
         consistency_checks,
@@ -1136,6 +1392,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "artifact_flag_violations": artifact_flag_violations,
         "artifact_consistency_ok": not consistency_blockers,
         "artifact_consistency_checks": consistency_checks,
+        "release_surface": _release_surface_status(args.release_surface_dir),
         "artifacts": artifact_statuses,
         "commands": {
             "claim": _one_liner(claim_cmd),
@@ -1155,6 +1412,28 @@ def main() -> int:
     parser.add_argument("--upstream-dir", type=Path, default=DEFAULT_UPSTREAM_DIR)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--result-dir", type=Path, default=DEFAULT_RESULT_DIR)
+    parser.add_argument(
+        "--release-surface-dir",
+        type=Path,
+        help=(
+            "Directory for the deterministic WR01 static release surface. "
+            "Defaults to <result-dir>/release_surface."
+        ),
+    )
+    parser.add_argument(
+        "--build-release-surface",
+        action="store_true",
+        help="Write archive.zip, inflate.sh, report.txt, and archive_manifest.json under --release-surface-dir.",
+    )
+    parser.add_argument(
+        "--refresh-static-compliance",
+        action="store_true",
+        help=(
+            "After building the release surface, rerun non-dispatch static "
+            "pre-submission compliance against it and overwrite "
+            "<result-dir>/pre_submission_compliance.json."
+        ),
+    )
     parser.add_argument("--archive-sha256", default="d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628")
     parser.add_argument("--archive-bytes", type=int, default=186222)
     parser.add_argument("--claims-path", type=Path, default=DEFAULT_CLAIMS_PATH)
@@ -1180,7 +1459,19 @@ def main() -> int:
         parser.error("--claim-ttl-hours must be positive")
     if args.now_utc and _parse_utc(args.now_utc) is None:
         parser.error("--now-utc must be ISO-8601 UTC-compatible, e.g. 2026-05-06T10:00:00Z")
+    if args.release_surface_dir is None:
+        args.release_surface_dir = args.result_dir / DEFAULT_RELEASE_SURFACE_SUBDIR
+    generation_payload = None
+    compliance_refresh_payload = None
+    if args.build_release_surface or args.refresh_static_compliance:
+        generation_payload = build_release_surface(args, now_utc=_now_utc(args))
+    if args.refresh_static_compliance:
+        compliance_refresh_payload = refresh_static_compliance(args)
     payload = build_packet(args)
+    if generation_payload is not None:
+        payload["release_surface_generation"] = generation_payload
+    if compliance_refresh_payload is not None:
+        payload["static_compliance_refresh"] = compliance_refresh_payload
     text = json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
     if args.json_out:
         _repo_path(args.json_out).parent.mkdir(parents=True, exist_ok=True)

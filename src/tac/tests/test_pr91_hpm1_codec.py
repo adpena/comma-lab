@@ -310,6 +310,19 @@ def test_pr91_entropy_failure_grammar_probe_records_exact_failure_row() -> None:
     assert trace["failure"]["group"] == 10
     assert trace["failure"]["symbol_in_group"] == 191
     assert trace["token_stream"]["uint32_word_count"] == 29199
+    word_order = report["token_word_order_probe"]
+    assert word_order["schema"] == "pr91_hpm1_token_word_order_probe_v1"
+    assert word_order["dispatch_allowed"] is False
+    assert word_order["source_little_reproduces_exact_failure_row"] is True
+    assert word_order["status"] == "not_explained_by_uint32_endian_or_word_reversal"
+    assert word_order["non_source_candidates_matching_source_failure_row"] == []
+    assert {row["candidate"] for row in word_order["candidate_results"]} == {
+        "source_little_uint32",
+        "source_native_uint32",
+        "big_endian_uint32_words",
+        "reversed_little_uint32_words",
+        "reversed_big_endian_uint32_words",
+    }
 
 
 def test_pr91_semantic_decode_trench_cli_records_tool_manifest(tmp_path: Path) -> None:
@@ -354,6 +367,7 @@ def test_pr91_entropy_failure_grammar_probe_cli_records_tool_manifest(tmp_path: 
             str(REPO / "tools" / "audit_pr91_hpm1_entropy_failure_grammar_probe.py"),
             "--archive",
             str(DEFAULT_PR91_ARCHIVE),
+            "--skip-word-order-probe",
             "--json-out",
             str(out),
         ],
@@ -369,6 +383,7 @@ def test_pr91_entropy_failure_grammar_probe_cli_records_tool_manifest(tmp_path: 
     assert payload["tool_run_manifest"]["tool"] == (
         "tools/audit_pr91_hpm1_entropy_failure_grammar_probe.py"
     )
+    assert payload["token_word_order_probe"]["status"] == "not_attempted_by_request"
 
 
 

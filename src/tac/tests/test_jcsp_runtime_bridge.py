@@ -1,6 +1,7 @@
 """Fail-closed tests for the robust_current JCSP runtime bridge."""
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import subprocess
@@ -8,6 +9,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from tac.joint_codec_stack_orchestrator import (
     JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER,
@@ -106,6 +108,19 @@ def test_runtime_bridge_detects_real_jcsp_but_refuses_consumption(
     assert output_contract["expected_raw_outputs"] == [
         "2018-07-27--06-03-57/10/video.raw"
     ]
+    parity_contract = output_contract["raw_output_parity_contract"]
+    assert parity_contract["schema"] == (
+        bridge.JCSP_RUNTIME_RAW_OUTPUT_PARITY_CONTRACT_SCHEMA
+    )
+    assert parity_contract["required_proof_schema"] == (
+        bridge.JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA
+    )
+    assert parity_contract["required_candidate_output_source"] == (
+        "jcsp_runtime_bridge_emitted_rawvideo"
+    )
+    assert parity_contract["expected_raw_output_count"] == 1
+    assert parity_contract["preexisting_raw_outputs_are_not_parity_proof"] is True
+    assert parity_contract["ready_for_output_parity"] is False
     assert output_contract["bridge_emits_contest_raw_outputs"] is False
     assert output_contract["raw_output_emission_attempted"] is False
     assert output_contract["output_parity_checked"] is False
@@ -118,6 +133,115 @@ def test_runtime_bridge_detects_real_jcsp_but_refuses_consumption(
     assert bridge.JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER in first["dispatch_blockers"]
     assert "jcsp_stream_decode_emit_frames_missing" in first["dispatch_blockers"]
     assert len(first["manifest_sha256"]) == 64
+
+
+def test_runtime_bridge_marks_preexisting_raw_outputs_unproven(
+    tmp_path: Path,
+) -> None:
+    bridge = _load_bridge_module()
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    (archive_dir / "jcsp.bin").write_bytes(_real_jcsp_bytes())
+    inflated_dir = tmp_path / "inflated"
+    raw_path = inflated_dir / "route" / "video.raw"
+    raw_path.parent.mkdir(parents=True)
+    raw_path.write_bytes(b"stale-output")
+    names_file = tmp_path / "names.txt"
+    names_file.write_text("route/video.hevc\n", encoding="utf-8")
+
+    manifest = bridge.probe_jcsp_runtime_bridge(
+        archive_dir,
+        inflated_dir=inflated_dir,
+        video_names_file=names_file,
+    )
+
+    output_contract = manifest["contest_output_contract"]
+    assert output_contract["existing_raw_output_count"] == 1
+    [row] = output_contract["existing_raw_outputs_at_probe"]
+    assert row["path"] == "route/video.raw"
+    assert row["exists"] is True
+    assert row["is_file"] is True
+    assert row["bytes"] == len(b"stale-output")
+    assert row["sha256"] is None
+    assert row["sha256_status"] == "not_hashed_pre_dispatch_probe"
+    assert row["parity_proof_source"] == "preexisting_raw_output_unproven"
+    assert "jcsp_existing_raw_outputs_unproven" in (
+        output_contract["dispatch_blockers"]
+    )
+    parity_contract = output_contract["raw_output_parity_contract"]
+    assert parity_contract["existing_raw_output_count_at_probe"] == 1
+    assert parity_contract["preexisting_raw_outputs_are_not_parity_proof"] is True
+    assert parity_contract["ready_for_submission_runtime_consumption"] is False
+    assert bridge.JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER in (
+        output_contract["dispatch_blockers"]
+    )
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_runtime_raw_output_parity_proof_requires_bridge_emission(
+    tmp_path: Path,
+) -> None:
+    bridge = _load_bridge_module()
+    candidate_dir = tmp_path / "candidate"
+    reference_dir = tmp_path / "reference"
+    candidate_path = candidate_dir / "route" / "video.raw"
+    reference_path = reference_dir / "route" / "video.raw"
+    candidate_path.parent.mkdir(parents=True)
+    reference_path.parent.mkdir(parents=True)
+    payload = b"rgb-raw-bytes"
+    candidate_path.write_bytes(payload)
+    reference_path.write_bytes(payload)
+    manifest_path = tmp_path / "raw_output_parity.json"
+
+    proof = bridge.prove_jcsp_runtime_raw_output_parity(
+        ["route/video.raw"],
+        candidate_raw_dir=candidate_dir,
+        reference_raw_dir=reference_dir,
+        candidate_outputs_emitted_by_bridge=False,
+        manifest_json=manifest_path,
+    )
+
+    assert json.loads(manifest_path.read_text(encoding="utf-8")) == proof
+    assert proof["schema"] == bridge.JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA
+    assert proof["score_claim"] is False
+    assert proof["dispatch_attempted"] is False
+    assert proof["byte_exact_raw_output_parity"] is True
+    assert proof["ready_for_output_parity"] is False
+    assert proof["ready_for_submission_runtime_consumption"] is False
+    assert proof["ready_for_exact_eval_dispatch"] is False
+    assert "jcsp_candidate_outputs_not_emitted_by_bridge" in (
+        proof["dispatch_blockers"]
+    )
+    [row] = proof["outputs"]
+    assert row["candidate_bytes"] == len(payload)
+    assert row["candidate_sha256"] == hashlib.sha256(payload).hexdigest()
+    assert row["reference_sha256"] == row["candidate_sha256"]
+    assert row["byte_exact_match"] is True
+
+    emitted_proof = bridge.prove_jcsp_runtime_raw_output_parity(
+        ["route/video.raw"],
+        candidate_raw_dir=candidate_dir,
+        reference_raw_dir=reference_dir,
+        candidate_outputs_emitted_by_bridge=True,
+    )
+
+    assert emitted_proof["ready_for_output_parity"] is True
+    assert emitted_proof["ready_for_submission_runtime_consumption"] is True
+    assert emitted_proof["ready_for_exact_eval_dispatch"] is False
+    assert emitted_proof["dispatch_blockers"] == []
+
+
+def test_runtime_raw_output_parity_proof_rejects_unsafe_paths(
+    tmp_path: Path,
+) -> None:
+    bridge = _load_bridge_module()
+    with pytest.raises(ValueError, match="unsafe raw output path"):
+        bridge.prove_jcsp_runtime_raw_output_parity(
+            ["../video.raw"],
+            candidate_raw_dir=tmp_path,
+            reference_raw_dir=tmp_path,
+            candidate_outputs_emitted_by_bridge=True,
+        )
 
 
 def test_runtime_bridge_refuses_jcsk_preview_member(tmp_path: Path) -> None:

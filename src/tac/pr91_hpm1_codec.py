@@ -134,6 +134,13 @@ EXPECTED_PR85_STBM_HPM1_PROJECTION_SCORE = 0.248795
 
 DEFAULT_PR91_HPM1_CONTEXT_WINDOWS = ((33, 8), (5948, 8))
 PR91_HPM1_CONTEXT_MODES = ("decoded_context", "reference_context")
+PR91_HPM1_TOKEN_WORD_ORDER_CANDIDATES = (
+    "source_little_uint32",
+    "source_native_uint32",
+    "big_endian_uint32_words",
+    "reversed_little_uint32_words",
+    "reversed_big_endian_uint32_words",
+)
 
 _QUARANTINE_SPEC = (
     ".recovery_quarantine_20260505T004735Z/src/tac/pr91_hpm1_codec.recovery_spec.json"
@@ -679,6 +686,69 @@ def _context_tensor_summary(tensor: Any, *, label: str) -> dict[str, Any]:
     }
 
 
+def _hpm1_token_words_for_candidate(
+    payload: Hpm1MaskPayload,
+    candidate: str,
+) -> np.ndarray:
+    """Return a deterministic uint32 queue view for a token-order hypothesis."""
+
+    if payload.tokens_len % 4:
+        raise Pr91Hpm1Error(
+            "hpm1_token_word_order_probe",
+            "tokens_not_uint32_aligned",
+            tokens_bytes=payload.tokens_len,
+        )
+    little = np.frombuffer(payload.tokens, dtype="<u4").astype(np.uint32, copy=False)
+    if candidate == "source_little_uint32":
+        return np.ascontiguousarray(little, dtype=np.uint32)
+    if candidate == "source_native_uint32":
+        return np.ascontiguousarray(
+            np.frombuffer(payload.tokens, dtype=np.uint32).astype(np.uint32, copy=False),
+            dtype=np.uint32,
+        )
+    if candidate == "big_endian_uint32_words":
+        return np.ascontiguousarray(
+            np.frombuffer(payload.tokens, dtype=">u4").astype(np.uint32, copy=True),
+            dtype=np.uint32,
+        )
+    if candidate == "reversed_little_uint32_words":
+        return np.ascontiguousarray(little[::-1], dtype=np.uint32)
+    if candidate == "reversed_big_endian_uint32_words":
+        big = np.frombuffer(payload.tokens, dtype=">u4").astype(np.uint32, copy=True)
+        return np.ascontiguousarray(big[::-1], dtype=np.uint32)
+    raise Pr91Hpm1Error(
+        "hpm1_token_word_order_probe",
+        "unsupported_token_word_order_candidate",
+        candidate=candidate,
+        supported=list(PR91_HPM1_TOKEN_WORD_ORDER_CANDIDATES),
+    )
+
+
+def _token_words_summary(words: np.ndarray) -> dict[str, Any]:
+    arr = np.ascontiguousarray(words, dtype=np.uint32)
+    return {
+        "uint32_word_count": int(arr.size),
+        "decoder_words_sha256": sha256_bytes(arr.tobytes()),
+        "first_words_hex": [f"0x{int(word):08x}" for word in arr[:8]],
+        "last_words_hex": [f"0x{int(word):08x}" for word in arr[-8:]],
+    }
+
+
+def _failure_row_signature(trace: Mapping[str, Any]) -> dict[str, int] | None:
+    failure = trace.get("failure")
+    if not isinstance(failure, Mapping):
+        return None
+    keys = (
+        "frame",
+        "group",
+        "symbol_in_group",
+        "decoded_symbol_count_before_failure",
+    )
+    if not all(key in failure for key in keys):
+        return None
+    return {key: int(failure[key]) for key in keys}
+
+
 def _trace_hpm1_entropy_decode_failure(
     model: Any,
     payload: Hpm1MaskPayload,
@@ -687,6 +757,8 @@ def _trace_hpm1_entropy_decode_failure(
     prob_eps: float,
     max_frames: int | None,
     device: str,
+    token_word_order_candidate: str = "source_little_uint32",
+    token_words: np.ndarray | None = None,
 ) -> dict[str, Any]:
     """Replay HPM1 entropy decode until the first exact grammar failure."""
 
@@ -718,7 +790,11 @@ def _trace_hpm1_entropy_decode_failure(
         delta=payload.delta,
         device=dev,
     )
-    words = np.frombuffer(payload.tokens, dtype="<u4").astype(np.uint32, copy=False)
+    words = (
+        _hpm1_token_words_for_candidate(payload, token_word_order_candidate)
+        if token_words is None
+        else np.ascontiguousarray(token_words, dtype=np.uint32)
+    )
     decoder = _pr86_hpac_codec.constriction.stream.queue.RangeDecoder(words)
     decoded_prev = torch.zeros((1, payload.height, payload.width), dtype=torch.long, device=dev)
     decoded_symbols = 0
@@ -760,6 +836,7 @@ def _trace_hpm1_entropy_decode_failure(
                             "device": device,
                             "probability_variant": resolved.name,
                             "prob_eps": float(prob_eps),
+                            "token_word_order_candidate": token_word_order_candidate,
                             "failure": {
                                 "stage": "submitted_tokens_decode",
                                 "reason": "hpac_entropy_decode_contract_mismatch",
@@ -774,9 +851,8 @@ def _trace_hpm1_entropy_decode_failure(
                             "token_stream": {
                                 "bytes": len(payload.tokens),
                                 "sha256": sha256_bytes(payload.tokens),
-                                "uint32_word_count": int(words.size),
-                                "first_words_hex": [f"0x{int(word):08x}" for word in words[:8]],
-                                "last_words_hex": [f"0x{int(word):08x}" for word in words[-8:]],
+                                **_token_words_summary(words),
+                                "word_order_candidate": token_word_order_candidate,
                             },
                             "group_geometry": {
                                 "symbols_in_group": int(probs_at_group.shape[0]),
@@ -847,6 +923,7 @@ def _trace_hpm1_entropy_decode_failure(
         "device": device,
         "probability_variant": resolved.name,
         "prob_eps": float(prob_eps),
+        "token_word_order_candidate": token_word_order_candidate,
         "decoded_frames": int(decoded_frames.shape[0]),
         "decoded_symbols": int(decoded_symbols),
         "decoded_tokens": {
@@ -859,6 +936,117 @@ def _trace_hpm1_entropy_decode_failure(
     }
 
 
+def _run_hpm1_token_word_order_probe(
+    model: Any,
+    payload: Hpm1MaskPayload,
+    *,
+    probability_variant: str | Any,
+    prob_eps: float,
+    max_frames: int | None,
+    device: str,
+    source_trace: Mapping[str, Any] | None = None,
+    candidates: tuple[str, ...] = PR91_HPM1_TOKEN_WORD_ORDER_CANDIDATES,
+) -> dict[str, Any]:
+    """Classify whether the first mismatch is a simple uint32 queue transform."""
+
+    started_at = time.time()
+    seen_word_shas: dict[str, str] = {}
+    source_signature = _failure_row_signature(source_trace or {})
+    candidate_results: list[dict[str, Any]] = []
+    matching_source_failure_rows: list[str] = []
+    non_source_matching_source_failure_rows: list[str] = []
+
+    for candidate in candidates:
+        words = _hpm1_token_words_for_candidate(payload, candidate)
+        word_summary = _token_words_summary(words)
+        duplicate_of = seen_word_shas.get(word_summary["decoder_words_sha256"])
+        if duplicate_of is not None:
+            row = {
+                "candidate": candidate,
+                "status": "not_run_duplicate_decoder_words",
+                "duplicate_of": duplicate_of,
+                "passed": False,
+                "word_summary": word_summary,
+            }
+            if source_signature is not None and duplicate_of == "source_little_uint32":
+                row["matches_source_failure_row"] = True
+                matching_source_failure_rows.append(candidate)
+            candidate_results.append(row)
+            continue
+        seen_word_shas[word_summary["decoder_words_sha256"]] = candidate
+
+        if candidate == "source_little_uint32" and source_trace is not None:
+            trace = dict(source_trace)
+        else:
+            trace = _trace_hpm1_entropy_decode_failure(
+                model,
+                payload,
+                probability_variant=probability_variant,
+                prob_eps=prob_eps,
+                max_frames=max_frames,
+                device=device,
+                token_word_order_candidate=candidate,
+                token_words=words,
+            )
+        signature = _failure_row_signature(trace)
+        matches_source = bool(source_signature is not None and signature == source_signature)
+        if matches_source:
+            matching_source_failure_rows.append(candidate)
+            if candidate != "source_little_uint32":
+                non_source_matching_source_failure_rows.append(candidate)
+        candidate_results.append(
+            {
+                "candidate": candidate,
+                "status": trace.get("status"),
+                "passed": bool(trace.get("passed") is True),
+                "word_summary": word_summary,
+                "failure_signature": signature,
+                "matches_source_failure_row": matches_source,
+                "exception_type": (
+                    trace.get("failure", {}).get("exception_type")
+                    if isinstance(trace.get("failure"), Mapping)
+                    else None
+                ),
+                "decoded_symbols": trace.get("decoded_symbols"),
+                "elapsed_sec": trace.get("elapsed_sec"),
+            }
+        )
+
+    source_reproduced = "source_little_uint32" in matching_source_failure_rows
+    narrowed = source_reproduced and not non_source_matching_source_failure_rows
+    return {
+        "schema": "pr91_hpm1_token_word_order_probe_v1",
+        "status": (
+            "not_explained_by_uint32_endian_or_word_reversal"
+            if narrowed
+            else "word_order_hypothesis_still_open"
+        ),
+        "passed": bool(narrowed),
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "device": device,
+        "probability_variant": resolve_hpac_probability_variant(probability_variant).name,
+        "prob_eps": float(prob_eps),
+        "max_frames": max_frames,
+        "source_failure_signature": source_signature,
+        "source_little_reproduces_exact_failure_row": source_reproduced,
+        "non_source_candidates_matching_source_failure_row": (
+            non_source_matching_source_failure_rows
+        ),
+        "matching_source_failure_row_candidates": matching_source_failure_rows,
+        "candidate_results": candidate_results,
+        "narrowed_hypothesis": (
+            "The PR91 HPM1 mismatch is not explained by simple uint32 endian "
+            "swapping, native-vs-little dtype selection, or whole-word queue "
+            "reversal; the remaining gap is semantic probability/range grammar "
+            "or encoder-side context construction."
+            if narrowed
+            else "At least one non-source uint32 queue transform matched the source failure row; investigate token queue orientation further."
+        ),
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
+
+
 def run_pr91_hpm1_entropy_failure_grammar_probe(
     archive: Path = DEFAULT_PR91_ARCHIVE,
     *,
@@ -866,6 +1054,7 @@ def run_pr91_hpm1_entropy_failure_grammar_probe(
     probability_variant: str = DEFAULT_HPAC_PROBABILITY_VARIANT,
     prob_eps: float = PROB_EPS,
     max_frames: int | None = 1,
+    include_word_order_probe: bool = True,
     output_dir: Path | None = None,
     strict: bool = False,
     write_json: bool = True,
@@ -900,6 +1089,25 @@ def run_pr91_hpm1_entropy_failure_grammar_probe(
         device=device,
     )
     blocked = trace.get("passed") is not True
+    word_order_probe = (
+        _run_hpm1_token_word_order_probe(
+            model,
+            payload,
+            probability_variant=probability_variant,
+            prob_eps=prob_eps,
+            max_frames=max_frames,
+            device=device,
+            source_trace=trace,
+        )
+        if include_word_order_probe
+        else {
+            "schema": "pr91_hpm1_token_word_order_probe_v1",
+            "status": "not_attempted_by_request",
+            "passed": False,
+            "score_claim": False,
+            "dispatch_allowed": False,
+        }
+    )
     report: dict[str, Any] = {
         "schema": "pr91_hpm1_entropy_failure_grammar_probe_v1",
         "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_entropy_failure_grammar_probe",
@@ -931,6 +1139,7 @@ def run_pr91_hpm1_entropy_failure_grammar_probe(
             "hpac_sha256": sha256_bytes(payload.hpac),
         },
         "entropy_failure_trace": trace,
+        "token_word_order_probe": word_order_probe,
         "exact_missing_grammar": {
             "status": "identified_as_entropy_decode_contract_gap" if blocked else "not_triggered_in_requested_prefix",
             "missing_wire_contract": (

@@ -12,34 +12,34 @@
         "unsafe_reason": null
       }
     ],
-    "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip",
+    "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive.zip",
     "sha256": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628"
   },
   "archive_manifest": {
     "exists": true,
-    "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json"
+    "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json"
   },
   "auth_eval": {
     "exists": false,
-    "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/contest_auth_eval.json"
+    "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/contest_auth_eval.json"
   },
   "checks": [
     {
-      "details": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/archive.zip",
+      "details": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive.zip",
       "name": "required_file_present:archive.zip",
-      "passed": false,
+      "passed": true,
       "severity": "error"
     },
     {
-      "details": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh",
+      "details": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/inflate.sh",
       "name": "required_file_present:inflate.sh",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/report.txt",
+      "details": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/report.txt",
       "name": "required_file_present:report.txt",
-      "passed": false,
+      "passed": true,
       "severity": "error"
     },
     {
@@ -49,7 +49,7 @@
       "severity": "error"
     },
     {
-      "details": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/hnerv_wavelet_apply_transform_candidate.zip",
+      "details": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive.zip",
       "name": "archive_exists",
       "passed": true,
       "severity": "error"
@@ -109,19 +109,19 @@
       "severity": "error"
     },
     {
-      "details": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/contest_auth_eval.json",
+      "details": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/contest_auth_eval.json",
       "name": "auth_eval_exists",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
+      "details": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
       "name": "archive_manifest_exists",
       "passed": true,
       "severity": "error"
     },
     {
-      "details": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
+      "details": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
       "name": "archive_manifest_json_object",
       "passed": true,
       "severity": "error"
@@ -139,35 +139,47 @@
       "severity": "error"
     },
     {
-      "details": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/report.txt",
+      "details": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/report.txt",
       "name": "report_exists",
-      "passed": false,
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "",
+      "name": "public_scan_has_no_private_surface",
+      "passed": true,
       "severity": "error"
     }
   ],
   "dispatch_claims": {
     "required": false
   },
-  "passed": false,
+  "passed": true,
+  "public_hygiene": {
+    "hits": [],
+    "scan_paths": [
+      "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface"
+    ]
+  },
   "report": {
-    "exists": false,
-    "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/report.txt"
+    "exists": true,
+    "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/report.txt"
   },
   "schema": "pre_submission_compliance_check_v1",
   "submission_dir": {
-    "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders",
+    "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface",
     "required_files": {
       "archive.zip": {
-        "exists": false,
-        "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/archive.zip"
+        "exists": true,
+        "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive.zip"
       },
       "inflate.sh": {
         "exists": true,
-        "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/inflate.sh"
+        "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/inflate.sh"
       },
       "report.txt": {
-        "exists": false,
-        "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/report.txt"
+        "exists": true,
+        "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/report.txt"
       }
     }
   }

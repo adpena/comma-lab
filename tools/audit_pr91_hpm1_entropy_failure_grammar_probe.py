@@ -31,6 +31,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--probability-variant", default=DEFAULT_HPAC_PROBABILITY_VARIANT)
     parser.add_argument("--prob-eps", type=float, default=1e-7)
     parser.add_argument("--max-frames", type=int, default=1)
+    parser.add_argument(
+        "--skip-word-order-probe",
+        action="store_true",
+        help="Skip the local uint32 token word-order/endian hypothesis probe.",
+    )
     return parser.parse_args(argv)
 
 
@@ -42,6 +47,7 @@ def main(argv: list[str] | None = None) -> int:
         probability_variant=args.probability_variant,
         prob_eps=args.prob_eps,
         max_frames=args.max_frames,
+        include_word_order_probe=not args.skip_word_order_probe,
         write_json=False,
     )
     input_paths = [args.archive] if args.archive.is_file() else []

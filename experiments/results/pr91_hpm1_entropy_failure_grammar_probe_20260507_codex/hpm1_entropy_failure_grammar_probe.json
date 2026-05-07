@@ -63,7 +63,7 @@
   "dispatch_allowed": false,
   "dispatch_attempted": false,
   "dispatch_performed": false,
-  "elapsed_sec": 7.612,
+  "elapsed_sec": 32.045,
   "entropy_failure_trace": {
     "context_before_failing_group": {
       "current_frame": {
@@ -132,7 +132,7 @@
     },
     "device": "cpu",
     "dispatch_allowed": false,
-    "elapsed_sec": 7.598,
+    "elapsed_sec": 7.739,
     "failing_probability_row": {
       "categorical_perfect": false,
       "normalized_for_categorical": {
@@ -192,6 +192,7 @@
     "status": "failed_at_first_entropy_mismatch",
     "token_stream": {
       "bytes": 116796,
+      "decoder_words_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
       "first_words_hex": [
         "0x9b5c86f6",
         "0xc3e3f98a",
@@ -213,8 +214,10 @@
         "0xa3cabc6d"
       ],
       "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
-      "uint32_word_count": 29199
-    }
+      "uint32_word_count": 29199,
+      "word_order_candidate": "source_little_uint32"
+    },
+    "token_word_order_candidate": "source_little_uint32"
   },
   "evidence_grade": "local_entropy_failure_grammar_probe",
   "exact_missing_grammar": {
@@ -306,7 +309,7 @@
   },
   "promotion_eligible": false,
   "ready_for_exact_eval_dispatch": false,
-  "recorded_at_utc": "2026-05-07T00:50:47+00:00",
+  "recorded_at_utc": "2026-05-07T01:04:34+00:00",
   "runtime_source_contract": {
     "contains_range_codec_cpp": true,
     "file_count": 6,
@@ -392,13 +395,227 @@
   "schema": "pr91_hpm1_entropy_failure_grammar_probe_v1",
   "score_claim": false,
   "status": "blocked_hpm1_entropy_decoder_grammar_mismatch",
+  "token_word_order_probe": {
+    "candidate_results": [
+      {
+        "candidate": "source_little_uint32",
+        "decoded_symbols": null,
+        "elapsed_sec": 7.739,
+        "exception_type": "AssertionError",
+        "failure_signature": {
+          "decoded_symbol_count_before_failure": 5951,
+          "frame": 0,
+          "group": 10,
+          "symbol_in_group": 191
+        },
+        "matches_source_failure_row": true,
+        "passed": false,
+        "status": "failed_at_first_entropy_mismatch",
+        "word_summary": {
+          "decoder_words_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+          "first_words_hex": [
+            "0x9b5c86f6",
+            "0xc3e3f98a",
+            "0xf6f1efc5",
+            "0x12458e3f",
+            "0x13c6f92f",
+            "0x00000000",
+            "0x00000000",
+            "0x1edbc12d"
+          ],
+          "last_words_hex": [
+            "0x21ba8197",
+            "0x9cfe9ecd",
+            "0x6cad5e80",
+            "0xc7afa705",
+            "0x98e4980f",
+            "0x76208ae1",
+            "0x69051875",
+            "0xa3cabc6d"
+          ],
+          "uint32_word_count": 29199
+        }
+      },
+      {
+        "candidate": "source_native_uint32",
+        "duplicate_of": "source_little_uint32",
+        "matches_source_failure_row": true,
+        "passed": false,
+        "status": "not_run_duplicate_decoder_words",
+        "word_summary": {
+          "decoder_words_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+          "first_words_hex": [
+            "0x9b5c86f6",
+            "0xc3e3f98a",
+            "0xf6f1efc5",
+            "0x12458e3f",
+            "0x13c6f92f",
+            "0x00000000",
+            "0x00000000",
+            "0x1edbc12d"
+          ],
+          "last_words_hex": [
+            "0x21ba8197",
+            "0x9cfe9ecd",
+            "0x6cad5e80",
+            "0xc7afa705",
+            "0x98e4980f",
+            "0x76208ae1",
+            "0x69051875",
+            "0xa3cabc6d"
+          ],
+          "uint32_word_count": 29199
+        }
+      },
+      {
+        "candidate": "big_endian_uint32_words",
+        "decoded_symbols": null,
+        "elapsed_sec": 6.205,
+        "exception_type": "AssertionError",
+        "failure_signature": {
+          "decoded_symbol_count_before_failure": 4323,
+          "frame": 0,
+          "group": 8,
+          "symbol_in_group": 483
+        },
+        "matches_source_failure_row": false,
+        "passed": false,
+        "status": "failed_at_first_entropy_mismatch",
+        "word_summary": {
+          "decoder_words_sha256": "519d614d8cd8e03e0f23d3c0d58f70e1492ae4677887f19ba3353e77262f1132",
+          "first_words_hex": [
+            "0xf6865c9b",
+            "0x8af9e3c3",
+            "0xc5eff1f6",
+            "0x3f8e4512",
+            "0x2ff9c613",
+            "0x00000000",
+            "0x00000000",
+            "0x2dc1db1e"
+          ],
+          "last_words_hex": [
+            "0x9781ba21",
+            "0xcd9efe9c",
+            "0x805ead6c",
+            "0x05a7afc7",
+            "0x0f98e498",
+            "0xe18a2076",
+            "0x75180569",
+            "0x6dbccaa3"
+          ],
+          "uint32_word_count": 29199
+        }
+      },
+      {
+        "candidate": "reversed_little_uint32_words",
+        "decoded_symbols": null,
+        "elapsed_sec": 6.906,
+        "exception_type": "AssertionError",
+        "failure_signature": {
+          "decoded_symbol_count_before_failure": 5279,
+          "frame": 0,
+          "group": 9,
+          "symbol_in_group": 479
+        },
+        "matches_source_failure_row": false,
+        "passed": false,
+        "status": "failed_at_first_entropy_mismatch",
+        "word_summary": {
+          "decoder_words_sha256": "c181e1ce372f932eaa43776f633eabeb3d40a98085f90f2fc096533c1ab9fecd",
+          "first_words_hex": [
+            "0xa3cabc6d",
+            "0x69051875",
+            "0x76208ae1",
+            "0x98e4980f",
+            "0xc7afa705",
+            "0x6cad5e80",
+            "0x9cfe9ecd",
+            "0x21ba8197"
+          ],
+          "last_words_hex": [
+            "0x1edbc12d",
+            "0x00000000",
+            "0x00000000",
+            "0x13c6f92f",
+            "0x12458e3f",
+            "0xf6f1efc5",
+            "0xc3e3f98a",
+            "0x9b5c86f6"
+          ],
+          "uint32_word_count": 29199
+        }
+      },
+      {
+        "candidate": "reversed_big_endian_uint32_words",
+        "decoded_symbols": null,
+        "elapsed_sec": 11.171,
+        "exception_type": "AssertionError",
+        "failure_signature": {
+          "decoded_symbol_count_before_failure": 12423,
+          "frame": 0,
+          "group": 15,
+          "symbol_in_group": 135
+        },
+        "matches_source_failure_row": false,
+        "passed": false,
+        "status": "failed_at_first_entropy_mismatch",
+        "word_summary": {
+          "decoder_words_sha256": "3485f6cad54600f83824a9feb580a5adcbf5f58fcdccc2cba0118932a3834024",
+          "first_words_hex": [
+            "0x6dbccaa3",
+            "0x75180569",
+            "0xe18a2076",
+            "0x0f98e498",
+            "0x05a7afc7",
+            "0x805ead6c",
+            "0xcd9efe9c",
+            "0x9781ba21"
+          ],
+          "last_words_hex": [
+            "0x2dc1db1e",
+            "0x00000000",
+            "0x00000000",
+            "0x2ff9c613",
+            "0x3f8e4512",
+            "0xc5eff1f6",
+            "0x8af9e3c3",
+            "0xf6865c9b"
+          ],
+          "uint32_word_count": 29199
+        }
+      }
+    ],
+    "device": "cpu",
+    "dispatch_allowed": false,
+    "elapsed_sec": 24.293,
+    "matching_source_failure_row_candidates": [
+      "source_little_uint32",
+      "source_native_uint32"
+    ],
+    "max_frames": 1,
+    "narrowed_hypothesis": "The PR91 HPM1 mismatch is not explained by simple uint32 endian swapping, native-vs-little dtype selection, or whole-word queue reversal; the remaining gap is semantic probability/range grammar or encoder-side context construction.",
+    "non_source_candidates_matching_source_failure_row": [],
+    "passed": true,
+    "prob_eps": 1e-07,
+    "probability_variant": "source_float64_perfect_false",
+    "schema": "pr91_hpm1_token_word_order_probe_v1",
+    "score_claim": false,
+    "source_failure_signature": {
+      "decoded_symbol_count_before_failure": 5951,
+      "frame": 0,
+      "group": 10,
+      "symbol_in_group": 191
+    },
+    "source_little_reproduces_exact_failure_row": true,
+    "status": "not_explained_by_uint32_endian_or_word_reversal"
+  },
   "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_entropy_failure_grammar_probe",
   "tool_run_manifest": {
     "argv": [
       "--json-out",
       "experiments/results/pr91_hpm1_entropy_failure_grammar_probe_20260507_codex/hpm1_entropy_failure_grammar_probe.json"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "43023cef1053b441d839697447005548755c629970e05d387c9add64af1524a1",
+    "canonical_payload_without_tool_manifest_sha256": "6c04821427a29b8ce5e9d3a7e5ae1af28d99a33f354a68c73b4be99e27208ea1",
     "dispatch_attempted": false,
     "input_files": [
       {

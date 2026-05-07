@@ -13,7 +13,7 @@ import hashlib
 import json
 import struct
 import sys
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +29,12 @@ JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER = (
 )
 JCSP_RUNTIME_OUTPUT_CONTRACT_SCHEMA = "jcsp_submission_runtime_output_contract_v1"
 JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER = "jcsp_runtime_raw_output_parity_missing"
+JCSP_RUNTIME_RAW_OUTPUT_PARITY_CONTRACT_SCHEMA = (
+    "jcsp_runtime_raw_output_parity_contract_v1"
+)
+JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA = (
+    "jcsp_runtime_raw_output_parity_proof_v1"
+)
 JCSP_MAGIC = b"JCSP"
 JCSK_MAGIC = b"JCSK"
 JCSP_VERSION = 1
@@ -68,6 +74,14 @@ def _sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def _with_manifest_sha256(payload: Mapping[str, Any]) -> dict[str, Any]:
     out = dict(payload)
     out.pop("manifest_sha256", None)
@@ -97,6 +111,20 @@ def _raw_output_for_video_name(video_name: str) -> str:
     return f"{stem}.raw"
 
 
+def _validate_raw_output_rel_path(raw_output: str) -> str:
+    text = str(raw_output).strip()
+    if not text:
+        raise ValueError("empty raw output path")
+    if "\x00" in text or text.startswith("/"):
+        raise ValueError(f"unsafe raw output path {text!r}")
+    parts = Path(text).parts
+    if any(part == ".." for part in parts):
+        raise ValueError(f"unsafe raw output path {text!r}")
+    if not text.endswith(".raw"):
+        raise ValueError(f"raw output path must end with .raw: {text!r}")
+    return text
+
+
 def _expected_raw_outputs_from_names_file(
     video_names_file: str | Path | None,
 ) -> tuple[list[str], str | None]:
@@ -123,6 +151,7 @@ def _observe_existing_raw_outputs(
     root = Path(inflated_dir)
     rows: list[dict[str, Any]] = []
     for rel in expected_raw_outputs:
+        rel = _validate_raw_output_rel_path(rel)
         path = root / rel
         exists = path.exists()
         row: dict[str, Any] = {
@@ -130,6 +159,9 @@ def _observe_existing_raw_outputs(
             "exists": exists,
             "is_file": path.is_file(),
             "bytes": None,
+            "sha256": None,
+            "sha256_status": "not_hashed_pre_dispatch_probe",
+            "parity_proof_source": "preexisting_raw_output_unproven",
         }
         if path.is_file():
             try:
@@ -138,6 +170,171 @@ def _observe_existing_raw_outputs(
                 row["bytes"] = None
         rows.append(row)
     return rows
+
+
+def _raw_output_parity_contract(
+    *,
+    expected_raw_outputs: list[str],
+    existing_raw_output_count: int,
+    names_error: str | None,
+) -> dict[str, Any]:
+    expected_known = names_error is None and bool(expected_raw_outputs)
+    return {
+        "schema": JCSP_RUNTIME_RAW_OUTPUT_PARITY_CONTRACT_SCHEMA,
+        "required_proof_schema": JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "expected_raw_outputs_known": expected_known,
+        "expected_raw_output_count": len(expected_raw_outputs),
+        "expected_raw_outputs_sha256": _sha256_bytes(
+            _canonical_json_bytes({"expected_raw_outputs": expected_raw_outputs})
+        ),
+        "required_candidate_output_source": "jcsp_runtime_bridge_emitted_rawvideo",
+        "required_reference_output_source": (
+            "contest_reference_runtime_or_byte_custody_baseline"
+        ),
+        "preexisting_raw_outputs_are_not_parity_proof": True,
+        "existing_raw_output_count_at_probe": int(existing_raw_output_count),
+        "required_per_output_fields": [
+            "path",
+            "candidate_exists",
+            "candidate_bytes",
+            "candidate_sha256",
+            "reference_exists",
+            "reference_bytes",
+            "reference_sha256",
+            "byte_exact_match",
+        ],
+        "acceptance_conditions": [
+            "jcsp_stream_consumer_decodes_jcsp_streams",
+            "bridge_emits_exactly_expected_raw_outputs",
+            "candidate_outputs_are_from_current_bridge_run",
+            "reference_outputs_are_from_contest_runtime_or_custody_baseline",
+            "all_candidate_sha256_values_match_reference_sha256_values",
+            "parity_proof_manifest_uses_required_schema",
+        ],
+        "ready_for_output_parity": False,
+        "ready_for_submission_runtime_consumption": False,
+        "dispatch_blocker": JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER,
+    }
+
+
+def _raw_output_file_identity(
+    root: str | Path,
+    rel: str,
+    *,
+    role: str,
+) -> dict[str, Any]:
+    path = Path(root) / rel
+    exists = path.exists()
+    is_file = path.is_file()
+    row: dict[str, Any] = {
+        f"{role}_exists": exists,
+        f"{role}_is_file": is_file,
+        f"{role}_bytes": None,
+        f"{role}_sha256": None,
+    }
+    if is_file:
+        row[f"{role}_bytes"] = int(path.stat().st_size)
+        row[f"{role}_sha256"] = _sha256_file(path)
+    return row
+
+
+def prove_jcsp_runtime_raw_output_parity(
+    expected_raw_outputs: Iterable[str],
+    *,
+    candidate_raw_dir: str | Path,
+    reference_raw_dir: str | Path,
+    candidate_outputs_emitted_by_bridge: bool,
+    manifest_json: str | Path | None = None,
+) -> dict[str, Any]:
+    """Build a deterministic byte-exact raw-output parity proof.
+
+    This helper is intentionally independent from the current inflate probe.
+    The current bridge does not emit raw outputs, so ``probe_jcsp_runtime_bridge``
+    still refuses every present ``jcsp.bin``.  The future JCSP stream consumer
+    can call this only after it writes the contest ``.raw`` files for the
+    current run.
+    """
+
+    expected = _dedupe(
+        [_validate_raw_output_rel_path(str(item)) for item in expected_raw_outputs]
+    )
+    rows: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    for rel in expected:
+        row = {"path": rel}
+        row.update(_raw_output_file_identity(candidate_raw_dir, rel, role="candidate"))
+        row.update(_raw_output_file_identity(reference_raw_dir, rel, role="reference"))
+        row["byte_exact_match"] = bool(
+            row["candidate_is_file"]
+            and row["reference_is_file"]
+            and row["candidate_bytes"] == row["reference_bytes"]
+            and row["candidate_sha256"] == row["reference_sha256"]
+        )
+        if not row["candidate_is_file"]:
+            blockers.append("jcsp_candidate_raw_output_missing")
+        if not row["reference_is_file"]:
+            blockers.append("jcsp_reference_raw_output_missing")
+        if row["candidate_is_file"] and row["reference_is_file"] and not row[
+            "byte_exact_match"
+        ]:
+            blockers.append("jcsp_raw_output_sha256_mismatch")
+        rows.append(row)
+
+    if not expected:
+        blockers.append("jcsp_expected_raw_outputs_missing")
+    if not candidate_outputs_emitted_by_bridge:
+        blockers.append("jcsp_candidate_outputs_not_emitted_by_bridge")
+
+    all_candidate_present = bool(expected) and all(
+        row["candidate_is_file"] for row in rows
+    )
+    all_reference_present = bool(expected) and all(
+        row["reference_is_file"] for row in rows
+    )
+    byte_exact = bool(expected) and all(row["byte_exact_match"] for row in rows)
+    ready_for_output_parity = bool(
+        candidate_outputs_emitted_by_bridge
+        and all_candidate_present
+        and all_reference_present
+        and byte_exact
+    )
+    manifest: dict[str, Any] = {
+        "schema": JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "candidate_outputs_emitted_by_bridge": bool(
+            candidate_outputs_emitted_by_bridge
+        ),
+        "candidate_output_source": (
+            "jcsp_runtime_bridge_emitted_rawvideo"
+            if candidate_outputs_emitted_by_bridge
+            else "preexisting_or_unproven_raw_files"
+        ),
+        "reference_output_source": "contest_reference_runtime_or_byte_custody_baseline",
+        "candidate_raw_dir": str(Path(candidate_raw_dir)),
+        "reference_raw_dir": str(Path(reference_raw_dir)),
+        "expected_raw_outputs": expected,
+        "expected_raw_output_count": len(expected),
+        "output_count": len(rows),
+        "all_candidate_outputs_present": all_candidate_present,
+        "all_reference_outputs_present": all_reference_present,
+        "byte_exact_raw_output_parity": byte_exact,
+        "ready_for_output_parity": ready_for_output_parity,
+        "ready_for_submission_runtime_consumption": ready_for_output_parity,
+        "ready_for_exact_eval_dispatch": False,
+        "outputs": rows,
+        "dispatch_blockers": (
+            []
+            if ready_for_output_parity
+            else _dedupe([JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER, *blockers])
+        ),
+    }
+    manifest = _with_manifest_sha256(manifest)
+    if manifest_json is not None:
+        _write_manifest(Path(manifest_json), manifest)
+    return manifest
 
 
 def _contest_output_contract(
@@ -151,6 +348,11 @@ def _contest_output_contract(
     )
     observed = _observe_existing_raw_outputs(inflated_dir, expected_raw_outputs)
     existing_count = sum(1 for row in observed if row["exists"])
+    parity_contract = _raw_output_parity_contract(
+        expected_raw_outputs=expected_raw_outputs,
+        existing_raw_output_count=existing_count,
+        names_error=names_error,
+    )
     blockers: list[str] = []
     if member_present:
         blockers.extend(
@@ -177,6 +379,10 @@ def _contest_output_contract(
         "expected_raw_output_count": len(expected_raw_outputs),
         "existing_raw_outputs_at_probe": observed,
         "existing_raw_output_count": existing_count,
+        "raw_output_parity_contract": parity_contract,
+        "required_raw_output_parity_proof_schema": (
+            JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA
+        ),
         "bridge_emits_contest_raw_outputs": False,
         "raw_output_emission_attempted": False,
         "output_parity_checked": False,

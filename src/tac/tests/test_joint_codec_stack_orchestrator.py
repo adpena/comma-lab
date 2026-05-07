@@ -15,6 +15,8 @@ from tac.balle_hyperprior_codec import (
 from tac.joint_codec_stack_orchestrator import (
     JCSP_ARCHIVE_MEMBER_CONTRACT_SCHEMA,
     JCSP_ARCHIVE_MEMBER_NAME,
+    JCSP_RUNTIME_RAW_OUTPUT_PARITY_CONTRACT_SCHEMA,
+    JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA,
     JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
     JCSP_SUBMISSION_RUNTIME_CONSUMPTION_SCHEMA,
     JCSP_SUBMISSION_RUNTIME_OUTPUT_CONTRACT_SCHEMA,
@@ -196,6 +198,16 @@ def test_jcsp_noop_archive_fixture_is_deterministic_and_loader_consumes_member()
     )
     output_contract = runtime_consumption["contest_output_contract"]
     assert output_contract["schema"] == JCSP_SUBMISSION_RUNTIME_OUTPUT_CONTRACT_SCHEMA
+    parity_contract = output_contract["raw_output_parity_contract"]
+    assert parity_contract["schema"] == JCSP_RUNTIME_RAW_OUTPUT_PARITY_CONTRACT_SCHEMA
+    assert parity_contract["required_proof_schema"] == (
+        JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA
+    )
+    assert parity_contract["expected_raw_outputs_known"] is False
+    assert parity_contract["required_candidate_output_source"] == (
+        "jcsp_runtime_bridge_emitted_rawvideo"
+    )
+    assert parity_contract["preexisting_raw_outputs_are_not_parity_proof"] is True
     assert output_contract["bridge_emits_contest_raw_outputs"] is False
     assert output_contract["output_parity_checked"] is False
     assert output_contract["ready_for_submission_runtime_consumption"] is False

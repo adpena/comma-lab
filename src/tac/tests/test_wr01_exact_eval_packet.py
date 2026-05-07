@@ -6,6 +6,7 @@ import math
 import os
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
@@ -52,26 +53,24 @@ def test_wr01_exact_eval_packet_reports_missing_env_without_dispatch(tmp_path: P
     assert payload["proxy_row"] is False
     assert payload["score_claim"] is False
     assert payload["dispatch_attempted"] is False
-    assert payload["dispatch_gate"] == "blocked_static_packet_ready_until_static_blockers_clear"
-    assert payload["dispatch_unlocked"] is False
-    assert payload["ready_for_exact_eval_dispatch_claim"] is False
-    assert payload["candidate_static_preflight_ready"] is False
-    assert payload["static_packet_ready"] is False
+    assert payload["dispatch_gate"] == "eligible_for_cuda_auth_eval_after_lane_claim"
+    assert payload["dispatch_unlocked"] is True
+    assert payload["ready_for_exact_eval_dispatch_claim"] is True
+    assert payload["candidate_static_preflight_ready"] is True
+    assert payload["static_packet_ready"] is True
     assert payload["ready_for_submit"] is False
     assert "missing_lightning_environment" in payload["blockers"]
     assert payload["source_archive_sha256"] == "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e"
     assert payload["source_archive_bytes"] == 186231
-    assert "pre_submission_compliance_failed" in payload["blockers"]
+    assert "pre_submission_compliance_failed" not in payload["blockers"]
+    assert "pre_submission_compliance_failed" not in payload["static_blockers"]
     assert "dry_run_queue_payload_section_diff_mismatch" not in payload["blockers"]
     assert "lightning_dry_run_not_ready" not in payload["blockers"]
     assert "missing_active_lane_dispatch_claim" in payload["blockers"]
     assert "missing_operator_exact_cuda_approval" in payload["blockers"]
     assert payload["preflight_ready"] is True
-    assert payload["compliance_ok"] is False
-    assert payload["compliance_failure_summary"]["release_surface_only"] is True
-    assert "required_file_present:archive.zip" in payload["compliance_failure_summary"]["categories"][
-        "release_surface_missing"
-    ]
+    assert payload["compliance_ok"] is True
+    assert payload["compliance_failure_summary"]["failed_count"] == 0
     assert payload["payload_diff_ready"] is True
     assert payload["dry_run_ready"] is True
     assert payload["dry_run_submit_readiness"]["remote_preflight_only"] is True
@@ -82,6 +81,95 @@ def test_wr01_exact_eval_packet_reports_missing_env_without_dispatch(tmp_path: P
     assert "'$LIGHTNING_SSH_TARGET'" not in payload["commands"]["submit"]
     assert "--remote $LIGHTNING_SSH_TARGET" in payload["commands"]["submit"]
     assert "tools/claim_lane_dispatch.py" in payload["commands"]["claim"]
+
+
+def test_wr01_exact_eval_packet_builds_release_surface_and_refreshes_static_compliance(
+    tmp_path: Path,
+) -> None:
+    fixture = _write_matching_packet_artifacts(
+        tmp_path,
+        archive_member_payload=b"candidate payload",
+    )
+    result_dir = fixture["result_dir"]
+    inflate = result_dir / "source_inflate.sh"
+    inflate.write_text("#!/usr/bin/env bash\nset -euo pipefail\nexit 0\n", encoding="utf-8")
+    inflate.chmod(0o755)
+    claims_path = tmp_path / "claims.md"
+    out = tmp_path / "packet.json"
+    env = os.environ.copy()
+    for key in (
+        "LIGHTNING_SSH_TARGET",
+        "LIGHTNING_REMOTE_PACT",
+        "LIGHTNING_UPSTREAM_DIR",
+        "LIGHTNING_TEAMSPACE",
+        "LIGHTNING_STUDIO",
+        "LIGHTNING_SDK_USER",
+    ):
+        env.pop(key, None)
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "build_wr01_exact_eval_packet.py"),
+            "--job-name",
+            "job",
+            "--lane-id",
+            "lane",
+            "--archive",
+            str(fixture["archive"]),
+            "--baseline-json",
+            str(fixture["baseline"]),
+            "--inflate-sh",
+            str(inflate),
+            "--result-dir",
+            str(result_dir),
+            "--archive-sha256",
+            fixture["archive_sha256"],
+            "--archive-bytes",
+            str(fixture["archive_bytes"]),
+            "--claims-path",
+            str(claims_path),
+            "--now-utc",
+            "2026-05-06T10:00:00Z",
+            "--build-release-surface",
+            "--refresh-static-compliance",
+            "--json-out",
+            str(out),
+        ],
+        check=True,
+        text=True,
+        env=env,
+    )
+
+    release_surface = result_dir / "release_surface"
+    assert _sha256((release_surface / "archive.zip").read_bytes()) == fixture["archive_sha256"]
+    assert os.access(release_surface / "inflate.sh", os.X_OK)
+    report = (release_surface / "report.txt").read_text(encoding="utf-8")
+    assert f"archive_sha256: {fixture['archive_sha256']}" in report
+    assert "score_claim: false" in report
+    surface_manifest = json.loads((release_surface / "archive_manifest.json").read_text(encoding="utf-8"))
+    assert surface_manifest["schema"] == "wr01_release_surface_manifest_v1"
+    assert surface_manifest["score_claim"] is False
+    assert surface_manifest["dispatch_attempted"] is False
+    assert surface_manifest["candidate_archive_sha256"] == fixture["archive_sha256"]
+    assert surface_manifest["manifest_links"]["candidate_manifest"]["exists"] is True
+
+    compliance = json.loads((result_dir / "pre_submission_compliance.json").read_text(encoding="utf-8"))
+    assert compliance["passed"] is True
+    assert compliance["submission_dir"]["path"].endswith("release_surface")
+    assert compliance["archive_manifest"]["path"].endswith("release_surface/archive_manifest.json")
+    assert all(check["passed"] for check in compliance["checks"] if check["severity"] == "error")
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["compliance_ok"] is True
+    assert "pre_submission_compliance_failed" not in payload["static_blockers"]
+    assert payload["static_packet_ready"] is True
+    assert payload["ready_for_submit"] is False
+    assert "missing_lightning_environment" in payload["blockers"]
+    assert "missing_active_lane_dispatch_claim" in payload["blockers"]
+    assert "missing_operator_exact_cuda_approval" in payload["blockers"]
+    assert payload["release_surface_generation"]["files"]["archive.zip"]["sha256"] == fixture["archive_sha256"]
+    assert payload["static_compliance_refresh"]["returncode"] == 0
 
 
 def test_wr01_exact_eval_packet_accepts_matching_custody_artifacts(tmp_path: Path) -> None:
@@ -531,6 +619,13 @@ def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _write_single_member_zip(path: Path, payload: bytes) -> None:
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
+        info = zipfile.ZipInfo("x", date_time=(1980, 1, 1, 0, 0, 0))
+        info.external_attr = 0o100644 << 16
+        zf.writestr(info, payload)
+
+
 def _write_claims(path: Path, *, lane_id: str, job_name: str) -> None:
     path.write_text(
         "\n".join(
@@ -561,11 +656,16 @@ def _write_matching_packet_artifacts(
     candidate_payload_sha256: str = "c" * 64,
     changed_source_sha256: str = "d" * 64,
     changed_section_sha256: str = "e" * 64,
+    archive_member_payload: bytes | None = None,
 ) -> dict[str, object]:
     result_dir = root / "wr01_fixture"
     result_dir.mkdir()
     archive = result_dir / "candidate.zip"
-    archive.write_bytes(b"candidate archive bytes")
+    if archive_member_payload is None:
+        archive.write_bytes(b"candidate archive bytes")
+    else:
+        _write_single_member_zip(archive, archive_member_payload)
+        candidate_payload_sha256 = _sha256(archive_member_payload)
     archive_sha256 = _sha256(archive.read_bytes())
     archive_bytes = archive.stat().st_size
     baseline = root / "baseline.json"

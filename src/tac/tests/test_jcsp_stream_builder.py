@@ -35,6 +35,8 @@ from tac.jcsp_stream_builder import (
 )
 from tac.joint_codec_stack_orchestrator import (
     JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER,
+    JCSP_RUNTIME_RAW_OUTPUT_PARITY_CONTRACT_SCHEMA,
+    JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA,
     JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
     JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER,
     KIND_ARITHMETIC_STATIC,
@@ -334,6 +336,12 @@ def test_jcsp_stream_source_archive_member_closes_real_jcsp_member(
     output_contract = manifest_a["runtime_consumption_contract"][
         "contest_output_contract"
     ]
+    parity_contract = output_contract["raw_output_parity_contract"]
+    assert parity_contract["schema"] == JCSP_RUNTIME_RAW_OUTPUT_PARITY_CONTRACT_SCHEMA
+    assert parity_contract["required_proof_schema"] == (
+        JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA
+    )
+    assert parity_contract["preexisting_raw_outputs_are_not_parity_proof"] is True
     assert output_contract["bridge_emits_contest_raw_outputs"] is False
     assert output_contract["output_parity_checked"] is False
 

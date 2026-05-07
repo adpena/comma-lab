@@ -254,8 +254,11 @@
       "ok": true
     },
     {
-      "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
-      "expected": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
+      "actual": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
+      "expected": [
+        "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
+        "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json"
+      ],
       "name": "compliance_manifest_path_mismatch",
       "ok": true
     },
@@ -326,7 +329,7 @@
       "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/public_replay_preflight.json"
     },
     {
-      "bytes": 5975,
+      "bytes": 6069,
       "exists": true,
       "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/pre_submission_compliance.json"
     },
@@ -347,14 +350,13 @@
     }
   ],
   "blockers": [
-    "pre_submission_compliance_failed",
     "missing_lightning_environment",
     "missing_active_lane_dispatch_claim",
     "missing_operator_exact_cuda_approval"
   ],
   "byte_delta": -9,
   "candidate_id": "wr01_apply_pr106x_half",
-  "candidate_static_preflight_ready": false,
+  "candidate_static_preflight_ready": true,
   "changed_section_name": "latents_and_sidecar_brotli",
   "changed_section_sha256": "2d85c4891e06906833e6a106dd486184121159a2380b581dc0e0b7d56603e939",
   "commands": {
@@ -366,31 +368,22 @@
     "categories": {
       "archive_integrity": [],
       "archive_manifest_mismatch": [],
-      "auth_eval_or_report_missing": [
-        "report_exists"
-      ],
+      "auth_eval_or_report_missing": [],
       "other": [],
-      "release_surface_missing": [
-        "required_file_present:archive.zip",
-        "required_file_present:report.txt"
-      ]
+      "release_surface_missing": []
     },
-    "failed_check_names": [
-      "required_file_present:archive.zip",
-      "required_file_present:report.txt",
-      "report_exists"
-    ],
-    "failed_count": 3,
-    "release_surface_only": true,
+    "failed_check_names": [],
+    "failed_count": 0,
+    "release_surface_only": false,
     "schema": "wr01_compliance_failure_summary_v1"
   },
-  "compliance_ok": false,
+  "compliance_ok": true,
   "confidence": 1.0,
   "conflicts_with_atoms": [],
   "conflicts_with_families": [],
   "dispatch_attempted": false,
-  "dispatch_gate": "blocked_static_packet_ready_until_static_blockers_clear",
-  "dispatch_unlocked": false,
+  "dispatch_gate": "eligible_for_cuda_auth_eval_after_lane_claim",
+  "dispatch_unlocked": true,
   "dry_run_queue_metadata": {
     "actual": {
       "archive_manifest": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
@@ -426,26 +419,7 @@
   "expected_score_variance": 0.0,
   "expected_seg_dist_delta": 0.0,
   "expected_total_score_delta": -5.9927305780995425e-06,
-  "failed_compliance_checks": [
-    {
-      "details": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/archive.zip",
-      "name": "required_file_present:archive.zip",
-      "passed": false,
-      "severity": "error"
-    },
-    {
-      "details": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/report.txt",
-      "name": "required_file_present:report.txt",
-      "passed": false,
-      "severity": "error"
-    },
-    {
-      "details": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source/submissions/belt_and_suspenders/report.txt",
-      "name": "report_exists",
-      "passed": false,
-      "severity": "error"
-    }
-  ],
+  "failed_compliance_checks": [],
   "family": "hnerv_wavelet_wr01_apply_transform",
   "family_group": "hnerv_wavelet_wr01_apply",
   "interaction_assumptions": [
@@ -480,9 +454,70 @@
   "payload_diff_ready": true,
   "preflight_ready": true,
   "proxy_row": false,
-  "ready_for_exact_eval_dispatch_claim": false,
+  "ready_for_exact_eval_dispatch_claim": true,
   "ready_for_submit": false,
   "recorded_at_utc": "2026-05-07T00:00:00Z",
+  "release_surface": {
+    "exists": true,
+    "files": {
+      "archive.zip": {
+        "bytes": 186222,
+        "exists": true,
+        "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive.zip",
+        "sha256": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628"
+      },
+      "archive_manifest.json": {
+        "bytes": 3256,
+        "exists": true,
+        "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
+        "sha256": "8a140a0f333ef736ec197d3b72af833854ac442d11ea5a3746bc46e826a8e2ca"
+      },
+      "inflate.sh": {
+        "bytes": 681,
+        "exists": true,
+        "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/inflate.sh",
+        "sha256": "6052c2ddcb42f2149e9eb364b73735e06748cf1600ab3fd7a793805fcee87709"
+      },
+      "report.txt": {
+        "bytes": 1238,
+        "exists": true,
+        "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/report.txt",
+        "sha256": "3bf8eba8a7a8647bbf58de5abeb13bdf342b5d9ee05cf47c6a301e952ac6391c"
+      }
+    },
+    "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface",
+    "schema": "wr01_release_surface_status_v1"
+  },
+  "release_surface_generation": {
+    "files": {
+      "archive.zip": {
+        "bytes": 186222,
+        "exists": true,
+        "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive.zip",
+        "sha256": "d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628"
+      },
+      "archive_manifest.json": {
+        "bytes": 3256,
+        "exists": true,
+        "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
+        "sha256": "8a140a0f333ef736ec197d3b72af833854ac442d11ea5a3746bc46e826a8e2ca"
+      },
+      "inflate.sh": {
+        "bytes": 681,
+        "exists": true,
+        "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/inflate.sh",
+        "sha256": "6052c2ddcb42f2149e9eb364b73735e06748cf1600ab3fd7a793805fcee87709"
+      },
+      "report.txt": {
+        "bytes": 1238,
+        "exists": true,
+        "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/report.txt",
+        "sha256": "3bf8eba8a7a8647bbf58de5abeb13bdf342b5d9ee05cf47c6a301e952ac6391c"
+      }
+    },
+    "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface",
+    "schema": "wr01_release_surface_generation_v1"
+  },
   "schema": "wr01_exact_eval_operator_packet_v1",
   "schema_version": 1,
   "score_claim": false,
@@ -496,9 +531,15 @@
   },
   "source_archive_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
   "source_payload_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
-  "static_blockers": [
-    "pre_submission_compliance_failed"
-  ],
-  "static_packet_ready": false,
+  "static_blockers": [],
+  "static_compliance_refresh": {
+    "command": ".venv/bin/python scripts/pre_submission_compliance_check.py --submission-dir experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface --archive experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive.zip --archive-manifest-json experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json --expect-single-member x --expected-archive-sha256 d2208ffa41297c40ce5f0bdbbe4767a9831301e382522afd2f6acf455a6b1628 --expected-archive-size-bytes 186222 --public-scan-path experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface --json-out experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/pre_submission_compliance.json --strict",
+    "json_out": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/pre_submission_compliance.json",
+    "returncode": 0,
+    "schema": "wr01_static_compliance_refresh_v1",
+    "stderr_tail": "",
+    "stdout_tail": ""
+  },
+  "static_packet_ready": true,
   "tool": "tools/build_wr01_exact_eval_packet.py"
 }

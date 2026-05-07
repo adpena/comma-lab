@@ -163,6 +163,12 @@ JCSP_SUBMISSION_RUNTIME_OUTPUT_CONTRACT_SCHEMA: str = (
 JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER: str = (
     "jcsp_runtime_raw_output_parity_missing"
 )
+JCSP_RUNTIME_RAW_OUTPUT_PARITY_CONTRACT_SCHEMA: str = (
+    "jcsp_runtime_raw_output_parity_contract_v1"
+)
+JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA: str = (
+    "jcsp_runtime_raw_output_parity_proof_v1"
+)
 
 # Codec kind flags
 KIND_ARITHMETIC_STATIC: int = 0
@@ -1620,12 +1626,62 @@ def build_jcsp_local_skeleton_archive_member(
     return archive_bytes, contract
 
 
+def _jcsp_runtime_raw_output_parity_contract() -> dict[str, Any]:
+    """Return the fail-closed raw-output parity proof contract.
+
+    The archive/runtime builder does not know the contest names file yet, so it
+    records the required proof schema and acceptance conditions. The
+    stdlib-only submission bridge fills in expected output paths during inflate.
+    """
+
+    expected_raw_outputs: list[str] = []
+    return {
+        "schema": JCSP_RUNTIME_RAW_OUTPUT_PARITY_CONTRACT_SCHEMA,
+        "required_proof_schema": JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "expected_raw_outputs_known": False,
+        "expected_raw_output_count": 0,
+        "expected_raw_outputs_sha256": _sha256_bytes(
+            _canonical_json_bytes({"expected_raw_outputs": expected_raw_outputs})
+        ),
+        "required_candidate_output_source": "jcsp_runtime_bridge_emitted_rawvideo",
+        "required_reference_output_source": (
+            "contest_reference_runtime_or_byte_custody_baseline"
+        ),
+        "preexisting_raw_outputs_are_not_parity_proof": True,
+        "existing_raw_output_count_at_probe": 0,
+        "required_per_output_fields": [
+            "path",
+            "candidate_exists",
+            "candidate_bytes",
+            "candidate_sha256",
+            "reference_exists",
+            "reference_bytes",
+            "reference_sha256",
+            "byte_exact_match",
+        ],
+        "acceptance_conditions": [
+            "jcsp_stream_consumer_decodes_jcsp_streams",
+            "bridge_emits_exactly_expected_raw_outputs",
+            "candidate_outputs_are_from_current_bridge_run",
+            "reference_outputs_are_from_contest_runtime_or_custody_baseline",
+            "all_candidate_sha256_values_match_reference_sha256_values",
+            "parity_proof_manifest_uses_required_schema",
+        ],
+        "ready_for_output_parity": False,
+        "ready_for_submission_runtime_consumption": False,
+        "dispatch_blocker": JCSP_SUBMISSION_RUNTIME_OUTPUT_PARITY_BLOCKER,
+    }
+
+
 def _jcsp_submission_runtime_consumption_contract(
     *,
     member_name: str,
 ) -> dict[str, Any]:
     """Return the fail-closed runtime consumption gate for JCSP archives."""
 
+    raw_output_parity_contract = _jcsp_runtime_raw_output_parity_contract()
     output_contract = {
         "schema": JCSP_SUBMISSION_RUNTIME_OUTPUT_CONTRACT_SCHEMA,
         "score_claim": False,
@@ -1634,6 +1690,10 @@ def _jcsp_submission_runtime_consumption_contract(
         "contest_output_format": "one uint8 RGB rawvideo .raw per names_file entry",
         "bridge_emits_contest_raw_outputs": False,
         "raw_output_emission_attempted": False,
+        "raw_output_parity_contract": raw_output_parity_contract,
+        "required_raw_output_parity_proof_schema": (
+            JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA
+        ),
         "output_parity_checked": False,
         "output_parity_artifact": None,
         "ready_for_output_parity": False,
@@ -2309,6 +2369,8 @@ __all__ = [
     "JCSP_LOCAL_SKELETON_RUNTIME_BLOCKER",
     "JCSP_LOCAL_SKELETON_SCHEMA",
     "JCSP_MODEL_STREAM_ARCHIVE_READINESS_SCHEMA",
+    "JCSP_RUNTIME_RAW_OUTPUT_PARITY_CONTRACT_SCHEMA",
+    "JCSP_RUNTIME_RAW_OUTPUT_PARITY_PROOF_SCHEMA",
     "JCSP_STREAM_ARCHIVE_BYTE_RECONCILIATION_SCHEMA",
     "JCSP_STREAM_METADATA_SCHEMA",
     "JCSP_SUBMISSION_RUNTIME_BRIDGE_PROBE_SCHEMA",
