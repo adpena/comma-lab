@@ -1,4 +1,6 @@
 {
+  "approval_scope": "operator approval recorded for exact CUDA score-lowering work; this release surface remains static and non-dispatched",
+  "approved_exact_eval_target": true,
   "archive": {
     "bytes": 186088,
     "path": "archive.zip",
@@ -22,7 +24,7 @@
       "repo_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/manifest.json"
     },
     "exact_eval_packet": {
-      "exists": false,
+      "exists": true,
       "repo_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json"
     },
     "payload_section_diff": {
@@ -34,6 +36,7 @@
       "repo_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/public_replay_preflight.json"
     }
   },
+  "operator_approved_exact_cuda": true,
   "recorded_at_utc": "2026-05-07T12:30:00Z",
   "release_surface_scope": "static_upload_files_only_no_auth_eval_no_dispatch",
   "remaining_required_for_score_or_dispatch": [

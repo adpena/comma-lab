@@ -30,6 +30,7 @@ from tools.build_field_meta_dispatch_selection import build_selection_report  # 
 SCHEMA_VERSION = 4
 DEFAULT_PACKET_MANIFEST_GLOBS = (
     "experiments/results/**/wr01_exact_eval_packet.json",
+    "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_*/hnerv_lowlevel_exact_eval_packet.json",
     "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_*/hnerv_lowlevel_exact_eval_packet.json",
 )
 
@@ -266,6 +267,7 @@ def build_next_comprehensive_tranche(
             "score_claim": False,
             "dispatch_attempted": False,
             "ready_for_exact_eval_dispatch": False,
+            "candidate_preflight_ready_for_exact_eval_dispatch": False,
             "candidate_local_preflight_ready": False,
             "candidate_static_preflight_ready": False,
             "candidate_count": 0,
@@ -283,7 +285,7 @@ def build_next_comprehensive_tranche(
                 "scope_counts": {},
             },
             "lexicographic_feasibility_order": [
-                "ready_for_exact_eval_dispatch desc",
+                "field_selection_ready_for_exact_eval_dispatch desc",
                 "candidate_static_preflight_ready desc",
                 "archive_proof.byte_closed desc",
                 "runtime_proof.runtime_closed desc",
@@ -330,6 +332,7 @@ def build_roadmap_status(
     packet_manifest_globs: list[str] | None = None,
     claims_path: Path | None = None,
     now_utc: str | None = None,
+    operator_approved_exact_cuda: bool | None = None,
 ) -> dict[str, Any]:
     """Join static frontier inventory with live dirty-worktree blockers."""
 
@@ -385,6 +388,7 @@ def build_roadmap_status(
         claims_path=claims_path,
         now_utc=now_utc,
         dirty_paths=live_dirty_paths,
+        operator_approved_exact_cuda=operator_approved_exact_cuda,
     )
     next_tranche = build_next_comprehensive_tranche(
         rows,
@@ -451,6 +455,7 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- selected_candidate_static_refresh_status: `{_md(selected_operator.get('static_refresh_status') or 'none')}`",
         f"- selected_candidate_refresh_blockers: `{_md_list(selected_operator.get('refresh_blockers') or [])}`",
         f"- selected_candidate_approval_blockers: `{_md_list(selected_operator.get('approval_blockers') or [])}`",
+        f"- selected_candidate_operator_approval_source: `{_md((selected_operator.get('operator_approval_state') or {}).get('source') or 'none')}`",
         "",
         "| workstream | keys | dirty-blocked keys | acceptance gates |",
         "|---|---|---|---|",
@@ -552,6 +557,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--packet-manifest-glob", action="append")
     parser.add_argument("--claims-path", type=Path)
     parser.add_argument("--now-utc")
+    parser.add_argument(
+        "--operator-approved-exact-cuda",
+        action="store_true",
+        help=(
+            "Record operator exact-CUDA approval for packet-selection context only; "
+            "does not satisfy env, lane-claim, exact-CUDA, or review gates."
+        ),
+    )
     parser.add_argument("--format", choices=("json", "markdown"), default="markdown")
     return parser
 
@@ -564,6 +577,7 @@ def main(argv: list[str] | None = None) -> int:
         packet_manifest_globs=args.packet_manifest_glob,
         claims_path=args.claims_path,
         now_utc=args.now_utc,
+        operator_approved_exact_cuda=args.operator_approved_exact_cuda or None,
     )
     if args.json_out is not None:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)

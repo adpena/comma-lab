@@ -95,6 +95,16 @@ def test_lowlevel_exact_eval_packet_builds_static_release_surface(tmp_path: Path
     assert manifest["dispatch_gate"] == "eligible_for_cuda_auth_eval_after_lane_claim"
     assert manifest["fixed_runtime_preflight"]["ready_for_fixed_runtime_exact_eval"] is True
     assert manifest["exact_eval_runtime_contract"]["ready_for_exact_eval_runtime"] is True
+    runtime_tree = manifest["fixed_runtime_preflight"]["runtime_tree_sha256"]
+    assert len(runtime_tree) == 64
+    assert manifest["exact_eval_runtime_contract"]["runtime_tree_sha256"] == runtime_tree
+    assert manifest["fixed_runtime_preflight"]["runtime_tree_source"].endswith("public_replay_preflight.json")
+    assert manifest["exact_eval_runtime_contract"]["runtime_tree_source"].endswith("public_replay_preflight.json")
+
+    claim_command = packet["commands"]["claim"]
+    assert "PR106x lgblock16 1-byte" not in claim_command
+    assert "fixture_lgblock16 HNeRV low-level Brotli exact CUDA eval" in claim_command
+    assert f"byte_delta={packet['byte_delta']}" in claim_command
 
     payload_diff = json.loads((result_dir / "payload_section_diff_vs_source.json").read_text(encoding="utf-8"))
     assert payload_diff["changed_section_count"] == 2
@@ -150,6 +160,66 @@ def test_lowlevel_exact_eval_packet_blocks_missing_raw_equivalence(tmp_path: Pat
     assert not (result_dir / "release_surface" / "archive.zip").exists()
     readiness_manifest = json.loads((result_dir / "manifest.json").read_text(encoding="utf-8"))
     assert readiness_manifest["static_packet_ready"] is False
+
+
+def test_lowlevel_exact_eval_packet_records_operator_approval_without_dispatch(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    for name in module.REQUIRED_ENV:
+        monkeypatch.delenv(name, raising=False)
+    fixture = _write_lowlevel_fixture(tmp_path)
+    result_dir = tmp_path / "approved_packet"
+
+    args = module.build_arg_parser().parse_args(
+        [
+            "--candidate-result",
+            str(fixture["result_json"]),
+            "--archive",
+            str(fixture["candidate_archive"]),
+            "--baseline-json",
+            str(fixture["baseline_json"]),
+            "--inflate-sh",
+            str(fixture["inflate_sh"]),
+            "--upstream-dir",
+            str(fixture["upstream_dir"]),
+            "--result-dir",
+            str(result_dir),
+            "--release-surface-dir",
+            str(result_dir / "release_surface"),
+            "--lane-id",
+            "fixture_q10",
+            "--job-name",
+            "exact_eval_fixture_q10",
+            "--claims-path",
+            str(tmp_path / "claims.md"),
+            "--now-utc",
+            "2026-05-07T12:00:00Z",
+            "--operator-approved-exact-cuda",
+        ]
+    )
+
+    packet = module.build_packet(args)
+
+    assert packet["operator_approved_exact_cuda"] is True
+    assert packet["approved_exact_eval_target"] is True
+    assert packet["ready_for_submit"] is False
+    assert "missing_operator_exact_cuda_approval" not in packet["submit_blockers"]
+    assert packet["submit_blockers"] == [
+        "missing_lightning_environment",
+        "missing_active_lane_dispatch_claim",
+    ]
+    assert packet["dispatch_attempted"] is False
+    assert packet["remote_gpu_run"] is False
+    manifest = json.loads((result_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["operator_approved_exact_cuda"] is True
+    assert manifest["approved_exact_eval_target"] is True
+    assert "requires_operator_exact_cuda_approval" not in manifest["submit_blockers_until_operator_action"]
+    release_manifest = json.loads(
+        (result_dir / "release_surface" / "archive_manifest.json").read_text(encoding="utf-8")
+    )
+    assert release_manifest["operator_approved_exact_cuda"] is True
+    assert release_manifest["approved_exact_eval_target"] is True
 
 
 def test_lowlevel_exact_eval_packet_cli_materializes_packet(tmp_path: Path) -> None:

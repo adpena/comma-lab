@@ -1,7 +1,10 @@
 .venv/bin/python tools/build_field_meta_dispatch_selection.py \
-  --manifest experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/manifest.json \
+  --manifest experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json \
   --manifest experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/manifest.json \
-  --manifest experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json \
+  --manifest experiments/results/apogee_int6_repack_20260504_claude/repack_metadata.json \
+  --claims-path .omx/state/active_lane_dispatch_claims.md \
+  --now-utc 2026-05-07T12:30:00Z \
+  --operator-approved-exact-cuda \
   --dirty-path experiments/results/public_pr100_intake_20260504_codex/source \
   --dirty-path experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source \
   --dirty-path experiments/results/public_pr103_intake_20260504_codex/source \

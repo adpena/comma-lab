@@ -1,4 +1,6 @@
 {
+  "approval_scope": "operator approval for exact CUDA score-lowering work only; lane claim, environment, submit, harvest, and score-adjudication gates still apply",
+  "approved_exact_eval_target": true,
   "archive_bytes": 186088,
   "archive_identity": {
     "bytes": 186088,
@@ -22,7 +24,7 @@
   "candidate_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
   "candidate_static_preflight_ready": true,
   "commands": {
-    "claim": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id pr106_q10_151byte_brotli --platform lightning --instance-job-id exact_eval_pr106_q10_151byte_brotli_20260507 --agent codex:gpt-5.5 --status active_exact_eval --notes 'PR106x lgblock16 1-byte Brotli exact CUDA eval; archive_sha256=626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7 bytes=186088; static_packet=experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json'",
+    "claim": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id pr106_q10_151byte_brotli --platform lightning --instance-job-id exact_eval_pr106_q10_151byte_brotli_20260507 --agent codex:gpt-5.5 --status active_exact_eval --notes 'pr106_q10_151byte_brotli HNeRV low-level Brotli exact CUDA eval; byte_delta=-151; source=PR106; member=0.bin; archive_sha256=626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7 bytes=186088; static_packet=experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json'",
     "harvest": ".venv/bin/python scripts/launch_lightning_batch_job.py harvest-ssh --state-path .omx/state/lightning_batch_jobs.json --job-name exact_eval_pr106_q10_151byte_brotli_20260507 --ssh-target $LIGHTNING_SSH_TARGET --expected-archive-sha256 626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7 --expected-archive-size-bytes 186088 --require-adjudication",
     "submit": ".venv/bin/python scripts/lightning_exact_eval_repro.py --job-name exact_eval_pr106_q10_151byte_brotli_20260507 --stage-workspace --submit --archive experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip --baseline-json experiments/results/lightning_batch/exact_eval_public_pr106_belt_and_suspenders_adapter_t4_20260504T1330Z/contest_auth_eval.adjudicated.json --inflate-sh experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh --upstream-dir $LIGHTNING_UPSTREAM_DIR --remote $LIGHTNING_SSH_TARGET --remote-pact $LIGHTNING_REMOTE_PACT --studio $LIGHTNING_STUDIO --teamspace $LIGHTNING_TEAMSPACE --sdk-user $LIGHTNING_SDK_USER --machine ${LIGHTNING_MACHINE:-T4} --predicted-band 0.18 0.25 --regression-threshold 0.01 --max-posenet-relative 1.01 --max-segnet-relative 1.01 --max-sane-score 1.0 --component-trace --queue-metadata lane=pr106_q10_151byte_brotli --queue-metadata archive_manifest=experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/manifest.json --queue-metadata public_preflight=experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/public_replay_preflight.json --queue-metadata payload_section_diff=experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/payload_section_diff_vs_source.json --extra-artifact experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/manifest.json --extra-artifact experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/public_replay_preflight.json --extra-artifact experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/pre_submission_compliance.json --extra-artifact experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/payload_section_diff_vs_source.json --extra-artifact experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json"
   },
@@ -53,13 +55,12 @@
     "LIGHTNING_STUDIO",
     "LIGHTNING_SDK_USER"
   ],
-  "operator_approved_exact_cuda": false,
+  "operator_approved_exact_cuda": true,
   "operator_next_steps": {
     "copy_safe": true,
     "current_submit_blockers": [
       "missing_lightning_environment",
-      "missing_active_lane_dispatch_claim",
-      "missing_operator_exact_cuda_approval"
+      "missing_active_lane_dispatch_claim"
     ],
     "first_remote_gpu_step": "submit_exact_cuda",
     "must_run_in_order": true,
@@ -81,7 +82,7 @@
         "writes_repo_state": true
       },
       {
-        "copy_safe_command": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id pr106_q10_151byte_brotli --platform lightning --instance-job-id exact_eval_pr106_q10_151byte_brotli_20260507 --agent codex:gpt-5.5 --status active_exact_eval --notes 'PR106x lgblock16 1-byte Brotli exact CUDA eval; archive_sha256=626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7 bytes=186088; static_packet=experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json'",
+        "copy_safe_command": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id pr106_q10_151byte_brotli --platform lightning --instance-job-id exact_eval_pr106_q10_151byte_brotli_20260507 --agent codex:gpt-5.5 --status active_exact_eval --notes 'pr106_q10_151byte_brotli HNeRV low-level Brotli exact CUDA eval; byte_delta=-151; source=PR106; member=0.bin; archive_sha256=626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7 bytes=186088; static_packet=experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json'",
         "dispatches_remote_gpu": false,
         "id": "claim_lane_no_dispatch",
         "order": 3,
@@ -141,10 +142,10 @@
           "sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7"
         },
         "archive_manifest.json": {
-          "bytes": 2392,
+          "bytes": 2610,
           "exists": true,
           "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/archive_manifest.json",
-          "sha256": "ed59c6f7c8e37e441d6a1f978567b29b645b7d0b45d5f66fc1b2974475187745"
+          "sha256": "b67c6f25359ff4a7c67538241d5be9d7f3f393a1c8d08021f7c5755f851643df"
         },
         "inflate.sh": {
           "bytes": 631,
@@ -181,10 +182,10 @@
         "sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7"
       },
       "archive_manifest.json": {
-        "bytes": 2392,
+        "bytes": 2610,
         "exists": true,
         "path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/release_surface/archive_manifest.json",
-        "sha256": "ed59c6f7c8e37e441d6a1f978567b29b645b7d0b45d5f66fc1b2974475187745"
+        "sha256": "b67c6f25359ff4a7c67538241d5be9d7f3f393a1c8d08021f7c5755f851643df"
       },
       "inflate.sh": {
         "bytes": 631,
@@ -218,8 +219,7 @@
   "static_packet_ready": true,
   "submit_blockers": [
     "missing_lightning_environment",
-    "missing_active_lane_dispatch_claim",
-    "missing_operator_exact_cuda_approval"
+    "missing_active_lane_dispatch_claim"
   ],
   "tool": "tools/build_hnerv_lowlevel_exact_eval_packet.py",
   "validation_checks": [

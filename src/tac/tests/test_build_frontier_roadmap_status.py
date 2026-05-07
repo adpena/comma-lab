@@ -132,11 +132,13 @@ def test_frontier_roadmap_status_discovers_default_packet_manifests() -> None:
 
     assert DEFAULT_PACKET_MANIFEST_GLOBS == (
         "experiments/results/**/wr01_exact_eval_packet.json",
+        "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_*/hnerv_lowlevel_exact_eval_packet.json",
         "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_*/hnerv_lowlevel_exact_eval_packet.json",
     )
     assert "wr01_apply_pr106x_half" in candidate_ids
+    assert "pr106_q10_151byte_brotli" in candidate_ids
     assert "pr106x_lgblock16_1byte_brotli" in candidate_ids
-    assert packet_selection["candidate_count"] >= 2
+    assert packet_selection["candidate_count"] >= 3
     assert packet_selection["candidate_static_preflight_ready_count"] == 2
     assert packet_selection["pareto_summary"]["frontier_count"] == 1
     assert packet_selection["report_blockers"] == []
@@ -147,11 +149,11 @@ def test_frontier_roadmap_status_discovers_default_packet_manifests() -> None:
     )
     assert wr01["archive_proof"]["byte_closed"] is True
     assert wr01["runtime_proof"]["runtime_closed"] is True
-    assert wr01["strict_candidate_preflight_ready"] is True
-    assert wr01["candidate_static_preflight_ready"] is True
-    assert wr01["selection_decision"] == "needs_active_lane_claim_before_dispatch"
-    assert "missing_active_lane_dispatch_claim" in wr01["candidate_blockers"]
-    assert "claim:dispatch_claim_check_missing" in wr01["candidate_blockers"]
+    assert wr01["strict_candidate_preflight_ready"] is False
+    assert wr01["candidate_static_preflight_ready"] is False
+    assert wr01["selection_decision"] == "strict_candidate_preflight_refused"
+    assert "strict_candidate_preflight_not_ready" in wr01["candidate_blockers"]
+    assert "strict:dispatch_unlocked_false" in wr01["candidate_blockers"]
     assert wr01["operator_next_steps_summary"]["schema"] == "packet_operator_next_steps_summary_v1"
     assert wr01["operator_next_steps_summary"]["packet_operator_next_steps_schema"] == (
         "wr01_operator_next_steps_v1"
@@ -160,9 +162,25 @@ def test_frontier_roadmap_status_discovers_default_packet_manifests() -> None:
     assert wr01["next_local_non_gpu_action"]["id"] == "verify_lightning_env"
     assert wr01["operator_claim_blockers"] == ["missing_active_lane_dispatch_claim"]
     assert wr01["operator_refresh_blockers"] == []
-    assert wr01["operator_approval_blockers"] == ["missing_operator_exact_cuda_approval"]
+    assert wr01["operator_approval_blockers"] == []
     assert "missing_lightning_environment" in wr01["operator_current_blockers"]
     assert "missing_env:LIGHTNING_SSH_TARGET" in wr01["operator_environment_blockers"]
+    q10 = next(
+        row
+        for row in packet_selection["rows"]
+        if row["candidate_id"] == "pr106_q10_151byte_brotli"
+    )
+    assert q10["family_group"] == "hnerv_lowlevel_brotli_repack"
+    assert q10["byte_delta"] == -151
+    assert q10["archive_proof"]["byte_closed"] is True
+    assert q10["runtime_proof"]["runtime_closed"] is True
+    assert q10["candidate_static_preflight_ready"] is True
+    assert q10["pareto_frontier"] is True
+    assert q10["selection_decision"] == "static_candidate_acquire_kkt_and_lane_claim_before_dispatch"
+    assert "missing_active_lane_dispatch_claim" in q10["candidate_blockers"]
+    assert "claim:dispatch_claim_check_missing" in q10["candidate_blockers"]
+    assert "passed_kkt_proof_or_converged_admm_waterline_result" in q10["next_required_proof"]
+    assert q10["operator_next_steps_summary"]["static_refresh_status"] == "passed"
     lgblock16 = next(
         row
         for row in packet_selection["rows"]
@@ -173,7 +191,9 @@ def test_frontier_roadmap_status_discovers_default_packet_manifests() -> None:
     assert lgblock16["archive_proof"]["byte_closed"] is True
     assert lgblock16["runtime_proof"]["runtime_closed"] is True
     assert lgblock16["candidate_static_preflight_ready"] is True
-    assert lgblock16["selection_decision"] == "needs_active_lane_claim_before_dispatch"
+    assert lgblock16["pareto_frontier"] is False
+    assert lgblock16["pareto_dominated_by"] == ["pr106_q10_151byte_brotli"]
+    assert lgblock16["selection_decision"] == "static_candidate_pareto_dominated_before_dispatch"
     assert "missing_active_lane_dispatch_claim" in lgblock16["candidate_blockers"]
     assert "claim:dispatch_claim_check_missing" in lgblock16["candidate_blockers"]
     assert lgblock16["operator_next_steps_summary"]["static_refresh_status"] == "passed"
@@ -255,7 +275,7 @@ def test_frontier_roadmap_status_consumes_field_meta_packet_manifests(tmp_path: 
         packet_selection["selected_candidate"]["non_dominated_frontier_reason"]["reason"]
         == "non_dominated_within_pareto_scope"
     )
-    assert packet_selection["selected_candidate"]["selection_decision"] == "needs_active_lane_claim_before_dispatch"
+    assert packet_selection["selected_candidate"]["selection_decision"] == "static_candidate_acquire_kkt_and_lane_claim_before_dispatch"
     assert packet_selection["selected_candidate"]["ready_for_exact_eval_dispatch"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
 

@@ -38,9 +38,14 @@ def test_field_meta_selector_reports_static_ready_but_not_dispatch_ready_without
     assert row["dispatch_identity_proof"]["status"] == "passed"
     assert row["dispatch_claim_proof"]["checked"] is False
     assert "missing_active_lane_dispatch_claim" in row["candidate_blockers"]
-    assert row["next_required_proof"] == [
+    assert row["candidate_preflight_next_required_proof"] == [
         "matching_active_level2_lane_claim_for_manifest_lane_and_job",
     ]
+    assert row["next_required_proof"] == [
+        "matching_active_level2_lane_claim_for_manifest_lane_and_job",
+        "passed_kkt_proof_or_converged_admm_waterline_result",
+    ]
+    assert row["selection_decision"] == "static_candidate_acquire_kkt_and_lane_claim_before_dispatch"
 
 
 def test_field_meta_selector_summarizes_operator_next_steps_without_dispatch(
@@ -125,6 +130,44 @@ def test_field_meta_selector_summarizes_operator_next_steps_without_dispatch(
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_field_meta_selector_records_operator_approval_context_without_unlocking_dispatch(
+    tmp_path: Path,
+) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="approval_context_candidate",
+        lane_id="lane_approval_context_candidate",
+        job_name="job_approval_context_candidate",
+    )
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload["operator_next_steps"] = {
+        "schema": "fixture_operator_next_steps_v1",
+        "copy_safe": True,
+        "current_submit_blockers": [
+            "missing_operator_exact_cuda_approval",
+            "missing_active_lane_dispatch_claim",
+        ],
+        "steps": [],
+    }
+    manifest.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    report = build_selection_report(
+        repo_root=REPO,
+        manifest_paths=[manifest],
+        operator_approved_exact_cuda=True,
+    )
+
+    row = report["rows"][0]
+    assert report["operator_approval_state"]["approved"] is True
+    assert report["operator_approval_state"]["dispatch_unlocked_by_approval"] is False
+    assert report["adversarial_gate_policy"]["score_claim_requires_exact_cuda_and_adversarial_review"] is True
+    assert row["operator_approval_state"]["source"] == "selector_context_operator_approved_exact_cuda"
+    assert row["operator_approval_blockers"] == []
+    assert row["ready_for_exact_eval_dispatch"] is False
+    assert "missing_active_lane_dispatch_claim" in row["field_selection_blockers"]
+    assert "requires_adversarial_review_before_score_claim" in report["dispatch_blockers"]
+
+
 def test_field_meta_selector_ingests_hnerv_lowlevel_result_manifest_as_local_candidate() -> None:
     manifest = (
         REPO
@@ -189,12 +232,62 @@ def test_field_meta_selector_uses_hnerv_rate_only_packet_delta(tmp_path: Path) -
     assert row["byte_delta"] == -151
     assert row["expected_total_score_delta"] == -0.00010054470192144788
     assert row["field_selection_score_delta"] == -0.000100544702
+    assert row["rate_only_delta_proof"]["status"] == "passed"
+    assert row["rate_only_delta_proof"]["byte_delta"] == -151
+    assert row["rate_only_delta_proof"]["expected_total_score_delta_source"] == (
+        "expected_total_score_delta_rate_only"
+    )
     assert row["interaction_assumptions"] == [
         "rate_only_raw_equivalent_brotli_repack",
         "component_deltas_require_exact_cuda_confirmation",
     ]
     assert row["field_interaction_contract"]["status"] == "passed"
     assert "field_interaction_contract_blocked" not in row["exact_dispatch_blockers"]["blockers"]
+
+
+def test_field_meta_selector_normalizes_apogee_intn_forensic_metadata(tmp_path: Path) -> None:
+    archive = tmp_path / "apogee_int6_archive.zip"
+    info = zipfile.ZipInfo("0.bin")
+    info.date_time = (1980, 1, 1, 0, 0, 0)
+    info.external_attr = 0o644 << 16
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr(info, bytes([0xA6]) + b"fixture-apogee-int6")
+    metadata = {
+        "archive_path": archive.as_posix(),
+        "archive_size_bytes": archive.stat().st_size,
+        "bits": 6,
+        "candidate_archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+        "delta_bytes": -15789,
+        "dispatch_blockers": [
+            "missing_contest_faithful_distortion_model",
+            "missing_scorer_basin_parity_gate",
+            "byte_only_prediction_not_score_evidence",
+        ],
+        "distortion_model_status": "missing",
+        "rate_component_score_delta_vs_pr106": -0.010513247010845963,
+        "ready_for_exact_eval_dispatch": False,
+        "score_affecting_payload_changed": True,
+        "score_claim": False,
+        "scorer_basin_parity_status": "missing",
+        "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+    }
+    manifest = tmp_path / "repack_metadata.json"
+    manifest.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    assert row["candidate_id"] == "apogee_int6"
+    assert row["family_group"] == "apogee_intN"
+    assert row["archive_proof"]["byte_closed"] is True
+    assert row["archive_proof"]["sha256_expected"] == metadata["candidate_archive_sha256"]
+    assert row["byte_delta"] == -15789
+    assert row["expected_total_score_delta"] == -0.010513247010845963
+    assert row["proxy_row"] is True
+    assert row["candidate_static_preflight_ready"] is False
+    assert "strict:ready_for_exact_eval_dispatch_false" in row["candidate_blockers"]
+    assert "strict:missing_distortion_model_gate" in row["candidate_blockers"]
+    assert row["rate_only_delta_proof"]["status"] == "not_applicable"
 
 
 def test_field_meta_selector_summarizes_nested_static_compliance_refresh() -> None:
@@ -245,8 +338,13 @@ def test_field_meta_selector_requires_lane_and_job_identity_for_static_ready(
         "dispatch_instance_job_id_missing",
     ]
     assert "missing_dispatch_identity_for_lane_claim" in row["candidate_blockers"]
+    assert row["candidate_preflight_next_required_proof"] == [
+        "manifest_lane_id_and_instance_job_id_for_level2_claim",
+    ]
     assert row["next_required_proof"] == [
         "manifest_lane_id_and_instance_job_id_for_level2_claim",
+        "passed_kkt_proof_or_converged_admm_waterline_result",
+        "pareto_eligible_static_ready_non_proxy_candidate",
     ]
 
 
@@ -367,8 +465,13 @@ def test_field_meta_selector_rejects_non_zip_archive_even_with_matching_sha(
     assert row["archive_proof"]["byte_closed"] is False
     assert row["archive_proof"]["zip_custody"]["status"] == "blocked"
     assert "archive:zip:archive_zip_unreadable" in row["candidate_blockers"]
-    assert row["next_required_proof"] == [
+    assert row["candidate_preflight_next_required_proof"] == [
         "local_archive_file_with_matching_sha256_and_bytes"
+    ]
+    assert row["next_required_proof"] == [
+        "local_archive_file_with_matching_sha256_and_bytes",
+        "passed_kkt_proof_or_converged_admm_waterline_result",
+        "pareto_eligible_static_ready_non_proxy_candidate",
     ]
 
 
@@ -388,8 +491,13 @@ def test_field_meta_selector_rejects_packet_without_runtime_tree_even_when_stric
     assert row["candidate_static_preflight_ready"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
     assert "missing_byte_closed_runtime_proof" in row["candidate_blockers"]
-    assert row["next_required_proof"] == [
+    assert row["candidate_preflight_next_required_proof"] == [
         "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract"
+    ]
+    assert row["next_required_proof"] == [
+        "runtime_tree_sha256_from_public_replay_preflight_or_exact_runtime_contract",
+        "passed_kkt_proof_or_converged_admm_waterline_result",
+        "pareto_eligible_static_ready_non_proxy_candidate",
     ]
 
 
@@ -455,8 +563,13 @@ def test_field_meta_selector_surfaces_packet_static_blockers(
     assert row["selection_decision"] == "strict_candidate_preflight_refused"
     assert row["non_dominated_frontier_reason"]["status"] == "ineligible"
     assert row["pareto_eligibility_blockers"] == ["candidate_static_preflight_not_ready"]
-    assert row["next_required_proof"] == [
+    assert row["candidate_preflight_next_required_proof"] == [
         "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py"
+    ]
+    assert row["next_required_proof"] == [
+        "passing_experiments/preflight_candidate_manifest_dispatch_readiness.py",
+        "passed_kkt_proof_or_converged_admm_waterline_result",
+        "pareto_eligible_static_ready_non_proxy_candidate",
     ]
 
 
@@ -494,7 +607,7 @@ def test_field_meta_selector_exposes_pareto_kkt_and_information_gain(
         "job_name": "job_pareto",
         "family_group": "hnerv_rate_recode",
         "pareto_scope": "hnerv_rate_recode",
-        "interaction_assumptions": ["rate_only_byte_equivalent"],
+        "interaction_assumptions": ["first_order_volterra_recode"],
         "interaction_model": "first_order_volterra_rate_recode",
         "volterra_order": 1,
         "volterra_terms": ["rate_only_linear_section"],
@@ -530,7 +643,7 @@ def test_field_meta_selector_exposes_pareto_kkt_and_information_gain(
     first = report["rows"][0]
     assert first["pareto_frontier"] is True
     assert first["field_interaction_contract"]["status"] == "passed"
-    assert first["field_interaction_contract"]["assumptions"] == ["rate_only_byte_equivalent"]
+    assert first["field_interaction_contract"]["assumptions"] == ["first_order_volterra_recode"]
     assert first["field_interaction_contract"]["interaction_model"] == "first_order_volterra_rate_recode"
     assert first["field_interaction_contract"]["volterra_order"] == 1
     assert first["field_interaction_contract"]["volterra_terms"] == ["rate_only_linear_section"]
@@ -637,6 +750,144 @@ def test_field_meta_selector_penalizes_dirty_packet_over_raw_delta(
     assert dirty_row["selection_penalty_terms"]["dirty_path_blocked"] > 0.0
     assert dirty_row["field_selection_score_delta"] == dirty_row["expected_total_score_delta"]
     assert dirty_row["next_required_proof"][0] == "clean_or_isolate_dirty_candidate_paths_before_selection"
+
+
+def test_field_meta_selector_ranks_q10_over_forensic_cross_paradigm_packets(
+    tmp_path: Path,
+) -> None:
+    q10 = _packet_manifest(
+        tmp_path / "q10",
+        candidate_id="pr106_q10_151byte_brotli",
+        family_group="hnerv_lowlevel_brotli_repack",
+        pareto_scope="hnerv_rate_only_exact_archive",
+        lane_id="pr106_q10_151byte_brotli",
+        job_name="exact_eval_pr106_q10_151byte_brotli_20260507",
+        byte_delta=-151,
+        expected_score_delta=0.0,
+        interaction_assumptions=["rate_only_raw_equivalent_brotli_repack"],
+    )
+    q10_payload = json.loads(q10.read_text(encoding="utf-8"))
+    q10_payload.pop("expected_total_score_delta")
+    q10_payload["family"] = "hnerv_lowlevel_brotli_repack"
+    q10_payload["expected_total_score_delta_rate_only"] = -0.00010054470192144788
+    q10.write_text(json.dumps(q10_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    apogee = _packet_manifest(
+        tmp_path / "apogee",
+        candidate_id="apogee_int5_forensic",
+        family_group="apogee_intN",
+        pareto_scope="apogee_intN",
+        lane_id="apogee_int5_forensic",
+        job_name="forensic_apogee_int5",
+        expected_score_delta=-0.02,
+        byte_delta=-31_000,
+        interaction_assumptions=["forensic_byte_only_no_distortion_model"],
+    )
+    wave_omega = _packet_manifest(
+        tmp_path / "wave_omega",
+        candidate_id="wave_omega_proxy",
+        family_group="wave_omega",
+        pareto_scope="wave_omega",
+        lane_id="wave_omega_proxy",
+        job_name="forensic_wave_omega",
+        expected_score_delta=-0.01,
+        byte_delta=-20_000,
+        interaction_assumptions=["planning_proxy_wave_omega"],
+    )
+    dezeta = _packet_manifest(
+        tmp_path / "dezeta",
+        candidate_id="paradigm_dezeta_proxy",
+        family_group="paradigm_dezeta",
+        pareto_scope="paradigm_dezeta",
+        lane_id="paradigm_dezeta_proxy",
+        job_name="forensic_paradigm_dezeta",
+        expected_score_delta=-0.03,
+        byte_delta=-45_000,
+        runtime_tree_sha256=None,
+        interaction_assumptions=["planning_proxy_dezeta"],
+    )
+    for manifest in (apogee, wave_omega, dezeta):
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+        payload["evidence_grade"] = "planning_proxy"
+        payload["proxy_row"] = True
+        manifest.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[apogee, wave_omega, q10, dezeta])
+
+    assert report["selected_candidate"]["candidate_id"] == "pr106_q10_151byte_brotli"
+    assert report["adversarial_gate_policy"]["pareto_dominated_packets_sort_behind_non_dominated_static_ready_packets"] is True
+    q10_row = report["rows"][0]
+    assert q10_row["rate_only_delta_proof"]["status"] == "passed"
+    assert q10_row["pareto_frontier"] is True
+    assert q10_row["selection_decision"] == "static_candidate_acquire_kkt_and_lane_claim_before_dispatch"
+    blocked = {row["candidate_id"]: row for row in report["rows"][1:]}
+    assert blocked["apogee_int5_forensic"]["proxy_row"] is True
+    assert blocked["wave_omega_proxy"]["proxy_row"] is True
+    assert blocked["paradigm_dezeta_proxy"]["runtime_proof"]["runtime_closed"] is False
+    assert all(row["pareto_eligible"] is False for row in blocked.values())
+
+
+def test_field_meta_pareto_does_not_false_dominate_across_scopes(tmp_path: Path) -> None:
+    a = _packet_manifest(
+        tmp_path / "a",
+        candidate_id="scope_a_candidate",
+        family_group="scope_a",
+        pareto_scope="scope_a",
+        lane_id="scope_a_candidate",
+        job_name="job_scope_a_candidate",
+        expected_score_delta=-0.01,
+        byte_delta=-100,
+        kkt_proof=_kkt_proof(),
+    )
+    b = _packet_manifest(
+        tmp_path / "b",
+        candidate_id="scope_b_candidate",
+        family_group="scope_b",
+        pareto_scope="scope_b",
+        lane_id="scope_b_candidate",
+        job_name="job_scope_b_candidate",
+        expected_score_delta=-0.001,
+        byte_delta=-1,
+        kkt_proof=_kkt_proof(),
+    )
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[a, b])
+
+    rows = {row["candidate_id"]: row for row in report["rows"]}
+    assert rows["scope_a_candidate"]["pareto_frontier"] is True
+    assert rows["scope_b_candidate"]["pareto_frontier"] is True
+    assert rows["scope_a_candidate"]["pareto_dominated_by"] == []
+    assert rows["scope_b_candidate"]["pareto_dominated_by"] == []
+    assert report["pareto_summary"]["frontier_count"] == 2
+
+
+def test_field_meta_selector_blocks_rate_only_delta_that_mismatches_byte_term(
+    tmp_path: Path,
+) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="bad_rate_only_delta",
+        lane_id="lane_bad_rate_only_delta",
+        job_name="job_bad_rate_only_delta",
+        family_group="hnerv_lowlevel_brotli_repack",
+        pareto_scope="hnerv_lowlevel_brotli_repack",
+        byte_delta=-30,
+        expected_score_delta=-0.5,
+        interaction_assumptions=["rate_only_raw_equivalent_brotli_repack"],
+    )
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload.pop("expected_total_score_delta")
+    payload["expected_total_score_delta_rate_only"] = -0.5
+    manifest.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    assert row["rate_only_delta_proof"]["status"] == "blocked"
+    assert "rate_only_score_delta_mismatch" in row["rate_only_delta_proof"]["blockers"]
+    assert "rate_only_score_delta_mismatch" in row["candidate_blockers"]
+    assert row["candidate_static_preflight_ready"] is False
+    assert row["pareto_eligible"] is False
+    assert "rate_only_score_delta_reconciles_to_official_byte_rate_term" in row["next_required_proof"]
 
 
 def test_build_field_meta_dispatch_selection_cli_writes_json(tmp_path: Path) -> None:

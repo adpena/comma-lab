@@ -216,6 +216,16 @@ def _raw_equivalence_by_section(candidate_result: dict[str, Any]) -> dict[str, d
     return out
 
 
+def _runtime_tree_from_public_preflight(public_preflight: dict[str, Any] | None) -> str:
+    if not isinstance(public_preflight, dict):
+        return ""
+    runtime = public_preflight.get("runtime")
+    if not isinstance(runtime, dict):
+        return ""
+    runtime_tree = runtime.get("runtime_tree_sha256")
+    return runtime_tree if _is_sha256(runtime_tree) else ""
+
+
 def _validate_candidate_result(
     candidate_result: dict[str, Any],
     *,
@@ -385,11 +395,21 @@ def _candidate_manifest(
     public_preflight_path: Path,
     payload_diff_path: Path,
     compliance_path: Path,
+    public_preflight: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     byte_delta = int(candidate_result["candidate_archive_bytes"]) - int(candidate_result["source_archive_bytes"])
     expected_delta = byte_delta * RATE_SCORE_PER_BYTE
     changed = _changed_sections(candidate_result)
     raw_equivalence = list(_raw_equivalence_by_section(candidate_result).values())
+    runtime_tree = _runtime_tree_from_public_preflight(public_preflight)
+    runtime_tree_fields = (
+        {
+            "runtime_tree_sha256": runtime_tree,
+            "runtime_tree_source": _repo_rel(public_preflight_path),
+        }
+        if runtime_tree
+        else {}
+    )
     return {
         "schema": "hnerv_lowlevel_exact_eval_candidate_manifest_v1",
         "schema_version": 1,
@@ -404,6 +424,12 @@ def _candidate_manifest(
         "dispatch_attempted": False,
         "dispatch_performed": False,
         "remote_jobs_dispatched": False,
+        "operator_approved_exact_cuda": bool(args.operator_approved_exact_cuda),
+        "approved_exact_eval_target": bool(static_ready and args.operator_approved_exact_cuda),
+        "approval_scope": (
+            "operator approval for exact CUDA score-lowering work only; "
+            "lane claim, environment, submit, harvest, and score-adjudication gates still apply"
+        ),
         "proxy_row": False,
         "source_archive_custody_mode": "verified_source_archive_payload_match",
         "source_archive_path": candidate_result.get("source_archive_path"),
@@ -439,11 +465,13 @@ def _candidate_manifest(
             "remaining_blockers": [row["code"] for row in static_blockers],
             "inflate_sh": _repo_rel(args.inflate_sh),
             "upstream_dir": _repo_rel(args.upstream_dir),
+            **runtime_tree_fields,
         },
         "exact_eval_runtime_contract": {
             "ready_for_exact_eval_runtime": static_ready,
             "remaining_blockers": [row["code"] for row in static_blockers],
             "inflate_sh": _repo_rel(args.inflate_sh),
+            **runtime_tree_fields,
         },
         "artifact_links": {
             "candidate_result": _repo_rel(args.candidate_result),
@@ -457,8 +485,8 @@ def _candidate_manifest(
         ],
         "submit_blockers_until_operator_action": [
             "requires_level2_lane_dispatch_claim",
-            "requires_operator_exact_cuda_approval",
             "requires_lightning_environment",
+            *([] if args.operator_approved_exact_cuda else ["requires_operator_exact_cuda_approval"]),
         ],
     }
 
@@ -580,6 +608,12 @@ def build_release_surface(
         "score_claim": False,
         "dispatch_attempted": False,
         "remote_gpu_run": False,
+        "operator_approved_exact_cuda": bool(args.operator_approved_exact_cuda),
+        "approved_exact_eval_target": bool(args.operator_approved_exact_cuda),
+        "approval_scope": (
+            "operator approval recorded for exact CUDA score-lowering work; "
+            "this release surface remains static and non-dispatched"
+        ),
         "release_surface_scope": "static_upload_files_only_no_auth_eval_no_dispatch",
         "candidate_archive_sha256": candidate_result.get("candidate_archive_sha256"),
         "candidate_archive_bytes": candidate_result.get("candidate_archive_bytes"),
@@ -818,8 +852,19 @@ def _required_env_check_cmd() -> list[str]:
 
 
 def _claim_cmd(args: argparse.Namespace) -> list[str]:
+    byte_delta = getattr(args, "byte_delta", None)
+    source_label = str(getattr(args, "source_label", "") or "").strip()
+    member_name = str(getattr(args, "candidate_member_name", "") or "").strip()
+    note_parts = [f"{args.lane_id} HNeRV low-level Brotli exact CUDA eval"]
+    if isinstance(byte_delta, int) and not isinstance(byte_delta, bool):
+        note_parts.append(f"byte_delta={byte_delta}")
+    if source_label:
+        note_parts.append(f"source={source_label}")
+    if member_name:
+        note_parts.append(f"member={member_name}")
     notes = (
-        f"PR106x lgblock16 1-byte Brotli exact CUDA eval; "
+        "; ".join(note_parts)
+        + "; "
         f"archive_sha256={args.archive_sha256} bytes={args.archive_bytes}; "
         f"static_packet={_repo_rel(_packet_output_path(args))}"
     )
@@ -931,6 +976,9 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         args.archive = Path(str(candidate_result.get("candidate_archive_path")))
     args.archive_sha256 = args.archive_sha256 or str(candidate_result.get("candidate_archive_sha256") or "")
     args.archive_bytes = args.archive_bytes or int(candidate_result.get("candidate_archive_bytes") or 0)
+    args.byte_delta = int(candidate_result["candidate_archive_bytes"]) - int(candidate_result["source_archive_bytes"])
+    args.source_label = candidate_result.get("source_label")
+    args.candidate_member_name = candidate_result.get("candidate_member_name")
 
     args.result_dir.mkdir(parents=True, exist_ok=True)
     if args.release_surface_dir is None:
@@ -942,6 +990,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
     release_surface_generation = None
     static_compliance_refresh = None
     dispatch_readiness_refresh = None
+    public_preflight_payload: dict[str, Any] | None = None
     public_preflight_path = args.result_dir / "public_replay_preflight.json"
     payload_diff_path = args.result_dir / "payload_section_diff_vs_source.json"
     compliance_path = args.result_dir / "pre_submission_compliance.json"
@@ -950,6 +999,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
     if not static_blockers:
         public_preflight_refresh = refresh_public_replay_preflight(args)
         public_preflight = read_json(_repo_path(public_preflight_path))
+        public_preflight_payload = public_preflight if isinstance(public_preflight, dict) else None
         if not isinstance(public_preflight, dict) or public_preflight.get("ready_for_exact_eval_dispatch") is not True:
             static_blockers.append(
                 {
@@ -968,6 +1018,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
             public_preflight_path=public_preflight_path,
             payload_diff_path=payload_diff_path,
             compliance_path=compliance_path,
+            public_preflight=public_preflight_payload,
         )
         manifest_path.write_text(json_text(manifest), encoding="utf-8")
         release_surface_generation = build_release_surface(
@@ -1008,6 +1059,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
             public_preflight_path=public_preflight_path,
             payload_diff_path=payload_diff_path,
             compliance_path=compliance_path,
+            public_preflight=public_preflight_payload,
         )
         manifest_path.write_text(json_text(manifest), encoding="utf-8")
 
@@ -1048,6 +1100,12 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "remote_gpu_run": False,
         "static_packet_ready": static_ready,
         "candidate_static_preflight_ready": static_ready,
+        "operator_approved_exact_cuda": bool(args.operator_approved_exact_cuda),
+        "approved_exact_eval_target": bool(static_ready and args.operator_approved_exact_cuda),
+        "approval_scope": (
+            "operator approval for exact CUDA score-lowering work only; "
+            "lane claim, environment, submit, harvest, and score-adjudication gates still apply"
+        ),
         "dispatch_gate": (
             "eligible_for_cuda_auth_eval_after_lane_claim"
             if static_ready
@@ -1060,7 +1118,6 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "submit_blockers": submit_blockers,
         "score_blockers": score_blockers,
         "missing_env": missing_env,
-        "operator_approved_exact_cuda": bool(args.operator_approved_exact_cuda),
         "lane_claim_preflight": claim_report,
         "archive_sha256": args.archive_sha256,
         "archive_bytes": args.archive_bytes,

@@ -1,4 +1,6 @@
 {
+  "approval_scope": "operator approval for exact CUDA score-lowering work only; lane claim, environment, submit, harvest, and score-adjudication gates still apply",
+  "approved_exact_eval_target": true,
   "artifact_links": {
     "candidate_result": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/manifest.json",
     "payload_section_diff": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/payload_section_diff_vs_source.json",
@@ -22,7 +24,9 @@
   "exact_eval_runtime_contract": {
     "inflate_sh": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh",
     "ready_for_exact_eval_runtime": true,
-    "remaining_blockers": []
+    "remaining_blockers": [],
+    "runtime_tree_sha256": "f402908b2490718c4f7b76987335ec1a496cb12ab71c27e1e1aea4024d5712cb",
+    "runtime_tree_source": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/public_replay_preflight.json"
   },
   "expected_pose_dist_delta": 0.0,
   "expected_seg_dist_delta": 0.0,
@@ -32,6 +36,8 @@
     "inflate_sh": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh",
     "ready_for_fixed_runtime_exact_eval": true,
     "remaining_blockers": [],
+    "runtime_tree_sha256": "f402908b2490718c4f7b76987335ec1a496cb12ab71c27e1e1aea4024d5712cb",
+    "runtime_tree_source": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/public_replay_preflight.json",
     "upstream_dir": "upstream"
   },
   "job_name": "exact_eval_pr106_q10_151byte_brotli_20260507",
@@ -62,6 +68,7 @@
       "source_section_sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004"
     }
   ],
+  "operator_approved_exact_cuda": true,
   "pareto_scope": "hnerv_rate_only_exact_archive",
   "proxy_row": false,
   "raw_equivalence": [
@@ -101,7 +108,6 @@
   "static_packet_ready": true,
   "submit_blockers_until_operator_action": [
     "requires_level2_lane_dispatch_claim",
-    "requires_operator_exact_cuda_approval",
     "requires_lightning_environment"
   ]
 }

@@ -26,6 +26,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.optimization.meta_lagrangian_allocator import rate_score_delta  # noqa: E402
 from tac.repo_io import json_text, read_json, repo_relative, sha256_file  # noqa: E402
 
 SCHEMA_VERSION = 3
@@ -33,6 +34,7 @@ TOOL = "tools/build_field_meta_dispatch_selection.py"
 STRICT_PREFLIGHT = "experiments/preflight_candidate_manifest_dispatch_readiness.py"
 HEX_CHARS = set("0123456789abcdef")
 PARETO_EPS = 1e-12
+RATE_ONLY_SCORE_EPS = 1e-9
 PROXY_EVIDENCE_GRADE_MARKERS = (
     "planning",
     "proxy",
@@ -416,7 +418,7 @@ def _archive_identity_candidates(
         {
             "source": "root_archive_fields",
             "path_value": payload.get("archive_path"),
-            "sha256": payload.get("archive_sha256"),
+            "sha256": payload.get("archive_sha256", payload.get("candidate_archive_sha256")),
             "bytes": payload.get("archive_bytes", payload.get("archive_size_bytes")),
         },
     ]
@@ -859,6 +861,20 @@ def _numeric_first(payload: Mapping[str, Any], keys: Sequence[str], default: flo
     return default
 
 
+def _first_numeric_with_source(
+    payload: Mapping[str, Any],
+    paths: Sequence[Sequence[str]],
+    default: float = 0.0,
+) -> tuple[float, str]:
+    for path in paths:
+        value = _nested(payload, path)
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int | float):
+            return float(value), ".".join(path)
+    return default, "default"
+
+
 def _candidate_family(payload: Mapping[str, Any]) -> tuple[str, str, str]:
     family = _first_nonempty_string(
         payload,
@@ -1101,6 +1117,116 @@ def _candidate_confidence(payload: Mapping[str, Any]) -> float:
     return max(0.0, min(1.0, value))
 
 
+def _expected_total_score_delta(payload: Mapping[str, Any]) -> tuple[float, str]:
+    """Return the selector score delta and the source field used for custody."""
+
+    rate_only_delta = _first_numeric_with_source(
+        payload,
+        (
+            ("expected_total_score_delta_rate_only",),
+            ("meta_lagrangian_atom", "expected_total_score_delta_rate_only"),
+            ("meta_lagrangian_atom_export", "atom_template", "expected_total_score_delta_rate_only"),
+            ("selected_target", "expected_total_score_delta_rate_only"),
+            (
+                "selected_target",
+                "meta_lagrangian_atom_export",
+                "atom_template",
+                "expected_total_score_delta_rate_only",
+            ),
+        ),
+        default=float("nan"),
+    )
+    if rate_only_delta[0] == rate_only_delta[0]:
+        return rate_only_delta
+    return _first_numeric_with_source(
+        payload,
+        (
+            ("expected_total_score_delta",),
+            ("rate_score_delta_vs_source_estimate",),
+            ("rate_component_score_delta_vs_pr106",),
+            ("rate_score_delta",),
+            ("score_delta",),
+            ("meta_lagrangian_atom", "expected_total_score_delta"),
+            ("meta_lagrangian_atom_export", "atom_template", "expected_total_score_delta"),
+            ("selected_target", "expected_total_score_delta"),
+            ("selected_target", "meta_lagrangian_atom_export", "atom_template", "expected_total_score_delta"),
+        ),
+    )
+
+
+def _declares_rate_only_delta(
+    *,
+    payload: Mapping[str, Any],
+    family: str,
+    family_group: str,
+    evidence_grade: str,
+    interaction_assumptions: Sequence[str],
+) -> bool:
+    if _nested(payload, ("expected_total_score_delta_rate_only",)) is not None:
+        return True
+    token_blob = " ".join(
+        [
+            family,
+            family_group,
+            evidence_grade,
+            *[str(value) for value in interaction_assumptions],
+        ]
+    ).lower()
+    return any(
+        token in token_blob
+        for token in (
+            "rate_only",
+            "rate-only",
+            "raw_equivalent",
+            "raw-equivalent",
+            "byte_equivalent",
+            "byte-equivalent",
+        )
+    )
+
+
+def _rate_only_delta_proof(
+    *,
+    payload: Mapping[str, Any],
+    family: str,
+    family_group: str,
+    evidence_grade: str,
+    interaction_assumptions: Sequence[str],
+    byte_delta: int,
+    expected_total_score_delta: float,
+    expected_total_score_delta_source: str,
+    expected_seg_dist_delta: float,
+    expected_pose_dist_delta: float,
+) -> dict[str, Any]:
+    declared = _declares_rate_only_delta(
+        payload=payload,
+        family=family,
+        family_group=family_group,
+        evidence_grade=evidence_grade,
+        interaction_assumptions=interaction_assumptions,
+    )
+    expected_rate_delta = rate_score_delta(byte_delta)
+    blockers: list[str] = []
+    if declared:
+        if abs(expected_seg_dist_delta) > RATE_ONLY_SCORE_EPS:
+            blockers.append("rate_only_expected_seg_delta_nonzero")
+        if abs(expected_pose_dist_delta) > RATE_ONLY_SCORE_EPS:
+            blockers.append("rate_only_expected_pose_delta_nonzero")
+        if abs(expected_total_score_delta - expected_rate_delta) > RATE_ONLY_SCORE_EPS:
+            blockers.append("rate_only_score_delta_mismatch")
+    return {
+        "schema": "rate_only_delta_proof_v1",
+        "declared_rate_only": declared,
+        "status": "passed" if declared and not blockers else ("not_applicable" if not declared else "blocked"),
+        "byte_delta": byte_delta,
+        "official_rate_score_delta": round(expected_rate_delta, 12),
+        "expected_total_score_delta": round(expected_total_score_delta, 12),
+        "expected_total_score_delta_source": expected_total_score_delta_source,
+        "tolerance": RATE_ONLY_SCORE_EPS,
+        "blockers": _unique_strings(blockers),
+    }
+
+
 def _proof_status_passed(section: Mapping[str, Any]) -> bool | None:
     status = str(section.get("status") or section.get("state") or "").strip().lower()
     if status in KKT_PROOF_PASS_STATUSES:
@@ -1299,6 +1425,7 @@ def _byte_delta(payload: Mapping[str, Any]) -> int:
         "candidate_archive_byte_delta_vs_source_estimate",
         "section_byte_delta",
         "byte_delta",
+        "delta_bytes",
     ):
         value = payload.get(key)
         if isinstance(value, int) and not isinstance(value, bool):
@@ -1413,12 +1540,67 @@ def _normalize_hnerv_lowlevel_result_manifest(
     return normalized
 
 
+def _normalize_apogee_intn_repack_metadata(
+    payload: Mapping[str, Any],
+    *,
+    manifest_path: Path,
+    repo_root: Path,
+) -> dict[str, Any] | None:
+    bits = payload.get("bits")
+    archive_path = payload.get("archive_path")
+    candidate_sha = payload.get("candidate_archive_sha256")
+    if (
+        not isinstance(bits, int)
+        or isinstance(bits, bool)
+        or not isinstance(archive_path, str)
+        or not _is_sha256(candidate_sha)
+    ):
+        return None
+    normalized = dict(payload)
+    normalized.setdefault("candidate_id", f"apogee_int{bits}")
+    normalized.setdefault("family", "apogee_intN")
+    normalized.setdefault("family_group", "apogee_intN")
+    normalized.setdefault("pareto_scope", "apogee_intN_forensic_distortion_required")
+    normalized.setdefault(
+        "evidence_grade",
+        "forensic_byte_only_prediction_invalid_until_distortion_gate_or_exact_cuda",
+    )
+    normalized.setdefault("proxy_row", True)
+    normalized.setdefault(
+        "interaction_assumptions",
+        [
+            "score_affecting_payload_changed",
+            "distortion_model_required_before_dispatch",
+            "byte_only_prediction_not_score_evidence",
+        ],
+    )
+    normalized.setdefault("expected_seg_dist_delta", 0.0)
+    normalized.setdefault("expected_pose_dist_delta", 0.0)
+    normalized.setdefault("expected_information_gain_nats", 0.0)
+    artifact_paths = [
+        *(_path_values(normalized.get("artifact_paths"))),
+        archive_path,
+        repo_relative(manifest_path, repo_root),
+    ]
+    normalized["artifact_paths"] = _ordered_unique_strings(
+        path for path in artifact_paths if path
+    )
+    return normalized
+
+
 def _normalize_manifest_payload(
     payload: Mapping[str, Any],
     *,
     manifest_path: Path,
     repo_root: Path,
 ) -> dict[str, Any]:
+    apogee_intn = _normalize_apogee_intn_repack_metadata(
+        payload,
+        manifest_path=manifest_path,
+        repo_root=repo_root,
+    )
+    if apogee_intn is not None:
+        return apogee_intn
     hnerv_lowlevel = _normalize_hnerv_lowlevel_result_manifest(
         payload,
         manifest_path=manifest_path,
@@ -1591,16 +1773,63 @@ def _operator_approval_blockers(
     payload: Mapping[str, Any],
     *,
     current_blockers: Sequence[str],
+    operator_approval_state: Mapping[str, Any],
 ) -> list[str]:
-    blockers = [
-        blocker
-        for blocker in current_blockers
-        if "approval" in blocker.lower() or "approved" in blocker.lower()
-    ]
-    if payload.get("operator_approved_exact_cuda") is False:
+    approved = operator_approval_state.get("approved") is True
+    blockers = []
+    for blocker in current_blockers:
+        lowered = blocker.lower()
+        if "approval" not in lowered and "approved" not in lowered:
+            continue
+        if approved and "operator" in lowered and "exact_cuda" in lowered:
+            continue
+        blockers.append(blocker)
+    if payload.get("operator_approved_exact_cuda") is False and not approved:
         blockers.append("missing_operator_exact_cuda_approval")
-    blockers.extend(_string_list(payload.get("approval_blockers")))
+    for blocker in _string_list(payload.get("approval_blockers")):
+        lowered = blocker.lower()
+        if approved and "operator" in lowered and "exact_cuda" in lowered:
+            continue
+        blockers.append(blocker)
     return _unique_strings(blockers)
+
+
+def _operator_approval_state(
+    payload: Mapping[str, Any],
+    *,
+    operator_approved_exact_cuda: bool | None,
+) -> dict[str, Any]:
+    manifest_value = payload.get("operator_approved_exact_cuda")
+    manifest_approved = manifest_value if isinstance(manifest_value, bool) else None
+    if operator_approved_exact_cuda is True:
+        approved = True
+        source = "selector_context_operator_approved_exact_cuda"
+    elif operator_approved_exact_cuda is False:
+        approved = False
+        source = "selector_context_operator_refused_exact_cuda"
+    elif manifest_approved is not None:
+        approved = manifest_approved
+        source = "candidate_manifest_operator_approved_exact_cuda"
+    else:
+        approved = None
+        source = "not_recorded"
+    return {
+        "schema": "operator_approval_state_v1",
+        "approved": approved,
+        "source": source,
+        "manifest_operator_approved_exact_cuda": manifest_approved,
+        "selector_context_operator_approved_exact_cuda": operator_approved_exact_cuda,
+        "dispatch_unlocked_by_approval": False,
+        "remaining_required_gates": [
+            "environment",
+            "active_lane_dispatch_claim",
+            "candidate_static_preflight",
+            "pareto_frontier",
+            "kkt_or_admm_proof",
+            "exact_cuda_auth_eval",
+            "adversarial_review_before_score_claim",
+        ],
+    }
 
 
 def _operator_environment_blockers(
@@ -1658,11 +1887,19 @@ def _static_refresh_source(payload: Mapping[str, Any]) -> str:
     return source
 
 
-def _operator_next_steps_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
+def _operator_next_steps_summary(
+    payload: Mapping[str, Any],
+    *,
+    operator_approved_exact_cuda: bool | None = None,
+) -> dict[str, Any]:
     section = _operator_next_steps(payload)
     steps = _operator_steps(payload)
     current_blockers = _operator_current_blockers(payload)
     next_local_action = _next_local_non_gpu_action(payload)
+    approval_state = _operator_approval_state(
+        payload,
+        operator_approved_exact_cuda=operator_approved_exact_cuda,
+    )
     local_step_ids = [
         str(step.get("id") or "")
         for step in steps
@@ -1700,7 +1937,9 @@ def _operator_next_steps_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
         "approval_blockers": _operator_approval_blockers(
             payload,
             current_blockers=current_blockers,
+            operator_approval_state=approval_state,
         ),
+        "operator_approval_state": approval_state,
         "environment_blockers": _operator_environment_blockers(
             payload,
             current_blockers=current_blockers,
@@ -1733,6 +1972,21 @@ def _next_required_proofs(blockers: Sequence[str]) -> list[str]:
     if not out:
         out.append("exact_cuda_auth_eval_on_selected_archive_bytes")
     return out
+
+
+def _field_selection_next_required_proofs(row: Mapping[str, Any]) -> list[str]:
+    next_required_proof = list(row.get("candidate_preflight_next_required_proof") or row.get("next_required_proof") or [])
+    if any("rate_only" in blocker for blocker in row.get("candidate_blockers", [])):
+        next_required_proof.append("rate_only_score_delta_reconciles_to_official_byte_rate_term")
+    if row.get("kkt_ready_for_field_planning") is not True:
+        next_required_proof.append("passed_kkt_proof_or_converged_admm_waterline_result")
+    if row.get("pareto_eligible") is not True:
+        next_required_proof.append("pareto_eligible_static_ready_non_proxy_candidate")
+    elif row.get("pareto_frontier") is not True:
+        next_required_proof.append("non_dominated_candidate_or_explicit_pareto_scope_override")
+    if row.get("field_interaction_contract", {}).get("status") != "passed":
+        next_required_proof.append("explicit_interaction_assumptions_or_volterra_scope")
+    return _unique_strings(next_required_proof)
 
 
 def _dispatch_identity_proof(claim: Mapping[str, Any]) -> dict[str, Any]:
@@ -1914,15 +2168,7 @@ def _exact_dispatch_blockers(row: Mapping[str, Any]) -> dict[str, Any]:
         blockers.append("field_interaction_contract_blocked")
     blockers = _unique_strings(blockers)
     rigorous_ready = bool(row.get("ready_for_exact_eval_dispatch") and not blockers)
-    next_required_proof = list(row.get("next_required_proof") or [])
-    if row.get("kkt_ready_for_field_planning") is not True:
-        next_required_proof.append("passed_kkt_proof_or_converged_admm_waterline_result")
-    if row.get("pareto_eligible") is not True:
-        next_required_proof.append("pareto_eligible_static_ready_non_proxy_candidate")
-    elif row.get("pareto_frontier") is not True:
-        next_required_proof.append("non_dominated_candidate_or_explicit_pareto_scope_override")
-    if row.get("field_interaction_contract", {}).get("status") != "passed":
-        next_required_proof.append("explicit_interaction_assumptions_or_volterra_scope")
+    next_required_proof = _field_selection_next_required_proofs(row)
     return {
         "schema": "exact_dispatch_blockers_v1",
         "ready_for_exact_eval_dispatch": rigorous_ready,
@@ -1933,7 +2179,7 @@ def _exact_dispatch_blockers(row: Mapping[str, Any]) -> dict[str, Any]:
         "blockers": blockers,
         "blocker_count": len(blockers),
         "blocker_categories": _blocker_categories(blockers),
-        "next_required_proof": _unique_strings(next_required_proof),
+        "next_required_proof": next_required_proof,
     }
 
 
@@ -1942,6 +2188,11 @@ def _annotate_row_explanations(rows: Iterable[dict[str, Any]]) -> None:
         row["pareto_eligibility_blockers"] = _pareto_eligibility_blockers(row)
         row["non_dominated_frontier_reason"] = _non_dominated_frontier_reason(row)
         row["exact_dispatch_blockers"] = _exact_dispatch_blockers(row)
+        row["field_selection_blockers"] = row["exact_dispatch_blockers"]["blockers"]
+        row["field_selection_next_required_proof"] = row["exact_dispatch_blockers"][
+            "next_required_proof"
+        ]
+        row["next_required_proof"] = row["field_selection_next_required_proof"]
         row["field_selection_ready_for_exact_eval_dispatch"] = bool(
             row["exact_dispatch_blockers"]["ready_for_exact_eval_dispatch"]
         )
@@ -1981,11 +2232,32 @@ def _selection_penalty_terms(row: Mapping[str, Any]) -> dict[str, float]:
 
 
 def _selection_decision(row: Mapping[str, Any]) -> str:
-    if row.get("ready_for_exact_eval_dispatch") is True:
-        return "ready_for_exact_eval_dispatch_after_active_claim"
     if row.get("dirty_blocked") is True:
         return "refused_dirty_worktree_overlap"
+    if row.get("field_selection_ready_for_exact_eval_dispatch") is True:
+        return "field_selection_ready_for_exact_eval_dispatch_after_active_claim"
+    if row.get("ready_for_exact_eval_dispatch") is True:
+        if row.get("kkt_ready_for_field_planning") is not True:
+            return "active_claim_present_acquire_kkt_or_admm_proof_before_dispatch"
+        if row.get("pareto_eligible") is not True:
+            return "active_claim_present_but_pareto_ineligible"
+        if row.get("pareto_frontier") is not True:
+            return "active_claim_present_but_pareto_dominated"
+        if row.get("field_interaction_contract", {}).get("status") != "passed":
+            return "active_claim_present_acquire_interaction_contract_before_dispatch"
+        return "active_claim_present_but_exact_dispatch_blocked"
     if row.get("candidate_static_preflight_ready") is True:
+        missing_claim = "missing_active_lane_dispatch_claim" in row.get("candidate_blockers", [])
+        if row.get("pareto_eligible") is not True:
+            return "static_candidate_pareto_ineligible_before_dispatch"
+        if row.get("pareto_frontier") is not True:
+            return "static_candidate_pareto_dominated_before_dispatch"
+        if row.get("kkt_ready_for_field_planning") is not True and missing_claim:
+            return "static_candidate_acquire_kkt_and_lane_claim_before_dispatch"
+        if row.get("kkt_ready_for_field_planning") is not True:
+            return "static_candidate_acquire_kkt_or_admm_proof_before_dispatch"
+        if row.get("field_interaction_contract", {}).get("status") != "passed":
+            return "static_candidate_acquire_interaction_contract_before_dispatch"
         return "needs_active_lane_claim_before_dispatch"
     if row.get("candidate_local_preflight_ready") is True:
         return "needs_dispatch_identity_before_lane_claim"
@@ -2000,7 +2272,7 @@ def _selection_decision(row: Mapping[str, Any]) -> str:
 
 def _lexicographic_feasibility_tuple(row: Mapping[str, Any]) -> list[Any]:
     return [
-        bool(row["ready_for_exact_eval_dispatch"]),
+        bool(row["field_selection_ready_for_exact_eval_dispatch"]),
         bool(row["candidate_static_preflight_ready"]),
         bool(row["archive_proof"]["byte_closed"]),
         bool(row["runtime_proof"]["runtime_closed"]),
@@ -2037,7 +2309,7 @@ def _annotate_selection_scores(rows: list[dict[str, Any]]) -> None:
         row["field_selection_score_delta"] = round(float(row["expected_total_score_delta"]), 12)
         row["selection_blockers"] = list(terms)
         row["selection_decision"] = _selection_decision(row)
-        row["dispatch_refused"] = row.get("ready_for_exact_eval_dispatch") is not True
+        row["dispatch_refused"] = row.get("field_selection_ready_for_exact_eval_dispatch") is not True
         row["lexicographic_feasibility_tuple"] = _lexicographic_feasibility_tuple(row)
 
 
@@ -2049,6 +2321,7 @@ def _row_for_manifest(
     now_utc: str | None,
     ttl_hours: float,
     dirty_paths: Sequence[str] | None,
+    operator_approved_exact_cuda: bool | None,
 ) -> dict[str, Any]:
     payload = read_json(manifest_path)
     if not isinstance(payload, dict):
@@ -2117,8 +2390,6 @@ def _row_for_manifest(
         dispatch_blockers.append("dirty_worktree_overlap")
         dispatch_blockers.extend(f"dirty:{path}" for path in dirty_matches)
         dispatch_blockers = _unique_strings(dispatch_blockers)
-    blockers = _unique_strings([*static_blockers, *dispatch_blockers])
-    ready = bool(static_ready and claim["active_lane_claim"] and not dispatch_blockers)
     family, family_group, pareto_scope = _candidate_family(payload)
     evidence_grade = _candidate_evidence_grade(payload)
     proxy_row = _candidate_proxy_row(payload, evidence_grade)
@@ -2131,20 +2402,7 @@ def _row_for_manifest(
         conflicts_with_families=conflicts_with_families,
         conflicts_with_atoms=conflicts_with_atoms,
     )
-    kkt_proof = _kkt_proof(payload)
-    kkt_blockers: list[str] = []
-    candidate_static_ready_after_dirty = bool(static_ready and not dirty_matches)
-    if not static_ready:
-        kkt_blockers.extend(static_blockers or ["candidate_static_preflight_not_ready"])
-    if dirty_matches:
-        kkt_blockers.append("dirty_worktree_overlap")
-    if proxy_row:
-        kkt_blockers.append("planning_or_proxy_packet")
-    kkt_blockers.extend(field_interaction_contract["blockers"])
-    if kkt_proof["status"] != "passed":
-        kkt_blockers.extend(f"kkt:{blocker}" for blocker in kkt_proof["blockers"])
-    kkt_blockers = _unique_strings(kkt_blockers)
-    kkt_ready = not kkt_blockers
+    byte_delta = _byte_delta(payload)
     expected_seg_delta = _first_numeric(
         payload,
         (
@@ -2165,6 +2423,37 @@ def _row_for_manifest(
             ("selected_target", "meta_lagrangian_atom_export", "atom_template", "expected_pose_dist_delta"),
         ),
     )
+    expected_score_delta, expected_score_delta_source = _expected_total_score_delta(payload)
+    rate_only_delta_proof = _rate_only_delta_proof(
+        payload=payload,
+        family=family,
+        family_group=family_group,
+        evidence_grade=evidence_grade,
+        interaction_assumptions=interaction_assumptions,
+        byte_delta=byte_delta,
+        expected_total_score_delta=expected_score_delta,
+        expected_total_score_delta_source=expected_score_delta_source,
+        expected_seg_dist_delta=expected_seg_delta,
+        expected_pose_dist_delta=expected_pose_delta,
+    )
+    selector_blockers = _unique_strings(rate_only_delta_proof["blockers"])
+    selector_static_ready = bool(static_ready and not selector_blockers)
+    blockers = _unique_strings([*static_blockers, *selector_blockers, *dispatch_blockers])
+    ready = bool(selector_static_ready and claim["active_lane_claim"] and not dispatch_blockers)
+    kkt_proof = _kkt_proof(payload)
+    kkt_blockers: list[str] = []
+    candidate_static_ready_after_dirty = bool(selector_static_ready and not dirty_matches)
+    if not selector_static_ready:
+        kkt_blockers.extend([*static_blockers, *selector_blockers] or ["candidate_static_preflight_not_ready"])
+    if dirty_matches:
+        kkt_blockers.append("dirty_worktree_overlap")
+    if proxy_row:
+        kkt_blockers.append("planning_or_proxy_packet")
+    kkt_blockers.extend(field_interaction_contract["blockers"])
+    if kkt_proof["status"] != "passed":
+        kkt_blockers.extend(f"kkt:{blocker}" for blocker in kkt_proof["blockers"])
+    kkt_blockers = _unique_strings(kkt_blockers)
+    kkt_ready = not kkt_blockers
     expected_info_gain = _first_numeric(
         payload,
         (
@@ -2188,7 +2477,11 @@ def _row_for_manifest(
             ("selected_target", "meta_lagrangian_atom_export", "atom_template", "expected_score_variance"),
         ),
     )
-    operator_summary = _operator_next_steps_summary(payload)
+    operator_summary = _operator_next_steps_summary(
+        payload,
+        operator_approved_exact_cuda=operator_approved_exact_cuda,
+    )
+    candidate_preflight_next_required_proof = _next_required_proofs(blockers)
     return {
         "schema_version": SCHEMA_VERSION,
         "manifest_path": repo_relative(manifest_path, repo_root),
@@ -2212,13 +2505,15 @@ def _row_for_manifest(
         "operator_claim_blockers": operator_summary["claim_blockers"],
         "operator_refresh_blockers": operator_summary["refresh_blockers"],
         "operator_approval_blockers": operator_summary["approval_blockers"],
+        "operator_approval_state": operator_summary["operator_approval_state"],
         "operator_environment_blockers": operator_summary["environment_blockers"],
         "next_local_non_gpu_action": operator_summary["next_local_non_gpu_action"],
         "next_local_non_gpu_command": operator_summary["next_local_non_gpu_command"],
         "ready_for_exact_eval_dispatch": ready,
+        "candidate_preflight_ready_for_exact_eval_dispatch": ready,
         "candidate_local_preflight_ready": base_static_ready,
         "candidate_static_preflight_ready": candidate_static_ready_after_dirty,
-        "candidate_static_preflight_ready_before_dirty": static_ready,
+        "candidate_static_preflight_ready_before_dirty": selector_static_ready,
         "static_candidate_blockers": static_blockers,
         "dispatch_identity_proof": identity,
         "dispatch_claim_proof": claim,
@@ -2230,18 +2525,12 @@ def _row_for_manifest(
         "dirty_path_blockers": dirty_matches,
         "dirty_blocked": bool(dirty_matches),
         "candidate_watch_paths": watch_paths,
-        "byte_delta": _byte_delta(payload),
-        "expected_total_score_delta": _numeric_first(
-            payload,
-            (
-                "expected_total_score_delta",
-                "expected_total_score_delta_rate_only",
-                "rate_score_delta_vs_source_estimate",
-                "score_delta",
-            ),
-        ),
+        "byte_delta": byte_delta,
+        "expected_total_score_delta": expected_score_delta,
+        "expected_total_score_delta_source": expected_score_delta_source,
         "expected_seg_dist_delta": expected_seg_delta,
         "expected_pose_dist_delta": expected_pose_delta,
+        "rate_only_delta_proof": rate_only_delta_proof,
         "expected_information_gain_nats": expected_info_gain,
         "expected_score_variance": expected_score_variance,
         "kkt_ready_for_field_planning": kkt_ready,
@@ -2254,7 +2543,8 @@ def _row_for_manifest(
         "non_dominated_frontier_reason": {},
         "pareto_objectives": {},
         "candidate_blockers": blockers,
-        "next_required_proof": _next_required_proofs(blockers),
+        "candidate_preflight_next_required_proof": candidate_preflight_next_required_proof,
+        "next_required_proof": candidate_preflight_next_required_proof,
         "exact_dispatch_blockers": {},
     }
 
@@ -2289,6 +2579,7 @@ def build_selection_report(
     now_utc: str | None = None,
     ttl_hours: float = 24.0,
     dirty_paths: Sequence[str] | None = None,
+    operator_approved_exact_cuda: bool | None = None,
 ) -> dict[str, Any]:
     manifests = _expand_manifest_inputs(
         repo_root=repo_root,
@@ -2303,6 +2594,7 @@ def build_selection_report(
             now_utc=now_utc,
             ttl_hours=ttl_hours,
             dirty_paths=dirty_paths,
+            operator_approved_exact_cuda=operator_approved_exact_cuda,
         )
         for path in manifests
     ]
@@ -2333,7 +2625,33 @@ def build_selection_report(
         "strict_candidate_preflight": STRICT_PREFLIGHT,
         "score_claim": False,
         "dispatch_attempted": False,
-        "ready_for_exact_eval_dispatch": bool(selected and selected["ready_for_exact_eval_dispatch"]),
+        "operator_approval_state": {
+            "schema": "operator_approval_state_v1",
+            "approved": operator_approved_exact_cuda if operator_approved_exact_cuda is not None else None,
+            "source": (
+                "selector_context_operator_approved_exact_cuda"
+                if operator_approved_exact_cuda is True
+                else (
+                    "selector_context_operator_refused_exact_cuda"
+                    if operator_approved_exact_cuda is False
+                    else "per_candidate_manifest_or_not_recorded"
+                )
+            ),
+            "dispatch_unlocked_by_approval": False,
+        },
+        "adversarial_gate_policy": {
+            "schema": "field_meta_adversarial_gate_policy_v1",
+            "operator_approval_is_not_dispatch_readiness": True,
+            "rate_only_delta_must_match_official_byte_rate_term": True,
+            "pareto_dominated_packets_sort_behind_non_dominated_static_ready_packets": True,
+            "score_claim_requires_exact_cuda_and_adversarial_review": True,
+        },
+        "ready_for_exact_eval_dispatch": bool(
+            selected and selected["field_selection_ready_for_exact_eval_dispatch"]
+        ),
+        "candidate_preflight_ready_for_exact_eval_dispatch": bool(
+            selected and selected["ready_for_exact_eval_dispatch"]
+        ),
         "candidate_local_preflight_ready": bool(selected and selected["candidate_local_preflight_ready"]),
         "candidate_static_preflight_ready": bool(selected and selected["candidate_static_preflight_ready"]),
         "candidate_count": len(rows),
@@ -2349,7 +2667,7 @@ def build_selection_report(
         "pareto_summary": pareto_summary,
         "selection_penalties": dict(sorted(SELECTION_PENALTIES.items())),
         "lexicographic_feasibility_order": [
-            "ready_for_exact_eval_dispatch desc",
+            "field_selection_ready_for_exact_eval_dispatch desc",
             "candidate_static_preflight_ready desc",
             "archive_proof.byte_closed desc",
             "runtime_proof.runtime_closed desc",
@@ -2372,6 +2690,7 @@ def build_selection_report(
             "selection_report_only_no_dispatch",
             "requires_lane_dispatch_claim_before_remote_gpu_submit",
             "requires_exact_cuda_auth_eval_for_score_claim",
+            "requires_adversarial_review_before_score_claim",
         ],
         "report_blockers": [] if rows else ["no_candidate_packet_manifests_supplied"],
     }
@@ -2386,6 +2705,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--now-utc")
     parser.add_argument("--ttl-hours", type=float, default=24.0)
     parser.add_argument("--dirty-path", action="append", default=[])
+    parser.add_argument(
+        "--operator-approved-exact-cuda",
+        action="store_true",
+        help=(
+            "Record operator approval in this selector context. This clears only "
+            "operator-approval classification; it does not satisfy env, lane-claim, "
+            "KKT/Pareto, exact-CUDA, or adversarial-review gates."
+        ),
+    )
     parser.add_argument("--json-out", type=Path)
     return parser.parse_args(argv)
 
@@ -2400,6 +2728,7 @@ def main(argv: list[str] | None = None) -> int:
         now_utc=args.now_utc,
         ttl_hours=args.ttl_hours,
         dirty_paths=args.dirty_path,
+        operator_approved_exact_cuda=args.operator_approved_exact_cuda or None,
     )
     text = json_text(report)
     if args.json_out:
