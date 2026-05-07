@@ -64,4 +64,3 @@ def test_to_meta_lagrangian_candidates_emits_strict_evaluate_schema() -> None:
     accepted = set(inspect.signature(MetaLagrangianSearch.evaluate_candidate).parameters)
     accepted.discard("self")
     assert set(rows[0]).issubset(accepted)
-
