@@ -1,0 +1,24 @@
+{
+  "schema": "distortion_proxy_local_v1",
+  "tag": "[distortion-proxy:local]",
+  "evidence_semantics": "local_distortion_proxy",
+  "ready_for_exact_eval_dispatch": false,
+  "dispatch_blockers": [
+    "local_distortion_proxy_is_not_contest_cuda_evidence",
+    "missing_scorer_basin_parity_gate",
+    "missing_exact_cuda_candidate_evidence"
+  ],
+  "archive_bytes": 170450,
+  "rel_err_pct": 1.55,
+  "n_layers": 13,
+  "predicted_avg_pose_dist": 3.4e-05,
+  "predicted_avg_seg_dist": 0.00067819,
+  "calibration_n_anchors": 3,
+  "calibration_rel_err_range": [
+    0.0,
+    7.09
+  ],
+  "extrapolating_outside_calibration_range": false,
+  "anchors_path": ".omx/calibration/anchors_apogee_intN.json",
+  "warning": "Closed-form architecture-naive estimate calibrated from anchors. Tag results [distortion-proxy:local], NEVER [contest-CUDA]. Final score MUST come from upstream/evaluate.py on the EXACT archive bytes; this proxy is not dispatch readiness."
+}

@@ -1,0 +1,44 @@
+{
+  "gates": [
+    {
+      "confidence": "high",
+      "detail": "3 anchors loaded from anchors_apogee_intN.json",
+      "name": "anchors_sufficient",
+      "passed": true
+    },
+    {
+      "confidence": "high",
+      "detail": "predicted_high=0.2040 is below the SHA-tied rate-distortion floor 0.3067 (lossless=0.2095, rate_delta=-0.010513, component_penalty=0.107727). Parity/readiness evidence is not score-lowering evidence.",
+      "name": "sanity_lossy_vs_lossless",
+      "passed": false
+    },
+    {
+      "confidence": "high",
+      "detail": "rel_err 1.55% > threshold; proxy telemetry plus scorer_basin_parity_gate evidence matches exact archive SHA",
+      "name": "distortion_model_gate",
+      "passed": true
+    },
+    {
+      "confidence": "high",
+      "detail": "0 dispatch_local_path_leak / remote_script_local_pythonpath_leak hazards",
+      "name": "hazard_scan",
+      "passed": true
+    },
+    {
+      "confidence": "high",
+      "detail": "lane_maturity validate clean",
+      "name": "lane_registry_consistent",
+      "passed": true
+    },
+    {
+      "confidence": "high",
+      "detail": "scorer_basin_parity_gate evidence matches exact archive SHA",
+      "name": "apogee_evidence_semantics",
+      "passed": true
+    }
+  ],
+  "passed": false,
+  "refusal_reasons": [
+    "sanity_lossy_vs_lossless: predicted_high=0.2040 is below the SHA-tied rate-distortion floor 0.3067 (lossless=0.2095, rate_delta=-0.010513, component_penalty=0.107727). Parity/readiness evidence is not score-lowering evidence."
+  ]
+}
