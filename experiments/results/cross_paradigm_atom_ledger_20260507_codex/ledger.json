@@ -10,7 +10,8 @@
     "cross_paradigm_atom_is_planning_only": 15,
     "decode_reencode_byte_exact_reencode_not_proven": 5,
     "decode_reencode_full_decode_not_proven": 5,
-    "decode_reencode_independent_proof_artifact_missing": 5,
+    "decode_reencode_independent_proof_byte_exact_reencode_not_proven": 5,
+    "decode_reencode_independent_proof_full_decode_not_proven": 5,
     "decode_reencode_parity_not_passed": 5,
     "exact_eval_dispatch_requirements_missing": 5,
     "exact_eval_packet_not_ready_for_submit": 1,
@@ -23,7 +24,7 @@
     "planning_only_structural_recode_profile": 9,
     "requires_archive_builder_and_payload_diff": 3,
     "requires_archive_manifest_preflight": 9,
-    "requires_byte_closed_archive_manifest_before_dispatch": 15,
+    "requires_byte_closed_archive_manifest_before_dispatch": 9,
     "requires_exact_cuda_auth_eval": 15,
     "requires_runtime_decoder_implementation": 9,
     "requires_stack_interaction_review": 15,
@@ -32,7 +33,7 @@
   "allocator_tool": "tac.optimization.meta_lagrangian_allocator.build_atom_ledger",
   "atom_count": 15,
   "base_pose_dist": 3.351e-05,
-  "byte_closed_archive_manifest_attached_count": 1,
+  "byte_closed_archive_manifest_attached_count": 6,
   "byte_closed_manifest_required_for_kkt": true,
   "byte_closed_manifest_required_for_pareto": true,
   "common_atom_fields": [
@@ -101,7 +102,7 @@
         "eligible": 0,
         "frontier": 0,
         "ineligible": 5,
-        "missing_byte_closed_manifest": 5,
+        "missing_byte_closed_manifest": 0,
         "proxy": 5,
         "rankable": 5,
         "total": 5
@@ -139,7 +140,6 @@
       "adapter_dispatch_blockers": [
         "cross_paradigm_atom_is_planning_only",
         "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
         "requires_exact_cuda_auth_eval",
         "exact_eval_packet_not_ready_for_submit",
         "missing_lightning_environment",
@@ -180,7 +180,6 @@
         "requires_exact_cuda_auth_eval",
         "cross_paradigm_atom_is_planning_only",
         "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
         "exact_eval_packet_not_ready_for_submit",
         "missing_lightning_environment",
         "missing_active_lane_dispatch_claim",
@@ -189,7 +188,7 @@
       "dispatchable": false,
       "evidence_grade": "exact_eval_packet_byte_closed",
       "evidence_source_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
-      "evidence_source_sha256": "cc1999364d2cd7f53d6608063e91dd87d79993476132a0cbf8822a97874698f8",
+      "evidence_source_sha256": "0e59293e4750b79914db239230d563658673aa5e051a483657188582fe7e13ca",
       "exact_dispatch_blockers": {
         "blocker_categories": {
           "custody": [],
@@ -362,12 +361,1421 @@
       "source_dispatch_blockers": [
         "cross_paradigm_atom_is_planning_only",
         "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
         "requires_exact_cuda_auth_eval",
         "exact_eval_packet_not_ready_for_submit",
         "missing_lightning_environment",
         "missing_active_lane_dispatch_claim",
         "missing_operator_exact_cuda_approval"
+      ]
+    },
+    {
+      "adapter": "categorical_openpilot_mask_plan",
+      "adapter_dispatch_blockers": [
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_exact_cuda_auth_eval",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing"
+      ],
+      "allocation_inference": false,
+      "archive_manifest_custody": {
+        "archive_bytes": 169725,
+        "archive_bytes_valid": true,
+        "archive_sha256": "6a5bf1f3c4d6d2b6cb752979caa72a31b994825d24ee42ae90eeaa58f44abd7d",
+        "archive_sha256_valid": true,
+        "blockers": [],
+        "exists": true,
+        "is_file": true,
+        "manifest_json_valid": true,
+        "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+        "score_claim_false": true,
+        "sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+        "sha256_actual": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+        "sha256_matches": true,
+        "sha256_valid": true,
+        "verified": true
+      },
+      "archive_manifest_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+      "archive_manifest_sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+      "archive_ready_for_stack_review": false,
+      "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_0_road",
+      "byte_closed_archive_manifest_attached": true,
+      "byte_delta": 0,
+      "class_support": [
+        0
+      ],
+      "confidence": 0.4,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [
+        "whole_mask_replacement"
+      ],
+      "cross_paradigm_schema_version": 1,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "proxy_row_not_dispatchable",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "planning_manifest_audit",
+      "evidence_source_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+      "evidence_source_sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+      "exact_dispatch_blockers": {
+        "blocker_categories": {
+          "custody": [],
+          "dirty_worktree": [],
+          "dispatch_claim": [],
+          "exact_cuda_eval": [
+            "requires_exact_cuda_auth_eval"
+          ],
+          "interaction_model": [],
+          "kkt_or_admm": [
+            "proxy_evidence_not_kkt_ready",
+            "kkt:kkt_proof_or_admm_result_missing",
+            "kkt_not_ready_for_field_planning"
+          ],
+          "other": [],
+          "pareto_frontier": [
+            "pareto_ineligible_atom",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "proxy_or_planning": [
+            "planning_only_lagrangian_atom",
+            "proxy_row_not_dispatchable",
+            "proxy_row"
+          ],
+          "runtime": [],
+          "score_claim": []
+        },
+        "blocker_count": 9,
+        "blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval",
+          "proxy_row_not_dispatchable",
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "kkt_not_ready_for_field_planning",
+          "pareto_ineligible_atom",
+          "proxy_row",
+          "pareto_ineligible_for_field_selection"
+        ],
+        "dispatch_attempted": false,
+        "dispatchable": false,
+        "next_required_proof": [
+          "non_proxy_empirical_or_cuda_evidence",
+          "passed_kkt_proof_or_converged_admm_waterline_result",
+          "pareto_eligible_byte_closed_non_proxy_rankable_atom",
+          "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+        ],
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "exact_dispatch_blockers_v1",
+        "score_claim": false
+      },
+      "expected_information_gain_nats": 0.0,
+      "expected_pose_dist_delta": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_seg_dist_delta": 0.0,
+      "expected_total_score_delta": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
+      "family_group": "categorical_openpilot_mask_plan",
+      "field_interaction_contract": {
+        "assumption_count": 4,
+        "assumptions": [
+          "categorical_byte_closed_archive_parity_proven",
+          "mask_stream_replacement_or_residual",
+          "openpilot_priors_must_be_charged_if_score_affecting",
+          "requires_class_geometry_noop_controls"
+        ],
+        "blockers": [],
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [
+          "whole_mask_replacement"
+        ],
+        "interaction_model": "",
+        "schema": "field_interaction_contract_v1",
+        "status": "passed",
+        "volterra_order": null,
+        "volterra_order_source": "",
+        "volterra_scope": "undeclared_order_first_order_assumptions_only",
+        "volterra_terms": [],
+        "volterra_terms_declared": false
+      },
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "geometry_priors": [],
+      "hard_pair_support": [],
+      "interaction_assumptions": [
+        "mask_stream_replacement_or_residual",
+        "openpilot_priors_must_be_charged_if_score_affecting",
+        "requires_class_geometry_noop_controls",
+        "categorical_byte_closed_archive_parity_proven"
+      ],
+      "kkt_blockers": [
+        "proxy_evidence_not_kkt_ready",
+        "kkt:kkt_proof_or_admm_result_missing"
+      ],
+      "kkt_proof": {
+        "blockers": [
+          "kkt_proof_or_admm_result_missing"
+        ],
+        "candidates": [],
+        "kind": "",
+        "residual": null,
+        "source": "",
+        "status": "blocked",
+        "tolerance": null
+      },
+      "kkt_ready_for_field_planning": false,
+      "lexicographic_feasibility_tuple": [
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        0.0,
+        0.0
+      ],
+      "non_dominated_frontier_reason": {
+        "dominated_by": [],
+        "eligibility_blockers": [
+          "proxy_row"
+        ],
+        "eligible": false,
+        "frontier": false,
+        "objective_directions": {
+          "archive_ready_for_stack_review": "max",
+          "byte_delta": "min",
+          "confidence": "max",
+          "expected_pose_dist_delta": "min",
+          "expected_seg_dist_delta": "min",
+          "expected_total_score_delta": "min"
+        },
+        "objectives": {
+          "archive_ready_for_stack_review": 0.0,
+          "byte_delta": 0.0,
+          "confidence": 0.4,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "expected_total_score_delta": 0.0
+        },
+        "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+        "schema": "non_dominated_frontier_reason_v1",
+        "scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+        "status": "ineligible"
+      },
+      "observation_noise_variance": 0.0,
+      "openpilot_priors": [
+        "road_geometry_track_prior",
+        "openpilot_prior_required"
+      ],
+      "pair_support": [],
+      "paradigm": "categorical_openpilot_mask",
+      "pareto_dominated_by": [],
+      "pareto_eligibility_blockers": [
+        "proxy_row"
+      ],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_objectives": {
+        "archive_ready_for_stack_review": 0.0,
+        "byte_delta": 0.0,
+        "confidence": 0.4,
+        "expected_pose_dist_delta": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": 0.0
+      },
+      "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+      "pose_score_delta_confidence_weighted": 0.0,
+      "proxy_row": true,
+      "rankable": true,
+      "rate_score_delta": 0.0,
+      "ready_for_exact_eval_dispatch": false,
+      "requested_dispatchable": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "seg_score_delta_confidence_weighted": 0.0,
+      "selection_blockers": [
+        "kkt_not_ready_for_field_planning",
+        "pareto_ineligible_atom",
+        "proxy_row"
+      ],
+      "selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "pareto_ineligible_atom": 25.0,
+        "proxy_row": 50.0
+      },
+      "selection_penalty_units": 85.0,
+      "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+      "selection_score_delta": 0.0,
+      "source_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+      "source_dispatch_blockers": [
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_exact_cuda_auth_eval",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing"
+      ]
+    },
+    {
+      "adapter": "categorical_openpilot_mask_plan",
+      "adapter_dispatch_blockers": [
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_exact_cuda_auth_eval",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing"
+      ],
+      "allocation_inference": false,
+      "archive_manifest_custody": {
+        "archive_bytes": 169725,
+        "archive_bytes_valid": true,
+        "archive_sha256": "6a5bf1f3c4d6d2b6cb752979caa72a31b994825d24ee42ae90eeaa58f44abd7d",
+        "archive_sha256_valid": true,
+        "blockers": [],
+        "exists": true,
+        "is_file": true,
+        "manifest_json_valid": true,
+        "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+        "score_claim_false": true,
+        "sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+        "sha256_actual": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+        "sha256_matches": true,
+        "sha256_valid": true,
+        "verified": true
+      },
+      "archive_manifest_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+      "archive_manifest_sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+      "archive_ready_for_stack_review": false,
+      "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_1_lane_markings",
+      "byte_closed_archive_manifest_attached": true,
+      "byte_delta": 0,
+      "class_support": [
+        1
+      ],
+      "confidence": 0.4,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [
+        "whole_mask_replacement"
+      ],
+      "cross_paradigm_schema_version": 1,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "proxy_row_not_dispatchable",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "planning_manifest_audit",
+      "evidence_source_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+      "evidence_source_sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+      "exact_dispatch_blockers": {
+        "blocker_categories": {
+          "custody": [],
+          "dirty_worktree": [],
+          "dispatch_claim": [],
+          "exact_cuda_eval": [
+            "requires_exact_cuda_auth_eval"
+          ],
+          "interaction_model": [],
+          "kkt_or_admm": [
+            "proxy_evidence_not_kkt_ready",
+            "kkt:kkt_proof_or_admm_result_missing",
+            "kkt_not_ready_for_field_planning"
+          ],
+          "other": [],
+          "pareto_frontier": [
+            "pareto_ineligible_atom",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "proxy_or_planning": [
+            "planning_only_lagrangian_atom",
+            "proxy_row_not_dispatchable",
+            "proxy_row"
+          ],
+          "runtime": [],
+          "score_claim": []
+        },
+        "blocker_count": 9,
+        "blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval",
+          "proxy_row_not_dispatchable",
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "kkt_not_ready_for_field_planning",
+          "pareto_ineligible_atom",
+          "proxy_row",
+          "pareto_ineligible_for_field_selection"
+        ],
+        "dispatch_attempted": false,
+        "dispatchable": false,
+        "next_required_proof": [
+          "non_proxy_empirical_or_cuda_evidence",
+          "passed_kkt_proof_or_converged_admm_waterline_result",
+          "pareto_eligible_byte_closed_non_proxy_rankable_atom",
+          "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+        ],
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "exact_dispatch_blockers_v1",
+        "score_claim": false
+      },
+      "expected_information_gain_nats": 0.0,
+      "expected_pose_dist_delta": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_seg_dist_delta": 0.0,
+      "expected_total_score_delta": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
+      "family_group": "categorical_openpilot_mask_plan",
+      "field_interaction_contract": {
+        "assumption_count": 4,
+        "assumptions": [
+          "categorical_byte_closed_archive_parity_proven",
+          "mask_stream_replacement_or_residual",
+          "openpilot_priors_must_be_charged_if_score_affecting",
+          "requires_class_geometry_noop_controls"
+        ],
+        "blockers": [],
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [
+          "whole_mask_replacement"
+        ],
+        "interaction_model": "",
+        "schema": "field_interaction_contract_v1",
+        "status": "passed",
+        "volterra_order": null,
+        "volterra_order_source": "",
+        "volterra_scope": "undeclared_order_first_order_assumptions_only",
+        "volterra_terms": [],
+        "volterra_terms_declared": false
+      },
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "geometry_priors": [],
+      "hard_pair_support": [],
+      "interaction_assumptions": [
+        "mask_stream_replacement_or_residual",
+        "openpilot_priors_must_be_charged_if_score_affecting",
+        "requires_class_geometry_noop_controls",
+        "categorical_byte_closed_archive_parity_proven"
+      ],
+      "kkt_blockers": [
+        "proxy_evidence_not_kkt_ready",
+        "kkt:kkt_proof_or_admm_result_missing"
+      ],
+      "kkt_proof": {
+        "blockers": [
+          "kkt_proof_or_admm_result_missing"
+        ],
+        "candidates": [],
+        "kind": "",
+        "residual": null,
+        "source": "",
+        "status": "blocked",
+        "tolerance": null
+      },
+      "kkt_ready_for_field_planning": false,
+      "lexicographic_feasibility_tuple": [
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        0.0,
+        0.0
+      ],
+      "non_dominated_frontier_reason": {
+        "dominated_by": [],
+        "eligibility_blockers": [
+          "proxy_row"
+        ],
+        "eligible": false,
+        "frontier": false,
+        "objective_directions": {
+          "archive_ready_for_stack_review": "max",
+          "byte_delta": "min",
+          "confidence": "max",
+          "expected_pose_dist_delta": "min",
+          "expected_seg_dist_delta": "min",
+          "expected_total_score_delta": "min"
+        },
+        "objectives": {
+          "archive_ready_for_stack_review": 0.0,
+          "byte_delta": 0.0,
+          "confidence": 0.4,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "expected_total_score_delta": 0.0
+        },
+        "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+        "schema": "non_dominated_frontier_reason_v1",
+        "scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+        "status": "ineligible"
+      },
+      "observation_noise_variance": 0.0,
+      "openpilot_priors": [
+        "lane_marking_track_prior",
+        "openpilot_prior_required"
+      ],
+      "pair_support": [],
+      "paradigm": "categorical_openpilot_mask",
+      "pareto_dominated_by": [],
+      "pareto_eligibility_blockers": [
+        "proxy_row"
+      ],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_objectives": {
+        "archive_ready_for_stack_review": 0.0,
+        "byte_delta": 0.0,
+        "confidence": 0.4,
+        "expected_pose_dist_delta": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": 0.0
+      },
+      "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+      "pose_score_delta_confidence_weighted": 0.0,
+      "proxy_row": true,
+      "rankable": true,
+      "rate_score_delta": 0.0,
+      "ready_for_exact_eval_dispatch": false,
+      "requested_dispatchable": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "seg_score_delta_confidence_weighted": 0.0,
+      "selection_blockers": [
+        "kkt_not_ready_for_field_planning",
+        "pareto_ineligible_atom",
+        "proxy_row"
+      ],
+      "selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "pareto_ineligible_atom": 25.0,
+        "proxy_row": 50.0
+      },
+      "selection_penalty_units": 85.0,
+      "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+      "selection_score_delta": 0.0,
+      "source_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+      "source_dispatch_blockers": [
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_exact_cuda_auth_eval",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing"
+      ]
+    },
+    {
+      "adapter": "categorical_openpilot_mask_plan",
+      "adapter_dispatch_blockers": [
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_exact_cuda_auth_eval",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing"
+      ],
+      "allocation_inference": false,
+      "archive_manifest_custody": {
+        "archive_bytes": 169725,
+        "archive_bytes_valid": true,
+        "archive_sha256": "6a5bf1f3c4d6d2b6cb752979caa72a31b994825d24ee42ae90eeaa58f44abd7d",
+        "archive_sha256_valid": true,
+        "blockers": [],
+        "exists": true,
+        "is_file": true,
+        "manifest_json_valid": true,
+        "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+        "score_claim_false": true,
+        "sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+        "sha256_actual": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+        "sha256_matches": true,
+        "sha256_valid": true,
+        "verified": true
+      },
+      "archive_manifest_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+      "archive_manifest_sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+      "archive_ready_for_stack_review": false,
+      "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_2_undrivable",
+      "byte_closed_archive_manifest_attached": true,
+      "byte_delta": 0,
+      "class_support": [
+        2
+      ],
+      "confidence": 0.4,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [
+        "whole_mask_replacement"
+      ],
+      "cross_paradigm_schema_version": 1,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "proxy_row_not_dispatchable",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "planning_manifest_audit",
+      "evidence_source_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+      "evidence_source_sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+      "exact_dispatch_blockers": {
+        "blocker_categories": {
+          "custody": [],
+          "dirty_worktree": [],
+          "dispatch_claim": [],
+          "exact_cuda_eval": [
+            "requires_exact_cuda_auth_eval"
+          ],
+          "interaction_model": [],
+          "kkt_or_admm": [
+            "proxy_evidence_not_kkt_ready",
+            "kkt:kkt_proof_or_admm_result_missing",
+            "kkt_not_ready_for_field_planning"
+          ],
+          "other": [],
+          "pareto_frontier": [
+            "pareto_ineligible_atom",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "proxy_or_planning": [
+            "planning_only_lagrangian_atom",
+            "proxy_row_not_dispatchable",
+            "proxy_row"
+          ],
+          "runtime": [],
+          "score_claim": []
+        },
+        "blocker_count": 9,
+        "blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval",
+          "proxy_row_not_dispatchable",
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "kkt_not_ready_for_field_planning",
+          "pareto_ineligible_atom",
+          "proxy_row",
+          "pareto_ineligible_for_field_selection"
+        ],
+        "dispatch_attempted": false,
+        "dispatchable": false,
+        "next_required_proof": [
+          "non_proxy_empirical_or_cuda_evidence",
+          "passed_kkt_proof_or_converged_admm_waterline_result",
+          "pareto_eligible_byte_closed_non_proxy_rankable_atom",
+          "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+        ],
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "exact_dispatch_blockers_v1",
+        "score_claim": false
+      },
+      "expected_information_gain_nats": 0.0,
+      "expected_pose_dist_delta": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_seg_dist_delta": 0.0,
+      "expected_total_score_delta": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
+      "family_group": "categorical_openpilot_mask_plan",
+      "field_interaction_contract": {
+        "assumption_count": 4,
+        "assumptions": [
+          "categorical_byte_closed_archive_parity_proven",
+          "mask_stream_replacement_or_residual",
+          "openpilot_priors_must_be_charged_if_score_affecting",
+          "requires_class_geometry_noop_controls"
+        ],
+        "blockers": [],
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [
+          "whole_mask_replacement"
+        ],
+        "interaction_model": "",
+        "schema": "field_interaction_contract_v1",
+        "status": "passed",
+        "volterra_order": null,
+        "volterra_order_source": "",
+        "volterra_scope": "undeclared_order_first_order_assumptions_only",
+        "volterra_terms": [],
+        "volterra_terms_declared": false
+      },
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "geometry_priors": [],
+      "hard_pair_support": [],
+      "interaction_assumptions": [
+        "mask_stream_replacement_or_residual",
+        "openpilot_priors_must_be_charged_if_score_affecting",
+        "requires_class_geometry_noop_controls",
+        "categorical_byte_closed_archive_parity_proven"
+      ],
+      "kkt_blockers": [
+        "proxy_evidence_not_kkt_ready",
+        "kkt:kkt_proof_or_admm_result_missing"
+      ],
+      "kkt_proof": {
+        "blockers": [
+          "kkt_proof_or_admm_result_missing"
+        ],
+        "candidates": [],
+        "kind": "",
+        "residual": null,
+        "source": "",
+        "status": "blocked",
+        "tolerance": null
+      },
+      "kkt_ready_for_field_planning": false,
+      "lexicographic_feasibility_tuple": [
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        0.0,
+        0.0
+      ],
+      "non_dominated_frontier_reason": {
+        "dominated_by": [],
+        "eligibility_blockers": [
+          "proxy_row"
+        ],
+        "eligible": false,
+        "frontier": false,
+        "objective_directions": {
+          "archive_ready_for_stack_review": "max",
+          "byte_delta": "min",
+          "confidence": "max",
+          "expected_pose_dist_delta": "min",
+          "expected_seg_dist_delta": "min",
+          "expected_total_score_delta": "min"
+        },
+        "objectives": {
+          "archive_ready_for_stack_review": 0.0,
+          "byte_delta": 0.0,
+          "confidence": 0.4,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "expected_total_score_delta": 0.0
+        },
+        "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+        "schema": "non_dominated_frontier_reason_v1",
+        "scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+        "status": "ineligible"
+      },
+      "observation_noise_variance": 0.0,
+      "openpilot_priors": [
+        "scene_layout_prior",
+        "openpilot_prior_required"
+      ],
+      "pair_support": [],
+      "paradigm": "categorical_openpilot_mask",
+      "pareto_dominated_by": [],
+      "pareto_eligibility_blockers": [
+        "proxy_row"
+      ],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_objectives": {
+        "archive_ready_for_stack_review": 0.0,
+        "byte_delta": 0.0,
+        "confidence": 0.4,
+        "expected_pose_dist_delta": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": 0.0
+      },
+      "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+      "pose_score_delta_confidence_weighted": 0.0,
+      "proxy_row": true,
+      "rankable": true,
+      "rate_score_delta": 0.0,
+      "ready_for_exact_eval_dispatch": false,
+      "requested_dispatchable": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "seg_score_delta_confidence_weighted": 0.0,
+      "selection_blockers": [
+        "kkt_not_ready_for_field_planning",
+        "pareto_ineligible_atom",
+        "proxy_row"
+      ],
+      "selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "pareto_ineligible_atom": 25.0,
+        "proxy_row": 50.0
+      },
+      "selection_penalty_units": 85.0,
+      "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+      "selection_score_delta": 0.0,
+      "source_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+      "source_dispatch_blockers": [
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_exact_cuda_auth_eval",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing"
+      ]
+    },
+    {
+      "adapter": "categorical_openpilot_mask_plan",
+      "adapter_dispatch_blockers": [
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_exact_cuda_auth_eval",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing"
+      ],
+      "allocation_inference": false,
+      "archive_manifest_custody": {
+        "archive_bytes": 169725,
+        "archive_bytes_valid": true,
+        "archive_sha256": "6a5bf1f3c4d6d2b6cb752979caa72a31b994825d24ee42ae90eeaa58f44abd7d",
+        "archive_sha256_valid": true,
+        "blockers": [],
+        "exists": true,
+        "is_file": true,
+        "manifest_json_valid": true,
+        "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+        "score_claim_false": true,
+        "sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+        "sha256_actual": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+        "sha256_matches": true,
+        "sha256_valid": true,
+        "verified": true
+      },
+      "archive_manifest_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+      "archive_manifest_sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+      "archive_ready_for_stack_review": false,
+      "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_3_movable",
+      "byte_closed_archive_manifest_attached": true,
+      "byte_delta": 0,
+      "class_support": [
+        3
+      ],
+      "confidence": 0.4,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [
+        "whole_mask_replacement"
+      ],
+      "cross_paradigm_schema_version": 1,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "proxy_row_not_dispatchable",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "planning_manifest_audit",
+      "evidence_source_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+      "evidence_source_sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+      "exact_dispatch_blockers": {
+        "blocker_categories": {
+          "custody": [],
+          "dirty_worktree": [],
+          "dispatch_claim": [],
+          "exact_cuda_eval": [
+            "requires_exact_cuda_auth_eval"
+          ],
+          "interaction_model": [],
+          "kkt_or_admm": [
+            "proxy_evidence_not_kkt_ready",
+            "kkt:kkt_proof_or_admm_result_missing",
+            "kkt_not_ready_for_field_planning"
+          ],
+          "other": [],
+          "pareto_frontier": [
+            "pareto_ineligible_atom",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "proxy_or_planning": [
+            "planning_only_lagrangian_atom",
+            "proxy_row_not_dispatchable",
+            "proxy_row"
+          ],
+          "runtime": [],
+          "score_claim": []
+        },
+        "blocker_count": 9,
+        "blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval",
+          "proxy_row_not_dispatchable",
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "kkt_not_ready_for_field_planning",
+          "pareto_ineligible_atom",
+          "proxy_row",
+          "pareto_ineligible_for_field_selection"
+        ],
+        "dispatch_attempted": false,
+        "dispatchable": false,
+        "next_required_proof": [
+          "non_proxy_empirical_or_cuda_evidence",
+          "passed_kkt_proof_or_converged_admm_waterline_result",
+          "pareto_eligible_byte_closed_non_proxy_rankable_atom",
+          "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+        ],
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "exact_dispatch_blockers_v1",
+        "score_claim": false
+      },
+      "expected_information_gain_nats": 0.0,
+      "expected_pose_dist_delta": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_seg_dist_delta": 0.0,
+      "expected_total_score_delta": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
+      "family_group": "categorical_openpilot_mask_plan",
+      "field_interaction_contract": {
+        "assumption_count": 4,
+        "assumptions": [
+          "categorical_byte_closed_archive_parity_proven",
+          "mask_stream_replacement_or_residual",
+          "openpilot_priors_must_be_charged_if_score_affecting",
+          "requires_class_geometry_noop_controls"
+        ],
+        "blockers": [],
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [
+          "whole_mask_replacement"
+        ],
+        "interaction_model": "",
+        "schema": "field_interaction_contract_v1",
+        "status": "passed",
+        "volterra_order": null,
+        "volterra_order_source": "",
+        "volterra_scope": "undeclared_order_first_order_assumptions_only",
+        "volterra_terms": [],
+        "volterra_terms_declared": false
+      },
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "geometry_priors": [],
+      "hard_pair_support": [],
+      "interaction_assumptions": [
+        "mask_stream_replacement_or_residual",
+        "openpilot_priors_must_be_charged_if_score_affecting",
+        "requires_class_geometry_noop_controls",
+        "categorical_byte_closed_archive_parity_proven"
+      ],
+      "kkt_blockers": [
+        "proxy_evidence_not_kkt_ready",
+        "kkt:kkt_proof_or_admm_result_missing"
+      ],
+      "kkt_proof": {
+        "blockers": [
+          "kkt_proof_or_admm_result_missing"
+        ],
+        "candidates": [],
+        "kind": "",
+        "residual": null,
+        "source": "",
+        "status": "blocked",
+        "tolerance": null
+      },
+      "kkt_ready_for_field_planning": false,
+      "lexicographic_feasibility_tuple": [
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        0.0,
+        0.0
+      ],
+      "non_dominated_frontier_reason": {
+        "dominated_by": [],
+        "eligibility_blockers": [
+          "proxy_row"
+        ],
+        "eligible": false,
+        "frontier": false,
+        "objective_directions": {
+          "archive_ready_for_stack_review": "max",
+          "byte_delta": "min",
+          "confidence": "max",
+          "expected_pose_dist_delta": "min",
+          "expected_seg_dist_delta": "min",
+          "expected_total_score_delta": "min"
+        },
+        "objectives": {
+          "archive_ready_for_stack_review": 0.0,
+          "byte_delta": 0.0,
+          "confidence": 0.4,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "expected_total_score_delta": 0.0
+        },
+        "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+        "schema": "non_dominated_frontier_reason_v1",
+        "scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+        "status": "ineligible"
+      },
+      "observation_noise_variance": 0.0,
+      "openpilot_priors": [
+        "dynamic_object_filter_prior",
+        "openpilot_prior_required"
+      ],
+      "pair_support": [],
+      "paradigm": "categorical_openpilot_mask",
+      "pareto_dominated_by": [],
+      "pareto_eligibility_blockers": [
+        "proxy_row"
+      ],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_objectives": {
+        "archive_ready_for_stack_review": 0.0,
+        "byte_delta": 0.0,
+        "confidence": 0.4,
+        "expected_pose_dist_delta": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": 0.0
+      },
+      "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+      "pose_score_delta_confidence_weighted": 0.0,
+      "proxy_row": true,
+      "rankable": true,
+      "rate_score_delta": 0.0,
+      "ready_for_exact_eval_dispatch": false,
+      "requested_dispatchable": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "seg_score_delta_confidence_weighted": 0.0,
+      "selection_blockers": [
+        "kkt_not_ready_for_field_planning",
+        "pareto_ineligible_atom",
+        "proxy_row"
+      ],
+      "selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "pareto_ineligible_atom": 25.0,
+        "proxy_row": 50.0
+      },
+      "selection_penalty_units": 85.0,
+      "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+      "selection_score_delta": 0.0,
+      "source_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+      "source_dispatch_blockers": [
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_exact_cuda_auth_eval",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing"
+      ]
+    },
+    {
+      "adapter": "categorical_openpilot_mask_plan",
+      "adapter_dispatch_blockers": [
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_exact_cuda_auth_eval",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing"
+      ],
+      "allocation_inference": false,
+      "archive_manifest_custody": {
+        "archive_bytes": 169725,
+        "archive_bytes_valid": true,
+        "archive_sha256": "6a5bf1f3c4d6d2b6cb752979caa72a31b994825d24ee42ae90eeaa58f44abd7d",
+        "archive_sha256_valid": true,
+        "blockers": [],
+        "exists": true,
+        "is_file": true,
+        "manifest_json_valid": true,
+        "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+        "score_claim_false": true,
+        "sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+        "sha256_actual": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+        "sha256_matches": true,
+        "sha256_valid": true,
+        "verified": true
+      },
+      "archive_manifest_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+      "archive_manifest_sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+      "archive_ready_for_stack_review": false,
+      "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_4_my_car",
+      "byte_closed_archive_manifest_attached": true,
+      "byte_delta": 0,
+      "class_support": [
+        4
+      ],
+      "confidence": 0.4,
+      "conflicts_with_atoms": [],
+      "conflicts_with_families": [
+        "whole_mask_replacement"
+      ],
+      "cross_paradigm_schema_version": 1,
+      "dispatch_blockers": [
+        "planning_only_lagrangian_atom",
+        "requires_exact_cuda_auth_eval",
+        "proxy_row_not_dispatchable",
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing"
+      ],
+      "dispatchable": false,
+      "evidence_grade": "planning_manifest_audit",
+      "evidence_source_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
+      "evidence_source_sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c",
+      "exact_dispatch_blockers": {
+        "blocker_categories": {
+          "custody": [],
+          "dirty_worktree": [],
+          "dispatch_claim": [],
+          "exact_cuda_eval": [
+            "requires_exact_cuda_auth_eval"
+          ],
+          "interaction_model": [],
+          "kkt_or_admm": [
+            "proxy_evidence_not_kkt_ready",
+            "kkt:kkt_proof_or_admm_result_missing",
+            "kkt_not_ready_for_field_planning"
+          ],
+          "other": [],
+          "pareto_frontier": [
+            "pareto_ineligible_atom",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "proxy_or_planning": [
+            "planning_only_lagrangian_atom",
+            "proxy_row_not_dispatchable",
+            "proxy_row"
+          ],
+          "runtime": [],
+          "score_claim": []
+        },
+        "blocker_count": 9,
+        "blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval",
+          "proxy_row_not_dispatchable",
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_or_admm_result_missing",
+          "kkt_not_ready_for_field_planning",
+          "pareto_ineligible_atom",
+          "proxy_row",
+          "pareto_ineligible_for_field_selection"
+        ],
+        "dispatch_attempted": false,
+        "dispatchable": false,
+        "next_required_proof": [
+          "non_proxy_empirical_or_cuda_evidence",
+          "passed_kkt_proof_or_converged_admm_waterline_result",
+          "pareto_eligible_byte_closed_non_proxy_rankable_atom",
+          "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+        ],
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "exact_dispatch_blockers_v1",
+        "score_claim": false
+      },
+      "expected_information_gain_nats": 0.0,
+      "expected_pose_dist_delta": 0.0,
+      "expected_score_variance": 0.0,
+      "expected_seg_dist_delta": 0.0,
+      "expected_total_score_delta": 0.0,
+      "expected_uncertainty_reduction": {
+        "has_uncertainty_signal": false,
+        "source_fields": [],
+        "total_variance_reduction": 0.0
+      },
+      "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
+      "family_group": "categorical_openpilot_mask_plan",
+      "field_interaction_contract": {
+        "assumption_count": 4,
+        "assumptions": [
+          "categorical_byte_closed_archive_parity_proven",
+          "mask_stream_replacement_or_residual",
+          "openpilot_priors_must_be_charged_if_score_affecting",
+          "requires_class_geometry_noop_controls"
+        ],
+        "blockers": [],
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [
+          "whole_mask_replacement"
+        ],
+        "interaction_model": "",
+        "schema": "field_interaction_contract_v1",
+        "status": "passed",
+        "volterra_order": null,
+        "volterra_order_source": "",
+        "volterra_scope": "undeclared_order_first_order_assumptions_only",
+        "volterra_terms": [],
+        "volterra_terms_declared": false
+      },
+      "field_selection_ready_for_exact_eval_dispatch": false,
+      "geometry_priors": [],
+      "hard_pair_support": [],
+      "interaction_assumptions": [
+        "mask_stream_replacement_or_residual",
+        "openpilot_priors_must_be_charged_if_score_affecting",
+        "requires_class_geometry_noop_controls",
+        "categorical_byte_closed_archive_parity_proven"
+      ],
+      "kkt_blockers": [
+        "proxy_evidence_not_kkt_ready",
+        "kkt:kkt_proof_or_admm_result_missing"
+      ],
+      "kkt_proof": {
+        "blockers": [
+          "kkt_proof_or_admm_result_missing"
+        ],
+        "candidates": [],
+        "kind": "",
+        "residual": null,
+        "source": "",
+        "status": "blocked",
+        "tolerance": null
+      },
+      "kkt_ready_for_field_planning": false,
+      "lexicographic_feasibility_tuple": [
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        0.0,
+        0.0
+      ],
+      "non_dominated_frontier_reason": {
+        "dominated_by": [],
+        "eligibility_blockers": [
+          "proxy_row"
+        ],
+        "eligible": false,
+        "frontier": false,
+        "objective_directions": {
+          "archive_ready_for_stack_review": "max",
+          "byte_delta": "min",
+          "confidence": "max",
+          "expected_pose_dist_delta": "min",
+          "expected_seg_dist_delta": "min",
+          "expected_total_score_delta": "min"
+        },
+        "objectives": {
+          "archive_ready_for_stack_review": 0.0,
+          "byte_delta": 0.0,
+          "confidence": 0.4,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": 0.0,
+          "expected_total_score_delta": 0.0
+        },
+        "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+        "schema": "non_dominated_frontier_reason_v1",
+        "scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+        "status": "ineligible"
+      },
+      "observation_noise_variance": 0.0,
+      "openpilot_priors": [
+        "ego_car_filter_prior",
+        "openpilot_prior_required"
+      ],
+      "pair_support": [],
+      "paradigm": "categorical_openpilot_mask",
+      "pareto_dominated_by": [],
+      "pareto_eligibility_blockers": [
+        "proxy_row"
+      ],
+      "pareto_eligible": false,
+      "pareto_frontier": false,
+      "pareto_objectives": {
+        "archive_ready_for_stack_review": 0.0,
+        "byte_delta": 0.0,
+        "confidence": 0.4,
+        "expected_pose_dist_delta": 0.0,
+        "expected_seg_dist_delta": 0.0,
+        "expected_total_score_delta": 0.0
+      },
+      "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
+      "pose_score_delta_confidence_weighted": 0.0,
+      "proxy_row": true,
+      "rankable": true,
+      "rate_score_delta": 0.0,
+      "ready_for_exact_eval_dispatch": false,
+      "requested_dispatchable": false,
+      "research_basis_ids": [
+        "fridrich_stc_2011",
+        "fridrich_pq_wetpaper_2004",
+        "balle_e2e_2017",
+        "balle_hyperprior_2018"
+      ],
+      "score_claim": false,
+      "seg_score_delta_confidence_weighted": 0.0,
+      "selection_blockers": [
+        "kkt_not_ready_for_field_planning",
+        "pareto_ineligible_atom",
+        "proxy_row"
+      ],
+      "selection_penalty_terms": {
+        "kkt_not_ready_for_field_planning": 10.0,
+        "pareto_ineligible_atom": 25.0,
+        "proxy_row": 50.0
+      },
+      "selection_penalty_units": 85.0,
+      "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+      "selection_score_delta": 0.0,
+      "source_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+      "source_dispatch_blockers": [
+        "cross_paradigm_atom_is_planning_only",
+        "requires_stack_interaction_review",
+        "requires_exact_cuda_auth_eval",
+        "categorical_mask_requires_charged_runtime_consumer",
+        "categorical_mask_requires_decode_reencode_parity",
+        "no_op_control_not_passed:decode_reencode_identity_control",
+        "decode_reencode_parity_not_passed",
+        "decode_reencode_full_decode_not_proven",
+        "decode_reencode_byte_exact_reencode_not_proven",
+        "decode_reencode_independent_proof_full_decode_not_proven",
+        "decode_reencode_independent_proof_byte_exact_reencode_not_proven",
+        "exact_eval_dispatch_requirements_missing"
       ]
     },
     {
@@ -2709,1461 +4117,6 @@
         "requires_submission_runtime_decoder",
         "requires_archive_builder_and_payload_diff"
       ]
-    },
-    {
-      "adapter": "categorical_openpilot_mask_plan",
-      "adapter_dispatch_blockers": [
-        "cross_paradigm_atom_is_planning_only",
-        "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
-        "requires_exact_cuda_auth_eval",
-        "categorical_mask_requires_charged_runtime_consumer",
-        "categorical_mask_requires_decode_reencode_parity",
-        "no_op_control_not_passed:decode_reencode_identity_control",
-        "decode_reencode_parity_not_passed",
-        "decode_reencode_full_decode_not_proven",
-        "decode_reencode_byte_exact_reencode_not_proven",
-        "decode_reencode_independent_proof_artifact_missing",
-        "exact_eval_dispatch_requirements_missing"
-      ],
-      "allocation_inference": false,
-      "archive_manifest_custody": {
-        "archive_bytes": null,
-        "archive_bytes_valid": false,
-        "archive_sha256": "",
-        "archive_sha256_valid": false,
-        "blockers": [],
-        "exists": false,
-        "is_file": false,
-        "manifest_json_valid": false,
-        "path": "",
-        "score_claim_false": false,
-        "sha256": "",
-        "sha256_matches": false,
-        "sha256_valid": false,
-        "verified": false
-      },
-      "archive_manifest_path": "",
-      "archive_manifest_sha256": "",
-      "archive_ready_for_stack_review": false,
-      "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_0_road",
-      "byte_closed_archive_manifest_attached": false,
-      "byte_delta": 0,
-      "class_support": [
-        0
-      ],
-      "confidence": 0.4,
-      "conflicts_with_atoms": [],
-      "conflicts_with_families": [
-        "whole_mask_replacement"
-      ],
-      "cross_paradigm_schema_version": 1,
-      "dispatch_blockers": [
-        "planning_only_lagrangian_atom",
-        "requires_exact_cuda_auth_eval",
-        "requires_byte_closed_archive",
-        "proxy_row_not_dispatchable",
-        "cross_paradigm_atom_is_planning_only",
-        "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
-        "categorical_mask_requires_charged_runtime_consumer",
-        "categorical_mask_requires_decode_reencode_parity",
-        "no_op_control_not_passed:decode_reencode_identity_control",
-        "decode_reencode_parity_not_passed",
-        "decode_reencode_full_decode_not_proven",
-        "decode_reencode_byte_exact_reencode_not_proven",
-        "decode_reencode_independent_proof_artifact_missing",
-        "exact_eval_dispatch_requirements_missing"
-      ],
-      "dispatchable": false,
-      "evidence_grade": "planning_manifest_audit",
-      "evidence_source_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
-      "evidence_source_sha256": "5ba5fd95817e9a59566a6d54be000d90f37a875c8b93ea3ce879685b6fdd83bb",
-      "exact_dispatch_blockers": {
-        "blocker_categories": {
-          "custody": [
-            "requires_byte_closed_archive",
-            "missing_byte_closed_archive_manifest"
-          ],
-          "dirty_worktree": [],
-          "dispatch_claim": [],
-          "exact_cuda_eval": [
-            "requires_exact_cuda_auth_eval"
-          ],
-          "interaction_model": [],
-          "kkt_or_admm": [
-            "proxy_evidence_not_kkt_ready",
-            "kkt:kkt_proof_or_admm_result_missing",
-            "kkt_not_ready_for_field_planning"
-          ],
-          "other": [],
-          "pareto_frontier": [
-            "pareto_ineligible_atom",
-            "pareto_ineligible_for_field_selection"
-          ],
-          "proxy_or_planning": [
-            "planning_only_lagrangian_atom",
-            "proxy_row_not_dispatchable",
-            "proxy_row"
-          ],
-          "runtime": [],
-          "score_claim": []
-        },
-        "blocker_count": 11,
-        "blockers": [
-          "planning_only_lagrangian_atom",
-          "requires_exact_cuda_auth_eval",
-          "requires_byte_closed_archive",
-          "proxy_row_not_dispatchable",
-          "missing_byte_closed_archive_manifest",
-          "proxy_evidence_not_kkt_ready",
-          "kkt:kkt_proof_or_admm_result_missing",
-          "kkt_not_ready_for_field_planning",
-          "pareto_ineligible_atom",
-          "proxy_row",
-          "pareto_ineligible_for_field_selection"
-        ],
-        "dispatch_attempted": false,
-        "dispatchable": false,
-        "next_required_proof": [
-          "verified_byte_closed_archive_manifest_with_sha256_and_bytes",
-          "non_proxy_empirical_or_cuda_evidence",
-          "passed_kkt_proof_or_converged_admm_waterline_result",
-          "pareto_eligible_byte_closed_non_proxy_rankable_atom",
-          "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
-        ],
-        "ready_for_exact_eval_dispatch": false,
-        "schema": "exact_dispatch_blockers_v1",
-        "score_claim": false
-      },
-      "expected_information_gain_nats": 0.0,
-      "expected_pose_dist_delta": 0.0,
-      "expected_score_variance": 0.0,
-      "expected_seg_dist_delta": 0.0,
-      "expected_total_score_delta": 0.0,
-      "expected_uncertainty_reduction": {
-        "has_uncertainty_signal": false,
-        "source_fields": [],
-        "total_variance_reduction": 0.0
-      },
-      "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
-      "family_group": "categorical_openpilot_mask_plan",
-      "field_interaction_contract": {
-        "assumption_count": 3,
-        "assumptions": [
-          "mask_stream_replacement_or_residual",
-          "openpilot_priors_must_be_charged_if_score_affecting",
-          "requires_class_geometry_noop_controls"
-        ],
-        "blockers": [],
-        "conflicts_with_atoms": [],
-        "conflicts_with_families": [
-          "whole_mask_replacement"
-        ],
-        "interaction_model": "",
-        "schema": "field_interaction_contract_v1",
-        "status": "passed",
-        "volterra_order": null,
-        "volterra_order_source": "",
-        "volterra_scope": "undeclared_order_first_order_assumptions_only",
-        "volterra_terms": [],
-        "volterra_terms_declared": false
-      },
-      "field_selection_ready_for_exact_eval_dispatch": false,
-      "geometry_priors": [],
-      "hard_pair_support": [],
-      "interaction_assumptions": [
-        "mask_stream_replacement_or_residual",
-        "openpilot_priors_must_be_charged_if_score_affecting",
-        "requires_class_geometry_noop_controls"
-      ],
-      "kkt_blockers": [
-        "missing_byte_closed_archive_manifest",
-        "proxy_evidence_not_kkt_ready",
-        "kkt:kkt_proof_or_admm_result_missing"
-      ],
-      "kkt_proof": {
-        "blockers": [
-          "kkt_proof_or_admm_result_missing"
-        ],
-        "candidates": [],
-        "kind": "",
-        "residual": null,
-        "source": "",
-        "status": "blocked",
-        "tolerance": null
-      },
-      "kkt_ready_for_field_planning": false,
-      "lexicographic_feasibility_tuple": [
-        false,
-        true,
-        false,
-        false,
-        false,
-        false,
-        0.0,
-        0.0
-      ],
-      "non_dominated_frontier_reason": {
-        "dominated_by": [],
-        "eligibility_blockers": [
-          "missing_byte_closed_archive_manifest",
-          "proxy_row"
-        ],
-        "eligible": false,
-        "frontier": false,
-        "objective_directions": {
-          "archive_ready_for_stack_review": "max",
-          "byte_delta": "min",
-          "confidence": "max",
-          "expected_pose_dist_delta": "min",
-          "expected_seg_dist_delta": "min",
-          "expected_total_score_delta": "min"
-        },
-        "objectives": {
-          "archive_ready_for_stack_review": 0.0,
-          "byte_delta": 0.0,
-          "confidence": 0.4,
-          "expected_pose_dist_delta": 0.0,
-          "expected_seg_dist_delta": 0.0,
-          "expected_total_score_delta": 0.0
-        },
-        "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
-        "schema": "non_dominated_frontier_reason_v1",
-        "scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
-        "status": "ineligible"
-      },
-      "observation_noise_variance": 0.0,
-      "openpilot_priors": [
-        "road_geometry_track_prior",
-        "openpilot_prior_required"
-      ],
-      "pair_support": [],
-      "paradigm": "categorical_openpilot_mask",
-      "pareto_dominated_by": [],
-      "pareto_eligibility_blockers": [
-        "missing_byte_closed_archive_manifest",
-        "proxy_row"
-      ],
-      "pareto_eligible": false,
-      "pareto_frontier": false,
-      "pareto_objectives": {
-        "archive_ready_for_stack_review": 0.0,
-        "byte_delta": 0.0,
-        "confidence": 0.4,
-        "expected_pose_dist_delta": 0.0,
-        "expected_seg_dist_delta": 0.0,
-        "expected_total_score_delta": 0.0
-      },
-      "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
-      "pose_score_delta_confidence_weighted": 0.0,
-      "proxy_row": true,
-      "rankable": true,
-      "rate_score_delta": 0.0,
-      "ready_for_exact_eval_dispatch": false,
-      "requested_dispatchable": false,
-      "research_basis_ids": [
-        "fridrich_stc_2011",
-        "fridrich_pq_wetpaper_2004",
-        "balle_e2e_2017",
-        "balle_hyperprior_2018"
-      ],
-      "score_claim": false,
-      "seg_score_delta_confidence_weighted": 0.0,
-      "selection_blockers": [
-        "kkt_not_ready_for_field_planning",
-        "missing_byte_closed_archive_manifest",
-        "pareto_ineligible_atom",
-        "proxy_row"
-      ],
-      "selection_penalty_terms": {
-        "kkt_not_ready_for_field_planning": 10.0,
-        "missing_byte_closed_archive_manifest": 100.0,
-        "pareto_ineligible_atom": 25.0,
-        "proxy_row": 50.0
-      },
-      "selection_penalty_units": 185.0,
-      "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
-      "selection_score_delta": 0.0,
-      "source_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
-      "source_dispatch_blockers": [
-        "cross_paradigm_atom_is_planning_only",
-        "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
-        "requires_exact_cuda_auth_eval",
-        "categorical_mask_requires_charged_runtime_consumer",
-        "categorical_mask_requires_decode_reencode_parity",
-        "no_op_control_not_passed:decode_reencode_identity_control",
-        "decode_reencode_parity_not_passed",
-        "decode_reencode_full_decode_not_proven",
-        "decode_reencode_byte_exact_reencode_not_proven",
-        "decode_reencode_independent_proof_artifact_missing",
-        "exact_eval_dispatch_requirements_missing"
-      ]
-    },
-    {
-      "adapter": "categorical_openpilot_mask_plan",
-      "adapter_dispatch_blockers": [
-        "cross_paradigm_atom_is_planning_only",
-        "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
-        "requires_exact_cuda_auth_eval",
-        "categorical_mask_requires_charged_runtime_consumer",
-        "categorical_mask_requires_decode_reencode_parity",
-        "no_op_control_not_passed:decode_reencode_identity_control",
-        "decode_reencode_parity_not_passed",
-        "decode_reencode_full_decode_not_proven",
-        "decode_reencode_byte_exact_reencode_not_proven",
-        "decode_reencode_independent_proof_artifact_missing",
-        "exact_eval_dispatch_requirements_missing"
-      ],
-      "allocation_inference": false,
-      "archive_manifest_custody": {
-        "archive_bytes": null,
-        "archive_bytes_valid": false,
-        "archive_sha256": "",
-        "archive_sha256_valid": false,
-        "blockers": [],
-        "exists": false,
-        "is_file": false,
-        "manifest_json_valid": false,
-        "path": "",
-        "score_claim_false": false,
-        "sha256": "",
-        "sha256_matches": false,
-        "sha256_valid": false,
-        "verified": false
-      },
-      "archive_manifest_path": "",
-      "archive_manifest_sha256": "",
-      "archive_ready_for_stack_review": false,
-      "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_1_lane_markings",
-      "byte_closed_archive_manifest_attached": false,
-      "byte_delta": 0,
-      "class_support": [
-        1
-      ],
-      "confidence": 0.4,
-      "conflicts_with_atoms": [],
-      "conflicts_with_families": [
-        "whole_mask_replacement"
-      ],
-      "cross_paradigm_schema_version": 1,
-      "dispatch_blockers": [
-        "planning_only_lagrangian_atom",
-        "requires_exact_cuda_auth_eval",
-        "requires_byte_closed_archive",
-        "proxy_row_not_dispatchable",
-        "cross_paradigm_atom_is_planning_only",
-        "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
-        "categorical_mask_requires_charged_runtime_consumer",
-        "categorical_mask_requires_decode_reencode_parity",
-        "no_op_control_not_passed:decode_reencode_identity_control",
-        "decode_reencode_parity_not_passed",
-        "decode_reencode_full_decode_not_proven",
-        "decode_reencode_byte_exact_reencode_not_proven",
-        "decode_reencode_independent_proof_artifact_missing",
-        "exact_eval_dispatch_requirements_missing"
-      ],
-      "dispatchable": false,
-      "evidence_grade": "planning_manifest_audit",
-      "evidence_source_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
-      "evidence_source_sha256": "5ba5fd95817e9a59566a6d54be000d90f37a875c8b93ea3ce879685b6fdd83bb",
-      "exact_dispatch_blockers": {
-        "blocker_categories": {
-          "custody": [
-            "requires_byte_closed_archive",
-            "missing_byte_closed_archive_manifest"
-          ],
-          "dirty_worktree": [],
-          "dispatch_claim": [],
-          "exact_cuda_eval": [
-            "requires_exact_cuda_auth_eval"
-          ],
-          "interaction_model": [],
-          "kkt_or_admm": [
-            "proxy_evidence_not_kkt_ready",
-            "kkt:kkt_proof_or_admm_result_missing",
-            "kkt_not_ready_for_field_planning"
-          ],
-          "other": [],
-          "pareto_frontier": [
-            "pareto_ineligible_atom",
-            "pareto_ineligible_for_field_selection"
-          ],
-          "proxy_or_planning": [
-            "planning_only_lagrangian_atom",
-            "proxy_row_not_dispatchable",
-            "proxy_row"
-          ],
-          "runtime": [],
-          "score_claim": []
-        },
-        "blocker_count": 11,
-        "blockers": [
-          "planning_only_lagrangian_atom",
-          "requires_exact_cuda_auth_eval",
-          "requires_byte_closed_archive",
-          "proxy_row_not_dispatchable",
-          "missing_byte_closed_archive_manifest",
-          "proxy_evidence_not_kkt_ready",
-          "kkt:kkt_proof_or_admm_result_missing",
-          "kkt_not_ready_for_field_planning",
-          "pareto_ineligible_atom",
-          "proxy_row",
-          "pareto_ineligible_for_field_selection"
-        ],
-        "dispatch_attempted": false,
-        "dispatchable": false,
-        "next_required_proof": [
-          "verified_byte_closed_archive_manifest_with_sha256_and_bytes",
-          "non_proxy_empirical_or_cuda_evidence",
-          "passed_kkt_proof_or_converged_admm_waterline_result",
-          "pareto_eligible_byte_closed_non_proxy_rankable_atom",
-          "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
-        ],
-        "ready_for_exact_eval_dispatch": false,
-        "schema": "exact_dispatch_blockers_v1",
-        "score_claim": false
-      },
-      "expected_information_gain_nats": 0.0,
-      "expected_pose_dist_delta": 0.0,
-      "expected_score_variance": 0.0,
-      "expected_seg_dist_delta": 0.0,
-      "expected_total_score_delta": 0.0,
-      "expected_uncertainty_reduction": {
-        "has_uncertainty_signal": false,
-        "source_fields": [],
-        "total_variance_reduction": 0.0
-      },
-      "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
-      "family_group": "categorical_openpilot_mask_plan",
-      "field_interaction_contract": {
-        "assumption_count": 3,
-        "assumptions": [
-          "mask_stream_replacement_or_residual",
-          "openpilot_priors_must_be_charged_if_score_affecting",
-          "requires_class_geometry_noop_controls"
-        ],
-        "blockers": [],
-        "conflicts_with_atoms": [],
-        "conflicts_with_families": [
-          "whole_mask_replacement"
-        ],
-        "interaction_model": "",
-        "schema": "field_interaction_contract_v1",
-        "status": "passed",
-        "volterra_order": null,
-        "volterra_order_source": "",
-        "volterra_scope": "undeclared_order_first_order_assumptions_only",
-        "volterra_terms": [],
-        "volterra_terms_declared": false
-      },
-      "field_selection_ready_for_exact_eval_dispatch": false,
-      "geometry_priors": [],
-      "hard_pair_support": [],
-      "interaction_assumptions": [
-        "mask_stream_replacement_or_residual",
-        "openpilot_priors_must_be_charged_if_score_affecting",
-        "requires_class_geometry_noop_controls"
-      ],
-      "kkt_blockers": [
-        "missing_byte_closed_archive_manifest",
-        "proxy_evidence_not_kkt_ready",
-        "kkt:kkt_proof_or_admm_result_missing"
-      ],
-      "kkt_proof": {
-        "blockers": [
-          "kkt_proof_or_admm_result_missing"
-        ],
-        "candidates": [],
-        "kind": "",
-        "residual": null,
-        "source": "",
-        "status": "blocked",
-        "tolerance": null
-      },
-      "kkt_ready_for_field_planning": false,
-      "lexicographic_feasibility_tuple": [
-        false,
-        true,
-        false,
-        false,
-        false,
-        false,
-        0.0,
-        0.0
-      ],
-      "non_dominated_frontier_reason": {
-        "dominated_by": [],
-        "eligibility_blockers": [
-          "missing_byte_closed_archive_manifest",
-          "proxy_row"
-        ],
-        "eligible": false,
-        "frontier": false,
-        "objective_directions": {
-          "archive_ready_for_stack_review": "max",
-          "byte_delta": "min",
-          "confidence": "max",
-          "expected_pose_dist_delta": "min",
-          "expected_seg_dist_delta": "min",
-          "expected_total_score_delta": "min"
-        },
-        "objectives": {
-          "archive_ready_for_stack_review": 0.0,
-          "byte_delta": 0.0,
-          "confidence": 0.4,
-          "expected_pose_dist_delta": 0.0,
-          "expected_seg_dist_delta": 0.0,
-          "expected_total_score_delta": 0.0
-        },
-        "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
-        "schema": "non_dominated_frontier_reason_v1",
-        "scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
-        "status": "ineligible"
-      },
-      "observation_noise_variance": 0.0,
-      "openpilot_priors": [
-        "lane_marking_track_prior",
-        "openpilot_prior_required"
-      ],
-      "pair_support": [],
-      "paradigm": "categorical_openpilot_mask",
-      "pareto_dominated_by": [],
-      "pareto_eligibility_blockers": [
-        "missing_byte_closed_archive_manifest",
-        "proxy_row"
-      ],
-      "pareto_eligible": false,
-      "pareto_frontier": false,
-      "pareto_objectives": {
-        "archive_ready_for_stack_review": 0.0,
-        "byte_delta": 0.0,
-        "confidence": 0.4,
-        "expected_pose_dist_delta": 0.0,
-        "expected_seg_dist_delta": 0.0,
-        "expected_total_score_delta": 0.0
-      },
-      "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
-      "pose_score_delta_confidence_weighted": 0.0,
-      "proxy_row": true,
-      "rankable": true,
-      "rate_score_delta": 0.0,
-      "ready_for_exact_eval_dispatch": false,
-      "requested_dispatchable": false,
-      "research_basis_ids": [
-        "fridrich_stc_2011",
-        "fridrich_pq_wetpaper_2004",
-        "balle_e2e_2017",
-        "balle_hyperprior_2018"
-      ],
-      "score_claim": false,
-      "seg_score_delta_confidence_weighted": 0.0,
-      "selection_blockers": [
-        "kkt_not_ready_for_field_planning",
-        "missing_byte_closed_archive_manifest",
-        "pareto_ineligible_atom",
-        "proxy_row"
-      ],
-      "selection_penalty_terms": {
-        "kkt_not_ready_for_field_planning": 10.0,
-        "missing_byte_closed_archive_manifest": 100.0,
-        "pareto_ineligible_atom": 25.0,
-        "proxy_row": 50.0
-      },
-      "selection_penalty_units": 185.0,
-      "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
-      "selection_score_delta": 0.0,
-      "source_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
-      "source_dispatch_blockers": [
-        "cross_paradigm_atom_is_planning_only",
-        "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
-        "requires_exact_cuda_auth_eval",
-        "categorical_mask_requires_charged_runtime_consumer",
-        "categorical_mask_requires_decode_reencode_parity",
-        "no_op_control_not_passed:decode_reencode_identity_control",
-        "decode_reencode_parity_not_passed",
-        "decode_reencode_full_decode_not_proven",
-        "decode_reencode_byte_exact_reencode_not_proven",
-        "decode_reencode_independent_proof_artifact_missing",
-        "exact_eval_dispatch_requirements_missing"
-      ]
-    },
-    {
-      "adapter": "categorical_openpilot_mask_plan",
-      "adapter_dispatch_blockers": [
-        "cross_paradigm_atom_is_planning_only",
-        "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
-        "requires_exact_cuda_auth_eval",
-        "categorical_mask_requires_charged_runtime_consumer",
-        "categorical_mask_requires_decode_reencode_parity",
-        "no_op_control_not_passed:decode_reencode_identity_control",
-        "decode_reencode_parity_not_passed",
-        "decode_reencode_full_decode_not_proven",
-        "decode_reencode_byte_exact_reencode_not_proven",
-        "decode_reencode_independent_proof_artifact_missing",
-        "exact_eval_dispatch_requirements_missing"
-      ],
-      "allocation_inference": false,
-      "archive_manifest_custody": {
-        "archive_bytes": null,
-        "archive_bytes_valid": false,
-        "archive_sha256": "",
-        "archive_sha256_valid": false,
-        "blockers": [],
-        "exists": false,
-        "is_file": false,
-        "manifest_json_valid": false,
-        "path": "",
-        "score_claim_false": false,
-        "sha256": "",
-        "sha256_matches": false,
-        "sha256_valid": false,
-        "verified": false
-      },
-      "archive_manifest_path": "",
-      "archive_manifest_sha256": "",
-      "archive_ready_for_stack_review": false,
-      "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_2_undrivable",
-      "byte_closed_archive_manifest_attached": false,
-      "byte_delta": 0,
-      "class_support": [
-        2
-      ],
-      "confidence": 0.4,
-      "conflicts_with_atoms": [],
-      "conflicts_with_families": [
-        "whole_mask_replacement"
-      ],
-      "cross_paradigm_schema_version": 1,
-      "dispatch_blockers": [
-        "planning_only_lagrangian_atom",
-        "requires_exact_cuda_auth_eval",
-        "requires_byte_closed_archive",
-        "proxy_row_not_dispatchable",
-        "cross_paradigm_atom_is_planning_only",
-        "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
-        "categorical_mask_requires_charged_runtime_consumer",
-        "categorical_mask_requires_decode_reencode_parity",
-        "no_op_control_not_passed:decode_reencode_identity_control",
-        "decode_reencode_parity_not_passed",
-        "decode_reencode_full_decode_not_proven",
-        "decode_reencode_byte_exact_reencode_not_proven",
-        "decode_reencode_independent_proof_artifact_missing",
-        "exact_eval_dispatch_requirements_missing"
-      ],
-      "dispatchable": false,
-      "evidence_grade": "planning_manifest_audit",
-      "evidence_source_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
-      "evidence_source_sha256": "5ba5fd95817e9a59566a6d54be000d90f37a875c8b93ea3ce879685b6fdd83bb",
-      "exact_dispatch_blockers": {
-        "blocker_categories": {
-          "custody": [
-            "requires_byte_closed_archive",
-            "missing_byte_closed_archive_manifest"
-          ],
-          "dirty_worktree": [],
-          "dispatch_claim": [],
-          "exact_cuda_eval": [
-            "requires_exact_cuda_auth_eval"
-          ],
-          "interaction_model": [],
-          "kkt_or_admm": [
-            "proxy_evidence_not_kkt_ready",
-            "kkt:kkt_proof_or_admm_result_missing",
-            "kkt_not_ready_for_field_planning"
-          ],
-          "other": [],
-          "pareto_frontier": [
-            "pareto_ineligible_atom",
-            "pareto_ineligible_for_field_selection"
-          ],
-          "proxy_or_planning": [
-            "planning_only_lagrangian_atom",
-            "proxy_row_not_dispatchable",
-            "proxy_row"
-          ],
-          "runtime": [],
-          "score_claim": []
-        },
-        "blocker_count": 11,
-        "blockers": [
-          "planning_only_lagrangian_atom",
-          "requires_exact_cuda_auth_eval",
-          "requires_byte_closed_archive",
-          "proxy_row_not_dispatchable",
-          "missing_byte_closed_archive_manifest",
-          "proxy_evidence_not_kkt_ready",
-          "kkt:kkt_proof_or_admm_result_missing",
-          "kkt_not_ready_for_field_planning",
-          "pareto_ineligible_atom",
-          "proxy_row",
-          "pareto_ineligible_for_field_selection"
-        ],
-        "dispatch_attempted": false,
-        "dispatchable": false,
-        "next_required_proof": [
-          "verified_byte_closed_archive_manifest_with_sha256_and_bytes",
-          "non_proxy_empirical_or_cuda_evidence",
-          "passed_kkt_proof_or_converged_admm_waterline_result",
-          "pareto_eligible_byte_closed_non_proxy_rankable_atom",
-          "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
-        ],
-        "ready_for_exact_eval_dispatch": false,
-        "schema": "exact_dispatch_blockers_v1",
-        "score_claim": false
-      },
-      "expected_information_gain_nats": 0.0,
-      "expected_pose_dist_delta": 0.0,
-      "expected_score_variance": 0.0,
-      "expected_seg_dist_delta": 0.0,
-      "expected_total_score_delta": 0.0,
-      "expected_uncertainty_reduction": {
-        "has_uncertainty_signal": false,
-        "source_fields": [],
-        "total_variance_reduction": 0.0
-      },
-      "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
-      "family_group": "categorical_openpilot_mask_plan",
-      "field_interaction_contract": {
-        "assumption_count": 3,
-        "assumptions": [
-          "mask_stream_replacement_or_residual",
-          "openpilot_priors_must_be_charged_if_score_affecting",
-          "requires_class_geometry_noop_controls"
-        ],
-        "blockers": [],
-        "conflicts_with_atoms": [],
-        "conflicts_with_families": [
-          "whole_mask_replacement"
-        ],
-        "interaction_model": "",
-        "schema": "field_interaction_contract_v1",
-        "status": "passed",
-        "volterra_order": null,
-        "volterra_order_source": "",
-        "volterra_scope": "undeclared_order_first_order_assumptions_only",
-        "volterra_terms": [],
-        "volterra_terms_declared": false
-      },
-      "field_selection_ready_for_exact_eval_dispatch": false,
-      "geometry_priors": [],
-      "hard_pair_support": [],
-      "interaction_assumptions": [
-        "mask_stream_replacement_or_residual",
-        "openpilot_priors_must_be_charged_if_score_affecting",
-        "requires_class_geometry_noop_controls"
-      ],
-      "kkt_blockers": [
-        "missing_byte_closed_archive_manifest",
-        "proxy_evidence_not_kkt_ready",
-        "kkt:kkt_proof_or_admm_result_missing"
-      ],
-      "kkt_proof": {
-        "blockers": [
-          "kkt_proof_or_admm_result_missing"
-        ],
-        "candidates": [],
-        "kind": "",
-        "residual": null,
-        "source": "",
-        "status": "blocked",
-        "tolerance": null
-      },
-      "kkt_ready_for_field_planning": false,
-      "lexicographic_feasibility_tuple": [
-        false,
-        true,
-        false,
-        false,
-        false,
-        false,
-        0.0,
-        0.0
-      ],
-      "non_dominated_frontier_reason": {
-        "dominated_by": [],
-        "eligibility_blockers": [
-          "missing_byte_closed_archive_manifest",
-          "proxy_row"
-        ],
-        "eligible": false,
-        "frontier": false,
-        "objective_directions": {
-          "archive_ready_for_stack_review": "max",
-          "byte_delta": "min",
-          "confidence": "max",
-          "expected_pose_dist_delta": "min",
-          "expected_seg_dist_delta": "min",
-          "expected_total_score_delta": "min"
-        },
-        "objectives": {
-          "archive_ready_for_stack_review": 0.0,
-          "byte_delta": 0.0,
-          "confidence": 0.4,
-          "expected_pose_dist_delta": 0.0,
-          "expected_seg_dist_delta": 0.0,
-          "expected_total_score_delta": 0.0
-        },
-        "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
-        "schema": "non_dominated_frontier_reason_v1",
-        "scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
-        "status": "ineligible"
-      },
-      "observation_noise_variance": 0.0,
-      "openpilot_priors": [
-        "scene_layout_prior",
-        "openpilot_prior_required"
-      ],
-      "pair_support": [],
-      "paradigm": "categorical_openpilot_mask",
-      "pareto_dominated_by": [],
-      "pareto_eligibility_blockers": [
-        "missing_byte_closed_archive_manifest",
-        "proxy_row"
-      ],
-      "pareto_eligible": false,
-      "pareto_frontier": false,
-      "pareto_objectives": {
-        "archive_ready_for_stack_review": 0.0,
-        "byte_delta": 0.0,
-        "confidence": 0.4,
-        "expected_pose_dist_delta": 0.0,
-        "expected_seg_dist_delta": 0.0,
-        "expected_total_score_delta": 0.0
-      },
-      "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
-      "pose_score_delta_confidence_weighted": 0.0,
-      "proxy_row": true,
-      "rankable": true,
-      "rate_score_delta": 0.0,
-      "ready_for_exact_eval_dispatch": false,
-      "requested_dispatchable": false,
-      "research_basis_ids": [
-        "fridrich_stc_2011",
-        "fridrich_pq_wetpaper_2004",
-        "balle_e2e_2017",
-        "balle_hyperprior_2018"
-      ],
-      "score_claim": false,
-      "seg_score_delta_confidence_weighted": 0.0,
-      "selection_blockers": [
-        "kkt_not_ready_for_field_planning",
-        "missing_byte_closed_archive_manifest",
-        "pareto_ineligible_atom",
-        "proxy_row"
-      ],
-      "selection_penalty_terms": {
-        "kkt_not_ready_for_field_planning": 10.0,
-        "missing_byte_closed_archive_manifest": 100.0,
-        "pareto_ineligible_atom": 25.0,
-        "proxy_row": 50.0
-      },
-      "selection_penalty_units": 185.0,
-      "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
-      "selection_score_delta": 0.0,
-      "source_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
-      "source_dispatch_blockers": [
-        "cross_paradigm_atom_is_planning_only",
-        "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
-        "requires_exact_cuda_auth_eval",
-        "categorical_mask_requires_charged_runtime_consumer",
-        "categorical_mask_requires_decode_reencode_parity",
-        "no_op_control_not_passed:decode_reencode_identity_control",
-        "decode_reencode_parity_not_passed",
-        "decode_reencode_full_decode_not_proven",
-        "decode_reencode_byte_exact_reencode_not_proven",
-        "decode_reencode_independent_proof_artifact_missing",
-        "exact_eval_dispatch_requirements_missing"
-      ]
-    },
-    {
-      "adapter": "categorical_openpilot_mask_plan",
-      "adapter_dispatch_blockers": [
-        "cross_paradigm_atom_is_planning_only",
-        "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
-        "requires_exact_cuda_auth_eval",
-        "categorical_mask_requires_charged_runtime_consumer",
-        "categorical_mask_requires_decode_reencode_parity",
-        "no_op_control_not_passed:decode_reencode_identity_control",
-        "decode_reencode_parity_not_passed",
-        "decode_reencode_full_decode_not_proven",
-        "decode_reencode_byte_exact_reencode_not_proven",
-        "decode_reencode_independent_proof_artifact_missing",
-        "exact_eval_dispatch_requirements_missing"
-      ],
-      "allocation_inference": false,
-      "archive_manifest_custody": {
-        "archive_bytes": null,
-        "archive_bytes_valid": false,
-        "archive_sha256": "",
-        "archive_sha256_valid": false,
-        "blockers": [],
-        "exists": false,
-        "is_file": false,
-        "manifest_json_valid": false,
-        "path": "",
-        "score_claim_false": false,
-        "sha256": "",
-        "sha256_matches": false,
-        "sha256_valid": false,
-        "verified": false
-      },
-      "archive_manifest_path": "",
-      "archive_manifest_sha256": "",
-      "archive_ready_for_stack_review": false,
-      "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_3_movable",
-      "byte_closed_archive_manifest_attached": false,
-      "byte_delta": 0,
-      "class_support": [
-        3
-      ],
-      "confidence": 0.4,
-      "conflicts_with_atoms": [],
-      "conflicts_with_families": [
-        "whole_mask_replacement"
-      ],
-      "cross_paradigm_schema_version": 1,
-      "dispatch_blockers": [
-        "planning_only_lagrangian_atom",
-        "requires_exact_cuda_auth_eval",
-        "requires_byte_closed_archive",
-        "proxy_row_not_dispatchable",
-        "cross_paradigm_atom_is_planning_only",
-        "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
-        "categorical_mask_requires_charged_runtime_consumer",
-        "categorical_mask_requires_decode_reencode_parity",
-        "no_op_control_not_passed:decode_reencode_identity_control",
-        "decode_reencode_parity_not_passed",
-        "decode_reencode_full_decode_not_proven",
-        "decode_reencode_byte_exact_reencode_not_proven",
-        "decode_reencode_independent_proof_artifact_missing",
-        "exact_eval_dispatch_requirements_missing"
-      ],
-      "dispatchable": false,
-      "evidence_grade": "planning_manifest_audit",
-      "evidence_source_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
-      "evidence_source_sha256": "5ba5fd95817e9a59566a6d54be000d90f37a875c8b93ea3ce879685b6fdd83bb",
-      "exact_dispatch_blockers": {
-        "blocker_categories": {
-          "custody": [
-            "requires_byte_closed_archive",
-            "missing_byte_closed_archive_manifest"
-          ],
-          "dirty_worktree": [],
-          "dispatch_claim": [],
-          "exact_cuda_eval": [
-            "requires_exact_cuda_auth_eval"
-          ],
-          "interaction_model": [],
-          "kkt_or_admm": [
-            "proxy_evidence_not_kkt_ready",
-            "kkt:kkt_proof_or_admm_result_missing",
-            "kkt_not_ready_for_field_planning"
-          ],
-          "other": [],
-          "pareto_frontier": [
-            "pareto_ineligible_atom",
-            "pareto_ineligible_for_field_selection"
-          ],
-          "proxy_or_planning": [
-            "planning_only_lagrangian_atom",
-            "proxy_row_not_dispatchable",
-            "proxy_row"
-          ],
-          "runtime": [],
-          "score_claim": []
-        },
-        "blocker_count": 11,
-        "blockers": [
-          "planning_only_lagrangian_atom",
-          "requires_exact_cuda_auth_eval",
-          "requires_byte_closed_archive",
-          "proxy_row_not_dispatchable",
-          "missing_byte_closed_archive_manifest",
-          "proxy_evidence_not_kkt_ready",
-          "kkt:kkt_proof_or_admm_result_missing",
-          "kkt_not_ready_for_field_planning",
-          "pareto_ineligible_atom",
-          "proxy_row",
-          "pareto_ineligible_for_field_selection"
-        ],
-        "dispatch_attempted": false,
-        "dispatchable": false,
-        "next_required_proof": [
-          "verified_byte_closed_archive_manifest_with_sha256_and_bytes",
-          "non_proxy_empirical_or_cuda_evidence",
-          "passed_kkt_proof_or_converged_admm_waterline_result",
-          "pareto_eligible_byte_closed_non_proxy_rankable_atom",
-          "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
-        ],
-        "ready_for_exact_eval_dispatch": false,
-        "schema": "exact_dispatch_blockers_v1",
-        "score_claim": false
-      },
-      "expected_information_gain_nats": 0.0,
-      "expected_pose_dist_delta": 0.0,
-      "expected_score_variance": 0.0,
-      "expected_seg_dist_delta": 0.0,
-      "expected_total_score_delta": 0.0,
-      "expected_uncertainty_reduction": {
-        "has_uncertainty_signal": false,
-        "source_fields": [],
-        "total_variance_reduction": 0.0
-      },
-      "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
-      "family_group": "categorical_openpilot_mask_plan",
-      "field_interaction_contract": {
-        "assumption_count": 3,
-        "assumptions": [
-          "mask_stream_replacement_or_residual",
-          "openpilot_priors_must_be_charged_if_score_affecting",
-          "requires_class_geometry_noop_controls"
-        ],
-        "blockers": [],
-        "conflicts_with_atoms": [],
-        "conflicts_with_families": [
-          "whole_mask_replacement"
-        ],
-        "interaction_model": "",
-        "schema": "field_interaction_contract_v1",
-        "status": "passed",
-        "volterra_order": null,
-        "volterra_order_source": "",
-        "volterra_scope": "undeclared_order_first_order_assumptions_only",
-        "volterra_terms": [],
-        "volterra_terms_declared": false
-      },
-      "field_selection_ready_for_exact_eval_dispatch": false,
-      "geometry_priors": [],
-      "hard_pair_support": [],
-      "interaction_assumptions": [
-        "mask_stream_replacement_or_residual",
-        "openpilot_priors_must_be_charged_if_score_affecting",
-        "requires_class_geometry_noop_controls"
-      ],
-      "kkt_blockers": [
-        "missing_byte_closed_archive_manifest",
-        "proxy_evidence_not_kkt_ready",
-        "kkt:kkt_proof_or_admm_result_missing"
-      ],
-      "kkt_proof": {
-        "blockers": [
-          "kkt_proof_or_admm_result_missing"
-        ],
-        "candidates": [],
-        "kind": "",
-        "residual": null,
-        "source": "",
-        "status": "blocked",
-        "tolerance": null
-      },
-      "kkt_ready_for_field_planning": false,
-      "lexicographic_feasibility_tuple": [
-        false,
-        true,
-        false,
-        false,
-        false,
-        false,
-        0.0,
-        0.0
-      ],
-      "non_dominated_frontier_reason": {
-        "dominated_by": [],
-        "eligibility_blockers": [
-          "missing_byte_closed_archive_manifest",
-          "proxy_row"
-        ],
-        "eligible": false,
-        "frontier": false,
-        "objective_directions": {
-          "archive_ready_for_stack_review": "max",
-          "byte_delta": "min",
-          "confidence": "max",
-          "expected_pose_dist_delta": "min",
-          "expected_seg_dist_delta": "min",
-          "expected_total_score_delta": "min"
-        },
-        "objectives": {
-          "archive_ready_for_stack_review": 0.0,
-          "byte_delta": 0.0,
-          "confidence": 0.4,
-          "expected_pose_dist_delta": 0.0,
-          "expected_seg_dist_delta": 0.0,
-          "expected_total_score_delta": 0.0
-        },
-        "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
-        "schema": "non_dominated_frontier_reason_v1",
-        "scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
-        "status": "ineligible"
-      },
-      "observation_noise_variance": 0.0,
-      "openpilot_priors": [
-        "dynamic_object_filter_prior",
-        "openpilot_prior_required"
-      ],
-      "pair_support": [],
-      "paradigm": "categorical_openpilot_mask",
-      "pareto_dominated_by": [],
-      "pareto_eligibility_blockers": [
-        "missing_byte_closed_archive_manifest",
-        "proxy_row"
-      ],
-      "pareto_eligible": false,
-      "pareto_frontier": false,
-      "pareto_objectives": {
-        "archive_ready_for_stack_review": 0.0,
-        "byte_delta": 0.0,
-        "confidence": 0.4,
-        "expected_pose_dist_delta": 0.0,
-        "expected_seg_dist_delta": 0.0,
-        "expected_total_score_delta": 0.0
-      },
-      "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
-      "pose_score_delta_confidence_weighted": 0.0,
-      "proxy_row": true,
-      "rankable": true,
-      "rate_score_delta": 0.0,
-      "ready_for_exact_eval_dispatch": false,
-      "requested_dispatchable": false,
-      "research_basis_ids": [
-        "fridrich_stc_2011",
-        "fridrich_pq_wetpaper_2004",
-        "balle_e2e_2017",
-        "balle_hyperprior_2018"
-      ],
-      "score_claim": false,
-      "seg_score_delta_confidence_weighted": 0.0,
-      "selection_blockers": [
-        "kkt_not_ready_for_field_planning",
-        "missing_byte_closed_archive_manifest",
-        "pareto_ineligible_atom",
-        "proxy_row"
-      ],
-      "selection_penalty_terms": {
-        "kkt_not_ready_for_field_planning": 10.0,
-        "missing_byte_closed_archive_manifest": 100.0,
-        "pareto_ineligible_atom": 25.0,
-        "proxy_row": 50.0
-      },
-      "selection_penalty_units": 185.0,
-      "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
-      "selection_score_delta": 0.0,
-      "source_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
-      "source_dispatch_blockers": [
-        "cross_paradigm_atom_is_planning_only",
-        "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
-        "requires_exact_cuda_auth_eval",
-        "categorical_mask_requires_charged_runtime_consumer",
-        "categorical_mask_requires_decode_reencode_parity",
-        "no_op_control_not_passed:decode_reencode_identity_control",
-        "decode_reencode_parity_not_passed",
-        "decode_reencode_full_decode_not_proven",
-        "decode_reencode_byte_exact_reencode_not_proven",
-        "decode_reencode_independent_proof_artifact_missing",
-        "exact_eval_dispatch_requirements_missing"
-      ]
-    },
-    {
-      "adapter": "categorical_openpilot_mask_plan",
-      "adapter_dispatch_blockers": [
-        "cross_paradigm_atom_is_planning_only",
-        "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
-        "requires_exact_cuda_auth_eval",
-        "categorical_mask_requires_charged_runtime_consumer",
-        "categorical_mask_requires_decode_reencode_parity",
-        "no_op_control_not_passed:decode_reencode_identity_control",
-        "decode_reencode_parity_not_passed",
-        "decode_reencode_full_decode_not_proven",
-        "decode_reencode_byte_exact_reencode_not_proven",
-        "decode_reencode_independent_proof_artifact_missing",
-        "exact_eval_dispatch_requirements_missing"
-      ],
-      "allocation_inference": false,
-      "archive_manifest_custody": {
-        "archive_bytes": null,
-        "archive_bytes_valid": false,
-        "archive_sha256": "",
-        "archive_sha256_valid": false,
-        "blockers": [],
-        "exists": false,
-        "is_file": false,
-        "manifest_json_valid": false,
-        "path": "",
-        "score_claim_false": false,
-        "sha256": "",
-        "sha256_matches": false,
-        "sha256_valid": false,
-        "verified": false
-      },
-      "archive_manifest_path": "",
-      "archive_manifest_sha256": "",
-      "archive_ready_for_stack_review": false,
-      "atom_id": "categorical_openpilot_mask:candidate_construction_plan_class_rows:class_4_my_car",
-      "byte_closed_archive_manifest_attached": false,
-      "byte_delta": 0,
-      "class_support": [
-        4
-      ],
-      "confidence": 0.4,
-      "conflicts_with_atoms": [],
-      "conflicts_with_families": [
-        "whole_mask_replacement"
-      ],
-      "cross_paradigm_schema_version": 1,
-      "dispatch_blockers": [
-        "planning_only_lagrangian_atom",
-        "requires_exact_cuda_auth_eval",
-        "requires_byte_closed_archive",
-        "proxy_row_not_dispatchable",
-        "cross_paradigm_atom_is_planning_only",
-        "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
-        "categorical_mask_requires_charged_runtime_consumer",
-        "categorical_mask_requires_decode_reencode_parity",
-        "no_op_control_not_passed:decode_reencode_identity_control",
-        "decode_reencode_parity_not_passed",
-        "decode_reencode_full_decode_not_proven",
-        "decode_reencode_byte_exact_reencode_not_proven",
-        "decode_reencode_independent_proof_artifact_missing",
-        "exact_eval_dispatch_requirements_missing"
-      ],
-      "dispatchable": false,
-      "evidence_grade": "planning_manifest_audit",
-      "evidence_source_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
-      "evidence_source_sha256": "5ba5fd95817e9a59566a6d54be000d90f37a875c8b93ea3ce879685b6fdd83bb",
-      "exact_dispatch_blockers": {
-        "blocker_categories": {
-          "custody": [
-            "requires_byte_closed_archive",
-            "missing_byte_closed_archive_manifest"
-          ],
-          "dirty_worktree": [],
-          "dispatch_claim": [],
-          "exact_cuda_eval": [
-            "requires_exact_cuda_auth_eval"
-          ],
-          "interaction_model": [],
-          "kkt_or_admm": [
-            "proxy_evidence_not_kkt_ready",
-            "kkt:kkt_proof_or_admm_result_missing",
-            "kkt_not_ready_for_field_planning"
-          ],
-          "other": [],
-          "pareto_frontier": [
-            "pareto_ineligible_atom",
-            "pareto_ineligible_for_field_selection"
-          ],
-          "proxy_or_planning": [
-            "planning_only_lagrangian_atom",
-            "proxy_row_not_dispatchable",
-            "proxy_row"
-          ],
-          "runtime": [],
-          "score_claim": []
-        },
-        "blocker_count": 11,
-        "blockers": [
-          "planning_only_lagrangian_atom",
-          "requires_exact_cuda_auth_eval",
-          "requires_byte_closed_archive",
-          "proxy_row_not_dispatchable",
-          "missing_byte_closed_archive_manifest",
-          "proxy_evidence_not_kkt_ready",
-          "kkt:kkt_proof_or_admm_result_missing",
-          "kkt_not_ready_for_field_planning",
-          "pareto_ineligible_atom",
-          "proxy_row",
-          "pareto_ineligible_for_field_selection"
-        ],
-        "dispatch_attempted": false,
-        "dispatchable": false,
-        "next_required_proof": [
-          "verified_byte_closed_archive_manifest_with_sha256_and_bytes",
-          "non_proxy_empirical_or_cuda_evidence",
-          "passed_kkt_proof_or_converged_admm_waterline_result",
-          "pareto_eligible_byte_closed_non_proxy_rankable_atom",
-          "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
-        ],
-        "ready_for_exact_eval_dispatch": false,
-        "schema": "exact_dispatch_blockers_v1",
-        "score_claim": false
-      },
-      "expected_information_gain_nats": 0.0,
-      "expected_pose_dist_delta": 0.0,
-      "expected_score_variance": 0.0,
-      "expected_seg_dist_delta": 0.0,
-      "expected_total_score_delta": 0.0,
-      "expected_uncertainty_reduction": {
-        "has_uncertainty_signal": false,
-        "source_fields": [],
-        "total_variance_reduction": 0.0
-      },
-      "family": "categorical_openpilot_mask_candidate_construction_plan_class_rows",
-      "family_group": "categorical_openpilot_mask_plan",
-      "field_interaction_contract": {
-        "assumption_count": 3,
-        "assumptions": [
-          "mask_stream_replacement_or_residual",
-          "openpilot_priors_must_be_charged_if_score_affecting",
-          "requires_class_geometry_noop_controls"
-        ],
-        "blockers": [],
-        "conflicts_with_atoms": [],
-        "conflicts_with_families": [
-          "whole_mask_replacement"
-        ],
-        "interaction_model": "",
-        "schema": "field_interaction_contract_v1",
-        "status": "passed",
-        "volterra_order": null,
-        "volterra_order_source": "",
-        "volterra_scope": "undeclared_order_first_order_assumptions_only",
-        "volterra_terms": [],
-        "volterra_terms_declared": false
-      },
-      "field_selection_ready_for_exact_eval_dispatch": false,
-      "geometry_priors": [],
-      "hard_pair_support": [],
-      "interaction_assumptions": [
-        "mask_stream_replacement_or_residual",
-        "openpilot_priors_must_be_charged_if_score_affecting",
-        "requires_class_geometry_noop_controls"
-      ],
-      "kkt_blockers": [
-        "missing_byte_closed_archive_manifest",
-        "proxy_evidence_not_kkt_ready",
-        "kkt:kkt_proof_or_admm_result_missing"
-      ],
-      "kkt_proof": {
-        "blockers": [
-          "kkt_proof_or_admm_result_missing"
-        ],
-        "candidates": [],
-        "kind": "",
-        "residual": null,
-        "source": "",
-        "status": "blocked",
-        "tolerance": null
-      },
-      "kkt_ready_for_field_planning": false,
-      "lexicographic_feasibility_tuple": [
-        false,
-        true,
-        false,
-        false,
-        false,
-        false,
-        0.0,
-        0.0
-      ],
-      "non_dominated_frontier_reason": {
-        "dominated_by": [],
-        "eligibility_blockers": [
-          "missing_byte_closed_archive_manifest",
-          "proxy_row"
-        ],
-        "eligible": false,
-        "frontier": false,
-        "objective_directions": {
-          "archive_ready_for_stack_review": "max",
-          "byte_delta": "min",
-          "confidence": "max",
-          "expected_pose_dist_delta": "min",
-          "expected_seg_dist_delta": "min",
-          "expected_total_score_delta": "min"
-        },
-        "objectives": {
-          "archive_ready_for_stack_review": 0.0,
-          "byte_delta": 0.0,
-          "confidence": 0.4,
-          "expected_pose_dist_delta": 0.0,
-          "expected_seg_dist_delta": 0.0,
-          "expected_total_score_delta": 0.0
-        },
-        "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
-        "schema": "non_dominated_frontier_reason_v1",
-        "scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
-        "status": "ineligible"
-      },
-      "observation_noise_variance": 0.0,
-      "openpilot_priors": [
-        "ego_car_filter_prior",
-        "openpilot_prior_required"
-      ],
-      "pair_support": [],
-      "paradigm": "categorical_openpilot_mask",
-      "pareto_dominated_by": [],
-      "pareto_eligibility_blockers": [
-        "missing_byte_closed_archive_manifest",
-        "proxy_row"
-      ],
-      "pareto_eligible": false,
-      "pareto_frontier": false,
-      "pareto_objectives": {
-        "archive_ready_for_stack_review": 0.0,
-        "byte_delta": 0.0,
-        "confidence": 0.4,
-        "expected_pose_dist_delta": 0.0,
-        "expected_seg_dist_delta": 0.0,
-        "expected_total_score_delta": 0.0
-      },
-      "pareto_scope": "categorical_openpilot_mask:candidate_construction_plan_class_rows",
-      "pose_score_delta_confidence_weighted": 0.0,
-      "proxy_row": true,
-      "rankable": true,
-      "rate_score_delta": 0.0,
-      "ready_for_exact_eval_dispatch": false,
-      "requested_dispatchable": false,
-      "research_basis_ids": [
-        "fridrich_stc_2011",
-        "fridrich_pq_wetpaper_2004",
-        "balle_e2e_2017",
-        "balle_hyperprior_2018"
-      ],
-      "score_claim": false,
-      "seg_score_delta_confidence_weighted": 0.0,
-      "selection_blockers": [
-        "kkt_not_ready_for_field_planning",
-        "missing_byte_closed_archive_manifest",
-        "pareto_ineligible_atom",
-        "proxy_row"
-      ],
-      "selection_penalty_terms": {
-        "kkt_not_ready_for_field_planning": 10.0,
-        "missing_byte_closed_archive_manifest": 100.0,
-        "pareto_ineligible_atom": 25.0,
-        "proxy_row": 50.0
-      },
-      "selection_penalty_units": 185.0,
-      "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
-      "selection_score_delta": 0.0,
-      "source_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
-      "source_dispatch_blockers": [
-        "cross_paradigm_atom_is_planning_only",
-        "requires_stack_interaction_review",
-        "requires_byte_closed_archive_manifest_before_dispatch",
-        "requires_exact_cuda_auth_eval",
-        "categorical_mask_requires_charged_runtime_consumer",
-        "categorical_mask_requires_decode_reencode_parity",
-        "no_op_control_not_passed:decode_reencode_identity_control",
-        "decode_reencode_parity_not_passed",
-        "decode_reencode_full_decode_not_proven",
-        "decode_reencode_byte_exact_reencode_not_proven",
-        "decode_reencode_independent_proof_artifact_missing",
-        "exact_eval_dispatch_requirements_missing"
-      ]
     }
   ],
   "schema_version": 2,
@@ -4195,7 +4148,7 @@
       "--json-out",
       "experiments/results/cross_paradigm_atom_ledger_20260507_codex/ledger.json"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "c0e9a39dff4b58cf9b3f2b643f1bd37f1cd152e7fd73b15ab1f0336053930d17",
+    "canonical_payload_without_tool_manifest_sha256": "effa03bdd37642103433fb75735e62774bc2d96396589c23a9826996ed2d3c20",
     "dispatch_attempted": false,
     "input_files": [
       {
@@ -4204,14 +4157,14 @@
         "sha256": "d7b31ac9ac97f148c75379fec3dcbfb0cebc8ee64fb6f87a616a224b3616578f"
       },
       {
-        "bytes": 58591,
+        "bytes": 63146,
         "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json",
-        "sha256": "cc1999364d2cd7f53d6608063e91dd87d79993476132a0cbf8822a97874698f8"
+        "sha256": "0e59293e4750b79914db239230d563658673aa5e051a483657188582fe7e13ca"
       },
       {
-        "bytes": 27200,
+        "bytes": 29344,
         "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
-        "sha256": "5ba5fd95817e9a59566a6d54be000d90f37a875c8b93ea3ce879685b6fdd83bb"
+        "sha256": "1e5c3562ed3509f566e81a439a4433b004e07bcffe32b0607d7f5251273ba65c"
       }
     ],
     "output_path": "experiments/results/cross_paradigm_atom_ledger_20260507_codex/ledger.json",

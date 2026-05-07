@@ -239,6 +239,58 @@ def test_categorical_readiness_candidate_construction_class_rows_surface() -> No
     assert atom["source_archive_sha256"] == "a" * 64
 
 
+def test_categorical_readiness_byte_closed_parity_supplies_archive_custody(
+    tmp_path: Path,
+) -> None:
+    readiness = tmp_path / "readiness.json"
+    payload = {
+        "kind": "categorical_candidate_readiness",
+        "schema_version": 1,
+        "score_claim": False,
+        "byte_closed_archive_parity": {
+            "contract": "categorical_byte_closed_archive_parity_v1",
+            "schema_version": 1,
+            "proven": True,
+            "score_claim": False,
+            "dispatch_attempted": False,
+            "blockers": [],
+            "candidate_archive": {"bytes": 169725, "sha256": "6" * 64},
+        },
+        "candidate_construction_plan": {
+            "class_rows": [
+                {
+                    "class_id": 1,
+                    "name": "lane_markings",
+                    "byte_delta": 11,
+                }
+            ]
+        },
+    }
+    readiness.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+
+    atoms = atoms_from_categorical_openpilot_mask_plan(
+        payload,
+        evidence_source_path=readiness.as_posix(),
+        evidence_source_sha256=sha256_file(readiness),
+    )
+    assert len(atoms) == 1
+    assert atoms[0]["archive_manifest_path"] == readiness.as_posix()
+    assert atoms[0]["archive_manifest_sha256"] == sha256_file(readiness)
+    assert "categorical_byte_closed_archive_parity_proven" in atoms[0]["interaction_assumptions"]
+
+    ledger = build_cross_paradigm_atom_ledger(
+        atoms,
+        base_pose_dist=0.00003351,
+        source="fixture",
+    )
+    row = ledger["rows"][0]
+    assert row["byte_closed_archive_manifest_attached"] is True
+    assert row["archive_manifest_custody"]["archive_sha256"] == "6" * 64
+    assert "requires_byte_closed_archive" not in row["dispatch_blockers"]
+    assert "requires_byte_closed_archive_manifest_before_dispatch" not in row["source_dispatch_blockers"]
+    assert row["archive_ready_for_stack_review"] is False
+
+
 def test_invalid_confidence_and_duplicate_ids_fail_closed() -> None:
     with pytest.raises(CrossParadigmAtomError, match="confidence"):
         atoms_from_foveation_plan({"ok": True, "bytes": 1, "confidence": 2.0})

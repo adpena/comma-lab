@@ -27,6 +27,9 @@ DEFAULT_DISPATCH_BLOCKERS = (
     "requires_byte_closed_archive_manifest_before_dispatch",
     "requires_exact_cuda_auth_eval",
 )
+ARCHIVE_CUSTODY_SATISFIED_BLOCKERS = {
+    "requires_byte_closed_archive_manifest_before_dispatch",
+}
 
 COMMON_ATOM_FIELDS = (
     "atom_id",
@@ -81,6 +84,12 @@ def build_cross_paradigm_atom_ledger(
         paradigm = str(original["paradigm"])
         adapter = str(original["adapter"])
         source_blockers = list(original["dispatch_blockers"])
+        if row["byte_closed_archive_manifest_attached"]:
+            source_blockers = [
+                blocker
+                for blocker in source_blockers
+                if blocker not in ARCHIVE_CUSTODY_SATISFIED_BLOCKERS
+            ]
         source_blocker_counts.update(source_blockers)
         paradigm_counts[paradigm] += 1
         adapter_counts[adapter] += 1
@@ -439,6 +448,13 @@ def atoms_from_categorical_openpilot_mask_plan(
         plan,
         keys=("archive_manifest_sha256", "candidate_archive_manifest_sha256"),
     )
+    if (
+        not archive_manifest_path
+        and not archive_manifest_sha256
+        and _categorical_byte_closed_archive_parity_proven(plan)
+    ):
+        archive_manifest_path = evidence_source_path
+        archive_manifest_sha256 = evidence_source_sha256
     atoms: list[dict[str, Any]] = []
     for source_name, row in _categorical_rows(plan):
         family = str(row.get("family") or row.get("atom_family") or source_name or "mask_atom")
@@ -493,6 +509,11 @@ def atoms_from_categorical_openpilot_mask_plan(
                     "mask_stream_replacement_or_residual",
                     "openpilot_priors_must_be_charged_if_score_affecting",
                     "requires_class_geometry_noop_controls",
+                    *(
+                        ["categorical_byte_closed_archive_parity_proven"]
+                        if _categorical_byte_closed_archive_parity_proven(plan)
+                        else []
+                    ),
                     *_string_list(row.get("interaction_assumptions")),
                 ]
             ),
@@ -535,6 +556,26 @@ def atoms_from_categorical_openpilot_mask_plan(
         }
         atoms.append(normalize_cross_paradigm_atom(atom))
     return _dedupe_and_sort_atoms(atoms)
+
+
+def _categorical_byte_closed_archive_parity_proven(plan: Mapping[str, Any]) -> bool:
+    parity = plan.get("byte_closed_archive_parity")
+    if not isinstance(parity, Mapping):
+        return False
+    candidate_archive = parity.get("candidate_archive")
+    archive = candidate_archive if isinstance(candidate_archive, Mapping) else {}
+    archive_sha256 = str(archive.get("sha256") or "")
+    archive_bytes = archive.get("bytes")
+    return bool(
+        parity.get("proven") is True
+        and parity.get("score_claim") is False
+        and parity.get("dispatch_attempted") is False
+        and not _string_list(parity.get("blockers"))
+        and isinstance(archive_bytes, int)
+        and not isinstance(archive_bytes, bool)
+        and archive_bytes > 0
+        and _looks_like_sha256(archive_sha256)
+    )
 
 
 def atoms_from_lapose_plan(
@@ -828,6 +869,10 @@ def _sha256_file_if_exists(path_value: str) -> str:
         for chunk in iter(lambda: handle.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _looks_like_sha256(value: str) -> bool:
+    return len(value) == 64 and all(char in "0123456789abcdef" for char in value.lower())
 
 
 def _lapose_rows(payload: Mapping[str, Any]) -> list[Mapping[str, Any]]:

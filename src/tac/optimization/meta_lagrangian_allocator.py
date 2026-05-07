@@ -437,7 +437,18 @@ def _archive_manifest_payload_custody(path: Path) -> dict[str, Any]:
         }
 
     archive = payload.get("archive")
+    candidate_archive = payload.get("candidate_archive")
+    parity = payload.get("byte_closed_archive_parity")
+    parity_archive = (
+        parity.get("candidate_archive")
+        if isinstance(parity, Mapping) and parity.get("proven") is True
+        else None
+    )
     archive_obj = archive if isinstance(archive, Mapping) else {}
+    if not archive_obj and isinstance(candidate_archive, Mapping):
+        archive_obj = candidate_archive
+    if not archive_obj and isinstance(parity_archive, Mapping):
+        archive_obj = parity_archive
     archive_sha256 = str(
         archive_obj.get("sha256")
         or payload.get("archive_sha256")

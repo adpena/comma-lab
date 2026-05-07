@@ -553,6 +553,40 @@ def test_archive_manifest_file_must_describe_closed_archive_bytes(tmp_path: Path
     assert "archive_manifest_archive_bytes_missing_or_invalid" in row["dispatch_blockers"]
 
 
+def test_candidate_archive_record_counts_as_byte_closed_manifest(tmp_path: Path) -> None:
+    manifest = tmp_path / "candidate-readiness.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "candidate_archive": {"bytes": 169725, "sha256": "7" * 64},
+                "score_claim": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    row = expected_atom_score_delta(
+        {
+            "atom_id": "candidate_archive_manifest",
+            "family": "mask_atom",
+            "family_group": "mask",
+            "byte_delta": -1,
+            "confidence": 0.7,
+            "evidence_grade": "empirical",
+            "interaction_assumptions": ["byte_closed_candidate_archive"],
+            "archive_manifest_path": manifest.as_posix(),
+            "archive_manifest_sha256": sha256_file(manifest),
+        },
+        base_pose_dist=0.01,
+    )
+
+    assert row["byte_closed_archive_manifest_attached"] is True
+    assert row["archive_manifest_custody"]["archive_sha256"] == "7" * 64
+    assert "requires_byte_closed_archive" not in row["dispatch_blockers"]
+
+
 def test_dispatchable_proxy_row_is_refused_even_with_byte_closed_manifest(tmp_path: Path) -> None:
     manifest = _archive_manifest(tmp_path)
     row = expected_atom_score_delta(
