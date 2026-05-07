@@ -123,6 +123,13 @@ _SCORER_FREE_RENDERER_MAGICS: tuple[bytes, ...] = (
     b"C3R1",
     b"SCv1",
     b"SZv1",
+    b"QFAI",
+    b"QZS3",
+    b"MQZ1",
+    b"QBF1",
+    b"BFJ1",
+    b"QH0",
+    b"QM0",
     b"NWC1",  # Lane J-NWC base codec wire format
     b"NWCS",  # Lane J-NWCS sensitivity-aware codec wire format prefix
 )

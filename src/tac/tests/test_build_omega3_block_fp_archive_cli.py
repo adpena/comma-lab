@@ -272,3 +272,57 @@ def test_loader_accepts_frontier_jfg_wire_formats_and_rejects_unknown_magic() ->
             b"NOPEnot-a-supported-jfg-payload",
             device=torch.device("cpu"),
         )
+
+
+def test_source_member_detection_rejects_pr106_style_hnerv_zero_bin(
+    tmp_path: Path,
+) -> None:
+    module = _load_cli_module()
+    source_archive = tmp_path / "hnerv_like.zip"
+    with zipfile.ZipFile(source_archive, "w") as zf:
+        zf.writestr("0.bin", b"HNeRV-packed-payload-not-jfg")
+        zf.writestr("masks.mkv", b"mask")
+
+    with (
+        zipfile.ZipFile(source_archive, "r") as zf,
+        pytest.raises(ValueError, match="no supported JFG renderer member"),
+    ):
+        module._identify_source_renderer_member(zf)
+
+
+def test_builder_rejects_non_default_depth_mult_before_archive_write(
+    tmp_path: Path,
+) -> None:
+    sd = _make_synthetic_jfg_state_dict()
+    renderer_blob = _make_qfai_renderer_blob(sd)
+    header_len = struct.unpack("<I", renderer_blob[4:8])[0]
+    header = json.loads(renderer_blob[8:8 + header_len].decode("utf-8"))
+    header["depth_mult"] = 2
+    header_b = json.dumps(header).encode("utf-8")
+    rewritten_blob = b"".join(
+        [
+            b"QFAI",
+            struct.pack("<I", len(header_b)),
+            header_b,
+            renderer_blob[8 + header_len:],
+        ]
+    )
+    source_archive = tmp_path / "source_depth2.zip"
+    with zipfile.ZipFile(source_archive, "w") as zf:
+        zf.writestr("renderer.bin", rewritten_blob)
+
+    out_dir = tmp_path / "out_depth2"
+    cmd = [
+        sys.executable,
+        str(CLI_PATH),
+        "--source-archive",
+        str(source_archive),
+        "--output-dir",
+        str(out_dir),
+        "--lzma-preset",
+        "1",
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, cwd=REPO_ROOT)
+    assert result.returncode != 0
+    assert "depth_mult=1" in (result.stdout + result.stderr)
+    assert not (out_dir / "archive.zip").exists()

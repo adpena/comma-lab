@@ -126,6 +126,8 @@ def test_film_layer_protection_default() -> None:
     sd = {
         "block.film_proj.weight": torch.randn(112, 48) * 0.1,
         "block.film_proj.bias": torch.randn(112) * 0.01,
+        "pose_mlp.0.weight": torch.randn(48, 6) * 0.1,
+        "pose_mlp.2.weight": torch.randn(48, 48) * 0.1,
         "block.conv1.weight": torch.randn(56, 56, 1, 1) * 0.05,
     }
     cfg = BlockFPConfig(block_size=16, protect_film_layers=True, lzma_preset=1)
@@ -134,6 +136,8 @@ def test_film_layer_protection_default() -> None:
     assert quantized["block.film_proj.weight"].int8_mantissa == b""
     assert len(quantized["block.film_proj.weight"].fp16_payload) == 112 * 48 * 2
     assert quantized["block.film_proj.bias"].protected is True
+    assert quantized["pose_mlp.0.weight"].protected is True
+    assert quantized["pose_mlp.2.weight"].protected is True
     assert quantized["block.conv1.weight"].protected is False
     assert len(quantized["block.conv1.weight"].int8_mantissa) > 0
 
@@ -312,6 +316,19 @@ def test_unpack_renderer_payload_recognizes_bfj1_renderer_payload() -> None:
 
     assert unpacker._looks_like_renderer_payload(payload) is True
     assert unpacker._renderer_payload_codec_label(payload) == "brotli_bfj1"
+
+
+def test_bfj1_is_visible_to_runtime_preflight_and_composition_allowlist(
+    tmp_path,
+) -> None:
+    from tac.preflight import preflight_check
+    from tac.stack_compositions import _SCORER_FREE_RENDERER_MAGICS
+
+    renderer = tmp_path / "renderer.bin"
+    renderer.write_bytes(MAGIC_BFJ1 + b"synthetic-bfj1-body")
+
+    assert preflight_check(renderer_path=renderer, verbose=False) == []
+    assert MAGIC_BFJ1 in _SCORER_FREE_RENDERER_MAGICS
 
 
 def test_compress_empty_dict_raises() -> None:

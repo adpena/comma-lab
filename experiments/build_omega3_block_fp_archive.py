@@ -83,6 +83,25 @@ def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+_SUPPORTED_JFG_CONTAINER_MAGICS: tuple[bytes, ...] = (
+    b"QZS3",
+    b"MQZ1",
+    b"QBF1",
+    b"BFJ1",
+    b"QFAI",
+    b"QH0",
+    b"QM0",
+)
+
+
+def _looks_like_supported_jfg_container(blob: bytes) -> bool:
+    return blob.startswith(_SUPPORTED_JFG_CONTAINER_MAGICS)
+
+
+def _looks_like_torch_state_dict_container(blob: bytes) -> bool:
+    return blob.startswith((b"PK\x03\x04", b"\x80\x02", b"\x80\x03", b"\x80\x04", b"\x80\x05"))
+
+
 def _load_jfg_state_dict_from_blob(
     blob: bytes,
     *,
@@ -164,21 +183,41 @@ def _load_jfg_state_dict_from_blob(
 
 
 def _identify_source_renderer_member(zf: zipfile.ZipFile) -> str:
-    """Pick the renderer member from a source archive's namelist.
+    """Pick a reviewed JFG renderer member by content, not filename.
 
-    Common conventions:
-      - ``renderer.bin`` (canonical)
-      - ``0.bin`` (apogee_int6 / OWV3 lanes)
-
-    Falls back to the first member if neither is present.
+    PR106/HNeRV archives commonly use ``0.bin`` for a non-JFG packed payload.
+    This builder is only for JointFrameGenerator payloads, so filename fallback
+    would create a dangerous architecture-family mixup. Raw torch state-dicts
+    are accepted only from explicit renderer-like filenames.
     """
     names = zf.namelist()
-    for candidate in ("renderer.bin", "0.bin"):
-        if candidate in names:
+    preferred = ["renderer.bin", "p", *names]
+    for candidate in dict.fromkeys(preferred):
+        if candidate not in names:
+            continue
+        blob = zf.read(candidate)
+        if _looks_like_supported_jfg_container(blob):
+            return candidate
+        if candidate == "renderer.bin" and _looks_like_torch_state_dict_container(blob):
             return candidate
     if not names:
         raise ValueError("source archive contains no members")
-    return names[0]
+    raise ValueError(
+        "source archive contains no supported JFG renderer member; expected "
+        "QZS3/MQZ1/QBF1/BFJ1/QFAI/QH0/QM0 content, or a raw torch state_dict "
+        "in renderer.bin. Refusing filename-only fallback."
+    )
+
+
+def _validate_supported_arch_meta(arch_meta: dict[str, Any]) -> None:
+    """Fail closed on source architectures the BFJ1 runtime cannot rebuild."""
+    depth_mult = int(arch_meta.get("depth_mult", 1))
+    if depth_mult != 1:
+        raise ValueError(
+            "BFJ1 runtime currently rebuilds JointFrameGenerator with "
+            f"depth_mult=1, but source arch_meta has depth_mult={depth_mult}. "
+            "Refusing to build an archive that would fail strict load at inflate."
+        )
 
 
 # Manifest
@@ -368,6 +407,7 @@ def main(argv: list[str] | None = None) -> int:
     state_dict, arch_meta = _load_jfg_state_dict_from_blob(
         renderer_blob, device=torch.device("cpu")
     )
+    _validate_supported_arch_meta(arch_meta)
     n_params = sum(int(t.numel()) for t in state_dict.values())
     print(
         f"[omega3] JFG state_dict loaded: {len(state_dict)} tensors, "

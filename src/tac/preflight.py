@@ -118,6 +118,7 @@ def preflight_check(
             b"QFAI": "Q-FAITHFUL JointFrameGenerator runtime renderer",
             b"QZS3": "QZS3 JointFrameGenerator runtime renderer",
             b"MQZ1": "MQZ1 mixed/local QZS runtime renderer",
+            b"BFJ1": "BFJ1 block-FP JointFrameGenerator runtime renderer",
             b"QH0": "PR85 QH0 JointFrameGenerator runtime renderer",
             b"QM0": "PR85 QM0 JointFrameGenerator runtime renderer",
             b"QH1": "PR85 QH1 lossless record-repack JointFrameGenerator runtime renderer",

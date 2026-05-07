@@ -127,6 +127,7 @@ DEFAULT_BLOCK_SIZE: int = 64
 DEFAULT_PROTECT_PATTERNS: tuple[str, ...] = (
     "film",
     "cond",
+    "pose_mlp",
     "gamma",
     "beta",
     "scale",
