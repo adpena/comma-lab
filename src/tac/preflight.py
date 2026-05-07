@@ -1138,8 +1138,16 @@ def preflight_all(
         #   PCC6: venv-creating scripts must install pip (or annotate)
         #   PCC7: vastai create instance must use --disk >= 60GB
         #   PCC8: multi-candidate chain drivers must clean inflated/ per-cand
+        # Promoted STRICT 2026-05-06: live count 0 — wired
+        # `bash scripts/ensure_remote_uv.sh --symlink-system` Stage 0b in the
+        # 4 lane scripts that directly invoke contest_auth_eval.py (j_nwc,
+        # j_nwcs_ec_stack, j_nwcs_sensitivity_aware_codec, wc_curator_outlier).
+        # Scanner also accepts `remote_archive_only_eval.sh` delegation as a
+        # satisfying inheritance marker (the canonical wrapper bootstraps at
+        # lines 46-72) and uses regex-based contest_auth_eval.py invocation
+        # detection (no false-positive on JSON-string mentions).
         check_remote_archive_eval_self_bootstraps_uv_and_ffmpeg(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # Promoted STRICT 2026-05-06: PCC6/7/8 all at 0 live violations after
         # the loop-session permanent-extinction wave (commit ed8a3da7-era).
@@ -21598,9 +21606,21 @@ def check_remote_archive_eval_self_bootstraps_uv_and_ffmpeg(
         # remote_setup_full.sh having pre-bootstrapped uv.
         "remote_setup_full.sh",
         "setup_full.sh",
+        # Lane scripts that delegate the eval to remote_archive_only_eval.sh
+        # inherit its self-bootstrap (lines 46-72 in that script). The
+        # delegation is the acceptance: the canonical wrapper bootstraps
+        # before running contest_auth_eval.py.
+        "remote_archive_only_eval.sh",
         # Some scripts call `command -v uv` then source the install if
         # missing — that satisfies the contract by self-healing.
         "command -v uv >/dev/null",
+    )
+    # Detect ACTUAL contest_auth_eval.py subprocess invocations, not
+    # JSON-string mentions inside heredocs (e.g. provenance manifests
+    # writing `"required_score_truth": "... contest_auth_eval.py ..."`).
+    _invocation_re = re.compile(
+        r'(?:"?\$PYBIN"?|\bpython3?\b)\s+(?:-u\s+)?(?:-m\s+)?'
+        r'(?:\S+/)?contest_auth_eval\.py\b'
     )
     for path in candidates:
         n_scanned += 1
@@ -21614,7 +21634,11 @@ def check_remote_archive_eval_self_bootstraps_uv_and_ffmpeg(
             line if not line.lstrip().startswith("#") else ""
             for line in text.split("\n")
         )
-        if "contest_auth_eval" not in non_comment:
+        # Accept either a real python invocation OR a delegation to a
+        # remote_lane_*.sh / remote_archive_only_eval.sh that itself runs
+        # contest_auth_eval.py — the delegation is satisfied by the
+        # `remote_archive_only_eval.sh` inheritance marker below.
+        if not _invocation_re.search(non_comment) and "remote_archive_only_eval.sh" not in non_comment:
             continue
         n_relevant += 1
         if any(m in non_comment for m in bootstrap_markers):

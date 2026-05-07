@@ -45,6 +45,17 @@ bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
     exit 2
 }
 
+# Stage 0b: self-bootstrap uv (CLAUDE.md non-negotiable, PCC5).
+# Fresh Vast.ai instances don't have uv on PATH. The canonical helper is
+# scripts/ensure_remote_uv.sh — it idempotently installs uv and symlinks
+# it into /usr/local/bin so subprocesses inherit it. Cost of skipping
+# this: ~$0.30 + 5-10 min wasted per dispatch (memory: feedback_uv_not_on_path_vast_instance_20260501).
+log "=== Stage 0b: uv bootstrap ==="
+bash "$WORKSPACE/scripts/ensure_remote_uv.sh" --symlink-system >/dev/null || {
+    log "FATAL: uv bootstrap failed."
+    exit 3
+}
+
 # Stage 1: code parity.
 cost_guard
 # CODE PARITY: launcher tarball is authoritative — do NOT git reset --hard.
