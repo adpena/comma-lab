@@ -412,7 +412,8 @@ def test_wr01_exact_eval_packet_accepts_matching_custody_artifacts(tmp_path: Pat
     assert payload["runtime_decode_gate"]["blockers"] == []
     assert payload["candidate_id"] == "lane"
     assert payload["family"] == "hnerv_wavelet_wr01_apply_transform"
-    assert payload["pareto_scope"] == "hnerv_rate_only_exact_archive"
+    assert payload["pareto_scope"] == "hnerv_wavelet_apply_transform_exact_archive"
+    assert "rate-only single-member archive transform" not in payload["interaction_assumptions"]
     assert payload["byte_delta"] == archive_bytes - 123
     assert math.isclose(
         payload["expected_total_score_delta"],

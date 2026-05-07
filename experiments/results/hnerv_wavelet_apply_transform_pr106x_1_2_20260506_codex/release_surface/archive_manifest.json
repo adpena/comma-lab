@@ -55,7 +55,7 @@
       "repo_path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json"
     }
   },
-  "recorded_at_utc": "2026-05-07T09:47:04Z",
+  "recorded_at_utc": "2026-05-07T09:55:29Z",
   "release_surface_scope": "static_upload_files_only_no_auth_eval_no_dispatch",
   "remaining_required_for_score_or_dispatch": [
     "exact_cuda_auth_eval",
@@ -66,7 +66,7 @@
   "remote_gpu_run": false,
   "report": {
     "path": "report.txt",
-    "sha256": "981fc16991b195e746d02861cf1a27ce56d0d459f886aeec82185ddcbcd1b15f"
+    "sha256": "d18ede86b0f402b0004ca44068b13f1f8341d31b59551d1c8659b5f62895c8ae"
   },
   "schema": "wr01_release_surface_manifest_v1",
   "schema_version": 1,

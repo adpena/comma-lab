@@ -1,5 +1,5 @@
 WR01 static release surface
-recorded_at_utc: 2026-05-07T09:47:04Z
+recorded_at_utc: 2026-05-07T09:55:29Z
 candidate_id: wr01_apply_pr106x_half
 family: hnerv_wavelet_wr01_apply_transform
 scope: upload-file static surface only

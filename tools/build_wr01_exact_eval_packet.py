@@ -2431,7 +2431,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "candidate_id": args.lane_id,
         "family": "hnerv_wavelet_wr01_apply_transform",
         "family_group": "hnerv_wavelet_wr01_apply",
-        "pareto_scope": "hnerv_rate_only_exact_archive",
+        "pareto_scope": "hnerv_wavelet_apply_transform_exact_archive",
         "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
         "confidence": 1.0,
         "proxy_row": False,
@@ -2442,7 +2442,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "expected_information_gain_nats": 0.0,
         "expected_score_variance": 0.0,
         "interaction_assumptions": [
-            "rate-only single-member archive transform; no intentional SegNet or PoseNet distortion change",
+            "scorer-visible single-member archive transform; no SegNet or PoseNet delta is claimed before exact CUDA",
             "archive and runtime parity are necessary but exact CUDA auth eval is required before any score claim",
             "no composability assumption with categorical, sensitivity, or pose atoms until stacked archive eval exists",
         ],

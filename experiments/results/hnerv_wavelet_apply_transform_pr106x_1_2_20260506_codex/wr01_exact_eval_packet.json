@@ -479,7 +479,7 @@
   "family": "hnerv_wavelet_wr01_apply_transform",
   "family_group": "hnerv_wavelet_wr01_apply",
   "interaction_assumptions": [
-    "rate-only single-member archive transform; no intentional SegNet or PoseNet distortion change",
+    "scorer-visible single-member archive transform; no SegNet or PoseNet delta is claimed before exact CUDA",
     "archive and runtime parity are necessary but exact CUDA auth eval is required before any score claim",
     "no composability assumption with categorical, sensitivity, or pose atoms until stacked archive eval exists"
   ],
@@ -589,14 +589,14 @@
     ]
   },
   "packet_kind": "wr01_exact_eval_operator_packet",
-  "pareto_scope": "hnerv_rate_only_exact_archive",
+  "pareto_scope": "hnerv_wavelet_apply_transform_exact_archive",
   "payload_diff_ready": true,
   "preflight_ready": true,
   "proxy_row": false,
   "ready_for_exact_eval_dispatch": false,
   "ready_for_exact_eval_dispatch_claim": false,
   "ready_for_submit": false,
-  "recorded_at_utc": "2026-05-07T09:47:05Z",
+  "recorded_at_utc": "2026-05-07T09:55:29Z",
   "release_surface": {
     "exists": true,
     "files": {
@@ -610,7 +610,7 @@
         "bytes": 3864,
         "exists": true,
         "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
-        "sha256": "4c93de758ab962e5e9e584bcef85791a74cd8c878aee6e9b1fbcbcbb5cc94453"
+        "sha256": "361e2022f71ef9765431a99e8f45e6864b09e673e965b2d2bfab06a66c6f1cdf"
       },
       "inflate.sh": {
         "bytes": 681,
@@ -622,7 +622,7 @@
         "bytes": 1238,
         "exists": true,
         "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/report.txt",
-        "sha256": "981fc16991b195e746d02861cf1a27ce56d0d459f886aeec82185ddcbcd1b15f"
+        "sha256": "d18ede86b0f402b0004ca44068b13f1f8341d31b59551d1c8659b5f62895c8ae"
       }
     },
     "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface",
@@ -640,7 +640,7 @@
         "bytes": 3864,
         "exists": true,
         "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
-        "sha256": "4c93de758ab962e5e9e584bcef85791a74cd8c878aee6e9b1fbcbcbb5cc94453"
+        "sha256": "361e2022f71ef9765431a99e8f45e6864b09e673e965b2d2bfab06a66c6f1cdf"
       },
       "inflate.sh": {
         "bytes": 681,
@@ -652,7 +652,7 @@
         "bytes": 1238,
         "exists": true,
         "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/report.txt",
-        "sha256": "981fc16991b195e746d02861cf1a27ce56d0d459f886aeec82185ddcbcd1b15f"
+        "sha256": "d18ede86b0f402b0004ca44068b13f1f8341d31b59551d1c8659b5f62895c8ae"
       }
     },
     "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface",
@@ -769,7 +769,7 @@
     "path": "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json",
     "ready": true,
     "schema": "wr01_release_surface_manifest_consistency_v1",
-    "sha256": "4c93de758ab962e5e9e584bcef85791a74cd8c878aee6e9b1fbcbcbb5cc94453"
+    "sha256": "361e2022f71ef9765431a99e8f45e6864b09e673e965b2d2bfab06a66c6f1cdf"
   },
   "runtime_decode_gate": {
     "blockers": [],
