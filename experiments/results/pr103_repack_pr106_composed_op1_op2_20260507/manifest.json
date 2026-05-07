@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "tool": "experiments.build_pr103_repacked_archive",
+  "score_claim": false,
+  "score_evidence_grade": "[predicted]",
+  "source_archive_path": "/Users/adpena/Projects/pact/experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+  "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+  "source_archive_bytes": 186239,
+  "source_payload_bytes": 186131,
+  "source_member_name": "0.bin",
+  "source_decoder_section_bytes": 170278,
+  "source_latents_section_bytes": 15849,
+  "n_state_dict_tensors": 28,
+  "n_state_dict_params": 228958,
+  "schema_meta": {
+    "n_pairs": 600,
+    "latent_dim": 28,
+    "base_channels": 36,
+    "eval_size": [
+      384,
+      512
+    ]
+  },
+  "brotli_quality": 11,
+  "adaptive_lgwin": true,
+  "compose_with_pr101": true,
+  "op1_decoder_bytes": 170037,
+  "validate_ac": true,
+  "ac_audit": {
+    "0": {
+      "ac_bytes": 31632,
+      "brotli_bytes": 31892,
+      "delta_bytes": -260,
+      "n_symbols": 48384
+    },
+    "2": {
+      "ac_bytes": 34028,
+      "brotli_bytes": 34227,
+      "delta_bytes": -199,
+      "n_symbols": 46656
+    },
+    "4": {
+      "ac_bytes": 34548,
+      "brotli_bytes": 34789,
+      "delta_bytes": -241,
+      "n_symbols": 46656
+    },
+    "6": {
+      "ac_bytes": 27648,
+      "brotli_bytes": 27895,
+      "delta_bytes": -247,
+      "n_symbols": 34992
+    },
+    "8": {
+      "ac_bytes": 15048,
+      "brotli_bytes": 15229,
+      "delta_bytes": -181,
+      "n_symbols": 19440
+    },
+    "10": {
+      "ac_bytes": 10788,
+      "brotli_bytes": 10949,
+      "delta_bytes": -161,
+      "n_symbols": 12960
+    },
+    "12": {
+      "ac_bytes": 7684,
+      "brotli_bytes": 7821,
+      "delta_bytes": -137,
+      "n_symbols": 11664
+    },
+    "21": {
+      "ac_bytes": 12,
+      "brotli_bytes": 13,
+      "delta_bytes": -1,
+      "n_symbols": 9
+    }
+  },
+  "output_archive_path": "/Users/adpena/Projects/pact/experiments/results/pr103_repack_pr106_composed_op1_op2_20260507/archive.zip",
+  "output_archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+  "output_archive_bytes": 185578,
+  "output_decoder_section_bytes": 169617,
+  "output_latents_section_bytes": 15849,
+  "decoder_delta_bytes": -661,
+  "archive_delta_bytes": -661,
+  "predicted_score_delta_tag": "[predicted]",
+  "predicted_score_delta_rate_component": -0.000440132768,
+  "runtime_adapter_required": true,
+  "runtime_adapter_blockers": [
+    "pr103_arithmetic_codec_runtime_adapter_not_yet_integrated",
+    "pr106_inflate_will_fail_on_pr103_decoder_format",
+    "pr103_decoder_section_has_no_section_length_prefixes_so_runtime_must_carry_hardcoded_lengths_or_a_small_header"
+  ]
+}
