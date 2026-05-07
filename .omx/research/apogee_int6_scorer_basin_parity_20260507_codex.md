@@ -43,6 +43,38 @@ apogee_int6. It clears the local non-proxy readiness blocker but does not create
 an exact score claim. The next score truth remains exact CUDA auth eval on the
 exact archive bytes through `archive.zip -> inflate.sh -> upstream/evaluate.py`.
 
+## Predispatch Gate Narrowing
+
+After the parity evidence landed, the local distortion proxy was run with:
+
+- `archive_bytes`: `170450`
+- `rel_err_pct`: `1.55`
+- `n_layers`: `13`
+- `evidence_semantics`: `local_distortion_proxy`
+- `tag`: `[distortion-proxy:local]`
+
+Artifact:
+`experiments/results/apogee_int6_basin_parity_20260507_claude/distortion_proxy_local.json`
+
+Re-running `tools/predispatch_sanity.py` with both `--distortion-proxy-ran` and
+the scorer-basin parity JSON narrowed the refusal to one remaining blocker:
+
+- `sanity_lossy_vs_lossless`: predicted band `[0.190, 0.204]` is below the
+  lossless PR106 baseline `0.2095`, so the current policy treats the band as
+  incoherent for a lossy repack.
+
+Cleared gates in that run:
+
+- `anchors_sufficient`
+- `distortion_model_gate`
+- `hazard_scan`
+- `lane_registry_consistent`
+- `apogee_evidence_semantics`
+
+Current status: evidence-complete locally, still not dispatch-ready under the
+strict sanity policy unless that policy is revised for rate-only lossy repacks
+or an explicit operator override is used and recorded.
+
 ## Command
 
 ```bash
@@ -53,4 +85,18 @@ exact archive bytes through `archive.zip -> inflate.sh -> upstream/evaluate.py`.
   --device cpu \
   --n-probes 10 \
   --n-hessian-samples 4
+```
+
+Predispatch check:
+
+```bash
+.venv/bin/python tools/predispatch_sanity.py \
+  --archive experiments/results/apogee_int6_repack_20260504_claude/apogee_int6_archive.zip \
+  --predicted-low 0.190 \
+  --predicted-high 0.204 \
+  --rel-err-pct 1.55 \
+  --lane-class apogee_intN \
+  --distortion-proxy-ran \
+  --readiness-evidence-json experiments/results/apogee_int6_basin_parity_20260507_claude/parity_evidence.json \
+  --json
 ```
