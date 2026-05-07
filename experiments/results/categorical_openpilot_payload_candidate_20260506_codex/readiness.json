@@ -14,6 +14,37 @@
     "schema_version": 1,
     "sha256": "b9d5b86f64de5945e8cb60455d94450a1e6986953a55d41a179cfecd15dd3dea"
   },
+  "byte_closed_archive_parity": {
+    "archive_member_manifest": {
+      "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/archive_member_manifest.json",
+      "schema_valid": true,
+      "sha256": "b9d5b86f64de5945e8cb60455d94450a1e6986953a55d41a179cfecd15dd3dea"
+    },
+    "blockers": [],
+    "candidate_archive": {
+      "bytes": 169725,
+      "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/archive.zip",
+      "sha256": "6a5bf1f3c4d6d2b6cb752979caa72a31b994825d24ee42ae90eeaa58f44abd7d"
+    },
+    "charged_member_count": 6,
+    "contains_inflate_sh": true,
+    "contract": "categorical_byte_closed_archive_parity_v1",
+    "dispatch_attempted": false,
+    "member_byte_mismatches": [],
+    "member_bytes_match": true,
+    "member_count": 6,
+    "member_order_matches_manifest": true,
+    "member_sha256_mismatches": [],
+    "member_sha256s_match": true,
+    "members_match_charged_members": true,
+    "missing_charged_members": [],
+    "proven": true,
+    "schema_version": 1,
+    "score_claim": false,
+    "untracked_members": [],
+    "zip_determinism_contract_passed": true,
+    "zip_wire_contract_passed": true
+  },
   "candidate_archive": {
     "bytes": 169725,
     "contains_inflate_sh": true,
@@ -779,7 +810,7 @@
       "--out-dir",
       "experiments/results/categorical_openpilot_payload_candidate_20260506_codex"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "59960ee10980c6318811d49de2f10abfb8035a93e18cd09c0167335cc7ca8ab6",
+    "canonical_payload_without_tool_manifest_sha256": "101c7fd5a64eaf88c0416fa85f67eed35b7fd34815fc4d9d4c05a92ade45d51b",
     "dispatch_attempted": false,
     "input_files": [
       {

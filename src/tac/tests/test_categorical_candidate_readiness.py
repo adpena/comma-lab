@@ -350,6 +350,14 @@ def test_audit_categorical_candidate_manifest_fails_closed_on_self_attested_pari
     assert manifest["archive_member_manifest"]["schema_valid"] is True
     assert manifest["archive_member_manifest"]["member_order_matches_charged_members"] is True
     assert manifest["archive_member_manifest"]["member_count_matches_charged_members"] is True
+    assert manifest["byte_closed_archive_parity"]["proven"] is True
+    assert manifest["byte_closed_archive_parity"]["score_claim"] is False
+    assert manifest["byte_closed_archive_parity"]["dispatch_attempted"] is False
+    assert manifest["byte_closed_archive_parity"]["member_order_matches_manifest"] is True
+    assert manifest["byte_closed_archive_parity"]["members_match_charged_members"] is True
+    assert manifest["byte_closed_archive_parity"]["zip_wire_contract_passed"] is True
+    assert manifest["byte_closed_archive_parity"]["zip_determinism_contract_passed"] is True
+    assert manifest["byte_closed_archive_parity"]["blockers"] == []
     assert manifest["semantic_contract"]["matches_candidate"] is True
     assert manifest["runtime_consumer"]["consumes_charged_members"] is True
     assert manifest["label_prior_payload_manifest"]["accepted"] is True
@@ -383,6 +391,7 @@ def test_audit_categorical_candidate_manifest_accepts_complete_dispatch_proofs(
 
     assert manifest["ready_for_exact_eval_dispatch"] is True
     assert manifest["dispatch_blockers"] == []
+    assert manifest["byte_closed_archive_parity"]["proven"] is True
     assert manifest["runtime_loader_parity"]["accepted"] is True
     assert manifest["label_prior_payload_manifest"]["accepted"] is True
     assert manifest["runtime_loader_parity"]["runtime_execution_proof"]["accepted"] is True
@@ -986,6 +995,9 @@ def test_audit_categorical_candidate_manifest_rejects_nondeterministic_zip_metad
 
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["candidate_archive"]["member_order_matches_manifest"] is False
+    assert manifest["byte_closed_archive_parity"]["proven"] is False
+    assert "byte_closed_archive_member_order_mismatch" in manifest["byte_closed_archive_parity"]["blockers"]
+    assert "byte_closed_zip_determinism_contract_failed" in manifest["byte_closed_archive_parity"]["blockers"]
     assert deterministic["passed"] is False
     assert deterministic["bad_timestamps"]
     assert deterministic["bad_external_attr_modes"]

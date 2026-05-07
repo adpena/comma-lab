@@ -168,9 +168,9 @@
         "sha256": "c32e7fb5defa68c84a11470d7724e8a3e4049e108524c9a74e095df30f1ddb68"
       },
       {
-        "bytes": 27200,
+        "bytes": 28395,
         "path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
-        "sha256": "5ba5fd95817e9a59566a6d54be000d90f37a875c8b93ea3ce879685b6fdd83bb"
+        "sha256": "afab4478f255a5bf02d68a84d3226ce290d74970cc1746a95469331388202b5d"
       }
     ],
     "output_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/summary.json",

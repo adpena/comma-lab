@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import struct
 import zipfile
+from collections.abc import Mapping
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -1274,6 +1275,157 @@ def _read_archive_members(
         return {}, [], f"{type(exc).__name__}: {exc}", wire_contract
 
 
+def _byte_closed_archive_parity_report(
+    *,
+    candidate_archive_contract: Any,
+    archive_path: Path | None,
+    candidate_archive_bytes: int | None,
+    candidate_archive_sha256: str,
+    archive_record: Any,
+    archive_error: str | None,
+    archive_wire_contract: Mapping[str, Any],
+    archive_untracked_members: list[str],
+    archive_member_order_matches_manifest: bool,
+    manifest_path: Path | None,
+    manifest_payload: dict[str, Any] | None,
+    manifest_error: str,
+    manifest_record: Any,
+    archive_member_manifest_sha256: Any,
+    charged_members: Any,
+    member_names: list[str],
+    member_records: list[dict[str, Any]],
+    archive_members: dict[str, bytes],
+    repo_root: Path,
+) -> dict[str, Any]:
+    """Summarize archive/member-manifest byte closure without score claims."""
+
+    determinism_contract = archive_wire_contract.get("determinism_contract")
+    manifest_members = manifest_payload.get("members") if isinstance(manifest_payload, dict) else None
+    manifest_member_order = manifest_payload.get("member_order") if isinstance(manifest_payload, dict) else None
+    manifest_member_count = manifest_payload.get("member_count") if isinstance(manifest_payload, dict) else None
+    archive_member_names = sorted(archive_members)
+    charged_name_set = {record["name"] for record in member_records if record.get("name")}
+    missing_members = sorted(charged_name_set - set(archive_members))
+    extra_members = sorted(set(archive_members) - charged_name_set)
+    member_hash_mismatches: list[str] = []
+    member_byte_mismatches: list[str] = []
+    for record in member_records:
+        name = record["name"]
+        if not name or name not in archive_members:
+            continue
+        raw = archive_members[name]
+        if record.get("bytes") != len(raw):
+            member_byte_mismatches.append(name)
+        if record.get("sha256") != sha256_bytes(raw):
+            member_hash_mismatches.append(name)
+
+    blockers: list[str] = []
+    if candidate_archive_contract != CONTEST_ARCHIVE_CONTRACT:
+        blockers.append("byte_closed_candidate_archive_contract_not_contest_zip")
+    if not isinstance(archive_record, dict):
+        blockers.append("byte_closed_candidate_archive_record_missing")
+    if archive_path is None or not archive_path.is_file():
+        blockers.append("byte_closed_candidate_archive_path_missing")
+    if not isinstance(candidate_archive_bytes, int) or candidate_archive_bytes <= 0:
+        blockers.append("byte_closed_candidate_archive_bytes_missing")
+    if not _is_sha256(candidate_archive_sha256):
+        blockers.append("byte_closed_candidate_archive_sha256_missing_or_invalid")
+    if isinstance(archive_record, dict):
+        if archive_record.get("bytes") != candidate_archive_bytes:
+            blockers.append("byte_closed_candidate_archive_record_bytes_mismatch")
+        if archive_record.get("sha256") != candidate_archive_sha256:
+            blockers.append("byte_closed_candidate_archive_record_sha256_mismatch")
+    if archive_error:
+        blockers.append("byte_closed_candidate_archive_not_readable_zip")
+    if archive_wire_contract.get("passed") is not True:
+        blockers.append("byte_closed_zip_wire_contract_failed")
+    if not isinstance(determinism_contract, dict) or determinism_contract.get("passed") is not True:
+        blockers.append("byte_closed_zip_determinism_contract_failed")
+    if CONTEST_INFLATE_MEMBER not in archive_members:
+        blockers.append("byte_closed_inflate_member_missing")
+    if archive_untracked_members or extra_members:
+        blockers.append("byte_closed_archive_has_untracked_members")
+    if missing_members:
+        blockers.append("byte_closed_archive_missing_charged_members")
+    if member_byte_mismatches:
+        blockers.append("byte_closed_archive_member_bytes_mismatch")
+    if member_hash_mismatches:
+        blockers.append("byte_closed_archive_member_sha256_mismatch")
+    if not archive_member_order_matches_manifest:
+        blockers.append("byte_closed_archive_member_order_mismatch")
+    if not isinstance(manifest_record, dict):
+        blockers.append("byte_closed_archive_member_manifest_record_missing")
+    if manifest_path is None or not manifest_path.is_file():
+        blockers.append("byte_closed_archive_member_manifest_path_missing")
+    if manifest_error:
+        blockers.append("byte_closed_archive_member_manifest_json_invalid")
+    if manifest_payload is None:
+        blockers.append("byte_closed_archive_member_manifest_payload_missing")
+    else:
+        if manifest_payload.get("schema_version") != SCHEMA_VERSION:
+            blockers.append("byte_closed_archive_member_manifest_schema_version_invalid")
+        if manifest_payload.get("archive_member_manifest_contract") != ARCHIVE_MEMBER_MANIFEST_CONTRACT:
+            blockers.append("byte_closed_archive_member_manifest_contract_invalid")
+        if not _archive_member_manifest_kind_valid(manifest_payload.get("kind")):
+            blockers.append("byte_closed_archive_member_manifest_kind_invalid")
+        if manifest_members != charged_members:
+            blockers.append("byte_closed_archive_member_manifest_members_mismatch")
+        if manifest_member_order != member_names:
+            blockers.append("byte_closed_archive_member_manifest_order_mismatch")
+        if manifest_member_count != len(member_names):
+            blockers.append("byte_closed_archive_member_manifest_count_mismatch")
+    if manifest_path is not None and manifest_path.is_file():
+        actual_manifest_sha = sha256_file(manifest_path)
+        if archive_member_manifest_sha256 != actual_manifest_sha:
+            blockers.append("byte_closed_archive_member_manifest_sha256_mismatch")
+        if isinstance(manifest_record, dict):
+            if manifest_record.get("bytes") != manifest_path.stat().st_size:
+                blockers.append("byte_closed_archive_member_manifest_record_bytes_mismatch")
+            if manifest_record.get("sha256") != actual_manifest_sha:
+                blockers.append("byte_closed_archive_member_manifest_record_sha256_mismatch")
+
+    blockers = list(dict.fromkeys(blockers))
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "contract": "categorical_byte_closed_archive_parity_v1",
+        "proven": not blockers,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "candidate_archive": {
+            "path": repo_relative(archive_path, repo_root) if archive_path is not None else "",
+            "bytes": candidate_archive_bytes,
+            "sha256": candidate_archive_sha256,
+        },
+        "archive_member_manifest": {
+            "path": repo_relative(manifest_path, repo_root) if manifest_path is not None else "",
+            "sha256": sha256_file(manifest_path) if manifest_path is not None and manifest_path.is_file() else "",
+            "schema_valid": (
+                isinstance(manifest_payload, dict)
+                and manifest_payload.get("schema_version") == SCHEMA_VERSION
+                and manifest_payload.get("archive_member_manifest_contract") == ARCHIVE_MEMBER_MANIFEST_CONTRACT
+                and _archive_member_manifest_kind_valid(manifest_payload.get("kind"))
+            ),
+        },
+        "member_count": len(archive_member_names),
+        "charged_member_count": len(member_records),
+        "member_order_matches_manifest": archive_member_order_matches_manifest,
+        "members_match_charged_members": not missing_members and not extra_members,
+        "member_bytes_match": not member_byte_mismatches,
+        "member_sha256s_match": not member_hash_mismatches,
+        "zip_wire_contract_passed": archive_wire_contract.get("passed") is True,
+        "zip_determinism_contract_passed": (
+            isinstance(determinism_contract, dict)
+            and determinism_contract.get("passed") is True
+        ),
+        "contains_inflate_sh": CONTEST_INFLATE_MEMBER in archive_members,
+        "missing_charged_members": missing_members,
+        "untracked_members": sorted({*archive_untracked_members, *extra_members}),
+        "member_byte_mismatches": member_byte_mismatches,
+        "member_sha256_mismatches": member_hash_mismatches,
+        "blockers": blockers,
+    }
+
+
 def audit_categorical_candidate_manifest(
     payload: dict[str, Any],
     *,
@@ -1544,6 +1696,28 @@ def audit_categorical_candidate_manifest(
             blockers.append("candidate_archive_untracked_members")
             warnings.append(f"archive contains untracked members: {archive_untracked_members}")
 
+    byte_closed_archive_parity = _byte_closed_archive_parity_report(
+        candidate_archive_contract=payload.get("candidate_archive_contract", ""),
+        archive_path=archive_path,
+        candidate_archive_bytes=candidate_archive_bytes,
+        candidate_archive_sha256=candidate_archive_sha256,
+        archive_record=archive_record,
+        archive_error=archive_error,
+        archive_wire_contract=archive_wire_contract,
+        archive_untracked_members=archive_untracked_members,
+        archive_member_order_matches_manifest=archive_member_order_matches_manifest,
+        manifest_path=manifest_path,
+        manifest_payload=manifest_payload,
+        manifest_error=manifest_error,
+        manifest_record=manifest_record,
+        archive_member_manifest_sha256=payload.get("archive_member_manifest_sha256"),
+        charged_members=charged_members,
+        member_names=member_names,
+        member_records=member_records,
+        archive_members=archive_members,
+        repo_root=root,
+    )
+
     label_prior_payload_manifest, label_prior_payload_manifest_blockers = (
         _label_prior_payload_manifest_report(
             payload.get(
@@ -1683,6 +1857,7 @@ def audit_categorical_candidate_manifest(
                 manifest_payload is not None and manifest_payload.get("member_count") == len(member_names)
             ),
         },
+        "byte_closed_archive_parity": byte_closed_archive_parity,
         "semantic_contract": {
             "class_order": expected_names,
             "selfcomp_gray_codebook": expected_gray,
