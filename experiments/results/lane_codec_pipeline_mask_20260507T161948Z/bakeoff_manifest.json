@@ -1,0 +1,58 @@
+{
+  "candidates": [
+    {
+      "bytes_out": null,
+      "error": null,
+      "findings": [
+        "\u03b1-NeRV not yet L2 ready \u2014 encode requires context['pretrained_nerv_codec'] (trained upstream by NeRVMaskTrainer on CUDA). See tac.alpha_mask_codec_readiness.py for the family contract."
+      ],
+      "op_name": "alpha_nerv_mask",
+      "ready": false
+    },
+    {
+      "bytes_out": 23443,
+      "error": null,
+      "findings": [],
+      "op_name": "alpha_wavelet_mask",
+      "ready": true
+    },
+    {
+      "bytes_out": 6659,
+      "error": null,
+      "findings": [],
+      "op_name": "alpha_vqvae_mask",
+      "ready": true
+    },
+    {
+      "bytes_out": 16400,
+      "error": null,
+      "findings": [],
+      "op_name": "alpha_grayscale_lut_mask",
+      "ready": true
+    },
+    {
+      "bytes_out": 12904,
+      "error": null,
+      "findings": [],
+      "op_name": "alpha_av1_baseline_mask",
+      "ready": true
+    }
+  ],
+  "contract": "alpha_mask_bakeoff_manifest_v1",
+  "evidence_tag": "[empirical:alpha_mask_bakeoff]",
+  "input_dtype": "torch.int64",
+  "input_shape": [
+    16,
+    32,
+    32
+  ],
+  "schema_version": 1,
+  "score_claim": false,
+  "score_evidence_grade": "empirical",
+  "winner": {
+    "bytes_in": 131072,
+    "bytes_out": 6659,
+    "delta_bytes": -124413,
+    "op_name": "alpha_vqvae_mask"
+  }
+}
