@@ -555,6 +555,21 @@ def _score_snapshot(row: InventoryRow, *, repo_root: Path) -> dict[str, Any] | N
                 if isinstance(auth_eval.get("anchor_proof"), dict)
                 else {}
             )
+            anchor_auth_eval = (
+                anchor_proof.get("auth_eval")
+                if isinstance(anchor_proof.get("auth_eval"), dict)
+                else {}
+            )
+            anchor_runtime = (
+                anchor_proof.get("runtime")
+                if isinstance(anchor_proof.get("runtime"), dict)
+                else {}
+            )
+            upstream_eval = (
+                anchor_auth_eval.get("upstream_evaluate_py")
+                if isinstance(anchor_auth_eval.get("upstream_evaluate_py"), dict)
+                else {}
+            )
             score = strict_formula.get("score", auth_record.get("score"))
             archive_bytes = strict_formula.get(
                 "archive_bytes",
@@ -582,6 +597,13 @@ def _score_snapshot(row: InventoryRow, *, repo_root: Path) -> dict[str, Any] | N
                 "anchor_proof_schema": anchor_proof.get("schema"),
                 "archive_bytes": archive_bytes,
                 "archive_sha256": auth_record.get("archive_sha256"),
+                "runtime_tree_sha256": anchor_runtime.get("runtime_tree_sha256"),
+                "runtime_file_count": anchor_runtime.get("runtime_file_count"),
+                "device": anchor_auth_eval.get("device"),
+                "samples": anchor_auth_eval.get("samples"),
+                "gpu_model": anchor_auth_eval.get("gpu_model"),
+                "eval_command_sanitized": anchor_auth_eval.get("eval_command_sanitized"),
+                "upstream_evaluate_py_sha256": upstream_eval.get("sha256"),
                 "seg_dist": seg_dist,
                 "pose_dist": pose_dist,
             }

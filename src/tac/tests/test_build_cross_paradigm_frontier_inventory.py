@@ -75,6 +75,27 @@ def test_cross_paradigm_inventory_pins_required_score_path_rows() -> None:
         pr103["score_snapshot"]["archive_sha256"]
         == "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce"
     )
+    assert pr103["score_snapshot"]["runtime_tree_sha256"] == (
+        "54db9e5ddee85ae7f486fae900ff3907932efb1c8d3062bc264b0e5c7456d8f6"
+    )
+    assert pr103["score_snapshot"]["runtime_file_count"] == 3
+    assert pr103["score_snapshot"]["device"] == "cuda"
+    assert pr103["score_snapshot"]["samples"] == 600
+    assert pr103["score_snapshot"]["gpu_model"] == "Tesla T4"
+    assert pr103["score_snapshot"]["upstream_evaluate_py_sha256"] == (
+        "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    )
+    assert pr103["score_snapshot"]["eval_command_sanitized"] == [
+        "experiments/contest_auth_eval.py",
+        "--archive",
+        "archive.zip",
+        "--inflate-sh",
+        "submissions/pr103_pr106_final_runtime/inflate.sh",
+        "--upstream-dir",
+        "upstream",
+        "--device",
+        "cuda",
+    ]
     assert "entropy_coding" in pr103["paradigms"]
     assert "src/tac/pr103_pr106_runtime_closure.py" in pr103["code_paths"]
     assert "submissions/pr103_pr106_final_runtime/inflate.py" in pr103["code_paths"]

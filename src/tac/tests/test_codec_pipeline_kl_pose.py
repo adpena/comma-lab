@@ -82,7 +82,7 @@ def test_roundtrip_smooth_trajectory_within_quant_tolerance() -> None:
     recon = decoded[POSE_KEY]
     assert recon.shape == poses.shape
     # Max abs error bounded by truncation (small for smooth) + per-axis
-    # int16 quant step. Total per-frame error budget ~few × 1e-4 for our
+    # int16 quant step. Total per-frame error budget ~few x 1e-4 for our
     # synthetic. Keep a generous 1e-2 to absorb the truncation tail.
     max_err = (recon.float() - poses.float()).abs().max().item()
     assert max_err < 1e-2, f"max abs error {max_err} exceeded tolerance"
@@ -97,8 +97,8 @@ def test_roundtrip_full_rank_k6_is_quant_only_lossy() -> None:
     result = op.encode(sd, context={})
     decoded = op.decode(result.blob, op_state=result.op_state, context={})
     recon = decoded[POSE_KEY]
-    # int16 step ≈ max_abs/32767 per component, so per-axis error
-    # bounded by max_abs/32767. Loose bound: 2 × max_abs / 32767.
+    # int16 step is approximately max_abs/32767 per component, so per-axis error
+    # bounded by max_abs/32767. Loose bound: 2 x max_abs / 32767.
     max_abs = poses.abs().max().item()
     grid_bound = 2.0 * max_abs / 32767.0 * 6  # generous, accumulates across components
     max_err = (recon.float() - poses.float()).abs().max().item()
@@ -238,7 +238,7 @@ def test_encode_raises_on_missing_pose_key() -> None:
 
 def test_encode_raises_on_non_tensor_pose() -> None:
     op = Op_KLPoseStream()
-    with pytest.raises(TypeError, match="must be torch.Tensor"):
+    with pytest.raises(TypeError, match=r"must be torch\.Tensor"):
         op.encode({POSE_KEY: [[0.0] * 6] * 100}, context={})  # type: ignore[dict-item]
 
 

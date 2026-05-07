@@ -73,6 +73,17 @@ def test_all_lanes_cross_paradigm_gate_pins_promoted_pr103_anchor() -> None:
     ]
 
     row["score_snapshot"]["archive_bytes"] = 185578
+    row["score_snapshot"]["runtime_tree_sha256"] = "deadbeef"
+
+    assert module._cross_paradigm_pr103_anchor_failures(payload["rows"]) == [
+        "anchor_runtime_tree_sha256_drift: expected "
+        "'54db9e5ddee85ae7f486fae900ff3907932efb1c8d3062bc264b0e5c7456d8f6', "
+        "got 'deadbeef'"
+    ]
+
+    row["score_snapshot"]["runtime_tree_sha256"] = (
+        "54db9e5ddee85ae7f486fae900ff3907932efb1c8d3062bc264b0e5c7456d8f6"
+    )
     row["score_snapshot"]["compliance_passed"] = False
     row["score_snapshot"]["compliance_failed_checks"] = ["auth_eval_promotable_stamp"]
 

@@ -40,14 +40,6 @@ Usage:
 """
 from __future__ import annotations
 
-# Line-buffer stdout so progress flushes to log files immediately.
-import sys as _sys
-try:
-    _sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
-    _sys.stderr.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
-except (AttributeError, OSError):
-    pass
-
 import argparse
 import ast
 import hashlib
@@ -61,6 +53,13 @@ import tempfile
 import time
 import zipfile
 from pathlib import Path, PurePosixPath
+
+# Line-buffer stdout so progress flushes to log files immediately.
+try:
+    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
+    sys.stderr.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
+except (AttributeError, OSError):
+    pass
 
 # Schema version for the JSON we emit. Bump when adding fields so downstream
 # tooling (BATTLE_PLAN parsers, leaderboard, etc.) can detect compatibility.
@@ -197,11 +196,7 @@ def _module_exists(module_name: str, repo_root: Path) -> bool:
 
 
 def _relative_import_base(module_name: str, level: int) -> str:
-    parts = module_name.split(".")
-    if module_name.endswith(".__init__"):
-        parts = parts[:-1]
-    else:
-        parts = parts[:-1]
+    parts = module_name.split(".")[:-1]
     if level > 1:
         parts = parts[: -(level - 1)]
     return ".".join(parts)
@@ -840,12 +835,12 @@ def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
     t0 = time.monotonic()
     try:
         result = subprocess.run(cmd, timeout=timeout, check=False)
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as exc:
         raise RuntimeError(
             f"[inflate] TIMED OUT after {timeout}s. Contest budget is "
             f"30 min on T4. If this is a development run, pass "
             f"--inflate-timeout 7200 (or higher) to bypass."
-        )
+        ) from exc
     elapsed = time.monotonic() - t0
     print(f"[inflate] returncode={result.returncode} elapsed={elapsed:.1f}s")
     if result.returncode != 0:
@@ -853,7 +848,7 @@ def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
 
     # Council R3 #3 + R4 #1 fix: STRICT per-video byte-count validation.
     # Each .raw is uint8 RGB at upstream/frame_utils.py's camera_size
-    # (1164w × 874h) × NUM_FRAMES (1200) × 3 channels = 3,663,237,120 B.
+    # (1164w x 874h) x NUM_FRAMES (1200) x 3 channels = 3,663,237,120 B.
     # R4 #1 (CRITICAL): use Path.with_suffix('.raw') NOT .stem so subdir
     # paths like 'subdir/0.mkv' resolve to 'inflated_dir/subdir/0.raw'
     # (matching submissions/robust_current/inflate.sh layout). The .stem
@@ -885,7 +880,7 @@ def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
         details = ", ".join(f"{n}={a}B (expected {e}B)" for n, a, e in wrong_size[:3])
         raise RuntimeError(
             f"[inflate] WRONG-SIZE .raw file(s): {details}. Each must be "
-            f"{EXPECTED_RAW_BYTES:,} bytes (1164×874×1200×3). Likely "
+            f"{EXPECTED_RAW_BYTES:,} bytes (1164x874x1200x3). Likely "
             f"truncated mid-decode."
         )
     print(f"[inflate] produced {len(test_videos)} .raw file(s), each "
@@ -1004,7 +999,7 @@ def _run_upstream_evaluate(upstream_dir: Path, submission_dir: Path,
     if not report_path.exists():
         # Try to recover from stdout if report.txt is missing.
         if "Final score:" in result.stdout:
-            print(f"[evaluate] report.txt missing — recovering from stdout")
+            print("[evaluate] report.txt missing — recovering from stdout")
             parsed = _parse_report(
                 result.stdout,
                 archive_size=archive_bytes_actual,
@@ -1070,10 +1065,7 @@ def _parse_report(report_path: Path | str, *, archive_size: int,
         if "\n" not in report_path and len(report_path) < 4096:
             try:
                 candidate = Path(report_path)
-                if candidate.exists():
-                    text = candidate.read_text()
-                else:
-                    text = report_path
+                text = candidate.read_text() if candidate.exists() else report_path
             except OSError:
                 text = report_path
         else:
@@ -1294,6 +1286,14 @@ def main() -> int:
 
         # Save final JSON next to the work dir
         result["provenance"] = prov
+        is_a_plus_plus = (
+            args.device == "cuda"
+            and result.get("n_samples") == 600
+            and prov.get("gpu_t4_match") is True
+        )
+        result["promotion_eligible"] = is_a_plus_plus
+        result["score_claim_valid"] = is_a_plus_plus
+        result["evidence_grade"] = "A++" if is_a_plus_plus else "B"
         result["work_dir"] = str(work_dir)
         out_json = work_dir / "contest_auth_eval.json"
         with open(out_json, "w") as f:
@@ -1302,7 +1302,7 @@ def main() -> int:
         # Print sentinel line for downstream parsers (matches the format
         # auth_eval_renderer.py uses, so existing log scrapers keep working)
         print(f"\nRESULT_JSON: {json.dumps(result)}")
-        print(f"\n=== CONTEST AUTH EVAL ===")
+        print("\n=== CONTEST AUTH EVAL ===")
         print(f"  Canonical score: {result['canonical_score']:.12f}")
         print(f"  Reported final:  {result['final_score']:.4f}")
         print(f"  PoseNet dist:   {result['avg_posenet_dist']:.6f}")

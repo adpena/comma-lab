@@ -702,6 +702,18 @@ def _cross_paradigm_pr103_anchor_failures(rows: list[object]) -> list[str]:
         != "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce"
     ):
         failures.append(f"anchor_archive_sha256_drift: {snapshot.get('archive_sha256')!r}")
+    runtime_expected = {
+        "runtime_tree_sha256": "54db9e5ddee85ae7f486fae900ff3907932efb1c8d3062bc264b0e5c7456d8f6",
+        "device": "cuda",
+        "samples": 600,
+        "gpu_model": "Tesla T4",
+        "upstream_evaluate_py_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
+    }
+    for field, value in runtime_expected.items():
+        if snapshot.get(field) != value:
+            failures.append(
+                f"anchor_{field}_drift: expected {value!r}, got {snapshot.get(field)!r}"
+            )
     score_path = str(snapshot.get("path") or "")
     if not score_path.endswith("pre_submission_compliance.contest_final.json"):
         failures.append(f"anchor_score_snapshot_path_not_tracked_compliance_json: {score_path!r}")

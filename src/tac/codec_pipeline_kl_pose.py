@@ -190,9 +190,12 @@ def _decode_blob(blob: bytes) -> tuple[torch.Tensor, np.ndarray, np.ndarray, np.
     if blob[:4] != _KPS_MAGIC:
         raise ValueError(f"KL pose blob bad magic: got {blob[:4]!r}, want {_KPS_MAGIC!r}")
     cur = 4
-    n_frames = struct.unpack_from("<I", blob, cur)[0]; cur += 4
-    pose_dim = struct.unpack_from("<H", blob, cur)[0]; cur += 2
-    n_comp = struct.unpack_from("<H", blob, cur)[0]; cur += 2
+    n_frames = struct.unpack_from("<I", blob, cur)[0]
+    cur += 4
+    pose_dim = struct.unpack_from("<H", blob, cur)[0]
+    cur += 2
+    n_comp = struct.unpack_from("<H", blob, cur)[0]
+    cur += 2
     if pose_dim != _POSE_DIM:
         raise ValueError(f"KL pose blob: pose_dim={pose_dim}, expected {_POSE_DIM}")
     basis_len = n_comp * _POSE_DIM * 8
@@ -202,7 +205,8 @@ def _decode_blob(blob: bytes) -> tuple[torch.Tensor, np.ndarray, np.ndarray, np.
     cur += _POSE_DIM * 8
     scales = np.frombuffer(blob, dtype="<f8", count=n_comp, offset=cur).copy()
     cur += n_comp * 8
-    coef_compressed_len = struct.unpack_from("<I", blob, cur)[0]; cur += 4
+    coef_compressed_len = struct.unpack_from("<I", blob, cur)[0]
+    cur += 4
     coef_compressed = blob[cur:cur + coef_compressed_len]
     if len(coef_compressed) != coef_compressed_len:
         raise ValueError(
@@ -352,7 +356,7 @@ def estimate_truncation_rms(
 
 
 __all__ = [
-    "Op_KLPoseStream",
     "POSE_KEY",
+    "Op_KLPoseStream",
     "estimate_truncation_rms",
 ]

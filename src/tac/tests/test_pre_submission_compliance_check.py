@@ -26,7 +26,13 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _write_submission(root: Path, *, device: str = "cuda", t4: bool = True, runtime_tree: str | None = "a" * 64) -> dict:
+def _write_submission(
+    root: Path,
+    *,
+    device: str = "cuda",
+    t4: bool = True,
+    runtime_tree: str | None = None,
+) -> dict:
     mod = _load_module()
     root.mkdir(parents=True)
     archive = root / "archive.zip"
@@ -35,6 +41,8 @@ def _write_submission(root: Path, *, device: str = "cuda", t4: bool = True, runt
     inflate = root / "inflate.sh"
     inflate.write_text("#!/usr/bin/env bash\nset -euo pipefail\n", encoding="utf-8")
     inflate.chmod(0o755)
+    if runtime_tree is None:
+        runtime_tree = mod._submission_runtime_manifest(root)["runtime_tree_sha256"]
     archive_sha = _sha(archive)
     archive_bytes = archive.stat().st_size
     seg = 0.00057185
@@ -111,6 +119,65 @@ def test_pre_submission_check_passes_strict_happy_path(tmp_path: Path) -> None:
         "pre_submission_compliance_anchor_proof_v1"
     )
     assert report["auth_eval"]["anchor_proof"]["score_basis"] == strict_formula
+    assert report["submission_runtime"]["runtime_tree_sha256"] == expected["runtime_tree"]
+
+
+def test_pre_submission_check_contest_final_rejects_runtime_tree_mismatch(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission", runtime_tree="b" * 64)
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--auth-eval-json",
+                str(tmp_path / "submission" / "contest_auth_eval.json"),
+                "--contest-final",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    assert "submission_runtime_tree_matches_auth_eval" in _failed_check_names(report)
+
+
+def test_pre_submission_check_contest_final_rejects_inferred_promotion_stamp(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    auth_path = tmp_path / "submission" / "contest_auth_eval.json"
+    auth = json.loads(auth_path.read_text(encoding="utf-8"))
+    auth.pop("promotion_eligible")
+    auth.pop("score_claim_valid")
+    auth.pop("evidence_grade")
+    auth_path.write_text(json.dumps(auth, indent=2) + "\n", encoding="utf-8")
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--auth-eval-json",
+                str(auth_path),
+                "--contest-final",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    assert "auth_eval_explicit_promotable_stamp" in _failed_check_names(report)
 
 
 def test_pre_submission_check_records_strict_formula_when_report_score_uses_rounded_rate(

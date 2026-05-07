@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import importlib.util
+import json
 import math
 import re
 import stat
@@ -38,6 +39,13 @@ ensure_repo_imports(REPO_ROOT)
 from tools.auth_eval_records import parse_auth_eval_payload  # noqa: E402
 from tac.preflight import check_public_release_hygiene  # noqa: E402
 from tac.repo_io import json_text, read_json, repo_relative, sha256_file  # noqa: E402
+from experiments.contest_auth_eval import (  # noqa: E402
+    _repo_local_tac_import_manifest as _contest_repo_local_tac_import_manifest,
+    _repo_rel as _contest_repo_rel,
+    _runtime_dependency_extra_roots as _contest_runtime_dependency_extra_roots,
+    _runtime_root_file_manifest as _contest_runtime_root_file_manifest,
+    _sha256 as _contest_sha256,
+)
 
 ORIGINAL_VIDEO_BYTES = 37_545_489
 SCHEMA = "pre_submission_compliance_check_v1"
@@ -53,6 +61,12 @@ TERMINAL_DISPATCH_STATUS_PREFIXES = (
 PRIVATE_SURFACE_RE = re.compile(
     r"(/Users/|ssh\d+\.vast\.ai|fc-[A-Z0-9]{20,}|ap-[A-Za-z0-9]{12,}|sk-[A-Za-z0-9_-]{20,})"
 )
+SUBMISSION_RUNTIME_CUSTODY_FILENAMES = {
+    "archive_manifest.json",
+    "contest_auth_eval.json",
+    "report.txt",
+}
+SUBMISSION_RUNTIME_CUSTODY_PREFIXES = ("pre_submission_compliance.",)
 
 
 @dataclass(frozen=True)
@@ -253,6 +267,125 @@ def _runtime_tree_candidates(payload: dict[str, Any]) -> dict[str, str]:
     return candidates
 
 
+def _submission_runtime_manifest(submission_dir: Path) -> dict[str, Any]:
+    inflate_sh = submission_dir / "inflate.sh"
+    runtime_root = inflate_sh.parent.resolve()
+    repo_root = REPO_ROOT.resolve()
+    upstream_dir = repo_root / "upstream"
+
+    def _is_custody_file(row: dict[str, Any]) -> bool:
+        rel = str(row.get("relative_path") or "")
+        name = PurePosixPath(rel).name
+        return name in SUBMISSION_RUNTIME_CUSTODY_FILENAMES or any(
+            name.startswith(prefix) for prefix in SUBMISSION_RUNTIME_CUSTODY_PREFIXES
+        )
+
+    files = [
+        row
+        for row in _contest_runtime_root_file_manifest(runtime_root, repo_root)
+        if not _is_custody_file(row)
+    ]
+    extra_roots = _contest_runtime_dependency_extra_roots(inflate_sh, repo_root)
+    external_dependency_roots = []
+    for extra_root in extra_roots:
+        external_dependency_roots.append(
+            {
+                "root": str(extra_root),
+                "repo_relative_root": _contest_repo_rel(extra_root, repo_root),
+                "exists": extra_root.exists(),
+                "files": _contest_runtime_root_file_manifest(extra_root, repo_root),
+            }
+        )
+
+    evaluate_py = (upstream_dir / "evaluate.py").resolve()
+    upstream_eval = None
+    if evaluate_py.exists():
+        upstream_eval = {
+            "relative_path": "evaluate.py",
+            "bytes": evaluate_py.stat().st_size,
+            "sha256": _contest_sha256(evaluate_py, prefix=0),
+        }
+    repo_local_tac = _contest_repo_local_tac_import_manifest(runtime_root, repo_root)
+    tree_payload = {
+        "runtime_root_name": runtime_root.name,
+        "files": files,
+        "external_dependency_roots": external_dependency_roots,
+        "repo_local_tac_import_manifest": repo_local_tac,
+        "upstream_evaluate_py": upstream_eval,
+    }
+    tree_sha = hashlib.sha256(
+        json.dumps(tree_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    return {
+        "schema": "pre_submission_runtime_dependency_manifest_v1",
+        "basis": "contest_auth_eval_runtime_dependency_manifest_v1_without_custody_files",
+        "runtime_root": str(runtime_root),
+        "runtime_file_count": len(files),
+        "runtime_tree_sha256": tree_sha,
+        "files": files,
+        "external_dependency_roots": external_dependency_roots,
+        "repo_local_tac_import_manifest": repo_local_tac,
+        "upstream_evaluate_py": upstream_eval,
+        "excluded_custody_filenames": sorted(SUBMISSION_RUNTIME_CUSTODY_FILENAMES),
+        "excluded_custody_prefixes": list(SUBMISSION_RUNTIME_CUSTODY_PREFIXES),
+    }
+
+
+def _auth_runtime_candidates(auth_eval: dict[str, Any]) -> dict[str, str]:
+    candidates = auth_eval.get("runtime_tree_candidates")
+    if isinstance(candidates, dict):
+        return {str(key): str(value) for key, value in candidates.items()}
+    return {}
+
+
+def inspect_submission_runtime(
+    submission_dir: Path,
+    auth_eval: dict[str, Any],
+    *,
+    required: bool,
+) -> tuple[dict[str, Any], list[Check]]:
+    checks: list[Check] = []
+    inflate_sh = submission_dir / "inflate.sh"
+    exists = inflate_sh.is_file()
+    _add(
+        checks,
+        "submission_runtime_inflate_exists",
+        exists or not required,
+        _rel(inflate_sh),
+    )
+    if not exists:
+        return {"inflate_sh": _rel(inflate_sh), "exists": False}, checks
+
+    try:
+        manifest = _submission_runtime_manifest(submission_dir)
+    except OSError as exc:
+        _add(
+            checks,
+            "submission_runtime_manifest_computable",
+            not required,
+            f"{exc.__class__.__name__}: {exc}",
+        )
+        return {"inflate_sh": _rel(inflate_sh), "exists": True}, checks
+
+    _add(checks, "submission_runtime_manifest_computable", True, manifest.get("schema", ""))
+    runtime_sha = manifest.get("runtime_tree_sha256")
+    _add(
+        checks,
+        "submission_runtime_tree_recorded",
+        (not required) or bool(runtime_sha),
+        f"runtime_tree_sha256={runtime_sha}",
+    )
+    candidates = _auth_runtime_candidates(auth_eval)
+    expected = set(candidates.values())
+    _add(
+        checks,
+        "submission_runtime_tree_matches_auth_eval",
+        (not required) or (isinstance(runtime_sha, str) and runtime_sha in expected),
+        f"submission={runtime_sha} auth_eval_candidates={candidates}",
+    )
+    return manifest, checks
+
+
 def _safe_provenance_snapshot(
     payload: dict[str, Any],
     *,
@@ -429,6 +562,18 @@ def inspect_auth_eval(path: Path, archive: dict[str, Any], args: argparse.Namesp
             (not args.require_t4_equivalent)
             or (record.promotion_eligible and record.score_claim_valid and record.evidence_grade == "A++"),
             f"promotion={record.promotion_eligible} claim={record.score_claim_valid} grade={record.evidence_grade}",
+        )
+        _add(
+            checks,
+            "auth_eval_explicit_promotable_stamp",
+            (not args.contest_final)
+            or (
+                payload.get("promotion_eligible") is True
+                and payload.get("score_claim_valid") is True
+                and payload.get("evidence_grade") == "A++"
+            ),
+            "contest-final requires explicit promotion_eligible=true, "
+            "score_claim_valid=true, evidence_grade=A++ in the auth-eval JSON",
         )
 
     runtime_candidates = _runtime_tree_candidates(payload)
@@ -632,6 +777,13 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
     auth_record, auth_checks = inspect_auth_eval(auth_path, archive, args)
     sections["auth_eval"] = auth_record
     checks.extend(auth_checks)
+    runtime_record, runtime_checks = inspect_submission_runtime(
+        submission_dir,
+        auth_record,
+        required=args.require_submission_runtime_match,
+    )
+    sections["submission_runtime"] = runtime_record
+    checks.extend(runtime_checks)
     manifest_record, manifest_checks = inspect_archive_manifest(manifest_path, archive, required=args.contest_final or args.archive_manifest_json is not None)
     sections["archive_manifest"] = manifest_record
     checks.extend(manifest_checks)
