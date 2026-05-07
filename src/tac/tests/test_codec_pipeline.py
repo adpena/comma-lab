@@ -281,3 +281,18 @@ def test_op2_auto_derives_n_hi_when_default_zero() -> None:
     _, manifest = pipeline.encode(sd, skip_validate=True)
     op_state = manifest.op_results[0].op_state
     assert op_state["n_latent_hi_symbols"] == arr.size
+
+
+def test_op2_docstring_lists_all_five_section_keys() -> None:
+    """Bug-hunter v2 (re-opened MEDIUM): ensure the Op2 class docstring
+    enumerates EVERY section_lengths key the encoder populates. The prior
+    docstring listed only 4 (br, hists, merged_ac, hi_hist) and silently
+    drifted out-of-date when ac_fallback landed; keep them coupled."""
+    docstring = Op2_PR103ArithmeticCodec.__doc__ or ""
+    for key in ("br", "hists", "merged_ac", "hi_hist", "ac_fallback"):
+        assert f"``{key}``" in docstring, (
+            f"Op2 docstring missing section key {key!r}; encoder populates "
+            f"all five and decoder reads the same set"
+        )
+    # Also pin the ac_fallback_set op_state mention.
+    assert "ac_fallback_set" in docstring

@@ -444,9 +444,23 @@ class Op2_PR103ArithmeticCodec:
     -661 bytes vs PR106 baseline (subagent measurement, commit 35abccf5).
 
     The op_state required by the decoder:
-        - ``section_lengths``: dict with keys ``br, hists, merged_ac, hi_hist``
+        - ``section_lengths``: dict with five keys, exactly mirroring the wire
+          sections: ``br`` (concatenated non-AC brotli streams),
+          ``hists`` (per-tensor histogram blob), ``merged_ac`` (merged
+          RangeEncoder stream over AC_TENSOR_INDICES + latent-hi),
+          ``hi_hist`` (latent-hi histogram blob), and ``ac_fallback`` (the
+          fallback-stream brotli blob populated when ``ac_auto_fallback=True``
+          rerouted regressing AC tensors back to brotli; length 0 when no
+          fallback fired). Bug-hunter v2: prior docstring listed only the
+          first 4 keys (drift introduced when ``ac_fallback`` landed
+          2026-05-07; decoder accepted ac_fallback as optional so existing
+          callers worked, but the wrap docstring was no longer accurate).
         - ``n_latent_hi_symbols``: int, how many latent-hi symbols to drain
           from the merged RangeDecoder AFTER the 8 weight streams.
+        - ``ac_fallback_set``: list[int], the AC_TENSOR_INDICES that were
+          rerouted to brotli by ``ac_auto_fallback`` (records the
+          encoder-side decision so the decoder reads the same fallback
+          blob).
     """
     name: str = "pr103_arithmetic_codec"
     brotli_quality: int = 11
