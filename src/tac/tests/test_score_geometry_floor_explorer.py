@@ -1,4 +1,4 @@
-"""Tests for tac.score_geometry_floor_explorer — what-if floor reduction techniques."""
+"""Tests for tac.score_geometry_floor_explorer what-if floor reduction techniques."""
 from __future__ import annotations
 
 import pytest
@@ -9,6 +9,7 @@ from tac.score_geometry_floor_explorer import (
     explore_lossy_quantization,
     explore_sparsity,
     explore_water_filling,
+    rank_technique_results,
 )
 
 # Synthetic baseline for hermetic tests
@@ -76,7 +77,7 @@ def test_sparsity_reduces_floor() -> None:
         baseline_per_tensor_bits=EMPIRICAL_BITS,
         archive_overhead_bytes=ARCHIVE_OVERHEAD,
     )
-    # 50% sparse → ~50% content reduction
+    # 50% sparse gives roughly 50% content reduction.
     assert result.bytes_floor < baseline.total_bytes_empirical_floor
     # Specifically: should be in [40%, 60%] of baseline content
     baseline_content = baseline.total_bytes_empirical_floor - ARCHIVE_OVERHEAD
@@ -110,7 +111,7 @@ def test_architecture_shrink_reduces_floor_proportionally() -> None:
         baseline_per_tensor_bits=EMPIRICAL_BITS,
         archive_overhead_bytes=ARCHIVE_OVERHEAD,
     )
-    # 0.5× elements → ~0.5× content
+    # 0.5x elements gives roughly 0.5x content.
     baseline_content = baseline.total_bytes_empirical_floor - ARCHIVE_OVERHEAD
     new_content = result.bytes_floor - ARCHIVE_OVERHEAD
     assert 0.45 < new_content / baseline_content < 0.55
@@ -119,7 +120,7 @@ def test_architecture_shrink_reduces_floor_proportionally() -> None:
 def test_water_filling_respects_baseline_cap() -> None:
     """Water-filling with budget > total entropy capacity caps at baseline (no over-allocation)."""
     sensitivities = {"w1": 1.0, "w2": 0.1}  # w1 much more sensitive
-    # Big budget — should saturate to baseline since we cap each tensor
+    # Big budget should saturate to baseline since we cap each tensor.
     big_budget = 1_000_000
     result = explore_water_filling(
         schema=SCHEMA,
@@ -140,7 +141,7 @@ def test_water_filling_respects_baseline_cap() -> None:
 
 
 def test_water_filling_with_tight_budget_below_baseline() -> None:
-    """Tight budget → floor below baseline."""
+    """Tight budget gives a floor below baseline."""
     sensitivities = {"w1": 1.0, "w2": 1.0}
     # Tight budget: total available bits much less than baseline content
     baseline = baseline_floor_summary(
@@ -184,3 +185,51 @@ def test_water_filling_rejects_zero_sensitivity_total() -> None:
             total_bit_budget=1000,
             archive_overhead_bytes=ARCHIVE_OVERHEAD,
         )
+
+
+def test_water_filling_rejects_negative_sensitivity() -> None:
+    with pytest.raises(ValueError, match="nonnegative"):
+        explore_water_filling(
+            schema=SCHEMA,
+            baseline_n_quant=N_QUANT,
+            baseline_per_tensor_bits=EMPIRICAL_BITS,
+            sensitivities={"w1": 1.0, "w2": -0.1},
+            total_bit_budget=1000,
+            archive_overhead_bytes=ARCHIVE_OVERHEAD,
+        )
+
+
+def test_rank_technique_results_fills_savings_and_sorts() -> None:
+    baseline = baseline_floor_summary(
+        schema=SCHEMA,
+        baseline_n_quant=N_QUANT,
+        baseline_per_tensor_bits=EMPIRICAL_BITS,
+        archive_overhead_bytes=ARCHIVE_OVERHEAD,
+    )
+    shrink = explore_architecture_shrink(
+        schema=SCHEMA,
+        baseline_n_quant=N_QUANT,
+        baseline_per_tensor_bits=EMPIRICAL_BITS,
+        element_multiplier=0.5,
+        archive_overhead_bytes=ARCHIVE_OVERHEAD,
+    )
+    sparse = explore_sparsity(
+        schema=SCHEMA,
+        baseline_n_quant=N_QUANT,
+        baseline_per_tensor_bits=EMPIRICAL_BITS,
+        sparsity_fraction=0.25,
+        archive_overhead_bytes=ARCHIVE_OVERHEAD,
+    )
+
+    ranked = rank_technique_results(
+        baseline_floor_bytes=baseline.total_bytes_empirical_floor,
+        results=[sparse, shrink],
+    )
+
+    assert ranked[0].bytes_savings_vs_baseline >= ranked[1].bytes_savings_vs_baseline
+    assert all(result.bytes_savings_vs_baseline > 0 for result in ranked)
+
+
+def test_rank_technique_results_rejects_invalid_baseline() -> None:
+    with pytest.raises(ValueError, match="baseline_floor_bytes"):
+        rank_technique_results(baseline_floor_bytes=0, results=[])

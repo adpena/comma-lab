@@ -1,0 +1,834 @@
+{
+  "all_evaluations": [
+    {
+      "bytes_out": 162156,
+      "error": null,
+      "eval_idx": 0,
+      "fitness": 162156.0,
+      "params": {
+        "brotli_lgblock": 19,
+        "brotli_lgwin": 12,
+        "brotli_quality": 10
+      },
+      "pareto_dominated_by": [
+        10,
+        17,
+        21,
+        25
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:57:45Z"
+    },
+    {
+      "bytes_out": 162157,
+      "error": null,
+      "eval_idx": 1,
+      "fitness": 162157.0,
+      "params": {
+        "brotli_lgblock": 21,
+        "brotli_lgwin": 11,
+        "brotli_quality": 10
+      },
+      "pareto_dominated_by": [
+        0,
+        4,
+        10,
+        11,
+        13,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        24,
+        25
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:57:51Z"
+    },
+    {
+      "bytes_out": 162280,
+      "error": null,
+      "eval_idx": 2,
+      "fitness": 162280.0,
+      "params": {
+        "brotli_lgblock": 17,
+        "brotli_lgwin": 13,
+        "brotli_quality": 11
+      },
+      "pareto_dominated_by": [
+        0,
+        1,
+        4,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        23,
+        24,
+        25,
+        26
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:57:57Z"
+    },
+    {
+      "bytes_out": 162282,
+      "error": null,
+      "eval_idx": 3,
+      "fitness": 162282.0,
+      "params": {
+        "brotli_lgblock": 17,
+        "brotli_lgwin": 13,
+        "brotli_quality": 10
+      },
+      "pareto_dominated_by": [
+        0,
+        1,
+        2,
+        4,
+        6,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        23,
+        24,
+        25,
+        26
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:58:06Z"
+    },
+    {
+      "bytes_out": 162156,
+      "error": null,
+      "eval_idx": 4,
+      "fitness": 162156.0,
+      "params": {
+        "brotli_lgblock": 19,
+        "brotli_lgwin": 15,
+        "brotli_quality": 10
+      },
+      "pareto_dominated_by": [
+        10,
+        17,
+        21,
+        25
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:58:11Z"
+    },
+    {
+      "bytes_out": 162282,
+      "error": null,
+      "eval_idx": 5,
+      "fitness": 162282.0,
+      "params": {
+        "brotli_lgblock": 17,
+        "brotli_lgwin": 14,
+        "brotli_quality": 10
+      },
+      "pareto_dominated_by": [
+        0,
+        1,
+        2,
+        4,
+        6,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        23,
+        24,
+        25,
+        26
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:58:17Z"
+    },
+    {
+      "bytes_out": 162280,
+      "error": null,
+      "eval_idx": 6,
+      "fitness": 162280.0,
+      "params": {
+        "brotli_lgblock": 17,
+        "brotli_lgwin": 13,
+        "brotli_quality": 11
+      },
+      "pareto_dominated_by": [
+        0,
+        1,
+        4,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        23,
+        24,
+        25,
+        26
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:58:22Z"
+    },
+    {
+      "bytes_out": 163960,
+      "error": null,
+      "eval_idx": 7,
+      "fitness": 163960.0,
+      "params": {
+        "brotli_lgblock": 21,
+        "brotli_lgwin": 12,
+        "brotli_quality": 9
+      },
+      "pareto_dominated_by": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        23,
+        24,
+        25,
+        26,
+        27
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:58:31Z"
+    },
+    {
+      "bytes_out": 164290,
+      "error": null,
+      "eval_idx": 8,
+      "fitness": 164290.0,
+      "params": {
+        "brotli_lgblock": 20,
+        "brotli_lgwin": 14,
+        "brotli_quality": 9
+      },
+      "pareto_dominated_by": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:58:31Z"
+    },
+    {
+      "bytes_out": 164167,
+      "error": null,
+      "eval_idx": 9,
+      "fitness": 164167.0,
+      "params": {
+        "brotli_lgblock": 20,
+        "brotli_lgwin": 13,
+        "brotli_quality": 9
+      },
+      "pareto_dominated_by": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:58:31Z"
+    },
+    {
+      "bytes_out": 162154,
+      "error": null,
+      "eval_idx": 10,
+      "fitness": 162154.0,
+      "params": {
+        "brotli_lgblock": 18,
+        "brotli_lgwin": 13,
+        "brotli_quality": 11
+      },
+      "pareto_dominated_by": [],
+      "pareto_frontier": true,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:58:31Z"
+    },
+    {
+      "bytes_out": 162156,
+      "error": null,
+      "eval_idx": 11,
+      "fitness": 162156.0,
+      "params": {
+        "brotli_lgblock": 20,
+        "brotli_lgwin": 12,
+        "brotli_quality": 10
+      },
+      "pareto_dominated_by": [
+        10,
+        17,
+        21,
+        25
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:58:40Z"
+    },
+    {
+      "bytes_out": 162157,
+      "error": null,
+      "eval_idx": 12,
+      "fitness": 162157.0,
+      "params": {
+        "brotli_lgblock": 21,
+        "brotli_lgwin": 11,
+        "brotli_quality": 10
+      },
+      "pareto_dominated_by": [
+        0,
+        4,
+        10,
+        11,
+        13,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        24,
+        25
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:58:46Z"
+    },
+    {
+      "bytes_out": 162156,
+      "error": null,
+      "eval_idx": 13,
+      "fitness": 162156.0,
+      "params": {
+        "brotli_lgblock": 19,
+        "brotli_lgwin": 12,
+        "brotli_quality": 10
+      },
+      "pareto_dominated_by": [
+        10,
+        17,
+        21,
+        25
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:58:52Z"
+    },
+    {
+      "bytes_out": 162157,
+      "error": null,
+      "eval_idx": 14,
+      "fitness": 162157.0,
+      "params": {
+        "brotli_lgblock": 19,
+        "brotli_lgwin": 11,
+        "brotli_quality": 10
+      },
+      "pareto_dominated_by": [
+        0,
+        4,
+        10,
+        11,
+        13,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        24,
+        25
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:58:58Z"
+    },
+    {
+      "bytes_out": 162156,
+      "error": null,
+      "eval_idx": 15,
+      "fitness": 162156.0,
+      "params": {
+        "brotli_lgblock": 18,
+        "brotli_lgwin": 13,
+        "brotli_quality": 10
+      },
+      "pareto_dominated_by": [
+        10,
+        17,
+        21,
+        25
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:59:03Z"
+    },
+    {
+      "bytes_out": 162156,
+      "error": null,
+      "eval_idx": 16,
+      "fitness": 162156.0,
+      "params": {
+        "brotli_lgblock": 19,
+        "brotli_lgwin": 13,
+        "brotli_quality": 10
+      },
+      "pareto_dominated_by": [
+        10,
+        17,
+        21,
+        25
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:59:09Z"
+    },
+    {
+      "bytes_out": 162155,
+      "error": null,
+      "eval_idx": 17,
+      "fitness": 162155.0,
+      "params": {
+        "brotli_lgblock": 19,
+        "brotli_lgwin": 11,
+        "brotli_quality": 11
+      },
+      "pareto_dominated_by": [
+        10,
+        25
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:59:15Z"
+    },
+    {
+      "bytes_out": 162156,
+      "error": null,
+      "eval_idx": 18,
+      "fitness": 162156.0,
+      "params": {
+        "brotli_lgblock": 18,
+        "brotli_lgwin": 12,
+        "brotli_quality": 10
+      },
+      "pareto_dominated_by": [
+        10,
+        17,
+        21,
+        25
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:59:24Z"
+    },
+    {
+      "bytes_out": 162156,
+      "error": null,
+      "eval_idx": 19,
+      "fitness": 162156.0,
+      "params": {
+        "brotli_lgblock": 19,
+        "brotli_lgwin": 13,
+        "brotli_quality": 10
+      },
+      "pareto_dominated_by": [
+        10,
+        17,
+        21,
+        25
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:59:30Z"
+    },
+    {
+      "bytes_out": 162156,
+      "error": null,
+      "eval_idx": 20,
+      "fitness": 162156.0,
+      "params": {
+        "brotli_lgblock": 19,
+        "brotli_lgwin": 12,
+        "brotli_quality": 10
+      },
+      "pareto_dominated_by": [
+        10,
+        17,
+        21,
+        25
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:59:36Z"
+    },
+    {
+      "bytes_out": 162155,
+      "error": null,
+      "eval_idx": 21,
+      "fitness": 162155.0,
+      "params": {
+        "brotli_lgblock": 18,
+        "brotli_lgwin": 11,
+        "brotli_quality": 11
+      },
+      "pareto_dominated_by": [
+        10,
+        25
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:59:41Z"
+    },
+    {
+      "bytes_out": 163960,
+      "error": null,
+      "eval_idx": 22,
+      "fitness": 163960.0,
+      "params": {
+        "brotli_lgblock": 20,
+        "brotli_lgwin": 12,
+        "brotli_quality": 9
+      },
+      "pareto_dominated_by": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        23,
+        24,
+        25,
+        26,
+        27
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:59:51Z"
+    },
+    {
+      "bytes_out": 162157,
+      "error": null,
+      "eval_idx": 23,
+      "fitness": 162157.0,
+      "params": {
+        "brotli_lgblock": 18,
+        "brotli_lgwin": 10,
+        "brotli_quality": 10
+      },
+      "pareto_dominated_by": [
+        0,
+        4,
+        10,
+        11,
+        13,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        24,
+        25
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:59:51Z"
+    },
+    {
+      "bytes_out": 162156,
+      "error": null,
+      "eval_idx": 24,
+      "fitness": 162156.0,
+      "params": {
+        "brotli_lgblock": 19,
+        "brotli_lgwin": 12,
+        "brotli_quality": 10
+      },
+      "pareto_dominated_by": [
+        10,
+        17,
+        21,
+        25
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T22:59:56Z"
+    },
+    {
+      "bytes_out": 162154,
+      "error": null,
+      "eval_idx": 25,
+      "fitness": 162154.0,
+      "params": {
+        "brotli_lgblock": 20,
+        "brotli_lgwin": 12,
+        "brotli_quality": 11
+      },
+      "pareto_dominated_by": [],
+      "pareto_frontier": true,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T23:00:02Z"
+    },
+    {
+      "bytes_out": 162157,
+      "error": null,
+      "eval_idx": 26,
+      "fitness": 162157.0,
+      "params": {
+        "brotli_lgblock": 19,
+        "brotli_lgwin": 11,
+        "brotli_quality": 10
+      },
+      "pareto_dominated_by": [
+        0,
+        4,
+        10,
+        11,
+        13,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        24,
+        25
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T23:00:11Z"
+    },
+    {
+      "bytes_out": 162282,
+      "error": null,
+      "eval_idx": 27,
+      "fitness": 162282.0,
+      "params": {
+        "brotli_lgblock": 17,
+        "brotli_lgwin": 12,
+        "brotli_quality": 10
+      },
+      "pareto_dominated_by": [
+        0,
+        1,
+        2,
+        4,
+        6,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        23,
+        24,
+        25,
+        26
+      ],
+      "pareto_frontier": false,
+      "reconstruction_rms": 0.0,
+      "timestamp_utc": "2026-05-07T23:00:17Z"
+    }
+  ],
+  "best_eval": {
+    "bytes_out": 162154,
+    "error": null,
+    "eval_idx": 10,
+    "fitness": 162154.0,
+    "params": {
+      "brotli_lgblock": 18,
+      "brotli_lgwin": 13,
+      "brotli_quality": 11
+    },
+    "pareto_dominated_by": [],
+    "pareto_frontier": true,
+    "reconstruction_rms": 0.0,
+    "timestamp_utc": "2026-05-07T22:58:31Z"
+  },
+  "charged_bits_changed": false,
+  "deployment_target": "desktop_research",
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "cpu_only_codec_op_search",
+    "no_archive_substitution_performed",
+    "no_score_affecting_payload_change_proof",
+    "missing_byte_closed_archive_manifest",
+    "missing_exact_cuda_auth_eval"
+  ],
+  "evidence_semantics": "cpu_codec_op_search_forensic",
+  "n_evaluations": 28,
+  "n_failed": 0,
+  "n_successful": 28,
+  "op_class": "Op1_PR101SplitBrotli",
+  "op_module": "tac.codec_pipeline",
+  "optimizer": "cma_es",
+  "parameter_space": [
+    {
+      "high": 11.0,
+      "init": 11.0,
+      "log": false,
+      "low": 1.0,
+      "name": "brotli_quality",
+      "type": "int"
+    },
+    {
+      "high": 24.0,
+      "init": 13.0,
+      "log": false,
+      "low": 10.0,
+      "name": "brotli_lgwin",
+      "type": "int"
+    },
+    {
+      "high": 24.0,
+      "init": 19.0,
+      "log": false,
+      "low": 16.0,
+      "name": "brotli_lgblock",
+      "type": "int"
+    }
+  ],
+  "pareto_frontier_count": 2,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "codec_op_cma_search_report_v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "seed": 42,
+  "target_modes": [
+    "contest_exact_eval_planning"
+  ],
+  "tool": "tools/codec_op_cma_search.py"
+}

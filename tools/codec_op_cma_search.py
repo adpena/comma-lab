@@ -393,7 +393,7 @@ def cma_es_search(
             )
             solutions.append((x, objective))
             eval_idx += 1
-        # Always a full popsize batch — never short
+        # Always a full popsize batch; never short.
         optimizer.tell(solutions)
     return evaluations
 
@@ -532,7 +532,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--state-dict-key", default=None)
     parser.add_argument(
         "--param-spec", required=True,
-        help="JSON dict mapping param name → "
+        help="JSON dict mapping param name to "
         "{type: int|float, low, high, init, log?}",
     )
     parser.add_argument("--max-evals", type=int, default=30)
