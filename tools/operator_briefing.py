@@ -78,6 +78,14 @@ PHASE_1_EXACT_EVAL_PACKETS = [
         ),
     },
     {
+        "lane_id": "pr106_q10_151byte_brotli",
+        "name": "PR106 low-level Brotli q10 151-byte rate candidate",
+        "packet_path": (
+            "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/"
+            "hnerv_lowlevel_exact_eval_packet.json"
+        ),
+    },
+    {
         "lane_id": "pr106x_lgblock16_1byte_brotli",
         "name": "PR106x low-level Brotli lgblock16 one-byte rate candidate",
         "packet_path": (

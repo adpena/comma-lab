@@ -7,8 +7,8 @@ This file just guards against the orchestrator's subprocess wiring breaking
 """
 from __future__ import annotations
 
-import json
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -43,6 +43,7 @@ def test_briefing_runs_all_three_phases():
     assert "Phase 1 blocked readiness artifacts" in proc.stdout
     assert "pr91_hpm1_readiness_bundle" in proc.stdout
     assert "wr01_apply_pr106x_half" in proc.stdout
+    assert "pr106_q10_151byte_brotli" in proc.stdout
     assert "pr106x_lgblock16_1byte_brotli" in proc.stdout
     assert "Copy-safe next steps" in proc.stdout
     assert "assert_packet_ready_for_submit" in proc.stdout
@@ -101,8 +102,18 @@ def test_briefing_json_composite_has_all_three_keys():
     packet_rows = {row["lane_id"]: row for row in out["exact_eval_packets"]}
     assert set(packet_rows) >= {
         "wr01_apply_pr106x_half",
+        "pr106_q10_151byte_brotli",
         "pr106x_lgblock16_1byte_brotli",
     }
+    q10 = packet_rows["pr106_q10_151byte_brotli"]
+    assert q10["ready_for_submit"] is False
+    assert q10["preflight_ready"] is True
+    assert q10["compliance_ok"] is True
+    assert q10["payload_diff_ready"] is True
+    assert q10["dry_run_ready"] is True
+    assert "missing_active_lane_dispatch_claim" in q10["blockers"]
+    assert "missing_lightning_environment" in q10["blockers"]
+    assert q10["operator_next_steps"]["schema"] == "hnerv_lowlevel_operator_next_steps_v1"
     lgblock16 = packet_rows["pr106x_lgblock16_1byte_brotli"]
     assert lgblock16["ready_for_submit"] is False
     assert lgblock16["preflight_ready"] is True
@@ -123,14 +134,21 @@ def test_briefing_json_each_phase_has_n_total_or_n_configs():
     assert any(k in out["reconciler"] for k in ("n_configs", "n_landed"))
     packet_rows = {row["lane_id"]: row for row in out["exact_eval_packets"]}
     assert packet_rows["wr01_apply_pr106x_half"]["operator_next_steps"]["schema"] == "wr01_operator_next_steps_v1"
-    assert (
-        packet_rows["wr01_apply_pr106x_half"]["operator_next_steps"]["steps"][4]["id"]
-        == "assert_packet_ready_for_submit"
-    )
-    assert (
-        packet_rows["pr106x_lgblock16_1byte_brotli"]["operator_next_steps"]["steps"][4]["id"]
-        == "submit_exact_cuda"
-    )
+    wr01_step_ids = [
+        step["id"]
+        for step in packet_rows["wr01_apply_pr106x_half"]["operator_next_steps"]["steps"]
+    ]
+    q10_step_ids = [
+        step["id"]
+        for step in packet_rows["pr106_q10_151byte_brotli"]["operator_next_steps"]["steps"]
+    ]
+    lgblock16_step_ids = [
+        step["id"]
+        for step in packet_rows["pr106x_lgblock16_1byte_brotli"]["operator_next_steps"]["steps"]
+    ]
+    assert "assert_packet_ready_for_submit" in wr01_step_ids
+    assert "submit_exact_cuda" in q10_step_ids
+    assert "submit_exact_cuda" in lgblock16_step_ids
     assert out["non_dispatchable_readiness_artifacts"][0]["score_claim"] is False
 
 
