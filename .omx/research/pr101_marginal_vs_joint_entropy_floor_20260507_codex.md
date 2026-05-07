@@ -14,6 +14,7 @@ Artifact: `reports/pr101_per_tensor_brotli_sweep.json`
 - Input state dict:
   `experiments/results/cma_pr101_real_substrate_20260507T222605Z/pr101_decoder_state_dict.pt`
 - Sweep: 28 tensors x 504 configs/tensor = 14,112 evaluations
+  (`quality=4..11`, `lgwin=10..18`, `lgblock=16..22`)
 - Wall clock: 12.037 seconds
 - Raw quantized bytes: 228,958
 - Sum of independently optimized per-tensor Brotli streams: 162,227 bytes
@@ -26,15 +27,22 @@ Global PR101 decoder-byte references:
 
 - Authored PR101 decoder blob: 162,164 bytes
   (`src/tac/pr101_split_brotli_codec.py`, public deconstruction ledgers)
-- True CMA-ES CodecOp global best found this tranche:
+- Best CodecOp setting found by the true CMA-ES run this tranche:
   162,154 bytes, `quality=11`, `lgwin=13`, `lgblock=18`
   (`experiments/results/cma_pr101_real_substrate_cmaes_20260507T223229Z/cma_pr101_search_report.json`)
+- Best CodecOp setting reproduced by hardened Optuna known-best probe:
+  162,150 bytes, `quality=11`, `lgwin=16`, `lgblock=19`
+  (`experiments/results/optuna_pr101_known_best_probe_20260507_codex/optuna_search_report.json`)
+- Hardened 60-trial Optuna sweep:
+  60/60 valid tensor-complete roundtrips, best found in that seeded run:
+  162,151 bytes, `quality=10`, `lgwin=16`, `lgblock=18`
+  (`experiments/results/optuna_pr101_real_substrate_hardened_20260507_codex/optuna_search_report.json`)
 
 Interpretation:
 
 - Independent per-tensor Brotli is not a hidden win here.
 - The per-tensor optimum is 63 bytes larger than the authored PR101 decoder blob
-  and 73 bytes larger than the current CMA-ES global best.
+  and 77 bytes larger than the current Optuna known-best probe.
 - Therefore, the remaining rate leverage is not better independent Brotli
   parameterization. It must come from one of:
   - lower-entropy weights,
@@ -77,11 +85,24 @@ Current evidence status:
   context model, stream contract, and reproducible command before it can drive
   dispatch.
 
+## Optuna Artifact Disposition
+
+`experiments/results/optuna_pr101_real_substrate_20260507T230716Z` is
+superseded planning smoke: it was successful, but it predates the hardened
+report/ledger schema and tensor-coverage fields. Use the two hardened artifacts
+above for routing and ledger promotion. Both remain CPU-prep only:
+
+- `score_claim=false`
+- `score_affecting_payload_changed=false`
+- `charged_bits_changed=false`
+- blocker includes `missing_exact_cuda_auth_eval`
+- all valid rows reconstruct all 28 expected tensor keys
+
 ## Routing Decision
 
 Use the direct artifact to deprioritize:
 
-- more independent per-tensor Brotli sweeps,
+- more independent per-tensor Brotli sweeps over this already-covered grid,
 - pure encoder-parameter searches on the unchanged PR101 decoder substrate,
 - claims that the authored PR101 decoder has large generic Brotli slack.
 

@@ -41,6 +41,7 @@ import math
 import sys
 import time
 from dataclasses import asdict, dataclass, field
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
@@ -72,6 +73,7 @@ class ParamSpec:
     type: str  # "int" or "float"
     low: float
     high: float
+    init: float
     log: bool = False
 
 
@@ -83,7 +85,14 @@ class Evaluation:
     reconstruction_rms: float | None
     fitness: float | None
     timestamp_utc: str
+    expected_tensor_count: int = 0
+    matched_tensor_count: int = 0
+    missing_tensor_keys: list[str] = field(default_factory=list)
+    non_tensor_decoded_keys: list[str] = field(default_factory=list)
+    shape_mismatch_tensor_keys: list[str] = field(default_factory=list)
     error: str | None = None
+    pareto_frontier: bool = False
+    pareto_dominated_by: list[int] = field(default_factory=list)
 
 
 @dataclass
@@ -95,11 +104,13 @@ class SearchReport:
     n_evaluations: int
     n_successful: int
     n_failed: int
+    pareto_frontier_count: int
     best_eval: Evaluation | None
     all_evaluations: list[Evaluation] = field(default_factory=list)
     optimizer: str = "optuna_tpe"
     seed: int = 0
     sampler_kind: str = "TPESampler"
+    optuna_version: str | None = None
     evidence_semantics: str = EVIDENCE_SEMANTICS
     target_modes: list[str] = field(default_factory=lambda: list(TARGET_MODES))
     deployment_target: str = DEPLOYMENT_TARGET
@@ -113,36 +124,116 @@ class SearchReport:
 
 
 def _import_codec_op(module: str, class_name: str):
-    mod = importlib.import_module(module)
+    try:
+        mod = importlib.import_module(module)
+    except ImportError as exc:
+        raise SystemExit(f"could not import module {module!r}: {exc}") from None
     if not hasattr(mod, class_name):
         raise SystemExit(f"module {module!r} has no class {class_name!r}")
-    return getattr(mod, class_name)
+    cls = getattr(mod, class_name)
+    for required in ("encode", "decode"):
+        if not hasattr(cls, required):
+            raise SystemExit(
+                f"{module}.{class_name} missing CodecOp method {required!r}"
+            )
+    return cls
 
 
-def _load_state_dict(path: Path) -> dict[str, torch.Tensor]:
+def _load_state_dict(path: Path, key: str | None) -> dict[str, torch.Tensor]:
     if not path.is_file():
         raise SystemExit(f"state_dict path does not exist: {path}")
     obj = torch.load(path, map_location="cpu", weights_only=False)
     if isinstance(obj, dict):
+        for name, value in obj.items():
+            if not isinstance(name, str):
+                raise SystemExit(
+                    f"state_dict key {name!r} is not a string"
+                )
+            if not isinstance(value, torch.Tensor):
+                raise SystemExit(
+                    f"state_dict value for {name!r} is not a Tensor "
+                    f"(got {type(value).__name__})"
+                )
         return obj
-    raise SystemExit(f"loaded {path} is not a dict")
+    if key is None:
+        raise SystemExit(
+            f"loaded {path} is a tensor not a dict; pass --state-dict-key"
+        )
+    if not isinstance(obj, torch.Tensor):
+        raise SystemExit(
+            f"loaded {path} is neither dict nor Tensor "
+            f"(got {type(obj).__name__})"
+        )
+    return {key: obj}
 
 
 def _parse_param_spec(spec_json: str) -> list[ParamSpec]:
-    raw = json.loads(spec_json)
+    try:
+        raw = json.loads(spec_json)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"--param-spec is not valid JSON: {exc}") from None
+    if not isinstance(raw, dict):
+        raise SystemExit("--param-spec must be a JSON dict")
+    if not raw:
+        raise SystemExit("--param-spec must contain at least one parameter")
     specs: list[ParamSpec] = []
     for name, body in raw.items():
+        if not isinstance(name, str) or not name:
+            raise SystemExit("--param-spec parameter names must be non-empty strings")
+        if not isinstance(body, dict):
+            raise SystemExit(f"--param-spec entry {name!r} must be a dict")
         param_type = str(body.get("type", "float"))
         if param_type not in {"int", "float"}:
-            raise SystemExit(f"--param-spec entry {name!r} has unsupported type {param_type!r}")
+            raise SystemExit(
+                f"--param-spec entry {name!r} has unsupported type "
+                f"{param_type!r}; expected 'int' or 'float'"
+            )
+        try:
+            low = float(body["low"])
+            high = float(body["high"])
+            init = float(body.get("init", (low + high) / 2))
+        except KeyError as exc:
+            raise SystemExit(
+                f"--param-spec entry {name!r} missing required key {exc.args[0]!r}"
+            ) from None
+        except (TypeError, ValueError) as exc:
+            raise SystemExit(
+                f"--param-spec entry {name!r} low/high/init must be numeric: {exc}"
+            ) from None
+        if not (math.isfinite(low) and math.isfinite(high) and math.isfinite(init)):
+            raise SystemExit(f"--param-spec entry {name!r} bounds/init must be finite")
+        if high < low:
+            raise SystemExit(f"--param-spec entry {name!r} high must be >= low")
+        if param_type == "int" and (
+            not low.is_integer() or not high.is_integer()
+        ):
+            raise SystemExit(
+                f"--param-spec entry {name!r} int bounds must be integers"
+            )
+        log = bool(body.get("log", False))
+        if log and (low <= 0.0 or high <= 0.0):
+            raise SystemExit(f"--param-spec entry {name!r} log range must be > 0")
         specs.append(ParamSpec(
             name=name,
             type=param_type,
-            low=float(body["low"]),
-            high=float(body["high"]),
-            log=bool(body.get("log", False)),
+            low=low,
+            high=high,
+            init=init,
+            log=log,
         ))
     return specs
+
+
+def _coerce(value: float, spec: ParamSpec) -> Any:
+    value = float(value)
+    if not math.isfinite(value):
+        raise ValueError(f"{spec.name}: sampled value must be finite")
+    clamped = max(spec.low, min(spec.high, value))
+    if spec.type == "int":
+        return round(clamped)
+    if spec.type != "float":
+        raise ValueError(f"{spec.name}: unsupported parameter type {spec.type!r}")
+    return float(clamped)
 
 
 def _evaluate(
@@ -166,21 +257,59 @@ def _evaluate(
         )
         if isinstance(decoded, tuple):
             decoded = decoded[0]
+        if not isinstance(decoded, dict):
+            raise ValueError(
+                f"CodecOp decode returned {type(decoded).__name__}, expected dict"
+            )
+        expected_keys = [
+            k for k, original in state_dict.items()
+            if isinstance(original, torch.Tensor)
+        ]
         rms_sum = 0.0
         rms_count = 0
+        missing_keys: list[str] = []
+        non_tensor_keys: list[str] = []
+        shape_mismatch_keys: list[str] = []
         for k, original in state_dict.items():
             if not isinstance(original, torch.Tensor):
                 continue
-            recon = decoded.get(k)
+            if k not in decoded:
+                missing_keys.append(k)
+                continue
+            recon = decoded[k]
             if not isinstance(recon, torch.Tensor):
+                non_tensor_keys.append(k)
                 continue
             if recon.shape != original.shape:
+                shape_mismatch_keys.append(k)
                 continue
             diff = (recon.float() - original.float()).flatten()
             rms_sum += float((diff * diff).mean().item())
             rms_count += 1
-        if rms_count == 0:
-            raise ValueError("no matching tensor outputs in decode")
+        if (
+            rms_count == 0
+            or missing_keys
+            or non_tensor_keys
+            or shape_mismatch_keys
+            or rms_count != len(expected_keys)
+        ):
+            return Evaluation(
+                eval_idx=eval_idx,
+                params=dict(params),
+                bytes_out=bytes_out,
+                reconstruction_rms=None,
+                fitness=None,
+                timestamp_utc=timestamp,
+                expected_tensor_count=len(expected_keys),
+                matched_tensor_count=rms_count,
+                missing_tensor_keys=missing_keys,
+                non_tensor_decoded_keys=non_tensor_keys,
+                shape_mismatch_tensor_keys=shape_mismatch_keys,
+                error=(
+                    "ValueError: CodecOp decode did not reconstruct every "
+                    "input tensor key"
+                ),
+            )
         rms = math.sqrt(rms_sum / rms_count)
         fitness = float(bytes_out) + 1e6 * rms
         return Evaluation(
@@ -190,6 +319,8 @@ def _evaluate(
             reconstruction_rms=rms,
             fitness=fitness,
             timestamp_utc=timestamp,
+            expected_tensor_count=len(expected_keys),
+            matched_tensor_count=rms_count,
         )
     except Exception as exc:
         return Evaluation(
@@ -213,7 +344,13 @@ def optuna_tpe_search(
     """TPE-based Bayesian optimization over CodecOp param space."""
     if max_evals <= 0:
         return []
-    import optuna
+    try:
+        import optuna
+    except ImportError as exc:
+        raise SystemExit(
+            "optuna is required for tools/codec_op_optuna_search.py; "
+            "install the project lock or run via uv"
+        ) from exc
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
     evaluations: list[Evaluation] = []
@@ -226,10 +363,12 @@ def optuna_tpe_search(
         for spec in specs:
             if spec.type == "int":
                 v = trial.suggest_int(spec.name, int(spec.low), int(spec.high))
-            else:
+            elif spec.type == "float":
                 v = trial.suggest_float(
                     spec.name, spec.low, spec.high, log=spec.log
                 )
+            else:
+                raise ValueError(f"unsupported parameter type {spec.type!r}")
             params[spec.name] = v
         ev = _evaluate(op_cls, params, state_dict, idx)
         evaluations.append(ev)
@@ -241,8 +380,76 @@ def optuna_tpe_search(
 
     sampler = optuna.samplers.TPESampler(seed=seed)
     study = optuna.create_study(direction="minimize", sampler=sampler)
+    study.enqueue_trial({
+        spec.name: _coerce(spec.init, spec) for spec in specs
+    })
     study.optimize(objective, n_trials=max_evals)
     return evaluations
+
+
+def _valid_for_pareto(ev: Evaluation) -> bool:
+    return (
+        ev.error is None
+        and ev.bytes_out >= 0
+        and ev.reconstruction_rms is not None
+        and math.isfinite(ev.reconstruction_rms)
+        and ev.fitness is not None
+        and math.isfinite(ev.fitness)
+        and ev.expected_tensor_count > 0
+        and ev.matched_tensor_count == ev.expected_tensor_count
+        and not ev.missing_tensor_keys
+        and not ev.non_tensor_decoded_keys
+        and not ev.shape_mismatch_tensor_keys
+    )
+
+
+def annotate_pareto_frontier(evaluations: list[Evaluation]) -> None:
+    """Mark CPU-planning non-dominated trials over bytes and RMS."""
+    valid = [ev for ev in evaluations if _valid_for_pareto(ev)]
+    for ev in evaluations:
+        ev.pareto_frontier = False
+        ev.pareto_dominated_by = []
+    for ev in valid:
+        dominated_by: list[int] = []
+        assert ev.reconstruction_rms is not None
+        for other in valid:
+            if other.eval_idx == ev.eval_idx:
+                continue
+            assert other.reconstruction_rms is not None
+            no_worse = (
+                other.bytes_out <= ev.bytes_out
+                and other.reconstruction_rms <= ev.reconstruction_rms
+            )
+            strictly_better = (
+                other.bytes_out < ev.bytes_out
+                or other.reconstruction_rms < ev.reconstruction_rms
+            )
+            if no_worse and strictly_better:
+                dominated_by.append(other.eval_idx)
+        ev.pareto_dominated_by = sorted(dominated_by)
+        ev.pareto_frontier = not dominated_by
+
+
+def _evaluation_sort_key(ev: Evaluation) -> tuple[Any, ...]:
+    return (
+        ev.error is not None,
+        not ev.pareto_frontier,
+        ev.fitness if ev.fitness is not None else FAILED_FITNESS_PENALTY,
+        ev.bytes_out if ev.bytes_out >= 0 else sys.maxsize,
+        (
+            ev.reconstruction_rms
+            if ev.reconstruction_rms is not None
+            else float("inf")
+        ),
+        ev.eval_idx,
+    )
+
+
+def _optuna_version() -> str | None:
+    try:
+        return version("optuna")
+    except PackageNotFoundError:
+        return None
 
 
 def _build_search_report(
@@ -253,11 +460,10 @@ def _build_search_report(
     seed: int,
     specs: list[ParamSpec],
 ) -> SearchReport:
-    successful = [e for e in evaluations if e.error is None and e.fitness is not None]
-    failed = [e for e in evaluations if e.error is not None or e.fitness is None]
-    best = None
-    if successful:
-        best = min(successful, key=lambda e: e.fitness if e.fitness is not None else float("inf"))
+    annotate_pareto_frontier(evaluations)
+    successful = [e for e in evaluations if _valid_for_pareto(e)]
+    failed = [e for e in evaluations if not _valid_for_pareto(e)]
+    best = min(successful, key=_evaluation_sort_key, default=None)
     return SearchReport(
         schema=REPORT_SCHEMA,
         tool=TOOL_NAME,
@@ -266,12 +472,81 @@ def _build_search_report(
         n_evaluations=len(evaluations),
         n_successful=len(successful),
         n_failed=len(failed),
+        pareto_frontier_count=len([e for e in evaluations if e.pareto_frontier]),
         best_eval=best,
         all_evaluations=evaluations,
         optimizer="optuna_tpe",
         seed=seed,
+        optuna_version=_optuna_version(),
         parameter_space=[asdict(s) for s in specs],
     )
+
+
+def append_atom_ledger_rows(
+    ledger_path: Path,
+    evaluations: list[Evaluation],
+    *,
+    op_module: str,
+    op_class: str,
+    substrate_label: str,
+) -> None:
+    """Append one planning-only row per Optuna evaluation."""
+    annotate_pareto_frontier(evaluations)
+    ledger_path.parent.mkdir(parents=True, exist_ok=True)
+    with ledger_path.open("a", encoding="utf-8") as fp:
+        for ev in evaluations:
+            blockers = list(DISPATCH_BLOCKERS)
+            if ev.error is not None:
+                blockers.append("evaluation_failed")
+            row = {
+                "schema": LEDGER_ROW_SCHEMA,
+                "tool": TOOL_NAME,
+                "timestamp_utc": ev.timestamp_utc,
+                "phase": None,
+                "atom_id": f"{substrate_label}/eval_{ev.eval_idx}",
+                "family": "codec_op_param_search",
+                "family_group": f"codec_op_param_search:{op_class}",
+                "pareto_scope": f"{op_module}.{op_class}",
+                "substrate_label": f"{substrate_label}/eval_{ev.eval_idx}",
+                "cathedral_op": f"{op_module}.{op_class}",
+                "op_params": ev.params,
+                "byte_delta": 0,
+                "bytes_out": ev.bytes_out,
+                "reconstruction_rms": ev.reconstruction_rms,
+                "fitness": ev.fitness,
+                "expected_tensor_count": ev.expected_tensor_count,
+                "matched_tensor_count": ev.matched_tensor_count,
+                "missing_tensor_keys": list(ev.missing_tensor_keys),
+                "non_tensor_decoded_keys": list(ev.non_tensor_decoded_keys),
+                "shape_mismatch_tensor_keys": list(ev.shape_mismatch_tensor_keys),
+                "pareto_frontier": ev.pareto_frontier,
+                "pareto_dominated_by": list(ev.pareto_dominated_by),
+                "error": ev.error,
+                "evidence_grade": EVIDENCE_GRADE,
+                "evidence_semantics": EVIDENCE_SEMANTICS,
+                "target_modes": list(TARGET_MODES),
+                "deployment_target": DEPLOYMENT_TARGET,
+                "ready_for_exact_eval_dispatch": False,
+                "field_selection_ready_for_exact_eval_dispatch": False,
+                "dispatchable": False,
+                "dispatch_attempted": False,
+                "score_claim": False,
+                "score_affecting_payload_changed": False,
+                "charged_bits_changed": False,
+                "dispatch_blockers": blockers,
+                "planning_objectives": {
+                    "bytes_out": ev.bytes_out,
+                    "reconstruction_rms": ev.reconstruction_rms,
+                    "fitness": ev.fitness,
+                    "matched_tensor_count": ev.matched_tensor_count,
+                    "expected_tensor_count": ev.expected_tensor_count,
+                },
+                "notes": (
+                    "Optuna TPE CodecOp parameter-search trial; CPU-only "
+                    "forensic planning row, no archive substitution or score claim."
+                ),
+            }
+            fp.write(json.dumps(row, allow_nan=False, sort_keys=True) + "\n")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -288,10 +563,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--atom-ledger-output", type=Path, default=None,
                         help="Optional JSONL path for atom-ledger rows (one per eval)")
+    parser.add_argument(
+        "--substrate-label", default="optuna_search",
+        help="Prefix for atom-ledger substrate_label.",
+    )
     args = parser.parse_args(argv)
+    if args.max_evals < 1:
+        raise SystemExit("--max-evals must be >= 1")
 
     op_cls = _import_codec_op(args.module, args.class_name)
-    state_dict = _load_state_dict(args.state_dict_path)
+    state_dict = _load_state_dict(args.state_dict_path, args.state_dict_key)
     specs = _parse_param_spec(args.param_spec)
 
     evaluations = optuna_tpe_search(
@@ -302,7 +583,11 @@ def main(argv: list[str] | None = None) -> int:
         seed=args.seed, specs=specs,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(asdict(report), indent=2, sort_keys=True), encoding="utf-8")
+    args.output.write_text(
+        json.dumps(asdict(report), allow_nan=False, indent=2, sort_keys=True)
+        + "\n",
+        encoding="utf-8",
+    )
     print(
         f"wrote {args.output} (n_evals={report.n_evaluations}, "
         f"n_failed={report.n_failed}, optimizer={report.optimizer})"
@@ -316,30 +601,13 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     if args.atom_ledger_output:
-        args.atom_ledger_output.parent.mkdir(parents=True, exist_ok=True)
-        with args.atom_ledger_output.open("w", encoding="utf-8") as fp:
-            for ev in evaluations:
-                row = {
-                    "schema": LEDGER_ROW_SCHEMA,
-                    "tool": TOOL_NAME,
-                    "evidence_grade": EVIDENCE_GRADE,
-                    "evidence_semantics": EVIDENCE_SEMANTICS,
-                    "target_modes": list(TARGET_MODES),
-                    "deployment_target": DEPLOYMENT_TARGET,
-                    "score_affecting_payload_changed": False,
-                    "charged_bits_changed": False,
-                    "dispatch_blockers": list(DISPATCH_BLOCKERS),
-                    "op_module": args.module,
-                    "op_class": args.class_name,
-                    "eval_idx": ev.eval_idx,
-                    "params": ev.params,
-                    "bytes_out": ev.bytes_out,
-                    "reconstruction_rms": ev.reconstruction_rms,
-                    "fitness": ev.fitness,
-                    "timestamp_utc": ev.timestamp_utc,
-                    "error": ev.error,
-                }
-                fp.write(json.dumps(row, sort_keys=True) + "\n")
+        append_atom_ledger_rows(
+            args.atom_ledger_output,
+            evaluations,
+            op_module=args.module,
+            op_class=args.class_name,
+            substrate_label=args.substrate_label,
+        )
         print(f"appended {len(evaluations)} rows to {args.atom_ledger_output}")
     return 0
 

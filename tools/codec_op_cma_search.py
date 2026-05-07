@@ -101,6 +101,11 @@ class Evaluation:
     reconstruction_rms: float | None
     fitness: float | None
     timestamp_utc: str
+    expected_tensor_count: int = 0
+    matched_tensor_count: int = 0
+    missing_tensor_keys: list[str] = field(default_factory=list)
+    non_tensor_decoded_keys: list[str] = field(default_factory=list)
+    shape_mismatch_tensor_keys: list[str] = field(default_factory=list)
     error: str | None = None
     pareto_frontier: bool = False
     pareto_dominated_by: list[int] = field(default_factory=list)
@@ -261,24 +266,56 @@ def _evaluate(
             raise ValueError(
                 f"CodecOp decode returned {type(decoded).__name__}, expected dict"
             )
-        # Reconstruction RMS over all tensors that survive the roundtrip
+        # Reconstruction RMS over all tensors in the input contract.
         rms_sum = 0.0
         rms_count = 0
+        expected_keys = [
+            k for k, original in state_dict.items()
+            if isinstance(original, torch.Tensor)
+        ]
+        missing_keys: list[str] = []
+        non_tensor_keys: list[str] = []
+        shape_mismatch_keys: list[str] = []
         for k, original in state_dict.items():
             if not isinstance(original, torch.Tensor):
                 continue
             if k not in decoded:
+                missing_keys.append(k)
                 continue
             recon = decoded[k]
             if not isinstance(recon, torch.Tensor):
+                non_tensor_keys.append(k)
                 continue
             if recon.shape != original.shape:
+                shape_mismatch_keys.append(k)
                 continue
             diff = (recon.float() - original.float()).flatten()
             rms_sum += float((diff * diff).mean().item())
             rms_count += 1
-        if rms_count == 0:
-            raise ValueError("CodecOp decode produced no matching tensor outputs")
+        if (
+            rms_count == 0
+            or missing_keys
+            or non_tensor_keys
+            or shape_mismatch_keys
+            or rms_count != len(expected_keys)
+        ):
+            return Evaluation(
+                eval_idx=eval_idx,
+                params=dict(params),
+                bytes_out=bytes_out,
+                reconstruction_rms=None,
+                fitness=None,
+                timestamp_utc=timestamp,
+                expected_tensor_count=len(expected_keys),
+                matched_tensor_count=rms_count,
+                missing_tensor_keys=missing_keys,
+                non_tensor_decoded_keys=non_tensor_keys,
+                shape_mismatch_tensor_keys=shape_mismatch_keys,
+                error=(
+                    "ValueError: CodecOp decode did not reconstruct every "
+                    "input tensor key"
+                ),
+            )
         rms = math.sqrt(rms_sum / rms_count)
         # Fitness: bytes_out + 1e6 * RMS (penalty for high reconstruction
         # error; the codec must roundtrip cleanly to be useful). Lower
@@ -291,6 +328,8 @@ def _evaluate(
             reconstruction_rms=rms,
             fitness=fitness,
             timestamp_utc=timestamp,
+            expected_tensor_count=len(expected_keys),
+            matched_tensor_count=rms_count,
         )
     except Exception as exc:
         return Evaluation(
@@ -406,6 +445,11 @@ def _valid_for_pareto(ev: Evaluation) -> bool:
         and math.isfinite(ev.reconstruction_rms)
         and ev.fitness is not None
         and math.isfinite(ev.fitness)
+        and ev.expected_tensor_count > 0
+        and ev.matched_tensor_count == ev.expected_tensor_count
+        and not ev.missing_tensor_keys
+        and not ev.non_tensor_decoded_keys
+        and not ev.shape_mismatch_tensor_keys
     )
 
 
@@ -496,6 +540,11 @@ def append_atom_ledger_rows(
                 "bytes_out": ev.bytes_out,
                 "reconstruction_rms": ev.reconstruction_rms,
                 "fitness": ev.fitness,
+                "expected_tensor_count": ev.expected_tensor_count,
+                "matched_tensor_count": ev.matched_tensor_count,
+                "missing_tensor_keys": list(ev.missing_tensor_keys),
+                "non_tensor_decoded_keys": list(ev.non_tensor_decoded_keys),
+                "shape_mismatch_tensor_keys": list(ev.shape_mismatch_tensor_keys),
                 "pareto_frontier": ev.pareto_frontier,
                 "pareto_dominated_by": list(ev.pareto_dominated_by),
                 "error": ev.error,
@@ -515,6 +564,8 @@ def append_atom_ledger_rows(
                     "bytes_out": ev.bytes_out,
                     "reconstruction_rms": ev.reconstruction_rms,
                     "fitness": ev.fitness,
+                    "matched_tensor_count": ev.matched_tensor_count,
+                    "expected_tensor_count": ev.expected_tensor_count,
                 },
                 "notes": (
                     "CMA-ES/random CodecOp parameter-search trial; CPU-only "

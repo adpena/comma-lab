@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import builtins
 import importlib.util
 import json
 import sys
@@ -12,11 +11,13 @@ import pytest
 import torch
 
 REPO = Path(__file__).resolve().parents[3]
-TOOL_PATH = REPO / "tools" / "codec_op_cma_search.py"
+TOOL_PATH = REPO / "tools" / "codec_op_optuna_search.py"
 
 
 def _load_tool():
-    spec = importlib.util.spec_from_file_location("codec_op_cma_search_under_test", TOOL_PATH)
+    spec = importlib.util.spec_from_file_location(
+        "codec_op_optuna_search_under_test", TOOL_PATH
+    )
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -40,12 +41,16 @@ class _ToyCodecOp:
         self.scale = float(scale)
         self.quality = int(quality)
 
-    def encode(self, state_dict: dict[str, torch.Tensor], context: dict[str, Any]) -> _Result:
+    def encode(
+        self, state_dict: dict[str, torch.Tensor], context: dict[str, Any]
+    ) -> _Result:
         del context
         bytes_out = 100 + 10 * self.quality + round(abs(self.scale) * 1_000)
         return _Result(bytes_out=bytes_out, op_state={"x": state_dict["x"]})
 
-    def decode(self, blob: bytes, *, op_state: dict[str, Any], context: dict[str, Any]) -> dict[str, torch.Tensor]:
+    def decode(
+        self, blob: bytes, *, op_state: dict[str, Any], context: dict[str, Any]
+    ) -> dict[str, torch.Tensor]:
         del blob, context
         return {"x": op_state["x"] + self.scale}
 
@@ -54,11 +59,15 @@ class _FailingCodecOp:
     def __init__(self, **params: Any) -> None:
         del params
 
-    def encode(self, state_dict: dict[str, torch.Tensor], context: dict[str, Any]) -> _Result:
+    def encode(
+        self, state_dict: dict[str, torch.Tensor], context: dict[str, Any]
+    ) -> _Result:
         del state_dict, context
         raise RuntimeError("fixture encode failure")
 
-    def decode(self, blob: bytes, *, op_state: dict[str, Any], context: dict[str, Any]) -> dict[str, torch.Tensor]:
+    def decode(
+        self, blob: bytes, *, op_state: dict[str, Any], context: dict[str, Any]
+    ) -> dict[str, torch.Tensor]:
         del blob, op_state, context
         return {}
 
@@ -67,11 +76,15 @@ class _DroppingCodecOp:
     def __init__(self, **params: Any) -> None:
         del params
 
-    def encode(self, state_dict: dict[str, torch.Tensor], context: dict[str, Any]) -> _Result:
+    def encode(
+        self, state_dict: dict[str, torch.Tensor], context: dict[str, Any]
+    ) -> _Result:
         del context
         return _Result(bytes_out=123, op_state={"x": state_dict["x"]})
 
-    def decode(self, blob: bytes, *, op_state: dict[str, Any], context: dict[str, Any]) -> dict[str, torch.Tensor]:
+    def decode(
+        self, blob: bytes, *, op_state: dict[str, Any], context: dict[str, Any]
+    ) -> dict[str, torch.Tensor]:
         del blob, context
         return {"x": op_state["x"]}
 
@@ -80,7 +93,9 @@ def _state_dict() -> dict[str, torch.Tensor]:
     return {"x": torch.tensor([1.0, 2.0, 3.0], dtype=torch.float32)}
 
 
-def _projection(evaluations: list[Any]) -> list[tuple[dict[str, Any], int, float | None, float | None, str | None]]:
+def _projection(
+    evaluations: list[Any],
+) -> list[tuple[dict[str, Any], int, float | None, float | None, str | None]]:
     return [
         (
             ev.params,
@@ -93,63 +108,69 @@ def _projection(evaluations: list[Any]) -> list[tuple[dict[str, Any], int, float
     ]
 
 
-def test_random_search_is_deterministic_and_starts_with_init() -> None:
+def test_optuna_tpe_search_is_deterministic_for_fixed_seed() -> None:
+    pytest.importorskip("optuna")
     specs = [
         tool.ParamSpec("scale", "float", 0.0, 0.2, 0.0),
         tool.ParamSpec("quality", "int", 1, 5, 3),
     ]
 
-    first = tool.random_search(_ToyCodecOp, _state_dict(), specs, max_evals=5, seed=17)
-    second = tool.random_search(_ToyCodecOp, _state_dict(), specs, max_evals=5, seed=17)
+    first = tool.optuna_tpe_search(
+        _ToyCodecOp, _state_dict(), specs, max_evals=5, seed=17
+    )
+    second = tool.optuna_tpe_search(
+        _ToyCodecOp, _state_dict(), specs, max_evals=5, seed=17
+    )
 
     assert _projection(first) == _projection(second)
     assert first[0].params == {"scale": 0.0, "quality": 3}
     assert len(first) == 5
+    assert all(ev.error is None for ev in first)
 
 
-def test_cma_es_missing_dependency_uses_same_deterministic_random_path(monkeypatch: pytest.MonkeyPatch) -> None:
-    specs = [
-        tool.ParamSpec("scale", "float", 0.0, 0.2, 0.0),
-        tool.ParamSpec("quality", "int", 1, 5, 3),
-    ]
-    real_import = builtins.__import__
-
-    def fake_import(name: str, *args: Any, **kwargs: Any) -> Any:
-        if name == "cmaes":
-            raise ImportError("forced missing cmaes")
-        return real_import(name, *args, **kwargs)
-
-    monkeypatch.setattr(builtins, "__import__", fake_import)
-
-    fallback = tool.cma_es_search(_ToyCodecOp, _state_dict(), specs, max_evals=4, seed=23)
-    direct = tool.random_search(_ToyCodecOp, _state_dict(), specs, max_evals=4, seed=23)
-
-    assert _projection(fallback) == _projection(direct)
-
-
-def test_parameter_spec_validation_and_coercion() -> None:
-    int_spec = tool.ParamSpec("n", "int", 1, 3, 2)
-    float_spec = tool.ParamSpec("alpha", "float", -1.0, 1.0, 0.0)
-
-    assert tool._coerce(0.1, int_spec) == 1
-    assert tool._coerce(2.6, int_spec) == 3
-    assert tool._coerce(7.0, int_spec) == 3
-    assert tool._coerce(-2.0, float_spec) == -1.0
-    assert tool._coerce(0.25, float_spec) == pytest.approx(0.25)
-
+def test_parameter_spec_validation() -> None:
     parsed = tool._parse_param_spec(
-        json.dumps({"alpha": {"type": "float", "low": 0.1, "high": 1.0, "log": True}})
+        json.dumps(
+            {
+                "alpha": {
+                    "type": "float",
+                    "low": 0.1,
+                    "high": 1.0,
+                    "init": 0.3,
+                    "log": True,
+                }
+            }
+        )
     )
-    assert parsed == [tool.ParamSpec("alpha", "float", 0.1, 1.0, 0.55, True)]
+    assert parsed == [tool.ParamSpec("alpha", "float", 0.1, 1.0, 0.3, True)]
 
     with pytest.raises(SystemExit, match="unsupported type"):
         tool._parse_param_spec('{"bad": {"type": "str", "low": 0, "high": 1}}')
     with pytest.raises(SystemExit, match="high must be >= low"):
         tool._parse_param_spec('{"bad": {"low": 2, "high": 1}}')
+    with pytest.raises(SystemExit, match="int bounds must be integers"):
+        tool._parse_param_spec(
+            '{"bad": {"type": "int", "low": 1.5, "high": 3}}'
+        )
     with pytest.raises(SystemExit, match="log range must be > 0"):
         tool._parse_param_spec('{"bad": {"low": 0, "high": 1, "log": true}}')
-    with pytest.raises(ValueError, match="unsupported parameter type"):
-        tool._coerce(1.0, tool.ParamSpec("bad", "str", 0, 1, 0))
+    with pytest.raises(SystemExit, match="must contain at least one parameter"):
+        tool._parse_param_spec("{}")
+
+
+def test_load_state_dict_requires_tensors_or_explicit_tensor_key(tmp_path: Path) -> None:
+    dict_path = tmp_path / "dict.pt"
+    torch.save(_state_dict(), dict_path)
+    assert list(tool._load_state_dict(dict_path, None)) == ["x"]
+
+    tensor_path = tmp_path / "tensor.pt"
+    torch.save(torch.tensor([1.0]), tensor_path)
+    assert list(tool._load_state_dict(tensor_path, "single")) == ["single"]
+
+    bad_path = tmp_path / "bad.pt"
+    torch.save({"x": 1}, bad_path)
+    with pytest.raises(SystemExit, match="is not a Tensor"):
+        tool._load_state_dict(bad_path, None)
 
 
 def test_failed_evaluation_is_json_safe_and_not_pareto_ranked() -> None:
@@ -182,7 +203,7 @@ def test_partial_decode_coverage_is_failed_not_ranked() -> None:
     assert ev.pareto_frontier is False
 
 
-def test_append_atom_ledger_rows_uses_planning_only_target_metadata(tmp_path: Path) -> None:
+def test_append_atom_ledger_rows_uses_planning_only_metadata(tmp_path: Path) -> None:
     evaluations = [
         tool.Evaluation(
             eval_idx=0,
@@ -227,16 +248,15 @@ def test_append_atom_ledger_rows_uses_planning_only_target_metadata(tmp_path: Pa
     rows = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
     assert len(rows) == 3
     first, dominated, failed = rows
-    assert first["schema"] == "codec_op_cma_search_eval_v1"
-    assert first["tool"] == "tools/codec_op_cma_search.py"
+    assert first["schema"] == "codec_op_optuna_search_eval_v1"
+    assert first["tool"] == "tools/codec_op_optuna_search.py"
     assert first["target_modes"] == ["contest_exact_eval_planning"]
-    assert "contest_exact_eval" not in first["target_modes"]
-    assert first["deployment_target"] == "desktop_research"
     assert first["ready_for_exact_eval_dispatch"] is False
+    assert first["field_selection_ready_for_exact_eval_dispatch"] is False
+    assert first["dispatchable"] is False
     assert first["score_claim"] is False
     assert first["score_affecting_payload_changed"] is False
     assert first["charged_bits_changed"] is False
-    assert first["evidence_semantics"] == "cpu_codec_op_search_forensic"
     assert "missing_exact_cuda_auth_eval" in first["dispatch_blockers"]
     assert first["byte_delta"] == 0
     assert first["expected_tensor_count"] == 1
@@ -249,6 +269,7 @@ def test_append_atom_ledger_rows_uses_planning_only_target_metadata(tmp_path: Pa
 
 
 def test_main_writes_strict_report_schema_and_ledger(tmp_path: Path) -> None:
+    pytest.importorskip("optuna")
     fixture_module = tmp_path / "fixture_codec_op.py"
     fixture_module.write_text(
         """
@@ -292,7 +313,12 @@ class FixtureCodecOp:
                 "--param-spec",
                 json.dumps(
                     {
-                        "scale": {"type": "float", "low": 0.0, "high": 0.2, "init": 0.0},
+                        "scale": {
+                            "type": "float",
+                            "low": 0.0,
+                            "high": 0.2,
+                            "init": 0.0,
+                        },
                         "quality": {"type": "int", "low": 1, "high": 5, "init": 3},
                     }
                 ),
@@ -300,12 +326,12 @@ class FixtureCodecOp:
                 "3",
                 "--seed",
                 "9",
-                "--optimizer",
-                "random",
                 "--output",
                 str(report_path),
                 "--atom-ledger-output",
                 str(ledger_path),
+                "--substrate-label",
+                "fixture_search",
             ]
         )
     finally:
@@ -313,17 +339,19 @@ class FixtureCodecOp:
 
     assert rc == 0
     payload = json.loads(report_path.read_text(encoding="utf-8"))
-    assert payload["schema"] == "codec_op_cma_search_report_v1"
-    assert payload["tool"] == "tools/codec_op_cma_search.py"
-    assert payload["optimizer"] == "random_search"
+    assert payload["schema"] == "codec_op_optuna_search_report_v1"
+    assert payload["tool"] == "tools/codec_op_optuna_search.py"
+    assert payload["optimizer"] == "optuna_tpe"
     assert payload["n_evaluations"] == 3
     assert payload["n_successful"] == 3
     assert payload["n_failed"] == 0
+    assert payload["pareto_frontier_count"] >= 1
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["score_claim"] is False
     assert payload["target_modes"] == ["contest_exact_eval_planning"]
     assert payload["score_affecting_payload_changed"] is False
     assert payload["charged_bits_changed"] is False
     assert payload["best_eval"]["pareto_frontier"] is True
+    assert payload["optuna_version"] is not None
     assert payload["parameter_space"][0]["name"] == "scale"
     assert len(ledger_path.read_text(encoding="utf-8").splitlines()) == 3
