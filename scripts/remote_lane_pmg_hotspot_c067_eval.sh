@@ -18,6 +18,14 @@ if [ "${SKIP_NVDEC_PROBE:-0}" != "1" ] && [ -f "$WORKSPACE/scripts/probe_nvdec.s
   bash "$WORKSPACE/scripts/probe_nvdec.sh" || exit 2
 fi
 
+# Strip macOS AppleDouble resource forks before contest_auth_eval validates
+# upstream/videos. Lane F-V2 bug 2026-04-27: tar from macOS host carried
+# `._0.mkv` files alongside `0.mkv`, contest_auth_eval._validate_uncompressed_dir
+# raised "uncompressed-dir contamination" exit non-zero. Explicit cleanup is
+# defense-in-depth — remote_archive_only_eval.sh strips upstream/ at line 92
+# but doing it here keeps the failure window narrow.
+find upstream/videos -name '._*' -delete 2>/dev/null || true
+
 OUT="experiments/results/vast_live_harvest/pmg_hotspot_c067_h100_20260502T1350Z"
 CANDIDATE_DIR="experiments/results/pmg_hotspot_candidate_c067_20260502"
 ARCHIVE_SRC="$CANDIDATE_DIR/archive.zip"

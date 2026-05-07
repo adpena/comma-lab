@@ -20,6 +20,14 @@
 
 set -euo pipefail
 
+# Strip macOS AppleDouble resource forks (._0.mkv) before the canonical driver
+# runs contest_auth_eval. The underlying scripts/remote_lane_sjkl_c067.sh sources
+# env.sh and is exempted by the static scanner, but doing it here too is
+# defense-in-depth and satisfies the scanner directly on this wrapper.
+# Lane F-V2 bug 2026-04-27 — _validate_uncompressed_dir contamination crash.
+WORKSPACE="${WORKSPACE:-/workspace/pact}"
+[ -d "$WORKSPACE/upstream/videos" ] && find "$WORKSPACE/upstream/videos" -name '._*' -delete 2>/dev/null || true
+
 export SJKL_RUN_ID="${SJKL_RUN_ID:-sjkl_c067_v3_k2_a4_cap8k_prepped_$(date -u +%Y%m%dT%H%M%SZ)}"
 export SJKL_OUTPUT_DIR="${SJKL_OUTPUT_DIR:-experiments/results/${SJKL_RUN_ID}}"
 export SJKL_PREPARED_TENSOR_DIR="${SJKL_PREPARED_TENSOR_DIR:-experiments/results/sjkl_tensor_prep_c067_full_20260502}"
