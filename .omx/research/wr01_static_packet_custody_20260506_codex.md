@@ -79,7 +79,10 @@ prefer the lower-risk, larger byte win unless explicitly superseded.
 - `.venv/bin/ruff check tools/build_wr01_exact_eval_packet.py src/tac/tests/test_wr01_exact_eval_packet.py src/tac/optimization/cross_paradigm_atoms.py src/tac/tests/test_cross_paradigm_atoms.py`
   - passed
 - `.venv/bin/python tools/all_lanes_preflight.py`
-  - all 23 checks passed after this adversarial-priority refresh
+  - latest run failed at Gate #10 because
+    `.omx/research/wave_omega_stack_composition_blueprint_20260507_claude.md`
+    is an unrelated untracked source-like research artifact; WR01 focused
+    tests/lint remained green
 
 ## Next Action
 
