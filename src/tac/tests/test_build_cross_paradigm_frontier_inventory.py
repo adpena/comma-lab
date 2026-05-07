@@ -114,6 +114,18 @@ def test_cross_paradigm_inventory_pins_required_score_path_rows() -> None:
     assert "meta_lagrangian" in lapose["paradigms"]
     assert lapose["action_class"] == "calibrate_planning_signal_and_attach_archive_consumer"
 
+    allocator = rows["meta_lagrangian_cross_paradigm_allocator"]
+    assert allocator["status"] == "field_acquisition_ranker_landed_planning_only"
+    assert "src/tac/optimization/field_equation_planner.py" in allocator["code_paths"]
+    assert "src/tac/optimization/bayesian_experimental_design.py" in allocator["code_paths"]
+    assert "tools/build_field_equation_plan.py" in allocator["code_paths"]
+    assert (
+        ".omx/research/field_acquisition_ranking_20260507_codex.md"
+        in allocator["evidence_paths"]
+    )
+    assert "field_acquisition_ranking" in allocator["next_patch"]
+    assert any("zero design-ready rows" in blocker for blocker in allocator["blockers"])
+
 
 def test_cross_paradigm_inventory_geometry_feedback_contracts_fail_closed() -> None:
     payload = build_inventory(repo_root=REPO)

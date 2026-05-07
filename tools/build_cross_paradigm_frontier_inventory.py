@@ -278,17 +278,34 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         title="Meta-lagrangian cross-paradigm allocator",
         paradigms=("meta_lagrangian", "all_paradigms"),
         role="canonical_ranker",
-        status="planning_ranker_landed",
-        evidence_grade="derivation/planning",
-        stackability="high: common row schema can compare rate, pose, seg, class, hard-pair support",
-        replacement_potential="none directly; selects concrete stack/replacement builders",
-        code_paths=("src/tac/optimization/meta_lagrangian_allocator.py",),
-        evidence_paths=(".omx/research/atom_lagrangian_waterfill_sub03_system_20260501_codex.md",),
-        next_patch=(
-            "Add cross-paradigm family/conflict fields and refuse dispatchable rows unless a "
-            "byte-closed archive manifest is attached."
+        status="field_acquisition_ranker_landed_planning_only",
+        evidence_grade="derivation/planning with deterministic acquisition artifact",
+        stackability=(
+            "high: common row schema compares rate, pose, seg, class, hard-pair support, "
+            "Pareto/KKT readiness, and Bayesian acquisition pressure"
         ),
-        blockers=("planner assumes additive expected deltas until exact stacked archives land",),
+        replacement_potential="none directly; selects concrete stack/replacement builders",
+        code_paths=(
+            "src/tac/optimization/meta_lagrangian_allocator.py",
+            "src/tac/optimization/field_equation_planner.py",
+            "src/tac/optimization/bayesian_experimental_design.py",
+            "tools/build_field_equation_plan.py",
+        ),
+        evidence_paths=(
+            ".omx/research/atom_lagrangian_waterfill_sub03_system_20260501_codex.md",
+            ".omx/research/field_acquisition_ranking_20260507_codex.md",
+            "reports/cross_paradigm_atom_ledger_v3_20260506.json",
+        ),
+        next_patch=(
+            "Feed every paradigm into field_acquisition_ranking, then promote only rows with "
+            "Pareto/KKT readiness, byte-closed archive manifests, and explicit Volterra/"
+            "interaction assumptions."
+        ),
+        blockers=(
+            "planner assumes additive expected deltas until exact stacked archives land",
+            "live v3 atom ledger currently has zero design-ready rows",
+            "high-acquisition planning rows still need byte-closed archive consumers",
+        ),
     ),
     InventoryRow(
         key="sensitivity_omega_w_v3",
