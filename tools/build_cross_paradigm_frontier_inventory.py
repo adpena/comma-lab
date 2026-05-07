@@ -210,11 +210,14 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/summary.json",
             "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
             ".omx/research/pr91_hpm1_phase_major_failure_classification_20260507_codex.json",
+            ".omx/research/pr91_hpm1_submitted_prefix_token_recovery_tile_major_20260507_codex.json",
+            ".omx/research/pr91_hpm1_next_row_suffix_scan_tile_major_20260507_codex.json",
         ),
         next_patch=(
-            "Use the phase-major failure classification to recover PR91/HPM1 prior context, "
-            "range-state, or true encoder semantic-token grammar; then prove full decode/"
-            "reencode parity before replacing the runtime skeleton with a charged consumer."
+            "Use the PR91/HPM1 phase-major and tile-major failure classifications to "
+            "recover encoder-side probability/range-state contract drift or earlier "
+            "context/order drift; then prove full decode/reencode parity before "
+            "replacing the runtime skeleton with a charged consumer."
         ),
         blockers=(
             "raw lossless class wrapping was byte-regressive",
@@ -222,6 +225,8 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "CLADE/SPADE/openpilot priors need charged archive consumption",
             "local PR91 HPM1 payload candidate lacks full 600-frame decode/reencode parity",
             "phase-major reference row is argmax but stream still fails after 15989 symbols",
+            "tile-major submitted prefix reaches 8274 symbols but fails at frame 0 group 12 symbol 210",
+            "same-group next-coordinate suffix scan tested 1134 remaining rows and found 0 decodable",
             "prior probability/context or range-state grammar remains unrecovered",
             "runtime consumer is a charged fail-closed skeleton, not a decoder",
             "PR91 HPAC device contract is ambient/contradictory in public runtime sources",

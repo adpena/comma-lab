@@ -88,8 +88,18 @@ def test_cross_paradigm_inventory_pins_required_score_path_rows() -> None:
         ".omx/research/pr91_hpm1_phase_major_failure_classification_20260507_codex.json"
         in categorical["evidence_paths"]
     )
-    assert "phase-major failure classification" in categorical["next_patch"]
+    assert (
+        ".omx/research/pr91_hpm1_submitted_prefix_token_recovery_tile_major_20260507_codex.json"
+        in categorical["evidence_paths"]
+    )
+    assert (
+        ".omx/research/pr91_hpm1_next_row_suffix_scan_tile_major_20260507_codex.json"
+        in categorical["evidence_paths"]
+    )
+    assert "phase-major and tile-major failure classifications" in categorical["next_patch"]
     assert any("15989 symbols" in blocker for blocker in categorical["blockers"])
+    assert any("8274 symbols" in blocker for blocker in categorical["blockers"])
+    assert any("1134 remaining rows" in blocker for blocker in categorical["blockers"])
     assert any("range-state grammar" in blocker for blocker in categorical["blockers"])
 
     entropy = rows["hnerv_per_tensor_context_entropy"]

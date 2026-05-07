@@ -1,8 +1,7 @@
 {
   "dirty_blocked_row_count": 0,
-  "dirty_path_count": 11,
+  "dirty_path_count": 12,
   "dirty_paths": [
-    "experiments/results/cross_paradigm_frontier_inventory_20260507_codex/",
     "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/lightning_exact_eval_plan.json",
     "experiments/results/public_pr100_intake_20260504_codex/source",
     "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source",
@@ -12,7 +11,9 @@
     "experiments/results/public_pr81_qzs3_range_mask_intake_20260503_codex/repo",
     "experiments/results/public_pr82_henosis_frontier_intake_20260503_codex/repo",
     "experiments/results/public_pr91_intake_20260504_worker/pr91_src/repo",
-    "reports/raw/kaggle_ingest/kaggle-dilated-h64-long1000-retry-v6-20260410T234220Z/comma_video_compression_challenge"
+    "reports/raw/kaggle_ingest/kaggle-dilated-h64-long1000-retry-v6-20260410T234220Z/comma_video_compression_challenge",
+    "src/tac/tests/test_build_cross_paradigm_frontier_inventory.py",
+    "tools/build_cross_paradigm_frontier_inventory.py"
   ],
   "dispatch_attempted": false,
   "dispatch_blockers": [
@@ -181,10 +182,7 @@
                 "claim:dispatch_claim_check_missing"
               ],
               "exact_cuda_eval": [],
-              "interaction_model": [
-                "missing_interaction_assumptions",
-                "field_interaction_contract_blocked"
-              ],
+              "interaction_model": [],
               "kkt_or_admm": [
                 "kkt:kkt_proof_or_admm_result_missing",
                 "kkt_not_ready_for_field_planning"
@@ -196,22 +194,19 @@
               "score_claim": [],
               "strict_preflight": []
             },
-            "blocker_count": 6,
+            "blocker_count": 4,
             "blockers": [
               "missing_active_lane_dispatch_claim",
               "claim:dispatch_claim_check_missing",
-              "missing_interaction_assumptions",
               "kkt:kkt_proof_or_admm_result_missing",
-              "kkt_not_ready_for_field_planning",
-              "field_interaction_contract_blocked"
+              "kkt_not_ready_for_field_planning"
             ],
             "candidate_preflight_ready_for_exact_eval_dispatch": false,
             "dispatch_attempted": false,
             "dispatch_refused": true,
             "next_required_proof": [
               "matching_active_level2_lane_claim_for_manifest_lane_and_job",
-              "passed_kkt_proof_or_converged_admm_waterline_result",
-              "explicit_interaction_assumptions_or_volterra_scope"
+              "passed_kkt_proof_or_converged_admm_waterline_result"
             ],
             "ready_for_exact_eval_dispatch": false,
             "schema": "exact_dispatch_blockers_v1",
@@ -221,20 +216,21 @@
           "expected_pose_dist_delta": 0.0,
           "expected_score_variance": 0.0,
           "expected_seg_dist_delta": 0.0,
-          "expected_total_score_delta": 0.0,
+          "expected_total_score_delta": -6.658589531221714e-07,
           "family": "hnerv_lowlevel_brotli_repack",
           "family_group": "hnerv_lowlevel_brotli_repack",
           "field_interaction_contract": {
-            "assumption_count": 0,
-            "assumptions": [],
-            "blockers": [
-              "missing_interaction_assumptions"
+            "assumption_count": 2,
+            "assumptions": [
+              "rate_only_raw_equivalent_brotli_repack",
+              "component_deltas_require_exact_cuda_confirmation"
             ],
+            "blockers": [],
             "conflicts_with_atoms": [],
             "conflicts_with_families": [],
             "interaction_model": "",
             "schema": "field_interaction_contract_v1",
-            "status": "blocked",
+            "status": "passed",
             "volterra_order": null,
             "volterra_order_source": "",
             "volterra_scope": "undeclared_order_first_order_assumptions_only",
@@ -242,10 +238,12 @@
             "volterra_terms_declared": false
           },
           "field_selection_ready_for_exact_eval_dispatch": false,
-          "field_selection_score_delta": 0.0,
-          "interaction_assumptions": [],
+          "field_selection_score_delta": -6.65859e-07,
+          "interaction_assumptions": [
+            "rate_only_raw_equivalent_brotli_repack",
+            "component_deltas_require_exact_cuda_confirmation"
+          ],
           "kkt_blockers": [
-            "missing_interaction_assumptions",
             "kkt:kkt_proof_or_admm_result_missing"
           ],
           "kkt_proof": {
@@ -268,7 +266,7 @@
             true,
             true,
             false,
-            0.0,
+            -6.65859e-07,
             0.0
           ],
           "manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/hnerv_lowlevel_exact_eval_packet.json",
@@ -306,7 +304,7 @@
               "confidence": 1.0,
               "expected_pose_dist_delta": 0.0,
               "expected_seg_dist_delta": 0.0,
-              "expected_total_score_delta": 0.0
+              "expected_total_score_delta": -6.658589531221714e-07
             },
             "reason": "non_dominated_within_pareto_scope",
             "schema": "non_dominated_frontier_reason_v1",
@@ -401,7 +399,7 @@
             "confidence": 1.0,
             "expected_pose_dist_delta": 0.0,
             "expected_seg_dist_delta": 0.0,
-            "expected_total_score_delta": 0.0
+            "expected_total_score_delta": -6.658589531221714e-07
           },
           "pareto_scope": "hnerv_rate_only_exact_archive",
           "proxy_row": false,
@@ -926,10 +924,7 @@
               "claim:dispatch_claim_check_missing"
             ],
             "exact_cuda_eval": [],
-            "interaction_model": [
-              "missing_interaction_assumptions",
-              "field_interaction_contract_blocked"
-            ],
+            "interaction_model": [],
             "kkt_or_admm": [
               "kkt:kkt_proof_or_admm_result_missing",
               "kkt_not_ready_for_field_planning"
@@ -941,22 +936,19 @@
             "score_claim": [],
             "strict_preflight": []
           },
-          "blocker_count": 6,
+          "blocker_count": 4,
           "blockers": [
             "missing_active_lane_dispatch_claim",
             "claim:dispatch_claim_check_missing",
-            "missing_interaction_assumptions",
             "kkt:kkt_proof_or_admm_result_missing",
-            "kkt_not_ready_for_field_planning",
-            "field_interaction_contract_blocked"
+            "kkt_not_ready_for_field_planning"
           ],
           "candidate_preflight_ready_for_exact_eval_dispatch": false,
           "dispatch_attempted": false,
           "dispatch_refused": true,
           "next_required_proof": [
             "matching_active_level2_lane_claim_for_manifest_lane_and_job",
-            "passed_kkt_proof_or_converged_admm_waterline_result",
-            "explicit_interaction_assumptions_or_volterra_scope"
+            "passed_kkt_proof_or_converged_admm_waterline_result"
           ],
           "ready_for_exact_eval_dispatch": false,
           "schema": "exact_dispatch_blockers_v1",
@@ -966,20 +958,21 @@
         "expected_pose_dist_delta": 0.0,
         "expected_score_variance": 0.0,
         "expected_seg_dist_delta": 0.0,
-        "expected_total_score_delta": 0.0,
+        "expected_total_score_delta": -6.658589531221714e-07,
         "family": "hnerv_lowlevel_brotli_repack",
         "family_group": "hnerv_lowlevel_brotli_repack",
         "field_interaction_contract": {
-          "assumption_count": 0,
-          "assumptions": [],
-          "blockers": [
-            "missing_interaction_assumptions"
+          "assumption_count": 2,
+          "assumptions": [
+            "rate_only_raw_equivalent_brotli_repack",
+            "component_deltas_require_exact_cuda_confirmation"
           ],
+          "blockers": [],
           "conflicts_with_atoms": [],
           "conflicts_with_families": [],
           "interaction_model": "",
           "schema": "field_interaction_contract_v1",
-          "status": "blocked",
+          "status": "passed",
           "volterra_order": null,
           "volterra_order_source": "",
           "volterra_scope": "undeclared_order_first_order_assumptions_only",
@@ -987,10 +980,12 @@
           "volterra_terms_declared": false
         },
         "field_selection_ready_for_exact_eval_dispatch": false,
-        "field_selection_score_delta": 0.0,
-        "interaction_assumptions": [],
+        "field_selection_score_delta": -6.65859e-07,
+        "interaction_assumptions": [
+          "rate_only_raw_equivalent_brotli_repack",
+          "component_deltas_require_exact_cuda_confirmation"
+        ],
         "kkt_blockers": [
-          "missing_interaction_assumptions",
           "kkt:kkt_proof_or_admm_result_missing"
         ],
         "kkt_proof": {
@@ -1013,7 +1008,7 @@
           true,
           true,
           false,
-          0.0,
+          -6.65859e-07,
           0.0
         ],
         "manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/hnerv_lowlevel_exact_eval_packet.json",
@@ -1051,7 +1046,7 @@
             "confidence": 1.0,
             "expected_pose_dist_delta": 0.0,
             "expected_seg_dist_delta": 0.0,
-            "expected_total_score_delta": 0.0
+            "expected_total_score_delta": -6.658589531221714e-07
           },
           "reason": "non_dominated_within_pareto_scope",
           "schema": "non_dominated_frontier_reason_v1",
@@ -1146,7 +1141,7 @@
           "confidence": 1.0,
           "expected_pose_dist_delta": 0.0,
           "expected_seg_dist_delta": 0.0,
-          "expected_total_score_delta": 0.0
+          "expected_total_score_delta": -6.658589531221714e-07
         },
         "pareto_scope": "hnerv_rate_only_exact_archive",
         "proxy_row": false,
@@ -1400,6 +1395,8 @@
         "CLADE/SPADE/openpilot priors need charged archive consumption",
         "local PR91 HPM1 payload candidate lacks full 600-frame decode/reencode parity",
         "phase-major reference row is argmax but stream still fails after 15989 symbols",
+        "tile-major submitted prefix reaches 8274 symbols but fails at frame 0 group 12 symbol 210",
+        "same-group next-coordinate suffix scan tested 1134 remaining rows and found 0 decodable",
         "prior probability/context or range-state grammar remains unrecovered",
         "runtime consumer is a charged fail-closed skeleton, not a decoder",
         "PR91 HPAC device contract is ambient/contradictory in public runtime sources"
@@ -1410,7 +1407,7 @@
       "key": "categorical_qma9_clade_spade_openpilot",
       "missing_code_path_count": 0,
       "missing_evidence_path_count": 0,
-      "next_patch": "Use the phase-major failure classification to recover PR91/HPM1 prior context, range-state, or true encoder semantic-token grammar; then prove full decode/reencode parity before replacing the runtime skeleton with a charged consumer.",
+      "next_patch": "Use the PR91/HPM1 phase-major and tile-major failure classifications to recover encoder-side probability/range-state contract drift or earlier context/order drift; then prove full decode/reencode parity before replacing the runtime skeleton with a charged consumer.",
       "priority_tier": 30,
       "readiness_stage": "needs_byte_closed_candidate_or_fixture",
       "ready_for_exact_eval_dispatch": false,
