@@ -18,7 +18,6 @@ Cross-ref: project_cross_paradigm_pipeline_wiring_landed_20260506.md
 """
 from __future__ import annotations
 
-import inspect
 import re
 import tempfile
 from pathlib import Path
@@ -26,7 +25,6 @@ from pathlib import Path
 import pytest
 
 from experiments.pipeline import PipelineConfig, step_extract_masks
-
 
 _PIPELINE_PATH = (
     Path(__file__).resolve().parents[3] / "experiments" / "pipeline.py"
@@ -38,6 +36,9 @@ _PIPELINE_PATH = (
 CROSS_PARADIGM_BOOL_FLAGS: tuple[str, ...] = (
     "use_sensitivity_weighted",
     "use_joint_codec_stack",
+    "use_joint_scorer_aware",
+    "use_learnable_entropy",
+    "use_full_renderer_self_compress",
     "use_raft_init",
     "use_riemannian_tto",
 )
@@ -82,6 +83,22 @@ def test_each_cross_paradigm_flag_has_a_guard_site() -> None:
             f"in experiments/pipeline.py — silent-no-op trap. "
             f"Add a WARN guard or dispatch branch in the corresponding step."
         )
+
+
+def test_dezeta_phase1_flags_fail_closed() -> None:
+    """delta/epsilon/zeta Phase-1 flags must not silently fall through."""
+    src = _PIPELINE_PATH.read_text(encoding="utf-8")
+    for name in (
+        "use_joint_scorer_aware",
+        "use_learnable_entropy",
+        "use_full_renderer_self_compress",
+    ):
+        idx = src.find(f"cfg.{name}")
+        assert idx >= 0
+        window = src[idx: idx + 900]
+        assert "raise NotImplementedError" in window
+        assert "REGISTERED-BUT-NOT-WIRED" in window
+        assert "Refusing to fall" in window
 
 
 # Flags with full dispatch wiring (not just WARN guards). New flags graduate

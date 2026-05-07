@@ -57,6 +57,17 @@ def test_full_renderer_self_compress_config_accepts_valid_inputs() -> None:
     assert cfg.protect_patterns == DEFAULT_FILM_PROTECT_PATTERNS
 
 
+def test_full_renderer_self_compress_config_unions_custom_protect_patterns() -> None:
+    cfg = FullRendererSelfCompressConfig(
+        target_bits_total=50_000,
+        protect_patterns=("custom_gate",),
+    )
+    assert cfg.protect_patterns[: len(DEFAULT_FILM_PROTECT_PATTERNS)] == (
+        DEFAULT_FILM_PROTECT_PATTERNS
+    )
+    assert "custom_gate" in cfg.protect_patterns
+
+
 def test_full_renderer_self_compress_config_rejects_bad_inputs() -> None:
     with pytest.raises(FullRendererSelfCompressError, match="target_bits_total"):
         FullRendererSelfCompressConfig(target_bits_total=0)
@@ -70,6 +81,16 @@ def test_full_renderer_self_compress_config_rejects_bad_inputs() -> None:
         FullRendererSelfCompressConfig(
             target_bits_total=1, protect_film_layers="yes"  # type: ignore[arg-type]
         )
+    with pytest.raises(FullRendererSelfCompressError, match="protect_patterns"):
+        FullRendererSelfCompressConfig(target_bits_total=1, protect_patterns=())
+    with pytest.raises(FullRendererSelfCompressError, match="film_unprotect_override"):
+        FullRendererSelfCompressConfig(target_bits_total=1, protect_film_layers=False)
+    cfg = FullRendererSelfCompressConfig(
+        target_bits_total=1,
+        protect_film_layers=False,
+        film_unprotect_override="ALLOW_UNPROTECTED_FILM_COMPRESSION",
+    )
+    assert cfg.protect_film_layers is False
     with pytest.raises(FullRendererSelfCompressError, match="bit_depth_init"):
         FullRendererSelfCompressConfig(target_bits_total=1, bit_depth_init=9.0)
     with pytest.raises(FullRendererSelfCompressError, match="prune_threshold"):

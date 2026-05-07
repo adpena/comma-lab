@@ -225,6 +225,9 @@ class FullRendererSelfCompressConfig:
             with ``pose_dim=0``). Phase 2 raises if False.
         protect_patterns: Tuple of substring patterns to FiLM-protect.
             Default :data:`DEFAULT_FILM_PROTECT_PATTERNS`.
+        film_unprotect_override: required literal override string if
+            ``protect_film_layers`` is False. This prevents accidental
+            unprotected FiLM compression.
         bit_depth_init: Initial bit-depth value for swapped layers
             (passed through to :class:`tac.self_compress.LearnableBitDepth`).
             Must be in (0, 8].
@@ -252,6 +255,9 @@ class FullRendererSelfCompressConfig:
     )
     """Substring patterns for FiLM protection; default
     :data:`DEFAULT_FILM_PROTECT_PATTERNS`."""
+
+    film_unprotect_override: str = ""
+    """Required explicit override if ``protect_film_layers`` is False."""
 
     bit_depth_init: float = 8.0
     """Initial bit-depth for swapped layers; default 8 = full int8."""
@@ -295,6 +301,21 @@ class FullRendererSelfCompressConfig:
             raise FullRendererSelfCompressError(
                 f"every protect_pattern must be a str; got "
                 f"{self.protect_patterns!r}"
+            )
+        if self.protect_film_layers:
+            if len(self.protect_patterns) == 0:
+                raise FullRendererSelfCompressError(
+                    "protect_patterns must not be empty when protect_film_layers=True"
+                )
+            # Custom patterns are additive, never replacements for the default
+            # FiLM protection set.
+            self.protect_patterns = tuple(
+                dict.fromkeys(DEFAULT_FILM_PROTECT_PATTERNS + self.protect_patterns)
+            )
+        elif self.film_unprotect_override != "ALLOW_UNPROTECTED_FILM_COMPRESSION":
+            raise FullRendererSelfCompressError(
+                "protect_film_layers=False requires "
+                "film_unprotect_override='ALLOW_UNPROTECTED_FILM_COMPRESSION'"
             )
         if (
             not isinstance(self.bit_depth_init, (int, float))

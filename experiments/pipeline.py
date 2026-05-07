@@ -1636,54 +1636,51 @@ def step_compress_weights(
             "and no GPU/remote/eval dispatch was attempted."
         )
 
-    # ── Cross-paradigm flag guards (PARADIGM-δ, PARADIGM-ε, PARADIGM-ζ) ──
+    # -- Cross-paradigm flag guards (PARADIGM-delta/epsilon/zeta) --------
     # Phase 1 scaffolding (blueprint at
     # ``.omx/research/paradigm_delta_epsilon_zeta_phase1_blueprint_20260507_claude.md``).
-    # Mirror of the WARN-on-unwired pattern from PARADIGM-β / PARADIGM-γ.
+    # Mirror of the fail-closed unwired-stub pattern from PARADIGM-alpha.
     # All three branches are REGISTERED-BUT-NOT-WIRED in Phase 1; full
     # dispatch wiring is staged behind:
-    #   - δ: Gate 2 (apogee_int6 [contest-CUDA] eval landing)
-    #   - ε / ζ: Gate 3 (δ Phase-2 [contest-CUDA] empirical improvement)
+    #   - delta: Gate 2 (apogee_int6 [contest-CUDA] eval landing)
+    #   - epsilon / zeta: Gate 3 (delta Phase-2 [contest-CUDA] empirical improvement)
     # See lane registry entries lane_delta_joint_training,
     # lane_epsilon_learnable_entropy, lane_zeta_self_compress_renderer.
     if cfg.use_joint_scorer_aware:
-        _log(
-            "PARADIGM-δ: cfg.use_joint_scorer_aware=True but the joint "
+        raise NotImplementedError(
+            "PARADIGM-delta: cfg.use_joint_scorer_aware=True but the joint "
             "scorer-aware training dispatch path "
             "(tac.joint_scorer_aware_training.JointScorerAwareLoss) is "
-            "REGISTERED-BUT-NOT-WIRED (Phase 1 scaffold). Falling through to "
-            f"weight_compression={mode!r}. To enable, the operator must land "
+            "REGISTERED-BUT-NOT-WIRED (Phase 1 scaffold). Refusing to fall "
+            f"through to weight_compression={mode!r}. To enable, land "
             "the Phase 2 dispatch branch + integration test (Gate 2 = "
             "apogee_int6 [contest-CUDA] eval landing). See lane "
             "lane_delta_joint_training in the registry. joint_training_config_path="
-            f"{cfg.joint_training_config_path!r}.",
-            "WARN",
+            f"{cfg.joint_training_config_path!r}."
         )
     if cfg.use_learnable_entropy:
-        _log(
-            "PARADIGM-ε: cfg.use_learnable_entropy=True but the learned "
+        raise NotImplementedError(
+            "PARADIGM-epsilon: cfg.use_learnable_entropy=True but the learned "
             "entropy prior codec dispatch path "
             "(tac.learnable_entropy_model.LearnableEntropyModelCodec) is "
-            "REGISTERED-BUT-NOT-WIRED (Phase 1 scaffold). Falling through to "
-            f"weight_compression={mode!r} (no LEPR archive section). To "
-            "enable, the operator must land the Phase 2 dispatch branch + "
-            "integration test (Gate 3 = δ Phase-2 empirical improvement). "
-            "See lane lane_epsilon_learnable_entropy in the registry.",
-            "WARN",
+            "REGISTERED-BUT-NOT-WIRED (Phase 1 scaffold). Refusing to fall "
+            f"through to weight_compression={mode!r} without a LEPR archive "
+            "section. To enable, land the Phase 2 dispatch branch + "
+            "integration test (Gate 3 = delta Phase-2 empirical improvement). "
+            "See lane lane_epsilon_learnable_entropy in the registry."
         )
     if cfg.use_full_renderer_self_compress:
-        _log(
-            "PARADIGM-ζ: cfg.use_full_renderer_self_compress=True but the "
+        raise NotImplementedError(
+            "PARADIGM-zeta: cfg.use_full_renderer_self_compress=True but the "
             "full-renderer self-compression dispatch path "
             "(tac.self_compress_full_renderer.FullRendererSelfCompress) is "
-            "REGISTERED-BUT-NOT-WIRED (Phase 1 scaffold). Falling through to "
-            f"weight_compression={mode!r} (no ZETA archive section). To "
-            "enable, the operator must land the Phase 2 dispatch branch + "
-            "integration test (Gate 3 = δ Phase-2 empirical improvement) — "
+            "REGISTERED-BUT-NOT-WIRED (Phase 1 scaffold). Refusing to fall "
+            f"through to weight_compression={mode!r} without a ZETA archive "
+            "section. To enable, land the Phase 2 dispatch branch + "
+            "integration test (Gate 3 = delta Phase-2 empirical improvement) "
             "and the QAT loop MUST honor the >=2000 step minimum + FiLM "
             "protection per Selfcomp/Hotz revisions. See lane "
-            "lane_zeta_self_compress_renderer in the registry.",
-            "WARN",
+            "lane_zeta_self_compress_renderer in the registry."
         )
 
     # ── Lane J-NWC neural-weight-compression branch ─────────────────────
