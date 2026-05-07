@@ -142,3 +142,38 @@ def test_markov_context_floor_does_not_exceed_iid_for_repeated_pattern() -> None
 
     assert markov1_bits <= iid_bits
     assert markov2_bits <= markov1_bits
+
+
+def test_context_transform_probe_is_planning_only(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tool = _load_tool("pr101_context_transform_floor_probe.py")
+    _install_tiny_schema(monkeypatch, tool)
+    state_dict_path = _tiny_state_dict(tmp_path / "state.pt")
+
+    manifest = tool.build_transform_floor_report(state_dict_path)
+
+    transforms = {row["transform"]: row for row in manifest["transforms"]}
+    assert {"identity", "nibble_split", "zero_mask_nonzero_value"} <= set(transforms)
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert "no_actual_transform_coder_bitstream" in manifest["dispatch_blockers"]
+    assert transforms["identity"]["metadata_bytes_charged"] == 0
+    assert transforms["identity"]["n_symbols_total"] == 8
+    assert transforms["nibble_split"]["n_symbols_total"] == 16
+
+
+def test_context_delta_transform_preserves_symbol_count(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tool = _load_tool("pr101_context_transform_floor_probe.py")
+    _install_tiny_schema(monkeypatch, tool)
+    state_dict_path = _tiny_state_dict(tmp_path / "state.pt")
+
+    manifest = tool.build_transform_floor_report(state_dict_path)
+    transforms = {row["transform"]: row for row in manifest["transforms"]}
+
+    assert transforms["delta_mod255"]["n_symbols_total"] == transforms["identity"][
+        "n_symbols_total"
+    ]
+    assert transforms["delta_mod255"]["invertible_fixed_transform"] is True

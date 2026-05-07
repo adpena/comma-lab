@@ -20,12 +20,14 @@ No artifact in this ledger is a contest score claim. No archive was changed.
 - `tools/pr101_constriction_marginal_floor.py`
 - `tools/pr101_constriction_shared_pmf_floor.py`
 - `tools/pr101_constriction_quantgauss_hyperprior.py`
+- `tools/pr101_context_transform_floor_probe.py`
 - `reports/pr101_provable_optimal_floor.json`
 - `reports/pr101_adaptive_ac.json`
 - `reports/pr101_pmf_pca.json`
 - `reports/pr101_constriction_marginal.json`
 - `reports/pr101_constriction_shared_pmf.json`
 - `reports/pr101_constriction_quantgauss.json`
+- `reports/pr101_context_transform_floor_probe.json`
 - `reports/pr101_markov1_aac_round_trip.json` (pre-existing context-coder
   round-trip report, used here as negative implementation evidence)
 
@@ -126,6 +128,25 @@ payload bytes, and the oracle Markov-2 row is far lower. The hard work is
 learning a deployable context model whose own description length does not eat
 the gain.
 
+`reports/pr101_context_transform_floor_probe.json` adds the first transform
+probe:
+
+| Transform | IID payload | Markov-1 payload | Markov-2 payload | Markov-1 archive vs 178,144 |
+|---|---:|---:|---:|---:|
+| identity | 159,822 | 152,106 | 98,013 | -9,944 |
+| signed_zigzag | 159,822 | 152,106 | 98,013 | -9,944 |
+| zero_mask_nonzero_value | 159,822 | 152,220 | 99,612 | -9,830 |
+| abs_sign_split | 173,797 | 168,859 | 134,062 | +6,809 |
+| delta_mod255 | 199,284 | 170,501 | 54,935 | +8,451 |
+| nibble_split | 183,072 | 182,071 | 176,699 | +20,021 |
+| bitplanes | 225,443 | 225,327 | 225,257 | +63,277 |
+
+Interpretation: signed zigzag and identity are entropy-equivalent under these
+oracle models; zero-mask categorical splitting does not improve Markov-1; byte
+slicing/nibbles/bitplanes lose under this model. Delta coding creates a very
+low Markov-2 oracle row but a worse Markov-1 row, which makes it a research
+target for deployable higher-order modeling rather than a ready packer win.
+
 ## Next engineering tranche
 
 1. Do not promote the existing naive Markov-1 AAC codec. Keep its round-trip
@@ -154,5 +175,46 @@ the gain.
 - `.venv/bin/python -m json.tool reports/pr101_constriction_marginal.json`
 - `.venv/bin/python -m json.tool reports/pr101_constriction_quantgauss.json`
 - `.venv/bin/python -m json.tool reports/pr101_constriction_shared_pmf.json`
+- `.venv/bin/python -m json.tool reports/pr101_context_transform_floor_probe.json`
 
-Focused tests: 20 passed, 1 pytest-config warning about unknown `timeout`.
+Focused tests: 22 passed, 1 pytest-config warning about unknown `timeout`.
+
+## Adversarial review of 19:10 summary claims
+
+Accepted with narrow scope:
+
+- Brotli+Optuna at 178,144 and per-tensor AAC at 178,181 are verified in the
+  local reports. AAC is a near tie but not a candidate archive.
+- PCA K=15 at 184,837 verifies that this particular linear low-rank PMF basis
+  loses on PR101.
+- Shared PMF at 203,196 and QuantizedGaussian/Laplace at 205,938 verify that
+  those simple non-learned PMF models lose on PR101.
+- The naive Markov-1 AAC round-trip at 199,238 is valid negative evidence for
+  that implementation.
+
+Rejected or narrowed:
+
+- "Encoder-side ceiling is structurally ~178 KB without ML" is too broad. The
+  supported statement is narrower: the tested IID/static/simple-parametric
+  PMF and naive adaptive coders are saturated near 178 KB on PR101. It does not
+  prove impossibility for all deterministic transforms, table structures,
+  grammar coders, or custom low-level packetization.
+- "Markov-1 falsified" is too broad. Only the naive prefix-adaptive Markov-1
+  implementation is falsified. The oracle Markov-1 row still shows context
+  signal; the problem is making that signal deployable after model cost.
+- "Oracle Markov-1 + brotli'd table = 209,051" is not accepted without a
+  committed artifact showing the 40,851-byte table construction and exact
+  accounting. Even if confirmed, it falsifies a full transmitted transition
+  table, not sparse, structured, generated, or learned context models.
+- "Only NN path" is too strong. Neural hyperpriors are the best current
+  hypothesis for making context cheap, but deterministic grammar/codegen/table
+  factorization and architecture-side retraining remain live until exact
+  artifacts retire them.
+- CompressAI/Balle and tiny-NN savings are prediction-band only. They must
+  record model bytes, deterministic decode, payload bytes, and archive closure
+  before they can affect dispatch priority.
+
+Updated priority: pursue architecture/lower-entropy substrate and learned
+context modeling in parallel, while allowing cheap deterministic transform
+probes only when they produce new conditional-entropy evidence or a byte-closed
+packet.
