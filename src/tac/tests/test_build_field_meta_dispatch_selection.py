@@ -127,6 +127,19 @@ def test_field_meta_selector_summarizes_operator_next_steps_without_dispatch(
         "missing_lightning_environment",
         "missing_env:LIGHTNING_SSH_TARGET",
     ]
+    assert "missing_lightning_environment" in row["exact_dispatch_blockers"]["blockers"]
+    assert (
+        "missing_env:LIGHTNING_SSH_TARGET"
+        in row["exact_dispatch_blockers"]["blockers"]
+    )
+    assert row["exact_dispatch_blockers"]["blocker_categories"]["environment"] == [
+        "missing_lightning_environment",
+        "missing_env:LIGHTNING_SSH_TARGET",
+    ]
+    assert (
+        "lightning_or_remote_exact_eval_environment_available"
+        in row["exact_dispatch_blockers"]["next_required_proof"]
+    )
     assert row["ready_for_exact_eval_dispatch"] is False
 
 

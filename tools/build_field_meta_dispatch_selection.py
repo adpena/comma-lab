@@ -59,6 +59,7 @@ PARETO_OBJECTIVE_DIRECTIONS = {
     "candidate_static_preflight_ready": "max",
 }
 BLOCKER_CATEGORY_KEYS = (
+    "environment",
     "custody",
     "runtime",
     "dispatch_claim",
@@ -2073,6 +2074,8 @@ def _operator_next_steps_summary(
 
 def _next_required_proofs(blockers: Sequence[str]) -> list[str]:
     out: list[str] = []
+    if any("environment" in blocker.lower() or "missing_env" in blocker.lower() for blocker in blockers):
+        out.append("lightning_or_remote_exact_eval_environment_available")
     if "dirty_worktree_overlap" in blockers:
         out.append("clean_or_isolate_dirty_candidate_paths_before_selection")
     if "missing_byte_closed_archive_proof" in blockers:
@@ -2092,6 +2095,8 @@ def _next_required_proofs(blockers: Sequence[str]) -> list[str]:
 
 def _field_selection_next_required_proofs(row: Mapping[str, Any]) -> list[str]:
     next_required_proof = list(row.get("candidate_preflight_next_required_proof") or row.get("next_required_proof") or [])
+    if row.get("operator_environment_blockers"):
+        next_required_proof.append("lightning_or_remote_exact_eval_environment_available")
     if any("rate_only" in blocker for blocker in row.get("candidate_blockers", [])):
         next_required_proof.append("rate_only_score_delta_reconciles_to_official_byte_rate_term")
     if row.get("kkt_ready_for_field_planning") is not True:
@@ -2243,7 +2248,9 @@ def _blocker_categories(blockers: Iterable[Any]) -> dict[str, list[str]]:
     categories: dict[str, list[str]] = {key: [] for key in BLOCKER_CATEGORY_KEYS}
     for blocker in _unique_strings(blockers):
         lowered = blocker.lower()
-        if any(token in lowered for token in ("archive", "byte_closed", "manifest", "custody", "zip")):
+        if "environment" in lowered or "missing_env" in lowered:
+            categories["environment"].append(blocker)
+        elif any(token in lowered for token in ("archive", "byte_closed", "manifest", "custody", "zip")):
             categories["custody"].append(blocker)
         elif "runtime" in lowered:
             categories["runtime"].append(blocker)
@@ -2273,6 +2280,7 @@ def _blocker_categories(blockers: Iterable[Any]) -> dict[str, list[str]]:
 def _exact_dispatch_blockers(row: Mapping[str, Any]) -> dict[str, Any]:
     blockers: list[str] = [
         *row.get("candidate_blockers", []),
+        *row.get("operator_environment_blockers", []),
         *row.get("kkt_blockers", []),
         *row.get("selection_blockers", []),
     ]

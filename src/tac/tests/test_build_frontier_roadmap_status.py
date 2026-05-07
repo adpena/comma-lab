@@ -180,7 +180,8 @@ def test_frontier_roadmap_status_discovers_default_packet_manifests() -> None:
     assert "missing_active_lane_dispatch_claim" in q10["candidate_blockers"]
     assert "claim:dispatch_claim_check_missing" in q10["candidate_blockers"]
     assert q10["next_required_proof"] == [
-        "matching_active_level2_lane_claim_for_manifest_lane_and_job"
+        "matching_active_level2_lane_claim_for_manifest_lane_and_job",
+        "lightning_or_remote_exact_eval_environment_available",
     ]
     assert q10["operator_next_steps_summary"]["static_refresh_status"] == "passed"
     lgblock16 = next(
