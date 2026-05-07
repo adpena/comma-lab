@@ -243,6 +243,12 @@ def test_field_meta_selector_uses_hnerv_rate_only_packet_delta(tmp_path: Path) -
     report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
 
     row = report["rows"][0]
+    archive = json.loads(manifest.read_text(encoding="utf-8"))["archive"]
+    assert row["candidate_archive_path"] == archive["path"]
+    assert row["candidate_archive_sha256"] == archive["sha256"]
+    assert row["candidate_archive_bytes"] == archive["bytes"]
+    assert row["lane_id"] == "pr106_q10_151byte_brotli"
+    assert row["job_name"] == "exact_eval_pr106_q10_151byte_brotli_20260507"
     assert row["byte_delta"] == -151
     assert row["expected_total_score_delta"] == -0.00010054470192144788
     assert row["field_selection_score_delta"] == -0.000100544702
@@ -374,6 +380,14 @@ def test_field_meta_selector_summarizes_nested_static_compliance_refresh() -> No
 
     row = report["rows"][0]
     summary = row["operator_next_steps_summary"]
+    assert row["candidate_archive_path"].endswith(
+        "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/"
+        "pr106x_lowlevel_brotli_hnerv_brotli_repack_candidate.zip"
+    )
+    assert row["candidate_archive_bytes"] == row["archive_proof"]["bytes_actual"]
+    assert row["candidate_archive_sha256"] == row["archive_proof"]["sha256_actual"]
+    assert row["lane_id"] == "pr106x_lgblock16_1byte_brotli"
+    assert row["job_name"] == "exact_eval_pr106x_lgblock16_1byte_brotli_20260507"
     assert summary["static_refresh_status"] == "passed"
     assert summary["static_refresh_command"] == static_refresh["command"]
     assert summary["static_refresh_schema"] == "hnerv_lowlevel_static_compliance_refresh_v1"

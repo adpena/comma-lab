@@ -794,6 +794,9 @@
       },
       "byte_delta": -151,
       "calibration_expected_total_score_delta": null,
+      "candidate_archive_bytes": 186088,
+      "candidate_archive_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip",
+      "candidate_archive_sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
       "candidate_blockers": [
         "missing_active_lane_dispatch_claim",
         "claim:dispatch_claim_latest_status_terminal"
@@ -1014,10 +1017,12 @@
         "status": "needs_active_lane_claim_before_dispatch",
         "title": ""
       },
+      "instance_job_id": "exact_eval_pr106_q10_151byte_brotli_20260507",
       "interaction_assumptions": [
         "rate_only_raw_equivalent_brotli_repack",
         "component_deltas_require_exact_cuda_confirmation"
       ],
+      "job_name": "exact_eval_pr106_q10_151byte_brotli_20260507",
       "kkt_blockers": [],
       "kkt_proof": {
         "blockers": [],
@@ -1040,6 +1045,7 @@
         "tolerance": 0.0
       },
       "kkt_ready_for_field_planning": true,
+      "lane_id": "pr106_q10_151byte_brotli",
       "lexicographic_feasibility_tuple": [
         false,
         true,
@@ -1327,6 +1333,9 @@
       },
       "byte_delta": -1,
       "calibration_expected_total_score_delta": null,
+      "candidate_archive_bytes": 186079,
+      "candidate_archive_path": "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/pr106x_lowlevel_brotli_hnerv_brotli_repack_candidate.zip",
+      "candidate_archive_sha256": "866dc135e9168d61fab02b6b1c218c4b1d6eed779154a6dc3095fd05e48024f2",
       "candidate_blockers": [
         "missing_active_lane_dispatch_claim",
         "claim:active_dispatch_claim_missing"
@@ -1528,10 +1537,12 @@
         "status": "static_candidate_pareto_dominated_before_dispatch",
         "title": ""
       },
+      "instance_job_id": "exact_eval_pr106x_lgblock16_1byte_brotli_20260507",
       "interaction_assumptions": [
         "rate_only_raw_equivalent_brotli_repack",
         "component_deltas_require_exact_cuda_confirmation"
       ],
+      "job_name": "exact_eval_pr106x_lgblock16_1byte_brotli_20260507",
       "kkt_blockers": [
         "kkt:kkt_proof_or_admm_result_missing"
       ],
@@ -1547,6 +1558,7 @@
         "tolerance": null
       },
       "kkt_ready_for_field_planning": false,
+      "lane_id": "pr106x_lgblock16_1byte_brotli",
       "lexicographic_feasibility_tuple": [
         false,
         true,
@@ -1809,6 +1821,9 @@
       },
       "byte_delta": -241,
       "calibration_expected_total_score_delta": null,
+      "candidate_archive_bytes": 185998,
+      "candidate_archive_path": "experiments/results/pr101_repack_pr106_20260507T152608Z_claude/archive.zip",
+      "candidate_archive_sha256": "219844e77442fb352424a7f232d9a25f52e3f28d93b80fce800874ded94853aa",
       "candidate_blockers": [
         "missing_byte_closed_runtime_proof",
         "runtime:runtime_proof_missing",
@@ -2070,11 +2085,13 @@
         "status": "needs_byte_closed_runtime_proof",
         "title": ""
       },
+      "instance_job_id": "",
       "interaction_assumptions": [
         "rate_only_decoder_schema_repack_if_runtime_adapter_restores_payload",
         "runtime_adapter_required_before_exact_eval",
         "component_deltas_require_exact_cuda_confirmation"
       ],
+      "job_name": "",
       "kkt_blockers": [
         "missing_byte_closed_runtime_proof",
         "runtime:runtime_proof_missing",
@@ -2097,6 +2114,7 @@
         "tolerance": null
       },
       "kkt_ready_for_field_planning": false,
+      "lane_id": "",
       "lexicographic_feasibility_tuple": [
         false,
         false,
@@ -2361,6 +2379,9 @@
       },
       "byte_delta": -36,
       "calibration_expected_total_score_delta": null,
+      "candidate_archive_bytes": 186044,
+      "candidate_archive_path": "experiments/results/hnerv_pr101_schema_candidate_20260507_codex/pr106x_lowlevel_brotli_pr101_schema_candidate.zip",
+      "candidate_archive_sha256": "a927bd957b34d18a85230ac1a784331c6b6ad9b25bde7532d646c875b7548d6e",
       "candidate_blockers": [
         "missing_byte_closed_runtime_proof",
         "runtime:runtime_proof_missing",
@@ -2654,12 +2675,14 @@
         "status": "needs_byte_closed_runtime_proof",
         "title": ""
       },
+      "instance_job_id": "",
       "interaction_assumptions": [
         "rate_only_decoder_raw_equivalent_recode",
         "runtime_adapter_required_before_exact_eval",
         "fp16_scale_probe_is_scorer_changing_and_not_rate_only",
         "component_deltas_require_exact_cuda_confirmation"
       ],
+      "job_name": "",
       "kkt_blockers": [
         "missing_byte_closed_runtime_proof",
         "runtime:runtime_proof_missing",
@@ -2685,6 +2708,7 @@
         "tolerance": null
       },
       "kkt_ready_for_field_planning": false,
+      "lane_id": "",
       "lexicographic_feasibility_tuple": [
         false,
         false,
@@ -2963,6 +2987,9 @@
       },
       "byte_delta": -14,
       "calibration_expected_total_score_delta": null,
+      "candidate_archive_bytes": 186066,
+      "candidate_archive_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/pr106x_lowlevel_brotli_hdm3_archive_candidate.zip",
+      "candidate_archive_sha256": "5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771",
       "candidate_blockers": [
         "missing_byte_closed_runtime_proof",
         "runtime:runtime_proof_missing",
@@ -3245,11 +3272,13 @@
         "status": "needs_byte_closed_runtime_proof",
         "title": ""
       },
+      "instance_job_id": "",
       "interaction_assumptions": [
         "rate_only_decoder_raw_equivalent_recode",
         "runtime_adapter_required_before_exact_eval",
         "component_deltas_require_exact_cuda_confirmation"
       ],
+      "job_name": "",
       "kkt_blockers": [
         "missing_byte_closed_runtime_proof",
         "runtime:runtime_proof_missing",
@@ -3272,6 +3301,7 @@
         "tolerance": null
       },
       "kkt_ready_for_field_planning": false,
+      "lane_id": "",
       "lexicographic_feasibility_tuple": [
         false,
         false,
@@ -3545,6 +3575,9 @@
       },
       "byte_delta": -52679,
       "calibration_expected_total_score_delta": null,
+      "candidate_archive_bytes": 169725,
+      "candidate_archive_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/archive.zip",
+      "candidate_archive_sha256": "6a5bf1f3c4d6d2b6cb752979caa72a31b994825d24ee42ae90eeaa58f44abd7d",
       "candidate_blockers": [
         "missing_byte_closed_runtime_proof",
         "runtime:runtime_proof_missing",
@@ -3866,12 +3899,14 @@
         "status": "needs_byte_closed_runtime_proof",
         "title": ""
       },
+      "instance_job_id": "",
       "interaction_assumptions": [
         "substitutional_mask_payload_candidate",
         "decode_reencode_identity_required_before_dispatch",
         "label_permutation_control_passed_but_full_decode_missing",
         "component_deltas_require_exact_cuda_confirmation"
       ],
+      "job_name": "",
       "kkt_blockers": [
         "missing_byte_closed_runtime_proof",
         "runtime:runtime_proof_missing",
@@ -3901,6 +3936,7 @@
         "tolerance": null
       },
       "kkt_ready_for_field_planning": false,
+      "lane_id": "",
       "lexicographic_feasibility_tuple": [
         false,
         false,
@@ -4193,6 +4229,9 @@
       },
       "byte_delta": 0,
       "calibration_expected_total_score_delta": null,
+      "candidate_archive_bytes": 178981,
+      "candidate_archive_path": "experiments/results/pr102_zero_byte_tuning_custody_20260507_codex/ethan_v2_hnerv_lc_scale095_archive.zip",
+      "candidate_archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
       "candidate_blockers": [
         "missing_byte_closed_runtime_proof",
         "runtime:runtime_proof_missing",
@@ -4474,11 +4513,13 @@
         "status": "needs_byte_closed_runtime_proof",
         "title": ""
       },
+      "instance_job_id": "",
       "interaction_assumptions": [
         "zero_byte_runtime_tuning_no_archive_delta",
         "requires_exact_cuda_replay_before_score_claim",
         "no_op_control_required_before_current_stack_port"
       ],
+      "job_name": "",
       "kkt_blockers": [
         "missing_byte_closed_runtime_proof",
         "runtime:runtime_proof_missing",
@@ -4502,6 +4543,7 @@
         "tolerance": null
       },
       "kkt_ready_for_field_planning": false,
+      "lane_id": "",
       "lexicographic_feasibility_tuple": [
         false,
         false,
@@ -4771,6 +4813,9 @@
       },
       "byte_delta": -15789,
       "calibration_expected_total_score_delta": 0.09721374394989438,
+      "candidate_archive_bytes": 170450,
+      "candidate_archive_path": "experiments/results/apogee_int6_repack_20260504_claude/apogee_int6_archive.zip",
+      "candidate_archive_sha256": "0176a2691a4daf5991170404d30a304ae30389621c0fc54914628414aef39ff1",
       "candidate_blockers": [
         "missing_byte_closed_runtime_proof",
         "runtime:runtime_proof_missing",
@@ -5048,11 +5093,13 @@
         "status": "needs_byte_closed_runtime_proof",
         "title": ""
       },
+      "instance_job_id": "",
       "interaction_assumptions": [
         "score_affecting_payload_changed",
         "distortion_model_required_before_dispatch",
         "byte_only_prediction_not_score_evidence"
       ],
+      "job_name": "",
       "kkt_blockers": [
         "missing_byte_closed_runtime_proof",
         "runtime:runtime_proof_missing",
@@ -5077,6 +5124,7 @@
         "tolerance": null
       },
       "kkt_ready_for_field_planning": false,
+      "lane_id": "",
       "lexicographic_feasibility_tuple": [
         false,
         false,
@@ -5352,6 +5400,9 @@
       },
       "byte_delta": -13565,
       "calibration_expected_total_score_delta": null,
+      "candidate_archive_bytes": null,
+      "candidate_archive_path": "",
+      "candidate_archive_sha256": "",
       "candidate_blockers": [
         "missing_byte_closed_archive_proof",
         "archive:archive_identity_missing",
@@ -5672,11 +5723,13 @@
         "status": "needs_byte_closed_archive_proof",
         "title": ""
       },
+      "instance_job_id": "",
       "interaction_assumptions": [
         "planning_only_entropy_target",
         "requires_actual_decoder_runtime_implementation",
         "requires_candidate_archive_manifest_before_pareto_dispatch"
       ],
+      "job_name": "",
       "kkt_blockers": [
         "missing_byte_closed_archive_proof",
         "archive:archive_identity_missing",
@@ -5705,6 +5758,7 @@
         "tolerance": null
       },
       "kkt_ready_for_field_planning": false,
+      "lane_id": "",
       "lexicographic_feasibility_tuple": [
         false,
         false,
@@ -5996,6 +6050,9 @@
       },
       "byte_delta": 0,
       "calibration_expected_total_score_delta": null,
+      "candidate_archive_bytes": null,
+      "candidate_archive_path": "",
+      "candidate_archive_sha256": "",
       "candidate_blockers": [
         "missing_byte_closed_archive_proof",
         "archive:archive_identity_missing",
@@ -6329,11 +6386,13 @@
         "status": "needs_byte_closed_archive_proof",
         "title": ""
       },
+      "instance_job_id": "",
       "interaction_assumptions": [
         "schema_review_only_no_candidate_archive",
         "public_replay_fidelity_mismatch_blocks_score_claim",
         "requires_byte_different_archive_before_pareto_ranking"
       ],
+      "job_name": "",
       "kkt_blockers": [
         "missing_byte_closed_archive_proof",
         "archive:archive_identity_missing",
@@ -6364,6 +6423,7 @@
         "tolerance": null
       },
       "kkt_ready_for_field_planning": false,
+      "lane_id": "",
       "lexicographic_feasibility_tuple": [
         false,
         false,
@@ -6664,6 +6724,9 @@
     },
     "byte_delta": -151,
     "calibration_expected_total_score_delta": null,
+    "candidate_archive_bytes": 186088,
+    "candidate_archive_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_20260506_codex/pr106_hnerv_brotli_repack_candidate.zip",
+    "candidate_archive_sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
     "candidate_blockers": [
       "missing_active_lane_dispatch_claim",
       "claim:dispatch_claim_latest_status_terminal"
@@ -6884,10 +6947,12 @@
       "status": "needs_active_lane_claim_before_dispatch",
       "title": ""
     },
+    "instance_job_id": "exact_eval_pr106_q10_151byte_brotli_20260507",
     "interaction_assumptions": [
       "rate_only_raw_equivalent_brotli_repack",
       "component_deltas_require_exact_cuda_confirmation"
     ],
+    "job_name": "exact_eval_pr106_q10_151byte_brotli_20260507",
     "kkt_blockers": [],
     "kkt_proof": {
       "blockers": [],
@@ -6910,6 +6975,7 @@
       "tolerance": 0.0
     },
     "kkt_ready_for_field_planning": true,
+    "lane_id": "pr106_q10_151byte_brotli",
     "lexicographic_feasibility_tuple": [
       false,
       true,
