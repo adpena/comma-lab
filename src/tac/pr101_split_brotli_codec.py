@@ -285,6 +285,7 @@ def _build_per_tensor_payload(
     idx: int,
     *,
     byte_map_override: str | None = None,
+    conv4_perms_override: dict[int, tuple[int, int, int, int]] | None = None,
 ) -> bytes:
     """Apply byte-map (+ optional 4D permutation) and append fp16 scale.
 
@@ -294,6 +295,10 @@ def _build_per_tensor_payload(
         byte_map_override: optional override for byte_map (one of "zig",
             "negzig", "twos", "off"). When None, DECODER_BYTE_MAPS.get(idx,
             "zig") is used.
+        conv4_perms_override: optional override for the per-tensor 4D axis
+            permutation. When None, ``CONV4_STORAGE_PERMS`` is used. Used by
+            :func:`encode_decoder_compact`'s ``auto_derive_all`` path to
+            substitute the substrate-derived conv4 perms.
     """
     name, expected_shape = FIXED_STATE_SCHEMA[idx]
     if qt.name != name:
@@ -305,9 +310,12 @@ def _build_per_tensor_payload(
             f"shape mismatch for {name!r}: schema {expected_shape}, tensor {qt.shape}"
         )
     q = qt.q_i8
-    if len(qt.shape) == 4 and idx in CONV4_STORAGE_PERMS:
+    perms_table = (
+        conv4_perms_override if conv4_perms_override is not None else CONV4_STORAGE_PERMS
+    )
+    if len(qt.shape) == 4 and idx in perms_table:
         # Permute to storage order; flatten via the storage-order axes.
-        q_storage = np.transpose(q, CONV4_STORAGE_PERMS[idx]).copy()
+        q_storage = np.transpose(q, perms_table[idx]).copy()
         flat = q_storage.reshape(-1)
     else:
         flat = q.reshape(-1)
@@ -330,6 +338,10 @@ def encode_decoder_compact(
     brotli_quality: int = 11,
     effective_byte_maps: dict[int, str] | None = None,
     auto_select: bool = False,
+    auto_derive_all: bool = False,
+    derived_storage_order: tuple[int, ...] | None = None,
+    derived_stream_ends: tuple[int, ...] | None = None,
+    derived_conv4_perms: dict[int, tuple[int, int, int, int]] | None = None,
 ) -> bytes:
     """Encode a torch ``state_dict`` to a PR101-compatible ``decoder_blob``.
 
@@ -363,13 +375,84 @@ def encode_decoder_compact(
             split-Brotli's stream-context sharing. Marginal gain from joint
             optimization is sub-byte per tensor; not worth the engineering cost.
 
+        auto_derive_all: when True, runs all 5 substrate-adaptive derivers
+            on ``state_dict`` (and ``latents``-related derivers are deferred
+            to higher-level callers — see :func:`derive_all` in
+            :mod:`tac.pr101_split_brotli_codec_derivers`) and uses the
+            derived ``storage_order`` / ``stream_ends`` / ``conv4_perms``
+            in place of PR101's hardcoded constants. The decoder MUST
+            receive the same derived constants for a byte-faithful
+            roundtrip; use :func:`encode_decoder_compact_with_derivers`
+            (returns both bytes and the derived dict) when round-tripping
+            is required. Per Round 3 review precedent: explicit overrides
+            (``derived_storage_order``/etc.) > ``auto_derive_all`` >
+            module defaults.
+        derived_storage_order, derived_stream_ends, derived_conv4_perms:
+            optional explicit overrides. When provided, these win over
+            ``auto_derive_all``. When ``auto_derive_all=True`` and an
+            override is None, the corresponding deriver runs on
+            ``state_dict``.
+
     Returns:
-        Concatenated bytes of len(DECODER_STREAM_ENDS) brotli streams.
+        Concatenated bytes of len(<active stream ends>) brotli streams.
     """
     if auto_select and effective_byte_maps is None:
         effective_byte_maps = auto_select_byte_maps(
             state_dict, brotli_quality=brotli_quality
         )
+
+    # auto_derive_all + explicit overrides resolution. Explicit overrides
+    # win over auto_derive_all (Round 3 precedent: explicit > auto > defaults).
+    if auto_derive_all or any(
+        v is not None
+        for v in (derived_storage_order, derived_stream_ends, derived_conv4_perms)
+    ):
+        # Lazy import to avoid a hard dependency cycle: derivers imports this
+        # module's constants and helpers, so we resolve their imports late.
+        from tac.pr101_split_brotli_codec_derivers import (
+            derive_conv4_perms as _derive_conv4_perms,
+            derive_storage_order as _derive_storage_order,
+            derive_stream_ends as _derive_stream_ends,
+        )
+        if derived_storage_order is None and auto_derive_all:
+            derived_storage_order = _derive_storage_order(state_dict)
+        if derived_conv4_perms is None and auto_derive_all:
+            derived_conv4_perms = _derive_conv4_perms(
+                state_dict, brotli_quality=brotli_quality
+            )
+        if derived_stream_ends is None and auto_derive_all:
+            # stream_ends needs storage_order; if not yet derived, fall back
+            # to PR101 default for stream_ends derivation.
+            so_for_se = derived_storage_order if derived_storage_order is not None else DECODER_STORAGE_ORDER
+            derived_stream_ends = _derive_stream_ends(
+                state_dict, so_for_se, brotli_quality=brotli_quality
+            )
+
+    active_storage_order = (
+        derived_storage_order if derived_storage_order is not None else DECODER_STORAGE_ORDER
+    )
+    active_stream_ends = (
+        derived_stream_ends if derived_stream_ends is not None else DECODER_STREAM_ENDS
+    )
+    active_conv4_perms = derived_conv4_perms  # None ⇒ _build_per_tensor_payload uses module default
+
+    # Validate active_storage_order is a permutation of range(len(schema)).
+    if sorted(active_storage_order) != list(range(len(FIXED_STATE_SCHEMA))):
+        raise Pr101SplitBrotliCodecError(
+            f"active_storage_order must be a permutation of range({len(FIXED_STATE_SCHEMA)}); "
+            f"got {active_storage_order}"
+        )
+    # Validate active_stream_ends are strictly increasing, in (0, N], and end at N.
+    if (
+        not all(0 < e <= len(active_storage_order) for e in active_stream_ends)
+        or list(active_stream_ends) != sorted(set(active_stream_ends))
+        or active_stream_ends[-1] != len(active_storage_order)
+    ):
+        raise Pr101SplitBrotliCodecError(
+            f"active_stream_ends must be strictly-increasing positions ending at "
+            f"{len(active_storage_order)}; got {active_stream_ends}"
+        )
+
     # 1) Quantize every tensor in schema order.
     quantized: list[_QuantizedTensor] = []
     schema_names = {name for name, _ in FIXED_STATE_SCHEMA}
@@ -380,11 +463,13 @@ def encode_decoder_compact(
         quantized.append(_quantize_tensor(name, state_dict[name]))
 
     # 2) Build per-tensor on-disk payloads (mapped bytes + fp16 scale), in
-    #    DECODER_STORAGE_ORDER (NOT schema order). Round 2 fix: thread
+    #    active_storage_order (NOT schema order). Round 2 fix: thread
     #    effective_byte_maps override through, so caller can auto-skip
-    #    regressing maps from validate_byte_map_savings().
+    #    regressing maps from validate_byte_map_savings(). Derivers fix: thread
+    #    the derived conv4_perms through as well so the substrate-optimal
+    #    perms actually take effect on the wire.
     parts_by_storage: list[bytes] = []
-    for storage_idx in DECODER_STORAGE_ORDER:
+    for storage_idx in active_storage_order:
         override = (
             effective_byte_maps.get(storage_idx)
             if effective_byte_maps is not None
@@ -392,14 +477,17 @@ def encode_decoder_compact(
         )
         parts_by_storage.append(
             _build_per_tensor_payload(
-                quantized[storage_idx], storage_idx, byte_map_override=override
+                quantized[storage_idx],
+                storage_idx,
+                byte_map_override=override,
+                conv4_perms_override=active_conv4_perms,
             )
         )
 
     # 3) Group payloads into split-stream windows and brotli each window.
     streams: list[bytes] = []
     start = 0
-    for end in DECODER_STREAM_ENDS:
+    for end in active_stream_ends:
         window_raw = b"".join(parts_by_storage[start:end])
         streams.append(pack_brotli_stream(window_raw, quality=brotli_quality))
         start = end
@@ -407,10 +495,66 @@ def encode_decoder_compact(
     return b"".join(streams)
 
 
+def encode_decoder_compact_with_derivers(
+    state_dict: dict[str, torch.Tensor],
+    *,
+    brotli_quality: int = 11,
+    effective_byte_maps: dict[int, str] | None = None,
+    auto_select: bool = True,
+) -> tuple[bytes, dict[str, object]]:
+    """Convenience wrapper that returns both the encoded bytes AND the dict
+    of derived constants needed by the decoder for a byte-faithful roundtrip.
+
+    Behavior: runs all 5 substrate-adaptive derivers on ``state_dict`` (the
+    sidecar codebook + latent dim order are no-ops in this entry point — they
+    apply at the latent/sidecar layer, not the decoder-blob layer). Returns
+    a tuple ``(blob_bytes, params)`` where ``params`` has keys:
+
+    * ``storage_order`` — derived
+    * ``stream_ends`` — derived
+    * ``conv4_perms`` — derived
+    * ``effective_byte_maps`` — derived (when ``auto_select=True``) or None
+
+    The caller passes ``params`` through to :func:`decode_decoder_compact`
+    (with ``derived_*`` kwargs) for a byte-faithful roundtrip.
+    """
+    from tac.pr101_split_brotli_codec_derivers import (
+        derive_conv4_perms as _derive_conv4_perms,
+        derive_storage_order as _derive_storage_order,
+        derive_stream_ends as _derive_stream_ends,
+    )
+    storage_order = _derive_storage_order(state_dict)
+    conv4_perms = _derive_conv4_perms(state_dict, brotli_quality=brotli_quality)
+    stream_ends = _derive_stream_ends(
+        state_dict, storage_order, brotli_quality=brotli_quality
+    )
+    if auto_select and effective_byte_maps is None:
+        effective_byte_maps = auto_select_byte_maps(
+            state_dict, brotli_quality=brotli_quality
+        )
+    blob = encode_decoder_compact(
+        state_dict,
+        brotli_quality=brotli_quality,
+        effective_byte_maps=effective_byte_maps,
+        derived_storage_order=storage_order,
+        derived_stream_ends=stream_ends,
+        derived_conv4_perms=conv4_perms,
+    )
+    return blob, {
+        "storage_order": storage_order,
+        "stream_ends": stream_ends,
+        "conv4_perms": conv4_perms,
+        "effective_byte_maps": effective_byte_maps,
+    }
+
+
 def decode_decoder_compact(
     data: bytes,
     *,
     effective_byte_maps: dict[int, str] | None = None,
+    derived_storage_order: tuple[int, ...] | None = None,
+    derived_stream_ends: tuple[int, ...] | None = None,
+    derived_conv4_perms: dict[int, tuple[int, int, int, int]] | None = None,
 ) -> dict[str, torch.Tensor]:
     """Decode a PR101 ``decoder_blob`` to a torch ``state_dict``.
 
@@ -425,12 +569,27 @@ def decode_decoder_compact(
             decoder MUST agree with encoder on per-tensor byte_map; without
             this override the decoder uses PR101's defaults which would
             corrupt encoded tensors that used a different map.
+        derived_storage_order, derived_stream_ends, derived_conv4_perms:
+            optional substrate-derived constants matching those passed to
+            :func:`encode_decoder_compact`. When ``encode_decoder_compact``
+            was called with ``auto_derive_all=True`` or any ``derived_*``
+            override, the decoder MUST receive the SAME values or the
+            roundtrip will corrupt tensor shapes / orderings.
     """
-    raw = decompress_brotli_streams(data, len(DECODER_STREAM_ENDS))
+    active_storage_order = (
+        derived_storage_order if derived_storage_order is not None else DECODER_STORAGE_ORDER
+    )
+    active_stream_ends = (
+        derived_stream_ends if derived_stream_ends is not None else DECODER_STREAM_ENDS
+    )
+    active_conv4_perms = (
+        derived_conv4_perms if derived_conv4_perms is not None else CONV4_STORAGE_PERMS
+    )
+    raw = decompress_brotli_streams(data, len(active_stream_ends))
     pos = 0
     sd: dict[str, torch.Tensor] = {}
 
-    for idx in DECODER_STORAGE_ORDER:
+    for idx in active_storage_order:
         name, shape = FIXED_STATE_SCHEMA[idx]
         numel = int(np.prod(shape))
         zz = np.frombuffer(raw, dtype=np.uint8, count=numel, offset=pos)
@@ -445,9 +604,9 @@ def decode_decoder_compact(
         else:
             decode_map = DECODER_BYTE_MAPS.get(idx, "zig")
         q = decode_mapped_u8(zz, decode_map)
-        if len(shape) == 4:
-            storage_perm = CONV4_STORAGE_PERMS[idx]
-            inverse_perm = CONV4_INVERSE_PERMS[idx]
+        if len(shape) == 4 and idx in active_conv4_perms:
+            storage_perm = active_conv4_perms[idx]
+            inverse_perm = tuple(int(v) for v in np.argsort(storage_perm))
             stored_shape = tuple(shape[i] for i in storage_perm)
             q = q.reshape(stored_shape)
             q = np.transpose(q, inverse_perm).copy()
@@ -656,6 +815,7 @@ __all__ = [
     "decode_mapped_u8",
     "decompress_brotli_streams",
     "encode_decoder_compact",
+    "encode_decoder_compact_with_derivers",
     "pack_brotli_stream",
     "validate_byte_map_savings",
 ]
