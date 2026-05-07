@@ -64,6 +64,8 @@ class DispatchResult:
 
 _LIGHTNING_DISPATCH = REPO / "tools" / "lightning_dispatch_pr106_stack.py"
 _VASTAI_DISPATCH = REPO / "scripts" / "launch_lane_on_vastai.py"
+DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES = 185_578
+DEFAULT_ACTIVE_FLOOR_SCORE = 0.2089810755823297
 BLOCKED_EVIDENCE_SEMANTICS = {
     "prediction_only_forensic",
     "local_proxy_prediction_forensic",
@@ -75,7 +77,26 @@ class DispatchInputError(ValueError):
     """Raised when ranked input is not exact-eval dispatch-ready."""
 
 
-def _candidate_blockers(candidate: dict) -> list[str]:
+def _candidate_archive_bytes(candidate: dict) -> int | None:
+    for key in ("archive_size_bytes", "expected_archive_size_bytes", "archive_bytes"):
+        value = candidate.get(key)
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _candidate_blockers(
+    candidate: dict,
+    *,
+    active_floor_archive_bytes: int | None = DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES,
+    active_floor_score: float | None = DEFAULT_ACTIVE_FLOOR_SCORE,
+    allow_above_active_floor_dispatch: bool = False,
+    operator_override_reason: str | None = None,
+) -> list[str]:
     blockers: list[str] = []
     # Round 5 R5-1 fix (2026-05-06, 95% CRITICAL): the historical
     # `if candidate.get("dispatch_blockers"): blockers.append(...)` rejected
@@ -95,6 +116,24 @@ def _candidate_blockers(candidate: dict) -> list[str]:
         blockers.append(f"blocked_evidence_semantics:{semantics or 'missing'}")
     if candidate.get("score_claim") is True and candidate.get("score_claim_verified") is not True:
         blockers.append("unverified_score_claim")
+    archive_bytes = _candidate_archive_bytes(candidate)
+    if (
+        active_floor_archive_bytes is not None
+        and archive_bytes is not None
+        and archive_bytes > active_floor_archive_bytes
+    ):
+        if not allow_above_active_floor_dispatch:
+            score_note = (
+                f", active_floor_score={active_floor_score:.12f}"
+                if active_floor_score is not None else ""
+            )
+            blockers.append(
+                "above_active_floor_archive_bytes:"
+                f"{archive_bytes}>{active_floor_archive_bytes}{score_note}; "
+                "treat as research/calibration unless explicitly overridden"
+            )
+        elif not operator_override_reason:
+            blockers.append("above_active_floor_override_missing_reason")
     return blockers
 
 
@@ -211,7 +250,15 @@ def _fire_one(
     )
 
 
-def _load_top_k(ranked_input: Path, k: int | None) -> list[dict]:
+def _load_top_k(
+    ranked_input: Path,
+    k: int | None,
+    *,
+    active_floor_archive_bytes: int | None = DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES,
+    active_floor_score: float | None = DEFAULT_ACTIVE_FLOOR_SCORE,
+    allow_above_active_floor_dispatch: bool = False,
+    operator_override_reason: str | None = None,
+) -> list[dict]:
     """Load candidates from a meta-Lagrangian ranked-output JSON file."""
     payload = json.loads(ranked_input.read_text())
     if isinstance(payload, dict) and payload.get("ready_for_exact_eval_dispatch") is False:
@@ -229,7 +276,13 @@ def _load_top_k(ranked_input: Path, k: int | None) -> list[dict]:
             blocked.append(f"candidate[{idx}]: not an object")
             continue
         candidate_id = candidate.get("candidate_id", f"candidate[{idx}]")
-        for blocker in _candidate_blockers(candidate):
+        for blocker in _candidate_blockers(
+            candidate,
+            active_floor_archive_bytes=active_floor_archive_bytes,
+            active_floor_score=active_floor_score,
+            allow_above_active_floor_dispatch=allow_above_active_floor_dispatch,
+            operator_override_reason=operator_override_reason,
+        ):
             blocked.append(f"{candidate_id}: {blocker}")
     if blocked:
         details = "\n  - ".join(blocked[:20])
@@ -257,6 +310,18 @@ def main(argv: list[str] | None = None) -> int:
                         help="$ estimate per dispatch for budget gating")
     parser.add_argument("--max-total-cost", type=float, default=5.00,
                         help="hard cap on total $ across all dispatches; refuse if exceeded")
+    parser.add_argument("--active-floor-archive-bytes", type=int, default=DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES,
+                        help="refuse paid dispatch for candidates larger than the current active "
+                        "archive-byte floor unless --allow-above-active-floor-dispatch is set "
+                        f"(default: {DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES})")
+    parser.add_argument("--active-floor-score", type=float, default=DEFAULT_ACTIVE_FLOOR_SCORE,
+                        help="current active score floor for diagnostic blocker text "
+                        f"(default: {DEFAULT_ACTIVE_FLOOR_SCORE:.12f})")
+    parser.add_argument("--allow-above-active-floor-dispatch", action="store_true",
+                        help="operator override for calibration/non-rate experiments whose archives "
+                        "are larger than --active-floor-archive-bytes")
+    parser.add_argument("--operator-override-reason", default=None,
+                        help="required with --allow-above-active-floor-dispatch")
     parser.add_argument("--max-dph", type=float, default=0.30,
                         help="passed to vastai dispatcher to gate per-hour cost")
     parser.add_argument("--per-dispatch-timeout-seconds", type=float, default=1800.0,
@@ -266,9 +331,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dry-run", action="store_true",
                         help="print the dispatch commands that WOULD fire, without firing them")
     args = parser.parse_args(argv)
+    if args.allow_above_active_floor_dispatch and not args.operator_override_reason:
+        print(
+            "FATAL: --allow-above-active-floor-dispatch requires "
+            "--operator-override-reason",
+            file=sys.stderr,
+        )
+        return 2
 
     try:
-        candidates = _load_top_k(args.ranked_input, args.top_k)
+        candidates = _load_top_k(
+            args.ranked_input,
+            args.top_k,
+            active_floor_archive_bytes=args.active_floor_archive_bytes,
+            active_floor_score=args.active_floor_score,
+            allow_above_active_floor_dispatch=args.allow_above_active_floor_dispatch,
+            operator_override_reason=args.operator_override_reason,
+        )
     except DispatchInputError as exc:
         print(f"FATAL: {exc}", file=sys.stderr)
         return 2

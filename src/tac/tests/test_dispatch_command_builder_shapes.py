@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
-
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -30,6 +30,12 @@ def _ready_lightning_candidate() -> dict:
     }
 
 
+def _write_ranked_input(tmp_path: Path, candidates: list[dict]) -> Path:
+    ranked = tmp_path / "ranked.json"
+    ranked.write_text(json.dumps({"dispatch_ready": candidates}), encoding="utf-8")
+    return ranked
+
+
 def test_parallel_dispatch_lightning_command_uses_stack_dispatcher_flags() -> None:
     tool = _load_tool("parallel_dispatch_top_k")
 
@@ -51,6 +57,47 @@ def test_parallel_dispatch_lightning_command_uses_stack_dispatcher_flags() -> No
     assert "--job-name batch_candidate42" in joined
     assert "--lane-script" not in cmd
     assert "--predicted-band" not in cmd
+
+
+def test_parallel_dispatch_rejects_above_active_floor_archive_by_default(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = {
+        **_ready_lightning_candidate(),
+        "archive_size_bytes": tool.DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES + 1,
+    }
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "above_active_floor_archive_bytes" in message
+    assert str(tool.DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES + 1) in message
+
+
+def test_parallel_dispatch_allows_above_active_floor_with_operator_reason(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = {
+        **_ready_lightning_candidate(),
+        "archive_size_bytes": tool.DEFAULT_ACTIVE_FLOOR_ARCHIVE_BYTES + 1,
+    }
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    loaded = tool._load_top_k(
+        ranked,
+        k=None,
+        allow_above_active_floor_dispatch=True,
+        operator_override_reason="calibration dispatch for non-rate-axis candidate",
+    )
+
+    assert loaded == [candidate]
 
 
 def test_feedback_loop_lightning_command_uses_stack_dispatcher_flags() -> None:
