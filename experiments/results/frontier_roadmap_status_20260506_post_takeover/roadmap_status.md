@@ -3,7 +3,7 @@
 Live-safe operator roadmap. It does not claim scores or dispatch work.
 
 - row_count: `12`
-- dirty_path_count: `11`
+- dirty_path_count: `10`
 - dirty_blocked_row_count: `0`
 - next_unblocked_keys: `hnerv_wavelet_wr01_apply, hnerv_lowlevel_brotli_repack, categorical_qma9_clade_spade_openpilot, joint_admm_balle_arithmetic_stack, hnerv_per_tensor_context_entropy`
 
@@ -12,17 +12,17 @@ Live-safe operator roadmap. It does not claim scores or dispatch work.
 - name: `byte-closed frontier closure and field-selected exact-eval tranche`
 - objective: Prepare score-reduction attempts by converting the strongest current planning surfaces into byte-closed, runtime-consumed candidates, then select any exact CUDA packet only through Pareto/KKT-proof/meta-Lagrangian gates.
 - candidate_packet_count: `1`
-- candidate_local_preflight_ready_count: `0`
-- candidate_static_preflight_ready_count: `0`
+- candidate_local_preflight_ready_count: `1`
+- candidate_static_preflight_ready_count: `1`
 - ready_candidate_packet_count: `0`
 - field_selection_ready_candidate_packet_count: `0`
 - dirty_blocked_candidate_packet_count: `0`
-- pareto_frontier_candidate_packet_count: `0`
+- pareto_frontier_candidate_packet_count: `1`
 - kkt_ready_candidate_packet_count: `0`
 - selected_candidate_packet: `wr01_apply_pr106x_half`
-- selected_candidate_decision: `strict_candidate_preflight_refused`
-- selected_candidate_frontier_reason: `not_on_frontier_until_pareto_eligibility_blockers_clear`
-- selected_candidate_exact_blocker_count: `14`
+- selected_candidate_decision: `needs_active_lane_claim_before_dispatch`
+- selected_candidate_frontier_reason: `non_dominated_within_pareto_scope`
+- selected_candidate_exact_blocker_count: `4`
 
 | workstream | keys | dirty-blocked keys | acceptance gates |
 |---|---|---|---|
