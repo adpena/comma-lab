@@ -622,7 +622,12 @@ def compress_jfg_block_fp(
         block_size=int(block_size),
         default_dtype=default_dtype,
     )
-    return lzma.compress(envelope, preset=int(lzma_preset))
+    # On-disk file format: outer 4-byte BFJ1 magic + lzma-compressed
+    # inner envelope. The inner envelope ALSO begins with BFJ1 (the
+    # canonical envelope-magic check is on the post-lzma bytes), so
+    # readers can sanity-check both layers.
+    inner = lzma.compress(envelope, preset=int(lzma_preset))
+    return MAGIC_BFJ1 + inner
 
 
 # ── Decompress ────────────────────────────────────────────────────────────
@@ -749,11 +754,28 @@ def decompress_jfg_block_fp(
             f"{type(blob).__name__}"
         )
     blob = bytes(blob)
-    # Probe magic before lzma to give a clear error for unwrapped payloads.
-    # The raw envelope starts with BFJ1; the lzma stream does not.
+    # Three accepted on-disk forms for forward compatibility:
+    #   1. BFJ1 + lzma(BFJ1 + envelope)         — canonical (compress_jfg_block_fp output)
+    #   2. lzma(BFJ1 + envelope)                — legacy/internal
+    #   3. BFJ1 + envelope (no lzma)            — already-decompressed envelope
     if blob[:4] == MAGIC_BFJ1:
-        envelope = blob
+        # Canonical form: outer magic + inner lzma(BFJ1 + envelope)
+        # Or already-decompressed envelope (form 3 — no lzma).
+        rest = blob[4:]
+        if rest[:6] == b"\xfd7zXZ\x00":
+            envelope = lzma.decompress(rest)
+            if envelope[:4] != MAGIC_BFJ1:
+                raise ValueError(
+                    f"BFJ1 decompress: lzma payload does not start with magic "
+                    f"{MAGIC_BFJ1!r}"
+                )
+        else:
+            # Form 3: outer BFJ1 then raw envelope (no lzma) — only valid if
+            # the rest starts with the version field. We test by re-prepending
+            # the magic and treating the whole blob as the envelope.
+            envelope = blob
     else:
+        # Form 2: legacy — pure lzma stream wrapping a BFJ1 envelope.
         envelope = lzma.decompress(blob)
         if envelope[:4] != MAGIC_BFJ1:
             raise ValueError(

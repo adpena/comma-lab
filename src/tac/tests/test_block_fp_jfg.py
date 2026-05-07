@@ -203,13 +203,22 @@ def test_compressed_size_is_bounded_for_jfg_class_fixture() -> None:
     blob = compress_jfg_block_fp(
         quantize_jfg_block_fp(sd, cfg), lzma_preset=9
     )
-    assert len(blob) < 100 * 1024, f"compressed blob is {len(blob)} bytes for {total} params"
+    assert len(blob) < 100 * 1024, (
+        f"compressed blob is {len(blob)} bytes for {total} params"
+    )
     assert len(blob) > 256
 
 
 def test_inflate_dispatch_can_load_bfj1_archive(tmp_path) -> None:
     """End-to-end seam: BFJ1 archive on disk → state_dict round-trip.
-    Inflate-side magic detection: lzma payload, then BFJ1 envelope."""
+
+    On-disk format:
+        outer 4-byte BFJ1 magic + lzma-compressed inner envelope.
+    The inner envelope ALSO begins with BFJ1 (canonical envelope-magic
+    after lzma decompression). This double-magic layout makes inflate
+    dispatch a simple ``magic == b"BFJ1"`` check on the file's first
+    4 bytes; the codec's decompressor handles everything else.
+    """
     torch.manual_seed(8)
     sd = {
         "stem.weight": torch.randn(16, 8, 3, 3) * 0.1,
@@ -224,8 +233,12 @@ def test_inflate_dispatch_can_load_bfj1_archive(tmp_path) -> None:
     bin_path = tmp_path / "renderer.bin"
     bin_path.write_bytes(blob)
     raw = bin_path.read_bytes()
+    # Inflate-side dispatch checks: first 4 bytes are BFJ1 magic.
+    assert raw[:4] == MAGIC_BFJ1
+    # After magic strip, the rest is lzma.
+    assert raw[4:10] == b"\xfd7zXZ\x00"
     import lzma as _lzma
-    envelope = _lzma.decompress(raw)
+    envelope = _lzma.decompress(raw[4:])
     assert envelope[:4] == MAGIC_BFJ1
     (version,) = struct.unpack("<I", envelope[4:8])
     assert version == BFJ1_VERSION
