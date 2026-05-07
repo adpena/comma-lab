@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import os
 import re
 import shlex
@@ -820,6 +821,16 @@ def refresh_dispatch_readiness(args: argparse.Namespace) -> dict[str, Any]:
         output.as_posix(),
     ]
     payload = _run_json_cmd(cmd, output)
+    stdout_tail = payload.get("stdout_tail")
+    if isinstance(stdout_tail, str) and stdout_tail.strip().startswith("{"):
+        try:
+            payload["underlying_static_readiness_stdout"] = json.loads(stdout_tail)
+            payload["stdout_tail"] = ""
+            payload["stdout_tail_disposition"] = (
+                "parsed_into_underlying_static_readiness_stdout_and_superseded_by_lane_claim_overlay"
+            )
+        except json.JSONDecodeError:
+            payload["stdout_tail_disposition"] = "unparsed_subprocess_stdout_tail"
     claim_report = lane_claim_preflight(args, now_utc=_now_utc(args))
     if not claim_report["active_claim_present"]:
         blockers = payload.setdefault("blockers", [])
