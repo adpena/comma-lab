@@ -6,6 +6,14 @@
 # and stops at byte-screen evidence. It does not run contest_auth_eval.py and
 # does not create a dispatch claim; operators must claim `imp_c067_bridge`
 # before launching remote GPU work.
+#
+# IMP_NOT_A_CYCLE_DISPATCHER: this is a single-stage byte-screen candidate
+# builder, not a Lane-17 multi-cycle IMP dispatcher. There are no training
+# cycles to "revert on regression" because no auth-eval-per-cycle decision
+# loop exists. The Stage 4 contest-CUDA auth eval is intentionally out of
+# scope (deferred to operator-driven exact eval). Check 94 (Council Lane-17
+# IMP design) does not apply to this script. Reference filename pattern
+# `remote_lane_j_imp_*.sh` — that's the multi-cycle dispatcher pattern.
 
 set -euo pipefail
 

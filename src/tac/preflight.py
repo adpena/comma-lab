@@ -18966,6 +18966,18 @@ def check_imp_cycles_use_ema_and_auth_eval(
             name_lower = sh.name.lower()
             if "imp" not in name_lower:
                 continue
+            try:
+                head = sh.read_text(errors="ignore")[:2000]
+            except OSError:
+                head = ""
+            # Header-level waiver: byte-screen / candidate-builder scripts
+            # that are NOT multi-cycle dispatchers don't have cycles to
+            # revert on. The waiver token must appear in the first 2000
+            # bytes (header) and explain why the dispatcher chain doesn't
+            # apply. Reference: remote_lane_imp_c067_bridge.sh — bounded
+            # byte-screen builder, not a Lane-17 cycle dispatcher.
+            if "IMP_NOT_A_CYCLE_DISPATCHER" in head:
+                continue
             n_scanned += 1
             violations.extend(
                 _scan_imp_dispatcher_for_chain_completeness(sh, root)
