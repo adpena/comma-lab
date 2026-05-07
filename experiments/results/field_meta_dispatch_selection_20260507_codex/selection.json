@@ -293,7 +293,6 @@
         "runtime:runtime_proof_missing",
         "strict_candidate_preflight_not_ready",
         "strict:ready_for_exact_eval_dispatch_false",
-        "strict_pre_submission_compliance_json_missing",
         "lane_dispatch_claim_missing",
         "exact_cuda_auth_eval_missing",
         "kkt:kkt_proof_or_admm_result_missing",
@@ -316,13 +315,13 @@
         "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/hdm3_normalize.py"
       ],
       "dispatch_attempted": false,
-      "evidence_grade": "empirical_archive_candidate_runtime_adapter_parity_exact_cuda_blocked",
+      "evidence_grade": "empirical_archive_candidate_runtime_adapter_parity_static_packet_ready",
       "evidence_paths": [],
       "expected_information_gain_nats": 0.05,
       "expected_pose_dist_delta": 0.0,
       "expected_seg_dist_delta": 0.0,
       "expected_total_score_delta": -9.322025e-06,
-      "family": "hnerv_hdm3_decoder_entropy_recode",
+      "family": "hnerv_hdm3_decoder_recode",
       "family_group": "hnerv_decoder_entropy_recode",
       "key": "pr106x_hdm3_decoder_recode_14byte",
       "next_patch": "",
@@ -1286,7 +1285,9 @@
         "missing_active_lane_dispatch_claim": 100.0
       },
       "selection_penalty_units": 100.0,
+      "source_ready_for_exact_eval_packet": null,
       "source_score_lowering_evidence": null,
+      "source_static_packet_ready": true,
       "static_candidate_blockers": [],
       "strict_candidate_preflight": {
         "blockers": [],
@@ -1774,7 +1775,9 @@
         "pareto_dominated_packet": 10.0
       },
       "selection_penalty_units": 135.0,
+      "source_ready_for_exact_eval_packet": null,
       "source_score_lowering_evidence": null,
+      "source_static_packet_ready": true,
       "static_candidate_blockers": [],
       "strict_candidate_preflight": {
         "blockers": [],
@@ -2329,7 +2332,9 @@
         "pareto_ineligible_packet": 50.0
       },
       "selection_penalty_units": 1325.0,
+      "source_ready_for_exact_eval_packet": null,
       "source_score_lowering_evidence": null,
+      "source_static_packet_ready": null,
       "static_candidate_blockers": [
         "missing_byte_closed_runtime_proof",
         "runtime:runtime_proof_missing",
@@ -2721,7 +2726,7 @@
         0.08
       ],
       "manifest_path": "experiments/results/hnerv_pr101_schema_candidate_20260507_codex/pr101_schema_archive_candidate_manifest.json",
-      "manifest_sha256": "6b822a193867a4c3c330b418ea85e2b574c1e78ed0393dadbcd4cc096c366424",
+      "manifest_sha256": "95d305714f4c99e010c29aa5e5167e770ee7eb410723d3a384fe4b7ac7da8aed",
       "next_local_non_gpu_action": null,
       "next_local_non_gpu_command": "",
       "next_required_proof": [
@@ -2928,7 +2933,9 @@
         "strict_candidate_preflight_blocked": 500.0
       },
       "selection_penalty_units": 1825.0,
+      "source_ready_for_exact_eval_packet": null,
       "source_score_lowering_evidence": null,
+      "source_static_packet_ready": null,
       "static_candidate_blockers": [
         "missing_byte_closed_runtime_proof",
         "runtime:runtime_proof_missing",
@@ -2995,7 +3002,6 @@
         "runtime:runtime_proof_missing",
         "strict_candidate_preflight_not_ready",
         "strict:ready_for_exact_eval_dispatch_false",
-        "strict_pre_submission_compliance_json_missing",
         "lane_dispatch_claim_missing",
         "exact_cuda_auth_eval_missing"
       ],
@@ -3016,7 +3022,8 @@
         "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/hdm3_normalize.py",
         "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/pr106x_lowlevel_brotli_hdm3_archive_candidate.zip",
         "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/pr106x_hnerv_brotli_repack_candidate.zip",
-        "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/runtime_adapter_proof.with_tool_run.json"
+        "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/runtime_adapter_proof.with_tool_run.json",
+        "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_exact_eval_packet_readiness.json"
       ],
       "code_paths": [
         "src/tac/hnerv_hdm3_archive_candidate.py",
@@ -3035,13 +3042,12 @@
         "active_claim": null,
         "active_lane_claim": false,
         "blockers": [
-          "dispatch_lane_id_missing",
           "dispatch_instance_job_id_missing"
         ],
         "checked": true,
         "claims_path": ".omx/state/active_lane_dispatch_claims.md",
         "instance_job_id": "",
-        "lane_id": "",
+        "lane_id": "hnerv_hdm3_q_brotli_split_exact_eval",
         "matching_claims": [],
         "now_utc": "2026-05-07T12:30:00Z",
         "status": "blocked",
@@ -3049,15 +3055,14 @@
       },
       "dispatch_identity_proof": {
         "blockers": [
-          "dispatch_lane_id_missing",
           "dispatch_instance_job_id_missing"
         ],
         "instance_job_id": "",
-        "lane_id": "",
+        "lane_id": "hnerv_hdm3_q_brotli_split_exact_eval",
         "status": "blocked"
       },
       "dispatch_refused": true,
-      "evidence_grade": "empirical_archive_candidate_runtime_adapter_parity_exact_cuda_blocked",
+      "evidence_grade": "empirical_archive_candidate_runtime_adapter_parity_static_packet_ready",
       "evidence_paths": [],
       "exact_dispatch_blockers": {
         "blocker_categories": {
@@ -3093,18 +3098,16 @@
           "score_claim": [],
           "strict_preflight": [
             "strict_candidate_preflight_not_ready",
-            "strict_pre_submission_compliance_json_missing",
             "strict_candidate_preflight_blocked",
             "ingestion:strict_candidate_preflight_not_ready"
           ]
         },
-        "blocker_count": 16,
+        "blocker_count": 15,
         "blockers": [
           "missing_byte_closed_runtime_proof",
           "runtime:runtime_proof_missing",
           "strict_candidate_preflight_not_ready",
           "strict:ready_for_exact_eval_dispatch_false",
-          "strict_pre_submission_compliance_json_missing",
           "lane_dispatch_claim_missing",
           "exact_cuda_auth_eval_missing",
           "kkt:kkt_proof_or_admm_result_missing",
@@ -3136,7 +3139,7 @@
       "expected_seg_dist_delta": 0.0,
       "expected_total_score_delta": -9.322025e-06,
       "expected_total_score_delta_source": "expected_total_score_delta_rate_only",
-      "family": "hnerv_hdm3_decoder_entropy_recode",
+      "family": "hnerv_hdm3_decoder_recode",
       "family_group": "hnerv_decoder_entropy_recode",
       "field_interaction_contract": {
         "assumption_count": 3,
@@ -3186,7 +3189,6 @@
         "runtime:runtime_proof_missing",
         "strict_candidate_preflight_not_ready",
         "strict:ready_for_exact_eval_dispatch_false",
-        "strict_pre_submission_compliance_json_missing",
         "lane_dispatch_claim_missing",
         "exact_cuda_auth_eval_missing",
         "kkt:kkt_proof_or_admm_result_missing",
@@ -3214,7 +3216,6 @@
           "runtime:runtime_proof_missing",
           "strict_candidate_preflight_not_ready",
           "strict:ready_for_exact_eval_dispatch_false",
-          "strict_pre_submission_compliance_json_missing",
           "lane_dispatch_claim_missing",
           "exact_cuda_auth_eval_missing",
           "kkt:kkt_proof_or_admm_result_missing",
@@ -3237,13 +3238,13 @@
           "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/hdm3_normalize.py"
         ],
         "dispatch_attempted": false,
-        "evidence_grade": "empirical_archive_candidate_runtime_adapter_parity_exact_cuda_blocked",
+        "evidence_grade": "empirical_archive_candidate_runtime_adapter_parity_static_packet_ready",
         "evidence_paths": [],
         "expected_information_gain_nats": 0.05,
         "expected_pose_dist_delta": 0.0,
         "expected_seg_dist_delta": 0.0,
         "expected_total_score_delta": -9.322025e-06,
-        "family": "hnerv_hdm3_decoder_entropy_recode",
+        "family": "hnerv_hdm3_decoder_recode",
         "family_group": "hnerv_decoder_entropy_recode",
         "key": "pr106x_hdm3_decoder_recode_14byte",
         "next_patch": "",
@@ -3284,7 +3285,6 @@
         "runtime:runtime_proof_missing",
         "strict_candidate_preflight_not_ready",
         "strict:ready_for_exact_eval_dispatch_false",
-        "strict_pre_submission_compliance_json_missing",
         "lane_dispatch_claim_missing",
         "exact_cuda_auth_eval_missing",
         "kkt:kkt_proof_or_admm_result_missing"
@@ -3301,7 +3301,7 @@
         "tolerance": null
       },
       "kkt_ready_for_field_planning": false,
-      "lane_id": "",
+      "lane_id": "hnerv_hdm3_q_brotli_split_exact_eval",
       "lexicographic_feasibility_tuple": [
         false,
         false,
@@ -3314,7 +3314,7 @@
         0.05
       ],
       "manifest_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_archive_candidate_manifest.json",
-      "manifest_sha256": "0081c3a426b978dc2ef9b9178ea313c69019ab69cd457f8507889441c7e7bd0b",
+      "manifest_sha256": "2675903f48b424869c9d72ede95d460adecc6730e4831444eac68d5bd6c2c210",
       "next_local_non_gpu_action": null,
       "next_local_non_gpu_command": "",
       "next_required_proof": [
@@ -3374,7 +3374,6 @@
         "lane_dispatch_claim_missing"
       ],
       "operator_current_blockers": [
-        "strict_pre_submission_compliance_json_missing",
         "lane_dispatch_claim_missing",
         "exact_cuda_auth_eval_missing"
       ],
@@ -3386,7 +3385,6 @@
         ],
         "copy_safe": null,
         "current_blockers": [
-          "strict_pre_submission_compliance_json_missing",
           "lane_dispatch_claim_missing",
           "exact_cuda_auth_eval_missing"
         ],
@@ -3462,10 +3460,10 @@
         "tolerance": 1e-09
       },
       "readiness_component_penalty_overwhelms_rate_gain": null,
-      "readiness_evidence_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/runtime_adapter_proof.with_tool_run.json",
-      "readiness_evidence_ready_for_exact_eval_dispatch": null,
-      "readiness_evidence_semantics": "hdm3_runtime_adapter_payload_identity",
-      "readiness_evidence_sha256": "6b37209a88e6483e5f8c0a034f2dfc39cc0c99b6aea0aa06426e79e1fe8d4331",
+      "readiness_evidence_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/hdm3_exact_eval_packet_readiness.json",
+      "readiness_evidence_ready_for_exact_eval_dispatch": false,
+      "readiness_evidence_semantics": "hdm3_static_packet_runtime_adapter_payload_identity",
+      "readiness_evidence_sha256": "1cdd8db33363024f59183758bd539eb85ab12c5374ef2b5ca8988fe39cd82396",
       "ready_for_exact_eval_dispatch": false,
       "role": "rate_recode_substitute",
       "runtime_proof": {
@@ -3514,13 +3512,14 @@
         "strict_candidate_preflight_blocked": 500.0
       },
       "selection_penalty_units": 1825.0,
+      "source_ready_for_exact_eval_packet": true,
       "source_score_lowering_evidence": null,
+      "source_static_packet_ready": true,
       "static_candidate_blockers": [
         "missing_byte_closed_runtime_proof",
         "runtime:runtime_proof_missing",
         "strict_candidate_preflight_not_ready",
         "strict:ready_for_exact_eval_dispatch_false",
-        "strict_pre_submission_compliance_json_missing",
         "lane_dispatch_claim_missing",
         "exact_cuda_auth_eval_missing"
       ],
@@ -3537,7 +3536,7 @@
           "active_conflicts": [],
           "checked": false,
           "claims_path": null,
-          "lane_id": null
+          "lane_id": "hnerv_hdm3_q_brotli_split_exact_eval"
         },
         "ready_for_exact_eval_dispatch": false,
         "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
@@ -3612,6 +3611,7 @@
         "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/candidate.json",
         "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/construction_plan.json",
         "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/decode_reencode_blocked_proof.json",
+        "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/hpm1_semantic_parity_fail_closed.json",
         "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/hpm1_structural_inventory.json",
         "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/label_permutation_control.json",
         "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/readiness.json",
@@ -3949,7 +3949,7 @@
         0.35
       ],
       "manifest_path": "experiments/results/categorical_openpilot_payload_candidate_20260506_codex/summary.json",
-      "manifest_sha256": "71edf2351ec9398a27c795175d97e5378adf36f5d25d4def820939830f0f96d8",
+      "manifest_sha256": "38d5f302ae8ef5486b160166a2b72c82ac390445e0e34dc4318b73a9e57619a3",
       "next_local_non_gpu_action": null,
       "next_local_non_gpu_command": "",
       "next_required_proof": [
@@ -4166,7 +4166,9 @@
         "strict_candidate_preflight_blocked": 500.0
       },
       "selection_penalty_units": 1825.0,
+      "source_ready_for_exact_eval_packet": null,
       "source_score_lowering_evidence": null,
+      "source_static_packet_ready": null,
       "static_candidate_blockers": [
         "missing_byte_closed_runtime_proof",
         "runtime:runtime_proof_missing",
@@ -4756,7 +4758,9 @@
         "strict_candidate_preflight_blocked": 500.0
       },
       "selection_penalty_units": 1825.0,
+      "source_ready_for_exact_eval_packet": null,
       "source_score_lowering_evidence": null,
+      "source_static_packet_ready": null,
       "static_candidate_blockers": [
         "missing_byte_closed_runtime_proof",
         "runtime:runtime_proof_missing",
@@ -5335,7 +5339,9 @@
         "strict_candidate_preflight_blocked": 500.0
       },
       "selection_penalty_units": 1825.0,
+      "source_ready_for_exact_eval_packet": null,
       "source_score_lowering_evidence": false,
+      "source_static_packet_ready": null,
       "static_candidate_blockers": [
         "missing_byte_closed_runtime_proof",
         "runtime:runtime_proof_missing",
@@ -5987,7 +5993,9 @@
         "strict_candidate_preflight_blocked": 500.0
       },
       "selection_penalty_units": 2900.0,
+      "source_ready_for_exact_eval_packet": null,
       "source_score_lowering_evidence": null,
+      "source_static_packet_ready": null,
       "static_candidate_blockers": [
         "missing_byte_closed_archive_proof",
         "archive:archive_identity_missing",
@@ -6657,7 +6665,9 @@
         "strict_candidate_preflight_blocked": 500.0
       },
       "selection_penalty_units": 2900.0,
+      "source_ready_for_exact_eval_packet": null,
       "source_score_lowering_evidence": null,
+      "source_static_packet_ready": null,
       "static_candidate_blockers": [
         "missing_byte_closed_archive_proof",
         "archive:archive_identity_missing",
@@ -7216,7 +7226,9 @@
       "missing_active_lane_dispatch_claim": 100.0
     },
     "selection_penalty_units": 100.0,
+    "source_ready_for_exact_eval_packet": null,
     "source_score_lowering_evidence": null,
+    "source_static_packet_ready": true,
     "static_candidate_blockers": [],
     "strict_candidate_preflight": {
       "blockers": [],

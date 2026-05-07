@@ -1819,6 +1819,19 @@ def _normalize_hnerv_hdm3_archive_candidate(
         ],
     )
     proof_path = manifest_path.parent / "runtime_adapter_proof.with_tool_run.json"
+    readiness_path = manifest_path.parent / "hdm3_exact_eval_packet_readiness.json"
+    readiness: Mapping[str, Any] = {}
+    if readiness_path.is_file():
+        try:
+            readiness_payload = read_json(readiness_path)
+        except (OSError, ValueError):
+            readiness_payload = {}
+        if (
+            isinstance(readiness_payload, Mapping)
+            and readiness_payload.get("candidate_archive_sha256")
+            == normalized.get("candidate_archive_sha256")
+        ):
+            readiness = readiness_payload
     if proof_path.is_file():
         try:
             proof = read_json(proof_path)
@@ -1835,6 +1848,16 @@ def _normalize_hnerv_hdm3_archive_candidate(
                 "hdm3_runtime_tree_parity_manifest_missing",
                 "hdm3_inflate_output_parity_missing",
             }
+            proof_blockers = _string_list(proof.get("remaining_dispatch_blockers"))
+            if readiness:
+                proof_blockers = _string_list(readiness.get("dispatch_blockers"))
+                strict_static = readiness.get("strict_static_compliance")
+                if (
+                    isinstance(strict_static, Mapping)
+                    and strict_static.get("present") is True
+                    and strict_static.get("passed") is True
+                ):
+                    obsolete_blockers.add("strict_pre_submission_compliance_json_missing")
             normalized["dispatch_blockers"] = _ordered_unique_strings(
                 [
                     *[
@@ -1842,16 +1865,35 @@ def _normalize_hnerv_hdm3_archive_candidate(
                         for blocker in _string_list(normalized.get("dispatch_blockers"))
                         if blocker not in obsolete_blockers
                     ],
-                    *(_string_list(proof.get("remaining_dispatch_blockers"))),
+                    *proof_blockers,
                 ]
             )
             normalized["evidence_grade"] = (
-                "empirical_archive_candidate_runtime_adapter_parity_exact_cuda_blocked"
+                str(readiness.get("evidence_grade") or "")
+                or "empirical_archive_candidate_runtime_adapter_parity_exact_cuda_blocked"
             )
             normalized["runtime_adapter_parity_proven"] = True
-            normalized["readiness_evidence_path"] = repo_relative(proof_path, repo_root)
-            normalized["readiness_evidence_sha256"] = sha256_file(proof_path)
-            normalized["readiness_evidence_semantics"] = "hdm3_runtime_adapter_payload_identity"
+            normalized["readiness_evidence_path"] = repo_relative(
+                readiness_path if readiness else proof_path,
+                repo_root,
+            )
+            normalized["readiness_evidence_sha256"] = sha256_file(
+                readiness_path if readiness else proof_path
+            )
+            normalized["readiness_evidence_semantics"] = (
+                "hdm3_static_packet_runtime_adapter_payload_identity"
+                if readiness
+                else "hdm3_runtime_adapter_payload_identity"
+            )
+            normalized["readiness_evidence_ready_for_exact_eval_dispatch"] = (
+                readiness.get("ready_for_exact_eval_dispatch") if readiness else False
+            )
+            if readiness:
+                normalized["static_packet_ready"] = readiness.get("static_packet_ready")
+                normalized["ready_for_exact_eval_packet"] = readiness.get(
+                    "ready_for_exact_eval_packet"
+                )
+                normalized["static_blockers"] = _string_list(readiness.get("static_blockers"))
     _append_artifact_paths(
         normalized,
         manifest_path=manifest_path,
@@ -1860,6 +1902,7 @@ def _normalize_hnerv_hdm3_archive_candidate(
             normalized.get("candidate_archive_path"),
             normalized.get("source_archive_path"),
             manifest_path.parent / "runtime_adapter_proof.with_tool_run.json",
+            manifest_path.parent / "hdm3_exact_eval_packet_readiness.json",
         ],
     )
     return normalized
@@ -3420,6 +3463,8 @@ def _row_for_manifest(
         "candidate_local_preflight_ready": base_static_ready,
         "candidate_static_preflight_ready": candidate_static_ready_after_dirty,
         "candidate_static_preflight_ready_before_dirty": selector_static_ready,
+        "source_static_packet_ready": payload.get("static_packet_ready"),
+        "source_ready_for_exact_eval_packet": payload.get("ready_for_exact_eval_packet"),
         "static_candidate_blockers": static_blockers,
         "candidate_archive_path": archive["path"],
         "candidate_archive_sha256": archive["sha256_actual"] or archive["sha256_expected"],

@@ -1134,6 +1134,33 @@ def test_field_meta_selector_normalizes_hdm3_and_pr101_rate_recode_manifests(
         + "\n",
         encoding="utf-8",
     )
+    readiness = tmp_path / "hdm3_exact_eval_packet_readiness.json"
+    readiness.write_text(
+        json.dumps(
+            {
+                "candidate_archive_sha256": hashlib.sha256(hdm3_archive.read_bytes()).hexdigest(),
+                "dispatch_blockers": [
+                    "lane_dispatch_claim_missing",
+                    "exact_cuda_auth_eval_missing",
+                ],
+                "evidence_grade": (
+                    "empirical_archive_candidate_runtime_adapter_parity_static_packet_ready"
+                ),
+                "ready_for_exact_eval_dispatch": False,
+                "ready_for_exact_eval_packet": True,
+                "static_blockers": [],
+                "static_packet_ready": True,
+                "strict_static_compliance": {
+                    "passed": True,
+                    "present": True,
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     pr101_manifest = tmp_path / "pr101_manifest.json"
     pr101_manifest.write_text(
         json.dumps(
@@ -1166,7 +1193,16 @@ def test_field_meta_selector_normalizes_hdm3_and_pr101_rate_recode_manifests(
     assert hdm3["rate_only_delta_proof"]["status"] == "passed"
     assert hdm3["archive_proof"]["byte_closed"] is True
     assert hdm3["runtime_proof"]["runtime_closed"] is False
-    assert hdm3["readiness_evidence_semantics"] == "hdm3_runtime_adapter_payload_identity"
+    assert (
+        hdm3["readiness_evidence_semantics"]
+        == "hdm3_static_packet_runtime_adapter_payload_identity"
+    )
+    assert hdm3["evidence_grade"] == (
+        "empirical_archive_candidate_runtime_adapter_parity_static_packet_ready"
+    )
+    assert hdm3["source_static_packet_ready"] is True
+    assert hdm3["source_ready_for_exact_eval_packet"] is True
+    assert "strict_pre_submission_compliance_json_missing" not in hdm3["candidate_blockers"]
     assert "hdm3_runtime_adapter_archive_parity_proof_missing" not in hdm3["candidate_blockers"]
     assert hdm3["frontier_row"]["family"] == "hnerv_hdm3_decoder_entropy_recode"
     pr101 = rows["pr106x_pr101_schema_f32_recode_36byte"]
