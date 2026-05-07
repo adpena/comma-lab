@@ -1,6 +1,6 @@
 use std::fs;
 use std::process::Command;
-use zipwire::inspect_zip_bytes;
+use zipwire::{inspect_zip_bytes, rewrite_single_identity_bytes, rewrite_single_identity_path};
 
 const STORED_SINGLE_MEMBER_ZIP: &[u8] = &[
     0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x21, 0x00, 0x74, 0xb6,
@@ -76,6 +76,162 @@ fn accepts_deflated_metadata_without_payload_inflate() {
         8
     );
     assert!(member.blockers.is_empty());
+}
+
+#[test]
+fn rewrite_single_identity_is_byte_identical_and_proven() {
+    let rewrite = rewrite_single_identity_bytes(
+        "fixture/stored.zip",
+        STORED_SINGLE_MEMBER_ZIP,
+        "fixture/out.zip",
+    )
+    .expect("rewrite-single identity");
+
+    assert_eq!(rewrite.output_bytes, STORED_SINGLE_MEMBER_ZIP);
+    assert_eq!(rewrite.proof.mode, "identity");
+    assert!(!rewrite.proof.mutation_requested);
+    assert!(rewrite.proof.byte_identical);
+    assert_eq!(rewrite.proof.input.path, "fixture/stored.zip");
+    assert_eq!(rewrite.proof.output.path, "fixture/out.zip");
+    assert_eq!(rewrite.proof.input.bytes, 113);
+    assert_eq!(rewrite.proof.output.bytes, 113);
+    assert_eq!(
+        rewrite.proof.input.sha256,
+        "7cae837c71aa1abbc55b52dcdb51487a847725bb97cb507d5761ac23c344bf86"
+    );
+    assert_eq!(rewrite.proof.output.sha256, rewrite.proof.input.sha256);
+    assert_eq!(rewrite.proof.member.name, "x");
+    assert_eq!(rewrite.proof.member.compress_type, 0);
+    assert_eq!(rewrite.proof.member.header_offset, 0);
+    assert_eq!(rewrite.proof.member.payload_offset, 31);
+    assert_eq!(rewrite.proof.member.compressed_bytes, 13);
+    assert_eq!(rewrite.proof.member.uncompressed_bytes, 13);
+    assert_eq!(rewrite.proof.member.crc32, "6428b674");
+    assert_eq!(
+        rewrite.proof.member.payload_sha256,
+        "808b59664b6adb9274e3bbd0766e7aec9659786c22fdb825c49ca7fda1c6236e"
+    );
+}
+
+#[test]
+fn rewrite_single_identity_is_deterministic_across_repeated_runs() {
+    let first = rewrite_single_identity_bytes(
+        "fixture/stored.zip",
+        STORED_SINGLE_MEMBER_ZIP,
+        "fixture/out.zip",
+    )
+    .expect("first rewrite");
+    let second = rewrite_single_identity_bytes(
+        "fixture/stored.zip",
+        STORED_SINGLE_MEMBER_ZIP,
+        "fixture/out.zip",
+    )
+    .expect("second rewrite");
+
+    assert_eq!(first.output_bytes, second.output_bytes);
+    assert_eq!(first.proof, second.proof);
+}
+
+#[test]
+fn rewrite_single_fails_closed_on_multi_member_archives() {
+    let raw = multi_stored_members_fixture();
+
+    let err = rewrite_single_identity_bytes("fixture/multi.zip", &raw, "fixture/out.zip")
+        .expect_err("multi-member rewrite must fail");
+
+    assert_eq!(
+        err.blockers(),
+        ["rewrite_single_requires_exactly_one_member:2"]
+    );
+}
+
+#[test]
+fn rewrite_single_fails_closed_on_unsupported_methods() {
+    let err = rewrite_single_identity_bytes(
+        "fixture/deflated.zip",
+        DEFLATED_SINGLE_MEMBER_ZIP,
+        "fixture/out.zip",
+    )
+    .expect_err("deflated rewrite must fail");
+
+    assert_eq!(
+        err.blockers(),
+        [
+            "rewrite_single_requires_stored_method:8",
+            "rewrite_single_stored_size_mismatch:15!=13"
+        ]
+    );
+}
+
+#[test]
+fn rewrite_single_fails_closed_on_encrypted_members() {
+    let mut raw = STORED_SINGLE_MEMBER_ZIP.to_vec();
+    raw[6] = 1;
+    raw[52] = 1;
+
+    let err = rewrite_single_identity_bytes("fixture/encrypted.zip", &raw, "fixture/out.zip")
+        .expect_err("encrypted rewrite must fail");
+
+    assert_eq!(err.blockers(), ["x:encrypted_member"]);
+}
+
+#[test]
+fn rewrite_single_path_rejection_does_not_write_output() {
+    let dir = std::env::temp_dir().join(format!("zipwire-rewrite-reject-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).expect("test dir");
+    let archive = dir.join("input.zip");
+    let rewritten = dir.join("output.zip");
+    fs::write(&archive, DEFLATED_SINGLE_MEMBER_ZIP).expect("archive write");
+
+    let err = rewrite_single_identity_path(&archive, &rewritten)
+        .expect_err("deflated path rewrite must fail");
+
+    assert_eq!(err.kind(), std::io::ErrorKind::InvalidData);
+    assert!(!rewritten.exists());
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn cli_rewrite_single_writes_identity_output_and_json_proof() {
+    let dir = std::env::temp_dir().join(format!("zipwire-rewrite-cli-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).expect("test dir");
+    let archive = dir.join("input.zip");
+    let rewritten = dir.join("output.zip");
+    fs::write(&archive, STORED_SINGLE_MEMBER_ZIP).expect("archive write");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zipwire"))
+        .arg("rewrite-single")
+        .arg(&archive)
+        .arg(&rewritten)
+        .output()
+        .expect("run zipwire rewrite-single");
+
+    assert!(
+        output.status.success(),
+        "stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        fs::read(&rewritten).expect("rewritten archive"),
+        STORED_SINGLE_MEMBER_ZIP
+    );
+    let proof: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("rewrite proof JSON");
+    assert_eq!(proof["mode"], "identity");
+    assert_eq!(proof["mutation_requested"], false);
+    assert_eq!(proof["byte_identical"], true);
+    assert_eq!(proof["input"]["bytes"], 113);
+    assert_eq!(proof["output"]["bytes"], 113);
+    assert_eq!(proof["member"]["name"], "x");
+    assert_eq!(
+        proof["member"]["payload_sha256"],
+        "808b59664b6adb9274e3bbd0766e7aec9659786c22fdb825c49ca7fda1c6236e"
+    );
+
+    let _ = fs::remove_dir_all(&dir);
 }
 
 #[test]
@@ -207,6 +363,18 @@ fn duplicate_stored_members_fixture() -> Vec<u8> {
     let central_offset = out.len() as u32;
     central_stored_file(&mut out, b"x", 0xe8b7_be43, 1, 0);
     central_stored_file(&mut out, b"x", 0x71be_eff9, 1, 32);
+    let central_size = out.len() as u32 - central_offset;
+    end_of_central_directory(&mut out, 2, central_size, central_offset);
+    out
+}
+
+fn multi_stored_members_fixture() -> Vec<u8> {
+    let mut out = Vec::new();
+    local_stored_file(&mut out, b"x", b"a", 0xe8b7_be43);
+    local_stored_file(&mut out, b"y", b"b", 0x71be_eff9);
+    let central_offset = out.len() as u32;
+    central_stored_file(&mut out, b"x", 0xe8b7_be43, 1, 0);
+    central_stored_file(&mut out, b"y", 0x71be_eff9, 1, 32);
     let central_size = out.len() as u32 - central_offset;
     end_of_central_directory(&mut out, 2, central_size, central_offset);
     out

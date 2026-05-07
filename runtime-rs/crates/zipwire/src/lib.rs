@@ -1,6 +1,8 @@
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
+use std::error::Error;
+use std::fmt;
 use std::fs;
 use std::io;
 use std::path::Path;
@@ -51,11 +53,73 @@ pub struct LocalHeaderInspect {
     pub uncompressed_bytes: u64,
 }
 
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct RewriteSingleProof {
+    pub mode: String,
+    pub mutation_requested: bool,
+    pub byte_identical: bool,
+    pub input: RewriteArchiveProof,
+    pub output: RewriteArchiveProof,
+    pub member: RewriteMemberProof,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct RewriteArchiveProof {
+    pub path: String,
+    pub bytes: u64,
+    pub sha256: String,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct RewriteMemberProof {
+    pub name: String,
+    pub compress_type: u16,
+    pub header_offset: u64,
+    pub payload_offset: u64,
+    pub compressed_bytes: u64,
+    pub uncompressed_bytes: u64,
+    pub crc32: String,
+    pub payload_sha256: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RewriteSingleOutput {
+    pub output_bytes: Vec<u8>,
+    pub proof: RewriteSingleProof,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RewriteSingleError {
+    blockers: Vec<String>,
+}
+
+impl RewriteSingleError {
+    pub fn blockers(&self) -> &[String] {
+        &self.blockers
+    }
+}
+
+impl fmt::Display for RewriteSingleError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "rewrite-single rejected archive: ")?;
+        for (index, blocker) in self.blockers.iter().enumerate() {
+            if index != 0 {
+                write!(f, "; ")?;
+            }
+            write!(f, "{blocker}")?;
+        }
+        Ok(())
+    }
+}
+
+impl Error for RewriteSingleError {}
+
 #[derive(Debug, Clone, Copy)]
 struct Eocd {
     total_entries: u16,
     central_directory_size: u32,
     central_directory_offset: u32,
+    comment_len: u16,
 }
 
 #[derive(Debug, Clone)]
@@ -66,6 +130,8 @@ struct CentralDirectoryEntry {
     compressed_bytes: u32,
     uncompressed_bytes: u32,
     header_offset: u32,
+    central_extra_bytes: u16,
+    central_comment_bytes: u16,
     name: String,
 }
 
@@ -120,6 +186,205 @@ pub fn inspect_zip_bytes(path: &str, raw_zip: &[u8]) -> ArchiveInspect {
         members,
         zip_strict: blockers.is_empty(),
         blockers,
+    }
+}
+
+/// Rewrite a simple stored single-member ZIP archive in identity mode.
+///
+/// This intentionally narrow native surface validates strict central/local
+/// metadata, rejects unsupported ZIP features, and returns byte-identical
+/// output bytes plus a deterministic proof. It does not decompress payloads and
+/// does not support mutation.
+pub fn rewrite_single_identity_bytes(
+    input_path: &str,
+    raw_zip: &[u8],
+    output_path: &str,
+) -> Result<RewriteSingleOutput, RewriteSingleError> {
+    let member = validate_rewrite_single_identity(input_path, raw_zip)?;
+    let archive_sha256 = sha256_hex(raw_zip);
+    let archive_bytes = raw_zip.len() as u64;
+    Ok(RewriteSingleOutput {
+        output_bytes: raw_zip.to_vec(),
+        proof: RewriteSingleProof {
+            mode: "identity".to_string(),
+            mutation_requested: false,
+            byte_identical: true,
+            input: RewriteArchiveProof {
+                path: input_path.to_string(),
+                bytes: archive_bytes,
+                sha256: archive_sha256.clone(),
+            },
+            output: RewriteArchiveProof {
+                path: output_path.to_string(),
+                bytes: archive_bytes,
+                sha256: archive_sha256,
+            },
+            member,
+        },
+    })
+}
+
+/// Rewrite a simple stored single-member ZIP archive to a path in identity mode.
+///
+/// Invalid archives are rejected before the output path is written.
+pub fn rewrite_single_identity_path(
+    input_path: &Path,
+    output_path: &Path,
+) -> io::Result<RewriteSingleProof> {
+    let raw = fs::read(input_path)?;
+    let rewrite = rewrite_single_identity_bytes(
+        &input_path.to_string_lossy(),
+        &raw,
+        &output_path.to_string_lossy(),
+    )
+    .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
+    fs::write(output_path, &rewrite.output_bytes)?;
+    Ok(rewrite.proof)
+}
+
+fn validate_rewrite_single_identity(
+    input_path: &str,
+    raw_zip: &[u8],
+) -> Result<RewriteMemberProof, RewriteSingleError> {
+    let inspect = inspect_zip_bytes(input_path, raw_zip);
+    let mut blockers = inspect.blockers.clone();
+
+    if inspect.member_count != 1 {
+        blockers.push(format!(
+            "rewrite_single_requires_exactly_one_member:{}",
+            inspect.member_count
+        ));
+    }
+
+    let eocd_offset = match find_eocd(raw_zip) {
+        Ok(offset) => Some(offset),
+        Err(err) => {
+            blockers.push(format!("bad_zip:{err}"));
+            None
+        }
+    };
+    let eocd = match eocd_offset {
+        Some(offset) => match parse_eocd(raw_zip, offset) {
+            Ok(eocd) => Some(eocd),
+            Err(err) => {
+                blockers.push(format!("bad_zip:{err}"));
+                None
+            }
+        },
+        None => None,
+    };
+    let entries = match parse_central_directory(raw_zip) {
+        Ok(entries) => entries,
+        Err(err) => {
+            blockers.push(format!("bad_zip:{err}"));
+            Vec::new()
+        }
+    };
+
+    let mut proof = None;
+    if let (Some(eocd), [entry]) = (eocd, entries.as_slice()) {
+        if eocd.comment_len != 0 {
+            blockers.push(format!(
+                "rewrite_single_eocd_comment_not_supported:{}",
+                eocd.comment_len
+            ));
+        }
+        if entry.header_offset != 0 {
+            blockers.push(format!(
+                "rewrite_single_requires_local_header_at_start:{}",
+                entry.header_offset
+            ));
+        }
+        if entry.central_extra_bytes != 0 {
+            blockers.push(format!(
+                "rewrite_single_central_extra_not_supported:{}",
+                entry.central_extra_bytes
+            ));
+        }
+        if entry.central_comment_bytes != 0 {
+            blockers.push(format!(
+                "rewrite_single_central_comment_not_supported:{}",
+                entry.central_comment_bytes
+            ));
+        }
+        if entry.flags & !(FLAG_UTF8_NAME | FLAG_ENCRYPTED) != 0 {
+            blockers.push(format!(
+                "rewrite_single_unsupported_flag_bits:0x{:04x}",
+                entry.flags & !(FLAG_UTF8_NAME | FLAG_ENCRYPTED)
+            ));
+        }
+        if entry.compress_type != ZIP_STORED {
+            blockers.push(format!(
+                "rewrite_single_requires_stored_method:{}",
+                entry.compress_type
+            ));
+        }
+        if entry.compressed_bytes != entry.uncompressed_bytes {
+            blockers.push(format!(
+                "rewrite_single_stored_size_mismatch:{}!={}",
+                entry.compressed_bytes, entry.uncompressed_bytes
+            ));
+        }
+
+        match parse_local_header(raw_zip, entry.header_offset as usize) {
+            Ok(local) => {
+                if local.extra_bytes != 0 {
+                    blockers.push(format!(
+                        "rewrite_single_local_extra_not_supported:{}",
+                        local.extra_bytes
+                    ));
+                }
+                let payload_end = local
+                    .data_offset
+                    .saturating_add(entry.compressed_bytes as usize);
+                let central_directory_offset = eocd.central_directory_offset as usize;
+                let central_directory_end =
+                    central_directory_offset.saturating_add(eocd.central_directory_size as usize);
+                if payload_end > raw_zip.len() {
+                    blockers.push(format!(
+                        "rewrite_single_payload_out_of_range:{}>{}",
+                        payload_end,
+                        raw_zip.len()
+                    ));
+                }
+                if payload_end != central_directory_offset {
+                    blockers.push(format!(
+                        "rewrite_single_requires_central_directory_after_payload:{}!={}",
+                        payload_end, central_directory_offset
+                    ));
+                }
+                if let Some(offset) = eocd_offset {
+                    if central_directory_end != offset {
+                        blockers.push(format!(
+                            "rewrite_single_central_directory_eocd_gap:{}!={}",
+                            central_directory_end, offset
+                        ));
+                    }
+                }
+
+                if payload_end <= raw_zip.len() {
+                    proof = Some(RewriteMemberProof {
+                        name: entry.name.clone(),
+                        compress_type: entry.compress_type,
+                        header_offset: entry.header_offset as u64,
+                        payload_offset: local.data_offset as u64,
+                        compressed_bytes: entry.compressed_bytes as u64,
+                        uncompressed_bytes: entry.uncompressed_bytes as u64,
+                        crc32: format!("{:08x}", entry.crc32),
+                        payload_sha256: sha256_hex(&raw_zip[local.data_offset..payload_end]),
+                    });
+                }
+            }
+            Err(err) => blockers.push(format!("local_header_error:{err}")),
+        }
+    }
+
+    blockers.sort();
+    blockers.dedup();
+    if blockers.is_empty() {
+        Ok(proof.expect("single-member proof produced when blockers are empty"))
+    } else {
+        Err(RewriteSingleError { blockers })
     }
 }
 
@@ -278,6 +543,8 @@ fn parse_central_directory(raw_zip: &[u8]) -> Result<Vec<CentralDirectoryEntry>,
             compressed_bytes,
             uncompressed_bytes,
             header_offset,
+            central_extra_bytes: extra_len as u16,
+            central_comment_bytes: comment_len as u16,
             name,
         });
         cursor = entry_end;
@@ -327,6 +594,7 @@ fn parse_eocd(raw_zip: &[u8], offset: usize) -> Result<Eocd, String> {
         total_entries,
         central_directory_size,
         central_directory_offset,
+        comment_len: read_u16(raw_zip, offset + 20),
     })
 }
 
@@ -337,6 +605,8 @@ struct LocalHeader {
     crc32: u32,
     compressed_bytes: u32,
     uncompressed_bytes: u32,
+    extra_bytes: u16,
+    data_offset: usize,
     name: String,
 }
 
@@ -375,6 +645,8 @@ fn parse_local_header(raw_zip: &[u8], offset: usize) -> Result<LocalHeader, Stri
         crc32,
         compressed_bytes,
         uncompressed_bytes,
+        extra_bytes: extra_len as u16,
+        data_offset: after_extra,
         name,
     })
 }
