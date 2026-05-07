@@ -9,7 +9,14 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from tac.pr95_residual_atoms import main
+from tac.pr95_residual_atoms import (
+    PR95AtomPlanError,
+    emit_plan,
+    main,
+    sha256_file,
+)
+
+__all__ = ["PR95AtomPlanError", "emit_plan", "main", "sha256_file"]
 
 if __name__ == "__main__":
     raise SystemExit(main())

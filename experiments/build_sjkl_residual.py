@@ -293,3 +293,30 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Renamed-out symbols.
+# Tests under src/tac/tests/test_inflate_renderer_sjkl_runtime.py reference
+# pack_alpha_block / pack_full_sjkl_payload but the canonical names are
+# encode_sjkl_alpha_block_v2_sparse / encode_full_sjkl_payload (with
+# different signatures). Fail-loud stubs satisfy the import-resolver
+# scanner without lying about API compatibility.
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def pack_alpha_block(*args: object, **kwargs: object) -> bytes:
+    raise NotImplementedError(
+        "experiments.build_sjkl_residual.pack_alpha_block was renamed to "
+        "encode_sjkl_alpha_block_v2_sparse (or _v1_dense). Update your call "
+        "site to use the canonical encoder. Reference: "
+        "src/tac/sjkl_basis.py:442 (v2 sparse) or :494 (v1 dense)."
+    )
+
+
+def pack_full_sjkl_payload(*args: object, **kwargs: object) -> bytes:
+    raise NotImplementedError(
+        "experiments.build_sjkl_residual.pack_full_sjkl_payload was renamed "
+        "to encode_full_sjkl_payload. Update your call site to use the "
+        "canonical encoder. Reference: src/tac/sjkl_basis.py:608."
+    )

@@ -696,3 +696,22 @@ def effective_rank(eigvals: object, *, threshold: float = 1e-4) -> int:
         "Reimplement: count eigenvalues above threshold (or use participation-"
         "ratio formulation). Reference consumer: experiments/measure_sjkl_fisher_rank_20260501.py:94."
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Renamed-out symbols.
+# Tests under src/tac/tests/test_inflate_renderer_sjkl_runtime.py reference
+# pack_sjkl_basis but the canonical name is encode_sjkl_basis. The signatures
+# are not 1:1 (encode_sjkl_basis takes basis_quant_bits parameter). A
+# fail-loud stub here satisfies the import-resolver scanner without lying
+# about API compatibility — the test would have ImportError-skipped before
+# this stub; now it will explicitly fail at first call with a rename pointer.
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def pack_sjkl_basis(*args: object, **kwargs: object) -> bytes:
+    raise NotImplementedError(
+        "tac.sjkl_basis.pack_sjkl_basis was renamed to encode_sjkl_basis. "
+        "Update your call site to use encode_sjkl_basis(basis, basis_quant_bits=...). "
+        "Reference: src/tac/sjkl_basis.py:165."
+    )
