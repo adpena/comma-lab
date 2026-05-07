@@ -114,6 +114,12 @@ def test_build_categorical_candidate_payload_is_byte_closed_and_fail_closed(
     assert readiness["runtime_loader_parity"]["accepted"] is True
     assert readiness["runtime_loader_parity"]["sidecar_free"] is True
     assert readiness["runtime_loader_parity"]["runtime_execution_proof"]["accepted"] is True
+    assert (
+        readiness["runtime_loader_parity"]["runtime_execution_proof"][
+            "hpm1_runtime_consumer_proof"
+        ]["required"]
+        is False
+    )
     assert readiness["decode_reencode_parity"]["accepted"] is False
     assert readiness["conditioning_prior_contract"]["passed"] is True
     assert readiness["label_prior_payload_manifest"]["accepted"] is True
@@ -269,6 +275,15 @@ def test_build_categorical_candidate_payload_emits_hpm1_structural_inventory(
     assert readiness["hpm1_structural_decode_inventory"]["structural_reencode_matches_source"] is True
     assert readiness["runtime_loader_parity"]["accepted"] is True
     assert readiness["runtime_loader_parity"]["runtime_execution_proof"]["accepted"] is True
+    hpm1_runtime = readiness["runtime_loader_parity"]["runtime_execution_proof"][
+        "hpm1_runtime_consumer_proof"
+    ]
+    assert hpm1_runtime["required"] is True
+    assert hpm1_runtime["accepted"] is True
+    assert hpm1_runtime["payload_codec"] == "HPM1"
+    assert hpm1_runtime["hpm1_structural_reencode_passed"] is True
+    assert hpm1_runtime["hpm1_hpac_model_load_passed"] is True
+    assert hpm1_runtime["expected_fail_closed_exit"] is True
     assert readiness["dispatch_blockers"].count(
         "no_op_control_not_passed:label_permutation_fail_closed_control"
     ) == 0

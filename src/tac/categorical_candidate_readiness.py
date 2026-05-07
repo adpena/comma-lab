@@ -72,6 +72,8 @@ REQUIRED_CONTROL_NAMES = (
 REQUIRED_MEMBER_ROLES = ("categorical_payload", "decoder_or_runtime_consumer")
 CONTEST_ARCHIVE_CONTRACT = "contest_archive_zip"
 CONTEST_INFLATE_MEMBER = "inflate.sh"
+HPM1_CATEGORICAL_PAYLOAD_MEMBER = "categorical_payload.bin"
+HPM1_PAYLOAD_MAGIC = b"HPM1"
 EXACT_EVAL_ENTRYPOINT = "experiments/contest_auth_eval.py"
 EXACT_EVAL_PATH = "archive.zip -> inflate.sh -> upstream/evaluate.py"
 DISPATCH_CLAIMS_PATH = ".omx/state/active_lane_dispatch_claims.md"
@@ -390,6 +392,14 @@ def _runtime_loader_parity_report(
         proof_summary["runtime_output_sha256"] = output_sha if isinstance(output_sha, str) else ""
         if not _is_sha256(output_sha):
             proof_blockers.append("runtime_execution_proof_output_sha256_missing_or_invalid")
+        hpm1_runtime_summary, hpm1_runtime_blockers = (
+            _hpm1_runtime_consumer_proof_report(
+                proof_payload,
+                archive_members=archive_members,
+            )
+        )
+        proof_summary["hpm1_runtime_consumer_proof"] = hpm1_runtime_summary
+        proof_blockers.extend(hpm1_runtime_blockers)
     proof_blockers = list(dict.fromkeys(proof_blockers))
     proof_summary["accepted"] = not proof_blockers
     proof_summary["blockers"] = proof_blockers
@@ -398,6 +408,73 @@ def _runtime_loader_parity_report(
 
     accepted = not blockers
     summary["accepted"] = accepted
+    summary["blockers"] = blockers
+    return summary, blockers
+
+
+def _hpm1_runtime_consumer_proof_report(
+    proof_payload: Mapping[str, Any],
+    *,
+    archive_members: Mapping[str, bytes],
+) -> tuple[dict[str, Any], list[str]]:
+    payload_raw = archive_members.get(HPM1_CATEGORICAL_PAYLOAD_MEMBER)
+    required = isinstance(payload_raw, bytes) and payload_raw.startswith(HPM1_PAYLOAD_MAGIC)
+    blockers: list[str] = []
+    summary: dict[str, Any] = {
+        "required": required,
+        "accepted": not required,
+        "payload_member": HPM1_CATEGORICAL_PAYLOAD_MEMBER,
+        "runtime_report_kind": "",
+        "payload_codec": "",
+        "hpm1_structural_reencode_passed": False,
+        "hpm1_hpac_model_load_passed": False,
+        "expected_fail_closed_exit": False,
+        "full_decode_reencode_parity_proven": False,
+        "blockers": [],
+    }
+    if not required:
+        return summary, blockers
+
+    runtime_report = proof_payload.get("runtime_report_summary")
+    if not isinstance(runtime_report, Mapping):
+        blockers.append("runtime_execution_proof_hpm1_runtime_report_summary_missing")
+        summary["blockers"] = blockers
+        return summary, blockers
+
+    runtime_kind = runtime_report.get("kind", "")
+    payload_codec = runtime_report.get("payload_codec", "")
+    hpm1_structural_reencode_passed = (
+        runtime_report.get("hpm1_structural_reencode_passed") is True
+    )
+    hpm1_hpac_model_load_passed = (
+        runtime_report.get("hpm1_hpac_model_load_passed") is True
+    )
+    expected_fail_closed_exit = proof_payload.get("expected_fail_closed_exit") is True
+    full_decode_reencode_parity_proven = (
+        runtime_report.get("full_decode_reencode_parity_proven") is True
+    )
+    summary.update(
+        {
+            "runtime_report_kind": runtime_kind if isinstance(runtime_kind, str) else "",
+            "payload_codec": payload_codec if isinstance(payload_codec, str) else "",
+            "hpm1_structural_reencode_passed": hpm1_structural_reencode_passed,
+            "hpm1_hpac_model_load_passed": hpm1_hpac_model_load_passed,
+            "expected_fail_closed_exit": expected_fail_closed_exit,
+            "full_decode_reencode_parity_proven": full_decode_reencode_parity_proven,
+        }
+    )
+    if runtime_kind != "categorical_charged_runtime_consumer_report":
+        blockers.append("runtime_execution_proof_hpm1_runtime_report_kind_mismatch")
+    if payload_codec != "HPM1":
+        blockers.append("runtime_execution_proof_hpm1_payload_codec_mismatch")
+    if not hpm1_structural_reencode_passed:
+        blockers.append("runtime_execution_proof_hpm1_structural_reencode_not_proven")
+    if not hpm1_hpac_model_load_passed:
+        blockers.append("runtime_execution_proof_hpm1_hpac_model_load_not_proven")
+    if not expected_fail_closed_exit:
+        blockers.append("runtime_execution_proof_hpm1_fail_closed_exit_not_proven")
+
+    summary["accepted"] = not blockers
     summary["blockers"] = blockers
     return summary, blockers
 

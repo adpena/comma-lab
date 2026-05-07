@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import struct
 import subprocess
 import sys
 import zipfile
@@ -269,6 +270,15 @@ def _structural_hpm1_inventory(payload_sha: str) -> dict:
     }
 
 
+def _minimal_hpm1_payload() -> bytes:
+    return (
+        b"HPM1"
+        + struct.pack("<IIIIIIIIIII", 1, 1, 1, 1, 0, 1, 0, 1, 4, 5, 4)
+        + b"\x00\x00\x00\x00"
+        + b"model"
+    )
+
+
 def _hpm1_semantic_parity_fail_closed(
     *,
     payload_sha: str,
@@ -505,6 +515,41 @@ def test_audit_categorical_candidate_manifest_accepts_complete_dispatch_proofs(
     assert manifest["decode_reencode_parity"]["independent_proof"]["accepted"] is True
     assert manifest["exact_eval_dispatch_requirements"]["accepted"] is True
     assert manifest["exact_eval_dispatch_requirements"]["exact_cuda"]["entrypoint"] == EXACT_EVAL_ENTRYPOINT
+
+
+def test_audit_categorical_candidate_manifest_requires_hpm1_runtime_consumer_summary(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    hpm1_payload = _minimal_hpm1_payload()
+    _replace_charged_archive_member(
+        candidate,
+        member_name="categorical_payload.bin",
+        raw=hpm1_payload,
+    )
+    payload_sha = sha256_bytes(hpm1_payload)
+    candidate["decode_reencode_parity"]["payload_member_sha256"] = payload_sha
+    candidate["decode_reencode_parity"]["byte_exact_reencode"][
+        "reencoded_payload_sha256"
+    ] = payload_sha
+    _attach_complete_dispatch_proofs(candidate, tmp_path)
+
+    manifest = audit_categorical_candidate_manifest(
+        candidate,
+        repo_root=REPO,
+        manifest_dir=tmp_path,
+    )
+    runtime_proof = manifest["runtime_loader_parity"]["runtime_execution_proof"]
+    hpm1_runtime = runtime_proof["hpm1_runtime_consumer_proof"]
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert runtime_proof["accepted"] is False
+    assert hpm1_runtime["required"] is True
+    assert hpm1_runtime["accepted"] is False
+    assert (
+        "runtime_execution_proof_hpm1_runtime_report_summary_missing"
+        in manifest["dispatch_blockers"]
+    )
 
 
 def test_audit_categorical_candidate_manifest_rejects_no_op_proof_artifact(
