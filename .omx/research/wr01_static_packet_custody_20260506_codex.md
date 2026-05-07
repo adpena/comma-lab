@@ -26,7 +26,7 @@ candidate:
 
 - packet:
   `experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/wr01_exact_eval_packet.json`
-  sha256 `bfee5bb53bc95c3e312f47b2f1b1dec2f1169066675ef2db8dd4b9c84f57af8f`
+  sha256 `73aee4536eb26ef0f7fd1ff3bd4f93a0aafc267813bf2d9fc33c234d231a332a`
 - apply manifest:
   `experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json`
   sha256 `f106d31d1ffc5f5e991e3e96faef6f849b4020521538c4d819610ab548e48f91`
@@ -38,7 +38,7 @@ candidate:
   sha256 `359e350e9ad0075eb9561f489e71d08bebabbc99ea5224afab1a8c46cda73a50`
 - release archive manifest:
   `experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/release_surface/archive_manifest.json`
-  sha256 `4c93de758ab962e5e9e584bcef85791a74cd8c878aee6e9b1fbcbcbb5cc94453`
+  sha256 `361e2022f71ef9765431a99e8f45e6864b09e673e965b2d2bfab06a66c6f1cdf`
 
 ## Gate State
 
@@ -49,6 +49,7 @@ candidate:
 - `static_blockers=[]`
 - `runtime_decode_gate_blockers=[]`
 - `operator_approved_exact_cuda=true`
+- `pareto_scope=hnerv_wavelet_apply_transform_exact_archive`
 - `ready_for_submit=false`
 - remaining blockers:
   - `missing_lightning_environment`
@@ -65,8 +66,8 @@ candidate:
 - fastest safe score-lowering path:
   `dispatch_hnerv_rate_only_q10_before_wr01_if_lane_claim_and_env_clear`
 
-Reasoning: WR01 changes a scorer-visible wavelet residual sidecar and has only
-a 9-byte rate win before exact CUDA. The q10 HNeRV low-level repack is
+Reasoning: WR01 changes scorer-visible latent/sidecar bytes and has only a
+9-byte rate win before exact CUDA. The q10 HNeRV low-level repack is
 rate-only, static-ready, and records a larger 151-byte byte win. Neither packet
 may claim score without exact CUDA, but the next scarce exact-eval slot should
 prefer the lower-risk, larger byte win unless explicitly superseded.
