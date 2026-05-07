@@ -77,6 +77,14 @@ PHASE_1_EXACT_EVAL_PACKETS = [
             "wr01_exact_eval_packet.json"
         ),
     },
+    {
+        "lane_id": "pr106x_lgblock16_1byte_brotli",
+        "name": "PR106x low-level Brotli lgblock16 one-byte rate candidate",
+        "packet_path": (
+            "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/"
+            "hnerv_lowlevel_exact_eval_packet.json"
+        ),
+    },
 ]
 
 
@@ -209,19 +217,44 @@ def _load_exact_eval_packet(lane: dict) -> dict[str, object]:
             "archive_bytes": None,
             "commands": {},
         }
+    blockers = list(packet.get("blockers") or packet.get("submit_blockers") or [])
+    static_ready = bool(
+        packet.get("preflight_ready")
+        or packet.get("static_packet_ready")
+        or packet.get("candidate_static_preflight_ready")
+    )
+    compliance_ok = bool(
+        packet.get("compliance_ok")
+        or packet.get("static_compliance_ok")
+        or not packet.get("static_blockers")
+    )
+    artifacts = packet.get("artifacts")
+    payload_diff_ready = bool(
+        packet.get("payload_diff_ready")
+        or packet.get("payload_section_diff_ready")
+        or packet.get("linked_lowlevel_changes")
+        or (
+            isinstance(artifacts, dict)
+            and bool(artifacts.get("payload_section_diff"))
+        )
+    )
+    dry_run_ready = bool(
+        packet.get("dry_run_ready")
+        or packet.get("ready_for_exact_eval_dispatch_claim")
+    )
     return {
         "lane_id": lane["lane_id"],
         "name": lane["name"],
         "packet_path": lane["packet_path"],
         "ready_for_submit": bool(packet.get("ready_for_submit")),
-        "blockers": list(packet.get("blockers") or []),
+        "blockers": blockers,
         "missing_env": list(packet.get("missing_env") or []),
         "archive_sha256": packet.get("archive_sha256"),
         "archive_bytes": packet.get("archive_bytes"),
-        "preflight_ready": bool(packet.get("preflight_ready")),
-        "compliance_ok": bool(packet.get("compliance_ok")),
-        "payload_diff_ready": bool(packet.get("payload_diff_ready")),
-        "dry_run_ready": bool(packet.get("dry_run_ready")),
+        "preflight_ready": static_ready,
+        "compliance_ok": compliance_ok,
+        "payload_diff_ready": payload_diff_ready,
+        "dry_run_ready": dry_run_ready,
         "commands": dict(packet.get("commands") or {}),
         "operator_next_steps": dict(packet.get("operator_next_steps") or {}),
     }

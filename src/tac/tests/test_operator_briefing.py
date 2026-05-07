@@ -43,8 +43,10 @@ def test_briefing_runs_all_three_phases():
     assert "Phase 1 blocked readiness artifacts" in proc.stdout
     assert "pr91_hpm1_readiness_bundle" in proc.stdout
     assert "wr01_apply_pr106x_half" in proc.stdout
+    assert "pr106x_lgblock16_1byte_brotli" in proc.stdout
     assert "Copy-safe next steps" in proc.stdout
     assert "assert_packet_ready_for_submit" in proc.stdout
+    assert "refresh_with_operator_exact_cuda_approval" in proc.stdout
 
 
 def test_briefing_skip_pareto_omits_phase1():
@@ -96,6 +98,19 @@ def test_briefing_json_composite_has_all_three_keys():
     assert row["dispatch_blockers"]
     assert row["artifact_dispatch_blockers"]
     assert "not a score or dispatch artifact" in row["summary"]
+    packet_rows = {row["lane_id"]: row for row in out["exact_eval_packets"]}
+    assert set(packet_rows) >= {
+        "wr01_apply_pr106x_half",
+        "pr106x_lgblock16_1byte_brotli",
+    }
+    lgblock16 = packet_rows["pr106x_lgblock16_1byte_brotli"]
+    assert lgblock16["ready_for_submit"] is False
+    assert lgblock16["preflight_ready"] is True
+    assert lgblock16["compliance_ok"] is True
+    assert lgblock16["payload_diff_ready"] is True
+    assert lgblock16["dry_run_ready"] is True
+    assert "missing_active_lane_dispatch_claim" in lgblock16["blockers"]
+    assert lgblock16["operator_next_steps"]["schema"] == "hnerv_lowlevel_operator_next_steps_v1"
 
 
 def test_briefing_json_each_phase_has_n_total_or_n_configs():
@@ -106,11 +121,15 @@ def test_briefing_json_each_phase_has_n_total_or_n_configs():
     assert any(k in out["pareto"] for k in ("n_configs", "n_pareto_frontier"))
     assert any(k in out["dashboard"] for k in ("n_total", "n_displayed"))
     assert any(k in out["reconciler"] for k in ("n_configs", "n_landed"))
-    assert out["exact_eval_packets"][0]["lane_id"] == "wr01_apply_pr106x_half"
-    assert out["exact_eval_packets"][0]["operator_next_steps"]["schema"] == "wr01_operator_next_steps_v1"
+    packet_rows = {row["lane_id"]: row for row in out["exact_eval_packets"]}
+    assert packet_rows["wr01_apply_pr106x_half"]["operator_next_steps"]["schema"] == "wr01_operator_next_steps_v1"
     assert (
-        out["exact_eval_packets"][0]["operator_next_steps"]["steps"][4]["id"]
+        packet_rows["wr01_apply_pr106x_half"]["operator_next_steps"]["steps"][4]["id"]
         == "assert_packet_ready_for_submit"
+    )
+    assert (
+        packet_rows["pr106x_lgblock16_1byte_brotli"]["operator_next_steps"]["steps"][4]["id"]
+        == "submit_exact_cuda"
     )
     assert out["non_dispatchable_readiness_artifacts"][0]["score_claim"] is False
 
