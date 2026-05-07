@@ -41,6 +41,7 @@ def test_cross_paradigm_inventory_pins_required_score_path_rows() -> None:
     rows = {row["key"]: row for row in payload["rows"]}
 
     for key in (
+        "hnerv_pr103_pr106_ac_repack_runtime_closure",
         "categorical_qma9_clade_spade_openpilot",
         "lapose_motion_atom_allocator",
         "meta_lagrangian_cross_paradigm_allocator",
@@ -52,6 +53,19 @@ def test_cross_paradigm_inventory_pins_required_score_path_rows() -> None:
         assert rows[key]["ready_for_exact_eval_dispatch"] is False
         assert rows[key]["next_patch"]
         assert rows[key]["blockers"]
+
+    pr103 = rows["hnerv_pr103_pr106_ac_repack_runtime_closure"]
+    assert pr103["action_class"] == "wire_pr103_pr106_runtime_adapter"
+    assert pr103["priority_tier"] == 5
+    assert "entropy_coding" in pr103["paradigms"]
+    assert "src/tac/pr103_pr106_runtime_closure.py" in pr103["code_paths"]
+    assert "tools/prove_pr103_pr106_runtime_closure.py" in pr103["code_paths"]
+    assert (
+        "experiments/results/pr103_repack_pr106_standalone_20260507/runtime_closure.json"
+        in pr103["evidence_paths"]
+    )
+    assert "runtime packet" in pr103["next_patch"]
+    assert any("exact CUDA" in blocker for blocker in pr103["blockers"])
 
     categorical = rows["categorical_qma9_clade_spade_openpilot"]
     assert "categorical_masks" in categorical["paradigms"]
@@ -165,14 +179,16 @@ def test_cross_paradigm_inventory_action_queue_routes_next_tranche() -> None:
     queue = payload["frontier_action_queue"]
 
     assert [row["key"] for row in queue[:5]] == [
+        "hnerv_pr103_pr106_ac_repack_runtime_closure",
         "hnerv_wavelet_wr01_apply",
         "hnerv_lowlevel_brotli_repack",
         "categorical_qma9_clade_spade_openpilot",
         "joint_admm_balle_arithmetic_stack",
-        "hnerv_per_tensor_context_entropy",
     ]
-    assert queue[0]["action_class"] == "claim_exact_eval_packet_after_static_gate"
-    assert queue[2]["action_class"] == "build_byte_closed_categorical_candidate"
+    assert queue[0]["action_class"] == "wire_pr103_pr106_runtime_adapter"
+    assert queue[1]["action_class"] == "claim_exact_eval_packet_after_static_gate"
+    assert queue[3]["action_class"] == "build_byte_closed_categorical_candidate"
+    assert payload["action_class_counts"]["wire_pr103_pr106_runtime_adapter"] == 1
     assert payload["action_class_counts"]["wire_jcsp_submission_runtime_consumer"] == 1
 
 

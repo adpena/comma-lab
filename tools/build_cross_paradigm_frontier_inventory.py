@@ -38,6 +38,7 @@ from tac.repo_io import json_text  # noqa: E402
 SCHEMA_VERSION = 1
 DEFAULT_ACTION_CLASS = "research_review_before_local_patch"
 ACTION_CLASS_BY_KEY = {
+    "hnerv_pr103_pr106_ac_repack_runtime_closure": "wire_pr103_pr106_runtime_adapter",
     "hnerv_lowlevel_brotli_repack": "exact_eval_or_promote_measured_rate_candidate",
     "hnerv_per_tensor_context_entropy": "reduce_entropy_model_overhead",
     "hnerv_wavelet_wr01_apply": "claim_exact_eval_packet_after_static_gate",
@@ -52,6 +53,7 @@ ACTION_CLASS_BY_KEY = {
     "selfcompress_mdl_fp4_tto": "prove_deterministic_export_and_inflate_closure",
 }
 PRIORITY_TIER_BY_KEY = {
+    "hnerv_pr103_pr106_ac_repack_runtime_closure": 5,
     "hnerv_wavelet_wr01_apply": 10,
     "hnerv_lowlevel_brotli_repack": 20,
     "categorical_qma9_clade_spade_openpilot": 30,
@@ -84,6 +86,43 @@ class InventoryRow:
 
 
 STATIC_ROWS: tuple[InventoryRow, ...] = (
+    InventoryRow(
+        key="hnerv_pr103_pr106_ac_repack_runtime_closure",
+        title="PR103 AC decoder repack inside PR106 envelope",
+        paradigms=("alpha_mask_payload", "entropy_coding", "public_frontier_replay"),
+        role="stacker_rate_only",
+        status="byte_different_archive_runtime_closure_proven_runtime_packet_pending",
+        evidence_grade="empirical runtime-closure proof; no score claim until exact CUDA",
+        stackability=(
+            "high: replaces the PR106 decoder section with PR103 arithmetic-coded bytes "
+            "while preserving fixed PR106 latents; should compose before scorer-changing atoms"
+        ),
+        replacement_potential="low: rate-only public-frontier repack, not a representation replacement",
+        code_paths=(
+            "src/tac/pr103_arithmetic_codec.py",
+            "src/tac/pr103_pr106_runtime_closure.py",
+            "experiments/build_pr103_repacked_archive.py",
+            "tools/prove_pr103_pr106_runtime_closure.py",
+        ),
+        evidence_paths=(
+            "experiments/results/pr103_repack_pr106_standalone_20260507/manifest.json",
+            "experiments/results/pr103_repack_pr106_standalone_20260507/runtime_closure.json",
+            ".omx/research/pr103_pr106_runtime_closure_20260507_codex.md",
+            ".omx/research/hnerv_pr103_lc_ac_schema_frontier_20260507_codex.md",
+        ),
+        next_patch=(
+            "Generate or copy the PR103-aware parser closure into a self-contained submission "
+            "runtime packet, close brotli/constriction dependency custody, then run strict "
+            "submission compliance before lane-claimed exact CUDA auth eval."
+        ),
+        blockers=(
+            "final submission runtime adapter not yet packetized",
+            "brotli/constriction dependency custody must be closed inside the runtime",
+            "strict contest compliance not yet run on final packet",
+            "no lane dispatch claim",
+            "no exact CUDA auth eval for this candidate archive SHA",
+        ),
+    ),
     InventoryRow(
         key="hnerv_lowlevel_brotli_repack",
         title="HNeRV low-level brotli repack",
