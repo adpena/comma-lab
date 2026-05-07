@@ -57,7 +57,7 @@
   "dispatch_allowed": false,
   "dispatch_attempted": false,
   "dispatch_performed": false,
-  "elapsed_sec": 37.107,
+  "elapsed_sec": 37.1,
   "evidence_grade": "empirical",
   "evidence_limitations": [
     "not score evidence",
@@ -193,7 +193,7 @@
   },
   "promotion_eligible": false,
   "ready_for_exact_eval_dispatch": false,
-  "recorded_at_utc": "2026-05-07T03:15:03+00:00",
+  "recorded_at_utc": "2026-05-07T03:18:43+00:00",
   "reference_teacher_forcing_probe": {
     "advanced_candidates": [
       "phase_major_row_major"
@@ -512,7 +512,7 @@
             "byte_exact_reencode_proven": false,
             "device": "cpu",
             "dispatch_allowed": false,
-            "elapsed_sec": 11.424,
+            "elapsed_sec": 11.463,
             "failure": {
               "decoded_symbol_count_before_failure": 15989,
               "exception_text": "Tried to decode from compressed data that is invalid for the employed entropy model.",
@@ -1389,6 +1389,7 @@
     "probability_variant": "source_float64_perfect_false",
     "range_prefix_probe": {
       "enabled": true,
+      "max_target_decoded_before": 20000,
       "replay_symbol_limit": 0,
       "scope": "local CPU reference-forced range-state prefix reconstruction; not score or dispatch evidence",
       "window_symbols_before_failure": [
@@ -1566,10 +1567,12 @@
       "1",
       "--range-prefix-replay-symbol-limit",
       "0",
+      "--range-prefix-max-target-decoded-before",
+      "20000",
       "--json-out",
       ".omx/research/pr91_hpm1_phase_major_range_prefix_probe_20260507_codex.json"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "07bbaf5ae6fd48ce634e11224537442443e28f0dff7d35f346df4d9496f76091",
+    "canonical_payload_without_tool_manifest_sha256": "53377bf919c36f184e391a84098d57f89676145e0639d504c4c97fa8f49fcb4f",
     "dispatch_attempted": false,
     "input_files": [
       {
