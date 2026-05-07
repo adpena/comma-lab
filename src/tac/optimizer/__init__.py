@@ -12,6 +12,8 @@ every advance to GPU spend goes through the same hardened gates that the
 """
 from tac.optimizer.meta_lagrangian import (
     CandidateEvaluation,
+    CmaEsCandidateSuggestion,
+    CmaEsSearchBounds,
     LagrangianConstraints,
     MetaLagrangianSearch,
     contest_score,
@@ -19,6 +21,8 @@ from tac.optimizer.meta_lagrangian import (
 
 __all__ = [
     "CandidateEvaluation",
+    "CmaEsCandidateSuggestion",
+    "CmaEsSearchBounds",
     "LagrangianConstraints",
     "MetaLagrangianSearch",
     "contest_score",

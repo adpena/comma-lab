@@ -524,6 +524,18 @@ wheels = [
 ]
 
 [[package]]
+name = "cmaes"
+version = "0.13.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3d/9f/ae4edb7dec820e84fef7a90b753ae5c72c66a05ffa69a7894771024386a7/cmaes-0.13.0.tar.gz", hash = "sha256:69a252b0291d08100351e37c2918c7c6d929b02ab7dcd9dd14fc02c7c98cc1b9", size = 61265, upload-time = "2026-03-28T07:41:55.249Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7e/98/be3f668f77838b2756ccc78a45e0c62f43d3134003f3f4bad814d37df1b3/cmaes-0.13.0-py3-none-any.whl", hash = "sha256:ccf61c73d5792cf44b50672b63f28c590082d1c1f5ab5155e2dd6e5305427cad", size = 73027, upload-time = "2026-03-28T07:41:53.956Z" },
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -3355,6 +3367,7 @@ source = { editable = "." }
 dependencies = [
     { name = "brotli" },
     { name = "click" },
+    { name = "cmaes" },
     { name = "constriction" },
     { name = "cryptography" },
     { name = "numpy" },
@@ -3405,6 +3418,7 @@ requires-dist = [
     { name = "av", marker = "extra == 'runtime'", specifier = ">=10.0" },
     { name = "brotli", specifier = ">=1.0" },
     { name = "click", specifier = ">=8.0,<9.0" },
+    { name = "cmaes", specifier = ">=0.13,<1.0" },
     { name = "constriction", specifier = ">=0.4,<0.5" },
     { name = "cryptography", specifier = ">=41.0" },
     { name = "dask", extras = ["array"], marker = "extra == 'analysis'", specifier = ">=2024.1" },

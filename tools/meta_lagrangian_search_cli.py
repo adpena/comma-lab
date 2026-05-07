@@ -51,6 +51,7 @@ from tac.optimization.meta_lagrangian_ledger_adapter import (  # noqa: E402
     search_candidates_from_atoms,
 )
 from tac.optimizer.meta_lagrangian import (  # noqa: E402
+    CmaEsSearchBounds,
     LagrangianConstraints,
     MetaLagrangianSearch,
 )
@@ -152,6 +153,21 @@ def main(argv: list[str] | None = None) -> int:
                         help="JSON file with a list of candidate dicts")
     parser.add_argument("--auto-sweep-bits", type=str, default=None,
                         help="comma-separated list of bit-widths to auto-walk apogee_int<N> archives")
+    parser.add_argument(
+        "--auto-cma-es",
+        action="store_true",
+        help="generate deterministic CPU-planning candidates with CMA-ES",
+    )
+    parser.add_argument("--cma-es-generations", type=int, default=4)
+    parser.add_argument("--cma-es-population", type=int, default=8)
+    parser.add_argument("--cma-es-seed", type=int, default=0)
+    parser.add_argument("--cma-es-sigma", type=float, default=0.25)
+    parser.add_argument("--cma-es-archive-min", type=int, default=100_000)
+    parser.add_argument("--cma-es-archive-max", type=int, default=220_000)
+    parser.add_argument("--cma-es-rel-err-min", type=float, default=0.0)
+    parser.add_argument("--cma-es-rel-err-max", type=float, default=8.0)
+    parser.add_argument("--cma-es-layers-min", type=int, default=1)
+    parser.add_argument("--cma-es-layers-max", type=int, default=32)
     parser.add_argument("--top-k", type=int, default=3)
     parser.add_argument("--rate-max", type=float, default=None,
                         help="constraint: rate_unscaled upper bound (default: anchor-derived)")
@@ -171,26 +187,6 @@ def main(argv: list[str] | None = None) -> int:
     anchors = load_calibration_anchors(anchors_path)
     proxy = make_distortion_proxy(anchors_path)
 
-    # Load candidates
-    candidate_input_adapter = None
-    if args.candidates_json:
-        candidates, candidate_input_adapter = _load_candidates_from_path(args.candidates_json)
-    elif args.auto_sweep_bits:
-        bits = [int(b.strip()) for b in args.auto_sweep_bits.split(",")]
-        candidates = _auto_sweep_apogee(bits)
-    else:
-        print("FATAL: must specify --candidates-json or --auto-sweep-bits", file=sys.stderr)
-        return 2
-    if candidate_input_adapter is not None:
-        print(
-            "[meta-lagrangian] adapted "
-            f"{candidate_input_adapter.get('atom_count', candidate_input_adapter.get('canonical_atom_count', 0))} "
-            f"canonical atoms from {candidate_input_adapter.get('source_format')}; "
-            f"{len(candidates)} strict search candidates"
-        )
-    if not candidates:
-        print("WARN: candidate list is empty", file=sys.stderr)
-
     # Constraint construction (override defaults if provided)
     constraints_kwargs = {}
     if args.rate_max is not None:
@@ -206,6 +202,86 @@ def main(argv: list[str] | None = None) -> int:
         distortion_proxy=proxy,
         constraints=constraints,
     )
+
+    # Load or generate candidates. Exactly one source must be selected so
+    # reports have an auditable provenance surface.
+    source_count = sum(
+        bool(value)
+        for value in (args.candidates_json, args.auto_sweep_bits, args.auto_cma_es)
+    )
+    if source_count != 1:
+        print(
+            "FATAL: specify exactly one of --candidates-json, --auto-sweep-bits, "
+            "or --auto-cma-es",
+            file=sys.stderr,
+        )
+        return 2
+    candidate_input_adapter = None
+    candidate_generation_report = None
+    if args.candidates_json:
+        candidates, candidate_input_adapter = _load_candidates_from_path(args.candidates_json)
+    elif args.auto_sweep_bits:
+        bits = [int(b.strip()) for b in args.auto_sweep_bits.split(",")]
+        candidates = _auto_sweep_apogee(bits)
+    else:
+        bounds = CmaEsSearchBounds(
+            archive_bytes=(args.cma_es_archive_min, args.cma_es_archive_max),
+            rel_err_pct=(args.cma_es_rel_err_min, args.cma_es_rel_err_max),
+            n_layers=(args.cma_es_layers_min, args.cma_es_layers_max),
+        )
+        suggestions = search.suggest_cma_es_candidates(
+            lane_class=args.lane_class,
+            bounds=bounds,
+            candidate_id_prefix=f"{args.lane_class}_cma_es",
+            generations=args.cma_es_generations,
+            population_size=args.cma_es_population,
+            sigma=args.cma_es_sigma,
+            seed=args.cma_es_seed,
+        )
+        candidates = [dict(item.candidate) for item in suggestions]
+        candidate_generation_report = {
+            "schema": "meta_lagrangian_cma_es_candidate_generation_v1",
+            "planning_only": True,
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_blockers": [
+                "cma_es_candidate_generator_is_cpu_planning_only",
+                "candidate_archive_missing",
+                "requires_static_preflight",
+                "requires_lane_dispatch_claim",
+                "requires_exact_cuda_auth_eval",
+            ],
+            "seed": args.cma_es_seed,
+            "generations": args.cma_es_generations,
+            "population_size": args.cma_es_population,
+            "sigma": args.cma_es_sigma,
+            "bounds": asdict(bounds),
+            "suggestion_count": len(suggestions),
+            "top_suggestions": [
+                {
+                    "candidate": item.candidate,
+                    "objective": item.objective,
+                    "generation": item.generation,
+                    "unit_vector": list(item.unit_vector),
+                }
+                for item in suggestions[: args.top_k]
+            ],
+        }
+    if candidate_input_adapter is not None:
+        print(
+            "[meta-lagrangian] adapted "
+            f"{candidate_input_adapter.get('atom_count', candidate_input_adapter.get('canonical_atom_count', 0))} "
+            f"canonical atoms from {candidate_input_adapter.get('source_format')}; "
+            f"{len(candidates)} strict search candidates"
+        )
+    if candidate_generation_report is not None:
+        print(
+            "[meta-lagrangian] generated "
+            f"{candidate_generation_report['suggestion_count']} CMA-ES planning candidates "
+            f"with seed={candidate_generation_report['seed']}"
+        )
+    if not candidates:
+        print("WARN: candidate list is empty", file=sys.stderr)
 
     # Coerce archive_path to Path object if present
     for c in candidates:
@@ -241,6 +317,7 @@ def main(argv: list[str] | None = None) -> int:
             "constraints": asdict(constraints),
             "candidates_evaluated": len(candidates),
             "candidate_input_adapter": candidate_input_adapter,
+            "candidate_generation_report": candidate_generation_report,
             "local_search_engine_eligible": len([e for e in evaluations if e.eligible_for_dispatch]),
             "ready_for_exact_eval_dispatch_count": len(dispatch_ready),
             "eligible_for_dispatch": 0,

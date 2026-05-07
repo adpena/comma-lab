@@ -1,0 +1,264 @@
+{
+  "schema": "meta_lagrangian_search_v1",
+  "tag": "[distortion-proxy:local | predictor:calibrated_weak | sanity:gated | dispatch:blocking]",
+  "evidence_semantics": "local_proxy_prediction_forensic",
+  "ready_for_exact_eval_dispatch": false,
+  "dispatch_blockers": [
+    "meta_lagrangian_uses_distortion_proxy_local",
+    "score_band_is_prediction_only",
+    "missing_contest_faithful_distortion_model",
+    "missing_scorer_basin_parity_gate",
+    "missing_exact_cuda_candidate_evidence"
+  ],
+  "ts_utc": "2026-05-07T22:42:42Z",
+  "lane_class": "apogee_intN",
+  "anchors_path": ".omx/calibration/anchors_apogee_intN.json",
+  "constraints": {
+    "rate_unscaled_max": 0.005,
+    "pose_dist_max": 0.0001,
+    "seg_dist_max": 0.001,
+    "lambda_rate": 1.0,
+    "lambda_pose": 1.0,
+    "lambda_seg": 1.0
+  },
+  "candidates_evaluated": 4,
+  "candidate_input_adapter": null,
+  "candidate_generation_report": {
+    "schema": "meta_lagrangian_cma_es_candidate_generation_v1",
+    "planning_only": true,
+    "score_claim": false,
+    "ready_for_exact_eval_dispatch": false,
+    "dispatch_blockers": [
+      "cma_es_candidate_generator_is_cpu_planning_only",
+      "candidate_archive_missing",
+      "requires_static_preflight",
+      "requires_lane_dispatch_claim",
+      "requires_exact_cuda_auth_eval"
+    ],
+    "seed": 7,
+    "generations": 1,
+    "population_size": 4,
+    "sigma": 0.25,
+    "bounds": {
+      "archive_bytes": [
+        100000,
+        220000
+      ],
+      "rel_err_pct": [
+        0.0,
+        8.0
+      ],
+      "n_layers": [
+        1,
+        32
+      ]
+    },
+    "suggestion_count": 4,
+    "top_suggestions": [
+      {
+        "candidate": {
+          "candidate_id": "apogee_intN_cma_es_g00_m02",
+          "archive_bytes": 159973,
+          "rel_err_pct": 0.4905513873091585,
+          "n_layers": 24,
+          "lane_class": "apogee_intN"
+        },
+        "objective": 0.19277754322239887,
+        "generation": 0,
+        "unit_vector": [
+          0.49977740353551714,
+          0.06131892341364481,
+          0.7544145014158734
+        ]
+      },
+      {
+        "candidate": {
+          "candidate_id": "apogee_intN_cma_es_g00_m01",
+          "archive_bytes": 172225,
+          "rel_err_pct": 2.4221539427485226,
+          "n_layers": 17,
+          "lane_class": "apogee_intN"
+        },
+        "objective": 0.20093564711605172,
+        "generation": 0,
+        "unit_vector": [
+          0.6018790707491269,
+          0.3027692428435653,
+          0.500516393226487
+        ]
+      }
+    ]
+  },
+  "local_search_engine_eligible": 0,
+  "ready_for_exact_eval_dispatch_count": 0,
+  "eligible_for_dispatch": 0,
+  "top_k": [],
+  "top_k_forensic": [
+    {
+      "candidate_id": "apogee_intN_cma_es_g00_m02",
+      "archive_bytes": 159973,
+      "rel_err_pct": 0.4905513873091585,
+      "n_layers": 24,
+      "lane_class": "apogee_intN",
+      "archive_path": null,
+      "proxy_pose": 3.4e-05,
+      "proxy_seg": 0.00067819,
+      "proxy_rate_unscaled": 0.004260778172312524,
+      "proxy_score": 0.19277754322239887,
+      "band_low": 0.11777754322239886,
+      "band_high": 0.2677775432223989,
+      "band_refused": false,
+      "band_refusal_reason": "",
+      "band_method": "proxy",
+      "lagrangian": 0.19277754322239887,
+      "rate_violation": 0.0,
+      "pose_violation": 0.0,
+      "seg_violation": 0.0,
+      "sanity_passed": false,
+      "sanity_failures": [
+        "sanity_skipped: archive_path not yet produced"
+      ],
+      "rank_key": Infinity,
+      "eligible_for_dispatch": false
+    },
+    {
+      "candidate_id": "apogee_intN_cma_es_g00_m01",
+      "archive_bytes": 172225,
+      "rel_err_pct": 2.4221539427485226,
+      "n_layers": 17,
+      "lane_class": "apogee_intN",
+      "archive_path": null,
+      "proxy_pose": 3.4e-05,
+      "proxy_seg": 0.00067819,
+      "proxy_rate_unscaled": 0.0045871023280586384,
+      "proxy_score": 0.20093564711605172,
+      "band_low": 0.1259356471160517,
+      "band_high": 0.27593564711605173,
+      "band_refused": false,
+      "band_refusal_reason": "",
+      "band_method": "proxy",
+      "lagrangian": 0.20093564711605172,
+      "rate_violation": 0.0,
+      "pose_violation": 0.0,
+      "seg_violation": 0.0,
+      "sanity_passed": false,
+      "sanity_failures": [
+        "sanity_skipped: archive_path not yet produced"
+      ],
+      "rank_key": Infinity,
+      "eligible_for_dispatch": false
+    }
+  ],
+  "engine_top_k_local_only": [],
+  "all_evaluations": [
+    {
+      "candidate_id": "apogee_intN_cma_es_g00_m02",
+      "archive_bytes": 159973,
+      "rel_err_pct": 0.4905513873091585,
+      "n_layers": 24,
+      "lane_class": "apogee_intN",
+      "archive_path": null,
+      "proxy_pose": 3.4e-05,
+      "proxy_seg": 0.00067819,
+      "proxy_rate_unscaled": 0.004260778172312524,
+      "proxy_score": 0.19277754322239887,
+      "band_low": 0.11777754322239886,
+      "band_high": 0.2677775432223989,
+      "band_refused": false,
+      "band_refusal_reason": "",
+      "band_method": "proxy",
+      "lagrangian": 0.19277754322239887,
+      "rate_violation": 0.0,
+      "pose_violation": 0.0,
+      "seg_violation": 0.0,
+      "sanity_passed": false,
+      "sanity_failures": [
+        "sanity_skipped: archive_path not yet produced"
+      ],
+      "rank_key": Infinity,
+      "eligible_for_dispatch": false
+    },
+    {
+      "candidate_id": "apogee_intN_cma_es_g00_m01",
+      "archive_bytes": 172225,
+      "rel_err_pct": 2.4221539427485226,
+      "n_layers": 17,
+      "lane_class": "apogee_intN",
+      "archive_path": null,
+      "proxy_pose": 3.4e-05,
+      "proxy_seg": 0.00067819,
+      "proxy_rate_unscaled": 0.0045871023280586384,
+      "proxy_score": 0.20093564711605172,
+      "band_low": 0.1259356471160517,
+      "band_high": 0.27593564711605173,
+      "band_refused": false,
+      "band_refusal_reason": "",
+      "band_method": "proxy",
+      "lagrangian": 0.20093564711605172,
+      "rate_violation": 0.0,
+      "pose_violation": 0.0,
+      "seg_violation": 0.0,
+      "sanity_passed": false,
+      "sanity_failures": [
+        "sanity_skipped: archive_path not yet produced"
+      ],
+      "rank_key": Infinity,
+      "eligible_for_dispatch": false
+    },
+    {
+      "candidate_id": "apogee_intN_cma_es_g00_m03",
+      "archive_bytes": 178015,
+      "rel_err_pct": 2.749142052066481,
+      "n_layers": 15,
+      "lane_class": "apogee_intN",
+      "archive_path": null,
+      "proxy_pose": 3.4e-05,
+      "proxy_seg": 0.00067819,
+      "proxy_rate_unscaled": 0.004741315261601734,
+      "proxy_score": 0.2047909704546291,
+      "band_low": 0.1297909704546291,
+      "band_high": 0.2797909704546291,
+      "band_refused": false,
+      "band_refusal_reason": "",
+      "band_method": "proxy",
+      "lagrangian": 0.2047909704546291,
+      "rate_violation": 0.0,
+      "pose_violation": 0.0,
+      "seg_violation": 0.0,
+      "sanity_passed": false,
+      "sanity_failures": [
+        "sanity_skipped: archive_path not yet produced"
+      ],
+      "rank_key": Infinity,
+      "eligible_for_dispatch": false
+    },
+    {
+      "candidate_id": "apogee_intN_cma_es_g00_m00",
+      "archive_bytes": 210716,
+      "rel_err_pct": 3.0681252589183345,
+      "n_layers": 17,
+      "lane_class": "apogee_intN",
+      "archive_path": null,
+      "proxy_pose": 3.4e-05,
+      "proxy_seg": 0.00067819,
+      "proxy_rate_unscaled": 0.005612285406643659,
+      "proxy_score": 0.22656522408067725,
+      "band_low": 0.15156522408067724,
+      "band_high": 0.30156522408067726,
+      "band_refused": false,
+      "band_refusal_reason": "",
+      "band_method": "proxy",
+      "lagrangian": 0.2271775094873209,
+      "rate_violation": 0.0006122854066436586,
+      "pose_violation": 0.0,
+      "seg_violation": 0.0,
+      "sanity_passed": false,
+      "sanity_failures": [
+        "sanity_skipped: archive_path not yet produced"
+      ],
+      "rank_key": Infinity,
+      "eligible_for_dispatch": false
+    }
+  ],
+  "warning": "Outputs are [distortion-proxy:local] estimates ranked by Lagrangian. They are not GPU-dispatch readiness. NEVER promote to [contest-CUDA] without upstream/evaluate.py on the EXACT bytes or an explicit contest-faithful distortion/parity gate."
+}

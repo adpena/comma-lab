@@ -65,6 +65,10 @@ dependencies = [
     # the compliance gate. The wheel is ~3MB on standard wheels and has
     # binary builds for T4 / 4090 / macOS — no native compile required.
     "cryptography>=41.0",
+    # CMA-ES black-box optimizer used by tools/meta_lagrangian_search_cli.py
+    # for deterministic CPU-planning sweeps over candidate parameter spaces.
+    # Pure Python, small wheel, no native build dependencies.
+    "cmaes>=0.13,<1.0",
 ]
 
 [project.optional-dependencies]

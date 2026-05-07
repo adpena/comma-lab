@@ -38,6 +38,7 @@ import sys
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "src"))
@@ -124,6 +125,41 @@ class CandidateEvaluation:
     # Final ranking key (lower = better; refused/failed sort to the bottom)
     rank_key: float = float("inf")
     eligible_for_dispatch: bool = False
+
+
+@dataclass(frozen=True)
+class CmaEsSearchBounds:
+    """Bounded continuous search box for deterministic CMA-ES candidate prep.
+
+    The optimizer runs in normalized ``[0, 1]^3`` coordinates and maps back to
+    the strict candidate schema consumed by :meth:`evaluate_candidate`. It is a
+    CPU planning generator only; returned candidates still need archives,
+    preflight, lane claims, and exact CUDA evidence.
+    """
+
+    archive_bytes: tuple[int, int]
+    rel_err_pct: tuple[float, float]
+    n_layers: tuple[int, int]
+
+
+@dataclass(frozen=True)
+class CmaEsCandidateSuggestion:
+    """One deterministic CMA-ES proposal plus its local objective evidence."""
+
+    candidate: dict[str, Any]
+    objective: float
+    generation: int
+    unit_vector: tuple[float, float, float]
+    evaluation: CandidateEvaluation
+    score_claim: bool = False
+    ready_for_exact_eval_dispatch: bool = False
+    dispatch_blockers: tuple[str, ...] = (
+        "cma_es_candidate_generator_is_cpu_planning_only",
+        "candidate_archive_missing",
+        "requires_static_preflight",
+        "requires_lane_dispatch_claim",
+        "requires_exact_cuda_auth_eval",
+    )
 
 
 DistortionProxy = Callable[[int, float, int], tuple[float, float]]
@@ -259,6 +295,94 @@ class MetaLagrangianSearch:
         """
         return [self.evaluate_candidate(**c) for c in candidates]
 
+    def suggest_cma_es_candidates(
+        self,
+        *,
+        lane_class: str,
+        bounds: CmaEsSearchBounds,
+        candidate_id_prefix: str = "cma_es",
+        generations: int = 4,
+        population_size: int = 8,
+        sigma: float = 0.25,
+        seed: int = 0,
+    ) -> list[CmaEsCandidateSuggestion]:
+        """Generate deterministic planning candidates with CMA-ES.
+
+        This is a proposal generator, not a dispatch gate. It optimizes the
+        local Lagrangian over ``archive_bytes``, ``rel_err_pct``, and
+        ``n_layers`` using the same proxy/predictor pipeline as normal
+        candidates, but it never supplies an archive path and therefore cannot
+        become dispatch-eligible by itself.
+        """
+
+        _validate_cma_es_bounds(bounds)
+        if generations <= 0:
+            raise ValueError("generations must be positive")
+        if population_size <= 0:
+            raise ValueError("population_size must be positive")
+        if not math.isfinite(float(sigma)) or sigma <= 0:
+            raise ValueError("sigma must be a positive finite float")
+
+        try:
+            import numpy as np
+            from cmaes import CMA
+        except ImportError as exc:  # pragma: no cover - dependency is pinned
+            raise RuntimeError(
+                "cmaes is required for CMA-ES candidate generation; install "
+                "the project dependencies or use --candidates-json/--auto-sweep-bits"
+            ) from exc
+
+        optimizer = CMA(
+            mean=np.array([0.5, 0.5, 0.5], dtype=np.float64),
+            sigma=float(sigma),
+            bounds=np.array([[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]], dtype=np.float64),
+            seed=int(seed),
+            population_size=int(population_size),
+        )
+        best_by_key: dict[tuple[int, float, int], CmaEsCandidateSuggestion] = {}
+        for generation in range(int(generations)):
+            solutions = []
+            for member in range(int(population_size)):
+                unit = optimizer.ask()
+                clipped = np.clip(np.asarray(unit, dtype=np.float64), 0.0, 1.0)
+                candidate = _candidate_from_unit_vector(
+                    clipped,
+                    bounds=bounds,
+                    lane_class=lane_class,
+                    candidate_id=(
+                        f"{candidate_id_prefix}_g{generation:02d}_m{member:02d}"
+                    ),
+                )
+                evaluation = self.evaluate_candidate(**candidate)
+                objective = _cma_es_objective(evaluation)
+                solutions.append((unit, objective))
+                key = (
+                    int(candidate["archive_bytes"]),
+                    round(float(candidate["rel_err_pct"]), 12),
+                    int(candidate["n_layers"]),
+                )
+                suggestion = CmaEsCandidateSuggestion(
+                    candidate=candidate,
+                    objective=objective,
+                    generation=generation,
+                    unit_vector=tuple(float(value) for value in clipped.tolist()),
+                    evaluation=evaluation,
+                )
+                previous = best_by_key.get(key)
+                if previous is None or suggestion.objective < previous.objective:
+                    best_by_key[key] = suggestion
+            optimizer.tell(solutions)
+        return sorted(
+            best_by_key.values(),
+            key=lambda item: (
+                item.objective,
+                int(item.candidate["archive_bytes"]),
+                float(item.candidate["rel_err_pct"]),
+                int(item.candidate["n_layers"]),
+                str(item.candidate["candidate_id"]),
+            ),
+        )
+
     @staticmethod
     def top_k(evaluations: list[CandidateEvaluation], k: int = 3) -> list[CandidateEvaluation]:
         """Return the top-k DISPATCH-ELIGIBLE evaluations sorted by rank_key."""
@@ -301,3 +425,59 @@ def _default_sanity_gate(**kwargs):
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module.predispatch_sanity(**{k: v for k, v in kwargs.items() if k != "self"})
+
+
+def _validate_cma_es_bounds(bounds: CmaEsSearchBounds) -> None:
+    for name, pair in (
+        ("archive_bytes", bounds.archive_bytes),
+        ("rel_err_pct", bounds.rel_err_pct),
+        ("n_layers", bounds.n_layers),
+    ):
+        if len(pair) != 2:
+            raise ValueError(f"{name} bounds must have exactly two values")
+        lo, hi = pair
+        if not math.isfinite(float(lo)) or not math.isfinite(float(hi)):
+            raise ValueError(f"{name} bounds must be finite")
+        if hi < lo:
+            raise ValueError(f"{name} upper bound must be >= lower bound")
+    if bounds.archive_bytes[0] <= 0 or bounds.n_layers[0] <= 0:
+        raise ValueError("archive_bytes and n_layers lower bounds must be positive")
+
+
+def _scale_unit(value: float, *, lo: float, hi: float) -> float:
+    return float(lo) + float(value) * (float(hi) - float(lo))
+
+
+def _candidate_from_unit_vector(
+    unit: Any,
+    *,
+    bounds: CmaEsSearchBounds,
+    lane_class: str,
+    candidate_id: str,
+) -> dict[str, Any]:
+    archive_bytes = round(
+        _scale_unit(
+            unit[0],
+            lo=bounds.archive_bytes[0],
+            hi=bounds.archive_bytes[1],
+        )
+    )
+    rel_err_pct = _scale_unit(unit[1], lo=bounds.rel_err_pct[0], hi=bounds.rel_err_pct[1])
+    n_layers = round(_scale_unit(unit[2], lo=bounds.n_layers[0], hi=bounds.n_layers[1]))
+    n_layers = max(int(bounds.n_layers[0]), min(int(bounds.n_layers[1]), n_layers))
+    return {
+        "candidate_id": candidate_id,
+        "archive_bytes": archive_bytes,
+        "rel_err_pct": float(rel_err_pct),
+        "n_layers": n_layers,
+        "lane_class": lane_class,
+    }
+
+
+def _cma_es_objective(evaluation: CandidateEvaluation) -> float:
+    objective = float(evaluation.lagrangian)
+    if evaluation.band_refused:
+        objective += 1_000_000.0
+    if not math.isfinite(objective):
+        return 1_000_000_000.0
+    return objective

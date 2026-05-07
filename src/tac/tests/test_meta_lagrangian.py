@@ -19,6 +19,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from tac.optimizer.meta_lagrangian import (  # noqa: E402
     CandidateEvaluation,
+    CmaEsSearchBounds,
     LagrangianConstraints,
     MetaLagrangianSearch,
     contest_score,
@@ -155,6 +156,68 @@ def test_meta_lagrangian_evaluate_is_deterministic() -> None:
         )
         runs.append((ev.lagrangian, ev.proxy_pose, ev.proxy_seg, ev.band_low, ev.band_high))
     assert len(set(runs)) == 1, f"non-deterministic evaluate: {len(set(runs))} unique tuples"
+
+
+def test_cma_es_candidate_suggestions_are_deterministic_and_fail_closed() -> None:
+    """CMA-ES should be a reproducible candidate generator, not a dispatch gate."""
+
+    bounds = CmaEsSearchBounds(
+        archive_bytes=(150_000, 190_000),
+        rel_err_pct=(0.0, 1.0),
+        n_layers=(8, 16),
+    )
+    search = MetaLagrangianSearch(_make_anchors(), _honest_proxy)
+
+    first = search.suggest_cma_es_candidates(
+        lane_class="apogee_intN",
+        bounds=bounds,
+        generations=2,
+        population_size=4,
+        seed=123,
+    )
+    second = search.suggest_cma_es_candidates(
+        lane_class="apogee_intN",
+        bounds=bounds,
+        generations=2,
+        population_size=4,
+        seed=123,
+    )
+
+    assert [item.candidate for item in first] == [item.candidate for item in second]
+    assert [item.objective for item in first] == [item.objective for item in second]
+    assert first == sorted(first, key=lambda item: item.objective)
+    assert first
+    for item in first:
+        assert item.score_claim is False
+        assert item.ready_for_exact_eval_dispatch is False
+        assert "requires_exact_cuda_auth_eval" in item.dispatch_blockers
+        assert item.evaluation.archive_path is None
+        assert item.evaluation.eligible_for_dispatch is False
+        candidate = item.candidate
+        assert set(candidate) == {
+            "candidate_id",
+            "archive_bytes",
+            "rel_err_pct",
+            "n_layers",
+            "lane_class",
+        }
+        assert bounds.archive_bytes[0] <= candidate["archive_bytes"] <= bounds.archive_bytes[1]
+        assert bounds.rel_err_pct[0] <= candidate["rel_err_pct"] <= bounds.rel_err_pct[1]
+        assert bounds.n_layers[0] <= candidate["n_layers"] <= bounds.n_layers[1]
+
+
+def test_cma_es_candidate_suggestions_validate_bounds() -> None:
+    search = MetaLagrangianSearch(_make_anchors(), _honest_proxy)
+
+    with pytest.raises(ValueError, match="archive_bytes upper bound"):
+        search.suggest_cma_es_candidates(
+            lane_class="apogee_intN",
+            bounds=CmaEsSearchBounds(
+                archive_bytes=(190_000, 150_000),
+                rel_err_pct=(0.0, 1.0),
+                n_layers=(8, 16),
+            ),
+        )
 
 
 def test_meta_lagrangian_preserves_archive_path(tmp_path: Path) -> None:
