@@ -12,6 +12,7 @@ import argparse
 import ast
 import hashlib
 import json
+import math
 import struct
 import sys
 from collections.abc import Sequence
@@ -19,15 +20,20 @@ from pathlib import Path
 from typing import Any
 
 PAYLOAD_MEMBER = "lapose_foveation_tuples.lfv1"
+FOVEATION_PARAMS_MEMBER = "foveation_params.bin"
 PROOF_MEMBER = "runtime_consumer_proof_skeleton.json"
-REQUIRED_MEMBERS = (PAYLOAD_MEMBER, PROOF_MEMBER)
+REQUIRED_MEMBERS = (PAYLOAD_MEMBER, FOVEATION_PARAMS_MEMBER, PROOF_MEMBER)
 PAYLOAD_MAGIC = b"LFV1"
+FOVEATION_MAGIC = b"HFV1"
 HEADER_STRUCT = struct.Struct("<4sHHHH")
+FOVEATION_HEADER_STRUCT = struct.Struct("<4sIII")
 ROW_STRUCT = struct.Struct("<BHHHHHH")
+FOVEATION_ROW_STRUCT = struct.Struct("<fffff")
 RUNTIME_PROOF_SKELETON_CONTRACT = "lapose_foveation_runtime_consumer_proof_skeleton_v1"
 RUNTIME_EFFECT_CONTROLS_CONTRACT = "lapose_foveation_runtime_effect_controls_v1"
 RUNTIME_STRUCTURAL_OUTPUT_CONTRACT = "lapose_foveation_runtime_structural_output_v1"
 RUNTIME_SCORER_VISIBLE_BRIDGE_CONTRACT = "lapose_foveation_scorer_visible_bridge_v1"
+LFV1_FOVEATION_PARAMS_BRIDGE_CONTRACT = "lapose_lfv1_to_foveation_params_bridge_v1"
 UINT16_MAX = 65_535
 SCORER_VISIBLE_MEMBER_GROUPS = {
     "mask_or_segmentation_stream": (
@@ -55,7 +61,7 @@ SCORER_VISIBLE_MEMBER_GROUPS = {
         "optimized_poses.qp1",
         "zoom_scalars.bin",
         "zoom_scalars.pt",
-        "foveation_params.bin",
+        FOVEATION_PARAMS_MEMBER,
     ),
 }
 
@@ -81,6 +87,111 @@ def _canonical_json_sha256(payload: dict[str, Any]) -> str:
         "utf-8"
     )
     return _sha256_bytes(raw)
+
+
+def _dequantize_u16(value: int, low: float, high: float) -> float:
+    return float(low) + (float(high) - float(low)) * (float(value) / float(UINT16_MAX))
+
+
+def _default_foveation_row(frame_width: int, frame_height: int) -> tuple[float, float, float, float, float]:
+    return (
+        0.0,
+        max(math.hypot(float(frame_width), float(frame_height)), 1.0),
+        1.0,
+        float(max(frame_width - 1, 0)) / 2.0,
+        float(max(frame_height - 1, 0)) / 2.0,
+    )
+
+
+def lower_lfv1_to_foveation_params(decoded: dict[str, Any]) -> tuple[bytes, dict[str, Any]]:
+    """Lower decoded LFV1 tuples into a deterministic HFV1 geometry payload.
+
+    This produces an archive-contained scorer-visible geometry member. It does
+    not prove that a contest runtime applies the member to output frames.
+    """
+
+    frame_width = int(decoded["frame_width"])
+    frame_height = int(decoded["frame_height"])
+    rows = decoded["rows"]
+    n_frames = max(int(row["pair_index"]) for row in rows) + 1 if rows else 1
+    n_frames = max(n_frames, 1)
+    radius_high = max(math.hypot(float(frame_width), float(frame_height)), 1.0)
+    params = [_default_foveation_row(frame_width, frame_height) for _ in range(n_frames)]
+    applied_rows: list[dict[str, Any]] = []
+    for row in rows:
+        frame_index = int(row["pair_index"])
+        quantized = row["quantized"]
+        values = (
+            _dequantize_u16(int(quantized["alpha"]), 0.0, 8.0),
+            max(_dequantize_u16(int(quantized["radius"]), 0.0, radius_high), 1e-6),
+            _dequantize_u16(int(quantized["power"]), 0.0, 8.0),
+            _dequantize_u16(int(quantized["origin_x"]), 0.0, float(max(frame_width - 1, 0))),
+            _dequantize_u16(int(quantized["origin_y"]), 0.0, float(max(frame_height - 1, 0))),
+        )
+        params[frame_index] = values
+        applied_rows.append(
+            {
+                "row_index": int(row["row_index"]),
+                "pair_index": frame_index,
+                "opcode": int(row["opcode"]),
+                "target_member": FOVEATION_PARAMS_MEMBER,
+                "target_frame_index": frame_index,
+            }
+        )
+    body = b"".join(FOVEATION_ROW_STRUCT.pack(*values) for values in params)
+    raw = FOVEATION_HEADER_STRUCT.pack(
+        FOVEATION_MAGIC,
+        int(n_frames),
+        int(frame_height),
+        int(frame_width),
+    ) + body
+    report = {
+        "schema_version": 1,
+        "contract": LFV1_FOVEATION_PARAMS_BRIDGE_CONTRACT,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "source_member": PAYLOAD_MEMBER,
+        "target_member": FOVEATION_PARAMS_MEMBER,
+        "target_wire_format": FOVEATION_MAGIC.decode("ascii"),
+        "source_row_count": int(decoded["row_count"]),
+        "target_frame_count": int(n_frames),
+        "image_size": {"height": frame_height, "width": frame_width},
+        "duplicate_pair_policy": "last_lfv1_tuple_for_pair_index_wins",
+        "applied_rows": applied_rows,
+        "output_bytes": len(raw),
+        "output_sha256": _sha256_bytes(raw),
+        "runtime_output_parity_proven": False,
+        "exact_cuda_auth_eval_proven": False,
+        "blockers": [
+            "lapose_foveation_runtime_output_parity_not_proven",
+            "exact_cuda_auth_eval_missing",
+        ],
+    }
+    return raw, report
+
+
+def build_lfv1_foveation_params_bridge_report(
+    payload: bytes,
+    foveation_params: bytes,
+) -> dict[str, Any]:
+    decoded = _decode_lfv1(payload)
+    expected_raw, report = lower_lfv1_to_foveation_params(decoded)
+    report.update(
+        {
+            "source_payload_sha256": _sha256_bytes(payload),
+            "target_member_sha256": _sha256_bytes(foveation_params),
+            "target_member_bytes": len(foveation_params),
+            "derived_bytes_match": foveation_params == expected_raw,
+            "passed": foveation_params == expected_raw,
+        }
+    )
+    if foveation_params != expected_raw:
+        report["blockers"] = [
+            *report["blockers"],
+            "lapose_foveation_params_member_not_derived_from_lfv1",
+        ]
+    return report
 
 
 def _member_group_report(member_names: Sequence[str]) -> dict[str, dict[str, Any]]:
@@ -140,6 +251,8 @@ def _runtime_source_references(runtime_consumer_source: str) -> dict[str, bool]:
             symbols
             & {
                 "apply_lfv1_to_foveation_params",
+                "build_lfv1_foveation_params_bridge_report",
+                "lower_lfv1_to_foveation_params",
                 "load_foveation_params",
                 "functional_hyperbolic_foveation",
             }
@@ -159,9 +272,10 @@ def build_scorer_visible_bridge_report(
     groups = _member_group_report(names)
     source_refs = _runtime_source_references(runtime_consumer_source)
     has_lfv1_payload = PAYLOAD_MEMBER in names
-    has_renderer_or_mask_path = (
+    has_scorer_visible_member_path = (
         groups["mask_or_segmentation_stream"]["present"]
         or groups["renderer_or_segmap_runtime"]["present"]
+        or groups["pose_or_geometry_stream"]["present"]
     )
     runtime_references_scorer_visible_path = any(
         source_refs[key]
@@ -175,14 +289,14 @@ def build_scorer_visible_bridge_report(
     )
     bridge_path_present = (
         has_lfv1_payload
-        and has_renderer_or_mask_path
+        and has_scorer_visible_member_path
         and runtime_references_scorer_visible_path
     )
     blockers: list[str] = []
     if not has_lfv1_payload:
         blockers.append("lapose_foveation_lfv1_member_missing")
-    if not has_renderer_or_mask_path:
-        blockers.append("lapose_foveation_renderer_or_mask_output_path_missing")
+    if not has_scorer_visible_member_path:
+        blockers.append("lapose_foveation_renderer_mask_or_geometry_output_path_missing")
     if not runtime_references_scorer_visible_path:
         blockers.append("lapose_foveation_runtime_does_not_reference_scorer_visible_output_path")
     blockers.append("lapose_foveation_scorer_visible_output_parity_not_proven")
@@ -213,8 +327,8 @@ def build_scorer_visible_bridge_report(
         },
         "blockers": blockers,
         "fail_closed_reason": (
-            "LFV1 tuple bytes affect only the runtime skeleton structural digest; "
-            "no packaged renderer/mask output bridge applies them to scorer-visible outputs."
+            "LFV1 tuple bytes are lowered to archive-contained foveation geometry when present, "
+            "but no packaged contest runtime parity proof shows that geometry changes scorer-visible frames."
         ),
     }
 
@@ -521,10 +635,16 @@ def verify_charged_members(archive_root: str | Path) -> dict[str, Any]:
         raise RuntimeSkeletonError("missing charged runtime member(s): " + ", ".join(missing))
 
     payload_path = root / PAYLOAD_MEMBER
+    foveation_path = root / FOVEATION_PARAMS_MEMBER
     proof_path = root / PROOF_MEMBER
     payload_raw = payload_path.read_bytes()
+    foveation_raw = foveation_path.read_bytes()
     decoded = _decode_lfv1(payload_raw)
     runtime_effect_controls = build_runtime_effect_control_report(payload_raw)
+    lfv1_foveation_params_bridge = build_lfv1_foveation_params_bridge_report(
+        payload_raw,
+        foveation_raw,
+    )
     proof = _read_proof(proof_path)
 
     charged_sha = proof.get("charged_member_sha256")
@@ -539,6 +659,13 @@ def verify_charged_members(archive_root: str | Path) -> dict[str, Any]:
         raise RuntimeSkeletonError("LFV1 payload SHA-256 does not match runtime proof")
     if charged_bytes.get(PAYLOAD_MEMBER) != len(payload_raw):
         raise RuntimeSkeletonError("LFV1 payload byte count does not match runtime proof")
+    foveation_sha = _sha256_bytes(foveation_raw)
+    if charged_sha.get(FOVEATION_PARAMS_MEMBER) != foveation_sha:
+        raise RuntimeSkeletonError("foveation_params.bin SHA-256 does not match runtime proof")
+    if charged_bytes.get(FOVEATION_PARAMS_MEMBER) != len(foveation_raw):
+        raise RuntimeSkeletonError("foveation_params.bin byte count does not match runtime proof")
+    if not lfv1_foveation_params_bridge["passed"]:
+        raise RuntimeSkeletonError("foveation_params.bin is not derived from LFV1 payload")
 
     records = [
         {
@@ -550,6 +677,11 @@ def verify_charged_members(archive_root: str | Path) -> dict[str, Any]:
             "name": PROOF_MEMBER,
             "bytes": proof_path.stat().st_size,
             "sha256": _sha256_file(proof_path),
+        },
+        {
+            "name": FOVEATION_PARAMS_MEMBER,
+            "bytes": len(foveation_raw),
+            "sha256": foveation_sha,
         },
     ]
 
@@ -580,6 +712,7 @@ def verify_charged_members(archive_root: str | Path) -> dict[str, Any]:
         "ready_for_exact_eval_dispatch": False,
         "charged_members_verified": records,
         "lfv1_payload_decode": decoded,
+        "lfv1_foveation_params_bridge": lfv1_foveation_params_bridge,
         "runtime_effect_controls": runtime_effect_controls,
         "scorer_visible_bridge": scorer_visible_bridge,
         "structural_runtime_consumption_proven": runtime_effect_controls[
@@ -588,6 +721,7 @@ def verify_charged_members(archive_root: str | Path) -> dict[str, Any]:
         "runtime_output_parity_proven": False,
         "scored_runtime_output_parity_proven": False,
         "noop_controls_proven": runtime_effect_controls["passed"],
+        "lfv1_to_foveation_params_bridge_proven": lfv1_foveation_params_bridge["passed"],
         "exact_cuda_auth_eval_proven": False,
         "dispatch_blockers": [
             "lapose_foveation_runtime_skeleton_not_a_decoder",

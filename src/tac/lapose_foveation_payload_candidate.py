@@ -19,12 +19,16 @@ from tac.analysis.lapose_foveation_payload import (
     decode_lapose_foveation_tuple_payload,
 )
 from tac.lapose_foveation_runtime_skeleton import (
+    FOVEATION_PARAMS_MEMBER,
+    LFV1_FOVEATION_PARAMS_BRIDGE_CONTRACT,
     PROOF_MEMBER,
     RUNTIME_EFFECT_CONTROLS_CONTRACT,
     RUNTIME_PROOF_SKELETON_CONTRACT,
     RUNTIME_SCORER_VISIBLE_BRIDGE_CONTRACT,
+    build_lfv1_foveation_params_bridge_report,
     build_runtime_effect_control_report,
     build_scorer_visible_bridge_report,
+    lower_lfv1_to_foveation_params,
 )
 from tac.repo_io import json_text, repo_relative, sha256_bytes, sha256_file, write_json
 
@@ -44,6 +48,7 @@ CONTEST_INFLATE_MEMBER = "inflate.sh"
 RUNTIME_CONSUMER_MEMBER = "runtime_consumer.py"
 MEMBER_ROLES = {
     CONTEST_INFLATE_MEMBER: "inflate_entrypoint_fail_closed",
+    FOVEATION_PARAMS_MEMBER: "derived_hfv1_foveation_geometry",
     PAYLOAD_MEMBER: "lapose_foveation_tuple_payload",
     RUNTIME_CONSUMER_MEMBER: "decoder_or_runtime_consumer",
     PROOF_MEMBER: "runtime_consumer_proof",
@@ -149,6 +154,7 @@ def _runtime_proof_skeleton(
     runtime_consumer_bytes: int,
     decoded_payload: dict[str, Any],
     runtime_effect_controls: dict[str, Any],
+    lfv1_foveation_params_bridge: dict[str, Any],
     scorer_visible_bridge: dict[str, Any],
 ) -> dict[str, Any]:
     return {
@@ -162,10 +168,12 @@ def _runtime_proof_skeleton(
         "charged_member_names": list(MEMBER_ORDER),
         "charged_member_sha256": {
             PAYLOAD_MEMBER: payload_sha256,
+            FOVEATION_PARAMS_MEMBER: lfv1_foveation_params_bridge["output_sha256"],
             RUNTIME_CONSUMER_MEMBER: runtime_consumer_sha256,
         },
         "charged_member_bytes": {
             PAYLOAD_MEMBER: payload_bytes,
+            FOVEATION_PARAMS_MEMBER: lfv1_foveation_params_bridge["output_bytes"],
             RUNTIME_CONSUMER_MEMBER: runtime_consumer_bytes,
         },
         "lfv1_payload_decode": {
@@ -176,12 +184,14 @@ def _runtime_proof_skeleton(
             "frame_height": decoded_payload["frame_height"],
         },
         "runtime_effect_controls": runtime_effect_controls,
+        "lfv1_foveation_params_bridge": lfv1_foveation_params_bridge,
         "proof_status": {
             "archive_contains_payload_and_runtime": True,
             "lfv1_structure_decode": True,
             "structural_runtime_consumption": runtime_effect_controls[
                 "structural_runtime_consumption"
             ]["passed"],
+            "lfv1_to_foveation_params_bridge": lfv1_foveation_params_bridge["passed"],
             "scorer_visible_output_bridge": scorer_visible_bridge["bridge_path_present"],
             "scored_runtime_output_parity": False,
             "runtime_output_parity": False,
@@ -231,10 +241,15 @@ def build_lapose_foveation_payload_archive_candidate(
     runtime_consumer = runtime_source_path.read_bytes()
 
     payload_sha = sha256_bytes(lfv1_payload)
+    foveation_params, _bridge_preview = lower_lfv1_to_foveation_params(decoded_payload)
+    lfv1_foveation_params_bridge = build_lfv1_foveation_params_bridge_report(
+        lfv1_payload,
+        foveation_params,
+    )
     runtime_consumer_sha = sha256_bytes(runtime_consumer)
     runtime_consumer_source = runtime_consumer.decode("utf-8", errors="replace")
     scorer_visible_bridge = build_scorer_visible_bridge_report(
-        MEMBER_ORDER,
+        [*MEMBER_ORDER],
         runtime_consumer_source=runtime_consumer_source,
     )
     proof_skeleton = json_text(
@@ -246,11 +261,13 @@ def build_lapose_foveation_payload_archive_candidate(
             runtime_consumer_bytes=len(runtime_consumer),
             decoded_payload=decoded_payload,
             runtime_effect_controls=runtime_effect_controls,
+            lfv1_foveation_params_bridge=lfv1_foveation_params_bridge,
             scorer_visible_bridge=scorer_visible_bridge,
         )
     ).encode("utf-8")
     member_payloads = {
         CONTEST_INFLATE_MEMBER: _inflate_script(),
+        FOVEATION_PARAMS_MEMBER: foveation_params,
         PAYLOAD_MEMBER: lfv1_payload,
         RUNTIME_CONSUMER_MEMBER: runtime_consumer,
         PROOF_MEMBER: proof_skeleton,
@@ -315,7 +332,7 @@ def build_lapose_foveation_payload_archive_candidate(
             "byte_identical_to_runtime_consumer": True,
             "sidecar_free": True,
             "fallback_used": False,
-            "loaded_charged_members": [PAYLOAD_MEMBER, PROOF_MEMBER],
+            "loaded_charged_members": [PAYLOAD_MEMBER, FOVEATION_PARAMS_MEMBER, PROOF_MEMBER],
             "structural_runtime_consumption": runtime_effect_controls[
                 "structural_runtime_consumption"
             ],
@@ -325,6 +342,7 @@ def build_lapose_foveation_payload_archive_candidate(
             "blocker": "scored_runtime_output_parity_not_proven",
         },
         "scorer_visible_bridge": scorer_visible_bridge,
+        "lfv1_foveation_params_bridge": lfv1_foveation_params_bridge,
         "payload_decode": {
             "schema_version": SCHEMA_VERSION,
             "payload_decode_contract": LFV1_PAYLOAD_DECODE_CONTRACT,
@@ -861,6 +879,82 @@ def _scorer_visible_bridge_report(
     return summary, validation_blockers, dispatch_blockers
 
 
+def _lfv1_foveation_params_bridge_report(
+    report: Any,
+    *,
+    archive_members: dict[str, bytes],
+) -> tuple[dict[str, Any], list[str], list[str]]:
+    validation_blockers: list[str] = []
+    dispatch_blockers: list[str] = []
+    summary: dict[str, Any] = {
+        "schema_version": SCHEMA_VERSION,
+        "contract": LFV1_FOVEATION_PARAMS_BRIDGE_CONTRACT,
+        "declared": isinstance(report, dict),
+        "accepted": False,
+        "passed": False,
+        "source_member": PAYLOAD_MEMBER,
+        "target_member": FOVEATION_PARAMS_MEMBER,
+        "derived_bytes_match": False,
+        "validation_blockers": [],
+        "declared_blockers": [],
+    }
+    if not isinstance(report, dict):
+        validation_blockers.append("lfv1_foveation_params_bridge_report_missing")
+        summary["validation_blockers"] = validation_blockers
+        return summary, validation_blockers, dispatch_blockers
+
+    if report.get("schema_version") != SCHEMA_VERSION:
+        validation_blockers.append("lfv1_foveation_params_bridge_schema_version_missing_or_invalid")
+    if report.get("contract") != LFV1_FOVEATION_PARAMS_BRIDGE_CONTRACT:
+        validation_blockers.append("lfv1_foveation_params_bridge_contract_missing_or_invalid")
+    if report.get("score_claim") is not False:
+        validation_blockers.append("lfv1_foveation_params_bridge_score_claim_must_be_false")
+    if report.get("dispatch_attempted") is not False:
+        validation_blockers.append("lfv1_foveation_params_bridge_dispatch_attempted_must_be_false")
+    if report.get("ready_for_exact_eval_dispatch") is not False:
+        validation_blockers.append(
+            "lfv1_foveation_params_bridge_ready_for_exact_eval_dispatch_must_be_false"
+        )
+
+    raw_payload = archive_members.get(PAYLOAD_MEMBER)
+    foveation_raw = archive_members.get(FOVEATION_PARAMS_MEMBER)
+    if raw_payload is None:
+        validation_blockers.append("lfv1_foveation_params_bridge_source_member_missing")
+    if foveation_raw is None:
+        validation_blockers.append("lfv1_foveation_params_bridge_target_member_missing")
+    if raw_payload is not None and foveation_raw is not None:
+        try:
+            expected = build_lfv1_foveation_params_bridge_report(raw_payload, foveation_raw)
+        except Exception as exc:
+            validation_blockers.append(
+                f"lfv1_foveation_params_bridge_recompute_failed:{type(exc).__name__}"
+            )
+        else:
+            if report != expected:
+                validation_blockers.append("lfv1_foveation_params_bridge_report_mismatch")
+
+    declared = report.get("blockers")
+    if isinstance(declared, list) and all(isinstance(item, str) for item in declared):
+        dispatch_blockers.extend(declared)
+    else:
+        validation_blockers.append("lfv1_foveation_params_bridge_blockers_missing_or_invalid")
+
+    summary.update(
+        {
+            "accepted": not validation_blockers,
+            "passed": report.get("passed") is True,
+            "source_member": report.get("source_member", PAYLOAD_MEMBER),
+            "target_member": report.get("target_member", FOVEATION_PARAMS_MEMBER),
+            "target_frame_count": report.get("target_frame_count"),
+            "target_member_sha256": report.get("target_member_sha256", ""),
+            "derived_bytes_match": report.get("derived_bytes_match") is True,
+            "declared_blockers": dispatch_blockers,
+            "validation_blockers": validation_blockers,
+        }
+    )
+    return summary, validation_blockers, dispatch_blockers
+
+
 def audit_lapose_foveation_payload_candidate(
     payload: dict[str, Any],
     *,
@@ -1122,6 +1216,15 @@ def audit_lapose_foveation_payload_candidate(
     blockers.extend(bridge_validation_blockers)
     blockers.extend(bridge_dispatch_blockers)
 
+    lfv1_foveation_params_bridge, foveation_bridge_validation_blockers, foveation_bridge_dispatch_blockers = (
+        _lfv1_foveation_params_bridge_report(
+            payload.get("lfv1_foveation_params_bridge"),
+            archive_members=archive_members,
+        )
+    )
+    blockers.extend(foveation_bridge_validation_blockers)
+    blockers.extend(foveation_bridge_dispatch_blockers)
+
     exact_cuda_auth_eval = payload.get("exact_cuda_auth_eval")
     if not isinstance(exact_cuda_auth_eval, dict) or exact_cuda_auth_eval.get("passed") is not True:
         blockers.append("exact_cuda_auth_eval_missing")
@@ -1180,6 +1283,7 @@ def audit_lapose_foveation_payload_candidate(
         "no_op_controls": no_op_summary,
         "runtime_effect_controls": runtime_effect_controls,
         "scorer_visible_bridge": scorer_visible_bridge,
+        "lfv1_foveation_params_bridge": lfv1_foveation_params_bridge,
         "runtime_consumption_audit": {
             "structural_runtime_consumption": runtime_effect_controls[
                 "structural_runtime_consumption"
@@ -1188,10 +1292,12 @@ def audit_lapose_foveation_payload_candidate(
                 "scored_runtime_output_parity"
             ],
             "scorer_visible_bridge": scorer_visible_bridge,
+            "lfv1_foveation_params_bridge": lfv1_foveation_params_bridge,
             "scored_runtime_output_parity_required": True,
         },
         "runtime_contract": {
             "charged_member_required": PAYLOAD_MEMBER,
+            "derived_scorer_visible_member_required": FOVEATION_PARAMS_MEMBER,
             "runtime_consumer_required": True,
             "scorer_visible_output_bridge_required": True,
             "runtime_output_parity_required": True,
