@@ -6,6 +6,7 @@ import zipfile
 from pathlib import Path
 
 from tools.build_frontier_roadmap_status import (
+    DEFAULT_PACKET_MANIFEST_GLOBS,
     build_roadmap_status,
     dirty_paths_for_row,
     render_markdown,
@@ -112,6 +113,22 @@ def test_frontier_roadmap_status_markdown_is_operator_briefing() -> None:
     assert "`stacker_scorer_changing`" in markdown
     assert "evidence" in markdown
     assert "next_unblocked_keys" in markdown
+
+
+def test_frontier_roadmap_status_discovers_default_packet_manifests() -> None:
+    payload = build_roadmap_status(repo_root=REPO, dirty_paths=[])
+
+    packet_selection = payload["next_comprehensive_tranche"][
+        "field_meta_candidate_packet_selection"
+    ]
+    candidate_ids = {row["candidate_id"] for row in packet_selection["rows"]}
+
+    assert DEFAULT_PACKET_MANIFEST_GLOBS == (
+        "experiments/results/**/wr01_exact_eval_packet.json",
+    )
+    assert "wr01_apply_pr106x_half" in candidate_ids
+    assert packet_selection["candidate_count"] >= 1
+    assert packet_selection["report_blockers"] == []
 
 
 def test_frontier_roadmap_status_consumes_field_meta_packet_manifests(tmp_path: Path) -> None:

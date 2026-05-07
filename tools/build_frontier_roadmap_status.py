@@ -28,6 +28,9 @@ from tools.build_cross_paradigm_frontier_inventory import build_inventory  # noq
 from tools.build_field_meta_dispatch_selection import build_selection_report  # noqa: E402
 
 SCHEMA_VERSION = 3
+DEFAULT_PACKET_MANIFEST_GLOBS = (
+    "experiments/results/**/wr01_exact_eval_packet.json",
+)
 
 
 def git_dirty_paths(repo_root: Path) -> list[str]:
@@ -331,6 +334,12 @@ def build_roadmap_status(
 
     inventory = build_inventory(repo_root=repo_root)
     live_dirty_paths = git_dirty_paths(repo_root) if dirty_paths is None else sorted(set(dirty_paths))
+    selection_manifest_paths = packet_manifest_paths or []
+    selection_manifest_globs = (
+        list(DEFAULT_PACKET_MANIFEST_GLOBS)
+        if packet_manifest_paths is None and packet_manifest_globs is None
+        else packet_manifest_globs or []
+    )
     rows = []
     stage_counts: Counter[str] = Counter()
     dirty_blocked_count = 0
@@ -370,8 +379,8 @@ def build_roadmap_status(
     ][:5]
     field_meta_candidate_packet_selection = build_selection_report(
         repo_root=repo_root,
-        manifest_paths=packet_manifest_paths or [],
-        manifest_globs=packet_manifest_globs or [],
+        manifest_paths=selection_manifest_paths,
+        manifest_globs=selection_manifest_globs,
         claims_path=claims_path,
         now_utc=now_utc,
         dirty_paths=live_dirty_paths,
@@ -498,8 +507,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--md-out", type=Path)
-    parser.add_argument("--packet-manifest", action="append", type=Path, default=[])
-    parser.add_argument("--packet-manifest-glob", action="append", default=[])
+    parser.add_argument("--packet-manifest", action="append", type=Path)
+    parser.add_argument("--packet-manifest-glob", action="append")
     parser.add_argument("--claims-path", type=Path)
     parser.add_argument("--now-utc")
     parser.add_argument("--format", choices=("json", "markdown"), default="markdown")
