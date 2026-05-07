@@ -1,0 +1,40 @@
+{
+  "archive_sha256": "0176a2691a4daf5991170404d30a304ae30389621c0fc54914628414aef39ff1",
+  "basin_parity_passed": true,
+  "candidate_archive_path": "/Users/adpena/Projects/pact/experiments/results/apogee_int6_repack_20260504_claude/apogee_int6_archive.zip",
+  "candidate_archive_sha256": "0176a2691a4daf5991170404d30a304ae30389621c0fc54914628414aef39ff1",
+  "evidence_grade": "ready",
+  "evidence_semantics": "scorer_basin_parity_gate",
+  "lossless_archive_path": "/Users/adpena/Projects/pact/experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+  "lossless_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+  "notes": "[scorer-basin-parity:CPU] | computed_utc=2026-05-07T10:22:46Z | n_probes=2, n_hessian_samples=1 | pose_dist_lossless=5.284e-05 -> pose_dist_quantized=1.379e-04 (delta +8.511e-05, threshold 1.000e-03) | seg_dist_lossless=6.714e-04 -> seg_dist_quantized=1.645e-03 (delta +9.740e-04, threshold 5.000e-03) | hessian_trace_lossless=2.864e+06, hessian_trace_quantized=3.829e+06, log10_ratio=+0.13 (tolerance |1.00|) | candidate=apogee_int6_archive.zip lossless=archive.zip meta={'n_pairs': 600, 'latent_dim': 28, 'base_channels': 36, 'eval_size': [384, 512]}",
+  "parity_report": {
+    "anchor_frame_shas": [
+      "ec1323fb5c6aeb93",
+      "7be97fdb2bc4fa82"
+    ],
+    "basin_parity_passed": true,
+    "computed_utc": "2026-05-07T10:22:46Z",
+    "device": "cpu",
+    "failure_reasons": [],
+    "hessian_log_ratio": 0.126113398865551,
+    "hessian_log_ratio_tolerance": 1.0,
+    "hessian_trace_lossless": 2864315.1630859375,
+    "hessian_trace_quantized": 3829430.5791015625,
+    "n_hessian_samples": 1,
+    "n_probes": 2,
+    "pose_dist_delta": 8.510673069395125e-05,
+    "pose_dist_lossless": 5.28418313479051e-05,
+    "pose_dist_quantized": 0.00013794856204185635,
+    "pose_threshold": 0.001,
+    "seg_dist_delta": 0.0009740194072946906,
+    "seg_dist_lossless": 0.00067138671875,
+    "seg_dist_quantized": 0.0016454061260446906,
+    "seg_threshold": 0.005
+  },
+  "pose_dist_delta": 8.510673069395125e-05,
+  "ready_for_exact_eval_dispatch": true,
+  "scorer_basin_parity_status": "pass",
+  "seg_dist_delta": 0.0009740194072946906,
+  "status": "pass"
+}
