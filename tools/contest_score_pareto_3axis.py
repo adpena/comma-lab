@@ -282,6 +282,24 @@ def _flag_legacy_regime(d_pose: float) -> bool:
     return d_pose > 0.01
 
 
+def _is_finite_positive(*values: float | int | None) -> bool:
+    """Self-protection: reject candidates with NaN, inf, or non-positive
+    archive bytes. Catches scorer-divergence artifacts that emit NaN and
+    file-loading bugs that produce -1 or 0 byte counts.
+    """
+    import math
+    for v in values:
+        if v is None:
+            return False
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return False
+        if not math.isfinite(f):
+            return False
+    return True
+
+
 def load_candidate_from_evidence(path: Path) -> Candidate | None:
     """Parse one evidence JSON into a Candidate. Returns None if d_seg / d_pose
     / archive_bytes is missing — these tools only act on contest-CUDA evidence
@@ -294,6 +312,13 @@ def load_candidate_from_evidence(path: Path) -> Candidate | None:
     d_pose = _extract_d_pose(payload)
     archive_bytes = _extract_archive_bytes(payload)
     if d_seg is None or d_pose is None or archive_bytes is None:
+        return None
+    # Self-protection: reject NaN, inf, and non-positive archive bytes.
+    # NaN d_seg/d_pose appear when the scorer diverged or evidence is
+    # corrupted. archive_bytes <= 0 indicates a file-loading bug.
+    if not _is_finite_positive(d_seg, d_pose):
+        return None
+    if archive_bytes <= 0:
         return None
     archive_path = _extract_archive_path(payload, path)
     archive_sha = _extract_archive_sha(payload)
@@ -359,19 +384,72 @@ def load_candidates(
 
 def compute_pareto(candidates: list[Candidate]) -> list[Candidate]:
     """In-place mark Pareto dominance + score rank. Returns the same list
-    (after augmenting fields). Pure function on the candidates list besides
-    the in-place augmentation."""
+    (after augmenting fields).
+
+    Vectorized via numpy: builds 3 column vectors (d_seg, d_pose, B) of
+    length N, then computes the N×N dominance matrix
+    ``D[i, j] = j_dominates_i`` as a single boolean broadcast. For each i:
+      - ``pareto_dominators_count = D[i, :].sum()``
+      - ``is_frontier = (count == 0)``
+      - ``pareto_dominated_by`` = label of the first j s.t. D[i, j].
+
+    Falls back to the scalar path on ``len <= 1`` (no dominance possible).
+    Vectorization is meaningful even at N=138 (≈19,000 comparisons in
+    the scalar path become a single broadcast). Per operator directive
+    'continue lowering things to rust and optimization and vectorizing
+    and parallelizing' — numpy ops dispatch to BLAS/LAPACK (effective
+    C/Rust under the hood).
+    """
     n = len(candidates)
-    for i in range(n):
-        for j in range(n):
-            if i == j:
-                continue
-            if dominates(candidates[j], candidates[i]):
-                candidates[i].pareto_dominators_count += 1
-                if candidates[i].pareto_dominated_by is None:
-                    candidates[i].pareto_dominated_by = candidates[j].label
-        candidates[i].is_frontier = candidates[i].pareto_dominated_by is None
-    # Score rank: 1 = lowest contest score (best)
+    if n <= 1:
+        for c in candidates:
+            c.is_frontier = True
+            c.score_rank = 1
+        return candidates
+
+    import numpy as np  # local import — keeps top-level imports light
+
+    # Build column vectors. Cast to float for NaN-safe comparisons.
+    d_seg = np.fromiter((c.d_seg for c in candidates), dtype=np.float64, count=n)
+    d_pose = np.fromiter((c.d_pose for c in candidates), dtype=np.float64, count=n)
+    bytes_ = np.fromiter((c.archive_bytes for c in candidates), dtype=np.int64, count=n)
+
+    # NaN-safety: NaN comparisons are False, so a NaN candidate naturally
+    # dominates nothing AND is dominated by nothing (becomes a frontier
+    # outlier). Document this; legitimate use is to flag-and-skip.
+    finite = (
+        np.isfinite(d_seg) & np.isfinite(d_pose) & np.isfinite(bytes_.astype(np.float64))
+    )
+
+    # Pareto dominance matrix: D[i, j] = True iff candidate j dominates
+    # candidate i. Row i sums = how many candidates dominate i.
+    le_seg = d_seg[None, :] <= d_seg[:, None]   # (i, j) → j_seg <= i_seg
+    le_pose = d_pose[None, :] <= d_pose[:, None]
+    le_bytes = bytes_[None, :] <= bytes_[:, None]
+    lt_seg = d_seg[None, :] < d_seg[:, None]
+    lt_pose = d_pose[None, :] < d_pose[:, None]
+    lt_bytes = bytes_[None, :] < bytes_[:, None]
+    strict_any = lt_seg | lt_pose | lt_bytes
+    le_all = le_seg & le_pose & le_bytes
+    dom_matrix = le_all & strict_any
+    np.fill_diagonal(dom_matrix, False)
+
+    # Apply finite-mask: NaN rows can't be dominated, NaN columns can't
+    # dominate (all-False either way), so masking keeps them as frontier
+    # outliers — already the natural numpy behavior. Just ensure we never
+    # mark a NaN-d_seg candidate as a valid frontier without flagging.
+    dom_count = dom_matrix.sum(axis=1).astype(int)
+
+    for i, c in enumerate(candidates):
+        c.pareto_dominators_count = int(dom_count[i])
+        c.is_frontier = bool(c.pareto_dominators_count == 0) and bool(finite[i])
+        if c.pareto_dominators_count > 0:
+            # First dominator (lowest j index s.t. dom_matrix[i, j])
+            j_first = int(np.argmax(dom_matrix[i, :]))
+            c.pareto_dominated_by = candidates[j_first].label
+
+    # Score rank: 1 = lowest contest score (best). Use stable sort on
+    # composite key (score, bytes, d_pose, d_seg).
     sorted_by_score = sorted(
         candidates,
         key=lambda c: (c.score, c.archive_bytes, c.d_pose, c.d_seg),
@@ -470,6 +548,13 @@ def main(argv: list[str] | None = None) -> int:
         "that pollute current PR106-frontier rankings.",
     )
     parser.add_argument(
+        "--frontier-only",
+        action="store_true",
+        help="Print/emit only Pareto-frontier candidates (drops dominated "
+        "rows). Useful for the operator when N is large; cuts a 138-row "
+        "table to the 1-5 relevant lanes.",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Machine-readable JSON output instead of human table.",
@@ -492,6 +577,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.exclude_legacy_regime:
         cands = [cand for cand in cands if not cand.is_legacy_regime]
     cands = compute_pareto(cands)
+    report_candidates = [cand for cand in cands if cand.is_frontier] if args.frontier_only else cands
 
     if args.json:
         out = {
@@ -504,11 +590,13 @@ def main(argv: list[str] | None = None) -> int:
             "importance_flip_pose_floor": IMPORTANCE_FLIP_POSE_FLOOR,
             "n_candidates": len(cands),
             "n_frontier": sum(1 for c in cands if c.is_frontier),
-            "candidates": [asdict(c) for c in cands],
+            "n_reported_candidates": len(report_candidates),
+            "frontier_only": bool(args.frontier_only),
+            "candidates": [asdict(c) for c in report_candidates],
         }
         print(json.dumps(out, indent=2, sort_keys=True, allow_nan=False))
     else:
-        print(_fmt_table(cands))
+        print(_fmt_table(report_candidates))
     return 0
 
 

@@ -110,6 +110,71 @@ def test_frontier_empty_list() -> None:
     assert mod.compute_pareto([]) == []
 
 
+def test_frontier_single_candidate_is_always_frontier() -> None:
+    """N=1 short-circuit: the lone candidate is trivially Pareto-optimal."""
+    mod = _load_tool_module()
+    cands = [mod.Candidate("solo", d_seg=0.001, d_pose=1e-5, archive_bytes=100)]
+    cands = mod.compute_pareto(cands)
+    assert cands[0].is_frontier
+    assert cands[0].score_rank == 1
+
+
+def test_vectorized_matches_scalar_dominates() -> None:
+    """The numpy-vectorized path must agree with scalar dominates() for
+    every (i, j) pair. Regression: ensures vectorization correctness."""
+    mod = _load_tool_module()
+    # Hand-crafted set covering all axis combos
+    cands = [
+        mod.Candidate("a", d_seg=0.001, d_pose=1e-5, archive_bytes=100),
+        mod.Candidate("b", d_seg=0.002, d_pose=2e-5, archive_bytes=200),
+        mod.Candidate("c", d_seg=0.001, d_pose=1e-5, archive_bytes=200),
+        mod.Candidate("d", d_seg=0.0005, d_pose=5e-5, archive_bytes=300),
+        mod.Candidate("e", d_seg=0.001, d_pose=1e-5, archive_bytes=100),  # dup of a
+    ]
+    n = len(cands)
+    expected_dom_count = [0] * n
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                continue
+            if mod.dominates(cands[j], cands[i]):
+                expected_dom_count[i] += 1
+    cands = mod.compute_pareto(cands)
+    actual = [c.pareto_dominators_count for c in cands]
+    assert actual == expected_dom_count, (
+        f"vectorized != scalar: actual={actual} expected={expected_dom_count}"
+    )
+
+
+def test_nan_input_rejected_by_loader(tmp_path) -> None:
+    """Self-protection: NaN d_seg/d_pose in evidence file → loader returns None.
+    This prevents scorer-divergence artifacts from corrupting the frontier.
+    """
+    mod = _load_tool_module()
+    evidence = tmp_path / "nan.json"
+    evidence.write_text(json.dumps({
+        "auth_eval": {"seg_distortion": float("nan"), "pose_distortion": 1e-5},
+        "archive_bytes": 100,
+    }))
+    assert mod.load_candidate_from_evidence(evidence) is None
+
+
+def test_negative_archive_bytes_rejected(tmp_path) -> None:
+    """Self-protection: archive_bytes <= 0 (corrupted file) → loader returns None."""
+    mod = _load_tool_module()
+    evidence = tmp_path / "bad_bytes.json"
+    evidence.write_text(json.dumps({
+        "auth_eval": {"seg_distortion": 0.001, "pose_distortion": 1e-5},
+        "archive_bytes": 0,
+    }))
+    assert mod.load_candidate_from_evidence(evidence) is None
+    evidence.write_text(json.dumps({
+        "auth_eval": {"seg_distortion": 0.001, "pose_distortion": 1e-5},
+        "archive_bytes": -100,
+    }))
+    assert mod.load_candidate_from_evidence(evidence) is None
+
+
 # ---------------------------------------------------------------------------
 # Score ranking
 # ---------------------------------------------------------------------------
@@ -350,6 +415,56 @@ def test_main_exclude_legacy_regime_filters_old_pose_candidates(
     payload = json.loads(capsys.readouterr().out)
     assert payload["n_candidates"] == 1
     assert payload["candidates"][0]["label"] == "current_lane"
+
+
+def test_main_frontier_only_reports_only_nondominated_candidates(
+    tmp_path: pathlib.Path,
+    capsys,
+) -> None:
+    mod = _load_tool_module()
+    repo_root = tmp_path
+    best = repo_root / "experiments" / "results" / "best_lane" / "auth_eval_result.json"
+    dominated = repo_root / "experiments" / "results" / "dominated_lane" / "auth_eval_result.json"
+    best.parent.mkdir(parents=True)
+    dominated.parent.mkdir(parents=True)
+    best.write_text(
+        json.dumps(
+            {
+                "avg_segnet_dist": 0.001,
+                "avg_posenet_dist": 5e-5,
+                "archive_size_bytes": 200,
+            }
+        ),
+        encoding="utf-8",
+    )
+    dominated.write_text(
+        json.dumps(
+            {
+                "avg_segnet_dist": 0.002,
+                "avg_posenet_dist": 6e-5,
+                "archive_size_bytes": 300,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = mod.main(
+        [
+            "--evidence-globs",
+            str(best),
+            str(dominated),
+            "--frontier-only",
+            "--json",
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["n_candidates"] == 2
+    assert payload["n_frontier"] == 1
+    assert payload["n_reported_candidates"] == 1
+    assert payload["frontier_only"] is True
+    assert payload["candidates"][0]["label"] == "best_lane"
 
 
 # ---------------------------------------------------------------------------
