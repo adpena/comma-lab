@@ -4,10 +4,10 @@
     "strict_pre_submission_compliance_json"
   ],
   "audit_source": {
-    "bytes": 18674,
+    "bytes": 19334,
     "id": "entropy_audit_json",
     "path": "experiments/results/hnerv_hdm3_entropy_packet_20260507_codex/entropy_overhead_audit.json",
-    "sha256": "8a7eb954cbeed539a792bf050793cec6940e3a020355af7354580fe7924a754b"
+    "sha256": "ce5ff3424172cd1832ea642ceb5f1cfb3e3c28f571ccd7e83abb70a4d05315b0"
   },
   "audit_source_kind": "entropy_codec_gap_audit",
   "audit_summary": {
@@ -19,10 +19,10 @@
   },
   "available_inputs": [
     {
-      "bytes": 18674,
+      "bytes": 19334,
       "id": "entropy_audit_json",
       "path": "experiments/results/hnerv_hdm3_entropy_packet_20260507_codex/entropy_overhead_audit.json",
-      "sha256": "8a7eb954cbeed539a792bf050793cec6940e3a020355af7354580fe7924a754b"
+      "sha256": "ce5ff3424172cd1832ea642ceb5f1cfb3e3c28f571ccd7e83abb70a4d05315b0"
     },
     {
       "bytes": 1201,
@@ -84,6 +84,8 @@
     "missing_artifact:candidate_archive_manifest_with_member_sha256s",
     "missing_artifact:strict_pre_submission_compliance_json",
     "missing_artifact:meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions",
+    "missing_artifact:hdc2_runtime_decoder_contract_with_inflate_consumer",
+    "missing_artifact:hdc2_archive_candidate_manifest_with_decoder_stream_consumed",
     "missing_artifact:runtime_tree_parity_manifest",
     "missing_candidate_archive_manifest",
     "missing_runtime_tree_parity_manifest",
@@ -99,6 +101,8 @@
     "candidate_archive_manifest_with_member_sha256s",
     "strict_pre_submission_compliance_json",
     "meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions",
+    "hdc2_runtime_decoder_contract_with_inflate_consumer",
+    "hdc2_archive_candidate_manifest_with_decoder_stream_consumed",
     "runtime_tree_parity_manifest"
   ],
   "packet_requirements": [
@@ -277,6 +281,30 @@
     {
       "available": false,
       "bytes": null,
+      "id": "hdc2_runtime_decoder_contract_with_inflate_consumer",
+      "missing_reason": "not_provided",
+      "path": "",
+      "provided": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requirement_group": "target_specific",
+      "score_claim": false,
+      "sha256": null
+    },
+    {
+      "available": false,
+      "bytes": null,
+      "id": "hdc2_archive_candidate_manifest_with_decoder_stream_consumed",
+      "missing_reason": "not_provided",
+      "path": "",
+      "provided": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requirement_group": "target_specific",
+      "score_claim": false,
+      "sha256": null
+    },
+    {
+      "available": false,
+      "bytes": null,
       "id": "runtime_tree_parity_manifest",
       "missing_reason": "not_provided",
       "path": "",
@@ -292,6 +320,8 @@
     "missing_artifact:candidate_archive_manifest_with_member_sha256s",
     "missing_artifact:strict_pre_submission_compliance_json",
     "missing_artifact:meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions",
+    "missing_artifact:hdc2_runtime_decoder_contract_with_inflate_consumer",
+    "missing_artifact:hdc2_archive_candidate_manifest_with_decoder_stream_consumed",
     "missing_artifact:runtime_tree_parity_manifest",
     "missing_candidate_archive_manifest",
     "missing_runtime_tree_parity_manifest"
@@ -347,7 +377,9 @@
         "roundtrip_decode_validation_manifest",
         "candidate_archive_manifest_with_member_sha256s",
         "strict_pre_submission_compliance_json",
-        "meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions"
+        "meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions",
+        "hdc2_runtime_decoder_contract_with_inflate_consumer",
+        "hdc2_archive_candidate_manifest_with_decoder_stream_consumed"
       ],
       "fail_closed_criteria": [
         "refuse_if_counts_missing_or_nonpositive",
@@ -357,6 +389,10 @@
         "refuse_if_huffman_lengths_not_prefix_floor",
         "refuse_if_aq_floor_used_with_alphabet_size_less_than_two",
         "refuse_if_roundtrip_decode_validation_missing"
+      ],
+      "hdc2_direct_archive_runtime_requirements": [
+        "hdc2_runtime_decoder_contract_with_inflate_consumer",
+        "hdc2_archive_candidate_manifest_with_decoder_stream_consumed"
       ],
       "known_overhead_accounting_complete": true,
       "label": "public_pr106_belt_and_suspenders:hdc2_global_prev_symbol_contexts",
@@ -450,13 +486,13 @@
       "experiments/results/hnerv_hdm3_entropy_packet_20260507_codex/candidate_packet.json",
       "--fail-if-missing"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "9c5054da82c7dc42a750631fdff60aae5d2324e37edfc19890d8b4e1fa34553d",
+    "canonical_payload_without_tool_manifest_sha256": "ebba9ed140abaf5a010468c3fc13c87e467f567c56562d2f7fae604fad64968a",
     "dispatch_attempted": false,
     "input_files": [
       {
-        "bytes": 18674,
+        "bytes": 19334,
         "path": "experiments/results/hnerv_hdm3_entropy_packet_20260507_codex/entropy_overhead_audit.json",
-        "sha256": "8a7eb954cbeed539a792bf050793cec6940e3a020355af7354580fe7924a754b"
+        "sha256": "ce5ff3424172cd1832ea642ceb5f1cfb3e3c28f571ccd7e83abb70a4d05315b0"
       },
       {
         "bytes": 2229,

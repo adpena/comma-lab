@@ -29,6 +29,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--frontier-ranking", type=Path, required=True)
     parser.add_argument("--entropy-audit", type=Path, required=True)
     parser.add_argument("--hdc2-work-product", type=Path, required=True)
+    parser.add_argument("--active-floor-label")
+    parser.add_argument("--active-floor-archive-bytes", type=int)
+    parser.add_argument("--active-floor-archive-sha256")
+    parser.add_argument("--active-floor-score", type=float)
     parser.add_argument("--json-out", type=Path, required=True)
     parser.add_argument("--md-out", type=Path, required=True)
     return parser.parse_args(argv)
@@ -42,6 +46,7 @@ def main(argv: list[str] | None = None) -> int:
             read_json(args.frontier_ranking),
             read_json(args.entropy_audit),
             read_json(args.hdc2_work_product),
+            active_floor=_active_floor_from_args(args),
         )
     except (OSError, Hdc2CombinedEntropyError) as exc:
         print(f"FATAL: HDC2 combined entropy manifest input rejected: {exc}", file=sys.stderr)
@@ -61,6 +66,16 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
+def _active_floor_from_args(args: argparse.Namespace) -> dict[str, object] | None:
+    if args.active_floor_archive_bytes is None:
+        return None
+    return {
+        "label": args.active_floor_label or "",
+        "archive_bytes": args.active_floor_archive_bytes,
+        "archive_sha256": args.active_floor_archive_sha256 or "",
+        "score": args.active_floor_score,
+    }
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
-

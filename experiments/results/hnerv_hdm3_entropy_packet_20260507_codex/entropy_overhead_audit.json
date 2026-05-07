@@ -53,7 +53,9 @@
         "roundtrip_decode_validation_manifest",
         "candidate_archive_manifest_with_member_sha256s",
         "strict_pre_submission_compliance_json",
-        "meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions"
+        "meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions",
+        "hdc2_runtime_decoder_contract_with_inflate_consumer",
+        "hdc2_archive_candidate_manifest_with_decoder_stream_consumed"
       ],
       "fail_closed_criteria": [
         "refuse_if_counts_missing_or_nonpositive",
@@ -63,6 +65,10 @@
         "refuse_if_huffman_lengths_not_prefix_floor",
         "refuse_if_aq_floor_used_with_alphabet_size_less_than_two",
         "refuse_if_roundtrip_decode_validation_missing"
+      ],
+      "hdc2_direct_archive_runtime_requirements": [
+        "hdc2_runtime_decoder_contract_with_inflate_consumer",
+        "hdc2_archive_candidate_manifest_with_decoder_stream_consumed"
       ],
       "known_overhead_accounting_complete": true,
       "label": "public_pr106_belt_and_suspenders:hdc2_global_prev_symbol_contexts",
@@ -165,7 +171,9 @@
         "roundtrip_decode_validation_manifest",
         "candidate_archive_manifest_with_member_sha256s",
         "strict_pre_submission_compliance_json",
-        "meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions"
+        "meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions",
+        "hdc2_runtime_decoder_contract_with_inflate_consumer",
+        "hdc2_archive_candidate_manifest_with_decoder_stream_consumed"
       ],
       "fail_closed_criteria": [
         "refuse_if_counts_missing_or_nonpositive",
@@ -175,6 +183,10 @@
         "refuse_if_huffman_lengths_not_prefix_floor",
         "refuse_if_aq_floor_used_with_alphabet_size_less_than_two",
         "refuse_if_roundtrip_decode_validation_missing"
+      ],
+      "hdc2_direct_archive_runtime_requirements": [
+        "hdc2_runtime_decoder_contract_with_inflate_consumer",
+        "hdc2_archive_candidate_manifest_with_decoder_stream_consumed"
       ],
       "known_overhead_accounting_complete": true,
       "label": "public_pr106_belt_and_suspenders:hdc2_global_prev_symbol_contexts",
@@ -379,7 +391,7 @@
       "experiments/results/hnerv_hdm3_entropy_packet_20260507_codex/candidate_packet.json",
       "--fail-if-missing"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "4fc5eb1f90885e756e171a12dd1396d8bfdf63d88395fac30cfa77ba58d282ca",
+    "canonical_payload_without_tool_manifest_sha256": "329898f311bc94db935089450a42b659698e6b3d99147a7be0a177cc58a5e467",
     "dispatch_attempted": false,
     "input_files": [
       {

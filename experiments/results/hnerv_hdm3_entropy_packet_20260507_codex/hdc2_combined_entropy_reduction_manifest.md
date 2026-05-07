@@ -39,6 +39,22 @@
 - archive_build_gate: `true`
 - archive_build_gate_rule: `candidate_stream_bytes_must_be_less_than_current_frontier_section_bytes_and_raw_equality_closed`
 
+## Active Archive Floor Gate
+
+- active_floor_label: `pr103_on_pr106_a++`
+- active_floor_archive_bytes: `185578`
+- direct_hdc2_projected_archive_bytes: `237334`
+- best_bounded_candidate_projected_archive_bytes: `186066`
+- best_bounded_candidate_byte_delta_vs_active_floor: `488`
+- best_bounded_candidate_below_active_floor: `false`
+- blockers: `not_below_active_archive_floor:185578, requires_candidate_archive_below_active_floor_before_exact_eval`
+
+## HDC2 Direct Runtime/Archive Gate
+
+- status: `fail_closed`
+- projected_archive_bytes_if_direct_hdc2_replaced_section: `237334`
+- missing_artifacts: `hdc2_runtime_decoder_contract_with_inflate_consumer, hdc2_archive_candidate_manifest_with_decoder_stream_consumed`
+
 ## Stream Evidence
 
 - roundtrip_valid: `true`

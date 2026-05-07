@@ -228,6 +228,8 @@
   "ready_for_archive_preflight": false,
   "ready_for_exact_eval_dispatch": false,
   "remaining_blockers": [
+    "hdc2_runtime_decoder_contract_with_inflate_consumer_missing",
+    "hdc2_archive_candidate_manifest_with_decoder_stream_consumed_missing",
     "candidate_archive_manifest_missing",
     "strict_pre_submission_compliance_json_missing",
     "meta_lagrangian_atom_export_missing",

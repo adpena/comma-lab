@@ -243,3 +243,104 @@ def test_hdc2_combined_entropy_manifest_selects_hdm3_when_byte_gate_closes() -> 
     assert accounting["net_byte_delta_after_best_bounded_candidate"] == -4127
     assert break_even["archive_build_gate"] is True
     assert break_even["archive_build_gate_blockers"] == []
+
+
+def test_hdc2_combined_entropy_manifest_blocks_candidates_above_active_floor() -> None:
+    manifest = build_hdc2_combined_entropy_manifest(
+        {
+            "current_frontier": {
+                "archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+                "archive_bytes": 186080,
+                "score": 0.20935073680571203,
+            },
+            "next_entropy_research_action": {
+                "target_label": "public_pr106_belt_and_suspenders:hdc2_global_prev_symbol_contexts",
+                "target_section": "decoder_packed_brotli",
+            },
+            "combined_entropy_gap_groups": [
+                {
+                    "target_label": "public_pr106_belt_and_suspenders:hdc2_global_prev_symbol_contexts",
+                    "frontier_section": "decoder_packed_brotli",
+                    "frontier_section_bytes": 170127,
+                    "actual_replacement_bytes": 221381,
+                }
+            ],
+        },
+        {
+            "entropy_overhead_target_ranking": [
+                {
+                    "label": "public_pr106_belt_and_suspenders:hdc2_global_prev_symbol_contexts",
+                    "target_kind": "known_model_overhead",
+                    "target_bytes": 40840,
+                },
+                {
+                    "label": "public_pr106_belt_and_suspenders:hdc2_global_prev_symbol_contexts",
+                    "target_kind": "known_payload_entropy_gap",
+                    "target_bytes": 23979,
+                },
+            ]
+        },
+        {
+            "source_stream_section_manifest": {
+                "stream": {
+                    "sha256": "b" * 64,
+                    "decoded_raw_sha256": "c" * 64,
+                }
+            },
+            "roundtrip_decode_validation_manifest": {
+                "roundtrip_valid": True,
+                "raw_equal": True,
+                "q_roundtrip_equal": True,
+                "scale_roundtrip_equal": True,
+                "candidate_stream_sha256": "d" * 64,
+                "candidate_stream_bytes": 221381,
+            },
+            "decoded_output_equivalence_report": {
+                "decoded_output_equal": True,
+                "old_new_sha256_equal": True,
+            },
+            "bounded_hdc2_recode_variants": [
+                {
+                    "variant": "hdm3_q_brotli_split_fixed_schema_q_stream_plus_raw_scales",
+                    "codec": "HDM3_fixed_schema_q_brotli_raw_scales",
+                    "bytes": 170113,
+                    "raw_equal": True,
+                    "q_roundtrip_equal": True,
+                    "scale_roundtrip_equal": True,
+                    "archive_ready": False,
+                    "header_bytes": 7,
+                    "q_brotli_bytes": 169994,
+                    "q_stream_bytes": 228958,
+                    "raw_scale_bytes": 112,
+                    "brotli_quality": 11,
+                },
+            ],
+        },
+        active_floor={
+            "label": "pr103_on_pr106_a++",
+            "archive_bytes": 185578,
+            "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+            "score": 0.2089810755823297,
+        },
+    )
+
+    gate = manifest["active_floor_gate"]
+    hdc2_gate = manifest["hdc2_direct_archive_runtime_gate"]
+    assert manifest["ready_for_archive_preflight"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert "best_bounded_candidate_not_below_active_archive_floor" in manifest["blockers"]
+    assert gate["active_floor_archive_bytes"] == 185578
+    assert gate["direct_hdc2_projected_archive_bytes"] == 237334
+    assert gate["direct_hdc2_byte_delta_vs_active_floor"] == 51756
+    assert gate["best_bounded_candidate_projected_archive_bytes"] == 186066
+    assert gate["best_bounded_candidate_byte_delta_vs_active_floor"] == 488
+    assert gate["best_bounded_candidate_below_active_floor"] is False
+    assert gate["blockers"] == [
+        "not_below_active_archive_floor:185578",
+        "requires_candidate_archive_below_active_floor_before_exact_eval",
+    ]
+    assert hdc2_gate["status"] == "fail_closed"
+    assert hdc2_gate["missing_artifacts"] == [
+        "hdc2_runtime_decoder_contract_with_inflate_consumer",
+        "hdc2_archive_candidate_manifest_with_decoder_stream_consumed",
+    ]

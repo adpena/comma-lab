@@ -8,6 +8,10 @@ from typing import Any
 SCHEMA_VERSION = 1
 TOOL_NAME = "tac.hnerv_hdc2_combined_entropy"
 RATE_SCORE_PER_BYTE = 25.0 / 37_545_489
+HDC2_DIRECT_ARCHIVE_RUNTIME_REQUIREMENTS = [
+    "hdc2_runtime_decoder_contract_with_inflate_consumer",
+    "hdc2_archive_candidate_manifest_with_decoder_stream_consumed",
+]
 
 
 class Hdc2CombinedEntropyError(ValueError):
@@ -18,6 +22,8 @@ def build_hdc2_combined_entropy_manifest(
     frontier_ranking: Mapping[str, Any],
     entropy_audit: Mapping[str, Any],
     hdc2_work_product: Mapping[str, Any],
+    *,
+    active_floor: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a fail-closed byte-accounted plan for the HDC2 section recode."""
 
@@ -54,6 +60,7 @@ def build_hdc2_combined_entropy_manifest(
 
     frontier_section_bytes = _positive_int(group.get("frontier_section_bytes"), "frontier_section_bytes")
     actual_replacement_bytes = _positive_int(group.get("actual_replacement_bytes"), "actual_replacement_bytes")
+    frontier_archive_bytes = _positive_int(frontier.get("archive_bytes"), "frontier_archive_bytes")
     model_overhead_bytes = _positive_int(model_target.get("target_bytes"), "model_overhead_target_bytes")
     payload_gap_bytes = _positive_int(payload_target.get("target_bytes"), "payload_gap_target_bytes")
     known_target_bytes = model_overhead_bytes + payload_gap_bytes
@@ -142,6 +149,17 @@ def build_hdc2_combined_entropy_manifest(
         )
     else:
         bounded_break_even = None
+    active_floor_gate = _active_floor_gate(
+        active_floor,
+        frontier_archive_bytes=frontier_archive_bytes,
+        direct_hdc2_archive_delta=actual_replacement_bytes - frontier_section_bytes,
+        bounded_candidate=bounded_candidate,
+    )
+    if (
+        isinstance(active_floor_gate, Mapping)
+        and active_floor_gate.get("best_bounded_candidate_below_active_floor") is False
+    ):
+        blockers.append("best_bounded_candidate_not_below_active_archive_floor")
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -154,6 +172,7 @@ def build_hdc2_combined_entropy_manifest(
         "ready_for_exact_eval_dispatch": False,
         "dispatch_blockers": [
             "combined_entropy_manifest_is_planning_only",
+            "hdc2_direct_archive_runtime_contract_missing",
             "requires_actual_decoder_runtime_implementation",
             "requires_candidate_archive_manifest",
             "requires_strict_pre_submission_compliance",
@@ -165,7 +184,7 @@ def build_hdc2_combined_entropy_manifest(
             "label": target_label,
             "section": target_section,
             "frontier_archive_sha256": frontier.get("archive_sha256"),
-            "frontier_archive_bytes": frontier.get("archive_bytes"),
+            "frontier_archive_bytes": frontier_archive_bytes,
             "frontier_score": frontier.get("score"),
             "frontier_section_bytes": frontier_section_bytes,
             "source_stream_sha256": source_stream.get("sha256"),
@@ -174,6 +193,24 @@ def build_hdc2_combined_entropy_manifest(
         "byte_accounting": byte_accounting,
         "bounded_candidate": bounded_candidate,
         "bounded_candidate_break_even_plan": bounded_break_even,
+        "active_floor_gate": active_floor_gate,
+        "hdc2_direct_archive_runtime_gate": {
+            "status": "fail_closed",
+            "score_claim": False,
+            "dispatch_attempted": False,
+            "ready_for_archive_preflight": False,
+            "ready_for_exact_eval_dispatch": False,
+            "candidate_variant": "range_prev_symbol_global_q_streams_plus_raw_scales",
+            "candidate_stream_bytes": actual_replacement_bytes,
+            "projected_archive_bytes_if_direct_hdc2_replaced_section": (
+                frontier_archive_bytes + actual_replacement_bytes - frontier_section_bytes
+            ),
+            "missing_artifacts": list(HDC2_DIRECT_ARCHIVE_RUNTIME_REQUIREMENTS),
+            "blockers": [
+                "hdc2_runtime_decoder_contract_with_inflate_consumer_missing",
+                "hdc2_archive_candidate_manifest_with_decoder_stream_consumed_missing",
+            ],
+        },
         "closed_stream_evidence": {
             "roundtrip_valid": roundtrip.get("roundtrip_valid") is True,
             "raw_equal": roundtrip.get("raw_equal") is True,
@@ -187,6 +224,7 @@ def build_hdc2_combined_entropy_manifest(
         "next_required_artifacts": [
             "actual_static_model_context_elision_or_shared_codebook_implementation",
             "actual_payload_entropy_gap_reduction_implementation",
+            *HDC2_DIRECT_ARCHIVE_RUNTIME_REQUIREMENTS,
             "candidate_archive_manifest_with_member_sha256s",
             "runtime_tree_parity_manifest",
             "strict_pre_submission_compliance_json",
@@ -256,6 +294,34 @@ def render_markdown(manifest: Mapping[str, Any]) -> str:
                     "",
                 ]
             )
+    active_floor = manifest.get("active_floor_gate")
+    if isinstance(active_floor, Mapping):
+        lines.extend(
+            [
+                "## Active Archive Floor Gate",
+                "",
+                f"- active_floor_label: `{active_floor.get('active_floor_label')}`",
+                f"- active_floor_archive_bytes: `{active_floor.get('active_floor_archive_bytes')}`",
+                f"- direct_hdc2_projected_archive_bytes: `{active_floor.get('direct_hdc2_projected_archive_bytes')}`",
+                f"- best_bounded_candidate_projected_archive_bytes: `{active_floor.get('best_bounded_candidate_projected_archive_bytes')}`",
+                f"- best_bounded_candidate_byte_delta_vs_active_floor: `{active_floor.get('best_bounded_candidate_byte_delta_vs_active_floor')}`",
+                f"- best_bounded_candidate_below_active_floor: `{_bool_text(active_floor.get('best_bounded_candidate_below_active_floor') is True)}`",
+                f"- blockers: `{', '.join(str(item) for item in active_floor.get('blockers') or [])}`",
+                "",
+            ]
+        )
+    hdc2_runtime_gate = manifest.get("hdc2_direct_archive_runtime_gate")
+    if isinstance(hdc2_runtime_gate, Mapping):
+        lines.extend(
+            [
+                "## HDC2 Direct Runtime/Archive Gate",
+                "",
+                f"- status: `{hdc2_runtime_gate.get('status')}`",
+                f"- projected_archive_bytes_if_direct_hdc2_replaced_section: `{hdc2_runtime_gate.get('projected_archive_bytes_if_direct_hdc2_replaced_section')}`",
+                f"- missing_artifacts: `{', '.join(str(item) for item in hdc2_runtime_gate.get('missing_artifacts') or [])}`",
+                "",
+            ]
+        )
     lines.extend(
         [
             "## Stream Evidence",
@@ -377,6 +443,59 @@ def _best_bounded_candidate(
     return min(candidates, key=lambda row: (int(row["bytes"]), str(row["variant"])))
 
 
+def _active_floor_gate(
+    active_floor: Mapping[str, Any] | None,
+    *,
+    frontier_archive_bytes: int,
+    direct_hdc2_archive_delta: int,
+    bounded_candidate: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    if active_floor is None:
+        return None
+    floor_bytes = _positive_int(active_floor.get("archive_bytes"), "active_floor.archive_bytes")
+    floor_label = str(active_floor.get("label") or "")
+    direct_archive_bytes = frontier_archive_bytes + direct_hdc2_archive_delta
+    gate: dict[str, Any] = {
+        "schema": "hnerv_hdc2_active_archive_floor_gate_v1",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "active_floor_label": floor_label,
+        "active_floor_archive_bytes": floor_bytes,
+        "active_floor_archive_sha256": active_floor.get("archive_sha256"),
+        "active_floor_score": active_floor.get("score"),
+        "source_frontier_archive_bytes": frontier_archive_bytes,
+        "direct_hdc2_projected_archive_bytes": direct_archive_bytes,
+        "direct_hdc2_byte_delta_vs_active_floor": direct_archive_bytes - floor_bytes,
+        "best_bounded_candidate_projected_archive_bytes": None,
+        "best_bounded_candidate_byte_delta_vs_active_floor": None,
+        "best_bounded_candidate_below_active_floor": False,
+        "blockers": [],
+    }
+    if bounded_candidate is not None:
+        net_delta = _optional_int(
+            bounded_candidate.get("net_byte_delta_vs_frontier_section"),
+            "net_byte_delta_vs_frontier_section",
+        )
+        if net_delta is not None:
+            projected = frontier_archive_bytes + net_delta
+            delta_vs_floor = projected - floor_bytes
+            gate.update(
+                {
+                    "best_bounded_candidate_variant": bounded_candidate.get("variant"),
+                    "best_bounded_candidate_projected_archive_bytes": projected,
+                    "best_bounded_candidate_byte_delta_vs_active_floor": delta_vs_floor,
+                    "best_bounded_candidate_below_active_floor": delta_vs_floor < 0,
+                }
+            )
+    if gate["best_bounded_candidate_below_active_floor"] is not True:
+        gate["blockers"] = [
+            f"not_below_active_archive_floor:{floor_bytes}",
+            "requires_candidate_archive_below_active_floor_before_exact_eval",
+        ]
+    return gate
+
+
 def _matching_combined_group(
     frontier_ranking: Mapping[str, Any],
     target_label: str,
@@ -437,6 +556,14 @@ def _optional_nonnegative_int(value: Any, label: str) -> int | None:
         return None
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise Hdc2CombinedEntropyError(f"{label} must be a nonnegative integer")
+    return value
+
+
+def _optional_int(value: Any, label: str) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise Hdc2CombinedEntropyError(f"{label} must be an integer")
     return value
 
 

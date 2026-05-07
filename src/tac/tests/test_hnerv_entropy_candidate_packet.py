@@ -19,6 +19,9 @@ from tac.hnerv_decoder_recode import (
 from tac.hnerv_entropy_candidate_packet import (
     CANDIDATE_STREAM_REQUIREMENT_ID,
     DECODED_OUTPUT_EQUIVALENCE_REQUIREMENT_ID,
+    HDC2_ARCHIVE_CANDIDATE_CONTRACT_REQUIREMENT_ID,
+    HDC2_DIRECT_ARCHIVE_RUNTIME_REQUIREMENTS,
+    HDC2_RUNTIME_DECODER_CONTRACT_REQUIREMENT_ID,
     HDC2_STREAM_ARTIFACT_REQUIREMENTS,
     ROUNDTRIP_REQUIREMENT_ID,
     SOURCE_ARCHIVE_REQUIREMENT_ID,
@@ -148,6 +151,10 @@ def test_hdc2_stream_work_product_closes_stream_requirements_but_not_archive(
     ] > 0
     assert work_product["old_new_model_context_table_diff"]["raw_equal"] is True
     assert work_product["old_new_model_context_table_diff"]["header_bytes_delta"] < 0
+    assert work_product["remaining_blockers"][:2] == [
+        "hdc2_runtime_decoder_contract_with_inflate_consumer_missing",
+        "hdc2_archive_candidate_manifest_with_decoder_stream_consumed_missing",
+    ]
     bounded = work_product["bounded_hdc2_recode_variants"]
     assert len(bounded) == 2
     hdm2 = next(
@@ -191,6 +198,16 @@ def test_hdc2_stream_work_product_closes_stream_requirements_but_not_archive(
     assert "old_new_model_context_table_diff" not in manifest["missing_artifacts"]
     assert "candidate_archive_manifest_with_member_sha256s" in manifest["missing_artifacts"]
     assert "runtime_tree_parity_manifest" in manifest["missing_artifacts"]
+    assert HDC2_RUNTIME_DECODER_CONTRACT_REQUIREMENT_ID in manifest["missing_artifacts"]
+    assert HDC2_ARCHIVE_CANDIDATE_CONTRACT_REQUIREMENT_ID in manifest["missing_artifacts"]
+    assert (
+        f"missing_artifact:{HDC2_RUNTIME_DECODER_CONTRACT_REQUIREMENT_ID}"
+        in manifest["readiness_blockers"]
+    )
+    assert (
+        f"missing_artifact:{HDC2_ARCHIVE_CANDIDATE_CONTRACT_REQUIREMENT_ID}"
+        in manifest["readiness_blockers"]
+    )
     assert "missing_candidate_archive_manifest" in manifest["readiness_blockers"]
     assert "missing_runtime_tree_parity_manifest" in manifest["readiness_blockers"]
     assert manifest["ready_for_local_packet_review"] is False
@@ -242,6 +259,9 @@ def test_candidate_packet_can_adapt_hnerv_structural_recode_profile(tmp_path: Pa
     assert manifest["selected_target"]["rank"] == 1
     assert manifest["selected_target"]["target_kind"] == "known_model_overhead"
     assert manifest["selected_target"]["target_bytes"] == 40
+    assert set(HDC2_DIRECT_ARCHIVE_RUNTIME_REQUIREMENTS).issubset(
+        set(manifest["selected_target"]["row"]["exact_next_artifact_requirements"])
+    )
     assert manifest["selected_target"]["row"]["source_variant"]["variant"] == (
         "range_prev_symbol_global_q_streams_plus_raw_scales"
     )
@@ -480,6 +500,8 @@ def test_build_hnerv_entropy_candidate_packet_cli_materializes_hdc2_stream_work_
     ]
     assert "old_new_model_context_table_diff" not in packet["missing_artifacts"]
     assert "candidate_archive_manifest_with_member_sha256s" in packet["missing_artifacts"]
+    assert HDC2_RUNTIME_DECODER_CONTRACT_REQUIREMENT_ID in packet["missing_artifacts"]
+    assert HDC2_ARCHIVE_CANDIDATE_CONTRACT_REQUIREMENT_ID in packet["missing_artifacts"]
     assert packet["ready_for_exact_eval_dispatch"] is False
 
 
@@ -588,6 +610,9 @@ def test_build_hnerv_entropy_candidate_packet_cli_materializes_adapted_audit(
     assert audit["tool"] == "tac.hnerv_entropy_candidate_packet.hnerv_profile_entropy_overhead_adapter"
     assert audit["audit_source_kind"] == "hnerv_structural_recode_profile_adapted_entropy_overhead_audit"
     assert audit["entropy_overhead_target_ranking"][0]["target_kind"] == "known_model_overhead"
+    assert set(HDC2_DIRECT_ARCHIVE_RUNTIME_REQUIREMENTS).issubset(
+        set(audit["entropy_overhead_target_ranking"][0]["exact_next_artifact_requirements"])
+    )
     assert audit["ready_for_exact_eval_dispatch"] is False
     assert packet["audit_source_kind"] == "entropy_codec_gap_audit"
     assert packet["audit_source"]["path"].endswith("entropy_audit.json")
