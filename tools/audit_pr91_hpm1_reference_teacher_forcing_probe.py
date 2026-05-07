@@ -21,6 +21,7 @@ from tac.pr91_hpm1_codec import (  # noqa: E402
     DEFAULT_PR91_ARCHIVE,
     DEFAULT_PR91_HPM1_RANGE_PREFIX_MAX_TARGET_DECODED_BEFORE,
     DEFAULT_PR91_HPM1_RANGE_PREFIX_REPLAY_SYMBOL_LIMIT,
+    DEFAULT_PR91_HPM1_RANGE_PREFIX_SEED_SYMBOLS,
     DEFAULT_PR91_HPM1_RANGE_PREFIX_WINDOW_SYMBOLS,
     run_pr91_hpm1_reference_teacher_forcing_probe,
 )
@@ -89,6 +90,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--range-prefix-seed-symbol-counts",
+        default=",".join(str(value) for value in DEFAULT_PR91_HPM1_RANGE_PREFIX_SEED_SYMBOLS),
+        help=(
+            "Comma-separated positive early prefix lengths to compare before "
+            "deep failure-window checkpoints."
+        ),
+    )
+    parser.add_argument(
         "--range-prefix-replay-symbol-limit",
         type=int,
         default=DEFAULT_PR91_HPM1_RANGE_PREFIX_REPLAY_SYMBOL_LIMIT,
@@ -152,6 +161,10 @@ def main(argv: list[str] | None = None) -> int:
         range_prefix_window_symbols=_parse_positive_int_csv(
             args.range_prefix_window_symbols,
             option="--range-prefix-window-symbols",
+        ),
+        range_prefix_seed_symbol_counts=_parse_positive_int_csv(
+            args.range_prefix_seed_symbol_counts,
+            option="--range-prefix-seed-symbol-counts",
         ),
         range_prefix_replay_symbol_limit=args.range_prefix_replay_symbol_limit,
         range_prefix_max_target_decoded_before=(

@@ -156,6 +156,7 @@ PR91_HPM1_SOURCE_FAILURE_GROUP = 10
 PR91_HPM1_SOURCE_FAILURE_SYMBOL_IN_GROUP = 191
 PR91_HPM1_SOURCE_FAILURE_DECODED_BEFORE = 5951
 DEFAULT_PR91_HPM1_RANGE_PREFIX_WINDOW_SYMBOLS = (1024, 256, 64, 16, 1)
+DEFAULT_PR91_HPM1_RANGE_PREFIX_SEED_SYMBOLS = (1, 2, 4, 8, 16, 32, 64, 128)
 DEFAULT_PR91_HPM1_RANGE_PREFIX_REPLAY_SYMBOL_LIMIT = 2048
 DEFAULT_PR91_HPM1_RANGE_PREFIX_MAX_TARGET_DECODED_BEFORE = 4096
 
@@ -1262,6 +1263,7 @@ def _prefix_checkpoint_symbol_counts(
     target_group_start: int,
     total_collected_symbols: int,
     range_prefix_window_symbols: tuple[int, ...],
+    range_prefix_seed_symbol_counts: tuple[int, ...],
 ) -> list[dict[str, Any]]:
     """Build deterministic prefix checkpoints around one failed range row."""
 
@@ -1279,6 +1281,8 @@ def _prefix_checkpoint_symbol_counts(
         int(target_decoded_before): "before_failure_row",
         int(target_decoded_before) + 1: "including_failure_row",
     }
+    for count in sorted({int(value) for value in range_prefix_seed_symbol_counts if int(value) > 0}):
+        labels.setdefault(count, f"first_{count}_symbols")
     for window in windows:
         count = max(0, int(target_decoded_before) - window)
         labels.setdefault(count, f"failure_minus_{window}_symbols")
@@ -1314,6 +1318,20 @@ def _validate_range_prefix_window_symbols(
             bad_values=bad,
         )
     return windows
+
+
+def _validate_range_prefix_seed_symbol_counts(
+    range_prefix_seed_symbol_counts: tuple[int, ...] | list[int],
+) -> tuple[int, ...]:
+    seed_counts = tuple(int(value) for value in range_prefix_seed_symbol_counts)
+    bad = [int(value) for value in seed_counts if int(value) <= 0]
+    if bad:
+        raise Pr91Hpm1Error(
+            "hpm1_range_state_prefix_probe",
+            "range_prefix_seed_symbol_counts_must_be_positive",
+            bad_values=bad,
+        )
+    return seed_counts
 
 
 def _replay_prefix_against_words(
@@ -1511,6 +1529,86 @@ def _build_range_prefix_checkpoint_report(
     }
 
 
+def _classify_range_prefix_reconstruction(
+    checkpoint_reports: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Summarize local prefix re-encode evidence without promoting parity."""
+
+    first_reference_failure: dict[str, Any] | None = None
+    first_word_mismatch: dict[str, Any] | None = None
+    attempted_nonempty = 0
+    for checkpoint in sorted(
+        checkpoint_reports,
+        key=lambda row: int(row.get("symbol_count", 0)),
+    ):
+        symbol_count = int(checkpoint.get("symbol_count", 0))
+        if symbol_count <= 0:
+            continue
+        full_replay = checkpoint.get("submitted_full_stream_prefix_replay", {})
+        if isinstance(full_replay, Mapping) and full_replay.get("status") != "not_attempted_symbol_limit":
+            attempted_nonempty += 1
+            if full_replay.get("passed") is not True and first_reference_failure is None:
+                first_reference_failure = {
+                    "checkpoint_label": checkpoint.get("label"),
+                    "symbol_count": symbol_count,
+                    "status": full_replay.get("status"),
+                    "decoded_symbol_count": full_replay.get("decoded_symbol_count"),
+                    "first_mismatch": full_replay.get("first_mismatch"),
+                }
+        word_comparison = checkpoint.get("submitted_word_comparison", {})
+        if (
+            isinstance(word_comparison, Mapping)
+            and word_comparison.get("same_word_count_prefix_matches") is False
+            and first_word_mismatch is None
+        ):
+            first_word_mismatch = {
+                "checkpoint_label": checkpoint.get("label"),
+                "symbol_count": symbol_count,
+                "common_prefix_word_count": word_comparison.get("common_prefix_word_count"),
+                "local_word_count": word_comparison.get("local_word_count"),
+                "submitted_total_word_count": word_comparison.get("submitted_total_word_count"),
+            }
+
+    if first_reference_failure is not None:
+        status = "submitted_stream_reference_symbol_mismatch_in_seed_prefix"
+        next_patch = (
+            "recover true PR91 encoder semantic tokens or a bridge from the "
+            "phase-major PR85/QMA9 context prior to submitted PR91 symbols"
+        )
+    elif first_word_mismatch is not None:
+        status = "local_reference_prefix_words_diverge_from_submitted_stream"
+        next_patch = (
+            "recover encoder-side range construction/finalization or probability "
+            "numeric grammar before asserting byte-exact reencode"
+        )
+    elif attempted_nonempty:
+        status = "attempted_seed_prefixes_did_not_find_reference_mismatch"
+        next_patch = (
+            "extend bounded seed-prefix replay or recover full encoder trace"
+        )
+    else:
+        status = "no_nonempty_seed_prefix_replay_attempted"
+        next_patch = "raise range_prefix_replay_symbol_limit for local forensic replay"
+
+    return {
+        "schema": "pr91_hpm1_range_prefix_reconstruction_classification_v1",
+        "status": status,
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "full_decode_proven": False,
+        "byte_exact_reencode_proven": False,
+        "attempted_nonempty_prefix_replays": attempted_nonempty,
+        "first_submitted_reference_prefix_failure": first_reference_failure,
+        "first_local_reference_word_mismatch": first_word_mismatch,
+        "next_patch_target": next_patch,
+        "scope_note": (
+            "Seed-prefix checks are local CPU byte-grammar diagnostics only; "
+            "they do not prove full HPM1 decode, byte-exact reencode, score "
+            "validity, or dispatch readiness."
+        ),
+    }
+
+
 def _hash_probability_row_sequences(
     raw_rows: list[np.ndarray],
     normalized_rows: list[np.ndarray],
@@ -1578,6 +1676,7 @@ def _trace_hpm1_reference_forced_range_state_prefix_probe(
     spatial_order_candidate: str,
     target_failure: Mapping[str, Any],
     range_prefix_window_symbols: tuple[int, ...],
+    range_prefix_seed_symbol_counts: tuple[int, ...],
     replay_symbol_limit: int,
 ) -> dict[str, Any]:
     """Probe probability-row and range-prefix state before one failed row."""
@@ -1813,6 +1912,7 @@ def _trace_hpm1_reference_forced_range_state_prefix_probe(
         target_group_start=target_group_start,
         total_collected_symbols=len(reference_symbols),
         range_prefix_window_symbols=range_prefix_window_symbols,
+        range_prefix_seed_symbol_counts=range_prefix_seed_symbol_counts,
     )
     checkpoint_reports = [
         _build_range_prefix_checkpoint_report(
@@ -1872,8 +1972,16 @@ def _trace_hpm1_reference_forced_range_state_prefix_probe(
                 for value in range_prefix_window_symbols
                 if int(value) > 0
             ],
+            "seed_symbol_counts": [
+                int(value)
+                for value in range_prefix_seed_symbol_counts
+                if int(value) > 0
+            ],
             "checkpoint_symbol_counts": checkpoints,
             "checkpoint_results": checkpoint_reports,
+            "classification": _classify_range_prefix_reconstruction(
+                checkpoint_reports
+            ),
         },
         "failure": failure_report,
         "scope_note": (
@@ -2669,6 +2777,95 @@ def _classify_reference_teacher_forcing_hypotheses(
             "true_pr91_encoder_semantic_tokens_not_recovered",
             "range_coder_full_stream_contract_not_recovered",
         ],
+    }
+
+
+def _summarize_reference_teacher_forcing_candidate_progress(
+    candidate_results: list[dict[str, Any]],
+    *,
+    source_decoded_before: int,
+) -> dict[str, Any]:
+    """Contrast decoded-context and reference-forced progress by candidate."""
+
+    rows: list[dict[str, Any]] = []
+    advancing: list[str] = []
+    regressing: list[str] = []
+    for row in candidate_results:
+        candidate = str(row.get("candidate", ""))
+        decoded_context = row.get("decoded_context", {})
+        reference_context = row.get("reference_teacher_forced_context", {})
+        if not isinstance(decoded_context, Mapping) or not isinstance(
+            reference_context,
+            Mapping,
+        ):
+            continue
+        decoded_before = int(
+            decoded_context.get("decoded_symbols_or_before_failure") or 0
+        )
+        reference_before = int(
+            reference_context.get("decoded_symbols_or_before_failure") or 0
+        )
+        delta_vs_decoded = reference_before - decoded_before
+        delta_vs_source = reference_before - int(source_decoded_before)
+        if delta_vs_decoded > 0:
+            progress_status = "reference_forcing_advances_candidate"
+            advancing.append(candidate)
+        elif delta_vs_decoded < 0:
+            progress_status = "reference_forcing_regresses_candidate"
+            regressing.append(candidate)
+        else:
+            progress_status = "reference_forcing_same_prefix_as_decoded_context"
+        rows.append(
+            {
+                "candidate": candidate,
+                "status": progress_status,
+                "decoded_context_symbols_before_failure": decoded_before,
+                "reference_forced_symbols_before_failure": reference_before,
+                "delta_reference_vs_decoded": int(delta_vs_decoded),
+                "delta_reference_vs_source": int(delta_vs_source),
+                "decoded_context_failure_signature": decoded_context.get(
+                    "failure_signature"
+                ),
+                "reference_forced_failure_signature": reference_context.get(
+                    "failure_signature"
+                ),
+                "first_decoded_reference_mismatch": reference_context.get(
+                    "first_decoded_reference_mismatch"
+                ),
+            }
+        )
+
+    if advancing:
+        status = "phase_major_reference_forcing_remains_live_if_present"
+        next_patch = (
+            "prioritize the advancing candidate; do not use regressing "
+            "teacher-forced rows as byte-reencode evidence"
+        )
+    elif regressing:
+        status = "reference_forcing_only_regresses_requested_candidates"
+        next_patch = (
+            "leave this reference context path fail-closed and recover true "
+            "PR91 encoder grammar"
+        )
+    else:
+        status = "reference_forcing_candidate_progress_inconclusive"
+        next_patch = "add narrower candidate rows or true PR91 encoder-token evidence"
+
+    return {
+        "schema": "pr91_hpm1_reference_teacher_forcing_candidate_progress_v1",
+        "status": status,
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "source_decoded_symbols_or_before_failure": int(source_decoded_before),
+        "advancing_candidates": advancing,
+        "regressing_candidates": regressing,
+        "candidate_rows": rows,
+        "next_patch_target": next_patch,
+        "scope_note": (
+            "This is a local CPU candidate-progress diagnostic only. It does "
+            "not prove full decode, byte-exact reencode, score validity, or "
+            "dispatch readiness."
+        ),
     }
 
 
@@ -3660,6 +3857,9 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
     range_prefix_window_symbols: tuple[int, ...] | list[int] = (
         DEFAULT_PR91_HPM1_RANGE_PREFIX_WINDOW_SYMBOLS
     ),
+    range_prefix_seed_symbol_counts: tuple[int, ...] | list[int] = (
+        DEFAULT_PR91_HPM1_RANGE_PREFIX_SEED_SYMBOLS
+    ),
     range_prefix_replay_symbol_limit: int = (
         DEFAULT_PR91_HPM1_RANGE_PREFIX_REPLAY_SYMBOL_LIMIT
     ),
@@ -3686,6 +3886,9 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
         )
     range_prefix_windows = _validate_range_prefix_window_symbols(
         range_prefix_window_symbols
+    )
+    range_prefix_seed_counts = _validate_range_prefix_seed_symbol_counts(
+        range_prefix_seed_symbol_counts
     )
     if int(range_prefix_replay_symbol_limit) < 0:
         raise Pr91Hpm1Error(
@@ -3814,6 +4017,7 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
                         spatial_order_candidate=candidate,
                         target_failure=reference_signature,
                         range_prefix_window_symbols=range_prefix_windows,
+                        range_prefix_seed_symbol_counts=range_prefix_seed_counts,
                         replay_symbol_limit=range_prefix_replay_symbol_limit,
                     )
                 )
@@ -4031,6 +4235,9 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
                 "window_symbols_before_failure": [
                     int(value) for value in range_prefix_windows
                 ],
+                "seed_symbol_counts": [
+                    int(value) for value in range_prefix_seed_counts
+                ],
                 "replay_symbol_limit": int(range_prefix_replay_symbol_limit),
                 "max_target_decoded_before": int(
                     range_prefix_max_target_decoded_before
@@ -4046,6 +4253,12 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
             },
             "candidate_results": candidate_results,
             "advanced_candidates": advanced_candidates,
+            "candidate_progress_summary": (
+                _summarize_reference_teacher_forcing_candidate_progress(
+                    candidate_results,
+                    source_decoded_before=source_decoded_before,
+                )
+            ),
             "hypothesis_classification": hypothesis_classification,
             "narrowed_hypothesis": (
                 "Forcing the HPAC current/previous context from the available "

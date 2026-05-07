@@ -1,0 +1,2628 @@
+{
+  "archive": {
+    "bundle_format": "pr85_v5_8byte_lengths",
+    "bytes": 222404,
+    "member_x_bytes": 222304,
+    "member_x_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+    "path": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+    "segment_bytes": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 145087,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    },
+    "segment_sha256": {
+      "bias": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+      "frac": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+      "frac2": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+      "frac3": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+      "mask": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+      "model": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc",
+      "pose": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c",
+      "post": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+      "randmulti": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+      "region": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+      "shift": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4"
+    },
+    "sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f"
+  },
+  "dependency_report": {
+    "expected": {
+      "constriction": "0.4.2",
+      "numpy": "2.4.4",
+      "pyppmd": "1.3.1",
+      "python": "3.12.13",
+      "torch": "2.11.0"
+    },
+    "mismatches": {},
+    "missing": [],
+    "observed": {
+      "constriction": "0.4.2",
+      "numpy": "2.4.4",
+      "pyppmd": "1.3.1",
+      "python": "3.12.13",
+      "torch": "2.11.0"
+    },
+    "status": "passed",
+    "strict": false
+  },
+  "device": "cpu",
+  "dispatch_allowed": false,
+  "dispatch_attempted": false,
+  "dispatch_performed": false,
+  "elapsed_sec": 60.596,
+  "evidence_grade": "empirical",
+  "evidence_limitations": [
+    "not score evidence",
+    "not full standalone HPM1 decode proof",
+    "not byte-exact re-encode proof",
+    "not dispatch-eligible"
+  ],
+  "evidence_scope": "local_cpu_hpm1_reference_teacher_forcing_hypothesis_probe",
+  "exact_missing_grammar": {
+    "not_explained_by_this_probe": "",
+    "remaining_open_classes": [
+      "encoder-side probability numeric contract",
+      "range-coder construction/finalization contract",
+      "true PR91 encoder semantic tokens if they differ from PR85/QMA9 reference",
+      "training-time token semantics not represented by submitted decode source",
+      "row ordering is only partial evidence until full decode/reencode parity exists"
+    ],
+    "status": "still_open_after_reference_teacher_forcing_probe"
+  },
+  "gpu_or_remote_work": false,
+  "hpm1_static_contract": {
+    "config": {
+      "channels": 64,
+      "delta": 2,
+      "height": 384,
+      "hpac_d_film": 8,
+      "hpac_len": 28243,
+      "n_frames": 600,
+      "ppmd_order": 4,
+      "predictor_count": 32,
+      "tokens_len": 116796,
+      "use_spm": 1,
+      "width": 512
+    },
+    "dispatch_allowed": false,
+    "failures": [],
+    "hpac": {
+      "bytes": 28243,
+      "sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd"
+    },
+    "schema": "pr91_hpm1_static_contract_v1",
+    "score_claim": false,
+    "status": "passed",
+    "tokens": {
+      "bytes": 116796,
+      "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+      "uint32_aligned": true
+    }
+  },
+  "hypothesis_classification": {
+    "best_reference_teacher_forced_candidate": "phase_major_row_major",
+    "best_reference_teacher_forced_decoded_symbols_or_before_failure": 15989,
+    "best_reference_teacher_forced_failure_signature": {
+      "decoded_symbol_count_before_failure": 15989,
+      "frame": 0,
+      "group": 17,
+      "symbol_in_group": 437
+    },
+    "dispatch_allowed": false,
+    "fail_closed_blockers": [
+      "full_600_frame_hpm1_decode_not_proven",
+      "byte_exact_hpm1_reencode_not_proven",
+      "true_pr91_encoder_semantic_tokens_not_recovered",
+      "range_coder_full_stream_contract_not_recovered"
+    ],
+    "probability_context_grammar": {
+      "note": "The public runtime gives no encoder-side probability trace, so context drift or numeric probability grammar before the failing row remains a fail-closed blocker.",
+      "status": "still_open_prior_context_or_probability_numeric_contract"
+    },
+    "range_coder_contract": {
+      "decoder_not_stream_exhaustion": true,
+      "note": "The failed submitted stream state is not reproduced by a single-row local model failure; prior range state, finalization, or encoder-side construction remains open.",
+      "single_row_local_roundtrip_all_symbols": true,
+      "status": "still_open_prior_range_state_or_encoder_finalization_contract"
+    },
+    "row_ordering": {
+      "advanced_candidates": [
+        "phase_major_row_major"
+      ],
+      "note": "At least one off-source spatial order advances beyond source order, but the best advanced candidate still fails before completing frame 0.",
+      "status": "phase_major_advances_but_does_not_decode_full_prefix"
+    },
+    "schema": "pr91_hpm1_decode_failure_hypothesis_classification_v1",
+    "score_claim": false,
+    "semantic_token_interpretation": {
+      "available_reference_symbol": 2,
+      "available_reference_symbol_probability": 0.6799724541,
+      "available_reference_symbol_rank": 1,
+      "status": "not_explained_by_current_row_available_reference_symbol",
+      "true_pr91_encoder_tokens_still_open": true
+    },
+    "source_decoded_symbols_or_before_failure": 5951,
+    "status": "narrowed_to_range_or_probability_context_grammar_after_phase_major_reference_row"
+  },
+  "local_only": true,
+  "next_required_proofs": [
+    "recover an encoder-side HPAC token generator or full source archive",
+    "test range-coder construction/finalization against the traced failing row",
+    "test probability quantization beyond the existing float32/float64/perfect matrix",
+    "decode all 600 HPM1 frames and re-encode exact token bytes before any dispatch"
+  ],
+  "payload": {
+    "config": {
+      "channels": 64,
+      "delta": 2,
+      "height": 384,
+      "hpac_d_film": 8,
+      "hpac_len": 28243,
+      "n_frames": 600,
+      "ppmd_order": 4,
+      "predictor_count": 32,
+      "tokens_len": 116796,
+      "use_spm": 1,
+      "width": 512
+    },
+    "hpac_bytes": 28243,
+    "hpac_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+    "tokens_bytes": 116796,
+    "tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b"
+  },
+  "pr86_hpac_relationship": {
+    "dispatch_allowed": false,
+    "expected_pr86_tokens_sha256": "14144bde496631f89a02646496bc2e66306bba6da149ddca37e21d85d175f225",
+    "expected_pr91_hpm1_hpac_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+    "hpac_model_matches_expected_pr91": true,
+    "pr86_archive": "experiments/results/public_pr86_intake_20260504_codex/archive.zip",
+    "pr86_archive_available": true,
+    "pr91_hpac_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+    "pr91_tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+    "score_claim": false,
+    "status": "passed_static_hpac_relationship",
+    "tokens_match_pr86_expected": false
+  },
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recorded_at_utc": "2026-05-07T03:55:13+00:00",
+  "reference_teacher_forcing_probe": {
+    "advanced_candidates": [
+      "phase_major_row_major"
+    ],
+    "candidate_progress_summary": {
+      "advancing_candidates": [
+        "phase_major_row_major"
+      ],
+      "candidate_rows": [
+        {
+          "candidate": "phase_major_row_major",
+          "decoded_context_failure_signature": {
+            "decoded_symbol_count_before_failure": 6926,
+            "frame": 0,
+            "group": 11,
+            "symbol_in_group": 14
+          },
+          "decoded_context_symbols_before_failure": 6926,
+          "delta_reference_vs_decoded": 9063,
+          "delta_reference_vs_source": 10038,
+          "first_decoded_reference_mismatch": {
+            "decoded_symbol": 2,
+            "frame": 0,
+            "global_symbol": 7,
+            "group": 0,
+            "pixel_yx": {
+              "x": 224,
+              "y": 0
+            },
+            "reference_symbol": 0,
+            "symbol_in_group": 7
+          },
+          "reference_forced_failure_signature": {
+            "decoded_symbol_count_before_failure": 15989,
+            "frame": 0,
+            "group": 17,
+            "symbol_in_group": 437
+          },
+          "reference_forced_symbols_before_failure": 15989,
+          "status": "reference_forcing_advances_candidate"
+        }
+      ],
+      "dispatch_allowed": false,
+      "next_patch_target": "prioritize the advancing candidate; do not use regressing teacher-forced rows as byte-reencode evidence",
+      "regressing_candidates": [],
+      "schema": "pr91_hpm1_reference_teacher_forcing_candidate_progress_v1",
+      "scope_note": "This is a local CPU candidate-progress diagnostic only. It does not prove full decode, byte-exact reencode, score validity, or dispatch readiness.",
+      "score_claim": false,
+      "source_decoded_symbols_or_before_failure": 5951,
+      "status": "phase_major_reference_forcing_remains_live_if_present"
+    },
+    "candidate_results": [
+      {
+        "candidate": "phase_major_row_major",
+        "decoded_context": {
+          "byte_exact_reencode_proven": false,
+          "decoded_symbols_or_before_failure": 6926,
+          "exception_type": "AssertionError",
+          "failing_probability_row_sha256": "41c675875baa3f35b6b4dd4755d9ea196a95e2a74d6c139d5d55a058a2da3538",
+          "failure_row_interpretation": {
+            "argmax_probability": 0.9999890782,
+            "argmax_symbol": 2,
+            "context_mode": "decoded_spatial_order",
+            "decoder_not_stream_exhaustion": true,
+            "dispatch_allowed": false,
+            "hypothesis_implications": [
+              "single-row categorical admissibility is local-only and does not prove the submitted range state"
+            ],
+            "normalized_row_sha256": "41c675875baa3f35b6b4dd4755d9ea196a95e2a74d6c139d5d55a058a2da3538",
+            "prob_eps": 1e-07,
+            "probability_order_desc": [
+              2,
+              3,
+              0,
+              1,
+              4
+            ],
+            "probability_variant": "source_float64_perfect_false",
+            "schema": "pr91_hpm1_failure_row_interpretation_v1",
+            "score_claim": false,
+            "single_row_range_model_roundtrip": {
+              "all_symbols_roundtrip": true,
+              "dispatch_allowed": false,
+              "failed_symbols": [],
+              "passed": true,
+              "prob_eps": 1e-07,
+              "probability_variant": "source_float64_perfect_false",
+              "schema": "pr91_hpm1_single_row_range_model_roundtrip_v1",
+              "score_claim": false,
+              "status": "passed_all_symbols_roundtrip",
+              "symbol_count": 5,
+              "symbol_results": [
+                {
+                  "compressed_word_count": 1,
+                  "compressed_words_sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+                  "decoded_symbol": 0,
+                  "decoder_maybe_exhausted_after_decode": true,
+                  "passed": true,
+                  "symbol": 0
+                },
+                {
+                  "compressed_word_count": 1,
+                  "compressed_words_sha256": "995f230d17d4d537a39545062bb989c616c4c11e2ff86788afb4b4784da2ef49",
+                  "decoded_symbol": 1,
+                  "decoder_maybe_exhausted_after_decode": true,
+                  "passed": true,
+                  "symbol": 1
+                },
+                {
+                  "compressed_word_count": 1,
+                  "compressed_words_sha256": "0afaabaabed8e629d43cc2f5e65a5174adfa3f023476951cdd0f72f2b9fd1025",
+                  "decoded_symbol": 2,
+                  "decoder_maybe_exhausted_after_decode": true,
+                  "passed": true,
+                  "symbol": 2
+                },
+                {
+                  "compressed_word_count": 1,
+                  "compressed_words_sha256": "c9c9f76520d7496de319349fdd62fffb57a3b1abff5291f33b9347f43362720f",
+                  "decoded_symbol": 3,
+                  "decoder_maybe_exhausted_after_decode": true,
+                  "passed": true,
+                  "symbol": 3
+                },
+                {
+                  "compressed_word_count": 1,
+                  "compressed_words_sha256": "4d2fb9a139da6b5b3d78b7978439bb4a2396f8135455f89618787b2ff20f5e96",
+                  "decoded_symbol": 4,
+                  "decoder_maybe_exhausted_after_decode": true,
+                  "passed": true,
+                  "symbol": 4
+                }
+              ]
+            },
+            "status": "no_reference_symbol_available_for_semantic_row_classification"
+          },
+          "failure_signature": {
+            "decoded_symbol_count_before_failure": 6926,
+            "frame": 0,
+            "group": 11,
+            "symbol_in_group": 14
+          },
+          "full_decode_proven": false,
+          "passed": false,
+          "passes_source_failure_row": true,
+          "range_decoder_diagnostic": {
+            "exception_text": "Tried to decode from compressed data that is invalid for the employed entropy model.",
+            "not_stream_exhaustion": true,
+            "state_after_failed_decode": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_failed_decode_exception",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "state_before_decode": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "before_decode_attempt",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            }
+          },
+          "status": "failed_at_first_entropy_mismatch"
+        },
+        "description": "Off-contract probe: visit each P x P phase for the group first, then scan tiles row-major for that phase.",
+        "reference_teacher_forced_context": {
+          "advances_beyond_decoded_context": true,
+          "advances_beyond_source_failure_row": true,
+          "byte_exact_reencode_proven": false,
+          "canonical_reference_symbol_window": {
+            "end_symbol_in_group_exclusive": 443,
+            "failed_reference_pixel_yx": {
+              "x": 173,
+              "y": 98
+            },
+            "failed_reference_symbol": 2,
+            "failure_symbol_in_group": 437,
+            "frame": 0,
+            "group": 17,
+            "includes_failure_symbol": true,
+            "next_reference_symbol_count": 5,
+            "next_reference_symbols_sha256": "2bc4e42b2781a84798bb3bf4291394f5acb029f64d6100e8268e471849fd3a2d",
+            "reference_scope_note": "These are canonical PR85/QMA9 reference tokens under the requested layout, not proven PR91 encoder semantic tokens.",
+            "reference_symbols_sha256": "a08709a1584e2bb9531d16b4996d033d1d9b0c8bf709d0e1bc8f40977a1e92e2",
+            "rows": [
+              {
+                "pixel_yx": {
+                  "x": 109,
+                  "y": 98
+                },
+                "reference_symbol": 4,
+                "relative_to_failure": -2,
+                "symbol_in_group": 435
+              },
+              {
+                "pixel_yx": {
+                  "x": 141,
+                  "y": 98
+                },
+                "reference_symbol": 2,
+                "relative_to_failure": -1,
+                "symbol_in_group": 436
+              },
+              {
+                "pixel_yx": {
+                  "x": 173,
+                  "y": 98
+                },
+                "reference_symbol": 2,
+                "relative_to_failure": 0,
+                "symbol_in_group": 437
+              },
+              {
+                "pixel_yx": {
+                  "x": 205,
+                  "y": 98
+                },
+                "reference_symbol": 2,
+                "relative_to_failure": 1,
+                "symbol_in_group": 438
+              },
+              {
+                "pixel_yx": {
+                  "x": 237,
+                  "y": 98
+                },
+                "reference_symbol": 2,
+                "relative_to_failure": 2,
+                "symbol_in_group": 439
+              },
+              {
+                "pixel_yx": {
+                  "x": 269,
+                  "y": 98
+                },
+                "reference_symbol": 2,
+                "relative_to_failure": 3,
+                "symbol_in_group": 440
+              },
+              {
+                "pixel_yx": {
+                  "x": 301,
+                  "y": 98
+                },
+                "reference_symbol": 2,
+                "relative_to_failure": 4,
+                "symbol_in_group": 441
+              },
+              {
+                "pixel_yx": {
+                  "x": 333,
+                  "y": 98
+                },
+                "reference_symbol": 1,
+                "relative_to_failure": 5,
+                "symbol_in_group": 442
+              }
+            ],
+            "schema": "pr91_hpm1_reference_group_symbol_window_v1",
+            "start_symbol_in_group": 435,
+            "window_after": 5,
+            "window_before": 2,
+            "window_symbol_count": 8
+          },
+          "decoded_symbols_or_before_failure": 15989,
+          "exception_type": "AssertionError",
+          "failing_probability_row_sha256": "361eb359d1f6b370c66f4a3f83bc78d523c8d819df3bcd9b7a8e1645e38fb239",
+          "failure_row_interpretation": {
+            "argmax_probability": 0.6799724541,
+            "argmax_symbol": 2,
+            "context_mode": "reference_teacher_forced",
+            "decoder_not_stream_exhaustion": true,
+            "dispatch_allowed": false,
+            "hypothesis_implications": [
+              "single-row categorical admissibility is local-only and does not prove the submitted range state",
+              "available reference symbol is the failing-row argmax; this row is not explained by a bad PR85/QMA9 label",
+              "submitted stream failure is not RangeDecoder exhaustion",
+              "local constriction can encode/decode every symbol for this categorical row"
+            ],
+            "immediate_semantic_row_mismatch": false,
+            "model_row_supports_reference_symbol": true,
+            "normalized_row_sha256": "361eb359d1f6b370c66f4a3f83bc78d523c8d819df3bcd9b7a8e1645e38fb239",
+            "prob_eps": 1e-07,
+            "probability_order_desc": [
+              2,
+              3,
+              4,
+              0,
+              1
+            ],
+            "probability_variant": "source_float64_perfect_false",
+            "reference_symbol": 2,
+            "reference_symbol_is_argmax": true,
+            "reference_symbol_probability": 0.6799724541,
+            "reference_symbol_rank": 1,
+            "schema": "pr91_hpm1_failure_row_interpretation_v1",
+            "score_claim": false,
+            "single_row_range_model_roundtrip": {
+              "all_symbols_roundtrip": true,
+              "dispatch_allowed": false,
+              "failed_symbols": [],
+              "passed": true,
+              "prob_eps": 1e-07,
+              "probability_variant": "source_float64_perfect_false",
+              "schema": "pr91_hpm1_single_row_range_model_roundtrip_v1",
+              "score_claim": false,
+              "status": "passed_all_symbols_roundtrip",
+              "symbol_count": 5,
+              "symbol_results": [
+                {
+                  "compressed_word_count": 1,
+                  "compressed_words_sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+                  "decoded_symbol": 0,
+                  "decoder_maybe_exhausted_after_decode": true,
+                  "passed": true,
+                  "symbol": 0
+                },
+                {
+                  "compressed_word_count": 1,
+                  "compressed_words_sha256": "4c3d0cd0b074d79692104d423195e5ba261f3c2d34b8cd16ed43b9ed57f43070",
+                  "decoded_symbol": 1,
+                  "decoder_maybe_exhausted_after_decode": true,
+                  "passed": true,
+                  "symbol": 1
+                },
+                {
+                  "compressed_word_count": 1,
+                  "compressed_words_sha256": "d719ac596192b778d679686b2cd8125f14d68930658cebe84dfc620edb9fb465",
+                  "decoded_symbol": 2,
+                  "decoder_maybe_exhausted_after_decode": true,
+                  "passed": true,
+                  "symbol": 2
+                },
+                {
+                  "compressed_word_count": 1,
+                  "compressed_words_sha256": "f3576fe3970a0664d4823d6e8c41b049ed17624038d9bf2c718d37543e94231b",
+                  "decoded_symbol": 3,
+                  "decoder_maybe_exhausted_after_decode": true,
+                  "passed": true,
+                  "symbol": 3
+                },
+                {
+                  "compressed_word_count": 1,
+                  "compressed_words_sha256": "95d2755822fec37635eb482499f1a19da8e549ba805c372bbacbc97110fe9f56",
+                  "decoded_symbol": 4,
+                  "decoder_maybe_exhausted_after_decode": true,
+                  "passed": true,
+                  "symbol": 4
+                }
+              ]
+            },
+            "status": "not_explained_by_current_row_reference_symbol_probability"
+          },
+          "failure_signature": {
+            "decoded_symbol_count_before_failure": 15989,
+            "frame": 0,
+            "group": 17,
+            "symbol_in_group": 437
+          },
+          "first_decoded_reference_mismatch": {
+            "decoded_symbol": 2,
+            "frame": 0,
+            "global_symbol": 7,
+            "group": 0,
+            "pixel_yx": {
+              "x": 224,
+              "y": 0
+            },
+            "reference_symbol": 0,
+            "symbol_in_group": 7
+          },
+          "full_decode_proven": false,
+          "passed": false,
+          "range_decoder_diagnostic": {
+            "exception_text": "Tried to decode from compressed data that is invalid for the employed entropy model.",
+            "not_stream_exhaustion": true,
+            "state_after_failed_decode": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "after_failed_decode_exception",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            },
+            "state_before_decode": {
+              "api": "constriction.stream.queue.RangeDecoder",
+              "label": "before_decode_attempt",
+              "maybe_exhausted": false,
+              "public_state_surface": "maybe_exhausted_only"
+            }
+          },
+          "range_state_prefix_probe": {
+            "byte_exact_reencode_proven": false,
+            "device": "cpu",
+            "dispatch_allowed": false,
+            "elapsed_sec": 18.117,
+            "failure": {
+              "decoded_symbol_count_before_failure": 15989,
+              "exception_text": "Tried to decode from compressed data that is invalid for the employed entropy model.",
+              "exception_type": "AssertionError",
+              "failing_probability_row": {
+                "normalized_for_categorical": {
+                  "argmax_symbol": 2,
+                  "dtype": "float64",
+                  "max": 0.6799724541,
+                  "min": 1.8174e-06,
+                  "sha256": "361eb359d1f6b370c66f4a3f83bc78d523c8d819df3bcd9b7a8e1645e38fb239",
+                  "sum": 1.0,
+                  "values": [
+                    4.20132e-05,
+                    1.8174e-06,
+                    0.6799724541,
+                    0.2701068993,
+                    0.0498768161
+                  ]
+                },
+                "raw_softmax": {
+                  "dtype": "float32",
+                  "sha256": "50cc67d2bd6e287e17c7d9c7177a25d9909ab920e3b8a7032d4808a661cf365e",
+                  "sum": 0.9999998808,
+                  "values": [
+                    4.20132e-05,
+                    1.8174e-06,
+                    0.6799724102,
+                    0.2701068819,
+                    0.0498768128
+                  ]
+                }
+              },
+              "failure_row_interpretation": {
+                "argmax_probability": 0.6799724541,
+                "argmax_symbol": 2,
+                "context_mode": "reference_teacher_forced_range_state_prefix",
+                "decoder_not_stream_exhaustion": true,
+                "dispatch_allowed": false,
+                "hypothesis_implications": [
+                  "single-row categorical admissibility is local-only and does not prove the submitted range state",
+                  "available reference symbol is the failing-row argmax; this row is not explained by a bad PR85/QMA9 label",
+                  "submitted stream failure is not RangeDecoder exhaustion",
+                  "local constriction can encode/decode every symbol for this categorical row"
+                ],
+                "immediate_semantic_row_mismatch": false,
+                "model_row_supports_reference_symbol": true,
+                "normalized_row_sha256": "361eb359d1f6b370c66f4a3f83bc78d523c8d819df3bcd9b7a8e1645e38fb239",
+                "prob_eps": 1e-07,
+                "probability_order_desc": [
+                  2,
+                  3,
+                  4,
+                  0,
+                  1
+                ],
+                "probability_variant": "source_float64_perfect_false",
+                "reference_symbol": 2,
+                "reference_symbol_is_argmax": true,
+                "reference_symbol_probability": 0.6799724541,
+                "reference_symbol_rank": 1,
+                "schema": "pr91_hpm1_failure_row_interpretation_v1",
+                "score_claim": false,
+                "single_row_range_model_roundtrip": {
+                  "all_symbols_roundtrip": true,
+                  "dispatch_allowed": false,
+                  "failed_symbols": [],
+                  "passed": true,
+                  "prob_eps": 1e-07,
+                  "probability_variant": "source_float64_perfect_false",
+                  "schema": "pr91_hpm1_single_row_range_model_roundtrip_v1",
+                  "score_claim": false,
+                  "status": "passed_all_symbols_roundtrip",
+                  "symbol_count": 5,
+                  "symbol_results": [
+                    {
+                      "compressed_word_count": 1,
+                      "compressed_words_sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+                      "decoded_symbol": 0,
+                      "decoder_maybe_exhausted_after_decode": true,
+                      "passed": true,
+                      "symbol": 0
+                    },
+                    {
+                      "compressed_word_count": 1,
+                      "compressed_words_sha256": "4c3d0cd0b074d79692104d423195e5ba261f3c2d34b8cd16ed43b9ed57f43070",
+                      "decoded_symbol": 1,
+                      "decoder_maybe_exhausted_after_decode": true,
+                      "passed": true,
+                      "symbol": 1
+                    },
+                    {
+                      "compressed_word_count": 1,
+                      "compressed_words_sha256": "d719ac596192b778d679686b2cd8125f14d68930658cebe84dfc620edb9fb465",
+                      "decoded_symbol": 2,
+                      "decoder_maybe_exhausted_after_decode": true,
+                      "passed": true,
+                      "symbol": 2
+                    },
+                    {
+                      "compressed_word_count": 1,
+                      "compressed_words_sha256": "f3576fe3970a0664d4823d6e8c41b049ed17624038d9bf2c718d37543e94231b",
+                      "decoded_symbol": 3,
+                      "decoder_maybe_exhausted_after_decode": true,
+                      "passed": true,
+                      "symbol": 3
+                    },
+                    {
+                      "compressed_word_count": 1,
+                      "compressed_words_sha256": "95d2755822fec37635eb482499f1a19da8e549ba805c372bbacbc97110fe9f56",
+                      "decoded_symbol": 4,
+                      "decoder_maybe_exhausted_after_decode": true,
+                      "passed": true,
+                      "symbol": 4
+                    }
+                  ]
+                },
+                "status": "not_explained_by_current_row_reference_symbol_probability"
+              },
+              "frame": 0,
+              "frame_start_decoded_symbols": 0,
+              "group": 17,
+              "group_start_decoded_symbols": 15552,
+              "range_decoder_diagnostic": {
+                "not_stream_exhaustion": true,
+                "state_after_failed_decode": {
+                  "api": "constriction.stream.queue.RangeDecoder",
+                  "label": "after_failed_decode_exception",
+                  "maybe_exhausted": false,
+                  "public_state_surface": "maybe_exhausted_only"
+                },
+                "state_before_decode": {
+                  "api": "constriction.stream.queue.RangeDecoder",
+                  "label": "before_decode_attempt",
+                  "maybe_exhausted": false,
+                  "public_state_surface": "maybe_exhausted_only"
+                }
+              },
+              "reason": "hpac_entropy_decode_contract_mismatch",
+              "stage": "submitted_tokens_decode",
+              "symbol_in_group": 437
+            },
+            "full_decode_proven": false,
+            "observed_failure": {
+              "decoded_symbol_count_before_failure": 15989,
+              "frame": 0,
+              "group": 17,
+              "symbol_in_group": 437
+            },
+            "passed": false,
+            "prob_eps": 1e-07,
+            "probability_row_sequence_hashes": {
+              "failure_window_hashes": [
+                {
+                  "end_global_symbol_exclusive": 15990,
+                  "includes_failure_row": true,
+                  "normalized_rows_sha256": "e7cafbb7e0c7e64f0c52e1bf418344e74dcb3962020175409f6ce2d298f5145f",
+                  "reference_symbols_sha256": "50cff72c8e550546d661ec235431888fb2f9f7bada40c17020d47f6ccc117aae",
+                  "start_global_symbol": 15988,
+                  "symbols_before_failure_window": 1
+                }
+              ],
+              "rows_before_failure": {
+                "count": 15989,
+                "normalized_for_categorical_sha256": "eafd81c8b25c675b79ad0b3096274d9ba4e4c8c0084d9d1195cae61a57edf638",
+                "raw_softmax_sha256": "066aa2591a4d9e1e2fb4753556623c2a7ddcfc442ba1c9050fe6f29226a590fa",
+                "reference_symbols_sha256": "bf1292b8c2132bcc36879921a5c4d81b4b7d8f33b72eccf491fd0d11daa5519b",
+                "submitted_decoded_symbols_sha256": "4bec98d9e7507d379dfeff9dec9480a652d2004c36d5913bce9de9286f6c7ccc"
+              },
+              "rows_including_failure": {
+                "count": 15990,
+                "normalized_for_categorical_sha256": "bb25d4b003f3d45d5900cadcfadc34660c9952105646d40d5bd0d1be197f925d",
+                "raw_softmax_sha256": "8d88b886519b9ee80502450735152c222194a38658d104543b9047255c811f0f",
+                "reference_symbols_sha256": "a94d1fe43cd58f868e89bd34dc1e0ddc742df0fba6ceef2a35b00a8134fba4be"
+              },
+              "schema": "pr91_hpm1_probability_row_sequence_hashes_v1"
+            },
+            "probability_variant": "source_float64_perfect_false",
+            "range_prefix_reconstruction": {
+              "checkpoint_results": [
+                {
+                  "includes_failure_symbol": false,
+                  "label": "empty_stream",
+                  "local_reference_prefix_replay": {
+                    "decoded_symbol_count": 0,
+                    "passed": true,
+                    "status": "decoded_empty_prefix"
+                  },
+                  "local_reference_prefix_words": {
+                    "first_words_hex": [],
+                    "last_words_hex": [],
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "uint32_word_count": 0
+                  },
+                  "range_encoder_state": {
+                    "api": "constriction.stream.queue.RangeEncoder",
+                    "compressed_words_snapshot": {
+                      "first_words_hex": [],
+                      "last_words_hex": [],
+                      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                      "uint32_word_count": 0
+                    },
+                    "is_empty": 1,
+                    "label": "after_encoding_0_reference_symbols",
+                    "num_bits": 0,
+                    "num_words": 0,
+                    "pos": {
+                      "interval": [
+                        0,
+                        18446744073709551615
+                      ],
+                      "queue_index": 0
+                    }
+                  },
+                  "scope_note": "Local prefix words are independently finalized reference-context range streams; mismatch with the submitted full stream is a range-state diagnostic, not a score or parity claim. The full submitted stream replay is the prefix-decode fidelity check; the same-word-count replay is only a truncation sensitivity diagnostic.",
+                  "submitted_full_stream_prefix_replay": {
+                    "decoded_symbol_count": 0,
+                    "passed": true,
+                    "status": "decoded_empty_prefix"
+                  },
+                  "submitted_same_word_count_prefix": {
+                    "first_words_hex": [],
+                    "last_words_hex": [],
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "uint32_word_count": 0
+                  },
+                  "submitted_same_word_count_replay": {
+                    "decoded_symbol_count": 0,
+                    "passed": true,
+                    "status": "decoded_empty_prefix"
+                  },
+                  "submitted_word_comparison": {
+                    "common_prefix_word_count": 0,
+                    "local_word_count": 0,
+                    "same_word_count_prefix_matches": true,
+                    "same_word_count_prefix_scope": "submitted stream truncated to the independently finalized local prefix word count",
+                    "submitted_full_stream_prefix_replay_passed": true,
+                    "submitted_total_word_count": 29199
+                  },
+                  "symbol_count": 0,
+                  "symbols_before_failure_remaining": 15989
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "first_1_symbols",
+                  "local_reference_prefix_replay": {
+                    "decoded_prefix_sha256": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986",
+                    "decoded_symbol_count": 1,
+                    "decoder_state_after_replay": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay",
+                      "maybe_exhausted": true,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "passed": true,
+                    "status": "decoded_reference_prefix"
+                  },
+                  "local_reference_prefix_words": {
+                    "first_words_hex": [
+                      "0x01ac3d00"
+                    ],
+                    "last_words_hex": [
+                      "0x01ac3d00"
+                    ],
+                    "sha256": "02b565e56b1d661de80b1ee21e46b500ccc589a5cbca3ca53bd0a5a6fd1785d3",
+                    "uint32_word_count": 1
+                  },
+                  "range_encoder_state": {
+                    "api": "constriction.stream.queue.RangeEncoder",
+                    "compressed_words_snapshot": {
+                      "first_words_hex": [
+                        "0x01ac3d00"
+                      ],
+                      "last_words_hex": [
+                        "0x01ac3d00"
+                      ],
+                      "sha256": "02b565e56b1d661de80b1ee21e46b500ccc589a5cbca3ca53bd0a5a6fd1785d3",
+                      "uint32_word_count": 1
+                    },
+                    "is_empty": 0,
+                    "label": "after_encoding_1_reference_symbols",
+                    "num_bits": 32,
+                    "num_words": 1,
+                    "pos": {
+                      "interval": [
+                        120538360241345475,
+                        17817261572163681375
+                      ],
+                      "queue_index": 0
+                    }
+                  },
+                  "scope_note": "Local prefix words are independently finalized reference-context range streams; mismatch with the submitted full stream is a range-state diagnostic, not a score or parity claim. The full submitted stream replay is the prefix-decode fidelity check; the same-word-count replay is only a truncation sensitivity diagnostic.",
+                  "submitted_full_stream_prefix_replay": {
+                    "decoded_prefix_sha256": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986",
+                    "decoded_symbol_count": 1,
+                    "decoder_state_after_replay": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay",
+                      "maybe_exhausted": false,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "passed": true,
+                    "status": "decoded_reference_prefix"
+                  },
+                  "submitted_same_word_count_prefix": {
+                    "first_words_hex": [
+                      "0x9b5c86f6"
+                    ],
+                    "last_words_hex": [
+                      "0x9b5c86f6"
+                    ],
+                    "sha256": "b73ef75801a53e501a877255b1f50b6aeae8d443305b32388a91685e97c3c78c",
+                    "uint32_word_count": 1
+                  },
+                  "submitted_same_word_count_replay": {
+                    "decoded_prefix_sha256": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986",
+                    "decoded_symbol_count": 1,
+                    "decoder_state_after_replay": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay",
+                      "maybe_exhausted": false,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "passed": true,
+                    "status": "decoded_reference_prefix"
+                  },
+                  "submitted_word_comparison": {
+                    "common_prefix_word_count": 0,
+                    "local_word_count": 1,
+                    "same_word_count_prefix_matches": false,
+                    "same_word_count_prefix_scope": "submitted stream truncated to the independently finalized local prefix word count",
+                    "submitted_full_stream_prefix_replay_passed": true,
+                    "submitted_total_word_count": 29199
+                  },
+                  "symbol_count": 1,
+                  "symbols_before_failure_remaining": 15988
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "first_2_symbols",
+                  "local_reference_prefix_replay": {
+                    "decoded_prefix_sha256": "50cff72c8e550546d661ec235431888fb2f9f7bada40c17020d47f6ccc117aae",
+                    "decoded_symbol_count": 2,
+                    "decoder_state_after_replay": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay",
+                      "maybe_exhausted": true,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "passed": true,
+                    "status": "decoded_reference_prefix"
+                  },
+                  "local_reference_prefix_words": {
+                    "first_words_hex": [
+                      "0x0a3955cd"
+                    ],
+                    "last_words_hex": [
+                      "0x0a3955cd"
+                    ],
+                    "sha256": "b58d40b6522d90d0abcf78e3ed57d8a40c62c7beea1c471f61c8b9136d63e283",
+                    "uint32_word_count": 1
+                  },
+                  "range_encoder_state": {
+                    "api": "constriction.stream.queue.RangeEncoder",
+                    "compressed_words_snapshot": {
+                      "first_words_hex": [
+                        "0x0a3955cd"
+                      ],
+                      "last_words_hex": [
+                        "0x0a3955cd"
+                      ],
+                      "sha256": "b58d40b6522d90d0abcf78e3ed57d8a40c62c7beea1c471f61c8b9136d63e283",
+                      "uint32_word_count": 1
+                    },
+                    "is_empty": 0,
+                    "label": "after_encoding_2_reference_symbols",
+                    "num_bits": 32,
+                    "num_words": 1,
+                    "pos": {
+                      "interval": [
+                        736714351672916307,
+                        16758223423775979363
+                      ],
+                      "queue_index": 0
+                    }
+                  },
+                  "scope_note": "Local prefix words are independently finalized reference-context range streams; mismatch with the submitted full stream is a range-state diagnostic, not a score or parity claim. The full submitted stream replay is the prefix-decode fidelity check; the same-word-count replay is only a truncation sensitivity diagnostic.",
+                  "submitted_full_stream_prefix_replay": {
+                    "decoded_prefix_sha256": "50cff72c8e550546d661ec235431888fb2f9f7bada40c17020d47f6ccc117aae",
+                    "decoded_symbol_count": 2,
+                    "decoder_state_after_replay": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay",
+                      "maybe_exhausted": false,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "passed": true,
+                    "status": "decoded_reference_prefix"
+                  },
+                  "submitted_same_word_count_prefix": {
+                    "first_words_hex": [
+                      "0x9b5c86f6"
+                    ],
+                    "last_words_hex": [
+                      "0x9b5c86f6"
+                    ],
+                    "sha256": "b73ef75801a53e501a877255b1f50b6aeae8d443305b32388a91685e97c3c78c",
+                    "uint32_word_count": 1
+                  },
+                  "submitted_same_word_count_replay": {
+                    "decoded_prefix_sha256": "50cff72c8e550546d661ec235431888fb2f9f7bada40c17020d47f6ccc117aae",
+                    "decoded_symbol_count": 2,
+                    "decoder_state_after_replay": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay",
+                      "maybe_exhausted": false,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "passed": true,
+                    "status": "decoded_reference_prefix"
+                  },
+                  "submitted_word_comparison": {
+                    "common_prefix_word_count": 0,
+                    "local_word_count": 1,
+                    "same_word_count_prefix_matches": false,
+                    "same_word_count_prefix_scope": "submitted stream truncated to the independently finalized local prefix word count",
+                    "submitted_full_stream_prefix_replay_passed": true,
+                    "submitted_total_word_count": 29199
+                  },
+                  "symbol_count": 2,
+                  "symbols_before_failure_remaining": 15987
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "first_4_symbols",
+                  "local_reference_prefix_replay": {
+                    "decoded_prefix_sha256": "bb72b4e4eb29dc59328668f32e0511e3ac0e5ce4026b1591965216e49ca1f5d7",
+                    "decoded_symbol_count": 4,
+                    "decoder_state_after_replay": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay",
+                      "maybe_exhausted": true,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "passed": true,
+                    "status": "decoded_reference_prefix"
+                  },
+                  "local_reference_prefix_words": {
+                    "first_words_hex": [
+                      "0x1a264d07"
+                    ],
+                    "last_words_hex": [
+                      "0x1a264d07"
+                    ],
+                    "sha256": "9ad61c8d6918fd5871a144508beeee1fa5c9159418d498625c64cf37aab471f6",
+                    "uint32_word_count": 1
+                  },
+                  "range_encoder_state": {
+                    "api": "constriction.stream.queue.RangeEncoder",
+                    "compressed_words_snapshot": {
+                      "first_words_hex": [
+                        "0x1a264d07"
+                      ],
+                      "last_words_hex": [
+                        "0x1a264d07"
+                      ],
+                      "sha256": "9ad61c8d6918fd5871a144508beeee1fa5c9159418d498625c64cf37aab471f6",
+                      "uint32_word_count": 1
+                    },
+                    "is_empty": 0,
+                    "label": "after_encoding_4_reference_symbols",
+                    "num_bits": 32,
+                    "num_words": 1,
+                    "pos": {
+                      "interval": [
+                        1884278184212123775,
+                        14798707668462480005
+                      ],
+                      "queue_index": 0
+                    }
+                  },
+                  "scope_note": "Local prefix words are independently finalized reference-context range streams; mismatch with the submitted full stream is a range-state diagnostic, not a score or parity claim. The full submitted stream replay is the prefix-decode fidelity check; the same-word-count replay is only a truncation sensitivity diagnostic.",
+                  "submitted_full_stream_prefix_replay": {
+                    "decoded_prefix_sha256": "bb72b4e4eb29dc59328668f32e0511e3ac0e5ce4026b1591965216e49ca1f5d7",
+                    "decoded_symbol_count": 4,
+                    "decoder_state_after_replay": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay",
+                      "maybe_exhausted": false,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "passed": true,
+                    "status": "decoded_reference_prefix"
+                  },
+                  "submitted_same_word_count_prefix": {
+                    "first_words_hex": [
+                      "0x9b5c86f6"
+                    ],
+                    "last_words_hex": [
+                      "0x9b5c86f6"
+                    ],
+                    "sha256": "b73ef75801a53e501a877255b1f50b6aeae8d443305b32388a91685e97c3c78c",
+                    "uint32_word_count": 1
+                  },
+                  "submitted_same_word_count_replay": {
+                    "decoded_prefix_sha256": "bb72b4e4eb29dc59328668f32e0511e3ac0e5ce4026b1591965216e49ca1f5d7",
+                    "decoded_symbol_count": 4,
+                    "decoder_state_after_replay": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay",
+                      "maybe_exhausted": false,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "passed": true,
+                    "status": "decoded_reference_prefix"
+                  },
+                  "submitted_word_comparison": {
+                    "common_prefix_word_count": 0,
+                    "local_word_count": 1,
+                    "same_word_count_prefix_matches": false,
+                    "same_word_count_prefix_scope": "submitted stream truncated to the independently finalized local prefix word count",
+                    "submitted_full_stream_prefix_replay_passed": true,
+                    "submitted_total_word_count": 29199
+                  },
+                  "symbol_count": 4,
+                  "symbols_before_failure_remaining": 15985
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "first_8_symbols",
+                  "local_reference_prefix_replay": {
+                    "decoded_prefix_sha256": "ca0b56fda4333c4917fbe87d85149df70786766a4bd9832ca11b30d7306c1fbd",
+                    "decoded_symbol_count": 8,
+                    "decoder_state_after_replay": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay",
+                      "maybe_exhausted": true,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "passed": true,
+                    "status": "decoded_reference_prefix"
+                  },
+                  "local_reference_prefix_words": {
+                    "first_words_hex": [
+                      "0x2e9d9815"
+                    ],
+                    "last_words_hex": [
+                      "0x2e9d9815"
+                    ],
+                    "sha256": "fc4393852bd6c5c1c608fb918a7af6918d6aa4c1b24c45c4724a853de3a13802",
+                    "uint32_word_count": 1
+                  },
+                  "range_encoder_state": {
+                    "api": "constriction.stream.queue.RangeEncoder",
+                    "compressed_words_snapshot": {
+                      "first_words_hex": [
+                        "0x2e9d9815"
+                      ],
+                      "last_words_hex": [
+                        "0x2e9d9815"
+                      ],
+                      "sha256": "fc4393852bd6c5c1c608fb918a7af6918d6aa4c1b24c45c4724a853de3a13802",
+                      "uint32_word_count": 1
+                    },
+                    "is_empty": 0,
+                    "label": "after_encoding_8_reference_symbols",
+                    "num_bits": 32,
+                    "num_words": 1,
+                    "pos": {
+                      "interval": [
+                        3359008109493373335,
+                        422075683448280528
+                      ],
+                      "queue_index": 0
+                    }
+                  },
+                  "scope_note": "Local prefix words are independently finalized reference-context range streams; mismatch with the submitted full stream is a range-state diagnostic, not a score or parity claim. The full submitted stream replay is the prefix-decode fidelity check; the same-word-count replay is only a truncation sensitivity diagnostic.",
+                  "submitted_full_stream_prefix_replay": {
+                    "decoded_prefix_sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310",
+                    "decoded_symbol_count": 8,
+                    "decoder_state_after_mismatch": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay_mismatch",
+                      "maybe_exhausted": false,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "first_mismatch": {
+                      "decoded_symbol": 2,
+                      "reference_symbol": 0,
+                      "symbol_index": 7
+                    },
+                    "passed": false,
+                    "status": "decoded_symbol_mismatch"
+                  },
+                  "submitted_same_word_count_prefix": {
+                    "first_words_hex": [
+                      "0x9b5c86f6"
+                    ],
+                    "last_words_hex": [
+                      "0x9b5c86f6"
+                    ],
+                    "sha256": "b73ef75801a53e501a877255b1f50b6aeae8d443305b32388a91685e97c3c78c",
+                    "uint32_word_count": 1
+                  },
+                  "submitted_same_word_count_replay": {
+                    "decoded_prefix_sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310",
+                    "decoded_symbol_count": 8,
+                    "decoder_state_after_mismatch": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay_mismatch",
+                      "maybe_exhausted": false,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "first_mismatch": {
+                      "decoded_symbol": 2,
+                      "reference_symbol": 0,
+                      "symbol_index": 7
+                    },
+                    "passed": false,
+                    "status": "decoded_symbol_mismatch"
+                  },
+                  "submitted_word_comparison": {
+                    "common_prefix_word_count": 0,
+                    "local_word_count": 1,
+                    "same_word_count_prefix_matches": false,
+                    "same_word_count_prefix_scope": "submitted stream truncated to the independently finalized local prefix word count",
+                    "submitted_full_stream_prefix_replay_passed": false,
+                    "submitted_total_word_count": 29199
+                  },
+                  "symbol_count": 8,
+                  "symbols_before_failure_remaining": 15981
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "first_16_symbols",
+                  "local_reference_prefix_replay": {
+                    "decoded_prefix_sha256": "2a81b284d8add45f94d58099cc7c622a2ed2c5e54f112b0656961f55d9834774",
+                    "decoded_symbol_count": 16,
+                    "decoder_state_after_replay": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay",
+                      "maybe_exhausted": true,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "passed": true,
+                    "status": "decoded_reference_prefix"
+                  },
+                  "local_reference_prefix_words": {
+                    "first_words_hex": [
+                      "0x2e9f5d84"
+                    ],
+                    "last_words_hex": [
+                      "0x2e9f5d84"
+                    ],
+                    "sha256": "ce3b40d85d962799669389907df2646629963abdc02955d729c5e8e355fd21cb",
+                    "uint32_word_count": 1
+                  },
+                  "range_encoder_state": {
+                    "api": "constriction.stream.queue.RangeEncoder",
+                    "compressed_words_snapshot": {
+                      "first_words_hex": [
+                        "0x2e9f5d84"
+                      ],
+                      "last_words_hex": [
+                        "0x2e9f5d84"
+                      ],
+                      "sha256": "ce3b40d85d962799669389907df2646629963abdc02955d729c5e8e355fd21cb",
+                      "uint32_word_count": 1
+                    },
+                    "is_empty": 0,
+                    "label": "after_encoding_16_reference_symbols",
+                    "num_bits": 32,
+                    "num_words": 1,
+                    "pos": {
+                      "interval": [
+                        3359506666024063742,
+                        17409493776
+                      ],
+                      "queue_index": 0
+                    }
+                  },
+                  "scope_note": "Local prefix words are independently finalized reference-context range streams; mismatch with the submitted full stream is a range-state diagnostic, not a score or parity claim. The full submitted stream replay is the prefix-decode fidelity check; the same-word-count replay is only a truncation sensitivity diagnostic.",
+                  "submitted_full_stream_prefix_replay": {
+                    "decoded_prefix_sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310",
+                    "decoded_symbol_count": 8,
+                    "decoder_state_after_mismatch": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay_mismatch",
+                      "maybe_exhausted": false,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "first_mismatch": {
+                      "decoded_symbol": 2,
+                      "reference_symbol": 0,
+                      "symbol_index": 7
+                    },
+                    "passed": false,
+                    "status": "decoded_symbol_mismatch"
+                  },
+                  "submitted_same_word_count_prefix": {
+                    "first_words_hex": [
+                      "0x9b5c86f6"
+                    ],
+                    "last_words_hex": [
+                      "0x9b5c86f6"
+                    ],
+                    "sha256": "b73ef75801a53e501a877255b1f50b6aeae8d443305b32388a91685e97c3c78c",
+                    "uint32_word_count": 1
+                  },
+                  "submitted_same_word_count_replay": {
+                    "decoded_prefix_sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310",
+                    "decoded_symbol_count": 8,
+                    "decoder_state_after_mismatch": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay_mismatch",
+                      "maybe_exhausted": false,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "first_mismatch": {
+                      "decoded_symbol": 2,
+                      "reference_symbol": 0,
+                      "symbol_index": 7
+                    },
+                    "passed": false,
+                    "status": "decoded_symbol_mismatch"
+                  },
+                  "submitted_word_comparison": {
+                    "common_prefix_word_count": 0,
+                    "local_word_count": 1,
+                    "same_word_count_prefix_matches": false,
+                    "same_word_count_prefix_scope": "submitted stream truncated to the independently finalized local prefix word count",
+                    "submitted_full_stream_prefix_replay_passed": false,
+                    "submitted_total_word_count": 29199
+                  },
+                  "symbol_count": 16,
+                  "symbols_before_failure_remaining": 15973
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "first_32_symbols",
+                  "local_reference_prefix_replay": {
+                    "decoded_prefix_sha256": "960df346fb022d5d5bed770044a5ef58cdc557d1b21bb8c32ffa9cbbdf4d6ad2",
+                    "decoded_symbol_count": 32,
+                    "decoder_state_after_replay": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay",
+                      "maybe_exhausted": true,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "passed": true,
+                    "status": "decoded_reference_prefix"
+                  },
+                  "local_reference_prefix_words": {
+                    "first_words_hex": [
+                      "0x2e9f5d83",
+                      "0x7478bd9f"
+                    ],
+                    "last_words_hex": [
+                      "0x2e9f5d83",
+                      "0x7478bd9f"
+                    ],
+                    "sha256": "b9f21bae3862f4b1b815c4816f011af581689af20f53b8b55dc725697c3adccb",
+                    "uint32_word_count": 2
+                  },
+                  "range_encoder_state": {
+                    "api": "constriction.stream.queue.RangeEncoder",
+                    "compressed_words_snapshot": {
+                      "first_words_hex": [
+                        "0x2e9f5d83",
+                        "0x7478bd9f"
+                      ],
+                      "last_words_hex": [
+                        "0x2e9f5d83",
+                        "0x7478bd9f"
+                      ],
+                      "sha256": "b9f21bae3862f4b1b815c4816f011af581689af20f53b8b55dc725697c3adccb",
+                      "uint32_word_count": 2
+                    },
+                    "is_empty": 0,
+                    "label": "after_encoding_32_reference_symbols",
+                    "num_bits": 64,
+                    "num_words": 2,
+                    "pos": {
+                      "interval": [
+                        8392666392052836265,
+                        21187883804
+                      ],
+                      "queue_index": 1
+                    }
+                  },
+                  "scope_note": "Local prefix words are independently finalized reference-context range streams; mismatch with the submitted full stream is a range-state diagnostic, not a score or parity claim. The full submitted stream replay is the prefix-decode fidelity check; the same-word-count replay is only a truncation sensitivity diagnostic.",
+                  "submitted_full_stream_prefix_replay": {
+                    "decoded_prefix_sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310",
+                    "decoded_symbol_count": 8,
+                    "decoder_state_after_mismatch": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay_mismatch",
+                      "maybe_exhausted": false,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "first_mismatch": {
+                      "decoded_symbol": 2,
+                      "reference_symbol": 0,
+                      "symbol_index": 7
+                    },
+                    "passed": false,
+                    "status": "decoded_symbol_mismatch"
+                  },
+                  "submitted_same_word_count_prefix": {
+                    "first_words_hex": [
+                      "0x9b5c86f6",
+                      "0xc3e3f98a"
+                    ],
+                    "last_words_hex": [
+                      "0x9b5c86f6",
+                      "0xc3e3f98a"
+                    ],
+                    "sha256": "c4049485cba764e12268838c5cc96e4ffe3e95140a90d1a0cf7076fd1e10c5c3",
+                    "uint32_word_count": 2
+                  },
+                  "submitted_same_word_count_replay": {
+                    "decoded_prefix_sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310",
+                    "decoded_symbol_count": 8,
+                    "decoder_state_after_mismatch": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay_mismatch",
+                      "maybe_exhausted": false,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "first_mismatch": {
+                      "decoded_symbol": 2,
+                      "reference_symbol": 0,
+                      "symbol_index": 7
+                    },
+                    "passed": false,
+                    "status": "decoded_symbol_mismatch"
+                  },
+                  "submitted_word_comparison": {
+                    "common_prefix_word_count": 0,
+                    "local_word_count": 2,
+                    "same_word_count_prefix_matches": false,
+                    "same_word_count_prefix_scope": "submitted stream truncated to the independently finalized local prefix word count",
+                    "submitted_full_stream_prefix_replay_passed": false,
+                    "submitted_total_word_count": 29199
+                  },
+                  "symbol_count": 32,
+                  "symbols_before_failure_remaining": 15957
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "first_64_symbols",
+                  "local_reference_prefix_replay": {
+                    "decoded_prefix_sha256": "9b77e81214a615d2bad0c3f616c3768d57da8c4da591166dba4c911d089180ad",
+                    "decoded_symbol_count": 64,
+                    "decoder_state_after_replay": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay",
+                      "maybe_exhausted": true,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "passed": true,
+                    "status": "decoded_reference_prefix"
+                  },
+                  "local_reference_prefix_words": {
+                    "first_words_hex": [
+                      "0x2e9f5d83",
+                      "0x7478bd9f",
+                      "0x43f4b64a",
+                      "0xfae56925"
+                    ],
+                    "last_words_hex": [
+                      "0x2e9f5d83",
+                      "0x7478bd9f",
+                      "0x43f4b64a",
+                      "0xfae56925"
+                    ],
+                    "sha256": "081cdc08ff852c47c163891076de666845149896b5873e2e140dad7ba301b380",
+                    "uint32_word_count": 4
+                  },
+                  "range_encoder_state": {
+                    "api": "constriction.stream.queue.RangeEncoder",
+                    "compressed_words_snapshot": {
+                      "first_words_hex": [
+                        "0x2e9f5d83",
+                        "0x7478bd9f",
+                        "0x43f4b64a",
+                        "0xfae56925"
+                      ],
+                      "last_words_hex": [
+                        "0x2e9f5d83",
+                        "0x7478bd9f",
+                        "0x43f4b64a",
+                        "0xfae56925"
+                      ],
+                      "sha256": "081cdc08ff852c47c163891076de666845149896b5873e2e140dad7ba301b380",
+                      "uint32_word_count": 4
+                    },
+                    "is_empty": 0,
+                    "label": "after_encoding_64_reference_symbols",
+                    "num_bits": 128,
+                    "num_words": 4,
+                    "pos": {
+                      "interval": [
+                        18078971882698189738,
+                        67039658775885318
+                      ],
+                      "queue_index": 3
+                    }
+                  },
+                  "scope_note": "Local prefix words are independently finalized reference-context range streams; mismatch with the submitted full stream is a range-state diagnostic, not a score or parity claim. The full submitted stream replay is the prefix-decode fidelity check; the same-word-count replay is only a truncation sensitivity diagnostic.",
+                  "submitted_full_stream_prefix_replay": {
+                    "decoded_prefix_sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310",
+                    "decoded_symbol_count": 8,
+                    "decoder_state_after_mismatch": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay_mismatch",
+                      "maybe_exhausted": false,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "first_mismatch": {
+                      "decoded_symbol": 2,
+                      "reference_symbol": 0,
+                      "symbol_index": 7
+                    },
+                    "passed": false,
+                    "status": "decoded_symbol_mismatch"
+                  },
+                  "submitted_same_word_count_prefix": {
+                    "first_words_hex": [
+                      "0x9b5c86f6",
+                      "0xc3e3f98a",
+                      "0xf6f1efc5",
+                      "0x12458e3f"
+                    ],
+                    "last_words_hex": [
+                      "0x9b5c86f6",
+                      "0xc3e3f98a",
+                      "0xf6f1efc5",
+                      "0x12458e3f"
+                    ],
+                    "sha256": "fdca51c54c2d5a9e95b15c3b7a47b6252f17986c785ede5da86433de48c6bce9",
+                    "uint32_word_count": 4
+                  },
+                  "submitted_same_word_count_replay": {
+                    "decoded_prefix_sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310",
+                    "decoded_symbol_count": 8,
+                    "decoder_state_after_mismatch": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay_mismatch",
+                      "maybe_exhausted": false,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "first_mismatch": {
+                      "decoded_symbol": 2,
+                      "reference_symbol": 0,
+                      "symbol_index": 7
+                    },
+                    "passed": false,
+                    "status": "decoded_symbol_mismatch"
+                  },
+                  "submitted_word_comparison": {
+                    "common_prefix_word_count": 0,
+                    "local_word_count": 4,
+                    "same_word_count_prefix_matches": false,
+                    "same_word_count_prefix_scope": "submitted stream truncated to the independently finalized local prefix word count",
+                    "submitted_full_stream_prefix_replay_passed": false,
+                    "submitted_total_word_count": 29199
+                  },
+                  "symbol_count": 64,
+                  "symbols_before_failure_remaining": 15925
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "first_128_symbols",
+                  "local_reference_prefix_replay": {
+                    "decoded_prefix_sha256": "b5de5110c95f8e7b58787047c9836b02ab43c2a1b030051b05bb3e6e313e0dfe",
+                    "decoded_symbol_count": 128,
+                    "decoder_state_after_replay": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay",
+                      "maybe_exhausted": true,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "passed": true,
+                    "status": "decoded_reference_prefix"
+                  },
+                  "local_reference_prefix_words": {
+                    "first_words_hex": [
+                      "0x2e9f5d83",
+                      "0x7478bd9f",
+                      "0x43f4b64a",
+                      "0xfae81ac2",
+                      "0x6b060535",
+                      "0x0d5ac0f8",
+                      "0x18cc025a"
+                    ],
+                    "last_words_hex": [
+                      "0x2e9f5d83",
+                      "0x7478bd9f",
+                      "0x43f4b64a",
+                      "0xfae81ac2",
+                      "0x6b060535",
+                      "0x0d5ac0f8",
+                      "0x18cc025a"
+                    ],
+                    "sha256": "5adc58719a78914476d9f4bb4d26cb09c2b20e3e6ab043f12b2de8ac1000a9a2",
+                    "uint32_word_count": 7
+                  },
+                  "range_encoder_state": {
+                    "api": "constriction.stream.queue.RangeEncoder",
+                    "compressed_words_snapshot": {
+                      "first_words_hex": [
+                        "0x2e9f5d83",
+                        "0x7478bd9f",
+                        "0x43f4b64a",
+                        "0xfae81ac2",
+                        "0x6b060535",
+                        "0x0d5ac0f8",
+                        "0x18cc025a"
+                      ],
+                      "last_words_hex": [
+                        "0x2e9f5d83",
+                        "0x7478bd9f",
+                        "0x43f4b64a",
+                        "0xfae81ac2",
+                        "0x6b060535",
+                        "0x0d5ac0f8",
+                        "0x18cc025a"
+                      ],
+                      "sha256": "5adc58719a78914476d9f4bb4d26cb09c2b20e3e6ab043f12b2de8ac1000a9a2",
+                      "uint32_word_count": 7
+                    },
+                    "is_empty": 0,
+                    "label": "after_encoding_128_reference_symbols",
+                    "num_bits": 224,
+                    "num_words": 7,
+                    "pos": {
+                      "interval": [
+                        1786805733673234742,
+                        276945419432
+                      ],
+                      "queue_index": 6
+                    }
+                  },
+                  "scope_note": "Local prefix words are independently finalized reference-context range streams; mismatch with the submitted full stream is a range-state diagnostic, not a score or parity claim. The full submitted stream replay is the prefix-decode fidelity check; the same-word-count replay is only a truncation sensitivity diagnostic.",
+                  "submitted_full_stream_prefix_replay": {
+                    "decoded_prefix_sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310",
+                    "decoded_symbol_count": 8,
+                    "decoder_state_after_mismatch": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay_mismatch",
+                      "maybe_exhausted": false,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "first_mismatch": {
+                      "decoded_symbol": 2,
+                      "reference_symbol": 0,
+                      "symbol_index": 7
+                    },
+                    "passed": false,
+                    "status": "decoded_symbol_mismatch"
+                  },
+                  "submitted_same_word_count_prefix": {
+                    "first_words_hex": [
+                      "0x9b5c86f6",
+                      "0xc3e3f98a",
+                      "0xf6f1efc5",
+                      "0x12458e3f",
+                      "0x13c6f92f",
+                      "0x00000000",
+                      "0x00000000"
+                    ],
+                    "last_words_hex": [
+                      "0x9b5c86f6",
+                      "0xc3e3f98a",
+                      "0xf6f1efc5",
+                      "0x12458e3f",
+                      "0x13c6f92f",
+                      "0x00000000",
+                      "0x00000000"
+                    ],
+                    "sha256": "4baa055661c309919cfa085ed2e293665ff07d4719494404fd7d1162139e13a6",
+                    "uint32_word_count": 7
+                  },
+                  "submitted_same_word_count_replay": {
+                    "decoded_prefix_sha256": "10ae0fdbf8c4f1f2b5e708fd7478abd2bf03b190edc878dc62ada645aa7e0310",
+                    "decoded_symbol_count": 8,
+                    "decoder_state_after_mismatch": {
+                      "api": "constriction.stream.queue.RangeDecoder",
+                      "label": "after_prefix_replay_mismatch",
+                      "maybe_exhausted": false,
+                      "public_state_surface": "maybe_exhausted_only"
+                    },
+                    "first_mismatch": {
+                      "decoded_symbol": 2,
+                      "reference_symbol": 0,
+                      "symbol_index": 7
+                    },
+                    "passed": false,
+                    "status": "decoded_symbol_mismatch"
+                  },
+                  "submitted_word_comparison": {
+                    "common_prefix_word_count": 0,
+                    "local_word_count": 7,
+                    "same_word_count_prefix_matches": false,
+                    "same_word_count_prefix_scope": "submitted stream truncated to the independently finalized local prefix word count",
+                    "submitted_full_stream_prefix_replay_passed": false,
+                    "submitted_total_word_count": 29199
+                  },
+                  "symbol_count": 128,
+                  "symbols_before_failure_remaining": 15861
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "target_group_start",
+                  "local_reference_prefix_replay": {
+                    "limit": 128,
+                    "passed": false,
+                    "status": "not_attempted_symbol_limit",
+                    "symbol_count": 15552
+                  },
+                  "local_reference_prefix_words": {
+                    "first_words_hex": [
+                      "0x2e9f5d83",
+                      "0x7478bd9f",
+                      "0x43f4b64a",
+                      "0xfae81ac2",
+                      "0x6b060535",
+                      "0x0d5ac0f8",
+                      "0x18cc0263",
+                      "0xcac7b887"
+                    ],
+                    "last_words_hex": [
+                      "0xac4dc0b5",
+                      "0xffec3e20",
+                      "0x958ad969",
+                      "0xff4b4b5a",
+                      "0x2efda956",
+                      "0xd2e626a2",
+                      "0x8d058380",
+                      "0x4aa6a491"
+                    ],
+                    "sha256": "d44c3fe4b58e0f41316c73f6933d75e92372dcb1957cfc3cd8057f058dc89cb0",
+                    "uint32_word_count": 858
+                  },
+                  "range_encoder_state": {
+                    "api": "constriction.stream.queue.RangeEncoder",
+                    "compressed_words_snapshot": {
+                      "first_words_hex": [
+                        "0x2e9f5d83",
+                        "0x7478bd9f",
+                        "0x43f4b64a",
+                        "0xfae81ac2",
+                        "0x6b060535",
+                        "0x0d5ac0f8",
+                        "0x18cc0263",
+                        "0xcac7b887"
+                      ],
+                      "last_words_hex": [
+                        "0xac4dc0b5",
+                        "0xffec3e20",
+                        "0x958ad969",
+                        "0xff4b4b5a",
+                        "0x2efda956",
+                        "0xd2e626a2",
+                        "0x8d058380",
+                        "0x4aa6a491"
+                      ],
+                      "sha256": "d44c3fe4b58e0f41316c73f6933d75e92372dcb1957cfc3cd8057f058dc89cb0",
+                      "uint32_word_count": 858
+                    },
+                    "is_empty": 0,
+                    "label": "after_encoding_15552_reference_symbols",
+                    "num_bits": 27456,
+                    "num_words": 858,
+                    "pos": {
+                      "interval": [
+                        5379167747346513768,
+                        138893418050992614
+                      ],
+                      "queue_index": 857
+                    }
+                  },
+                  "scope_note": "Local prefix words are independently finalized reference-context range streams; mismatch with the submitted full stream is a range-state diagnostic, not a score or parity claim. The full submitted stream replay is the prefix-decode fidelity check; the same-word-count replay is only a truncation sensitivity diagnostic.",
+                  "submitted_full_stream_prefix_replay": {
+                    "limit": 128,
+                    "passed": false,
+                    "status": "not_attempted_symbol_limit",
+                    "symbol_count": 15552
+                  },
+                  "submitted_same_word_count_prefix": {
+                    "first_words_hex": [
+                      "0x9b5c86f6",
+                      "0xc3e3f98a",
+                      "0xf6f1efc5",
+                      "0x12458e3f",
+                      "0x13c6f92f",
+                      "0x00000000",
+                      "0x00000000",
+                      "0x1edbc12d"
+                    ],
+                    "last_words_hex": [
+                      "0x90f1af01",
+                      "0x5c8401cf",
+                      "0x2d9a2768",
+                      "0x275f8e6d",
+                      "0x4d79470a",
+                      "0x7e667366",
+                      "0xfce14558",
+                      "0x9faa3747"
+                    ],
+                    "sha256": "e867ad1dee607a645cf5deb898564d556ad86dfdd4f14a3b9a60811e3cad7d3a",
+                    "uint32_word_count": 858
+                  },
+                  "submitted_same_word_count_replay": {
+                    "limit": 128,
+                    "passed": false,
+                    "status": "not_attempted_symbol_limit",
+                    "symbol_count": 15552
+                  },
+                  "submitted_word_comparison": {
+                    "common_prefix_word_count": 0,
+                    "local_word_count": 858,
+                    "same_word_count_prefix_matches": false,
+                    "same_word_count_prefix_scope": "submitted stream truncated to the independently finalized local prefix word count",
+                    "submitted_full_stream_prefix_replay_passed": false,
+                    "submitted_total_word_count": 29199
+                  },
+                  "symbol_count": 15552,
+                  "symbols_before_failure_remaining": 437
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "failure_minus_1_symbols",
+                  "local_reference_prefix_replay": {
+                    "limit": 128,
+                    "passed": false,
+                    "status": "not_attempted_symbol_limit",
+                    "symbol_count": 15988
+                  },
+                  "local_reference_prefix_words": {
+                    "first_words_hex": [
+                      "0x2e9f5d83",
+                      "0x7478bd9f",
+                      "0x43f4b64a",
+                      "0xfae81ac2",
+                      "0x6b060535",
+                      "0x0d5ac0f8",
+                      "0x18cc0263",
+                      "0xcac7b887"
+                    ],
+                    "last_words_hex": [
+                      "0xb0447ba1",
+                      "0xd68a860b",
+                      "0xbabf3960",
+                      "0xad7296d4",
+                      "0x41fd75ff",
+                      "0xd6c25eff",
+                      "0x031f9513",
+                      "0x5a5ce8a9"
+                    ],
+                    "sha256": "049421db7ef7094934120d5864a9b92d8b16d80cfba5171325ba9cb7f59b11e6",
+                    "uint32_word_count": 867
+                  },
+                  "range_encoder_state": {
+                    "api": "constriction.stream.queue.RangeEncoder",
+                    "compressed_words_snapshot": {
+                      "first_words_hex": [
+                        "0x2e9f5d83",
+                        "0x7478bd9f",
+                        "0x43f4b64a",
+                        "0xfae81ac2",
+                        "0x6b060535",
+                        "0x0d5ac0f8",
+                        "0x18cc0263",
+                        "0xcac7b887"
+                      ],
+                      "last_words_hex": [
+                        "0xb0447ba1",
+                        "0xd68a860b",
+                        "0xbabf3960",
+                        "0xad7296d4",
+                        "0x41fd75ff",
+                        "0xd6c25eff",
+                        "0x031f9513",
+                        "0x5a5ce8a9"
+                      ],
+                      "sha256": "049421db7ef7094934120d5864a9b92d8b16d80cfba5171325ba9cb7f59b11e6",
+                      "uint32_word_count": 867
+                    },
+                    "is_empty": 0,
+                    "label": "after_encoding_15988_reference_symbols",
+                    "num_bits": 27744,
+                    "num_words": 867,
+                    "pos": {
+                      "interval": [
+                        6511334970793889212,
+                        36502850250
+                      ],
+                      "queue_index": 866
+                    }
+                  },
+                  "scope_note": "Local prefix words are independently finalized reference-context range streams; mismatch with the submitted full stream is a range-state diagnostic, not a score or parity claim. The full submitted stream replay is the prefix-decode fidelity check; the same-word-count replay is only a truncation sensitivity diagnostic.",
+                  "submitted_full_stream_prefix_replay": {
+                    "limit": 128,
+                    "passed": false,
+                    "status": "not_attempted_symbol_limit",
+                    "symbol_count": 15988
+                  },
+                  "submitted_same_word_count_prefix": {
+                    "first_words_hex": [
+                      "0x9b5c86f6",
+                      "0xc3e3f98a",
+                      "0xf6f1efc5",
+                      "0x12458e3f",
+                      "0x13c6f92f",
+                      "0x00000000",
+                      "0x00000000",
+                      "0x1edbc12d"
+                    ],
+                    "last_words_hex": [
+                      "0xd079c55c",
+                      "0xc271e2b2",
+                      "0x985c7b0b",
+                      "0x0dbff5a6",
+                      "0x6e7510f2",
+                      "0xa1a6d8e1",
+                      "0x96cfa63f",
+                      "0xa1831e5a"
+                    ],
+                    "sha256": "20ce09968f1334135c22bf88ceac0296559568c5ece09f08a0d729d44daf74ac",
+                    "uint32_word_count": 867
+                  },
+                  "submitted_same_word_count_replay": {
+                    "limit": 128,
+                    "passed": false,
+                    "status": "not_attempted_symbol_limit",
+                    "symbol_count": 15988
+                  },
+                  "submitted_word_comparison": {
+                    "common_prefix_word_count": 0,
+                    "local_word_count": 867,
+                    "same_word_count_prefix_matches": false,
+                    "same_word_count_prefix_scope": "submitted stream truncated to the independently finalized local prefix word count",
+                    "submitted_full_stream_prefix_replay_passed": false,
+                    "submitted_total_word_count": 29199
+                  },
+                  "symbol_count": 15988,
+                  "symbols_before_failure_remaining": 1
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "before_failure_row",
+                  "local_reference_prefix_replay": {
+                    "limit": 128,
+                    "passed": false,
+                    "status": "not_attempted_symbol_limit",
+                    "symbol_count": 15989
+                  },
+                  "local_reference_prefix_words": {
+                    "first_words_hex": [
+                      "0x2e9f5d83",
+                      "0x7478bd9f",
+                      "0x43f4b64a",
+                      "0xfae81ac2",
+                      "0x6b060535",
+                      "0x0d5ac0f8",
+                      "0x18cc0263",
+                      "0xcac7b887"
+                    ],
+                    "last_words_hex": [
+                      "0xd68a860b",
+                      "0xbabf3960",
+                      "0xad7296d4",
+                      "0x41fd75ff",
+                      "0xd6c25eff",
+                      "0x031f9513",
+                      "0x5a5ce8b0",
+                      "0xb141d2d2"
+                    ],
+                    "sha256": "fc9c44cda7108cdd0d59ddda59ba67dcde0a526212c9aa5b8eb0fe7543e30054",
+                    "uint32_word_count": 868
+                  },
+                  "range_encoder_state": {
+                    "api": "constriction.stream.queue.RangeEncoder",
+                    "compressed_words_snapshot": {
+                      "first_words_hex": [
+                        "0x2e9f5d83",
+                        "0x7478bd9f",
+                        "0x43f4b64a",
+                        "0xfae81ac2",
+                        "0x6b060535",
+                        "0x0d5ac0f8",
+                        "0x18cc0263",
+                        "0xcac7b887"
+                      ],
+                      "last_words_hex": [
+                        "0xd68a860b",
+                        "0xbabf3960",
+                        "0xad7296d4",
+                        "0x41fd75ff",
+                        "0xd6c25eff",
+                        "0x031f9513",
+                        "0x5a5ce8b0",
+                        "0xb141d2d2"
+                      ],
+                      "sha256": "fc9c44cda7108cdd0d59ddda59ba67dcde0a526212c9aa5b8eb0fe7543e30054",
+                      "uint32_word_count": 868
+                    },
+                    "is_empty": 0,
+                    "label": "after_encoding_15989_reference_symbols",
+                    "num_bits": 27776,
+                    "num_words": 868,
+                    "pos": {
+                      "interval": [
+                        12772721817584402432,
+                        1336159816069939200
+                      ],
+                      "queue_index": 867
+                    }
+                  },
+                  "scope_note": "Local prefix words are independently finalized reference-context range streams; mismatch with the submitted full stream is a range-state diagnostic, not a score or parity claim. The full submitted stream replay is the prefix-decode fidelity check; the same-word-count replay is only a truncation sensitivity diagnostic.",
+                  "submitted_full_stream_prefix_replay": {
+                    "limit": 128,
+                    "passed": false,
+                    "status": "not_attempted_symbol_limit",
+                    "symbol_count": 15989
+                  },
+                  "submitted_same_word_count_prefix": {
+                    "first_words_hex": [
+                      "0x9b5c86f6",
+                      "0xc3e3f98a",
+                      "0xf6f1efc5",
+                      "0x12458e3f",
+                      "0x13c6f92f",
+                      "0x00000000",
+                      "0x00000000",
+                      "0x1edbc12d"
+                    ],
+                    "last_words_hex": [
+                      "0xc271e2b2",
+                      "0x985c7b0b",
+                      "0x0dbff5a6",
+                      "0x6e7510f2",
+                      "0xa1a6d8e1",
+                      "0x96cfa63f",
+                      "0xa1831e5a",
+                      "0x2dbfd13e"
+                    ],
+                    "sha256": "e09dc2302b031525c9ce148e1de1aa1a7043a59b192452af20c74b34b81e4d9b",
+                    "uint32_word_count": 868
+                  },
+                  "submitted_same_word_count_replay": {
+                    "limit": 128,
+                    "passed": false,
+                    "status": "not_attempted_symbol_limit",
+                    "symbol_count": 15989
+                  },
+                  "submitted_word_comparison": {
+                    "common_prefix_word_count": 0,
+                    "local_word_count": 868,
+                    "same_word_count_prefix_matches": false,
+                    "same_word_count_prefix_scope": "submitted stream truncated to the independently finalized local prefix word count",
+                    "submitted_full_stream_prefix_replay_passed": false,
+                    "submitted_total_word_count": 29199
+                  },
+                  "symbol_count": 15989,
+                  "symbols_before_failure_remaining": 0
+                },
+                {
+                  "includes_failure_symbol": true,
+                  "label": "including_failure_row",
+                  "local_reference_prefix_replay": {
+                    "limit": 128,
+                    "passed": false,
+                    "status": "not_attempted_symbol_limit",
+                    "symbol_count": 15990
+                  },
+                  "local_reference_prefix_words": {
+                    "first_words_hex": [
+                      "0x2e9f5d83",
+                      "0x7478bd9f",
+                      "0x43f4b64a",
+                      "0xfae81ac2",
+                      "0x6b060535",
+                      "0x0d5ac0f8",
+                      "0x18cc0263",
+                      "0xcac7b887"
+                    ],
+                    "last_words_hex": [
+                      "0xd68a860b",
+                      "0xbabf3960",
+                      "0xad7296d4",
+                      "0x41fd75ff",
+                      "0xd6c25eff",
+                      "0x031f9513",
+                      "0x5a5ce8b0",
+                      "0xb1420835"
+                    ],
+                    "sha256": "cfaf318eaceafbe5495746e97b6cf9ace319fb95c08e2a47b9fa21077ee40f48",
+                    "uint32_word_count": 868
+                  },
+                  "range_encoder_state": {
+                    "api": "constriction.stream.queue.RangeEncoder",
+                    "compressed_words_snapshot": {
+                      "first_words_hex": [
+                        "0x2e9f5d83",
+                        "0x7478bd9f",
+                        "0x43f4b64a",
+                        "0xfae81ac2",
+                        "0x6b060535",
+                        "0x0d5ac0f8",
+                        "0x18cc0263",
+                        "0xcac7b887"
+                      ],
+                      "last_words_hex": [
+                        "0xd68a860b",
+                        "0xbabf3960",
+                        "0xad7296d4",
+                        "0x41fd75ff",
+                        "0xd6c25eff",
+                        "0x031f9513",
+                        "0x5a5ce8b0",
+                        "0xb1420835"
+                      ],
+                      "sha256": "cfaf318eaceafbe5495746e97b6cf9ace319fb95c08e2a47b9fa21077ee40f48",
+                      "uint32_word_count": 868
+                    },
+                    "is_empty": 0,
+                    "label": "after_encoding_15990_reference_symbols",
+                    "num_bits": 27776,
+                    "num_words": 868,
+                    "pos": {
+                      "interval": [
+                        12772780513245496832,
+                        908551651265510400
+                      ],
+                      "queue_index": 867
+                    }
+                  },
+                  "scope_note": "Local prefix words are independently finalized reference-context range streams; mismatch with the submitted full stream is a range-state diagnostic, not a score or parity claim. The full submitted stream replay is the prefix-decode fidelity check; the same-word-count replay is only a truncation sensitivity diagnostic.",
+                  "submitted_full_stream_prefix_replay": {
+                    "limit": 128,
+                    "passed": false,
+                    "status": "not_attempted_symbol_limit",
+                    "symbol_count": 15990
+                  },
+                  "submitted_same_word_count_prefix": {
+                    "first_words_hex": [
+                      "0x9b5c86f6",
+                      "0xc3e3f98a",
+                      "0xf6f1efc5",
+                      "0x12458e3f",
+                      "0x13c6f92f",
+                      "0x00000000",
+                      "0x00000000",
+                      "0x1edbc12d"
+                    ],
+                    "last_words_hex": [
+                      "0xc271e2b2",
+                      "0x985c7b0b",
+                      "0x0dbff5a6",
+                      "0x6e7510f2",
+                      "0xa1a6d8e1",
+                      "0x96cfa63f",
+                      "0xa1831e5a",
+                      "0x2dbfd13e"
+                    ],
+                    "sha256": "e09dc2302b031525c9ce148e1de1aa1a7043a59b192452af20c74b34b81e4d9b",
+                    "uint32_word_count": 868
+                  },
+                  "submitted_same_word_count_replay": {
+                    "limit": 128,
+                    "passed": false,
+                    "status": "not_attempted_symbol_limit",
+                    "symbol_count": 15990
+                  },
+                  "submitted_word_comparison": {
+                    "common_prefix_word_count": 0,
+                    "local_word_count": 868,
+                    "same_word_count_prefix_matches": false,
+                    "same_word_count_prefix_scope": "submitted stream truncated to the independently finalized local prefix word count",
+                    "submitted_full_stream_prefix_replay_passed": false,
+                    "submitted_total_word_count": 29199
+                  },
+                  "symbol_count": 15990,
+                  "symbols_before_failure_remaining": -1
+                }
+              ],
+              "checkpoint_symbol_counts": [
+                {
+                  "includes_failure_symbol": false,
+                  "label": "empty_stream",
+                  "symbol_count": 0,
+                  "symbols_before_failure_remaining": 15989
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "first_1_symbols",
+                  "symbol_count": 1,
+                  "symbols_before_failure_remaining": 15988
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "first_2_symbols",
+                  "symbol_count": 2,
+                  "symbols_before_failure_remaining": 15987
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "first_4_symbols",
+                  "symbol_count": 4,
+                  "symbols_before_failure_remaining": 15985
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "first_8_symbols",
+                  "symbol_count": 8,
+                  "symbols_before_failure_remaining": 15981
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "first_16_symbols",
+                  "symbol_count": 16,
+                  "symbols_before_failure_remaining": 15973
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "first_32_symbols",
+                  "symbol_count": 32,
+                  "symbols_before_failure_remaining": 15957
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "first_64_symbols",
+                  "symbol_count": 64,
+                  "symbols_before_failure_remaining": 15925
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "first_128_symbols",
+                  "symbol_count": 128,
+                  "symbols_before_failure_remaining": 15861
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "target_group_start",
+                  "symbol_count": 15552,
+                  "symbols_before_failure_remaining": 437
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "failure_minus_1_symbols",
+                  "symbol_count": 15988,
+                  "symbols_before_failure_remaining": 1
+                },
+                {
+                  "includes_failure_symbol": false,
+                  "label": "before_failure_row",
+                  "symbol_count": 15989,
+                  "symbols_before_failure_remaining": 0
+                },
+                {
+                  "includes_failure_symbol": true,
+                  "label": "including_failure_row",
+                  "symbol_count": 15990,
+                  "symbols_before_failure_remaining": -1
+                }
+              ],
+              "classification": {
+                "attempted_nonempty_prefix_replays": 8,
+                "byte_exact_reencode_proven": false,
+                "dispatch_allowed": false,
+                "first_local_reference_word_mismatch": {
+                  "checkpoint_label": "first_1_symbols",
+                  "common_prefix_word_count": 0,
+                  "local_word_count": 1,
+                  "submitted_total_word_count": 29199,
+                  "symbol_count": 1
+                },
+                "first_submitted_reference_prefix_failure": {
+                  "checkpoint_label": "first_8_symbols",
+                  "decoded_symbol_count": 8,
+                  "first_mismatch": {
+                    "decoded_symbol": 2,
+                    "reference_symbol": 0,
+                    "symbol_index": 7
+                  },
+                  "status": "decoded_symbol_mismatch",
+                  "symbol_count": 8
+                },
+                "full_decode_proven": false,
+                "next_patch_target": "recover true PR91 encoder semantic tokens or a bridge from the phase-major PR85/QMA9 context prior to submitted PR91 symbols",
+                "schema": "pr91_hpm1_range_prefix_reconstruction_classification_v1",
+                "scope_note": "Seed-prefix checks are local CPU byte-grammar diagnostics only; they do not prove full HPM1 decode, byte-exact reencode, score validity, or dispatch readiness.",
+                "score_claim": false,
+                "status": "submitted_stream_reference_symbol_mismatch_in_seed_prefix"
+              },
+              "schema": "pr91_hpm1_range_prefix_reconstruction_windows_v1",
+              "seed_symbol_counts": [
+                1,
+                2,
+                4,
+                8,
+                16,
+                32,
+                64,
+                128
+              ],
+              "window_symbols_before_failure": [
+                1
+              ]
+            },
+            "reference_teacher_forcing": {
+              "first_decoded_reference_mismatch": {
+                "decoded_symbol": 2,
+                "frame": 0,
+                "global_symbol": 7,
+                "group": 0,
+                "pixel_yx": {
+                  "x": 224,
+                  "y": 0
+                },
+                "reference_symbol": 0,
+                "symbol_in_group": 7
+              },
+              "reference_mismatch_count_before_failure": 5595
+            },
+            "schema": "pr91_hpm1_range_state_prefix_probe_v1",
+            "scope_note": "Local CPU forensic probe only. It narrows prior context/range-state hypotheses but does not prove HPM1 decode parity, byte-exact re-encoding, score validity, or dispatch readiness.",
+            "score_claim": false,
+            "spatial_order_candidate": "phase_major_row_major",
+            "status": "target_failure_reproduced_with_reference_context",
+            "submitted_token_stream": {
+              "bytes": 116796,
+              "decoder_words_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+              "first_words_hex": [
+                "0x9b5c86f6",
+                "0xc3e3f98a",
+                "0xf6f1efc5",
+                "0x12458e3f",
+                "0x13c6f92f",
+                "0x00000000",
+                "0x00000000",
+                "0x1edbc12d"
+              ],
+              "last_words_hex": [
+                "0x21ba8197",
+                "0x9cfe9ecd",
+                "0x6cad5e80",
+                "0xc7afa705",
+                "0x98e4980f",
+                "0x76208ae1",
+                "0x69051875",
+                "0xa3cabc6d"
+              ],
+              "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+              "uint32_word_count": 29199,
+              "word_order_candidate": "source_little_uint32"
+            },
+            "target_failure": {
+              "decoded_symbol_count_before_failure": 15989,
+              "frame": 0,
+              "group": 17,
+              "symbol_in_group": 437
+            },
+            "target_failure_reproduced": true,
+            "target_group_start_decoded_symbols": 15552
+          },
+          "reference_mismatch_count_before_failure": 5595,
+          "status": "failed_at_first_entropy_mismatch"
+        }
+      }
+    ],
+    "candidate_scope": {
+      "label": "phase-major row-major",
+      "requested_candidates": [
+        "phase_major_row_major"
+      ]
+    },
+    "dispatch_allowed": false,
+    "hypothesis_classification": {
+      "best_reference_teacher_forced_candidate": "phase_major_row_major",
+      "best_reference_teacher_forced_decoded_symbols_or_before_failure": 15989,
+      "best_reference_teacher_forced_failure_signature": {
+        "decoded_symbol_count_before_failure": 15989,
+        "frame": 0,
+        "group": 17,
+        "symbol_in_group": 437
+      },
+      "dispatch_allowed": false,
+      "fail_closed_blockers": [
+        "full_600_frame_hpm1_decode_not_proven",
+        "byte_exact_hpm1_reencode_not_proven",
+        "true_pr91_encoder_semantic_tokens_not_recovered",
+        "range_coder_full_stream_contract_not_recovered"
+      ],
+      "probability_context_grammar": {
+        "note": "The public runtime gives no encoder-side probability trace, so context drift or numeric probability grammar before the failing row remains a fail-closed blocker.",
+        "status": "still_open_prior_context_or_probability_numeric_contract"
+      },
+      "range_coder_contract": {
+        "decoder_not_stream_exhaustion": true,
+        "note": "The failed submitted stream state is not reproduced by a single-row local model failure; prior range state, finalization, or encoder-side construction remains open.",
+        "single_row_local_roundtrip_all_symbols": true,
+        "status": "still_open_prior_range_state_or_encoder_finalization_contract"
+      },
+      "row_ordering": {
+        "advanced_candidates": [
+          "phase_major_row_major"
+        ],
+        "note": "At least one off-source spatial order advances beyond source order, but the best advanced candidate still fails before completing frame 0.",
+        "status": "phase_major_advances_but_does_not_decode_full_prefix"
+      },
+      "schema": "pr91_hpm1_decode_failure_hypothesis_classification_v1",
+      "score_claim": false,
+      "semantic_token_interpretation": {
+        "available_reference_symbol": 2,
+        "available_reference_symbol_probability": 0.6799724541,
+        "available_reference_symbol_rank": 1,
+        "status": "not_explained_by_current_row_available_reference_symbol",
+        "true_pr91_encoder_tokens_still_open": true
+      },
+      "source_decoded_symbols_or_before_failure": 5951,
+      "status": "narrowed_to_range_or_probability_context_grammar_after_phase_major_reference_row"
+    },
+    "max_frames": 1,
+    "narrowed_hypothesis": "At least one spatial candidate advances under PR85/QMA9 reference teacher-forcing; recover true PR91 semantic tokens or encoder context before dismissing this class.",
+    "passed": false,
+    "prob_eps": 1e-07,
+    "probability_variant": "source_float64_perfect_false",
+    "range_prefix_probe": {
+      "enabled": true,
+      "max_target_decoded_before": 20000,
+      "replay_symbol_limit": 128,
+      "scope": "local CPU reference-forced range-state prefix reconstruction; not score or dispatch evidence",
+      "seed_symbol_counts": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        32,
+        64,
+        128
+      ],
+      "window_symbols_before_failure": [
+        1
+      ]
+    },
+    "reference_symbol_window": {
+      "scope": "canonical_reference_tokens_at_failure_row",
+      "window_after": 5,
+      "window_before": 2
+    },
+    "schema": "pr91_hpm1_reference_teacher_forcing_probe_v1",
+    "score_claim": false,
+    "status": "at_least_one_candidate_advanced_under_reference_teacher_forcing"
+  },
+  "reference_token_sha256_contract": {
+    "actual_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "expected_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "matches_expected": true,
+    "required": true
+  },
+  "reference_tokens": {
+    "bytes": 117964800,
+    "expected_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "layout": "legacy_assume_nhw",
+    "matches_expected_pr85_qma9_token_source": true,
+    "observed_range": {
+      "max": 4,
+      "min": 0
+    },
+    "path": "experiments/results/pr85_qma9_mode_sweep_20260504_codex/adaptive6pr.decoded.raw",
+    "render_order_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "render_transform": "none",
+    "returned_shape": [
+      600,
+      384,
+      512
+    ],
+    "sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "storage_order": "frame_major_header_height_by_header_width",
+    "storage_shape": [
+      600,
+      384,
+      512
+    ]
+  },
+  "runtime_source_contract": {
+    "contains_range_codec_cpp": true,
+    "file_count": 6,
+    "files": [
+      {
+        "bytes": 110051,
+        "path": "__pycache__/inflate.cpython-312.pyc",
+        "sha256": "f61d13b45251b738edba51486323229887a7dfd5a72dda48f660d1a6e7ac5085"
+      },
+      {
+        "bytes": 34363,
+        "path": "__pycache__/pr86_hpac.cpython-312.pyc",
+        "sha256": "72f5ad6cb03355d489b704df199d3ac20bb25ba5ddcfd889473021783ba310b7"
+      },
+      {
+        "bytes": 86673,
+        "path": "inflate.py",
+        "sha256": "9665d3832abd8f720617cad4e976536ef9ff4ce9a117623b9a00229c518a22ba"
+      },
+      {
+        "bytes": 228,
+        "path": "inflate.sh",
+        "sha256": "2c37f19e210f97c8926b70594e4d57fd8b0256dadace0cd55c28bbe6995ff027"
+      },
+      {
+        "bytes": 19657,
+        "path": "pr86_hpac.py",
+        "sha256": "f86f3067386928478d983817c9f9ee095ce6eb02aee8c0fbb7987cd0af1f9b01"
+      },
+      {
+        "bytes": 60201,
+        "path": "range_mask_codec.cpp",
+        "sha256": "23a6d9b622b231f61c73cd57eae3af96ca6133d07fab85e384a72e257317fb25"
+      }
+    ],
+    "missing_required_source_files": [],
+    "pycache_file_count": 2,
+    "pycache_files": [
+      {
+        "bytes": 110051,
+        "path": "__pycache__/inflate.cpython-312.pyc",
+        "sha256": "f61d13b45251b738edba51486323229887a7dfd5a72dda48f660d1a6e7ac5085"
+      },
+      {
+        "bytes": 34363,
+        "path": "__pycache__/pr86_hpac.cpython-312.pyc",
+        "sha256": "72f5ad6cb03355d489b704df199d3ac20bb25ba5ddcfd889473021783ba310b7"
+      }
+    ],
+    "pycache_only": false,
+    "required_source_files": [
+      "inflate.py",
+      "pr86_hpac.py"
+    ],
+    "required_source_files_present": true,
+    "score_claim": false,
+    "source_dir": "experiments/results/public_pr_archive_release_view/public_pr91_intake_20260505_auto/source/submissions/hpac_coder_hybrid",
+    "source_file_count": 4,
+    "source_files": [
+      {
+        "bytes": 86673,
+        "path": "inflate.py",
+        "sha256": "9665d3832abd8f720617cad4e976536ef9ff4ce9a117623b9a00229c518a22ba"
+      },
+      {
+        "bytes": 228,
+        "path": "inflate.sh",
+        "sha256": "2c37f19e210f97c8926b70594e4d57fd8b0256dadace0cd55c28bbe6995ff027"
+      },
+      {
+        "bytes": 19657,
+        "path": "pr86_hpac.py",
+        "sha256": "f86f3067386928478d983817c9f9ee095ce6eb02aee8c0fbb7987cd0af1f9b01"
+      },
+      {
+        "bytes": 60201,
+        "path": "range_mask_codec.cpp",
+        "sha256": "23a6d9b622b231f61c73cd57eae3af96ca6133d07fab85e384a72e257317fb25"
+      }
+    ],
+    "status": "passed_static_source_inventory"
+  },
+  "schema": "pr91_hpm1_reference_teacher_forcing_probe_v1",
+  "score_claim": false,
+  "source_order_baseline": {
+    "decoded_symbols_or_before_failure": 5951,
+    "failure_signature": {
+      "decoded_symbol_count_before_failure": 5951,
+      "frame": 0,
+      "group": 10,
+      "symbol_in_group": 191
+    },
+    "range_decoder_diagnostic": {
+      "exception_text": "Tried to decode from compressed data that is invalid for the employed entropy model.",
+      "not_stream_exhaustion": true,
+      "state_after_failed_decode": {
+        "api": "constriction.stream.queue.RangeDecoder",
+        "label": "after_failed_decode_exception",
+        "maybe_exhausted": false,
+        "public_state_surface": "maybe_exhausted_only"
+      },
+      "state_before_decode": {
+        "api": "constriction.stream.queue.RangeDecoder",
+        "label": "before_decode_attempt",
+        "maybe_exhausted": false,
+        "public_state_surface": "maybe_exhausted_only"
+      }
+    },
+    "status": "failed_at_first_entropy_mismatch"
+  },
+  "status": "reference_teacher_forcing_hypothesis_still_open",
+  "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_reference_teacher_forcing_probe",
+  "tool_run_manifest": {
+    "argv": [
+      "--spatial-order-candidates",
+      "phase_major_row_major",
+      "--range-prefix-probe",
+      "--range-prefix-window-symbols",
+      "1",
+      "--range-prefix-seed-symbol-counts",
+      "1,2,4,8,16,32,64,128",
+      "--range-prefix-replay-symbol-limit",
+      "128",
+      "--range-prefix-max-target-decoded-before",
+      "20000",
+      "--json-out",
+      ".omx/research/pr91_hpm1_reference_teacher_forcing_seed_prefix_20260507_codex.json"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "f3aa69bd13b88d5bd0b825d6380223854d36ad575ce4b3db4f34003738c5ef7a",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 222404,
+        "path": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+        "sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f"
+      },
+      {
+        "bytes": 117964800,
+        "path": "experiments/results/pr85_qma9_mode_sweep_20260504_codex/adaptive6pr.decoded.raw",
+        "sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a"
+      }
+    ],
+    "output_path": ".omx/research/pr91_hpm1_reference_teacher_forcing_seed_prefix_20260507_codex.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/audit_pr91_hpm1_reference_teacher_forcing_probe.py"
+  }
+}

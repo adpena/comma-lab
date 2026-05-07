@@ -19,6 +19,8 @@ from tac.pr91_hpm1_codec import (
     DEFAULT_PR91_ARCHIVE,
     Pr91Hpm1Error,
     _build_range_prefix_checkpoint_report,
+    _classify_range_prefix_reconstruction,
+    _prefix_checkpoint_symbol_counts,
     build_hpm1_mask_segment,
     raw_tokens_to_mod5_residual_symbols,
     reconstruct_raw_tokens_from_mod5_residual_symbols,
@@ -235,6 +237,87 @@ def test_range_prefix_report_uses_full_submitted_stream_for_replay_fidelity() ->
     assert report["submitted_word_comparison"][
         "submitted_full_stream_prefix_replay_passed"
     ] is True
+
+
+def test_range_prefix_checkpoints_include_seed_counts_before_deep_failure() -> None:
+    checkpoints = _prefix_checkpoint_symbol_counts(
+        target_decoded_before=15989,
+        target_group_start=15552,
+        total_collected_symbols=15990,
+        range_prefix_window_symbols=(1024, 1),
+        range_prefix_seed_symbol_counts=(1, 8, 64, 20000),
+    )
+
+    by_count = {row["symbol_count"]: row for row in checkpoints}
+    assert by_count[0]["label"] == "empty_stream"
+    assert by_count[1]["label"] == "first_1_symbols"
+    assert by_count[8]["label"] == "first_8_symbols"
+    assert by_count[64]["label"] == "first_64_symbols"
+    assert 20000 not in by_count
+    assert by_count[14965]["label"] == "failure_minus_1024_symbols"
+    assert by_count[15988]["label"] == "failure_minus_1_symbols"
+    assert by_count[15989]["label"] == "before_failure_row"
+    assert by_count[15990]["label"] == "including_failure_row"
+
+
+def test_range_prefix_reconstruction_classifies_seed_reference_mismatch() -> None:
+    summary = _classify_range_prefix_reconstruction(
+        [
+            {
+                "label": "empty_stream",
+                "symbol_count": 0,
+                "submitted_full_stream_prefix_replay": {
+                    "status": "decoded_empty_prefix",
+                    "passed": True,
+                },
+                "submitted_word_comparison": {
+                    "same_word_count_prefix_matches": True,
+                    "common_prefix_word_count": 0,
+                },
+            },
+            {
+                "label": "first_8_symbols",
+                "symbol_count": 8,
+                "submitted_full_stream_prefix_replay": {
+                    "status": "decoded_symbol_mismatch",
+                    "passed": False,
+                    "decoded_symbol_count": 8,
+                    "first_mismatch": {
+                        "symbol_index": 7,
+                        "decoded_symbol": 2,
+                        "reference_symbol": 0,
+                    },
+                },
+                "submitted_word_comparison": {
+                    "same_word_count_prefix_matches": False,
+                    "common_prefix_word_count": 0,
+                    "local_word_count": 1,
+                    "submitted_total_word_count": 18268,
+                },
+            },
+        ]
+    )
+
+    assert summary["schema"] == (
+        "pr91_hpm1_range_prefix_reconstruction_classification_v1"
+    )
+    assert summary["status"] == (
+        "submitted_stream_reference_symbol_mismatch_in_seed_prefix"
+    )
+    assert summary["score_claim"] is False
+    assert summary["dispatch_allowed"] is False
+    assert summary["byte_exact_reencode_proven"] is False
+    assert summary["first_submitted_reference_prefix_failure"] == {
+        "checkpoint_label": "first_8_symbols",
+        "symbol_count": 8,
+        "status": "decoded_symbol_mismatch",
+        "decoded_symbol_count": 8,
+        "first_mismatch": {
+            "symbol_index": 7,
+            "decoded_symbol": 2,
+            "reference_symbol": 0,
+        },
+    }
 
 
 def test_pr91_probability_matrix_is_fail_closed_not_notimplemented(tmp_path: Path) -> None:
@@ -634,6 +717,15 @@ def test_pr91_reference_teacher_forcing_probe_cli_narrows_false_lead(
     )
     probe = payload["reference_teacher_forcing_probe"]
     assert probe["status"] == "not_explained_by_pr85_qma9_reference_teacher_forcing"
+    progress = probe["candidate_progress_summary"]
+    assert progress["schema"] == (
+        "pr91_hpm1_reference_teacher_forcing_candidate_progress_v1"
+    )
+    assert progress["advancing_candidates"] == []
+    assert progress["regressing_candidates"] == ["tile_major_row_major"]
+    assert progress["candidate_rows"][0]["status"] == (
+        "reference_forcing_regresses_candidate"
+    )
     assert probe["candidate_scope"] == {
         "requested_candidates": ["tile_major_row_major"],
         "label": "tile-major row-major",
@@ -702,6 +794,7 @@ def test_pr91_reference_teacher_forcing_probe_cli_help_lists_range_prefix_flags(
 
     assert "--range-prefix-probe" in result.stdout
     assert "--range-prefix-window-symbols" in result.stdout
+    assert "--range-prefix-seed-symbol-counts" in result.stdout
     assert "--range-prefix-replay-symbol-limit" in result.stdout
     assert "--range-prefix-max-target-decoded-before" in result.stdout
 
@@ -731,6 +824,10 @@ def test_pr91_reference_teacher_forcing_probe_records_phase_major_next_row_artif
     assert report["dispatch_allowed"] is False
     probe = report["reference_teacher_forcing_probe"]
     assert probe["advanced_candidates"] == ["phase_major_row_major"]
+    progress = probe["candidate_progress_summary"]
+    assert progress["advancing_candidates"] == ["phase_major_row_major"]
+    assert progress["regressing_candidates"] == []
+    assert progress["candidate_rows"][0]["delta_reference_vs_decoded"] == 9063
     row = probe["candidate_results"][0]["reference_teacher_forced_context"]
     assert row["failure_signature"] == {
         "frame": 0,
@@ -853,6 +950,12 @@ def test_pr91_probe_contracts_fail_closed_on_bad_inputs(tmp_path: Path) -> None:
             archive,
             run_range_prefix_probe=True,
             range_prefix_window_symbols=(0,),
+        )
+    with pytest.raises(Pr91Hpm1Error, match="range_prefix_seed_symbol_counts_must_be_positive"):
+        run_pr91_hpm1_reference_teacher_forcing_probe(
+            archive,
+            run_range_prefix_probe=True,
+            range_prefix_seed_symbol_counts=(0,),
         )
     with pytest.raises(Pr91Hpm1Error, match="replay_symbol_limit_must_be_nonnegative"):
         run_pr91_hpm1_reference_teacher_forcing_probe(
