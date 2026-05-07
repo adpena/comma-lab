@@ -250,13 +250,16 @@ def build_sweep_candidates(
 def to_meta_lagrangian_candidates(
     candidates: list[SweepCandidate], *, lane_class: str | None = None
 ) -> list[dict[str, Any]]:
-    """Convert sweep candidates to the schema consumed by
+    """Convert sweep candidates to the strict schema consumed by
     :func:`tac.optimizer.meta_lagrangian.MetaLagrangianSearch.evaluate_all`
     (via ``tools/meta_lagrangian_search_cli.py --candidates-json``).
 
     The search engine expects each candidate dict to carry
     ``candidate_id``, ``archive_bytes``, ``rel_err_pct``, ``n_layers``,
-    ``lane_class``, and optional ``archive_path`` keys.
+    ``lane_class``, and optional ``archive_path`` keys. It forwards each
+    dict directly into ``evaluate_candidate(**candidate)``; do not emit
+    extra metadata here or the bridge will fail at runtime. The full sweep
+    manifest already preserves op params, predicted bands, and provenance.
 
     Mapping rationale:
       - ``archive_bytes`` ← ``predicted_archive_bytes`` (the substituted size)
@@ -282,16 +285,6 @@ def to_meta_lagrangian_candidates(
             "n_layers": 0,
             "lane_class": derived_lane_class,
             "archive_path": None,
-            # Pass-through fields so the search engine can surface them in
-            # its ranked report (non-required but useful for forensics).
-            "predicted_band": list(c.predicted_band),
-            "predicted_score": c.predicted_score,
-            "score_delta_vs_anchor": c.score_delta_vs_anchor,
-            "rate_delta_vs_anchor": c.rate_delta_vs_anchor,
-            "evidence_semantics": c.evidence_semantics,
-            "op_module": c.op_module,
-            "op_class": c.op_class,
-            "op_params": dict(c.op_params),
         })
     return out
 
