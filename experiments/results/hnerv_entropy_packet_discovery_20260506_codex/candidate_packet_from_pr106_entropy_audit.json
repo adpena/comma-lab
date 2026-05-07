@@ -25,6 +25,24 @@
       "sha256": "0514a47f7e786f5353d4a3329a3f7be734d03dbd0816b7376dde536c5d639d82"
     },
     {
+      "bytes": 1201,
+      "id": "byte_accounted_model_overhead_reduction_manifest",
+      "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/byte_accounted_model_overhead_reduction_manifest.json",
+      "sha256": "1f5dbcaf31a542d67bb30e22b54528edf9dc81166b4403a7d2780289323723b7"
+    },
+    {
+      "bytes": 1179,
+      "id": "byte_accounted_static_model_context_reduction_manifest",
+      "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/byte_accounted_static_model_context_reduction_manifest.json",
+      "sha256": "f7cfebf295177cd40612d4fb6c8b5612d0f5cf64fecbe79abf08ae343a993874"
+    },
+    {
+      "bytes": 1167,
+      "id": "old_new_model_context_table_diff",
+      "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/old_new_model_context_table_diff.json",
+      "sha256": "c4dc66d7ae5e154ad12270adce8bd179513f5047ea42927a80700731042d9abb"
+    },
+    {
       "bytes": 2229,
       "id": "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256",
       "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256.json",
@@ -63,9 +81,6 @@
   ],
   "dispatch_attempted": false,
   "dispatch_blockers": [
-    "missing_artifact:byte_accounted_model_overhead_reduction_manifest",
-    "missing_artifact:byte_accounted_static_model_context_reduction_manifest",
-    "missing_artifact:old_new_model_context_table_diff",
     "missing_artifact:candidate_archive_manifest_with_member_sha256s",
     "missing_artifact:strict_pre_submission_compliance_json",
     "missing_artifact:meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions",
@@ -81,9 +96,6 @@
   "invalid_json_artifacts": [],
   "invalid_requirement_artifacts": [],
   "missing_artifacts": [
-    "byte_accounted_model_overhead_reduction_manifest",
-    "byte_accounted_static_model_context_reduction_manifest",
-    "old_new_model_context_table_diff",
     "candidate_archive_manifest_with_member_sha256s",
     "strict_pre_submission_compliance_json",
     "meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions",
@@ -91,40 +103,55 @@
   ],
   "packet_requirements": [
     {
-      "available": false,
-      "bytes": null,
+      "available": true,
+      "bytes": 1201,
       "id": "byte_accounted_model_overhead_reduction_manifest",
-      "missing_reason": "not_provided",
-      "path": "",
-      "provided": false,
+      "json_parseable": true,
+      "missing_reason": "",
+      "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/byte_accounted_model_overhead_reduction_manifest.json",
+      "provided": true,
       "ready_for_exact_eval_dispatch": false,
       "requirement_group": "target_specific",
       "score_claim": false,
-      "sha256": null
+      "sha256": "1f5dbcaf31a542d67bb30e22b54528edf9dc81166b4403a7d2780289323723b7",
+      "validation": {
+        "blockers": [],
+        "valid": true
+      }
     },
     {
-      "available": false,
-      "bytes": null,
+      "available": true,
+      "bytes": 1179,
       "id": "byte_accounted_static_model_context_reduction_manifest",
-      "missing_reason": "not_provided",
-      "path": "",
-      "provided": false,
+      "json_parseable": true,
+      "missing_reason": "",
+      "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/byte_accounted_static_model_context_reduction_manifest.json",
+      "provided": true,
       "ready_for_exact_eval_dispatch": false,
       "requirement_group": "target_specific",
       "score_claim": false,
-      "sha256": null
+      "sha256": "f7cfebf295177cd40612d4fb6c8b5612d0f5cf64fecbe79abf08ae343a993874",
+      "validation": {
+        "blockers": [],
+        "valid": true
+      }
     },
     {
-      "available": false,
-      "bytes": null,
+      "available": true,
+      "bytes": 1167,
       "id": "old_new_model_context_table_diff",
-      "missing_reason": "not_provided",
-      "path": "",
-      "provided": false,
+      "json_parseable": true,
+      "missing_reason": "",
+      "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/old_new_model_context_table_diff.json",
+      "provided": true,
       "ready_for_exact_eval_dispatch": false,
       "requirement_group": "byte_equivalence",
       "score_claim": false,
-      "sha256": null
+      "sha256": "c4dc66d7ae5e154ad12270adce8bd179513f5047ea42927a80700731042d9abb",
+      "validation": {
+        "blockers": [],
+        "valid": true
+      }
     },
     {
       "available": true,
@@ -262,9 +289,6 @@
   ],
   "planning_only": true,
   "readiness_blockers": [
-    "missing_artifact:byte_accounted_model_overhead_reduction_manifest",
-    "missing_artifact:byte_accounted_static_model_context_reduction_manifest",
-    "missing_artifact:old_new_model_context_table_diff",
     "missing_artifact:candidate_archive_manifest_with_member_sha256s",
     "missing_artifact:strict_pre_submission_compliance_json",
     "missing_artifact:meta_lagrangian_atom_json_with_byte_delta_and_interaction_assumptions",
@@ -421,9 +445,10 @@
       "--hdc2-stream-work-product-dir",
       "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product",
       "--json-out",
-      "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/candidate_packet_from_pr106_entropy_audit.json"
+      "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/candidate_packet_from_pr106_entropy_audit.json",
+      "--fail-if-missing"
     ],
-    "canonical_payload_without_tool_manifest_sha256": "cc67e463eca72959048ddf481fdbff6a6272cc2502ec106c0b9174528edc0ff8",
+    "canonical_payload_without_tool_manifest_sha256": "f8f2a20582a88d55f24597921673e651260aa15e4f403da0f4edc8dd6ced4e29",
     "dispatch_attempted": false,
     "input_files": [
       {
@@ -455,6 +480,21 @@
         "bytes": 777,
         "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/roundtrip_decode_validation_manifest.json",
         "sha256": "d6fedb748580eb92c4cfd27d4666eabcaffcd32629ecc131ef975b6026d43562"
+      },
+      {
+        "bytes": 1201,
+        "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/byte_accounted_model_overhead_reduction_manifest.json",
+        "sha256": "1f5dbcaf31a542d67bb30e22b54528edf9dc81166b4403a7d2780289323723b7"
+      },
+      {
+        "bytes": 1179,
+        "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/byte_accounted_static_model_context_reduction_manifest.json",
+        "sha256": "f7cfebf295177cd40612d4fb6c8b5612d0f5cf64fecbe79abf08ae343a993874"
+      },
+      {
+        "bytes": 1167,
+        "path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/hdc2_stream_work_product/old_new_model_context_table_diff.json",
+        "sha256": "c4dc66d7ae5e154ad12270adce8bd179513f5047ea42927a80700731042d9abb"
       }
     ],
     "output_path": "experiments/results/hnerv_entropy_packet_discovery_20260506_codex/candidate_packet_from_pr106_entropy_audit.json",

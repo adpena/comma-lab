@@ -21,6 +21,73 @@
       "variant": "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales"
     }
   ],
+  "byte_accounted_model_overhead_reduction_manifest": {
+    "accounting_closed": true,
+    "byte_accounting": {
+      "actual_bytes": 221381,
+      "known_container_overhead_bytes": 0,
+      "known_encoded_payload_bytes": 180541,
+      "known_model_overhead_bytes": 40840,
+      "known_unattributed_bytes": 0
+    },
+    "dispatch_attempted": false,
+    "ready_for_exact_eval_dispatch": false,
+    "remaining_for_archive_candidate": [
+      "runtime_decoder_contract",
+      "candidate_archive_manifest",
+      "strict_pre_submission_compliance_json",
+      "exact_cuda_auth_eval"
+    ],
+    "requirement_id": "byte_accounted_model_overhead_reduction_manifest",
+    "schema_version": 1,
+    "score_claim": false,
+    "source_label": "public_pr106_belt_and_suspenders",
+    "source_variant": {
+      "accounted_bytes": 221381,
+      "bytes": 221381,
+      "header_bytes": 40840,
+      "range_payload_bytes": 180429,
+      "raw_scale_bytes": 112,
+      "sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f",
+      "variant": "range_prev_symbol_global_q_streams_plus_raw_scales"
+    },
+    "target_bytes": 40840,
+    "target_bytes_field": "hdc2.header_bytes",
+    "target_kind": "known_model_overhead",
+    "tool": "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+  },
+  "byte_accounted_static_model_context_reduction_manifest": {
+    "accounting_closed": true,
+    "blockers": [],
+    "candidate_variant": {
+      "bytes": 208821,
+      "context_count": 247,
+      "context_token_count": 228930,
+      "header_bytes": 19329,
+      "range_context_count": 60,
+      "raw_context_count": 187,
+      "raw_equal": true,
+      "sha256": "4a1db82f170db62038ad683d6024920b1da59cd9e54e8fda8e3109605fc08bc5",
+      "variant": "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales"
+    },
+    "dispatch_attempted": false,
+    "ready_for_exact_eval_dispatch": false,
+    "requirement_id": "byte_accounted_static_model_context_reduction_manifest",
+    "schema_metadata_elided_vs_hdc2_bytes": 444,
+    "schema_version": 1,
+    "score_claim": false,
+    "source_label": "public_pr106_belt_and_suspenders",
+    "source_variant": {
+      "bytes": 221381,
+      "context_count": 247,
+      "context_token_count": 228930,
+      "header_bytes": 40840,
+      "sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f",
+      "variant": "range_prev_symbol_global_q_streams_plus_raw_scales"
+    },
+    "static_context_header_reduction_bytes": 21511,
+    "tool": "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+  },
   "candidate_stream_file": {
     "bytes": 221381,
     "id": "candidate_hdc2_global_prev_symbol_stream",
@@ -96,13 +163,43 @@
   },
   "dispatch_attempted": false,
   "gpu_required": false,
+  "old_new_model_context_table_diff": {
+    "blockers": [],
+    "context_count_equal": true,
+    "context_token_count_equal": true,
+    "dispatch_attempted": false,
+    "header_bytes_delta": -21511,
+    "new_variant": {
+      "bytes": 208821,
+      "context_count": 247,
+      "context_token_count": 228930,
+      "header_bytes": 19329,
+      "range_context_count": 60,
+      "raw_context_count": 187,
+      "sha256": "4a1db82f170db62038ad683d6024920b1da59cd9e54e8fda8e3109605fc08bc5",
+      "variant": "mixed_range_raw_global_prev_symbol_schema_indexed_q_streams_plus_raw_scales"
+    },
+    "old_variant": {
+      "bytes": 221381,
+      "context_count": 247,
+      "context_token_count": 228930,
+      "header_bytes": 40840,
+      "sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f",
+      "variant": "range_prev_symbol_global_q_streams_plus_raw_scales"
+    },
+    "raw_equal": true,
+    "ready_for_exact_eval_dispatch": false,
+    "requirement_id": "old_new_model_context_table_diff",
+    "schema_metadata_elided_vs_hdc2_bytes": 444,
+    "schema_version": 1,
+    "score_claim": false,
+    "source_label": "public_pr106_belt_and_suspenders",
+    "tool": "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+  },
   "planning_only": true,
   "ready_for_archive_preflight": false,
   "ready_for_exact_eval_dispatch": false,
   "remaining_blockers": [
-    "byte_accounted_model_overhead_reduction_manifest_not_built",
-    "byte_accounted_static_model_context_reduction_manifest_not_built",
-    "old_new_model_context_table_diff_not_built",
     "candidate_archive_manifest_missing",
     "strict_pre_submission_compliance_json_missing",
     "meta_lagrangian_atom_export_missing",
@@ -193,10 +290,10 @@
     "sha256": "30b364d6b538f08987fc098198fb9cbbd9be4776d3f0a3bec8bf5bf7b10c2047"
   },
   "source_profile": {
-    "bytes": 13487,
+    "bytes": 17744,
     "id": "hnerv_decoder_structural_recode_profile",
     "path": "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json",
-    "sha256": "d7b31ac9ac97f148c75379fec3dcbfb0cebc8ee64fb6f87a616a224b3616578f"
+    "sha256": "c8400288270a077cb8c7bf2a2c7c16483748a9aa9dede407e3cd1543c4733dd2"
   },
   "source_stream_section_manifest": {
     "dispatch_attempted": false,

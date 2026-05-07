@@ -1,0 +1,35 @@
+{
+  "accounting_closed": true,
+  "byte_accounting": {
+    "actual_bytes": 221381,
+    "known_container_overhead_bytes": 0,
+    "known_encoded_payload_bytes": 180541,
+    "known_model_overhead_bytes": 40840,
+    "known_unattributed_bytes": 0
+  },
+  "dispatch_attempted": false,
+  "ready_for_exact_eval_dispatch": false,
+  "remaining_for_archive_candidate": [
+    "runtime_decoder_contract",
+    "candidate_archive_manifest",
+    "strict_pre_submission_compliance_json",
+    "exact_cuda_auth_eval"
+  ],
+  "requirement_id": "byte_accounted_model_overhead_reduction_manifest",
+  "schema_version": 1,
+  "score_claim": false,
+  "source_label": "public_pr106_belt_and_suspenders",
+  "source_variant": {
+    "accounted_bytes": 221381,
+    "bytes": 221381,
+    "header_bytes": 40840,
+    "range_payload_bytes": 180429,
+    "raw_scale_bytes": 112,
+    "sha256": "41816a2834eb9ca3e9ff78e138b30a1c22b0ec4d580cea8de55042dcb624cc5f",
+    "variant": "range_prev_symbol_global_q_streams_plus_raw_scales"
+  },
+  "target_bytes": 40840,
+  "target_bytes_field": "hdc2.header_bytes",
+  "target_kind": "known_model_overhead",
+  "tool": "tac.hnerv_entropy_candidate_packet.build_hdc2_stream_byte_equivalence_work_product"
+}
