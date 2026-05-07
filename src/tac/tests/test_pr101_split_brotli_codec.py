@@ -172,3 +172,37 @@ def test_encoder_rejects_missing_tensor() -> None:
     del sd["stem.bias"]
     with pytest.raises(Pr101SplitBrotliCodecError):
         encode_decoder_compact(sd)
+
+
+def test_auto_select_byte_maps_returns_valid_overrides() -> None:
+    """Round 2 review CRITICAL fix: auto_select_byte_maps returns a dict
+    mapping (idx → winning map) only where winner differs from PR101 default."""
+    from tac.pr101_split_brotli_codec import auto_select_byte_maps
+    sd = _synthetic_state_dict()
+    overrides = auto_select_byte_maps(sd, brotli_quality=11)
+    for idx, m in overrides.items():
+        assert m in ("zig", "negzig", "twos", "off")
+        assert isinstance(idx, int) and 0 <= idx < 28
+
+
+def test_encode_decode_roundtrip_with_effective_byte_maps() -> None:
+    """Round 2 fix: encoder + decoder honor effective_byte_maps override
+    consistently. Same dict to both → idempotent re-encode."""
+    sd = _synthetic_state_dict()
+    overrides = {0: "negzig", 5: "off"}  # force non-default
+    encoded = encode_decoder_compact(sd, effective_byte_maps=overrides)
+    decoded = decode_decoder_compact(encoded, effective_byte_maps=overrides)
+    re_encoded = encode_decoder_compact(decoded, effective_byte_maps=overrides)
+    assert encoded == re_encoded, "non-idempotent encode under override"
+
+
+def test_decode_mismatched_override_breaks_contract() -> None:
+    """Round 2 fix: encoder/decoder mismatch on byte_maps MUST produce
+    different bytes when re-encoded. Guards the override contract."""
+    sd = _synthetic_state_dict()
+    encoded = encode_decoder_compact(sd, effective_byte_maps={0: "negzig"})
+    wrong_decoded = decode_decoder_compact(encoded, effective_byte_maps={0: "twos"})
+    re_encoded = encode_decoder_compact(wrong_decoded, effective_byte_maps={0: "negzig"})
+    assert encoded != re_encoded, (
+        "decoder silently ignored effective_byte_maps mismatch"
+    )

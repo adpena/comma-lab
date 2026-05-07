@@ -280,8 +280,21 @@ def _quantize_tensor(name: str, tensor: torch.Tensor, *, n_quant: int = N_QUANT)
 # Top-level encode / decode
 # ---------------------------------------------------------------------------
 
-def _build_per_tensor_payload(qt: _QuantizedTensor, idx: int) -> bytes:
-    """Apply byte-map (+ optional 4D permutation) and append fp16 scale."""
+def _build_per_tensor_payload(
+    qt: _QuantizedTensor,
+    idx: int,
+    *,
+    byte_map_override: str | None = None,
+) -> bytes:
+    """Apply byte-map (+ optional 4D permutation) and append fp16 scale.
+
+    Args:
+        qt: quantized tensor with i8 codes + fp16 scale.
+        idx: tensor index in FIXED_STATE_SCHEMA.
+        byte_map_override: optional override for byte_map (one of "zig",
+            "negzig", "twos", "off"). When None, DECODER_BYTE_MAPS.get(idx,
+            "zig") is used.
+    """
     name, expected_shape = FIXED_STATE_SCHEMA[idx]
     if qt.name != name:
         raise Pr101SplitBrotliCodecError(
@@ -298,7 +311,13 @@ def _build_per_tensor_payload(qt: _QuantizedTensor, idx: int) -> bytes:
         flat = q_storage.reshape(-1)
     else:
         flat = q.reshape(-1)
-    byte_map = DECODER_BYTE_MAPS.get(idx, "zig")
+    # NB: byte_map dispatch happens in caller via _build_per_tensor_payload's
+    # byte_map_override argument; this fallback honors PR101's defaults if the
+    # caller doesn't pass an override (preserves wire-format compatibility with
+    # PR101's own decoder). Round 2 review CRITICAL fix 2026-05-07: the per-call
+    # override path makes validated maps survive end-to-end without lying about
+    # the wire format.
+    byte_map = byte_map_override if byte_map_override is not None else DECODER_BYTE_MAPS.get(idx, "zig")
     mapped = _encode_mapped_u8(flat, byte_map)
     # fp16 scale (2 bytes, little-endian); fp16 is the on-disk format PR101 uses.
     scale_bytes = np.array([qt.scale], dtype=np.float16).tobytes()
@@ -309,15 +328,27 @@ def encode_decoder_compact(
     state_dict: dict[str, torch.Tensor],
     *,
     brotli_quality: int = 11,
+    effective_byte_maps: dict[int, str] | None = None,
 ) -> bytes:
     """Encode a torch ``state_dict`` to a PR101-compatible ``decoder_blob``.
 
     The output bytes can be losslessly decoded by :func:`decode_decoder_compact`
-    AND by PR101's own ``decode_decoder_compact`` (in their codec.py).
+    AND by PR101's own ``decode_decoder_compact`` (in their codec.py) **only if**
+    the caller and decoder agree on which byte-maps were used. PR101's defaults
+    (``DECODER_BYTE_MAPS``) work end-to-end via PR101's own decoder; if the
+    caller overrides via ``effective_byte_maps``, the same dict MUST be passed
+    to :func:`decode_decoder_compact` for byte-faithful round-trip.
 
     Args:
         state_dict: HNeRVDecoder state dict keyed by FIXED_STATE_SCHEMA names.
         brotli_quality: Brotli compression level (PR101 ships at 11).
+        effective_byte_maps: optional override mapping tensor_idx → map_name
+            (one of "zig", "negzig", "twos", "off"). When None, PR101's
+            DECODER_BYTE_MAPS is used. Round 2 review CRITICAL fix:
+            :func:`validate_byte_map_savings` now returns a dict that can be
+            fed directly into this parameter to AUTO-SKIP regressing maps —
+            previously the gate WARNED but did not act. See
+            :func:`auto_select_byte_maps` for the recommended workflow.
 
     Returns:
         Concatenated bytes of len(DECODER_STREAM_ENDS) brotli streams.
@@ -332,10 +363,21 @@ def encode_decoder_compact(
         quantized.append(_quantize_tensor(name, state_dict[name]))
 
     # 2) Build per-tensor on-disk payloads (mapped bytes + fp16 scale), in
-    #    DECODER_STORAGE_ORDER (NOT schema order).
+    #    DECODER_STORAGE_ORDER (NOT schema order). Round 2 fix: thread
+    #    effective_byte_maps override through, so caller can auto-skip
+    #    regressing maps from validate_byte_map_savings().
     parts_by_storage: list[bytes] = []
     for storage_idx in DECODER_STORAGE_ORDER:
-        parts_by_storage.append(_build_per_tensor_payload(quantized[storage_idx], storage_idx))
+        override = (
+            effective_byte_maps.get(storage_idx)
+            if effective_byte_maps is not None
+            else None
+        )
+        parts_by_storage.append(
+            _build_per_tensor_payload(
+                quantized[storage_idx], storage_idx, byte_map_override=override
+            )
+        )
 
     # 3) Group payloads into split-stream windows and brotli each window.
     streams: list[bytes] = []
@@ -348,12 +390,24 @@ def encode_decoder_compact(
     return b"".join(streams)
 
 
-def decode_decoder_compact(data: bytes) -> dict[str, torch.Tensor]:
+def decode_decoder_compact(
+    data: bytes,
+    *,
+    effective_byte_maps: dict[int, str] | None = None,
+) -> dict[str, torch.Tensor]:
     """Decode a PR101 ``decoder_blob`` to a torch ``state_dict``.
 
     Verbatim port of PR101's ``decode_decoder_compact`` (codec.py:259-292),
     minus the ``HNeRVDecoder``-instantiation step (we use ``FIXED_STATE_SCHEMA``
     directly to avoid pulling in the model module).
+
+    Args:
+        data: encoded ``decoder_blob`` bytes.
+        effective_byte_maps: optional override matching the dict passed to
+            :func:`encode_decoder_compact`. Round 2 review CRITICAL fix:
+            decoder MUST agree with encoder on per-tensor byte_map; without
+            this override the decoder uses PR101's defaults which would
+            corrupt encoded tensors that used a different map.
     """
     raw = decompress_brotli_streams(data, len(DECODER_STREAM_ENDS))
     pos = 0
@@ -367,7 +421,13 @@ def decode_decoder_compact(data: bytes) -> dict[str, torch.Tensor]:
         scale = np.frombuffer(raw, dtype=np.float16, count=1, offset=pos)[0]
         pos += 2
 
-        q = decode_mapped_u8(zz, DECODER_BYTE_MAPS.get(idx, "zig"))
+        # Round 2 fix: decoder honors effective_byte_maps override iff
+        # caller passed it (must match encoder's override or roundtrip corrupts).
+        if effective_byte_maps is not None and idx in effective_byte_maps:
+            decode_map = effective_byte_maps[idx]
+        else:
+            decode_map = DECODER_BYTE_MAPS.get(idx, "zig")
+        q = decode_mapped_u8(zz, decode_map)
         if len(shape) == 4:
             storage_perm = CONV4_STORAGE_PERMS[idx]
             inverse_perm = CONV4_INVERSE_PERMS[idx]
@@ -449,7 +509,67 @@ def validate_byte_map_savings(
     return results
 
 
+def auto_select_byte_maps(
+    state_dict: dict[str, torch.Tensor],
+    *,
+    brotli_quality: int = 11,
+    candidate_maps: tuple[str, ...] = ("zig", "negzig", "twos", "off"),
+) -> dict[int, str]:
+    """Round 2 review CRITICAL fix: produce an ``effective_byte_maps`` dict
+    that auto-selects the brotli-optimal byte_map per tensor on the CALLER's
+    state_dict (not PR101's training set).
+
+    PR101's ``DECODER_BYTE_MAPS`` was tuned offline on PR101's own fine-tuned
+    weights. On any OTHER weight distribution (PR106, apogee_intN, our
+    internal substrates), some maps regress brotli output. This helper runs
+    the per-tensor brotli measurement under each candidate map and picks the
+    smallest. Returns a dict matching the contract of
+    :func:`encode_decoder_compact`'s ``effective_byte_maps`` arg.
+
+    Args:
+        state_dict: the actual weights to encode. The function quantizes them
+            once and tries each candidate map.
+        brotli_quality: must match the encoder's quality (default 11).
+        candidate_maps: tuple of map names to try per tensor. Subset of
+            ``{"zig", "negzig", "twos", "off"}``.
+
+    Returns:
+        ``dict[int, str]`` keyed by tensor idx (only for indices where the
+        winner differs from PR101's default). Caller passes this to
+        :func:`encode_decoder_compact` and :func:`decode_decoder_compact`.
+    """
+    quantized = [
+        _quantize_tensor(name, state_dict[name])
+        for name, _shape in FIXED_STATE_SCHEMA
+    ]
+    selected: dict[int, str] = {}
+    for idx in range(len(FIXED_STATE_SCHEMA)):
+        best_map: str | None = None
+        best_bytes: int | None = None
+        for cand in candidate_maps:
+            payload = _build_per_tensor_payload(
+                quantized[idx], idx, byte_map_override=cand
+            )
+            n = len(pack_brotli_stream(payload, quality=brotli_quality))
+            if best_bytes is None or n < best_bytes:
+                best_bytes = n
+                best_map = cand
+        # Only record an override if it differs from PR101's default — keeps
+        # the dict small and lets the encoder/decoder use defaults elsewhere.
+        default_map = DECODER_BYTE_MAPS.get(idx, "zig")
+        if best_map != default_map:
+            selected[idx] = best_map
+            logger.info(
+                "auto_select_byte_maps: tensor idx=%d (%s) prefers %r over "
+                "PR101 default %r (%d bytes vs default)",
+                idx, FIXED_STATE_SCHEMA[idx][0], best_map, default_map,
+                best_bytes,
+            )
+    return selected
+
+
 __all__ = [
+    "auto_select_byte_maps",
     "BASE_CHANNELS",
     "CONV4_INVERSE_PERMS",
     "CONV4_STORAGE_PERMS",
