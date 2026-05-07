@@ -177,3 +177,21 @@ def test_context_delta_transform_preserves_symbol_count(
         "n_symbols_total"
     ]
     assert transforms["delta_mod255"]["invertible_fixed_transform"] is True
+
+
+def test_transition_table_cost_probe_is_planning_only(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tool = _load_tool("pr101_markov_transition_table_cost.py")
+    _install_tiny_schema(monkeypatch, tool)
+    state_dict_path = _tiny_state_dict(tmp_path / "state.pt")
+
+    manifest = tool.measure_transition_table_cost(state_dict_path)
+
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert "transition_table_not_wired_into_decoder" in manifest["dispatch_blockers"]
+    assert manifest["n_nonzero_transition_pairs"] > 0
+    assert manifest["recomputed_markov1_oracle_payload_bytes"] > 0
+    serialization_names = {row["name"] for row in manifest["serializations"]}
+    assert {"dense_u16", "dense_u32", "sparse_u16", "sparse_varint"} <= serialization_names

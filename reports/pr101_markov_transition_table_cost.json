@@ -1,0 +1,74 @@
+{
+  "archive_overhead_bytes": 16094,
+  "charged_bits_changed": false,
+  "comparison_brotli_optuna_archive_bytes": 178144,
+  "dispatch_blockers": [
+    "model_sideinfo_cost_probe_only",
+    "oracle_payload_not_an_actual_coder_bitstream",
+    "transition_table_not_wired_into_decoder",
+    "no_archive_substitution_performed",
+    "missing_exact_cuda_auth_eval"
+  ],
+  "evidence_grade": "empirical",
+  "evidence_semantics": "cpu_markov_transition_table_sideinfo_cost",
+  "first_symbol_literal_bytes": 28,
+  "input_state_dict": "experiments/results/cma_pr101_real_substrate_20260507T222605Z/pr101_decoder_state_dict.pt",
+  "input_state_dict_sha256": "b863362aaba1b9cae9b944f5e5b1a43a53ca824b7899ed7b80a2e2146d66f053",
+  "max_transition_count": 174,
+  "n_categories": 255,
+  "n_nonzero_transition_pairs": 35009,
+  "n_tensors": 28,
+  "ready_for_exact_eval_dispatch": false,
+  "recomputed_markov1_oracle_payload_bytes": 152106,
+  "reference_markov1_oracle_payload_bytes": 152106,
+  "schema": "pr101_markov_transition_table_cost.v1",
+  "score_affecting_payload_changed": false,
+  "score_claim": false,
+  "serializations": [
+    {
+      "archive_bytes_with_oracle_payload_table_and_zip": 200191,
+      "archive_bytes_with_oracle_payload_table_first_symbols_and_zip": 200219,
+      "brotli_bytes": 31991,
+      "delta_archive_vs_brotli_optuna": 22047,
+      "delta_archive_with_first_symbols_vs_brotli_optuna": 22075,
+      "name": "sparse_varint",
+      "oracle_payload_plus_brotli_table_and_first_symbols_bytes": 184125,
+      "oracle_payload_plus_brotli_table_bytes": 184097,
+      "raw_bytes": 72271
+    },
+    {
+      "archive_bytes_with_oracle_payload_table_and_zip": 209075,
+      "archive_bytes_with_oracle_payload_table_first_symbols_and_zip": 209103,
+      "brotli_bytes": 40875,
+      "delta_archive_vs_brotli_optuna": 30931,
+      "delta_archive_with_first_symbols_vs_brotli_optuna": 30959,
+      "name": "dense_u16",
+      "oracle_payload_plus_brotli_table_and_first_symbols_bytes": 193009,
+      "oracle_payload_plus_brotli_table_bytes": 192981,
+      "raw_bytes": 3641400
+    },
+    {
+      "archive_bytes_with_oracle_payload_table_and_zip": 212883,
+      "archive_bytes_with_oracle_payload_table_first_symbols_and_zip": 212911,
+      "brotli_bytes": 44683,
+      "delta_archive_vs_brotli_optuna": 34739,
+      "delta_archive_with_first_symbols_vs_brotli_optuna": 34767,
+      "name": "dense_u32",
+      "oracle_payload_plus_brotli_table_and_first_symbols_bytes": 196817,
+      "oracle_payload_plus_brotli_table_bytes": 196789,
+      "raw_bytes": 7282800
+    },
+    {
+      "archive_bytes_with_oracle_payload_table_and_zip": 219667,
+      "archive_bytes_with_oracle_payload_table_first_symbols_and_zip": 219695,
+      "brotli_bytes": 51467,
+      "delta_archive_vs_brotli_optuna": 41523,
+      "delta_archive_with_first_symbols_vs_brotli_optuna": 41551,
+      "name": "sparse_u16",
+      "oracle_payload_plus_brotli_table_and_first_symbols_bytes": 203601,
+      "oracle_payload_plus_brotli_table_bytes": 203573,
+      "raw_bytes": 140126
+    }
+  ],
+  "tool": "tools/pr101_markov_transition_table_cost.py"
+}

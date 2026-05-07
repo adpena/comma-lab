@@ -21,6 +21,7 @@ No artifact in this ledger is a contest score claim. No archive was changed.
 - `tools/pr101_constriction_shared_pmf_floor.py`
 - `tools/pr101_constriction_quantgauss_hyperprior.py`
 - `tools/pr101_context_transform_floor_probe.py`
+- `tools/pr101_markov_transition_table_cost.py`
 - `reports/pr101_provable_optimal_floor.json`
 - `reports/pr101_adaptive_ac.json`
 - `reports/pr101_pmf_pca.json`
@@ -28,6 +29,7 @@ No artifact in this ledger is a contest score claim. No archive was changed.
 - `reports/pr101_constriction_shared_pmf.json`
 - `reports/pr101_constriction_quantgauss.json`
 - `reports/pr101_context_transform_floor_probe.json`
+- `reports/pr101_markov_transition_table_cost.json`
 - `reports/pr101_markov1_aac_round_trip.json` (pre-existing context-coder
   round-trip report, used here as negative implementation evidence)
 
@@ -147,6 +149,22 @@ slicing/nibbles/bitplanes lose under this model. Delta coding creates a very
 low Markov-2 oracle row but a worse Markov-1 row, which makes it a research
 target for deployable higher-order modeling rather than a ready packer win.
 
+`reports/pr101_markov_transition_table_cost.json` reruns the suspicious
+"Oracle Markov-1 + brotli'd table" claim with deterministic transition-table
+serializations:
+
+| Serialization | Raw table bytes | Brotli table bytes | Archive with oracle payload + table + first symbols | Delta vs 178,144 |
+|---|---:|---:|---:|---:|
+| sparse_varint | 72,271 | 31,991 | 200,219 | +22,075 |
+| dense_u16 | 3,641,400 | 40,875 | 209,103 | +30,959 |
+| dense_u32 | 7,282,800 | 44,683 | 212,911 | +34,767 |
+| sparse_u16 | 140,126 | 51,467 | 219,695 | +41,551 |
+
+The other-agent 40,851-byte table number is close to the dense-u16 result but
+not exact. The best measured serialization is sparse-varint at 31,991 bytes.
+Even with that better table, the oracle Markov-1 route is still 22,075 bytes
+worse than Brotli once table and first-symbol side information are charged.
+
 ## Next engineering tranche
 
 1. Do not promote the existing naive Markov-1 AAC codec. Keep its round-trip
@@ -176,8 +194,9 @@ target for deployable higher-order modeling rather than a ready packer win.
 - `.venv/bin/python -m json.tool reports/pr101_constriction_quantgauss.json`
 - `.venv/bin/python -m json.tool reports/pr101_constriction_shared_pmf.json`
 - `.venv/bin/python -m json.tool reports/pr101_context_transform_floor_probe.json`
+- `.venv/bin/python -m json.tool reports/pr101_markov_transition_table_cost.json`
 
-Focused tests: 22 passed, 1 pytest-config warning about unknown `timeout`.
+Focused tests: 23 passed, 1 pytest-config warning about unknown `timeout`.
 
 ## Adversarial review of 19:10 summary claims
 
@@ -203,9 +222,12 @@ Rejected or narrowed:
   implementation is falsified. The oracle Markov-1 row still shows context
   signal; the problem is making that signal deployable after model cost.
 - "Oracle Markov-1 + brotli'd table = 209,051" is not accepted without a
-  committed artifact showing the 40,851-byte table construction and exact
-  accounting. Even if confirmed, it falsifies a full transmitted transition
-  table, not sparse, structured, generated, or learned context models.
+  committed artifact showing the table construction and exact accounting. The
+  rerun measured dense-u16 at 40,875 table bytes and 209,103 charged archive
+  bytes with first symbols; sparse-varint improves to 31,991 table bytes and
+  200,219 charged archive bytes. The broad conclusion remains: full
+  transmitted Markov tables lose, but the exact number and best serialization
+  in the summary were not fully rigorous.
 - "Only NN path" is too strong. Neural hyperpriors are the best current
   hypothesis for making context cheap, but deterministic grammar/codegen/table
   factorization and architecture-side retraining remain live until exact
