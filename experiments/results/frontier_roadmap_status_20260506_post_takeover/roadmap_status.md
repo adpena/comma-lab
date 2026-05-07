@@ -3,7 +3,7 @@
 Live-safe operator roadmap. It does not claim scores or dispatch work.
 
 - row_count: `12`
-- dirty_path_count: `12`
+- dirty_path_count: `13`
 - dirty_blocked_row_count: `0`
 - next_unblocked_keys: `hnerv_wavelet_wr01_apply, hnerv_lowlevel_brotli_repack, categorical_qma9_clade_spade_openpilot, joint_admm_balle_arithmetic_stack, hnerv_per_tensor_context_entropy`
 
@@ -36,12 +36,12 @@ Live-safe operator roadmap. It does not claim scores or dispatch work.
 
 | key | tier | role | stage | safe | action | evidence | blockers | next patch |
 |---|---:|---|---|---|---|---|---:|---|
-| `hnerv_wavelet_wr01_apply` | 10 | `stacker_scorer_changing` | `needs_lane_claim_and_exact_cuda` | `yes` | `claim_exact_eval_packet_after_static_gate` | empirical archive candidate; exact CUDA pending | 2 | Harvest/finalize incoming custody hardening, then exact CUDA only after lane claim. |
+| `hnerv_wavelet_wr01_apply` | 10 | `stacker_scorer_changing` | `needs_lane_claim_and_exact_cuda` | `yes` | `claim_exact_eval_packet_after_static_gate` | empirical archive candidate; exact CUDA pending | 2 | Use the compress-time harness to emit a byte-custody-backed WR01 atom plan, then exact CUDA only after lane claim and operator approval. |
 | `hnerv_lowlevel_brotli_repack` | 20 | `stacker_rate_only` | `exact_evidence_present_review_before_promotion` | `yes` | `exact_eval_or_promote_measured_rate_candidate` | A++ exact CUDA for PR106x; empirical for PR106 q10 rebuild until exact eval | 1 | Promote only exact-evaluated archive SHAs; surface PR106x lgblock16 -1B and PR106 q10 as local archive candidates until candidate-specific preflight, lane claim, and exact CUDA auth eval land. |
 | `categorical_qma9_clade_spade_openpilot` | 30 | `replacement_or_mask_stacker` | `needs_byte_closed_candidate_or_fixture` | `yes` | `build_byte_closed_categorical_candidate` | local byte-closed PR91 HPM1 payload candidate plus deterministic archive-readiness audit; decode/reencode and runtime parity blocked | 6 | Recover PR91/HPM1 full decode/reencode parity against the local payload member, replace the runtime skeleton with a real charged consumer, and pass the matching readiness audit before any lane claim or exact eval. |
 | `joint_admm_balle_arithmetic_stack` | 40 | `stack_or_replacement_orchestrator` | `needs_research_or_contract_hardening` | `yes` | `wire_jcsp_submission_runtime_consumer` | empirical byte-closed JCSP archive member plus runtime-loader parity | 6 | Wire submissions/robust_current to decode/consume jcsp.bin and emit contest outputs, then claim a lane before exact CUDA auth eval. |
 | `hnerv_per_tensor_context_entropy` | 50 | `stacker_rate_only` | `needs_research_or_contract_hardening` | `yes` | `reduce_entropy_model_overhead` | empirical entropy-floor plus parity fixture profile | 2 | Cluster or codebook-share HDC2 context tables; HDC2 cut PR106x penalty from +96,671B to +51,103B but remains byte-negative. |
-| `sensitivity_omega_w_v3` | 60 | `stacker_quantization` | `needs_byte_closed_candidate_or_fixture` | `yes` | `replace_stub_sensitivity_with_certified_cuda_artifact` | planning/diagnostic until certified sensitivity artifact | 2 | Replace all-ones/stub sensitivity producers with certified CUDA/component artifacts. |
+| `sensitivity_omega_w_v3` | 60 | `stacker_quantization` | `needs_byte_closed_candidate_or_fixture` | `yes` | `replace_stub_sensitivity_with_certified_cuda_artifact` | planning/diagnostic until certified sensitivity artifact | 2 | Attach the deterministic NWCS stream manifest to a byte-closed archive/container candidate, then replace all-ones/stub sensitivity producers with certified CUDA/component artifacts. |
 | `telescopic_foveation_field` | 70 | `scorer_weighted_proposal_or_replacement` | `needs_research_or_contract_hardening` | `yes` | `charge_runtime_geometry_consumer_contract` | planning plus historical negatives | 7 | Run charged foveation-params readiness audit, then keep foveation as ranking feedback until a runtime consumer passes geometry preflight and exact component gates. |
 | `lapose_motion_atom_allocator` | 80 | `proposal_allocator` | `needs_research_or_contract_hardening` | `yes` | `calibrate_planning_signal_and_attach_archive_consumer` | diagnostic CUDA response allocated to pairs; planning only | 8 | Keep labeled as LA-Pose-inspired until a paper-faithful inverse-dynamics encoder and pose head exist; add class/openpilot manifests, calibrate confidence, and require a charged archive consumer before dispatch. |
 | `raft_radial_openpilot_pose` | 90 | `proposal_or_pose_sidecar_replacement` | `needs_research_or_contract_hardening` | `yes` | `emit_pose_disagreement_readiness_artifact` | planning/prototype | 8 | Emit deterministic pose-disagreement and runtime-consumption readiness artifacts. |

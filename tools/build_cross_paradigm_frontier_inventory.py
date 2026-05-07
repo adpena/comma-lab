@@ -147,14 +147,19 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "src/tac/hnerv_wavelet_residual.py",
             "src/tac/hnerv_wavelet_apply_transform.py",
             "src/tac/hnerv_wavelet_apply_gate.py",
+            "src/tac/hnerv_wavelet_compress_time_harness.py",
             "tools/build_hnerv_wavelet_apply_transform_candidate.py",
+            "tools/build_hnerv_wavelet_compress_time_harness.py",
             "tools/build_wr01_exact_eval_packet.py",
         ),
         evidence_paths=(
             "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
             "experiments/results/hnerv_wavelet_sidechannel_pr106x_20260506_codex/manifest.json",
         ),
-        next_patch="Harvest/finalize incoming custody hardening, then exact CUDA only after lane claim.",
+        next_patch=(
+            "Use the compress-time harness to emit a byte-custody-backed WR01 atom plan, "
+            "then exact CUDA only after lane claim and operator approval."
+        ),
         blockers=("changes decoded output", "tiny byte win means component drift dominates EV"),
     ),
     InventoryRow(
@@ -297,12 +302,20 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         code_paths=(
             "src/tac/sensitivity_map.py",
             "src/tac/component_sensitivity_artifact.py",
+            "src/tac/neural_weight_codec_sensitivity.py",
             "src/tac/owv3_sensitivity_weighted.py",
             "tools/dispatch_dryrun_omega_w_v3.py",
             "experiments/repack_pr106_with_water_filling.py",
         ),
-        evidence_paths=(".omx/research/component_sensitivity_map_certification_20260501_codex.md",),
-        next_patch="Replace all-ones/stub sensitivity producers with certified CUDA/component artifacts.",
+        evidence_paths=(
+            ".omx/research/component_sensitivity_map_certification_20260501_codex.md",
+            ".omx/research/nwcs_beta_encoding_loop_greenup_20260507_codex.md",
+        ),
+        next_patch=(
+            "Attach the deterministic NWCS stream manifest to a byte-closed archive/container "
+            "candidate, then replace all-ones/stub sensitivity producers with certified CUDA/"
+            "component artifacts."
+        ),
         blockers=("stub sensitivity must fail closed", "component collapse risk"),
     ),
     InventoryRow(

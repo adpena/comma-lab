@@ -89,6 +89,19 @@ def test_cross_paradigm_inventory_pins_required_score_path_rows() -> None:
     assert "src/tac/optimization/entropy_codec_gap_audit.py" in entropy["code_paths"]
     assert "tools/audit_entropy_codec_gap.py" in entropy["code_paths"]
 
+    wr01 = rows["hnerv_wavelet_wr01_apply"]
+    assert "src/tac/hnerv_wavelet_compress_time_harness.py" in wr01["code_paths"]
+    assert "tools/build_hnerv_wavelet_compress_time_harness.py" in wr01["code_paths"]
+    assert "compress-time harness" in wr01["next_patch"]
+
+    sensitivity = rows["sensitivity_omega_w_v3"]
+    assert "src/tac/neural_weight_codec_sensitivity.py" in sensitivity["code_paths"]
+    assert (
+        ".omx/research/nwcs_beta_encoding_loop_greenup_20260507_codex.md"
+        in sensitivity["evidence_paths"]
+    )
+    assert "deterministic NWCS stream manifest" in sensitivity["next_patch"]
+
     lowlevel = rows["hnerv_lowlevel_brotli_repack"]
     assert (
         "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/result.json"

@@ -1,9 +1,8 @@
 {
   "dirty_blocked_row_count": 0,
-  "dirty_path_count": 12,
+  "dirty_path_count": 13,
   "dirty_paths": [
-    "experiments/results/frontier_roadmap_status_20260506_post_takeover/roadmap_status.json",
-    "experiments/results/frontier_roadmap_status_20260506_post_takeover/roadmap_status.md",
+    ".omx/research/cross_paradigm_frontier_inventory_20260506_codex.md",
     "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/lightning_exact_eval_plan.json",
     "experiments/results/public_pr100_intake_20260504_codex/source",
     "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/source",
@@ -13,7 +12,9 @@
     "experiments/results/public_pr81_qzs3_range_mask_intake_20260503_codex/repo",
     "experiments/results/public_pr82_henosis_frontier_intake_20260503_codex/repo",
     "experiments/results/public_pr91_intake_20260504_worker/pr91_src/repo",
-    "reports/raw/kaggle_ingest/kaggle-dilated-h64-long1000-retry-v6-20260410T234220Z/comma_video_compression_challenge"
+    "reports/raw/kaggle_ingest/kaggle-dilated-h64-long1000-retry-v6-20260410T234220Z/comma_video_compression_challenge",
+    "src/tac/tests/test_build_cross_paradigm_frontier_inventory.py",
+    "tools/build_cross_paradigm_frontier_inventory.py"
   ],
   "dispatch_attempted": false,
   "dispatch_blockers": [
@@ -1052,7 +1053,7 @@
       "key": "hnerv_wavelet_wr01_apply",
       "missing_code_path_count": 0,
       "missing_evidence_path_count": 0,
-      "next_patch": "Harvest/finalize incoming custody hardening, then exact CUDA only after lane claim.",
+      "next_patch": "Use the compress-time harness to emit a byte-custody-backed WR01 atom plan, then exact CUDA only after lane claim and operator approval.",
       "priority_tier": 10,
       "readiness_stage": "needs_lane_claim_and_exact_cuda",
       "ready_for_exact_eval_dispatch": false,
@@ -1179,7 +1180,7 @@
       "key": "sensitivity_omega_w_v3",
       "missing_code_path_count": 0,
       "missing_evidence_path_count": 0,
-      "next_patch": "Replace all-ones/stub sensitivity producers with certified CUDA/component artifacts.",
+      "next_patch": "Attach the deterministic NWCS stream manifest to a byte-closed archive/container candidate, then replace all-ones/stub sensitivity producers with certified CUDA/component artifacts.",
       "priority_tier": 60,
       "readiness_stage": "needs_byte_closed_candidate_or_fixture",
       "ready_for_exact_eval_dispatch": false,
