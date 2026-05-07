@@ -21,6 +21,7 @@ from tac.pr91_hpm1_codec import (
     _build_range_prefix_checkpoint_report,
     _classify_range_prefix_reconstruction,
     _prefix_checkpoint_symbol_counts,
+    _summarize_reference_to_submitted_symbol_bridge,
     build_hpm1_mask_segment,
     raw_tokens_to_mod5_residual_symbols,
     reconstruct_raw_tokens_from_mod5_residual_symbols,
@@ -31,6 +32,7 @@ from tac.pr91_hpm1_codec import (
     run_pr91_hpm1_probability_variant_matrix,
     run_pr91_hpm1_reference_teacher_forcing_probe,
     run_pr91_hpm1_semantic_decode_trench,
+    run_pr91_hpm1_semantic_symbol_bridge_probe,
     run_pr91_hpm1_spatial_group_order_probe,
     split_hpm1_mask_segment,
     validate_hpm1_static_contract,
@@ -318,6 +320,47 @@ def test_range_prefix_reconstruction_classifies_seed_reference_mismatch() -> Non
             "reference_symbol": 0,
         },
     }
+
+
+def test_symbol_bridge_summary_rejects_conflicting_seed_mapping() -> None:
+    summary = _summarize_reference_to_submitted_symbol_bridge(
+        reference_symbols=[0, 1, 2, 3, 4, 0, 1, 0],
+        submitted_symbols=[0, 1, 2, 3, 4, 0, 1, 2],
+        previous_reference_symbols=[0, 0, 0, 0, 0, 0, 0, 0],
+    )
+
+    assert summary["schema"] == "pr91_hpm1_reference_to_submitted_symbol_bridge_v1"
+    assert summary["status"] == "no_simple_reference_to_submitted_symbol_bridge_for_prefix"
+    assert summary["score_claim"] is False
+    assert summary["dispatch_allowed"] is False
+    assert summary["bridge_found"] is False
+    assert summary["first_identity_mismatch"] == {
+        "symbol_index": 7,
+        "candidate_symbol": 0,
+        "submitted_symbol": 2,
+    }
+    permutation = summary["global_label_permutation_bridge"]
+    assert permutation["status"] == "conflicting_reference_symbol_mappings"
+    assert permutation["perfect_candidate_found"] is False
+    assert permutation["conflicting_reference_symbols"] == [
+        {"reference_symbol": 0, "observed_submitted_symbols": [0, 2]}
+    ]
+
+
+def test_symbol_bridge_summary_records_permutation_candidate() -> None:
+    summary = _summarize_reference_to_submitted_symbol_bridge(
+        reference_symbols=[0, 1, 2, 3, 4, 0, 2],
+        submitted_symbols=[2, 0, 4, 1, 3, 2, 4],
+        previous_reference_symbols=[0, 0, 0, 0, 0, 0, 0],
+    )
+
+    assert summary["status"] == "global_label_permutation_bridge_matches_submitted_prefix"
+    assert summary["bridge_found"] is True
+    permutation = summary["global_label_permutation_bridge"]
+    assert permutation["perfect_candidate_found"] is True
+    assert permutation["consistent_permutation_count"] == 1
+    assert permutation["first_consistent_permutations"] == [[2, 0, 4, 1, 3]]
+    assert summary["identity_bridge"]["all_symbols_match"] is False
 
 
 def test_pr91_probability_matrix_is_fail_closed_not_notimplemented(tmp_path: Path) -> None:
@@ -903,6 +946,96 @@ def test_pr91_reference_teacher_forcing_probe_records_phase_major_next_row_artif
     assert range_prefix["target_decoded_symbols_before_failure"] == 15989
     assert range_prefix["range_prefix_max_target_decoded_before"] == 4096
     assert "slow forensic runs" in range_prefix["reason"]
+
+
+def test_pr91_semantic_symbol_bridge_probe_narrows_first_8_phase_major_seed() -> None:
+    if not DEFAULT_PR91_ARCHIVE.is_file():
+        pytest.skip("canonical PR91 archive not available")
+    if not DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE.is_file():
+        pytest.skip("PR85/QMA9 decoded reference token source not available")
+
+    report = run_pr91_hpm1_semantic_symbol_bridge_probe(
+        DEFAULT_PR91_ARCHIVE,
+        reference_tokens_path=DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE,
+        reference_layout="legacy_assume_nhw",
+        spatial_order_candidate="phase_major_row_major",
+        symbol_count=8,
+        row_preview_limit=8,
+        mismatch_limit=8,
+        write_json=False,
+    )
+
+    assert report["schema"] == "pr91_hpm1_semantic_symbol_bridge_probe_v1"
+    assert report["status"] == "narrowed_no_simple_pr85_qma9_to_pr91_symbol_bridge"
+    assert report["score_claim"] is False
+    assert report["dispatch_allowed"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    trace = report["symbol_bridge_probe"]["prefix_trace"]
+    assert trace["status"] == "submitted_prefix_has_no_simple_reference_symbol_bridge"
+    assert trace["prefix_completed"] is True
+    assert trace["decoded_symbol_count"] == 8
+    assert trace["symbol_sequences"]["first_reference_symbols"] == [2, 2, 2, 2, 2, 2, 2, 0]
+    assert trace["symbol_sequences"]["first_submitted_symbols"] == [2, 2, 2, 2, 2, 2, 2, 2]
+    assert trace["symbol_sequences"]["first_reference_submitted_mismatch"] == {
+        "symbol_index": 7,
+        "reference_symbol": 0,
+        "submitted_symbol": 2,
+    }
+    bridge = trace["bridge_summary"]
+    assert bridge["status"] == "no_simple_reference_to_submitted_symbol_bridge_for_prefix"
+    assert bridge["bridge_found"] is False
+    assert bridge["identity_bridge"]["match_count"] == 7
+    assert bridge["global_label_permutation_bridge"]["status"] == "no_consistent_permutation"
+    assert bridge["global_label_permutation_bridge"]["consistent_permutation_count"] == 0
+    assert bridge["best_mod5_offset_bridge"]["candidate"] == "reference_plus_0_mod5"
+    assert bridge["best_mod5_offset_bridge"]["match_count"] == 7
+    assert trace["mismatch_rows"][0]["global_symbol"] == 7
+    assert trace["mismatch_rows"][0]["pixel_yx"] == {"y": 0, "x": 224}
+    assert trace["mismatch_rows"][0]["reference_symbol_probability"] == pytest.approx(0.0343694585)
+    assert trace["mismatch_rows"][0]["submitted_symbol_probability"] == pytest.approx(0.939719006)
+
+
+def test_pr91_semantic_symbol_bridge_probe_cli_records_tool_manifest(tmp_path: Path) -> None:
+    if not DEFAULT_PR91_ARCHIVE.is_file():
+        pytest.skip("canonical PR91 archive not available")
+    if not DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE.is_file():
+        pytest.skip("PR85/QMA9 decoded reference token source not available")
+    out = tmp_path / "semantic_symbol_bridge_probe.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(
+                REPO
+                / "tools"
+                / "audit_pr91_hpm1_semantic_symbol_bridge_probe.py"
+            ),
+            "--archive",
+            str(DEFAULT_PR91_ARCHIVE),
+            "--reference-tokens",
+            str(DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE),
+            "--symbol-count",
+            "8",
+            "--row-preview-limit",
+            "4",
+            "--mismatch-limit",
+            "4",
+            "--json-out",
+            str(out),
+        ],
+        check=True,
+        cwd=REPO,
+        text=True,
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["schema"] == "pr91_hpm1_semantic_symbol_bridge_probe_v1"
+    assert payload["score_claim"] is False
+    assert payload["dispatch_allowed"] is False
+    assert payload["tool_run_manifest"]["tool"] == (
+        "tools/audit_pr91_hpm1_semantic_symbol_bridge_probe.py"
+    )
+    assert payload["symbol_bridge_probe"]["prefix_trace"]["decoded_symbol_count"] == 8
 
 
 def test_pr91_probe_contracts_fail_closed_on_bad_inputs(tmp_path: Path) -> None:

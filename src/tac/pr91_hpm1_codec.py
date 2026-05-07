@@ -28,6 +28,7 @@ import zipfile
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from itertools import permutations
 from pathlib import Path
 from typing import Any
 
@@ -159,6 +160,8 @@ DEFAULT_PR91_HPM1_RANGE_PREFIX_WINDOW_SYMBOLS = (1024, 256, 64, 16, 1)
 DEFAULT_PR91_HPM1_RANGE_PREFIX_SEED_SYMBOLS = (1, 2, 4, 8, 16, 32, 64, 128)
 DEFAULT_PR91_HPM1_RANGE_PREFIX_REPLAY_SYMBOL_LIMIT = 2048
 DEFAULT_PR91_HPM1_RANGE_PREFIX_MAX_TARGET_DECODED_BEFORE = 4096
+DEFAULT_PR91_HPM1_SYMBOL_BRIDGE_PREFIX_SYMBOLS = 32
+DEFAULT_PR91_HPM1_SYMBOL_BRIDGE_MAX_SYMBOLS = 4096
 
 _QUARANTINE_SPEC = (
     ".recovery_quarantine_20260505T004735Z/src/tac/pr91_hpm1_codec.recovery_spec.json"
@@ -1606,6 +1609,523 @@ def _classify_range_prefix_reconstruction(
             "they do not prove full HPM1 decode, byte-exact reencode, score "
             "validity, or dispatch readiness."
         ),
+    }
+
+
+def _first_symbol_mismatch(
+    expected_symbols: np.ndarray,
+    actual_symbols: np.ndarray,
+    *,
+    expected_label: str,
+    actual_label: str,
+) -> dict[str, int] | None:
+    expected = np.asarray(expected_symbols, dtype=np.uint8)
+    actual = np.asarray(actual_symbols, dtype=np.uint8)
+    for index, (expected_value, actual_value) in enumerate(zip(expected, actual, strict=True)):
+        if int(expected_value) != int(actual_value):
+            return {
+                "symbol_index": int(index),
+                expected_label: int(expected_value),
+                actual_label: int(actual_value),
+            }
+    return None
+
+
+def _symbol_histogram(values: np.ndarray) -> dict[str, int]:
+    arr = np.asarray(values, dtype=np.uint8)
+    return {str(symbol): int(np.count_nonzero(arr == symbol)) for symbol in range(5)}
+
+
+def _candidate_symbol_match_summary(
+    candidate_symbols: np.ndarray,
+    submitted_symbols: np.ndarray,
+    *,
+    name: str,
+) -> dict[str, Any]:
+    candidate = np.asarray(candidate_symbols, dtype=np.uint8)
+    submitted = np.asarray(submitted_symbols, dtype=np.uint8)
+    if candidate.shape != submitted.shape:
+        raise Pr91Hpm1Error(
+            "hpm1_symbol_bridge_probe",
+            "candidate_submitted_shape_mismatch",
+            candidate=name,
+            candidate_shape=list(candidate.shape),
+            submitted_shape=list(submitted.shape),
+        )
+    matches = candidate == submitted
+    match_count = int(np.count_nonzero(matches))
+    return {
+        "candidate": name,
+        "symbol_count": int(candidate.size),
+        "match_count": match_count,
+        "mismatch_count": int(candidate.size - match_count),
+        "all_symbols_match": bool(candidate.size > 0 and match_count == int(candidate.size)),
+        "first_mismatch": _first_symbol_mismatch(
+            candidate,
+            submitted,
+            expected_label="candidate_symbol",
+            actual_label="submitted_symbol",
+        ),
+        "candidate_symbols_sha256": sha256_bytes(np.ascontiguousarray(candidate).tobytes()),
+    }
+
+
+def _summarize_reference_to_submitted_symbol_bridge(
+    reference_symbols: list[int] | np.ndarray,
+    submitted_symbols: list[int] | np.ndarray,
+    previous_reference_symbols: list[int] | np.ndarray,
+) -> dict[str, Any]:
+    """Classify simple PR85/QMA9 -> PR91 semantic-symbol bridge hypotheses."""
+
+    reference = np.asarray(reference_symbols, dtype=np.uint8)
+    submitted = np.asarray(submitted_symbols, dtype=np.uint8)
+    previous = np.asarray(previous_reference_symbols, dtype=np.uint8)
+    if reference.shape != submitted.shape or reference.shape != previous.shape:
+        raise Pr91Hpm1Error(
+            "hpm1_symbol_bridge_probe",
+            "symbol_sequence_shape_mismatch",
+            reference_shape=list(reference.shape),
+            submitted_shape=list(submitted.shape),
+            previous_shape=list(previous.shape),
+        )
+    if reference.ndim != 1:
+        raise Pr91Hpm1Error(
+            "hpm1_symbol_bridge_probe",
+            "symbol_sequences_must_be_flat",
+            shape=list(reference.shape),
+        )
+    if int(reference.size) == 0:
+        return {
+            "schema": "pr91_hpm1_reference_to_submitted_symbol_bridge_v1",
+            "status": "no_symbols_available_for_bridge_probe",
+            "score_claim": False,
+            "dispatch_allowed": False,
+            "symbol_count": 0,
+            "bridge_found": False,
+        }
+
+    identity = _candidate_symbol_match_summary(
+        reference,
+        submitted,
+        name="identity_reference_symbol",
+    )
+    mod5_offset_rows = [
+        _candidate_symbol_match_summary(
+            ((reference.astype(np.int16) + offset) % 5).astype(np.uint8),
+            submitted,
+            name=f"reference_plus_{offset}_mod5",
+        )
+        for offset in range(5)
+    ]
+    best_mod5_offset = max(
+        mod5_offset_rows,
+        key=lambda row: (int(row["match_count"]), -int(row["mismatch_count"])),
+    )
+    residual_minus = _candidate_symbol_match_summary(
+        ((reference.astype(np.int16) - previous.astype(np.int16)) % 5).astype(np.uint8),
+        submitted,
+        name="reference_minus_previous_mod5",
+    )
+    residual_plus = _candidate_symbol_match_summary(
+        ((reference.astype(np.int16) + previous.astype(np.int16)) % 5).astype(np.uint8),
+        submitted,
+        name="reference_plus_previous_mod5",
+    )
+
+    observed_counts: dict[str, dict[str, int]] = {
+        str(symbol): {str(other): 0 for other in range(5)} for symbol in range(5)
+    }
+    observed_values_by_reference: dict[str, list[int]] = {}
+    constraints: dict[int, int] = {}
+    conflicts: list[dict[str, Any]] = []
+    for ref_value, submitted_value in zip(reference, submitted, strict=True):
+        observed_counts[str(int(ref_value))][str(int(submitted_value))] += 1
+    for ref_symbol in range(5):
+        observed_values = [
+            submitted_symbol
+            for submitted_symbol, count in observed_counts[str(ref_symbol)].items()
+            if int(count) > 0
+        ]
+        observed_values_int = sorted(int(value) for value in observed_values)
+        observed_values_by_reference[str(ref_symbol)] = observed_values_int
+        if len(observed_values_int) == 1:
+            constraints[ref_symbol] = observed_values_int[0]
+        elif len(observed_values_int) > 1:
+            conflicts.append(
+                {
+                    "reference_symbol": ref_symbol,
+                    "observed_submitted_symbols": observed_values_int,
+                }
+            )
+
+    consistent_permutations: list[list[int]] = []
+    if not conflicts:
+        for perm in permutations(range(5)):
+            if all(int(perm[ref_symbol]) == int(submitted_symbol) for ref_symbol, submitted_symbol in constraints.items()):
+                consistent_permutations.append([int(value) for value in perm])
+    permutation_bridge_found = bool(consistent_permutations)
+
+    if identity["all_symbols_match"]:
+        status = "identity_reference_symbols_match_submitted_prefix"
+        next_patch = "extend the bounded prefix or attempt byte-exact encoder reconstruction"
+        bridge_found = True
+    elif permutation_bridge_found:
+        status = "global_label_permutation_bridge_matches_submitted_prefix"
+        next_patch = "test the surviving label permutation on a deeper prefix before reencode work"
+        bridge_found = True
+    elif best_mod5_offset["all_symbols_match"]:
+        status = "constant_mod5_offset_bridge_matches_submitted_prefix"
+        next_patch = "test the mod5 offset on a deeper prefix and then recover encoder range finalization"
+        bridge_found = True
+    elif residual_minus["all_symbols_match"] or residual_plus["all_symbols_match"]:
+        status = "previous_frame_mod5_residual_bridge_matches_submitted_prefix"
+        next_patch = "test residual bridge beyond frame-zero seed symbols"
+        bridge_found = True
+    else:
+        status = "no_simple_reference_to_submitted_symbol_bridge_for_prefix"
+        next_patch = (
+            "recover true PR91 encoder semantic tokens or encoder-side "
+            "probability/range trace; the available PR85/QMA9 prefix is not "
+            "a simple identity, label-permutation, offset, or residual bridge"
+        )
+        bridge_found = False
+
+    return {
+        "schema": "pr91_hpm1_reference_to_submitted_symbol_bridge_v1",
+        "status": status,
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "symbol_count": int(reference.size),
+        "bridge_found": bool(bridge_found),
+        "reference_symbols": {
+            "sha256": sha256_bytes(np.ascontiguousarray(reference).tobytes()),
+            "histogram": _symbol_histogram(reference),
+            "first_symbols": [int(value) for value in reference[:16].tolist()],
+        },
+        "submitted_symbols": {
+            "sha256": sha256_bytes(np.ascontiguousarray(submitted).tobytes()),
+            "histogram": _symbol_histogram(submitted),
+            "first_symbols": [int(value) for value in submitted[:16].tolist()],
+        },
+        "previous_reference_symbols": {
+            "sha256": sha256_bytes(np.ascontiguousarray(previous).tobytes()),
+            "histogram": _symbol_histogram(previous),
+            "first_symbols": [int(value) for value in previous[:16].tolist()],
+        },
+        "identity_bridge": identity,
+        "best_mod5_offset_bridge": best_mod5_offset,
+        "mod5_offset_bridges": mod5_offset_rows,
+        "previous_frame_residual_bridges": [residual_minus, residual_plus],
+        "global_label_permutation_bridge": {
+            "status": (
+                "conflicting_reference_symbol_mappings"
+                if conflicts
+                else "consistent_with_observed_prefix"
+                if permutation_bridge_found
+                else "no_consistent_permutation"
+            ),
+            "perfect_candidate_found": permutation_bridge_found,
+            "consistent_permutation_count": len(consistent_permutations),
+            "first_consistent_permutations": consistent_permutations[:5],
+            "observed_submitted_symbols_by_reference_symbol": observed_values_by_reference,
+            "observed_pair_counts": observed_counts,
+            "conflicting_reference_symbols": conflicts,
+        },
+        "first_identity_mismatch": identity["first_mismatch"],
+        "next_patch_target": next_patch,
+        "scope_note": (
+            "This prefix bridge is a local CPU diagnostic only. It compares "
+            "submitted range-decoded seed symbols against available PR85/QMA9 "
+            "reference symbols under a requested context/order hypothesis; it "
+            "does not prove full HPM1 decode, byte-exact reencode, score "
+            "validity, or dispatch readiness."
+        ),
+    }
+
+
+def _trace_hpm1_reference_forced_symbol_bridge_prefix(
+    model: Any,
+    payload: Hpm1MaskPayload,
+    reference_tokens: np.ndarray,
+    *,
+    probability_variant: str | Any,
+    prob_eps: float,
+    device: str,
+    spatial_order_candidate: str,
+    symbol_count: int,
+    row_preview_limit: int,
+    mismatch_limit: int,
+) -> dict[str, Any]:
+    """Decode a bounded submitted prefix against reference-context rows."""
+
+    if torch is None or F is None:  # pragma: no cover - optional dependency path
+        raise Pr91Hpm1Error("dependency_contract", "torch_missing")
+    if _pr86_hpac_codec.constriction is None:  # pragma: no cover
+        raise Pr91Hpm1Error("dependency_contract", "constriction_missing")
+    if str(device) != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "hpm1_symbol_bridge_probe_is_cpu_only",
+            requested_device=device,
+        )
+    _spatial_order_description(spatial_order_candidate)
+    if list(reference_tokens.shape) != [payload.n_frames, payload.height, payload.width]:
+        raise Pr91Hpm1Error(
+            "reference_token_contract",
+            "reference_token_shape_mismatch",
+            expected=[payload.n_frames, payload.height, payload.width],
+            actual=list(reference_tokens.shape),
+        )
+    if int(symbol_count) <= 0:
+        raise Pr91Hpm1Error(
+            "hpm1_symbol_bridge_probe",
+            "symbol_count_must_be_positive",
+            symbol_count=symbol_count,
+        )
+    if int(symbol_count) > DEFAULT_PR91_HPM1_SYMBOL_BRIDGE_MAX_SYMBOLS:
+        raise Pr91Hpm1Error(
+            "hpm1_symbol_bridge_probe",
+            "symbol_count_exceeds_local_probe_limit",
+            symbol_count=symbol_count,
+            max_symbols=DEFAULT_PR91_HPM1_SYMBOL_BRIDGE_MAX_SYMBOLS,
+        )
+    if int(row_preview_limit) < 0 or int(mismatch_limit) < 0:
+        raise Pr91Hpm1Error(
+            "hpm1_symbol_bridge_probe",
+            "row_limits_must_be_nonnegative",
+            row_preview_limit=row_preview_limit,
+            mismatch_limit=mismatch_limit,
+        )
+
+    started_at = time.time()
+    resolved = resolve_hpac_probability_variant(probability_variant)
+    dev = torch.device(device)
+    model = model.to(dev).eval()
+    masks = _group_masks(
+        payload.height,
+        payload.width,
+        P=payload.predictor_count,
+        delta=payload.delta,
+        device=dev,
+    )
+    submitted_words = _hpm1_token_words_for_candidate(payload, "source_little_uint32")
+    decoder = _pr86_hpac_codec.constriction.stream.queue.RangeDecoder(submitted_words)
+    decoded_prev = torch.zeros(
+        (1, payload.height, payload.width),
+        dtype=torch.long,
+        device=dev,
+    )
+    decoded_symbols = 0
+    reference_symbols: list[int] = []
+    submitted_symbols: list[int] = []
+    previous_reference_symbols: list[int] = []
+    row_preview: list[dict[str, Any]] = []
+    mismatch_rows: list[dict[str, Any]] = []
+    failure_report: dict[str, Any] | None = None
+
+    with torch.no_grad():
+        for frame in range(payload.n_frames):
+            idx = torch.tensor([frame], dtype=torch.long, device=dev)
+            cur = torch.zeros(
+                (1, payload.height, payload.width),
+                dtype=torch.long,
+                device=dev,
+            )
+            for group, mask in enumerate(masks):
+                if mask is None:
+                    continue
+                coords = _hpm1_group_coords_for_spatial_order(
+                    payload,
+                    group=group,
+                    mask=mask,
+                    candidate=spatial_order_candidate,
+                    device=dev,
+                )
+                logits = model(cur, idx, decoded_prev)
+                probs = F.softmax(logits.float(), dim=1)
+                probs_at_group = (
+                    probs[0][:, coords[:, 0], coords[:, 1]]
+                    .permute(1, 0)
+                    .contiguous()
+                )
+                probs_np = probs_at_group.cpu().numpy()
+                coord_rows = coords[:, 0].detach().cpu().numpy()
+                coord_cols = coords[:, 1].detach().cpu().numpy()
+                ref_at_group = reference_tokens[
+                    frame,
+                    coord_rows,
+                    coord_cols,
+                ].astype(np.int64, copy=False)
+                prev_at_group = (
+                    decoded_prev[0, coords[:, 0], coords[:, 1]]
+                    .detach()
+                    .cpu()
+                    .numpy()
+                    .astype(np.int64, copy=False)
+                )
+                for symbol_in_group, row in enumerate(probs_np):
+                    if decoded_symbols >= int(symbol_count):
+                        break
+                    normalized = _normalize_probability_row(
+                        row,
+                        prob_eps=prob_eps,
+                        variant=resolved,
+                    )
+                    cat = _categorical_from_probs(
+                        row,
+                        prob_eps=prob_eps,
+                        variant=resolved,
+                    )
+                    decoder_state_before = _range_decoder_state_summary(
+                        decoder,
+                        label="before_symbol_bridge_decode",
+                    )
+                    reference_symbol = int(ref_at_group[symbol_in_group])
+                    previous_symbol = int(prev_at_group[symbol_in_group])
+                    y = int(coord_rows[symbol_in_group])
+                    x = int(coord_cols[symbol_in_group])
+                    try:
+                        submitted_symbol = int(decoder.decode(cat))
+                    except Exception as exc:
+                        failure_report = {
+                            "status": "range_decode_exception_before_prefix_limit",
+                            "passed": False,
+                            "exception_type": type(exc).__name__,
+                            "exception_text": str(exc),
+                            "global_symbol": int(decoded_symbols),
+                            "frame": int(frame),
+                            "group": int(group),
+                            "symbol_in_group": int(symbol_in_group),
+                            "pixel_yx": {"y": y, "x": x},
+                            "reference_symbol": reference_symbol,
+                            "previous_reference_symbol": previous_symbol,
+                            "decoder_state_before_exception": decoder_state_before,
+                            "decoder_state_after_exception": _range_decoder_state_summary(
+                                decoder,
+                                label="after_symbol_bridge_decode_exception",
+                            ),
+                        }
+                        break
+
+                    reference_symbols.append(reference_symbol)
+                    submitted_symbols.append(submitted_symbol)
+                    previous_reference_symbols.append(previous_symbol)
+                    order = np.argsort(-normalized)
+                    reference_rank = int(np.where(order == reference_symbol)[0][0] + 1)
+                    submitted_rank = int(np.where(order == submitted_symbol)[0][0] + 1)
+                    row_record = {
+                        "global_symbol": int(decoded_symbols),
+                        "frame": int(frame),
+                        "group": int(group),
+                        "symbol_in_group": int(symbol_in_group),
+                        "pixel_yx": {"y": y, "x": x},
+                        "reference_symbol": reference_symbol,
+                        "submitted_symbol": submitted_symbol,
+                        "previous_reference_symbol": previous_symbol,
+                        "reference_minus_previous_mod5_symbol": int(
+                            (reference_symbol - previous_symbol) % 5
+                        ),
+                        "reference_plus_previous_mod5_symbol": int(
+                            (reference_symbol + previous_symbol) % 5
+                        ),
+                        "matches_reference_symbol": bool(submitted_symbol == reference_symbol),
+                        "reference_symbol_probability": round(float(normalized[reference_symbol]), 10),
+                        "submitted_symbol_probability": round(float(normalized[submitted_symbol]), 10),
+                        "reference_symbol_rank": reference_rank,
+                        "submitted_symbol_rank": submitted_rank,
+                        "normalized_probability_row_sha256": sha256_bytes(
+                            np.ascontiguousarray(normalized).tobytes()
+                        ),
+                    }
+                    if len(row_preview) < int(row_preview_limit):
+                        row_preview.append(row_record)
+                    if (
+                        submitted_symbol != reference_symbol
+                        and len(mismatch_rows) < int(mismatch_limit)
+                    ):
+                        mismatch_rows.append(row_record)
+                    decoded_symbols += 1
+                if failure_report is not None or decoded_symbols >= int(symbol_count):
+                    break
+                cur[
+                    0,
+                    coords[:, 0],
+                    coords[:, 1],
+                ] = torch.from_numpy(ref_at_group).to(dev)
+            if failure_report is not None or decoded_symbols >= int(symbol_count):
+                break
+            decoded_prev = torch.from_numpy(
+                reference_tokens[frame : frame + 1].astype(np.int64, copy=False)
+            ).to(dev)
+
+    bridge_summary = _summarize_reference_to_submitted_symbol_bridge(
+        reference_symbols,
+        submitted_symbols,
+        previous_reference_symbols,
+    )
+    prefix_completed = int(decoded_symbols) == int(symbol_count)
+    if failure_report is not None:
+        status = "range_decode_exception_before_symbol_bridge_prefix_complete"
+    elif bridge_summary.get("bridge_found") is True:
+        status = "submitted_prefix_has_simple_reference_symbol_bridge_candidate"
+    else:
+        status = "submitted_prefix_has_no_simple_reference_symbol_bridge"
+
+    return {
+        "schema": "pr91_hpm1_semantic_symbol_bridge_prefix_trace_v1",
+        "status": status,
+        "passed": bool(prefix_completed and bridge_summary.get("bridge_found") is False),
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "full_decode_proven": False,
+        "byte_exact_reencode_proven": False,
+        "device": device,
+        "probability_variant": resolved.name,
+        "prob_eps": float(prob_eps),
+        "spatial_order_candidate": spatial_order_candidate,
+        "spatial_order_description": _spatial_order_description(spatial_order_candidate),
+        "requested_symbol_count": int(symbol_count),
+        "decoded_symbol_count": int(decoded_symbols),
+        "prefix_completed": bool(prefix_completed),
+        "submitted_token_stream": {
+            "bytes": len(payload.tokens),
+            "sha256": sha256_bytes(payload.tokens),
+            **_token_words_summary(submitted_words),
+            "word_order_candidate": "source_little_uint32",
+        },
+        "symbol_sequences": {
+            "reference_symbols_sha256": sha256_bytes(
+                np.asarray(reference_symbols, dtype=np.uint8).tobytes()
+            ),
+            "submitted_symbols_sha256": sha256_bytes(
+                np.asarray(submitted_symbols, dtype=np.uint8).tobytes()
+            ),
+            "previous_reference_symbols_sha256": sha256_bytes(
+                np.asarray(previous_reference_symbols, dtype=np.uint8).tobytes()
+            ),
+            "first_reference_symbols": [int(value) for value in reference_symbols[:16]],
+            "first_submitted_symbols": [int(value) for value in submitted_symbols[:16]],
+            "first_previous_reference_symbols": [
+                int(value) for value in previous_reference_symbols[:16]
+            ],
+            "first_reference_submitted_mismatch": _first_symbol_mismatch(
+                np.asarray(reference_symbols, dtype=np.uint8),
+                np.asarray(submitted_symbols, dtype=np.uint8),
+                expected_label="reference_symbol",
+                actual_label="submitted_symbol",
+            ),
+        },
+        "symbol_rows_preview": row_preview,
+        "mismatch_rows": mismatch_rows,
+        "bridge_summary": bridge_summary,
+        "failure": failure_report,
+        "scope_note": (
+            "This trace uses the submitted PR91 range stream with reference "
+            "teacher-forced context rows. It only narrows seed symbol bridge "
+            "hypotheses and is not a full decode, reencode, score, or dispatch "
+            "artifact."
+        ),
+        "elapsed_sec": round(time.time() - started_at, 3),
     }
 
 
@@ -4304,6 +4824,178 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
     if strict and report["ready_for_exact_eval_dispatch"] is not True:
         raise Pr91Hpm1Error(
             "hpm1_reference_teacher_forcing_probe",
+            str(report["status"]),
+            report=report,
+        )
+    return _jsonable(report)
+
+
+def run_pr91_hpm1_semantic_symbol_bridge_probe(
+    archive: Path = DEFAULT_PR91_ARCHIVE,
+    *,
+    reference_tokens_path: Path = DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE,
+    reference_layout: str = "legacy_assume_nhw",
+    device: str = "cpu",
+    probability_variant: str = DEFAULT_HPAC_PROBABILITY_VARIANT,
+    prob_eps: float = PROB_EPS,
+    spatial_order_candidate: str = "phase_major_row_major",
+    symbol_count: int = DEFAULT_PR91_HPM1_SYMBOL_BRIDGE_PREFIX_SYMBOLS,
+    row_preview_limit: int = 16,
+    mismatch_limit: int = 16,
+    output_dir: Path | None = None,
+    strict: bool = False,
+    write_json: bool = True,
+    require_expected_reference_sha: bool = True,
+) -> dict[str, Any]:
+    """Probe simple bridges from PR85/QMA9 reference tokens to PR91 symbols."""
+
+    started_at = time.time()
+    if str(device) != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "pr91_hpm1_semantic_symbol_bridge_probe_is_cpu_only",
+            requested_device=device,
+        )
+    archive_path = Path(archive)
+    payload = extract_pr91_hpm1_payload(archive_path)
+    reference_tokens, reference_report = _load_reference_tokens(
+        Path(reference_tokens_path),
+        payload.n_frames,
+        payload.height,
+        payload.width,
+        reference_layout,
+    )
+    reference_sha_matches_expected = bool(
+        reference_report["matches_expected_pr85_qma9_token_source"]
+    )
+    if require_expected_reference_sha and not reference_sha_matches_expected:
+        raise Pr91Hpm1Error(
+            "reference_token_contract",
+            "unexpected_pr85_qma9_reference_token_sha256",
+            path=reference_report["path"],
+            expected_sha256=reference_report["expected_sha256"],
+            actual_sha256=reference_report["sha256"],
+            layout=reference_layout,
+        )
+
+    dependency_report = collect_dependency_report(strict=False)
+    static_report = validate_hpm1_static_contract(payload)
+    relationship = compare_hpm1_to_pr86_hpac_contract(payload)
+    runtime_sources = analyze_pr91_hpm1_runtime_sources()
+    model = load_hpm1_hpac_model(payload, device=device)
+    bridge_trace = _trace_hpm1_reference_forced_symbol_bridge_prefix(
+        model,
+        payload,
+        reference_tokens,
+        probability_variant=probability_variant,
+        prob_eps=prob_eps,
+        device=device,
+        spatial_order_candidate=spatial_order_candidate,
+        symbol_count=symbol_count,
+        row_preview_limit=row_preview_limit,
+        mismatch_limit=mismatch_limit,
+    )
+    bridge_summary = bridge_trace.get("bridge_summary", {})
+    prefix_completed = bridge_trace.get("prefix_completed") is True
+    bridge_found = (
+        isinstance(bridge_summary, Mapping)
+        and bridge_summary.get("bridge_found") is True
+    )
+    if prefix_completed and not bridge_found:
+        status = "narrowed_no_simple_pr85_qma9_to_pr91_symbol_bridge"
+        not_explained = (
+            "identity, global label permutation, constant mod5 offset, or "
+            "previous-frame mod5 residual bridge for the requested prefix"
+        )
+    elif bridge_found:
+        status = "simple_symbol_bridge_hypothesis_still_open"
+        not_explained = ""
+    else:
+        status = "blocked_before_symbol_bridge_prefix_complete"
+        not_explained = ""
+
+    report: dict[str, Any] = {
+        "schema": "pr91_hpm1_semantic_symbol_bridge_probe_v1",
+        "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_semantic_symbol_bridge_probe",
+        "recorded_at_utc": datetime.now(UTC).replace(microsecond=0).isoformat(),
+        "status": status,
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "dispatch_attempted": False,
+        "dispatch_performed": False,
+        "gpu_or_remote_work": False,
+        "local_only": True,
+        "ready_for_exact_eval_dispatch": False,
+        "promotion_eligible": False,
+        "evidence_grade": "empirical",
+        "evidence_scope": "local_cpu_hpm1_semantic_symbol_bridge_prefix_probe",
+        "evidence_limitations": [
+            "not score evidence",
+            "not full standalone HPM1 decode proof",
+            "not byte-exact re-encode proof",
+            "not dispatch-eligible",
+        ],
+        "device": device,
+        "archive": _archive_report(archive_path),
+        "reference_tokens": reference_report,
+        "reference_token_sha256_contract": {
+            "required": bool(require_expected_reference_sha),
+            "expected_sha256": reference_report["expected_sha256"],
+            "actual_sha256": reference_report["sha256"],
+            "matches_expected": reference_sha_matches_expected,
+        },
+        "hpm1_static_contract": static_report,
+        "pr86_hpac_relationship": relationship,
+        "dependency_report": dependency_report,
+        "runtime_source_contract": runtime_sources,
+        "payload": {
+            "config": payload.config(),
+            "tokens_bytes": len(payload.tokens),
+            "tokens_sha256": sha256_bytes(payload.tokens),
+            "hpac_bytes": len(payload.hpac),
+            "hpac_sha256": sha256_bytes(payload.hpac),
+        },
+        "symbol_bridge_probe": {
+            "schema": "pr91_hpm1_semantic_symbol_bridge_probe_v1",
+            "status": bridge_trace.get("status"),
+            "passed": bool(bridge_trace.get("passed") is True),
+            "score_claim": False,
+            "dispatch_allowed": False,
+            "probability_variant": resolve_hpac_probability_variant(
+                probability_variant
+            ).name,
+            "prob_eps": float(prob_eps),
+            "spatial_order_candidate": spatial_order_candidate,
+            "requested_symbol_count": int(symbol_count),
+            "row_preview_limit": int(row_preview_limit),
+            "mismatch_limit": int(mismatch_limit),
+            "prefix_trace": bridge_trace,
+        },
+        "exact_missing_grammar": {
+            "status": "still_open_after_symbol_bridge_probe",
+            "not_explained_by_this_probe": not_explained,
+            "remaining_open_classes": [
+                "true PR91 encoder semantic tokens not visible in public runtime",
+                "encoder-side probability numeric contract",
+                "range-coder construction/finalization contract",
+                "phase-major reference context remains only a prior until full decode/reencode parity",
+            ],
+        },
+        "next_required_proofs": [
+            "recover true PR91 encoder semantic tokens or source encoder trace",
+            "test any surviving bridge on a deeper bounded prefix before reencode work",
+            "decode all 600 HPM1 frames and re-encode exact token bytes before any dispatch",
+        ],
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
+    if write_json and output_dir is not None:
+        write_json_report(
+            report,
+            Path(output_dir) / "semantic_symbol_bridge_probe.json",
+        )
+    if strict and report["ready_for_exact_eval_dispatch"] is not True:
+        raise Pr91Hpm1Error(
+            "hpm1_semantic_symbol_bridge_probe",
             str(report["status"]),
             report=report,
         )
