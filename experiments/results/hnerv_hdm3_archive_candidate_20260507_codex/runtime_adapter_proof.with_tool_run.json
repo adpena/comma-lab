@@ -1,0 +1,125 @@
+{
+  "adapter_proof": {
+    "contract": "hnerv_hdm3_runtime_adapter_proof_v1",
+    "decoder_raw_equal": true,
+    "decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+    "decoder_section_byte_delta_runtime_only": 14,
+    "dispatch_attempted": false,
+    "exact_source_payload_identity_proven_by_archive_proof": true,
+    "input_decoder_section_bytes": 170113,
+    "input_decoder_section_sha256": "149a41ecf4d1614757c9369838e3a7cb9f03a648fe9b61a2317e9b7f2996b256",
+    "input_payload_bytes": 185966,
+    "input_payload_sha256": "cb265692118961b9e1aeca090b5773f0de81c5a1acc882fc58057f10e16e6df7",
+    "latents_and_sidecar_input_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+    "latents_and_sidecar_output_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+    "latents_and_sidecar_preserved": true,
+    "legacy_brotli_quality": 10,
+    "mode": "hdm3_restored_to_legacy_brotli",
+    "output_decoder_section_bytes": 170127,
+    "output_decoder_section_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+    "output_payload_bytes": 185980,
+    "output_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+    "payload_changed": true,
+    "ready_for_exact_eval_dispatch": false,
+    "ready_for_public_runtime_inflate": true,
+    "remaining_dispatch_blockers": [
+      "strict_pre_submission_compliance_json_missing",
+      "lane_dispatch_claim_missing",
+      "exact_cuda_auth_eval_missing"
+    ],
+    "restored_decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+    "schema_version": 1,
+    "score_claim": false
+  },
+  "candidate_archive_bytes": 186066,
+  "candidate_archive_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/pr106x_lowlevel_brotli_hdm3_archive_candidate.zip",
+  "candidate_archive_sha256": "5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771",
+  "candidate_decoder_section_bytes": 170113,
+  "candidate_decoder_section_is_hdm3": true,
+  "candidate_decoder_section_sha256": "149a41ecf4d1614757c9369838e3a7cb9f03a648fe9b61a2317e9b7f2996b256",
+  "candidate_latents_and_sidecar_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+  "candidate_member_name": "x",
+  "contract": "hnerv_hdm3_runtime_adapter_archive_parity_v1",
+  "decoder_raw_matches_source": true,
+  "dispatch_attempted": false,
+  "inflate_output_parity_proven_by_payload_identity": true,
+  "latents_and_sidecar_match_source": true,
+  "public_pr106_dependency_root_unchanged": true,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_public_runtime_inflate": true,
+  "remaining_dispatch_blockers": [
+    "strict_pre_submission_compliance_json_missing",
+    "lane_dispatch_claim_missing",
+    "exact_cuda_auth_eval_missing"
+  ],
+  "restored_decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+  "restored_decoder_section_bytes": 170127,
+  "restored_decoder_section_matches_source": true,
+  "restored_decoder_section_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+  "restored_latents_and_sidecar_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+  "restored_payload_bytes": 185980,
+  "restored_payload_matches_source": true,
+  "restored_payload_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/candidate_hdm3_restored_legacy_payload.bin",
+  "restored_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+  "runtime_adapter_files": [
+    {
+      "bytes": 8914,
+      "path": "src/tac/hnerv_hdm3_runtime_adapter.py",
+      "sha256": "98c6748b1c7ea7bc1fc9da496db0da65266f60291200b67cc053019e76b5e24b"
+    },
+    {
+      "bytes": 1102,
+      "path": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/hdm3_normalize.py",
+      "sha256": "3561c609cf597cf095f2b28439929dddf7ec20e54b3d120912f519fde128dee8"
+    },
+    {
+      "bytes": 2385,
+      "path": "experiments/public_runtime_adapters/pr106_belt_and_suspenders_adapter/inflate.sh",
+      "sha256": "a9bad807419677fb7d0d3162f70114cdc249e1ed717e417b484fc716a2c9d6aa"
+    }
+  ],
+  "runtime_adapter_integrated": true,
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive_bytes": 186080,
+  "source_archive_path": "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/pr106x_hnerv_brotli_repack_candidate.zip",
+  "source_archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
+  "source_decoder_raw_sha256": "f22eb6be56499fa5785f47f85d2bef7f71246f29674691fd3e06af733c8c0703",
+  "source_decoder_section_bytes": 170127,
+  "source_decoder_section_sha256": "07725c39ff436195e319f258b1e033290de30e259bc3f103b1b487f21a698c5c",
+  "source_latents_and_sidecar_sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+  "source_member_name": "x",
+  "source_payload_bytes": 185980,
+  "source_payload_sha256": "b6ba493aa37446143b003235eaeb3a49c0748a6d64392fb9a666a6c872629171",
+  "tool_run_manifest": {
+    "argv": [
+      "--source-archive",
+      "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/pr106x_hnerv_brotli_repack_candidate.zip",
+      "--candidate-archive",
+      "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/pr106x_lowlevel_brotli_hdm3_archive_candidate.zip",
+      "--output-dir",
+      "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex",
+      "--json-out",
+      "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/runtime_adapter_proof.with_tool_run.json"
+    ],
+    "canonical_payload_without_tool_manifest_sha256": "704022df8a913a6dd23fafd91f599d206110bd27426f642268d6966acfdb91c1",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 186080,
+        "path": "experiments/results/hnerv_lowlevel_repack_pr106x_20260506_codex/pr106x_hnerv_brotli_repack_candidate.zip",
+        "sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f"
+      },
+      {
+        "bytes": 186066,
+        "path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/pr106x_lowlevel_brotli_hdm3_archive_candidate.zip",
+        "sha256": "5b5619628b54ccec44d51360ecb258dfe61742a581c7605c74d1ddaa5c025771"
+      }
+    ],
+    "output_path": "experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/runtime_adapter_proof.with_tool_run.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/prove_hnerv_hdm3_runtime_adapter.py"
+  }
+}

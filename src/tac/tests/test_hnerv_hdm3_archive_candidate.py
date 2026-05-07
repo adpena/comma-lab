@@ -49,8 +49,9 @@ def test_build_hdm3_archive_candidate_is_byte_closed_but_not_dispatch_ready(
     assert manifest["decoder_raw_equivalence"]["raw_equal"] is True
     assert manifest["decoder_raw_equivalence"]["q_roundtrip_equal"] is True
     assert manifest["decoder_raw_equivalence"]["scale_roundtrip_equal"] is True
-    assert manifest["runtime_adapter_proof"]["submission_runtime_integrated"] is False
-    assert "hdm3_submission_runtime_adapter_not_integrated" in manifest["dispatch_blockers"]
+    assert manifest["runtime_adapter_proof"]["submission_runtime_integrated"] is True
+    assert manifest["runtime_adapter_proof"]["runtime_adapter_module"] == "tac.hnerv_hdm3_runtime_adapter"
+    assert "hdm3_runtime_adapter_archive_parity_proof_missing" in manifest["dispatch_blockers"]
     assert "exact_cuda_auth_eval_missing" in manifest["dispatch_blockers"]
 
     candidate_archive = REPO / manifest["candidate_archive_path"]

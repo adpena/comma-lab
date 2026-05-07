@@ -52,7 +52,13 @@ while IFS= read -r line; do
     exit 3
   fi
   DST="${OUTPUT_DIR}/${BASE}.raw"
-  echo "[pr106-adapter] inflating ${SRC} -> ${DST}"
+  RESTORED_SRC="${OUTPUT_DIR}/.${BASE}.hdm3_legacy_payload.bin"
+  RESTORED_PROOF="${OUTPUT_DIR}/.${BASE}.hdm3_legacy_payload.proof.json"
+  PYTHONPATH="$REPO_ROOT/src${PYTHONPATH:+:$PYTHONPATH}" \
+    "$PYBIN" "$HERE/hdm3_normalize.py" "$SRC" "$RESTORED_SRC" \
+      --json-out "$RESTORED_PROOF"
+  echo "[pr106-adapter] hdm3/legacy bridge proof ${RESTORED_PROOF}"
+  echo "[pr106-adapter] inflating ${RESTORED_SRC} -> ${DST}"
   PYTHONPATH="$SOURCE_ROOT/submissions/belt_and_suspenders/src${PYTHONPATH:+:$PYTHONPATH}" \
-    "$PYBIN" "$INFLATE_PY" "$SRC" "$DST"
+    "$PYBIN" "$INFLATE_PY" "$RESTORED_SRC" "$DST"
 done < "$FILE_LIST"

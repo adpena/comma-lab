@@ -192,11 +192,16 @@ def _runtime_adapter_blocker_report() -> dict[str, Any]:
         "content_detection_required": True,
         "legacy_brotli_fallback_required": True,
         "hdm3_decoder_fixture_raw_equal": True,
-        "submission_runtime_integrated": False,
+        "submission_runtime_integrated": True,
+        "runtime_adapter_module": "tac.hnerv_hdm3_runtime_adapter",
+        "runtime_normalizer_path": (
+            "experiments/public_runtime_adapters/"
+            "pr106_belt_and_suspenders_adapter/hdm3_normalize.py"
+        ),
         "runtime_tree_parity_manifest_present": False,
         "ready_for_exact_eval_dispatch": False,
         "dispatch_blockers": [
-            "hdm3_submission_runtime_adapter_not_integrated",
+            "hdm3_runtime_adapter_archive_parity_proof_missing",
             "hdm3_runtime_tree_parity_manifest_missing",
             "hdm3_inflate_output_parity_missing",
         ],
