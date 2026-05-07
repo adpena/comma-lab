@@ -2741,6 +2741,290 @@ def _trace_hpm1_spatial_order_decode_failure(
     }
 
 
+def _trace_hpm1_submitted_prefix_token_recovery(
+    model: Any,
+    payload: Hpm1MaskPayload,
+    reference_tokens: np.ndarray | None,
+    *,
+    probability_variant: str | Any,
+    prob_eps: float,
+    device: str,
+    max_symbols: int | None,
+    row_preview_limit: int,
+    mismatch_limit: int,
+) -> dict[str, Any]:
+    """Recover deterministic submitted symbols until the first range failure."""
+
+    if torch is None or F is None:  # pragma: no cover - optional dependency path
+        raise Pr91Hpm1Error("dependency_contract", "torch_missing")
+    if _pr86_hpac_codec.constriction is None:  # pragma: no cover
+        raise Pr91Hpm1Error("dependency_contract", "constriction_missing")
+    if str(device) != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "hpm1_submitted_prefix_token_recovery_is_cpu_only",
+            requested_device=device,
+        )
+    if max_symbols is not None and int(max_symbols) <= 0:
+        raise Pr91Hpm1Error(
+            "hpm1_submitted_prefix_token_recovery",
+            "max_symbols_must_be_positive",
+            max_symbols=max_symbols,
+        )
+    if int(row_preview_limit) < 0 or int(mismatch_limit) < 0:
+        raise Pr91Hpm1Error(
+            "hpm1_submitted_prefix_token_recovery",
+            "row_limits_must_be_nonnegative",
+            row_preview_limit=row_preview_limit,
+            mismatch_limit=mismatch_limit,
+        )
+    if reference_tokens is not None and list(reference_tokens.shape) != [
+        payload.n_frames,
+        payload.height,
+        payload.width,
+    ]:
+        raise Pr91Hpm1Error(
+            "reference_token_contract",
+            "reference_token_shape_mismatch",
+            expected=[payload.n_frames, payload.height, payload.width],
+            actual=list(reference_tokens.shape),
+        )
+
+    started_at = time.time()
+    resolved = resolve_hpac_probability_variant(probability_variant)
+    dev = torch.device(device)
+    model = model.to(dev).eval()
+    masks = _group_masks(
+        payload.height,
+        payload.width,
+        P=payload.predictor_count,
+        delta=payload.delta,
+        device=dev,
+    )
+    words = _hpm1_token_words_for_candidate(payload, "source_little_uint32")
+    decoder = _pr86_hpac_codec.constriction.stream.queue.RangeDecoder(words)
+    decoded_prev = torch.zeros((1, payload.height, payload.width), dtype=torch.long, device=dev)
+    decoded_symbols = 0
+    recovered_symbols: list[int] = []
+    reference_symbols: list[int] = []
+    row_preview: list[dict[str, Any]] = []
+    mismatch_rows: list[dict[str, Any]] = []
+    reference_mismatch_count = 0
+    raw_rows_hasher = hashlib.sha256()
+    normalized_rows_hasher = hashlib.sha256()
+    coords_hasher = hashlib.sha256()
+    failure_report: dict[str, Any] | None = None
+    hit_symbol_limit = False
+
+    with torch.no_grad():
+        for frame in range(payload.n_frames):
+            idx = torch.tensor([frame], dtype=torch.long, device=dev)
+            cur = torch.zeros((1, payload.height, payload.width), dtype=torch.long, device=dev)
+            frame_start_symbols = decoded_symbols
+            for group, mask in enumerate(masks):
+                if mask is None:
+                    continue
+                group_start_symbols = decoded_symbols
+                coords = _hpm1_group_coords_for_spatial_order(
+                    payload,
+                    group=group,
+                    mask=mask,
+                    candidate="source_mask_row_major",
+                    device=dev,
+                )
+                coord_rows = coords[:, 0].detach().cpu().numpy()
+                coord_cols = coords[:, 1].detach().cpu().numpy()
+                logits = model(cur, idx, decoded_prev)
+                probs = F.softmax(logits.float(), dim=1)
+                probs_at_group = (
+                    probs[0][:, coords[:, 0], coords[:, 1]]
+                    .permute(1, 0)
+                    .contiguous()
+                )
+                probs_np = probs_at_group.cpu().numpy()
+                decoded = np.empty(int(probs_at_group.shape[0]), dtype=np.int64)
+                for symbol_in_group, row in enumerate(probs_np):
+                    if max_symbols is not None and decoded_symbols >= int(max_symbols):
+                        hit_symbol_limit = True
+                        break
+                    raw_row = np.ascontiguousarray(row)
+                    normalized = np.ascontiguousarray(
+                        _normalize_probability_row(
+                            raw_row,
+                            prob_eps=prob_eps,
+                            variant=resolved,
+                        )
+                    )
+                    raw_rows_hasher.update(raw_row.tobytes())
+                    normalized_rows_hasher.update(normalized.tobytes())
+                    y = int(coord_rows[symbol_in_group])
+                    x = int(coord_cols[symbol_in_group])
+                    coords_hasher.update(
+                        np.asarray([frame, group, symbol_in_group, y, x], dtype="<i4").tobytes()
+                    )
+                    cat = _categorical_from_probs(raw_row, prob_eps=prob_eps, variant=resolved)
+                    decoder_state_before = _range_decoder_state_summary(
+                        decoder,
+                        label="before_submitted_prefix_decode",
+                    )
+                    try:
+                        decoded_symbol = int(decoder.decode(cat))
+                    except Exception as exc:
+                        failure_report = {
+                            "stage": "submitted_tokens_decode",
+                            "reason": "hpac_entropy_decode_contract_mismatch",
+                            "exception_type": type(exc).__name__,
+                            "exception_text": str(exc),
+                            "frame": int(frame),
+                            "group": int(group),
+                            "symbol_in_group": int(symbol_in_group),
+                            "decoded_symbol_count_before_failure": int(decoded_symbols),
+                            "group_start_decoded_symbols": int(group_start_symbols),
+                            "frame_start_decoded_symbols": int(frame_start_symbols),
+                            "pixel_yx": {"y": y, "x": x},
+                            "range_decoder_diagnostic": {
+                                "state_before_decode": decoder_state_before,
+                                "state_after_failed_decode": _range_decoder_state_summary(
+                                    decoder,
+                                    label="after_submitted_prefix_decode_exception",
+                                ),
+                                "not_stream_exhaustion": bool(
+                                    decoder_state_before.get("maybe_exhausted") is False
+                                ),
+                            },
+                            "failing_probability_row": {
+                                "raw_softmax_sha256": sha256_bytes(raw_row.tobytes()),
+                                "normalized_sha256": sha256_bytes(normalized.tobytes()),
+                                "normalized_values": [
+                                    round(float(value), 10)
+                                    for value in normalized.tolist()
+                                ],
+                                "argmax_symbol": int(normalized.argmax()),
+                            },
+                        }
+                        break
+
+                    decoded[symbol_in_group] = decoded_symbol
+                    recovered_symbols.append(decoded_symbol)
+                    reference_symbol: int | None = None
+                    if reference_tokens is not None:
+                        reference_symbol = int(reference_tokens[frame, y, x])
+                        reference_symbols.append(reference_symbol)
+                        if decoded_symbol != reference_symbol:
+                            reference_mismatch_count += 1
+                    order = np.argsort(-normalized, kind="stable")
+                    record = {
+                        "global_symbol": int(decoded_symbols),
+                        "frame": int(frame),
+                        "group": int(group),
+                        "symbol_in_group": int(symbol_in_group),
+                        "pixel_yx": {"y": y, "x": x},
+                        "submitted_symbol": int(decoded_symbol),
+                        "submitted_symbol_probability": round(
+                            float(normalized[decoded_symbol]),
+                            10,
+                        ),
+                        "submitted_symbol_rank": int(
+                            np.where(order == decoded_symbol)[0][0] + 1
+                        ),
+                        "argmax_symbol": int(order[0]),
+                        "normalized_probability_row_sha256": sha256_bytes(
+                            normalized.tobytes()
+                        ),
+                    }
+                    if reference_symbol is not None:
+                        record.update(
+                            {
+                                "reference_symbol": reference_symbol,
+                                "matches_reference_symbol": bool(
+                                    decoded_symbol == reference_symbol
+                                ),
+                            }
+                        )
+                    if len(row_preview) < int(row_preview_limit):
+                        row_preview.append(record)
+                    if (
+                        reference_symbol is not None
+                        and decoded_symbol != reference_symbol
+                        and len(mismatch_rows) < int(mismatch_limit)
+                    ):
+                        mismatch_rows.append(record)
+                    decoded_symbols += 1
+                if failure_report is not None or hit_symbol_limit:
+                    break
+                cur[0, coords[:, 0], coords[:, 1]] = torch.from_numpy(decoded).to(dev)
+            if failure_report is not None or hit_symbol_limit:
+                break
+            decoded_prev = cur.clone()
+
+    recovered_arr = np.asarray(recovered_symbols, dtype=np.uint8)
+    reference_arr = np.asarray(reference_symbols, dtype=np.uint8)
+    status = (
+        "recovered_requested_submitted_prefix"
+        if hit_symbol_limit
+        else "recovered_prefix_until_first_entropy_failure"
+        if failure_report is not None
+        else "recovered_full_submitted_stream"
+    )
+    return {
+        "schema": "pr91_hpm1_submitted_prefix_token_recovery_trace_v1",
+        "status": status,
+        "passed": bool(recovered_arr.size > 0),
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "full_decode_proven": bool(failure_report is None and not hit_symbol_limit),
+        "byte_exact_reencode_proven": False,
+        "device": device,
+        "probability_variant": resolved.name,
+        "prob_eps": float(prob_eps),
+        "source_loop": "public PR91 source mask row-major decoded-context HPAC loop",
+        "max_symbols": None if max_symbols is None else int(max_symbols),
+        "decoded_symbol_count": int(recovered_arr.size),
+        "submitted_symbols": {
+            "sha256": sha256_bytes(recovered_arr.tobytes()),
+            **_small_int_preview(recovered_arr),
+        },
+        "probability_row_trace": {
+            "raw_softmax_rows_sha256": raw_rows_hasher.hexdigest(),
+            "normalized_rows_sha256": normalized_rows_hasher.hexdigest(),
+            "row_count": int(recovered_arr.size + (1 if failure_report else 0)),
+        },
+        "coordinate_trace": {
+            "schema": "frame_group_symbol_yx_int32_sequence_v1",
+            "sha256": coords_hasher.hexdigest(),
+        },
+        "reference_comparison": {
+            "attempted": reference_tokens is not None,
+            "reference_symbols_sha256": (
+                sha256_bytes(reference_arr.tobytes())
+                if reference_tokens is not None
+                else ""
+            ),
+            "reference_mismatch_count": int(reference_mismatch_count),
+            "first_mismatch": (
+                _first_symbol_mismatch(
+                    reference_arr,
+                    recovered_arr,
+                    expected_label="reference_symbol",
+                    actual_label="submitted_symbol",
+                )
+                if reference_tokens is not None
+                else None
+            ),
+            "mismatch_rows": mismatch_rows,
+        },
+        "row_preview": row_preview,
+        "failure": failure_report,
+        "scope_note": (
+            "Recovered symbols are the deterministic local CPU prefix decoded "
+            "from submitted PR91 range words under the public source HPAC "
+            "probability loop. This is forensic token/trace evidence only, not "
+            "a full decode, byte-exact reencode, score, or dispatch artifact."
+        ),
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
+
+
 def _trace_hpm1_reference_teacher_forced_spatial_order_failure(
     model: Any,
     payload: Hpm1MaskPayload,
@@ -4996,6 +5280,164 @@ def run_pr91_hpm1_semantic_symbol_bridge_probe(
     if strict and report["ready_for_exact_eval_dispatch"] is not True:
         raise Pr91Hpm1Error(
             "hpm1_semantic_symbol_bridge_probe",
+            str(report["status"]),
+            report=report,
+        )
+    return _jsonable(report)
+
+
+def run_pr91_hpm1_submitted_prefix_token_recovery_probe(
+    archive: Path = DEFAULT_PR91_ARCHIVE,
+    *,
+    reference_tokens_path: Path | None = DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE,
+    reference_layout: str = "legacy_assume_nhw",
+    device: str = "cpu",
+    probability_variant: str = DEFAULT_HPAC_PROBABILITY_VARIANT,
+    prob_eps: float = PROB_EPS,
+    max_symbols: int | None = None,
+    row_preview_limit: int = 16,
+    mismatch_limit: int = 16,
+    output_dir: Path | None = None,
+    strict: bool = False,
+    write_json: bool = True,
+    require_expected_reference_sha: bool = True,
+) -> dict[str, Any]:
+    """Recover the deterministic submitted PR91 HPM1 prefix before failure."""
+
+    started_at = time.time()
+    if str(device) != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "pr91_hpm1_submitted_prefix_token_recovery_probe_is_cpu_only",
+            requested_device=device,
+        )
+    archive_path = Path(archive)
+    payload = extract_pr91_hpm1_payload(archive_path)
+    reference_tokens: np.ndarray | None = None
+    reference_report: dict[str, Any] = {
+        "attempted": False,
+        "path": None,
+        "layout": reference_layout,
+    }
+    reference_sha_matches_expected = False
+    if reference_tokens_path is not None:
+        reference_tokens, loaded_reference_report = _load_reference_tokens(
+            Path(reference_tokens_path),
+            payload.n_frames,
+            payload.height,
+            payload.width,
+            reference_layout,
+        )
+        reference_report = loaded_reference_report
+        reference_sha_matches_expected = bool(
+            reference_report["matches_expected_pr85_qma9_token_source"]
+        )
+        if require_expected_reference_sha and not reference_sha_matches_expected:
+            raise Pr91Hpm1Error(
+                "reference_token_contract",
+                "unexpected_pr85_qma9_reference_token_sha256",
+                path=reference_report["path"],
+                expected_sha256=reference_report["expected_sha256"],
+                actual_sha256=reference_report["sha256"],
+                layout=reference_layout,
+            )
+
+    dependency_report = collect_dependency_report(strict=False)
+    static_report = validate_hpm1_static_contract(payload)
+    relationship = compare_hpm1_to_pr86_hpac_contract(payload)
+    runtime_sources = analyze_pr91_hpm1_runtime_sources()
+    model = load_hpm1_hpac_model(payload, device=device)
+    trace = _trace_hpm1_submitted_prefix_token_recovery(
+        model,
+        payload,
+        reference_tokens,
+        probability_variant=probability_variant,
+        prob_eps=prob_eps,
+        device=device,
+        max_symbols=max_symbols,
+        row_preview_limit=row_preview_limit,
+        mismatch_limit=mismatch_limit,
+    )
+    recovered_prefix = (
+        trace.get("decoded_symbol_count", 0) > 0
+        and trace.get("status") == "recovered_prefix_until_first_entropy_failure"
+    )
+    report: dict[str, Any] = {
+        "schema": "pr91_hpm1_submitted_prefix_token_recovery_probe_v1",
+        "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_submitted_prefix_token_recovery_probe",
+        "recorded_at_utc": datetime.now(UTC).replace(microsecond=0).isoformat(),
+        "status": (
+            "recovered_submitted_prefix_until_first_entropy_failure"
+            if recovered_prefix
+            else str(trace.get("status"))
+        ),
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "dispatch_attempted": False,
+        "dispatch_performed": False,
+        "gpu_or_remote_work": False,
+        "local_only": True,
+        "ready_for_exact_eval_dispatch": False,
+        "promotion_eligible": False,
+        "evidence_grade": "empirical",
+        "evidence_scope": "local_cpu_hpm1_submitted_prefix_token_and_probability_trace",
+        "evidence_limitations": [
+            "not score evidence",
+            "not full standalone HPM1 decode proof",
+            "not byte-exact re-encode proof",
+            "not dispatch-eligible",
+        ],
+        "device": device,
+        "archive": _archive_report(archive_path),
+        "reference_tokens": reference_report,
+        "reference_token_sha256_contract": {
+            "required": bool(
+                reference_tokens_path is not None and require_expected_reference_sha
+            ),
+            "expected_sha256": reference_report.get("expected_sha256"),
+            "actual_sha256": reference_report.get("sha256"),
+            "matches_expected": reference_sha_matches_expected,
+        },
+        "hpm1_static_contract": static_report,
+        "pr86_hpac_relationship": relationship,
+        "dependency_report": dependency_report,
+        "runtime_source_contract": runtime_sources,
+        "payload": {
+            "config": payload.config(),
+            "tokens_bytes": len(payload.tokens),
+            "tokens_sha256": sha256_bytes(payload.tokens),
+            "hpac_bytes": len(payload.hpac),
+            "hpac_sha256": sha256_bytes(payload.hpac),
+        },
+        "submitted_prefix_token_recovery": trace,
+        "exact_missing_grammar": {
+            "status": "still_open_after_submitted_prefix_token_recovery",
+            "recovered": (
+                "deterministic submitted semantic-symbol prefix before the "
+                "first public HPAC range failure"
+            ),
+            "remaining_open_classes": [
+                "encoder-side probability numeric contract at the failure row",
+                "range-coder construction/finalization contract",
+                "true PR91 symbols beyond the first entropy failure",
+                "byte-exact full-stream reencode",
+            ],
+        },
+        "next_required_proofs": [
+            "use the recovered prefix and probability-row hashes to isolate the first non-public encoder contract difference",
+            "recover an encoder-side HPAC token generator or full source archive",
+            "decode all 600 HPM1 frames and re-encode exact token bytes before any dispatch",
+        ],
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
+    if write_json and output_dir is not None:
+        write_json_report(
+            report,
+            Path(output_dir) / "submitted_prefix_token_recovery_probe.json",
+        )
+    if strict and report["ready_for_exact_eval_dispatch"] is not True:
+        raise Pr91Hpm1Error(
+            "hpm1_submitted_prefix_token_recovery_probe",
             str(report["status"]),
             report=report,
         )

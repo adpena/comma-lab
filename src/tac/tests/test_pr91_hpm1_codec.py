@@ -34,6 +34,7 @@ from tac.pr91_hpm1_codec import (
     run_pr91_hpm1_semantic_decode_trench,
     run_pr91_hpm1_semantic_symbol_bridge_probe,
     run_pr91_hpm1_spatial_group_order_probe,
+    run_pr91_hpm1_submitted_prefix_token_recovery_probe,
     split_hpm1_mask_segment,
     validate_hpm1_static_contract,
 )
@@ -542,6 +543,73 @@ def test_pr91_semantic_decode_trench_cli_records_tool_manifest(tmp_path: Path) -
     assert payload["hpac_model_load"]["loaded"] is True
     assert payload["tool_run_manifest"]["tool"] == (
         "tools/audit_pr91_hpm1_semantic_decode_trench.py"
+    )
+
+
+def test_pr91_submitted_prefix_token_recovery_probe_recovers_bounded_prefix() -> None:
+    if not DEFAULT_PR91_ARCHIVE.is_file():
+        pytest.skip("canonical PR91 archive not available")
+
+    report = run_pr91_hpm1_submitted_prefix_token_recovery_probe(
+        DEFAULT_PR91_ARCHIVE,
+        reference_tokens_path=None,
+        max_symbols=8,
+        row_preview_limit=4,
+        mismatch_limit=0,
+        write_json=False,
+    )
+
+    assert report["schema"] == "pr91_hpm1_submitted_prefix_token_recovery_probe_v1"
+    assert report["score_claim"] is False
+    assert report["dispatch_allowed"] is False
+    assert report["status"] == "recovered_requested_submitted_prefix"
+    trace = report["submitted_prefix_token_recovery"]
+    assert trace["schema"] == "pr91_hpm1_submitted_prefix_token_recovery_trace_v1"
+    assert trace["decoded_symbol_count"] == 8
+    assert trace["submitted_symbols"]["first"] == [2, 2, 2, 2, 2, 2, 2, 2]
+    assert trace["probability_row_trace"]["row_count"] == 8
+    assert trace["probability_row_trace"]["normalized_rows_sha256"] == (
+        "e0d10a91f0b9b42283aebbb3bde4d618950d8145c056c6e9d5801b10e0359cc9"
+    )
+    assert trace["failure"] is None
+    assert trace["reference_comparison"]["attempted"] is False
+
+
+def test_pr91_submitted_prefix_token_recovery_cli_records_tool_manifest(
+    tmp_path: Path,
+) -> None:
+    if not DEFAULT_PR91_ARCHIVE.is_file():
+        pytest.skip("canonical PR91 archive not available")
+    out = tmp_path / "submitted_prefix_token_recovery_probe.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(
+                REPO
+                / "tools"
+                / "audit_pr91_hpm1_submitted_prefix_token_recovery_probe.py"
+            ),
+            "--archive",
+            str(DEFAULT_PR91_ARCHIVE),
+            "--max-symbols",
+            "8",
+            "--skip-reference",
+            "--json-out",
+            str(out),
+        ],
+        check=True,
+        cwd=REPO,
+        text=True,
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["schema"] == "pr91_hpm1_submitted_prefix_token_recovery_probe_v1"
+    assert payload["score_claim"] is False
+    assert payload["dispatch_allowed"] is False
+    assert payload["submitted_prefix_token_recovery"]["decoded_symbol_count"] == 8
+    assert payload["tool_run_manifest"]["tool"] == (
+        "tools/audit_pr91_hpm1_submitted_prefix_token_recovery_probe.py"
     )
 
 
