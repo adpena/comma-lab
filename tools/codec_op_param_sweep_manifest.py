@@ -142,7 +142,7 @@ def _expand_param_grid(grid: dict[str, list]) -> list[dict[str, Any]]:
         return [{}]
     keys = sorted(grid.keys())
     value_lists = [grid[k] for k in keys]
-    return [dict(zip(keys, combo)) for combo in itertools.product(*value_lists)]
+    return [dict(zip(keys, combo, strict=True)) for combo in itertools.product(*value_lists)]
 
 
 def build_sweep_candidates(
@@ -188,7 +188,7 @@ def build_sweep_candidates(
         op = op_cls(**params)
         try:
             result = op.encode(state_dict, context={})
-        except Exception as exc:  # noqa: BLE001 — surface op-side errors clearly
+        except Exception as exc:
             raise SystemExit(
                 f"CodecOp {op_class_name}({params}) encode failed: {exc}"
             ) from exc
