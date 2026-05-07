@@ -1,16 +1,16 @@
-"""Lane SH — Shannon-optimal arithmetic coding for SegMap qint streams.
+"""Lane SH — deterministic arithmetic-coding primitives for qint streams.
 
-EUREKA #4 (grand council 2026-04-29): the Selfcomp/Quantizr block-FP qint
-ternary stream has very low entropy after per-channel exponent factoring (the
-Shannon bound is ~1.0-1.5 bits/symbol for the +1/0/-1 distribution we observe
-in trained SegMap weights). The current ``payload.tar.xz`` outer xz-compresses
-the dense int8 qint plus the per-block exponents, but xz is a generic
-LZMA-based coder — it does not exploit the symbol-level distribution.
+This module provides pure, deterministic arithmetic/range-coding helpers for
+small integer streams. It is a codec primitive, not a score claim. Whether it
+beats Brotli/xz for a contest archive depends on stream context, model-table
+overhead, runtime bytes, and exact archive custody. PR106-era measurements
+already showed that zero-order entropy estimates can overstate wins when a
+generic compressor exploits structure better than the proposed model.
 
-A simple ARITHMETIC CODER (per-stream frequency table + range coding)
-typically reaches the Shannon entropy bound to within < 1% overhead. For our
-1.0-1.5 bits/symbol streams this means ~30% rate reduction on the renderer
-weights vs xz.
+Use this lane by measuring each concrete stream against its current packed
+baseline and recording actual bytes, decoder overhead, and round-trip custody.
+No module-level percentage reduction or Shannon-bound claim is valid until that
+stream-specific evidence exists.
 
 Format spec (Lane SH v1)
 ------------------------
@@ -52,10 +52,8 @@ from __future__ import annotations
 import io
 import math
 import struct
-from typing import Iterable
 
 import numpy as np
-
 
 _AQ_MAGIC: bytes = b"AQv1"
 _AQ_VERSION: int = 1
@@ -616,7 +614,7 @@ def profile_aqv1_container(blob: bytes) -> dict:
     header_bytes = len(blob) - len(payload)
     entropy_bits_per_symbol = _entropy_bits_from_freq(freq)
     entropy_payload_bits = entropy_bits_per_symbol * float(n_symbols)
-    entropy_payload_bytes_floor = int(math.ceil(entropy_payload_bits / 8.0))
+    entropy_payload_bytes_floor = math.ceil(entropy_payload_bits / 8.0)
     payload_bits_per_symbol = 8.0 * len(payload) / float(n_symbols)
     container_bits_per_symbol = 8.0 * len(blob) / float(n_symbols)
     return {
@@ -628,9 +626,9 @@ def profile_aqv1_container(blob: bytes) -> dict:
         "num_symbols": int(num_symbols),
         "offset": int(offset),
         "n_symbols": int(n_symbols),
-        "container_bytes": int(len(blob)),
+        "container_bytes": len(blob),
         "header_bytes": int(header_bytes),
-        "payload_bytes": int(len(payload)),
+        "payload_bytes": len(payload),
         "frequency_table": [int(x) for x in freq.tolist()],
         "zero_order_entropy_bits_per_symbol": entropy_bits_per_symbol,
         "zero_order_entropy_payload_bytes_floor": entropy_payload_bytes_floor,
@@ -696,7 +694,7 @@ def profile_aqc1_container(blob: bytes) -> dict:
     header_bytes = len(blob) - len(payload)
     entropy_bits_per_symbol = _entropy_bits_from_freq(freq)
     entropy_payload_bits = entropy_bits_per_symbol * float(n_symbols)
-    entropy_payload_bytes_floor = int(math.ceil(entropy_payload_bits / 8.0))
+    entropy_payload_bytes_floor = math.ceil(entropy_payload_bits / 8.0)
     payload_bits_per_symbol = 8.0 * len(payload) / float(n_symbols)
     container_bits_per_symbol = 8.0 * len(blob) / float(n_symbols)
     return {
@@ -709,9 +707,9 @@ def profile_aqc1_container(blob: bytes) -> dict:
         "offset": int(offset),
         "n_symbols": int(n_symbols),
         "observed_symbol_count": int(n_present),
-        "container_bytes": int(len(blob)),
+        "container_bytes": len(blob),
         "header_bytes": int(header_bytes),
-        "payload_bytes": int(len(payload)),
+        "payload_bytes": len(payload),
         "sparse_frequency_table_bytes": int(2 + 6 * int(n_present)),
         "frequency_table": [int(x) for x in freq.tolist()],
         "zero_order_entropy_bits_per_symbol": entropy_bits_per_symbol,
@@ -941,6 +939,7 @@ def unpack_arithmetic_payload(payload_path: str) -> dict:
     inflate_segmap_arithmetic.py).
     """
     import json
+
     import torch
 
     from tac.block_fp_codec import decode_conv_weight, decode_tensor_linear_q_per_tensor_v1
@@ -1037,7 +1036,7 @@ def unpack_arithmetic_payload(payload_path: str) -> dict:
             # SCORER-LOAD-WAIVER: weights_only=False here is decompress-time
             # only; the SHv1 container stores a torch.save()-d dict of qint
             # tensors (not a state_dict). No scorer or model weights are
-            # loaded — this is pure codec metadata. (PARADIGM-γ audit waiver.)
+            # loaded — this is pure codec metadata. (PARADIGM-gamma audit waiver.)
             packed = torch.load(buf_t, weights_only=False)
             out[key] = decode_tensor_linear_q_per_tensor_v1(packed)
         else:
@@ -1046,16 +1045,16 @@ def unpack_arithmetic_payload(payload_path: str) -> dict:
 
 
 __all__ = [
-    "encode_qints_arithmetic",
-    "encode_qints_arithmetic_compact",
+    "build_freq_table",
+    "build_observed_freq_table",
     "decode_qints_arithmetic",
     "decode_qints_arithmetic_compact",
-    "profile_aqv1_container",
+    "encode_qints_arithmetic",
+    "encode_qints_arithmetic_compact",
     "profile_aqc1_container",
+    "profile_aqv1_container",
     "profile_arithmetic_container",
     "profile_qints_arithmetic",
     "repack_payload_tar_xz_to_arithmetic",
     "unpack_arithmetic_payload",
-    "build_freq_table",
-    "build_observed_freq_table",
 ]

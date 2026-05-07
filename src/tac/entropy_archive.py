@@ -1,9 +1,10 @@
-"""Entropy-coded archive with learned probability models.
+"""Experimental entropy-coded archive helpers.
 
-Instead of uniform deflate compression, use arithmetic coding with learned
-probability distributions for each component of the archive. Shannon's
-theorem: if model probabilities match the true distribution, we achieve
-the entropy bound.
+This module explores arithmetic-coded archive components and learned-probability
+model hooks. It is not a promoted archive format and it does not establish a
+score or byte-reduction claim by itself. A candidate is meaningful only after
+the learned model bytes, decoder bytes, archive member bytes, and deterministic
+round-trip evidence beat the current packed baseline for the same stream.
 
 Components:
 1. video.mkv -- H.265/AV1 encoded (unchanged, already compressed)
@@ -12,7 +13,8 @@ Components:
 4. pose targets -- arithmetic coded with learned probability model
 5. entropy model weights -- ~1-2KB shared decoder
 
-Target: 30-50% smaller than current archive.zip.
+Status: research/prototype. Treat reduction estimates as hypotheses until a
+byte-closed archive and exact CUDA auth eval artifact exist.
 
 Usage::
 
@@ -27,27 +29,25 @@ Usage::
 
 from __future__ import annotations
 
+import bisect
 import io
 import json
-import math
 import struct
 import zipfile
 from typing import Any
-
-import bisect
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 __all__ = [
-    "NeuralEntropyModel",
     "ArithmeticCoder",
     "ArithmeticDecoder",
+    "NeuralEntropyModel",
     "build_entropy_archive",
-    "inflate_entropy_archive",
     "compress_byte_stream",
     "decompress_byte_stream",
+    "inflate_entropy_archive",
 ]
 
 
@@ -401,7 +401,7 @@ class NeuralEntropyModel(nn.Module):
         return buf.getvalue()
 
     @classmethod
-    def deserialize(cls, data: bytes) -> "NeuralEntropyModel":
+    def deserialize(cls, data: bytes) -> NeuralEntropyModel:
         """Deserialize an entropy model from bytes.
 
         Uses safe manual unpacking (no pickle/torch.load). Compatible with
@@ -952,7 +952,7 @@ def _smoke_test() -> None:
     for k in state:
         err = (state[k] - restored_state[k]).abs().max().item()
         assert err < 0.1, f"Weight quant error for {k}: {err}"
-    print(f"  weight quantization: OK")
+    print("  weight quantization: OK")
 
     # 7. Full archive round-trip
     video = b"fake_video_data_12345"
@@ -1003,7 +1003,7 @@ def _smoke_test() -> None:
 
     # 10. compress_byte_stream edge case: empty input
     assert decompress_byte_stream(compress_byte_stream(b"")) == b""
-    print(f"  byte stream empty: OK")
+    print("  byte stream empty: OK")
 
     print("entropy_archive: all smoke tests passed")
 
