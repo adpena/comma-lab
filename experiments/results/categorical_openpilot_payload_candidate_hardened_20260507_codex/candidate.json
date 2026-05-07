@@ -1,0 +1,669 @@
+{
+  "archive_member_manifest": {
+    "bytes": 1635,
+    "path": "archive_member_manifest.json",
+    "sha256": "0a942fd2c3673e6a43bed2636960a4688d58b2b6d9e0a1ba9b4c3a20e528860d"
+  },
+  "archive_member_manifest_sha256": "0a942fd2c3673e6a43bed2636960a4688d58b2b6d9e0a1ba9b4c3a20e528860d",
+  "candidate_archive": {
+    "bytes": 179979,
+    "path": "archive.zip",
+    "sha256": "9bfea530158ab498a55ec626804c5e9eb1bb80da14a2f2d21d7262c1841bc2fe"
+  },
+  "candidate_archive_contract": "contest_archive_zip",
+  "candidate_construction_plan": {
+    "archive_member_manifest_sha256": "0a942fd2c3673e6a43bed2636960a4688d58b2b6d9e0a1ba9b4c3a20e528860d",
+    "byte_closed_archive_parity": {
+      "proof_path": "",
+      "proven": false,
+      "required": true
+    },
+    "candidate_archive_sha256": "9bfea530158ab498a55ec626804c5e9eb1bb80da14a2f2d21d7262c1841bc2fe",
+    "candidate_construction_ready": true,
+    "charged_member_summary": {
+      "optional_roles": {
+        "decoder_table": {
+          "members": [
+            "class_codebook.json"
+          ],
+          "present": true
+        }
+      },
+      "required_roles": {
+        "categorical_payload": {
+          "members": [
+            "categorical_payload.bin"
+          ],
+          "present": true
+        },
+        "decoder_or_runtime_consumer": {
+          "members": [
+            "runtime_consumer.py"
+          ],
+          "present": true
+        }
+      },
+      "role_to_members": {
+        "categorical_payload": [
+          "categorical_payload.bin"
+        ],
+        "decoder_or_runtime_consumer": [
+          "runtime_consumer.py"
+        ],
+        "decoder_table": [
+          "class_codebook.json"
+        ],
+        "inflate_entrypoint": [
+          "inflate.sh"
+        ],
+        "label_prior_payload_manifest": [
+          "label_prior_payload_manifest.json"
+        ],
+        "runtime_consumer_proof": [
+          "runtime_consumer_proof_skeleton.json"
+        ]
+      }
+    },
+    "class_rows": [
+      {
+        "categorical_payload_member": "categorical_payload.bin",
+        "charged_label_member": "class_codebook.json",
+        "class_id": 0,
+        "comma10k_color": "#402020",
+        "comma10k_id": 1,
+        "default_quant_bits": 8,
+        "name": "road",
+        "openpilot_prior_hint": "road_geometry_track_prior",
+        "selfcomp_gray": 0,
+        "semantic_priority_weight_ppm": 266667
+      },
+      {
+        "categorical_payload_member": "categorical_payload.bin",
+        "charged_label_member": "class_codebook.json",
+        "class_id": 1,
+        "comma10k_color": "#ff0000",
+        "comma10k_id": 2,
+        "default_quant_bits": 8,
+        "name": "lane_markings",
+        "openpilot_prior_hint": "lane_marking_track_prior",
+        "selfcomp_gray": 255,
+        "semantic_priority_weight_ppm": 266667
+      },
+      {
+        "categorical_payload_member": "categorical_payload.bin",
+        "charged_label_member": "class_codebook.json",
+        "class_id": 2,
+        "comma10k_color": "#808060",
+        "comma10k_id": 3,
+        "default_quant_bits": 4,
+        "name": "undrivable",
+        "openpilot_prior_hint": "scene_layout_prior",
+        "selfcomp_gray": 64,
+        "semantic_priority_weight_ppm": 133333
+      },
+      {
+        "categorical_payload_member": "categorical_payload.bin",
+        "charged_label_member": "class_codebook.json",
+        "class_id": 3,
+        "comma10k_color": "#00ff66",
+        "comma10k_id": 4,
+        "default_quant_bits": 6,
+        "name": "movable",
+        "openpilot_prior_hint": "dynamic_object_filter_prior",
+        "selfcomp_gray": 192,
+        "semantic_priority_weight_ppm": 200000
+      },
+      {
+        "categorical_payload_member": "categorical_payload.bin",
+        "charged_label_member": "class_codebook.json",
+        "class_id": 4,
+        "comma10k_color": "#cc00ff",
+        "comma10k_id": 5,
+        "default_quant_bits": 4,
+        "name": "my_car",
+        "openpilot_prior_hint": "ego_car_filter_prior",
+        "selfcomp_gray": 128,
+        "semantic_priority_weight_ppm": 133333
+      }
+    ],
+    "conditioning_prior_contract": {
+      "compression_time_only_count": 1,
+      "declared": true,
+      "dispatch_blockers": [],
+      "kind": "categorical_openpilot_mask_prior_contract",
+      "passed": true,
+      "records": [
+        {
+          "charged_member": "categorical_payload.bin",
+          "charged_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+          "compression_time_only": false,
+          "family": "qma9",
+          "index": 0,
+          "label_contract": "contest_zero_based_comma10k_order",
+          "name": "local_categorical_payload",
+          "requires_charged_member": true,
+          "runtime_consumed": true,
+          "source_provenance_kind": "charged_archive_member",
+          "usage": "inflate_runtime_conditioning"
+        },
+        {
+          "charged_member": "",
+          "charged_member_sha256": "",
+          "compression_time_only": true,
+          "family": "openpilot_priors",
+          "index": 1,
+          "label_contract": "openpilot_prior_hints_non_runtime",
+          "name": "ego_lane_atom_ranker",
+          "requires_charged_member": false,
+          "runtime_consumed": false,
+          "source_provenance_kind": "compression_time_only_derivation",
+          "usage": "compression_time_atom_ranking_only"
+        },
+        {
+          "charged_member": "class_codebook.json",
+          "charged_member_sha256": "f21a3d846c0258d311b3f0aaa4fc7356289af1b29af2299cd83a3c9a353c8914",
+          "compression_time_only": false,
+          "family": "clade_spade",
+          "index": 2,
+          "label_contract": "contest_zero_based_comma10k_order",
+          "name": "canonical_class_codebook_conditioning",
+          "requires_charged_member": true,
+          "runtime_consumed": true,
+          "source_provenance_kind": "charged_archive_member",
+          "usage": "inflate_runtime_conditioning"
+        }
+      ],
+      "runtime_consumed_count": 2,
+      "schema_version": 1,
+      "warnings": []
+    },
+    "conditioning_priors": [
+      {
+        "charged_member": "categorical_payload.bin",
+        "charged_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+        "family": "qma9",
+        "label_contract": "contest_zero_based_comma10k_order",
+        "name": "local_categorical_payload",
+        "runtime_consumed": true,
+        "source_provenance": {
+          "charged_member": "categorical_payload.bin",
+          "kind": "charged_archive_member",
+          "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+          "source_kind": "pr91_hpm1_mask_segment"
+        },
+        "usage": "inflate_runtime_conditioning"
+      },
+      {
+        "family": "openpilot_priors",
+        "label_contract": "openpilot_prior_hints_non_runtime",
+        "name": "ego_lane_atom_ranker",
+        "runtime_consumed": false,
+        "source_provenance": {
+          "kind": "compression_time_only_derivation",
+          "runtime_consumed": false,
+          "source": "categorical_candidate_plan.openpilot_prior_hints"
+        },
+        "usage": "compression_time_atom_ranking_only"
+      },
+      {
+        "charged_member": "class_codebook.json",
+        "charged_member_sha256": "f21a3d846c0258d311b3f0aaa4fc7356289af1b29af2299cd83a3c9a353c8914",
+        "family": "clade_spade",
+        "label_contract": "contest_zero_based_comma10k_order",
+        "name": "canonical_class_codebook_conditioning",
+        "runtime_consumed": true,
+        "source_provenance": {
+          "charged_member": "class_codebook.json",
+          "kind": "charged_archive_member",
+          "sha256": "f21a3d846c0258d311b3f0aaa4fc7356289af1b29af2299cd83a3c9a353c8914",
+          "source": "build_categorical_class_codebook"
+        },
+        "usage": "inflate_runtime_conditioning"
+      }
+    ],
+    "construction_plan_contract": "categorical_charged_label_construction_plan_v1",
+    "dispatch_attempted": false,
+    "dispatch_blockers": [
+      "categorical_construction_plan_not_dispatchable",
+      "real_byte_closed_archive_parity_missing"
+    ],
+    "evidence_grade": "planning_manifest",
+    "kind": "categorical_charged_label_construction_plan",
+    "next_required_proofs": [
+      "replace_fixture_payload_with_real_charged_categorical_payload",
+      "full_decode_reencode_parity_for_charged_categorical_payload",
+      "runtime_loader_parity_against_archive_member",
+      "exact_cuda_auth_eval_only_after_lane_claim"
+    ],
+    "plan_blockers": [],
+    "primary_label_sources": [
+      {
+        "name": "comma10k README",
+        "url": "https://github.com/commaai/comma10k/blob/master/README.md",
+        "used_for": "class ids, label names, and mask colors"
+      },
+      {
+        "name": "comma.ai crowdsourced Segnet blog",
+        "url": "https://blog.comma.ai/crowdsourced-segnet-you-can-help/",
+        "used_for": "five-label openpilot semantic grouping"
+      }
+    ],
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "runtime_consumer_member": "runtime_consumer.py",
+    "schema_version": 1,
+    "score_claim": false,
+    "semantic_class_order": [
+      "road",
+      "lane_markings",
+      "undrivable",
+      "movable",
+      "my_car"
+    ],
+    "semantic_weight_source": "SEMANTIC_QUANTIZATION_DEFAULT_BITS",
+    "source_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+    "typed_label_atoms": {
+      "atom_count": 5,
+      "atoms": [
+        {
+          "atom_id": "contest_class_0_road",
+          "atom_type": "semantic_class_label_prior",
+          "class_id": 0,
+          "comma10k_color": "#402020",
+          "comma10k_id": 1,
+          "default_quant_bits": 8,
+          "label_contract": "contest_zero_based_comma10k_order",
+          "name": "road",
+          "openpilot_prior_hint": "road_geometry_track_prior",
+          "runtime_consumed": false,
+          "runtime_policy": "runtime use requires charged archive member provenance",
+          "selfcomp_gray": 0,
+          "semantic_priority_weight_ppm": 266667,
+          "stack_stage": "representation",
+          "usage": "compression_time_atom_ranking_only"
+        },
+        {
+          "atom_id": "contest_class_1_lane_markings",
+          "atom_type": "semantic_class_label_prior",
+          "class_id": 1,
+          "comma10k_color": "#ff0000",
+          "comma10k_id": 2,
+          "default_quant_bits": 8,
+          "label_contract": "contest_zero_based_comma10k_order",
+          "name": "lane_markings",
+          "openpilot_prior_hint": "lane_marking_track_prior",
+          "runtime_consumed": false,
+          "runtime_policy": "runtime use requires charged archive member provenance",
+          "selfcomp_gray": 255,
+          "semantic_priority_weight_ppm": 266667,
+          "stack_stage": "representation",
+          "usage": "compression_time_atom_ranking_only"
+        },
+        {
+          "atom_id": "contest_class_2_undrivable",
+          "atom_type": "semantic_class_label_prior",
+          "class_id": 2,
+          "comma10k_color": "#808060",
+          "comma10k_id": 3,
+          "default_quant_bits": 4,
+          "label_contract": "contest_zero_based_comma10k_order",
+          "name": "undrivable",
+          "openpilot_prior_hint": "scene_layout_prior",
+          "runtime_consumed": false,
+          "runtime_policy": "runtime use requires charged archive member provenance",
+          "selfcomp_gray": 64,
+          "semantic_priority_weight_ppm": 133333,
+          "stack_stage": "representation",
+          "usage": "compression_time_atom_ranking_only"
+        },
+        {
+          "atom_id": "contest_class_3_movable",
+          "atom_type": "semantic_class_label_prior",
+          "class_id": 3,
+          "comma10k_color": "#00ff66",
+          "comma10k_id": 4,
+          "default_quant_bits": 6,
+          "label_contract": "contest_zero_based_comma10k_order",
+          "name": "movable",
+          "openpilot_prior_hint": "dynamic_object_filter_prior",
+          "runtime_consumed": false,
+          "runtime_policy": "runtime use requires charged archive member provenance",
+          "selfcomp_gray": 192,
+          "semantic_priority_weight_ppm": 200000,
+          "stack_stage": "representation",
+          "usage": "compression_time_atom_ranking_only"
+        },
+        {
+          "atom_id": "contest_class_4_my_car",
+          "atom_type": "semantic_class_label_prior",
+          "class_id": 4,
+          "comma10k_color": "#cc00ff",
+          "comma10k_id": 5,
+          "default_quant_bits": 4,
+          "label_contract": "contest_zero_based_comma10k_order",
+          "name": "my_car",
+          "openpilot_prior_hint": "ego_car_filter_prior",
+          "runtime_consumed": false,
+          "runtime_policy": "runtime use requires charged archive member provenance",
+          "selfcomp_gray": 128,
+          "semantic_priority_weight_ppm": 133333,
+          "stack_stage": "representation",
+          "usage": "compression_time_atom_ranking_only"
+        }
+      ],
+      "dispatch_attempted": false,
+      "kind": "categorical_typed_label_atoms",
+      "label_contract": "contest_zero_based_comma10k_order",
+      "ready_for_exact_eval_dispatch": false,
+      "schema_version": 1,
+      "score_claim": false,
+      "typed_label_atoms_contract": "categorical_typed_label_atoms_v1"
+    }
+  },
+  "candidate_manifest_contract": "categorical_byte_closed_candidate_manifest_v1",
+  "candidate_rows": [
+    {
+      "dispatch_attempted": false,
+      "evidence_grade": "local_payload_custody",
+      "payload_member": "categorical_payload.bin",
+      "payload_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+      "ready_for_exact_eval_dispatch": false,
+      "row_id": "local_categorical_payload_custody",
+      "score_claim": false,
+      "status": "byte_closed_local_candidate_blocked_on_parity"
+    }
+  ],
+  "charged_members": [
+    {
+      "bytes": 145087,
+      "name": "categorical_payload.bin",
+      "role": "categorical_payload",
+      "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc"
+    },
+    {
+      "bytes": 5627,
+      "name": "class_codebook.json",
+      "role": "decoder_table",
+      "sha256": "f21a3d846c0258d311b3f0aaa4fc7356289af1b29af2299cd83a3c9a353c8914"
+    },
+    {
+      "bytes": 274,
+      "name": "inflate.sh",
+      "role": "inflate_entrypoint",
+      "sha256": "4e39eb6168a86d192cc13b3a3728e38f8cd6c77c8359eeb6c4b8e8af9db9845a"
+    },
+    {
+      "bytes": 9152,
+      "name": "label_prior_payload_manifest.json",
+      "role": "label_prior_payload_manifest",
+      "sha256": "d33c7bcf3069e04cdef857b8e74655582a3418f45800ce79ac37d132a5af09e8"
+    },
+    {
+      "bytes": 17180,
+      "name": "runtime_consumer.py",
+      "role": "decoder_or_runtime_consumer",
+      "sha256": "a4e45905e6555ae41f3c322779a5e0c5dc40c39fef02d47903421225bb4887b3"
+    },
+    {
+      "bytes": 1901,
+      "name": "runtime_consumer_proof_skeleton.json",
+      "role": "runtime_consumer_proof",
+      "sha256": "246bb7838a71623453757391ea5b11f09df991cec88f2b5dfced59fd888a61d1"
+    }
+  ],
+  "conditioning_priors": [
+    {
+      "charged_member": "categorical_payload.bin",
+      "charged_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+      "family": "qma9",
+      "label_contract": "contest_zero_based_comma10k_order",
+      "name": "local_categorical_payload",
+      "runtime_consumed": true,
+      "source_provenance": {
+        "charged_member": "categorical_payload.bin",
+        "kind": "charged_archive_member",
+        "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+        "source_kind": "pr91_hpm1_mask_segment"
+      },
+      "usage": "inflate_runtime_conditioning"
+    },
+    {
+      "family": "openpilot_priors",
+      "label_contract": "openpilot_prior_hints_non_runtime",
+      "name": "ego_lane_atom_ranker",
+      "runtime_consumed": false,
+      "source_provenance": {
+        "kind": "compression_time_only_derivation",
+        "runtime_consumed": false,
+        "source": "categorical_candidate_plan.openpilot_prior_hints"
+      },
+      "usage": "compression_time_atom_ranking_only"
+    },
+    {
+      "charged_member": "class_codebook.json",
+      "charged_member_sha256": "f21a3d846c0258d311b3f0aaa4fc7356289af1b29af2299cd83a3c9a353c8914",
+      "family": "clade_spade",
+      "label_contract": "contest_zero_based_comma10k_order",
+      "name": "canonical_class_codebook_conditioning",
+      "runtime_consumed": true,
+      "source_provenance": {
+        "charged_member": "class_codebook.json",
+        "kind": "charged_archive_member",
+        "sha256": "f21a3d846c0258d311b3f0aaa4fc7356289af1b29af2299cd83a3c9a353c8914",
+        "source": "build_categorical_class_codebook"
+      },
+      "usage": "inflate_runtime_conditioning"
+    }
+  ],
+  "decode_reencode_parity": {
+    "byte_exact_reencode": {
+      "blocker": "byte_exact_reencode_not_proven",
+      "byte_exact": false,
+      "passed": false,
+      "reencoded_payload_sha256": ""
+    },
+    "decode_reencode_parity_contract": "categorical_decode_reencode_parity_v1",
+    "dispatch_attempted": false,
+    "full_decode": {
+      "blocker": "full_categorical_payload_decode_not_proven",
+      "decoded_masks_sha256": "",
+      "frame_count": null,
+      "passed": false
+    },
+    "independent_proof_artifact": {
+      "accepted_expected": false,
+      "bytes": 1335,
+      "kind": "categorical_decode_reencode_independent_proof",
+      "path": "decode_reencode_blocked_proof.json",
+      "sha256": "bc65ddc14ed15bf1bb7673d26f8daf60093466dd45dd064d71b2b13da592e3f1"
+    },
+    "passed": false,
+    "payload_member": "categorical_payload.bin",
+    "payload_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+    "schema_version": 1,
+    "score_claim": false,
+    "sidecar_free": true
+  },
+  "dispatch_attempted": false,
+  "fixture_only": false,
+  "hpm1_semantic_parity_fail_closed": {
+    "bytes": 9197,
+    "candidate_archive_sha256": "9bfea530158ab498a55ec626804c5e9eb1bb80da14a2f2d21d7262c1841bc2fe",
+    "contract": "hpm1_semantic_parity_fail_closed_v1",
+    "divergence_caught_before_exact_eval": true,
+    "path": "hpm1_semantic_parity_fail_closed.json",
+    "payload_member": "categorical_payload.bin",
+    "payload_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+    "sha256": "5ae622848cc51a5ce62b1dc8fd0362f33cce931a299c3453f17a3dba3d549a13"
+  },
+  "hpm1_structural_decode_inventory": {
+    "byte_exact_semantic_reencode_proven": false,
+    "bytes": 12621,
+    "contract": "hpm1_payload_structural_decode_inventory_v1",
+    "full_decode_proven": false,
+    "path": "hpm1_structural_inventory.json",
+    "payload_member": "categorical_payload.bin",
+    "payload_member_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+    "sha256": "aa3cc750c714eece180016d8eeb035a5182fa45562e60d06cb6c7eec91e990ed",
+    "structural_reencode_matches_source": true,
+    "unsupported_wire_constructs": [
+      "hpac_autoregressive_probability_rows",
+      "constriction_range_decoder_uint32_queue_replay",
+      "hpac_context_update_order",
+      "range_encoder_uint32_reemit",
+      "contest_runtime_sidecar_free_hpm1_loader"
+    ]
+  },
+  "kind": "categorical_qma9_clade_spade_openpilot_candidate_manifest",
+  "label_permutation_control": {
+    "bytes": 1515,
+    "control_name": "label_permutation_fail_closed_control",
+    "expected_failure_observed": true,
+    "mutation": {
+      "member": "class_codebook.json",
+      "operation": "reverse_classes_order",
+      "original_class_order": [
+        "road",
+        "lane_markings",
+        "undrivable",
+        "movable",
+        "my_car"
+      ],
+      "permuted_class_order": [
+        "my_car",
+        "movable",
+        "undrivable",
+        "lane_markings",
+        "road"
+      ]
+    },
+    "passed": true,
+    "path": "label_permutation_control.json",
+    "sha256": "56f9b0ab9e7dfa28cd19235058ccd7d08a01f860262e708b5a3a549802ac327b"
+  },
+  "label_prior_payload_manifest": {
+    "bytes": 9152,
+    "contract": "categorical_label_prior_payload_manifest_v1",
+    "member": "label_prior_payload_manifest.json",
+    "sha256": "d33c7bcf3069e04cdef857b8e74655582a3418f45800ce79ac37d132a5af09e8"
+  },
+  "label_prior_payload_manifest_member": {
+    "bytes": 9152,
+    "contract": "categorical_label_prior_payload_manifest_v1",
+    "name": "label_prior_payload_manifest.json",
+    "sha256": "d33c7bcf3069e04cdef857b8e74655582a3418f45800ce79ac37d132a5af09e8"
+  },
+  "no_op_controls": {
+    "charged_member_presence_control": {
+      "passed": true,
+      "scope": "archive_member_manifest_and_zip_member_sha256"
+    },
+    "decode_reencode_identity_control": {
+      "passed": false,
+      "scope": "real_payload_requires_decode_reencode_parity"
+    },
+    "label_permutation_fail_closed_control": {
+      "passed": true,
+      "proof_artifact": {
+        "bytes": 1515,
+        "control_name": "label_permutation_fail_closed_control",
+        "expected_failure_observed": true,
+        "mutation": {
+          "member": "class_codebook.json",
+          "operation": "reverse_classes_order",
+          "original_class_order": [
+            "road",
+            "lane_markings",
+            "undrivable",
+            "movable",
+            "my_car"
+          ],
+          "permuted_class_order": [
+            "my_car",
+            "movable",
+            "undrivable",
+            "lane_markings",
+            "road"
+          ]
+        },
+        "passed": true,
+        "path": "label_permutation_control.json",
+        "sha256": "56f9b0ab9e7dfa28cd19235058ccd7d08a01f860262e708b5a3a549802ac327b"
+      },
+      "scope": "runtime_rejects_permuted_charged_class_codebook"
+    },
+    "runtime_consumes_conditioning_control": {
+      "passed": true,
+      "scope": "runtime_consumer_executes_from_archive_and_consumes_charged_members"
+    }
+  },
+  "payload_source": {
+    "kind": "pr91_hpm1_mask_segment",
+    "payload_bytes": 145087,
+    "payload_magic": "48504d31",
+    "payload_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+    "segment_name": "mask",
+    "source_archive_bytes": 222404,
+    "source_archive_path": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+    "source_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+    "source_member": "x",
+    "source_member_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf"
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "runtime_consumer": {
+    "consumes_charged_members": true,
+    "path": "src/tac/categorical_candidate_runtime_skeleton.py"
+  },
+  "runtime_consumer_proof_skeleton_member": {
+    "bytes": 1901,
+    "contract": "categorical_runtime_consumer_proof_skeleton_v1",
+    "name": "runtime_consumer_proof_skeleton.json",
+    "sha256": "246bb7838a71623453757391ea5b11f09df991cec88f2b5dfced59fd888a61d1"
+  },
+  "runtime_loader_parity": {
+    "byte_identical_to_runtime_consumer": true,
+    "dispatch_attempted": false,
+    "fallback_used": false,
+    "loaded_charged_members": [
+      "categorical_payload.bin",
+      "class_codebook.json",
+      "label_prior_payload_manifest.json",
+      "runtime_consumer_proof_skeleton.json"
+    ],
+    "loader_member": "runtime_consumer.py",
+    "loader_member_sha256": "a4e45905e6555ae41f3c322779a5e0c5dc40c39fef02d47903421225bb4887b3",
+    "passed": true,
+    "runtime_consumer_path": "src/tac/categorical_candidate_runtime_skeleton.py",
+    "runtime_consumer_sha256": "a4e45905e6555ae41f3c322779a5e0c5dc40c39fef02d47903421225bb4887b3",
+    "runtime_execution_proof": {
+      "bytes": 1617,
+      "path": "runtime_execution_proof.json",
+      "runtime_output_sha256": "b5deeb218b4a96e51f005d15aea430fad7ff4bd69095efa12511bc375ed663c8",
+      "semantic_runtime_output_parity_proven": false,
+      "sha256": "c38a113a6bb76fdbe4c01f490d48bfdb8059adc784d9fadec4eed87d454fe5ec"
+    },
+    "runtime_loader_parity_contract": "categorical_runtime_loader_parity_v1",
+    "runtime_output_sha256": "b5deeb218b4a96e51f005d15aea430fad7ff4bd69095efa12511bc375ed663c8",
+    "schema_version": 1,
+    "score_claim": false,
+    "semantic_runtime_output_parity_proven": false,
+    "sidecar_free": true
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "selfcomp_gray_codebook": [
+    0,
+    255,
+    64,
+    192,
+    128
+  ],
+  "semantic_class_order": [
+    "road",
+    "lane_markings",
+    "undrivable",
+    "movable",
+    "my_car"
+  ],
+  "source_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f"
+}

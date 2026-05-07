@@ -411,6 +411,7 @@ def verify_charged_members(archive_root: str | Path) -> dict[str, Any]:
         and categorical_payload.get("structural_reencode", {}).get("passed") is True
         and categorical_payload.get("hpac_model_load", {}).get("passed") is True,
         "runtime_output_parity_proven": False,
+        "semantic_runtime_output_parity_proven": False,
         "full_decode_reencode_parity_proven": False,
         "dispatch_blockers": [
             "decode_reencode_parity_missing",

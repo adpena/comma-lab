@@ -267,6 +267,8 @@ def _runtime_loader_parity_report(
         "sidecar_free": False,
         "fallback_used": None,
         "loaded_charged_members": [],
+        "semantic_runtime_output_parity_proven": False,
+        "runtime_output_sha256": "",
         "runtime_execution_proof": {
             "declared": False,
             "accepted": False,
@@ -335,6 +337,15 @@ def _runtime_loader_parity_report(
     if fallback_used is not False:
         blockers.append("runtime_loader_parity_fallback_used")
 
+    semantic_runtime_output_parity = report.get("semantic_runtime_output_parity_proven") is True
+    report_output_sha = report.get("runtime_output_sha256")
+    summary["semantic_runtime_output_parity_proven"] = semantic_runtime_output_parity
+    summary["runtime_output_sha256"] = report_output_sha if isinstance(report_output_sha, str) else ""
+    if not semantic_runtime_output_parity:
+        blockers.append("runtime_loader_parity_semantic_runtime_output_parity_not_proven")
+    elif not _is_sha256(report_output_sha):
+        blockers.append("runtime_loader_parity_runtime_output_sha256_missing_or_invalid")
+
     loaded_members = report.get("loaded_charged_members")
     if not isinstance(loaded_members, list) or not loaded_members:
         blockers.append("runtime_loader_parity_loaded_charged_members_missing")
@@ -393,6 +404,15 @@ def _runtime_loader_parity_report(
         proof_summary["runtime_output_sha256"] = output_sha if isinstance(output_sha, str) else ""
         if not _is_sha256(output_sha):
             proof_blockers.append("runtime_execution_proof_output_sha256_missing_or_invalid")
+        proof_semantic_parity = proof_payload.get("semantic_runtime_output_parity_proven") is True
+        proof_summary["semantic_runtime_output_parity_proven"] = proof_semantic_parity
+        if semantic_runtime_output_parity:
+            if not proof_semantic_parity:
+                proof_blockers.append(
+                    "runtime_execution_proof_semantic_runtime_output_parity_not_proven"
+                )
+            if output_sha != report_output_sha:
+                proof_blockers.append("runtime_execution_proof_output_sha256_mismatch")
         hpm1_runtime_summary, hpm1_runtime_blockers = (
             _hpm1_runtime_consumer_proof_report(
                 proof_payload,
@@ -634,6 +654,10 @@ def _decode_reencode_parity_report(
             )
             if not _is_sha256(proof_decoded_sha):
                 proof_blockers.append("decode_reencode_independent_proof_full_decode_sha256_missing_or_invalid")
+            elif proof_decoded_sha != summary["decoded_masks_sha256"]:
+                proof_blockers.append(
+                    "decode_reencode_independent_proof_decoded_masks_sha256_mismatch"
+                )
         proof_reencode = proof_payload.get("byte_exact_reencode")
         proof_reencode_ok = isinstance(proof_reencode, dict) and proof_reencode.get("passed") is True
         if not proof_reencode_ok:

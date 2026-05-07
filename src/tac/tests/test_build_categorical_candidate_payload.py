@@ -112,8 +112,9 @@ def test_build_categorical_candidate_payload_is_byte_closed_and_fail_closed(
     assert readiness["archive_member_manifest"]["member_order_matches_charged_members"] is True
     assert readiness["archive_member_manifest"]["member_count_matches_charged_members"] is True
     assert candidate["runtime_loader_parity"]["passed"] is True
-    assert readiness["runtime_loader_parity"]["accepted"] is True
+    assert readiness["runtime_loader_parity"]["accepted"] is False
     assert readiness["runtime_loader_parity"]["sidecar_free"] is True
+    assert readiness["runtime_loader_parity"]["semantic_runtime_output_parity_proven"] is False
     assert readiness["runtime_loader_parity"]["runtime_execution_proof"]["accepted"] is True
     assert (
         readiness["runtime_loader_parity"]["runtime_execution_proof"][
@@ -129,6 +130,7 @@ def test_build_categorical_candidate_payload_is_byte_closed_and_fail_closed(
     assert readiness_file["tool_run_manifest"]["tool"] == "tools/build_categorical_candidate_payload.py"
     blockers = set(readiness["dispatch_blockers"])
     assert "runtime_loader_parity_not_passed" not in blockers
+    assert "runtime_loader_parity_semantic_runtime_output_parity_not_proven" in blockers
     assert "runtime_execution_proof_artifact_missing" not in blockers
     assert "decode_reencode_parity_not_passed" in blockers
     assert "decode_reencode_full_decode_not_proven" in blockers
@@ -205,6 +207,7 @@ def test_build_categorical_candidate_payload_is_byte_closed_and_fail_closed(
     assert runtime_proof["runtime_executed"] is True
     assert runtime_proof["sidecar_free"] is True
     assert runtime_proof["fallback_used"] is False
+    assert runtime_proof["semantic_runtime_output_parity_proven"] is False
     assert runtime_proof["runtime_report_summary"]["typed_label_atom_count"] == 5
     assert runtime_proof["runtime_report_summary"]["payload_codec"] == "opaque_categorical_payload"
     label_control = read_json(out_a / LABEL_PERMUTATION_CONTROL_FILENAME)
@@ -280,17 +283,21 @@ def test_build_categorical_candidate_payload_emits_hpm1_structural_inventory(
     assert inventory["byte_exact_semantic_reencode"]["passed"] is False
     assert readiness["hpm1_structural_decode_inventory"]["accepted"] is True
     assert readiness["hpm1_structural_decode_inventory"]["structural_reencode_matches_source"] is True
-    assert readiness["runtime_loader_parity"]["accepted"] is True
-    assert readiness["runtime_loader_parity"]["runtime_execution_proof"]["accepted"] is True
+    assert readiness["runtime_loader_parity"]["accepted"] is False
+    assert readiness["runtime_loader_parity"]["semantic_runtime_output_parity_proven"] is False
     hpm1_runtime = readiness["runtime_loader_parity"]["runtime_execution_proof"][
         "hpm1_runtime_consumer_proof"
     ]
     assert hpm1_runtime["required"] is True
-    assert hpm1_runtime["accepted"] is True
+    assert hpm1_runtime["accepted"] is False
     assert hpm1_runtime["payload_codec"] == "HPM1"
     assert hpm1_runtime["hpm1_structural_reencode_passed"] is True
     assert hpm1_runtime["hpm1_hpac_model_load_passed"] is True
     assert hpm1_runtime["expected_fail_closed_exit"] is True
+    assert (
+        "runtime_execution_proof_hpm1_full_decode_reencode_parity_not_proven"
+        in readiness["dispatch_blockers"]
+    )
     assert readiness["dispatch_blockers"].count(
         "no_op_control_not_passed:label_permutation_fail_closed_control"
     ) == 0

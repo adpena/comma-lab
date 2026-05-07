@@ -1,0 +1,41 @@
+{
+  "candidate_archive_sha256": "9bfea530158ab498a55ec626804c5e9eb1bb80da14a2f2d21d7262c1841bc2fe",
+  "consumed_charged_members": [
+    "categorical_payload.bin",
+    "class_codebook.json",
+    "label_prior_payload_manifest.json",
+    "runtime_consumer_proof_skeleton.json"
+  ],
+  "dispatch_attempted": false,
+  "executed_archive_inflate": true,
+  "expected_fail_closed_exit": true,
+  "fallback_used": false,
+  "independent_proof": true,
+  "inflate_returncode": 2,
+  "kind": "categorical_runtime_execution_independent_proof",
+  "loaded_charged_members": [
+    "categorical_payload.bin",
+    "class_codebook.json",
+    "label_prior_payload_manifest.json",
+    "runtime_consumer_proof_skeleton.json"
+  ],
+  "loader_member": "runtime_consumer.py",
+  "loader_member_sha256": "a4e45905e6555ae41f3c322779a5e0c5dc40c39fef02d47903421225bb4887b3",
+  "producer_tool": "tac.categorical_payload_candidate.build_categorical_payload_candidate",
+  "proof_scope": "archive_inflate_runtime_execution",
+  "runtime_consumer_sha256": "a4e45905e6555ae41f3c322779a5e0c5dc40c39fef02d47903421225bb4887b3",
+  "runtime_executed": true,
+  "runtime_output_sha256": "b5deeb218b4a96e51f005d15aea430fad7ff4bd69095efa12511bc375ed663c8",
+  "runtime_report_summary": {
+    "full_decode_reencode_parity_proven": false,
+    "hpm1_hpac_model_load_passed": true,
+    "hpm1_structural_reencode_passed": true,
+    "kind": "categorical_charged_runtime_consumer_report",
+    "payload_codec": "HPM1",
+    "typed_label_atom_count": 5
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "semantic_runtime_output_parity_proven": false,
+  "sidecar_free": true
+}

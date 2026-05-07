@@ -1,0 +1,53 @@
+{
+  "archive_member_manifest_contract": "categorical_archive_member_manifest_v1",
+  "fixture_only": false,
+  "kind": "categorical_local_candidate_archive_member_manifest",
+  "member_count": 6,
+  "member_order": [
+    "categorical_payload.bin",
+    "class_codebook.json",
+    "inflate.sh",
+    "label_prior_payload_manifest.json",
+    "runtime_consumer.py",
+    "runtime_consumer_proof_skeleton.json"
+  ],
+  "members": [
+    {
+      "bytes": 145087,
+      "name": "categorical_payload.bin",
+      "role": "categorical_payload",
+      "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc"
+    },
+    {
+      "bytes": 5627,
+      "name": "class_codebook.json",
+      "role": "decoder_table",
+      "sha256": "f21a3d846c0258d311b3f0aaa4fc7356289af1b29af2299cd83a3c9a353c8914"
+    },
+    {
+      "bytes": 274,
+      "name": "inflate.sh",
+      "role": "inflate_entrypoint",
+      "sha256": "4e39eb6168a86d192cc13b3a3728e38f8cd6c77c8359eeb6c4b8e8af9db9845a"
+    },
+    {
+      "bytes": 9152,
+      "name": "label_prior_payload_manifest.json",
+      "role": "label_prior_payload_manifest",
+      "sha256": "d33c7bcf3069e04cdef857b8e74655582a3418f45800ce79ac37d132a5af09e8"
+    },
+    {
+      "bytes": 17180,
+      "name": "runtime_consumer.py",
+      "role": "decoder_or_runtime_consumer",
+      "sha256": "a4e45905e6555ae41f3c322779a5e0c5dc40c39fef02d47903421225bb4887b3"
+    },
+    {
+      "bytes": 1901,
+      "name": "runtime_consumer_proof_skeleton.json",
+      "role": "runtime_consumer_proof",
+      "sha256": "246bb7838a71623453757391ea5b11f09df991cec88f2b5dfced59fd888a61d1"
+    }
+  ],
+  "schema_version": 1
+}

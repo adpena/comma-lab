@@ -88,3 +88,38 @@ Do not exact-eval this categorical packet yet. It needs:
 3. Sidecar-free runtime loader proof.
 4. Active Level-2 dispatch claim.
 5. Exact CUDA auth eval through `archive.zip -> inflate.sh -> upstream/evaluate.py`.
+
+## Hardened Readiness Refresh
+
+After the initial refresh, the categorical readiness gate was tightened so
+runtime-loader parity requires explicit semantic runtime output parity, not
+just sidecar-free execution of the archived runtime consumer. Decode/reencode
+independent proofs also have to match the decoded-mask SHA they claim to prove.
+
+Rebuilt hardened artifacts:
+
+```text
+.venv/bin/python tools/build_categorical_candidate_payload.py
+  --out-dir experiments/results/categorical_openpilot_payload_candidate_hardened_20260507_codex
+  --payload-source pr91-hpm1-mask
+  --source-archive experiments/results/public_pr91_intake_20260504_codex/archive.zip
+```
+
+Hardened audit artifacts:
+
+- `experiments/results/categorical_openpilot_payload_candidate_hardened_20260507_codex/readiness_audit_hardened.json`
+- `experiments/results/categorical_hpm1_gate_hardened_20260507_codex/categorical_readiness_hardened.json`
+- `experiments/results/categorical_hpm1_gate_hardened_20260507_codex/pr91_hpm1_readiness_with_failure_probe.json`
+
+The archive remains byte-identical to the refreshed build:
+
+- Archive bytes: `179979`
+- Archive SHA-256:
+  `9bfea530158ab498a55ec626804c5e9eb1bb80da14a2f2d21d7262c1841bc2fe`
+- Runtime output SHA-256:
+  `b5deeb218b4a96e51f005d15aea430fad7ff4bd69095efa12511bc375ed663c8`
+
+The stricter readiness result is still `ready_for_exact_eval_dispatch=false`.
+This is the intended fail-closed state: categorical/HPM1 remains a promising
+rate-axis packet, but it is blocked until semantic HPM1 decode/reencode parity
+is proven and wired into the runtime without sidecars.

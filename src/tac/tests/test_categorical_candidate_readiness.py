@@ -423,6 +423,8 @@ def _attach_complete_dispatch_proofs(candidate: dict, tmp_path: Path) -> None:
     }
 
     runtime_parity = candidate["runtime_loader_parity"]
+    runtime_parity["semantic_runtime_output_parity_proven"] = True
+    runtime_parity["runtime_output_sha256"] = "c" * 64
     runtime_proof = {
         "schema_version": 1,
         "kind": RUNTIME_EXECUTION_PROOF_KIND,
@@ -441,6 +443,7 @@ def _attach_complete_dispatch_proofs(candidate: dict, tmp_path: Path) -> None:
         "fallback_used": False,
         "consumed_charged_members": runtime_parity["loaded_charged_members"],
         "runtime_output_sha256": "c" * 64,
+        "semantic_runtime_output_parity_proven": True,
     }
     runtime_proof_path = tmp_path / "runtime_execution_independent_proof.json"
     write_json(runtime_proof_path, runtime_proof)
@@ -595,6 +598,66 @@ def test_audit_categorical_candidate_manifest_accepts_complete_dispatch_proofs(
     assert manifest["decode_reencode_parity"]["independent_proof"]["accepted"] is True
     assert manifest["exact_eval_dispatch_requirements"]["accepted"] is True
     assert manifest["exact_eval_dispatch_requirements"]["exact_cuda"]["entrypoint"] == EXACT_EVAL_ENTRYPOINT
+    assert manifest["runtime_loader_parity"]["semantic_runtime_output_parity_proven"] is True
+
+
+def test_audit_categorical_candidate_manifest_rejects_missing_runtime_output_parity(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    _attach_complete_dispatch_proofs(candidate, tmp_path)
+    candidate["runtime_loader_parity"]["semantic_runtime_output_parity_proven"] = False
+    proof_path = tmp_path / "runtime_execution_independent_proof.json"
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    proof["semantic_runtime_output_parity_proven"] = False
+    write_json(proof_path, proof)
+    candidate["runtime_loader_parity"]["runtime_execution_proof"] = {
+        "path": proof_path.name,
+        "bytes": proof_path.stat().st_size,
+        "sha256": sha256_file(proof_path),
+    }
+
+    manifest = audit_categorical_candidate_manifest(
+        candidate,
+        repo_root=REPO,
+        manifest_dir=tmp_path,
+    )
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["runtime_loader_parity"]["accepted"] is False
+    assert (
+        "runtime_loader_parity_semantic_runtime_output_parity_not_proven"
+        in manifest["dispatch_blockers"]
+    )
+
+
+def test_audit_categorical_candidate_manifest_rejects_decode_proof_output_mismatch(
+    tmp_path: Path,
+) -> None:
+    candidate = _base_candidate(tmp_path)
+    _attach_complete_dispatch_proofs(candidate, tmp_path)
+    proof_path = tmp_path / "decode_reencode_independent_proof.json"
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    proof["full_decode"]["decoded_masks_sha256"] = "d" * 64
+    write_json(proof_path, proof)
+    candidate["decode_reencode_parity"]["independent_proof_artifact"] = {
+        "path": proof_path.name,
+        "bytes": proof_path.stat().st_size,
+        "sha256": sha256_file(proof_path),
+    }
+
+    manifest = audit_categorical_candidate_manifest(
+        candidate,
+        repo_root=REPO,
+        manifest_dir=tmp_path,
+    )
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["decode_reencode_parity"]["independent_proof"]["accepted"] is False
+    assert (
+        "decode_reencode_independent_proof_decoded_masks_sha256_mismatch"
+        in manifest["dispatch_blockers"]
+    )
 
 
 def test_audit_categorical_candidate_manifest_requires_hpm1_runtime_consumer_summary(

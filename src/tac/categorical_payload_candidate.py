@@ -264,6 +264,10 @@ def _write_runtime_execution_proof(
         runtime_output_sha = sha256_bytes(
             (completed.stdout + "\n" + completed.stderr).encode("utf-8")
         )
+    semantic_runtime_output_parity = (
+        runtime_report.get("semantic_runtime_output_parity_proven") is True
+        or runtime_report.get("runtime_output_parity_proven") is True
+    )
     proof = {
         "schema_version": SCHEMA_VERSION,
         "kind": RUNTIME_EXECUTION_PROOF_KIND,
@@ -285,6 +289,7 @@ def _write_runtime_execution_proof(
         "consumed_charged_members": consumed_member_names,
         "loaded_charged_members": loaded_charged_members,
         "runtime_output_sha256": runtime_output_sha,
+        "semantic_runtime_output_parity_proven": semantic_runtime_output_parity,
         "runtime_report_summary": {
             "kind": runtime_report.get("kind", ""),
             "typed_label_atom_count": (
@@ -327,6 +332,8 @@ def _write_runtime_execution_proof(
         "path": RUNTIME_EXECUTION_PROOF_FILENAME,
         "bytes": proof_path.stat().st_size,
         "sha256": sha256_file(proof_path),
+        "runtime_output_sha256": runtime_output_sha,
+        "semantic_runtime_output_parity_proven": semantic_runtime_output_parity,
     }
 
 
@@ -850,6 +857,7 @@ def build_categorical_payload_candidate(
             "loaded_charged_members": loaded_charged_members,
             "runtime_execution_proof": runtime_execution_proof,
             "semantic_runtime_output_parity_proven": False,
+            "runtime_output_sha256": runtime_execution_proof["runtime_output_sha256"],
         },
         "decode_reencode_parity": {
             "schema_version": SCHEMA_VERSION,
