@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Empirical marginal-floor encoder using constriction range coder.
 
-This is the operational counterpart to ``compute_shannon_floor`` —
-the marginal-floor calculator predicts ceil(N · H) bytes; this tool
+This is the operational counterpart to ``compute_shannon_floor``.
+The marginal-floor calculator predicts ceil(N * H) bytes; this tool
 ACTUALLY encodes PR101's quantized weights with that distribution and
 measures the real bytes-out, including all overhead (per-tensor PMF
 header + range-coder finalization).
@@ -35,11 +35,11 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import sys
 import time
-from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -57,8 +57,12 @@ from tac.pr101_split_brotli_codec import (  # noqa: E402
 
 TOOL_NAME = "tools/pr101_constriction_marginal_floor.py"
 SCHEMA_VERSION = "pr101_constriction_marginal_floor.v1"
+EVIDENCE_GRADE = "empirical"
+EVIDENCE_SEMANTICS = "cpu_range_coder_marginal_pmf_packet_estimate"
+REFERENCE_BROTLI_OPTUNA_BYTES = 178_144
+REFERENCE_PER_TENSOR_MARGINAL_FLOOR_BYTES = 175_916
 
-# int8 symbol space [-127, 127] → 255 categories
+# int8 symbol space [-127, 127] maps to 255 categories.
 N_CATEGORIES = 255
 
 
@@ -110,6 +114,8 @@ def encode_marginal_floor(
     cmodel = constriction.stream.model
     RangeEncoder = constriction.stream.queue.RangeEncoder
 
+    input_bytes = state_dict_path.read_bytes()
+    input_sha256 = hashlib.sha256(input_bytes).hexdigest()
     state_dict = torch.load(state_dict_path, map_location="cpu", weights_only=False)
     if not isinstance(state_dict, dict):
         raise SystemExit(f"loaded {state_dict_path} is not a dict")
@@ -134,7 +140,7 @@ def encode_marginal_floor(
         # `encoded` is a numpy uint32 array; convert to bytes
         encoded_bytes = encoded.tobytes()
         # PMF overhead: store the PMF as float16 or quantized int16. Use
-        # float16 = 2 bytes per category × 255 = 510 bytes/tensor as a
+        # float16 = 2 bytes per category x 255 = 510 bytes/tensor as a
         # plausible deployable overhead. (Could tune lower with quantized
         # PMF or implicit predictor.)
         pmf_overhead = N_CATEGORIES * 2  # 510 bytes
@@ -163,6 +169,19 @@ def encode_marginal_floor(
         "schema": SCHEMA_VERSION,
         "tool": TOOL_NAME,
         "input_state_dict": str(state_dict_path),
+        "input_state_dict_sha256": input_sha256,
+        "evidence_grade": EVIDENCE_GRADE,
+        "evidence_semantics": EVIDENCE_SEMANTICS,
+        "score_claim": False,
+        "score_affecting_payload_changed": False,
+        "charged_bits_changed": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": [
+            "packet_estimate_only",
+            "pmf_storage_not_wired_into_decoder",
+            "no_archive_substitution_performed",
+            "missing_exact_cuda_auth_eval",
+        ],
         "n_tensors": len(rows),
         "n_categories": N_CATEGORIES,
         "smoothing": 1.0,
@@ -174,10 +193,10 @@ def encode_marginal_floor(
         "total_archive_with_overhead": total_with_archive_overhead,
         "total_theoretical_bits_at_empirical_pmf": total_theoretical_bits,
         "total_theoretical_bytes_at_empirical_pmf": math.ceil(total_theoretical_bits / 8.0),
-        "comparison_brotli_optuna_optimum_bytes": 178144,
-        "savings_vs_brotli_optuna": 178144 - total_with_archive_overhead,
-        "comparison_per_tensor_marginal_floor_bytes": 175916,
-        "savings_vs_marginal_floor": 175916 - total_with_archive_overhead,
+        "comparison_brotli_optuna_optimum_bytes": REFERENCE_BROTLI_OPTUNA_BYTES,
+        "savings_vs_brotli_optuna": REFERENCE_BROTLI_OPTUNA_BYTES - total_with_archive_overhead,
+        "comparison_per_tensor_marginal_floor_bytes": REFERENCE_PER_TENSOR_MARGINAL_FLOOR_BYTES,
+        "savings_vs_marginal_floor": REFERENCE_PER_TENSOR_MARGINAL_FLOOR_BYTES - total_with_archive_overhead,
         "per_tensor": rows,
     }
 
@@ -196,7 +215,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"Wrote {args.output}")
     print(f"Total encoded payload:           {manifest['total_encoded_payload_bytes']:>10,} bytes")
-    print(f"PMF overhead (255 cats × 2 B × 28 tensors): {manifest['total_pmf_overhead_bytes']:>10,} bytes")
+    print(f"PMF overhead (255 cats x 2 B x 28 tensors): {manifest['total_pmf_overhead_bytes']:>10,} bytes")
     print(f"Total with PMF overhead:         {manifest['total_with_pmf_overhead']:>10,} bytes")
     print(f"Archive overhead (latent+sidecar+zip):       {manifest['total_archive_overhead_bytes']:>10,} bytes")
     print(f"Total archive with overhead:     {manifest['total_archive_with_overhead']:>10,} bytes")
@@ -205,7 +224,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"vs marginal floor (175,916 B):   {manifest['savings_vs_marginal_floor']:>+10,} bytes")
     print()
     print(f"Theoretical bits at empirical PMF: {manifest['total_theoretical_bits_at_empirical_pmf']:,.1f}")
-    print(f"  → bytes:                         {manifest['total_theoretical_bytes_at_empirical_pmf']:,}")
+    print(f"  -> bytes:                        {manifest['total_theoretical_bytes_at_empirical_pmf']:,}")
     print(f"  + archive overhead = floor:      {manifest['total_theoretical_bytes_at_empirical_pmf'] + manifest['total_archive_overhead_bytes']:,} bytes")
     return 0
 

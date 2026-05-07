@@ -26,6 +26,12 @@
       "bytes_payload": 186793,
       "name": "joint_aac_zero_pmf",
       "ratio_to_per_tensor_floor": 1.1687564915969015
+    },
+    {
+      "bytes_archive": 199238,
+      "bytes_payload": 183144,
+      "name": "naive_markov1_aac_round_trip",
+      "ratio_to_per_tensor_floor": 1.145924841386042
     }
   ],
   "evidence_grade": "derivation",

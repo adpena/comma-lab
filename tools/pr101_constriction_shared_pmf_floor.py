@@ -7,7 +7,7 @@ PMF overhead. This variant encodes all 28 tensors against a SINGLE
 shared empirical PMF computed from all 228,958 symbols pooled.
 
 Pros:
-  - PMF overhead drops from 14,280 → 510 bytes (single PMF, not 28)
+  - PMF overhead drops from 14,280 to 510 bytes (single PMF, not 28)
   - Pooled PMF is "near-canonical" since neural-network weight
     distributions are highly self-similar across layers (mostly
     Laplacian-like)
@@ -20,9 +20,9 @@ Operational comparison vs brotli:
   - brotli static-Huffman uses ~14 bytes of header per stream (one
     stream); about equivalent overhead to one PMF here
   - brotli adapts within its sliding window; this shared-PMF approach
-    does NOT adapt at all — pure marginal coding
+    does NOT adapt at all: pure marginal coding
 
-This tool's output is the "naive joint-floor approximation" — not as
+This tool's output is the "naive joint-floor approximation", not as
 good as a learned hyperprior, but a useful upper bound on the true
 joint floor.
 
@@ -38,6 +38,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import sys
@@ -60,6 +61,11 @@ from tac.pr101_split_brotli_codec import (  # noqa: E402
 TOOL_NAME = "tools/pr101_constriction_shared_pmf_floor.py"
 SCHEMA_VERSION = "pr101_constriction_shared_pmf_floor.v1"
 N_CATEGORIES = 255
+EVIDENCE_GRADE = "empirical"
+EVIDENCE_SEMANTICS = "cpu_shared_pmf_range_coder_packet_estimate"
+REFERENCE_BROTLI_OPTUNA_BYTES = 178_144
+REFERENCE_PER_TENSOR_MARGINAL_FLOOR_BYTES = 175_916
+REFERENCE_PER_TENSOR_CONSTRICTION_BYTES = 190_718
 
 
 def _int8_to_index(arr_i8: np.ndarray) -> np.ndarray:
@@ -71,6 +77,8 @@ def encode_shared_pmf(state_dict_path: Path) -> dict[str, Any]:
     cmodel = constriction.stream.model
     RangeEncoder = constriction.stream.queue.RangeEncoder
 
+    input_bytes = state_dict_path.read_bytes()
+    input_sha256 = hashlib.sha256(input_bytes).hexdigest()
     state_dict = torch.load(state_dict_path, map_location="cpu", weights_only=False)
     if not isinstance(state_dict, dict):
         raise SystemExit(f"loaded {state_dict_path} is not a dict")
@@ -120,6 +128,19 @@ def encode_shared_pmf(state_dict_path: Path) -> dict[str, Any]:
         "schema": SCHEMA_VERSION,
         "tool": TOOL_NAME,
         "input_state_dict": str(state_dict_path),
+        "input_state_dict_sha256": input_sha256,
+        "evidence_grade": EVIDENCE_GRADE,
+        "evidence_semantics": EVIDENCE_SEMANTICS,
+        "score_claim": False,
+        "score_affecting_payload_changed": False,
+        "charged_bits_changed": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": [
+            "packet_estimate_only",
+            "shared_pmf_not_wired_into_decoder",
+            "no_archive_substitution_performed",
+            "missing_exact_cuda_auth_eval",
+        ],
         "n_tensors": len(per_tensor_meta),
         "total_symbols": int(all_symbols.size),
         "n_categories": N_CATEGORIES,
@@ -133,12 +154,12 @@ def encode_shared_pmf(state_dict_path: Path) -> dict[str, Any]:
         "total_archive_with_overhead": total_with_archive,
         "theoretical_bits_at_pooled_pmf": bits,
         "theoretical_bytes_at_pooled_pmf": math.ceil(bits / 8.0),
-        "comparison_brotli_optuna_optimum_bytes": 178144,
-        "savings_vs_brotli_optuna": 178144 - total_with_archive,
-        "comparison_per_tensor_marginal_floor_bytes": 175916,
-        "savings_vs_per_tensor_marginal_floor": 175916 - total_with_archive,
-        "comparison_per_tensor_constriction_marginal_bytes": 190718,
-        "savings_vs_per_tensor_constriction": 190718 - total_with_archive,
+        "comparison_brotli_optuna_optimum_bytes": REFERENCE_BROTLI_OPTUNA_BYTES,
+        "savings_vs_brotli_optuna": REFERENCE_BROTLI_OPTUNA_BYTES - total_with_archive,
+        "comparison_per_tensor_marginal_floor_bytes": REFERENCE_PER_TENSOR_MARGINAL_FLOOR_BYTES,
+        "savings_vs_per_tensor_marginal_floor": REFERENCE_PER_TENSOR_MARGINAL_FLOOR_BYTES - total_with_archive,
+        "comparison_per_tensor_constriction_marginal_bytes": REFERENCE_PER_TENSOR_CONSTRICTION_BYTES,
+        "savings_vs_per_tensor_constriction": REFERENCE_PER_TENSOR_CONSTRICTION_BYTES - total_with_archive,
         "per_tensor": per_tensor_meta,
     }
 

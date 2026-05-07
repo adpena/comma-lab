@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Ballé-style QuantizedGaussian hyperprior on PR101 weights.
+"""Balle-style QuantizedGaussian hyperprior on PR101 weights.
 
 Per the joint-entropy subagent verdict (memo
 ``feedback_pr101_joint_entropy_floor_subagent_verdict_20260507.md``),
@@ -8,11 +8,11 @@ the deployable joint-floor approach is "constriction + learned
 
 For each tensor:
   1. Compute (mean, std) of its int8-quantized symbols (zigzag-decoded)
-  2. Encode (mean, std) as fp16 → 4 bytes overhead per tensor
+  2. Encode (mean, std) as fp16: 4 bytes overhead per tensor
   3. Use constriction's QuantizedGaussian(mean, std) as the coding model
   4. Encode the symbols against the per-tensor Gaussian
 
-Total overhead: 28 × 4 = 112 bytes (vs 14,280 for empirical PMF).
+Total overhead: 28 x 4 = 112 bytes (vs 14,280 for empirical PMF).
 
 If neural-network INT8 weight distributions ARE roughly Gaussian (after
 zero-meaning), the Gaussian payload bytes will be close to the empirical
@@ -35,8 +35,8 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
-import math
 import sys
 import time
 from pathlib import Path
@@ -56,6 +56,13 @@ from tac.pr101_split_brotli_codec import (  # noqa: E402
 
 TOOL_NAME = "tools/pr101_constriction_quantgauss_hyperprior.py"
 SCHEMA_VERSION = "pr101_constriction_quantgauss_hyperprior.v1"
+EVIDENCE_GRADE = "empirical"
+EVIDENCE_SEMANTICS = "cpu_parametric_hyperprior_packet_estimate"
+REFERENCE_BROTLI_OPTUNA_BYTES = 178_144
+REFERENCE_PER_TENSOR_MARGINAL_FLOOR_BYTES = 175_916
+REFERENCE_PER_TENSOR_CONSTRICTION_BYTES = 190_718
+REFERENCE_SHARED_PMF_CONSTRICTION_BYTES = 203_196
+REFERENCE_JOINT_FLOOR_PREDICTION_BYTES = 155_000
 
 
 def _try_encode_quantgauss(
@@ -96,6 +103,8 @@ def _try_encode_quantgauss(
 
 
 def encode_quantgauss_hyperprior(state_dict_path: Path) -> dict[str, Any]:
+    input_bytes = state_dict_path.read_bytes()
+    input_sha256 = hashlib.sha256(input_bytes).hexdigest()
     state_dict = torch.load(state_dict_path, map_location="cpu", weights_only=False)
     if not isinstance(state_dict, dict):
         raise SystemExit(f"loaded {state_dict_path} is not a dict")
@@ -119,12 +128,12 @@ def encode_quantgauss_hyperprior(state_dict_path: Path) -> dict[str, Any]:
         # Try Gaussian
         try:
             g_bytes, _, _ = _try_encode_quantgauss(symbols, mean, std, use_laplace=False)
-        except Exception as exc:
+        except Exception:
             g_bytes = -1
         # Try Laplace
         try:
             l_bytes, _, _ = _try_encode_quantgauss(symbols, mean, std, use_laplace=True)
-        except Exception as exc:
+        except Exception:
             l_bytes = -1
         # Pick best (Gaussian or Laplace; need 1 bit to flag which model in archive)
         if g_bytes > 0 and l_bytes > 0:
@@ -166,22 +175,35 @@ def encode_quantgauss_hyperprior(state_dict_path: Path) -> dict[str, Any]:
         "schema": SCHEMA_VERSION,
         "tool": TOOL_NAME,
         "input_state_dict": str(state_dict_path),
+        "input_state_dict_sha256": input_sha256,
+        "evidence_grade": EVIDENCE_GRADE,
+        "evidence_semantics": EVIDENCE_SEMANTICS,
+        "score_claim": False,
+        "score_affecting_payload_changed": False,
+        "charged_bits_changed": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": [
+            "packet_estimate_only",
+            "parametric_model_not_wired_into_decoder",
+            "no_archive_substitution_performed",
+            "missing_exact_cuda_auth_eval",
+        ],
         "n_tensors": len(rows),
         "elapsed_seconds": elapsed,
         "total_payload_bytes": total_payload_bytes,
         "total_hyperprior_overhead_bytes": total_hyperprior_overhead,
         "total_archive_overhead_bytes": archive_overhead,
         "total_archive_with_overhead": total_with_overhead,
-        "comparison_brotli_optuna_optimum_bytes": 178144,
-        "savings_vs_brotli_optuna": 178144 - total_with_overhead,
-        "comparison_per_tensor_marginal_floor_bytes": 175916,
-        "savings_vs_marginal_floor": 175916 - total_with_overhead,
-        "comparison_per_tensor_constriction": 190718,
-        "savings_vs_per_tensor_constriction": 190718 - total_with_overhead,
-        "comparison_shared_pmf_constriction": 203196,
-        "savings_vs_shared_pmf_constriction": 203196 - total_with_overhead,
-        "subagent_predicted_deployable_joint_floor": 155000,
-        "gap_to_subagent_prediction": total_with_overhead - 155000,
+        "comparison_brotli_optuna_optimum_bytes": REFERENCE_BROTLI_OPTUNA_BYTES,
+        "savings_vs_brotli_optuna": REFERENCE_BROTLI_OPTUNA_BYTES - total_with_overhead,
+        "comparison_per_tensor_marginal_floor_bytes": REFERENCE_PER_TENSOR_MARGINAL_FLOOR_BYTES,
+        "savings_vs_marginal_floor": REFERENCE_PER_TENSOR_MARGINAL_FLOOR_BYTES - total_with_overhead,
+        "comparison_per_tensor_constriction": REFERENCE_PER_TENSOR_CONSTRICTION_BYTES,
+        "savings_vs_per_tensor_constriction": REFERENCE_PER_TENSOR_CONSTRICTION_BYTES - total_with_overhead,
+        "comparison_shared_pmf_constriction": REFERENCE_SHARED_PMF_CONSTRICTION_BYTES,
+        "savings_vs_shared_pmf_constriction": REFERENCE_SHARED_PMF_CONSTRICTION_BYTES - total_with_overhead,
+        "subagent_predicted_deployable_joint_floor": REFERENCE_JOINT_FLOOR_PREDICTION_BYTES,
+        "gap_to_subagent_prediction": total_with_overhead - REFERENCE_JOINT_FLOOR_PREDICTION_BYTES,
         "per_tensor": rows,
     }
 
@@ -200,7 +222,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"Wrote {args.output}")
     print(f"Total payload (Gaussian/Laplace per-tensor): {manifest['total_payload_bytes']:>10,} bytes")
-    print(f"Hyperprior overhead (28 × 5 B):              {manifest['total_hyperprior_overhead_bytes']:>10,} bytes")
+    print(f"Hyperprior overhead (28 x 5 B):              {manifest['total_hyperprior_overhead_bytes']:>10,} bytes")
     print(f"Archive overhead:                            {manifest['total_archive_overhead_bytes']:>10,} bytes")
     print(f"Total archive:                               {manifest['total_archive_with_overhead']:>10,} bytes")
     print()

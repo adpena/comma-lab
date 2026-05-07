@@ -1,25 +1,19 @@
 #!/usr/bin/env python3
-"""PCA-based PMF compression for PR101.
+"""PCA-based PMF compression falsification probe for PR101.
 
-The 28 per-tensor PMFs form a 28×255 matrix M where each row is a
-fp16-quantized probability vector. Empirically these PMFs are highly
-correlated (all near-Laplacian peaks at zero) — the SVD rank is bounded
-by 28 but the effective rank is far smaller (~3-5).
+The 28 per-tensor PMFs form a 28x255 matrix M where each row is a
+fp16-quantized probability vector. A low-rank PMF hypothesis would make
+the PMF side information compressible as a basis plus per-tensor
+coefficients. This tool measures that hypothesis rather than assuming it.
 
 This tool applies truncated PCA at rank K and measures:
   - Reconstruction error (max KL-divergence per tensor)
   - Total transmitted bytes:
-      basis K × 255 fp16  +  per-tensor coefficients (28 × K fp16)
+      basis K x 255 fp16  +  per-tensor coefficients (28 x K fp16)
   - Comparison with brotli-concat-PMFs (3,513 bytes empirical)
 
-Predicted at K=3: ~1,700 bytes total PMF overhead → 1.8 KB savings vs
-brotli concat. Combined with per-tensor empirical range coder: total
-archive = 160,344 + 1,700 + 16,094 = 178,138 B ≈ tied with brotli.
-
-K=5 sweep: trades 1 KB more overhead for likely <0.1% payload increase.
-Net: should beat brotli by 0.5-1.5 KB.
-
-Pure CPU + numpy. No GPU, no scorer load.
+The output is planning evidence only. It does not emit a decoder bitstream
+or a score-affecting archive. Pure CPU + numpy. No GPU, no scorer load.
 
 Usage::
 
@@ -30,6 +24,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import sys
@@ -52,10 +47,16 @@ from tac.pr101_split_brotli_codec import (  # noqa: E402
 TOOL_NAME = "tools/pr101_pmf_pca_compression.py"
 SCHEMA_VERSION = "pr101_pmf_pca_compression.v1"
 N_CATEGORIES = 255
+EVIDENCE_GRADE = "empirical"
+EVIDENCE_SEMANTICS = "cpu_pmf_side_information_planning_probe"
+REFERENCE_BROTLI_OPTUNA_BYTES = 178_144
+REFERENCE_PER_TENSOR_RAW_PMF_BYTES = 190_718
+REFERENCE_PER_TENSOR_BROTLI_PMF_BYTES = 179_951
+REFERENCE_JOINT_FLOOR_PREDICTION_BYTES = 155_000
 
 
 def _build_pmf_matrix(state_dict: dict) -> np.ndarray:
-    """Build a 28 × N_CATEGORIES matrix of per-tensor empirical PMFs."""
+    """Build a 28 x N_CATEGORIES matrix of per-tensor empirical PMFs."""
     pmfs: list[np.ndarray] = []
     for name, _shape in FIXED_STATE_SCHEMA:
         if name not in state_dict:
@@ -69,7 +70,7 @@ def _build_pmf_matrix(state_dict: dict) -> np.ndarray:
 
 
 def _kl_divergence(p: np.ndarray, q: np.ndarray) -> float:
-    """KL(p || q) — direction matters; use this to bound coding loss."""
+    """KL(p || q). Direction matters; use this to bound coding loss."""
     eps = 1e-12
     p = p + eps
     q = q + eps
@@ -90,8 +91,18 @@ def _theoretical_bits_at_pmf(symbols: np.ndarray, pmf: np.ndarray) -> float:
 
 def pca_compress(state_dict_path: Path, k_values: list[int]) -> dict[str, Any]:
     """Sweep PCA rank K, measuring overhead bytes + payload bytes."""
+    input_bytes = state_dict_path.read_bytes()
+    input_sha256 = hashlib.sha256(input_bytes).hexdigest()
     state_dict = torch.load(state_dict_path, map_location="cpu", weights_only=False)
+    if not isinstance(state_dict, dict):
+        raise SystemExit(f"loaded {state_dict_path} is not a dict")
     M = _build_pmf_matrix(state_dict)  # (28, 255)
+    max_rank = min(M.shape)
+    if not k_values:
+        raise SystemExit("at least one K value is required")
+    bad_k = [k for k in k_values if k <= 0 or k > max_rank]
+    if bad_k:
+        raise SystemExit(f"K values outside valid range [1, {max_rank}]: {bad_k}")
 
     # Center the PMFs around their mean (so PCA captures variation, not the
     # mean shape)
@@ -125,10 +136,11 @@ def pca_compress(state_dict_path: Path, k_values: list[int]) -> dict[str, Any]:
         M_recon = np.clip(M_recon, 1e-8, None)
         M_recon = M_recon / M_recon.sum(axis=1, keepdims=True)
 
-        # Overhead: basis (k × 255 fp16) + mean (255 fp16) + per-tensor coefs (28 × k fp16)
-        basis_bytes = k * N_CATEGORIES * 2  # k × 255 × 2
-        mean_bytes = N_CATEGORIES * 2       # 255 × 2 = 510
-        coef_bytes = 28 * k * 2             # 28 × k × 2
+        # Overhead: basis (k x 255 fp16) + mean (255 fp16)
+        # + per-tensor coefficients (28 x k fp16).
+        basis_bytes = k * N_CATEGORIES * 2  # k x 255 x 2
+        mean_bytes = N_CATEGORIES * 2       # 255 x 2 = 510
+        coef_bytes = 28 * k * 2             # 28 x k x 2
         raw_overhead_bytes = basis_bytes + mean_bytes + coef_bytes
         # Also try brotli-compressing the overhead blob
         overhead_blob = (
@@ -171,22 +183,37 @@ def pca_compress(state_dict_path: Path, k_values: list[int]) -> dict[str, Any]:
             "total_archive_with_brotli_overhead": total_with_brotli,
         })
 
+    best = min(sweep_rows, key=lambda r: r["total_archive_with_brotli_overhead"])
     return {
         "schema": SCHEMA_VERSION,
         "tool": TOOL_NAME,
         "input_state_dict": str(state_dict_path),
+        "input_state_dict_sha256": input_sha256,
+        "evidence_grade": EVIDENCE_GRADE,
+        "evidence_semantics": EVIDENCE_SEMANTICS,
+        "score_claim": False,
+        "score_affecting_payload_changed": False,
+        "charged_bits_changed": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": [
+            "planning_probe_only",
+            "no_actual_pca_pmf_decoder_bitstream",
+            "no_archive_substitution_performed",
+            "missing_exact_cuda_auth_eval",
+        ],
         "n_tensors": 28,
         "n_categories": N_CATEGORIES,
         "raw_pmf_bytes_fp16": len(raw_pmfs_bytes),
         "brotli_concat_pmf_bytes": brotli_concat_bytes,
+        "best_k_by_total_archive_with_brotli_overhead": best,
         "singular_values_spectrum": [float(s) for s in S],
         "spectrum_decay_pct": [
             float(S[i] / S[0]) for i in range(min(len(S), 10))
         ],
-        "comparison_brotli_optuna_optimum_bytes": 178144,
-        "comparison_per_tensor_constriction_with_raw_pmfs_bytes": 190718,
-        "comparison_per_tensor_constriction_with_brotli_pmfs_bytes": 179951,
-        "subagent_predicted_deployable_joint_floor_bytes": 155000,
+        "comparison_brotli_optuna_optimum_bytes": REFERENCE_BROTLI_OPTUNA_BYTES,
+        "comparison_per_tensor_constriction_with_raw_pmfs_bytes": REFERENCE_PER_TENSOR_RAW_PMF_BYTES,
+        "comparison_per_tensor_constriction_with_brotli_pmfs_bytes": REFERENCE_PER_TENSOR_BROTLI_PMF_BYTES,
+        "subagent_predicted_deployable_joint_floor_bytes": REFERENCE_JOINT_FLOOR_PREDICTION_BYTES,
         "k_sweep": sweep_rows,
     }
 
@@ -209,16 +236,27 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Wrote {args.output}")
     print(f"Spectrum decay (first 10):     {[f'{x:.3f}' for x in manifest['spectrum_decay_pct']]}")
     print(f"Brotli concat PMF baseline:    {manifest['brotli_concat_pmf_bytes']:,} bytes")
-    print(f"\n{'K':>3} {'raw_ovh':>9} {'br_ovh':>8} {'payload':>10} {'total_brotli':>13} {'vs_brotli178144':>18} {'max_KL':>9}")
+    print()
+    print(
+        f"{'K':>3} {'raw_ovh':>9} {'br_ovh':>8} {'payload':>10} "
+        f"{'total_brotli':>13} {'vs_brotli178144':>18} {'max_KL':>9}"
+    )
     for r in manifest["k_sweep"]:
-        delta = r["total_archive_with_brotli_overhead"] - 178144
-        print(f"{r['k']:>3} {r['raw_overhead_bytes']:>9,} {r['brotli_compressed_overhead_bytes']:>8,} "
-              f"{r['theoretical_payload_bytes']:>10,} {r['total_archive_with_brotli_overhead']:>13,} "
-              f"{delta:>+18,} {r['max_kl_divergence_per_tensor']:>9.4f}")
+        delta = r["total_archive_with_brotli_overhead"] - REFERENCE_BROTLI_OPTUNA_BYTES
+        print(
+            f"{r['k']:>3} {r['raw_overhead_bytes']:>9,} "
+            f"{r['brotli_compressed_overhead_bytes']:>8,} "
+            f"{r['theoretical_payload_bytes']:>10,} "
+            f"{r['total_archive_with_brotli_overhead']:>13,} "
+            f"{delta:>+18,} {r['max_kl_divergence_per_tensor']:>9.4f}"
+        )
     print()
     best = min(manifest["k_sweep"], key=lambda r: r["total_archive_with_brotli_overhead"])
-    print(f"Best K={best['k']}: total {best['total_archive_with_brotli_overhead']:,} bytes "
-          f"(vs brotli 178,144: {best['total_archive_with_brotli_overhead'] - 178144:+,})")
+    print(
+        f"Best K={best['k']}: total {best['total_archive_with_brotli_overhead']:,} bytes "
+        f"(vs brotli {REFERENCE_BROTLI_OPTUNA_BYTES:,}: "
+        f"{best['total_archive_with_brotli_overhead'] - REFERENCE_BROTLI_OPTUNA_BYTES:+,})"
+    )
     return 0
 
 
