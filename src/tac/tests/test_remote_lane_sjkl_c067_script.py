@@ -32,20 +32,20 @@ def test_sjkl_c067_remote_script_uses_real_sjkl_cli_flags() -> None:
     text = _text()
     for token in (
         "experiments/prepare_sjkl_pair_tensors.py",
-        "--renderer-frames",
-        "--gt-video",
-        "--output-dir",
-        "--target-slot 0",
-        "--max-pairs",
-        "experiments/build_sjkl_residual.py",
+        "SJKL_PREPARED_TENSOR_DIR",
+        "renderer_target_slot_chw.pt",
+        "gt_pairs_btchw.pt",
         "--renderer-output",
-        "--gt-pairs",
-        "--out",
-        "--basis-grid-h",
-        "--basis-grid-w",
+        "--target-frames",
+        "--output-dir",
+        "--anchor-pair-idx 0",
+        "experiments/build_sjkl_residual.py",
+        "--pair-tensor-manifest",
+        "--rank",
+        "--n-pairs",
         "--alpha-bits",
-        "--n-anchor-pairs",
-        "--manifest",
+        "--basis-quant-bits",
+        "--max-bytes",
     ):
         assert token in text
     assert "--output-json" not in text
@@ -57,8 +57,8 @@ def test_sjkl_c067_remote_script_packs_charged_payload_deterministically() -> No
     assert "experiments/build_sjkl_c067_archive.py" in text
     assert "--source-archive" in text
     assert "--sjkl-bin" in text
-    assert "--payload-member-name p" in text
-    assert "--max-sjkl-bytes \"$MAX_SJKL_BYTES\"" in text
+    assert "--sjkl-member-name p" in text
+    assert "if int(sjkl.get(\"bytes\", -1)) > int(sjkl.get(\"max_bytes\", -1))" in text
     assert "sjkl_c067_archive_manifest.json" in text
     assert "output_logical_runtime_members" in text
     assert "sjkl.bin missing from packed logical members" in text
