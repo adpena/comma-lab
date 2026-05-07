@@ -7,6 +7,7 @@ from tac.score_geometry_floor_explorer import (
     baseline_floor_summary,
     explore_architecture_shrink,
     explore_lossy_quantization,
+    explore_mixed_precision,
     explore_sparsity,
     explore_water_filling,
     rank_technique_results,
@@ -58,6 +59,63 @@ def test_lossy_quantization_rejects_no_op() -> None:
             baseline_n_quant=N_QUANT,
             baseline_per_tensor_bits=EMPIRICAL_BITS,
             target_n_quant=N_QUANT,
+            archive_overhead_bytes=ARCHIVE_OVERHEAD,
+        )
+
+
+def test_mixed_precision_reduces_floor_for_robust_tensor() -> None:
+    result = explore_mixed_precision(
+        schema=SCHEMA,
+        baseline_n_quant=N_QUANT,
+        baseline_per_tensor_bits=EMPIRICAL_BITS,
+        per_tensor_n_quant={"w2": 15},
+        archive_overhead_bytes=ARCHIVE_OVERHEAD,
+    )
+    baseline = baseline_floor_summary(
+        schema=SCHEMA,
+        baseline_n_quant=N_QUANT,
+        baseline_per_tensor_bits=EMPIRICAL_BITS,
+        archive_overhead_bytes=ARCHIVE_OVERHEAD,
+    )
+
+    assert result.bytes_floor < baseline.total_bytes_empirical_floor
+    assert result.distortion_risk == "lossy_high"
+    assert result.name == "mixed_precision_changed=1_min=15_max=127"
+    assert result.score_at_floor_zero_distortion > 0
+
+
+def test_mixed_precision_supports_default_quantization() -> None:
+    result = explore_mixed_precision(
+        schema=SCHEMA,
+        baseline_n_quant=N_QUANT,
+        baseline_per_tensor_bits=EMPIRICAL_BITS,
+        per_tensor_n_quant={"w1": 63},
+        default_n_quant=63,
+        archive_overhead_bytes=ARCHIVE_OVERHEAD,
+    )
+
+    assert result.name == "mixed_precision_changed=2_min=63_max=63"
+    assert result.bytes_floor > ARCHIVE_OVERHEAD
+
+
+def test_mixed_precision_rejects_unknown_tensor() -> None:
+    with pytest.raises(ValueError, match="unknown tensor"):
+        explore_mixed_precision(
+            schema=SCHEMA,
+            baseline_n_quant=N_QUANT,
+            baseline_per_tensor_bits=EMPIRICAL_BITS,
+            per_tensor_n_quant={"missing": 15},
+            archive_overhead_bytes=ARCHIVE_OVERHEAD,
+        )
+
+
+def test_mixed_precision_rejects_out_of_range_quantization() -> None:
+    with pytest.raises(ValueError, match="must be in"):
+        explore_mixed_precision(
+            schema=SCHEMA,
+            baseline_n_quant=N_QUANT,
+            baseline_per_tensor_bits=EMPIRICAL_BITS,
+            per_tensor_n_quant={"w1": N_QUANT + 1},
             archive_overhead_bytes=ARCHIVE_OVERHEAD,
         )
 

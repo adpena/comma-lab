@@ -1,0 +1,592 @@
+{
+  "elapsed_seconds": 12.037014961242676,
+  "evals_per_second": 1172.3836886004092,
+  "input_state_dict": "experiments/results/cma_pr101_real_substrate_20260507T222605Z/pr101_decoder_state_dict.pt",
+  "n_evals_per_tensor": 504,
+  "n_tensors": 28,
+  "n_total_evals": 14112,
+  "per_tensor_results": [
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 31872,
+      "bytes_out": 31872,
+      "bytes_savings_vs_pr101_default": 0,
+      "encoded_sha256": "3546abb98a42bcbda8af03fc4fe715762184c79c4e81afc37e2fd89959d025ab",
+      "lgblock": 16,
+      "lgwin": 10,
+      "n_elements": 48384,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "stem.weight",
+      "quality": 10,
+      "raw_bytes_len": 48384,
+      "raw_sha256": "cf4977c7138afbb35b8c50ff0bdd7a1fdcd7ac65d4dec3567476914ef66fd998",
+      "shape": [
+        1728,
+        28
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 1610,
+      "bytes_out": 1608,
+      "bytes_savings_vs_pr101_default": 2,
+      "encoded_sha256": "ee550ee9deb658a2c5517e9c13f35683ff842e99aea06248d029fe2d5ada4fd8",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 1728,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "stem.bias",
+      "quality": 4,
+      "raw_bytes_len": 1728,
+      "raw_sha256": "09c15c86690f462db5472f01032ae1dc1783ad2c596bfe3fe32bc12f597637aa",
+      "shape": [
+        1728
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 32546,
+      "bytes_out": 32544,
+      "bytes_savings_vs_pr101_default": 2,
+      "encoded_sha256": "1c5b9629b5f6b68844de65e14f08e627a9e25c2d4140921b9c2ce50db21143b9",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 46656,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "blocks.0.weight",
+      "quality": 4,
+      "raw_bytes_len": 46656,
+      "raw_sha256": "9c8b0fafa400f1be471c6883c0ba24c7c19c786dc438a4b9515e4d5d9af19770",
+      "shape": [
+        144,
+        36,
+        3,
+        3
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 148,
+      "bytes_out": 148,
+      "bytes_savings_vs_pr101_default": 0,
+      "encoded_sha256": "2dfb9373bd4371521a6bcf773ecdd503a20ced48a39bdb7c35a8f707805badde",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 144,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "blocks.0.bias",
+      "quality": 4,
+      "raw_bytes_len": 144,
+      "raw_sha256": "1b66e30401fbfdffa41b3f1ff4738965eed8d4b65495b0fb0bd07eaf02a3e810",
+      "shape": [
+        144
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 32723,
+      "bytes_out": 32722,
+      "bytes_savings_vs_pr101_default": 1,
+      "encoded_sha256": "a25b0726005ab22169bde17ae303e861397bce4be08eaa2fedd16d1542f81687",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 46656,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "blocks.1.weight",
+      "quality": 4,
+      "raw_bytes_len": 46656,
+      "raw_sha256": "d5122c3a0fceb59168364faf15ff5741e11acfa27b75575b85dee79985008dae",
+      "shape": [
+        144,
+        36,
+        3,
+        3
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 148,
+      "bytes_out": 148,
+      "bytes_savings_vs_pr101_default": 0,
+      "encoded_sha256": "f69aafd5f7bfd7b2388822b9cc2300ab0b825ef9c44f0251aab57945032cd785",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 144,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "blocks.1.bias",
+      "quality": 4,
+      "raw_bytes_len": 144,
+      "raw_sha256": "64560a0264d368203742f4a58ee5f488a6781abc2253342c5f366d4fb0bedb1a",
+      "shape": [
+        144
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 25644,
+      "bytes_out": 25643,
+      "bytes_savings_vs_pr101_default": 1,
+      "encoded_sha256": "f7f1ee542f5ada0a9793aa1c5ab1d2f6ec6864ded1aac04125a967243fc25136",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 34992,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "blocks.2.weight",
+      "quality": 4,
+      "raw_bytes_len": 34992,
+      "raw_sha256": "775e91f056b8b0d0da520393152f1be256f1d749bac353b9de4808d943964c65",
+      "shape": [
+        108,
+        36,
+        3,
+        3
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 112,
+      "bytes_out": 112,
+      "bytes_savings_vs_pr101_default": 0,
+      "encoded_sha256": "4a21e3a6831904fd58a713a95aff4dbbf01f066369e504790e8babe70149e423",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 108,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "blocks.2.bias",
+      "quality": 4,
+      "raw_bytes_len": 108,
+      "raw_sha256": "55d5675e1265daad629afff33d4b764cec64e3d08b0c4c9b6e4453d2bf216f87",
+      "shape": [
+        108
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 14188,
+      "bytes_out": 14187,
+      "bytes_savings_vs_pr101_default": 1,
+      "encoded_sha256": "0c890ff12cdae571b5eeb0ea20c4594bde4b25dbd594fe35838ba6954eab3a39",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 19440,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "blocks.3.weight",
+      "quality": 4,
+      "raw_bytes_len": 19440,
+      "raw_sha256": "ced9aed9885440349a54a93547971dfadb31bee8ca1ce91285646c82488908e8",
+      "shape": [
+        80,
+        27,
+        3,
+        3
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 84,
+      "bytes_out": 84,
+      "bytes_savings_vs_pr101_default": 0,
+      "encoded_sha256": "08e67b274e8abc2914f339f54b7c43a42326166cb2c7ed93be775ea1bb54eddc",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 80,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "blocks.3.bias",
+      "quality": 4,
+      "raw_bytes_len": 80,
+      "raw_sha256": "94843d788d707943ff6017ecf9e279f3804771dec61e43404a6a8023489bc8e5",
+      "shape": [
+        80
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 10336,
+      "bytes_out": 10335,
+      "bytes_savings_vs_pr101_default": 1,
+      "encoded_sha256": "b0a8787051b7ff22508fdc6ce79ec579a274425f2a7c2653ad008247fd0c45fc",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 12960,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "blocks.4.weight",
+      "quality": 4,
+      "raw_bytes_len": 12960,
+      "raw_sha256": "7df3b0e06e66a83c15ea2839122f13c70c956c9e740a57cb5cf0382c88c3a59d",
+      "shape": [
+        72,
+        20,
+        3,
+        3
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 76,
+      "bytes_out": 76,
+      "bytes_savings_vs_pr101_default": 0,
+      "encoded_sha256": "b7b3f2b52478e841c6277f0f40dabd1cea00fd9ddb20eaa1c2cd85986d2d58ac",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 72,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "blocks.4.bias",
+      "quality": 4,
+      "raw_bytes_len": 72,
+      "raw_sha256": "856d07cdcb9316f5275ad3fc00ba1c417ce776e6aae170c0aac30430097c8f3a",
+      "shape": [
+        72
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 7811,
+      "bytes_out": 7810,
+      "bytes_savings_vs_pr101_default": 1,
+      "encoded_sha256": "ff60da7b4c42f48e69830bb200eb9c43d7c2e8244d8d853b18a16daa94b97cd6",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 11664,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "blocks.5.weight",
+      "quality": 4,
+      "raw_bytes_len": 11664,
+      "raw_sha256": "110d39d21653b2c56c65804de7b3666a772be1dc15d99ca9974da0f0a946d890",
+      "shape": [
+        72,
+        18,
+        3,
+        3
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 76,
+      "bytes_out": 76,
+      "bytes_savings_vs_pr101_default": 0,
+      "encoded_sha256": "27f4379e696a045498de53f86ecb2d1a1b3c9f44b6317e128aa8f4831bee4bde",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 72,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "blocks.5.bias",
+      "quality": 4,
+      "raw_bytes_len": 72,
+      "raw_sha256": "d35f57d5db67358b00872e71ca7a1b69d93e21a62a4fcb864e762d26929b1759",
+      "shape": [
+        72
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 784,
+      "bytes_out": 783,
+      "bytes_savings_vs_pr101_default": 1,
+      "encoded_sha256": "d16c8c4dc0c3a122793689303393a870fa6c5e2499b306e66077dceec9377e5e",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 972,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "skips.2.weight",
+      "quality": 4,
+      "raw_bytes_len": 972,
+      "raw_sha256": "11965d7666b486268cf84b33f20f620b47186fb983cb465158b7d8a8cd6809e8",
+      "shape": [
+        27,
+        36,
+        1,
+        1
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 31,
+      "bytes_out": 31,
+      "bytes_savings_vs_pr101_default": 0,
+      "encoded_sha256": "0ebdab8e860a45987b003fcdedd99542848297d679c07e384c523527ed6bca9c",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 27,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "skips.2.bias",
+      "quality": 4,
+      "raw_bytes_len": 27,
+      "raw_sha256": "4949b52cd9a620594033328d761cb42d8b2e69b4b2f7e6d0d0d3016a20083d18",
+      "shape": [
+        27
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 497,
+      "bytes_out": 495,
+      "bytes_savings_vs_pr101_default": 2,
+      "encoded_sha256": "fa70093fb20dd514adcfba6c24d432af05d2ce4059a9840b7c4bfeb905546b48",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 540,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "skips.3.weight",
+      "quality": 4,
+      "raw_bytes_len": 540,
+      "raw_sha256": "54fdf13c79dc78af83aa31770145da65b2718d60ddacf51137f00caec50b601e",
+      "shape": [
+        20,
+        27,
+        1,
+        1
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 24,
+      "bytes_out": 24,
+      "bytes_savings_vs_pr101_default": 0,
+      "encoded_sha256": "027ba1f6df37dd1736c7fa2784916c79fd1f68a75d18416fa3dc49961c1ccb4e",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 20,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "skips.3.bias",
+      "quality": 4,
+      "raw_bytes_len": 20,
+      "raw_sha256": "3c5919e54681eaae0151211ca33fd6302748285c78cdbe084642e2b33af50cd8",
+      "shape": [
+        20
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 346,
+      "bytes_out": 345,
+      "bytes_savings_vs_pr101_default": 1,
+      "encoded_sha256": "eae82e2d2d2e7a2a19ae3783f3ded91a80e7758a71e4b06603be07642b3ce045",
+      "lgblock": 16,
+      "lgwin": 10,
+      "n_elements": 360,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "skips.4.weight",
+      "quality": 4,
+      "raw_bytes_len": 360,
+      "raw_sha256": "ef09dbf839458c348a5afddae0cd21440fe943a3a95a4e26d0df29bfce504b55",
+      "shape": [
+        18,
+        20,
+        1,
+        1
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 22,
+      "bytes_out": 22,
+      "bytes_savings_vs_pr101_default": 0,
+      "encoded_sha256": "7b5643c4db7ff28c1d0ee4495b06a394a3f0d00bcf19d98fb37c12ba3c323113",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 18,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "skips.4.bias",
+      "quality": 4,
+      "raw_bytes_len": 18,
+      "raw_sha256": "cfaadc74b95679684d9a7c1feb29e1d8b2bc83d8942ebffca5b2e5e1ae82a107",
+      "shape": [
+        18
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 1085,
+      "bytes_out": 1083,
+      "bytes_savings_vs_pr101_default": 2,
+      "encoded_sha256": "58774e54878b7b2ea0ab4bf691c54069cb04844e7981bba37387f4fb441cdc6e",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 1458,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "refine.0.weight",
+      "quality": 4,
+      "raw_bytes_len": 1458,
+      "raw_sha256": "80217990e80d681dc1888326657db946e32735f99b9756b99394230e455c5fb1",
+      "shape": [
+        9,
+        18,
+        3,
+        3
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 13,
+      "bytes_out": 13,
+      "bytes_savings_vs_pr101_default": 0,
+      "encoded_sha256": "2f58af2a1bf7933d3fd5352b9eb50f2c94668acc63aeb03f3f3367e023b9fd73",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 9,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "refine.0.bias",
+      "quality": 4,
+      "raw_bytes_len": 9,
+      "raw_sha256": "ee04d2c6dc6d814fc48fcb99a9b36a8d8a30163ae936e19facd3e3a12eb849c2",
+      "shape": [
+        9
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 1199,
+      "bytes_out": 1183,
+      "bytes_savings_vs_pr101_default": 16,
+      "encoded_sha256": "1729c089aa2ef862b4e1fab8861c9aa0ec485ebd4a400b5dd5d6345abaeff0a8",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 1458,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "refine.1.weight",
+      "quality": 4,
+      "raw_bytes_len": 1458,
+      "raw_sha256": "efabc874cac0950c44b4d28f766a92b66db243b93d1fb1ad684036dc0cc07da0",
+      "shape": [
+        18,
+        9,
+        3,
+        3
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 22,
+      "bytes_out": 22,
+      "bytes_savings_vs_pr101_default": 0,
+      "encoded_sha256": "db25e5bc771b1dfe97a59686479b16037ec1b2b25ffc08e831700adad59388bb",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 18,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "refine.1.bias",
+      "quality": 4,
+      "raw_bytes_len": 18,
+      "raw_sha256": "f3ca9c4ad543909d6cd1e9617ac25b52469f0dd817335c8ed07b7b88dce3c8ee",
+      "shape": [
+        18
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 417,
+      "bytes_out": 415,
+      "bytes_savings_vs_pr101_default": 2,
+      "encoded_sha256": "997f1686ff5c71f4a40fa1339f1729dffc6a0790f3dfb20fbda08b9eab4264fa",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 486,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "rgb_0.weight",
+      "quality": 4,
+      "raw_bytes_len": 486,
+      "raw_sha256": "cd032eb276e2f3a102f42c4fce298274a1643fa91c00a1da64dfb58898be114f",
+      "shape": [
+        3,
+        18,
+        3,
+        3
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 7,
+      "bytes_out": 7,
+      "bytes_savings_vs_pr101_default": 0,
+      "encoded_sha256": "40a74114b224adefa4dc937e1ce2ef6b2b3f17beeb292c4094353b7a1f432551",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 3,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "rgb_0.bias",
+      "quality": 4,
+      "raw_bytes_len": 3,
+      "raw_sha256": "30128a1eb37365e6e814e327c0222f716c3ad9062a83781102cea24a4ef3e7b6",
+      "shape": [
+        3
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 436,
+      "bytes_out": 432,
+      "bytes_savings_vs_pr101_default": 4,
+      "encoded_sha256": "02af3a84bf6b9675219b24716450a06cbcaa2f228676ec8bb0638eeb5e5df887",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 486,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "rgb_1.weight",
+      "quality": 4,
+      "raw_bytes_len": 486,
+      "raw_sha256": "c5689a2b14ec132357e26d492f69cd74372ab529b0d9dd63a764ad556d55b0ac",
+      "shape": [
+        3,
+        18,
+        3,
+        3
+      ]
+    },
+    {
+      "bytes_at_pr101_default_q11_lgwin22": 7,
+      "bytes_out": 7,
+      "bytes_savings_vs_pr101_default": 0,
+      "encoded_sha256": "2c434fd34caacb9a2c60641dbf1a37d87290be5c84ce547c275eae1ac41c122e",
+      "lgblock": 16,
+      "lgwin": 16,
+      "n_elements": 3,
+      "n_evals": 504,
+      "n_failed": 0,
+      "name": "rgb_1.bias",
+      "quality": 4,
+      "raw_bytes_len": 3,
+      "raw_sha256": "344aaf7f1e4863a0c75616007a6af5c4fe7a72c59f853b3dbd855c374c58a7a3",
+      "shape": [
+        3
+      ]
+    }
+  ],
+  "schema": "pr101_per_tensor_brotli_sweep.v1",
+  "sweep_axes": {
+    "lgblock": [
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22
+    ],
+    "lgwin": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18
+    ],
+    "quality": [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "tool": "tools/pr101_per_tensor_brotli_sweep.py",
+  "total_at_pr101_default_bytes": 162264,
+  "total_per_tensor_optimum_bytes": 162227,
+  "total_raw_bytes": 228958,
+  "total_savings_vs_pr101_default": 37
+}

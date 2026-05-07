@@ -71,7 +71,7 @@ def test_advise_candidate_target_score_curves_when_feasible() -> None:
 
 
 def test_advise_candidate_target_score_infeasible_when_too_aggressive() -> None:
-    """Target=0.05 from PR106 frontier: seg+rate already > 0.05 → infeasible."""
+    """Target=0.05 from PR106 frontier: seg+rate already > 0.05 is infeasible."""
     advisor = _load_advisor()
     advice = advisor.advise_candidate(
         label="pr106",
@@ -119,7 +119,7 @@ def test_advise_pareto_json_round_trip(tmp_path: Path) -> None:
 
 
 def test_advise_pareto_json_rejects_missing_fields(tmp_path: Path) -> None:
-    """Required fields missing → ValueError."""
+    """Required fields missing raises ValueError."""
     advisor = _load_advisor()
     pareto_json = tmp_path / "broken.json"
     pareto_json.write_text(
@@ -128,6 +128,102 @@ def test_advise_pareto_json_rejects_missing_fields(tmp_path: Path) -> None:
     )
     with pytest.raises(ValueError, match="missing required fields"):
         advisor.advise_pareto_json(pareto_json_path=pareto_json)
+
+
+def test_floor_technique_manifest_priorities_are_planning_only(tmp_path: Path) -> None:
+    advisor = _load_advisor()
+    floor_json = tmp_path / "floor_techniques.json"
+    floor_json.write_text(
+        json.dumps({
+            "baseline_floor_bytes": 176_000,
+            "techniques": [
+                {
+                    "name": "arch_shrink_x0.40",
+                    "description": "architecture shrink",
+                    "bytes_floor": 80_000,
+                    "score_at_floor_zero_distortion": 0.053,
+                    "distortion_risk": "architectural",
+                    "notes": ["needs retrain"],
+                },
+                {
+                    "name": "sparsity_alpha0.70",
+                    "description": "sparsity",
+                    "bytes_floor": 65_000,
+                    "score_at_floor_zero_distortion": 0.043,
+                    "distortion_risk": "training_side",
+                    "notes": ["needs QAT"],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    baseline_floor_bytes, floor_results = advisor.load_floor_technique_results(floor_json)
+    advice = advisor.advise_candidate(
+        label="pr101",
+        d_seg=6.7e-4,
+        d_pose=3.4e-5,
+        archive_bytes=178_258,
+        target_score=0.155,
+        floor_technique_results=floor_results,
+        floor_baseline_bytes=baseline_floor_bytes,
+    )
+
+    priorities = advice.floor_technique_priorities
+    assert [row["name"] for row in priorities] == [
+        "sparsity_alpha0.70",
+        "arch_shrink_x0.40",
+    ]
+    assert priorities[0]["bytes_savings_vs_floor_baseline"] == 111_000
+    assert priorities[0]["archive_byte_delta_if_rate_only"] == -113_258
+    assert priorities[0]["score_claim"] is False
+    assert "missing_exact_cuda_auth_eval" in priorities[0]["dispatch_blockers"]
+    assert "closed-form planning signals only" in advice.notes[-1]
+
+
+def test_floor_technique_manifest_rejects_invalid_rows(tmp_path: Path) -> None:
+    advisor = _load_advisor()
+    floor_json = tmp_path / "broken_floor.json"
+    floor_json.write_text(
+        json.dumps({"techniques": [{"name": "bad", "bytes_floor": 0}]}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="bytes_floor"):
+        advisor.load_floor_technique_results(floor_json)
+
+
+def test_advise_pareto_json_attaches_floor_priorities(tmp_path: Path) -> None:
+    advisor = _load_advisor()
+    pareto_json = tmp_path / "pareto.json"
+    pareto_json.write_text(
+        json.dumps({
+            "candidates": [
+                {"label": "c1", "d_seg": 6.7e-4, "d_pose": 3.4e-5, "archive_bytes": 178258},
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    rows = advisor.advise_pareto_json(
+        pareto_json_path=pareto_json,
+        target_score=0.155,
+        floor_technique_results=[
+            advisor.TechniqueResult(
+                name="arch_shrink_x0.25",
+                description="architecture shrink",
+                bytes_floor=56_000,
+                bytes_savings_vs_baseline=0,
+                score_at_floor_zero_distortion=0.037,
+                distortion_risk="architectural",
+                notes=[],
+            )
+        ],
+        floor_baseline_bytes=176_000,
+    )
+
+    assert rows[0].floor_technique_priorities[0]["name"] == "arch_shrink_x0.25"
+    assert rows[0].floor_technique_priorities[0]["evidence_grade"] == advisor.EVIDENCE_GRADE
 
 
 def test_render_advice_summary_includes_axis_priorities() -> None:
@@ -147,6 +243,33 @@ def test_render_advice_summary_includes_axis_priorities() -> None:
     # Target curves must appear since we supplied target_score
     assert "Pose-only path" in text
     assert "Bytes-only path" in text
+
+
+def test_render_advice_summary_includes_floor_priorities() -> None:
+    advisor = _load_advisor()
+    advice = advisor.advise_candidate(
+        label="test",
+        d_seg=6.7e-4,
+        d_pose=3.4e-5,
+        archive_bytes=178258,
+        target_score=0.155,
+        floor_technique_results=[
+            advisor.TechniqueResult(
+                name="arch_shrink_x0.25",
+                description="architecture shrink",
+                bytes_floor=56_000,
+                bytes_savings_vs_baseline=0,
+                score_at_floor_zero_distortion=0.037,
+                distortion_risk="architectural",
+                notes=[],
+            )
+        ],
+        floor_baseline_bytes=176_000,
+    )
+
+    text = advisor.render_advice_summary(advice)
+    assert "Closed-form floor technique priorities" in text
+    assert "arch_shrink_x0.25" in text
 
 
 def test_axis_effort_class_thresholds() -> None:

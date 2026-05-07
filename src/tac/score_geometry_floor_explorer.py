@@ -50,6 +50,7 @@ import math
 from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
 
+from tac.score_geometry import contest_score
 from tac.score_geometry_shannon_floor import (
     ShannonFloorReport,
     compute_shannon_floor,
@@ -69,6 +70,19 @@ class TechniqueResult:
     """Heuristic risk tag: 'lossless' | 'lossy_low' | 'lossy_high' |
     'training_side' | 'architectural'."""
     notes: list[str] = field(default_factory=list)
+
+
+def _count_elements(shape: tuple[int, ...]) -> int:
+    n = 1
+    for dim in shape:
+        n *= int(dim)
+    return n
+
+
+def _uniform_bits(n_quant: int) -> float:
+    if n_quant < 1:
+        raise ValueError(f"n_quant must be >= 1, got {n_quant}")
+    return math.log2(n_quant) if n_quant > 1 else 0.0
 
 
 def explore_lossy_quantization(
@@ -119,6 +133,86 @@ def explore_lossy_quantization(
             "Actual savings may be larger if quantization concentrates symbols.",
             f"REQUIRES distortion-parity validation (basin-parity gate, see "
             f"apogee_int{target_n_quant if target_n_quant < 8 else 'N'} forensic).",
+        ],
+    )
+
+
+def explore_mixed_precision(
+    *,
+    schema: Iterable[tuple[str, tuple[int, ...]]],
+    baseline_n_quant: int,
+    baseline_per_tensor_bits: dict[str, float],
+    per_tensor_n_quant: dict[str, int],
+    archive_overhead_bytes: int,
+    default_n_quant: int | None = None,
+) -> TechniqueResult:
+    """Estimate a per-tensor mixed-precision quantization floor.
+
+    Tensors absent from ``per_tensor_n_quant`` use ``default_n_quant`` when
+    supplied, otherwise ``baseline_n_quant``. Empirical entropy is scaled by
+    log2(target_n_quant) / log2(baseline_n_quant), matching the global lossy
+    quantization proxy while allowing sensitive tensors to keep more levels.
+    """
+    if not per_tensor_n_quant:
+        raise ValueError("per_tensor_n_quant must not be empty")
+    if baseline_n_quant < 1:
+        raise ValueError("baseline_n_quant must be >= 1")
+    if archive_overhead_bytes < 0:
+        raise ValueError("archive_overhead_bytes must be non-negative")
+    fallback_n_quant = baseline_n_quant if default_n_quant is None else default_n_quant
+    if fallback_n_quant < 1 or fallback_n_quant > baseline_n_quant:
+        raise ValueError("default_n_quant must be in [1, baseline_n_quant]")
+
+    baseline_bits = _uniform_bits(baseline_n_quant)
+    total_empirical_bits = 0.0
+    total_uniform_bits = 0.0
+    changed = 0
+    min_n_quant = baseline_n_quant
+    max_n_quant = 1
+    schema_list = list(schema)
+    schema_names = {name for name, _shape in schema_list}
+    unknown_names = sorted(set(per_tensor_n_quant) - schema_names)
+    if unknown_names:
+        raise ValueError(f"unknown tensor(s) in per_tensor_n_quant: {unknown_names}")
+
+    for name, shape in schema_list:
+        n = _count_elements(shape)
+        target_n_quant = int(per_tensor_n_quant.get(name, fallback_n_quant))
+        if target_n_quant < 1 or target_n_quant > baseline_n_quant:
+            raise ValueError(
+                f"n_quant for {name!r} must be in [1, {baseline_n_quant}], "
+                f"got {target_n_quant}"
+            )
+        if target_n_quant != baseline_n_quant:
+            changed += 1
+        min_n_quant = min(min_n_quant, target_n_quant)
+        max_n_quant = max(max_n_quant, target_n_quant)
+        ratio = (
+            _uniform_bits(target_n_quant) / baseline_bits
+            if baseline_bits > 0
+            else 0.0
+        )
+        empirical_bits = baseline_per_tensor_bits.get(name, baseline_bits) * ratio
+        total_empirical_bits += n * empirical_bits
+        total_uniform_bits += n * _uniform_bits(target_n_quant)
+
+    empirical_bytes_floor = math.ceil(total_empirical_bits / 8.0) + archive_overhead_bytes
+    uniform_bytes_floor = math.ceil(total_uniform_bits / 8.0) + archive_overhead_bytes
+    risk = "lossy_low" if min_n_quant >= 64 else "lossy_high"
+    return TechniqueResult(
+        name=f"mixed_precision_changed={changed}_min={min_n_quant}_max={max_n_quant}",
+        description=(
+            f"Per-tensor n_quant assignment over {len(schema_list)} tensors "
+            f"({changed} below baseline)"
+        ),
+        bytes_floor=empirical_bytes_floor,
+        bytes_savings_vs_baseline=0,
+        score_at_floor_zero_distortion=contest_score(0.0, 0.0, empirical_bytes_floor),
+        distortion_risk=risk,
+        notes=[
+            f"Uniform mixed-precision floor would be {uniform_bytes_floor} bytes.",
+            "Empirical bits scaled per tensor by log2(target_n_quant)/log2(baseline_n_quant).",
+            "Planning-only; requires per-tensor distortion/sensitivity validation before archive work.",
         ],
     )
 
@@ -192,9 +286,7 @@ def explore_architecture_shrink(
     new_schema: list[tuple[str, tuple[int, ...]]] = []
     new_per_tensor_bits: dict[str, float] = {}
     for name, shape in schema:
-        n = 1
-        for dim in shape:
-            n *= int(dim)
+        n = _count_elements(shape)
         target_n = max(1, int(n * element_multiplier))
         # Preserve shape's "leading dim" structure by scaling the FIRST dim
         # (a heuristic; real architectures might shrink mid-dims). For
@@ -250,9 +342,7 @@ def explore_water_filling(
     weights: dict[str, float] = {}
     elements: dict[str, int] = {}
     for name, shape in schema_list:
-        n = 1
-        for dim in shape:
-            n *= int(dim)
+        n = _count_elements(shape)
         elements[name] = n
         sens = sensitivities.get(name, 1.0)
         weights[name] = sens * n
@@ -360,6 +450,7 @@ __all__ = [
     "baseline_floor_summary",
     "explore_architecture_shrink",
     "explore_lossy_quantization",
+    "explore_mixed_precision",
     "explore_sparsity",
     "explore_water_filling",
     "rank_technique_results",

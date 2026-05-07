@@ -65,6 +65,10 @@ from tac.score_geometry import (  # noqa: E402
     score_decomposition,
     score_gradient,
 )
+from tac.score_geometry_floor_explorer import (  # noqa: E402
+    TechniqueResult,
+    rank_technique_results,
+)
 
 TOOL_NAME = "tools/dispatch_advisor.py"
 SCHEMA_VERSION = "dispatch_advisor.v1"
@@ -94,7 +98,88 @@ class CandidateAdvice:
     operating_regime_summary: dict[str, object]
     axis_priorities: list[dict[str, object]]
     target_score_curves: dict[str, object]
+    floor_technique_priorities: list[dict[str, object]] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+
+
+def load_floor_technique_results(path: Path) -> tuple[int | None, list[TechniqueResult]]:
+    """Load planning-only floor technique rows from a JSON manifest."""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    rows = payload.get("techniques", payload.get("results", []))
+    if not isinstance(rows, list):
+        raise ValueError(f"{path}: expected techniques/results list")
+    baseline_raw = payload.get("baseline_floor_bytes")
+    baseline_floor_bytes = int(baseline_raw) if baseline_raw is not None else None
+    results: list[TechniqueResult] = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            raise ValueError(f"{path}: technique row {index} is not an object")
+        try:
+            name = str(row["name"])
+            bytes_floor = int(row["bytes_floor"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"{path}: technique row {index} missing name/bytes_floor") from exc
+        if bytes_floor <= 0:
+            raise ValueError(f"{path}: technique row {index} bytes_floor must be positive")
+        score_at_floor = row.get("score_at_floor_zero_distortion")
+        results.append(TechniqueResult(
+            name=name,
+            description=str(row.get("description", name)),
+            bytes_floor=bytes_floor,
+            bytes_savings_vs_baseline=int(row.get("bytes_savings_vs_baseline", 0)),
+            score_at_floor_zero_distortion=(
+                float(score_at_floor)
+                if score_at_floor is not None
+                else contest_score(0.0, 0.0, bytes_floor)
+            ),
+            distortion_risk=str(row.get("distortion_risk", "unknown")),
+            notes=[str(note) for note in row.get("notes", [])],
+        ))
+    return baseline_floor_bytes, results
+
+
+def rank_floor_techniques_for_candidate(
+    *,
+    d_seg: float,
+    d_pose: float,
+    archive_bytes: int,
+    target_score: float | None,
+    baseline_floor_bytes: int,
+    technique_results: list[TechniqueResult],
+) -> list[dict[str, object]]:
+    """Attach closed-form floor techniques to the dispatch advisor safely."""
+    ranked = rank_technique_results(
+        baseline_floor_bytes=baseline_floor_bytes,
+        results=technique_results,
+    )
+    rows: list[dict[str, object]] = []
+    for result in ranked:
+        score_holding_distortion = contest_score(d_seg, d_pose, result.bytes_floor)
+        rows.append({
+            "name": result.name,
+            "description": result.description,
+            "bytes_floor": result.bytes_floor,
+            "bytes_savings_vs_floor_baseline": result.bytes_savings_vs_baseline,
+            "archive_byte_delta_if_rate_only": result.bytes_floor - archive_bytes,
+            "score_at_floor_zero_distortion": result.score_at_floor_zero_distortion,
+            "score_holding_current_distortion": score_holding_distortion,
+            "score_gap_to_target_holding_current_distortion": (
+                score_holding_distortion - target_score
+                if target_score is not None
+                else None
+            ),
+            "distortion_risk": result.distortion_risk,
+            "notes": result.notes,
+            "score_claim": False,
+            "evidence_grade": EVIDENCE_GRADE,
+            "dispatch_blockers": [
+                "closed_form_floor_only",
+                "no_archive_candidate",
+                "no_distortion_validation",
+                "missing_exact_cuda_auth_eval",
+            ],
+        })
+    return rows
 
 
 def _axis_effort_class(
@@ -143,6 +228,8 @@ def advise_candidate(
     d_pose: float,
     archive_bytes: int,
     target_score: float | None = None,
+    floor_technique_results: list[TechniqueResult] | None = None,
+    floor_baseline_bytes: int | None = None,
 ) -> CandidateAdvice:
     """Build a CandidateAdvice for a single (d_seg, d_pose, B) point.
 
@@ -234,10 +321,26 @@ def advise_candidate(
         f"(strict lower bound; achievable only at d_seg=d_pose=0).",
     ]
     if score < information_floor(archive_bytes):
-        # Sanity check — should never happen
+        # Sanity check; should never happen.
         notes.append(
             f"WARNING: score {score:.5f} is below information floor "
             f"{information_floor(archive_bytes):.5f}; check inputs."
+        )
+
+    floor_priorities: list[dict[str, object]] = []
+    if floor_technique_results:
+        baseline_bytes = floor_baseline_bytes or archive_bytes
+        floor_priorities = rank_floor_techniques_for_candidate(
+            d_seg=d_seg,
+            d_pose=d_pose,
+            archive_bytes=archive_bytes,
+            target_score=target_score,
+            baseline_floor_bytes=baseline_bytes,
+            technique_results=floor_technique_results,
+        )
+        notes.append(
+            "Floor technique priorities are closed-form planning signals only; "
+            "they do not imply a score-affecting archive exists."
         )
 
     return CandidateAdvice(
@@ -264,6 +367,7 @@ def advise_candidate(
         },
         axis_priorities=[asdict(p) for p in priorities],
         target_score_curves=target_curves,
+        floor_technique_priorities=floor_priorities,
         notes=notes,
     )
 
@@ -272,6 +376,8 @@ def advise_pareto_json(
     *,
     pareto_json_path: Path,
     target_score: float | None = None,
+    floor_technique_results: list[TechniqueResult] | None = None,
+    floor_baseline_bytes: int | None = None,
 ) -> list[CandidateAdvice]:
     """Run the advisor over every candidate in a 3-axis Pareto JSON dump."""
     payload = json.loads(pareto_json_path.read_text(encoding="utf-8"))
@@ -298,6 +404,8 @@ def advise_pareto_json(
             d_pose=d_pose,
             archive_bytes=archive_bytes,
             target_score=target_score,
+            floor_technique_results=floor_technique_results,
+            floor_baseline_bytes=floor_baseline_bytes,
         )
         advice_rows.append(advice)
     return advice_rows
@@ -343,6 +451,15 @@ def render_advice_summary(advice: CandidateAdvice) -> str:
                          f"saving {bytes_curve['byte_savings_required']:,} bytes)")
         else:
             lines.append("  Bytes-only path: INFEASIBLE (seg+pose already exceed target)")
+    if advice.floor_technique_priorities:
+        lines.append("")
+        lines.append("Closed-form floor technique priorities (planning-only):")
+        for i, row in enumerate(advice.floor_technique_priorities[:5], 1):
+            lines.append(
+                f"  {i}. {row['name']}: floor {row['bytes_floor']:,} bytes, "
+                f"savings {row['bytes_savings_vs_floor_baseline']:,} vs floor baseline, "
+                f"risk {row['distortion_risk']}"
+            )
     return "\n".join(lines)
 
 
@@ -358,6 +475,8 @@ def main(argv: list[str] | None = None) -> int:
     p_inspect.add_argument("--target-score", type=float, default=None)
     p_inspect.add_argument("--output", type=Path, default=None,
                            help="Optional JSON output path")
+    p_inspect.add_argument("--floor-techniques-json", type=Path, default=None,
+                           help="Optional floor-technique manifest from score_geometry_floor_explorer")
     p_inspect.add_argument("--summary-text", action="store_true",
                            help="Print human-readable summary instead of JSON")
 
@@ -365,18 +484,28 @@ def main(argv: list[str] | None = None) -> int:
                               help="Advise every candidate in a 3-axis Pareto JSON")
     p_pareto.add_argument("--pareto-json", type=Path, required=True)
     p_pareto.add_argument("--target-score", type=float, default=None)
+    p_pareto.add_argument("--floor-techniques-json", type=Path, default=None,
+                          help="Optional floor-technique manifest from score_geometry_floor_explorer")
     p_pareto.add_argument("--output", type=Path, required=True,
                           help="JSON output path with all advice rows")
 
     args = parser.parse_args(argv)
 
     if args.cmd == "inspect":
+        floor_baseline_bytes = None
+        floor_results = None
+        if args.floor_techniques_json:
+            floor_baseline_bytes, floor_results = load_floor_technique_results(
+                args.floor_techniques_json
+            )
         advice = advise_candidate(
             label=args.label,
             d_seg=args.d_seg,
             d_pose=args.d_pose,
             archive_bytes=args.archive_bytes,
             target_score=args.target_score,
+            floor_technique_results=floor_results,
+            floor_baseline_bytes=floor_baseline_bytes,
         )
         if args.summary_text:
             print(render_advice_summary(advice))
@@ -395,9 +524,17 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "from-pareto":
+        floor_baseline_bytes = None
+        floor_results = None
+        if args.floor_techniques_json:
+            floor_baseline_bytes, floor_results = load_floor_technique_results(
+                args.floor_techniques_json
+            )
         advice_rows = advise_pareto_json(
             pareto_json_path=args.pareto_json,
             target_score=args.target_score,
+            floor_technique_results=floor_results,
+            floor_baseline_bytes=floor_baseline_bytes,
         )
         payload = {
             "schema": SCHEMA_VERSION,
@@ -406,6 +543,11 @@ def main(argv: list[str] | None = None) -> int:
             "input_pareto_json": str(args.pareto_json),
             "n_candidates": len(advice_rows),
             "target_score": args.target_score,
+            "floor_techniques_json": (
+                str(args.floor_techniques_json)
+                if args.floor_techniques_json
+                else None
+            ),
             "advice_rows": [asdict(a) for a in advice_rows],
         }
         args.output.parent.mkdir(parents=True, exist_ok=True)
