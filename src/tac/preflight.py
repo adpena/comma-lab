@@ -19766,7 +19766,21 @@ def _scan_remote_lane_auth_eval_fragile_parse(path: Path, repo_root: Path) -> li
     rel = path.relative_to(repo_root) if path.is_absolute() else path
     code_text = "\n".join(line.split("#", 1)[0] for line in text.splitlines())
     contest_cuda_claim = "[contest-CUDA]" in text
-    if contest_cuda_claim and "contest_auth_eval.py" in text:
+    # Trigger only on actual auth-eval subprocess invocations. Match
+    # `python|python3|$PYBIN [-u] [-m] experiments/contest_auth_eval.py`
+    # so JSON-string mentions inside provenance manifests
+    # (e.g. `"required_score_truth": "... contest_auth_eval.py --device cuda"`)
+    # do NOT trigger the check. Comments are already stripped via code_text.
+    _invocation_re = re.compile(
+        r'(?:"?\$PYBIN"?|\bpython3?\b)\s+(?:-u\s+)?(?:-m\s+)?'
+        r'(?:\S+/)?contest_auth_eval\.py\b'
+    )
+    invokes_auth_eval = bool(_invocation_re.search(code_text))
+    # Acceptance path (c): delegates to scripts/remote_archive_only_eval.sh,
+    # which itself passes `--keep-work-dir` + `--work-dir "$LOG_DIR/eval_work"`
+    # to contest_auth_eval.py at line 378-384 and uses literal `--device cuda`.
+    delegates_to_archive_only_eval = "remote_archive_only_eval.sh" in code_text
+    if contest_cuda_claim and invokes_auth_eval and not delegates_to_archive_only_eval:
         if "--keep-work-dir" not in code_text or "--work-dir" not in code_text:
             violations.append(
                 f"{rel}: [contest-CUDA] auth eval must pass --keep-work-dir "
