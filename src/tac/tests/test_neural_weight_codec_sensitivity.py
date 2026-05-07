@@ -313,6 +313,35 @@ def test_encode_manifest_is_repeatable_accounted_and_non_claiming():
     }
 
 
+def test_encode_routes_tied_sensitivities_by_original_block_index():
+    cfg = SensitivityAwareCodecConfig(
+        block_size=4, latent_dim=4, hidden=8, codebook_sizes=[4, 16, 64, 256]
+    )
+    codec = SensitivityAwareWeightCodec(cfg)
+    weights = torch.arange(16, dtype=torch.float32).reshape(4, 4)
+    sensitivities = torch.tensor([0.2, 0.2, 0.9, 0.2], dtype=torch.float32)
+
+    blob, manifest = encode_with_variable_codebook_manifest(
+        codec, weights, sensitivities
+    )
+
+    bucket_offset = manifest["stream_offsets"]["bucket_ids"]
+    bucket_ids = list(blob[bucket_offset: bucket_offset + manifest["num_blocks"]])
+    assert bucket_ids == [0, 1, 3, 2]
+    assert manifest["bucket_counts"] == [1, 1, 1, 1]
+    assert manifest["claim_status"] == {
+        "score_claim": False,
+        "dispatch_claim": False,
+        "evidence_grade": "empirical",
+    }
+    assert manifest["sensitivity"] == {
+        "blocks": 4,
+        "min": pytest.approx(0.2),
+        "max": pytest.approx(0.9),
+        "sum": pytest.approx(1.5),
+    }
+
+
 def test_encode_uses_little_endian_float16_tail_bytes():
     cfg = SensitivityAwareCodecConfig(
         block_size=8, latent_dim=4, hidden=8, codebook_sizes=[4]

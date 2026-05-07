@@ -15,6 +15,7 @@ import pytest
 
 from tac.pr85_bundle import SEGMENT_ORDER, pack_pr85_bundle
 from tac.pr91_hpm1_codec import (
+    DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE,
     DEFAULT_PR91_ARCHIVE,
     Pr91Hpm1Error,
     build_hpm1_mask_segment,
@@ -25,6 +26,7 @@ from tac.pr91_hpm1_codec import (
     run_pr91_hpm1_first_symbol_state_probe,
     run_pr91_hpm1_preflight,
     run_pr91_hpm1_probability_variant_matrix,
+    run_pr91_hpm1_reference_teacher_forcing_probe,
     run_pr91_hpm1_semantic_decode_trench,
     run_pr91_hpm1_spatial_group_order_probe,
     split_hpm1_mask_segment,
@@ -516,6 +518,103 @@ def test_pr91_spatial_group_order_probe_cli_records_tool_manifest(tmp_path: Path
     ]
 
 
+def test_pr91_reference_teacher_forcing_probe_cli_narrows_false_lead(
+    tmp_path: Path,
+) -> None:
+    if not DEFAULT_PR91_ARCHIVE.is_file():
+        pytest.skip("canonical PR91 archive not available")
+    if not DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE.is_file():
+        pytest.skip("PR85/QMA9 decoded reference token source not available")
+    out = tmp_path / "reference_teacher_forcing_probe.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(
+                REPO
+                / "tools"
+                / "audit_pr91_hpm1_reference_teacher_forcing_probe.py"
+            ),
+            "--archive",
+            str(DEFAULT_PR91_ARCHIVE),
+            "--reference-tokens",
+            str(DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE),
+            "--reference-layout",
+            "legacy_assume_nhw",
+            "--spatial-order-candidates",
+            "tile_major_row_major",
+            "--json-out",
+            str(out),
+        ],
+        check=True,
+        cwd=REPO,
+        text=True,
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["schema"] == "pr91_hpm1_reference_teacher_forcing_probe_v1"
+    assert payload["status"] == "narrowed_pr85_qma9_reference_teacher_forcing_false_lead"
+    assert payload["score_claim"] is False
+    assert payload["dispatch_allowed"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["evidence_grade"] == "empirical"
+    assert payload["evidence_scope"] == (
+        "local_cpu_hpm1_reference_teacher_forcing_hypothesis_probe"
+    )
+    assert payload["reference_tokens"]["matches_expected_pr85_qma9_token_source"] is True
+    assert payload["reference_token_sha256_contract"]["matches_expected"] is True
+    assert payload["source_order_baseline"]["failure_signature"] == {
+        "frame": 0,
+        "group": 10,
+        "symbol_in_group": 191,
+        "decoded_symbol_count_before_failure": 5951,
+    }
+    assert payload["tool_run_manifest"]["tool"] == (
+        "tools/audit_pr91_hpm1_reference_teacher_forcing_probe.py"
+    )
+    probe = payload["reference_teacher_forcing_probe"]
+    assert probe["status"] == "not_explained_by_pr85_qma9_reference_teacher_forcing"
+    assert probe["candidate_scope"] == {
+        "requested_candidates": ["tile_major_row_major"],
+        "label": "tile-major row-major",
+    }
+    assert "phase-major" not in probe["narrowed_hypothesis"]
+    assert probe["advanced_candidates"] == []
+    row = probe["candidate_results"][0]
+    assert row["candidate"] == "tile_major_row_major"
+    assert row["decoded_context"]["failure_signature"] == {
+        "frame": 0,
+        "group": 12,
+        "symbol_in_group": 210,
+        "decoded_symbol_count_before_failure": 8274,
+    }
+    assert row["reference_teacher_forced_context"]["failure_signature"] == {
+        "frame": 0,
+        "group": 5,
+        "symbol_in_group": 305,
+        "decoded_symbol_count_before_failure": 2033,
+    }
+    assert row["reference_teacher_forced_context"][
+        "advances_beyond_decoded_context"
+    ] is False
+    assert row["reference_teacher_forced_context"]["full_decode_proven"] is False
+    assert row["reference_teacher_forced_context"]["byte_exact_reencode_proven"] is False
+    assert row["reference_teacher_forced_context"][
+        "reference_mismatch_count_before_failure"
+    ] == 683
+    assert row["reference_teacher_forced_context"][
+        "first_decoded_reference_mismatch"
+    ] == {
+        "global_symbol": 7,
+        "frame": 0,
+        "group": 0,
+        "symbol_in_group": 7,
+        "pixel_yx": {"y": 0, "x": 224},
+        "decoded_symbol": 2,
+        "reference_symbol": 0,
+    }
+
+
 def test_pr91_probe_contracts_fail_closed_on_bad_inputs(tmp_path: Path) -> None:
     archive = _synthetic_hpm1_archive(tmp_path / "archive.zip")
 
@@ -533,6 +632,23 @@ def test_pr91_probe_contracts_fail_closed_on_bad_inputs(tmp_path: Path) -> None:
         run_pr91_hpm1_spatial_group_order_probe(
             archive,
             candidates=("bad_spatial_order",),
+        )
+    with pytest.raises(Pr91Hpm1Error, match="reference_tokens_missing"):
+        run_pr91_hpm1_reference_teacher_forcing_probe(
+            archive,
+            reference_tokens_path=tmp_path / "missing_tokens.raw",
+            candidates=("tile_major_row_major",),
+        )
+    wrong_tokens = tmp_path / "wrong_tokens.raw"
+    wrong_tokens.write_bytes(b"\0" * 32)
+    with pytest.raises(
+        Pr91Hpm1Error,
+        match="unexpected_pr85_qma9_reference_token_sha256",
+    ):
+        run_pr91_hpm1_reference_teacher_forcing_probe(
+            archive,
+            reference_tokens_path=wrong_tokens,
+            candidates=("tile_major_row_major",),
         )
 
 

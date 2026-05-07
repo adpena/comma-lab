@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a fail-closed WR01 compress-time harness manifest."""
+"""Build fail-closed WR01 compress-time harness and atom-plan manifests."""
 
 from __future__ import annotations
 
@@ -24,7 +24,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-archive", type=Path, required=True)
     parser.add_argument("--source-label", required=True)
-    parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for hnerv_wavelet_compress_time_harness.json and the planning-only atom plan.",
+    )
     parser.add_argument("--target-section", action="append", dest="target_sections")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--atom-budget", type=int, default=32)

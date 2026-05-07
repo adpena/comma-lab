@@ -28,7 +28,7 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.repo_io import json_text, read_json, repo_relative, sha256_file  # noqa: E402
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 TOOL = "tools/build_field_meta_dispatch_selection.py"
 STRICT_PREFLIGHT = "experiments/preflight_candidate_manifest_dispatch_readiness.py"
 HEX_CHARS = set("0123456789abcdef")
@@ -1422,6 +1422,293 @@ def _normalize_manifest_payload(
     return dict(payload)
 
 
+def _operator_next_steps(payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    value = payload.get("operator_next_steps")
+    return value if isinstance(value, Mapping) else {}
+
+
+def _operator_step_sort_key(step: Mapping[str, Any]) -> tuple[int, str]:
+    order = step.get("order")
+    if isinstance(order, bool) or not isinstance(order, int):
+        order = 10_000
+    return order, str(step.get("id") or step.get("purpose") or "")
+
+
+def _operator_steps(payload: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    section = _operator_next_steps(payload)
+    raw_steps = section.get("steps")
+    if not isinstance(raw_steps, Sequence) or isinstance(raw_steps, (str, bytes, bytearray)):
+        return []
+    steps = [step for step in raw_steps if isinstance(step, Mapping)]
+    return sorted(steps, key=_operator_step_sort_key)
+
+
+def _command_step_summary(
+    *,
+    source: str,
+    step_id: str,
+    command: str,
+    order: int | None = None,
+    purpose: str = "",
+    writes_repo_state: bool | None = None,
+) -> dict[str, Any]:
+    return {
+        "source": source,
+        "id": step_id,
+        "order": order,
+        "purpose": purpose,
+        "command": command,
+        "copy_safe_command": command,
+        "dispatches_remote_gpu": False,
+        "writes_repo_state": writes_repo_state,
+    }
+
+
+def _step_command(step: Mapping[str, Any]) -> str:
+    for key in ("copy_safe_command", "command", "local_command"):
+        value = step.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def _step_summary(step: Mapping[str, Any]) -> dict[str, Any]:
+    order = step.get("order")
+    return _command_step_summary(
+        source="operator_next_steps.steps",
+        step_id=str(step.get("id") or ""),
+        order=order if isinstance(order, int) and not isinstance(order, bool) else None,
+        purpose=str(step.get("purpose") or ""),
+        command=_step_command(step),
+        writes_repo_state=(
+            step.get("writes_repo_state")
+            if isinstance(step.get("writes_repo_state"), bool)
+            else None
+        ),
+    )
+
+
+def _next_local_non_gpu_action(payload: Mapping[str, Any]) -> dict[str, Any] | None:
+    for step in _operator_steps(payload):
+        if step.get("dispatches_remote_gpu") is True:
+            continue
+        command = _step_command(step)
+        if command:
+            return _step_summary(step)
+    for key in ("next_local_non_gpu_command", "next_local_command"):
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            return _command_step_summary(
+                source=key,
+                step_id=key,
+                command=value.strip(),
+            )
+    commands = payload.get("commands")
+    if isinstance(commands, Mapping):
+        for key in ("preflight", "refresh", "claim", "assert", "build", "harvest"):
+            value = commands.get(key)
+            if isinstance(value, str) and value.strip():
+                return _command_step_summary(
+                    source=f"commands.{key}",
+                    step_id=key,
+                    command=value.strip(),
+                )
+    return None
+
+
+def _operator_current_blockers(payload: Mapping[str, Any]) -> list[str]:
+    section = _operator_next_steps(payload)
+    blockers: list[Any] = []
+    for key in (
+        "current_blockers",
+        "current_submit_blockers",
+        "current_dispatch_blockers",
+        "blockers",
+    ):
+        blockers.extend(_string_list(section.get(key)))
+    for key in (
+        "blockers",
+        "dispatch_blockers",
+        "approval_blockers",
+        "refresh_blockers",
+        "static_blockers",
+    ):
+        blockers.extend(_string_list(payload.get(key)))
+    return _unique_strings(blockers)
+
+
+def _operator_claim_blockers(
+    payload: Mapping[str, Any],
+    *,
+    current_blockers: Sequence[str],
+) -> list[str]:
+    blockers = [
+        blocker
+        for blocker in current_blockers
+        if any(token in blocker.lower() for token in ("claim", "lane"))
+    ]
+    lane_claim = payload.get("lane_claim_preflight")
+    if isinstance(lane_claim, Mapping):
+        if lane_claim.get("active_claim_present") is not True:
+            blockers.append("missing_active_lane_dispatch_claim")
+        if lane_claim.get("claims_path_exists") is False:
+            blockers.append("dispatch_claims_file_missing")
+        if lane_claim.get("conflict_present") is True:
+            blockers.append("active_lane_dispatch_claim_conflict")
+    return _unique_strings(blockers)
+
+
+def _operator_refresh_blockers(
+    payload: Mapping[str, Any],
+    *,
+    current_blockers: Sequence[str],
+) -> list[str]:
+    blockers = [
+        blocker
+        for blocker in current_blockers
+        if "refresh" in blocker.lower() or "static" in blocker.lower()
+    ]
+    if payload.get("static_packet_ready") is False:
+        blockers.append("static_packet_ready_false")
+    blockers.extend(_string_list(payload.get("static_blockers")))
+    blockers.extend(_string_list(payload.get("refresh_blockers")))
+    refresh, _ = _static_compliance_refresh(payload)
+    if refresh:
+        returncode = refresh.get("returncode")
+        if isinstance(returncode, int) and not isinstance(returncode, bool) and returncode != 0:
+            blockers.append("static_compliance_refresh_failed")
+    return _unique_strings(blockers)
+
+
+def _operator_approval_blockers(
+    payload: Mapping[str, Any],
+    *,
+    current_blockers: Sequence[str],
+) -> list[str]:
+    blockers = [
+        blocker
+        for blocker in current_blockers
+        if "approval" in blocker.lower() or "approved" in blocker.lower()
+    ]
+    if payload.get("operator_approved_exact_cuda") is False:
+        blockers.append("missing_operator_exact_cuda_approval")
+    blockers.extend(_string_list(payload.get("approval_blockers")))
+    return _unique_strings(blockers)
+
+
+def _operator_environment_blockers(
+    payload: Mapping[str, Any],
+    *,
+    current_blockers: Sequence[str],
+) -> list[str]:
+    blockers = [
+        blocker
+        for blocker in current_blockers
+        if "environment" in blocker.lower() or "env" in blocker.lower()
+    ]
+    blockers.extend(f"missing_env:{name}" for name in _string_list(payload.get("missing_env")))
+    return _unique_strings(blockers)
+
+
+def _static_compliance_refresh(payload: Mapping[str, Any]) -> tuple[Mapping[str, Any], str]:
+    refresh = payload.get("static_compliance_refresh")
+    if isinstance(refresh, Mapping):
+        return refresh, "static_compliance_refresh"
+    refreshes = payload.get("refreshes")
+    if isinstance(refreshes, Mapping):
+        nested = refreshes.get("static_compliance")
+        if isinstance(nested, Mapping):
+            return nested, "refreshes.static_compliance"
+    return {}, ""
+
+
+def _static_refresh_status(payload: Mapping[str, Any]) -> str:
+    refresh, _ = _static_compliance_refresh(payload)
+    if not refresh:
+        return "not_recorded"
+    returncode = refresh.get("returncode")
+    if isinstance(returncode, int) and not isinstance(returncode, bool):
+        return "passed" if returncode == 0 else "failed"
+    return "unknown"
+
+
+def _static_refresh_command(payload: Mapping[str, Any]) -> str:
+    refresh, _ = _static_compliance_refresh(payload)
+    if not refresh:
+        return ""
+    command = refresh.get("command")
+    return command.strip() if isinstance(command, str) else ""
+
+
+def _static_refresh_schema(payload: Mapping[str, Any]) -> str:
+    refresh, _ = _static_compliance_refresh(payload)
+    schema = refresh.get("schema") if refresh else ""
+    return str(schema or "")
+
+
+def _static_refresh_source(payload: Mapping[str, Any]) -> str:
+    _, source = _static_compliance_refresh(payload)
+    return source
+
+
+def _operator_next_steps_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
+    section = _operator_next_steps(payload)
+    steps = _operator_steps(payload)
+    current_blockers = _operator_current_blockers(payload)
+    next_local_action = _next_local_non_gpu_action(payload)
+    local_step_ids = [
+        str(step.get("id") or "")
+        for step in steps
+        if step.get("dispatches_remote_gpu") is not True and str(step.get("id") or "")
+    ]
+    remote_step_ids = [
+        str(step.get("id") or "")
+        for step in steps
+        if step.get("dispatches_remote_gpu") is True and str(step.get("id") or "")
+    ]
+    return {
+        "schema": "packet_operator_next_steps_summary_v1",
+        "source": "operator_next_steps" if section else "manifest_command_fields",
+        "packet_operator_next_steps_schema": str(section.get("schema") or ""),
+        "packet_path": str(section.get("packet_path") or ""),
+        "copy_safe": section.get("copy_safe") if isinstance(section.get("copy_safe"), bool) else None,
+        "must_run_in_order": (
+            section.get("must_run_in_order")
+            if isinstance(section.get("must_run_in_order"), bool)
+            else None
+        ),
+        "step_count": len(steps),
+        "local_non_gpu_step_ids": local_step_ids,
+        "remote_gpu_step_ids": remote_step_ids,
+        "first_remote_gpu_step": str(section.get("first_remote_gpu_step") or ""),
+        "current_blockers": current_blockers,
+        "claim_blockers": _operator_claim_blockers(
+            payload,
+            current_blockers=current_blockers,
+        ),
+        "refresh_blockers": _operator_refresh_blockers(
+            payload,
+            current_blockers=current_blockers,
+        ),
+        "approval_blockers": _operator_approval_blockers(
+            payload,
+            current_blockers=current_blockers,
+        ),
+        "environment_blockers": _operator_environment_blockers(
+            payload,
+            current_blockers=current_blockers,
+        ),
+        "static_refresh_status": _static_refresh_status(payload),
+        "static_refresh_command": _static_refresh_command(payload),
+        "static_refresh_schema": _static_refresh_schema(payload),
+        "static_refresh_source": _static_refresh_source(payload),
+        "next_local_non_gpu_action": next_local_action,
+        "next_local_non_gpu_command": (
+            str(next_local_action.get("command") or "") if next_local_action else ""
+        ),
+    }
+
+
 def _next_required_proofs(blockers: Sequence[str]) -> list[str]:
     out: list[str] = []
     if "dirty_worktree_overlap" in blockers:
@@ -1894,6 +2181,7 @@ def _row_for_manifest(
             ("selected_target", "meta_lagrangian_atom_export", "atom_template", "expected_score_variance"),
         ),
     )
+    operator_summary = _operator_next_steps_summary(payload)
     return {
         "schema_version": SCHEMA_VERSION,
         "manifest_path": repo_relative(manifest_path, repo_root),
@@ -1912,6 +2200,14 @@ def _row_for_manifest(
         "confidence": _candidate_confidence(payload),
         "score_claim": False,
         "dispatch_attempted": False,
+        "operator_next_steps_summary": operator_summary,
+        "operator_current_blockers": operator_summary["current_blockers"],
+        "operator_claim_blockers": operator_summary["claim_blockers"],
+        "operator_refresh_blockers": operator_summary["refresh_blockers"],
+        "operator_approval_blockers": operator_summary["approval_blockers"],
+        "operator_environment_blockers": operator_summary["environment_blockers"],
+        "next_local_non_gpu_action": operator_summary["next_local_non_gpu_action"],
+        "next_local_non_gpu_command": operator_summary["next_local_non_gpu_command"],
         "ready_for_exact_eval_dispatch": ready,
         "candidate_local_preflight_ready": base_static_ready,
         "candidate_static_preflight_ready": candidate_static_ready_after_dirty,

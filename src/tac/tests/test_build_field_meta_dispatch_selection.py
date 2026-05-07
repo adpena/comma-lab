@@ -43,6 +43,88 @@ def test_field_meta_selector_reports_static_ready_but_not_dispatch_ready_without
     ]
 
 
+def test_field_meta_selector_summarizes_operator_next_steps_without_dispatch(
+    tmp_path: Path,
+) -> None:
+    manifest = _packet_manifest(
+        tmp_path,
+        candidate_id="operator_packet",
+        lane_id="lane_operator_packet",
+        job_name="job_operator_packet",
+    )
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    refresh_command = ".venv/bin/python tools/build_packet.py --json-out packet.json"
+    verify_command = ".venv/bin/python -c 'import os; assert os.environ.get(\"LIGHTNING_SSH_TARGET\")'"
+    payload.update(
+        {
+            "missing_env": ["LIGHTNING_SSH_TARGET"],
+            "operator_approved_exact_cuda": False,
+            "lane_claim_preflight": {
+                "active_claim_present": False,
+                "claims_path_exists": True,
+                "conflict_present": False,
+            },
+            "static_compliance_refresh": {
+                "command": refresh_command,
+                "returncode": 0,
+            },
+            "operator_next_steps": {
+                "schema": "fixture_operator_next_steps_v1",
+                "copy_safe": True,
+                "must_run_in_order": True,
+                "first_remote_gpu_step": "submit_exact_cuda",
+                "current_blockers": [
+                    "missing_lightning_environment",
+                    "missing_active_lane_dispatch_claim",
+                    "missing_operator_exact_cuda_approval",
+                ],
+                "steps": [
+                    {
+                        "id": "verify_lightning_env",
+                        "order": 1,
+                        "copy_safe_command": verify_command,
+                        "dispatches_remote_gpu": False,
+                        "writes_repo_state": False,
+                    },
+                    {
+                        "id": "submit_exact_cuda",
+                        "order": 2,
+                        "copy_safe_command": "scripts/lightning_exact_eval_repro.py --submit",
+                        "dispatches_remote_gpu": True,
+                        "writes_repo_state": True,
+                    },
+                ],
+            },
+        }
+    )
+    manifest.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest])
+
+    row = report["rows"][0]
+    summary = row["operator_next_steps_summary"]
+    assert row["score_claim"] is False
+    assert row["dispatch_attempted"] is False
+    assert summary["packet_operator_next_steps_schema"] == "fixture_operator_next_steps_v1"
+    assert summary["first_remote_gpu_step"] == "submit_exact_cuda"
+    assert summary["local_non_gpu_step_ids"] == ["verify_lightning_env"]
+    assert summary["remote_gpu_step_ids"] == ["submit_exact_cuda"]
+    assert row["next_local_non_gpu_action"]["id"] == "verify_lightning_env"
+    assert row["next_local_non_gpu_command"] == verify_command
+    assert row["operator_claim_blockers"] == ["missing_active_lane_dispatch_claim"]
+    assert row["operator_refresh_blockers"] == []
+    assert row["operator_next_steps_summary"]["static_refresh_status"] == "passed"
+    assert row["operator_next_steps_summary"]["static_refresh_command"] == refresh_command
+    assert row["operator_next_steps_summary"]["static_refresh_source"] == "static_compliance_refresh"
+    assert row["operator_next_steps_summary"]["static_refresh_schema"] == ""
+    assert row["operator_approval_blockers"] == ["missing_operator_exact_cuda_approval"]
+    assert row["operator_environment_blockers"] == [
+        "missing_lightning_environment",
+        "missing_env:LIGHTNING_SSH_TARGET",
+    ]
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
 def test_field_meta_selector_ingests_hnerv_lowlevel_result_manifest_as_local_candidate() -> None:
     manifest = (
         REPO
@@ -81,6 +163,27 @@ def test_field_meta_selector_ingests_hnerv_lowlevel_result_manifest_as_local_can
     assert "missing_dispatch_identity_for_lane_claim" in row["exact_dispatch_blockers"]["blockers"]
     assert "kkt:kkt_proof_or_admm_result_missing" in row["exact_dispatch_blockers"]["blockers"]
     assert row["selection_decision"] == "strict_candidate_preflight_refused"
+
+
+def test_field_meta_selector_summarizes_nested_static_compliance_refresh() -> None:
+    manifest = (
+        REPO
+        / "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/"
+        "hnerv_lowlevel_exact_eval_packet.json"
+    )
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    static_refresh = payload["refreshes"]["static_compliance"]
+
+    report = build_selection_report(repo_root=REPO, manifest_paths=[manifest], dirty_paths=[])
+
+    row = report["rows"][0]
+    summary = row["operator_next_steps_summary"]
+    assert summary["static_refresh_status"] == "passed"
+    assert summary["static_refresh_command"] == static_refresh["command"]
+    assert summary["static_refresh_schema"] == "hnerv_lowlevel_static_compliance_refresh_v1"
+    assert summary["static_refresh_source"] == "refreshes.static_compliance"
+    assert row["operator_refresh_blockers"] == []
+    assert row["ready_for_exact_eval_dispatch"] is False
 
 
 def test_field_meta_selector_requires_lane_and_job_identity_for_static_ready(

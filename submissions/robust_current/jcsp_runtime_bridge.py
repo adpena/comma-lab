@@ -3,8 +3,10 @@
 
 This module is intentionally stdlib-only.  It runs from ``inflate.sh`` before
 any rendering branch so an archive carrying ``jcsp.bin`` cannot silently fall
-through to an unrelated runtime path.  The bridge currently probes and proves
-the member shape; it does not decode streams or emit frames.
+through to an unrelated runtime path.  The CLI probe still refuses every
+present ``jcsp.bin`` before branch dispatch.  The separate emitter helpers are
+for narrow raw-output bridge proofs and must prove byte parity before they can
+clear submission-runtime consumption blockers.
 """
 from __future__ import annotations
 
@@ -13,6 +15,7 @@ import hashlib
 import json
 import struct
 import sys
+from bisect import bisect_right
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -47,6 +50,13 @@ JCSP_RUNTIME_FIXTURE_RAW_OUTPUT_BLOCKER = (
 JCSP_RUNTIME_DECODER_ADAPTER_SCHEMA = "jcsp_runtime_decoder_adapter_contract_v1"
 JCSP_RUNTIME_DECODED_STREAM_SCHEMA = "jcsp_runtime_decoded_stream_v1"
 JCSP_RUNTIME_REAL_DECODER_BLOCKER = "jcsp_real_stream_decoder_adapter_missing"
+JCSP_RUNTIME_AQ_RAWVIDEO_ADAPTER_ID = "jcsp_arithmetic_uint8_rawvideo_adapter_v1"
+JCSP_RUNTIME_AQ_RAWVIDEO_STREAM_KIND = "arithmetic_static_uint8_rawvideo_v1"
+JCSP_RUNTIME_AQ_RAWVIDEO_FORMAT_CONTRACT = (
+    "JCSP stream codec_kind=0, stream name equals expected .raw path, "
+    "payload magic AQv1/AQc1, AQ num_symbols=256, AQ offset=0, decoded "
+    "symbols are written as nonempty RGB24 rawvideo bytes with length divisible by 3"
+)
 JCSP_MAGIC = b"JCSP"
 JCSK_MAGIC = b"JCSK"
 JCSP_VERSION = 1
@@ -55,6 +65,20 @@ KIND_ARITHMETIC_STATIC = 0
 KIND_BALLE_HYPERPRIOR = 1
 KIND_RAW_PASSTHROUGH = 2
 EXIT_JCSP_MEMBER_REFUSED = 44
+
+AQ_MAGIC = b"AQv1"
+AQC_MAGIC = b"AQc1"
+AQ_VERSION = 1
+AQC_VERSION = 1
+AQ_RAWVIDEO_NUM_SYMBOLS = 256
+AQ_RAWVIDEO_OFFSET = 0
+
+_AC_PRECISION = 32
+_AC_TOP = 1 << _AC_PRECISION
+_AC_HALF = _AC_TOP >> 1
+_AC_QUARTER = _AC_TOP >> 2
+_AC_THREE_QUARTER = _AC_HALF + _AC_QUARTER
+_AC_MASK = _AC_TOP - 1
 
 _PAYLOAD_MAGICS_BY_CODEC_KIND: dict[int, tuple[bytes, ...]] = {
     KIND_ARITHMETIC_STATIC: (b"AQv1", b"AQc1"),
@@ -137,6 +161,274 @@ def _validate_raw_output_rel_path(raw_output: str) -> str:
     return text
 
 
+class _BitReader:
+    def __init__(self, data: bytes) -> None:
+        self.data = data
+        self.byte_pos = 0
+        self.bit_pos = 0
+
+    def read(self) -> int:
+        if self.byte_pos >= len(self.data):
+            return 0
+        byte = self.data[self.byte_pos]
+        bit = (byte >> (7 - self.bit_pos)) & 1
+        self.bit_pos += 1
+        if self.bit_pos == 8:
+            self.bit_pos = 0
+            self.byte_pos += 1
+        return bit
+
+
+class _ArithmeticDecoder:
+    def __init__(self, data: bytes) -> None:
+        self.reader = _BitReader(data)
+        self.low = 0
+        self.high = _AC_MASK
+        self.value = 0
+        for _ in range(_AC_PRECISION):
+            self.value = (self.value << 1) | self.reader.read()
+
+    def get_target(self, total: int) -> int:
+        span = self.high - self.low + 1
+        return ((self.value - self.low + 1) * total - 1) // span
+
+    def remove(self, cum_low: int, cum_high: int, total: int) -> None:
+        span = self.high - self.low + 1
+        self.high = self.low + (span * cum_high) // total - 1
+        self.low = self.low + (span * cum_low) // total
+        while True:
+            if self.high < _AC_HALF:
+                pass
+            elif self.low >= _AC_HALF:
+                self.low -= _AC_HALF
+                self.high -= _AC_HALF
+                self.value -= _AC_HALF
+            elif self.low >= _AC_QUARTER and self.high < _AC_THREE_QUARTER:
+                self.low -= _AC_QUARTER
+                self.high -= _AC_QUARTER
+                self.value -= _AC_QUARTER
+            else:
+                break
+            self.low = (self.low << 1) & _AC_MASK
+            self.high = ((self.high << 1) | 1) & _AC_MASK
+            self.value = ((self.value << 1) | self.reader.read()) & _AC_MASK
+
+
+def _read_exact(payload: bytes, cursor: int, nbytes: int, label: str) -> tuple[bytes, int]:
+    if nbytes < 0 or cursor < 0 or cursor + nbytes > len(payload):
+        raise ValueError(
+            f"AQ rawvideo payload truncated while reading {label}: "
+            f"offset={cursor} need={nbytes} len={len(payload)}"
+        )
+    return payload[cursor : cursor + nbytes], cursor + nbytes
+
+
+def _uint32_freq_table(raw: bytes) -> list[int]:
+    if len(raw) % 4:
+        raise ValueError("AQ rawvideo frequency table byte length is not divisible by 4")
+    return [item[0] for item in struct.iter_unpack("<I", raw)]
+
+
+def _cumulative_table(freq: list[int], *, allow_zero: bool, label: str) -> tuple[list[int], int]:
+    if not freq:
+        raise ValueError(f"{label} frequency table is empty")
+    if allow_zero:
+        if any(item < 0 for item in freq):
+            raise ValueError(f"{label} frequency table contains negative counts")
+    elif any(item <= 0 for item in freq):
+        raise ValueError(f"{label} frequency table contains zero-probability symbols")
+    cum = [0]
+    running = 0
+    for count in freq:
+        running += int(count)
+        cum.append(running)
+    if running <= 0:
+        raise ValueError(f"{label} frequency table total must be positive")
+    return cum, running
+
+
+def _validate_declared_symbol_count(
+    *,
+    freq: list[int],
+    n_symbols: int,
+    allow_zero_freq: bool,
+    label: str,
+) -> None:
+    if n_symbols <= 0:
+        raise ValueError(f"{label} n_symbols must be positive")
+    total = sum(int(item) for item in freq)
+    if allow_zero_freq:
+        if total != int(n_symbols):
+            raise ValueError(
+                f"{label} frequency total {total} must equal n_symbols {n_symbols}"
+            )
+        return
+    if total < int(n_symbols):
+        raise ValueError(
+            f"{label} frequency total {total} is smaller than n_symbols {n_symbols}"
+        )
+    zero_protection_overhead = total - int(n_symbols)
+    if zero_protection_overhead > len(freq) - 1:
+        raise ValueError(
+            f"{label} zero-protected frequency overhead {zero_protection_overhead} "
+            f"exceeds alphabet slack {len(freq) - 1}"
+        )
+
+
+def _decode_symbols_from_arithmetic_payload(
+    *,
+    freq: list[int],
+    payload: bytes,
+    n_symbols: int,
+    allow_zero_freq: bool,
+    label: str,
+) -> bytes:
+    cum, total = _cumulative_table(freq, allow_zero=allow_zero_freq, label=label)
+    decoder = _ArithmeticDecoder(payload)
+    decoded = bytearray()
+    observed = [0] * len(freq)
+    for index in range(int(n_symbols)):
+        target = decoder.get_target(total)
+        symbol = bisect_right(cum, target) - 1
+        if symbol < 0 or symbol >= len(freq) or int(freq[symbol]) <= 0:
+            raise ValueError(
+                f"{label} target={target} fell outside a positive-frequency "
+                f"symbol at {index}/{n_symbols}"
+            )
+        decoder.remove(int(cum[symbol]), int(cum[symbol + 1]), total)
+        if symbol > 255:
+            raise ValueError(f"{label} decoded symbol {symbol} exceeds uint8 range")
+        decoded.append(symbol)
+        observed[symbol] += 1
+
+    if allow_zero_freq:
+        if observed != [int(item) for item in freq]:
+            raise ValueError(f"{label} decoded symbol counts do not match sparse frequency table")
+    else:
+        for observed_count, expected_count in zip(observed, freq, strict=True):
+            if observed_count > int(expected_count):
+                raise ValueError(f"{label} decoded symbol count exceeds dense frequency table")
+            if int(expected_count) > 1 and observed_count != int(expected_count):
+                raise ValueError(f"{label} decoded symbol counts do not match dense frequency table")
+    return bytes(decoded)
+
+
+def _decode_aq_uint8_rawvideo(payload: bytes) -> tuple[bytes, str]:
+    magic = payload[:4]
+    if magic == AQ_MAGIC:
+        return _decode_aqv1_uint8_rawvideo(payload), "AQv1"
+    if magic == AQC_MAGIC:
+        return _decode_aqc1_uint8_rawvideo(payload), "AQc1"
+    raise ValueError(f"unsupported AQ rawvideo magic {magic!r}")
+
+
+def _decode_aqv1_uint8_rawvideo(payload: bytes) -> bytes:
+    cursor = 0
+    magic, cursor = _read_exact(payload, cursor, 4, "magic")
+    if magic != AQ_MAGIC:
+        raise ValueError(f"bad AQv1 rawvideo magic {magic!r}")
+    raw, cursor = _read_exact(payload, cursor, 2, "version")
+    (version,) = struct.unpack("<H", raw)
+    if version != AQ_VERSION:
+        raise ValueError(f"unsupported AQv1 rawvideo version {version}")
+    raw, cursor = _read_exact(payload, cursor, 2, "num_symbols")
+    (num_symbols,) = struct.unpack("<H", raw)
+    raw, cursor = _read_exact(payload, cursor, 4, "offset")
+    (offset,) = struct.unpack("<i", raw)
+    if num_symbols != AQ_RAWVIDEO_NUM_SYMBOLS or offset != AQ_RAWVIDEO_OFFSET:
+        raise ValueError(
+            "AQv1 rawvideo requires num_symbols=256 and offset=0; "
+            f"got num_symbols={num_symbols} offset={offset}"
+        )
+    raw, cursor = _read_exact(payload, cursor, 8, "n_symbols")
+    (n_symbols,) = struct.unpack("<Q", raw)
+    raw, cursor = _read_exact(payload, cursor, int(num_symbols) * 4, "frequency table")
+    freq = _uint32_freq_table(raw)
+    raw, cursor = _read_exact(payload, cursor, 8, "payload_size")
+    (payload_size,) = struct.unpack("<Q", raw)
+    if payload_size <= 0:
+        raise ValueError("AQv1 rawvideo payload_size must be positive")
+    coded_payload, cursor = _read_exact(payload, cursor, int(payload_size), "payload")
+    if cursor != len(payload):
+        raise ValueError("AQv1 rawvideo payload has trailing bytes after declared payload")
+    _validate_declared_symbol_count(
+        freq=freq,
+        n_symbols=int(n_symbols),
+        allow_zero_freq=False,
+        label="AQv1 rawvideo",
+    )
+    return _decode_symbols_from_arithmetic_payload(
+        freq=freq,
+        payload=coded_payload,
+        n_symbols=int(n_symbols),
+        allow_zero_freq=False,
+        label="AQv1 rawvideo",
+    )
+
+
+def _decode_aqc1_uint8_rawvideo(payload: bytes) -> bytes:
+    cursor = 0
+    magic, cursor = _read_exact(payload, cursor, 4, "magic")
+    if magic != AQC_MAGIC:
+        raise ValueError(f"bad AQc1 rawvideo magic {magic!r}")
+    raw, cursor = _read_exact(payload, cursor, 2, "version")
+    (version,) = struct.unpack("<H", raw)
+    if version != AQC_VERSION:
+        raise ValueError(f"unsupported AQc1 rawvideo version {version}")
+    raw, cursor = _read_exact(payload, cursor, 2, "num_symbols")
+    (num_symbols,) = struct.unpack("<H", raw)
+    raw, cursor = _read_exact(payload, cursor, 4, "offset")
+    (offset,) = struct.unpack("<i", raw)
+    if num_symbols != AQ_RAWVIDEO_NUM_SYMBOLS or offset != AQ_RAWVIDEO_OFFSET:
+        raise ValueError(
+            "AQc1 rawvideo requires num_symbols=256 and offset=0; "
+            f"got num_symbols={num_symbols} offset={offset}"
+        )
+    raw, cursor = _read_exact(payload, cursor, 8, "n_symbols")
+    (n_symbols,) = struct.unpack("<Q", raw)
+    raw, cursor = _read_exact(payload, cursor, 2, "n_present")
+    (n_present,) = struct.unpack("<H", raw)
+    if n_present == 0 or n_present > num_symbols:
+        raise ValueError(
+            f"AQc1 rawvideo n_present must be in [1, num_symbols], got {n_present}"
+        )
+    freq = [0] * int(num_symbols)
+    seen: set[int] = set()
+    for _ in range(int(n_present)):
+        raw, cursor = _read_exact(payload, cursor, 2, "symbol")
+        (symbol,) = struct.unpack("<H", raw)
+        raw, cursor = _read_exact(payload, cursor, 4, "count")
+        (count,) = struct.unpack("<I", raw)
+        if symbol >= num_symbols:
+            raise ValueError(f"AQc1 rawvideo symbol index out of range: {symbol}")
+        if symbol in seen:
+            raise ValueError(f"AQc1 rawvideo duplicate symbol index: {symbol}")
+        if count == 0:
+            raise ValueError(f"AQc1 rawvideo symbol {symbol} has zero count")
+        seen.add(int(symbol))
+        freq[int(symbol)] = int(count)
+    raw, cursor = _read_exact(payload, cursor, 8, "payload_size")
+    (payload_size,) = struct.unpack("<Q", raw)
+    if payload_size <= 0:
+        raise ValueError("AQc1 rawvideo payload_size must be positive")
+    coded_payload, cursor = _read_exact(payload, cursor, int(payload_size), "payload")
+    if cursor != len(payload):
+        raise ValueError("AQc1 rawvideo payload has trailing bytes after declared payload")
+    _validate_declared_symbol_count(
+        freq=freq,
+        n_symbols=int(n_symbols),
+        allow_zero_freq=True,
+        label="AQc1 rawvideo",
+    )
+    return _decode_symbols_from_arithmetic_payload(
+        freq=freq,
+        payload=coded_payload,
+        n_symbols=int(n_symbols),
+        allow_zero_freq=True,
+        label="AQc1 rawvideo",
+    )
+
+
 @dataclass(frozen=True)
 class DecodedRawOutputStream:
     path: str
@@ -212,6 +504,81 @@ class RawOutputDecoderAdapter:
         raise NotImplementedError("raw output decoder adapter is not implemented")
 
 
+class ArithmeticUint8RawVideoDecoderAdapter(RawOutputDecoderAdapter):
+    adapter_id = JCSP_RUNTIME_AQ_RAWVIDEO_ADAPTER_ID
+    adapter_kind = JCSP_RUNTIME_AQ_RAWVIDEO_STREAM_KIND
+    candidate_output_source = JCSP_RUNTIME_REAL_RAW_OUTPUT_SOURCE
+    emits_real_rawvideo = True
+    fixture_passthrough = False
+    non_production = False
+
+    def contract(self, expected_raw_outputs: Iterable[str]) -> dict[str, Any]:
+        payload = super().contract(expected_raw_outputs)
+        payload.update(
+            {
+                "accepted_codec_kind": KIND_ARITHMETIC_STATIC,
+                "accepted_payload_magics": ["AQv1", "AQc1"],
+                "stream_name_contract": (
+                    "stream name must exactly equal expected .raw relative path"
+                ),
+                "stream_payload_contract": JCSP_RUNTIME_AQ_RAWVIDEO_FORMAT_CONTRACT,
+                "decoded_stream_kind": JCSP_RUNTIME_AQ_RAWVIDEO_STREAM_KIND,
+                "ready_for_submission_runtime_consumption": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        )
+        payload["dispatch_blockers"] = _dedupe(
+            [
+                JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER,
+                *payload["dispatch_blockers"],
+                "exact_cuda_auth_eval_missing",
+            ]
+        )
+        return payload
+
+    def decode_stream(
+        self,
+        stream: Mapping[str, Any],
+        *,
+        expected_raw_outputs: set[str],
+    ) -> tuple[DecodedRawOutputStream | None, str | None]:
+        stream_name = str(stream.get("name", ""))
+        try:
+            rel = _validate_raw_output_rel_path(stream_name)
+        except ValueError:
+            return None, "jcsp_aq_rawvideo_stream_name_not_raw_output_path"
+        if rel not in expected_raw_outputs:
+            return None, "jcsp_aq_rawvideo_unexpected_raw_stream"
+        if int(stream.get("codec_kind", -1)) != KIND_ARITHMETIC_STATIC:
+            return None, "jcsp_aq_rawvideo_stream_not_arithmetic_static"
+        raw_payload = stream.get("payload", b"")
+        if not isinstance(raw_payload, (bytes, bytearray, memoryview)):
+            return None, "jcsp_aq_rawvideo_payload_not_bytes"
+        try:
+            decoded, payload_magic = _decode_aq_uint8_rawvideo(bytes(raw_payload))
+        except ValueError:
+            return None, "jcsp_aq_rawvideo_decode_failed"
+        if not decoded:
+            return None, "jcsp_aq_rawvideo_decoded_rawvideo_empty"
+        if len(decoded) % 3:
+            return None, "jcsp_aq_rawvideo_decoded_bytes_not_rgb24_aligned"
+        return (
+            DecodedRawOutputStream(
+                path=rel,
+                payload=decoded,
+                source_stream_name=stream_name,
+                source_codec_kind=int(stream["codec_kind"]),
+                candidate_output_source=self.candidate_output_source,
+                decoder_adapter_id=self.adapter_id,
+                decoded_stream_kind=f"{self.adapter_kind}:{payload_magic}",
+                real_decoded_rawvideo=True,
+                fixture_passthrough=False,
+                dispatch_blockers=(JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER,),
+            ),
+            None,
+        )
+
+
 class FixtureRawPassthroughDecoderAdapter(RawOutputDecoderAdapter):
     adapter_id = "jcsp_fixture_raw_passthrough_adapter_v1"
     adapter_kind = "fixture_raw_passthrough"
@@ -284,6 +651,7 @@ def _decoder_interface_contract(
     expected_raw_outputs: Iterable[str],
 ) -> dict[str, Any]:
     expected = list(expected_raw_outputs)
+    real_adapter = ArithmeticUint8RawVideoDecoderAdapter()
     fixture_adapter = FixtureRawPassthroughDecoderAdapter()
     return {
         "schema": JCSP_RUNTIME_DECODER_ADAPTER_SCHEMA,
@@ -293,7 +661,9 @@ def _decoder_interface_contract(
         "required_candidate_output_source_for_dispatch": (
             JCSP_RUNTIME_REAL_RAW_OUTPUT_SOURCE
         ),
-        "production_decoder_adapter_wired": False,
+        "production_decoder_adapter_wired": True,
+        "real_decoder_adapter_available": True,
+        "real_decoder_adapter": real_adapter.contract(expected),
         "fixture_passthrough_adapter_available": True,
         "fixture_passthrough_is_non_dispatch_proof": True,
         "expected_raw_outputs": expected,
@@ -303,7 +673,6 @@ def _decoder_interface_contract(
         "ready_for_submission_runtime_consumption": False,
         "ready_for_exact_eval_dispatch": False,
         "dispatch_blockers": [
-            JCSP_RUNTIME_REAL_DECODER_BLOCKER,
             JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER,
             JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
             "exact_cuda_auth_eval_missing",
@@ -742,6 +1111,220 @@ def emit_jcsp_fixture_raw_outputs(
     return manifest
 
 
+def _parsed_container_summary(parsed: Mapping[str, Any]) -> dict[str, Any]:
+    stream_rows: list[dict[str, Any]] = []
+    for stream in parsed.get("streams", []):
+        if not isinstance(stream, Mapping):
+            continue
+        stream_rows.append(
+            {
+                key: value
+                for key, value in stream.items()
+                if key != "payload"
+            }
+        )
+    return {
+        "container_magic": parsed.get("container_magic"),
+        "container_version": parsed.get("container_version"),
+        "stream_count": parsed.get("stream_count"),
+        "streams": stream_rows,
+        "noop_fixture": parsed.get("noop_fixture"),
+    }
+
+
+def emit_jcsp_real_raw_outputs(
+    archive_dir: str | Path,
+    *,
+    expected_raw_outputs: Iterable[str],
+    output_dir: str | Path,
+    reference_raw_dir: str | Path | None = None,
+    member_name: str = JCSP_ARCHIVE_MEMBER_NAME,
+    manifest_json: str | Path | None = None,
+    parity_manifest_json: str | Path | None = None,
+) -> dict[str, Any]:
+    """Decode the narrow real JCSP AQ/rawvideo stream contract.
+
+    Supported stream kind:
+    ``codec_kind=KIND_ARITHMETIC_STATIC`` with AQv1/AQc1 payload bytes whose
+    AQ header declares ``num_symbols=256`` and ``offset=0``. The stream name
+    must exactly match an expected ``.raw`` relative output path. The decoded
+    symbols must be nonempty RGB24 bytes, then are written as uint8 rawvideo.
+    All other JCSP stream kinds fail closed with manifest blockers.
+    """
+
+    expected = _dedupe(
+        [_validate_raw_output_rel_path(str(item)) for item in expected_raw_outputs]
+    )
+    output_root = Path(output_dir)
+    archive_root = Path(archive_dir)
+    member_path = archive_root / member_name
+    blockers: list[str] = []
+    emitted_rows: list[dict[str, Any]] = []
+    decode_failures: list[dict[str, Any]] = []
+    parity_proof: dict[str, Any] | None = None
+    parsed_summary: dict[str, Any] | None = None
+    decoder_adapter = ArithmeticUint8RawVideoDecoderAdapter()
+
+    if not expected:
+        blockers.append("jcsp_expected_raw_outputs_missing")
+    if not member_path.exists():
+        blockers.append("jcsp_member_missing_for_real_raw_output_emission")
+    elif not member_path.is_file():
+        blockers.append("jcsp_member_path_not_regular_file")
+
+    decoded_streams_by_name: dict[str, DecodedRawOutputStream] = {}
+    if not blockers:
+        blob = member_path.read_bytes()
+        if len(blob) < 4 or blob[:4] != JCSP_MAGIC:
+            blockers.append("jcsp_real_emitter_requires_real_jcsp_member")
+        else:
+            try:
+                parsed = _parse_real_jcsp_container(blob, include_payload=True)
+            except ValueError as exc:
+                blockers.append("jcsp_runtime_probe_parse_failed")
+                parsed_summary = {"parse_error": str(exc)}
+            else:
+                parsed_summary = _parsed_container_summary(parsed)
+                expected_set = set(expected)
+                for stream in parsed["streams"]:
+                    decoded, blocker = decoder_adapter.decode_stream(
+                        stream,
+                        expected_raw_outputs=expected_set,
+                    )
+                    if blocker is not None:
+                        blockers.append(blocker)
+                        decode_failures.append(
+                            {
+                                "stream_name": stream.get("name"),
+                                "codec_kind": stream.get("codec_kind"),
+                                "payload_magic": stream.get("payload_magic"),
+                                "blocker": blocker,
+                            }
+                        )
+                        continue
+                    if decoded is None:
+                        blocker = "jcsp_aq_rawvideo_decoder_returned_no_stream"
+                        blockers.append(blocker)
+                        decode_failures.append(
+                            {
+                                "stream_name": stream.get("name"),
+                                "codec_kind": stream.get("codec_kind"),
+                                "payload_magic": stream.get("payload_magic"),
+                                "blocker": blocker,
+                            }
+                        )
+                        continue
+                    rel = decoded.path
+                    if rel in decoded_streams_by_name:
+                        blockers.append("jcsp_aq_rawvideo_duplicate_raw_stream_name")
+                        continue
+                    decoded_streams_by_name[rel] = decoded
+
+                stream_set = set(decoded_streams_by_name)
+                expected_set = set(expected)
+                if expected_set - stream_set:
+                    blockers.append("jcsp_aq_rawvideo_missing_expected_raw_stream")
+                if stream_set - expected_set:
+                    blockers.append("jcsp_aq_rawvideo_unexpected_raw_stream")
+                for rel in expected:
+                    if (output_root / rel).exists():
+                        blockers.append("jcsp_aq_rawvideo_output_target_already_exists")
+
+    blockers = _dedupe(blockers)
+    if not blockers:
+        for rel in expected:
+            decoded = decoded_streams_by_name[rel]
+            path = output_root / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(decoded.payload)
+            emitted_rows.append(decoded.manifest_row())
+
+    if reference_raw_dir is not None and emitted_rows:
+        parity_proof = prove_jcsp_runtime_raw_output_parity(
+            expected,
+            candidate_raw_dir=output_root,
+            reference_raw_dir=reference_raw_dir,
+            candidate_outputs_emitted_by_bridge=True,
+            candidate_output_source=JCSP_RUNTIME_REAL_RAW_OUTPUT_SOURCE,
+            manifest_json=parity_manifest_json,
+        )
+
+    ready_for_output_parity = bool(
+        parity_proof is not None
+        and parity_proof.get("ready_for_output_parity") is True
+    )
+    ready_for_submission_runtime_consumption = ready_for_output_parity
+    dispatch_blockers = _dedupe(
+        [
+            *blockers,
+            *(
+                parity_proof.get("dispatch_blockers", [])
+                if parity_proof is not None
+                else [JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER]
+            ),
+            *(
+                []
+                if ready_for_submission_runtime_consumption
+                else [JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER]
+            ),
+            "exact_cuda_auth_eval_missing",
+        ]
+    )
+    byte_exact_parity = bool(
+        parity_proof is not None
+        and parity_proof.get("byte_exact_raw_output_parity") is True
+    )
+    manifest: dict[str, Any] = {
+        "schema": JCSP_RUNTIME_RAW_OUTPUT_EMISSION_SCHEMA,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "candidate_output_source": JCSP_RUNTIME_REAL_RAW_OUTPUT_SOURCE,
+        "candidate_outputs_from_real_bridge_rawvideo": bool(emitted_rows),
+        "member_name": member_name,
+        "member_present": member_path.exists(),
+        "expected_raw_outputs": expected,
+        "expected_raw_output_count": len(expected),
+        "candidate_raw_dir": str(output_root),
+        "reference_raw_dir": (
+            str(Path(reference_raw_dir)) if reference_raw_dir is not None else None
+        ),
+        "decoder_interface": _decoder_interface_contract(expected),
+        "decoder_adapter": decoder_adapter.contract(expected),
+        "parsed_container": parsed_summary,
+        "raw_output_emission_attempted": not blockers,
+        "real_raw_outputs_emitted": bool(emitted_rows),
+        "fixture_raw_outputs_emitted": False,
+        "bridge_emits_contest_raw_outputs": bool(emitted_rows),
+        "real_decoded_rawvideo_stream_count": sum(
+            1 for row in emitted_rows if row["real_decoded_rawvideo"]
+        ),
+        "fixture_passthrough_stream_count": sum(
+            1 for row in emitted_rows if row["fixture_passthrough"]
+        ),
+        "emitted_raw_output_count": len(emitted_rows),
+        "emitted_raw_outputs": emitted_rows,
+        "decode_failures": decode_failures,
+        "output_parity_checked": parity_proof is not None,
+        "output_parity_artifact": (
+            str(Path(parity_manifest_json))
+            if parity_manifest_json is not None
+            else None
+        ),
+        "raw_output_parity_proof": parity_proof,
+        "byte_exact_raw_output_parity": byte_exact_parity,
+        "ready_for_output_parity": ready_for_output_parity,
+        "ready_for_submission_runtime_consumption": (
+            ready_for_submission_runtime_consumption
+        ),
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": dispatch_blockers,
+    }
+    manifest = _with_manifest_sha256(manifest)
+    if manifest_json is not None:
+        _write_manifest(Path(manifest_json), manifest)
+    return manifest
+
+
 def _contest_output_contract(
     *,
     member_present: bool,
@@ -763,8 +1346,7 @@ def _contest_output_contract(
         blockers.extend(
             [
                 JCSP_RUNTIME_OUTPUT_PARITY_BLOCKER,
-                JCSP_RUNTIME_REAL_DECODER_BLOCKER,
-                "jcsp_stream_decode_emit_frames_missing",
+                "jcsp_runtime_probe_does_not_emit_raw_outputs",
                 "jcsp_raw_output_emission_missing",
             ]
         )
@@ -1006,9 +1588,9 @@ def probe_jcsp_runtime_bridge(
     """Probe ``archive_dir/member_name`` and return a deterministic contract.
 
     A present JCSP member is never treated as dispatch-ready by this tranche.
-    Real ``JCSP`` bytes are parsed and then refused because no stream consumer
-    is wired.  Local ``JCSK`` preview bytes are refused before runtime-loader
-    readiness.
+    Real ``JCSP`` bytes are parsed and then refused because the probe path does
+    not emit raw outputs or prove parity.  Local ``JCSK`` preview bytes are
+    refused before runtime-loader readiness.
     """
 
     archive_root = Path(archive_dir)
@@ -1125,16 +1707,16 @@ def probe_jcsp_runtime_bridge(
                 {
                     "detected_real_jcsp_member": True,
                     "ready_for_runtime_loader": True,
-                    "runtime_action": "refuse_until_jcsp_stream_consumer_implemented",
+                    "runtime_action": "refuse_until_jcsp_raw_output_emission_and_parity",
                     "refusal_reason": (
-                        "real JCSP container parsed, but robust_current does "
-                        "not decode JCSP streams or emit frames from them yet"
+                        "real JCSP container parsed and a narrow AQ rawvideo "
+                        "adapter exists, but the probe path does not emit raw "
+                        "outputs or prove parity"
                     ),
                     "dispatch_blockers": [
                         JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
                         "not_integrated_into_submission_inflate_path",
                         *output_contract["dispatch_blockers"],
-                        "jcsp_stream_decode_emit_frames_missing",
                         "exact_cuda_auth_eval_missing",
                     ],
                 }

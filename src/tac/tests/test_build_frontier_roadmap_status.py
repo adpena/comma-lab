@@ -105,6 +105,13 @@ def test_frontier_roadmap_status_markdown_is_operator_briefing() -> None:
     assert "field_selection_ready_candidate_packet_count" in markdown
     assert "selected_candidate_frontier_reason" in markdown
     assert "selected_candidate_exact_blocker_count" in markdown
+    assert "selected_candidate_next_local_non_gpu_step" in markdown
+    assert "selected_candidate_claim_blockers" in markdown
+    assert "selected_candidate_static_refresh_status" in markdown
+    assert "selected_candidate_approval_blockers" in markdown
+    assert "Candidate Packets" in markdown
+    assert "verify_lightning_env" in markdown
+    assert "missing_operator_exact_cuda_approval" in markdown
     assert "dirty-blocked keys" in markdown
     assert "`rate_frontier_closure`" in markdown
     assert "`field_meta_selection`" in markdown
@@ -145,6 +152,17 @@ def test_frontier_roadmap_status_discovers_default_packet_manifests() -> None:
     assert wr01["selection_decision"] == "needs_active_lane_claim_before_dispatch"
     assert "missing_active_lane_dispatch_claim" in wr01["candidate_blockers"]
     assert "claim:dispatch_claim_check_missing" in wr01["candidate_blockers"]
+    assert wr01["operator_next_steps_summary"]["schema"] == "packet_operator_next_steps_summary_v1"
+    assert wr01["operator_next_steps_summary"]["packet_operator_next_steps_schema"] == (
+        "wr01_operator_next_steps_v1"
+    )
+    assert wr01["operator_next_steps_summary"]["static_refresh_status"] == "passed"
+    assert wr01["next_local_non_gpu_action"]["id"] == "verify_lightning_env"
+    assert wr01["operator_claim_blockers"] == ["missing_active_lane_dispatch_claim"]
+    assert wr01["operator_refresh_blockers"] == []
+    assert wr01["operator_approval_blockers"] == ["missing_operator_exact_cuda_approval"]
+    assert "missing_lightning_environment" in wr01["operator_current_blockers"]
+    assert "missing_env:LIGHTNING_SSH_TARGET" in wr01["operator_environment_blockers"]
     lgblock16 = next(
         row
         for row in packet_selection["rows"]
@@ -158,6 +176,13 @@ def test_frontier_roadmap_status_discovers_default_packet_manifests() -> None:
     assert lgblock16["selection_decision"] == "needs_active_lane_claim_before_dispatch"
     assert "missing_active_lane_dispatch_claim" in lgblock16["candidate_blockers"]
     assert "claim:dispatch_claim_check_missing" in lgblock16["candidate_blockers"]
+    assert lgblock16["operator_next_steps_summary"]["static_refresh_status"] == "passed"
+    assert lgblock16["operator_next_steps_summary"]["static_refresh_schema"] == (
+        "hnerv_lowlevel_static_compliance_refresh_v1"
+    )
+    assert lgblock16["operator_next_steps_summary"]["static_refresh_source"] == (
+        "refreshes.static_compliance"
+    )
     assert "pareto_dominated_packet" in lgblock16["exact_dispatch_blockers"]["blockers"]
 
 

@@ -27,7 +27,7 @@ from tac.repo_io import json_text  # noqa: E402
 from tools.build_cross_paradigm_frontier_inventory import build_inventory  # noqa: E402
 from tools.build_field_meta_dispatch_selection import build_selection_report  # noqa: E402
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 DEFAULT_PACKET_MANIFEST_GLOBS = (
     "experiments/results/**/wr01_exact_eval_packet.json",
     "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_*/hnerv_lowlevel_exact_eval_packet.json",
@@ -261,7 +261,7 @@ def build_next_comprehensive_tranche(
         },
         "field_meta_candidate_packet_selection": field_meta_candidate_packet_selection
         or {
-            "schema_version": 2,
+            "schema_version": 3,
             "tool": "tools/build_field_meta_dispatch_selection.py",
             "score_claim": False,
             "dispatch_attempted": False,
@@ -417,6 +417,8 @@ def build_roadmap_status(
 def render_markdown(payload: dict[str, Any]) -> str:
     packet_selection = payload["next_comprehensive_tranche"]["field_meta_candidate_packet_selection"]
     selected_packet = packet_selection.get("selected_candidate") or {}
+    selected_operator = selected_packet.get("operator_next_steps_summary") or {}
+    selected_next_action = selected_operator.get("next_local_non_gpu_action") or {}
     lines = [
         "# Frontier Roadmap Status",
         "",
@@ -443,6 +445,12 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- selected_candidate_decision: `{_md(selected_packet.get('selection_decision') or 'none')}`",
         f"- selected_candidate_frontier_reason: `{_md((selected_packet.get('non_dominated_frontier_reason') or {}).get('reason') or 'none')}`",
         f"- selected_candidate_exact_blocker_count: `{_md((selected_packet.get('exact_dispatch_blockers') or {}).get('blocker_count') or 0)}`",
+        f"- selected_candidate_next_local_non_gpu_step: `{_md(selected_next_action.get('id') or 'none')}`",
+        f"- selected_candidate_next_local_non_gpu_command: `{_md(selected_operator.get('next_local_non_gpu_command') or 'none')}`",
+        f"- selected_candidate_claim_blockers: `{_md_list(selected_operator.get('claim_blockers') or [])}`",
+        f"- selected_candidate_static_refresh_status: `{_md(selected_operator.get('static_refresh_status') or 'none')}`",
+        f"- selected_candidate_refresh_blockers: `{_md_list(selected_operator.get('refresh_blockers') or [])}`",
+        f"- selected_candidate_approval_blockers: `{_md_list(selected_operator.get('approval_blockers') or [])}`",
         "",
         "| workstream | keys | dirty-blocked keys | acceptance gates |",
         "|---|---|---|---|",
@@ -464,6 +472,32 @@ def render_markdown(payload: dict[str, Any]) -> str:
             )
             + " |"
         )
+    if packet_selection.get("rows"):
+        lines += [
+            "",
+            "## Candidate Packets",
+            "",
+            "| candidate | decision | local non-GPU step | claim blockers | refresh blockers | approval blockers | next local non-GPU command |",
+            "|---|---|---|---|---|---|---|",
+        ]
+        for row in packet_selection["rows"]:
+            summary = row.get("operator_next_steps_summary") or {}
+            action = summary.get("next_local_non_gpu_action") or {}
+            lines.append(
+                "| "
+                + " | ".join(
+                    (
+                        f"`{_md(row.get('candidate_id') or '')}`",
+                        f"`{_md(row.get('selection_decision') or '')}`",
+                        f"`{_md(action.get('id') or 'none')}`",
+                        _md_list(summary.get("claim_blockers") or []),
+                        _md_list(summary.get("refresh_blockers") or []),
+                        _md_list(summary.get("approval_blockers") or []),
+                        _md(summary.get("next_local_non_gpu_command") or "none"),
+                    )
+                )
+                + " |"
+            )
     lines += [
         "",
         "## Frontier Rows",
@@ -501,6 +535,12 @@ def render_markdown(payload: dict[str, Any]) -> str:
 
 def _md(value: object) -> str:
     return str(value).replace("|", r"\|").replace("\n", " ")
+
+
+def _md_list(values: list[object]) -> str:
+    if not values:
+        return "none"
+    return ", ".join(_md(value) for value in values)
 
 
 def build_parser() -> argparse.ArgumentParser:

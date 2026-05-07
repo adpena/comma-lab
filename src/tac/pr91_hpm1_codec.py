@@ -100,6 +100,10 @@ DEFAULT_PR85_QMA9_TOKEN_SOURCE = (
     REPO_ROOT
     / "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin"
 )
+DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE = (
+    REPO_ROOT
+    / "experiments/results/pr85_qma9_mode_sweep_20260504_codex/adaptive6pr.decoded.raw"
+)
 
 CONTEST_ARCHIVE_BYTE_DENOMINATOR = 37545489
 EXPECTED_PR91_ARCHIVE_BYTES = 222404
@@ -759,6 +763,13 @@ def _failure_row_signature(trace: Mapping[str, Any]) -> dict[str, int] | None:
     return {key: int(failure[key]) for key in keys}
 
 
+def _decoded_symbols_or_before_failure(trace: Mapping[str, Any]) -> int:
+    signature = _failure_row_signature(trace)
+    if signature is not None:
+        return int(signature["decoded_symbol_count_before_failure"])
+    return int(trace.get("decoded_symbols", 0) or 0)
+
+
 def _spatial_order_description(candidate: str) -> str:
     if candidate == "source_mask_row_major":
         return (
@@ -798,6 +809,21 @@ def _validate_spatial_order_candidates(candidates: tuple[str, ...]) -> tuple[str
     for name in requested:
         _spatial_order_description(name)
     return requested
+
+
+def _spatial_candidate_scope_label(candidates: tuple[str, ...]) -> str:
+    labels_by_candidate = {
+        "source_mask_row_major": "source-mask row-major",
+        "full_col_major": "full-column-major",
+        "tile_major_row_major": "tile-major row-major",
+        "phase_major_row_major": "phase-major row-major",
+    }
+    labels = [labels_by_candidate.get(candidate, candidate) for candidate in candidates]
+    if len(labels) == 1:
+        return labels[0]
+    if len(labels) == 2:
+        return f"{labels[0]} and {labels[1]}"
+    return f"{', '.join(labels[:-1])}, and {labels[-1]}"
 
 
 def _hpm1_group_coords_for_spatial_order(
@@ -982,6 +1008,8 @@ def _trace_hpm1_spatial_order_decode_failure(
                             "passed": False,
                             "score_claim": False,
                             "dispatch_allowed": False,
+                            "full_decode_proven": False,
+                            "byte_exact_reencode_proven": False,
                             "device": device,
                             "probability_variant": resolved.name,
                             "prob_eps": float(prob_eps),
@@ -1087,6 +1115,251 @@ def _trace_hpm1_spatial_order_decode_failure(
             "sha256": sha256_bytes(decoded_frames.tobytes()),
         },
         "full_decode_proven": max_frames is None and int(decoded_frames.shape[0]) == payload.n_frames,
+        "byte_exact_reencode_proven": False,
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
+
+
+def _trace_hpm1_reference_teacher_forced_spatial_order_failure(
+    model: Any,
+    payload: Hpm1MaskPayload,
+    reference_tokens: np.ndarray,
+    *,
+    probability_variant: str | Any,
+    prob_eps: float,
+    max_frames: int | None,
+    device: str,
+    spatial_order_candidate: str,
+) -> dict[str, Any]:
+    """Replay HPM1 while forcing HPAC context from reference mask tokens."""
+
+    if torch is None or F is None:  # pragma: no cover - optional dependency path
+        raise Pr91Hpm1Error("dependency_contract", "torch_missing")
+    if _pr86_hpac_codec.constriction is None:  # pragma: no cover
+        raise Pr91Hpm1Error("dependency_contract", "constriction_missing")
+    if str(device) != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "hpm1_reference_teacher_forcing_probe_is_cpu_only",
+            requested_device=device,
+        )
+
+    _spatial_order_description(spatial_order_candidate)
+    if list(reference_tokens.shape) != [payload.n_frames, payload.height, payload.width]:
+        raise Pr91Hpm1Error(
+            "reference_token_contract",
+            "reference_token_shape_mismatch",
+            expected=[payload.n_frames, payload.height, payload.width],
+            actual=list(reference_tokens.shape),
+        )
+    resolved = resolve_hpac_probability_variant(probability_variant)
+    frame_count = int(payload.n_frames if max_frames is None else min(int(max_frames), payload.n_frames))
+    if frame_count <= 0:
+        raise Pr91Hpm1Error(
+            "hpm1_reference_teacher_forcing_probe",
+            "frame_count_must_be_positive",
+            max_frames=max_frames,
+        )
+    dev = torch.device(device)
+    model = model.to(dev).eval()
+    masks = _group_masks(
+        payload.height,
+        payload.width,
+        P=payload.predictor_count,
+        delta=payload.delta,
+        device=dev,
+    )
+    words = _hpm1_token_words_for_candidate(payload, "source_little_uint32")
+    decoder = _pr86_hpac_codec.constriction.stream.queue.RangeDecoder(words)
+    decoded_prev = torch.zeros((1, payload.height, payload.width), dtype=torch.long, device=dev)
+    decoded_symbols = 0
+    first_reference_mismatch: dict[str, Any] | None = None
+    reference_mismatch_count = 0
+    started_at = time.time()
+
+    with torch.no_grad():
+        for frame in range(frame_count):
+            idx = torch.tensor([frame], dtype=torch.long, device=dev)
+            cur = torch.zeros((1, payload.height, payload.width), dtype=torch.long, device=dev)
+            frame_start_symbols = decoded_symbols
+            for group, mask in enumerate(masks):
+                if mask is None:
+                    continue
+                group_start_symbols = decoded_symbols
+                coords = _hpm1_group_coords_for_spatial_order(
+                    payload,
+                    group=group,
+                    mask=mask,
+                    candidate=spatial_order_candidate,
+                    device=dev,
+                )
+                logits = model(cur, idx, decoded_prev)
+                probs = F.softmax(logits.float(), dim=1)
+                probs_at_group = (
+                    probs[0][:, coords[:, 0], coords[:, 1]]
+                    .permute(1, 0)
+                    .contiguous()
+                )
+                probs_np = probs_at_group.cpu().numpy()
+                ref_at_group = reference_tokens[
+                    frame,
+                    coords[:, 0].detach().cpu().numpy(),
+                    coords[:, 1].detach().cpu().numpy(),
+                ].astype(np.int64, copy=False)
+                decoded = np.empty(int(probs_at_group.shape[0]), dtype=np.int64)
+                for symbol_in_group, row in enumerate(probs_np):
+                    normalized = _normalize_probability_row(
+                        row,
+                        prob_eps=prob_eps,
+                        variant=resolved,
+                    )
+                    cat = _categorical_from_probs(row, prob_eps=prob_eps, variant=resolved)
+                    try:
+                        decoded_symbol = int(decoder.decode(cat))
+                    except Exception as exc:
+                        prefix = decoded[:symbol_in_group].astype(np.uint8, copy=False)
+                        raw_row = np.ascontiguousarray(row)
+                        norm_row = np.ascontiguousarray(normalized)
+                        return {
+                            "status": "failed_at_first_entropy_mismatch",
+                            "passed": False,
+                            "score_claim": False,
+                            "dispatch_allowed": False,
+                            "full_decode_proven": False,
+                            "byte_exact_reencode_proven": False,
+                            "device": device,
+                            "probability_variant": resolved.name,
+                            "prob_eps": float(prob_eps),
+                            "context_mode": "reference_teacher_forced",
+                            "spatial_order_candidate": spatial_order_candidate,
+                            "spatial_order_description": _spatial_order_description(
+                                spatial_order_candidate
+                            ),
+                            "failure": {
+                                "stage": "submitted_tokens_decode",
+                                "reason": "hpac_entropy_decode_contract_mismatch",
+                                "exception_type": type(exc).__name__,
+                                "frame": int(frame),
+                                "group": int(group),
+                                "symbol_in_group": int(symbol_in_group),
+                                "decoded_symbol_count_before_failure": int(decoded_symbols),
+                                "group_start_decoded_symbols": int(group_start_symbols),
+                                "frame_start_decoded_symbols": int(frame_start_symbols),
+                            },
+                            "token_stream": {
+                                "bytes": len(payload.tokens),
+                                "sha256": sha256_bytes(payload.tokens),
+                                **_token_words_summary(words),
+                                "word_order_candidate": "source_little_uint32",
+                            },
+                            "group_geometry": {
+                                "symbols_in_group": int(probs_at_group.shape[0]),
+                                "mask_true_count": int(mask.sum().item()),
+                                "mask_sha256": sha256_bytes(
+                                    mask.cpu().numpy().astype(np.uint8).tobytes()
+                                ),
+                                "coords": _coords_summary(coords),
+                            },
+                            "failing_probability_row": {
+                                "raw_softmax": {
+                                    "dtype": str(raw_row.dtype),
+                                    "sha256": sha256_bytes(raw_row.tobytes()),
+                                    "values": [
+                                        round(float(value), 10)
+                                        for value in raw_row.tolist()
+                                    ],
+                                    "sum": round(float(raw_row.sum()), 10),
+                                },
+                                "normalized_for_categorical": {
+                                    "dtype": str(norm_row.dtype),
+                                    "sha256": sha256_bytes(norm_row.tobytes()),
+                                    "values": [
+                                        round(float(value), 10)
+                                        for value in norm_row.tolist()
+                                    ],
+                                    "sum": round(float(norm_row.sum()), 10),
+                                    "argmax_symbol": int(norm_row.argmax()),
+                                    "min": round(float(norm_row.min()), 10),
+                                    "max": round(float(norm_row.max()), 10),
+                                },
+                            },
+                            "decoded_prefix_in_failing_group": {
+                                "symbol_count": int(prefix.size),
+                                "sha256": sha256_bytes(prefix.tobytes()),
+                                **_small_int_preview(prefix),
+                            },
+                            "reference_teacher_forcing": {
+                                "policy": (
+                                    "after each complete HPAC group, current-frame "
+                                    "context is assigned from reference tokens; "
+                                    "previous-frame context is reference frame f-1"
+                                ),
+                                "reference_mismatch_count_before_failure": int(
+                                    reference_mismatch_count
+                                ),
+                                "first_decoded_reference_mismatch": first_reference_mismatch,
+                            },
+                            "context_before_failing_group": {
+                                "current_frame": _context_tensor_summary(
+                                    cur[0],
+                                    label="current_frame_reference_context_before_group",
+                                ),
+                                "previous_frame": _context_tensor_summary(
+                                    decoded_prev[0],
+                                    label="previous_frame_reference_context",
+                                ),
+                            },
+                            "elapsed_sec": round(time.time() - started_at, 3),
+                        }
+                    decoded[symbol_in_group] = decoded_symbol
+                    reference_symbol = int(ref_at_group[symbol_in_group])
+                    if decoded_symbol != reference_symbol:
+                        reference_mismatch_count += 1
+                        if first_reference_mismatch is None:
+                            yx = coords[symbol_in_group].detach().cpu().numpy()
+                            first_reference_mismatch = {
+                                "global_symbol": int(decoded_symbols),
+                                "frame": int(frame),
+                                "group": int(group),
+                                "symbol_in_group": int(symbol_in_group),
+                                "pixel_yx": {"y": int(yx[0]), "x": int(yx[1])},
+                                "decoded_symbol": decoded_symbol,
+                                "reference_symbol": reference_symbol,
+                            }
+                    decoded_symbols += 1
+                cur[
+                    0,
+                    coords[:, 0],
+                    coords[:, 1],
+                ] = torch.from_numpy(ref_at_group).to(dev)
+            decoded_prev = torch.from_numpy(
+                reference_tokens[frame : frame + 1].astype(np.int64, copy=False)
+            ).to(dev)
+
+    return {
+        "status": "completed_requested_reference_forced_prefix_decode",
+        "passed": True,
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "device": device,
+        "probability_variant": resolved.name,
+        "prob_eps": float(prob_eps),
+        "context_mode": "reference_teacher_forced",
+        "spatial_order_candidate": spatial_order_candidate,
+        "spatial_order_description": _spatial_order_description(spatial_order_candidate),
+        "decoded_frames": int(frame_count),
+        "decoded_symbols": int(decoded_symbols),
+        "requested_frame_prefix_completed": True,
+        "all_frames_requested": max_frames is None and int(frame_count) == payload.n_frames,
+        "reference_teacher_forcing": {
+            "reference_mismatch_count_before_failure": int(reference_mismatch_count),
+            "first_decoded_reference_mismatch": first_reference_mismatch,
+        },
+        "full_decode_proven": False,
+        "full_decode_note": (
+            "Reference teacher-forced context is an off-contract semantic probe; "
+            "even a completed requested prefix is not standalone HPM1 full decode proof."
+        ),
         "byte_exact_reencode_proven": False,
         "elapsed_sec": round(time.time() - started_at, 3),
     }
@@ -2152,6 +2425,305 @@ def run_pr91_hpm1_spatial_group_order_probe(
     return _jsonable(report)
 
 
+def run_pr91_hpm1_reference_teacher_forcing_probe(
+    archive: Path = DEFAULT_PR91_ARCHIVE,
+    *,
+    reference_tokens_path: Path = DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE,
+    reference_layout: str = "legacy_assume_nhw",
+    device: str = "cpu",
+    probability_variant: str = DEFAULT_HPAC_PROBABILITY_VARIANT,
+    prob_eps: float = PROB_EPS,
+    max_frames: int | None = 1,
+    candidates: tuple[str, ...] = (
+        "tile_major_row_major",
+        "phase_major_row_major",
+    ),
+    output_dir: Path | None = None,
+    strict: bool = False,
+    write_json: bool = True,
+    require_expected_reference_sha: bool = True,
+) -> dict[str, Any]:
+    """Test whether PR85/QMA9 semantic teacher-forcing advances HPM1 replay."""
+
+    started_at = time.time()
+    if str(device) != "cpu":
+        raise Pr91Hpm1Error(
+            "device_contract",
+            "pr91_hpm1_reference_teacher_forcing_probe_is_cpu_only",
+            requested_device=device,
+        )
+    requested_candidates = _validate_spatial_order_candidates(candidates)
+    archive_path = Path(archive)
+    payload = extract_pr91_hpm1_payload(archive_path)
+    reference_tokens, reference_report = _load_reference_tokens(
+        Path(reference_tokens_path),
+        payload.n_frames,
+        payload.height,
+        payload.width,
+        reference_layout,
+    )
+    reference_sha_matches_expected = bool(
+        reference_report["matches_expected_pr85_qma9_token_source"]
+    )
+    if require_expected_reference_sha and not reference_sha_matches_expected:
+        raise Pr91Hpm1Error(
+            "reference_token_contract",
+            "unexpected_pr85_qma9_reference_token_sha256",
+            path=reference_report["path"],
+            expected_sha256=reference_report["expected_sha256"],
+            actual_sha256=reference_report["sha256"],
+            layout=reference_layout,
+        )
+    dependency_report = collect_dependency_report(strict=False)
+    static_report = validate_hpm1_static_contract(payload)
+    relationship = compare_hpm1_to_pr86_hpac_contract(payload)
+    runtime_sources = analyze_pr91_hpm1_runtime_sources()
+    model = load_hpm1_hpac_model(payload, device=device)
+    source_trace = _trace_hpm1_spatial_order_decode_failure(
+        model,
+        payload,
+        probability_variant=probability_variant,
+        prob_eps=prob_eps,
+        max_frames=max_frames,
+        device=device,
+        spatial_order_candidate="source_mask_row_major",
+    )
+    source_decoded_before = _decoded_symbols_or_before_failure(source_trace)
+    candidate_results: list[dict[str, Any]] = []
+    advanced_candidates: list[str] = []
+
+    for candidate in requested_candidates:
+        decoded_trace = _trace_hpm1_spatial_order_decode_failure(
+            model,
+            payload,
+            probability_variant=probability_variant,
+            prob_eps=prob_eps,
+            max_frames=max_frames,
+            device=device,
+            spatial_order_candidate=candidate,
+        )
+        reference_trace = _trace_hpm1_reference_teacher_forced_spatial_order_failure(
+            model,
+            payload,
+            reference_tokens,
+            probability_variant=probability_variant,
+            prob_eps=prob_eps,
+            max_frames=max_frames,
+            device=device,
+            spatial_order_candidate=candidate,
+        )
+        decoded_before = _decoded_symbols_or_before_failure(decoded_trace)
+        reference_before = _decoded_symbols_or_before_failure(reference_trace)
+        advances_beyond_decoded = (
+            reference_trace.get("passed") is True or reference_before > decoded_before
+        )
+        if advances_beyond_decoded:
+            advanced_candidates.append(candidate)
+        candidate_results.append(
+            {
+                "candidate": candidate,
+                "description": _spatial_order_description(candidate),
+                "decoded_context": {
+                    "status": decoded_trace.get("status"),
+                    "passed": bool(decoded_trace.get("passed") is True),
+                    "failure_signature": _failure_row_signature(decoded_trace),
+                    "decoded_symbols_or_before_failure": decoded_before,
+                    "full_decode_proven": bool(
+                        decoded_trace.get("full_decode_proven") is True
+                    ),
+                    "byte_exact_reencode_proven": bool(
+                        decoded_trace.get("byte_exact_reencode_proven") is True
+                    ),
+                    "passes_source_failure_row": (
+                        decoded_trace.get("passed") is True
+                        or decoded_before > source_decoded_before
+                    ),
+                    "exception_type": (
+                        decoded_trace.get("failure", {}).get("exception_type")
+                        if isinstance(decoded_trace.get("failure"), Mapping)
+                        else None
+                    ),
+                    "failing_probability_row_sha256": (
+                        decoded_trace.get("failing_probability_row", {})
+                        .get("normalized_for_categorical", {})
+                        .get("sha256")
+                        if isinstance(decoded_trace.get("failing_probability_row"), Mapping)
+                        else None
+                    ),
+                },
+                "reference_teacher_forced_context": {
+                    "status": reference_trace.get("status"),
+                    "passed": bool(reference_trace.get("passed") is True),
+                    "failure_signature": _failure_row_signature(reference_trace),
+                    "decoded_symbols_or_before_failure": reference_before,
+                    "full_decode_proven": bool(
+                        reference_trace.get("full_decode_proven") is True
+                    ),
+                    "byte_exact_reencode_proven": bool(
+                        reference_trace.get("byte_exact_reencode_proven") is True
+                    ),
+                    "advances_beyond_decoded_context": bool(advances_beyond_decoded),
+                    "advances_beyond_source_failure_row": (
+                        reference_trace.get("passed") is True
+                        or reference_before > source_decoded_before
+                    ),
+                    "exception_type": (
+                        reference_trace.get("failure", {}).get("exception_type")
+                        if isinstance(reference_trace.get("failure"), Mapping)
+                        else None
+                    ),
+                    "failing_probability_row_sha256": (
+                        reference_trace.get("failing_probability_row", {})
+                        .get("normalized_for_categorical", {})
+                        .get("sha256")
+                        if isinstance(reference_trace.get("failing_probability_row"), Mapping)
+                        else None
+                    ),
+                    "reference_mismatch_count_before_failure": (
+                        reference_trace.get("reference_teacher_forcing", {}).get(
+                            "reference_mismatch_count_before_failure"
+                        )
+                        if isinstance(
+                            reference_trace.get("reference_teacher_forcing"),
+                            Mapping,
+                        )
+                        else None
+                    ),
+                    "first_decoded_reference_mismatch": (
+                        reference_trace.get("reference_teacher_forcing", {}).get(
+                            "first_decoded_reference_mismatch"
+                        )
+                        if isinstance(
+                            reference_trace.get("reference_teacher_forcing"),
+                            Mapping,
+                        )
+                        else None
+                    ),
+                },
+            }
+        )
+
+    narrowed = not advanced_candidates
+    candidate_scope_label = _spatial_candidate_scope_label(requested_candidates)
+    report: dict[str, Any] = {
+        "schema": "pr91_hpm1_reference_teacher_forcing_probe_v1",
+        "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_reference_teacher_forcing_probe",
+        "recorded_at_utc": datetime.now(UTC).replace(microsecond=0).isoformat(),
+        "status": (
+            "narrowed_pr85_qma9_reference_teacher_forcing_false_lead"
+            if narrowed
+            else "reference_teacher_forcing_hypothesis_still_open"
+        ),
+        "score_claim": False,
+        "dispatch_allowed": False,
+        "dispatch_attempted": False,
+        "dispatch_performed": False,
+        "gpu_or_remote_work": False,
+        "local_only": True,
+        "ready_for_exact_eval_dispatch": False,
+        "promotion_eligible": False,
+        "evidence_grade": "empirical",
+        "evidence_scope": "local_cpu_hpm1_reference_teacher_forcing_hypothesis_probe",
+        "evidence_limitations": [
+            "not score evidence",
+            "not full standalone HPM1 decode proof",
+            "not byte-exact re-encode proof",
+            "not dispatch-eligible",
+        ],
+        "device": device,
+        "archive": _archive_report(archive_path),
+        "reference_tokens": reference_report,
+        "reference_token_sha256_contract": {
+            "required": bool(require_expected_reference_sha),
+            "expected_sha256": reference_report["expected_sha256"],
+            "actual_sha256": reference_report["sha256"],
+            "matches_expected": reference_sha_matches_expected,
+        },
+        "hpm1_static_contract": static_report,
+        "pr86_hpac_relationship": relationship,
+        "dependency_report": dependency_report,
+        "runtime_source_contract": runtime_sources,
+        "payload": {
+            "config": payload.config(),
+            "tokens_bytes": len(payload.tokens),
+            "tokens_sha256": sha256_bytes(payload.tokens),
+            "hpac_bytes": len(payload.hpac),
+            "hpac_sha256": sha256_bytes(payload.hpac),
+        },
+        "source_order_baseline": {
+            "status": source_trace.get("status"),
+            "failure_signature": _failure_row_signature(source_trace),
+            "decoded_symbols_or_before_failure": source_decoded_before,
+        },
+        "reference_teacher_forcing_probe": {
+            "schema": "pr91_hpm1_reference_teacher_forcing_probe_v1",
+            "status": (
+                "not_explained_by_pr85_qma9_reference_teacher_forcing"
+                if narrowed
+                else "at_least_one_candidate_advanced_under_reference_teacher_forcing"
+            ),
+            "passed": bool(narrowed),
+            "score_claim": False,
+            "dispatch_allowed": False,
+            "probability_variant": resolve_hpac_probability_variant(
+                probability_variant
+            ).name,
+            "prob_eps": float(prob_eps),
+            "max_frames": max_frames,
+            "candidate_scope": {
+                "requested_candidates": list(requested_candidates),
+                "label": candidate_scope_label,
+            },
+            "candidate_results": candidate_results,
+            "advanced_candidates": advanced_candidates,
+            "narrowed_hypothesis": (
+                "Forcing the HPAC current/previous context from the available "
+                "PR85/QMA9 reference token tensor does not advance the requested "
+                f"spatial candidate scope ({candidate_scope_label}) beyond the "
+                "decoded-context failure rows."
+                if narrowed
+                else "At least one spatial candidate advances under PR85/QMA9 "
+                "reference teacher-forcing; recover true PR91 semantic tokens "
+                "or encoder context before dismissing this class."
+            ),
+        },
+        "exact_missing_grammar": {
+            "status": "still_open_after_reference_teacher_forcing_probe",
+            "not_explained_by_this_probe": (
+                "PR85/QMA9 render-order semantic teacher-forcing for the "
+                f"requested spatial candidate scope ({candidate_scope_label})"
+                if narrowed
+                else ""
+            ),
+            "remaining_open_classes": [
+                "encoder-side probability numeric contract",
+                "range-coder construction/finalization contract",
+                "true PR91 encoder semantic tokens if they differ from PR85/QMA9 reference",
+                "training-time token semantics not represented by submitted decode source",
+            ],
+        },
+        "next_required_proofs": [
+            "recover an encoder-side HPAC token generator or full source archive",
+            "test range-coder construction/finalization against the traced failing row",
+            "test probability quantization beyond the existing float32/float64/perfect matrix",
+            "decode all 600 HPM1 frames and re-encode exact token bytes before any dispatch",
+        ],
+        "elapsed_sec": round(time.time() - started_at, 3),
+    }
+    if write_json and output_dir is not None:
+        write_json_report(
+            report,
+            Path(output_dir) / "reference_teacher_forcing_probe.json",
+        )
+    if strict and report["ready_for_exact_eval_dispatch"] is not True:
+        raise Pr91Hpm1Error(
+            "hpm1_reference_teacher_forcing_probe",
+            str(report["status"]),
+            report=report,
+        )
+    return _jsonable(report)
+
+
 def run_pr91_hpm1_semantic_decode_trench(
     archive: Path = DEFAULT_PR91_ARCHIVE,
     *,
@@ -2664,8 +3236,92 @@ def run_pr91_hpm1_stream_transform_probe(*args: Any, **kwargs: Any) -> Any:
     raise _rehydration_failure("run_pr91_hpm1_stream_transform_probe")
 
 
-def _load_reference_tokens(*args: Any, **kwargs: Any) -> Any:
-    raise _rehydration_failure("_load_reference_tokens")
+def _load_reference_tokens(
+    path: Path,
+    N: int,
+    H: int,
+    W: int,
+    layout: str,
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Load uint8 reference mask tokens into render-order ``N,H,W`` shape."""
+
+    path = Path(path)
+    if not path.is_file():
+        raise Pr91Hpm1Error(
+            "reference_token_contract",
+            "reference_tokens_missing",
+            path=path,
+        )
+    raw = path.read_bytes()
+    expected_bytes = int(N) * int(H) * int(W)
+    if len(raw) != expected_bytes:
+        raise Pr91Hpm1Error(
+            "reference_token_contract",
+            "reference_token_size_mismatch",
+            path=path,
+            expected_bytes=expected_bytes,
+            actual_bytes=len(raw),
+            actual_sha256=sha256_bytes(raw),
+        )
+    if layout == "qma9_storage_wh_to_render_hw":
+        arr = (
+            np.frombuffer(raw, dtype=np.uint8)
+            .reshape(int(N), int(W), int(H))
+            .transpose(0, 2, 1)
+            .copy()
+        )
+        storage_shape = [int(N), int(W), int(H)]
+        storage_order = "frame_major_header_width_by_header_height"
+        render_transform = "reshape_NWH_transpose_to_NHW"
+    elif layout in {"legacy_assume_nhw", "nhw_render_order"}:
+        arr = np.ascontiguousarray(
+            np.frombuffer(raw, dtype=np.uint8).reshape(int(N), int(H), int(W))
+        )
+        storage_shape = [int(N), int(H), int(W)]
+        storage_order = "frame_major_header_height_by_header_width"
+        render_transform = "none"
+    else:
+        raise Pr91Hpm1Error(
+            "reference_token_contract",
+            "unsupported_reference_token_layout",
+            requested_layout=layout,
+            supported_layouts=[
+                "qma9_storage_wh_to_render_hw",
+                "legacy_assume_nhw",
+                "nhw_render_order",
+            ],
+        )
+    observed_min = int(arr.min()) if arr.size else None
+    observed_max = int(arr.max()) if arr.size else None
+    if (
+        (observed_min is not None and observed_min < 0)
+        or (observed_max is not None and observed_max > 4)
+    ):
+        raise Pr91Hpm1Error(
+            "reference_token_contract",
+            "reference_token_values_out_of_range",
+            path=path,
+            observed_min=observed_min,
+            observed_max=observed_max,
+        )
+    digest = sha256_bytes(raw)
+    render_digest = sha256_bytes(arr.tobytes(order="C"))
+    return arr, {
+        "path": repo_rel(path),
+        "bytes": len(raw),
+        "sha256": digest,
+        "expected_sha256": EXPECTED_PR85_QMA9_TOKEN_SOURCE_SHA256,
+        "matches_expected_pr85_qma9_token_source": (
+            digest == EXPECTED_PR85_QMA9_TOKEN_SOURCE_SHA256
+        ),
+        "layout": layout,
+        "storage_shape": storage_shape,
+        "returned_shape": [int(N), int(H), int(W)],
+        "storage_order": storage_order,
+        "render_transform": render_transform,
+        "render_order_sha256": render_digest,
+        "observed_range": {"min": observed_min, "max": observed_max},
+    }
 
 
 def _symbol_position(*args: Any, **kwargs: Any) -> Any:
