@@ -15,6 +15,27 @@ ARCHIVE_SRC="$CANDIDATE_DIR/archive.zip"
 mkdir -p "$OUT"
 log() { echo "[pmg-hotspot-c067-h100] $(date -u +%FT%TZ) $*" | tee -a "$OUT/driver.log"; }
 
+# Provenance — feedback_canonical_remote_bootstraps mandate.
+PROVENANCE="$OUT/provenance.json"
+GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
+GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1 || echo "no-gpu")
+python3 - <<PY
+import json, time
+prov = {
+    "started_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    "git_hash": "$GIT_HASH",
+    "gpu_name": "$GPU_NAME",
+    "lane_script": "scripts/remote_lane_pmg_hotspot_c067_eval.sh",
+    "candidate_family": "pmg_hotspot_cmg3_residual_over_c067",
+    "guard": "ALLOW_REPLAY_EXACT_NEGATIVE_PMG=1 (forensic replay only)",
+    "score_claim": False,
+    "promotion_eligible": False,
+}
+with open("$PROVENANCE", "w") as f:
+    json.dump(prov, f, indent=2, sort_keys=True)
+print(json.dumps(prov, sort_keys=True))
+PY
+
 cat > "$OUT/source_sha256s.expected" <<'SHA'
 submissions/robust_current/inflate.sh=86449a1f52ac6b2be120d47287b8410f915dce7e562c69f480103f6e527c6017
 submissions/robust_current/inflate_renderer.py=ba334748b365fbf0055323177fb21842528dbe37a2b0ef5a303260da00a09f40
