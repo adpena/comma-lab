@@ -231,13 +231,20 @@ def preflight_check(
         try:
             # R38 fix: use detect_pose_manifest to autopick the right
             # manifest based on which pose format the archive actually has.
-            from tac.submission_archive import validate_archive, detect_pose_manifest
+            from tac.submission_archive import detect_pose_manifest, validate_archive
             manifest = detect_pose_manifest(archive_path)
             result = validate_archive(archive_path, manifest, strict=True)
-            if result.valid:
+            if result.valid and result.dispatch_ready:
                 _pass(f"Archive: {result.archive_bytes:,}B, rate={result.rate_term:.4f}, valid")
             else:
-                errors = result.errors or ["archive validation returned invalid"]
+                errors = result.errors or []
+                if not result.dispatch_ready:
+                    errors.extend(
+                        f"archive dispatch blocker: {blocker}"
+                        for blocker in result.dispatch_blockers
+                    )
+                if not errors:
+                    errors = ["archive validation returned invalid"]
                 _fail(f"Archive: {'; '.join(errors)}")
                 for w in result.warnings:
                     _warn(f"Archive: {w}")
