@@ -1,0 +1,576 @@
+{
+  "empirical_floor_bytes": 175916,
+  "input_state_dict": "experiments/results/cma_pr101_real_substrate_20260507T222605Z/pr101_decoder_state_dict.pt",
+  "n_quant": 127,
+  "per_tensor": [
+    {
+      "empirical_bits_per_element": 5.221834571977232,
+      "entropy_ratio_vs_uniform": 0.747184170701085,
+      "max_symbol": 116,
+      "min_symbol": -127,
+      "mode_count": 2816,
+      "mode_symbol": -2,
+      "n_elements": 48384,
+      "n_quant_max": 127,
+      "n_unique_symbols": 118,
+      "name": "stem.weight",
+      "scale": 0.01201629638671875,
+      "shape": [
+        1728,
+        28
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 7.203411495331803,
+      "entropy_ratio_vs_uniform": 1.0307249243861383,
+      "max_symbol": 127,
+      "min_symbol": -103,
+      "mode_count": 30,
+      "mode_symbol": 0,
+      "n_elements": 1728,
+      "n_quant_max": 127,
+      "n_unique_symbols": 194,
+      "name": "stem.bias",
+      "scale": 0.0166015625,
+      "shape": [
+        1728
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 5.539484274804958,
+      "entropy_ratio_vs_uniform": 0.7926361716232266,
+      "max_symbol": 115,
+      "min_symbol": -127,
+      "mode_count": 2184,
+      "mode_symbol": -3,
+      "n_elements": 46656,
+      "n_quant_max": 127,
+      "n_unique_symbols": 131,
+      "name": "blocks.0.weight",
+      "scale": 0.0047454833984375,
+      "shape": [
+        144,
+        36,
+        3,
+        3
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 6.497051022348011,
+      "entropy_ratio_vs_uniform": 0.9296529051661618,
+      "max_symbol": 127,
+      "min_symbol": -106,
+      "mode_count": 5,
+      "mode_symbol": -8,
+      "n_elements": 144,
+      "n_quant_max": 127,
+      "n_unique_symbols": 101,
+      "name": "blocks.0.bias",
+      "scale": 0.006805419921875,
+      "shape": [
+        144
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 5.561289148594001,
+      "entropy_ratio_vs_uniform": 0.7957561970309137,
+      "max_symbol": 103,
+      "min_symbol": -127,
+      "mode_count": 2208,
+      "mode_symbol": 5,
+      "n_elements": 46656,
+      "n_quant_max": 127,
+      "n_unique_symbols": 151,
+      "name": "blocks.1.weight",
+      "scale": 0.004058837890625,
+      "shape": [
+        144,
+        36,
+        3,
+        3
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 6.411879754941829,
+      "entropy_ratio_vs_uniform": 0.9174658812520067,
+      "max_symbol": 119,
+      "min_symbol": -127,
+      "mode_count": 5,
+      "mode_symbol": -13,
+      "n_elements": 144,
+      "n_quant_max": 127,
+      "n_unique_symbols": 96,
+      "name": "blocks.1.bias",
+      "scale": 0.006923675537109375,
+      "shape": [
+        144
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 5.815377982992134,
+      "entropy_ratio_vs_uniform": 0.8321133723487614,
+      "max_symbol": 125,
+      "min_symbol": -127,
+      "mode_count": 1367,
+      "mode_symbol": 5,
+      "n_elements": 34992,
+      "n_quant_max": 127,
+      "n_unique_symbols": 172,
+      "name": "blocks.2.weight",
+      "scale": 0.00323486328125,
+      "shape": [
+        108,
+        36,
+        3,
+        3
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 6.377527432698984,
+      "entropy_ratio_vs_uniform": 0.9125504610002009,
+      "max_symbol": 117,
+      "min_symbol": -127,
+      "mode_count": 3,
+      "mode_symbol": -34,
+      "n_elements": 108,
+      "n_quant_max": 127,
+      "n_unique_symbols": 88,
+      "name": "blocks.2.bias",
+      "scale": 0.006053924560546875,
+      "shape": [
+        108
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 5.77068602376645,
+      "entropy_ratio_vs_uniform": 0.8257184695553538,
+      "max_symbol": 127,
+      "min_symbol": -127,
+      "mode_count": 769,
+      "mode_symbol": 4,
+      "n_elements": 19440,
+      "n_quant_max": 127,
+      "n_unique_symbols": 155,
+      "name": "blocks.3.weight",
+      "scale": 0.0031909942626953125,
+      "shape": [
+        80,
+        27,
+        3,
+        3
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 5.859183719779185,
+      "entropy_ratio_vs_uniform": 0.8383814669545983,
+      "max_symbol": 127,
+      "min_symbol": -95,
+      "mode_count": 3,
+      "mode_symbol": -2,
+      "n_elements": 80,
+      "n_quant_max": 127,
+      "n_unique_symbols": 63,
+      "name": "blocks.3.bias",
+      "scale": 0.011566162109375,
+      "shape": [
+        80
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 6.269517628323618,
+      "entropy_ratio_vs_uniform": 0.8970955064248711,
+      "max_symbol": 127,
+      "min_symbol": -127,
+      "mode_count": 360,
+      "mode_symbol": -13,
+      "n_elements": 12960,
+      "n_quant_max": 127,
+      "n_unique_symbols": 206,
+      "name": "blocks.4.weight",
+      "scale": 0.0025844573974609375,
+      "shape": [
+        72,
+        20,
+        3,
+        3
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 5.8156225708266645,
+      "entropy_ratio_vs_uniform": 0.8321483700408154,
+      "max_symbol": 127,
+      "min_symbol": -111,
+      "mode_count": 3,
+      "mode_symbol": 0,
+      "n_elements": 72,
+      "n_quant_max": 127,
+      "n_unique_symbols": 60,
+      "name": "blocks.4.bias",
+      "scale": 0.0095977783203125,
+      "shape": [
+        72
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 5.260277702628818,
+      "entropy_ratio_vs_uniform": 0.752684938352593,
+      "max_symbol": 90,
+      "min_symbol": -127,
+      "mode_count": 642,
+      "mode_symbol": -7,
+      "n_elements": 11664,
+      "n_quant_max": 127,
+      "n_unique_symbols": 92,
+      "name": "blocks.5.weight",
+      "scale": 0.006439208984375,
+      "shape": [
+        72,
+        18,
+        3,
+        3
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 5.576107119467822,
+      "entropy_ratio_vs_uniform": 0.7978764773895151,
+      "max_symbol": 127,
+      "min_symbol": -89,
+      "mode_count": 4,
+      "mode_symbol": 13,
+      "n_elements": 72,
+      "n_quant_max": 127,
+      "n_unique_symbols": 53,
+      "name": "blocks.5.bias",
+      "scale": 0.0163726806640625,
+      "shape": [
+        72
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 5.731671307589952,
+      "entropy_ratio_vs_uniform": 0.8201359146218994,
+      "max_symbol": 127,
+      "min_symbol": -125,
+      "mode_count": 44,
+      "mode_symbol": -6,
+      "n_elements": 972,
+      "n_quant_max": 127,
+      "n_unique_symbols": 77,
+      "name": "skips.2.weight",
+      "scale": 0.0037708282470703125,
+      "shape": [
+        27,
+        36,
+        1,
+        1
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 4.43063240949075,
+      "entropy_ratio_vs_uniform": 0.6339722863555184,
+      "max_symbol": 76,
+      "min_symbol": -127,
+      "mode_count": 3,
+      "mode_symbol": 50,
+      "n_elements": 27,
+      "n_quant_max": 127,
+      "n_unique_symbols": 23,
+      "name": "skips.2.bias",
+      "scale": 0.005413055419921875,
+      "shape": [
+        27
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 5.99989013655116,
+      "entropy_ratio_vs_uniform": 0.8585149288402514,
+      "max_symbol": 119,
+      "min_symbol": -127,
+      "mode_count": 23,
+      "mode_symbol": 21,
+      "n_elements": 540,
+      "n_quant_max": 127,
+      "n_unique_symbols": 92,
+      "name": "skips.3.weight",
+      "scale": 0.003002166748046875,
+      "shape": [
+        20,
+        27,
+        1,
+        1
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 4.321928094887363,
+      "entropy_ratio_vs_uniform": 0.6184179553940519,
+      "max_symbol": 120,
+      "min_symbol": -127,
+      "mode_count": 1,
+      "mode_symbol": 25,
+      "n_elements": 20,
+      "n_quant_max": 127,
+      "n_unique_symbols": 20,
+      "name": "skips.3.bias",
+      "scale": 0.00738525390625,
+      "shape": [
+        20
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 5.742903678183986,
+      "entropy_ratio_vs_uniform": 0.8217431370246062,
+      "max_symbol": 127,
+      "min_symbol": -112,
+      "mode_count": 14,
+      "mode_symbol": 31,
+      "n_elements": 360,
+      "n_quant_max": 127,
+      "n_unique_symbols": 73,
+      "name": "skips.4.weight",
+      "scale": 0.0027942657470703125,
+      "shape": [
+        18,
+        20,
+        1,
+        1
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 4.169925001442312,
+      "entropy_ratio_vs_uniform": 0.5966680696490627,
+      "max_symbol": 127,
+      "min_symbol": -111,
+      "mode_count": 1,
+      "mode_symbol": -73,
+      "n_elements": 18,
+      "n_quant_max": 127,
+      "n_unique_symbols": 18,
+      "name": "skips.4.bias",
+      "scale": 0.006145477294921875,
+      "shape": [
+        18
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 5.46556806975341,
+      "entropy_ratio_vs_uniform": 0.7820596170404376,
+      "max_symbol": 127,
+      "min_symbol": -122,
+      "mode_count": 80,
+      "mode_symbol": 9,
+      "n_elements": 1458,
+      "n_quant_max": 127,
+      "n_unique_symbols": 73,
+      "name": "refine.0.weight",
+      "scale": 0.007617950439453125,
+      "shape": [
+        9,
+        18,
+        3,
+        3
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 3.169925001442312,
+      "entropy_ratio_vs_uniform": 0.4535796281440753,
+      "max_symbol": 46,
+      "min_symbol": -127,
+      "mode_count": 1,
+      "mode_symbol": -88,
+      "n_elements": 9,
+      "n_quant_max": 127,
+      "n_unique_symbols": 9,
+      "name": "refine.0.bias",
+      "scale": 0.007480621337890625,
+      "shape": [
+        9
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 5.947793726440215,
+      "entropy_ratio_vs_uniform": 0.8510605347094716,
+      "max_symbol": 127,
+      "min_symbol": -117,
+      "mode_count": 65,
+      "mode_symbol": -9,
+      "n_elements": 1458,
+      "n_quant_max": 127,
+      "n_unique_symbols": 110,
+      "name": "refine.1.weight",
+      "scale": 0.003505706787109375,
+      "shape": [
+        18,
+        9,
+        3,
+        3
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 4.058813890331201,
+      "entropy_ratio_vs_uniform": 0.5807693539262864,
+      "max_symbol": 115,
+      "min_symbol": -127,
+      "mode_count": 2,
+      "mode_symbol": -69,
+      "n_elements": 18,
+      "n_quant_max": 127,
+      "n_unique_symbols": 17,
+      "name": "refine.1.bias",
+      "scale": 0.01419830322265625,
+      "shape": [
+        18
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 5.575037289557011,
+      "entropy_ratio_vs_uniform": 0.7977233970949018,
+      "max_symbol": 127,
+      "min_symbol": -101,
+      "mode_count": 29,
+      "mode_symbol": 7,
+      "n_elements": 486,
+      "n_quant_max": 127,
+      "n_unique_symbols": 69,
+      "name": "rgb_0.weight",
+      "scale": 0.007236480712890625,
+      "shape": [
+        3,
+        18,
+        3,
+        3
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 1.584962500721156,
+      "entropy_ratio_vs_uniform": 0.22678981407203766,
+      "max_symbol": 127,
+      "min_symbol": -6,
+      "mode_count": 1,
+      "mode_symbol": 127,
+      "n_elements": 3,
+      "n_quant_max": 127,
+      "n_unique_symbols": 3,
+      "name": "rgb_0.bias",
+      "scale": 0.01030731201171875,
+      "shape": [
+        3
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 5.7931118555688075,
+      "entropy_ratio_vs_uniform": 0.8289273468774062,
+      "max_symbol": 127,
+      "min_symbol": -90,
+      "mode_count": 24,
+      "mode_symbol": 0,
+      "n_elements": 486,
+      "n_quant_max": 127,
+      "n_unique_symbols": 76,
+      "name": "rgb_1.weight",
+      "scale": 0.005481719970703125,
+      "shape": [
+        3,
+        18,
+        3,
+        3
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    },
+    {
+      "empirical_bits_per_element": 1.584962500721156,
+      "entropy_ratio_vs_uniform": 0.22678981407203766,
+      "max_symbol": -49,
+      "min_symbol": -127,
+      "mode_count": 1,
+      "mode_symbol": -127,
+      "n_elements": 3,
+      "n_quant_max": 127,
+      "n_unique_symbols": 3,
+      "name": "rgb_1.bias",
+      "scale": 0.00592041015625,
+      "shape": [
+        3
+      ],
+      "uniform_bits_per_element": 6.9886846867721655
+    }
+  ],
+  "schema": "pr101_per_tensor_empirical_entropy.v1",
+  "score_at_empirical_floor_zero_distortion": 0.11713524359743989,
+  "tool": "tools/pr101_per_tensor_empirical_entropy.py",
+  "top_5_least_skewed_tensors": [
+    {
+      "entropy_ratio": 1.0307249243861383,
+      "name": "stem.bias"
+    },
+    {
+      "entropy_ratio": 0.9296529051661618,
+      "name": "blocks.0.bias"
+    },
+    {
+      "entropy_ratio": 0.9174658812520067,
+      "name": "blocks.1.bias"
+    },
+    {
+      "entropy_ratio": 0.9125504610002009,
+      "name": "blocks.2.bias"
+    },
+    {
+      "entropy_ratio": 0.8970955064248711,
+      "name": "blocks.4.weight"
+    }
+  ],
+  "top_5_most_skewed_tensors": [
+    {
+      "entropy_ratio": 0.22678981407203766,
+      "name": "rgb_0.bias"
+    },
+    {
+      "entropy_ratio": 0.22678981407203766,
+      "name": "rgb_1.bias"
+    },
+    {
+      "entropy_ratio": 0.4535796281440753,
+      "name": "refine.0.bias"
+    },
+    {
+      "entropy_ratio": 0.5807693539262864,
+      "name": "refine.1.bias"
+    },
+    {
+      "entropy_ratio": 0.5966680696490627,
+      "name": "skips.4.bias"
+    }
+  ],
+  "total_elements": 228958,
+  "uniform_bits_per_element": 6.9886846867721655,
+  "uniform_floor_bytes": 216109,
+  "uniform_to_empirical_savings_bytes": 40193,
+  "weighted_avg_empirical_bits_per_element": 5.584317153649183,
+  "weighted_avg_entropy_ratio_vs_uniform": 0.7990512383852286
+}
