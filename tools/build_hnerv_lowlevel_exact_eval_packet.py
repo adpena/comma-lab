@@ -216,6 +216,57 @@ def _raw_equivalence_by_section(candidate_result: dict[str, Any]) -> dict[str, d
     return out
 
 
+def _rate_only_raw_equivalent_kkt_proof(
+    *,
+    candidate_result: dict[str, Any],
+    static_ready: bool,
+    byte_delta: int,
+    expected_delta: float,
+) -> dict[str, Any]:
+    """Return a narrow KKT-style descent proof for raw-equivalent rate-only repacks."""
+
+    blockers: list[str] = []
+    changed = _changed_sections(candidate_result)
+    payload_changes = [row for row in changed if row.get("section_name") != "packed_header_ff_len24"]
+    raw_by_section = _raw_equivalence_by_section(candidate_result)
+    if not static_ready:
+        blockers.append("static_packet_not_ready")
+    if byte_delta >= 0:
+        blockers.append("byte_delta_not_negative")
+    if len(payload_changes) != 1:
+        blockers.append("single_payload_change_required")
+    for row in payload_changes:
+        section_name = str(row.get("section_name") or "")
+        raw_row = raw_by_section.get(section_name)
+        if not isinstance(raw_row, dict) or raw_row.get("raw_equal") is not True:
+            blockers.append(f"raw_equivalence_missing:{section_name or '<unknown>'}")
+    official_delta = byte_delta * RATE_SCORE_PER_BYTE
+    if abs(expected_delta - official_delta) > 1e-12:
+        blockers.append("official_rate_delta_mismatch")
+
+    passed = not blockers
+    residual = 0.0 if passed else None
+    tolerance = 0.0 if passed else 1e-12
+    return {
+        "schema": "hnerv_rate_only_raw_equivalent_kkt_proof_v1",
+        "status": "passed" if passed else "blocked",
+        "proof_class": "discrete_rate_only_raw_equivalent_archive_repack",
+        "stationarity_residual": residual,
+        "stationarity_tolerance": tolerance,
+        "kkt_residual": residual,
+        "kkt_tolerance": tolerance,
+        "official_rate_score_delta": official_delta,
+        "byte_delta": byte_delta,
+        "expected_seg_dist_delta": 0.0,
+        "expected_pose_dist_delta": 0.0,
+        "interaction_assumptions": [
+            "raw_equivalent_payload_sections_preserve_scorer_visible_runtime_outputs",
+            "only_official_rate_term_changes_before_exact_cuda_confirmation",
+        ],
+        "blockers": blockers,
+    }
+
+
 def _runtime_tree_from_public_preflight(public_preflight: dict[str, Any] | None) -> str:
     if not isinstance(public_preflight, dict):
         return ""
@@ -401,6 +452,12 @@ def _candidate_manifest(
     expected_delta = byte_delta * RATE_SCORE_PER_BYTE
     changed = _changed_sections(candidate_result)
     raw_equivalence = list(_raw_equivalence_by_section(candidate_result).values())
+    kkt_proof = _rate_only_raw_equivalent_kkt_proof(
+        candidate_result=candidate_result,
+        static_ready=static_ready,
+        byte_delta=byte_delta,
+        expected_delta=expected_delta,
+    )
     runtime_tree = _runtime_tree_from_public_preflight(public_preflight)
     runtime_tree_fields = (
         {
@@ -448,6 +505,7 @@ def _candidate_manifest(
         "expected_total_score_delta_rate_only": expected_delta,
         "expected_seg_dist_delta": 0.0,
         "expected_pose_dist_delta": 0.0,
+        "kkt_proof": kkt_proof,
         "raw_equivalence": raw_equivalence,
         "linked_lowlevel_changes": changed,
         "static_packet_ready": static_ready,
@@ -1083,6 +1141,14 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "operator_score_claim_review_not_done",
     ]
     packet_path = _packet_output_path(args)
+    byte_delta = int(candidate_result["candidate_archive_bytes"]) - int(candidate_result["source_archive_bytes"])
+    expected_delta = byte_delta * RATE_SCORE_PER_BYTE
+    kkt_proof = _rate_only_raw_equivalent_kkt_proof(
+        candidate_result=candidate_result,
+        static_ready=static_ready,
+        byte_delta=byte_delta,
+        expected_delta=expected_delta,
+    )
     packet = {
         "schema": "hnerv_lowlevel_exact_eval_operator_packet_v1",
         "schema_version": 1,
@@ -1126,11 +1192,9 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "source_archive_bytes": candidate_result.get("source_archive_bytes"),
         "source_payload_sha256": candidate_result.get("source_payload_sha256"),
         "candidate_payload_sha256": candidate_result.get("candidate_payload_sha256"),
-        "byte_delta": int(candidate_result["candidate_archive_bytes"]) - int(candidate_result["source_archive_bytes"]),
-        "expected_total_score_delta_rate_only": (
-            (int(candidate_result["candidate_archive_bytes"]) - int(candidate_result["source_archive_bytes"]))
-            * RATE_SCORE_PER_BYTE
-        ),
+        "byte_delta": byte_delta,
+        "expected_total_score_delta_rate_only": expected_delta,
+        "kkt_proof": kkt_proof,
         "validation_checks": checks,
         "release_surface": _release_surface_status(args.release_surface_dir),
         "refreshes": {

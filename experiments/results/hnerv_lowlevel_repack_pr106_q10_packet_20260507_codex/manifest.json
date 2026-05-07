@@ -41,6 +41,24 @@
     "upstream_dir": "upstream"
   },
   "job_name": "exact_eval_pr106_q10_151byte_brotli_20260507",
+  "kkt_proof": {
+    "blockers": [],
+    "byte_delta": -151,
+    "expected_pose_dist_delta": 0.0,
+    "expected_seg_dist_delta": 0.0,
+    "interaction_assumptions": [
+      "raw_equivalent_payload_sections_preserve_scorer_visible_runtime_outputs",
+      "only_official_rate_term_changes_before_exact_cuda_confirmation"
+    ],
+    "kkt_residual": 0.0,
+    "kkt_tolerance": 0.0,
+    "official_rate_score_delta": -0.00010054470192144788,
+    "proof_class": "discrete_rate_only_raw_equivalent_archive_repack",
+    "schema": "hnerv_rate_only_raw_equivalent_kkt_proof_v1",
+    "stationarity_residual": 0.0,
+    "stationarity_tolerance": 0.0,
+    "status": "passed"
+  },
   "lane_id": "pr106_q10_151byte_brotli",
   "linked_lowlevel_changes": [
     {

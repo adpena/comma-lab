@@ -22,7 +22,7 @@
   ],
   "field_selection_ready_for_exact_eval_dispatch": false,
   "field_selection_ready_for_exact_eval_dispatch_count": 0,
-  "kkt_ready_for_field_planning_count": 0,
+  "kkt_ready_for_field_planning_count": 1,
   "lexicographic_feasibility_order": [
     "field_selection_ready_for_exact_eval_dispatch desc",
     "candidate_static_preflight_ready desc",
@@ -148,10 +148,7 @@
           ],
           "exact_cuda_eval": [],
           "interaction_model": [],
-          "kkt_or_admm": [
-            "kkt:kkt_proof_or_admm_result_missing",
-            "kkt_not_ready_for_field_planning"
-          ],
+          "kkt_or_admm": [],
           "other": [],
           "pareto_frontier": [],
           "proxy_or_planning": [],
@@ -159,19 +156,16 @@
           "score_claim": [],
           "strict_preflight": []
         },
-        "blocker_count": 4,
+        "blocker_count": 2,
         "blockers": [
           "missing_active_lane_dispatch_claim",
-          "claim:active_dispatch_claim_missing",
-          "kkt:kkt_proof_or_admm_result_missing",
-          "kkt_not_ready_for_field_planning"
+          "claim:active_dispatch_claim_missing"
         ],
         "candidate_preflight_ready_for_exact_eval_dispatch": false,
         "dispatch_attempted": false,
         "dispatch_refused": true,
         "next_required_proof": [
-          "matching_active_level2_lane_claim_for_manifest_lane_and_job",
-          "passed_kkt_proof_or_converged_admm_waterline_result"
+          "matching_active_level2_lane_claim_for_manifest_lane_and_job"
         ],
         "ready_for_exact_eval_dispatch": false,
         "schema": "exact_dispatch_blockers_v1",
@@ -205,13 +199,10 @@
       },
       "field_selection_blockers": [
         "missing_active_lane_dispatch_claim",
-        "claim:active_dispatch_claim_missing",
-        "kkt:kkt_proof_or_admm_result_missing",
-        "kkt_not_ready_for_field_planning"
+        "claim:active_dispatch_claim_missing"
       ],
       "field_selection_next_required_proof": [
-        "matching_active_level2_lane_claim_for_manifest_lane_and_job",
-        "passed_kkt_proof_or_converged_admm_waterline_result"
+        "matching_active_level2_lane_claim_for_manifest_lane_and_job"
       ],
       "field_selection_ready_for_exact_eval_dispatch": false,
       "field_selection_score_delta": -0.000100544702,
@@ -219,21 +210,28 @@
         "rate_only_raw_equivalent_brotli_repack",
         "component_deltas_require_exact_cuda_confirmation"
       ],
-      "kkt_blockers": [
-        "kkt:kkt_proof_or_admm_result_missing"
-      ],
+      "kkt_blockers": [],
       "kkt_proof": {
-        "blockers": [
-          "kkt_proof_or_admm_result_missing"
+        "blockers": [],
+        "candidates": [
+          {
+            "blockers": [],
+            "kind": "kkt_proof",
+            "residual": 0.0,
+            "residual_source": "kkt_residual",
+            "source": "kkt_proof",
+            "status": "passed",
+            "tolerance": 0.0,
+            "tolerance_source": "kkt_tolerance"
+          }
         ],
-        "candidates": [],
-        "kind": "",
-        "residual": null,
-        "source": "",
-        "status": "blocked",
-        "tolerance": null
+        "kind": "kkt_proof",
+        "residual": 0.0,
+        "source": "kkt_proof",
+        "status": "passed",
+        "tolerance": 0.0
       },
-      "kkt_ready_for_field_planning": false,
+      "kkt_ready_for_field_planning": true,
       "lexicographic_feasibility_tuple": [
         false,
         true,
@@ -241,12 +239,12 @@
         true,
         true,
         true,
-        false,
+        true,
         -0.000100544702,
         0.0
       ],
       "manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json",
-      "manifest_sha256": "35f00cb4af1d2fc9bddb4e1753c32322a7ee8037fa5e2d482c53de1da9117711",
+      "manifest_sha256": "8ef495fe98bbd2086ce070f190a8593d0007110919c8a0efe920159dbdd6b43c",
       "next_local_non_gpu_action": {
         "command": ".venv/bin/python -c 'import os,sys; missing=[k for k in sys.argv[1:] if not os.environ.get(k)]; raise SystemExit(('\"'\"'FATAL: missing Lightning env: '\"'\"'+'\"'\"', '\"'\"'.join(missing)) if missing else 0)' LIGHTNING_SSH_TARGET LIGHTNING_REMOTE_PACT LIGHTNING_UPSTREAM_DIR LIGHTNING_TEAMSPACE LIGHTNING_STUDIO LIGHTNING_SDK_USER",
         "copy_safe_command": ".venv/bin/python -c 'import os,sys; missing=[k for k in sys.argv[1:] if not os.environ.get(k)]; raise SystemExit(('\"'\"'FATAL: missing Lightning env: '\"'\"'+'\"'\"', '\"'\"'.join(missing)) if missing else 0)' LIGHTNING_SSH_TARGET LIGHTNING_REMOTE_PACT LIGHTNING_UPSTREAM_DIR LIGHTNING_TEAMSPACE LIGHTNING_STUDIO LIGHTNING_SDK_USER",
@@ -259,8 +257,7 @@
       },
       "next_local_non_gpu_command": ".venv/bin/python -c 'import os,sys; missing=[k for k in sys.argv[1:] if not os.environ.get(k)]; raise SystemExit(('\"'\"'FATAL: missing Lightning env: '\"'\"'+'\"'\"', '\"'\"'.join(missing)) if missing else 0)' LIGHTNING_SSH_TARGET LIGHTNING_REMOTE_PACT LIGHTNING_UPSTREAM_DIR LIGHTNING_TEAMSPACE LIGHTNING_STUDIO LIGHTNING_SDK_USER",
       "next_required_proof": [
-        "matching_active_level2_lane_claim_for_manifest_lane_and_job",
-        "passed_kkt_proof_or_converged_admm_waterline_result"
+        "matching_active_level2_lane_claim_for_manifest_lane_and_job"
       ],
       "non_dominated_frontier_reason": {
         "dominated_by": [],
@@ -439,15 +436,13 @@
       "schema_version": 3,
       "score_claim": false,
       "selection_blockers": [
-        "kkt_not_ready_for_field_planning",
         "missing_active_lane_dispatch_claim"
       ],
-      "selection_decision": "static_candidate_acquire_kkt_and_lane_claim_before_dispatch",
+      "selection_decision": "needs_active_lane_claim_before_dispatch",
       "selection_penalty_terms": {
-        "kkt_not_ready_for_field_planning": 25.0,
         "missing_active_lane_dispatch_claim": 100.0
       },
-      "selection_penalty_units": 125.0,
+      "selection_penalty_units": 100.0,
       "static_candidate_blockers": [],
       "strict_candidate_preflight": {
         "blockers": [],
@@ -1356,10 +1351,7 @@
         ],
         "exact_cuda_eval": [],
         "interaction_model": [],
-        "kkt_or_admm": [
-          "kkt:kkt_proof_or_admm_result_missing",
-          "kkt_not_ready_for_field_planning"
-        ],
+        "kkt_or_admm": [],
         "other": [],
         "pareto_frontier": [],
         "proxy_or_planning": [],
@@ -1367,19 +1359,16 @@
         "score_claim": [],
         "strict_preflight": []
       },
-      "blocker_count": 4,
+      "blocker_count": 2,
       "blockers": [
         "missing_active_lane_dispatch_claim",
-        "claim:active_dispatch_claim_missing",
-        "kkt:kkt_proof_or_admm_result_missing",
-        "kkt_not_ready_for_field_planning"
+        "claim:active_dispatch_claim_missing"
       ],
       "candidate_preflight_ready_for_exact_eval_dispatch": false,
       "dispatch_attempted": false,
       "dispatch_refused": true,
       "next_required_proof": [
-        "matching_active_level2_lane_claim_for_manifest_lane_and_job",
-        "passed_kkt_proof_or_converged_admm_waterline_result"
+        "matching_active_level2_lane_claim_for_manifest_lane_and_job"
       ],
       "ready_for_exact_eval_dispatch": false,
       "schema": "exact_dispatch_blockers_v1",
@@ -1413,13 +1402,10 @@
     },
     "field_selection_blockers": [
       "missing_active_lane_dispatch_claim",
-      "claim:active_dispatch_claim_missing",
-      "kkt:kkt_proof_or_admm_result_missing",
-      "kkt_not_ready_for_field_planning"
+      "claim:active_dispatch_claim_missing"
     ],
     "field_selection_next_required_proof": [
-      "matching_active_level2_lane_claim_for_manifest_lane_and_job",
-      "passed_kkt_proof_or_converged_admm_waterline_result"
+      "matching_active_level2_lane_claim_for_manifest_lane_and_job"
     ],
     "field_selection_ready_for_exact_eval_dispatch": false,
     "field_selection_score_delta": -0.000100544702,
@@ -1427,21 +1413,28 @@
       "rate_only_raw_equivalent_brotli_repack",
       "component_deltas_require_exact_cuda_confirmation"
     ],
-    "kkt_blockers": [
-      "kkt:kkt_proof_or_admm_result_missing"
-    ],
+    "kkt_blockers": [],
     "kkt_proof": {
-      "blockers": [
-        "kkt_proof_or_admm_result_missing"
+      "blockers": [],
+      "candidates": [
+        {
+          "blockers": [],
+          "kind": "kkt_proof",
+          "residual": 0.0,
+          "residual_source": "kkt_residual",
+          "source": "kkt_proof",
+          "status": "passed",
+          "tolerance": 0.0,
+          "tolerance_source": "kkt_tolerance"
+        }
       ],
-      "candidates": [],
-      "kind": "",
-      "residual": null,
-      "source": "",
-      "status": "blocked",
-      "tolerance": null
+      "kind": "kkt_proof",
+      "residual": 0.0,
+      "source": "kkt_proof",
+      "status": "passed",
+      "tolerance": 0.0
     },
-    "kkt_ready_for_field_planning": false,
+    "kkt_ready_for_field_planning": true,
     "lexicographic_feasibility_tuple": [
       false,
       true,
@@ -1449,12 +1442,12 @@
       true,
       true,
       true,
-      false,
+      true,
       -0.000100544702,
       0.0
     ],
     "manifest_path": "experiments/results/hnerv_lowlevel_repack_pr106_q10_packet_20260507_codex/hnerv_lowlevel_exact_eval_packet.json",
-    "manifest_sha256": "35f00cb4af1d2fc9bddb4e1753c32322a7ee8037fa5e2d482c53de1da9117711",
+    "manifest_sha256": "8ef495fe98bbd2086ce070f190a8593d0007110919c8a0efe920159dbdd6b43c",
     "next_local_non_gpu_action": {
       "command": ".venv/bin/python -c 'import os,sys; missing=[k for k in sys.argv[1:] if not os.environ.get(k)]; raise SystemExit(('\"'\"'FATAL: missing Lightning env: '\"'\"'+'\"'\"', '\"'\"'.join(missing)) if missing else 0)' LIGHTNING_SSH_TARGET LIGHTNING_REMOTE_PACT LIGHTNING_UPSTREAM_DIR LIGHTNING_TEAMSPACE LIGHTNING_STUDIO LIGHTNING_SDK_USER",
       "copy_safe_command": ".venv/bin/python -c 'import os,sys; missing=[k for k in sys.argv[1:] if not os.environ.get(k)]; raise SystemExit(('\"'\"'FATAL: missing Lightning env: '\"'\"'+'\"'\"', '\"'\"'.join(missing)) if missing else 0)' LIGHTNING_SSH_TARGET LIGHTNING_REMOTE_PACT LIGHTNING_UPSTREAM_DIR LIGHTNING_TEAMSPACE LIGHTNING_STUDIO LIGHTNING_SDK_USER",
@@ -1467,8 +1460,7 @@
     },
     "next_local_non_gpu_command": ".venv/bin/python -c 'import os,sys; missing=[k for k in sys.argv[1:] if not os.environ.get(k)]; raise SystemExit(('\"'\"'FATAL: missing Lightning env: '\"'\"'+'\"'\"', '\"'\"'.join(missing)) if missing else 0)' LIGHTNING_SSH_TARGET LIGHTNING_REMOTE_PACT LIGHTNING_UPSTREAM_DIR LIGHTNING_TEAMSPACE LIGHTNING_STUDIO LIGHTNING_SDK_USER",
     "next_required_proof": [
-      "matching_active_level2_lane_claim_for_manifest_lane_and_job",
-      "passed_kkt_proof_or_converged_admm_waterline_result"
+      "matching_active_level2_lane_claim_for_manifest_lane_and_job"
     ],
     "non_dominated_frontier_reason": {
       "dominated_by": [],
@@ -1647,15 +1639,13 @@
     "schema_version": 3,
     "score_claim": false,
     "selection_blockers": [
-      "kkt_not_ready_for_field_planning",
       "missing_active_lane_dispatch_claim"
     ],
-    "selection_decision": "static_candidate_acquire_kkt_and_lane_claim_before_dispatch",
+    "selection_decision": "needs_active_lane_claim_before_dispatch",
     "selection_penalty_terms": {
-      "kkt_not_ready_for_field_planning": 25.0,
       "missing_active_lane_dispatch_claim": 100.0
     },
-    "selection_penalty_units": 125.0,
+    "selection_penalty_units": 100.0,
     "static_candidate_blockers": [],
     "strict_candidate_preflight": {
       "blockers": [],

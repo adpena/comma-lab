@@ -82,6 +82,10 @@ def test_lowlevel_exact_eval_packet_builds_static_release_surface(tmp_path: Path
         "operator_score_claim_review_not_done",
     ]
     assert packet["byte_delta"] < 0
+    assert packet["kkt_proof"]["status"] == "passed"
+    assert packet["kkt_proof"]["proof_class"] == "discrete_rate_only_raw_equivalent_archive_repack"
+    assert packet["kkt_proof"]["stationarity_residual"] == 0.0
+    assert packet["kkt_proof"]["official_rate_score_delta"] == packet["expected_total_score_delta_rate_only"]
 
     release_surface = result_dir / "release_surface"
     assert _sha256(release_surface / "archive.zip") == fixture["candidate_archive_sha256"]
@@ -100,6 +104,8 @@ def test_lowlevel_exact_eval_packet_builds_static_release_surface(tmp_path: Path
     assert manifest["exact_eval_runtime_contract"]["runtime_tree_sha256"] == runtime_tree
     assert manifest["fixed_runtime_preflight"]["runtime_tree_source"].endswith("public_replay_preflight.json")
     assert manifest["exact_eval_runtime_contract"]["runtime_tree_source"].endswith("public_replay_preflight.json")
+    assert manifest["kkt_proof"]["status"] == "passed"
+    assert manifest["kkt_proof"]["byte_delta"] == packet["byte_delta"]
 
     claim_command = packet["commands"]["claim"]
     assert "PR106x lgblock16 1-byte" not in claim_command
@@ -155,6 +161,9 @@ def test_lowlevel_exact_eval_packet_blocks_missing_raw_equivalence(tmp_path: Pat
     packet = module.build_packet(args)
 
     assert packet["static_packet_ready"] is False
+    assert packet["kkt_proof"]["status"] == "blocked"
+    assert "static_packet_not_ready" in packet["kkt_proof"]["blockers"]
+    assert "raw_equivalence_missing:decoder_packed_brotli" in packet["kkt_proof"]["blockers"]
     assert "static_packet_not_ready" in packet["submit_blockers"]
     assert any(row["code"] == "payload_change_raw_equivalence_closed" for row in packet["static_blockers"])
     assert not (result_dir / "release_surface" / "archive.zip").exists()
