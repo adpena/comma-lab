@@ -186,6 +186,11 @@ def main(argv: list[str] | None = None) -> int:
                 else:
                     print(text, end="")
                 if args.fail_if_missing and discovery.get("missing_source_artifacts"):
+                    _print_fail_if_missing(
+                        "discovery missing source artifacts",
+                        discovery.get("missing_source_artifacts") or [],
+                        args.json_out,
+                    )
                     return 1
                 return 0
             selected = discovery["selected_entropy_audit"]
@@ -233,6 +238,11 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(text, end="")
     if args.fail_if_missing and manifest.get("missing_artifacts"):
+        _print_fail_if_missing(
+            "candidate packet missing required artifacts",
+            manifest.get("missing_artifacts") or [],
+            args.json_out,
+        )
         return 1
     return 0
 
@@ -253,6 +263,13 @@ def _add_artifact(artifacts: dict[str, Path], requirement_id: str, path: Path) -
     if requirement_id in artifacts:
         raise HnervEntropyCandidatePacketError(f"duplicate artifact requirement id: {requirement_id}")
     artifacts[requirement_id] = path
+
+
+def _print_fail_if_missing(reason: str, missing: list[object], json_out: Path | None) -> None:
+    items = ", ".join(str(item) for item in missing) or "unknown"
+    print(f"FATAL: HNeRV entropy candidate packet {reason}: {items}", file=sys.stderr)
+    if json_out is not None:
+        print(f"FATAL: details written to {json_out}", file=sys.stderr)
 
 
 def _materialize_hdc2_stream_work_product(args: argparse.Namespace) -> dict[str, Path]:

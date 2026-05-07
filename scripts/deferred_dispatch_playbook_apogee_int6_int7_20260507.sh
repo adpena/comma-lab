@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 # Deferred-dispatch playbook — fires {int6, int7} parallel dispatch when paid GPU returns.
 #
-# Pre-conditions verified 2026-05-07T12:13Z:
+# Pre-conditions last investigated 2026-05-07T12:13Z:
 #   - apogee_int6 archive: experiments/results/apogee_int6_repack_20260504_claude/apogee_int6_archive.zip
 #     SHA: 0176a2691a4daf5991170404d30a304ae30389621c0fc54914628414aef39ff1
-#     basin-parity PASS (parity_evidence.json present)
-#     predispatch_sanity ALL 5 GATES PASS exit 0 (with --readiness-evidence-json + --distortion-proxy-ran)
+#     basin-parity PASS (parity_evidence.json present), but current
+#     predispatch_sanity may still refuse the predicted score band when the
+#     SHA-tied rate-distortion floor is violated. This playbook re-runs the
+#     gate and stops before any claim/stage/submit when it fails.
 #   - apogee_int7 archive: experiments/results/apogee_int7_repack_20260504_claude/apogee_int7_archive.zip
 #     SHA: 44deb963508a7069c98538211e967c844c0126f79dfd1a0ccf69740ec1bae99b
 #     basin-parity PASS (parity_evidence.json present)
-#   - Lightning workspace already staged at:
-#     experiments/results/lightning_batch/claude_apogee_int6_override_20260507_101520Z/source_manifest.json
-#     manifest_sha256: dea0c7a6c60feb3685aadaa8b509e50280a2f820be6fe4a9107f6d967612f46d
+#   - Older Lightning workspaces are forensic only. Fresh dispatch delegates to
+#     tools/lightning_dispatch_pr106_stack.py so repo paths, runtime paths,
+#     claims, source manifests, and g4dn/T4 settings stay canonical.
 #
 # Usage:
 #   When ANY of these unblocks:
@@ -65,42 +67,26 @@ case "$PROVIDER" in
     echo "=== Lightning T4 dispatch (canonical recipe) ==="
     for bits in 6 7; do
       archive="experiments/results/apogee_int${bits}_repack_20260504_claude/apogee_int${bits}_archive.zip"
-      JOB_NAME="claude_apogee_int${bits}_lightning_$(date -u +%Y%m%dT%H%M%SZ)"
-      RUN_ID="claude_apogee_int${bits}_lightning_$(date -u +%Y%m%dT%H%M%SZ)"
-      MANIFEST_DIR="experiments/results/lightning_batch/${RUN_ID}"
+      evidence="experiments/results/apogee_int${bits}_basin_parity_20260507_claude/parity_evidence.json"
+      job_name="claude_apogee_int${bits}_lightning_$(date -u +%Y%m%dT%H%M%SZ)"
 
-      .venv/bin/python tools/claim_lane_dispatch.py claim \
-        --lane-id "lane_apogee_int${bits}" --platform lightning \
-        --instance-job-id "$JOB_NAME" --agent operator \
-        --status "active_dispatch_lightning_t4_post_basin_parity_pass" \
-        --notes "Deferred-dispatch playbook fired post-billing-resolution"
-
-      mkdir -p "$MANIFEST_DIR"
-      .venv/bin/python scripts/lightning_repro_workspace.py \
-        --remote "s_01knw7wnzbe79wfq5mqqbx1mbz@ssh.lightning.ai" \
-        --remote-pact "/teamspace/studios/this_studio/pact" \
-        --run-id "$RUN_ID" \
-        --manifest-out "${MANIFEST_DIR}/source_manifest.json" \
-        --source "src/" --source "submissions/apogee_intN/" --source "upstream/" \
-        --source "tools/" --source "scripts/" --source "pyproject.toml" --source "uv.lock" \
-        --artifact "$archive" \
-        --requirements-mode no-install --no-verify
-
-      .venv/bin/python scripts/launch_lightning_batch_job.py exact-eval \
-        --job-name "$JOB_NAME" \
-        --archive "$archive" \
-        --repo-dir "$PWD" --upstream-dir "$PWD/upstream" \
-        --teamspace "comma-lab" --studio "lossy-compression-challenge" --user "adpena" \
-        --inflate-sh "$PWD/submissions/apogee_intN/inflate.sh" \
-        --predicted-band 0.190 0.215 \
-        --baseline-score 0.20945673 --baseline-archive-bytes 186239 \
-        --infer-expected-archive --adjudicate --regression-threshold 0.05 \
-        --dispatch-lane-id "lane_apogee_int${bits}" \
-        --source-manifest "${MANIFEST_DIR}/source_manifest.json" \
-        --allow-skip-remote-preflight-reason "Track C basin-parity gates all pass; deferred-dispatch playbook 2026-05-07" \
-        --env "INFLATE_TORCH_SPEC=torch==2.5.1+cu124" \
-        --env "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124" \
-        --env "UV_INDEX_STRATEGY=unsafe-best-match"
+      cmd=(
+        .venv/bin/python tools/lightning_dispatch_pr106_stack.py
+        --lane "apogee_int${bits}"
+        --archive "$archive"
+        --predicted-low 0.190
+        --predicted-high 0.215
+        --apogee-distortion-gate-json "$evidence"
+        --machine g4dn.2xlarge
+        --job-name "$job_name"
+      )
+      if [[ -n "${LIGHTNING_SSH_TARGET:-}" ]]; then
+        cmd+=(--ssh-target "$LIGHTNING_SSH_TARGET")
+      fi
+      if [[ -n "${LIGHTNING_REMOTE_PACT:-}" ]]; then
+        cmd+=(--remote-pact "$LIGHTNING_REMOTE_PACT")
+      fi
+      "${cmd[@]}"
     done
     ;;
 

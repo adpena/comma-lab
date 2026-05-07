@@ -93,6 +93,7 @@ class Candidate:
     score_rank: int = 0  # 1 = best contest score
     is_frontier: bool = False  # alias for pareto_dominated_by is None
     importance_flip_above: bool = False  # True iff d_pose > IMPORTANCE_FLIP_POSE_FLOOR
+    is_legacy_regime: bool = False  # True if d_pose > 0.01 (stale / old operating point)
 
 
 def dominates(a: Candidate, b: Candidate) -> bool:
@@ -130,12 +131,22 @@ def _extract_d_seg(payload: dict[str, Any]) -> float | None:
                 v = container.get(key)
                 if v is not None:
                     return float(v)
-    for key in ("seg_distortion", "d_seg", "segnet_distortion"):
+    for key in (
+        "seg_distortion", "d_seg", "segnet_distortion", "avg_segnet_dist",
+        "segnet_dist",  # contest_eval_result.json variant
+    ):
         v = auth.get(key)
         if v is None:
             v = payload.get(key)
         if v is not None:
             return float(v)
+    # metrics.json variant: nested under "segnet" dict
+    seg_dict = payload.get("segnet")
+    if isinstance(seg_dict, dict):
+        for nested_key in ("avg_dist", "mean", "dist", "distortion"):
+            v = seg_dict.get(nested_key)
+            if v is not None:
+                return float(v)
     return None
 
 
@@ -149,12 +160,21 @@ def _extract_d_pose(payload: dict[str, Any]) -> float | None:
                 v = container.get(key)
                 if v is not None:
                     return float(v)
-    for key in ("pose_distortion", "d_pose", "posenet_distortion"):
+    for key in (
+        "pose_distortion", "d_pose", "posenet_distortion", "avg_posenet_dist",
+        "posenet_dist",  # contest_eval_result.json variant
+    ):
         v = auth.get(key)
         if v is None:
             v = payload.get(key)
         if v is not None:
             return float(v)
+    pose_dict = payload.get("posenet")
+    if isinstance(pose_dict, dict):
+        for nested_key in ("avg_dist", "mean", "dist", "distortion"):
+            v = pose_dict.get(nested_key)
+            if v is not None:
+                return float(v)
     return None
 
 
@@ -229,6 +249,39 @@ def _extract_archive_sha(payload: dict[str, Any]) -> str | None:
     return None
 
 
+def _derive_lane_label(path: Path) -> str:
+    """Walk up ``path`` until we find a directory under ``experiments/results/``;
+    return that directory's name. Falls back to immediate parent / stem.
+
+    Self-protection (M-1.1 hardening): with legacy schemas, many evidence
+    files share the same immediate parent (``robust_current``). The lane
+    identity is several levels up. Walking up to the
+    ``experiments/results/<lane>/...`` boundary gives the unique lane label.
+    """
+    try:
+        parts = list(path.resolve().parts)
+    except OSError:
+        parts = list(path.parts)
+    if "experiments" in parts:
+        idx = parts.index("experiments")
+        if idx + 2 < len(parts) and parts[idx + 1] == "results":
+            return parts[idx + 2]
+    return path.parent.name or path.stem
+
+
+def _flag_legacy_regime(d_pose: float) -> bool:
+    """Self-protection: candidates with d_pose >> the importance-flip threshold
+    (2.5e-4) are likely stale evidence from the OLD 1.x score operating point
+    or MPS-CUDA divergence artifacts. They should NOT be ranked alongside
+    current PR106-frontier candidates; flag them so the operator can filter.
+
+    Heuristic threshold: d_pose > 0.01 means the candidate's pose distortion
+    is 30+ standard deviations above the current frontier; almost certainly
+    stale or contaminated.
+    """
+    return d_pose > 0.01
+
+
 def load_candidate_from_evidence(path: Path) -> Candidate | None:
     """Parse one evidence JSON into a Candidate. Returns None if d_seg / d_pose
     / archive_bytes is missing — these tools only act on contest-CUDA evidence
@@ -244,7 +297,7 @@ def load_candidate_from_evidence(path: Path) -> Candidate | None:
         return None
     archive_path = _extract_archive_path(payload, path)
     archive_sha = _extract_archive_sha(payload)
-    label = path.parent.name or path.stem
+    label = _derive_lane_label(path)
     score = float(contest_score(
         seg_distortion=d_seg, pose_distortion=d_pose, archive_bytes=archive_bytes,
     ))
@@ -261,6 +314,7 @@ def load_candidate_from_evidence(path: Path) -> Candidate | None:
         score=score,
         decomposition=decomp,
         importance_flip_above=d_pose > IMPORTANCE_FLIP_POSE_FLOOR,
+        is_legacy_regime=_flag_legacy_regime(d_pose),
     )
 
 
@@ -268,11 +322,22 @@ def load_candidates(
     evidence_paths: list[Path],
     *,
     glob_pattern: str | None = None,
+    glob_patterns: list[str] | None = None,
     repo_root: Path = REPO_ROOT,
 ) -> list[Candidate]:
+    """Load candidates from explicit paths + optional glob pattern(s).
+
+    Accepts both ``glob_pattern`` (single-pattern back-compat) and
+    ``glob_patterns`` (list, M-1.1 extension for legacy schemas).
+    """
     paths: list[Path] = list(evidence_paths)
+    pattern_list: list[str] = []
     if glob_pattern:
-        for p in glob.glob(str(repo_root / glob_pattern), recursive=True):
+        pattern_list.append(glob_pattern)
+    if glob_patterns:
+        pattern_list.extend(glob_patterns)
+    for pattern in pattern_list:
+        for p in glob.glob(str(repo_root / pattern), recursive=True):
             paths.append(Path(p))
     seen: set[Path] = set()
     out: list[Candidate] = []
@@ -381,6 +446,30 @@ def main(argv: list[str] | None = None) -> int:
         "Example: 'experiments/results/**/pre_submission_compliance.contest_final.json'",
     )
     parser.add_argument(
+        "--evidence-globs",
+        nargs="*",
+        default=None,
+        help="Multiple glob patterns (M-1.1: lets you union the canonical "
+        "schema glob with legacy schema globs in one run).",
+    )
+    parser.add_argument(
+        "--include-legacy",
+        action="store_true",
+        help="Convenience flag: union the canonical glob with all known "
+        "legacy schema variants (auth_eval_renderer_fp4.json, "
+        "auth_eval_result.json, auth_eval_*.json under recovered_*). "
+        "PARTIAL: only covers the schema used by these named files; other "
+        "legacy variants may not load. See M-1.1 in the roadmap rollup.",
+    )
+    parser.add_argument(
+        "--exclude-legacy-regime",
+        action="store_true",
+        help="Self-protection: drop candidates with d_pose > 0.01 from the "
+        "frontier comparison. These are old operating-point or MPS-divergence "
+        "artifacts (e.g. baseline_dilated_h64_0_90 evidence with d_pose~3.4) "
+        "that pollute current PR106-frontier rankings.",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Machine-readable JSON output instead of human table.",
@@ -388,7 +477,20 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     paths = [Path(p) for p in args.evidence_paths]
-    cands = load_candidates(paths, glob_pattern=args.evidence_glob)
+    glob_patterns: list[str] = []
+    if args.evidence_globs:
+        glob_patterns.extend(args.evidence_globs)
+    if args.include_legacy:
+        glob_patterns.extend([
+            "experiments/results/**/auth_eval_renderer_fp4.json",
+            "experiments/results/**/auth_eval_result.json",
+            "experiments/results/**/auth_eval_*.json",
+        ])
+    cands = load_candidates(
+        paths, glob_pattern=args.evidence_glob, glob_patterns=glob_patterns,
+    )
+    if args.exclude_legacy_regime:
+        cands = [cand for cand in cands if not cand.is_legacy_regime]
     cands = compute_pareto(cands)
 
     if args.json:

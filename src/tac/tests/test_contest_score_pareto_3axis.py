@@ -260,6 +260,98 @@ def test_load_candidate_handles_corrupt_json(tmp_path: pathlib.Path) -> None:
     assert mod.load_candidate_from_evidence(p) is None
 
 
+def test_load_candidates_accepts_multiple_glob_patterns(tmp_path: pathlib.Path) -> None:
+    mod = _load_tool_module()
+    repo_root = tmp_path
+    first = repo_root / "experiments" / "results" / "lane_a" / "auth_eval_renderer_fp4.json"
+    second = repo_root / "experiments" / "results" / "lane_b" / "auth_eval_result.json"
+    first.parent.mkdir(parents=True)
+    second.parent.mkdir(parents=True)
+    first.write_text(
+        json.dumps(
+            {
+                "avg_segnet_dist": 0.001,
+                "avg_posenet_dist": 5e-5,
+                "archive_size_bytes": 200,
+            }
+        ),
+        encoding="utf-8",
+    )
+    second.write_text(
+        json.dumps(
+            {
+                "auth_eval": {
+                    "record": {
+                        "avg_segnet_dist": 0.002,
+                        "avg_posenet_dist": 6e-5,
+                        "archive_bytes": 300,
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    candidates = mod.load_candidates(
+        [],
+        glob_patterns=[
+            "experiments/results/**/auth_eval_renderer_fp4.json",
+            "experiments/results/**/auth_eval_result.json",
+        ],
+        repo_root=repo_root,
+    )
+
+    assert {candidate.label for candidate in candidates} == {"lane_a", "lane_b"}
+    assert sorted(candidate.archive_bytes for candidate in candidates) == [200, 300]
+
+
+def test_main_exclude_legacy_regime_filters_old_pose_candidates(
+    tmp_path: pathlib.Path,
+    capsys,
+) -> None:
+    mod = _load_tool_module()
+    repo_root = tmp_path
+    current = repo_root / "experiments" / "results" / "current_lane" / "auth_eval_result.json"
+    legacy = repo_root / "experiments" / "results" / "legacy_lane" / "auth_eval_result.json"
+    current.parent.mkdir(parents=True)
+    legacy.parent.mkdir(parents=True)
+    current.write_text(
+        json.dumps(
+            {
+                "avg_segnet_dist": 0.001,
+                "avg_posenet_dist": 5e-5,
+                "archive_size_bytes": 200,
+            }
+        ),
+        encoding="utf-8",
+    )
+    legacy.write_text(
+        json.dumps(
+            {
+                "avg_segnet_dist": 0.001,
+                "avg_posenet_dist": 0.25,
+                "archive_size_bytes": 200,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = mod.main(
+        [
+            "--evidence-globs",
+            str(current),
+            str(legacy),
+            "--exclude-legacy-regime",
+            "--json",
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["n_candidates"] == 1
+    assert payload["candidates"][0]["label"] == "current_lane"
+
+
 # ---------------------------------------------------------------------------
 # Importance-flip threshold detection
 # ---------------------------------------------------------------------------

@@ -407,9 +407,12 @@ def test_build_hnerv_entropy_candidate_packet_cli_writes_manifest(tmp_path: Path
         cwd=REPO,
         text=True,
         check=False,
+        capture_output=True,
     )
 
     assert proc.returncode == 1
+    assert "candidate packet missing required artifacts" in proc.stderr
+    assert "source_archive_manifest_with_archive_sha256_bytes_and_runtime_tree_sha256" in proc.stderr
     payload = json.loads(json_out.read_text(encoding="utf-8"))
     assert payload["tool_run_manifest"]["tool"] == "tools/build_hnerv_entropy_candidate_packet.py"
     assert payload["ready_for_exact_eval_dispatch"] is False
@@ -453,9 +456,12 @@ def test_build_hnerv_entropy_candidate_packet_cli_materializes_hdc2_stream_work_
         cwd=REPO,
         text=True,
         check=False,
+        capture_output=True,
     )
 
     assert proc.returncode == 1
+    assert "candidate packet missing required artifacts" in proc.stderr
+    assert "candidate_archive_manifest_with_member_sha256s" in proc.stderr
     packet = json.loads(packet_out.read_text(encoding="utf-8"))
     assert (output_dir / "candidate_hdc2_global_prev_symbol_stream.bin").is_file()
     assert (output_dir / "candidate_hdm3_q_brotli_split_stream.bin").is_file()
@@ -532,9 +538,12 @@ def test_build_hnerv_entropy_candidate_packet_cli_discovers_missing_source_input
         cwd=REPO,
         text=True,
         check=False,
+        capture_output=True,
     )
 
     assert proc.returncode == 1
+    assert "discovery missing source artifacts" in proc.stderr
+    assert "hnerv_entropy_codec_gap_audit_json_with_entropy_overhead_target_ranking" in proc.stderr
     payload = json.loads(json_out.read_text(encoding="utf-8"))
     assert payload["tool"] == "tac.hnerv_entropy_candidate_packet.discover_candidate_audit_inputs"
     assert payload["valid_input_count"] == 0
@@ -568,9 +577,12 @@ def test_build_hnerv_entropy_candidate_packet_cli_materializes_adapted_audit(
         cwd=REPO,
         text=True,
         check=False,
+        capture_output=True,
     )
 
     assert proc.returncode == 1
+    assert "candidate packet missing required artifacts" in proc.stderr
+    assert "candidate_archive_manifest_with_member_sha256s" in proc.stderr
     audit = json.loads(audit_out.read_text(encoding="utf-8"))
     packet = json.loads(packet_out.read_text(encoding="utf-8"))
     assert audit["tool"] == "tac.hnerv_entropy_candidate_packet.hnerv_profile_entropy_overhead_adapter"
