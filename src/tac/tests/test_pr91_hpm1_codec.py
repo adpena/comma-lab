@@ -575,6 +575,35 @@ def test_pr91_submitted_prefix_token_recovery_probe_recovers_bounded_prefix() ->
     assert trace["reference_comparison"]["attempted"] is False
 
 
+def test_pr91_submitted_prefix_token_recovery_probe_can_probe_spatial_order_past_source_failure() -> None:
+    if not DEFAULT_PR91_ARCHIVE.is_file():
+        pytest.skip("canonical PR91 archive not available")
+
+    report = run_pr91_hpm1_submitted_prefix_token_recovery_probe(
+        DEFAULT_PR91_ARCHIVE,
+        reference_tokens_path=None,
+        spatial_order_candidate="tile_major_row_major",
+        max_symbols=5960,
+        row_preview_limit=0,
+        mismatch_limit=0,
+        write_json=False,
+    )
+
+    assert report["schema"] == "pr91_hpm1_submitted_prefix_token_recovery_probe_v1"
+    assert report["score_claim"] is False
+    assert report["dispatch_allowed"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["status"] == "recovered_requested_submitted_prefix"
+    assert report["spatial_order_probe"]["candidate"] == "tile_major_row_major"
+    assert report["spatial_order_probe"]["source_contract"] is False
+    trace = report["submitted_prefix_token_recovery"]
+    assert trace["spatial_order_candidate"] == "tile_major_row_major"
+    assert trace["decoded_symbol_count"] == 5960
+    assert trace["full_decode_proven"] is False
+    assert trace["byte_exact_reencode_proven"] is False
+    assert trace["failure"] is None
+
+
 def test_pr91_submitted_prefix_token_recovery_cli_records_tool_manifest(
     tmp_path: Path,
 ) -> None:
@@ -611,6 +640,27 @@ def test_pr91_submitted_prefix_token_recovery_cli_records_tool_manifest(
     assert payload["tool_run_manifest"]["tool"] == (
         "tools/audit_pr91_hpm1_submitted_prefix_token_recovery_probe.py"
     )
+
+
+def test_pr91_submitted_prefix_token_recovery_cli_lists_spatial_order_flag() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(
+                REPO
+                / "tools"
+                / "audit_pr91_hpm1_submitted_prefix_token_recovery_probe.py"
+            ),
+            "--help",
+        ],
+        check=True,
+        cwd=REPO,
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+
+    assert "--spatial-order-candidate" in result.stdout
+    assert "tile_major_row_major" in result.stdout
 
 
 def test_pr91_entropy_failure_grammar_probe_cli_records_tool_manifest(tmp_path: Path) -> None:

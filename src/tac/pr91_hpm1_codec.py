@@ -2749,6 +2749,7 @@ def _trace_hpm1_submitted_prefix_token_recovery(
     probability_variant: str | Any,
     prob_eps: float,
     device: str,
+    spatial_order_candidate: str,
     max_symbols: int | None,
     row_preview_limit: int,
     mismatch_limit: int,
@@ -2789,6 +2790,7 @@ def _trace_hpm1_submitted_prefix_token_recovery(
             expected=[payload.n_frames, payload.height, payload.width],
             actual=list(reference_tokens.shape),
         )
+    _spatial_order_description(spatial_order_candidate)
 
     started_at = time.time()
     resolved = resolve_hpac_probability_variant(probability_variant)
@@ -2829,7 +2831,7 @@ def _trace_hpm1_submitted_prefix_token_recovery(
                     payload,
                     group=group,
                     mask=mask,
-                    candidate="source_mask_row_major",
+                    candidate=spatial_order_candidate,
                     device=dev,
                 )
                 coord_rows = coords[:, 0].detach().cpu().numpy()
@@ -2977,7 +2979,13 @@ def _trace_hpm1_submitted_prefix_token_recovery(
         "device": device,
         "probability_variant": resolved.name,
         "prob_eps": float(prob_eps),
-        "source_loop": "public PR91 source mask row-major decoded-context HPAC loop",
+        "spatial_order_candidate": spatial_order_candidate,
+        "spatial_order_description": _spatial_order_description(spatial_order_candidate),
+        "source_loop": (
+            "public PR91 source mask row-major decoded-context HPAC loop"
+            if spatial_order_candidate == "source_mask_row_major"
+            else "off-contract spatial-order hypothesis over submitted PR91 range words"
+        ),
         "max_symbols": None if max_symbols is None else int(max_symbols),
         "decoded_symbol_count": int(recovered_arr.size),
         "submitted_symbols": {
@@ -5294,6 +5302,7 @@ def run_pr91_hpm1_submitted_prefix_token_recovery_probe(
     device: str = "cpu",
     probability_variant: str = DEFAULT_HPAC_PROBABILITY_VARIANT,
     prob_eps: float = PROB_EPS,
+    spatial_order_candidate: str = "source_mask_row_major",
     max_symbols: int | None = None,
     row_preview_limit: int = 16,
     mismatch_limit: int = 16,
@@ -5311,6 +5320,7 @@ def run_pr91_hpm1_submitted_prefix_token_recovery_probe(
             "pr91_hpm1_submitted_prefix_token_recovery_probe_is_cpu_only",
             requested_device=device,
         )
+    _spatial_order_description(spatial_order_candidate)
     archive_path = Path(archive)
     payload = extract_pr91_hpm1_payload(archive_path)
     reference_tokens: np.ndarray | None = None
@@ -5354,6 +5364,7 @@ def run_pr91_hpm1_submitted_prefix_token_recovery_probe(
         probability_variant=probability_variant,
         prob_eps=prob_eps,
         device=device,
+        spatial_order_candidate=spatial_order_candidate,
         max_symbols=max_symbols,
         row_preview_limit=row_preview_limit,
         mismatch_limit=mismatch_limit,
@@ -5381,6 +5392,17 @@ def run_pr91_hpm1_submitted_prefix_token_recovery_probe(
         "promotion_eligible": False,
         "evidence_grade": "empirical",
         "evidence_scope": "local_cpu_hpm1_submitted_prefix_token_and_probability_trace",
+        "spatial_order_probe": {
+            "candidate": spatial_order_candidate,
+            "description": _spatial_order_description(spatial_order_candidate),
+            "source_contract": spatial_order_candidate == "source_mask_row_major",
+            "dispatch_allowed": False,
+            "scope_note": (
+                "Non-source spatial orders are off-contract local forensic "
+                "hypotheses. They may recover deeper submitted range prefixes "
+                "but do not prove PR91 decode parity or byte-exact reencode."
+            ),
+        },
         "evidence_limitations": [
             "not score evidence",
             "not full standalone HPM1 decode proof",
@@ -5415,6 +5437,11 @@ def run_pr91_hpm1_submitted_prefix_token_recovery_probe(
             "recovered": (
                 "deterministic submitted semantic-symbol prefix before the "
                 "first public HPAC range failure"
+                if spatial_order_candidate == "source_mask_row_major"
+                else (
+                    "deterministic submitted semantic-symbol prefix before the "
+                    f"first off-contract {spatial_order_candidate} HPAC range failure"
+                )
             ),
             "remaining_open_classes": [
                 "encoder-side probability numeric contract at the failure row",

@@ -19,6 +19,7 @@ from tac.pr91_hpm1_codec import (  # noqa: E402
     DEFAULT_HPAC_PROBABILITY_VARIANT,
     DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE,
     DEFAULT_PR91_ARCHIVE,
+    PR91_HPM1_SPATIAL_ORDER_CANDIDATES,
     run_pr91_hpm1_submitted_prefix_token_recovery_probe,
 )
 from tac.repo_io import json_text  # noqa: E402
@@ -41,6 +42,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--probability-variant", default=DEFAULT_HPAC_PROBABILITY_VARIANT)
     parser.add_argument("--prob-eps", type=float, default=1e-7)
+    parser.add_argument(
+        "--spatial-order-candidate",
+        default="source_mask_row_major",
+        choices=PR91_HPM1_SPATIAL_ORDER_CANDIDATES,
+        help=(
+            "Spatial traversal hypothesis for recovering submitted range symbols. "
+            "Only source_mask_row_major is the public PR91 source contract; "
+            "other choices are local forensic probes."
+        ),
+    )
     parser.add_argument(
         "--max-symbols",
         type=int,
@@ -84,6 +95,7 @@ def main(argv: list[str] | None = None) -> int:
         reference_layout=args.reference_layout,
         probability_variant=args.probability_variant,
         prob_eps=args.prob_eps,
+        spatial_order_candidate=args.spatial_order_candidate,
         max_symbols=args.max_symbols,
         row_preview_limit=args.row_preview_limit,
         mismatch_limit=args.mismatch_limit,
