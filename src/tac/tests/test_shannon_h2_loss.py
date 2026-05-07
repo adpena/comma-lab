@@ -115,6 +115,47 @@ def test_h0_returns_bits_not_nats() -> None:
     assert float(h0) < 8.5, "H0 value suggests nats not bits"
 
 
+def test_h0_finite_temperature_bias_documented() -> None:
+    """Bug-hunter v2 (re-opened LOW): the docstring previously claimed
+    "minimum = 0 (delta)". For the soft-assignment surrogate at finite
+    temperature, the minimum is strictly POSITIVE because softmax spreads
+    probability across nearby bins even for a delta input. This test
+    pins the bias direction (always positive on delta-like inputs) so
+    the docstring softening stays honest.
+    """
+    # A genuinely delta-distributed input (all weights identical).
+    w = torch.full((1000,), 0.5)
+    h0_t1 = shannon_h0_loss(w, temperature=1.0, n_bits=8)
+    h0_t05 = shannon_h0_loss(w, temperature=0.5, n_bits=8)
+    h0_t01 = shannon_h0_loss(w, temperature=0.1, n_bits=8)
+
+    # Surrogate is strictly positive at finite temperature.
+    assert float(h0_t1) > 0.0
+    assert float(h0_t05) > 0.0
+    assert float(h0_t01) > 0.0
+    # And the bias decreases monotonically as temperature -> 0.
+    assert float(h0_t1) > float(h0_t05) > float(h0_t01), (
+        f"finite-temperature bias must decrease as T decreases: "
+        f"T=1.0 -> {float(h0_t1)}, T=0.5 -> {float(h0_t05)}, "
+        f"T=0.1 -> {float(h0_t01)}"
+    )
+
+
+def test_h0_docstring_warns_about_finite_temperature_bias() -> None:
+    """Bug-hunter v2 (re-opened LOW): the docstring softening must call out
+    the finite-temperature positive bias so future readers don't fire a
+    delta-epsilon-zeta stopping criterion expecting H0 to hit exactly 0."""
+    docstring = shannon_h0_loss.__doc__ or ""
+    # Look for the key concepts (finite-temperature + bias).
+    lower = docstring.lower()
+    assert "finite-temperature" in lower or "finite temperature" in lower, (
+        "shannon_h0_loss docstring must mention the finite-temperature surrogate"
+    )
+    assert "bias" in lower, (
+        "shannon_h0_loss docstring must mention the positive bias on delta inputs"
+    )
+
+
 def test_h0_invariant_to_constant_offset() -> None:
     """H0 should be ~invariant to adding a constant (translation in weight space).
 

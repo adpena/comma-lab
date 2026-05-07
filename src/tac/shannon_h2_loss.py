@@ -114,7 +114,23 @@ def shannon_h0_loss(
     For an empirical histogram p over the alphabet, ``H0 = -Sum p_i log2 p_i``.
     Numpy reference: :func:`tools.per_tensor_shannon_analysis.shannon_entropy_h0`.
 
-    Maximum value = ``n_bits`` (uniform distribution); minimum = 0 (delta).
+    Bounds (with caveats):
+
+    - **True H0 (hard histogram)** is in ``[0, n_bits]``: ``n_bits`` for a
+      uniform distribution, exactly 0 for a delta distribution.
+    - **Surrogate H0 returned here** uses a finite-temperature soft assignment
+      (softmax over bin centers). Bug-hunter v2 (re-opened LOW): the previous
+      docstring asserted "minimum = 0 (delta)" without qualification; for the
+      finite-temperature surrogate the minimum is **strictly positive** because
+      a delta-distributed input still spreads softmax probability across
+      multiple bins. The bias goes to zero only as ``temperature -> 0``;
+      typical training temperatures (1.0) produce a residual bias on the
+      order of a few tenths of a bit on near-delta inputs. This is well-known
+      for soft histograms; treat the surrogate as an upper bound on H0 for
+      training-loss purposes (a delta-epsilon-zeta stopping criterion that
+      relies on H0 hitting exactly 0 will fire later than intended; use
+      ``temperature`` < 1 if you need a tighter surrogate).
+
     Differentiable in ``weights`` via the soft-assignment scheme.
 
     Args:
@@ -122,7 +138,8 @@ def shannon_h0_loss(
         n_bits: alphabet size (2**n_bits). Default 8 = u8 alphabet.
         quant_range: symmetric quant range; matches PR101's N_QUANT.
         temperature: soft-assignment temperature; lower = closer to true
-            (non-differentiable) histogram.
+            (non-differentiable) histogram. Lower temperature also reduces
+            the positive-bias-on-delta-inputs noted above.
         eps: numerical floor on probabilities for log stability.
 
     Returns:
@@ -174,8 +191,10 @@ def shannon_h2_loss(
     (compressible by context-aware coder); higher = more random.
 
     Important: H2 <= H1 <= H0 always (conditioning never increases entropy).
-    A delta-epsilon-zeta training objective minimizing H2 pushes toward conditionally
-    uniform weights.
+    Minimizing H2 pushes toward more deterministic conditional structure, not
+    conditionally uniform weights. That can be useful only if the final archive
+    uses a coder that exploits the same structure; otherwise it is just a
+    planning/training signal, not a byte or score claim.
     """
     if max_alphabet_for_trigram > 64:
         raise ValueError(
