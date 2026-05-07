@@ -11,7 +11,6 @@ import pytest
 import torch
 import torch.nn as nn
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 INFLATE_RENDERER_PATH = REPO_ROOT / "submissions" / "robust_current" / "inflate_renderer.py"
 UNPACK_RENDERER_PAYLOAD_PATH = (
@@ -222,7 +221,7 @@ def test_sjkl_strict_contract_fails_when_charged_payload_is_skipped(
     inflate._apply_sjkl_residual_to_pairs(pairs, state, pair_start=0)
 
     monkeypatch.setenv("SJKL_REQUIRE_APPLIED", "1")
-    with pytest.raises(RuntimeError, match="charged sjkl.bin did not affect any"):
+    with pytest.raises(RuntimeError, match=r"charged sjkl\.bin did not affect any"):
         inflate._finalize_sjkl_application_contract(state)
 
 

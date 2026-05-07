@@ -6,8 +6,6 @@ import numpy as np
 import pytest
 import torch
 
-import numpy as np
-
 from tac.sjkl_basis import (
     SJKLBasis,
     apply_sjkl_residual,
@@ -15,10 +13,13 @@ from tac.sjkl_basis import (
     decode_full_sjkl_payload,
     decode_sjkl_alpha_block,
     decode_sjkl_basis,
+    effective_rank,
     encode_full_sjkl_payload,
     encode_sjkl_alpha_block_v1_dense,
     encode_sjkl_alpha_block_v2_sparse,
     encode_sjkl_basis,
+    fisher_matvec,
+    lanczos_topk,
     unpack_sjkl_basis,
 )
 
@@ -166,6 +167,23 @@ def test_runtime_contract_basis_coarse_attribute():
     assert basis.basis_coarse.shape == (5, 24)
 
 
+def test_runtime_contract_shaped_basis_metadata_roundtrip():
+    basis = SJKLBasis(
+        basis_coarse=torch.ones(1, 3, 2, 3),
+        scale=torch.tensor([2.5]),
+        target_h=4,
+        target_w=6,
+    ).renormalize()
+    blob = encode_sjkl_basis(basis, basis_quant_bits=8)
+    decoded = decode_sjkl_basis(blob)
+
+    assert decoded.basis_coarse.shape == (1, 3, 2, 3)
+    assert decoded.upsample().shape == (1, 3, 4, 6)
+    assert decoded.target_h == 4
+    assert decoded.target_w == 6
+    assert torch.allclose(decoded.scale, basis.scale, atol=1e-5)
+
+
 def test_quant_bits_8_payload_byte_layout():
     """Verify q8 packs as 1 byte per value (no bit-stream overhead)."""
     basis = _make_random_basis(rank=2, dim=10)
@@ -173,6 +191,40 @@ def test_quant_bits_8_payload_byte_layout():
     # header (4 magic + 1 ver + 1 flag + 2 K + 4 D + 2 M = 14) + 4 scale + 2*10 basis + 2*2 coef
     expected = 14 + 4 + (2 * 10) + (2 * 2)
     assert len(blob) == expected, f"q8 blob size mismatch: got {len(blob)}, expected {expected}"
+
+
+def test_fisher_matvec_matches_linear_gauss_newton():
+    class LinearScorer(torch.nn.Module):
+        def __init__(self, diag: torch.Tensor) -> None:
+            super().__init__()
+            self.register_buffer("diag", diag)
+
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            return x.reshape(-1) * self.diag
+
+    diag = torch.tensor([1.0, 2.0, 3.0, 4.0])
+    frames = torch.zeros(4, dtype=torch.float32)
+    probe = torch.tensor([0.5, -1.0, 2.0, -0.25], dtype=torch.float32)
+
+    out = fisher_matvec(LinearScorer(diag), None, frames, probe)
+
+    expected = 100.0 * diag.square() * probe
+    assert torch.allclose(out, expected, atol=1e-5)
+
+
+def test_lanczos_topk_and_effective_rank_are_deterministic():
+    diag = torch.tensor([9.0, 4.0, 1.0, 0.01], dtype=torch.float32)
+
+    def matvec(v: torch.Tensor) -> torch.Tensor:
+        return diag * v
+
+    eigvals_a, eigvecs_a = lanczos_topk(matvec, dim=4, k=2, n_iters=4, seed=7)
+    eigvals_b, eigvecs_b = lanczos_topk(matvec, dim=4, k=2, n_iters=4, seed=7)
+
+    assert torch.allclose(eigvals_a, torch.tensor([9.0, 4.0]), atol=1e-4)
+    assert torch.allclose(eigvals_a, eigvals_b)
+    assert torch.allclose(eigvecs_a.abs(), eigvecs_b.abs())
+    assert effective_rank(torch.tensor([9.0, 4.0, 1e-5]), threshold=1e-4) == 2
 
 
 # ============================================================

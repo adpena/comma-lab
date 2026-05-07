@@ -43,10 +43,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from tac.sjkl_basis import (  # noqa: E402
+from tac.sjkl_basis import (
     SJKLBasis,
     compute_sjkl_basis_lanczos,
     encode_full_sjkl_payload,
+    encode_sjkl_alpha_block_v1_dense,
     encode_sjkl_alpha_block_v2_sparse,
 )
 
@@ -136,6 +137,62 @@ def _build_cpu_stub_score_fn(dim: int, *, peak_idx: int = 0):
     return score_fn
 
 
+def _infer_rgb_shape(dim: int) -> tuple[int, int] | None:
+    if dim == 3 * 384 * 512:
+        return (384, 512)
+    if dim == 3 * 192 * 256:
+        return (192, 256)
+    if dim == 3 * 128 * 128:
+        return (128, 128)
+    return None
+
+
+def _build_cuda_self_target_scorer_fn(anchor_frame: torch.Tensor) -> tuple[object, dict]:
+    """Build a compress-time scorer Fisher proxy around the frozen scorers.
+
+    This is not an auth-eval score path. It uses the scorer networks only to
+    define a differentiable self-target Gauss-Newton loss at the anchor frame.
+    """
+    h_w = _infer_rgb_shape(int(anchor_frame.numel()))
+    if h_w is None:
+        raise SystemExit(
+            "FATAL: CUDA scorer Fisher proxy requires a flat RGB frame with known "
+            f"shape, got dim={int(anchor_frame.numel())}. Add shape metadata in the "
+            "pair tensor manifest before production SJ-KL basis builds."
+        )
+    height, width = h_w
+    from tac.scorer import load_differentiable_scorers
+
+    posenet, segnet = load_differentiable_scorers(REPO_ROOT / "upstream", device=anchor_frame.device)
+    for model in (posenet, segnet):
+        model.eval()
+        for param in model.parameters():
+            param.requires_grad_(False)
+
+    def _pair_from_flat(flat: torch.Tensor) -> torch.Tensor:
+        chw = flat.reshape(3, height, width).clamp(0.0, 255.0)
+        return torch.stack([chw, chw], dim=0).unsqueeze(0)
+
+    with torch.no_grad():
+        base_pair = _pair_from_flat(anchor_frame.detach())
+        target_pose = posenet(posenet.preprocess_input(base_pair))["pose"][..., :6].detach()
+        target_seg = segnet(segnet.preprocess_input(base_pair)).detach()
+
+    def score_fn(flat: torch.Tensor) -> torch.Tensor:
+        pair = _pair_from_flat(flat.reshape(-1))
+        pose_out = posenet(posenet.preprocess_input(pair))["pose"][..., :6]
+        seg_out = segnet(segnet.preprocess_input(pair))
+        pose_loss = 5.0 * (pose_out - target_pose).pow(2).sum()
+        seg_loss = 50.0 * (seg_out - target_seg).pow(2).sum()
+        return pose_loss + seg_loss
+
+    return score_fn, {
+        "scorer_fisher_mode": "cuda_self_target_gauss_newton_proxy",
+        "scorer_fisher_frame_shape": [3, height, width],
+        "scorer_fisher_score_claim": False,
+    }
+
+
 def _build_cpu_stub_pair_residuals(n_pairs: int, dim: int, *, seed: int) -> torch.Tensor:
     """Synthetic pair residuals for smoke testing (small random noise around zero)."""
     g = torch.Generator().manual_seed(seed)
@@ -145,6 +202,7 @@ def _build_cpu_stub_pair_residuals(n_pairs: int, dim: int, *, seed: int) -> torc
 def build_sjkl_residual(cfg: BuildConfig) -> dict:
     """Main pipeline. Returns manifest dict (also written to disk)."""
     device = torch.device(cfg.device)
+    scorer_meta: dict = {}
     if cfg.device != "cuda" and not cfg.allow_cpu_stub:
         raise SystemExit(
             f"FATAL: --device {cfg.device} requires --allow-cpu-stub. "
@@ -153,7 +211,7 @@ def build_sjkl_residual(cfg: BuildConfig) -> dict:
 
     if cfg.allow_cpu_stub and not cfg.pair_tensor_manifest.is_file():
         # Pure-CPU smoke mode: synthesize tiny inputs to exercise the pipeline byte-faithfully
-        print(f"[sjkl-residual] CPU STUB MODE: synthesizing inputs (manifest absent)", file=sys.stderr)
+        print("[sjkl-residual] CPU STUB MODE: synthesizing inputs (manifest absent)", file=sys.stderr)
         dim = 256
         n_total_pairs = 600
         anchor_frame = torch.zeros(dim, dtype=torch.float32)
@@ -176,11 +234,8 @@ def build_sjkl_residual(cfg: BuildConfig) -> dict:
         if cfg.device == "cpu":
             score_fn = _build_cpu_stub_score_fn(dim)
         else:
-            raise NotImplementedError(
-                "Real-scorer integration on CUDA is the canonical production path. "
-                "Wire JointFrameGenerator + posenet/segnet score graph here. "
-                "Per CLAUDE.md FORBIDDEN PATTERNS: no MPS fallback. CUDA only."
-            )
+            anchor_frame = anchor_frame.to(device)
+            score_fn, scorer_meta = _build_cuda_self_target_scorer_fn(anchor_frame)
 
     # Move to device
     anchor_frame = anchor_frame.to(device)
@@ -244,12 +299,13 @@ def build_sjkl_residual(cfg: BuildConfig) -> dict:
         "compressed_alpha_block_bytes": len(compressed_alpha_block),
         "tag": "[empirical:" + str(sjkl_path) + "]" if cfg.device == "cuda" else "[advisory only]",
     }
+    manifest_out.update(scorer_meta)
     manifest_path = cfg.output_dir / "sjkl_manifest.json"
     manifest_path.write_text(json.dumps(manifest_out, indent=2))
 
     print(f"[sjkl-residual] wrote {sjkl_path} ({len(sjkl_bytes)} bytes, sha {sjkl_sha[:16]})", file=sys.stderr)
     print(f"[sjkl-residual] wrote {manifest_path}", file=sys.stderr)
-    print(f"[sjkl-residual] score_claim=false; auth eval through contest CUDA pipeline required", file=sys.stderr)
+    print("[sjkl-residual] score_claim=false; auth eval through contest CUDA pipeline required", file=sys.stderr)
 
     return manifest_out
 
@@ -296,27 +352,54 @@ if __name__ == "__main__":
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Renamed-out symbols.
-# Tests under src/tac/tests/test_inflate_renderer_sjkl_runtime.py reference
-# pack_alpha_block / pack_full_sjkl_payload but the canonical names are
-# encode_sjkl_alpha_block_v2_sparse / encode_full_sjkl_payload (with
-# different signatures). Fail-loud stubs satisfy the import-resolver
-# scanner without lying about API compatibility.
+# Legacy compatibility symbols.
+# Older SJ-KL runtime tests/tools build payloads from already-packed sections.
+# Keep these thin wrappers byte-compatible with the canonical encoders.
 # ─────────────────────────────────────────────────────────────────────────
 
 
 def pack_alpha_block(*args: object, **kwargs: object) -> bytes:
-    raise NotImplementedError(
-        "experiments.build_sjkl_residual.pack_alpha_block was renamed to "
-        "encode_sjkl_alpha_block_v2_sparse (or _v1_dense). Update your call "
-        "site to use the canonical encoder. Reference: "
-        "src/tac/sjkl_basis.py:442 (v2 sparse) or :494 (v1 dense)."
-    )
+    if len(args) < 3:
+        raise TypeError("pack_alpha_block requires alpha_qs, mins, and steps")
+    alpha_qs, mins, steps = args[:3]
+    alpha_bits = int(kwargs.pop("alpha_bits", 8))
+    pair_indices = kwargs.pop("pair_indices", None)
+    sparse_bitpacked = bool(kwargs.pop("sparse_bitpacked", pair_indices is not None))
+    if kwargs:
+        raise TypeError(f"unexpected pack_alpha_block kwargs: {sorted(kwargs)}")
+    qs = np.vstack([np.asarray(x) for x in alpha_qs]).astype(np.uint16 if alpha_bits > 8 else np.uint8)
+    mins_arr = np.asarray(mins, dtype=np.float32)
+    steps_arr = np.asarray(steps, dtype=np.float32)
+    if sparse_bitpacked:
+        if pair_indices is None:
+            pair_indices_arr = np.arange(qs.shape[0], dtype=np.uint16)
+        else:
+            pair_indices_arr = np.asarray(pair_indices, dtype=np.uint16)
+        return encode_sjkl_alpha_block_v2_sparse(
+            qs,
+            mins_arr,
+            steps_arr,
+            alpha_bits=alpha_bits,
+            pair_indices=pair_indices_arr,
+        )
+    return encode_sjkl_alpha_block_v1_dense(qs, mins_arr, steps_arr, alpha_bits=alpha_bits)
 
 
 def pack_full_sjkl_payload(*args: object, **kwargs: object) -> bytes:
-    raise NotImplementedError(
-        "experiments.build_sjkl_residual.pack_full_sjkl_payload was renamed "
-        "to encode_full_sjkl_payload. Update your call site to use the "
-        "canonical encoder. Reference: src/tac/sjkl_basis.py:608."
+    if len(args) != 2:
+        raise TypeError("pack_full_sjkl_payload requires basis_bytes and alpha_block_bytes")
+    if kwargs:
+        raise TypeError(f"unexpected pack_full_sjkl_payload kwargs: {sorted(kwargs)}")
+    basis_bytes, alpha_block_bytes = (bytes(args[0]), bytes(args[1]))
+    if not basis_bytes.startswith(b"SJKL"):
+        raise ValueError("basis_bytes must start with SJKL magic")
+    basis_section = basis_bytes[4:]
+    if alpha_block_bytes.startswith((b"SJKB", b"SJK2")):
+        alpha_block_bytes = brotli.compress(alpha_block_bytes, quality=11)
+    return (
+        b"SJKL"
+        + len(basis_section).to_bytes(4, "little")
+        + len(alpha_block_bytes).to_bytes(4, "little")
+        + basis_section
+        + alpha_block_bytes
     )

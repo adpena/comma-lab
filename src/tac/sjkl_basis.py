@@ -37,6 +37,7 @@ the C067 use case (422 bytes FP16 -> ~250 bytes q6, addendum verified).
 
 from __future__ import annotations
 
+import math
 import struct
 from dataclasses import dataclass
 
@@ -46,25 +47,30 @@ import torch
 _SJKL_MAGIC = b"SJKL"
 _SJKL_BLOCK_MAGIC = b"SJKB"      # legacy V1 dense alpha block (matches inflate_renderer.py)
 _SJKL_BLOCK_V2_MAGIC = b"SJK2"   # V2 sparse bit-packed alpha block with pair indices
+_SJKL_META_MAGIC = b"SJBM"       # optional basis metadata trailer: shape + per-vector scale
 _SJKL_VERSION = 1
 _FP16_FLAG = 0  # basis_quant_bits=None / FP16 fallback
 
 __all__ = [
     "SJKLBasis",
-    "encode_sjkl_basis",
-    "decode_sjkl_basis",
-    "unpack_sjkl_basis",
     "apply_sjkl_residual",
     "compute_sjkl_basis_lanczos",
-    "encode_sjkl_alpha_block_v2_sparse",
-    "encode_sjkl_alpha_block_v1_dense",
-    "decode_sjkl_alpha_block",
-    "encode_full_sjkl_payload",
     "decode_full_sjkl_payload",
+    "decode_sjkl_alpha_block",
+    "decode_sjkl_basis",
+    "effective_rank",
+    "encode_full_sjkl_payload",
+    "encode_sjkl_alpha_block_v1_dense",
+    "encode_sjkl_alpha_block_v2_sparse",
+    "encode_sjkl_basis",
+    "fisher_matvec",
+    "lanczos_topk",
+    "pack_sjkl_basis",
+    "unpack_sjkl_basis",
 ]
 
 
-@dataclass
+@dataclass(init=False)
 class SJKLBasis:
     """Top-K eigenvectors of the scorer's Fisher information matrix
     plus per-frame projection coefficients.
@@ -82,11 +88,239 @@ class SJKLBasis:
     coefficients: torch.Tensor  # (M,) float32 — typically M = K * num_frames
     rank: int
     dim: int
+    scale: torch.Tensor         # (K,) float32, applied by inflate to decoded alpha coefficients
+    target_h: int
+    target_w: int
+    _basis_coarse_shape: tuple[int, int, int, int] | None
+
+    def __init__(
+        self,
+        eigenvectors: torch.Tensor | None = None,
+        coefficients: torch.Tensor | None = None,
+        rank: int | None = None,
+        dim: int | None = None,
+        *,
+        basis_coarse: torch.Tensor | None = None,
+        scale: torch.Tensor | None = None,
+        target_h: int | None = None,
+        target_w: int | None = None,
+        basis_coarse_shape: tuple[int, int, int, int] | None = None,
+    ) -> None:
+        """Create either a flat basis or an inflate-runtime shaped basis.
+
+        The original codec stores flat eigenvectors `(K, D)`. The robust_current
+        inflate path additionally expects `basis_coarse`, `scale`, target shape,
+        and `upsample()`. Supporting both here keeps the on-disk codec reusable
+        while restoring the runtime contract for charged `sjkl.bin` payloads.
+        """
+        if basis_coarse is not None:
+            if eigenvectors is not None:
+                raise ValueError("pass either eigenvectors or basis_coarse, not both")
+            coarse = basis_coarse.detach().to(torch.float32).contiguous()
+            if coarse.dim() != 4:
+                raise ValueError(f"basis_coarse must be 4-D (K, C, H, W), got {tuple(coarse.shape)}")
+            coarse_k, coarse_c, coarse_h, coarse_w = (int(x) for x in coarse.shape)
+            if coarse_c != 3:
+                raise ValueError(f"basis_coarse channel count must be 3, got {coarse_c}")
+            inferred_dim = coarse_c * coarse_h * coarse_w
+            if rank is not None and int(rank) != coarse_k:
+                raise ValueError(f"rank {rank} does not match basis_coarse K={coarse_k}")
+            if dim is not None and int(dim) != inferred_dim:
+                raise ValueError(f"dim {dim} does not match basis_coarse C*H*W={inferred_dim}")
+            eigenvectors = coarse.reshape(coarse_k, inferred_dim)
+            rank = coarse_k
+            dim = inferred_dim
+            basis_coarse_shape = (coarse_k, coarse_c, coarse_h, coarse_w)
+            target_h = coarse_h if target_h is None else int(target_h)
+            target_w = coarse_w if target_w is None else int(target_w)
+        elif eigenvectors is None:
+            raise ValueError("SJKLBasis requires eigenvectors or basis_coarse")
+
+        eig = eigenvectors.detach().to(torch.float32).contiguous()
+        if eig.dim() != 2:
+            raise ValueError(f"eigenvectors must be 2-D (K, D), got shape {tuple(eig.shape)}")
+        inferred_rank, inferred_dim = (int(x) for x in eig.shape)
+        rank = inferred_rank if rank is None else int(rank)
+        dim = inferred_dim if dim is None else int(dim)
+        if (rank, dim) != (inferred_rank, inferred_dim):
+            raise ValueError(
+                f"eigenvectors shape {tuple(eig.shape)} does not match "
+                f"(rank, dim)=({rank}, {dim})"
+            )
+
+        if coefficients is None:
+            coefs = torch.zeros(rank, dtype=torch.float32)
+        else:
+            coefs = coefficients.detach().to(torch.float32).contiguous().reshape(-1)
+
+        if scale is None:
+            scale_t = torch.ones(rank, dtype=torch.float32)
+        else:
+            scale_t = scale.detach().to(torch.float32).contiguous().reshape(-1)
+        if int(scale_t.numel()) != rank:
+            raise ValueError(f"scale must contain rank={rank} values, got {int(scale_t.numel())}")
+
+        if basis_coarse_shape is not None:
+            shape_rank, shape_c, shape_h, shape_w = (int(x) for x in basis_coarse_shape)
+            if shape_rank != rank or shape_c * shape_h * shape_w != dim:
+                raise ValueError(
+                    "basis_coarse_shape must match (rank, dim): "
+                    f"{basis_coarse_shape} vs ({rank}, {dim})"
+                )
+            if shape_c != 3:
+                raise ValueError(f"basis_coarse_shape channel count must be 3, got {shape_c}")
+            target_h = shape_h if target_h is None else int(target_h)
+            target_w = shape_w if target_w is None else int(target_w)
+
+        if target_h is None or target_w is None:
+            inferred_shape = _infer_chw_shape(dim)
+            if inferred_shape is None:
+                target_h, target_w = 1, max(1, dim)
+            else:
+                _, target_h, target_w = inferred_shape
+
+        self.eigenvectors = eig
+        self.coefficients = coefs
+        self.rank = rank
+        self.dim = dim
+        self.scale = scale_t
+        self.target_h = int(target_h)
+        self.target_w = int(target_w)
+        self._basis_coarse_shape = basis_coarse_shape
 
     @property
     def basis_coarse(self) -> torch.Tensor:
-        """Runtime contract alias for eigenvectors (shape (K, D))."""
-        return self.eigenvectors
+        """Runtime contract alias for the coarse `(K, C, H, W)` basis when known.
+
+        For legacy flat-only payloads this returns `(K, D)`, preserving the old
+        alias used by earlier codec tests.
+        """
+        if self._basis_coarse_shape is None:
+            return self.eigenvectors
+        return self.eigenvectors.reshape(self._basis_coarse_shape)
+
+    def upsample(self) -> torch.Tensor:
+        """Return basis vectors as `(K, 3, target_h, target_w)` for inflate."""
+        coarse = self.basis_coarse
+        if coarse.dim() != 4:
+            shape = _infer_chw_shape(self.dim, target_h=self.target_h, target_w=self.target_w)
+            if shape is None:
+                raise ValueError(
+                    f"cannot reshape flat SJ-KL basis dim={self.dim} into RGB target "
+                    f"{self.target_h}x{self.target_w}"
+                )
+            self._basis_coarse_shape = (self.rank, *shape)
+            coarse = self.basis_coarse
+        if int(coarse.shape[-2]) == self.target_h and int(coarse.shape[-1]) == self.target_w:
+            return coarse
+        return torch.nn.functional.interpolate(
+            coarse,
+            size=(self.target_h, self.target_w),
+            mode="bilinear",
+            align_corners=False,
+        )
+
+    def renormalize(self) -> SJKLBasis:
+        """Normalize basis vectors while preserving `scale * basis` product."""
+        flat = self.eigenvectors.reshape(self.rank, -1)
+        norms = flat.norm(dim=1).clamp_min(1e-12)
+        self.eigenvectors = (flat / norms[:, None]).reshape_as(self.eigenvectors)
+        self.scale = self.scale * norms.to(self.scale.dtype)
+        return self
+
+
+def _infer_chw_shape(
+    dim: int,
+    *,
+    target_h: int | None = None,
+    target_w: int | None = None,
+) -> tuple[int, int, int] | None:
+    """Infer `(C, H, W)` for RGB frame bases when the shape is unambiguous."""
+    dim = int(dim)
+    if target_h is not None and target_w is not None and dim == 3 * int(target_h) * int(target_w):
+        return (3, int(target_h), int(target_w))
+    common_shapes = ((3, 384, 512), (3, 512, 384), (3, 192, 256), (3, 128, 128))
+    for shape in common_shapes:
+        c, h, w = shape
+        if dim == c * h * w:
+            return shape
+    if dim % 3 != 0:
+        return None
+    pixels = dim // 3
+    side = math.isqrt(pixels)
+    if side * side == pixels:
+        return (3, side, side)
+    return None
+
+
+def _encode_sjkl_basis_metadata(basis: SJKLBasis) -> bytes:
+    coarse_shape = basis._basis_coarse_shape
+    scale = basis.scale.detach().to(torch.float32).cpu()
+    has_scale = not torch.allclose(scale, torch.ones_like(scale), atol=0.0, rtol=0.0)
+    if coarse_shape is None and not has_scale:
+        return b""
+    if coarse_shape is None:
+        inferred = _infer_chw_shape(basis.dim, target_h=basis.target_h, target_w=basis.target_w)
+        if inferred is None:
+            coarse_h = 0
+            coarse_w = 0
+        else:
+            _, coarse_h, coarse_w = inferred
+    else:
+        _, _, coarse_h, coarse_w = coarse_shape
+    if max(int(basis.target_h), int(basis.target_w), int(coarse_h), int(coarse_w)) > 0xFFFF:
+        raise ValueError("SJ-KL basis metadata dimensions must fit uint16")
+    return (
+        _SJKL_META_MAGIC
+        + struct.pack(
+            "<HHHHH",
+            int(basis.target_h),
+            int(basis.target_w),
+            int(coarse_h),
+            int(coarse_w),
+            int(basis.rank),
+        )
+        + scale.numpy().astype(np.float32).tobytes()
+    )
+
+
+def _decode_sjkl_basis_metadata(
+    data: bytes,
+    *,
+    rank: int,
+    dim: int,
+) -> tuple[torch.Tensor, int | None, int | None, tuple[int, int, int, int] | None]:
+    scale = torch.ones(rank, dtype=torch.float32)
+    target_h: int | None = None
+    target_w: int | None = None
+    basis_coarse_shape: tuple[int, int, int, int] | None = None
+    if not data:
+        inferred = _infer_chw_shape(dim)
+        if inferred is not None:
+            _, target_h, target_w = inferred
+            basis_coarse_shape = (rank, *inferred)
+        return scale, target_h, target_w, basis_coarse_shape
+    if not data.startswith(_SJKL_META_MAGIC):
+        raise ValueError(f"unexpected trailing SJ-KL basis bytes: {len(data)}")
+    meta_header_len = 4 + struct.calcsize("<HHHHH")
+    if len(data) < meta_header_len:
+        raise ValueError("truncated SJ-KL basis metadata")
+    target_h, target_w, coarse_h, coarse_w, scale_count = struct.unpack_from("<HHHHH", data, 4)
+    if int(scale_count) != int(rank):
+        raise ValueError(f"SJ-KL metadata scale_count {scale_count} does not match rank {rank}")
+    expected_len = meta_header_len + 4 * rank
+    if len(data) != expected_len:
+        raise ValueError(f"SJ-KL metadata length mismatch: expected {expected_len}, got {len(data)}")
+    scale_np = np.frombuffer(data[meta_header_len:], dtype=np.float32).copy()
+    scale = torch.from_numpy(scale_np)
+    if coarse_h and coarse_w:
+        if dim != 3 * int(coarse_h) * int(coarse_w):
+            raise ValueError(
+                f"SJ-KL metadata coarse shape 3x{coarse_h}x{coarse_w} "
+                f"does not match dim {dim}"
+            )
+        basis_coarse_shape = (rank, 3, int(coarse_h), int(coarse_w))
+    return scale, int(target_h), int(target_w), basis_coarse_shape
 
 
 def _quantize_signed_intN(x: np.ndarray, bits: int) -> tuple[np.ndarray, float]:
@@ -197,7 +431,7 @@ def encode_sjkl_basis(basis: SJKLBasis, basis_quant_bits: int | None = 6) -> byt
     coef_np = basis.coefficients.detach().to(torch.float16).contiguous().cpu().numpy()
     coef_bytes = coef_np.tobytes()
 
-    return header + basis_bytes + coef_bytes
+    return header + basis_bytes + coef_bytes + _encode_sjkl_basis_metadata(basis)
 
 
 def decode_sjkl_basis(data: bytes) -> SJKLBasis:
@@ -232,12 +466,22 @@ def decode_sjkl_basis(data: bytes) -> SJKLBasis:
     if len(coef_bytes) != n_coef_bytes:
         raise ValueError(f"truncated coefficients: need {n_coef_bytes}, have {len(coef_bytes)}")
     coef_np = np.frombuffer(coef_bytes, dtype=np.float16).astype(np.float32)
+    pos += n_coef_bytes
+    scale, target_h, target_w, basis_coarse_shape = _decode_sjkl_basis_metadata(
+        data[pos:],
+        rank=K,
+        dim=D,
+    )
 
     return SJKLBasis(
         eigenvectors=torch.from_numpy(eig_np.copy()),
         coefficients=torch.from_numpy(coef_np.copy()),
         rank=K,
         dim=D,
+        scale=scale,
+        target_h=target_h,
+        target_w=target_w,
+        basis_coarse_shape=basis_coarse_shape,
     )
 
 
@@ -414,9 +658,6 @@ def compute_sjkl_basis_lanczos(
 # qs values are in [0, 2^alpha_bits - 1] and decode as
 # alpha[i, j] = mins[i] + qs[i, j] * steps[i].
 
-import math
-
-
 def _validate_alpha_inputs(qs: np.ndarray, mins: np.ndarray, steps: np.ndarray, alpha_bits: int) -> None:
     if qs.ndim != 2:
         raise ValueError(f"qs must be 2-D (n_pairs, k), got shape {qs.shape}")
@@ -463,8 +704,8 @@ def encode_sjkl_alpha_block_v2_sparse(
     if pair_indices.shape != (n_pairs,):
         raise ValueError(f"pair_indices must be (n_pairs={n_pairs},), got {pair_indices.shape}")
     if int(pair_indices.min()) < 0 or int(pair_indices.max()) > 0xFFFF:
-        raise ValueError(f"pair_indices must fit in uint16 [0, 65535]")
-    if len(set(int(x) for x in pair_indices.tolist())) != n_pairs:
+        raise ValueError("pair_indices must fit in uint16 [0, 65535]")
+    if len({int(x) for x in pair_indices.tolist()}) != n_pairs:
         raise ValueError("pair_indices must not contain duplicates")
 
     header = _SJKL_BLOCK_V2_MAGIC + struct.pack("<HHB", n_pairs, k, alpha_bits)
@@ -508,10 +749,7 @@ def encode_sjkl_alpha_block_v1_dense(
     header = _SJKL_BLOCK_MAGIC + struct.pack("<HHB", n_pairs, k, alpha_bits)
     mins_bytes = np.asarray(mins, dtype=np.float16).tobytes()
     steps_bytes = np.asarray(steps, dtype=np.float16).tobytes()
-    if alpha_bits <= 8:
-        qs_bytes = qs.astype(np.uint8).tobytes()
-    else:
-        qs_bytes = qs.astype(np.uint16).tobytes()
+    qs_bytes = qs.astype(np.uint8).tobytes() if alpha_bits <= 8 else qs.astype(np.uint16).tobytes()
     return header + mins_bytes + steps_bytes + qs_bytes
 
 
@@ -536,7 +774,7 @@ def decode_sjkl_alpha_block(raw: bytes) -> dict:
                 f"SJ-KL sparse alpha block length mismatch: expected {qs_end}, got {len(raw)}"
             )
         pair_indices = np.frombuffer(raw[cursor:indices_end], dtype=np.uint16).astype(np.int64).copy()
-        if len(set(int(x) for x in pair_indices.tolist())) != int(pair_indices.shape[0]):
+        if len({int(x) for x in pair_indices.tolist()}) != int(pair_indices.shape[0]):
             raise ValueError("SJ-KL sparse alpha block contains duplicate pair indices")
         mins = np.frombuffer(raw[indices_end:mins_end], dtype=np.float16).astype(np.float32).copy()
         steps = np.frombuffer(raw[mins_end:steps_end], dtype=np.float16).astype(np.float32).copy()
@@ -661,57 +899,209 @@ def decode_full_sjkl_payload(payload: bytes) -> tuple[SJKLBasis, dict]:
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Stubs for recovered Fisher/Lanczos rank helpers.
+# Recovered Fisher/Lanczos rank helpers.
 #
-# `experiments/measure_sjkl_fisher_rank_20260501.py` imports these names
-# but the implementations were lost during a filter-repo cleanup. The stubs
-# raise NotImplementedError on first call so:
-#   1. Static dead-import scanner sees the symbol exists (preflight passes).
-#   2. Runtime callers fail loud with a clear "implement me" pointer instead
-#      of crashing with a confusing AttributeError on import.
-# Consumer signature inferred from experiments/measure_sjkl_fisher_rank_20260501.py.
+# These are compression-time analysis primitives only. They do not run at
+# inflate time and they do not produce score evidence by themselves.
 # ─────────────────────────────────────────────────────────────────────────
 
 
-def fisher_matvec(seg: object, pose: object, frames: object, v: object) -> object:
-    raise NotImplementedError(
-        "tac.sjkl_basis.fisher_matvec was lost during filter-repo cleanup. "
-        "Reimplement: Fisher-information matrix-vector product over (seg, pose, "
-        "frames, v) using SegNet+PoseNet gradient products. Reference consumer: "
-        "experiments/measure_sjkl_fisher_rank_20260501.py:88."
+def _scorer_outputs(model: object | None, frames: torch.Tensor) -> tuple[torch.Tensor, ...]:
+    if model is None:
+        return ()
+    x = frames
+    preprocess = getattr(model, "preprocess_input", None)
+    if callable(preprocess):
+        x = preprocess(x)
+    out = model(x)  # type: ignore[misc]
+    if torch.is_tensor(out):
+        return (out.reshape(-1),)
+    if isinstance(out, dict):
+        tensors: list[torch.Tensor] = []
+        for key in sorted(out):
+            value = out[key]
+            if not torch.is_tensor(value):
+                continue
+            if key == "pose" and value.shape[-1] >= 2:
+                value = value[..., : value.shape[-1] // 2]
+            tensors.append(value.reshape(-1))
+        return tuple(tensors)
+    if isinstance(out, (tuple, list)):
+        return tuple(x.reshape(-1) for x in out if torch.is_tensor(x))
+    raise TypeError(f"unsupported scorer output type: {type(out).__name__}")
+
+
+def _embed_probe_vector(frames: torch.Tensor, v: torch.Tensor) -> tuple[torch.Tensor, tuple[int, ...] | None]:
+    v = v.to(device=frames.device, dtype=frames.dtype)
+    if int(v.numel()) == int(frames.numel()):
+        return v.reshape_as(frames), None
+    if frames.dim() == 5:
+        per_frame = int(frames.shape[2] * frames.shape[3] * frames.shape[4])
+        if int(v.numel()) == per_frame:
+            full = torch.zeros_like(frames)
+            full[:, 0] = v.reshape(frames.shape[2], frames.shape[3], frames.shape[4])
+            return full, tuple(v.shape)
+    if frames.dim() == 4 and int(v.numel()) == int(frames.shape[1] * frames.shape[2] * frames.shape[3]):
+        return v.reshape_as(frames), tuple(v.shape)
+    raise ValueError(
+        f"probe vector with {int(v.numel())} values is incompatible with frames shape {tuple(frames.shape)}"
     )
 
 
-def lanczos_topk(matvec: object, n: int, k: int, *args: object, **kwargs: object) -> object:
-    raise NotImplementedError(
-        "tac.sjkl_basis.lanczos_topk was lost during filter-repo cleanup. "
-        "Reimplement: top-k Lanczos eigenvalue extraction over the matvec "
-        "operator. Reference consumer: experiments/measure_sjkl_fisher_rank_20260501.py:90."
-    )
+def _extract_probe_result(hv: torch.Tensor, original_shape: tuple[int, ...] | None, v: torch.Tensor) -> torch.Tensor:
+    if original_shape is None:
+        return hv.reshape_as(v)
+    if hv.dim() == 5:
+        selected = hv[0, 0] if int(hv.shape[0]) == 1 else hv[:, 0].sum(dim=0)
+        return selected.reshape(original_shape)
+    return hv.reshape(original_shape)
+
+
+def fisher_matvec(seg: object, pose: object, frames: object, v: object) -> torch.Tensor:
+    """Return `F @ v` for the local scorer Fisher proxy at `frames`.
+
+    `F` is the Gauss-Newton/Fisher matrix of frozen scorer outputs at the
+    anchor: `100 J_seg.T J_seg + 10 J_pose.T J_pose`. If `frames` is a
+    two-frame pair and `v` is a single RGB frame vector, the probe is applied
+    to frame 0 to match the current SJ-KL inflate application site.
+    """
+    frames_t = torch.as_tensor(frames)
+    if not frames_t.is_floating_point():
+        frames_t = frames_t.to(torch.float32)
+    anchor = frames_t.detach().clone().requires_grad_(True)
+    v_t = torch.as_tensor(v, device=anchor.device)
+    v_full, original_shape = _embed_probe_vector(anchor, v_t)
+
+    with torch.no_grad():
+        seg_targets = tuple(x.detach() for x in _scorer_outputs(seg, anchor.detach()))
+        pose_targets = tuple(x.detach() for x in _scorer_outputs(pose, anchor.detach()))
+    if not seg_targets and not pose_targets:
+        raise ValueError("fisher_matvec requires at least one scorer output")
+
+    loss = anchor.new_zeros(())
+    for out, target in zip(_scorer_outputs(seg, anchor), seg_targets, strict=True):
+        loss = loss + 50.0 * (out - target).pow(2).sum()
+    for out, target in zip(_scorer_outputs(pose, anchor), pose_targets, strict=True):
+        loss = loss + 5.0 * (out - target).pow(2).sum()
+
+    (grad,) = torch.autograd.grad(loss, anchor, create_graph=True)
+    gv = (grad * v_full).sum()
+    (hv,) = torch.autograd.grad(gv, anchor, retain_graph=False)
+    return _extract_probe_result(hv.detach(), original_shape, v_t)
+
+
+def lanczos_topk(
+    matvec: object,
+    n: int | None = None,
+    k: int | None = None,
+    *args: object,
+    dim: int | None = None,
+    n_iters: int | None = None,
+    seed: int = 0,
+    shape_hint: tuple[int, ...] | None = None,
+    dtype: torch.dtype = torch.float32,
+    device: str | torch.device = "cpu",
+    tol: float = 1e-10,
+    reorthogonalize: bool = True,
+    **_kwargs: object,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Deterministic symmetric Lanczos top-k eigensolver for a matvec operator."""
+    del args
+    if dim is None:
+        if n is None:
+            raise ValueError("lanczos_topk requires dim=... or positional n")
+        dim = int(n)
+    if k is None:
+        raise ValueError("lanczos_topk requires k")
+    dim = int(dim)
+    k = int(k)
+    if dim <= 0:
+        raise ValueError(f"dim must be positive, got {dim}")
+    if not 1 <= k <= dim:
+        raise ValueError(f"k must be in [1, dim={dim}], got {k}")
+    n_iters = max(k, int(n_iters if n_iters is not None else max(k * 2, 8)))
+    probe_shape = tuple(shape_hint) if shape_hint is not None else (dim,)
+    if math.prod(probe_shape) != dim:
+        raise ValueError(f"shape_hint product {math.prod(probe_shape)} does not match dim {dim}")
+
+    device_t = torch.device(device)
+    generator = torch.Generator().manual_seed(int(seed))
+    q = torch.randn(probe_shape, generator=generator, dtype=dtype).to(device_t)
+    q = q / q.norm().clamp_min(tol)
+    q_prev = torch.zeros_like(q)
+    beta_prev = q.new_zeros(())
+    basis_vectors: list[torch.Tensor] = []
+    alphas: list[torch.Tensor] = []
+    betas: list[torch.Tensor] = []
+
+    if not callable(matvec):
+        raise TypeError("matvec must be callable")
+
+    for _ in range(n_iters):
+        basis_vectors.append(q)
+        w = matvec(q)  # type: ignore[misc]
+        if not torch.is_tensor(w):
+            w = torch.as_tensor(w, device=device_t, dtype=dtype)
+        w = w.to(device=device_t, dtype=dtype).reshape(probe_shape)
+        w = w - beta_prev * q_prev
+        alpha = (q.reshape(-1) * w.reshape(-1)).sum()
+        w = w - alpha * q
+        if reorthogonalize:
+            for old_q in basis_vectors:
+                w = w - (old_q.reshape(-1) * w.reshape(-1)).sum() * old_q
+        beta = w.norm()
+        alphas.append(alpha.detach())
+        if float(beta) <= tol:
+            break
+        betas.append(beta.detach())
+        q_prev = q
+        q = w / beta.clamp_min(tol)
+        beta_prev = beta
+
+    m = len(alphas)
+    tri = torch.zeros((m, m), dtype=dtype, device=device_t)
+    for i, alpha in enumerate(alphas):
+        tri[i, i] = alpha
+        if i + 1 < m:
+            tri[i, i + 1] = betas[i]
+            tri[i + 1, i] = betas[i]
+    eigvals, eigvecs = torch.linalg.eigh(tri)
+    order = torch.argsort(eigvals, descending=True)[:k]
+    q_flat = torch.stack([q_i.reshape(-1) for q_i in basis_vectors[:m]], dim=0)
+    ritz_flat = eigvecs[:, order].T @ q_flat
+    ritz_flat = ritz_flat / ritz_flat.norm(dim=1, keepdim=True).clamp_min(tol)
+    ritz = ritz_flat if shape_hint is None else ritz_flat.reshape(k, *probe_shape)
+    return eigvals[order].detach(), ritz.detach()
 
 
 def effective_rank(eigvals: object, *, threshold: float = 1e-4) -> int:
-    raise NotImplementedError(
-        "tac.sjkl_basis.effective_rank was lost during filter-repo cleanup. "
-        "Reimplement: count eigenvalues above threshold (or use participation-"
-        "ratio formulation). Reference consumer: experiments/measure_sjkl_fisher_rank_20260501.py:94."
-    )
+    """Count finite eigenvalues above `threshold * max(abs(eigvals))`."""
+    vals = torch.as_tensor(eigvals, dtype=torch.float64).reshape(-1)
+    vals = vals[torch.isfinite(vals)].abs()
+    if vals.numel() == 0:
+        return 0
+    max_val = vals.max()
+    if float(max_val) <= 0.0:
+        return 0
+    cutoff = max_val * float(threshold) if threshold < 1.0 else vals.new_tensor(float(threshold))
+    return int((vals > cutoff).sum().item())
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Renamed-out symbols.
-# Tests under src/tac/tests/test_inflate_renderer_sjkl_runtime.py reference
-# pack_sjkl_basis but the canonical name is encode_sjkl_basis. The signatures
-# are not 1:1 (encode_sjkl_basis takes basis_quant_bits parameter). A
-# fail-loud stub here satisfies the import-resolver scanner without lying
-# about API compatibility — the test would have ImportError-skipped before
-# this stub; now it will explicitly fail at first call with a rename pointer.
+# Legacy compatibility symbol.
+# Tests and older tools still call pack_sjkl_basis; keep it as a thin wrapper
+# over the canonical encoder instead of a dispatch-blocking stub.
 # ─────────────────────────────────────────────────────────────────────────
 
 
 def pack_sjkl_basis(*args: object, **kwargs: object) -> bytes:
-    raise NotImplementedError(
-        "tac.sjkl_basis.pack_sjkl_basis was renamed to encode_sjkl_basis. "
-        "Update your call site to use encode_sjkl_basis(basis, basis_quant_bits=...). "
-        "Reference: src/tac/sjkl_basis.py:165."
-    )
+    """Backward-compatible wrapper for older SJ-KL runtime tests/tools."""
+    if not args:
+        raise TypeError("pack_sjkl_basis requires an SJKLBasis argument")
+    basis = args[0]
+    if not isinstance(basis, SJKLBasis):
+        raise TypeError(f"pack_sjkl_basis expected SJKLBasis, got {type(basis).__name__}")
+    basis_quant_bits = kwargs.pop("basis_quant_bits", 6)
+    if kwargs:
+        raise TypeError(f"unexpected pack_sjkl_basis kwargs: {sorted(kwargs)}")
+    return encode_sjkl_basis(basis, basis_quant_bits=basis_quant_bits)
