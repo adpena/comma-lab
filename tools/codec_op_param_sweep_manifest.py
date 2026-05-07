@@ -365,6 +365,21 @@ def main(argv: list[str] | None = None) -> int:
         "candidate dicts (anchors_<lane_class>.json must exist). "
         "Default: derived from op_class.lower().",
     )
+    parser.add_argument(
+        "--substrate-archive-pr101", type=Path, default=None,
+        help="Path to a PR101-shaped archive.zip. When set AND the CodecOp "
+        "produces a wire-format-compatible decoder_blob (Op1_PR101SplitBrotli), "
+        "the tool calls tools.pr101_archive_substitution_surgery to produce a "
+        "real substituted archive per candidate at "
+        "experiments/results/<label_prefix>_<candidate_id>/archive.zip and "
+        "writes the path into archive_path. For non-compatible ops "
+        "(Op_KLPoseStream, etc.) this flag is rejected with a clear error.",
+    )
+    parser.add_argument(
+        "--substituted-archive-output-dir", type=Path, default=None,
+        help="Directory under which per-candidate substituted archives are "
+        "written (default: experiments/results/<label_prefix>_<candidate_id>/).",
+    )
     args = parser.parse_args(argv)
 
     op_cls = _import_codec_op(args.module, args.class_name)
@@ -406,6 +421,61 @@ def main(argv: list[str] | None = None) -> int:
         f"top candidate: {manifest['candidates'][0]['candidate_id']} "
         f"predicted_score={manifest['candidates'][0]['predicted_score']:.5f}"
     )
+    # PR101 archive-substitution surgery wire-up (huge tranche #4):
+    # for wire-format-compatible CodecOps + a PR101 substrate archive,
+    # produce a real substituted archive per candidate so dispatch is
+    # ready-to-fire (modulo operator GPU authorization).
+    if args.substrate_archive_pr101 is not None:
+        if args.class_name not in {"Op1_PR101SplitBrotli"}:
+            raise SystemExit(
+                f"--substrate-archive-pr101 requires --class Op1_PR101SplitBrotli "
+                f"(wire-format-compatible with PR101). Got --class={args.class_name}; "
+                f"this op produces a stream PR101 doesn't ship or has incompatible "
+                f"wire format. Substitution would corrupt the archive."
+            )
+        # Lazy-import the surgery tool to keep top-level imports light
+        sys.path.insert(0, str(REPO_ROOT / "tools"))
+        from pr101_archive_substitution_surgery import substitute_decoder_blob
+
+        out_root = (
+            args.substituted_archive_output_dir
+            or REPO_ROOT / "experiments" / "results" / "codec_op_substituted"
+        )
+        out_root.mkdir(parents=True, exist_ok=True)
+        for candidate in candidates:
+            cand_dir = out_root / f"{args.label_prefix}_{candidate.candidate_id}"
+            cand_dir.mkdir(parents=True, exist_ok=True)
+            archive_out = cand_dir / "archive.zip"
+            # Re-run the encode to get the actual blob bytes (not just bytes_out).
+            op_instance = op_cls(**candidate.op_params)
+            blob_result = op_instance.encode(state_dict, context={})
+            # PR101 surgery requires exact 162,164-byte decoder_blob length.
+            # If the cathedral re-encoded with auto_select_byte_maps the bytes
+            # MAY be smaller — in which case we cannot substitute into a stock
+            # PR101 archive (offsets shift) and must skip + log.
+            if len(blob_result.blob) != 162_164:
+                print(
+                    f"  candidate {candidate.candidate_id}: bytes_out="
+                    f"{len(blob_result.blob)} != 162164 (PR101 fixed offset); "
+                    "substitution skipped (would corrupt latent_blob extraction). "
+                    "This candidate produces savings but requires a forked inflate."
+                )
+                continue
+            report = substitute_decoder_blob(
+                input_archive=args.substrate_archive_pr101,
+                replacement_decoder_blob=blob_result.blob,
+                output_archive=archive_out,
+            )
+            (cand_dir / "substitution_report.json").write_text(
+                json.dumps(asdict(report), indent=2, sort_keys=True)
+            )
+            print(
+                f"  candidate {candidate.candidate_id}: substituted "
+                f"archive_bytes={archive_out.stat().st_size} "
+                f"(input={report.input_size_bytes}, delta={report.bytes_delta:+}) "
+                f"-> {archive_out}"
+            )
+
     if args.meta_lagrangian_output:
         ml_candidates = to_meta_lagrangian_candidates(
             candidates, lane_class=args.meta_lagrangian_lane_class,

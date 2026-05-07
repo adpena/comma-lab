@@ -202,6 +202,56 @@ def test_cli_verify_emits_json(tmp_path, capsys) -> None:
     assert out["decoder_blob"]["matches_expected"] is True
 
 
+def test_byte_faithful_roundtrip_through_real_pr101_codec(tmp_path) -> None:
+    """End-to-end smoke: real PR101 archive → decode_decoder_compact →
+    encode_decoder_compact (PR101 defaults) → SHA-faithful to original.
+
+    This is the keystone test proving the cathedral's PR101 codec is
+    bit-faithful with PR101's native codec on PR101's own substrate.
+    Skipped when the canonical intake archive is not on disk so the
+    test suite stays portable.
+    """
+    mod = _load_tool_module()
+    repo_root = pathlib.Path(__file__).resolve().parents[3]
+    canonical = (
+        repo_root
+        / "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip"
+    )
+    if not canonical.is_file():
+        pytest.skip("canonical PR101 intake not present")
+
+    import hashlib
+
+    from tac.pr101_split_brotli_codec import decode_decoder_compact, encode_decoder_compact
+
+    inner = mod._read_inner_blob(canonical)
+    decoder_blob, _latent, _sidecar = mod._split_pr101_inner_blob(inner)
+    state_dict = decode_decoder_compact(decoder_blob)
+    re_encoded = encode_decoder_compact(state_dict, brotli_quality=11)
+    assert re_encoded == decoder_blob, (
+        "cathedral re-encode of PR101's own state_dict must produce "
+        "byte-identical decoder_blob (PR101 defaults)"
+    )
+    # SHA cross-check (would catch silent length-only-equal but bytes-differ)
+    assert hashlib.sha256(re_encoded).hexdigest() == hashlib.sha256(decoder_blob).hexdigest()
+
+    # Substitute the re-encoded blob back through the surgery tool;
+    # output archive must be a valid PR101 archive and the sliced
+    # decoder section must SHA-equal the original.
+    out = tmp_path / "roundtrip_pr101.zip"
+    report = mod.substitute_decoder_blob(
+        input_archive=canonical,
+        replacement_decoder_blob=re_encoded,
+        output_archive=out,
+    )
+    assert report.sha256_input_decoder_blob == report.sha256_replacement_decoder_blob
+    out_inner = mod._read_inner_blob(out)
+    out_dec, out_lat, out_side = mod._split_pr101_inner_blob(out_inner)
+    assert out_dec == decoder_blob
+    assert out_lat == _latent
+    assert out_side == _sidecar
+
+
 def test_cli_substitute_writes_report(tmp_path, capsys) -> None:
     mod = _load_tool_module()
     archive = _make_synthetic_pr101_archive(tmp_path)
