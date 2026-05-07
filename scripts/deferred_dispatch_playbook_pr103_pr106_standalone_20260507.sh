@@ -90,8 +90,30 @@ if [[ -f "${REPO_ROOT}/.omx/state/active_lane_dispatch_claims.md" ]]; then
     fi
 fi
 echo "[playbook] lane claim state: ${LANE_STATE}"
-if [[ "${LANE_STATE}" == claim_missing ]]; then
-    echo "WARNING: lane claim absent; re-claim before dispatch" >&2
+# Bug-hunter v2 fix 2026-05-07 (new MEDIUM): the previous version printed
+# "WARNING: lane claim absent; re-claim before dispatch" but proceeded to
+# dispatch anyway. CLAUDE.md "CROSS-AGENT DISPATCH COORDINATION" is
+# NON-NEGOTIABLE: every dispatch must claim the lane via
+# tools/claim_lane_dispatch.py BEFORE firing. Silent-warn-and-proceed is the
+# coordination-failure pattern that burned $5-10 of duplicate GPU spend on
+# 2026-05-01. We now exit non-zero (exit 6, distinct from 2/3/4/5/7/8) on
+# real provider dispatch when the claim is missing; dry-run remains
+# permissive so operators can still preview the dispatch plan.
+# claim_missing = file exists but no row matches our lane id
+# claim_unknown = file does not exist at all (fresh checkout / wiped state)
+# Both are "no claim" conditions and must block real-provider dispatch.
+if [[ "${LANE_STATE}" == claim_missing || "${LANE_STATE}" == claim_unknown ]]; then
+    if [[ "${DRY_RUN}" != "1" && -n "${PROVIDER}" ]]; then
+        echo "FATAL: lane claim ${LANE_STATE} for pr103_pr106_standalone;" \
+             "refusing dispatch. Run:" >&2
+        echo "  python tools/claim_lane_dispatch.py claim --lane-id" \
+             "pr103_pr106_standalone --ttl-hours 168 --notes <reason>" >&2
+        echo "before retrying. (CLAUDE.md CROSS-AGENT DISPATCH" \
+             "COORDINATION non-negotiable.)" >&2
+        exit 6
+    fi
+    echo "WARNING: lane claim ${LANE_STATE}; dry-run permissive; re-claim" \
+         "before real dispatch" >&2
 fi
 echo
 
