@@ -225,8 +225,11 @@ RESUME_ARGS=()
 RESUME_FROM="${RESUME_FROM:-}"
 if [ -z "$RESUME_FROM" ]; then
     # Auto-detect newest training_state checkpoint from prior preempted run.
-    AUTO_RESUME=$(ls -t "$LOG_DIR/train/training_state_q_faithful_modal.pt" 2>/dev/null | head -1)
-    if [ -n "$AUTO_RESUME" ] && [ -f "$AUTO_RESUME" ]; then
+    AUTO_RESUME=""
+    if [ -f "$LOG_DIR/train/training_state_q_faithful_modal.pt" ]; then
+        AUTO_RESUME="$LOG_DIR/train/training_state_q_faithful_modal.pt"
+    fi
+    if [ -n "$AUTO_RESUME" ]; then
         RESUME_FROM="$AUTO_RESUME"
         log "  AUTO-RESUME: detected $RESUME_FROM ($(stat -c '%s' "$RESUME_FROM" 2>/dev/null || stat -f '%z' "$RESUME_FROM") bytes)"
     fi
