@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "tool": "experiments.build_pr101_repacked_archive",
+  "score_claim": false,
+  "score_evidence_grade": "prediction",
+  "source_archive_path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+  "source_archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+  "source_archive_bytes": 186239,
+  "source_payload_bytes": 186131,
+  "source_member_name": "0.bin",
+  "source_decoder_section_bytes": 170278,
+  "source_latents_section_bytes": 15849,
+  "n_state_dict_tensors": 28,
+  "n_state_dict_params": 228958,
+  "schema_meta": {
+    "n_pairs": 600,
+    "latent_dim": 28,
+    "base_channels": 36,
+    "eval_size": [
+      384,
+      512
+    ]
+  },
+  "brotli_quality": 11,
+  "validate_byte_maps": true,
+  "byte_map_audit": {
+    "9": {
+      "with_map_bytes": 86,
+      "without_map_bytes": 86,
+      "delta_bytes": 0,
+      "byte_map": "negzig"
+    },
+    "14": {
+      "with_map_bytes": 806,
+      "without_map_bytes": 807,
+      "delta_bytes": -1,
+      "byte_map": "negzig"
+    },
+    "20": {
+      "with_map_bytes": 1088,
+      "without_map_bytes": 1086,
+      "delta_bytes": 2,
+      "byte_map": "twos"
+    },
+    "27": {
+      "with_map_bytes": 9,
+      "without_map_bytes": 9,
+      "delta_bytes": 0,
+      "byte_map": "off"
+    }
+  },
+  "output_archive_path": "experiments/results/pr101_repack_pr106_20260507T152608Z_claude/archive.zip",
+  "output_archive_sha256": "219844e77442fb352424a7f232d9a25f52e3f28d93b80fce800874ded94853aa",
+  "output_archive_bytes": 185998,
+  "output_decoder_section_bytes": 170037,
+  "output_latents_section_bytes": 15849,
+  "decoder_delta_bytes": -241,
+  "archive_delta_bytes": -241,
+  "predicted_score_delta_tag": "prediction",
+  "predicted_score_delta_rate_component": -0.000160472008,
+  "hidden_gem_classification": {
+    "blockers": [
+      "pr101_split_brotli_runtime_adapter_not_yet_integrated",
+      "pr106_inflate_will_fail_on_pr101_decoder_format",
+      "runtime_tree_parity_manifest_missing",
+      "inflate_output_parity_missing",
+      "strict_pre_submission_compliance_json_missing",
+      "lane_dispatch_claim_missing",
+      "exact_cuda_auth_eval_missing"
+    ],
+    "candidate_id": "PR101-split-brotli-repack-on-PR106",
+    "classification": "stack_candidate_requires_runtime_adapter",
+    "classification_evidence_grade": "prediction",
+    "dispatch_attempted": false,
+    "evidence_semantics": "rate_delta_prediction_only_no_score_claim",
+    "next_actions": [
+      "prove raw decoder or inflate-output parity against the source archive",
+      "integrate a fail-closed PR101 decoder-format runtime adapter",
+      "materialize strict compliance JSON and exact CUDA auth eval only after a lane claim"
+    ],
+    "rationale": "This is a byte-smaller PR101-format repack of the PR106 source, but the current PR106 runtime is expected to fail on the new decoder format.",
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "stack_candidate": true,
+    "substitute_candidate": false
+  },
+  "runtime_adapter_required": true,
+  "runtime_adapter_blockers": [
+    "pr101_split_brotli_runtime_adapter_not_yet_integrated",
+    "pr106_inflate_will_fail_on_pr101_decoder_format"
+  ]
+}

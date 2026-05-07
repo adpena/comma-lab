@@ -21,6 +21,16 @@
 - decoder_maybe_exhausted: `true`
 - reencoded_byte_identical: `true`
 
+## Hidden-Gem Classification
+
+| candidate | classification | stack | substitute | evidence semantics |
+|---|---|---:|---:|---|
+| `PR103-lc-ac-source-schema` | `stack_source_candidate` | true | false | byte-identical AC re-encode and schema-gap analysis; no score claim |
+
+PR103 is a bounded source-schema candidate for a future PR101/PR106x
+byte-different archive. It is not a substitute/frontier score row while replay
+fidelity remains blocked by the public leaderboard score mismatch.
+
 ## Next Targets
 
 | rank | stream | role | symbols | model gap bytes | model floor bytes |

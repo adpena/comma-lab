@@ -12,6 +12,30 @@
   "candidate_rate_positive": true,
   "candidate_rate_score_delta_if_runtime_supported_and_components_equal": -2.3970922e-05,
   "candidate_variant": "pr101_schema_split_brotli_f32_scale_raw_equal",
+  "hidden_gem_classification": {
+    "blockers": [
+      "pr101_schema_submission_runtime_adapter_not_integrated",
+      "pr101_schema_inflate_output_parity_missing",
+      "strict_pre_submission_compliance_json_missing",
+      "lane_dispatch_claim_missing",
+      "exact_cuda_auth_eval_missing"
+    ],
+    "candidate_id": "PR101-schema-f32-on-PR106x",
+    "classification": "stack_candidate",
+    "classification_evidence_grade": "empirical",
+    "dispatch_attempted": false,
+    "evidence_semantics": "byte_equivalence_only_raw_decoder_equal_no_score_claim",
+    "next_actions": [
+      "integrate fail-closed runtime content detection for the PR101 schema stream",
+      "record runtime-tree parity manifest and inflate-output parity",
+      "run strict pre-submission compliance before any lane claim or CUDA dispatch"
+    ],
+    "rationale": "Raw decoder bytes are restored exactly while charged bytes shrink by 36; this is a pack/layout component that can stack after runtime-adapter parity.",
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "stack_candidate": true,
+    "substitute_candidate": false
+  },
   "decoder_raw_equivalence": {
     "contract": "pr101_schema_decoder_raw_equivalence_v1",
     "raw_equal": true,
@@ -33,6 +57,29 @@
       "pr101_fp16_scale_inflate_output_parity_missing",
       "pr101_fp16_scale_exact_cuda_auth_eval_missing"
     ],
+    "hidden_gem_classification": {
+      "blockers": [
+        "pr101_fp16_scale_runtime_adapter_not_integrated",
+        "pr101_fp16_scale_inflate_output_parity_missing",
+        "pr101_fp16_scale_exact_cuda_auth_eval_missing"
+      ],
+      "candidate_id": "PR101-fp16-scale-on-PR106x",
+      "classification": "substitute_candidate_probe",
+      "classification_evidence_grade": "empirical",
+      "conditional_stack_candidate_after_exact_cuda": true,
+      "dispatch_attempted": false,
+      "evidence_semantics": "q_roundtrip_equal_but_scale_raw_not_equal_no_score_claim",
+      "next_actions": [
+        "prove inflate-output parity or classify the scale quantization delta before dispatch",
+        "integrate the runtime adapter with legacy fallback",
+        "only compare score after exact CUDA auth eval on exact archive bytes"
+      ],
+      "rationale": "The q-stream roundtrips but fp16 scales change restored weights, so this is a scorer-facing substitute probe rather than a lossless pack-only stack row.",
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "stack_candidate": false,
+      "substitute_candidate": true
+    },
     "max_abs_scale_error": 4.408881068229675e-06,
     "max_abs_weight_error_bound": 0.0005599278956651688,
     "max_rel_scale_error": 0.0003232605350608376,

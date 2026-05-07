@@ -59,6 +59,30 @@
     "exact_cuda_auth_eval_missing"
   ],
   "gpu_required": false,
+  "hidden_gem_classification": {
+    "blocked_from_substitute_by": [
+      "replay_fidelity:public_leaderboard_score_mismatch",
+      "candidate_archive_missing",
+      "old_new_archive_sha256_pair_missing",
+      "candidate_runtime_adapter_missing",
+      "exact_cuda_auth_eval_missing"
+    ],
+    "candidate_id": "PR103-lc-ac-source-schema",
+    "classification": "stack_source_candidate",
+    "classification_evidence_grade": "empirical",
+    "dispatch_attempted": false,
+    "evidence_semantics": "byte_identical_ac_reencode_and_schema_gap_analysis_no_score_claim",
+    "next_actions": [
+      "port only the bounded LC/AC contract into a byte-different PR101/PR106x candidate",
+      "record old/new archive SHA-256 and runtime adapter parity",
+      "keep PR103 source-score semantics invalid until replay fidelity is closed"
+    ],
+    "rationale": "The merged AC stream re-encodes byte-identically and exposes bounded stream gaps, but the source archive has a public-score replay mismatch.",
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "stack_candidate": true,
+    "substitute_candidate": false
+  },
   "merged_arithmetic_stream": {
     "blockers": [],
     "codec": "constriction.stream.queue.RangeEncoder_uint32_words",

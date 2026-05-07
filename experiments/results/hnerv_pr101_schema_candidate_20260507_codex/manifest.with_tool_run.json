@@ -12,6 +12,30 @@
   "candidate_rate_positive": true,
   "candidate_rate_score_delta_if_runtime_supported_and_components_equal": -2.3970922e-05,
   "candidate_variant": "pr101_schema_split_brotli_f32_scale_raw_equal",
+  "hidden_gem_classification": {
+    "blockers": [
+      "pr101_schema_submission_runtime_adapter_not_integrated",
+      "pr101_schema_inflate_output_parity_missing",
+      "strict_pre_submission_compliance_json_missing",
+      "lane_dispatch_claim_missing",
+      "exact_cuda_auth_eval_missing"
+    ],
+    "candidate_id": "PR101-schema-f32-on-PR106x",
+    "classification": "stack_candidate",
+    "classification_evidence_grade": "empirical",
+    "dispatch_attempted": false,
+    "evidence_semantics": "byte_equivalence_only_raw_decoder_equal_no_score_claim",
+    "next_actions": [
+      "integrate fail-closed runtime content detection for the PR101 schema stream",
+      "record runtime-tree parity manifest and inflate-output parity",
+      "run strict pre-submission compliance before any lane claim or CUDA dispatch"
+    ],
+    "rationale": "Raw decoder bytes are restored exactly while charged bytes shrink by 36; this is a pack/layout component that can stack after runtime-adapter parity.",
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "stack_candidate": true,
+    "substitute_candidate": false
+  },
   "decoder_raw_equivalence": {
     "contract": "pr101_schema_decoder_raw_equivalence_v1",
     "raw_equal": true,
