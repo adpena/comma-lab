@@ -138,7 +138,7 @@ def test_field_rows_carry_uncertainty_and_meta_selection_penalties(tmp_path: Pat
         base_pose_dist=0.01,
         source="fixture",
     )
-    plan = build_field_equation_plan(ledger, source="fixture")
+    plan = build_field_equation_plan(ledger, source="fixture", base_score=0.21)
 
     row = plan["rows"][0]
     assert row["expected_information_gain_nats"] == pytest.approx(0.25)
@@ -147,8 +147,69 @@ def test_field_rows_carry_uncertainty_and_meta_selection_penalties(tmp_path: Pat
     assert row["meta_lagrangian_selection_score_delta"] == pytest.approx(
         ledger["rows"][0]["selection_score_delta"]
     )
+    acquisition = plan["field_acquisition_ranking"]["rows"][0]
+    assert acquisition["atom_id"] == "uncertainty_atom"
+    assert acquisition["expected_information_gain_nats"] == pytest.approx(0.25)
+    assert acquisition["predicted_score_mean"] is not None
+    assert acquisition["acquisition_value"] > 0.0
     assert row["ready_for_exact_eval_dispatch"] is False
     assert row["dispatchable"] is False
+
+
+def test_field_acquisition_ranking_keeps_dispatch_blockers_explicit(tmp_path: Path) -> None:
+    ledger = _closed_stack_ledger(tmp_path)
+    plan = build_field_equation_plan(
+        ledger,
+        source="fixture",
+        base_score=0.21,
+    )
+
+    ranking = plan["field_acquisition_ranking"]
+
+    assert ranking["schema"] == "field_acquisition_ranking_v1"
+    assert ranking["score_claim"] is False
+    assert ranking["dispatch_attempted"] is False
+    assert ranking["ready_for_exact_eval_dispatch"] is False
+    assert ranking["design_ready_count"] == 2
+    assert [row["rank"] for row in ranking["rows"]] == [1, 2]
+    assert all(row["design_ready"] is True for row in ranking["rows"])
+    assert all(row["dispatch_design_blockers"] == [] for row in ranking["rows"])
+    assert ranking["rows"][0]["acquisition_value"] >= ranking["rows"][1]["acquisition_value"]
+
+
+def test_field_acquisition_ranking_refuses_missing_base_score_and_proxy(tmp_path: Path) -> None:
+    manifest = _archive_manifest(tmp_path)
+    manifest_sha = sha256_file(manifest)
+    ledger = build_atom_ledger(
+        [
+            {
+                "atom_id": "proxy_atom",
+                "family": "mask_patch",
+                "family_group": "mask",
+                "pareto_scope": "mask",
+                "byte_delta": -10,
+                "expected_seg_dist_delta": -0.0001,
+                "confidence": 1.0,
+                "evidence_grade": "planning_proxy",
+                "raw_equal": True,
+                "interaction_assumptions": ["first_order_mask_patch"],
+                "expected_information_gain_nats": 0.5,
+                "archive_manifest_path": manifest.as_posix(),
+                "archive_manifest_sha256": manifest_sha,
+            }
+        ],
+        base_pose_dist=0.01,
+        source="fixture",
+    )
+    plan = build_field_equation_plan(ledger, source="fixture")
+
+    row = plan["field_acquisition_ranking"]["rows"][0]
+
+    assert row["design_ready"] is False
+    assert row["predicted_score_mean"] is None
+    assert row["expected_improvement"] == 0.0
+    assert "missing_base_score_for_expected_improvement" in row["dispatch_design_blockers"]
+    assert "proxy_evidence_not_dispatch_design_ready" in row["dispatch_design_blockers"]
 
 
 def test_field_action_penalizes_proxy_even_when_byte_closed(tmp_path: Path) -> None:

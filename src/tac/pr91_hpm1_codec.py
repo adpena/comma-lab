@@ -917,6 +917,100 @@ def _coords_summary(coords: Any) -> dict[str, Any]:
     }
 
 
+def _range_decoder_state_summary(decoder: Any, *, label: str) -> dict[str, Any]:
+    """Record the limited public RangeDecoder state without mutating it."""
+
+    state: dict[str, Any] = {
+        "label": label,
+        "api": "constriction.stream.queue.RangeDecoder",
+        "public_state_surface": "maybe_exhausted_only",
+    }
+    maybe_exhausted = getattr(decoder, "maybe_exhausted", None)
+    if callable(maybe_exhausted):
+        try:
+            state["maybe_exhausted"] = bool(maybe_exhausted())
+        except Exception as exc:  # pragma: no cover - dependency-specific
+            state["maybe_exhausted_error"] = f"{type(exc).__name__}: {exc}"
+    else:
+        state["maybe_exhausted_available"] = False
+    return state
+
+
+def _reference_group_symbol_window(
+    reference_symbols: np.ndarray,
+    coords: Any,
+    *,
+    frame: int,
+    group: int,
+    failure_symbol_in_group: int,
+    window_before: int,
+    window_after: int,
+) -> dict[str, Any]:
+    """Summarize canonical reference tokens around a failed group symbol."""
+
+    before = int(window_before)
+    after = int(window_after)
+    if before < 0 or after < 0:
+        raise Pr91Hpm1Error(
+            "reference_teacher_forcing_probe",
+            "reference_window_counts_must_be_nonnegative",
+            window_before=window_before,
+            window_after=window_after,
+        )
+    ref = np.asarray(reference_symbols, dtype=np.uint8)
+    coord_arr = coords.detach().cpu().numpy().astype(np.int64, copy=False)
+    failure_symbol = int(failure_symbol_in_group)
+    if failure_symbol < 0 or failure_symbol >= int(ref.shape[0]):
+        raise Pr91Hpm1Error(
+            "reference_teacher_forcing_probe",
+            "failure_symbol_out_of_reference_group",
+            group=group,
+            failure_symbol_in_group=failure_symbol,
+            symbols_in_group=int(ref.shape[0]),
+        )
+    start = max(0, failure_symbol - before)
+    end = min(int(ref.shape[0]), failure_symbol + after + 1)
+    window_symbols = np.ascontiguousarray(ref[start:end], dtype=np.uint8)
+    next_symbols = np.ascontiguousarray(
+        ref[failure_symbol + 1 : end],
+        dtype=np.uint8,
+    )
+    rows = []
+    for symbol_in_group in range(start, end):
+        row, col = coord_arr[symbol_in_group]
+        rows.append(
+            {
+                "symbol_in_group": int(symbol_in_group),
+                "relative_to_failure": int(symbol_in_group - failure_symbol),
+                "pixel_yx": {"y": int(row), "x": int(col)},
+                "reference_symbol": int(ref[symbol_in_group]),
+            }
+        )
+    fail_row, fail_col = coord_arr[failure_symbol]
+    return {
+        "schema": "pr91_hpm1_reference_group_symbol_window_v1",
+        "frame": int(frame),
+        "group": int(group),
+        "failure_symbol_in_group": failure_symbol,
+        "window_before": before,
+        "window_after": after,
+        "start_symbol_in_group": int(start),
+        "end_symbol_in_group_exclusive": int(end),
+        "includes_failure_symbol": True,
+        "window_symbol_count": int(window_symbols.size),
+        "reference_symbols_sha256": sha256_bytes(window_symbols.tobytes()),
+        "next_reference_symbol_count": int(next_symbols.size),
+        "next_reference_symbols_sha256": sha256_bytes(next_symbols.tobytes()),
+        "failed_reference_symbol": int(ref[failure_symbol]),
+        "failed_reference_pixel_yx": {"y": int(fail_row), "x": int(fail_col)},
+        "rows": rows,
+        "reference_scope_note": (
+            "These are canonical PR85/QMA9 reference tokens under the requested "
+            "layout, not proven PR91 encoder semantic tokens."
+        ),
+    }
+
+
 def _trace_hpm1_spatial_order_decode_failure(
     model: Any,
     payload: Hpm1MaskPayload,
@@ -997,9 +1091,17 @@ def _trace_hpm1_spatial_order_decode_failure(
                         variant=resolved,
                     )
                     cat = _categorical_from_probs(row, prob_eps=prob_eps, variant=resolved)
+                    decoder_state_before = _range_decoder_state_summary(
+                        decoder,
+                        label="before_decode_attempt",
+                    )
                     try:
                         decoded[symbol_in_group] = decoder.decode(cat)
                     except Exception as exc:
+                        decoder_state_after = _range_decoder_state_summary(
+                            decoder,
+                            label="after_failed_decode_exception",
+                        )
                         prefix = decoded[:symbol_in_group].astype(np.uint8, copy=False)
                         raw_row = np.ascontiguousarray(row)
                         norm_row = np.ascontiguousarray(normalized)
@@ -1027,6 +1129,14 @@ def _trace_hpm1_spatial_order_decode_failure(
                                 "decoded_symbol_count_before_failure": int(decoded_symbols),
                                 "group_start_decoded_symbols": int(group_start_symbols),
                                 "frame_start_decoded_symbols": int(frame_start_symbols),
+                            },
+                            "range_decoder_diagnostic": {
+                                "state_before_decode": decoder_state_before,
+                                "state_after_failed_decode": decoder_state_after,
+                                "exception_text": str(exc),
+                                "not_stream_exhaustion": bool(
+                                    decoder_state_before.get("maybe_exhausted") is False
+                                ),
                             },
                             "token_stream": {
                                 "bytes": len(payload.tokens),
@@ -1130,6 +1240,8 @@ def _trace_hpm1_reference_teacher_forced_spatial_order_failure(
     max_frames: int | None,
     device: str,
     spatial_order_candidate: str,
+    reference_window_before: int = 2,
+    reference_window_after: int = 5,
 ) -> dict[str, Any]:
     """Replay HPM1 while forcing HPAC context from reference mask tokens."""
 
@@ -1151,6 +1263,13 @@ def _trace_hpm1_reference_teacher_forced_spatial_order_failure(
             "reference_token_shape_mismatch",
             expected=[payload.n_frames, payload.height, payload.width],
             actual=list(reference_tokens.shape),
+        )
+    if int(reference_window_before) < 0 or int(reference_window_after) < 0:
+        raise Pr91Hpm1Error(
+            "reference_teacher_forcing_probe",
+            "reference_window_counts_must_be_nonnegative",
+            reference_window_before=reference_window_before,
+            reference_window_after=reference_window_after,
         )
     resolved = resolve_hpac_probability_variant(probability_variant)
     frame_count = int(payload.n_frames if max_frames is None else min(int(max_frames), payload.n_frames))
@@ -1214,9 +1333,17 @@ def _trace_hpm1_reference_teacher_forced_spatial_order_failure(
                         variant=resolved,
                     )
                     cat = _categorical_from_probs(row, prob_eps=prob_eps, variant=resolved)
+                    decoder_state_before = _range_decoder_state_summary(
+                        decoder,
+                        label="before_decode_attempt",
+                    )
                     try:
                         decoded_symbol = int(decoder.decode(cat))
                     except Exception as exc:
+                        decoder_state_after = _range_decoder_state_summary(
+                            decoder,
+                            label="after_failed_decode_exception",
+                        )
                         prefix = decoded[:symbol_in_group].astype(np.uint8, copy=False)
                         raw_row = np.ascontiguousarray(row)
                         norm_row = np.ascontiguousarray(normalized)
@@ -1245,6 +1372,14 @@ def _trace_hpm1_reference_teacher_forced_spatial_order_failure(
                                 "decoded_symbol_count_before_failure": int(decoded_symbols),
                                 "group_start_decoded_symbols": int(group_start_symbols),
                                 "frame_start_decoded_symbols": int(frame_start_symbols),
+                            },
+                            "range_decoder_diagnostic": {
+                                "state_before_decode": decoder_state_before,
+                                "state_after_failed_decode": decoder_state_after,
+                                "exception_text": str(exc),
+                                "not_stream_exhaustion": bool(
+                                    decoder_state_before.get("maybe_exhausted") is False
+                                ),
                             },
                             "token_stream": {
                                 "bytes": len(payload.tokens),
@@ -1288,6 +1423,15 @@ def _trace_hpm1_reference_teacher_forced_spatial_order_failure(
                                 "sha256": sha256_bytes(prefix.tobytes()),
                                 **_small_int_preview(prefix),
                             },
+                            "canonical_reference_symbol_window": _reference_group_symbol_window(
+                                ref_at_group,
+                                coords,
+                                frame=frame,
+                                group=group,
+                                failure_symbol_in_group=symbol_in_group,
+                                window_before=reference_window_before,
+                                window_after=reference_window_after,
+                            ),
                             "reference_teacher_forcing": {
                                 "policy": (
                                     "after each complete HPAC group, current-frame "
@@ -1558,9 +1702,17 @@ def _trace_hpm1_entropy_decode_failure(
                         variant=resolved,
                     )
                     cat = _categorical_from_probs(row, prob_eps=prob_eps, variant=resolved)
+                    decoder_state_before = _range_decoder_state_summary(
+                        decoder,
+                        label="before_decode_attempt",
+                    )
                     try:
                         decoded[symbol_in_group] = decoder.decode(cat)
                     except Exception as exc:
+                        decoder_state_after = _range_decoder_state_summary(
+                            decoder,
+                            label="after_failed_decode_exception",
+                        )
                         prefix = decoded[:symbol_in_group].astype(np.uint8, copy=False)
                         raw_row = np.ascontiguousarray(row)
                         norm_row = np.ascontiguousarray(normalized)
@@ -1583,6 +1735,14 @@ def _trace_hpm1_entropy_decode_failure(
                                 "decoded_symbol_count_before_failure": int(decoded_symbols),
                                 "group_start_decoded_symbols": int(group_start_symbols),
                                 "frame_start_decoded_symbols": int(frame_start_symbols),
+                            },
+                            "range_decoder_diagnostic": {
+                                "state_before_decode": decoder_state_before,
+                                "state_after_failed_decode": decoder_state_after,
+                                "exception_text": str(exc),
+                                "not_stream_exhaustion": bool(
+                                    decoder_state_before.get("maybe_exhausted") is False
+                                ),
                             },
                             "token_stream": {
                                 "bytes": len(payload.tokens),
@@ -2442,6 +2602,8 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
     strict: bool = False,
     write_json: bool = True,
     require_expected_reference_sha: bool = True,
+    reference_window_before: int = 2,
+    reference_window_after: int = 5,
 ) -> dict[str, Any]:
     """Test whether PR85/QMA9 semantic teacher-forcing advances HPM1 replay."""
 
@@ -2453,6 +2615,13 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
             requested_device=device,
         )
     requested_candidates = _validate_spatial_order_candidates(candidates)
+    if int(reference_window_before) < 0 or int(reference_window_after) < 0:
+        raise Pr91Hpm1Error(
+            "reference_teacher_forcing_probe",
+            "reference_window_counts_must_be_nonnegative",
+            reference_window_before=reference_window_before,
+            reference_window_after=reference_window_after,
+        )
     archive_path = Path(archive)
     payload = extract_pr91_hpm1_payload(archive_path)
     reference_tokens, reference_report = _load_reference_tokens(
@@ -2511,6 +2680,8 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
             max_frames=max_frames,
             device=device,
             spatial_order_candidate=candidate,
+            reference_window_before=reference_window_before,
+            reference_window_after=reference_window_after,
         )
         decoded_before = _decoded_symbols_or_before_failure(decoded_trace)
         reference_before = _decoded_symbols_or_before_failure(reference_trace)
@@ -2550,6 +2721,11 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
                         if isinstance(decoded_trace.get("failing_probability_row"), Mapping)
                         else None
                     ),
+                    "range_decoder_diagnostic": (
+                        decoded_trace.get("range_decoder_diagnostic")
+                        if isinstance(decoded_trace.get("range_decoder_diagnostic"), Mapping)
+                        else None
+                    ),
                 },
                 "reference_teacher_forced_context": {
                     "status": reference_trace.get("status"),
@@ -2577,6 +2753,19 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
                         .get("normalized_for_categorical", {})
                         .get("sha256")
                         if isinstance(reference_trace.get("failing_probability_row"), Mapping)
+                        else None
+                    ),
+                    "range_decoder_diagnostic": (
+                        reference_trace.get("range_decoder_diagnostic")
+                        if isinstance(reference_trace.get("range_decoder_diagnostic"), Mapping)
+                        else None
+                    ),
+                    "canonical_reference_symbol_window": (
+                        reference_trace.get("canonical_reference_symbol_window")
+                        if isinstance(
+                            reference_trace.get("canonical_reference_symbol_window"),
+                            Mapping,
+                        )
                         else None
                     ),
                     "reference_mismatch_count_before_failure": (
@@ -2654,6 +2843,11 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
             "status": source_trace.get("status"),
             "failure_signature": _failure_row_signature(source_trace),
             "decoded_symbols_or_before_failure": source_decoded_before,
+            "range_decoder_diagnostic": (
+                source_trace.get("range_decoder_diagnostic")
+                if isinstance(source_trace.get("range_decoder_diagnostic"), Mapping)
+                else None
+            ),
         },
         "reference_teacher_forcing_probe": {
             "schema": "pr91_hpm1_reference_teacher_forcing_probe_v1",
@@ -2670,6 +2864,11 @@ def run_pr91_hpm1_reference_teacher_forcing_probe(
             ).name,
             "prob_eps": float(prob_eps),
             "max_frames": max_frames,
+            "reference_symbol_window": {
+                "window_before": int(reference_window_before),
+                "window_after": int(reference_window_after),
+                "scope": "canonical_reference_tokens_at_failure_row",
+            },
             "candidate_scope": {
                 "requested_candidates": list(requested_candidates),
                 "label": candidate_scope_label,

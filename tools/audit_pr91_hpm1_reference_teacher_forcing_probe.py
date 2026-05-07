@@ -45,6 +45,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--prob-eps", type=float, default=1e-7)
     parser.add_argument("--max-frames", type=int, default=1)
     parser.add_argument(
+        "--reference-window-before",
+        type=int,
+        default=2,
+        help="Reference symbols before the entropy failure row to record.",
+    )
+    parser.add_argument(
+        "--reference-window-after",
+        type=int,
+        default=5,
+        help="Reference symbols after the entropy failure row to record.",
+    )
+    parser.add_argument(
         "--allow-unexpected-reference-sha",
         action="store_true",
         help=(
@@ -79,6 +91,8 @@ def main(argv: list[str] | None = None) -> int:
         max_frames=args.max_frames,
         candidates=_parse_candidates(args.spatial_order_candidates),
         require_expected_reference_sha=not args.allow_unexpected_reference_sha,
+        reference_window_before=args.reference_window_before,
+        reference_window_after=args.reference_window_after,
         write_json=False,
     )
     input_paths = [

@@ -14,6 +14,7 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from tac.optimization.meta_lagrangian_allocator import rate_score_delta
+from tac.optimization.bayesian_experimental_design import expected_improvement_minimize
 from tac.optimization.research_basis import (
     research_basis_ids_for_family,
     research_basis_manifest,
@@ -508,6 +509,106 @@ def volterra_interaction_rows(
     return out
 
 
+def _field_acquisition_row(
+    row: Mapping[str, Any],
+    *,
+    base_score: float | None,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    score_delta = float(row["frechet_derivatives"]["d_score_d_epsilon"])
+    predicted_score_mean: float | None = None
+    expected_improvement = 0.0
+    if base_score is None:
+        blockers.append("missing_base_score_for_expected_improvement")
+    else:
+        predicted_score_mean = float(base_score) + score_delta
+        expected_improvement = expected_improvement_minimize(
+            predicted_score_mean,
+            float(row["expected_score_variance"]),
+            float(base_score),
+        )
+    if row.get("rankable") is not True:
+        blockers.append("atom_not_rankable")
+    if row.get("pareto_eligible") is not True:
+        blockers.append("pareto_ineligible_atom")
+    elif row.get("pareto_frontier") is not True:
+        blockers.append("pareto_dominated_atom")
+    if row.get("kkt_ready_for_field_planning") is not True:
+        blockers.append("kkt_not_ready_for_field_planning")
+    if row.get("byte_closed_archive_manifest_attached") is not True:
+        blockers.append("missing_byte_closed_archive_manifest")
+    if row.get("proxy_row") is True:
+        blockers.append("proxy_evidence_not_dispatch_design_ready")
+    if row["kkt"]["kkt_blockers"]:
+        blockers.append("kkt_blockers_present")
+    action_bonus = max(0.0, -float(row["variational_action_delta"]))
+    information_gain = float(row["expected_information_gain_nats"])
+    acquisition_value = expected_improvement + information_gain + action_bonus
+    return {
+        "atom_id": str(row["atom_id"]),
+        "family": str(row["family"]),
+        "pareto_scope": str(row["pareto_scope"]),
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "predicted_score_mean": (
+            round(predicted_score_mean, 12)
+            if predicted_score_mean is not None
+            else None
+        ),
+        "expected_improvement": round(expected_improvement, 12),
+        "expected_information_gain_nats": round(information_gain, 12),
+        "descending_action_bonus": round(action_bonus, 12),
+        "acquisition_value": round(acquisition_value, 12),
+        "acquisition_formula": "EI_minimize(base_score + d_score) + EIG_nats + max(0, -variational_action_delta)",
+        "design_ready": not blockers,
+        "dispatch_design_blockers": _unique_ordered_strings(blockers),
+    }
+
+
+def field_acquisition_ranking(
+    field_rows: Iterable[Mapping[str, Any]],
+    *,
+    base_score: float | None,
+) -> dict[str, Any]:
+    """Return planning-only Bayesian/KKT acquisition ranking for field rows."""
+
+    rows = [
+        _field_acquisition_row(row, base_score=base_score)
+        for row in field_rows
+    ]
+    rows.sort(
+        key=lambda row: (
+            not bool(row["design_ready"]),
+            -float(row["acquisition_value"]),
+            -float(row["expected_improvement"]),
+            -float(row["expected_information_gain_nats"]),
+            str(row["atom_id"]),
+        )
+    )
+    for index, row in enumerate(rows, start=1):
+        row["rank"] = index
+    blocker_counts: Counter[str] = Counter()
+    for row in rows:
+        blocker_counts.update(row["dispatch_design_blockers"])
+    return {
+        "schema": "field_acquisition_ranking_v1",
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "ready_for_exact_eval_dispatch": False,
+        "base_score": base_score,
+        "objective": (
+            "Choose the next exact CUDA observation by expected improvement, "
+            "expected information gain, and variational descent after KKT/Pareto/"
+            "byte-closure blockers are explicit."
+        ),
+        "design_ready_count": sum(1 for row in rows if row["design_ready"]),
+        "row_count": len(rows),
+        "blocker_counts": dict(sorted(blocker_counts.items())),
+        "rows": rows,
+    }
+
+
 def build_field_equation_plan(
     atom_ledger: Mapping[str, Any],
     *,
@@ -556,6 +657,7 @@ def build_field_equation_plan(
     compatible_interaction_rows = [
         row for row in interaction_rows if row["compatible_for_stack_planning"]
     ]
+    acquisition = field_acquisition_ranking(rows, base_score=base_score)
     best_pair_delta = (
         float(compatible_interaction_rows[0]["combined_score_delta"])
         if compatible_interaction_rows
@@ -605,6 +707,7 @@ def build_field_equation_plan(
         "compatible_volterra_interaction_count": len(compatible_interaction_rows),
         "blocked_volterra_interaction_count": len(interaction_rows) - len(compatible_interaction_rows),
         "volterra_blocker_counts": dict(sorted(volterra_blocker_counts.items())),
+        "field_acquisition_ranking": acquisition,
         "theoretical_floor_estimate": floor_estimate,
         "trainable_surrogate": {
             "target": "minimize_variational_action_delta",
@@ -648,6 +751,7 @@ __all__ = [
     "FieldEquationPlannerError",
     "build_field_equation_plan",
     "field_row",
+    "field_acquisition_ranking",
     "frechet_derivatives",
     "variational_action_delta",
     "volterra_interaction_rows",

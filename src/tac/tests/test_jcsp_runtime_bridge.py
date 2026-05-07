@@ -733,12 +733,86 @@ def test_runtime_bridge_cli_fails_closed_when_jcsp_member_present(
     assert not (inflated_dir / "route" / "video.raw").exists()
 
 
+def test_runtime_bridge_cli_real_aq_preflight_emits_raw_but_blocks_exact_eval(
+    tmp_path: Path,
+) -> None:
+    bridge = _load_bridge_module()
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    payload = bytes(range(36))
+    (archive_dir / "jcsp.bin").write_bytes(
+        _real_rawvideo_jcsp_bytes("route/video.raw", payload)
+    )
+    candidate_dir = tmp_path / "candidate"
+    reference_dir = tmp_path / "reference"
+    reference_path = reference_dir / "route" / "video.raw"
+    reference_path.parent.mkdir(parents=True)
+    reference_path.write_bytes(payload)
+    names_file = tmp_path / "names.txt"
+    names_file.write_text("route/video.hevc\n", encoding="utf-8")
+    manifest_path = tmp_path / "real_aq_preflight.json"
+    parity_path = tmp_path / "real_aq_parity.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(BRIDGE_PATH),
+            str(archive_dir),
+            "--mode",
+            "emit-real-raw-outputs",
+            "--inflated-dir",
+            str(candidate_dir),
+            "--video-names-file",
+            str(names_file),
+            "--reference-raw-dir",
+            str(reference_dir),
+            "--manifest-json",
+            str(manifest_path),
+            "--parity-manifest-json",
+            str(parity_path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 44
+    assert "real AQ rawvideo preflight remains closed" in result.stderr
+    assert (candidate_dir / "route" / "video.raw").read_bytes() == payload
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["runtime_action"] == (
+        "emit_real_aq_rawvideo_runtime_preflight_fail_closed"
+    )
+    assert manifest["score_claim"] is False
+    assert manifest["dispatch_attempted"] is False
+    assert manifest["no_scorer_at_inflate"] is True
+    assert manifest["exact_eval_dispatch_blocked"] is True
+    assert manifest["consumes_required_member"] is True
+    assert manifest["candidate_outputs_from_real_bridge_rawvideo"] is True
+    assert manifest["real_raw_outputs_emitted"] is True
+    assert manifest["ready_for_output_parity"] is True
+    assert manifest["ready_for_submission_runtime_consumption"] is True
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["dispatch_blockers"] == ["exact_cuda_auth_eval_missing"]
+    adapter = manifest["runtime_preflight_adapter"]
+    assert adapter["schema"] == bridge.JCSP_RUNTIME_PREFLIGHT_ADAPTER_SCHEMA
+    assert adapter["adapter_id"] == bridge.JCSP_RUNTIME_REAL_AQ_PREFLIGHT_ADAPTER_ID
+    assert adapter["no_scorer_at_inflate"] is True
+    proof = json.loads(parity_path.read_text(encoding="utf-8"))
+    assert proof == manifest["raw_output_parity_proof"]
+    assert proof["ready_for_submission_runtime_consumption"] is True
+
+
 def test_inflate_sh_probes_jcsp_before_branch_dispatch() -> None:
     text = INFLATE_SH_PATH.read_text(encoding="utf-8")
     hook = text.index("jcsp_runtime_bridge.py")
     branch_dispatch = text.index("while IFS= read -r rel")
 
     assert hook < branch_dispatch
+    assert 'JCSP_RUNTIME_BRIDGE_MODE="${JCSP_RUNTIME_BRIDGE_MODE:-probe}"' in text
+    assert '--mode "$JCSP_RUNTIME_BRIDGE_MODE"' in text
     assert "--inflated-dir \"$INFLATED_DIR\"" in text
+    assert "--output-dir \"$INFLATED_DIR\"" in text
     assert "--video-names-file \"$VIDEO_NAMES_FILE\"" in text
     assert "--manifest-json \"$JCSP_RUNTIME_PROBE_MANIFEST\"" in text
+    assert "--parity-manifest-json \"$JCSP_RUNTIME_PARITY_MANIFEST\"" in text

@@ -12,6 +12,8 @@ from tac.hnerv_lowlevel_packer import read_strict_single_member_zip, write_store
 from tac.hnerv_wavelet_compress_time_harness import (
     ATOM_PLAN_FILENAME,
     ATOM_PLAN_SCHEMA,
+    SELECTED_ATOMS_FILENAME,
+    SELECTED_ATOMS_SCHEMA,
     WR01_FIXED_ATOM_WIRE_BYTES,
     HnervWaveletCompressTimeHarnessError,
     build_wavelet_compress_time_harness,
@@ -54,13 +56,18 @@ def test_wavelet_compress_time_harness_manifest_is_deterministic_and_fail_closed
 
     manifest_path = out_dir / "hnerv_wavelet_compress_time_harness.json"
     atom_plan_path = out_dir / ATOM_PLAN_FILENAME
+    selected_atoms_path = out_dir / SELECTED_ATOMS_FILENAME
     assert manifest == repeat
     assert json.loads(manifest_path.read_text(encoding="utf-8")) == manifest
     assert json.loads(atom_plan_path.read_text(encoding="utf-8")) == manifest["atom_plan_manifest"]
+    assert json.loads(selected_atoms_path.read_text(encoding="utf-8")) == manifest[
+        "selected_atoms_manifest"
+    ]
     assert manifest["score_claim"] is False
     assert manifest["dispatch_attempted"] is False
     assert manifest["ready_for_compress_time_training"] is False
     assert manifest["ready_for_atom_plan_review"] is True
+    assert manifest["ready_for_selected_atom_review"] is True
     assert manifest["ready_for_wavelet_sidechannel_candidate"] is False
     assert manifest["ready_for_archive_preflight"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
@@ -77,11 +84,19 @@ def test_wavelet_compress_time_harness_manifest_is_deterministic_and_fail_closed
     assert output_manifest["atom_plan_manifest_sha256"] == manifest["atom_plan_manifest"][
         "manifest_sha256_excluding_self"
     ]
+    assert output_manifest["selected_atoms_schema"] == SELECTED_ATOMS_SCHEMA
+    assert output_manifest["selected_atoms_manifest_path"] == str(selected_atoms_path)
+    assert output_manifest["selected_atoms_manifest_sha256"] == manifest["selected_atoms_manifest"][
+        "manifest_sha256_excluding_self"
+    ]
     assert input_manifest["source"]["source_archive_custody_mode"] == ("operator_expected_archive_identity_verified")
     assert input_manifest["config"]["seed"] == 123
     assert input_manifest["config"]["atom_budget"] == 7
     assert input_manifest["config"]["rng_state_mutated"] is False
     assert output_manifest["trained_atoms_manifest_path"] is None
+    assert output_manifest["apply_readiness"]["ready"] is False
+    assert output_manifest["apply_readiness"]["selected_atoms_manifest_path"] == str(selected_atoms_path)
+    assert "no_candidate_archive_emitted" in output_manifest["apply_readiness"]["blockers"]
     assert output_manifest["wavelet_sidechannel_archive_path"] is None
     assert output_manifest["applied_candidate_archive_path"] is None
     assert output_manifest["decode_validation"]["fail_closed"] is True
@@ -121,6 +136,46 @@ def test_wavelet_compress_time_harness_manifest_is_deterministic_and_fail_closed
     assert first_atom["selected_for_apply"] is False
     assert first_atom["score_claim"] is False
     assert len(atom_plan["plan_sha256"]) == 64
+
+    selected = manifest["selected_atoms_manifest"]
+    assert selected["schema"] == SELECTED_ATOMS_SCHEMA
+    assert selected["source_archive_sha256"] == source.archive_sha256
+    assert selected["source_archive_bytes"] == source.archive_bytes
+    assert selected["atom_plan_manifest_path"] == str(atom_plan_path)
+    assert selected["atom_plan_manifest_sha256"] == atom_plan["manifest_sha256_excluding_self"]
+    assert selected["atom_plan_sha256"] == atom_plan["plan_sha256"]
+    assert selected["selection_mode"] == "atom_plan_budget_rank_order"
+    assert selected["selection_input"]["budget_is_dispatch_clearance"] is False
+    assert selected["total_selected_atom_count"] == 7
+    assert selected["selected_atom_ids"] == atom_plan["atom_ids"]
+    assert selected["estimated_total_atom_wire_bytes"] == 7 * WR01_FIXED_ATOM_WIRE_BYTES
+    assert selected["ready_for_selected_atom_review"] is True
+    assert selected["ready_for_train_select_apply"] is False
+    assert selected["ready_for_runtime_apply"] is False
+    assert selected["ready_for_archive_preflight"] is False
+    assert selected["ready_for_exact_eval_dispatch"] is False
+    assert selected["candidate_archive_path"] is None
+    assert selected["candidate_archive_sha256"] is None
+    assert selected["candidate_archive_bytes"] is None
+    assert "selected_atoms_manifest_is_planning_only" in selected["blockers"]
+    assert "requires_exact_cuda_auth_eval" in selected["dispatch_blockers"]
+    assert len(selected["selection_sha256"]) == 64
+    assert len(selected["manifest_sha256_excluding_self"]) == 64
+    selected_section = selected["sections"][0]
+    assert selected_section["section_name"] == "latents_and_sidecar_brotli"
+    assert selected_section["selected_atom_count"] == 7
+    assert selected_section["selected_atom_ids"] == atom_plan["atom_ids"]
+    assert selected_section["estimated_wire_bytes"] == 7 * WR01_FIXED_ATOM_WIRE_BYTES
+    assert selected_section["atoms"] == selected_section["selected_atoms"]
+    selected_first = selected_section["selected_atoms"][0]
+    assert selected_first["atom_id"] == first_atom["atom_id"]
+    assert selected_first["selection_rank"] == 1
+    assert selected_first["estimated_wire_bytes"] == WR01_FIXED_ATOM_WIRE_BYTES
+    assert selected_first["byte_delta"] == WR01_FIXED_ATOM_WIRE_BYTES
+    assert selected_first["selected_for_apply_readiness"] is True
+    assert selected_first["selected_for_runtime_apply"] is False
+    assert selected_first["score_claim"] is False
+    assert "no_candidate_archive_emitted" in selected_first["dispatch_blockers"]
 
 
 def test_wavelet_compress_time_harness_rejects_source_identity_mismatch(
@@ -176,6 +231,8 @@ def test_wavelet_compress_time_harness_exact_validation_remains_non_dispatchable
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["output_manifest"]["wavelet_sidechannel_archive_path"] is None
     assert manifest["output_manifest"]["applied_candidate_archive_path"] is None
+    assert manifest["selected_atoms_manifest"]["ready_for_runtime_apply"] is False
+    assert manifest["selected_atoms_manifest"]["candidate_archive_path"] is None
     assert "compress_time_harness_scaffold_only" in manifest["dispatch_blockers"]
     assert "requires_wr01_runtime_apply_path" in manifest["dispatch_blockers"]
     assert "requires_exact_cuda_auth_eval" in manifest["dispatch_blockers"]
@@ -226,13 +283,21 @@ def test_build_hnerv_wavelet_compress_time_harness_cli_writes_same_manifest(
     payload = json.loads(json_out.read_text(encoding="utf-8"))
     persisted = json.loads((out_dir / "hnerv_wavelet_compress_time_harness.json").read_text(encoding="utf-8"))
     atom_plan = json.loads((out_dir / ATOM_PLAN_FILENAME).read_text(encoding="utf-8"))
+    selected_atoms = json.loads((out_dir / SELECTED_ATOMS_FILENAME).read_text(encoding="utf-8"))
     assert payload == persisted
     assert payload["score_claim"] is False
     assert payload["dispatch_attempted"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["output_manifest"]["atom_plan_manifest_path"] == str(out_dir / ATOM_PLAN_FILENAME)
+    assert payload["output_manifest"]["selected_atoms_manifest_path"] == str(
+        out_dir / SELECTED_ATOMS_FILENAME
+    )
     assert payload["atom_plan_manifest"] == atom_plan
+    assert payload["selected_atoms_manifest"] == selected_atoms
     assert atom_plan["total_emitted_atom_count"] == 7
+    assert selected_atoms["total_selected_atom_count"] == 7
+    assert selected_atoms["ready_for_exact_eval_dispatch"] is False
+    assert selected_atoms["candidate_archive_path"] is None
     assert atom_plan["ready_for_train_select_apply"] is False
     assert payload["output_manifest"]["decode_validation"]["exact_validation_available"] is False
 

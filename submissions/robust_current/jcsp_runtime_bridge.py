@@ -52,6 +52,10 @@ JCSP_RUNTIME_DECODED_STREAM_SCHEMA = "jcsp_runtime_decoded_stream_v1"
 JCSP_RUNTIME_REAL_DECODER_BLOCKER = "jcsp_real_stream_decoder_adapter_missing"
 JCSP_RUNTIME_AQ_RAWVIDEO_ADAPTER_ID = "jcsp_arithmetic_uint8_rawvideo_adapter_v1"
 JCSP_RUNTIME_AQ_RAWVIDEO_STREAM_KIND = "arithmetic_static_uint8_rawvideo_v1"
+JCSP_RUNTIME_PREFLIGHT_ADAPTER_SCHEMA = "jcsp_runtime_preflight_adapter_v1"
+JCSP_RUNTIME_REAL_AQ_PREFLIGHT_ADAPTER_ID = (
+    "jcsp_real_aq_rawvideo_runtime_preflight_adapter_v1"
+)
 JCSP_RUNTIME_AQ_RAWVIDEO_FORMAT_CONTRACT = (
     "JCSP stream codec_kind=0, stream name equals expected .raw path, "
     "payload magic AQv1/AQc1, AQ num_symbols=256, AQ offset=0, decoded "
@@ -1278,10 +1282,12 @@ def emit_jcsp_real_raw_outputs(
         "schema": JCSP_RUNTIME_RAW_OUTPUT_EMISSION_SCHEMA,
         "score_claim": False,
         "dispatch_attempted": False,
+        "runtime_action": "emit_real_aq_rawvideo_outputs",
         "candidate_output_source": JCSP_RUNTIME_REAL_RAW_OUTPUT_SOURCE,
         "candidate_outputs_from_real_bridge_rawvideo": bool(emitted_rows),
         "member_name": member_name,
         "member_present": member_path.exists(),
+        "consumes_required_member": bool(emitted_rows),
         "expected_raw_outputs": expected,
         "expected_raw_output_count": len(expected),
         "candidate_raw_dir": str(output_root),
@@ -1319,6 +1325,85 @@ def emit_jcsp_real_raw_outputs(
         "ready_for_exact_eval_dispatch": False,
         "dispatch_blockers": dispatch_blockers,
     }
+    manifest = _with_manifest_sha256(manifest)
+    if manifest_json is not None:
+        _write_manifest(Path(manifest_json), manifest)
+    return manifest
+
+
+def emit_jcsp_real_aq_rawvideo_runtime_preflight(
+    archive_dir: str | Path,
+    *,
+    video_names_file: str | Path | None,
+    output_dir: str | Path,
+    reference_raw_dir: str | Path | None = None,
+    member_name: str = JCSP_ARCHIVE_MEMBER_NAME,
+    manifest_json: str | Path | None = None,
+    parity_manifest_json: str | Path | None = None,
+) -> dict[str, Any]:
+    """Fail-closed CLI adapter for the narrow real AQ/rawvideo bridge.
+
+    This is the runtime-facing preflight step: derive expected contest ``.raw``
+    paths from the names file, decode real AQv1/AQc1 JCSP streams into
+    ``output_dir``, optionally prove byte parity against a reference raw tree,
+    and still keep exact eval dispatch blocked.  It imports no scorer modules
+    and makes no score claim.
+    """
+
+    expected_raw_outputs, names_error = _expected_raw_outputs_from_names_file(
+        video_names_file
+    )
+    manifest = emit_jcsp_real_raw_outputs(
+        archive_dir,
+        expected_raw_outputs=expected_raw_outputs,
+        output_dir=output_dir,
+        reference_raw_dir=reference_raw_dir,
+        member_name=member_name,
+        parity_manifest_json=parity_manifest_json,
+    )
+    preflight_blockers: list[str] = []
+    if video_names_file is None:
+        preflight_blockers.append("jcsp_video_names_file_missing")
+    if names_error is not None:
+        preflight_blockers.append("jcsp_video_names_file_parse_failed")
+
+    if preflight_blockers:
+        manifest["ready_for_output_parity"] = False
+        manifest["ready_for_submission_runtime_consumption"] = False
+        manifest["ready_for_exact_eval_dispatch"] = False
+
+    manifest.update(
+        {
+            "runtime_action": "emit_real_aq_rawvideo_runtime_preflight_fail_closed",
+            "runtime_preflight_adapter": {
+                "schema": JCSP_RUNTIME_PREFLIGHT_ADAPTER_SCHEMA,
+                "adapter_id": JCSP_RUNTIME_REAL_AQ_PREFLIGHT_ADAPTER_ID,
+                "score_claim": False,
+                "dispatch_attempted": False,
+                "no_scorer_at_inflate": True,
+                "decoder_adapter_id": JCSP_RUNTIME_AQ_RAWVIDEO_ADAPTER_ID,
+                "candidate_output_source": JCSP_RUNTIME_REAL_RAW_OUTPUT_SOURCE,
+                "required_reference_for_submission_runtime_consumption": (
+                    "byte-exact raw output parity proof"
+                ),
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "video_names_file": (
+                str(Path(video_names_file)) if video_names_file is not None else None
+            ),
+            "video_names_file_parse_error": names_error,
+            "no_scorer_at_inflate": True,
+            "exact_eval_dispatch_blocked": True,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_blockers": _dedupe(
+                [
+                    *manifest.get("dispatch_blockers", []),
+                    *preflight_blockers,
+                    "exact_cuda_auth_eval_missing",
+                ]
+            ),
+        }
+    )
     manifest = _with_manifest_sha256(manifest)
     if manifest_json is not None:
         _write_manifest(Path(manifest_json), manifest)
@@ -1715,7 +1800,7 @@ def probe_jcsp_runtime_bridge(
                     ),
                     "dispatch_blockers": [
                         JCSP_SUBMISSION_RUNTIME_CONSUMPTION_BLOCKER,
-                        "not_integrated_into_submission_inflate_path",
+                        "jcsp_runtime_preflight_adapter_not_requested",
                         *output_contract["dispatch_blockers"],
                         "exact_cuda_auth_eval_missing",
                     ],
@@ -1752,6 +1837,15 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument("archive_dir", help="inflater archive directory")
     parser.add_argument(
+        "--mode",
+        choices=("probe", "emit-real-raw-outputs"),
+        default="probe",
+        help=(
+            "probe only, or run the fail-closed real AQ rawvideo preflight "
+            "emitter"
+        ),
+    )
+    parser.add_argument(
         "--member-name",
         default=JCSP_ARCHIVE_MEMBER_NAME,
         help="JCSP member filename inside archive_dir",
@@ -1767,6 +1861,24 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         help="inflated output directory used to inspect pre-existing raw outputs",
     )
     parser.add_argument(
+        "--output-dir",
+        default=None,
+        help=(
+            "raw output directory for emit-real-raw-outputs mode; defaults to "
+            "--inflated-dir"
+        ),
+    )
+    parser.add_argument(
+        "--reference-raw-dir",
+        default=None,
+        help="optional reference rawvideo directory for byte parity proof",
+    )
+    parser.add_argument(
+        "--parity-manifest-json",
+        default=None,
+        help="optional path to write raw output parity proof JSON",
+    )
+    parser.add_argument(
         "--video-names-file",
         default=None,
         help="contest video names file used to derive required .raw outputs",
@@ -1776,6 +1888,39 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(sys.argv[1:] if argv is None else argv)
+    if args.mode == "emit-real-raw-outputs":
+        output_dir = args.output_dir or args.inflated_dir
+        if output_dir is None:
+            print(
+                "[jcsp-runtime-bridge] FATAL: --mode emit-real-raw-outputs "
+                "requires --output-dir or --inflated-dir",
+                file=sys.stderr,
+            )
+            return 2
+        manifest = emit_jcsp_real_aq_rawvideo_runtime_preflight(
+            args.archive_dir,
+            member_name=args.member_name,
+            video_names_file=args.video_names_file,
+            output_dir=output_dir,
+            reference_raw_dir=args.reference_raw_dir,
+            manifest_json=args.manifest_json,
+            parity_manifest_json=args.parity_manifest_json,
+        )
+        if not manifest["member_present"]:
+            return 0
+        print(
+            "[jcsp-runtime-bridge] wrote deterministic real AQ rawvideo "
+            f"preflight manifest: {args.manifest_json}",
+            file=sys.stderr,
+        )
+        print(
+            "[jcsp-runtime-bridge] FATAL: real AQ rawvideo preflight remains "
+            "closed to exact eval dispatch; blockers="
+            f"{','.join(manifest.get('dispatch_blockers', []))}",
+            file=sys.stderr,
+        )
+        return EXIT_JCSP_MEMBER_REFUSED
+
     manifest = probe_jcsp_runtime_bridge(
         args.archive_dir,
         member_name=args.member_name,

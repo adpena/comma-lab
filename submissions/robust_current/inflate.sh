@@ -185,12 +185,23 @@ if [ -f "$ARCHIVE_DIR/renderer_payload.bin" ] \
 fi
 
 if [ -f "$ARCHIVE_DIR/jcsp.bin" ]; then
+  JCSP_RUNTIME_BRIDGE_MODE="${JCSP_RUNTIME_BRIDGE_MODE:-probe}"
   JCSP_RUNTIME_PROBE_MANIFEST="$INFLATED_DIR/jcsp_runtime_probe_manifest.json"
-  echo "[inflate] jcsp.bin detected; probing JCSP runtime bridge" >&2
-  if ! "${PYTHON:-python3}" "$SELF_DIR/jcsp_runtime_bridge.py" "$ARCHIVE_DIR" \
+  JCSP_RUNTIME_PARITY_MANIFEST="$INFLATED_DIR/jcsp_runtime_raw_output_parity_manifest.json"
+  echo "[inflate] jcsp.bin detected; running JCSP runtime bridge mode=$JCSP_RUNTIME_BRIDGE_MODE" >&2
+  JCSP_RUNTIME_BRIDGE_ARGS=(
+      "$SELF_DIR/jcsp_runtime_bridge.py" "$ARCHIVE_DIR"
+      --mode "$JCSP_RUNTIME_BRIDGE_MODE"
       --inflated-dir "$INFLATED_DIR" \
+      --output-dir "$INFLATED_DIR" \
       --video-names-file "$VIDEO_NAMES_FILE" \
-      --manifest-json "$JCSP_RUNTIME_PROBE_MANIFEST"; then
+      --manifest-json "$JCSP_RUNTIME_PROBE_MANIFEST" \
+      --parity-manifest-json "$JCSP_RUNTIME_PARITY_MANIFEST"
+  )
+  if [ -n "${JCSP_REFERENCE_RAW_DIR:-}" ]; then
+    JCSP_RUNTIME_BRIDGE_ARGS+=(--reference-raw-dir "$JCSP_REFERENCE_RAW_DIR")
+  fi
+  if ! "${PYTHON:-python3}" "${JCSP_RUNTIME_BRIDGE_ARGS[@]}"; then
     echo "FATAL: JCSP runtime bridge refused jcsp.bin; refusing to dispatch inflate." >&2
     echo "       Probe manifest: $JCSP_RUNTIME_PROBE_MANIFEST" >&2
     exit 44

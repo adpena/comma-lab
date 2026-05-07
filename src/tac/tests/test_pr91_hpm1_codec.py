@@ -613,6 +613,64 @@ def test_pr91_reference_teacher_forcing_probe_cli_narrows_false_lead(
         "decoded_symbol": 2,
         "reference_symbol": 0,
     }
+    reference_window = row["reference_teacher_forced_context"][
+        "canonical_reference_symbol_window"
+    ]
+    assert reference_window["schema"] == "pr91_hpm1_reference_group_symbol_window_v1"
+    assert reference_window["frame"] == 0
+    assert reference_window["group"] == 5
+    assert reference_window["failure_symbol_in_group"] == 305
+    assert reference_window["next_reference_symbol_count"] == 5
+    assert reference_window["rows"][2]["relative_to_failure"] == 0
+    assert row["reference_teacher_forced_context"]["range_decoder_diagnostic"][
+        "not_stream_exhaustion"
+    ] is True
+
+
+def test_pr91_reference_teacher_forcing_probe_records_phase_major_next_row_artifact() -> None:
+    if not DEFAULT_PR91_ARCHIVE.is_file():
+        pytest.skip("canonical PR91 archive not available")
+    if not DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE.is_file():
+        pytest.skip("PR85/QMA9 decoded reference token source not available")
+
+    report = run_pr91_hpm1_reference_teacher_forcing_probe(
+        DEFAULT_PR91_ARCHIVE,
+        reference_tokens_path=DEFAULT_PR85_QMA9_DECODED_REFERENCE_TOKEN_SOURCE,
+        reference_layout="legacy_assume_nhw",
+        candidates=("phase_major_row_major",),
+        reference_window_before=1,
+        reference_window_after=3,
+        write_json=False,
+    )
+
+    assert report["schema"] == "pr91_hpm1_reference_teacher_forcing_probe_v1"
+    assert report["status"] == "reference_teacher_forcing_hypothesis_still_open"
+    assert report["score_claim"] is False
+    assert report["dispatch_allowed"] is False
+    probe = report["reference_teacher_forcing_probe"]
+    assert probe["advanced_candidates"] == ["phase_major_row_major"]
+    row = probe["candidate_results"][0]["reference_teacher_forced_context"]
+    assert row["failure_signature"] == {
+        "frame": 0,
+        "group": 17,
+        "symbol_in_group": 437,
+        "decoded_symbol_count_before_failure": 15989,
+    }
+    assert row["advances_beyond_decoded_context"] is True
+    assert row["range_decoder_diagnostic"]["not_stream_exhaustion"] is True
+    assert row["range_decoder_diagnostic"]["state_before_decode"][
+        "maybe_exhausted"
+    ] is False
+    reference_window = row["canonical_reference_symbol_window"]
+    assert reference_window["failure_symbol_in_group"] == 437
+    assert reference_window["window_before"] == 1
+    assert reference_window["window_after"] == 3
+    assert reference_window["next_reference_symbol_count"] == 3
+    assert [
+        entry["relative_to_failure"] for entry in reference_window["rows"]
+    ] == [-1, 0, 1, 2, 3]
+    assert len(reference_window["reference_symbols_sha256"]) == 64
+    assert reference_window["failed_reference_symbol"] in range(5)
 
 
 def test_pr91_probe_contracts_fail_closed_on_bad_inputs(tmp_path: Path) -> None:
@@ -649,6 +707,11 @@ def test_pr91_probe_contracts_fail_closed_on_bad_inputs(tmp_path: Path) -> None:
             archive,
             reference_tokens_path=wrong_tokens,
             candidates=("tile_major_row_major",),
+        )
+    with pytest.raises(Pr91Hpm1Error, match="reference_window_counts_must_be_nonnegative"):
+        run_pr91_hpm1_reference_teacher_forcing_probe(
+            archive,
+            reference_window_after=-1,
         )
 
 

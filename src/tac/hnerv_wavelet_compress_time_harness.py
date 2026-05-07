@@ -27,6 +27,8 @@ SCHEMA_VERSION = 1
 TOOL = "tac.hnerv_wavelet_compress_time_harness.build_wavelet_compress_time_harness"
 ATOM_PLAN_SCHEMA = "hnerv_wavelet_compress_time_atom_plan.v1"
 ATOM_PLAN_FILENAME = "hnerv_wavelet_compress_time_atom_plan.json"
+SELECTED_ATOMS_SCHEMA = "hnerv_wavelet_compress_time_selected_atoms.v1"
+SELECTED_ATOMS_FILENAME = "hnerv_wavelet_compress_time_selected_atoms.json"
 WR01_FIXED_ATOM_WIRE_BYTES = 17
 
 
@@ -144,6 +146,7 @@ def build_wavelet_compress_time_harness(
         target_sections=tuple(config["target_sections"]),
     )
     atom_plan_path = None if output_dir is None else Path(output_dir) / ATOM_PLAN_FILENAME
+    selected_atoms_path = None if output_dir is None else Path(output_dir) / SELECTED_ATOMS_FILENAME
     atom_plan_manifest, atom_plan_blockers = _build_atom_plan_manifest(
         source_archive=source_archive,
         source_label=source_label,
@@ -152,6 +155,13 @@ def build_wavelet_compress_time_harness(
         config=config,
         config_sha256=config_sha256,
         manifest_path=atom_plan_path,
+    )
+    selected_atoms_manifest, selected_atoms_blockers = _build_selected_atoms_manifest(
+        source_archive=source_archive,
+        source_label=source_label,
+        archive=archive,
+        atom_plan=atom_plan_manifest,
+        manifest_path=selected_atoms_path,
     )
     decode_validation = _decode_validation_placeholder(
         exact_decode_validation=exact_decode_validation,
@@ -169,6 +179,7 @@ def build_wavelet_compress_time_harness(
     blockers = [
         *section_blockers,
         *atom_plan_blockers,
+        *selected_atoms_blockers,
         *decode_validation["blockers"],
         *pipeline_blockers,
     ]
@@ -189,13 +200,28 @@ def build_wavelet_compress_time_harness(
         "atom_plan_manifest_path": str(atom_plan_path) if atom_plan_path is not None else None,
         "atom_plan_manifest_sha256": atom_plan_manifest["manifest_sha256_excluding_self"],
         "atom_plan_schema": ATOM_PLAN_SCHEMA,
+        "selected_atoms_manifest_path": str(selected_atoms_path) if selected_atoms_path is not None else None,
+        "selected_atoms_manifest_sha256": selected_atoms_manifest["manifest_sha256_excluding_self"],
+        "selected_atoms_schema": SELECTED_ATOMS_SCHEMA,
         "trained_atoms_manifest_path": None,
-        "selected_atoms_manifest_path": None,
         "wavelet_sidechannel_archive_path": None,
         "applied_candidate_archive_path": None,
         "candidate_archive_sha256": None,
         "candidate_archive_bytes": None,
         "decode_validation": decode_validation,
+        "apply_readiness": {
+            "status": "blocked",
+            "ready": False,
+            "selected_atoms_manifest_path": (
+                str(selected_atoms_path) if selected_atoms_path is not None else None
+            ),
+            "selected_atoms_manifest_sha256": selected_atoms_manifest[
+                "manifest_sha256_excluding_self"
+            ],
+            "blockers": list(selected_atoms_manifest["dispatch_blockers"]),
+            "score_claim": False,
+            "dispatch_attempted": False,
+        },
         "score_claim": False,
         "dispatch_attempted": False,
     }
@@ -212,9 +238,11 @@ def build_wavelet_compress_time_harness(
         "input_manifest": input_manifest,
         "output_manifest": output_manifest,
         "atom_plan_manifest": atom_plan_manifest,
+        "selected_atoms_manifest": selected_atoms_manifest,
         "source_sections": section_records,
         "ready_for_compress_time_training": False,
         "ready_for_atom_plan_review": not atom_plan_blockers,
+        "ready_for_selected_atom_review": not selected_atoms_blockers,
         "ready_for_wavelet_sidechannel_candidate": False,
         "ready_for_archive_preflight": False,
         "ready_for_exact_eval_dispatch": False,
@@ -245,6 +273,7 @@ def build_wavelet_compress_time_harness(
         output_root = Path(output_dir)
         output_root.mkdir(parents=True, exist_ok=True)
         write_json(atom_plan_path, atom_plan_manifest)
+        write_json(selected_atoms_path, selected_atoms_manifest)
         manifest_path = output_root / "hnerv_wavelet_compress_time_harness.json"
         manifest["manifest_path"] = str(manifest_path)
         manifest["manifest_sha256_excluding_self"] = _manifest_sha256_excluding_self(manifest)
@@ -394,6 +423,192 @@ def _build_atom_plan_manifest(
     atom_plan["plan_sha256"] = _atom_plan_digest(atom_plan)
     atom_plan["manifest_sha256_excluding_self"] = _manifest_sha256_excluding_self(atom_plan)
     return atom_plan, blockers
+
+
+def _build_selected_atoms_manifest(
+    *,
+    source_archive: str | Path,
+    source_label: str,
+    archive: Any,
+    atom_plan: Mapping[str, Any],
+    manifest_path: Path | None,
+) -> tuple[dict[str, Any], list[str]]:
+    structural_blockers: list[str] = []
+    selected_sections: list[dict[str, Any]] = []
+    selected_atom_ids: list[str] = []
+    seen_atom_ids: set[str] = set()
+    total_estimated_wire_bytes = 0
+    plan_manifest_sha256 = str(atom_plan.get("manifest_sha256_excluding_self") or "")
+    if len(plan_manifest_sha256) != 64:
+        structural_blockers.append("selected_atoms_missing_atom_plan_manifest_sha256")
+    plan_sha256 = str(atom_plan.get("plan_sha256") or "")
+    if len(plan_sha256) != 64:
+        structural_blockers.append("selected_atoms_missing_atom_plan_sha256")
+
+    for section in atom_plan.get("sections") or []:
+        if not isinstance(section, Mapping):
+            structural_blockers.append("selected_atoms_invalid_atom_plan_section")
+            continue
+        section_name = str(section.get("section_name") or "")
+        section_blockers: list[str] = []
+        candidates = [
+            dict(atom)
+            for atom in section.get("candidate_atoms") or []
+            if isinstance(atom, Mapping)
+        ]
+        if not section_name:
+            section_blockers.append("selected_atoms_section_name_missing")
+        if not candidates:
+            section_blockers.append(f"selected_atoms_no_candidate_atoms:{section_name or 'unknown'}")
+
+        atoms: list[dict[str, Any]] = []
+        for selection_rank, atom in enumerate(sorted(candidates, key=_atom_selection_sort_key), start=1):
+            atom_id = str(atom.get("atom_id") or "")
+            if not atom_id:
+                section_blockers.append(f"selected_atoms_candidate_missing_atom_id:{section_name}")
+                continue
+            if atom_id in seen_atom_ids:
+                section_blockers.append(f"selected_atoms_duplicate_atom_id:{atom_id}")
+                continue
+            seen_atom_ids.add(atom_id)
+            atom_wire_bytes = int(atom.get("atom_wire_bytes_budget") or WR01_FIXED_ATOM_WIRE_BYTES)
+            selected_atom = {
+                "atom_id": atom_id,
+                "section_name": section_name,
+                "source_section_sha256": section.get("source_section_sha256"),
+                "raw_sha256": section.get("raw_sha256"),
+                "raw_offset": int(atom.get("raw_offset", 0)),
+                "raw_end": int(atom.get("raw_end", 0)),
+                "level": int(atom.get("level", 0)),
+                "coefficient_index": int(atom.get("coefficient_index", 0)),
+                "coefficient_quantized": int(atom.get("coefficient_quantized", 0)),
+                "abs_coefficient_quantized": int(atom.get("abs_coefficient_quantized", 0)),
+                "budget_rank": int(atom.get("budget_rank", selection_rank)),
+                "selection_rank": selection_rank,
+                "selection_policy": "atom_plan_budget_rank_order",
+                "estimated_wire_bytes": atom_wire_bytes,
+                "byte_delta": atom_wire_bytes,
+                "budget_status": "selected_from_atom_plan_for_apply_readiness_scaffold",
+                "selected_for_apply_readiness": True,
+                "selected_for_runtime_apply": False,
+                "score_claim": False,
+                "dispatch_attempted": False,
+                "dispatch_blockers": [
+                    "selected_atom_is_planning_only",
+                    "requires_trained_wr01_atom_manifest",
+                    "requires_wr01_runtime_apply_path",
+                    "requires_exact_decode_validation_manifest",
+                    "no_candidate_archive_emitted",
+                ],
+            }
+            atoms.append(selected_atom)
+            selected_atom_ids.append(atom_id)
+            total_estimated_wire_bytes += atom_wire_bytes
+
+        structural_blockers.extend(section_blockers)
+        selected_sections.append(
+            {
+                "section_name": section_name,
+                "source_section_bytes": section.get("source_section_bytes"),
+                "source_section_sha256": section.get("source_section_sha256"),
+                "source_section_payload_span": section.get("source_section_payload_span"),
+                "transform_domain": section.get("transform_domain"),
+                "raw_bytes": section.get("raw_bytes"),
+                "raw_sha256": section.get("raw_sha256"),
+                "selected_atom_count": len(atoms),
+                "selected_atom_ids": [str(atom["atom_id"]) for atom in atoms],
+                "estimated_wire_bytes": sum(int(atom["estimated_wire_bytes"]) for atom in atoms),
+                "atoms": atoms,
+                "selected_atoms": atoms,
+                "ready_for_runtime_apply": False,
+                "ready_for_archive_preflight": False,
+                "ready_for_exact_eval_dispatch": False,
+                "blockers": [
+                    *section_blockers,
+                    "selected_atoms_section_is_planning_only",
+                    "requires_wr01_runtime_apply_path",
+                    "requires_exact_decode_validation_manifest",
+                ],
+                "score_claim": False,
+                "dispatch_attempted": False,
+            }
+        )
+
+    if not selected_sections:
+        structural_blockers.append("selected_atoms_no_sections_recorded")
+    if not selected_atom_ids:
+        structural_blockers.append("selected_atoms_no_atoms_selected")
+
+    blocking_status = [
+        "selected_atoms_manifest_is_planning_only",
+        "requires_trained_wr01_atom_manifest",
+        "requires_wr01_runtime_apply_path",
+        "requires_exact_decode_validation_manifest",
+        "no_candidate_archive_emitted",
+        "requires_archive_manifest_preflight",
+        "requires_exact_cuda_auth_eval",
+    ]
+    selected_manifest = {
+        "schema": SELECTED_ATOMS_SCHEMA,
+        "schema_version": SCHEMA_VERSION,
+        "tool": TOOL,
+        "score_claim": False,
+        "dispatch_attempted": False,
+        "source_label": str(source_label),
+        "source_archive_path": str(source_archive),
+        "source_archive_sha256": archive.archive_sha256,
+        "source_archive_bytes": archive.archive_bytes,
+        "source_member_name": archive.member_name,
+        "source_payload_sha256": sha256_bytes(archive.payload),
+        "source_payload_bytes": len(archive.payload),
+        "atom_plan_schema": str(atom_plan.get("schema") or ""),
+        "atom_plan_manifest_path": str(atom_plan.get("manifest_path") or ""),
+        "atom_plan_manifest_sha256": plan_manifest_sha256,
+        "atom_plan_sha256": plan_sha256,
+        "selection_mode": "atom_plan_budget_rank_order",
+        "selection_input": {
+            "atom_plan_atom_count": len(atom_plan.get("atom_ids") or []),
+            "atom_plan_atom_ids": list(atom_plan.get("atom_ids") or []),
+            "budget_is_dispatch_clearance": False,
+        },
+        "target_sections": list(atom_plan.get("target_sections") or []),
+        "total_selected_atom_count": len(selected_atom_ids),
+        "selected_atom_ids": selected_atom_ids,
+        "estimated_total_atom_wire_bytes": total_estimated_wire_bytes,
+        "sections": selected_sections,
+        "ready_for_selected_atom_review": not structural_blockers,
+        "ready_for_train_select_apply": False,
+        "ready_for_runtime_apply": False,
+        "ready_for_wavelet_sidechannel_candidate": False,
+        "ready_for_archive_preflight": False,
+        "ready_for_exact_eval_dispatch": False,
+        "trained_atoms_manifest_path": None,
+        "trained_atoms_manifest_sha256": None,
+        "wavelet_sidechannel_archive_path": None,
+        "applied_candidate_archive_path": None,
+        "candidate_archive_path": None,
+        "candidate_archive_sha256": None,
+        "candidate_archive_bytes": None,
+        "blockers": [*structural_blockers, *blocking_status],
+        "dispatch_blockers": blocking_status,
+        "candidate_required_proof": [
+            "source_archive_sha256",
+            "source_archive_bytes",
+            "atom_plan_manifest_sha256",
+            "selected_atoms_manifest_sha256",
+            "trained_atoms_manifest_sha256",
+            "wr01_runtime_apply_manifest_sha256",
+            "exact_decode_validation_manifest_sha256",
+            "archive_manifest_preflight",
+            "contest_cuda_auth_eval_json",
+        ],
+        "manifest_path": str(manifest_path) if manifest_path is not None else None,
+    }
+    selected_manifest["selection_sha256"] = _selected_atoms_digest(selected_manifest)
+    selected_manifest["manifest_sha256_excluding_self"] = _manifest_sha256_excluding_self(
+        selected_manifest
+    )
+    return selected_manifest, structural_blockers
 
 
 def _blocked_atom_plan_section(
@@ -554,6 +769,38 @@ def _atom_plan_digest(atom_plan: Mapping[str, Any]) -> str:
     return sha256_bytes(json_line(payload).encode("utf-8"))
 
 
+def _atom_selection_sort_key(atom: Mapping[str, Any]) -> tuple[int, int, int, int, int, str]:
+    return (
+        int(atom.get("budget_rank", 1 << 30)),
+        int(atom.get("raw_offset", 0)),
+        int(atom.get("level", 0)),
+        int(atom.get("coefficient_index", 0)),
+        int(atom.get("coefficient_quantized", 0)),
+        str(atom.get("atom_id") or ""),
+    )
+
+
+def _selected_atoms_digest(selected_manifest: Mapping[str, Any]) -> str:
+    payload = {
+        "schema": selected_manifest.get("schema"),
+        "source_archive_sha256": selected_manifest.get("source_archive_sha256"),
+        "source_archive_bytes": selected_manifest.get("source_archive_bytes"),
+        "atom_plan_manifest_sha256": selected_manifest.get("atom_plan_manifest_sha256"),
+        "selected_atom_ids": selected_manifest.get("selected_atom_ids"),
+        "sections": [
+            {
+                "section_name": section.get("section_name"),
+                "source_section_sha256": section.get("source_section_sha256"),
+                "raw_sha256": section.get("raw_sha256"),
+                "atoms": section.get("atoms"),
+            }
+            for section in selected_manifest.get("sections") or []
+            if isinstance(section, Mapping)
+        ],
+    }
+    return sha256_bytes(json_line(payload).encode("utf-8"))
+
+
 def _source_section_records(
     *,
     packed: Any,
@@ -708,6 +955,8 @@ __all__ = [
     "ATOM_PLAN_FILENAME",
     "ATOM_PLAN_SCHEMA",
     "SCHEMA_VERSION",
+    "SELECTED_ATOMS_FILENAME",
+    "SELECTED_ATOMS_SCHEMA",
     "TOOL",
     "WR01_FIXED_ATOM_WIRE_BYTES",
     "HnervWaveletCompressTimeConfig",
